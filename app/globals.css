@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: oklch(0.13 0.012 280);
+  --color-surface: oklch(0.17 0.014 280);
+  --color-elevated: oklch(0.21 0.016 280);
+  --color-border: oklch(0.28 0.018 280);
+  --color-border-strong: oklch(0.36 0.02 280);
+  --color-foreground: oklch(0.97 0.005 280);
+  --color-muted: oklch(0.72 0.015 280);
+  --color-subtle: oklch(0.55 0.018 280);
+  --color-primary: oklch(0.68 0.19 295);
+  --color-primary-foreground: oklch(0.99 0 0);
+  --color-accent: oklch(0.78 0.16 75);
+  --color-accent-foreground: oklch(0.18 0.02 280);
+  --color-danger: oklch(0.65 0.22 25);
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
+  --font-display: var(--font-cinzel), Georgia, "Times New Roman", serif;
+
+  --radius-card: 1rem;
+  --radius-frame: 1.25rem;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background-color: color-mix(in oklab, var(--color-primary) 35%, transparent);
+  color: var(--color-foreground);
+}
+
+.bg-grid {
+  background-image:
+    linear-gradient(
+      to right,
+      color-mix(in oklab, var(--color-border) 60%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in oklab, var(--color-border) 60%, transparent) 1px,
+      transparent 1px
+    );
+  background-size: 56px 56px;
+}
+
+.bg-radial-glow {
+  background-image: radial-gradient(
+    ellipse 80% 60% at 50% -20%,
+    color-mix(in oklab, var(--color-primary) 22%, transparent),
+    transparent 70%
+  );
+}
