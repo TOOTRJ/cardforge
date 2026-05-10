@@ -3,12 +3,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, GitFork, Heart, Pencil, Share2 } from "lucide-react";
 import { CardPreview } from "@/components/cards/card-preview";
+import { ExportButton } from "@/components/creator/export-button";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { getCardBySlugPublic } from "@/lib/cards/queries";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { RENDER_PRESETS } from "@/lib/render/card-image";
 import type { ArtPosition, FrameStyle } from "@/types/card";
 
 type Params = { slug: string };
@@ -30,9 +32,51 @@ export async function generateMetadata({
     return { title: titleFromSlug(slug) };
   }
   const card = await getCardBySlugPublic(slug);
+  if (!card) {
+    return { title: titleFromSlug(slug) };
+  }
+
+  const isShareable =
+    card.visibility === "public" || card.visibility === "unlisted";
+  const description =
+    card.flavor_text?.trim() ||
+    card.rules_text?.trim() ||
+    "A custom trading card on CardForge.";
+
+  // Open Graph + Twitter previews use the rendered card image so social
+  // unfurls show what the card actually looks like. Only emit them for
+  // shareable visibilities — private cards shouldn't leak their preview
+  // into link previews.
+  const ogImageUrl = isShareable ? `/api/cards/${card.id}/og` : undefined;
+  const { width, height } = RENDER_PRESETS.default;
+
   return {
-    title: card?.title ?? titleFromSlug(slug),
-    description: card?.flavor_text ?? "A custom trading card on CardForge.",
+    title: card.title,
+    description,
+    openGraph: ogImageUrl
+      ? {
+          title: `${card.title} · CardForge`,
+          description,
+          type: "article",
+          url: `/card/${card.slug}`,
+          images: [
+            {
+              url: ogImageUrl,
+              width,
+              height,
+              alt: `${card.title} card preview`,
+            },
+          ],
+        }
+      : undefined,
+    twitter: ogImageUrl
+      ? {
+          card: "summary_large_image",
+          title: `${card.title} · CardForge`,
+          description,
+          images: [ogImageUrl],
+        }
+      : undefined,
   };
 }
 
@@ -102,11 +146,19 @@ export default async function CardDetailPage({
 
           <div className="flex flex-wrap items-center gap-2">
             {isOwner ? (
-              <Button asChild>
-                <Link href={`/card/${card.slug}/edit`}>
-                  <Pencil className="h-4 w-4" aria-hidden /> Edit card
-                </Link>
-              </Button>
+              <>
+                <Button asChild>
+                  <Link href={`/card/${card.slug}/edit`}>
+                    <Pencil className="h-4 w-4" aria-hidden /> Edit card
+                  </Link>
+                </Button>
+                <ExportButton
+                  cardId={card.id}
+                  cardSlug={card.slug}
+                  variant="outline"
+                  label="Download HD PNG"
+                />
+              </>
             ) : null}
             <Button variant="primary" disabled>
               <Heart className="h-4 w-4" aria-hidden /> Like

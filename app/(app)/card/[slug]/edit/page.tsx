@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { CardCreatorForm } from "@/components/creator/card-creator-form";
+import { ExportButton } from "@/components/creator/export-button";
 import { PageHeader } from "@/components/layout/page-header";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { Button } from "@/components/ui/button";
@@ -80,6 +81,12 @@ export default async function EditCardPage({ params }: EditCardPageProps) {
                   ? "Unlisted"
                   : "Private"}
             </Badge>
+            <ExportButton
+              cardId={card.id}
+              cardSlug={card.slug}
+              variant="outline"
+              label="Download HD PNG"
+            />
             <Button asChild variant="ghost">
               <Link href={`/card/${card.slug}`}>
                 <ArrowLeft className="h-4 w-4" aria-hidden /> View public page

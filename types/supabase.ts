@@ -17,6 +17,50 @@ export type Database = {
   };
   public: {
     Tables: {
+      card_exports: {
+        Row: {
+          card_id: string;
+          created_at: string;
+          file_url: string;
+          format: string;
+          height: number;
+          id: string;
+          owner_id: string;
+          storage_path: string;
+          width: number;
+        };
+        Insert: {
+          card_id: string;
+          created_at?: string;
+          file_url: string;
+          format: string;
+          height: number;
+          id?: string;
+          owner_id: string;
+          storage_path: string;
+          width: number;
+        };
+        Update: {
+          card_id?: string;
+          created_at?: string;
+          file_url?: string;
+          format?: string;
+          height?: number;
+          id?: string;
+          owner_id?: string;
+          storage_path?: string;
+          width?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "card_exports_card_id_fkey";
+            columns: ["card_id"];
+            isOneToOne: false;
+            referencedRelation: "cards";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       card_templates: {
         Row: {
           config: Json;
@@ -379,3 +423,6 @@ export type CardTemplate = Tables<"card_templates">;
 export type Card = Tables<"cards">;
 export type CardInsert = TablesInsert<"cards">;
 export type CardUpdate = TablesUpdate<"cards">;
+
+export type CardExport = Tables<"card_exports">;
+export type CardExportInsert = TablesInsert<"card_exports">;
