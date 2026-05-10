@@ -186,6 +186,54 @@ export async function getCardById(id: string): Promise<Card | null> {
 }
 
 /**
+ * Fetch a card by slug owned by the currently signed-in user. Returns null
+ * if there's no session, no Supabase config, or no matching row. Used by
+ * the editor page to load a draft for editing.
+ */
+export async function getMyCardBySlug(slug: string): Promise<Card | null> {
+  if (!isSupabaseConfigured()) return null;
+  const user = await getCurrentUser();
+  if (!user) return null;
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("cards")
+      .select("*")
+      .eq("owner_id", user.id)
+      .eq("slug", slug)
+      .maybeSingle();
+    return data ? narrowCard(data) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Find a card by slug across all owners — RLS filters out anything the viewer
+ * isn't allowed to see. If multiple cards share the slug (slugs are unique
+ * per owner, not globally), we return the most recently updated one.
+ *
+ * Used by the public `/card/[slug]` page. A future phase can disambiguate
+ * via `/card/[username]/[slug]` if collisions become common.
+ */
+export async function getCardBySlugPublic(slug: string): Promise<Card | null> {
+  if (!isSupabaseConfigured()) return null;
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("cards")
+      .select("*")
+      .eq("slug", slug)
+      .order("updated_at", { ascending: false })
+      .limit(1);
+    if (!data || data.length === 0) return null;
+    return narrowCard(data[0]);
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Fetch a card by `(owner_username, slug)`. Used by the public `/card/[slug]`
  * page in later phases — for now we accept the *current* user's slug too,
  * since profile lookups need RLS context.

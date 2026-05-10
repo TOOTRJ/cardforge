@@ -3,23 +3,19 @@ import Link from "next/link";
 import { FilePlus2, FolderOpen, Globe2, Pencil, UserCog } from "lucide-react";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PageHeader } from "@/components/layout/page-header";
-import { CardPreviewPlaceholder } from "@/components/cards/card-preview-placeholder";
+import { CardPreview } from "@/components/cards/card-preview";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
+import { listMyCards } from "@/lib/cards/queries";
+import type { ArtPosition, FrameStyle } from "@/types/card";
 
 export const metadata: Metadata = {
   title: "Dashboard",
   description: "Your CardForge workspace.",
 };
-
-const stats = [
-  { label: "Cards", value: "0", helper: "Saved drafts and published cards" },
-  { label: "Sets", value: "0", helper: "Custom sets you’ve organized" },
-  { label: "Likes", value: "0", helper: "Coming soon: community love" },
-];
 
 export default async function DashboardPage() {
   const user = await getCurrentUser();
@@ -31,12 +27,35 @@ export default async function DashboardPage() {
     "Forgemaster";
   const profileIncomplete = !profile?.username;
 
+  const myCards = await listMyCards();
+  const recentCards = myCards.slice(0, 6);
+  const drafts = myCards.filter((c) => c.visibility === "private");
+  const publicCards = myCards.filter((c) => c.visibility === "public");
+
+  const stats = [
+    {
+      label: "Cards",
+      value: String(myCards.length),
+      helper: "Saved drafts and published cards",
+    },
+    {
+      label: "Public",
+      value: String(publicCards.length),
+      helper: "Listed in the gallery",
+    },
+    {
+      label: "Drafts",
+      value: String(drafts.length),
+      helper: "Private, in-progress cards",
+    },
+  ];
+
   return (
     <DashboardShell>
       <PageHeader
         eyebrow="Workspace"
         title={`Welcome back, ${greetingName}`}
-        description="A snapshot of your cards, drafts, and sets. Card creation goes live in Phase 4 — for now this workspace is wired to your real account."
+        description="A snapshot of your cards, drafts, and sets. Click any card to edit it."
         actions={
           <>
             <Button asChild variant="outline">
@@ -89,72 +108,69 @@ export default async function DashboardPage() {
 
       <DashboardSection
         title="Recent cards"
-        description="Your most recently edited drafts and published cards will appear here once card data is wired up."
+        description="Click any card to open the editor."
         action={
           <Button asChild variant="ghost" size="sm">
             <Link href="/gallery">View gallery</Link>
           </Button>
         }
       >
-        <EmptyState
-          icon={Pencil}
-          title="No cards yet"
-          description="Open the creator and forge your very first card. Saved drafts will surface here automatically."
-          action={
-            <Button asChild>
-              <Link href="/create">Open creator</Link>
-            </Button>
-          }
-        />
+        {recentCards.length === 0 ? (
+          <EmptyState
+            icon={Pencil}
+            title="No cards yet"
+            description="Open the creator and forge your very first card. Saved drafts will surface here automatically."
+            action={
+              <Button asChild>
+                <Link href="/create">Open creator</Link>
+              </Button>
+            }
+          />
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {recentCards.map((card) => (
+              <CardLink key={card.id} card={card} />
+            ))}
+          </div>
+        )}
       </DashboardSection>
 
       <DashboardSection
         title="Drafts"
-        description="Private, in-progress cards you haven’t published."
+        description="Private, in-progress cards you haven't published."
       >
-        <EmptyState
-          icon={FolderOpen}
-          title="No drafts"
-          description="Drafts you save while creating will live here until you publish."
-        />
+        {drafts.length === 0 ? (
+          <EmptyState
+            icon={FolderOpen}
+            title="No drafts"
+            description="Drafts you save while creating will live here until you publish."
+          />
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {drafts.slice(0, 6).map((card) => (
+              <CardLink key={card.id} card={card} />
+            ))}
+          </div>
+        )}
       </DashboardSection>
 
       <DashboardSection
         title="Public cards"
         description="Cards visible on your public profile and the gallery."
       >
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <CardPreviewPlaceholder
-            card={{
-              title: "Forge Sample I",
-              cost: "{1}{R}",
-              cardType: "creature",
-              rarity: "uncommon",
-              colorIdentity: "red",
-              artistCredit: greetingName,
-            }}
+        {publicCards.length === 0 ? (
+          <EmptyState
+            icon={Globe2}
+            title="Nothing public yet"
+            description="Toggle a card's visibility to Public from the editor and it will appear here."
           />
-          <CardPreviewPlaceholder
-            card={{
-              title: "Forge Sample II",
-              cost: "{2}{G}",
-              cardType: "spell",
-              rarity: "common",
-              colorIdentity: "green",
-              artistCredit: greetingName,
-            }}
-          />
-          <SurfaceCard className="flex aspect-[5/7] flex-col items-center justify-center gap-3 border-dashed p-6 text-center">
-            <Globe2 className="h-6 w-6 text-primary" aria-hidden />
-            <p className="font-display text-sm font-semibold text-foreground">
-              Publish your work
-            </p>
-            <p className="text-xs leading-5 text-muted">
-              Public visibility ships with the sharing phase. Sample cards
-              shown here are placeholders.
-            </p>
-          </SurfaceCard>
-        </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {publicCards.slice(0, 6).map((card) => (
+              <CardLink key={card.id} card={card} />
+            ))}
+          </div>
+        )}
       </DashboardSection>
 
       <SurfaceCard className="mt-12 flex flex-col gap-3 p-6">
@@ -179,6 +195,57 @@ export default async function DashboardPage() {
       </SurfaceCard>
     </DashboardShell>
   );
+}
+
+function CardLink({
+  card,
+}: {
+  card: Awaited<ReturnType<typeof listMyCards>>[number];
+}) {
+  return (
+    <Link
+      href={`/card/${card.slug}/edit`}
+      className="group block rounded-frame focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      aria-label={`Edit ${card.title}`}
+    >
+      <CardPreview
+        title={card.title}
+        cost={card.cost}
+        cardType={card.card_type}
+        supertype={card.supertype}
+        subtypes={card.subtypes}
+        rarity={card.rarity}
+        colorIdentity={card.color_identity}
+        rulesText={card.rules_text}
+        flavorText={card.flavor_text}
+        power={card.power}
+        toughness={card.toughness}
+        loyalty={card.loyalty}
+        defense={card.defense}
+        artistCredit={card.artist_credit}
+        artUrl={card.art_url}
+        artPosition={card.art_position as ArtPosition}
+        frameStyle={card.frame_style as FrameStyle}
+      />
+      <div className="mt-2 flex items-center justify-between text-xs text-muted">
+        <span>{visibilityLabel(card.visibility)}</span>
+        <span className="opacity-0 transition-opacity group-hover:opacity-100">
+          Click to edit →
+        </span>
+      </div>
+    </Link>
+  );
+}
+
+function visibilityLabel(visibility: "private" | "unlisted" | "public"): string {
+  switch (visibility) {
+    case "public":
+      return "Public";
+    case "unlisted":
+      return "Unlisted";
+    default:
+      return "Private";
+  }
 }
 
 function DashboardSection({
