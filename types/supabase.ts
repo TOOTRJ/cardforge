@@ -17,6 +17,186 @@ export type Database = {
   };
   public: {
     Tables: {
+      card_templates: {
+        Row: {
+          config: Json;
+          created_at: string;
+          description: string | null;
+          game_system_id: string;
+          id: string;
+          is_active: boolean;
+          key: string;
+          name: string;
+        };
+        Insert: {
+          config?: Json;
+          created_at?: string;
+          description?: string | null;
+          game_system_id: string;
+          id?: string;
+          is_active?: boolean;
+          key: string;
+          name: string;
+        };
+        Update: {
+          config?: Json;
+          created_at?: string;
+          description?: string | null;
+          game_system_id?: string;
+          id?: string;
+          is_active?: boolean;
+          key?: string;
+          name?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "card_templates_game_system_id_fkey";
+            columns: ["game_system_id"];
+            isOneToOne: false;
+            referencedRelation: "game_systems";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      cards: {
+        Row: {
+          art_position: Json;
+          art_url: string | null;
+          artist_credit: string | null;
+          card_type: string | null;
+          color_identity: string[];
+          cost: string | null;
+          created_at: string;
+          defense: string | null;
+          flavor_text: string | null;
+          frame_style: Json;
+          game_system_id: string;
+          id: string;
+          loyalty: string | null;
+          metadata: Json;
+          owner_id: string;
+          parent_card_id: string | null;
+          power: string | null;
+          rarity: string | null;
+          rules_text: string | null;
+          slug: string;
+          subtypes: string[];
+          supertype: string | null;
+          template_id: string | null;
+          title: string;
+          toughness: string | null;
+          updated_at: string;
+          visibility: string;
+        };
+        Insert: {
+          art_position?: Json;
+          art_url?: string | null;
+          artist_credit?: string | null;
+          card_type?: string | null;
+          color_identity?: string[];
+          cost?: string | null;
+          created_at?: string;
+          defense?: string | null;
+          flavor_text?: string | null;
+          frame_style?: Json;
+          game_system_id: string;
+          id?: string;
+          loyalty?: string | null;
+          metadata?: Json;
+          owner_id: string;
+          parent_card_id?: string | null;
+          power?: string | null;
+          rarity?: string | null;
+          rules_text?: string | null;
+          slug: string;
+          subtypes?: string[];
+          supertype?: string | null;
+          template_id?: string | null;
+          title: string;
+          toughness?: string | null;
+          updated_at?: string;
+          visibility?: string;
+        };
+        Update: {
+          art_position?: Json;
+          art_url?: string | null;
+          artist_credit?: string | null;
+          card_type?: string | null;
+          color_identity?: string[];
+          cost?: string | null;
+          created_at?: string;
+          defense?: string | null;
+          flavor_text?: string | null;
+          frame_style?: Json;
+          game_system_id?: string;
+          id?: string;
+          loyalty?: string | null;
+          metadata?: Json;
+          owner_id?: string;
+          parent_card_id?: string | null;
+          power?: string | null;
+          rarity?: string | null;
+          rules_text?: string | null;
+          slug?: string;
+          subtypes?: string[];
+          supertype?: string | null;
+          template_id?: string | null;
+          title?: string;
+          toughness?: string | null;
+          updated_at?: string;
+          visibility?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "cards_game_system_id_fkey";
+            columns: ["game_system_id"];
+            isOneToOne: false;
+            referencedRelation: "game_systems";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "cards_parent_card_id_fkey";
+            columns: ["parent_card_id"];
+            isOneToOne: false;
+            referencedRelation: "cards";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "cards_template_id_fkey";
+            columns: ["template_id"];
+            isOneToOne: false;
+            referencedRelation: "card_templates";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      game_systems: {
+        Row: {
+          created_at: string;
+          description: string | null;
+          id: string;
+          is_active: boolean;
+          key: string;
+          name: string;
+        };
+        Insert: {
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          is_active?: boolean;
+          key: string;
+          name: string;
+        };
+        Update: {
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          is_active?: boolean;
+          key?: string;
+          name?: string;
+        };
+        Relationships: [];
+      };
       profiles: {
         Row: {
           avatar_url: string | null;
@@ -193,3 +373,9 @@ export const Constants = {
 export type Profile = Tables<"profiles">;
 export type ProfileInsert = TablesInsert<"profiles">;
 export type ProfileUpdate = TablesUpdate<"profiles">;
+
+export type GameSystem = Tables<"game_systems">;
+export type CardTemplate = Tables<"card_templates">;
+export type Card = Tables<"cards">;
+export type CardInsert = TablesInsert<"cards">;
+export type CardUpdate = TablesUpdate<"cards">;
