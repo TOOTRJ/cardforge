@@ -13,6 +13,7 @@ import {
   getFantasyGameSystem,
   getTemplatesForGameSystem,
 } from "@/lib/cards/queries";
+import { isAIConfigured } from "@/lib/ai/card-assistant";
 
 export const metadata: Metadata = {
   title: "Create",
@@ -66,6 +67,7 @@ export default async function CreatePage() {
           userId={user.id}
           gameSystems={[gameSystem]}
           templates={templates}
+          aiConfigured={isAIConfigured()}
         />
       </div>
     </div>

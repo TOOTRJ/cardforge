@@ -17,6 +17,7 @@ import {
   getTemplatesForGameSystem,
 } from "@/lib/cards/queries";
 import { listMySetsForCard } from "@/lib/sets/queries";
+import { isAIConfigured } from "@/lib/ai/card-assistant";
 
 type EditCardPageProps = {
   params: Promise<{ slug: string }>;
@@ -119,6 +120,7 @@ export default async function EditCardPage({ params }: EditCardPageProps) {
           gameSystems={gameSystem ? [gameSystem] : []}
           templates={templates}
           card={card}
+          aiConfigured={isAIConfigured()}
         />
       </div>
     </div>

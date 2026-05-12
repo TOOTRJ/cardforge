@@ -26,6 +26,11 @@ import { CardPreview } from "@/components/cards/card-preview";
 import { ArtUploader } from "@/components/creator/art-uploader";
 import { DeleteCardDialog } from "@/components/creator/delete-card-dialog";
 import {
+  AIAssistantPanel,
+  type CardFieldPatch,
+} from "@/components/creator/ai-assistant-panel";
+import type { CardContext } from "@/lib/ai/schemas";
+import {
   createCardAction,
   updateCardAction,
 } from "@/lib/cards/actions";
@@ -83,6 +88,8 @@ type CardCreatorFormProps = {
   gameSystems: GameSystem[];
   templates: CardTemplate[];
   card?: Card | null;
+  /** Whether ANTHROPIC_API_KEY is set on the server — gates the AI panel. */
+  aiConfigured: boolean;
 };
 
 const VISIBILITY_OPTIONS: Array<{
@@ -195,6 +202,7 @@ export function CardCreatorForm({
   gameSystems,
   templates,
   card,
+  aiConfigured,
 }: CardCreatorFormProps) {
   const router = useRouter();
   const [isSubmitting, startTransition] = useTransition();
@@ -227,6 +235,66 @@ export function CardCreatorForm({
   // We feed it the same defaults useForm has, so RHF always populates every
   // field; the cast just lifts useWatch's DeepPartial<> back to FormValues.
   const watched = useWatch({ control, defaultValue: defaults }) as FormValues;
+
+  // Slice of the live form state the AI panel sends as context. Stripping
+  // empty strings keeps the prompt tight.
+  const cardContext: CardContext = {
+    title: watched.title.trim() || undefined,
+    cost: watched.cost.trim() || undefined,
+    card_type:
+      watched.card_type && (CARD_TYPE_VALUES as readonly string[]).includes(watched.card_type)
+        ? (watched.card_type as CardType)
+        : undefined,
+    supertype: watched.supertype.trim() || undefined,
+    subtypes:
+      parseSubtypes(watched.subtypes_text).length > 0
+        ? parseSubtypes(watched.subtypes_text)
+        : undefined,
+    rarity:
+      watched.rarity && (RARITY_VALUES as readonly string[]).includes(watched.rarity)
+        ? (watched.rarity as Rarity)
+        : undefined,
+    color_identity:
+      watched.color_identity.length > 0 ? watched.color_identity : undefined,
+    rules_text: watched.rules_text.trim() || undefined,
+    flavor_text: watched.flavor_text.trim() || undefined,
+    power: watched.power.trim() || undefined,
+    toughness: watched.toughness.trim() || undefined,
+    loyalty: watched.loyalty.trim() || undefined,
+    defense: watched.defense.trim() || undefined,
+  };
+
+  // Apply an AI patch through setValue so RHF marks every touched field
+  // dirty. Strings are passed through as-is; the color_identity readonly
+  // tuple from the schema is widened to a mutable array.
+  const handleAIPatch = (patch: CardFieldPatch) => {
+    const setIfPresent = (
+      key: keyof FormValues,
+      value: string | undefined,
+    ) => {
+      if (value === undefined) return;
+      setValue(key, value as never, { shouldDirty: true });
+    };
+
+    setIfPresent("title", patch.title);
+    setIfPresent("cost", patch.cost);
+    setIfPresent("card_type", patch.card_type);
+    setIfPresent("supertype", patch.supertype);
+    setIfPresent("subtypes_text", patch.subtypes_text);
+    setIfPresent("rarity", patch.rarity);
+    setIfPresent("rules_text", patch.rules_text);
+    setIfPresent("flavor_text", patch.flavor_text);
+    setIfPresent("power", patch.power);
+    setIfPresent("toughness", patch.toughness);
+
+    if (patch.color_identity) {
+      setValue(
+        "color_identity",
+        Array.from(patch.color_identity) as ColorIdentity[],
+        { shouldDirty: true },
+      );
+    }
+  };
 
   // ---- Submit ----
   const onSubmit: SubmitHandler<FormValues> = (values) => {
@@ -616,6 +684,12 @@ export function CardCreatorForm({
             />
           </div>
         </FieldGroup>
+
+        <AIAssistantPanel
+          cardContext={cardContext}
+          onApply={handleAIPatch}
+          configured={aiConfigured}
+        />
 
         {/* Action bar */}
         <div className="sticky bottom-0 -mx-6 -mb-6 flex flex-wrap items-center justify-between gap-3 border-t border-border/50 bg-surface/95 px-6 py-4 backdrop-blur-sm">
