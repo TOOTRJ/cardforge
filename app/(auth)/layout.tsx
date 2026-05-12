@@ -21,7 +21,10 @@ export default function AuthLayout({
         </Link>
       </header>
 
-      <main className="relative z-10 flex flex-1 items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
+      <main
+        id="main"
+        className="relative z-10 flex flex-1 items-center justify-center px-4 py-12 sm:px-6 lg:px-8"
+      >
         <div className="w-full max-w-md">{children}</div>
       </main>
     </div>

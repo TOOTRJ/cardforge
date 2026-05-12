@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Heart, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, Heart, Sparkles } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { CardPreview } from "@/components/cards/card-preview";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,10 @@ import {
 export const metadata: Metadata = {
   title: "Gallery",
   description: "Browse public custom cards forged by the CardForge community.",
+  alternates: { canonical: "/gallery" },
 };
+
+const PAGE_SIZE = 24;
 
 type GalleryPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -37,6 +40,7 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
   const rarityParam = firstString(params.rarity);
   const searchParam = firstString(params.q);
   const sortParam = firstString(params.sort);
+  const pageParam = firstString(params.page);
 
   const cardType = (CARD_TYPE_VALUES as readonly string[]).includes(
     cardTypeParam ?? "",
@@ -51,6 +55,9 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
   const sort: "recent" | "popular" =
     sortParam === "popular" ? "popular" : "recent";
 
+  const pageRaw = Number.parseInt(pageParam ?? "1", 10);
+  const page = Number.isFinite(pageRaw) && pageRaw >= 1 ? pageRaw : 1;
+
   const configured = isSupabaseConfigured();
   const cards = configured
     ? await listPublicCardsRich({
@@ -58,9 +65,27 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
         rarity,
         search: searchParam ?? undefined,
         sort,
-        limit: 24,
+        limit: PAGE_SIZE,
+        offset: (page - 1) * PAGE_SIZE,
       })
     : [];
+
+  // We don't have a separate "total" query — `hasMore` is a heuristic: a
+  // full page strongly suggests there's at least one more. The Next button
+  // disappears once we return < PAGE_SIZE rows.
+  const hasMore = cards.length === PAGE_SIZE;
+  const hasPrev = page > 1;
+
+  const buildHref = (nextPage: number) => {
+    const qs = new URLSearchParams();
+    if (cardTypeParam) qs.set("type", cardTypeParam);
+    if (rarityParam) qs.set("rarity", rarityParam);
+    if (searchParam) qs.set("q", searchParam);
+    if (sortParam) qs.set("sort", sortParam);
+    if (nextPage > 1) qs.set("page", String(nextPage));
+    const query = qs.toString();
+    return query ? `/gallery?${query}` : "/gallery";
+  };
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
@@ -102,11 +127,38 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
             }
           />
         ) : (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {cards.map((card) => (
-              <GalleryCardTile key={card.id} card={card} />
-            ))}
-          </div>
+          <>
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {cards.map((card) => (
+                <GalleryCardTile key={card.id} card={card} />
+              ))}
+            </div>
+            {hasPrev || hasMore ? (
+              <div className="mt-10 flex items-center justify-between gap-3 border-t border-border/40 pt-6">
+                <span className="text-xs text-subtle">
+                  Page {page}
+                </span>
+                <div className="flex items-center gap-2">
+                  {hasPrev ? (
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={buildHref(page - 1)} scroll>
+                        <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
+                        Previous
+                      </Link>
+                    </Button>
+                  ) : null}
+                  {hasMore ? (
+                    <Button asChild size="sm">
+                      <Link href={buildHref(page + 1)} scroll>
+                        Next
+                        <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+                      </Link>
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+          </>
         )}
       </div>
     </div>

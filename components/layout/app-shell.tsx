@@ -20,7 +20,9 @@ export function AppShell({
   return (
     <div className={cn("flex min-h-svh flex-col", className)}>
       <SiteHeader variant={variant} user={user} />
-      <main className="flex-1">{children}</main>
+      <main id="main" className="flex-1">
+        {children}
+      </main>
       {hideFooter ? null : <SiteFooter />}
     </div>
   );

@@ -33,13 +33,21 @@ export const siteConfig = {
       links: [
         { label: "Dashboard", href: "/dashboard" },
         { label: "Settings", href: "/settings" },
+        { label: "Sign in", href: "/login" },
       ],
     },
     {
-      title: "About",
+      title: "Company",
       links: [
-        { label: "Home", href: "/" },
-        { label: "Sign in", href: "/login" },
+        { label: "About", href: "/about" },
+        { label: "Disclaimer", href: "/disclaimer" },
+      ],
+    },
+    {
+      title: "Legal",
+      links: [
+        { label: "Terms", href: "/terms" },
+        { label: "Privacy", href: "/privacy" },
       ],
     },
   ],
