@@ -90,6 +90,81 @@ export type Database = {
           },
         ];
       };
+      card_set_items: {
+        Row: {
+          card_id: string;
+          created_at: string;
+          id: string;
+          position: number;
+          set_id: string;
+        };
+        Insert: {
+          card_id: string;
+          created_at?: string;
+          id?: string;
+          position?: number;
+          set_id: string;
+        };
+        Update: {
+          card_id?: string;
+          created_at?: string;
+          id?: string;
+          position?: number;
+          set_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "card_set_items_card_id_fkey";
+            columns: ["card_id"];
+            isOneToOne: false;
+            referencedRelation: "cards";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "card_set_items_set_id_fkey";
+            columns: ["set_id"];
+            isOneToOne: false;
+            referencedRelation: "card_sets";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      card_sets: {
+        Row: {
+          cover_url: string | null;
+          created_at: string;
+          description: string | null;
+          id: string;
+          owner_id: string;
+          slug: string;
+          title: string;
+          updated_at: string;
+          visibility: string;
+        };
+        Insert: {
+          cover_url?: string | null;
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          owner_id: string;
+          slug: string;
+          title: string;
+          updated_at?: string;
+          visibility?: string;
+        };
+        Update: {
+          cover_url?: string | null;
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          owner_id?: string;
+          slug?: string;
+          title?: string;
+          updated_at?: string;
+          visibility?: string;
+        };
+        Relationships: [];
+      };
       card_templates: {
         Row: {
           config: Json;
@@ -458,3 +533,10 @@ export type CardExportInsert = TablesInsert<"card_exports">;
 
 export type CardLike = Tables<"card_likes">;
 export type CardLikeInsert = TablesInsert<"card_likes">;
+
+export type CardSet = Tables<"card_sets">;
+export type CardSetInsert = TablesInsert<"card_sets">;
+export type CardSetUpdate = TablesUpdate<"card_sets">;
+
+export type CardSetItem = Tables<"card_set_items">;
+export type CardSetItemInsert = TablesInsert<"card_set_items">;

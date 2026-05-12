@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { CardCreatorForm } from "@/components/creator/card-creator-form";
 import { ExportButton } from "@/components/creator/export-button";
+import { AddToSetButton } from "@/components/sets/add-to-set-button";
 import { PageHeader } from "@/components/layout/page-header";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ import {
   getMyCardBySlug,
   getTemplatesForGameSystem,
 } from "@/lib/cards/queries";
+import { listMySetsForCard } from "@/lib/sets/queries";
 
 type EditCardPageProps = {
   params: Promise<{ slug: string }>;
@@ -59,7 +61,10 @@ export default async function EditCardPage({ params }: EditCardPageProps) {
     notFound();
   }
 
-  const gameSystem = await getFantasyGameSystem();
+  const [gameSystem, mySets] = await Promise.all([
+    getFantasyGameSystem(),
+    listMySetsForCard(card.id),
+  ]);
   const templates = gameSystem
     ? await getTemplatesForGameSystem(gameSystem.id)
     : [];
@@ -81,6 +86,17 @@ export default async function EditCardPage({ params }: EditCardPageProps) {
                   ? "Unlisted"
                   : "Private"}
             </Badge>
+            <AddToSetButton
+              cardId={card.id}
+              cardSlug={card.slug}
+              sets={mySets.map((s) => ({
+                id: s.id,
+                slug: s.slug,
+                title: s.title,
+                cards_count: s.cards_count,
+                contains_card: s.contains_card,
+              }))}
+            />
             <ExportButton
               cardId={card.id}
               cardSlug={card.slug}
