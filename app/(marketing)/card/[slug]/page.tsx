@@ -1,14 +1,20 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, GitFork, Heart, Pencil, Share2 } from "lucide-react";
+import { ArrowLeft, Pencil, Share2 } from "lucide-react";
 import { CardPreview } from "@/components/cards/card-preview";
 import { ExportButton } from "@/components/creator/export-button";
+import { LikeButton } from "@/components/cards/like-button";
+import { RemixButton } from "@/components/cards/remix-button";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SurfaceCard } from "@/components/ui/surface-card";
-import { getCardBySlugPublic } from "@/lib/cards/queries";
-import { getCurrentUser } from "@/lib/supabase/server";
+import {
+  countCardLikes,
+  getCardBySlugPublic,
+  hasUserLikedCard,
+} from "@/lib/cards/queries";
+import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { RENDER_PRESETS } from "@/lib/render/card-image";
 import type { ArtPosition, FrameStyle } from "@/types/card";
@@ -95,6 +101,25 @@ export default async function CardDetailPage({
   const user = await getCurrentUser();
   const isOwner = Boolean(user && user.id === card.owner_id);
 
+  // Three parallel-ish reads: like count, current user's like, owner profile.
+  // Each is independent, so we await them concurrently.
+  const supabase = isSupabaseConfigured() ? await createClient() : null;
+
+  const [likesCount, viewerLiked, ownerProfile] = await Promise.all([
+    countCardLikes(card.id),
+    user ? hasUserLikedCard(user.id, card.id) : Promise.resolve(false),
+    supabase
+      ? supabase
+          .from("profiles")
+          .select("id, username, display_name, avatar_url")
+          .eq("id", card.owner_id)
+          .maybeSingle()
+          .then((res) => res.data ?? null)
+      : Promise.resolve(null),
+  ]);
+
+  const createdAt = formatDate(card.created_at);
+
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
       <Link
@@ -130,12 +155,25 @@ export default async function CardDetailPage({
 
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-3">
-            <Badge
-              variant={card.visibility === "public" ? "primary" : "outline"}
-              className="self-start"
-            >
-              {visibilityLabel(card.visibility)}
-            </Badge>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge
+                variant={card.visibility === "public" ? "primary" : "outline"}
+              >
+                {visibilityLabel(card.visibility)}
+              </Badge>
+              {ownerProfile?.username ? (
+                <Link
+                  href={`/profile/${ownerProfile.username}`}
+                  className="text-xs text-muted transition-colors hover:text-foreground"
+                >
+                  by{" "}
+                  <span className="font-mono text-foreground">
+                    @{ownerProfile.username}
+                  </span>
+                </Link>
+              ) : null}
+              <span className="text-xs text-subtle">· {createdAt}</span>
+            </div>
             <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
               {card.title}
             </h1>
@@ -145,6 +183,18 @@ export default async function CardDetailPage({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <LikeButton
+              cardId={card.id}
+              cardSlug={card.slug}
+              initialLiked={viewerLiked}
+              initialCount={likesCount}
+              requiresSignIn={!user}
+            />
+            <RemixButton
+              cardId={card.id}
+              cardSlug={card.slug}
+              requiresSignIn={!user}
+            />
             {isOwner ? (
               <>
                 <Button asChild>
@@ -160,12 +210,6 @@ export default async function CardDetailPage({
                 />
               </>
             ) : null}
-            <Button variant="primary" disabled>
-              <Heart className="h-4 w-4" aria-hidden /> Like
-            </Button>
-            <Button variant="secondary" disabled>
-              <GitFork className="h-4 w-4" aria-hidden /> Remix
-            </Button>
             <Button variant="ghost" disabled>
               <Share2 className="h-4 w-4" aria-hidden /> Share
             </Button>
@@ -238,6 +282,19 @@ function visibilityLabel(visibility: "private" | "unlisted" | "public"): string 
 
 function capitalize(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function formatDate(value: string): string {
+  try {
+    const date = new Date(value);
+    return new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }).format(date);
+  } catch {
+    return "—";
+  }
 }
 
 function Detail({ label, value }: { label: string; value: string }) {

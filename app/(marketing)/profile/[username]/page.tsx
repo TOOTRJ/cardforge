@@ -1,10 +1,18 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import { CardPreviewPlaceholder } from "@/components/cards/card-preview-placeholder";
+import { notFound } from "next/navigation";
+import { ArrowLeft, ExternalLink, Heart } from "lucide-react";
+import { CardPreview } from "@/components/cards/card-preview";
 import { PageHeader } from "@/components/layout/page-header";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
+import {
+  getProfileByUsername,
+  listPublicCardsByOwner,
+} from "@/lib/cards/queries";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
+import type { ArtPosition, FrameStyle } from "@/types/card";
 
 type Params = { username: string };
 
@@ -14,9 +22,15 @@ export async function generateMetadata({
   params: Promise<Params>;
 }): Promise<Metadata> {
   const { username } = await params;
+  if (!isSupabaseConfigured()) {
+    return { title: `@${username}` };
+  }
+  const profile = await getProfileByUsername(username);
   return {
-    title: `@${username}`,
-    description: `Custom cards forged by @${username} on CardForge.`,
+    title: profile
+      ? (profile.display_name ?? `@${profile.username}`)
+      : `@${username}`,
+    description: profile?.bio ?? `Custom cards forged by @${username} on CardForge.`,
   };
 }
 
@@ -26,21 +40,20 @@ export default async function ProfilePage({
   params: Promise<Params>;
 }) {
   const { username } = await params;
-  const displayName = username
-    .split(/[-_]/)
-    .map((s) => s[0]?.toUpperCase() + s.slice(1))
-    .join(" ") || username;
 
-  const cards = Array.from({ length: 4 }, (_, i) => ({
-    id: String(i),
-    slug: `${username}-card-${i + 1}`,
-    title: `${displayName} Card ${i + 1}`,
-    cost: "{2}{U}",
-    cardType: "creature" as const,
-    rarity: "rare" as const,
-    colorIdentity: "blue" as const,
-    artistCredit: displayName,
-  }));
+  if (!isSupabaseConfigured()) {
+    return <NotConfigured username={username} />;
+  }
+
+  const profile = await getProfileByUsername(username);
+  if (!profile) {
+    notFound();
+  }
+
+  const cards = await listPublicCardsByOwner(profile.id, { limit: 24 });
+  const displayName =
+    profile.display_name?.trim() || profile.username || "Forgemaster";
+  const initial = (displayName[0] ?? "?").toUpperCase();
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
@@ -55,18 +68,35 @@ export default async function ProfilePage({
       <SurfaceCard className="flex flex-col items-start gap-4 p-8 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
           <span className="flex h-16 w-16 items-center justify-center rounded-full bg-linear-to-br from-primary to-accent font-display text-xl font-semibold text-primary-foreground">
-            {displayName[0]?.toUpperCase()}
+            {initial}
           </span>
           <div className="flex flex-col gap-1">
             <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground">
               {displayName}
             </h1>
-            <span className="font-mono text-sm text-muted">@{username}</span>
+            <span className="font-mono text-sm text-muted">
+              @{profile.username ?? username}
+            </span>
+            {profile.bio ? (
+              <p className="mt-2 max-w-xl text-sm leading-6 text-muted">
+                {profile.bio}
+              </p>
+            ) : null}
+            {profile.website_url ? (
+              <a
+                href={profile.website_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+              >
+                <ExternalLink className="h-3 w-3" aria-hidden />
+                {profile.website_url.replace(/^https?:\/\//, "")}
+              </a>
+            ) : null}
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Badge>{cards.length} cards</Badge>
-          <Badge variant="outline">0 sets</Badge>
+          <Badge>{profile.public_cards_count} public</Badge>
         </div>
       </SurfaceCard>
 
@@ -74,16 +104,85 @@ export default async function ProfilePage({
         className="mt-10"
         eyebrow="Cards"
         title={`Forged by ${displayName}`}
-        description="Public cards published by this creator. Authentication and real card data ship in later phases."
+        description="Public cards published by this creator."
       />
 
-      <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {cards.map((card) => (
-          <Link key={card.id} href={`/card/${card.slug}`} className="block">
-            <CardPreviewPlaceholder card={card} />
-          </Link>
-        ))}
+      <div className="mt-8">
+        {cards.length === 0 ? (
+          <EmptyState
+            icon={Heart}
+            title="No public cards yet"
+            description={`${displayName} hasn't published any cards publicly. Check back later or browse the gallery for other creators.`}
+          />
+        ) : (
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {cards.map((card) => (
+              <ProfileCardTile key={card.id} card={card} />
+            ))}
+          </div>
+        )}
       </div>
+    </div>
+  );
+}
+
+function ProfileCardTile({
+  card,
+}: {
+  card: Awaited<ReturnType<typeof listPublicCardsByOwner>>[number];
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <Link
+        href={`/card/${card.slug}`}
+        className="block rounded-frame focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        aria-label={`Open ${card.title}`}
+      >
+        <CardPreview
+          title={card.title}
+          cost={card.cost}
+          cardType={card.card_type}
+          supertype={card.supertype}
+          subtypes={card.subtypes}
+          rarity={card.rarity}
+          colorIdentity={card.color_identity}
+          rulesText={card.rules_text}
+          flavorText={card.flavor_text}
+          power={card.power}
+          toughness={card.toughness}
+          loyalty={card.loyalty}
+          defense={card.defense}
+          artistCredit={card.artist_credit}
+          artUrl={card.art_url}
+          artPosition={card.art_position as ArtPosition}
+          frameStyle={card.frame_style as FrameStyle}
+        />
+      </Link>
+      <div className="flex items-center justify-between gap-2 text-xs">
+        <span className="truncate text-muted">
+          {card.visibility === "public" ? "Public" : "Unlisted"}
+        </span>
+        <span className="inline-flex items-center gap-1 text-muted">
+          <Heart className="h-3 w-3" aria-hidden />
+          {card.likes_count}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function NotConfigured({ username }: { username: string }) {
+  return (
+    <div className="mx-auto w-full max-w-2xl px-4 py-16 sm:px-6 lg:px-8">
+      <SurfaceCard className="flex flex-col gap-3 p-8 text-center">
+        <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground">
+          @{username}
+        </h1>
+        <p className="text-sm leading-6 text-muted">
+          Supabase isn&apos;t configured for this deployment, so profile pages
+          aren&apos;t loading real data yet.
+        </p>
+      </SurfaceCard>
     </div>
   );
 }

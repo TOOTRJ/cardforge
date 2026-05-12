@@ -11,10 +11,33 @@ import {
   type CardTemplate,
   type CardWithLineage,
   type CardWithOwner,
-  type GameSystem,
+  type CardType,
   type ColorIdentity,
+  type GameSystem,
+  type Profile,
+  type Rarity,
 } from "@/types/card";
 import type { Card as CardRow } from "@/types/supabase";
+
+// Composed shape: card + owner profile + like count. Used by the gallery
+// and any "card tile" listing.
+export type CardWithStats = CardWithOwner & {
+  likes_count: number;
+};
+
+export type ProfileWithStats = Profile & {
+  public_cards_count: number;
+};
+
+export type PublicCardListOptions = {
+  limit?: number;
+  offset?: number;
+  cardType?: CardType;
+  rarity?: Rarity;
+  search?: string;
+  sort?: "recent" | "popular";
+  visibility?: "public" | "unlisted" | "all-shareable";
+};
 
 // ---------------------------------------------------------------------------
 // Narrowing helper — every query returns rows whose enum-typed text columns
@@ -333,6 +356,233 @@ export async function isSlugTakenForCurrentUser(
     }
     const { count, error } = await query;
     if (error) return false;
+    return (count ?? 0) > 0;
+  } catch {
+    return false;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Gallery + profile reads — Phase 6.
+//
+// PostgREST can't auto-discover the cards↔profiles relationship (owner_id
+// references auth.users, not profiles) and aggregates across relationships
+// are awkward to ORDER BY. Each query batches a follow-up fetch and stitches
+// in TypeScript so we keep the SQL straightforward and RLS-safe.
+// ---------------------------------------------------------------------------
+
+const SHAREABLE_VISIBILITIES = ["public", "unlisted"] as const;
+
+async function attachStats(
+  rows: CardRow[],
+  sort: "recent" | "popular" = "recent",
+): Promise<CardWithStats[]> {
+  if (rows.length === 0) return [];
+
+  const supabase = await createClient();
+  const cardIds = rows.map((r) => r.id);
+  const ownerIds = Array.from(new Set(rows.map((r) => r.owner_id)));
+
+  const [likesResult, ownersResult] = await Promise.all([
+    supabase.from("card_likes").select("card_id").in("card_id", cardIds),
+    supabase
+      .from("profiles")
+      .select("id, username, display_name, avatar_url")
+      .in("id", ownerIds),
+  ]);
+
+  const likeCount = new Map<string, number>();
+  for (const row of likesResult.data ?? []) {
+    likeCount.set(row.card_id, (likeCount.get(row.card_id) ?? 0) + 1);
+  }
+
+  const ownerById = new Map<string, CardWithOwner["owner"]>();
+  for (const row of ownersResult.data ?? []) {
+    ownerById.set(row.id, {
+      username: row.username,
+      display_name: row.display_name,
+      avatar_url: row.avatar_url,
+    });
+  }
+
+  const enriched: CardWithStats[] = rows.map((row) => ({
+    ...narrowCard(row),
+    owner: ownerById.get(row.owner_id) ?? null,
+    likes_count: likeCount.get(row.id) ?? 0,
+  }));
+
+  if (sort === "popular") {
+    enriched.sort((a, b) => {
+      if (b.likes_count !== a.likes_count) return b.likes_count - a.likes_count;
+      return (
+        new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+      );
+    });
+  }
+
+  return enriched;
+}
+
+/**
+ * Public gallery query with filters, search, and sort. RLS limits results
+ * to readable rows; we layer "public" (default) or "all-shareable"
+ * (public + unlisted) on top.
+ */
+export async function listPublicCardsRich(
+  options: PublicCardListOptions = {},
+): Promise<CardWithStats[]> {
+  if (!isSupabaseConfigured()) return [];
+
+  const {
+    limit = 24,
+    offset = 0,
+    cardType,
+    rarity,
+    search,
+    sort = "recent",
+    visibility = "public",
+  } = options;
+
+  try {
+    const supabase = await createClient();
+    let query = supabase
+      .from("cards")
+      .select("*")
+      .order("updated_at", { ascending: false });
+
+    if (visibility === "all-shareable") {
+      query = query.in(
+        "visibility",
+        SHAREABLE_VISIBILITIES as unknown as string[],
+      );
+    } else {
+      query = query.eq("visibility", visibility);
+    }
+
+    if (cardType) {
+      query = query.eq("card_type", cardType);
+    }
+    if (rarity) {
+      query = query.eq("rarity", rarity);
+    }
+    if (search?.trim()) {
+      const escaped = search.trim().replace(/[%_]/g, "\\$&");
+      query = query.or(
+        `title.ilike.%${escaped}%,rules_text.ilike.%${escaped}%,flavor_text.ilike.%${escaped}%`,
+      );
+    }
+
+    // When sorting by popularity we fetch a larger window so the in-process
+    // re-sort has more candidates to work with.
+    const fetchLimit = sort === "popular" ? Math.max(limit * 3, 60) : limit;
+    query = query.range(offset, offset + fetchLimit - 1);
+
+    const { data, error } = await query;
+    if (error || !data) return [];
+
+    const enriched = await attachStats(data, sort);
+    return enriched.slice(0, limit);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * All public + unlisted cards owned by a given user. Used by the profile
+ * page. RLS already filters out private cards belonging to others; we
+ * keep that filter explicit in the query for clarity.
+ */
+export async function listPublicCardsByOwner(
+  ownerId: string,
+  options: { limit?: number; offset?: number } = {},
+): Promise<CardWithStats[]> {
+  if (!isSupabaseConfigured()) return [];
+  const { limit = 24, offset = 0 } = options;
+
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("cards")
+      .select("*")
+      .eq("owner_id", ownerId)
+      .in("visibility", SHAREABLE_VISIBILITIES as unknown as string[])
+      .order("updated_at", { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (!data || data.length === 0) return [];
+    return attachStats(data, "recent");
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Look up a profile by username plus a count of their public cards.
+ * Returns null if the profile doesn't exist.
+ */
+export async function getProfileByUsername(
+  username: string,
+): Promise<ProfileWithStats | null> {
+  if (!isSupabaseConfigured()) return null;
+  if (!username) return null;
+
+  try {
+    const supabase = await createClient();
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("username", username)
+      .maybeSingle();
+    if (!profile) return null;
+
+    const { count } = await supabase
+      .from("cards")
+      .select("id", { count: "exact", head: true })
+      .eq("owner_id", profile.id)
+      .in("visibility", SHAREABLE_VISIBILITIES as unknown as string[]);
+
+    return {
+      ...profile,
+      public_cards_count: count ?? 0,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Number of likes on a single card. Used on the public detail page.
+ */
+export async function countCardLikes(cardId: string): Promise<number> {
+  if (!isSupabaseConfigured()) return 0;
+  try {
+    const supabase = await createClient();
+    const { count } = await supabase
+      .from("card_likes")
+      .select("id", { count: "exact", head: true })
+      .eq("card_id", cardId);
+    return count ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Whether the given user has liked the given card. Returns false for
+ * anonymous viewers.
+ */
+export async function hasUserLikedCard(
+  userId: string | null | undefined,
+  cardId: string,
+): Promise<boolean> {
+  if (!isSupabaseConfigured() || !userId) return false;
+  try {
+    const supabase = await createClient();
+    const { count } = await supabase
+      .from("card_likes")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("card_id", cardId);
     return (count ?? 0) > 0;
   } catch {
     return false;

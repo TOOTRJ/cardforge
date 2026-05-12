@@ -61,6 +61,35 @@ export type Database = {
           },
         ];
       };
+      card_likes: {
+        Row: {
+          card_id: string;
+          created_at: string;
+          id: string;
+          user_id: string;
+        };
+        Insert: {
+          card_id: string;
+          created_at?: string;
+          id?: string;
+          user_id: string;
+        };
+        Update: {
+          card_id?: string;
+          created_at?: string;
+          id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "card_likes_card_id_fkey";
+            columns: ["card_id"];
+            isOneToOne: false;
+            referencedRelation: "cards";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       card_templates: {
         Row: {
           config: Json;
@@ -426,3 +455,6 @@ export type CardUpdate = TablesUpdate<"cards">;
 
 export type CardExport = Tables<"card_exports">;
 export type CardExportInsert = TablesInsert<"card_exports">;
+
+export type CardLike = Tables<"card_likes">;
+export type CardLikeInsert = TablesInsert<"card_likes">;

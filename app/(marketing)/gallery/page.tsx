@@ -1,37 +1,73 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Search } from "lucide-react";
+import { Heart, Sparkles } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
-import { CardPreviewPlaceholder } from "@/components/cards/card-preview-placeholder";
+import { CardPreview } from "@/components/cards/card-preview";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import type { CardPreview } from "@/types";
+import { EmptyState } from "@/components/ui/empty-state";
+import { GalleryFilters } from "@/components/gallery/gallery-filters";
+import { listPublicCardsRich } from "@/lib/cards/queries";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
+import {
+  CARD_TYPE_VALUES,
+  RARITY_VALUES,
+  type ArtPosition,
+  type CardType,
+  type FrameStyle,
+  type Rarity,
+} from "@/types/card";
 
 export const metadata: Metadata = {
   title: "Gallery",
   description: "Browse public custom cards forged by the CardForge community.",
 };
 
-const galleryCards: CardPreview[] = [
-  { id: "1", slug: "emberbound-wyrm", title: "Emberbound Wyrm", cost: "{3}{R}{R}", cardType: "creature", rarity: "mythic", colorIdentity: "red", artistCredit: "Anya Vale" },
-  { id: "2", slug: "tideglass-oracle", title: "Tideglass Oracle", cost: "{1}{U}{U}", cardType: "creature", rarity: "rare", colorIdentity: "blue", artistCredit: "K. Mori" },
-  { id: "3", slug: "sablethorn-pact", title: "Sablethorn Pact", cost: "{2}{B}{B}", cardType: "enchantment", rarity: "rare", colorIdentity: "black", artistCredit: "Lior Zane" },
-  { id: "4", slug: "verdant-reliquary", title: "Verdant Reliquary", cost: "{1}{G}", cardType: "artifact", rarity: "uncommon", colorIdentity: "green", artistCredit: "P. Rook" },
-  { id: "5", slug: "stormbound-herald", title: "Stormbound Herald", cost: "{2}{U}{R}", cardType: "creature", rarity: "mythic", colorIdentity: "multicolor", artistCredit: "M. Ito" },
-  { id: "6", slug: "quiet-pilgrim", title: "Quiet Pilgrim", cost: "{W}", cardType: "creature", rarity: "common", colorIdentity: "white", artistCredit: "Anya Vale" },
-  { id: "7", slug: "shardlight-rite", title: "Shardlight Rite", cost: "{X}{W}", cardType: "spell", rarity: "rare", colorIdentity: "white", artistCredit: "K. Mori" },
-  { id: "8", slug: "duskwater-haven", title: "Duskwater Haven", cost: "—", cardType: "land", rarity: "uncommon", colorIdentity: "colorless", artistCredit: "Lior Zane" },
-];
+type GalleryPageProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
 
-const filters = ["All", "Creature", "Spell", "Artifact", "Enchantment", "Land", "Token"];
+function firstString(value: string | string[] | undefined): string | null {
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value ?? null;
+}
 
-export default function GalleryPage() {
+export default async function GalleryPage({ searchParams }: GalleryPageProps) {
+  const params = await searchParams;
+  const cardTypeParam = firstString(params.type);
+  const rarityParam = firstString(params.rarity);
+  const searchParam = firstString(params.q);
+  const sortParam = firstString(params.sort);
+
+  const cardType = (CARD_TYPE_VALUES as readonly string[]).includes(
+    cardTypeParam ?? "",
+  )
+    ? (cardTypeParam as CardType)
+    : undefined;
+  const rarity = (RARITY_VALUES as readonly string[]).includes(
+    rarityParam ?? "",
+  )
+    ? (rarityParam as Rarity)
+    : undefined;
+  const sort: "recent" | "popular" =
+    sortParam === "popular" ? "popular" : "recent";
+
+  const configured = isSupabaseConfigured();
+  const cards = configured
+    ? await listPublicCardsRich({
+        cardType,
+        rarity,
+        search: searchParam ?? undefined,
+        sort,
+        limit: 24,
+      })
+    : [];
+
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
       <PageHeader
         eyebrow="Public"
         title="Community gallery"
-        description="Discover custom cards forged by the CardForge community. Search, filter, and remix your favorites once accounts ship in a later phase."
+        description="Discover custom cards forged by the CardForge community. Filter, sort, and click into any card to view, like, or remix."
         actions={
           <Button asChild>
             <Link href="/create">Forge your own</Link>
@@ -39,39 +75,94 @@ export default function GalleryPage() {
         }
       />
 
-      <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative w-full sm:max-w-md">
-          <Search
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-subtle"
-            aria-hidden
-          />
-          <input
-            type="search"
-            placeholder="Search cards (placeholder)"
-            disabled
-            className="h-10 w-full rounded-md border border-border bg-surface pl-9 pr-3 text-sm text-muted placeholder:text-subtle focus:outline-none disabled:cursor-not-allowed disabled:opacity-70"
-          />
-        </div>
-
-        <div className="flex flex-wrap gap-1.5">
-          {filters.map((filter) => (
-            <Badge key={filter} variant={filter === "All" ? "primary" : "outline"}>
-              {filter}
-            </Badge>
-          ))}
-        </div>
+      <div className="mt-8">
+        <GalleryFilters />
       </div>
 
-      <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {galleryCards.map((card) => (
+      <div className="mt-10">
+        {!configured ? (
+          <EmptyState
+            icon={Sparkles}
+            title="Gallery is offline"
+            description="Supabase isn't configured for this deployment. The gallery will populate once env vars land."
+          />
+        ) : cards.length === 0 ? (
+          <EmptyState
+            icon={Sparkles}
+            title="No cards match"
+            description={
+              cardType || rarity || searchParam
+                ? "Try clearing the filters above, or be the first to publish a card that matches."
+                : "Be the first to publish a public card — it'll show up here for everyone."
+            }
+            action={
+              <Button asChild>
+                <Link href="/create">Forge your own</Link>
+              </Button>
+            }
+          />
+        ) : (
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {cards.map((card) => (
+              <GalleryCardTile key={card.id} card={card} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function GalleryCardTile({
+  card,
+}: {
+  card: Awaited<ReturnType<typeof listPublicCardsRich>>[number];
+}) {
+  const ownerLabel =
+    card.owner?.username ?? card.owner?.display_name ?? "Anonymous forger";
+
+  return (
+    <div className="flex flex-col gap-2">
+      <Link
+        href={`/card/${card.slug}`}
+        className="block rounded-frame focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        aria-label={`Open ${card.title}`}
+      >
+        <CardPreview
+          title={card.title}
+          cost={card.cost}
+          cardType={card.card_type}
+          supertype={card.supertype}
+          subtypes={card.subtypes}
+          rarity={card.rarity}
+          colorIdentity={card.color_identity}
+          rulesText={card.rules_text}
+          flavorText={card.flavor_text}
+          power={card.power}
+          toughness={card.toughness}
+          loyalty={card.loyalty}
+          defense={card.defense}
+          artistCredit={card.artist_credit}
+          artUrl={card.art_url}
+          artPosition={card.art_position as ArtPosition}
+          frameStyle={card.frame_style as FrameStyle}
+        />
+      </Link>
+      <div className="flex items-center justify-between gap-2 text-xs">
+        {card.owner?.username ? (
           <Link
-            key={card.id}
-            href={`/card/${card.slug}`}
-            className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-frame"
+            href={`/profile/${card.owner.username}`}
+            className="truncate font-mono text-muted transition-colors hover:text-foreground"
           >
-            <CardPreviewPlaceholder card={card} />
+            @{card.owner.username}
           </Link>
-        ))}
+        ) : (
+          <span className="truncate text-muted">{ownerLabel}</span>
+        )}
+        <span className="inline-flex items-center gap-1 text-muted">
+          <Heart className="h-3 w-3" aria-hidden />
+          {card.likes_count}
+        </span>
       </div>
     </div>
   );
