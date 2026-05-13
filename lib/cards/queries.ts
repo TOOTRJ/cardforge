@@ -466,9 +466,19 @@ export async function listPublicCardsRich(
       query = query.eq("rarity", rarity);
     }
     if (search?.trim()) {
-      const escaped = search.trim().replace(/[%_]/g, "\\$&");
+      // PostgREST's `.or(...)` argument is a structural string: commas
+      // separate filter terms, parens group, colons split column/op/value,
+      // and double-quotes delimit values that contain those structural
+      // characters. We escape SQL LIKE wildcards (% and _) so a user can't
+      // turn a search into a wildcard match, then wrap the value in
+      // double-quotes and backslash-escape any literal quotes so that
+      // structural chars in the input don't break the filter expression.
+      // RLS is still the real authorization gate, but a clean filter
+      // expression avoids runtime parse errors and confusing results.
+      const sqlEscaped = search.trim().replace(/[%_]/g, "\\$&");
+      const quoted = `"%${sqlEscaped.replace(/"/g, '\\"')}%"`;
       query = query.or(
-        `title.ilike.%${escaped}%,rules_text.ilike.%${escaped}%,flavor_text.ilike.%${escaped}%`,
+        `title.ilike.${quoted},rules_text.ilike.${quoted},flavor_text.ilike.${quoted}`,
       );
     }
 

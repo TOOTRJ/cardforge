@@ -48,10 +48,19 @@ export async function GET(
   let card;
   try {
     const supabase = await createClient();
+    // Defense-in-depth: RLS already blocks anonymous reads of private cards,
+    // but the OG endpoint is the canonical og:image target — once a URL is
+    // public it gets crawled / cached by social platforms. If a card was
+    // public, got indexed, then flipped to private, we don't want this route
+    // (or its CDN tier) to keep rendering the private content. Restrict the
+    // query to publicly-shareable visibility states so the *owner* hitting
+    // this URL from their own session still can't render a private card's
+    // OG image.
     const { data } = await supabase
       .from("cards")
       .select("*")
       .eq("id", id)
+      .in("visibility", ["public", "unlisted"])
       .maybeSingle();
     card = data;
   } catch {

@@ -44,11 +44,14 @@ function extensionFromMime(mime: string): string {
  *
  * The bucket is public-read (no SELECT policy needed) so the returned
  * `publicUrl` works in any browser without a signed link.
+ *
+ * The user id is derived from the Supabase session inside the function, NOT
+ * accepted as an argument from the caller. This removes the "client passes
+ * an id" foot-gun even though RLS already binds the upload to auth.uid() —
+ * a caller can't accidentally (or maliciously) point uploads at someone
+ * else's prefix.
  */
-export async function uploadCardArt(
-  userId: string,
-  file: File,
-): Promise<UploadArtResult> {
+export async function uploadCardArt(file: File): Promise<UploadArtResult> {
   if (!ALLOWED_MIME_TYPES.includes(file.type as (typeof ALLOWED_MIME_TYPES)[number])) {
     return {
       ok: false,
@@ -63,6 +66,17 @@ export async function uploadCardArt(
   }
 
   const supabase = createClient();
+
+  // Derive the owner from the actual session. If the user signed out in
+  // another tab between mounting the uploader and dropping the file, we
+  // bail with a friendly error instead of generating a path that RLS will
+  // reject.
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError || !userData.user) {
+    return { ok: false, error: "Sign in to upload artwork." };
+  }
+  const userId = userData.user.id;
+
   const ext = extensionFromMime(file.type);
   const id =
     typeof crypto !== "undefined" && "randomUUID" in crypto

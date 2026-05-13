@@ -305,6 +305,16 @@ export async function updateCardAction(
   if (existing.slug !== row.slug) {
     revalidatePath(`/card/${existing.slug}`);
   }
+  // If visibility moved out of (or into) a shareable state, flush the OG
+  // image route too. The route filters visibility at query time (defense in
+  // depth) but the CDN cache layer hangs onto the rendered PNG for up to
+  // s-maxage seconds; revalidating drops that cache so a public-→-private
+  // flip immediately stops serving the old image to social scrapers.
+  const visibilityChanged =
+    update.visibility !== undefined && update.visibility !== existing.visibility;
+  if (visibilityChanged) {
+    revalidatePath(`/api/cards/${row.id}/og`);
+  }
 
   return { ok: true, cardId: row.id, slug: row.slug };
 }

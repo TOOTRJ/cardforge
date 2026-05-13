@@ -17,6 +17,48 @@ export type Database = {
   };
   public: {
     Tables: {
+      card_ai_calls: {
+        Row: {
+          action: string;
+          created_at: string;
+          id: string;
+          user_id: string;
+        };
+        Insert: {
+          action: string;
+          created_at?: string;
+          id?: string;
+          user_id: string;
+        };
+        Update: {
+          action?: string;
+          created_at?: string;
+          id?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      scryfall_calls: {
+        Row: {
+          action: string;
+          created_at: string;
+          id: string;
+          user_id: string;
+        };
+        Insert: {
+          action: string;
+          created_at?: string;
+          id?: string;
+          user_id: string;
+        };
+        Update: {
+          action?: string;
+          created_at?: string;
+          id?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       card_exports: {
         Row: {
           card_id: string;
@@ -530,6 +572,12 @@ export type CardUpdate = TablesUpdate<"cards">;
 
 export type CardExport = Tables<"card_exports">;
 export type CardExportInsert = TablesInsert<"card_exports">;
+
+export type CardAiCall = Tables<"card_ai_calls">;
+export type CardAiCallInsert = TablesInsert<"card_ai_calls">;
+
+export type ScryfallCall = Tables<"scryfall_calls">;
+export type ScryfallCallInsert = TablesInsert<"scryfall_calls">;
 
 export type CardLike = Tables<"card_likes">;
 export type CardLikeInsert = TablesInsert<"card_likes">;

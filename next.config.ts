@@ -19,13 +19,28 @@ const nextConfig: NextConfig = {
   // (Satori-compatible, no remote config pain) but configuring the
   // remotePattern here makes a future migration to <Image /> a one-line
   // swap.
+  //
+  // We scope to the three buckets we own explicitly instead of the broad
+  // `/storage/v1/object/public/**`. If someone later creates a new public
+  // bucket via Supabase Studio (outside the checked-in migrations), it
+  // won't automatically become an allowed remote pattern.
   images: {
     remotePatterns: supabaseHostname
       ? [
           {
             protocol: "https",
             hostname: supabaseHostname,
-            pathname: "/storage/v1/object/public/**",
+            pathname: "/storage/v1/object/public/card-art/**",
+          },
+          {
+            protocol: "https",
+            hostname: supabaseHostname,
+            pathname: "/storage/v1/object/public/card-exports/**",
+          },
+          {
+            protocol: "https",
+            hostname: supabaseHostname,
+            pathname: "/storage/v1/object/public/set-covers/**",
           },
         ]
       : [],
