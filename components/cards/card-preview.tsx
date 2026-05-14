@@ -1,8 +1,13 @@
-import type { ReactNode } from "react";
+"use client";
+
+import { useState, type ReactNode } from "react";
+import { RotateCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ManaCostGlyphs } from "@/components/cards/mana-cost-glyphs";
 import type {
   ArtPosition,
+  CardBackFace,
+  CardFinish,
   CardType,
   ColorIdentity,
   FrameStyle,
@@ -33,12 +38,21 @@ export type CardPreviewData = {
   artUrl?: string | null;
   artPosition?: ArtPosition;
   frameStyle?: FrameStyle;
+  /** Optional back-face content. When set, the preview renders a flip
+   *  button in the corner and supports a 3D flip animation between the
+   *  two faces. */
+  backFace?: CardBackFace | null;
 };
 
 type CardPreviewProps = CardPreviewData & {
   className?: string;
   /** When true, suppress hover lift / cursor cues (used inside the editor). */
   staticInEditor?: boolean;
+  /** When provided, the displayed face is controlled by the parent and
+   *  the flip button calls `onFaceChange`. When omitted, the preview
+   *  manages its own face state via the flip button. */
+  face?: "front" | "back";
+  onFaceChange?: (next: "front" | "back") => void;
 };
 
 // ---------------------------------------------------------------------------
@@ -57,8 +71,6 @@ const COLOR_GRADIENT: Record<ColorIdentity, string> = {
   colorless: "from-slate-500/35 via-slate-400/15",
 };
 
-// Halo colors used behind the entire card frame — softer, larger radius
-// than the in-art gradient.
 const COLOR_HALO: Record<ColorIdentity, string> = {
   white:
     "radial-gradient(ellipse 120% 80% at 50% 0%, color-mix(in oklab, #f5e6b8 30%, transparent), transparent 60%)",
@@ -95,9 +107,6 @@ const ACCENT_STYLE: Record<NonNullable<FrameStyle["accent"]>, string> = {
   neutral: "border-border-strong/80",
 };
 
-// Simple set of keyword abilities we italicize in the rules text. Not
-// exhaustive — just enough to make the preview feel typeset rather than
-// raw. Lowercased on match.
 const KEYWORD_ABILITIES = new Set([
   "flying",
   "trample",
@@ -132,7 +141,11 @@ function buildTypeLine({
   supertype,
   cardType,
   subtypes,
-}: Pick<CardPreviewData, "supertype" | "cardType" | "subtypes">): string {
+}: {
+  supertype: string | null | undefined;
+  cardType: CardType | null | undefined;
+  subtypes: string[] | undefined;
+}): string {
   const left = [supertype, cardType ? capitalize(cardType) : null]
     .filter(Boolean)
     .join(" ");
@@ -150,12 +163,39 @@ function showsPowerToughness(cardType: CardType | null | undefined): boolean {
 }
 
 function showsLoyalty(rarity: Rarity | null | undefined): boolean {
-  // Reserved for planeswalker-like future templates; off by default.
   return rarity === "mythic";
 }
 
 // ---------------------------------------------------------------------------
+// Per-face data — the slice of props that differs between the front and
+// the back of a DFC. Built once per face inside CardPreview, then passed
+// into InnerCardPanel.
+// ---------------------------------------------------------------------------
+
+type FaceData = {
+  title: string | null;
+  cost: string | null;
+  cardType: CardType | null;
+  supertype: string | null;
+  subtypes: string[];
+  rulesText: string | null;
+  flavorText: string | null;
+  power: string | null;
+  toughness: string | null;
+  loyalty: string | null;
+  defense: string | null;
+  artistCredit: string | null;
+  artUrl: string | null;
+  artPosition: ArtPosition;
+};
+
+// ---------------------------------------------------------------------------
 // CardPreview — canonical visual component used by the creator + gallery.
+//
+// When `backFace` is provided, the inner panel is rendered twice inside a
+// CSS 3D flip container with a flip button in the corner. When omitted,
+// the back-face DOM never mounts and the component behaves exactly as
+// before.
 // ---------------------------------------------------------------------------
 
 export function CardPreview({
@@ -176,30 +216,70 @@ export function CardPreview({
   artUrl,
   artPosition,
   frameStyle,
+  backFace,
+  face,
+  onFaceChange,
   className,
   staticInEditor = false,
 }: CardPreviewProps) {
-  const safeTitle = title?.trim() || "Untitled Card";
-  const showCost = cardType !== "land" && cost?.trim();
-  const showPT = showsPowerToughness(cardType) && (power || toughness);
-  const showLoyalty = showsLoyalty(rarity) && Boolean(loyalty);
-  const showDefense = Boolean(defense);
-  const gradient = pickGradient(colorIdentity);
   const halo = pickHalo(colorIdentity);
-  const focalX = clamp(artPosition?.focalX ?? 0.5, 0, 1);
-  const focalY = clamp(artPosition?.focalY ?? 0.5, 0, 1);
-  const scale = clamp(artPosition?.scale ?? 1, 0.5, 4);
 
   const borderClass =
     BORDER_STYLE[frameStyle?.border ?? "thin"] +
     " " +
     ACCENT_STYLE[frameStyle?.accent ?? "neutral"];
 
-  const isMythicFoil = rarity === "mythic" || rarity === "rare";
-  const accentTitleColor =
-    rarity === "mythic" || rarity === "rare"
-      ? RARITY_COLOR[rarity]
-      : undefined;
+  const finish: CardFinish = frameStyle?.finish ?? "regular";
+  const isFoil = finish === "foil";
+  const isEtched = finish === "etched";
+
+  // Build the two face datasets up front. The back is only computed if a
+  // backFace prop was provided; missing fields fall through to null /
+  // empty so the InnerCardPanel never crashes on undefined.
+  const frontFace: FaceData = {
+    title: title ?? null,
+    cost: cost ?? null,
+    cardType: cardType ?? null,
+    supertype: supertype ?? null,
+    subtypes: subtypes ?? [],
+    rulesText: rulesText ?? null,
+    flavorText: flavorText ?? null,
+    power: power ?? null,
+    toughness: toughness ?? null,
+    loyalty: loyalty ?? null,
+    defense: defense ?? null,
+    artistCredit: artistCredit ?? null,
+    artUrl: artUrl ?? null,
+    artPosition: artPosition ?? {},
+  };
+
+  const backFaceData: FaceData | null = backFace
+    ? {
+        title: backFace.title ?? null,
+        cost: backFace.cost ?? null,
+        cardType: backFace.card_type ?? null,
+        supertype: backFace.supertype ?? null,
+        subtypes: backFace.subtypes ?? [],
+        rulesText: backFace.rules_text ?? null,
+        flavorText: backFace.flavor_text ?? null,
+        power: backFace.power ?? null,
+        toughness: backFace.toughness ?? null,
+        loyalty: backFace.loyalty ?? null,
+        defense: backFace.defense ?? null,
+        artistCredit: backFace.artist_credit ?? null,
+        artUrl: backFace.art_url ?? null,
+        artPosition: backFace.art_position ?? {},
+      }
+    : null;
+
+  // Face state: controlled when `face` is provided, internal otherwise.
+  const [internalFace, setInternalFace] = useState<"front" | "back">("front");
+  const currentFace = face ?? internalFace;
+  const toggleFace = () => {
+    const next = currentFace === "front" ? "back" : "front";
+    if (onFaceChange) onFaceChange(next);
+    else setInternalFace(next);
+  };
 
   return (
     <div
@@ -210,56 +290,271 @@ export function CardPreview({
         className,
       )}
     >
-      {/* Ambient color halo — sits between the outer frame and inner card
-          and tints the whole composition by the card's color identity. */}
+      {/* Ambient color halo — shared by both faces. */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 opacity-90"
         style={{ background: halo }}
       />
 
-      {/* Optional mythic/rare foil shimmer — a slow conic sweep gated by
-          mix-blend so it doesn't blow out the underlying colors. Static in
-          editor mode to keep typing focus on the form. */}
-      {isMythicFoil ? (
+      {/* Foil shimmer overlay — shared. */}
+      {isFoil ? (
         <div
           aria-hidden
           className={cn(
-            "pointer-events-none absolute inset-0 mix-blend-overlay opacity-30",
+            "pointer-events-none absolute inset-0 z-30 mix-blend-overlay opacity-35",
             staticInEditor ? "" : "animate-[card-shimmer_6s_linear_infinite]",
           )}
           style={{
             background:
-              rarity === "mythic"
-                ? "conic-gradient(from 0deg, transparent, rgba(255,200,120,0.55), transparent 40%, rgba(255,255,255,0.35) 60%, transparent 80%)"
-                : "conic-gradient(from 0deg, transparent, rgba(255,235,180,0.4), transparent 50%)",
+              "conic-gradient(from 0deg, transparent, rgba(255,200,120,0.55), transparent 30%, rgba(255,255,255,0.45) 50%, transparent 70%, rgba(190,170,255,0.5) 85%, transparent 100%)",
           }}
         />
       ) : null}
 
-      <div className="relative flex h-full flex-col gap-2 rounded-card border border-border/60 bg-background/40 p-2 backdrop-blur-sm">
-        {/* Title bar */}
-        <div className="flex items-center justify-between gap-2 rounded-md border border-border/40 bg-surface/80 px-3 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-          <span
-            className="truncate font-display text-base font-semibold tracking-wide text-foreground"
-            style={accentTitleColor ? { color: accentTitleColor } : undefined}
-            title={safeTitle}
-          >
-            {safeTitle}
-          </span>
-          {showCost ? <ManaCostGlyphs cost={cost} size="sm" /> : null}
-        </div>
+      {/* Etched overlay — shared. */}
+      {isEtched ? (
+        <>
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-2 z-20 rounded-card border-2"
+            style={{
+              borderImage:
+                "linear-gradient(135deg, #f3d57c 0%, #d4a64a 50%, #f3d57c 100%) 1",
+              borderImageSlice: 1,
+            }}
+          />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 z-10 mix-blend-overlay opacity-20"
+            style={{
+              backgroundImage:
+                "repeating-linear-gradient(45deg, rgba(255,255,255,0.18) 0 1px, transparent 1px 6px), repeating-linear-gradient(-45deg, rgba(255,255,255,0.12) 0 1px, transparent 1px 6px)",
+            }}
+          />
+        </>
+      ) : null}
 
-        {/* Art well */}
+      {/* Flip container.
+          - Single-face cards: render InnerCardPanel directly to keep the
+            DOM stable (no extra 3D layer).
+          - DFC: wrap both faces in a CSS 3D rotor that flips on
+            currentFace change.
+          We always set perspective on the outer card so a future flip
+          doesn't snap into perspective on first click. */}
+      {backFaceData ? (
+        <div
+          className="relative h-full w-full"
+          style={{ perspective: "1200px" }}
+        >
+          <div
+            className="relative h-full w-full transition-transform duration-500"
+            style={{
+              transformStyle: "preserve-3d",
+              transform:
+                currentFace === "back" ? "rotateY(180deg)" : "rotateY(0deg)",
+            }}
+          >
+            <div
+              className="absolute inset-0"
+              style={{ backfaceVisibility: "hidden" }}
+              aria-hidden={currentFace === "back"}
+            >
+              <InnerCardPanel
+                face={frontFace}
+                rarity={rarity ?? null}
+                colorIdentity={colorIdentity ?? []}
+                finish={finish}
+              />
+            </div>
+            <div
+              className="absolute inset-0"
+              style={{
+                backfaceVisibility: "hidden",
+                transform: "rotateY(180deg)",
+              }}
+              aria-hidden={currentFace === "front"}
+            >
+              <InnerCardPanel
+                face={backFaceData}
+                rarity={rarity ?? null}
+                colorIdentity={colorIdentity ?? []}
+                finish={finish}
+              />
+            </div>
+          </div>
+        </div>
+      ) : (
+        <InnerCardPanel
+          face={frontFace}
+          rarity={rarity ?? null}
+          colorIdentity={colorIdentity ?? []}
+          finish={finish}
+        />
+      )}
+
+      {/* Flip button — only when a back face is present. */}
+      {backFaceData ? (
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            event.preventDefault();
+            toggleFace();
+          }}
+          aria-label={
+            currentFace === "front" ? "Flip to back face" : "Flip to front face"
+          }
+          aria-pressed={currentFace === "back"}
+          className="absolute bottom-3 right-3 z-40 flex h-8 w-8 items-center justify-center rounded-full border border-border/80 bg-background/85 text-muted shadow-lg transition-colors hover:border-border-strong hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+        >
+          <RotateCw className="h-4 w-4" aria-hidden />
+        </button>
+      ) : null}
+
+      <style>{shimmerKeyframes}</style>
+    </div>
+  );
+}
+
+const shimmerKeyframes = `@keyframes card-shimmer { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`;
+
+// ---------------------------------------------------------------------------
+// InnerCardPanel — the inner rounded card body. Renders the 5 sections
+// (title bar, art well, type line, rules + flavor, footer) for one face.
+// Shared finish/halo/foil overlays live on CardPreview's outer wrapper.
+// ---------------------------------------------------------------------------
+
+function InnerCardPanel({
+  face,
+  rarity,
+  colorIdentity,
+  finish,
+}: {
+  face: FaceData;
+  rarity: Rarity | null;
+  colorIdentity: ColorIdentity[];
+  finish: CardFinish;
+}) {
+  const safeTitle = face.title?.trim() || "Untitled Card";
+  const showCost = face.cardType !== "land" && face.cost?.trim();
+  const showPT =
+    showsPowerToughness(face.cardType) && (face.power || face.toughness);
+  const showLoyalty = showsLoyalty(rarity) && Boolean(face.loyalty);
+  const showDefense = Boolean(face.defense);
+  const gradient = pickGradient(colorIdentity);
+  const focalX = clamp(face.artPosition?.focalX ?? 0.5, 0, 1);
+  const focalY = clamp(face.artPosition?.focalY ?? 0.5, 0, 1);
+  const scale = clamp(face.artPosition?.scale ?? 1, 0.5, 4);
+
+  const isBorderless = finish === "borderless";
+  const isShowcase = finish === "showcase";
+
+  const accentTitleColor =
+    rarity === "mythic" || rarity === "rare"
+      ? RARITY_COLOR[rarity]
+      : undefined;
+
+  const titleBarClass = isBorderless
+    ? "border border-white/10 bg-background/35 backdrop-blur-md"
+    : "border border-border/40 bg-surface/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]";
+  const typeLineClass = isBorderless
+    ? "border border-white/10 bg-background/35 backdrop-blur-md text-foreground/85"
+    : "border border-border/40 bg-surface/80 text-muted shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]";
+  const rulesPanelClass = isBorderless
+    ? "border border-white/10 bg-background/60 backdrop-blur-md text-foreground"
+    : "border border-border/40 bg-surface/60 text-foreground/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]";
+  const footerTextClass = isBorderless ? "text-foreground/80" : "text-subtle";
+
+  return (
+    <div className="relative flex h-full flex-col gap-2 overflow-hidden rounded-card border border-border/60 bg-background/40 p-2 backdrop-blur-sm">
+      {/* Borderless: full-bleed art sits behind every section. */}
+      {isBorderless ? (
+        <>
+          <div
+            aria-hidden
+            className={cn(
+              "absolute inset-0 z-0 overflow-hidden bg-linear-to-b to-background/80",
+              gradient,
+            )}
+          >
+            {face.artUrl ? (
+              <ArtImage
+                src={face.artUrl}
+                focalX={focalX}
+                focalY={focalY}
+                scale={scale}
+                alt={`Artwork for ${safeTitle}`}
+              />
+            ) : (
+              <>
+                <div className="absolute inset-0 bg-grid opacity-25" />
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    background:
+                      "radial-gradient(circle at 50% 45%, color-mix(in oklab, var(--color-primary) 18%, transparent), transparent 60%)",
+                  }}
+                />
+              </>
+            )}
+          </div>
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 z-0"
+            style={{
+              background:
+                "linear-gradient(180deg, rgba(0,0,0,0.5) 0%, transparent 22%, transparent 62%, rgba(0,0,0,0.75) 100%)",
+            }}
+          />
+        </>
+      ) : null}
+
+      {/* Title bar */}
+      <div
+        className={cn(
+          "relative z-10 flex items-center justify-between gap-2 rounded-md px-3 py-1.5",
+          titleBarClass,
+        )}
+      >
+        <span
+          className={cn(
+            "truncate font-display font-semibold tracking-wide text-foreground",
+            isShowcase ? "text-base italic" : "text-base",
+          )}
+          style={accentTitleColor ? { color: accentTitleColor } : undefined}
+          title={safeTitle}
+        >
+          {safeTitle}
+        </span>
+        {showCost ? <ManaCostGlyphs cost={face.cost} size="sm" /> : null}
+      </div>
+
+      {/* Showcase ornate underline */}
+      {isShowcase ? (
+        <div
+          aria-hidden
+          className="relative z-10 h-px"
+          style={{
+            background:
+              "linear-gradient(90deg, transparent 0%, color-mix(in oklab, var(--color-accent) 60%, transparent) 50%, transparent 100%)",
+          }}
+        />
+      ) : null}
+
+      {/* Art well */}
+      {isBorderless ? (
+        <div className="relative z-0 flex-1" aria-hidden />
+      ) : (
         <div
           className={cn(
-            "relative flex-1 overflow-hidden rounded-md border border-border/40 bg-linear-to-b to-background/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]",
+            "relative z-10 flex-1 overflow-hidden rounded-md border border-border/40 bg-linear-to-b to-background/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]",
             gradient,
           )}
         >
-          {artUrl ? (
+          {face.artUrl ? (
             <ArtImage
-              src={artUrl}
+              src={face.artUrl}
               focalX={focalX}
               focalY={focalY}
               scale={scale}
@@ -284,63 +579,77 @@ export function CardPreview({
             </>
           )}
         </div>
+      )}
 
-        {/* Type line + rarity gem */}
-        <div className="flex items-center justify-between gap-2 rounded-md border border-border/40 bg-surface/80 px-3 py-1.5 text-[11px] text-muted shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-          <span className="truncate font-display tracking-wide">
-            {buildTypeLine({ supertype, cardType, subtypes })}
-          </span>
-          {rarity ? (
-            <RarityGem rarity={rarity} />
-          ) : null}
-        </div>
-
-        {/* Rules + flavor */}
-        <div className="flex flex-1 flex-col gap-2 rounded-md border border-border/40 bg-surface/60 px-3 py-2 text-xs leading-5 text-foreground/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
-          <p className="whitespace-pre-line">
-            {rulesText?.trim() ? (
-              renderRulesText(rulesText)
-            ) : (
-              <span className="text-subtle italic">Rules text appears here.</span>
-            )}
-          </p>
-          {flavorText?.trim() ? (
-            <p className="border-t border-border/40 pt-2 italic text-subtle">
-              {flavorText}
-            </p>
-          ) : null}
-          {(showPT || showLoyalty || showDefense) && (
-            <div className="mt-auto flex flex-wrap items-center gap-2 border-t border-border/40 pt-2">
-              {showPT ? (
-                <Stat
-                  label="P/T"
-                  value={`${power ?? "—"} / ${toughness ?? "—"}`}
-                />
-              ) : null}
-              {showLoyalty ? <Stat label="Loyalty" value={loyalty ?? "—"} /> : null}
-              {showDefense ? <Stat label="Defense" value={defense ?? "—"} /> : null}
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-subtle">
-          <span className="truncate">
-            {artistCredit?.trim() ? `Art: ${artistCredit}` : "Art: Unknown"}
-          </span>
-          <span className="font-display tracking-widest">CardForge</span>
-        </div>
+      {/* Type line + rarity gem */}
+      <div
+        className={cn(
+          "relative z-10 flex items-center justify-between gap-2 rounded-md px-3 py-1.5 text-[11px]",
+          typeLineClass,
+        )}
+      >
+        <span className="truncate font-display tracking-wide">
+          {buildTypeLine({
+            supertype: face.supertype,
+            cardType: face.cardType,
+            subtypes: face.subtypes,
+          })}
+        </span>
+        {rarity ? <RarityGem rarity={rarity} /> : null}
       </div>
 
-      {/* Shimmer keyframes — kept inline so this component doesn't depend
-          on a global @keyframes registration. Browsers de-dupe identical
-          @keyframes by name, so multiple previews share the same animation. */}
-      <style>{shimmerKeyframes}</style>
+      {/* Rules + flavor */}
+      <div
+        className={cn(
+          "relative z-10 flex flex-1 flex-col gap-2 rounded-md px-3 py-2 text-xs leading-5",
+          rulesPanelClass,
+        )}
+      >
+        <p className="whitespace-pre-line">
+          {face.rulesText?.trim() ? (
+            renderRulesText(face.rulesText)
+          ) : (
+            <span className="text-subtle italic">Rules text appears here.</span>
+          )}
+        </p>
+        {face.flavorText?.trim() ? (
+          <p className="border-t border-border/40 pt-2 italic text-subtle">
+            {face.flavorText}
+          </p>
+        ) : null}
+        {(showPT || showLoyalty || showDefense) && (
+          <div className="mt-auto flex flex-wrap items-center gap-2 border-t border-border/40 pt-2">
+            {showPT ? (
+              <Stat
+                label="P/T"
+                value={`${face.power ?? "—"} / ${face.toughness ?? "—"}`}
+              />
+            ) : null}
+            {showLoyalty ? (
+              <Stat label="Loyalty" value={face.loyalty ?? "—"} />
+            ) : null}
+            {showDefense ? (
+              <Stat label="Defense" value={face.defense ?? "—"} />
+            ) : null}
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div
+        className={cn(
+          "relative z-10 flex items-center justify-between text-[10px] uppercase tracking-wider",
+          footerTextClass,
+        )}
+      >
+        <span className="truncate">
+          {face.artistCredit?.trim() ? `Art: ${face.artistCredit}` : "Art: Unknown"}
+        </span>
+        <span className="font-display tracking-widest">CardForge</span>
+      </div>
     </div>
   );
 }
-
-const shimmerKeyframes = `@keyframes card-shimmer { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`;
 
 // ---------------------------------------------------------------------------
 // Internals
@@ -361,8 +670,6 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 function RarityGem({ rarity }: { rarity: Rarity }) {
-  // Diamond-shaped gem, tinted by rarity. Inline SVG so there's no asset
-  // pipeline and the gem inherits the same OKLCH palette as everything else.
   const fill = RARITY_COLOR[rarity];
   const isMythic = rarity === "mythic";
   return (
@@ -406,9 +713,6 @@ function ArtImage({
   scale: number;
   alt: string;
 }) {
-  // Plain <img> — no Next.js Image, since the user-uploaded card-art origin
-  // is dynamic and we don't want to wedge the editor on remoteImage config
-  // misses. A proper Image setup arrives in the export/render phase.
   return (
     /* eslint-disable-next-line @next/next/no-img-element */
     <img
@@ -425,12 +729,6 @@ function ArtImage({
   );
 }
 
-// ---------------------------------------------------------------------------
-// Rules-text typography — italicize the first-word keyword on each line if
-// it matches a known keyword ability, and italicize reminder text in
-// parentheses. Keeps the preview feeling typeset without a full templater.
-// ---------------------------------------------------------------------------
-
 function renderRulesText(raw: string): ReactNode {
   const lines = raw.split(/\n+/);
   return lines.map((line, i) => (
@@ -442,8 +740,6 @@ function renderRulesText(raw: string): ReactNode {
 }
 
 function renderLine(line: string): ReactNode[] {
-  // First-word keyword detection. Accepts multi-word keywords like
-  // "first strike" / "double strike".
   const lower = line.toLowerCase();
   let prefixLen = 0;
   for (const keyword of KEYWORD_ABILITIES) {
@@ -464,7 +760,6 @@ function renderLine(line: string): ReactNode[] {
       </em>
     ) : null;
 
-  // Now split the remainder on parenthetical reminder text.
   const parts: ReactNode[] = keywordNode ? [keywordNode] : [];
   const reminderPattern = /\(([^)]+)\)/g;
   let cursor = 0;

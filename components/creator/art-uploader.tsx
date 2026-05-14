@@ -12,7 +12,7 @@ import {
 import { ImagePlus, Loader2, Move, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { uploadCardArt } from "@/lib/cards/upload-art";
+import { uploadCardArtServerAction } from "@/lib/cards/upload-art-server";
 import { cn } from "@/lib/utils";
 import type { ArtPosition } from "@/types/card";
 
@@ -66,17 +66,22 @@ export function ArtUploader({
         toast.error("You need to be signed in to upload artwork.");
         return;
       }
-      // Cheap client-side gate to short-circuit obviously-wrong files before
-      // the network round-trip; the server-side bucket policy is the real
-      // backstop. The actual upload derives the owner id from the Supabase
-      // session — we don't pass `userId` through anymore.
+      // Cheap client-side gate to short-circuit obviously-wrong files
+      // before the network round-trip. The real validation lives in the
+      // server action — Sharp decodes the bytes and rejects anything
+      // that isn't a real PNG / JPEG / WebP / GIF.
       if (!file.type.startsWith("image/")) {
         toast.error("That doesn't look like an image.");
         return;
       }
       setUploading(true);
       try {
-        const result = await uploadCardArt(file);
+        // Pass the File via FormData. Server actions accept FormData
+        // arguments natively in Next.js — the file streams over the
+        // wire without us having to base64 it ourselves.
+        const formData = new FormData();
+        formData.append("file", file);
+        const result = await uploadCardArtServerAction(formData);
         if (!result.ok) {
           toast.error(result.error);
           return;

@@ -12,13 +12,22 @@ import {
   Loader2,
   Search,
   Sparkles,
-  X,
   ExternalLink,
   ImageDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { ManaCostGlyphs } from "@/components/cards/mana-cost-glyphs";
 import type { ScryfallImportPatch } from "@/lib/scryfall/import-mapper";
 import { cn } from "@/lib/utils";
@@ -29,10 +38,10 @@ import { cn } from "@/lib/utils";
 // import official artwork (CLAUDE.md guardrails explicitly overridden for
 // this feature; see 10_REMIX_AND_INSPIRATION.md).
 //
-// Two-pane layout:
-//   - left: search input + scrollable result list
-//   - right: detail preview of the selected card + "Use as starting point"
-// On smaller screens the right pane stacks under the left.
+// Built on the shared Radix Dialog primitive (chunk 01). Radix mounts the
+// content only while open, so every dialog open gets a fresh state slot
+// in the inner ScryfallImportContent component — no need for manual
+// "remount on open" plumbing.
 // ---------------------------------------------------------------------------
 
 const SEARCH_DEBOUNCE_MS = 250;
@@ -96,6 +105,15 @@ type ScryfallImportDialogProps = {
   /** Label override for the trigger button. */
   triggerLabel?: string;
   triggerVariant?: "primary" | "secondary" | "outline" | "ghost";
+  /** When provided, the dialog open state is controlled externally. The
+   *  built-in trigger button is suppressed in that mode so the parent
+   *  decides where the open affordance lives (e.g. the start-with hero
+   *  on /create, or a programmatic open from the command palette). */
+  open?: boolean;
+  onOpenChange?: (next: boolean) => void;
+  /** Hide the built-in trigger button even in uncontrolled mode. Useful
+   *  when only a custom-event listener should open the dialog. */
+  hideTrigger?: boolean;
 };
 
 export function ScryfallImportDialog({
@@ -103,42 +121,58 @@ export function ScryfallImportDialog({
   onImport,
   triggerLabel = "Search a real card",
   triggerVariant = "outline",
+  open: controlledOpen,
+  onOpenChange,
+  hideTrigger,
 }: ScryfallImportDialogProps) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = (next: boolean) => {
+    if (!isControlled) setInternalOpen(next);
+    onOpenChange?.(next);
+  };
+  const renderTrigger = !hideTrigger && !isControlled;
+
   return (
-    <>
-      <Button
-        type="button"
-        variant={triggerVariant}
-        onClick={() => setOpen(true)}
-        disabled={!signedIn}
-        title={
-          signedIn ? undefined : "Sign in to search and import real cards."
-        }
-      >
-        <Search className="h-4 w-4" aria-hidden />
-        {triggerLabel}
-      </Button>
-      {open ? (
-        <DialogBody onClose={() => setOpen(false)} onImport={onImport} />
+    <Dialog open={open} onOpenChange={setOpen}>
+      {renderTrigger ? (
+        <DialogTrigger asChild>
+          <Button
+            type="button"
+            variant={triggerVariant}
+            disabled={!signedIn}
+            title={
+              signedIn ? undefined : "Sign in to search and import real cards."
+            }
+          >
+            <Search className="h-4 w-4" aria-hidden />
+            {triggerLabel}
+          </Button>
+        </DialogTrigger>
       ) : null}
-    </>
+      <DialogContent size="lg" className="min-h-0">
+        <ScryfallImportContent
+          onClose={() => setOpen(false)}
+          onImport={onImport}
+        />
+      </DialogContent>
+    </Dialog>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Dialog body — only mounted while open. Splitting it out means each open
-// gets a fresh state slot (no stale results from a previous session).
+// Inner content — mounted only while the dialog is open. Each open is a
+// fresh state slot, so previous-session search results never leak.
 // ---------------------------------------------------------------------------
 
-function DialogBody({
+function ScryfallImportContent({
   onClose,
   onImport,
 }: {
   onClose: () => void;
   onImport: (payload: ScryfallImportPayload) => void;
 }) {
-  const dialogRef = useRef<HTMLDivElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   const [query, setQuery] = useState("");
@@ -153,23 +187,19 @@ function DialogBody({
   const [importArt, setImportArt] = useState(true);
   const [committing, startCommit] = useTransition();
 
-  // Esc + click-outside close, focus the search box on open.
+  // Focus the search input on mount. Radix's Dialog manages the focus trap
+  // and initial focus; we just want the cursor to land in the search box
+  // rather than the dialog's first focusable element (which would be the
+  // close button).
   useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKey);
     searchInputRef.current?.focus();
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, []);
 
   // Debounced search. Each keystroke schedules a fetch SEARCH_DEBOUNCE_MS
   // later; we cancel via an abort controller if the query changes mid-flight.
-  //
-  // Note: all setState calls live inside the setTimeout callback (i.e.
-  // outside the synchronous effect body) so we satisfy the
-  // react-hooks/set-state-in-effect rule. The empty-query branch also
-  // happens inside the timer for the same reason.
+  // All setState calls live inside the setTimeout callback (i.e. outside the
+  // synchronous effect body) so we satisfy the react-hooks/set-state-in-effect
+  // rule.
   useEffect(() => {
     const q = query.trim();
     const controller = new AbortController();
@@ -295,192 +325,160 @@ function DialogBody({
   }, [selectedCard, selectedId, loadingSelected]);
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center px-4 py-10 sm:items-center"
-      role="presentation"
-      onClick={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-    >
-      <div
-        className="absolute inset-0 bg-background/70 backdrop-blur-sm"
-        aria-hidden
-      />
-      <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="scryfall-import-title"
-        tabIndex={-1}
-        className={cn(
-          "relative z-10 flex max-h-[85vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-2xl",
-          "focus-visible:outline-none",
-        )}
-      >
-        {/* Header */}
-        <div className="flex items-start justify-between gap-3 border-b border-border/60 px-5 py-4">
-          <div className="flex flex-col gap-1">
-            <h2
-              id="scryfall-import-title"
-              className="font-display text-lg font-semibold tracking-tight text-foreground"
-            >
-              Search a card to remix
-            </h2>
-            <p className="text-xs leading-5 text-muted">
-              Pick a real card to seed your draft. Source data and images
-              come from{" "}
-              <a
-                href="https://scryfall.com/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary underline-offset-2 hover:underline"
-              >
-                Scryfall
-              </a>
-              . You can edit every field afterward.
-            </p>
-          </div>
-          <button
-            type="button"
-            aria-label="Close"
-            onClick={onClose}
-            className="rounded-md p-1 text-muted transition-colors hover:bg-elevated hover:text-foreground"
+    <>
+      <DialogHeader>
+        <DialogTitle>Search a card to remix</DialogTitle>
+        <DialogDescription>
+          Pick a real card to seed your draft. Source data and images come
+          from{" "}
+          <a
+            href="https://scryfall.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary underline-offset-2 hover:underline"
           >
-            <X className="h-4 w-4" aria-hidden />
-          </button>
-        </div>
+            Scryfall
+          </a>
+          . You can edit every field afterward.
+        </DialogDescription>
+      </DialogHeader>
 
-        {/* Body */}
-        <div className="grid flex-1 min-h-0 grid-cols-1 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
-          {/* Left: search + list */}
-          <div className="flex min-h-0 flex-col border-b border-border/60 lg:border-b-0 lg:border-r">
-            <div className="flex items-center gap-2 border-b border-border/60 px-4 py-3">
-              <Search className="h-4 w-4 text-subtle" aria-hidden />
-              <input
-                ref={searchInputRef}
-                type="search"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="e.g. Lightning Bolt, t:dragon r:rare"
-                className="h-8 flex-1 bg-transparent text-sm text-foreground placeholder:text-subtle focus:outline-none"
-                aria-label="Search Scryfall"
-              />
-              {searching ? (
-                <Loader2
-                  className="h-4 w-4 animate-spin text-subtle"
-                  aria-hidden
-                />
-              ) : null}
-            </div>
-
-            <div className="min-h-0 flex-1 overflow-y-auto">
-              {searchError ? (
-                <p className="px-4 py-3 text-xs text-danger">{searchError}</p>
-              ) : null}
-              {!query.trim() ? (
-                <SearchTips />
-              ) : results.length === 0 && !searching ? (
-                <p className="px-4 py-6 text-center text-xs text-subtle">
-                  No matches.
-                </p>
-              ) : (
-                <ul role="listbox" aria-label="Search results">
-                  {results.map((card) => (
-                    <li key={card.id}>
-                      <button
-                        type="button"
-                        role="option"
-                        aria-selected={selectedId === card.id}
-                        onClick={() => handleSelect(card.id)}
-                        className={cn(
-                          "flex w-full items-start gap-3 border-b border-border/40 px-3 py-2 text-left transition-colors hover:bg-elevated/60",
-                          selectedId === card.id ? "bg-elevated/80" : "",
-                        )}
-                      >
-                        {card.thumb_url ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={card.thumb_url}
-                            alt=""
-                            className="h-12 w-16 shrink-0 rounded-sm object-cover"
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div className="h-12 w-16 shrink-0 rounded-sm bg-elevated" />
-                        )}
-                        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                          <span className="truncate text-sm font-medium text-foreground">
-                            {card.name}
-                          </span>
-                          <span className="truncate text-[11px] uppercase tracking-wider text-subtle">
-                            {card.set ? card.set.toUpperCase() : "—"}
-                            {card.rarity ? ` · ${card.rarity}` : ""}
-                          </span>
-                          {card.mana_cost ? (
-                            <ManaCostGlyphs cost={card.mana_cost} size="sm" />
-                          ) : null}
-                        </div>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
-
-          {/* Right: preview */}
-          <div className="flex min-h-0 flex-col overflow-y-auto">
-            {selectionPreview === "empty" ? (
-              <DetailEmpty />
-            ) : selectionPreview === "loading" ? (
-              <div className="flex h-full items-center justify-center p-8">
-                <Loader2
-                  className="h-6 w-6 animate-spin text-subtle"
-                  aria-hidden
-                />
-              </div>
-            ) : selectedCard ? (
-              <Detail
-                data={selectedCard}
-                importArt={importArt}
-                onImportArtChange={setImportArt}
+      {/* Body: search + detail. min-h-0 lets the children shrink so the
+          dialog stays within max-h-[85vh] from the Dialog primitive. */}
+      <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
+        {/* Left: search + result list */}
+        <div className="flex min-h-0 flex-col border-b border-border/60 lg:border-b-0 lg:border-r">
+          <div className="flex items-center gap-2 border-b border-border/60 px-4 py-3">
+            <Search className="h-4 w-4 text-subtle" aria-hidden />
+            <input
+              ref={searchInputRef}
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="e.g. Lightning Bolt, t:dragon r:rare"
+              className="h-8 flex-1 bg-transparent text-sm text-foreground placeholder:text-subtle focus:outline-none"
+              aria-label="Search Scryfall"
+            />
+            {searching ? (
+              <Loader2
+                className="h-4 w-4 animate-spin text-subtle"
+                aria-hidden
               />
             ) : null}
           </div>
-        </div>
 
-        {/* Footer */}
-        <div className="flex flex-col gap-2 border-t border-border/60 px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-[11px] leading-5 text-subtle">
-            Imported text and artwork remain subject to their original
-            copyright. Use the disclaimer page for the full notice.
-          </p>
-          <div className="flex items-center gap-2">
-            <Button type="button" variant="ghost" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              variant="primary"
-              onClick={handleConfirm}
-              disabled={!selectedCard || committing}
-            >
-              {committing ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                  Working…
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-4 w-4" aria-hidden />
-                  Use as starting point
-                </>
-              )}
-            </Button>
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            {searchError ? (
+              <p className="px-4 py-3 text-xs text-danger">{searchError}</p>
+            ) : null}
+            {!query.trim() ? (
+              <SearchTips />
+            ) : searching && results.length === 0 ? (
+              // First-paint while waiting on the initial Scryfall response
+              // for a new query. Once results land we render them
+              // immediately even if a follow-up keystroke is in flight, so
+              // the user always has a populated list to scan.
+              <ScryfallResultsSkeleton />
+            ) : results.length === 0 && !searching ? (
+              <p className="px-4 py-6 text-center text-xs text-subtle">
+                No matches.
+              </p>
+            ) : (
+              <ul role="listbox" aria-label="Search results">
+                {results.map((card) => (
+                  <li key={card.id}>
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={selectedId === card.id}
+                      onClick={() => handleSelect(card.id)}
+                      className={cn(
+                        "flex w-full items-start gap-3 border-b border-border/40 px-3 py-2 text-left transition-colors hover:bg-elevated/60",
+                        selectedId === card.id ? "bg-elevated/80" : "",
+                      )}
+                    >
+                      {card.thumb_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={card.thumb_url}
+                          alt=""
+                          className="h-12 w-16 shrink-0 rounded-sm object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="h-12 w-16 shrink-0 rounded-sm bg-elevated" />
+                      )}
+                      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                        <span className="truncate text-sm font-medium text-foreground">
+                          {card.name}
+                        </span>
+                        <span className="truncate text-[11px] uppercase tracking-wider text-subtle">
+                          {card.set ? card.set.toUpperCase() : "—"}
+                          {card.rarity ? ` · ${card.rarity}` : ""}
+                        </span>
+                        {card.mana_cost ? (
+                          <ManaCostGlyphs cost={card.mana_cost} size="sm" />
+                        ) : null}
+                      </div>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
+
+        {/* Right: detail preview */}
+        <div className="flex min-h-0 flex-col overflow-y-auto">
+          {selectionPreview === "empty" ? (
+            <DetailEmpty />
+          ) : selectionPreview === "loading" ? (
+            <div className="flex h-full items-center justify-center p-8">
+              <Loader2
+                className="h-6 w-6 animate-spin text-subtle"
+                aria-hidden
+              />
+            </div>
+          ) : selectedCard ? (
+            <Detail
+              data={selectedCard}
+              importArt={importArt}
+              onImportArtChange={setImportArt}
+            />
+          ) : null}
+        </div>
       </div>
-    </div>
+
+      <DialogFooter className="flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-[11px] leading-5 text-subtle">
+          Imported text and artwork remain subject to their original
+          copyright. Use the disclaimer page for the full notice.
+        </p>
+        <div className="flex items-center gap-2">
+          <Button type="button" variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            onClick={handleConfirm}
+            disabled={!selectedCard || committing}
+          >
+            {committing ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                Working…
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4" aria-hidden />
+                Use as starting point
+              </>
+            )}
+          </Button>
+        </div>
+      </DialogFooter>
+    </>
   );
 }
 
@@ -516,6 +514,28 @@ function SearchTips() {
         </li>
       </ul>
     </div>
+  );
+}
+
+function ScryfallResultsSkeleton() {
+  // Shape-matches a real result row (thumbnail + name + set/rarity + mana
+  // glyphs row) so the list doesn't reflow when actual results land.
+  return (
+    <ul aria-label="Loading search results">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <li
+          key={i}
+          className="flex items-start gap-3 border-b border-border/40 px-3 py-2"
+        >
+          <Skeleton className="h-12 w-16 shrink-0 rounded-sm" />
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+            <Skeleton className="h-3 w-2/3" />
+            <Skeleton className="h-2.5 w-1/3" />
+            <Skeleton className="h-3 w-16" />
+          </div>
+        </li>
+      ))}
+    </ul>
   );
 }
 

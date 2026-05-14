@@ -3,13 +3,14 @@ import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
   isAIConfigured,
-  runCardAssistant,
+  streamCardAssistantResponse,
 } from "@/lib/ai/card-assistant";
 import { AI_ACTIONS, type AIAction } from "@/lib/ai/schemas";
 import { checkAiRateLimit, logAiCall } from "@/lib/ai/rate-limit";
 
-// AI calls can take several seconds; ensure we don't get killed early.
-// 60s is plenty for a single structured-output call to Anthropic.
+// AI streams can take 10–30s end-to-end (token-by-token over the wire);
+// allow plenty of headroom. The streamObject reader closes the response
+// as soon as the model finishes, so this is a ceiling, not a target.
 export const maxDuration = 60;
 
 function isAIAction(value: unknown): value is AIAction {
@@ -20,8 +21,9 @@ function isAIAction(value: unknown): value is AIAction {
 }
 
 export async function POST(request: Request) {
-  // Auth gate: only signed-in users can use the AI assistant. This both
-  // ratchets the load and feeds the per-user rate limit below.
+  // Auth + service-config gates. These return JSON responses (not the
+  // NDJSON stream format) since the client reads them as `.json()` when
+  // `response.ok === false`.
   if (!isSupabaseConfigured()) {
     return NextResponse.json(
       { ok: false, error: "Supabase is not configured." },
@@ -58,10 +60,9 @@ export async function POST(request: Request) {
     );
   }
 
-  // Per-user windowed quota. We check the limit BEFORE invoking the
-  // provider (the expensive bit), and log the call regardless of provider
-  // success so failed-but-attempted calls still consume quota — a noisy
-  // attacker can't trigger errors to dodge the limit.
+  // Per-user windowed quota. Same posture as Phase 9 chunk PR 1: log
+  // BEFORE invoking the provider so noisy failures still consume quota
+  // and can't be used to evade the cap.
   const limit = await checkAiRateLimit(user.id);
   if (!limit.ok) {
     return NextResponse.json(
@@ -73,11 +74,9 @@ export async function POST(request: Request) {
     );
   }
 
-  // Pull the action label out of the body for usage logging. The full
-  // payload is still validated inside `runCardAssistant`; this is a thin
-  // pre-parse so we can record what the user *tried* to do even on
-  // schema-rejection paths. Unknown actions are silently skipped — the
-  // strict parse inside the assistant will reject them with a 400.
+  // Pull the action label out of the body for usage logging — same
+  // pattern as the non-streaming version. Unknown actions are swallowed
+  // here; the validate-then-stream call below rejects them properly.
   const action: AIAction | null =
     typeof payload === "object" &&
     payload !== null &&
@@ -90,8 +89,7 @@ export async function POST(request: Request) {
     await logAiCall(user.id, action);
   }
 
-  const result = await runCardAssistant(payload);
-  return NextResponse.json(result, {
-    status: result.ok ? 200 : 400,
-  });
+  // Streaming begins. The library function handles its own validation +
+  // error responses — both as NDJSON so the client only has one parser.
+  return streamCardAssistantResponse(payload);
 }

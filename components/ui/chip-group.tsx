@@ -4,14 +4,13 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
-// ChipGroup — a horizontal row of toggle chips. Generic over the value type
-// so it can drive any enum-like select. Replaces our many bespoke <select>
-// fields with something visually consistent with the existing color and
-// visibility pickers.
+// ChipGroup — a row of toggle chips. Two modes:
 //
-// Single-select today; if we need multi-select later we can add a
-// `multiSelect` prop and switch the chip role to "checkbox" — the rest of
-// the markup is the same.
+//   1. Single-select (default): radio-group semantics. `value` is one of T.
+//   2. Multi-select: checkbox semantics. `value` is an array of T.
+//
+// The two modes use a discriminated union on the `multiSelect` prop so the
+// TypeScript compiler picks the correct `value` / `onChange` signature.
 // ---------------------------------------------------------------------------
 
 export type ChipOption<T extends string> = {
@@ -26,51 +25,94 @@ export type ChipOption<T extends string> = {
   activeClass?: string;
 };
 
-type ChipGroupProps<T extends string> = {
-  value: T | null | "";
-  onChange: (next: T) => void;
+type Layout = "wrap" | "grid-2" | "grid-3" | "grid-4";
+type Size = "sm" | "md";
+
+type CommonProps<T extends string> = {
   options: ChipOption<T>[];
-  /** Optional CSS grid layout. Defaults to a flex-wrap row. */
-  layout?: "wrap" | "grid-2" | "grid-3" | "grid-4";
-  /** Render as larger card-style chips (with description). */
-  size?: "sm" | "md";
+  layout?: Layout;
+  size?: Size;
   className?: string;
   ariaLabel?: string;
 };
 
-const LAYOUT_CLASS: Record<NonNullable<ChipGroupProps<string>["layout"]>, string> = {
+type SingleProps<T extends string> = CommonProps<T> & {
+  multiSelect?: false;
+  value: T | null | "";
+  onChange: (next: T) => void;
+};
+
+type MultiProps<T extends string> = CommonProps<T> & {
+  multiSelect: true;
+  value: T[];
+  onChange: (next: T[]) => void;
+};
+
+type ChipGroupProps<T extends string> = SingleProps<T> | MultiProps<T>;
+
+const LAYOUT_CLASS: Record<Layout, string> = {
   wrap: "flex flex-wrap gap-2",
   "grid-2": "grid grid-cols-2 gap-2",
   "grid-3": "grid grid-cols-2 sm:grid-cols-3 gap-2",
   "grid-4": "grid grid-cols-2 sm:grid-cols-4 gap-2",
 };
 
-export function ChipGroup<T extends string>({
-  value,
-  onChange,
-  options,
-  layout = "wrap",
-  size = "sm",
-  className,
-  ariaLabel,
-}: ChipGroupProps<T>) {
+function isActive<T extends string>(
+  value: ChipGroupProps<T>["value"],
+  candidate: T,
+  multiSelect: boolean | undefined,
+): boolean {
+  if (multiSelect) {
+    return Array.isArray(value) && value.includes(candidate);
+  }
+  return value === candidate;
+}
+
+export function ChipGroup<T extends string>(props: ChipGroupProps<T>) {
+  const {
+    options,
+    layout = "wrap",
+    size = "sm",
+    className,
+    ariaLabel,
+  } = props;
+  const multi = props.multiSelect === true;
+
+  const handleClick = (next: T) => {
+    if (multi) {
+      const current = (props.value as T[]) ?? [];
+      const exists = current.includes(next);
+      const nextValue = exists
+        ? current.filter((v) => v !== next)
+        : [...current, next];
+      props.onChange(nextValue);
+    } else {
+      (props.onChange as (next: T) => void)(next);
+    }
+  };
+
   return (
     <div
-      role="radiogroup"
+      // Multi-select chips are a row of independent toggles → no radiogroup
+      // semantics. Single-select chips behave as a radio group.
+      role={multi ? "group" : "radiogroup"}
       aria-label={ariaLabel}
       className={cn(LAYOUT_CLASS[layout], className)}
     >
       {options.map((option) => {
-        const active = option.value === value;
+        const active = isActive(props.value, option.value, multi);
         const Icon = option.icon;
-        const activeClass = option.activeClass ?? "border-primary bg-primary/15 text-primary";
+        const activeClass =
+          option.activeClass ?? "border-primary bg-primary/15 text-primary";
+        const ariaProps = multi
+          ? { "aria-pressed": active }
+          : { "aria-checked": active, role: "radio" as const };
         return (
           <button
             key={option.value}
             type="button"
-            role="radio"
-            aria-checked={active}
-            onClick={() => onChange(option.value)}
+            {...ariaProps}
+            onClick={() => handleClick(option.value)}
             className={cn(
               "group/chip flex items-center gap-2 rounded-md border bg-elevated/60 text-left transition-colors",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",

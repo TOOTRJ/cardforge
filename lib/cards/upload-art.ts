@@ -1,5 +1,19 @@
 "use client";
 
+// ---------------------------------------------------------------------------
+// @deprecated as of Phase 11 chunk 14.
+//
+// This client-side uploader uploads the raw browser File directly to
+// Supabase Storage. It only validates the declared MIME type, which a
+// malicious client can spoof. New callers should use the server action
+// in `lib/cards/upload-art-server.ts` instead — that path Sharp-validates
+// the bytes before they land in storage.
+//
+// Kept here so any historic call sites still compile during the
+// migration. Will be removed in a follow-up once the codebase has no
+// remaining importers.
+// ---------------------------------------------------------------------------
+
 import { createClient } from "@/lib/supabase/client";
 
 const ALLOWED_MIME_TYPES = [

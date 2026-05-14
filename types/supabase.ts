@@ -253,6 +253,7 @@ export type Database = {
           art_position: Json;
           art_url: string | null;
           artist_credit: string | null;
+          back_face: Json | null;
           card_type: string | null;
           color_identity: string[];
           cost: string | null;
@@ -270,6 +271,7 @@ export type Database = {
           rarity: string | null;
           rules_text: string | null;
           slug: string;
+          source_scryfall_id: string | null;
           subtypes: string[];
           supertype: string | null;
           template_id: string | null;
@@ -282,6 +284,7 @@ export type Database = {
           art_position?: Json;
           art_url?: string | null;
           artist_credit?: string | null;
+          back_face?: Json | null;
           card_type?: string | null;
           color_identity?: string[];
           cost?: string | null;
@@ -299,6 +302,7 @@ export type Database = {
           rarity?: string | null;
           rules_text?: string | null;
           slug: string;
+          source_scryfall_id?: string | null;
           subtypes?: string[];
           supertype?: string | null;
           template_id?: string | null;
@@ -311,6 +315,7 @@ export type Database = {
           art_position?: Json;
           art_url?: string | null;
           artist_credit?: string | null;
+          back_face?: Json | null;
           card_type?: string | null;
           color_identity?: string[];
           cost?: string | null;
@@ -328,6 +333,7 @@ export type Database = {
           rarity?: string | null;
           rules_text?: string | null;
           slug?: string;
+          source_scryfall_id?: string | null;
           subtypes?: string[];
           supertype?: string | null;
           template_id?: string | null;
@@ -425,7 +431,14 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      card_ai_calls_daily: {
+        Args: { since: string };
+        Returns: { day: string; count: number }[];
+      };
+      scryfall_calls_daily: {
+        Args: { since: string };
+        Returns: { day: string; count: number }[];
+      };
     };
     Enums: {
       [_ in never]: never;

@@ -8,6 +8,7 @@ import {
   type ArtPosition,
   type CardType,
   type ColorIdentity,
+  type FrameStyle,
   type Rarity,
 } from "@/types/card";
 import { renderCardImage, type RenderPreset } from "@/lib/render/card-image";
@@ -88,7 +89,10 @@ export async function GET(
     artistCredit: card.artist_credit,
     artUrl: card.art_url,
     artPosition: (card.art_position as ArtPosition) ?? {},
-    frameStyle: {},
+    // Pass the persisted frame style through to the renderer so finishes
+    // (foil / etched / borderless / showcase from Phase 11 chunk 03) show
+    // up in OG previews and downloaded PNGs. Previously hard-coded to {}.
+    frameStyle: (card.frame_style as FrameStyle) ?? {},
   };
 
   const response = renderCardImage(previewData, preset);

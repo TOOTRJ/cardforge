@@ -14,6 +14,15 @@ const supabaseHostname = (() => {
 })();
 
 const nextConfig: NextConfig = {
+  // Phase 11 chunk 14: bump the server-action body size limit so the
+  // Sharp-validated card-art upload (max 8 MB enforced server-side) can
+  // actually receive 8 MB images. Default is 1 MB, which would reject
+  // most uploads before our own size check runs.
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "10mb",
+    },
+  },
   // Allow next/image to optimize user-uploaded card art + set covers from
   // our Supabase Storage origin. We currently render these with <img>
   // (Satori-compatible, no remote config pain) but configuring the

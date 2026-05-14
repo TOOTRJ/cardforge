@@ -2,6 +2,11 @@ import type { Metadata, Viewport } from "next";
 import { Cinzel, Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import { getSiteBaseUrl } from "@/lib/site-url";
+import {
+  getTheme,
+  noFlashScript,
+  resolveThemeForServer,
+} from "@/lib/theme";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -53,21 +58,49 @@ export const metadata: Metadata = {
   },
 };
 
+// Tells the browser which UI affordances (scrollbars, form controls) to
+// theme. We declare both schemes so the browser picks based on the
+// resolved data-theme attribute that the no-flash script sets pre-paint.
 export const viewport: Viewport = {
-  themeColor: "#13131c",
-  colorScheme: "dark",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#fafafa" },
+    { media: "(prefers-color-scheme: dark)", color: "#13131c" },
+  ],
+  colorScheme: "light dark",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Server-resolved theme: the cookie wins. When the cookie says
+  // "system" (or is missing), we render `dark` and let the inline
+  // no-flash script swap to `light` based on prefers-color-scheme
+  // before the stylesheet evaluates. That avoids a hydration mismatch
+  // (React doesn't manage `data-theme` so it doesn't complain about a
+  // post-hydration attribute change either).
+  const theme = await getTheme();
+  const initialDataTheme = resolveThemeForServer(theme);
+
   return (
     <html
       lang="en"
+      data-theme={initialDataTheme}
       className={`${geistSans.variable} ${geistMono.variable} ${cinzel.variable} h-full antialiased`}
+      // Suppress the hydration warning for `data-theme` — the no-flash
+      // script may legitimately change it between server render and
+      // hydration when the user prefers light + cookie is "system".
+      suppressHydrationWarning
     >
+      <head>
+        {/* No-flash theme script. Runs before any stylesheet evaluates
+            so the right OKLCH palette applies on first paint. Inlined
+            (not a `next/script` import) because timing is critical. */}
+        <script
+          dangerouslySetInnerHTML={{ __html: noFlashScript() }}
+        />
+      </head>
       <body className="min-h-full">
         {/* Keyboard a11y: skip past the SiteHeader straight into the page
             content. Invisible until focused. */}
@@ -79,7 +112,11 @@ export default function RootLayout({
         </a>
         {children}
         <Toaster
-          theme="dark"
+          // Sonner's `theme="system"` follows prefers-color-scheme, which
+          // matches what our `data-theme` attribute already reflects
+          // post-hydration. The CSS-variable toastOptions ensure the
+          // toasts pick up the correct OKLCH palette either way.
+          theme="system"
           position="bottom-right"
           toastOptions={{
             style: {

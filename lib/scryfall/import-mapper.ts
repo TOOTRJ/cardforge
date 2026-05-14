@@ -90,6 +90,31 @@ export type ScryfallImportPatch = {
   /** Display-only preview URL. NOT written to the form's `art_url` — the
    *  user has to explicitly opt in to importing the art. */
   preview_art_url?: string | null;
+  /** When present, the Scryfall card has two faces and the back-face
+   *  content should be seeded into the form's back_face fields. The
+   *  back-face art is imported separately via the `mode: "art-back"`
+   *  option on /api/scryfall/import-art. */
+  back_face?: ScryfallImportBackFacePatch;
+};
+
+export type ScryfallImportBackFacePatch = {
+  title?: string;
+  cost?: string;
+  card_type?: CardType;
+  supertype?: string;
+  subtypes_text?: string;
+  rules_text?: string;
+  flavor_text?: string;
+  power?: string;
+  toughness?: string;
+  loyalty?: string;
+  defense?: string;
+  artist_credit?: string;
+  /** Public URL of the imported back-face artwork. When set, the form
+   *  writes this into `back_face.art_url`. Set only when the user opted
+   *  to also import artwork on the front face — the back-face import is
+   *  triggered in the same flow. */
+  imported_art_url?: string | null;
 };
 
 /**
@@ -201,5 +226,50 @@ export function mapScryfallToFormPatch(
     artist_credit: card.artist ?? undefined,
     source_scryfall_id: card.id,
     preview_art_url: options.artPreviewUrl ?? null,
+    // DFC detection: any card with two faces (Delver, Werewolves, etc.)
+    // emits a back_face patch the form will seed when the user imports.
+    back_face: card.card_faces && card.card_faces.length >= 2
+      ? mapScryfallBackFace(card)
+      : undefined,
+  };
+}
+
+/**
+ * Build the back-face patch from `card.card_faces[1]`. Mirrors the front
+ * mapper's field-by-field defensiveness — invalid card_types and missing
+ * fields are simply omitted rather than guessed.
+ */
+function mapScryfallBackFace(
+  card: ScryfallCard,
+): ScryfallImportBackFacePatch | undefined {
+  const back = card.card_faces?.[1];
+  if (!back) return undefined;
+
+  const typeParts = parseTypeLine(back.type_line);
+  const cardType =
+    typeParts.card_type &&
+    (CARD_TYPE_VALUES as readonly string[]).includes(typeParts.card_type)
+      ? typeParts.card_type
+      : undefined;
+
+  return {
+    title: back.name ?? undefined,
+    cost: back.mana_cost ?? undefined,
+    card_type: cardType,
+    supertype: typeParts.supertype,
+    subtypes_text: typeParts.subtypes_text,
+    rules_text: back.oracle_text ?? undefined,
+    // Scryfall flavor_text is generally on the top-level card object, not
+    // per-face. Leave undefined; the user can fill in their own.
+    flavor_text: undefined,
+    power: back.power ?? undefined,
+    toughness: back.toughness ?? undefined,
+    // The ScryfallCardFace schema doesn't include loyalty/defense today.
+    loyalty: undefined,
+    defense: undefined,
+    // Per-face artist is the same person in practice; reuse the front's
+    // artist credit so the user has something to start from.
+    artist_credit: card.artist ?? undefined,
+    imported_art_url: null,
   };
 }

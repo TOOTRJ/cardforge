@@ -37,6 +37,10 @@ export type PublicCardListOptions = {
   search?: string;
   sort?: "recent" | "popular";
   visibility?: "public" | "unlisted" | "all-shareable";
+  /** Scryfall provenance filter (Phase 11 chunk 13). When set, restricts
+   *  the result to cards imported from this Scryfall id. Powers the
+   *  /gallery?source=<id> "lineage" view. */
+  sourceScryfallId?: string;
 };
 
 // ---------------------------------------------------------------------------
@@ -257,6 +261,49 @@ export async function getCardBySlugPublic(slug: string): Promise<Card | null> {
 }
 
 /**
+ * Resolve a legacy `/card/[slug]` URL to its canonical
+ * `/card/[username]/[slug]` form. Used by the redirector page.
+ *
+ * Rules (per Phase 11 chunk 11):
+ *   - Only shareable rows count: visibility must be public or unlisted.
+ *   - There must be EXACTLY one match. Multiple owners with the same
+ *     slug are an ambiguous resolve — we 404 rather than guess.
+ *   - The owner must have a username set. Cards owned by a profile
+ *     without a username are unreachable via the public URL and resolve
+ *     to null (the caller turns this into a 404).
+ *
+ * RLS still gates which rows are visible; this query doesn't broaden
+ * access — it just decides where to redirect when the slug resolves.
+ */
+export async function resolveLegacyCardSlug(
+  slug: string,
+): Promise<{ username: string; slug: string } | null> {
+  if (!isSupabaseConfigured()) return null;
+  try {
+    const supabase = await createClient();
+    const { data: rows } = await supabase
+      .from("cards")
+      .select("id, slug, owner_id, visibility")
+      .eq("slug", slug)
+      .in("visibility", ["public", "unlisted"]);
+    if (!rows || rows.length !== 1) return null;
+
+    const row = rows[0];
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("username")
+      .eq("id", row.owner_id)
+      .maybeSingle();
+    const username = profile?.username;
+    if (!username) return null;
+
+    return { username, slug: row.slug };
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Fetch a card by `(owner_username, slug)`. Used by the public `/card/[slug]`
  * page in later phases — for now we accept the *current* user's slug too,
  * since profile lookups need RLS context.
@@ -441,6 +488,7 @@ export async function listPublicCardsRich(
     search,
     sort = "recent",
     visibility = "public",
+    sourceScryfallId,
   } = options;
 
   try {
@@ -464,6 +512,9 @@ export async function listPublicCardsRich(
     }
     if (rarity) {
       query = query.eq("rarity", rarity);
+    }
+    if (sourceScryfallId) {
+      query = query.eq("source_scryfall_id", sourceScryfallId);
     }
     if (search?.trim()) {
       // PostgREST's `.or(...)` argument is a structural string: commas

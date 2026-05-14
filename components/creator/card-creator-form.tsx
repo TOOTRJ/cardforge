@@ -18,6 +18,7 @@ import {
   Lock,
   Mountain,
   Save,
+  Search,
   Sparkles,
   Swords,
   Wand2,
@@ -49,6 +50,10 @@ import {
   ScryfallImportDialog,
   type ScryfallImportPayload,
 } from "@/components/creator/scryfall-import-dialog";
+import {
+  CARDFORGE_EVENTS,
+  FORM_SCROLL_TARGET_ID,
+} from "@/components/creator/start-with-hero";
 import type { CardContext } from "@/lib/ai/schemas";
 import {
   createCardAction,
@@ -61,6 +66,8 @@ import {
   RARITY_VALUES,
   type ArtPosition,
   type Card,
+  type CardBackFace,
+  type CardFinish,
   type CardTemplate,
   type CardType,
   type ColorIdentity,
@@ -77,6 +84,26 @@ import { cn } from "@/lib/utils";
 // text fields and convert to the schema's optional/empty-as-undefined shape
 // at submission time.
 // ---------------------------------------------------------------------------
+
+// Back-face form values mirror the front-face fields the back face stores.
+// Slug / visibility / template / color_identity / rarity / frame_style
+// are card-level (shared across faces) and NOT duplicated here.
+type BackFaceFormValues = {
+  title: string;
+  cost: string;
+  card_type: CardType | "";
+  supertype: string;
+  subtypes_text: string;
+  rules_text: string;
+  flavor_text: string;
+  power: string;
+  toughness: string;
+  loyalty: string;
+  defense: string;
+  artist_credit: string;
+  art_url: string;
+  art_position: ArtPosition;
+};
 
 type FormValues = {
   title: string;
@@ -100,6 +127,12 @@ type FormValues = {
   art_position: ArtPosition;
   frame_style: FrameStyle;
   visibility: Visibility;
+  // Phase 11 chunk 10: optional back-face for DFCs.
+  has_back_face: boolean;
+  back_face: BackFaceFormValues;
+  // Phase 11 chunk 13: Scryfall provenance. Hidden in the form; set when
+  // the user imports from Scryfall and persisted on save.
+  source_scryfall_id: string;
 };
 
 type CardCreatorFormProps = {
@@ -112,11 +145,12 @@ type CardCreatorFormProps = {
   aiConfigured: boolean;
 };
 
-type TabKey = "identity" | "rules" | "art" | "publishing";
+type TabKey = "identity" | "rules" | "art" | "back-face" | "publishing";
 
 // Each field belongs to exactly one tab. We use this to badge tabs with an
 // error dot and auto-switch the user to the first tab containing an error
-// when a server-side validation fails.
+// when a server-side validation fails. Back-face fields all map to the
+// back-face tab; the toggle + nested object live at the form root.
 const FIELD_TO_TAB: Record<keyof FormValues, TabKey> = {
   title: "identity",
   slug: "identity",
@@ -139,6 +173,11 @@ const FIELD_TO_TAB: Record<keyof FormValues, TabKey> = {
   art_position: "art",
   frame_style: "publishing",
   visibility: "publishing",
+  has_back_face: "back-face",
+  back_face: "back-face",
+  // Hidden field — no tab. Map to "publishing" so any errors surface
+  // there (they shouldn't happen since the user doesn't edit it directly).
+  source_scryfall_id: "publishing",
 };
 
 const CARD_TYPE_OPTIONS: ChipOption<CardType>[] = [
@@ -197,6 +236,113 @@ const ACCENT_OPTIONS: ChipOption<NonNullable<FrameStyle["accent"]>>[] = [
   { value: "cool", label: "Cool", activeClass: "border-primary bg-primary/15 text-primary" },
 ];
 
+// Finish presets — premium treatments layered on top of the base frame.
+// Descriptions are surfaced via ChipGroup's `md` size which shows the
+// description under the label.
+const FINISH_OPTIONS: ChipOption<CardFinish>[] = [
+  {
+    value: "regular",
+    label: "Regular",
+    description: "Baseline frame. The default look.",
+  },
+  {
+    value: "foil",
+    label: "Foil",
+    description: "Animated holographic sheen for showpieces.",
+    activeClass: "border-accent bg-accent/15 text-accent",
+  },
+  {
+    value: "etched",
+    label: "Etched",
+    description: "Gold-leaf inner border with a subtle texture.",
+    activeClass: "border-amber-300 bg-amber-300/15 text-amber-200",
+  },
+  {
+    value: "borderless",
+    label: "Borderless",
+    description: "Art bleeds behind the section panels.",
+  },
+  {
+    value: "showcase",
+    label: "Showcase",
+    description: "Italic display title with an ornate hairline.",
+    activeClass: "border-primary bg-primary/15 text-primary",
+  },
+];
+
+// Color swatch gradients — mirror the ManaCostGlyphs palette so the
+// color-identity chips read as the same color language as the cost preview.
+// Multicolor is a conic sweep so it visibly differs from any single color.
+const COLOR_SWATCH: Record<ColorIdentity, string> = {
+  white:
+    "radial-gradient(circle at 30% 25%, #fff 0%, #f7eccb 45%, #cfb787 100%)",
+  blue:
+    "radial-gradient(circle at 30% 25%, #dff2ff 0%, #7cc3ee 45%, #1f6aa1 100%)",
+  black:
+    "radial-gradient(circle at 30% 25%, #d6cfc8 0%, #5b5550 45%, #1a1814 100%)",
+  red:
+    "radial-gradient(circle at 30% 25%, #ffd9c7 0%, #ec6f4c 45%, #8e2c14 100%)",
+  green:
+    "radial-gradient(circle at 30% 25%, #dcf2c8 0%, #79b664 45%, #234e1a 100%)",
+  multicolor:
+    "conic-gradient(from 45deg, #cfb787, #7cc3ee, #ec6f4c, #79b664, #c98cf7, #cfb787)",
+  colorless:
+    "radial-gradient(circle at 30% 25%, #eceaea 0%, #b8b5b3 45%, #6f6c69 100%)",
+};
+
+const COLOR_IDENTITY_OPTIONS: ChipOption<ColorIdentity>[] =
+  COLOR_IDENTITY_VALUES.map((color) => ({
+    value: color,
+    label: color,
+    leading: <ColorSwatch color={color} />,
+    activeClass: "border-foreground/50 bg-elevated text-foreground",
+  }));
+
+// Empty back-face values — used when the user toggles on "has back face"
+// from a freshly-created card, or when there's no persisted back face.
+const EMPTY_BACK_FACE: BackFaceFormValues = {
+  title: "",
+  cost: "",
+  card_type: "creature",
+  supertype: "",
+  subtypes_text: "",
+  rules_text: "",
+  flavor_text: "",
+  power: "",
+  toughness: "",
+  loyalty: "",
+  defense: "",
+  artist_credit: "",
+  art_url: "",
+  art_position: { focalX: 0.5, focalY: 0.5, scale: 1 },
+};
+
+function backFaceFormValuesFrom(
+  source: CardBackFace | null | undefined,
+): BackFaceFormValues {
+  if (!source) return EMPTY_BACK_FACE;
+  return {
+    title: source.title ?? "",
+    cost: source.cost ?? "",
+    card_type: source.card_type ?? "",
+    supertype: source.supertype ?? "",
+    subtypes_text: source.subtypes?.join(", ") ?? "",
+    rules_text: source.rules_text ?? "",
+    flavor_text: source.flavor_text ?? "",
+    power: source.power ?? "",
+    toughness: source.toughness ?? "",
+    loyalty: source.loyalty ?? "",
+    defense: source.defense ?? "",
+    artist_credit: source.artist_credit ?? "",
+    art_url: source.art_url ?? "",
+    art_position: source.art_position ?? {
+      focalX: 0.5,
+      focalY: 0.5,
+      scale: 1,
+    },
+  };
+}
+
 function defaultValuesFor(
   card: Card | null | undefined,
   gameSystems: GameSystem[],
@@ -226,10 +372,16 @@ function defaultValuesFor(
       artist_credit: "",
       art_url: "",
       art_position: { focalX: 0.5, focalY: 0.5, scale: 1 },
-      frame_style: { border: "thin", accent: "neutral" },
+      frame_style: { border: "thin", accent: "neutral", finish: "regular" },
       visibility: "private",
+      has_back_face: false,
+      back_face: EMPTY_BACK_FACE,
+      source_scryfall_id: "",
     };
   }
+
+  const persistedBackFace =
+    (card.back_face as CardBackFace | null | undefined) ?? null;
 
   return {
     title: card.title,
@@ -260,6 +412,9 @@ function defaultValuesFor(
       accent: "neutral",
     },
     visibility: card.visibility,
+    has_back_face: persistedBackFace !== null,
+    back_face: backFaceFormValuesFrom(persistedBackFace),
+    source_scryfall_id: card.source_scryfall_id ?? "",
   };
 }
 
@@ -294,6 +449,40 @@ export function CardCreatorForm({
     name: string;
     scryfallUri: string | null;
   } | null>(null);
+  // Scryfall dialog open state is lifted into the form so the start-with
+  // hero on /create and the global command palette can open it via custom
+  // DOM events. The dialog itself is rendered once below with `hideTrigger`.
+  const [scryfallOpen, setScryfallOpen] = useState(false);
+
+  // Listen for hero/palette custom events. Each event is fire-and-forget
+  // — no payload, just a signal to perform a UI action.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const openScryfall = () => setScryfallOpen(true);
+    const openAiConcept = () => {
+      setActiveTab("publishing");
+      // Defer the scroll one tick so the Publishing tab has time to mount
+      // its content before we try to scroll the AI anchor into view.
+      requestAnimationFrame(() => {
+        document
+          .getElementById("ai-assistant-anchor")
+          ?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    };
+    const scrollToForm = () => {
+      document
+        .getElementById(FORM_SCROLL_TARGET_ID)
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+    window.addEventListener(CARDFORGE_EVENTS.openScryfall, openScryfall);
+    window.addEventListener(CARDFORGE_EVENTS.openAiConcept, openAiConcept);
+    window.addEventListener(CARDFORGE_EVENTS.scrollToForm, scrollToForm);
+    return () => {
+      window.removeEventListener(CARDFORGE_EVENTS.openScryfall, openScryfall);
+      window.removeEventListener(CARDFORGE_EVENTS.openAiConcept, openAiConcept);
+      window.removeEventListener(CARDFORGE_EVENTS.scrollToForm, scrollToForm);
+    };
+  }, []);
 
   const defaults = useMemo(
     () => defaultValuesFor(card, gameSystems, templates),
@@ -429,6 +618,43 @@ export function CardCreatorForm({
       );
     }
 
+    // DFC handling: if the Scryfall card had a back face, the mapper
+    // returns `patch.back_face`. Enable has_back_face and populate the
+    // nested object. The back-face art import is a separate explicit step
+    // (mode: "art-back") — for now we just seed the text fields.
+    if (patch.back_face) {
+      const bf = patch.back_face;
+      setValue("has_back_face", true, { shouldDirty: true });
+      setValue(
+        "back_face",
+        {
+          title: bf.title ?? "",
+          cost: bf.cost ?? "",
+          card_type: bf.card_type ?? "",
+          supertype: bf.supertype ?? "",
+          subtypes_text: bf.subtypes_text ?? "",
+          rules_text: bf.rules_text ?? "",
+          flavor_text: bf.flavor_text ?? "",
+          power: bf.power ?? "",
+          toughness: bf.toughness ?? "",
+          loyalty: bf.loyalty ?? "",
+          defense: bf.defense ?? "",
+          artist_credit: bf.artist_credit ?? "",
+          art_url: bf.imported_art_url ?? "",
+          art_position: { focalX: 0.5, focalY: 0.5, scale: 1 },
+        },
+        { shouldDirty: true },
+      );
+    }
+
+    // Stamp the Scryfall provenance so the saved card joins the
+    // "Also remixed by N" group on the public detail page (chunk 13).
+    if (patch.source_scryfall_id) {
+      setValue("source_scryfall_id", patch.source_scryfall_id, {
+        shouldDirty: true,
+      });
+    }
+
     setRemixSource({ name: source.name, scryfallUri: source.scryfallUri });
     // Pop the user back to Identity so they can see the seeded fields.
     setActiveTab("identity");
@@ -449,6 +675,29 @@ export function CardCreatorForm({
   // ---- Submit ----
   const onSubmit: SubmitHandler<FormValues> = (values) => {
     setServerError(null);
+
+    // Build the back_face payload only when the user toggled it on.
+    // When off, send `null` so the server clears any previously-persisted
+    // back face (the action treats `null` as an explicit clear vs.
+    // `undefined` which would be a no-op).
+    const backFacePayload = values.has_back_face
+      ? {
+          title: values.back_face.title.trim(),
+          cost: values.back_face.cost.trim() || undefined,
+          card_type: values.back_face.card_type || undefined,
+          supertype: values.back_face.supertype.trim() || undefined,
+          subtypes: parseSubtypes(values.back_face.subtypes_text),
+          rules_text: values.back_face.rules_text.trim() || undefined,
+          flavor_text: values.back_face.flavor_text.trim() || undefined,
+          power: values.back_face.power.trim() || undefined,
+          toughness: values.back_face.toughness.trim() || undefined,
+          loyalty: values.back_face.loyalty.trim() || undefined,
+          defense: values.back_face.defense.trim() || undefined,
+          artist_credit: values.back_face.artist_credit.trim() || undefined,
+          art_url: values.back_face.art_url.trim() || undefined,
+          art_position: values.back_face.art_position,
+        }
+      : null;
 
     const payload = {
       title: values.title.trim(),
@@ -472,6 +721,11 @@ export function CardCreatorForm({
       art_position: values.art_position,
       frame_style: values.frame_style,
       visibility: values.visibility,
+      back_face: backFacePayload,
+      // Empty string → undefined so we don't send a no-op or fail the
+      // UUID validator. A future "unlink from source" button could send
+      // `null` instead to explicitly clear.
+      source_scryfall_id: values.source_scryfall_id.trim() || undefined,
     };
 
     startTransition(async () => {
@@ -573,6 +827,21 @@ export function CardCreatorForm({
               Art
             </TabsTrigger>
             <TabsTrigger
+              value="back-face"
+              badge={
+                tabsWithErrors.has("back-face") ? (
+                  <ErrorDot />
+                ) : watched.has_back_face ? (
+                  <span
+                    aria-hidden
+                    className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-primary"
+                  />
+                ) : null
+              }
+            >
+              Back face
+            </TabsTrigger>
+            <TabsTrigger
               value="publishing"
               badge={
                 tabsWithErrors.has("publishing") ? <ErrorDot /> : null
@@ -586,7 +855,9 @@ export function CardCreatorForm({
           <TabsContent value="identity" className="mt-6 flex flex-col gap-6">
             {/* Start-from-real-card chip row. Sits above Title because
                 it's a "blank-page" jumpstart — once the user has typed
-                anything, this is still here but less prominent. */}
+                anything, this is still here but less prominent. The
+                button just flips `scryfallOpen` because the dialog is
+                rendered once at the bottom of the form (controlled mode). */}
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/60 bg-elevated/40 px-4 py-3">
               <div className="flex flex-col gap-0.5">
                 <span className="text-xs font-semibold uppercase tracking-wider text-subtle">
@@ -596,10 +867,20 @@ export function CardCreatorForm({
                   Search Scryfall and seed every field, including the artwork.
                 </span>
               </div>
-              <ScryfallImportDialog
-                signedIn={Boolean(userId)}
-                onImport={handleScryfallImport}
-              />
+              <Button
+                type="button"
+                variant="outline"
+                disabled={!userId}
+                title={
+                  userId
+                    ? undefined
+                    : "Sign in to search and import real cards."
+                }
+                onClick={() => setScryfallOpen(true)}
+              >
+                <Search className="h-4 w-4" aria-hidden />
+                Search a real card
+              </Button>
             </div>
 
             <FieldGroup
@@ -740,9 +1021,13 @@ export function CardCreatorForm({
                 control={control}
                 name="color_identity"
                 render={({ field }) => (
-                  <ColorIdentityPicker
+                  <ChipGroup
+                    multiSelect
+                    ariaLabel="Color identity"
+                    layout="wrap"
                     value={field.value}
-                    onChange={field.onChange}
+                    onChange={(next) => field.onChange(next)}
+                    options={COLOR_IDENTITY_OPTIONS}
                   />
                 )}
               />
@@ -854,6 +1139,208 @@ export function CardCreatorForm({
             />
           </TabsContent>
 
+          {/* ----- Back face tab ----- */}
+          <TabsContent value="back-face" className="mt-6 flex flex-col gap-6">
+            {!watched.has_back_face ? (
+              <SurfaceCard className="flex flex-col items-center gap-3 border-dashed bg-elevated/40 p-8 text-center">
+                <p className="text-sm leading-6 text-muted">
+                  This card only has a front face. Add a back face to make it
+                  a double-faced card (DFC). The back face shares the card&apos;s
+                  rarity, color identity, and frame style — only the text and
+                  art differ.
+                </p>
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  onClick={() =>
+                    setValue("has_back_face", true, { shouldDirty: true })
+                  }
+                >
+                  <Sparkles className="h-4 w-4" aria-hidden />
+                  Add a back face
+                </Button>
+              </SurfaceCard>
+            ) : (
+              <>
+                <FieldGroup
+                  label="Title"
+                  helper="The back-face title. Required when a back face is enabled."
+                >
+                  <input
+                    {...register("back_face.title")}
+                    placeholder="Insectile Aberration"
+                    className={inputClass(false)}
+                    autoComplete="off"
+                  />
+                </FieldGroup>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <FieldGroup label="Cost">
+                    <div className="flex flex-col gap-2">
+                      <input
+                        {...register("back_face.cost")}
+                        placeholder="—"
+                        className={inputClass(false)}
+                        autoComplete="off"
+                      />
+                      {watched.back_face.cost?.trim() ? (
+                        <div className="flex h-7 items-center rounded-md border border-border/40 bg-elevated/40 px-2">
+                          <ManaCostGlyphs
+                            cost={watched.back_face.cost}
+                            size="sm"
+                          />
+                        </div>
+                      ) : null}
+                    </div>
+                  </FieldGroup>
+
+                  <FieldGroup label="Card type">
+                    <Controller
+                      control={control}
+                      name="back_face.card_type"
+                      render={({ field }) => (
+                        <ChipGroup
+                          ariaLabel="Back-face card type"
+                          layout="grid-3"
+                          value={field.value}
+                          onChange={(next) => field.onChange(next)}
+                          options={CARD_TYPE_OPTIONS}
+                        />
+                      )}
+                    />
+                  </FieldGroup>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <FieldGroup label="Supertype">
+                    <input
+                      {...register("back_face.supertype")}
+                      placeholder="Legendary"
+                      className={inputClass(false)}
+                      autoComplete="off"
+                    />
+                  </FieldGroup>
+                  <FieldGroup label="Subtypes" helper="Comma-separated.">
+                    <input
+                      {...register("back_face.subtypes_text")}
+                      placeholder="Human, Wizard"
+                      className={inputClass(false)}
+                      autoComplete="off"
+                    />
+                  </FieldGroup>
+                </div>
+
+                <FieldGroup label="Rules text">
+                  <textarea
+                    {...register("back_face.rules_text")}
+                    placeholder="Flying. Whenever the back face deals damage…"
+                    rows={4}
+                    className={textareaClass(false)}
+                  />
+                </FieldGroup>
+
+                <FieldGroup label="Flavor text">
+                  <textarea
+                    {...register("back_face.flavor_text")}
+                    placeholder="Optional."
+                    rows={2}
+                    className={textareaClass(false)}
+                  />
+                </FieldGroup>
+
+                <div className="grid gap-4 sm:grid-cols-4">
+                  <FieldGroup label="Power">
+                    <input
+                      {...register("back_face.power")}
+                      placeholder="3"
+                      className={inputClass(false)}
+                      autoComplete="off"
+                    />
+                  </FieldGroup>
+                  <FieldGroup label="Toughness">
+                    <input
+                      {...register("back_face.toughness")}
+                      placeholder="2"
+                      className={inputClass(false)}
+                      autoComplete="off"
+                    />
+                  </FieldGroup>
+                  <FieldGroup label="Loyalty">
+                    <input
+                      {...register("back_face.loyalty")}
+                      placeholder="—"
+                      className={inputClass(false)}
+                      autoComplete="off"
+                    />
+                  </FieldGroup>
+                  <FieldGroup label="Defense">
+                    <input
+                      {...register("back_face.defense")}
+                      placeholder="—"
+                      className={inputClass(false)}
+                      autoComplete="off"
+                    />
+                  </FieldGroup>
+                </div>
+
+                <FieldGroup label="Artist credit">
+                  <input
+                    {...register("back_face.artist_credit")}
+                    placeholder="Anya Vale"
+                    className={inputClass(false)}
+                    autoComplete="off"
+                  />
+                </FieldGroup>
+
+                <Controller
+                  control={control}
+                  name="back_face.art_url"
+                  render={({ field: artUrlField }) => (
+                    <Controller
+                      control={control}
+                      name="back_face.art_position"
+                      render={({ field: artPosField }) => (
+                        <ArtUploader
+                          userId={userId}
+                          artUrl={artUrlField.value}
+                          artPosition={artPosField.value}
+                          onArtChange={({ artUrl, artPosition }) => {
+                            artUrlField.onChange(artUrl ?? "");
+                            artPosField.onChange(artPosition);
+                            setValue("back_face.art_url", artUrl ?? "", {
+                              shouldDirty: true,
+                            });
+                            setValue("back_face.art_position", artPosition, {
+                              shouldDirty: true,
+                            });
+                          }}
+                        />
+                      )}
+                    />
+                  )}
+                />
+
+                <div className="flex justify-end">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setValue("has_back_face", false, { shouldDirty: true });
+                      // Clear nested values so a re-enable starts fresh.
+                      setValue("back_face", EMPTY_BACK_FACE, {
+                        shouldDirty: true,
+                      });
+                    }}
+                  >
+                    Remove back face
+                  </Button>
+                </div>
+              </>
+            )}
+          </TabsContent>
+
           {/* ----- Publishing tab ----- */}
           <TabsContent value="publishing" className="mt-6 flex flex-col gap-6">
             <FieldGroup label="Visibility">
@@ -868,6 +1355,26 @@ export function CardCreatorForm({
                     value={field.value}
                     onChange={(next) => field.onChange(next)}
                     options={VISIBILITY_OPTIONS}
+                  />
+                )}
+              />
+            </FieldGroup>
+
+            <FieldGroup
+              label="Finish"
+              helper="Premium treatment layered on top of the frame."
+            >
+              <Controller
+                control={control}
+                name="frame_style.finish"
+                render={({ field }) => (
+                  <ChipGroup
+                    ariaLabel="Finish"
+                    layout="grid-2"
+                    size="md"
+                    value={field.value ?? "regular"}
+                    onChange={(next) => field.onChange(next)}
+                    options={FINISH_OPTIONS}
                   />
                 )}
               />
@@ -914,13 +1421,30 @@ export function CardCreatorForm({
               </div>
             </FieldGroup>
 
-            <AIAssistantPanel
-              cardContext={cardContext}
-              onApply={handleAIPatch}
-              configured={aiConfigured}
-            />
+            {/* Anchor target for the start-with hero's "Generate from
+                concept" option — scrollIntoView lands here after the tab
+                swaps to Publishing. */}
+            <div id="ai-assistant-anchor" className="scroll-mt-20">
+              <AIAssistantPanel
+                cardContext={cardContext}
+                onApply={handleAIPatch}
+                configured={aiConfigured}
+              />
+            </div>
           </TabsContent>
         </Tabs>
+
+        {/* Controlled Scryfall import dialog. Rendered once; opened by:
+            - the Identity-tab inline trigger (above)
+            - the start-with hero on /create
+            - the global command palette
+            All three paths just flip `scryfallOpen` via state or events. */}
+        <ScryfallImportDialog
+          signedIn={Boolean(userId)}
+          onImport={handleScryfallImport}
+          open={scryfallOpen}
+          onOpenChange={setScryfallOpen}
+        />
 
         {/* Action bar — sticky across all tabs so saving never requires
             switching back to a "publishing" tab. */}
@@ -1009,6 +1533,37 @@ export function CardCreatorForm({
               artUrl={watched.art_url || null}
               artPosition={watched.art_position}
               frameStyle={watched.frame_style}
+              // DFC: pass the back face so the preview gains its flip
+              // button. While the user is on the Back face tab the
+              // controlled `face` prop forces the back so the live edits
+              // are immediately visible.
+              backFace={
+                watched.has_back_face
+                  ? {
+                      title: watched.back_face.title,
+                      cost: watched.back_face.cost || undefined,
+                      card_type:
+                        watched.back_face.card_type === ""
+                          ? undefined
+                          : (watched.back_face.card_type as CardType),
+                      supertype: watched.back_face.supertype || undefined,
+                      subtypes: parseSubtypes(
+                        watched.back_face.subtypes_text,
+                      ),
+                      rules_text: watched.back_face.rules_text || undefined,
+                      flavor_text: watched.back_face.flavor_text || undefined,
+                      power: watched.back_face.power || undefined,
+                      toughness: watched.back_face.toughness || undefined,
+                      loyalty: watched.back_face.loyalty || undefined,
+                      defense: watched.back_face.defense || undefined,
+                      artist_credit:
+                        watched.back_face.artist_credit || undefined,
+                      art_url: watched.back_face.art_url || undefined,
+                      art_position: watched.back_face.art_position,
+                    }
+                  : null
+              }
+              face={activeTab === "back-face" ? "back" : "front"}
             />
           </div>
           <p className="text-xs leading-5 text-muted">
@@ -1099,41 +1654,15 @@ function SmallGem({ color }: { color: string }) {
   );
 }
 
-function ColorIdentityPicker({
-  value,
-  onChange,
-}: {
-  value: ColorIdentity[];
-  onChange: (next: ColorIdentity[]) => void;
-}) {
-  const toggle = (color: ColorIdentity) => {
-    if (value.includes(color)) {
-      onChange(value.filter((c) => c !== color));
-    } else {
-      onChange([...value, color]);
-    }
-  };
+function ColorSwatch({ color }: { color: ColorIdentity }) {
+  // Small filled circle that mirrors the mana-glyph palette. Used as the
+  // `leading` element on color-identity chips so the picker reads as a
+  // continuation of the cost glyphs instead of generic text pills.
   return (
-    <div className="flex flex-wrap gap-2">
-      {COLOR_IDENTITY_VALUES.map((color) => {
-        const active = value.includes(color);
-        return (
-          <button
-            key={color}
-            type="button"
-            onClick={() => toggle(color)}
-            className={cn(
-              "rounded-full border px-3 py-1 text-xs font-medium capitalize transition-colors",
-              active
-                ? "border-primary bg-primary/15 text-primary"
-                : "border-border bg-elevated text-muted hover:border-border-strong hover:text-foreground",
-            )}
-            aria-pressed={active}
-          >
-            {color}
-          </button>
-        );
-      })}
-    </div>
+    <span
+      aria-hidden
+      className="inline-block h-3 w-3 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.3),0_1px_1px_rgba(0,0,0,0.3)]"
+      style={{ background: COLOR_SWATCH[color] }}
+    />
   );
 }

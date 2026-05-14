@@ -40,9 +40,16 @@ const bodySchema = z.object({
     // Scryfall ids are UUIDs but be liberal about format here — the
     // client helper will fail closed on anything that doesn't resolve.
     .regex(/^[0-9a-f-]+$/i, "Invalid Scryfall id."),
-  /** "print" pulls the full card frame; "art" pulls art_crop only. We
-   *  default to "print" because that's what the user just clicked. */
-  mode: z.enum(["print", "art"]).optional().default("print"),
+  /** Modes:
+   *   - "print"     : full card frame (front)
+   *   - "art"       : art_crop of the front face (default)
+   *   - "print-back": full card frame of the back face (DFC only)
+   *   - "art-back"  : art_crop of the back face (DFC only)
+   *  Both "*-back" modes return 404 when the card has no second face. */
+  mode: z
+    .enum(["print", "art", "print-back", "art-back"])
+    .optional()
+    .default("art"),
 });
 
 function extensionFromContentType(contentType: string): string {
@@ -112,13 +119,36 @@ export async function POST(request: Request) {
     );
   }
 
-  const top = card.image_uris ?? card.card_faces?.[0]?.image_uris ?? null;
-  const imageUrl =
-    parsed.data.mode === "art"
-      ? top?.art_crop ?? top?.normal ?? null
-      : pickPrintImageUrl(card);
+  // For "*-back" modes, source the image from `card_faces[1]`. If the
+  // card has only one face, fail with 404 — the caller asked for art
+  // that doesn't exist.
+  const isBack =
+    parsed.data.mode === "art-back" || parsed.data.mode === "print-back";
+  const faceImages = isBack
+    ? card.card_faces?.[1]?.image_uris ?? null
+    : card.image_uris ?? card.card_faces?.[0]?.image_uris ?? null;
 
-  if (!imageUrl) {
+  if (isBack && !card.card_faces?.[1]) {
+    return NextResponse.json(
+      { ok: false, error: "This card has no back face." },
+      { status: 404 },
+    );
+  }
+
+  const wantsArt =
+    parsed.data.mode === "art" || parsed.data.mode === "art-back";
+  const imageUrl = wantsArt
+    ? faceImages?.art_crop ?? faceImages?.normal ?? null
+    : faceImages?.png ?? faceImages?.large ?? faceImages?.normal ?? null;
+
+  // Front-face print still goes through the original picker so historic
+  // behavior is unchanged.
+  const finalImageUrl =
+    !isBack && parsed.data.mode === "print"
+      ? pickPrintImageUrl(card)
+      : imageUrl;
+
+  if (!finalImageUrl) {
     return NextResponse.json(
       { ok: false, error: "Scryfall has no image for this card." },
       { status: 404 },
@@ -126,7 +156,7 @@ export async function POST(request: Request) {
   }
 
   // 2) Pull the bytes. fetchScryfallImage host-locks the URL.
-  const fetched = await fetchScryfallImage(imageUrl);
+  const fetched = await fetchScryfallImage(finalImageUrl);
   if (!fetched) {
     return NextResponse.json(
       {
