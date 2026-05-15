@@ -6,10 +6,19 @@ import {
   useRef,
   useState,
   type DragEvent,
+  type KeyboardEvent,
   type PointerEvent,
   type WheelEvent,
 } from "react";
-import { ImagePlus, Loader2, Move, Trash2, Upload } from "lucide-react";
+import {
+  ImagePlus,
+  Loader2,
+  Move,
+  RotateCcw,
+  RotateCw,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { uploadCardArtServerAction } from "@/lib/cards/upload-art-server";
@@ -57,6 +66,7 @@ export function ArtUploader({
   const focalX = clamp(artPosition.focalX ?? 0.5, 0, 1);
   const focalY = clamp(artPosition.focalY ?? 0.5, 0, 1);
   const scale = clamp(artPosition.scale ?? 1, MIN_SCALE, MAX_SCALE);
+  const rotation = clamp(artPosition.rotation ?? 0, -180, 180);
 
   // ---- Upload ------------------------------------------------------------
 
@@ -244,7 +254,56 @@ export function ArtUploader({
   };
 
   const handleResetPosition = () => {
-    updatePosition({ focalX: 0.5, focalY: 0.5, scale: 1 });
+    updatePosition({ focalX: 0.5, focalY: 0.5, scale: 1, rotation: 0 });
+  };
+
+  // Keyboard nudging on the dropzone — arrow keys move the focal point by
+  // 1% (Shift = 5%), `+` / `=` zooms in, `-` / `_` zooms out, `r` / `0`
+  // resets. Matches the v2 spec. Only fires when the dropzone has focus
+  // AND there's an artUrl (no point nudging an empty slot).
+  const handleDropzoneKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (!artUrl) {
+      // The pre-existing Enter/Space-to-open behaviour still applies; we
+      // bail early so we don't intercept it.
+      return;
+    }
+    const step = event.shiftKey ? 0.05 : 0.01;
+    switch (event.key) {
+      case "ArrowLeft":
+        event.preventDefault();
+        updatePosition({ focalX: clamp(focalX - step, 0, 1) });
+        return;
+      case "ArrowRight":
+        event.preventDefault();
+        updatePosition({ focalX: clamp(focalX + step, 0, 1) });
+        return;
+      case "ArrowUp":
+        event.preventDefault();
+        updatePosition({ focalY: clamp(focalY - step, 0, 1) });
+        return;
+      case "ArrowDown":
+        event.preventDefault();
+        updatePosition({ focalY: clamp(focalY + step, 0, 1) });
+        return;
+      case "+":
+      case "=":
+        event.preventDefault();
+        updatePosition({ scale: clamp(scale + 0.05, MIN_SCALE, MAX_SCALE) });
+        return;
+      case "-":
+      case "_":
+        event.preventDefault();
+        updatePosition({ scale: clamp(scale - 0.05, MIN_SCALE, MAX_SCALE) });
+        return;
+      case "r":
+      case "R":
+      case "0":
+        event.preventDefault();
+        handleResetPosition();
+        return;
+      default:
+        return;
+    }
   };
 
   return (
@@ -286,12 +345,14 @@ export function ArtUploader({
           if ((event.key === "Enter" || event.key === " ") && !artUrl) {
             event.preventDefault();
             openPicker();
+            return;
           }
+          handleDropzoneKeyDown(event);
         }}
         role={artUrl ? "img" : "button"}
         aria-label={
           artUrl
-            ? "Drag to set focal point. Shift-scroll to zoom."
+            ? "Drag to set focal point. Shift-scroll to zoom. Arrow keys nudge. +/- zoom. R resets."
             : "Drop an image here or click to upload"
         }
         tabIndex={0}
@@ -322,7 +383,7 @@ export function ArtUploader({
               className="pointer-events-none h-full w-full select-none object-cover"
               style={{
                 objectPosition: `${focalX * 100}% ${focalY * 100}%`,
-                transform: `scale(${scale})`,
+                transform: `rotate(${rotation}deg) scale(${scale})`,
                 transformOrigin: `${focalX * 100}% ${focalY * 100}%`,
               }}
             />
@@ -416,6 +477,44 @@ export function ArtUploader({
             display={`${scale.toFixed(2)}×`}
             onChange={(value) => updatePosition({ scale: value })}
           />
+          <div className="flex items-center gap-2">
+            <SliderRow
+              label="Rotation"
+              value={rotation}
+              min={-180}
+              max={180}
+              step={1}
+              display={`${rotation > 0 ? "+" : ""}${rotation}°`}
+              onChange={(value) => updatePosition({ rotation: value })}
+              className="flex-1"
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              aria-label="Rotate 90° counter-clockwise"
+              onClick={() =>
+                updatePosition({
+                  rotation: clamp(rotation - 90, -180, 180),
+                })
+              }
+            >
+              <RotateCcw className="h-3.5 w-3.5" aria-hidden />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              aria-label="Rotate 90° clockwise"
+              onClick={() =>
+                updatePosition({
+                  rotation: clamp(rotation + 90, -180, 180),
+                })
+              }
+            >
+              <RotateCw className="h-3.5 w-3.5" aria-hidden />
+            </Button>
+          </div>
         </div>
       ) : null}
     </div>
@@ -509,6 +608,7 @@ function SliderRow({
   step,
   display,
   onChange,
+  className,
 }: {
   label: string;
   value: number;
@@ -517,9 +617,10 @@ function SliderRow({
   step: number;
   display: string;
   onChange: (value: number) => void;
+  className?: string;
 }) {
   return (
-    <label className="flex flex-col gap-1.5">
+    <label className={cn("flex flex-col gap-1.5", className)}>
       <span className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-subtle">
         {label}
         <span className="font-mono text-foreground">{display}</span>
