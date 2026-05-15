@@ -36,6 +36,16 @@ function modelId(): string {
 // a generated card (slug, owner_id, IDs). The model also returns an
 // `art_prompt` that we feed into DALL-E — keeping it on the same object
 // means we get a paired text + art prompt in a single GPT-4o call.
+//
+// IMPORTANT: OpenAI's structured-outputs strict mode requires every
+// property in `properties` to also appear in `required`. Zod's `.optional()`
+// produces a JSON schema where the field is missing from `required`, which
+// OpenAI rejects with:
+//   "Invalid schema for response_format … 'required' is required to be
+//    supplied and to be an array including every key in properties."
+// The recommended workaround is `.nullable()` — the model returns `null`
+// for fields that don't apply (e.g. power on a non-creature) and we treat
+// null/undefined identically downstream.
 export const randomCardSchema = z
   .object({
     title: z
@@ -54,12 +64,16 @@ export const randomCardSchema = z
     supertype: z
       .string()
       .max(64)
-      .optional()
-      .describe("Optional supertype like Legendary, Basic, Snow."),
+      .nullable()
+      .describe(
+        "Supertype like Legendary, Basic, Snow. Return null when the card has no supertype.",
+      ),
     subtypes: z
       .array(z.string().max(40))
       .max(6)
-      .describe("Subtypes like ['Dragon', 'Elder'] or ['Wizard']."),
+      .describe(
+        "Subtypes like ['Dragon', 'Elder'] or ['Wizard']. Return [] when there are no subtypes.",
+      ),
     rarity: z.enum(RARITY_VALUES),
     color_identity: z
       .array(z.enum(COLOR_IDENTITY_VALUES))
@@ -78,28 +92,34 @@ export const randomCardSchema = z
     flavor_text: z
       .string()
       .max(280)
-      .optional()
-      .describe("Optional short italic flavor — quote or in-world observation."),
+      .nullable()
+      .describe(
+        "Short italic flavor — quote or in-world observation. Return null when omitted.",
+      ),
     power: z
       .string()
       .max(8)
-      .optional()
-      .describe("Only present when card_type is 'creature' or 'token'."),
+      .nullable()
+      .describe(
+        "Present when card_type is 'creature' or 'token'; otherwise null.",
+      ),
     toughness: z
       .string()
       .max(8)
-      .optional()
-      .describe("Only present when card_type is 'creature' or 'token'."),
+      .nullable()
+      .describe(
+        "Present when card_type is 'creature' or 'token'; otherwise null.",
+      ),
     loyalty: z
       .string()
       .max(8)
-      .optional()
-      .describe("Only present when card_type is 'planeswalker'."),
+      .nullable()
+      .describe("Present when card_type is 'planeswalker'; otherwise null."),
     defense: z
       .string()
       .max(8)
-      .optional()
-      .describe("Only present when card_type is 'battle'."),
+      .nullable()
+      .describe("Present when card_type is 'battle'; otherwise null."),
     art_prompt: z
       .string()
       .min(40)
