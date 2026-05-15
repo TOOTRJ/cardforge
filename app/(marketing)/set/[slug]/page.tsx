@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { ArrowLeft, PackageOpen, Pencil } from "lucide-react";
 import { CardPreview } from "@/components/cards/card-preview";
+import { CardPreviewSkeleton } from "@/components/cards/card-preview-skeleton";
+import { CardHoverEffect } from "@/components/cards/card-hover-effect";
+import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layout/page-header";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { Button } from "@/components/ui/button";
@@ -14,6 +18,7 @@ import {
   listCardsInSet,
 } from "@/lib/sets/queries";
 import { computeSetAnalytics } from "@/lib/sets/analytics";
+import { buildCardPath } from "@/lib/cards/utils";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import type { ArtPosition, FrameStyle } from "@/types/card";
@@ -73,14 +78,16 @@ export default async function SetDetailPage({
   params: Promise<Params>;
 }) {
   const { slug } = await params;
-  const set = isSupabaseConfigured() ? await getSetBySlugPublic(slug) : null;
+  // Set + auth are needed to render the header / owner chip — keep them on
+  // the page shell. The expensive `listCardsInSet` + analytics live behind
+  // a Suspense boundary so the cover + title paint immediately.
+  const [set, user] = await Promise.all([
+    isSupabaseConfigured() ? getSetBySlugPublic(slug) : null,
+    getCurrentUser(),
+  ]);
   if (!set) notFound();
 
-  const user = await getCurrentUser();
   const isOwner = Boolean(user && user.id === set.owner_id);
-
-  const items = await listCardsInSet(set.id);
-  const analytics = computeSetAnalytics(items.map((i) => i.card));
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
@@ -155,6 +162,34 @@ export default async function SetDetailPage({
         </div>
       </SurfaceCard>
 
+      <Suspense fallback={<SetBodySkeleton />}>
+        <SetBody
+          setId={set.id}
+          setSlug={set.slug}
+          ownerUsername={set.owner?.username ?? null}
+          isOwner={isOwner}
+        />
+      </Suspense>
+    </div>
+  );
+}
+
+async function SetBody({
+  setId,
+  setSlug,
+  ownerUsername,
+  isOwner,
+}: {
+  setId: string;
+  setSlug: string;
+  ownerUsername: string | null;
+  isOwner: boolean;
+}) {
+  const items = await listCardsInSet(setId);
+  const analytics = computeSetAnalytics(items.map((i) => i.card));
+
+  return (
+    <>
       <section className="mt-10">
         <PageHeader
           eyebrow="Analytics"
@@ -186,7 +221,7 @@ export default async function SetDetailPage({
               action={
                 isOwner ? (
                   <Button asChild>
-                    <Link href={`/set/${set.slug}/edit`}>Manage cards</Link>
+                    <Link href={`/set/${setSlug}/edit`}>Manage cards</Link>
                   </Button>
                 ) : null
               }
@@ -196,36 +231,79 @@ export default async function SetDetailPage({
               {items.map(({ card }) => (
                 <Link
                   key={card.id}
-                  href={`/card/${card.slug}`}
+                  href={buildCardPath({
+                    slug: card.slug,
+                    owner: { username: ownerUsername },
+                  })}
                   className="block rounded-frame focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   aria-label={`Open ${card.title}`}
+                  style={{ viewTransitionName: `card-${card.id}` }}
                 >
-                  <CardPreview
-                    title={card.title}
-                    cost={card.cost}
-                    cardType={card.card_type}
-                    supertype={card.supertype}
-                    subtypes={card.subtypes}
-                    rarity={card.rarity}
-                    colorIdentity={card.color_identity}
-                    rulesText={card.rules_text}
-                    flavorText={card.flavor_text}
-                    power={card.power}
-                    toughness={card.toughness}
-                    loyalty={card.loyalty}
-                    defense={card.defense}
-                    artistCredit={card.artist_credit}
-                    artUrl={card.art_url}
-                    artPosition={card.art_position as ArtPosition}
-                    frameStyle={card.frame_style as FrameStyle}
-                  />
+                  <CardHoverEffect>
+                    <CardPreview
+                      title={card.title}
+                      cost={card.cost}
+                      cardType={card.card_type}
+                      supertype={card.supertype}
+                      subtypes={card.subtypes}
+                      rarity={card.rarity}
+                      colorIdentity={card.color_identity}
+                      rulesText={card.rules_text}
+                      flavorText={card.flavor_text}
+                      power={card.power}
+                      toughness={card.toughness}
+                      loyalty={card.loyalty}
+                      defense={card.defense}
+                      artistCredit={card.artist_credit}
+                      artUrl={card.art_url}
+                      artPosition={card.art_position as ArtPosition}
+                      frameStyle={card.frame_style as FrameStyle}
+                    />
+                  </CardHoverEffect>
                 </Link>
               ))}
             </div>
           )}
         </div>
       </section>
-    </div>
+    </>
+  );
+}
+
+function SetBodySkeleton() {
+  return (
+    <>
+      <section className="mt-10">
+        <header className="mb-6">
+          <h2 className="font-display text-xl font-semibold tracking-tight text-foreground">
+            Set breakdown
+          </h2>
+        </header>
+        <SurfaceCard className="p-6">
+          <div className="grid gap-4 sm:grid-cols-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="flex flex-col gap-2">
+                <Skeleton className="h-3 w-16" />
+                <Skeleton className="h-6 w-24" />
+              </div>
+            ))}
+          </div>
+        </SurfaceCard>
+      </section>
+
+      <section className="mt-12">
+        <header className="mb-6">
+          <h2 className="font-display text-xl font-semibold tracking-tight text-foreground">
+            Cards
+          </h2>
+        </header>
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <CardPreviewSkeleton key={i} />
+          ))}
+        </div>
+      </section>
+    </>
   );
 }
 

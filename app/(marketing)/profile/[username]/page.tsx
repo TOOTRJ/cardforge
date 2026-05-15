@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ExternalLink, Heart } from "lucide-react";
 import { CardPreview } from "@/components/cards/card-preview";
+import { CardPreviewSkeleton } from "@/components/cards/card-preview-skeleton";
+import { CardHoverEffect } from "@/components/cards/card-hover-effect";
+import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layout/page-header";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +15,7 @@ import {
   getProfileByUsername,
   listPublicCardsByOwner,
 } from "@/lib/cards/queries";
+import { buildCardPath } from "@/lib/cards/utils";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import type { ArtPosition, FrameStyle } from "@/types/card";
 
@@ -45,12 +50,13 @@ export default async function ProfilePage({
     return <NotConfigured username={username} />;
   }
 
+  // Profile lookup blocks the page shell because the header + display name
+  // depend on it. The cards grid suspends below with a skeleton fallback.
   const profile = await getProfileByUsername(username);
   if (!profile) {
     notFound();
   }
 
-  const cards = await listPublicCardsByOwner(profile.id, { limit: 24 });
   const displayName =
     profile.display_name?.trim() || profile.username || "Forgemaster";
   const initial = (displayName[0] ?? "?").toUpperCase();
@@ -108,55 +114,102 @@ export default async function ProfilePage({
       />
 
       <div className="mt-8">
-        {cards.length === 0 ? (
-          <EmptyState
-            icon={Heart}
-            title="No public cards yet"
-            description={`${displayName} hasn't published any cards publicly. Check back later or browse the gallery for other creators.`}
+        <Suspense fallback={<ProfileCardsSkeleton count={8} />}>
+          <ProfileCards
+            ownerId={profile.id}
+            ownerUsername={profile.username ?? username}
+            displayName={displayName}
           />
-        ) : (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {cards.map((card) => (
-              <ProfileCardTile key={card.id} card={card} />
-            ))}
-          </div>
-        )}
+        </Suspense>
       </div>
+    </div>
+  );
+}
+
+async function ProfileCards({
+  ownerId,
+  ownerUsername,
+  displayName,
+}: {
+  ownerId: string;
+  ownerUsername: string;
+  displayName: string;
+}) {
+  const cards = await listPublicCardsByOwner(ownerId, { limit: 24 });
+  if (cards.length === 0) {
+    return (
+      <EmptyState
+        icon={Heart}
+        title="No public cards yet"
+        description={`${displayName} hasn't published any cards publicly. Check back later or browse the gallery for other creators.`}
+      />
+    );
+  }
+  return (
+    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {cards.map((card) => (
+        <ProfileCardTile
+          key={card.id}
+          card={card}
+          ownerUsername={ownerUsername}
+        />
+      ))}
+    </div>
+  );
+}
+
+function ProfileCardsSkeleton({ count }: { count: number }) {
+  return (
+    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="flex flex-col gap-2">
+          <CardPreviewSkeleton />
+          <div className="flex items-center justify-between gap-2 text-xs">
+            <Skeleton className="h-3 w-16" />
+            <Skeleton className="h-3 w-8" />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
 
 function ProfileCardTile({
   card,
+  ownerUsername,
 }: {
   card: Awaited<ReturnType<typeof listPublicCardsByOwner>>[number];
+  ownerUsername: string;
 }) {
   return (
     <div className="flex flex-col gap-2">
       <Link
-        href={`/card/${card.slug}`}
+        href={buildCardPath({ slug: card.slug, owner: { username: ownerUsername } })}
         className="block rounded-frame focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         aria-label={`Open ${card.title}`}
+        style={{ viewTransitionName: `card-${card.id}` }}
       >
-        <CardPreview
-          title={card.title}
-          cost={card.cost}
-          cardType={card.card_type}
-          supertype={card.supertype}
-          subtypes={card.subtypes}
-          rarity={card.rarity}
-          colorIdentity={card.color_identity}
-          rulesText={card.rules_text}
-          flavorText={card.flavor_text}
-          power={card.power}
-          toughness={card.toughness}
-          loyalty={card.loyalty}
-          defense={card.defense}
-          artistCredit={card.artist_credit}
-          artUrl={card.art_url}
-          artPosition={card.art_position as ArtPosition}
-          frameStyle={card.frame_style as FrameStyle}
-        />
+        <CardHoverEffect>
+          <CardPreview
+            title={card.title}
+            cost={card.cost}
+            cardType={card.card_type}
+            supertype={card.supertype}
+            subtypes={card.subtypes}
+            rarity={card.rarity}
+            colorIdentity={card.color_identity}
+            rulesText={card.rules_text}
+            flavorText={card.flavor_text}
+            power={card.power}
+            toughness={card.toughness}
+            loyalty={card.loyalty}
+            defense={card.defense}
+            artistCredit={card.artist_credit}
+            artUrl={card.art_url}
+            artPosition={card.art_position as ArtPosition}
+            frameStyle={card.frame_style as FrameStyle}
+          />
+        </CardHoverEffect>
       </Link>
       <div className="flex items-center justify-between gap-2 text-xs">
         <span className="truncate text-muted">

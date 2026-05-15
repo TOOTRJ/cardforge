@@ -17,6 +17,48 @@ export type Database = {
   };
   public: {
     Tables: {
+      card_ai_calls: {
+        Row: {
+          action: string;
+          created_at: string;
+          id: string;
+          user_id: string;
+        };
+        Insert: {
+          action: string;
+          created_at?: string;
+          id?: string;
+          user_id: string;
+        };
+        Update: {
+          action?: string;
+          created_at?: string;
+          id?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      scryfall_calls: {
+        Row: {
+          action: string;
+          created_at: string;
+          id: string;
+          user_id: string;
+        };
+        Insert: {
+          action: string;
+          created_at?: string;
+          id?: string;
+          user_id: string;
+        };
+        Update: {
+          action?: string;
+          created_at?: string;
+          id?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       card_exports: {
         Row: {
           card_id: string;
@@ -211,6 +253,7 @@ export type Database = {
           art_position: Json;
           art_url: string | null;
           artist_credit: string | null;
+          back_face: Json | null;
           card_type: string | null;
           color_identity: string[];
           cost: string | null;
@@ -228,6 +271,7 @@ export type Database = {
           rarity: string | null;
           rules_text: string | null;
           slug: string;
+          source_scryfall_id: string | null;
           subtypes: string[];
           supertype: string | null;
           template_id: string | null;
@@ -240,6 +284,7 @@ export type Database = {
           art_position?: Json;
           art_url?: string | null;
           artist_credit?: string | null;
+          back_face?: Json | null;
           card_type?: string | null;
           color_identity?: string[];
           cost?: string | null;
@@ -257,6 +302,7 @@ export type Database = {
           rarity?: string | null;
           rules_text?: string | null;
           slug: string;
+          source_scryfall_id?: string | null;
           subtypes?: string[];
           supertype?: string | null;
           template_id?: string | null;
@@ -269,6 +315,7 @@ export type Database = {
           art_position?: Json;
           art_url?: string | null;
           artist_credit?: string | null;
+          back_face?: Json | null;
           card_type?: string | null;
           color_identity?: string[];
           cost?: string | null;
@@ -286,6 +333,7 @@ export type Database = {
           rarity?: string | null;
           rules_text?: string | null;
           slug?: string;
+          source_scryfall_id?: string | null;
           subtypes?: string[];
           supertype?: string | null;
           template_id?: string | null;
@@ -383,7 +431,14 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      card_ai_calls_daily: {
+        Args: { since: string };
+        Returns: { day: string; count: number }[];
+      };
+      scryfall_calls_daily: {
+        Args: { since: string };
+        Returns: { day: string; count: number }[];
+      };
     };
     Enums: {
       [_ in never]: never;
@@ -530,6 +585,12 @@ export type CardUpdate = TablesUpdate<"cards">;
 
 export type CardExport = Tables<"card_exports">;
 export type CardExportInsert = TablesInsert<"card_exports">;
+
+export type CardAiCall = Tables<"card_ai_calls">;
+export type CardAiCallInsert = TablesInsert<"card_ai_calls">;
+
+export type ScryfallCall = Tables<"scryfall_calls">;
+export type ScryfallCallInsert = TablesInsert<"scryfall_calls">;
 
 export type CardLike = Tables<"card_likes">;
 export type CardLikeInsert = TablesInsert<"card_likes">;

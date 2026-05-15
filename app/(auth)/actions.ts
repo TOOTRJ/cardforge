@@ -2,9 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { getSiteBaseUrl } from "@/lib/site-url";
 import {
   fieldErrorsFromZod,
   loginSchema,
@@ -13,6 +13,15 @@ import {
   type LoginInput,
   type SignupInput,
 } from "@/lib/auth/schemas";
+
+// Generic signup error — Supabase's raw "User already registered" / "rate
+// limit" / etc. messages leak signal that helps account enumeration. We
+// normalize to a single message and rely on the email verification flow to
+// surface "already registered" via the confirmation email path. We still
+// log the underlying error to the server for debugging; nothing reaches the
+// client.
+const GENERIC_SIGNUP_ERROR =
+  "We couldn't create your account. Double-check your details and try again.";
 
 const SAFE_REDIRECT = /^\/[^\s]*$/;
 
@@ -101,12 +110,12 @@ export async function signupAction(
   }
 
   const supabase = await createClient();
-  const headerList = await headers();
-  const origin =
-    headerList.get("origin") ?? headerList.get("x-forwarded-host") ?? "";
-  const emailRedirectTo = origin
-    ? `${origin.startsWith("http") ? origin : `https://${origin}`}/auth/callback`
-    : undefined;
+  // Build the email confirmation redirect from our own resolver instead of
+  // trusting the Origin / X-Forwarded-Host request headers. Supabase's
+  // allow-list still gates the final destination, but using the canonical
+  // site URL means an attacker can't spoof the email's destination via a
+  // crafted Host header on the signup request.
+  const emailRedirectTo = `${getSiteBaseUrl()}/auth/callback`;
 
   const { error } = await supabase.auth.signUp({
     email: parsed.data.email,
@@ -121,9 +130,13 @@ export async function signupAction(
   });
 
   if (error) {
+    // Surface a generic message so attackers can't distinguish
+    // "already-registered" / "rate-limited" / "weak-password" via response
+    // timing or text. Real signup failures still log to the server.
+    console.warn("signupAction: supabase.auth.signUp error", error.message);
     return {
       status: "error",
-      formError: error.message,
+      formError: GENERIC_SIGNUP_ERROR,
       values: { email: parsed.data.email, username: parsed.data.username },
     };
   }

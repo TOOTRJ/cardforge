@@ -14,18 +14,42 @@ const supabaseHostname = (() => {
 })();
 
 const nextConfig: NextConfig = {
+  // Phase 11 chunk 14: bump the server-action body size limit so the
+  // Sharp-validated card-art upload (max 8 MB enforced server-side) can
+  // actually receive 8 MB images. Default is 1 MB, which would reject
+  // most uploads before our own size check runs.
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "10mb",
+    },
+  },
   // Allow next/image to optimize user-uploaded card art + set covers from
   // our Supabase Storage origin. We currently render these with <img>
   // (Satori-compatible, no remote config pain) but configuring the
   // remotePattern here makes a future migration to <Image /> a one-line
   // swap.
+  //
+  // We scope to the three buckets we own explicitly instead of the broad
+  // `/storage/v1/object/public/**`. If someone later creates a new public
+  // bucket via Supabase Studio (outside the checked-in migrations), it
+  // won't automatically become an allowed remote pattern.
   images: {
     remotePatterns: supabaseHostname
       ? [
           {
             protocol: "https",
             hostname: supabaseHostname,
-            pathname: "/storage/v1/object/public/**",
+            pathname: "/storage/v1/object/public/card-art/**",
+          },
+          {
+            protocol: "https",
+            hostname: supabaseHostname,
+            pathname: "/storage/v1/object/public/card-exports/**",
+          },
+          {
+            protocol: "https",
+            hostname: supabaseHostname,
+            pathname: "/storage/v1/object/public/set-covers/**",
           },
         ]
       : [],

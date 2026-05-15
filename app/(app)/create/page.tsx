@@ -3,6 +3,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowLeft, Sparkles } from "lucide-react";
 import { CardCreatorForm } from "@/components/creator/card-creator-form";
+import {
+  StartWithHero,
+  FORM_SCROLL_TARGET_ID,
+} from "@/components/creator/start-with-hero";
 import { PageHeader } from "@/components/layout/page-header";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { Button } from "@/components/ui/button";
@@ -62,6 +66,10 @@ export default async function CreatePage() {
       />
 
       <div className="mt-10">
+        <StartWithHero />
+      </div>
+
+      <div id={FORM_SCROLL_TARGET_ID} className="mt-10 scroll-mt-24">
         <CardCreatorForm
           mode="create"
           userId={user.id}

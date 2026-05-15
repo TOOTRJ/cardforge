@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { z } from "zod";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
@@ -377,4 +378,288 @@ export async function addCurrentCardToSetAction(
     revalidatePath(`/card/${cardSlug}/edit`);
   }
   return result;
+}
+
+// ---------------------------------------------------------------------------
+// Bulk add (Phase 11 chunk 08)
+//
+// Adds many cards to a single set in one go. Used by the dashboard's
+// bulk-action bar. Posture matches the bulk card actions in
+// lib/cards/actions.ts:
+//   - Validate as Zod arrays-of-UUIDs (max 100)
+//   - Pre-flight ownership on the set AND every card
+//   - Single multi-row insert; already-existing membership rows are
+//     silently skipped so the operation is idempotent (a follow-up
+//     bulk-add of overlapping ids just no-ops the duplicates)
+//   - New rows get positions appended to the end of the set (max + i)
+// ---------------------------------------------------------------------------
+
+const BULK_MAX_SET_CARDS = 100;
+
+const bulkAddToSetSchema = z.object({
+  setId: z.string().uuid("Invalid set id."),
+  cardIds: z
+    .array(z.string().uuid("Invalid card id."))
+    .min(1, "Pick at least one card.")
+    .max(BULK_MAX_SET_CARDS, `Up to ${BULK_MAX_SET_CARDS} cards at a time.`),
+});
+
+export type BulkAddToSetSuccess = {
+  ok: true;
+  setId: string;
+  added: number;
+  skipped: number;
+};
+
+export type BulkAddToSetFailure = {
+  ok: false;
+  error: string;
+};
+
+export type BulkAddToSetResult = BulkAddToSetSuccess | BulkAddToSetFailure;
+
+export async function addCardsToSetAction(
+  setId: string,
+  cardIds: string[],
+): Promise<BulkAddToSetResult> {
+  if (!isSupabaseConfigured()) {
+    return { ok: false, error: "Supabase is not configured." };
+  }
+  const user = await getCurrentUser();
+  if (!user) {
+    return { ok: false, error: "Sign in to add cards to a set." };
+  }
+
+  const parsed = bulkAddToSetSchema.safeParse({ setId, cardIds });
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Invalid request.",
+    };
+  }
+  const ids = Array.from(new Set(parsed.data.cardIds));
+
+  const supabase = await createClient();
+
+  // Pre-flight ownership in parallel: set + every card.
+  const [setResult, cardsResult, existingItemsResult] = await Promise.all([
+    supabase
+      .from("card_sets")
+      .select("id, slug, owner_id")
+      .eq("id", parsed.data.setId)
+      .maybeSingle(),
+    supabase
+      .from("cards")
+      .select("id, owner_id")
+      .in("id", ids),
+    // Cards already in this set — we skip them on insert to keep the
+    // operation idempotent rather than failing on the unique constraint.
+    supabase
+      .from("card_set_items")
+      .select("card_id, position")
+      .eq("set_id", parsed.data.setId),
+  ]);
+
+  if (setResult.error) return { ok: false, error: setResult.error.message };
+  if (!setResult.data || setResult.data.owner_id !== user.id) {
+    return { ok: false, error: "Set not found or not yours." };
+  }
+
+  if (cardsResult.error) return { ok: false, error: cardsResult.error.message };
+  const existingCards = cardsResult.data ?? [];
+  if (existingCards.length !== ids.length) {
+    return { ok: false, error: "Some cards weren't found." };
+  }
+  if (existingCards.some((c) => c.owner_id !== user.id)) {
+    return { ok: false, error: "Some cards aren't yours to add." };
+  }
+
+  if (existingItemsResult.error) {
+    return { ok: false, error: existingItemsResult.error.message };
+  }
+  const alreadyIn = new Set(
+    (existingItemsResult.data ?? []).map((row) => row.card_id),
+  );
+  const maxPosition = (existingItemsResult.data ?? []).reduce(
+    (max, row) => Math.max(max, row.position ?? 0),
+    -1,
+  );
+
+  // Filter to the cards that aren't already in the set. If none remain,
+  // we're done — same idempotent posture as the single-card insert.
+  const toInsert = ids.filter((id) => !alreadyIn.has(id));
+  if (toInsert.length === 0) {
+    return {
+      ok: true,
+      setId: parsed.data.setId,
+      added: 0,
+      skipped: ids.length,
+    };
+  }
+
+  const rows = toInsert.map((cardId, index) => ({
+    set_id: parsed.data.setId,
+    card_id: cardId,
+    position: maxPosition + 1 + index,
+  }));
+
+  const { error: insertError } = await supabase
+    .from("card_set_items")
+    .insert(rows);
+  if (insertError) {
+    return { ok: false, error: insertError.message };
+  }
+
+  revalidatePath(`/set/${setResult.data.slug}`);
+  revalidatePath(`/set/${setResult.data.slug}/edit`);
+  revalidatePath("/sets");
+  revalidatePath("/dashboard");
+
+  return {
+    ok: true,
+    setId: parsed.data.setId,
+    added: toInsert.length,
+    skipped: ids.length - toInsert.length,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Reorder (Phase 11 chunk 09)
+//
+// Drag-reorder cards within a set. The client supplies the new ORDER of
+// card_set_items row ids; the server writes each row's `position` to its
+// index in the array. Posture:
+//   1. Validate (Zod): array of UUIDs, max 100
+//   2. Verify the caller owns the set
+//   3. Verify the supplied ids are EXACTLY the current set's items (a
+//      permutation) — guards against stale optimistic state, mid-flight
+//      additions, and outright bad client input
+//   4. Parallel UPDATEs setting position = index. Each is bounded by
+//      `.eq("set_id", setId)` so a malicious client can't move rows
+//      from one set into another by spoofing their ids.
+// ---------------------------------------------------------------------------
+
+const reorderSetCardsSchema = z.object({
+  setId: z.string().uuid("Invalid set id."),
+  orderedItemIds: z
+    .array(z.string().uuid("Invalid item id."))
+    .min(1, "Provide at least one item id.")
+    .max(BULK_MAX_SET_CARDS, `Up to ${BULK_MAX_SET_CARDS} items at a time.`),
+});
+
+export type ReorderSetCardsSuccess = {
+  ok: true;
+  setId: string;
+  count: number;
+};
+
+export type ReorderSetCardsFailure = {
+  ok: false;
+  error: string;
+};
+
+export type ReorderSetCardsResult =
+  | ReorderSetCardsSuccess
+  | ReorderSetCardsFailure;
+
+export async function reorderSetCardsAction(
+  setId: string,
+  orderedItemIds: string[],
+): Promise<ReorderSetCardsResult> {
+  if (!isSupabaseConfigured()) {
+    return { ok: false, error: "Supabase is not configured." };
+  }
+  const user = await getCurrentUser();
+  if (!user) {
+    return { ok: false, error: "Sign in to reorder cards." };
+  }
+
+  const parsed = reorderSetCardsSchema.safeParse({ setId, orderedItemIds });
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Invalid request.",
+    };
+  }
+
+  // Reject duplicate ids in the ordered list — that would either silently
+  // collapse positions (one row's UPDATE wins) or indicate a buggy client.
+  const uniqueIds = new Set(parsed.data.orderedItemIds);
+  if (uniqueIds.size !== parsed.data.orderedItemIds.length) {
+    return { ok: false, error: "Duplicate item ids in the order." };
+  }
+
+  const supabase = await createClient();
+
+  // Ownership check on the set first — RLS would block the update anyway,
+  // but the friendlier error message helps the UI.
+  const { data: set, error: setError } = await supabase
+    .from("card_sets")
+    .select("id, slug, owner_id")
+    .eq("id", parsed.data.setId)
+    .maybeSingle();
+  if (setError) return { ok: false, error: setError.message };
+  if (!set || set.owner_id !== user.id) {
+    return { ok: false, error: "Set not found or not yours." };
+  }
+
+  // Permutation check: the supplied ids must match the current set's
+  // membership exactly. If the user added a card in another tab between
+  // when the grid loaded and the drag completed, the lists won't match
+  // and we abort with a "stale" hint so the UI can re-fetch.
+  const { data: existingItems, error: itemsError } = await supabase
+    .from("card_set_items")
+    .select("id")
+    .eq("set_id", parsed.data.setId);
+  if (itemsError) return { ok: false, error: itemsError.message };
+  const existingIds = new Set((existingItems ?? []).map((r) => r.id));
+  if (existingIds.size !== uniqueIds.size) {
+    return {
+      ok: false,
+      error: "Set membership changed — refresh and try again.",
+    };
+  }
+  for (const id of uniqueIds) {
+    if (!existingIds.has(id)) {
+      return {
+        ok: false,
+        error: "Set membership changed — refresh and try again.",
+      };
+    }
+  }
+
+  // Parallel UPDATEs — each writes position = its index. Bounded by
+  // set_id so a spoofed id can't repoint another set's row. For a 30-card
+  // set this is ~30 round-trips over a single pooled connection, ~50-80ms
+  // end-to-end on Supabase.
+  const updates = parsed.data.orderedItemIds.map((itemId, position) =>
+    supabase
+      .from("card_set_items")
+      .update({ position })
+      .eq("id", itemId)
+      .eq("set_id", parsed.data.setId),
+  );
+  const results = await Promise.all(updates);
+  const failure = results.find((r) => r.error);
+  if (failure?.error) {
+    return { ok: false, error: failure.error.message };
+  }
+
+  // Bump the set's updated_at so listings reflect the recent activity.
+  // RLS-bound update; same posture as updateSetAction.
+  await supabase
+    .from("card_sets")
+    .update({ updated_at: new Date().toISOString() })
+    .eq("id", parsed.data.setId)
+    .eq("owner_id", user.id);
+
+  revalidatePath(`/set/${set.slug}`);
+  revalidatePath(`/set/${set.slug}/edit`);
+  revalidatePath("/sets");
+
+  return {
+    ok: true,
+    setId: parsed.data.setId,
+    count: parsed.data.orderedItemIds.length,
+  };
 }

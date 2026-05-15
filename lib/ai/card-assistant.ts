@@ -1,7 +1,8 @@
 import "server-only";
 
-import { generateObject } from "ai";
+import { streamObject } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
+import type { DeepPartial } from "ai";
 import {
   cardAssistantRequestSchema,
   checkBalanceOutputSchema,
@@ -11,8 +12,8 @@ import {
   improveWordingOutputSchema,
   suggestCostOutputSchema,
   suggestRarityOutputSchema,
+  type AIAction,
   type CardAssistantRequest,
-  type CardAssistantResponse,
   type CardContext,
 } from "@/lib/ai/schemas";
 
@@ -134,121 +135,175 @@ If the user's concept is too vague, pick reasonable defaults rather than asking 
 }
 
 // ---------------------------------------------------------------------------
-// Public API — call from the route handler.
+// Streaming response builder — NDJSON protocol.
+//
+// Each line emitted is a single JSON object terminated by `\n`:
+//   { "partial": <DeepPartial>, "action": "<action_name>" }   ← repeated
+//   { "done":    { "action": "<action_name>", "data": <final> } }
+//   { "error":   "<friendly message>" }                        ← on failure
+//
+// The client (components/creator/ai-assistant-panel.tsx) consumes this via
+// fetch + ReadableStream getReader(). NDJSON keeps each event self-contained
+// and easy to recover from if a chunk lands mid-line — the client only
+// dispatches on full lines.
 // ---------------------------------------------------------------------------
 
-export async function runCardAssistant(
-  rawRequest: unknown,
-): Promise<CardAssistantResponse> {
+const NDJSON_HEADERS = {
+  "Content-Type": "application/x-ndjson",
+  "Cache-Control": "no-cache, no-transform",
+};
+
+function ndjsonError(message: string, status = 400): Response {
+  const body = JSON.stringify({ error: message }) + "\n";
+  return new Response(body, { status, headers: NDJSON_HEADERS });
+}
+
+type StreamObjectResult<T> = {
+  partialObjectStream: AsyncIterable<DeepPartial<T>>;
+  object: Promise<T>;
+};
+
+function makeStream<T>(
+  result: StreamObjectResult<T>,
+  action: AIAction,
+): ReadableStream<Uint8Array> {
+  return new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const encoder = new TextEncoder();
+      const writeLine = (payload: object) => {
+        controller.enqueue(
+          encoder.encode(JSON.stringify(payload) + "\n"),
+        );
+      };
+      try {
+        for await (const partial of result.partialObjectStream) {
+          writeLine({ partial, action });
+        }
+        const final = await result.object;
+        writeLine({ done: { action, data: final } });
+      } catch (error) {
+        const detail =
+          error instanceof Error ? error.message : "Unknown AI provider error.";
+        writeLine({ error: friendlyError(detail) });
+      } finally {
+        controller.close();
+      }
+    },
+  });
+}
+
+/**
+ * Validate the request, kick off a streaming AI call, and return a
+ * streaming NDJSON Response. The caller (the route handler) is expected
+ * to have already done auth + rate-limit checks; this function is purely
+ * concerned with the AI-provider conversation.
+ */
+export function streamCardAssistantResponse(rawRequest: unknown): Response {
   const parsed = cardAssistantRequestSchema.safeParse(rawRequest);
   if (!parsed.success) {
-    return {
-      ok: false,
-      error: parsed.error.issues[0]?.message ?? "Invalid request.",
-    };
+    return ndjsonError(
+      parsed.error.issues[0]?.message ?? "Invalid request.",
+      400,
+    );
   }
 
   if (!isAIConfigured()) {
-    return {
-      ok: false,
-      error:
-        "AI assistant isn't configured. Set ANTHROPIC_API_KEY in your environment.",
-    };
+    return ndjsonError(
+      "AI assistant isn't configured. Set ANTHROPIC_API_KEY in your environment.",
+      503,
+    );
   }
 
   const request = parsed.data;
   const prompt = actionPrompt(request);
   const model = anthropic(modelId());
 
-  try {
-    switch (request.action) {
-      case "improve_wording": {
-        const { object } = await generateObject({
-          model,
-          schema: improveWordingOutputSchema,
-          system: SYSTEM_PROMPT,
-          prompt,
-        });
-        return { ok: true, suggestion: { action: "improve_wording", data: object } };
-      }
-      case "suggest_cost": {
-        const { object } = await generateObject({
-          model,
-          schema: suggestCostOutputSchema,
-          system: SYSTEM_PROMPT,
-          prompt,
-        });
-        return { ok: true, suggestion: { action: "suggest_cost", data: object } };
-      }
-      case "suggest_rarity": {
-        const { object } = await generateObject({
-          model,
-          schema: suggestRarityOutputSchema,
-          system: SYSTEM_PROMPT,
-          prompt,
-        });
-        return { ok: true, suggestion: { action: "suggest_rarity", data: object } };
-      }
-      case "generate_flavor": {
-        const { object } = await generateObject({
-          model,
-          schema: generateFlavorOutputSchema,
-          system: SYSTEM_PROMPT,
-          prompt,
-        });
-        return { ok: true, suggestion: { action: "generate_flavor", data: object } };
-      }
-      case "generate_art_prompt": {
-        const { object } = await generateObject({
-          model,
-          schema: generateArtPromptOutputSchema,
-          system: SYSTEM_PROMPT,
-          prompt,
-        });
-        return {
-          ok: true,
-          suggestion: { action: "generate_art_prompt", data: object },
-        };
-      }
-      case "check_balance": {
-        const { object } = await generateObject({
-          model,
-          schema: checkBalanceOutputSchema,
-          system: SYSTEM_PROMPT,
-          prompt,
-        });
-        return { ok: true, suggestion: { action: "check_balance", data: object } };
-      }
-      case "generate_from_concept": {
-        if (!request.concept || request.concept.trim().length === 0) {
-          return {
-            ok: false,
-            error:
-              "Give the assistant a concept to riff on (a sentence or two is plenty).",
-          };
-        }
-        const { object } = await generateObject({
-          model,
-          schema: generateFromConceptOutputSchema,
-          system: SYSTEM_PROMPT,
-          prompt,
-        });
-        return {
-          ok: true,
-          suggestion: { action: "generate_from_concept", data: object },
-        };
-      }
+  // Branch by action so each `streamObject` call gets its narrow schema.
+  // The result is fed into the shared NDJSON encoder.
+  switch (request.action) {
+    case "improve_wording": {
+      const result = streamObject({
+        model,
+        schema: improveWordingOutputSchema,
+        system: SYSTEM_PROMPT,
+        prompt,
+      });
+      return new Response(makeStream(result, "improve_wording"), {
+        headers: NDJSON_HEADERS,
+      });
     }
-  } catch (error) {
-    // Surface the underlying provider error so the UI can show a useful toast.
-    // Anthropic 429/5xx errors come through with .message; other failures fall
-    // back to a generic string.
-    const detail =
-      error instanceof Error ? error.message : "Unknown AI provider error.";
-    return {
-      ok: false,
-      error: friendlyError(detail),
-    };
+    case "suggest_cost": {
+      const result = streamObject({
+        model,
+        schema: suggestCostOutputSchema,
+        system: SYSTEM_PROMPT,
+        prompt,
+      });
+      return new Response(makeStream(result, "suggest_cost"), {
+        headers: NDJSON_HEADERS,
+      });
+    }
+    case "suggest_rarity": {
+      const result = streamObject({
+        model,
+        schema: suggestRarityOutputSchema,
+        system: SYSTEM_PROMPT,
+        prompt,
+      });
+      return new Response(makeStream(result, "suggest_rarity"), {
+        headers: NDJSON_HEADERS,
+      });
+    }
+    case "generate_flavor": {
+      const result = streamObject({
+        model,
+        schema: generateFlavorOutputSchema,
+        system: SYSTEM_PROMPT,
+        prompt,
+      });
+      return new Response(makeStream(result, "generate_flavor"), {
+        headers: NDJSON_HEADERS,
+      });
+    }
+    case "generate_art_prompt": {
+      const result = streamObject({
+        model,
+        schema: generateArtPromptOutputSchema,
+        system: SYSTEM_PROMPT,
+        prompt,
+      });
+      return new Response(makeStream(result, "generate_art_prompt"), {
+        headers: NDJSON_HEADERS,
+      });
+    }
+    case "check_balance": {
+      const result = streamObject({
+        model,
+        schema: checkBalanceOutputSchema,
+        system: SYSTEM_PROMPT,
+        prompt,
+      });
+      return new Response(makeStream(result, "check_balance"), {
+        headers: NDJSON_HEADERS,
+      });
+    }
+    case "generate_from_concept": {
+      if (!request.concept || request.concept.trim().length === 0) {
+        return ndjsonError(
+          "Give the assistant a concept to riff on (a sentence or two is plenty).",
+          400,
+        );
+      }
+      const result = streamObject({
+        model,
+        schema: generateFromConceptOutputSchema,
+        system: SYSTEM_PROMPT,
+        prompt,
+      });
+      return new Response(makeStream(result, "generate_from_concept"), {
+        headers: NDJSON_HEADERS,
+      });
+    }
   }
 }
 
