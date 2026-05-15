@@ -26,7 +26,12 @@ const PROMPT_PREAMBLE =
   "Magic: The Gathering style fantasy illustration. Cinematic composition, painterly oil-on-canvas finish, dramatic lighting, rich detail. NO frame, NO borders, NO card layout, NO text or lettering anywhere in the image.";
 
 function modelId(): string {
-  return process.env.OPENAI_IMAGE_MODEL?.trim() || "dall-e-3";
+  // gpt-image-1 is OpenAI's current production image model. dall-e-3 is
+  // being retired and many accounts already get
+  //   400 The model 'dall-e-3' does not exist.
+  // when calling it. Override via OPENAI_IMAGE_MODEL if you have access
+  // to dall-e-3 (or future models like gpt-image-2).
+  return process.env.OPENAI_IMAGE_MODEL?.trim() || "gpt-image-1";
 }
 
 function client(): OpenAI {
@@ -67,15 +72,16 @@ export async function generateRandomArt(rawPrompt: string): Promise<RandomArtRes
   // ---- OpenAI image call ----
   //
   // Param compatibility notes (OpenAI Images API as of 2026):
-  //   - `style` was DALL-E-3-only and is now rejected at the API even on
-  //     dall-e-3 (OpenAI is winding the model down). We don't pass it.
-  //     DALL-E 3's default style is "vivid" anyway, so cards still get
-  //     the dramatic look we want.
-  //   - `quality: "hd"` is valid for dall-e-3. gpt-image-1 takes
-  //     `"low" | "medium" | "high" | "auto"`. We detect the model and
-  //     pick the right value.
-  //   - `response_format: "url"` is dall-e-2/3 only; gpt-image-1 always
-  //     returns b64_json. We branch the response handling accordingly.
+  //   OpenAI is winding `dall-e-3` down and routing more accounts through
+  //   the GPT image stack. Several params that the SDK still types as
+  //   valid for `dall-e-3` are now rejected server-side:
+  //     - `style` (vivid|natural)        → 400 Unknown parameter
+  //     - `response_format` (url|b64)    → 400 Unknown parameter
+  //   To stay forward-compatible we send the minimal universal param set
+  //   (model, prompt, size, n) and read whichever response field comes
+  //   back — `url` for legacy dall-e responses, `b64_json` for the new
+  //   GPT image responses. Quality stays opinionated per model since
+  //   it's still accepted and meaningfully affects output.
   const model = modelId();
   const isDalle = model.startsWith("dall-e");
 
@@ -83,29 +89,22 @@ export async function generateRandomArt(rawPrompt: string): Promise<RandomArtRes
   let revisedPrompt: string | undefined;
   try {
     const oa = client();
-    const response = isDalle
-      ? await oa.images.generate({
-          model,
-          prompt,
-          size: "1024x1024",
-          quality: "hd",
-          n: 1,
-          response_format: "url",
-        })
-      : await oa.images.generate({
-          model,
-          prompt,
-          size: "1024x1024",
-          quality: "high",
-          n: 1,
-        });
+    const response = await oa.images.generate({
+      model,
+      prompt,
+      size: "1024x1024",
+      // dall-e-3 accepts "standard" | "hd"; gpt-image-1 accepts
+      // "low" | "medium" | "high" | "auto". Pick the per-model best.
+      quality: isDalle ? "hd" : "high",
+      n: 1,
+    });
     const first = response.data?.[0];
     revisedPrompt = first?.revised_prompt ?? undefined;
-    if (isDalle) {
-      imageUrl = first?.url ?? undefined;
+    if (first?.url) {
+      imageUrl = first.url;
     } else if (first?.b64_json) {
-      // Wrap the base64 payload in a data: URL so the same fetch code path
-      // below picks it up. We immediately re-upload to Storage anyway, so
+      // Wrap the base64 payload in a data: URL so the same fetch code
+      // path below picks it up. We re-upload to Storage immediately so
       // there's no extra hop in the user-visible flow.
       imageUrl = `data:image/png;base64,${first.b64_json}`;
     }
