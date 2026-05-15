@@ -7,9 +7,16 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 // Legacy redirector (Phase 11 chunk 11).
 //
 // The canonical public URL is now `/card/[username]/[slug]`. This file
-// preserves the old `/card/[slug]` shape so existing share links, gallery
-// embeds, and search engine results keep working — it resolves the slug
-// to its unambiguous owner and 301s to the canonical path.
+// preserves the old single-segment `/card/<slug>` shape so existing share
+// links, gallery embeds, and search engine results keep working — it
+// resolves the slug to its unambiguous owner and 301s to the canonical
+// path.
+//
+// File-system note: the folder is `[username]/` (NOT `[slug]/`) because
+// Next.js requires the dynamic segment name to be consistent across
+// siblings at the same path depth — `/card/[username]/[slug]` lives in
+// the same directory. We destructure `params.username` here as `slug`
+// since the URL parameter is semantically a slug in this surface.
 //
 // Resolution rules (see resolveLegacyCardSlug):
 //   - Slug must match exactly one PUBLIC or UNLISTED card.
@@ -22,7 +29,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 // the purpose.
 // ---------------------------------------------------------------------------
 
-type Params = { slug: string };
+type Params = { username: string };
 
 export const metadata: Metadata = {
   // The redirect happens before the page renders, so search engines see
@@ -37,7 +44,9 @@ export default async function LegacyCardSlugPage({
 }: {
   params: Promise<Params>;
 }) {
-  const { slug } = await params;
+  // The URL is /card/<slug>; the file-system param is `username` per the
+  // note above. We treat the value as a slug for resolution.
+  const { username: slug } = await params;
 
   if (!isSupabaseConfigured()) {
     notFound();

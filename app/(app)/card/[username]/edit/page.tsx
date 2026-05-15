@@ -19,14 +19,20 @@ import {
 import { listMySetsForCard } from "@/lib/sets/queries";
 import { isAIConfigured } from "@/lib/ai/card-assistant";
 
+// File-system param name is `username` because the sibling
+// `(marketing)/card/[username]/[slug]` route uses the same first
+// segment — Next.js requires consistent dynamic-segment names across
+// the route tree at the same depth. The value at the URL position is
+// still a card slug (the owner's own card), so we destructure as
+// `slug` for clarity downstream.
 type EditCardPageProps = {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ username: string }>;
 };
 
 export async function generateMetadata({
   params,
 }: EditCardPageProps): Promise<Metadata> {
-  const { slug } = await params;
+  const { username: slug } = await params;
   return {
     title: `Edit ${slug.replace(/-/g, " ")}`,
     description: "Edit your custom card.",
@@ -49,7 +55,7 @@ export default async function EditCardPage({ params }: EditCardPageProps) {
     );
   }
 
-  const { slug } = await params;
+  const { username: slug } = await params;
   const user = await getCurrentUser();
   if (!user) {
     redirect(`/login?redirectTo=${encodeURIComponent(`/card/${slug}/edit`)}`);
