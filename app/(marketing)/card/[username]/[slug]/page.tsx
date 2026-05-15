@@ -3,9 +3,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Pencil } from "lucide-react";
 import { CardPreview } from "@/components/cards/card-preview";
+import { CardComments } from "@/components/cards/card-comments";
 import { DownloadModal } from "@/components/cards/download-modal";
 import { LikeButton } from "@/components/cards/like-button";
 import { RemixButton } from "@/components/cards/remix-button";
+import { ShareTargets } from "@/components/cards/share-targets";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SurfaceCard } from "@/components/ui/surface-card";
@@ -15,9 +17,11 @@ import {
   hasUserLikedCard,
 } from "@/lib/cards/queries";
 import { countPublicRemixesBySource } from "@/lib/cards/source-queries";
+import { listCommentsForCard } from "@/lib/cards/comments-queries";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { RENDER_PRESETS } from "@/lib/render/card-image";
+import { getSiteBaseUrl } from "@/lib/site-url";
 import type { ArtPosition, CardBackFace, FrameStyle } from "@/types/card";
 import { Sparkles } from "lucide-react";
 
@@ -120,7 +124,7 @@ export default async function CardDetailPage({
   const user = await getCurrentUser();
   const isOwner = Boolean(user && user.id === card.owner_id);
 
-  const [likesCount, viewerLiked, otherRemixesCount] = await Promise.all([
+  const [likesCount, viewerLiked, otherRemixesCount, comments] = await Promise.all([
     countCardLikes(card.id),
     user ? hasUserLikedCard(user.id, card.id) : Promise.resolve(false),
     // Chunk 13: count of OTHER public remixes of the same Scryfall card.
@@ -128,14 +132,34 @@ export default async function CardDetailPage({
     card.source_scryfall_id
       ? countPublicRemixesBySource(card.source_scryfall_id, card.id)
       : Promise.resolve(0),
+    listCommentsForCard(card.id, { limit: 50 }),
   ]);
 
   const ownerProfile = card.owner;
 
   const createdAt = formatDate(card.created_at);
 
+  const siteBase = getSiteBaseUrl();
+  const isShareable =
+    card.visibility === "public" || card.visibility === "unlisted";
+  const jsonLd = isShareable
+    ? buildCardJsonLd({
+        card,
+        username,
+        ownerDisplay:
+          ownerProfile?.display_name || ownerProfile?.username || "Anonymous",
+        siteBase,
+      })
+    : null;
+
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+      {jsonLd ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      ) : null}
       <Link
         href="/gallery"
         className="mb-6 inline-flex items-center gap-1 text-sm text-muted transition-colors hover:text-foreground"
@@ -238,6 +262,10 @@ export default async function CardDetailPage({
               </Button>
             ) : null}
             <DownloadModal cardId={card.id} cardSlug={card.slug} />
+            <ShareTargets
+              cardTitle={card.title}
+              cardUrl={`${siteBase}/card/${username}/${card.slug}`}
+            />
           </div>
 
           <SurfaceCard className="grid gap-4 p-6 sm:grid-cols-2">
@@ -288,6 +316,13 @@ export default async function CardDetailPage({
               </p>
             </SurfaceCard>
           ) : null}
+
+          <CardComments
+            cardId={card.id}
+            cardSlug={card.slug}
+            initialComments={comments}
+            currentUserId={user?.id ?? null}
+          />
         </div>
       </div>
     </div>
@@ -331,4 +366,83 @@ function Detail({ label, value }: { label: string; value: string }) {
       <span className="text-sm text-foreground">{value}</span>
     </div>
   );
+}
+
+// ---------------------------------------------------------------------------
+// JSON-LD CreativeWork
+//
+// Lets Google / ChatGPT / Perplexity describe the card accurately when a
+// user asks about it. We emit only the fields we actually have — no
+// fabricated authors or licenses. The image URL points at the public OG
+// renderer so social unfurls and search-result thumbnails match.
+// ---------------------------------------------------------------------------
+
+function buildCardJsonLd({
+  card,
+  username,
+  ownerDisplay,
+  siteBase,
+}: {
+  card: {
+    id: string;
+    title: string;
+    slug: string;
+    created_at: string;
+    updated_at: string;
+    flavor_text: string | null;
+    rules_text: string | null;
+    artist_credit: string | null;
+  };
+  username: string;
+  ownerDisplay: string;
+  siteBase: string;
+}): Record<string, unknown> {
+  const description =
+    card.flavor_text?.trim() ||
+    card.rules_text?.trim() ||
+    "A custom Magic: The Gathering card forged on Spellwright.";
+  const truncatedDescription =
+    description.length > 280 ? `${description.slice(0, 277)}…` : description;
+
+  const canonical = `${siteBase}/card/${username}/${card.slug}`;
+
+  const schema: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": "CreativeWork",
+    name: card.title,
+    headline: card.title,
+    description: truncatedDescription,
+    url: canonical,
+    mainEntityOfPage: canonical,
+    datePublished: card.created_at,
+    dateModified: card.updated_at,
+    image: `${siteBase}/api/cards/${card.id}/og`,
+    author: {
+      "@type": "Person",
+      name: ownerDisplay,
+      url: `${siteBase}/profile/${username}`,
+    },
+    creator: {
+      "@type": "Person",
+      name: ownerDisplay,
+      url: `${siteBase}/profile/${username}`,
+    },
+    publisher: {
+      "@type": "Organization",
+      name: "Spellwright",
+      url: siteBase,
+    },
+    inLanguage: "en",
+    isAccessibleForFree: true,
+    genre: "Fan-made custom Magic: The Gathering card",
+  };
+
+  if (card.artist_credit?.trim()) {
+    schema.contributor = {
+      "@type": "Person",
+      name: card.artist_credit.trim(),
+    };
+  }
+
+  return schema;
 }
