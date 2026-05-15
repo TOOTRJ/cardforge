@@ -17,9 +17,13 @@ import type { CardPreviewData } from "@/components/cards/card-preview";
 // ---------------------------------------------------------------------------
 // /api/cards/[id]/pdf — Print-ready PDF download
 //
-// Query params:
-//   ?sheet=true  — 9-up print sheet (US Letter, with crop marks)
-//                  default: single card on a 2.5"×3.5" page
+// Query params (current):
+//   ?layout=card                  → single card on a 2.5"×3.5" page (default)
+//   ?layout=sheet&paper=letter    → 9-up US Letter sheet with crop marks
+//   ?layout=sheet&paper=a4        → 9-up A4 sheet with crop marks
+//
+// Legacy alias (preserved for existing share/embed links):
+//   ?sheet=true                   ≡ ?layout=sheet&paper=letter
 //
 // Auth / visibility rules (mirrors the OG image route):
 //   - public cards    → accessible to everyone, cached at CDN
@@ -49,8 +53,31 @@ export async function GET(
     );
   }
 
-  const sheetParam = request.nextUrl.searchParams.get("sheet");
-  const layout: PdfLayout = sheetParam === "true" ? "sheet" : "card";
+  const params2 = request.nextUrl.searchParams;
+  const sheetParam = params2.get("sheet");
+  const layoutParam = params2.get("layout");
+  const paperParam = params2.get("paper");
+
+  // Resolve the effective layout. Order of precedence:
+  //   1. ?layout=<value> when valid
+  //   2. legacy ?sheet=true → sheet
+  //   3. default: single card
+  let layout: PdfLayout = "card";
+  if (layoutParam === "card") {
+    layout = "card";
+  } else if (layoutParam === "sheet" || layoutParam === "sheet-letter" || layoutParam === "sheet-a4") {
+    layout = layoutParam;
+  } else if (sheetParam === "true") {
+    layout = "sheet";
+  }
+
+  // Paper only applies to sheet layouts; mirror it onto the layout name
+  // so card-pdf.ts only has to look at one parameter.
+  if ((layout === "sheet" || layout === "sheet-letter") && paperParam === "a4") {
+    layout = "sheet-a4";
+  } else if (layout === "sheet" && paperParam === "letter") {
+    layout = "sheet-letter";
+  }
 
   // Fetch the card row (RLS applies — anon can read public/unlisted).
   let card: Awaited<ReturnType<typeof fetchCard>>;
@@ -119,9 +146,11 @@ export async function GET(
   }
 
   const filename =
-    layout === "sheet"
-      ? `${card.slug}-sheet.pdf`
-      : `${card.slug}.pdf`;
+    layout === "sheet-a4"
+      ? `${card.slug}-sheet-a4.pdf`
+      : layout === "sheet" || layout === "sheet-letter"
+        ? `${card.slug}-sheet.pdf`
+        : `${card.slug}.pdf`;
 
   // Cache public cards at CDN; skip cache for unlisted/private.
   const cacheControl =

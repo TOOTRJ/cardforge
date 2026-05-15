@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Pencil, Share2 } from "lucide-react";
+import { ArrowLeft, Pencil } from "lucide-react";
 import { CardPreview } from "@/components/cards/card-preview";
-import { ExportButton } from "@/components/creator/export-button";
+import { DownloadModal } from "@/components/cards/download-modal";
 import { LikeButton } from "@/components/cards/like-button";
 import { RemixButton } from "@/components/cards/remix-button";
 import { Button } from "@/components/ui/button";
@@ -231,23 +231,13 @@ export default async function CardDetailPage({
               requiresSignIn={!user}
             />
             {isOwner ? (
-              <>
-                <Button asChild>
-                  <Link href={`/card/${card.slug}/edit`}>
-                    <Pencil className="h-4 w-4" aria-hidden /> Edit card
-                  </Link>
-                </Button>
-                <ExportButton
-                  cardId={card.id}
-                  cardSlug={card.slug}
-                  variant="outline"
-                  label="Download HD PNG"
-                />
-              </>
+              <Button asChild>
+                <Link href={`/card/${card.slug}/edit`}>
+                  <Pencil className="h-4 w-4" aria-hidden /> Edit card
+                </Link>
+              </Button>
             ) : null}
-            <Button variant="ghost" disabled>
-              <Share2 className="h-4 w-4" aria-hidden /> Share
-            </Button>
+            <DownloadModal cardId={card.id} cardSlug={card.slug} />
           </div>
 
           <SurfaceCard className="grid gap-4 p-6 sm:grid-cols-2">

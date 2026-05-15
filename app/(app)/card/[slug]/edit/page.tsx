@@ -3,8 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { CardCreatorForm } from "@/components/creator/card-creator-form";
-import { ExportButton } from "@/components/creator/export-button";
-import { PrintButton } from "@/components/creator/print-button";
+import { DownloadModal } from "@/components/cards/download-modal";
 import { AddToSetButton } from "@/components/sets/add-to-set-button";
 import { PageHeader } from "@/components/layout/page-header";
 import { SurfaceCard } from "@/components/ui/surface-card";
@@ -99,17 +98,7 @@ export default async function EditCardPage({ params }: EditCardPageProps) {
                 contains_card: s.contains_card,
               }))}
             />
-            <ExportButton
-              cardId={card.id}
-              cardSlug={card.slug}
-              variant="outline"
-              label="Download HD PNG"
-            />
-            <PrintButton
-              cardId={card.id}
-              cardSlug={card.slug}
-              variant="outline"
-            />
+            <DownloadModal cardId={card.id} cardSlug={card.slug} />
             <Button asChild variant="ghost">
               <Link href={`/card/${card.slug}`}>
                 <ArrowLeft className="h-4 w-4" aria-hidden /> View public page
