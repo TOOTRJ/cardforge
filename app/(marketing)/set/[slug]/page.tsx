@@ -144,13 +144,13 @@ export default async function SetDetailPage({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {items.length > 0 ? (
-              <Button asChild variant="outline">
-                <Link href={`/set/${set.slug}/booster`}>
-                  <PackageOpen className="h-4 w-4" aria-hidden /> Open booster
-                </Link>
-              </Button>
-            ) : null}
+            {/* Always exposed in the header; the booster page renders an
+                empty-state when the set has no cards yet. */}
+            <Button asChild variant="outline">
+              <Link href={`/set/${set.slug}/booster`}>
+                <PackageOpen className="h-4 w-4" aria-hidden /> Open booster
+              </Link>
+            </Button>
             {isOwner ? (
               <Button asChild>
                 <Link href={`/set/${set.slug}/edit`}>

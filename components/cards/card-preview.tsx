@@ -162,8 +162,12 @@ function showsPowerToughness(cardType: CardType | null | undefined): boolean {
   return cardType === "creature" || cardType === "token";
 }
 
-function showsLoyalty(rarity: Rarity | null | undefined): boolean {
-  return rarity === "mythic";
+function showsLoyalty(cardType: CardType | null | undefined): boolean {
+  return cardType === "planeswalker";
+}
+
+function showsDefense(cardType: CardType | null | undefined): boolean {
+  return cardType === "battle";
 }
 
 // ---------------------------------------------------------------------------
@@ -440,8 +444,8 @@ function InnerCardPanel({
   const showCost = face.cardType !== "land" && face.cost?.trim();
   const showPT =
     showsPowerToughness(face.cardType) && (face.power || face.toughness);
-  const showLoyalty = showsLoyalty(rarity) && Boolean(face.loyalty);
-  const showDefense = Boolean(face.defense);
+  const showLoyalty = showsLoyalty(face.cardType) && Boolean(face.loyalty);
+  const showDefense = showsDefense(face.cardType) && Boolean(face.defense);
   const gradient = pickGradient(colorIdentity);
   const focalX = clamp(face.artPosition?.focalX ?? 0.5, 0, 1);
   const focalY = clamp(face.artPosition?.focalY ?? 0.5, 0, 1);

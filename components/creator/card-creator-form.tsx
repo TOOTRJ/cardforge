@@ -13,12 +13,14 @@ import {
   ArrowLeft,
   Box,
   Coins,
+  Crown,
   Globe2,
   Link2,
   Lock,
   Mountain,
   Save,
   Search,
+  Shield,
   Sparkles,
   Swords,
   Wand2,
@@ -180,12 +182,18 @@ const FIELD_TO_TAB: Record<keyof FormValues, TabKey> = {
   source_scryfall_id: "publishing",
 };
 
+// Modern MTG card type picker. The legacy "spell" value is still accepted
+// by the DB (migration 0018 keeps it in the check constraint) so existing
+// rows render fine, but new cards pick a more specific instant/sorcery.
 const CARD_TYPE_OPTIONS: ChipOption<CardType>[] = [
   { value: "creature", label: "Creature", icon: Swords },
-  { value: "spell", label: "Spell", icon: Zap },
+  { value: "instant", label: "Instant", icon: Zap },
+  { value: "sorcery", label: "Sorcery", icon: Wand2 },
   { value: "artifact", label: "Artifact", icon: Box },
   { value: "enchantment", label: "Enchantment", icon: Sparkles },
   { value: "land", label: "Land", icon: Mountain },
+  { value: "planeswalker", label: "Planeswalker", icon: Crown },
+  { value: "battle", label: "Battle", icon: Shield },
   { value: "token", label: "Token", icon: Coins },
 ];
 

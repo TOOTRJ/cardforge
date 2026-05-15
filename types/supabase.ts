@@ -38,26 +38,40 @@ export type Database = {
         };
         Relationships: [];
       };
-      scryfall_calls: {
+      card_comments: {
         Row: {
-          action: string;
+          author_id: string;
+          body: string;
+          card_id: string;
           created_at: string;
           id: string;
-          user_id: string;
+          updated_at: string;
         };
         Insert: {
-          action: string;
+          author_id: string;
+          body: string;
+          card_id: string;
           created_at?: string;
           id?: string;
-          user_id: string;
+          updated_at?: string;
         };
         Update: {
-          action?: string;
+          author_id?: string;
+          body?: string;
+          card_id?: string;
           created_at?: string;
           id?: string;
-          user_id?: string;
+          updated_at?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "card_comments_card_id_fkey";
+            columns: ["card_id"];
+            isOneToOne: false;
+            referencedRelation: "cards";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       card_exports: {
         Row: {
@@ -263,8 +277,11 @@ export type Database = {
           frame_style: Json;
           game_system_id: string;
           id: string;
+          layout: string;
           loyalty: string | null;
+          mana_value: number | null;
           metadata: Json;
+          oracle_text: string | null;
           owner_id: string;
           parent_card_id: string | null;
           power: string | null;
@@ -294,8 +311,11 @@ export type Database = {
           frame_style?: Json;
           game_system_id: string;
           id?: string;
+          layout?: string;
           loyalty?: string | null;
+          mana_value?: number | null;
           metadata?: Json;
+          oracle_text?: string | null;
           owner_id: string;
           parent_card_id?: string | null;
           power?: string | null;
@@ -325,8 +345,11 @@ export type Database = {
           frame_style?: Json;
           game_system_id?: string;
           id?: string;
+          layout?: string;
           loyalty?: string | null;
+          mana_value?: number | null;
           metadata?: Json;
+          oracle_text?: string | null;
           owner_id?: string;
           parent_card_id?: string | null;
           power?: string | null;
@@ -426,6 +449,27 @@ export type Database = {
         };
         Relationships: [];
       };
+      scryfall_calls: {
+        Row: {
+          action: string;
+          created_at: string;
+          id: string;
+          user_id: string;
+        };
+        Insert: {
+          action: string;
+          created_at?: string;
+          id?: string;
+          user_id: string;
+        };
+        Update: {
+          action?: string;
+          created_at?: string;
+          id?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -433,11 +477,17 @@ export type Database = {
     Functions: {
       card_ai_calls_daily: {
         Args: { since: string };
-        Returns: { day: string; count: number }[];
+        Returns: {
+          count: number;
+          day: string;
+        }[];
       };
       scryfall_calls_daily: {
         Args: { since: string };
-        Returns: { day: string; count: number }[];
+        Returns: {
+          count: number;
+          day: string;
+        }[];
       };
     };
     Enums: {
@@ -601,3 +651,8 @@ export type CardSetUpdate = TablesUpdate<"card_sets">;
 
 export type CardSetItem = Tables<"card_set_items">;
 export type CardSetItemInsert = TablesInsert<"card_set_items">;
+
+// Phase v2: comments on public cards.
+export type CardComment = Tables<"card_comments">;
+export type CardCommentInsert = TablesInsert<"card_comments">;
+export type CardCommentUpdate = TablesUpdate<"card_comments">;

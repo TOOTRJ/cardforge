@@ -32,20 +32,22 @@ const KNOWN_SUPERTYPES = new Set([
   "Elite",
 ]);
 
-// Scryfall's type words → our CardType enum. Several Scryfall types
-// collapse into our generic "spell" since the data model deliberately
-// keeps a small enum (creature/spell/artifact/enchantment/land/token).
+// Scryfall's type words → our CardType enum. The data model now supports
+// every canonical MTG type directly (creature / instant / sorcery / artifact
+// / enchantment / land / planeswalker / battle / token), so imports preserve
+// the source type instead of collapsing it. "Tribal" isn't a separate
+// CardType in our schema — it folds back to the legacy "spell" so we still
+// import the card without losing it.
 const TYPE_WORD_TO_CARD_TYPE: Record<string, CardType> = {
   creature: "creature",
-  instant: "spell",
-  sorcery: "spell",
+  instant: "instant",
+  sorcery: "sorcery",
   artifact: "artifact",
   enchantment: "enchantment",
   land: "land",
   token: "token",
-  // Less common — best-effort mapping so we don't lose them entirely.
-  planeswalker: "spell",
-  battle: "spell",
+  planeswalker: "planeswalker",
+  battle: "battle",
   tribal: "spell",
 };
 

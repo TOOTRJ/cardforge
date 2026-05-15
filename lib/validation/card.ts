@@ -111,9 +111,53 @@ export const artPositionSchema = z
     focalX: z.number().min(0).max(1).optional(),
     focalY: z.number().min(0).max(1).optional(),
     scale: z.number().min(0.1).max(4).optional(),
+    rotation: z.number().min(-180).max(180).optional(),
   })
   .strict()
   .default({});
+
+// Scryfall layout vocabulary — kept in sync with the cards_layout_valid
+// CHECK constraint in supabase/migrations/0019_v2_compat.sql.
+export const CARD_LAYOUT_VALUES = [
+  "normal",
+  "split",
+  "flip",
+  "transform",
+  "modal_dfc",
+  "meld",
+  "leveler",
+  "saga",
+  "adventure",
+  "planar",
+  "scheme",
+  "vanguard",
+  "token",
+  "double_faced_token",
+  "emblem",
+  "augment",
+  "host",
+  "art_series",
+  "reversible_card",
+  "class",
+  "case",
+  "mutate",
+  "prototype",
+] as const;
+
+export const cardLayoutSchema = z.enum(CARD_LAYOUT_VALUES);
+
+export const cardManaValueSchema = z
+  .number()
+  .min(0, "Mana value must be 0 or greater.")
+  .max(99, "Mana value seems out of range.")
+  .optional();
+
+export const cardOracleTextSchema = optionalEmptyString(
+  z
+    .string()
+    .trim()
+    .max(4000, "Oracle text must be 4000 characters or fewer."),
+);
 
 export const frameStyleSchema = z
   .object({
@@ -193,6 +237,11 @@ const baseCardSchema = z.object({
   // imported from Scryfall via the import dialog. UUID-shaped per
   // Scryfall's id format. `null` clears; `undefined` leaves alone.
   source_scryfall_id: uuidSchema.nullable().optional(),
+  // Scryfall parity columns (Phase v2). All optional; server actions write
+  // oracle_text alongside rules_text to keep both in sync.
+  oracle_text: cardOracleTextSchema,
+  mana_value: cardManaValueSchema,
+  layout: cardLayoutSchema.optional(),
 });
 
 export const createCardSchema = baseCardSchema;

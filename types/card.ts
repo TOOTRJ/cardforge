@@ -7,6 +7,8 @@ import type {
   Card as CardRow,
   CardInsert as CardRowInsert,
   CardUpdate as CardRowUpdate,
+  CardComment as CardCommentRow,
+  CardCommentInsert as CardCommentRowInsert,
   CardTemplate as CardTemplateRow,
   GameSystem as GameSystemRow,
   Profile as ProfileRow,
@@ -128,6 +130,8 @@ export type ArtPosition = {
   focalY?: number;
   /** 1.0 = no zoom, >1 zooms in, <1 zooms out. */
   scale?: number;
+  /** Rotation in degrees, -180 to 180. 0 (default) = no rotation. */
+  rotation?: number;
 };
 
 // Back-face content for double-faced cards (DFCs). Persisted as jsonb on
@@ -182,6 +186,17 @@ export type CardWithOwner = Card & {
 
 export type CardWithLineage = Card & {
   parent: Pick<Card, "id" | "slug" | "title"> | null;
+};
+
+// ---------------------------------------------------------------------------
+// Comments on public cards (Phase v2)
+// ---------------------------------------------------------------------------
+
+export type CardComment = CardCommentRow;
+export type CardCommentInsert = CardCommentRowInsert;
+
+export type CardCommentWithAuthor = CardComment & {
+  author: Pick<Profile, "username" | "display_name" | "avatar_url"> | null;
 };
 
 // ---------------------------------------------------------------------------
