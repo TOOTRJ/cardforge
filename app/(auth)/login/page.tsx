@@ -8,7 +8,7 @@ import type { LoginInput } from "@/lib/auth/schemas";
 
 export const metadata: Metadata = {
   title: "Sign in",
-  description: "Sign in to your CardForge account.",
+  description: "Sign in to your Spellwright account.",
 };
 
 type SearchParams = { redirectTo?: string; notice?: string };
@@ -78,7 +78,7 @@ export default async function LoginPage({
       />
 
       <p className="text-sm text-muted">
-        New to CardForge?{" "}
+        New to Spellwright?{" "}
         <Link
           href={
             redirectTo

@@ -8,7 +8,7 @@ import type { SignupInput } from "@/lib/auth/schemas";
 
 export const metadata: Metadata = {
   title: "Create account",
-  description: "Create a CardForge account to start designing custom cards.",
+  description: "Create a Spellwright account to start designing custom cards.",
 };
 
 type SearchParams = { redirectTo?: string };

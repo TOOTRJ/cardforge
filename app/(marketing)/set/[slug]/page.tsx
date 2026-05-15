@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Pencil } from "lucide-react";
+import { ArrowLeft, PackageOpen, Pencil } from "lucide-react";
 import { CardPreview } from "@/components/cards/card-preview";
 import { PageHeader } from "@/components/layout/page-header";
 import { SurfaceCard } from "@/components/ui/surface-card";
@@ -42,14 +42,14 @@ export async function generateMetadata({
 
   const isShareable = set.visibility === "public" || set.visibility === "unlisted";
   const description =
-    set.description?.trim() || `A custom card set on CardForge.`;
+    set.description?.trim() || `A custom card set on Spellwright.`;
 
   return {
     title: set.title,
     description,
     openGraph: isShareable && set.cover_url
       ? {
-          title: `${set.title} · CardForge`,
+          title: `${set.title} · Spellwright`,
           description,
           type: "article",
           url: `/set/${set.slug}`,
@@ -59,7 +59,7 @@ export async function generateMetadata({
     twitter: isShareable && set.cover_url
       ? {
           card: "summary_large_image",
-          title: `${set.title} · CardForge`,
+          title: `${set.title} · Spellwright`,
           description,
           images: [set.cover_url],
         }
@@ -136,13 +136,22 @@ export default async function SetDetailPage({
             ) : null}
           </div>
 
-          {isOwner ? (
-            <Button asChild>
-              <Link href={`/set/${set.slug}/edit`}>
-                <Pencil className="h-4 w-4" aria-hidden /> Edit set
-              </Link>
-            </Button>
-          ) : null}
+          <div className="flex flex-wrap items-center gap-2">
+            {items.length > 0 ? (
+              <Button asChild variant="outline">
+                <Link href={`/set/${set.slug}/booster`}>
+                  <PackageOpen className="h-4 w-4" aria-hidden /> Open booster
+                </Link>
+              </Button>
+            ) : null}
+            {isOwner ? (
+              <Button asChild>
+                <Link href={`/set/${set.slug}/edit`}>
+                  <Pencil className="h-4 w-4" aria-hidden /> Edit set
+                </Link>
+              </Button>
+            ) : null}
+          </div>
         </div>
       </SurfaceCard>
 

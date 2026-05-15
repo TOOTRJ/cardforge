@@ -30,13 +30,33 @@ export type Rarity = (typeof RARITY_VALUES)[number];
 
 export const CARD_TYPE_VALUES = [
   "creature",
-  "spell",
+  "instant",
+  "sorcery",
   "artifact",
   "enchantment",
   "land",
+  "planeswalker",
+  "battle",
   "token",
+  // Legacy value kept for backward compatibility with existing saved cards.
+  // New cards should use 'instant' or 'sorcery' directly.
+  "spell",
 ] as const;
 export type CardType = (typeof CARD_TYPE_VALUES)[number];
+
+// Display-friendly labels for each card type, used in select menus and previews.
+export const CARD_TYPE_LABELS: Record<CardType, string> = {
+  creature: "Creature",
+  instant: "Instant",
+  sorcery: "Sorcery",
+  artifact: "Artifact",
+  enchantment: "Enchantment",
+  land: "Land",
+  planeswalker: "Planeswalker",
+  battle: "Battle",
+  token: "Token",
+  spell: "Spell (legacy)",
+};
 
 export const COLOR_IDENTITY_VALUES = [
   "white",

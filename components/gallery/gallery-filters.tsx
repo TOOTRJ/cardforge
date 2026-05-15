@@ -4,11 +4,15 @@ import { useCallback, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Loader2, Search, X } from "lucide-react";
 import {
+  CARD_TYPE_LABELS,
   CARD_TYPE_VALUES,
+  COLOR_IDENTITY_VALUES,
   RARITY_VALUES,
   type CardType,
+  type ColorIdentity,
   type Rarity,
 } from "@/types/card";
+import { ManaPip } from "@/components/cards/mana-pip";
 import { cn } from "@/lib/utils";
 
 type Sort = "recent" | "popular";
@@ -18,14 +22,6 @@ const SORT_LABELS: Record<Sort, string> = {
   popular: "Popular",
 };
 
-const CARD_TYPE_LABELS: Record<CardType, string> = {
-  creature: "Creature",
-  spell: "Spell",
-  artifact: "Artifact",
-  enchantment: "Enchantment",
-  land: "Land",
-  token: "Token",
-};
 
 const RARITY_LABELS: Record<Rarity, string> = {
   common: "Common",
@@ -46,6 +42,7 @@ export function GalleryFilters() {
 
   const cardTypeParam = searchParams.get("type");
   const rarityParam = searchParams.get("rarity");
+  const colorParam = searchParams.get("color");
   const sortParam = readSort(searchParams.get("sort"));
   const searchParam = searchParams.get("q") ?? "";
 
@@ -58,6 +55,11 @@ export function GalleryFilters() {
     rarityParam ?? "",
   )
     ? (rarityParam as Rarity)
+    : null;
+  const colorIdentity = (COLOR_IDENTITY_VALUES as readonly string[]).includes(
+    colorParam ?? "",
+  )
+    ? (colorParam as ColorIdentity)
     : null;
 
   // Search has its own local state so typing doesn't refetch on every
@@ -105,6 +107,7 @@ export function GalleryFilters() {
   const filtersActive =
     cardType !== null ||
     rarity !== null ||
+    colorIdentity !== null ||
     sortParam !== "recent" ||
     searchInput.trim().length > 0;
 
@@ -189,6 +192,28 @@ export function GalleryFilters() {
 
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs font-semibold uppercase tracking-wider text-subtle">
+          Color
+        </span>
+        <Chip
+          active={colorIdentity === null}
+          onClick={() => updateParam({ color: null })}
+        >
+          All
+        </Chip>
+        {COLOR_IDENTITY_VALUES.map((color) => (
+          <ColorChip
+            key={color}
+            color={color}
+            active={colorIdentity === color}
+            onClick={() =>
+              updateParam({ color: colorIdentity === color ? null : color })
+            }
+          />
+        ))}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-semibold uppercase tracking-wider text-subtle">
           Sort
         </span>
         {(Object.keys(SORT_LABELS) as Sort[]).map((value) => (
@@ -219,6 +244,7 @@ export function GalleryFilters() {
                 q: null,
                 type: null,
                 rarity: null,
+                color: null,
                 sort: null,
               });
             }}
@@ -254,6 +280,57 @@ function Chip({
       aria-pressed={active}
     >
       {children}
+    </button>
+  );
+}
+
+// Maps a ColorIdentity value to the mana pip symbol used for rendering.
+const COLOR_TO_PIP: Record<ColorIdentity, string> = {
+  white: "W",
+  blue: "U",
+  black: "B",
+  red: "R",
+  green: "G",
+  colorless: "C",
+  multicolor: "M",
+};
+
+// Human-readable label for aria purposes.
+const COLOR_LABEL: Record<ColorIdentity, string> = {
+  white: "White",
+  blue: "Blue",
+  black: "Black",
+  red: "Red",
+  green: "Green",
+  colorless: "Colorless",
+  multicolor: "Multicolor",
+};
+
+function ColorChip({
+  color,
+  active,
+  onClick,
+}: {
+  color: ColorIdentity;
+  active: boolean;
+  onClick: () => void;
+}) {
+  const pipSymbol = COLOR_TO_PIP[color];
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={`Filter by ${COLOR_LABEL[color]}`}
+      aria-pressed={active}
+      className={cn(
+        "rounded-full transition-all",
+        active
+          ? "ring-2 ring-primary ring-offset-2 ring-offset-background"
+          : "opacity-60 hover:opacity-100",
+      )}
+    >
+      <ManaPip symbol={pipSymbol} size="md" />
     </button>
   );
 }

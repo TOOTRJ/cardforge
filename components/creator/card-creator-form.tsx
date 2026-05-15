@@ -14,6 +14,7 @@ import {
   Globe2,
   Link2,
   Lock,
+  LogIn,
   Save,
   Sparkles,
   Wand2,
@@ -25,6 +26,8 @@ import { SurfaceCard } from "@/components/ui/surface-card";
 import { CardPreview } from "@/components/cards/card-preview";
 import { ArtUploader } from "@/components/creator/art-uploader";
 import { DeleteCardDialog } from "@/components/creator/delete-card-dialog";
+import { ManaCostBuilder } from "@/components/creator/mana-cost-builder";
+import { FrameStylePicker } from "@/components/creator/frame-style-picker";
 import {
   AIAssistantPanel,
   type CardFieldPatch,
@@ -36,6 +39,7 @@ import {
 } from "@/lib/cards/actions";
 import { slugify } from "@/lib/validation/card";
 import {
+  CARD_TYPE_LABELS,
   CARD_TYPE_VALUES,
   COLOR_IDENTITY_VALUES,
   RARITY_VALUES,
@@ -421,37 +425,39 @@ export function CardCreatorForm({
           />
         </FieldGroup>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <FieldGroup label="Cost" helper="Generic fantasy cost (e.g. {2}{R}).">
-            <input
-              {...register("cost")}
-              placeholder="{2}{R}{R}"
-              className={inputClass(Boolean(errors.cost))}
-              autoComplete="off"
-            />
-          </FieldGroup>
+        <FieldGroup label="Mana Cost" helper="Click pips to build the cost, or type it directly below.">
+          <Controller
+            control={control}
+            name="cost"
+            render={({ field }) => (
+              <ManaCostBuilder
+                value={field.value}
+                onChange={field.onChange}
+              />
+            )}
+          />
+        </FieldGroup>
 
-          <FieldGroup label="Card type" error={errors.card_type?.message}>
-            <Controller
-              control={control}
-              name="card_type"
-              render={({ field }) => (
-                <select
-                  value={field.value}
-                  onChange={(event) => field.onChange(event.target.value)}
-                  className={selectClass(false)}
-                >
-                  <option value="">— pick one —</option>
-                  {CARD_TYPE_VALUES.map((type) => (
-                    <option key={type} value={type}>
-                      {type[0].toUpperCase() + type.slice(1)}
-                    </option>
-                  ))}
-                </select>
-              )}
-            />
-          </FieldGroup>
-        </div>
+        <FieldGroup label="Type Line" error={errors.card_type?.message}>
+          <Controller
+            control={control}
+            name="card_type"
+            render={({ field }) => (
+              <select
+                value={field.value}
+                onChange={(event) => field.onChange(event.target.value)}
+                className={selectClass(false)}
+              >
+                <option value="">— pick one —</option>
+                {CARD_TYPE_VALUES.map((type) => (
+                  <option key={type} value={type}>
+                    {CARD_TYPE_LABELS[type]}
+                  </option>
+                ))}
+              </select>
+            )}
+          />
+        </FieldGroup>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <FieldGroup
@@ -467,11 +473,11 @@ export function CardCreatorForm({
           </FieldGroup>
           <FieldGroup
             label="Subtypes"
-            helper="Comma-separated. Up to 10."
+            helper="Space-separated creature types, e.g. Elf Warrior or Dragon Elder."
           >
             <input
               {...register("subtypes_text")}
-              placeholder="Dragon, Elder"
+              placeholder="Dragon Elder"
               className={inputClass(Boolean(errors.subtypes_text))}
               autoComplete="off"
             />
@@ -541,22 +547,22 @@ export function CardCreatorForm({
         </FieldGroup>
 
         <FieldGroup
-          label="Rules text"
+          label="Oracle Text"
           error={errors.rules_text?.message}
-          helper="Up to 4000 characters."
+          helper="Card abilities and rules. Use (parentheses) for reminder text — it renders in italics."
         >
           <textarea
             {...register("rules_text")}
-            placeholder="Flying. Whenever Emberbound Wyrm enters the battlefield, draw a card."
+            placeholder="Flying&#10;When this creature enters, draw a card. (This ability triggers once.)"
             rows={4}
             className={textareaClass(Boolean(errors.rules_text))}
           />
         </FieldGroup>
 
         <FieldGroup
-          label="Flavor text"
+          label="Flavor Text"
           error={errors.flavor_text?.message}
-          helper="Optional — up to 1000 characters."
+          helper='Optional. Renders in italics at the bottom of the card. E.g. "A coil of fire, bound by oath."'
         >
           <textarea
             {...register("flavor_text")}
@@ -602,8 +608,8 @@ export function CardCreatorForm({
         </div>
 
         <FieldGroup
-          label="Artist credit"
-          helper="Who made the artwork? Yourself, a public-domain artist, or a licensed source."
+          label="Illustrated by"
+          helper="The artist's name. Yourself, a public-domain artist, or a licensed source."
         >
           <input
             {...register("artist_credit")}
@@ -650,39 +656,17 @@ export function CardCreatorForm({
           />
         </FieldGroup>
 
-        <FieldGroup label="Frame style" helper="Optional polish on the preview.">
-          <div className="grid grid-cols-2 gap-3">
-            <Controller
-              control={control}
-              name="frame_style.border"
-              render={({ field }) => (
-                <select
-                  value={field.value ?? "thin"}
-                  onChange={(event) => field.onChange(event.target.value)}
-                  className={selectClass(false)}
-                >
-                  <option value="thin">Border: Thin</option>
-                  <option value="thick">Border: Thick</option>
-                  <option value="ornate">Border: Ornate</option>
-                </select>
-              )}
-            />
-            <Controller
-              control={control}
-              name="frame_style.accent"
-              render={({ field }) => (
-                <select
-                  value={field.value ?? "neutral"}
-                  onChange={(event) => field.onChange(event.target.value)}
-                  className={selectClass(false)}
-                >
-                  <option value="neutral">Accent: Neutral</option>
-                  <option value="warm">Accent: Warm</option>
-                  <option value="cool">Accent: Cool</option>
-                </select>
-              )}
-            />
-          </div>
+        <FieldGroup label="Frame style" helper="Pick a preset — or combine border and accent in the raw fields below.">
+          <Controller
+            control={control}
+            name="frame_style"
+            render={({ field }) => (
+              <FrameStylePicker
+                value={field.value}
+                onChange={field.onChange}
+              />
+            )}
+          />
         </FieldGroup>
 
         <AIAssistantPanel
@@ -694,7 +678,11 @@ export function CardCreatorForm({
         {/* Action bar */}
         <div className="sticky bottom-0 -mx-6 -mb-6 flex flex-wrap items-center justify-between gap-3 border-t border-border/50 bg-surface/95 px-6 py-4 backdrop-blur-sm">
           <div className="flex items-center gap-2 text-xs text-muted">
-            {isDirty ? (
+            {!userId ? (
+              <Badge variant="accent" className="gap-1.5">
+                <Sparkles className="h-3 w-3" aria-hidden /> Preview mode
+              </Badge>
+            ) : isDirty ? (
               <Badge variant="accent" className="gap-1.5">
                 <Sparkles className="h-3 w-3" aria-hidden /> Unsaved changes
               </Badge>
@@ -703,7 +691,23 @@ export function CardCreatorForm({
             )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {mode === "edit" && card ? (
+            {!userId ? (
+              // Guest mode — prompt to sign in instead of showing a save button
+              <>
+                <Button asChild variant="ghost">
+                  <Link href="/login?redirectTo=/create">
+                    <ArrowLeft className="h-4 w-4" aria-hidden />
+                    Back
+                  </Link>
+                </Button>
+                <Button asChild size="lg">
+                  <Link href="/signup">
+                    <LogIn className="h-4 w-4" aria-hidden />
+                    Sign in to save
+                  </Link>
+                </Button>
+              </>
+            ) : mode === "edit" && card ? (
               <DeleteCardDialog
                 cardId={card.id}
                 cardTitle={card.title}
@@ -717,19 +721,21 @@ export function CardCreatorForm({
                 </Link>
               </Button>
             )}
-            <Button type="submit" disabled={isSubmitting} size="lg">
-              {isSubmitting ? (
-                <>
-                  <Wand2 className="h-4 w-4 animate-pulse" aria-hidden />
-                  Saving…
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4" aria-hidden />
-                  {mode === "edit" ? "Save changes" : "Save card"}
-                </>
-              )}
-            </Button>
+            {userId ? (
+              <Button type="submit" disabled={isSubmitting} size="lg">
+                {isSubmitting ? (
+                  <>
+                    <Wand2 className="h-4 w-4 animate-pulse" aria-hidden />
+                    Saving…
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4" aria-hidden />
+                    {mode === "edit" ? "Save changes" : "Save card"}
+                  </>
+                )}
+              </Button>
+            ) : null}
           </div>
         </div>
       </SurfaceCard>

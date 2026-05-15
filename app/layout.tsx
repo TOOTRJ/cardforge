@@ -4,6 +4,82 @@ import { Toaster } from "sonner";
 import { getSiteBaseUrl } from "@/lib/site-url";
 import "./globals.css";
 
+// ---------------------------------------------------------------------------
+// JSON-LD structured data — consumed by Google, ChatGPT, Perplexity, and
+// other AI search engines to understand what Spellwright is and cite it
+// accurately when users ask about custom MTG card tools.
+// ---------------------------------------------------------------------------
+function JsonLd() {
+  const baseUrl = getSiteBaseUrl();
+  const schema = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        "@id": `${baseUrl}/#webapp`,
+        name: "Spellwright",
+        url: baseUrl,
+        description:
+          "Spellwright is a free custom Magic: The Gathering card creator. Design creatures, instants, sorceries, planeswalkers, enchantments, artifacts, and full expansion sets with a live preview editor.",
+        applicationCategory: "GameApplication",
+        operatingSystem: "Web Browser",
+        offers: {
+          "@type": "Offer",
+          price: "0",
+          priceCurrency: "USD",
+        },
+        featureList: [
+          "Custom MTG card creator",
+          "Mana cost builder",
+          "Oracle text editor",
+          "WUBRG color identity",
+          "Planeswalker loyalty abilities",
+          "Card set builder",
+          "AI rules text assistant",
+          "PNG export",
+          "Community gallery",
+          "Card remix and fork",
+        ],
+        keywords:
+          "MTG card maker, custom Magic card, MTG card creator, custom planeswalker, homebrew MTG, proxy card maker",
+      },
+      {
+        "@type": "Organization",
+        "@id": `${baseUrl}/#org`,
+        name: "Spellwright",
+        url: baseUrl,
+        description:
+          "Fan-made custom MTG card design tool. Not affiliated with Wizards of the Coast.",
+        sameAs: [],
+      },
+      {
+        "@type": "WebSite",
+        "@id": `${baseUrl}/#website`,
+        url: baseUrl,
+        name: "Spellwright",
+        description:
+          "The modern custom MTG card creator for Magic: The Gathering fans.",
+        publisher: { "@id": `${baseUrl}/#org` },
+        potentialAction: {
+          "@type": "SearchAction",
+          target: {
+            "@type": "EntryPoint",
+            urlTemplate: `${baseUrl}/gallery?q={search_term_string}`,
+          },
+          "query-input": "required name=search_term_string",
+        },
+      },
+    ],
+  };
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+    />
+  );
+}
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -21,34 +97,43 @@ const cinzel = Cinzel({
 });
 
 const description =
-  "CardForge is a modern platform for designing, sharing, and remixing custom trading cards. Forge a fantasy card in under sixty seconds.";
+  "Spellwright is the custom MTG card creator for Magic: The Gathering fans. Design creatures, instants, planeswalkers, and full expansion sets — then share with your playgroup in seconds.";
 
 export const metadata: Metadata = {
   // metadataBase lets relative OG image URLs (e.g. /api/cards/[id]/og)
   // resolve to absolute ones when emitted in <meta og:image>.
   metadataBase: new URL(getSiteBaseUrl()),
   title: {
-    default: "CardForge — Design custom trading cards",
-    template: "%s · CardForge",
+    default: "Spellwright — Custom MTG Card Creator",
+    template: "%s · Spellwright",
   },
   description,
-  applicationName: "CardForge",
+  applicationName: "Spellwright",
   keywords: [
-    "custom trading cards",
-    "card maker",
-    "fantasy card creator",
-    "homebrew cards",
-    "playtest cards",
+    "MTG card maker",
+    "custom MTG cards",
+    "Magic the Gathering card creator",
+    "custom magic card maker",
+    "MTG card designer",
+    "homebrew MTG cards",
+    "custom planeswalker card",
+    "MTG proxy maker",
+    "magic card generator",
+    "custom creature card",
+    "MTG card creator",
+    "playtest magic cards",
+    "fan made magic cards",
+    "MTG homebrew",
   ],
   openGraph: {
-    title: "CardForge — Design custom trading cards",
+    title: "Spellwright — Custom MTG Card Creator",
     description,
     type: "website",
-    siteName: "CardForge",
+    siteName: "Spellwright",
   },
   twitter: {
     card: "summary_large_image",
-    title: "CardForge — Design custom trading cards",
+    title: "Spellwright — Custom MTG Card Creator",
     description,
   },
 };
@@ -69,6 +154,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${cinzel.variable} h-full antialiased`}
     >
       <body className="min-h-full">
+        <JsonLd />
         {/* Keyboard a11y: skip past the SiteHeader straight into the page
             content. Invisible until focused. */}
         <a

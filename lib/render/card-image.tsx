@@ -354,7 +354,7 @@ function CardImage({ card }: { card: CardPreviewData }) {
               ? `Art: ${card.artistCredit}`
               : "Art: Unknown"}
           </span>
-          <span>CardForge</span>
+          <span>Spellwright</span>
         </div>
       </div>
     </div>

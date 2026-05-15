@@ -5,7 +5,7 @@ import { LegalPageShell } from "@/components/marketing/legal-page-shell";
 export const metadata: Metadata = {
   title: "Terms of Service",
   description:
-    "The rules of the road for using CardForge — content ownership, acceptable use, and account responsibilities.",
+    "The rules of the road for using Spellwright — content ownership, acceptable use, and account responsibilities.",
   alternates: { canonical: "/terms" },
 };
 
@@ -14,18 +14,18 @@ export default function TermsPage() {
     <LegalPageShell
       eyebrow="Legal"
       title="Terms of Service"
-      description="A plain-English overview of the rules for using CardForge. This is MVP boilerplate — review with a lawyer before relying on it for anything serious."
+      description="A plain-English overview of the rules for using Spellwright. This is MVP boilerplate — review with a lawyer before relying on it for anything serious."
       lastUpdated="May 2026"
     >
       <p className="rounded-md border border-border/60 bg-elevated px-4 py-3 text-foreground">
-        <strong>Heads up:</strong> CardForge is in active development. These
+        <strong>Heads up:</strong> Spellwright is in active development. These
         terms are intentionally short and may evolve. The version published
         here always reflects the current rules.
       </p>
 
       <h2>1. Accepting these terms</h2>
       <p>
-        By creating an account or using CardForge, you agree to follow these
+        By creating an account or using Spellwright, you agree to follow these
         terms. If you don&apos;t agree, please don&apos;t use the service.
       </p>
 
@@ -41,8 +41,8 @@ export default function TermsPage() {
 
       <h2>3. Content you create</h2>
       <p>
-        You own the cards, sets, art, and text you upload to CardForge. By
-        publishing a card publicly or as unlisted, you grant CardForge a
+        You own the cards, sets, art, and text you upload to Spellwright. By
+        publishing a card publicly or as unlisted, you grant Spellwright a
         non-exclusive license to host, display, and reproduce that content for
         the purpose of running the platform (e.g. rendering it in the gallery,
         generating Open Graph previews, etc.). You can revoke this license at
@@ -59,7 +59,7 @@ export default function TermsPage() {
       </p>
 
       <h2>5. Acceptable use</h2>
-      <p>You agree not to use CardForge to:</p>
+      <p>You agree not to use Spellwright to:</p>
       <ul>
         <li>Harass, defame, or threaten others.</li>
         <li>
@@ -83,7 +83,7 @@ export default function TermsPage() {
 
       <h2>7. Service availability</h2>
       <p>
-        CardForge is provided &quot;as is.&quot; We don&apos;t guarantee
+        Spellwright is provided &quot;as is.&quot; We don&apos;t guarantee
         uptime, error-free operation, or that exported files will render
         exactly the same forever. Practice good hygiene: back up cards that
         matter to you.

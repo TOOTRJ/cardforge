@@ -8,7 +8,7 @@ import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   title: "Settings",
-  description: "Manage your CardForge profile and preferences.",
+  description: "Manage your Spellwright profile and preferences.",
 };
 
 export default async function SettingsPage() {

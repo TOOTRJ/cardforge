@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { CardCreatorForm } from "@/components/creator/card-creator-form";
 import { ExportButton } from "@/components/creator/export-button";
+import { PrintButton } from "@/components/creator/print-button";
 import { AddToSetButton } from "@/components/sets/add-to-set-button";
 import { PageHeader } from "@/components/layout/page-header";
 import { SurfaceCard } from "@/components/ui/surface-card";
@@ -103,6 +104,11 @@ export default async function EditCardPage({ params }: EditCardPageProps) {
               cardSlug={card.slug}
               variant="outline"
               label="Download HD PNG"
+            />
+            <PrintButton
+              cardId={card.id}
+              cardSlug={card.slug}
+              variant="outline"
             />
             <Button asChild variant="ghost">
               <Link href={`/card/${card.slug}`}>

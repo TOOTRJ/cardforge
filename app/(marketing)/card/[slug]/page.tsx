@@ -1,11 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Pencil, Share2 } from "lucide-react";
+import { ArrowLeft, Pencil } from "lucide-react";
 import { CardPreview } from "@/components/cards/card-preview";
+import { OracleText } from "@/components/cards/oracle-text";
+import { ManaPip, ManaString } from "@/components/cards/mana-pip";
 import { ExportButton } from "@/components/creator/export-button";
+import { PrintButton } from "@/components/creator/print-button";
 import { LikeButton } from "@/components/cards/like-button";
 import { RemixButton } from "@/components/cards/remix-button";
+import { ShareButton } from "@/components/cards/share-button";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SurfaceCard } from "@/components/ui/surface-card";
@@ -14,8 +18,10 @@ import {
   getCardBySlugPublic,
   hasUserLikedCard,
 } from "@/lib/cards/queries";
+import { CARD_TYPE_LABELS } from "@/types/card";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { getSiteBaseUrl } from "@/lib/site-url";
 import { RENDER_PRESETS } from "@/lib/render/card-image";
 import type { ArtPosition, FrameStyle } from "@/types/card";
 
@@ -47,7 +53,7 @@ export async function generateMetadata({
   const description =
     card.flavor_text?.trim() ||
     card.rules_text?.trim() ||
-    "A custom trading card on CardForge.";
+    "A custom trading card on Spellwright.";
 
   // Open Graph + Twitter previews use the rendered card image so social
   // unfurls show what the card actually looks like. Only emit them for
@@ -61,7 +67,7 @@ export async function generateMetadata({
     description,
     openGraph: ogImageUrl
       ? {
-          title: `${card.title} · CardForge`,
+          title: `${card.title} · Spellwright`,
           description,
           type: "article",
           url: `/card/${card.slug}`,
@@ -78,7 +84,7 @@ export async function generateMetadata({
     twitter: ogImageUrl
       ? {
           card: "summary_large_image",
-          title: `${card.title} · CardForge`,
+          title: `${card.title} · Spellwright`,
           description,
           images: [ogImageUrl],
         }
@@ -119,6 +125,7 @@ export default async function CardDetailPage({
   ]);
 
   const createdAt = formatDate(card.created_at);
+  const cardUrl = `${getSiteBaseUrl()}/card/${card.slug}`;
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
@@ -210,29 +217,68 @@ export default async function CardDetailPage({
                 />
               </>
             ) : null}
-            <Button variant="ghost" disabled>
-              <Share2 className="h-4 w-4" aria-hidden /> Share
-            </Button>
+            {/* PDF download available for all shareable cards */}
+            {(card.visibility === "public" || card.visibility === "unlisted") ? (
+              <PrintButton
+                cardId={card.id}
+                cardSlug={card.slug}
+                variant="outline"
+              />
+            ) : isOwner ? (
+              <PrintButton
+                cardId={card.id}
+                cardSlug={card.slug}
+                variant="outline"
+              />
+            ) : null}
+            <ShareButton
+              cardTitle={card.title}
+              cardUrl={cardUrl}
+              variant="ghost"
+            />
           </div>
 
           <SurfaceCard className="grid gap-4 p-6 sm:grid-cols-2">
             <Detail
               label="Card type"
-              value={card.card_type ? capitalize(card.card_type) : "—"}
+              value={card.card_type ? CARD_TYPE_LABELS[card.card_type] : "—"}
             />
             <Detail
               label="Rarity"
               value={card.rarity ? capitalize(card.rarity) : "—"}
             />
-            <Detail label="Cost" value={card.cost ?? "—"} />
-            <Detail
-              label="Color identity"
-              value={
-                card.color_identity.length > 0
-                  ? card.color_identity.map(capitalize).join(", ")
-                  : "—"
-              }
-            />
+            <div className="flex flex-col gap-1">
+              <span className="text-xs font-semibold uppercase tracking-wider text-subtle">
+                Cost
+              </span>
+              {card.cost ? (
+                <ManaString cost={card.cost} size="sm" />
+              ) : (
+                <span className="text-sm text-foreground">—</span>
+              )}
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-xs font-semibold uppercase tracking-wider text-subtle">
+                Color identity
+              </span>
+              {card.color_identity.length > 0 ? (
+                <div className="flex flex-wrap gap-1">
+                  {card.color_identity.map((c) => {
+                    const sym =
+                      c === "white" ? "W"
+                      : c === "blue" ? "U"
+                      : c === "black" ? "B"
+                      : c === "red" ? "R"
+                      : c === "green" ? "G"
+                      : c === "colorless" ? "C"
+                      : "M";
+                    return <ManaPip key={c} symbol={sym} size="sm" />;
+                  })}
+                </div>
+              ) : (
+                <span className="text-sm text-foreground">—</span>
+              )}
+            </div>
             <Detail
               label="Power / Toughness"
               value={
@@ -248,9 +294,7 @@ export default async function CardDetailPage({
             <h2 className="font-display text-lg font-semibold text-foreground">
               Rules text
             </h2>
-            <p className="whitespace-pre-line text-sm leading-6 text-muted">
-              {card.rules_text?.trim() || "No rules text yet."}
-            </p>
+            <OracleText text={card.rules_text} className="text-sm text-muted" />
           </SurfaceCard>
 
           {card.flavor_text?.trim() ? (

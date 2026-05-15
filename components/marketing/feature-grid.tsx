@@ -1,10 +1,10 @@
 import {
-  GalleryHorizontalEnd,
   GitFork,
   Layers,
   Palette,
   Sparkles,
-  Wand2,
+  Swords,
+  FileDown,
   type LucideIcon,
 } from "lucide-react";
 import { SurfaceCard } from "@/components/ui/surface-card";
@@ -17,40 +17,40 @@ type Feature = {
 
 const features: Feature[] = [
   {
-    icon: Wand2,
-    title: "Create cards fast",
+    icon: Swords,
+    title: "Every MTG card type",
     description:
-      "A simple, focused editor with a live preview. Type a name, drop in art, and the card forms in real time.",
-  },
-  {
-    icon: Layers,
-    title: "Build custom sets",
-    description:
-      "Group cards into sets and worlds. Track rarities, color identity, and themes from a single workspace.",
-  },
-  {
-    icon: GalleryHorizontalEnd,
-    title: "Share and remix",
-    description:
-      "Publish cards to a public gallery or keep them private. Fork any community card to riff on it.",
-  },
-  {
-    icon: Sparkles,
-    title: "AI-assisted design",
-    description:
-      "Soon: smart prompts for rules text, balancing, and flavor. Phase 1 ships the foundation it sits on.",
+      "Creatures, instants, sorceries, enchantments, artifacts, lands, planeswalkers, and battles. Set mana costs, power/toughness, loyalty counters, and oracle text exactly the way you want.",
   },
   {
     icon: Palette,
-    title: "Original frames",
+    title: "WUBRG color identity",
     description:
-      "Premium, generic fantasy frames. No copyrighted symbols, fonts, or set marks — your art, your IP.",
+      "Full five-color support. Assign white, blue, black, red, green, or multicolor identity and watch the card's art well tint to match. Colorless builds included.",
+  },
+  {
+    icon: Sparkles,
+    title: "AI rules templating",
+    description:
+      "Stuck on wording? The built-in AI assistant suggests oracle text, tightens keyword templating, and writes flavor text in the voice you describe — without overwriting your work.",
+  },
+  {
+    icon: Layers,
+    title: "Full expansion sets",
+    description:
+      "Group cards into named sets. Track rarity distribution, color spread, and creature type themes across your whole set from a single workspace — like a one-person R&D team.",
   },
   {
     icon: GitFork,
-    title: "Structured by default",
+    title: "Share and remix",
     description:
-      "Every card is structured data first. Export PNG, JSON, or remix into a new card without losing fidelity.",
+      "Publish cards to the community gallery or keep them private. Any public card can be remixed — fork it, tweak the cost, rewrite the ability, and publish your spin under your name.",
+  },
+  {
+    icon: FileDown,
+    title: "Export your cards",
+    description:
+      "Download any card as a high-resolution PNG or export your full set as structured JSON. Every card is data first, image second — so it stays editable forever.",
   },
 ];
 
@@ -59,14 +59,14 @@ export function FeatureGrid() {
     <section className="mx-auto w-full max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
       <div className="mb-12 flex flex-col gap-4 text-center">
         <span className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-          What you can build today
+          Built for Magic fans
         </span>
         <h2 className="font-display text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-          A creator-first card platform
+          Everything you need to design custom MTG cards
         </h2>
         <p className="mx-auto max-w-2xl text-base leading-7 text-muted">
-          The MVP launches with a polished fantasy-card creator, but the
-          architecture is universal — built to grow into any custom card game.
+          From a single homebrewed creature to a complete fan expansion —
+          Spellwright handles the design work so you can focus on the game.
         </p>
       </div>
 

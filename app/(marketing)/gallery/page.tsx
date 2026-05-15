@@ -10,16 +10,18 @@ import { listPublicCardsRich } from "@/lib/cards/queries";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
   CARD_TYPE_VALUES,
+  COLOR_IDENTITY_VALUES,
   RARITY_VALUES,
   type ArtPosition,
   type CardType,
+  type ColorIdentity,
   type FrameStyle,
   type Rarity,
 } from "@/types/card";
 
 export const metadata: Metadata = {
   title: "Gallery",
-  description: "Browse public custom cards forged by the CardForge community.",
+  description: "Browse public custom cards forged by the Spellwright community.",
   alternates: { canonical: "/gallery" },
 };
 
@@ -38,6 +40,7 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
   const params = await searchParams;
   const cardTypeParam = firstString(params.type);
   const rarityParam = firstString(params.rarity);
+  const colorParam = firstString(params.color);
   const searchParam = firstString(params.q);
   const sortParam = firstString(params.sort);
   const pageParam = firstString(params.page);
@@ -52,6 +55,11 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
   )
     ? (rarityParam as Rarity)
     : undefined;
+  const colorIdentity = (COLOR_IDENTITY_VALUES as readonly string[]).includes(
+    colorParam ?? "",
+  )
+    ? (colorParam as ColorIdentity)
+    : undefined;
   const sort: "recent" | "popular" =
     sortParam === "popular" ? "popular" : "recent";
 
@@ -63,6 +71,7 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
     ? await listPublicCardsRich({
         cardType,
         rarity,
+        colorIdentity,
         search: searchParam ?? undefined,
         sort,
         limit: PAGE_SIZE,
@@ -80,6 +89,7 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
     const qs = new URLSearchParams();
     if (cardTypeParam) qs.set("type", cardTypeParam);
     if (rarityParam) qs.set("rarity", rarityParam);
+    if (colorParam) qs.set("color", colorParam);
     if (searchParam) qs.set("q", searchParam);
     if (sortParam) qs.set("sort", sortParam);
     if (nextPage > 1) qs.set("page", String(nextPage));
@@ -92,7 +102,7 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
       <PageHeader
         eyebrow="Public"
         title="Community gallery"
-        description="Discover custom cards forged by the CardForge community. Filter, sort, and click into any card to view, like, or remix."
+        description="Discover custom cards forged by the Spellwright community. Filter, sort, and click into any card to view, like, or remix."
         actions={
           <Button asChild>
             <Link href="/create">Forge your own</Link>

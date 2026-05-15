@@ -6,6 +6,8 @@ import type {
   FrameStyle,
   Rarity,
 } from "@/types/card";
+import { ManaString } from "@/components/cards/mana-pip";
+import { OracleText } from "@/components/cards/oracle-text";
 
 // ---------------------------------------------------------------------------
 // Public props — match the cards table fields used in the live preview.
@@ -100,9 +102,12 @@ function showsPowerToughness(cardType: CardType | null | undefined): boolean {
   return cardType === "creature" || cardType === "token";
 }
 
-function showsLoyalty(rarity: Rarity | null | undefined): boolean {
-  // Reserved for planeswalker-like future templates; off by default.
-  return rarity === "mythic";
+function showsLoyalty(cardType: CardType | null | undefined): boolean {
+  return cardType === "planeswalker";
+}
+
+function showsDefense(cardType: CardType | null | undefined): boolean {
+  return cardType === "battle";
 }
 
 // ---------------------------------------------------------------------------
@@ -133,8 +138,8 @@ export function CardPreview({
   const safeTitle = title?.trim() || "Untitled Card";
   const showCost = cardType !== "land" && cost?.trim();
   const showPT = showsPowerToughness(cardType) && (power || toughness);
-  const showLoyalty = showsLoyalty(rarity) && Boolean(loyalty);
-  const showDefense = Boolean(defense);
+  const showLoyalty = showsLoyalty(cardType) && Boolean(loyalty);
+  const showDefense = showsDefense(cardType) && Boolean(defense);
   const gradient = pickGradient(colorIdentity);
   const focalX = clamp(artPosition?.focalX ?? 0.5, 0, 1);
   const focalY = clamp(artPosition?.focalY ?? 0.5, 0, 1);
@@ -161,9 +166,7 @@ export function CardPreview({
             {safeTitle}
           </span>
           {showCost ? (
-            <span className="rounded-full border border-border/60 bg-elevated px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-muted">
-              {cost}
-            </span>
+            <ManaString cost={cost} size="xs" />
           ) : null}
         </div>
 
@@ -213,11 +216,7 @@ export function CardPreview({
 
         {/* Rules + flavor */}
         <div className="flex flex-1 flex-col gap-2 rounded-md border border-border/40 bg-surface/60 px-3 py-2 text-[11px] leading-5 text-muted">
-          <p className="whitespace-pre-line">
-            {rulesText?.trim() || (
-              <span className="text-subtle italic">Rules text appears here.</span>
-            )}
-          </p>
+          <OracleText text={rulesText} className="text-[11px]" />
           {flavorText?.trim() ? (
             <p className="border-t border-border/40 pt-2 italic text-subtle">
               {flavorText}
@@ -242,7 +241,7 @@ export function CardPreview({
           <span className="truncate">
             {artistCredit?.trim() ? `Art: ${artistCredit}` : "Art: Unknown"}
           </span>
-          <span>CardForge</span>
+          <span>Spellwright</span>
         </div>
       </div>
     </div>

@@ -1,5 +1,6 @@
 import { SurfaceCard } from "@/components/ui/surface-card";
 import {
+  CARD_TYPE_LABELS,
   CARD_TYPE_VALUES,
   COLOR_IDENTITY_VALUES,
   RARITY_VALUES,
@@ -13,14 +14,6 @@ type SetAnalyticsPanelProps = {
   analytics: SetAnalytics;
 };
 
-const CARD_TYPE_LABELS: Record<CardType, string> = {
-  creature: "Creature",
-  spell: "Spell",
-  artifact: "Artifact",
-  enchantment: "Enchantment",
-  land: "Land",
-  token: "Token",
-};
 
 const RARITY_LABELS: Record<Rarity, string> = {
   common: "Common",

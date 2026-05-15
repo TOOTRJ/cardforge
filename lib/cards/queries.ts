@@ -34,6 +34,7 @@ export type PublicCardListOptions = {
   offset?: number;
   cardType?: CardType;
   rarity?: Rarity;
+  colorIdentity?: ColorIdentity;
   search?: string;
   sort?: "recent" | "popular";
   visibility?: "public" | "unlisted" | "all-shareable";
@@ -438,6 +439,7 @@ export async function listPublicCardsRich(
     offset = 0,
     cardType,
     rarity,
+    colorIdentity,
     search,
     sort = "recent",
     visibility = "public",
@@ -464,6 +466,10 @@ export async function listPublicCardsRich(
     }
     if (rarity) {
       query = query.eq("rarity", rarity);
+    }
+    if (colorIdentity) {
+      // color_identity is a text[] column. `cs` = contains (array superset).
+      query = query.contains("color_identity", [colorIdentity]);
     }
     if (search?.trim()) {
       const escaped = search.trim().replace(/[%_]/g, "\\$&");

@@ -1,10 +1,10 @@
 export const siteConfig = {
-  name: "CardForge",
-  tagline: "Design custom trading cards in seconds.",
+  name: "Spellwright",
+  tagline: "Custom Magic cards, forged by hand.",
   description:
-    "A modern platform for creating, sharing, and remixing custom trading cards. CardForge launches with a polished fantasy-card creator and is built to grow into any card game.",
+    "Spellwright is the modern platform for designing, sharing, and remixing custom Magic: The Gathering cards. Build a creature, instant, planeswalker, or full expansion set — and share it with your playgroup in seconds.",
   disclaimer:
-    "CardForge is an unofficial custom card design and playtesting tool. It is not affiliated with, endorsed by, or sponsored by Wizards of the Coast or any official trading card game publisher. Users are responsible for ensuring they have rights to any uploaded artwork.",
+    "Spellwright is an unofficial fan tool for custom Magic: The Gathering card design and playtesting. It is not affiliated with, endorsed by, or sponsored by Wizards of the Coast, Hasbro, or any official trading card game publisher. Magic: The Gathering is a trademark of Wizards of the Coast LLC. Users are responsible for ensuring they have rights to any uploaded artwork.",
   marketingNav: [
     { label: "Gallery", href: "/gallery" },
     { label: "Create", href: "/create" },
@@ -24,6 +24,7 @@ export const siteConfig = {
     {
       title: "Product",
       links: [
+        { label: "MTG Card Maker", href: "/mtg-card-maker" },
         { label: "Create", href: "/create" },
         { label: "Gallery", href: "/gallery" },
       ],

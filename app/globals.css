@@ -1,24 +1,39 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: oklch(0.13 0.012 280);
-  --color-surface: oklch(0.17 0.014 280);
-  --color-elevated: oklch(0.21 0.016 280);
-  --color-border: oklch(0.28 0.018 280);
-  --color-border-strong: oklch(0.36 0.02 280);
-  --color-foreground: oklch(0.97 0.005 280);
-  --color-muted: oklch(0.72 0.015 280);
-  --color-subtle: oklch(0.55 0.018 280);
-  --color-primary: oklch(0.68 0.19 295);
-  --color-primary-foreground: oklch(0.99 0 0);
-  --color-accent: oklch(0.78 0.16 75);
-  --color-accent-foreground: oklch(0.18 0.02 280);
+  /* ── Core surfaces ────────────────────────────────────────────── */
+  --color-background: oklch(0.12 0.014 275);
+  --color-surface: oklch(0.16 0.016 275);
+  --color-elevated: oklch(0.20 0.018 275);
+  --color-border: oklch(0.27 0.018 275);
+  --color-border-strong: oklch(0.36 0.022 275);
+  --color-foreground: oklch(0.96 0.008 75);
+  --color-muted: oklch(0.70 0.018 75);
+  --color-subtle: oklch(0.52 0.020 275);
+
+  /* ── Brand — gold primary (Spellwright) ───────────────────────── */
+  /* Shifted from purple to gold to match the quill/parchment identity */
+  --color-primary: oklch(0.76 0.14 75);
+  --color-primary-foreground: oklch(0.14 0.02 275);
+  --color-accent: oklch(0.65 0.18 295);
+  --color-accent-foreground: oklch(0.99 0 0);
   --color-danger: oklch(0.65 0.22 25);
 
+  /* ── WUBRG mana colors ────────────────────────────────────────── */
+  /* Used for color identity pips, card tinting, and gallery filters */
+  --color-mana-w: oklch(0.95 0.04 95);   /* White  — warm parchment */
+  --color-mana-u: oklch(0.60 0.18 240);  /* Blue   — deep cerulean  */
+  --color-mana-b: oklch(0.52 0.14 295);  /* Black  — arcane violet  */
+  --color-mana-r: oklch(0.62 0.22 25);   /* Red    — hot crimson    */
+  --color-mana-g: oklch(0.60 0.18 150);  /* Green  — forest green   */
+  --color-mana-c: oklch(0.55 0.01 275);  /* Colorless — neutral     */
+
+  /* ── Typography ──────────────────────────────────────────────── */
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
   --font-display: var(--font-cinzel), Georgia, "Times New Roman", serif;
 
+  /* ── Radii ───────────────────────────────────────────────────── */
   --radius-card: 1rem;
   --radius-frame: 1.25rem;
 }
@@ -66,3 +81,35 @@ body {
     transparent 70%
   );
 }
+
+/* ── WUBRG gradient bar — used in hero, OG image, decorative elements ── */
+.bg-wubrg {
+  background: linear-gradient(
+    90deg,
+    var(--color-mana-w) 0%,
+    var(--color-mana-u) 25%,
+    var(--color-mana-b) 50%,
+    var(--color-mana-r) 75%,
+    var(--color-mana-g) 100%
+  );
+}
+
+/* ── Mana pip helpers — small colored circles for color identity ── */
+.mana-pip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1em;
+  height: 1.1em;
+  border-radius: 50%;
+  font-size: 0.6em;
+  font-weight: 900;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.mana-w { background-color: var(--color-mana-w); color: #1a1420; }
+.mana-u { background-color: var(--color-mana-u); color: #fff; }
+.mana-b { background-color: var(--color-mana-b); color: #fff; }
+.mana-r { background-color: var(--color-mana-r); color: #fff; }
+.mana-g { background-color: var(--color-mana-g); color: #fff; }
+.mana-c { background-color: var(--color-mana-c); color: #fff; }

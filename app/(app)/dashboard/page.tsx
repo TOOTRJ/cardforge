@@ -14,7 +14,7 @@ import type { ArtPosition, FrameStyle } from "@/types/card";
 
 export const metadata: Metadata = {
   title: "Dashboard",
-  description: "Your CardForge workspace.",
+  description: "Your Spellwright workspace.",
 };
 
 export default async function DashboardPage() {
@@ -24,7 +24,7 @@ export default async function DashboardPage() {
     profile?.display_name ||
     profile?.username ||
     user?.email?.split("@")[0] ||
-    "Forgemaster";
+    "Planeswalker";
   const profileIncomplete = !profile?.username;
 
   const myCards = await listMyCards();
@@ -34,28 +34,28 @@ export default async function DashboardPage() {
 
   const stats = [
     {
-      label: "Cards",
+      label: "Spells Forged",
       value: String(myCards.length),
-      helper: "Saved drafts and published cards",
+      helper: "Total cards in your library",
     },
     {
-      label: "Public",
+      label: "On the Battlefield",
       value: String(publicCards.length),
-      helper: "Listed in the gallery",
+      helper: "Published to the gallery",
     },
     {
-      label: "Drafts",
+      label: "In the Library",
       value: String(drafts.length),
-      helper: "Private, in-progress cards",
+      helper: "Private drafts in progress",
     },
   ];
 
   return (
     <DashboardShell>
       <PageHeader
-        eyebrow="Workspace"
+        eyebrow="Spellwright"
         title={`Welcome back, ${greetingName}`}
-        description="A snapshot of your cards, drafts, and sets. Click any card to edit it."
+        description="Your cards, drafts, and sets at a glance. Click any card to open the editor."
         actions={
           <>
             <Button asChild variant="outline">
@@ -81,7 +81,7 @@ export default async function DashboardPage() {
                 Finish your profile
               </p>
               <p className="text-xs leading-5 text-muted">
-                Pick a username so other forgers can find you. You can change it
+                Pick a username so other Planeswalkers can find you. You can change it
                 later in settings.
               </p>
             </div>
@@ -107,7 +107,7 @@ export default async function DashboardPage() {
       </div>
 
       <DashboardSection
-        title="Recent cards"
+        title="Recent spells"
         description="Click any card to open the editor."
         action={
           <Button asChild variant="ghost" size="sm">
@@ -118,11 +118,11 @@ export default async function DashboardPage() {
         {recentCards.length === 0 ? (
           <EmptyState
             icon={Pencil}
-            title="No cards yet"
-            description="Open the creator and forge your very first card. Saved drafts will surface here automatically."
+            title="The forge lies quiet"
+            description="No spells have been cast here yet. Open the creator to forge your first card — it'll appear here automatically."
             action={
               <Button asChild>
-                <Link href="/create">Open creator</Link>
+                <Link href="/create">Start forging</Link>
               </Button>
             }
           />
@@ -142,8 +142,8 @@ export default async function DashboardPage() {
         {drafts.length === 0 ? (
           <EmptyState
             icon={FolderOpen}
-            title="No drafts"
-            description="Drafts you save while creating will live here until you publish."
+            title="Library is empty"
+            description="Cards you save as private drafts are kept here, away from the battlefield, until you're ready to publish."
           />
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -155,14 +155,14 @@ export default async function DashboardPage() {
       </DashboardSection>
 
       <DashboardSection
-        title="Public cards"
-        description="Cards visible on your public profile and the gallery."
+        title="On the battlefield"
+        description="Published cards visible on your profile and the community gallery."
       >
         {publicCards.length === 0 ? (
           <EmptyState
             icon={Globe2}
-            title="Nothing public yet"
-            description="Toggle a card's visibility to Public from the editor and it will appear here."
+            title="Nothing in play yet"
+            description="Set any card's visibility to Public in the editor and it enters the battlefield — visible to all Planeswalkers."
           />
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

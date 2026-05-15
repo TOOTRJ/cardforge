@@ -30,7 +30,7 @@ export async function generateMetadata({
     title: profile
       ? (profile.display_name ?? `@${profile.username}`)
       : `@${username}`,
-    description: profile?.bio ?? `Custom cards forged by @${username} on CardForge.`,
+    description: profile?.bio ?? `Custom cards forged by @${username} on Spellwright.`,
   };
 }
 

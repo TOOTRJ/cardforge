@@ -18,6 +18,20 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 1,
     },
     {
+      // Primary SEO landing page — targets "MTG card maker" search query
+      url: `${baseUrl}/mtg-card-maker`,
+      lastModified,
+      changeFrequency: "monthly",
+      priority: 0.95,
+    },
+    {
+      // Guest card creator — no account required, high conversion page
+      url: `${baseUrl}/preview`,
+      lastModified,
+      changeFrequency: "monthly",
+      priority: 0.85,
+    },
+    {
       url: `${baseUrl}/gallery`,
       lastModified,
       changeFrequency: "daily",

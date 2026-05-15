@@ -40,3 +40,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# claude code — local permissions cache may contain tokens; worktrees are
+# transient and should never enter the main repo's history.
+.claude/settings.local.json
+.claude/worktrees/
