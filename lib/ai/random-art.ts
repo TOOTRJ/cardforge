@@ -65,22 +65,50 @@ export async function generateRandomArt(rawPrompt: string): Promise<RandomArtRes
   const prompt = `${PROMPT_PREAMBLE} ${rawPrompt.trim()}`.slice(0, 4000);
 
   // ---- OpenAI image call ----
+  //
+  // Param compatibility notes (OpenAI Images API as of 2026):
+  //   - `style` was DALL-E-3-only and is now rejected at the API even on
+  //     dall-e-3 (OpenAI is winding the model down). We don't pass it.
+  //     DALL-E 3's default style is "vivid" anyway, so cards still get
+  //     the dramatic look we want.
+  //   - `quality: "hd"` is valid for dall-e-3. gpt-image-1 takes
+  //     `"low" | "medium" | "high" | "auto"`. We detect the model and
+  //     pick the right value.
+  //   - `response_format: "url"` is dall-e-2/3 only; gpt-image-1 always
+  //     returns b64_json. We branch the response handling accordingly.
+  const model = modelId();
+  const isDalle = model.startsWith("dall-e");
+
   let imageUrl: string | undefined;
   let revisedPrompt: string | undefined;
   try {
     const oa = client();
-    const response = await oa.images.generate({
-      model: modelId(),
-      prompt,
-      size: "1024x1024",
-      quality: "hd",
-      style: "vivid",
-      n: 1,
-      response_format: "url",
-    });
+    const response = isDalle
+      ? await oa.images.generate({
+          model,
+          prompt,
+          size: "1024x1024",
+          quality: "hd",
+          n: 1,
+          response_format: "url",
+        })
+      : await oa.images.generate({
+          model,
+          prompt,
+          size: "1024x1024",
+          quality: "high",
+          n: 1,
+        });
     const first = response.data?.[0];
-    imageUrl = first?.url ?? undefined;
     revisedPrompt = first?.revised_prompt ?? undefined;
+    if (isDalle) {
+      imageUrl = first?.url ?? undefined;
+    } else if (first?.b64_json) {
+      // Wrap the base64 payload in a data: URL so the same fetch code path
+      // below picks it up. We immediately re-upload to Storage anyway, so
+      // there's no extra hop in the user-visible flow.
+      imageUrl = `data:image/png;base64,${first.b64_json}`;
+    }
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Image generation failed.";
