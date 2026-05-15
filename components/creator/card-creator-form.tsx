@@ -461,6 +461,10 @@ export function CardCreatorForm({
   // hero on /create and the global command palette can open it via custom
   // DOM events. The dialog itself is rendered once below with `hideTrigger`.
   const [scryfallOpen, setScryfallOpen] = useState(false);
+  // Random-card generation state. Disabled until the user is signed in;
+  // disables itself while a request is in flight so the user can't double-
+  // submit and burn quota.
+  const [generatingRandom, setGeneratingRandom] = useState(false);
 
   // Listen for hero/palette custom events. Each event is fire-and-forget
   // — no payload, just a signal to perform a UI action.
@@ -666,6 +670,88 @@ export function CardCreatorForm({
     setRemixSource({ name: source.name, scryfallUri: source.scryfallUri });
     // Pop the user back to Identity so they can see the seeded fields.
     setActiveTab("identity");
+  };
+
+  // Kick off /api/ai/random-card and pour the result into the form. Art is
+  // optional — the model occasionally trips DALL-E's safety filter even on
+  // benign prompts; we surface a soft toast in that case and leave the
+  // existing art_url alone so the user can upload their own.
+  const handleRandomCard = async () => {
+    if (!userId) {
+      toast.error("Sign in to use the AI random card generator.");
+      return;
+    }
+    setGeneratingRandom(true);
+    try {
+      const response = await fetch("/api/ai/random-card", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload?.ok) {
+        toast.error(
+          payload?.error ?? "Random card generation failed. Try again.",
+        );
+        return;
+      }
+      const card = payload.card as {
+        title: string;
+        cost: string;
+        card_type: CardType;
+        supertype?: string;
+        subtypes?: string[];
+        rarity: Rarity;
+        color_identity: ColorIdentity[];
+        rules_text: string;
+        flavor_text?: string;
+        power?: string;
+        toughness?: string;
+        loyalty?: string;
+        defense?: string;
+      };
+
+      setValue("title", card.title, { shouldDirty: true });
+      setValue("cost", card.cost, { shouldDirty: true });
+      setValue("card_type", card.card_type, { shouldDirty: true });
+      setValue("supertype", card.supertype ?? "", { shouldDirty: true });
+      setValue("subtypes_text", (card.subtypes ?? []).join(", "), {
+        shouldDirty: true,
+      });
+      setValue("rarity", card.rarity, { shouldDirty: true });
+      setValue(
+        "color_identity",
+        Array.from(card.color_identity) as ColorIdentity[],
+        { shouldDirty: true },
+      );
+      setValue("rules_text", card.rules_text, { shouldDirty: true });
+      setValue("flavor_text", card.flavor_text ?? "", { shouldDirty: true });
+      setValue("power", card.power ?? "", { shouldDirty: true });
+      setValue("toughness", card.toughness ?? "", { shouldDirty: true });
+      setValue("loyalty", card.loyalty ?? "", { shouldDirty: true });
+      setValue("defense", card.defense ?? "", { shouldDirty: true });
+
+      if (payload.art?.ok && payload.art.publicUrl) {
+        setValue("art_url", payload.art.publicUrl, { shouldDirty: true });
+        setValue(
+          "art_position",
+          { focalX: 0.5, focalY: 0.5, scale: 1 },
+          { shouldDirty: true },
+        );
+        toast.success("Random card forged — review and tweak before saving.");
+      } else {
+        const detail =
+          payload.artError ??
+          "The art generator hit a snag; the card text is ready.";
+        toast.message("Random card forged", { description: detail });
+      }
+      // Pop the user back to Identity so they see the new card.
+      setActiveTab("identity");
+    } catch {
+      toast.error("Network error while generating a random card.");
+    } finally {
+      setGeneratingRandom(false);
+    }
   };
 
   // Per-tab dirty-error map. We compute a Set of tabs that contain an error
@@ -888,6 +974,47 @@ export function CardCreatorForm({
               >
                 <Search className="h-4 w-4" aria-hidden />
                 Search a real card
+              </Button>
+            </div>
+
+            {/* AI random-card generator — pairs GPT-4o text with a DALL-E
+                3 illustration. Disabled for guests and while a request is
+                in flight. */}
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3">
+              <div className="flex flex-col gap-0.5">
+                <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-primary">
+                  <Sparkles className="h-3 w-3" aria-hidden />
+                  Generate with AI
+                </span>
+                <span className="text-[11px] text-muted">
+                  GPT-4o drafts the card, DALL-E 3 paints original art.
+                  Capped at 10 random cards per day.
+                </span>
+              </div>
+              <Button
+                type="button"
+                variant="primary"
+                disabled={!userId || generatingRandom}
+                title={
+                  userId
+                    ? generatingRandom
+                      ? "Generating…"
+                      : undefined
+                    : "Sign in to use the AI generator."
+                }
+                onClick={handleRandomCard}
+              >
+                {generatingRandom ? (
+                  <>
+                    <Wand2 className="h-4 w-4 animate-pulse" aria-hidden />
+                    Forging…
+                  </>
+                ) : (
+                  <>
+                    <Wand2 className="h-4 w-4" aria-hidden />
+                    Random card
+                  </>
+                )}
               </Button>
             </div>
 

@@ -20,7 +20,14 @@ export type AiActionLabel =
   | "generate_flavor"
   | "generate_art_prompt"
   | "check_balance"
-  | "generate_from_concept";
+  | "generate_from_concept"
+  | "generate_random_card"
+  | "generate_random_art";
+
+// Per-user daily quota specifically for the random-card flow. Image
+// generation is the priciest call we make, so it gets its own cap on top
+// of the global PER_DAY_LIMIT. 10/day matches the v2 spec.
+const RANDOM_CARD_DAILY_LIMIT = 10;
 
 export type RateLimitResult =
   | { ok: true }
@@ -93,6 +100,38 @@ export async function checkAiRateLimit(
     };
   }
 
+  return { ok: true };
+}
+
+/**
+ * Per-user check specifically for the random-card flow. Lives alongside
+ * `checkAiRateLimit`; the route handler runs both — the global limit
+ * protects the platform AI spend, this one keeps a single user from
+ * draining the DALL-E budget.
+ */
+export async function checkRandomCardDailyLimit(
+  userId: string,
+): Promise<RateLimitResult> {
+  const supabase = await createClient();
+  const dayAgo = new Date(Date.now() - DAY_MS).toISOString();
+  const { count, error } = await supabase
+    .from("card_ai_calls")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("action", "generate_random_card")
+    .gte("created_at", dayAgo);
+
+  // Fail open on errors — same posture as the global limit.
+  if (error) return { ok: true };
+
+  if ((count ?? 0) >= RANDOM_CARD_DAILY_LIMIT) {
+    return {
+      ok: false,
+      reason: "per_day",
+      retryAfterSeconds: 60 * 60,
+      message: `Daily random-card quota reached (${RANDOM_CARD_DAILY_LIMIT}/day). It resets in 24h.`,
+    };
+  }
   return { ok: true };
 }
 
