@@ -649,7 +649,7 @@ function InnerCardPanel({
         <span className="truncate">
           {face.artistCredit?.trim() ? `Art: ${face.artistCredit}` : "Art: Unknown"}
         </span>
-        <span className="font-display tracking-widest">CardForge</span>
+        <span className="font-display tracking-widest">Spellwright</span>
       </div>
     </div>
   );

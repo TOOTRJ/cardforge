@@ -16,7 +16,7 @@ import { listMySets } from "@/lib/sets/queries";
 
 export const metadata: Metadata = {
   title: "Dashboard",
-  description: "Your CardForge workspace.",
+  description: "Your Spellwright workspace.",
 };
 
 export default async function DashboardPage() {

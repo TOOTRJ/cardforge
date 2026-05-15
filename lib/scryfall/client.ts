@@ -38,7 +38,13 @@ function userAgent(): string {
   // Scryfall asks for a User-Agent string identifying your app and ideally
   // a contact URL. We use the site base URL as a contact pointer.
   const site = getSiteBaseUrl();
-  return `CardForge/1.0 (+${site})`;
+  // The Scryfall docs require a User-Agent identifying the app and ideally
+  // a contact URL. Override via SCRYFALL_USER_AGENT if needed (e.g. when
+  // running multiple environments against the same outbound IP).
+  return (
+    process.env.SCRYFALL_USER_AGENT?.trim() ||
+    `Spellwright/1.0 (+${site})`
+  );
 }
 
 async function scryfallFetch(path: string): Promise<Response> {

@@ -69,7 +69,7 @@ export async function generateMetadata({
   const description =
     card.flavor_text?.trim() ||
     card.rules_text?.trim() ||
-    "A custom trading card on CardForge.";
+    "A custom trading card on Spellwright.";
 
   const ogImageUrl = isShareable ? `/api/cards/${card.id}/og` : undefined;
   const { width, height } = RENDER_PRESETS.default;
@@ -79,7 +79,7 @@ export async function generateMetadata({
     description,
     openGraph: ogImageUrl
       ? {
-          title: `${card.title} · CardForge`,
+          title: `${card.title} · Spellwright`,
           description,
           type: "article",
           url: `/card/${username}/${card.slug}`,
@@ -96,7 +96,7 @@ export async function generateMetadata({
     twitter: ogImageUrl
       ? {
           card: "summary_large_image",
-          title: `${card.title} · CardForge`,
+          title: `${card.title} · Spellwright`,
           description,
           images: [ogImageUrl],
         }

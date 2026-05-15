@@ -715,7 +715,7 @@ function Disclaimer() {
       </Badge>
       <p>
         Imported text and artwork are the property of their respective
-        rights holders. CardForge surfaces them so you can riff on real
+        rights holders. Spellwright surfaces them so you can riff on real
         designs — rewrite the rules text and swap the art before
         publishing publicly to keep your card original.
       </p>
