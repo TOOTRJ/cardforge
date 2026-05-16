@@ -17,6 +17,62 @@ export type Database = {
   };
   public: {
     Tables: {
+      card_ai_calls: {
+        Row: {
+          action: string;
+          created_at: string;
+          id: string;
+          user_id: string;
+        };
+        Insert: {
+          action: string;
+          created_at?: string;
+          id?: string;
+          user_id: string;
+        };
+        Update: {
+          action?: string;
+          created_at?: string;
+          id?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      card_comments: {
+        Row: {
+          author_id: string;
+          body: string;
+          card_id: string;
+          created_at: string;
+          id: string;
+          updated_at: string;
+        };
+        Insert: {
+          author_id: string;
+          body: string;
+          card_id: string;
+          created_at?: string;
+          id?: string;
+          updated_at?: string;
+        };
+        Update: {
+          author_id?: string;
+          body?: string;
+          card_id?: string;
+          created_at?: string;
+          id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "card_comments_card_id_fkey";
+            columns: ["card_id"];
+            isOneToOne: false;
+            referencedRelation: "cards";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       card_exports: {
         Row: {
           card_id: string;
@@ -211,6 +267,7 @@ export type Database = {
           art_position: Json;
           art_url: string | null;
           artist_credit: string | null;
+          back_face: Json | null;
           card_type: string | null;
           color_identity: string[];
           cost: string | null;
@@ -220,14 +277,18 @@ export type Database = {
           frame_style: Json;
           game_system_id: string;
           id: string;
+          layout: string;
           loyalty: string | null;
+          mana_value: number | null;
           metadata: Json;
+          oracle_text: string | null;
           owner_id: string;
           parent_card_id: string | null;
           power: string | null;
           rarity: string | null;
           rules_text: string | null;
           slug: string;
+          source_scryfall_id: string | null;
           subtypes: string[];
           supertype: string | null;
           template_id: string | null;
@@ -240,6 +301,7 @@ export type Database = {
           art_position?: Json;
           art_url?: string | null;
           artist_credit?: string | null;
+          back_face?: Json | null;
           card_type?: string | null;
           color_identity?: string[];
           cost?: string | null;
@@ -249,14 +311,18 @@ export type Database = {
           frame_style?: Json;
           game_system_id: string;
           id?: string;
+          layout?: string;
           loyalty?: string | null;
+          mana_value?: number | null;
           metadata?: Json;
+          oracle_text?: string | null;
           owner_id: string;
           parent_card_id?: string | null;
           power?: string | null;
           rarity?: string | null;
           rules_text?: string | null;
           slug: string;
+          source_scryfall_id?: string | null;
           subtypes?: string[];
           supertype?: string | null;
           template_id?: string | null;
@@ -269,6 +335,7 @@ export type Database = {
           art_position?: Json;
           art_url?: string | null;
           artist_credit?: string | null;
+          back_face?: Json | null;
           card_type?: string | null;
           color_identity?: string[];
           cost?: string | null;
@@ -278,14 +345,18 @@ export type Database = {
           frame_style?: Json;
           game_system_id?: string;
           id?: string;
+          layout?: string;
           loyalty?: string | null;
+          mana_value?: number | null;
           metadata?: Json;
+          oracle_text?: string | null;
           owner_id?: string;
           parent_card_id?: string | null;
           power?: string | null;
           rarity?: string | null;
           rules_text?: string | null;
           slug?: string;
+          source_scryfall_id?: string | null;
           subtypes?: string[];
           supertype?: string | null;
           template_id?: string | null;
@@ -378,12 +449,46 @@ export type Database = {
         };
         Relationships: [];
       };
+      scryfall_calls: {
+        Row: {
+          action: string;
+          created_at: string;
+          id: string;
+          user_id: string;
+        };
+        Insert: {
+          action: string;
+          created_at?: string;
+          id?: string;
+          user_id: string;
+        };
+        Update: {
+          action?: string;
+          created_at?: string;
+          id?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      card_ai_calls_daily: {
+        Args: { since: string };
+        Returns: {
+          count: number;
+          day: string;
+        }[];
+      };
+      scryfall_calls_daily: {
+        Args: { since: string };
+        Returns: {
+          count: number;
+          day: string;
+        }[];
+      };
     };
     Enums: {
       [_ in never]: never;
@@ -531,6 +636,12 @@ export type CardUpdate = TablesUpdate<"cards">;
 export type CardExport = Tables<"card_exports">;
 export type CardExportInsert = TablesInsert<"card_exports">;
 
+export type CardAiCall = Tables<"card_ai_calls">;
+export type CardAiCallInsert = TablesInsert<"card_ai_calls">;
+
+export type ScryfallCall = Tables<"scryfall_calls">;
+export type ScryfallCallInsert = TablesInsert<"scryfall_calls">;
+
 export type CardLike = Tables<"card_likes">;
 export type CardLikeInsert = TablesInsert<"card_likes">;
 
@@ -540,3 +651,8 @@ export type CardSetUpdate = TablesUpdate<"card_sets">;
 
 export type CardSetItem = Tables<"card_set_items">;
 export type CardSetItemInsert = TablesInsert<"card_set_items">;
+
+// Phase v2: comments on public cards.
+export type CardComment = Tables<"card_comments">;
+export type CardCommentInsert = TablesInsert<"card_comments">;
+export type CardCommentUpdate = TablesUpdate<"card_comments">;

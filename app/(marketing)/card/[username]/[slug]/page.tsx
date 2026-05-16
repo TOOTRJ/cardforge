@@ -3,29 +3,45 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Pencil } from "lucide-react";
 import { CardPreview } from "@/components/cards/card-preview";
-import { OracleText } from "@/components/cards/oracle-text";
-import { ManaPip, ManaString } from "@/components/cards/mana-pip";
-import { ExportButton } from "@/components/creator/export-button";
-import { PrintButton } from "@/components/creator/print-button";
+import { CardComments } from "@/components/cards/card-comments";
+import { DownloadModal } from "@/components/cards/download-modal";
 import { LikeButton } from "@/components/cards/like-button";
 import { RemixButton } from "@/components/cards/remix-button";
-import { ShareButton } from "@/components/cards/share-button";
+import { ShareTargets } from "@/components/cards/share-targets";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import {
   countCardLikes,
-  getCardBySlugPublic,
+  getCardByOwnerAndSlug,
   hasUserLikedCard,
 } from "@/lib/cards/queries";
-import { CARD_TYPE_LABELS } from "@/types/card";
-import { createClient, getCurrentUser } from "@/lib/supabase/server";
+import { countPublicRemixesBySource } from "@/lib/cards/source-queries";
+import { listCommentsForCard } from "@/lib/cards/comments-queries";
+import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { getSiteBaseUrl } from "@/lib/site-url";
 import { RENDER_PRESETS } from "@/lib/render/card-image";
-import type { ArtPosition, FrameStyle } from "@/types/card";
+import { getSiteBaseUrl } from "@/lib/site-url";
+import type { ArtPosition, CardBackFace, FrameStyle } from "@/types/card";
+import { Sparkles } from "lucide-react";
 
-type Params = { slug: string };
+// ---------------------------------------------------------------------------
+// Canonical public card detail page (Phase 11 chunk 11).
+//
+// URL: /card/[username]/[slug]
+//
+// The username-namespaced URL eliminates slug ambiguity — two different
+// owners can each have a card named "lightning-bolt" without one
+// hijacking the other's public link. The legacy `/card/[slug]` route is
+// preserved as a 301 redirector (see app/(marketing)/card/[slug]/page.tsx).
+//
+// RLS gates which cards the viewer can read: anonymous + non-owner
+// viewers only see `public` / `unlisted` rows. Owners see their private
+// cards via this URL too, which lets them preview the public-facing
+// rendering before flipping visibility.
+// ---------------------------------------------------------------------------
+
+type Params = { username: string; slug: string };
 
 function titleFromSlug(slug: string): string {
   return slug
@@ -39,11 +55,11 @@ export async function generateMetadata({
 }: {
   params: Promise<Params>;
 }): Promise<Metadata> {
-  const { slug } = await params;
+  const { username, slug } = await params;
   if (!isSupabaseConfigured()) {
     return { title: titleFromSlug(slug) };
   }
-  const card = await getCardBySlugPublic(slug);
+  const card = await getCardByOwnerAndSlug(username, slug);
   if (!card) {
     return { title: titleFromSlug(slug) };
   }
@@ -55,10 +71,6 @@ export async function generateMetadata({
     card.rules_text?.trim() ||
     "A custom trading card on Spellwright.";
 
-  // Open Graph + Twitter previews use the rendered card image so social
-  // unfurls show what the card actually looks like. Only emit them for
-  // shareable visibilities — private cards shouldn't leak their preview
-  // into link previews.
   const ogImageUrl = isShareable ? `/api/cards/${card.id}/og` : undefined;
   const { width, height } = RENDER_PRESETS.default;
 
@@ -70,7 +82,7 @@ export async function generateMetadata({
           title: `${card.title} · Spellwright`,
           description,
           type: "article",
-          url: `/card/${card.slug}`,
+          url: `/card/${username}/${card.slug}`,
           images: [
             {
               url: ogImageUrl,
@@ -89,6 +101,9 @@ export async function generateMetadata({
           images: [ogImageUrl],
         }
       : undefined,
+    alternates: {
+      canonical: `/card/${username}/${card.slug}`,
+    },
   };
 }
 
@@ -97,8 +112,10 @@ export default async function CardDetailPage({
 }: {
   params: Promise<Params>;
 }) {
-  const { slug } = await params;
-  const card = isSupabaseConfigured() ? await getCardBySlugPublic(slug) : null;
+  const { username, slug } = await params;
+  const card = isSupabaseConfigured()
+    ? await getCardByOwnerAndSlug(username, slug)
+    : null;
 
   if (!card) {
     notFound();
@@ -107,28 +124,42 @@ export default async function CardDetailPage({
   const user = await getCurrentUser();
   const isOwner = Boolean(user && user.id === card.owner_id);
 
-  // Three parallel-ish reads: like count, current user's like, owner profile.
-  // Each is independent, so we await them concurrently.
-  const supabase = isSupabaseConfigured() ? await createClient() : null;
-
-  const [likesCount, viewerLiked, ownerProfile] = await Promise.all([
+  const [likesCount, viewerLiked, otherRemixesCount, comments] = await Promise.all([
     countCardLikes(card.id),
     user ? hasUserLikedCard(user.id, card.id) : Promise.resolve(false),
-    supabase
-      ? supabase
-          .from("profiles")
-          .select("id, username, display_name, avatar_url")
-          .eq("id", card.owner_id)
-          .maybeSingle()
-          .then((res) => res.data ?? null)
-      : Promise.resolve(null),
+    // Chunk 13: count of OTHER public remixes of the same Scryfall card.
+    // Returns 0 when this card wasn't imported from Scryfall.
+    card.source_scryfall_id
+      ? countPublicRemixesBySource(card.source_scryfall_id, card.id)
+      : Promise.resolve(0),
+    listCommentsForCard(card.id, { limit: 50 }),
   ]);
 
+  const ownerProfile = card.owner;
+
   const createdAt = formatDate(card.created_at);
-  const cardUrl = `${getSiteBaseUrl()}/card/${card.slug}`;
+
+  const siteBase = getSiteBaseUrl();
+  const isShareable =
+    card.visibility === "public" || card.visibility === "unlisted";
+  const jsonLd = isShareable
+    ? buildCardJsonLd({
+        card,
+        username,
+        ownerDisplay:
+          ownerProfile?.display_name || ownerProfile?.username || "Anonymous",
+        siteBase,
+      })
+    : null;
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+      {jsonLd ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      ) : null}
       <Link
         href="/gallery"
         className="mb-6 inline-flex items-center gap-1 text-sm text-muted transition-colors hover:text-foreground"
@@ -138,7 +169,13 @@ export default async function CardDetailPage({
       </Link>
 
       <div className="grid gap-10 lg:grid-cols-[minmax(0,360px)_1fr]">
-        <div className="mx-auto w-full max-w-sm">
+        <div
+          className="mx-auto w-full max-w-sm"
+          // Matches the gallery / dashboard / profile / set thumbnails'
+          // view-transition-name so chromium-class browsers can animate a
+          // shared-element transition between the grid tile and this hero.
+          style={{ viewTransitionName: `card-${card.id}` }}
+        >
           <CardPreview
             title={card.title}
             cost={card.cost}
@@ -157,6 +194,7 @@ export default async function CardDetailPage({
             artUrl={card.art_url}
             artPosition={card.art_position as ArtPosition}
             frameStyle={card.frame_style as FrameStyle}
+            backFace={(card.back_face as CardBackFace | null) ?? null}
           />
         </div>
 
@@ -187,6 +225,20 @@ export default async function CardDetailPage({
             <p className="text-sm leading-6 text-muted">
               Slug: <span className="font-mono text-foreground">{card.slug}</span>
             </p>
+            {/* Chunk 13: "Also remixed by N others" chip. Only renders
+                when this card was imported from Scryfall AND at least
+                one other public/unlisted remix exists. Click-through
+                lands on the gallery filtered by the same source. */}
+            {card.source_scryfall_id && otherRemixesCount > 0 ? (
+              <Link
+                href={`/gallery?source=${encodeURIComponent(card.source_scryfall_id)}`}
+                className="inline-flex w-fit items-center gap-1.5 rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-xs text-foreground transition-colors hover:border-accent hover:bg-accent/15"
+              >
+                <Sparkles className="h-3 w-3 text-accent" aria-hidden />
+                Also remixed by {otherRemixesCount}{" "}
+                {otherRemixesCount === 1 ? "other" : "others"}
+              </Link>
+            ) : null}
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -203,82 +255,37 @@ export default async function CardDetailPage({
               requiresSignIn={!user}
             />
             {isOwner ? (
-              <>
-                <Button asChild>
-                  <Link href={`/card/${card.slug}/edit`}>
-                    <Pencil className="h-4 w-4" aria-hidden /> Edit card
-                  </Link>
-                </Button>
-                <ExportButton
-                  cardId={card.id}
-                  cardSlug={card.slug}
-                  variant="outline"
-                  label="Download HD PNG"
-                />
-              </>
+              <Button asChild>
+                <Link href={`/card/${card.slug}/edit`}>
+                  <Pencil className="h-4 w-4" aria-hidden /> Edit card
+                </Link>
+              </Button>
             ) : null}
-            {/* PDF download available for all shareable cards */}
-            {(card.visibility === "public" || card.visibility === "unlisted") ? (
-              <PrintButton
-                cardId={card.id}
-                cardSlug={card.slug}
-                variant="outline"
-              />
-            ) : isOwner ? (
-              <PrintButton
-                cardId={card.id}
-                cardSlug={card.slug}
-                variant="outline"
-              />
-            ) : null}
-            <ShareButton
+            <DownloadModal cardId={card.id} cardSlug={card.slug} />
+            <ShareTargets
               cardTitle={card.title}
-              cardUrl={cardUrl}
-              variant="ghost"
+              cardUrl={`${siteBase}/card/${username}/${card.slug}`}
             />
           </div>
 
           <SurfaceCard className="grid gap-4 p-6 sm:grid-cols-2">
             <Detail
               label="Card type"
-              value={card.card_type ? CARD_TYPE_LABELS[card.card_type] : "—"}
+              value={card.card_type ? capitalize(card.card_type) : "—"}
             />
             <Detail
               label="Rarity"
               value={card.rarity ? capitalize(card.rarity) : "—"}
             />
-            <div className="flex flex-col gap-1">
-              <span className="text-xs font-semibold uppercase tracking-wider text-subtle">
-                Cost
-              </span>
-              {card.cost ? (
-                <ManaString cost={card.cost} size="sm" />
-              ) : (
-                <span className="text-sm text-foreground">—</span>
-              )}
-            </div>
-            <div className="flex flex-col gap-1">
-              <span className="text-xs font-semibold uppercase tracking-wider text-subtle">
-                Color identity
-              </span>
-              {card.color_identity.length > 0 ? (
-                <div className="flex flex-wrap gap-1">
-                  {card.color_identity.map((c) => {
-                    const sym =
-                      c === "white" ? "W"
-                      : c === "blue" ? "U"
-                      : c === "black" ? "B"
-                      : c === "red" ? "R"
-                      : c === "green" ? "G"
-                      : c === "colorless" ? "C"
-                      : "M";
-                    return <ManaPip key={c} symbol={sym} size="sm" />;
-                  })}
-                </div>
-              ) : (
-                <span className="text-sm text-foreground">—</span>
-              )}
-            </div>
+            <Detail label="Cost" value={card.cost ?? "—"} />
+            <Detail
+              label="Color identity"
+              value={
+                card.color_identity.length > 0
+                  ? card.color_identity.map(capitalize).join(", ")
+                  : "—"
+              }
+            />
             <Detail
               label="Power / Toughness"
               value={
@@ -294,7 +301,9 @@ export default async function CardDetailPage({
             <h2 className="font-display text-lg font-semibold text-foreground">
               Rules text
             </h2>
-            <OracleText text={card.rules_text} className="text-sm text-muted" />
+            <p className="whitespace-pre-line text-sm leading-6 text-muted">
+              {card.rules_text?.trim() || "No rules text yet."}
+            </p>
           </SurfaceCard>
 
           {card.flavor_text?.trim() ? (
@@ -307,6 +316,13 @@ export default async function CardDetailPage({
               </p>
             </SurfaceCard>
           ) : null}
+
+          <CardComments
+            cardId={card.id}
+            cardSlug={card.slug}
+            initialComments={comments}
+            currentUserId={user?.id ?? null}
+          />
         </div>
       </div>
     </div>
@@ -350,4 +366,83 @@ function Detail({ label, value }: { label: string; value: string }) {
       <span className="text-sm text-foreground">{value}</span>
     </div>
   );
+}
+
+// ---------------------------------------------------------------------------
+// JSON-LD CreativeWork
+//
+// Lets Google / ChatGPT / Perplexity describe the card accurately when a
+// user asks about it. We emit only the fields we actually have — no
+// fabricated authors or licenses. The image URL points at the public OG
+// renderer so social unfurls and search-result thumbnails match.
+// ---------------------------------------------------------------------------
+
+function buildCardJsonLd({
+  card,
+  username,
+  ownerDisplay,
+  siteBase,
+}: {
+  card: {
+    id: string;
+    title: string;
+    slug: string;
+    created_at: string;
+    updated_at: string;
+    flavor_text: string | null;
+    rules_text: string | null;
+    artist_credit: string | null;
+  };
+  username: string;
+  ownerDisplay: string;
+  siteBase: string;
+}): Record<string, unknown> {
+  const description =
+    card.flavor_text?.trim() ||
+    card.rules_text?.trim() ||
+    "A custom Magic: The Gathering card forged on Spellwright.";
+  const truncatedDescription =
+    description.length > 280 ? `${description.slice(0, 277)}…` : description;
+
+  const canonical = `${siteBase}/card/${username}/${card.slug}`;
+
+  const schema: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": "CreativeWork",
+    name: card.title,
+    headline: card.title,
+    description: truncatedDescription,
+    url: canonical,
+    mainEntityOfPage: canonical,
+    datePublished: card.created_at,
+    dateModified: card.updated_at,
+    image: `${siteBase}/api/cards/${card.id}/og`,
+    author: {
+      "@type": "Person",
+      name: ownerDisplay,
+      url: `${siteBase}/profile/${username}`,
+    },
+    creator: {
+      "@type": "Person",
+      name: ownerDisplay,
+      url: `${siteBase}/profile/${username}`,
+    },
+    publisher: {
+      "@type": "Organization",
+      name: "Spellwright",
+      url: siteBase,
+    },
+    inLanguage: "en",
+    isAccessibleForFree: true,
+    genre: "Fan-made custom Magic: The Gathering card",
+  };
+
+  if (card.artist_credit?.trim()) {
+    schema.contributor = {
+      "@type": "Person",
+      name: card.artist_credit.trim(),
+    };
+  }
+
+  return schema;
 }

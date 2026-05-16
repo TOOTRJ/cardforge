@@ -18,11 +18,15 @@ import type { FrameStyle } from "@/types/card";
 
 export type FramePresetKey = "classic" | "modern" | "showcase" | "promo";
 
+// `finish` is picked independently in the form (Publishing tab), so a
+// preset only locks the border + accent combo. We deliberately omit
+// `finish` from the preset object so applying a preset preserves whatever
+// finish the user already chose.
 export type FramePreset = {
   key: FramePresetKey;
   label: string;
   description: string;
-  style: Required<FrameStyle>;
+  style: Pick<Required<FrameStyle>, "border" | "accent">;
 };
 
 export const FRAME_PRESETS: FramePreset[] = [
@@ -82,7 +86,7 @@ export function FrameStylePicker({
           <button
             key={preset.key}
             type="button"
-            onClick={() => onChange(preset.style)}
+            onClick={() => onChange({ ...value, ...preset.style })}
             aria-pressed={active}
             className={cn(
               "flex flex-col gap-1 rounded-lg border bg-background/40 p-3 text-left transition-colors",

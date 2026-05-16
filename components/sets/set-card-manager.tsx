@@ -1,18 +1,34 @@
 "use client";
 
-import { useTransition, useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Plus, X } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  rectSortingStrategy,
+  sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SurfaceCard } from "@/components/ui/surface-card";
-import { CardPreview } from "@/components/cards/card-preview";
+import { SetCardSortable } from "@/components/sets/set-card-sortable";
 import {
   addCardToSetAction,
   removeCardFromSetAction,
+  reorderSetCardsAction,
 } from "@/lib/sets/actions";
-import type { Card, ArtPosition, FrameStyle } from "@/types/card";
+import type { Card } from "@/types/card";
 import type { SetItem } from "@/lib/sets/queries";
 import { cn } from "@/lib/utils";
 
@@ -32,6 +48,33 @@ export function SetCardManager({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [pendingId, setPendingId] = useState<string | null>(null);
+
+  // Local copy of items so drag-end can update the visual order
+  // immediately (optimistic UI) without waiting for the server round-trip
+  // + router refresh. We re-sync with the prop using React's render-phase
+  // setState idiom — when the parent's `items` reference changes (after
+  // a refresh / add / remove), we replace `orderedItems` in the same
+  // render so the effect-less reset never lags by a frame.
+  const [orderedItems, setOrderedItems] = useState<SetItem[]>(items);
+  const [itemsSnapshot, setItemsSnapshot] = useState(items);
+  if (items !== itemsSnapshot) {
+    setItemsSnapshot(items);
+    setOrderedItems(items);
+  }
+
+  const [isReordering, setIsReordering] = useState(false);
+
+  // Sensors: pointer for mouse/touch, keyboard for accessibility.
+  // PointerSensor's activationConstraint (a tiny drag distance) avoids
+  // accidentally engaging drag when the user just clicks the grip handle.
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 4 },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
 
   const handleAdd = (cardId: string) => {
     setPendingId(cardId);
@@ -61,6 +104,43 @@ export function SetCardManager({
     });
   };
 
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const fromIndex = orderedItems.findIndex((i) => i.item_id === active.id);
+    const toIndex = orderedItems.findIndex((i) => i.item_id === over.id);
+    if (fromIndex < 0 || toIndex < 0) return;
+
+    // Optimistic local update — drop-target snaps immediately so the user
+    // sees the result before the server confirms.
+    const previous = orderedItems;
+    const next = arrayMove(orderedItems, fromIndex, toIndex);
+    setOrderedItems(next);
+    setIsReordering(true);
+
+    startTransition(async () => {
+      const orderedIds = next.map((item) => item.item_id);
+      const result = await reorderSetCardsAction(setId, orderedIds);
+      setIsReordering(false);
+      if (!result.ok) {
+        // Roll back to the pre-drag order; the server didn't accept the
+        // new order so the visual state has to revert to match the DB.
+        setOrderedItems(previous);
+        toast.error(result.error);
+        return;
+      }
+      // Refresh server data so the next render reconciles with the DB.
+      // No toast on success — drag-reorder is a quiet operation; toast
+      // would feel chatty for every drag.
+      router.refresh();
+    });
+  };
+
+  // The SortableContext needs a stable id list in the same order as the
+  // rendered tiles. Recompute every render to track local reorders.
+  const sortableIds = orderedItems.map((i) => i.item_id);
+
   return (
     <div className="flex flex-col gap-10">
       <section className="flex flex-col gap-4">
@@ -69,60 +149,41 @@ export function SetCardManager({
             Cards in this set
           </h2>
           <p className="text-sm text-muted">
-            {items.length === 0
+            {orderedItems.length === 0
               ? "No cards yet — pick some from your library below."
-              : `${items.length} card${items.length === 1 ? "" : "s"} included.`}
+              : `${orderedItems.length} card${orderedItems.length === 1 ? "" : "s"} included. Drag the grip handle to reorder.`}
           </p>
+          {isReordering ? (
+            <span className="inline-flex items-center gap-1.5 self-start text-[11px] uppercase tracking-wider text-subtle">
+              <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
+              Saving order…
+            </span>
+          ) : null}
         </header>
 
-        {items.length === 0 ? (
+        {orderedItems.length === 0 ? (
           <SurfaceCard className="flex items-center justify-center border-dashed p-8 text-center text-sm text-muted">
             Empty for now. Use the picker below to add your first card.
           </SurfaceCard>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {items.map(({ card }) => (
-              <div key={card.id} className="flex flex-col gap-2">
-                <CardPreview
-                  staticInEditor
-                  title={card.title}
-                  cost={card.cost}
-                  cardType={card.card_type}
-                  supertype={card.supertype}
-                  subtypes={card.subtypes}
-                  rarity={card.rarity}
-                  colorIdentity={card.color_identity}
-                  rulesText={card.rules_text}
-                  flavorText={card.flavor_text}
-                  power={card.power}
-                  toughness={card.toughness}
-                  loyalty={card.loyalty}
-                  defense={card.defense}
-                  artistCredit={card.artist_credit}
-                  artUrl={card.art_url}
-                  artPosition={card.art_position as ArtPosition}
-                  frameStyle={card.frame_style as FrameStyle}
-                />
-                <div className="flex items-center justify-between gap-2 text-xs text-muted">
-                  <span className="truncate">/{card.slug}</span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleRemove(card.id, card.title)}
-                    disabled={isPending && pendingId === card.id}
-                  >
-                    {isPending && pendingId === card.id ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
-                    ) : (
-                      <X className="h-3.5 w-3.5" aria-hidden />
-                    )}
-                    Remove
-                  </Button>
-                </div>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext items={sortableIds} strategy={rectSortingStrategy}>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {orderedItems.map((item) => (
+                  <SetCardSortable
+                    key={item.item_id}
+                    item={item}
+                    onRemove={handleRemove}
+                    isRemoving={isPending && pendingId === item.card.id}
+                  />
+                ))}
               </div>
-            ))}
-          </div>
+            </SortableContext>
+          </DndContext>
         )}
       </section>
 

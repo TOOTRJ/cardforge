@@ -11,6 +11,7 @@ import {
   type ArtPosition,
   type CardType,
   type ColorIdentity,
+  type FrameStyle,
   type Rarity,
 } from "@/types/card";
 import type { CardPreviewData } from "@/components/cards/card-preview";
@@ -89,7 +90,9 @@ export async function exportCardAction(
     artistCredit: card.artist_credit,
     artUrl: card.art_url,
     artPosition: (card.art_position as ArtPosition) ?? {},
-    frameStyle: {},
+    // Pass the persisted frame style through so finishes (foil / etched /
+    // borderless / showcase) reach the downloaded PNG. Previously {}.
+    frameStyle: (card.frame_style as FrameStyle) ?? {},
   };
 
   let pngBytes: ArrayBuffer;

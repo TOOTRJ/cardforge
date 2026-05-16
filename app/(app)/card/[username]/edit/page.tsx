@@ -3,8 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { CardCreatorForm } from "@/components/creator/card-creator-form";
-import { ExportButton } from "@/components/creator/export-button";
-import { PrintButton } from "@/components/creator/print-button";
+import { DownloadModal } from "@/components/cards/download-modal";
 import { AddToSetButton } from "@/components/sets/add-to-set-button";
 import { PageHeader } from "@/components/layout/page-header";
 import { SurfaceCard } from "@/components/ui/surface-card";
@@ -20,14 +19,20 @@ import {
 import { listMySetsForCard } from "@/lib/sets/queries";
 import { isAIConfigured } from "@/lib/ai/card-assistant";
 
+// File-system param name is `username` because the sibling
+// `(marketing)/card/[username]/[slug]` route uses the same first
+// segment — Next.js requires consistent dynamic-segment names across
+// the route tree at the same depth. The value at the URL position is
+// still a card slug (the owner's own card), so we destructure as
+// `slug` for clarity downstream.
 type EditCardPageProps = {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ username: string }>;
 };
 
 export async function generateMetadata({
   params,
 }: EditCardPageProps): Promise<Metadata> {
-  const { slug } = await params;
+  const { username: slug } = await params;
   return {
     title: `Edit ${slug.replace(/-/g, " ")}`,
     description: "Edit your custom card.",
@@ -50,7 +55,7 @@ export default async function EditCardPage({ params }: EditCardPageProps) {
     );
   }
 
-  const { slug } = await params;
+  const { username: slug } = await params;
   const user = await getCurrentUser();
   if (!user) {
     redirect(`/login?redirectTo=${encodeURIComponent(`/card/${slug}/edit`)}`);
@@ -99,17 +104,7 @@ export default async function EditCardPage({ params }: EditCardPageProps) {
                 contains_card: s.contains_card,
               }))}
             />
-            <ExportButton
-              cardId={card.id}
-              cardSlug={card.slug}
-              variant="outline"
-              label="Download HD PNG"
-            />
-            <PrintButton
-              cardId={card.id}
-              cardSlug={card.slug}
-              variant="outline"
-            />
+            <DownloadModal cardId={card.id} cardSlug={card.slug} />
             <Button asChild variant="ghost">
               <Link href={`/card/${card.slug}`}>
                 <ArrowLeft className="h-4 w-4" aria-hidden /> View public page

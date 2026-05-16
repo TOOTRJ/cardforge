@@ -2,7 +2,10 @@ import Link from "next/link";
 import { Logo } from "./logo";
 import { Button } from "@/components/ui/button";
 import { LogoutButton } from "@/components/auth/logout-button";
+import { CommandPaletteTrigger } from "./command-palette-trigger";
+import { ThemeToggle } from "./theme-toggle";
 import { siteConfig } from "@/lib/site-config";
+import type { Theme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
 type HeaderUser = {
@@ -13,12 +16,14 @@ type HeaderUser = {
 type SiteHeaderProps = {
   variant?: "marketing" | "app";
   user?: HeaderUser | null;
+  theme?: Theme;
   className?: string;
 };
 
 export function SiteHeader({
   variant = "marketing",
   user,
+  theme = "system",
   className,
 }: SiteHeaderProps) {
   const nav = variant === "app" ? siteConfig.appNav : siteConfig.marketingNav;
@@ -47,8 +52,13 @@ export function SiteHeader({
         </nav>
 
         <div className="ml-auto flex items-center gap-2">
+          {/* Theme toggle — visible to authed AND anonymous users. */}
+          <ThemeToggle initialTheme={theme} />
           {isAuthed ? (
             <>
+              {/* ⌘K palette trigger. Only authed users see it because the
+                  palette itself is only mounted in the (app) layout. */}
+              {variant === "app" ? <CommandPaletteTrigger /> : null}
               {user?.username ? (
                 <Link
                   href={`/profile/${user.username}`}

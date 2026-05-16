@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { z } from "zod";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
@@ -13,7 +14,12 @@ import {
   getCardById,
   isSlugTakenForCurrentUser,
 } from "@/lib/cards/queries";
-import type { CardInsert, CardUpdate } from "@/types/card";
+import {
+  VISIBILITY_VALUES,
+  type CardInsert,
+  type CardUpdate,
+  type Visibility,
+} from "@/types/card";
 import type { ZodIssue } from "zod";
 
 // ---------------------------------------------------------------------------
@@ -104,9 +110,13 @@ function revalidateCardPaths(slug: string, ownerUsername?: string | null) {
   revalidatePath("/dashboard");
   revalidatePath("/sets");
   revalidatePath("/gallery");
+  // Legacy slug-only path still serves as the redirector — busting its
+  // cache keeps stale redirects from sticking after a slug edit.
   revalidatePath(`/card/${slug}`);
   if (ownerUsername) {
     revalidatePath(`/profile/${ownerUsername}`);
+    // Canonical public detail URL (Phase 11 chunk 11).
+    revalidatePath(`/card/${ownerUsername}/${slug}`);
   }
 }
 
@@ -195,6 +205,12 @@ export async function createCardAction(
     frame_style: data.frame_style ?? {},
     visibility: data.visibility,
     parent_card_id: data.parent_card_id ?? null,
+    // Back face (chunk 10): null when undefined or explicitly cleared,
+    // jsonb object when the user has filled in DFC content.
+    back_face: data.back_face ?? null,
+    // Scryfall provenance (chunk 13): the source card id when imported,
+    // null otherwise. Stays null forever for forged-from-scratch cards.
+    source_scryfall_id: data.source_scryfall_id ?? null,
   };
 
   const { data: row, error } = await supabase
@@ -283,6 +299,12 @@ export async function updateCardAction(
   if (data.frame_style !== undefined) update.frame_style = data.frame_style;
   if (data.visibility !== undefined) update.visibility = data.visibility;
   if (data.parent_card_id !== undefined) update.parent_card_id = data.parent_card_id;
+  // Back face: `null` clears it; an object replaces it whole. Omitting
+  // the field leaves whatever the DB already had untouched.
+  if (data.back_face !== undefined) update.back_face = data.back_face ?? null;
+  // Scryfall source: same semantics — null clears, omitted leaves alone.
+  if (data.source_scryfall_id !== undefined)
+    update.source_scryfall_id = data.source_scryfall_id ?? null;
 
   const { data: row, error } = await supabase
     .from("cards")
@@ -301,9 +323,24 @@ export async function updateCardAction(
 
   const ownerUsername = await getOwnerUsername();
   revalidateCardPaths(row.slug, ownerUsername);
-  // Also revalidate the previous slug if it changed.
+  // Also revalidate the previous slug if it changed — both the legacy
+  // redirector and the canonical username-namespaced URL need busting so
+  // the old URL stops resolving to stale data.
   if (existing.slug !== row.slug) {
     revalidatePath(`/card/${existing.slug}`);
+    if (ownerUsername) {
+      revalidatePath(`/card/${ownerUsername}/${existing.slug}`);
+    }
+  }
+  // If visibility moved out of (or into) a shareable state, flush the OG
+  // image route too. The route filters visibility at query time (defense in
+  // depth) but the CDN cache layer hangs onto the rendered PNG for up to
+  // s-maxage seconds; revalidating drops that cache so a public-→-private
+  // flip immediately stops serving the old image to social scrapers.
+  const visibilityChanged =
+    update.visibility !== undefined && update.visibility !== existing.visibility;
+  if (visibilityChanged) {
+    revalidatePath(`/api/cards/${row.id}/og`);
   }
 
   return { ok: true, cardId: row.id, slug: row.slug };
@@ -397,4 +434,166 @@ export async function remixCardAction(
     visibility: "private",
     parent_card_id: parent.id,
   });
+}
+
+// ---------------------------------------------------------------------------
+// Bulk actions (Phase 11 chunk 08)
+//
+// Both bulk actions follow the same shape:
+//   1. Validate the request (Zod: array of UUIDs)
+//   2. Pre-flight ownership check across the full id set — if ANY card is
+//      missing or belongs to another user, abort the whole batch.
+//   3. Single mutation across the set, bounded to `owner_id = user.id` as
+//      a belt-and-braces guard alongside RLS.
+//   4. Revalidate the dashboard / gallery / sets surfaces.
+//
+// We bound batches at 100 ids to keep request payloads reasonable + so the
+// pre-flight `IN (...)` query stays index-friendly.
+// ---------------------------------------------------------------------------
+
+const BULK_MAX_IDS = 100;
+
+const bulkCardIdsSchema = z
+  .array(z.string().uuid("Invalid card id."))
+  .min(1, "Pick at least one card.")
+  .max(BULK_MAX_IDS, `Up to ${BULK_MAX_IDS} cards at a time.`);
+
+const bulkVisibilitySchema = z.object({
+  cardIds: bulkCardIdsSchema,
+  visibility: z.enum(VISIBILITY_VALUES),
+});
+
+export type BulkCardsSuccess = {
+  ok: true;
+  count: number;
+};
+
+export type BulkCardsFailure = {
+  ok: false;
+  error: string;
+};
+
+export type BulkCardsResult = BulkCardsSuccess | BulkCardsFailure;
+
+export async function updateCardsVisibilityAction(
+  cardIds: string[],
+  visibility: Visibility,
+): Promise<BulkCardsResult> {
+  if (!isSupabaseConfigured()) {
+    return { ok: false, error: "Supabase is not configured." };
+  }
+  const user = await getCurrentUser();
+  if (!user) {
+    return { ok: false, error: "Sign in to update cards." };
+  }
+
+  const parsed = bulkVisibilitySchema.safeParse({ cardIds, visibility });
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Invalid request.",
+    };
+  }
+  const ids = Array.from(new Set(parsed.data.cardIds));
+
+  const supabase = await createClient();
+
+  // Pre-flight ownership: every id must exist AND be owned by the caller.
+  const { data: existing, error: existingError } = await supabase
+    .from("cards")
+    .select("id, owner_id")
+    .in("id", ids);
+  if (existingError) {
+    return { ok: false, error: existingError.message };
+  }
+  if (!existing || existing.length !== ids.length) {
+    return {
+      ok: false,
+      error: "Some cards weren't found.",
+    };
+  }
+  if (existing.some((c) => c.owner_id !== user.id)) {
+    return {
+      ok: false,
+      error: "Some cards aren't yours to edit.",
+    };
+  }
+
+  const { error } = await supabase
+    .from("cards")
+    .update({ visibility: parsed.data.visibility })
+    .in("id", ids)
+    .eq("owner_id", user.id);
+
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+
+  // Revalidate the surfaces that show card lists. Per-card slug paths are
+  // skipped here — they'll refresh on next visit. Same posture as the
+  // single-card updateCardAction.
+  revalidatePath("/dashboard");
+  revalidatePath("/gallery");
+  revalidatePath("/sets");
+
+  return { ok: true, count: ids.length };
+}
+
+export async function deleteCardsAction(
+  cardIds: string[],
+): Promise<BulkCardsResult> {
+  if (!isSupabaseConfigured()) {
+    return { ok: false, error: "Supabase is not configured." };
+  }
+  const user = await getCurrentUser();
+  if (!user) {
+    return { ok: false, error: "Sign in to delete cards." };
+  }
+
+  const parsed = bulkCardIdsSchema.safeParse(cardIds);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Invalid request.",
+    };
+  }
+  const ids = Array.from(new Set(parsed.data));
+
+  const supabase = await createClient();
+
+  const { data: existing, error: existingError } = await supabase
+    .from("cards")
+    .select("id, owner_id")
+    .in("id", ids);
+  if (existingError) {
+    return { ok: false, error: existingError.message };
+  }
+  if (!existing || existing.length !== ids.length) {
+    return {
+      ok: false,
+      error: "Some cards weren't found.",
+    };
+  }
+  if (existing.some((c) => c.owner_id !== user.id)) {
+    return {
+      ok: false,
+      error: "Some cards aren't yours to delete.",
+    };
+  }
+
+  const { error } = await supabase
+    .from("cards")
+    .delete()
+    .in("id", ids)
+    .eq("owner_id", user.id);
+
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath("/gallery");
+  revalidatePath("/sets");
+
+  return { ok: true, count: ids.length };
 }

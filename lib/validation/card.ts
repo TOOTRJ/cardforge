@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  CARD_FINISH_VALUES,
   CARD_TYPE_VALUES,
   COLOR_IDENTITY_VALUES,
   RARITY_VALUES,
@@ -110,19 +111,96 @@ export const artPositionSchema = z
     focalX: z.number().min(0).max(1).optional(),
     focalY: z.number().min(0).max(1).optional(),
     scale: z.number().min(0.1).max(4).optional(),
+    rotation: z.number().min(-180).max(180).optional(),
   })
   .strict()
   .default({});
+
+// Scryfall layout vocabulary — kept in sync with the cards_layout_valid
+// CHECK constraint in supabase/migrations/0019_v2_compat.sql.
+export const CARD_LAYOUT_VALUES = [
+  "normal",
+  "split",
+  "flip",
+  "transform",
+  "modal_dfc",
+  "meld",
+  "leveler",
+  "saga",
+  "adventure",
+  "planar",
+  "scheme",
+  "vanguard",
+  "token",
+  "double_faced_token",
+  "emblem",
+  "augment",
+  "host",
+  "art_series",
+  "reversible_card",
+  "class",
+  "case",
+  "mutate",
+  "prototype",
+] as const;
+
+export const cardLayoutSchema = z.enum(CARD_LAYOUT_VALUES);
+
+export const cardManaValueSchema = z
+  .number()
+  .min(0, "Mana value must be 0 or greater.")
+  .max(99, "Mana value seems out of range.")
+  .optional();
+
+export const cardOracleTextSchema = optionalEmptyString(
+  z
+    .string()
+    .trim()
+    .max(4000, "Oracle text must be 4000 characters or fewer."),
+);
 
 export const frameStyleSchema = z
   .object({
     border: z.enum(["thin", "thick", "ornate"]).optional(),
     accent: z.enum(["warm", "cool", "neutral"]).optional(),
+    finish: z.enum(CARD_FINISH_VALUES).optional(),
   })
   .strict()
   .default({});
 
 const uuidSchema = z.string().uuid("Must be a valid UUID.");
+
+// ---------------------------------------------------------------------------
+// Back-face schema (Phase 11 chunk 10)
+//
+// Same field shape as the front face, minus the shared/cross-face fields
+// (rarity, color_identity, frame_style, visibility, slug, owner, etc.) —
+// those live on the front-card row and apply to both faces.
+//
+// Title is required so we never store an "empty" back face. Everything
+// else is optional and follows the same length/format rules as the front.
+// ---------------------------------------------------------------------------
+
+export const backFaceSchema = z
+  .object({
+    title: cardTitleSchema,
+    cost: cardCostSchema,
+    card_type: cardTypeSchema,
+    supertype: cardSupertypeSchema,
+    subtypes: cardSubtypesSchema,
+    rules_text: cardRulesTextSchema,
+    flavor_text: cardFlavorTextSchema,
+    power: cardStatStringSchema,
+    toughness: cardStatStringSchema,
+    loyalty: cardStatStringSchema,
+    defense: cardStatStringSchema,
+    artist_credit: cardArtistCreditSchema,
+    art_url: cardArtUrlSchema,
+    art_position: artPositionSchema,
+  })
+  .strict();
+
+export type BackFaceInput = z.infer<typeof backFaceSchema>;
 
 // ---------------------------------------------------------------------------
 // Composite schemas — the shapes server actions consume.
@@ -151,6 +229,19 @@ const baseCardSchema = z.object({
   frame_style: frameStyleSchema,
   visibility: cardVisibilitySchema,
   parent_card_id: uuidSchema.optional(),
+  // Optional back face (Phase 11 chunk 10). `null` clears any existing
+  // back face; `undefined` (omitted) leaves it untouched on update. The
+  // back_face object must validate against backFaceSchema when provided.
+  back_face: backFaceSchema.nullable().optional(),
+  // Scryfall provenance (Phase 11 chunk 13). Set when the card was
+  // imported from Scryfall via the import dialog. UUID-shaped per
+  // Scryfall's id format. `null` clears; `undefined` leaves alone.
+  source_scryfall_id: uuidSchema.nullable().optional(),
+  // Scryfall parity columns (Phase v2). All optional; server actions write
+  // oracle_text alongside rules_text to keep both in sync.
+  oracle_text: cardOracleTextSchema,
+  mana_value: cardManaValueSchema,
+  layout: cardLayoutSchema.optional(),
 });
 
 export const createCardSchema = baseCardSchema;
