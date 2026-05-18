@@ -10,6 +10,9 @@ import { remixCardAction } from "@/lib/cards/actions";
 type RemixButtonProps = {
   cardId: string;
   cardSlug: string;
+  /** Owner of the card; when set, sign-in redirectTo lands on the canonical
+   *  `/card/[username]/[slug]` instead of bouncing through the legacy redirector. */
+  ownerUsername?: string | null;
   /** When true (no session) the click sends them to /login first. */
   requiresSignIn?: boolean;
   className?: string;
@@ -18,6 +21,7 @@ type RemixButtonProps = {
 export function RemixButton({
   cardId,
   cardSlug,
+  ownerUsername,
   requiresSignIn = false,
   className,
 }: RemixButtonProps) {
@@ -26,7 +30,10 @@ export function RemixButton({
 
   const handleClick = () => {
     if (requiresSignIn) {
-      router.push(`/login?redirectTo=${encodeURIComponent(`/card/${cardSlug}`)}`);
+      const next = ownerUsername
+        ? `/card/${ownerUsername}/${cardSlug}`
+        : `/card/${cardSlug}`;
+      router.push(`/login?redirectTo=${encodeURIComponent(next)}`);
       return;
     }
 

@@ -142,7 +142,11 @@ async function getOwnerUsername(): Promise<string | null> {
 // ---------------------------------------------------------------------------
 
 export type CreateCardOptions = {
-  /** When set, redirect to /card/<slug> after a successful create. */
+  /**
+   * When set, redirect to the canonical `/card/[username]/[slug]` after a
+   * successful create. Falls back to `/card/[slug]` (legacy redirector) when
+   * the owner has no username yet.
+   */
   redirectAfterCreate?: boolean;
 };
 
@@ -230,7 +234,11 @@ export async function createCardAction(
   revalidateCardPaths(row.slug, ownerUsername);
 
   if (options.redirectAfterCreate) {
-    redirect(`/card/${row.slug}`);
+    redirect(
+      ownerUsername
+        ? `/card/${ownerUsername}/${row.slug}`
+        : `/card/${row.slug}`,
+    );
   }
 
   return { ok: true, cardId: row.id, slug: row.slug };

@@ -11,6 +11,9 @@ import { cn } from "@/lib/utils";
 type LikeButtonProps = {
   cardId: string;
   cardSlug?: string;
+  /** Owner of the card. When set, the sign-in redirectTo lands on the
+   *  canonical `/card/[username]/[slug]` instead of the legacy redirector. */
+  ownerUsername?: string | null;
   initialLiked: boolean;
   initialCount: number;
   /** When true the user can't actually like (no session) → click sends to login. */
@@ -26,6 +29,7 @@ type LikeState = {
 export function LikeButton({
   cardId,
   cardSlug,
+  ownerUsername,
   initialLiked,
   initialCount,
   requiresSignIn = false,
@@ -40,11 +44,14 @@ export function LikeButton({
 
   const handleClick = () => {
     if (requiresSignIn) {
-      const next = cardSlug
-        ? `/card/${cardSlug}`
-        : typeof window !== "undefined"
-          ? window.location.pathname
-          : "/";
+      const next =
+        ownerUsername && cardSlug
+          ? `/card/${ownerUsername}/${cardSlug}`
+          : cardSlug
+            ? `/card/${cardSlug}`
+            : typeof window !== "undefined"
+              ? window.location.pathname
+              : "/";
       router.push(`/login?redirectTo=${encodeURIComponent(next)}`);
       return;
     }
@@ -54,7 +61,7 @@ export function LikeButton({
 
     startTransition(async () => {
       setOptimistic({ liked: nextLiked, count: nextCount });
-      const result = await toggleLikeAction(cardId, cardSlug);
+      const result = await toggleLikeAction(cardId, cardSlug, ownerUsername);
       if (!result.ok) {
         toast.error(result.error);
         // Revert: re-set optimistic to the pre-click values.

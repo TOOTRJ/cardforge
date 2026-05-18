@@ -12,7 +12,7 @@ import { SurfaceCard } from "@/components/ui/surface-card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { getCurrentUser } from "@/lib/supabase/server";
+import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
 import {
   getFantasyGameSystem,
   getTemplatesForGameSystem,
@@ -36,7 +36,10 @@ export default async function CreatePage() {
     redirect("/login?redirectTo=/create");
   }
 
-  const gameSystem = await getFantasyGameSystem();
+  const [gameSystem, profile] = await Promise.all([
+    getFantasyGameSystem(),
+    getCurrentProfile(),
+  ]);
   const templates = gameSystem
     ? await getTemplatesForGameSystem(gameSystem.id)
     : [];
@@ -73,6 +76,7 @@ export default async function CreatePage() {
         <CardCreatorForm
           mode="create"
           userId={user.id}
+          ownerUsername={profile?.username ?? null}
           gameSystems={[gameSystem]}
           templates={templates}
           aiConfigured={isAIConfigured()}

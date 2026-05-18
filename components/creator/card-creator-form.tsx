@@ -140,6 +140,10 @@ type FormValues = {
 type CardCreatorFormProps = {
   mode: "create" | "edit";
   userId: string | null;
+  /** Current user's username, if any. Lets the slug helper preview the
+   *  canonical `/card/[username]/[slug]` URL the card will live at. Null when
+   *  the user is signed out (preview mode) or hasn't picked a username yet. */
+  ownerUsername?: string | null;
   gameSystems: GameSystem[];
   templates: CardTemplate[];
   card?: Card | null;
@@ -441,6 +445,7 @@ function parseSubtypes(text: string): string[] {
 export function CardCreatorForm({
   mode,
   userId,
+  ownerUsername,
   gameSystems,
   templates,
   card,
@@ -1033,7 +1038,11 @@ export function CardCreatorForm({
 
             <FieldGroup
               label="Slug"
-              helper={`URL: /card/${watched.slug || slugify(watched.title || "untitled-card")}`}
+              helper={`URL: ${
+                ownerUsername
+                  ? `/card/${ownerUsername}/${watched.slug || slugify(watched.title || "untitled-card")}`
+                  : `/card/${watched.slug || slugify(watched.title || "untitled-card")}`
+              }`}
               error={errors.slug?.message}
             >
               <input

@@ -18,12 +18,17 @@ import Link from "next/link";
 import { PackageOpen, RefreshCw, RotateCcw } from "lucide-react";
 import { CardPreview } from "@/components/cards/card-preview";
 import { Button } from "@/components/ui/button";
+import { buildCardPath } from "@/lib/cards/utils";
 import { cn } from "@/lib/utils";
 import type { ArtPosition, CardType, ColorIdentity, FrameStyle, Rarity } from "@/types/card";
 
 export type BoosterCard = {
   id: string;
   slug: string;
+  /** Username of the card's owner, when available. Used to build the
+   *  canonical `/card/[username]/[slug]` link. Falls back to the legacy
+   *  redirector when null (cards owned by usernameless profiles). */
+  ownerUsername: string | null;
   title: string;
   cost: string | null;
   cardType: CardType | null;
@@ -117,7 +122,10 @@ export function BoosterViewer({
                 style={{ animationDelay: `${i * 30}ms` }}
               >
                 <Link
-                  href={`/card/${card.slug}`}
+                  href={buildCardPath({
+                    slug: card.slug,
+                    owner: { username: card.ownerUsername },
+                  })}
                   className="block rounded-frame focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   aria-label={`View ${card.title}`}
                 >

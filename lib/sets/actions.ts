@@ -371,9 +371,13 @@ export async function addCurrentCardToSetAction(
   cardSlug: string,
   setId: string,
   cardId: string,
+  ownerUsername?: string | null,
 ): Promise<SetItemResult> {
   const result = await addCardToSetAction(setId, cardId);
   if (result.ok) {
+    if (ownerUsername) {
+      revalidatePath(`/card/${ownerUsername}/${cardSlug}`);
+    }
     revalidatePath(`/card/${cardSlug}`);
     revalidatePath(`/card/${cardSlug}/edit`);
   }

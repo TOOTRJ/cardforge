@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { getSetBySlugPublic, listCardsInSet } from "@/lib/sets/queries";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { createClient } from "@/lib/supabase/server";
 import { BoosterViewer } from "@/components/sets/booster-viewer";
 import type { ArtPosition, FrameStyle } from "@/types/card";
 
@@ -62,6 +63,7 @@ function sampleBooster(
     art_position: unknown;
     frame_style: unknown;
     slug: string;
+    owner_id: string;
   }>,
 ): typeof cards {
   if (cards.length <= BOOSTER_SIZE) return shuffle(cards);
@@ -140,11 +142,31 @@ export default async function BoosterPage({
     );
   }
 
+  const sampled = sampleBooster(allCards);
+
+  // Batch-resolve each owner's username so the booster card links land on the
+  // canonical `/card/[username]/[slug]` URL instead of bouncing through the
+  // legacy redirector. Cards from usernameless owners fall back to the
+  // legacy path inside buildCardPath().
+  const ownerIds = Array.from(new Set(sampled.map((c) => c.owner_id)));
+  const usernameByOwner = new Map<string, string>();
+  if (ownerIds.length > 0) {
+    const supabase = await createClient();
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, username")
+      .in("id", ownerIds);
+    for (const profile of profiles ?? []) {
+      if (profile.username) usernameByOwner.set(profile.id, profile.username);
+    }
+  }
+
   // Serialise only the fields the viewer needs (avoids passing the full card
   // object which has DB timestamps etc. that aren't serialisable cleanly).
-  const boosterCards = sampleBooster(allCards).map((c) => ({
+  const boosterCards = sampled.map((c) => ({
     id: c.id,
     slug: c.slug,
+    ownerUsername: usernameByOwner.get(c.owner_id) ?? null,
     title: c.title,
     cost: c.cost,
     cardType: c.card_type as Parameters<typeof BoosterViewer>[0]["cards"][number]["cardType"],
