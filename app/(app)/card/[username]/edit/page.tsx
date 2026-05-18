@@ -10,12 +10,13 @@ import { SurfaceCard } from "@/components/ui/surface-card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { getCurrentUser } from "@/lib/supabase/server";
+import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
 import {
   getFantasyGameSystem,
   getMyCardBySlug,
   getTemplatesForGameSystem,
 } from "@/lib/cards/queries";
+import { buildCardPath } from "@/lib/cards/utils";
 import { listMySetsForCard } from "@/lib/sets/queries";
 import { isAIConfigured } from "@/lib/ai/card-assistant";
 
@@ -68,20 +69,26 @@ export default async function EditCardPage({ params }: EditCardPageProps) {
     notFound();
   }
 
-  const [gameSystem, mySets] = await Promise.all([
+  const [gameSystem, mySets, profile] = await Promise.all([
     getFantasyGameSystem(),
     listMySetsForCard(card.id),
+    getCurrentProfile(),
   ]);
   const templates = gameSystem
     ? await getTemplatesForGameSystem(gameSystem.id)
     : [];
+  const ownerUsername = profile?.username ?? null;
+  const publicPath = buildCardPath({
+    slug: card.slug,
+    owner: { username: ownerUsername },
+  });
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
       <PageHeader
         eyebrow="Editing"
         title={card.title}
-        description={`Slug: /card/${card.slug}`}
+        description={`Slug: ${publicPath}`}
         actions={
           <>
             <Badge
@@ -96,6 +103,7 @@ export default async function EditCardPage({ params }: EditCardPageProps) {
             <AddToSetButton
               cardId={card.id}
               cardSlug={card.slug}
+              ownerUsername={ownerUsername}
               sets={mySets.map((s) => ({
                 id: s.id,
                 slug: s.slug,
@@ -106,7 +114,7 @@ export default async function EditCardPage({ params }: EditCardPageProps) {
             />
             <DownloadModal cardId={card.id} cardSlug={card.slug} />
             <Button asChild variant="ghost">
-              <Link href={`/card/${card.slug}`}>
+              <Link href={publicPath}>
                 <ArrowLeft className="h-4 w-4" aria-hidden /> View public page
               </Link>
             </Button>
@@ -118,6 +126,7 @@ export default async function EditCardPage({ params }: EditCardPageProps) {
         <CardCreatorForm
           mode="edit"
           userId={user.id}
+          ownerUsername={ownerUsername}
           gameSystems={gameSystem ? [gameSystem] : []}
           templates={templates}
           card={card}

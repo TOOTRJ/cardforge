@@ -245,6 +245,7 @@ export default async function CardDetailPage({
             <LikeButton
               cardId={card.id}
               cardSlug={card.slug}
+              ownerUsername={username}
               initialLiked={viewerLiked}
               initialCount={likesCount}
               requiresSignIn={!user}
@@ -252,6 +253,7 @@ export default async function CardDetailPage({
             <RemixButton
               cardId={card.id}
               cardSlug={card.slug}
+              ownerUsername={username}
               requiresSignIn={!user}
             />
             {isOwner ? (
@@ -320,6 +322,7 @@ export default async function CardDetailPage({
           <CardComments
             cardId={card.id}
             cardSlug={card.slug}
+            ownerUsername={username}
             initialComments={comments}
             currentUserId={user?.id ?? null}
           />

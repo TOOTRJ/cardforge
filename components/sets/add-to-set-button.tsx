@@ -23,10 +23,18 @@ type SetOption = {
 type AddToSetButtonProps = {
   cardId: string;
   cardSlug: string;
+  /** Owner of the card — used to revalidate the canonical
+   *  `/card/[username]/[slug]` after a successful set toggle. */
+  ownerUsername?: string | null;
   sets: SetOption[];
 };
 
-export function AddToSetButton({ cardId, cardSlug, sets }: AddToSetButtonProps) {
+export function AddToSetButton({
+  cardId,
+  cardSlug,
+  ownerUsername,
+  sets,
+}: AddToSetButtonProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -50,7 +58,7 @@ export function AddToSetButton({ cardId, cardSlug, sets }: AddToSetButtonProps) 
     startTransition(async () => {
       const result = set.contains_card
         ? await removeCardFromSetAction(set.id, cardId)
-        : await addCurrentCardToSetAction(cardSlug, set.id, cardId);
+        : await addCurrentCardToSetAction(cardSlug, set.id, cardId, ownerUsername);
       if (!result.ok) {
         toast.error(result.formError ?? "Could not update the set.");
       } else {

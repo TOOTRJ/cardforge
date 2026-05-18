@@ -145,6 +145,17 @@ export async function exportCardAction(
     format: "png",
   });
 
+  // Look up the owner's username so we can revalidate the canonical
+  // `/card/[username]/[slug]` URL alongside the legacy redirector and the
+  // owner-scoped edit page.
+  const { data: ownerProfile } = await supabase
+    .from("profiles")
+    .select("username")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (ownerProfile?.username) {
+    revalidatePath(`/card/${ownerProfile.username}/${card.slug}`);
+  }
   revalidatePath(`/card/${card.slug}`);
   revalidatePath(`/card/${card.slug}/edit`);
 

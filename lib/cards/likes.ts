@@ -38,9 +38,23 @@ async function recountLikes(
  * state by looking at whether the user has a row after the operation and
  * returns the fresh count for optimistic-UI confirmation.
  */
+function revalidateLikePaths(
+  cardSlug: string | undefined,
+  ownerUsername: string | null | undefined,
+) {
+  if (!cardSlug) return;
+  if (ownerUsername) {
+    revalidatePath(`/card/${ownerUsername}/${cardSlug}`);
+    revalidatePath(`/profile/${ownerUsername}`);
+  }
+  // Legacy redirector still needs busting so old links pick up fresh counts.
+  revalidatePath(`/card/${cardSlug}`);
+}
+
 export async function toggleLikeAction(
   cardId: string,
   cardSlug?: string,
+  ownerUsername?: string | null,
 ): Promise<ToggleLikeResult> {
   if (!UUID_PATTERN.test(cardId)) {
     return { ok: false, error: "Invalid card id." };
@@ -73,9 +87,7 @@ export async function toggleLikeAction(
       return { ok: false, error: deleteErr.message };
     }
     const count = await recountLikes(supabase, cardId);
-    if (cardSlug) {
-      revalidatePath(`/card/${cardSlug}`);
-    }
+    revalidateLikePaths(cardSlug, ownerUsername);
     return { ok: true, liked: false, likes_count: count };
   }
 
@@ -91,17 +103,13 @@ export async function toggleLikeAction(
     // between SELECT and INSERT). Recompute and treat as already liked.
     if (insertErr.code === "23505") {
       const count = await recountLikes(supabase, cardId);
-      if (cardSlug) {
-        revalidatePath(`/card/${cardSlug}`);
-      }
+      revalidateLikePaths(cardSlug, ownerUsername);
       return { ok: true, liked: true, likes_count: count };
     }
     return { ok: false, error: insertErr.message };
   }
 
   const count = await recountLikes(supabase, cardId);
-  if (cardSlug) {
-    revalidatePath(`/card/${cardSlug}`);
-  }
+  revalidateLikePaths(cardSlug, ownerUsername);
   return { ok: true, liked: true, likes_count: count };
 }

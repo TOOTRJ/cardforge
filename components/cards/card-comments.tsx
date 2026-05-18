@@ -37,6 +37,9 @@ const MAX_BODY = 2000;
 type Props = {
   cardId: string;
   cardSlug: string;
+  /** Owner of the card; lets the signed-out nudge link back to the canonical
+   *  `/card/[username]/[slug]` after sign-in instead of the legacy redirector. */
+  ownerUsername?: string | null;
   initialComments: CardCommentWithAuthor[];
   currentUserId: string | null;
 };
@@ -44,6 +47,7 @@ type Props = {
 export function CardComments({
   cardId,
   cardSlug,
+  ownerUsername,
   initialComments,
   currentUserId,
 }: Props) {
@@ -127,7 +131,7 @@ export function CardComments({
           </div>
         </form>
       ) : (
-        <SignedOutNudge cardSlug={cardSlug} />
+        <SignedOutNudge cardSlug={cardSlug} ownerUsername={ownerUsername} />
       )}
 
       <div className="flex flex-col gap-3">
@@ -155,8 +159,16 @@ export function CardComments({
 // Sub-components
 // ---------------------------------------------------------------------------
 
-function SignedOutNudge({ cardSlug }: { cardSlug: string }) {
-  const redirectTo = encodeURIComponent(`/card/${cardSlug}`);
+function SignedOutNudge({
+  cardSlug,
+  ownerUsername,
+}: {
+  cardSlug: string;
+  ownerUsername?: string | null;
+}) {
+  const redirectTo = encodeURIComponent(
+    ownerUsername ? `/card/${ownerUsername}/${cardSlug}` : `/card/${cardSlug}`,
+  );
   return (
     <div className="rounded-md border border-border/60 bg-elevated/60 px-4 py-3 text-xs text-muted">
       <Link
