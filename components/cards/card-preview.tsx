@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react";
 import { RotateCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ManaCostGlyphs } from "@/components/cards/mana-cost-glyphs";
+import { SetSymbol } from "@/components/cards/set-symbol";
 import { rulesFontTier, type RulesFontTier } from "@/lib/cards/render-tiers";
 import type {
   ArtPosition,
@@ -617,7 +618,7 @@ function InnerCardPanel({
             subtypes: face.subtypes,
           })}
         </span>
-        {rarity ? <RarityGem rarity={rarity} /> : null}
+        {rarity ? <SetSymbol rarity={rarity} /> : null}
       </div>
 
       {/* Rules + flavor — flex-1 absorbs whatever space is left after the
@@ -696,36 +697,9 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
-function RarityGem({ rarity }: { rarity: Rarity }) {
-  const fill = RARITY_COLOR[rarity];
-  const isMythic = rarity === "mythic";
-  return (
-    <span
-      aria-label={`${capitalize(rarity)} rarity`}
-      title={capitalize(rarity)}
-      className={cn(
-        "inline-flex h-3.5 w-3.5 items-center justify-center",
-        isMythic ? "drop-shadow-[0_0_4px_rgba(240,138,74,0.45)]" : "",
-      )}
-    >
-      <svg viewBox="0 0 12 12" className="h-full w-full" aria-hidden>
-        <defs>
-          <linearGradient id={`gem-${rarity}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="white" stopOpacity="0.85" />
-            <stop offset="40%" stopColor={fill} />
-            <stop offset="100%" stopColor={fill} stopOpacity="0.7" />
-          </linearGradient>
-        </defs>
-        <polygon
-          points="6,1 11,6 6,11 1,6"
-          fill={`url(#gem-${rarity})`}
-          stroke="rgba(0,0,0,0.35)"
-          strokeWidth="0.5"
-        />
-      </svg>
-    </span>
-  );
-}
+// (RarityGem was removed when the SetSymbol component replaced the diamond
+// pip with a Keyrune set-symbol glyph. RARITY_COLOR is still used above for
+// rare/mythic title tinting, so it stays.)
 
 function ArtImage({
   src,
