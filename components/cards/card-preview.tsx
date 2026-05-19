@@ -5,6 +5,7 @@ import { RotateCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ManaCostGlyphs } from "@/components/cards/mana-cost-glyphs";
 import { SetSymbol } from "@/components/cards/set-symbol";
+import { FrameLayer } from "@/components/cards/frame-layer";
 import { rulesFontTier, type RulesFontTier } from "@/lib/cards/render-tiers";
 import type {
   ArtPosition,
@@ -306,10 +307,18 @@ export function CardPreview({
         className,
       )}
     >
+      {/* Frame layer — bottom-most. The PNG fills the whole outer rect
+          (including the p-3 padding) so the colored frame border shows
+          around the InnerCardPanel. */}
+      <FrameLayer
+        template={frameStyle?.template ?? "regular"}
+        colorIdentity={colorIdentity}
+      />
+
       {/* Ambient color halo — shared by both faces. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-90"
+        className="pointer-events-none absolute inset-0 z-10 opacity-50"
         style={{ background: halo }}
       />
 
@@ -485,7 +494,7 @@ function InnerCardPanel({
   const footerTextClass = isBorderless ? "text-foreground/80" : "text-subtle";
 
   return (
-    <div className="relative flex h-full flex-col gap-2 overflow-hidden rounded-card border border-border/60 bg-background/40 p-2 backdrop-blur-sm">
+    <div className="relative z-20 flex h-full flex-col gap-2 overflow-hidden rounded-card border border-border/60 bg-background/30 p-2 backdrop-blur-md">
       {/* Borderless: full-bleed art sits behind every section. */}
       {isBorderless ? (
         <>

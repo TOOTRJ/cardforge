@@ -1,0 +1,67 @@
+import { cn } from "@/lib/utils";
+import type { ColorIdentity, FrameTemplate } from "@/types/card";
+
+// ---------------------------------------------------------------------------
+// FrameLayer — bottom-most z-index layer in CardPreview. Loads the chosen
+// frame PNG from public/frames/{template}/{colorKey}.png and stretches it
+// across the whole card. Sections (title, art, type, rules, footer) sit on
+// top with their own translucent backgrounds.
+//
+// Color resolution rule (matches the existing pickGradient logic):
+//   - 0 colors → colorless "c"
+//   - 1 color  → that color's key
+//   - 2+       → multicolor "m"
+//
+// The PNGs are clean original placeholders (see scripts/generate-frame-
+// placeholders.ts). Drop your own PNGs at the same paths to upgrade the
+// look — the file naming is the only contract.
+// ---------------------------------------------------------------------------
+
+const COLOR_KEY_LETTER: Record<ColorIdentity, string> = {
+  white: "w",
+  blue: "u",
+  black: "b",
+  red: "r",
+  green: "g",
+  colorless: "c",
+  multicolor: "m",
+};
+
+export function pickFrameColorKey(
+  colors: ColorIdentity[] | undefined,
+): string {
+  if (!colors || colors.length === 0) return "c";
+  if (colors.length > 1) return "m";
+  return COLOR_KEY_LETTER[colors[0]] ?? "c";
+}
+
+export function frameAssetPath(
+  template: FrameTemplate,
+  colorKey: string,
+): string {
+  return `/frames/${template}/${colorKey}.png`;
+}
+
+export function FrameLayer({
+  template = "regular",
+  colorIdentity,
+  className,
+}: {
+  template?: FrameTemplate;
+  colorIdentity: ColorIdentity[] | undefined;
+  className?: string;
+}) {
+  const colorKey = pickFrameColorKey(colorIdentity);
+  const src = frameAssetPath(template, colorKey);
+  return (
+    <div
+      aria-hidden
+      className={cn("pointer-events-none absolute inset-0 z-0", className)}
+      style={{
+        backgroundImage: `url(${src})`,
+        backgroundSize: "100% 100%",
+        backgroundRepeat: "no-repeat",
+      }}
+    />
+  );
+}
