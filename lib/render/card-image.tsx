@@ -10,6 +10,7 @@
 import { ImageResponse } from "next/og";
 import { rulesFontTier, type RulesFontTier } from "@/lib/cards/render-tiers";
 import { tokenize, tokenSuffix } from "@/components/cards/mana-cost-glyphs";
+import { pickFrameColorKey } from "@/components/cards/frame-layer";
 import {
   KEYRUNE_DEFAULT_GLYPH,
   KEYRUNE_FONT_BYTES,
@@ -18,8 +19,9 @@ import {
   MPLANTIN_FONT_BYTES,
   getManaCodepoint,
 } from "@/lib/render/card-fonts";
+import { getFrameDataUrl } from "@/lib/render/card-frames";
 import type { CardPreviewData } from "@/components/cards/card-preview";
-import type { Rarity } from "@/types/card";
+import type { ColorIdentity, Rarity } from "@/types/card";
 
 // ---------------------------------------------------------------------------
 // Sizing presets — 5:7 card aspect ratio, matching the live preview.
@@ -169,6 +171,16 @@ function CardImage({
     ? `1px solid ${COLORS.borderStrong}55`
     : `1px solid ${COLORS.border}66`;
 
+  // Frame asset — bottom-most layer. Picks the right color PNG using the
+  // same resolution rule as the live preview (FrameLayer): one color uses
+  // that color's PNG; 2+ colors use the multicolor frame; none falls back
+  // to colorless.
+  const frameTemplate = card.frameStyle?.template ?? "regular";
+  const frameColorKey = pickFrameColorKey(
+    card.colorIdentity as ColorIdentity[] | undefined,
+  );
+  const frameDataUrl = getFrameDataUrl(frameTemplate, frameColorKey);
+
   return (
     <div
       style={{
@@ -188,6 +200,23 @@ function CardImage({
         position: "relative",
       }}
     >
+      {/* Frame asset — bottom-most, fills the whole card so the colored
+          border shows around the inner panel. Matches the FrameLayer the
+          live preview renders in the editor. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={frameDataUrl}
+        alt=""
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          objectFit: "fill",
+        }}
+      />
+
       {/* Foil: static specular sheen. Satori doesn't run animations, so we
           freeze the conic foil from the live preview into a linear rainbow
           band that still reads as "holographic" in a still PNG. */}

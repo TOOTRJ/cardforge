@@ -169,11 +169,21 @@ export const CARD_FINISH_VALUES = [
 ] as const;
 export type CardFinish = (typeof CARD_FINISH_VALUES)[number];
 
+// Frame templates correspond to PNG assets in public/frames/{template}/{color}.png.
+// Phase 2 ships one template ("regular") with seven color variants; future
+// phases can add "creature", "saga", "planeswalker", etc. as additional PNG
+// folders. New entries here only need PNGs at the matching path — the
+// FrameLayer + Satori renderer pick them up automatically.
+export const FRAME_TEMPLATE_VALUES = ["regular"] as const;
+export type FrameTemplate = (typeof FRAME_TEMPLATE_VALUES)[number];
+
 export type FrameStyle = {
   /** Optional override of the template's default visual treatment. */
   border?: "thin" | "thick" | "ornate";
   accent?: "warm" | "cool" | "neutral";
   finish?: CardFinish;
+  /** Which frame PNG asset to layer behind the card sections. */
+  template?: FrameTemplate;
 };
 
 // ---------------------------------------------------------------------------

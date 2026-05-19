@@ -41,7 +41,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { CardPreview } from "@/components/cards/card-preview";
-import { ManaCostGlyphs } from "@/components/cards/mana-cost-glyphs";
+import { ManaCostPicker } from "@/components/cards/mana-cost-picker";
 import { ArtUploader } from "@/components/creator/art-uploader";
 import { DeleteCardDialog } from "@/components/creator/delete-card-dialog";
 import {
@@ -1056,22 +1056,19 @@ export function CardCreatorForm({
             <div className="grid gap-4 sm:grid-cols-2">
               <FieldGroup
                 label="Cost"
-                helper="Generic fantasy cost — e.g. {2}{R}."
+                helper="Click pips to build the mana cost."
                 error={errors.cost?.message}
               >
-                <div className="flex flex-col gap-2">
-                  <input
-                    {...register("cost")}
-                    placeholder="{2}{R}{R}"
-                    className={inputClass(Boolean(errors.cost))}
-                    autoComplete="off"
-                  />
-                  {watched.cost.trim() ? (
-                    <div className="flex h-7 items-center rounded-md border border-border/40 bg-elevated/40 px-2">
-                      <ManaCostGlyphs cost={watched.cost} size="sm" />
-                    </div>
-                  ) : null}
-                </div>
+                <Controller
+                  control={control}
+                  name="cost"
+                  render={({ field }) => (
+                    <ManaCostPicker
+                      value={field.value ?? ""}
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
               </FieldGroup>
 
               <FieldGroup label="Card type" error={errors.card_type?.message}>
@@ -1321,22 +1318,16 @@ export function CardCreatorForm({
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <FieldGroup label="Cost">
-                    <div className="flex flex-col gap-2">
-                      <input
-                        {...register("back_face.cost")}
-                        placeholder="—"
-                        className={inputClass(false)}
-                        autoComplete="off"
-                      />
-                      {watched.back_face.cost?.trim() ? (
-                        <div className="flex h-7 items-center rounded-md border border-border/40 bg-elevated/40 px-2">
-                          <ManaCostGlyphs
-                            cost={watched.back_face.cost}
-                            size="sm"
-                          />
-                        </div>
-                      ) : null}
-                    </div>
+                    <Controller
+                      control={control}
+                      name="back_face.cost"
+                      render={({ field }) => (
+                        <ManaCostPicker
+                          value={field.value ?? ""}
+                          onChange={field.onChange}
+                        />
+                      )}
+                    />
                   </FieldGroup>
 
                   <FieldGroup label="Card type">
