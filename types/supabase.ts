@@ -286,6 +286,8 @@ export type Database = {
           parent_card_id: string | null;
           power: string | null;
           rarity: string | null;
+          rendered_at: string | null;
+          rendered_image_url: string | null;
           rules_text: string | null;
           slug: string;
           source_scryfall_id: string | null;
@@ -320,6 +322,8 @@ export type Database = {
           parent_card_id?: string | null;
           power?: string | null;
           rarity?: string | null;
+          rendered_at?: string | null;
+          rendered_image_url?: string | null;
           rules_text?: string | null;
           slug: string;
           source_scryfall_id?: string | null;
@@ -354,6 +358,8 @@ export type Database = {
           parent_card_id?: string | null;
           power?: string | null;
           rarity?: string | null;
+          rendered_at?: string | null;
+          rendered_image_url?: string | null;
           rules_text?: string | null;
           slug?: string;
           source_scryfall_id?: string | null;

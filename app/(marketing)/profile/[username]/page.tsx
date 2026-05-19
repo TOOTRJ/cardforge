@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ExternalLink, Heart } from "lucide-react";
-import { CardPreview } from "@/components/cards/card-preview";
+import { BakedCardThumbnail } from "@/components/cards/baked-card-thumbnail";
 import { CardPreviewSkeleton } from "@/components/cards/card-preview-skeleton";
 import { CardHoverEffect } from "@/components/cards/card-hover-effect";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -190,24 +190,28 @@ function ProfileCardTile({
         style={{ viewTransitionName: `card-${card.id}` }}
       >
         <CardHoverEffect>
-          <CardPreview
+          <BakedCardThumbnail
+            renderedImageUrl={card.rendered_image_url}
             title={card.title}
-            cost={card.cost}
-            cardType={card.card_type}
-            supertype={card.supertype}
-            subtypes={card.subtypes}
-            rarity={card.rarity}
-            colorIdentity={card.color_identity}
-            rulesText={card.rules_text}
-            flavorText={card.flavor_text}
-            power={card.power}
-            toughness={card.toughness}
-            loyalty={card.loyalty}
-            defense={card.defense}
-            artistCredit={card.artist_credit}
-            artUrl={card.art_url}
-            artPosition={card.art_position as ArtPosition}
-            frameStyle={card.frame_style as FrameStyle}
+            previewData={{
+              title: card.title,
+              cost: card.cost,
+              cardType: card.card_type,
+              supertype: card.supertype,
+              subtypes: card.subtypes,
+              rarity: card.rarity,
+              colorIdentity: card.color_identity,
+              rulesText: card.rules_text,
+              flavorText: card.flavor_text,
+              power: card.power,
+              toughness: card.toughness,
+              loyalty: card.loyalty,
+              defense: card.defense,
+              artistCredit: card.artist_credit,
+              artUrl: card.art_url,
+              artPosition: card.art_position as ArtPosition,
+              frameStyle: card.frame_style as FrameStyle,
+            }}
           />
         </CardHoverEffect>
       </Link>

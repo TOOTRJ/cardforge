@@ -8,6 +8,7 @@
 // renderer is portable and doesn't pull on the app's CSS variables.
 
 import { ImageResponse } from "next/og";
+import { rulesFontTier, type RulesFontTier } from "@/lib/cards/render-tiers";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 
 // ---------------------------------------------------------------------------
@@ -101,7 +102,26 @@ function clamp(value: number, min: number, max: number): number {
 //     etched cross-hatch + the foil specular sheen
 // ---------------------------------------------------------------------------
 
-function CardImage({ card }: { card: CardPreviewData }) {
+// Font sizes for the rules+flavor box, indexed by the same tier the live
+// preview uses (rulesFontTier in card-preview.tsx). Values are calibrated
+// for the 750×1050 default preset; the renderer scales them up for HD.
+const RULES_FONT_PX_BY_TIER: Record<RulesFontTier, number> = {
+  0: 20,
+  1: 17,
+  2: 14,
+  3: 12,
+};
+
+function CardImage({
+  card,
+  height,
+}: {
+  card: CardPreviewData;
+  /** Total render canvas height in pixels — needed because Satori does
+   *  not honor `aspectRatio`, so the art well height is computed up front
+   *  as a fixed proportion of the card height. */
+  height: number;
+}) {
   const title = (card.title?.trim() || "Untitled Card").slice(0, 80);
   const showCost = card.cardType !== "land" && card.cost?.trim();
   const showPT = showsPowerToughness(card.cardType) && (card.power || card.toughness);
@@ -114,6 +134,14 @@ function CardImage({ card }: { card: CardPreviewData }) {
 
   const typeLine = buildTypeLine(card);
   const rarityColor = card.rarity ? RARITY_DOT[card.rarity] : null;
+
+  const rulesFontPx = RULES_FONT_PX_BY_TIER[rulesFontTier(card.rulesText, card.flavorText)];
+
+  // Art well height is 46% of the total card height. This is the same
+  // proportion the live preview gets via aspect-[3/2] (which Satori
+  // doesn't support); computing in pixels here keeps both renderers
+  // visually identical at any preset size.
+  const artHeight = Math.floor(height * 0.46);
 
   // Read the finish from the persisted frame_style. Defaults to "regular"
   // so any historic card without an explicit finish renders unchanged.
@@ -309,13 +337,18 @@ function CardImage({ card }: { card: CardPreviewData }) {
           />
         ) : null}
 
-        {/* Art well — replaced by an empty flex spacer when borderless
-            since the full-bleed backdrop already covers this area. */}
+        {/* Art well — fixed 3:2 aspect ratio so the art window stays the
+            same proportional size regardless of how long the card's rules
+            text is. Mirrors the live preview (card-preview.tsx). The
+            borderless variant still uses a flex spacer because the
+            full-bleed backdrop sits behind every section. */}
         {isBorderless ? (
           <div
             style={{
               display: "flex",
-              flex: 1,
+              flexShrink: 0,
+              width: "100%",
+              height: artHeight,
               position: "relative",
               zIndex: 0,
             }}
@@ -325,7 +358,9 @@ function CardImage({ card }: { card: CardPreviewData }) {
             style={{
               display: "flex",
               position: "relative",
-              flex: 1,
+              flexShrink: 0,
+              width: "100%",
+              height: artHeight,
               borderRadius: 10,
               overflow: "hidden",
               border: `1px solid ${COLORS.border}66`,
@@ -407,19 +442,24 @@ function CardImage({ card }: { card: CardPreviewData }) {
           ) : null}
         </div>
 
-        {/* Rules + flavor */}
+        {/* Rules + flavor — takes whatever vertical space is left after
+            the fixed-height sections. overflow:hidden clips long text
+            instead of warping the layout; rulesFontPx auto-shrinks the
+            font in 4 tiers based on character count so most cards fit. */}
         <div
           style={{
             display: "flex",
             flexDirection: "column",
             flex: 1,
+            minHeight: 0,
+            overflow: "hidden",
             padding: "12px 16px",
             borderRadius: 10,
             background: isBorderless ? `${COLORS.background}aa` : `${COLORS.surface}99`,
             border: sectionBorder,
             color: COLORS.muted,
-            fontSize: 18,
-            lineHeight: 1.45,
+            fontSize: rulesFontPx,
+            lineHeight: 1.4,
             gap: 10,
             position: "relative",
             zIndex: 10,
@@ -541,7 +581,7 @@ export function renderCardImage(
   preset: RenderPreset = "default",
 ): ImageResponse {
   const { width, height } = RENDER_PRESETS[preset];
-  return new ImageResponse(<CardImage card={card} />, {
+  return new ImageResponse(<CardImage card={card} height={height} />, {
     width,
     height,
   });

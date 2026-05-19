@@ -14,6 +14,7 @@ import {
   getCardById,
   isSlugTakenForCurrentUser,
 } from "@/lib/cards/queries";
+import { bakeAndPersistCardRender } from "@/lib/cards/bake-render";
 import {
   VISIBILITY_VALUES,
   type CardInsert,
@@ -230,6 +231,14 @@ export async function createCardAction(
     };
   }
 
+  // Bake a PNG of the new card to the card-renders bucket and persist its
+  // URL on the row. This is what the gallery/profile/detail pages render —
+  // so the saved card looks identical everywhere and never reflows when
+  // viewed at a different size. Best-effort: a failure here doesn't roll
+  // back the create. The pages fall back to <CardPreview> when the URL is
+  // still null.
+  await bakeAndPersistCardRender(row.id);
+
   const ownerUsername = await getOwnerUsername();
   revalidateCardPaths(row.slug, ownerUsername);
 
@@ -328,6 +337,10 @@ export async function updateCardAction(
       formError: error?.message ?? "Could not update card.",
     };
   }
+
+  // Re-bake the PNG so the gallery + detail thumbnails reflect the edit.
+  // Best-effort (same posture as createCardAction).
+  await bakeAndPersistCardRender(row.id);
 
   const ownerUsername = await getOwnerUsername();
   revalidateCardPaths(row.slug, ownerUsername);

@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react";
 import { RotateCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ManaCostGlyphs } from "@/components/cards/mana-cost-glyphs";
+import { rulesFontTier, type RulesFontTier } from "@/lib/cards/render-tiers";
 import type {
   ArtPosition,
   CardBackFace,
@@ -169,6 +170,16 @@ function showsLoyalty(cardType: CardType | null | undefined): boolean {
 function showsDefense(cardType: CardType | null | undefined): boolean {
   return cardType === "battle";
 }
+
+// Tailwind class per font tier — fed by rulesFontTier (lib/cards/render-tiers).
+// The mapping is the CLIENT side of the tiering scheme; the Satori renderer
+// has its own pixel-value mapping so the baked PNG matches at scale.
+const RULES_FONT_CLASS_BY_TIER: Record<RulesFontTier, string> = {
+  0: "text-xs leading-[1.45]",
+  1: "text-[11px] leading-[1.4]",
+  2: "text-[10px] leading-[1.35]",
+  3: "text-[9px] leading-[1.3]",
+};
 
 // ---------------------------------------------------------------------------
 // Per-face data — the slice of props that differs between the front and
@@ -454,6 +465,8 @@ function InnerCardPanel({
   const isBorderless = finish === "borderless";
   const isShowcase = finish === "showcase";
 
+  const rulesFontClass = RULES_FONT_CLASS_BY_TIER[rulesFontTier(face.rulesText, face.flavorText)];
+
   const accentTitleColor =
     rarity === "mythic" || rarity === "rare"
       ? RARITY_COLOR[rarity]
@@ -517,7 +530,7 @@ function InnerCardPanel({
       {/* Title bar */}
       <div
         className={cn(
-          "relative z-10 flex items-center justify-between gap-2 rounded-md px-3 py-1.5",
+          "relative z-10 flex shrink-0 items-center justify-between gap-2 rounded-md px-3 py-1.5",
           titleBarClass,
         )}
       >
@@ -546,13 +559,18 @@ function InnerCardPanel({
         />
       ) : null}
 
-      {/* Art well */}
+      {/* Art well — fixed aspect ratio so it never shrinks when text grows.
+          The 3:2 ratio gives the art ~47% of card body height across all
+          card sizes (matches real MTG card art proportions closely). The
+          borderless variant reserves the same vertical slot with a
+          transparent spacer; the full-bleed art behind the panels shows
+          through. */}
       {isBorderless ? (
-        <div className="relative z-0 flex-1" aria-hidden />
+        <div className="relative z-0 aspect-[3/2] w-full shrink-0" aria-hidden />
       ) : (
         <div
           className={cn(
-            "relative z-10 flex-1 overflow-hidden rounded-md border border-border/40 bg-linear-to-b to-background/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]",
+            "relative z-10 aspect-[3/2] w-full shrink-0 overflow-hidden rounded-md border border-border/40 bg-linear-to-b to-background/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]",
             gradient,
           )}
         >
@@ -588,7 +606,7 @@ function InnerCardPanel({
       {/* Type line + rarity gem */}
       <div
         className={cn(
-          "relative z-10 flex items-center justify-between gap-2 rounded-md px-3 py-1.5 text-[11px]",
+          "relative z-10 flex shrink-0 items-center justify-between gap-2 rounded-md px-3 py-1.5 text-[11px]",
           typeLineClass,
         )}
       >
@@ -602,10 +620,15 @@ function InnerCardPanel({
         {rarity ? <RarityGem rarity={rarity} /> : null}
       </div>
 
-      {/* Rules + flavor */}
+      {/* Rules + flavor — flex-1 absorbs whatever space is left after the
+          fixed-height sections. min-h-0 + overflow-hidden prevents the box
+          from pushing other regions out of the card; if the user types more
+          text than the font tier accommodates, it's clipped instead of
+          warping the layout. */}
       <div
         className={cn(
-          "relative z-10 flex flex-1 flex-col gap-2 rounded-md px-3 py-2 text-xs leading-5",
+          "relative z-10 flex min-h-0 flex-1 flex-col gap-2 overflow-hidden rounded-md px-3 py-2",
+          rulesFontClass,
           rulesPanelClass,
         )}
       >
@@ -642,7 +665,7 @@ function InnerCardPanel({
       {/* Footer */}
       <div
         className={cn(
-          "relative z-10 flex items-center justify-between text-[10px] uppercase tracking-wider",
+          "relative z-10 flex shrink-0 items-center justify-between text-[10px] uppercase tracking-wider",
           footerTextClass,
         )}
       >
