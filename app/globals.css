@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+/* Mana font (mana-font) — open-source pictographic font for Magic mana symbols.
+   SIL OFL 1.1 for the font, MIT for the CSS. Glyph designs © WotC. Provides
+   the `ms ms-w` / `ms ms-cost` / `ms ms-shadow` etc. class set. */
+@import "mana-font/css/mana.css";
+
+/* Keyrune — same author, set symbols. `ss ss-{setcode}` classes. */
+@import "keyrune/css/keyrune.css";
+
 @theme {
   /* ── Core surfaces ────────────────────────────────────────────── */
   --color-background: oklch(0.12 0.014 275);

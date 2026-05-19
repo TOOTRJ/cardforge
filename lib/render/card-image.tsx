@@ -9,7 +9,17 @@
 
 import { ImageResponse } from "next/og";
 import { rulesFontTier, type RulesFontTier } from "@/lib/cards/render-tiers";
+import { tokenize, tokenSuffix } from "@/components/cards/mana-cost-glyphs";
+import {
+  KEYRUNE_DEFAULT_GLYPH,
+  KEYRUNE_FONT_BYTES,
+  MANA_FONT_BYTES,
+  MANA_GLYPH_COLOR,
+  MPLANTIN_FONT_BYTES,
+  getManaCodepoint,
+} from "@/lib/render/card-fonts";
 import type { CardPreviewData } from "@/components/cards/card-preview";
+import type { Rarity } from "@/types/card";
 
 // ---------------------------------------------------------------------------
 // Sizing presets — 5:7 card aspect ratio, matching the live preview.
@@ -52,11 +62,13 @@ const COLOR_GRADIENTS: Record<string, [string, string]> = {
   colorless: ["#94a3b833", "#94a3b822"],
 };
 
-const RARITY_DOT: Record<string, string> = {
-  common: "#d4d4d8",
-  uncommon: "#7dd3fc",
-  rare: "#fcd34d",
-  mythic: "#fb923c",
+// Real-card rarity inks for the Keyrune set-symbol glyph in the type line.
+// Common is the dark stamp; uncommon/rare/mythic use the metallic finishes.
+const RARITY_SET_SYMBOL_COLOR: Record<Rarity, string> = {
+  common: "#0f0f12",
+  uncommon: "#a5a5b5",
+  rare: "#c9a14a",
+  mythic: "#d35327",
 };
 
 // ---------------------------------------------------------------------------
@@ -133,7 +145,6 @@ function CardImage({
   const scale = clamp(card.artPosition?.scale ?? 1, 0.5, 4);
 
   const typeLine = buildTypeLine(card);
-  const rarityColor = card.rarity ? RARITY_DOT[card.rarity] : null;
 
   const rulesFontPx = RULES_FONT_PX_BY_TIER[rulesFontTier(card.rulesText, card.flavorText)];
 
@@ -168,7 +179,11 @@ function CardImage({
         background: `linear-gradient(135deg, ${COLORS.elevated}, ${COLORS.surface}, ${COLORS.background})`,
         padding: 18,
         boxSizing: "border-box",
-        fontFamily: '"Geist", "Inter", system-ui, sans-serif',
+        // MPlantin is the only general-text font Satori has loaded (see the
+        // fonts: [...] block in renderCardImage). Setting it as the root
+        // default means title/type/rules/footer all render even though
+        // they don't opt into a specific family.
+        fontFamily: '"MPlantin"',
         color: COLORS.foreground,
         position: "relative",
       }}
@@ -303,24 +318,8 @@ function CardImage({
           >
             {title}
           </span>
-          {showCost ? (
-            <span
-              style={{
-                display: "flex",
-                alignItems: "center",
-                fontFamily: '"Geist Mono", ui-monospace, monospace',
-                fontSize: 16,
-                color: COLORS.muted,
-                background: COLORS.elevated,
-                border: `1px solid ${COLORS.border}99`,
-                borderRadius: 9999,
-                padding: "4px 12px",
-                letterSpacing: 1,
-                textTransform: "uppercase",
-              }}
-            >
-              {card.cost}
-            </span>
+          {showCost && card.cost ? (
+            <CostGlyphs cost={card.cost} fontSize={26} />
           ) : null}
         </div>
 
@@ -429,16 +428,8 @@ function CardImage({
           >
             {typeLine}
           </span>
-          {rarityColor ? (
-            <span
-              style={{
-                width: 12,
-                height: 12,
-                borderRadius: 9999,
-                background: rarityColor,
-                display: "block",
-              }}
-            />
+          {card.rarity ? (
+            <SetSymbolGlyph rarity={card.rarity as Rarity} fontSize={20} />
           ) : null}
         </div>
 
@@ -548,6 +539,94 @@ function CardImage({
   );
 }
 
+// ---------------------------------------------------------------------------
+// CostGlyphs — Satori-side renderer for mana cost strings. Tokenizes the cost
+// the same way the live preview does, then emits one styled <span> per token
+// using the Mana font (fontFamily: "Mana"). Unknown tokens render as plain
+// fallback text so weird inputs never break the bake.
+// ---------------------------------------------------------------------------
+
+function CostGlyphs({
+  cost,
+  fontSize,
+}: {
+  cost: string;
+  fontSize: number;
+}) {
+  const tokens = tokenize(cost);
+  if (tokens.length === 0) return null;
+
+  return (
+    <span style={{ display: "flex", alignItems: "center", gap: 2 }}>
+      {tokens.map((token, i) => {
+        if (token.kind === "text") {
+          return (
+            <span
+              key={`t-${i}`}
+              style={{
+                color: COLORS.muted,
+                fontSize: fontSize * 0.6,
+                letterSpacing: 1,
+                textTransform: "uppercase",
+              }}
+            >
+              {token.value}
+            </span>
+          );
+        }
+        const suffix = tokenSuffix(token);
+        const codepoint = suffix ? getManaCodepoint(suffix) : null;
+        if (!codepoint) return null;
+        // The Mana font is monochrome; tint by the relevant color so the pip
+        // reads as W/U/B/R/G/C the same way the live preview's CSS does.
+        // For hybrid and twobrid pips, fall back to the colorless hue — the
+        // glyph itself encodes the two-color split.
+        const tintKey =
+          token.kind === "solid" && /^[wubrgc]$/.test(token.label.toLowerCase())
+            ? token.label.toLowerCase()
+            : "c";
+        const color = MANA_GLYPH_COLOR[tintKey] ?? MANA_GLYPH_COLOR.c;
+        return (
+          <span
+            key={`g-${i}`}
+            style={{
+              display: "flex",
+              fontFamily: '"Mana"',
+              fontSize,
+              lineHeight: 1,
+              color,
+            }}
+          >
+            {codepoint}
+          </span>
+        );
+      })}
+    </span>
+  );
+}
+
+function SetSymbolGlyph({
+  rarity,
+  fontSize,
+}: {
+  rarity: Rarity;
+  fontSize: number;
+}) {
+  return (
+    <span
+      style={{
+        display: "flex",
+        fontFamily: '"Keyrune"',
+        fontSize,
+        lineHeight: 1,
+        color: RARITY_SET_SYMBOL_COLOR[rarity],
+      }}
+    >
+      {KEYRUNE_DEFAULT_GLYPH}
+    </span>
+  );
+}
+
 function Pill({ label, value }: { label: string; value: string }) {
   return (
     <span
@@ -584,5 +663,34 @@ export function renderCardImage(
   return new ImageResponse(<CardImage card={card} height={height} />, {
     width,
     height,
+    // Mana + Keyrune are loaded so the cost glyphs and set symbol render
+    // with the open-source pictographic fonts (SIL OFL 1.1) the live
+    // preview uses via CSS. Without this, Satori has no glyphs for the
+    // PUA codepoints we emit and falls back to .notdef boxes.
+    // Satori has no auto-fallback when explicit fonts are provided, so the
+    // body font (MPlantin, the actual MTG body-text font that ships with
+    // mana-font) is registered alongside the icon fonts. MPlantin is the
+    // default; Mana / Keyrune are opted into on the spans that render
+    // their glyphs.
+    fonts: [
+      {
+        name: "MPlantin",
+        data: MPLANTIN_FONT_BYTES,
+        weight: 400,
+        style: "normal",
+      },
+      {
+        name: "Mana",
+        data: MANA_FONT_BYTES,
+        weight: 400,
+        style: "normal",
+      },
+      {
+        name: "Keyrune",
+        data: KEYRUNE_FONT_BYTES,
+        weight: 400,
+        style: "normal",
+      },
+    ],
   });
 }
