@@ -1,17 +1,23 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Flame, Heart } from "lucide-react";
 import { BakedCardThumbnail } from "@/components/cards/baked-card-thumbnail";
 import { CardHoverEffect } from "@/components/cards/card-hover-effect";
 import { CardPreviewSkeleton } from "@/components/cards/card-preview-skeleton";
+import { TrendingShareButton } from "@/components/gallery/trending-share-button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { buildCardPath } from "@/lib/cards/utils";
+import { buildCardPath, buildCardUrl } from "@/lib/cards/utils";
+import { getSiteBaseUrl } from "@/lib/site-url";
 import type { CardWithStats } from "@/lib/cards/queries";
 import type { ArtPosition, FrameStyle } from "@/types/card";
 
 // ---------------------------------------------------------------------------
-// TrendingCardsSection — header + grid of trending tiles. Pure presentational
-// component; the caller fetches via listTrendingCards() and passes the rows
-// in. Renders nothing when the list is empty so the home/gallery pages don't
+// TrendingCardsSection — header + grid of trending tiles. Each tile carries
+// three click targets:
+//   - the card image opens the card detail page
+//   - the share icon (top-right overlay) opens the share-targets dialog
+//   - the owner chip (avatar + handle, below the image) opens the profile
+// Renders nothing when the list is empty so the home/gallery pages don't
 // show an awkward empty header above no content.
 // ---------------------------------------------------------------------------
 
@@ -39,6 +45,10 @@ export function TrendingCardsSection({
 }: TrendingCardsSectionProps) {
   if (cards.length === 0) return null;
 
+  // Resolved once for the section so per-tile renders don't each pay the
+  // env-var lookup; falls back to localhost during local dev.
+  const siteBase = getSiteBaseUrl();
+
   return (
     <section aria-labelledby="trending-heading">
       <div className="mb-6 flex flex-col items-start justify-between gap-3 md:flex-row md:items-end">
@@ -63,7 +73,12 @@ export function TrendingCardsSection({
       </div>
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {cards.map((card) => (
-          <TrendingTile key={card.id} card={card} priority={priority} />
+          <TrendingTile
+            key={card.id}
+            card={card}
+            priority={priority}
+            siteBase={siteBase}
+          />
         ))}
       </div>
     </section>
@@ -73,64 +88,125 @@ export function TrendingCardsSection({
 function TrendingTile({
   card,
   priority,
+  siteBase,
 }: {
   card: CardWithStats;
   priority: boolean;
+  siteBase: string;
 }) {
-  const ownerLabel =
-    card.owner?.username ?? card.owner?.display_name ?? "Anonymous forger";
+  const cardUrl = buildCardUrl(card, siteBase);
 
   return (
     <div className="flex flex-col gap-2">
-      <Link
-        href={buildCardPath(card)}
-        className="block rounded-frame focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-        aria-label={`Open ${card.title}`}
-        style={{ viewTransitionName: `trending-card-${card.id}` }}
-      >
-        <CardHoverEffect>
-          <BakedCardThumbnail
-            renderedImageUrl={card.rendered_image_url}
-            title={card.title}
-            priority={priority}
-            previewData={{
-              title: card.title,
-              cost: card.cost,
-              cardType: card.card_type,
-              supertype: card.supertype,
-              subtypes: card.subtypes,
-              rarity: card.rarity,
-              colorIdentity: card.color_identity,
-              rulesText: card.rules_text,
-              flavorText: card.flavor_text,
-              power: card.power,
-              toughness: card.toughness,
-              loyalty: card.loyalty,
-              defense: card.defense,
-              artistCredit: card.artist_credit,
-              artUrl: card.art_url,
-              artPosition: card.art_position as ArtPosition,
-              frameStyle: card.frame_style as FrameStyle,
-            }}
-          />
-        </CardHoverEffect>
-      </Link>
-      <div className="flex items-center justify-between gap-2 text-xs">
-        {card.owner?.username ? (
-          <Link
-            href={`/profile/${card.owner.username}`}
-            className="truncate font-mono text-muted transition-colors hover:text-foreground"
-          >
-            @{card.owner.username}
-          </Link>
-        ) : (
-          <span className="truncate text-muted">{ownerLabel}</span>
-        )}
-        <span className="inline-flex items-center gap-1 text-muted">
-          <Heart className="h-3 w-3" aria-hidden />
-          {card.likes_count}
-        </span>
+      <div className="group relative">
+        <Link
+          href={buildCardPath(card)}
+          className="block rounded-frame focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          aria-label={`Open ${card.title}`}
+          style={{ viewTransitionName: `trending-card-${card.id}` }}
+        >
+          <CardHoverEffect>
+            <BakedCardThumbnail
+              renderedImageUrl={card.rendered_image_url}
+              title={card.title}
+              priority={priority}
+              previewData={{
+                title: card.title,
+                cost: card.cost,
+                cardType: card.card_type,
+                supertype: card.supertype,
+                subtypes: card.subtypes,
+                rarity: card.rarity,
+                colorIdentity: card.color_identity,
+                rulesText: card.rules_text,
+                flavorText: card.flavor_text,
+                power: card.power,
+                toughness: card.toughness,
+                loyalty: card.loyalty,
+                defense: card.defense,
+                artistCredit: card.artist_credit,
+                artUrl: card.art_url,
+                artPosition: card.art_position as ArtPosition,
+                frameStyle: card.frame_style as FrameStyle,
+              }}
+            />
+          </CardHoverEffect>
+        </Link>
+        <div className="absolute right-2 top-2 z-10">
+          <TrendingShareButton cardTitle={card.title} cardUrl={cardUrl} />
+        </div>
       </div>
+
+      <ProfileChip
+        owner={card.owner}
+        likesCount={card.likes_count}
+      />
+    </div>
+  );
+}
+
+function ProfileChip({
+  owner,
+  likesCount,
+}: {
+  owner: CardWithStats["owner"];
+  likesCount: number;
+}) {
+  const displayName =
+    owner?.display_name?.trim() || owner?.username || "Anonymous forger";
+  const initial = (displayName[0] ?? "?").toUpperCase();
+  const handle = owner?.username ? `@${owner.username}` : null;
+  const chipClass =
+    "inline-flex min-w-0 items-center gap-2 rounded-full border border-border/40 bg-elevated/40 py-1 pl-1 pr-2.5 text-xs transition-colors hover:border-border-strong hover:bg-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50";
+
+  const chipInner = (
+    <>
+      <span className="relative flex h-6 w-6 shrink-0 overflow-hidden rounded-full bg-linear-to-br from-primary to-accent text-[10px] font-semibold text-primary-foreground">
+        {owner?.avatar_url ? (
+          <Image
+            src={owner.avatar_url}
+            alt=""
+            fill
+            sizes="24px"
+            className="object-cover"
+            unoptimized
+          />
+        ) : (
+          <span className="flex h-full w-full items-center justify-center">
+            {initial}
+          </span>
+        )}
+      </span>
+      <span className="flex min-w-0 flex-col leading-tight">
+        <span className="truncate font-medium text-foreground">
+          {displayName}
+        </span>
+        {handle ? (
+          <span className="truncate font-mono text-[10px] text-subtle">
+            {handle}
+          </span>
+        ) : null}
+      </span>
+    </>
+  );
+
+  return (
+    <div className="flex items-center justify-between gap-2">
+      {owner?.username ? (
+        <Link
+          href={`/profile/${owner.username}`}
+          aria-label={`Visit ${displayName}'s profile`}
+          className={chipClass}
+        >
+          {chipInner}
+        </Link>
+      ) : (
+        <div className={chipClass}>{chipInner}</div>
+      )}
+      <span className="inline-flex shrink-0 items-center gap-1 text-xs text-muted">
+        <Heart className="h-3 w-3" aria-hidden />
+        {likesCount}
+      </span>
     </div>
   );
 }
@@ -153,7 +229,7 @@ export function TrendingCardsSectionSkeleton({ count = 4 }: { count?: number }) 
           <div key={i} className="flex flex-col gap-2">
             <CardPreviewSkeleton />
             <div className="flex items-center justify-between gap-2 text-xs">
-              <Skeleton className="h-3 w-24" />
+              <Skeleton shape="circle" className="h-6 w-6" />
               <Skeleton className="h-3 w-8" />
             </div>
           </div>
