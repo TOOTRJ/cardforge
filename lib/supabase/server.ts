@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import type { Database } from "@/types/supabase";
@@ -28,7 +29,11 @@ export async function createClient() {
   });
 }
 
-export async function getCurrentUser() {
+// Wrapped in React's per-request `cache()` so multiple call sites within a
+// single render (layout + page + nested queries) share one auth lookup
+// instead of hitting Supabase's rate limit. Same memoization works for the
+// profile query below.
+export const getCurrentUser = cache(async () => {
   if (!isSupabaseConfigured()) return null;
   try {
     const supabase = await createClient();
@@ -38,9 +43,9 @@ export async function getCurrentUser() {
   } catch {
     return null;
   }
-}
+});
 
-export async function getCurrentProfile() {
+export const getCurrentProfile = cache(async () => {
   const user = await getCurrentUser();
   if (!user) return null;
   try {
@@ -54,4 +59,4 @@ export async function getCurrentProfile() {
   } catch {
     return null;
   }
-}
+});

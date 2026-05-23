@@ -5,7 +5,9 @@
 //       "dark"   — force dark
 //       "light"  — force light
 //       "system" — follow the OS / browser via prefers-color-scheme
-//     Missing cookie defaults to "system".
+//     Missing cookie defaults to "dark" (the brand surface). Users who
+//     prefer light or system can pick it via the header toggle and the
+//     choice will stick.
 //   - The cookie is set by the server action exported below. Client code
 //     can mirror the change to `document.documentElement.dataset.theme`
 //     for an instant visual update without waiting for the round-trip.
@@ -34,11 +36,11 @@ export function isTheme(value: unknown): value is Theme {
   return typeof value === "string" && THEME_VALUES.has(value as Theme);
 }
 
-/** Read the user's theme preference from the cookie. Defaults to "system". */
+/** Read the user's theme preference from the cookie. Defaults to "dark". */
 export async function getTheme(): Promise<Theme> {
   const store = await cookies();
   const value = store.get(THEME_COOKIE)?.value;
-  return isTheme(value) ? value : "system";
+  return isTheme(value) ? value : "dark";
 }
 
 /**
@@ -61,5 +63,7 @@ export function resolveThemeForServer(theme: Theme): ResolvedTheme {
  * paint.
  */
 export function noFlashScript(): string {
-  return `(function(){try{var m=document.cookie.match(/(?:^|; )${THEME_COOKIE}=([^;]+)/);var t=m?decodeURIComponent(m[1]):"system";var resolved=t==="light"||t==="dark"?t:(window.matchMedia&&window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark");document.documentElement.dataset.theme=resolved;}catch(e){}})();`;
+  // No cookie -> "dark" (brand default). Explicit "system" still follows
+  // the OS preference; explicit "dark"/"light" win unchanged.
+  return `(function(){try{var m=document.cookie.match(/(?:^|; )${THEME_COOKIE}=([^;]+)/);var t=m?decodeURIComponent(m[1]):"dark";var resolved=t==="light"||t==="dark"?t:(window.matchMedia&&window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark");document.documentElement.dataset.theme=resolved;}catch(e){}})();`;
 }

@@ -11,8 +11,9 @@ import { SurfaceCard } from "@/components/ui/surface-card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
-import { listMyCards } from "@/lib/cards/queries";
+import { listLikedCardsByUser, listMyCards } from "@/lib/cards/queries";
 import { listMySets } from "@/lib/sets/queries";
+import { LikedCardsSection } from "@/components/creator/liked-cards-section";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -112,10 +113,14 @@ export default async function DashboardPage() {
 // ---------------------------------------------------------------------------
 
 async function DashboardCards() {
-  // Cards + sets in parallel — sets feed the bulk "Add to set" picker so
-  // the dashboard doesn't need a follow-up client fetch when the user
-  // opens it.
-  const [myCards, mySets] = await Promise.all([listMyCards(), listMySets()]);
+  // Cards + sets + liked cards in parallel. Sets feed the bulk "Add to set"
+  // picker; liked cards feed the new "Liked cards" section below.
+  const viewer = await getCurrentUser();
+  const [myCards, mySets, likedCards] = await Promise.all([
+    listMyCards(),
+    listMySets(),
+    viewer ? listLikedCardsByUser(viewer.id) : Promise.resolve([]),
+  ]);
   const drafts = myCards.filter((c) => c.visibility === "private");
   const publicCards = myCards.filter((c) => c.visibility === "public");
   const recentCards = myCards.slice(0, 6);
@@ -169,6 +174,8 @@ async function DashboardCards() {
         publicCards={publicCards}
         userSets={setSummaries}
       />
+
+      <LikedCardsSection likedCards={likedCards} />
     </>
   );
 }

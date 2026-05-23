@@ -1,9 +1,10 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Flame, Heart } from "lucide-react";
+import { Flame } from "lucide-react";
 import { BakedCardThumbnail } from "@/components/cards/baked-card-thumbnail";
 import { CardHoverEffect } from "@/components/cards/card-hover-effect";
 import { CardPreviewSkeleton } from "@/components/cards/card-preview-skeleton";
+import { QuickLikeButton } from "@/components/cards/quick-like-button";
 import { TrendingShareButton } from "@/components/gallery/trending-share-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { buildCardPath, buildCardUrl } from "@/lib/cards/utils";
@@ -23,6 +24,9 @@ import type { ArtPosition, FrameStyle } from "@/types/card";
 
 type TrendingCardsSectionProps = {
   cards: CardWithStats[];
+  /** Whether the current viewer is signed in. Used to decide whether the
+   *  quick-like button toggles directly or bounces through /login. */
+  isAuthed: boolean;
   /** Eyebrow text rendered above the heading. */
   eyebrow?: string;
   /** Main heading text for the section. */
@@ -37,6 +41,7 @@ type TrendingCardsSectionProps = {
 
 export function TrendingCardsSection({
   cards,
+  isAuthed,
   eyebrow = "Trending now",
   heading = "Hot this week",
   description,
@@ -78,6 +83,7 @@ export function TrendingCardsSection({
             card={card}
             priority={priority}
             siteBase={siteBase}
+            isAuthed={isAuthed}
           />
         ))}
       </div>
@@ -89,10 +95,12 @@ function TrendingTile({
   card,
   priority,
   siteBase,
+  isAuthed,
 }: {
   card: CardWithStats;
   priority: boolean;
   siteBase: string;
+  isAuthed: boolean;
 }) {
   const cardUrl = buildCardUrl(card, siteBase);
 
@@ -139,7 +147,18 @@ function TrendingTile({
 
       <ProfileChip
         owner={card.owner}
-        likesCount={card.likes_count}
+        likeNode={
+          <QuickLikeButton
+            kind="card"
+            cardId={card.id}
+            cardSlug={card.slug}
+            ownerUsername={card.owner?.username ?? null}
+            initialLiked={card.liked_by_viewer}
+            initialCount={card.likes_count}
+            requiresSignIn={!isAuthed}
+            redirectAfterLogin={buildCardPath(card)}
+          />
+        }
       />
     </div>
   );
@@ -147,10 +166,10 @@ function TrendingTile({
 
 function ProfileChip({
   owner,
-  likesCount,
+  likeNode,
 }: {
   owner: CardWithStats["owner"];
-  likesCount: number;
+  likeNode: React.ReactNode;
 }) {
   const displayName =
     owner?.display_name?.trim() || owner?.username || "Anonymous forger";
@@ -203,10 +222,7 @@ function ProfileChip({
       ) : (
         <div className={chipClass}>{chipInner}</div>
       )}
-      <span className="inline-flex shrink-0 items-center gap-1 text-xs text-muted">
-        <Heart className="h-3 w-3" aria-hidden />
-        {likesCount}
-      </span>
+      {likeNode}
     </div>
   );
 }

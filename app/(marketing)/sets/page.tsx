@@ -8,8 +8,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SurfaceCard } from "@/components/ui/surface-card";
+import { QuickLikeButton } from "@/components/cards/quick-like-button";
 import { listPublicSets } from "@/lib/sets/queries";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { getCurrentUser } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   title: "Community sets",
@@ -67,10 +69,14 @@ export default async function PublicSetsPage({ searchParams }: SetsPageProps) {
 }
 
 async function PublicSetsResults({ page }: { page: number }) {
-  const sets = await listPublicSets({
-    limit: PAGE_SIZE,
-    offset: (page - 1) * PAGE_SIZE,
-  });
+  const [sets, viewer] = await Promise.all([
+    listPublicSets({
+      limit: PAGE_SIZE,
+      offset: (page - 1) * PAGE_SIZE,
+    }),
+    getCurrentUser(),
+  ]);
+  const isAuthed = Boolean(viewer);
 
   if (sets.length === 0) {
     return (
@@ -94,7 +100,7 @@ async function PublicSetsResults({ page }: { page: number }) {
     <>
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {sets.map((set) => (
-          <PublicSetTile key={set.id} set={set} />
+          <PublicSetTile key={set.id} set={set} isAuthed={isAuthed} />
         ))}
       </div>
       {hasPrev || hasMore ? (
@@ -129,8 +135,10 @@ async function PublicSetsResults({ page }: { page: number }) {
 
 function PublicSetTile({
   set,
+  isAuthed,
 }: {
   set: Awaited<ReturnType<typeof listPublicSets>>[number];
+  isAuthed: boolean;
 }) {
   const ownerLabel =
     set.owner?.display_name?.trim() || set.owner?.username || "Anonymous forger";
@@ -183,9 +191,21 @@ function PublicSetTile({
         ) : (
           <span className="truncate text-muted">{ownerLabel}</span>
         )}
-        <span className="text-muted">
-          {set.cards_count} card{set.cards_count === 1 ? "" : "s"}
-        </span>
+        <div className="flex items-center gap-3 text-muted">
+          <span>
+            {set.cards_count} card{set.cards_count === 1 ? "" : "s"}
+          </span>
+          <QuickLikeButton
+            kind="set"
+            setId={set.id}
+            setSlug={set.slug}
+            ownerUsername={set.owner?.username ?? null}
+            initialLiked={set.liked_by_viewer}
+            initialCount={set.likes_count}
+            requiresSignIn={!isAuthed}
+            redirectAfterLogin={`/sets`}
+          />
+        </div>
       </div>
     </SurfaceCard>
   );
