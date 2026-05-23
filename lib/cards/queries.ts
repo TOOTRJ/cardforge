@@ -18,6 +18,12 @@ import {
   type Rarity,
 } from "@/types/card";
 import type { Card as CardRow } from "@/types/supabase";
+import {
+  TRENDING_FRESHNESS_WINDOW_DAYS,
+  TRENDING_WINDOW_DAYS,
+  sortTrending,
+  trendingScore,
+} from "@/lib/cards/trending";
 
 // Composed shape: card + owner profile + like count. Used by the gallery
 // and any "card tile" listing.
@@ -608,6 +614,143 @@ export async function getProfileByUsername(
     };
   } catch {
     return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Trending — 7-day windowed weighted velocity (see lib/cards/trending.ts).
+//
+// We aggregate signals client-side rather than in SQL because PostgREST
+// can't easily join four sources (cards, card_likes, card_comments, and
+// remix children) with a single ORDER BY on the derived score. Fetching
+// the candidate pool and scoring in-process mirrors how attachStats works.
+//
+// Candidate pool is capped at 500 most-recently-updated public cards —
+// anything older is overwhelmingly unlikely to be trending, and the cap
+// keeps memory bounded as the catalog grows.
+// ---------------------------------------------------------------------------
+
+const TRENDING_CANDIDATE_CAP = 500;
+
+export async function listTrendingCards(
+  options: { limit?: number } = {},
+): Promise<CardWithStats[]> {
+  if (!isSupabaseConfigured()) return [];
+  const { limit = 12 } = options;
+
+  try {
+    const supabase = await createClient();
+
+    const { data: cardRows, error: cardErr } = await supabase
+      .from("cards")
+      .select("*")
+      .eq("visibility", "public")
+      .order("updated_at", { ascending: false })
+      .limit(TRENDING_CANDIDATE_CAP);
+
+    if (cardErr || !cardRows || cardRows.length === 0) return [];
+
+    const cardIds = cardRows.map((c) => c.id);
+    const ownerByCardId = new Map(cardRows.map((c) => [c.id, c.owner_id]));
+    const ownerIds = Array.from(new Set(cardRows.map((c) => c.owner_id)));
+
+    const now = Date.now();
+    const windowStart = new Date(
+      now - TRENDING_WINDOW_DAYS * 24 * 60 * 60 * 1000,
+    ).toISOString();
+    const freshnessCutoffMs =
+      now - TRENDING_FRESHNESS_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+
+    const [
+      allLikesResult,
+      recentLikesResult,
+      recentCommentsResult,
+      recentRemixesResult,
+      ownersResult,
+    ] = await Promise.all([
+      supabase.from("card_likes").select("card_id").in("card_id", cardIds),
+      supabase
+        .from("card_likes")
+        .select("card_id, user_id")
+        .in("card_id", cardIds)
+        .gte("created_at", windowStart),
+      supabase
+        .from("card_comments")
+        .select("card_id, author_id")
+        .in("card_id", cardIds)
+        .gte("created_at", windowStart),
+      supabase
+        .from("cards")
+        .select("parent_card_id, owner_id")
+        .in("parent_card_id", cardIds)
+        .gte("created_at", windowStart),
+      supabase
+        .from("profiles")
+        .select("id, username, display_name, avatar_url")
+        .in("id", ownerIds),
+    ]);
+
+    const totalLikes = new Map<string, number>();
+    for (const row of allLikesResult.data ?? []) {
+      totalLikes.set(row.card_id, (totalLikes.get(row.card_id) ?? 0) + 1);
+    }
+
+    const recentLikes = new Map<string, number>();
+    for (const row of recentLikesResult.data ?? []) {
+      if (row.user_id === ownerByCardId.get(row.card_id)) continue;
+      recentLikes.set(row.card_id, (recentLikes.get(row.card_id) ?? 0) + 1);
+    }
+
+    const recentComments = new Map<string, number>();
+    for (const row of recentCommentsResult.data ?? []) {
+      if (row.author_id === ownerByCardId.get(row.card_id)) continue;
+      recentComments.set(
+        row.card_id,
+        (recentComments.get(row.card_id) ?? 0) + 1,
+      );
+    }
+
+    const recentRemixes = new Map<string, number>();
+    for (const row of recentRemixesResult.data ?? []) {
+      const parentId = row.parent_card_id;
+      if (!parentId) continue;
+      if (row.owner_id === ownerByCardId.get(parentId)) continue;
+      recentRemixes.set(parentId, (recentRemixes.get(parentId) ?? 0) + 1);
+    }
+
+    const ownerProfileById = new Map<string, CardWithOwner["owner"]>();
+    for (const row of ownersResult.data ?? []) {
+      ownerProfileById.set(row.id, {
+        username: row.username,
+        display_name: row.display_name,
+        avatar_url: row.avatar_url,
+      });
+    }
+
+    const scored = cardRows.map((row) => {
+      const score = trendingScore({
+        likes_7d: recentLikes.get(row.id) ?? 0,
+        comments_7d: recentComments.get(row.id) ?? 0,
+        remixes_7d: recentRemixes.get(row.id) ?? 0,
+        is_fresh: new Date(row.created_at).getTime() > freshnessCutoffMs,
+      });
+      return {
+        card: row,
+        score,
+        likesTotal: totalLikes.get(row.id) ?? 0,
+        createdAt: row.created_at,
+      };
+    });
+
+    return sortTrending(scored)
+      .slice(0, limit)
+      .map(({ card, likesTotal }) => ({
+        ...narrowCard(card),
+        owner: ownerProfileById.get(card.owner_id) ?? null,
+        likes_count: likesTotal,
+      }));
+  } catch {
+    return [];
   }
 }
 
