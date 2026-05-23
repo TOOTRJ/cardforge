@@ -6,7 +6,7 @@ export function SiteFooter() {
   return (
     <footer className="mt-24 border-t border-border/60 bg-background">
       <div className="mx-auto w-full max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-        <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-[1.4fr_repeat(4,_1fr)]">
+        <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-[1.6fr_repeat(3,_1fr)]">
           <div className="flex flex-col gap-4">
             <Logo />
             <p className="max-w-xs text-sm leading-6 text-muted">

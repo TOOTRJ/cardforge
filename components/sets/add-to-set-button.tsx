@@ -131,7 +131,7 @@ export function AddToSetButton({
                 <div className="rounded-md border border-dashed border-border/60 bg-background/40 p-4 text-center text-sm text-muted">
                   You don&apos;t have any sets yet.{" "}
                   <Link
-                    href="/sets/new"
+                    href="/dashboard/sets/new"
                     className="font-medium text-primary hover:underline"
                   >
                     Create one
@@ -181,7 +181,7 @@ export function AddToSetButton({
 
             <div className="mt-5 flex items-center justify-between gap-2 border-t border-border/50 pt-4">
               <Link
-                href="/sets/new"
+                href="/dashboard/sets/new"
                 className="text-xs text-muted transition-colors hover:text-foreground"
               >
                 + Create a new set

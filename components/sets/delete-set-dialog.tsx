@@ -19,7 +19,7 @@ type DeleteSetDialogProps = {
 export function DeleteSetDialog({
   setId,
   setTitle,
-  redirectTo = "/sets",
+  redirectTo = "/dashboard/sets",
   triggerLabel = "Delete set",
   triggerVariant = "outline",
 }: DeleteSetDialogProps) {

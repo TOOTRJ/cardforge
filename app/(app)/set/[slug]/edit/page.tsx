@@ -88,10 +88,10 @@ export default async function EditSetPage({ params }: EditSetPageProps) {
             <DeleteSetDialog
               setId={set.id}
               setTitle={set.title}
-              redirectTo="/sets"
+              redirectTo="/dashboard/sets"
             />
             <Button asChild variant="ghost">
-              <Link href="/sets">
+              <Link href="/dashboard/sets">
                 <ArrowLeft className="h-4 w-4" aria-hidden /> All sets
               </Link>
             </Button>

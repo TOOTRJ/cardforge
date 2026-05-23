@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { Logo } from "./logo";
 import { Button } from "@/components/ui/button";
-import { LogoutButton } from "@/components/auth/logout-button";
+import { NavLinks } from "./nav-links";
+import { UserMenu } from "./user-menu";
+import { MobileMenu } from "./mobile-menu";
 import { CommandPaletteTrigger } from "./command-palette-trigger";
 import { ThemeToggle } from "./theme-toggle";
 import { siteConfig } from "@/lib/site-config";
@@ -11,9 +13,13 @@ import { cn } from "@/lib/utils";
 type HeaderUser = {
   username: string | null;
   displayName: string | null;
+  avatarUrl?: string | null;
 };
 
 type SiteHeaderProps = {
+  /** Kept for the ⌘K trigger gating — the palette is only mounted in the
+   *  (app) route group, so showing the trigger elsewhere would be a dead
+   *  shortcut. Nav items themselves no longer depend on variant. */
   variant?: "marketing" | "app";
   user?: HeaderUser | null;
   theme?: Theme;
@@ -26,7 +32,6 @@ export function SiteHeader({
   theme = "system",
   className,
 }: SiteHeaderProps) {
-  const nav = variant === "app" ? siteConfig.appNav : siteConfig.marketingNav;
   const isAuthed = Boolean(user);
 
   return (
@@ -36,53 +41,49 @@ export function SiteHeader({
         className,
       )}
     >
-      <div className="mx-auto flex h-16 w-full max-w-7xl items-center gap-6 px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-16 w-full max-w-7xl items-center gap-3 px-4 sm:gap-6 sm:px-6 lg:px-8">
         <Logo />
 
-        <nav className="hidden md:flex md:items-center md:gap-1">
-          {nav.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="rounded-md px-3 py-2 text-sm text-muted transition-colors hover:bg-elevated hover:text-foreground"
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
+        <NavLinks
+          className="hidden md:flex md:items-center md:gap-1"
+          items={siteConfig.primaryNav}
+          isAuthed={isAuthed}
+          activeClassName="bg-elevated"
+        />
 
         <div className="ml-auto flex items-center gap-2">
-          {/* Theme toggle — visible to authed AND anonymous users. */}
           <ThemeToggle initialTheme={theme} />
           {isAuthed ? (
             <>
-              {/* ⌘K palette trigger. Only authed users see it because the
-                  palette itself is only mounted in the (app) layout. */}
               {variant === "app" ? <CommandPaletteTrigger /> : null}
-              {user?.username ? (
-                <Link
-                  href={`/profile/${user.username}`}
-                  className="hidden rounded-full border border-border/70 bg-elevated px-3 py-1 text-xs font-medium text-muted transition-colors hover:border-border-strong hover:text-foreground sm:inline-flex"
-                  title={user.displayName ?? user.username}
-                >
-                  @{user.username}
-                </Link>
-              ) : null}
-              <LogoutButton />
-              <Button asChild size="sm">
+              <Button asChild size="sm" className="hidden sm:inline-flex">
                 <Link href="/create">New card</Link>
               </Button>
+              <UserMenu
+                username={user?.username ?? null}
+                displayName={user?.displayName ?? null}
+                avatarUrl={user?.avatarUrl ?? null}
+              />
             </>
           ) : (
             <>
-              <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
+              <Button
+                asChild
+                variant="ghost"
+                size="sm"
+                className="hidden sm:inline-flex"
+              >
                 <Link href="/login">Sign in</Link>
               </Button>
-              <Button asChild size="sm">
+              <Button asChild size="sm" className="hidden sm:inline-flex">
                 <Link href="/signup">Start creating</Link>
               </Button>
             </>
           )}
+          <MobileMenu
+            isAuthed={isAuthed}
+            username={user?.username ?? null}
+          />
         </div>
       </div>
     </header>

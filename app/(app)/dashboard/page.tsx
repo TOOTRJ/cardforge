@@ -44,7 +44,7 @@ export default async function DashboardPage() {
         actions={
           <>
             <Button asChild variant="outline">
-              <Link href="/sets">My sets</Link>
+              <Link href="/dashboard/sets">My sets</Link>
             </Button>
             <Button asChild>
               <Link href="/create">
