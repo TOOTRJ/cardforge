@@ -1,11 +1,18 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { ArrowRight } from "lucide-react";
 import { MarketingHero } from "@/components/marketing/marketing-hero";
 import { FeatureGrid } from "@/components/marketing/feature-grid";
 import { CardPreviewPlaceholder } from "@/components/cards/card-preview-placeholder";
+import {
+  TrendingCardsSection,
+  TrendingCardsSectionSkeleton,
+} from "@/components/gallery/trending-cards-section";
 import { Button } from "@/components/ui/button";
+import { listTrendingCards } from "@/lib/cards/queries";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
 
-const galleryPreview = [
+const galleryPlaceholder = [
   {
     title: "Sablethorn Pact",
     cost: "{2}{B}{B}",
@@ -40,6 +47,15 @@ const galleryPreview = [
   },
 ];
 
+const VIEW_GALLERY_LINK = (
+  <Button asChild variant="outline">
+    <Link href="/gallery">
+      View gallery
+      <ArrowRight className="h-4 w-4" aria-hidden />
+    </Link>
+  </Button>
+);
+
 export default function HomePage() {
   return (
     <>
@@ -47,32 +63,13 @@ export default function HomePage() {
       <FeatureGrid />
 
       <section className="mx-auto w-full max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
-        <div className="mb-10 flex flex-col items-start justify-between gap-4 md:flex-row md:items-end">
-          <div className="flex flex-col gap-2">
-            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-              Gallery preview
-            </span>
-            <h2 className="font-display text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-              Cards from the community
-            </h2>
-            <p className="max-w-2xl text-base leading-7 text-muted">
-              Placeholder previews showcase the layout for the public gallery you’ll
-              fill with real cards in the coming phases.
-            </p>
-          </div>
-          <Button asChild variant="outline">
-            <Link href="/gallery">
-              View gallery
-              <ArrowRight className="h-4 w-4" aria-hidden />
-            </Link>
-          </Button>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {galleryPreview.map((card) => (
-            <CardPreviewPlaceholder key={card.title} card={card} />
-          ))}
-        </div>
+        {isSupabaseConfigured() ? (
+          <Suspense fallback={<TrendingCardsSectionSkeleton count={4} />}>
+            <HomeTrending />
+          </Suspense>
+        ) : (
+          <PlaceholderGallery />
+        )}
       </section>
 
       <section className="mx-auto w-full max-w-5xl px-4 pb-24 sm:px-6 lg:px-8">
@@ -98,6 +95,48 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+    </>
+  );
+}
+
+async function HomeTrending() {
+  const trending = await listTrendingCards({ limit: 4 });
+  if (trending.length === 0) return <PlaceholderGallery />;
+  return (
+    <TrendingCardsSection
+      cards={trending}
+      eyebrow="Trending now"
+      heading="Top trending cards"
+      description="The cards racking up the most likes, comments, and remixes this week."
+      action={VIEW_GALLERY_LINK}
+    />
+  );
+}
+
+function PlaceholderGallery() {
+  return (
+    <>
+      <div className="mb-10 flex flex-col items-start justify-between gap-4 md:flex-row md:items-end">
+        <div className="flex flex-col gap-2">
+          <span className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+            Gallery preview
+          </span>
+          <h2 className="font-display text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+            Cards from the community
+          </h2>
+          <p className="max-w-2xl text-base leading-7 text-muted">
+            Placeholder previews showcase the layout for the public gallery.
+            Trending cards will populate here once the community starts forging.
+          </p>
+        </div>
+        {VIEW_GALLERY_LINK}
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {galleryPlaceholder.map((card) => (
+          <CardPreviewPlaceholder key={card.title} card={card} />
+        ))}
+      </div>
     </>
   );
 }

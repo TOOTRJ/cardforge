@@ -10,7 +10,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { GalleryFilters } from "@/components/gallery/gallery-filters";
-import { listPublicCardsRich } from "@/lib/cards/queries";
+import {
+  TrendingCardsSection,
+  TrendingCardsSectionSkeleton,
+} from "@/components/gallery/trending-cards-section";
+import { listPublicCardsRich, listTrendingCards } from "@/lib/cards/queries";
 import { buildCardPath } from "@/lib/cards/utils";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
@@ -138,6 +142,14 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
         }
       />
 
+      {configured ? (
+        <div className="mt-10">
+          <Suspense fallback={<TrendingCardsSectionSkeleton count={4} />}>
+            <GalleryTrending />
+          </Suspense>
+        </div>
+      ) : null}
+
       <div className="mt-8">
         <GalleryFilters />
       </div>
@@ -165,6 +177,20 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
         )}
       </div>
     </div>
+  );
+}
+
+async function GalleryTrending() {
+  const trending = await listTrendingCards({ limit: 4 });
+  if (trending.length === 0) return null;
+  return (
+    <TrendingCardsSection
+      cards={trending}
+      eyebrow="Trending now"
+      heading="Hot this week"
+      description="Cards picking up steam — fresh likes, comments, and remixes from the last 7 days."
+      priority
+    />
   );
 }
 
