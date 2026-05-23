@@ -6,8 +6,11 @@ import { SurfaceCard } from "@/components/ui/surface-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { ProfileForm } from "@/components/auth/profile-form";
+import { ProfileMediaUploader } from "@/components/auth/profile-media-uploader";
+import { PinnedCardsPicker } from "@/components/auth/pinned-cards-picker";
 import { UsagePanel } from "@/components/settings/usage-panel";
 import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
+import { listPublicCardsByOwner } from "@/lib/cards/queries";
 
 export const metadata: Metadata = {
   title: "Settings",
@@ -39,11 +42,41 @@ export default async function SettingsPage() {
         <SurfaceCard className="grid gap-6 p-6 sm:grid-cols-[1fr_2fr]">
           <div className="flex flex-col gap-1">
             <h3 className="font-display text-lg font-semibold text-foreground">
+              Avatar & banner
+            </h3>
+            <p className="text-sm leading-6 text-muted">
+              Customize the imagery on your public profile. PNG, JPEG, WebP,
+              or GIF, up to 8 MB.
+            </p>
+          </div>
+          <div className="flex flex-col gap-6 sm:flex-row">
+            <ProfileMediaUploader
+              kind="avatar"
+              currentUrl={profile?.avatar_url ?? null}
+              label="Avatar"
+              hint="Square crops look best — 256×256 or larger."
+              previewClassName="aspect-square w-32"
+            />
+            <div className="flex-1">
+              <ProfileMediaUploader
+                kind="banner"
+                currentUrl={profile?.banner_url ?? null}
+                label="Banner"
+                hint="Wide aspect (≈ 4:1). Renders at the top of your profile."
+                previewClassName="aspect-[4/1] w-full"
+              />
+            </div>
+          </div>
+        </SurfaceCard>
+
+        <SurfaceCard className="grid gap-6 p-6 sm:grid-cols-[1fr_2fr]">
+          <div className="flex flex-col gap-1">
+            <h3 className="font-display text-lg font-semibold text-foreground">
               Public profile
             </h3>
             <p className="text-sm leading-6 text-muted">
-              Your username, display name, and bio appear on your profile page
-              and next to every card you publish.
+              Your identity, bio, accent color, and social links appear on
+              your profile page and next to every card you publish.
             </p>
             {profileIncomplete ? (
               <p className="mt-2 text-xs leading-5 text-accent">
@@ -58,8 +91,34 @@ export default async function SettingsPage() {
               display_name: profile?.display_name ?? "",
               bio: profile?.bio ?? "",
               website_url: profile?.website_url ?? "",
+              accent_color: profile?.accent_color ?? "",
+              twitter_url: profile?.twitter_url ?? "",
+              bluesky_url: profile?.bluesky_url ?? "",
+              instagram_url: profile?.instagram_url ?? "",
+              youtube_url: profile?.youtube_url ?? "",
+              tiktok_url: profile?.tiktok_url ?? "",
+              discord_url: profile?.discord_url ?? "",
+              github_url: profile?.github_url ?? "",
             }}
           />
+        </SurfaceCard>
+
+        <SurfaceCard className="grid gap-6 p-6 sm:grid-cols-[1fr_2fr]">
+          <div className="flex flex-col gap-1">
+            <h3 className="font-display text-lg font-semibold text-foreground">
+              Pinned cards
+            </h3>
+            <p className="text-sm leading-6 text-muted">
+              Pin up to three public cards to the top of your profile. New
+              visitors see these first.
+            </p>
+          </div>
+          <Suspense fallback={<PinnedSkeleton />}>
+            <PinnedCardsSection
+              userId={user?.id ?? null}
+              initialPinned={profile?.pinned_card_ids ?? []}
+            />
+          </Suspense>
         </SurfaceCard>
 
         <SurfaceCard className="grid gap-6 p-6 sm:grid-cols-[1fr_2fr]">
@@ -90,15 +149,38 @@ export default async function SettingsPage() {
               no calendar-day cut-off.
             </p>
           </div>
-          {/* Suspend the usage queries so the profile + preferences cards
-              paint immediately; the usage tile streams in behind a
-              skeleton. */}
           <Suspense fallback={<UsagePanelSkeleton />}>
             <UsagePanel />
           </Suspense>
         </SurfaceCard>
       </div>
     </DashboardShell>
+  );
+}
+
+async function PinnedCardsSection({
+  userId,
+  initialPinned,
+}: {
+  userId: string | null;
+  initialPinned: string[];
+}) {
+  if (!userId) {
+    return (
+      <p className="text-sm text-muted">Sign in to pin cards to your profile.</p>
+    );
+  }
+  const cards = await listPublicCardsByOwner(userId, { limit: 48 });
+  return <PinnedCardsPicker cards={cards} initialPinned={initialPinned} />;
+}
+
+function PinnedSkeleton() {
+  return (
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      {[0, 1, 2].map((i) => (
+        <Skeleton key={i} className="aspect-[3/4] w-full rounded-md" />
+      ))}
+    </div>
   );
 }
 

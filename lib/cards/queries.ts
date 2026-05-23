@@ -555,6 +555,40 @@ export async function listPublicCardsRich(
 }
 
 /**
+ * Resolves a profile's `pinned_card_ids` array into full card rows. We
+ * filter out cards that:
+ *   - no longer exist (the array isn't FK-bound, so this can happen)
+ *   - have been made private/unlisted (only public pins are honored)
+ * The result preserves the saved order of the array — the user explicitly
+ * chose which card sits first.
+ */
+export async function listPinnedCardsForProfile(
+  pinnedIds: readonly string[],
+): Promise<CardWithStats[]> {
+  if (!isSupabaseConfigured()) return [];
+  if (pinnedIds.length === 0) return [];
+
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("cards")
+      .select("*")
+      .in("id", pinnedIds as string[])
+      .eq("visibility", "public");
+
+    if (error || !data || data.length === 0) return [];
+
+    const order = new Map(pinnedIds.map((id, i) => [id, i]));
+    const sorted = [...data].sort(
+      (a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0),
+    );
+    return attachStats(sorted, "recent");
+  } catch {
+    return [];
+  }
+}
+
+/**
  * All public + unlisted cards owned by a given user. Used by the profile
  * page. RLS already filters out private cards belonging to others; we
  * keep that filter explicit in the query for clarity.

@@ -56,6 +56,11 @@ const nextConfig: NextConfig = {
             hostname: supabaseHostname,
             pathname: "/storage/v1/object/public/set-covers/**",
           },
+          {
+            protocol: "https",
+            hostname: supabaseHostname,
+            pathname: "/storage/v1/object/public/profile-media/**",
+          },
         ]
       : [],
   },
