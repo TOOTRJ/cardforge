@@ -104,7 +104,8 @@ async function getOwnerUsername(): Promise<string | null> {
 }
 
 function revalidateSetPaths(slug: string, ownerUsername?: string | null) {
-  revalidatePath("/sets");
+  revalidatePath("/dashboard/sets");
+  revalidatePath("/sets"); // public community browse
   revalidatePath("/dashboard");
   revalidatePath(`/set/${slug}`);
   revalidatePath(`/set/${slug}/edit`);
@@ -322,6 +323,7 @@ export async function addCardToSetAction(
 
   revalidatePath(`/set/${set.slug}`);
   revalidatePath(`/set/${set.slug}/edit`);
+  revalidatePath("/dashboard/sets");
   revalidatePath("/sets");
   return { ok: true, setId, cardId };
 }
@@ -359,6 +361,7 @@ export async function removeCardFromSetAction(
 
   revalidatePath(`/set/${set.slug}`);
   revalidatePath(`/set/${set.slug}/edit`);
+  revalidatePath("/dashboard/sets");
   revalidatePath("/sets");
   return { ok: true, setId, cardId };
 }
@@ -516,6 +519,7 @@ export async function addCardsToSetAction(
 
   revalidatePath(`/set/${setResult.data.slug}`);
   revalidatePath(`/set/${setResult.data.slug}/edit`);
+  revalidatePath("/dashboard/sets");
   revalidatePath("/sets");
   revalidatePath("/dashboard");
 
@@ -659,6 +663,7 @@ export async function reorderSetCardsAction(
 
   revalidatePath(`/set/${set.slug}`);
   revalidatePath(`/set/${set.slug}/edit`);
+  revalidatePath("/dashboard/sets");
   revalidatePath("/sets");
 
   return {

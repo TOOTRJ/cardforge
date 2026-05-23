@@ -19,6 +19,7 @@ export default async function MarketingLayout({
           ? {
               username: profile?.username ?? null,
               displayName: profile?.display_name ?? null,
+              avatarUrl: profile?.avatar_url ?? null,
             }
           : null
       }

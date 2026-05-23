@@ -16,8 +16,6 @@ export default function robots(): MetadataRoute.Robots {
           "/dashboard",
           "/settings",
           "/create",
-          "/sets/new",
-          "/sets",
           "/card/*/edit",
           "/set/*/edit",
         ],

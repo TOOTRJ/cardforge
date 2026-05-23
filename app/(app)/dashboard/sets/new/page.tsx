@@ -49,7 +49,7 @@ export default async function NewSetPage() {
               <Sparkles className="h-3 w-3" aria-hidden /> Phase 7
             </Badge>
             <Button asChild variant="ghost">
-              <Link href="/sets">
+              <Link href="/dashboard/sets">
                 <ArrowLeft className="h-4 w-4" aria-hidden /> All sets
               </Link>
             </Button>

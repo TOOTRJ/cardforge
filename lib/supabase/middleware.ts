@@ -3,7 +3,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@/types/supabase";
 import { getSupabaseEnv, isSupabaseConfigured } from "./env";
 
-const PROTECTED_PREFIXES = ["/dashboard", "/create", "/sets", "/settings"];
+// /sets is now the PUBLIC community browse (mirrors /gallery) and is not
+// protected. Personal sets live under /dashboard/sets and are covered by
+// the /dashboard prefix.
+const PROTECTED_PREFIXES = ["/dashboard", "/create", "/settings"];
 const AUTH_REDIRECT_PREFIXES = ["/login", "/signup"];
 
 function pathMatches(path: string, prefixes: readonly string[]) {

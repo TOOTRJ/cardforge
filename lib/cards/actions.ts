@@ -109,7 +109,7 @@ async function ensureUniqueSlugForUser(
 
 function revalidateCardPaths(slug: string, ownerUsername?: string | null) {
   revalidatePath("/dashboard");
-  revalidatePath("/sets");
+  revalidatePath("/dashboard/sets");
   revalidatePath("/gallery");
   // Legacy slug-only path still serves as the redirector — busting its
   // cache keeps stale redirects from sticking after a slug edit.
@@ -555,7 +555,7 @@ export async function updateCardsVisibilityAction(
   // single-card updateCardAction.
   revalidatePath("/dashboard");
   revalidatePath("/gallery");
-  revalidatePath("/sets");
+  revalidatePath("/dashboard/sets");
 
   return { ok: true, count: ids.length };
 }
@@ -614,7 +614,7 @@ export async function deleteCardsAction(
 
   revalidatePath("/dashboard");
   revalidatePath("/gallery");
-  revalidatePath("/sets");
+  revalidatePath("/dashboard/sets");
 
   return { ok: true, count: ids.length };
 }

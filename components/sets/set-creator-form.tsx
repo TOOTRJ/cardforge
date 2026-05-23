@@ -266,7 +266,7 @@ export function SetCreatorForm({ mode, userId, set }: SetCreatorFormProps) {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button asChild variant="ghost">
-              <Link href={mode === "edit" && set ? `/set/${set.slug}` : "/sets"}>
+              <Link href={mode === "edit" && set ? `/set/${set.slug}` : "/dashboard/sets"}>
                 <ArrowLeft className="h-4 w-4" aria-hidden />
                 {mode === "edit" ? "View set" : "Back to sets"}
               </Link>

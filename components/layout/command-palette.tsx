@@ -82,15 +82,21 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     title: "My sets",
-    href: "/sets",
+    href: "/dashboard/sets",
     icon: Layers,
     hint: "Manage your card sets",
   },
   {
     title: "New set",
-    href: "/sets/new",
+    href: "/dashboard/sets/new",
     icon: FolderPlus,
     hint: "Create a new card set",
+  },
+  {
+    title: "Community sets",
+    href: "/sets",
+    icon: Layers,
+    hint: "Browse public sets",
   },
   {
     title: "Settings",

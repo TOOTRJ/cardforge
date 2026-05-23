@@ -25,7 +25,7 @@ export default async function SetsPage() {
         description="Group your cards into sets, decks, and worlds. Each set has its own visibility, cover, and analytics."
         actions={
           <Button asChild>
-            <Link href="/sets/new">
+            <Link href="/dashboard/sets/new">
               <Plus className="h-4 w-4" aria-hidden />
               New set
             </Link>
@@ -41,7 +41,7 @@ export default async function SetsPage() {
             description="Create your first set to group cards by theme, world, or playtest deck."
             action={
               <Button asChild>
-                <Link href="/sets/new">Create a set</Link>
+                <Link href="/dashboard/sets/new">Create a set</Link>
               </Button>
             }
           />
