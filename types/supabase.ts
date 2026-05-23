@@ -485,6 +485,27 @@ export type Database = {
         };
         Relationships: [];
       };
+      set_likes: {
+        Row: {
+          created_at: string;
+          id: string;
+          set_id: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          set_id: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          set_id?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       scryfall_calls: {
         Row: {
           action: string;

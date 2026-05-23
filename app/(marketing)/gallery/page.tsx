@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { ArrowLeft, ArrowRight, Heart, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, Sparkles } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { BakedCardThumbnail } from "@/components/cards/baked-card-thumbnail";
+import { QuickLikeButton } from "@/components/cards/quick-like-button";
 import { CardPreviewSkeleton } from "@/components/cards/card-preview-skeleton";
 import { CardHoverEffect } from "@/components/cards/card-hover-effect";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,6 +16,7 @@ import {
   TrendingCardsSectionSkeleton,
 } from "@/components/gallery/trending-cards-section";
 import { listPublicCardsRich, listTrendingCards } from "@/lib/cards/queries";
+import { getCurrentUser } from "@/lib/supabase/server";
 import { buildCardPath } from "@/lib/cards/utils";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
@@ -181,11 +183,15 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
 }
 
 async function GalleryTrending() {
-  const trending = await listTrendingCards({ limit: 4 });
+  const [trending, viewer] = await Promise.all([
+    listTrendingCards({ limit: 4 }),
+    getCurrentUser(),
+  ]);
   if (trending.length === 0) return null;
   return (
     <TrendingCardsSection
       cards={trending}
+      isAuthed={Boolean(viewer)}
       eyebrow="Trending now"
       heading="Hot this week"
       description="Cards picking up steam — fresh likes, comments, and remixes from the last 7 days."
@@ -196,15 +202,19 @@ async function GalleryTrending() {
 
 async function GalleryResults({ filters }: { filters: ParsedFilters }) {
   const { cardType, rarity, search, sort, page, sourceScryfallId } = filters;
-  const cards = await listPublicCardsRich({
-    cardType,
-    rarity,
-    search,
-    sort,
-    sourceScryfallId,
-    limit: PAGE_SIZE,
-    offset: (page - 1) * PAGE_SIZE,
-  });
+  const [cards, viewer] = await Promise.all([
+    listPublicCardsRich({
+      cardType,
+      rarity,
+      search,
+      sort,
+      sourceScryfallId,
+      limit: PAGE_SIZE,
+      offset: (page - 1) * PAGE_SIZE,
+    }),
+    getCurrentUser(),
+  ]);
+  const isAuthed = Boolean(viewer);
 
   if (cards.length === 0) {
     return (
@@ -248,7 +258,7 @@ async function GalleryResults({ filters }: { filters: ParsedFilters }) {
       ) : null}
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {cards.map((card) => (
-          <GalleryCardTile key={card.id} card={card} />
+          <GalleryCardTile key={card.id} card={card} isAuthed={isAuthed} />
         ))}
       </div>
       {hasPrev || hasMore ? (
@@ -280,8 +290,10 @@ async function GalleryResults({ filters }: { filters: ParsedFilters }) {
 
 function GalleryCardTile({
   card,
+  isAuthed,
 }: {
   card: Awaited<ReturnType<typeof listPublicCardsRich>>[number];
+  isAuthed: boolean;
 }) {
   const ownerLabel =
     card.owner?.username ?? card.owner?.display_name ?? "Anonymous forger";
@@ -335,10 +347,16 @@ function GalleryCardTile({
         ) : (
           <span className="truncate text-muted">{ownerLabel}</span>
         )}
-        <span className="inline-flex items-center gap-1 text-muted">
-          <Heart className="h-3 w-3" aria-hidden />
-          {card.likes_count}
-        </span>
+        <QuickLikeButton
+          kind="card"
+          cardId={card.id}
+          cardSlug={card.slug}
+          ownerUsername={card.owner?.username ?? null}
+          initialLiked={card.liked_by_viewer}
+          initialCount={card.likes_count}
+          requiresSignIn={!isAuthed}
+          redirectAfterLogin={buildCardPath(card)}
+        />
       </div>
     </div>
   );

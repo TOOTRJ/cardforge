@@ -25,10 +25,15 @@ import {
   trendingScore,
 } from "@/lib/cards/trending";
 
-// Composed shape: card + owner profile + like count. Used by the gallery
-// and any "card tile" listing.
+// Composed shape: card + owner profile + like count + viewer's like state.
+// Used by the gallery and any "card tile" listing.
+//
+// `liked_by_viewer` is `false` for anonymous viewers and for cards the
+// current user hasn't liked. The flag lets tile UIs render the heart in
+// the right state without a follow-up client fetch.
 export type CardWithStats = CardWithOwner & {
   likes_count: number;
+  liked_by_viewer: boolean;
 };
 
 export type ProfileWithStats = Profile & {
@@ -436,17 +441,34 @@ async function attachStats(
   const cardIds = rows.map((r) => r.id);
   const ownerIds = Array.from(new Set(rows.map((r) => r.owner_id)));
 
-  const [likesResult, ownersResult] = await Promise.all([
+  // Read the viewer once up front; if they're anonymous we skip the
+  // self-like lookup entirely. The likes query never blocks on RLS — the
+  // policy is publicly readable — so this is cheap.
+  const viewer = await getCurrentUser();
+
+  const [likesResult, ownersResult, viewerLikesResult] = await Promise.all([
     supabase.from("card_likes").select("card_id").in("card_id", cardIds),
     supabase
       .from("profiles")
       .select("id, username, display_name, avatar_url")
       .in("id", ownerIds),
+    viewer
+      ? supabase
+          .from("card_likes")
+          .select("card_id")
+          .eq("user_id", viewer.id)
+          .in("card_id", cardIds)
+      : Promise.resolve({ data: [] as Array<{ card_id: string }> }),
   ]);
 
   const likeCount = new Map<string, number>();
   for (const row of likesResult.data ?? []) {
     likeCount.set(row.card_id, (likeCount.get(row.card_id) ?? 0) + 1);
+  }
+
+  const viewerLiked = new Set<string>();
+  for (const row of viewerLikesResult.data ?? []) {
+    viewerLiked.add(row.card_id);
   }
 
   const ownerById = new Map<string, CardWithOwner["owner"]>();
@@ -462,6 +484,7 @@ async function attachStats(
     ...narrowCard(row),
     owner: ownerById.get(row.owner_id) ?? null,
     likes_count: likeCount.get(row.id) ?? 0,
+    liked_by_viewer: viewerLiked.has(row.id),
   }));
 
   if (sort === "popular") {
@@ -695,12 +718,17 @@ export async function listTrendingCards(
     const freshnessCutoffMs =
       now - TRENDING_FRESHNESS_WINDOW_DAYS * 24 * 60 * 60 * 1000;
 
+    // Viewer lookup is fire-and-forget so the trending score itself never
+    // depends on auth — anonymous visitors still get the same trending list.
+    const viewer = await getCurrentUser();
+
     const [
       allLikesResult,
       recentLikesResult,
       recentCommentsResult,
       recentRemixesResult,
       ownersResult,
+      viewerLikesResult,
     ] = await Promise.all([
       supabase.from("card_likes").select("card_id").in("card_id", cardIds),
       supabase
@@ -722,11 +750,23 @@ export async function listTrendingCards(
         .from("profiles")
         .select("id, username, display_name, avatar_url")
         .in("id", ownerIds),
+      viewer
+        ? supabase
+            .from("card_likes")
+            .select("card_id")
+            .eq("user_id", viewer.id)
+            .in("card_id", cardIds)
+        : Promise.resolve({ data: [] as Array<{ card_id: string }> }),
     ]);
 
     const totalLikes = new Map<string, number>();
     for (const row of allLikesResult.data ?? []) {
       totalLikes.set(row.card_id, (totalLikes.get(row.card_id) ?? 0) + 1);
+    }
+
+    const viewerLiked = new Set<string>();
+    for (const row of viewerLikesResult.data ?? []) {
+      viewerLiked.add(row.card_id);
     }
 
     const recentLikes = new Map<string, number>();
@@ -782,7 +822,51 @@ export async function listTrendingCards(
         ...narrowCard(card),
         owner: ownerProfileById.get(card.owner_id) ?? null,
         likes_count: likesTotal,
+        liked_by_viewer: viewerLiked.has(card.id),
       }));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Cards the given user has liked. Filters to shareable visibilities so a
+ * card that flipped private after being liked drops off the list rather
+ * than rendering as a broken tile. Ordered by most-recently-liked.
+ */
+export async function listLikedCardsByUser(
+  userId: string,
+  options: { limit?: number } = {},
+): Promise<CardWithStats[]> {
+  if (!isSupabaseConfigured()) return [];
+  const { limit = 24 } = options;
+
+  try {
+    const supabase = await createClient();
+    const { data: likeRows } = await supabase
+      .from("card_likes")
+      .select("card_id, created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(limit);
+
+    if (!likeRows || likeRows.length === 0) return [];
+
+    const orderedIds = likeRows.map((r) => r.card_id);
+    const { data: cardRows } = await supabase
+      .from("cards")
+      .select("*")
+      .in("id", orderedIds)
+      .in("visibility", SHAREABLE_VISIBILITIES as unknown as string[]);
+
+    if (!cardRows || cardRows.length === 0) return [];
+
+    const cardById = new Map(cardRows.map((row) => [row.id, row]));
+    const sortedRows = orderedIds
+      .map((id) => cardById.get(id))
+      .filter((row): row is CardRow => row !== undefined);
+
+    return attachStats(sortedRows, "recent");
   } catch {
     return [];
   }

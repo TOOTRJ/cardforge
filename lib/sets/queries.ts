@@ -29,6 +29,15 @@ export type CardSetWithOwner = CardSet & {
   owner: Pick<Profile, "username" | "display_name" | "avatar_url"> | null;
 };
 
+export type CardSetWithLikes = CardSet & {
+  likes_count: number;
+  liked_by_viewer: boolean;
+};
+
+export type PublicSetListing = CardSetWithCount &
+  CardSetWithOwner &
+  CardSetWithLikes;
+
 // ---------------------------------------------------------------------------
 // Narrowers — keep enum-typed text columns honest.
 // ---------------------------------------------------------------------------
@@ -104,10 +113,12 @@ export async function listMySets(): Promise<CardSetWithCount[]> {
   }
 }
 
-export async function listPublicSets(options: {
-  limit?: number;
-  offset?: number;
-} = {}): Promise<(CardSetWithCount & CardSetWithOwner)[]> {
+export async function listPublicSets(
+  options: {
+    limit?: number;
+    offset?: number;
+  } = {},
+): Promise<PublicSetListing[]> {
   if (!isSupabaseConfigured()) return [];
   const { limit = 24, offset = 0 } = options;
 
@@ -121,8 +132,11 @@ export async function listPublicSets(options: {
       .range(offset, offset + limit - 1);
     if (!sets || sets.length === 0) return [];
 
-    const [counts, owners] = await Promise.all([
-      countCardsForSets(sets.map((s) => s.id)),
+    const setIds = sets.map((s) => s.id);
+    const viewer = await getCurrentUser();
+
+    const [counts, owners, likes, viewerLikes] = await Promise.all([
+      countCardsForSets(setIds),
       (async () => {
         const ownerIds = Array.from(new Set(sets.map((s) => s.owner_id)));
         const { data } = await supabase
@@ -139,12 +153,31 @@ export async function listPublicSets(options: {
         }
         return byId;
       })(),
+      supabase.from("set_likes").select("set_id").in("set_id", setIds),
+      viewer
+        ? supabase
+            .from("set_likes")
+            .select("set_id")
+            .eq("user_id", viewer.id)
+            .in("set_id", setIds)
+        : Promise.resolve({ data: [] as Array<{ set_id: string }> }),
     ]);
+
+    const likeCount = new Map<string, number>();
+    for (const row of likes.data ?? []) {
+      likeCount.set(row.set_id, (likeCount.get(row.set_id) ?? 0) + 1);
+    }
+    const viewerLiked = new Set<string>();
+    for (const row of viewerLikes.data ?? []) {
+      viewerLiked.add(row.set_id);
+    }
 
     return sets.map((row) => ({
       ...narrowSet(row),
       cards_count: counts.get(row.id) ?? 0,
       owner: owners.get(row.owner_id) ?? null,
+      likes_count: likeCount.get(row.id) ?? 0,
+      liked_by_viewer: viewerLiked.has(row.id),
     }));
   } catch {
     return [];

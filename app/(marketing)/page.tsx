@@ -10,6 +10,7 @@ import {
 } from "@/components/gallery/trending-cards-section";
 import { Button } from "@/components/ui/button";
 import { listTrendingCards } from "@/lib/cards/queries";
+import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 const galleryPlaceholder = [
@@ -100,11 +101,15 @@ export default function HomePage() {
 }
 
 async function HomeTrending() {
-  const trending = await listTrendingCards({ limit: 4 });
+  const [trending, viewer] = await Promise.all([
+    listTrendingCards({ limit: 4 }),
+    getCurrentUser(),
+  ]);
   if (trending.length === 0) return <PlaceholderGallery />;
   return (
     <TrendingCardsSection
       cards={trending}
+      isAuthed={Boolean(viewer)}
       eyebrow="Trending now"
       heading="Top trending cards"
       description="The cards racking up the most likes, comments, and remixes this week."
