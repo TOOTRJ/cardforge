@@ -152,29 +152,14 @@ OUTPUT REQUIREMENTS:
 - The art_prompt should be a vivid 60-100 word description of an MTG-style fantasy illustration depicting THIS card's subject. Include subject, action/pose, environment, lighting, color palette mood, and a 2-3 word style hint like "oil-painted fantasy illustration". Stay original — no copyrighted artist names, no fictional worlds by name.
 - No preambles, no sycophancy — output ONLY the structured fields you're asked for.`;
 
-export type RandomCardInput = {
-  /** Optional flavor seeds the user passed in. All optional; if omitted the
-   *  model rolls a fully random design. */
-  rarity?: (typeof RARITY_VALUES)[number];
-  color?: (typeof COLOR_IDENTITY_VALUES)[number];
-  cardType?: (typeof CARD_TYPE_VALUES)[number];
-  concept?: string;
-};
-
-function userPrompt(input: RandomCardInput): string {
-  const parts: string[] = [];
-  parts.push("Generate ONE complete original Magic: The Gathering card.");
-  if (input.rarity) parts.push(`Target rarity: ${input.rarity}.`);
-  if (input.color) parts.push(`Target color: ${input.color}.`);
-  if (input.cardType) parts.push(`Target card type: ${input.cardType}.`);
-  if (input.concept?.trim()) {
-    parts.push(`Concept seed (loose inspiration, not a copy): "${input.concept.trim()}".`);
-  } else {
-    parts.push("No specific theme — surprise the user with a creative choice.");
-  }
-  parts.push("Return the structured card object exactly per the schema.");
-  return parts.join("\n");
-}
+// The "Random card" button is a pure "surprise me" generator — no steering.
+// Directed/concept generation lives separately in the AI assistant panel's
+// "Generate from concept" action.
+const USER_PROMPT = [
+  "Generate ONE complete original Magic: The Gathering card.",
+  "No specific theme — surprise the user with a creative choice.",
+  "Return the structured card object exactly per the schema.",
+].join("\n");
 
 /**
  * Calls GPT-4o once and returns a Zod-validated RandomCardOutput plus a
@@ -182,14 +167,12 @@ function userPrompt(input: RandomCardInput): string {
  * before invoking this — we don't want to refund OpenAI calls on quota
  * misses.
  */
-export async function generateRandomCard(
-  input: RandomCardInput = {},
-): Promise<RandomCardOutput> {
+export async function generateRandomCard(): Promise<RandomCardOutput> {
   const { object } = await generateObject({
     model: openai(modelId()),
     schema: randomCardSchema,
     system: SYSTEM_PROMPT,
-    prompt: userPrompt(input),
+    prompt: USER_PROMPT,
     // Temperature high enough for variety, low enough to keep rules-text
     // coherent. The schema-bounded format means we don't get rambling.
     temperature: 0.9,

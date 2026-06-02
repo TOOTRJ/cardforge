@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
@@ -11,14 +10,8 @@ import {
   generateRandomCard,
   isOpenAiConfigured,
   randomCardSchema,
-  type RandomCardInput,
 } from "@/lib/ai/random-card";
 import { generateRandomArt } from "@/lib/ai/random-art";
-import {
-  CARD_TYPE_VALUES,
-  COLOR_IDENTITY_VALUES,
-  RARITY_VALUES,
-} from "@/types/card";
 
 // ---------------------------------------------------------------------------
 // /api/ai/random-card
@@ -36,17 +29,7 @@ import {
 
 export const maxDuration = 90;
 
-const requestSchema = z
-  .object({
-    rarity: z.enum(RARITY_VALUES).optional(),
-    color: z.enum(COLOR_IDENTITY_VALUES).optional(),
-    cardType: z.enum(CARD_TYPE_VALUES).optional(),
-    concept: z.string().trim().max(280).optional(),
-  })
-  .strict()
-  .default({});
-
-export async function POST(request: Request) {
+export async function POST() {
   if (!isSupabaseConfigured()) {
     return NextResponse.json(
       { ok: false, error: "Supabase isn't configured." },
@@ -72,30 +55,6 @@ export async function POST(request: Request) {
       { status: 503 },
     );
   }
-
-  // ---- Validate input ----
-  let payload: unknown = {};
-  try {
-    const text = await request.text();
-    payload = text ? JSON.parse(text) : {};
-  } catch {
-    return NextResponse.json(
-      { ok: false, error: "Request body must be JSON." },
-      { status: 400 },
-    );
-  }
-
-  const parsed = requestSchema.safeParse(payload);
-  if (!parsed.success) {
-    return NextResponse.json(
-      {
-        ok: false,
-        error: parsed.error.issues[0]?.message ?? "Invalid request body.",
-      },
-      { status: 400 },
-    );
-  }
-  const input = parsed.data as RandomCardInput;
 
   // ---- Rate-limit checks ----
   const globalLimit = await checkAiRateLimit(user.id);
@@ -127,7 +86,7 @@ export async function POST(request: Request) {
 
   let cardObject;
   try {
-    cardObject = await generateRandomCard(input);
+    cardObject = await generateRandomCard();
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Random card generation failed.";
