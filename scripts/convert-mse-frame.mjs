@@ -25,19 +25,19 @@ import fs from "node:fs";
 
 // ── Config: edit these for each frame set ──────────────────────────────────
 const PACK =
-  "/Users/redjester/Projects/other/Full-Magic-Pack/data/magic-m15-token.mse-style";
-const OUT = "public/frames/m15token";
+  "/Users/redjester/Projects/other/Full-Magic-Pack/data/magic-m15-devoid.mse-style";
+const OUT = "public/frames/m15devoid";
 const MAP = {
-  w: "wcard.jpg",
-  u: "ucard.jpg",
-  b: "bcard.jpg",
-  r: "rcard.jpg",
-  g: "gcard.jpg",
-  c: "ccard.jpg",
-  m: "mcard.jpg",
+  w: "wcard.png",
+  u: "ucard.png",
+  b: "bcard.png",
+  r: "rcard.png",
+  g: "gcard.png",
+  c: "ccard.png",
+  m: "mcard.png",
 };
 // Seed point(s) inside each art window, as fractions of the card (x, y).
-const SEEDS = [[0.5, 0.45]];
+const SEEDS = [[0.5, 0.33]];
 // ───────────────────────────────────────────────────────────────────────────
 
 const W = 1500;
