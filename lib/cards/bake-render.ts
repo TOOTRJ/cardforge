@@ -4,6 +4,7 @@ import "server-only";
 
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { renderCardImage } from "@/lib/render/card-image";
+import { cardRenderPath } from "@/lib/cards/storage-paths";
 import {
   isCardType,
   isColorIdentity,
@@ -76,7 +77,7 @@ function rowToPreviewData(card: CardRowForBake): CardPreviewData {
 }
 
 export type BakeRenderResult =
-  | { ok: true; renderedImageUrl: string }
+  | { ok: true; renderedImageUrl: string | null }
   | { ok: false; error: string };
 
 /**
@@ -104,7 +105,7 @@ export async function bakeCardRender(
   const { data: card, error: fetchErr } = await supabase
     .from("cards")
     .select(
-      "id, owner_id, title, cost, card_type, supertype, subtypes, rarity, color_identity, rules_text, flavor_text, power, toughness, loyalty, defense, artist_credit, art_url, art_position, frame_style",
+      "id, owner_id, visibility, title, cost, card_type, supertype, subtypes, rarity, color_identity, rules_text, flavor_text, power, toughness, loyalty, defense, artist_credit, art_url, art_position, frame_style",
     )
     .eq("id", cardId)
     .maybeSingle();
@@ -114,6 +115,19 @@ export async function bakeCardRender(
   }
   if (card.owner_id !== user.id) {
     return { ok: false, error: "Not the card owner." };
+  }
+
+  const path = cardRenderPath(user.id, card.id);
+
+  // A private card must not leave its render in the public-read card-renders
+  // bucket — that PNG is the full card image. Skip the bake and remove any
+  // render left over from when the card was public/unlisted. Owner-only views
+  // fall back to the live <CardPreview>; publishing again re-bakes on save.
+  // (Art is intentionally NOT removed here — remixes copy art_url, so the art
+  // object can be shared; its random-id path is also never publicly exposed.)
+  if (card.visibility === "private") {
+    await supabase.storage.from("card-renders").remove([path]);
+    return { ok: true, renderedImageUrl: null };
   }
 
   const previewData = rowToPreviewData(card as CardRowForBake);
@@ -127,11 +141,8 @@ export async function bakeCardRender(
     return { ok: false, error: `Render failed: ${detail}` };
   }
 
-  // Deterministic path so each card has exactly one stored render at any
-  // given time. upsert: true overwrites on resave instead of creating a
-  // pile of versioned files we'd then need to garbage-collect.
-  const path = `${user.id}/${card.id}.png`;
-
+  // upsert: true overwrites on resave instead of creating a pile of versioned
+  // files we'd then need to garbage-collect.
   const { error: uploadErr } = await supabase.storage
     .from("card-renders")
     .upload(path, pngBytes, {
@@ -182,8 +193,9 @@ export async function bakeAndPersistCardRender(
   const { error: updateErr } = await supabase
     .from("cards")
     .update({
+      // null for private cards (no public render); a URL otherwise.
       rendered_image_url: result.renderedImageUrl,
-      rendered_at: new Date().toISOString(),
+      rendered_at: result.renderedImageUrl ? new Date().toISOString() : null,
     })
     .eq("id", cardId);
 
