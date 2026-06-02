@@ -269,13 +269,39 @@ export const FRAME_SET_DEFAULT_TEMPLATE: Record<FrameSet, FrameTemplate> = {
 };
 
 export type FrameStyle = {
-  /** Optional override of the template's default visual treatment. */
-  border?: "thin" | "thick" | "ornate";
-  accent?: "warm" | "cool" | "neutral";
+  /** Premium treatment layered on the base frame (foil / etched / showcase). */
   finish?: CardFinish;
   /** Which frame PNG asset to layer behind the card sections. */
   template?: FrameTemplate;
 };
+
+// ---------------------------------------------------------------------------
+// Roadmap frames — on the to-do list but not yet selectable. The picker shows
+// these as disabled "Soon" chips so users can see what's coming. They are NOT
+// part of FRAME_TEMPLATE_VALUES (which is compile-enforced and needs a layout
+// profile + the 7 color PNGs), so they're plain display rows keyed by a string.
+//
+// To ship one: build the frame (see scripts/build-adventure-frame.mjs for the
+// multi-panel composite approach), add it to FRAME_TEMPLATE_VALUES + a profile,
+// and remove it from here.
+// ---------------------------------------------------------------------------
+export type ComingSoonFrame = { key: string; label: string; set: FrameSet };
+export const COMING_SOON_FRAMES: ComingSoonFrame[] = [
+  // Multi-panel frames (m15 family) — the composite approach is proven by the
+  // Adventure frame; these are the remaining split-layout cards.
+  { key: "flip", label: "Flip", set: "m15" },
+  { key: "aftermath", label: "Aftermath", set: "m15" },
+  { key: "split", label: "Split", set: "m15" },
+];
+
+export type ComingSoonSet = { key: string; label: string };
+export const COMING_SOON_SETS: ComingSoonSet[] = [
+  // Whole frame families on the roadmap (popular + recent set trade dress).
+  { key: "retro", label: "Retro (1997)" },
+  { key: "futureshifted", label: "Future Sight" },
+  { key: "showcase", label: "Showcase" },
+  { key: "universesbeyond", label: "Universes Beyond" },
+];
 
 // ---------------------------------------------------------------------------
 // Composed types for queries that join cards with related tables.

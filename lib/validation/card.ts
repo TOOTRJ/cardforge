@@ -119,8 +119,6 @@ export const artPositionSchema = z
 
 export const frameStyleSchema = z
   .object({
-    border: z.enum(["thin", "thick", "ornate"]).optional(),
-    accent: z.enum(["warm", "cool", "neutral"]).optional(),
     finish: z.enum(CARD_FINISH_VALUES).optional(),
     template: z.enum(FRAME_TEMPLATE_VALUES).optional(),
   })

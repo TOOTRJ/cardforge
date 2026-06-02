@@ -89,6 +89,11 @@ import {
 } from "@/types/card";
 import { normalizeFrameTemplate } from "@/lib/cards/card-display";
 import { getFrameProfile } from "@/lib/cards/template-layout";
+import {
+  EMPTY_BACK_FACE,
+  type BackFaceFormValues,
+  type FormValues,
+} from "@/lib/creator/form-types";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -98,55 +103,9 @@ import { cn } from "@/lib/utils";
 // at submission time.
 // ---------------------------------------------------------------------------
 
-// Back-face form values mirror the front-face fields the back face stores.
-// Slug / visibility / template / color_identity / rarity / frame_style
-// are card-level (shared across faces) and NOT duplicated here.
-type BackFaceFormValues = {
-  title: string;
-  cost: string;
-  card_type: CardType | "";
-  supertype: string;
-  subtypes_text: string;
-  rules_text: string;
-  flavor_text: string;
-  power: string;
-  toughness: string;
-  loyalty: string;
-  defense: string;
-  artist_credit: string;
-  art_url: string;
-  art_position: ArtPosition;
-};
-
-type FormValues = {
-  title: string;
-  slug: string;
-  game_system_id: string;
-  template_id: string;
-  cost: string;
-  color_identity: ColorIdentity[];
-  supertype: string;
-  card_type: CardType | "";
-  subtypes_text: string;
-  rarity: Rarity | "";
-  rules_text: string;
-  flavor_text: string;
-  power: string;
-  toughness: string;
-  loyalty: string;
-  defense: string;
-  artist_credit: string;
-  art_url: string;
-  art_position: ArtPosition;
-  frame_style: FrameStyle;
-  visibility: Visibility;
-  // Phase 11 chunk 10: optional back-face for DFCs.
-  has_back_face: boolean;
-  back_face: BackFaceFormValues;
-  // Phase 11 chunk 13: Scryfall provenance. Hidden in the form; set when
-  // the user imports from Scryfall and persisted on save.
-  source_scryfall_id: string;
-};
+// FormValues / BackFaceFormValues / EMPTY_BACK_FACE now live in
+// lib/creator/form-types.ts so the pure step model (lib/creator/steps.ts) can
+// reference them without importing this client component.
 
 type CardCreatorFormProps = {
   mode: "create" | "edit";
@@ -247,12 +206,6 @@ const VISIBILITY_OPTIONS: ChipOption<Visibility>[] = [
   },
 ];
 
-const BORDER_OPTIONS: ChipOption<NonNullable<FrameStyle["border"]>>[] = [
-  { value: "thin", label: "Thin" },
-  { value: "thick", label: "Thick" },
-  { value: "ornate", label: "Ornate" },
-];
-
 // Frame template options — the MSE-derived MTG frame PNG that sits behind the
 // card. All are converted from the open-source Full-Magic-Pack (MSE template).
 // Each chip leads with a small thumbnail of the frame so the (now sizable)
@@ -272,12 +225,6 @@ const FRAME_SET_OPTIONS: ChipOption<FrameSet>[] = FRAME_SET_VALUES.map((set) => 
   label: FRAME_SET_LABELS[set],
   leading: <FrameThumb template={FRAME_SET_DEFAULT_TEMPLATE[set]} />,
 }));
-
-const ACCENT_OPTIONS: ChipOption<NonNullable<FrameStyle["accent"]>>[] = [
-  { value: "neutral", label: "Neutral" },
-  { value: "warm", label: "Warm", activeClass: "border-accent bg-accent/15 text-accent" },
-  { value: "cool", label: "Cool", activeClass: "border-primary bg-primary/15 text-primary" },
-];
 
 // Finish presets — premium treatments layered on top of the base frame.
 // Descriptions are surfaced via ChipGroup's `md` size which shows the
@@ -299,11 +246,6 @@ const FINISH_OPTIONS: ChipOption<CardFinish>[] = [
     label: "Etched",
     description: "Gold-leaf inner border with a subtle texture.",
     activeClass: "border-amber-300 bg-amber-300/15 text-amber-200",
-  },
-  {
-    value: "borderless",
-    label: "Borderless",
-    description: "Art bleeds behind the section panels.",
   },
   {
     value: "showcase",
@@ -341,24 +283,6 @@ const COLOR_IDENTITY_OPTIONS: ChipOption<ColorIdentity>[] =
     activeClass: "border-foreground/50 bg-elevated text-foreground",
   }));
 
-// Empty back-face values — used when the user toggles on "has back face"
-// from a freshly-created card, or when there's no persisted back face.
-const EMPTY_BACK_FACE: BackFaceFormValues = {
-  title: "",
-  cost: "",
-  card_type: "creature",
-  supertype: "",
-  subtypes_text: "",
-  rules_text: "",
-  flavor_text: "",
-  power: "",
-  toughness: "",
-  loyalty: "",
-  defense: "",
-  artist_credit: "",
-  art_url: "",
-  art_position: { focalX: 0.5, focalY: 0.5, scale: 1 },
-};
 
 function backFaceFormValuesFrom(
   source: CardBackFace | null | undefined,
@@ -416,8 +340,6 @@ function defaultValuesFor(
       art_url: "",
       art_position: { focalX: 0.5, focalY: 0.5, scale: 1 },
       frame_style: {
-        border: "thin",
-        accent: "neutral",
         finish: "regular",
         template: DEFAULT_FRAME_TEMPLATE,
       },
@@ -436,8 +358,6 @@ function defaultValuesFor(
   // shows a valid selection and the save passes validation.
   const persistedFrame = (card.frame_style as FrameStyle | null) ?? {};
   const normalizedFrameStyle: FrameStyle = {
-    border: persistedFrame.border ?? "thin",
-    accent: persistedFrame.accent ?? "neutral",
     finish: persistedFrame.finish ?? "regular",
     template: normalizeFrameTemplate(persistedFrame.template),
   };
@@ -1633,47 +1553,6 @@ export function CardCreatorForm({
                   />
                 )}
               />
-            </FieldGroup>
-
-            <FieldGroup label="Frame style" helper="Polish on the preview.">
-              <div className="flex flex-col gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <span className="text-[11px] uppercase tracking-wider text-subtle">
-                    Border
-                  </span>
-                  <Controller
-                    control={control}
-                    name="frame_style.border"
-                    render={({ field }) => (
-                      <ChipGroup
-                        ariaLabel="Border style"
-                        layout="grid-3"
-                        value={field.value ?? "thin"}
-                        onChange={(next) => field.onChange(next)}
-                        options={BORDER_OPTIONS}
-                      />
-                    )}
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <span className="text-[11px] uppercase tracking-wider text-subtle">
-                    Accent
-                  </span>
-                  <Controller
-                    control={control}
-                    name="frame_style.accent"
-                    render={({ field }) => (
-                      <ChipGroup
-                        ariaLabel="Accent"
-                        layout="grid-3"
-                        value={field.value ?? "neutral"}
-                        onChange={(next) => field.onChange(next)}
-                        options={ACCENT_OPTIONS}
-                      />
-                    )}
-                  />
-                </div>
-              </div>
             </FieldGroup>
 
             {/* Anchor target for the start-with hero's "Generate from
