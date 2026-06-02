@@ -407,6 +407,23 @@ function CardFace({
         )}
       </div>
 
+      {/* Second art — the right half's art window (Split). Below the frame. */}
+      {layout.secondFace?.artSlot && secondFace?.artUrl ? (
+        <div
+          aria-hidden
+          className="absolute overflow-hidden"
+          style={{ ...rectStyle(layout.secondFace.artSlot), zIndex: 0 }}
+        >
+          <ArtImage
+            src={secondFace.artUrl}
+            focalX={clamp(secondFace.artPosition?.focalX ?? 0.5, 0, 1)}
+            focalY={clamp(secondFace.artPosition?.focalY ?? 0.5, 0, 1)}
+            scale={clamp(secondFace.artPosition?.scale ?? 1, 0.5, 4)}
+            alt=""
+          />
+        </div>
+      ) : null}
+
       {/* Frame PNG — above the art so its painted slot border is on top. */}
       <FrameLayer template={template} colorIdentity={colorIdentity} zIndex={5} />
 

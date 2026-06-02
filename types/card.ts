@@ -209,6 +209,7 @@ export const FRAME_TEMPLATE_VALUES = [
   "saga",
   "adventure",
   "flip",
+  "split",
 ] as const;
 export type FrameTemplate = (typeof FRAME_TEMPLATE_VALUES)[number];
 
@@ -233,6 +234,7 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   saga: "Saga",
   adventure: "Adventure",
   flip: "Flip",
+  split: "Split",
 };
 
 // ---------------------------------------------------------------------------
@@ -260,6 +262,7 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   saga: "m15",
   adventure: "m15",
   flip: "m15",
+  split: "m15",
   agclassic: "alpha",
   alphaland: "alpha",
   alphatoken: "alpha",
@@ -292,7 +295,6 @@ export type ComingSoonFrame = { key: string; label: string; set: FrameSet };
 export const COMING_SOON_FRAMES: ComingSoonFrame[] = [
   // Multi-panel frames (m15 family) still on the roadmap.
   { key: "aftermath", label: "Aftermath", set: "m15" },
-  { key: "split", label: "Split", set: "m15" },
 ];
 
 export type ComingSoonSet = { key: string; label: string };

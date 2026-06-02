@@ -169,6 +169,18 @@ function CardImage({
   const artW = Math.round((layout.artSlot.widthPct / 100) * width);
   const artH = Math.round((layout.artSlot.heightPct / 100) * height);
 
+  // Split's right-half art (back-face art in the second art window).
+  const secondArtSlot = layout.secondFace?.artSlot;
+  const secondArtUrl = card.backFace?.art_url;
+  const secondArtPos = (card.backFace?.art_position ?? {}) as {
+    focalX?: number;
+    focalY?: number;
+    scale?: number;
+  };
+  const focalX2 = clamp(secondArtPos.focalX ?? 0.5, 0, 1) * 100;
+  const focalY2 = clamp(secondArtPos.focalY ?? 0.5, 0, 1) * 100;
+  const scale2 = clamp(secondArtPos.scale ?? 1, 0.5, 4);
+
   return (
     <div
       style={{
@@ -211,6 +223,27 @@ function CardImage({
           />
         )}
       </div>
+
+      {/* Second art — the right half's art window (Split). Below the frame. */}
+      {secondArtSlot && secondArtUrl ? (
+        <div style={{ ...slotBox(secondArtSlot), display: "flex", overflow: "hidden" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={secondArtUrl}
+            width={Math.round((secondArtSlot.widthPct / 100) * width)}
+            height={Math.round((secondArtSlot.heightPct / 100) * height)}
+            alt=""
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              objectPosition: `${focalX2}% ${focalY2}%`,
+              transform: `scale(${scale2})`,
+              transformOrigin: `${focalX2}% ${focalY2}%`,
+            }}
+          />
+        </div>
+      ) : null}
 
       {/* Frame PNG — above the art. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
