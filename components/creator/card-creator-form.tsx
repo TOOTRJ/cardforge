@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -11,6 +17,7 @@ import {
 } from "react-hook-form";
 import {
   ArrowLeft,
+  ArrowRight,
   Box,
   Coins,
   Crown,
@@ -34,12 +41,7 @@ import {
   ChipGroup,
   type ChipOption,
 } from "@/components/ui/chip-group";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Stepper, type StepperStep } from "@/components/ui/stepper";
 import { CardPreview } from "@/components/cards/card-preview";
 import { ManaCostPicker } from "@/components/cards/mana-cost-picker";
 import { ArtUploader } from "@/components/creator/art-uploader";
@@ -79,6 +81,8 @@ import {
   type GameSystem,
   type Rarity,
   type Visibility,
+  COMING_SOON_FRAMES,
+  COMING_SOON_SETS,
   DEFAULT_FRAME_TEMPLATE,
   FRAME_SET_DEFAULT_TEMPLATE,
   FRAME_SET_LABELS,
@@ -94,6 +98,16 @@ import {
   type BackFaceFormValues,
   type FormValues,
 } from "@/lib/creator/form-types";
+import {
+  buildFieldToStep,
+  hidesCost,
+  statVisibility,
+  stepIndexForField,
+  stepLabel,
+  visibleSteps,
+  type StepContext,
+  type StepKey,
+} from "@/lib/creator/steps";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -121,40 +135,8 @@ type CardCreatorFormProps = {
   aiConfigured: boolean;
 };
 
-type TabKey = "identity" | "rules" | "art" | "back-face" | "publishing";
-
-// Each field belongs to exactly one tab. We use this to badge tabs with an
-// error dot and auto-switch the user to the first tab containing an error
-// when a server-side validation fails. Back-face fields all map to the
-// back-face tab; the toggle + nested object live at the form root.
-const FIELD_TO_TAB: Record<keyof FormValues, TabKey> = {
-  title: "identity",
-  slug: "identity",
-  game_system_id: "identity",
-  template_id: "identity",
-  cost: "identity",
-  color_identity: "identity",
-  supertype: "identity",
-  card_type: "identity",
-  subtypes_text: "identity",
-  rarity: "identity",
-  rules_text: "rules",
-  flavor_text: "rules",
-  power: "rules",
-  toughness: "rules",
-  loyalty: "rules",
-  defense: "rules",
-  artist_credit: "art",
-  art_url: "art",
-  art_position: "art",
-  frame_style: "publishing",
-  visibility: "publishing",
-  has_back_face: "back-face",
-  back_face: "back-face",
-  // Hidden field — no tab. Map to "publishing" so any errors surface
-  // there (they shouldn't happen since the user doesn't edit it directly).
-  source_scryfall_id: "publishing",
-};
+// Step membership + field→step routing now live in lib/creator/steps.ts (pure
+// + unit-tested) so the form and the tests derive the same frame-aware flow.
 
 // Modern MTG card type picker. The legacy "spell" value is still accepted
 // by the DB (migration 0018 keeps it in the check constraint) so existing
@@ -225,6 +207,27 @@ const FRAME_SET_OPTIONS: ChipOption<FrameSet>[] = FRAME_SET_VALUES.map((set) => 
   label: FRAME_SET_LABELS[set],
   leading: <FrameThumb template={FRAME_SET_DEFAULT_TEMPLATE[set]} />,
 }));
+
+// "Coming soon" chips — disabled, badge-tagged display rows for frames/sets on
+// the roadmap (types/card.ts). They're a separate ChipGroup block so the real
+// (typed) frame selection stays type-safe; clicks are no-ops.
+function SoonBadge() {
+  return (
+    <span className="rounded-full border border-border/70 bg-elevated px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-subtle">
+      Soon
+    </span>
+  );
+}
+const COMING_SOON_SET_OPTIONS: ChipOption<string>[] = COMING_SOON_SETS.map(
+  (s) => ({ value: `soon:${s.key}`, label: s.label, disabled: true, badge: <SoonBadge /> }),
+);
+const comingSoonFrameOptions = (set: FrameSet): ChipOption<string>[] =>
+  COMING_SOON_FRAMES.filter((f) => f.set === set).map((f) => ({
+    value: `soon:${f.key}`,
+    label: f.label,
+    disabled: true,
+    badge: <SoonBadge />,
+  }));
 
 // Finish presets — premium treatments layered on top of the base frame.
 // Descriptions are surfaced via ChipGroup's `md` size which shows the
@@ -418,7 +421,12 @@ export function CardCreatorForm({
   const router = useRouter();
   const [isSubmitting, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<TabKey>("identity");
+  // Active step index into the dynamic `steps` list (see below). Clamped on
+  // read so it stays valid when the visible steps shrink (e.g. a DFC is removed).
+  const [current, setCurrent] = useState(0);
+  // Stable handle to the latest step-navigation fn, so the once-registered
+  // custom-event listeners (hero / command palette) always call current logic.
+  const goToStepKeyRef = useRef<(key: StepKey) => void>(() => {});
   // Tracks the source card when the user seeds the form from Scryfall.
   // Surfaces as a chip near the save bar so the user remembers they need
   // to make the card their own before publishing.
@@ -441,9 +449,9 @@ export function CardCreatorForm({
     if (typeof window === "undefined") return;
     const openScryfall = () => setScryfallOpen(true);
     const openAiConcept = () => {
-      setActiveTab("publishing");
-      // Defer the scroll one tick so the Publishing tab has time to mount
-      // its content before we try to scroll the AI anchor into view.
+      // The AI assistant panel lives on the Rules step. Jump there, then defer
+      // the scroll one tick so the step content mounts before we scroll to it.
+      goToStepKeyRef.current("rules");
       requestAnimationFrame(() => {
         document
           .getElementById("ai-assistant-anchor")
@@ -477,6 +485,7 @@ export function CardCreatorForm({
     setError,
     control,
     reset,
+    trigger,
     formState: { errors, isDirty },
   } = useForm<FormValues>({
     defaultValues: defaults,
@@ -498,6 +507,62 @@ export function CardCreatorForm({
   // "Back face" tab presents itself as "Adventure" when that frame is selected.
   const isAdventureFrame =
     normalizeFrameTemplate(watched.frame_style?.template) === "adventure";
+
+  // ---- Frame-aware stepper ----
+  // The visible steps + their order depend on the frame, card type, and whether
+  // a back face exists (lib/creator/steps.ts). `current` is clamped so it stays
+  // valid when the list shrinks (e.g. the user turns a DFC back off).
+  const stepCtx: StepContext = {
+    template: watched.frame_style?.template,
+    cardType: watched.card_type,
+    hasBackFace: watched.has_back_face,
+  };
+  const steps = visibleSteps(stepCtx);
+  const idx = Math.min(current, steps.length - 1);
+  const activeStep = steps[idx];
+  const stepKey = activeStep?.key;
+  const isLastStep = idx === steps.length - 1;
+  const statVis = statVisibility(watched.card_type);
+
+  const goToIndex = (i: number) =>
+    setCurrent(Math.max(0, Math.min(i, steps.length - 1)));
+  const goToStepKey = (key: StepKey) => {
+    const i = steps.findIndex((s) => s.key === key);
+    if (i >= 0) setCurrent(i);
+  };
+  // Keep the listener-facing nav handle pointed at the latest closure (the
+  // hero/palette listeners are registered once with a stable ref).
+  useEffect(() => {
+    goToStepKeyRef.current = goToStepKey;
+  });
+  const goBack = () => goToIndex(idx - 1);
+  // Validate only the current step's fields before advancing. Most fields have
+  // no client rules (server stays authoritative); only title / back_face.title
+  // can block, so the flow rarely interrupts.
+  const goNext = async () => {
+    const ok = await trigger(activeStep.fields);
+    if (ok) goToIndex(idx + 1);
+  };
+
+  // Which steps own a field that currently has an error — drives the step
+  // marker's error state. Routes nested back_face.* errors to their root.
+  const stepsWithErrors = useMemo(() => {
+    const map = buildFieldToStep();
+    const set = new Set<StepKey>();
+    for (const name of Object.keys(errors)) {
+      const root = name.split(".")[0] as keyof FormValues;
+      const key = map.get(root);
+      if (key) set.add(key);
+    }
+    return set;
+  }, [errors]);
+
+  const stepperSteps: StepperStep[] = steps.map((step) => ({
+    key: step.key,
+    label: stepLabel(step, stepCtx),
+    description: step.description,
+    hasError: stepsWithErrors.has(step.key),
+  }));
 
   // Slice of the live form state the AI panel sends as context. Stripping
   // empty strings keeps the prompt tight.
@@ -644,7 +709,7 @@ export function CardCreatorForm({
 
     setRemixSource({ name: source.name, scryfallUri: source.scryfallUri });
     // Pop the user back to Identity so they can see the seeded fields.
-    setActiveTab("identity");
+    goToStepKey("details");
   };
 
   // Kick off /api/ai/random-card and pour the result into the form. Art is
@@ -721,25 +786,13 @@ export function CardCreatorForm({
         toast.message("Random card forged", { description: detail });
       }
       // Pop the user back to Identity so they see the new card.
-      setActiveTab("identity");
+      goToStepKey("details");
     } catch {
       toast.error("Network error while generating a random card.");
     } finally {
       setGeneratingRandom(false);
     }
   };
-
-  // Per-tab dirty-error map. We compute a Set of tabs that contain an error
-  // so we can dot-badge the trigger and switch to the first failing tab
-  // after submit.
-  const tabsWithErrors = useMemo(() => {
-    const tabs = new Set<TabKey>();
-    for (const fieldName of Object.keys(errors) as Array<keyof FormValues>) {
-      const tab = FIELD_TO_TAB[fieldName];
-      if (tab) tabs.add(tab);
-    }
-    return tabs;
-  }, [errors]);
 
   // ---- Submit ----
   const onSubmit: SubmitHandler<FormValues> = (values) => {
@@ -802,15 +855,15 @@ export function CardCreatorForm({
         fieldErrors: Record<string, string | undefined> | undefined,
       ) => {
         if (!fieldErrors) return;
-        let firstErrorTab: TabKey | null = null;
+        let firstErrorField: string | null = null;
         for (const [name, message] of Object.entries(fieldErrors)) {
           if (!message) continue;
           setError(name as keyof FormValues, { message });
-          if (!firstErrorTab) {
-            firstErrorTab = FIELD_TO_TAB[name as keyof FormValues] ?? null;
-          }
+          if (!firstErrorField) firstErrorField = name;
         }
-        if (firstErrorTab) setActiveTab(firstErrorTab);
+        // Jump to the step owning the first errored field (falls back to the
+        // last step if that step isn't currently visible).
+        if (firstErrorField) goToIndex(stepIndexForField(firstErrorField, steps));
       };
 
       if (mode === "create") {
@@ -856,10 +909,62 @@ export function CardCreatorForm({
     watched.card_type === "" ? null : (watched.card_type as CardType);
   const rarityForPreview = watched.rarity === "" ? null : (watched.rarity as Rarity);
 
+  // Shared live-preview props for the desktop sticky aside + the mobile inline
+  // preview, so they never drift. `face` shows the back only on the Extra step
+  // for a true DFC (Adventure renders its second face inline, so it stays front).
+  const previewFace: "front" | "back" =
+    stepKey === "extra" && !isAdventureFrame ? "back" : "front";
+  const previewProps = {
+    staticInEditor: true,
+    title: watched.title,
+    cost: watched.cost,
+    cardType: cardTypeForPreview,
+    supertype: watched.supertype || null,
+    subtypes: parseSubtypes(watched.subtypes_text),
+    rarity: rarityForPreview,
+    colorIdentity: watched.color_identity,
+    rulesText: watched.rules_text,
+    flavorText: watched.flavor_text,
+    power: watched.power,
+    toughness: watched.toughness,
+    loyalty: watched.loyalty,
+    defense: watched.defense,
+    artistCredit: watched.artist_credit,
+    artUrl: watched.art_url || null,
+    artPosition: watched.art_position,
+    frameStyle: watched.frame_style,
+    backFace: watched.has_back_face
+      ? {
+          title: watched.back_face.title,
+          cost: watched.back_face.cost || undefined,
+          card_type:
+            watched.back_face.card_type === ""
+              ? undefined
+              : (watched.back_face.card_type as CardType),
+          supertype: watched.back_face.supertype || undefined,
+          subtypes: parseSubtypes(watched.back_face.subtypes_text),
+          rules_text: watched.back_face.rules_text || undefined,
+          flavor_text: watched.back_face.flavor_text || undefined,
+          power: watched.back_face.power || undefined,
+          toughness: watched.back_face.toughness || undefined,
+          loyalty: watched.back_face.loyalty || undefined,
+          defense: watched.back_face.defense || undefined,
+          artist_credit: watched.back_face.artist_credit || undefined,
+          art_url: watched.back_face.art_url || undefined,
+          art_position: watched.back_face.art_position,
+        }
+      : null,
+    face: previewFace,
+  };
+
   return (
     <form
       noValidate
-      onSubmit={handleSubmit(onSubmit)}
+      onSubmit={handleSubmit(onSubmit, (formErrors) => {
+        // Client validation blocked the save — jump to the first errored step.
+        const first = Object.keys(formErrors)[0];
+        if (first) goToIndex(stepIndexForField(first, steps));
+      })}
       className="grid gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]"
     >
       {/* ----- Left: form ----- */}
@@ -873,173 +978,201 @@ export function CardCreatorForm({
           </div>
         ) : null}
 
-        <Tabs value={activeTab} onValueChange={(next) => setActiveTab(next as TabKey)}>
-          <TabsList>
-            <TabsTrigger
-              value="identity"
-              badge={
-                tabsWithErrors.has("identity") ? <ErrorDot /> : null
-              }
-            >
-              Identity
-            </TabsTrigger>
-            <TabsTrigger
-              value="rules"
-              badge={tabsWithErrors.has("rules") ? <ErrorDot /> : null}
-            >
-              Rules
-            </TabsTrigger>
-            <TabsTrigger
-              value="art"
-              badge={tabsWithErrors.has("art") ? <ErrorDot /> : null}
-            >
-              Art
-            </TabsTrigger>
-            <TabsTrigger
-              value="back-face"
-              badge={
-                tabsWithErrors.has("back-face") ? (
-                  <ErrorDot />
-                ) : watched.has_back_face ? (
-                  <span
-                    aria-hidden
-                    className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-primary"
-                  />
-                ) : null
-              }
-            >
-              {isAdventureFrame ? "Adventure" : "Back face"}
-            </TabsTrigger>
-            <TabsTrigger
-              value="publishing"
-              badge={
-                tabsWithErrors.has("publishing") ? <ErrorDot /> : null
-              }
-            >
-              Publishing
-            </TabsTrigger>
-          </TabsList>
+        <div className="flex flex-col gap-6">
+          <Stepper
+            steps={stepperSteps}
+            current={idx}
+            onStepSelect={goToIndex}
+            isStepEnabled={() => true}
+          />
 
-          {/* ----- Identity tab ----- */}
-          <TabsContent value="identity" className="mt-6 flex flex-col gap-6">
-            {/* Start-from-real-card chip row. Sits above Title because
-                it's a "blank-page" jumpstart — once the user has typed
-                anything, this is still here but less prominent. The
-                button just flips `scryfallOpen` because the dialog is
-                rendered once at the bottom of the form (controlled mode). */}
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/60 bg-elevated/40 px-4 py-3">
-              <div className="flex flex-col gap-0.5">
-                <span className="text-xs font-semibold uppercase tracking-wider text-subtle">
-                  Start from a real card
-                </span>
-                <span className="text-[11px] text-muted">
-                  Search Scryfall and seed every field, including the artwork.
-                </span>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={!userId}
-                title={
-                  userId
-                    ? undefined
-                    : "Sign in to search and import real cards."
-                }
-                onClick={() => setScryfallOpen(true)}
-              >
-                <Search className="h-4 w-4" aria-hidden />
-                Search a real card
-              </Button>
+          {/* Mobile inline preview — keeps the card visible while editing
+              (the desktop sticky aside is hidden below lg). CSS-only toggle. */}
+          <details
+            className="rounded-lg border border-border/60 bg-elevated/30 lg:hidden"
+            open
+          >
+            <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-2 text-xs font-semibold uppercase tracking-wider text-subtle [&::-webkit-details-marker]:hidden">
+              Live preview
+              <span className="text-[10px] normal-case text-muted">
+                tap to toggle
+              </span>
+            </summary>
+            <div className="mx-auto w-full max-w-[220px] px-4 pb-4">
+              <CardPreview {...previewProps} />
             </div>
+          </details>
 
-            {/* AI random-card generator — pairs GPT-4o text with a
-                gpt-image-1 illustration. Disabled for guests and while a
-                request is in flight. */}
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3">
-              <div className="flex flex-col gap-0.5">
-                <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-primary">
-                  <Sparkles className="h-3 w-3" aria-hidden />
-                  Generate with AI
-                </span>
-                <span className="text-[11px] text-muted">
-                  GPT-4o drafts the card; an OpenAI image model paints
-                  original art. Capped at 10 random cards per day.
-                </span>
+          {/* ----- Frame step ----- */}
+          {stepKey === "frame" ? (
+            <>
+              {/* Quick-start: import a real card or let the AI draft one. */}
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/60 bg-elevated/40 px-4 py-3">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-subtle">
+                    Start from a real card
+                  </span>
+                  <span className="text-[11px] text-muted">
+                    Search Scryfall and seed every field, including the artwork.
+                  </span>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={!userId}
+                  title={
+                    userId
+                      ? undefined
+                      : "Sign in to search and import real cards."
+                  }
+                  onClick={() => setScryfallOpen(true)}
+                >
+                  <Search className="h-4 w-4" aria-hidden />
+                  Search a real card
+                </Button>
               </div>
-              <Button
-                type="button"
-                variant="primary"
-                disabled={!userId || generatingRandom}
-                title={
-                  userId
-                    ? generatingRandom
-                      ? "Generating…"
-                      : undefined
-                    : "Sign in to use the AI generator."
-                }
-                onClick={handleRandomCard}
-              >
-                {generatingRandom ? (
-                  <>
-                    <Wand2 className="h-4 w-4 animate-pulse" aria-hidden />
-                    Forging…
-                  </>
-                ) : (
-                  <>
-                    <Wand2 className="h-4 w-4" aria-hidden />
-                    Random card
-                  </>
-                )}
-              </Button>
-            </div>
 
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3">
+                <div className="flex flex-col gap-0.5">
+                  <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-primary">
+                    <Sparkles className="h-3 w-3" aria-hidden />
+                    Generate with AI
+                  </span>
+                  <span className="text-[11px] text-muted">
+                    GPT-4o drafts the card; an OpenAI image model paints original
+                    art. Capped at 10 random cards per day.
+                  </span>
+                </div>
+                <Button
+                  type="button"
+                  variant="primary"
+                  disabled={!userId || generatingRandom}
+                  title={
+                    userId
+                      ? generatingRandom
+                        ? "Generating…"
+                        : undefined
+                      : "Sign in to use the AI generator."
+                  }
+                  onClick={handleRandomCard}
+                >
+                  {generatingRandom ? (
+                    <>
+                      <Wand2 className="h-4 w-4 animate-pulse" aria-hidden />
+                      Forging…
+                    </>
+                  ) : (
+                    <>
+                      <Wand2 className="h-4 w-4" aria-hidden />
+                      Random card
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              <FieldGroup
+                label="Frame"
+                helper="Pick a frame set, then a frame within it — each chip previews its look."
+              >
+                <Controller
+                  control={control}
+                  name="frame_style.template"
+                  render={({ field }) => {
+                    const template = (field.value ??
+                      DEFAULT_FRAME_TEMPLATE) as FrameTemplate;
+                    const activeSet = FRAME_TEMPLATE_SET[template];
+                    const soonFrames = comingSoonFrameOptions(activeSet);
+                    return (
+                      <div className="flex flex-col gap-3">
+                        <ChipGroup
+                          ariaLabel="Frame set"
+                          layout="grid-2"
+                          size="md"
+                          value={activeSet}
+                          onChange={(nextSet) => {
+                            if (nextSet !== activeSet) {
+                              field.onChange(FRAME_SET_DEFAULT_TEMPLATE[nextSet]);
+                            }
+                          }}
+                          options={FRAME_SET_OPTIONS}
+                        />
+                        <ChipGroup
+                          ariaLabel="Frame"
+                          layout="grid-2"
+                          size="md"
+                          value={template}
+                          onChange={(next) => field.onChange(next)}
+                          options={TEMPLATE_OPTIONS.filter(
+                            (option) =>
+                              FRAME_TEMPLATE_SET[option.value] === activeSet,
+                          )}
+                        />
+                        <div className="mt-1 flex flex-col gap-2 rounded-lg border border-dashed border-border/50 bg-elevated/20 p-3">
+                          <span className="text-[11px] uppercase tracking-wider text-subtle">
+                            On the roadmap
+                          </span>
+                          {soonFrames.length > 0 ? (
+                            <ChipGroup
+                              ariaLabel="Upcoming frames"
+                              layout="grid-2"
+                              size="md"
+                              value=""
+                              onChange={() => {}}
+                              options={soonFrames}
+                            />
+                          ) : null}
+                          <ChipGroup
+                            ariaLabel="Upcoming sets"
+                            layout="grid-2"
+                            size="md"
+                            value=""
+                            onChange={() => {}}
+                            options={COMING_SOON_SET_OPTIONS}
+                          />
+                        </div>
+                      </div>
+                    );
+                  }}
+                />
+              </FieldGroup>
+            </>
+          ) : null}
+
+          {/* ----- Details step ----- */}
+          {stepKey === "details" ? (
+            <>
             <FieldGroup
               label="Title"
               helper="The card's name. Defaults the slug if you leave that blank."
               error={errors.title?.message}
             >
               <input
-                {...register("title")}
+                {...register("title", { required: "A title is required." })}
                 placeholder="Emberbound Wyrm"
                 className={inputClass(Boolean(errors.title))}
                 autoComplete="off"
               />
             </FieldGroup>
 
-            <FieldGroup
-              label="Slug"
-              helper={`URL: ${
-                ownerUsername
-                  ? `/card/${ownerUsername}/${watched.slug || slugify(watched.title || "untitled-card")}`
-                  : `/card/${watched.slug || slugify(watched.title || "untitled-card")}`
-              }`}
-              error={errors.slug?.message}
-            >
-              <input
-                {...register("slug")}
-                placeholder="emberbound-wyrm"
-                className={inputClass(Boolean(errors.slug))}
-                autoComplete="off"
-              />
-            </FieldGroup>
-
             <div className="grid gap-4 sm:grid-cols-2">
-              <FieldGroup
-                label="Cost"
-                helper="Click pips to build the mana cost."
-                error={errors.cost?.message}
-              >
-                <Controller
-                  control={control}
-                  name="cost"
-                  render={({ field }) => (
-                    <ManaCostPicker
-                      value={field.value ?? ""}
-                      onChange={field.onChange}
-                    />
-                  )}
-                />
-              </FieldGroup>
+              {hidesCost(watched.frame_style?.template) ? null : (
+                <FieldGroup
+                  label="Cost"
+                  helper="Click pips to build the mana cost."
+                  error={errors.cost?.message}
+                >
+                  <Controller
+                    control={control}
+                    name="cost"
+                    render={({ field }) => (
+                      <ManaCostPicker
+                        value={field.value ?? ""}
+                        onChange={field.onChange}
+                      />
+                    )}
+                  />
+                </FieldGroup>
+              )}
 
               <FieldGroup label="Card type" error={errors.card_type?.message}>
                 <Controller
@@ -1143,10 +1276,12 @@ export function CardCreatorForm({
                 )}
               />
             </FieldGroup>
-          </TabsContent>
+            </>
+          ) : null}
 
-          {/* ----- Rules tab ----- */}
-          <TabsContent value="rules" className="mt-6 flex flex-col gap-6">
+          {/* ----- Rules step ----- */}
+          {stepKey === "rules" ? (
+            <>
             <FieldGroup
               label="Rules text"
               error={errors.rules_text?.message}
@@ -1173,44 +1308,69 @@ export function CardCreatorForm({
               />
             </FieldGroup>
 
-            <div className="grid gap-4 sm:grid-cols-4">
-              <FieldGroup label="Power">
-                <input
-                  {...register("power")}
-                  placeholder="4"
-                  className={inputClass(Boolean(errors.power))}
-                  autoComplete="off"
-                />
-              </FieldGroup>
-              <FieldGroup label="Toughness">
-                <input
-                  {...register("toughness")}
-                  placeholder="4"
-                  className={inputClass(Boolean(errors.toughness))}
-                  autoComplete="off"
-                />
-              </FieldGroup>
-              <FieldGroup label="Loyalty">
-                <input
-                  {...register("loyalty")}
-                  placeholder="—"
-                  className={inputClass(Boolean(errors.loyalty))}
-                  autoComplete="off"
-                />
-              </FieldGroup>
-              <FieldGroup label="Defense">
-                <input
-                  {...register("defense")}
-                  placeholder="—"
-                  className={inputClass(Boolean(errors.defense))}
-                  autoComplete="off"
-                />
-              </FieldGroup>
-            </div>
-          </TabsContent>
+            {/* Only the stat the card type can actually display (P/T for
+                creatures/tokens, loyalty for planeswalkers, defense for
+                battles); spells/etc. show none. */}
+            {statVis.pt || statVis.loyalty || statVis.defense ? (
+              <div className="grid gap-4 sm:grid-cols-2">
+                {statVis.pt ? (
+                  <>
+                    <FieldGroup label="Power">
+                      <input
+                        {...register("power")}
+                        placeholder="4"
+                        className={inputClass(Boolean(errors.power))}
+                        autoComplete="off"
+                      />
+                    </FieldGroup>
+                    <FieldGroup label="Toughness">
+                      <input
+                        {...register("toughness")}
+                        placeholder="4"
+                        className={inputClass(Boolean(errors.toughness))}
+                        autoComplete="off"
+                      />
+                    </FieldGroup>
+                  </>
+                ) : null}
+                {statVis.loyalty ? (
+                  <FieldGroup label="Loyalty">
+                    <input
+                      {...register("loyalty")}
+                      placeholder="3"
+                      className={inputClass(Boolean(errors.loyalty))}
+                      autoComplete="off"
+                    />
+                  </FieldGroup>
+                ) : null}
+                {statVis.defense ? (
+                  <FieldGroup label="Defense">
+                    <input
+                      {...register("defense")}
+                      placeholder="4"
+                      className={inputClass(Boolean(errors.defense))}
+                      autoComplete="off"
+                    />
+                  </FieldGroup>
+                ) : null}
+              </div>
+            ) : null}
 
-          {/* ----- Art tab ----- */}
-          <TabsContent value="art" className="mt-6 flex flex-col gap-6">
+            {/* AI assistant — drafts/refines abilities + flavor from a prompt.
+                The hero / command palette jump here via the openAiConcept event. */}
+            <div id="ai-assistant-anchor" className="scroll-mt-20">
+              <AIAssistantPanel
+                cardContext={cardContext}
+                onApply={handleAIPatch}
+                configured={aiConfigured}
+              />
+            </div>
+            </>
+          ) : null}
+
+          {/* ----- Art step ----- */}
+          {stepKey === "art" ? (
+            <>
             <FieldGroup
               label="Artist credit"
               helper="Who made the artwork? Yourself, a public-domain artist, or a licensed source."
@@ -1248,10 +1408,12 @@ export function CardCreatorForm({
                 />
               )}
             />
-          </TabsContent>
+            </>
+          ) : null}
 
-          {/* ----- Back face tab ----- */}
-          <TabsContent value="back-face" className="mt-6 flex flex-col gap-6">
+          {/* ----- Adventure / Back face step ----- */}
+          {stepKey === "extra" ? (
+            <>
             {!watched.has_back_face ? (
               <SurfaceCard className="flex flex-col items-center gap-3 border-dashed bg-elevated/40 p-8 text-center">
                 <p className="text-sm leading-6 text-muted">
@@ -1294,9 +1456,13 @@ export function CardCreatorForm({
                   }
                 >
                   <input
-                    {...register("back_face.title")}
-                    placeholder="Insectile Aberration"
-                    className={inputClass(false)}
+                    {...register("back_face.title", {
+                      required: watched.has_back_face
+                        ? `A ${isAdventureFrame ? "adventure" : "back-face"} name is required.`
+                        : false,
+                    })}
+                    placeholder={isAdventureFrame ? "Stomp" : "Insectile Aberration"}
+                    className={inputClass(Boolean(errors.back_face?.title))}
                     autoComplete="off"
                   />
                 </FieldGroup>
@@ -1470,10 +1636,12 @@ export function CardCreatorForm({
                 </div>
               </>
             )}
-          </TabsContent>
+          </>
+          ) : null}
 
-          {/* ----- Publishing tab ----- */}
-          <TabsContent value="publishing" className="mt-6 flex flex-col gap-6">
+          {/* ----- Publish step ----- */}
+          {stepKey === "publish" ? (
+            <>
             <FieldGroup label="Visibility">
               <Controller
                 control={control}
@@ -1488,50 +1656,6 @@ export function CardCreatorForm({
                     options={VISIBILITY_OPTIONS}
                   />
                 )}
-              />
-            </FieldGroup>
-
-            <FieldGroup
-              label="Frame"
-              helper="Pick a frame set, then a frame within it — each chip previews its look."
-            >
-              <Controller
-                control={control}
-                name="frame_style.template"
-                render={({ field }) => {
-                  const template = (field.value ??
-                    DEFAULT_FRAME_TEMPLATE) as FrameTemplate;
-                  const activeSet = FRAME_TEMPLATE_SET[template];
-                  return (
-                    <div className="flex flex-col gap-3">
-                      <ChipGroup
-                        ariaLabel="Frame set"
-                        layout="grid-2"
-                        size="md"
-                        value={activeSet}
-                        onChange={(nextSet) => {
-                          // Switching sets jumps to that set's default frame;
-                          // staying in the set keeps the current frame.
-                          if (nextSet !== activeSet) {
-                            field.onChange(FRAME_SET_DEFAULT_TEMPLATE[nextSet]);
-                          }
-                        }}
-                        options={FRAME_SET_OPTIONS}
-                      />
-                      <ChipGroup
-                        ariaLabel="Frame"
-                        layout="grid-2"
-                        size="md"
-                        value={template}
-                        onChange={(next) => field.onChange(next)}
-                        options={TEMPLATE_OPTIONS.filter(
-                          (option) =>
-                            FRAME_TEMPLATE_SET[option.value] === activeSet,
-                        )}
-                      />
-                    </div>
-                  );
-                }}
               />
             </FieldGroup>
 
@@ -1555,18 +1679,34 @@ export function CardCreatorForm({
               />
             </FieldGroup>
 
-            {/* Anchor target for the start-with hero's "Generate from
-                concept" option — scrollIntoView lands here after the tab
-                swaps to Publishing. */}
-            <div id="ai-assistant-anchor" className="scroll-mt-20">
-              <AIAssistantPanel
-                cardContext={cardContext}
-                onApply={handleAIPatch}
-                configured={aiConfigured}
-              />
-            </div>
-          </TabsContent>
-        </Tabs>
+            {/* Slug auto-derives from the title; tuck it under Advanced for
+                anyone who wants a custom URL. */}
+            <details className="rounded-lg border border-border/60 bg-elevated/30">
+              <summary className="cursor-pointer list-none px-4 py-2 text-xs font-semibold uppercase tracking-wider text-subtle [&::-webkit-details-marker]:hidden">
+                Advanced
+              </summary>
+              <div className="px-4 pb-4">
+                <FieldGroup
+                  label="Slug"
+                  helper={`URL: ${
+                    ownerUsername
+                      ? `/card/${ownerUsername}/${watched.slug || slugify(watched.title || "untitled-card")}`
+                      : `/card/${watched.slug || slugify(watched.title || "untitled-card")}`
+                  }`}
+                  error={errors.slug?.message}
+                >
+                  <input
+                    {...register("slug")}
+                    placeholder="emberbound-wyrm"
+                    className={inputClass(Boolean(errors.slug))}
+                    autoComplete="off"
+                  />
+                </FieldGroup>
+              </div>
+            </details>
+            </>
+          ) : null}
+        </div>
 
         {/* Controlled Scryfall import dialog. Rendered once; opened by:
             - the Identity-tab inline trigger (above)
@@ -1610,95 +1750,59 @@ export function CardCreatorForm({
             ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            {idx > 0 ? (
+              <Button type="button" variant="ghost" onClick={goBack}>
+                <ArrowLeft className="h-4 w-4" aria-hidden />
+                Back
+              </Button>
+            ) : null}
             {mode === "edit" && card ? (
               <DeleteCardDialog
                 cardId={card.id}
                 cardTitle={card.title}
                 redirectTo="/dashboard"
               />
-            ) : (
+            ) : idx === 0 ? (
               <Button asChild variant="ghost">
                 <Link href="/dashboard">
                   <ArrowLeft className="h-4 w-4" aria-hidden />
                   Cancel
                 </Link>
               </Button>
+            ) : null}
+            {isLastStep ? (
+              <Button type="submit" disabled={isSubmitting} size="lg">
+                {isSubmitting ? (
+                  <>
+                    <Wand2 className="h-4 w-4 animate-pulse" aria-hidden />
+                    Saving…
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4" aria-hidden />
+                    {mode === "edit" ? "Save changes" : "Save card"}
+                  </>
+                )}
+              </Button>
+            ) : (
+              <Button type="button" size="lg" onClick={goNext}>
+                Next
+                <ArrowRight className="h-4 w-4" aria-hidden />
+              </Button>
             )}
-            <Button type="submit" disabled={isSubmitting} size="lg">
-              {isSubmitting ? (
-                <>
-                  <Wand2 className="h-4 w-4 animate-pulse" aria-hidden />
-                  Saving…
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4" aria-hidden />
-                  {mode === "edit" ? "Save changes" : "Save card"}
-                </>
-              )}
-            </Button>
           </div>
         </div>
       </SurfaceCard>
 
-      {/* ----- Right: live preview ----- */}
-      <aside className="lg:sticky lg:top-24 lg:self-start">
+      {/* ----- Right: live preview (desktop; mobile uses the inline
+          <details> preview above the step content) ----- */}
+      <aside className="hidden lg:sticky lg:top-24 lg:block lg:self-start">
         <div className="flex flex-col gap-4">
           <p className="text-xs font-semibold uppercase tracking-wider text-subtle">
             Live preview
           </p>
           <div className="mx-auto w-full max-w-sm">
-            <CardPreview
-              staticInEditor
-              title={watched.title}
-              cost={watched.cost}
-              cardType={cardTypeForPreview}
-              supertype={watched.supertype || null}
-              subtypes={parseSubtypes(watched.subtypes_text)}
-              rarity={rarityForPreview}
-              colorIdentity={watched.color_identity}
-              rulesText={watched.rules_text}
-              flavorText={watched.flavor_text}
-              power={watched.power}
-              toughness={watched.toughness}
-              loyalty={watched.loyalty}
-              defense={watched.defense}
-              artistCredit={watched.artist_credit}
-              artUrl={watched.art_url || null}
-              artPosition={watched.art_position}
-              frameStyle={watched.frame_style}
-              // DFC: pass the back face so the preview gains its flip
-              // button. While the user is on the Back face tab the
-              // controlled `face` prop forces the back so the live edits
-              // are immediately visible.
-              backFace={
-                watched.has_back_face
-                  ? {
-                      title: watched.back_face.title,
-                      cost: watched.back_face.cost || undefined,
-                      card_type:
-                        watched.back_face.card_type === ""
-                          ? undefined
-                          : (watched.back_face.card_type as CardType),
-                      supertype: watched.back_face.supertype || undefined,
-                      subtypes: parseSubtypes(
-                        watched.back_face.subtypes_text,
-                      ),
-                      rules_text: watched.back_face.rules_text || undefined,
-                      flavor_text: watched.back_face.flavor_text || undefined,
-                      power: watched.back_face.power || undefined,
-                      toughness: watched.back_face.toughness || undefined,
-                      loyalty: watched.back_face.loyalty || undefined,
-                      defense: watched.back_face.defense || undefined,
-                      artist_credit:
-                        watched.back_face.artist_credit || undefined,
-                      art_url: watched.back_face.art_url || undefined,
-                      art_position: watched.back_face.art_position,
-                    }
-                  : null
-              }
-              face={activeTab === "back-face" ? "back" : "front"}
-            />
+            <CardPreview {...previewProps} />
           </div>
           <p className="text-xs leading-5 text-muted">
             Saving doesn&apos;t publish — visibility above controls who can see
@@ -1761,15 +1865,6 @@ function selectClass(hasError: boolean): string {
     "h-10 w-full rounded-md border bg-background/60 px-3 text-sm text-foreground",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
     hasError ? "border-danger/60" : "border-border",
-  );
-}
-
-function ErrorDot() {
-  return (
-    <span
-      aria-hidden
-      className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-danger"
-    />
   );
 }
 
