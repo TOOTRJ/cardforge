@@ -20,9 +20,11 @@ import { pickFrameColorKey } from "@/components/cards/frame-layer";
 import {
   buildTypeLine,
   normalizeFrameTemplate,
+  parseChapters,
   showsDefense,
   showsLoyalty,
   showsPowerToughness,
+  type SagaChapter,
 } from "@/lib/cards/card-display";
 import {
   KEYRUNE_DEFAULT_GLYPH,
@@ -38,6 +40,7 @@ import {
 } from "@/lib/render/card-frames";
 import {
   getFrameProfile,
+  type FrameProfile,
   type Rect,
   type SlotAlign,
   type StatSlot,
@@ -277,7 +280,14 @@ function CardImage({
         )}
       </Band>
 
-      {/* Rules + flavor box. */}
+      {/* Rules — Saga chapter rail, otherwise the normal rules + flavor box. */}
+      {layout.chapters
+        ? ChapterBake({
+            slot: layout.chapters,
+            chapters: parseChapters(card.rulesText),
+            cardWidth: width,
+          })
+        : (
       <div
         style={{
           ...slotBox(layout.rules.rect),
@@ -321,6 +331,7 @@ function CardImage({
           </div>
         ) : null}
       </div>
+        )}
 
       {/* Footer — artist + brand. */}
       {layout.footer ? (
@@ -587,6 +598,78 @@ function StatBake({
       >
         {value}
       </span>
+    </div>
+  );
+}
+
+// ChapterBake — Satori-side Saga chapter rail (mirrors ChapterRail in the
+// preview). Equal-height rows, each a Roman-numeral badge + ability text.
+function ChapterBake({
+  slot,
+  chapters,
+  cardWidth,
+}: {
+  slot: NonNullable<FrameProfile["chapters"]>;
+  chapters: SagaChapter[];
+  cardWidth: number;
+}) {
+  const size = fpx(slot.sizePct, cardWidth);
+  const badge = Math.round(size * 1.7);
+  return (
+    <div
+      style={{
+        ...slotBox(slot.rect),
+        display: "flex",
+        flexDirection: "column",
+        zIndex: 20,
+      }}
+    >
+      {chapters.map((ch, i) => (
+        <div
+          key={i}
+          style={{
+            display: "flex",
+            flex: 1,
+            alignItems: "center",
+            padding: `${Math.round(size * 0.3)}px ${Math.round(size * 0.2)}px`,
+            overflow: "hidden",
+            borderBottom:
+              i < chapters.length - 1 ? `1px solid ${slot.dividerHex}` : "none",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              flexShrink: 0,
+              alignItems: "center",
+              justifyContent: "center",
+              minWidth: badge,
+              height: badge,
+              marginRight: Math.round(size * 0.6),
+              padding: `0 ${Math.round(size * 0.32)}px`,
+              borderRadius: 9999,
+              background: slot.markerFillHex,
+              color: slot.markerTextHex,
+              fontSize: Math.round(size * 0.82),
+              fontWeight: 700,
+            }}
+          >
+            {ch.marker}
+          </div>
+          <div
+            style={{
+              display: "flex",
+              flex: 1,
+              fontSize: size,
+              lineHeight: 1.22,
+              color: slot.textColorHex,
+              overflow: "hidden",
+            }}
+          >
+            {ch.text}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

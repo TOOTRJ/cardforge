@@ -25,26 +25,27 @@ import fs from "node:fs";
 
 // ── Config: edit these for each frame set ──────────────────────────────────
 const PACK =
-  "/Users/redjester/Projects/other/Full-Magic-Pack/data/magic-modules.mse-include/cards/375 m15 battle";
-const OUT = "public/frames/battle";
+  "/Users/redjester/Projects/other/Full-Magic-Pack/data/magic-modules.mse-include/cards/375 m15 saga cut";
+const OUT = "public/frames/saga";
 const MAP = {
-  w: "wcard.png",
-  u: "ucard.png",
-  b: "bcard.png",
-  r: "rcard.png",
-  g: "gcard.png",
-  c: "ccard.png",
-  m: "mcard.png",
+  w: "wcard.jpg",
+  u: "ucard.jpg",
+  b: "bcard.jpg",
+  r: "rcard.jpg",
+  g: "gcard.jpg",
+  c: "ccard.jpg",
+  m: "mcard.jpg",
 };
 // Seed point(s) inside each art window, as fractions of the card (x, y).
-const SEEDS = [[0.5, 0.35]];
+// Saga's art is the black column on the RIGHT, so seed there.
+const SEEDS = [[0.7, 0.45]];
 // Which art-window fill to cut to transparent: "black" (the m15 family) or
 // "white" (the agclassic / Alpha family). Ignored if the window is already
 // alpha-cut in the source (battle/devoid) — the fill just finds nothing.
 const FILL = "black";
 // Output canvas. Portrait frames are 1500×2100; landscape (battle) is 2100×1500.
-const OUT_W = 2100;
-const OUT_H = 1500;
+const OUT_W = 1500;
+const OUT_H = 2100;
 // ───────────────────────────────────────────────────────────────────────────
 
 const W = OUT_W;

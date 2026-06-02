@@ -120,6 +120,21 @@ export type FrameProfile = {
    *  preview container's aspect ratio and the bake's render dimensions. All
    *  rect/sizePct values are then relative to the landscape card. */
   orientation?: "portrait" | "landscape";
+  /** Saga chapter rail. When set, the card's rules text is parsed into chapters
+   *  (parseChapters in lib/cards/card-display) and rendered as stacked rows — a
+   *  Roman-numeral marker badge + ability text — inside this rect, REPLACING the
+   *  normal rules box. The Saga's art is a separate right-column artSlot. */
+  chapters?: {
+    rect: Rect;
+    /** Ability-text size, as a fraction of card width. */
+    sizePct: number;
+    textColorHex: string;
+    /** Chapter-number badge fill + text colors. */
+    markerFillHex: string;
+    markerTextHex: string;
+    /** Row divider line color. */
+    dividerHex: string;
+  };
 };
 
 /** Resolve a per-color asset path from a template like "/frames/m15/pt/{color}.png". */
@@ -458,6 +473,45 @@ const BATTLE: FrameProfile = {
   },
 };
 
+// Saga — the M15 Saga frame: a cream chapter rail on the LEFT (the parsed
+// chapters replace the normal rules box) and a tall art column on the RIGHT,
+// with a title bar (name + cost) on top and a type bar at the bottom. Source:
+// magic-modules.mse-include/cards/375 m15 saga cut.
+const SAGA: FrameProfile = {
+  label: "Saga",
+  artSlot: { topPct: 11.5, leftPct: 49.5, widthPct: 43, heightPct: 73 },
+  title: {
+    rect: { topPct: 4, leftPct: 9, widthPct: 82, heightPct: 7 },
+    sizePct: 0.046,
+    colorHex: INK_DARK,
+    weight: 600,
+    font: "display",
+  },
+  type: {
+    rect: { topPct: 85, leftPct: 9, widthPct: 82, heightPct: 6 },
+    sizePct: 0.03,
+    colorHex: INK_DARK,
+    weight: 600,
+    font: "display",
+  },
+  // Required by the type, but the chapter rail replaces it (rendered only when
+  // a frame has no `chapters`).
+  rules: {
+    rect: { topPct: 12.5, leftPct: 9, widthPct: 39.5, heightPct: 71 },
+    sizePct: 0.026,
+    colorHex: INK_DARK,
+    font: "body",
+  },
+  chapters: {
+    rect: { topPct: 12.5, leftPct: 9, widthPct: 39.5, heightPct: 71 },
+    sizePct: 0.0255,
+    textColorHex: INK_DARK,
+    markerFillHex: "#1c1712",
+    markerTextHex: "#f4eee2",
+    dividerHex: "rgba(40,32,22,0.35)",
+  },
+};
+
 const PROFILES: Record<FrameTemplate, FrameProfile> = {
   m15: M15,
   m15land: M15LAND,
@@ -469,6 +523,7 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   alphaland: ALPHALAND,
   alphatoken: ALPHATOKEN,
   battle: BATTLE,
+  saga: SAGA,
 };
 
 /** Resolve a frame profile, defaulting to M15 for unknown/legacy templates
