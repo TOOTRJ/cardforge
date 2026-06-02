@@ -1,6 +1,8 @@
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { CardPreview, type CardPreviewData } from "@/components/cards/card-preview";
+import { normalizeFrameTemplate } from "@/lib/cards/card-display";
+import { getFrameProfile } from "@/lib/cards/template-layout";
 
 // ---------------------------------------------------------------------------
 // BakedCardThumbnail — the canonical way to render a *saved* card in any
@@ -16,6 +18,12 @@ import { CardPreview, type CardPreviewData } from "@/components/cards/card-previ
 // path existed, or the bake transiently failed), we fall back to the live
 // React preview. The next time the card is saved, the PNG will be baked
 // and this fallback won't fire again.
+//
+// Landscape frames (Battle) are 7:5. Every gallery grid is a uniform 5:7
+// tile, so a landscape card is letterboxed — centered in the portrait tile
+// with breathing room above/below — rather than cropped (object-cover would
+// zoom into the middle of a Siege). This keeps every grid aligned while the
+// battle card stays whole and undistorted.
 //
 // The editor still uses <CardPreview> directly — that's where the live
 // preview matters and where the bake-from-form-state would be a chicken-
@@ -50,13 +58,31 @@ export function BakedCardThumbnail({
   sizes = DEFAULT_SIZES,
   priority = false,
 }: BakedCardThumbnailProps) {
+  const isLandscape =
+    getFrameProfile(normalizeFrameTemplate(previewData.frameStyle?.template))
+      .orientation === "landscape";
+
   if (!renderedImageUrl) {
+    // Live-preview fallback. Portrait cards fill the cell; landscape (Battle)
+    // cards are centered in a portrait tile so they don't break the grid.
+    if (isLandscape) {
+      return (
+        <div
+          className={cn(
+            "flex aspect-[5/7] w-full items-center overflow-hidden rounded-frame",
+            className,
+          )}
+        >
+          <CardPreview {...previewData} />
+        </div>
+      );
+    }
     return <CardPreview {...previewData} className={className} />;
   }
 
-  // The baked PNG is 5:7 (matches CardPreview's aspect ratio). The wrapper
-  // mirrors the rounded-frame look so the thumbnail integrates with the
-  // same hover effects and shadows the live preview gets.
+  // The wrapper mirrors the rounded-frame look so the thumbnail integrates with
+  // the same hover effects and shadows the live preview gets. Portrait renders
+  // are 5:7 (object-cover fills the tile); landscape renders are letterboxed.
   return (
     <div
       className={cn(
@@ -70,7 +96,7 @@ export function BakedCardThumbnail({
         fill
         sizes={sizes}
         priority={priority}
-        className="object-cover"
+        className={isLandscape ? "object-contain" : "object-cover"}
       />
     </div>
   );
