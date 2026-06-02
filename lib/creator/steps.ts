@@ -171,6 +171,7 @@ export function stepLabel(step: StepDef, ctx: StepContext): string {
     const t = normalizeFrameTemplate(ctx.template);
     if (t === "flip") return "Flip side";
     if (t === "split") return "Other half";
+    if (t === "aftermath") return "Aftermath";
     return "Back face";
   }
   return step.label;

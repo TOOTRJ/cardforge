@@ -210,6 +210,7 @@ export const FRAME_TEMPLATE_VALUES = [
   "adventure",
   "flip",
   "split",
+  "aftermath",
 ] as const;
 export type FrameTemplate = (typeof FRAME_TEMPLATE_VALUES)[number];
 
@@ -235,6 +236,7 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   adventure: "Adventure",
   flip: "Flip",
   split: "Split",
+  aftermath: "Aftermath",
 };
 
 // ---------------------------------------------------------------------------
@@ -263,6 +265,7 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   adventure: "m15",
   flip: "m15",
   split: "m15",
+  aftermath: "m15",
   agclassic: "alpha",
   alphaland: "alpha",
   alphatoken: "alpha",
@@ -293,8 +296,8 @@ export type FrameStyle = {
 // ---------------------------------------------------------------------------
 export type ComingSoonFrame = { key: string; label: string; set: FrameSet };
 export const COMING_SOON_FRAMES: ComingSoonFrame[] = [
-  // Multi-panel frames (m15 family) still on the roadmap.
-  { key: "aftermath", label: "Aftermath", set: "m15" },
+  // All m15 multi-panel frames now ship (adventure/flip/split/aftermath); add
+  // future roadmap frames here to surface them as disabled "Soon" chips.
 ];
 
 export type ComingSoonSet = { key: string; label: string };

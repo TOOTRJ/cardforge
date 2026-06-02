@@ -46,6 +46,10 @@ describe("visibleSteps", () => {
     expect(keys({ ...base, template: "split" })).toContain("extra");
   });
 
+  it("the Aftermath frame always adds the extra step (bottom half)", () => {
+    expect(keys({ ...base, template: "aftermath" })).toContain("extra");
+  });
+
   it("an unknown/legacy template still yields the base steps (no crash)", () => {
     expect(keys({ ...base, template: "regular" })).toEqual([
       "frame",
@@ -78,6 +82,12 @@ describe("stepLabel", () => {
 
   it("labels the extra step 'Other half' on the Split frame", () => {
     expect(stepLabel(extra, { ...base, template: "split" })).toBe("Other half");
+  });
+
+  it("labels the extra step 'Aftermath' on the Aftermath frame", () => {
+    expect(stepLabel(extra, { ...base, template: "aftermath" })).toBe(
+      "Aftermath",
+    );
   });
 });
 

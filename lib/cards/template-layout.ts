@@ -159,7 +159,7 @@ export type FrameProfile = {
    *    • Split (0°, landscape): the right half; brings its own `artSlot`.
    *  Both renderers draw it inline (the DFC flip is suppressed). */
   secondFace?: {
-    rotation: 0 | 90 | 180;
+    rotation: 0 | 90 | 180 | 270;
     title: TextSlot;
     type: TextSlot;
     rules: TextSlot;
@@ -736,6 +736,68 @@ const SPLIT: FrameProfile = {
   },
 };
 
+// Aftermath — the M15 Aftermath frame. A normal TOP half (cast from hand) over a
+// BOTTOM half rotated 90° (cast from the graveyard). The top half is a standard
+// spell layout (name/cost → small art → type → rules); the bottom half is the
+// back-face content rendered ROTATED 270° (read by turning the card). The
+// bottom slots are WIDE boxes centered on the rotated bars — rotate(270°) around
+// each center lands it on the vertical bar (the box may extend off-card before
+// rotation, which is fine). Frame stacked by scripts/build-aftermath-frame.mjs.
+const AFTERMATH: FrameProfile = {
+  label: "Aftermath",
+  artSlot: { topPct: 11.3, leftPct: 7.7, widthPct: 84.5, heightPct: 22.4 },
+  costSizePct: 0.04,
+  title: {
+    rect: { topPct: 5.7, leftPct: 8.5, widthPct: 82, heightPct: 4.4 },
+    sizePct: 0.044,
+    colorHex: INK_DARK,
+    weight: 600,
+    font: "display",
+  },
+  type: {
+    rect: { topPct: 35.4, leftPct: 8, widthPct: 82.7, heightPct: 3.8 },
+    sizePct: 0.03,
+    colorHex: INK_DARK_SOFT,
+    weight: 600,
+    font: "display",
+  },
+  rules: {
+    rect: { topPct: 40.9, leftPct: 7.5, widthPct: 84.5, heightPct: 12.4 },
+    sizePct: 0.028,
+    colorHex: INK_DARK,
+    vAlign: "start",
+    font: "body",
+    lineHeight: 1.3,
+  },
+  secondFace: {
+    rotation: 270,
+    costSizePct: 0.034,
+    // Wide boxes centered on each rotated bar (rotate 270° → vertical bar).
+    title: {
+      rect: { topPct: 72, leftPct: 69, widthPct: 39, heightPct: 7 },
+      sizePct: 0.038,
+      colorHex: INK_DARK,
+      weight: 600,
+      font: "display",
+    },
+    type: {
+      rect: { topPct: 72, leftPct: 29, widthPct: 39, heightPct: 7 },
+      sizePct: 0.028,
+      colorHex: INK_DARK_SOFT,
+      weight: 600,
+      font: "display",
+    },
+    rules: {
+      rect: { topPct: 56.5, leftPct: 4.5, widthPct: 39, heightPct: 38 },
+      sizePct: 0.026,
+      colorHex: INK_DARK,
+      vAlign: "center",
+      font: "body",
+      lineHeight: 1.25,
+    },
+  },
+};
+
 const PROFILES: Record<FrameTemplate, FrameProfile> = {
   m15: M15,
   m15land: M15LAND,
@@ -751,6 +813,7 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   adventure: ADVENTURE,
   flip: FLIP,
   split: SPLIT,
+  aftermath: AFTERMATH,
 };
 
 /** Resolve a frame profile, defaulting to M15 for unknown/legacy templates
