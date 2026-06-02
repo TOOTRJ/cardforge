@@ -100,7 +100,7 @@ async function build(colorKey, stem) {
   }
 
   await sharp(data, { raw: { width: W, height: H, channels: ch } })
-    .png()
+    .png({ compressionLevel: 9, effort: 10 })
     .toFile(path.join(OUT, `${colorKey}.png`));
   console.log(`${colorKey}.png  cut ${((cut / (W * H)) * 100).toFixed(1)}% ← ${stem}.png + ${stem}2.png`);
 }

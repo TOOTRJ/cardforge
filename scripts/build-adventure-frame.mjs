@@ -56,7 +56,7 @@ async function build(colorKey, stem) {
       { input: adventure, left: ADV_LEFT, top: BOX_TOP },
       { input: creature, left: MAIN_LEFT, top: BOX_TOP },
     ])
-    .png()
+    .png({ compressionLevel: 9, effort: 10 })
     .toFile(path.join(OUT, `${colorKey}.png`));
   console.log(`${colorKey}.png  ← m15 + double_page(${stem}) + null_page(${stem})`);
 }
