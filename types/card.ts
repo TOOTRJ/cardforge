@@ -185,9 +185,11 @@ export type CardFinish = (typeof CARD_FINISH_VALUES)[number];
 // "agclassic" — 1993 Alpha/Beta frame.
 // "alphaland" — 1993 Alpha land frame (agclassic geometry, no cost).
 // "alphatoken"— 1993 Alpha token frame (silver border, tan type box, no cost).
+// "battle"    — M15 Battle/Siege frame — the only LANDSCAPE (7:5) frame.
 //
 // Adding a frame: drop the PNGs, add a value here + a label below, and add one
-// profile entry in lib/cards/template-layout.ts. No renderer changes needed.
+// profile entry in lib/cards/template-layout.ts. No renderer changes needed
+// (landscape frames just set orientation: "landscape" in their profile).
 export const FRAME_TEMPLATE_VALUES = [
   "m15",
   "m15land",
@@ -198,6 +200,7 @@ export const FRAME_TEMPLATE_VALUES = [
   "agclassic",
   "alphaland",
   "alphatoken",
+  "battle",
 ] as const;
 export type FrameTemplate = (typeof FRAME_TEMPLATE_VALUES)[number];
 
@@ -216,6 +219,7 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   agclassic: "Alpha (1993)",
   alphaland: "Alpha Land",
   alphatoken: "Alpha Token",
+  battle: "Battle (Siege)",
 };
 
 export type FrameStyle = {

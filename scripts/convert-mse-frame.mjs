@@ -25,26 +25,30 @@ import fs from "node:fs";
 
 // ── Config: edit these for each frame set ──────────────────────────────────
 const PACK =
-  "/Users/redjester/Projects/other/Full-Magic-Pack/data/magic-agclassic.mse-style";
-const OUT = "public/frames/alphaland";
+  "/Users/redjester/Projects/other/Full-Magic-Pack/data/magic-modules.mse-include/cards/375 m15 battle";
+const OUT = "public/frames/battle";
 const MAP = {
-  w: "wlcard.jpg",
-  u: "ulcard.jpg",
-  b: "blcard.jpg",
-  r: "rlcard.jpg",
-  g: "glcard.jpg",
-  c: "clcard.jpg",
-  m: "mlcard.jpg",
+  w: "wcard.png",
+  u: "ucard.png",
+  b: "bcard.png",
+  r: "rcard.png",
+  g: "gcard.png",
+  c: "ccard.png",
+  m: "mcard.png",
 };
 // Seed point(s) inside each art window, as fractions of the card (x, y).
-const SEEDS = [[0.5, 0.3]];
+const SEEDS = [[0.5, 0.35]];
 // Which art-window fill to cut to transparent: "black" (the m15 family) or
-// "white" (the agclassic / Alpha family — their art windows are white).
-const FILL = "white";
+// "white" (the agclassic / Alpha family). Ignored if the window is already
+// alpha-cut in the source (battle/devoid) — the fill just finds nothing.
+const FILL = "black";
+// Output canvas. Portrait frames are 1500×2100; landscape (battle) is 2100×1500.
+const OUT_W = 2100;
+const OUT_H = 1500;
 // ───────────────────────────────────────────────────────────────────────────
 
-const W = 1500;
-const H = 2100;
+const W = OUT_W;
+const H = OUT_H;
 const NEAR_BLACK = 60; // r+g+b ≤ this counts as the black art fill
 const NEAR_WHITE = 235; // each channel ≥ this counts as the white art fill
 

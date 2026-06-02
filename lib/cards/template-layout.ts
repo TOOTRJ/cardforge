@@ -115,6 +115,11 @@ export type FrameProfile = {
   /** When true, never render the mana cost (tokens/emblems have none, and the
    *  frame's title bar has no cost area). */
   hideCost?: boolean;
+  /** Card aspect. "portrait" (default) is the 5:7 every normal frame uses;
+   *  "landscape" is the 7:5 rotated card used by Battle frames — it flips the
+   *  preview container's aspect ratio and the bake's render dimensions. All
+   *  rect/sizePct values are then relative to the landscape card. */
+  orientation?: "portrait" | "landscape";
 };
 
 /** Resolve a per-color asset path from a template like "/frames/m15/pt/{color}.png". */
@@ -410,6 +415,49 @@ const ALPHATOKEN: FrameProfile = {
   },
 };
 
+// Battle — the M15 Siege frame, the only LANDSCAPE frame (7:5). Full-bleed art
+// with a title pill (top), a type pill, and a text box overlaid; the frame
+// paints no defense shield, so the defense value renders on a drawn dark badge
+// in the bottom-right corner. All rects are % of the landscape card. Battles
+// are often DFCs (battle front / normal back) — the existing back-face flip
+// carries the back. Source: magic-modules.mse-include/cards/375 m15 battle.
+const BATTLE: FrameProfile = {
+  label: "Battle (Siege)",
+  orientation: "landscape",
+  artSlot: { topPct: 12.5, leftPct: 4, widthPct: 92, heightPct: 45 },
+  title: {
+    // inset past the rounded red end-nubs of the title pill
+    rect: { topPct: 4.2, leftPct: 12, widthPct: 76, heightPct: 7 },
+    sizePct: 0.036,
+    colorHex: INK_DARK,
+    weight: 600,
+    font: "display",
+  },
+  type: {
+    rect: { topPct: 57.8, leftPct: 12, widthPct: 76, heightPct: 6.8 },
+    sizePct: 0.025,
+    colorHex: INK_DARK,
+    weight: 600,
+    font: "display",
+  },
+  rules: {
+    rect: { topPct: 67.5, leftPct: 7, widthPct: 86, heightPct: 25 },
+    sizePct: 0.026,
+    colorHex: INK_DARK,
+    vAlign: "start",
+    font: "body",
+    lineHeight: 1.3,
+  },
+  defense: {
+    rect: { topPct: 81, leftPct: 88, widthPct: 9.5, heightPct: 14 },
+    sizePct: 0.05,
+    colorHex: "#ffffff",
+    weight: 700,
+    badgeColorHex: "#141008",
+    shadowCss: OUTLINE_SHADOW,
+  },
+};
+
 const PROFILES: Record<FrameTemplate, FrameProfile> = {
   m15: M15,
   m15land: M15LAND,
@@ -420,6 +468,7 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   agclassic: AGCLASSIC,
   alphaland: ALPHALAND,
   alphatoken: ALPHATOKEN,
+  battle: BATTLE,
 };
 
 /** Resolve a frame profile, defaulting to M15 for unknown/legacy templates
