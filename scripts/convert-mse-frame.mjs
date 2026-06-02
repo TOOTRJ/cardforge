@@ -25,24 +25,28 @@ import fs from "node:fs";
 
 // ── Config: edit these for each frame set ──────────────────────────────────
 const PACK =
-  "/Users/redjester/Projects/other/Full-Magic-Pack/data/magic-m15-devoid.mse-style";
-const OUT = "public/frames/m15devoid";
+  "/Users/redjester/Projects/other/Full-Magic-Pack/data/magic-agclassic.mse-style";
+const OUT = "public/frames/alphaland";
 const MAP = {
-  w: "wcard.png",
-  u: "ucard.png",
-  b: "bcard.png",
-  r: "rcard.png",
-  g: "gcard.png",
-  c: "ccard.png",
-  m: "mcard.png",
+  w: "wlcard.jpg",
+  u: "ulcard.jpg",
+  b: "blcard.jpg",
+  r: "rlcard.jpg",
+  g: "glcard.jpg",
+  c: "clcard.jpg",
+  m: "mlcard.jpg",
 };
 // Seed point(s) inside each art window, as fractions of the card (x, y).
-const SEEDS = [[0.5, 0.33]];
+const SEEDS = [[0.5, 0.3]];
+// Which art-window fill to cut to transparent: "black" (the m15 family) or
+// "white" (the agclassic / Alpha family — their art windows are white).
+const FILL = "white";
 // ───────────────────────────────────────────────────────────────────────────
 
 const W = 1500;
 const H = 2100;
 const NEAR_BLACK = 60; // r+g+b ≤ this counts as the black art fill
+const NEAR_WHITE = 235; // each channel ≥ this counts as the white art fill
 
 fs.mkdirSync(OUT, { recursive: true });
 
@@ -54,8 +58,13 @@ async function convert(colorKey, srcFile) {
     .toBuffer({ resolveWithObject: true });
   const ch = info.channels;
   const idx = (x, y) => (y * W + x) * ch;
-  const isBlack = (i) =>
-    data[i + 3] > 0 && data[i] + data[i + 1] + data[i + 2] <= NEAR_BLACK;
+  const isTarget = (i) =>
+    data[i + 3] > 0 &&
+    (FILL === "white"
+      ? data[i] >= NEAR_WHITE &&
+        data[i + 1] >= NEAR_WHITE &&
+        data[i + 2] >= NEAR_WHITE
+      : data[i] + data[i + 1] + data[i + 2] <= NEAR_BLACK);
 
   const seen = new Uint8Array(W * H);
   let cut = 0;
@@ -65,11 +74,11 @@ async function convert(colorKey, srcFile) {
     while (stack.length) {
       const [sx, sy] = stack.pop();
       let x = sx;
-      while (x >= 0 && isBlack(idx(x, sy))) x--;
+      while (x >= 0 && isTarget(idx(x, sy))) x--;
       x++;
       let up = false;
       let down = false;
-      while (x < W && isBlack(idx(x, sy))) {
+      while (x < W && isTarget(idx(x, sy))) {
         const p = sy * W + x;
         if (!seen[p]) {
           seen[p] = 1;
@@ -77,12 +86,12 @@ async function convert(colorKey, srcFile) {
           cut++;
         }
         if (sy > 0) {
-          const a = isBlack(idx(x, sy - 1));
+          const a = isTarget(idx(x, sy - 1));
           if (a && !up) stack.push([x, sy - 1]);
           up = a;
         }
         if (sy < H - 1) {
-          const b = isBlack(idx(x, sy + 1));
+          const b = isTarget(idx(x, sy + 1));
           if (b && !down) stack.push([x, sy + 1]);
           down = b;
         }
