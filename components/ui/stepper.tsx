@@ -68,6 +68,7 @@ export function Stepper({
             <span
               className={cn(
                 "relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-semibold transition-colors",
+                "group-hover:border-primary/60 group-hover:text-foreground",
                 state === "active" &&
                   "border-primary bg-primary/15 text-primary",
                 state === "complete" &&
@@ -88,7 +89,7 @@ export function Stepper({
           const label = (
             <span
               className={cn(
-                "mt-1.5 max-w-[8rem] text-center text-[11px] font-medium leading-tight transition-colors",
+                "mt-1.5 max-w-[8rem] text-center text-[11px] font-medium leading-tight transition-colors group-hover:text-foreground",
                 state === "active"
                   ? "text-foreground"
                   : state === "error"
@@ -123,7 +124,8 @@ export function Stepper({
                   type="button"
                   onClick={() => onStepSelect(i)}
                   aria-current={i === current ? "step" : undefined}
-                  className="flex flex-col items-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  title={`Go to ${step.label}`}
+                  className="group flex cursor-pointer flex-col items-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 >
                   {marker}
                   {label}
