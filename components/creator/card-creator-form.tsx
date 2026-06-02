@@ -83,6 +83,7 @@ import {
   FRAME_TEMPLATE_VALUES,
 } from "@/types/card";
 import { normalizeFrameTemplate } from "@/lib/cards/card-display";
+import { getFrameProfile } from "@/lib/cards/template-layout";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -249,10 +250,13 @@ const BORDER_OPTIONS: ChipOption<NonNullable<FrameStyle["border"]>>[] = [
 
 // Frame template options — the MSE-derived MTG frame PNG that sits behind the
 // card. All are converted from the open-source Full-Magic-Pack (MSE template).
+// Each chip leads with a small thumbnail of the frame so the (now sizable)
+// list is choosable by sight, not just by name.
 const TEMPLATE_OPTIONS: ChipOption<FrameTemplate>[] = FRAME_TEMPLATE_VALUES.map(
   (template) => ({
     value: template,
     label: FRAME_TEMPLATE_LABELS[template],
+    leading: <FrameThumb template={template} />,
   }),
 );
 
@@ -1524,7 +1528,7 @@ export function CardCreatorForm({
 
             <FieldGroup
               label="Template"
-              helper="The MTG frame your card is rendered on (M15 modern, M15 planeswalker, or 1993 Alpha)."
+              helper="The MTG frame your card is rendered on — each chip previews its look."
             >
               <Controller
                 control={control}
@@ -1845,6 +1849,23 @@ function ColorSwatch({ color }: { color: ColorIdentity }) {
       aria-hidden
       className="inline-block h-3 w-3 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.3),0_1px_1px_rgba(0,0,0,0.3)]"
       style={{ background: COLOR_SWATCH[color] }}
+    />
+  );
+}
+
+function FrameThumb({ template }: { template: FrameTemplate }) {
+  // A mini preview of the frame (the blue color variant is representative) so
+  // each template chip is recognizable by sight — important now that the list
+  // spans 11 frames with similar names. Battle is landscape (7:5); the rest 5:7.
+  const landscape = getFrameProfile(template).orientation === "landscape";
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "block shrink-0 overflow-hidden rounded-[3px] border border-border/60 bg-[#101015] bg-cover bg-center",
+        landscape ? "h-7 w-10" : "h-10 w-[29px]",
+      )}
+      style={{ backgroundImage: `url(/frames/${template}/u.png)` }}
     />
   );
 }
