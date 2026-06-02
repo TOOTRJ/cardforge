@@ -117,42 +117,6 @@ export const artPositionSchema = z
   .strict()
   .default({});
 
-// Scryfall layout vocabulary — kept in sync with the cards_layout_valid
-// CHECK constraint in supabase/migrations/0019_v2_compat.sql.
-export const CARD_LAYOUT_VALUES = [
-  "normal",
-  "split",
-  "flip",
-  "transform",
-  "modal_dfc",
-  "meld",
-  "leveler",
-  "saga",
-  "adventure",
-  "planar",
-  "scheme",
-  "vanguard",
-  "token",
-  "double_faced_token",
-  "emblem",
-  "augment",
-  "host",
-  "art_series",
-  "reversible_card",
-  "class",
-  "case",
-  "mutate",
-  "prototype",
-] as const;
-
-export const cardLayoutSchema = z.enum(CARD_LAYOUT_VALUES);
-
-export const cardManaValueSchema = z
-  .number()
-  .min(0, "Mana value must be 0 or greater.")
-  .max(99, "Mana value seems out of range.")
-  .optional();
-
 export const frameStyleSchema = z
   .object({
     border: z.enum(["thin", "thick", "ornate"]).optional(),
@@ -232,10 +196,6 @@ const baseCardSchema = z.object({
   // imported from Scryfall via the import dialog. UUID-shaped per
   // Scryfall's id format. `null` clears; `undefined` leaves alone.
   source_scryfall_id: uuidSchema.nullable().optional(),
-  // Scryfall parity columns (Phase v2), accepted for forward-compatibility
-  // with importer payloads. Optional; not yet persisted by the card actions.
-  mana_value: cardManaValueSchema,
-  layout: cardLayoutSchema.optional(),
 });
 
 export const createCardSchema = baseCardSchema;
