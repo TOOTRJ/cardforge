@@ -183,6 +183,8 @@ export type CardFinish = (typeof CARD_FINISH_VALUES)[number];
 // "m15devoid" — M15 devoid/Eldrazi frame (washed-out colorless; m15 geometry).
 // "m15pw"     — M15 planeswalker frame (two art cut-outs + loyalty badge).
 // "agclassic" — 1993 Alpha/Beta frame.
+// "alphaland" — 1993 Alpha land frame (agclassic geometry, no cost).
+// "alphatoken"— 1993 Alpha token frame (silver border, tan type box, no cost).
 //
 // Adding a frame: drop the PNGs, add a value here + a label below, and add one
 // profile entry in lib/cards/template-layout.ts. No renderer changes needed.
@@ -194,6 +196,8 @@ export const FRAME_TEMPLATE_VALUES = [
   "m15devoid",
   "m15pw",
   "agclassic",
+  "alphaland",
+  "alphatoken",
 ] as const;
 export type FrameTemplate = (typeof FRAME_TEMPLATE_VALUES)[number];
 
@@ -210,6 +214,8 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   m15devoid: "M15 Devoid",
   m15pw: "M15 Planeswalker",
   agclassic: "Alpha (1993)",
+  alphaland: "Alpha Land",
+  alphatoken: "Alpha Token",
 };
 
 export type FrameStyle = {
