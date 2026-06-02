@@ -42,6 +42,10 @@ describe("visibleSteps", () => {
     expect(keys({ ...base, template: "flip" })).toContain("extra");
   });
 
+  it("the Split frame always adds the extra step (right half)", () => {
+    expect(keys({ ...base, template: "split" })).toContain("extra");
+  });
+
   it("an unknown/legacy template still yields the base steps (no crash)", () => {
     expect(keys({ ...base, template: "regular" })).toEqual([
       "frame",
@@ -70,6 +74,10 @@ describe("stepLabel", () => {
 
   it("labels the extra step 'Flip side' on the Flip frame", () => {
     expect(stepLabel(extra, { ...base, template: "flip" })).toBe("Flip side");
+  });
+
+  it("labels the extra step 'Other half' on the Split frame", () => {
+    expect(stepLabel(extra, { ...base, template: "split" })).toBe("Other half");
   });
 });
 

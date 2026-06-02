@@ -168,7 +168,9 @@ export function visibleSteps(ctx: StepContext): StepDef[] {
 export function stepLabel(step: StepDef, ctx: StepContext): string {
   if (step.key === "extra") {
     if (isAdventureFrame(ctx.template)) return "Adventure";
-    if (normalizeFrameTemplate(ctx.template) === "flip") return "Flip side";
+    const t = normalizeFrameTemplate(ctx.template);
+    if (t === "flip") return "Flip side";
+    if (t === "split") return "Other half";
     return "Back face";
   }
   return step.label;

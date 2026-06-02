@@ -673,6 +673,69 @@ const FLIP: FrameProfile = {
   },
 };
 
+// Split — the M15 split frame (LANDSCAPE). Read sideways: two upright half-cards
+// side by side, each a full mini-card (name/cost → art → type → rules). The LEFT
+// half is the front content; the RIGHT half is the back-face content — a second
+// face with rotation 0 and its OWN art window. Both halves share the card's
+// color (the app has one color identity, so a two-color split renders multicolor
+// on both halves). Frame composited from two MSE half-frames by
+// scripts/build-split-frame.mjs. Geometry is the MSE 523×375 spec in percent.
+const SPLIT: FrameProfile = {
+  label: "Split",
+  orientation: "landscape",
+  artSlot: { topPct: 14.7, leftPct: 4.8, widthPct: 41.9, heightPct: 40.8 },
+  costSizePct: 0.023,
+  title: {
+    rect: { topPct: 7.4, leftPct: 5.2, widthPct: 41.4, heightPct: 5.5 },
+    sizePct: 0.026,
+    colorHex: INK_DARK,
+    weight: 600,
+    font: "display",
+  },
+  type: {
+    rect: { topPct: 56.3, leftPct: 5.2, widthPct: 40, heightPct: 4.2 },
+    sizePct: 0.02,
+    colorHex: INK_DARK_SOFT,
+    weight: 600,
+    font: "display",
+  },
+  rules: {
+    rect: { topPct: 62.4, leftPct: 4.8, widthPct: 41.9, heightPct: 28.5 },
+    sizePct: 0.024,
+    colorHex: INK_DARK,
+    vAlign: "start",
+    font: "body",
+    lineHeight: 1.28,
+  },
+  secondFace: {
+    rotation: 0,
+    costSizePct: 0.023,
+    artSlot: { topPct: 14.7, leftPct: 53.2, widthPct: 41.9, heightPct: 40.8 },
+    title: {
+      rect: { topPct: 7.4, leftPct: 53.5, widthPct: 41.4, heightPct: 5.5 },
+      sizePct: 0.026,
+      colorHex: INK_DARK,
+      weight: 600,
+      font: "display",
+    },
+    type: {
+      rect: { topPct: 56.3, leftPct: 53.5, widthPct: 40, heightPct: 4.2 },
+      sizePct: 0.02,
+      colorHex: INK_DARK_SOFT,
+      weight: 600,
+      font: "display",
+    },
+    rules: {
+      rect: { topPct: 62.4, leftPct: 53.2, widthPct: 41.9, heightPct: 28.5 },
+      sizePct: 0.024,
+      colorHex: INK_DARK,
+      vAlign: "start",
+      font: "body",
+      lineHeight: 1.28,
+    },
+  },
+};
+
 const PROFILES: Record<FrameTemplate, FrameProfile> = {
   m15: M15,
   m15land: M15LAND,
@@ -687,6 +750,7 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   saga: SAGA,
   adventure: ADVENTURE,
   flip: FLIP,
+  split: SPLIT,
 };
 
 /** Resolve a frame profile, defaulting to M15 for unknown/legacy templates
