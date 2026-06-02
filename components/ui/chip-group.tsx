@@ -21,6 +21,11 @@ export type ChipOption<T extends string> = {
   icon?: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
   /** Inline element (e.g. swatch dot, gem SVG) rendered before the label. */
   leading?: ReactNode;
+  /** Trailing element pinned to the right edge (e.g. a "Soon" badge). */
+  badge?: ReactNode;
+  /** Non-selectable chip — dimmed, ignores clicks (e.g. roadmap "coming soon"
+   *  frames). Still rendered so users can see what's coming. */
+  disabled?: boolean;
   /** Active-state tint class. Falls back to the primary color. */
   activeClass?: string;
 };
@@ -101,6 +106,7 @@ export function ChipGroup<T extends string>(props: ChipGroupProps<T>) {
     >
       {options.map((option) => {
         const active = isActive(props.value, option.value, multi);
+        const disabled = option.disabled === true;
         const Icon = option.icon;
         const activeClass =
           option.activeClass ?? "border-primary bg-primary/15 text-primary";
@@ -111,21 +117,26 @@ export function ChipGroup<T extends string>(props: ChipGroupProps<T>) {
           <button
             key={option.value}
             type="button"
+            disabled={disabled}
             {...ariaProps}
-            onClick={() => handleClick(option.value)}
+            onClick={disabled ? undefined : () => handleClick(option.value)}
             className={cn(
               "group/chip flex items-center gap-2 rounded-md border bg-elevated/60 text-left transition-colors",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
               size === "sm"
                 ? "px-3 py-1.5 text-xs font-medium"
                 : "px-3 py-2.5 text-sm",
-              active
-                ? activeClass
-                : "border-border text-muted hover:border-border-strong hover:text-foreground",
+              disabled
+                ? "cursor-not-allowed border-border/60 text-subtle opacity-55"
+                : active
+                  ? activeClass
+                  : "border-border text-muted hover:border-border-strong hover:text-foreground",
             )}
           >
             {option.leading ? (
-              <span className="shrink-0">{option.leading}</span>
+              <span className={cn("shrink-0", disabled && "opacity-60")}>
+                {option.leading}
+              </span>
             ) : null}
             {Icon ? (
               <Icon
@@ -149,6 +160,9 @@ export function ChipGroup<T extends string>(props: ChipGroupProps<T>) {
                 </span>
               ) : null}
             </span>
+            {option.badge ? (
+              <span className="ml-auto shrink-0 pl-1">{option.badge}</span>
+            ) : null}
           </button>
         );
       })}
