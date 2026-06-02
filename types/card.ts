@@ -187,6 +187,10 @@ export type CardFinish = (typeof CARD_FINISH_VALUES)[number];
 // "alphatoken"— 1993 Alpha token frame (silver border, tan type box, no cost).
 // "battle"    — M15 Battle/Siege frame — the only LANDSCAPE (7:5) frame.
 // "saga"      — M15 Saga frame (chapter rail on the left, art column on the right).
+// "adventure" — M15 Adventure (Eldraine) frame — a creature whose lower text area
+//               is split into an open "storybook": the adventure spell (its
+//               name/type/cost/rules come from the card's back-face content) on
+//               the LEFT page, the creature's own rules on the RIGHT page.
 //
 // Adding a frame: drop the PNGs, add a value here + a label below, and add one
 // profile entry in lib/cards/template-layout.ts. No renderer changes needed
@@ -203,6 +207,7 @@ export const FRAME_TEMPLATE_VALUES = [
   "alphatoken",
   "battle",
   "saga",
+  "adventure",
 ] as const;
 export type FrameTemplate = (typeof FRAME_TEMPLATE_VALUES)[number];
 
@@ -225,6 +230,7 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   alphatoken: "Token",
   battle: "Battle (Siege)",
   saga: "Saga",
+  adventure: "Adventure",
 };
 
 // ---------------------------------------------------------------------------
@@ -250,6 +256,7 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   m15pw: "m15",
   battle: "m15",
   saga: "m15",
+  adventure: "m15",
   agclassic: "alpha",
   alphaland: "alpha",
   alphatoken: "alpha",

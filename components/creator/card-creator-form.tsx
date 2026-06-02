@@ -573,6 +573,12 @@ export function CardCreatorForm({
   // field; the cast just lifts useWatch's DeepPartial<> back to FormValues.
   const watched = useWatch({ control, defaultValue: defaults }) as FormValues;
 
+  // The Adventure frame repurposes the back-face content as the adventure spell
+  // (rendered inline on the card's left page, not as a flippable face), so the
+  // "Back face" tab presents itself as "Adventure" when that frame is selected.
+  const isAdventureFrame =
+    normalizeFrameTemplate(watched.frame_style?.template) === "adventure";
+
   // Slice of the live form state the AI panel sends as context. Stripping
   // empty strings keeps the prompt tight.
   const cardContext: CardContext = {
@@ -982,7 +988,7 @@ export function CardCreatorForm({
                 ) : null
               }
             >
-              Back face
+              {isAdventureFrame ? "Adventure" : "Back face"}
             </TabsTrigger>
             <TabsTrigger
               value="publishing"
@@ -1329,10 +1335,21 @@ export function CardCreatorForm({
             {!watched.has_back_face ? (
               <SurfaceCard className="flex flex-col items-center gap-3 border-dashed bg-elevated/40 p-8 text-center">
                 <p className="text-sm leading-6 text-muted">
-                  This card only has a front face. Add a back face to make it
-                  a double-faced card (DFC). The back face shares the card&apos;s
-                  rarity, color identity, and frame style — only the text and
-                  art differ.
+                  {isAdventureFrame ? (
+                    <>
+                      The Adventure frame splits the lower card into a storybook:
+                      this content becomes the <strong>adventure spell</strong> on
+                      the left page, shown alongside the creature&apos;s rules — no
+                      flip. Add it to fill the adventure.
+                    </>
+                  ) : (
+                    <>
+                      This card only has a front face. Add a back face to make it
+                      a double-faced card (DFC). The back face shares the
+                      card&apos;s rarity, color identity, and frame style — only
+                      the text and art differ.
+                    </>
+                  )}
                 </p>
                 <Button
                   type="button"
@@ -1343,14 +1360,18 @@ export function CardCreatorForm({
                   }
                 >
                   <Sparkles className="h-4 w-4" aria-hidden />
-                  Add a back face
+                  {isAdventureFrame ? "Add the adventure" : "Add a back face"}
                 </Button>
               </SurfaceCard>
             ) : (
               <>
                 <FieldGroup
-                  label="Title"
-                  helper="The back-face title. Required when a back face is enabled."
+                  label={isAdventureFrame ? "Adventure name" : "Title"}
+                  helper={
+                    isAdventureFrame
+                      ? "The adventure spell's name (shown on the left page)."
+                      : "The back-face title. Required when a back face is enabled."
+                  }
                 >
                   <input
                     {...register("back_face.title")}
@@ -1413,12 +1434,21 @@ export function CardCreatorForm({
                 <FieldGroup label="Rules text">
                   <textarea
                     {...register("back_face.rules_text")}
-                    placeholder="Flying. Whenever the back face deals damage…"
+                    placeholder={
+                      isAdventureFrame
+                        ? "Stomp deals 2 damage to any target. (The adventure's rules.)"
+                        : "Flying. Whenever the back face deals damage…"
+                    }
                     rows={4}
                     className={textareaClass(false)}
                   />
                 </FieldGroup>
 
+                {/* Flavor, P/T, and art are front/DFC-only — an adventure spell
+                    is an instant/sorcery that shares the creature's art, so the
+                    Adventure tab hides them (the renderer ignores them anyway). */}
+                {!isAdventureFrame ? (
+                  <>
                 <FieldGroup label="Flavor text">
                   <textarea
                     {...register("back_face.flavor_text")}
@@ -1499,6 +1529,8 @@ export function CardCreatorForm({
                     />
                   )}
                 />
+                  </>
+                ) : null}
 
                 <div className="flex justify-end">
                   <Button
@@ -1513,7 +1545,7 @@ export function CardCreatorForm({
                       });
                     }}
                   >
-                    Remove back face
+                    {isAdventureFrame ? "Remove adventure" : "Remove back face"}
                   </Button>
                 </div>
               </>

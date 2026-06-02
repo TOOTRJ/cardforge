@@ -47,7 +47,7 @@ import {
   type TextSlot,
 } from "@/lib/cards/template-layout";
 import type { CardPreviewData } from "@/components/cards/card-preview";
-import type { ColorIdentity, Rarity } from "@/types/card";
+import type { CardBackFace, ColorIdentity, Rarity } from "@/types/card";
 
 // ---------------------------------------------------------------------------
 // Sizing presets — 5:7 card aspect ratio, matching the live preview.
@@ -332,6 +332,15 @@ function CardImage({
         ) : null}
       </div>
         )}
+
+      {/* Adventure spell — the left storybook page (Adventure frames). */}
+      {layout.adventure && card.backFace
+        ? AdventureBake({
+            slot: layout.adventure,
+            back: card.backFace,
+            cardWidth: width,
+          })
+        : null}
 
       {/* Footer — artist + brand. */}
       {layout.footer ? (
@@ -670,6 +679,83 @@ function ChapterBake({
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+// AdventureBake — Satori-side adventure sub-panel (mirrors AdventurePanel in the
+// preview). The adventure's name (+ cost) and type line sit on the left page's
+// colored bars; its rules sit on the cream page below. Wrapped in an inset:0
+// absolute box so the three absolutely-positioned slots resolve against the
+// card, exactly like the preview's percent coordinates.
+function AdventureBake({
+  slot,
+  back,
+  cardWidth,
+}: {
+  slot: NonNullable<FrameProfile["adventure"]>;
+  back: CardBackFace;
+  cardWidth: number;
+}) {
+  const name = back.title?.trim() || "Adventure";
+  const typeLine = buildTypeLine({
+    supertype: back.supertype,
+    cardType: back.card_type ?? null,
+    subtypes: back.subtypes,
+  });
+  const showCost = Boolean(back.cost?.trim());
+  // Full-size positioned wrapper so the three % slots resolve against the card
+  // (Satori needs a definite height — `inset:0` alone collapses to auto).
+  return (
+    <div
+      style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        zIndex: 20,
+      }}
+    >
+      <Band slot={slot.title} cardWidth={cardWidth}>
+        <span style={ELLIPSIS}>{name}</span>
+        {showCost && back.cost ? (
+          <CostGlyphs
+            cost={back.cost}
+            fontSize={fpx(slot.costSizePct ?? slot.title.sizePct, cardWidth)}
+          />
+        ) : (
+          <span style={{ display: "flex" }} />
+        )}
+      </Band>
+      <Band slot={slot.type} cardWidth={cardWidth}>
+        <span style={ELLIPSIS}>{typeLine}</span>
+        <span style={{ display: "flex" }} />
+      </Band>
+      <div
+        style={{
+          ...slotBox(slot.rules.rect),
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: vJustify(slot.rules.vAlign ?? "start"),
+          overflow: "hidden",
+          padding: `${Math.round(cardWidth * 0.01)}px ${Math.round(cardWidth * 0.006)}px`,
+          fontFamily: DISPLAY_FONT,
+          fontSize: fpx(slot.rules.sizePct, cardWidth),
+          lineHeight: slot.rules.lineHeight ?? 1.25,
+          color: slot.rules.colorHex,
+          textAlign: "center",
+          zIndex: 20,
+        }}
+      >
+        {back.rules_text?.trim() ? (
+          <div style={{ display: "flex", whiteSpace: "pre-wrap" }}>
+            {bakeText(back.rules_text)}
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }
