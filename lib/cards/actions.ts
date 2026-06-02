@@ -15,6 +15,7 @@ import {
   isSlugTakenForCurrentUser,
 } from "@/lib/cards/queries";
 import { bakeAndPersistCardRender } from "@/lib/cards/bake-render";
+import { cardRenderPath } from "@/lib/cards/storage-paths";
 import {
   VISIBILITY_VALUES,
   type CardInsert,
@@ -396,6 +397,13 @@ export async function deleteCardAction(
     return { ok: false, formError: error.message };
   }
 
+  // Remove the card's baked render from the public bucket (best-effort; the
+  // render path is per-card, so this never touches another card's render). Art
+  // is left alone — remixes copy art_url, so it can be shared.
+  await supabase.storage
+    .from("card-renders")
+    .remove([cardRenderPath(existing.owner_id, cardId)]);
+
   const ownerUsername = await getOwnerUsername();
   revalidateCardPaths(existing.slug, ownerUsername);
 
@@ -540,14 +548,28 @@ export async function updateCardsVisibilityAction(
     };
   }
 
+  // Going private must also drop the public render (the full card image) — both
+  // the row's URL and the stored object — for the same reason the single-card
+  // path does. (Going public again re-bakes on the next individual save.)
+  const goingPrivate = parsed.data.visibility === "private";
   const { error } = await supabase
     .from("cards")
-    .update({ visibility: parsed.data.visibility })
+    .update(
+      goingPrivate
+        ? { visibility: "private", rendered_image_url: null, rendered_at: null }
+        : { visibility: parsed.data.visibility },
+    )
     .in("id", ids)
     .eq("owner_id", user.id);
 
   if (error) {
     return { ok: false, error: error.message };
+  }
+
+  if (goingPrivate) {
+    await supabase.storage
+      .from("card-renders")
+      .remove(ids.map((id) => cardRenderPath(user.id, id)));
   }
 
   // Revalidate the surfaces that show card lists. Per-card slug paths are
@@ -611,6 +633,11 @@ export async function deleteCardsAction(
   if (error) {
     return { ok: false, error: error.message };
   }
+
+  // Remove the deleted cards' baked renders from the public bucket (best-effort).
+  await supabase.storage
+    .from("card-renders")
+    .remove(ids.map((id) => cardRenderPath(user.id, id)));
 
   revalidatePath("/dashboard");
   revalidatePath("/gallery");
