@@ -705,7 +705,7 @@ export function CardCreatorForm({
   };
 
   // Kick off /api/ai/random-card and pour the result into the form. Art is
-  // optional — the model occasionally trips DALL-E's safety filter even on
+  // optional — the model occasionally trips gpt-image-1's safety filter even on
   // benign prompts; we surface a soft toast in that case and leave the
   // existing art_url alone so the user can upload their own.
   const handleRandomCard = async () => {
@@ -1009,9 +1009,9 @@ export function CardCreatorForm({
               </Button>
             </div>
 
-            {/* AI random-card generator — pairs GPT-4o text with a DALL-E
-                3 illustration. Disabled for guests and while a request is
-                in flight. */}
+            {/* AI random-card generator — pairs GPT-4o text with a
+                gpt-image-1 illustration. Disabled for guests and while a
+                request is in flight. */}
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3">
               <div className="flex flex-col gap-0.5">
                 <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-primary">

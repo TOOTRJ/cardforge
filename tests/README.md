@@ -7,8 +7,8 @@ Phase 11 chunk 16 seeded a two-tier test layer:
   tokenizer.
 - **End-to-end tests** (`tests/e2e/`) — Playwright, run against a live
   `npm run dev` server. Cover marketing flows out of the box; auth /
-  create / Scryfall flows are scaffolded but `.fixme()`'d pending a
-  test Supabase project.
+  create / Scryfall flows are scaffolded but `test.skip()`'d (gated on
+  `SUPABASE_E2E_USER_EMAIL` / `_PASSWORD`) pending a test Supabase project.
 
 ## Running locally
 

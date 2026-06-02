@@ -11,7 +11,7 @@ import { SurfaceCard } from "@/components/ui/surface-card";
 // card generator", "ChatGPT custom magic card", etc. Mirrors the structure
 // of /mtg-card-maker but with copy and FAQ focused on the AI features:
 // the in-editor assistant (Claude) and the random-card generator (GPT-4o
-// + DALL-E 3, Phase 4).
+// + gpt-image-1, Phase 4).
 // ---------------------------------------------------------------------------
 
 export const metadata: Metadata = {

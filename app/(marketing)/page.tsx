@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { ArrowRight } from "lucide-react";
@@ -12,6 +13,13 @@ import { Button } from "@/components/ui/button";
 import { listTrendingCards } from "@/lib/cards/queries";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+
+// Self-canonical for the homepage. Other metadata (title, OG, etc.) is
+// inherited from the root layout; this just pins the canonical to "/" so it
+// doesn't fall through to the metadataBase root ambiguously.
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
 
 const galleryPlaceholder = [
   {
