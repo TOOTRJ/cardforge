@@ -200,11 +200,24 @@ const TEMPLATE_OPTIONS: ChipOption<FrameTemplate>[] = FRAME_TEMPLATE_VALUES.map(
   }),
 );
 
+// How many shippable frames each set holds — surfaced on the set chip so a set
+// reads as a *family* of frames, not a single style. Derived from the
+// template→set map so it stays correct as frames are added.
+const FRAMES_PER_SET = FRAME_TEMPLATE_VALUES.reduce(
+  (acc, template) => {
+    const set = FRAME_TEMPLATE_SET[template];
+    acc[set] = (acc[set] ?? 0) + 1;
+    return acc;
+  },
+  {} as Record<FrameSet, number>,
+);
+
 // Frame-set chips (the first step of the picker). Each leads with a thumbnail
-// of the set's default frame.
+// of the set's default frame and notes how many frames the family contains.
 const FRAME_SET_OPTIONS: ChipOption<FrameSet>[] = FRAME_SET_VALUES.map((set) => ({
   value: set,
   label: FRAME_SET_LABELS[set],
+  description: `${FRAMES_PER_SET[set]} frame${FRAMES_PER_SET[set] === 1 ? "" : "s"}`,
   leading: <FrameThumb template={FRAME_SET_DEFAULT_TEMPLATE[set]} />,
 }));
 
@@ -1070,10 +1083,19 @@ export function CardCreatorForm({
                 </Button>
               </div>
 
-              <FieldGroup
-                label="Frame"
-                helper="Pick a frame set, then a frame within it — each chip previews its look."
-              >
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-subtle">
+                    Frame
+                  </span>
+                  <span className="text-xs leading-5 text-muted">
+                    A <span className="font-medium text-foreground">set</span> is
+                    a card family — its era and trade dress. Pick a set, then
+                    choose a specific{" "}
+                    <span className="font-medium text-foreground">frame</span>{" "}
+                    within it.
+                  </span>
+                </div>
                 <Controller
                   control={control}
                   name="frame_style.template"
@@ -1081,60 +1103,89 @@ export function CardCreatorForm({
                     const template = (field.value ??
                       DEFAULT_FRAME_TEMPLATE) as FrameTemplate;
                     const activeSet = FRAME_TEMPLATE_SET[template];
+                    const setFrames = TEMPLATE_OPTIONS.filter(
+                      (option) => FRAME_TEMPLATE_SET[option.value] === activeSet,
+                    );
                     const soonFrames = comingSoonFrameOptions(activeSet);
                     return (
-                      <div className="flex flex-col gap-3">
-                        <ChipGroup
-                          ariaLabel="Frame set"
-                          layout="grid-2"
-                          size="md"
-                          value={activeSet}
-                          onChange={(nextSet) => {
-                            if (nextSet !== activeSet) {
-                              field.onChange(FRAME_SET_DEFAULT_TEMPLATE[nextSet]);
-                            }
-                          }}
-                          options={FRAME_SET_OPTIONS}
-                        />
-                        <ChipGroup
-                          ariaLabel="Frame"
-                          layout="grid-2"
-                          size="md"
-                          value={template}
-                          onChange={(next) => field.onChange(next)}
-                          options={TEMPLATE_OPTIONS.filter(
-                            (option) =>
-                              FRAME_TEMPLATE_SET[option.value] === activeSet,
-                          )}
-                        />
-                        <div className="mt-1 flex flex-col gap-2 rounded-lg border border-dashed border-border/50 bg-elevated/20 p-3">
-                          <span className="text-[11px] uppercase tracking-wider text-subtle">
-                            On the roadmap
-                          </span>
-                          {soonFrames.length > 0 ? (
-                            <ChipGroup
-                              ariaLabel="Upcoming frames"
-                              layout="grid-2"
-                              size="md"
-                              value=""
-                              onChange={() => {}}
-                              options={soonFrames}
-                            />
-                          ) : null}
+                      <div className="flex flex-col gap-5">
+                        {/* Step 1 — choose the set (the card family). */}
+                        <section className="flex flex-col gap-2">
+                          <PickerStepLabel
+                            n={1}
+                            title="Choose a set"
+                            count={`${FRAME_SET_VALUES.length} families`}
+                          />
                           <ChipGroup
-                            ariaLabel="Upcoming sets"
+                            ariaLabel="Frame set"
                             layout="grid-2"
                             size="md"
-                            value=""
-                            onChange={() => {}}
-                            options={COMING_SOON_SET_OPTIONS}
+                            value={activeSet}
+                            onChange={(nextSet) => {
+                              if (nextSet !== activeSet) {
+                                field.onChange(
+                                  FRAME_SET_DEFAULT_TEMPLATE[nextSet],
+                                );
+                              }
+                            }}
+                            options={FRAME_SET_OPTIONS}
                           />
-                        </div>
+                        </section>
+
+                        {/* Step 2 — choose a frame inside the chosen set. */}
+                        <section className="flex flex-col gap-2">
+                          <PickerStepLabel
+                            n={2}
+                            title="Choose a frame"
+                            aside={FRAME_SET_LABELS[activeSet]}
+                            count={`${setFrames.length} ${
+                              setFrames.length === 1 ? "frame" : "frames"
+                            }`}
+                          />
+                          <ChipGroup
+                            ariaLabel={`Frames in ${FRAME_SET_LABELS[activeSet]}`}
+                            layout="grid-2"
+                            size="md"
+                            value={template}
+                            onChange={(next) => field.onChange(next)}
+                            options={setFrames}
+                          />
+                        </section>
+
+                        {/* Roadmap — disabled previews of what's coming. */}
+                        {soonFrames.length > 0 ||
+                        COMING_SOON_SET_OPTIONS.length > 0 ? (
+                          <section className="flex flex-col gap-2 rounded-lg border border-dashed border-border/50 bg-elevated/20 p-3">
+                            <span className="text-[11px] uppercase tracking-wider text-subtle">
+                              On the roadmap
+                            </span>
+                            {soonFrames.length > 0 ? (
+                              <ChipGroup
+                                ariaLabel="Upcoming frames"
+                                layout="grid-2"
+                                size="md"
+                                value=""
+                                onChange={() => {}}
+                                options={soonFrames}
+                              />
+                            ) : null}
+                            {COMING_SOON_SET_OPTIONS.length > 0 ? (
+                              <ChipGroup
+                                ariaLabel="Upcoming sets"
+                                layout="grid-2"
+                                size="md"
+                                value=""
+                                onChange={() => {}}
+                                options={COMING_SOON_SET_OPTIONS}
+                              />
+                            ) : null}
+                          </section>
+                        ) : null}
                       </div>
                     );
                   }}
                 />
-              </FieldGroup>
+              </div>
             </>
           ) : null}
 
@@ -1841,6 +1892,43 @@ function FieldGroup({
         <span className="text-xs text-muted">{helper}</span>
       ) : null}
     </label>
+  );
+}
+
+// A numbered sub-step heading for the two-stage frame picker: a small index
+// badge, a title, an optional muted context line (the active set name), and a
+// right-aligned count. Makes "first a set, then a frame within it" legible.
+function PickerStepLabel({
+  n,
+  title,
+  aside,
+  count,
+}: {
+  n: number;
+  title: string;
+  aside?: string;
+  count?: string;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <span className="flex min-w-0 items-center gap-2 text-xs font-semibold uppercase tracking-wider text-subtle">
+        <span
+          aria-hidden
+          className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-border bg-elevated/60 text-[10px] text-foreground"
+        >
+          {n}
+        </span>
+        <span className="shrink-0">{title}</span>
+        {aside ? (
+          <span className="truncate font-normal normal-case tracking-normal text-muted">
+            · {aside}
+          </span>
+        ) : null}
+      </span>
+      {count ? (
+        <span className="shrink-0 text-[11px] text-muted">{count}</span>
+      ) : null}
+    </div>
   );
 }
 
