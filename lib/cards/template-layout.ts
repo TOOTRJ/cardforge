@@ -341,10 +341,20 @@ const M15TOKEN: FrameProfile = {
   },
 };
 
+// M15 Snow (Kaldheim/Coldsnap frosty frame) and M15 Devoid (Eldrazi washed-out
+// colorless frame) share the M15 geometry exactly — same title/art/type/text
+// regions and the same painted P/T plate — so they're straight clones with a
+// different frame PNG. Their plates are light (silver/pale), so the dark M15
+// ink reads on them unchanged.
+const M15SNOW: FrameProfile = { ...M15, label: "M15 Snow" };
+const M15DEVOID: FrameProfile = { ...M15, label: "M15 Devoid (Eldrazi)" };
+
 const PROFILES: Record<FrameTemplate, FrameProfile> = {
   m15: M15,
   m15land: M15LAND,
   m15token: M15TOKEN,
+  m15snow: M15SNOW,
+  m15devoid: M15DEVOID,
   m15pw: M15PW,
   agclassic: AGCLASSIC,
 };
