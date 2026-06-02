@@ -208,6 +208,7 @@ export const FRAME_TEMPLATE_VALUES = [
   "battle",
   "saga",
   "adventure",
+  "flip",
 ] as const;
 export type FrameTemplate = (typeof FRAME_TEMPLATE_VALUES)[number];
 
@@ -231,6 +232,7 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   battle: "Battle (Siege)",
   saga: "Saga",
   adventure: "Adventure",
+  flip: "Flip",
 };
 
 // ---------------------------------------------------------------------------
@@ -257,6 +259,7 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   battle: "m15",
   saga: "m15",
   adventure: "m15",
+  flip: "m15",
   agclassic: "alpha",
   alphaland: "alpha",
   alphatoken: "alpha",
@@ -287,9 +290,7 @@ export type FrameStyle = {
 // ---------------------------------------------------------------------------
 export type ComingSoonFrame = { key: string; label: string; set: FrameSet };
 export const COMING_SOON_FRAMES: ComingSoonFrame[] = [
-  // Multi-panel frames (m15 family) — the composite approach is proven by the
-  // Adventure frame; these are the remaining split-layout cards.
-  { key: "flip", label: "Flip", set: "m15" },
+  // Multi-panel frames (m15 family) still on the roadmap.
   { key: "aftermath", label: "Aftermath", set: "m15" },
   { key: "split", label: "Split", set: "m15" },
 ];
