@@ -210,19 +210,55 @@ export type FrameTemplate = (typeof FRAME_TEMPLATE_VALUES)[number];
 // that predate the picker, including the retired "regular" placeholder).
 export const DEFAULT_FRAME_TEMPLATE: FrameTemplate = "m15";
 
-// Display labels for the template picker in the creator form.
+// Display labels for the template picker. These are shown UNDER a frame-set
+// chip (Magic 2015 / Alpha), which supplies the family — so the labels are
+// set-relative ("Standard", "Land", …) rather than repeating the set name.
 export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
-  m15: "M15 (modern)",
-  m15land: "M15 Land",
-  m15token: "M15 Token",
-  m15snow: "M15 Snow",
-  m15devoid: "M15 Devoid",
-  m15pw: "M15 Planeswalker",
-  agclassic: "Alpha (1993)",
-  alphaland: "Alpha Land",
-  alphatoken: "Alpha Token",
+  m15: "Standard",
+  m15land: "Land",
+  m15token: "Token",
+  m15snow: "Snow",
+  m15devoid: "Devoid",
+  m15pw: "Planeswalker",
+  agclassic: "Standard",
+  alphaland: "Land",
+  alphatoken: "Token",
   battle: "Battle (Siege)",
   saga: "Saga",
+};
+
+// ---------------------------------------------------------------------------
+// Frame sets — group the templates into families so the creator can offer a
+// two-step picker: choose a set, then a frame within it. Every template must
+// map to a set (the Record below is exhaustive, so adding a frame is a compile
+// error until it's assigned a set).
+// ---------------------------------------------------------------------------
+export const FRAME_SET_VALUES = ["m15", "alpha"] as const;
+export type FrameSet = (typeof FRAME_SET_VALUES)[number];
+
+export const FRAME_SET_LABELS: Record<FrameSet, string> = {
+  m15: "Magic 2015 (modern)",
+  alpha: "Alpha (1993)",
+};
+
+export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
+  m15: "m15",
+  m15land: "m15",
+  m15token: "m15",
+  m15snow: "m15",
+  m15devoid: "m15",
+  m15pw: "m15",
+  battle: "m15",
+  saga: "m15",
+  agclassic: "alpha",
+  alphaland: "alpha",
+  alphatoken: "alpha",
+};
+
+// The frame a set defaults to when the picker switches to it.
+export const FRAME_SET_DEFAULT_TEMPLATE: Record<FrameSet, FrameTemplate> = {
+  m15: "m15",
+  alpha: "agclassic",
 };
 
 export type FrameStyle = {

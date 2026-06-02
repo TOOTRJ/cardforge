@@ -73,13 +73,18 @@ import {
   type CardTemplate,
   type CardType,
   type ColorIdentity,
+  type FrameSet,
   type FrameStyle,
   type FrameTemplate,
   type GameSystem,
   type Rarity,
   type Visibility,
   DEFAULT_FRAME_TEMPLATE,
+  FRAME_SET_DEFAULT_TEMPLATE,
+  FRAME_SET_LABELS,
+  FRAME_SET_VALUES,
   FRAME_TEMPLATE_LABELS,
+  FRAME_TEMPLATE_SET,
   FRAME_TEMPLATE_VALUES,
 } from "@/types/card";
 import { normalizeFrameTemplate } from "@/lib/cards/card-display";
@@ -259,6 +264,14 @@ const TEMPLATE_OPTIONS: ChipOption<FrameTemplate>[] = FRAME_TEMPLATE_VALUES.map(
     leading: <FrameThumb template={template} />,
   }),
 );
+
+// Frame-set chips (the first step of the picker). Each leads with a thumbnail
+// of the set's default frame.
+const FRAME_SET_OPTIONS: ChipOption<FrameSet>[] = FRAME_SET_VALUES.map((set) => ({
+  value: set,
+  label: FRAME_SET_LABELS[set],
+  leading: <FrameThumb template={FRAME_SET_DEFAULT_TEMPLATE[set]} />,
+}));
 
 const ACCENT_OPTIONS: ChipOption<NonNullable<FrameStyle["accent"]>>[] = [
   { value: "neutral", label: "Neutral" },
@@ -1527,22 +1540,46 @@ export function CardCreatorForm({
             </FieldGroup>
 
             <FieldGroup
-              label="Template"
-              helper="The MTG frame your card is rendered on — each chip previews its look."
+              label="Frame"
+              helper="Pick a frame set, then a frame within it — each chip previews its look."
             >
               <Controller
                 control={control}
                 name="frame_style.template"
-                render={({ field }) => (
-                  <ChipGroup
-                    ariaLabel="Template"
-                    layout="grid-2"
-                    size="md"
-                    value={field.value ?? DEFAULT_FRAME_TEMPLATE}
-                    onChange={(next) => field.onChange(next)}
-                    options={TEMPLATE_OPTIONS}
-                  />
-                )}
+                render={({ field }) => {
+                  const template = (field.value ??
+                    DEFAULT_FRAME_TEMPLATE) as FrameTemplate;
+                  const activeSet = FRAME_TEMPLATE_SET[template];
+                  return (
+                    <div className="flex flex-col gap-3">
+                      <ChipGroup
+                        ariaLabel="Frame set"
+                        layout="grid-2"
+                        size="md"
+                        value={activeSet}
+                        onChange={(nextSet) => {
+                          // Switching sets jumps to that set's default frame;
+                          // staying in the set keeps the current frame.
+                          if (nextSet !== activeSet) {
+                            field.onChange(FRAME_SET_DEFAULT_TEMPLATE[nextSet]);
+                          }
+                        }}
+                        options={FRAME_SET_OPTIONS}
+                      />
+                      <ChipGroup
+                        ariaLabel="Frame"
+                        layout="grid-2"
+                        size="md"
+                        value={template}
+                        onChange={(next) => field.onChange(next)}
+                        options={TEMPLATE_OPTIONS.filter(
+                          (option) =>
+                            FRAME_TEMPLATE_SET[option.value] === activeSet,
+                        )}
+                      />
+                    </div>
+                  );
+                }}
               />
             </FieldGroup>
 
