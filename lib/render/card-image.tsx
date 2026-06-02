@@ -599,7 +599,15 @@ export function renderCardImage(
   card: CardPreviewData,
   preset: RenderPreset = "default",
 ): ImageResponse {
-  const { width, height } = RENDER_PRESETS[preset];
+  const base = RENDER_PRESETS[preset];
+  // Landscape (Battle) frames swap the canvas to 7:5 so the bake matches the
+  // preview's landscape container. All slot rects are % of the card, so they
+  // resolve correctly against the swapped dimensions.
+  const landscape =
+    getFrameProfile(normalizeFrameTemplate(card.frameStyle?.template))
+      .orientation === "landscape";
+  const width = landscape ? base.height : base.width;
+  const height = landscape ? base.width : base.height;
   return new ImageResponse(
     <CardImage card={card} width={width} height={height} />,
     {
