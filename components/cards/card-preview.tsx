@@ -298,7 +298,8 @@ function CardFace({
 }) {
   const colorKey = pickFrameColorKey(colorIdentity);
   const safeTitle = face.title?.trim() || "Untitled Card";
-  const showCost = face.cardType !== "land" && Boolean(face.cost?.trim());
+  const showCost =
+    !layout.hideCost && face.cardType !== "land" && Boolean(face.cost?.trim());
 
   const showPT =
     Boolean(layout.pt) &&
@@ -319,6 +320,9 @@ function CardFace({
 
   const rulesSizePct =
     RULES_SIZE_PCT_BY_TIER[rulesFontTier(face.rulesText, face.flavorText)];
+  const hasRulesContent = Boolean(
+    face.rulesText?.trim() || face.flavorText?.trim(),
+  );
 
   return (
     <div className="absolute inset-0">
@@ -417,7 +421,7 @@ function CardFace({
           lineHeight: layout.rules.lineHeight ?? 1.3,
           color: layout.rules.colorHex,
           textAlign: "center",
-          ...(layout.rules.backdropHex
+          ...(layout.rules.backdropHex && hasRulesContent
             ? {
                 background: layout.rules.backdropHex,
                 borderRadius: "1.5cqw",
@@ -429,11 +433,12 @@ function CardFace({
           <div style={{ whiteSpace: "pre-line" }}>
             {renderRulesText(face.rulesText)}
           </div>
-        ) : (
+        ) : staticInEditor ? (
+          // Editor-only hint; never shown in the gallery preview or the bake.
           <span style={{ fontStyle: "italic", opacity: 0.55 }}>
             Rules text appears here.
           </span>
-        )}
+        ) : null}
         {face.flavorText?.trim() ? (
           <div
             style={{
@@ -535,7 +540,14 @@ function BandSlot({
         zIndex: 20,
         display: "flex",
         alignItems: "center",
-        justifyContent: "space-between",
+        // "center"/"end" align the single element (e.g. a centered token title);
+        // the default spreads the name + cost / type + symbol to the edges.
+        justifyContent:
+          slot.align === "center"
+            ? "center"
+            : slot.align === "end"
+              ? "flex-end"
+              : "space-between",
         gap: "2cqw",
         fontFamily: CARD_FONT,
         fontSize: cqw(slot.sizePct),

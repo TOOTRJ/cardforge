@@ -112,6 +112,9 @@ export type FrameProfile = {
   /** Set-symbol size (fraction of card width), right-aligned in the type band.
    *  Defaults to `type.sizePct`. */
   symbolSizePct?: number;
+  /** When true, never render the mana cost (tokens/emblems have none, and the
+   *  frame's title bar has no cost area). */
+  hideCost?: boolean;
 };
 
 /** Resolve a per-color asset path from a template like "/frames/m15/pt/{color}.png". */
@@ -286,9 +289,62 @@ const M15PW: FrameProfile = {
   },
 };
 
+// M15 Token — art-forward token frame. A dark title bar (light, centered name,
+// no cost), a large arched art window (12–81%), a cream type pill at the bottom
+// (centered), and P/T over the art (no plate). Token abilities render over the
+// lower art on a dark scrim. The arched top of the window is covered by the
+// frame; the artSlot is the bounding box.
+const M15TOKEN: FrameProfile = {
+  label: "M15 Token",
+  hideCost: true,
+  artSlot: { topPct: 12.0, leftPct: 6.5, widthPct: 87, heightPct: 69.0 },
+  title: {
+    rect: { topPct: 4.6, leftPct: 9, widthPct: 82, heightPct: 6.4 },
+    sizePct: 0.05,
+    colorHex: INK_LIGHT,
+    weight: 600,
+    align: "center",
+    font: "display",
+    letterSpacingEm: 0.01,
+  },
+  type: {
+    rect: { topPct: 87.5, leftPct: 11, widthPct: 78, heightPct: 5.2 },
+    sizePct: 0.03,
+    colorHex: INK_DARK,
+    weight: 600,
+    align: "center",
+    font: "display",
+  },
+  rules: {
+    rect: { topPct: 60.5, leftPct: 12, widthPct: 76, heightPct: 12 },
+    sizePct: 0.028,
+    colorHex: INK_LIGHT,
+    vAlign: "center",
+    font: "body",
+    lineHeight: 1.28,
+    backdropHex: "rgba(10,8,6,0.5)",
+  },
+  footer: {
+    rect: { topPct: 94.0, leftPct: 10, widthPct: 80, heightPct: 3.0 },
+    sizePct: 0.016,
+    colorHex: INK_LIGHT,
+    uppercase: true,
+    letterSpacingEm: 0.05,
+    font: "display",
+  },
+  pt: {
+    rect: { topPct: 73.5, leftPct: 75, widthPct: 19, heightPct: 7.0 },
+    sizePct: 0.043,
+    colorHex: "#ffffff",
+    weight: 700,
+    shadowCss: OUTLINE_SHADOW,
+  },
+};
+
 const PROFILES: Record<FrameTemplate, FrameProfile> = {
   m15: M15,
   m15land: M15LAND,
+  m15token: M15TOKEN,
   m15pw: M15PW,
   agclassic: AGCLASSIC,
 };
