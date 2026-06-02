@@ -1267,49 +1267,26 @@ export function CardCreatorForm({
               </FieldGroup>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FieldGroup label="Rarity">
-                <Controller
-                  control={control}
-                  name="rarity"
-                  render={({ field }) => (
-                    <ChipGroup
-                      ariaLabel="Rarity"
-                      layout="grid-4"
-                      value={field.value}
-                      onChange={(next) => field.onChange(next)}
-                      options={RARITY_OPTIONS}
-                    />
-                  )}
-                />
-              </FieldGroup>
-
-              <FieldGroup
-                label="Template"
-                helper="Visual layout used when rendering."
-              >
-                <Controller
-                  control={control}
-                  name="template_id"
-                  render={({ field }) => (
-                    <select
-                      value={field.value}
-                      onChange={(event) => field.onChange(event.target.value)}
-                      className={selectClass(false)}
-                    >
-                      {templates.length === 0 ? (
-                        <option value="">No templates available</option>
-                      ) : null}
-                      {templates.map((template) => (
-                        <option key={template.id} value={template.id}>
-                          {template.name}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                />
-              </FieldGroup>
-            </div>
+            {/* Rarity. (The old "Template" select was removed: template_id is
+                a vestigial DB field — no renderer reads it; the visual layout is
+                driven entirely by the Frame picker, and stat visibility by card
+                type. template_id is still defaulted + persisted in form state for
+                schema compatibility, just no longer user-editable.) */}
+            <FieldGroup label="Rarity">
+              <Controller
+                control={control}
+                name="rarity"
+                render={({ field }) => (
+                  <ChipGroup
+                    ariaLabel="Rarity"
+                    layout="grid-4"
+                    value={field.value}
+                    onChange={(next) => field.onChange(next)}
+                    options={RARITY_OPTIONS}
+                  />
+                )}
+              />
+            </FieldGroup>
 
             <FieldGroup label="Color identity" helper="One or more.">
               <Controller
@@ -1822,19 +1799,31 @@ export function CardCreatorForm({
               </Button>
             ) : null}
             {isLastStep ? (
-              <Button type="submit" disabled={isSubmitting} size="lg">
-                {isSubmitting ? (
-                  <>
-                    <Wand2 className="h-4 w-4 animate-pulse" aria-hidden />
-                    Saving…
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4" aria-hidden />
-                    {mode === "edit" ? "Save changes" : "Save card"}
-                  </>
-                )}
-              </Button>
+              !userId ? (
+                // Guests (e.g. the /preview creator) can't save — the server
+                // action rejects unauthenticated writes. Send them to sign in
+                // rather than showing a Save button that bounces with an error.
+                <Button asChild size="lg">
+                  <Link href="/login?redirectTo=/create">
+                    <Lock className="h-4 w-4" aria-hidden />
+                    Sign in to save
+                  </Link>
+                </Button>
+              ) : (
+                <Button type="submit" disabled={isSubmitting} size="lg">
+                  {isSubmitting ? (
+                    <>
+                      <Wand2 className="h-4 w-4 animate-pulse" aria-hidden />
+                      Saving…
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4" aria-hidden />
+                      {mode === "edit" ? "Save changes" : "Save card"}
+                    </>
+                  )}
+                </Button>
+              )
             ) : (
               <Button type="button" size="lg" onClick={goNext}>
                 Next
@@ -1943,14 +1932,6 @@ function inputClass(hasError: boolean): string {
 function textareaClass(hasError: boolean): string {
   return cn(
     "w-full rounded-md border bg-background/60 px-3 py-2 text-sm text-foreground placeholder:text-subtle",
-    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-    hasError ? "border-danger/60" : "border-border",
-  );
-}
-
-function selectClass(hasError: boolean): string {
-  return cn(
-    "h-10 w-full rounded-md border bg-background/60 px-3 text-sm text-foreground",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
     hasError ? "border-danger/60" : "border-border",
   );
