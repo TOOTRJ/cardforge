@@ -134,7 +134,8 @@ function CardImage({
   const frameDataUrl = getFrameDataUrl(template, colorKey);
 
   const title = (card.title?.trim() || "Untitled Card").slice(0, 80);
-  const showCost = card.cardType !== "land" && Boolean(card.cost?.trim());
+  const showCost =
+    !layout.hideCost && card.cardType !== "land" && Boolean(card.cost?.trim());
   const typeLine = buildTypeLine(card);
 
   // Same gating as the preview (shared helpers) — and only when the frame
@@ -158,6 +159,9 @@ function CardImage({
 
   const rulesSizePct =
     RULES_SIZE_PCT_BY_TIER[rulesFontTier(card.rulesText, card.flavorText)];
+  const hasRulesContent = Boolean(
+    card.rulesText?.trim() || card.flavorText?.trim(),
+  );
 
   const artW = Math.round((layout.artSlot.widthPct / 100) * width);
   const artH = Math.round((layout.artSlot.heightPct / 100) * height);
@@ -289,7 +293,7 @@ function CardImage({
           color: layout.rules.colorHex,
           textAlign: "center",
           zIndex: 20,
-          ...(layout.rules.backdropHex
+          ...(layout.rules.backdropHex && hasRulesContent
             ? {
                 background: layout.rules.backdropHex,
                 borderRadius: Math.round(width * 0.015),
@@ -301,11 +305,7 @@ function CardImage({
           <div style={{ display: "flex", whiteSpace: "pre-wrap" }}>
             {bakeText(card.rulesText)}
           </div>
-        ) : (
-          <span style={{ fontStyle: "italic", opacity: 0.5 }}>
-            Rules text appears here.
-          </span>
-        )}
+        ) : null}
         {card.flavorText?.trim() ? (
           <div
             style={{
@@ -424,7 +424,14 @@ function Band({
         ...slotBox(slot.rect),
         display: "flex",
         alignItems: "center",
-        justifyContent: "space-between",
+        // "center"/"end" align the single element (e.g. a centered token title);
+        // the default spreads the name + cost / type + symbol to the edges.
+        justifyContent:
+          slot.align === "center"
+            ? "center"
+            : slot.align === "end"
+              ? "flex-end"
+              : "space-between",
         fontFamily: DISPLAY_FONT,
         fontSize: fpx(slot.sizePct, cardWidth),
         fontWeight: slot.weight ?? 600,

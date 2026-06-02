@@ -178,6 +178,7 @@ export type CardFinish = (typeof CARD_FINISH_VALUES)[number];
 //
 // "m15"       — Magic 2015-era modern frame (the default).
 // "m15land"   — M15 land frame (stone border, color-tinted text box, no cost).
+// "m15token"  — M15 token frame (art-forward; dark title bar, no cost).
 // "m15pw"     — M15 planeswalker frame (two art cut-outs + loyalty badge).
 // "agclassic" — 1993 Alpha/Beta frame.
 //
@@ -186,6 +187,7 @@ export type CardFinish = (typeof CARD_FINISH_VALUES)[number];
 export const FRAME_TEMPLATE_VALUES = [
   "m15",
   "m15land",
+  "m15token",
   "m15pw",
   "agclassic",
 ] as const;
@@ -199,6 +201,7 @@ export const DEFAULT_FRAME_TEMPLATE: FrameTemplate = "m15";
 export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   m15: "M15 (modern)",
   m15land: "M15 Land",
+  m15token: "M15 Token",
   m15pw: "M15 Planeswalker",
   agclassic: "Alpha (1993)",
 };
