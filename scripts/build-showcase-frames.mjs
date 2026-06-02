@@ -89,7 +89,7 @@ async function convert(frame, color) {
   const out = path.join("public/frames", frame.name);
   fs.mkdirSync(out, { recursive: true });
   await sharp(data, { raw: { width: W, height: H, channels: ch } })
-    .png()
+    .png({ compressionLevel: 9, effort: 10 })
     .toFile(path.join(out, `${color}.png`));
   return cut;
 }
