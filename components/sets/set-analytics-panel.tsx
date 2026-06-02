@@ -4,7 +4,6 @@ import {
   CARD_TYPE_VALUES,
   COLOR_IDENTITY_VALUES,
   RARITY_VALUES,
-  type CardType,
   type ColorIdentity,
   type Rarity,
 } from "@/types/card";

@@ -18,3 +18,14 @@ export function rulesFontTier(
   if (total <= 440) return 2;
   return 3;
 }
+
+// Rules-box base font size as a fraction of card WIDTH, per length tier. Shared
+// by the live preview (× card width via `cqw` container units) and the Satori
+// bake (× card width in px) so a given amount of text renders at the same size
+// in both. One table = one source of truth, no drift between editor and export.
+export const RULES_SIZE_PCT_BY_TIER: Record<RulesFontTier, number> = {
+  0: 0.032,
+  1: 0.028,
+  2: 0.024,
+  3: 0.0205,
+};

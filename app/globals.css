@@ -8,6 +8,21 @@
 /* Keyrune — same author, set symbols. `ss ss-{setcode}` classes. */
 @import "keyrune/css/keyrune.css";
 
+/* MPlantin — the real MTG body-text font (ships with mana-font, SIL OFL 1.1).
+   Loaded as a web font so the live card preview uses the exact same typeface
+   the Satori bake (lib/render/card-image.tsx) renders with, making the editor
+   preview and the exported PNG pixel-identical. Copied to /public/fonts so the
+   browser can fetch it (node_modules isn't web-served). */
+@font-face {
+  font-family: "MPlantin";
+  src:
+    url("/fonts/mplantin.woff") format("woff"),
+    url("/fonts/mplantin.ttf") format("truetype");
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme {
   /* ── Core surfaces ────────────────────────────────────────────── */
   --color-background: oklch(0.12 0.014 275);

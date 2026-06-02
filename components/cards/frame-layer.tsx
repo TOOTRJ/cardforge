@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { DEFAULT_FRAME_TEMPLATE } from "@/types/card";
 import type { ColorIdentity, FrameTemplate } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -43,24 +44,34 @@ export function frameAssetPath(
 }
 
 export function FrameLayer({
-  template = "regular",
+  template = DEFAULT_FRAME_TEMPLATE,
   colorIdentity,
   className,
+  zIndex,
 }: {
   template?: FrameTemplate;
   colorIdentity: ColorIdentity[] | undefined;
   className?: string;
+  /** Optional inline z-index override. Templates that render a separate
+   *  art layer beneath the frame (cut-out slot) pass a positive value so
+   *  the frame sits on top of the art. Defaults to the base z-0 layer. */
+  zIndex?: number;
 }) {
   const colorKey = pickFrameColorKey(colorIdentity);
   const src = frameAssetPath(template, colorKey);
   return (
     <div
       aria-hidden
-      className={cn("pointer-events-none absolute inset-0 z-0", className)}
+      className={cn(
+        "pointer-events-none absolute inset-0",
+        zIndex === undefined ? "z-0" : "",
+        className,
+      )}
       style={{
         backgroundImage: `url(${src})`,
         backgroundSize: "100% 100%",
         backgroundRepeat: "no-repeat",
+        ...(zIndex === undefined ? {} : { zIndex }),
       }}
     />
   );

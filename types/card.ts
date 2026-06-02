@@ -169,13 +169,39 @@ export const CARD_FINISH_VALUES = [
 ] as const;
 export type CardFinish = (typeof CARD_FINISH_VALUES)[number];
 
-// Frame templates correspond to PNG assets in public/frames/{template}/{color}.png.
-// Phase 2 ships one template ("regular") with seven color variants; future
-// phases can add "creature", "saga", "planeswalker", etc. as additional PNG
-// folders. New entries here only need PNGs at the matching path — the
-// FrameLayer + Satori renderer pick them up automatically.
-export const FRAME_TEMPLATE_VALUES = ["regular"] as const;
+// Frame templates correspond to PNG assets in public/frames/{template}/{color}.png
+// plus a layout profile in lib/cards/template-layout.ts. Every template is an
+// MSE-derived MTG frame converted from the open-source Full-Magic-Pack; the
+// 375×523 MSE base is upscaled to 1500×2100 with the art window cut out to
+// alpha=0 so the user's art renders behind the frame. All templates share the
+// 7-color contract (w/u/b/r/g/c/m).
+//
+// "m15"       — Magic 2015-era modern frame (the default).
+// "m15land"   — M15 land frame (stone border, color-tinted text box, no cost).
+// "m15pw"     — M15 planeswalker frame (two art cut-outs + loyalty badge).
+// "agclassic" — 1993 Alpha/Beta frame.
+//
+// Adding a frame: drop the PNGs, add a value here + a label below, and add one
+// profile entry in lib/cards/template-layout.ts. No renderer changes needed.
+export const FRAME_TEMPLATE_VALUES = [
+  "m15",
+  "m15land",
+  "m15pw",
+  "agclassic",
+] as const;
 export type FrameTemplate = (typeof FRAME_TEMPLATE_VALUES)[number];
+
+// The frame used when a card has no explicit template (new cards + legacy rows
+// that predate the picker, including the retired "regular" placeholder).
+export const DEFAULT_FRAME_TEMPLATE: FrameTemplate = "m15";
+
+// Display labels for the template picker in the creator form.
+export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
+  m15: "M15 (modern)",
+  m15land: "M15 Land",
+  m15pw: "M15 Planeswalker",
+  agclassic: "Alpha (1993)",
+};
 
 export type FrameStyle = {
   /** Optional override of the template's default visual treatment. */

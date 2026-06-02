@@ -3,6 +3,7 @@ import {
   CARD_FINISH_VALUES,
   CARD_TYPE_VALUES,
   COLOR_IDENTITY_VALUES,
+  FRAME_TEMPLATE_VALUES,
   RARITY_VALUES,
   VISIBILITY_VALUES,
 } from "@/types/card";
@@ -152,18 +153,12 @@ export const cardManaValueSchema = z
   .max(99, "Mana value seems out of range.")
   .optional();
 
-export const cardOracleTextSchema = optionalEmptyString(
-  z
-    .string()
-    .trim()
-    .max(4000, "Oracle text must be 4000 characters or fewer."),
-);
-
 export const frameStyleSchema = z
   .object({
     border: z.enum(["thin", "thick", "ornate"]).optional(),
     accent: z.enum(["warm", "cool", "neutral"]).optional(),
     finish: z.enum(CARD_FINISH_VALUES).optional(),
+    template: z.enum(FRAME_TEMPLATE_VALUES).optional(),
   })
   .strict()
   .default({});
@@ -237,9 +232,8 @@ const baseCardSchema = z.object({
   // imported from Scryfall via the import dialog. UUID-shaped per
   // Scryfall's id format. `null` clears; `undefined` leaves alone.
   source_scryfall_id: uuidSchema.nullable().optional(),
-  // Scryfall parity columns (Phase v2). All optional; server actions write
-  // oracle_text alongside rules_text to keep both in sync.
-  oracle_text: cardOracleTextSchema,
+  // Scryfall parity columns (Phase v2), accepted for forward-compatibility
+  // with importer payloads. Optional; not yet persisted by the card actions.
   mana_value: cardManaValueSchema,
   layout: cardLayoutSchema.optional(),
 });

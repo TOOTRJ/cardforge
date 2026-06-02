@@ -12,6 +12,11 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Claude Code worktrees hold full stale snapshots of the repo (gitignored);
+    // linting them double-counts every file and floods the report with
+    // thousands of phantom problems. Coverage output is generated, not source.
+    ".claude/**",
+    "coverage/**",
   ]),
 ]);
 

@@ -8,6 +8,7 @@ import {
   type ArtPosition,
   type CardType,
   type ColorIdentity,
+  type FrameStyle,
   type Rarity,
 } from "@/types/card";
 import { renderCardImage, type RenderPreset } from "@/lib/render/card-image";
@@ -88,7 +89,10 @@ export async function GET(
     artistCredit: card.artist_credit,
     artUrl: card.art_url,
     artPosition: (card.art_position as ArtPosition) ?? {},
-    frameStyle: {},
+    // Pass the persisted frame style through so downloaded PNGs use the card's
+    // actual frame template + finish (previously hard-coded to {}, which forced
+    // every download back to the default frame).
+    frameStyle: (card.frame_style as FrameStyle) ?? {},
   };
 
   let pngBytes: Uint8Array;

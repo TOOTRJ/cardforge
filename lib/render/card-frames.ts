@@ -2,59 +2,71 @@ import "server-only";
 
 import fs from "node:fs";
 import path from "node:path";
-import type { FrameTemplate } from "@/types/card";
 
 // ---------------------------------------------------------------------------
-// Server-side loader for the placeholder frame PNGs that ship in
-// public/frames/{template}/{color}.png. Mirrors the live preview's
-// FrameLayer component — same file paths, same color resolution rules —
-// so the baked PNG and the editor preview match.
+// Server-side loader for the frame PNGs in public/frames/<template>/<color>.png
+// and the painted P/T plates in public/frames/<template>/pt/<color>.png.
 //
-// Satori (next/og) needs an inline source for backgrounds; it can't refer
-// to a public/ URL the way the browser can. We read the PNG bytes at
-// module load and expose them as a data: URL so the renderer JSX can pass
-// them directly to an <img src=...>.
+// Satori (next/og) can't reference a public/ URL the way the browser can, so
+// we read the PNG bytes and hand the renderer a data: URL. Everything is read
+// lazily and memoized per absolute path — the first render of a given
+// frame/color pays one filesystem read; every render after is a Map hit. This
+// is generic over the template name, so adding a new MSE frame needs no change
+// here: just drop the PNGs and the bake picks them up.
 // ---------------------------------------------------------------------------
 
 const FRAME_COLOR_KEYS = ["w", "u", "b", "r", "g", "c", "m"] as const;
-type FrameColorKey = (typeof FRAME_COLOR_KEYS)[number];
+const DEFAULT_TEMPLATE = "m15";
 
-function loadFrame(template: FrameTemplate, color: FrameColorKey): string {
-  const filePath = path.join(
-    process.cwd(),
-    "public",
-    "frames",
-    template,
-    `${color}.png`,
-  );
-  const bytes = fs.readFileSync(filePath);
-  return `data:image/png;base64,${bytes.toString("base64")}`;
+const CACHE = new Map<string, string | null>();
+
+function loadDataUrl(absPath: string): string | null {
+  const cached = CACHE.get(absPath);
+  if (cached !== undefined) return cached;
+  let value: string | null = null;
+  try {
+    if (fs.existsSync(absPath)) {
+      const bytes = fs.readFileSync(absPath);
+      value = `data:image/png;base64,${bytes.toString("base64")}`;
+    }
+  } catch {
+    value = null;
+  }
+  CACHE.set(absPath, value);
+  return value;
 }
 
-// Eagerly load all 7 frame variants at module import time. ~700 KB total —
-// well under any serverless function memory budget, and reading once at
-// cold start is cheaper than re-reading on every render.
-const REGULAR_FRAMES: Record<FrameColorKey, string> = {
-  w: loadFrame("regular", "w"),
-  u: loadFrame("regular", "u"),
-  b: loadFrame("regular", "b"),
-  r: loadFrame("regular", "r"),
-  g: loadFrame("regular", "g"),
-  c: loadFrame("regular", "c"),
-  m: loadFrame("regular", "m"),
-};
-
-const FRAMES_BY_TEMPLATE: Record<FrameTemplate, Record<FrameColorKey, string>> = {
-  regular: REGULAR_FRAMES,
-};
-
-export function getFrameDataUrl(
-  template: FrameTemplate,
-  colorKey: string,
-): string {
-  const set = FRAMES_BY_TEMPLATE[template] ?? FRAMES_BY_TEMPLATE.regular;
-  const key = (FRAME_COLOR_KEYS as readonly string[]).includes(colorKey)
-    ? (colorKey as FrameColorKey)
+function normalizeColor(colorKey: string): string {
+  return (FRAME_COLOR_KEYS as readonly string[]).includes(colorKey)
+    ? colorKey
     : "c";
-  return set[key];
 }
+
+function framePath(template: string, colorKey: string): string {
+  return path.join(process.cwd(), "public", "frames", template, `${colorKey}.png`);
+}
+
+/** Frame PNG as a data URL. Falls back to the default template, then to a 1×1
+ *  transparent pixel, so an unknown/legacy template never throws mid-render. */
+export function getFrameDataUrl(template: string, colorKey: string): string {
+  const key = normalizeColor(colorKey);
+  return (
+    loadDataUrl(framePath(template, key)) ??
+    loadDataUrl(framePath(DEFAULT_TEMPLATE, key)) ??
+    TRANSPARENT_PIXEL
+  );
+}
+
+/** Resolve a per-color plate path like "/frames/m15/pt/{color}.png" to a data
+ *  URL, or null when the asset doesn't exist (callers skip the plate). */
+export function getPlateDataUrlForPath(
+  pathTemplate: string,
+  colorKey: string,
+): string | null {
+  const key = normalizeColor(colorKey);
+  const resolved = pathTemplate.replace("{color}", key).replace(/^\//, "");
+  return loadDataUrl(path.join(process.cwd(), "public", resolved));
+}
+
+const TRANSPARENT_PIXEL =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M8AAAMBAQDJ/pLvAAAAAElFTkSuQmCC";

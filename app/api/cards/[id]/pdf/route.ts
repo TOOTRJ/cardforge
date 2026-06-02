@@ -8,6 +8,7 @@ import {
   type ArtPosition,
   type CardType,
   type ColorIdentity,
+  type FrameStyle,
   type Rarity,
 } from "@/types/card";
 import { renderCardImage } from "@/lib/render/card-image";
@@ -117,7 +118,9 @@ export async function GET(
     artistCredit: card.artist_credit,
     artUrl: card.art_url,
     artPosition: (card.art_position as ArtPosition) ?? {},
-    frameStyle: {},
+    // Pass the persisted frame style through so printed PDFs use the card's
+    // actual frame template + finish (previously hard-coded to {}).
+    frameStyle: (card.frame_style as FrameStyle) ?? {},
   };
 
   // Render PNG at HD quality (1500×2100) for crisp print output.

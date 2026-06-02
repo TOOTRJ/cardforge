@@ -44,15 +44,15 @@ describe("parseTypeLine", () => {
     });
   });
 
-  it("collapses Instant/Sorcery to our 'spell' enum", () => {
+  it("maps Instant/Sorcery to their own card types", () => {
     expect(parseTypeLine("Instant")).toEqual({
       supertype: undefined,
-      card_type: "spell",
+      card_type: "instant",
       subtypes_text: undefined,
     });
     expect(parseTypeLine("Sorcery")).toEqual({
       supertype: undefined,
-      card_type: "spell",
+      card_type: "sorcery",
       subtypes_text: undefined,
     });
   });
@@ -111,7 +111,7 @@ describe("mapScryfallToFormPatch", () => {
     const patch = mapScryfallToFormPatch(card);
     expect(patch.title).toBe("Lightning Bolt");
     expect(patch.cost).toBe("{R}");
-    expect(patch.card_type).toBe("spell");
+    expect(patch.card_type).toBe("instant");
     expect(patch.rarity).toBe("common");
     expect(patch.color_identity).toEqual(["red"]);
     expect(patch.rules_text).toBe(
