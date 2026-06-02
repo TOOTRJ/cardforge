@@ -150,6 +150,27 @@ export type FrameProfile = {
      *  adventure title's sizePct. */
     costSizePct?: number;
   };
+  /** A second face/half drawn from the card's BACK-FACE content, optionally
+   *  ROTATED — the multi-panel frames where two cards share one piece of
+   *  cardboard. Each slot is positioned in normal card coordinates and then
+   *  rotated `rotation`° in place (matching MSE's per-element `angle`):
+   *    • Flip (180°): the upside-down bottom creature; shares the front art.
+   *    • Aftermath (90°): the sideways bottom spell.
+   *    • Split (0°, landscape): the right half; brings its own `artSlot`.
+   *  Both renderers draw it inline (the DFC flip is suppressed). */
+  secondFace?: {
+    rotation: 0 | 90 | 180;
+    title: TextSlot;
+    type: TextSlot;
+    rules: TextSlot;
+    /** Mana-cost size (fraction of card width); when set, the title band
+     *  renders name + cost (split/aftermath). Omit for flip (no second cost). */
+    costSizePct?: number;
+    /** P/T for a creature second face (flip). */
+    pt?: StatSlot;
+    /** A second art window (split); omit when the face shares the front art. */
+    artSlot?: Rect;
+  };
 };
 
 /** Resolve a per-color asset path from a template like "/frames/m15/pt/{color}.png". */
@@ -581,6 +602,77 @@ const ADVENTURE: FrameProfile = {
   },
 };
 
+// Flip — the M15 Kamigawa flip frame. ONE card, two creatures: the top reads
+// normally (name → small text box → type bar) and the bottom is printed
+// UPSIDE-DOWN — its name / type / rules / P-T come from the back-face content
+// and render rotated 180° in place (matching MSE's per-element `angle: 180`).
+// They share the single middle art window. No painted P/T plate (the value sits
+// on the cream type bar → dark ink). Convert via scripts/build-flip-frame.mjs.
+// Geometry is the MSE 375×523 spec / measured plates, in percent.
+const FLIP: FrameProfile = {
+  label: "Flip",
+  artSlot: { topPct: 31.0, leftPct: 7.7, widthPct: 84.3, heightPct: 35.2 },
+  title: {
+    rect: { topPct: 5.7, leftPct: 8.5, widthPct: 82, heightPct: 4.4 },
+    sizePct: 0.043,
+    colorHex: INK_DARK,
+    weight: 600,
+    font: "display",
+  },
+  type: {
+    rect: { topPct: 25.0, leftPct: 8.5, widthPct: 68, heightPct: 3.8 },
+    sizePct: 0.029,
+    colorHex: INK_DARK_SOFT,
+    weight: 600,
+    font: "display",
+  },
+  rules: {
+    rect: { topPct: 11.3, leftPct: 7.7, widthPct: 84, heightPct: 12.5 },
+    sizePct: 0.026,
+    colorHex: INK_DARK,
+    vAlign: "center",
+    font: "body",
+    lineHeight: 1.22,
+  },
+  pt: {
+    rect: { topPct: 24.0, leftPct: 80.5, widthPct: 14, heightPct: 5.6 },
+    sizePct: 0.036,
+    colorHex: INK_DARK,
+    weight: 700,
+  },
+  secondFace: {
+    rotation: 180,
+    title: {
+      rect: { topPct: 89.3, leftPct: 9.5, widthPct: 82, heightPct: 4.4 },
+      sizePct: 0.043,
+      colorHex: INK_DARK,
+      weight: 600,
+      font: "display",
+    },
+    type: {
+      rect: { topPct: 69.4, leftPct: 23.5, widthPct: 68, heightPct: 3.8 },
+      sizePct: 0.029,
+      colorHex: INK_DARK_SOFT,
+      weight: 600,
+      font: "display",
+    },
+    rules: {
+      rect: { topPct: 77.5, leftPct: 8.3, widthPct: 84, heightPct: 10.5 },
+      sizePct: 0.026,
+      colorHex: INK_DARK,
+      vAlign: "center",
+      font: "body",
+      lineHeight: 1.22,
+    },
+    pt: {
+      rect: { topPct: 69.0, leftPct: 5.5, widthPct: 14, heightPct: 5.6 },
+      sizePct: 0.036,
+      colorHex: INK_DARK,
+      weight: 700,
+    },
+  },
+};
+
 const PROFILES: Record<FrameTemplate, FrameProfile> = {
   m15: M15,
   m15land: M15LAND,
@@ -594,6 +686,7 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   battle: BATTLE,
   saga: SAGA,
   adventure: ADVENTURE,
+  flip: FLIP,
 };
 
 /** Resolve a frame profile, defaulting to M15 for unknown/legacy templates

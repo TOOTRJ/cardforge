@@ -38,6 +38,10 @@ describe("visibleSteps", () => {
     expect(keys({ ...base, hasBackFace: true })).toContain("extra");
   });
 
+  it("the Flip frame always adds the extra step (intrinsic second face)", () => {
+    expect(keys({ ...base, template: "flip" })).toContain("extra");
+  });
+
   it("an unknown/legacy template still yields the base steps (no crash)", () => {
     expect(keys({ ...base, template: "regular" })).toEqual([
       "frame",
@@ -62,6 +66,10 @@ describe("stepLabel", () => {
 
   it("labels the extra step 'Back face' on a normal DFC", () => {
     expect(stepLabel(extra, { ...base, hasBackFace: true })).toBe("Back face");
+  });
+
+  it("labels the extra step 'Flip side' on the Flip frame", () => {
+    expect(stepLabel(extra, { ...base, template: "flip" })).toBe("Flip side");
   });
 });
 

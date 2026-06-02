@@ -212,7 +212,13 @@ export function CardPreview({
           rulesText: backFace.rules_text ?? null,
         }
       : null;
-  const showFlip = Boolean(backFaceData) && !isAdventure;
+  // Multi-panel frames (flip / split / aftermath) also render their back-face
+  // content inline (rotated), not as a flippable face.
+  const secondFaceData: FaceData | null = layout.secondFace
+    ? backFaceData
+    : null;
+  const showFlip =
+    Boolean(backFaceData) && !isAdventure && !layout.secondFace;
 
   const [internalFace, setInternalFace] = useState<"front" | "back">("front");
   const currentFace = face ?? internalFace;
@@ -277,7 +283,12 @@ export function CardPreview({
           </div>
         </div>
       ) : (
-        <CardFace face={frontFace} adventure={adventureData} {...faceProps} />
+        <CardFace
+          face={frontFace}
+          adventure={adventureData}
+          secondFace={secondFaceData}
+          {...faceProps}
+        />
       )}
 
       {showFlip ? (
@@ -320,6 +331,7 @@ function CardFace({
   finish,
   staticInEditor,
   adventure = null,
+  secondFace = null,
 }: {
   face: FaceData;
   template: FrameTemplate;
@@ -330,6 +342,8 @@ function CardFace({
   staticInEditor: boolean;
   /** Adventure spell shown on the left storybook page (Adventure frames only). */
   adventure?: AdventureData | null;
+  /** Back-face content for a rotated second face (flip / split / aftermath). */
+  secondFace?: FaceData | null;
 }) {
   const colorKey = pickFrameColorKey(colorIdentity);
   const safeTitle = face.title?.trim() || "Untitled Card";
@@ -503,6 +517,11 @@ function CardFace({
           data={adventure}
           staticInEditor={staticInEditor}
         />
+      ) : null}
+
+      {/* Second face — the rotated bottom/right card (flip / split / aftermath). */}
+      {layout.secondFace && secondFace ? (
+        <SecondFacePanel slot={layout.secondFace} data={secondFace} />
       ) : null}
 
       {/* Footer — artist credit + brand. */}
@@ -824,6 +843,116 @@ function AdventurePanel({
           </span>
         ) : null}
       </div>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// SecondFacePanel — the back-face content of a multi-panel frame, drawn inline
+// and ROTATED in place (flip 180° / aftermath 90°). Each slot sits at its card
+// coordinates; the transform spins the content without moving the box, matching
+// how MSE prints a second card on the same piece of cardboard.
+// ---------------------------------------------------------------------------
+
+function SecondFacePanel({
+  slot,
+  data,
+}: {
+  slot: NonNullable<FrameProfile["secondFace"]>;
+  data: FaceData;
+}) {
+  const rot = `rotate(${slot.rotation}deg)`;
+  const name = data.title?.trim() || "Untitled";
+  const typeLine = buildTypeLine({
+    supertype: data.supertype,
+    cardType: data.cardType,
+    subtypes: data.subtypes,
+  });
+  const showCost = Boolean(slot.costSizePct) && Boolean(data.cost?.trim());
+  const showPT = Boolean(slot.pt) && Boolean(data.power || data.toughness);
+  return (
+    <>
+      <div
+        style={{
+          ...rectStyle(slot.title.rect),
+          zIndex: 21,
+          transform: rot,
+          transformOrigin: "center",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: showCost ? "space-between" : "flex-start",
+          gap: "2cqw",
+          fontFamily: CARD_FONT,
+          fontSize: cqw(slot.title.sizePct),
+          fontWeight: slot.title.weight ?? 600,
+          color: slot.title.colorHex,
+        }}
+      >
+        <span style={ELLIPSIS} title={name}>
+          {name}
+        </span>
+        {showCost ? <ManaCostGlyphs cost={data.cost} size="sm" /> : null}
+      </div>
+      <div
+        style={{
+          ...rectStyle(slot.type.rect),
+          zIndex: 21,
+          transform: rot,
+          transformOrigin: "center",
+          display: "flex",
+          alignItems: "center",
+          fontFamily: CARD_FONT,
+          fontSize: cqw(slot.type.sizePct),
+          fontWeight: slot.type.weight ?? 600,
+          color: slot.type.colorHex,
+        }}
+      >
+        <span style={ELLIPSIS}>{typeLine}</span>
+      </div>
+      <div
+        style={{
+          ...rectStyle(slot.rules.rect),
+          zIndex: 21,
+          transform: rot,
+          transformOrigin: "center",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          overflow: "hidden",
+          padding: "1cqw 1.5cqw",
+          fontFamily: CARD_FONT,
+          fontSize: cqw(slot.rules.sizePct),
+          lineHeight: slot.rules.lineHeight ?? 1.25,
+          color: slot.rules.colorHex,
+          textAlign: "center",
+        }}
+      >
+        {data.rulesText?.trim() ? (
+          <div style={{ whiteSpace: "pre-line" }}>
+            {renderRulesText(data.rulesText)}
+          </div>
+        ) : null}
+      </div>
+      {showPT && slot.pt ? (
+        <div
+          style={{
+            ...rectStyle(slot.pt.rect),
+            zIndex: 21,
+            transform: rot,
+            transformOrigin: "center",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontFamily: CARD_FONT,
+            fontSize: cqw(slot.pt.sizePct),
+            fontWeight: slot.pt.weight ?? 700,
+            color: slot.pt.colorHex,
+            ...(slot.pt.shadowCss ? { textShadow: slot.pt.shadowCss } : {}),
+          }}
+        >
+          {`${data.power ?? "—"}/${data.toughness ?? "—"}`}
+        </div>
+      ) : null}
     </>
   );
 }

@@ -50,6 +50,17 @@ export function isAdventureFrame(
   return getFrameProfile(normalizeFrameTemplate(template)).adventure != null;
 }
 
+/** True when the frame has an INTRINSIC second face drawn from the back-face
+ *  content (Adventure's storybook page, or a flip/split/aftermath rotated face).
+ *  Such frames always show the back-face/extra step — the second face isn't
+ *  optional, it's part of the frame. */
+export function hasInlineBackFace(
+  template: FrameTemplate | string | undefined,
+): boolean {
+  const p = getFrameProfile(normalizeFrameTemplate(template));
+  return p.adventure != null || p.secondFace != null;
+}
+
 /** True when the frame paints no mana cost (tokens, some lands), so the cost
  *  field should be hidden. */
 export function hidesCost(
@@ -132,7 +143,7 @@ const STEP_DEFS: StepDef[] = [
     label: "Back face",
     description: "The second face",
     fields: ["has_back_face", "back_face"],
-    isVisible: (ctx) => isAdventureFrame(ctx.template) || ctx.hasBackFace,
+    isVisible: (ctx) => hasInlineBackFace(ctx.template) || ctx.hasBackFace,
   },
   {
     key: "publish",
@@ -156,7 +167,9 @@ export function visibleSteps(ctx: StepContext): StepDef[] {
  *  Back face). */
 export function stepLabel(step: StepDef, ctx: StepContext): string {
   if (step.key === "extra") {
-    return isAdventureFrame(ctx.template) ? "Adventure" : "Back face";
+    if (isAdventureFrame(ctx.template)) return "Adventure";
+    if (normalizeFrameTemplate(ctx.template) === "flip") return "Flip side";
+    return "Back face";
   }
   return step.label;
 }

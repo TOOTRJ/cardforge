@@ -342,6 +342,15 @@ function CardImage({
           })
         : null}
 
+      {/* Second face — the rotated bottom/right card (flip/split/aftermath). */}
+      {layout.secondFace && card.backFace
+        ? SecondFaceBake({
+            slot: layout.secondFace,
+            back: card.backFace,
+            cardWidth: width,
+          })
+        : null}
+
       {/* Footer — artist + brand. */}
       {layout.footer ? (
         <div
@@ -756,6 +765,129 @@ function AdventureBake({
           </div>
         ) : null}
       </div>
+    </div>
+  );
+}
+
+// SecondFaceBake — Satori-side rotated second face (mirrors SecondFacePanel).
+// Each slot is positioned in card coords then rotated in place; Satori honors
+// transform + transformOrigin, so flip/aftermath bake identically to preview.
+function SecondFaceBake({
+  slot,
+  back,
+  cardWidth,
+}: {
+  slot: NonNullable<FrameProfile["secondFace"]>;
+  back: CardBackFace;
+  cardWidth: number;
+}) {
+  const name = back.title?.trim() || "Untitled";
+  const typeLine = buildTypeLine({
+    supertype: back.supertype,
+    cardType: back.card_type ?? null,
+    subtypes: back.subtypes,
+  });
+  const rot = `rotate(${slot.rotation}deg)`;
+  const showCost = Boolean(slot.costSizePct) && Boolean(back.cost?.trim());
+  const showPT = Boolean(slot.pt) && Boolean(back.power || back.toughness);
+  return (
+    <div
+      style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        zIndex: 20,
+      }}
+    >
+      <div
+        style={{
+          ...slotBox(slot.title.rect),
+          display: "flex",
+          alignItems: "center",
+          justifyContent: showCost ? "space-between" : "flex-start",
+          transform: rot,
+          transformOrigin: "50% 50%",
+          fontFamily: DISPLAY_FONT,
+          fontSize: fpx(slot.title.sizePct, cardWidth),
+          fontWeight: slot.title.weight ?? 600,
+          color: slot.title.colorHex,
+          zIndex: 20,
+        }}
+      >
+        <span style={ELLIPSIS}>{name}</span>
+        {showCost && back.cost ? (
+          <CostGlyphs
+            cost={back.cost}
+            fontSize={fpx(slot.costSizePct ?? slot.title.sizePct, cardWidth)}
+          />
+        ) : (
+          <span style={{ display: "flex" }} />
+        )}
+      </div>
+      <div
+        style={{
+          ...slotBox(slot.type.rect),
+          display: "flex",
+          alignItems: "center",
+          transform: rot,
+          transformOrigin: "50% 50%",
+          fontFamily: DISPLAY_FONT,
+          fontSize: fpx(slot.type.sizePct, cardWidth),
+          fontWeight: slot.type.weight ?? 600,
+          color: slot.type.colorHex,
+          zIndex: 20,
+        }}
+      >
+        <span style={ELLIPSIS}>{typeLine}</span>
+      </div>
+      <div
+        style={{
+          ...slotBox(slot.rules.rect),
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          overflow: "hidden",
+          padding: `${Math.round(cardWidth * 0.008)}px ${Math.round(cardWidth * 0.012)}px`,
+          transform: rot,
+          transformOrigin: "50% 50%",
+          fontFamily: DISPLAY_FONT,
+          fontSize: fpx(slot.rules.sizePct, cardWidth),
+          lineHeight: slot.rules.lineHeight ?? 1.25,
+          color: slot.rules.colorHex,
+          textAlign: "center",
+          zIndex: 20,
+        }}
+      >
+        {back.rules_text?.trim() ? (
+          <div style={{ display: "flex", whiteSpace: "pre-wrap" }}>
+            {bakeText(back.rules_text)}
+          </div>
+        ) : null}
+      </div>
+      {showPT && slot.pt ? (
+        <div
+          style={{
+            ...slotBox(slot.pt.rect),
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            transform: rot,
+            transformOrigin: "50% 50%",
+            fontFamily: DISPLAY_FONT,
+            fontSize: fpx(slot.pt.sizePct, cardWidth),
+            fontWeight: slot.pt.weight ?? 700,
+            color: slot.pt.colorHex,
+            ...(slot.pt.shadowCss ? { textShadow: slot.pt.shadowCss } : {}),
+            zIndex: 20,
+          }}
+        >
+          {`${back.power ?? "—"}/${back.toughness ?? "—"}`}
+        </div>
+      ) : null}
     </div>
   );
 }
