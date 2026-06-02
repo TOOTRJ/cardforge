@@ -10,9 +10,11 @@ import { rulesFontTier, RULES_SIZE_PCT_BY_TIER } from "@/lib/cards/render-tiers"
 import {
   buildTypeLine,
   normalizeFrameTemplate,
+  parseChapters,
   showsDefense,
   showsLoyalty,
   showsPowerToughness,
+  type SagaChapter,
 } from "@/lib/cards/card-display";
 import {
   getFrameProfile,
@@ -406,7 +408,13 @@ function CardFace({
         {rarity ? <SetSymbol rarity={rarity} size={symbolPx(layout)} /> : null}
       </BandSlot>
 
-      {/* Rules + flavor box. */}
+      {/* Rules — Saga chapter rail, otherwise the normal rules + flavor box. */}
+      {layout.chapters ? (
+        <ChapterRail
+          slot={layout.chapters}
+          chapters={parseChapters(face.rulesText)}
+        />
+      ) : (
       <div
         style={{
           ...rectStyle(layout.rules.rect),
@@ -455,6 +463,7 @@ function CardFace({
           </div>
         ) : null}
       </div>
+      )}
 
       {/* Footer — artist credit + brand. */}
       {layout.footer ? (
@@ -617,6 +626,99 @@ function StatOverlay({
       >
         {value}
       </span>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// ChapterRail — the Saga left rail. Each parsed chapter is an equal-height row:
+// a Roman-numeral marker badge + the ability text, with dividers between rows.
+// ---------------------------------------------------------------------------
+
+function ChapterRail({
+  slot,
+  chapters,
+}: {
+  slot: NonNullable<FrameProfile["chapters"]>;
+  chapters: SagaChapter[];
+}) {
+  return (
+    <div
+      style={{
+        ...rectStyle(slot.rect),
+        zIndex: 20,
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      {chapters.length > 0 ? (
+        chapters.map((ch, i) => (
+          <div
+            key={i}
+            style={{
+              flex: 1,
+              minHeight: 0,
+              display: "flex",
+              alignItems: "center",
+              gap: "2cqw",
+              padding: "0.8cqw 0.4cqw",
+              overflow: "hidden",
+              borderBottom:
+                i < chapters.length - 1
+                  ? `1px solid ${slot.dividerHex}`
+                  : "none",
+            }}
+          >
+            <div
+              style={{
+                flexShrink: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                minWidth: cqw(slot.sizePct * 1.7),
+                height: cqw(slot.sizePct * 1.7),
+                padding: "0 0.8cqw",
+                borderRadius: "999px",
+                background: slot.markerFillHex,
+                color: slot.markerTextHex,
+                fontFamily: CARD_FONT,
+                fontSize: cqw(slot.sizePct * 0.82),
+                fontWeight: 700,
+              }}
+            >
+              {ch.marker}
+            </div>
+            <div
+              style={{
+                flex: 1,
+                minWidth: 0,
+                fontFamily: CARD_FONT,
+                fontSize: cqw(slot.sizePct),
+                lineHeight: 1.22,
+                color: slot.textColorHex,
+                overflow: "hidden",
+              }}
+            >
+              {ch.text}
+            </div>
+          </div>
+        ))
+      ) : (
+        <span
+          style={{
+            margin: "auto",
+            padding: "0 4cqw",
+            fontStyle: "italic",
+            fontFamily: CARD_FONT,
+            fontSize: cqw(slot.sizePct),
+            color: slot.textColorHex,
+            opacity: 0.5,
+            textAlign: "center",
+          }}
+        >
+          Add chapters as I — / II — / III — lines.
+        </span>
+      )}
     </div>
   );
 }

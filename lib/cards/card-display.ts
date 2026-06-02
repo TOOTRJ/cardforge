@@ -44,6 +44,41 @@ function capitalize(value: string): string {
   return value ? value.charAt(0).toUpperCase() + value.slice(1) : "";
 }
 
+// ---------------------------------------------------------------------------
+// Saga chapters. The Saga frame has no normal text box — its rules are a
+// vertical list of chapters down the left rail. We parse the card's rules text
+// into chapters by their Roman-numeral markers ("I — …", "II, III — …",
+// "IV: …"). Lines without a marker continue the previous chapter; lines before
+// the first marker are dropped (sagas put the lore-counter reminder in the
+// frame, not the text). Shared by the preview + bake so both render the same.
+// ---------------------------------------------------------------------------
+
+export type SagaChapter = { marker: string; text: string };
+
+const CHAPTER_LINE =
+  /^\s*([ivx]+(?:\s*,\s*[ivx]+)*)\s*[—:–-]\s*(.+)$/i;
+
+export function parseChapters(
+  rulesText: string | null | undefined,
+): SagaChapter[] {
+  if (!rulesText?.trim()) return [];
+  const out: SagaChapter[] = [];
+  for (const raw of rulesText.split(/\n+/)) {
+    const line = raw.trim();
+    if (!line) continue;
+    const match = CHAPTER_LINE.exec(line);
+    if (match) {
+      out.push({
+        marker: match[1].toUpperCase().replace(/\s+/g, ""),
+        text: match[2].trim(),
+      });
+    } else if (out.length > 0) {
+      out[out.length - 1].text += ` ${line}`;
+    }
+  }
+  return out;
+}
+
 // Builds the "Supertype Type — Subtype Subtype" line shown in the type bar.
 export function buildTypeLine({
   supertype,
