@@ -211,6 +211,15 @@ export const FRAME_TEMPLATE_VALUES = [
   "flip",
   "split",
   "aftermath",
+  // Showcase set families (popular recent sets).
+  "lotr",
+  "lotrscroll",
+  "avatar",
+  "bloomburrow",
+  "bloomanime",
+  "tarkirdragon",
+  "tarkirdraconic",
+  "tarkirghostfire",
 ] as const;
 export type FrameTemplate = (typeof FRAME_TEMPLATE_VALUES)[number];
 
@@ -237,6 +246,14 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   flip: "Flip",
   split: "Split",
   aftermath: "Aftermath",
+  lotr: "Ring",
+  lotrscroll: "Scroll",
+  avatar: "Elemental",
+  bloomburrow: "Woodland",
+  bloomanime: "Anime",
+  tarkirdragon: "Dragon Wing",
+  tarkirdraconic: "Draconic",
+  tarkirghostfire: "Ghostfire",
 };
 
 // ---------------------------------------------------------------------------
@@ -245,12 +262,23 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
 // map to a set (the Record below is exhaustive, so adding a frame is a compile
 // error until it's assigned a set).
 // ---------------------------------------------------------------------------
-export const FRAME_SET_VALUES = ["m15", "alpha"] as const;
+export const FRAME_SET_VALUES = [
+  "m15",
+  "alpha",
+  "lotr",
+  "avatar",
+  "bloomburrow",
+  "tarkir",
+] as const;
 export type FrameSet = (typeof FRAME_SET_VALUES)[number];
 
 export const FRAME_SET_LABELS: Record<FrameSet, string> = {
   m15: "Magic 2015 (modern)",
   alpha: "Alpha (1993)",
+  lotr: "The Lord of the Rings",
+  avatar: "Avatar: The Last Airbender",
+  bloomburrow: "Bloomburrow",
+  tarkir: "Tarkir: Dragonstorm",
 };
 
 export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
@@ -266,6 +294,14 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   flip: "m15",
   split: "m15",
   aftermath: "m15",
+  lotr: "lotr",
+  lotrscroll: "lotr",
+  avatar: "avatar",
+  bloomburrow: "bloomburrow",
+  bloomanime: "bloomburrow",
+  tarkirdragon: "tarkir",
+  tarkirdraconic: "tarkir",
+  tarkirghostfire: "tarkir",
   agclassic: "alpha",
   alphaland: "alpha",
   alphatoken: "alpha",
@@ -275,6 +311,10 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
 export const FRAME_SET_DEFAULT_TEMPLATE: Record<FrameSet, FrameTemplate> = {
   m15: "m15",
   alpha: "agclassic",
+  lotr: "lotr",
+  avatar: "avatar",
+  bloomburrow: "bloomburrow",
+  tarkir: "tarkirdragon",
 };
 
 export type FrameStyle = {
@@ -305,7 +345,6 @@ export const COMING_SOON_SETS: ComingSoonSet[] = [
   // Whole frame families on the roadmap (popular + recent set trade dress).
   { key: "retro", label: "Retro (1997)" },
   { key: "futureshifted", label: "Future Sight" },
-  { key: "showcase", label: "Showcase" },
   { key: "universesbeyond", label: "Universes Beyond" },
 ];
 

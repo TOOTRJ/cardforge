@@ -798,6 +798,200 @@ const AFTERMATH: FrameProfile = {
   },
 };
 
+// ---------------------------------------------------------------------------
+// Showcase set families — per-set "showcase" frame treatments from popular
+// recent sets. The MSE pieces ship with their art window already transparent
+// (built by scripts/build-showcase-frames.mjs), so these are layout-only
+// profiles. Several share an "art-forward" layout (art bleeds to the top; a
+// name bar ~57%; type + textbox below), captured by a factory.
+// ---------------------------------------------------------------------------
+const SHOWCASE_SHADOW = "0 1px 2px rgba(0,0,0,0.65), 0 0 2px rgba(0,0,0,0.5)";
+
+function artForwardShowcase(
+  label: string,
+  nameHex: string,
+  nameShadow = true,
+): FrameProfile {
+  return {
+    label,
+    artSlot: { topPct: 2.5, leftPct: 6, widthPct: 88, heightPct: 54 },
+    costSizePct: 0.034,
+    title: {
+      rect: { topPct: 56.4, leftPct: 11, widthPct: 78, heightPct: 6 },
+      sizePct: 0.042,
+      colorHex: nameHex,
+      weight: 600,
+      font: "display",
+      ...(nameShadow ? { shadowCss: SHOWCASE_SHADOW } : {}),
+    },
+    type: {
+      rect: { topPct: 63.4, leftPct: 11, widthPct: 78, heightPct: 4 },
+      sizePct: 0.026,
+      colorHex: INK_DARK,
+      weight: 600,
+      font: "display",
+    },
+    rules: {
+      rect: { topPct: 67.6, leftPct: 8, widthPct: 84, heightPct: 24.5 },
+      sizePct: 0.027,
+      colorHex: INK_DARK,
+      vAlign: "start",
+      font: "body",
+      lineHeight: 1.3,
+    },
+    pt: {
+      rect: { topPct: 87.2, leftPct: 71.5, widthPct: 23, heightPct: 7 },
+      sizePct: 0.04,
+      colorHex: "#ffffff",
+      weight: 700,
+      shadowCss: OUTLINE_SHADOW,
+    },
+  };
+}
+
+// Art-forward showcases (art bleeds to the top; name bar lower-middle).
+const AVATAR = artForwardShowcase("Avatar", INK_LIGHT);
+const BLOOMBURROW = artForwardShowcase("Bloomburrow", INK_LIGHT);
+
+// Tarkir card showcases — m15-style (name top → dark ink, art, type, textbox).
+// Dragon Wing's textbox is dark gothic (light rules); Draconic's is light
+// parchment (dark rules).
+function tarkirCard(label: string, rulesHex: string): FrameProfile {
+  return {
+    label,
+    artSlot: { topPct: 12, leftPct: 9, widthPct: 82, heightPct: 46 },
+    title: {
+      rect: { topPct: 4.6, leftPct: 11, widthPct: 78, heightPct: 6 },
+      sizePct: 0.044,
+      colorHex: INK_DARK,
+      weight: 600,
+      font: "display",
+    },
+    type: {
+      rect: { topPct: 60, leftPct: 11, widthPct: 78, heightPct: 5 },
+      sizePct: 0.03,
+      colorHex: INK_DARK,
+      weight: 600,
+      font: "display",
+    },
+    rules: {
+      rect: { topPct: 66, leftPct: 9, widthPct: 82, heightPct: 26 },
+      sizePct: 0.028,
+      colorHex: rulesHex,
+      vAlign: "start",
+      font: "body",
+      lineHeight: 1.3,
+    },
+    pt: {
+      rect: { topPct: 87, leftPct: 71, widthPct: 23, heightPct: 7.5 },
+      sizePct: 0.043,
+      colorHex: "#ffffff",
+      weight: 700,
+      shadowCss: OUTLINE_SHADOW,
+    },
+  };
+}
+const TARKIRDRAGON = tarkirCard("Dragon Wing", INK_LIGHT);
+const TARKIRDRACONIC = tarkirCard("Draconic", INK_DARK);
+
+// LOTR — title bar (top), CIRCULAR art window (the One Ring), type bar, textbox.
+// The artSlot is the circle's bounding box; the frame's opaque corners hide the
+// rectangular art outside the circle.
+const LOTR: FrameProfile = {
+  label: "Ring",
+  artSlot: { topPct: 13, leftPct: 14, widthPct: 72, heightPct: 45 },
+  title: {
+    rect: { topPct: 4.5, leftPct: 9, widthPct: 82, heightPct: 6 },
+    sizePct: 0.044,
+    colorHex: INK_LIGHT,
+    weight: 600,
+    font: "display",
+    shadowCss: SHOWCASE_SHADOW,
+  },
+  type: {
+    rect: { topPct: 59, leftPct: 9, widthPct: 82, heightPct: 5 },
+    sizePct: 0.028,
+    colorHex: INK_LIGHT,
+    weight: 600,
+    font: "display",
+    shadowCss: SHOWCASE_SHADOW,
+  },
+  rules: {
+    rect: { topPct: 66, leftPct: 8.5, widthPct: 83, heightPct: 26 },
+    sizePct: 0.028,
+    colorHex: INK_DARK,
+    vAlign: "start",
+    font: "body",
+    lineHeight: 1.3,
+  },
+  pt: {
+    rect: { topPct: 86.5, leftPct: 71, widthPct: 23, heightPct: 7.5 },
+    sizePct: 0.043,
+    colorHex: "#ffffff",
+    weight: 700,
+    shadowCss: OUTLINE_SHADOW,
+  },
+};
+
+// LOTR Scroll — m15-ish (title top, rectangular art, type, textbox) on a scroll.
+const LOTRSCROLL: FrameProfile = {
+  ...LOTR,
+  label: "Scroll",
+  artSlot: { topPct: 11.5, leftPct: 8, widthPct: 84, heightPct: 45 },
+  title: {
+    rect: { topPct: 4.5, leftPct: 9, widthPct: 82, heightPct: 6 },
+    sizePct: 0.044,
+    colorHex: INK_LIGHT,
+    weight: 600,
+    font: "display",
+    shadowCss: SHOWCASE_SHADOW,
+  },
+};
+
+// Borderless showcases — art fills nearly the whole card; the name + rules sit
+// on translucent panels over the art (scrim for legibility).
+function borderlessShowcase(label: string): FrameProfile {
+  return {
+    label,
+    artSlot: { topPct: 2.5, leftPct: 3.5, widthPct: 93, heightPct: 92 },
+    costSizePct: 0.034,
+    title: {
+      rect: { topPct: 5, leftPct: 8, widthPct: 84, heightPct: 6 },
+      sizePct: 0.044,
+      colorHex: INK_LIGHT,
+      weight: 600,
+      font: "display",
+      shadowCss: OUTLINE_SHADOW,
+    },
+    type: {
+      rect: { topPct: 56, leftPct: 8, widthPct: 84, heightPct: 4.5 },
+      sizePct: 0.026,
+      colorHex: INK_LIGHT,
+      weight: 600,
+      font: "display",
+      shadowCss: OUTLINE_SHADOW,
+    },
+    rules: {
+      rect: { topPct: 62, leftPct: 7, widthPct: 86, heightPct: 28 },
+      sizePct: 0.027,
+      colorHex: INK_LIGHT,
+      vAlign: "center",
+      font: "body",
+      lineHeight: 1.3,
+      backdropHex: "rgba(8,8,12,0.55)",
+    },
+    pt: {
+      rect: { topPct: 89, leftPct: 73, widthPct: 21, heightPct: 7 },
+      sizePct: 0.04,
+      colorHex: "#ffffff",
+      weight: 700,
+      shadowCss: OUTLINE_SHADOW,
+    },
+  };
+}
+const BLOOMANIME = borderlessShowcase("Anime");
+const TARKIRGHOSTFIRE = borderlessShowcase("Ghostfire");
+
 const PROFILES: Record<FrameTemplate, FrameProfile> = {
   m15: M15,
   m15land: M15LAND,
@@ -814,6 +1008,14 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   flip: FLIP,
   split: SPLIT,
   aftermath: AFTERMATH,
+  avatar: AVATAR,
+  bloomburrow: BLOOMBURROW,
+  bloomanime: BLOOMANIME,
+  lotr: LOTR,
+  lotrscroll: LOTRSCROLL,
+  tarkirdragon: TARKIRDRAGON,
+  tarkirdraconic: TARKIRDRACONIC,
+  tarkirghostfire: TARKIRGHOSTFIRE,
 };
 
 /** Resolve a frame profile, defaulting to M15 for unknown/legacy templates
