@@ -34,7 +34,7 @@ function modelId(): string {
 
 // The schema the model must match. We strip out fields that don't belong in
 // a generated card (slug, owner_id, IDs). The model also returns an
-// `art_prompt` that we feed into DALL-E — keeping it on the same object
+// `art_prompt` that we feed into gpt-image-1 — keeping it on the same object
 // means we get a paired text + art prompt in a single GPT-4o call.
 //
 // IMPORTANT: OpenAI's structured-outputs strict mode requires every
@@ -178,7 +178,7 @@ function userPrompt(input: RandomCardInput): string {
 
 /**
  * Calls GPT-4o once and returns a Zod-validated RandomCardOutput plus a
- * paired DALL-E art prompt. The caller is responsible for rate-limiting
+ * paired gpt-image-1 art prompt. The caller is responsible for rate-limiting
  * before invoking this — we don't want to refund OpenAI calls on quota
  * misses.
  */

@@ -23,6 +23,13 @@ import {
 const GENERIC_SIGNUP_ERROR =
   "We couldn't create your account. Double-check your details and try again.";
 
+// Generic sign-in error, for the same anti-enumeration reason as signup:
+// Supabase's raw messages (notably "Email not confirmed") reveal whether an
+// account exists. We normalize to one message and log the real reason server-
+// side. The common "invalid credentials" failure is already generic.
+const GENERIC_LOGIN_ERROR =
+  "Invalid email or password. Check your details and try again.";
+
 const SAFE_REDIRECT = /^\/[^\s]*$/;
 
 function safeRedirectTo(value: FormDataEntryValue | null) {
@@ -66,9 +73,11 @@ export async function loginAction(
   });
 
   if (error) {
+    // Log the underlying reason for debugging; never surface it to the client.
+    console.warn("loginAction: signInWithPassword error", error.message);
     return {
       status: "error",
-      formError: error.message,
+      formError: GENERIC_LOGIN_ERROR,
       values: { email: parsed.data.email },
     };
   }

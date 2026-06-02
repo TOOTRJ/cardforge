@@ -5,11 +5,11 @@ import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 // ---------------------------------------------------------------------------
-// DALL-E 3 art generator (Phase v2 Phase 4)
+// gpt-image-1 art generator (Phase v2 Phase 4)
 //
 // Flow:
 //   1. Wrap the model's art_prompt with an MTG-style preamble + the standard
-//      "no text, no frame" constraints DALL-E benefits from.
+//      "no text, no frame" constraints gpt-image-1 benefits from.
 //   2. Call OpenAI Images API with model="dall-e-3", quality="hd",
 //      size="1024x1024", style="vivid", n=1.
 //   3. Fetch the resulting URL server-side, byte-sniff it, upload to
@@ -39,7 +39,7 @@ function client(): OpenAI {
   // gives us a single point to override timeouts / base URL later.
   return new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
-    // 60s DALL-E HD requests routinely take 20-40s; the SDK default is
+    // 60s gpt-image-1 HD requests routinely take 20-40s; the SDK default is
     // already long enough but we set it explicitly to be safe.
     timeout: 90_000,
   });
@@ -50,7 +50,7 @@ export type RandomArtResult =
   | { ok: false; error: string };
 
 /**
- * Generate a DALL-E 3 image for the given prompt and upload to the user's
+ * Generate a gpt-image-1 image for the given prompt and upload to the user's
  * card-art bucket folder. Requires a signed-in user (uploads via their
  * session so RLS treats the file as their own).
  */

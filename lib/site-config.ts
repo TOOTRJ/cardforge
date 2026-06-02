@@ -39,15 +39,6 @@ export const siteConfig = {
     { label: "My Sets", href: "/dashboard/sets", authedOnly: true } as NavItem,
   ] as readonly NavItem[],
 
-  // Items in the avatar dropdown menu. Sign-out is rendered separately by
-  // the menu component (it's a server action, not a link).
-  accountMenu: [
-    { label: "View profile", href: "/profile" }, // resolved to /profile/{username} in the menu
-    { label: "Dashboard", href: "/dashboard" },
-    { label: "My sets", href: "/dashboard/sets" },
-    { label: "Settings", href: "/settings" },
-  ] as readonly NavItem[],
-
   // Dashboard left-rail nav (legacy — used inside DashboardShell).
   dashboardNav: [
     { label: "Overview", href: "/dashboard" },

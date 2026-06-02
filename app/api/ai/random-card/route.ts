@@ -24,13 +24,13 @@ import {
 // /api/ai/random-card
 //
 // Auth-required. Generates a fully-formed card (GPT-4o, schema-bounded) and
-// an accompanying piece of original art (DALL-E 3 HD), uploads the art to
+// an accompanying piece of original art (gpt-image-1 HD), uploads the art to
 // the caller's card-art bucket folder, and returns both to the client so
 // the editor can reset() its form with the result.
 //
 // Quota:
 //   - Global per-user cap from lib/ai/rate-limit.ts (20/min, 200/day) applies.
-//   - On top of that, a random-card-specific 10/day cap protects DALL-E
+//   - On top of that, a random-card-specific 10/day cap protects gpt-image-1
 //     spend (the priciest piece of the request).
 // ---------------------------------------------------------------------------
 
@@ -120,7 +120,7 @@ export async function POST(request: Request) {
   }
 
   // ---- Generate text first (cheaper; failures here mean we never burn
-  //      a DALL-E call). Log the call ahead of the AI request so a noisy
+  //      a gpt-image-1 call). Log the call ahead of the AI request so a noisy
   //      attacker can't trigger errors to evade the limit (matches the
   //      existing card-assistant pattern). ----
   await logAiCall(user.id, "generate_random_card");

@@ -107,7 +107,7 @@ export async function checkAiRateLimit(
  * Per-user check specifically for the random-card flow. Lives alongside
  * `checkAiRateLimit`; the route handler runs both — the global limit
  * protects the platform AI spend, this one keeps a single user from
- * draining the DALL-E budget.
+ * draining the gpt-image-1 budget.
  */
 export async function checkRandomCardDailyLimit(
   userId: string,
