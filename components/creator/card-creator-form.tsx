@@ -74,10 +74,15 @@ import {
   type CardType,
   type ColorIdentity,
   type FrameStyle,
+  type FrameTemplate,
   type GameSystem,
   type Rarity,
   type Visibility,
+  DEFAULT_FRAME_TEMPLATE,
+  FRAME_TEMPLATE_LABELS,
+  FRAME_TEMPLATE_VALUES,
 } from "@/types/card";
+import { normalizeFrameTemplate } from "@/lib/cards/card-display";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -242,6 +247,15 @@ const BORDER_OPTIONS: ChipOption<NonNullable<FrameStyle["border"]>>[] = [
   { value: "ornate", label: "Ornate" },
 ];
 
+// Frame template options — the MSE-derived MTG frame PNG that sits behind the
+// card. All are converted from the open-source Full-Magic-Pack (MSE template).
+const TEMPLATE_OPTIONS: ChipOption<FrameTemplate>[] = FRAME_TEMPLATE_VALUES.map(
+  (template) => ({
+    value: template,
+    label: FRAME_TEMPLATE_LABELS[template],
+  }),
+);
+
 const ACCENT_OPTIONS: ChipOption<NonNullable<FrameStyle["accent"]>>[] = [
   { value: "neutral", label: "Neutral" },
   { value: "warm", label: "Warm", activeClass: "border-accent bg-accent/15 text-accent" },
@@ -384,7 +398,12 @@ function defaultValuesFor(
       artist_credit: "",
       art_url: "",
       art_position: { focalX: 0.5, focalY: 0.5, scale: 1 },
-      frame_style: { border: "thin", accent: "neutral", finish: "regular" },
+      frame_style: {
+        border: "thin",
+        accent: "neutral",
+        finish: "regular",
+        template: DEFAULT_FRAME_TEMPLATE,
+      },
       visibility: "private",
       has_back_face: false,
       back_face: EMPTY_BACK_FACE,
@@ -394,6 +413,17 @@ function defaultValuesFor(
 
   const persistedBackFace =
     (card.back_face as CardBackFace | null | undefined) ?? null;
+
+  // Coerce the persisted frame style, mapping any legacy/retired template
+  // (e.g. the old "regular" placeholder) onto a current one so the picker
+  // shows a valid selection and the save passes validation.
+  const persistedFrame = (card.frame_style as FrameStyle | null) ?? {};
+  const normalizedFrameStyle: FrameStyle = {
+    border: persistedFrame.border ?? "thin",
+    accent: persistedFrame.accent ?? "neutral",
+    finish: persistedFrame.finish ?? "regular",
+    template: normalizeFrameTemplate(persistedFrame.template),
+  };
 
   return {
     title: card.title,
@@ -419,10 +449,7 @@ function defaultValuesFor(
       focalY: 0.5,
       scale: 1,
     },
-    frame_style: (card.frame_style as FrameStyle) ?? {
-      border: "thin",
-      accent: "neutral",
-    },
+    frame_style: normalizedFrameStyle,
     visibility: card.visibility,
     has_back_face: persistedBackFace !== null,
     back_face: backFaceFormValuesFrom(persistedBackFace),
@@ -992,8 +1019,8 @@ export function CardCreatorForm({
                   Generate with AI
                 </span>
                 <span className="text-[11px] text-muted">
-                  GPT-4o drafts the card, DALL-E 3 paints original art.
-                  Capped at 10 random cards per day.
+                  GPT-4o drafts the card; an OpenAI image model paints
+                  original art. Capped at 10 random cards per day.
                 </span>
               </div>
               <Button
@@ -1490,6 +1517,26 @@ export function CardCreatorForm({
                     value={field.value}
                     onChange={(next) => field.onChange(next)}
                     options={VISIBILITY_OPTIONS}
+                  />
+                )}
+              />
+            </FieldGroup>
+
+            <FieldGroup
+              label="Template"
+              helper="The MTG frame your card is rendered on (M15 modern, M15 planeswalker, or 1993 Alpha)."
+            >
+              <Controller
+                control={control}
+                name="frame_style.template"
+                render={({ field }) => (
+                  <ChipGroup
+                    ariaLabel="Template"
+                    layout="grid-2"
+                    size="md"
+                    value={field.value ?? DEFAULT_FRAME_TEMPLATE}
+                    onChange={(next) => field.onChange(next)}
+                    options={TEMPLATE_OPTIONS}
                   />
                 )}
               />

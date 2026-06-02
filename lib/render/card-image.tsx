@@ -1,16 +1,29 @@
 // Server-side card renderer. Uses Next.js `ImageResponse` (Satori +
-// resvg-wasm under the hood) so the same JSX produces a PNG you can:
+// resvg-wasm under the hood) so the same card produces a PNG you can:
 //   * serve as <meta og:image="..."> on public card pages, and
-//   * upload to the card-exports bucket on user request.
+//   * upload to the card-renders bucket on save / download.
 //
-// Satori has limited CSS support — Tailwind classes don't work and not all
-// transforms are honored. Every style here is inline + hex-coded so the
-// renderer is portable and doesn't pull on the app's CSS variables.
+// This mirrors the live preview (components/cards/card-preview.tsx) exactly:
+// both read the per-frame layout profile (lib/cards/template-layout.ts) and
+// position every region at the same card-relative percent coordinates. The
+// preview scales fonts with `cqw` container units; here we scale them by the
+// card's known pixel width — same fractions, identical result.
+//
+// Satori has limited CSS support: no Tailwind, no container queries, no
+// animations. Every style is inline + hex-coded, every multi-child element
+// declares `display: flex`.
 
 import { ImageResponse } from "next/og";
-import { rulesFontTier, type RulesFontTier } from "@/lib/cards/render-tiers";
+import { rulesFontTier, RULES_SIZE_PCT_BY_TIER } from "@/lib/cards/render-tiers";
 import { tokenize, tokenSuffix } from "@/components/cards/mana-cost-glyphs";
 import { pickFrameColorKey } from "@/components/cards/frame-layer";
+import {
+  buildTypeLine,
+  normalizeFrameTemplate,
+  showsDefense,
+  showsLoyalty,
+  showsPowerToughness,
+} from "@/lib/cards/card-display";
 import {
   KEYRUNE_DEFAULT_GLYPH,
   KEYRUNE_FONT_BYTES,
@@ -19,14 +32,23 @@ import {
   MPLANTIN_FONT_BYTES,
   getManaCodepoint,
 } from "@/lib/render/card-fonts";
-import { getFrameDataUrl } from "@/lib/render/card-frames";
+import {
+  getFrameDataUrl,
+  getPlateDataUrlForPath,
+} from "@/lib/render/card-frames";
+import {
+  getFrameProfile,
+  type Rect,
+  type SlotAlign,
+  type StatSlot,
+  type TextSlot,
+} from "@/lib/cards/template-layout";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import type { ColorIdentity, Rarity } from "@/types/card";
 
 // ---------------------------------------------------------------------------
 // Sizing presets — 5:7 card aspect ratio, matching the live preview.
-// "default" is good enough for OG/social previews; "hd" is the user-facing
-// download default.
+// "default" suits OG/social previews; "hd" is the user-facing download.
 // ---------------------------------------------------------------------------
 
 export const RENDER_PRESETS = {
@@ -36,68 +58,41 @@ export const RENDER_PRESETS = {
 
 export type RenderPreset = keyof typeof RENDER_PRESETS;
 
-// ---------------------------------------------------------------------------
-// Theme — hand-picked hex equivalents of the OKLCH tokens in globals.css.
-// Updating one place here keeps the export in sync with the live preview.
-// ---------------------------------------------------------------------------
-
-const COLORS = {
-  background: "#15151d",
-  surface: "#1c1c25",
-  elevated: "#23232e",
-  border: "#3a3a4a",
-  borderStrong: "#525266",
-  foreground: "#f4f4f5",
-  muted: "#a4a4b0",
-  subtle: "#71717a",
-  primary: "#a78bfa",
-  accent: "#fbbf24",
-} as const;
-
-const COLOR_GRADIENTS: Record<string, [string, string]> = {
-  white: ["#fde68a44", "#fef3c722"],
-  blue: ["#38bdf844", "#7dd3fc22"],
-  black: ["#3f3f46", "#71717a22"],
-  red: ["#fb718544", "#fda4af22"],
-  green: ["#34d39944", "#86efac22"],
-  multicolor: ["#e879f944", "#fbbf2422"],
-  colorless: ["#94a3b833", "#94a3b822"],
-};
-
 // Real-card rarity inks for the Keyrune set-symbol glyph in the type line.
-// Common is the dark stamp; uncommon/rare/mythic use the metallic finishes.
 const RARITY_SET_SYMBOL_COLOR: Record<Rarity, string> = {
   common: "#0f0f12",
-  uncommon: "#a5a5b5",
+  uncommon: "#9a9aa8",
   rare: "#c9a14a",
   mythic: "#d35327",
 };
 
+const DISPLAY_FONT = '"MPlantin"';
+
 // ---------------------------------------------------------------------------
-// Helpers
+// Geometry helpers — shared shape with the live preview's rectStyle(), but
+// font sizes resolve to px against the known card width.
 // ---------------------------------------------------------------------------
 
-function capitalize(value: string): string {
-  return value ? value.charAt(0).toUpperCase() + value.slice(1) : "";
+function slotBox(rect: Rect) {
+  return {
+    position: "absolute" as const,
+    top: `${rect.topPct}%`,
+    left: `${rect.leftPct}%`,
+    width: `${rect.widthPct}%`,
+    height: `${rect.heightPct}%`,
+  };
 }
 
-function buildTypeLine(card: CardPreviewData): string {
-  const left = [card.supertype, card.cardType ? capitalize(card.cardType) : null]
-    .filter(Boolean)
-    .join(" ");
-  const right = card.subtypes?.filter(Boolean).join(" ") ?? "";
-  if (left && right) return `${left} — ${right}`;
-  return left || right || "Type";
+function fpx(sizePct: number, cardWidth: number): number {
+  return Math.round(sizePct * cardWidth);
 }
 
-function pickGradient(colors: string[] | undefined): [string, string] {
-  if (!colors || colors.length === 0) return COLOR_GRADIENTS.colorless;
-  if (colors.length > 1) return COLOR_GRADIENTS.multicolor;
-  return COLOR_GRADIENTS[colors[0]] ?? COLOR_GRADIENTS.colorless;
-}
-
-function showsPowerToughness(cardType: string | null | undefined): boolean {
-  return cardType === "creature" || cardType === "token";
+function vJustify(align: SlotAlign | undefined): string {
+  return align === "center"
+    ? "center"
+    : align === "end"
+      ? "flex-end"
+      : "flex-start";
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -105,104 +100,112 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
-// ---------------------------------------------------------------------------
-// JSX layout — mirrors CardPreview's structure but uses inline styles only.
-//
-// Satori notes:
-//   * no Tailwind, only inline styles
-//   * no CSS animations — foil is a static specular gradient here
-//   * `position: absolute` IS supported, used for the borderless backdrop
-//   * `background-image` with multiple stops IS supported, used for the
-//     etched cross-hatch + the foil specular sheen
-// ---------------------------------------------------------------------------
+// MPlantin (the bake's body font) has no U+2212 MINUS SIGN glyph and Satori has
+// no font fallback, so a raw "−2:" loyalty ability would lose its sign. Map it
+// to a hyphen-minus, which the font does have. (The em-dash in type lines is
+// fine — MPlantin includes it.)
+function bakeText(text: string): string {
+  return text.replace(/−/g, "-");
+}
 
-// Font sizes for the rules+flavor box, indexed by the same tier the live
-// preview uses (rulesFontTier in card-preview.tsx). Values are calibrated
-// for the 750×1050 default preset; the renderer scales them up for HD.
-const RULES_FONT_PX_BY_TIER: Record<RulesFontTier, number> = {
-  0: 20,
-  1: 17,
-  2: 14,
-  3: 12,
-};
+// ---------------------------------------------------------------------------
+// Card JSX
+// ---------------------------------------------------------------------------
 
 function CardImage({
   card,
+  width,
   height,
 }: {
   card: CardPreviewData;
-  /** Total render canvas height in pixels — needed because Satori does
-   *  not honor `aspectRatio`, so the art well height is computed up front
-   *  as a fixed proportion of the card height. */
+  width: number;
   height: number;
 }) {
+  const template = normalizeFrameTemplate(card.frameStyle?.template);
+  const layout = getFrameProfile(template);
+  const finish = card.frameStyle?.finish ?? "regular";
+  const isFoil = finish === "foil";
+  const isEtched = finish === "etched";
+  const isShowcase = finish === "showcase";
+
+  const colorKey = pickFrameColorKey(
+    card.colorIdentity as ColorIdentity[] | undefined,
+  );
+  const frameDataUrl = getFrameDataUrl(template, colorKey);
+
   const title = (card.title?.trim() || "Untitled Card").slice(0, 80);
-  const showCost = card.cardType !== "land" && card.cost?.trim();
-  const showPT = showsPowerToughness(card.cardType) && (card.power || card.toughness);
-  const showLoyalty = card.rarity === "mythic" && Boolean(card.loyalty);
-  const showDefense = Boolean(card.defense);
-  const [gradFrom, gradTo] = pickGradient(card.colorIdentity);
+  const showCost = card.cardType !== "land" && Boolean(card.cost?.trim());
+  const typeLine = buildTypeLine(card);
+
+  // Same gating as the preview (shared helpers) — and only when the frame
+  // actually defines a slot for that stat.
+  const showPT =
+    Boolean(layout.pt) &&
+    showsPowerToughness(card.cardType) &&
+    Boolean(card.power || card.toughness);
+  const showLoyalty =
+    Boolean(layout.loyalty) &&
+    showsLoyalty(card.cardType) &&
+    Boolean(card.loyalty);
+  const showDefense =
+    Boolean(layout.defense) &&
+    showsDefense(card.cardType) &&
+    Boolean(card.defense);
+
   const focalX = clamp(card.artPosition?.focalX ?? 0.5, 0, 1) * 100;
   const focalY = clamp(card.artPosition?.focalY ?? 0.5, 0, 1) * 100;
   const scale = clamp(card.artPosition?.scale ?? 1, 0.5, 4);
 
-  const typeLine = buildTypeLine(card);
+  const rulesSizePct =
+    RULES_SIZE_PCT_BY_TIER[rulesFontTier(card.rulesText, card.flavorText)];
 
-  const rulesFontPx = RULES_FONT_PX_BY_TIER[rulesFontTier(card.rulesText, card.flavorText)];
-
-  // Art well height is 46% of the total card height. This is the same
-  // proportion the live preview gets via aspect-[3/2] (which Satori
-  // doesn't support); computing in pixels here keeps both renderers
-  // visually identical at any preset size.
-  const artHeight = Math.floor(height * 0.46);
-
-  // Read the finish from the persisted frame_style. Defaults to "regular"
-  // so any historic card without an explicit finish renders unchanged.
-  const finish = card.frameStyle?.finish ?? "regular";
-  const isFoil = finish === "foil";
-  const isEtched = finish === "etched";
-  const isBorderless = finish === "borderless";
-  const isShowcase = finish === "showcase";
-
-  // Section background colors. Borderless makes them translucent so the
-  // full-bleed art shows through; everything else uses the surface tint.
-  const sectionBg = isBorderless ? `${COLORS.background}66` : `${COLORS.surface}cc`;
-  const sectionBorder = isBorderless
-    ? `1px solid ${COLORS.borderStrong}55`
-    : `1px solid ${COLORS.border}66`;
-
-  // Frame asset — bottom-most layer. Picks the right color PNG using the
-  // same resolution rule as the live preview (FrameLayer): one color uses
-  // that color's PNG; 2+ colors use the multicolor frame; none falls back
-  // to colorless.
-  const frameTemplate = card.frameStyle?.template ?? "regular";
-  const frameColorKey = pickFrameColorKey(
-    card.colorIdentity as ColorIdentity[] | undefined,
-  );
-  const frameDataUrl = getFrameDataUrl(frameTemplate, frameColorKey);
+  const artW = Math.round((layout.artSlot.widthPct / 100) * width);
+  const artH = Math.round((layout.artSlot.heightPct / 100) * height);
 
   return (
     <div
       style={{
         display: "flex",
-        flexDirection: "column",
         width: "100%",
         height: "100%",
-        background: `linear-gradient(135deg, ${COLORS.elevated}, ${COLORS.surface}, ${COLORS.background})`,
-        padding: 18,
-        boxSizing: "border-box",
-        // MPlantin is the only general-text font Satori has loaded (see the
-        // fonts: [...] block in renderCardImage). Setting it as the root
-        // default means title/type/rules/footer all render even though
-        // they don't opt into a specific family.
-        fontFamily: '"MPlantin"',
-        color: COLORS.foreground,
         position: "relative",
+        background: "#101015",
+        fontFamily: DISPLAY_FONT,
+        color: layout.title.colorHex,
       }}
     >
-      {/* Frame asset — bottom-most, fills the whole card so the colored
-          border shows around the inner panel. Matches the FrameLayer the
-          live preview renders in the editor. */}
+      {/* Art — below the frame, in the transparent cut-out. */}
+      <div style={{ ...slotBox(layout.artSlot), display: "flex", overflow: "hidden" }}>
+        {card.artUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={card.artUrl}
+            width={artW}
+            height={artH}
+            alt=""
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              objectPosition: `${focalX}% ${focalY}%`,
+              transform: `scale(${scale})`,
+              transformOrigin: `${focalX}% ${focalY}%`,
+            }}
+          />
+        ) : (
+          <div
+            style={{
+              display: "flex",
+              width: "100%",
+              height: "100%",
+              background:
+                "radial-gradient(circle at 50% 40%, #2a2a33, #16161c 70%)",
+            }}
+          />
+        )}
+      </div>
+
+      {/* Frame PNG — above the art. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={frameDataUrl}
@@ -214,376 +217,237 @@ function CardImage({
           width: "100%",
           height: "100%",
           objectFit: "fill",
+          zIndex: 5,
         }}
       />
 
-      {/* Foil: static specular sheen. Satori doesn't run animations, so we
-          freeze the conic foil from the live preview into a linear rainbow
-          band that still reads as "holographic" in a still PNG. */}
+      {/* Stat overlays. */}
+      {showPT && layout.pt
+        ? StatBake({
+            slot: layout.pt,
+            value: `${card.power ?? "—"}/${card.toughness ?? "—"}`,
+            colorKey,
+            cardWidth: width,
+          })
+        : null}
+      {showLoyalty && layout.loyalty
+        ? StatBake({
+            slot: layout.loyalty,
+            value: String(card.loyalty ?? "—"),
+            colorKey,
+            cardWidth: width,
+          })
+        : null}
+      {showDefense && layout.defense
+        ? StatBake({
+            slot: layout.defense,
+            value: String(card.defense ?? "—"),
+            colorKey,
+            cardWidth: width,
+          })
+        : null}
+
+      {/* Title band — name + mana cost. */}
+      <Band slot={layout.title} cardWidth={width} italic={isShowcase}>
+        <span style={ELLIPSIS}>{title}</span>
+        {showCost && card.cost ? (
+          <CostGlyphs
+            cost={card.cost}
+            fontSize={fpx(layout.costSizePct ?? layout.title.sizePct, width)}
+          />
+        ) : (
+          <span style={{ display: "flex" }} />
+        )}
+      </Band>
+
+      {/* Type band — type line + rarity set-symbol. */}
+      <Band slot={layout.type} cardWidth={width}>
+        <span style={ELLIPSIS}>{typeLine}</span>
+        {card.rarity ? (
+          <SetSymbolGlyph
+            rarity={card.rarity as Rarity}
+            fontSize={fpx(layout.symbolSizePct ?? layout.type.sizePct * 1.1, width)}
+          />
+        ) : (
+          <span style={{ display: "flex" }} />
+        )}
+      </Band>
+
+      {/* Rules + flavor box. */}
+      <div
+        style={{
+          ...slotBox(layout.rules.rect),
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: vJustify(layout.rules.vAlign ?? "start"),
+          overflow: "hidden",
+          padding: `${Math.round(width * 0.012)}px ${Math.round(width * 0.006)}px`,
+          fontFamily: DISPLAY_FONT,
+          fontSize: fpx(rulesSizePct, width),
+          lineHeight: layout.rules.lineHeight ?? 1.3,
+          color: layout.rules.colorHex,
+          textAlign: "center",
+          zIndex: 20,
+          ...(layout.rules.backdropHex
+            ? {
+                background: layout.rules.backdropHex,
+                borderRadius: Math.round(width * 0.015),
+              }
+            : {}),
+        }}
+      >
+        {card.rulesText?.trim() ? (
+          <div style={{ display: "flex", whiteSpace: "pre-wrap" }}>
+            {bakeText(card.rulesText)}
+          </div>
+        ) : (
+          <span style={{ fontStyle: "italic", opacity: 0.5 }}>
+            Rules text appears here.
+          </span>
+        )}
+        {card.flavorText?.trim() ? (
+          <div
+            style={{
+              display: "flex",
+              fontStyle: "italic",
+              opacity: 0.85,
+              marginTop: Math.round(width * 0.012),
+              paddingTop: Math.round(width * 0.012),
+              borderTop: `1px solid ${layout.rules.colorHex}44`,
+            }}
+          >
+            {card.flavorText}
+          </div>
+        ) : null}
+      </div>
+
+      {/* Footer — artist + brand. */}
+      {layout.footer ? (
+        <div
+          style={{
+            ...slotBox(layout.footer.rect),
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            fontSize: fpx(layout.footer.sizePct, width),
+            color: layout.footer.colorHex,
+            letterSpacing: layout.footer.letterSpacingEm
+              ? `${layout.footer.letterSpacingEm}em`
+              : 0,
+            textTransform: layout.footer.uppercase ? "uppercase" : "none",
+            zIndex: 20,
+          }}
+        >
+          <span style={ELLIPSIS}>
+            {card.artistCredit?.trim()
+              ? `Art: ${card.artistCredit}`
+              : "Art: Unknown"}
+          </span>
+          <span style={{ display: "flex", flexShrink: 0 }}>Spellwright</span>
+        </div>
+      ) : null}
+
+      {/* Premium finish: foil specular sheen (static — Satori has no anim). */}
       {isFoil ? (
         <div
           style={{
             position: "absolute",
             inset: 0,
+            zIndex: 30,
             background:
               "linear-gradient(115deg, rgba(255,200,120,0.35) 0%, rgba(255,255,255,0.4) 35%, rgba(190,170,255,0.4) 55%, rgba(120,210,255,0.35) 75%, rgba(255,255,255,0.3) 100%)",
             mixBlendMode: "overlay",
-            pointerEvents: "none",
           }}
         />
       ) : null}
 
-      {/* Etched: gold-leaf inner border + fine cross-hatch overlay. Both
-          are static so they translate cleanly to PNG. */}
+      {/* Premium finish: etched gold inner border + cross-hatch. */}
       {isEtched ? (
         <>
           <div
             style={{
               position: "absolute",
-              top: 12,
-              left: 12,
-              right: 12,
-              bottom: 12,
-              border: "4px solid #d4a64a",
-              borderRadius: 24,
-              pointerEvents: "none",
+              top: "3%",
+              left: "3%",
+              right: "3%",
+              bottom: "3%",
+              zIndex: 30,
+              border: `${Math.round(width * 0.006)}px solid #d4a64a`,
+              borderRadius: Math.round(width * 0.03),
             }}
           />
           <div
             style={{
               position: "absolute",
               inset: 0,
+              zIndex: 30,
               backgroundImage:
                 "repeating-linear-gradient(45deg, rgba(255,255,255,0.10) 0 1px, transparent 1px 7px), repeating-linear-gradient(-45deg, rgba(255,255,255,0.08) 0 1px, transparent 1px 7px)",
-              pointerEvents: "none",
             }}
           />
         </>
       ) : null}
 
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          flex: 1,
-          padding: 14,
-          borderRadius: 22,
-          background: `${COLORS.background}66`,
-          border: `1px solid ${COLORS.border}99`,
-          gap: 10,
-          position: "relative",
-          overflow: "hidden",
-        }}
-      >
-        {/* Borderless: full-bleed art behind every section + a vignette so
-            the floating glass panels stay readable on busy images. */}
-        {isBorderless ? (
-          <>
-            <div
-              style={{
-                display: "flex",
-                position: "absolute",
-                inset: 0,
-                background: `linear-gradient(to bottom, ${gradFrom}, ${gradTo}, ${COLORS.background}cc)`,
-                overflow: "hidden",
-              }}
-            >
-              {card.artUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={card.artUrl}
-                  width={1500}
-                  height={2100}
-                  alt=""
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "cover",
-                    objectPosition: `${focalX}% ${focalY}%`,
-                    transform: `scale(${scale})`,
-                    transformOrigin: `${focalX}% ${focalY}%`,
-                  }}
-                />
-              ) : null}
-            </div>
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                background:
-                  "linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 22%, rgba(0,0,0,0) 62%, rgba(0,0,0,0.75) 100%)",
-                pointerEvents: "none",
-              }}
-            />
-          </>
-        ) : null}
+      {/* Showcase tints the title italic via the Band `italic` prop above. */}
+      {isShowcase ? null : null}
+    </div>
+  );
+}
 
-        {/* Title bar */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "10px 18px",
-            borderRadius: 10,
-            background: sectionBg,
-            border: sectionBorder,
-            position: "relative",
-            zIndex: 10,
-          }}
-        >
-          <span
-            style={{
-              fontSize: 28,
-              fontWeight: 600,
-              letterSpacing: 0.4,
-              color: COLORS.foreground,
-              maxWidth: "75%",
-              overflow: "hidden",
-              whiteSpace: "nowrap",
-              textOverflow: "ellipsis",
-              fontStyle: isShowcase ? "italic" : "normal",
-            }}
-          >
-            {title}
-          </span>
-          {showCost && card.cost ? (
-            <CostGlyphs cost={card.cost} fontSize={26} />
-          ) : null}
-        </div>
+const ELLIPSIS = {
+  display: "flex",
+  overflow: "hidden",
+  whiteSpace: "nowrap" as const,
+  textOverflow: "ellipsis" as const,
+  minWidth: 0,
+};
 
-        {/* Showcase ornate hairline below the title plate. */}
-        {isShowcase ? (
-          <div
-            style={{
-              display: "flex",
-              height: 2,
-              background: `linear-gradient(90deg, transparent 0%, ${COLORS.accent} 50%, transparent 100%)`,
-              position: "relative",
-              zIndex: 10,
-            }}
-          />
-        ) : null}
+// ---------------------------------------------------------------------------
+// Band — title/type line: left text + optional right glyph, same baseline.
+// ---------------------------------------------------------------------------
 
-        {/* Art well — fixed 3:2 aspect ratio so the art window stays the
-            same proportional size regardless of how long the card's rules
-            text is. Mirrors the live preview (card-preview.tsx). The
-            borderless variant still uses a flex spacer because the
-            full-bleed backdrop sits behind every section. */}
-        {isBorderless ? (
-          <div
-            style={{
-              display: "flex",
-              flexShrink: 0,
-              width: "100%",
-              height: artHeight,
-              position: "relative",
-              zIndex: 0,
-            }}
-          />
-        ) : (
-          <div
-            style={{
-              display: "flex",
-              position: "relative",
-              flexShrink: 0,
-              width: "100%",
-              height: artHeight,
-              borderRadius: 10,
-              overflow: "hidden",
-              border: `1px solid ${COLORS.border}66`,
-              background: `linear-gradient(to bottom, ${gradFrom}, ${gradTo}, ${COLORS.background}cc)`,
-              justifyContent: "center",
-              alignItems: "center",
-              zIndex: 10,
-            }}
-          >
-            {card.artUrl ? (
-              // next/og's Satori renderer does not support `next/image` — only
-              // a plain `<img>` element is allowed inside ImageResponse JSX.
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={card.artUrl}
-                width={1500}
-                height={1050}
-                alt=""
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                  objectPosition: `${focalX}% ${focalY}%`,
-                  transform: `scale(${scale})`,
-                  transformOrigin: `${focalX}% ${focalY}%`,
-                }}
-              />
-            ) : (
-              <span
-                style={{
-                  fontSize: 14,
-                  letterSpacing: 4,
-                  textTransform: "uppercase",
-                  color: COLORS.subtle,
-                }}
-              >
-                Artwork preview
-              </span>
-            )}
-          </div>
-        )}
-
-        {/* Type line */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "8px 16px",
-            borderRadius: 10,
-            background: sectionBg,
-            border: sectionBorder,
-            color: COLORS.muted,
-            fontSize: 18,
-            position: "relative",
-            zIndex: 10,
-          }}
-        >
-          <span
-            style={{
-              maxWidth: "85%",
-              overflow: "hidden",
-              whiteSpace: "nowrap",
-              textOverflow: "ellipsis",
-            }}
-          >
-            {typeLine}
-          </span>
-          {card.rarity ? (
-            <SetSymbolGlyph rarity={card.rarity as Rarity} fontSize={20} />
-          ) : null}
-        </div>
-
-        {/* Rules + flavor — takes whatever vertical space is left after
-            the fixed-height sections. overflow:hidden clips long text
-            instead of warping the layout; rulesFontPx auto-shrinks the
-            font in 4 tiers based on character count so most cards fit. */}
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            flex: 1,
-            minHeight: 0,
-            overflow: "hidden",
-            padding: "12px 16px",
-            borderRadius: 10,
-            background: isBorderless ? `${COLORS.background}aa` : `${COLORS.surface}99`,
-            border: sectionBorder,
-            color: COLORS.muted,
-            fontSize: rulesFontPx,
-            lineHeight: 1.4,
-            gap: 10,
-            position: "relative",
-            zIndex: 10,
-          }}
-        >
-          {card.rulesText?.trim() ? (
-            <p
-              style={{
-                margin: 0,
-                whiteSpace: "pre-wrap",
-                color: COLORS.foreground,
-              }}
-            >
-              {card.rulesText}
-            </p>
-          ) : (
-            <span style={{ fontStyle: "italic", color: COLORS.subtle }}>
-              Rules text appears here.
-            </span>
-          )}
-
-          {card.flavorText?.trim() ? (
-            <p
-              style={{
-                margin: 0,
-                paddingTop: 10,
-                borderTop: `1px solid ${COLORS.border}66`,
-                fontStyle: "italic",
-                color: COLORS.subtle,
-              }}
-            >
-              {card.flavorText}
-            </p>
-          ) : null}
-
-          {(showPT || showLoyalty || showDefense) && (
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: 8,
-                marginTop: "auto",
-                paddingTop: 10,
-                borderTop: `1px solid ${COLORS.border}66`,
-              }}
-            >
-              {showPT ? (
-                <Pill
-                  label="P/T"
-                  value={`${card.power ?? "—"} / ${card.toughness ?? "—"}`}
-                />
-              ) : null}
-              {showLoyalty ? (
-                <Pill label="Loyalty" value={card.loyalty ?? "—"} />
-              ) : null}
-              {showDefense ? (
-                <Pill label="Defense" value={card.defense ?? "—"} />
-              ) : null}
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            fontSize: 12,
-            letterSpacing: 2,
-            textTransform: "uppercase",
-            color: isBorderless ? COLORS.muted : COLORS.subtle,
-            position: "relative",
-            zIndex: 10,
-          }}
-        >
-          <span style={{ maxWidth: "70%", overflow: "hidden" }}>
-            {card.artistCredit?.trim()
-              ? `Art: ${card.artistCredit}`
-              : "Art: Unknown"}
-          </span>
-          <span>Spellwright</span>
-        </div>
-      </div>
+function Band({
+  slot,
+  cardWidth,
+  italic,
+  children,
+}: {
+  slot: TextSlot;
+  cardWidth: number;
+  italic?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      style={{
+        ...slotBox(slot.rect),
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        fontFamily: DISPLAY_FONT,
+        fontSize: fpx(slot.sizePct, cardWidth),
+        fontWeight: slot.weight ?? 600,
+        fontStyle: italic || slot.italic ? "italic" : "normal",
+        letterSpacing: slot.letterSpacingEm ? `${slot.letterSpacingEm}em` : 0,
+        textTransform: slot.uppercase ? "uppercase" : "none",
+        color: slot.colorHex,
+        zIndex: 20,
+        ...(slot.shadowCss ? { textShadow: slot.shadowCss } : {}),
+      }}
+    >
+      {children}
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// CostGlyphs — Satori-side renderer for mana cost strings. Tokenizes the cost
-// the same way the live preview does, then emits one styled <span> per token
-// using the Mana font (fontFamily: "Mana"). Unknown tokens render as plain
-// fallback text so weird inputs never break the bake.
+// CostGlyphs — Satori-side mana-cost renderer (Mana font, monochrome → tinted).
 // ---------------------------------------------------------------------------
 
-function CostGlyphs({
-  cost,
-  fontSize,
-}: {
-  cost: string;
-  fontSize: number;
-}) {
+function CostGlyphs({ cost, fontSize }: { cost: string; fontSize: number }) {
   const tokens = tokenize(cost);
-  if (tokens.length === 0) return null;
+  if (tokens.length === 0) return <span style={{ display: "flex" }} />;
 
   return (
     <span style={{ display: "flex", alignItems: "center", gap: 2 }}>
@@ -593,8 +457,8 @@ function CostGlyphs({
             <span
               key={`t-${i}`}
               style={{
-                color: COLORS.muted,
-                fontSize: fontSize * 0.6,
+                color: "#a4a4b0",
+                fontSize: Math.round(fontSize * 0.6),
                 letterSpacing: 1,
                 textTransform: "uppercase",
               }}
@@ -606,10 +470,6 @@ function CostGlyphs({
         const suffix = tokenSuffix(token);
         const codepoint = suffix ? getManaCodepoint(suffix) : null;
         if (!codepoint) return null;
-        // The Mana font is monochrome; tint by the relevant color so the pip
-        // reads as W/U/B/R/G/C the same way the live preview's CSS does.
-        // For hybrid and twobrid pips, fall back to the colorless hue — the
-        // glyph itself encodes the two-color split.
         const tintKey =
           token.kind === "solid" && /^[wubrgc]$/.test(token.label.toLowerCase())
             ? token.label.toLowerCase()
@@ -656,27 +516,71 @@ function SetSymbolGlyph({
   );
 }
 
-function Pill({ label, value }: { label: string; value: string }) {
+// StatBake — P/T, loyalty, or defense. Returns a JSX element (not a component
+// instance) so it slots into the outer flex layout cleanly.
+function StatBake({
+  slot,
+  value,
+  colorKey,
+  cardWidth,
+}: {
+  slot: StatSlot;
+  value: string;
+  colorKey: string;
+  cardWidth: number;
+}) {
+  const plateUrl = slot.plateAssetPathTemplate
+    ? getPlateDataUrlForPath(slot.plateAssetPathTemplate, colorKey)
+    : null;
   return (
-    <span
+    <div
       style={{
+        ...slotBox(slot.rect),
         display: "flex",
         alignItems: "center",
-        gap: 6,
-        padding: "4px 10px",
-        borderRadius: 9999,
-        border: `1px solid ${COLORS.border}99`,
-        background: `${COLORS.elevated}cc`,
-        color: COLORS.foreground,
-        fontFamily: '"Geist Mono", ui-monospace, monospace',
-        fontSize: 14,
-        letterSpacing: 1,
-        textTransform: "uppercase",
+        justifyContent: "center",
+        zIndex: 15,
       }}
     >
-      <span style={{ color: COLORS.subtle }}>{label}</span>
-      <span>{value}</span>
-    </span>
+      {plateUrl ? (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img
+          src={plateUrl}
+          alt=""
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "fill",
+          }}
+        />
+      ) : slot.badgeColorHex ? (
+        <div
+          style={{
+            position: "absolute",
+            top: "8%",
+            left: "12%",
+            right: "12%",
+            bottom: "8%",
+            background: slot.badgeColorHex,
+            borderRadius: "42%",
+          }}
+        />
+      ) : null}
+      <span
+        style={{
+          position: "relative",
+          color: slot.colorHex,
+          fontWeight: slot.weight ?? 700,
+          fontSize: fpx(slot.sizePct, cardWidth),
+          ...(slot.shadowCss ? { textShadow: slot.shadowCss } : {}),
+        }}
+      >
+        {value}
+      </span>
+    </div>
   );
 }
 
@@ -689,37 +593,19 @@ export function renderCardImage(
   preset: RenderPreset = "default",
 ): ImageResponse {
   const { width, height } = RENDER_PRESETS[preset];
-  return new ImageResponse(<CardImage card={card} height={height} />, {
-    width,
-    height,
-    // Mana + Keyrune are loaded so the cost glyphs and set symbol render
-    // with the open-source pictographic fonts (SIL OFL 1.1) the live
-    // preview uses via CSS. Without this, Satori has no glyphs for the
-    // PUA codepoints we emit and falls back to .notdef boxes.
-    // Satori has no auto-fallback when explicit fonts are provided, so the
-    // body font (MPlantin, the actual MTG body-text font that ships with
-    // mana-font) is registered alongside the icon fonts. MPlantin is the
-    // default; Mana / Keyrune are opted into on the spans that render
-    // their glyphs.
-    fonts: [
-      {
-        name: "MPlantin",
-        data: MPLANTIN_FONT_BYTES,
-        weight: 400,
-        style: "normal",
-      },
-      {
-        name: "Mana",
-        data: MANA_FONT_BYTES,
-        weight: 400,
-        style: "normal",
-      },
-      {
-        name: "Keyrune",
-        data: KEYRUNE_FONT_BYTES,
-        weight: 400,
-        style: "normal",
-      },
-    ],
-  });
+  return new ImageResponse(
+    <CardImage card={card} width={width} height={height} />,
+    {
+      width,
+      height,
+      // MPlantin is the real MTG body font (ships with mana-font); Mana +
+      // Keyrune supply the cost pips and set symbol. Satori has no auto-
+      // fallback once explicit fonts are provided, so all three are registered.
+      fonts: [
+        { name: "MPlantin", data: MPLANTIN_FONT_BYTES, weight: 400, style: "normal" },
+        { name: "Mana", data: MANA_FONT_BYTES, weight: 400, style: "normal" },
+        { name: "Keyrune", data: KEYRUNE_FONT_BYTES, weight: 400, style: "normal" },
+      ],
+    },
+  );
 }
