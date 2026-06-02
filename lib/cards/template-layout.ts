@@ -135,6 +135,21 @@ export type FrameProfile = {
     /** Row divider line color. */
     dividerHex: string;
   };
+  /** Adventure (Eldraine) sub-panel. When set, the frame is a creature whose
+   *  lower text area is an open storybook: this LEFT page holds an "adventure"
+   *  spell — a second name / type / cost / rules block sourced from the card's
+   *  BACK-FACE content — while the creature's own `rules` box is the RIGHT page.
+   *  Both show at once (the renderers suppress the DFC flip for adventure
+   *  frames). The adventure name + type sit on the panel's colored bars, so
+   *  they're light ink; the adventure rules sit on the cream page, so dark. */
+  adventure?: {
+    title: TextSlot;
+    type: TextSlot;
+    rules: TextSlot;
+    /** Adventure mana-cost size (fraction of card width). Defaults to the
+     *  adventure title's sizePct. */
+    costSizePct?: number;
+  };
 };
 
 /** Resolve a per-color asset path from a template like "/frames/m15/pt/{color}.png". */
@@ -512,6 +527,60 @@ const SAGA: FrameProfile = {
   },
 };
 
+// Adventure — the M15 Eldraine frame. The creature uses the M15 title + type
+// bars and art window unchanged, but the lower text area is an open storybook:
+// the adventure spell (name/type/cost/rules from the card's back-face) fills the
+// LEFT page, and the creature's own rules move to the narrow RIGHT page. The
+// adventure name + type sit on the page's colored bars (light ink + a soft
+// shadow so they read on any color); the rules sit on the cream page (dark ink).
+// Frame composited by scripts/build-adventure-frame.mjs (m15 base + double_page
+// + null_page). Geometry is the MSE 375×523 spec (magic-m15-adventure.mse-style)
+// in percent. P/T plate reuses M15's (it sits over the right creature page).
+const ADV_SHADOW = "0 1px 2px rgba(0,0,0,0.6), 0 0 2px rgba(0,0,0,0.5)";
+const ADVENTURE: FrameProfile = {
+  ...M15,
+  label: "Adventure",
+  // Creature rules → RIGHT page (MSE text left 190, top 332, width 143 → 481).
+  rules: {
+    rect: { topPct: 63.5, leftPct: 50.7, widthPct: 38.2, heightPct: 28.5 },
+    sizePct: 0.028,
+    colorHex: INK_DARK,
+    vAlign: "start",
+    font: "body",
+    lineHeight: 1.28,
+  },
+  adventure: {
+    // Adventure name (+ its cost) — MSE name 2 (left 32, top ~330, → cost 180).
+    title: {
+      rect: { topPct: 62.7, leftPct: 8.5, widthPct: 39.5, heightPct: 4.0 },
+      sizePct: 0.032,
+      colorHex: INK_LIGHT,
+      weight: 700,
+      font: "display",
+      shadowCss: ADV_SHADOW,
+    },
+    // Adventure type line — MSE type 2 (left 32, top ~353, width 155).
+    type: {
+      rect: { topPct: 67.0, leftPct: 8.5, widthPct: 41.3, heightPct: 3.7 },
+      sizePct: 0.0255,
+      colorHex: INK_LIGHT,
+      weight: 600,
+      font: "display",
+      shadowCss: ADV_SHADOW,
+    },
+    // Adventure rules — MSE text 2 (left 27, top 375, width 143 → 481).
+    rules: {
+      rect: { topPct: 71.6, leftPct: 7.2, widthPct: 38.1, heightPct: 20.3 },
+      sizePct: 0.026,
+      colorHex: INK_DARK,
+      vAlign: "start",
+      font: "body",
+      lineHeight: 1.25,
+    },
+    costSizePct: 0.03,
+  },
+};
+
 const PROFILES: Record<FrameTemplate, FrameProfile> = {
   m15: M15,
   m15land: M15LAND,
@@ -524,6 +593,7 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   alphatoken: ALPHATOKEN,
   battle: BATTLE,
   saga: SAGA,
+  adventure: ADVENTURE,
 };
 
 /** Resolve a frame profile, defaulting to M15 for unknown/legacy templates

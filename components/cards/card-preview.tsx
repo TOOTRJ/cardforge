@@ -122,6 +122,18 @@ type FaceData = {
   artPosition: ArtPosition;
 };
 
+// The adventure spell shown inline on an Adventure frame's left page. Sourced
+// from the card's back-face content (name / cost / type / rules) — no art or
+// P/T, since the adventure shares the creature's art and is an instant/sorcery.
+type AdventureData = {
+  title: string | null;
+  cost: string | null;
+  cardType: CardType | null;
+  supertype: string | null;
+  subtypes: string[];
+  rulesText: string | null;
+};
+
 export function CardPreview({
   title,
   cost,
@@ -186,6 +198,22 @@ export function CardPreview({
       }
     : null;
 
+  // Adventure frames render their back-face content as an inline sub-panel (the
+  // left storybook page), NOT as a flippable second face — both show at once.
+  const isAdventure = Boolean(layout.adventure);
+  const adventureData: AdventureData | null =
+    isAdventure && backFace
+      ? {
+          title: backFace.title ?? null,
+          cost: backFace.cost ?? null,
+          cardType: backFace.card_type ?? null,
+          supertype: backFace.supertype ?? null,
+          subtypes: backFace.subtypes ?? [],
+          rulesText: backFace.rules_text ?? null,
+        }
+      : null;
+  const showFlip = Boolean(backFaceData) && !isAdventure;
+
   const [internalFace, setInternalFace] = useState<"front" | "back">("front");
   const currentFace = face ?? internalFace;
   const toggleFace = () => {
@@ -216,7 +244,7 @@ export function CardPreview({
       )}
       style={{ containerType: "inline-size", borderRadius: "4.7cqw" }}
     >
-      {backFaceData ? (
+      {showFlip && backFaceData ? (
         <div
           className="relative h-full w-full"
           style={{ perspective: "1400px" }}
@@ -249,10 +277,10 @@ export function CardPreview({
           </div>
         </div>
       ) : (
-        <CardFace face={frontFace} {...faceProps} />
+        <CardFace face={frontFace} adventure={adventureData} {...faceProps} />
       )}
 
-      {backFaceData ? (
+      {showFlip ? (
         <button
           type="button"
           onClick={(event) => {
@@ -291,6 +319,7 @@ function CardFace({
   layout,
   finish,
   staticInEditor,
+  adventure = null,
 }: {
   face: FaceData;
   template: FrameTemplate;
@@ -299,6 +328,8 @@ function CardFace({
   layout: FrameProfile;
   finish: CardFinish;
   staticInEditor: boolean;
+  /** Adventure spell shown on the left storybook page (Adventure frames only). */
+  adventure?: AdventureData | null;
 }) {
   const colorKey = pickFrameColorKey(colorIdentity);
   const safeTitle = face.title?.trim() || "Untitled Card";
@@ -464,6 +495,15 @@ function CardFace({
         ) : null}
       </div>
       )}
+
+      {/* Adventure spell — the left storybook page (Adventure frames). */}
+      {layout.adventure && adventure ? (
+        <AdventurePanel
+          slot={layout.adventure}
+          data={adventure}
+          staticInEditor={staticInEditor}
+        />
+      ) : null}
 
       {/* Footer — artist credit + brand. */}
       {layout.footer ? (
@@ -720,6 +760,71 @@ function ChapterRail({
         </span>
       )}
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// AdventurePanel — the left storybook page of an Adventure frame. The adventure
+// spell's name (+ cost) and type line sit on the page's colored bars (light ink
+// with a soft shadow), and its rules sit on the cream page below (dark ink).
+// Rendered inline beside the creature's own (right) rules box — both visible at
+// once, so there's no flip.
+// ---------------------------------------------------------------------------
+
+function AdventurePanel({
+  slot,
+  data,
+  staticInEditor,
+}: {
+  slot: NonNullable<FrameProfile["adventure"]>;
+  data: AdventureData;
+  staticInEditor: boolean;
+}) {
+  const name = data.title?.trim() || "Adventure";
+  const typeLine = buildTypeLine({
+    supertype: data.supertype,
+    cardType: data.cardType,
+    subtypes: data.subtypes,
+  });
+  const showCost = Boolean(data.cost?.trim());
+  return (
+    <>
+      <BandSlot slot={slot.title}>
+        <span style={ELLIPSIS} title={name}>
+          {name}
+        </span>
+        {showCost ? <ManaCostGlyphs cost={data.cost} size="sm" /> : null}
+      </BandSlot>
+      <BandSlot slot={slot.type}>
+        <span style={ELLIPSIS}>{typeLine}</span>
+      </BandSlot>
+      <div
+        style={{
+          ...rectStyle(slot.rules.rect),
+          zIndex: 20,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: vJustify(slot.rules.vAlign ?? "start"),
+          overflow: "hidden",
+          padding: "1.2cqw 0.5cqw",
+          fontFamily: CARD_FONT,
+          fontSize: cqw(slot.rules.sizePct),
+          lineHeight: slot.rules.lineHeight ?? 1.25,
+          color: slot.rules.colorHex,
+          textAlign: "center",
+        }}
+      >
+        {data.rulesText?.trim() ? (
+          <div style={{ whiteSpace: "pre-line" }}>
+            {renderRulesText(data.rulesText)}
+          </div>
+        ) : staticInEditor ? (
+          <span style={{ fontStyle: "italic", opacity: 0.55 }}>
+            Adventure rules (the back face).
+          </span>
+        ) : null}
+      </div>
+    </>
   );
 }
 
