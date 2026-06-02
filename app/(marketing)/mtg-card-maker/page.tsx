@@ -82,8 +82,23 @@ const FAQ: { q: string; a: string }[] = [
 ];
 
 export default function MtgCardMakerPage() {
+  // FAQPage structured data so the Q&A is eligible for rich results and is
+  // citable by AI answer engines (the same FAQ rendered below, one source).
+  const faqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: FAQ.map(({ q, a }) => ({
+      "@type": "Question",
+      name: q,
+      acceptedAnswer: { "@type": "Answer", text: a },
+    })),
+  };
   return (
     <main id="main" className="mx-auto w-full max-w-4xl px-4 py-16 sm:px-6 lg:px-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
 
       {/* Hero */}
       <div className="mb-14 flex flex-col gap-5">

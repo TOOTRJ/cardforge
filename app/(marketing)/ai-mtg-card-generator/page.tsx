@@ -30,7 +30,7 @@ export const metadata: Metadata = {
 const FEATURES = [
   "One-click random card — AI picks rarity, color, type, and rules text",
   "Concept-to-card: type a theme and the AI drafts every field",
-  "AI-generated original art (DALL-E 3) sized for the card frame",
+  "AI-generated original art sized for the card frame",
   "Live preview as the AI fills the editor",
   "Rules-text improver — clean templating + correct keyword capitalization",
   "Balance check — risk level, specific concerns, suggested tweaks",
@@ -43,7 +43,7 @@ const FEATURES = [
 const FAQ: { q: string; a: string }[] = [
   {
     q: "What is an AI MTG card generator?",
-    a: "An AI MTG card generator uses a large language model to draft a complete Magic: The Gathering card from a brief prompt or a click. Spellwright's generator picks a rarity, color identity, type, mana cost, and rules text — then optionally generates original art with DALL-E 3 — and drops the result into the editor where you can tweak any field before publishing.",
+    a: "An AI MTG card generator uses a large language model to draft a complete Magic: The Gathering card from a brief prompt or a click. Spellwright's generator picks a rarity, color identity, type, mana cost, and rules text — then optionally generates original art with OpenAI's image model — and drops the result into the editor where you can tweak any field before publishing.",
   },
   {
     q: "How do I generate a random MTG card with AI?",
@@ -55,11 +55,11 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: "Can the AI generate artwork for my card?",
-    a: "Yes. After the AI drafts the card's text, it composes a vivid art prompt and generates a single original image via DALL-E 3. The image is uploaded to your card's art slot and you can replace it with your own upload at any time. Generated artwork is yours under the underlying OpenAI usage policy — typically free to use for non-commercial purposes.",
+    a: "Yes. After the AI drafts the card's text, it composes a vivid art prompt and generates a single original image via OpenAI's image model. The image is uploaded to your card's art slot and you can replace it with your own upload at any time. Generated artwork is yours under the underlying OpenAI usage policy — typically free to use for non-commercial purposes.",
   },
   {
     q: "Is the AI random card generator free?",
-    a: "Yes, within a daily quota. Free accounts can generate up to a small number of cards per day so a single user can't drain the AI budget for everyone. Signed-in users get a higher quota than guests. Heavy users will eventually have an option to bring their own OpenAI API key.",
+    a: "Yes, within a daily quota. You need a free account to use the AI generator (it's disabled for signed-out visitors), and each account can generate up to 10 random cards per day so a single user can't drain the AI budget for everyone. Heavy users will eventually have an option to bring their own OpenAI API key.",
   },
   {
     q: "Will the AI design balanced cards?",
@@ -76,11 +76,26 @@ const FAQ: { q: string; a: string }[] = [
 ];
 
 export default function AiMtgCardGeneratorPage() {
+  // FAQPage structured data so the Q&A is eligible for rich results and is
+  // citable by AI answer engines (the same FAQ rendered below, one source).
+  const faqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: FAQ.map(({ q, a }) => ({
+      "@type": "Question",
+      name: q,
+      acceptedAnswer: { "@type": "Answer", text: a },
+    })),
+  };
   return (
     <main
       id="main"
       className="mx-auto w-full max-w-4xl px-4 py-16 sm:px-6 lg:px-8"
     >
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
       <div className="mb-14 flex flex-col gap-5">
         <span className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
           AI-powered · Free · No setup

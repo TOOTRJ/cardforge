@@ -34,7 +34,7 @@ export default async function NewSetPage() {
 
   const user = await getCurrentUser();
   if (!user) {
-    redirect("/login?redirectTo=/sets/new");
+    redirect("/login?redirectTo=/dashboard/sets/new");
   }
 
   return (
