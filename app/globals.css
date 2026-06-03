@@ -202,12 +202,28 @@ body {
   will-change: transform;
 }
 
+/* Authentic card corner. Real Magic cards have a soft ~3.5%-of-short-side
+   corner; we render the card image edge-to-edge and only round this much so the
+   frame's own corner shows instead of a hard web-UI rounding. Expressed as an
+   aspect-corrected ELLIPTICAL radius (horizontal% / vertical%) so the corner
+   stays CIRCULAR without container-query units — `cqw` resolved against the
+   wrong ancestor and inflated the radius to ~8.6%. Portrait is 5:7, landscape
+   7:5, so the two axes use different percentages to land on the same px radius.
+     portrait : 3.5% of width  = 2.5% of height  (height = 1.4·width)
+     landscape: 2.5% of width  = 3.5% of height  (width  = 1.4·height) */
+.card-corners {
+  border-radius: 3.5% / 2.5%;
+}
+.card-corners-landscape {
+  border-radius: 2.5% / 3.5%;
+}
+
 .card-hover-glare {
   pointer-events: none;
   position: absolute;
   inset: 0;
   z-index: 20;
-  border-radius: var(--radius-frame);
+  border-radius: 3.5% / 2.5%;
   opacity: var(--card-active);
   background: radial-gradient(
     circle at var(--card-gx) var(--card-gy),

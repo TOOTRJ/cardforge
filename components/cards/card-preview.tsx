@@ -242,13 +242,17 @@ export function CardPreview({
       className={cn(
         "group relative w-full overflow-hidden bg-[#101015] shadow-[0_18px_60px_-30px_rgba(0,0,0,0.85)] transition-transform",
         // Battle frames are landscape (7:5); every other frame is the 5:7 card.
-        layout.orientation === "landscape" ? "aspect-[7/5]" : "aspect-[5/7]",
+        // card-corners* round only as much as a real card (~3.5%) so the frame's
+        // own corner shows — no hard web-UI rounding cutting into the card.
+        layout.orientation === "landscape"
+          ? "aspect-[7/5] card-corners-landscape"
+          : "aspect-[5/7] card-corners",
         staticInEditor
           ? ""
           : "hover:-translate-y-1 hover:shadow-[0_24px_80px_-30px_rgba(120,80,220,0.4)]",
         className,
       )}
-      style={{ containerType: "inline-size", borderRadius: "4.7cqw" }}
+      style={{ containerType: "inline-size" }}
     >
       {showFlip && backFaceData ? (
         <div
