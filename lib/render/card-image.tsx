@@ -566,21 +566,79 @@ function CostGlyphs({ cost, fontSize }: { cost: string; fontSize: number }) {
 function SetSymbolGlyph({
   rarity,
   fontSize,
+  iconUrl,
+  setCode,
 }: {
   rarity: Rarity;
   fontSize: number;
+  iconUrl?: string | null;
+  setCode?: string | null;
 }) {
+  const color = RARITY_SET_SYMBOL_COLOR[rarity];
+
+  // 1. A set's uploaded icon image — drawn as-is.
+  if (iconUrl) {
+    return (
+      <span style={{ display: "flex" }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={iconUrl}
+          width={Math.round(fontSize)}
+          height={Math.round(fontSize)}
+          style={{ objectFit: "contain" }}
+          alt=""
+        />
+      </span>
+    );
+  }
+
+  // 2. A preset Keyrune set glyph, rarity-tinted. (Specific-code glyph mapping
+  //    in the bake is a follow-up; the default Keyrune glyph stands in for now.)
+  if (setCode) {
+    return (
+      <span
+        style={{
+          display: "flex",
+          fontFamily: '"Keyrune"',
+          fontSize,
+          lineHeight: 1,
+          color,
+        }}
+      >
+        {KEYRUNE_DEFAULT_GLYPH}
+      </span>
+    );
+  }
+
+  // 3. Default — the Spellwright mark, rarity-tinted (matches the preview's
+  //    SpellwrightSetMark). Inline SVG so Satori renders it without a font.
+  const s = Math.round(fontSize);
   return (
-    <span
-      style={{
-        display: "flex",
-        fontFamily: '"Keyrune"',
-        fontSize,
-        lineHeight: 1,
-        color: RARITY_SET_SYMBOL_COLOR[rarity],
-      }}
-    >
-      {KEYRUNE_DEFAULT_GLYPH}
+    <span style={{ display: "flex" }}>
+      <svg width={s} height={s} viewBox="0 0 32 32">
+        <polygon points="16,3 28.4,12 23.6,26.8 8.4,26.8 3.6,12" fill={color} />
+        <line
+          x1="16"
+          y1="8.5"
+          x2="16"
+          y2="21"
+          stroke="rgba(0,0,0,0.5)"
+          strokeWidth="1.7"
+          strokeLinecap="round"
+        />
+        <path
+          d="M16 21 L12 18.4"
+          stroke="rgba(0,0,0,0.5)"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+        />
+        <path
+          d="M16 21 L20 18.4"
+          stroke="rgba(0,0,0,0.5)"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+        />
+      </svg>
     </span>
   );
 }
