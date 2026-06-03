@@ -190,6 +190,8 @@ export type Database = {
           cover_url: string | null;
           created_at: string;
           description: string | null;
+          icon_code: string | null;
+          icon_url: string | null;
           id: string;
           owner_id: string;
           slug: string;
@@ -201,6 +203,8 @@ export type Database = {
           cover_url?: string | null;
           created_at?: string;
           description?: string | null;
+          icon_code?: string | null;
+          icon_url?: string | null;
           id?: string;
           owner_id: string;
           slug: string;
@@ -212,6 +216,8 @@ export type Database = {
           cover_url?: string | null;
           created_at?: string;
           description?: string | null;
+          icon_code?: string | null;
+          icon_url?: string | null;
           id?: string;
           owner_id?: string;
           slug?: string;
@@ -285,10 +291,13 @@ export type Database = {
           owner_id: string;
           parent_card_id: string | null;
           power: string | null;
+          primary_set_id: string | null;
           rarity: string | null;
           rendered_at: string | null;
           rendered_image_url: string | null;
           rules_text: string | null;
+          set_icon_code: string | null;
+          set_icon_url: string | null;
           slug: string;
           source_scryfall_id: string | null;
           subtypes: string[];
@@ -321,10 +330,13 @@ export type Database = {
           owner_id: string;
           parent_card_id?: string | null;
           power?: string | null;
+          primary_set_id?: string | null;
           rarity?: string | null;
           rendered_at?: string | null;
           rendered_image_url?: string | null;
           rules_text?: string | null;
+          set_icon_code?: string | null;
+          set_icon_url?: string | null;
           slug: string;
           source_scryfall_id?: string | null;
           subtypes?: string[];
@@ -357,10 +369,13 @@ export type Database = {
           owner_id?: string;
           parent_card_id?: string | null;
           power?: string | null;
+          primary_set_id?: string | null;
           rarity?: string | null;
           rendered_at?: string | null;
           rendered_image_url?: string | null;
           rules_text?: string | null;
+          set_icon_code?: string | null;
+          set_icon_url?: string | null;
           slug?: string;
           source_scryfall_id?: string | null;
           subtypes?: string[];
@@ -384,6 +399,13 @@ export type Database = {
             columns: ["parent_card_id"];
             isOneToOne: false;
             referencedRelation: "cards";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "cards_primary_set_id_fkey";
+            columns: ["primary_set_id"];
+            isOneToOne: false;
+            referencedRelation: "card_sets";
             referencedColumns: ["id"];
           },
           {
