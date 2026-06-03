@@ -303,14 +303,12 @@ function CardImage({
       {/* Type band — type line + rarity set-symbol. */}
       <Band slot={layout.type} cardWidth={width}>
         <span style={ELLIPSIS}>{typeLine}</span>
-        {card.rarity ? (
-          <SetSymbolGlyph
-            rarity={card.rarity as Rarity}
-            fontSize={fpx(layout.symbolSizePct ?? layout.type.sizePct * 1.1, width)}
-          />
-        ) : (
-          <span style={{ display: "flex" }} />
-        )}
+        <SetSymbolGlyph
+          rarity={(card.rarity as Rarity | null) ?? "common"}
+          iconUrl={card.setIconUrl}
+          setCode={card.setIconCode}
+          fontSize={fpx(layout.symbolSizePct ?? layout.type.sizePct * 1.1, width)}
+        />
       </Band>
 
       {/* Rules — Saga chapter rail, otherwise the normal rules + flavor box. */}

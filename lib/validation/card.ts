@@ -194,6 +194,10 @@ const baseCardSchema = z.object({
   // imported from Scryfall via the import dialog. UUID-shaped per
   // Scryfall's id format. `null` clears; `undefined` leaves alone.
   source_scryfall_id: uuidSchema.nullable().optional(),
+  // The set this card is added to + whose symbol it displays. The action
+  // denormalizes that set's icon onto the card and creates set membership.
+  // `null` clears the association; `undefined` leaves it untouched on update.
+  primary_set_id: uuidSchema.nullable().optional(),
 });
 
 export const createCardSchema = baseCardSchema;

@@ -40,6 +40,25 @@ export const setCoverUrlSchema = optionalEmptyString(
     .url("Cover URL must be a valid URL."),
 );
 
+// Set symbol: an uploaded image URL (icon_url) OR a preset Keyrune set code
+// (icon_code, lowercase alphanumeric like "dom"/"mh3"). Both optional; the card
+// renderer falls back to the default Spellwright mark when neither is set.
+export const setIconUrlSchema = optionalEmptyString(
+  z
+    .string()
+    .trim()
+    .max(2048, "Icon URL must be 2048 characters or fewer.")
+    .url("Icon URL must be a valid URL."),
+);
+
+export const setIconCodeSchema = optionalEmptyString(
+  z
+    .string()
+    .trim()
+    .max(32, "Set code must be 32 characters or fewer.")
+    .regex(/^[a-z0-9]+$/, "Set code must be lowercase letters and numbers only."),
+);
+
 export const setVisibilitySchema = z
   .enum(VISIBILITY_VALUES)
   .default("private");
@@ -49,6 +68,8 @@ export const createSetSchema = z.object({
   slug: setSlugSchema.optional(),
   description: setDescriptionSchema,
   cover_url: setCoverUrlSchema,
+  icon_url: setIconUrlSchema,
+  icon_code: setIconCodeSchema,
   visibility: setVisibilitySchema,
 });
 

@@ -152,6 +152,62 @@ export type CreateCardOptions = {
   redirectAfterCreate?: boolean;
 };
 
+type ResolvedSetIcon = {
+  primary_set_id: string | null;
+  set_icon_url: string | null;
+  set_icon_code: string | null;
+};
+
+// Resolve a card's chosen primary set into the denormalized symbol fields. The
+// set must be owned by the user; an unknown/foreign set is silently dropped (we
+// don't fail the save over it). Returns the source set id for membership.
+async function resolvePrimarySet(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  primarySetId: string | null | undefined,
+): Promise<ResolvedSetIcon> {
+  const empty: ResolvedSetIcon = {
+    primary_set_id: null,
+    set_icon_url: null,
+    set_icon_code: null,
+  };
+  if (!primarySetId) return empty;
+  const { data: set } = await supabase
+    .from("card_sets")
+    .select("id, icon_url, icon_code")
+    .eq("id", primarySetId)
+    .eq("owner_id", userId)
+    .maybeSingle();
+  if (!set) return empty;
+  return {
+    primary_set_id: set.id,
+    set_icon_url: set.icon_url ?? null,
+    set_icon_code: set.icon_code ?? null,
+  };
+}
+
+// Add the card to a set's item list, appended after the current last position.
+// Idempotent on the (set_id, card_id) unique constraint; best-effort.
+async function addCardToSetMembership(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  setId: string,
+  cardId: string,
+): Promise<void> {
+  const { data: rows } = await supabase
+    .from("card_set_items")
+    .select("position")
+    .eq("set_id", setId)
+    .order("position", { ascending: false })
+    .limit(1);
+  const nextPosition = (rows?.[0]?.position ?? -1) + 1;
+  await supabase
+    .from("card_set_items")
+    .upsert(
+      { set_id: setId, card_id: cardId, position: nextPosition },
+      { onConflict: "set_id,card_id", ignoreDuplicates: true },
+    );
+}
+
 export async function createCardAction(
   payload: unknown,
   options: CreateCardOptions = {},
@@ -187,6 +243,8 @@ export async function createCardAction(
     }
   }
 
+  const setIcon = await resolvePrimarySet(supabase, user.id, data.primary_set_id);
+
   const insert: CardInsert = {
     owner_id: user.id,
     title: data.title,
@@ -217,6 +275,9 @@ export async function createCardAction(
     // Scryfall provenance (chunk 13): the source card id when imported,
     // null otherwise. Stays null forever for forged-from-scratch cards.
     source_scryfall_id: data.source_scryfall_id ?? null,
+    primary_set_id: setIcon.primary_set_id,
+    set_icon_url: setIcon.set_icon_url,
+    set_icon_code: setIcon.set_icon_code,
   };
 
   const { data: row, error } = await supabase
@@ -230,6 +291,12 @@ export async function createCardAction(
       ok: false,
       formError: error?.message ?? "Could not create card.",
     };
+  }
+
+  // Add the card to its chosen set's item list (the symbol is already
+  // denormalized on the row above).
+  if (setIcon.primary_set_id) {
+    await addCardToSetMembership(supabase, setIcon.primary_set_id, row.id);
   }
 
   // Bake a PNG of the new card to the card-renders bucket and persist its
@@ -323,6 +390,16 @@ export async function updateCardAction(
   // Scryfall source: same semantics — null clears, omitted leaves alone.
   if (data.source_scryfall_id !== undefined)
     update.source_scryfall_id = data.source_scryfall_id ?? null;
+  // Primary set: re-resolve so the card's denormalized symbol stays in sync.
+  const resolvedSet =
+    data.primary_set_id !== undefined
+      ? await resolvePrimarySet(supabase, user.id, data.primary_set_id)
+      : null;
+  if (resolvedSet) {
+    update.primary_set_id = resolvedSet.primary_set_id;
+    update.set_icon_url = resolvedSet.set_icon_url;
+    update.set_icon_code = resolvedSet.set_icon_code;
+  }
 
   const { data: row, error } = await supabase
     .from("cards")
@@ -337,6 +414,10 @@ export async function updateCardAction(
       ok: false,
       formError: error?.message ?? "Could not update card.",
     };
+  }
+
+  if (resolvedSet?.primary_set_id) {
+    await addCardToSetMembership(supabase, resolvedSet.primary_set_id, row.id);
   }
 
   // Re-bake the PNG so the gallery + detail thumbnails reflect the edit.
