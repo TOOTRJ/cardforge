@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
@@ -48,6 +48,12 @@ export function SetCardManager({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [pendingId, setPendingId] = useState<string | null>(null);
+
+  // Stable, hydration-safe id for dnd-kit. Without it, DndContext falls back to
+  // a module-level counter for its a11y ids (aria-describedby="DndDescribedBy-N"),
+  // which differs between the server and client render passes and trips a React
+  // hydration mismatch. useId() yields the same value on both sides.
+  const dndContextId = useId();
 
   // Local copy of items so drag-end can update the visual order
   // immediately (optimistic UI) without waiting for the server round-trip
@@ -167,6 +173,7 @@ export function SetCardManager({
           </SurfaceCard>
         ) : (
           <DndContext
+            id={dndContextId}
             sensors={sensors}
             collisionDetection={closestCenter}
             onDragEnd={handleDragEnd}
