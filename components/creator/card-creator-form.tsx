@@ -171,7 +171,7 @@ const VISIBILITY_OPTIONS: ChipOption<Visibility>[] = [
   {
     value: "private",
     label: "Private",
-    description: "Only you can see it. Drafts default here.",
+    description: "Only you can see it.",
     icon: Lock,
   },
   {
@@ -183,7 +183,7 @@ const VISIBILITY_OPTIONS: ChipOption<Visibility>[] = [
   {
     value: "public",
     label: "Public",
-    description: "Listed in the public gallery and your profile.",
+    description: "Listed in the public gallery and your profile. The default.",
     icon: Globe2,
   },
 ];
@@ -359,7 +359,7 @@ function defaultValuesFor(
         finish: "regular",
         template: DEFAULT_FRAME_TEMPLATE,
       },
-      visibility: "private",
+      visibility: "public",
       has_back_face: false,
       back_face: EMPTY_BACK_FACE,
       source_scryfall_id: "",
