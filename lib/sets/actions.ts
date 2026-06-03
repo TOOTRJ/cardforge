@@ -144,6 +144,8 @@ export async function createSetAction(
     slug,
     description: parsed.data.description ?? null,
     cover_url: parsed.data.cover_url ?? null,
+    icon_url: parsed.data.icon_url ?? null,
+    icon_code: parsed.data.icon_code ?? null,
     visibility: parsed.data.visibility,
   };
 
@@ -204,6 +206,8 @@ export async function updateSetAction(
   }
   if (data.description !== undefined) update.description = data.description ?? null;
   if (data.cover_url !== undefined) update.cover_url = data.cover_url ?? null;
+  if (data.icon_url !== undefined) update.icon_url = data.icon_url ?? null;
+  if (data.icon_code !== undefined) update.icon_code = data.icon_code ?? null;
   if (data.visibility !== undefined) update.visibility = data.visibility;
 
   const { data: row, error } = await supabase

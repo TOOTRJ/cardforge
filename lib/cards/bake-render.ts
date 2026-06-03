@@ -53,6 +53,8 @@ type CardRowForBake = {
   art_url: string | null;
   art_position: unknown;
   frame_style: unknown;
+  set_icon_url: string | null;
+  set_icon_code: string | null;
   back_face: unknown;
 };
 
@@ -75,6 +77,8 @@ function rowToPreviewData(card: CardRowForBake): CardPreviewData {
     artUrl: card.art_url,
     artPosition: (card.art_position as ArtPosition | null) ?? {},
     frameStyle: (card.frame_style as FrameStyle | null) ?? {},
+    setIconUrl: card.set_icon_url,
+    setIconCode: card.set_icon_code,
     // Adventure frames render the back-face content as an inline sub-panel.
     backFace: (card.back_face as CardBackFace | null) ?? null,
   };
@@ -109,7 +113,7 @@ export async function bakeCardRender(
   const { data: card, error: fetchErr } = await supabase
     .from("cards")
     .select(
-      "id, owner_id, visibility, title, cost, card_type, supertype, subtypes, rarity, color_identity, rules_text, flavor_text, power, toughness, loyalty, defense, artist_credit, art_url, art_position, frame_style, back_face",
+      "id, owner_id, visibility, title, cost, card_type, supertype, subtypes, rarity, color_identity, rules_text, flavor_text, power, toughness, loyalty, defense, artist_credit, art_url, art_position, frame_style, set_icon_url, set_icon_code, back_face",
     )
     .eq("id", cardId)
     .maybeSingle();

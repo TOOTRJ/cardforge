@@ -90,6 +90,8 @@ export function DashboardCardTile({ card, isSelected, onToggle }: Props) {
                 artUrl: card.art_url,
                 artPosition: card.art_position as ArtPosition,
                 frameStyle: card.frame_style as FrameStyle,
+                setIconUrl: card.set_icon_url,
+                setIconCode: card.set_icon_code,
               }}
             />
           </CardHoverEffect>

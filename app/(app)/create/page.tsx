@@ -17,6 +17,7 @@ import {
   getFantasyGameSystem,
   getTemplatesForGameSystem,
 } from "@/lib/cards/queries";
+import { listMySets } from "@/lib/sets/queries";
 import { isAIConfigured } from "@/lib/ai/card-assistant";
 
 export const metadata: Metadata = {
@@ -43,6 +44,7 @@ export default async function CreatePage() {
   const templates = gameSystem
     ? await getTemplatesForGameSystem(gameSystem.id)
     : [];
+  const mySets = await listMySets();
 
   if (!gameSystem) {
     return <SchemaUnseeded />;
@@ -79,6 +81,7 @@ export default async function CreatePage() {
           ownerUsername={profile?.username ?? null}
           gameSystems={[gameSystem]}
           templates={templates}
+          mySets={mySets}
           aiConfigured={isAIConfigured()}
         />
       </div>

@@ -66,6 +66,11 @@ export type CardPreviewData = {
   artUrl?: string | null;
   artPosition?: ArtPosition;
   frameStyle?: FrameStyle;
+  /** Set symbol the card displays (from its primary set). An uploaded image
+   *  (setIconUrl) wins over a preset Keyrune code (setIconCode); when both are
+   *  absent the default rarity-tinted Spellwright mark renders. */
+  setIconUrl?: string | null;
+  setIconCode?: string | null;
   /** Optional back-face content. When set, the preview renders a flip button
    *  and supports a 3D flip animation between the two faces. */
   backFace?: CardBackFace | null;
@@ -152,6 +157,8 @@ export function CardPreview({
   artUrl,
   artPosition,
   frameStyle,
+  setIconUrl,
+  setIconCode,
   backFace,
   face,
   onFaceChange,
@@ -235,6 +242,8 @@ export function CardPreview({
     layout,
     finish,
     staticInEditor,
+    setIconUrl: setIconUrl ?? null,
+    setIconCode: setIconCode ?? null,
   } as const;
 
   return (
@@ -334,6 +343,8 @@ function CardFace({
   layout,
   finish,
   staticInEditor,
+  setIconUrl = null,
+  setIconCode = null,
   adventure = null,
   secondFace = null,
 }: {
@@ -344,6 +355,8 @@ function CardFace({
   layout: FrameProfile;
   finish: CardFinish;
   staticInEditor: boolean;
+  setIconUrl?: string | null;
+  setIconCode?: string | null;
   /** Adventure spell shown on the left storybook page (Adventure frames only). */
   adventure?: AdventureData | null;
   /** Back-face content for a rotated second face (flip / split / aftermath). */
@@ -476,12 +489,12 @@ function CardFace({
             subtypes: face.subtypes,
           })}
         </span>
-        {rarity ? (
-          <SetSymbol
-            rarity={rarity}
-            size={cqw(layout.symbolSizePct ?? layout.type.sizePct * 1.1)}
-          />
-        ) : null}
+        <SetSymbol
+          rarity={rarity}
+          iconUrl={setIconUrl}
+          setCode={setIconCode}
+          size={cqw(layout.symbolSizePct ?? layout.type.sizePct * 1.1)}
+        />
       </BandSlot>
 
       {/* Rules — Saga chapter rail, otherwise the normal rules + flavor box. */}

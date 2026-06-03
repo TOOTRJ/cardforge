@@ -121,6 +121,13 @@ import { cn } from "@/lib/utils";
 // lib/creator/form-types.ts so the pure step model (lib/creator/steps.ts) can
 // reference them without importing this client component.
 
+type CardSetOption = {
+  id: string;
+  title: string;
+  icon_url: string | null;
+  icon_code: string | null;
+};
+
 type CardCreatorFormProps = {
   mode: "create" | "edit";
   userId: string | null;
@@ -131,6 +138,8 @@ type CardCreatorFormProps = {
   gameSystems: GameSystem[];
   templates: CardTemplate[];
   card?: Card | null;
+  /** The current user's sets — populates the "Add to set" picker on Publish. */
+  mySets?: CardSetOption[];
   /** Whether ANTHROPIC_API_KEY is set on the server — gates the AI panel. */
   aiConfigured: boolean;
 };
@@ -363,6 +372,7 @@ function defaultValuesFor(
       has_back_face: false,
       back_face: EMPTY_BACK_FACE,
       source_scryfall_id: "",
+      primary_set_id: "",
     };
   }
 
@@ -407,6 +417,7 @@ function defaultValuesFor(
     has_back_face: persistedBackFace !== null,
     back_face: backFaceFormValuesFrom(persistedBackFace),
     source_scryfall_id: card.source_scryfall_id ?? "",
+    primary_set_id: card.primary_set_id ?? "",
   };
 }
 
@@ -429,6 +440,7 @@ export function CardCreatorForm({
   gameSystems,
   templates,
   card,
+  mySets = [],
   aiConfigured,
 }: CardCreatorFormProps) {
   const router = useRouter();
@@ -861,6 +873,8 @@ export function CardCreatorForm({
       // UUID validator. A future "unlink from source" button could send
       // `null` instead to explicitly clear.
       source_scryfall_id: values.source_scryfall_id.trim() || undefined,
+      // Empty → null clears the association; a UUID adds the card to that set.
+      primary_set_id: values.primary_set_id || null,
     };
 
     startTransition(async () => {
@@ -1683,6 +1697,54 @@ export function CardCreatorForm({
                     onChange={(next) => field.onChange(next)}
                     options={VISIBILITY_OPTIONS}
                   />
+                )}
+              />
+            </FieldGroup>
+
+            <FieldGroup
+              label="Add to set"
+              helper="Group this card into one of your sets. If that set has an icon, the card uses it as its set symbol."
+            >
+              <Controller
+                control={control}
+                name="primary_set_id"
+                render={({ field }) => (
+                  <div className="flex flex-col gap-2">
+                    <select
+                      value={field.value}
+                      onChange={(event) => field.onChange(event.target.value)}
+                      disabled={mySets.length === 0}
+                      className={inputClass(false)}
+                    >
+                      <option value="">No set</option>
+                      {mySets.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.title}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="text-[11px] text-muted">
+                      {mySets.length === 0 ? (
+                        <>
+                          You don&apos;t have any sets yet.{" "}
+                          <Link
+                            href="/dashboard/sets/new"
+                            className="text-primary underline-offset-2 hover:underline"
+                          >
+                            Create one
+                          </Link>
+                          .
+                        </>
+                      ) : (
+                        <Link
+                          href="/dashboard/sets/new"
+                          className="text-primary underline-offset-2 hover:underline"
+                        >
+                          Create a new set
+                        </Link>
+                      )}
+                    </span>
+                  </div>
                 )}
               />
             </FieldGroup>
