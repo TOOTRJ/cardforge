@@ -17,7 +17,7 @@ import {
   getTemplatesForGameSystem,
 } from "@/lib/cards/queries";
 import { buildCardPath } from "@/lib/cards/utils";
-import { listMySetsForCard } from "@/lib/sets/queries";
+import { listMySets, listMySetsForCard } from "@/lib/sets/queries";
 import { isAIConfigured } from "@/lib/ai/card-assistant";
 
 // File-system param name is `username` because the sibling
@@ -69,10 +69,11 @@ export default async function EditCardPage({ params }: EditCardPageProps) {
     notFound();
   }
 
-  const [gameSystem, mySets, profile] = await Promise.all([
+  const [gameSystem, mySets, profile, userSets] = await Promise.all([
     getFantasyGameSystem(),
     listMySetsForCard(card.id),
     getCurrentProfile(),
+    listMySets(),
   ]);
   const templates = gameSystem
     ? await getTemplatesForGameSystem(gameSystem.id)
@@ -130,6 +131,7 @@ export default async function EditCardPage({ params }: EditCardPageProps) {
           gameSystems={gameSystem ? [gameSystem] : []}
           templates={templates}
           card={card}
+          mySets={userSets}
           aiConfigured={isAIConfigured()}
         />
       </div>

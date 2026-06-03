@@ -23,6 +23,7 @@ import { SurfaceCard } from "@/components/ui/surface-card";
 import { createSetAction, updateSetAction } from "@/lib/sets/actions";
 import { slugify } from "@/lib/validation/card";
 import { uploadSetCover } from "@/lib/sets/upload-cover";
+import { SetSymbol } from "@/components/cards/set-symbol";
 import { cn } from "@/lib/utils";
 import type { CardSet } from "@/lib/sets/queries";
 import type { Visibility } from "@/types/card";
@@ -32,6 +33,10 @@ type FormValues = {
   slug: string;
   description: string;
   cover_url: string;
+  /** Set symbol: an uploaded image (icon_url) OR a preset Keyrune code
+   *  (icon_code). Mutually exclusive — setting one clears the other. */
+  icon_url: string;
+  icon_code: string;
   visibility: Visibility;
 };
 
@@ -74,6 +79,8 @@ function defaultValuesFor(set: CardSet | null | undefined): FormValues {
       slug: "",
       description: "",
       cover_url: "",
+      icon_url: "",
+      icon_code: "",
       visibility: "private",
     };
   }
@@ -82,6 +89,8 @@ function defaultValuesFor(set: CardSet | null | undefined): FormValues {
     slug: set.slug,
     description: set.description ?? "",
     cover_url: set.cover_url ?? "",
+    icon_url: set.icon_url ?? "",
+    icon_code: set.icon_code ?? "",
     visibility: set.visibility,
   };
 }
@@ -119,6 +128,8 @@ export function SetCreatorForm({ mode, userId, set }: SetCreatorFormProps) {
       slug: values.slug.trim() ? slugify(values.slug.trim()) : undefined,
       description: values.description.trim() || undefined,
       cover_url: values.cover_url.trim() || undefined,
+      icon_url: values.icon_url.trim() || undefined,
+      icon_code: values.icon_code.trim() || undefined,
       visibility: values.visibility,
     };
 
@@ -241,6 +252,16 @@ export function SetCreatorForm({ mode, userId, set }: SetCreatorFormProps) {
           )}
         />
 
+        <IconField
+          userId={userId}
+          iconUrl={watched.icon_url}
+          iconCode={watched.icon_code}
+          onChange={(next) => {
+            setValue("icon_url", next.iconUrl, { shouldDirty: true });
+            setValue("icon_code", next.iconCode, { shouldDirty: true });
+          }}
+        />
+
         <FieldGroup label="Visibility">
           <Controller
             control={control}
@@ -329,6 +350,139 @@ function textareaClass(hasError: boolean): string {
     "w-full rounded-md border bg-background/60 px-3 py-2 text-sm text-foreground placeholder:text-subtle",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
     hasError ? "border-danger/60" : "border-border",
+  );
+}
+
+// A curated set of recognizable Keyrune set-symbol codes for the "pick a glyph"
+// option. The full Keyrune library has hundreds; these cover popular sets.
+const PRESET_SET_CODES = [
+  "dom",
+  "war",
+  "eld",
+  "thb",
+  "iko",
+  "znr",
+  "khm",
+  "stx",
+  "afr",
+  "mid",
+  "neo",
+  "dmu",
+];
+
+function IconField({
+  userId,
+  iconUrl,
+  iconCode,
+  onChange,
+}: {
+  userId: string | null;
+  iconUrl: string;
+  iconCode: string;
+  onChange: (next: { iconUrl: string; iconCode: string }) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleFile = async (file: File) => {
+    if (!userId) {
+      toast.error("You need to be signed in to upload an icon.");
+      return;
+    }
+    setUploading(true);
+    try {
+      const result = await uploadSetCover(userId, file);
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      onChange({ iconUrl: result.publicUrl, iconCode: "" });
+      toast.success("Icon uploaded.");
+    } finally {
+      setUploading(false);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-1">
+        <span className="text-xs font-semibold uppercase tracking-wider text-subtle">
+          Set icon
+        </span>
+        <span className="text-[11px] text-muted">
+          The set symbol shown on every card in this set. Upload an image or pick
+          a preset — leave empty to use the default Spellwright mark.
+        </span>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md border border-border bg-elevated/50">
+          <SetSymbol
+            rarity="rare"
+            iconUrl={iconUrl || null}
+            setCode={iconCode || null}
+            size={30}
+          />
+        </span>
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
+          className="sr-only"
+          aria-label="Upload set icon"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (file) handleFile(file);
+          }}
+        />
+        <Button
+          type="button"
+          variant="outline"
+          disabled={!userId || uploading}
+          onClick={() => inputRef.current?.click()}
+        >
+          {uploading ? "Uploading…" : "Upload image"}
+        </Button>
+        {iconUrl || iconCode ? (
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => onChange({ iconUrl: "", iconCode: "" })}
+          >
+            Use default
+          </Button>
+        ) : null}
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <span className="text-[11px] uppercase tracking-wider text-subtle">
+          Or pick a preset symbol
+        </span>
+        <div className="flex flex-wrap gap-2">
+          {PRESET_SET_CODES.map((code) => {
+            const active = !iconUrl && iconCode === code;
+            return (
+              <button
+                key={code}
+                type="button"
+                aria-pressed={active}
+                onClick={() => onChange({ iconUrl: "", iconCode: code })}
+                title={code.toUpperCase()}
+                className={cn(
+                  "flex h-9 w-9 items-center justify-center rounded-md border text-lg transition-colors",
+                  active
+                    ? "border-primary bg-primary/15 text-primary"
+                    : "border-border bg-elevated/50 text-muted hover:border-border-strong hover:text-foreground",
+                )}
+              >
+                <i className={cn("ss", `ss-${code}`, "ss-grad")} aria-hidden />
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
   );
 }
 

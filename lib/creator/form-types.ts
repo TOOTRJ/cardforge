@@ -56,6 +56,9 @@ export type FormValues = {
   has_back_face: boolean;
   back_face: BackFaceFormValues;
   source_scryfall_id: string;
+  /** The set this card is added to (empty = none). Its icon becomes the card's
+   *  set symbol; the action also adds the card to the set's list. */
+  primary_set_id: string;
 };
 
 // Empty back-face values — used when the user toggles on "has back face" from a
