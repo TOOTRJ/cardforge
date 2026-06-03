@@ -14,6 +14,7 @@ import {
   getSetById,
   isSetSlugTakenForCurrentUser,
 } from "@/lib/sets/queries";
+import { bakeAndPersistCardRender } from "@/lib/cards/bake-render";
 import type { CardSetInsert, CardSetUpdate } from "@/types/supabase";
 import type { ZodIssue } from "zod";
 
@@ -222,11 +223,39 @@ export async function updateSetAction(
     return { ok: false, formError: error?.message ?? "Could not update set." };
   }
 
+  // Re-sync the set's cards when its symbol changed. Cards denormalize their
+  // primary set's icon (migration 0025), so every card that calls this set home
+  // must be re-stamped with the new icon and re-baked — otherwise they'd keep
+  // displaying the old symbol. No-op when the icon didn't change.
+  const newIconUrl =
+    data.icon_url !== undefined ? data.icon_url ?? null : existing.icon_url;
+  const newIconCode =
+    data.icon_code !== undefined ? data.icon_code ?? null : existing.icon_code;
+  const iconChanged =
+    newIconUrl !== existing.icon_url || newIconCode !== existing.icon_code;
+  if (iconChanged) {
+    const { data: affected } = await supabase
+      .from("cards")
+      .update({ set_icon_url: newIconUrl, set_icon_code: newIconCode })
+      .eq("primary_set_id", setId)
+      .eq("owner_id", user.id)
+      .select("id");
+    // Re-bake each affected card's stored PNG (best-effort; bake never throws).
+    await Promise.all(
+      (affected ?? []).map((card) => bakeAndPersistCardRender(card.id)),
+    );
+  }
+
   const ownerUsername = await getOwnerUsername();
   revalidateSetPaths(row.slug, ownerUsername);
   if (existing.slug !== row.slug) {
     revalidatePath(`/set/${existing.slug}`);
     revalidatePath(`/set/${existing.slug}/edit`);
+  }
+  // The set's cards changed image — refresh the gallery (revalidateSetPaths
+  // already covers dashboard, community, set, and profile surfaces).
+  if (iconChanged) {
+    revalidatePath("/gallery");
   }
   return { ok: true, setId: row.id, slug: row.slug };
 }
@@ -267,7 +296,108 @@ export async function deleteSetAction(
 
 // ---------------------------------------------------------------------------
 // Set items: add / remove
+//
+// Cards denormalize their primary set's symbol (set_icon_url / set_icon_code,
+// sourced from primary_set_id) so the renderers need no join — see migration
+// 0025. Membership changes must keep that denormalized copy in sync AND re-bake
+// the card's PNG, because the set symbol is baked into the stored image that the
+// gallery / detail / profile pages render (lib/cards/bake-render.ts), not just
+// the live preview.
 // ---------------------------------------------------------------------------
+
+// A card joining a set adopts that set's symbol — but only when it has no home
+// set yet, so adding a card to a second collection never silently overwrites the
+// symbol it earned from its first set. (The card editor remains the explicit way
+// to re-home a card.) Denormalizes the set's icon onto the adopting cards, then
+// re-bakes their PNGs so the saved image — not just the live preview — updates.
+// Idempotent and safe to call with cards that are already members.
+async function adoptSetIconForNewMembers(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  setId: string,
+  cardIds: string[],
+): Promise<void> {
+  if (cardIds.length === 0) return;
+
+  const { data: set } = await supabase
+    .from("card_sets")
+    .select("icon_url, icon_code")
+    .eq("id", setId)
+    .eq("owner_id", userId)
+    .maybeSingle();
+  if (!set) return;
+
+  // Only cards without a primary set adopt this one; `.is("primary_set_id",
+  // null)` skips cards that already have a home, and `.select` returns exactly
+  // the rows we touched so we re-bake those and no others.
+  const { data: adopted } = await supabase
+    .from("cards")
+    .update({
+      primary_set_id: setId,
+      set_icon_url: set.icon_url ?? null,
+      set_icon_code: set.icon_code ?? null,
+    })
+    .in("id", cardIds)
+    .eq("owner_id", userId)
+    .is("primary_set_id", null)
+    .select("id");
+
+  await Promise.all(
+    (adopted ?? []).map((row) => bakeAndPersistCardRender(row.id)),
+  );
+}
+
+// A card leaving a set must stop pointing its denormalized symbol at a set it's
+// no longer in. If the departed set was the card's primary, re-home it to its
+// oldest remaining membership (deterministic + intuitive) — or clear back to the
+// default symbol when it now belongs to no sets — then re-bake. No-op when the
+// removed set wasn't the card's primary.
+async function repointPrimaryAfterRemoval(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  cardId: string,
+  removedSetId: string,
+): Promise<void> {
+  const { data: card } = await supabase
+    .from("cards")
+    .select("primary_set_id")
+    .eq("id", cardId)
+    .eq("owner_id", userId)
+    .maybeSingle();
+  if (!card || card.primary_set_id !== removedSetId) return;
+
+  const { data: remaining } = await supabase
+    .from("card_set_items")
+    .select("set_id")
+    .eq("card_id", cardId)
+    .order("created_at", { ascending: true })
+    .limit(1);
+  const nextSetId = remaining?.[0]?.set_id ?? null;
+
+  let iconUrl: string | null = null;
+  let iconCode: string | null = null;
+  if (nextSetId) {
+    const { data: set } = await supabase
+      .from("card_sets")
+      .select("icon_url, icon_code")
+      .eq("id", nextSetId)
+      .maybeSingle();
+    iconUrl = set?.icon_url ?? null;
+    iconCode = set?.icon_code ?? null;
+  }
+
+  await supabase
+    .from("cards")
+    .update({
+      primary_set_id: nextSetId,
+      set_icon_url: iconUrl,
+      set_icon_code: iconCode,
+    })
+    .eq("id", cardId)
+    .eq("owner_id", userId);
+
+  await bakeAndPersistCardRender(cardId);
+}
 
 export async function addCardToSetAction(
   setId: string,
@@ -313,13 +443,16 @@ export async function addCardToSetAction(
     position: 0,
   });
 
-  if (error) {
-    if (error.code === "23505") {
-      // Already in the set — treat as success (idempotent).
-      return { ok: true, setId, cardId };
-    }
+  // 23505 = already a member: treat as success (idempotent) and still fall
+  // through to the icon adoption below, which heals a membership created before
+  // this denormalization existed.
+  if (error && error.code !== "23505") {
     return { ok: false, formError: error.message };
   }
+
+  // Adopt the set's symbol onto the card when it has no home set yet, then
+  // re-bake. Cards that already belong to a primary set keep their symbol.
+  await adoptSetIconForNewMembers(supabase, user.id, setId, [cardId]);
 
   // Set's updated_at intentionally NOT touched here — that column tracks
   // metadata edits on the set itself, not membership changes. The set's
@@ -329,6 +462,10 @@ export async function addCardToSetAction(
   revalidatePath(`/set/${set.slug}/edit`);
   revalidatePath("/dashboard/sets");
   revalidatePath("/sets");
+  // The card's stored image (with its set symbol) changed — bust the surfaces
+  // that render card thumbnails so the new icon shows without a hard refresh.
+  revalidatePath("/dashboard");
+  revalidatePath("/gallery");
   return { ok: true, setId, cardId };
 }
 
@@ -363,10 +500,16 @@ export async function removeCardFromSetAction(
     return { ok: false, formError: error.message };
   }
 
+  // If this set was the card's home, re-home it (or clear to the default
+  // symbol) so its denormalized icon never points at a set it just left.
+  await repointPrimaryAfterRemoval(supabase, user.id, cardId, setId);
+
   revalidatePath(`/set/${set.slug}`);
   revalidatePath(`/set/${set.slug}/edit`);
   revalidatePath("/dashboard/sets");
   revalidatePath("/sets");
+  revalidatePath("/dashboard");
+  revalidatePath("/gallery");
   return { ok: true, setId, cardId };
 }
 
@@ -496,36 +639,37 @@ export async function addCardsToSetAction(
     -1,
   );
 
-  // Filter to the cards that aren't already in the set. If none remain,
-  // we're done — same idempotent posture as the single-card insert.
+  // Filter to the cards that aren't already in the set; only those need a new
+  // membership row (already-present ids are skipped — same idempotent posture as
+  // the single-card insert).
   const toInsert = ids.filter((id) => !alreadyIn.has(id));
-  if (toInsert.length === 0) {
-    return {
-      ok: true,
-      setId: parsed.data.setId,
-      added: 0,
-      skipped: ids.length,
-    };
+  if (toInsert.length > 0) {
+    const rows = toInsert.map((cardId, index) => ({
+      set_id: parsed.data.setId,
+      card_id: cardId,
+      position: maxPosition + 1 + index,
+    }));
+
+    const { error: insertError } = await supabase
+      .from("card_set_items")
+      .insert(rows);
+    if (insertError) {
+      return { ok: false, error: insertError.message };
+    }
   }
 
-  const rows = toInsert.map((cardId, index) => ({
-    set_id: parsed.data.setId,
-    card_id: cardId,
-    position: maxPosition + 1 + index,
-  }));
-
-  const { error: insertError } = await supabase
-    .from("card_set_items")
-    .insert(rows);
-  if (insertError) {
-    return { ok: false, error: insertError.message };
-  }
+  // Cards joining the set adopt its symbol when they have no home set yet, then
+  // get re-baked. Runs over every requested id (not just the freshly inserted
+  // ones) so an already-present card with no primary set is healed too; it's a
+  // no-op for cards that already have a home.
+  await adoptSetIconForNewMembers(supabase, user.id, parsed.data.setId, ids);
 
   revalidatePath(`/set/${setResult.data.slug}`);
   revalidatePath(`/set/${setResult.data.slug}/edit`);
   revalidatePath("/dashboard/sets");
   revalidatePath("/sets");
   revalidatePath("/dashboard");
+  revalidatePath("/gallery");
 
   return {
     ok: true,
