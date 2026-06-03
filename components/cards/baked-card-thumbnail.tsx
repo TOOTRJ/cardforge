@@ -69,7 +69,7 @@ export function BakedCardThumbnail({
       return (
         <div
           className={cn(
-            "flex aspect-[5/7] w-full items-center overflow-hidden rounded-frame",
+            "flex aspect-[5/7] w-full items-center overflow-hidden card-corners",
             className,
           )}
         >
@@ -86,7 +86,7 @@ export function BakedCardThumbnail({
   return (
     <div
       className={cn(
-        "relative aspect-[5/7] w-full overflow-hidden rounded-frame border border-border/40 bg-background shadow-[0_18px_60px_-30px_rgba(0,0,0,0.85)]",
+        "relative aspect-[5/7] w-full overflow-hidden card-corners border border-border/40 bg-background shadow-[0_18px_60px_-30px_rgba(0,0,0,0.85)]",
         className,
       )}
     >

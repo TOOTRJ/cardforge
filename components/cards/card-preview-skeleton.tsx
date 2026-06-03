@@ -17,7 +17,7 @@ export function CardPreviewSkeleton({ className }: CardPreviewSkeletonProps) {
       className={cn(
         // Outer frame — matches CardPreview's wrapper sizing/radius so the
         // grid layout stays identical between fallback and real content.
-        "relative aspect-[5/7] w-full overflow-hidden rounded-frame border border-border bg-elevated/40 p-3",
+        "relative aspect-[5/7] w-full overflow-hidden card-corners border border-border bg-elevated/40 p-3",
         className,
       )}
       aria-hidden
