@@ -241,13 +241,26 @@ const M15: FrameProfile = {
   },
 };
 
-// M15 Land — identical card geometry to M15 (same painted title plate, art
-// window, type bar, text box, dark bottom border), just a different frame
-// texture (stone border + color-tinted text box) and no mana cost. The cost is
-// suppressed automatically by the renderers for land-type cards, so this is a
-// straight clone of the M15 profile. P/T reuses the M15 plate so the rare
-// creature-land still renders correctly.
-const M15LAND: FrameProfile = { ...M15, label: "M15 Land" };
+// M15 Land — M15 card geometry (art window, type bar, text box, dark bottom
+// border, P/T plate) with the stone land texture. Two land-specific tweaks:
+//   • hideCost — the MSE land frame paints no cost box, so suppress the cost for
+//     ANY card type on this frame (matches ALPHALAND; lands have no cost anyway).
+//     Without this, a non-land card placed on the land frame would still paint a
+//     cost into dead space.
+//   • title inset — the land frame paints a large color-indicator orb at the
+//     left of the title bar (≈0–13% of the card width). M15's title starts at
+//     8.5%, which renders the name ON TOP of the orb. Start the name at 14% so
+//     it sits in the cream plate to the orb's right; keep the right edge aligned
+//     with M15 (14 + 77.5 = 91.5 ≈ 8.5 + 83).
+const M15LAND: FrameProfile = {
+  ...M15,
+  label: "M15 Land",
+  hideCost: true,
+  title: {
+    ...M15.title,
+    rect: { ...M15.title.rect, leftPct: 14, widthPct: 77.5 },
+  },
+};
 
 // AgClassic — the 1993 Alpha/Beta frame. Thin tan top border for the name
 // (4–8%), art window (9.5–54%), tan divider for the type (56–60%), cream text
