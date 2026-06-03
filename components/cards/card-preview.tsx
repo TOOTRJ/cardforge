@@ -459,7 +459,12 @@ function CardFace({
         <span style={ELLIPSIS} title={safeTitle}>
           {safeTitle}
         </span>
-        {showCost ? <ManaCostGlyphs cost={face.cost} size="sm" /> : null}
+        {showCost ? (
+          <ManaCostGlyphs
+            cost={face.cost}
+            fontSize={cqw(layout.costSizePct ?? layout.title.sizePct)}
+          />
+        ) : null}
       </BandSlot>
 
       {/* Type band — type line (left) + rarity set-symbol (right). */}
@@ -471,7 +476,12 @@ function CardFace({
             subtypes: face.subtypes,
           })}
         </span>
-        {rarity ? <SetSymbol rarity={rarity} size={symbolPx(layout)} /> : null}
+        {rarity ? (
+          <SetSymbol
+            rarity={rarity}
+            size={cqw(layout.symbolSizePct ?? layout.type.sizePct * 1.1)}
+          />
+        ) : null}
       </BandSlot>
 
       {/* Rules — Saga chapter rail, otherwise the normal rules + flavor box. */}
@@ -833,7 +843,9 @@ function AdventurePanel({
         <span style={ELLIPSIS} title={name}>
           {name}
         </span>
-        {showCost ? <ManaCostGlyphs cost={data.cost} size="sm" /> : null}
+        {showCost ? (
+          <ManaCostGlyphs cost={data.cost} fontSize={cqw(slot.title.sizePct)} />
+        ) : null}
       </BandSlot>
       <BandSlot slot={slot.type}>
         <span style={ELLIPSIS}>{typeLine}</span>
@@ -912,7 +924,12 @@ function SecondFacePanel({
         <span style={ELLIPSIS} title={name}>
           {name}
         </span>
-        {showCost ? <ManaCostGlyphs cost={data.cost} size="sm" /> : null}
+        {showCost ? (
+          <ManaCostGlyphs
+            cost={data.cost}
+            fontSize={cqw(slot.costSizePct ?? slot.title.sizePct)}
+          />
+        ) : null}
       </div>
       <div
         style={{
@@ -1006,12 +1023,6 @@ function cqw(pct: number): string {
 
 function vJustify(align: SlotAlign): string {
   return align === "center" ? "center" : align === "end" ? "flex-end" : "flex-start";
-}
-
-// The set-symbol component takes a pixel size; approximate from the type-band
-// font (the preview rescales responsively, so this only needs to be close).
-function symbolPx(layout: FrameProfile): number {
-  return Math.round((layout.symbolSizePct ?? layout.type.sizePct) * 360);
 }
 
 function clamp(value: number, min: number, max: number): number {

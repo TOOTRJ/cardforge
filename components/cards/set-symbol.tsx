@@ -28,9 +28,10 @@ type SetSymbolProps = {
   /** Specific set code (e.g. "dom", "mh3"). When null/undefined, falls back
    *  to Keyrune's default glyph. */
   setCode?: string | null;
-  /** Pixel size of the glyph. Defaults to 14, which matches the type-line
-   *  text height in CardPreview. */
-  size?: number;
+  /** Glyph size — a number (px) or any CSS length. Pass a container-relative
+   *  value (e.g. a `cqw` string) so the symbol scales with the card instead of
+   *  staying a fixed pixel size. Defaults to 14px. */
+  size?: number | string;
   className?: string;
 };
 

@@ -23,6 +23,11 @@ type GlyphSize = "sm" | "md" | "lg";
 type ManaCostGlyphsProps = {
   cost: string | null | undefined;
   size?: GlyphSize;
+  /** Explicit font-size override. Pass a container-relative value (e.g. a
+   *  `cqw` string) so the pips scale with the card instead of staying a fixed
+   *  pixel size. When set, it wins over `size`; the gap + text fallback scale
+   *  with it via em units. Used by CardPreview; the form pickers keep `size`. */
+  fontSize?: number | string;
   className?: string;
 };
 
@@ -161,26 +166,34 @@ export function tokenSuffix(token: Token): string | null {
 export function ManaCostGlyphs({
   cost,
   size = "md",
+  fontSize,
   className,
 }: ManaCostGlyphsProps) {
   if (!cost || !cost.trim()) return null;
   const tokens = tokenize(cost.trim());
   if (tokens.length === 0) return null;
 
-  const fontSize = SIZE_PX[size];
+  // A custom fontSize (e.g. a `cqw` value) scales the glyphs with the card; the
+  // gap then needs to scale too, so use an em gap instead of the fixed token.
+  const scaled = fontSize != null;
+  const resolvedFontSize = scaled ? fontSize : SIZE_PX[size];
 
   return (
     <span
-      className={cn("inline-flex items-center", GAP_CLASS[size], className)}
+      className={cn(
+        "inline-flex items-center",
+        scaled ? "gap-[0.12em]" : GAP_CLASS[size],
+        className,
+      )}
       aria-label={`Cost ${cost}`}
-      style={{ fontSize }}
+      style={{ fontSize: resolvedFontSize }}
     >
       {tokens.map((token, i) => {
         if (token.kind === "text") {
           return (
             <span
               key={`t-${i}`}
-              className="text-[10px] uppercase tracking-wider text-muted"
+              className="text-[0.72em] uppercase tracking-wider text-muted"
             >
               {token.value}
             </span>
