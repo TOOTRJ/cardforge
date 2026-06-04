@@ -16,6 +16,7 @@
 import { ImageResponse } from "next/og";
 import { rulesFontTier, RULES_SIZE_PCT_BY_TIER } from "@/lib/cards/render-tiers";
 import { tokenize, tokenSuffix } from "@/components/cards/mana-cost-glyphs";
+import { tokenizeRulesText, inlineManaTintKey } from "@/lib/cards/rules-text";
 import { pickFrameColorKey } from "@/components/cards/frame-layer";
 import {
   buildTypeLine,
@@ -27,6 +28,7 @@ import {
   type SagaChapter,
 } from "@/lib/cards/card-display";
 import {
+  DISPLAY_FONT_BYTES,
   KEYRUNE_DEFAULT_GLYPH,
   KEYRUNE_FONT_BYTES,
   MANA_FONT_BYTES,
@@ -69,7 +71,15 @@ const RARITY_SET_SYMBOL_COLOR: Record<Rarity, string> = {
   mythic: "#d35327",
 };
 
-const DISPLAY_FONT = '"MPlantin"';
+// Rules/flavor body text uses MPlantin (the real MTG body face); titles, type
+// lines, footer, and stat values use CardDisplay (an OFL Beleren stand-in),
+// falling back to MPlantin. A TextSlot's `font` field selects which.
+const BODY_FONT = '"MPlantin"';
+const DISPLAY_FONT = '"CardDisplay", "MPlantin"';
+
+function fontFamilyFor(font: TextSlot["font"]): string {
+  return font === "display" ? DISPLAY_FONT : BODY_FONT;
+}
 
 // ---------------------------------------------------------------------------
 // Geometry helpers — shared shape with the live preview's rectStyle(), but
@@ -189,7 +199,7 @@ function CardImage({
         height: "100%",
         position: "relative",
         background: "#101015",
-        fontFamily: DISPLAY_FONT,
+        fontFamily: BODY_FONT,
         color: layout.title.colorHex,
       }}
     >
@@ -324,15 +334,15 @@ function CardImage({
           ...slotBox(layout.rules.rect),
           display: "flex",
           flexDirection: "column",
-          alignItems: "center",
+          alignItems: "stretch",
           justifyContent: vJustify(layout.rules.vAlign ?? "start"),
           overflow: "hidden",
           padding: `${Math.round(width * 0.012)}px ${Math.round(width * 0.006)}px`,
-          fontFamily: DISPLAY_FONT,
+          fontFamily: fontFamilyFor(layout.rules.font),
           fontSize: fpx(rulesSizePct, width),
           lineHeight: layout.rules.lineHeight ?? 1.3,
           color: layout.rules.colorHex,
-          textAlign: "center",
+          textAlign: "left",
           zIndex: 20,
           ...(layout.rules.backdropHex && hasRulesContent
             ? {
@@ -343,9 +353,10 @@ function CardImage({
         }}
       >
         {card.rulesText?.trim() ? (
-          <div style={{ display: "flex", whiteSpace: "pre-wrap" }}>
-            {bakeText(card.rulesText)}
-          </div>
+          <RulesBodyBake
+            text={card.rulesText}
+            size={fpx(rulesSizePct, width)}
+          />
         ) : null}
         {card.flavorText?.trim() ? (
           <div
@@ -390,6 +401,7 @@ function CardImage({
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
+            fontFamily: fontFamilyFor(layout.footer.font),
             fontSize: fpx(layout.footer.sizePct, width),
             color: layout.footer.colorHex,
             letterSpacing: layout.footer.letterSpacingEm
@@ -561,6 +573,89 @@ function CostGlyphs({ cost, fontSize }: { cost: string; fontSize: number }) {
   );
 }
 
+// RulesBodyBake — Satori-side rules renderer. Consumes the SAME tokenizer the
+// preview's RulesBody uses (lib/cards/rules-text.ts), laying each paragraph out
+// as a flex-wrap row of word + inline-mana items. Inline {T}/{G} render as Mana-
+// font glyphs (tinted, like the cost pips); reminder text + ability words are
+// italicized. Word color is inherited from the rules container.
+function RulesBodyBake({ text, size }: { text: string; size: number }) {
+  const paragraphs = tokenizeRulesText(text);
+  const glyph = Math.round(size * 0.92);
+  // Inline pips sit on the (usually light) textbox, not the dark cost bar, so a
+  // thin dark ring keeps the pale gem tints legible on cream — approximating the
+  // shaded gem the preview gets from mana-font's `ms-cost`.
+  const o = Math.max(1, Math.round(glyph * 0.05));
+  const glyphRing = `${o}px 0 0 rgba(0,0,0,0.55), ${-o}px 0 0 rgba(0,0,0,0.55), 0 ${o}px 0 rgba(0,0,0,0.55), 0 ${-o}px 0 rgba(0,0,0,0.55)`;
+  const paraGap = Math.round(size * 0.5);
+  const colGap = Math.round(size * 0.26);
+  const lineGap = Math.round(size * 0.12);
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        rowGap: paraGap,
+      }}
+    >
+      {paragraphs.map((items, pi) => (
+        <div
+          key={pi}
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            justifyContent: "flex-start",
+            // Per-item margins instead of container `gap`: Satori's gap shifts
+            // the row's content left (it uses negative margins under the hood),
+            // which `overflow: hidden` then clips. Margins avoid that.
+            minHeight: items.length === 0 ? Math.round(size * 0.7) : 0,
+          }}
+        >
+          {items.map((it, i) => {
+            if (it.t === "m") {
+              const cp = getManaCodepoint(it.suffix);
+              if (!cp) return null;
+              return (
+                <span
+                  key={i}
+                  style={{
+                    display: "flex",
+                    fontFamily: '"Mana"',
+                    fontSize: glyph,
+                    lineHeight: 1,
+                    color:
+                      MANA_GLYPH_COLOR[inlineManaTintKey(it.suffix)] ??
+                      MANA_GLYPH_COLOR.c,
+                    textShadow: glyphRing,
+                    marginRight: colGap,
+                    marginBottom: lineGap,
+                  }}
+                >
+                  {cp}
+                </span>
+              );
+            }
+            return (
+              <span
+                key={i}
+                style={{
+                  display: "flex",
+                  fontStyle: it.em ? "italic" : "normal",
+                  opacity: it.em === "reminder" ? 0.7 : 1,
+                  marginRight: colGap,
+                  marginBottom: lineGap,
+                }}
+              >
+                {bakeText(it.v)}
+              </span>
+            );
+          })}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function SetSymbolGlyph({
   rarity,
   fontSize,
@@ -697,6 +792,7 @@ function StatBake({
       <span
         style={{
           position: "relative",
+          fontFamily: DISPLAY_FONT,
           color: slot.colorHex,
           fontWeight: slot.weight ?? 700,
           fontSize: fpx(slot.sizePct, cardWidth),
@@ -757,6 +853,7 @@ function ChapterBake({
               borderRadius: 9999,
               background: slot.markerFillHex,
               color: slot.markerTextHex,
+              fontFamily: DISPLAY_FONT,
               fontSize: Math.round(size * 0.82),
               fontWeight: 700,
             }}
@@ -767,6 +864,7 @@ function ChapterBake({
             style={{
               display: "flex",
               flex: 1,
+              fontFamily: BODY_FONT,
               fontSize: size,
               lineHeight: 1.22,
               color: slot.textColorHex,
@@ -836,11 +934,11 @@ function AdventureBake({
           ...slotBox(slot.rules.rect),
           display: "flex",
           flexDirection: "column",
-          alignItems: "center",
+          alignItems: "stretch",
           justifyContent: vJustify(slot.rules.vAlign ?? "start"),
           overflow: "hidden",
           padding: `${Math.round(cardWidth * 0.01)}px ${Math.round(cardWidth * 0.006)}px`,
-          fontFamily: DISPLAY_FONT,
+          fontFamily: fontFamilyFor(slot.rules.font),
           fontSize: fpx(slot.rules.sizePct, cardWidth),
           lineHeight: slot.rules.lineHeight ?? 1.25,
           color: slot.rules.colorHex,
@@ -849,9 +947,10 @@ function AdventureBake({
         }}
       >
         {back.rules_text?.trim() ? (
-          <div style={{ display: "flex", whiteSpace: "pre-wrap" }}>
-            {bakeText(back.rules_text)}
-          </div>
+          <RulesBodyBake
+            text={back.rules_text}
+            size={fpx(slot.rules.sizePct, cardWidth)}
+          />
         ) : null}
       </div>
     </div>
@@ -937,13 +1036,13 @@ function SecondFaceBake({
           ...slotBox(slot.rules.rect),
           display: "flex",
           flexDirection: "column",
-          alignItems: "center",
+          alignItems: "stretch",
           justifyContent: "center",
           overflow: "hidden",
           padding: `${Math.round(cardWidth * 0.008)}px ${Math.round(cardWidth * 0.012)}px`,
           transform: rot,
           transformOrigin: "50% 50%",
-          fontFamily: DISPLAY_FONT,
+          fontFamily: fontFamilyFor(slot.rules.font),
           fontSize: fpx(slot.rules.sizePct, cardWidth),
           lineHeight: slot.rules.lineHeight ?? 1.25,
           color: slot.rules.colorHex,
@@ -952,9 +1051,10 @@ function SecondFaceBake({
         }}
       >
         {back.rules_text?.trim() ? (
-          <div style={{ display: "flex", whiteSpace: "pre-wrap" }}>
-            {bakeText(back.rules_text)}
-          </div>
+          <RulesBodyBake
+            text={back.rules_text}
+            size={fpx(slot.rules.sizePct, cardWidth)}
+          />
         ) : null}
       </div>
       {showPT && slot.pt ? (
@@ -1008,6 +1108,7 @@ export function renderCardImage(
       // fallback once explicit fonts are provided, so all three are registered.
       fonts: [
         { name: "MPlantin", data: MPLANTIN_FONT_BYTES, weight: 400, style: "normal" },
+        { name: "CardDisplay", data: DISPLAY_FONT_BYTES, weight: 400, style: "normal" },
         { name: "Mana", data: MANA_FONT_BYTES, weight: 400, style: "normal" },
         { name: "Keyrune", data: KEYRUNE_FONT_BYTES, weight: 400, style: "normal" },
       ],
