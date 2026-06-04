@@ -6,6 +6,7 @@ import {
   isColorIdentity,
   isRarity,
   type ArtPosition,
+  type CardBackFace,
   type CardType,
   type ColorIdentity,
   type FrameStyle,
@@ -93,6 +94,11 @@ export async function GET(
     // (foil / etched / borderless / showcase from Phase 11 chunk 03) show
     // up in OG previews and downloaded PNGs. Previously hard-coded to {}.
     frameStyle: (card.frame_style as FrameStyle) ?? {},
+    // Back-face content drives the inline second face on multi-panel frames
+    // (adventure left page, flip / split / aftermath rotated faces). Without
+    // this the baked PNG renders those panels empty even though the live
+    // preview + persisted render (bake-render.ts) include them.
+    backFace: (card.back_face as CardBackFace | null) ?? null,
   };
 
   const response = renderCardImage(previewData, preset);

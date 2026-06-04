@@ -505,7 +505,7 @@ const BATTLE: FrameProfile = {
     font: "display",
   },
   rules: {
-    rect: { topPct: 67.5, leftPct: 7, widthPct: 86, heightPct: 25 },
+    rect: { topPct: 67.5, leftPct: 13, widthPct: 80, heightPct: 25 },
     sizePct: 0.026,
     colorHex: INK_DARK,
     vAlign: "start",
@@ -869,28 +869,36 @@ const BLOOMBURROW = artForwardShowcase("Bloomburrow", INK_LIGHT);
 // Tarkir card showcases — m15-style (name top → dark ink, art, type, textbox).
 // Dragon Wing's textbox is dark gothic (light rules); Draconic's is light
 // parchment (dark rules).
-function tarkirCard(label: string, rulesHex: string): FrameProfile {
+// inkHex drives title/type/rules together: light ink on the dark Dragon-Wing
+// frame, dark ink on the light Draconic parchment. Light ink gets a soft shadow
+// so the name/type read against the busy bars.
+function tarkirCard(label: string, inkHex: string): FrameProfile {
+  const onDark = inkHex === INK_LIGHT;
+  const barInk = {
+    colorHex: inkHex,
+    ...(onDark ? { shadowCss: SHOWCASE_SHADOW } : {}),
+  };
   return {
     label,
     artSlot: { topPct: 12, leftPct: 9, widthPct: 82, heightPct: 46 },
     title: {
       rect: { topPct: 4.6, leftPct: 11, widthPct: 78, heightPct: 6 },
       sizePct: 0.044,
-      colorHex: INK_DARK,
       weight: 600,
       font: "display",
+      ...barInk,
     },
     type: {
       rect: { topPct: 60, leftPct: 11, widthPct: 78, heightPct: 5 },
       sizePct: 0.03,
-      colorHex: INK_DARK,
       weight: 600,
       font: "display",
+      ...barInk,
     },
     rules: {
       rect: { topPct: 66, leftPct: 9, widthPct: 82, heightPct: 26 },
       sizePct: 0.028,
-      colorHex: rulesHex,
+      colorHex: inkHex,
       vAlign: "start",
       font: "body",
       lineHeight: 1.3,

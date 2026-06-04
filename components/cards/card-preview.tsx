@@ -7,6 +7,7 @@ import { ManaCostGlyphs } from "@/components/cards/mana-cost-glyphs";
 import { SetSymbol } from "@/components/cards/set-symbol";
 import { FrameLayer, pickFrameColorKey } from "@/components/cards/frame-layer";
 import { rulesFontTier, RULES_SIZE_PCT_BY_TIER } from "@/lib/cards/render-tiers";
+import { tokenizeRulesText } from "@/lib/cards/rules-text";
 import {
   buildTypeLine,
   normalizeFrameTemplate,
@@ -85,30 +86,23 @@ type CardPreviewProps = CardPreviewData & {
   onFaceChange?: (next: "front" | "back") => void;
 };
 
-const KEYWORD_ABILITIES = new Set([
-  "flying",
-  "trample",
-  "haste",
-  "vigilance",
-  "lifelink",
-  "deathtouch",
-  "reach",
-  "menace",
-  "first strike",
-  "double strike",
-  "indestructible",
-  "hexproof",
-  "ward",
-  "flash",
-  "defender",
-]);
-
 // MPlantin is the real MTG card font, loaded as a web font in globals.css. The
 // Satori bake renders every piece of card text in MPlantin, so the preview uses
 // it for ALL card text too (title, type, rules, footer, stats) — keeping the
 // editor preview and the exported PNG pixel-identical. The serifs are fallbacks
 // for the brief moment before the web font loads.
 const CARD_FONT = '"MPlantin", Georgia, "Times New Roman", serif';
+
+// Display face for titles, type lines, footer, and stat values — an OFL
+// Beleren stand-in (CardDisplay, declared in globals.css), falling back to
+// MPlantin then serifs before it loads. A slot's `font` field selects display
+// vs the MPlantin body font; the Satori bake reads the same `font` field, so
+// preview and PNG stay identical.
+const DISPLAY_FONT = '"CardDisplay", "MPlantin", Georgia, "Times New Roman", serif';
+
+function fontFor(font: TextSlot["font"]): string {
+  return font === "display" ? DISPLAY_FONT : CARD_FONT;
+}
 
 type FaceData = {
   title: string | null;
@@ -519,7 +513,7 @@ function CardFace({
           fontSize: cqw(rulesSizePct),
           lineHeight: layout.rules.lineHeight ?? 1.3,
           color: layout.rules.colorHex,
-          textAlign: "center",
+          textAlign: "left",
           ...(layout.rules.backdropHex && hasRulesContent
             ? {
                 background: layout.rules.backdropHex,
@@ -529,9 +523,7 @@ function CardFace({
         }}
       >
         {face.rulesText?.trim() ? (
-          <div style={{ whiteSpace: "pre-line" }}>
-            {renderRulesText(face.rulesText)}
-          </div>
+          <RulesBody text={face.rulesText} />
         ) : staticInEditor ? (
           // Editor-only hint; never shown in the gallery preview or the bake.
           <span style={{ fontStyle: "italic", opacity: 0.55 }}>
@@ -578,7 +570,7 @@ function CardFace({
             alignItems: "center",
             justifyContent: "space-between",
             gap: "2cqw",
-            fontFamily: CARD_FONT,
+            fontFamily: fontFor(layout.footer.font),
             fontSize: cqw(layout.footer.sizePct),
             color: layout.footer.colorHex,
             letterSpacing: `${layout.footer.letterSpacingEm ?? 0}em`,
@@ -663,7 +655,7 @@ function BandSlot({
               ? "flex-end"
               : "space-between",
         gap: "2cqw",
-        fontFamily: CARD_FONT,
+        fontFamily: fontFor(slot.font),
         fontSize: cqw(slot.sizePct),
         fontWeight: slot.weight ?? 600,
         fontStyle: italic || slot.italic ? "italic" : "normal",
@@ -720,7 +712,7 @@ function StatOverlay({
       <span
         className="relative"
         style={{
-          fontFamily: CARD_FONT,
+          fontFamily: DISPLAY_FONT,
           fontSize: cqw(slot.sizePct),
           fontWeight: slot.weight ?? 700,
           color: slot.colorHex,
@@ -763,8 +755,9 @@ function ChapterRail({
               minHeight: 0,
               display: "flex",
               alignItems: "center",
-              gap: "2cqw",
-              padding: "0.8cqw 0.4cqw",
+              // Size-relative so spacing matches the bake's ChapterBake exactly.
+              gap: cqw(slot.sizePct * 0.6),
+              padding: `${cqw(slot.sizePct * 0.3)} ${cqw(slot.sizePct * 0.2)}`,
               overflow: "hidden",
               borderBottom:
                 i < chapters.length - 1
@@ -780,11 +773,11 @@ function ChapterRail({
                 justifyContent: "center",
                 minWidth: cqw(slot.sizePct * 1.7),
                 height: cqw(slot.sizePct * 1.7),
-                padding: "0 0.8cqw",
+                padding: `0 ${cqw(slot.sizePct * 0.32)}`,
                 borderRadius: "999px",
                 background: slot.markerFillHex,
                 color: slot.markerTextHex,
-                fontFamily: CARD_FONT,
+                fontFamily: DISPLAY_FONT,
                 fontSize: cqw(slot.sizePct * 0.82),
                 fontWeight: 700,
               }}
@@ -871,7 +864,7 @@ function AdventurePanel({
           flexDirection: "column",
           justifyContent: vJustify(slot.rules.vAlign ?? "start"),
           overflow: "hidden",
-          padding: "1.2cqw 0.5cqw",
+          padding: "1cqw 0.6cqw",
           fontFamily: CARD_FONT,
           fontSize: cqw(slot.rules.sizePct),
           lineHeight: slot.rules.lineHeight ?? 1.25,
@@ -880,9 +873,7 @@ function AdventurePanel({
         }}
       >
         {data.rulesText?.trim() ? (
-          <div style={{ whiteSpace: "pre-line" }}>
-            {renderRulesText(data.rulesText)}
-          </div>
+          <RulesBody text={data.rulesText} />
         ) : staticInEditor ? (
           <span style={{ fontStyle: "italic", opacity: 0.55 }}>
             Adventure rules (the back face).
@@ -928,7 +919,7 @@ function SecondFacePanel({
           alignItems: "center",
           justifyContent: showCost ? "space-between" : "flex-start",
           gap: "2cqw",
-          fontFamily: CARD_FONT,
+          fontFamily: DISPLAY_FONT,
           fontSize: cqw(slot.title.sizePct),
           fontWeight: slot.title.weight ?? 600,
           color: slot.title.colorHex,
@@ -952,7 +943,7 @@ function SecondFacePanel({
           transformOrigin: "center",
           display: "flex",
           alignItems: "center",
-          fontFamily: CARD_FONT,
+          fontFamily: DISPLAY_FONT,
           fontSize: cqw(slot.type.sizePct),
           fontWeight: slot.type.weight ?? 600,
           color: slot.type.colorHex,
@@ -970,7 +961,7 @@ function SecondFacePanel({
           flexDirection: "column",
           justifyContent: "center",
           overflow: "hidden",
-          padding: "1cqw 1.5cqw",
+          padding: "0.8cqw 1.2cqw",
           fontFamily: CARD_FONT,
           fontSize: cqw(slot.rules.sizePct),
           lineHeight: slot.rules.lineHeight ?? 1.25,
@@ -979,9 +970,7 @@ function SecondFacePanel({
         }}
       >
         {data.rulesText?.trim() ? (
-          <div style={{ whiteSpace: "pre-line" }}>
-            {renderRulesText(data.rulesText)}
-          </div>
+          <RulesBody text={data.rulesText} />
         ) : null}
       </div>
       {showPT && slot.pt ? (
@@ -994,7 +983,7 @@ function SecondFacePanel({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontFamily: CARD_FONT,
+            fontFamily: DISPLAY_FONT,
             fontSize: cqw(slot.pt.sizePct),
             fontWeight: slot.pt.weight ?? 700,
             color: slot.pt.colorHex,
@@ -1072,55 +1061,61 @@ function ArtImage({
   );
 }
 
-function renderRulesText(raw: string): ReactNode {
-  const lines = raw.split(/\n+/);
-  return lines.map((line, i) => (
-    <span key={i}>
-      {renderLine(line)}
-      {i < lines.length - 1 ? <br /> : null}
-    </span>
-  ));
-}
-
-function renderLine(line: string): ReactNode[] {
-  const lower = line.toLowerCase();
-  let prefixLen = 0;
-  for (const keyword of KEYWORD_ABILITIES) {
-    if (lower.startsWith(keyword)) {
-      const afterChar = line.charAt(keyword.length);
-      if (afterChar === "" || /[\s,.;:]/.test(afterChar)) {
-        prefixLen = keyword.length;
-        break;
-      }
-    }
-  }
-
-  const remainder = prefixLen > 0 ? line.slice(prefixLen) : line;
-  const keywordNode =
-    prefixLen > 0 ? (
-      <em key="kw" className="font-medium not-italic text-current">
-        {line.slice(0, prefixLen)}
-      </em>
-    ) : null;
-
-  const parts: ReactNode[] = keywordNode ? [keywordNode] : [];
-  const reminderPattern = /\(([^)]+)\)/g;
-  let cursor = 0;
-  let n = 0;
-  for (const match of remainder.matchAll(reminderPattern)) {
-    if (match.index === undefined) continue;
-    if (match.index > cursor) {
-      parts.push(remainder.slice(cursor, match.index));
-    }
-    parts.push(
-      <span key={`r-${n++}`} className="italic opacity-70">
-        ({match[1]})
-      </span>,
-    );
-    cursor = match.index + match[0].length;
-  }
-  if (cursor < remainder.length) {
-    parts.push(remainder.slice(cursor));
-  }
-  return parts;
+// RulesBody — the shared rules-text renderer. Lays each paragraph out as a
+// flex-wrap row of word + inline-mana items (lib/cards/rules-text.ts), so inline
+// {T}/{G} render as real pips and reminder text / ability words are italicized.
+// The Satori bake (RulesBodyBake) consumes the SAME item stream, so the editor
+// preview and the exported PNG match.
+function RulesBody({ text }: { text: string }) {
+  const paragraphs = tokenizeRulesText(text);
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        rowGap: "0.5em",
+        width: "100%",
+      }}
+    >
+      {paragraphs.map((items, pi) => (
+        <div
+          key={pi}
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            justifyContent: "flex-start",
+            columnGap: "0.26em",
+            rowGap: "0.1em",
+            minHeight: items.length === 0 ? "0.7em" : undefined,
+          }}
+        >
+          {items.map((it, i) =>
+            it.t === "m" ? (
+              <i
+                key={i}
+                aria-hidden
+                className={cn("ms ms-cost ms-shadow", `ms-${it.suffix}`)}
+                style={{ fontSize: "0.92em" }}
+              />
+            ) : (
+              <span
+                key={i}
+                style={
+                  it.em
+                    ? {
+                        fontStyle: "italic",
+                        opacity: it.em === "reminder" ? 0.7 : 1,
+                      }
+                    : undefined
+                }
+              >
+                {it.v}
+              </span>
+            ),
+          )}
+        </div>
+      ))}
+    </div>
+  );
 }

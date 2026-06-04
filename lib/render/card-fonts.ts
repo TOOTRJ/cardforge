@@ -58,9 +58,21 @@ const KEYRUNE_FONT_PATH = path.join(
   "keyrune.ttf",
 );
 
+// CardDisplay — the title/type/footer/stat face: an OFL Goudy-derived display
+// serif (Sorts Mill Goudy) vendored in public/fonts, standing in for the
+// proprietary Beleren. Read with the same process.cwd()+literal-segments pattern
+// as the node_modules fonts so @vercel/nft bundles it into the function.
+const DISPLAY_FONT_PATH = path.join(
+  process.cwd(),
+  "public",
+  "fonts",
+  "SortsMillGoudy-Regular.ttf",
+);
+
 export const MANA_FONT_BYTES: Buffer = fs.readFileSync(MANA_FONT_PATH);
 export const MPLANTIN_FONT_BYTES: Buffer = fs.readFileSync(MPLANTIN_FONT_PATH);
 export const KEYRUNE_FONT_BYTES: Buffer = fs.readFileSync(KEYRUNE_FONT_PATH);
+export const DISPLAY_FONT_BYTES: Buffer = fs.readFileSync(DISPLAY_FONT_PATH);
 
 // ---------------------------------------------------------------------------
 // Per-color tints for the monochrome Mana font glyphs.
