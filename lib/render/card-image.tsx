@@ -32,7 +32,6 @@ import {
   KEYRUNE_DEFAULT_GLYPH,
   KEYRUNE_FONT_BYTES,
   MANA_FONT_BYTES,
-  MANA_GLYPH_COLOR,
   MPLANTIN_FONT_BYTES,
   getManaCodepoint,
 } from "@/lib/render/card-fonts";
@@ -520,8 +519,65 @@ function Band({
   );
 }
 
+// Mana-pip gem disc colors — the mana-font `.ms-cost` background-colors from
+// mana.css. The live preview gets the gem from that CSS; Satori can't, so we
+// draw the disc ourselves and put the dark symbol on top (matching real cards).
+const MANA_GEM_BG: Record<string, string> = {
+  w: "#f0f2c0",
+  u: "#b5cde3",
+  b: "#aca29a",
+  r: "#db8664",
+  g: "#93b483",
+  c: "#beb9b2",
+};
+const MANA_SYMBOL_INK = "#150d08";
+
+// ManaGem — one mana pip the way it prints: a colored disc with the dark symbol
+// centered on top (mirrors mana-font's `.ms-cost`). `size` is the disc diameter.
+function ManaGem({
+  suffix,
+  size,
+  style,
+}: {
+  suffix: string;
+  size: number;
+  style?: Record<string, unknown>;
+}) {
+  const cp = getManaCodepoint(suffix);
+  if (!cp) return null;
+  const bg = MANA_GEM_BG[inlineManaTintKey(suffix)] ?? MANA_GEM_BG.c;
+  const shadow = Math.max(1, Math.round(size * 0.05));
+  return (
+    <span
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: size,
+        height: size,
+        borderRadius: size,
+        background: bg,
+        boxShadow: `0 ${Math.max(1, Math.round(size * 0.04))}px ${shadow}px rgba(0,0,0,0.4)`,
+        ...style,
+      }}
+    >
+      <span
+        style={{
+          display: "flex",
+          fontFamily: '"Mana"',
+          fontSize: Math.round(size * 0.66),
+          lineHeight: 1,
+          color: MANA_SYMBOL_INK,
+        }}
+      >
+        {cp}
+      </span>
+    </span>
+  );
+}
+
 // ---------------------------------------------------------------------------
-// CostGlyphs — Satori-side mana-cost renderer (Mana font, monochrome → tinted).
+// CostGlyphs — Satori-side mana-cost renderer (gem discs, like real cards).
 // ---------------------------------------------------------------------------
 
 function CostGlyphs({ cost, fontSize }: { cost: string; fontSize: number }) {
@@ -547,27 +603,8 @@ function CostGlyphs({ cost, fontSize }: { cost: string; fontSize: number }) {
           );
         }
         const suffix = tokenSuffix(token);
-        const codepoint = suffix ? getManaCodepoint(suffix) : null;
-        if (!codepoint) return null;
-        const tintKey =
-          token.kind === "solid" && /^[wubrgc]$/.test(token.label.toLowerCase())
-            ? token.label.toLowerCase()
-            : "c";
-        const color = MANA_GLYPH_COLOR[tintKey] ?? MANA_GLYPH_COLOR.c;
-        return (
-          <span
-            key={`g-${i}`}
-            style={{
-              display: "flex",
-              fontFamily: '"Mana"',
-              fontSize,
-              lineHeight: 1,
-              color,
-            }}
-          >
-            {codepoint}
-          </span>
-        );
+        if (!suffix) return null;
+        return <ManaGem key={`g-${i}`} suffix={suffix} size={fontSize} />;
       })}
     </span>
   );
@@ -581,11 +618,6 @@ function CostGlyphs({ cost, fontSize }: { cost: string; fontSize: number }) {
 function RulesBodyBake({ text, size }: { text: string; size: number }) {
   const paragraphs = tokenizeRulesText(text);
   const glyph = Math.round(size * 0.92);
-  // Inline pips sit on the (usually light) textbox, not the dark cost bar, so a
-  // thin dark ring keeps the pale gem tints legible on cream — approximating the
-  // shaded gem the preview gets from mana-font's `ms-cost`.
-  const o = Math.max(1, Math.round(glyph * 0.05));
-  const glyphRing = `${o}px 0 0 rgba(0,0,0,0.55), ${-o}px 0 0 rgba(0,0,0,0.55), 0 ${o}px 0 rgba(0,0,0,0.55), 0 ${-o}px 0 rgba(0,0,0,0.55)`;
   const paraGap = Math.round(size * 0.5);
   const colGap = Math.round(size * 0.26);
   const lineGap = Math.round(size * 0.12);
@@ -613,26 +645,13 @@ function RulesBodyBake({ text, size }: { text: string; size: number }) {
         >
           {items.map((it, i) => {
             if (it.t === "m") {
-              const cp = getManaCodepoint(it.suffix);
-              if (!cp) return null;
               return (
-                <span
+                <ManaGem
                   key={i}
-                  style={{
-                    display: "flex",
-                    fontFamily: '"Mana"',
-                    fontSize: glyph,
-                    lineHeight: 1,
-                    color:
-                      MANA_GLYPH_COLOR[inlineManaTintKey(it.suffix)] ??
-                      MANA_GLYPH_COLOR.c,
-                    textShadow: glyphRing,
-                    marginRight: colGap,
-                    marginBottom: lineGap,
-                  }}
-                >
-                  {cp}
-                </span>
+                  suffix={it.suffix}
+                  size={glyph}
+                  style={{ marginRight: colGap, marginBottom: lineGap }}
+                />
               );
             }
             return (
