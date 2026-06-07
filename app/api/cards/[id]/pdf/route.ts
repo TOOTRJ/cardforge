@@ -12,6 +12,7 @@ import {
   type Rarity,
 } from "@/types/card";
 import { renderCardImage } from "@/lib/render/card-image";
+import { getEntitlements } from "@/lib/billing/entitlements";
 import { buildCardPdf, type PdfLayout } from "@/lib/render/card-pdf";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 
@@ -100,6 +101,26 @@ export async function GET(
     }
   }
 
+  // PDF export is a paid (Plus+) feature — clean, print-ready output; sheet
+  // layouts (3×3) are Pro. Enforced here as defense-in-depth; the download UI
+  // hides these options for free users.
+  const entitlements = await getEntitlements();
+  if (!entitlements.isPaid) {
+    return NextResponse.json(
+      {
+        error: "PDF export is a Plus feature. Upgrade to download print-ready PDFs.",
+        code: "UPGRADE_REQUIRED",
+      },
+      { status: 403 },
+    );
+  }
+  if (layout !== "card" && !entitlements.allowBatchExport) {
+    return NextResponse.json(
+      { error: "Sheet layouts are a Pro feature.", code: "UPGRADE_REQUIRED" },
+      { status: 403 },
+    );
+  }
+
   // Build the CardPreviewData shape the renderer expects.
   const previewData: CardPreviewData = {
     title: card.title,
@@ -126,7 +147,9 @@ export async function GET(
   // Render PNG at HD quality (1500×2100) for crisp print output.
   let pngBytes: Uint8Array;
   try {
-    const imgResponse = renderCardImage(previewData, "hd");
+    const imgResponse = renderCardImage(previewData, "hd", {
+      watermark: !entitlements.removeWatermark,
+    });
     pngBytes = new Uint8Array(await imgResponse.arrayBuffer());
   } catch (err) {
     const detail = err instanceof Error ? err.message : "Render error";
@@ -155,11 +178,8 @@ export async function GET(
         ? `${card.slug}-sheet.pdf`
         : `${card.slug}.pdf`;
 
-  // Cache public cards at CDN; skip cache for unlisted/private.
-  const cacheControl =
-    card.visibility === "public"
-      ? "public, max-age=60, s-maxage=600, stale-while-revalidate=86400"
-      : "private, no-store";
+  // PDFs are entitlement-scoped downloads — never shared-cache them.
+  const cacheControl = "private, no-store";
 
   return new NextResponse(Buffer.from(pdfBytes), {
     status: 200,

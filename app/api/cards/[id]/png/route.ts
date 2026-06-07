@@ -12,6 +12,7 @@ import {
   type Rarity,
 } from "@/types/card";
 import { renderCardImage, type RenderPreset } from "@/lib/render/card-image";
+import { getEntitlements } from "@/lib/billing/entitlements";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 
 // ---------------------------------------------------------------------------
@@ -52,7 +53,8 @@ export async function GET(
   }
 
   const presetParam = request.nextUrl.searchParams.get("preset");
-  const preset: RenderPreset = presetParam === "default" ? "default" : "hd";
+  const requestedPreset: RenderPreset =
+    presetParam === "default" ? "default" : "hd";
 
   let card: Awaited<ReturnType<typeof fetchCard>>;
   try {
@@ -95,9 +97,17 @@ export async function GET(
     frameStyle: (card.frame_style as FrameStyle) ?? {},
   };
 
+  // The CURRENT viewer's entitlement decides watermark + max resolution.
+  // Free: watermarked + capped to "default". Paid: clean + the requested preset.
+  const entitlements = await getEntitlements();
+  const preset: RenderPreset =
+    entitlements.maxExportPreset === "hd" ? requestedPreset : "default";
+
   let pngBytes: Uint8Array;
   try {
-    const imgResponse = renderCardImage(previewData, preset);
+    const imgResponse = renderCardImage(previewData, preset, {
+      watermark: !entitlements.removeWatermark,
+    });
     pngBytes = new Uint8Array(await imgResponse.arrayBuffer());
   } catch (err) {
     const detail = err instanceof Error ? err.message : "Render error";
@@ -107,10 +117,10 @@ export async function GET(
     );
   }
 
-  const cacheControl =
-    card.visibility === "public"
-      ? "public, max-age=60, s-maxage=600, stale-while-revalidate=86400"
-      : "private, no-store";
+  // Output varies by the authenticated viewer's entitlement (watermark +
+  // resolution), so it must NOT be shared-cached at the CDN — that would leak a
+  // clean render to a free viewer (or a watermarked one to a paid viewer).
+  const cacheControl = "private, no-store";
 
   return new NextResponse(Buffer.from(pngBytes), {
     status: 200,

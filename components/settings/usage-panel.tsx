@@ -1,8 +1,9 @@
-import { AlertTriangle, Globe2, Sparkles } from "lucide-react";
+import Link from "next/link";
+import { AlertTriangle, Coins, Globe2, Sparkles } from "lucide-react";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { Badge } from "@/components/ui/badge";
 import { UsageBarChart } from "@/components/settings/usage-bar-chart";
-import { getAiUsageSnapshot } from "@/lib/ai/usage-queries";
+import { getAiUsageSnapshot, getCreditSnapshot } from "@/lib/ai/usage-queries";
 import {
   getScryfallUsageSnapshot,
   type ScryfallAction,
@@ -37,17 +38,86 @@ const SCRYFALL_ACTION_LABEL: Record<ScryfallAction, string> = {
 };
 
 export async function UsagePanel() {
-  // Fetch both snapshots in parallel — neither depends on the other.
-  const [ai, scryfall] = await Promise.all([
+  // Fetch snapshots in parallel — none depends on the other.
+  const [credits, ai, scryfall] = await Promise.all([
+    getCreditSnapshot(),
     getAiUsageSnapshot(),
     getScryfallUsageSnapshot(),
   ]);
 
   const aiOverDay = ai.today >= ai.limits.perDay;
   const aiOverMinute = ai.minute >= ai.limits.perMinute;
+  const creditTierLabel =
+    credits.tier.charAt(0).toUpperCase() + credits.tier.slice(1);
+  const lowCredits = credits.balance <= 5;
 
   return (
     <div className="flex flex-col gap-6">
+      {/* AI credits */}
+      <SurfaceCard className="flex flex-col gap-4 p-6">
+        <header className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-elevated text-primary">
+              <Coins className="h-4 w-4" aria-hidden />
+            </span>
+            <div className="flex flex-col">
+              <span className="font-display text-sm font-semibold tracking-wide text-foreground">
+                AI generation credits
+              </span>
+              <span className="text-xs text-muted">
+                Spent on AI card &amp; art generation. 1 credit = 1 generation.
+              </span>
+            </div>
+          </div>
+          <Badge variant={credits.isPaid ? "primary" : "outline"}>
+            {creditTierLabel} plan
+          </Badge>
+        </header>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div
+            className={cn(
+              "flex flex-col gap-1 rounded-md border border-border/40 bg-background/40 px-3 py-2",
+              lowCredits && "border-danger/40 bg-danger/5",
+            )}
+          >
+            <span className="text-[11px] uppercase tracking-wider text-subtle">
+              Balance
+            </span>
+            <span className="flex items-baseline gap-1.5">
+              <span
+                className={cn(
+                  "font-display text-xl font-semibold tracking-tight",
+                  lowCredits ? "text-danger" : "text-foreground",
+                )}
+              >
+                {credits.balance}
+              </span>
+              <span className="text-xs text-muted">credits</span>
+            </span>
+          </div>
+          <div className="flex flex-col gap-1 rounded-md border border-border/40 bg-background/40 px-3 py-2">
+            <span className="text-[11px] uppercase tracking-wider text-subtle">
+              Monthly allotment
+            </span>
+            <span className="font-display text-xl font-semibold tracking-tight text-foreground">
+              {credits.monthlyAllotment}
+            </span>
+          </div>
+        </div>
+
+        <UsageBarChart data={credits.daily} unitLabel="credits spent" />
+
+        <Link
+          href="/pricing"
+          className="text-xs font-semibold text-primary underline-offset-4 hover:underline"
+        >
+          {credits.isPaid
+            ? "Manage plan or buy more credits →"
+            : "Upgrade or buy a credit pack for more →"}
+        </Link>
+      </SurfaceCard>
+
       {/* AI assistant */}
       <SurfaceCard className="flex flex-col gap-4 p-6">
         <header className="flex items-center justify-between gap-3">

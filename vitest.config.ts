@@ -37,6 +37,10 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "."),
+      // `server-only` is a Next.js build-time guard with no standalone package
+      // to resolve under vitest; stub it so server modules (e.g.
+      // lib/stripe/config.ts) remain unit-testable.
+      "server-only": path.resolve(__dirname, "tests/stubs/server-only.ts"),
     },
   },
 });

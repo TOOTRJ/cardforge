@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { CommandPalette } from "@/components/layout/command-palette";
 import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
+import { getEntitlements } from "@/lib/billing/entitlements";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +22,7 @@ export default async function AppGroupLayout({
   }
 
   const profile = user ? await getCurrentProfile() : null;
+  const entitlements = user ? await getEntitlements() : null;
 
   return (
     <AppShell
@@ -31,6 +33,7 @@ export default async function AppGroupLayout({
               username: profile?.username ?? null,
               displayName: profile?.display_name ?? null,
               avatarUrl: profile?.avatar_url ?? null,
+              isPaid: entitlements?.isPaid ?? false,
             }
           : null
       }

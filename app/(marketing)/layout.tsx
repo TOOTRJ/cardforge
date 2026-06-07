@@ -1,5 +1,6 @@
 import { AppShell } from "@/components/layout/app-shell";
 import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
+import { getEntitlements } from "@/lib/billing/entitlements";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,7 @@ export default async function MarketingLayout({
 }) {
   const user = await getCurrentUser();
   const profile = user ? await getCurrentProfile() : null;
+  const entitlements = user ? await getEntitlements() : null;
 
   return (
     <AppShell
@@ -20,6 +22,7 @@ export default async function MarketingLayout({
               username: profile?.username ?? null,
               displayName: profile?.display_name ?? null,
               avatarUrl: profile?.avatar_url ?? null,
+              isPaid: entitlements?.isPaid ?? false,
             }
           : null
       }

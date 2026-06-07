@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/cron/refill-credits",
+      "schedule": "0 6 * * *"
+    }
+  ]
+}

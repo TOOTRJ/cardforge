@@ -128,10 +128,12 @@ function CardImage({
   card,
   width,
   height,
+  watermark,
 }: {
   card: CardPreviewData;
   width: number;
   height: number;
+  watermark: boolean;
 }) {
   const template = normalizeFrameTemplate(card.frameStyle?.template);
   const layout = getFrameProfile(template);
@@ -462,6 +464,30 @@ function CardImage({
 
       {/* Showcase tints the title italic via the Band `italic` prop above. */}
       {isShowcase ? null : null}
+
+      {/* Free-tier watermark — OUR brand mark, baked into the pixels so it
+          can't be stripped client-side. Paid exports pass watermark=false.
+          Never a WotC mark; the MTG-style frame itself is always free. */}
+      {watermark ? (
+        <div
+          style={{
+            position: "absolute",
+            right: "3.5%",
+            bottom: "1.8%",
+            zIndex: 40,
+            display: "flex",
+            alignItems: "center",
+            fontFamily: DISPLAY_FONT,
+            fontSize: fpx(0.026, width),
+            fontWeight: 600,
+            letterSpacing: "0.02em",
+            color: "rgba(255,255,255,0.82)",
+            textShadow: "0 1px 3px rgba(0,0,0,0.8)",
+          }}
+        >
+          spellwright.app
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -1107,6 +1133,7 @@ function SecondFaceBake({
 export function renderCardImage(
   card: CardPreviewData,
   preset: RenderPreset = "default",
+  opts: { watermark?: boolean } = {},
 ): ImageResponse {
   const base = RENDER_PRESETS[preset];
   // Landscape (Battle) frames swap the canvas to 7:5 so the bake matches the
@@ -1118,7 +1145,12 @@ export function renderCardImage(
   const width = landscape ? base.height : base.width;
   const height = landscape ? base.width : base.height;
   return new ImageResponse(
-    <CardImage card={card} width={width} height={height} />,
+    <CardImage
+      card={card}
+      width={width}
+      height={height}
+      watermark={opts.watermark ?? true}
+    />,
     {
       width,
       height,

@@ -8,6 +8,9 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { listMySets } from "@/lib/sets/queries";
+import { getEntitlements } from "@/lib/billing/entitlements";
+import { isOpenAiConfigured } from "@/lib/ai/random-card";
+import { AiDeckGenerator } from "@/components/sets/ai-deck-generator";
 
 export const metadata: Metadata = {
   title: "Sets",
@@ -15,7 +18,11 @@ export const metadata: Metadata = {
 };
 
 export default async function SetsPage() {
-  const sets = await listMySets();
+  const [sets, entitlements] = await Promise.all([
+    listMySets(),
+    getEntitlements(),
+  ]);
+  const aiConfigured = isOpenAiConfigured();
 
   return (
     <DashboardShell>
@@ -33,7 +40,14 @@ export default async function SetsPage() {
         }
       />
 
-      <div className="mt-10">
+      <div className="mt-8">
+        <AiDeckGenerator
+          allowDeckGen={entitlements.allowDeckGen}
+          aiConfigured={aiConfigured}
+        />
+      </div>
+
+      <div className="mt-6">
         {sets.length === 0 ? (
           <EmptyState
             icon={Layers}

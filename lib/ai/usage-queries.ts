@@ -2,6 +2,8 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { getEntitlements } from "@/lib/billing/entitlements";
+import { MONTHLY_CREDITS, type PlanTier } from "@/lib/billing/plans";
 
 // ---------------------------------------------------------------------------
 // AI usage snapshot (Phase 11 chunk 15).
@@ -81,5 +83,47 @@ export async function getAiUsageSnapshot(): Promise<AiUsageSnapshot> {
     };
   } catch {
     return EMPTY_SNAPSHOT;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Credit snapshot (Phase B) — current balance, the plan's monthly allotment,
+// and a 30-day spend trend for the usage panel.
+// ---------------------------------------------------------------------------
+
+export type CreditSnapshot = {
+  balance: number;
+  tier: PlanTier;
+  isPaid: boolean;
+  monthlyAllotment: number;
+  /** Credits spent per day, last 30 days, ascending (gaps filled client-side). */
+  daily: DailyCount[];
+};
+
+export async function getCreditSnapshot(): Promise<CreditSnapshot> {
+  const entitlements = await getEntitlements();
+  const base: CreditSnapshot = {
+    balance: entitlements.credits,
+    tier: entitlements.tier,
+    isPaid: entitlements.isPaid,
+    monthlyAllotment: MONTHLY_CREDITS[entitlements.tier] ?? 0,
+    daily: [],
+  };
+  if (!isSupabaseConfigured()) return base;
+  try {
+    const supabase = await createClient();
+    const sinceTrend = new Date(Date.now() - TREND_DAYS * DAY_MS).toISOString();
+    const { data } = await supabase.rpc("credit_ledger_daily", {
+      since: sinceTrend,
+    });
+    const daily = (
+      (data ?? []) as Array<{ day: string; spent: number | string }>
+    ).map((row) => ({
+      day: row.day,
+      count: typeof row.spent === "string" ? Number(row.spent) : row.spent,
+    }));
+    return { ...base, daily };
+  } catch {
+    return base;
   }
 }

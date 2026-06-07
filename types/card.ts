@@ -325,6 +325,49 @@ export type FrameStyle = {
 };
 
 // ---------------------------------------------------------------------------
+// Premium gating (subscriptions).
+//
+// IP-safe rule: we ONLY ever gate our OWN technology — the rendered finishes
+// (foil/etched/showcase are our own shader code) and any ORIGINAL Spellwright
+// frames. WotC-derived frame trade dress (m15/alpha/lotr/avatar/bloomburrow/
+// tarkir) is NEVER paywalled — it stays free for everyone.
+// ---------------------------------------------------------------------------
+
+// Finishes that require a paid plan. "regular" and "borderless" stay free.
+export const PREMIUM_FINISHES: ReadonlySet<CardFinish> = new Set<CardFinish>([
+  "foil",
+  "etched",
+  "showcase",
+]);
+
+// Original premium frame templates (none yet). Add ONLY original Spellwright
+// frames here — never WotC trade dress. Wired up so gating is ready the moment
+// original premium frames ship.
+export const PREMIUM_FRAME_TEMPLATES: ReadonlySet<FrameTemplate> =
+  new Set<FrameTemplate>([]);
+
+export function isPremiumFinish(finish: CardFinish | null | undefined): boolean {
+  return finish != null && PREMIUM_FINISHES.has(finish);
+}
+
+export function isPremiumFrameTemplate(
+  template: FrameTemplate | null | undefined,
+): boolean {
+  return template != null && PREMIUM_FRAME_TEMPLATES.has(template);
+}
+
+/** True if a frame style uses any premium (paid) treatment. */
+export function frameStyleRequiresPremium(
+  frameStyle: FrameStyle | null | undefined,
+): boolean {
+  if (!frameStyle) return false;
+  return (
+    isPremiumFinish(frameStyle.finish) ||
+    isPremiumFrameTemplate(frameStyle.template)
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Roadmap frames — on the to-do list but not yet selectable. The picker shows
 // these as disabled "Soon" chips so users can see what's coming. They are NOT
 // part of FRAME_TEMPLATE_VALUES (which is compile-enforced and needs a layout

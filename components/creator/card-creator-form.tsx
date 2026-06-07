@@ -34,6 +34,7 @@ import {
   Zap,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useUpgradeModal } from "@/components/billing/upgrade-modal-provider";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SurfaceCard } from "@/components/ui/surface-card";
@@ -444,6 +445,7 @@ export function CardCreatorForm({
   aiConfigured,
 }: CardCreatorFormProps) {
   const router = useRouter();
+  const upgrade = useUpgradeModal();
   const [isSubmitting, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
   // Active step index into the dynamic `steps` list (see below). Clamped on
@@ -755,9 +757,16 @@ export function CardCreatorForm({
       });
       const payload = await response.json().catch(() => null);
       if (!response.ok || !payload?.ok) {
-        toast.error(
-          payload?.error ?? "Random card generation failed. Try again.",
-        );
+        if (
+          response.status === 402 ||
+          payload?.code === "INSUFFICIENT_CREDITS"
+        ) {
+          upgrade.open("credits");
+        } else {
+          toast.error(
+            payload?.error ?? "Random card generation failed. Try again.",
+          );
+        }
         return;
       }
       const card = payload.card as {
@@ -893,14 +902,28 @@ export function CardCreatorForm({
         if (firstErrorField) goToIndex(stepIndexForField(firstErrorField, steps));
       };
 
+      const handleUpgradeOrError = (failure: {
+        formError?: string;
+        fieldErrors?: Record<string, string | undefined>;
+        code?: string;
+      }) => {
+        applyFieldErrors(failure.fieldErrors);
+        if (failure.code === "UPGRADE_REQUIRED") {
+          upgrade.open(
+            failure.fieldErrors?.frame_style ? "premium_frame" : "capacity",
+          );
+          return;
+        }
+        if (failure.formError) {
+          setServerError(failure.formError);
+          toast.error(failure.formError);
+        }
+      };
+
       if (mode === "create") {
         const result = await createCardAction(payload);
         if (!result.ok) {
-          applyFieldErrors(result.fieldErrors);
-          if (result.formError) {
-            setServerError(result.formError);
-            toast.error(result.formError);
-          }
+          handleUpgradeOrError(result);
           return;
         }
         toast.success(`Saved “${payload.title}”`);
@@ -916,11 +939,7 @@ export function CardCreatorForm({
       }
       const result = await updateCardAction(card.id, payload);
       if (!result.ok) {
-        applyFieldErrors(result.fieldErrors);
-        if (result.formError) {
-          setServerError(result.formError);
-          toast.error(result.formError);
-        }
+        handleUpgradeOrError(result);
         return;
       }
       toast.success("Changes saved.");
