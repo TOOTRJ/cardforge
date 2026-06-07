@@ -35,7 +35,7 @@ begin
     new.stripe_subscription_id := null;
     new.current_period_end := null;
     new.cancel_at_period_end := false;
-    new.credits := 25;
+    new.credits := 5;
   else
     new.stripe_customer_id := old.stripe_customer_id;
     new.subscription_tier := old.subscription_tier;

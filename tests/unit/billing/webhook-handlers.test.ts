@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { handleStripeEvent } from "@/lib/stripe/webhook-handlers";
+import { MONTHLY_CREDITS } from "@/lib/billing/plans";
 
 // Minimal admin-client stand-in that records the writes the handlers make, so
 // we can assert dispatch behavior without a real Supabase client.
@@ -87,7 +88,7 @@ describe("handleStripeEvent", () => {
     const grant = rpcs.find((r) => r.fn === "grant_credits");
     expect(grant?.args).toMatchObject({
       p_user_id: "user-1",
-      p_amount: 200,
+      p_amount: MONTHLY_CREDITS.plus,
       p_reason: "subscription_refill",
     });
     expect(String(grant?.args.p_idempotency_key)).toMatch(/^refill:user-1:\d{4}-\d{2}$/);

@@ -13,14 +13,18 @@ Checkout + Customer Portal + a thin webhook → Supabase + app-managed credits**
 
 | Tier | Price | AI credits/mo | Watermark | Export | Capacity | Extras |
 |------|-------|---------------|-----------|--------|----------|--------|
-| Free | $0 | 25 (signup grant) | yes | PNG, capped 750px | 50 | — |
-| Plus | $9/mo | 200 | removed | + clean HD PNG, single PDF | 500 | premium finishes |
-| Pro | $19/mo | 1,000 | removed | + 3×3 sheets, whole-set export | unlimited | AI set generator |
+| Free | $0 | 5 (signup grant) | yes | PNG, capped 750px | 50 | — |
+| Plus | $9/mo | 30 | removed | + clean HD PNG, single PDF | 500 | premium finishes |
+| Pro | $19/mo | 75 | removed | + 3×3 sheets, whole-set export | unlimited | AI set generator |
 
 - **Credits** meter AI generation (1 credit = 1 card/art generation; the AI set
   generator costs 1/card). Cheap text-assistant actions stay on the windowed
   rate limit (free). Plan credit amounts: `lib/billing/plans.ts` → `MONTHLY_CREDITS`.
-- **Credit packs** (one-time, never expire): `CREDIT_PACKS` in the same file.
+- **Credit packs** (one-time, never expire): 30/$8 and 100/$24 — `CREDIT_PACKS`.
+- **Unit economics:** amounts are sized against a measured **~$0.11 per generation**
+  so even a max-usage subscriber stays under ~40% AI COGS of net revenue (after
+  Stripe fees). Re-tune `MONTHLY_CREDITS` / `CREDIT_PACKS` / prices in
+  `lib/billing/plans.ts` if your provider cost changes.
 
 ## 1. Apply the database migration
 

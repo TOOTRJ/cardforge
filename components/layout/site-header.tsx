@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Sparkles } from "lucide-react";
+import { Coins, Sparkles } from "lucide-react";
 import { Logo } from "./logo";
 import { Button } from "@/components/ui/button";
 import { NavLinks } from "./nav-links";
@@ -17,6 +17,9 @@ type HeaderUser = {
   avatarUrl?: string | null;
   /** Drives the header "Upgrade" CTA — hidden for paid users. */
   isPaid?: boolean;
+  /** AI credit balance + credits spent this month, for the header indicator. */
+  credits?: number;
+  creditsUsed?: number;
 };
 
 type SiteHeaderProps = {
@@ -59,6 +62,15 @@ export function SiteHeader({
           {isAuthed ? (
             <>
               {variant === "app" ? <CommandPaletteTrigger /> : null}
+              <Link
+                href="/settings#billing"
+                title="AI credits — balance · used this month"
+                className="hidden h-9 items-center gap-1.5 rounded-md border border-border/60 bg-elevated px-2.5 text-xs font-medium text-foreground transition-colors hover:border-border-strong sm:inline-flex"
+              >
+                <Coins className="h-3.5 w-3.5 text-primary" aria-hidden />
+                <span>{user?.credits ?? 0}</span>
+                <span className="text-subtle">· {user?.creditsUsed ?? 0} used</span>
+              </Link>
               {user?.isPaid ? null : (
                 <Button
                   asChild
@@ -100,6 +112,8 @@ export function SiteHeader({
             isAuthed={isAuthed}
             username={user?.username ?? null}
             isPaid={user?.isPaid ?? false}
+            credits={user?.credits ?? 0}
+            creditsUsed={user?.creditsUsed ?? 0}
           />
         </div>
       </div>
