@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Sparkles } from "lucide-react";
 import { Logo } from "./logo";
 import { Button } from "@/components/ui/button";
 import { NavLinks } from "./nav-links";
@@ -14,6 +15,8 @@ type HeaderUser = {
   username: string | null;
   displayName: string | null;
   avatarUrl?: string | null;
+  /** Drives the header "Upgrade" CTA — hidden for paid users. */
+  isPaid?: boolean;
 };
 
 type SiteHeaderProps = {
@@ -56,6 +59,18 @@ export function SiteHeader({
           {isAuthed ? (
             <>
               {variant === "app" ? <CommandPaletteTrigger /> : null}
+              {user?.isPaid ? null : (
+                <Button
+                  asChild
+                  variant="accent"
+                  size="sm"
+                  className="hidden sm:inline-flex"
+                >
+                  <Link href="/pricing">
+                    <Sparkles className="h-4 w-4" aria-hidden /> Upgrade
+                  </Link>
+                </Button>
+              )}
               <Button asChild size="sm" className="hidden sm:inline-flex">
                 <Link href="/create">New card</Link>
               </Button>
@@ -63,6 +78,7 @@ export function SiteHeader({
                 username={user?.username ?? null}
                 displayName={user?.displayName ?? null}
                 avatarUrl={user?.avatarUrl ?? null}
+                isPaid={user?.isPaid ?? false}
               />
             </>
           ) : (

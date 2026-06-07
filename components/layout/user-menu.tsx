@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import {
+  CreditCard,
   LayoutDashboard,
   Layers,
   LogOut,
   Settings,
+  Sparkles,
   UserCircle,
 } from "lucide-react";
 import {
@@ -26,9 +28,15 @@ type UserMenuProps = {
   username: string | null;
   displayName: string | null;
   avatarUrl?: string | null;
+  isPaid?: boolean;
 };
 
-export function UserMenu({ username, displayName, avatarUrl }: UserMenuProps) {
+export function UserMenu({
+  username,
+  displayName,
+  avatarUrl,
+  isPaid = false,
+}: UserMenuProps) {
   const label = displayName?.trim() || username || "Account";
   const initial = (label[0] ?? "?").toUpperCase();
 
@@ -95,6 +103,14 @@ export function UserMenu({ username, displayName, avatarUrl }: UserMenuProps) {
         />
         <MenuItem href="/dashboard/sets" icon={Layers} label="My sets" />
         <MenuItem href="/settings" icon={Settings} label="Settings" />
+        <MenuItem
+          href="/settings#billing"
+          icon={CreditCard}
+          label="Plans & billing"
+        />
+        {isPaid ? null : (
+          <MenuItem href="/pricing" icon={Sparkles} label="Upgrade to Pro" />
+        )}
         <div className="my-1 h-px bg-border/60" />
         <form action={logoutAction}>
           <button

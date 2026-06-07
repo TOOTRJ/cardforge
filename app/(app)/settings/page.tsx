@@ -9,7 +9,9 @@ import { ProfileForm } from "@/components/auth/profile-form";
 import { ProfileMediaUploader } from "@/components/auth/profile-media-uploader";
 import { PinnedCardsPicker } from "@/components/auth/pinned-cards-picker";
 import { UsagePanel } from "@/components/settings/usage-panel";
+import { BillingPanel } from "@/components/settings/billing-panel";
 import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
+import { getEntitlements } from "@/lib/billing/entitlements";
 import { listPublicCardsByOwner } from "@/lib/cards/queries";
 
 export const metadata: Metadata = {
@@ -20,6 +22,14 @@ export const metadata: Metadata = {
 export default async function SettingsPage() {
   const user = await getCurrentUser();
   const profile = await getCurrentProfile();
+  const entitlements = await getEntitlements();
+  const renewLabel = entitlements.currentPeriodEnd
+    ? new Date(entitlements.currentPeriodEnd).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
+    : null;
 
   const profileIncomplete = !profile?.username;
 
@@ -136,6 +146,29 @@ export default async function SettingsPage() {
             <Row label="Default rarity" value="Common" />
             <Row label="Theme" value="Switch via the header toggle" />
           </div>
+        </SurfaceCard>
+
+        <SurfaceCard
+          id="billing"
+          className="grid scroll-mt-24 gap-6 p-6 sm:grid-cols-[1fr_2fr]"
+        >
+          <div className="flex flex-col gap-1">
+            <h3 className="font-display text-lg font-semibold text-foreground">
+              Subscription &amp; billing
+            </h3>
+            <p className="text-sm leading-6 text-muted">
+              Your plan, renewal, and AI credit balance. Manage or cancel any
+              time through the secure Stripe portal.
+            </p>
+          </div>
+          <BillingPanel
+            tier={entitlements.tier}
+            isPaid={entitlements.isPaid}
+            status={entitlements.status}
+            credits={entitlements.credits}
+            renewLabel={renewLabel}
+            cancelAtPeriodEnd={entitlements.cancelAtPeriodEnd}
+          />
         </SurfaceCard>
 
         <SurfaceCard className="grid gap-6 p-6 sm:grid-cols-[1fr_2fr]">

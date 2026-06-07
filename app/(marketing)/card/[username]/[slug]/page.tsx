@@ -19,6 +19,7 @@ import {
 import { countPublicRemixesBySource } from "@/lib/cards/source-queries";
 import { listCommentsForCard } from "@/lib/cards/comments-queries";
 import { getCurrentUser } from "@/lib/supabase/server";
+import { getEntitlements } from "@/lib/billing/entitlements";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { RENDER_PRESETS } from "@/lib/render/card-image";
 import { getSiteBaseUrl } from "@/lib/site-url";
@@ -124,16 +125,18 @@ export default async function CardDetailPage({
   const user = await getCurrentUser();
   const isOwner = Boolean(user && user.id === card.owner_id);
 
-  const [likesCount, viewerLiked, otherRemixesCount, comments] = await Promise.all([
-    countCardLikes(card.id),
-    user ? hasUserLikedCard(user.id, card.id) : Promise.resolve(false),
-    // Chunk 13: count of OTHER public remixes of the same Scryfall card.
-    // Returns 0 when this card wasn't imported from Scryfall.
-    card.source_scryfall_id
-      ? countPublicRemixesBySource(card.source_scryfall_id, card.id)
-      : Promise.resolve(0),
-    listCommentsForCard(card.id, { limit: 50 }),
-  ]);
+  const [likesCount, viewerLiked, otherRemixesCount, comments, entitlements] =
+    await Promise.all([
+      countCardLikes(card.id),
+      user ? hasUserLikedCard(user.id, card.id) : Promise.resolve(false),
+      // Chunk 13: count of OTHER public remixes of the same Scryfall card.
+      // Returns 0 when this card wasn't imported from Scryfall.
+      card.source_scryfall_id
+        ? countPublicRemixesBySource(card.source_scryfall_id, card.id)
+        : Promise.resolve(0),
+      listCommentsForCard(card.id, { limit: 50 }),
+      getEntitlements(),
+    ]);
 
   const ownerProfile = card.owner;
 
@@ -265,7 +268,12 @@ export default async function CardDetailPage({
                 </Link>
               </Button>
             ) : null}
-            <DownloadModal cardId={card.id} cardSlug={card.slug} />
+            <DownloadModal
+              cardId={card.id}
+              cardSlug={card.slug}
+              isPaid={entitlements.isPaid}
+              canBatch={entitlements.allowBatchExport}
+            />
             <ShareTargets
               cardTitle={card.title}
               cardUrl={`${siteBase}/card/${username}/${card.slug}`}

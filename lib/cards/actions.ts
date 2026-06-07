@@ -18,10 +18,12 @@ import { bakeAndPersistCardRender } from "@/lib/cards/bake-render";
 import { cardRenderPath } from "@/lib/cards/storage-paths";
 import {
   VISIBILITY_VALUES,
+  frameStyleRequiresPremium,
   type CardInsert,
   type CardUpdate,
   type Visibility,
 } from "@/types/card";
+import { getEntitlements } from "@/lib/billing/entitlements";
 import type { ZodIssue } from "zod";
 
 // ---------------------------------------------------------------------------
@@ -35,6 +37,9 @@ export type CardActionFailure = {
   ok: false;
   formError?: string;
   fieldErrors?: CardActionFieldErrors;
+  /** "UPGRADE_REQUIRED" when a paid plan is needed — the UI opens the upgrade
+   *  modal instead of showing a generic error. */
+  code?: string;
 };
 
 export type CreateCardSuccess = {
@@ -228,6 +233,36 @@ export async function createCardAction(
   const supabase = await createClient();
 
   const data = parsed.data;
+
+  // Entitlement gates. Premium frame/finish (our own tech only — never WotC
+  // trade dress) requires a paid plan; saved-card capacity is tier-based.
+  const entitlements = await getEntitlements();
+  if (
+    frameStyleRequiresPremium(data.frame_style) &&
+    !entitlements.premiumFrames
+  ) {
+    return {
+      ok: false,
+      code: "UPGRADE_REQUIRED",
+      fieldErrors: {
+        frame_style: "That finish is a premium feature — upgrade to use it.",
+      },
+    };
+  }
+  if (entitlements.cardCapacity !== -1) {
+    const { count } = await supabase
+      .from("cards")
+      .select("id", { count: "exact", head: true })
+      .eq("owner_id", user.id);
+    if ((count ?? 0) >= entitlements.cardCapacity) {
+      return {
+        ok: false,
+        code: "UPGRADE_REQUIRED",
+        formError: `You've reached your ${entitlements.cardCapacity}-card limit. Upgrade for more space.`,
+      };
+    }
+  }
+
   const desiredSlug = data.slug ? slugify(data.slug) : slugify(data.title);
   const { slug } = await ensureUniqueSlugForUser(desiredSlug);
 
@@ -354,6 +389,23 @@ export async function updateCardAction(
   const existing = await getCardById(cardId);
   if (!existing || existing.owner_id !== user.id) {
     return { ok: false, formError: "Card not found or not yours to edit." };
+  }
+
+  // Premium frame/finish gate (our own tech only — never WotC trade dress).
+  if (data.frame_style !== undefined) {
+    const entitlements = await getEntitlements();
+    if (
+      frameStyleRequiresPremium(data.frame_style) &&
+      !entitlements.premiumFrames
+    ) {
+      return {
+        ok: false,
+        code: "UPGRADE_REQUIRED",
+        fieldErrors: {
+          frame_style: "That finish is a premium feature — upgrade to use it.",
+        },
+      };
+    }
   }
 
   const update: CardUpdate = {};

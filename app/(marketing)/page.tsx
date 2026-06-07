@@ -10,6 +10,7 @@ import {
   TrendingCardsSectionSkeleton,
 } from "@/components/gallery/trending-cards-section";
 import { Button } from "@/components/ui/button";
+import { PLANS } from "@/lib/billing/plans";
 import { listTrendingCards } from "@/lib/cards/queries";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -79,6 +80,55 @@ export default function HomePage() {
         ) : (
           <PlaceholderGallery />
         )}
+      </section>
+
+      <section className="mx-auto w-full max-w-5xl px-4 pb-16 sm:px-6 lg:px-8">
+        <div className="flex flex-col items-center gap-8 text-center">
+          <div className="flex flex-col gap-2">
+            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+              Free to start
+            </span>
+            <h2 className="font-display text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+              Upgrade when you need more
+            </h2>
+            <p className="mx-auto max-w-2xl text-base leading-7 text-muted">
+              The card maker is free forever — every frame, every card type.
+              Plans add AI generation credits, watermark-free hi-res exports, the
+              AI set generator, and premium finishes.
+            </p>
+          </div>
+          <div className="grid w-full gap-4 sm:grid-cols-3">
+            {PLANS.map((plan) => (
+              <div
+                key={plan.tier}
+                className={`flex flex-col gap-1 rounded-xl border bg-surface/80 p-5 text-left ${
+                  plan.featured
+                    ? "border-primary/40 ring-1 ring-primary/20"
+                    : "border-border/70"
+                }`}
+              >
+                <span className="font-display text-lg font-semibold text-foreground">
+                  {plan.name}
+                </span>
+                <span className="font-display text-2xl font-semibold text-foreground">
+                  ${plan.priceUsd}
+                  <span className="text-sm font-normal text-muted">
+                    {plan.priceUsd === 0 ? "" : "/mo"}
+                  </span>
+                </span>
+                <span className="text-xs leading-5 text-muted">
+                  {plan.tagline}
+                </span>
+              </div>
+            ))}
+          </div>
+          <Button asChild size="lg">
+            <Link href="/pricing">
+              See full pricing
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </Link>
+          </Button>
+        </div>
       </section>
 
       <section className="mx-auto w-full max-w-5xl px-4 pb-24 sm:px-6 lg:px-8">

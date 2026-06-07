@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Cinzel, Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
+import { UpgradeModalProvider } from "@/components/billing/upgrade-modal-provider";
 import { getSiteBaseUrl } from "@/lib/site-url";
 import {
   getTheme,
@@ -196,7 +197,7 @@ export default async function RootLayout({
         >
           Skip to main content
         </a>
-        {children}
+        <UpgradeModalProvider>{children}</UpgradeModalProvider>
         <Toaster
           // Sonner's `theme="system"` follows prefers-color-scheme, which
           // matches what our `data-theme` attribute already reflects

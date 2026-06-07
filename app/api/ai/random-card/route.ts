@@ -2,10 +2,12 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
+  AI_ACTION_COST,
   checkAiRateLimit,
-  checkRandomCardDailyLimit,
+  consumeAiCredits,
   logAiCall,
 } from "@/lib/ai/rate-limit";
+import { getEntitlements } from "@/lib/billing/entitlements";
 import {
   generateRandomCard,
   isOpenAiConfigured,
@@ -22,9 +24,10 @@ import { generateRandomArt } from "@/lib/ai/random-art";
 // the editor can reset() its form with the result.
 //
 // Quota:
-//   - Global per-user cap from lib/ai/rate-limit.ts (20/min, 200/day) applies.
-//   - On top of that, a random-card-specific 10/day cap protects gpt-image-1
-//     spend (the priciest piece of the request).
+//   - Global per-user burst cap from lib/ai/rate-limit.ts (20/min, 200/day).
+//   - AI credits: this flow costs credits (the priciest call we make). Free
+//     users get a starting grant; paid tiers get a monthly allotment; everyone
+//     can buy top-up packs. Returns 402 + code "INSUFFICIENT_CREDITS" when out.
 // ---------------------------------------------------------------------------
 
 export const maxDuration = 90;
@@ -67,14 +70,22 @@ export async function POST() {
       },
     );
   }
-  const dailyLimit = await checkRandomCardDailyLimit(user.id);
-  if (!dailyLimit.ok) {
+  // ---- Credit pre-check ----
+  // The random-card flow (GPT text + gpt-image-1) is the priciest call we make,
+  // so it costs AI credits. Pre-check the balance to avoid burning a generation
+  // for a user who can't pay for it; the atomic spend below is the real guard.
+  const cost = AI_ACTION_COST.generate_random_card ?? 1;
+  const entitlements = await getEntitlements();
+  if (entitlements.credits < cost) {
     return NextResponse.json(
-      { ok: false, error: dailyLimit.message },
       {
-        status: 429,
-        headers: { "Retry-After": String(dailyLimit.retryAfterSeconds) },
+        ok: false,
+        error:
+          "You're out of AI credits. Upgrade your plan or grab a credit pack to keep generating.",
+        code: "INSUFFICIENT_CREDITS",
+        balance: entitlements.credits,
       },
+      { status: 402 },
     );
   }
 
@@ -115,9 +126,20 @@ export async function POST() {
   await logAiCall(user.id, "generate_random_art");
   const art = await generateRandomArt(card.art_prompt);
 
+  // Charge the credit now that generation has run. We pre-checked the balance
+  // above; the atomic consume_credits RPC is the real guard against concurrent
+  // over-spend. Best-effort — a fail-open here just means a free generation.
+  const spend = await consumeAiCredits("generate_random_card");
+  const creditsRemaining = spend.ok
+    ? spend.balance
+    : entitlements.credits - cost;
+
   return NextResponse.json(
     {
       ok: true,
+      creditsRemaining: Number.isFinite(creditsRemaining)
+        ? creditsRemaining
+        : null,
       card: {
         title: card.title,
         cost: card.cost,

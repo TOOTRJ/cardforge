@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
+import { getEntitlements } from "@/lib/billing/entitlements";
 import {
   getFantasyGameSystem,
   getMyCardBySlug,
@@ -69,11 +70,12 @@ export default async function EditCardPage({ params }: EditCardPageProps) {
     notFound();
   }
 
-  const [gameSystem, mySets, profile, userSets] = await Promise.all([
+  const [gameSystem, mySets, profile, userSets, entitlements] = await Promise.all([
     getFantasyGameSystem(),
     listMySetsForCard(card.id),
     getCurrentProfile(),
     listMySets(),
+    getEntitlements(),
   ]);
   const templates = gameSystem
     ? await getTemplatesForGameSystem(gameSystem.id)
@@ -113,7 +115,12 @@ export default async function EditCardPage({ params }: EditCardPageProps) {
                 contains_card: s.contains_card,
               }))}
             />
-            <DownloadModal cardId={card.id} cardSlug={card.slug} />
+            <DownloadModal
+              cardId={card.id}
+              cardSlug={card.slug}
+              isPaid={entitlements.isPaid}
+              canBatch={entitlements.allowBatchExport}
+            />
             <Button asChild variant="ghost">
               <Link href={publicPath}>
                 <ArrowLeft className="h-4 w-4" aria-hidden /> View public page

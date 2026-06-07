@@ -142,7 +142,12 @@ export async function bakeCardRender(
 
   let pngBytes: ArrayBuffer;
   try {
-    const response = renderCardImage(previewData, "hd");
+    // The public gallery render always carries the brand mark, regardless of
+    // owner tier: it's a public marketing surface, and keeping it independent
+    // of entitlement avoids stale-cache leaks (the bake is long-cached at a
+    // fixed path). Paid users still get clean, hi-res output via the
+    // entitlement-gated download routes.
+    const response = renderCardImage(previewData, "hd", { watermark: true });
     pngBytes = await response.arrayBuffer();
   } catch (err) {
     const detail = err instanceof Error ? err.message : "Render error";

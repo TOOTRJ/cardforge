@@ -38,6 +38,54 @@ export type Database = {
         };
         Relationships: [];
       };
+      credit_ledger: {
+        Row: {
+          balance_after: number;
+          created_at: string;
+          delta: number;
+          id: string;
+          reason: string;
+          idempotency_key: string | null;
+          user_id: string;
+        };
+        Insert: {
+          balance_after: number;
+          created_at?: string;
+          delta: number;
+          id?: string;
+          reason: string;
+          idempotency_key?: string | null;
+          user_id: string;
+        };
+        Update: {
+          balance_after?: number;
+          created_at?: string;
+          delta?: number;
+          id?: string;
+          reason?: string;
+          idempotency_key?: string | null;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      stripe_events: {
+        Row: {
+          id: string;
+          processed_at: string;
+          type: string;
+        };
+        Insert: {
+          id: string;
+          processed_at?: string;
+          type: string;
+        };
+        Update: {
+          id?: string;
+          processed_at?: string;
+          type?: string;
+        };
+        Relationships: [];
+      };
       card_comments: {
         Row: {
           author_id: string;
@@ -464,6 +512,13 @@ export type Database = {
           username: string | null;
           website_url: string | null;
           youtube_url: string | null;
+          stripe_customer_id: string | null;
+          subscription_tier: string;
+          subscription_status: string | null;
+          stripe_subscription_id: string | null;
+          current_period_end: string | null;
+          cancel_at_period_end: boolean;
+          credits: number;
         };
         Insert: {
           accent_color?: string | null;
@@ -484,6 +539,13 @@ export type Database = {
           username?: string | null;
           website_url?: string | null;
           youtube_url?: string | null;
+          stripe_customer_id?: string | null;
+          subscription_tier?: string;
+          subscription_status?: string | null;
+          stripe_subscription_id?: string | null;
+          current_period_end?: string | null;
+          cancel_at_period_end?: boolean;
+          credits?: number;
         };
         Update: {
           accent_color?: string | null;
@@ -504,6 +566,13 @@ export type Database = {
           username?: string | null;
           website_url?: string | null;
           youtube_url?: string | null;
+          stripe_customer_id?: string | null;
+          subscription_tier?: string;
+          subscription_status?: string | null;
+          stripe_subscription_id?: string | null;
+          current_period_end?: string | null;
+          cancel_at_period_end?: boolean;
+          credits?: number;
         };
         Relationships: [];
       };
@@ -554,6 +623,29 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      consume_credits: {
+        Args: { p_amount: number; p_reason: string };
+        Returns: {
+          ok: boolean;
+          balance: number;
+        }[];
+      };
+      grant_credits: {
+        Args: {
+          p_user_id: string;
+          p_amount: number;
+          p_reason: string;
+          p_idempotency_key?: string;
+        };
+        Returns: number;
+      };
+      credit_ledger_daily: {
+        Args: { since: string };
+        Returns: {
+          day: string;
+          spent: number;
+        }[];
+      };
       card_ai_calls_daily: {
         Args: { since: string };
         Returns: {
@@ -735,3 +827,8 @@ export type CardSetItemInsert = TablesInsert<"card_set_items">;
 export type CardComment = Tables<"card_comments">;
 export type CardCommentInsert = TablesInsert<"card_comments">;
 export type CardCommentUpdate = TablesUpdate<"card_comments">;
+
+// Billing: subscription credits ledger + Stripe webhook dedupe.
+export type CreditLedgerEntry = Tables<"credit_ledger">;
+export type CreditLedgerInsert = TablesInsert<"credit_ledger">;
+export type StripeEvent = Tables<"stripe_events">;

@@ -101,7 +101,9 @@ export async function GET(
     backFace: (card.back_face as CardBackFace | null) ?? null,
   };
 
-  const response = renderCardImage(previewData, preset);
+  // OG previews always carry the brand mark — they're public marketing
+  // surfaces, not entitlement-gated downloads — so this stays CDN-cacheable.
+  const response = renderCardImage(previewData, preset, { watermark: true });
   response.headers.set("Cache-Control", CACHE_HEADER);
   response.headers.set("Content-Disposition", `inline; filename="${card.slug}.png"`);
   return response;

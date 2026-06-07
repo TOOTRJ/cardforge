@@ -166,3 +166,36 @@ export async function buildCardPdf(
 
   return doc.save();
 }
+
+/**
+ * Build a multi-page PDF for a whole set — one card per page at 2.5"×3.5".
+ * (Pro "whole-set export".) Pass the rendered PNG bytes for each card, in the
+ * order they should appear.
+ */
+export async function buildSetPdf(
+  cardPngs: Uint8Array[],
+  setTitle = "Spellwright Set",
+): Promise<Uint8Array> {
+  const doc = await PDFDocument.create();
+
+  doc.setTitle(setTitle);
+  doc.setAuthor("Spellwright");
+  doc.setSubject(
+    "Custom MTG-style set — fan-made, not affiliated with Wizards of the Coast.",
+  );
+  doc.setCreator("Spellwright (spellwright.app)");
+  doc.setProducer("pdf-lib");
+
+  if (cardPngs.length === 0) {
+    doc.addPage([CARD_W_PT, CARD_H_PT]);
+    return doc.save();
+  }
+
+  for (const png of cardPngs) {
+    const img = await embedImage(doc, png);
+    const page = doc.addPage([CARD_W_PT, CARD_H_PT]);
+    page.drawImage(img, { x: 0, y: 0, width: CARD_W_PT, height: CARD_H_PT });
+  }
+
+  return doc.save();
+}

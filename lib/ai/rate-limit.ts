@@ -22,7 +22,8 @@ export type AiActionLabel =
   | "check_balance"
   | "generate_from_concept"
   | "generate_random_card"
-  | "generate_random_art";
+  | "generate_random_art"
+  | "generate_deck";
 
 // Per-user daily quota specifically for the random-card flow. Image
 // generation is the priciest call we make, so it gets its own cap on top
@@ -155,4 +156,81 @@ export async function logAiCall(
     // when it works, and adding a console.warn here would just spam logs
     // on transient outages.
   }
+}
+
+// ---------------------------------------------------------------------------
+// AI generation credits (Phase B).
+//
+// Credits meter the operations with real marginal cost — AI card/art
+// generation. Cheap text-assistant actions stay governed by the windowed
+// rate limit above (cost 0), so free users can keep using them. Paid tiers get
+// a monthly credit allotment (granted on Stripe `invoice.paid`); everyone can
+// buy consumable top-up packs. Spending goes through the atomic consume_credits
+// RPC (which row-locks the profile), so concurrent generations can't
+// double-spend the balance.
+// ---------------------------------------------------------------------------
+
+// Cost in credits per AI action. Anything not listed is free (0) and relies on
+// the windowed rate limit only. Deck generation is metered per-card by the deck
+// route, so it isn't a fixed cost here.
+export const AI_ACTION_COST: Partial<Record<AiActionLabel, number>> = {
+  generate_random_card: 1,
+};
+
+export function creditCostFor(action: AiActionLabel): number {
+  return AI_ACTION_COST[action] ?? 0;
+}
+
+export type CreditSpendResult =
+  | { ok: true; balance: number }
+  | {
+      ok: false;
+      reason: "insufficient_credits";
+      balance: number;
+      message: string;
+    };
+
+const OUT_OF_CREDITS_MESSAGE =
+  "You're out of AI credits. Upgrade your plan or grab a credit pack to keep generating.";
+
+/**
+ * Spend `amount` credits atomically via the consume_credits RPC (relies on
+ * auth.uid() inside the function). Fails OPEN on an infrastructure error — a
+ * transient DB outage shouldn't wedge generation, matching checkAiRateLimit's
+ * posture — but fails CLOSED on an actual insufficient balance.
+ */
+export async function spendCredits(
+  amount: number,
+  reason: string,
+): Promise<CreditSpendResult> {
+  if (amount <= 0) return { ok: true, balance: Number.POSITIVE_INFINITY };
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase.rpc("consume_credits", {
+      p_amount: amount,
+      p_reason: reason,
+    });
+    if (error) return { ok: true, balance: Number.NaN }; // fail open
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row || !row.ok) {
+      return {
+        ok: false,
+        reason: "insufficient_credits",
+        balance: row?.balance ?? 0,
+        message: OUT_OF_CREDITS_MESSAGE,
+      };
+    }
+    return { ok: true, balance: row.balance };
+  } catch {
+    return { ok: true, balance: Number.NaN }; // fail open
+  }
+}
+
+/** Spend the credit cost of a specific AI action (0 = free / windowed-only). */
+export async function consumeAiCredits(
+  action: AiActionLabel,
+): Promise<CreditSpendResult> {
+  const cost = creditCostFor(action);
+  if (cost <= 0) return { ok: true, balance: Number.POSITIVE_INFINITY };
+  return spendCredits(cost, action);
 }
