@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Sparkles } from "lucide-react";
+import { BillingReturnToast } from "@/components/billing/billing-return-toast";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { PricingPlans } from "@/components/billing/pricing-plans";
@@ -22,6 +24,9 @@ export default async function PricingPage() {
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
+      <Suspense fallback={null}>
+        <BillingReturnToast />
+      </Suspense>
       {/* Header */}
       <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
         <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-primary">

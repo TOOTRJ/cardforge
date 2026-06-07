@@ -99,6 +99,7 @@ export function SiteHeader({
           <MobileMenu
             isAuthed={isAuthed}
             username={user?.username ?? null}
+            isPaid={user?.isPaid ?? false}
           />
         </div>
       </div>

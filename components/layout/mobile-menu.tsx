@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { Menu, X } from "lucide-react";
+import { Menu, Sparkles, X } from "lucide-react";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { Button } from "@/components/ui/button";
 import { siteConfig } from "@/lib/site-config";
@@ -20,9 +20,14 @@ import { cn } from "@/lib/utils";
 type MobileMenuProps = {
   isAuthed: boolean;
   username: string | null;
+  isPaid?: boolean;
 };
 
-export function MobileMenu({ isAuthed, username }: MobileMenuProps) {
+export function MobileMenu({
+  isAuthed,
+  username,
+  isPaid = false,
+}: MobileMenuProps) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
@@ -102,6 +107,13 @@ export function MobileMenu({ isAuthed, username }: MobileMenuProps) {
           {isAuthed ? (
             <>
               <div className="my-3 h-px bg-border/60" />
+              {isPaid ? null : (
+                <Button asChild variant="accent" className="mb-2">
+                  <Link href="/pricing" onClick={() => setOpen(false)}>
+                    <Sparkles className="h-4 w-4" aria-hidden /> Upgrade
+                  </Link>
+                </Button>
+              )}
               <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-subtle">
                 Account
               </p>
@@ -119,6 +131,12 @@ export function MobileMenu({ isAuthed, username }: MobileMenuProps) {
                   label="Settings"
                   onNav={() => setOpen(false)}
                   active={pathname === "/settings"}
+                />
+                <DrawerLink
+                  href="/settings#billing"
+                  label="Plans & billing"
+                  onNav={() => setOpen(false)}
+                  active={false}
                 />
               </div>
               <div className="mt-auto pt-4">

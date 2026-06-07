@@ -10,6 +10,7 @@ import { ProfileMediaUploader } from "@/components/auth/profile-media-uploader";
 import { PinnedCardsPicker } from "@/components/auth/pinned-cards-picker";
 import { UsagePanel } from "@/components/settings/usage-panel";
 import { BillingPanel } from "@/components/settings/billing-panel";
+import { BillingReturnToast } from "@/components/billing/billing-return-toast";
 import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import { listPublicCardsByOwner } from "@/lib/cards/queries";
@@ -35,6 +36,9 @@ export default async function SettingsPage() {
 
   return (
     <DashboardShell>
+      <Suspense fallback={null}>
+        <BillingReturnToast />
+      </Suspense>
       <PageHeader
         eyebrow="Account"
         title="Settings"
