@@ -5,6 +5,7 @@ import "server-only";
 import sharp from "sharp";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { scanImageUrl } from "@/lib/moderation/image-scan";
 
 // ---------------------------------------------------------------------------
 // Server-side card-art upload (Phase 11 chunk 14 — M1 hardening).
@@ -147,5 +148,18 @@ export async function uploadCardArtServerAction(
   }
 
   const { data } = supabase.storage.from("card-art").getPublicUrl(path);
+
+  // NSFW auto-scan. scanImageUrl fails open (missing key / API error → not
+  // flagged) so a moderation hiccup never blocks uploads; a positive flag
+  // removes the just-uploaded object and rejects the upload.
+  const scan = await scanImageUrl(data.publicUrl);
+  if (scan.flagged) {
+    await supabase.storage.from("card-art").remove([path]);
+    return {
+      ok: false,
+      error: "That image was flagged by our content filter and can't be uploaded.",
+    };
+  }
+
   return { ok: true, publicUrl: data.publicUrl, path };
 }

@@ -86,6 +86,50 @@ export type Database = {
         };
         Relationships: [];
       };
+      comment_reports: {
+        Row: {
+          comment_id: string;
+          created_at: string;
+          details: string | null;
+          id: string;
+          reason: string;
+          reporter_id: string;
+          resolved_at: string | null;
+          resolved_by: string | null;
+          status: string;
+        };
+        Insert: {
+          comment_id: string;
+          created_at?: string;
+          details?: string | null;
+          id?: string;
+          reason: string;
+          reporter_id: string;
+          resolved_at?: string | null;
+          resolved_by?: string | null;
+          status?: string;
+        };
+        Update: {
+          comment_id?: string;
+          created_at?: string;
+          details?: string | null;
+          id?: string;
+          reason?: string;
+          reporter_id?: string;
+          resolved_at?: string | null;
+          resolved_by?: string | null;
+          status?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "comment_reports_comment_id_fkey";
+            columns: ["comment_id"];
+            isOneToOne: false;
+            referencedRelation: "card_comments";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       card_reports: {
         Row: {
           card_id: string;
@@ -883,3 +927,5 @@ export type StripeEvent = Tables<"stripe_events">;
 // Moderation: user-filed reports on public cards.
 export type CardReport = Tables<"card_reports">;
 export type CardReportInsert = TablesInsert<"card_reports">;
+export type CommentReport = Tables<"comment_reports">;
+export type CommentReportInsert = TablesInsert<"comment_reports">;

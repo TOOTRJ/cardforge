@@ -20,7 +20,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { MessageCircle, Pencil, Send, Trash2, X } from "lucide-react";
+import { Flag, MessageCircle, Pencil, Send, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { SurfaceCard } from "@/components/ui/surface-card";
@@ -31,6 +31,8 @@ import {
   updateCommentAction,
 } from "@/lib/cards/comments-actions";
 import type { CardCommentWithAuthor } from "@/types/card";
+import { ReportDialog } from "@/components/moderation/report-dialog";
+import { reportCommentAction } from "@/lib/moderation/actions";
 
 const MAX_BODY = 2000;
 
@@ -290,6 +292,24 @@ function CommentRow({
               <Trash2 className="h-3 w-3" aria-hidden />
             </button>
           </div>
+        ) : null}
+        {currentUserId && !isAuthor ? (
+          <ReportDialog
+            title="Report this comment"
+            description="Tell us what's wrong. Reports are reviewed by our moderation team."
+            onSubmit={(reason, details) =>
+              reportCommentAction({ commentId: comment.id, reason, details })
+            }
+            trigger={
+              <button
+                type="button"
+                aria-label="Report comment"
+                className="rounded p-1 text-subtle transition-colors hover:bg-elevated hover:text-danger"
+              >
+                <Flag className="h-3 w-3" aria-hidden />
+              </button>
+            }
+          />
         ) : null}
       </header>
 

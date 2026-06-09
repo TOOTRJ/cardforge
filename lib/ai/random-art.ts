@@ -3,6 +3,7 @@ import "server-only";
 import OpenAI from "openai";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { scanImageUrl } from "@/lib/moderation/image-scan";
 
 // ---------------------------------------------------------------------------
 // gpt-image-1 art generator (Phase v2 Phase 4)
@@ -159,6 +160,18 @@ export async function generateRandomArt(rawPrompt: string): Promise<RandomArtRes
   }
 
   const { data } = supabase.storage.from("card-art").getPublicUrl(path);
+
+  // NSFW auto-scan (fails open). gpt-image-1 is already filtered upstream, but
+  // this catches edge cases; a flag removes the object and asks for a re-roll.
+  const scan = await scanImageUrl(data.publicUrl);
+  if (scan.flagged) {
+    await supabase.storage.from("card-art").remove([path]);
+    return {
+      ok: false,
+      error: "The generated art was flagged by our content filter. Try generating again.",
+    };
+  }
+
   return {
     ok: true,
     publicUrl: data.publicUrl,

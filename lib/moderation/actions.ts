@@ -10,6 +10,7 @@ import {
 import { createAdminClient } from "@/lib/supabase/admin";
 import { cardRenderPath } from "@/lib/cards/storage-paths";
 import { REPORT_REASONS } from "@/lib/moderation/reasons";
+import { notifyAdminsOfReport } from "@/lib/moderation/notify";
 
 // User reporting + admin moderation actions for public cards.
 
@@ -47,6 +48,84 @@ export async function reportCardAction(input: unknown): Promise<ReportResult> {
     if ((error as { code?: string }).code === "23505") return { ok: true };
     return { ok: false, error: "Couldn't file the report. Please try again." };
   }
+
+  await notifyAdminsOfReport({
+    kind: "card",
+    reason: parsed.data.reason,
+    details: parsed.data.details ?? null,
+  });
+  return { ok: true };
+}
+
+const commentReportSchema = z.object({
+  commentId: z.string().uuid("Invalid comment."),
+  reason: z.enum(REPORT_REASONS),
+  details: z
+    .string()
+    .trim()
+    .max(1000, "Keep details under 1000 characters.")
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
+});
+
+export async function reportCommentAction(input: unknown): Promise<ReportResult> {
+  const parsed = commentReportSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid report." };
+  }
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Please sign in to report a comment." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("comment_reports").insert({
+    comment_id: parsed.data.commentId,
+    reporter_id: user.id,
+    reason: parsed.data.reason,
+    details: parsed.data.details ?? null,
+  });
+  if (error) {
+    if ((error as { code?: string }).code === "23505") return { ok: true };
+    return { ok: false, error: "Couldn't file the report. Please try again." };
+  }
+
+  await notifyAdminsOfReport({
+    kind: "comment",
+    reason: parsed.data.reason,
+    details: parsed.data.details ?? null,
+  });
+  return { ok: true };
+}
+
+export type CommentResolveAction = "remove" | "dismiss";
+
+// Admin-only. "remove" deletes the comment (its reports cascade away);
+// "dismiss" clears the pending reports, leaving the comment.
+export async function resolveCommentReportsAction(input: {
+  commentId: string;
+  action: CommentResolveAction;
+}): Promise<ResolveResult> {
+  const profile = await getCurrentProfile();
+  if (!profile?.is_admin) return { ok: false, error: "Not authorized." };
+
+  const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!UUID.test(input.commentId)) return { ok: false, error: "Invalid comment id." };
+
+  const admin = createAdminClient();
+  if (input.action === "remove") {
+    await admin.from("card_comments").delete().eq("id", input.commentId);
+  } else {
+    await admin
+      .from("comment_reports")
+      .update({
+        status: "dismissed",
+        resolved_at: new Date().toISOString(),
+        resolved_by: profile.id,
+      })
+      .eq("comment_id", input.commentId)
+      .eq("status", "pending");
+  }
+
+  revalidatePath("/admin/moderation");
   return { ok: true };
 }
 
