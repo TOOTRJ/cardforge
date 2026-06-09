@@ -496,6 +496,7 @@ export type Database = {
           slug: string;
           source_scryfall_id: string | null;
           subtypes: string[];
+          tags: string[];
           supertype: string | null;
           template_id: string | null;
           title: string;
@@ -535,6 +536,7 @@ export type Database = {
           slug: string;
           source_scryfall_id?: string | null;
           subtypes?: string[];
+          tags?: string[];
           supertype?: string | null;
           template_id?: string | null;
           title: string;
@@ -574,6 +576,7 @@ export type Database = {
           slug?: string;
           source_scryfall_id?: string | null;
           subtypes?: string[];
+          tags?: string[];
           supertype?: string | null;
           template_id?: string | null;
           title?: string;

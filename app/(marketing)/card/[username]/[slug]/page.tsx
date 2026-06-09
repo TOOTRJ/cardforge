@@ -298,6 +298,20 @@ export default async function CardDetailPage({
             {user && !isOwner ? <ReportCardDialog cardId={card.id} /> : null}
           </div>
 
+          {card.tags.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {card.tags.map((tag) => (
+                <Link
+                  key={tag}
+                  href={`/gallery?tag=${encodeURIComponent(tag)}`}
+                  className="inline-flex items-center rounded-full border border-border/60 bg-elevated/60 px-2.5 py-1 text-xs text-muted transition-colors hover:border-border-strong hover:text-foreground"
+                >
+                  #{tag}
+                </Link>
+              ))}
+            </div>
+          ) : null}
+
           <SurfaceCard className="grid gap-4 p-6 sm:grid-cols-2">
             <Detail
               label="Card type"

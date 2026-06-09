@@ -98,6 +98,27 @@ export const cardSubtypesSchema = z
   .max(10, "A card can have up to 10 subtypes.")
   .default([]);
 
+// Freeform discovery tags. Normalized to lowercase alphanumeric + spaces/hyphens,
+// deduped, ≤30 chars each, ≤12 total — matching the DB cardinality check (0034).
+export const cardTagsSchema = z
+  .array(z.string())
+  .default([])
+  .transform((tags) =>
+    Array.from(
+      new Set(
+        tags
+          .map((tag) =>
+            tag
+              .toLowerCase()
+              .replace(/[^a-z0-9\s-]/g, "")
+              .replace(/\s+/g, " ")
+              .trim(),
+          )
+          .filter((tag) => tag.length > 0 && tag.length <= 30),
+      ),
+    ).slice(0, 12),
+  );
+
 export const cardColorIdentitySchema = z
   .array(z.enum(COLOR_IDENTITY_VALUES))
   .max(7, "Color identity has at most 7 values.")
@@ -173,6 +194,7 @@ const baseCardSchema = z.object({
   supertype: cardSupertypeSchema,
   card_type: cardTypeSchema,
   subtypes: cardSubtypesSchema,
+  tags: cardTagsSchema,
   rarity: cardRaritySchema,
   rules_text: cardRulesTextSchema,
   flavor_text: cardFlavorTextSchema,

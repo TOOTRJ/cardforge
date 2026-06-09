@@ -52,6 +52,8 @@ export type PublicCardListOptions = {
    *  the result to cards imported from this Scryfall id. Powers the
    *  /gallery?source=<id> "lineage" view. */
   sourceScryfallId?: string;
+  /** Filter to cards carrying this tag (the gallery ?tag= view). */
+  tag?: string;
 };
 
 // ---------------------------------------------------------------------------
@@ -518,6 +520,7 @@ export async function listPublicCardsRich(
     sort = "recent",
     visibility = "public",
     sourceScryfallId,
+    tag,
   } = options;
 
   try {
@@ -544,6 +547,9 @@ export async function listPublicCardsRich(
     }
     if (sourceScryfallId) {
       query = query.eq("source_scryfall_id", sourceScryfallId);
+    }
+    if (tag) {
+      query = query.contains("tags", [tag]);
     }
     if (search?.trim()) {
       // PostgREST's `.or(...)` argument is a structural string: commas

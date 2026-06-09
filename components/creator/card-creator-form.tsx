@@ -355,6 +355,7 @@ function defaultValuesFor(
       supertype: "",
       card_type: "creature",
       subtypes_text: "",
+      tags_text: "",
       rarity: "common",
       rules_text: "",
       flavor_text: "",
@@ -399,6 +400,7 @@ function defaultValuesFor(
     supertype: card.supertype ?? "",
     card_type: card.card_type ?? "",
     subtypes_text: card.subtypes.join(", "),
+    tags_text: card.tags?.join(", ") ?? "",
     rarity: card.rarity ?? "",
     rules_text: card.rules_text ?? "",
     flavor_text: card.flavor_text ?? "",
@@ -428,6 +430,14 @@ function parseSubtypes(text: string): string[] {
     .map((piece) => piece.trim())
     .filter((piece) => piece.length > 0)
     .slice(0, 10);
+}
+
+function parseTags(text: string): string[] {
+  return text
+    .split(/[,\n]/)
+    .map((piece) => piece.trim().toLowerCase())
+    .filter((piece) => piece.length > 0)
+    .slice(0, 12);
 }
 
 // ---------------------------------------------------------------------------
@@ -865,6 +875,7 @@ export function CardCreatorForm({
       supertype: values.supertype.trim() || undefined,
       card_type: values.card_type || undefined,
       subtypes: parseSubtypes(values.subtypes_text),
+      tags: parseTags(values.tags_text),
       rarity: values.rarity || undefined,
       rules_text: values.rules_text.trim() || undefined,
       flavor_text: values.flavor_text.trim() || undefined,
@@ -1299,6 +1310,18 @@ export function CardCreatorForm({
                 />
               </FieldGroup>
             </div>
+
+            <FieldGroup
+              label="Tags"
+              helper="Comma-separated keywords for discovery (e.g. dragons, tokens). Up to 12."
+            >
+              <input
+                {...register("tags_text")}
+                placeholder="dragons, tokens, tribal"
+                className={inputClass(Boolean(errors.tags_text))}
+                autoComplete="off"
+              />
+            </FieldGroup>
 
             {/* Rarity. (The old "Template" select was removed: template_id is
                 a vestigial DB field — no renderer reads it; the visual layout is

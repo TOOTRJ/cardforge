@@ -41,6 +41,7 @@ export type FormValues = {
   supertype: string;
   card_type: CardType | "";
   subtypes_text: string;
+  tags_text: string;
   rarity: Rarity | "";
   rules_text: string;
   flavor_text: string;

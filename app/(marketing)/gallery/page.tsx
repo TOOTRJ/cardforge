@@ -44,6 +44,7 @@ type ParsedFilters = {
   /** Scryfall provenance filter (Phase 11 chunk 13). When set, the
    *  gallery shows only cards imported from this Scryfall id. */
   sourceScryfallId: string | undefined;
+  tag: string | undefined;
   // Raw values preserved so `buildHref` reflects exactly what the user
   // typed (rather than the post-cleanup typed values).
   raw: {
@@ -52,6 +53,7 @@ type ParsedFilters = {
     q: string | null;
     sort: string | null;
     source: string | null;
+    tag: string | null;
   };
 };
 
@@ -67,6 +69,7 @@ function buildHref(filters: ParsedFilters, nextPage: number): string {
   if (filters.raw.q) qs.set("q", filters.raw.q);
   if (filters.raw.sort) qs.set("sort", filters.raw.sort);
   if (filters.raw.source) qs.set("source", filters.raw.source);
+  if (filters.raw.tag) qs.set("tag", filters.raw.tag);
   if (nextPage > 1) qs.set("page", String(nextPage));
   const query = qs.toString();
   return query ? `/gallery?${query}` : "/gallery";
@@ -83,6 +86,10 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
   const sortParam = firstString(params.sort);
   const pageParam = firstString(params.page);
   const sourceParam = firstString(params.source);
+  const tagParam = firstString(params.tag);
+  const tag = tagParam
+    ? tagParam.toLowerCase().trim().slice(0, 30) || undefined
+    : undefined;
   // UUID-format check on the source filter. Scryfall ids are UUIDs;
   // anything else (e.g. a probe with `?source=' OR 1=1`) is silently
   // ignored. Same posture as the cardType/rarity guards above.
@@ -115,12 +122,14 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
     sort,
     page,
     sourceScryfallId,
+    tag,
     raw: {
       type: cardTypeParam,
       rarity: rarityParam,
       q: searchParam,
       sort: sortParam,
       source: sourceScryfallId ?? null,
+      tag: tag ?? null,
     },
   };
 
@@ -196,7 +205,8 @@ async function GalleryTrending() {
 }
 
 async function GalleryResults({ filters }: { filters: ParsedFilters }) {
-  const { cardType, rarity, search, sort, page, sourceScryfallId } = filters;
+  const { cardType, rarity, search, sort, page, sourceScryfallId, tag } =
+    filters;
   const [cards, viewer] = await Promise.all([
     listPublicCardsRich({
       cardType,
@@ -204,6 +214,7 @@ async function GalleryResults({ filters }: { filters: ParsedFilters }) {
       search,
       sort,
       sourceScryfallId,
+      tag,
       limit: PAGE_SIZE,
       offset: (page - 1) * PAGE_SIZE,
     }),
@@ -217,7 +228,7 @@ async function GalleryResults({ filters }: { filters: ParsedFilters }) {
         icon={Sparkles}
         title="No cards match"
         description={
-          cardType || rarity || search || sourceScryfallId
+          cardType || rarity || search || sourceScryfallId || tag
             ? "Try clearing the filters above, or be the first to publish a card that matches."
             : "Be the first to publish a public card — it'll show up here for everyone."
         }
@@ -237,6 +248,19 @@ async function GalleryResults({ filters }: { filters: ParsedFilters }) {
 
   return (
     <>
+      {tag ? (
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-md border border-primary/40 bg-primary/10 px-4 py-2.5 text-xs text-foreground">
+          <span className="inline-flex items-center gap-2">
+            Showing cards tagged <span className="font-semibold">#{tag}</span>
+          </span>
+          <Link
+            href="/gallery"
+            className="font-mono text-[11px] uppercase tracking-wider text-muted transition-colors hover:text-foreground"
+          >
+            Clear filter
+          </Link>
+        </div>
+      ) : null}
       {sourceScryfallId ? (
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-md border border-accent/40 bg-accent/10 px-4 py-2.5 text-xs text-foreground">
           <span className="inline-flex items-center gap-2">
