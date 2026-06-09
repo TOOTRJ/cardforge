@@ -29,6 +29,7 @@ export default async function MarketingLayout({
               isPaid: entitlements?.isPaid ?? false,
               credits: entitlements?.credits ?? 0,
               creditsUsed,
+              isAdmin: profile?.is_admin ?? false,
             }
           : null
       }

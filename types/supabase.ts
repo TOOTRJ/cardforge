@@ -86,6 +86,50 @@ export type Database = {
         };
         Relationships: [];
       };
+      card_reports: {
+        Row: {
+          card_id: string;
+          created_at: string;
+          details: string | null;
+          id: string;
+          reason: string;
+          reporter_id: string;
+          resolved_at: string | null;
+          resolved_by: string | null;
+          status: string;
+        };
+        Insert: {
+          card_id: string;
+          created_at?: string;
+          details?: string | null;
+          id?: string;
+          reason: string;
+          reporter_id: string;
+          resolved_at?: string | null;
+          resolved_by?: string | null;
+          status?: string;
+        };
+        Update: {
+          card_id?: string;
+          created_at?: string;
+          details?: string | null;
+          id?: string;
+          reason?: string;
+          reporter_id?: string;
+          resolved_at?: string | null;
+          resolved_by?: string | null;
+          status?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "card_reports_card_id_fkey";
+            columns: ["card_id"];
+            isOneToOne: false;
+            referencedRelation: "cards";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       card_comments: {
         Row: {
           author_id: string;
@@ -519,6 +563,7 @@ export type Database = {
           current_period_end: string | null;
           cancel_at_period_end: boolean;
           credits: number;
+          is_admin: boolean;
         };
         Insert: {
           accent_color?: string | null;
@@ -546,6 +591,7 @@ export type Database = {
           current_period_end?: string | null;
           cancel_at_period_end?: boolean;
           credits?: number;
+          is_admin?: boolean;
         };
         Update: {
           accent_color?: string | null;
@@ -573,6 +619,7 @@ export type Database = {
           current_period_end?: string | null;
           cancel_at_period_end?: boolean;
           credits?: number;
+          is_admin?: boolean;
         };
         Relationships: [];
       };
@@ -832,3 +879,7 @@ export type CardCommentUpdate = TablesUpdate<"card_comments">;
 export type CreditLedgerEntry = Tables<"credit_ledger">;
 export type CreditLedgerInsert = TablesInsert<"credit_ledger">;
 export type StripeEvent = Tables<"stripe_events">;
+
+// Moderation: user-filed reports on public cards.
+export type CardReport = Tables<"card_reports">;
+export type CardReportInsert = TablesInsert<"card_reports">;

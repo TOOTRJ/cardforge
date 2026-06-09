@@ -21,6 +21,8 @@ type HeaderUser = {
   /** AI credit balance + credits spent this month, for the header indicator. */
   credits?: number;
   creditsUsed?: number;
+  /** Shows the admin (moderation) entry in the user menu. */
+  isAdmin?: boolean;
 };
 
 type SiteHeaderProps = {
@@ -100,6 +102,7 @@ export function SiteHeader({
                 displayName={user?.displayName ?? null}
                 avatarUrl={user?.avatarUrl ?? null}
                 isPaid={user?.isPaid ?? false}
+                isAdmin={user?.isAdmin ?? false}
               />
             </>
           ) : (
