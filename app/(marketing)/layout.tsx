@@ -3,6 +3,7 @@ import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import { getCreditsUsedThisMonth } from "@/lib/ai/usage-queries";
 import { isBillingEnabled } from "@/lib/billing/flags";
+import { getUnreadNotificationCount } from "@/lib/notifications/queries";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,7 @@ export default async function MarketingLayout({
   const entitlements = user ? await getEntitlements() : null;
   const creditsUsed =
     user && isBillingEnabled() ? await getCreditsUsedThisMonth() : 0;
+  const unreadNotifications = user ? await getUnreadNotificationCount() : 0;
 
   return (
     <AppShell
@@ -29,6 +31,7 @@ export default async function MarketingLayout({
               isPaid: entitlements?.isPaid ?? false,
               credits: entitlements?.credits ?? 0,
               creditsUsed,
+              unreadNotifications,
               isAdmin: profile?.is_admin ?? false,
             }
           : null

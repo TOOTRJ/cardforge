@@ -253,6 +253,47 @@ export type Database = {
           },
         ];
       };
+      notifications: {
+        Row: {
+          actor_id: string | null;
+          card_id: string | null;
+          comment_id: string | null;
+          created_at: string;
+          id: string;
+          read_at: string | null;
+          recipient_id: string;
+          type: string;
+        };
+        Insert: {
+          actor_id?: string | null;
+          card_id?: string | null;
+          comment_id?: string | null;
+          created_at?: string;
+          id?: string;
+          read_at?: string | null;
+          recipient_id: string;
+          type: string;
+        };
+        Update: {
+          actor_id?: string | null;
+          card_id?: string | null;
+          comment_id?: string | null;
+          created_at?: string;
+          id?: string;
+          read_at?: string | null;
+          recipient_id?: string;
+          type?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "notifications_card_id_fkey";
+            columns: ["card_id"];
+            isOneToOne: false;
+            referencedRelation: "cards";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       card_likes: {
         Row: {
           card_id: string;
@@ -929,3 +970,6 @@ export type CardReport = Tables<"card_reports">;
 export type CardReportInsert = TablesInsert<"card_reports">;
 export type CommentReport = Tables<"comment_reports">;
 export type CommentReportInsert = TablesInsert<"comment_reports">;
+
+// In-app creator notifications (likes / comments / remixes).
+export type Notification = Tables<"notifications">;

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Coins, Sparkles } from "lucide-react";
+import { Bell, Coins, Sparkles } from "lucide-react";
 import { Logo } from "./logo";
 import { Button } from "@/components/ui/button";
 import { NavLinks } from "./nav-links";
@@ -21,6 +21,8 @@ type HeaderUser = {
   /** AI credit balance + credits spent this month, for the header indicator. */
   credits?: number;
   creditsUsed?: number;
+  /** Unread in-app notification count for the header bell. */
+  unreadNotifications?: number;
   /** Shows the admin (moderation) entry in the user menu. */
   isAdmin?: boolean;
 };
@@ -43,6 +45,7 @@ export function SiteHeader({
 }: SiteHeaderProps) {
   const isAuthed = Boolean(user);
   const billingOn = isBillingEnabled();
+  const unread = user?.unreadNotifications ?? 0;
   const navItems = billingOn
     ? siteConfig.primaryNav
     : siteConfig.primaryNav.filter((item) => item.href !== "/pricing");
@@ -68,6 +71,23 @@ export function SiteHeader({
           <ThemeToggle initialTheme={theme} />
           {isAuthed ? (
             <>
+              <Link
+                href="/notifications"
+                title="Notifications"
+                aria-label={
+                  unread > 0
+                    ? `Notifications (${unread} unread)`
+                    : "Notifications"
+                }
+                className="relative inline-flex h-9 w-9 items-center justify-center rounded-md text-muted transition-colors hover:bg-elevated hover:text-foreground"
+              >
+                <Bell className="h-5 w-5" aria-hidden />
+                {unread > 0 ? (
+                  <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-semibold text-white">
+                    {unread > 9 ? "9+" : unread}
+                  </span>
+                ) : null}
+              </Link>
               {variant === "app" ? <CommandPaletteTrigger /> : null}
               {billingOn ? (
                 <Link
