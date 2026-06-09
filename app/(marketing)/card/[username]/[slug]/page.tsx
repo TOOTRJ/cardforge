@@ -9,6 +9,7 @@ import { LikeButton } from "@/components/cards/like-button";
 import { RemixButton } from "@/components/cards/remix-button";
 import { ShareTargets } from "@/components/cards/share-targets";
 import { ReportCardDialog } from "@/components/cards/report-card-dialog";
+import { GalleryCardTile } from "@/components/cards/gallery-card-tile";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SurfaceCard } from "@/components/ui/surface-card";
@@ -16,6 +17,9 @@ import {
   countCardLikes,
   getCardByOwnerAndSlug,
   hasUserLikedCard,
+  listMoreFromOwner,
+  listRelatedCards,
+  type CardWithStats,
 } from "@/lib/cards/queries";
 import { countPublicRemixesBySource } from "@/lib/cards/source-queries";
 import { listCommentsForCard } from "@/lib/cards/comments-queries";
@@ -126,18 +130,30 @@ export default async function CardDetailPage({
   const user = await getCurrentUser();
   const isOwner = Boolean(user && user.id === card.owner_id);
 
-  const [likesCount, viewerLiked, otherRemixesCount, comments, entitlements] =
-    await Promise.all([
-      countCardLikes(card.id),
-      user ? hasUserLikedCard(user.id, card.id) : Promise.resolve(false),
-      // Chunk 13: count of OTHER public remixes of the same Scryfall card.
-      // Returns 0 when this card wasn't imported from Scryfall.
-      card.source_scryfall_id
-        ? countPublicRemixesBySource(card.source_scryfall_id, card.id)
-        : Promise.resolve(0),
-      listCommentsForCard(card.id, { limit: 50 }),
-      getEntitlements(),
-    ]);
+  const [
+    likesCount,
+    viewerLiked,
+    otherRemixesCount,
+    comments,
+    entitlements,
+    moreFromOwner,
+    relatedCards,
+  ] = await Promise.all([
+    countCardLikes(card.id),
+    user ? hasUserLikedCard(user.id, card.id) : Promise.resolve(false),
+    // Chunk 13: count of OTHER public remixes of the same Scryfall card.
+    // Returns 0 when this card wasn't imported from Scryfall.
+    card.source_scryfall_id
+      ? countPublicRemixesBySource(card.source_scryfall_id, card.id)
+      : Promise.resolve(0),
+    listCommentsForCard(card.id, { limit: 50 }),
+    getEntitlements(),
+    listMoreFromOwner(card.owner_id, card.id, 4),
+    listRelatedCards(
+      { cardId: card.id, ownerId: card.owner_id, cardType: card.card_type },
+      4,
+    ),
+  ]);
 
   const ownerProfile = card.owner;
 
@@ -340,7 +356,63 @@ export default async function CardDetailPage({
           />
         </div>
       </div>
+
+      {moreFromOwner.length > 0 || relatedCards.length > 0 ? (
+        <div className="mt-14 flex flex-col gap-12">
+          {moreFromOwner.length > 0 ? (
+            <RelatedRow
+              title={`More from @${username}`}
+              viewAllHref={`/profile/${username}`}
+              cards={moreFromOwner}
+              isAuthed={Boolean(user)}
+            />
+          ) : null}
+          {relatedCards.length > 0 ? (
+            <RelatedRow
+              title="More like this"
+              viewAllHref={
+                card.card_type ? `/gallery?type=${card.card_type}` : "/gallery"
+              }
+              cards={relatedCards}
+              isAuthed={Boolean(user)}
+            />
+          ) : null}
+        </div>
+      ) : null}
     </div>
+  );
+}
+
+function RelatedRow({
+  title,
+  viewAllHref,
+  cards,
+  isAuthed,
+}: {
+  title: string;
+  viewAllHref: string;
+  cards: CardWithStats[];
+  isAuthed: boolean;
+}) {
+  return (
+    <section>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <h2 className="font-display text-lg font-semibold text-foreground">
+          {title}
+        </h2>
+        <Link
+          href={viewAllHref}
+          className="shrink-0 text-xs font-semibold text-primary underline-offset-4 hover:underline"
+        >
+          View all →
+        </Link>
+      </div>
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        {cards.map((card) => (
+          <GalleryCardTile key={card.id} card={card} isAuthed={isAuthed} />
+        ))}
+      </div>
+    </section>
   );
 }
 
