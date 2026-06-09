@@ -12,6 +12,7 @@ import { getCurrentUser } from "@/lib/supabase/server";
 export const metadata: Metadata = {
   title: "Your feed",
   description: "The newest cards from creators you follow.",
+  robots: { index: false, follow: false },
 };
 
 export const dynamic = "force-dynamic";

@@ -175,7 +175,7 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
           // the skeletons reappear during the new fetch instead of holding
           // the previous result.
           <Suspense
-            key={`${filters.raw.type ?? ""}-${filters.raw.rarity ?? ""}-${filters.raw.q ?? ""}-${filters.raw.sort ?? ""}-${filters.raw.source ?? ""}-${page}`}
+            key={`${filters.raw.type ?? ""}-${filters.raw.rarity ?? ""}-${filters.raw.q ?? ""}-${filters.raw.sort ?? ""}-${filters.raw.source ?? ""}-${filters.raw.tag ?? ""}-${page}`}
             fallback={<GallerySkeletonGrid count={PAGE_SIZE} />}
           >
             <GalleryResults filters={filters} />

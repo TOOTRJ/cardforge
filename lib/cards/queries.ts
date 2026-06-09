@@ -202,7 +202,10 @@ export async function listMyCards(): Promise<Card[]> {
       .from("cards")
       .select("*")
       .eq("owner_id", user.id)
-      .order("updated_at", { ascending: false });
+      .order("updated_at", { ascending: false })
+      // Safety bound so a power user with a huge library can't pull an
+      // unbounded result set into the dashboard. Pagination is a follow-up.
+      .limit(1000);
     if (error || !data) return [];
     return data.map(narrowCard);
   } catch {
@@ -662,7 +665,8 @@ export async function listFollowingFeed(
     const { data: follows } = await supabase
       .from("follows")
       .select("following_id")
-      .eq("follower_id", userId);
+      .eq("follower_id", userId)
+      .limit(500);
     const ids = (follows ?? []).map((f) => f.following_id);
     if (ids.length === 0) return [];
 
