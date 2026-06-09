@@ -97,8 +97,9 @@ export default async function NotificationsPage() {
                   </div>
                   {item.readAt ? null : (
                     <span
-                      className="mt-2 h-2 w-2 shrink-0 rounded-full bg-primary"
+                      role="img"
                       aria-label="Unread"
+                      className="mt-2 h-2 w-2 shrink-0 rounded-full bg-primary"
                     />
                   )}
                 </Link>
