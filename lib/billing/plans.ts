@@ -19,10 +19,12 @@ export const CREDIT_UNIT = "AI generation";
 
 // Monthly credit allotment per tier. Free is the one-time signup grant (no auto
 // refill yet); Plus/Pro are granted each billing cycle on Stripe `invoice.paid`.
+// Sized so even a max-usage subscriber keeps AI cost (~$0.11 per generation,
+// measured) under ~40% of net revenue. Tune in tandem with prices below.
 export const MONTHLY_CREDITS: Record<PlanTier, number> = {
-  free: 25,
-  plus: 200,
-  pro: 1000,
+  free: 5,
+  plus: 30,
+  pro: 75,
 };
 
 // Consumable top-up packs (one-time Stripe `payment` checkout). Purchased
@@ -31,8 +33,8 @@ export const CREDIT_PACKS: Record<
   PackKey,
   { credits: number; priceUsd: number; label: string }
 > = {
-  small: { credits: 100, priceUsd: 5, label: "100 credits" },
-  large: { credits: 500, priceUsd: 20, label: "500 credits" },
+  small: { credits: 30, priceUsd: 8, label: "30 credits" },
+  large: { credits: 100, priceUsd: 24, label: "100 credits" },
 };
 
 export type PlanDisplay = {
@@ -54,7 +56,7 @@ export const PLANS: PlanDisplay[] = [
     priceUsd: 0,
     tagline: "Design and share custom cards, forever free.",
     features: [
-      "25 AI generation credits to start",
+      "5 AI generation credits to start",
       "Every MTG-style frame & finish",
       "PNG export (watermarked)",
       "Up to 50 saved cards",
@@ -69,7 +71,7 @@ export const PLANS: PlanDisplay[] = [
     tagline: "For regular creators who want clean, hi-res cards.",
     featured: true,
     features: [
-      "200 AI credits every month",
+      "30 AI credits every month",
       "Watermark-free exports",
       "High-resolution (1500×2100) downloads",
       "Original premium frames & finishes",
@@ -84,7 +86,7 @@ export const PLANS: PlanDisplay[] = [
     annualUsd: 190,
     tagline: "For power users building whole sets with AI.",
     features: [
-      "1,000 AI credits every month",
+      "75 AI credits every month",
       "AI “generate a whole set”",
       "Batch & whole-set export",
       "Unlimited saved cards",

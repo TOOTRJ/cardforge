@@ -3,6 +3,8 @@ import { AppShell } from "@/components/layout/app-shell";
 import { CommandPalette } from "@/components/layout/command-palette";
 import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
 import { getEntitlements } from "@/lib/billing/entitlements";
+import { getCreditsUsedThisMonth } from "@/lib/ai/usage-queries";
+import { isBillingEnabled } from "@/lib/billing/flags";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +25,8 @@ export default async function AppGroupLayout({
 
   const profile = user ? await getCurrentProfile() : null;
   const entitlements = user ? await getEntitlements() : null;
+  const creditsUsed =
+    user && isBillingEnabled() ? await getCreditsUsedThisMonth() : 0;
 
   return (
     <AppShell
@@ -34,6 +38,8 @@ export default async function AppGroupLayout({
               displayName: profile?.display_name ?? null,
               avatarUrl: profile?.avatar_url ?? null,
               isPaid: entitlements?.isPaid ?? false,
+              credits: entitlements?.credits ?? 0,
+              creditsUsed,
             }
           : null
       }

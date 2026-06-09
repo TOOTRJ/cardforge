@@ -2,6 +2,7 @@ import "server-only";
 
 import { getCurrentProfile } from "@/lib/supabase/server";
 import type { PlanTier } from "@/lib/billing/plans";
+import { isBillingEnabled } from "@/lib/billing/flags";
 
 // The single server-side source of truth for what a user is allowed to do.
 // Reads the (React-cached) profile, which the Stripe webhook keeps in sync.
@@ -75,7 +76,26 @@ export class UpgradeRequiredError extends Error {
   }
 }
 
+// When billing is disabled (the default) everyone is fully unlocked — the app
+// behaves as a free tool. effectiveTier "pro" means requireTier() also passes.
+const UNLOCKED: Entitlements = {
+  tier: "free",
+  effectiveTier: "pro",
+  isPaid: true,
+  status: null,
+  credits: Number.MAX_SAFE_INTEGER,
+  removeWatermark: true,
+  maxExportPreset: "hd",
+  allowBatchExport: true,
+  allowDeckGen: true,
+  premiumFrames: true,
+  cardCapacity: -1,
+  currentPeriodEnd: null,
+  cancelAtPeriodEnd: false,
+};
+
 export async function getEntitlements(): Promise<Entitlements> {
+  if (!isBillingEnabled()) return UNLOCKED;
   const profile = await getCurrentProfile();
   const tier = (profile?.subscription_tier ?? "free") as PlanTier;
   const status = profile?.subscription_status ?? null;

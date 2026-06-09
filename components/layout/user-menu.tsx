@@ -16,6 +16,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { logoutAction } from "@/app/(auth)/actions";
+import { isBillingEnabled } from "@/lib/billing/flags";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -103,14 +104,18 @@ export function UserMenu({
         />
         <MenuItem href="/dashboard/sets" icon={Layers} label="My sets" />
         <MenuItem href="/settings" icon={Settings} label="Settings" />
-        <MenuItem
-          href="/settings#billing"
-          icon={CreditCard}
-          label="Plans & billing"
-        />
-        {isPaid ? null : (
-          <MenuItem href="/pricing" icon={Sparkles} label="Upgrade to Pro" />
-        )}
+        {isBillingEnabled() ? (
+          <>
+            <MenuItem
+              href="/settings#billing"
+              icon={CreditCard}
+              label="Plans & billing"
+            />
+            {isPaid ? null : (
+              <MenuItem href="/pricing" icon={Sparkles} label="Upgrade to Pro" />
+            )}
+          </>
+        ) : null}
         <div className="my-1 h-px bg-border/60" />
         <form action={logoutAction}>
           <button

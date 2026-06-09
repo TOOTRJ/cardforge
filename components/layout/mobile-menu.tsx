@@ -4,10 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { Menu, X } from "lucide-react";
+import { Coins, Menu, Sparkles, X } from "lucide-react";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { Button } from "@/components/ui/button";
 import { siteConfig } from "@/lib/site-config";
+import { isBillingEnabled } from "@/lib/billing/flags";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -20,15 +21,26 @@ import { cn } from "@/lib/utils";
 type MobileMenuProps = {
   isAuthed: boolean;
   username: string | null;
+  isPaid?: boolean;
+  credits?: number;
+  creditsUsed?: number;
 };
 
-export function MobileMenu({ isAuthed, username }: MobileMenuProps) {
+export function MobileMenu({
+  isAuthed,
+  username,
+  isPaid = false,
+  credits = 0,
+  creditsUsed = 0,
+}: MobileMenuProps) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const billingOn = isBillingEnabled();
 
   const visibleItems = siteConfig.primaryNav.filter((item) => {
     if (item.authedOnly && !isAuthed) return false;
     if (item.anonOnly && isAuthed) return false;
+    if (item.href === "/pricing" && !billingOn) return false;
     return true;
   });
 
@@ -102,9 +114,23 @@ export function MobileMenu({ isAuthed, username }: MobileMenuProps) {
           {isAuthed ? (
             <>
               <div className="my-3 h-px bg-border/60" />
+              {billingOn && !isPaid ? (
+                <Button asChild variant="accent" className="mb-2">
+                  <Link href="/pricing" onClick={() => setOpen(false)}>
+                    <Sparkles className="h-4 w-4" aria-hidden /> Upgrade
+                  </Link>
+                </Button>
+              ) : null}
               <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-subtle">
                 Account
               </p>
+              {billingOn ? (
+                <div className="mb-1 flex items-center gap-1.5 px-3 text-xs text-muted">
+                  <Coins className="h-3.5 w-3.5 text-primary" aria-hidden />
+                  <span className="font-medium text-foreground">{credits}</span>
+                  credits · {creditsUsed} used
+                </div>
+              ) : null}
               <div className="flex flex-col gap-0.5">
                 {username ? (
                   <DrawerLink
@@ -120,6 +146,14 @@ export function MobileMenu({ isAuthed, username }: MobileMenuProps) {
                   onNav={() => setOpen(false)}
                   active={pathname === "/settings"}
                 />
+                {billingOn ? (
+                  <DrawerLink
+                    href="/settings#billing"
+                    label="Plans & billing"
+                    onNav={() => setOpen(false)}
+                    active={false}
+                  />
+                ) : null}
               </div>
               <div className="mt-auto pt-4">
                 <LogoutButton className="w-full" />

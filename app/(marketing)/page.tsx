@@ -11,6 +11,7 @@ import {
 } from "@/components/gallery/trending-cards-section";
 import { Button } from "@/components/ui/button";
 import { PLANS } from "@/lib/billing/plans";
+import { isBillingEnabled } from "@/lib/billing/flags";
 import { listTrendingCards } from "@/lib/cards/queries";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -82,6 +83,7 @@ export default function HomePage() {
         )}
       </section>
 
+      {isBillingEnabled() ? (
       <section className="mx-auto w-full max-w-5xl px-4 pb-16 sm:px-6 lg:px-8">
         <div className="flex flex-col items-center gap-8 text-center">
           <div className="flex flex-col gap-2">
@@ -130,6 +132,7 @@ export default function HomePage() {
           </Button>
         </div>
       </section>
+      ) : null}
 
       <section className="mx-auto w-full max-w-5xl px-4 pb-24 sm:px-6 lg:px-8">
         <div className="relative overflow-hidden rounded-frame border border-border bg-linear-to-br from-surface via-surface to-elevated p-10 sm:p-14">

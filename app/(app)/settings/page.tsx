@@ -10,8 +10,10 @@ import { ProfileMediaUploader } from "@/components/auth/profile-media-uploader";
 import { PinnedCardsPicker } from "@/components/auth/pinned-cards-picker";
 import { UsagePanel } from "@/components/settings/usage-panel";
 import { BillingPanel } from "@/components/settings/billing-panel";
+import { BillingReturnToast } from "@/components/billing/billing-return-toast";
 import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
 import { getEntitlements } from "@/lib/billing/entitlements";
+import { isBillingEnabled } from "@/lib/billing/flags";
 import { listPublicCardsByOwner } from "@/lib/cards/queries";
 
 export const metadata: Metadata = {
@@ -35,6 +37,11 @@ export default async function SettingsPage() {
 
   return (
     <DashboardShell>
+      {isBillingEnabled() ? (
+        <Suspense fallback={null}>
+          <BillingReturnToast />
+        </Suspense>
+      ) : null}
       <PageHeader
         eyebrow="Account"
         title="Settings"
@@ -148,28 +155,30 @@ export default async function SettingsPage() {
           </div>
         </SurfaceCard>
 
-        <SurfaceCard
-          id="billing"
-          className="grid scroll-mt-24 gap-6 p-6 sm:grid-cols-[1fr_2fr]"
-        >
-          <div className="flex flex-col gap-1">
-            <h3 className="font-display text-lg font-semibold text-foreground">
-              Subscription &amp; billing
-            </h3>
-            <p className="text-sm leading-6 text-muted">
-              Your plan, renewal, and AI credit balance. Manage or cancel any
-              time through the secure Stripe portal.
-            </p>
-          </div>
-          <BillingPanel
-            tier={entitlements.tier}
-            isPaid={entitlements.isPaid}
-            status={entitlements.status}
-            credits={entitlements.credits}
-            renewLabel={renewLabel}
-            cancelAtPeriodEnd={entitlements.cancelAtPeriodEnd}
-          />
-        </SurfaceCard>
+        {isBillingEnabled() ? (
+          <SurfaceCard
+            id="billing"
+            className="grid scroll-mt-24 gap-6 p-6 sm:grid-cols-[1fr_2fr]"
+          >
+            <div className="flex flex-col gap-1">
+              <h3 className="font-display text-lg font-semibold text-foreground">
+                Subscription &amp; billing
+              </h3>
+              <p className="text-sm leading-6 text-muted">
+                Your plan, renewal, and AI credit balance. Manage or cancel any
+                time through the secure Stripe portal.
+              </p>
+            </div>
+            <BillingPanel
+              tier={entitlements.tier}
+              isPaid={entitlements.isPaid}
+              status={entitlements.status}
+              credits={entitlements.credits}
+              renewLabel={renewLabel}
+              cancelAtPeriodEnd={entitlements.cancelAtPeriodEnd}
+            />
+          </SurfaceCard>
+        ) : null}
 
         <SurfaceCard className="grid gap-6 p-6 sm:grid-cols-[1fr_2fr]">
           <div className="flex flex-col gap-1">

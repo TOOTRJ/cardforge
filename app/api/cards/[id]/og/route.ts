@@ -13,6 +13,7 @@ import {
   type Rarity,
 } from "@/types/card";
 import { renderCardImage, type RenderPreset } from "@/lib/render/card-image";
+import { isBillingEnabled } from "@/lib/billing/flags";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 
 // Cache aggressively at the CDN — the renderer is pure of card row + URL
@@ -103,7 +104,9 @@ export async function GET(
 
   // OG previews always carry the brand mark — they're public marketing
   // surfaces, not entitlement-gated downloads — so this stays CDN-cacheable.
-  const response = renderCardImage(previewData, preset, { watermark: true });
+  const response = renderCardImage(previewData, preset, {
+    watermark: isBillingEnabled(),
+  });
   response.headers.set("Cache-Control", CACHE_HEADER);
   response.headers.set("Content-Disposition", `inline; filename="${card.slug}.png"`);
   return response;

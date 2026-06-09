@@ -4,6 +4,7 @@ import "server-only";
 
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { renderCardImage } from "@/lib/render/card-image";
+import { isBillingEnabled } from "@/lib/billing/flags";
 import { cardRenderPath } from "@/lib/cards/storage-paths";
 import {
   isCardType,
@@ -147,7 +148,9 @@ export async function bakeCardRender(
     // of entitlement avoids stale-cache leaks (the bake is long-cached at a
     // fixed path). Paid users still get clean, hi-res output via the
     // entitlement-gated download routes.
-    const response = renderCardImage(previewData, "hd", { watermark: true });
+    const response = renderCardImage(previewData, "hd", {
+      watermark: isBillingEnabled(),
+    });
     pngBytes = await response.arrayBuffer();
   } catch (err) {
     const detail = err instanceof Error ? err.message : "Render error";

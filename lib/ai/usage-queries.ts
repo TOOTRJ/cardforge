@@ -100,6 +100,30 @@ export type CreditSnapshot = {
   daily: DailyCount[];
 };
 
+// Credits spent in the current calendar month (UTC). Cheap enough to call from
+// the layout for the header indicator; reuses the credit_ledger_daily RPC.
+export async function getCreditsUsedThisMonth(): Promise<number> {
+  if (!isSupabaseConfigured()) return 0;
+  try {
+    const supabase = await createClient();
+    const now = new Date();
+    const monthStart = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1),
+    ).toISOString();
+    const { data } = await supabase.rpc("credit_ledger_daily", {
+      since: monthStart,
+    });
+    const rows = (data ?? []) as Array<{ day: string; spent: number | string }>;
+    return rows.reduce(
+      (total, row) =>
+        total + (typeof row.spent === "string" ? Number(row.spent) : row.spent),
+      0,
+    );
+  } catch {
+    return 0;
+  }
+}
+
 export async function getCreditSnapshot(): Promise<CreditSnapshot> {
   const entitlements = await getEntitlements();
   const base: CreditSnapshot = {

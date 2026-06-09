@@ -4,6 +4,7 @@ import { SurfaceCard } from "@/components/ui/surface-card";
 import { Badge } from "@/components/ui/badge";
 import { UsageBarChart } from "@/components/settings/usage-bar-chart";
 import { getAiUsageSnapshot, getCreditSnapshot } from "@/lib/ai/usage-queries";
+import { isBillingEnabled } from "@/lib/billing/flags";
 import {
   getScryfallUsageSnapshot,
   type ScryfallAction,
@@ -50,10 +51,12 @@ export async function UsagePanel() {
   const creditTierLabel =
     credits.tier.charAt(0).toUpperCase() + credits.tier.slice(1);
   const lowCredits = credits.balance <= 5;
+  const billingOn = isBillingEnabled();
 
   return (
     <div className="flex flex-col gap-6">
       {/* AI credits */}
+      {billingOn ? (
       <SurfaceCard className="flex flex-col gap-4 p-6">
         <header className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -117,6 +120,7 @@ export async function UsagePanel() {
             : "Upgrade or buy a credit pack for more →"}
         </Link>
       </SurfaceCard>
+      ) : null}
 
       {/* AI assistant */}
       <SurfaceCard className="flex flex-col gap-4 p-6">

@@ -22,7 +22,7 @@ alter table public.profiles
   add column if not exists stripe_subscription_id text,
   add column if not exists current_period_end timestamptz,
   add column if not exists cancel_at_period_end boolean not null default false,
-  add column if not exists credits integer not null default 25;
+  add column if not exists credits integer not null default 5;
 
 -- Constraints (added separately so the migration is re-runnable on partially
 -- migrated DBs — `add column if not exists` won't re-add a constraint).
@@ -222,7 +222,7 @@ revoke all on function public.credit_ledger_daily(timestamptz)
 grant execute on function public.credit_ledger_daily(timestamptz) to authenticated;
 
 -- 7. signup credit grant audit row ------------------------------------------
--- New profiles get credits=25 from the column default. Record that grant in the
+-- New profiles get credits=5 from the column default. Record that grant in the
 -- ledger so the audit trail is complete from day one. Runs AFTER the
 -- handle_new_user insert (we don't touch that fragile function directly).
 create or replace function public.record_signup_credit_grant()

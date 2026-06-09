@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Logo } from "./logo";
 import { siteConfig } from "@/lib/site-config";
+import { isBillingEnabled } from "@/lib/billing/flags";
 
 export function SiteFooter() {
   return (
@@ -20,7 +21,11 @@ export function SiteFooter() {
                 {column.title}
               </h4>
               <ul className="space-y-2 text-sm">
-                {column.links.map((link) => (
+                {column.links
+                  .filter(
+                    (link) => isBillingEnabled() || link.href !== "/pricing",
+                  )
+                  .map((link) => (
                   <li key={link.href}>
                     <Link
                       href={link.href}

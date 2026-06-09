@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import { isBillingEnabled } from "@/lib/billing/flags";
 
 // Per-user windowed caps. Two windows so a user can't (a) spam the assistant
 // in a tight burst or (b) slowly drain the Anthropic spend cap over a day.
@@ -203,6 +204,8 @@ export async function spendCredits(
   amount: number,
   reason: string,
 ): Promise<CreditSpendResult> {
+  // Billing off → credits aren't enforced; never touch the ledger.
+  if (!isBillingEnabled()) return { ok: true, balance: Number.POSITIVE_INFINITY };
   if (amount <= 0) return { ok: true, balance: Number.POSITIVE_INFINITY };
   try {
     const supabase = await createClient();
