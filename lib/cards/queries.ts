@@ -641,6 +641,40 @@ export async function listPublicCardsByOwner(
 }
 
 /**
+ * Recent public cards from every creator the user follows, newest first.
+ * Powers the /feed page.
+ */
+export async function listFollowingFeed(
+  userId: string,
+  options: { limit?: number; offset?: number } = {},
+): Promise<CardWithStats[]> {
+  if (!isSupabaseConfigured()) return [];
+  const { limit = 24, offset = 0 } = options;
+
+  try {
+    const supabase = await createClient();
+    const { data: follows } = await supabase
+      .from("follows")
+      .select("following_id")
+      .eq("follower_id", userId);
+    const ids = (follows ?? []).map((f) => f.following_id);
+    if (ids.length === 0) return [];
+
+    const { data } = await supabase
+      .from("cards")
+      .select("*")
+      .in("owner_id", ids)
+      .eq("visibility", "public")
+      .order("created_at", { ascending: false })
+      .range(offset, offset + limit - 1);
+    if (!data || data.length === 0) return [];
+    return attachStats(data, "recent");
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Look up a profile by username plus a count of their public cards.
  * Returns null if the profile doesn't exist.
  */

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Bell, Heart, MessageCircle, Sparkles } from "lucide-react";
+import { Bell, Heart, MessageCircle, Sparkles, UserPlus } from "lucide-react";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { SurfaceCard } from "@/components/ui/surface-card";
@@ -25,6 +25,7 @@ const ICON: Record<string, typeof Bell> = {
   like: Heart,
   comment: MessageCircle,
   remix: Sparkles,
+  follow: UserPlus,
 };
 
 export default async function NotificationsPage() {
@@ -75,13 +76,20 @@ export default async function NotificationsPage() {
                   </span>
                   <div className="flex min-w-0 flex-1 flex-col">
                     <p className="text-sm leading-6 text-foreground">
-                      <span className="font-medium">{actorName}</span> {verb}{" "}
-                      {item.card ? (
-                        <span className="font-medium">{item.card.title}</span>
+                      <span className="font-medium">{actorName}</span>{" "}
+                      {item.type === "follow" ? (
+                        "started following you."
                       ) : (
-                        "your card"
+                        <>
+                          {verb}{" "}
+                          {item.card ? (
+                            <span className="font-medium">{item.card.title}</span>
+                          ) : (
+                            "your card"
+                          )}
+                          .
+                        </>
                       )}
-                      .
                     </p>
                     <span className="text-xs text-subtle">
                       {formatRelative(item.createdAt)}
