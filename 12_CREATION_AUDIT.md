@@ -374,3 +374,26 @@ states. Implemented:
 - Edit-mode saves mark the form clean immediately (`reset` keeping values).
 - Native before-unload warning whenever changes are unsaved.
 - Status badge: "Draft kept on this device" / "Unsaved changes" / "Up to date".
+
+---
+
+## 13. Round 3: render versioning + re-bake sweep (and a discovery)
+
+- `cards.layout_version` (migration 0037, applied to the live DB) records the
+  renderer generation that baked each stored PNG; every save-time bake stamps
+  it (`CARD_LAYOUT_VERSION`, lib/cards/layout-version.ts — bump on any
+  output-changing renderer/profile/asset change).
+- `POST /api/admin/rebake` (service-role, CRON_SECRET-gated in production,
+  dev bypass locally) re-bakes public/unlisted cards whose render is missing
+  or version-stale, in batches; `scripts/rebake-renders.mjs` loops it.
+- Shared bake plumbing extracted to `lib/cards/bake-core.ts` so the sweep and
+  the save-time bake render identically.
+
+**Discovery while wiring this up:** the live database has **never persisted a
+single baked render** — 0 objects in `card-renders`, `rendered_at` NULL on all
+60 cards (53 public) — while `card-art` has 111 objects through the same auth
+pattern. Every gallery tile has silently fallen back to the live `CardPreview`
+since launch, which also means the "stale gallery PNGs" concern was moot in
+practice. The save-time bake fails best-effort-silently (`console.warn`); the
+sweep reports per-card errors, so its first run doubles as the diagnostic for
+the root cause.
