@@ -675,6 +675,58 @@ export async function listFollowingFeed(
 }
 
 /**
+ * Other public cards by the same owner, newest first — "More from this creator".
+ */
+export async function listMoreFromOwner(
+  ownerId: string,
+  excludeCardId: string,
+  limit = 4,
+): Promise<CardWithStats[]> {
+  if (!isSupabaseConfigured()) return [];
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("cards")
+      .select("*")
+      .eq("owner_id", ownerId)
+      .eq("visibility", "public")
+      .neq("id", excludeCardId)
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    if (!data || data.length === 0) return [];
+    return attachStats(data, "recent");
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Public cards of the same type by OTHER creators — "More like this".
+ */
+export async function listRelatedCards(
+  params: { cardId: string; ownerId: string; cardType: string | null },
+  limit = 4,
+): Promise<CardWithStats[]> {
+  if (!isSupabaseConfigured() || !params.cardType) return [];
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("cards")
+      .select("*")
+      .eq("card_type", params.cardType)
+      .eq("visibility", "public")
+      .neq("id", params.cardId)
+      .neq("owner_id", params.ownerId)
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    if (!data || data.length === 0) return [];
+    return attachStats(data, "recent");
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Look up a profile by username plus a count of their public cards.
  * Returns null if the profile doesn't exist.
  */
