@@ -433,9 +433,17 @@ function parseSubtypes(text: string): string[] {
 }
 
 function parseTags(text: string): string[] {
+  // Mirror cardTagsSchema's normalization so the field preview matches what
+  // actually gets saved (lowercase, alphanumeric + spaces/hyphens, collapsed).
   return text
     .split(/[,\n]/)
-    .map((piece) => piece.trim().toLowerCase())
+    .map((piece) =>
+      piece
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, "")
+        .replace(/\s+/g, " ")
+        .trim(),
+    )
     .filter((piece) => piece.length > 0)
     .slice(0, 12);
 }
