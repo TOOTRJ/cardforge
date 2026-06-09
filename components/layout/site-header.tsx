@@ -8,6 +8,7 @@ import { MobileMenu } from "./mobile-menu";
 import { CommandPaletteTrigger } from "./command-palette-trigger";
 import { ThemeToggle } from "./theme-toggle";
 import { siteConfig } from "@/lib/site-config";
+import { isBillingEnabled } from "@/lib/billing/flags";
 import type { Theme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
@@ -39,6 +40,10 @@ export function SiteHeader({
   className,
 }: SiteHeaderProps) {
   const isAuthed = Boolean(user);
+  const billingOn = isBillingEnabled();
+  const navItems = billingOn
+    ? siteConfig.primaryNav
+    : siteConfig.primaryNav.filter((item) => item.href !== "/pricing");
 
   return (
     <header
@@ -52,7 +57,7 @@ export function SiteHeader({
 
         <NavLinks
           className="hidden md:flex md:items-center md:gap-1"
-          items={siteConfig.primaryNav}
+          items={navItems}
           isAuthed={isAuthed}
           activeClassName="bg-elevated"
         />
@@ -62,16 +67,20 @@ export function SiteHeader({
           {isAuthed ? (
             <>
               {variant === "app" ? <CommandPaletteTrigger /> : null}
-              <Link
-                href="/settings#billing"
-                title="AI credits — balance · used this month"
-                className="hidden h-9 items-center gap-1.5 rounded-md border border-border/60 bg-elevated px-2.5 text-xs font-medium text-foreground transition-colors hover:border-border-strong sm:inline-flex"
-              >
-                <Coins className="h-3.5 w-3.5 text-primary" aria-hidden />
-                <span>{user?.credits ?? 0}</span>
-                <span className="text-subtle">· {user?.creditsUsed ?? 0} used</span>
-              </Link>
-              {user?.isPaid ? null : (
+              {billingOn ? (
+                <Link
+                  href="/settings#billing"
+                  title="AI credits — balance · used this month"
+                  className="hidden h-9 items-center gap-1.5 rounded-md border border-border/60 bg-elevated px-2.5 text-xs font-medium text-foreground transition-colors hover:border-border-strong sm:inline-flex"
+                >
+                  <Coins className="h-3.5 w-3.5 text-primary" aria-hidden />
+                  <span>{user?.credits ?? 0}</span>
+                  <span className="text-subtle">
+                    · {user?.creditsUsed ?? 0} used
+                  </span>
+                </Link>
+              ) : null}
+              {billingOn && !user?.isPaid ? (
                 <Button
                   asChild
                   variant="accent"
@@ -82,7 +91,7 @@ export function SiteHeader({
                     <Sparkles className="h-4 w-4" aria-hidden /> Upgrade
                   </Link>
                 </Button>
-              )}
+              ) : null}
               <Button asChild size="sm" className="hidden sm:inline-flex">
                 <Link href="/create">New card</Link>
               </Button>

@@ -6,6 +6,13 @@ import { test, expect } from "@playwright/test";
 // ---------------------------------------------------------------------------
 
 test.describe("pricing page", () => {
+  // The whole paid layer is hidden behind NEXT_PUBLIC_BILLING_ENABLED; when it's
+  // off (the default) /pricing 404s, so only run these when billing is on.
+  test.skip(
+    process.env.NEXT_PUBLIC_BILLING_ENABLED !== "true",
+    "Billing is disabled — pricing page is hidden.",
+  );
+
   test("shows the three tiers and toggles monthly ↔ annual", async ({ page }) => {
     await page.goto("/pricing");
 

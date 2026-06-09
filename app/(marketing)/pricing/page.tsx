@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { notFound } from "next/navigation";
 import { Sparkles } from "lucide-react";
 import { BillingReturnToast } from "@/components/billing/billing-return-toast";
 import { getEntitlements } from "@/lib/billing/entitlements";
+import { isBillingEnabled } from "@/lib/billing/flags";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { PricingPlans } from "@/components/billing/pricing-plans";
 import { CreditPackGrid } from "@/components/billing/credit-pack-grid";
@@ -17,6 +19,9 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function PricingPage() {
+  // Billing hidden for now — the page 404s until NEXT_PUBLIC_BILLING_ENABLED=true.
+  if (!isBillingEnabled()) notFound();
+
   const user = await getCurrentUser();
   const entitlements = user ? await getEntitlements() : null;
   const currentTier = entitlements?.tier ?? null;

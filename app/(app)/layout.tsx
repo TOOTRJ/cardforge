@@ -4,6 +4,7 @@ import { CommandPalette } from "@/components/layout/command-palette";
 import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import { getCreditsUsedThisMonth } from "@/lib/ai/usage-queries";
+import { isBillingEnabled } from "@/lib/billing/flags";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 export const dynamic = "force-dynamic";
@@ -23,9 +24,9 @@ export default async function AppGroupLayout({
   }
 
   const profile = user ? await getCurrentProfile() : null;
-  const [entitlements, creditsUsed] = user
-    ? await Promise.all([getEntitlements(), getCreditsUsedThisMonth()])
-    : [null, 0];
+  const entitlements = user ? await getEntitlements() : null;
+  const creditsUsed =
+    user && isBillingEnabled() ? await getCreditsUsedThisMonth() : 0;
 
   return (
     <AppShell

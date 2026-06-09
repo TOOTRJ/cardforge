@@ -11,6 +11,7 @@ import { listMySets } from "@/lib/sets/queries";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import { isOpenAiConfigured } from "@/lib/ai/random-card";
 import { AiDeckGenerator } from "@/components/sets/ai-deck-generator";
+import { isBillingEnabled } from "@/lib/billing/flags";
 
 export const metadata: Metadata = {
   title: "Sets",
@@ -40,12 +41,14 @@ export default async function SetsPage() {
         }
       />
 
-      <div className="mt-8">
-        <AiDeckGenerator
-          allowDeckGen={entitlements.allowDeckGen}
-          aiConfigured={aiConfigured}
-        />
-      </div>
+      {isBillingEnabled() ? (
+        <div className="mt-8">
+          <AiDeckGenerator
+            allowDeckGen={entitlements.allowDeckGen}
+            aiConfigured={aiConfigured}
+          />
+        </div>
+      ) : null}
 
       <div className="mt-6">
         {sets.length === 0 ? (
