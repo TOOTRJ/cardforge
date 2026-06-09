@@ -108,6 +108,7 @@ import {
   stepIndexForField,
   stepLabel,
   visibleSteps,
+  STEP_ORDER,
   type StepContext,
   type StepKey,
 } from "@/lib/creator/steps";
@@ -338,6 +339,10 @@ function backFaceFormValuesFrom(
   };
 }
 
+// One shared key: a guest's /preview draft survives sign-up and reappears on
+// /create. Versioned so a future FormValues shape change can invalidate.
+const CARD_DRAFT_STORAGE_KEY = "spellwright:card-draft:v1";
+
 function defaultValuesFor(
   card: Card | null | undefined,
   gameSystems: GameSystem[],
@@ -497,7 +502,16 @@ export function CardCreatorForm({
   const [serverError, setServerError] = useState<string | null>(null);
   // Active step index into the dynamic `steps` list (see below). Clamped on
   // read so it stays valid when the visible steps shrink (e.g. a DFC is removed).
-  const [current, setCurrent] = useState(0);
+  const [current, setCurrent] = useState(() => {
+    // The create→edit redirect carries ?step=<key> so saving doesn't bounce
+    // the user back to the Frame step. Resolved against the full step order;
+    // visibleSteps clamps the index if the step isn't visible for this card.
+    if (typeof window === "undefined") return 0;
+    const want = new URLSearchParams(window.location.search).get("step");
+    if (!want) return 0;
+    const i = STEP_ORDER.indexOf(want as StepKey);
+    return i >= 0 ? i : 0;
+  });
   // Stable handle to the latest step-navigation fn, so the once-registered
   // custom-event listeners (hero / command palette) always call current logic.
   const goToStepKeyRef = useRef<(key: StepKey) => void>(() => {});
@@ -566,15 +580,86 @@ export function CardCreatorForm({
     mode: "onSubmit",
   });
 
-  // Reset when defaults change (e.g. navigating between drafts).
+  // Reset only when the SAVED card actually changes (navigating between
+  // cards, or fresh server truth after our own save) — never on mere prop
+  // identity churn. router.refresh() re-renders the page with brand-new
+  // card/gameSystems/templates objects every time; resetting on those wiped
+  // live edits "randomly" while users were typing.
+  const resetKey = card ? `${card.id}:${card.updated_at}` : "new";
+  const lastResetKey = useRef(resetKey);
   useEffect(() => {
+    if (lastResetKey.current === resetKey) return;
+    lastResetKey.current = resetKey;
     reset(defaults);
-  }, [defaults, reset]);
+  }, [resetKey, defaults, reset]);
+
+  // ----- Save model: explicit Save button + automatic LOCAL draft. -----
+  // The server save is deliberate (it bakes the public PNG and carries
+  // publish semantics), but unsaved work should never be lost: in create/
+  // preview mode the form persists a debounced draft to localStorage, restores
+  // it on the next visit (including a guest signing in and landing on
+  // /create), and clears it on a successful save. Edit mode trusts the server
+  // copy and instead warns before unloading with unsaved changes.
+  const isDraftMode = mode === "create" && !card;
+  const draftRestoredRef = useRef(false);
+  useEffect(() => {
+    if (!isDraftMode || draftRestoredRef.current) return;
+    draftRestoredRef.current = true;
+    try {
+      const raw = window.localStorage.getItem(CARD_DRAFT_STORAGE_KEY);
+      if (!raw) return;
+      const draft = JSON.parse(raw) as Partial<FormValues>;
+      if (!draft || typeof draft !== "object") return;
+      reset({ ...defaults, ...draft });
+      toast.info("Restored your unsaved draft.", {
+        action: {
+          label: "Start fresh",
+          onClick: () => {
+            window.localStorage.removeItem(CARD_DRAFT_STORAGE_KEY);
+            reset(defaults);
+          },
+        },
+      });
+    } catch {
+      // Corrupt/blocked storage — start clean.
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDraftMode]);
 
   // useWatch is the React Compiler-friendly subscription variant of watch().
   // We feed it the same defaults useForm has, so RHF always populates every
   // field; the cast just lifts useWatch's DeepPartial<> back to FormValues.
   const watched = useWatch({ control, defaultValue: defaults }) as FormValues;
+
+  // Debounced draft writes — every change while dirty, 800ms after the last.
+  useEffect(() => {
+    if (!isDraftMode || !isDirty) return;
+    const timer = window.setTimeout(() => {
+      try {
+        window.localStorage.setItem(
+          CARD_DRAFT_STORAGE_KEY,
+          JSON.stringify(watched),
+        );
+      } catch {
+        // Storage full/blocked — the explicit Save path still works.
+      }
+    }, 800);
+    return () => window.clearTimeout(timer);
+  }, [isDraftMode, isDirty, watched]);
+
+  // Native "leave site?" guard whenever there are unsaved changes. Draft mode
+  // is covered by localStorage, but edit mode has no local copy.
+  const isDirtyRef = useRef(isDirty);
+  useEffect(() => {
+    isDirtyRef.current = isDirty;
+  }, [isDirty]);
+  useEffect(() => {
+    const handler = (event: BeforeUnloadEvent) => {
+      if (isDirtyRef.current) event.preventDefault();
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, []);
 
   // The Adventure frame repurposes the back-face content as the adventure spell
   // (rendered inline on the card's left page, not as a flippable face), so the
@@ -1026,7 +1111,15 @@ export function CardCreatorForm({
           return;
         }
         toast.success(`Saved “${payload.title}”`);
-        router.replace(`/card/${result.slug}/edit`);
+        try {
+          window.localStorage.removeItem(CARD_DRAFT_STORAGE_KEY);
+        } catch {
+          // best-effort
+        }
+        // Land on the same step in edit mode instead of resetting to Frame.
+        router.replace(
+          `/card/${result.slug}/edit?step=${activeStep?.key ?? "publish"}`,
+        );
         router.refresh();
         return;
       }
@@ -1042,6 +1135,9 @@ export function CardCreatorForm({
         return;
       }
       toast.success("Changes saved.");
+      // Mark clean right away (keeping the on-screen values); the keyed reset
+      // swaps in server truth when the refresh lands.
+      reset(undefined, { keepValues: true });
       // If the slug changed, follow it.
       if (result.slug !== card.slug) {
         router.replace(`/card/${result.slug}/edit`);
@@ -2000,7 +2096,8 @@ export function CardCreatorForm({
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
             {isDirty ? (
               <Badge variant="accent" className="gap-1.5">
-                <Sparkles className="h-3 w-3" aria-hidden /> Unsaved changes
+                <Sparkles className="h-3 w-3" aria-hidden />
+                {isDraftMode ? "Draft kept on this device" : "Unsaved changes"}
               </Badge>
             ) : (
               <Badge variant="default">Up to date</Badge>

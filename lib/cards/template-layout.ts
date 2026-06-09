@@ -334,25 +334,27 @@ const AGCLASSIC: FrameProfile = {
 // shield, so it renders on a drawn dark badge.
 const M15PW: FrameProfile = {
   label: "M15 Planeswalker",
-  artSlot: { topPct: 10.0, leftPct: 7.2, widthPct: 85.6, heightPct: 81.4 },
+  // MSE m15-planeswalker spec: name 23–46px, image 52–479.5, type 296–316,
+  // text 330–478 (indented past the loyalty badge rail), loyalty 462+.
+  artSlot: { topPct: 9.9, leftPct: 6.7, widthPct: 86.4, heightPct: 81.7 },
   title: {
-    rect: { topPct: 3.2, leftPct: 8.5, widthPct: 80, heightPct: 5.6 },
-    sizePct: 0.05,
+    rect: { topPct: 4.4, leftPct: 8.5, widthPct: 80, heightPct: 4.4 },
+    sizePct: 0.0427,
     colorHex: INK_DARK,
     weight: 600,
     font: "display",
     letterSpacingEm: 0.01,
   },
   type: {
-    rect: { topPct: 56.2, leftPct: 8.5, widthPct: 80, heightPct: 5.0 },
-    sizePct: 0.032,
+    rect: { topPct: 56.6, leftPct: 8.8, widthPct: 79, heightPct: 3.8 },
+    sizePct: 0.0347,
     colorHex: INK_DARK_SOFT,
     weight: 600,
     font: "display",
   },
   rules: {
-    rect: { topPct: 64.0, leftPct: 9, widthPct: 78, heightPct: 25.5 },
-    sizePct: 0.031,
+    rect: { topPct: 63.1, leftPct: 8.5, widthPct: 83.5, heightPct: 28.3 },
+    sizePct: 0.0373,
     colorHex: INK_DARK,
     vAlign: "start",
     font: "body",
@@ -376,8 +378,8 @@ const M15PW: FrameProfile = {
     font: "display",
   },
   loyalty: {
-    rect: { topPct: 84.0, leftPct: 79.5, widthPct: 14, heightPct: 8.0 },
-    sizePct: 0.044,
+    rect: { topPct: 88.2, leftPct: 81.5, widthPct: 14.5, heightPct: 7.2 },
+    sizePct: 0.04,
     colorHex: "#ffffff",
     weight: 700,
     badgeColorHex: "#141008",
@@ -403,9 +405,11 @@ const M15TOKEN: FrameProfile = {
     font: "display",
     letterSpacingEm: 0.01,
   },
+  // Measured: the cream type pill spans 82.2–87.0% (was rendered at 87.5+,
+  // a band too low); MSE token type font is 14/375.
   type: {
-    rect: { topPct: 87.5, leftPct: 11, widthPct: 78, heightPct: 5.2 },
-    sizePct: 0.03,
+    rect: { topPct: 82.6, leftPct: 11, widthPct: 78, heightPct: 4.2 },
+    sizePct: 0.034,
     colorHex: INK_DARK,
     weight: 600,
     align: "center",
@@ -428,12 +432,13 @@ const M15TOKEN: FrameProfile = {
     letterSpacingEm: 0.05,
     font: "display",
   },
+  // MSE pt sits at 286,469 (76.3%, 89.7%) on the light lower band — dark ink
+  // at the card bottom, exactly like printed full-art tokens.
   pt: {
-    rect: { topPct: 73.5, leftPct: 75, widthPct: 19, heightPct: 7.0 },
-    sizePct: 0.043,
-    colorHex: "#ffffff",
+    rect: { topPct: 88.6, leftPct: 73.5, widthPct: 20, heightPct: 6.2 },
+    sizePct: 0.0427,
+    colorHex: INK_DARK,
     weight: 700,
-    shadowCss: OUTLINE_SHADOW,
   },
 };
 
@@ -515,33 +520,35 @@ const ALPHATOKEN: FrameProfile = {
 const BATTLE: FrameProfile = {
   label: "Battle (Siege)",
   orientation: "landscape",
-  artSlot: { topPct: 12.5, leftPct: 4, widthPct: 92, heightPct: 45 },
+  // Measured: title pill 5.0–12.0, art window 13.6–57.2, type bar 58.2–65.0,
+  // text box 67.2–96.2; MSE text 252→356 at left 63/523, defense at 480,336.
+  artSlot: { topPct: 13.6, leftPct: 4, widthPct: 92, heightPct: 43.6 },
   title: {
     // inset past the rounded red end-nubs of the title pill
-    rect: { topPct: 4.2, leftPct: 12, widthPct: 76, heightPct: 7 },
-    sizePct: 0.036,
+    rect: { topPct: 5.2, leftPct: 12.8, widthPct: 74, heightPct: 6.4 },
+    sizePct: 0.034,
     colorHex: INK_DARK,
     weight: 600,
     font: "display",
   },
   type: {
-    rect: { topPct: 57.8, leftPct: 12, widthPct: 76, heightPct: 6.8 },
+    rect: { topPct: 58.4, leftPct: 12.8, widthPct: 74, heightPct: 6.2 },
     sizePct: 0.025,
     colorHex: INK_DARK,
     weight: 600,
     font: "display",
   },
   rules: {
-    rect: { topPct: 67.5, leftPct: 13, widthPct: 80, heightPct: 25 },
-    sizePct: 0.028,
+    rect: { topPct: 67.5, leftPct: 12.1, widthPct: 78.4, heightPct: 27 },
+    sizePct: 0.0268,
     colorHex: INK_DARK,
     vAlign: "start",
     font: "body",
     lineHeight: 1.3,
   },
   defense: {
-    rect: { topPct: 81, leftPct: 88, widthPct: 9.5, heightPct: 14 },
-    sizePct: 0.05,
+    rect: { topPct: 87.3, leftPct: 89.9, widthPct: 8, heightPct: 11 },
+    sizePct: 0.034,
     colorHex: "#ffffff",
     weight: 700,
     badgeColorHex: "#141008",
@@ -556,17 +563,19 @@ const BATTLE: FrameProfile = {
 const SAGA: FrameProfile = {
   label: "Saga",
   costSizePct: 0.04,
-  artSlot: { topPct: 11.5, leftPct: 49.5, widthPct: 43, heightPct: 73 },
+  // MSE m15-saga spec: image 188,59 → 345,438; rail text from 60 to 437
+  // (badges at left 30, text indented to 45); type at 444.
+  artSlot: { topPct: 11.3, leftPct: 50.1, widthPct: 41.9, heightPct: 72.5 },
   title: {
-    rect: { topPct: 4, leftPct: 9, widthPct: 82, heightPct: 7 },
-    sizePct: 0.046,
+    rect: { topPct: 5.4, leftPct: 8.5, widthPct: 83, heightPct: 4.8 },
+    sizePct: 0.0427,
     colorHex: INK_DARK,
     weight: 600,
     font: "display",
   },
   type: {
-    rect: { topPct: 85, leftPct: 9, widthPct: 82, heightPct: 6 },
-    sizePct: 0.03,
+    rect: { topPct: 84.9, leftPct: 8.8, widthPct: 82, heightPct: 3.9 },
+    sizePct: 0.0347,
     colorHex: INK_DARK,
     weight: 600,
     font: "display",
@@ -574,14 +583,14 @@ const SAGA: FrameProfile = {
   // Required by the type, but the chapter rail replaces it (rendered only when
   // a frame has no `chapters`).
   rules: {
-    rect: { topPct: 12.5, leftPct: 9, widthPct: 39.5, heightPct: 71 },
-    sizePct: 0.026,
+    rect: { topPct: 11.5, leftPct: 8, widthPct: 41, heightPct: 72 },
+    sizePct: 0.029,
     colorHex: INK_DARK,
     font: "body",
   },
   chapters: {
-    rect: { topPct: 12.5, leftPct: 9, widthPct: 39.5, heightPct: 71 },
-    sizePct: 0.0255,
+    rect: { topPct: 11.5, leftPct: 8, widthPct: 41, heightPct: 72 },
+    sizePct: 0.029,
     textColorHex: INK_DARK,
     markerFillHex: "#1c1712",
     markerTextHex: "#f4eee2",
@@ -656,14 +665,14 @@ const FLIP: FrameProfile = {
   artSlot: { topPct: 31.0, leftPct: 7.7, widthPct: 84.3, heightPct: 35.2 },
   title: {
     rect: { topPct: 5.7, leftPct: 8.5, widthPct: 82, heightPct: 4.4 },
-    sizePct: 0.043,
+    sizePct: 0.0427,
     colorHex: INK_DARK,
     weight: 600,
     font: "display",
   },
   type: {
-    rect: { topPct: 25.0, leftPct: 8.5, widthPct: 68, heightPct: 3.8 },
-    sizePct: 0.029,
+    rect: { topPct: 25.0, leftPct: 8.5, widthPct: 68, heightPct: 4.2 },
+    sizePct: 0.0347,
     colorHex: INK_DARK_SOFT,
     weight: 600,
     font: "display",
@@ -677,29 +686,31 @@ const FLIP: FrameProfile = {
     lineHeight: 1.22,
   },
   pt: {
-    rect: { topPct: 24.0, leftPct: 80.5, widthPct: 14, heightPct: 5.6 },
-    sizePct: 0.036,
+    rect: { topPct: 24.5, leftPct: 82.1, widthPct: 11.7, heightPct: 5.4 },
+    sizePct: 0.0347,
     colorHex: INK_DARK,
     weight: 700,
   },
+  // Bottom half measured from the frame PNG: type bar 67.6–72.4, text box
+  // 72.6–86.0, title plate 87.2–92.4.
   secondFace: {
     rotation: 180,
     title: {
-      rect: { topPct: 89.3, leftPct: 9.5, widthPct: 82, heightPct: 4.4 },
-      sizePct: 0.043,
+      rect: { topPct: 87.8, leftPct: 9.5, widthPct: 82, heightPct: 4.4 },
+      sizePct: 0.0427,
       colorHex: INK_DARK,
       weight: 600,
       font: "display",
     },
     type: {
-      rect: { topPct: 69.4, leftPct: 23.5, widthPct: 68, heightPct: 3.8 },
-      sizePct: 0.029,
+      rect: { topPct: 68.0, leftPct: 23.5, widthPct: 68, heightPct: 4.2 },
+      sizePct: 0.0347,
       colorHex: INK_DARK_SOFT,
       weight: 600,
       font: "display",
     },
     rules: {
-      rect: { topPct: 77.5, leftPct: 8.3, widthPct: 84, heightPct: 10.5 },
+      rect: { topPct: 73.4, leftPct: 8.3, widthPct: 84, heightPct: 11.8 },
       sizePct: 0.029,
       colorHex: INK_DARK,
       vAlign: "center",
@@ -707,8 +718,8 @@ const FLIP: FrameProfile = {
       lineHeight: 1.22,
     },
     pt: {
-      rect: { topPct: 69.0, leftPct: 5.5, widthPct: 14, heightPct: 5.6 },
-      sizePct: 0.036,
+      rect: { topPct: 68.2, leftPct: 6.2, widthPct: 11.7, heightPct: 5.4 },
+      sizePct: 0.0347,
       colorHex: INK_DARK,
       weight: 700,
     },
@@ -726,10 +737,11 @@ const SPLIT: FrameProfile = {
   label: "Split",
   orientation: "landscape",
   artSlot: { topPct: 14.7, leftPct: 4.8, widthPct: 41.9, heightPct: 40.8 },
-  costSizePct: 0.023,
+  // MSE planeshifted-split: cost symbols 18/523 — larger than the name.
+  costSizePct: 0.0344,
   title: {
     rect: { topPct: 7.4, leftPct: 5.2, widthPct: 41.4, heightPct: 5.5 },
-    sizePct: 0.026,
+    sizePct: 0.0287,
     colorHex: INK_DARK,
     weight: 600,
     font: "display",
@@ -751,11 +763,11 @@ const SPLIT: FrameProfile = {
   },
   secondFace: {
     rotation: 0,
-    costSizePct: 0.023,
+    costSizePct: 0.0344,
     artSlot: { topPct: 14.7, leftPct: 53.2, widthPct: 41.9, heightPct: 40.8 },
     title: {
       rect: { topPct: 7.4, leftPct: 53.5, widthPct: 41.4, heightPct: 5.5 },
-      sizePct: 0.026,
+      sizePct: 0.0287,
       colorHex: INK_DARK,
       weight: 600,
       font: "display",
@@ -791,21 +803,21 @@ const AFTERMATH: FrameProfile = {
   costSizePct: 0.04,
   title: {
     rect: { topPct: 5.7, leftPct: 8.5, widthPct: 82, heightPct: 4.4 },
-    sizePct: 0.044,
+    sizePct: 0.04,
     colorHex: INK_DARK,
     weight: 600,
     font: "display",
   },
   type: {
     rect: { topPct: 35.4, leftPct: 8, widthPct: 82.7, heightPct: 3.8 },
-    sizePct: 0.03,
+    sizePct: 0.0347,
     colorHex: INK_DARK_SOFT,
     weight: 600,
     font: "display",
   },
   rules: {
-    rect: { topPct: 40.9, leftPct: 7.5, widthPct: 84.5, heightPct: 12.4 },
-    sizePct: 0.031,
+    rect: { topPct: 40.9, leftPct: 7.5, widthPct: 84.5, heightPct: 13.0 },
+    sizePct: 0.0373,
     colorHex: INK_DARK,
     vAlign: "start",
     font: "body",

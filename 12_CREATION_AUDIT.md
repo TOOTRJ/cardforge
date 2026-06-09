@@ -323,3 +323,54 @@ parser, and saga intro (156 tests green).
 template versioning + re-bake sweep, collector-info fields, hex saga badges,
 guest draft persistence (localStorage), token "Token Creature" type-line
 composition.
+
+---
+
+## 12. Round 2 (2026-06-09, same branch): M15-family verification + save model
+
+### M15 set family — frame-by-frame verification
+
+Method upgrade: geometry now comes from the **MSE style files themselves**
+(`magic-m15-*.mse-style/style` — exact element rects/font sizes at 375×523)
+plus **direct band measurement of our frame PNGs**
+(`scripts/scan-frame-bands.mjs`) where MSE's rotated-element coordinates are
+ambiguous. Every frame re-rendered through `scripts/visual-audit.mjs` and
+compared against its official reference.
+
+| Frame | Status | Corrections applied |
+|---|---|---|
+| m15 (Standard) | ✅ verified | — (reference standard) |
+| m15land | ✅ verified | none needed (M15 clone + orb inset confirmed correct) |
+| m15snow | ✅ verified | M15 clone confirmed |
+| m15devoid | ✅ verified | M15 clone confirmed |
+| m15token | ✅ fixed + verified | type pill moved 87.5→82.6% (measured band 82.2–87.0); P/T moved to the bottom band (88.6%, MSE 286,469) in dark ink like printed full-art tokens; type 3.4%w |
+| m15pw | ✅ fixed + verified | full MSE spec applied: title 4.4%/4.27%w, art 6.7/9.9/86.4/81.7, type 56.6%/3.47%w, ability text block 63.1–91.4% (badge rail + indent match MSE 63→345px), loyalty badge to 88.2/81.5 (MSE 462,326) |
+| battle | ✅ fixed + verified | plates measured: title pill 5.0–12.0, art 13.6–57.2, type 58.2–65.0, text 67.2–96.2; defense badge centered on MSE 480,336 (93.9%, 92.8%) |
+| saga | ✅ fixed + verified | MSE spec: title 5.4%/4.27%w, art 50.1/11.3/41.9/72.5, rail 11.5–83.5% with badge column, type 84.9%/3.47%w, chapter text 2.9%w |
+| adventure | ✅ verified | none this round (MSE adventure spec applied in round 1) |
+| flip | ✅ fixed + verified | bottom half re-measured from the PNG: type bar 68.0 (band 67.6–72.4), text 73.4–85.2 (band 72.6–86.0), title 87.8 (plate 87.2–92.4); P/T to MSE 82.1%/3.47%w both halves; top type 3.47%w |
+| split | ✅ fixed + verified | cost pips 2.3%→3.44%w (MSE 18px — larger than the name, like printed splits); title 2.87%w. Per-half colors remain a documented model limit |
+| aftermath | ✅ fixed + verified | title 4.0%w + type 3.47%w per MSE; text band extended to the measured 41.0–54.2 |
+
+### Save model (stepper resets / "weird autosave")
+
+Root causes found:
+1. `reset(defaults)` keyed on prop **identity** — `router.refresh()` after
+   every save (and any RSC re-render) produced new `card`/`gameSystems`/
+   `templates` objects and silently wiped live edits.
+2. Create-mode save navigated to the edit page with no step context — full
+   remount, stepper back to Frame.
+
+Decision: **explicit Save + automatic local draft** (not server autosave).
+Server saves bake the public PNG and carry publish semantics — autosaving
+those on keystrokes would re-bake constantly and publish half-finished
+states. Implemented:
+- Reset now keys on `card.id:updated_at` (real card changes only).
+- Create→edit redirect carries `?step=<key>`; the stepper initializes from it.
+- Debounced (800 ms) localStorage draft on create/preview
+  (`spellwright:card-draft:v1`), restored on the next visit with a
+  "Start fresh" escape — a guest's draft survives signing up. Cleared on
+  successful save.
+- Edit-mode saves mark the form clean immediately (`reset` keeping values).
+- Native before-unload warning whenever changes are unsaved.
+- Status badge: "Draft kept on this device" / "Unsaved changes" / "Up to date".
