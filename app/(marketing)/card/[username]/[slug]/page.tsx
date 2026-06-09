@@ -8,6 +8,7 @@ import { DownloadModal } from "@/components/cards/download-modal";
 import { LikeButton } from "@/components/cards/like-button";
 import { RemixButton } from "@/components/cards/remix-button";
 import { ShareTargets } from "@/components/cards/share-targets";
+import { ReportCardDialog } from "@/components/cards/report-card-dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SurfaceCard } from "@/components/ui/surface-card";
@@ -278,6 +279,7 @@ export default async function CardDetailPage({
               cardTitle={card.title}
               cardUrl={`${siteBase}/card/${username}/${card.slug}`}
             />
+            {user && !isOwner ? <ReportCardDialog cardId={card.id} /> : null}
           </div>
 
           <SurfaceCard className="grid gap-4 p-6 sm:grid-cols-2">

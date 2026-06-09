@@ -7,6 +7,7 @@ import {
   Layers,
   LogOut,
   Settings,
+  ShieldCheck,
   Sparkles,
   UserCircle,
 } from "lucide-react";
@@ -30,6 +31,7 @@ type UserMenuProps = {
   displayName: string | null;
   avatarUrl?: string | null;
   isPaid?: boolean;
+  isAdmin?: boolean;
 };
 
 export function UserMenu({
@@ -37,6 +39,7 @@ export function UserMenu({
   displayName,
   avatarUrl,
   isPaid = false,
+  isAdmin = false,
 }: UserMenuProps) {
   const label = displayName?.trim() || username || "Account";
   const initial = (label[0] ?? "?").toUpperCase();
@@ -115,6 +118,13 @@ export function UserMenu({
               <MenuItem href="/pricing" icon={Sparkles} label="Upgrade to Pro" />
             )}
           </>
+        ) : null}
+        {isAdmin ? (
+          <MenuItem
+            href="/admin/moderation"
+            icon={ShieldCheck}
+            label="Moderation"
+          />
         ) : null}
         <div className="my-1 h-px bg-border/60" />
         <form action={logoutAction}>

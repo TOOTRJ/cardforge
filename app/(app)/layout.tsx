@@ -40,6 +40,7 @@ export default async function AppGroupLayout({
               isPaid: entitlements?.isPaid ?? false,
               credits: entitlements?.credits ?? 0,
               creditsUsed,
+              isAdmin: profile?.is_admin ?? false,
             }
           : null
       }
