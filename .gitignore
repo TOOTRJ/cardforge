@@ -45,3 +45,7 @@ next-env.d.ts
 # transient and should never enter the main repo's history.
 .claude/settings.local.json
 .claude/worktrees/
+
+# Local scratch + visual-audit output
+tmp/
+test-results/

@@ -79,6 +79,58 @@ export function parseChapters(
   return out;
 }
 
+/** Lines before the first chapter marker — the saga's intro/reminder text
+ *  ("(As this Saga enters …)"), printed above chapter I on real cards. */
+export function parseSagaIntro(
+  rulesText: string | null | undefined,
+): string | null {
+  if (!rulesText?.trim()) return null;
+  const intro: string[] = [];
+  for (const raw of rulesText.split(/\n+/)) {
+    const line = raw.trim();
+    if (!line) continue;
+    if (CHAPTER_LINE.test(line)) break;
+    intro.push(line);
+  }
+  return intro.length > 0 ? intro.join(" ") : null;
+}
+
+// ---------------------------------------------------------------------------
+// Planeswalker loyalty abilities. Real M15 planeswalkers print each ability as
+// its own row with a loyalty-cost badge (+1 / −3 / 0) in a left rail and
+// alternating row shading. We parse the card's rules text by leading loyalty
+// costs; lines without one (static abilities) render as unbadged rows. Shared
+// by the preview + bake so both render the same.
+// ---------------------------------------------------------------------------
+
+export type LoyaltyAbility = { cost: string | null; text: string };
+
+const LOYALTY_LINE = /^\s*([+\-−–]?)\s*(\d+|X)\s*:\s*(.+)$/i;
+
+export function parseLoyaltyAbilities(
+  rulesText: string | null | undefined,
+): LoyaltyAbility[] {
+  if (!rulesText?.trim()) return [];
+  const out: LoyaltyAbility[] = [];
+  for (const raw of rulesText.split(/\n/)) {
+    const line = raw.trim();
+    if (!line) continue;
+    const match = LOYALTY_LINE.exec(line);
+    if (match) {
+      // Normalize the sign to ASCII so the Satori bake (whose fonts lack
+      // U+2212) and the browser render the identical glyph.
+      const sign = match[1] === "+" ? "+" : match[1] ? "-" : "";
+      out.push({
+        cost: `${sign}${match[2].toUpperCase()}`,
+        text: match[3].trim(),
+      });
+    } else {
+      out.push({ cost: null, text: line });
+    }
+  }
+  return out;
+}
+
 // Builds the "Supertype Type — Subtype Subtype" line shown in the type bar.
 export function buildTypeLine({
   supertype,

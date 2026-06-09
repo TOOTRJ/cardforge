@@ -6,15 +6,22 @@ import { cn } from "@/lib/utils";
 import { ManaCostGlyphs } from "@/components/cards/mana-cost-glyphs";
 import { SetSymbol } from "@/components/cards/set-symbol";
 import { FrameLayer, pickFrameColorKey } from "@/components/cards/frame-layer";
-import { rulesFontTier, RULES_SIZE_PCT_BY_TIER } from "@/lib/cards/render-tiers";
-import { tokenizeRulesText } from "@/lib/cards/rules-text";
+import { fitRulesSizePct } from "@/lib/cards/render-tiers";
+import {
+  tokenizeRulesText,
+  groupTightRuns,
+  type RulesItem,
+} from "@/lib/cards/rules-text";
 import {
   buildTypeLine,
   normalizeFrameTemplate,
   parseChapters,
+  parseSagaIntro,
+  parseLoyaltyAbilities,
   showsDefense,
   showsLoyalty,
   showsPowerToughness,
+  type LoyaltyAbility,
   type SagaChapter,
 } from "@/lib/cards/card-display";
 import {
@@ -378,11 +385,36 @@ function CardFace({
   const focalY = clamp(face.artPosition?.focalY ?? 0.5, 0, 1);
   const scale = clamp(face.artPosition?.scale ?? 1, 0.5, 4);
 
-  const rulesSizePct =
-    RULES_SIZE_PCT_BY_TIER[rulesFontTier(face.rulesText, face.flavorText)];
+  const aspect = layout.orientation === "landscape" ? 5 / 7 : 7 / 5;
+  // Planeswalker ability rows spend ~20% of the box on the badge rail plus
+  // per-row padding; narrow the rect handed to the fit estimate accordingly
+  // (the same correction in both renderers keeps preview == bake).
+  const usesLoyaltyRows =
+    Boolean(layout.loyaltyRows) && showsLoyalty(face.cardType);
+  const fitRect = usesLoyaltyRows
+    ? {
+        ...layout.rules.rect,
+        widthPct: layout.rules.rect.widthPct * 0.78,
+        heightPct: layout.rules.rect.heightPct * 0.88,
+      }
+    : layout.rules.rect;
+  const rulesSizePct = fitRulesSizePct({
+    rulesText: face.rulesText,
+    flavorText: face.flavorText,
+    rect: fitRect,
+    baseSizePct: layout.rules.sizePct,
+    lineHeight: layout.rules.lineHeight ?? 1.3,
+    aspect,
+  });
   const hasRulesContent = Boolean(
     face.rulesText?.trim() || face.flavorText?.trim(),
   );
+
+  // Planeswalker ability rows (badged loyalty costs, striped rows) when the
+  // frame defines them and the card actually is a planeswalker.
+  const loyaltyAbilities = usesLoyaltyRows
+    ? parseLoyaltyAbilities(face.rulesText)
+    : [];
 
   return (
     <div className="absolute inset-0">
@@ -469,7 +501,7 @@ function CardFace({
         {showCost ? (
           <ManaCostGlyphs
             cost={face.cost}
-            fontSize={cqw(layout.costSizePct ?? layout.title.sizePct)}
+            fontSize={pipFont(layout.costSizePct ?? layout.title.sizePct)}
           />
         ) : null}
       </BandSlot>
@@ -491,11 +523,20 @@ function CardFace({
         />
       </BandSlot>
 
-      {/* Rules — Saga chapter rail, otherwise the normal rules + flavor box. */}
+      {/* Rules — Saga chapter rail or planeswalker ability rows, otherwise the
+          normal rules + flavor box. */}
       {layout.chapters ? (
         <ChapterRail
           slot={layout.chapters}
+          intro={parseSagaIntro(face.rulesText)}
           chapters={parseChapters(face.rulesText)}
+        />
+      ) : layout.loyaltyRows && loyaltyAbilities.length > 0 ? (
+        <LoyaltyRows
+          slot={layout.rules}
+          rows={layout.loyaltyRows}
+          abilities={loyaltyAbilities}
+          sizePct={rulesSizePct}
         />
       ) : (
       <div
@@ -507,8 +548,8 @@ function CardFace({
           alignItems: "stretch",
           justifyContent: vJustify(layout.rules.vAlign ?? "start"),
           overflow: "hidden",
-          padding: "1.5cqw 0.5cqw",
-          gap: "1.4cqw",
+          padding: "1.2cqw 0.6cqw",
+          gap: "1.2cqw",
           fontFamily: CARD_FONT,
           fontSize: cqw(rulesSizePct),
           lineHeight: layout.rules.lineHeight ?? 1.3,
@@ -533,14 +574,18 @@ function CardFace({
         {face.flavorText?.trim() ? (
           <div
             style={{
+              display: "flex",
+              flexDirection: "column",
+              rowGap: "0.4cqw",
               fontStyle: "italic",
-              opacity: 0.85,
               borderTop: `1px solid ${layout.rules.colorHex}44`,
               paddingTop: "1.2cqw",
               marginTop: "0.4cqw",
             }}
           >
-            {face.flavorText}
+            {face.flavorText.split(/\n/).filter((l) => l.trim()).map((line, i) => (
+              <span key={i}>{line}</span>
+            ))}
           </div>
         ) : null}
       </div>
@@ -557,7 +602,11 @@ function CardFace({
 
       {/* Second face — the rotated bottom/right card (flip / split / aftermath). */}
       {layout.secondFace && secondFace ? (
-        <SecondFacePanel slot={layout.secondFace} data={secondFace} />
+        <SecondFacePanel
+          slot={layout.secondFace}
+          data={secondFace}
+          aspect={aspect}
+        />
       ) : null}
 
       {/* Footer — artist credit + brand. */}
@@ -732,9 +781,11 @@ function StatOverlay({
 
 function ChapterRail({
   slot,
+  intro,
   chapters,
 }: {
   slot: NonNullable<FrameProfile["chapters"]>;
+  intro: string | null;
   chapters: SagaChapter[];
 }) {
   return (
@@ -746,6 +797,22 @@ function ChapterRail({
         flexDirection: "column",
       }}
     >
+      {intro ? (
+        <div
+          style={{
+            flexShrink: 0,
+            padding: `${cqw(slot.sizePct * 0.4)} ${cqw(slot.sizePct * 0.3)}`,
+            borderBottom: `1px solid ${slot.dividerHex}`,
+            fontFamily: CARD_FONT,
+            fontStyle: "italic",
+            fontSize: cqw(slot.sizePct * 0.9),
+            lineHeight: 1.2,
+            color: slot.textColorHex,
+          }}
+        >
+          {intro}
+        </div>
+      ) : null}
       {chapters.length > 0 ? (
         chapters.map((ch, i) => (
           <div
@@ -850,7 +917,10 @@ function AdventurePanel({
           {name}
         </span>
         {showCost ? (
-          <ManaCostGlyphs cost={data.cost} fontSize={cqw(slot.title.sizePct)} />
+          <ManaCostGlyphs
+            cost={data.cost}
+            fontSize={pipFont(slot.costSizePct ?? slot.title.sizePct)}
+          />
         ) : null}
       </BandSlot>
       <BandSlot slot={slot.type}>
@@ -866,7 +936,16 @@ function AdventurePanel({
           overflow: "hidden",
           padding: "1cqw 0.6cqw",
           fontFamily: CARD_FONT,
-          fontSize: cqw(slot.rules.sizePct),
+          fontSize: cqw(
+            fitRulesSizePct({
+              rulesText: data.rulesText,
+              flavorText: null,
+              rect: slot.rules.rect,
+              baseSizePct: slot.rules.sizePct,
+              lineHeight: slot.rules.lineHeight ?? 1.25,
+              aspect: 7 / 5,
+            }),
+          ),
           lineHeight: slot.rules.lineHeight ?? 1.25,
           color: slot.rules.colorHex,
           textAlign: "center",
@@ -894,9 +973,11 @@ function AdventurePanel({
 function SecondFacePanel({
   slot,
   data,
+  aspect,
 }: {
   slot: NonNullable<FrameProfile["secondFace"]>;
   data: FaceData;
+  aspect: number;
 }) {
   const rot = `rotate(${slot.rotation}deg)`;
   const name = data.title?.trim() || "Untitled";
@@ -907,6 +988,14 @@ function SecondFacePanel({
   });
   const showCost = Boolean(slot.costSizePct) && Boolean(data.cost?.trim());
   const showPT = Boolean(slot.pt) && Boolean(data.power || data.toughness);
+  const rulesSizePct = fitRulesSizePct({
+    rulesText: data.rulesText,
+    flavorText: null,
+    rect: slot.rules.rect,
+    baseSizePct: slot.rules.sizePct,
+    lineHeight: slot.rules.lineHeight ?? 1.25,
+    aspect,
+  });
   return (
     <>
       <div
@@ -931,7 +1020,7 @@ function SecondFacePanel({
         {showCost ? (
           <ManaCostGlyphs
             cost={data.cost}
-            fontSize={cqw(slot.costSizePct ?? slot.title.sizePct)}
+            fontSize={pipFont(slot.costSizePct ?? slot.title.sizePct)}
           />
         ) : null}
       </div>
@@ -963,7 +1052,7 @@ function SecondFacePanel({
           overflow: "hidden",
           padding: "0.8cqw 1.2cqw",
           fontFamily: CARD_FONT,
-          fontSize: cqw(slot.rules.sizePct),
+          fontSize: cqw(rulesSizePct),
           lineHeight: slot.rules.lineHeight ?? 1.25,
           color: slot.rules.colorHex,
           textAlign: "center",
@@ -1021,6 +1110,14 @@ function rectStyle(rect: Rect): CSSProperties {
 // Font size as container-query width units, so text scales with the card.
 function cqw(pct: number): string {
   return `${(pct * 100).toFixed(3)}cqw`;
+}
+
+// mana-font's `.ms-cost` disc renders at 1.3em for a given font-size; profiles
+// specify the DISC diameter, so the CSS font-size is the diameter ÷ 1.3. The
+// bake's ManaGem draws the disc at the diameter directly — same visual size.
+const MS_COST_DISC_EM = 1.3;
+function pipFont(discPct: number): string {
+  return cqw(discPct / MS_COST_DISC_EM);
 }
 
 function vJustify(align: SlotAlign): string {
@@ -1090,30 +1187,120 @@ function RulesBody({ text }: { text: string }) {
             minHeight: items.length === 0 ? "0.7em" : undefined,
           }}
         >
-          {items.map((it, i) =>
-            it.t === "m" ? (
-              <i
-                key={i}
-                aria-hidden
-                className={cn("ms ms-cost ms-shadow", `ms-${it.suffix}`)}
-                style={{ fontSize: "0.92em" }}
-              />
-            ) : (
-              <span
-                key={i}
-                style={
-                  it.em
-                    ? {
-                        fontStyle: "italic",
-                        opacity: it.em === "reminder" ? 0.7 : 1,
-                      }
-                    : undefined
-                }
-              >
-                {it.v}
-              </span>
-            ),
-          )}
+          {groupTightRuns(items).map((run, ri) => (
+            <span
+              key={ri}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {run.map((it, i) => (
+                <RulesRunItem
+                  key={i}
+                  item={it}
+                  pipGapBefore={i > 0 && it.t === "m" && run[i - 1].t === "m"}
+                />
+              ))}
+            </span>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// One item inside an unbreakable run. Inline pips size so the visible disc is
+// 0.92em (mana-font's 1.3em disc ÷ the 0.708em font), matching the bake's
+// ManaGem; reminder/ability emphasis is italic at full ink, like print.
+function RulesRunItem({
+  item,
+  pipGapBefore,
+}: {
+  item: RulesItem;
+  pipGapBefore: boolean;
+}) {
+  if (item.t === "m") {
+    return (
+      <i
+        aria-hidden
+        className={cn("ms ms-cost ms-shadow", `ms-${item.suffix}`)}
+        style={{
+          fontSize: `${(0.92 / MS_COST_DISC_EM).toFixed(4)}em`,
+          ...(pipGapBefore ? { marginLeft: "0.08em" } : {}),
+        }}
+      />
+    );
+  }
+  return (
+    <span style={item.em ? { fontStyle: "italic" } : undefined}>{item.v}</span>
+  );
+}
+
+// LoyaltyRows — printed-planeswalker ability rows: a loyalty-cost badge in the
+// left rail + the ability text, alternating translucent row shading. Static
+// abilities (no leading cost) render unbadged. Mirrors LoyaltyRowsBake.
+function LoyaltyRows({
+  slot,
+  rows,
+  abilities,
+  sizePct,
+}: {
+  slot: TextSlot;
+  rows: NonNullable<FrameProfile["loyaltyRows"]>;
+  abilities: LoyaltyAbility[];
+  sizePct: number;
+}) {
+  return (
+    <div
+      style={{
+        ...rectStyle(slot.rect),
+        zIndex: 20,
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        overflow: "hidden",
+        fontFamily: CARD_FONT,
+        fontSize: cqw(sizePct),
+        lineHeight: slot.lineHeight ?? 1.25,
+        color: slot.colorHex,
+        borderRadius: "1.2cqw",
+      }}
+    >
+      {abilities.map((ab, i) => (
+        <div
+          key={i}
+          style={{
+            display: "flex",
+            flex: 1,
+            alignItems: "center",
+            background: i % 2 === 0 ? rows.stripeAHex : rows.stripeBHex,
+            padding: `${cqw(sizePct * 0.22)} ${cqw(sizePct * 0.4)}`,
+          }}
+        >
+          <div
+            style={{
+              flexShrink: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: cqw(sizePct * 2.3),
+              height: cqw(sizePct * 1.5),
+              marginRight: cqw(sizePct * 0.5),
+              borderRadius: cqw(sizePct * 0.35),
+              background: ab.cost ? rows.badgeFillHex : "transparent",
+              color: rows.badgeTextHex,
+              fontFamily: DISPLAY_FONT,
+              fontSize: cqw(sizePct * 0.92),
+              fontWeight: 700,
+            }}
+          >
+            {ab.cost ?? ""}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <RulesBody text={ab.text} />
+          </div>
         </div>
       ))}
     </div>

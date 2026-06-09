@@ -58,19 +58,34 @@ const KEYRUNE_FONT_PATH = path.join(
   "keyrune.ttf",
 );
 
-// CardDisplay — the title/type/footer/stat face: an OFL Goudy-derived display
-// serif (Sorts Mill Goudy) vendored in public/fonts, standing in for the
-// proprietary Beleren. Read with the same process.cwd()+literal-segments pattern
-// as the node_modules fonts so @vercel/nft bundles it into the function.
+// CardDisplay — the title/type/footer/stat face: Beleren Bold, the face real
+// cards use, vendored in public/fonts from the same non-commercial
+// Full-Magic-Pack the frame trade dress comes from (see 12_CREATION_AUDIT.md).
+// The family name + this path are the swap contract. Read with the same
+// process.cwd()+literal-segments pattern as the node_modules fonts so
+// @vercel/nft bundles it into the function.
 const DISPLAY_FONT_PATH = path.join(
   process.cwd(),
   "public",
   "fonts",
-  "SortsMillGoudy-Regular.ttf",
+  "Beleren-Bold.ttf",
+);
+
+// MPlantin Italic — the real italic master for flavor/reminder text. Satori
+// has no synthetic italics, so without this the bake would render italic runs
+// upright (or the browser-synthesized oblique wouldn't match the PNG).
+const MPLANTIN_ITALIC_FONT_PATH = path.join(
+  process.cwd(),
+  "public",
+  "fonts",
+  "mplantin-italic.ttf",
 );
 
 export const MANA_FONT_BYTES: Buffer = fs.readFileSync(MANA_FONT_PATH);
 export const MPLANTIN_FONT_BYTES: Buffer = fs.readFileSync(MPLANTIN_FONT_PATH);
+export const MPLANTIN_ITALIC_FONT_BYTES: Buffer = fs.readFileSync(
+  MPLANTIN_ITALIC_FONT_PATH,
+);
 export const KEYRUNE_FONT_BYTES: Buffer = fs.readFileSync(KEYRUNE_FONT_PATH);
 export const DISPLAY_FONT_BYTES: Buffer = fs.readFileSync(DISPLAY_FONT_PATH);
 
@@ -155,3 +170,41 @@ export function getManaCodepoint(suffix: string): string | null {
  * users can pick a real set.
  */
 export const KEYRUNE_DEFAULT_GLYPH: string = String.fromCodePoint(0xe684);
+
+// ---------------------------------------------------------------------------
+// Keyrune codepoints — same idea as the mana map: parse keyrune.css so the
+// Satori bake renders the SAME set glyph the preview's `ss ss-{code}` class
+// shows, instead of the generic default mark. Keyrune uses single-colon
+// `:before` selectors (vs mana.css's `::before`), so the regex accepts both.
+// ---------------------------------------------------------------------------
+
+const KEYRUNE_CSS_PATH = path.join(
+  process.cwd(),
+  "node_modules",
+  "keyrune",
+  "css",
+  "keyrune.css",
+);
+
+function buildKeyruneCodepointMap(): Map<string, string> {
+  const css = fs.readFileSync(KEYRUNE_CSS_PATH, "utf8");
+  const map = new Map<string, string>();
+  const blockPattern = /([^{}]+)\{[^}]*content:\s*"(\\[\da-f]+)"[^}]*\}/gi;
+  for (const block of css.matchAll(blockPattern)) {
+    const codepoint = String.fromCodePoint(parseInt(block[2].slice(1), 16));
+    for (const sel of block[1].split(",")) {
+      const match = sel.match(/\.ss-([\w-]+):{1,2}before/);
+      if (match) map.set(match[1].toLowerCase(), codepoint);
+    }
+  }
+  return map;
+}
+
+const KEYRUNE_CODEPOINTS = buildKeyruneCodepointMap();
+
+/** Resolve a Keyrune set code ("dom", "mh3", "ss-dom" also tolerated) to the
+ *  font's glyph, or null when unknown — callers fall back to the default. */
+export function getKeyruneCodepoint(setCode: string): string | null {
+  const key = setCode.toLowerCase().replace(/^ss-/, "");
+  return KEYRUNE_CODEPOINTS.get(key) ?? null;
+}

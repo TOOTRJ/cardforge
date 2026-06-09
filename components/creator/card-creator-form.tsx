@@ -45,6 +45,8 @@ import {
 import { Stepper, type StepperStep } from "@/components/ui/stepper";
 import { CardPreview } from "@/components/cards/card-preview";
 import { ManaCostPicker } from "@/components/cards/mana-cost-picker";
+import { tokenize } from "@/components/cards/mana-cost-glyphs";
+import { RulesSymbolToolbar } from "@/components/creator/rules-symbol-toolbar";
 import { ArtUploader } from "@/components/creator/art-uploader";
 import { DeleteCardDialog } from "@/components/creator/delete-card-dialog";
 import {
@@ -106,6 +108,7 @@ import {
   stepIndexForField,
   stepLabel,
   visibleSteps,
+  STEP_ORDER,
   type StepContext,
   type StepKey,
 } from "@/lib/creator/steps";
@@ -336,6 +339,10 @@ function backFaceFormValuesFrom(
   };
 }
 
+// One shared key: a guest's /preview draft survives sign-up and reappears on
+// /create. Versioned so a future FormValues shape change can invalidate.
+const CARD_DRAFT_STORAGE_KEY = "spellwright:card-draft:v1";
+
 function defaultValuesFor(
   card: Card | null | undefined,
   gameSystems: GameSystem[],
@@ -432,6 +439,33 @@ function parseSubtypes(text: string): string[] {
     .slice(0, 10);
 }
 
+// Colors actually present in a mana cost — the printed rule for a card's
+// color. Drives the "match mana cost" auto color identity: solid pips, both
+// hybrid halves, and phyrexian pips count; generic/X/snow/tap do not.
+const COST_COLOR_NAME: Record<string, ColorIdentity> = {
+  W: "white",
+  U: "blue",
+  B: "black",
+  R: "red",
+  G: "green",
+};
+
+function deriveColorIdentity(cost: string): ColorIdentity[] {
+  const found: ColorIdentity[] = [];
+  const add = (key: string) => {
+    const name = COST_COLOR_NAME[key];
+    if (name && !found.includes(name)) found.push(name);
+  };
+  for (const token of tokenize(cost)) {
+    if (token.kind === "solid") add(token.color);
+    else if (token.kind === "hybrid") {
+      add(token.left);
+      add(token.right);
+    } else if (token.kind === "phyrexian") add(token.color);
+  }
+  return found;
+}
+
 function parseTags(text: string): string[] {
   // Mirror cardTagsSchema's normalization so the field preview matches what
   // actually gets saved (lowercase, alphanumeric + spaces/hyphens, collapsed).
@@ -468,7 +502,16 @@ export function CardCreatorForm({
   const [serverError, setServerError] = useState<string | null>(null);
   // Active step index into the dynamic `steps` list (see below). Clamped on
   // read so it stays valid when the visible steps shrink (e.g. a DFC is removed).
-  const [current, setCurrent] = useState(0);
+  const [current, setCurrent] = useState(() => {
+    // The create→edit redirect carries ?step=<key> so saving doesn't bounce
+    // the user back to the Frame step. Resolved against the full step order;
+    // visibleSteps clamps the index if the step isn't visible for this card.
+    if (typeof window === "undefined") return 0;
+    const want = new URLSearchParams(window.location.search).get("step");
+    if (!want) return 0;
+    const i = STEP_ORDER.indexOf(want as StepKey);
+    return i >= 0 ? i : 0;
+  });
   // Stable handle to the latest step-navigation fn, so the once-registered
   // custom-event listeners (hero / command palette) always call current logic.
   const goToStepKeyRef = useRef<(key: StepKey) => void>(() => {});
@@ -528,24 +571,95 @@ export function CardCreatorForm({
     handleSubmit,
     setValue,
     setError,
+    getValues,
     control,
     reset,
-    trigger,
     formState: { errors, isDirty },
   } = useForm<FormValues>({
     defaultValues: defaults,
     mode: "onSubmit",
   });
 
-  // Reset when defaults change (e.g. navigating between drafts).
+  // Reset only when the SAVED card actually changes (navigating between
+  // cards, or fresh server truth after our own save) — never on mere prop
+  // identity churn. router.refresh() re-renders the page with brand-new
+  // card/gameSystems/templates objects every time; resetting on those wiped
+  // live edits "randomly" while users were typing.
+  const resetKey = card ? `${card.id}:${card.updated_at}` : "new";
+  const lastResetKey = useRef(resetKey);
   useEffect(() => {
+    if (lastResetKey.current === resetKey) return;
+    lastResetKey.current = resetKey;
     reset(defaults);
-  }, [defaults, reset]);
+  }, [resetKey, defaults, reset]);
+
+  // ----- Save model: explicit Save button + automatic LOCAL draft. -----
+  // The server save is deliberate (it bakes the public PNG and carries
+  // publish semantics), but unsaved work should never be lost: in create/
+  // preview mode the form persists a debounced draft to localStorage, restores
+  // it on the next visit (including a guest signing in and landing on
+  // /create), and clears it on a successful save. Edit mode trusts the server
+  // copy and instead warns before unloading with unsaved changes.
+  const isDraftMode = mode === "create" && !card;
+  const draftRestoredRef = useRef(false);
+  useEffect(() => {
+    if (!isDraftMode || draftRestoredRef.current) return;
+    draftRestoredRef.current = true;
+    try {
+      const raw = window.localStorage.getItem(CARD_DRAFT_STORAGE_KEY);
+      if (!raw) return;
+      const draft = JSON.parse(raw) as Partial<FormValues>;
+      if (!draft || typeof draft !== "object") return;
+      reset({ ...defaults, ...draft });
+      toast.info("Restored your unsaved draft.", {
+        action: {
+          label: "Start fresh",
+          onClick: () => {
+            window.localStorage.removeItem(CARD_DRAFT_STORAGE_KEY);
+            reset(defaults);
+          },
+        },
+      });
+    } catch {
+      // Corrupt/blocked storage — start clean.
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDraftMode]);
 
   // useWatch is the React Compiler-friendly subscription variant of watch().
   // We feed it the same defaults useForm has, so RHF always populates every
   // field; the cast just lifts useWatch's DeepPartial<> back to FormValues.
   const watched = useWatch({ control, defaultValue: defaults }) as FormValues;
+
+  // Debounced draft writes — every change while dirty, 800ms after the last.
+  useEffect(() => {
+    if (!isDraftMode || !isDirty) return;
+    const timer = window.setTimeout(() => {
+      try {
+        window.localStorage.setItem(
+          CARD_DRAFT_STORAGE_KEY,
+          JSON.stringify(watched),
+        );
+      } catch {
+        // Storage full/blocked — the explicit Save path still works.
+      }
+    }, 800);
+    return () => window.clearTimeout(timer);
+  }, [isDraftMode, isDirty, watched]);
+
+  // Native "leave site?" guard whenever there are unsaved changes. Draft mode
+  // is covered by localStorage, but edit mode has no local copy.
+  const isDirtyRef = useRef(isDirty);
+  useEffect(() => {
+    isDirtyRef.current = isDirty;
+  }, [isDirty]);
+  useEffect(() => {
+    const handler = (event: BeforeUnloadEvent) => {
+      if (isDirtyRef.current) event.preventDefault();
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, []);
 
   // The Adventure frame repurposes the back-face content as the adventure spell
   // (rendered inline on the card's left page, not as a flippable face), so the
@@ -581,13 +695,11 @@ export function CardCreatorForm({
     goToStepKeyRef.current = goToStepKey;
   });
   const goBack = () => goToIndex(idx - 1);
-  // Validate only the current step's fields before advancing. Most fields have
-  // no client rules (server stays authoritative); only title / back_face.title
-  // can block, so the flow rarely interrupts.
-  const goNext = async () => {
-    const ok = await trigger(activeStep.fields);
-    if (ok) goToIndex(idx + 1);
-  };
+  // Navigation never blocks: a guest exploring the flow shouldn't have to
+  // invent a title to see step 3. Validation runs at save — submit errors
+  // route to the offending step (see onSubmit's error handling) and light the
+  // step marker red.
+  const goNext = () => goToIndex(idx + 1);
 
   // Which steps own a field that currently has an error — drives the step
   // marker's error state. Routes nested back_face.* errors to their root.
@@ -608,6 +720,56 @@ export function CardCreatorForm({
     description: step.description,
     hasError: stepsWithErrors.has(step.key),
   }));
+
+  // "Match mana cost" — auto-derive color identity from the cost so picking
+  // {R}{R} can never produce a colorless frame by accident. Any manual chip
+  // edit or imported identity turns the automation off.
+  const [autoColors, setAutoColors] = useState(mode === "create");
+  const derivedColors = useMemo(
+    () => deriveColorIdentity(watched.cost ?? ""),
+    [watched.cost],
+  );
+  useEffect(() => {
+    if (!autoColors) return;
+    // A cost with no colored pips says nothing about identity (lands,
+    // artifacts) — leave whatever the user picked.
+    if (derivedColors.length === 0) return;
+    const current = watched.color_identity;
+    const same =
+      current.length === derivedColors.length &&
+      derivedColors.every((c) => current.includes(c));
+    if (!same) {
+      setValue("color_identity", derivedColors, { shouldDirty: true });
+    }
+  }, [autoColors, derivedColors, watched.color_identity, setValue]);
+
+  // Caret-preserving symbol insertion for the rules textareas (front + back).
+  // register() is hoisted so the field ref can be merged with a local DOM ref.
+  const rulesTextField = register("rules_text");
+  const backRulesTextField = register("back_face.rules_text");
+  const rulesTextRef = useRef<HTMLTextAreaElement | null>(null);
+  const backRulesTextRef = useRef<HTMLTextAreaElement | null>(null);
+  const insertSymbol = (
+    field: "rules_text" | "back_face.rules_text",
+    ref: React.MutableRefObject<HTMLTextAreaElement | null>,
+    token: string,
+  ) => {
+    const el = ref.current;
+    const current =
+      field === "rules_text"
+        ? getValues("rules_text") ?? ""
+        : getValues("back_face.rules_text") ?? "";
+    const start = el?.selectionStart ?? current.length;
+    const end = el?.selectionEnd ?? current.length;
+    const next = current.slice(0, start) + token + current.slice(end);
+    setValue(field, next, { shouldDirty: true });
+    requestAnimationFrame(() => {
+      if (!el) return;
+      el.focus();
+      const caret = start + token.length;
+      el.setSelectionRange(caret, caret);
+    });
+  };
 
   // Slice of the live form state the AI panel sends as context. Stripping
   // empty strings keeps the prompt tight.
@@ -661,6 +823,7 @@ export function CardCreatorForm({
     setIfPresent("toughness", patch.toughness);
 
     if (patch.color_identity) {
+      setAutoColors(false);
       setValue(
         "color_identity",
         Array.from(patch.color_identity) as ColorIdentity[],
@@ -699,6 +862,7 @@ export function CardCreatorForm({
     setIfPresent("artist_credit", patch.artist_credit);
 
     if (patch.color_identity) {
+      setAutoColors(false);
       setValue(
         "color_identity",
         Array.from(patch.color_identity) as ColorIdentity[],
@@ -806,6 +970,7 @@ export function CardCreatorForm({
       setValue("title", card.title, { shouldDirty: true });
       setValue("cost", card.cost, { shouldDirty: true });
       setValue("card_type", card.card_type, { shouldDirty: true });
+      setAutoColors(false);
       setValue("supertype", card.supertype ?? "", { shouldDirty: true });
       setValue("subtypes_text", (card.subtypes ?? []).join(", "), {
         shouldDirty: true,
@@ -946,7 +1111,15 @@ export function CardCreatorForm({
           return;
         }
         toast.success(`Saved “${payload.title}”`);
-        router.replace(`/card/${result.slug}/edit`);
+        try {
+          window.localStorage.removeItem(CARD_DRAFT_STORAGE_KEY);
+        } catch {
+          // best-effort
+        }
+        // Land on the same step in edit mode instead of resetting to Frame.
+        router.replace(
+          `/card/${result.slug}/edit?step=${activeStep?.key ?? "publish"}`,
+        );
         router.refresh();
         return;
       }
@@ -962,6 +1135,9 @@ export function CardCreatorForm({
         return;
       }
       toast.success("Changes saved.");
+      // Mark clean right away (keeping the on-screen values); the keyed reset
+      // swaps in server truth when the refresh lands.
+      reset(undefined, { keepValues: true });
       // If the slug changed, follow it.
       if (result.slug !== card.slug) {
         router.replace(`/card/${result.slug}/edit`);
@@ -1104,8 +1280,8 @@ export function CardCreatorForm({
                     Generate with AI
                   </span>
                   <span className="text-[11px] text-muted">
-                    GPT-4o drafts the card; an OpenAI image model paints original
-                    art. Capped at 10 random cards per day.
+                    AI drafts the card and an image model paints original art.
+                    Capped at 10 random cards per day.
                   </span>
                 </div>
                 <Button
@@ -1294,43 +1470,6 @@ export function CardCreatorForm({
               </FieldGroup>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FieldGroup
-                label="Supertype"
-                helper="Optional — e.g. Legendary, Basic."
-              >
-                <input
-                  {...register("supertype")}
-                  placeholder="Legendary"
-                  className={inputClass(Boolean(errors.supertype))}
-                  autoComplete="off"
-                />
-              </FieldGroup>
-              <FieldGroup
-                label="Subtypes"
-                helper="Comma-separated. Up to 10."
-              >
-                <input
-                  {...register("subtypes_text")}
-                  placeholder="Dragon, Elder"
-                  className={inputClass(Boolean(errors.subtypes_text))}
-                  autoComplete="off"
-                />
-              </FieldGroup>
-            </div>
-
-            <FieldGroup
-              label="Tags"
-              helper="Comma-separated keywords for discovery (e.g. dragons, tokens). Up to 12."
-            >
-              <input
-                {...register("tags_text")}
-                placeholder="dragons, tokens, tribal"
-                className={inputClass(Boolean(errors.tags_text))}
-                autoComplete="off"
-              />
-            </FieldGroup>
-
             {/* Rarity. (The old "Template" select was removed: template_id is
                 a vestigial DB field — no renderer reads it; the visual layout is
                 driven entirely by the Frame picker, and stat visibility by card
@@ -1352,22 +1491,85 @@ export function CardCreatorForm({
               />
             </FieldGroup>
 
-            <FieldGroup label="Color identity" helper="One or more.">
-              <Controller
-                control={control}
-                name="color_identity"
-                render={({ field }) => (
-                  <ChipGroup
-                    multiSelect
-                    ariaLabel="Color identity"
-                    layout="wrap"
-                    value={field.value}
-                    onChange={(next) => field.onChange(next)}
-                    options={COLOR_IDENTITY_OPTIONS}
+            {/* Quick path stops here: title + cost + type + rarity make a real
+                card (color identity follows the cost automatically). Everything
+                below is detail control. */}
+            <MoreOptions summary="More options — supertype, subtypes, colors, tags">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FieldGroup
+                  label="Supertype"
+                  helper="Optional — e.g. Legendary, Basic."
+                >
+                  <input
+                    {...register("supertype")}
+                    placeholder="Legendary"
+                    className={inputClass(Boolean(errors.supertype))}
+                    autoComplete="off"
                   />
-                )}
-              />
-            </FieldGroup>
+                </FieldGroup>
+                <FieldGroup
+                  label="Subtypes"
+                  helper="Comma-separated. Up to 10."
+                >
+                  <input
+                    {...register("subtypes_text")}
+                    placeholder="Dragon, Elder"
+                    className={inputClass(Boolean(errors.subtypes_text))}
+                    autoComplete="off"
+                  />
+                </FieldGroup>
+              </div>
+
+              <FieldGroup
+                label="Color identity"
+                helper={
+                  autoColors
+                    ? "Following the mana cost — edit the chips to take over."
+                    : "Drives the frame color. One or more."
+                }
+              >
+                <div className="flex flex-col gap-2">
+                  <Controller
+                    control={control}
+                    name="color_identity"
+                    render={({ field }) => (
+                      <ChipGroup
+                        multiSelect
+                        ariaLabel="Color identity"
+                        layout="wrap"
+                        value={field.value}
+                        onChange={(next) => {
+                          setAutoColors(false);
+                          field.onChange(next);
+                        }}
+                        options={COLOR_IDENTITY_OPTIONS}
+                      />
+                    )}
+                  />
+                  <label className="flex w-fit cursor-pointer items-center gap-2 text-xs text-muted">
+                    <input
+                      type="checkbox"
+                      checked={autoColors}
+                      onChange={(event) => setAutoColors(event.target.checked)}
+                      className="h-3.5 w-3.5 accent-[var(--color-primary)]"
+                    />
+                    Match mana cost automatically
+                  </label>
+                </div>
+              </FieldGroup>
+
+              <FieldGroup
+                label="Tags"
+                helper="Comma-separated keywords for discovery (e.g. dragons, tokens). Up to 12."
+              >
+                <input
+                  {...register("tags_text")}
+                  placeholder="dragons, tokens, tribal"
+                  className={inputClass(Boolean(errors.tags_text))}
+                  autoComplete="off"
+                />
+              </FieldGroup>
+            </MoreOptions>
             </>
           ) : null}
 
@@ -1377,14 +1579,25 @@ export function CardCreatorForm({
             <FieldGroup
               label="Rules text"
               error={errors.rules_text?.message}
-              helper="Up to 4000 characters."
+              helper="Symbols render as real pips on the card — click one above or type the {T} / {2} / {W/U} code. Up to 4000 characters."
             >
-              <textarea
-                {...register("rules_text")}
-                placeholder="Flying. Whenever Emberbound Wyrm enters the battlefield, draw a card."
-                rows={6}
-                className={textareaClass(Boolean(errors.rules_text))}
-              />
+              <div className="flex flex-col gap-2">
+                <RulesSymbolToolbar
+                  onInsert={(token) =>
+                    insertSymbol("rules_text", rulesTextRef, token)
+                  }
+                />
+                <textarea
+                  {...rulesTextField}
+                  ref={(el) => {
+                    rulesTextField.ref(el);
+                    rulesTextRef.current = el;
+                  }}
+                  placeholder="{T}: Add {G}. Whenever this creature attacks, draw a card."
+                  rows={6}
+                  className={textareaClass(Boolean(errors.rules_text))}
+                />
+              </div>
             </FieldGroup>
 
             <FieldGroup
@@ -1463,18 +1676,6 @@ export function CardCreatorForm({
           {/* ----- Art step ----- */}
           {stepKey === "art" ? (
             <>
-            <FieldGroup
-              label="Artist credit"
-              helper="Who made the artwork? Yourself, a public-domain artist, or a licensed source."
-            >
-              <input
-                {...register("artist_credit")}
-                placeholder="Anya Vale"
-                className={inputClass(Boolean(errors.artist_credit))}
-                autoComplete="off"
-              />
-            </FieldGroup>
-
             <Controller
               control={control}
               name="art_url"
@@ -1500,6 +1701,20 @@ export function CardCreatorForm({
                 />
               )}
             />
+
+            <MoreOptions summary="More options — artist credit">
+              <FieldGroup
+                label="Artist credit"
+                helper="Who made the artwork? Yourself, a public-domain artist, or a licensed source."
+              >
+                <input
+                  {...register("artist_credit")}
+                  placeholder="Anya Vale"
+                  className={inputClass(Boolean(errors.artist_credit))}
+                  autoComplete="off"
+                />
+              </FieldGroup>
+            </MoreOptions>
             </>
           ) : null}
 
@@ -1610,16 +1825,31 @@ export function CardCreatorForm({
                 </div>
 
                 <FieldGroup label="Rules text">
-                  <textarea
-                    {...register("back_face.rules_text")}
-                    placeholder={
-                      isAdventureFrame
-                        ? "Stomp deals 2 damage to any target. (The adventure's rules.)"
-                        : "Flying. Whenever the back face deals damage…"
-                    }
-                    rows={4}
-                    className={textareaClass(false)}
-                  />
+                  <div className="flex flex-col gap-2">
+                    <RulesSymbolToolbar
+                      onInsert={(token) =>
+                        insertSymbol(
+                          "back_face.rules_text",
+                          backRulesTextRef,
+                          token,
+                        )
+                      }
+                    />
+                    <textarea
+                      {...backRulesTextField}
+                      ref={(el) => {
+                        backRulesTextField.ref(el);
+                        backRulesTextRef.current = el;
+                      }}
+                      placeholder={
+                        isAdventureFrame
+                          ? "Stomp deals 2 damage to any target. (The adventure's rules.)"
+                          : "Flying. Whenever the back face deals damage…"
+                      }
+                      rows={4}
+                      className={textareaClass(false)}
+                    />
+                  </div>
                 </FieldGroup>
 
                 {/* Flavor, P/T, and art are front/DFC-only — an adventure spell
@@ -1866,7 +2096,8 @@ export function CardCreatorForm({
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
             {isDirty ? (
               <Badge variant="accent" className="gap-1.5">
-                <Sparkles className="h-3 w-3" aria-hidden /> Unsaved changes
+                <Sparkles className="h-3 w-3" aria-hidden />
+                {isDraftMode ? "Draft kept on this device" : "Unsaved changes"}
               </Badge>
             ) : (
               <Badge variant="default">Up to date</Badge>
@@ -1969,6 +2200,26 @@ export function CardCreatorForm({
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
+
+// Per-step "More options" collapsible — the Detailed-create surface. Quick
+// creators never need to open it; everything inside persists like any other
+// field. Mirrors the Publish step's Advanced <details> styling.
+function MoreOptions({
+  summary,
+  children,
+}: {
+  summary: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <details className="rounded-lg border border-border/60 bg-elevated/30">
+      <summary className="cursor-pointer list-none px-4 py-2 text-xs font-semibold uppercase tracking-wider text-subtle transition-colors hover:text-muted [&::-webkit-details-marker]:hidden">
+        {summary}
+      </summary>
+      <div className="flex flex-col gap-4 px-4 pb-4 pt-2">{children}</div>
+    </details>
+  );
+}
 
 function FieldGroup({
   label,

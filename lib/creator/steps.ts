@@ -159,6 +159,10 @@ const STEP_DEFS: StepDef[] = [
 // ---------------------------------------------------------------------------
 
 /** The ordered list of steps visible for the given context. */
+/** The fixed step order — visibility filters this list, never reorders it.
+ *  Useful for resolving a step key from a URL before context is known. */
+export const STEP_ORDER: StepKey[] = STEP_DEFS.map((s) => s.key);
+
 export function visibleSteps(ctx: StepContext): StepDef[] {
   return STEP_DEFS.filter((step) => step.isVisible(ctx));
 }
