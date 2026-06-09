@@ -5,10 +5,13 @@ import { PageHeader } from "@/components/layout/page-header";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Download } from "lucide-react";
 import { ProfileForm } from "@/components/auth/profile-form";
 import { ProfileMediaUploader } from "@/components/auth/profile-media-uploader";
 import { PinnedCardsPicker } from "@/components/auth/pinned-cards-picker";
 import { UsagePanel } from "@/components/settings/usage-panel";
+import { DeleteAccountDialog } from "@/components/settings/delete-account-dialog";
 import { BillingPanel } from "@/components/settings/billing-panel";
 import { BillingReturnToast } from "@/components/billing/billing-return-toast";
 import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
@@ -194,6 +197,47 @@ export default async function SettingsPage() {
           <Suspense fallback={<UsagePanelSkeleton />}>
             <UsagePanel />
           </Suspense>
+        </SurfaceCard>
+
+        <SurfaceCard className="grid gap-6 p-6 sm:grid-cols-[1fr_2fr]">
+          <div className="flex flex-col gap-1">
+            <h3 className="font-display text-lg font-semibold text-foreground">
+              Your data &amp; account
+            </h3>
+            <p className="text-sm leading-6 text-muted">
+              Export everything you&apos;ve created, or permanently delete your
+              account.
+            </p>
+          </div>
+          <div className="flex flex-col divide-y divide-border/60">
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-4">
+              <div className="flex flex-col gap-0.5">
+                <p className="text-sm font-medium text-foreground">
+                  Export your data
+                </p>
+                <p className="text-xs text-muted">
+                  Download your profile, cards, sets, and comments as a JSON file.
+                </p>
+              </div>
+              <Button asChild variant="secondary">
+                <a href="/api/account/export">
+                  <Download className="h-4 w-4" aria-hidden /> Download
+                </a>
+              </Button>
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-4">
+              <div className="flex flex-col gap-0.5">
+                <p className="text-sm font-medium text-foreground">
+                  Delete account
+                </p>
+                <p className="text-xs text-muted">
+                  Permanently remove your account and everything you&apos;ve made.
+                  This can&apos;t be undone.
+                </p>
+              </div>
+              <DeleteAccountDialog />
+            </div>
+          </div>
         </SurfaceCard>
       </div>
     </DashboardShell>

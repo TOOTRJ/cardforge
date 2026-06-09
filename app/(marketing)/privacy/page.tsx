@@ -97,13 +97,16 @@ export default function PrivacyPage() {
           own.
         </li>
         <li>
-          <strong>Deletion</strong> — delete individual cards, sets, or your
-          whole account. Account deletion cascades to your content
-          immediately.
+          <strong>Deletion</strong> — delete individual cards and sets any time,
+          or permanently delete your whole account from{" "}
+          <Link href="/settings">settings</Link>. Account deletion immediately
+          and irreversibly removes your profile, content, and uploaded files.
         </li>
         <li>
-          <strong>Portability</strong> — exports (PNG today; full data export
-          coming) are available from the editor.
+          <strong>Portability</strong> — download a full JSON export of your
+          account data (profile, cards, sets, comments) from{" "}
+          <Link href="/settings">settings</Link>, and export any card as PNG or
+          PDF from the editor.
         </li>
       </ul>
 
