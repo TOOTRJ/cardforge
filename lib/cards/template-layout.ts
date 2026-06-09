@@ -106,8 +106,11 @@ export type FrameProfile = {
   pt?: StatSlot;
   loyalty?: StatSlot;
   defense?: StatSlot;
-  /** Mana-cost pip size (fraction of card width), right-aligned in the title
-   *  band. Defaults to `title.sizePct`. */
+  /** Mana-cost pip size — the visual DISC DIAMETER as a fraction of card
+   *  width (MSE m15 spec: 15px on a 375px card = 0.04), right-aligned in the
+   *  title band. Defaults to `title.sizePct`. Both renderers treat this as the
+   *  disc size: the preview divides by mana-font's 1.3em disc ratio, the bake
+   *  draws the disc at exactly this size. */
   costSizePct?: number;
   /** Set-symbol size (fraction of card width), right-aligned in the type band.
    *  Defaults to `type.sizePct`. */
@@ -120,6 +123,18 @@ export type FrameProfile = {
    *  preview container's aspect ratio and the bake's render dimensions. All
    *  rect/sizePct values are then relative to the landscape card. */
   orientation?: "portrait" | "landscape";
+  /** Planeswalker ability rows. When set and the card is a planeswalker, the
+   *  rules box renders as per-ability rows — a loyalty-cost badge rail on the
+   *  left (+1 / -3 / 0) with alternating translucent row shading, exactly like
+   *  printed M15 planeswalkers — instead of the plain text body. Lines without
+   *  a leading loyalty cost (static abilities) render unbadged. */
+  loyaltyRows?: {
+    badgeFillHex: string;
+    badgeTextHex: string;
+    /** Alternating row backdrops (odd/even), translucent over the art. */
+    stripeAHex: string;
+    stripeBHex: string;
+  };
   /** Saga chapter rail. When set, the card's rules text is parsed into chapters
    *  (parseChapters in lib/cards/card-display) and rendered as stacked rows — a
    *  Roman-numeral marker badge + ability text — inside this rect, REPLACING the
@@ -200,6 +215,8 @@ const OUTLINE_SHADOW =
 // painted P/T plate via the pt/ asset set.
 const M15: FrameProfile = {
   label: "M15",
+  // MSE m15 spec: cost symbols 15px / text 14px on the 375px-wide card.
+  costSizePct: 0.04,
   artSlot: { topPct: 11.4, leftPct: 7.8, widthPct: 84.4, heightPct: 44.0 },
   title: {
     rect: { topPct: 4.6, leftPct: 8.5, widthPct: 83, heightPct: 6.0 },
@@ -218,7 +235,7 @@ const M15: FrameProfile = {
   },
   rules: {
     rect: { topPct: 63.4, leftPct: 8.5, widthPct: 83, heightPct: 28.0 },
-    sizePct: 0.03,
+    sizePct: 0.0373,
     colorHex: INK_DARK,
     vAlign: "start",
     font: "body",
@@ -268,6 +285,7 @@ const M15LAND: FrameProfile = {
 // with a black outline in the bottom-right.
 const AGCLASSIC: FrameProfile = {
   label: "Alpha (1993)",
+  costSizePct: 0.042,
   artSlot: { topPct: 9.5, leftPct: 10.6, widthPct: 78.8, heightPct: 44.8 },
   title: {
     rect: { topPct: 3.6, leftPct: 12, widthPct: 76, heightPct: 4.8 },
@@ -285,7 +303,7 @@ const AGCLASSIC: FrameProfile = {
   },
   rules: {
     rect: { topPct: 61.6, leftPct: 12.5, widthPct: 75, heightPct: 26.5 },
-    sizePct: 0.029,
+    sizePct: 0.036,
     colorHex: INK_DARK,
     vAlign: "start",
     font: "body",
@@ -299,12 +317,13 @@ const AGCLASSIC: FrameProfile = {
     letterSpacingEm: 0.05,
     font: "display",
   },
+  // Official 1993 cards print P/T in dark ink on the tan frame strip — not
+  // the white-with-outline treatment modern over-art stats use.
   pt: {
     rect: { topPct: 88.4, leftPct: 74, widthPct: 19, heightPct: 5.8 },
     sizePct: 0.04,
-    colorHex: "#ffffff",
+    colorHex: INK_DARK,
     weight: 700,
-    shadowCss: OUTLINE_SHADOW,
   },
 };
 
@@ -333,12 +352,20 @@ const M15PW: FrameProfile = {
   },
   rules: {
     rect: { topPct: 64.0, leftPct: 9, widthPct: 78, heightPct: 25.5 },
-    sizePct: 0.029,
+    sizePct: 0.031,
     colorHex: INK_DARK,
     vAlign: "start",
     font: "body",
     lineHeight: 1.3,
     backdropHex: "rgba(244,238,226,0.72)",
+  },
+  // Printed planeswalkers stripe each ability row and badge its loyalty cost
+  // in the left rail; parseLoyaltyAbilities supplies the rows.
+  loyaltyRows: {
+    badgeFillHex: "#141008",
+    badgeTextHex: "#f5f0e4",
+    stripeAHex: "rgba(244,238,226,0.78)",
+    stripeBHex: "rgba(229,221,202,0.78)",
   },
   footer: {
     rect: { topPct: 93.4, leftPct: 9, widthPct: 70, heightPct: 3.0 },
@@ -386,7 +413,7 @@ const M15TOKEN: FrameProfile = {
   },
   rules: {
     rect: { topPct: 60.5, leftPct: 12, widthPct: 76, heightPct: 12 },
-    sizePct: 0.028,
+    sizePct: 0.031,
     colorHex: INK_LIGHT,
     vAlign: "center",
     font: "body",
@@ -455,7 +482,7 @@ const ALPHATOKEN: FrameProfile = {
   },
   rules: {
     rect: { topPct: 49.0, leftPct: 12, widthPct: 76, heightPct: 11 },
-    sizePct: 0.027,
+    sizePct: 0.03,
     colorHex: INK_LIGHT,
     vAlign: "center",
     font: "body",
@@ -506,7 +533,7 @@ const BATTLE: FrameProfile = {
   },
   rules: {
     rect: { topPct: 67.5, leftPct: 13, widthPct: 80, heightPct: 25 },
-    sizePct: 0.026,
+    sizePct: 0.028,
     colorHex: INK_DARK,
     vAlign: "start",
     font: "body",
@@ -528,6 +555,7 @@ const BATTLE: FrameProfile = {
 // magic-modules.mse-include/cards/375 m15 saga cut.
 const SAGA: FrameProfile = {
   label: "Saga",
+  costSizePct: 0.04,
   artSlot: { topPct: 11.5, leftPct: 49.5, widthPct: 43, heightPct: 73 },
   title: {
     rect: { topPct: 4, leftPct: 9, widthPct: 82, heightPct: 7 },
@@ -577,7 +605,7 @@ const ADVENTURE: FrameProfile = {
   // Creature rules → RIGHT page (MSE text left 190, top 332, width 143 → 481).
   rules: {
     rect: { topPct: 63.5, leftPct: 50.7, widthPct: 38.2, heightPct: 28.5 },
-    sizePct: 0.028,
+    sizePct: 0.031,
     colorHex: INK_DARK,
     vAlign: "start",
     font: "body",
@@ -605,7 +633,7 @@ const ADVENTURE: FrameProfile = {
     // Adventure rules — MSE text 2 (left 27, top 375, width 143 → 481).
     rules: {
       rect: { topPct: 71.6, leftPct: 7.2, widthPct: 38.1, heightPct: 20.3 },
-      sizePct: 0.026,
+      sizePct: 0.029,
       colorHex: INK_DARK,
       vAlign: "start",
       font: "body",
@@ -624,6 +652,7 @@ const ADVENTURE: FrameProfile = {
 // Geometry is the MSE 375×523 spec / measured plates, in percent.
 const FLIP: FrameProfile = {
   label: "Flip",
+  costSizePct: 0.04,
   artSlot: { topPct: 31.0, leftPct: 7.7, widthPct: 84.3, heightPct: 35.2 },
   title: {
     rect: { topPct: 5.7, leftPct: 8.5, widthPct: 82, heightPct: 4.4 },
@@ -641,7 +670,7 @@ const FLIP: FrameProfile = {
   },
   rules: {
     rect: { topPct: 11.3, leftPct: 7.7, widthPct: 84, heightPct: 12.5 },
-    sizePct: 0.026,
+    sizePct: 0.029,
     colorHex: INK_DARK,
     vAlign: "center",
     font: "body",
@@ -671,7 +700,7 @@ const FLIP: FrameProfile = {
     },
     rules: {
       rect: { topPct: 77.5, leftPct: 8.3, widthPct: 84, heightPct: 10.5 },
-      sizePct: 0.026,
+      sizePct: 0.029,
       colorHex: INK_DARK,
       vAlign: "center",
       font: "body",
@@ -714,7 +743,7 @@ const SPLIT: FrameProfile = {
   },
   rules: {
     rect: { topPct: 62.4, leftPct: 4.8, widthPct: 41.9, heightPct: 28.5 },
-    sizePct: 0.024,
+    sizePct: 0.027,
     colorHex: INK_DARK,
     vAlign: "start",
     font: "body",
@@ -740,7 +769,7 @@ const SPLIT: FrameProfile = {
     },
     rules: {
       rect: { topPct: 62.4, leftPct: 53.2, widthPct: 41.9, heightPct: 28.5 },
-      sizePct: 0.024,
+      sizePct: 0.027,
       colorHex: INK_DARK,
       vAlign: "start",
       font: "body",
@@ -776,7 +805,7 @@ const AFTERMATH: FrameProfile = {
   },
   rules: {
     rect: { topPct: 40.9, leftPct: 7.5, widthPct: 84.5, heightPct: 12.4 },
-    sizePct: 0.028,
+    sizePct: 0.031,
     colorHex: INK_DARK,
     vAlign: "start",
     font: "body",
@@ -802,7 +831,7 @@ const AFTERMATH: FrameProfile = {
     },
     rules: {
       rect: { topPct: 56.5, leftPct: 4.5, widthPct: 39, heightPct: 38 },
-      sizePct: 0.026,
+      sizePct: 0.029,
       colorHex: INK_DARK,
       vAlign: "center",
       font: "body",
@@ -846,7 +875,7 @@ function artForwardShowcase(
     },
     rules: {
       rect: { topPct: 67.6, leftPct: 8, widthPct: 84, heightPct: 24.5 },
-      sizePct: 0.027,
+      sizePct: 0.033,
       colorHex: INK_DARK,
       vAlign: "start",
       font: "body",
@@ -866,39 +895,42 @@ function artForwardShowcase(
 const AVATAR = artForwardShowcase("Avatar", INK_LIGHT);
 const BLOOMBURROW = artForwardShowcase("Bloomburrow", INK_LIGHT);
 
-// Tarkir card showcases — m15-style (name top → dark ink, art, type, textbox).
-// Dragon Wing's textbox is dark gothic (light rules); Draconic's is light
-// parchment (dark rules).
-// inkHex drives title/type/rules together: light ink on the dark Dragon-Wing
-// frame, dark ink on the light Draconic parchment. Light ink gets a soft shadow
-// so the name/type read against the busy bars.
-function tarkirCard(label: string, inkHex: string): FrameProfile {
-  const onDark = inkHex === INK_LIGHT;
-  const barInk = {
-    colorHex: inkHex,
-    ...(onDark ? { shadowCss: SHOWCASE_SHADOW } : {}),
-  };
+// Tarkir card showcases — m15-style (name top, art, type, textbox). Each slot
+// gets its own ink because the two frames invert per band: Dragon Wing's title
+// bar + textbox are dark gothic (light ink) but its TYPE bar is light silver
+// (dark ink); Draconic's title sits over dark art (light ink + shadow) while
+// its type + parchment textbox take dark ink.
+function tarkirCard(
+  label: string,
+  inks: { title: string; type: string; rules: string },
+): FrameProfile {
+  const slotInk = (hex: string) => ({
+    colorHex: hex,
+    ...(hex === INK_LIGHT ? { shadowCss: SHOWCASE_SHADOW } : {}),
+  });
   return {
     label,
+    costSizePct: 0.038,
     artSlot: { topPct: 12, leftPct: 9, widthPct: 82, heightPct: 46 },
     title: {
       rect: { topPct: 4.6, leftPct: 11, widthPct: 78, heightPct: 6 },
       sizePct: 0.044,
       weight: 600,
       font: "display",
-      ...barInk,
+      ...slotInk(inks.title),
     },
+    // Measured: the painted type band spans ~56.3–61.5% on both frames.
     type: {
-      rect: { topPct: 60, leftPct: 11, widthPct: 78, heightPct: 5 },
+      rect: { topPct: 56.6, leftPct: 11, widthPct: 78, heightPct: 4.8 },
       sizePct: 0.03,
       weight: 600,
       font: "display",
-      ...barInk,
+      ...slotInk(inks.type),
     },
     rules: {
       rect: { topPct: 66, leftPct: 9, widthPct: 82, heightPct: 26 },
-      sizePct: 0.028,
-      colorHex: inkHex,
+      sizePct: 0.033,
+      colorHex: inks.rules,
       vAlign: "start",
       font: "body",
       lineHeight: 1.3,
@@ -912,14 +944,23 @@ function tarkirCard(label: string, inkHex: string): FrameProfile {
     },
   };
 }
-const TARKIRDRAGON = tarkirCard("Dragon Wing", INK_LIGHT);
-const TARKIRDRACONIC = tarkirCard("Draconic", INK_DARK);
+const TARKIRDRAGON = tarkirCard("Dragon Wing", {
+  title: INK_LIGHT,
+  type: INK_DARK,
+  rules: INK_LIGHT,
+});
+const TARKIRDRACONIC = tarkirCard("Draconic", {
+  title: INK_DARK,
+  type: INK_DARK,
+  rules: INK_DARK,
+});
 
 // LOTR — title bar (top), CIRCULAR art window (the One Ring), type bar, textbox.
 // The artSlot is the circle's bounding box; the frame's opaque corners hide the
 // rectangular art outside the circle.
 const LOTR: FrameProfile = {
   label: "Ring",
+  costSizePct: 0.038,
   artSlot: { topPct: 13, leftPct: 14, widthPct: 72, heightPct: 45 },
   title: {
     rect: { topPct: 4.5, leftPct: 9, widthPct: 82, heightPct: 6 },
@@ -939,7 +980,7 @@ const LOTR: FrameProfile = {
   },
   rules: {
     rect: { topPct: 66, leftPct: 8.5, widthPct: 83, heightPct: 26 },
-    sizePct: 0.028,
+    sizePct: 0.033,
     colorHex: INK_DARK,
     vAlign: "start",
     font: "body",
@@ -955,23 +996,40 @@ const LOTR: FrameProfile = {
 };
 
 // LOTR Scroll — m15-ish (title top, rectangular art, type, textbox) on a scroll.
+// The scroll's ribbon + type band are light parchment in every color variant,
+// so both take dark ink (the official LTC scrolls print dark).
 const LOTRSCROLL: FrameProfile = {
   ...LOTR,
   label: "Scroll",
   artSlot: { topPct: 11.5, leftPct: 8, widthPct: 84, heightPct: 45 },
+  rules: {
+    ...LOTR.rules,
+    rect: { topPct: 65.5, leftPct: 8.5, widthPct: 83, heightPct: 21 },
+  },
   title: {
     rect: { topPct: 4.5, leftPct: 9, widthPct: 82, heightPct: 6 },
     sizePct: 0.044,
-    colorHex: INK_LIGHT,
+    colorHex: INK_DARK,
     weight: 600,
     font: "display",
-    shadowCss: SHOWCASE_SHADOW,
+  },
+  type: {
+    rect: { topPct: 59, leftPct: 9, widthPct: 82, heightPct: 5 },
+    sizePct: 0.028,
+    colorHex: INK_DARK,
+    weight: 600,
+    font: "display",
   },
 };
 
 // Borderless showcases — art fills nearly the whole card; the name + rules sit
 // on translucent panels over the art (scrim for legibility).
-function borderlessShowcase(label: string): FrameProfile {
+function borderlessShowcase(
+  label: string,
+  opts: { typeInk?: string; ptInk?: string } = {},
+): FrameProfile {
+  const typeInk = opts.typeInk ?? INK_LIGHT;
+  const ptInk = opts.ptInk ?? "#ffffff";
   return {
     label,
     artSlot: { topPct: 2.5, leftPct: 3.5, widthPct: 93, heightPct: 92 },
@@ -987,14 +1045,14 @@ function borderlessShowcase(label: string): FrameProfile {
     type: {
       rect: { topPct: 56, leftPct: 8, widthPct: 84, heightPct: 4.5 },
       sizePct: 0.026,
-      colorHex: INK_LIGHT,
+      colorHex: typeInk,
       weight: 600,
       font: "display",
-      shadowCss: OUTLINE_SHADOW,
+      ...(typeInk === INK_LIGHT ? { shadowCss: OUTLINE_SHADOW } : {}),
     },
     rules: {
       rect: { topPct: 62, leftPct: 7, widthPct: 86, heightPct: 28 },
-      sizePct: 0.027,
+      sizePct: 0.032,
       colorHex: INK_LIGHT,
       vAlign: "center",
       font: "body",
@@ -1004,14 +1062,18 @@ function borderlessShowcase(label: string): FrameProfile {
     pt: {
       rect: { topPct: 89, leftPct: 73, widthPct: 21, heightPct: 7 },
       sizePct: 0.04,
-      colorHex: "#ffffff",
+      colorHex: ptInk,
       weight: 700,
-      shadowCss: OUTLINE_SHADOW,
+      ...(ptInk === "#ffffff" ? { shadowCss: OUTLINE_SHADOW } : {}),
     },
   };
 }
 const BLOOMANIME = borderlessShowcase("Anime");
-const TARKIRGHOSTFIRE = borderlessShowcase("Ghostfire");
+// Ghostfire's type band + P/T plate are pale ice — dark ink reads on them.
+const TARKIRGHOSTFIRE = borderlessShowcase("Ghostfire", {
+  typeInk: INK_DARK,
+  ptInk: INK_DARK,
+});
 
 const PROFILES: Record<FrameTemplate, FrameProfile> = {
   m15: M15,

@@ -14,17 +14,26 @@
 // declares `display: flex`.
 
 import { ImageResponse } from "next/og";
-import { rulesFontTier, RULES_SIZE_PCT_BY_TIER } from "@/lib/cards/render-tiers";
+import { fitRulesSizePct } from "@/lib/cards/render-tiers";
 import { tokenize, tokenSuffix } from "@/components/cards/mana-cost-glyphs";
-import { tokenizeRulesText, inlineManaTintKey } from "@/lib/cards/rules-text";
+import {
+  tokenizeRulesText,
+  groupTightRuns,
+  hybridHalves,
+  inlineManaTintKey,
+  type RulesItem,
+} from "@/lib/cards/rules-text";
 import { pickFrameColorKey } from "@/components/cards/frame-layer";
 import {
   buildTypeLine,
   normalizeFrameTemplate,
   parseChapters,
+  parseSagaIntro,
+  parseLoyaltyAbilities,
   showsDefense,
   showsLoyalty,
   showsPowerToughness,
+  type LoyaltyAbility,
   type SagaChapter,
 } from "@/lib/cards/card-display";
 import {
@@ -33,6 +42,8 @@ import {
   KEYRUNE_FONT_BYTES,
   MANA_FONT_BYTES,
   MPLANTIN_FONT_BYTES,
+  MPLANTIN_ITALIC_FONT_BYTES,
+  getKeyruneCodepoint,
   getManaCodepoint,
 } from "@/lib/render/card-fonts";
 import {
@@ -171,11 +182,36 @@ function CardImage({
   const focalY = clamp(card.artPosition?.focalY ?? 0.5, 0, 1) * 100;
   const scale = clamp(card.artPosition?.scale ?? 1, 0.5, 4);
 
-  const rulesSizePct =
-    RULES_SIZE_PCT_BY_TIER[rulesFontTier(card.rulesText, card.flavorText)];
+  const aspect = layout.orientation === "landscape" ? 5 / 7 : 7 / 5;
+  // Planeswalker ability rows spend ~20% of the box on the badge rail plus
+  // per-row padding; narrow the rect handed to the fit estimate accordingly
+  // (the same correction in both renderers keeps preview == bake).
+  const usesLoyaltyRows =
+    Boolean(layout.loyaltyRows) && showsLoyalty(card.cardType);
+  const fitRect = usesLoyaltyRows
+    ? {
+        ...layout.rules.rect,
+        widthPct: layout.rules.rect.widthPct * 0.78,
+        heightPct: layout.rules.rect.heightPct * 0.88,
+      }
+    : layout.rules.rect;
+  const rulesSizePct = fitRulesSizePct({
+    rulesText: card.rulesText,
+    flavorText: card.flavorText,
+    rect: fitRect,
+    baseSizePct: layout.rules.sizePct,
+    lineHeight: layout.rules.lineHeight ?? 1.3,
+    aspect,
+  });
   const hasRulesContent = Boolean(
     card.rulesText?.trim() || card.flavorText?.trim(),
   );
+
+  // Planeswalker ability rows (badged loyalty costs, striped rows) when the
+  // frame defines them and the card actually is a planeswalker.
+  const loyaltyAbilities = usesLoyaltyRows
+    ? parseLoyaltyAbilities(card.rulesText)
+    : [];
 
   const artW = Math.round((layout.artSlot.widthPct / 100) * width);
   const artH = Math.round((layout.artSlot.heightPct / 100) * height);
@@ -322,14 +358,24 @@ function CardImage({
         />
       </Band>
 
-      {/* Rules — Saga chapter rail, otherwise the normal rules + flavor box. */}
+      {/* Rules — Saga chapter rail or planeswalker ability rows, otherwise the
+          normal rules + flavor box. */}
       {layout.chapters
         ? ChapterBake({
             slot: layout.chapters,
+            intro: parseSagaIntro(card.rulesText),
             chapters: parseChapters(card.rulesText),
             cardWidth: width,
           })
-        : (
+        : layout.loyaltyRows && loyaltyAbilities.length > 0
+          ? LoyaltyRowsBake({
+              slot: layout.rules,
+              rows: layout.loyaltyRows,
+              abilities: loyaltyAbilities,
+              sizePct: rulesSizePct,
+              cardWidth: width,
+            })
+          : (
       <div
         style={{
           ...slotBox(layout.rules.rect),
@@ -360,18 +406,11 @@ function CardImage({
           />
         ) : null}
         {card.flavorText?.trim() ? (
-          <div
-            style={{
-              display: "flex",
-              fontStyle: "italic",
-              opacity: 0.85,
-              marginTop: Math.round(width * 0.012),
-              paddingTop: Math.round(width * 0.012),
-              borderTop: `1px solid ${layout.rules.colorHex}44`,
-            }}
-          >
-            {card.flavorText}
-          </div>
+          <FlavorBake
+            text={card.flavorText}
+            cardWidth={width}
+            dividerHex={`${layout.rules.colorHex}44`}
+          />
         ) : null}
       </div>
         )}
@@ -391,6 +430,7 @@ function CardImage({
             slot: layout.secondFace,
             back: card.backFace,
             cardWidth: width,
+            aspect,
           })
         : null}
 
@@ -558,8 +598,12 @@ const MANA_GEM_BG: Record<string, string> = {
 };
 const MANA_SYMBOL_INK = "#150d08";
 
-// ManaGem — one mana pip the way it prints: a colored disc with the dark symbol
-// centered on top (mirrors mana-font's `.ms-cost`). `size` is the disc diameter.
+// ManaGem — one mana pip the way it prints: a colored disc with the dark
+// symbol centered on top (mirrors mana-font's `.ms-cost`, where the glyph is
+// 0.95em inside a 1.3em disc and `.ms-shadow` is a hard offset shadow).
+// `size` is the disc diameter. Hybrid/twobrid pips render the printed split
+// disc: a 135° two-color fill with the two half-symbols offset to the top-left
+// and bottom-right, exactly like mana-font's `::before`/`::after` halves.
 function ManaGem({
   suffix,
   size,
@@ -569,10 +613,68 @@ function ManaGem({
   size: number;
   style?: Record<string, unknown>;
 }) {
+  const halves = hybridHalves(suffix);
+  const shadow = `${-Math.max(1, Math.round(size * 0.06))}px ${Math.max(1, Math.round(size * 0.07))}px 0 #111`;
+
+  if (halves) {
+    const topCp = getManaCodepoint(halves.top);
+    const bottomCp = getManaCodepoint(halves.bottom);
+    const topBg = MANA_GEM_BG[halves.top] ?? MANA_GEM_BG.c;
+    const bottomBg = MANA_GEM_BG[halves.bottom] ?? MANA_GEM_BG.c;
+    const half = Math.round(size * 0.42);
+    return (
+      <span
+        style={{
+          display: "flex",
+          position: "relative",
+          width: size,
+          height: size,
+          borderRadius: size,
+          background: `linear-gradient(135deg, ${topBg} 50%, ${bottomBg} 50%)`,
+          boxShadow: shadow,
+          overflow: "hidden",
+          ...style,
+        }}
+      >
+        {topCp ? (
+          <span
+            style={{
+              position: "absolute",
+              top: Math.round(size * 0.07),
+              left: Math.round(size * 0.1),
+              display: "flex",
+              fontFamily: '"Mana"',
+              fontSize: half,
+              lineHeight: 1,
+              color: MANA_SYMBOL_INK,
+            }}
+          >
+            {topCp}
+          </span>
+        ) : null}
+        {bottomCp ? (
+          <span
+            style={{
+              position: "absolute",
+              top: Math.round(size * 0.5),
+              left: Math.round(size * 0.52),
+              display: "flex",
+              fontFamily: '"Mana"',
+              fontSize: half,
+              lineHeight: 1,
+              color: MANA_SYMBOL_INK,
+            }}
+          >
+            {bottomCp}
+          </span>
+        ) : null}
+      </span>
+    );
+  }
+
   const cp = getManaCodepoint(suffix);
   if (!cp) return null;
   const bg = MANA_GEM_BG[inlineManaTintKey(suffix)] ?? MANA_GEM_BG.c;
-  const shadow = Math.max(1, Math.round(size * 0.05));
   return (
     <span
       style={{
@@ -583,15 +685,16 @@ function ManaGem({
         height: size,
         borderRadius: size,
         background: bg,
-        boxShadow: `0 ${Math.max(1, Math.round(size * 0.04))}px ${shadow}px rgba(0,0,0,0.4)`,
+        boxShadow: shadow,
         ...style,
       }}
     >
       <span
         style={{
           display: "flex",
+          // mana-font: 0.95em glyph in a 1.3em disc.
           fontFamily: '"Mana"',
-          fontSize: Math.round(size * 0.66),
+          fontSize: Math.round(size * 0.73),
           lineHeight: 1,
           color: MANA_SYMBOL_INK,
         }}
@@ -611,7 +714,15 @@ function CostGlyphs({ cost, fontSize }: { cost: string; fontSize: number }) {
   if (tokens.length === 0) return <span style={{ display: "flex" }} />;
 
   return (
-    <span style={{ display: "flex", alignItems: "center", gap: 2 }}>
+    <span
+      style={{
+        display: "flex",
+        alignItems: "center",
+        // Mirrors the preview's 0.12em pip gap (scales with the disc size
+        // instead of a fixed 2px that vanished at HD resolution).
+        gap: Math.max(1, Math.round(fontSize * 0.12)),
+      }}
+    >
       {tokens.map((token, i) => {
         if (token.kind === "text") {
           return (
@@ -636,17 +747,50 @@ function CostGlyphs({ cost, fontSize }: { cost: string; fontSize: number }) {
   );
 }
 
+// One rules item inside a run — a word or an inline pip. Real cards print
+// reminder text full-ink italic (no dimming), so emphasis is italics only.
+function RulesItemBake({
+  item,
+  glyph,
+  gapBefore,
+}: {
+  item: RulesItem;
+  glyph: number;
+  gapBefore: number;
+}) {
+  if (item.t === "m") {
+    return (
+      <ManaGem
+        suffix={item.suffix}
+        size={glyph}
+        style={gapBefore ? { marginLeft: gapBefore } : undefined}
+      />
+    );
+  }
+  return (
+    <span
+      style={{
+        display: "flex",
+        fontStyle: item.em ? "italic" : "normal",
+        ...(gapBefore ? { marginLeft: gapBefore } : {}),
+      }}
+    >
+      {bakeText(item.v)}
+    </span>
+  );
+}
+
 // RulesBodyBake — Satori-side rules renderer. Consumes the SAME tokenizer the
-// preview's RulesBody uses (lib/cards/rules-text.ts), laying each paragraph out
-// as a flex-wrap row of word + inline-mana items. Inline {T}/{G} render as Mana-
-// font glyphs (tinted, like the cost pips); reminder text + ability words are
-// italicized. Word color is inherited from the rules container.
+// preview's RulesBody uses (lib/cards/rules-text.ts): each paragraph is a
+// flex-wrap row of unbreakable RUNS (groupTightRuns), so "({T}:" or "{2}{U}"
+// never split across lines and punctuation hugs its pip exactly like print.
 function RulesBodyBake({ text, size }: { text: string; size: number }) {
   const paragraphs = tokenizeRulesText(text);
   const glyph = Math.round(size * 0.92);
   const paraGap = Math.round(size * 0.5);
-  const colGap = Math.round(size * 0.26);
+  const runGap = Math.round(size * 0.26);
   const lineGap = Math.round(size * 0.12);
+  const pipGap = Math.max(1, Math.round(size * 0.08));
   return (
     <div
       style={{
@@ -663,38 +807,144 @@ function RulesBodyBake({ text, size }: { text: string; size: number }) {
             flexWrap: "wrap",
             alignItems: "center",
             justifyContent: "flex-start",
-            // Per-item margins instead of container `gap`: Satori's gap shifts
+            // Per-run margins instead of container `gap`: Satori's gap shifts
             // the row's content left (it uses negative margins under the hood),
             // which `overflow: hidden` then clips. Margins avoid that.
             minHeight: items.length === 0 ? Math.round(size * 0.7) : 0,
           }}
         >
-          {items.map((it, i) => {
-            if (it.t === "m") {
-              return (
-                <ManaGem
+          {groupTightRuns(items).map((run, ri) => (
+            <span
+              key={ri}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                marginRight: runGap,
+                marginBottom: lineGap,
+              }}
+            >
+              {run.map((it, i) => (
+                <RulesItemBake
                   key={i}
-                  suffix={it.suffix}
-                  size={glyph}
-                  style={{ marginRight: colGap, marginBottom: lineGap }}
+                  item={it}
+                  glyph={glyph}
+                  // Adjacent pips ("{G}{G}") keep a hairline gap inside the
+                  // run; words glued to a pip ("{T}:") get none.
+                  gapBefore={
+                    i > 0 && it.t === "m" && run[i - 1].t === "m" ? pipGap : 0
+                  }
                 />
-              );
-            }
-            return (
-              <span
-                key={i}
-                style={{
-                  display: "flex",
-                  fontStyle: it.em ? "italic" : "normal",
-                  opacity: it.em === "reminder" ? 0.7 : 1,
-                  marginRight: colGap,
-                  marginBottom: lineGap,
-                }}
-              >
-                {bakeText(it.v)}
-              </span>
-            );
-          })}
+              ))}
+            </span>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// FlavorBake — italic flavor text under a hairline divider, with source line
+// breaks preserved (real cards put quote attributions on their own line).
+function FlavorBake({
+  text,
+  cardWidth,
+  dividerHex,
+}: {
+  text: string;
+  cardWidth: number;
+  dividerHex: string;
+}) {
+  const lines = text.split(/\n/).filter((l) => l.trim().length > 0);
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        fontStyle: "italic",
+        marginTop: Math.round(cardWidth * 0.012),
+        paddingTop: Math.round(cardWidth * 0.012),
+        borderTop: `1px solid ${dividerHex}`,
+        rowGap: Math.round(cardWidth * 0.004),
+      }}
+    >
+      {lines.map((line, i) => (
+        <span key={i} style={{ display: "flex" }}>
+          {bakeText(line)}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+// LoyaltyRowsBake — printed-planeswalker ability rows: a loyalty-cost badge in
+// the left rail + the ability text, with alternating translucent row shading.
+// Static abilities (no leading cost) render unbadged. Mirrors LoyaltyRows in
+// the preview.
+function LoyaltyRowsBake({
+  slot,
+  rows,
+  abilities,
+  sizePct,
+  cardWidth,
+}: {
+  slot: TextSlot;
+  rows: NonNullable<FrameProfile["loyaltyRows"]>;
+  abilities: LoyaltyAbility[];
+  sizePct: number;
+  cardWidth: number;
+}) {
+  const size = fpx(sizePct, cardWidth);
+  const badgeW = Math.round(size * 2.3);
+  const badgeH = Math.round(size * 1.5);
+  return (
+    <div
+      style={{
+        ...slotBox(slot.rect),
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        overflow: "hidden",
+        fontFamily: fontFamilyFor(slot.font),
+        fontSize: size,
+        lineHeight: slot.lineHeight ?? 1.25,
+        color: slot.colorHex,
+        zIndex: 20,
+        borderRadius: Math.round(cardWidth * 0.012),
+      }}
+    >
+      {abilities.map((ab, i) => (
+        <div
+          key={i}
+          style={{
+            display: "flex",
+            flex: 1,
+            alignItems: "center",
+            background: i % 2 === 0 ? rows.stripeAHex : rows.stripeBHex,
+            padding: `${Math.round(size * 0.22)}px ${Math.round(size * 0.4)}px`,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              flexShrink: 0,
+              alignItems: "center",
+              justifyContent: "center",
+              width: badgeW,
+              height: badgeH,
+              marginRight: Math.round(size * 0.5),
+              borderRadius: Math.round(size * 0.35),
+              background: ab.cost ? rows.badgeFillHex : "transparent",
+              color: rows.badgeTextHex,
+              fontFamily: DISPLAY_FONT,
+              fontSize: Math.round(size * 0.92),
+              fontWeight: 700,
+            }}
+          >
+            {ab.cost ?? ""}
+          </div>
+          <div style={{ display: "flex", flex: 1 }}>
+            <RulesBodyBake text={ab.text} size={size} />
+          </div>
         </div>
       ))}
     </div>
@@ -730,8 +980,10 @@ function SetSymbolGlyph({
     );
   }
 
-  // 2. A preset Keyrune set glyph, rarity-tinted. (Specific-code glyph mapping
-  //    in the bake is a follow-up; the default Keyrune glyph stands in for now.)
+  // 2. A preset Keyrune set glyph, rarity-tinted — the SAME glyph the
+  //    preview's `ss ss-{code}` class shows (codepoint parsed from
+  //    keyrune.css), falling back to the generic Keyrune mark for unknown
+  //    codes.
   if (setCode) {
     return (
       <span
@@ -743,7 +995,7 @@ function SetSymbolGlyph({
           color,
         }}
       >
-        {KEYRUNE_DEFAULT_GLYPH}
+        {getKeyruneCodepoint(setCode) ?? KEYRUNE_DEFAULT_GLYPH}
       </span>
     );
   }
@@ -851,13 +1103,17 @@ function StatBake({
 }
 
 // ChapterBake — Satori-side Saga chapter rail (mirrors ChapterRail in the
-// preview). Equal-height rows, each a Roman-numeral badge + ability text.
+// preview). An optional italic intro row (the saga's reminder text, printed
+// above chapter I on real cards), then equal-height rows of Roman-numeral
+// badge + ability text.
 function ChapterBake({
   slot,
+  intro,
   chapters,
   cardWidth,
 }: {
   slot: NonNullable<FrameProfile["chapters"]>;
+  intro: string | null;
   chapters: SagaChapter[];
   cardWidth: number;
 }) {
@@ -872,6 +1128,23 @@ function ChapterBake({
         zIndex: 20,
       }}
     >
+      {intro ? (
+        <div
+          style={{
+            display: "flex",
+            flexShrink: 0,
+            padding: `${Math.round(size * 0.4)}px ${Math.round(size * 0.3)}px`,
+            borderBottom: `1px solid ${slot.dividerHex}`,
+            fontFamily: BODY_FONT,
+            fontStyle: "italic",
+            fontSize: Math.round(size * 0.9),
+            lineHeight: 1.2,
+            color: slot.textColorHex,
+          }}
+        >
+          {bakeText(intro)}
+        </div>
+      ) : null}
       {chapters.map((ch, i) => (
         <div
           key={i}
@@ -945,6 +1218,14 @@ function AdventureBake({
     subtypes: back.subtypes,
   });
   const showCost = Boolean(back.cost?.trim());
+  const rulesSize = fitRulesSizePct({
+    rulesText: back.rules_text,
+    flavorText: null,
+    rect: slot.rules.rect,
+    baseSizePct: slot.rules.sizePct,
+    lineHeight: slot.rules.lineHeight ?? 1.25,
+    aspect: 7 / 5,
+  });
   // Full-size positioned wrapper so the three % slots resolve against the card
   // (Satori needs a definite height — `inset:0` alone collapses to auto).
   return (
@@ -984,7 +1265,7 @@ function AdventureBake({
           overflow: "hidden",
           padding: `${Math.round(cardWidth * 0.01)}px ${Math.round(cardWidth * 0.006)}px`,
           fontFamily: fontFamilyFor(slot.rules.font),
-          fontSize: fpx(slot.rules.sizePct, cardWidth),
+          fontSize: fpx(rulesSize, cardWidth),
           lineHeight: slot.rules.lineHeight ?? 1.25,
           color: slot.rules.colorHex,
           textAlign: "center",
@@ -994,7 +1275,7 @@ function AdventureBake({
         {back.rules_text?.trim() ? (
           <RulesBodyBake
             text={back.rules_text}
-            size={fpx(slot.rules.sizePct, cardWidth)}
+            size={fpx(rulesSize, cardWidth)}
           />
         ) : null}
       </div>
@@ -1009,10 +1290,12 @@ function SecondFaceBake({
   slot,
   back,
   cardWidth,
+  aspect,
 }: {
   slot: NonNullable<FrameProfile["secondFace"]>;
   back: CardBackFace;
   cardWidth: number;
+  aspect: number;
 }) {
   const name = back.title?.trim() || "Untitled";
   const typeLine = buildTypeLine({
@@ -1023,6 +1306,14 @@ function SecondFaceBake({
   const rot = `rotate(${slot.rotation}deg)`;
   const showCost = Boolean(slot.costSizePct) && Boolean(back.cost?.trim());
   const showPT = Boolean(slot.pt) && Boolean(back.power || back.toughness);
+  const rulesSize = fitRulesSizePct({
+    rulesText: back.rules_text,
+    flavorText: null,
+    rect: slot.rules.rect,
+    baseSizePct: slot.rules.sizePct,
+    lineHeight: slot.rules.lineHeight ?? 1.25,
+    aspect,
+  });
   return (
     <div
       style={{
@@ -1088,7 +1379,7 @@ function SecondFaceBake({
           transform: rot,
           transformOrigin: "50% 50%",
           fontFamily: fontFamilyFor(slot.rules.font),
-          fontSize: fpx(slot.rules.sizePct, cardWidth),
+          fontSize: fpx(rulesSize, cardWidth),
           lineHeight: slot.rules.lineHeight ?? 1.25,
           color: slot.rules.colorHex,
           textAlign: "center",
@@ -1098,7 +1389,7 @@ function SecondFaceBake({
         {back.rules_text?.trim() ? (
           <RulesBodyBake
             text={back.rules_text}
-            size={fpx(slot.rules.sizePct, cardWidth)}
+            size={fpx(rulesSize, cardWidth)}
           />
         ) : null}
       </div>
@@ -1159,6 +1450,7 @@ export function renderCardImage(
       // fallback once explicit fonts are provided, so all three are registered.
       fonts: [
         { name: "MPlantin", data: MPLANTIN_FONT_BYTES, weight: 400, style: "normal" },
+        { name: "MPlantin", data: MPLANTIN_ITALIC_FONT_BYTES, weight: 400, style: "italic" },
         { name: "CardDisplay", data: DISPLAY_FONT_BYTES, weight: 400, style: "normal" },
         { name: "Mana", data: MANA_FONT_BYTES, weight: 400, style: "normal" },
         { name: "Keyrune", data: KEYRUNE_FONT_BYTES, weight: 400, style: "normal" },

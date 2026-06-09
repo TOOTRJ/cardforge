@@ -23,15 +23,27 @@
   font-display: swap;
 }
 
-/* CardDisplay — title/type/footer/stat face. An openly-licensed (SIL OFL 1.1)
-   Goudy-derived display serif (Sorts Mill Goudy) standing in for the proprietary
-   Beleren the real cards use; swap in a licensed Beleren later by replacing the
-   file and keeping this family name. The 400–700 weight RANGE over a single
-   master suppresses browser faux-bold, so a `font-weight: 600` title renders the
-   same single master the Satori bake registers — keeping preview == PNG. */
+/* MPlantin Italic — the real italic master (flavor text, reminder text). The
+   browser would otherwise synthesize an oblique that doesn't match what the
+   Satori bake renders. Same Full-Magic-Pack sourcing as the frames. */
+@font-face {
+  font-family: "MPlantin";
+  src: url("/fonts/mplantin-italic.ttf") format("truetype");
+  font-weight: 400 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* CardDisplay — title/type/footer/stat face: Beleren Bold, the face real cards
+   use, sourced from the same non-commercial Full-Magic-Pack as the frame trade
+   dress (this project knowingly reproduces WotC trade dress for personal use —
+   see 12_CREATION_AUDIT.md). The family name + file path are the swap contract.
+   The 400–700 weight RANGE over the single master suppresses browser faux-bold,
+   so a `font-weight: 600` title renders the same master the Satori bake
+   registers — keeping preview == PNG. */
 @font-face {
   font-family: "CardDisplay";
-  src: url("/fonts/SortsMillGoudy-Regular.ttf") format("truetype");
+  src: url("/fonts/Beleren-Bold.ttf") format("truetype");
   font-weight: 400 700;
   font-style: normal;
   font-display: swap;
