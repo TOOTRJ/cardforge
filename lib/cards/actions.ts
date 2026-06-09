@@ -291,6 +291,7 @@ export async function createCardAction(
     supertype: data.supertype ?? null,
     card_type: data.card_type ?? null,
     subtypes: data.subtypes,
+    tags: data.tags ?? [],
     rarity: data.rarity ?? null,
     rules_text: data.rules_text ?? null,
     flavor_text: data.flavor_text ?? null,
@@ -423,6 +424,7 @@ export async function updateCardAction(
   if (data.supertype !== undefined) update.supertype = data.supertype ?? null;
   if (data.card_type !== undefined) update.card_type = data.card_type ?? null;
   if (data.subtypes !== undefined) update.subtypes = data.subtypes;
+  if (data.tags !== undefined) update.tags = data.tags;
   if (data.rarity !== undefined) update.rarity = data.rarity ?? null;
   if (data.rules_text !== undefined) update.rules_text = data.rules_text ?? null;
   if (data.flavor_text !== undefined) update.flavor_text = data.flavor_text ?? null;
@@ -582,6 +584,7 @@ export async function remixCardAction(
     supertype: parent.supertype ?? undefined,
     card_type: parent.card_type ?? undefined,
     subtypes: parent.subtypes,
+    tags: parent.tags ?? [],
     rarity: parent.rarity ?? undefined,
     rules_text: parent.rules_text ?? undefined,
     flavor_text: parent.flavor_text ?? undefined,
