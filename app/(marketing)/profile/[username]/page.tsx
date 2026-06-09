@@ -21,6 +21,9 @@ import {
   type ProfileWithStats,
 } from "@/lib/cards/queries";
 import { buildCardPath } from "@/lib/cards/utils";
+import { getCurrentUser } from "@/lib/supabase/server";
+import { isFollowing, getFollowCounts } from "@/lib/follows/queries";
+import { FollowButton } from "@/components/follows/follow-button";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { SOCIAL_PLATFORMS, type SocialPlatformKey } from "@/lib/auth/schemas";
 import type { ArtPosition, FrameStyle } from "@/types/card";
@@ -61,6 +64,13 @@ export default async function ProfilePage({
     notFound();
   }
 
+  const viewer = await getCurrentUser();
+  const isOwnProfile = Boolean(viewer && viewer.id === profile.id);
+  const [following, followCounts] = await Promise.all([
+    viewer && !isOwnProfile ? isFollowing(profile.id) : Promise.resolve(false),
+    getFollowCounts(profile.id),
+  ]);
+
   const displayName =
     profile.display_name?.trim() || profile.username || "Forgemaster";
   const initial = (displayName[0] ?? "?").toUpperCase();
@@ -88,6 +98,11 @@ export default async function ProfilePage({
         profile={profile}
         displayName={displayName}
         initial={initial}
+        followers={followCounts.followers}
+        following={followCounts.following}
+        isOwnProfile={isOwnProfile}
+        viewerSignedIn={Boolean(viewer)}
+        initialFollowing={following}
       />
 
       <Suspense fallback={<PinnedRowSkeleton />}>
@@ -121,10 +136,20 @@ function ProfileHero({
   profile,
   displayName,
   initial,
+  followers,
+  following,
+  isOwnProfile,
+  viewerSignedIn,
+  initialFollowing,
 }: {
   profile: ProfileWithStats;
   displayName: string;
   initial: string;
+  followers: number;
+  following: number;
+  isOwnProfile: boolean;
+  viewerSignedIn: boolean;
+  initialFollowing: boolean;
 }) {
   return (
     <div className="overflow-hidden rounded-frame border border-border bg-surface">
@@ -151,8 +176,21 @@ function ProfileHero({
             <ProfileLinks profile={profile} />
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge>{profile.public_cards_count} public</Badge>
+        <div className="flex flex-col items-start gap-2 sm:items-end">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge>{profile.public_cards_count} public</Badge>
+            <Badge variant="outline">
+              {followers} {followers === 1 ? "follower" : "followers"}
+            </Badge>
+            <Badge variant="outline">{following} following</Badge>
+          </div>
+          {isOwnProfile ? null : (
+            <FollowButton
+              targetUserId={profile.id}
+              initialFollowing={initialFollowing}
+              requiresSignIn={!viewerSignedIn}
+            />
+          )}
         </div>
       </div>
     </div>

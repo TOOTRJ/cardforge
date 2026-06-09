@@ -36,6 +36,7 @@ export const siteConfig = {
     { label: "Sets", href: "/sets" },
     { label: "Pricing", href: "/pricing" },
     { label: "Create", href: "/create", anonOnly: true } as NavItem,
+    { label: "Feed", href: "/feed", authedOnly: true } as NavItem,
     { label: "Dashboard", href: "/dashboard", authedOnly: true } as NavItem,
     { label: "My Sets", href: "/dashboard/sets", authedOnly: true } as NavItem,
   ] as readonly NavItem[],
