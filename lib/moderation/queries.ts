@@ -88,3 +88,62 @@ export async function getModerationQueue(): Promise<ModerationCard[] | null> {
   }
   return Array.from(byCard.values());
 }
+
+export type ModerationComment = {
+  commentId: string;
+  body: string;
+  cardId: string;
+  reports: ModerationReport[];
+};
+
+/** Pending comment reports grouped by comment, newest first. Same admin gate. */
+export async function getCommentModerationQueue(): Promise<
+  ModerationComment[] | null
+> {
+  const profile = await getCurrentProfile();
+  if (!profile?.is_admin) return null;
+  if (!isAdminConfigured()) return [];
+
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("comment_reports")
+    .select(
+      "id, reason, details, created_at, comment_id, card_comments(id, body, card_id)",
+    )
+    .eq("status", "pending")
+    .order("created_at", { ascending: false })
+    .limit(300);
+  if (error || !data) return [];
+
+  type Row = {
+    id: string;
+    reason: string;
+    details: string | null;
+    created_at: string;
+    comment_id: string;
+    card_comments: { id: string; body: string; card_id: string } | null;
+  };
+
+  const byComment = new Map<string, ModerationComment>();
+  for (const row of data as unknown as Row[]) {
+    const comment = row.card_comments;
+    if (!comment) continue;
+    let entry = byComment.get(comment.id);
+    if (!entry) {
+      entry = {
+        commentId: comment.id,
+        body: comment.body,
+        cardId: comment.card_id,
+        reports: [],
+      };
+      byComment.set(comment.id, entry);
+    }
+    entry.reports.push({
+      id: row.id,
+      reason: row.reason,
+      details: row.details,
+      createdAt: row.created_at,
+    });
+  }
+  return Array.from(byComment.values());
+}
