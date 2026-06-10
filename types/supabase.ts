@@ -484,6 +484,7 @@ export type Database = {
           metadata: Json;
           oracle_text: string | null;
           owner_id: string;
+          layout_version: number | null;
           parent_card_id: string | null;
           power: string | null;
           primary_set_id: string | null;
@@ -528,6 +529,7 @@ export type Database = {
           power?: string | null;
           primary_set_id?: string | null;
           rarity?: string | null;
+          layout_version?: number | null;
           rendered_at?: string | null;
           rendered_image_url?: string | null;
           rules_text?: string | null;
@@ -568,6 +570,7 @@ export type Database = {
           power?: string | null;
           primary_set_id?: string | null;
           rarity?: string | null;
+          layout_version?: number | null;
           rendered_at?: string | null;
           rendered_image_url?: string | null;
           rules_text?: string | null;

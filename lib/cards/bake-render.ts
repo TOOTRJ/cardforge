@@ -7,17 +7,11 @@ import { renderCardImage } from "@/lib/render/card-image";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { cardRenderPath } from "@/lib/cards/storage-paths";
 import {
-  isCardType,
-  isColorIdentity,
-  isRarity,
-  type ArtPosition,
-  type CardBackFace,
-  type CardType,
-  type ColorIdentity,
-  type FrameStyle,
-  type Rarity,
-} from "@/types/card";
-import type { CardPreviewData } from "@/components/cards/card-preview";
+  BAKE_SELECT_COLUMNS,
+  rowToPreviewData,
+  type CardRowForBake,
+} from "@/lib/cards/bake-core";
+import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
 
 // ---------------------------------------------------------------------------
 // Bake a card to a PNG and upload it to the `card-renders` bucket.
@@ -33,57 +27,6 @@ import type { CardPreviewData } from "@/components/cards/card-preview";
 //   * cache-busted via a `?v={timestamp}` query string on the stored URL
 //   * RLS (migration 0021) restricts writes to the card owner
 // ---------------------------------------------------------------------------
-
-type CardRowForBake = {
-  id: string;
-  owner_id: string;
-  title: string;
-  cost: string | null;
-  card_type: string | null;
-  supertype: string | null;
-  subtypes: string[];
-  rarity: string | null;
-  color_identity: string[];
-  rules_text: string | null;
-  flavor_text: string | null;
-  power: string | null;
-  toughness: string | null;
-  loyalty: string | null;
-  defense: string | null;
-  artist_credit: string | null;
-  art_url: string | null;
-  art_position: unknown;
-  frame_style: unknown;
-  set_icon_url: string | null;
-  set_icon_code: string | null;
-  back_face: unknown;
-};
-
-function rowToPreviewData(card: CardRowForBake): CardPreviewData {
-  return {
-    title: card.title,
-    cost: card.cost,
-    cardType: isCardType(card.card_type) ? (card.card_type as CardType) : null,
-    supertype: card.supertype,
-    subtypes: card.subtypes,
-    rarity: isRarity(card.rarity) ? (card.rarity as Rarity) : null,
-    colorIdentity: card.color_identity.filter(isColorIdentity) as ColorIdentity[],
-    rulesText: card.rules_text,
-    flavorText: card.flavor_text,
-    power: card.power,
-    toughness: card.toughness,
-    loyalty: card.loyalty,
-    defense: card.defense,
-    artistCredit: card.artist_credit,
-    artUrl: card.art_url,
-    artPosition: (card.art_position as ArtPosition | null) ?? {},
-    frameStyle: (card.frame_style as FrameStyle | null) ?? {},
-    setIconUrl: card.set_icon_url,
-    setIconCode: card.set_icon_code,
-    // Adventure frames render the back-face content as an inline sub-panel.
-    backFace: (card.back_face as CardBackFace | null) ?? null,
-  };
-}
 
 export type BakeRenderResult =
   | { ok: true; renderedImageUrl: string | null }
@@ -113,9 +56,7 @@ export async function bakeCardRender(
   // where validation munged a field or a trigger normalized it.
   const { data: card, error: fetchErr } = await supabase
     .from("cards")
-    .select(
-      "id, owner_id, visibility, title, cost, card_type, supertype, subtypes, rarity, color_identity, rules_text, flavor_text, power, toughness, loyalty, defense, artist_credit, art_url, art_position, frame_style, set_icon_url, set_icon_code, back_face",
-    )
+    .select(BAKE_SELECT_COLUMNS)
     .eq("id", cardId)
     .maybeSingle();
 
@@ -212,6 +153,10 @@ export async function bakeAndPersistCardRender(
       // null for private cards (no public render); a URL otherwise.
       rendered_image_url: result.renderedImageUrl,
       rendered_at: result.renderedImageUrl ? new Date().toISOString() : null,
+      // Records WHICH renderer/profile generation baked this PNG, so
+      // scripts/rebake-renders.mjs can find stale renders after template
+      // changes (see lib/cards/layout-version.ts).
+      layout_version: result.renderedImageUrl ? CARD_LAYOUT_VERSION : null,
     })
     .eq("id", cardId);
 
