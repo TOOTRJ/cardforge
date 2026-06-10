@@ -158,6 +158,12 @@ describe("field → step routing", () => {
     expect(map.get("back_face")).toBe("extra");
   });
 
+  it("routes card type + color identity to the frame step (they drive it)", () => {
+    const map = buildFieldToStep();
+    expect(map.get("card_type")).toBe("frame");
+    expect(map.get("color_identity")).toBe("frame");
+  });
+
   it("routes a nested back_face.* error to the extra step when visible", () => {
     const steps = visibleSteps({ ...base, hasBackFace: true });
     const idx = stepIndexForField("back_face.title", steps);

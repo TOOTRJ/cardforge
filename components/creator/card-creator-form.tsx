@@ -78,16 +78,21 @@ import {
   type CardTemplate,
   type CardType,
   type ColorIdentity,
+  type FrameEra,
   type FrameSet,
   type FrameStyle,
   type FrameTemplate,
   type GameSystem,
   type Rarity,
   type Visibility,
-  COMING_SOON_FRAMES,
-  COMING_SOON_SETS,
+  COMING_SOON_ERAS,
   DEFAULT_FRAME_TEMPLATE,
+  ERA_SPECIAL_LAYOUTS,
+  FRAME_ERA_HINTS,
+  FRAME_ERA_LABELS,
+  FRAME_ERA_VALUES,
   FRAME_SET_DEFAULT_TEMPLATE,
+  FRAME_SET_ERA,
   FRAME_SET_LABELS,
   FRAME_SET_VALUES,
   FRAME_TEMPLATE_LABELS,
@@ -95,6 +100,14 @@ import {
   FRAME_TEMPLATE_VALUES,
 } from "@/types/card";
 import { normalizeFrameTemplate } from "@/lib/cards/card-display";
+import { pickFrameColorKey } from "@/components/cards/frame-layer";
+import {
+  eraForTemplate,
+  eraSupportsType,
+  isTypeDerivedStandard,
+  resolveFrameTemplate,
+  standardFrameFor,
+} from "@/lib/creator/frame-picker";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import {
   EMPTY_BACK_FACE,
@@ -201,20 +214,8 @@ const VISIBILITY_OPTIONS: ChipOption<Visibility>[] = [
   },
 ];
 
-// Frame template options — the MSE-derived MTG frame PNG that sits behind the
-// card. All are converted from the open-source Full-Magic-Pack (MSE template).
-// Each chip leads with a small thumbnail of the frame so the (now sizable)
-// list is choosable by sight, not just by name.
-const TEMPLATE_OPTIONS: ChipOption<FrameTemplate>[] = FRAME_TEMPLATE_VALUES.map(
-  (template) => ({
-    value: template,
-    label: FRAME_TEMPLATE_LABELS[template],
-    leading: <FrameThumb template={template} />,
-  }),
-);
-
-// How many shippable frames each set holds — surfaced on the set chip so a set
-// reads as a *family* of frames, not a single style. Derived from the
+// How many shippable frames each set holds — surfaced on the showcase set chip
+// so a set reads as a *family* of frames, not a single style. Derived from the
 // template→set map so it stays correct as frames are added.
 const FRAMES_PER_SET = FRAME_TEMPLATE_VALUES.reduce(
   (acc, template) => {
@@ -225,18 +226,9 @@ const FRAMES_PER_SET = FRAME_TEMPLATE_VALUES.reduce(
   {} as Record<FrameSet, number>,
 );
 
-// Frame-set chips (the first step of the picker). Each leads with a thumbnail
-// of the set's default frame and notes how many frames the family contains.
-const FRAME_SET_OPTIONS: ChipOption<FrameSet>[] = FRAME_SET_VALUES.map((set) => ({
-  value: set,
-  label: FRAME_SET_LABELS[set],
-  description: `${FRAMES_PER_SET[set]} frame${FRAMES_PER_SET[set] === 1 ? "" : "s"}`,
-  leading: <FrameThumb template={FRAME_SET_DEFAULT_TEMPLATE[set]} />,
-}));
-
-// "Coming soon" chips — disabled, badge-tagged display rows for frames/sets on
-// the roadmap (types/card.ts). They're a separate ChipGroup block so the real
-// (typed) frame selection stays type-safe; clicks are no-ops.
+// "Coming soon" chips — disabled, badge-tagged display rows for eras on the
+// roadmap (types/card.ts). A separate ChipGroup block so the real (typed) era
+// selection stays type-safe; clicks are no-ops.
 function SoonBadge() {
   return (
     <span className="rounded-full border border-border/70 bg-elevated px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-subtle">
@@ -244,17 +236,17 @@ function SoonBadge() {
     </span>
   );
 }
-const COMING_SOON_SET_OPTIONS: ChipOption<string>[] = COMING_SOON_SETS.map(
-  (s) => ({ value: `soon:${s.key}`, label: s.label, disabled: true, badge: <SoonBadge /> }),
-);
-const comingSoonFrameOptions = (set: FrameSet): ChipOption<string>[] =>
-  COMING_SOON_FRAMES.filter((f) => f.set === set).map((f) => ({
-    value: `soon:${f.key}`,
-    label: f.label,
+// Roadmap ERA chips — disabled "Soon" rows for border generations not yet
+// converted (Retro 1997 / Modern 2003 / Future Sight). Shown under the era tier.
+const COMING_SOON_ERA_OPTIONS: ChipOption<string>[] = COMING_SOON_ERAS.map(
+  (e) => ({
+    value: `soon:${e.key}`,
+    label: e.label,
+    description: e.hint,
     disabled: true,
     badge: <SoonBadge />,
-  }));
-
+  }),
+);
 // Finish presets — premium treatments layered on top of the base frame.
 // Descriptions are surfaced via ChipGroup's `md` size which shows the
 // description under the label.
@@ -742,6 +734,25 @@ export function CardCreatorForm({
       setValue("color_identity", derivedColors, { shouldDirty: true });
     }
   }, [autoColors, derivedColors, watched.color_identity, setValue]);
+
+  // Keep a type-derived STANDARD frame in sync with the card type, so changing
+  // type (e.g. creature → planeswalker) swaps to the right variant (m15 → m15pw)
+  // automatically — no more frame/type mismatches. Special layouts (Saga,
+  // Adventure…) and showcase frames are explicit picks and stay put. When the
+  // current era can't frame the new type (Classic has no planeswalker), fall
+  // forward to the M15 era which frames everything.
+  const currentTemplate = (watched.frame_style?.template ??
+    DEFAULT_FRAME_TEMPLATE) as FrameTemplate;
+  useEffect(() => {
+    if (!isTypeDerivedStandard(currentTemplate)) return;
+    const era = eraForTemplate(currentTemplate);
+    const resolved =
+      standardFrameFor(era, watched.card_type) ??
+      standardFrameFor("m15", watched.card_type);
+    if (resolved && resolved !== currentTemplate) {
+      setValue("frame_style.template", resolved, { shouldDirty: true });
+    }
+  }, [watched.card_type, currentTemplate, setValue]);
 
   // Caret-preserving symbol insertion for the rules textareas (front + back).
   // register() is hoisted so the field ref can be merged with a local DOM ref.
@@ -1311,109 +1322,172 @@ export function CardCreatorForm({
                 </Button>
               </div>
 
-              <div className="flex flex-col gap-3">
-                <div className="flex flex-col gap-1">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-subtle">
-                    Frame
-                  </span>
-                  <span className="text-xs leading-5 text-muted">
-                    A <span className="font-medium text-foreground">set</span> is
-                    a card family — its era and trade dress. Pick a set, then
-                    choose a specific{" "}
-                    <span className="font-medium text-foreground">frame</span>{" "}
-                    within it.
-                  </span>
-                </div>
-                <Controller
-                  control={control}
-                  name="frame_style.template"
-                  render={({ field }) => {
-                    const template = (field.value ??
-                      DEFAULT_FRAME_TEMPLATE) as FrameTemplate;
-                    const activeSet = FRAME_TEMPLATE_SET[template];
-                    const setFrames = TEMPLATE_OPTIONS.filter(
-                      (option) => FRAME_TEMPLATE_SET[option.value] === activeSet,
-                    );
-                    const soonFrames = comingSoonFrameOptions(activeSet);
-                    return (
-                      <div className="flex flex-col gap-5">
-                        {/* Step 1 — choose the set (the card family). */}
-                        <section className="flex flex-col gap-2">
-                          <PickerStepLabel
-                            n={1}
-                            title="Choose a set"
-                            count={`${FRAME_SET_VALUES.length} families`}
-                          />
-                          <ChipGroup
-                            ariaLabel="Frame set"
-                            layout="grid-2"
-                            size="md"
-                            value={activeSet}
-                            onChange={(nextSet) => {
-                              if (nextSet !== activeSet) {
-                                field.onChange(
-                                  FRAME_SET_DEFAULT_TEMPLATE[nextSet],
-                                );
-                              }
-                            }}
-                            options={FRAME_SET_OPTIONS}
-                          />
-                        </section>
+              {/* 1 · What are you making — type + color drive the frame. */}
+              <section className="flex flex-col gap-3">
+                <PickerStepLabel n={1} title="What are you making" />
+                <FieldGroup label="Card type" error={errors.card_type?.message}>
+                  <Controller
+                    control={control}
+                    name="card_type"
+                    render={({ field }) => (
+                      <ChipGroup
+                        ariaLabel="Card type"
+                        layout="grid-3"
+                        value={field.value}
+                        onChange={(next) => field.onChange(next)}
+                        options={CARD_TYPE_OPTIONS}
+                      />
+                    )}
+                  />
+                </FieldGroup>
+                <FieldGroup
+                  label="Color"
+                  helper={
+                    autoColors
+                      ? "Following the mana cost — tap a color to take over."
+                      : "Sets the frame color. Pick one or more, or none for colorless."
+                  }
+                >
+                  <div className="flex flex-col gap-2">
+                    <Controller
+                      control={control}
+                      name="color_identity"
+                      render={({ field }) => (
+                        <ChipGroup
+                          multiSelect
+                          ariaLabel="Color identity"
+                          layout="wrap"
+                          value={field.value}
+                          onChange={(next) => {
+                            setAutoColors(false);
+                            field.onChange(next);
+                          }}
+                          options={COLOR_IDENTITY_OPTIONS}
+                        />
+                      )}
+                    />
+                    <label className="flex w-fit cursor-pointer items-center gap-2 text-xs text-muted">
+                      <input
+                        type="checkbox"
+                        checked={autoColors}
+                        onChange={(event) => setAutoColors(event.target.checked)}
+                        className="h-3.5 w-3.5 accent-[var(--color-primary)]"
+                      />
+                      Match mana cost automatically
+                    </label>
+                  </div>
+                </FieldGroup>
+              </section>
 
-                        {/* Step 2 — choose a frame inside the chosen set. */}
-                        <section className="flex flex-col gap-2">
-                          <PickerStepLabel
-                            n={2}
-                            title="Choose a frame"
-                            aside={FRAME_SET_LABELS[activeSet]}
-                            count={`${setFrames.length} ${
-                              setFrames.length === 1 ? "frame" : "frames"
-                            }`}
-                          />
-                          <ChipGroup
-                            ariaLabel={`Frames in ${FRAME_SET_LABELS[activeSet]}`}
-                            layout="grid-2"
-                            size="md"
-                            value={template}
-                            onChange={(next) => field.onChange(next)}
-                            options={setFrames}
-                          />
-                        </section>
+              {/* 2 · Era + 3 · Frame. The era is the border generation; the
+                  specific frame is derived from the card type (no mismatches),
+                  with optional special layouts and a set→treatment sub-picker
+                  for the Showcase era. */}
+              <Controller
+                control={control}
+                name="frame_style.template"
+                render={({ field }) => {
+                  const template = (field.value ??
+                    DEFAULT_FRAME_TEMPLATE) as FrameTemplate;
+                  const cardType = watched.card_type;
+                  const colorKey = pickFrameColorKey(watched.color_identity);
+                  const activeEra = eraForTemplate(template);
+                  const activeSet = FRAME_TEMPLATE_SET[template];
 
-                        {/* Roadmap — disabled previews of what's coming. */}
-                        {soonFrames.length > 0 ||
-                        COMING_SOON_SET_OPTIONS.length > 0 ? (
-                          <section className="flex flex-col gap-2 rounded-lg border border-dashed border-border/50 bg-elevated/20 p-3">
-                            <span className="text-[11px] uppercase tracking-wider text-subtle">
-                              On the roadmap
-                            </span>
-                            {soonFrames.length > 0 ? (
-                              <ChipGroup
-                                ariaLabel="Upcoming frames"
-                                layout="grid-2"
-                                size="md"
-                                value=""
-                                onChange={() => {}}
-                                options={soonFrames}
-                              />
-                            ) : null}
-                            {COMING_SOON_SET_OPTIONS.length > 0 ? (
-                              <ChipGroup
-                                ariaLabel="Upcoming sets"
-                                layout="grid-2"
-                                size="md"
-                                value=""
-                                onChange={() => {}}
-                                options={COMING_SOON_SET_OPTIONS}
-                              />
-                            ) : null}
-                          </section>
-                        ) : null}
-                      </div>
-                    );
-                  }}
-                />
-              </div>
+                  // Era chips: a thumbnail of that era's frame for the current
+                  // type + color, disabled (with a reason) when the era can't
+                  // frame this card type.
+                  const eraOptions: ChipOption<FrameEra>[] = FRAME_ERA_VALUES.map(
+                    (era) => {
+                      const supported = eraSupportsType(era, cardType);
+                      const thumbTemplate =
+                        era === "showcase"
+                          ? FRAME_SET_DEFAULT_TEMPLATE.lotr
+                          : standardFrameFor(era, cardType) ??
+                            standardFrameFor(era, "creature") ??
+                            DEFAULT_FRAME_TEMPLATE;
+                      return {
+                        value: era,
+                        label: FRAME_ERA_LABELS[era],
+                        description: supported
+                          ? FRAME_ERA_HINTS[era]
+                          : `No ${cardType || "creature"} frame in this era yet`,
+                        leading: (
+                          <FrameThumb
+                            template={thumbTemplate}
+                            colorKey={colorKey}
+                          />
+                        ),
+                        disabled: !supported,
+                      };
+                    },
+                  );
+
+                  const selectEra = (nextEra: FrameEra) => {
+                    if (nextEra === activeEra) return;
+                    if (nextEra === "showcase") {
+                      field.onChange(FRAME_SET_DEFAULT_TEMPLATE.lotr);
+                      return;
+                    }
+                    const resolved = resolveFrameTemplate(nextEra, cardType);
+                    if (resolved) field.onChange(resolved);
+                  };
+
+                  return (
+                    <div className="flex flex-col gap-5">
+                      {/* 2 · Era */}
+                      <section className="flex flex-col gap-2">
+                        <PickerStepLabel
+                          n={2}
+                          title="Choose an era"
+                          count={`${FRAME_ERA_VALUES.length} live`}
+                        />
+                        <ChipGroup
+                          ariaLabel="Frame era"
+                          layout="grid-2"
+                          size="md"
+                          value={activeEra}
+                          onChange={selectEra}
+                          options={eraOptions}
+                        />
+                        <ChipGroup
+                          ariaLabel="Upcoming eras"
+                          layout="grid-2"
+                          size="md"
+                          value=""
+                          onChange={() => {}}
+                          options={COMING_SOON_ERA_OPTIONS}
+                        />
+                      </section>
+
+                      {/* 3 · Frame */}
+                      <section className="flex flex-col gap-2">
+                        <PickerStepLabel
+                          n={3}
+                          title="Frame"
+                          aside={FRAME_ERA_LABELS[activeEra]}
+                        />
+                        {activeEra === "showcase" ? (
+                          <ShowcaseFramePicker
+                            activeSet={activeSet}
+                            template={template}
+                            colorKey={colorKey}
+                            onChange={field.onChange}
+                          />
+                        ) : (
+                          <BorderEraFramePicker
+                            era={activeEra}
+                            cardType={cardType}
+                            template={template}
+                            colorKey={colorKey}
+                            onChange={field.onChange}
+                          />
+                        )}
+                      </section>
+                    </div>
+                  );
+                }}
+              />
             </>
           ) : null}
 
@@ -1433,42 +1507,24 @@ export function CardCreatorForm({
               />
             </FieldGroup>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              {hidesCost(watched.frame_style?.template) ? null : (
-                <FieldGroup
-                  label="Cost"
-                  helper="Click pips to build the mana cost."
-                  error={errors.cost?.message}
-                >
-                  <Controller
-                    control={control}
-                    name="cost"
-                    render={({ field }) => (
-                      <ManaCostPicker
-                        value={field.value ?? ""}
-                        onChange={field.onChange}
-                      />
-                    )}
-                  />
-                </FieldGroup>
-              )}
-
-              <FieldGroup label="Card type" error={errors.card_type?.message}>
+            {hidesCost(watched.frame_style?.template) ? null : (
+              <FieldGroup
+                label="Cost"
+                helper="Click pips to build the mana cost."
+                error={errors.cost?.message}
+              >
                 <Controller
                   control={control}
-                  name="card_type"
+                  name="cost"
                   render={({ field }) => (
-                    <ChipGroup
-                      ariaLabel="Card type"
-                      layout="grid-3"
-                      value={field.value}
-                      onChange={(next) => field.onChange(next)}
-                      options={CARD_TYPE_OPTIONS}
+                    <ManaCostPicker
+                      value={field.value ?? ""}
+                      onChange={field.onChange}
                     />
                   )}
                 />
               </FieldGroup>
-            </div>
+            )}
 
             {/* Rarity. (The old "Template" select was removed: template_id is
                 a vestigial DB field — no renderer reads it; the visual layout is
@@ -1491,10 +1547,9 @@ export function CardCreatorForm({
               />
             </FieldGroup>
 
-            {/* Quick path stops here: title + cost + type + rarity make a real
-                card (color identity follows the cost automatically). Everything
-                below is detail control. */}
-            <MoreOptions summary="More options — supertype, subtypes, colors, tags">
+            {/* Quick path stops here: type + color (step 1) + title + cost +
+                rarity make a real card. Everything below is detail control. */}
+            <MoreOptions summary="More options — supertype, subtypes, tags">
               <div className="grid gap-4 sm:grid-cols-2">
                 <FieldGroup
                   label="Supertype"
@@ -1519,44 +1574,6 @@ export function CardCreatorForm({
                   />
                 </FieldGroup>
               </div>
-
-              <FieldGroup
-                label="Color identity"
-                helper={
-                  autoColors
-                    ? "Following the mana cost — edit the chips to take over."
-                    : "Drives the frame color. One or more."
-                }
-              >
-                <div className="flex flex-col gap-2">
-                  <Controller
-                    control={control}
-                    name="color_identity"
-                    render={({ field }) => (
-                      <ChipGroup
-                        multiSelect
-                        ariaLabel="Color identity"
-                        layout="wrap"
-                        value={field.value}
-                        onChange={(next) => {
-                          setAutoColors(false);
-                          field.onChange(next);
-                        }}
-                        options={COLOR_IDENTITY_OPTIONS}
-                      />
-                    )}
-                  />
-                  <label className="flex w-fit cursor-pointer items-center gap-2 text-xs text-muted">
-                    <input
-                      type="checkbox"
-                      checked={autoColors}
-                      onChange={(event) => setAutoColors(event.target.checked)}
-                      className="h-3.5 w-3.5 accent-[var(--color-primary)]"
-                    />
-                    Match mana cost automatically
-                  </label>
-                </div>
-              </FieldGroup>
 
               <FieldGroup
                 label="Tags"
@@ -2328,10 +2345,16 @@ function ColorSwatch({ color }: { color: ColorIdentity }) {
   );
 }
 
-function FrameThumb({ template }: { template: FrameTemplate }) {
-  // A mini preview of the frame (the blue color variant is representative) so
-  // each template chip is recognizable by sight — important now that the list
-  // spans 11 frames with similar names. Battle is landscape (7:5); the rest 5:7.
+function FrameThumb({
+  template,
+  colorKey = "u",
+}: {
+  template: FrameTemplate;
+  /** Frame color variant to preview. Defaults to blue (representative) for the
+   *  static module-level chips; the in-step picker passes the card's live color
+   *  so the thumbnails match what the user will get. */
+  colorKey?: string;
+}) {
   const landscape = getFrameProfile(template).orientation === "landscape";
   return (
     <span
@@ -2340,7 +2363,137 @@ function FrameThumb({ template }: { template: FrameTemplate }) {
         "block shrink-0 overflow-hidden rounded-[3px] border border-border/60 bg-[#101015] bg-cover bg-center",
         landscape ? "h-7 w-10" : "h-10 w-[29px]",
       )}
-      style={{ backgroundImage: `url(/frames/${template}/u.png)` }}
+      style={{ backgroundImage: `url(/frames/${template}/${colorKey}.png)` }}
     />
+  );
+}
+
+// Border-era frame picker (Classic / M15): the type-derived standard frame as a
+// single chip, plus an optional "Special layouts" row (Saga, Adventure, Split,
+// Flip, Aftermath, Snow, Devoid for M15) that overrides it. Both chip groups
+// bind to the same template value, so exactly one shows as selected.
+function BorderEraFramePicker({
+  era,
+  cardType,
+  template,
+  colorKey,
+  onChange,
+}: {
+  era: FrameEra;
+  cardType: CardType | "";
+  template: FrameTemplate;
+  colorKey: string;
+  onChange: (next: FrameTemplate) => void;
+}) {
+  const standard =
+    standardFrameFor(era, cardType) ?? standardFrameFor("m15", cardType);
+  const specials = ERA_SPECIAL_LAYOUTS[era];
+  const standardOptions: ChipOption<FrameTemplate>[] = standard
+    ? [
+        {
+          value: standard,
+          label: FRAME_TEMPLATE_LABELS[standard],
+          description: "The standard frame for this card type",
+          leading: <FrameThumb template={standard} colorKey={colorKey} />,
+        },
+      ]
+    : [];
+  return (
+    <div className="flex flex-col gap-3">
+      <ChipGroup
+        ariaLabel="Standard frame"
+        layout="grid-2"
+        size="md"
+        value={template}
+        onChange={onChange}
+        options={standardOptions}
+      />
+      {specials.length > 0 ? (
+        <div className="flex flex-col gap-2">
+          <span className="text-[11px] uppercase tracking-wider text-subtle">
+            Special layouts — replace the standard frame
+          </span>
+          <ChipGroup
+            ariaLabel="Special layouts"
+            layout="grid-2"
+            size="md"
+            value={template}
+            onChange={onChange}
+            options={specials.map((t) => ({
+              value: t,
+              label: FRAME_TEMPLATE_LABELS[t],
+              leading: <FrameThumb template={t} colorKey={colorKey} />,
+            }))}
+          />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+// Showcase & Universes Beyond picker: the existing set → treatment two-stage,
+// scoped to the showcase IP families (LOTR / Avatar / Bloomburrow / Tarkir).
+function ShowcaseFramePicker({
+  activeSet,
+  template,
+  colorKey,
+  onChange,
+}: {
+  activeSet: FrameSet;
+  template: FrameTemplate;
+  colorKey: string;
+  onChange: (next: FrameTemplate) => void;
+}) {
+  const showcaseSets = FRAME_SET_VALUES.filter(
+    (s) => FRAME_SET_ERA[s] === "showcase",
+  );
+  const setOptions: ChipOption<FrameSet>[] = showcaseSets.map((set) => ({
+    value: set,
+    label: FRAME_SET_LABELS[set],
+    description: `${FRAMES_PER_SET[set]} frame${FRAMES_PER_SET[set] === 1 ? "" : "s"}`,
+    leading: (
+      <FrameThumb
+        template={FRAME_SET_DEFAULT_TEMPLATE[set]}
+        colorKey={colorKey}
+      />
+    ),
+  }));
+  const treatments: ChipOption<FrameTemplate>[] = FRAME_TEMPLATE_VALUES.filter(
+    (t) => FRAME_TEMPLATE_SET[t] === activeSet,
+  ).map((t) => ({
+    value: t,
+    label: FRAME_TEMPLATE_LABELS[t],
+    leading: <FrameThumb template={t} colorKey={colorKey} />,
+  }));
+  return (
+    <div className="flex flex-col gap-3">
+      <ChipGroup
+        ariaLabel="Showcase set"
+        layout="grid-2"
+        size="md"
+        value={activeSet}
+        onChange={(nextSet) => {
+          if (nextSet !== activeSet) {
+            onChange(FRAME_SET_DEFAULT_TEMPLATE[nextSet]);
+          }
+        }}
+        options={setOptions}
+      />
+      {treatments.length > 1 ? (
+        <div className="flex flex-col gap-2">
+          <span className="text-[11px] uppercase tracking-wider text-subtle">
+            Treatment · {FRAME_SET_LABELS[activeSet]}
+          </span>
+          <ChipGroup
+            ariaLabel={`Treatments in ${FRAME_SET_LABELS[activeSet]}`}
+            layout="grid-2"
+            size="md"
+            value={template}
+            onChange={onChange}
+            options={treatments}
+          />
+        </div>
+      ) : null}
+    </div>
   );
 }
