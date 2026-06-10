@@ -39,7 +39,7 @@ export default async function LoginPage({
         >
           Supabase isn&apos;t configured yet. Add{" "}
           <code className="font-mono text-xs">NEXT_PUBLIC_SUPABASE_URL</code> and{" "}
-          <code className="font-mono text-xs">NEXT_PUBLIC_SUPABASE_ANON_KEY</code>{" "}
+          <code className="font-mono text-xs">NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY</code>{" "}
           to <code className="font-mono text-xs">.env.local</code> to enable
           authentication.
         </div>

@@ -60,7 +60,7 @@ function notConfigured(): SetActionFailure {
   return {
     ok: false,
     formError:
-      "Supabase isn't configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.",
+      "Supabase isn't configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY.",
   };
 }
 
