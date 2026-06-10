@@ -109,12 +109,19 @@ const FRAMES = {
     fill: "white",
     seeds: [[0.5, 0.3]],
   },
+  // Future Sight (NOT yet shipped): the base {color}card.jpg is the colored
+  // background + name bar + vertical mana strip; the silver frame structure,
+  // type bar, textbox, and P/T box ship as SEPARATE positioned overlay PNGs
+  // ({color}typeline/textbox/pt.png) that must be composited on first. The art
+  // window is white. Building it faithfully also needs a vertical mana-cost
+  // capability in the renderer (the cost prints down the left strip, not in the
+  // name bar). Left here as the starting config for that effort.
   future: {
     out: "public/frames/future",
     pack: `${PACK_ROOT}/magic-future.mse-style`,
     map: futureMap,
-    fill: "black",
-    seeds: [[0.5, 0.33]],
+    fill: "white",
+    seeds: [[0.5, 0.3]],
   },
 };
 
