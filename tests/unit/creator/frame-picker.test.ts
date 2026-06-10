@@ -77,25 +77,38 @@ describe("resolveFrameTemplate", () => {
 });
 
 describe("erasAvailableForType / eraSupportsType", () => {
-  it("offers every era for a creature", () => {
+  it("offers every border era for a creature", () => {
     expect(erasAvailableForType("creature")).toEqual([
       "classic",
+      "retro",
+      "modern",
       "m15",
       "showcase",
     ]);
   });
 
-  it("drops Classic for planeswalkers and battles (no 1993 frame)", () => {
+  it("drops the pre-planeswalker eras for planeswalkers and battles", () => {
+    // Planeswalkers/battles postdate the 1993/1997/2003 borders → only M15 +
+    // showcase frame them.
     expect(erasAvailableForType("planeswalker")).toEqual(["m15", "showcase"]);
     expect(erasAvailableForType("battle")).toEqual(["m15", "showcase"]);
     expect(eraSupportsType("classic", "planeswalker")).toBe(false);
+    expect(eraSupportsType("retro", "planeswalker")).toBe(false);
+    expect(eraSupportsType("modern", "planeswalker")).toBe(false);
     expect(eraSupportsType("m15", "planeswalker")).toBe(true);
     expect(eraSupportsType("showcase", "planeswalker")).toBe(true);
   });
 
-  it("keeps Classic for lands and tokens", () => {
-    expect(erasAvailableForType("land")).toContain("classic");
-    expect(erasAvailableForType("token")).toContain("classic");
+  it("keeps the border eras for lands and tokens (where they have a frame)", () => {
+    expect(erasAvailableForType("land")).toEqual([
+      "classic",
+      "retro",
+      "modern",
+      "m15",
+      "showcase",
+    ]);
+    // Only Classic + M15 have token frames (retro/modern token deferred).
+    expect(erasAvailableForType("token")).toEqual(["classic", "m15", "showcase"]);
   });
 
   it("never returns an empty list for any card type", () => {

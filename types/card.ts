@@ -220,6 +220,11 @@ export const FRAME_TEMPLATE_VALUES = [
   "tarkirdragon",
   "tarkirdraconic",
   "tarkirghostfire",
+  // Border eras beyond Alpha/M15 (converted from the MSE old/new/future styles).
+  "retro",
+  "retroland",
+  "modern",
+  "modernland",
 ] as const;
 export type FrameTemplate = (typeof FRAME_TEMPLATE_VALUES)[number];
 
@@ -254,6 +259,10 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   tarkirdragon: "Dragon Wing",
   tarkirdraconic: "Draconic",
   tarkirghostfire: "Ghostfire",
+  retro: "Standard",
+  retroland: "Land",
+  modern: "Standard",
+  modernland: "Land",
 };
 
 // ---------------------------------------------------------------------------
@@ -269,6 +278,8 @@ export const FRAME_SET_VALUES = [
   "avatar",
   "bloomburrow",
   "tarkir",
+  "retro",
+  "modern",
 ] as const;
 export type FrameSet = (typeof FRAME_SET_VALUES)[number];
 
@@ -279,6 +290,8 @@ export const FRAME_SET_LABELS: Record<FrameSet, string> = {
   avatar: "Avatar: The Last Airbender",
   bloomburrow: "Bloomburrow",
   tarkir: "Tarkir: Dragonstorm",
+  retro: "Retro (1997)",
+  modern: "Modern border (2003)",
 };
 
 export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
@@ -305,6 +318,10 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   agclassic: "alpha",
   alphaland: "alpha",
   alphatoken: "alpha",
+  retro: "retro",
+  retroland: "retro",
+  modern: "modern",
+  modernland: "modern",
 };
 
 // The frame a set defaults to when the picker switches to it.
@@ -315,6 +332,8 @@ export const FRAME_SET_DEFAULT_TEMPLATE: Record<FrameSet, FrameTemplate> = {
   avatar: "avatar",
   bloomburrow: "bloomburrow",
   tarkir: "tarkirdragon",
+  retro: "retro",
+  modern: "modern",
 };
 
 // ---------------------------------------------------------------------------
@@ -329,11 +348,13 @@ export const FRAME_SET_DEFAULT_TEMPLATE: Record<FrameSet, FrameTemplate> = {
 // Eras group the existing FrameSets: alpha→classic, m15→m15, and the four
 // Universes Beyond / showcase IP sets (lotr/avatar/bloomburrow/tarkir)→showcase.
 // ---------------------------------------------------------------------------
-export const FRAME_ERA_VALUES = ["classic", "m15", "showcase"] as const;
+export const FRAME_ERA_VALUES = ["classic", "retro", "modern", "m15", "showcase"] as const;
 export type FrameEra = (typeof FRAME_ERA_VALUES)[number];
 
 export const FRAME_ERA_LABELS: Record<FrameEra, string> = {
   classic: "Classic (1993)",
+  retro: "Retro (1997)",
+  modern: "Modern border (2003)",
   m15: "M15 (2015)",
   showcase: "Showcase & Universes Beyond",
 };
@@ -341,6 +362,8 @@ export const FRAME_ERA_LABELS: Record<FrameEra, string> = {
 // Friendly one-liners shown under each era chip.
 export const FRAME_ERA_HINTS: Record<FrameEra, string> = {
   classic: "Alpha / Beta — the original border",
+  retro: "Mirage–Scourge old border",
+  modern: "8th Edition–M14, the pre-2015 frame",
   m15: "The current Magic frame",
   showcase: "Modern IP crossovers & alt-art frames",
 };
@@ -349,6 +372,8 @@ export const FRAME_ERA_HINTS: Record<FrameEra, string> = {
 // error until it's assigned an era.
 export const FRAME_SET_ERA: Record<FrameSet, FrameEra> = {
   alpha: "classic",
+  retro: "retro",
+  modern: "modern",
   m15: "m15",
   lotr: "showcase",
   avatar: "showcase",
@@ -362,9 +387,8 @@ export const FRAME_SET_ERA: Record<FrameSet, FrameEra> = {
 // has no frame for that type (e.g. Classic has no planeswalker or battle —
 // those card types postdate the 1993 border), which the picker surfaces by
 // disabling the era chip for that type.
-export const ERA_TYPE_FRAME: Record<
-  "classic" | "m15",
-  Partial<Record<CardType, FrameTemplate>>
+export const ERA_TYPE_FRAME: Partial<
+  Record<FrameEra, Partial<Record<CardType, FrameTemplate>>>
 > = {
   classic: {
     creature: "agclassic",
@@ -375,6 +399,24 @@ export const ERA_TYPE_FRAME: Record<
     spell: "agclassic",
     land: "alphaland",
     token: "alphatoken",
+  },
+  retro: {
+    creature: "retro",
+    instant: "retro",
+    sorcery: "retro",
+    artifact: "retro",
+    enchantment: "retro",
+    spell: "retro",
+    land: "retroland",
+  },
+  modern: {
+    creature: "modern",
+    instant: "modern",
+    sorcery: "modern",
+    artifact: "modern",
+    enchantment: "modern",
+    spell: "modern",
+    land: "modernland",
   },
   m15: {
     creature: "m15",
@@ -395,6 +437,8 @@ export const ERA_TYPE_FRAME: Record<
 // Adventure a storybook creature, etc.). Order = display order in the picker.
 export const ERA_SPECIAL_LAYOUTS: Record<FrameEra, FrameTemplate[]> = {
   classic: [],
+  retro: [],
+  modern: [],
   m15: ["saga", "adventure", "split", "flip", "aftermath", "m15snow", "m15devoid"],
   showcase: [],
 };
@@ -471,8 +515,6 @@ export const COMING_SOON_FRAMES: ComingSoonFrame[] = [
 // the era to FRAME_ERA_VALUES + an ERA_TYPE_FRAME row, and remove it here.
 export type ComingSoonEra = { key: string; label: string; hint: string };
 export const COMING_SOON_ERAS: ComingSoonEra[] = [
-  { key: "retro", label: "Retro (1997)", hint: "Mirage–Scourge old border" },
-  { key: "modern", label: "Modern border (2003)", hint: "8th Edition–M14" },
   { key: "future", label: "Future Sight (2007)", hint: "The futureshifted frame" },
 ];
 
