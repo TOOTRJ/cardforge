@@ -91,24 +91,26 @@ export function statVisibility(cardType: CardType | "" | null | undefined): {
 
 const STEP_DEFS: StepDef[] = [
   {
+    // The frame step leads with "what are you making" (card type + color),
+    // because both DRIVE the frame: the era's type-variant comes from the card
+    // type and the frame color from the color identity. So these own their
+    // fields here (server-error routing follows), not on Details.
     key: "frame",
     label: "Frame",
-    description: "Pick a card frame",
-    fields: ["frame_style"],
+    description: "Type, color & frame",
+    fields: ["card_type", "color_identity", "frame_style"],
     isVisible: always,
   },
   {
     key: "details",
     label: "Details",
-    description: "Name, type & color",
+    description: "Name, cost & rarity",
     fields: [
       "title",
       "cost",
-      "card_type",
       "supertype",
       "subtypes_text",
       "rarity",
-      "color_identity",
       "game_system_id",
       "template_id",
     ],

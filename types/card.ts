@@ -317,6 +317,88 @@ export const FRAME_SET_DEFAULT_TEMPLATE: Record<FrameSet, FrameTemplate> = {
   tarkir: "tarkirdragon",
 };
 
+// ---------------------------------------------------------------------------
+// Frame ERAS — the top tier of the creator's frame picker. An era is a border
+// generation (the visual trade-dress family), NOT a play format. Play formats
+// (Modern, Pioneer…) span multiple borders, so they can't group frames; border
+// years can. The picker flow is: pick card type + color → pick era → the
+// specific frame is derived from the type (ERA_TYPE_FRAME), with optional
+// special layouts (ERA_SPECIAL_LAYOUTS) and a set→treatment sub-picker for the
+// "showcase" era.
+//
+// Eras group the existing FrameSets: alpha→classic, m15→m15, and the four
+// Universes Beyond / showcase IP sets (lotr/avatar/bloomburrow/tarkir)→showcase.
+// ---------------------------------------------------------------------------
+export const FRAME_ERA_VALUES = ["classic", "m15", "showcase"] as const;
+export type FrameEra = (typeof FRAME_ERA_VALUES)[number];
+
+export const FRAME_ERA_LABELS: Record<FrameEra, string> = {
+  classic: "Classic (1993)",
+  m15: "M15 (2015)",
+  showcase: "Showcase & Universes Beyond",
+};
+
+// Friendly one-liners shown under each era chip.
+export const FRAME_ERA_HINTS: Record<FrameEra, string> = {
+  classic: "Alpha / Beta — the original border",
+  m15: "The current Magic frame",
+  showcase: "Modern IP crossovers & alt-art frames",
+};
+
+// Which era each FrameSet belongs to. Exhaustive → adding a set is a compile
+// error until it's assigned an era.
+export const FRAME_SET_ERA: Record<FrameSet, FrameEra> = {
+  alpha: "classic",
+  m15: "m15",
+  lotr: "showcase",
+  avatar: "showcase",
+  bloomburrow: "showcase",
+  tarkir: "showcase",
+};
+
+// The standard / type-specific frame for a BORDER era + card type. The showcase
+// era is intentionally absent — its frames are chosen by a set→treatment
+// sub-picker, not derived from type. A missing card-type entry means the era
+// has no frame for that type (e.g. Classic has no planeswalker or battle —
+// those card types postdate the 1993 border), which the picker surfaces by
+// disabling the era chip for that type.
+export const ERA_TYPE_FRAME: Record<
+  "classic" | "m15",
+  Partial<Record<CardType, FrameTemplate>>
+> = {
+  classic: {
+    creature: "agclassic",
+    instant: "agclassic",
+    sorcery: "agclassic",
+    artifact: "agclassic",
+    enchantment: "agclassic",
+    spell: "agclassic",
+    land: "alphaland",
+    token: "alphatoken",
+  },
+  m15: {
+    creature: "m15",
+    instant: "m15",
+    sorcery: "m15",
+    artifact: "m15",
+    enchantment: "m15",
+    spell: "m15",
+    land: "m15land",
+    token: "m15token",
+    planeswalker: "m15pw",
+    battle: "battle",
+  },
+};
+
+// Structural / skin frame variants the user can opt into within a border era,
+// OVERRIDING the type-derived default (a Saga is a chapter-rail enchantment, an
+// Adventure a storybook creature, etc.). Order = display order in the picker.
+export const ERA_SPECIAL_LAYOUTS: Record<FrameEra, FrameTemplate[]> = {
+  classic: [],
+  m15: ["saga", "adventure", "split", "flip", "aftermath", "m15snow", "m15devoid"],
+  showcase: [],
+};
+
 export type FrameStyle = {
   /** Premium treatment layered on the base frame (foil / etched / showcase). */
   finish?: CardFinish;
@@ -383,13 +465,21 @@ export const COMING_SOON_FRAMES: ComingSoonFrame[] = [
   // future roadmap frames here to surface them as disabled "Soon" chips.
 ];
 
-export type ComingSoonSet = { key: string; label: string };
-export const COMING_SOON_SETS: ComingSoonSet[] = [
-  // Whole frame families on the roadmap (popular + recent set trade dress).
-  { key: "retro", label: "Retro (1997)" },
-  { key: "futureshifted", label: "Future Sight" },
-  { key: "universesbeyond", label: "Universes Beyond" },
+// Roadmap ERAS — border generations not yet converted, shown as disabled "Soon"
+// chips in the era tier so users see what's coming. The MSE pack has all three
+// (magic-old / magic-new / magic-future); to ship one, convert its frames, add
+// the era to FRAME_ERA_VALUES + an ERA_TYPE_FRAME row, and remove it here.
+export type ComingSoonEra = { key: string; label: string; hint: string };
+export const COMING_SOON_ERAS: ComingSoonEra[] = [
+  { key: "retro", label: "Retro (1997)", hint: "Mirage–Scourge old border" },
+  { key: "modern", label: "Modern border (2003)", hint: "8th Edition–M14" },
+  { key: "future", label: "Future Sight (2007)", hint: "The futureshifted frame" },
 ];
+
+// (Universes Beyond is now LIVE inside the "showcase" era — LOTR/Avatar are UB —
+//  so it's no longer a roadmap item.)
+export type ComingSoonSet = { key: string; label: string };
+export const COMING_SOON_SETS: ComingSoonSet[] = [];
 
 // ---------------------------------------------------------------------------
 // Composed types for queries that join cards with related tables.
