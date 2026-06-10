@@ -6,7 +6,7 @@
 //   node scripts/rebake-renders.mjs
 //     REBAKE_URL    target endpoint (default http://localhost:3000/api/admin/rebake
 //                   — the local dev server, which talks to the same Supabase
-//                   project and needs SUPABASE_SERVICE_ROLE_KEY in its env)
+//                   project and needs SUPABASE_SECRET_KEY in its env)
 //     CRON_SECRET   required when REBAKE_URL points at production
 //     BATCH         cards per request (default 8, max 25)
 //

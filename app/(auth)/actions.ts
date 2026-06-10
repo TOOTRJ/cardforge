@@ -61,7 +61,7 @@ export async function loginAction(
     return {
       status: "error",
       formError:
-        "Supabase isn't configured yet. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to .env.local.",
+        "Supabase isn't configured yet. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY to .env.local.",
       values: { email: parsed.data.email },
     };
   }
@@ -113,7 +113,7 @@ export async function signupAction(
     return {
       status: "error",
       formError:
-        "Supabase isn't configured yet. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to .env.local.",
+        "Supabase isn't configured yet. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY to .env.local.",
       values: { email: parsed.data.email, username: parsed.data.username },
     };
   }

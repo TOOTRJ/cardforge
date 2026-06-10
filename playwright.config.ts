@@ -12,7 +12,7 @@ import { defineConfig, devices } from "@playwright/test";
 //   1. `npx playwright install chromium`
 //      Downloads the browser binary. Required before the first run.
 //   2. Optional — for auth/create/import tests, populate `.env.local`
-//      with NEXT_PUBLIC_SUPABASE_URL + NEXT_PUBLIC_SUPABASE_ANON_KEY
+//      with NEXT_PUBLIC_SUPABASE_URL + NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 //      pointing at a test Supabase project. The marketing smoke test
 //      runs without these.
 // ---------------------------------------------------------------------------

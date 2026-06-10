@@ -104,7 +104,7 @@ function NotConfigured() {
           The card creator requires a Supabase connection to load card templates.
           Set <code className="font-mono text-foreground">NEXT_PUBLIC_SUPABASE_URL</code>{" "}
           and{" "}
-          <code className="font-mono text-foreground">NEXT_PUBLIC_SUPABASE_ANON_KEY</code>{" "}
+          <code className="font-mono text-foreground">NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY</code>{" "}
           in your environment.
         </p>
       </SurfaceCard>

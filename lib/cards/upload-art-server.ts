@@ -10,8 +10,9 @@ import { scanImageUrl } from "@/lib/moderation/image-scan";
 // ---------------------------------------------------------------------------
 // Server-side card-art upload (Phase 11 chunk 14 — M1 hardening).
 //
-// Replaces the client-side `lib/cards/upload-art.ts` for trusted uploads.
-// The browser still ships the bytes, but VALIDATION happens server-side:
+// Replaced the old client-side upload path (`lib/cards/upload-art.ts`,
+// since removed) for trusted uploads. The browser still ships the bytes,
+// but VALIDATION happens server-side:
 //
 //   1. Auth gate via the user's session.
 //   2. Size check (8 MB) against the actual blob, not the declared length.

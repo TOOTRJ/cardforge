@@ -99,7 +99,7 @@ function NotConfigured() {
         <p className="text-sm leading-6 text-muted">
           Set <code className="font-mono text-foreground">NEXT_PUBLIC_SUPABASE_URL</code>{" "}
           and{" "}
-          <code className="font-mono text-foreground">NEXT_PUBLIC_SUPABASE_ANON_KEY</code>{" "}
+          <code className="font-mono text-foreground">NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY</code>{" "}
           in your environment to enable the creator.
         </p>
       </SurfaceCard>
