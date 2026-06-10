@@ -48,7 +48,7 @@ export async function POST(request: Request) {
   }
   if (!isAdminConfigured()) {
     return NextResponse.json(
-      { ok: false, error: "Service role not configured (SUPABASE_SERVICE_ROLE_KEY)." },
+      { ok: false, error: "Admin key not configured (SUPABASE_SECRET_KEY)." },
       { status: 503 },
     );
   }

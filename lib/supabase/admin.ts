@@ -9,19 +9,27 @@ import type { Database } from "@/types/supabase";
 // write billing/entitlement columns that the user's own client is not trusted
 // to set.
 
-export function isAdminConfigured(): boolean {
+// Prefer the new `sb_secret_...` key (individually rotatable/revocable);
+// the legacy service_role JWT name keeps working as a fallback during the
+// migration. Both grant the same RLS-bypassing privileges.
+function adminKey(): string {
   return (
-    Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) &&
-    Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY)
+    process.env.SUPABASE_SECRET_KEY ??
+    process.env.SUPABASE_SERVICE_ROLE_KEY ??
+    ""
   );
+}
+
+export function isAdminConfigured(): boolean {
+  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) && Boolean(adminKey());
 }
 
 export function createAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+  const key = adminKey();
   if (!url || !key) {
     throw new Error(
-      "Supabase service role is not configured (SUPABASE_SERVICE_ROLE_KEY).",
+      "Supabase admin key is not configured (SUPABASE_SECRET_KEY or legacy SUPABASE_SERVICE_ROLE_KEY).",
     );
   }
   return createSupabaseClient<Database>(url, key, {

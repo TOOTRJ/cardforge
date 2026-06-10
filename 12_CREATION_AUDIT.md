@@ -397,3 +397,22 @@ since launch, which also means the "stale gallery PNGs" concern was moot in
 practice. The save-time bake fails best-effort-silently (`console.warn`); the
 sweep reports per-card errors, so its first run doubles as the diagnostic for
 the root cause.
+
+**Root cause found + fixed (same day):** the bake uploads with `upsert: true`,
+which Supabase storage executes as `INSERT … ON CONFLICT DO UPDATE` — and that
+plan requires SELECT visibility on `storage.objects`. `card-renders` had
+insert/update/delete policies but **no SELECT policy**, so every
+session-authenticated upsert failed RLS ("new row violates row-level security
+policy"). `card-art` never hit it because it uploads with `upsert: false`; the
+sweep never hit it because service_role bypasses RLS. Migration **0038** adds
+the owner-scoped SELECT policy; a live dev probe then confirmed the real
+`bakeCardRender` succeeds with the user session client, and the sweep
+backfilled all 53 public cards (verified: 53 objects, `layout_version = 2`,
+gallery tiles serving from `card-renders`).
+
+**Key migration:** the service-role JWT used for the sweep was exposed during
+setup, so the code now prefers Supabase's new API keys —
+`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (`sb_publishable_…`) and
+`SUPABASE_SECRET_KEY` (`sb_secret_…`) — with the legacy names as fallbacks
+(lib/supabase/env.ts, lib/supabase/admin.ts). Disabling the legacy JWT keys in
+the dashboard then revokes the exposed key without touching user sessions.
