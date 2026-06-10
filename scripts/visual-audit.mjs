@@ -135,6 +135,8 @@ const REFS = [
   { frame: "m15devoid", url: named("Reality Smasher", "ogw") },
   { frame: "m15pw", url: named("Vivien Reid", "m19") },
   { frame: "agclassic", url: named("Llanowar Elves", "lea") },
+  { frame: "retro", url: named("Mogg Fanatic", "tmp") },
+  { frame: "retroland", url: named("Wasteland", "tmp") },
   { frame: "alphaland", url: search("set:lea t:forest") },
   // alphatoken: no official 1993 token exists — rendered solo, judged vs MSE intent.
   { frame: "alphatoken", url: null, sample: alphaTokenSample() },

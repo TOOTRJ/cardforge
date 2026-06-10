@@ -23,10 +23,9 @@ import {
 // card-type change; special layouts + showcase frames are explicit user picks
 // and stay put.
 const TYPE_DERIVED_STANDARDS: ReadonlySet<FrameTemplate> = new Set(
-  [
-    ...Object.values(ERA_TYPE_FRAME.classic),
-    ...Object.values(ERA_TYPE_FRAME.m15),
-  ].filter((t): t is FrameTemplate => Boolean(t)),
+  Object.values(ERA_TYPE_FRAME)
+    .flatMap((byType) => Object.values(byType ?? {}))
+    .filter((t): t is FrameTemplate => Boolean(t)),
 );
 
 /** True when the template is a type-derived standard frame (so the picker may
@@ -51,7 +50,7 @@ export function standardFrameFor(
 ): FrameTemplate | null {
   if (era === "showcase") return null;
   const ct = (cardType || "creature") as CardType;
-  return ERA_TYPE_FRAME[era][ct] ?? null;
+  return ERA_TYPE_FRAME[era]?.[ct] ?? null;
 }
 
 /** Resolve the template the picker should select for a given (era, type),

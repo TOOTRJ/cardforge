@@ -511,6 +511,67 @@ const ALPHATOKEN: FrameProfile = {
   },
 };
 
+// ---------------------------------------------------------------------------
+// Retro (1997, magic-old.mse-style) — the pre-8th-Edition "old border": a tan
+// marble frame with the name + type printed directly on the border (no plates),
+// a white art window (cut to transparent), a cream text box, and dark-ink P/T
+// at the bottom-right. Structurally like AGCLASSIC but with the MSE magic-old
+// geometry. All text is dark ink on the light frame.
+// MSE magic-old spec (375×523): name 42,24 (23h); image 45,51 286×233;
+// type 39,291 (20h); text 43,318 289×143; pt 295,470 47×27.
+// ---------------------------------------------------------------------------
+const RETRO: FrameProfile = {
+  label: "Retro (1997)",
+  costSizePct: 0.04,
+  artSlot: { topPct: 9.6, leftPct: 11.7, widthPct: 76.6, heightPct: 44.8 },
+  title: {
+    rect: { topPct: 4.2, leftPct: 11, widthPct: 78, heightPct: 4.6 },
+    sizePct: 0.044,
+    colorHex: INK_DARK,
+    weight: 600,
+    font: "display",
+  },
+  type: {
+    rect: { topPct: 55.4, leftPct: 10.4, widthPct: 74, heightPct: 3.9 },
+    sizePct: 0.03,
+    colorHex: INK_DARK,
+    weight: 600,
+    font: "display",
+  },
+  rules: {
+    rect: { topPct: 60.6, leftPct: 11.5, widthPct: 77, heightPct: 27.2 },
+    sizePct: 0.0373,
+    colorHex: INK_DARK,
+    vAlign: "start",
+    font: "body",
+    lineHeight: 1.3,
+  },
+  footer: {
+    rect: { topPct: 95.3, leftPct: 11, widthPct: 78, heightPct: 2.6 },
+    sizePct: 0.015,
+    colorHex: "#efe9dd",
+    uppercase: true,
+    letterSpacingEm: 0.04,
+    font: "display",
+  },
+  // Real Mirage-era cards print P/T in dark ink on the tan strip (the MSE
+  // "white" note is its own outline treatment) — match the printed card.
+  pt: {
+    rect: { topPct: 89.5, leftPct: 77.5, widthPct: 14, heightPct: 5.6 },
+    sizePct: 0.042,
+    colorHex: INK_DARK,
+    weight: 700,
+  },
+};
+
+// Retro land — the 1997 nonbasic land frame (magic-old-unland): same geometry,
+// no mana cost.
+const RETROLAND: FrameProfile = {
+  ...RETRO,
+  label: "Retro Land",
+  hideCost: true,
+};
+
 // Battle — the M15 Siege frame, the only LANDSCAPE frame (7:5). Full-bleed art
 // with a title pill (top), a type pill, and a text box overlaid; the frame
 // paints no defense shield, so the defense value renders on a drawn dark badge
@@ -1111,6 +1172,8 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   tarkirdragon: TARKIRDRAGON,
   tarkirdraconic: TARKIRDRACONIC,
   tarkirghostfire: TARKIRGHOSTFIRE,
+  retro: RETRO,
+  retroland: RETROLAND,
 };
 
 /** Resolve a frame profile, defaulting to M15 for unknown/legacy templates
