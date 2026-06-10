@@ -572,6 +572,67 @@ const RETROLAND: FrameProfile = {
   hideCost: true,
 };
 
+// ---------------------------------------------------------------------------
+// Modern border (2003, magic-new.mse-style) — the 8th-Edition–M14 frame: a
+// light beveled border with a title bar, a type bar, and a separate beveled
+// P/T box bottom-right (a real plate PNG, like M15). Names/type use the squared
+// display face (Beleren stands in for Matrix, which it was designed to evoke).
+// MSE magic-new spec (375×523): name 30 (23h); image 32,62 311×228;
+// type 298 (20h); text 31,328 311×142; pt box 284,466 60×28 (+plate overlay).
+// ---------------------------------------------------------------------------
+const MODERN: FrameProfile = {
+  label: "Modern border (2003)",
+  costSizePct: 0.04,
+  artSlot: { topPct: 11.6, leftPct: 8.3, widthPct: 83.2, heightPct: 43.8 },
+  title: {
+    rect: { topPct: 5.5, leftPct: 8.8, widthPct: 78, heightPct: 4.4 },
+    sizePct: 0.044,
+    colorHex: INK_DARK,
+    weight: 600,
+    font: "display",
+  },
+  type: {
+    rect: { topPct: 56.6, leftPct: 9, widthPct: 74, heightPct: 3.9 },
+    sizePct: 0.0347,
+    colorHex: INK_DARK,
+    weight: 600,
+    font: "display",
+  },
+  rules: {
+    rect: { topPct: 62.5, leftPct: 8.3, widthPct: 83, heightPct: 27 },
+    sizePct: 0.0373,
+    colorHex: INK_DARK,
+    vAlign: "start",
+    font: "body",
+    lineHeight: 1.3,
+  },
+  footer: {
+    rect: { topPct: 91.4, leftPct: 14, widthPct: 58, heightPct: 2.6 },
+    sizePct: 0.015,
+    colorHex: INK_DARK,
+    uppercase: true,
+    letterSpacingEm: 0.04,
+    font: "display",
+  },
+  // The 2003 P/T box is a separate beveled plate (magic-new {color}pt.jpg),
+  // upscaled to /frames/modern/pt/{color}.png. Drawn behind the dark value.
+  pt: {
+    rect: { topPct: 87.3, leftPct: 73.3, widthPct: 21, heightPct: 6.8 },
+    sizePct: 0.044,
+    colorHex: INK_DARK,
+    weight: 700,
+    plateAssetPathTemplate: "/frames/modern/pt/{color}.png",
+  },
+};
+
+// Modern land — the 2003 nonbasic land frame (magic-new land variants): same
+// geometry, no mana cost.
+const MODERNLAND: FrameProfile = {
+  ...MODERN,
+  label: "Modern Land",
+  hideCost: true,
+};
+
 // Battle — the M15 Siege frame, the only LANDSCAPE frame (7:5). Full-bleed art
 // with a title pill (top), a type pill, and a text box overlaid; the frame
 // paints no defense shield, so the defense value renders on a drawn dark badge
@@ -1174,6 +1235,8 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   tarkirghostfire: TARKIRGHOSTFIRE,
   retro: RETRO,
   retroland: RETROLAND,
+  modern: MODERN,
+  modernland: MODERNLAND,
 };
 
 /** Resolve a frame profile, defaulting to M15 for unknown/legacy templates

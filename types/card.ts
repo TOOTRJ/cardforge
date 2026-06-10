@@ -223,6 +223,8 @@ export const FRAME_TEMPLATE_VALUES = [
   // Border eras beyond Alpha/M15 (converted from the MSE old/new/future styles).
   "retro",
   "retroland",
+  "modern",
+  "modernland",
 ] as const;
 export type FrameTemplate = (typeof FRAME_TEMPLATE_VALUES)[number];
 
@@ -259,6 +261,8 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   tarkirghostfire: "Ghostfire",
   retro: "Standard",
   retroland: "Land",
+  modern: "Standard",
+  modernland: "Land",
 };
 
 // ---------------------------------------------------------------------------
@@ -275,6 +279,7 @@ export const FRAME_SET_VALUES = [
   "bloomburrow",
   "tarkir",
   "retro",
+  "modern",
 ] as const;
 export type FrameSet = (typeof FRAME_SET_VALUES)[number];
 
@@ -286,6 +291,7 @@ export const FRAME_SET_LABELS: Record<FrameSet, string> = {
   bloomburrow: "Bloomburrow",
   tarkir: "Tarkir: Dragonstorm",
   retro: "Retro (1997)",
+  modern: "Modern border (2003)",
 };
 
 export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
@@ -314,6 +320,8 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   alphatoken: "alpha",
   retro: "retro",
   retroland: "retro",
+  modern: "modern",
+  modernland: "modern",
 };
 
 // The frame a set defaults to when the picker switches to it.
@@ -325,6 +333,7 @@ export const FRAME_SET_DEFAULT_TEMPLATE: Record<FrameSet, FrameTemplate> = {
   bloomburrow: "bloomburrow",
   tarkir: "tarkirdragon",
   retro: "retro",
+  modern: "modern",
 };
 
 // ---------------------------------------------------------------------------
@@ -339,12 +348,13 @@ export const FRAME_SET_DEFAULT_TEMPLATE: Record<FrameSet, FrameTemplate> = {
 // Eras group the existing FrameSets: alpha→classic, m15→m15, and the four
 // Universes Beyond / showcase IP sets (lotr/avatar/bloomburrow/tarkir)→showcase.
 // ---------------------------------------------------------------------------
-export const FRAME_ERA_VALUES = ["classic", "retro", "m15", "showcase"] as const;
+export const FRAME_ERA_VALUES = ["classic", "retro", "modern", "m15", "showcase"] as const;
 export type FrameEra = (typeof FRAME_ERA_VALUES)[number];
 
 export const FRAME_ERA_LABELS: Record<FrameEra, string> = {
   classic: "Classic (1993)",
   retro: "Retro (1997)",
+  modern: "Modern border (2003)",
   m15: "M15 (2015)",
   showcase: "Showcase & Universes Beyond",
 };
@@ -353,6 +363,7 @@ export const FRAME_ERA_LABELS: Record<FrameEra, string> = {
 export const FRAME_ERA_HINTS: Record<FrameEra, string> = {
   classic: "Alpha / Beta — the original border",
   retro: "Mirage–Scourge old border",
+  modern: "8th Edition–M14, the pre-2015 frame",
   m15: "The current Magic frame",
   showcase: "Modern IP crossovers & alt-art frames",
 };
@@ -362,6 +373,7 @@ export const FRAME_ERA_HINTS: Record<FrameEra, string> = {
 export const FRAME_SET_ERA: Record<FrameSet, FrameEra> = {
   alpha: "classic",
   retro: "retro",
+  modern: "modern",
   m15: "m15",
   lotr: "showcase",
   avatar: "showcase",
@@ -397,6 +409,15 @@ export const ERA_TYPE_FRAME: Partial<
     spell: "retro",
     land: "retroland",
   },
+  modern: {
+    creature: "modern",
+    instant: "modern",
+    sorcery: "modern",
+    artifact: "modern",
+    enchantment: "modern",
+    spell: "modern",
+    land: "modernland",
+  },
   m15: {
     creature: "m15",
     instant: "m15",
@@ -417,6 +438,7 @@ export const ERA_TYPE_FRAME: Partial<
 export const ERA_SPECIAL_LAYOUTS: Record<FrameEra, FrameTemplate[]> = {
   classic: [],
   retro: [],
+  modern: [],
   m15: ["saga", "adventure", "split", "flip", "aftermath", "m15snow", "m15devoid"],
   showcase: [],
 };
@@ -493,7 +515,6 @@ export const COMING_SOON_FRAMES: ComingSoonFrame[] = [
 // the era to FRAME_ERA_VALUES + an ERA_TYPE_FRAME row, and remove it here.
 export type ComingSoonEra = { key: string; label: string; hint: string };
 export const COMING_SOON_ERAS: ComingSoonEra[] = [
-  { key: "modern", label: "Modern border (2003)", hint: "8th Edition–M14" },
   { key: "future", label: "Future Sight (2007)", hint: "The futureshifted frame" },
 ];
 
