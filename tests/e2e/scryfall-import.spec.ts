@@ -86,7 +86,11 @@ test.describe("Scryfall search → import", () => {
     await page.goto("/create");
 
     // Open the Scryfall import dialog from the Identity-tab trigger.
-    await page.getByRole("button", { name: /search a real card/i }).click();
+    // Exact match: the quick-start hero renders a second, longer-named
+    // "Search a real card …" tile; this targets the frame-step button.
+    await page
+      .getByRole("button", { name: "Search a real card", exact: true })
+      .click();
 
     // Type into the search input → triggers the mocked /search.
     await page.locator('input[aria-label="Search Scryfall"]').fill(

@@ -17,7 +17,7 @@ test.describe("pricing page", () => {
     await page.goto("/pricing");
 
     await expect(
-      page.getByRole("heading", { name: /forge more with a plan/i }),
+      page.getByRole("heading", { name: /legendary tools/i }),
     ).toBeVisible();
 
     for (const name of ["Free", "Plus", "Pro"]) {

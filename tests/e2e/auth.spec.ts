@@ -35,10 +35,20 @@ test.describe("signup → login → logout", () => {
   });
 
   test("logout returns to the marketing home", async ({ page }) => {
-    // Assumes previous test's session is still active. Runs serial via
-    // playwright.config.ts (fullyParallel: false, workers: 1).
-    await page.goto("/dashboard");
-    await page.getByRole("button", { name: /sign out|logout/i }).click();
-    await page.waitForURL("/");
+    // Fresh context per test (storageState: undefined), so sign in first.
+    await page.goto("/login");
+    await page
+      .locator('input[type="email"]')
+      .fill(process.env.SUPABASE_E2E_USER_EMAIL!);
+    await page
+      .locator('input[type="password"]')
+      .fill(process.env.SUPABASE_E2E_USER_PASSWORD!);
+    await page.getByRole("button", { name: /sign in/i }).click();
+    await page.waitForURL("**/dashboard");
+
+    // Sign out lives inside the account-menu popover.
+    await page.getByRole("button", { name: /open account menu/i }).click();
+    await page.getByRole("button", { name: /sign out/i }).click();
+    await page.waitForURL((url) => url.pathname === "/");
   });
 });
