@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { PenLine } from "lucide-react";
+import { FileDown, Sparkles, Type } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { CompassStar } from "@/components/ui/compass-star";
+import { StarfieldBackdrop } from "@/components/ui/starfield-backdrop";
 import { CardPreviewPlaceholder } from "@/components/cards/card-preview-placeholder";
 
 // WUBRG pip labels for the decorative strip
@@ -13,33 +14,41 @@ const MANA_PIPS = [
   { key: "G", label: "Green", cls: "mana-pip mana-g" },
 ];
 
+// The three precision promises under the CTAs (mockup's micro-feature row).
+const MICRO_FEATURES = [
+  { icon: Sparkles, label: "Pixel-perfect pips" },
+  { icon: Type, label: "Advanced text tools" },
+  { icon: FileDown, label: "Print-ready exports" },
+];
+
 export function MarketingHero() {
   return (
     <section className="relative overflow-hidden border-b border-border/40">
       <div className="absolute inset-0 bg-radial-glow" aria-hidden />
-      <div className="absolute inset-0 bg-grid opacity-[0.15]" aria-hidden />
+      <StarfieldBackdrop withGlyphs />
 
       <div className="relative mx-auto grid w-full max-w-7xl gap-12 px-4 py-24 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:gap-16 lg:px-8 lg:py-32">
         <div className="flex flex-col items-start gap-6">
-          {/* Badge */}
-          <Badge variant="primary" className="gap-1.5">
-            <PenLine className="h-3 w-3" aria-hidden />
-            Free · No account needed to preview
-          </Badge>
+          {/* Eyebrow */}
+          <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-gold-strong">
+            <CompassStar className="h-3.5 w-3.5" />
+            Built for creators. Inspired by legends.
+          </p>
 
           {/* Headline */}
           <h1 className="font-display text-4xl font-semibold leading-[1.05] tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-            Design your own
-            <span className="block bg-linear-to-r from-primary via-primary to-accent bg-clip-text text-transparent">
-              Magic cards.
+            Create custom MTG-style cards with
+            <span className="block bg-linear-to-r from-gold-strong via-primary-bright to-primary-bright bg-clip-text text-transparent">
+              perfect pips, text, and frames.
             </span>
           </h1>
 
           {/* Sub-copy — MTG vocabulary throughout */}
           <p className="max-w-xl text-base leading-7 text-muted sm:text-lg">
-            Set mana costs, write oracle text, tune power and toughness —
-            then share the result with your playgroup. Creatures, instants,
-            enchantments, planeswalkers, full expansion sets. All of it.
+            Set mana costs with precision pips, write oracle text with smart
+            tools, and pick frames from three decades of card design — then
+            share the result with your playgroup or the community. Free to
+            start; no account needed to preview.
           </p>
 
           {/* WUBRG pip strip */}
@@ -60,12 +69,25 @@ export function MarketingHero() {
           {/* CTAs */}
           <div className="flex flex-wrap items-center gap-3">
             <Button asChild size="lg">
-              <Link href="/preview">Start forging</Link>
+              <Link href="/preview">Start creating</Link>
             </Button>
             <Button asChild size="lg" variant="outline">
-              <Link href="/gallery">Browse gallery</Link>
+              <Link href="/gallery">Explore the gallery</Link>
             </Button>
           </div>
+
+          {/* Micro-features — the precision promises */}
+          <ul className="flex flex-wrap items-center gap-x-6 gap-y-2">
+            {MICRO_FEATURES.map(({ icon: Icon, label }) => (
+              <li
+                key={label}
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-muted"
+              >
+                <Icon className="h-3.5 w-3.5 text-gold" aria-hidden />
+                {label}
+              </li>
+            ))}
+          </ul>
 
           {/* Legal micro-copy */}
           <p className="text-xs leading-5 text-subtle">
@@ -76,7 +98,7 @@ export function MarketingHero() {
 
         {/* Hero card preview — two tilted placeholder cards */}
         <div className="relative">
-          <div className="absolute -inset-8 -z-10 rounded-[2rem] bg-linear-to-br from-primary/20 via-accent/10 to-transparent blur-2xl" aria-hidden />
+          <div className="absolute -inset-8 -z-10 rounded-[2rem] bg-linear-to-br from-primary/25 via-gold/10 to-transparent blur-2xl" aria-hidden />
           <div className="grid grid-cols-2 gap-4 sm:gap-6">
             <CardPreviewPlaceholder
               className="rotate-[-4deg]"

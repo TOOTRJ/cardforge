@@ -1,84 +1,88 @@
 import {
+  Frame,
   GitFork,
   Layers,
-  Palette,
   Sparkles,
   Swords,
-  FileDown,
+  Type,
   type LucideIcon,
 } from "lucide-react";
 import { SurfaceCard } from "@/components/ui/surface-card";
+import { IconTile } from "@/components/ui/icon-tile";
+import { SectionHeading } from "@/components/ui/section-heading";
 
 type Feature = {
   icon: LucideIcon;
+  tone: "gold" | "purple" | "ember";
   title: string;
   description: string;
 };
 
 const features: Feature[] = [
   {
+    icon: Sparkles,
+    tone: "gold",
+    title: "Perfect pips",
+    description:
+      "Precision mana symbols that stay crisp at any size — generic, hybrid, twobrid, phyrexian, snow, energy, all of it. Upload your own custom pip icons and every card you own wears them, from the editor to the exported PNG.",
+  },
+  {
+    icon: Frame,
+    tone: "purple",
+    title: "Beautiful frames",
+    description:
+      "Three decades of card design in one picker: 1993 classic, 1997 retro, 2003 modern, M15, and showcase styles. Frames tint to your color identity automatically, and the live preview matches the export pixel for pixel.",
+  },
+  {
+    icon: Type,
+    tone: "ember",
+    title: "Smart text tools",
+    description:
+      "An oracle-text editor with a full symbol toolbar, reminder-text italics, ability templating, and auto-fit sizing — plus an AI assistant that tightens wording and writes flavor text without overwriting your work.",
+  },
+  {
     icon: Swords,
+    tone: "purple",
     title: "Every MTG card type",
     description:
-      "Creatures, instants, sorceries, enchantments, artifacts, lands, planeswalkers, and battles. Set mana costs, power/toughness, loyalty counters, and oracle text exactly the way you want.",
-  },
-  {
-    icon: Palette,
-    title: "WUBRG color identity",
-    description:
-      "Full five-color support. Assign white, blue, black, red, green, or multicolor identity and watch the card's art well tint to match. Colorless builds included.",
-  },
-  {
-    icon: Sparkles,
-    title: "AI rules templating",
-    description:
-      "Stuck on wording? The built-in AI assistant suggests oracle text, tightens keyword templating, and writes flavor text in the voice you describe — without overwriting your work.",
+      "Creatures, instants, sorceries, enchantments, artifacts, lands, planeswalkers, battles, sagas, and double-faced cards. Set power and toughness, loyalty, defense, and chapter abilities exactly the way you want.",
   },
   {
     icon: Layers,
+    tone: "gold",
     title: "Full expansion sets",
     description:
-      "Group cards into named sets. Track rarity distribution, color spread, and creature type themes across your whole set from a single workspace — like a one-person R&D team.",
+      "Group cards into named sets. Track rarity distribution, color spread, and creature-type themes across your whole set from a single workspace — like a one-person R&D team.",
   },
   {
     icon: GitFork,
-    title: "Share and remix",
+    tone: "ember",
+    title: "Share, remix, export",
     description:
-      "Publish cards to the community gallery or keep them private. Any public card can be remixed — fork it, tweak the cost, rewrite the ability, and publish your spin under your name.",
-  },
-  {
-    icon: FileDown,
-    title: "Export your cards",
-    description:
-      "Download any card as a high-resolution PNG or export your full set as structured JSON. Every card is data first, image second — so it stays editable forever.",
+      "Publish to the community gallery or keep cards private. Remix any public card under your own name, and export print-ready PNGs or PDF sheets whenever you're ready to play.",
   },
 ];
 
 export function FeatureGrid() {
   return (
     <section className="mx-auto w-full max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
-      <div className="mb-12 flex flex-col gap-4 text-center">
-        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-primary-bright">
-          Built for Magic fans
-        </span>
-        <h2 className="font-display text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-          Everything you need to design custom MTG cards
-        </h2>
-        <p className="mx-auto max-w-2xl text-base leading-7 text-muted">
-          From a single homebrewed creature to a complete fan expansion —
-          PipGlyph handles the design work so you can focus on the game.
-        </p>
-      </div>
+      <SectionHeading
+        align="center"
+        eyebrow="Built for Magic fans"
+        title="Everything you need to craft amazing cards"
+        description="From a single homebrewed creature to a complete fan expansion — PipGlyph handles the precision work so you can focus on the game."
+        className="mb-12"
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {features.map(({ icon: Icon, title, description }) => (
+        {features.map(({ icon: Icon, tone, title, description }) => (
           <SurfaceCard
             key={title}
-            className="flex flex-col gap-3 p-6 transition-colors hover:border-border-strong"
+            className="flex flex-col gap-3 p-6 transition-colors hover:border-gold/40"
           >
-            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-elevated text-primary-bright">
-              <Icon className="h-5 w-5" aria-hidden />
-            </span>
+            <IconTile tone={tone}>
+              <Icon aria-hidden />
+            </IconTile>
             <h3 className="font-display text-lg font-semibold text-foreground">
               {title}
             </h3>

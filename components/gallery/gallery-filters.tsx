@@ -145,7 +145,7 @@ export function GalleryFilters() {
       </form>
 
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-semibold uppercase tracking-wider text-subtle">
+        <span className="text-xs font-semibold uppercase tracking-wider text-muted">
           Type
         </span>
         <Chip
@@ -168,7 +168,7 @@ export function GalleryFilters() {
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-semibold uppercase tracking-wider text-subtle">
+        <span className="text-xs font-semibold uppercase tracking-wider text-muted">
           Rarity
         </span>
         <Chip
@@ -191,7 +191,7 @@ export function GalleryFilters() {
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-semibold uppercase tracking-wider text-subtle">
+        <span className="text-xs font-semibold uppercase tracking-wider text-muted">
           Color
         </span>
         <Chip
@@ -213,7 +213,7 @@ export function GalleryFilters() {
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-semibold uppercase tracking-wider text-subtle">
+        <span className="text-xs font-semibold uppercase tracking-wider text-muted">
           Sort
         </span>
         {(Object.keys(SORT_LABELS) as Sort[]).map((value) => (
