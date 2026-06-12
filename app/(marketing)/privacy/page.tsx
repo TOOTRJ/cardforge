@@ -15,7 +15,7 @@ export default function PrivacyPage() {
       eyebrow="Legal"
       title="Privacy"
       description="What we collect, why we collect it, and how to delete it."
-      lastUpdated="May 2026"
+      lastUpdated="June 2026"
     >
       <p className="rounded-md border border-border/60 bg-elevated px-4 py-3 text-foreground">
         <strong>The short version:</strong> PipGlyph collects the minimum it
@@ -110,12 +110,28 @@ export default function PrivacyPage() {
         </li>
       </ul>
 
-      <h2>6. Cookies</h2>
+      <h2>6. Cookies &amp; analytics</h2>
       <p>
         We use first-party cookies for authentication (Supabase session
-        tokens). We don&apos;t use third-party advertising or analytics
-        cookies. Basic anonymous analytics may be added later — if so, this
-        page will be updated first.
+        tokens) and your theme preference. We don&apos;t use advertising
+        cookies.
+      </p>
+      <p>
+        We use Google Analytics 4 to understand aggregate usage — which
+        pages are visited and roughly how the product is used. This sets
+        Google&apos;s <code>_ga</code> cookies and shares usage signals
+        (page URLs, device/browser class, approximate region) with Google.
+        We don&apos;t send your email, card content, or other account data
+        to analytics. You can block it with any standard content blocker or
+        Google&apos;s{" "}
+        <a
+          href="https://tools.google.com/dlpage/gaoptout"
+          rel="noopener noreferrer"
+          target="_blank"
+        >
+          opt-out browser add-on
+        </a>
+        ; the product works identically without it.
       </p>
 
       <h2>7. Children</h2>
