@@ -12,9 +12,17 @@ import {
   daysLeft,
   getChallengeBySlug,
   isActive,
+  type Challenge,
 } from "@/lib/challenges/queries";
 import { listPublicCardsRich } from "@/lib/cards/queries";
+import { buildCardPath } from "@/lib/cards/utils";
 import { getCurrentUser } from "@/lib/supabase/server";
+import { getSiteBaseUrl } from "@/lib/site-url";
+import {
+  breadcrumbJsonLd,
+  itemListJsonLd,
+  JsonLd,
+} from "@/components/seo/json-ld";
 
 type Params = { slug: string };
 
@@ -50,6 +58,25 @@ export default async function ChallengeDetailPage({
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: "Home", path: "/" },
+          { name: "Challenges", path: "/challenges" },
+          { name: challenge.title, path: `/challenges/${challenge.slug}` },
+        ])}
+      />
+      <JsonLd data={buildChallengeEventJsonLd(challenge)} />
+      {entries.length > 0 ? (
+        <JsonLd
+          data={itemListJsonLd({
+            name: `${challenge.title} — challenge entries`,
+            items: entries.map((card) => ({
+              name: card.title,
+              path: buildCardPath(card),
+            })),
+          })}
+        />
+      ) : null}
       {/* Hero */}
       <SurfaceCard tone="gold" className="relative overflow-hidden p-8 sm:p-12">
         <div className="absolute inset-0 bg-radial-glow" aria-hidden />
@@ -146,4 +173,39 @@ export default async function ChallengeDetailPage({
       </section>
     </div>
   );
+}
+
+// ---------------------------------------------------------------------------
+// Event JSON-LD — challenges are online events with a real window, which
+// lets search engines surface "N days left" style context. Google's Event
+// rich result requires a location; VirtualLocation + the online attendance
+// mode is the correct shape for a web-only event.
+// ---------------------------------------------------------------------------
+
+function buildChallengeEventJsonLd(
+  challenge: Challenge,
+): Record<string, unknown> {
+  const base = getSiteBaseUrl();
+  const canonical = `${base}/challenges/${challenge.slug}`;
+  return {
+    "@context": "https://schema.org",
+    "@type": "Event",
+    name: challenge.title,
+    description: challenge.description,
+    startDate: challenge.starts_at,
+    endDate: challenge.ends_at,
+    eventStatus: "https://schema.org/EventScheduled",
+    eventAttendanceMode: "https://schema.org/OnlineEventAttendanceMode",
+    location: {
+      "@type": "VirtualLocation",
+      url: canonical,
+    },
+    organizer: {
+      "@type": "Organization",
+      name: "PipGlyph",
+      url: base,
+    },
+    isAccessibleForFree: true,
+    url: canonical,
+  };
 }

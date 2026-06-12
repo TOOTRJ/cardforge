@@ -14,7 +14,13 @@ import {
   TrendingCardsSectionSkeleton,
 } from "@/components/gallery/trending-cards-section";
 import { listPublicCardsRich, listTrendingCards } from "@/lib/cards/queries";
+import { buildCardPath } from "@/lib/cards/utils";
 import { daysLeft, getFeaturedActiveChallenge } from "@/lib/challenges/queries";
+import {
+  breadcrumbJsonLd,
+  itemListJsonLd,
+  JsonLd,
+} from "@/components/seo/json-ld";
 import { Badge } from "@/components/ui/badge";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -139,6 +145,12 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: "Home", path: "/" },
+          { name: "Gallery", path: "/gallery" },
+        ])}
+      />
       <PageHeader
         eyebrow="Public"
         title="Community gallery"
@@ -250,8 +262,31 @@ async function GalleryResults({ filters }: { filters: ParsedFilters }) {
   const hasMore = cards.length === PAGE_SIZE;
   const hasPrev = page > 1;
 
+  // ItemList only on the canonical default view — every filtered/paged
+  // variant canonicalizes to /gallery, so describing a filtered slice
+  // there would mislabel the page's content.
+  const isCanonicalView =
+    page === 1 &&
+    !cardType &&
+    !rarity &&
+    !search &&
+    !sourceScryfallId &&
+    !tag &&
+    sort === "recent";
+
   return (
     <>
+      {isCanonicalView ? (
+        <JsonLd
+          data={itemListJsonLd({
+            name: "Community gallery — custom MTG-style cards",
+            items: cards.map((card) => ({
+              name: card.title,
+              path: buildCardPath(card),
+            })),
+          })}
+        />
+      ) : null}
       {tag ? (
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-md border border-primary/40 bg-primary/10 px-4 py-2.5 text-xs text-foreground">
           <span className="inline-flex items-center gap-2">

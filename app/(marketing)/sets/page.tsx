@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { QuickLikeButton } from "@/components/cards/quick-like-button";
+import { breadcrumbJsonLd, JsonLd } from "@/components/seo/json-ld";
 import { listPublicSets } from "@/lib/sets/queries";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getCurrentUser } from "@/lib/supabase/server";
@@ -40,6 +41,12 @@ export default async function PublicSetsPage({ searchParams }: SetsPageProps) {
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: "Home", path: "/" },
+          { name: "Community sets", path: "/sets" },
+        ])}
+      />
       <PageHeader
         eyebrow="Public"
         title="Community sets"

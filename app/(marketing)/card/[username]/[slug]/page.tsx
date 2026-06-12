@@ -29,6 +29,7 @@ import { getEntitlements } from "@/lib/billing/entitlements";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { RENDER_PRESETS } from "@/lib/render/card-image";
 import { getSiteBaseUrl } from "@/lib/site-url";
+import { breadcrumbJsonLd, JsonLd } from "@/components/seo/json-ld";
 import type { ArtPosition, CardBackFace, FrameStyle } from "@/types/card";
 import { Sparkles } from "lucide-react";
 
@@ -182,6 +183,17 @@ export default async function CardDetailPage({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      ) : null}
+      {/* Breadcrumbs only for indexable cards — unlisted pages are noindex,
+          so hierarchy signals there are wasted bytes. */}
+      {card.visibility === "public" ? (
+        <JsonLd
+          data={breadcrumbJsonLd([
+            { name: "Home", path: "/" },
+            { name: "Gallery", path: "/gallery" },
+            { name: card.title, path: `/card/${username}/${card.slug}` },
+          ])}
         />
       ) : null}
       <Link
