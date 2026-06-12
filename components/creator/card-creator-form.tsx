@@ -18,8 +18,14 @@ import {
 import {
   ArrowLeft,
   ArrowRight,
+  FileText,
+  Frame,
+  Image as ImageIcon,
+  Layers,
   Lock,
   Save,
+  ScrollText,
+  Send,
   Sparkles,
   Wand2,
 } from "lucide-react";
@@ -29,6 +35,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { Stepper, type StepperStep } from "@/components/ui/stepper";
+import { StepRail } from "@/components/ui/step-rail";
 import { CardPreview } from "@/components/cards/card-preview";
 import { DeleteCardDialog } from "@/components/creator/delete-card-dialog";
 import type { CardFieldPatch } from "@/components/creator/ai-assistant-panel";
@@ -136,6 +143,17 @@ const CARD_DRAFT_STORAGE_KEY = "pipglyph:card-draft:v1";
 // Pre-rebrand key — read as a fallback so in-flight drafts survive the
 // Spellwright → PipGlyph swap; removed once migrated. Drop after 2026-09.
 const LEGACY_CARD_DRAFT_STORAGE_KEY = "spellwright:card-draft:v1";
+
+// Icons for the xl+ vertical step rail (one per StepKey; the "extra" step's
+// dynamic labels — Adventure / Back face / Flip side — all read as Layers).
+const STEP_RAIL_ICONS: Record<string, React.ReactNode> = {
+  frame: <Frame aria-hidden />,
+  details: <FileText aria-hidden />,
+  art: <ImageIcon aria-hidden />,
+  rules: <ScrollText aria-hidden />,
+  extra: <Layers aria-hidden />,
+  publish: <Send aria-hidden />,
+};
 
 // ---------------------------------------------------------------------------
 // Component
@@ -891,8 +909,18 @@ export function CardCreatorForm({
           const first = Object.keys(formErrors)[0];
           if (first) goToIndex(stepIndexForField(first, steps));
         })}
-        className="grid gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]"
+        className="grid gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] xl:grid-cols-[10.5rem_minmax(0,1.05fr)_minmax(0,0.95fr)] xl:gap-6"
       >
+        {/* ----- Far left (xl+): vertical icon step rail ----- */}
+        <StepRail
+          steps={stepperSteps}
+          current={idx}
+          onStepSelect={goToIndex}
+          isStepEnabled={() => true}
+          icons={STEP_RAIL_ICONS}
+          className="hidden xl:sticky xl:top-24 xl:block xl:self-start"
+        />
+
         {/* ----- Left: form ----- */}
         <SurfaceCard className="flex flex-col gap-6 p-6">
           {serverError ? (
@@ -910,6 +938,7 @@ export function CardCreatorForm({
               current={idx}
               onStepSelect={goToIndex}
               isStepEnabled={() => true}
+              className="xl:hidden"
             />
 
             {/* Mobile inline preview — keeps the card visible while editing
