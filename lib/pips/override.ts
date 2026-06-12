@@ -8,9 +8,10 @@ import type { Token } from "@/components/cards/mana-cost-glyphs";
 // ManaCostPicker), the renderer asks `pipOverrideForToken` whether the token
 // should draw the owner's image instead of the standard mana-font glyph.
 //
-// Scope (v1): the six core symbols W/U/B/R/G/C, mana costs only. Generic
-// numbers, X, hybrids, phyrexians, and rules-text pips keep the standard
-// glyphs — extend CUSTOM_PIP_SYMBOLS + the match below to grow the set.
+// Scope: the six core symbols W/U/B/R/G/C, in mana costs AND inline
+// rules-text pips. Generic numbers, X, hybrids, phyrexians, and the
+// utility symbols keep the standard glyphs — extend CUSTOM_PIP_SYMBOLS +
+// the matches below to grow the set.
 // ---------------------------------------------------------------------------
 
 export const CUSTOM_PIP_SYMBOLS = ["W", "U", "B", "R", "G", "C"] as const;
@@ -47,4 +48,27 @@ export function pipOverrideForToken(
   if (token.label !== token.color) return null;
   if (!isCustomPipSymbol(token.color)) return null;
   return overrides[token.color] ?? null;
+}
+
+// Mana-font class suffixes for the core solids ("w"…"c") — the shape the
+// rules-text tokenizer carries (lib/cards/rules-text.ts RulesItem). Hybrids
+// ("wu"), twobrids ("2w"), phyrexians ("wp"), generic digits, and utility
+// suffixes ("tap"…) are longer than one core letter and never match.
+const SUFFIX_TO_SYMBOL: Record<string, CustomPipSymbol> = {
+  w: "W",
+  u: "U",
+  b: "B",
+  r: "R",
+  g: "G",
+  c: "C",
+};
+
+/** Suffix-keyed twin of pipOverrideForToken, for inline rules-text pips. */
+export function pipOverrideForSuffix(
+  suffix: string,
+  overrides: PipOverrides | null | undefined,
+): string | null {
+  if (!overrides) return null;
+  const symbol = SUFFIX_TO_SYMBOL[suffix];
+  return symbol ? overrides[symbol] ?? null : null;
 }
