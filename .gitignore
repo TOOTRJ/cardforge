@@ -50,3 +50,7 @@ next-env.d.ts
 # Local scratch + visual-audit output
 tmp/
 test-results/
+
+# supabase CLI scratch
+supabase/.branches
+supabase/.temp
