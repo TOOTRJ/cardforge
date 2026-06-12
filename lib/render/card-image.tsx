@@ -457,7 +457,7 @@ function CardImage({
               ? `Art: ${card.artistCredit}`
               : "Art: Unknown"}
           </span>
-          <span style={{ display: "flex", flexShrink: 0 }}>Spellwright</span>
+          <span style={{ display: "flex", flexShrink: 0 }}>PipGlyph</span>
         </div>
       ) : null}
 
@@ -525,7 +525,18 @@ function CardImage({
             textShadow: "0 1px 3px rgba(0,0,0,0.8)",
           }}
         >
-          spellwright.app
+          <svg
+            width={Math.round(fpx(0.03, width))}
+            height={Math.round(fpx(0.03, width))}
+            viewBox="0 0 32 32"
+            style={{ marginRight: Math.round(fpx(0.008, width)) }}
+          >
+            <path
+              d="M16 2.6 L18.5 13.5 L29.4 16 L18.5 18.5 L16 29.4 L13.5 18.5 L2.6 16 L13.5 13.5 Z"
+              fill="rgba(255,255,255,0.82)"
+            />
+          </svg>
+          pipglyph.com
         </div>
       ) : null}
     </div>
@@ -1000,34 +1011,19 @@ function SetSymbolGlyph({
     );
   }
 
-  // 3. Default — the Spellwright mark, rarity-tinted (matches the preview's
-  //    SpellwrightSetMark). Inline SVG so Satori renders it without a font.
+  // 3. Default — the PipGlyph mark, rarity-tinted (matches the preview's
+  //    PipGlyphSetMark — keep geometry in sync with
+  //    components/cards/set-symbol.tsx). Inline SVG so Satori renders it
+  //    without a font.
   const s = Math.round(fontSize);
   return (
     <span style={{ display: "flex" }}>
       <svg width={s} height={s} viewBox="0 0 32 32">
-        <polygon points="16,3 28.4,12 23.6,26.8 8.4,26.8 3.6,12" fill={color} />
-        <line
-          x1="16"
-          y1="8.5"
-          x2="16"
-          y2="21"
-          stroke="rgba(0,0,0,0.5)"
-          strokeWidth="1.7"
-          strokeLinecap="round"
-        />
         <path
-          d="M16 21 L12 18.4"
-          stroke="rgba(0,0,0,0.5)"
-          strokeWidth="1.6"
-          strokeLinecap="round"
+          d="M16 2.6 L18.5 13.5 L29.4 16 L18.5 18.5 L16 29.4 L13.5 18.5 L2.6 16 L13.5 13.5 Z"
+          fill={color}
         />
-        <path
-          d="M16 21 L20 18.4"
-          stroke="rgba(0,0,0,0.5)"
-          strokeWidth="1.6"
-          strokeLinecap="round"
-        />
+        <circle cx="16" cy="16" r="2.7" fill="rgba(0,0,0,0.5)" />
       </svg>
     </span>
   );

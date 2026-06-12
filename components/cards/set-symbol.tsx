@@ -36,10 +36,11 @@ type SetSymbolProps = {
   className?: string;
 };
 
-// The PipGlyph house mark, drawn as a solid rarity-tintable silhouette: a
-// pentagon (the 5-color wheel) filled with `currentColor` so the rarity ink
-// shows through, with the quill nib knocked out in translucent black so the
-// mark reads on silver, gold, or orange alike.
+// The PipGlyph house mark, drawn as a solid rarity-tintable silhouette: the
+// compass star filled with `currentColor` so the rarity ink shows through,
+// with the hub knocked out in translucent black so the mark reads on silver,
+// gold, or orange alike. KEEP GEOMETRY IN SYNC with the inline SVG in
+// lib/render/card-image.tsx (bake side) — preview and export must match.
 export function PipGlyphSetMark({
   className,
   style,
@@ -55,17 +56,11 @@ export function PipGlyphSetMark({
       role="img"
       aria-label="PipGlyph set"
     >
-      <polygon points="16,3 28.4,12 23.6,26.8 8.4,26.8 3.6,12" fill="currentColor" />
-      <g
-        stroke="rgba(0,0,0,0.5)"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-      >
-        <line x1="16" y1="8.5" x2="16" y2="21" strokeWidth="1.7" />
-        <path d="M16 21 L12 18.4" strokeWidth="1.6" />
-        <path d="M16 21 L20 18.4" strokeWidth="1.6" />
-      </g>
+      <path
+        d="M16 2.6 L18.5 13.5 L29.4 16 L18.5 18.5 L16 29.4 L13.5 18.5 L2.6 16 L13.5 13.5 Z"
+        fill="currentColor"
+      />
+      <circle cx="16" cy="16" r="2.7" fill="rgba(0,0,0,0.5)" />
     </svg>
   );
 }

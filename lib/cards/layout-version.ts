@@ -14,6 +14,8 @@
 //   (null) — renders baked before versioning existed (pre 2026-06-09)
 //   2      — creation-audit pass: Beleren/MPlantin-Italic, fit-based text
 //            sizing, pip-size contract, M15-family geometry verification
+//   3      — PipGlyph rebrand: footer brand line, compass-star default set
+//            mark, watermark → pipglyph.com (2026-06-11)
 // ---------------------------------------------------------------------------
 
-export const CARD_LAYOUT_VERSION = 2;
+export const CARD_LAYOUT_VERSION = 3;
