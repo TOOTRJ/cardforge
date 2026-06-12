@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft, Sparkles } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { CardCreatorForm } from "@/components/creator/card-creator-form";
 import {
   StartWithHero,
@@ -10,7 +10,6 @@ import {
 import { PageHeader } from "@/components/layout/page-header";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
 import { getPipOverrides } from "@/lib/pips/queries";
@@ -59,10 +58,7 @@ export default async function CreatePage() {
         description="Type on the left, watch the card take shape on the right. Save when you like the result."
         actions={
           <>
-            <Badge variant="primary" className="gap-1.5">
-              <Sparkles className="h-3 w-3" aria-hidden /> Phase 4 · Creator MVP
-            </Badge>
-            <Button asChild variant="ghost">
+<Button asChild variant="ghost">
               <Link href="/dashboard">
                 <ArrowLeft className="h-4 w-4" aria-hidden /> Dashboard
               </Link>

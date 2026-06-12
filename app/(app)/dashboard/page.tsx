@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { FilePlus2, UserCog } from "lucide-react";
+import { FilePlus2, Globe, Layers, Palette, UserCog } from "lucide-react";
+import { CompassStar } from "@/components/ui/compass-star";
+import { IconTile } from "@/components/ui/icon-tile";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { CardPreviewSkeleton } from "@/components/cards/card-preview-skeleton";
@@ -21,6 +23,37 @@ export const metadata: Metadata = {
   title: "Dashboard",
   description: "Your PipGlyph workspace.",
 };
+
+const QUICK_ACTIONS = [
+  {
+    title: "New card",
+    helper: "Start from scratch",
+    href: "/create",
+    tone: "gold" as const,
+    icon: <FilePlus2 aria-hidden />,
+  },
+  {
+    title: "My sets",
+    helper: "Group cards into sets",
+    href: "/dashboard/sets",
+    tone: "purple" as const,
+    icon: <Layers aria-hidden />,
+  },
+  {
+    title: "Custom pips",
+    helper: "Upload your own icons",
+    href: "/settings",
+    tone: "ember" as const,
+    icon: <Palette aria-hidden />,
+  },
+  {
+    title: "Explore gallery",
+    helper: "Find the community's best",
+    href: "/gallery",
+    tone: "gold" as const,
+    icon: <Globe aria-hidden />,
+  },
+];
 
 export default async function DashboardPage() {
   // User + profile lookups are cheap (single-row); fetch them in parallel
@@ -80,6 +113,29 @@ export default async function DashboardPage() {
           </Button>
         </SurfaceCard>
       ) : null}
+
+      {/* Quick actions — the mockup's tile row, mapped to real routes. */}
+      <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {QUICK_ACTIONS.map((action) => (
+          <Link
+            key={action.title}
+            href={action.href}
+            className="group rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          >
+            <SurfaceCard className="flex h-full items-center gap-3 p-4 transition-colors group-hover:border-gold/40">
+              <IconTile tone={action.tone}>{action.icon}</IconTile>
+              <div className="flex min-w-0 flex-col">
+                <span className="text-sm font-semibold text-foreground">
+                  {action.title}
+                </span>
+                <span className="truncate text-xs text-muted">
+                  {action.helper}
+                </span>
+              </div>
+            </SurfaceCard>
+          </Link>
+        ))}
+      </div>
 
       <Suspense fallback={<DashboardCardsSkeleton />}>
         <DashboardCards />
@@ -166,16 +222,22 @@ async function DashboardCards() {
       label: "Cards",
       value: String(myCards.length),
       helper: "Saved drafts and published cards",
+      tone: "gold" as const,
+      icon: <CompassStar className="h-5 w-5" />,
     },
     {
       label: "Public",
       value: String(publicCards.length),
       helper: "Listed in the gallery",
+      tone: "purple" as const,
+      icon: <Globe aria-hidden />,
     },
     {
       label: "Drafts",
       value: String(drafts.length),
       helper: "Private, in-progress cards",
+      tone: "ember" as const,
+      icon: <FilePlus2 aria-hidden />,
     },
   ];
 
@@ -192,14 +254,19 @@ async function DashboardCards() {
     <>
       <div className="mt-8 grid gap-4 sm:grid-cols-3">
         {stats.map((stat) => (
-          <SurfaceCard key={stat.label} className="p-6">
-            <p className="text-xs font-semibold uppercase tracking-wider text-subtle">
-              {stat.label}
-            </p>
-            <p className="mt-2 font-display text-3xl font-semibold tracking-tight text-foreground">
-              {stat.value}
-            </p>
-            <p className="mt-1 text-xs text-muted">{stat.helper}</p>
+          <SurfaceCard key={stat.label} className="flex items-center gap-4 p-5">
+            <IconTile tone={stat.tone} size="lg">
+              {stat.icon}
+            </IconTile>
+            <div className="flex flex-col">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">
+                {stat.label}
+              </p>
+              <p className="font-display text-3xl font-semibold leading-tight tracking-tight text-foreground">
+                {stat.value}
+              </p>
+              <p className="text-xs text-subtle">{stat.helper}</p>
+            </div>
           </SurfaceCard>
         ))}
       </div>

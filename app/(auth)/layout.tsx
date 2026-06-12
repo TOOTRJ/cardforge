@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Logo } from "@/components/layout/logo";
+import { StarfieldBackdrop } from "@/components/ui/starfield-backdrop";
 
 export default function AuthLayout({
   children,
@@ -9,7 +10,7 @@ export default function AuthLayout({
   return (
     <div className="relative flex min-h-svh flex-col bg-background">
       <div className="absolute inset-0 bg-radial-glow" aria-hidden />
-      <div className="absolute inset-0 bg-grid opacity-[0.12]" aria-hidden />
+      <StarfieldBackdrop withGlyphs />
 
       <header className="relative z-10 mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-6 sm:px-6 lg:px-8">
         <Logo />
