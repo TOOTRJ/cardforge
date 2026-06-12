@@ -169,11 +169,24 @@ export function tokenSuffix(token: Token): string | null {
 // ---------------------------------------------------------------------------
 
 // A custom pip image drawn in the exact box mana-font gives `.ms-cost`:
-// a 1.3em disc at 0.95em font size with the hard offset `.ms-shadow` pair —
-// so override pips line up pixel-for-pixel with standard ones beside them.
-function PipOverrideImg({ src }: { src: string }) {
+// a 1.3em disc at the given font size (0.95em for costs; rules text passes
+// its own scale) with the hard offset `.ms-shadow` pair — so override pips
+// line up pixel-for-pixel with standard ones beside them.
+export function PipOverrideImg({
+  src,
+  fontSizeEm = 0.95,
+  style,
+}: {
+  src: string;
+  fontSizeEm?: number;
+  style?: React.CSSProperties;
+}) {
   return (
-    <span aria-hidden style={{ fontSize: "0.95em" }} className="inline-flex">
+    <span
+      aria-hidden
+      style={{ fontSize: `${fontSizeEm}em`, ...style }}
+      className="inline-flex"
+    >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={src}

@@ -3,6 +3,7 @@ import { tokenize } from "@/components/cards/mana-cost-glyphs";
 import {
   CUSTOM_PIP_SYMBOLS,
   isCustomPipSymbol,
+  pipOverrideForSuffix,
   pipOverrideForToken,
   type PipOverrides,
 } from "@/lib/pips/override";
@@ -90,5 +91,25 @@ describe("pipOverrideForToken", () => {
     expect(pipOverrideForToken(token, null)).toBeNull();
     expect(pipOverrideForToken(token, undefined)).toBeNull();
     expect(pipOverrideForToken(token, {})).toBeNull();
+  });
+});
+
+describe("pipOverrideForSuffix (inline rules-text pips)", () => {
+  it("matches core solid suffixes", () => {
+    expect(pipOverrideForSuffix("r", OVERRIDES)).toBe(OVERRIDES.R);
+    expect(pipOverrideForSuffix("c", OVERRIDES)).toBe(OVERRIDES.C);
+    expect(pipOverrideForSuffix("u", OVERRIDES)).toBeNull();
+  });
+
+  it("never matches hybrids, twobrids, phyrexians, digits, or utility suffixes", () => {
+    for (const s of ["wu", "2w", "rp", "cp", "0", "3", "20", "x", "tap", "untap", "s", "e"]) {
+      expect(pipOverrideForSuffix(s, OVERRIDES)).toBeNull();
+    }
+  });
+
+  it("is null-safe", () => {
+    expect(pipOverrideForSuffix("r", null)).toBeNull();
+    expect(pipOverrideForSuffix("r", undefined)).toBeNull();
+    expect(pipOverrideForSuffix("r", {})).toBeNull();
   });
 });

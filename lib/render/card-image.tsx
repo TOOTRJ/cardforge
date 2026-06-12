@@ -17,6 +17,7 @@ import { ImageResponse } from "next/og";
 import { fitRulesSizePct } from "@/lib/cards/render-tiers";
 import { tokenize, tokenSuffix } from "@/components/cards/mana-cost-glyphs";
 import {
+  pipOverrideForSuffix,
   pipOverrideForToken,
   type PipOverrides,
 } from "@/lib/pips/override";
@@ -378,6 +379,7 @@ function CardImage({
               rows: layout.loyaltyRows,
               abilities: loyaltyAbilities,
               sizePct: rulesSizePct,
+              pipOverrides: card.pipOverrides,
               cardWidth: width,
             })
           : (
@@ -408,6 +410,7 @@ function CardImage({
           <RulesBodyBake
             text={card.rulesText}
             size={fpx(rulesSizePct, width)}
+            overrides={card.pipOverrides}
           />
         ) : null}
         {card.flavorText?.trim() ? (
@@ -803,12 +806,36 @@ function RulesItemBake({
   item,
   glyph,
   gapBefore,
+  overrides,
 }: {
   item: RulesItem;
   glyph: number;
   gapBefore: number;
+  overrides?: PipOverrides | null;
 }) {
   if (item.t === "m") {
+    const overrideSrc = pipOverrideForSuffix(item.suffix, overrides);
+    if (overrideSrc) {
+      // Same box + hard shadow as the ManaGem disc it replaces.
+      const shadow = `${-Math.max(1, Math.round(glyph * 0.06))}px ${Math.max(1, Math.round(glyph * 0.07))}px 0 #111`;
+      return (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img
+          src={overrideSrc}
+          alt=""
+          width={glyph}
+          height={glyph}
+          style={{
+            width: glyph,
+            height: glyph,
+            borderRadius: glyph,
+            objectFit: "cover",
+            boxShadow: shadow,
+            ...(gapBefore ? { marginLeft: gapBefore } : {}),
+          }}
+        />
+      );
+    }
     return (
       <ManaGem
         suffix={item.suffix}
@@ -834,7 +861,15 @@ function RulesItemBake({
 // preview's RulesBody uses (lib/cards/rules-text.ts): each paragraph is a
 // flex-wrap row of unbreakable RUNS (groupTightRuns), so "({T}:" or "{2}{U}"
 // never split across lines and punctuation hugs its pip exactly like print.
-function RulesBodyBake({ text, size }: { text: string; size: number }) {
+function RulesBodyBake({
+  text,
+  size,
+  overrides,
+}: {
+  text: string;
+  size: number;
+  overrides?: PipOverrides | null;
+}) {
   const paragraphs = tokenizeRulesText(text);
   const glyph = Math.round(size * 0.92);
   const paraGap = Math.round(size * 0.5);
@@ -878,6 +913,7 @@ function RulesBodyBake({ text, size }: { text: string; size: number }) {
                   key={i}
                   item={it}
                   glyph={glyph}
+                  overrides={overrides}
                   // Adjacent pips ("{G}{G}") keep a hairline gap inside the
                   // run; words glued to a pip ("{T}:") get none.
                   gapBefore={
@@ -936,12 +972,14 @@ function LoyaltyRowsBake({
   abilities,
   sizePct,
   cardWidth,
+  pipOverrides,
 }: {
   slot: TextSlot;
   rows: NonNullable<FrameProfile["loyaltyRows"]>;
   abilities: LoyaltyAbility[];
   sizePct: number;
   cardWidth: number;
+  pipOverrides?: PipOverrides | null;
 }) {
   const size = fpx(sizePct, cardWidth);
   const badgeW = Math.round(size * 2.3);
@@ -993,7 +1031,7 @@ function LoyaltyRowsBake({
             {ab.cost ?? ""}
           </div>
           <div style={{ display: "flex", flex: 1 }}>
-            <RulesBodyBake text={ab.text} size={size} />
+            <RulesBodyBake text={ab.text} size={size} overrides={pipOverrides} />
           </div>
         </div>
       ))}
@@ -1314,6 +1352,7 @@ function AdventureBake({
           <RulesBodyBake
             text={back.rules_text}
             size={fpx(rulesSize, cardWidth)}
+            overrides={pipOverrides}
           />
         ) : null}
       </div>
@@ -1431,6 +1470,7 @@ function SecondFaceBake({
           <RulesBodyBake
             text={back.rules_text}
             size={fpx(rulesSize, cardWidth)}
+            overrides={pipOverrides}
           />
         ) : null}
       </div>

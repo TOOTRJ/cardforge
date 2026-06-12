@@ -3,8 +3,14 @@
 import { useState, type CSSProperties, type ReactNode } from "react";
 import { RotateCw } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ManaCostGlyphs } from "@/components/cards/mana-cost-glyphs";
-import type { PipOverrides } from "@/lib/pips/override";
+import {
+  ManaCostGlyphs,
+  PipOverrideImg,
+} from "@/components/cards/mana-cost-glyphs";
+import {
+  pipOverrideForSuffix,
+  type PipOverrides,
+} from "@/lib/pips/override";
 import { SetSymbol } from "@/components/cards/set-symbol";
 import { FrameLayer, pickFrameColorKey } from "@/components/cards/frame-layer";
 import { fitRulesSizePct } from "@/lib/cards/render-tiers";
@@ -542,6 +548,7 @@ function CardFace({
         />
       ) : layout.loyaltyRows && loyaltyAbilities.length > 0 ? (
         <LoyaltyRows
+          pipOverrides={pipOverrides}
           slot={layout.rules}
           rows={layout.loyaltyRows}
           abilities={loyaltyAbilities}
@@ -573,7 +580,7 @@ function CardFace({
         }}
       >
         {face.rulesText?.trim() ? (
-          <RulesBody text={face.rulesText} />
+          <RulesBody text={face.rulesText} overrides={pipOverrides} />
         ) : staticInEditor ? (
           // Editor-only hint; never shown in the gallery preview or the bake.
           <span style={{ fontStyle: "italic", opacity: 0.55 }}>
@@ -966,7 +973,7 @@ function AdventurePanel({
         }}
       >
         {data.rulesText?.trim() ? (
-          <RulesBody text={data.rulesText} />
+          <RulesBody text={data.rulesText} overrides={pipOverrides} />
         ) : staticInEditor ? (
           <span style={{ fontStyle: "italic", opacity: 0.55 }}>
             Adventure rules (the back face).
@@ -1076,7 +1083,7 @@ function SecondFacePanel({
         }}
       >
         {data.rulesText?.trim() ? (
-          <RulesBody text={data.rulesText} />
+          <RulesBody text={data.rulesText} overrides={pipOverrides} />
         ) : null}
       </div>
       {showPT && slot.pt ? (
@@ -1180,7 +1187,13 @@ function ArtImage({
 // {T}/{G} render as real pips and reminder text / ability words are italicized.
 // The Satori bake (RulesBodyBake) consumes the SAME item stream, so the editor
 // preview and the exported PNG match.
-function RulesBody({ text }: { text: string }) {
+function RulesBody({
+  text,
+  overrides = null,
+}: {
+  text: string;
+  overrides?: PipOverrides | null;
+}) {
   const paragraphs = tokenizeRulesText(text);
   return (
     <div
@@ -1217,6 +1230,7 @@ function RulesBody({ text }: { text: string }) {
                 <RulesRunItem
                   key={i}
                   item={it}
+                  overrides={overrides}
                   pipGapBefore={i > 0 && it.t === "m" && run[i - 1].t === "m"}
                 />
               ))}
@@ -1234,11 +1248,23 @@ function RulesBody({ text }: { text: string }) {
 function RulesRunItem({
   item,
   pipGapBefore,
+  overrides = null,
 }: {
   item: RulesItem;
   pipGapBefore: boolean;
+  overrides?: PipOverrides | null;
 }) {
   if (item.t === "m") {
+    const overrideSrc = pipOverrideForSuffix(item.suffix, overrides);
+    if (overrideSrc) {
+      return (
+        <PipOverrideImg
+          src={overrideSrc}
+          fontSizeEm={0.92 / MS_COST_DISC_EM}
+          style={pipGapBefore ? { marginLeft: "0.08em" } : undefined}
+        />
+      );
+    }
     return (
       <i
         aria-hidden
@@ -1263,11 +1289,13 @@ function LoyaltyRows({
   rows,
   abilities,
   sizePct,
+  pipOverrides = null,
 }: {
   slot: TextSlot;
   rows: NonNullable<FrameProfile["loyaltyRows"]>;
   abilities: LoyaltyAbility[];
   sizePct: number;
+  pipOverrides?: PipOverrides | null;
 }) {
   return (
     <div
@@ -1316,7 +1344,7 @@ function LoyaltyRows({
             {ab.cost ?? ""}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <RulesBody text={ab.text} />
+            <RulesBody text={ab.text} overrides={pipOverrides} />
           </div>
         </div>
       ))}
