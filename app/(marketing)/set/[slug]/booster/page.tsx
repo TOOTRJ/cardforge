@@ -33,7 +33,7 @@ export async function generateMetadata({
   if (!set) return { title: "Booster Pack" };
   return {
     title: `Open a ${set.title} Booster`,
-    description: `Crack a virtual booster pack from the ${set.title} set on Spellwright. See which cards you pull!`,
+    description: `Crack a virtual booster pack from the ${set.title} set on PipGlyph. See which cards you pull!`,
   };
 }
 

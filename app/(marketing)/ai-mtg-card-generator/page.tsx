@@ -17,10 +17,10 @@ import { SurfaceCard } from "@/components/ui/surface-card";
 export const metadata: Metadata = {
   title: "AI MTG Card Generator — Design Custom Magic Cards with AI",
   description:
-    "Spellwright is an AI-powered Magic: The Gathering card generator. Describe a concept and the AI drafts a balanced creature, instant, planeswalker, or land — original card, original art, ready to share.",
+    "PipGlyph is an AI-powered Magic: The Gathering card generator. Describe a concept and the AI drafts a balanced creature, instant, planeswalker, or land — original card, original art, ready to share.",
   alternates: { canonical: "/ai-mtg-card-generator" },
   openGraph: {
-    title: "AI MTG Card Generator — Free Custom Magic Cards | Spellwright",
+    title: "AI MTG Card Generator — Free Custom Magic Cards | PipGlyph",
     description:
       "Generate a complete MTG card from a one-sentence concept. AI drafts the rules text, mana cost, rarity, and flavor — you tweak and publish. Free, browser-based.",
     type: "article",
@@ -43,7 +43,7 @@ const FEATURES = [
 const FAQ: { q: string; a: string }[] = [
   {
     q: "What is an AI MTG card generator?",
-    a: "An AI MTG card generator uses a large language model to draft a complete Magic: The Gathering card from a brief prompt or a click. Spellwright's generator picks a rarity, color identity, type, mana cost, and rules text — then optionally generates original art with OpenAI's image model — and drops the result into the editor where you can tweak any field before publishing.",
+    a: "An AI MTG card generator uses a large language model to draft a complete Magic: The Gathering card from a brief prompt or a click. PipGlyph's generator picks a rarity, color identity, type, mana cost, and rules text — then optionally generates original art with OpenAI's image model — and drops the result into the editor where you can tweak any field before publishing.",
   },
   {
     q: "How do I generate a random MTG card with AI?",
@@ -71,7 +71,7 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: "How is this different from asking ChatGPT for a custom Magic card?",
-    a: "A general chat assistant returns plain text — you'd still have to copy each field into a card editor, find or generate art, format the result, and share it. Spellwright integrates the same kind of generation directly into the card editor: every AI output is a structured patch that lands on the canvas, the art lands in the right slot, and the published card has a real public URL with social previews, comments, likes, and remix lineage.",
+    a: "A general chat assistant returns plain text — you'd still have to copy each field into a card editor, find or generate art, format the result, and share it. PipGlyph integrates the same kind of generation directly into the card editor: every AI output is a structured patch that lands on the canvas, the art lands in the right slot, and the published card has a real public URL with social previews, comments, likes, and remix lineage.",
   },
 ];
 
@@ -106,7 +106,7 @@ export default function AiMtgCardGeneratorPage() {
         <p className="max-w-2xl text-lg leading-7 text-muted">
           Describe a concept — &ldquo;a Boros planeswalker that punishes
           tapping creatures&rdquo;, &ldquo;a Simic ramp instant that scales
-          with snow lands&rdquo; — and Spellwright drafts a complete,
+          with snow lands&rdquo; — and PipGlyph drafts a complete,
           original Magic: The Gathering card. AI writes the rules text, AI
           generates the art, you edit and publish.
         </p>

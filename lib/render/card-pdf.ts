@@ -142,14 +142,14 @@ export type PdfLayout = "card" | "sheet" | "sheet-letter" | "sheet-a4";
 export async function buildCardPdf(
   pngBytes: Uint8Array,
   layout: PdfLayout = "card",
-  cardTitle = "Spellwright Card",
+  cardTitle = "PipGlyph Card",
 ): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
 
   doc.setTitle(cardTitle);
-  doc.setAuthor("Spellwright");
+  doc.setAuthor("PipGlyph");
   doc.setSubject("Custom MTG card — fan-made, not affiliated with Wizards of the Coast.");
-  doc.setCreator("Spellwright (spellwright.gg)");
+  doc.setCreator("PipGlyph (pipglyph.com)");
   doc.setProducer("pdf-lib");
 
   const img = await embedImage(doc, pngBytes);
@@ -174,16 +174,16 @@ export async function buildCardPdf(
  */
 export async function buildSetPdf(
   cardPngs: Uint8Array[],
-  setTitle = "Spellwright Set",
+  setTitle = "PipGlyph Set",
 ): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
 
   doc.setTitle(setTitle);
-  doc.setAuthor("Spellwright");
+  doc.setAuthor("PipGlyph");
   doc.setSubject(
     "Custom MTG-style set — fan-made, not affiliated with Wizards of the Coast.",
   );
-  doc.setCreator("Spellwright (spellwright.app)");
+  doc.setCreator("PipGlyph (pipglyph.com)");
   doc.setProducer("pdf-lib");
 
   if (cardPngs.length === 0) {

@@ -6,7 +6,7 @@ import { siteConfig } from "@/lib/site-config";
 export const metadata: Metadata = {
   title: "About",
   description:
-    "Spellwright is a modern, creator-first platform for designing custom trading cards. Learn what we're building.",
+    "PipGlyph is a modern, creator-first platform for designing custom trading cards. Learn what we're building.",
   alternates: { canonical: "/about" },
 };
 
@@ -18,7 +18,7 @@ export default function AboutPage() {
       description={siteConfig.description}
     >
       <p>
-        Spellwright is a modern platform for designing, sharing, and remixing
+        PipGlyph is a modern platform for designing, sharing, and remixing
         custom trading cards. The MVP launches with a polished fantasy-card
         creator and is built to grow into any custom card game — your homebrew
         Commander deck, your indie TCG, your tabletop RPG cards, classroom
@@ -30,7 +30,7 @@ export default function AboutPage() {
         <li>
           <strong>Originality first.</strong> We do not use proprietary card
           frames, fonts, set symbols, or trademarked names. Every visual element
-          shipped with Spellwright is original to the project.
+          shipped with PipGlyph is original to the project.
         </li>
         <li>
           <strong>Creators own their work.</strong> Cards are structured data —

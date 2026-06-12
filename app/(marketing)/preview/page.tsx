@@ -26,10 +26,10 @@ import { isAIConfigured } from "@/lib/ai/card-assistant";
 export const metadata: Metadata = {
   title: "Preview — Try the MTG Card Creator",
   description:
-    "Try Spellwright's custom MTG card creator without signing up. Build any card type, pick mana costs, write oracle text, and see a live preview instantly.",
+    "Try PipGlyph's custom MTG card creator without signing up. Build any card type, pick mana costs, write oracle text, and see a live preview instantly.",
   alternates: { canonical: "/preview" },
   openGraph: {
-    title: "Try the MTG Card Creator — No Account Needed | Spellwright",
+    title: "Try the MTG Card Creator — No Account Needed | PipGlyph",
     description:
       "Design custom Magic: The Gathering cards in seconds. Live preview, visual mana pip builder, full card type support. Free, no signup required.",
   },

@@ -43,7 +43,7 @@ function userAgent(): string {
   // running multiple environments against the same outbound IP).
   return (
     process.env.SCRYFALL_USER_AGENT?.trim() ||
-    `Spellwright/1.0 (+${site})`
+    `PipGlyph/1.0 (+${site})`
   );
 }
 

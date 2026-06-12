@@ -13,7 +13,7 @@ test("homepage renders the marketing chrome", async ({ page }) => {
   await page.goto("/");
   // Logo + "Start creating" CTA — defining elements of the marketing
   // header for an anonymous viewer.
-  await expect(page.getByRole("link", { name: /spellwright/i }).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: /pipglyph/i }).first()).toBeVisible();
   await expect(
     page.getByRole("link", { name: /start creating/i }).first(),
   ).toBeVisible();

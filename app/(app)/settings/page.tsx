@@ -21,7 +21,7 @@ import { listPublicCardsByOwner } from "@/lib/cards/queries";
 
 export const metadata: Metadata = {
   title: "Settings",
-  description: "Manage your Spellwright profile and preferences.",
+  description: "Manage your PipGlyph profile and preferences.",
   robots: { index: false, follow: false },
 };
 

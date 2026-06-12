@@ -15,58 +15,55 @@ export function Logo({ className, href = "/", showWordmark = true }: LogoProps) 
         "group inline-flex items-center gap-2.5 font-semibold tracking-tight",
         className,
       )}
-      aria-label="Spellwright home"
+      aria-label="PipGlyph home"
     >
-      {/* Pentagon icon mark — evokes the 5-color wheel, quill nib at center */}
+      {/* Compass-star mark — a precision instrument pointing every direction,
+          drawn with literal brand hexes so it reads identically on both
+          themes (gradients can't take CSS variables as stops). */}
       <span
         aria-hidden
         className="relative inline-flex h-8 w-8 items-center justify-center transition-transform group-hover:scale-105"
       >
         <svg
           viewBox="0 0 32 32"
-          className="h-8 w-8 drop-shadow-[0_0_10px_rgba(200,168,75,0.55)]"
+          className="h-8 w-8 drop-shadow-[0_0_10px_rgba(216,178,110,0.45)]"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
         >
           <defs>
-            {/* Gold gradient for the pentagon fill */}
-            <linearGradient id="sw-gold" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="#e8c96b" />
-              <stop offset="100%" stopColor="#a07828" />
-            </linearGradient>
-            {/* Subtle WUBRG 5-color stroke around the edges */}
-            <linearGradient id="sw-wubrg" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%"   stopColor="#f9faf9" />
-              <stop offset="25%"  stopColor="#4a90d9" />
-              <stop offset="50%"  stopColor="#9b72cf" />
-              <stop offset="75%"  stopColor="#e05252" />
-              <stop offset="100%" stopColor="#4caf72" />
+            <linearGradient id="pg-gold" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="#ecca8a" />
+              <stop offset="100%" stopColor="#b8904a" />
             </linearGradient>
           </defs>
-          {/* Pentagon background — 5 points, flat-top orientation */}
-          <polygon
-            points="16,2 29,11 24,27 8,27 3,11"
-            fill="#1a1420"
-            stroke="url(#sw-wubrg)"
-            strokeWidth="1.5"
+          {/* Ring */}
+          <circle
+            cx="16"
+            cy="16"
+            r="13.5"
+            stroke="url(#pg-gold)"
+            strokeWidth="1.1"
+            opacity="0.55"
           />
-          {/* Quill nib — S-shaped quill tip forming the mark */}
-          {/* Quill barrel */}
-          <line x1="16" y1="7" x2="16" y2="22" stroke="url(#sw-gold)" strokeWidth="1.4" strokeLinecap="round" />
-          {/* Quill tip — left nib */}
-          <path d="M16 22 L11 19" stroke="url(#sw-gold)" strokeWidth="1.3" strokeLinecap="round" />
-          {/* Quill tip — right nib */}
-          <path d="M16 22 L21 19" stroke="url(#sw-gold)" strokeWidth="1.3" strokeLinecap="round" />
-          {/* Quill vane — left */}
-          <path d="M16 9 Q10 12 12 17" stroke="url(#sw-gold)" strokeWidth="1.1" strokeLinecap="round" fill="none" opacity="0.75" />
-          {/* Quill vane — right */}
-          <path d="M16 9 Q22 12 20 17" stroke="url(#sw-gold)" strokeWidth="1.1" strokeLinecap="round" fill="none" opacity="0.75" />
+          {/* Cardinal compass star */}
+          <path
+            d="M16 3.4 L18.3 13.7 L28.6 16 L18.3 18.3 L16 28.6 L13.7 18.3 L3.4 16 L13.7 13.7 Z"
+            fill="url(#pg-gold)"
+          />
+          {/* Ordinal ticks — purple, the precision accents */}
+          <path
+            d="M22.2 9.8 L24.4 7.6 M9.8 22.2 L7.6 24.4 M22.2 22.2 L24.4 24.4 M9.8 9.8 L7.6 7.6"
+            stroke="#8e72c9"
+            strokeWidth="1.4"
+            strokeLinecap="round"
+            opacity="0.85"
+          />
         </svg>
       </span>
 
       {showWordmark ? (
         <span className="font-display text-lg leading-none tracking-wider text-foreground">
-          Spellwright
+          PipGlyph
         </span>
       ) : null}
     </Link>

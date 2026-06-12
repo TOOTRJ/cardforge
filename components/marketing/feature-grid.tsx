@@ -66,7 +66,7 @@ export function FeatureGrid() {
         </h2>
         <p className="mx-auto max-w-2xl text-base leading-7 text-muted">
           From a single homebrewed creature to a complete fan expansion —
-          Spellwright handles the design work so you can focus on the game.
+          PipGlyph handles the design work so you can focus on the game.
         </p>
       </div>
 

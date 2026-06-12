@@ -52,7 +52,7 @@ export async function GET() {
     },
   };
 
-  const filename = `spellwright-export-${payload.exportedAt.slice(0, 10)}.json`;
+  const filename = `pipglyph-export-${payload.exportedAt.slice(0, 10)}.json`;
   return new NextResponse(JSON.stringify(payload, null, 2), {
     headers: {
       "Content-Type": "application/json; charset=utf-8",

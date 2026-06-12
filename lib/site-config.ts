@@ -20,12 +20,12 @@ export type NavItem = {
 };
 
 export const siteConfig = {
-  name: "Spellwright",
-  tagline: "Custom Magic cards, forged by hand.",
+  name: "PipGlyph",
+  tagline: "Precision tools for legendary ideas.",
   description:
-    "Spellwright is the modern platform for designing, sharing, and remixing custom Magic: The Gathering cards. Build a creature, instant, planeswalker, or full expansion set — and share it with your playgroup in seconds.",
+    "PipGlyph is the MTG card creator, mana pip editor, and custom card maker for Magic: The Gathering fans. Design cards with precise mana pips, advanced text tools, and beautiful frames — then share full expansion sets with your playgroup in seconds.",
   disclaimer:
-    "Spellwright is an unofficial fan tool for custom Magic: The Gathering card design and playtesting. It is not affiliated with, endorsed by, or sponsored by Wizards of the Coast, Hasbro, or any official trading card game publisher. Magic: The Gathering is a trademark of Wizards of the Coast LLC. Users are responsible for ensuring they have rights to any uploaded artwork.",
+    "PipGlyph is an unofficial fan tool for custom Magic: The Gathering card design and playtesting. It is not affiliated with, endorsed by, or sponsored by Wizards of the Coast, Hasbro, or any official trading card game publisher. Magic: The Gathering is a trademark of Wizards of the Coast LLC. Users are responsible for ensuring they have rights to any uploaded artwork.",
 
   // Primary nav rendered in the header. The "Create" link is intentionally
   // omitted for authed users because the right-side "New card" CTA already

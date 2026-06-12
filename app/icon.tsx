@@ -1,7 +1,8 @@
 import { ImageResponse } from "next/og";
 
-// Spellwright favicon — pentagon icon mark with quill nib, rendered as a
-// flat 32×32 PNG via next/og for browser tabs and shortcut bars.
+// PipGlyph favicon — compass-star mark on the deep-navy brand surface,
+// rendered as a flat 32×32 PNG via next/og for browser tabs and shortcut
+// bars.
 
 export const size = { width: 32, height: 32 };
 export const contentType = "image/png";
@@ -17,11 +18,10 @@ export default function Icon() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#13121a",
+          background: "#0d1320",
           borderRadius: 7,
         }}
       >
-        {/* SVG pentagon + quill mark */}
         <svg
           width="26"
           height="26"
@@ -29,23 +29,28 @@ export default function Icon() {
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
         >
-          {/* Pentagon */}
-          <polygon
-            points="16,2 29,11 24,27 8,27 3,11"
-            fill="#1e1b2a"
-            stroke="#c8a84b"
-            strokeWidth="1.8"
+          {/* Ring */}
+          <circle
+            cx="16"
+            cy="16"
+            r="13.5"
+            stroke="#d8b26e"
+            strokeWidth="1.4"
+            opacity="0.6"
           />
-          {/* Quill barrel */}
-          <line x1="16" y1="7" x2="16" y2="22" stroke="#c8a84b" strokeWidth="1.6" strokeLinecap="round" />
-          {/* Nib left */}
-          <line x1="16" y1="22" x2="11" y2="19" stroke="#c8a84b" strokeWidth="1.4" strokeLinecap="round" />
-          {/* Nib right */}
-          <line x1="16" y1="22" x2="21" y2="19" stroke="#c8a84b" strokeWidth="1.4" strokeLinecap="round" />
-          {/* Vane left */}
-          <path d="M16 9 Q10 12 12 17" stroke="#e8c96b" strokeWidth="1.1" strokeLinecap="round" fill="none" opacity="0.7" />
-          {/* Vane right */}
-          <path d="M16 9 Q22 12 20 17" stroke="#e8c96b" strokeWidth="1.1" strokeLinecap="round" fill="none" opacity="0.7" />
+          {/* Cardinal compass star */}
+          <path
+            d="M16 3.4 L18.3 13.7 L28.6 16 L18.3 18.3 L16 28.6 L13.7 18.3 L3.4 16 L13.7 13.7 Z"
+            fill="#d8b26e"
+          />
+          {/* Ordinal ticks */}
+          <path
+            d="M22.2 9.8 L24.4 7.6 M9.8 22.2 L7.6 24.4 M22.2 22.2 L24.4 24.4 M9.8 9.8 L7.6 7.6"
+            stroke="#8e72c9"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            opacity="0.9"
+          />
         </svg>
       </div>
     ),

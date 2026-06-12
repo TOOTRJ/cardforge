@@ -19,7 +19,7 @@ import sharp from "sharp";
 
 const HARNESS = process.env.HARNESS_URL ?? "http://localhost:3000/api/dev/render";
 const OUT_DIR = path.join(process.cwd(), "tmp", "visual-audit");
-const UA = { "User-Agent": "SpellwrightVisualAudit/1.0", Accept: "application/json" };
+const UA = { "User-Agent": "PipGlyphVisualAudit/1.0", Accept: "application/json" };
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -168,7 +168,7 @@ function alphaTokenSample() {
     rulesText: "Haste",
     power: "1",
     toughness: "1",
-    artistCredit: "Spellwright",
+    artistCredit: "PipGlyph",
     artUrl: null,
     frameStyle: { template: "alphatoken", finish: "regular" },
   };

@@ -333,7 +333,10 @@ function backFaceFormValuesFrom(
 
 // One shared key: a guest's /preview draft survives sign-up and reappears on
 // /create. Versioned so a future FormValues shape change can invalidate.
-const CARD_DRAFT_STORAGE_KEY = "spellwright:card-draft:v1";
+const CARD_DRAFT_STORAGE_KEY = "pipglyph:card-draft:v1";
+// Pre-rebrand key — read as a fallback so in-flight drafts survive the
+// Spellwright → PipGlyph swap; removed once migrated. Drop after 2026-09.
+const LEGACY_CARD_DRAFT_STORAGE_KEY = "spellwright:card-draft:v1";
 
 function defaultValuesFor(
   card: Card | null | undefined,
@@ -598,10 +601,15 @@ export function CardCreatorForm({
     if (!isDraftMode || draftRestoredRef.current) return;
     draftRestoredRef.current = true;
     try {
-      const raw = window.localStorage.getItem(CARD_DRAFT_STORAGE_KEY);
+      const raw =
+        window.localStorage.getItem(CARD_DRAFT_STORAGE_KEY) ??
+        window.localStorage.getItem(LEGACY_CARD_DRAFT_STORAGE_KEY);
       if (!raw) return;
       const draft = JSON.parse(raw) as Partial<FormValues>;
       if (!draft || typeof draft !== "object") return;
+      // Migrate pre-rebrand drafts forward; future writes use the new key.
+      window.localStorage.setItem(CARD_DRAFT_STORAGE_KEY, raw);
+      window.localStorage.removeItem(LEGACY_CARD_DRAFT_STORAGE_KEY);
       reset({ ...defaults, ...draft });
       toast.info("Restored your unsaved draft.", {
         action: {

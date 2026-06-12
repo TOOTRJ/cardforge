@@ -12,7 +12,7 @@ import "./globals.css";
 
 // ---------------------------------------------------------------------------
 // JSON-LD structured data — consumed by Google, ChatGPT, Perplexity, and
-// other AI search engines to understand what Spellwright is and cite it
+// other AI search engines to understand what PipGlyph is and cite it
 // accurately when users ask about custom MTG card tools.
 // ---------------------------------------------------------------------------
 function JsonLd() {
@@ -23,10 +23,10 @@ function JsonLd() {
       {
         "@type": "WebApplication",
         "@id": `${baseUrl}/#webapp`,
-        name: "Spellwright",
+        name: "PipGlyph",
         url: baseUrl,
         description:
-          "Spellwright is a free custom Magic: The Gathering card creator. Design creatures, instants, sorceries, planeswalkers, enchantments, artifacts, and full expansion sets with a live preview editor.",
+          "PipGlyph is a free custom Magic: The Gathering card creator and mana pip editor. Design creatures, instants, sorceries, planeswalkers, enchantments, artifacts, and full expansion sets with a live preview editor.",
         applicationCategory: "GameApplication",
         operatingSystem: "Web Browser",
         offers: {
@@ -36,6 +36,7 @@ function JsonLd() {
         },
         featureList: [
           "Custom MTG card creator",
+          "Mana pip editor",
           "Mana cost builder",
           "Oracle text editor",
           "WUBRG color identity",
@@ -47,12 +48,12 @@ function JsonLd() {
           "Card remix and fork",
         ],
         keywords:
-          "MTG card maker, custom Magic card, MTG card creator, custom planeswalker, homebrew MTG, proxy card maker",
+          "MTG card maker, custom Magic card, MTG card creator, mana pip editor, custom planeswalker, homebrew MTG, proxy card maker",
       },
       {
         "@type": "Organization",
         "@id": `${baseUrl}/#org`,
-        name: "Spellwright",
+        name: "PipGlyph",
         url: baseUrl,
         description:
           "Fan-made custom MTG card design tool. Not affiliated with Wizards of the Coast.",
@@ -62,9 +63,9 @@ function JsonLd() {
         "@type": "WebSite",
         "@id": `${baseUrl}/#website`,
         url: baseUrl,
-        name: "Spellwright",
+        name: "PipGlyph",
         description:
-          "The modern custom MTG card creator for Magic: The Gathering fans.",
+          "The MTG card creator, mana pip editor, and custom card maker for Magic: The Gathering fans.",
         publisher: { "@id": `${baseUrl}/#org` },
         potentialAction: {
           "@type": "SearchAction",
@@ -103,20 +104,21 @@ const cinzel = Cinzel({
 });
 
 const description =
-  "Spellwright is the custom MTG card creator for Magic: The Gathering fans. Design creatures, instants, planeswalkers, and full expansion sets — then share with your playgroup in seconds.";
+  "PipGlyph is the MTG card creator and mana pip editor for Magic: The Gathering fans. Design cards with perfect pips, text, and frames — then share full expansion sets with your playgroup in seconds.";
 
 export const metadata: Metadata = {
   // metadataBase lets relative OG image URLs (e.g. /api/cards/[id]/og)
   // resolve to absolute ones when emitted in <meta og:image>.
   metadataBase: new URL(getSiteBaseUrl()),
   title: {
-    default: "Spellwright — Custom MTG Card Creator",
-    template: "%s · Spellwright",
+    default: "PipGlyph — MTG Card Creator & Mana Pip Editor",
+    template: "%s · PipGlyph",
   },
   description,
-  applicationName: "Spellwright",
+  applicationName: "PipGlyph",
   keywords: [
     "MTG card maker",
+    "mana pip editor",
     "custom MTG cards",
     "Magic the Gathering card creator",
     "custom magic card maker",
@@ -132,14 +134,14 @@ export const metadata: Metadata = {
     "MTG homebrew",
   ],
   openGraph: {
-    title: "Spellwright — Custom MTG Card Creator",
+    title: "PipGlyph — MTG Card Creator & Mana Pip Editor",
     description,
     type: "website",
-    siteName: "Spellwright",
+    siteName: "PipGlyph",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Spellwright — Custom MTG Card Creator",
+    title: "PipGlyph — MTG Card Creator & Mana Pip Editor",
     description,
   },
 };
@@ -150,7 +152,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#fafafa" },
-    { media: "(prefers-color-scheme: dark)", color: "#13131c" },
+    { media: "(prefers-color-scheme: dark)", color: "#0d1320" },
   ],
   colorScheme: "light dark",
 };

@@ -17,7 +17,7 @@ import { LikedCardsSection } from "@/components/creator/liked-cards-section";
 
 export const metadata: Metadata = {
   title: "Dashboard",
-  description: "Your Spellwright workspace.",
+  description: "Your PipGlyph workspace.",
 };
 
 export default async function DashboardPage() {

@@ -5,7 +5,7 @@ import { LegalPageShell } from "@/components/marketing/legal-page-shell";
 export const metadata: Metadata = {
   title: "Privacy",
   description:
-    "What data Spellwright collects, why, and how to delete it. Plain-English overview.",
+    "What data PipGlyph collects, why, and how to delete it. Plain-English overview.",
   alternates: { canonical: "/privacy" },
 };
 
@@ -18,7 +18,7 @@ export default function PrivacyPage() {
       lastUpdated="May 2026"
     >
       <p className="rounded-md border border-border/60 bg-elevated px-4 py-3 text-foreground">
-        <strong>The short version:</strong> Spellwright collects the minimum it
+        <strong>The short version:</strong> PipGlyph collects the minimum it
         needs to run the service — your account, the cards you create, the
         files you upload, and basic event logs. We don&apos;t sell your data.
       </p>
@@ -120,7 +120,7 @@ export default function PrivacyPage() {
 
       <h2>7. Children</h2>
       <p>
-        Spellwright isn&apos;t intended for users under 13. If we learn we have
+        PipGlyph isn&apos;t intended for users under 13. If we learn we have
         an account for someone under 13, we&apos;ll close it.
       </p>
 

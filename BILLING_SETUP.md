@@ -1,6 +1,6 @@
 # Billing & Subscriptions — Setup & Operations
 
-Premium subscriptions + AI credits for Spellwright, built on **Stripe hosted
+Premium subscriptions + AI credits for PipGlyph, built on **Stripe hosted
 Checkout + Customer Portal + a thin webhook → Supabase + app-managed credits**.
 
 > **IP posture (important):** the paid value is *our technology* — AI generation
