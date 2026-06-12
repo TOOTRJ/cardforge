@@ -12,6 +12,7 @@ import { siteConfig } from "@/lib/site-config";
 
 export const metadata: Metadata = {
   title: "Pricing",
+  alternates: { canonical: "/pricing" },
   description:
     "Design custom MTG-style cards for free. Upgrade for more AI generation credits, watermark-free hi-res exports, the AI set generator, and premium frames. Monthly or annual.",
 };

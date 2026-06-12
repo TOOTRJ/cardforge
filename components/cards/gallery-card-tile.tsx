@@ -30,6 +30,7 @@ export function GalleryCardTile({
           <BakedCardThumbnail
             renderedImageUrl={card.rendered_image_url}
             title={card.title}
+            alt={`${card.title} — custom MTG-style ${card.card_type ?? "card"}${card.rarity ? `, ${card.rarity} rarity` : ""}`}
             previewData={{
               title: card.title,
               cost: card.cost,

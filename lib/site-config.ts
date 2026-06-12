@@ -60,6 +60,14 @@ export const siteConfig = {
       ],
     },
     {
+      title: "Guides",
+      links: [
+        { label: "MTG card maker", href: "/mtg-card-maker" },
+        { label: "AI card generator", href: "/ai-mtg-card-generator" },
+        { label: "Mana pip editor", href: "/mana-pip-editor" },
+      ],
+    },
+    {
       title: "Company",
       links: [
         { label: "About", href: "/about" },

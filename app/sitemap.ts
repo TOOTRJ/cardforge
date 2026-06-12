@@ -113,12 +113,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
-  const [dynamicCards, challengePages] = await Promise.all([
+  const [dynamicCards, challengePages, setPages, profilePages] = await Promise.all([
     fetchPublicCardEntries(baseUrl),
     fetchChallengeEntries(baseUrl),
+    fetchPublicSetEntries(baseUrl),
+    fetchProfileEntries(baseUrl),
   ]);
 
-  return [...staticPages, ...challengePages, ...dynamicCards];
+  return [
+    ...staticPages,
+    ...challengePages,
+    ...setPages,
+    ...profilePages,
+    ...dynamicCards,
+  ];
 }
 
 // ---------------------------------------------------------------------------
@@ -188,6 +196,54 @@ async function fetchChallengeEntries(
       changeFrequency: "weekly" as const,
       priority: 0.7,
     }));
+  } catch {
+    return [];
+  }
+}
+
+async function fetchPublicSetEntries(
+  baseUrl: string,
+): Promise<MetadataRoute.Sitemap> {
+  if (!isSupabaseConfigured()) return [];
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("card_sets")
+      .select("slug, updated_at")
+      .eq("visibility", "public")
+      .order("updated_at", { ascending: false })
+      .limit(500);
+    return (data ?? []).map((s) => ({
+      url: `${baseUrl}/set/${s.slug}`,
+      lastModified: new Date(s.updated_at),
+      changeFrequency: "weekly" as const,
+      priority: 0.6,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+async function fetchProfileEntries(
+  baseUrl: string,
+): Promise<MetadataRoute.Sitemap> {
+  if (!isSupabaseConfigured()) return [];
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("profiles")
+      .select("username, updated_at")
+      .not("username", "is", null)
+      .order("updated_at", { ascending: false })
+      .limit(500);
+    return (data ?? [])
+      .filter((p) => p.username)
+      .map((p) => ({
+        url: `${baseUrl}/profile/${p.username}`,
+        lastModified: new Date(p.updated_at),
+        changeFrequency: "weekly" as const,
+        priority: 0.5,
+      }));
   } catch {
     return [];
   }

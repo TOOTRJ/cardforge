@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SurfaceCard } from "@/components/ui/surface-card";
+import { GuideCrossLinks } from "@/components/marketing/guide-cross-links";
 
 // ---------------------------------------------------------------------------
 // SEO landing page: /mtg-card-maker
@@ -158,6 +159,8 @@ export default function MtgCardMakerPage() {
       </section>
 
       {/* CTA footer */}
+      <GuideCrossLinks current="/mtg-card-maker" />
+
       <section
         aria-labelledby="cta-heading"
         className="relative overflow-hidden rounded-frame border border-border bg-surface p-10"

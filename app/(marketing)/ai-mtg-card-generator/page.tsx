@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowRight, CheckCircle2, Sparkles, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SurfaceCard } from "@/components/ui/surface-card";
+import { GuideCrossLinks } from "@/components/marketing/guide-cross-links";
 
 // ---------------------------------------------------------------------------
 // SEO landing: /ai-mtg-card-generator
@@ -164,6 +165,8 @@ export default function AiMtgCardGeneratorPage() {
           ))}
         </div>
       </section>
+
+      <GuideCrossLinks current="/ai-mtg-card-generator" />
 
       <section
         aria-labelledby="cta-heading"

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SurfaceCard } from "@/components/ui/surface-card";
+import { GuideCrossLinks } from "@/components/marketing/guide-cross-links";
 
 // ---------------------------------------------------------------------------
 // SEO landing page: /mana-pip-editor
@@ -142,6 +143,8 @@ export default function ManaPipEditorPage() {
       </section>
 
       {/* CTA footer */}
+      <GuideCrossLinks current="/mana-pip-editor" />
+
       <section
         aria-labelledby="cta-heading"
         className="relative overflow-hidden rounded-frame border border-gold/40 bg-surface p-10"
