@@ -22,6 +22,11 @@ export const metadata: Metadata = {
   alternates: { canonical: "/challenges" },
 };
 
+// ISR: challenges + trending tags are viewer-independent (cookie-free
+// public client), so this page serves from the CDN and re-bakes at most
+// every 5 minutes. Card mutations purge it eagerly.
+export const revalidate = 300;
+
 export default async function ChallengesPage() {
   const [challenges, trendingTags] = await Promise.all([
     listChallenges(),

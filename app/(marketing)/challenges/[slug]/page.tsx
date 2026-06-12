@@ -16,7 +16,6 @@ import {
 } from "@/lib/challenges/queries";
 import { listPublicCardsRich } from "@/lib/cards/queries";
 import { buildCardPath } from "@/lib/cards/utils";
-import { getCurrentUser } from "@/lib/supabase/server";
 import { getSiteBaseUrl } from "@/lib/site-url";
 import {
   breadcrumbJsonLd,
@@ -25,6 +24,20 @@ import {
 } from "@/components/seo/json-ld";
 
 type Params = { slug: string };
+
+// ISR: a challenge page is identical for every viewer (entries come from
+// the anonymous query; hearts re-check the session cookie client-side at
+// click time). 60s keeps the entries grid feeling live mid-challenge
+// while still absorbing traffic spikes on the CDN.
+export const revalidate = 60;
+
+// No params prebuilt (challenges are admin-seeded rows, unknown at build
+// time) — exporting this opts the segment into on-demand ISR: each slug
+// renders on first visit, then serves from cache for the revalidate
+// window. Without it the segment stays fully dynamic.
+export function generateStaticParams(): Array<{ slug: string }> {
+  return [];
+}
 
 export async function generateMetadata({
   params,
@@ -50,10 +63,12 @@ export default async function ChallengeDetailPage({
   const challenge = await getChallengeBySlug(slug);
   if (!challenge) notFound();
 
-  const [entries, viewer] = await Promise.all([
-    listPublicCardsRich({ tag: challenge.tag, sort: "popular", limit: 24 }),
-    getCurrentUser(),
-  ]);
+  const entries = await listPublicCardsRich({
+    tag: challenge.tag,
+    sort: "popular",
+    limit: 24,
+    anonymous: true,
+  });
   const active = isActive(challenge);
 
   return (
@@ -166,7 +181,7 @@ export default async function ChallengeDetailPage({
         ) : (
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {entries.map((card) => (
-              <GalleryCardTile key={card.id} card={card} isAuthed={Boolean(viewer)} />
+              <GalleryCardTile key={card.id} card={card} isAuthed={false} />
             ))}
           </div>
         )}

@@ -23,6 +23,10 @@ import { isAIConfigured } from "@/lib/ai/card-assistant";
 // Signing up unlocks saving, publishing to the gallery, and set management.
 // ---------------------------------------------------------------------------
 
+// ISR: the guest creator only reads seeded reference data (game system +
+// templates via the cookie-free public client) — re-bake hourly.
+export const revalidate = 3600;
+
 export const metadata: Metadata = {
   title: "Preview — Try the MTG Card Creator",
   description:

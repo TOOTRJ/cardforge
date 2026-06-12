@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/public";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 // ---------------------------------------------------------------------------
@@ -8,6 +8,8 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 // ENTRIES are simply public cards wearing the challenge's tag, fetched with
 // the existing listPublicCardsRich({ tag }) — no join table. All reads
 // fail soft (empty/null) so a DB hiccup never breaks the marketing shell.
+// All reads are viewer-independent, so they use the cookie-free public
+// client — pages built on them stay static/ISR-cacheable.
 // ---------------------------------------------------------------------------
 
 export {
@@ -22,7 +24,7 @@ import type { Challenge } from "@/lib/challenges/shared";
 export async function listChallenges(): Promise<Challenge[]> {
   if (!isSupabaseConfigured()) return [];
   try {
-    const supabase = await createClient();
+    const supabase = createPublicClient();
     const { data, error } = await supabase
       .from("challenges")
       .select("*")
@@ -40,7 +42,7 @@ export async function getChallengeBySlug(
 ): Promise<Challenge | null> {
   if (!isSupabaseConfigured()) return null;
   try {
-    const supabase = await createClient();
+    const supabase = createPublicClient();
     const { data, error } = await supabase
       .from("challenges")
       .select("*")
@@ -58,7 +60,7 @@ export async function getChallengeBySlug(
 export async function getFeaturedActiveChallenge(): Promise<Challenge | null> {
   if (!isSupabaseConfigured()) return null;
   try {
-    const supabase = await createClient();
+    const supabase = createPublicClient();
     const nowIso = new Date().toISOString();
     const { data, error } = await supabase
       .from("challenges")
@@ -81,7 +83,7 @@ export async function getFeaturedActiveChallenge(): Promise<Challenge | null> {
 export async function getCurrentChallenge(): Promise<Challenge | null> {
   if (!isSupabaseConfigured()) return null;
   try {
-    const supabase = await createClient();
+    const supabase = createPublicClient();
     const nowIso = new Date().toISOString();
     const { data, error } = await supabase
       .from("challenges")
