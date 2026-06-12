@@ -35,23 +35,28 @@ test.describe("create a card (text fields only)", () => {
       page.getByRole("heading", { name: /forge a new card/i }),
     ).toBeVisible();
 
-    // The creator is a linear stepper that opens on the Frame step. The Title
-    // field lives on the Details step, and Save only appears on the last
-    // (Publish) step — so walk forward with "Next" rather than saving in place.
-    await page.getByRole("button", { name: /^next$/i }).click();
+    // Navigate steps via the vertical step rail (xl+ — the default Desktop
+    // Chrome viewport is 1280px wide) instead of walking "Next": the sticky
+    // bar swaps Next → "Save card" IN PLACE on the last transition, so a
+    // Next click racing that swap can land on Save and submit early. Free
+    // step jumping is enabled (isStepEnabled: () => true).
+    const rail = page.getByRole("navigation", { name: /card editor steps/i });
+    await rail.getByRole("button", { name: /^details$/i }).click();
 
     // Generate a unique title so reruns don't collide on the slug.
     const title = `Test Card ${Date.now()}`;
     await page.locator('input[placeholder="Emberbound Wyrm"]').fill(title);
 
-    // Advance through the remaining steps until Save (last step) is reachable.
+    // Jump to the Publish step and save.
+    await rail.getByRole("button", { name: /^publish$/i }).click();
     const saveButton = page.getByRole("button", { name: /save card/i });
-    for (let i = 0; i < 6 && !(await saveButton.isVisible().catch(() => false)); i++) {
-      await page.getByRole("button", { name: /^next$/i }).click();
-    }
+    await expect(saveButton).toBeVisible();
 
-    // Submit.
-    await saveButton.click();
+    // dispatchEvent fires the click exactly once: the label swaps to
+    // "Saving…" on submit, which detaches the accessible name and would send
+    // a regular click() into its retry loop hunting a button that no longer
+    // exists.
+    await saveButton.dispatchEvent("click");
 
     // After save, the editor redirects to the slug-edit URL.
     await page.waitForURL(/\/card\/.+\/edit/);
