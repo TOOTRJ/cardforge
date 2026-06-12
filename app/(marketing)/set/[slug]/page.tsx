@@ -21,6 +21,12 @@ import { computeSetAnalytics } from "@/lib/sets/analytics";
 import { buildCardPath } from "@/lib/cards/utils";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { getSiteBaseUrl } from "@/lib/site-url";
+import {
+  breadcrumbJsonLd,
+  itemListJsonLd,
+  JsonLd,
+} from "@/components/seo/json-ld";
 import type { ArtPosition, FrameStyle } from "@/types/card";
 import { Layers } from "lucide-react";
 
@@ -49,25 +55,29 @@ export async function generateMetadata({
   const description =
     set.description?.trim() || `A custom card set on PipGlyph.`;
 
+  // og:image comes from the sibling opengraph-image.tsx file route (which
+  // embeds the cover when one exists and falls back to a branded card) —
+  // file-convention images take precedence over any set here anyway.
   return {
     title: set.title,
     description,
+    // Unlisted sets are reachable by link but shouldn't enter the index.
+    robots:
+      set.visibility !== "public" ? { index: false, follow: false } : undefined,
     alternates: { canonical: `/set/${set.slug}` },
-    openGraph: isShareable && set.cover_url
+    openGraph: isShareable
       ? {
           title: `${set.title} · PipGlyph`,
           description,
           type: "article",
           url: `/set/${set.slug}`,
-          images: [{ url: set.cover_url, alt: `${set.title} cover` }],
         }
       : undefined,
-    twitter: isShareable && set.cover_url
+    twitter: isShareable
       ? {
           card: "summary_large_image",
           title: `${set.title} · PipGlyph`,
           description,
-          images: [set.cover_url],
         }
       : undefined,
   };
@@ -89,9 +99,33 @@ export default async function SetDetailPage({
   if (!set) notFound();
 
   const isOwner = Boolean(user && user.id === set.owner_id);
+  const isPublic = set.visibility === "public";
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      {/* Structured data only for indexable (public) sets — unlisted pages
+          are noindex, so schema there is dead weight. */}
+      {isPublic ? (
+        <>
+          <JsonLd
+            data={breadcrumbJsonLd([
+              { name: "Home", path: "/" },
+              { name: "Community sets", path: "/sets" },
+              { name: set.title, path: `/set/${set.slug}` },
+            ])}
+          />
+          <JsonLd
+            data={buildSetCollectionJsonLd({
+              title: set.title,
+              description: set.description,
+              slug: set.slug,
+              ownerUsername: set.owner?.username ?? null,
+              ownerDisplay:
+                set.owner?.display_name || set.owner?.username || null,
+            })}
+          />
+        </>
+      ) : null}
       <Link
         href="/gallery"
         className="mb-6 inline-flex items-center gap-1 text-sm text-muted transition-colors hover:text-foreground"
@@ -167,8 +201,10 @@ export default async function SetDetailPage({
         <SetBody
           setId={set.id}
           setSlug={set.slug}
+          setTitle={set.title}
           ownerUsername={set.owner?.username ?? null}
           isOwner={isOwner}
+          emitJsonLd={isPublic}
         />
       </Suspense>
     </div>
@@ -178,19 +214,37 @@ export default async function SetDetailPage({
 async function SetBody({
   setId,
   setSlug,
+  setTitle,
   ownerUsername,
   isOwner,
+  emitJsonLd,
 }: {
   setId: string;
   setSlug: string;
+  setTitle: string;
   ownerUsername: string | null;
   isOwner: boolean;
+  emitJsonLd: boolean;
 }) {
   const items = await listCardsInSet(setId);
   const analytics = computeSetAnalytics(items.map((i) => i.card));
 
   return (
     <>
+      {emitJsonLd && items.length > 0 ? (
+        <JsonLd
+          data={itemListJsonLd({
+            name: `${setTitle} — cards in this set`,
+            items: items.map(({ card }) => ({
+              name: card.title,
+              path: buildCardPath({
+                slug: card.slug,
+                owner: { username: ownerUsername },
+              }),
+            })),
+          })}
+        />
+      ) : null}
       <section className="mt-10">
         <PageHeader
           eyebrow="Analytics"
@@ -323,4 +377,46 @@ function visibilityLabel(visibility: string): string {
     default:
       return "Private";
   }
+}
+
+// ---------------------------------------------------------------------------
+// CollectionPage JSON-LD — tells search engines this page is a curated
+// collection authored by a community member, distinct from the site-level
+// WebSite/Organization graph in the root layout.
+// ---------------------------------------------------------------------------
+
+function buildSetCollectionJsonLd({
+  title,
+  description,
+  slug,
+  ownerUsername,
+  ownerDisplay,
+}: {
+  title: string;
+  description: string | null;
+  slug: string;
+  ownerUsername: string | null;
+  ownerDisplay: string | null;
+}): Record<string, unknown> {
+  const base = getSiteBaseUrl();
+  const canonical = `${base}/set/${slug}`;
+  const schema: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: title,
+    description:
+      description?.trim() || "A custom card set on PipGlyph.",
+    url: canonical,
+    isPartOf: { "@type": "WebSite", name: "PipGlyph", url: base },
+  };
+  if (ownerDisplay) {
+    schema.author = {
+      "@type": "Person",
+      name: ownerDisplay,
+      ...(ownerUsername
+        ? { url: `${base}/profile/${ownerUsername}` }
+        : {}),
+    };
+  }
+  return schema;
 }

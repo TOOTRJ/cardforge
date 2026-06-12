@@ -13,6 +13,7 @@ import {
   listChallenges,
 } from "@/lib/challenges/queries";
 import { listTrendingTags } from "@/lib/cards/queries";
+import { breadcrumbJsonLd, JsonLd } from "@/components/seo/json-ld";
 
 export const metadata: Metadata = {
   title: "Design Challenges",
@@ -31,6 +32,12 @@ export default async function ChallengesPage() {
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: "Home", path: "/" },
+          { name: "Challenges", path: "/challenges" },
+        ])}
+      />
       <PageHeader
         eyebrow="Community"
         title="Design challenges"

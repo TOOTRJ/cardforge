@@ -26,6 +26,8 @@ import { isFollowing, getFollowCounts } from "@/lib/follows/queries";
 import { FollowButton } from "@/components/follows/follow-button";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { SOCIAL_PLATFORMS, type SocialPlatformKey } from "@/lib/auth/schemas";
+import { getSiteBaseUrl } from "@/lib/site-url";
+import { JsonLd } from "@/components/seo/json-ld";
 import type { ArtPosition, FrameStyle } from "@/types/card";
 
 type Params = { username: string };
@@ -87,6 +89,7 @@ export default async function ProfilePage({
       className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8"
       style={accentStyle}
     >
+      <JsonLd data={buildProfileJsonLd(profile, displayName)} />
       <Link
         href="/gallery"
         className="mb-6 inline-flex items-center gap-1 text-sm text-muted transition-colors hover:text-foreground"
@@ -454,6 +457,43 @@ function ProfileCardTile({
       </div>
     </div>
   );
+}
+
+// ---------------------------------------------------------------------------
+// ProfilePage + Person JSON-LD — Google's profile-page structured data
+// shape. sameAs collects the creator's own links (website + socials) so
+// search engines can connect this profile to their wider identity.
+// ---------------------------------------------------------------------------
+
+function buildProfileJsonLd(
+  profile: ProfileWithStats,
+  displayName: string,
+): Record<string, unknown> {
+  const base = getSiteBaseUrl();
+  const canonical = `${base}/profile/${profile.username}`;
+  const sameAs = [
+    profile.website_url,
+    ...SOCIAL_PLATFORMS.map((p) => profile[p.key as SocialPlatformKey]),
+  ].filter((url): url is string => Boolean(url));
+
+  const person: Record<string, unknown> = {
+    "@type": "Person",
+    name: displayName,
+    alternateName: `@${profile.username}`,
+    url: canonical,
+    description:
+      profile.bio?.trim() || `Custom cards forged by @${profile.username} on PipGlyph.`,
+  };
+  if (profile.avatar_url) person.image = profile.avatar_url;
+  if (sameAs.length > 0) person.sameAs = sameAs;
+
+  return {
+    "@context": "https://schema.org",
+    "@type": "ProfilePage",
+    dateCreated: profile.created_at,
+    mainEntity: person,
+    url: canonical,
+  };
 }
 
 function NotConfigured({ username }: { username: string }) {
