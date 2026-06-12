@@ -76,7 +76,7 @@ export type CardPreviewData = {
   frameStyle?: FrameStyle;
   /** Set symbol the card displays (from its primary set). An uploaded image
    *  (setIconUrl) wins over a preset Keyrune code (setIconCode); when both are
-   *  absent the default rarity-tinted Spellwright mark renders. */
+   *  absent the default rarity-tinted PipGlyph mark renders. */
   setIconUrl?: string | null;
   setIconCode?: string | null;
   /** Optional back-face content. When set, the preview renders a flip button
@@ -629,7 +629,7 @@ function CardFace({
           <span style={ELLIPSIS}>
             {face.artistCredit?.trim() ? `Art: ${face.artistCredit}` : "Art: Unknown"}
           </span>
-          <span style={{ flexShrink: 0 }}>Spellwright</span>
+          <span style={{ flexShrink: 0 }}>PipGlyph</span>
         </div>
       ) : null}
 
