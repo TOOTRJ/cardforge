@@ -59,7 +59,7 @@
   --color-border-strong: oklch(0.43 0.038 262);
   --color-foreground: oklch(0.96 0.005 262);
   --color-muted: oklch(0.72 0.018 262);
-  --color-subtle: oklch(0.55 0.02 262);
+  --color-subtle: oklch(0.62 0.02 262);
 
   /* ── Brand — PipGlyph: purple primary, gold accent ────────────── */
   /* Primary ≈ #6B4D9A (CTAs, active states); accent ≈ #D8B26E (gold
@@ -123,7 +123,7 @@
   --color-border-strong: oklch(0.72 0.018 262);
   --color-foreground: oklch(0.18 0.012 262);
   --color-muted: oklch(0.42 0.018 262);
-  --color-subtle: oklch(0.58 0.018 262);
+  --color-subtle: oklch(0.52 0.018 262);
   --color-primary: oklch(0.45 0.14 300);
   --color-primary-foreground: oklch(0.99 0 0);
   --color-primary-bright: oklch(0.45 0.14 300);

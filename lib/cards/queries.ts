@@ -1006,3 +1006,23 @@ export async function hasUserLikedCard(
     return false;
   }
 }
+
+/**
+ * Count of cards visible to the public gallery (RLS keeps this to
+ * public/unlisted rows for anonymous viewers). Powers the marketing
+ * stat strip; returns 0 on any failure so the strip degrades quietly.
+ */
+export async function countPublicCards(): Promise<number> {
+  if (!isSupabaseConfigured()) return 0;
+  try {
+    const supabase = await createClient();
+    const { count, error } = await supabase
+      .from("cards")
+      .select("id", { count: "exact", head: true })
+      .eq("visibility", "public");
+    if (error) return 0;
+    return count ?? 0;
+  } catch {
+    return 0;
+  }
+}

@@ -10,11 +10,15 @@ import {
   TrendingCardsSectionSkeleton,
 } from "@/components/gallery/trending-cards-section";
 import { Button } from "@/components/ui/button";
+import { GlyphDivider } from "@/components/ui/glyph-divider";
+import { StarfieldBackdrop } from "@/components/ui/starfield-backdrop";
+import { StatBadge } from "@/components/ui/stat-badge";
 import { PLANS } from "@/lib/billing/plans";
 import { isBillingEnabled } from "@/lib/billing/flags";
-import { listTrendingCards } from "@/lib/cards/queries";
+import { countPublicCards, listTrendingCards } from "@/lib/cards/queries";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 
 // Self-canonical for the homepage. Other metadata (title, OG, etc.) is
 // inherited from the root layout; this just pins the canonical to "/" so it
@@ -73,6 +77,21 @@ export default function HomePage() {
       <MarketingHero />
       <FeatureGrid />
 
+      {/* Stat strip + brand epigraph — the "engineered for precision" band. */}
+      <section className="mx-auto w-full max-w-5xl px-4 pb-8 sm:px-6 lg:px-8">
+        <GlyphDivider className="mb-10" />
+        {isSupabaseConfigured() ? (
+          <Suspense fallback={null}>
+            <HomeStats />
+          </Suspense>
+        ) : null}
+        <p className="mx-auto mt-10 max-w-2xl text-center font-display text-lg italic leading-8 text-muted sm:text-xl">
+          &ldquo;The finest creations are born from control, intention, and
+          imagination.&rdquo;
+        </p>
+        <GlyphDivider glyph="diamond" className="mt-10" />
+      </section>
+
       <section className="mx-auto w-full max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
         {isSupabaseConfigured() ? (
           <Suspense fallback={<TrendingCardsSectionSkeleton count={4} />}>
@@ -105,7 +124,7 @@ export default function HomePage() {
                 key={plan.tier}
                 className={`flex flex-col gap-1 rounded-xl border bg-surface/80 p-5 text-left ${
                   plan.featured
-                    ? "border-primary/40 ring-1 ring-primary-bright/20"
+                    ? "border-gold/45 ring-1 ring-gold/20"
                     : "border-border/70"
                 }`}
               >
@@ -135,29 +154,48 @@ export default function HomePage() {
       ) : null}
 
       <section className="mx-auto w-full max-w-5xl px-4 pb-24 sm:px-6 lg:px-8">
-        <div className="relative overflow-hidden rounded-frame border border-border bg-linear-to-br from-surface via-surface to-elevated p-10 sm:p-14">
+        <div className="relative overflow-hidden rounded-frame border border-gold/40 bg-linear-to-br from-surface via-surface to-elevated p-10 sm:p-14">
           <div className="absolute inset-0 bg-radial-glow" aria-hidden />
+          <StarfieldBackdrop withGlyphs />
           <div className="relative flex flex-col items-start gap-5">
             <h2 className="font-display text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-              Ready to forge your first card?
+              Ready to craft something legendary?
             </h2>
             <p className="max-w-xl text-base leading-7 text-muted">
-              Phase 1 ships the foundation. The full editor, auth, and exports
-              arrive in the phases ahead. You can already explore the navigation
-              and layout shell today.
+              Join the creators already building worlds, one card at a time.
+              You&apos;re building more than cards — you&apos;re building a
+              legacy.
             </p>
             <div className="flex flex-wrap items-center gap-3">
               <Button asChild size="lg">
-                <Link href="/create">Open the creator</Link>
+                <Link href="/create">Start your journey</Link>
               </Button>
               <Button asChild size="lg" variant="ghost">
-                <Link href="/dashboard">Visit the dashboard</Link>
+                <Link href="/gallery">Browse the gallery</Link>
               </Button>
             </div>
           </div>
         </div>
       </section>
     </>
+  );
+}
+
+async function HomeStats() {
+  const cardCount = await countPublicCards();
+  // Friendly rounding: 1,234 → "1.2K+". Below 100 the raw number reads
+  // more honest than a padded "+".
+  const cards =
+    cardCount >= 1000
+      ? `${(cardCount / 1000).toFixed(1).replace(/\.0$/, "")}K+`
+      : `${cardCount}`;
+  return (
+    <div className="grid grid-cols-2 gap-8 sm:grid-cols-4">
+      <StatBadge value={cards} label="Cards forged" />
+      <StatBadge value={`${FRAME_TEMPLATE_VALUES.length}+`} label="Frame styles" />
+      <StatBadge value="6" label="Mana identities" />
+      <StatBadge value="∞" label="Possibilities" />
+    </div>
   );
 }
 

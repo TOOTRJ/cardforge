@@ -213,6 +213,10 @@ export function ManaCostGlyphs({
         scaled ? "gap-[0.12em]" : GAP_CLASS[size],
         className,
       )}
+      // A rendered mana cost is a composite pictograph — role="img" makes
+      // the aria-label valid (plain spans prohibit it) and reads the whole
+      // cost as one unit instead of glyph-by-glyph.
+      role="img"
       aria-label={`Cost ${cost}`}
       style={{ fontSize: resolvedFontSize }}
     >

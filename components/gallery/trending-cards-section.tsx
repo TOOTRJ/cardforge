@@ -203,7 +203,7 @@ function ProfileChip({
           {displayName}
         </span>
         {handle ? (
-          <span className="truncate font-mono text-[10px] text-subtle">
+          <span className="truncate font-mono text-[10px] text-muted">
             {handle}
           </span>
         ) : null}

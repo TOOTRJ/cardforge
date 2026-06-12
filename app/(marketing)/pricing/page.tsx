@@ -34,12 +34,15 @@ export default async function PricingPage() {
       </Suspense>
       {/* Header */}
       <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
-        <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-primary-bright">
+        <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-gold-strong">
           <Sparkles className="h-3.5 w-3.5" aria-hidden />
-          Simple, honest pricing
+          Choose the plan that fits your craft
         </span>
         <h1 className="font-display text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
-          Forge more with a plan
+          Legendary tools.{" "}
+          <span className="bg-linear-to-r from-gold-strong to-primary-bright bg-clip-text text-transparent">
+            Every creator.
+          </span>
         </h1>
         <p className="text-base leading-7 text-muted">
           The card maker is free forever — every frame, every card type. Plans

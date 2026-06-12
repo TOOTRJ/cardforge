@@ -24,13 +24,14 @@ export function PlanCard({ plan, currentTier, period = "monthly", cta }: PlanCar
 
   return (
     <SurfaceCard
+      tone={plan.featured ? "gold" : "default"}
       className={cn(
         "relative flex flex-col gap-5 p-6",
-        plan.featured && "border-primary/40 ring-1 ring-primary-bright/20",
+        plan.featured && "ring-1 ring-gold/25",
       )}
     >
       {plan.featured ? (
-        <Badge variant="primary" className="absolute -top-3 left-6">
+        <Badge variant="gold" className="absolute -top-3 left-6 bg-surface">
           Most popular
         </Badge>
       ) : null}
