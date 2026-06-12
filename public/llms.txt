@@ -1,0 +1,25 @@
+# PipGlyph
+
+> PipGlyph (https://www.pipglyph.com) is a free, browser-based MTG-style custom
+> card creator and mana pip editor. Design custom Magic: The Gathering-style
+> cards with precise mana symbols (including hybrid, twobrid, phyrexian, snow,
+> and energy pips — plus user-uploaded custom pip icons), frames spanning three
+> decades of card design, an AI rules-text assistant, print-ready PNG/PDF
+> export, full expansion-set building, a community gallery with likes and
+> remixing, and community design challenges. Fan-made tool; not affiliated
+> with Wizards of the Coast.
+
+## Key pages
+
+- [MTG Card Maker](https://www.pipglyph.com/mtg-card-maker): What the card creator does, how to make a custom card, FAQ with direct answers.
+- [Mana Pip Editor](https://www.pipglyph.com/mana-pip-editor): The full mana symbol vocabulary and custom pip uploads, with FAQ.
+- [AI MTG Card Generator](https://www.pipglyph.com/ai-mtg-card-generator): Concept-to-card AI generation, with FAQ.
+- [Community Gallery](https://www.pipglyph.com/gallery): Public custom cards — filter by color, type, rarity, and tag.
+- [Design Challenges](https://www.pipglyph.com/challenges): Community design briefs; entries are public cards wearing the challenge tag.
+- [About](https://www.pipglyph.com/about): What PipGlyph is, principles, and roadmap.
+
+## Notes
+
+- Sitemap: https://www.pipglyph.com/sitemap.xml
+- Individual cards live at https://www.pipglyph.com/card/[username]/[slug] and carry CreativeWork structured data.
+- The card maker is free; no account is needed to preview at https://www.pipglyph.com/preview.

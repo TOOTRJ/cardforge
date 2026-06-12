@@ -35,6 +35,8 @@ export type BakedCardThumbnailProps = {
   renderedImageUrl: string | null | undefined;
   /** Card title — used as the <img>'s accessible label. */
   title: string | null | undefined;
+  /** Image alt override — defaults to the card title. */
+  alt?: string;
   /** Same field set passed to <CardPreview> for the fallback render. */
   previewData: CardPreviewData;
   className?: string;
@@ -53,6 +55,7 @@ const DEFAULT_SIZES =
 export function BakedCardThumbnail({
   renderedImageUrl,
   title,
+  alt,
   previewData,
   className,
   sizes = DEFAULT_SIZES,
@@ -92,7 +95,7 @@ export function BakedCardThumbnail({
     >
       <Image
         src={renderedImageUrl}
-        alt={title?.trim() || "Card"}
+        alt={alt ?? (title?.trim() || "Card")}
         fill
         sizes={sizes}
         priority={priority}

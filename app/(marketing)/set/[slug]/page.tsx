@@ -52,6 +52,7 @@ export async function generateMetadata({
   return {
     title: set.title,
     description,
+    alternates: { canonical: `/set/${set.slug}` },
     openGraph: isShareable && set.cover_url
       ? {
           title: `${set.title} · PipGlyph`,

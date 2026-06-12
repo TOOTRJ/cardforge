@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { GlyphDivider } from "@/components/ui/glyph-divider";
 import { StarfieldBackdrop } from "@/components/ui/starfield-backdrop";
+import { GUIDE_LINKS } from "@/components/marketing/guide-cross-links";
 import { StatBadge } from "@/components/ui/stat-badge";
 import { PLANS } from "@/lib/billing/plans";
 import { isBillingEnabled } from "@/lib/billing/flags";
@@ -177,6 +178,28 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Guide links — internal links so the SEO landing pages aren't
+          orphaned (crawlers weight homepage links heavily). */}
+      <nav
+        aria-label="Guides"
+        className="mx-auto w-full max-w-5xl px-4 pb-16 sm:px-6 lg:px-8"
+      >
+        <p className="text-center text-sm text-muted">
+          Guides:{" "}
+          {GUIDE_LINKS.map((g, i) => (
+            <span key={g.href}>
+              {i > 0 ? " · " : ""}
+              <Link
+                href={g.href}
+                className="font-medium text-primary-bright underline-offset-2 hover:underline"
+              >
+                {g.label}
+              </Link>
+            </span>
+          ))}
+        </p>
+      </nav>
     </>
   );
 }

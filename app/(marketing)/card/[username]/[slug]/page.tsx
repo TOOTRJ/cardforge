@@ -82,6 +82,9 @@ export async function generateMetadata({
   const { width, height } = RENDER_PRESETS.default;
 
   return {
+    // Unlisted cards are reachable by link but shouldn't enter the index;
+    // private renders only ever reach the owner, but belt-and-braces.
+    robots: card.visibility !== "public" ? { index: false, follow: false } : undefined,
     title: card.title,
     description,
     openGraph: ogImageUrl

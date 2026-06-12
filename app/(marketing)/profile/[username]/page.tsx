@@ -45,6 +45,7 @@ export async function generateMetadata({
       ? (profile.display_name ?? `@${profile.username}`)
       : `@${username}`,
     description: profile?.bio ?? `Custom cards forged by @${username} on PipGlyph.`,
+    alternates: { canonical: `/profile/${profile?.username ?? username}` },
   };
 }
 
