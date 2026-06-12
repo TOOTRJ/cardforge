@@ -87,11 +87,13 @@ import {
 import {
   defaultValuesFor,
   deriveColorIdentity,
+  mergeTag,
   parseSubtypes,
   parseTags,
 } from "@/lib/creator/card-fields";
 import { type FormValues } from "@/lib/creator/form-types";
 import type { PipOverrides } from "@/lib/pips/override";
+import type { Challenge } from "@/lib/challenges/shared";
 import {
   buildFieldToStep,
   statVisibility,
@@ -135,6 +137,9 @@ type CardCreatorFormProps = {
    *  into the Tags field — including into a restored draft — so a "Start
    *  designing" CTA always produces an entry that counts. Create mode only. */
   initialTag?: string | null;
+  /** The currently running challenge, if any — powers the Publish panel's
+   *  "Enter the challenge" toggle (server-fetched). */
+  activeChallenge?: Challenge | null;
 };
 
 // Step membership + field→step routing now live in lib/creator/steps.ts (pure
@@ -151,16 +156,6 @@ const CARD_DRAFT_STORAGE_KEY = "pipglyph:card-draft:v1";
 // Pre-rebrand key — read as a fallback so in-flight drafts survive the
 // Spellwright → PipGlyph swap; removed once migrated. Drop after 2026-09.
 const LEGACY_CARD_DRAFT_STORAGE_KEY = "spellwright:card-draft:v1";
-
-// Append a tag to a comma-separated tags field unless it's already there.
-function mergeTag(tagsText: string | undefined, tag: string): string {
-  const existing = (tagsText ?? "")
-    .split(",")
-    .map((t) => t.trim().toLowerCase())
-    .filter(Boolean);
-  if (existing.includes(tag.toLowerCase())) return tagsText ?? "";
-  return existing.length > 0 ? `${tagsText}, ${tag}` : tag;
-}
 
 // Icons for the xl+ vertical step rail (one per StepKey; the "layout" panel's
 // dynamic labels — Adventure / Back face / Flip side — all read as Layers).
@@ -191,6 +186,7 @@ export function CardCreatorForm({
   aiConfigured,
   pipOverrides = {},
   initialTag = null,
+  activeChallenge = null,
 }: CardCreatorFormProps) {
   const router = useRouter();
   const upgrade = useUpgradeModal();
@@ -1078,6 +1074,7 @@ export function CardCreatorForm({
             {/* ----- Publish panel ----- */}
             {stepKey === "publish" ? (
               <PublishPanel
+                activeChallenge={activeChallenge}
                 ownerUsername={ownerUsername}
                 mySets={mySets}
                 watchedSlug={watched.slug}

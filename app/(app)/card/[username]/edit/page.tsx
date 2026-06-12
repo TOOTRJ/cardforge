@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
 import { getPipOverrides } from "@/lib/pips/queries";
+import { getCurrentChallenge } from "@/lib/challenges/queries";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import {
   getFantasyGameSystem,
@@ -142,6 +143,7 @@ export default async function EditCardPage({ params }: EditCardPageProps) {
           mySets={userSets}
           aiConfigured={isAIConfigured()}
           pipOverrides={await getPipOverrides(user.id)}
+          activeChallenge={await getCurrentChallenge()}
         />
       </div>
     </div>

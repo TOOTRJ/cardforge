@@ -5,8 +5,8 @@
 // the Effects panel; the Tags field moved here from the old details step).
 
 import Link from "next/link";
-import { Controller, useFormContext } from "react-hook-form";
-import { Globe2, Link2, Lock } from "lucide-react";
+import { Controller, useFormContext, useWatch } from "react-hook-form";
+import { Globe2, Link2, Lock, Trophy } from "lucide-react";
 import {
   ChipGroup,
   type ChipOption,
@@ -16,6 +16,8 @@ import {
   inputClass,
 } from "@/components/creator/field-group";
 import { slugify } from "@/lib/validation/card";
+import { mergeTag, parseTags, removeTag } from "@/lib/creator/card-fields";
+import { daysLeft, type Challenge } from "@/lib/challenges/shared";
 import type { Visibility } from "@/types/card";
 import type { FormValues } from "@/lib/creator/form-types";
 
@@ -48,6 +50,8 @@ export type CardSetOption = {
 };
 
 type PublishPanelProps = {
+  /** The currently running challenge, if any — renders the entry toggle. */
+  activeChallenge?: Challenge | null;
   /** Current user's username, if any — previews the canonical card URL. */
   ownerUsername?: string | null;
   /** The current user's sets — populates the "Add to set" picker. */
@@ -58,6 +62,7 @@ type PublishPanelProps = {
 };
 
 export function PublishPanel({
+  activeChallenge,
   ownerUsername,
   mySets,
   watchedSlug,
@@ -66,11 +71,66 @@ export function PublishPanel({
   const {
     register,
     control,
+    setValue,
     formState: { errors },
   } = useFormContext<FormValues>();
+  const tagsText = useWatch({ control, name: "tags_text" }) ?? "";
+  const visibility = useWatch({ control, name: "visibility" });
+  const entered = activeChallenge
+    ? parseTags(tagsText).includes(activeChallenge.tag)
+    : false;
 
   return (
     <>
+      {activeChallenge ? (
+        <div className="flex flex-col gap-2 rounded-xl border border-gold/40 bg-surface/80 p-4">
+          <label className="flex cursor-pointer items-start gap-3">
+            <input
+              type="checkbox"
+              checked={entered}
+              onChange={(e) =>
+                setValue(
+                  "tags_text",
+                  e.target.checked
+                    ? mergeTag(tagsText, activeChallenge.tag)
+                    : removeTag(tagsText, activeChallenge.tag),
+                  { shouldDirty: true },
+                )
+              }
+              className="mt-1"
+              aria-describedby="challenge-entry-help"
+            />
+            <span className="flex min-w-0 flex-col gap-0.5">
+              <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                <Trophy className="h-4 w-4 text-gold-strong" aria-hidden />
+                Enter the &ldquo;{activeChallenge.title}&rdquo; challenge
+              </span>
+              <span id="challenge-entry-help" className="text-xs leading-5 text-muted">
+                Adds the{" "}
+                <code className="rounded bg-elevated/70 px-1 py-0.5 font-mono text-[11px] text-foreground">
+                  {activeChallenge.tag}
+                </code>{" "}
+                tag · {daysLeft(activeChallenge)} day
+                {daysLeft(activeChallenge) === 1 ? "" : "s"} left ·{" "}
+                <Link
+                  href={`/challenges/${activeChallenge.slug}`}
+                  className="text-primary-bright underline-offset-2 hover:underline"
+                >
+                  view the brief
+                </Link>
+              </span>
+            </span>
+          </label>
+          {entered && visibility !== "public" ? (
+            <p className="text-xs leading-5 text-accent">
+              Entries must be public to appear on the challenge page — this
+              card is currently {visibility || "private"}. Switch Visibility
+              to Public below.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
       <FieldGroup label="Visibility">
         <Controller
           control={control}

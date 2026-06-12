@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
 import { getPipOverrides } from "@/lib/pips/queries";
+import { getCurrentChallenge } from "@/lib/challenges/queries";
 import {
   getFantasyGameSystem,
   getTemplatesForGameSystem,
@@ -91,6 +92,7 @@ export default async function CreatePage({
           aiConfigured={isAIConfigured()}
           pipOverrides={await getPipOverrides(user.id)}
           initialTag={initialTag}
+          activeChallenge={await getCurrentChallenge()}
         />
       </div>
     </div>
