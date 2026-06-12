@@ -15,6 +15,7 @@ import { renderCardImage } from "@/lib/render/card-image";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import { buildCardPdf, type PdfLayout } from "@/lib/render/card-pdf";
 import type { CardPreviewData } from "@/components/cards/card-preview";
+import { getPipOverrides } from "@/lib/pips/queries";
 
 // ---------------------------------------------------------------------------
 // /api/cards/[id]/pdf — Print-ready PDF download
@@ -123,6 +124,7 @@ export async function GET(
 
   // Build the CardPreviewData shape the renderer expects.
   const previewData: CardPreviewData = {
+    pipOverrides: await getPipOverrides(card.owner_id),
     title: card.title,
     cost: card.cost,
     cardType: isCardType(card.card_type) ? (card.card_type as CardType) : null,

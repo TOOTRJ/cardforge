@@ -15,6 +15,7 @@ import {
 import { renderCardImage, type RenderPreset } from "@/lib/render/card-image";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import type { CardPreviewData } from "@/components/cards/card-preview";
+import { getPipOverrides } from "@/lib/pips/queries";
 
 // Cache aggressively at the CDN — the renderer is pure of card row + URL
 // query (preset). When a card is edited, its `updated_at` changes; we don't
@@ -75,6 +76,7 @@ export async function GET(
   }
 
   const previewData: CardPreviewData = {
+    pipOverrides: await getPipOverrides(card.owner_id),
     title: card.title,
     cost: card.cost,
     cardType: isCardType(card.card_type) ? (card.card_type as CardType) : null,

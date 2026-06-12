@@ -774,6 +774,33 @@ export type Database = {
         };
         Relationships: [];
       };
+      custom_pips: {
+        Row: {
+          created_at: string;
+          id: string;
+          image_url: string;
+          owner_id: string;
+          symbol: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          image_url: string;
+          owner_id: string;
+          symbol: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          image_url?: string;
+          owner_id?: string;
+          symbol?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;

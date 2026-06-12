@@ -80,6 +80,7 @@ import {
   parseTags,
 } from "@/lib/creator/card-fields";
 import { type FormValues } from "@/lib/creator/form-types";
+import type { PipOverrides } from "@/lib/pips/override";
 import {
   buildFieldToStep,
   statVisibility,
@@ -116,6 +117,9 @@ type CardCreatorFormProps = {
   mySets?: CardSetOption[];
   /** Whether ANTHROPIC_API_KEY is set on the server — gates the AI panel. */
   aiConfigured: boolean;
+  /** The signed-in user's custom pip icons (server-fetched; {} when none).
+   *  Drives the cost picker icons, the live preview, and the pip dialog. */
+  pipOverrides?: PipOverrides;
 };
 
 // Step membership + field→step routing now live in lib/creator/steps.ts (pure
@@ -146,6 +150,7 @@ export function CardCreatorForm({
   card,
   mySets = [],
   aiConfigured,
+  pipOverrides = {},
 }: CardCreatorFormProps) {
   const router = useRouter();
   const upgrade = useUpgradeModal();
@@ -835,6 +840,7 @@ export function CardCreatorForm({
     stepKey === "extra" && !isAdventureFrame ? "back" : "front";
   const previewProps = {
     staticInEditor: true,
+    pipOverrides,
     title: watched.title,
     cost: watched.cost,
     cardType: cardTypeForPreview,
@@ -939,7 +945,10 @@ export function CardCreatorForm({
 
             {/* ----- Details step ----- */}
             {stepKey === "details" ? (
-              <DetailsStep frameTemplate={watched.frame_style?.template} />
+              <DetailsStep
+                frameTemplate={watched.frame_style?.template}
+                pipOverrides={pipOverrides}
+              />
             ) : null}
 
             {/* ----- Rules step ----- */}

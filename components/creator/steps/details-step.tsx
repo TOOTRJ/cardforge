@@ -9,6 +9,7 @@ import {
   type ChipOption,
 } from "@/components/ui/chip-group";
 import { ManaCostPicker } from "@/components/cards/mana-cost-picker";
+import { CustomPipDialog } from "@/components/creator/custom-pip-dialog";
 import {
   FieldGroup,
   MoreOptions,
@@ -17,6 +18,7 @@ import {
 import { RARITY_VALUES, type Rarity } from "@/types/card";
 import { hidesCost } from "@/lib/creator/steps";
 import type { FormValues } from "@/lib/creator/form-types";
+import type { PipOverrides } from "@/lib/pips/override";
 
 const RARITY_COLOR_HEX: Record<Rarity, string> = {
   common: "#cfcfd4",
@@ -50,9 +52,12 @@ const RARITY_OPTIONS: ChipOption<Rarity>[] = RARITY_VALUES.map((rarity) => ({
 type DetailsStepProps = {
   /** Live frame template from the form — token/land frames hide the cost. */
   frameTemplate: string | undefined;
+  /** The signed-in user's custom pip icons (server-fetched). Drives the
+   *  picker's icons and the "Customize pips" dialog beside it. */
+  pipOverrides: PipOverrides;
 };
 
-export function DetailsStep({ frameTemplate }: DetailsStepProps) {
+export function DetailsStep({ frameTemplate, pipOverrides }: DetailsStepProps) {
   const {
     register,
     control,
@@ -80,16 +85,20 @@ export function DetailsStep({ frameTemplate }: DetailsStepProps) {
           helper="Click pips to build the mana cost."
           error={errors.cost?.message}
         >
-          <Controller
-            control={control}
-            name="cost"
-            render={({ field }) => (
-              <ManaCostPicker
-                value={field.value ?? ""}
-                onChange={field.onChange}
-              />
-            )}
-          />
+          <div className="flex flex-col gap-2">
+            <Controller
+              control={control}
+              name="cost"
+              render={({ field }) => (
+                <ManaCostPicker
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  overrides={pipOverrides}
+                />
+              )}
+            />
+            <CustomPipDialog overrides={pipOverrides} />
+          </div>
         </FieldGroup>
       )}
 

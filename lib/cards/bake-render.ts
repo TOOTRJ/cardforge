@@ -11,6 +11,7 @@ import {
   rowToPreviewData,
   type CardRowForBake,
 } from "@/lib/cards/bake-core";
+import { getPipOverrides } from "@/lib/pips/queries";
 import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
 
 // ---------------------------------------------------------------------------
@@ -80,7 +81,8 @@ export async function bakeCardRender(
     return { ok: true, renderedImageUrl: null };
   }
 
-  const previewData = rowToPreviewData(card as CardRowForBake);
+  const pipOverrides = await getPipOverrides(card.owner_id);
+  const previewData = rowToPreviewData(card as CardRowForBake, pipOverrides);
 
   let pngBytes: ArrayBuffer;
   try {

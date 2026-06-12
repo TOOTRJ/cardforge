@@ -11,6 +11,8 @@ import { ProfileForm } from "@/components/auth/profile-form";
 import { ProfileMediaUploader } from "@/components/auth/profile-media-uploader";
 import { PinnedCardsPicker } from "@/components/auth/pinned-cards-picker";
 import { UsagePanel } from "@/components/settings/usage-panel";
+import { CustomPipsPanel } from "@/components/settings/custom-pips-panel";
+import { getPipOverrides } from "@/lib/pips/queries";
 import { DeleteAccountDialog } from "@/components/settings/delete-account-dialog";
 import { BillingPanel } from "@/components/settings/billing-panel";
 import { BillingReturnToast } from "@/components/billing/billing-return-toast";
@@ -89,6 +91,8 @@ export default async function SettingsPage() {
             </div>
           </div>
         </SurfaceCard>
+
+        <CustomPipsPanel overrides={user ? await getPipOverrides(user.id) : {}} />
 
         <SurfaceCard className="grid gap-6 p-6 sm:grid-cols-[1fr_2fr]">
           <div className="flex flex-col gap-1">

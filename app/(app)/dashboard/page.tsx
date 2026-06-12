@@ -11,6 +11,8 @@ import { SurfaceCard } from "@/components/ui/surface-card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
+import { getPipOverrides } from "@/lib/pips/queries";
+import { CUSTOM_PIP_SYMBOLS as PIP_STRIP_SYMBOLS } from "@/lib/pips/override";
 import { listLikedCardsByUser, listMyCards } from "@/lib/cards/queries";
 import { listMySets } from "@/lib/sets/queries";
 import { LikedCardsSection } from "@/components/creator/liked-cards-section";
@@ -28,6 +30,7 @@ export default async function DashboardPage() {
     getCurrentUser(),
     getCurrentProfile(),
   ]);
+  const pipOverrides = user ? await getPipOverrides(user.id) : {};
 
   const greetingName =
     profile?.display_name ||
@@ -82,7 +85,40 @@ export default async function DashboardPage() {
         <DashboardCards />
       </Suspense>
 
-      <SurfaceCard className="mt-12 flex flex-col gap-3 p-6">
+      <SurfaceCard className="mt-12 flex flex-col gap-3 p-6 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-1.5">
+          <Badge variant="gold" className="self-start">
+            Custom pips
+          </Badge>
+          <p className="flex items-center text-sm text-muted">
+            Your pip icons:
+            {PIP_STRIP_SYMBOLS.map((s) => {
+              const url = pipOverrides[s];
+              return url ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  key={s}
+                  src={url}
+                  alt={`Custom ${s} pip`}
+                  className="mx-0.5 inline-block h-5 w-5 rounded-full object-cover shadow-[-1px_1px_0_#111]"
+                />
+              ) : (
+                <i
+                  key={s}
+                  className={`ms ms-${s.toLowerCase()} ms-cost ms-shadow mx-0.5`}
+                  aria-label={`Standard ${s} pip`}
+                  style={{ fontSize: 15 }}
+                />
+              );
+            })}
+          </p>
+        </div>
+        <Button asChild variant="outline" size="sm" className="self-start sm:self-center">
+          <Link href="/settings">Manage in Settings</Link>
+        </Button>
+      </SurfaceCard>
+
+      <SurfaceCard className="mt-4 flex flex-col gap-3 p-6">
         <Badge variant="outline" className="self-start">
           Account
         </Badge>

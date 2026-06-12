@@ -4,6 +4,10 @@ import { useState } from "react";
 import { Delete, Eraser } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ManaCostGlyphs } from "@/components/cards/mana-cost-glyphs";
+import {
+  isCustomPipSymbol,
+  type PipOverrides,
+} from "@/lib/pips/override";
 
 // ---------------------------------------------------------------------------
 // ManaCostPicker — click-driven editor for the card's mana cost. Replaces
@@ -23,6 +27,10 @@ type Props = {
   onChange: (next: string) => void;
   /** Identifier so React Hook Form can wire up errors and aria. */
   id?: string;
+  /** The user's custom pip icons — swaps the ICON on the color buttons and
+   *  in the preview row. Behavior (tokens emitted, order, removal) is
+   *  identical with or without overrides. */
+  overrides?: PipOverrides | null;
   className?: string;
 };
 
@@ -66,7 +74,13 @@ function dropLastToken(cost: string): string {
   return trimmed.slice(0, lastOpen);
 }
 
-export function ManaCostPicker({ value, onChange, id, className }: Props) {
+export function ManaCostPicker({
+  value,
+  onChange,
+  id,
+  overrides,
+  className,
+}: Props) {
   // The generic-mana stepper is local UI state — it only matters while the
   // picker is mounted and never needs to round-trip to the form.
   const [generic, setGeneric] = useState<number>(1);
@@ -87,7 +101,7 @@ export function ManaCostPicker({ value, onChange, id, className }: Props) {
       <div className="flex min-h-9 items-center justify-between gap-2 rounded-md border border-border/40 bg-background/60 px-3 py-1.5">
         <div className="flex items-center gap-1.5">
           {value.trim() ? (
-            <ManaCostGlyphs cost={value} size="md" />
+            <ManaCostGlyphs cost={value} size="md" overrides={overrides} />
           ) : (
             <span className="text-[11px] uppercase tracking-wider text-subtle">
               No cost yet — click pips below
@@ -156,6 +170,9 @@ export function ManaCostPicker({ value, onChange, id, className }: Props) {
             iconSuffix={b.iconSuffix}
             onClick={() => append(b.token)}
             ring={b.ring}
+            overrideUrl={
+              isCustomPipSymbol(b.token) ? overrides?.[b.token] ?? null : null
+            }
           />
         ))}
       </div>
@@ -182,11 +199,14 @@ function PipButton({
   iconSuffix,
   onClick,
   ring,
+  overrideUrl,
 }: {
   label: string;
   iconSuffix: string;
   onClick: () => void;
   ring: string;
+  /** Custom pip icon — replaces the mana-font glyph, nothing else. */
+  overrideUrl?: string | null;
 }) {
   return (
     <button
@@ -199,11 +219,21 @@ function PipButton({
         ring,
       )}
     >
-      <i
-        className={`ms ms-${iconSuffix} ms-cost ms-shadow`}
-        aria-hidden
-        style={{ fontSize: 22 }}
-      />
+      {overrideUrl ? (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img
+          src={overrideUrl}
+          alt=""
+          aria-hidden
+          className="h-[26px] w-[26px] rounded-full object-cover shadow-[-1px_2px_0_#111]"
+        />
+      ) : (
+        <i
+          className={`ms ms-${iconSuffix} ms-cost ms-shadow`}
+          aria-hidden
+          style={{ fontSize: 22 }}
+        />
+      )}
     </button>
   );
 }

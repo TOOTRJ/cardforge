@@ -14,6 +14,7 @@ import {
 import { renderCardImage, type RenderPreset } from "@/lib/render/card-image";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import type { CardPreviewData } from "@/components/cards/card-preview";
+import { getPipOverrides } from "@/lib/pips/queries";
 
 // ---------------------------------------------------------------------------
 // /api/cards/[id]/png — Download a rendered PNG of a card
@@ -75,6 +76,7 @@ export async function GET(
   }
 
   const previewData: CardPreviewData = {
+    pipOverrides: await getPipOverrides(card.owner_id),
     title: card.title,
     cost: card.cost,
     cardType: isCardType(card.card_type) ? (card.card_type as CardType) : null,

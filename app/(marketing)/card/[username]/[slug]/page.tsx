@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Pencil } from "lucide-react";
 import { CardPreview } from "@/components/cards/card-preview";
+import { getPipOverrides } from "@/lib/pips/queries";
 import { CardComments } from "@/components/cards/card-comments";
 import { DownloadModal } from "@/components/cards/download-modal";
 import { LikeButton } from "@/components/cards/like-button";
@@ -199,6 +200,7 @@ export default async function CardDetailPage({
           <CardPreview
             title={card.title}
             cost={card.cost}
+            pipOverrides={await getPipOverrides(card.owner_id)}
             cardType={card.card_type}
             supertype={card.supertype}
             subtypes={card.subtypes}

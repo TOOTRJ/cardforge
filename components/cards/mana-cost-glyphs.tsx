@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { pipOverrideForToken, type PipOverrides } from "@/lib/pips/override";
 
 // ---------------------------------------------------------------------------
 // ManaCostGlyphs — render `{2}{R}{G/W}{R/P}{T}{S}` etc. using the open-source
@@ -28,6 +29,10 @@ type ManaCostGlyphsProps = {
    *  pixel size. When set, it wins over `size`; the gap + text fallback scale
    *  with it via em units. Used by CardPreview; the form pickers keep `size`. */
   fontSize?: number | string;
+  /** The card OWNER's custom pip icons. Pure color pips ({W}…{C}) with an
+   *  entry render the uploaded image instead of the mana-font glyph; all
+   *  other tokens (and all callers that omit this) keep the standard look. */
+  overrides?: PipOverrides | null;
   className?: string;
 };
 
@@ -163,10 +168,33 @@ export function tokenSuffix(token: Token): string | null {
 // Renderer
 // ---------------------------------------------------------------------------
 
+// A custom pip image drawn in the exact box mana-font gives `.ms-cost`:
+// a 1.3em disc at 0.95em font size with the hard offset `.ms-shadow` pair —
+// so override pips line up pixel-for-pixel with standard ones beside them.
+function PipOverrideImg({ src }: { src: string }) {
+  return (
+    <span aria-hidden style={{ fontSize: "0.95em" }} className="inline-flex">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt=""
+        style={{
+          width: "1.3em",
+          height: "1.3em",
+          borderRadius: "50%",
+          objectFit: "cover",
+          boxShadow: "-0.06em 0.07em 0 #111, 0 0.06em 0 #111",
+        }}
+      />
+    </span>
+  );
+}
+
 export function ManaCostGlyphs({
   cost,
   size = "md",
   fontSize,
+  overrides,
   className,
 }: ManaCostGlyphsProps) {
   if (!cost || !cost.trim()) return null;
@@ -198,6 +226,10 @@ export function ManaCostGlyphs({
               {token.value}
             </span>
           );
+        }
+        const overrideSrc = pipOverrideForToken(token, overrides);
+        if (overrideSrc) {
+          return <PipOverrideImg key={`g-${i}`} src={overrideSrc} />;
         }
         const suffix = tokenSuffix(token);
         if (!suffix) return null;

@@ -17,6 +17,10 @@ import { ImageResponse } from "next/og";
 import { fitRulesSizePct } from "@/lib/cards/render-tiers";
 import { tokenize, tokenSuffix } from "@/components/cards/mana-cost-glyphs";
 import {
+  pipOverrideForToken,
+  type PipOverrides,
+} from "@/lib/pips/override";
+import {
   tokenizeRulesText,
   groupTightRuns,
   hybridHalves,
@@ -341,6 +345,7 @@ function CardImage({
           <CostGlyphs
             cost={card.cost}
             fontSize={fpx(layout.costSizePct ?? layout.title.sizePct, width)}
+            overrides={card.pipOverrides}
           />
         ) : (
           <span style={{ display: "flex" }} />
@@ -421,6 +426,7 @@ function CardImage({
             slot: layout.adventure,
             back: card.backFace,
             cardWidth: width,
+            pipOverrides: card.pipOverrides,
           })
         : null}
 
@@ -431,6 +437,7 @@ function CardImage({
             back: card.backFace,
             cardWidth: width,
             aspect,
+            pipOverrides: card.pipOverrides,
           })
         : null}
 
@@ -720,7 +727,16 @@ function ManaGem({
 // CostGlyphs — Satori-side mana-cost renderer (gem discs, like real cards).
 // ---------------------------------------------------------------------------
 
-function CostGlyphs({ cost, fontSize }: { cost: string; fontSize: number }) {
+function CostGlyphs({
+  cost,
+  fontSize,
+  overrides,
+}: {
+  cost: string;
+  fontSize: number;
+  /** Card owner's custom pip icons — see lib/pips/override.ts. */
+  overrides?: PipOverrides | null;
+}) {
   const tokens = tokenize(cost);
   if (tokens.length === 0) return <span style={{ display: "flex" }} />;
 
@@ -748,6 +764,29 @@ function CostGlyphs({ cost, fontSize }: { cost: string; fontSize: number }) {
             >
               {token.value}
             </span>
+          );
+        }
+        const overrideSrc = pipOverrideForToken(token, overrides);
+        if (overrideSrc) {
+          // Same box + hard shadow as the ManaGem disc it replaces, so
+          // custom pips line up exactly with standard ones beside them.
+          const shadow = `${-Math.max(1, Math.round(fontSize * 0.06))}px ${Math.max(1, Math.round(fontSize * 0.07))}px 0 #111`;
+          return (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              key={`g-${i}`}
+              src={overrideSrc}
+              alt=""
+              width={fontSize}
+              height={fontSize}
+              style={{
+                width: fontSize,
+                height: fontSize,
+                borderRadius: fontSize,
+                objectFit: "cover",
+                boxShadow: shadow,
+              }}
+            />
           );
         }
         const suffix = tokenSuffix(token);
@@ -1202,10 +1241,12 @@ function AdventureBake({
   slot,
   back,
   cardWidth,
+  pipOverrides,
 }: {
   slot: NonNullable<FrameProfile["adventure"]>;
   back: CardBackFace;
   cardWidth: number;
+  pipOverrides?: PipOverrides | null;
 }) {
   const name = back.title?.trim() || "Adventure";
   const typeLine = buildTypeLine({
@@ -1242,6 +1283,7 @@ function AdventureBake({
           <CostGlyphs
             cost={back.cost}
             fontSize={fpx(slot.costSizePct ?? slot.title.sizePct, cardWidth)}
+            overrides={pipOverrides}
           />
         ) : (
           <span style={{ display: "flex" }} />
@@ -1287,11 +1329,13 @@ function SecondFaceBake({
   back,
   cardWidth,
   aspect,
+  pipOverrides,
 }: {
   slot: NonNullable<FrameProfile["secondFace"]>;
   back: CardBackFace;
   cardWidth: number;
   aspect: number;
+  pipOverrides?: PipOverrides | null;
 }) {
   const name = back.title?.trim() || "Untitled";
   const typeLine = buildTypeLine({
@@ -1342,6 +1386,7 @@ function SecondFaceBake({
           <CostGlyphs
             cost={back.cost}
             fontSize={fpx(slot.costSizePct ?? slot.title.sizePct, cardWidth)}
+            overrides={pipOverrides}
           />
         ) : (
           <span style={{ display: "flex" }} />
