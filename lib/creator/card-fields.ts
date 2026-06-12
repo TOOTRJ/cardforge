@@ -1,0 +1,187 @@
+// Pure (non-React) field helpers for the card creator form — free-text
+// parsing, cost→color derivation, and persisted-card→form-values mapping.
+// Extracted from components/creator/card-creator-form.tsx; nothing here may
+// read component state.
+
+import { tokenize } from "@/components/cards/mana-cost-glyphs";
+import { normalizeFrameTemplate } from "@/lib/cards/card-display";
+import {
+  DEFAULT_FRAME_TEMPLATE,
+  type ArtPosition,
+  type Card,
+  type CardBackFace,
+  type CardTemplate,
+  type ColorIdentity,
+  type FrameStyle,
+  type GameSystem,
+} from "@/types/card";
+import {
+  EMPTY_BACK_FACE,
+  type BackFaceFormValues,
+  type FormValues,
+} from "@/lib/creator/form-types";
+
+export function backFaceFormValuesFrom(
+  source: CardBackFace | null | undefined,
+): BackFaceFormValues {
+  if (!source) return EMPTY_BACK_FACE;
+  return {
+    title: source.title ?? "",
+    cost: source.cost ?? "",
+    card_type: source.card_type ?? "",
+    supertype: source.supertype ?? "",
+    subtypes_text: source.subtypes?.join(", ") ?? "",
+    rules_text: source.rules_text ?? "",
+    flavor_text: source.flavor_text ?? "",
+    power: source.power ?? "",
+    toughness: source.toughness ?? "",
+    loyalty: source.loyalty ?? "",
+    defense: source.defense ?? "",
+    artist_credit: source.artist_credit ?? "",
+    art_url: source.art_url ?? "",
+    art_position: source.art_position ?? {
+      focalX: 0.5,
+      focalY: 0.5,
+      scale: 1,
+    },
+  };
+}
+
+export function defaultValuesFor(
+  card: Card | null | undefined,
+  gameSystems: GameSystem[],
+  templates: CardTemplate[],
+): FormValues {
+  const fallbackGameSystem = gameSystems[0]?.id ?? "";
+  const fallbackTemplate = templates[0]?.id ?? "";
+
+  if (!card) {
+    return {
+      title: "",
+      slug: "",
+      game_system_id: fallbackGameSystem,
+      template_id: fallbackTemplate,
+      cost: "",
+      color_identity: [],
+      supertype: "",
+      card_type: "creature",
+      subtypes_text: "",
+      tags_text: "",
+      rarity: "common",
+      rules_text: "",
+      flavor_text: "",
+      power: "",
+      toughness: "",
+      loyalty: "",
+      defense: "",
+      artist_credit: "",
+      art_url: "",
+      art_position: { focalX: 0.5, focalY: 0.5, scale: 1 },
+      frame_style: {
+        finish: "regular",
+        template: DEFAULT_FRAME_TEMPLATE,
+      },
+      visibility: "public",
+      has_back_face: false,
+      back_face: EMPTY_BACK_FACE,
+      source_scryfall_id: "",
+      primary_set_id: "",
+    };
+  }
+
+  const persistedBackFace =
+    (card.back_face as CardBackFace | null | undefined) ?? null;
+
+  // Coerce the persisted frame style, mapping any legacy/retired template
+  // (e.g. the old "regular" placeholder) onto a current one so the picker
+  // shows a valid selection and the save passes validation.
+  const persistedFrame = (card.frame_style as FrameStyle | null) ?? {};
+  const normalizedFrameStyle: FrameStyle = {
+    finish: persistedFrame.finish ?? "regular",
+    template: normalizeFrameTemplate(persistedFrame.template),
+  };
+
+  return {
+    title: card.title,
+    slug: card.slug,
+    game_system_id: card.game_system_id,
+    template_id: card.template_id ?? fallbackTemplate,
+    cost: card.cost ?? "",
+    color_identity: card.color_identity,
+    supertype: card.supertype ?? "",
+    card_type: card.card_type ?? "",
+    subtypes_text: card.subtypes.join(", "),
+    tags_text: card.tags?.join(", ") ?? "",
+    rarity: card.rarity ?? "",
+    rules_text: card.rules_text ?? "",
+    flavor_text: card.flavor_text ?? "",
+    power: card.power ?? "",
+    toughness: card.toughness ?? "",
+    loyalty: card.loyalty ?? "",
+    defense: card.defense ?? "",
+    artist_credit: card.artist_credit ?? "",
+    art_url: card.art_url ?? "",
+    art_position: (card.art_position as ArtPosition) ?? {
+      focalX: 0.5,
+      focalY: 0.5,
+      scale: 1,
+    },
+    frame_style: normalizedFrameStyle,
+    visibility: card.visibility,
+    has_back_face: persistedBackFace !== null,
+    back_face: backFaceFormValuesFrom(persistedBackFace),
+    source_scryfall_id: card.source_scryfall_id ?? "",
+    primary_set_id: card.primary_set_id ?? "",
+  };
+}
+
+export function parseSubtypes(text: string): string[] {
+  return text
+    .split(/[,\n]/)
+    .map((piece) => piece.trim())
+    .filter((piece) => piece.length > 0)
+    .slice(0, 10);
+}
+
+// Colors actually present in a mana cost — the printed rule for a card's
+// color. Drives the "match mana cost" auto color identity: solid pips, both
+// hybrid halves, and phyrexian pips count; generic/X/snow/tap do not.
+const COST_COLOR_NAME: Record<string, ColorIdentity> = {
+  W: "white",
+  U: "blue",
+  B: "black",
+  R: "red",
+  G: "green",
+};
+
+export function deriveColorIdentity(cost: string): ColorIdentity[] {
+  const found: ColorIdentity[] = [];
+  const add = (key: string) => {
+    const name = COST_COLOR_NAME[key];
+    if (name && !found.includes(name)) found.push(name);
+  };
+  for (const token of tokenize(cost)) {
+    if (token.kind === "solid") add(token.color);
+    else if (token.kind === "hybrid") {
+      add(token.left);
+      add(token.right);
+    } else if (token.kind === "phyrexian") add(token.color);
+  }
+  return found;
+}
+
+export function parseTags(text: string): string[] {
+  // Mirror cardTagsSchema's normalization so the field preview matches what
+  // actually gets saved (lowercase, alphanumeric + spaces/hyphens, collapsed).
+  return text
+    .split(/[,\n]/)
+    .map((piece) =>
+      piece
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, "")
+        .replace(/\s+/g, " ")
+        .trim(),
+    )
+    .filter((piece) => piece.length > 0)
+    .slice(0, 12);
+}
