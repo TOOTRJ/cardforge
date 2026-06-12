@@ -8,6 +8,7 @@ import {
   noFlashScript,
   resolveThemeForServer,
 } from "@/lib/theme";
+import { GoogleAnalytics } from "@next/third-parties/google";
 import "./globals.css";
 
 // ---------------------------------------------------------------------------
@@ -215,6 +216,13 @@ export default async function RootLayout({
             },
           }}
         />
+        {/* GA4 — only loads when the measurement ID env is set (so local
+            dev, previews, and the e2e server stay analytics-free unless
+            opted in). Page views are tracked automatically on App Router
+            navigations by @next/third-parties. */}
+        {process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ? (
+          <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID} />
+        ) : null}
       </body>
     </html>
   );
