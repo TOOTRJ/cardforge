@@ -1,15 +1,44 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 
 // ---------------------------------------------------------------------------
 // Create-card e2e (Phase 11 chunk 16 — scaffolded).
 //
-// Drives the form's text-only happy path (no upload). Auth-gated, so it
-// skips when the Supabase test-user creds aren't set. See tests/README.md.
+// Drives the form's text-only happy path (no upload) plus the action-bar
+// race regression. Auth-gated, so it skips when the Supabase test-user
+// creds aren't set. See tests/README.md.
 // ---------------------------------------------------------------------------
 
 const hasCredentials =
   !!process.env.SUPABASE_E2E_USER_EMAIL &&
   !!process.env.SUPABASE_E2E_USER_PASSWORD;
+
+async function signIn(page: Page) {
+  await page.goto("/login");
+  await page
+    .locator('input[type="email"]')
+    .fill(process.env.SUPABASE_E2E_USER_EMAIL!);
+  await page
+    .locator('input[type="password"]')
+    .fill(process.env.SUPABASE_E2E_USER_PASSWORD!);
+  await page.getByRole("button", { name: /sign in/i }).click();
+  await page.waitForURL("**/dashboard");
+}
+
+// Opens /create and fills a unique title (so reruns don't collide on the
+// slug), navigating via the vertical step rail (xl+ — the default Desktop
+// Chrome viewport is 1280px wide). Free step jumping is enabled
+// (isStepEnabled: () => true). Returns the rail locator.
+async function openCreatorWithTitle(page: Page, title: string) {
+  await page.goto("/create");
+  await expect(
+    page.getByRole("heading", { name: /forge a new card/i }),
+  ).toBeVisible();
+
+  const rail = page.getByRole("navigation", { name: /card editor steps/i });
+  await rail.getByRole("button", { name: /^details$/i }).click();
+  await page.locator('input[placeholder="Emberbound Wyrm"]').fill(title);
+  return rail;
+}
 
 test.describe("create a card (text fields only)", () => {
   test.skip(
@@ -18,39 +47,16 @@ test.describe("create a card (text fields only)", () => {
   );
 
   test("fills the form and saves to dashboard", async ({ page }) => {
-    // Sign in first.
-    await page.goto("/login");
-    await page.locator('input[type="email"]').fill(
-      process.env.SUPABASE_E2E_USER_EMAIL!,
-    );
-    await page.locator('input[type="password"]').fill(
-      process.env.SUPABASE_E2E_USER_PASSWORD!,
-    );
-    await page.getByRole("button", { name: /sign in/i }).click();
-    await page.waitForURL("**/dashboard");
+    await signIn(page);
+    const rail = await openCreatorWithTitle(page, `Test Card ${Date.now()}`);
 
-    // Open the creator.
-    await page.goto("/create");
-    await expect(
-      page.getByRole("heading", { name: /forge a new card/i }),
-    ).toBeVisible();
-
-    // Navigate steps via the vertical step rail (xl+ — the default Desktop
-    // Chrome viewport is 1280px wide) instead of walking "Next": the sticky
-    // bar swaps Next → "Save card" IN PLACE on the last transition, so a
-    // Next click racing that swap can land on Save and submit early. Free
-    // step jumping is enabled (isStepEnabled: () => true).
-    const rail = page.getByRole("navigation", { name: /card editor steps/i });
-    await rail.getByRole("button", { name: /^details$/i }).click();
-
-    // Generate a unique title so reruns don't collide on the slug.
-    const title = `Test Card ${Date.now()}`;
-    await page.locator('input[placeholder="Emberbound Wyrm"]').fill(title);
-
-    // Jump to the Publish step and save.
+    // Jump to the Publish step and save. Save arms (enables) ~300ms after
+    // the step appears — the guard against clicks racing the Next → Save
+    // swap — and dispatchEvent skips actionability waits, so wait for it
+    // explicitly.
     await rail.getByRole("button", { name: /^publish$/i }).click();
     const saveButton = page.getByRole("button", { name: /save card/i });
-    await expect(saveButton).toBeVisible();
+    await expect(saveButton).toBeEnabled();
 
     // dispatchEvent fires the click exactly once: the label swaps to
     // "Saving…" on submit, which detaches the accessible name and would send
@@ -59,6 +65,35 @@ test.describe("create a card (text fields only)", () => {
     await saveButton.dispatchEvent("click");
 
     // After save, the editor redirects to the slug-edit URL.
+    await page.waitForURL(/\/card\/.+\/edit/);
+  });
+
+  test("a click racing the Next → Save swap doesn't submit early", async ({
+    page,
+  }) => {
+    await signIn(page);
+    // A valid (titled) form, so a premature submit would observably save and
+    // redirect — an invalid one would just bounce to the errored step.
+    const rail = await openCreatorWithTitle(page, `Race Card ${Date.now()}`);
+
+    // Land on the second-to-last step: jump to Publish, then one Back.
+    await rail.getByRole("button", { name: /^publish$/i }).click();
+    await page.getByRole("button", { name: /^back$/i }).click();
+
+    // The race: "Save card" replaces Next in the same action-bar slot, so the
+    // second click of a fast double-click lands on Save. It must hit the
+    // still-disarmed button and do nothing.
+    await page.getByRole("button", { name: /^next$/i }).dblclick();
+
+    // Had the trailing click submitted, the label would now read "Saving…"
+    // (failing this name lookup) or the page would already be redirecting.
+    const saveButton = page.getByRole("button", { name: /save card/i });
+    await expect(saveButton).toBeEnabled();
+    expect(page.url()).toContain("/create");
+
+    // Once armed, Save still works (dispatchEvent for the same reason as the
+    // happy path above).
+    await saveButton.dispatchEvent("click");
     await page.waitForURL(/\/card\/.+\/edit/);
   });
 });
