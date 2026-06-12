@@ -152,8 +152,8 @@ export default async function SettingsPage() {
               Preferences
             </h3>
             <p className="text-sm leading-6 text-muted">
-              Editor defaults applied to new cards. Editable preferences arrive
-              with the Creator MVP phase.
+              Editor defaults applied to new cards. These aren&apos;t
+              editable yet — customizable preferences are on the roadmap.
             </p>
           </div>
           <div className="flex flex-col gap-3">

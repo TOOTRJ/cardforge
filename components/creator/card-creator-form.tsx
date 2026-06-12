@@ -153,8 +153,8 @@ type CardCreatorFormProps = {
 // One shared key: a guest's /preview draft survives sign-up and reappears on
 // /create. Versioned so a future FormValues shape change can invalidate.
 const CARD_DRAFT_STORAGE_KEY = "pipglyph:card-draft:v1";
-// Pre-rebrand key — read as a fallback so in-flight drafts survive the
-// Spellwright → PipGlyph swap; removed once migrated. Drop after 2026-09.
+// Pre-rebrand draft key — read once as a migration fallback so in-flight
+// drafts survive the brand swap, then deleted. Safe to remove after 2026-09.
 const LEGACY_CARD_DRAFT_STORAGE_KEY = "spellwright:card-draft:v1";
 
 // Icons for the xl+ vertical step rail (one per StepKey; the "layout" panel's

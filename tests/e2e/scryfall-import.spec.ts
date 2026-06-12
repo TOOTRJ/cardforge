@@ -85,9 +85,9 @@ test.describe("Scryfall search → import", () => {
     await page.waitForURL("**/dashboard");
     await page.goto("/create");
 
-    // Open the Scryfall import dialog from the Identity-tab trigger.
+    // Open the Scryfall import dialog from the identity panel's trigger.
     // Exact match: the quick-start hero renders a second, longer-named
-    // "Search a real card …" tile; this targets the frame-step button.
+    // "Search a real card …" tile; this targets the identity-panel button.
     await page
       .getByRole("button", { name: "Search a real card", exact: true })
       .click();

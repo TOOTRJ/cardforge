@@ -51,11 +51,18 @@ export default function AboutPage() {
 
       <h2>What ships today</h2>
       <ul>
-        <li>Account creation, profile, and visibility controls</li>
-        <li>A card creator with live preview, art upload, and PNG export</li>
+        <li>
+          A nine-panel card editor with live preview — frames from three
+          decades of card design, double-faced and adventure cards, and
+          precise mana pips with per-user <strong>custom pip icons</strong>
+        </li>
+        <li>Scryfall import for remixing real cards, with lineage tracking</li>
+        <li>Print-ready PNG and PDF export (single cards and 9-up sheets)</li>
         <li>A public gallery with filters, search, likes, and remix</li>
         <li>Custom sets with analytics and shareable detail pages</li>
+        <li>Community design challenges with briefs, entry tags, and spotlights</li>
         <li>An optional AI design assistant powered by Anthropic Claude</li>
+        <li>Account creation, profiles, visibility controls, and light/dark themes</li>
       </ul>
 
       <h2>The roadmap</h2>
@@ -73,9 +80,6 @@ export default function AboutPage() {
         </li>
         <li>
           A sets index for discovery, plus pinning featured sets.
-        </li>
-        <li>
-          Bulk export and printable PDF sheets.
         </li>
       </ul>
 
