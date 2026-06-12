@@ -6,6 +6,7 @@ import { Heart } from "lucide-react";
 import { toast } from "sonner";
 import { toggleLikeAction } from "@/lib/cards/likes";
 import { toggleSetLikeAction } from "@/lib/sets/likes";
+import { hasSupabaseSessionCookie } from "@/lib/supabase/session-cookie";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -22,7 +23,10 @@ import { cn } from "@/lib/utils";
 type CommonProps = {
   initialLiked: boolean;
   initialCount: number;
-  /** When true, click navigates to /login instead of mutating. */
+  /** Server-render hint that the viewer looked anonymous. On cached /
+   *  static pages this is ALWAYS true, so it's re-checked against the
+   *  session cookie at click time — a signed-in user on a cached page
+   *  still gets a working like instead of a bounce to /login. */
   requiresSignIn?: boolean;
   /** Used to construct the post-login redirectTo. */
   redirectAfterLogin?: string;
@@ -72,7 +76,10 @@ export function QuickLikeButton(props: QuickLikeButtonProps) {
     e.preventDefault();
     e.stopPropagation();
 
-    if (requiresSignIn) {
+    // The hint only ever PROMOTES: anonymous-rendered page + session
+    // cookie present → attempt the action (the server action is the real
+    // validator). Without a cookie, bounce to login as before.
+    if (requiresSignIn && !hasSupabaseSessionCookie()) {
       const next =
         redirectAfterLogin ??
         (typeof window !== "undefined" ? window.location.pathname : "/");

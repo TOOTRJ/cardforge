@@ -14,6 +14,11 @@ import { GuideCrossLinks } from "@/components/marketing/guide-cross-links";
 // /mtg-card-maker: direct Q&A answers that AI engines can cite.
 // ---------------------------------------------------------------------------
 
+// Hard guarantee of static rendering: if a future change introduces a
+// cookie/header read on this page, the build fails instead of silently
+// losing CDN cacheability.
+export const dynamic = "error";
+
 export const metadata: Metadata = {
   title: "Mana Pip Editor — Custom MTG Mana Symbols",
   description:

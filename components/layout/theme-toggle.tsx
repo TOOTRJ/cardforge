@@ -1,23 +1,52 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useSyncExternalStore, useTransition } from "react";
 import { Monitor, Moon, Sun } from "lucide-react";
-import { type Theme } from "@/lib/theme";
+import {
+  readThemeCookieClient,
+  writeThemeCookieClient,
+  type Theme,
+} from "@/lib/theme-shared";
 import { setThemeAction } from "@/lib/theme-actions";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
 // ThemeToggle — cycles through dark → light → system → dark.
 //
-// We update the DOM immediately (`document.documentElement.dataset.theme`)
-// so the visual change is instant, then fire the server action to
-// persist the cookie. The action is wrapped in startTransition so the
-// route refresh that follows the cookie write doesn't block the click.
+// The theme cookie is treated as an external store (useSyncExternalStore):
+// the server snapshot is always "dark" so the header renders identically
+// for every visitor and stays statically cacheable; right after hydration
+// React swaps in the client snapshot (the real cookie). The page itself
+// is already themed correctly by the <head> no-flash script.
+//
+// On click we update the DOM + cookie synchronously (instant visuals),
+// then fire the server action to persist authoritatively. The action is
+// wrapped in startTransition so the route refresh that follows the
+// cookie write doesn't block the click.
 //
 // The icon reflects the EFFECTIVE theme — Sun when light, Moon when
 // dark, Monitor when system. For "system" we also recompute on each
 // click in case the OS preference changed since mount.
 // ---------------------------------------------------------------------------
+
+// Cookie-change listeners — lets every mounted toggle re-read the cookie
+// when one of them cycles (and gives useSyncExternalStore its subscribe).
+const themeListeners = new Set<() => void>();
+
+function subscribeToTheme(callback: () => void): () => void {
+  themeListeners.add(callback);
+  return () => {
+    themeListeners.delete(callback);
+  };
+}
+
+function notifyThemeChanged(): void {
+  for (const listener of [...themeListeners]) listener();
+}
+
+function serverThemeSnapshot(): Theme {
+  return "dark";
+}
 
 const THEME_ORDER: Theme[] = ["dark", "light", "system"];
 
@@ -37,22 +66,27 @@ const ICONS: Record<
 };
 
 type ThemeToggleProps = {
-  initialTheme: Theme;
   className?: string;
 };
 
-export function ThemeToggle({ initialTheme, className }: ThemeToggleProps) {
-  const [theme, setTheme] = useState<Theme>(initialTheme);
+export function ThemeToggle({ className }: ThemeToggleProps) {
+  const theme = useSyncExternalStore(
+    subscribeToTheme,
+    readThemeCookieClient,
+    serverThemeSnapshot,
+  );
   const [, startTransition] = useTransition();
 
   const cycle = () => {
     const idx = THEME_ORDER.indexOf(theme);
     const next = THEME_ORDER[(idx + 1) % THEME_ORDER.length];
 
-    // Instant DOM update — the inline no-flash script in <head> set the
-    // initial data-theme; from here on the toggle is the authority.
+    // Instant DOM + cookie update — the inline no-flash script in <head>
+    // set the initial data-theme; from here on the toggle is the
+    // authority. The cookie write is what the store snapshot reads.
     applyThemeToDocument(next);
-    setTheme(next);
+    writeThemeCookieClient(next);
+    notifyThemeChanged();
 
     startTransition(() => {
       void setThemeAction(next);

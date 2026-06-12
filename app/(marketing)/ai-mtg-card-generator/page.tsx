@@ -15,6 +15,11 @@ import { GuideCrossLinks } from "@/components/marketing/guide-cross-links";
 // + gpt-image-1, Phase 4).
 // ---------------------------------------------------------------------------
 
+// Hard guarantee of static rendering: if a future change introduces a
+// cookie/header read on this page, the build fails instead of silently
+// losing CDN cacheability.
+export const dynamic = "error";
+
 export const metadata: Metadata = {
   title: "AI MTG Card Generator — Design Custom Magic Cards with AI",
   description:

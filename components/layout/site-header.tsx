@@ -9,7 +9,6 @@ import { CommandPaletteTrigger } from "./command-palette-trigger";
 import { ThemeToggle } from "./theme-toggle";
 import { siteConfig } from "@/lib/site-config";
 import { isBillingEnabled } from "@/lib/billing/flags";
-import type { Theme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
 type HeaderUser = {
@@ -33,14 +32,12 @@ type SiteHeaderProps = {
    *  shortcut. Nav items themselves no longer depend on variant. */
   variant?: "marketing" | "app";
   user?: HeaderUser | null;
-  theme?: Theme;
   className?: string;
 };
 
 export function SiteHeader({
   variant = "marketing",
   user,
-  theme = "system",
   className,
 }: SiteHeaderProps) {
   const isAuthed = Boolean(user);
@@ -68,7 +65,7 @@ export function SiteHeader({
         />
 
         <div className="ml-auto flex items-center gap-2">
-          <ThemeToggle initialTheme={theme} />
+          <ThemeToggle />
           {isAuthed ? (
             <>
               <Link

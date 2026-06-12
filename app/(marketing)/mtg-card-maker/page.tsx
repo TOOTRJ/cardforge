@@ -13,6 +13,11 @@ import { GuideCrossLinks } from "@/components/marketing/guide-cross-links";
 // (ChatGPT, Perplexity, Google AI Mode) can cite specific passages.
 // ---------------------------------------------------------------------------
 
+// Hard guarantee of static rendering: if a future change introduces a
+// cookie/header read on this page, the build fails instead of silently
+// losing CDN cacheability.
+export const dynamic = "error";
+
 export const metadata: Metadata = {
   title: "MTG Card Maker — Create Custom Magic: The Gathering Cards",
   description:
