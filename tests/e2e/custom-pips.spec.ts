@@ -44,10 +44,10 @@ test.describe("custom pips", () => {
     await page.getByRole("button", { name: /sign in/i }).click();
     await page.waitForURL("**/dashboard");
 
-    // Open the creator on the Details step (cost picker + pip dialog).
+    // Open the creator on the Pips panel (cost picker + pip dialog).
     await page.goto("/create");
     const rail = page.getByRole("navigation", { name: /card editor steps/i });
-    await rail.getByRole("button", { name: /^details$/i }).click();
+    await rail.getByRole("button", { name: /^pips$/i }).click();
 
     // Upload a custom red pip through the dialog.
     await page.getByRole("button", { name: /customize pips/i }).click();
@@ -73,7 +73,7 @@ test.describe("custom pips", () => {
 
     // Inline rules-text pips wear the override too: type a {R} into rules
     // and check the live card preview.
-    await rail.getByRole("button", { name: /^rules$/i }).click();
+    await rail.getByRole("button", { name: /^text$/i }).click();
     await page
       .locator('textarea[name="rules_text"]')
       .fill("{T}: Add {R} to your mana pool.");
@@ -82,7 +82,7 @@ test.describe("custom pips", () => {
       .toBeGreaterThanOrEqual(2); // cost (title band) + rules-text pip on the preview
 
     // Remove → revert to standard.
-    await rail.getByRole("button", { name: /^details$/i }).click();
+    await rail.getByRole("button", { name: /^pips$/i }).click();
     await page.getByRole("button", { name: /customize pips/i }).click();
     await page
       .getByRole("button", { name: /remove custom red mana pip/i })

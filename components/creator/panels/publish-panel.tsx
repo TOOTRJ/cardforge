@@ -1,7 +1,8 @@
 "use client";
 
-// Publish step — visibility, set membership, finish, and the advanced slug
-// override. Extracted verbatim from card-creator-form.tsx.
+// Publish panel — visibility, set membership, and the advanced tags + slug
+// overrides. Regrouped from the old publish step (the finish picker moved to
+// the Effects panel; the Tags field moved here from the old details step).
 
 import Link from "next/link";
 import { Controller, useFormContext } from "react-hook-form";
@@ -15,7 +16,7 @@ import {
   inputClass,
 } from "@/components/creator/field-group";
 import { slugify } from "@/lib/validation/card";
-import type { CardFinish, Visibility } from "@/types/card";
+import type { Visibility } from "@/types/card";
 import type { FormValues } from "@/lib/creator/form-types";
 
 const VISIBILITY_OPTIONS: ChipOption<Visibility>[] = [
@@ -39,35 +40,6 @@ const VISIBILITY_OPTIONS: ChipOption<Visibility>[] = [
   },
 ];
 
-// Finish presets — premium treatments layered on top of the base frame.
-// Descriptions are surfaced via ChipGroup's `md` size which shows the
-// description under the label.
-const FINISH_OPTIONS: ChipOption<CardFinish>[] = [
-  {
-    value: "regular",
-    label: "Regular",
-    description: "Baseline frame. The default look.",
-  },
-  {
-    value: "foil",
-    label: "Foil",
-    description: "Animated holographic sheen for showpieces.",
-    activeClass: "border-accent bg-accent/15 text-accent",
-  },
-  {
-    value: "etched",
-    label: "Etched",
-    description: "Gold-leaf inner border with a subtle texture.",
-    activeClass: "border-amber-300 bg-amber-300/15 text-amber-200",
-  },
-  {
-    value: "showcase",
-    label: "Showcase",
-    description: "Italic display title with an ornate hairline.",
-    activeClass: "border-primary bg-primary/15 text-primary-bright",
-  },
-];
-
 export type CardSetOption = {
   id: string;
   title: string;
@@ -75,7 +47,7 @@ export type CardSetOption = {
   icon_code: string | null;
 };
 
-type PublishStepProps = {
+type PublishPanelProps = {
   /** Current user's username, if any — previews the canonical card URL. */
   ownerUsername?: string | null;
   /** The current user's sets — populates the "Add to set" picker. */
@@ -85,12 +57,12 @@ type PublishStepProps = {
   watchedTitle: string;
 };
 
-export function PublishStep({
+export function PublishPanel({
   ownerUsername,
   mySets,
   watchedSlug,
   watchedTitle,
-}: PublishStepProps) {
+}: PublishPanelProps) {
   const {
     register,
     control,
@@ -164,33 +136,25 @@ export function PublishStep({
         />
       </FieldGroup>
 
-      <FieldGroup
-        label="Finish"
-        helper="Premium treatment layered on top of the frame."
-      >
-        <Controller
-          control={control}
-          name="frame_style.finish"
-          render={({ field }) => (
-            <ChipGroup
-              ariaLabel="Finish"
-              layout="grid-2"
-              size="md"
-              value={field.value ?? "regular"}
-              onChange={(next) => field.onChange(next)}
-              options={FINISH_OPTIONS}
-            />
-          )}
-        />
-      </FieldGroup>
-
-      {/* Slug auto-derives from the title; tuck it under Advanced for
-          anyone who wants a custom URL. */}
+      {/* Slug auto-derives from the title; tuck it (and the discovery tags)
+          under Advanced for anyone who wants a custom URL. */}
       <details className="rounded-lg border border-border/60 bg-elevated/30">
         <summary className="cursor-pointer list-none px-4 py-2 text-xs font-semibold uppercase tracking-wider text-subtle [&::-webkit-details-marker]:hidden">
           Advanced
         </summary>
-        <div className="px-4 pb-4">
+        <div className="flex flex-col gap-4 px-4 pb-4">
+          <FieldGroup
+            label="Tags"
+            helper="Comma-separated keywords for discovery (e.g. dragons, tokens). Up to 12."
+          >
+            <input
+              {...register("tags_text")}
+              placeholder="dragons, tokens, tribal"
+              className={inputClass(Boolean(errors.tags_text))}
+              autoComplete="off"
+            />
+          </FieldGroup>
+
           <FieldGroup
             label="Slug"
             helper={`URL: ${
