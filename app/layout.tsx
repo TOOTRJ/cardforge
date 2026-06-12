@@ -104,11 +104,10 @@ const cinzel = Cinzel({
   weight: ["500", "600", "700"],
 });
 
-// The production GA4 property. Env var wins; otherwise only true
-// production deploys (VERCEL_ENV === "production") load analytics.
-const GA_MEASUREMENT_ID =
-  process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ??
-  (process.env.VERCEL_ENV === "production" ? "G-5YC92QH71H" : undefined);
+// GA4 loads only where NEXT_PUBLIC_GA_MEASUREMENT_ID is configured (the
+// Vercel production env) — local dev, previews, and e2e stay
+// analytics-free unless explicitly opted in.
+const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
 const description =
   "PipGlyph is the MTG card creator and mana pip editor for Magic: The Gathering fans. Design cards with perfect pips, text, and frames — then share full expansion sets with your playgroup in seconds.";
@@ -223,12 +222,8 @@ export default async function RootLayout({
           }}
         />
         {/* GA4 — page views track automatically on App Router navigations
-            (@next/third-parties). Loads when the env var is set, or on
-            Vercel PRODUCTION deploys via the committed fallback below —
-            previews, local dev, and the e2e server stay analytics-free.
-            Measurement IDs are public (they ship in every page's source),
-            so committing the production ID is safe; the env var still
-            overrides it. */}
+            (@next/third-parties). Gated on the env var so only deploys
+            that configure it load analytics. */}
         {GA_MEASUREMENT_ID ? <GoogleAnalytics gaId={GA_MEASUREMENT_ID} /> : null}
       </body>
     </html>
