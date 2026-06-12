@@ -68,7 +68,9 @@ if (!userId) {
 // the profile row with username null.
 const { error: profileError } = await admin
   .from("profiles")
-  .update({ username: "e2e_forger", display_name: "E2E Forger" })
+  // is_admin powers the /admin e2e specs (challenge authoring). Only the
+  // LOCAL stack ever runs this script (the URL guard above).
+  .update({ username: "e2e_forger", display_name: "E2E Forger", is_admin: true })
   .eq("id", userId);
 if (profileError) {
   console.error(`✗ profile update failed: ${profileError.message}`);

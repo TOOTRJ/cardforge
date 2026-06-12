@@ -10,34 +10,13 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 // fail soft (empty/null) so a DB hiccup never breaks the marketing shell.
 // ---------------------------------------------------------------------------
 
-export type Challenge = {
-  id: string;
-  slug: string;
-  title: string;
-  description: string;
-  tag: string;
-  hero_image_url: string | null;
-  starts_at: string;
-  ends_at: string;
-  featured: boolean;
-  created_at: string;
-};
+export {
+  daysLeft,
+  isActive,
+  type Challenge,
+} from "@/lib/challenges/shared";
 
-/** Whole-day count until the challenge closes; 0 when closed. */
-export function daysLeft(challenge: Pick<Challenge, "ends_at">): number {
-  const ms = new Date(challenge.ends_at).getTime() - Date.now();
-  return Math.max(0, Math.ceil(ms / 86_400_000));
-}
-
-export function isActive(
-  challenge: Pick<Challenge, "starts_at" | "ends_at">,
-): boolean {
-  const now = Date.now();
-  return (
-    new Date(challenge.starts_at).getTime() <= now &&
-    new Date(challenge.ends_at).getTime() > now
-  );
-}
+import type { Challenge } from "@/lib/challenges/shared";
 
 /** All challenges, newest window first. */
 export async function listChallenges(): Promise<Challenge[]> {
