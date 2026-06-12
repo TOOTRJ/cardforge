@@ -4,6 +4,7 @@ import { useState, type CSSProperties, type ReactNode } from "react";
 import { RotateCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ManaCostGlyphs } from "@/components/cards/mana-cost-glyphs";
+import type { PipOverrides } from "@/lib/pips/override";
 import { SetSymbol } from "@/components/cards/set-symbol";
 import { FrameLayer, pickFrameColorKey } from "@/components/cards/frame-layer";
 import { fitRulesSizePct } from "@/lib/cards/render-tiers";
@@ -82,6 +83,9 @@ export type CardPreviewData = {
   /** Optional back-face content. When set, the preview renders a flip button
    *  and supports a 3D flip animation between the two faces. */
   backFace?: CardBackFace | null;
+  /** The card OWNER's custom pip icons — cost pips render these instead of
+   *  the standard mana-font glyphs (preview AND bake read this field). */
+  pipOverrides?: PipOverrides | null;
 };
 
 type CardPreviewProps = CardPreviewData & {
@@ -161,6 +165,7 @@ export function CardPreview({
   setIconUrl,
   setIconCode,
   backFace,
+  pipOverrides,
   face,
   onFaceChange,
   className,
@@ -245,6 +250,7 @@ export function CardPreview({
     staticInEditor,
     setIconUrl: setIconUrl ?? null,
     setIconCode: setIconCode ?? null,
+    pipOverrides: pipOverrides ?? null,
   } as const;
 
   return (
@@ -346,6 +352,7 @@ function CardFace({
   staticInEditor,
   setIconUrl = null,
   setIconCode = null,
+  pipOverrides = null,
   adventure = null,
   secondFace = null,
 }: {
@@ -358,6 +365,7 @@ function CardFace({
   staticInEditor: boolean;
   setIconUrl?: string | null;
   setIconCode?: string | null;
+  pipOverrides?: PipOverrides | null;
   /** Adventure spell shown on the left storybook page (Adventure frames only). */
   adventure?: AdventureData | null;
   /** Back-face content for a rotated second face (flip / split / aftermath). */
@@ -502,6 +510,7 @@ function CardFace({
           <ManaCostGlyphs
             cost={face.cost}
             fontSize={pipFont(layout.costSizePct ?? layout.title.sizePct)}
+            overrides={pipOverrides}
           />
         ) : null}
       </BandSlot>
@@ -597,6 +606,7 @@ function CardFace({
           slot={layout.adventure}
           data={adventure}
           staticInEditor={staticInEditor}
+          pipOverrides={pipOverrides}
         />
       ) : null}
 
@@ -606,6 +616,7 @@ function CardFace({
           slot={layout.secondFace}
           data={secondFace}
           aspect={aspect}
+          pipOverrides={pipOverrides}
         />
       ) : null}
 
@@ -898,10 +909,12 @@ function AdventurePanel({
   slot,
   data,
   staticInEditor,
+  pipOverrides = null,
 }: {
   slot: NonNullable<FrameProfile["adventure"]>;
   data: AdventureData;
   staticInEditor: boolean;
+  pipOverrides?: PipOverrides | null;
 }) {
   const name = data.title?.trim() || "Adventure";
   const typeLine = buildTypeLine({
@@ -920,6 +933,7 @@ function AdventurePanel({
           <ManaCostGlyphs
             cost={data.cost}
             fontSize={pipFont(slot.costSizePct ?? slot.title.sizePct)}
+            overrides={pipOverrides}
           />
         ) : null}
       </BandSlot>
@@ -974,10 +988,12 @@ function SecondFacePanel({
   slot,
   data,
   aspect,
+  pipOverrides = null,
 }: {
   slot: NonNullable<FrameProfile["secondFace"]>;
   data: FaceData;
   aspect: number;
+  pipOverrides?: PipOverrides | null;
 }) {
   const rot = `rotate(${slot.rotation}deg)`;
   const name = data.title?.trim() || "Untitled";
@@ -1021,6 +1037,7 @@ function SecondFacePanel({
           <ManaCostGlyphs
             cost={data.cost}
             fontSize={pipFont(slot.costSizePct ?? slot.title.sizePct)}
+            overrides={pipOverrides}
           />
         ) : null}
       </div>

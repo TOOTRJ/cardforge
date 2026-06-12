@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
+import { getPipOverrides } from "@/lib/pips/queries";
 import {
   getFantasyGameSystem,
   getTemplatesForGameSystem,
@@ -83,6 +84,7 @@ export default async function CreatePage() {
           templates={templates}
           mySets={mySets}
           aiConfigured={isAIConfigured()}
+          pipOverrides={await getPipOverrides(user.id)}
         />
       </div>
     </div>
