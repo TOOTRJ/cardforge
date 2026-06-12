@@ -1,33 +1,62 @@
-# Custom Card Creator — Claude Code MVP Pack
+# PipGlyph
 
-This pack is designed for building a modern custom trading card creator in controlled phases using Claude Code.
+**Precision tools for legendary ideas.** PipGlyph ([www.pipglyph.com](https://www.pipglyph.com))
+is an MTG-style custom card creator: a nine-panel editor with precise mana
+pips (including per-user **custom pip icons**), frames spanning three decades
+of card design, an AI rules-text assistant, a community gallery with likes
+and remixing, full expansion-set building, design challenges, and print-ready
+PNG/PDF export. The live preview and the exported image share one layout
+engine, so what you see is exactly what renders.
 
-## How to use
+## Stack
 
-1. Create a new repo.
-2. Add these files to the repo root.
-3. Start with `CLAUDE.md`.
-4. Run the phases in order.
-5. Do not allow Claude to skip ahead.
-6. After each phase, require Claude to run:
-   - `npm run lint`
-   - `npm run typecheck`
-   - `npm run build`
-7. Commit after each completed phase.
+- **Next.js 16** (App Router, Turbopack) · React 19 · Tailwind 4 (CSS-first tokens in `app/globals.css`)
+- **Supabase** (Postgres + RLS, Auth, Storage) via `@supabase/ssr`
+- **Satori + resvg** server rendering for card exports (`lib/render/card-image.tsx`)
+- **Stripe** (flag-gated billing: `NEXT_PUBLIC_BILLING_ENABLED`), **GA4** (env-gated), Vercel hosting
+- Tests: **Vitest** (unit) + **Playwright** (e2e against a local Supabase stack)
 
-## Phase order
+## Local setup
 
-1. `00_PHASE_ZERO_LOCKED_SPEC.md`
-2. `01_FOUNDATION.md`
-3. `02_DATABASE_AND_AUTH.md`
-4. `03_CARD_DATA_MODEL.md`
-5. `04_CREATOR_MVP.md`
-6. `05_RENDER_AND_EXPORT.md`
-7. `06_LIBRARY_AND_PUBLIC_SHARING.md`
-8. `07_SETS_MVP.md`
-9. `08_AI_ASSISTANT_MVP.md`
-10. `09_POLISH_AND_LAUNCH.md`
+```bash
+npm install
+cp .env.example .env.local        # fill in Supabase URL + publishable key (see comments)
+npm run dev                       # http://localhost:3000
+```
 
-## Core rule
+For the **full e2e suite** (auth, editor, challenges flows) you need the local
+Supabase stack — see [tests/README.md](tests/README.md):
 
-Build one phase at a time. Each phase should end in a working, buildable app.
+```bash
+supabase start                    # needs a container runtime (colima works)
+cp .env.e2e.example .env.e2e      # paste keys from `supabase status`
+node scripts/seed-e2e.mjs         # idempotent test user (local-only by design)
+npx playwright test               # full suite, on its own :3100 server
+```
+
+## Useful scripts
+
+| Script | Purpose |
+| --- | --- |
+| `scripts/seed-e2e.mjs` | Seed the e2e user into the **local** stack (refuses non-local URLs). |
+| `scripts/rebake-renders.mjs` | Re-render stored card PNGs after a renderer/layout change (bump `CARD_LAYOUT_VERSION` first — see `lib/cards/layout-version.ts`). |
+| `scripts/visual-audit.mjs` | Side-by-side render comparisons against reference scans. |
+
+## Architecture notes
+
+- **Editor**: `components/creator/card-creator-form.tsx` orchestrates nine
+  contextual panels (`components/creator/panels/`) over a pure step model in
+  `lib/creator/steps.ts`.
+- **Preview ↔ export parity**: both renderers read the same frame profiles
+  (`lib/cards/template-layout.ts`); any change inside card pixels must land in
+  `components/cards/card-preview.tsx` **and** `lib/render/card-image.tsx`
+  together, with a `CARD_LAYOUT_VERSION` bump + rebake.
+- **Migrations**: `supabase/migrations/` is canonical; apply to the remote via
+  the Supabase MCP/CLI. Storage upserts need owner `SELECT` policies (see
+  migrations `0038`–`0040` for the pattern).
+- **Billing setup**: [BILLING_SETUP.md](BILLING_SETUP.md).
+
+## History
+
+Planning and audit documents from the original build-out live in
+[docs/archive/](docs/archive/) — kept for provenance; superseded by this file.
