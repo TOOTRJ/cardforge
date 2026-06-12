@@ -50,23 +50,34 @@
 }
 
 @theme {
-  /* ── Core surfaces ────────────────────────────────────────────── */
-  --color-background: oklch(0.12 0.014 275);
-  --color-surface: oklch(0.16 0.016 275);
-  --color-elevated: oklch(0.20 0.018 275);
-  --color-border: oklch(0.27 0.018 275);
-  --color-border-strong: oklch(0.36 0.022 275);
-  --color-foreground: oklch(0.96 0.008 75);
-  --color-muted: oklch(0.70 0.018 75);
-  --color-subtle: oklch(0.52 0.020 275);
+  /* ── Core surfaces — PipGlyph slate-navy (hue ~262) ───────────── */
+  /* Mockup anchors: #0D1320 background, #1A2030 surface, #2A3346 border */
+  --color-background: oklch(0.18 0.03 262);
+  --color-surface: oklch(0.23 0.03 262);
+  --color-elevated: oklch(0.28 0.032 262);
+  --color-border: oklch(0.33 0.034 262);
+  --color-border-strong: oklch(0.43 0.038 262);
+  --color-foreground: oklch(0.96 0.005 262);
+  --color-muted: oklch(0.72 0.018 262);
+  --color-subtle: oklch(0.55 0.02 262);
 
-  /* ── Brand — gold primary (Spellwright) ───────────────────────── */
-  /* Shifted from purple to gold to match the quill/parchment identity */
-  --color-primary: oklch(0.76 0.14 75);
-  --color-primary-foreground: oklch(0.14 0.02 275);
-  --color-accent: oklch(0.65 0.18 295);
-  --color-accent-foreground: oklch(0.99 0 0);
+  /* ── Brand — PipGlyph: purple primary, gold accent ────────────── */
+  /* Primary ≈ #6B4D9A (CTAs, active states); accent ≈ #D8B26E (gold
+     emphasis). The literal gold/ember tokens below exist so "this is
+     gold" styling (borders, icon strokes) survives any future change
+     to the semantic accent. */
+  --color-primary: oklch(0.5 0.13 300);
+  --color-primary-foreground: oklch(0.98 0.005 300);
+  /* Readable purple for text/icons/focus rings on dark surfaces — the
+     fill-strength primary above sits at ~2.4:1 against surface, fine
+     for fills with light text but too dim for text-sized marks. */
+  --color-primary-bright: oklch(0.7 0.11 300);
+  --color-accent: oklch(0.78 0.09 84);
+  --color-accent-foreground: oklch(0.2 0.03 262);
   --color-danger: oklch(0.65 0.22 25);
+  --color-gold: oklch(0.78 0.09 84);
+  --color-gold-strong: oklch(0.84 0.1 84);
+  --color-ember: oklch(0.64 0.16 47);
 
   /* ── WUBRG mana colors ────────────────────────────────────────── */
   /* Used for color identity pips, card tinting, and gallery filters */
@@ -105,19 +116,23 @@
 
 :root[data-theme="light"] {
   color-scheme: light;
-  --color-background: oklch(0.98 0.005 280);
-  --color-surface: oklch(0.96 0.008 280);
-  --color-elevated: oklch(0.92 0.012 280);
-  --color-border: oklch(0.85 0.014 280);
-  --color-border-strong: oklch(0.72 0.018 280);
-  --color-foreground: oklch(0.18 0.012 280);
-  --color-muted: oklch(0.42 0.018 280);
-  --color-subtle: oklch(0.58 0.018 280);
-  --color-primary: oklch(0.52 0.22 295);
+  --color-background: oklch(0.98 0.005 262);
+  --color-surface: oklch(0.96 0.008 262);
+  --color-elevated: oklch(0.92 0.012 262);
+  --color-border: oklch(0.85 0.014 262);
+  --color-border-strong: oklch(0.72 0.018 262);
+  --color-foreground: oklch(0.18 0.012 262);
+  --color-muted: oklch(0.42 0.018 262);
+  --color-subtle: oklch(0.58 0.018 262);
+  --color-primary: oklch(0.45 0.14 300);
   --color-primary-foreground: oklch(0.99 0 0);
-  --color-accent: oklch(0.62 0.18 75);
-  --color-accent-foreground: oklch(0.18 0.02 280);
+  --color-primary-bright: oklch(0.45 0.14 300);
+  --color-accent: oklch(0.6 0.11 84);
+  --color-accent-foreground: oklch(0.18 0.02 262);
   --color-danger: oklch(0.55 0.22 25);
+  --color-gold: oklch(0.62 0.1 84);
+  --color-gold-strong: oklch(0.55 0.11 84);
+  --color-ember: oklch(0.58 0.16 47);
 }
 
 html,
@@ -157,6 +172,53 @@ body {
     ellipse 80% 60% at 50% -20%,
     color-mix(in oklab, var(--color-primary) 22%, transparent),
     transparent 70%
+  );
+}
+
+.bg-radial-glow-gold {
+  background-image: radial-gradient(
+    ellipse 80% 60% at 50% -20%,
+    color-mix(in oklab, var(--color-gold) 16%, transparent),
+    transparent 70%
+  );
+}
+
+/* ── Starfield — arcane dot field for hero/auth backdrops ──────────
+   Three tiled 1px radial-gradient layers at co-prime sizes so the
+   repetition isn't obvious. Static (no animation) so it needs no
+   reduced-motion override. Apply via <StarfieldBackdrop aria-hidden>. */
+.bg-starfield {
+  background-image:
+    radial-gradient(
+      circle 1px at 22% 31%,
+      color-mix(in oklab, var(--color-gold) 55%, transparent) 99%,
+      transparent
+    ),
+    radial-gradient(
+      circle 1px at 71% 64%,
+      color-mix(in oklab, var(--color-foreground) 40%, transparent) 99%,
+      transparent
+    ),
+    radial-gradient(
+      circle 1px at 47% 83%,
+      color-mix(in oklab, var(--color-gold) 35%, transparent) 99%,
+      transparent
+    );
+  background-size:
+    173px 173px,
+    127px 127px,
+    211px 211px;
+}
+
+/* ── Gold hairline divider — thin rule that fades at both ends ───── */
+.divider-gold {
+  height: 1px;
+  border: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklab, var(--color-gold) 55%, transparent) 50%,
+    transparent
   );
 }
 

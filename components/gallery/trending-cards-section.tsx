@@ -58,7 +58,7 @@ export function TrendingCardsSection({
     <section aria-labelledby="trending-heading">
       <div className="mb-6 flex flex-col items-start justify-between gap-3 md:flex-row md:items-end">
         <div className="flex flex-col gap-1.5">
-          <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-primary-bright">
             <Flame className="h-3.5 w-3.5" aria-hidden />
             {eyebrow}
           </span>
@@ -109,7 +109,7 @@ function TrendingTile({
       <div className="group relative">
         <Link
           href={buildCardPath(card)}
-          className="block rounded-frame focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          className="block rounded-frame focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           aria-label={`Open ${card.title}`}
           style={{ viewTransitionName: `trending-card-${card.id}` }}
         >
@@ -178,7 +178,7 @@ function ProfileChip({
   const initial = (displayName[0] ?? "?").toUpperCase();
   const handle = owner?.username ? `@${owner.username}` : null;
   const chipClass =
-    "inline-flex min-w-0 items-center gap-2 rounded-full border border-border/40 bg-elevated/40 py-1 pl-1 pr-2.5 text-xs transition-colors hover:border-border-strong hover:bg-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50";
+    "inline-flex min-w-0 items-center gap-2 rounded-full border border-border/40 bg-elevated/40 py-1 pl-1 pr-2.5 text-xs transition-colors hover:border-border-strong hover:bg-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50";
 
   const chipInner = (
     <>

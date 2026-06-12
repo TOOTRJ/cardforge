@@ -283,7 +283,7 @@ function ProfileLinks({ profile }: { profile: ProfileWithStats }) {
           href={profile.website_url}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+          className="inline-flex items-center gap-1 text-xs text-primary-bright hover:underline"
         >
           <ExternalLink className="h-3 w-3" aria-hidden />
           {profile.website_url.replace(/^https?:\/\//, "")}
@@ -298,7 +298,7 @@ function ProfileLinks({ profile }: { profile: ProfileWithStats }) {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label={`${entry.label} profile`}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border/60 bg-elevated/60 text-muted transition-colors hover:bg-elevated hover:text-[var(--profile-accent,var(--color-primary))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border/60 bg-elevated/60 text-muted transition-colors hover:bg-elevated hover:text-[var(--profile-accent,var(--color-primary))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50"
               >
                 <SocialIcon platform={entry.key} className="h-4 w-4" />
               </a>
@@ -412,7 +412,7 @@ function ProfileCardTile({
     <div className="flex flex-col gap-2">
       <Link
         href={buildCardPath({ slug: card.slug, owner: { username: ownerUsername } })}
-        className="block rounded-frame focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        className="block rounded-frame focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         aria-label={`Open ${card.title}`}
         style={{ viewTransitionName: `card-${card.id}` }}
       >

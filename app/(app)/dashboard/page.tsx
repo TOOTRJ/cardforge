@@ -94,7 +94,7 @@ export default async function DashboardPage() {
               {" "}· profile{" "}
               <Link
                 href={`/profile/${profile.username}`}
-                className="font-mono text-primary hover:underline"
+                className="font-mono text-primary-bright hover:underline"
               >
                 @{profile.username}
               </Link>

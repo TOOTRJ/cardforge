@@ -57,13 +57,13 @@ export function DashboardCardTile({ card, isSelected, onToggle }: Props) {
           // ring transitions in/out on selection-state changes.
           "relative rounded-frame transition-[box-shadow] duration-150",
           isSelected
-            ? "ring-2 ring-primary ring-offset-2 ring-offset-background"
+            ? "ring-2 ring-primary-bright ring-offset-2 ring-offset-background"
             : "",
         )}
       >
         <Link
           href={`/card/${card.slug}/edit`}
-          className="group block rounded-frame focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          className="group block rounded-frame focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           aria-label={`Edit ${card.title}`}
           onClick={handleLinkClick}
           style={{ viewTransitionName: `card-${card.id}` }}
@@ -112,7 +112,7 @@ export function DashboardCardTile({ card, isSelected, onToggle }: Props) {
           aria-label={isSelected ? `Deselect ${card.title}` : `Select ${card.title}`}
           className={cn(
             "absolute right-3 top-3 z-30 flex h-7 w-7 items-center justify-center rounded-md border shadow-md transition-colors",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60",
             isSelected
               ? "border-primary bg-primary text-primary-foreground"
               : "border-border/80 bg-background/80 text-transparent hover:border-border-strong hover:text-foreground",

@@ -126,7 +126,7 @@ export function GalleryFilters() {
           onChange={(event) => setSearchInput(event.target.value)}
           type="search"
           placeholder="Search title, rules, or flavor"
-          className="h-10 w-full rounded-md border border-border bg-surface pl-9 pr-9 text-sm text-foreground placeholder:text-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          className="h-10 w-full rounded-md border border-border bg-surface pl-9 pr-9 text-sm text-foreground placeholder:text-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           aria-label="Search gallery"
         />
         {searchInput ? (
@@ -274,7 +274,7 @@ function Chip({
       className={cn(
         "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
         active
-          ? "border-primary bg-primary/15 text-primary"
+          ? "border-primary bg-primary/15 text-primary-bright"
           : "border-border bg-elevated text-muted hover:border-border-strong hover:text-foreground",
       )}
       aria-pressed={active}
@@ -326,7 +326,7 @@ function ColorChip({
       className={cn(
         "rounded-full transition-all",
         active
-          ? "ring-2 ring-primary ring-offset-2 ring-offset-background"
+          ? "ring-2 ring-primary-bright ring-offset-2 ring-offset-background"
           : "opacity-60 hover:opacity-100",
       )}
     >

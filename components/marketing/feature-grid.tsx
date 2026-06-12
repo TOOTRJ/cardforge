@@ -58,7 +58,7 @@ export function FeatureGrid() {
   return (
     <section className="mx-auto w-full max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
       <div className="mb-12 flex flex-col gap-4 text-center">
-        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-primary-bright">
           Built for Magic fans
         </span>
         <h2 className="font-display text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
@@ -76,7 +76,7 @@ export function FeatureGrid() {
             key={title}
             className="flex flex-col gap-3 p-6 transition-colors hover:border-border-strong"
           >
-            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-elevated text-primary">
+            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-elevated text-primary-bright">
               <Icon className="h-5 w-5" aria-hidden />
             </span>
             <h3 className="font-display text-lg font-semibold text-foreground">

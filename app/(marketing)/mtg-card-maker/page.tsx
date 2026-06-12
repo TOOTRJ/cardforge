@@ -102,7 +102,7 @@ export default function MtgCardMakerPage() {
 
       {/* Hero */}
       <div className="mb-14 flex flex-col gap-5">
-        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-primary-bright">
           Free · Browser-based · No download required
         </span>
         <h1 className="font-display text-4xl font-semibold leading-tight tracking-tight text-foreground sm:text-5xl">
@@ -134,7 +134,7 @@ export default function MtgCardMakerPage() {
           <ul className="grid gap-3 sm:grid-cols-2">
             {FEATURES.map((f) => (
               <li key={f} className="flex items-start gap-2.5 text-sm text-muted">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary-bright" aria-hidden />
                 {f}
               </li>
             ))}

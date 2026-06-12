@@ -317,7 +317,7 @@ export function CardPreview({
             currentFace === "front" ? "Flip to back face" : "Flip to front face"
           }
           aria-pressed={currentFace === "back"}
-          className="absolute bottom-3 right-3 z-40 flex h-8 w-8 items-center justify-center rounded-full border border-border/80 bg-background/85 text-muted shadow-lg transition-colors hover:border-border-strong hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+          className="absolute bottom-3 right-3 z-40 flex h-8 w-8 items-center justify-center rounded-full border border-border/80 bg-background/85 text-muted shadow-lg transition-colors hover:border-border-strong hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60"
         >
           <RotateCw className="h-4 w-4" aria-hidden />
         </button>

@@ -126,7 +126,7 @@ export function BoosterViewer({
                     slug: card.slug,
                     owner: { username: card.ownerUsername },
                   })}
-                  className="block rounded-frame focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  className="block rounded-frame focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   aria-label={`View ${card.title}`}
                 >
                   <CardPreview
@@ -226,7 +226,7 @@ function SealedPack({
             {/* Card back decoration */}
             <div className="flex h-full flex-col items-center justify-center gap-3 p-4">
               <div className="h-16 w-16 rounded-full border-2 border-primary/40 bg-primary/10 flex items-center justify-center">
-                <span className="font-display text-2xl font-bold text-primary/60">S</span>
+                <span className="font-display text-2xl font-bold text-primary-bright/60">S</span>
               </div>
               <div className="flex flex-col gap-1.5 w-full items-center">
                 {[...Array(4)].map((_, j) => (

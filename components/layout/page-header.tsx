@@ -24,7 +24,7 @@ export function PageHeader({
     >
       <div className="flex flex-col gap-2">
         {eyebrow ? (
-          <span className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+          <span className="text-xs font-semibold uppercase tracking-[0.18em] text-primary-bright">
             {eyebrow}
           </span>
         ) : null}

@@ -24,7 +24,7 @@ export function EmptyState({
       )}
     >
       {Icon ? (
-        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-elevated text-primary">
+        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-elevated text-primary-bright">
           <Icon className="h-5 w-5" aria-hidden />
         </span>
       ) : null}

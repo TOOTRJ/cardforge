@@ -340,7 +340,7 @@ function FieldGroup({
 function inputClass(hasError: boolean): string {
   return cn(
     "h-10 w-full rounded-md border bg-background/60 px-3 text-sm text-foreground placeholder:text-subtle",
-    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
     hasError ? "border-danger/60" : "border-border",
   );
 }
@@ -348,7 +348,7 @@ function inputClass(hasError: boolean): string {
 function textareaClass(hasError: boolean): string {
   return cn(
     "w-full rounded-md border bg-background/60 px-3 py-2 text-sm text-foreground placeholder:text-subtle",
-    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
     hasError ? "border-danger/60" : "border-border",
   );
 }
@@ -472,7 +472,7 @@ function IconField({
                 className={cn(
                   "flex h-9 w-9 items-center justify-center rounded-md border text-lg transition-colors",
                   active
-                    ? "border-primary bg-primary/15 text-primary"
+                    ? "border-primary bg-primary/15 text-primary-bright"
                     : "border-border bg-elevated/50 text-muted hover:border-border-strong hover:text-foreground",
                 )}
               >

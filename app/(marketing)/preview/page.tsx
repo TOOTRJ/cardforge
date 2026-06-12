@@ -59,7 +59,7 @@ export default async function PreviewPage() {
           card is visible here but won&apos;t be saved.{" "}
           <Link
             href="/signup"
-            className="font-medium text-primary underline-offset-2 hover:underline"
+            className="font-medium text-primary-bright underline-offset-2 hover:underline"
           >
             Create a free account
           </Link>{" "}

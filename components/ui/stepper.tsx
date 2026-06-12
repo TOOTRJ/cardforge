@@ -70,9 +70,9 @@ export function Stepper({
                 "relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-semibold transition-colors",
                 "group-hover:border-primary/60 group-hover:text-foreground",
                 state === "active" &&
-                  "border-primary bg-primary/15 text-primary",
+                  "border-primary bg-primary/15 text-primary-bright",
                 state === "complete" &&
-                  "border-primary/60 bg-primary/10 text-primary",
+                  "border-primary/60 bg-primary/10 text-primary-bright",
                 state === "error" && "border-danger bg-danger/10 text-danger",
                 state === "upcoming" &&
                   "border-border bg-elevated/80 text-subtle",
@@ -125,7 +125,7 @@ export function Stepper({
                   onClick={() => onStepSelect(i)}
                   aria-current={i === current ? "step" : undefined}
                   title={`Go to ${step.label}`}
-                  className="group flex cursor-pointer flex-col items-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  className="group flex cursor-pointer flex-col items-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 >
                   {marker}
                   {label}

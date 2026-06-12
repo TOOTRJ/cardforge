@@ -34,7 +34,7 @@ export default async function PricingPage() {
       </Suspense>
       {/* Header */}
       <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
-        <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+        <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-primary-bright">
           <Sparkles className="h-3.5 w-3.5" aria-hidden />
           Simple, honest pricing
         </span>

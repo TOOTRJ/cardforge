@@ -82,7 +82,7 @@ export function UpgradeModal({ open, reason, onOpenChange }: UpgradeModalProps) 
       <DialogContent size="md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Crown className="h-4 w-4 text-primary" aria-hidden />
+            <Crown className="h-4 w-4 text-primary-bright" aria-hidden />
             {copy.title}
           </DialogTitle>
           <DialogDescription>{copy.description}</DialogDescription>

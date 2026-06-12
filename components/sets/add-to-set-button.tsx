@@ -132,7 +132,7 @@ export function AddToSetButton({
                   You don&apos;t have any sets yet.{" "}
                   <Link
                     href="/dashboard/sets/new"
-                    className="font-medium text-primary hover:underline"
+                    className="font-medium text-primary-bright hover:underline"
                   >
                     Create one
                   </Link>{" "}
@@ -168,7 +168,7 @@ export function AddToSetButton({
                         {isBusy ? (
                           <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
                         ) : set.contains_card ? (
-                          <Check className="h-3.5 w-3.5 text-primary" aria-hidden />
+                          <Check className="h-3.5 w-3.5 text-primary-bright" aria-hidden />
                         ) : (
                           <Plus className="h-3.5 w-3.5 text-muted" aria-hidden />
                         )}

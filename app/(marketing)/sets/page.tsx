@@ -149,7 +149,7 @@ function PublicSetTile({
     <SurfaceCard className="flex h-full flex-col gap-0 overflow-hidden p-0 transition-colors hover:border-border-strong">
       <Link
         href={`/set/${set.slug}`}
-        className="group flex flex-1 flex-col rounded-frame focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        className="group flex flex-1 flex-col rounded-frame focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         aria-label={`Open ${set.title}`}
       >
         <div className="relative aspect-video w-full overflow-hidden bg-elevated">

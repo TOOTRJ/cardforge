@@ -60,7 +60,7 @@ export async function UsagePanel() {
       <SurfaceCard className="flex flex-col gap-4 p-6">
         <header className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-elevated text-primary">
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-elevated text-gold-strong">
               <Coins className="h-4 w-4" aria-hidden />
             </span>
             <div className="flex flex-col">
@@ -113,7 +113,7 @@ export async function UsagePanel() {
 
         <Link
           href="/pricing"
-          className="text-xs font-semibold text-primary underline-offset-4 hover:underline"
+          className="text-xs font-semibold text-primary-bright underline-offset-4 hover:underline"
         >
           {credits.isPaid
             ? "Manage plan or buy more credits →"
@@ -126,7 +126,7 @@ export async function UsagePanel() {
       <SurfaceCard className="flex flex-col gap-4 p-6">
         <header className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-elevated text-primary">
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-elevated text-primary-bright">
               <Sparkles className="h-4 w-4" aria-hidden />
             </span>
             <div className="flex flex-col">
@@ -168,7 +168,7 @@ export async function UsagePanel() {
       <SurfaceCard className="flex flex-col gap-4 p-6">
         <header className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-elevated text-primary">
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-elevated text-primary-bright">
               <Globe2 className="h-4 w-4" aria-hidden />
             </span>
             <div className="flex flex-col">

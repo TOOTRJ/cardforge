@@ -119,7 +119,7 @@ export function CardComments({
             aria-label="Write a comment"
             className={cn(
               "w-full rounded-md border border-border bg-background/60 px-3 py-2 text-sm text-foreground placeholder:text-subtle",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50",
             )}
           />
           <div className="flex items-center justify-between">
@@ -175,7 +175,7 @@ function SignedOutNudge({
     <div className="rounded-md border border-border/60 bg-elevated/60 px-4 py-3 text-xs text-muted">
       <Link
         href={`/login?redirectTo=${redirectTo}`}
-        className="font-semibold text-primary hover:underline"
+        className="font-semibold text-primary-bright hover:underline"
       >
         Sign in
       </Link>{" "}
@@ -323,7 +323,7 @@ function CommentRow({
             aria-label="Edit comment"
             className={cn(
               "w-full rounded-md border border-border bg-background/60 px-3 py-2 text-sm text-foreground",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50",
             )}
           />
           <div className="flex justify-end gap-2">

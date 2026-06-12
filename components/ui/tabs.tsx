@@ -191,7 +191,7 @@ export function TabsTrigger({
       onKeyDown={onKeyDown}
       className={cn(
         "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50",
         active
           ? "bg-surface text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_1px_4px_rgba(0,0,0,0.25)]"
           : "text-subtle hover:text-foreground",

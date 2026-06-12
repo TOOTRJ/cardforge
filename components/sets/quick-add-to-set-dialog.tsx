@@ -193,7 +193,7 @@ export function QuickAddToSetDialog({
                         <FolderPlus
                           className={cn(
                             "h-3.5 w-3.5 shrink-0",
-                            active ? "text-primary" : "text-subtle",
+                            active ? "text-primary-bright" : "text-subtle",
                           )}
                           aria-hidden
                         />
@@ -218,7 +218,7 @@ export function QuickAddToSetDialog({
                 onChange={(event) => setNewTitle(event.target.value)}
                 placeholder="Embercoast Saga"
                 autoFocus
-                className="h-10 w-full rounded-md border border-border bg-background/60 px-3 text-sm text-foreground placeholder:text-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                className="h-10 w-full rounded-md border border-border bg-background/60 px-3 text-sm text-foreground placeholder:text-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 disabled={isPending}
               />
               <span className="text-[11px] text-subtle">

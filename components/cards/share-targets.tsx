@@ -107,7 +107,7 @@ function CopyLink({ cardUrl }: { cardUrl: string }) {
       onClick={onCopy}
       className={cn(
         "flex w-full items-center gap-3 rounded-md border border-border/60 bg-elevated/60 px-3 py-2.5 text-left transition-colors",
-        "hover:border-border-strong hover:bg-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
+        "hover:border-border-strong hover:bg-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50",
       )}
       aria-label={copied ? "Link copied" : "Copy card link"}
     >
@@ -148,7 +148,7 @@ function CopyDiscord({ message }: { message: string }) {
       onClick={onCopy}
       className={cn(
         "flex w-full items-center gap-3 rounded-md border border-border/60 bg-elevated/60 px-3 py-2.5 text-left transition-colors",
-        "hover:border-border-strong hover:bg-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
+        "hover:border-border-strong hover:bg-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50",
       )}
       aria-label={copied ? "Message copied" : "Copy a Discord-formatted message"}
     >
@@ -188,7 +188,7 @@ function ExternalShareButton({
       rel="noopener noreferrer"
       className={cn(
         "flex w-full items-center gap-3 rounded-md border border-border/60 bg-elevated/60 px-3 py-2.5 text-left transition-colors",
-        "hover:border-border-strong hover:bg-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
+        "hover:border-border-strong hover:bg-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50",
       )}
     >
       <span className="flex h-7 w-7 items-center justify-center rounded-full bg-background/60 text-foreground">

@@ -133,7 +133,7 @@ export default async function BoosterPage({
         </p>
         <Link
           href={`/set/${slug}`}
-          className="mt-4 inline-flex items-center gap-1 text-sm text-primary hover:underline"
+          className="mt-4 inline-flex items-center gap-1 text-sm text-primary-bright hover:underline"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden />
           Back to {set.title}

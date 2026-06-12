@@ -359,7 +359,7 @@ export function ArtUploader({
         className={cn(
           "group relative overflow-hidden rounded-lg border-2 border-dashed bg-elevated/40 transition-colors",
           ASPECT_RATIO_CLASS,
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
           isDragOver
             ? "border-primary/80 bg-primary/10"
             : artUrl
@@ -538,7 +538,7 @@ function EmptyDropzoneInner({
         className={cn(
           "flex h-12 w-12 items-center justify-center rounded-full border bg-surface/80 transition-colors",
           dragOver
-            ? "border-primary/80 text-primary"
+            ? "border-primary/80 text-primary-bright"
             : "border-border text-muted",
         )}
         aria-hidden
