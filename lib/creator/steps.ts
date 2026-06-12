@@ -1,10 +1,11 @@
-// Pure, React-free step model for the card-creator stepper. Kept side-effect
+// Pure, React-free panel model for the card-creator editor. Kept side-effect
 // free so it's unit-testable under the node test env and so both the client
-// form and the tests derive the SAME step list from the same rules.
+// form and the tests derive the SAME panel list from the same rules.
 //
-// The stepper is FRAME-AWARE: which steps appear (and a couple of step labels)
-// depend on the chosen frame template + card type + whether a back face exists.
-// Field→step routing is derived from the step defs (no hand-kept map to drift).
+// The editor is FRAME-AWARE: which panels appear (and a couple of panel
+// labels) depend on the chosen frame template + card type + whether a back
+// face exists. Field→panel routing is derived from the panel defs (no
+// hand-kept map to drift).
 
 import type { CardType, FrameTemplate } from "@/types/card";
 import type { FormValues } from "@/lib/creator/form-types";
@@ -16,7 +17,16 @@ import {
 } from "@/lib/cards/card-display";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 
-export type StepKey = "frame" | "details" | "art" | "rules" | "extra" | "publish";
+export type StepKey =
+  | "identity"
+  | "pips"
+  | "frame"
+  | "art"
+  | "text"
+  | "abilities"
+  | "layout"
+  | "effects"
+  | "publish";
 
 export type StepContext = {
   template: FrameTemplate | string | undefined;
@@ -26,13 +36,13 @@ export type StepContext = {
 
 export type StepDef = {
   key: StepKey;
-  /** Fallback label. The "extra" step's label is dynamic — use stepLabel(). */
+  /** Fallback label. The "layout" panel's label is dynamic — use stepLabel(). */
   label: string;
-  /** Short helper shown under the step label on mobile. */
+  /** Short helper shown under the panel label on mobile. */
   description: string;
-  /** Form fields this step owns — drives per-step validation + error routing. */
+  /** Form fields this panel owns — drives per-panel validation + error routing. */
   fields: (keyof FormValues)[];
-  /** Whether this step appears for the given context. */
+  /** Whether this panel appears for the given context. */
   isVisible: (ctx: StepContext) => boolean;
 };
 
@@ -52,7 +62,7 @@ export function isAdventureFrame(
 
 /** True when the frame has an INTRINSIC second face drawn from the back-face
  *  content (Adventure's storybook page, or a flip/split/aftermath rotated face).
- *  Such frames always show the back-face/extra step — the second face isn't
+ *  Such frames always show the back-face/layout panel — the second face isn't
  *  optional, it's part of the frame. */
 export function hasInlineBackFace(
   template: FrameTemplate | string | undefined,
@@ -86,28 +96,17 @@ export function statVisibility(cardType: CardType | "" | null | undefined): {
 }
 
 // ---------------------------------------------------------------------------
-// Step definitions (declaration order = display order).
+// Panel definitions (declaration order = display order).
 // ---------------------------------------------------------------------------
 
 const STEP_DEFS: StepDef[] = [
   {
-    // The frame step leads with "what are you making" (card type + color),
-    // because both DRIVE the frame: the era's type-variant comes from the card
-    // type and the frame color from the color identity. So these own their
-    // fields here (server-error routing follows), not on Details.
-    key: "frame",
-    label: "Frame",
-    description: "Type, color & frame",
-    fields: ["card_type", "color_identity", "frame_style"],
-    isVisible: always,
-  },
-  {
-    key: "details",
-    label: "Details",
-    description: "Name, cost & rarity",
+    key: "identity",
+    label: "Identity",
+    description: "Name, type & rarity",
     fields: [
       "title",
-      "cost",
+      "card_type",
       "supertype",
       "subtypes_text",
       "rarity",
@@ -117,41 +116,70 @@ const STEP_DEFS: StepDef[] = [
     isVisible: always,
   },
   {
+    key: "pips",
+    label: "Pips",
+    description: "Mana cost & color identity",
+    fields: ["cost", "color_identity"],
+    isVisible: always,
+  },
+  {
+    key: "frame",
+    label: "Frame",
+    description: "Era & frame style",
+    fields: ["frame_style"],
+    isVisible: always,
+  },
+  {
     key: "art",
     label: "Art",
-    description: "Upload & frame the art",
+    description: "Upload & position art",
     fields: ["artist_credit", "art_url", "art_position"],
     isVisible: always,
   },
   {
-    key: "rules",
-    label: "Rules",
-    description: "Abilities, flavor & stats",
-    fields: [
-      "rules_text",
-      "flavor_text",
-      "power",
-      "toughness",
-      "loyalty",
-      "defense",
-    ],
+    key: "text",
+    label: "Text",
+    description: "Rules & flavor",
+    fields: ["rules_text", "flavor_text"],
     isVisible: always,
+  },
+  {
+    // Stats only exist for types that display them (P/T for creatures/tokens,
+    // loyalty for planeswalkers, defense for battles); spells/etc. hide the
+    // whole panel.
+    key: "abilities",
+    label: "Abilities",
+    description: "Stats & combat numbers",
+    fields: ["power", "toughness", "loyalty", "defense"],
+    isVisible: (ctx) => {
+      const v = statVisibility(ctx.cardType);
+      return v.pt || v.loyalty || v.defense;
+    },
   },
   {
     // Adventure spell (Adventure frame) or the back face (any DFC). Present when
     // the frame's second face is intrinsic (Adventure) or the user enabled a
     // back face. Label flips via stepLabel().
-    key: "extra",
+    key: "layout",
     label: "Back face",
     description: "The second face",
     fields: ["has_back_face", "back_face"],
     isVisible: (ctx) => hasInlineBackFace(ctx.template) || ctx.hasBackFace,
   },
   {
+    // Edits frame_style.finish — error routing for frame_style stays owned by
+    // the "frame" panel (the primary owner), so this panel lists no fields.
+    key: "effects",
+    label: "Effects",
+    description: "Finish & treatments",
+    fields: [],
+    isVisible: always,
+  },
+  {
     key: "publish",
     label: "Publish",
-    description: "Visibility, finish & save",
-    fields: ["visibility", "slug", "source_scryfall_id"],
+    description: "Visibility, set & save",
+    fields: ["visibility", "slug", "source_scryfall_id", "tags_text"],
     isVisible: always,
   },
 ];
@@ -160,19 +188,19 @@ const STEP_DEFS: StepDef[] = [
 // Public API.
 // ---------------------------------------------------------------------------
 
-/** The ordered list of steps visible for the given context. */
-/** The fixed step order — visibility filters this list, never reorders it.
- *  Useful for resolving a step key from a URL before context is known. */
+/** The ordered list of panels visible for the given context. */
+/** The fixed panel order — visibility filters this list, never reorders it.
+ *  Useful for resolving a panel key from a URL before context is known. */
 export const STEP_ORDER: StepKey[] = STEP_DEFS.map((s) => s.key);
 
 export function visibleSteps(ctx: StepContext): StepDef[] {
   return STEP_DEFS.filter((step) => step.isVisible(ctx));
 }
 
-/** The display label for a step — dynamic for the "extra" step (Adventure vs
- *  Back face). */
+/** The display label for a panel — dynamic for the "layout" panel (Adventure
+ *  vs Back face). */
 export function stepLabel(step: StepDef, ctx: StepContext): string {
-  if (step.key === "extra") {
+  if (step.key === "layout") {
     if (isAdventureFrame(ctx.template)) return "Adventure";
     const t = normalizeFrameTemplate(ctx.template);
     if (t === "flip") return "Flip side";
@@ -183,10 +211,10 @@ export function stepLabel(step: StepDef, ctx: StepContext): string {
   return step.label;
 }
 
-/** Map every owned field to its step key, derived from the defs. Used to route a
- *  server validation error to the right step. Note frame_style maps to "frame"
- *  even though the finish lives on the publish step (frame is the primary owner).
- */
+/** Map every owned field to its panel key, derived from the defs. Used to
+ *  route a server validation error to the right panel. Note frame_style maps
+ *  to "frame" even though the finish lives on the effects panel (frame is the
+ *  primary owner). */
 export function buildFieldToStep(
   steps: StepDef[] = STEP_DEFS,
 ): Map<keyof FormValues, StepKey> {
@@ -200,7 +228,7 @@ export function buildFieldToStep(
 }
 
 /** Route a (possibly nested, e.g. "back_face.title") field name to a visible
- *  step index, falling back to the last (publish) step. */
+ *  panel index, falling back to the last (publish) panel. */
 export function stepIndexForField(
   fieldName: string,
   steps: StepDef[],

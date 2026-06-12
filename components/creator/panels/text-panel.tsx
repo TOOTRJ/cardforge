@@ -1,9 +1,9 @@
 "use client";
 
-// Rules step — rules/flavor text with the symbol toolbar, the type-gated stat
-// inputs, and the AI assistant panel. Extracted verbatim from
-// card-creator-form.tsx; the caret-preserving symbol insertion (shared with
-// the Extra step's back-face textarea) stays in the orchestrator and arrives
+// Text panel — rules/flavor text with the symbol toolbar and the AI assistant
+// panel. Regrouped from the old rules step (the stat inputs moved to the
+// Abilities panel); the caret-preserving symbol insertion (shared with the
+// Layout panel's back-face textarea) stays in the orchestrator and arrives
 // here as the hoisted field registration + ref + insert callback.
 
 import { useFormContext, type UseFormRegisterReturn } from "react-hook-form";
@@ -14,16 +14,12 @@ import {
 } from "@/components/creator/ai-assistant-panel";
 import {
   FieldGroup,
-  inputClass,
   textareaClass,
 } from "@/components/creator/field-group";
 import type { CardContext } from "@/lib/ai/schemas";
 import type { FormValues } from "@/lib/creator/form-types";
 
-type RulesStepProps = {
-  /** Which stat inputs the current card type displays (P/T vs loyalty vs
-   *  defense) — computed by the orchestrator via statVisibility(). */
-  statVis: { pt: boolean; loyalty: boolean; defense: boolean };
+type TextPanelProps = {
   /** Slice of the live form state the AI panel sends as context. */
   cardContext: CardContext;
   aiConfigured: boolean;
@@ -35,15 +31,14 @@ type RulesStepProps = {
   onInsertSymbol: (token: string) => void;
 };
 
-export function RulesStep({
-  statVis,
+export function TextPanel({
   cardContext,
   aiConfigured,
   onAIPatch,
   rulesTextField,
   rulesTextRef,
   onInsertSymbol,
-}: RulesStepProps) {
+}: TextPanelProps) {
   const {
     register,
     formState: { errors },
@@ -83,54 +78,6 @@ export function RulesStep({
           className={textareaClass(Boolean(errors.flavor_text))}
         />
       </FieldGroup>
-
-      {/* Only the stat the card type can actually display (P/T for
-          creatures/tokens, loyalty for planeswalkers, defense for
-          battles); spells/etc. show none. */}
-      {statVis.pt || statVis.loyalty || statVis.defense ? (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {statVis.pt ? (
-            <>
-              <FieldGroup label="Power">
-                <input
-                  {...register("power")}
-                  placeholder="4"
-                  className={inputClass(Boolean(errors.power))}
-                  autoComplete="off"
-                />
-              </FieldGroup>
-              <FieldGroup label="Toughness">
-                <input
-                  {...register("toughness")}
-                  placeholder="4"
-                  className={inputClass(Boolean(errors.toughness))}
-                  autoComplete="off"
-                />
-              </FieldGroup>
-            </>
-          ) : null}
-          {statVis.loyalty ? (
-            <FieldGroup label="Loyalty">
-              <input
-                {...register("loyalty")}
-                placeholder="3"
-                className={inputClass(Boolean(errors.loyalty))}
-                autoComplete="off"
-              />
-            </FieldGroup>
-          ) : null}
-          {statVis.defense ? (
-            <FieldGroup label="Defense">
-              <input
-                {...register("defense")}
-                placeholder="4"
-                className={inputClass(Boolean(errors.defense))}
-                autoComplete="off"
-              />
-            </FieldGroup>
-          ) : null}
-        </div>
-      ) : null}
 
       {/* AI assistant — drafts/refines abilities + flavor from a prompt.
           The hero / command palette jump here via the openAiConcept event. */}

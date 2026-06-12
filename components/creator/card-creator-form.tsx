@@ -18,8 +18,8 @@ import {
 import {
   ArrowLeft,
   ArrowRight,
-  FileText,
   Frame,
+  IdCard,
   Image as ImageIcon,
   Layers,
   Lock,
@@ -27,6 +27,7 @@ import {
   ScrollText,
   Send,
   Sparkles,
+  Swords,
   Wand2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -47,15 +48,18 @@ import {
   CARDFORGE_EVENTS,
   FORM_SCROLL_TARGET_ID,
 } from "@/components/creator/start-with-hero";
-import { FrameStep } from "@/components/creator/steps/frame-step";
-import { DetailsStep } from "@/components/creator/steps/details-step";
-import { RulesStep } from "@/components/creator/steps/rules-step";
-import { ArtStep } from "@/components/creator/steps/art-step";
-import { ExtraStep } from "@/components/creator/steps/extra-step";
+import { IdentityPanel } from "@/components/creator/panels/identity-panel";
+import { PipsPanel } from "@/components/creator/panels/pips-panel";
+import { FramePanel } from "@/components/creator/panels/frame-panel";
+import { ArtPanel } from "@/components/creator/panels/art-panel";
+import { TextPanel } from "@/components/creator/panels/text-panel";
+import { AbilitiesPanel } from "@/components/creator/panels/abilities-panel";
+import { LayoutPanel } from "@/components/creator/panels/layout-panel";
+import { EffectsPanel } from "@/components/creator/panels/effects-panel";
 import {
-  PublishStep,
+  PublishPanel,
   type CardSetOption,
-} from "@/components/creator/steps/publish-step";
+} from "@/components/creator/panels/publish-panel";
 import type { CardContext } from "@/lib/ai/schemas";
 import {
   createCardAction,
@@ -132,10 +136,10 @@ type CardCreatorFormProps = {
 // Step membership + field→step routing now live in lib/creator/steps.ts (pure
 // + unit-tested) so the form and the tests derive the same frame-aware flow.
 
-// Step JSX lives in components/creator/steps/* (one client component per
-// step); shared presentational helpers in field-group.tsx + frame-pickers.tsx;
+// Panel JSX lives in components/creator/panels/* (one client component per
+// panel); shared presentational helpers in field-group.tsx + frame-pickers.tsx;
 // pure field helpers in lib/creator/card-fields.ts. This orchestrator owns the
-// form instance, draft persistence, step navigation, submit, and the preview.
+// form instance, draft persistence, panel navigation, submit, and the preview.
 
 // One shared key: a guest's /preview draft survives sign-up and reappears on
 // /create. Versioned so a future FormValues shape change can invalidate.
@@ -144,14 +148,17 @@ const CARD_DRAFT_STORAGE_KEY = "pipglyph:card-draft:v1";
 // Spellwright → PipGlyph swap; removed once migrated. Drop after 2026-09.
 const LEGACY_CARD_DRAFT_STORAGE_KEY = "spellwright:card-draft:v1";
 
-// Icons for the xl+ vertical step rail (one per StepKey; the "extra" step's
+// Icons for the xl+ vertical step rail (one per StepKey; the "layout" panel's
 // dynamic labels — Adventure / Back face / Flip side — all read as Layers).
 const STEP_RAIL_ICONS: Record<string, React.ReactNode> = {
+  identity: <IdCard aria-hidden />,
+  pips: <Sparkles aria-hidden />,
   frame: <Frame aria-hidden />,
-  details: <FileText aria-hidden />,
   art: <ImageIcon aria-hidden />,
-  rules: <ScrollText aria-hidden />,
-  extra: <Layers aria-hidden />,
+  text: <ScrollText aria-hidden />,
+  abilities: <Swords aria-hidden />,
+  layout: <Layers aria-hidden />,
+  effects: <Wand2 aria-hidden />,
   publish: <Send aria-hidden />,
 };
 
@@ -215,9 +222,9 @@ export function CardCreatorForm({
     if (typeof window === "undefined") return;
     const openScryfall = () => setScryfallOpen(true);
     const openAiConcept = () => {
-      // The AI assistant panel lives on the Rules step. Jump there, then defer
-      // the scroll one tick so the step content mounts before we scroll to it.
-      goToStepKeyRef.current("rules");
+      // The AI assistant panel lives on the Text panel. Jump there, then defer
+      // the scroll one tick so the panel content mounts before we scroll to it.
+      goToStepKeyRef.current("text");
       requestAnimationFrame(() => {
         document
           .getElementById("ai-assistant-anchor")
@@ -638,7 +645,7 @@ export function CardCreatorForm({
 
     setRemixSource({ name: source.name, scryfallUri: source.scryfallUri });
     // Pop the user back to Identity so they can see the seeded fields.
-    goToStepKey("details");
+    goToStepKey("identity");
   };
 
   // Kick off /api/ai/random-card and pour the result into the form. Art is
@@ -723,7 +730,7 @@ export function CardCreatorForm({
         toast.message("Random card forged", { description: detail });
       }
       // Pop the user back to Identity so they see the new card.
-      goToStepKey("details");
+      goToStepKey("identity");
     } catch {
       toast.error("Network error while generating a random card.");
     } finally {
@@ -871,10 +878,10 @@ export function CardCreatorForm({
   const rarityForPreview = watched.rarity === "" ? null : (watched.rarity as Rarity);
 
   // Shared live-preview props for the desktop sticky aside + the mobile inline
-  // preview, so they never drift. `face` shows the back only on the Extra step
+  // preview, so they never drift. `face` shows the back only on the Layout panel
   // for a true DFC (Adventure renders its second face inline, so it stays front).
   const previewFace: "front" | "back" =
-    stepKey === "extra" && !isAdventureFrame ? "back" : "front";
+    stepKey === "layout" && !isAdventureFrame ? "back" : "front";
   const previewProps = {
     staticInEditor: true,
     pipOverrides,
@@ -977,32 +984,40 @@ export function CardCreatorForm({
               </div>
             </details>
 
-            {/* ----- Frame step ----- */}
-            {stepKey === "frame" ? (
-              <FrameStep
+            {/* ----- Identity panel ----- */}
+            {stepKey === "identity" ? (
+              <IdentityPanel
                 userId={userId}
-                cardType={watched.card_type}
-                colorIdentity={watched.color_identity}
-                autoColors={autoColors}
-                onAutoColorsChange={setAutoColors}
                 generatingRandom={generatingRandom}
                 onRandomCard={handleRandomCard}
                 onOpenScryfall={() => setScryfallOpen(true)}
               />
             ) : null}
 
-            {/* ----- Details step ----- */}
-            {stepKey === "details" ? (
-              <DetailsStep
+            {/* ----- Pips panel ----- */}
+            {stepKey === "pips" ? (
+              <PipsPanel
                 frameTemplate={watched.frame_style?.template}
                 pipOverrides={pipOverrides}
+                autoColors={autoColors}
+                onAutoColorsChange={setAutoColors}
               />
             ) : null}
 
-            {/* ----- Rules step ----- */}
-            {stepKey === "rules" ? (
-              <RulesStep
-                statVis={statVis}
+            {/* ----- Frame panel ----- */}
+            {stepKey === "frame" ? (
+              <FramePanel
+                cardType={watched.card_type}
+                colorIdentity={watched.color_identity}
+              />
+            ) : null}
+
+            {/* ----- Art panel ----- */}
+            {stepKey === "art" ? <ArtPanel userId={userId} /> : null}
+
+            {/* ----- Text panel ----- */}
+            {stepKey === "text" ? (
+              <TextPanel
                 cardContext={cardContext}
                 aiConfigured={aiConfigured}
                 onAIPatch={handleAIPatch}
@@ -1014,12 +1029,14 @@ export function CardCreatorForm({
               />
             ) : null}
 
-            {/* ----- Art step ----- */}
-            {stepKey === "art" ? <ArtStep userId={userId} /> : null}
+            {/* ----- Abilities panel ----- */}
+            {stepKey === "abilities" ? (
+              <AbilitiesPanel statVis={statVis} />
+            ) : null}
 
-            {/* ----- Adventure / Back face step ----- */}
-            {stepKey === "extra" ? (
-              <ExtraStep
+            {/* ----- Layout (Adventure / Back face) panel ----- */}
+            {stepKey === "layout" ? (
+              <LayoutPanel
                 userId={userId}
                 hasBackFace={watched.has_back_face}
                 isAdventureFrame={isAdventureFrame}
@@ -1031,9 +1048,12 @@ export function CardCreatorForm({
               />
             ) : null}
 
-            {/* ----- Publish step ----- */}
+            {/* ----- Effects panel ----- */}
+            {stepKey === "effects" ? <EffectsPanel /> : null}
+
+            {/* ----- Publish panel ----- */}
             {stepKey === "publish" ? (
-              <PublishStep
+              <PublishPanel
                 ownerUsername={ownerUsername}
                 mySets={mySets}
                 watchedSlug={watched.slug}

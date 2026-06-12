@@ -1,10 +1,10 @@
 "use client";
 
-// Adventure / Back face step — the empty-state toggle card plus the full
-// back-face (or adventure-spell) field set. Extracted verbatim from
-// card-creator-form.tsx; the back-face rules textarea's caret-preserving
-// symbol insertion stays in the orchestrator (shared logic with the Rules
-// step) and arrives as the hoisted registration + ref + insert callback.
+// Layout (Adventure / Back face) panel — the empty-state toggle card plus the
+// full back-face (or adventure-spell) field set. Renamed wholesale from the
+// old extra step; the back-face rules textarea's caret-preserving symbol
+// insertion stays in the orchestrator (shared logic with the Text panel) and
+// arrives as the hoisted registration + ref + insert callback.
 
 import {
   Controller,
@@ -29,7 +29,7 @@ import {
   type FormValues,
 } from "@/lib/creator/form-types";
 
-type ExtraStepProps = {
+type LayoutPanelProps = {
   userId: string | null;
   /** Live has_back_face flag from the form. */
   hasBackFace: boolean;
@@ -43,14 +43,14 @@ type ExtraStepProps = {
   onInsertSymbol: (token: string) => void;
 };
 
-export function ExtraStep({
+export function LayoutPanel({
   userId,
   hasBackFace,
   isAdventureFrame,
   backRulesTextField,
   backRulesTextRef,
   onInsertSymbol,
-}: ExtraStepProps) {
+}: LayoutPanelProps) {
   const {
     register,
     control,

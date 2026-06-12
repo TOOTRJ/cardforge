@@ -1,7 +1,7 @@
 "use client";
 
-// Art step — the uploader/positioner plus the artist-credit "more options"
-// collapsible. Extracted verbatim from card-creator-form.tsx.
+// Art panel — the uploader/positioner plus the artist-credit "more options"
+// collapsible. Moved unchanged from the old art step.
 
 import { Controller, useFormContext } from "react-hook-form";
 import { ArtUploader } from "@/components/creator/art-uploader";
@@ -12,11 +12,11 @@ import {
 } from "@/components/creator/field-group";
 import type { FormValues } from "@/lib/creator/form-types";
 
-type ArtStepProps = {
+type ArtPanelProps = {
   userId: string | null;
 };
 
-export function ArtStep({ userId }: ArtStepProps) {
+export function ArtPanel({ userId }: ArtPanelProps) {
   const {
     register,
     control,
