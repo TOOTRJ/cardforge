@@ -113,10 +113,27 @@ async function ensureUniqueSlugForUser(
   return { slug: desired, conflict: true };
 }
 
+/**
+ * Purge the ISR'd discovery pages (home trending/stats, challenges index,
+ * every challenge detail). Card mutations are rare relative to reads, so
+ * eager purging keeps those pages fresh without shrinking their
+ * revalidate windows. Like-toggles deliberately do NOT purge — the ISR
+ * window absorbs that churn.
+ */
+function revalidateDiscoverySurfaces() {
+  revalidatePath("/");
+  revalidatePath("/challenges");
+  // Purges every /challenges/[slug] page — a published card may be an
+  // entry in whichever challenge matches its tags; resolving which one
+  // isn't worth a lookup when the purge is this cheap.
+  revalidatePath("/challenges/[slug]", "page");
+}
+
 function revalidateCardPaths(slug: string, ownerUsername?: string | null) {
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/sets");
   revalidatePath("/gallery");
+  revalidateDiscoverySurfaces();
   // Legacy slug-only path still serves as the redirector — busting its
   // cache keeps stale redirects from sticking after a slug edit.
   revalidatePath(`/card/${slug}`);
@@ -714,6 +731,7 @@ export async function updateCardsVisibilityAction(
   revalidatePath("/dashboard");
   revalidatePath("/gallery");
   revalidatePath("/dashboard/sets");
+  revalidateDiscoverySurfaces();
 
   return { ok: true, count: ids.length };
 }
@@ -778,6 +796,7 @@ export async function deleteCardsAction(
   revalidatePath("/dashboard");
   revalidatePath("/gallery");
   revalidatePath("/dashboard/sets");
+  revalidateDiscoverySurfaces();
 
   return { ok: true, count: ids.length };
 }

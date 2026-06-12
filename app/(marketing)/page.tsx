@@ -17,7 +17,6 @@ import { StatBadge } from "@/components/ui/stat-badge";
 import { PLANS } from "@/lib/billing/plans";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { countPublicCards, listTrendingCards } from "@/lib/cards/queries";
-import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 
@@ -27,6 +26,12 @@ import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
 };
+
+// ISR: the homepage is identical for every viewer (stats + trending use
+// the cookie-free public client; auth chrome is the client island), so
+// it's served from the CDN and re-baked at most every 5 minutes. Card
+// mutations also purge it eagerly via revalidatePath("/").
+export const revalidate = 300;
 
 const galleryPlaceholder = [
   {
@@ -223,15 +228,16 @@ async function HomeStats() {
 }
 
 async function HomeTrending() {
-  const [trending, viewer] = await Promise.all([
-    listTrendingCards({ limit: 4 }),
-    getCurrentUser(),
-  ]);
+  // Anonymous mode keeps this page static: no viewer lookup, no cookie
+  // read. isAuthed=false just means the tile hearts render the
+  // signed-out hint — QuickLikeButton re-checks the session cookie at
+  // click time, so signed-in users on the cached page still like fine.
+  const trending = await listTrendingCards({ limit: 4, anonymous: true });
   if (trending.length === 0) return <PlaceholderGallery />;
   return (
     <TrendingCardsSection
       cards={trending}
-      isAuthed={Boolean(viewer)}
+      isAuthed={false}
       eyebrow="Trending now"
       heading="Top trending cards"
       description="The cards racking up the most likes, comments, and remixes this week."

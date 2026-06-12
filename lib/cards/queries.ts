@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/public";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
   isCardType,
@@ -54,6 +55,11 @@ export type PublicCardListOptions = {
   sourceScryfallId?: string;
   /** Filter to cards carrying this tag (the gallery ?tag= view). */
   tag?: string;
+  /** Viewer-independent mode for static/ISR pages: uses the cookie-free
+   *  public client and skips the viewer's like-state lookup
+   *  (`liked_by_viewer` is always false). Anonymous RLS visibility is
+   *  identical to what signed-out traffic sees today. */
+  anonymous?: boolean;
 };
 
 // ---------------------------------------------------------------------------
@@ -100,7 +106,9 @@ export async function getActiveGameSystems(): Promise<GameSystem[]> {
 export async function getFantasyGameSystem(): Promise<GameSystem | null> {
   if (!isSupabaseConfigured()) return null;
   try {
-    const supabase = await createClient();
+    // Seeded reference data, identical for every viewer — cookie-free so
+    // /preview can be ISR-cached.
+    const supabase = createPublicClient();
     const { data } = await supabase
       .from("game_systems")
       .select("*")
@@ -118,7 +126,8 @@ export async function getTemplatesForGameSystem(
 ): Promise<CardTemplate[]> {
   if (!isSupabaseConfigured()) return [];
   try {
-    const supabase = await createClient();
+    // Seeded reference data — see getFantasyGameSystem.
+    const supabase = createPublicClient();
     const { data, error } = await supabase
       .from("card_templates")
       .select("*")
@@ -439,17 +448,19 @@ const SHAREABLE_VISIBILITIES = ["public", "unlisted"] as const;
 async function attachStats(
   rows: CardRow[],
   sort: "recent" | "popular" = "recent",
+  { anonymous = false }: { anonymous?: boolean } = {},
 ): Promise<CardWithStats[]> {
   if (rows.length === 0) return [];
 
-  const supabase = await createClient();
+  const supabase = anonymous ? createPublicClient() : await createClient();
   const cardIds = rows.map((r) => r.id);
   const ownerIds = Array.from(new Set(rows.map((r) => r.owner_id)));
 
   // Read the viewer once up front; if they're anonymous we skip the
   // self-like lookup entirely. The likes query never blocks on RLS — the
-  // policy is publicly readable — so this is cheap.
-  const viewer = await getCurrentUser();
+  // policy is publicly readable — so this is cheap. Anonymous mode skips
+  // the lookup without touching cookies (keeps ISR callers static).
+  const viewer = anonymous ? null : await getCurrentUser();
 
   const [likesResult, ownersResult, viewerLikesResult] = await Promise.all([
     supabase.from("card_likes").select("card_id").in("card_id", cardIds),
@@ -524,10 +535,11 @@ export async function listPublicCardsRich(
     visibility = "public",
     sourceScryfallId,
     tag,
+    anonymous = false,
   } = options;
 
   try {
-    const supabase = await createClient();
+    const supabase = anonymous ? createPublicClient() : await createClient();
     let query = supabase
       .from("cards")
       .select("*")
@@ -579,7 +591,7 @@ export async function listPublicCardsRich(
     const { data, error } = await query;
     if (error || !data) return [];
 
-    const enriched = await attachStats(data, sort);
+    const enriched = await attachStats(data, sort, { anonymous });
     return enriched.slice(0, limit);
   } catch {
     return [];
@@ -786,13 +798,13 @@ export async function getProfileByUsername(
 const TRENDING_CANDIDATE_CAP = 500;
 
 export async function listTrendingCards(
-  options: { limit?: number } = {},
+  options: { limit?: number; anonymous?: boolean } = {},
 ): Promise<CardWithStats[]> {
   if (!isSupabaseConfigured()) return [];
-  const { limit = 12 } = options;
+  const { limit = 12, anonymous = false } = options;
 
   try {
-    const supabase = await createClient();
+    const supabase = anonymous ? createPublicClient() : await createClient();
 
     const { data: cardRows, error: cardErr } = await supabase
       .from("cards")
@@ -816,7 +828,8 @@ export async function listTrendingCards(
 
     // Viewer lookup is fire-and-forget so the trending score itself never
     // depends on auth — anonymous visitors still get the same trending list.
-    const viewer = await getCurrentUser();
+    // Anonymous mode (ISR pages) skips it without reading cookies.
+    const viewer = anonymous ? null : await getCurrentUser();
 
     const [
       allLikesResult,
@@ -1015,7 +1028,9 @@ export async function hasUserLikedCard(
 export async function countPublicCards(): Promise<number> {
   if (!isSupabaseConfigured()) return 0;
   try {
-    const supabase = await createClient();
+    // Viewer-independent by definition — cookie-free client keeps the
+    // marketing pages that render this static/ISR-cacheable.
+    const supabase = createPublicClient();
     const { count, error } = await supabase
       .from("cards")
       .select("id", { count: "exact", head: true })
@@ -1037,7 +1052,8 @@ export async function listTrendingTags(
 ): Promise<{ tag: string; count: number }[]> {
   if (!isSupabaseConfigured()) return [];
   try {
-    const supabase = await createClient();
+    // Public tags over public cards — viewer-independent, cookie-free.
+    const supabase = createPublicClient();
     const { data, error } = await supabase
       .from("cards")
       .select("tags")
