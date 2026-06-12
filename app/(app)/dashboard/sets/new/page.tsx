@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft, Sparkles } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { SetCreatorForm } from "@/components/sets/set-creator-form";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getCurrentUser } from "@/lib/supabase/server";
@@ -45,10 +44,7 @@ export default async function NewSetPage() {
         description="Set the metadata first — you can add cards once it's saved."
         actions={
           <>
-            <Badge variant="primary" className="gap-1.5">
-              <Sparkles className="h-3 w-3" aria-hidden /> Phase 7
-            </Badge>
-            <Button asChild variant="ghost">
+<Button asChild variant="ghost">
               <Link href="/dashboard/sets">
                 <ArrowLeft className="h-4 w-4" aria-hidden /> All sets
               </Link>

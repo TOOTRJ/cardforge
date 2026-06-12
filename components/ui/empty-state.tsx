@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CompassStar } from "@/components/ui/compass-star";
 
 type EmptyStateProps = {
   icon?: LucideIcon;
@@ -23,11 +24,13 @@ export function EmptyState({
         className,
       )}
     >
-      {Icon ? (
-        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-elevated text-primary-bright">
+      <span className="flex h-12 w-12 items-center justify-center rounded-full bg-elevated text-gold">
+        {Icon ? (
           <Icon className="h-5 w-5" aria-hidden />
-        </span>
-      ) : null}
+        ) : (
+          <CompassStar className="h-5 w-5" />
+        )}
+      </span>
       <div className="flex max-w-md flex-col gap-1.5">
         <h3 className="font-display text-lg font-semibold text-foreground">{title}</h3>
         {description ? (

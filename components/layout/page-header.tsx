@@ -18,13 +18,13 @@ export function PageHeader({
   return (
     <div
       className={cn(
-        "flex flex-col gap-4 border-b border-border/50 pb-8 md:flex-row md:items-end md:justify-between",
+        "flex flex-col gap-4 border-b border-gold/20 pb-8 md:flex-row md:items-end md:justify-between",
         className,
       )}
     >
       <div className="flex flex-col gap-2">
         {eyebrow ? (
-          <span className="text-xs font-semibold uppercase tracking-[0.18em] text-primary-bright">
+          <span className="text-xs font-semibold uppercase tracking-[0.18em] text-gold-strong">
             {eyebrow}
           </span>
         ) : null}
