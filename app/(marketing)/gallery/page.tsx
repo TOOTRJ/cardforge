@@ -14,6 +14,8 @@ import {
   TrendingCardsSectionSkeleton,
 } from "@/components/gallery/trending-cards-section";
 import { listPublicCardsRich, listTrendingCards } from "@/lib/cards/queries";
+import { daysLeft, getFeaturedActiveChallenge } from "@/lib/challenges/queries";
+import { Badge } from "@/components/ui/badge";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
@@ -147,6 +149,8 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
           </Button>
         }
       />
+
+      <FeaturedChallengeBanner />
 
       {configured ? (
         <div className="mt-10">
@@ -325,6 +329,34 @@ function GallerySkeletonGrid({ count }: { count: number }) {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+// Featured-challenge banner — renders nothing when no featured challenge is
+// in its window, so the gallery is unchanged outside challenge seasons.
+async function FeaturedChallengeBanner() {
+  const challenge = await getFeaturedActiveChallenge();
+  if (!challenge) return null;
+  return (
+    <div className="mt-6 flex flex-col gap-3 rounded-xl border border-gold/40 bg-surface/80 p-5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-1">
+        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-gold-strong">
+          Featured challenge
+        </span>
+        <p className="text-sm text-muted">
+          <span className="font-display text-base font-semibold text-foreground">
+            {challenge.title}
+          </span>{" "}
+          · {daysLeft(challenge)} day{daysLeft(challenge) === 1 ? "" : "s"} left
+          {" — "}publish a card tagged{" "}
+          <Badge variant="gold" className="align-middle">{challenge.tag}</Badge>{" "}
+          to enter.
+        </p>
+      </div>
+      <Button asChild variant="outline" className="self-start sm:self-center">
+        <Link href={`/challenges/${challenge.slug}`}>View challenge</Link>
+      </Button>
     </div>
   );
 }

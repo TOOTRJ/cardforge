@@ -1026,3 +1026,37 @@ export async function countPublicCards(): Promise<number> {
     return 0;
   }
 }
+
+/**
+ * The most-used tags across recently updated public cards — the community
+ * "trending topics". Counted in JS over a bounded window (a few hundred
+ * rows) rather than a DB aggregate; plenty for v1 scale. Fail-soft.
+ */
+export async function listTrendingTags(
+  limit = 8,
+): Promise<{ tag: string; count: number }[]> {
+  if (!isSupabaseConfigured()) return [];
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("cards")
+      .select("tags")
+      .eq("visibility", "public")
+      .order("updated_at", { ascending: false })
+      .limit(300);
+    if (error || !data) return [];
+
+    const counts = new Map<string, number>();
+    for (const row of data) {
+      for (const tag of row.tags ?? []) {
+        counts.set(tag, (counts.get(tag) ?? 0) + 1);
+      }
+    }
+    return [...counts.entries()]
+      .map(([tag, count]) => ({ tag, count }))
+      .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag))
+      .slice(0, limit);
+  } catch {
+    return [];
+  }
+}
