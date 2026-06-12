@@ -185,3 +185,22 @@ export function parseTags(text: string): string[] {
     .filter((piece) => piece.length > 0)
     .slice(0, 12);
 }
+
+/** Append a tag to a comma-separated tags field unless it's already there. */
+export function mergeTag(tagsText: string | undefined, tag: string): string {
+  const existing = (tagsText ?? "")
+    .split(",")
+    .map((t) => t.trim().toLowerCase())
+    .filter(Boolean);
+  if (existing.includes(tag.toLowerCase())) return tagsText ?? "";
+  return existing.length > 0 ? `${tagsText}, ${tag}` : tag;
+}
+
+/** Remove a tag from a comma-separated tags field (case-insensitive). */
+export function removeTag(tagsText: string | undefined, tag: string): string {
+  return (tagsText ?? "")
+    .split(",")
+    .map((t) => t.trim())
+    .filter((t) => t && t.toLowerCase() !== tag.toLowerCase())
+    .join(", ");
+}
