@@ -71,7 +71,7 @@ export function AuthForm<T extends Record<string, unknown>>({
               defaultValue={hasValue ? defaultValue : undefined}
               aria-invalid={fieldError ? "true" : undefined}
               className={cn(
-                "h-10 w-full rounded-md border bg-background/60 px-3 text-sm text-foreground placeholder:text-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                "h-10 w-full rounded-md border bg-background/60 px-3 text-sm text-foreground placeholder:text-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                 fieldError ? "border-danger/60" : "border-border",
               )}
             />

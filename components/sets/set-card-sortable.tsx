@@ -64,7 +64,7 @@ export function SetCardSortable({
         // Lift effect mid-drag. Higher z-index keeps the dragged tile
         // above its siblings.
         isDragging
-          ? "z-10 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.7)] ring-2 ring-primary/60"
+          ? "z-10 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.7)] ring-2 ring-primary-bright/60"
           : "",
       )}
     >
@@ -102,9 +102,9 @@ export function SetCardSortable({
           className={cn(
             "absolute left-2 top-2 z-30 flex h-7 w-7 cursor-grab items-center justify-center rounded-md border border-border/80 bg-background/80 text-muted shadow-md transition-colors",
             "hover:border-border-strong hover:text-foreground",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60",
             "active:cursor-grabbing",
-            isDragging && "border-primary bg-primary/15 text-primary",
+            isDragging && "border-primary bg-primary/15 text-primary-bright",
           )}
         >
           <GripVertical className="h-4 w-4" aria-hidden />

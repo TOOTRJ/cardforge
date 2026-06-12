@@ -133,7 +133,7 @@ export function PinnedCardsPicker({
               onClick={() => toggle(card.id)}
               className={cn(
                 "group relative flex flex-col gap-2 rounded-md border-2 p-1.5 text-left transition-colors",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50",
                 isPinned
                   ? "border-primary bg-primary/10"
                   : "border-border/40 hover:border-border-strong",

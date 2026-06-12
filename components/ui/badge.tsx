@@ -9,9 +9,11 @@ const badgeVariants = cva(
         default:
           "border-border/70 bg-elevated text-muted",
         primary:
-          "border-primary/30 bg-primary/15 text-primary",
+          "border-primary/30 bg-primary/15 text-primary-bright",
         accent:
           "border-accent/40 bg-accent/15 text-accent",
+        gold:
+          "border-gold/45 bg-gold/10 text-gold-strong",
         outline: "border-border text-muted",
       },
     },

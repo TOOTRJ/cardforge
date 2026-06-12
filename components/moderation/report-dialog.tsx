@@ -58,7 +58,7 @@ export function ReportDialog({
   }
 
   const fieldClass =
-    "rounded-md border border-border bg-background px-3 text-sm text-foreground placeholder:text-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-50";
+    "rounded-md border border-border bg-background px-3 text-sm text-foreground placeholder:text-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50 disabled:opacity-50";
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

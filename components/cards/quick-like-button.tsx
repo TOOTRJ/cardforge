@@ -120,7 +120,7 @@ export function QuickLikeButton(props: QuickLikeButtonProps) {
       aria-pressed={state.liked}
       aria-label={ariaLabel}
       className={cn(
-        "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-xs leading-none transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
+        "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-xs leading-none transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50",
         state.liked
           ? "text-rose-300 hover:text-rose-200"
           : "text-muted hover:text-foreground",

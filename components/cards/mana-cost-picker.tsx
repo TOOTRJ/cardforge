@@ -134,7 +134,7 @@ export function ManaCostPicker({ value, onChange, id, className }: Props) {
               setGeneric(Math.max(0, Math.min(20, n)));
             }
           }}
-          className="h-8 w-16 rounded-md border border-border/40 bg-background/80 px-2 text-sm text-foreground tabular-nums focus:outline-none focus:ring-1 focus:ring-primary/40"
+          className="h-8 w-16 rounded-md border border-border/40 bg-background/80 px-2 text-sm text-foreground tabular-nums focus:outline-none focus:ring-1 focus:ring-primary-bright/40"
         />
         <button
           type="button"

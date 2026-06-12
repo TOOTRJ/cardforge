@@ -235,7 +235,7 @@ async function SetBody({
                     slug: card.slug,
                     owner: { username: ownerUsername },
                   })}
-                  className="block rounded-frame focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  className="block rounded-frame focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   aria-label={`Open ${card.title}`}
                   style={{ viewTransitionName: `card-${card.id}` }}
                 >

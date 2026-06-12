@@ -95,7 +95,7 @@ export function SiteHeader({
                   title="AI credits — balance · used this month"
                   className="hidden h-9 items-center gap-1.5 rounded-md border border-border/60 bg-elevated px-2.5 text-xs font-medium text-foreground transition-colors hover:border-border-strong sm:inline-flex"
                 >
-                  <Coins className="h-3.5 w-3.5 text-primary" aria-hidden />
+                  <Coins className="h-3.5 w-3.5 text-gold-strong" aria-hidden />
                   <span>{user?.credits ?? 0}</span>
                   <span className="text-subtle">
                     · {user?.creditsUsed ?? 0} used

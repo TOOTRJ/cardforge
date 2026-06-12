@@ -92,7 +92,7 @@ export const DialogContent = forwardRef<
           className={cn(
             "absolute right-3 top-3 rounded-md p-1 text-muted transition-colors",
             "hover:bg-elevated hover:text-foreground",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50",
           )}
         >
           <X className="h-4 w-4" aria-hidden />

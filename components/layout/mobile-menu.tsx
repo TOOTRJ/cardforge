@@ -50,7 +50,7 @@ export function MobileMenu({
         <button
           type="button"
           aria-label="Open navigation menu"
-          className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border/60 bg-elevated text-muted transition-colors hover:border-border-strong hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 md:hidden"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border/60 bg-elevated text-muted transition-colors hover:border-border-strong hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50 md:hidden"
         >
           <Menu className="h-4 w-4" aria-hidden />
         </button>
@@ -126,7 +126,7 @@ export function MobileMenu({
               </p>
               {billingOn ? (
                 <div className="mb-1 flex items-center gap-1.5 px-3 text-xs text-muted">
-                  <Coins className="h-3.5 w-3.5 text-primary" aria-hidden />
+                  <Coins className="h-3.5 w-3.5 text-gold-strong" aria-hidden />
                   <span className="font-medium text-foreground">{credits}</span>
                   credits · {creditsUsed} used
                 </div>

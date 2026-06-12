@@ -416,7 +416,7 @@ function RelatedRow({
         </h2>
         <Link
           href={viewAllHref}
-          className="shrink-0 text-xs font-semibold text-primary underline-offset-4 hover:underline"
+          className="shrink-0 text-xs font-semibold text-primary-bright underline-offset-4 hover:underline"
         >
           View all →
         </Link>

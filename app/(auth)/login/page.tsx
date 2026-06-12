@@ -85,7 +85,7 @@ export default async function LoginPage({
               ? `/signup?redirectTo=${encodeURIComponent(redirectTo)}`
               : "/signup"
           }
-          className="font-medium text-primary hover:underline"
+          className="font-medium text-primary-bright hover:underline"
         >
           Create an account
         </Link>

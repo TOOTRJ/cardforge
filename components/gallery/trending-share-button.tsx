@@ -26,7 +26,7 @@ export function TrendingShareButton({
         <button
           type="button"
           aria-label={`Share ${cardTitle}`}
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-background/85 text-foreground backdrop-blur transition-colors hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-background/85 text-foreground backdrop-blur transition-colors hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50"
         >
           <Share2 className="h-4 w-4" aria-hidden />
         </button>

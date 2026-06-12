@@ -272,7 +272,7 @@ const FINISH_OPTIONS: ChipOption<CardFinish>[] = [
     value: "showcase",
     label: "Showcase",
     description: "Italic display title with an ornate hairline.",
-    activeClass: "border-primary bg-primary/15 text-primary",
+    activeClass: "border-primary bg-primary/15 text-primary-bright",
   },
 ];
 
@@ -1286,7 +1286,7 @@ export function CardCreatorForm({
 
               <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3">
                 <div className="flex flex-col gap-0.5">
-                  <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-primary">
+                  <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-primary-bright">
                     <Sparkles className="h-3 w-3" aria-hidden />
                     Generate with AI
                   </span>
@@ -2026,7 +2026,7 @@ export function CardCreatorForm({
                           You don&apos;t have any sets yet.{" "}
                           <Link
                             href="/dashboard/sets/new"
-                            className="text-primary underline-offset-2 hover:underline"
+                            className="text-primary-bright underline-offset-2 hover:underline"
                           >
                             Create one
                           </Link>
@@ -2035,7 +2035,7 @@ export function CardCreatorForm({
                       ) : (
                         <Link
                           href="/dashboard/sets/new"
-                          className="text-primary underline-offset-2 hover:underline"
+                          className="text-primary-bright underline-offset-2 hover:underline"
                         >
                           Create a new set
                         </Link>
@@ -2304,7 +2304,7 @@ function PickerStepLabel({
 function inputClass(hasError: boolean): string {
   return cn(
     "h-10 w-full rounded-md border bg-background/60 px-3 text-sm text-foreground placeholder:text-subtle",
-    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
     hasError ? "border-danger/60" : "border-border",
   );
 }
@@ -2312,7 +2312,7 @@ function inputClass(hasError: boolean): string {
 function textareaClass(hasError: boolean): string {
   return cn(
     "w-full rounded-md border bg-background/60 px-3 py-2 text-sm text-foreground placeholder:text-subtle",
-    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
     hasError ? "border-danger/60" : "border-border",
   );
 }

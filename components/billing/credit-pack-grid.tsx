@@ -15,7 +15,7 @@ export function CreditPackGrid() {
         return (
           <SurfaceCard key={key} className="flex flex-col gap-4 p-6">
             <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-elevated text-primary">
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-elevated text-gold-strong">
                 <Coins className="h-5 w-5" aria-hidden />
               </span>
               <div className="flex flex-col">

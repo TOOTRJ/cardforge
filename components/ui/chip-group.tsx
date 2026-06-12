@@ -109,7 +109,7 @@ export function ChipGroup<T extends string>(props: ChipGroupProps<T>) {
         const disabled = option.disabled === true;
         const Icon = option.icon;
         const activeClass =
-          option.activeClass ?? "border-primary bg-primary/15 text-primary";
+          option.activeClass ?? "border-primary bg-primary/15 text-primary-bright";
         const ariaProps = multi
           ? { "aria-pressed": active }
           : { "aria-checked": active, role: "radio" as const };
@@ -122,7 +122,7 @@ export function ChipGroup<T extends string>(props: ChipGroupProps<T>) {
             onClick={disabled ? undefined : () => handleClick(option.value)}
             className={cn(
               "group/chip flex items-center gap-2 rounded-md border bg-elevated/60 text-left transition-colors",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
               size === "sm"
                 ? "px-3 py-1.5 text-xs font-medium"
                 : "px-3 py-2.5 text-sm",

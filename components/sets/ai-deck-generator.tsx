@@ -70,12 +70,12 @@ export function AiDeckGenerator({
   }
 
   const inputClass =
-    "h-10 rounded-md border border-border bg-background px-3 text-sm text-foreground placeholder:text-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-50";
+    "h-10 rounded-md border border-border bg-background px-3 text-sm text-foreground placeholder:text-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50 disabled:opacity-50";
 
   return (
     <SurfaceCard className="flex flex-col gap-4 p-6">
       <div className="flex items-center gap-3">
-        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-elevated text-primary">
+        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-elevated text-primary-bright">
           <Wand2 className="h-4 w-4" aria-hidden />
         </span>
         <div className="flex flex-col">

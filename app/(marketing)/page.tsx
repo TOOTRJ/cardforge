@@ -87,7 +87,7 @@ export default function HomePage() {
       <section className="mx-auto w-full max-w-5xl px-4 pb-16 sm:px-6 lg:px-8">
         <div className="flex flex-col items-center gap-8 text-center">
           <div className="flex flex-col gap-2">
-            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-primary-bright">
               Free to start
             </span>
             <h2 className="font-display text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
@@ -105,7 +105,7 @@ export default function HomePage() {
                 key={plan.tier}
                 className={`flex flex-col gap-1 rounded-xl border bg-surface/80 p-5 text-left ${
                   plan.featured
-                    ? "border-primary/40 ring-1 ring-primary/20"
+                    ? "border-primary/40 ring-1 ring-primary-bright/20"
                     : "border-border/70"
                 }`}
               >
@@ -184,7 +184,7 @@ function PlaceholderGallery() {
     <>
       <div className="mb-10 flex flex-col items-start justify-between gap-4 md:flex-row md:items-end">
         <div className="flex flex-col gap-2">
-          <span className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+          <span className="text-xs font-semibold uppercase tracking-[0.18em] text-primary-bright">
             Gallery preview
           </span>
           <h2 className="font-display text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">

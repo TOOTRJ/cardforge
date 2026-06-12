@@ -75,7 +75,7 @@ export function StartWithHero() {
             key={option.key}
             type="button"
             onClick={() => handleClick(option.key)}
-            className={`group flex flex-col gap-3 rounded-xl border bg-linear-to-br ${option.accentClass} p-5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background`}
+            className={`group flex flex-col gap-3 rounded-xl border bg-linear-to-br ${option.accentClass} p-5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background`}
           >
             <span className="flex h-9 w-9 items-center justify-center rounded-md border border-white/10 bg-background/40 text-foreground">
               <Icon className="h-4 w-4" aria-hidden />

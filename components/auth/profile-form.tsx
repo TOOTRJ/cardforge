@@ -225,7 +225,7 @@ function Field({
         autoComplete={autoComplete}
         aria-invalid={error ? "true" : undefined}
         className={cn(
-          "h-10 w-full rounded-md border bg-background/60 px-3 text-sm text-foreground placeholder:text-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+          "h-10 w-full rounded-md border bg-background/60 px-3 text-sm text-foreground placeholder:text-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
           error ? "border-danger/60" : "border-border",
           readOnly ? "cursor-not-allowed opacity-70" : "",
         )}
@@ -259,7 +259,7 @@ function FieldArea({
         rows={3}
         aria-invalid={error ? "true" : undefined}
         className={cn(
-          "w-full rounded-md border bg-background/60 px-3 py-2 text-sm text-foreground placeholder:text-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+          "w-full rounded-md border bg-background/60 px-3 py-2 text-sm text-foreground placeholder:text-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
           error ? "border-danger/60" : "border-border",
         )}
       />
@@ -312,7 +312,7 @@ function ColorField({
           placeholder="#d4af37"
           aria-invalid={error ? "true" : undefined}
           className={cn(
-            "h-10 flex-1 rounded-md border bg-background/60 px-3 font-mono text-sm text-foreground placeholder:text-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+            "h-10 flex-1 rounded-md border bg-background/60 px-3 font-mono text-sm text-foreground placeholder:text-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
             error ? "border-danger/60" : "border-border",
           )}
         />

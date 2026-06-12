@@ -69,7 +69,7 @@ export function ThemeToggle({ initialTheme, className }: ThemeToggleProps) {
       title={`Theme: ${LABELS[theme]}`}
       className={cn(
         "inline-flex h-9 w-9 items-center justify-center rounded-full border border-border/70 bg-elevated text-muted transition-colors hover:border-border-strong hover:text-foreground",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60",
         className,
       )}
     >

@@ -26,7 +26,7 @@ export function PlanCard({ plan, currentTier, period = "monthly", cta }: PlanCar
     <SurfaceCard
       className={cn(
         "relative flex flex-col gap-5 p-6",
-        plan.featured && "border-primary/40 ring-1 ring-primary/20",
+        plan.featured && "border-primary/40 ring-1 ring-primary-bright/20",
       )}
     >
       {plan.featured ? (
@@ -52,7 +52,7 @@ export function PlanCard({ plan, currentTier, period = "monthly", cta }: PlanCar
           </span>
         </div>
         {showAnnual ? (
-          <span className="text-xs text-primary">
+          <span className="text-xs text-primary-bright">
             ≈ ${(plan.annualUsd! / 12).toFixed(2)}/mo · 2 months free
           </span>
         ) : null}
@@ -64,7 +64,7 @@ export function PlanCard({ plan, currentTier, period = "monthly", cta }: PlanCar
             key={feature}
             className="flex items-start gap-2.5 text-sm leading-6 text-foreground"
           >
-            <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
+            <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary-bright" aria-hidden />
             <span>{feature}</span>
           </li>
         ))}

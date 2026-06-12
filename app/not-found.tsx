@@ -11,7 +11,7 @@ export default function NotFound() {
   return (
     <AppShell variant="marketing">
       <div className="mx-auto flex min-h-[60vh] w-full max-w-xl flex-col items-center justify-center gap-6 px-4 py-16 text-center sm:px-6">
-        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-elevated text-primary">
+        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-elevated text-primary-bright">
           <Compass className="h-6 w-6" aria-hidden />
         </span>
         <div className="flex flex-col gap-2">

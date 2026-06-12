@@ -82,7 +82,7 @@ function SetTile({
   return (
     <Link
       href={`/set/${set.slug}/edit`}
-      className="group block rounded-frame focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      className="group block rounded-frame focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     >
       <SurfaceCard className="flex h-full flex-col gap-3 overflow-hidden p-0 transition-colors group-hover:border-border-strong">
         <div className="relative aspect-video w-full overflow-hidden bg-elevated">

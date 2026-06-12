@@ -335,7 +335,7 @@ function ScryfallImportContent({
             href="https://scryfall.com/"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-primary underline-offset-2 hover:underline"
+            className="text-primary-bright underline-offset-2 hover:underline"
           >
             Scryfall
           </a>
@@ -580,7 +580,7 @@ function Detail({
               href={card.scryfall_uri}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 self-start text-[11px] uppercase tracking-wider text-primary underline-offset-2 hover:underline"
+              className="inline-flex items-center gap-1 self-start text-[11px] uppercase tracking-wider text-primary-bright underline-offset-2 hover:underline"
             >
               <ExternalLink className="h-3 w-3" aria-hidden /> View on Scryfall
             </a>

@@ -261,7 +261,7 @@ export function AIAssistantPanel({
         className="flex items-center justify-between gap-3 text-left"
       >
         <div className="flex items-center gap-3">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-elevated text-primary">
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-elevated text-primary-bright">
             <Sparkles className="h-4 w-4" aria-hidden />
           </span>
           <div className="flex flex-col">
@@ -312,7 +312,7 @@ export function AIAssistantPanel({
                     {busy ? (
                       <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
                     ) : (
-                      <Icon className="h-4 w-4 text-primary" aria-hidden />
+                      <Icon className="h-4 w-4 text-primary-bright" aria-hidden />
                     )}
                     {meta.label}
                   </span>
@@ -331,7 +331,7 @@ export function AIAssistantPanel({
               onChange={(event) => setConcept(event.target.value)}
               rows={2}
               placeholder="A storm-fearing siren who heals her allies but takes damage from rain."
-              className="w-full rounded-md border border-border bg-background/60 px-3 py-2 text-sm text-foreground placeholder:text-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="w-full rounded-md border border-border bg-background/60 px-3 py-2 text-sm text-foreground placeholder:text-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               disabled={!configured || isStreaming}
             />
           </label>
@@ -390,7 +390,7 @@ function SuggestionCard({
     <SurfaceCard className="flex flex-col gap-3 border-primary/40 bg-background/60 p-4">
       <header className="flex items-center justify-between gap-2">
         <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
-          <Icon className="h-4 w-4 text-primary" aria-hidden />
+          <Icon className="h-4 w-4 text-primary-bright" aria-hidden />
           {meta.label}
         </span>
         <Button
@@ -542,7 +542,7 @@ function SuggestionBody({
           ? "bg-danger/15 text-danger border-danger/40"
           : risk_level === "medium"
             ? "bg-accent/15 text-accent border-accent/40"
-            : "bg-primary/15 text-primary border-primary/30";
+            : "bg-primary/15 text-primary-bright border-primary/30";
       return (
         <div className="flex flex-col gap-3">
           <div className="flex flex-wrap items-center gap-2">
@@ -693,7 +693,7 @@ function StreamingSuggestionPreview({
     <SurfaceCard className="flex flex-col gap-3 border-primary/40 bg-background/60 p-4">
       <header className="flex items-center justify-between gap-2">
         <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
-          <Icon className="h-4 w-4 text-primary" aria-hidden />
+          <Icon className="h-4 w-4 text-primary-bright" aria-hidden />
           {meta.label}
         </span>
         <div className="flex items-center gap-2">
