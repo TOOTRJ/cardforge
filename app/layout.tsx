@@ -3,11 +3,7 @@ import { Cinzel, Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import { UpgradeModalProvider } from "@/components/billing/upgrade-modal-provider";
 import { getSiteBaseUrl } from "@/lib/site-url";
-import {
-  getTheme,
-  noFlashScript,
-  resolveThemeForServer,
-} from "@/lib/theme";
+import { noFlashScript } from "@/lib/theme-shared";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import "./globals.css";
 
@@ -163,24 +159,22 @@ export const viewport: Viewport = {
   colorScheme: "light dark",
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Server-resolved theme: the cookie wins. When the cookie says
-  // "system" (or is missing), we render `dark` and let the inline
-  // no-flash script swap to `light` based on prefers-color-scheme
-  // before the stylesheet evaluates. That avoids a hydration mismatch
-  // (React doesn't manage `data-theme` so it doesn't complain about a
-  // post-hydration attribute change either).
-  const theme = await getTheme();
-  const initialDataTheme = resolveThemeForServer(theme);
-
+  // The root layout reads NO cookies — that keeps every route eligible
+  // for static rendering / CDN caching. data-theme is always "dark"
+  // (the brand default) in server HTML; the inline no-flash script in
+  // <head> reads the theme cookie + prefers-color-scheme and corrects
+  // the attribute before the stylesheet evaluates, so light-theme users
+  // never see a dark flash. React doesn't manage `data-theme`, and
+  // suppressHydrationWarning covers the attribute swap.
   return (
     <html
       lang="en"
-      data-theme={initialDataTheme}
+      data-theme="dark"
       className={`${geistSans.variable} ${geistMono.variable} ${cinzel.variable} h-full antialiased`}
       // Suppress the hydration warning for `data-theme` — the no-flash
       // script may legitimately change it between server render and

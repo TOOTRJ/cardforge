@@ -3,6 +3,11 @@ import Link from "next/link";
 import { LegalPageShell } from "@/components/marketing/legal-page-shell";
 import { siteConfig } from "@/lib/site-config";
 
+// Hard guarantee of static rendering: if a future change introduces a
+// cookie/header read on this page, the build fails instead of silently
+// losing CDN cacheability.
+export const dynamic = "error";
+
 export const metadata: Metadata = {
   title: "Disclaimer",
   description:

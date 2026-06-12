@@ -1,42 +1,20 @@
 import { AppShell } from "@/components/layout/app-shell";
-import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
-import { getEntitlements } from "@/lib/billing/entitlements";
-import { getCreditsUsedThisMonth } from "@/lib/ai/usage-queries";
-import { isBillingEnabled } from "@/lib/billing/flags";
-import { getUnreadNotificationCount } from "@/lib/notifications/queries";
 
-export const dynamic = "force-dynamic";
+// Marketing layout — a sync, cookie-free passthrough so every page in
+// this group is eligible for static rendering / CDN caching. Auth-aware
+// header chrome comes from the SiteHeaderClient island (authMode
+// "client"), which fetches /api/me post-hydration only when a Supabase
+// session cookie is present. Pages that genuinely depend on the viewer
+// (gallery like-state, card detail, etc.) opt into dynamic rendering
+// themselves by reading cookies in their own loaders.
 
-export default async function MarketingLayout({
+export default function MarketingLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const user = await getCurrentUser();
-  const profile = user ? await getCurrentProfile() : null;
-  const entitlements = user ? await getEntitlements() : null;
-  const creditsUsed =
-    user && isBillingEnabled() ? await getCreditsUsedThisMonth() : 0;
-  const unreadNotifications = user ? await getUnreadNotificationCount() : 0;
-
   return (
-    <AppShell
-      variant="marketing"
-      user={
-        user
-          ? {
-              username: profile?.username ?? null,
-              displayName: profile?.display_name ?? null,
-              avatarUrl: profile?.avatar_url ?? null,
-              isPaid: entitlements?.isPaid ?? false,
-              credits: entitlements?.credits ?? 0,
-              creditsUsed,
-              unreadNotifications,
-              isAdmin: profile?.is_admin ?? false,
-            }
-          : null
-      }
-    >
+    <AppShell variant="marketing" authMode="client">
       {children}
     </AppShell>
   );

@@ -24,11 +24,17 @@ export default async function AppGroupLayout({
     redirect("/login");
   }
 
-  const profile = user ? await getCurrentProfile() : null;
-  const entitlements = user ? await getEntitlements() : null;
-  const creditsUsed =
-    user && isBillingEnabled() ? await getCreditsUsedThisMonth() : 0;
-  const unreadNotifications = user ? await getUnreadNotificationCount() : 0;
+  // The four chrome lookups are independent — run them concurrently
+  // instead of serially (same data, ~one round-trip of latency instead
+  // of four).
+  const [profile, entitlements, creditsUsed, unreadNotifications] = user
+    ? await Promise.all([
+        getCurrentProfile(),
+        getEntitlements(),
+        isBillingEnabled() ? getCreditsUsedThisMonth() : Promise.resolve(0),
+        getUnreadNotificationCount(),
+      ])
+    : [null, null, 0, 0];
 
   return (
     <AppShell
