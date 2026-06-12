@@ -1,10 +1,10 @@
 import { ImageResponse } from "next/og";
 
-// Site-wide Open Graph image for Spellwright — used as the social preview on
+// Site-wide Open Graph image for PipGlyph — used as the social preview on
 // any page that doesn't define its own (gallery, profiles, legal pages).
 // Individual card pages have their own /api/cards/[id]/og asset.
 
-export const alt = "Spellwright — Custom MTG Card Creator";
+export const alt = "PipGlyph — Precision tools for legendary ideas.";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 export const runtime = "edge";
@@ -32,14 +32,14 @@ export default function OpenGraphImage() {
           padding: "72px 96px",
           gap: 20,
           background:
-            "linear-gradient(135deg, #13121a 0%, #1c1828 50%, #13121a 100%)",
-          color: "#f0eadc",
+            "linear-gradient(135deg, #0d1320 0%, #1a2030 50%, #0d1320 100%)",
+          color: "#f2f3f5",
           fontFamily: "system-ui, sans-serif",
           position: "relative",
           overflow: "hidden",
         }}
       >
-        {/* Decorative radial glow — gold tinted */}
+        {/* Decorative radial glow — purple tinted */}
         <div
           style={{
             position: "absolute",
@@ -49,7 +49,7 @@ export default function OpenGraphImage() {
             height: 600,
             borderRadius: "50%",
             background:
-              "radial-gradient(circle, rgba(200,168,75,0.18) 0%, transparent 70%)",
+              "radial-gradient(circle, rgba(107,77,154,0.28) 0%, transparent 70%)",
             display: "flex",
           }}
         />
@@ -78,9 +78,8 @@ export default function OpenGraphImage() {
           ))}
         </div>
 
-        {/* Brand lockup — pentagon icon + wordmark */}
+        {/* Brand lockup — compass-star mark + wordmark */}
         <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
-          {/* Pentagon icon mark */}
           <div
             style={{
               width: 64,
@@ -88,23 +87,31 @@ export default function OpenGraphImage() {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              background: "#1e1b2a",
+              background: "#111827",
               borderRadius: 14,
-              border: "2px solid #c8a84b",
+              border: "2px solid #d8b26e",
             }}
           >
             <svg width="40" height="40" viewBox="0 0 32 32" fill="none">
-              <polygon
-                points="16,2 29,11 24,27 8,27 3,11"
-                fill="#1e1b2a"
-                stroke="#c8a84b"
-                strokeWidth="1.5"
+              <circle
+                cx="16"
+                cy="16"
+                r="13.5"
+                stroke="#d8b26e"
+                strokeWidth="1.2"
+                opacity="0.55"
               />
-              <line x1="16" y1="7" x2="16" y2="22" stroke="#c8a84b" strokeWidth="1.6" strokeLinecap="round" />
-              <line x1="16" y1="22" x2="11" y2="19" stroke="#c8a84b" strokeWidth="1.4" strokeLinecap="round" />
-              <line x1="16" y1="22" x2="21" y2="19" stroke="#c8a84b" strokeWidth="1.4" strokeLinecap="round" />
-              <path d="M16 9 Q10 12 12 17" stroke="#e8c96b" strokeWidth="1.1" strokeLinecap="round" fill="none" opacity="0.75" />
-              <path d="M16 9 Q22 12 20 17" stroke="#e8c96b" strokeWidth="1.1" strokeLinecap="round" fill="none" opacity="0.75" />
+              <path
+                d="M16 3.4 L18.3 13.7 L28.6 16 L18.3 18.3 L16 28.6 L13.7 18.3 L3.4 16 L13.7 13.7 Z"
+                fill="#d8b26e"
+              />
+              <path
+                d="M22.2 9.8 L24.4 7.6 M9.8 22.2 L7.6 24.4 M22.2 22.2 L24.4 24.4 M9.8 9.8 L7.6 7.6"
+                stroke="#8e72c9"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                opacity="0.9"
+              />
             </svg>
           </div>
           <span
@@ -112,36 +119,38 @@ export default function OpenGraphImage() {
               fontSize: 30,
               letterSpacing: 5,
               textTransform: "uppercase",
-              color: "#c8a84b",
+              color: "#d8b26e",
               fontWeight: 600,
             }}
           >
-            Spellwright
+            PipGlyph
           </span>
         </div>
 
-        {/* Main headline */}
+        {/* Main headline — explicit column flex; Satori won't reliably break
+            a display:block span inside flowing h1 text. */}
         <h1
           style={{
             margin: 0,
-            fontSize: 84,
+            display: "flex",
+            flexDirection: "column",
+            fontSize: 80,
             lineHeight: 1.06,
             letterSpacing: -2,
             fontWeight: 700,
-            maxWidth: 900,
+            maxWidth: 980,
           }}
         >
-          Design your own
+          <span>Custom MTG cards</span>
           <span
             style={{
-              display: "block",
               backgroundImage:
-                "linear-gradient(90deg, #e8c96b 0%, #c8a84b 40%, #9b72cf 100%)",
+                "linear-gradient(90deg, #d8b26e 0%, #b794e6 60%, #8e72c9 100%)",
               backgroundClip: "text",
               color: "transparent",
             }}
           >
-            Magic cards.
+            with perfect pips.
           </span>
         </h1>
 
@@ -151,12 +160,12 @@ export default function OpenGraphImage() {
             margin: 0,
             fontSize: 26,
             lineHeight: 1.45,
-            color: "#8a7a6a",
-            maxWidth: 720,
+            color: "#9aa3b5",
+            maxWidth: 760,
           }}
         >
-          Creatures, instants, planeswalkers, full sets — built by fans, for
-          fans. No account required to start.
+          Precision mana pips, advanced text tools, and beautiful frames —
+          built for storytellers, deck builders, and worldbuilders.
         </p>
 
         {/* Mana pips row */}
@@ -192,12 +201,12 @@ export default function OpenGraphImage() {
             display: "flex",
             alignItems: "center",
             fontSize: 18,
-            color: "#4a3a2a",
+            color: "#6e6248",
             letterSpacing: 2,
             textTransform: "uppercase",
           }}
         >
-          spellwright.gg
+          pipglyph.com
         </div>
       </div>
     ),

@@ -412,7 +412,7 @@ function IconField({
         </span>
         <span className="text-[11px] text-muted">
           The set symbol shown on every card in this set. Upload an image or pick
-          a preset — leave empty to use the default Spellwright mark.
+          a preset — leave empty to use the default PipGlyph mark.
         </span>
       </div>
 

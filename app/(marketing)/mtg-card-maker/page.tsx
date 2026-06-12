@@ -15,10 +15,10 @@ import { SurfaceCard } from "@/components/ui/surface-card";
 export const metadata: Metadata = {
   title: "MTG Card Maker — Create Custom Magic: The Gathering Cards",
   description:
-    "Spellwright is the best free MTG card maker. Design custom Magic: The Gathering cards with mana costs, oracle text, art, and power/toughness. No download required.",
+    "PipGlyph is the best free MTG card maker. Design custom Magic: The Gathering cards with mana costs, oracle text, art, and power/toughness. No download required.",
   alternates: { canonical: "/mtg-card-maker" },
   openGraph: {
-    title: "MTG Card Maker — Create Custom Magic Cards for Free | Spellwright",
+    title: "MTG Card Maker — Create Custom Magic Cards for Free | PipGlyph",
     description:
       "Build custom MTG cards online in seconds. Set mana cost, oracle text, color identity, rarity, and art. Free, browser-based, no account required to preview.",
     type: "article",
@@ -49,35 +49,35 @@ const FEATURES = [
 const FAQ: { q: string; a: string }[] = [
   {
     q: "What is an MTG card maker?",
-    a: "An MTG card maker is a web tool that lets you design custom Magic: The Gathering cards. You fill in the card's name, mana cost, type line, oracle text, power/toughness (or loyalty for planeswalkers), and upload art. The tool renders your inputs as a card that looks like a real MTG card. Spellwright is a free, browser-based MTG card maker with a live preview editor.",
+    a: "An MTG card maker is a web tool that lets you design custom Magic: The Gathering cards. You fill in the card's name, mana cost, type line, oracle text, power/toughness (or loyalty for planeswalkers), and upload art. The tool renders your inputs as a card that looks like a real MTG card. PipGlyph is a free, browser-based MTG card maker with a live preview editor.",
   },
   {
     q: "How do I make a custom MTG card?",
-    a: "To make a custom MTG card on Spellwright: (1) Go to the card creator at /create. (2) Enter the card's name and mana cost using pip notation like {2}{R}{R}. (3) Choose the card type — creature, instant, sorcery, enchantment, artifact, planeswalker, land, or battle. (4) Write the oracle text for the card's abilities. (5) Set power and toughness for creatures, or loyalty for planeswalkers. (6) Upload art or use the art prompt tool. (7) Download as PNG or publish to the gallery.",
+    a: "To make a custom MTG card on PipGlyph: (1) Go to the card creator at /create. (2) Enter the card's name and mana cost using pip notation like {2}{R}{R}. (3) Choose the card type — creature, instant, sorcery, enchantment, artifact, planeswalker, land, or battle. (4) Write the oracle text for the card's abilities. (5) Set power and toughness for creatures, or loyalty for planeswalkers. (6) Upload art or use the art prompt tool. (7) Download as PNG or publish to the gallery.",
   },
   {
-    q: "Is Spellwright free to use?",
-    a: "Yes. Spellwright is completely free to use. You can preview and design cards without creating an account. Creating an account (also free) lets you save cards, build sets, publish to the community gallery, and remix other players' cards.",
+    q: "Is PipGlyph free to use?",
+    a: "Yes. PipGlyph is completely free to use. You can preview and design cards without creating an account. Creating an account (also free) lets you save cards, build sets, publish to the community gallery, and remix other players' cards.",
   },
   {
     q: "Can I make a custom planeswalker card?",
-    a: "Yes. Spellwright supports planeswalker cards with loyalty counters and +/– ability lines. Select 'Planeswalker' from the card type dropdown, enter the starting loyalty value, and write each loyalty ability in the oracle text field.",
+    a: "Yes. PipGlyph supports planeswalker cards with loyalty counters and +/– ability lines. Select 'Planeswalker' from the card type dropdown, enter the starting loyalty value, and write each loyalty ability in the oracle text field.",
   },
   {
     q: "Can I print my custom MTG cards?",
-    a: "You can export your card as a high-resolution PNG and then print it at home or at a print shop. Custom fan-made cards are intended for personal, non-commercial use — such as playtesting a new Commander deck or sharing with your playgroup. Spellwright does not use official Wizards of the Coast card backs, fonts, or set symbols.",
+    a: "You can export your card as a high-resolution PNG and then print it at home or at a print shop. Custom fan-made cards are intended for personal, non-commercial use — such as playtesting a new Commander deck or sharing with your playgroup. PipGlyph does not use official Wizards of the Coast card backs, fonts, or set symbols.",
   },
   {
-    q: "What is the difference between Spellwright and MTG Cardsmith or Card Conjurer?",
-    a: "Spellwright, MTG Cardsmith, and Card Conjurer are all free browser-based MTG card makers. Spellwright differentiates itself with a modern UI, a built-in AI assistant for oracle text and flavor text, full set management (group cards into named expansions), and a structured data model that keeps every card editable as JSON — not just a flat image.",
+    q: "What is the difference between PipGlyph and MTG Cardsmith or Card Conjurer?",
+    a: "PipGlyph, MTG Cardsmith, and Card Conjurer are all free browser-based MTG card makers. PipGlyph differentiates itself with a modern UI, a built-in AI assistant for oracle text and flavor text, full set management (group cards into named expansions), and a structured data model that keeps every card editable as JSON — not just a flat image.",
   },
   {
     q: "Is it legal to make custom MTG cards?",
-    a: "Making custom Magic cards for personal, non-commercial use — playtesting, playgroup games, Commander homebrew — is generally accepted by the Magic community and falls under fan creation norms. Spellwright uses original card frames, fonts, and design elements and does not reproduce Wizards of the Coast's proprietary assets. Users are responsible for any artwork they upload and must not sell or commercially distribute printed proxy cards.",
+    a: "Making custom Magic cards for personal, non-commercial use — playtesting, playgroup games, Commander homebrew — is generally accepted by the Magic community and falls under fan creation norms. PipGlyph uses original card frames, fonts, and design elements and does not reproduce Wizards of the Coast's proprietary assets. Users are responsible for any artwork they upload and must not sell or commercially distribute printed proxy cards.",
   },
   {
     q: "How do I write proper MTG oracle text?",
-    a: "MTG oracle text follows specific conventions: keyword abilities are capitalized (Flying, Trample, Vigilance), triggered abilities start with 'When', 'Whenever', or 'At', activated abilities use the format 'Cost: Effect', and reminder text goes in parentheses in italics. Spellwright's AI assistant can suggest properly templated oracle text for any ability you describe in plain English.",
+    a: "MTG oracle text follows specific conventions: keyword abilities are capitalized (Flying, Trample, Vigilance), triggered abilities start with 'When', 'Whenever', or 'At', activated abilities use the format 'Cost: Effect', and reminder text goes in parentheses in italics. PipGlyph's AI assistant can suggest properly templated oracle text for any ability you describe in plain English.",
   },
 ];
 
@@ -109,7 +109,7 @@ export default function MtgCardMakerPage() {
           The MTG Card Maker for Magic Fans
         </h1>
         <p className="max-w-2xl text-lg leading-7 text-muted">
-          Spellwright is a free, browser-based Magic: The Gathering card creator.
+          PipGlyph is a free, browser-based Magic: The Gathering card creator.
           Design any card type — creatures, instants, planeswalkers, full sets —
           with a live preview editor, then share with your playgroup in seconds.
         </p>
@@ -128,7 +128,7 @@ export default function MtgCardMakerPage() {
       {/* Feature checklist */}
       <section aria-labelledby="features-heading" className="mb-14">
         <h2 id="features-heading" className="font-display mb-6 text-2xl font-semibold text-foreground">
-          What Spellwright can do
+          What PipGlyph can do
         </h2>
         <SurfaceCard className="p-6">
           <ul className="grid gap-3 sm:grid-cols-2">

@@ -42,7 +42,7 @@ export const setCoverUrlSchema = optionalEmptyString(
 
 // Set symbol: an uploaded image URL (icon_url) OR a preset Keyrune set code
 // (icon_code, lowercase alphanumeric like "dom"/"mh3"). Both optional; the card
-// renderer falls back to the default Spellwright mark when neither is set.
+// renderer falls back to the default PipGlyph mark when neither is set.
 export const setIconUrlSchema = optionalEmptyString(
   z
     .string()

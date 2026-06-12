@@ -47,7 +47,7 @@ async function sendEmail(summary: string, link: string): Promise<void> {
   const to = process.env.ADMIN_ALERT_EMAIL?.trim();
   if (!apiKey || !to) return;
   const from =
-    process.env.ADMIN_ALERT_FROM?.trim() || "Spellwright <onboarding@resend.dev>";
+    process.env.ADMIN_ALERT_FROM?.trim() || "PipGlyph <onboarding@resend.dev>";
   try {
     await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -58,7 +58,7 @@ async function sendEmail(summary: string, link: string): Promise<void> {
       body: JSON.stringify({
         from,
         to,
-        subject: "[Spellwright] New content report",
+        subject: "[PipGlyph] New content report",
         text: `${summary}\n\n${link}`,
       }),
     });

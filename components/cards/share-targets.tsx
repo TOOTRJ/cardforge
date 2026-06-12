@@ -37,14 +37,14 @@ type ShareTargetsProps = {
 };
 
 export function ShareTargets({ cardTitle, cardUrl, trigger }: ShareTargetsProps) {
-  const tweetText = `${cardTitle} — a custom Magic card on Spellwright`;
+  const tweetText = `${cardTitle} — a custom Magic card on PipGlyph`;
   const xHref = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
     tweetText,
   )}&url=${encodeURIComponent(cardUrl)}`;
   const redditHref = `https://www.reddit.com/submit?url=${encodeURIComponent(
     cardUrl,
   )}&title=${encodeURIComponent(cardTitle)}`;
-  const discordMessage = `**${cardTitle}** — a custom Magic card I made on Spellwright\n${cardUrl}`;
+  const discordMessage = `**${cardTitle}** — a custom Magic card I made on PipGlyph\n${cardUrl}`;
 
   return (
     <Dialog>

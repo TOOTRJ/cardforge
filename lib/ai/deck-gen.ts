@@ -64,7 +64,7 @@ export function clampDeckSize(value: number): number {
   return Math.max(MIN_DECK_SIZE, Math.min(MAX_DECK_SIZE, Math.round(value)));
 }
 
-const SYSTEM_PROMPT = `You design ORIGINAL Magic: The Gathering-style cards for a homebrew tool called Spellwright.
+const SYSTEM_PROMPT = `You design ORIGINAL Magic: The Gathering-style cards for a homebrew tool called PipGlyph.
 
 Your job: draft a COHESIVE themed mini-set — a small group of cards that clearly belong together (shared mechanics, color identity, world, and flavor), with a mix of rarities and card types that feels like a real expansion slice.
 

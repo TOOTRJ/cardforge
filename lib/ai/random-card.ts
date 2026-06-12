@@ -132,7 +132,7 @@ export const randomCardSchema = z
 
 export type RandomCardOutput = z.infer<typeof randomCardSchema>;
 
-const SYSTEM_PROMPT = `You design ORIGINAL Magic: The Gathering cards for a homebrew tool called Spellwright.
+const SYSTEM_PROMPT = `You design ORIGINAL Magic: The Gathering cards for a homebrew tool called PipGlyph.
 
 DESIGN VOCABULARY YOU MAY USE FREELY:
 - Standard MTG keyword abilities (Flying, Trample, Deathtouch, Lifelink, Vigilance, Hexproof, Indestructible, Menace, Reach, First Strike, Double Strike, Haste, Defender, Flash, Ward, Protection, Convoke, Cascade, Storm, Cycling, Flashback, …)

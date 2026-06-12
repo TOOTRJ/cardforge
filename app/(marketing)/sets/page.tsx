@@ -16,7 +16,7 @@ import { getCurrentUser } from "@/lib/supabase/server";
 export const metadata: Metadata = {
   title: "Community sets",
   description:
-    "Browse public card sets — full expansions, themed decks, and remix collections shared by Spellwright forgers.",
+    "Browse public card sets — full expansions, themed decks, and remix collections shared by PipGlyph forgers.",
   alternates: { canonical: "/sets" },
 };
 
@@ -43,7 +43,7 @@ export default async function PublicSetsPage({ searchParams }: SetsPageProps) {
       <PageHeader
         eyebrow="Public"
         title="Community sets"
-        description="Full expansions, themed decks, and remix collections from the Spellwright community. Open a set to flip through its cards or import it into your own."
+        description="Full expansions, themed decks, and remix collections from the PipGlyph community. Open a set to flip through its cards or import it into your own."
         actions={
           <Button asChild>
             <Link href="/dashboard/sets/new">Build a set</Link>

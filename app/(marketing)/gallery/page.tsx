@@ -25,7 +25,7 @@ import {
 
 export const metadata: Metadata = {
   title: "Gallery",
-  description: "Browse public custom cards forged by the Spellwright community.",
+  description: "Browse public custom cards forged by the PipGlyph community.",
   alternates: { canonical: "/gallery" },
 };
 
@@ -140,7 +140,7 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
       <PageHeader
         eyebrow="Public"
         title="Community gallery"
-        description="Discover custom cards forged by the Spellwright community. Filter, sort, and click into any card to view, like, or remix."
+        description="Discover custom cards forged by the PipGlyph community. Filter, sort, and click into any card to view, like, or remix."
         actions={
           <Button asChild>
             <Link href="/create">Forge your own</Link>

@@ -75,7 +75,7 @@ export async function generateMetadata({
   const description =
     card.flavor_text?.trim() ||
     card.rules_text?.trim() ||
-    "A custom trading card on Spellwright.";
+    "A custom trading card on PipGlyph.";
 
   const ogImageUrl = isShareable ? `/api/cards/${card.id}/og` : undefined;
   const { width, height } = RENDER_PRESETS.default;
@@ -85,7 +85,7 @@ export async function generateMetadata({
     description,
     openGraph: ogImageUrl
       ? {
-          title: `${card.title} · Spellwright`,
+          title: `${card.title} · PipGlyph`,
           description,
           type: "article",
           url: `/card/${username}/${card.slug}`,
@@ -102,7 +102,7 @@ export async function generateMetadata({
     twitter: ogImageUrl
       ? {
           card: "summary_large_image",
-          title: `${card.title} · Spellwright`,
+          title: `${card.title} · PipGlyph`,
           description,
           images: [ogImageUrl],
         }
@@ -501,7 +501,7 @@ function buildCardJsonLd({
   const description =
     card.flavor_text?.trim() ||
     card.rules_text?.trim() ||
-    "A custom Magic: The Gathering card forged on Spellwright.";
+    "A custom Magic: The Gathering card forged on PipGlyph.";
   const truncatedDescription =
     description.length > 280 ? `${description.slice(0, 277)}…` : description;
 
@@ -530,7 +530,7 @@ function buildCardJsonLd({
     },
     publisher: {
       "@type": "Organization",
-      name: "Spellwright",
+      name: "PipGlyph",
       url: siteBase,
     },
     inLanguage: "en",

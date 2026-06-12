@@ -121,7 +121,7 @@ export function ProfileForm({ defaultValues, email }: ProfileFormProps) {
           label="Accent color"
           name="accent_color"
           defaultValue={value("accent_color")}
-          helper="Hex color (e.g. #FF5577). Leave blank for the Spellwright default."
+          helper="Hex color (e.g. #FF5577). Leave blank for the PipGlyph default."
           error={error("accent_color")}
         />
       </FormSection>

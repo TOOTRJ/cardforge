@@ -454,7 +454,7 @@ export type FrameStyle = {
 // Premium gating (subscriptions).
 //
 // IP-safe rule: we ONLY ever gate our OWN technology — the rendered finishes
-// (foil/etched/showcase are our own shader code) and any ORIGINAL Spellwright
+// (foil/etched/showcase are our own shader code) and any ORIGINAL PipGlyph
 // frames. WotC-derived frame trade dress (m15/alpha/lotr/avatar/bloomburrow/
 // tarkir) is NEVER paywalled — it stays free for everyone.
 // ---------------------------------------------------------------------------
@@ -466,7 +466,7 @@ export const PREMIUM_FINISHES: ReadonlySet<CardFinish> = new Set<CardFinish>([
   "showcase",
 ]);
 
-// Original premium frame templates (none yet). Add ONLY original Spellwright
+// Original premium frame templates (none yet). Add ONLY original PipGlyph
 // frames here — never WotC trade dress. Wired up so gating is ready the moment
 // original premium frames ship.
 export const PREMIUM_FRAME_TEMPLATES: ReadonlySet<FrameTemplate> =

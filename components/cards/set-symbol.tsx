@@ -6,7 +6,7 @@ import type { Rarity } from "@/types/card";
 // Three sources, in priority order:
 //   1. iconUrl   — a set's uploaded icon image, drawn as-is (the owner's art).
 //   2. setCode   — a preset Keyrune set glyph (ss-dom, ss-mh3, …), rarity-tinted.
-//   3. default   — the Spellwright mark, rarity-tinted like a printed set symbol.
+//   3. default   — the PipGlyph mark, rarity-tinted like a printed set symbol.
 // Keyrune (https://keyrune.andrewgioia.com/) is an open-source pictographic
 // font; its CSS is imported globally in app/globals.css.
 // ---------------------------------------------------------------------------
@@ -36,11 +36,11 @@ type SetSymbolProps = {
   className?: string;
 };
 
-// The Spellwright house mark, drawn as a solid rarity-tintable silhouette: a
+// The PipGlyph house mark, drawn as a solid rarity-tintable silhouette: a
 // pentagon (the 5-color wheel) filled with `currentColor` so the rarity ink
 // shows through, with the quill nib knocked out in translucent black so the
 // mark reads on silver, gold, or orange alike.
-export function SpellwrightSetMark({
+export function PipGlyphSetMark({
   className,
   style,
 }: {
@@ -53,7 +53,7 @@ export function SpellwrightSetMark({
       className={className}
       style={style}
       role="img"
-      aria-label="Spellwright set"
+      aria-label="PipGlyph set"
     >
       <polygon points="16,3 28.4,12 23.6,26.8 8.4,26.8 3.6,12" fill="currentColor" />
       <g
@@ -106,9 +106,9 @@ export function SetSymbol({
     );
   }
 
-  // 3. Default — the Spellwright mark, rarity-tinted.
+  // 3. Default — the PipGlyph mark, rarity-tinted.
   return (
-    <SpellwrightSetMark
+    <PipGlyphSetMark
       className={className}
       style={{ width: size, height: size, color, flexShrink: 0 }}
     />

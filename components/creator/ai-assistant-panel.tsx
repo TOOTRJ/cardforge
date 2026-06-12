@@ -527,7 +527,7 @@ function SuggestionBody({
             {art_prompt}
           </p>
           <p className="text-xs text-muted">
-            Paste this into your favorite image generator. Spellwright doesn&apos;t
+            Paste this into your favorite image generator. PipGlyph doesn&apos;t
             generate images itself.
           </p>
           <div className="flex justify-end">{copyButton(art_prompt)}</div>

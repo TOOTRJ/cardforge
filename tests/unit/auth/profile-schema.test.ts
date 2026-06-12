@@ -21,9 +21,9 @@ const validBase = {
 describe("profileUpdateSchema — socials", () => {
   it("accepts a twitter URL on twitter.com OR x.com", () => {
     for (const url of [
-      "https://twitter.com/spellwright",
-      "https://x.com/spellwright",
-      "https://www.x.com/spellwright",
+      "https://twitter.com/pipglyph",
+      "https://x.com/pipglyph",
+      "https://www.x.com/pipglyph",
     ]) {
       const r = profileUpdateSchema.safeParse({
         ...validBase,
@@ -36,7 +36,7 @@ describe("profileUpdateSchema — socials", () => {
   it("rejects a twitter URL on the wrong host", () => {
     const r = profileUpdateSchema.safeParse({
       ...validBase,
-      twitter_url: "https://facebook.com/spellwright",
+      twitter_url: "https://facebook.com/pipglyph",
     });
     expect(r.success).toBe(false);
     if (!r.success) {

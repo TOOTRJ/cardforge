@@ -47,14 +47,14 @@ export async function generateMetadata({
 
   const isShareable = set.visibility === "public" || set.visibility === "unlisted";
   const description =
-    set.description?.trim() || `A custom card set on Spellwright.`;
+    set.description?.trim() || `A custom card set on PipGlyph.`;
 
   return {
     title: set.title,
     description,
     openGraph: isShareable && set.cover_url
       ? {
-          title: `${set.title} · Spellwright`,
+          title: `${set.title} · PipGlyph`,
           description,
           type: "article",
           url: `/set/${set.slug}`,
@@ -64,7 +64,7 @@ export async function generateMetadata({
     twitter: isShareable && set.cover_url
       ? {
           card: "summary_large_image",
-          title: `${set.title} · Spellwright`,
+          title: `${set.title} · PipGlyph`,
           description,
           images: [set.cover_url],
         }
