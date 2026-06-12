@@ -8,6 +8,7 @@ import {
   LogOut,
   Settings,
   ShieldCheck,
+  Trophy,
   Sparkles,
   UserCircle,
 } from "lucide-react";
@@ -120,11 +121,18 @@ export function UserMenu({
           </>
         ) : null}
         {isAdmin ? (
+          <>
           <MenuItem
             href="/admin/moderation"
             icon={ShieldCheck}
             label="Moderation"
           />
+          <MenuItem
+            href="/admin/challenges"
+            icon={Trophy}
+            label="Challenges"
+          />
+          </>
         ) : null}
         <div className="my-1 h-px bg-border/60" />
         <form action={logoutAction}>
