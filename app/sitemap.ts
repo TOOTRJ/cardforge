@@ -70,6 +70,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.9,
     },
     {
+      url: `${baseUrl}/challenges`,
+      lastModified,
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    {
       url: `${baseUrl}/about`,
       lastModified,
       changeFrequency: "monthly",
@@ -107,9 +113,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
-  const dynamicCards = await fetchPublicCardEntries(baseUrl);
+  const [dynamicCards, challengePages] = await Promise.all([
+    fetchPublicCardEntries(baseUrl),
+    fetchChallengeEntries(baseUrl),
+  ]);
 
-  return [...staticPages, ...dynamicCards];
+  return [...staticPages, ...challengePages, ...dynamicCards];
 }
 
 // ---------------------------------------------------------------------------
@@ -157,6 +166,28 @@ async function fetchPublicCardEntries(
       });
     }
     return entries;
+  } catch {
+    return [];
+  }
+}
+
+async function fetchChallengeEntries(
+  baseUrl: string,
+): Promise<MetadataRoute.Sitemap> {
+  if (!isSupabaseConfigured()) return [];
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("challenges")
+      .select("slug, created_at")
+      .order("created_at", { ascending: false })
+      .limit(100);
+    return (data ?? []).map((c) => ({
+      url: `${baseUrl}/challenges/${c.slug}`,
+      lastModified: new Date(c.created_at),
+      changeFrequency: "weekly" as const,
+      priority: 0.7,
+    }));
   } catch {
     return [];
   }

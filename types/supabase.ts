@@ -774,6 +774,45 @@ export type Database = {
         };
         Relationships: [];
       };
+      challenges: {
+        Row: {
+          created_at: string;
+          description: string;
+          ends_at: string;
+          featured: boolean;
+          hero_image_url: string | null;
+          id: string;
+          slug: string;
+          starts_at: string;
+          tag: string;
+          title: string;
+        };
+        Insert: {
+          created_at?: string;
+          description: string;
+          ends_at: string;
+          featured?: boolean;
+          hero_image_url?: string | null;
+          id?: string;
+          slug: string;
+          starts_at?: string;
+          tag: string;
+          title: string;
+        };
+        Update: {
+          created_at?: string;
+          description?: string;
+          ends_at?: string;
+          featured?: boolean;
+          hero_image_url?: string | null;
+          id?: string;
+          slug?: string;
+          starts_at?: string;
+          tag?: string;
+          title?: string;
+        };
+        Relationships: [];
+      };
       custom_pips: {
         Row: {
           created_at: string;

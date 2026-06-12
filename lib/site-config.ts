@@ -34,6 +34,7 @@ export const siteConfig = {
   primaryNav: [
     { label: "Gallery", href: "/gallery" },
     { label: "Sets", href: "/sets" },
+    { label: "Challenges", href: "/challenges" },
     { label: "Pricing", href: "/pricing" },
     { label: "Create", href: "/create", anonOnly: true } as NavItem,
     { label: "Feed", href: "/feed", authedOnly: true } as NavItem,
@@ -54,6 +55,7 @@ export const siteConfig = {
       links: [
         { label: "Gallery", href: "/gallery" },
         { label: "Community sets", href: "/sets" },
+        { label: "Challenges", href: "/challenges" },
         { label: "Pricing", href: "/pricing" },
       ],
     },

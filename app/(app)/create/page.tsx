@@ -26,7 +26,16 @@ export const metadata: Metadata = {
     "Forge a new custom trading card with a live preview, art upload, and visibility controls.",
 };
 
-export default async function CreatePage() {
+const CHALLENGE_TAG_PATTERN = /^[a-z0-9][a-z0-9-]{0,38}[a-z0-9]$/;
+
+export default async function CreatePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tag?: string }>;
+}) {
+  const { tag: tagParam } = await searchParams;
+  const initialTag =
+    tagParam && CHALLENGE_TAG_PATTERN.test(tagParam) ? tagParam : null;
   // Re-checked here in addition to the proxy/(app) layout — defense in depth.
   if (!isSupabaseConfigured()) {
     return <NotConfigured />;
@@ -81,6 +90,7 @@ export default async function CreatePage() {
           mySets={mySets}
           aiConfigured={isAIConfigured()}
           pipOverrides={await getPipOverrides(user.id)}
+          initialTag={initialTag}
         />
       </div>
     </div>

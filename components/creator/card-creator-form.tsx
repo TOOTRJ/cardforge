@@ -131,6 +131,10 @@ type CardCreatorFormProps = {
   /** The signed-in user's custom pip icons (server-fetched; {} when none).
    *  Drives the cost picker icons, the live preview, and the pip dialog. */
   pipOverrides?: PipOverrides;
+  /** Pre-seeded tag (e.g. a challenge entry tag from /create?tag=…). Merged
+   *  into the Tags field — including into a restored draft — so a "Start
+   *  designing" CTA always produces an entry that counts. Create mode only. */
+  initialTag?: string | null;
 };
 
 // Step membership + field→step routing now live in lib/creator/steps.ts (pure
@@ -147,6 +151,16 @@ const CARD_DRAFT_STORAGE_KEY = "pipglyph:card-draft:v1";
 // Pre-rebrand key — read as a fallback so in-flight drafts survive the
 // Spellwright → PipGlyph swap; removed once migrated. Drop after 2026-09.
 const LEGACY_CARD_DRAFT_STORAGE_KEY = "spellwright:card-draft:v1";
+
+// Append a tag to a comma-separated tags field unless it's already there.
+function mergeTag(tagsText: string | undefined, tag: string): string {
+  const existing = (tagsText ?? "")
+    .split(",")
+    .map((t) => t.trim().toLowerCase())
+    .filter(Boolean);
+  if (existing.includes(tag.toLowerCase())) return tagsText ?? "";
+  return existing.length > 0 ? `${tagsText}, ${tag}` : tag;
+}
 
 // Icons for the xl+ vertical step rail (one per StepKey; the "layout" panel's
 // dynamic labels — Adventure / Back face / Flip side — all read as Layers).
@@ -176,6 +190,7 @@ export function CardCreatorForm({
   mySets = [],
   aiConfigured,
   pipOverrides = {},
+  initialTag = null,
 }: CardCreatorFormProps) {
   const router = useRouter();
   const upgrade = useUpgradeModal();
@@ -246,10 +261,14 @@ export function CardCreatorForm({
     };
   }, []);
 
-  const defaults = useMemo(
-    () => defaultValuesFor(card, gameSystems, templates),
-    [card, gameSystems, templates],
-  );
+  const defaults = useMemo(() => {
+    const base = defaultValuesFor(card, gameSystems, templates);
+    // Seed the challenge tag for fresh creates (edits keep the card's tags).
+    if (initialTag && !card) {
+      base.tags_text = mergeTag(base.tags_text, initialTag);
+    }
+    return base;
+  }, [card, gameSystems, templates, initialTag]);
 
   // The full methods object is spread into <FormProvider> below so the step
   // components can reach the same form instance via useFormContext().
@@ -303,7 +322,12 @@ export function CardCreatorForm({
       // Migrate pre-rebrand drafts forward; future writes use the new key.
       window.localStorage.setItem(CARD_DRAFT_STORAGE_KEY, raw);
       window.localStorage.removeItem(LEGACY_CARD_DRAFT_STORAGE_KEY);
-      reset({ ...defaults, ...draft });
+      const restored = { ...defaults, ...draft };
+      // A challenge CTA's tag survives draft restoration too.
+      if (initialTag) {
+        restored.tags_text = mergeTag(restored.tags_text, initialTag);
+      }
+      reset(restored);
       toast.info("Restored your unsaved draft.", {
         action: {
           label: "Start fresh",
