@@ -186,6 +186,10 @@ export function CardCreatorForm({
     const i = STEP_ORDER.indexOf(want as StepKey);
     return i >= 0 ? i : 0;
   });
+  // Whether the "Save card" submit button accepts clicks — armed ~300ms after
+  // the last step appears, disarmed on every step change (see goToIndex and
+  // the arming effect below it).
+  const [saveArmed, setSaveArmed] = useState(false);
   // Stable handle to the latest step-navigation fn, so the once-registered
   // custom-event listeners (hero / command palette) always call current logic.
   const goToStepKeyRef = useRef<(key: StepKey) => void>(() => {});
@@ -365,11 +369,14 @@ export function CardCreatorForm({
   const isLastStep = idx === steps.length - 1;
   const statVis = statVisibility(watched.card_type);
 
-  const goToIndex = (i: number) =>
+  const goToIndex = (i: number) => {
+    // Every step change disarms Save — see the arming effect below goNext.
+    setSaveArmed(false);
     setCurrent(Math.max(0, Math.min(i, steps.length - 1)));
+  };
   const goToStepKey = (key: StepKey) => {
     const i = steps.findIndex((s) => s.key === key);
-    if (i >= 0) setCurrent(i);
+    if (i >= 0) goToIndex(i);
   };
   // Keep the listener-facing nav handle pointed at the latest closure (the
   // hero/palette listeners are registered once with a stable ref).
@@ -382,6 +389,18 @@ export function CardCreatorForm({
   // route to the offending step (see onSubmit's error handling) and light the
   // step marker red.
   const goNext = () => goToIndex(idx + 1);
+
+  // Save renders in the same action-bar slot Next just vacated, so the second
+  // click of a fast double-click on Next (or any click racing the swap) would
+  // land on Save and submit a half-finished card. Save stays disabled for a
+  // beat after the last step appears so stray trailing clicks hit an inert
+  // button; navigation (goToIndex) disarms it again on every step change.
+  // tests/e2e/create-card.spec.ts covers the race.
+  useEffect(() => {
+    if (idx !== steps.length - 1) return;
+    const timer = window.setTimeout(() => setSaveArmed(true), 300);
+    return () => window.clearTimeout(timer);
+  }, [idx, steps.length]);
 
   // Which steps own a field that currently has an error — drives the step
   // marker's error state. Routes nested back_face.* errors to their root.
@@ -1098,7 +1117,11 @@ export function CardCreatorForm({
                     </Link>
                   </Button>
                 ) : (
-                  <Button type="submit" disabled={isSubmitting} size="lg">
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting || !saveArmed}
+                    size="lg"
+                  >
                     {isSubmitting ? (
                       <>
                         <Wand2 className="h-4 w-4 animate-pulse" aria-hidden />
