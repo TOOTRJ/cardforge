@@ -11,6 +11,7 @@
 
 ## Key pages
 
+- [FAQ](https://www.pipglyph.com/faq): Every common question answered directly — card making, pips, AI, sharing, sets, printing, remixing, challenges.
 - [MTG Card Maker](https://www.pipglyph.com/mtg-card-maker): What the card creator does, how to make a custom card, FAQ with direct answers.
 - [Mana Pip Editor](https://www.pipglyph.com/mana-pip-editor): The full mana symbol vocabulary and custom pip uploads, with FAQ.
 - [AI MTG Card Generator](https://www.pipglyph.com/ai-mtg-card-generator): Concept-to-card AI generation, with FAQ.
