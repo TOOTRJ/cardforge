@@ -462,29 +462,25 @@ async function attachStats(
   // the lookup without touching cookies (keeps ISR callers static).
   const viewer = anonymous ? null : await getCurrentUser();
 
-  const [likesResult, ownersResult, viewerLikesResult] = await Promise.all([
-    supabase.from("card_likes").select("card_id").in("card_id", cardIds),
+  // Two queries instead of three: the like rows already carry user_id, so
+  // the viewer's own likes are derived from the same result set that
+  // feeds the counts.
+  const [likesResult, ownersResult] = await Promise.all([
+    supabase
+      .from("card_likes")
+      .select("card_id, user_id")
+      .in("card_id", cardIds),
     supabase
       .from("profiles")
       .select("id, username, display_name, avatar_url")
       .in("id", ownerIds),
-    viewer
-      ? supabase
-          .from("card_likes")
-          .select("card_id")
-          .eq("user_id", viewer.id)
-          .in("card_id", cardIds)
-      : Promise.resolve({ data: [] as Array<{ card_id: string }> }),
   ]);
 
   const likeCount = new Map<string, number>();
+  const viewerLiked = new Set<string>();
   for (const row of likesResult.data ?? []) {
     likeCount.set(row.card_id, (likeCount.get(row.card_id) ?? 0) + 1);
-  }
-
-  const viewerLiked = new Set<string>();
-  for (const row of viewerLikesResult.data ?? []) {
-    viewerLiked.add(row.card_id);
+    if (viewer && row.user_id === viewer.id) viewerLiked.add(row.card_id);
   }
 
   const ownerById = new Map<string, CardWithOwner["owner"]>();
@@ -584,8 +580,10 @@ export async function listPublicCardsRich(
     }
 
     // When sorting by popularity we fetch a larger window so the in-process
-    // re-sort has more candidates to work with.
-    const fetchLimit = sort === "popular" ? Math.max(limit * 3, 60) : limit;
+    // re-sort has more candidates to work with. 2× the page (capped at 48)
+    // is plenty at current scale — 3×/60 was measurably over-fetching.
+    const fetchLimit =
+      sort === "popular" ? Math.min(Math.max(limit * 2, 32), 48) : limit;
     query = query.range(offset, offset + fetchLimit - 1);
 
     const { data, error } = await query;

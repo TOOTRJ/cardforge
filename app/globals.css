@@ -16,6 +16,7 @@
 @font-face {
   font-family: "MPlantin";
   src:
+    url("/fonts/mplantin.woff2") format("woff2"),
     url("/fonts/mplantin.woff") format("woff"),
     url("/fonts/mplantin.ttf") format("truetype");
   font-weight: 400 700;
@@ -25,10 +26,14 @@
 
 /* MPlantin Italic — the real italic master (flavor text, reminder text). The
    browser would otherwise synthesize an oblique that doesn't match what the
-   Satori bake renders. Same Full-Magic-Pack sourcing as the frames. */
+   Satori bake renders. Same Full-Magic-Pack sourcing as the frames.
+   The .ttf masters stay in /public/fonts — the Satori bake reads those exact
+   bytes server-side; the .woff2 copies exist purely for browser transfer. */
 @font-face {
   font-family: "MPlantin";
-  src: url("/fonts/mplantin-italic.ttf") format("truetype");
+  src:
+    url("/fonts/mplantin-italic.woff2") format("woff2"),
+    url("/fonts/mplantin-italic.ttf") format("truetype");
   font-weight: 400 700;
   font-style: italic;
   font-display: swap;
@@ -43,7 +48,9 @@
    registers — keeping preview == PNG. */
 @font-face {
   font-family: "CardDisplay";
-  src: url("/fonts/Beleren-Bold.ttf") format("truetype");
+  src:
+    url("/fonts/Beleren-Bold.woff2") format("woff2"),
+    url("/fonts/Beleren-Bold.ttf") format("truetype");
   font-weight: 400 700;
   font-style: normal;
   font-display: swap;

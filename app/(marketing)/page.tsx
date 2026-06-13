@@ -242,6 +242,8 @@ async function HomeTrending() {
       heading="Top trending cards"
       description="The cards racking up the most likes, comments, and remixes this week."
       action={VIEW_GALLERY_LINK}
+      // First card images in the viewport — preload instead of lazy-load.
+      priority
     />
   );
 }
