@@ -65,6 +65,7 @@ export const siteConfig = {
         { label: "MTG card maker", href: "/mtg-card-maker" },
         { label: "AI card generator", href: "/ai-mtg-card-generator" },
         { label: "Mana pip editor", href: "/mana-pip-editor" },
+        { label: "FAQ", href: "/faq" },
       ],
     },
     {

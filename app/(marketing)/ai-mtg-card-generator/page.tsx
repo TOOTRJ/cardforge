@@ -4,6 +4,7 @@ import { ArrowRight, CheckCircle2, Sparkles, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { GuideCrossLinks } from "@/components/marketing/guide-cross-links";
+import { AI_GENERATOR_FAQ } from "@/lib/content/faq";
 
 // ---------------------------------------------------------------------------
 // SEO landing: /ai-mtg-card-generator
@@ -46,40 +47,7 @@ const FEATURES = [
   "All work stays editable — the AI seeds the form, you ship the design",
 ];
 
-const FAQ: { q: string; a: string }[] = [
-  {
-    q: "What is an AI MTG card generator?",
-    a: "An AI MTG card generator uses a large language model to draft a complete Magic: The Gathering card from a brief prompt or a click. PipGlyph's generator picks a rarity, color identity, type, mana cost, and rules text — then optionally generates original art with OpenAI's image model — and drops the result into the editor where you can tweak any field before publishing.",
-  },
-  {
-    q: "How do I generate a random MTG card with AI?",
-    a: "Open the card creator at /create and click 'Generate random card'. The AI picks every field for you and renders the result in the live preview. If you want a specific direction (e.g. 'a Selesnya Saga about a city of trees'), use the AI Assistant panel and pick 'Generate from concept'.",
-  },
-  {
-    q: "Does the AI use real MTG keyword abilities?",
-    a: "Yes. The AI assistant is allowed to use the full vocabulary of published MTG keyword abilities — Flying, Trample, Deathtouch, Lifelink, Vigilance, Menace, Cascade, Convoke, Cycling, Flashback, and so on — and to template rules text the same way Wizards' R&D does ('When …', 'Whenever …', 'Pay {N}'). The generator does NOT copy published card names, planeswalker names (Jace, Liliana, etc.), or set/world names — every card you generate is original.",
-  },
-  {
-    q: "Can the AI generate artwork for my card?",
-    a: "Yes. After the AI drafts the card's text, it composes a vivid art prompt and generates a single original image via OpenAI's image model. The image is uploaded to your card's art slot and you can replace it with your own upload at any time. Generated artwork is yours under the underlying OpenAI usage policy — typically free to use for non-commercial purposes.",
-  },
-  {
-    q: "Is the AI random card generator free?",
-    a: "Yes, within a daily quota. You need a free account to use the AI generator (it's disabled for signed-out visitors), and each account can generate up to 10 random cards per day so a single user can't drain the AI budget for everyone. Heavy users will eventually have an option to bring their own OpenAI API key.",
-  },
-  {
-    q: "Will the AI design balanced cards?",
-    a: "The AI is trained to follow MTG's color pie and mana curve heuristics, but it isn't infallible — a generated mythic might still be undercosted, and a generated common might be too weak. Run the 'Balance check' tool inside the AI assistant panel to get a risk-level read and concrete tweaks before publishing to the gallery.",
-  },
-  {
-    q: "Can I edit the AI's output after it generates a card?",
-    a: "Every field is editable in the live editor. The AI seeds the form; you ship the design. Change the title, swap the art, rewrite a rules-text line, downshift the mana cost — the AI's draft is a starting point, not a fixed output.",
-  },
-  {
-    q: "How is this different from asking ChatGPT for a custom Magic card?",
-    a: "A general chat assistant returns plain text — you'd still have to copy each field into a card editor, find or generate art, format the result, and share it. PipGlyph integrates the same kind of generation directly into the card editor: every AI output is a structured patch that lands on the canvas, the art lands in the right slot, and the published card has a real public URL with social previews, comments, likes, and remix lineage.",
-  },
-];
+const FAQ = AI_GENERATOR_FAQ;
 
 export default function AiMtgCardGeneratorPage() {
   // FAQPage structured data so the Q&A is eligible for rich results and is

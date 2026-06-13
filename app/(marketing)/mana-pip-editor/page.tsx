@@ -4,6 +4,7 @@ import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { GuideCrossLinks } from "@/components/marketing/guide-cross-links";
+import { MANA_PIP_FAQ } from "@/lib/content/faq";
 
 // ---------------------------------------------------------------------------
 // SEO landing page: /mana-pip-editor
@@ -45,32 +46,7 @@ const FEATURES = [
   "Color identity derived from your cost automatically",
 ];
 
-const FAQ: { q: string; a: string }[] = [
-  {
-    q: "What is a mana pip editor?",
-    a: "A mana pip editor is a tool for building the mana symbols (pips) on a custom trading card — the circular icons that show a card's cost. PipGlyph's pip editor is click-driven: you tap colored pip buttons to build costs like {2}{R}{R}, and the same symbols render inline in rules text for activation costs like {T}: Add one mana.",
-  },
-  {
-    q: "Can I upload my own custom mana symbols?",
-    a: "Yes. PipGlyph lets you upload a custom icon for each core mana symbol — white, blue, black, red, green, and colorless. Your icon replaces the standard symbol everywhere your cards render: the editor preview, your gallery thumbnails, public card pages, and PNG or PDF exports. Costs, color identity, and rules keep working exactly the same; only the icon changes.",
-  },
-  {
-    q: "Which mana symbols does PipGlyph support?",
-    a: "PipGlyph supports the full MTG-style mana vocabulary: generic costs {0} through {20}, variable costs {X} {Y} {Z}, the five colors plus colorless {W} {U} {B} {R} {G} {C}, all ten hybrid pairs like {W/U}, twobrids like {2/W}, phyrexian symbols like {R/P}, and the utility symbols tap {T}, untap {Q}, snow {S}, and energy {E}.",
-  },
-  {
-    q: "Do custom pips show up on exported cards?",
-    a: "Yes. PipGlyph renders exports server-side with the same layout engine as the live preview, so your custom pips appear in downloaded PNGs, print-ready PDFs, and the social-share images — pixel-aligned with standard symbols at any resolution.",
-  },
-  {
-    q: "How do hybrid and phyrexian pips work?",
-    a: "Hybrid pips show two halves — either two colors like {W/U} or a generic-color twobrid like {2/W} — and phyrexian pips carry the phi symbol, meaning the cost can be paid with mana or life. In PipGlyph you insert them from the symbol toolbar in the rules editor or build them into the mana cost, and they render as proper split discs in both the preview and the export.",
-  },
-  {
-    q: "Is the pip editor free?",
-    a: "Yes. The mana cost builder, the full symbol vocabulary, and custom pip uploads are free for every account. Custom pips are per-user: visitors always see a card with its owner's pips, so your set keeps a consistent look when you share it.",
-  },
-];
+const FAQ = MANA_PIP_FAQ;
 
 export default function ManaPipEditorPage() {
   const faqJsonLd = {
