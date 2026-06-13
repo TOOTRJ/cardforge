@@ -1,0 +1,74 @@
+---
+title: "The Complete Guide to MTG Mana Symbols"
+description: "Every mana pip explained — generic, colored, hybrid, twobrid, phyrexian, snow, energy, tap and untap — what each one means in a cost, how color identity works, and how to build them on a custom card."
+date: "2026-06-11"
+tags: ["mana pips", "symbols", "reference"]
+---
+
+Mana symbols — *pips*, in designer slang — are the densest information channel on a Magic card. Five circles in the corner tell you a card's color, its cost, its deck-building constraints, and often its design intent before you read a word of rules text. If you're making custom cards, fluency in the full symbol vocabulary is the difference between a cost that looks printed and one that looks pasted on.
+
+This is the complete vocabulary, symbol by symbol, with the rules meaning of each.
+
+## Generic and variable costs
+
+**`{0}` through `{20}`** — generic mana: payable with mana of any color (or colorless). A cost of `{3}{G}` means "any three, plus one green."
+
+**`{X}`** (and the rare `{Y}` and `{Z}`) — variable costs chosen as the spell is cast. An `{X}{R}` Fireball-style spell can be cast for as much mana as you have. On a custom card, remember the rules convention: *"X is the amount of damage"* style clarifications go in the rules text only when the relationship isn't obvious.
+
+## The five colors and colorless
+
+**`{W}` `{U}` `{B}` `{R}` `{G}`** — white, blue (U, because B was taken), black, red, green. One pip = one mana of exactly that color.
+
+**`{C}`** — explicitly *colorless* mana, introduced with the Eldrazi. `{C}` in a cost can only be paid with colorless mana — it is NOT generic. A custom card costed `{2}{C}` is meaningfully harder to cast than `{3}`.
+
+## Hybrid: either/or pips
+
+**The ten two-color hybrids — `{W/U}`, `{W/B}`, `{U/B}`, `{U/R}`, `{B/R}`, `{B/G}`, `{R/G}`, `{R/W}`, `{G/W}`, `{G/U}`** — are split discs payable with *either* color. A `{R/G}` pip is one mana that's red OR green, your choice per pip. Hybrid cards count as BOTH colors for color identity: a `{2}{W/U}` card is white-and-blue for deck-building purposes.
+
+**Twobrids — `{2/W}`, `{2/U}`, `{2/B}`, `{2/R}`, `{2/G}`** — payable as two generic OR one of the color. A creature costing three twobrid white pips can be cast for `{6}`, for `{W}{W}{W}`, or anything between. Twobrid cards are the named color regardless of how you pay.
+
+## Phyrexian: mana or life
+
+**`{W/P}`, `{U/P}`, `{B/P}`, `{R/P}`, `{G/P}`** (and colorless `{C/P}`) — the phi symbol means the pip can be paid with the colored mana *or 2 life*. Phyrexian costs are infamous in competitive history precisely because "free" is a price players love; cost custom phyrexian designs conservatively. A phyrexian pip still makes the card that color.
+
+## Utility symbols
+
+These appear in rules text and activation costs rather than in the top-right cost line:
+
+- **`{T}`** — the tap symbol: "tap this permanent" as a cost. *`{T}`: Add `{G}`.*
+- **`{Q}`** — the untap symbol, `{T}`'s rare mirror: "untap this permanent" as a cost.
+- **`{S}`** — snow mana: payable with any mana produced by a snow source. Deck-building texture, beloved of winter-themed custom sets.
+- **`{E}`** — energy counters: not mana at all, but a resource symbol used in costs ("Pay `{E}{E}`") and payouts ("You get `{E}`").
+
+## Color identity: what your pips imply
+
+A card's **color identity** is every colored pip that appears anywhere on it — cost AND rules text. A creature with cost `{2}{U}` and an activated ability costing `{B}` has a blue-black identity (it can't go in a mono-blue Commander deck). When you design a custom card, audit the rules text for stray pips; an off-color activation is a real design choice with real deck-building consequences.
+
+The [PipGlyph editor](/mtg-card-maker) derives color identity from your cost automatically, and the frame follows: gold for multicolor, the blended treatments for hybrid, colorless frames for artifacts and Eldrazi-style designs.
+
+## Building costs on a custom card
+
+In [PipGlyph's mana pip editor](/mana-pip-editor), costs are click-built — tap the pip buttons to append symbols, and the cost renders as proper discs in the live preview, with the same geometry the exported PNG uses. The full vocabulary above is available, including all ten hybrids, the five twobrids, phyrexian for every color, and the utility symbols in the rules-text toolbar.
+
+Two conventions worth following when you build:
+
+1. **Symbol order**: generic first, then colors in WUBRG-wheel order starting from the card's "primary" color — `{2}{W}{U}`, not `{U}{W}{2}`.
+2. **Curve honesty**: a double-pip cost like `{1}{R}{R}` is a real constraint — it asks the deck to be heavily red. Use doubled pips when you *want* the card to be hard to splash; use hybrid when you want it to travel between decks.
+
+## Custom pips: your symbols, same rules
+
+PipGlyph's signature feature: upload your own icon for each core symbol (W, U, B, R, G, C) and every card you own wears them — in the editor, the gallery, public card pages, and exports. The cost notation, color identity math, and rules all keep working; only the artwork on the disc changes. It's how a custom set gets a visual identity of its own. Custom pips are free on every account — see the [pip editor guide](/mana-pip-editor).
+
+## FAQ
+
+### What's the difference between colorless `{C}` and generic `{1}`?
+
+Generic (`{1}`, `{2}`, …) accepts mana of any type. Colorless `{C}` demands specifically colorless mana — from a Wastes, an artifact source, an Eldrazi. Use `{C}` in a custom cost only when "must be colorless" is the point.
+
+### Do hybrid pips make a card cheaper?
+
+Effectively yes — hybrid is the *easier* cost shape because more decks can pay it. Designers usually compensate: hybrid cards are templated so they'd be fair as a mono-color card of either half.
+
+### Can a custom card mix hybrid and phyrexian in one cost?
+
+Mechanically yes (`{W/U}{B/P}` is parseable), and PipGlyph renders it — but real cards almost never do it, so expect it to read as deliberately exotic. Exotic is sometimes the brief.

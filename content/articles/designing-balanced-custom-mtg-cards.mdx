@@ -1,0 +1,77 @@
+---
+title: "Designing Balanced Custom MTG Cards"
+description: "A practical framework for costing custom Magic cards — rate baselines, the color pie, downside design, rarity as a balance tool, and the playtest questions that catch broken designs before your playgroup does."
+date: "2026-06-10"
+tags: ["balance", "card design", "playtesting"]
+---
+
+Every custom card designer eventually hears the same review: *"cool, but broken."* Balance is the craft half of card design — the part that turns a flavor idea into something your playgroup actually lets you play. The good news: Magic has thirty years of public data about what fair looks like. This guide compresses it into a working method.
+
+## Start from a real-card baseline
+
+Never cost a card from scratch. Find the closest printed card and diff against it.
+
+A 2/2 creature for `{1}{G}` with a small upside is the modern baseline ("Grizzly Bears plus"). A 3/3 for `{3}` is unexciting; a 3/3 for `{2}` needs a color with aggressive identity or a small drawback. Removal tells the same story: instant-speed unconditional creature destruction is worth around `{2}{B}` to `{3}{B}` depending on era; conditional removal ("destroy target creature with power 4 or greater") earns a discount.
+
+The diff method: take the printed card, list what your version adds and removes, and price each delta. Added a keyword? That's roughly half a mana to a full mana depending on the keyword (deathtouch is cheap on a small body, expensive on a big one). Added a triggered ability that draws cards? Card advantage is the most expensive thing in the game — a full mana or more.
+
+When you [import a real card via Scryfall](/faq#import-remix) into PipGlyph as a remix starting point, you're doing the diff method with the baseline already on the canvas.
+
+## Respect the color pie
+
+Each color pays different prices for the same effect, and some effects are simply off-menu:
+
+- **White** gets efficient small creatures, board wipes, taxing effects, and removal-by-exile. It does NOT get raw card draw — white card advantage looks like "when a creature dies, draw."
+- **Blue** gets counterspells, card draw, bounce, and copy effects. Blue creature stats are deliberately below rate.
+- **Black** gets the best single-target removal and recursion, paying life and sacrificing creatures as currency. "Anything, at a price" is the brand.
+- **Red** gets damage, haste, impulse draw (exile the top card, play it this turn), and artifact destruction. Permanent answers to enchantments are off-pie.
+- **Green** gets the biggest creatures per mana, ramp, fight-based removal, and naturalize effects. Green should NOT get unconditional "destroy target creature."
+
+The fastest way to make a custom card feel wrong is a color-pie break: a green counterspell, a red enchantment exile. Breaks can be deliberate — but they should be rare, loud, and mythic.
+
+## Downsides, drawbacks, and the Necropotence rule
+
+Drawback design is where customs most often go broken, because of an asymmetry: **a drawback that doesn't matter is just flavor text.** Magic history's most banned cards are "drawback" cards where the drawback turned out to be a benefit in the right shell (Necropotence's "skip your draw step" reads disastrous; with the engine attached it was the best draw engine ever printed).
+
+Stress-test every drawback with: *which deck WANTS this cost?* "Sacrifice a creature" is a cost in a vacuum and an enabler in an aristocrats deck. "Discard a card" powers madness and reanimator. If the answer is "lots of decks want to pay this," price the card as if the drawback were an upside.
+
+## Rarity is a balance tool
+
+Rarity isn't prestige — it's a complexity and impact budget:
+
+- **Common**: one ability, French-vanilla territory, fair rate. Commons define limited play; keep them honest.
+- **Uncommon**: two abilities or one build-around hook. Signpost designs live here.
+- **Rare**: build-arounds, engines, and rate-pushers with real constraints.
+- **Mythic**: splashy, game-warping, *narrow*. Mythic should be the card the table talks about, not the card every deck plays four of.
+
+If your design needs three paragraphs, it isn't a common. PipGlyph's editor lets you set rarity per card — and the set analytics on [set pages](/faq#sets) show your rarity distribution, so a custom expansion can hold a realistic curve (roughly 10 commons per 3 uncommons per rare in printed set skeletons).
+
+## The five playtest questions
+
+Before publishing, run the card through these:
+
+1. **The four-of test** — would a competitive deck run four copies? If it's an auto-four-of in multiple archetypes, it's pushed.
+2. **The turn-sequence test** — write the actual turns: if your card hits the table on turn 3, what does the opponent's turn 3 look like across from it?
+3. **The blank test** — if the opponent has no answer, how fast does this win? Cards that win unanswered within two turns need answers to exist at the same speed.
+4. **The floor/ceiling test** — what's the card's worst reasonable mode? Cards with a high floor AND high ceiling are the broken ones; great designs buy ceiling by lowering the floor.
+5. **The fun test** — does the loser of the exchange get to make a decision? Effects that remove the opponent's agency (mass land destruction, extra-turn chains) need to be priced like mythics even when their rate looks fair.
+
+PipGlyph's AI assistant includes a **balance check** that reads your card and returns a risk assessment with specific cost suggestions — useful as a second opinion before you [publish to the gallery](/mtg-card-maker).
+
+## Balance is a conversation
+
+Publish the card, watch how it plays, and iterate — every card stays editable after publishing, and the community's likes and comments on the [gallery](/faq#sharing) are a live playtest panel. The printed game ships mistakes too; the difference for a custom designer is you can fix yours the same evening.
+
+## FAQ
+
+### Is there a formula for creature costs?
+
+A rough modern baseline: power + toughness ≈ 2 × converted cost, adjusted by color and keywords. A `{2}{G}` creature can be a 3/3; add trample and it's a 3/2 or costs `{3}{G}`. Formulas get you to the neighborhood; playtesting parks the car.
+
+### Should custom cards be balanced against modern power level or older eras?
+
+Pick a deliberate reference point and state it in the card's tags or set description. A card that's fair in 2003 Magic is unplayable next to 2024 designs — neither is wrong, but mixing eras in one set without intent reads as inconsistency.
+
+### How do I balance a card for Commander specifically?
+
+Multiply every "once per game" effect by three (you'll see it more often than in 1v1), discount aggro stats, and price card advantage up — 40-life games are attrition games. The fun test matters triple at a four-player table.
