@@ -1,0 +1,102 @@
+---
+title: "How to Write MTG Oracle Text That Reads Like the Real Thing"
+description: "The templating conventions behind Magic's rules text — keyword capitalization, trigger words, activated-ability syntax, reminder text, and the phrasing patterns that make a custom card feel printed."
+date: "2026-06-12"
+tags: ["oracle text", "templating", "card design"]
+---
+
+The fastest way to spot an amateur custom card isn't the art or the frame — it's the rules text. Magic's oracle text follows a tight, learnable grammar that Wizards' editing team has refined for thirty years. Match it and your custom card reads like it fell out of a booster pack. Miss it and the card feels off before anyone evaluates the design.
+
+This guide covers the conventions that matter most, in the order they'll bite you.
+
+## The three ability types and their shapes
+
+Almost every line of rules text is one of three things, and each has a fixed shape.
+
+**Static abilities** simply state a fact. No trigger, no cost, no colon.
+
+- *Flying*
+- *Other creatures you control get +1/+1.*
+- *Spells your opponents cast cost `{1}` more to cast.*
+
+**Triggered abilities** always begin with one of exactly three words: **When**, **Whenever**, or **At**.
+
+- *When this creature enters, draw a card.* — one-shot events
+- *Whenever you cast a spell, scry 1.* — repeatable events
+- *At the beginning of your upkeep, lose 1 life.* — turn-structure events
+
+If your ability fires on an event and doesn't start with one of those three words, rewrite it until it does.
+
+**Activated abilities** use the strict form `Cost: Effect.` The colon is load-bearing — it's how the rules know the difference between a cost you pay and a thing that happens.
+
+- *`{T}`: Add `{G}`.*
+- *`{2}{B}`, Sacrifice a creature: Each opponent loses 2 life.*
+- *Discard a card: This creature gets +1/+0 until end of turn.*
+
+Multiple costs are separated by commas, and the order is conventional: mana first, then tap/untap symbols, then other costs (sacrifice, discard, pay life).
+
+## Keywords are capitalized; actions are not
+
+Keyword abilities — Flying, Trample, Deathtouch, Lifelink, Vigilance, Menace, Haste, Cascade, Convoke — are proper nouns in oracle text. They're capitalized and listed on their own line, comma-separated:
+
+> Flying, lifelink
+
+(Note: only the first keyword on the line takes a capital letter in modern templating.)
+
+Keyword **actions** — scry, surveil, mill, fight, exile, sacrifice — are ordinary verbs and stay lowercase mid-sentence: *"When this creature dies, surveil 2."*
+
+## Reminder text goes in italic parentheses
+
+Reminder text restates a keyword's rules for newer players. It's always parenthesized, always italic, and always optional — real cards drop it at higher rarities where space is tight.
+
+> Deathtouch *(Any amount of damage this deals to a creature is enough to destroy it.)*
+
+In the [PipGlyph editor](/mtg-card-maker), wrap reminder text in parentheses and it renders in italics automatically, exactly like the printed treatment.
+
+## "You" means the controller; the card names itself
+
+Oracle text is written from the controller's point of view. "You" is always the card's controller; "an opponent" is anyone else. A card refers to itself by name on the first mention historically — but modern templating increasingly uses "this creature" / "this spell," which has two advantages for custom cards: it survives renames, and it reads cleanly on remixes. PipGlyph recommends the modern form.
+
+- Old style: *"Lightning Elemental deals 1 damage to any target."*
+- Modern style: *"This creature deals 1 damage to any target."*
+
+## Numbers, symbols, and the small stuff
+
+- Spell out one through... actually, no — Magic uses **numerals** almost everywhere: "draw 2 cards" is wrong; it's "draw two cards" for card counts but "deals 2 damage" for damage and "+2/+2" for stats. The working rule: damage, life, counters, and power/toughness use numerals; counted card actions ("draw two cards," "sacrifice three artifacts") spell the number out.
+- Mana symbols are always braces in source notation — `{2}{U}{U}`, `{X}`, `{W/P}` — and the [mana pip editor](/mana-pip-editor) renders them as proper discs both in costs and inline in rules text.
+- "Target" placement matters: *"Destroy target creature"* (the spell targets) vs. *"Destroy a creature"* (a non-targeting effect, often on triggers). If a player can respond to the choice, write "target."
+- Durations close lines: *"until end of turn"* sits at the end, not the start.
+
+## A worked example
+
+Say you want: a red creature that gets stronger when you play spells, and can throw itself at a player.
+
+First draft (typical mistakes):
+
+> If you play a spell this gets +1 until turn ends. Pay 1 and sacrifice: do 3 damage.
+
+Templated:
+
+> Whenever you cast an instant or sorcery spell, this creature gets +1/+0 until end of turn.
+>
+> `{1}{R}`, Sacrifice this creature: It deals 3 damage to target player.
+
+Every change is mechanical: the trigger word, the stat bonus format, the duration phrase, the cost-colon-effect shape, and an explicit target.
+
+## Let the assistant do the templating
+
+PipGlyph's built-in AI assistant accepts plain-English descriptions — "when this attacks, my other goblins get +1/+0" — and returns properly templated oracle text using real keyword vocabulary. It's the fastest way to learn the grammar: describe, compare, absorb. You can try it free in the [card creator](/preview).
+
+## FAQ
+
+### Should every custom card have reminder text?
+
+No. Follow rarity conventions: commons and uncommons carry reminder text for any keyword beyond the evergreen basics; rares and mythics usually drop it. If the text box is crowded, reminder text is the first thing to cut.
+
+### How long is too long for a text box?
+
+Real cards rarely exceed four lines of rules text plus flavor. If your design needs more, it usually wants to lose an ability — the best custom cards do one or two things crisply. PipGlyph's preview shrinks text to fit, but if you're relying on that, take the hint.
+
+### Where do I check how a real keyword is templated?
+
+Search any real card with the keyword on Scryfall and copy its phrasing. PipGlyph's [Scryfall import](/faq#import-remix) can pull a real card's oracle text straight into the editor as a reference starting point.

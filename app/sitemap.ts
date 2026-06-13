@@ -2,6 +2,7 @@ import "server-only";
 
 import type { MetadataRoute } from "next";
 import { getSiteBaseUrl } from "@/lib/site-url";
+import { listArticles } from "@/lib/content/articles";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
@@ -63,6 +64,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "monthly",
       priority: 0.85,
     },
+    {
+      url: `${baseUrl}/articles`,
+      lastModified,
+      changeFrequency: "weekly",
+      priority: 0.85,
+    },
+    // The guides themselves — read straight from content/articles/ so a
+    // new MDX file lands in the sitemap on the same deploy.
+    ...listArticles().map((article) => ({
+      url: `${baseUrl}/articles/${article.slug}`,
+      lastModified: new Date(article.date),
+      changeFrequency: "monthly" as const,
+      priority: 0.8,
+    })),
     {
       url: `${baseUrl}/preview`,
       lastModified,

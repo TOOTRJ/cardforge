@@ -11,6 +11,7 @@ export const GUIDE_LINKS = [
   { href: "/mtg-card-maker", label: "MTG card maker" },
   { href: "/ai-mtg-card-generator", label: "AI MTG card generator" },
   { href: "/mana-pip-editor", label: "Mana pip editor" },
+  { href: "/articles", label: "Articles" },
   { href: "/faq", label: "FAQ" },
 ] as const;
 

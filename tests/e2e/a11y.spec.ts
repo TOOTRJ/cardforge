@@ -16,7 +16,15 @@ import AxeBuilder from "@axe-core/playwright";
 //     changing trade-dress colors.
 // ---------------------------------------------------------------------------
 
-const PAGES = ["/", "/login", "/gallery", "/challenges", "/faq"];
+const PAGES = [
+  "/",
+  "/login",
+  "/gallery",
+  "/challenges",
+  "/faq",
+  "/articles",
+  "/articles/how-to-write-mtg-oracle-text",
+];
 
 for (const path of PAGES) {
   test(`axe scan: ${path} has no serious/critical violations`, async ({
