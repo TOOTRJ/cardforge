@@ -77,4 +77,20 @@ if (profileError) {
   process.exit(1);
 }
 
-console.log(`✓ Seeded ${email} (${userId}) with username e2e_forger`);
+// Wipe the e2e user's cards — every suite run creates a few, and after
+// enough runs the account hits the free-tier card limit, which fails the
+// save flows with an upgrade dialog instead of a redirect. Re-seeding
+// resets the slate. (Local-only by the URL guard above; deleting by
+// owner_id can never touch anyone else's cards.)
+const { error: wipeError, count: wiped } = await admin
+  .from("cards")
+  .delete({ count: "exact" })
+  .eq("owner_id", userId);
+if (wipeError) {
+  console.error(`✗ card wipe failed: ${wipeError.message}`);
+  process.exit(1);
+}
+
+console.log(
+  `✓ Seeded ${email} (${userId}) with username e2e_forger (wiped ${wiped ?? 0} stale cards)`,
+);

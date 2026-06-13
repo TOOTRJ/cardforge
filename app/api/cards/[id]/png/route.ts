@@ -1,5 +1,7 @@
+import { createHash } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
+import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
   isCardType,
@@ -75,8 +77,9 @@ export async function GET(
     }
   }
 
+  const pipOverrides = await getPipOverrides(card.owner_id);
   const previewData: CardPreviewData = {
-    pipOverrides: await getPipOverrides(card.owner_id),
+    pipOverrides,
     title: card.title,
     cost: card.cost,
     cardType: isCardType(card.card_type) ? (card.card_type as CardType) : null,
@@ -104,11 +107,45 @@ export async function GET(
   const entitlements = await getEntitlements();
   const preset: RenderPreset =
     entitlements.maxExportPreset === "hd" ? requestedPreset : "default";
+  const watermark = !entitlements.removeWatermark;
+
+  // Output varies by the authenticated viewer's entitlement (watermark +
+  // resolution), so it must NOT be shared-cached at the CDN — that would leak a
+  // clean render to a free viewer (or a watermarked one to a paid viewer).
+  // PRIVATE caching with mandatory revalidation is fine though, and it's
+  // what makes the 304 path below work for repeat downloads.
+  const cacheControl = "private, max-age=0, must-revalidate";
+
+  // The render is fully determined by the card row (updated_at), the
+  // owner's pip overrides, the renderer version, and the viewer's
+  // preset/watermark pair — fold them all into a weak ETag so a repeat
+  // download of an unchanged card short-circuits to a 304 BEFORE the
+  // expensive Satori render.
+  const etag = `W/"${createHash("sha1")
+    .update(
+      [
+        card.id,
+        card.updated_at,
+        preset,
+        watermark ? "wm" : "clean",
+        CARD_LAYOUT_VERSION,
+        JSON.stringify(pipOverrides ?? null),
+      ].join("|"),
+    )
+    .digest("hex")
+    .slice(0, 27)}"`;
+
+  if (request.headers.get("if-none-match") === etag) {
+    return new NextResponse(null, {
+      status: 304,
+      headers: { ETag: etag, "Cache-Control": cacheControl },
+    });
+  }
 
   let pngBytes: Uint8Array;
   try {
     const imgResponse = renderCardImage(previewData, preset, {
-      watermark: !entitlements.removeWatermark,
+      watermark,
     });
     pngBytes = new Uint8Array(await imgResponse.arrayBuffer());
   } catch (err) {
@@ -119,11 +156,6 @@ export async function GET(
     );
   }
 
-  // Output varies by the authenticated viewer's entitlement (watermark +
-  // resolution), so it must NOT be shared-cached at the CDN — that would leak a
-  // clean render to a free viewer (or a watermarked one to a paid viewer).
-  const cacheControl = "private, no-store";
-
   return new NextResponse(Buffer.from(pngBytes), {
     status: 200,
     headers: {
@@ -131,6 +163,7 @@ export async function GET(
       "Content-Disposition": `attachment; filename="${card.slug}.png"`,
       "Content-Length": String(pngBytes.byteLength),
       "Cache-Control": cacheControl,
+      ETag: etag,
     },
   });
 }
