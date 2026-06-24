@@ -1,0 +1,89 @@
+---
+title: "Designing Custom MTG Tokens"
+description: "Design custom MTG tokens that play right: what a token is, the traits that define one, balancing the maker card's cost, and token-matters synergies."
+date: "2026-06-23"
+tags: ["tokens", "card design"]
+---
+
+A token is a marker that represents a creature or other permanent on the battlefield, created by another card's ability rather than cast from your deck. Tokens have no mana cost, are never in your deck or hand, and cease to exist the moment they leave the battlefield. Designing one is really two jobs: building the token itself, and building the card or ability that makes it.
+
+That split is the whole trick. The token is the payoff; the spell or permanent that produces it carries the mana cost and the rarity. Get the relationship right and tokens become one of the most flexible tools in custom design — go-wide swarms, sacrifice fodder, and value engines all start here.
+
+## What a token actually is
+
+Mechanically, a token is not a card. You cannot put one in a deck, hold it in hand, or shuffle it into a library. It only exists as an object on the battlefield, and it gets there because another card told it to. The instant a token would change zones — it dies, it's bounced, it's exiled — it ceases to exist as a state-based action. A bounced token doesn't wait in your hand; it's just gone.
+
+That rule shapes every balance decision downstream. While they're on the battlefield, tokens are real permanents: a Soldier token blocks, attacks, taps for abilities, and dies to removal exactly like a printed creature. But they have no safety net — no graveyard value, no recursion, no second cast. That fragility is a feature, and a big part of why generating board presence stays fair.
+
+## The traits that define a token
+
+A token is defined entirely by the ability that creates it. Designing one means specifying a small bundle of characteristics:
+
+- **Name and creature/permanent types** — "a 1/1 white Soldier creature token" or "a Treasure artifact token." The type line does its usual work and feeds tribal synergies.
+- **Color** — set explicitly by the creating ability. A token has no mana cost, so it has no color of its own to derive. If the ability doesn't state a color, the token is colorless.
+- **Power and toughness** — only relevant for creature tokens, written like a printed body.
+- **Abilities** — keywords or rules text the token carries, from a flying Bird to a token that taps for mana.
+
+Common shapes recur because they work: a small evasive flyer (a 1/1 flying Spirit), a midrange beater (a 3/3 green Beast), and non-creature utility tokens — Treasure-style mana rocks you sacrifice, clue-style "pay and sacrifice to draw" artifacts, and food-style lifegain tokens. A 1/1 is the default body for a reason; stepping up to a 2/2 token meaningfully raises the value of whatever makes it.
+
+<Callout tone="tip" title="Color is opt-in">
+A token is colorless unless its creating ability explicitly gives it a color. "Create a 1/1 Soldier creature token" with no color word makes a colorless Soldier, which is almost never what you intend. Write "a 1/1 white Soldier creature token" — state the color every time.
+</Callout>
+
+## Designing the maker, not just the token
+
+Here's where the two-job framing pays off. The token is usually simple; the design and balance work lives in the card that makes it. That card has the mana cost, the rarity, and the timing, and three levers set its price:
+
+**Quantity.** One token versus five is a different card entirely. A spell that makes a single 1/1 is a cantrip-tier effect; one that makes five 1/1s is a finisher that demands a real cost and a higher rarity. Each body compounds with anthem and go-wide payoffs, so quantity scales nonlinearly.
+
+**Size and abilities.** A 1/1 is cheap to hand out; a 4/4 trampling token is a top-end haymaker. Every point of stats and every keyword on the token is paid for on the maker, exactly as on a normal creature — the same costing discipline covered in [designing balanced custom MTG cards](/articles/designing-balanced-custom-mtg-cards), just for a body you don't draw.
+
+**Recursion and repeatability.** A one-shot token spell is priced once. A permanent that makes a token every turn is an engine, and engines cost dramatically more because they bury the opponent over time. A creature with "at the beginning of your end step, create a 1/1" is worth far more than its body suggests.
+
+Match the maker's rarity to its ambition. A common might make one 1/1 on a small body; an uncommon might make two, or a 2/2 with a relevant type; rares and mythics carry the repeatable engines and the wide one-shot swarms. If you're unsure which type of card should carry which effect, [MTG card types explained](/articles/mtg-card-types-explained) lays out what sorceries, enchantments, and creatures each do well.
+
+## Tokens versus real cards
+
+A token strategy's defining weakness is that the whole board is made of objects with no resilience. A single sweeper resets a go-wide deck to nothing, and because tokens can't come back, there's no rebuild from the graveyard. "Leaves the battlefield" effects — bounce, exile, a flicker the token can't survive — act as pure removal against tokens in a way they don't against printed permanents.
+
+Lean on this when you balance. A card can profitably make a small army precisely because the army folds to answers other decks already run. If your maker is also resistant to sweepers, or rebuilds instantly, you've removed the natural check — it looks overcosted but plays broken. Keep the payoff and the fragility in the same design and the math stays honest.
+
+## Token-matters synergies
+
+Tokens shine through cards that care about them. Two evergreen axes:
+
+**Go-wide.** Anthems ("creatures you control get +1/+1"), "for each creature you control" payoffs, and convoke-style cost reduction all turn a pile of 1/1s into a real threat. The fun of a token deck is the multiplier, not any single body.
+
+**Sacrifice fodder.** Aristocrats decks treat tokens as ammunition — bodies to feed to "sacrifice a creature: deal damage" or "whenever a creature you control dies" triggers. A token that costs nothing to lose is the perfect sacrifice, and the food/clue/Treasure templates are built to be consumed.
+
+The trap to avoid is being **parasitic** — tokens whose only payoffs are other cards in your own set, so nothing works without the exact pieces side by side. The best token designs interface with mechanics that already exist broadly: generic creature types, "creatures you control," sacrifice outlets, and counts of permanents. Slot the token into systems players already understand, then let your set's specific payoffs be a bonus rather than a prerequisite. The color-pie logic for which colors get to swarm (white and green go wide; black and red sacrifice) is covered in [the MTG color pie explained](/articles/mtg-color-pie-explained).
+
+## A worked example
+
+Let's build a maker and its token together.
+
+**Hearthcaller Recruit** — <Mana cost="{2}{W}" /> — 2/2 — *When Hearthcaller Recruit enters, create a 1/1 white Soldier creature token.*
+
+The token is deliberately plain: a 1/1 white Soldier, color stated — a clean go-wide and sacrifice-fodder building block. The design lives in the maker. For three mana you get two bodies and three total power, at rate for a white two-for-one that earns its slot in a go-wide or aristocrats shell. The [oracle text](/articles/how-to-write-mtg-oracle-text) reads "When … enters," the standard enters-the-battlefield trigger, and "create … token," the standard token wording.
+
+Now feel the levers. Make it create *two* Soldiers and you'd push the cost to <Mana cost="{3}{W}" /> or shrink the Recruit's own body. Give the token flying and it's no longer a humble common. Move the trigger to your end step and you've built a slow engine that wants rare treatment. The token barely changed in any of those — the maker did all the moving. For costing the body itself, [how to design a custom MTG creature](/articles/how-to-design-a-custom-mtg-creature) walks the stat-versus-ability math the maker has to respect.
+
+PipGlyph supports token cards directly in the editor — build the token as its own card, set its color, stats, type line, and abilities, and watch the frame render live in the [card maker](/create). Publish it to the [gallery](/gallery) alongside the spell that makes it, the way printed token cards ship next to their generators.
+
+## FAQ
+
+### Do tokens have a mana cost?
+
+No. A token is created by another card's ability, never cast, so it has no mana cost. Its color comes only from the words in the ability that makes it; if no color is stated, the token is colorless.
+
+### What happens when a token leaves the battlefield?
+
+It ceases to exist. The moment a token would move to any other zone — graveyard, hand, exile, library — it's removed as a state-based action and is gone. There's no graveyard value and nothing to bounce back, which is why generating tokens stays fair against board wipes and "leaves the battlefield" effects.
+
+### How do I balance a card that makes tokens?
+
+Price the maker, not the token. Add up quantity, the size and abilities of each token, and whether the effect is one-shot or repeatable, then set the mana cost and rarity to match. Repeatable token engines are worth far more than their numbers suggest because they compound every turn; a one-shot swarm is a finisher; a single small token is a minor upside.
+
+### Can I design custom token cards in PipGlyph?
+
+Yes. PipGlyph's editor at [/create](/create) supports token cards — set the name, color, power and toughness, type line, and any abilities, and the frame renders as you build. You can publish tokens to the [gallery](/gallery) next to the spell or permanent that creates them so the pair shares context.

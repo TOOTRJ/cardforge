@@ -1,0 +1,91 @@
+---
+title: "How to Design Custom MTG Lands"
+description: "Design balanced custom MTG lands: why lands are costed by downside not mana, dual-land levers, utility and creature lands, and land color identity."
+date: "2026-06-23"
+tags: ["lands", "card design", "mana"]
+---
+
+A custom Magic land is balanced almost entirely by its downside, not by a mana cost. You play one land per turn for free, and tapping it for mana costs neither a card nor mana — so the entire fairness budget of a nonbasic land lives in its drawbacks: entering tapped, paying life, or being gated behind a condition. Get that one idea right and land design becomes the most disciplined corner of the whole craft.
+
+Lands are the quiet engine of every deck — roughly forty percent of a typical sixty-card deck — and the cards that decide whether your other spells ever get cast. That makes them low-glamour and high-stakes: a land that's a little too good warps every format it touches, which is why printed lands are tuned so carefully.
+
+## Why lands play by different rules
+
+Every other card type pays a mana cost to do its job. A land doesn't. The land drop is a free action you take once per turn, and an untapped land that taps for mana the moment it arrives has already paid you back — no card spent, no mana sunk into activating it. The resource it produces is pure profit.
+
+That's why you can't "cost a land more mana" to balance it; it costs zero by definition. So designers reach for the only lever left: **the downside.** A nonbasic that does more than a basic must give something back, or it's strictly better than a basic for free — which is how lands get banned.
+
+<Callout tone="note" title="The one principle">
+Lands are costed by downside, not by mana. When a land does more than tap for one color, it must pay with a real drawback — enters tapped, costs life, demands a condition, or sacrifices itself. If you can't name the downside, the land is undercosted.
+</Callout>
+
+## Basic lands versus nonbasic lands
+
+A basic land is the zero line. Plains, Island, Swamp, Mountain, and Forest each enter untapped and tap for one mana of their color, and you may run any number of them. They carry the supertype Basic, which matters — some effects fetch or destroy specifically basic lands.
+
+Everything else is nonbasic, and the rules cap you at four copies of any nonbasic in constructed decks (Commander allows one). That four-copy limit is itself a balancing force: it's why printed duals can push power a basic never could, and it buys a custom nonbasic a little more room than a basic gets.
+
+## The levers for dual and multicolor lands
+
+The central problem of land design is fixing colors. A land that taps for two or more colors is more flexible than any basic, so it has to pay for that flexibility. The printed game has settled on a handful of recurring archetypes, each a different way to price the same convenience:
+
+- **The tapped dual.** Enters tapped, then taps for either of two colors forever. The downside is the one turn of tempo lost on the way in — the simplest, most forgiving dial in the category.
+- **The life-payment dual.** Enters untapped and taps for either color, but you pay one life each time you use it for colored mana. You're buying tempo with your life total — fine at 20, riskier the lower you go.
+- **The conditional untapped dual.** Enters untapped only if you meet a condition: you control few other lands, you control a basic of the right type, or you reveal a card. Miss it and the land enters tapped, rewarding deckbuilding and sequencing.
+- **The fetch.** Sacrifices itself, often for a life payment, to search your library for a land. The downside is the self-sacrifice, the life, and the deckbuilding cost of running the targets.
+
+When you build one of these in PipGlyph, set the type line and write the ability text in the box; the pips you drop into that text determine the land's color identity, covered below. For what each symbol means and when to reach for the tap symbol, see the [complete guide to MTG mana symbols](/articles/mtg-mana-symbols-complete-guide).
+
+### Tapped versus untapped: the master dial
+
+If you remember one tuning knob, make it this one. Whether a land enters tapped or untapped is the single most common balance dial in all of land design, because it's worth almost exactly one turn of tempo — small enough to fine-tune with, large enough to matter. A two-color land that enters untapped with no other cost is, in most eras, too strong, and the cleanest fix is simply "enters tapped." To push a land for a slower format, let it enter untapped and attach a small condition or life cost instead. Most archetypes above are really just different answers to *"when is this allowed to be untapped?"*
+
+## Utility lands
+
+A utility land is a land that also does something — it taps for mana like normal but carries an extra ability, often an activation that doesn't even need colored mana. These are the most dangerous lands to cost, because of one rule: **an ability attached to a land is undercosted by default.** A land slot is nearly free, so any effect you bolt onto it is gained for a land drop the player was spending anyway — the price of a card you weren't going to cast otherwise. A utility ability that's fair on a two-mana spell is wildly overpushed on a land.
+
+The fix is one of two things. Keep the effect genuinely minor — small, slow, situational, nobody builds around it. Or attach a real cost: a mana activation, a life payment, tapping the land so it can't also make mana that turn, or sacrificing it outright. A land that sacrifices itself to draw a card late is fair; one that draws every turn for free is a format-warping mistake. When in doubt, make a utility land enter tapped *and* gate the ability — two downsides on one card is how the printed game keeps these honest.
+
+## Creature lands
+
+A creature land — sometimes called a manland — is a land that can become a creature, usually through an activated ability, then attack and block before reverting. They're appealing because they dodge sorcery-speed removal: an opponent holding creature destruction can't kill what's still a land.
+
+That resilience is the risk. A manland that's too cheap to animate gives a deck threats that are nearly impossible to answer, flattening games. Balance them by making the activation cost real, keeping the animated body modest, and — the usual move — having them enter tapped. Push the body or cut the activation cost and you've made one of the strongest card types in the game.
+
+## Color identity of lands
+
+Color identity is a Commander concept, and lands trip people up on it constantly. The rule is precise: a land has the color identity of any colored mana symbols it can produce *and* any colored mana symbols in its rules text. A land that taps for [white or blue](/articles/mtg-color-pie-explained) has a white-and-blue identity even with no colored mana cost of its own. A land whose ability reads <Mana cost="{T}" />, pay <Mana cost="{B}" /> for an effect carries black identity from that <Mana cost="{B}" /> in the text.
+
+The corollary matters for utility and creature lands: a land that taps only for colorless mana, such as one producing <Mana cost="{C}" />, with no colored symbols anywhere in its text, is colorless and legal in *any* Commander deck. Add a single colored pip — to the mana it makes or to an activated ability — and you lock it into those colors' decks. Keep every pip colorless for a land any commander can run; use colored pips to bind it to a color pair.
+
+In PipGlyph this is automatic — color identity follows the pips. Drop a <Mana cost="{G}" /> into the [card maker](/create) and the card carries green identity; build the mana-producing or activated abilities in the [mana pip editor](/mana-pip-editor) and the symbols you place are exactly what a Commander player reads off the card. The pips are the source of truth.
+
+## A worked example
+
+Let me build an untapped-conditional dual for an aggressive white-blue deck — untapped when I need it early, tapped once the game has run long.
+
+**Tideglass Causeway** — Land. *Tideglass Causeway enters tapped unless you control two or fewer other lands. <Mana cost="{T}" />: Add <Mana cost="{W}" /> or <Mana cost="{U}" />.*
+
+Walk the reasoning. The job is fixing white and blue, so it taps for both — that flexibility is the upside to pay for. The payment is the conditional tapped clause: on turns one through three, when an aggressive deck most needs untapped mana to curve out, you'll usually control two or fewer other lands and the Causeway comes in untapped. Draw it on turn six and it enters tapped — a real cost exactly when tempo matters least. That's the master dial, gated by board state.
+
+The two pips it produces, <Mana cost="{W}" /> and <Mana cost="{U}" />, give it white-blue identity, correct for its deck. I added no utility ability on purpose: a land already this good at fixing tips into undercosted the moment it gets a free effect on top. To push it for a slower format, loosen the condition to "three or fewer"; to pull it back, cut the condition and let it always enter tapped. The lever is right there.
+
+Drop this land into the [editor](/create) and watch the frame render as you type. A land's final balance is settled at the table, though — the costing discipline from [designing balanced custom MTG cards](/articles/designing-balanced-custom-mtg-cards) applies, and lands especially reward playtesting.
+
+## FAQ
+
+### Why don't custom lands have a mana cost?
+
+Because you play one land per turn for free and tapping it for mana costs neither a card nor mana. A land's output is pure profit, so there's no mana cost to raise as a balance lever — its entire fairness budget lives in its downside instead.
+
+### What is the most common way to balance a dual land?
+
+Whether it enters tapped or untapped. Entering tapped costs about one turn of tempo, a small, tunable unit, which makes it the master dial of land design. Most dual-land archetypes are just different answers to when the land is allowed to be untapped.
+
+### How is a land's color identity determined in Commander?
+
+By the colored mana symbols it can produce and any colored mana symbols in its rules text — not by a mana cost, since lands have none. A land that taps only for colorless and has no colored pips anywhere is colorless and legal in any Commander deck.
+
+### Why are abilities on lands considered undercosted?
+
+Because a land slot is nearly free, so any effect bolted onto a land is gained for a land drop the player was spending anyway. The same ability that's fair on a two-mana spell is overpushed on a land. Keep the effect minor or attach a real cost — mana, life, tapping, or sacrifice.

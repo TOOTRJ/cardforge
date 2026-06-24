@@ -1,0 +1,103 @@
+---
+title: "MTG Card Layouts Explained: Split, Adventure, Saga, and Double-Faced"
+description: "How non-standard MTG card layouts work — split, adventure, saga, and double-faced cards — and when each layout earns a place on a custom card."
+date: "2026-06-23"
+tags: ["card layouts", "reference", "frames"]
+---
+
+A Magic card's **layout** is its structural blueprint: how many faces it has, how the text box is divided, and how you play it. Most cards use the standard single-face layout, but a handful of special layouts — split, adventure, saga, and the two kinds of double-faced cards — pack two spells, two sides, or a sequence of abilities onto one physical card. This guide explains each layout in plain terms and notes which ones are practical to design as custom cards.
+
+Layout is distinct from *frame era* — the typeface, border weight, and trade dress that date a card to a particular year. Two cards can share the M15-era frame yet have completely different layouts. For that visual-history dimension, see [MTG card frame eras explained](/articles/mtg-card-frame-eras-explained); this guide is about structure.
+
+## Standard layout
+
+The baseline. One face, one casting cost top-right, one art box, one type line, one text box, and — for creatures — a power/toughness box bottom-right. The overwhelming majority of cards ever printed use this layout, and it's the canvas every other layout modifies. If you're learning where each region lives, [MTG card anatomy explained](/articles/mtg-card-anatomy-explained) walks the standard frame zone by zone.
+
+PipGlyph renders this standard single-face layout. The exotic layouts below are best understood as design concepts you can describe in a card's rules text and art direction, even when a single-face frame is doing the rendering.
+
+## Split cards
+
+A split card prints two separate half-cards side by side on one card, usually rotated ninety degrees so each half reads upright when you turn the card. Each half has its own name, mana cost, and text. Anywhere other than the battlefield the card counts as both halves at once, which matters for effects that read mana value or color.
+
+When you cast a split card, you pick one half and cast only that half; the other half is ignored for that casting. Two variants extend the idea:
+
+- **Fuse** — a keyword on some split cards letting you cast both halves at once from your hand, paying both costs.
+- **Aftermath** — a variant whose bottom half can only be cast from your graveyard, after the top half has already been cast from hand. One card becomes a two-act play across turns.
+
+Split cards are flexible but spend a lot of text budget — you're writing two cards' worth of rules in one frame.
+
+## Modal double-faced cards (MDFC)
+
+A modal double-faced card (MDFC) has two complete, playable faces printed on opposite sides of the card, with no transforming during play. When you put the card onto the stack or into play, you choose which face you're using *as you play it*, and that face is the only one that matters. A common design is a land on the back and a spell on the front, giving built-in flexibility against flood or screw.
+
+Because both faces are real, fully formed cards, an MDFC reads as two cards stapled together — the trade-off being that the back of the physical card carries game-relevant rules instead of the normal Magic card back, so these cards can't be hidden in a face-down deck without sleeves or proxies that account for it.
+
+## Transforming double-faced cards (TDFC)
+
+A transforming double-faced card (TDFC) also prints two faces, but here they are the *same* permanent in two states: a front face and a back face. You always cast or play the front; later, some trigger or ability **transforms** the card so the back face shows. The werewolf cycle is the classic example — front face by day, transformed back face after a quiet turn — but the pattern covers any "starts as one thing, becomes another" design.
+
+The transform corner symbol tells players which way the card flips and what triggers it. Unlike an MDFC, you don't choose a side at play time; the front is the entry point and the back is reached through gameplay.
+
+<Callout tone="note">
+MDFC and TDFC look similar — both are double-faced — but the rules question that separates them is "do I pick a side, or does it flip?" An MDFC is a choice when you play it; a TDFC enters as its front face and transforms later. Keep that distinction crisp in your card's rules text and the design reads clearly.
+</Callout>
+
+## Adventure
+
+An adventure card is a creature card with a second, smaller spell — the "adventure" — printed in the left portion of its text box. You can cast the card as that smaller spell first; when it resolves, instead of going to the graveyard the card is exiled and you may cast it later as the creature from exile. One card gives you a cheap effect now and a body afterward, without being double-faced — everything sits on one standard-shaped face with a divided text box.
+
+Adventure is appealing because it prints normally on one face, but the layout asks you to balance two spells against one card slot: the cheap half should feel worth a card on its own, and the creature should feel worth casting even after you've spent the adventure.
+
+## Saga
+
+A saga is an enchantment with a built-in sequence of chapter abilities labeled with Roman numerals (I, II, III, and sometimes more). It gains a lore counter when it enters and again as its controller's later turns begin, and reaching each numbered chapter triggers that chapter's ability once. After the final chapter resolves, the saga is sacrificed — it tells a short story and then leaves. The text box is laid out as a vertical column of chapters rather than one block of rules.
+
+Sagas are a strong way to script a three-beat narrative onto a card: setup, escalation, payoff. The discipline is making each chapter meaningful on its own turn, since players experience them one at a time. The clarity habits from [how to write MTG oracle text](/articles/how-to-write-mtg-oracle-text) apply directly — each chapter is its own small ability.
+
+## Other rules-driven layouts
+
+A few more layouts restructure the text box without adding a second face:
+
+- **Class** — an enchantment with leveled abilities you pay mana to unlock, reading as a tiered list; conceptually close to a saga but advanced by spending mana rather than by counters over time.
+- **Leveler** — a creature with level-up bands that change its power, toughness, and abilities as you add level counters, splitting the lower frame into stacked stat bands.
+- **Flip** — an older layout with a second name and stat block printed upside-down at the bottom; a trigger "flips" the card so the lower half becomes active. Largely legacy, but recognizable.
+
+Like adventure and saga, each is a single physical face whose *text box* is restructured to carry more than one mode.
+
+## Layout summary
+
+| Layout | What's different | How you play it |
+| --- | --- | --- |
+| Standard | One face, normal frame | Cast or play the single face |
+| Split | Two half-cards on one face | Cast one half; fuse casts both; aftermath casts the back from the graveyard |
+| MDFC | Two full faces, no transforming | Choose a side as you play it |
+| TDFC | Front face and back face | Cast the front; it transforms to the back via gameplay |
+| Adventure | Creature with a smaller spell in the text box | Cast the adventure first, then the creature from exile |
+| Saga | Enchantment with numbered chapters | Chapters trigger over successive turns, then it's sacrificed |
+| Class | Enchantment with paid level tiers | Pay mana to unlock each level |
+| Leveler | Creature with level-up stat bands | Add level counters to climb the bands |
+| Flip | Second stat block printed upside-down | A trigger flips to the lower half |
+
+## Design considerations
+
+Special layouts cost more than standard cards in two currencies. The first is **text budget**: split, MDFC, and saga layouts write two-plus cards' worth of rules into one frame, and crowded text is the fastest way to make a custom card feel amateur. The second is **printing and proxying**: double-faced cards need both sides rendered and can't share the normal card back, while split cards want a rotated layout. If you intend to print, the simplest layouts travel best.
+
+The rule of thumb: use a special layout only when the mechanic genuinely earns it. If a design works as a standard single-face card, keep it standard — that's the layout PipGlyph renders cleanly, the one that proxies without fuss, and the one most players parse instantly. Reach for split or double-faced when the *idea itself* is "two things in one," not merely to look fancy. When you're ready to build, the [card editor](/create) and the [MTG card maker](/mtg-card-maker) focus on that dependable single-face layout, with the era-based frame picker handling the trade-dress side of the equation.
+
+## FAQ
+
+### What is the difference between an MDFC and a TDFC?
+
+Both are double-faced cards with two printed faces, but they play differently. A modal double-faced card (MDFC) has two independent, fully playable faces, and you choose which side to use at the moment you play it — there's no flipping. A transforming double-faced card (TDFC) has a front face and a back face that are the same permanent in two states; you always start on the front and reach the back by transforming it through gameplay.
+
+### Can I cast both halves of a split card?
+
+Only if the card has the fuse keyword. A normal split card lets you cast one of its two halves per casting, and the other half is ignored for that cast. Fuse is the exception that allows casting both halves together from your hand for both costs. The aftermath variant is different again: its second half is cast from the graveyard, not the hand, and only after the first half has already been used.
+
+### How does a saga's chapter sequence work?
+
+A saga is an enchantment that gains a lore counter when it enters and again at the start of its controller's following turns. Each time it reaches a new numbered chapter (I, II, III, and so on) that chapter's ability triggers once. After the last chapter has triggered and resolved, the saga is sacrificed, so it plays out as a short, finite story rather than a permanent that sticks around.
+
+### Does PipGlyph support these special layouts?
+
+PipGlyph renders the standard single-face layout. You can absolutely design cards that *describe* special-layout mechanics in their rules text and art direction, but the frame itself is the single-face one — exotic multi-face and split structures are treated as design concepts here. For the frame, border, and typography side of card appearance, see [MTG card frame eras explained](/articles/mtg-card-frame-eras-explained).
