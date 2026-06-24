@@ -1,0 +1,93 @@
+---
+title: "How to Design Custom MTG Enchantments and Artifacts"
+description: "Design custom MTG enchantments and artifacts: Auras, Sagas, Equipment, Vehicles, and mana rocks — the color pie, costing static effects, and giving lock pieces counterplay."
+date: "2026-06-23"
+tags: ["enchantments", "artifacts", "card design"]
+---
+
+Enchantments and artifacts are the permanents that quietly rewrite the rules of the game and then stay on the battlefield doing it. An enchantment is a colored permanent that bends how the game works continuously — sometimes attached to a target as an Aura, sometimes sitting alone changing things for everyone. An artifact is a colorless permanent that any deck can run, from a sword you equip to a creature to a rock that makes mana. Both reward the same discipline: you pay once, the effect persists, so you price it like the long-term threat it is.
+
+These two card types are where custom designers most often overshoot, because a permanent that "just" sits there feels modest while it slowly takes over the game. Get the costing and the counterplay right and you get cards that feel powerful without feeling oppressive.
+
+## What an enchantment actually does
+
+An enchantment is a permanent whose whole job is to change the rules and keep changing them. Unlike a creature that attacks or a sorcery that resolves and vanishes, an enchantment installs an ongoing effect and leaves it running until someone removes it. That persistence is the entire design space — and the entire danger.
+
+There are three shapes worth knowing.
+
+### Auras versus standalone enchantments
+
+An Aura is an enchantment that attaches to something. Its type line reads "Enchantment — Aura," and its first line is an **"Enchant"** clause that names what it can legally attach to: "Enchant creature," "Enchant land," "Enchant permanent." When it enters, you choose a target; if that target leaves, the Aura goes to the graveyard with it. Auras carry built-in counterplay, which is why they can be costed aggressively — kill the creature and the Aura dies too, so the player who invests in one is taking a real risk.
+
+A standalone or global enchantment attaches to nothing. It enters the battlefield and changes the game from its own slot — a continuous static effect ("Creatures you control get +1/+1"), a recurring trigger ("At the beginning of your upkeep, draw a card"), or an activated ability you can use turn after turn. These are stickier than Auras because there's no creature to kill out from under them; the only answer is dedicated enchantment removal.
+
+### Sagas as chapter-based enchantments
+
+A Saga is an enchantment that tells a short story and then leaves. It enters with a lore counter, adds another each turn, and triggers a numbered chapter ability — I, II, III — as the counters climb, then sacrifices itself after the last chapter. Sagas are a clean way to hand a player a sequenced payoff with a built-in expiration date, which makes them inherently fairer than an open-ended static effect: the value is finite and the clock is visible to everyone.
+
+<Callout tone="warning" title="The lock-piece trap">
+The most dangerous custom enchantment is the un-interactive lock piece — a cheap static effect that simply turns off a whole mechanic ("Players can't draw cards," "Creatures can't attack"). On paper it reads clean. In play it can end the game with no way for the opponent to respond, and "you can't play Magic now" is rarely fun on the receiving end. If you print a hard lock, give it a cost, a clock, or an off-switch the opponent can reach.
+</Callout>
+
+## The color pie for enchantments
+
+Enchantments are not evenly distributed across the colors. White and green are the primary enchantment colors — they get the most enchantments, the best ones, and crucially they own the **removal** for both enchantments and artifacts. White exiles and destroys them outright; green naturalizes them. Blue, black, and red all use enchantments freely too, but their answers to your enchantment are scarcer and more conditional.
+
+That asymmetry is the single most important fact for costing a static effect. Enchantment removal is genuinely rarer than creature removal in most decks — many builds run zero copies — so a resolved enchantment is far more likely to stay on the battlefield for the rest of the game than a resolved creature is. A powerful continuous effect is therefore a *real* threat, not a hypothetical one, and you should price it as something that will probably never be answered. When you're sanity-checking which color should hold an effect at all, the [color pie guide](/articles/mtg-color-pie-explained) maps who owns what.
+
+## What an artifact actually does
+
+An artifact is a colorless permanent, which means any deck of any color can run it. That universality is the whole appeal and the whole hazard: a card every deck can play is a card you have to keep honest, because colorless power is the easiest thing in the game to overrate. "Goes in any deck" is doing a lot of quiet work on a card's real value.
+
+The common artifact archetypes:
+
+- **Equipment** attaches to a creature you control via an **"Equip"** cost — a one-time payment to move the buff onto a creature. Unlike an Aura, Equipment survives the creature it's attached to: kill the creature and the Equipment stays on the battlefield, ready to re-equip. That stickiness makes Equipment stronger than an equivalent Aura, so it should cost more.
+- **Vehicles** are artifacts with power and toughness that aren't creatures until you **Crew** them by tapping creatures whose combined power meets the Crew number. A crewed Vehicle attacks like a creature but dodges sorcery-speed creature removal while it sits inert.
+- **Mana rocks** are artifacts that tap for mana — colorless ramp and fixing available to every color. A rock costing <Mana cost="{2}" /> that taps for one mana is a classic, color-agnostic accelerant.
+- **Artifact creatures** are creatures that happen to be colorless and carry the Artifact type, so they're vulnerable to artifact removal as well as creature removal — a meaningful downside to weigh against their flexibility.
+
+Because an artifact slots into every deck, resist the urge to overload it. The bar for "is this too good?" is lower for a colorless card than for a colored one, precisely because there's no deck-building cost to including it.
+
+## Costing static and continuous effects
+
+Here is the core costing principle for both card types: a continuous effect is bought once and then paid out forever, so it is worth more than a one-shot that does the same thing once. A sorcery that gives your team +1/+1 until end of turn is a combat trick; an enchantment that gives your team +1/+1 permanently is a different animal entirely, and it should cost meaningfully more.
+
+Recurring value compounds, and that's the trap. An enchantment that draws you a card each upkeep doesn't draw one card — it draws a card every turn the game continues, and the longer the game runs the further ahead it puts you. When you cost a recurring trigger, multiply it across a realistic game length, not a single turn. The general balance framework in [designing balanced custom MTG cards](/articles/designing-balanced-custom-mtg-cards) applies directly: figure out the per-turn value, then ask what it totals over five or six turns, then price *that*.
+
+A practical rule of thumb: take what the effect would cost as a one-time spell, then add for permanence and for the fact that — especially on an enchantment in a deck without removal — it may never be dealt with. Auras and Sagas can sit lower on that curve because they come with built-in answers or expiration; open-ended static enchantments sit higher.
+
+## A worked enchantment
+
+Let's build a global enchantment that rewards a sacrifice deck without locking anyone out.
+
+**Vault of Hungry Echoes** — <Mana cost="{2}{B}" /> — Enchantment. *Whenever a creature you control dies, you gain 1 life and you may pay <Mana cost="{1}{B}" />. If you do, draw a card.*
+
+The reasoning: the trigger is recurring, so it's priced above a one-shot drain-and-draw, but it's gated — the card draw costs extra mana each time, which keeps the compounding in check and gives the effect a natural throttle. It changes the rules continuously (every creature death now matters) without ever telling the opponent they can't play, so there's no lock-piece problem. Three mana feels right for a build-around that does nothing on its own and only sings inside a deck built to feed it.
+
+## A worked artifact
+
+Now a piece of Equipment that's flexible but honest.
+
+**Sentinel's Warblade** — <Mana cost="{2}" /> — Artifact — Equipment. *Equipped creature gets +1/+1 and has vigilance. Equip <Mana cost="{2}" />.*
+
+The reasoning: a colorless +1/+1-and-vigilance is available to every deck, so the numbers stay modest on purpose — this is a role-player, not a bomb. The Equip cost is set so re-equipping after a creature dies is real but not free, which is the lever that keeps Equipment from being strictly better than the Aura version. Vigilance is a white-flavored keyword, but Equipment routinely lends keywords across colors, so a colorless artifact granting it reads completely natural. If you wanted it pushed, you'd raise the cast cost before you touched the stats.
+
+You can build and preview both of these in [PipGlyph](/create) — set the type line to Enchantment or Artifact, click-build the cost in the [mana pip editor](/mana-pip-editor) so the Equip and activation symbols render as proper discs, and the [card maker](/mtg-card-maker) shows the finished frame as you type. Watching the text box fill up next to the cost is the quickest way to feel whether a permanent is honest. For the broader picture of where these sit among the other card types, the [card types guide](/articles/mtg-card-types-explained) lays out the full set; the same continuous-value math also drives [custom land design](/articles/how-to-design-custom-mtg-lands).
+
+## FAQ
+
+### What is the difference between an Aura and a regular enchantment?
+
+An Aura attaches to a target via an "Enchant" clause and dies if that target leaves, giving the opponent built-in counterplay; a standalone enchantment attaches to nothing and changes the game from its own slot until it's removed. Auras can be costed more aggressively because killing the host kills the Aura.
+
+### Which colors get enchantment and artifact removal?
+
+White and green are the primary answers — white destroys or exiles enchantments and artifacts, green naturalizes them — while blue, black, and red have far scarcer and more conditional removal. Because that removal is rare, a resolved enchantment often stays on the battlefield all game, so cost it like a permanent threat.
+
+### Why should I cost a continuous effect higher than a one-time spell?
+
+Because you pay for a continuous effect once and it pays out every turn afterward, the value compounds the longer the game runs. Multiply the per-turn value across a realistic game length and price that total, not the single-turn benefit.
+
+### Are artifacts overpowered because every deck can play them?
+
+Not inherently, but their universality makes them easy to overrate, so the bar for "too good" is lower than for a colored card. Keep colorless numbers modest and lean on costs — Equip costs, activation costs — to keep flexible artifacts honest.

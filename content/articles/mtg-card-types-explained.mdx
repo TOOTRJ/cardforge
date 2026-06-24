@@ -1,0 +1,102 @@
+---
+title: "MTG Card Types Explained"
+description: "Every Magic card type explained — land, creature, artifact, enchantment, instant, sorcery, planeswalker, battle, and tokens, with a quick reference table."
+date: "2026-06-23"
+tags: ["card types", "reference"]
+---
+
+Every Magic: The Gathering card has a card type that tells the rules engine what it is and how you play it. The eight types are **Land**, **Creature**, **Artifact**, **Enchantment**, **Planeswalker**, and **Battle** — which are permanents that stay on the battlefield — plus **Instant** and **Sorcery**, the spells that resolve once and go to the graveyard. **Tokens** are a special case: game pieces other cards make, not cards you put in a deck.
+
+If you build custom cards, the card type is the first decision you make, because it governs everything downstream — where the card lives, when you can play it, and what the frame even looks like. This guide walks every type in order, explains it accurately, and links to a focused design guide for each one. You can build any of these in PipGlyph's editor at [/create](/create).
+
+## Permanents vs. spells
+
+The biggest dividing line is whether a card sticks around. A **permanent** stays on the battlefield after it resolves and keeps working until something removes it: lands, creatures, artifacts, enchantments, planeswalkers, and battles are all permanents. A **spell** — only instants and sorceries — resolves once, does what it says, and goes to the graveyard. That distinction drives most of the rules: permanents can be tapped, hold counters, and carry abilities that work turn after turn, while spells get one shot. Keep that frame in mind as you read the types below.
+
+## Land
+
+A land is your mana engine. Lands aren't spells — you don't cast them, you *play* them, and you may normally play only **one land per turn** during your main phase with an empty stack. Because they aren't spells, they can't be countered the way an instant or sorcery can. Basic lands (Plains, Island, Swamp, Mountain, Forest) tap for one mana of their color and have no other text; nonbasic lands fix multiple colors, enter tapped, or carry whole abilities, paying for that flexibility with drawbacks. Lands have no mana cost, so that corner sits empty. For the design tradeoffs, see [how to design custom MTG lands](/articles/how-to-design-custom-mtg-lands).
+
+## Creature
+
+Creatures are the cards that attack and block. Each creature has a **power/toughness** box in the bottom-right — two numbers like 2/3, where power is the damage it deals and toughness is how much it can take before dying. Creatures are permanents, but they come with one key restriction: **summoning sickness**. A creature can't attack or use abilities with the tap symbol unless you've controlled it continuously since your most recent turn began. Creatures also carry the bulk of Magic's keyword abilities — flying, trample, deathtouch — and most creature types (Goblin, Elf, Angel) feed tribal synergies. See [how to design a custom MTG creature](/articles/how-to-design-a-custom-mtg-creature) for the power/toughness baseline and how to price abilities against it.
+
+## Artifact
+
+Artifacts represent objects: gear, machines, relics, and constructs. They're permanents, and usually **colorless**, though some modern artifacts have a color. What makes the type distinctive is its subtypes. **Equipment** attaches to a creature you control and buffs it, staying on the battlefield if that creature dies. **Vehicles** have a power/toughness but aren't creatures until you "crew" them by tapping other creatures. And plain **mana rocks** tap for mana, accelerating any color deck like extra lands. Because they're colorless, artifacts slot into any deck, which is exactly why they need careful costing. They're covered alongside enchantments in [how to design custom enchantments and artifacts](/articles/how-to-design-custom-enchantments-and-artifacts).
+
+## Enchantment
+
+An enchantment is a permanent representing a lasting magical effect — a spell that stays cast rather than resolving and leaving. Once on the battlefield it keeps applying its effect until removed. Two subtypes are worth knowing. An **Aura** attaches to another permanent (often a creature) and modifies it, much like Equipment but on the enchantment side of the rules; if its host leaves, the Aura goes to the graveyard. A **Saga** tells a story in chapters: it gains a lore counter over successive turns, triggers a different ability at each chapter, then sacrifices itself when the story ends.
+
+<Callout tone="note">
+Auras and Equipment do similar jobs — both stick to a creature and buff it — but Auras are enchantments that die when their host leaves, while Equipment are artifacts that survive and can be re-attached. The card type is what decides which removal answers them.
+</Callout>
+
+Enchantments are the quietest permanent type, which is what makes them strong: many produce continuous, hard-to-interact-with effects. See [how to design custom enchantments and artifacts](/articles/how-to-design-custom-enchantments-and-artifacts).
+
+## Instant
+
+An instant is a spell you can cast almost any time you have **priority** — including during your opponent's turn, in combat, and in response to other spells and abilities on the stack. That flexibility is the instant's entire identity: you can hold up removal, counter a threat, or pump a blocker after attackers are declared, committing only when you know what's happening.
+
+Instants resolve and go to the graveyard, leaving nothing behind. The cost of all that timing freedom is that instants are usually priced a little higher than the same effect on a sorcery. Removal, combat tricks, and counterspells are the classic instant-speed effects. See [designing custom instants and sorceries](/articles/designing-custom-instants-and-sorceries) for how to value timing as a cost.
+
+## Sorcery
+
+A sorcery does the same one-shot job as an instant but with a tighter window: you can only cast it during **your own main phase, when the stack is empty**. You can't cast a sorcery on an opponent's turn or in response to anything. In exchange for that lost flexibility, sorceries tend to hit harder per mana — the biggest board wipes, the splashiest draw spells, and the heaviest ramp usually live here. Anything that says "do this only as a sorcery" is reminding you it needs that empty-stack, your-main-phase timing. Sorceries are covered with instants in [designing custom instants and sorceries](/articles/designing-custom-instants-and-sorceries).
+
+## Planeswalker
+
+A planeswalker is a permanent representing a powerful ally who fights alongside you. Instead of power and toughness, it enters with a starting **loyalty** number in the bottom-right corner. Each turn, at sorcery speed, you may activate **one** of its **loyalty abilities** — the lines starting with a plus or minus, which add or spend loyalty counters. Opponents can also attack a planeswalker directly with creatures, and damage dealt to it removes that many counters; at zero loyalty, it dies. That tug-of-war is the heart of how the type plays. See [how to design a custom planeswalker](/articles/how-to-design-a-custom-planeswalker) for building a balanced loyalty kit.
+
+## Battle
+
+Battle is the newest card type, introduced in 2023. A battle is a permanent that works like a siege you set up against an opponent. It enters with a **defense** number (shown much like loyalty), and a battle is **attacked by players** rather than acting on its own — opponents' creatures deal combat damage to remove its defense counters. Most battles so far are **Sieges**: you cast one and choose an opponent to "protect" it, meaning their creatures can attack it while yours work to bring its defense to zero. When the defense hits zero, the battle is defeated — typically the front face is exiled and you cast the more powerful back face for free. They're double-faced and rules-dense, so they're an advanced design target.
+
+## Token
+
+A token isn't a card you put in a deck — it's a marker representing a permanent on the battlefield, created by the ability of some other card ("create a 1/1 white Soldier creature token"). Tokens can be any permanent type: creature tokens are by far the most common, but Treasure (an artifact token that sacrifices for mana), Clue, Food, and assorted enchantment tokens all show up. The catch is that a token can only exist on the battlefield — the moment it would go anywhere else (graveyard, exile, hand), it's removed from the game as a state-based action. Custom designers still make token *cards* as reference pieces and for proxy printing, which is exactly what [designing custom MTG tokens](/articles/designing-custom-mtg-tokens) walks through.
+
+## Supertypes
+
+Sitting in front of the card type, **supertypes** are optional modifiers that tweak how a card behaves without being a type of their own. There are four: **Legendary** (you may control only one permanent with a given name; a second is put into the graveyard), **Basic** (the five basic lands, which you may run in unlimited copies), **Snow** (a flavor of permanent that "snow matters" cards care about), and the rare **World**. A type line reads supertype, then card type, then a dash, then subtypes — "Legendary Creature — Elf Druid," for instance.
+
+A single card can also carry **more than one card type** at once. "Artifact Creature" is a creature that's also an artifact, so it answers to both creature removal and artifact removal; "Enchantment Creature" and even land-creatures exist too. The card simply obeys all the rules of every type it has. For where all of this sits on the frame, see [MTG card anatomy explained](/articles/mtg-card-anatomy-explained).
+
+## Card types at a glance
+
+| Card type | Permanent? | When you can play it |
+| --- | --- | --- |
+| Land | Yes | One per turn, your main phase, empty stack |
+| Creature | Yes | Sorcery speed (your main phase, empty stack) |
+| Artifact | Yes | Sorcery speed |
+| Enchantment | Yes | Sorcery speed |
+| Planeswalker | Yes | Sorcery speed |
+| Battle | Yes | Sorcery speed |
+| Instant | No (spell) | Any time you have priority |
+| Sorcery | No (spell) | Your main phase, empty stack |
+| Token | Yes (on battlefield only) | Not played — created by other cards |
+
+## Designing any card type in PipGlyph
+
+Every type above is buildable in [PipGlyph's card maker](/mtg-card-maker). The type-line builder lets you set a supertype, one or more card types, and subtypes, and the editor adjusts the frame to match: pick Creature and you get a power/toughness box; pick Planeswalker and that corner becomes a loyalty value; pick Land and the mana-cost area clears out, since lands aren't cast. The live preview updates as you choose.
+
+Start a card at [/create](/create), choose your type, and let the editor handle the frame so you can focus on the rules text. The type line is the lever that sets everything else in motion.
+
+## FAQ
+
+### What are the card types in Magic?
+
+There are eight card types: Land, Creature, Artifact, Enchantment, Planeswalker, and Battle (all permanents that stay on the battlefield), plus Instant and Sorcery (spells that resolve once and go to the graveyard). Tokens are a related concept — permanents created by other cards rather than cards in your deck.
+
+### What is the difference between an instant and a sorcery?
+
+The only difference is timing. An instant can be cast any time you have priority, including on an opponent's turn and in response to other spells. A sorcery can only be cast during your own main phase when the stack is empty. Everything else works identically, which is why instants usually cost a bit more for the same effect.
+
+### Which card types are permanents?
+
+Land, Creature, Artifact, Enchantment, Planeswalker, and Battle are permanents — they stay on the battlefield after resolving. Instants and sorceries are not permanents; they resolve and head to the graveyard. Tokens count as permanents while they're on the battlefield but vanish the instant they would leave it.
+
+### Can one card have more than one card type?
+
+Yes. A card can combine types, such as Artifact Creature or Enchantment Creature, and it then follows all the rules of every type it has — an Artifact Creature can be hit by both creature removal and artifact removal. Supertypes like Legendary, Basic, Snow, and World stack on top of the card type without being types themselves.
