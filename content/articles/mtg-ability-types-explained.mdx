@@ -1,0 +1,92 @@
+---
+title: "MTG Ability Types Explained: Triggered, Activated, and Static"
+description: "A clear reference to MTG ability types — triggered, activated, and static abilities, plus spell and keyword abilities — for players and custom card designers."
+date: "2026-06-23"
+tags: ["abilities", "reference", "rules"]
+---
+
+A Magic: The Gathering permanent can have three kinds of abilities: triggered abilities that fire automatically when a condition is met, activated abilities the controller chooses to use by paying a cost, and static abilities that simply apply all the time. Two more categories round out the picture — spell abilities are the instructions on an instant or sorcery as it resolves, and keyword abilities are named shorthand that stand in for one of the underlying types. Knowing which bucket an effect belongs to tells you how it works and how to write it.
+
+This reference explains each ability type precisely, shows how to tell them apart, and gives custom designers a method for picking the right one. For ready-to-use templates of each, keep the [MTG templating cookbook](/articles/mtg-templating-cookbook) open alongside this guide. If you build cards in [PipGlyph](/create), understanding these categories is what keeps your oracle text reading like a real printed card instead of an approximation.
+
+## Triggered abilities
+
+A triggered ability watches for a specific event and fires on its own when that event happens — you never choose to use it. In templating, triggered abilities always begin with one of three words: "When," "Whenever," or "At." The classic example is an enters-the-battlefield trigger: "When this creature enters, draw a card." The instant the creature enters, the ability triggers.
+
+The structure is a trigger condition followed by an effect, and many triggers carry an "if" clause or an "intervening if" that adds a requirement the game checks before and on resolution. A trigger can fire on combat ("Whenever this creature attacks"), on a phase or step ("At the beginning of your upkeep"), on a state change ("Whenever a creature dies"), or on almost any event a designer can name.
+
+Crucially, triggered abilities use the stack. When the trigger condition is met, the ability is put on the stack the next time a player would receive priority, and players can respond to it with instants and other abilities before it resolves. That means a triggered ability is not guaranteed to do anything if the situation changes by the time it resolves — an opponent might remove its source or its target in response.
+
+<Callout tone="note">
+"When," "Whenever," and "At" are the reliable tells for a triggered ability. If a card's sentence starts with one of those words, it is a trigger, it goes on the stack, and your opponent gets a chance to respond.
+</Callout>
+
+## Activated abilities
+
+An activated ability is one the controller chooses to use by paying its cost. Its templating is unmistakable: a cost, a colon, then an effect — written as "Cost: Effect." A familiar shape is a tap ability such as <Mana cost="{T}" />: Add one mana, where the tap symbol is the cost and producing mana is the effect. Costs can combine mana, the tap symbol, sacrificing a permanent, discarding, paying life, and more, in any sensible mix.
+
+Anyone with priority can activate an activated ability whenever they could cast an instant, paying the cost as part of activating it, unless the card says otherwise. Like triggered abilities, activated abilities use the stack: once activated and paid for, the ability goes on the stack and can be responded to before it resolves. Costs are paid immediately and are not refunded if the ability is countered or its target disappears.
+
+A few well-known mechanics are activated abilities wearing a keyword. Equip is an activated ability that attaches an Equipment for its cost. The "loyalty abilities" on a planeswalker are a special kind of activated ability whose cost is adding or removing loyalty counters, limited to once per turn at sorcery speed — covered in the [planeswalker design guide](/articles/how-to-design-a-custom-planeswalker). The defining trait is always the same: a player decides to do it and pays for it.
+
+## Static abilities
+
+A static ability has no trigger and no activation cost. It is simply true for as long as its source is in the relevant zone, applying continuously without ever going on the stack. The cleanest example is an anthem: "Creatures you control get +1/+1." There is no event to wait for and no button to press — the bonus exists the whole time the enchantment is on the battlefield.
+
+Static abilities cover a huge range of effects: cost reducers, restrictions ("Creatures your opponents control enter tapped"), and characteristic-defining abilities like Flying. A characteristic-defining ability is a static ability that sets a card's own characteristic, and it even applies in zones outside the battlefield. Flying is a useful case to internalize — it is printed as a keyword, but underneath it is a static ability that continuously grants the creature an evasion characteristic, not a trigger or an activated cost.
+
+Because static abilities never use the stack, you cannot respond to a static ability "going off," because nothing goes off — there is no moment of resolution to target. When two static effects interact, the rules use a layer system and timestamps to determine the final result, but as a designer you rarely need to think that deeply: write the effect as an always-on statement and it behaves like one.
+
+## Spell abilities and keyword abilities
+
+Two more categories complete the set, and both reduce to the three above.
+
+A spell ability is the set of instructions printed on an instant or sorcery that take effect as the spell resolves. "Deal 3 damage to any target" on a burn spell is a spell ability — it is not a permanent's ability because the card never becomes a permanent; it does its job on the stack and then goes to the graveyard. Designing these is the focus of the [instants and sorceries guide](/articles/designing-custom-instants-and-sorceries).
+
+A keyword ability is a named word or phrase that represents a longer rules ability, so cards stay readable. Every keyword resolves to one of the underlying types. Flying and Defender are static. Equip and Cycling are activated. Cascade and Exalted are triggered. The keyword is just shorthand for that mechanic, often shown with italic reminder text the first time it appears. The full menu lives in the [keyword abilities list](/articles/mtg-keyword-abilities-list); the point here is that learning a keyword means learning which of the three types it stands for.
+
+### Replacement effects, briefly
+
+One more wrinkle is worth a clean note: replacement effects are not a fourth ability type but a distinct way some static abilities work. Instead of triggering, a replacement effect waits for an event and changes how it happens. They usually read with "instead" or with "as ... enters," such as "If this creature would die, exile it instead." A replacement effect does not use the stack and cannot be responded to — it simply modifies the event as it occurs. That is the key practical difference from a triggered ability, which fires after the event and can be answered.
+
+## Ability types at a glance
+
+This table summarizes how to recognize each type and whether it uses the stack.
+
+| Ability type | How it starts / is written | Who initiates it | Uses the stack? |
+| --- | --- | --- | --- |
+| Triggered | "When," "Whenever," or "At" | Automatic, on a condition | Yes |
+| Activated | "Cost: Effect" (cost, colon, effect) | The controller, by choice | Yes |
+| Static | Plain statement, no trigger or cost | Nobody — always on | No |
+| Spell | Instructions on an instant/sorcery | Resolves as the spell does | The spell uses the stack |
+| Replacement | "instead" / "as ... enters" | Modifies an event | No |
+
+## Choosing and templating abilities as a designer
+
+Picking the right ability type is a design decision, not a wording detail — it changes when an effect happens and whether opponents can interact with it. A short method:
+
+1. Decide when the effect should happen. If it responds to an event, it is triggered ("When/Whenever/At"). If a player should spend resources to make it happen, it is activated ("Cost: Effect"). If it should just be true the whole time, it is static.
+2. Decide whether opponents should get to respond. Triggered and activated abilities use the stack and can be answered; static and replacement effects cannot. If interactivity matters to the card, that often settles the type.
+3. Template it in the matching shape. Triggers lead with the trigger word and a comma before the effect. Activated abilities put the full cost before a colon. Static abilities are a flat sentence with no trigger and no cost.
+
+Mismatches are a common source of confusing custom cards — for example, writing an effect as a static sentence when it really needs to be a trigger so it can be removed in response, or piling a cost onto an ability that should always be on. Two sibling references go deeper: the [oracle text guide](/articles/how-to-write-mtg-oracle-text) covers exact wording and punctuation for each type, and the [common design mistakes](/articles/common-custom-card-design-mistakes) roundup flags the ability-type errors that show up most often.
+
+PipGlyph's editor formats each of these types the way a printed card would — keywords on their own line, activated costs with the colon, triggers leading with the trigger word — so the structure is correct as you type. Describe a card to the built-in AI assistant in plain English and it returns oracle text using the right ability type for the effect rather than an invented phrasing. Start a card on [/create](/create), or read more on the [card maker page](/mtg-card-maker).
+
+## FAQ
+
+### What are the types of abilities in MTG?
+
+A permanent in Magic can have three ability types: triggered abilities (which fire automatically on a condition and start with "When," "Whenever," or "At"), activated abilities (which a player uses by paying a cost, written "Cost: Effect"), and static abilities (which are always on, with no trigger and no cost). Two related categories round things out: spell abilities are the instructions on an instant or sorcery as it resolves, and keyword abilities are named shorthand that each represent one of those underlying types.
+
+### What is the difference between a triggered ability and an activated ability?
+
+A triggered ability happens on its own when a condition is met — you don't choose to use it, and it always begins with "When," "Whenever," or "At." An activated ability is one you choose to use by paying its cost, written as a cost, a colon, then an effect. Both use the stack and can be responded to, but the distinction is who starts it: a trigger fires automatically on an event, while an activated ability requires a player to decide to pay for it.
+
+### Do static abilities use the stack?
+
+No. A static ability has no trigger and no activation cost; it simply applies continuously while its source is in the relevant zone, so it never goes on the stack and cannot be responded to. An anthem like "Creatures you control get +1/+1" and the keyword Flying are static — they are always true rather than events that resolve. By contrast, triggered and activated abilities do use the stack, which is why opponents can respond to those but not to a static effect.
+
+### Are keyword abilities a separate ability type?
+
+No. A keyword ability is shorthand for a longer rule, and every keyword is really one of the three underlying types. Flying and Defender are static abilities, Equip and Cycling are activated abilities, and Cascade and Exalted are triggered abilities. The keyword exists to keep cards readable, often with italic reminder text, but mechanically it behaves exactly like the type it represents.

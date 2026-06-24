@@ -1,0 +1,97 @@
+---
+title: "Designing Custom Commander Cards"
+description: "How to design custom MTG cards for Commander (EDH) — the color identity rule, building a legendary commander, multiplayer balance, and singleton."
+date: "2026-06-23"
+tags: ["commander", "card design", "formats"]
+---
+
+Commander is a mostly-multiplayer Magic format built around a legendary creature you choose as your commander, played with a 100-card singleton deck (no duplicate cards except basic lands), starting at 40 life, usually four players to a table. Designing custom cards for it means designing for that environment: longer games, bigger swings, a four-way political board, and one extra deck-building rule — color identity — that quietly governs everything. Get those constraints in your bones and your customs will feel like they belong in a real Commander deck instead of a 1v1 cube.
+
+## What Commander is, in design terms
+
+Three rules shape every card you'll make for the format.
+
+**Singleton, 100 cards.** Your deck is exactly 100 cards including the commander, and you may run only one copy of any card other than basic lands. There are no playsets — every nonland card appears at most once. That single fact reshapes evaluation, and we'll come back to it.
+
+**40 life, multiplayer.** Games start at 40 and usually seat four players in a free-for-all. Damage races are slower, attrition matters more, and "once per game" effects recur far more often than they would in a twenty-life duel because the game simply lasts longer.
+
+**The commander itself.** You pick one legendary creature as your commander. It starts in the command zone, you can cast it from there, and if it would change zones you may return it there instead — each recast from the command zone costs an extra <Mana cost="{2}" /> (the "commander tax"). Because it's always available, your commander is the one card you can build your entire deck to support.
+
+## The color identity rule
+
+Color identity is the rule custom designers trip over most, so be precise about it. A card's color identity is the set of all colored mana symbols that appear anywhere on it — in its mana cost *and* in its rules text — plus any color indicator. Your Commander deck may only contain cards whose color identity is entirely within your commander's color identity.
+
+The consequence for design is sharp: every colored pip you put in a card's text box affects where that card is legal, not just how it's cast. A creature that costs <Mana cost="{3}{G}" /> but whose ability reads "add <Mana cost="{W}" />" has a green-white color identity and cannot go in a mono-green commander's deck. Reminder text and basic land types referenced by name don't add to identity, but an activated or triggered ability that produces or requires colored mana does.
+
+<Callout tone="warning" title="Watch your stray pips">
+On a custom card, a single off-color symbol buried in an ability changes the card's color identity and the decks it's legal in. If you don't mean for a card to be multicolored for deck-building purposes, keep every mana symbol in its text the same colors as its cost.
+</Callout>
+
+This makes pip choice a real decision rather than flavor. To slot a card into the widest set of decks, keep its identity tight; if you're designing for a two-color commander, leaning into both colors is exactly right. Our guides on the [color pie](/articles/mtg-color-pie-explained) and [designing multicolor cards](/articles/designing-multicolor-mtg-cards) cover which effects each color is allowed to carry.
+
+## Designing a commander
+
+A commander isn't just a strong legendary creature — it's a deck-building prompt. The best ones answer the question "what deck does this make me want to build?" before you've read the second line.
+
+**Build around a theme.** A commander's signature ability should suggest and reward an entire deck — a "build-around." If it rewards casting lots of small creatures, the deck writes itself: go wide, add token-makers, add payoffs. If it rewards drawing cards, the deck wants card-draw engines and a way to convert them into a win. Give the commander a clear identity in one sentence, then make sure the natural deck around it is fun to assemble.
+
+**Cost and stat it for 40 life.** A commander is available every game and recast repeatedly, so it should be fair at that consistency. A Commander game can survive a 6/6, but a commander that ends the game on its own with no support is a casual headache. Price the body and the ability together, and remember the commander tax makes an expensive commander pricier each time it dies. For the general framework, see [designing balanced custom cards](/articles/designing-balanced-custom-mtg-cards).
+
+**Make the ability table-facing, not solitaire.** Because the card defines a deck, its ability should create gameplay other people get to interact with — a board to attack, a resource to disrupt, a deal to make — rather than a closed loop that ignores the other three players.
+
+## Multiplayer balance
+
+A Commander card has to be fun across a four-player table, and that's a higher bar than being merely "balanced." Some effects are technically costed fine and still ruin games.
+
+- **Effects that create non-games are casual-unfriendly.** Mass land destruction and hard lock pieces (stax — taxing or preventing normal plays so thoroughly the table can't function) often produce a game where nobody gets to play Magic for an hour. They aren't broken on rate; they're miserable on experience. Design them rarely and deliberately, if at all.
+- **Favor build-arounds and payoffs.** Cards that reward a deck for doing its thing — "whenever you do X, get a benefit" — create tension without flipping the table.
+- **Lean political and interactive.** Multiplayer is the home of cards that let players choose, vote, or bargain. Effects that hand the table a decision tend to play wonderfully across four people.
+
+A good gut check: if your card resolving means three other players sit and watch with nothing to do, reconsider.
+
+## What singleton does to design
+
+Singleton — one copy of each card — is the quiet constraint that should color your evaluation. You'll see any given card roughly once per game, if at all, so consistency is genuinely harder. Two design consequences follow:
+
+- **Flexible, modal, and tutor effects are valued.** A card that searches for a specific card, or does a useful thing in many situations, partly buys back the consistency singleton takes away. A "choose one" card that's never dead is worth more here than in a format where you'd just draw the right answer.
+- **Redundancy lives across cards, not copies.** Since you can't run four of a thing, designers create redundancy by making several different cards that fill one role. When you design a cluster of customs for Commander, a few cards that gently reinforce one strategy beat one perfect card.
+
+So a little extra utility is worth more here than in 1v1 — but a tutor that fetches anything is also more reliably busted, because it always finds your best card.
+
+## A note on power level
+
+Commander spans an enormous range, from low-key casual tables to optimized high-power pods, and a card that's perfect for one is wrong for the other. A casual build-around can be a little slow and a little janky and that's a feature; a high-power card needs to keep up with fast mana and tight curves without being so good it homogenizes the format. Neither target is "correct" — but mixing them inside one custom set without intent reads as inconsistency. Pick a power level, tag it, and hold your cards to it.
+
+## A worked example
+
+Here's an original commander built to the brief above.
+
+**Veyla, Emberchoir Cantor** — <Mana cost="{2}{R}{W}" />
+*Legendary Creature — Human Cleric*
+**3/4**
+
+Whenever you cast your second spell each turn, create a 1/1 red and white Spirit creature token with haste. At the beginning of your end step, if you cast three or more spells this turn, those tokens gain "When this creature dies, deal 1 damage to any target" until your next turn.
+
+The deck this suggests almost builds itself: a red-white "spellslinger goes wide" list of cheap instants and sorceries, cost reducers, and ways to cast a second and third spell each turn. The first ability turns a busy turn into a board; the end-step ability turns that board into reach and a sacrifice payoff without locking anyone out. At three mana for a 3/4, Veyla survives the turn she lands and rewards play, not one explosive combo. Her color identity is exactly red-white, so the deck-building lane is clear, and every token she makes invites the table into combat math rather than shutting the game down — a build-around that's interactive by construction.
+
+## Build commanders and share decks in PipGlyph
+
+[PipGlyph](/mtg-card-maker) renders legendary creatures with the correct frame treatment, so a custom commander looks the part. Start a legendary build-around in the [card creator](/create), set its supertype, cost, and stats, and tune the ability live. When the commander's done, design the cards that support it — a whole deck of custom Commander cards — then publish to the [gallery](/gallery) for other players to browse, like, and remix. The fastest way to know whether a commander earns a deck is to build the first ten cards of that deck and see if it sings.
+
+## FAQ
+
+### What is a card's color identity in Commander?
+
+A card's color identity is every colored mana symbol that appears on it, in both its mana cost and its rules text, plus any color indicator. Your deck may only include cards whose color identity falls entirely within your commander's. That's why a stray off-color pip in an ability quietly changes which decks a custom card is legal in.
+
+### How many copies of a card can a Commander deck run?
+
+One. Commander is a singleton format: your 100-card deck may contain only a single copy of any card other than basic lands. This makes consistency harder than in formats with playsets, which is why flexible cards and tutors carry extra value in design.
+
+### What makes a good custom commander?
+
+A legendary creature whose ability suggests and rewards an entire deck — a build-around with a clear, one-sentence identity — costed and statted to be fair in a slower, 40-life multiplayer game. It should create a board or resource the other players can interact with, not a closed loop that ignores the table.
+
+### Why are mass land destruction and stax frowned upon in Commander?
+
+Because they tend to create non-games. Effects that destroy everyone's lands or lock the table out of playing normally can produce an hour where nobody makes meaningful decisions. They're often fine on raw rate but poor on experience — the thing casual Commander optimizes for — so design them sparingly.

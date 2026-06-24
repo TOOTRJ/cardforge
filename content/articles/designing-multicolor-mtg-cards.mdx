@@ -1,0 +1,80 @@
+---
+title: "Designing Multicolor MTG Cards"
+description: "How to design multicolor (gold) MTG cards that earn both colors: gold vs hybrid costs, the color pie, costing, color identity, and a worked example."
+date: "2026-06-23"
+tags: ["multicolor", "color pie", "card design"]
+---
+
+A multicolor card in Magic: The Gathering is a card with two or more colors in its identity, marked by the iconic gold frame. Its color identity is every colored mana symbol on it — in the cost and the rules text — so a white pip plus a blue pip makes a white-blue (Azorius) card, full stop. The golden rule of designing one is simple: it should *need* both colors, combining their strengths or expressing a two-color philosophy, not splashing a second pip for decoration.
+
+Gold cards are where the [color pie](/articles/mtg-color-pie-explained) gets interesting, because you're no longer arguing one color's case — you're fusing two. Done well, a multicolor card does something neither parent color could do alone; done lazily, it's a mono-color card wearing a fancier frame. This guide covers what makes a card multicolor, the crucial gold-versus-hybrid distinction, how to price the color tax, and how to lean on two-color identity.
+
+## What makes a card multicolor
+
+A card is multicolor when its color identity contains two or more of the five colors. Color identity is the union of every colored pip on the card — the mana cost *and* any colored symbols in the rules text or activated-ability costs. A creature that costs <Mana cost="{2}{G}" /> but has the ability <Mana cost="{U}" />, Tap: draw a card is green-blue, even though blue never appears in its cost. That hidden-pip case trips up new designers constantly, so always read the whole card, not just the upper-right corner.
+
+Generic mana — <Mana cost="{2}" />, the numbers — never adds color, and neither does colorless <Mana cost="{C}" />. Only the five colored pips count. This matters because the frame follows from identity: PipGlyph derives a card's color straight from the symbols you place, so a white pip plus a blue pip gives you the two-tone gold frame automatically — you choose a card's colors by choosing its pips, not by picking a frame. Start a card on [/create](/create) and assemble the cost in the [mana pip editor](/mana-pip-editor) to watch identity update live.
+
+## Gold versus hybrid costs
+
+This is the single most important distinction in multicolor design, and the two are easy to conflate because both produce a "two-color" card.
+
+A **gold cost** like <Mana cost="{W}{U}" /> requires one mana of *each* color: you must pay a white *and* a blue. That hard requirement is the whole point — the card demands both colors at the table, so it can only live in a deck running both. Gold is a commitment.
+
+A **hybrid cost** like <Mana cost="{W/U}" /> lets you pay *either* color for that symbol. The consequence is large: a card whose only colored requirement is hybrid can be cast in a *mono-color* deck — mono-white pays white, mono-blue pays blue — yet the card is still both colors by identity, because both appear in the symbol.
+
+That gap drives the design choice. Use **gold** when the effect genuinely fuses two philosophies and you want it locked to decks committed to both — the requirement is a feature. Use **hybrid** when you want a flexible card that *reads* as two-color and slots into either mono-color deck; great for accessibility and Limited, but the card can't truly require both colors at once. The twobrid pip <Mana cost="{2/W}" /> goes further, letting you pay two generic *or* one white — castable in any deck, and nearly colorless in practice.
+
+<Callout tone="tip" title="Pick the symbol that matches your intent">
+If the card's power comes from doing two colors' jobs at once, it must be gold — hybrid would let a mono-color deck cheat the cost while skipping half the identity. If you just want a two-color *flavor* that anyone can play, hybrid is the friendlier choice. Decide which before you set the pips in the [mana pip editor](/mana-pip-editor).
+</Callout>
+
+## The golden rule: earn the second color
+
+A multicolor card should justify its colors by *combining* them, and there are two honest ways. The first is **fusion of strengths**: the card does a white thing and a blue thing in a way that needs both — a creature that gains life (white) and draws a card on combat damage (blue). The second is **shared identity**: the card embodies what the two colors *believe* together. Black-green (Golgari) is the graveyard as a resource, death feeding growth; a gold card there might sacrifice a creature to return a bigger one, an idea living in the *overlap* of black's recursion and green's size.
+
+What you're avoiding is the splash card — a black removal spell with a single green pip stapled on for no reason. The test is the thumb test: cover one color's contribution. If the card still makes sense and does its job, that color was never earning its keep, and you've built a mono-color card with extra deck-building friction.
+
+## Costing a gold card
+
+Multicolor cards are harder to cast than mono-color cards: the color requirements constrain which decks can run them and demand the right mana on the right turn. Magic's costing convention compensates for that friction, so a gold card may be slightly *more powerful for its mana* than a comparable mono-color card — the color commitment is itself a cost.
+
+That allowance is small and has a hard ceiling: **never make a gold card strictly better than a comparable mono-color card.** If your white-blue two-drop outclasses every mono-white and mono-blue two-drop at the same rate *and* gives up nothing, the color requirement isn't a real downside — that's power creep with extra steps. The premium only applies when it's modest and the card genuinely couldn't exist in one color. The practical method: cost the card as if it were mono-color, then add a small bump for the dual requirement — a point of stats, a better rate — never a whole free ability. For pricing against a baseline, see [designing balanced custom MTG cards](/articles/designing-balanced-custom-mtg-cards); the multicolor wrinkle is just that "harder to cast" earns a few percent, not a blank check.
+
+## Two-color identity and guild flavor
+
+The five colors pair into ten two-color combinations, each with its own philosophy — the "guilds." Allied pairs (neighbors on the color wheel, like white-blue or red-green) share goals and blend smoothly, so their gold cards feel cooperative. Enemy pairs (across the wheel, like white-black or blue-red) disagree philosophically, so their cards usually express *tension* — fusing two opposed ideas into something slightly transgressive, which is exactly their charm.
+
+Designing to the pair's identity is what makes a gold card sing. A blue-red (Izzet) card should feel like spells-matter chaos; a white-black (Orzhov) card like taxes, drain, and grim bargains. The allied-versus-enemy framework is laid out in the [color pie guide](/articles/mtg-color-pie-explained) — read your intended pair before you write a line of rules text, because the pair's philosophy tells you what the card should *want* to do.
+
+## Color identity and deck-building
+
+Color identity isn't just cosmetic — it's a rules-relevant property, nowhere more than in Commander. A deck's commander sets its color identity, and **every card in the deck must fall within those colors**, judged by identity rather than mana cost. That hidden <Mana cost="{U}" /> activated ability from earlier makes a card blue, so it's illegal under a commander with no blue — even though you'd never need blue mana to cast it.
+
+The takeaway for the designer is responsibility: every colored pip you add, including ones buried in ability costs, narrows the set of decks that can legally run your card, and a third color narrows it again. That's not a reason to avoid gold cards — it's a reason to make each color pull real weight, because you're charging the player in deck-building flexibility for it.
+
+## A worked example
+
+Let's design a black-red (Rakdos) creature. Rakdos is reckless aggression and paying in pain — black's life-as-resource fused with red's burn and haste.
+
+**Embergrave Tormentor** — <Mana cost="{1}{B}{R}" />, a 3/2 with haste, and: *Whenever this creature attacks, you may pay 1 life. If you do, it deals 1 damage to any target.*
+
+The gold cost is correct because the card needs *both*: haste and the ping are red, paying life as a recurring resource is pure black — cover either color and it collapses, so the thumb test passes. The rate is honest, too. A 3/2 haste for three is a touch aggressive but fair, and the attack trigger is optional and self-taxing — you pay life, embodying black's "power has a price" — so it isn't strictly better than a mono-red three-drop; it trades a real downside for reach the mono-color version lacks. And it reads as Rakdos at a glance: it hits, it bleeds you, it burns the opponent. That's a card that earns its gold frame.
+
+## FAQ
+
+### What makes a Magic card multicolor?
+
+A card is multicolor when its color identity includes two or more of the five colors, counting every colored mana symbol on the card — the mana cost plus any colored pips in the rules text or ability costs. Multicolor cards display the gold frame, and a card can be multicolor even if a color appears only in an activated ability, not its mana cost.
+
+### What is the difference between gold and hybrid mana costs?
+
+A gold cost like <Mana cost="{W}{U}" /> requires one mana of each color, so the card can only be cast in a deck running both colors. A hybrid cost like <Mana cost="{W/U}" /> can be paid with either color, so the card is castable in a mono-color deck even though its color identity is still both colors.
+
+### Can multicolor cards be more powerful than mono-color cards?
+
+Slightly, yes — because the color requirements make them harder to cast, multicolor cards are allowed a small power premium for their mana cost. But the premium is modest, and a gold card should never be strictly better than a comparable mono-color card, or the color commitment stops being a real cost.
+
+### Why does color identity matter for Commander?
+
+In Commander, your commander defines the deck's color identity, and every card must fit within those colors — judged by color identity, which includes colored pips in rules text, not just the mana cost. A card with a hidden colored symbol in an ability can be illegal in a deck whose commander lacks that color.

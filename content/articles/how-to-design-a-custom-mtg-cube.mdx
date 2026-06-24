@@ -1,0 +1,104 @@
+---
+title: "How to Design a Custom MTG Cube"
+description: "How to design a custom MTG cube — cube size, power level, the ten color archetypes, singleton tradeoffs, and the draft-test-iterate loop that tunes it."
+date: "2026-06-23"
+tags: ["cube", "playtesting", "card design"]
+---
+
+A Magic: The Gathering cube is a curated, singleton pool of cards — no duplicates — that you and your friends draft, play, then shuffle back together and re-draft. It's a replayable, owner-designed draft environment rather than a sealed product you buy: you hand-pick every card, tune the power level, and revise the list over time. A custom cube takes that one step further — instead of filling it with existing cards, you fill it with your own designs.
+
+This guide walks the whole build: sizing the cube, choosing what it's about, balancing the colors, and running the test loop that turns a pile of cool cards into an environment that drafts well.
+
+## What makes a cube different from a set
+
+A set and a cube overlap — both are groups of cards meant to be drafted together — but the intent differs. A set is a self-contained, themed release with its own rarity ladder, designed as a product. A cube is personal: a hand-picked list, usually power-tuned or built around a pet theme, that lives on your shelf and changes whenever you want it to. If you're weighing which to build, the [custom set guide](/articles/how-to-design-a-custom-mtg-set) covers the set side in depth.
+
+The defining rule is singleton. Every card in a cube is a one-of, so there's no leaning on twelve copies of a common to define a color. Each card has to earn its slot on its own, which makes a cube a sharper design exercise — and a great showcase for original cards.
+
+## Size your cube to your pod
+
+Cube size is set by how many people draft it and how many cards each one takes. The classic size is 360, which supports a full eight-player draft: eight drafters opening the equivalent of three 15-card packs each is 8 × 45 = 360 cards, so the whole cube goes into the draft at once with nothing left over.
+
+You don't have to start there. Smaller cubes are easier to build, easier to balance, and faster to iterate on:
+
+- **120** — a tight four-player cube (4 × 30). The fastest to finish and a great proof of concept.
+- **180** — comfortable for four players with a little extra depth, or a snug six-player draft.
+- **270** — a six-player cube (6 × 45) with real archetype support.
+- **360** — the full eight-player standard.
+
+A smaller cube isn't a lesser cube. With 180 singleton cards you can still give every color a curve, every color pair an identity, and the format room to breathe — and you'll actually finish it.
+
+<Callout tone="tip">
+Build a 180 before you build a 360. A finished, well-tuned small cube drafts better than a sprawling half-balanced big one, and everything you learn tuning the 180 — curve, removal density, archetype support — transfers directly when you scale up.
+</Callout>
+
+## Choose a power level and a theme
+
+Before designing a single card, decide what the cube is *about*. Two dials set the tone.
+
+**Power level** is how strong, on average, the cards are. A high-power cube is all bombs and efficiency; a "synergy" or commons-style cube keeps individual cards modest so that combinations, not raw stats, decide games. Neither is better — but the cube has to pick a lane. A single card three power levels above everything else warps every draft around it.
+
+**Theme** is the creative hook: a tribal cube where each color anchors a creature type, an artifact-matters cube, a +1/+1 counters cube, a graveyard cube. A theme gives your custom designs a reason to exist and a yardstick for what belongs. It also keeps you from designing 360 unrelated good cards, which is how cubes drift into mush.
+
+Pick one primary axis and commit. You can always layer a second theme later, once the first one tests cleanly.
+
+## Balance the colors and build the archetypes
+
+A draftable cube is balanced two ways at once: across the five colors, and across the ten two-color pairs.
+
+Start with the colors roughly even — a similar count of cards in white, blue, black, red, and green, give or take. Lopsided color counts quietly punish whoever gets pushed off the deep color, and in a singleton format there's no bulk common to paper over the gap. Keep each color's slice doing what that color does so drafters can read it at a glance.
+
+Then design for the ten two-color archetypes. Every pair of colors should "want" to do something specific — one pair goes wide with tokens, another leans on instants and sorceries, another fills and exploits the graveyard, another simply curves out and attacks. Those identities are what let a drafter read a few early picks and commit to a lane instead of grabbing ten unconnected good cards. The [guilds and color pairs guide](/articles/mtg-guilds-and-color-pairs-explained) breaks down what each pairing naturally does, and the [balanced-design guide](/articles/designing-balanced-custom-mtg-cards) keeps the individual cards honest.
+
+Support each archetype on purpose. That means enough payoffs to reward going into a lane *and* enough cheap, flexible cards to fill out the deck around them — not just the splashy build-arounds.
+
+### Give every game a curve, removal, and fixing
+
+Archetypes are the strategy layer; underneath, the cube needs the plumbing that makes games playable.
+
+- **A creature curve.** Drafters need clean two- and three-drops in every color, or games stall and get decided by whoever drew their bomb. A cube top-heavy with five- and six-drops plays miserably no matter how cool those big cards are.
+- **Removal.** Spread answers across the colors that should have them, and watch the total density — too little removal and the first big threat runs away with the game; too much and creatures never matter.
+- **Mana fixing.** Because nearly every deck is two colors, the cube has to help players cast their spells: dual lands, fixing artifacts, or fetch-style effects. Skimp on fixing and the two-color format you designed never actually comes together on the battlefield.
+
+## Singleton means every card pulls its weight
+
+In a singleton cube there's no "filler at common." A card that nobody ever picks isn't harmless — it's a dead slot that makes packs worse, and over a 360-card cube those dead slots add up to whole packs of nothing.
+
+So design with the knife ready. After testing, cut the cards that never get picked and the ones that always dominate. The weakest card in a cube drags down the floor of the draft; the most oppressive one collapses the ceiling. Trimming both is how the environment tightens. A smaller, sharper list almost always plays better than a bigger, looser one — another reason starting at 180 pays off.
+
+## Draft it, watch it, revise it
+
+A cube is made in the test loop, not the spreadsheet. The cycle is simple and you run it over and over:
+
+1. **Draft the cube** with your pod (or simulate it solo).
+2. **Play the games** and take notes.
+3. **Watch for two signals:** cards that never get picked, and cards that always win the game they show up in.
+4. **Revise** — cut, buff, or re-cost — changing one variable at a time so you can tell what the change did.
+
+Resist the urge to overhaul everything between drafts. Cubes converge slowly; trust what the games show you over what your gut predicted. The [playtesting guide](/articles/how-to-playtest-custom-mtg-cards) goes deeper on running useful sessions and reading the results.
+
+## Building your cube in PipGlyph
+
+PipGlyph is built for exactly this loop. Design each card in the [editor](/create), then group your cards into a cube in the [set builder](/dashboard/sets). The set page gives you the cube's color balance, rarity spread, and mana-curve breakdown at a glance — so a color that's short on two-drops, or a curve that tops out too high, shows up immediately instead of surfacing mid-draft.
+
+When the list is ready to test, open the **booster simulator** on that page to deal booster-style hands and draft-test the cube with your pod. Note which cards never get taken and which ones dominate, then go back to the editor, revise, and run it again.
+
+When the cube holds together, publish it to the [gallery](/gallery) and hand your playgroup the link. To grow the list and pull in fresh designs, run a [community design challenge](/articles/running-a-community-card-design-challenge) around the cube's theme and let people pitch cards that fit. A cube your friends helped build is a cube they'll keep coming back to draft.
+
+## FAQ
+
+### What is an MTG cube?
+
+An MTG cube is a curated, singleton collection of cards — no duplicates — assembled by its owner to be drafted and played, then reset and drafted again. Unlike a sealed set you buy, a cube is hand-picked and tunable: you choose every card, set the power level, and revise the list whenever you like. A custom cube is one built from your own original card designs.
+
+### How many cards are in a cube?
+
+The classic size is 360, which exactly fills an eight-player draft (8 players × 45 cards). Smaller cubes are common and often better to start with: 120 for a four-player pod, 180 for four to six players, and 270 for six. Cube size is just players times cards-per-player, so you can scale it to whatever group you actually play with.
+
+### What does singleton mean in a cube?
+
+Singleton means each card appears exactly once — there are no duplicate copies anywhere in the cube. That forces every card to justify its slot on its own, since you can't rely on multiples to define a color or strategy. It also makes drafts more varied, because no two packs are stocked with the same repeated commons.
+
+### How do I make my custom cube balanced?
+
+Keep the five colors roughly even in card count, give each of the ten two-color pairs a clear archetype with both payoffs and support, and make sure every deck can find a creature curve, removal, and mana fixing. Then draft and play it repeatedly, cutting cards that never get picked or always dominate. Balance comes from the test loop, not from getting it right on paper the first time.

@@ -1,0 +1,180 @@
+---
+title: "An MTG Templating Cookbook: Common Rules Text Patterns"
+description: "A cookbook of correctly-templated MTG rules text patterns: ETB and dies triggers, tap and sacrifice costs, modal, anthems, and replacement effects."
+date: "2026-06-23"
+tags: ["templating", "oracle text", "card design"]
+---
+
+Most custom-card rules text is built from a small set of reusable patterns, and each one has a fixed shape Wizards' editors have used for years. Learn the shapes — trigger words, the cost-colon-effect form, "target" versus "each" — and templating becomes fill-in-the-blank instead of guesswork. This cookbook collects the patterns designers reach for most, each with its template and a one-line note on when to use it.
+
+If you want the underlying grammar in depth, read [how to write MTG oracle text](/articles/how-to-write-mtg-oracle-text) first, and see [MTG ability types explained](/articles/mtg-ability-types-explained) for what triggered, activated, and static abilities actually are; this page is the quick-reference companion. Every pattern below is paraphrased into a template — swap in your own card name, cost, and effect.
+
+## Triggered ability patterns
+
+Triggered abilities fire on an event and always begin with one of exactly three words: **When**, **Whenever**, or **At**. If your ability happens because something occurred and it doesn't start with one of those, it's templated wrong.
+
+### Enters-the-battlefield
+
+The workhorse trigger. Use it for one-shot effects that happen the moment a permanent resolves onto the battlefield.
+
+> When this creature enters, [effect].
+
+Note: modern templating says "enters," not the older "enters the battlefield." Refer to the card as "this creature" / "this artifact" so the text survives a rename.
+
+### Dies trigger
+
+"Dies" is shorthand with a precise meaning: a creature is put into a graveyard from the battlefield. Use it for death payoffs and recursion.
+
+> When this creature dies, [effect].
+
+Note: "dies" only covers the battlefield-to-graveyard move. A creature exiled, bounced, or milled has not died.
+
+### Attack and combat triggers
+
+Combat triggers reward you for swinging. "Attacks" fires when the creature is declared as an attacker; "deals combat damage" fires later, only if it connects.
+
+> Whenever this creature attacks, [effect].
+>
+> Whenever this creature deals combat damage to a player, [effect].
+
+Note: use **Whenever** (not When) for events that can recur, like attacking each turn.
+
+### Beginning-of-step triggers
+
+For effects tied to the turn structure — upkeep drains, end-step payoffs — use **At**.
+
+> At the beginning of your upkeep, [effect].
+
+Note: name the step and whose turn it is. "Your upkeep" and "each opponent's end step" are both common.
+
+## Activated ability patterns
+
+Activated abilities use the strict form `Cost: Effect.` The colon is load-bearing — it separates what you pay from what happens. Conventional cost order is mana, then tap or untap symbols, then everything else.
+
+### Activated ability with a tap cost
+
+The classic "tap this to do something" line. The tap symbol is a cost, so it sits before the colon.
+
+<Mana cost="{T}" />: [effect].
+
+Or with mana added first, written as a backticked template: `{1}{U}, {T}: [effect].`
+
+Note: a creature needs to have been under your control since your most recent turn began to pay <Mana cost="{T}" /> (unless it has Haste). Tapping is a cost; it is never written after the colon.
+
+### Sacrifice as a cost
+
+Sacrificing in a cost line is something you choose to do as part of activating the ability — it does **not** target and an opponent cannot respond to which permanent you pick.
+
+> Sacrifice [a thing]: [effect].
+
+Combine it with mana for a fuller cost, shown as a backticked template: `{1}{B}, Sacrifice a creature: [effect].`
+
+Note: because it's a cost, "Sacrifice a creature" uses "a," never "target." Contrast this with an effect that reads "sacrifice" after a colon or trigger, which is a different construction.
+
+<Callout tone="tip">
+The fastest templating gut-check: triggered abilities start with When, Whenever, or At; activated abilities are written Cost, then a colon, then Effect. If a line has neither a trigger word nor a colon, it's a static ability — it just states a fact.
+</Callout>
+
+## Modal patterns
+
+A modal ability lets the player pick from a menu of effects. The header tells you how many to choose, and each mode is its own bulleted line beginning with a bullet character.
+
+> Choose one —
+>
+> • [first mode].
+>
+> • [second mode].
+
+Variants swap the header: "Choose one or more —", "Choose two —", or "Choose one or both —" on a two-mode card.
+
+Note: modes are written as complete instructions, each ending in a period. Modern modal cards use a literal bullet ("•") rather than the older em-dash bullets.
+
+## Static ability patterns
+
+Static abilities have no trigger word and no colon. They state a continuous truth that's simply always on while the permanent is on the battlefield.
+
+### Anthem
+
+The most common static: a passive buff to a group of permanents you control.
+
+> Creatures you control get +1/+1.
+
+Note: there's no "When" and no cost — it's not a trigger, so don't write one. Use "other creatures you control" if the source shouldn't pump itself.
+
+### Cost reduction and taxes
+
+Static effects that change what spells cost read as a flat statement of the new cost.
+
+> Spells you cast cost `{1}` less to cast.
+>
+> Spells your opponents cast cost `{1}` more to cast.
+
+Note: "to cast" closes the line. Generic-mana adjustments are the safe default; reducing colored mana has corner cases.
+
+## Conditional and replacement patterns
+
+### Intervening "if" trigger
+
+Sometimes a trigger should only do something when a condition holds. The condition goes right after the trigger, set off by commas — this is the "intervening if."
+
+> When this creature enters, if you control three or more other creatures, [effect].
+
+Note: the condition is checked twice — when the ability would trigger and again when it resolves — so it differs from a plain "if" inside the effect. Keep the condition a simple board state.
+
+### Replacement effect
+
+A replacement effect watches for an event and swaps it for a different one before it happens. It reads with "would" and "instead."
+
+> If [an event] would happen, instead [a different event].
+
+A common shape: `If this creature would die, instead exile it.` Or for added value: "If you would draw a card, instead draw two cards" (kept deliberately simple here — real replacement effects can get intricate).
+
+Note: replacement effects don't use a trigger word, even though they react to an event. The "would … instead" wording is the tell.
+
+## Target versus each, and capitalization
+
+Two small choices separate clean text from sloppy text.
+
+**"Target" versus "each."** Write "target" only when the player chooses, and the choice can be responded to — "[this] deals 2 damage to target creature." Write "each" for a non-choice that hits everything in a group — "[this] deals 2 damage to each creature." A board wipe uses "each"; a single bolt uses "target." Effects on triggers often use "a" or "each" precisely to avoid targeting.
+
+**Capitalize keyword abilities; don't capitalize keyword actions.** Keyword abilities are proper nouns: Flying, Trample, Deathtouch, Lifelink, Menace. Keyword actions are ordinary verbs and stay lowercase mid-sentence: scry, surveil, mill, fight, exile, sacrifice. So it's "Flying, lifelink" on its own line, but "When this dies, surveil 2." The full vocabulary lives in the [MTG keyword abilities list](/articles/mtg-keyword-abilities-list).
+
+## The pattern table
+
+| Pattern | Template |
+| --- | --- |
+| ETB trigger | `When this creature enters, [effect].` |
+| Dies trigger | `When this creature dies, [effect].` |
+| Attack trigger | `Whenever this creature attacks, [effect].` |
+| Upkeep trigger | `At the beginning of your upkeep, [effect].` |
+| Tap activated ability | `{T}: [effect].` |
+| Sacrifice cost | `Sacrifice a creature: [effect].` |
+| Modal | `Choose one — • [mode]. • [mode].` |
+| Anthem (static) | `Creatures you control get +1/+1.` |
+| Cost tax (static) | `Spells your opponents cast cost {1} more to cast.` |
+| Intervening "if" | `When this enters, if [condition], [effect].` |
+| Replacement | `If [event] would happen, instead [other event].` |
+
+Read top to bottom, that table is most of a Magic card's grammar. Pick the pattern that matches what your ability does, drop in your specifics, and the text will already read like it was printed.
+
+## Let the editor template it for you
+
+When you build a card in the [PipGlyph editor](/create), you can type these patterns directly and they render in a real card text box, so you immediately see whether the line fits. And if you'd rather describe an effect in plain English, the [AI card generator](/ai-mtg-card-generator) returns properly templated oracle text — correct trigger words, the cost-colon-effect shape, "target" versus "each" handled for you. It's a quick way to check your own templating against a clean reference. If you're new to the whole process, [common custom card design mistakes](/articles/common-custom-card-design-mistakes) covers the templating errors that trip people up most.
+
+## FAQ
+
+### What is the difference between "dies" and "is destroyed"?
+
+"Dies" means a creature is put into a graveyard from the battlefield, for any reason — destruction, lethal damage, sacrifice, or zero toughness. "Destroyed" is just one of those causes. A dies trigger fires when the creature is sacrificed; a "when this is destroyed" effect would not. Use "dies" unless you specifically want to exclude sacrifice and state-based deaths.
+
+### When do I write "target" instead of "a" or "each"?
+
+Write "target" when a player actively chooses the object and an opponent could respond to that choice before the effect resolves — typical of spells and many activated abilities. Use "a" or "each" for non-targeting effects, which are common on triggered abilities and board-wide effects. A single-target removal spell says "destroy target creature"; a sweeper says "destroy each creature." If there's no meaningful choice to respond to, don't write "target."
+
+### Why does my activated ability need a colon?
+
+The colon is how the rules distinguish a cost you pay from an effect that happens. Everything before the colon is the cost; everything after is the effect. Without it, the line reads as a static ability or breaks entirely. So "<Mana cost="{T}" />: Add one mana of any color" is an activated ability, while the same words without a colon would not be.
+
+### How do I capitalize keyword abilities versus keyword actions?
+
+Keyword abilities (Flying, Trample, Deathtouch, Lifelink, Menace) are capitalized and usually listed together on their own line, comma-separated — and in modern templating only the first keyword on that line takes a capital letter, as in "Flying, lifelink." Keyword actions (scry, surveil, mill, fight) are ordinary verbs that stay lowercase when they appear mid-sentence, as in "When this dies, surveil 2."
