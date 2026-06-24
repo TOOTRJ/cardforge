@@ -6,8 +6,17 @@ import { ArrowLeft, ArrowRight, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { GlyphDivider } from "@/components/ui/glyph-divider";
+import { ArticleToc } from "@/components/content/article-toc";
+import { mdxComponents } from "@/components/content/mdx-components";
 import { breadcrumbJsonLd, JsonLd } from "@/components/seo/json-ld";
-import { getArticle, listArticles } from "@/lib/content/articles";
+import {
+  extractToc,
+  getArticle,
+  getRelatedArticles,
+  listArticles,
+  slugifyTag,
+  type ArticleMeta,
+} from "@/lib/content/articles";
 import { getSiteBaseUrl } from "@/lib/site-url";
 
 // ---------------------------------------------------------------------------
@@ -45,6 +54,7 @@ export async function generateMetadata({
       type: "article",
       url: `/articles/${meta.slug}`,
       publishedTime: meta.date,
+      modifiedTime: meta.updated ?? meta.date,
       tags: meta.tags,
     },
   };
@@ -60,9 +70,8 @@ export default async function ArticlePage({
   if (!article) notFound();
 
   const { meta, content } = article;
-  const others = listArticles()
-    .filter((a) => a.slug !== meta.slug)
-    .slice(0, 3);
+  const toc = extractToc(content);
+  const others = getRelatedArticles(meta.slug, 3);
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
@@ -86,12 +95,20 @@ export default async function ArticlePage({
       {/* Header */}
       <header className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center gap-2 text-xs text-subtle">
+          <span className="text-muted">By the PipGlyph Team</span>
+          <span aria-hidden>·</span>
           <time dateTime={meta.date}>{formatDate(meta.date)}</time>
           <span aria-hidden>·</span>
           <span className="inline-flex items-center gap-1">
             <Clock className="h-3 w-3" aria-hidden />
             {meta.readingMinutes} min read
           </span>
+          {meta.updated ? (
+            <>
+              <span aria-hidden>·</span>
+              <span>Updated {formatDate(meta.updated)}</span>
+            </>
+          ) : null}
         </div>
         <h1 className="font-display text-3xl font-semibold leading-tight tracking-tight text-foreground sm:text-4xl">
           {meta.title}
@@ -100,18 +117,29 @@ export default async function ArticlePage({
         {meta.tags.length > 0 ? (
           <div className="flex flex-wrap gap-1.5">
             {meta.tags.map((tag) => (
-              <Badge key={tag} variant="outline">
-                {tag}
-              </Badge>
+              <Link
+                key={tag}
+                href={`/articles/tag/${slugifyTag(tag)}`}
+                className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60"
+              >
+                <Badge
+                  variant="outline"
+                  className="transition-colors hover:border-primary-bright/60 hover:text-foreground"
+                >
+                  {tag}
+                </Badge>
+              </Link>
             ))}
           </div>
         ) : null}
       </header>
 
+      <ArticleToc items={toc} />
+
       {/* Body — prose styling via arbitrary variants, same approach as
           LegalPageShell but tuned for long-form reading. */}
-      <article className="mt-10 flex flex-col gap-5 text-[0.95rem] leading-7 text-muted [&_h2]:font-display [&_h2]:mt-8 [&_h2]:scroll-mt-24 [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:tracking-tight [&_h2]:text-foreground [&_h3]:font-display [&_h3]:mt-5 [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:text-foreground [&_a]:text-primary-bright [&_a]:underline [&_a]:underline-offset-2 [&_a]:decoration-primary-bright/50 hover:[&_a]:decoration-primary-bright [&_strong]:font-semibold [&_strong]:text-foreground [&_em]:italic [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1.5 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:space-y-1.5 [&_code]:rounded [&_code]:bg-elevated/80 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.85em] [&_code]:text-foreground [&_blockquote]:border-l-2 [&_blockquote]:border-gold/50 [&_blockquote]:pl-4 [&_blockquote]:italic [&_table]:w-full [&_table]:border-collapse [&_table]:text-sm [&_th]:border-b [&_th]:border-border [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:font-semibold [&_th]:text-foreground [&_td]:border-b [&_td]:border-border/50 [&_td]:px-3 [&_td]:py-2 [&_td]:align-top">
-        <MDXRemote source={content} />
+      <article className="mt-10 flex flex-col gap-5 text-[0.95rem] leading-7 text-muted [&_h2]:font-display [&_h2]:mt-8 [&_h2]:scroll-mt-24 [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:tracking-tight [&_h2]:text-foreground [&_h3]:font-display [&_h3]:mt-5 [&_h3]:scroll-mt-24 [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:text-foreground [&_a]:text-primary-bright [&_a]:underline [&_a]:underline-offset-2 [&_a]:decoration-primary-bright/50 hover:[&_a]:decoration-primary-bright [&_strong]:font-semibold [&_strong]:text-foreground [&_em]:italic [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1.5 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:space-y-1.5 [&_code]:rounded [&_code]:bg-elevated/80 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.85em] [&_code]:text-foreground [&_blockquote]:border-l-2 [&_blockquote]:border-gold/50 [&_blockquote]:pl-4 [&_blockquote]:italic [&_table]:w-full [&_table]:border-collapse [&_table]:text-sm [&_th]:border-b [&_th]:border-border [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:font-semibold [&_th]:text-foreground [&_td]:border-b [&_td]:border-border/50 [&_td]:px-3 [&_td]:py-2 [&_td]:align-top">
+        <MDXRemote source={content} components={mdxComponents} />
       </article>
 
       {/* CTA */}
@@ -137,7 +165,7 @@ export default async function ArticlePage({
         </div>
       </section>
 
-      {/* More guides */}
+      {/* More guides — ranked by shared tags, not random. */}
       {others.length > 0 ? (
         <section aria-labelledby="more-guides" className="mt-12">
           <h2
@@ -175,21 +203,19 @@ function formatDate(iso: string): string {
     month: "long",
     day: "numeric",
     year: "numeric",
+    // Frontmatter dates are calendar dates stored at UTC midnight; format in
+    // UTC so they don't shift a day back in negative-offset timezones.
+    timeZone: "UTC",
   }).format(new Date(iso));
 }
 
 // ---------------------------------------------------------------------------
 // Article JSON-LD — authored by the PipGlyph organization (guides are
-// editorial content, not user submissions).
+// editorial content, not user submissions). dateModified follows the optional
+// `updated` frontmatter so a revised guide signals freshness to search.
 // ---------------------------------------------------------------------------
 
-function buildArticleJsonLd(meta: {
-  slug: string;
-  title: string;
-  description: string;
-  date: string;
-  tags: string[];
-}): Record<string, unknown> {
+function buildArticleJsonLd(meta: ArticleMeta): Record<string, unknown> {
   const base = getSiteBaseUrl();
   const canonical = `${base}/articles/${meta.slug}`;
   return {
@@ -198,7 +224,7 @@ function buildArticleJsonLd(meta: {
     headline: meta.title,
     description: meta.description,
     datePublished: meta.date,
-    dateModified: meta.date,
+    dateModified: meta.updated ?? meta.date,
     url: canonical,
     mainEntityOfPage: canonical,
     keywords: meta.tags.join(", "),

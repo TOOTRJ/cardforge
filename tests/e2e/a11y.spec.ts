@@ -24,6 +24,8 @@ const PAGES = [
   "/faq",
   "/articles",
   "/articles/how-to-write-mtg-oracle-text",
+  "/articles/tag/card-design",
+  "/best-mtg-card-makers",
 ];
 
 for (const path of PAGES) {

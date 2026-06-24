@@ -1,0 +1,89 @@
+---
+title: "How to Playtest Custom MTG Cards"
+description: "How to playtest custom Magic cards: goldfish solo, play real games with proxies, read your playgroup, iterate one change at a time, and test a whole set."
+date: "2026-06-14"
+tags: ["playtesting", "card design", "proxies"]
+---
+
+Playtesting a custom Magic card means actually playing it in real games — not just reading the text and deciding it looks fair. It matters because the page and the table disagree constantly: a card that reads reasonable can be broken in the right deck, boring every time it resolves, or so narrow it never gets cast. Playtesting is the only step that tells you which one you built.
+
+## Why reading a card isn't testing it
+
+A finished card on your screen is a hypothesis, not a result. Designers are optimistic readers of their own work — you picture the card in the fair situation you imagined, not the degenerate one a motivated opponent will find. The gap between "reads fine" and "plays fine" is where almost every custom-card mistake lives.
+
+Three failure modes hide from a read-through. **Broken** cards look fair until someone builds the deck that abuses them. **Boring** cards are correctly costed but generate no decisions — they resolve and nothing interesting happens. **Unplayable** cards are so conditional or overcosted they sit in your hand. None of these announce themselves in the text box; you have to play the card to feel them, which is why testing belongs in the loop before you publish, not after.
+
+## Goldfish first: feel the rhythm solo
+
+Before you involve anyone else, "goldfish" the card — play a sample deck against an imaginary opponent who does nothing (the deck just sits there like a goldfish). Build a rough 60 around the card, shuffle, and play out a dozen turns drawing one card a turn.
+
+Solo testing answers the cheapest questions fast:
+
+- **Does the mana cost feel right?** A card you keep wishing cost one less is probably overcosted; one you cast every game on curve with no tension is probably undercosted. A <Mana cost="{1}{G}" /> two-drop should compete for the turn-two slot, not own it.
+- **When does it actually come down?** Find out whether your "midrange" card hits the table on turn four or stalls in hand until turn seven.
+- **Does the deck want it?** If you keep siding the card out of your own goldfish list, that's data.
+
+Goldfishing tells you nothing about interaction — there's no opponent — but it's the fastest way to catch an obviously wrong cost before you waste a real game on it. Build the test card and a few supporting pieces in [the editor](/create) so you're shuffling the real thing.
+
+## Real games with proxies
+
+The only way to see how a card *interacts* is to play it against a live opponent who is trying to win. Print the card as a proxy, sleeve it over a basic land or a junk common, and play actual games. (For getting clean, correctly-sized prints, see the guide on [printing proxy MTG cards](/articles/how-to-print-proxy-mtg-cards).)
+
+Real games surface everything goldfishing can't: whether your removal is too efficient against the format's creatures, whether a "fair" engine snowballs once unanswered, whether the card is dead in hand when the board isn't perfect. Play it across a few matchups, not just the one you designed it for — aggro, control, and a grindy midrange deck stress different parts of a card.
+
+<Callout tone="tip">
+The four-of test: before you call a card balanced, imagine four copies in the most aggressive deck that would want them. Most overpowered customs read fine as a singleton and only show their teeth at four-of consistency in the deck built to abuse them. If that sounds miserable to play against, the card is too strong — even if one copy felt fine.
+</Callout>
+
+## What to watch for at the table
+
+Every game you play with a custom card is collecting answers to a few questions, and each one maps to a specific way cards go wrong.
+
+**Is it fun?** Watch the player across from you, not just yourself. Does resolving the card create a decision for the opponent, or just remove their ability to play? Effects that take turns, lock the board, or strip every choice from the loser create "non-games" — technically a win, but nobody had a game. Feel-bad swings, where one card erases a long turn of work with no counterplay, are the same problem in a different coat.
+
+**Is it always the best play?** If the card is correct in every situation it comes up, it's probably too strong — good designs carry a cost or condition that sometimes makes you hold them. A card with no wrong time to cast has no real decision attached.
+
+**Does it ever come up?** The opposite failure: if games go by and the card never matters — too situational, too expensive, outclassed by what's already in the deck — it's too weak or too narrow. A build-around that nothing builds around is just a dead slot.
+
+These questions are the bridge between playtesting and design. When a test flags a problem, the fix lives in the costing framework in [designing balanced custom MTG cards](/articles/designing-balanced-custom-mtg-cards), and the patterns behind most of these failures are cataloged in [common custom card design mistakes](/articles/common-custom-card-design-mistakes). Testing finds the symptom; those guides name the disease.
+
+## The iteration loop: change one variable at a time
+
+Playtesting only improves a card if it feeds revision. The loop is easy to say and easy to rush — **design → test → revise → retest** — and the discipline is all in the revise step: change one variable per iteration.
+
+If a creature is too strong, you can lower its power, raise its cost, add a drawback, or tighten its ability. Change three of those at once and a good next test teaches you nothing about which fix mattered — and you've probably overcorrected into an unplayable card. Move one lever, retest, repeat. A practical order is cost first (the bluntest knob), then stats, then text. Because every card stays editable after you make it, the loop costs nothing but the games.
+
+## Getting feedback and reading it correctly
+
+A playgroup multiplies your testing, but feedback only helps if you read it right. The most important rule: **watch what people do, not just what they say.**
+
+Players are unreliable narrators of their own experience. Someone will call a card "fine" while groaning every time you cast it — believe the groan. Someone will call a card "weak" but quietly first-pick it every draft — believe the pick. Behavior is honest; commentary is filtered through politeness, recency, and whoever just lost. So track the tells: does the card get cut from decks or jammed into all of them, do opponents change how they play when it's down, does it draw the good kind of table-talk or the "ugh, that again" kind?
+
+Spoken feedback is still good for the one thing words do well — explaining *why*. When a tester says "it felt unfair," ask what specifically: the rate, the missing answer, the swing? That points at the lever to move. To get more eyes than your local pod, publish the card and let the community react. Likes and comments in the [gallery](/gallery) are a standing playtest panel, and the [FAQ](/faq) covers how sharing works on PipGlyph.
+
+## Pressure-testing a whole set
+
+Testing one card is about that card; testing a *set* is about the environment — and a custom set fails differently. Individual cards can each be reasonable while the Limited format they create is miserable: too fast, too grindy, no answers to the bombs, three colors that never come together.
+
+The way to test an environment is to play in it. In PipGlyph, gather your cards into a set and use the booster simulator to open packs and draft from your own expansion, then build and play those pools. Drafting surfaces what no single-card test can: whether the commons support real archetypes, whether removal is dense enough to check the bombs, whether the color balance holds when you're forced into a lane. A set that's a joy to build cards for can still be a chore to draft, and only repeated drafts reveal it.
+
+This is where a community pays off. Drafting your set with a few people generates a flood of environment data fast — the guide on [running a community card-design challenge](/articles/running-a-community-card-design-challenge) covers how to organize that, and browsing finished sets in the [gallery](/gallery) shows how other designers structure a draftable expansion. Build the set, share it, and let real drafts tell you what a spreadsheet couldn't.
+
+## FAQ
+
+### How many games do I need to playtest a custom card?
+
+Think in questions answered, not games played. A few goldfish runs settle the mana cost; a handful of real games against different decks settle interaction; a problem that shows up across three or four games is real, not variance. A bomb or an engine deserves more games than a vanilla creature, because the broken cases take longer to find.
+
+### Can I playtest a custom card without printing proxies?
+
+Goldfishing solo with the card on screen works for cost and curve feel, and online tabletop tools let you play full games with custom images. But for casual in-person testing, a sleeved paper proxy over a junk card is the fastest path to a real game — see the [proxy printing guide](/articles/how-to-print-proxy-mtg-cards) for clean, correctly-sized prints.
+
+### What's the difference between goldfishing and real playtesting?
+
+Goldfishing is solo: you play your deck against no opposition to feel its rhythm, speed, and mana cost. Real playtesting adds a live opponent, which is the only way to see interaction — how the card trades, whether it's answerable, and whether it's dead in hand when the board isn't ideal. Goldfish to catch obvious cost problems cheaply; play real games to catch everything else.
+
+### My playgroup says a card is fine but it feels too strong. Who's right?
+
+Trust behavior over commentary. If the card keeps winning games or always makes the deck while they call it "fine," it's stronger than they admit — players underrate cards that beat them quietly. Run the four-of test and write out the turn it lands across from an opponent. If the honest answer is "they probably just lose," revise the card regardless of the table's verdict.
+

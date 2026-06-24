@@ -1,0 +1,94 @@
+---
+title: "How to Design a Custom MTG Creature"
+description: "Design balanced custom MTG creatures: the power/toughness baseline, the stat-vs-ability tradeoff, keyword budgets by color, tribal synergy, and rarity."
+date: "2026-06-23"
+tags: ["creatures", "card design", "power and toughness"]
+---
+
+To design a balanced custom Magic creature, start from the rate baseline — roughly a 2/2 for two mana, a 3/3 for three — then "pay" for every keyword or ability by shaving a point of power or toughness or adding mana. Color decides what you get for the price: green buys the biggest bodies, while white and blue trade raw size for evasion and efficiency. Everything after that is flavor and rarity.
+
+Creatures are the load-bearing wall of almost every Magic set. They fill out the mana curve, they win the game by attacking, and they're the cards limited play is built around. A set with broken creatures plays badly no matter how elegant its spells are — which is exactly why creatures are the best place to learn costing.
+
+## The vanilla baseline
+
+Before you add a single word of rules text, a creature is just a mana cost and two numbers. The modern reference point is the "bear": a 2/2 for <Mana cost="{1}{G}" />, two mana for a body that trades up against one-drops and trades evenly with its peers. From there the rate scales almost linearly — a 3/3 for <Mana cost="{2}{G}" /> three mana, a 4/4 for four, a 5/5 for five. As a rule of thumb, **power plus toughness lands near twice the mana value** on a plain creature with no abilities.
+
+That baseline is deliberately boring, and that's the point: it's the zero line you measure deviations against. A 3/3 for <Mana cost="{2}{R}" /> is slightly above rate and wants an aggressive color to justify it. A 2/2 for <Mana cost="{2}{W}" /> is below rate and is *begging* for an ability to earn its slot.
+
+### How color bends the curve
+
+The baseline is green's baseline. Each color pays a different rate for the same stats because the [color pie](/articles/mtg-color-pie-explained) assigns each one a different job:
+
+- **Green** gets the biggest creatures per mana, full stop. If a body is over rate, green is usually the color that's allowed to print it.
+- **White** trades a little size for efficiency and team play — slightly smaller bodies, but with first strike, vigilance, or abilities that lift the whole board.
+- **Blue** runs deliberately *below* rate on the ground. Blue's creatures buy flying and tempo instead of raw stats; a blue flyer is happy to be a 2/3 where green would be a 3/4.
+- **Black** pays in life and sacrifice for its bodies, and gets menace, deathtouch, and recursion as its evasive toolkit.
+- **Red** gets aggressive stats and haste, with fragile toughness — the classic "hits hard, dies easy" 3/1.
+
+<Callout tone="tip" title="Size is a resource">
+Toughness is a currency you can spend. A 3/1 and a 1/3 cost the same on paper, but they play nothing alike — the 3/1 is a red beater that dies to a stiff breeze, the 1/3 is a white or blue blocker that survives combat. Decide which point you're spending *before* you reach for keywords.
+</Callout>
+
+## The stat-versus-ability tradeoff
+
+Here's the single most important idea in creature design: **every keyword and every ability is paid for.** When you bolt flying onto a body, that flying has a price, and you settle the bill in one of two currencies — fewer stat points, or more mana.
+
+A 2/2 flyer for <Mana cost="{1}{U}" /> is fair because flying on a small body is worth roughly a stat point at that cost. Make it a 3/3 flyer and the price jumps to three mana or more. The bigger the body, the more a keyword is worth, because evasion on a large creature closes games much faster. Deathtouch is nearly free on a 1/1 and genuinely expensive on a 5/5, where it turns every block into a trade and every attack into removal.
+
+When you're costing, work the diff: take the vanilla creature at that mana value, list what your version adds, and shave stats or raise the cost until it feels honest. This is the same discipline covered in depth in [designing balanced custom MTG cards](/articles/designing-balanced-custom-mtg-cards) — creatures are just the place it's easiest to see.
+
+## A keyword budget for creatures
+
+Most creatures should carry **zero or one ability.** Two is a signpost or an uncommon. Three or more, and you've left common-creature territory entirely. A keyword *budget* keeps your set readable and your costs honest — every ability you add is another line you have to pay for and another thing the player has to parse mid-combat.
+
+Match keywords to color, because the evergreen keywords are pie-coded. Flying lives in white and blue; trample and reach belong to green; first strike is white and red; deathtouch and menace are black and green; vigilance is white. A green flyer or a blue trampler trips the same wire as a typo. When in doubt, the [MTG keyword abilities list](/articles/mtg-keyword-abilities-list) maps every evergreen keyword to its home colors.
+
+Activated and triggered abilities follow templating rules, not just color rules. Triggers read **"When," "Whenever," or "At"** — "When this creature enters, draw a card." Activated abilities read **"Cost: Effect"** with a colon — <Mana cost="{1}{B}" />, sacrifice a creature: draw a card. Getting the trigger word right is the difference between text that looks printed and text that looks improvised; the [oracle-text guide](/articles/how-to-write-mtg-oracle-text) drills the templating.
+
+## Creature types as a design lever
+
+The type line is a design tool, not decoration. A creature's types — Goblin Warrior, Merfolk Wizard, Elf Druid — are hooks other cards reach for. Tribal synergy is one of the cleanest ways to make a creature *matter* without overloading its own text box: a vanilla 2/2 Goblin is mediocre alone but exciting in a deck full of "other Goblins you control get +1/+1."
+
+This lets you design at two levels: the individual creature stays simple and fairly costed, while its *type* does the heavy lifting in a deck built around it. Lean on this for commons especially — a humble body with the right creature type is a building block, and building blocks are what limited and tribal decks are made of. Just be deliberate: pick types your set actually intends to reward, or the synergy is purely theoretical.
+
+## How rarity reshapes a creature
+
+Rarity is a complexity and impact budget, and it changes creature design more than almost anything else. The deeper treatment is in the [rarity guide](/articles/mtg-rarity-explained), but for creatures specifically:
+
+- **Common** creatures are simple and clean — vanilla bodies, one keyword, or one tidy enters-the-battlefield trigger. Commons define limited play, so keep them honest and at rate.
+- **Uncommon** creatures earn a second ability or one build-around hook. This is where tribal lords and signpost gold creatures live.
+- **Rare and mythic** creatures get the engines and build-arounds — the creature your whole deck is constructed to abuse, with text worth a paragraph and stats that can push rate because the constraint lives elsewhere.
+
+If your creature needs three paragraphs to explain, it is not a common. Match the ambition of the text box to the rarity, and the card will feel like it belongs.
+
+## A worked example
+
+Let's build one. Say I want a black aggressive two-drop with a little reach and a little inevitability.
+
+**Gravemarsh Stalker** — <Mana cost="{1}{B}" /> — 2/1 — Menace. *Whenever Gravemarsh Stalker deals combat damage to a player, each opponent loses 1 life.*
+
+Walk the costing. The vanilla black two-drop is a 2/2; cutting the toughness to a 2/1 is part of how I'm paying for the abilities. Menace on a small aggressive body is cheap — black's evasive keyword, perfectly on-pie. The triggered ability follows the **"Whenever … "** template and adds a slow drip of reach that rewards connecting, which fits both black's identity and an aggressive game plan. The result is a fair, characterful uncommon — fragile enough to trade down, but it punishes a slow opponent. Bump the toughness back to a 2/2 and you'd want to push the cost to <Mana cost="{1}{B}{B}" /> or drop the trigger.
+
+You can build this exact creature and watch it render live in the [PipGlyph editor](/create) — set the cost, type the stats, drop the menace pip and the trigger into the text box, and the [card maker](/mtg-card-maker) shows the finished frame as you type. Seeing the body next to its cost is the fastest way to feel whether a creature is over or under rate.
+
+<Callout tone="note">
+Costing gets you to the right neighborhood; playtesting parks the car. Treat every number here as a strong first draft, then watch the creature actually attack and block before you call it balanced.
+</Callout>
+
+## FAQ
+
+### What is the power and toughness baseline for a custom creature?
+
+Roughly a 2/2 for two mana and a 3/3 for three — power plus toughness near twice the mana value. That's green's rate; white and blue run a touch smaller in exchange for evasion and efficiency.
+
+### How much should a keyword like flying cost on a creature?
+
+It depends on body size. Flying on a 2/2 is worth about one stat point or so; on a large creature it's worth much more, because evasion on a big body ends games faster. Pay for it by shaving stats or adding mana.
+
+### Which evergreen keywords belong to which colors?
+
+Flying is white and blue, trample and reach are green, first strike is white and red, deathtouch and menace are black and green, and vigilance is white. Putting a keyword off its color is one of the clearest signs of a fake card.
+
+### How does rarity change creature design?
+
+Commons stay simple — vanilla bodies or a single ability at rate. Uncommons add a second ability or a build-around hook, while rares and mythics carry the engines and rate-pushers. If the text needs three paragraphs, it is not a common.

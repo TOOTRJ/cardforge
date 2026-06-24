@@ -17,6 +17,7 @@ import { StatBadge } from "@/components/ui/stat-badge";
 import { PLANS } from "@/lib/billing/plans";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { countPublicCards, listTrendingCards } from "@/lib/cards/queries";
+import { listArticles } from "@/lib/content/articles";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 
@@ -184,6 +185,8 @@ export default function HomePage() {
         </div>
       </section>
 
+      <LatestGuides />
+
       {/* Guide links — internal links so the SEO landing pages aren't
           orphaned (crawlers weight homepage links heavily). */}
       <nav
@@ -206,6 +209,61 @@ export default function HomePage() {
         </p>
       </nav>
     </>
+  );
+}
+
+// Newest three guides — fresh internal links from the most-crawled page
+// (and a freshness signal as the article library grows). Filesystem read,
+// so it stays static with the rest of the homepage.
+function LatestGuides() {
+  const articles = listArticles().slice(0, 3);
+  if (articles.length === 0) return null;
+  return (
+    <section
+      aria-labelledby="latest-guides"
+      className="mx-auto w-full max-w-5xl px-4 pb-16 sm:px-6 lg:px-8"
+    >
+      <div className="flex flex-col items-center gap-6 text-center">
+        <div className="flex flex-col gap-2">
+          <span className="text-xs font-semibold uppercase tracking-[0.18em] text-primary-bright">
+            From the guides
+          </span>
+          <h2
+            id="latest-guides"
+            className="font-display text-3xl font-semibold tracking-tight text-foreground sm:text-4xl"
+          >
+            Learn the craft
+          </h2>
+          <p className="mx-auto max-w-2xl text-base leading-7 text-muted">
+            Deep dives on costing, oracle text, mana symbols, and more —
+            written for people who make their own cards.
+          </p>
+        </div>
+        <ul className="grid w-full gap-4 text-left sm:grid-cols-3">
+          {articles.map((a) => (
+            <li key={a.slug}>
+              <Link
+                href={`/articles/${a.slug}`}
+                className="group flex h-full flex-col gap-2 rounded-xl border border-border/70 bg-surface/80 p-5 transition-colors hover:border-border-strong"
+              >
+                <span className="font-display text-base font-semibold text-foreground group-hover:text-primary-bright">
+                  {a.title}
+                </span>
+                <span className="line-clamp-3 text-sm leading-6 text-muted">
+                  {a.description}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+        <Button asChild variant="outline">
+          <Link href="/articles">
+            All guides
+            <ArrowRight className="h-4 w-4" aria-hidden />
+          </Link>
+        </Button>
+      </div>
+    </section>
   );
 }
 

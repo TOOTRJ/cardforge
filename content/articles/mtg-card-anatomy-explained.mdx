@@ -1,0 +1,108 @@
+---
+title: "Anatomy of an MTG Card: Every Part Explained"
+description: "Every part of a Magic card explained top to bottom — name, mana cost, art, type line, set symbol, text box, power/toughness, loyalty, and the legal line."
+date: "2026-06-16"
+tags: ["card anatomy", "reference", "card frame"]
+---
+
+A Magic: The Gathering card is a small, dense data sheet. From the top down, the major parts are the **card name** (title bar), the **mana cost** (top-right), the **illustration**, the **type line**, the **expansion symbol** with its rarity color, the **text box** (abilities, reminder text, and flavor text), the **power/toughness** or **loyalty** box, and the **bottom line** carrying the collector number, artist credit, and legal text. Each region is fixed by the frame so players can read any card the same way.
+
+This guide walks every region in order, explains exactly what it holds, and notes which fields you fill in when you build a card in PipGlyph.
+
+## Card name
+
+The title bar runs across the top of the card and holds the **card name** — the card's unique identifier. Two cards with the same name are considered the same card for deck-building and rules purposes, which is why the name is the single most load-bearing string on the sheet. On older frames the name sits on a tinted nameplate; modern frames float it over a holofoil bar. Length matters in practice: a long name forces the type setter to shrink it, and the same is true in a custom editor, so concise names sit best.
+
+## Mana cost
+
+In the top-right of the title bar sits the **mana cost** — the resource you pay to cast the card. It is written as a run of pips: generic numbers first, then colored symbols, for example <Mana cost="{2}{W}{W}" /> or <Mana cost="{1}{U}{R}" />. Lands have no mana cost (you play them for free), and some cards are cast by other means, so an empty cost area is normal rather than a bug.
+
+The cost area is also where a card's **color** is read at a glance. The colored pips here, plus any colored pips in the text box, define the card's color identity. For the full vocabulary — generic, colored, hybrid, twobrid, phyrexian, snow, and the utility symbols — see the [complete guide to mana symbols](/articles/mtg-mana-symbols-complete-guide).
+
+## Illustration
+
+Below the title bar is the **art window**, the framed illustration. On the original 1993 through 2003 frames the art sits in a bordered box with clear margins; the 2015 "M15" frame and the full-art and borderless treatments push the illustration toward or past the card's edge. The art is the card's identity to most players, but mechanically it carries no rules — it's presentation only. Whether you get a tidy art box or an edge-to-edge bleed depends on the [frame era](/articles/mtg-card-frame-eras-explained) you choose.
+
+## Type line
+
+The **type line** runs in a bar directly under the art and is the card's grammatical core: it tells the rules engine what the card *is*. It reads left to right as **supertypes, then card types, then a long dash, then subtypes** — for example "Legendary Creature — Goblin Wizard" or "Basic Land — Mountain."
+
+### Supertypes
+
+Supertypes are optional modifiers that sit in front of the card type. The common ones are **Legendary** (you may control only one with a given name), **Basic** (the five basic lands), **Snow** (a permanent type that some costs care about), and the rare **World**. A card can have a supertype or none.
+
+### Card types
+
+The card type is the mandatory middle of the line and determines the rules that govern the card. The permanent types are **Creature**, **Artifact**, **Enchantment**, **Land**, **Planeswalker**, and **Battle**; the two spell types that resolve and leave are **Instant** and **Sorcery**. A card can carry more than one type, such as "Artifact Creature" or "Enchantment Creature."
+
+### Subtypes
+
+After the dash come subtypes, which are flavor-and-mechanics tags scoped to the card type. **Creature** subtypes are creature types like Goblin, Wizard, or Elf Druid; **Land** subtypes name the basic land types (Plains, Island, Swamp, Mountain, Forest) and nonbasic types like Gate; **Artifact** subtypes include Equipment and Vehicle; **Enchantment** subtypes include Aura and Saga. Instants and sorceries can share spell subtypes such as Arcane or Adventure. Subtypes are the hook a lot of tribal and synergy text reaches for, so they carry real weight despite living after the dash.
+
+## Expansion symbol and rarity
+
+To the right of the type line sits the **expansion symbol** (also called the set symbol), a small glyph identifying the set the card was printed in. Since the Exodus set in 1998, its **color encodes rarity**: black for common, silver for uncommon, gold for rare, and an orange-red for mythic rare. The symbol itself is purely informational and has no effect on gameplay. For how rarity is assigned and what it signals about a card, see [MTG rarity explained](/articles/mtg-rarity-explained).
+
+## Text box
+
+The **text box** fills the lower-middle of the card and holds everything the card does, plus its voice.
+
+**Abilities** are the rules text. They come in a few shapes: **keyword abilities** are single words or short phrases standing in for a longer rule (Flying, Trample, Lifelink); **triggered abilities** start with "When," "Whenever," or "At" and fire on an event; **activated abilities** are written as a cost, then a colon, then an effect, such as "<Mana cost="{T}" />: Add <Mana cost="{G}" />"; and **static abilities** simply state a continuous truth ("Other Goblins you control get +1/+1").
+
+**Reminder text** is the *italic text in parentheses* that restates what a keyword means. It's a courtesy for newer players and carries no extra rules — the keyword alone is the rule. Designers drop reminder text on well-known keywords to save space and keep it on obscure ones.
+
+**Flavor text** is the *italic, non-rules prose* — a quote or scene — usually set off below the abilities by a thin divider. It never affects play; it sets tone. For the conventions that make abilities and reminder text read like the printed game, see [how to write MTG oracle text](/articles/how-to-write-mtg-oracle-text).
+
+<Callout tone="note">
+If a line is italic and changes what the card does, it isn't really flavor text — it's reminder text. Flavor text is the prose that could be deleted without altering a single interaction.
+</Callout>
+
+## Power, toughness, and loyalty
+
+The bottom-right corner is a status box whose contents depend on the card type.
+
+**Creatures** show a **power/toughness** box: two numbers separated by a slash, like 2/3, where the first is the damage the creature deals and the second is how much damage destroys it. Some cards use `*` for a value defined by an ability. **Vehicles** also use a power/toughness box, since they become creatures when crewed.
+
+**Planeswalkers** show a single **loyalty** number in the bottom-right instead — the counters the planeswalker enters with. Loyalty abilities in the text box spend or add to that number. **Battles** carry a similar **defense** number. Most other card types leave this corner empty.
+
+## The bottom line
+
+The thin strip across the very bottom of the card carries its production data, set in small type. From left to right it typically includes the **collector number** (the card's position in the set, like 137/280), the **artist credit** ("Illus. [name]"), and the **legal line** — the copyright notice and rules-set code. None of this affects gameplay; it's provenance and legal text. On a custom card the legal line is where you should make clear the card is unofficial and fan-made rather than a Wizards of the Coast product.
+
+## Parts at a glance
+
+| Part | Location | What it holds | Affects play? |
+| --- | --- | --- | --- |
+| Card name | Title bar (top) | Unique identifier | Identity only |
+| Mana cost | Top-right | Cost to cast, as pips | Yes |
+| Illustration | Below title | Artwork | No |
+| Type line | Under the art | Supertype · type · subtype | Yes |
+| Expansion symbol | Right of type line | Set + rarity color | No |
+| Text box | Lower middle | Abilities, reminder, flavor | Abilities only |
+| Power/toughness | Bottom-right | Creature combat stats | Yes |
+| Loyalty | Bottom-right | Planeswalker counters | Yes |
+| Bottom line | Card foot | Collector no., artist, legal | No |
+
+## Filling it in within PipGlyph
+
+When you build a card in [PipGlyph's card maker](/mtg-card-maker), these regions map to the fields you edit: a name field, a click-built mana cost, an art upload, a type-line builder for supertype, type, and subtype, a rarity picker that sets the set-symbol color, a rules-text box, a flavor-text box, and the power/toughness or loyalty stat. The collector and legal lines render automatically.
+
+The one thing to keep in mind is that the **frame style changes the layout** — a retro frame gives you a bordered art box and a tinted text box, while a modern frame stretches the art and restyles the title bar — so the same fields land in slightly different places depending on the era you pick. Start a card at [/create](/create), choose a frame, and the live preview shows every region update as you type.
+
+## FAQ
+
+### What are the main parts of a Magic card?
+
+Top to bottom: the card name in the title bar, the mana cost in the top-right, the illustration, the type line, the expansion (set) symbol with its rarity color, the text box holding abilities and flavor text, the power/toughness or loyalty box in the bottom-right, and the bottom line with the collector number, artist credit, and legal text.
+
+### What is the dash in the type line for?
+
+The dash separates card types from subtypes. Everything before it is supertypes and card types (the rules category, like "Legendary Creature"); everything after it is subtypes (flavor-and-mechanics tags, like "Goblin Wizard"). If a card has no subtypes, there's no dash at all.
+
+### What's the difference between reminder text and flavor text?
+
+Both are italic, but reminder text appears in parentheses and restates an ability's rules in plain language, while flavor text is standalone prose — a quote or scene — usually set off by a divider. Neither changes how the card plays; reminder text just explains the rules that are already there.
+
+### Why do some cards have no mana cost or no power/toughness?
+
+Lands have no mana cost because you play them for free, and any non-creature card leaves the power/toughness box empty. Planeswalkers replace that box with a loyalty number, and battles use a defense number — the bottom-right corner simply shows whichever stat the card type needs, or nothing.

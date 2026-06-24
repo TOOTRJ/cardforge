@@ -214,6 +214,35 @@ const ACCOUNTS_FAQ: FaqEntry[] = [
   },
 ];
 
+// --- Choosing a card maker (rendered on /best-mtg-card-makers) --------------
+
+export const COMPARISON_FAQ: FaqEntry[] = [
+  {
+    q: "What is the best MTG card maker?",
+    a: "The best MTG card maker depends on what you need. PipGlyph is a strong all-rounder: a free, browser-based editor with a live preview, precise mana pips (including custom uploaded pip icons), an AI assistant for rules and flavor text, a full expansion-set builder, and PNG/PDF export for proxies. MTG Cardsmith and MTGNexus are other popular browser tools with large communities, and Magic Set Editor is a free offline desktop program favored for building whole sets.",
+  },
+  {
+    q: "Is there a CardConjurer alternative?",
+    a: "Yes. CardConjurer was a popular browser-based card renderer that was taken down in late 2023 after its creator received a cease-and-desist from Wizards of the Coast. PipGlyph is a free, browser-based alternative with a live-preview editor, the full mana-symbol vocabulary, custom pip uploads, set building, sharing, and high-resolution PNG and PDF export — built on original frames and fonts rather than Wizards' proprietary assets.",
+  },
+  {
+    q: "Why was CardConjurer taken down?",
+    a: "CardConjurer was discontinued in late 2023 after receiving a cease-and-desist from Wizards of the Coast over the use of their intellectual property. It's a reminder that custom-card tools last only if they respect WotC's IP — which is why PipGlyph uses its own original card frames, fonts, and mana symbols and follows the spirit of the Wizards Fan Content Policy.",
+  },
+  {
+    q: "Can I rebuild my CardConjurer cards in PipGlyph?",
+    a: "There's no direct file import from CardConjurer, but rebuilding a card in PipGlyph's editor takes a minute or two — you re-enter the name, mana cost, type line, rules text, and art. If the card is based on a real Magic card, PipGlyph's Scryfall import can pre-fill those fields for you to customize.",
+  },
+  {
+    q: "Are custom MTG card makers legal to use?",
+    a: "Making custom Magic cards for personal, non-commercial use — playtesting, homebrew, gifts, design challenges — is broadly accepted within the Magic community. The lines to avoid are selling cards, passing proxies off as real, and using Wizards of the Coast's copyrighted art or assets without rights. PipGlyph uses original frames and assets and is not affiliated with Wizards of the Coast.",
+  },
+  {
+    q: "Is PipGlyph free?",
+    a: "Yes. PipGlyph's card maker is free — every card type, every frame, and the live preview, with no account needed to start. A free account adds saving, publishing to the gallery, set building, and custom pip uploads; paid plans add AI generation credits, watermark-free hi-res exports, and the AI set generator.",
+  },
+];
+
 // --- The hub's topic list ---------------------------------------------------
 
 export const FAQ_TOPICS: FaqTopic[] = [
@@ -234,6 +263,12 @@ export const FAQ_TOPICS: FaqTopic[] = [
     title: "AI card generation",
     guideHref: "/ai-mtg-card-generator",
     entries: AI_GENERATOR_FAQ,
+  },
+  {
+    slug: "choosing",
+    title: "Choosing a card maker",
+    guideHref: "/best-mtg-card-makers",
+    entries: COMPARISON_FAQ,
   },
   { slug: "sharing", title: "Sharing & visibility", entries: SHARING_FAQ },
   { slug: "sets", title: "Sets & expansions", entries: SETS_FAQ },
