@@ -12,10 +12,11 @@
 ## Key pages
 
 - [FAQ](https://www.pipglyph.com/faq): Every common question answered directly — card making, pips, AI, sharing, sets, printing, remixing, challenges.
-- [Articles](https://www.pipglyph.com/articles): Long-form guides — writing oracle text, the complete mana symbol reference, balancing custom cards, card frame eras, running design challenges.
+- [Articles](https://www.pipglyph.com/articles): Long-form guides on custom MTG card design — designing creatures, spells, and planeswalkers; the color pie; keyword abilities; card anatomy; rarity; mana symbols; oracle text; balance; playtesting; and proxy printing. Grouped into topic clusters at /articles/tag/card-design, /articles/tag/reference, and /articles/tag/playtesting.
 - [MTG Card Maker](https://www.pipglyph.com/mtg-card-maker): What the card creator does, how to make a custom card, FAQ with direct answers.
 - [Mana Pip Editor](https://www.pipglyph.com/mana-pip-editor): The full mana symbol vocabulary and custom pip uploads, with FAQ.
 - [AI MTG Card Generator](https://www.pipglyph.com/ai-mtg-card-generator): Concept-to-card AI generation, with FAQ.
+- [Best MTG Card Makers](https://www.pipglyph.com/best-mtg-card-makers): Honest comparison of custom MTG card makers and a free CardConjurer alternative, with FAQ.
 - [Community Gallery](https://www.pipglyph.com/gallery): Public custom cards — filter by color, type, rarity, and tag.
 - [Design Challenges](https://www.pipglyph.com/challenges): Community design briefs; entries are public cards wearing the challenge tag.
 - [About](https://www.pipglyph.com/about): What PipGlyph is, principles, and roadmap.

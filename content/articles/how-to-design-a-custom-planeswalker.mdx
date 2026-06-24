@@ -1,0 +1,108 @@
+---
+title: "How to Design a Custom Planeswalker"
+description: "How to design a custom Magic planeswalker — starting loyalty, plus/minus/ultimate abilities, loyalty math, templating, and a full worked example."
+date: "2026-06-18"
+tags: ["planeswalkers", "card design", "loyalty"]
+---
+
+A planeswalker is a permanent that enters with a number of loyalty counters and carries loyalty abilities you activate by adding or removing those counters. You may activate only one loyalty ability per planeswalker per turn, and only at sorcery speed — your main phase, empty stack. The classic shape is three abilities: a plus that builds advantage, a minus that affects the board right now, and a game-ending ultimate. Get those three numbers talking to each other and you have a card; get them wrong and you have a 24-cent rare.
+
+Planeswalkers are the densest design space in Magic precisely because every number is load-bearing. Here's how to make the math behave.
+
+## Planeswalker anatomy
+
+Every planeswalker has the same skeleton, and learning the parts is half the battle.
+
+**Starting loyalty** is printed in the bottom-right corner. The planeswalker enters with that many loyalty counters. This is its life total, its fuel, and your single most important balance lever.
+
+**Loyalty abilities** are the activated abilities that add or remove loyalty counters as their cost. You activate one per turn, during a main phase, with nothing else on the stack — same timing as casting a sorcery. The cost is the counter change itself: a `[+1]` adds a counter, a `[−3]` removes three. A `[0]` does nothing to the count but still uses your one activation for the turn.
+
+**Loyalty is a resource and a clock.** Combat and direct damage dealt to a planeswalker remove that many loyalty counters; at zero, it goes to its owner's graveyard. Opponents attack it down while you spend it up — every turn is a tug-of-war over that number.
+
+<Callout tone="note" title="The one-per-turn rule">
+"One loyalty ability per turn" is per planeswalker, not per player. Two different planeswalkers can each activate an ability in the same turn. But you can't plus a planeswalker and then ultimate the same one — pick one lever per turn.
+</Callout>
+
+## The loyalty math heuristic
+
+Good planeswalker numbers follow a few reliable rules of thumb.
+
+**Starting loyalty usually sits at 3 to 5.** Lower than 3 and the card dies to a stiff breeze; higher than 5 (at a normal cost) and it's nearly impossible to kill through combat. Three is fragile-but-cheap; five is sticky-but-expensive. Pick the personality you want.
+
+**A planeswalker should ideally survive the turn it lands.** It enters and immediately uses its one ability — that's the whole point. If casting it and activating it once still leaves it dead to your opponent's existing board, it's underpowered. The plus ability's job is often to *protect itself*: make a blocker, gain life, tap the attacker, remove a threat.
+
+**Each ability has a job.** The plus should protect you or pull ahead incrementally — card advantage, a token, a small swing. The minus should have immediate, visible impact on the board the turn you play it — kill something, drain life, deal damage. The ultimate should be game-defining but not always reachable; if you can ultimate the turn it lands, the number is too low.
+
+A working sanity check: ask how many turns until the ultimate comes online untouched, plussing each turn. Three to four turns is the sweet spot. If it's one or two, the ultimate is too cheap. If it's six-plus, nobody will ever see it, so make it spectacular as a reward for getting there.
+
+## Templating loyalty abilities
+
+Loyalty abilities use a strict, recognizable format: a bracketed loyalty cost, a colon, then the effect.
+
+```
+[+1]: Draw a card, then discard a card.
+[0]: Create a 1/1 white Soldier creature token.
+[−7]: You get an emblem with "Creatures you control have flying."
+```
+
+A few conventions matter. The minus sign is a true minus (−), not a hyphen. Abilities are listed in descending loyalty order: plus on top, then zero or smaller pluses, minuses below, ultimate last. Each ability is one clean line that follows the same oracle grammar as any other card — trigger words, numerals for damage and counters, explicit targets when a player can respond. If a loyalty ability reads awkwardly, the fix is almost always in the rules text, not the number; our [oracle text templating guide](/articles/how-to-write-mtg-oracle-text) covers the grammar in depth.
+
+Mana never appears *inside* a loyalty cost — the counter change is the entire cost. Mana symbols like <Mana cost="{2}{W}" /> belong only in the planeswalker's casting cost in the top-right corner.
+
+## The classic three-ability template — and when to break it
+
+The three-ability structure (plus / minus / ultimate) is the default because it maps cleanly onto the three jobs: build, impact, win. Start here — it's legible, balance-friendly, and players instantly know how to read it. But deviating is fair game once you know why:
+
+- **Two abilities.** A focused planeswalker can run just two — often a plus and a minus, no ultimate — which lowers the ceiling and reads as a cheaper, role-player card. Great for commons-adjacent customs or lower mana costs.
+- **A static ability plus loyalty abilities.** Some planeswalkers carry a always-on static ability above their loyalty abilities (an anthem, a tax, a replacement effect) in addition to the activated ones. Powerful, but it makes evaluation harder — the static is "free" value every turn on top of your activation.
+- **An ability that can repeat.** A `[0]` you can use every turn forever is deceptively strong; price the starting loyalty and effect accordingly.
+
+The rule isn't "always three." It's "every ability earns its slot." Two great abilities beat three mediocre ones.
+
+## Color pie for planeswalkers
+
+Planeswalkers are color-coded creatures-that-aren't, so they obey the [color pie](/articles/mtg-color-pie-explained) like everything else. Each color's walker should do color-appropriate things:
+
+- **White** (<Mana cost="{W}" />) — tokens, anthems, life gain, board wipes, taxing effects, mass protection.
+- **Blue** (<Mana cost="{U}" />) — card draw, bounce, counterspell-flavored effects, tempo, taking extra turns at the high end.
+- **Black** (<Mana cost="{B}" />) — drain, edicts, recursion from the graveyard, card advantage paid in life.
+- **Red** (<Mana cost="{R}" />) — direct damage, impulsive draw, haste enablers, aggressive token swarms.
+- **Green** (<Mana cost="{G}" />) — ramp, big creatures, fight effects, +1/+1 counters, raw card advantage off permanents.
+
+Multicolor planeswalkers blend two adjacent slices. A <Mana cost="{R}{W}" /> walker might make tokens and burn; a <Mana cost="{B}{G}" /> one might drain and recur. Keep each ability inside its color's lane and the card reads as printed.
+
+## A worked example
+
+Here's an original planeswalker with the math spelled out.
+
+**Sylwen, Thornwarden** — <Mana cost="{2}{G}{W}" />
+*Legendary Planeswalker — Sylwen*
+**Starting loyalty: 4**
+
+- **[+1]:** Create a 1/1 green and white Sapling creature token. It gains vigilance until end of turn.
+- **[−2]:** Put two +1/+1 counters on target creature you control. It gains trample until end of turn.
+- **[−7]:** You get an emblem with "Creatures you control get +2/+2 and have trample and vigilance."
+
+The math: at four loyalty for four mana, Sylwen survives the turn it lands by making a 1/1 blocker that itself can block (vigilance is flavor, but the body matters), so a lone attacker doesn't immediately kill her. The plus builds a board and a defense at once — exactly its job. The minus pushes a real threat *now*, swinging a combat or pressuring life totals immediately. The ultimate sits at −7, so from a fresh 4 you need to plus three times (4 → 5 → 6 → 7) — four turns untouched — before it comes online, and by then you've also built a board for it to buff. Reachable, never free, game-ending when it lands. That's the whole heuristic in one card.
+
+## Build it in PipGlyph
+
+[PipGlyph](/mtg-card-maker) supports planeswalker loyalty abilities natively: set a starting loyalty, add as many loyalty abilities as you need, and each renders with its bracketed cost in the planeswalker text box. Drop in your casting cost, pick a frame, and the layout matches the printed treatment. Start a planeswalker in the [card creator](/create) and tune the numbers live — the fastest way to feel out whether your loyalty math survives contact with a board.
+
+## FAQ
+
+### How much starting loyalty should a custom planeswalker have?
+
+For a normal four-to-five-mana planeswalker, three to five is the standard range. Use three for a cheap, fragile design and five for an expensive, sticky one; tie the number to how easily the card protects itself the turn it enters.
+
+### Can a planeswalker use two loyalty abilities in one turn?
+
+No. You may activate only one loyalty ability per planeswalker per turn, and only at sorcery speed. Different planeswalkers you control each get their own activation, but a single one is limited to one ability per turn.
+
+### What happens when a planeswalker reaches zero loyalty?
+
+It's put into its owner's graveyard as a state-based action, just like a creature with zero toughness. Combat and direct damage to a planeswalker remove that much loyalty, which is how opponents race it down.
+
+### Does a planeswalker have to have an ultimate?
+
+No. Two-ability planeswalkers with just a plus and a minus are entirely legal and often well-balanced — skipping the ultimate lowers the card's ceiling, which suits cheaper or more focused designs. See our notes on [balancing custom cards](/articles/designing-balanced-custom-mtg-cards) for how to set that ceiling deliberately.

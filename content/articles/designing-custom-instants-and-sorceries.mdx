@@ -1,0 +1,97 @@
+---
+title: "Designing Custom Instants and Sorceries"
+description: "How to design custom MTG instants and sorceries — timing as a cost, card advantage math, color-pie-correct removal, spell archetypes, and clean templating."
+date: "2026-06-19"
+tags: ["spells", "card design", "instants"]
+---
+
+Instants and sorceries are Magic's noncreature spells: one-shot effects that resolve, do their thing, and head to the graveyard. The only mechanical difference between the two card types is timing — an instant can be cast any time you have priority, including during an opponent's turn and in response to other spells, while a sorcery can only be cast during your own main phase with an empty stack. That timing gap is the single most important lever in spell design, and most beginner customs misprice it.
+
+This guide covers how to cost that flexibility, how card advantage drives spell value, how removal maps onto the color pie, and how to template a one-shot effect so it reads like it was printed.
+
+## Timing is a cost you can spend
+
+Treat instant speed as a resource the card is paying mana for. An instant can ambush an attacker, save a creature from removal, or be held up as a bluff — none of which a sorcery can do. That flexibility is real power, so the rule of thumb is simple: the same effect on an instant should be slightly weaker or slightly pricier than on a sorcery.
+
+Concretely, a sorcery that deals 3 damage might cost <Mana cost="{R}" />; the instant-speed version usually wants <Mana cost="{1}{R}" />, or it stays at <Mana cost="{R}" /> but only hits creatures. Card draw shows the same gap: drawing two cards at sorcery speed is a fine two-mana rate, but doing it at the end of an opponent's turn — effectively free tempo, since you spent a tapped-out turn doing nothing visible — is worth more, so it costs <Mana cost="{2}{U}" /> or asks you to skip something.
+
+<Callout tone="tip" title="The hold-up tax">
+When you give an effect flash-like flexibility, ask "what does an opponent fear when I leave two mana open?" If the answer is "a lot," you're charging too little. Instant speed is worth roughly half a mana to a full mana over the sorcery rate.
+</Callout>
+
+## Card advantage is the currency
+
+Every spell is a trade, and the unit of trade is the card. Designers talk about exchanges as ratios:
+
+- **One-for-one** — your one card removes one of theirs. Most single-target removal lives here. This is the cheap, fair band: <Mana cost="{1}{B}" /> to <Mana cost="{2}{B}" /> for clean creature removal.
+- **Two-for-one** — your one card answers or replaces two of theirs. Card draw ("draw two cards") and sweepers ("destroy all creatures") generate raw advantage, and the game charges the most for it. Expect four-plus mana and rare-or-higher rarity.
+- **Card disadvantage** — combat tricks and counterspells that trade one-for-one but only when you read the situation right. These get a discount because they can whiff.
+
+The mapping is consistent: the more cards an effect nets you, the more mana and the higher the rarity. A two-mana "draw three" is the kind of thing that quietly warps a format. If you want the full framework for pricing deltas like this, the [balanced-card-design guide](/articles/designing-balanced-custom-mtg-cards) goes deep on rate baselines and the diff method.
+
+## Removal and the color pie
+
+Removal is where color identity is least negotiable, because every color *kills things differently*. Putting an effect in the wrong color is the fastest way to make a custom spell feel wrong. Keep removal in-color:
+
+- **Red** burns. It deals direct damage to creatures, planeswalkers, and sometimes players, with the damage capped so it can't reliably kill big things. Red rarely says "destroy"; it says "deals N damage."
+- **White** exiles and destroys, usually with a condition. White removal is efficient but fair: it hits attacking or tapped creatures, asks for a converted-cost threshold, or exiles at a premium. Unconditional cheap kill is off-brand.
+- **Black** destroys outright, shrinks with -X/-X, and forces sacrifice (edicts). Black pays the best rate for single-target removal and asks for life or creatures as currency — "anything dies, at a price."
+- **Blue** doesn't kill so much as *answer*. It bounces permanents to hand and counters spells before they resolve. Blue removal is temporary or preemptive, not permanent destruction.
+- **Green** fights. Its removal makes your creature deal damage equal to its power to a target, so green needs a body on board to remove anything — and it leans toward the can't-target-creatures niche (destroy target artifact, enchantment, or flyer) rather than open creature destruction.
+
+For a full breakdown of which effects each color does and doesn't get, see the [color pie explainer](/articles/mtg-color-pie-explained). Breaking the pie is allowed, but it should be deliberate, loud, and reserved for your splashiest mythics.
+
+## Common spell archetypes and how to cost them
+
+Most noncreature spells fall into a handful of buckets. Costing each starts from its archetype baseline:
+
+- **Burn** — direct damage, red's bread and butter. Roughly one mana per 2–3 damage to creatures; damage to any target (including players) costs more. A <Mana cost="{R}" /> instant that deals 3 to a creature is on-rate; bump to <Mana cost="{1}{R}" /> if it can hit face.
+- **Card draw** — pure advantage, mostly blue. Two mana to draw two at sorcery speed; pay up for instant speed or no drawback.
+- **Ramp** — green's mana acceleration (search a land, make Treasure, add mana). Price against the tempo gained; ramp that untaps or fixes colors is worth more than ramp that just counts.
+- **Counterspells** — blue's interaction. Hard counters want <Mana cost="{U}{U}" /> or a restriction; conditional counters ("unless they pay <Mana cost="{2}" />") earn a discount.
+- **Combat tricks** — cheap instants that swing a fight. Their value is conditional, so they're cheap: <Mana cost="{G}" /> for +3/+3, often with a small rider.
+- **Sweepers** — mass removal, white and black. Two-for-one or better by design, so four-plus mana and a real cost. A sweeper at three mana needs a meaningful drawback.
+
+## Templating one-shot effects
+
+Here's the good news about noncreature spells: they're the easiest card type to template, because a one-shot spell just *states its effect*. No trigger word, no cost-colon-effect structure — those belong to permanents. You don't write "When you cast this, deal 3 damage." You write "Deal 3 damage to any target."
+
+The trigger words **When**, **Whenever**, and **At** are for abilities that wait for an event. A spell's effect happens on resolution, so it's stated directly in the imperative: *Destroy target creature. Draw two cards. Counter target spell.* The two reflexive exceptions: an instant or sorcery that sets up a delayed or conditional follow-up can use a trigger inside its own text (*"Draw a card. If you control three or more artifacts, draw another card"* is fine as plain sequencing, but *"When you draw your second card this turn, ..."* would use a trigger).
+
+The rest is the same grammar every card follows: use "target" when a player can respond to the choice, spell out card counts ("draw two cards") but use numerals for damage and life ("deals 3 damage," "you gain 4 life"), and close lines with durations ("until end of turn"). The [oracle-text guide](/articles/how-to-write-mtg-oracle-text) covers the full ruleset; spells just skip the trigger-and-cost scaffolding.
+
+## A worked example
+
+Say you want a black instant that punishes a greedy opponent: it kills a creature and drains a little life, the kind of two-mode value black loves.
+
+A typical first draft mangles the templating:
+
+> Kill a creature and they lose 2 life, you gain 2.
+
+Templated, costed, and color-pie-correct:
+
+> **Vile Reckoning** — <Mana cost="{2}{B}" /> — Instant
+>
+> Destroy target creature. Its controller loses 2 life and you gain 2 life.
+
+The reasoning: destroy-target-creature plus a small drain is a one-for-one with a tempo bonus, which is firmly in black's lane. At sorcery speed this is a fair <Mana cost="{1}{B}" /> effect; the instant-speed flexibility — cast it on their attack, or in response to a sacrifice trigger to deny value — earns the extra generic mana, landing it at <Mana cost="{2}{B}" />. "Target creature" is correct because the opponent can respond to the choice; "destroy" (not "deals damage") keeps it black rather than red; and the drain is stated as plain effect text with no trigger word, because it all happens on resolution. Drop it to <Mana cost="{1}{B}" /> and you've got an uncommon staple; the design is honest at two-and-a-color.
+
+You can build this exact card in a couple of minutes — type the cost, drop in the rules text, and watch the pips render — in the [PipGlyph creator](/create), then tweak the wording live until it reads printed. If you'd rather start from a plain-English idea, the [AI card generator](/ai-mtg-card-generator) will template the effect and suggest a cost for you to sanity-check.
+
+## FAQ
+
+### When should an effect be an instant instead of a sorcery?
+
+Make it an instant when the flexibility genuinely matters — interaction (removal, counters, tricks), or reactive value you'd want to hold up. Make it a sorcery when the effect is proactive and you're happy paying less for it, like ramp, sweepers, or big card draw on your own turn.
+
+### How much extra should I charge for instant speed?
+
+Roughly half a mana to a full mana over the sorcery-speed rate, or keep the cost the same and weaken the effect (narrow the targets, lower the numbers). The exact tax depends on how scary the card is when you leave mana open.
+
+### Can a custom sorcery be cast at instant speed?
+
+Not by its type alone — the type line is what sets timing, so a sorcery is hard-locked to your main phase. If you want a sorcery-flavored effect at instant speed, either make it an instant or give a permanent an ability that lets you cast sorceries any time you could cast an instant.
+
+### What's the difference between "destroy" and "deals damage" on removal?
+
+"Destroy" sends a creature to the graveyard outright (dodged only by indestructible or regeneration) and belongs to white and black. "Deals N damage" is red's method — it's capped, can be prevented, and won't kill anything with toughness above N. Use the verb that matches your color.

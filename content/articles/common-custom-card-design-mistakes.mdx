@@ -1,0 +1,86 @@
+---
+title: "Common Custom Card Design Mistakes (and How to Fix Them)"
+description: "The seven mistakes that mark a custom MTG card as fake — undercosting, sloppy templating, color-pie breaks, kitchen-sink design, strictly-better cards, parasitism — and a concrete fix for each."
+date: "2026-06-17"
+tags: ["card design", "balance", "mistakes"]
+---
+
+Almost every weak custom Magic card fails for one of a handful of reasons, and they repeat across thousands of designs. Undercosting, vague rules text, and color-pie breaks account for most of them, and each has a fix you can apply in minutes. This guide walks the seven most common mistakes and shows how to turn a card that reads as fake into one that reads as printed.
+
+None of these are talent problems. They're checklist problems — the kind a second pass, or a second pair of eyes, catches every time. Run a new card past the list below before you publish it and you'll skip the most common review you'd otherwise get back.
+
+## Undercosting the card
+
+The most common mistake, by a wide margin, is giving a card more power than its mana pays for. New designers cost from imagination — "this feels like a three-drop" — instead of measuring against cards that already exist. The result is a 3/3 for <Mana cost="{1}{G}" /> with a relevant keyword, or a removal spell that does too much for too little.
+
+<Callout tone="warning" title="This is the one that gets cards rejected">
+Undercosting is the single most damaging mistake because it makes everything else irrelevant. A card with perfect templating, flawless flavor, and gorgeous art is still unplayable if it's broken — the only review it gets is "cool, but busted." Cost first; polish second.
+</Callout>
+
+The fix is to cost by diff, never from scratch. Find the closest printed card, then price the difference between it and yours. A 2/2 for <Mana cost="{1}{G}" /> is the modern baseline; if your two-drop is a 3/3, you owe a mana or a stat point or a real drawback. Card advantage is the most expensive thing in the game — a triggered ability that draws a card is worth a full mana on its own. The full method, with rate baselines for creatures and removal, lives in [designing balanced custom MTG cards](/articles/designing-balanced-custom-mtg-cards). Work the diff, and "feels like a three-drop" turns into a number you can defend.
+
+## Wordy or ambiguous templating
+
+The second giveaway is rules text that doesn't parse. New designers invent phrasing — "if you play a spell, this gets stronger" — instead of using Magic's actual grammar. The card might be perfectly balanced, but it reads as fake before anyone evaluates the design, because real oracle text follows a tight, learnable shape.
+
+The fix is to use the real conventions. Triggered abilities begin with **When**, **Whenever**, or **At**, and nothing else. Activated abilities use the strict `Cost: Effect` form, and the colon is load-bearing. So "if you play a spell, this gets stronger" becomes:
+
+> Whenever you cast an instant or sorcery spell, this creature gets +1/+0 until end of turn.
+
+Durations close the line ("until end of turn"), keywords are capitalized while keyword actions like *scry* and *exile* stay lowercase, and you write "target" only when a player can respond to the choice. The complete grammar is in [how to write MTG oracle text](/articles/how-to-write-mtg-oracle-text). Match it and the card stops looking improvised.
+
+## Breaking the color pie
+
+Each Magic color does different jobs, and handing a color something off its menu is one of the loudest tells of an amateur card. The usual offenders are predictable: blue with direct-damage burn, green with hard card draw ("draw two cards"), and white with raw card draw. These aren't balance mistakes — a fairly costed blue Lightning Bolt is still wrong, because blue doesn't burn.
+
+The fix is to relocate the effect to the color that owns it, or find the in-color version of what you wanted. If you wanted blue to deal with a creature, blue bounces or counters rather than burns. If you wanted green to refill its hand, green draws off *creatures* — "whenever a creature you control dies, draw a card" — instead of drawing flatly. White's card advantage looks the same way: conditional, tied to creatures dying or attacking, never a bare "draw two." [The MTG color pie explained](/articles/mtg-color-pie-explained) maps which effects live where. Deliberate breaks exist, but they should be rare, loud, and reserved for mythic — not a green counterspell you reached for because it was convenient.
+
+## The kitchen-sink card
+
+A close cousin of undercosting is the card that tries to do five things at once: it draws, it makes a token, it gains life, it has two keywords, and it pumps your team. Each ability might be reasonable alone, but stacked together they make a card that's impossible to cost, impossible to read, and impossible to balance. Beginners do this because every idea feels too good to cut.
+
+The fix is to cut to a single clear idea. Ask what the card is *about* — the one thing a player would name when they describe it — and delete everything that isn't in service of that. A card that does one thing crisply beats a card that does four things muddily every time. Most real cards carry one or two abilities; three is a signpost or a build-around, not a default. If you can't say the card's purpose in a sentence, it has too many.
+
+## Strictly-better design
+
+A strictly-better card is one that does everything an existing card does, plus more, with no tradeoff. Same cost, same stats, but yours also has flying — or the same removal spell but it also gains you life. These feel "fair" to new designers because they're only a little better, but a card with pure upside and no cost has no reason to exist except to power-creep what came before.
+
+The fix is to add a real cost or a real downside — something a deck actually has to weigh. The keyword is *real*: a drawback that no deck minds isn't a drawback, it's flavor text. "Sacrifice a creature" looks like a cost until you remember aristocrats decks *want* to sacrifice creatures. Stress-test every downside with one question: which deck wants to pay this? If lots of decks happily would, price the card as if the "drawback" were an upside. Good design buys a higher ceiling by accepting a lower floor — the tradeoff is the point, not an obstacle to route around.
+
+### A worked fix
+
+Say you've designed a 2/2 flyer for <Mana cost="{1}{W}" /> that also gains you 2 life when it enters — strictly better than a plain 2/2 flyer at the same cost. You have two honest fixes: raise the cost to <Mana cost="{2}{W}" />, or keep the cost and cut the body to a 1/2 so the lifegain is paid for in stats. Either makes the card a decision instead of a free upgrade.
+
+## Parasitic mechanics
+
+A parasitic mechanic is a keyword or theme that only works alongside other cards built for it. A designer invents a shiny new mechanic, then realizes a single card with it does nothing — you need the whole supporting cast to make it function. In isolation, a parasitic card is a blank, and a set full of them only plays with itself.
+
+The fix is to make cards good on their own first, then layer synergy on top. The best mechanics reward you for caring about them without *requiring* you to. Tribal is the model done right: a 2/2 Goblin is a fine, fairly costed creature by itself, and it gets *better* in a deck full of Goblins — but it's never a dead card. Design the standalone card to pull its weight at rate, and let the synergy be a bonus that decks opt into. The [MTG keyword abilities list](/articles/mtg-keyword-abilities-list) shows how evergreen keywords stay useful in any deck — a good benchmark for whether your custom mechanic can stand alone.
+
+## Big numbers instead of decisions
+
+The last mistake is subtler: reaching for raw size — a 9/9, "deal 7 damage," "draw five cards" — when the design has nothing interesting to offer. Big numbers feel powerful, but they're rarely *fun*, because they don't ask anyone to make a choice. The most memorable cards create decisions: when to use them, what to target, whether the cost is worth it this turn.
+
+The fix is to spend your design budget on choices rather than magnitude. A card that makes both players think beats a card that's merely large. Crucially, the loser of an exchange should still get to make a decision — effects that strip the opponent's agency entirely (extra-turn chains, mass land destruction) read as fair on a spreadsheet but play miserably. Ask whether your card creates an interesting moment or just a big one.
+
+## Catch mistakes before you publish
+
+You don't have to catch all of this by eye. PipGlyph's AI assistant includes a [balance check](/ai-mtg-card-generator) that reads your card and returns a risk assessment with specific cost suggestions — a fast second opinion that flags undercosting and pie breaks before your playgroup does. And building the card in the [PipGlyph editor](/create) surfaces the structural mistakes on its own: when you see the text crammed into the box, the kitchen-sink problem becomes obvious, and seeing the body next to its cost makes the rate jump out. Describe, render, compare, fix — most of these mistakes don't survive a single honest look.
+
+## FAQ
+
+### What is the most common custom card design mistake?
+
+Undercosting — packing too much power into too little mana. New designers cost from feel instead of measuring against printed cards, so they end up with pushed rates. The fix is to cost by diff: find the closest real card and price the difference.
+
+### How do I know if my custom card breaks the color pie?
+
+Check whether the effect belongs to that color's job. Blue doesn't deal direct damage, green doesn't draw cards flatly, and white doesn't get raw card draw. If your card hands a color something off its menu, relocate the effect or find the in-color version that does the same work.
+
+### What makes a card "strictly better" and why is that bad?
+
+A strictly-better card does everything another card does plus more, at the same cost, with no tradeoff. It's bad because pure upside with no downside is just power creep — there's no decision to make. Add a real cost or drawback that a deck actually has to weigh.
+
+### How can I check my custom card's balance quickly?
+
+Run it through the four-of test (would a competitive deck play four copies?) and ask which deck *wants* each of its drawbacks. For a second opinion, the [AI balance check](/ai-mtg-card-generator) reads the card and returns a risk assessment with cost suggestions.

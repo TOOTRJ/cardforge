@@ -2,7 +2,8 @@ import "server-only";
 
 import type { MetadataRoute } from "next";
 import { getSiteBaseUrl } from "@/lib/site-url";
-import { listArticles } from "@/lib/content/articles";
+import { listArticles, listTags } from "@/lib/content/articles";
+import { getCluster } from "@/lib/content/clusters";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
@@ -59,6 +60,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.9,
     },
     {
+      url: `${baseUrl}/best-mtg-card-makers`,
+      lastModified,
+      changeFrequency: "monthly",
+      priority: 0.9,
+    },
+    {
       url: `${baseUrl}/faq`,
       lastModified,
       changeFrequency: "monthly",
@@ -74,10 +81,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // new MDX file lands in the sitemap on the same deploy.
     ...listArticles().map((article) => ({
       url: `${baseUrl}/articles/${article.slug}`,
-      lastModified: new Date(article.date),
+      lastModified: new Date(article.updated ?? article.date),
       changeFrequency: "monthly" as const,
       priority: 0.8,
     })),
+    // Tag/cluster hubs — the substantive topic pages (defined clusters or any
+    // tag with 2+ guides). One-off single-article tags are noindex, so they're
+    // kept out of the sitemap too. Tag slugs are [a-z0-9-] only, so XML-safe.
+    ...listTags()
+      .filter((tag) => getCluster(tag.slug) !== null || tag.count >= 2)
+      .map((tag) => ({
+        url: `${baseUrl}/articles/tag/${tag.slug}`,
+        lastModified,
+        changeFrequency: "weekly" as const,
+        priority: 0.7,
+      })),
     {
       url: `${baseUrl}/preview`,
       lastModified,
