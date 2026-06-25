@@ -5,13 +5,14 @@ import { CompassStar } from "@/components/ui/compass-star";
 import { StarfieldBackdrop } from "@/components/ui/starfield-backdrop";
 import { CardPreviewPlaceholder } from "@/components/cards/card-preview-placeholder";
 
-// WUBRG pip labels for the decorative strip
+// WUBRG pips rendered with the Mana font — the same glyphs the card pips use,
+// so the strip shows real MTG mana symbols rather than plain colored dots.
 const MANA_PIPS = [
-  { key: "W", label: "White", cls: "mana-pip mana-w" },
-  { key: "U", label: "Blue",  cls: "mana-pip mana-u" },
-  { key: "B", label: "Black", cls: "mana-pip mana-b" },
-  { key: "R", label: "Red",   cls: "mana-pip mana-r" },
-  { key: "G", label: "Green", cls: "mana-pip mana-g" },
+  { key: "w", label: "White" },
+  { key: "u", label: "Blue" },
+  { key: "b", label: "Black" },
+  { key: "r", label: "Red" },
+  { key: "g", label: "Green" },
 ];
 
 // The three precision promises under the CTAs (mockup's micro-feature row).
@@ -53,16 +54,15 @@ export function MarketingHero() {
 
           {/* WUBRG pip strip */}
           <div className="flex items-center gap-2" aria-label="Supports all five Magic colors">
-            {MANA_PIPS.map((pip) => (
-              <span
-                key={pip.key}
-                className={pip.cls}
-                title={pip.label}
-                aria-label={pip.label}
-              >
-                {pip.key}
-              </span>
-            ))}
+            <span className="flex items-center gap-1.5 text-xl leading-none" aria-hidden>
+              {MANA_PIPS.map((pip) => (
+                <i
+                  key={pip.key}
+                  className={`ms ms-${pip.key} ms-cost ms-shadow`}
+                  title={pip.label}
+                />
+              ))}
+            </span>
             <span className="ml-1 text-xs text-subtle">All five colors supported</span>
           </div>
 

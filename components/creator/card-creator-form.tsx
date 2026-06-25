@@ -22,6 +22,7 @@ import {
   IdCard,
   Image as ImageIcon,
   Layers,
+  Loader2,
   Lock,
   Save,
   ScrollText,
@@ -1000,7 +1001,10 @@ export function CardCreatorForm({
                 </span>
               </summary>
               <div className="mx-auto w-full max-w-[220px] px-4 pb-4">
-                <CardPreview {...previewProps} />
+                <div className="relative">
+                  <CardPreview {...previewProps} />
+                  {generatingRandom ? <CardGeneratingOverlay /> : null}
+                </div>
               </div>
             </details>
 
@@ -1194,7 +1198,10 @@ export function CardCreatorForm({
               Live preview
             </p>
             <div className="mx-auto w-full max-w-sm">
-              <CardPreview {...previewProps} />
+              <div className="relative">
+                <CardPreview {...previewProps} />
+                {generatingRandom ? <CardGeneratingOverlay /> : null}
+              </div>
             </div>
             <p className="text-xs leading-5 text-muted">
               Saving doesn&apos;t publish — visibility above controls who can see
@@ -1204,5 +1211,25 @@ export function CardCreatorForm({
         </aside>
       </form>
     </FormProvider>
+  );
+}
+
+// Spinner overlay shown on the live preview while an AI random card is being
+// generated, so it's clear the card is being (re)built.
+function CardGeneratingOverlay() {
+  return (
+    <div
+      className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-[5%] bg-background/70 backdrop-blur-sm"
+      role="status"
+      aria-live="polite"
+    >
+      <Loader2
+        className="h-8 w-8 animate-spin text-primary-bright"
+        aria-hidden
+      />
+      <span className="text-xs font-semibold uppercase tracking-wider text-muted">
+        Forging…
+      </span>
+    </div>
   );
 }
