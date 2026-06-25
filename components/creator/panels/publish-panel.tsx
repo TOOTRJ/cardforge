@@ -1,8 +1,9 @@
 "use client";
 
-// Publish panel — visibility, set membership, and the advanced tags + slug
-// overrides. Regrouped from the old publish step (the finish picker moved to
-// the Effects panel; the Tags field moved here from the old details step).
+// Publish panel — visibility, set membership, and the advanced tags + the
+// read-only card URL. Regrouped from the old publish step (the finish picker
+// moved to the Effects panel; the Tags field moved here from the old details
+// step). The slug is derived from the title automatically — not user-editable.
 
 import Link from "next/link";
 import { Controller, useFormContext, useWatch } from "react-hook-form";
@@ -196,8 +197,8 @@ export function PublishPanel({
         />
       </FieldGroup>
 
-      {/* Slug auto-derives from the title; tuck it (and the discovery tags)
-          under Advanced for anyone who wants a custom URL. */}
+      {/* Discovery tags + the read-only card URL (the slug derives from the
+          title automatically and is not user-editable), under Advanced. */}
       <details className="rounded-lg border border-border/60 bg-elevated/30">
         <summary className="cursor-pointer list-none px-4 py-2 text-xs font-semibold uppercase tracking-wider text-subtle [&::-webkit-details-marker]:hidden">
           Advanced
@@ -216,20 +217,14 @@ export function PublishPanel({
           </FieldGroup>
 
           <FieldGroup
-            label="Slug"
-            helper={`URL: ${
-              ownerUsername
-                ? `/card/${ownerUsername}/${watchedSlug || slugify(watchedTitle || "untitled-card")}`
-                : `/card/${watchedSlug || slugify(watchedTitle || "untitled-card")}`
-            }`}
-            error={errors.slug?.message}
+            label="Card URL"
+            helper="Generated automatically from the title — not editable."
           >
-            <input
-              {...register("slug")}
-              placeholder="emberbound-wyrm"
-              className={inputClass(Boolean(errors.slug))}
-              autoComplete="off"
-            />
+            <p className="break-all rounded-md border border-border bg-background/40 px-3 py-2 text-sm text-muted">
+              {ownerUsername
+                ? `/card/${ownerUsername}/${watchedSlug || slugify(watchedTitle || "untitled-card")}`
+                : `/card/${watchedSlug || slugify(watchedTitle || "untitled-card")}`}
+            </p>
           </FieldGroup>
         </div>
       </details>

@@ -199,7 +199,7 @@ export function SetCreatorForm({ mode, userId, set }: SetCreatorFormProps) {
 
         <FieldGroup
           label="Title"
-          helper="The set's name. Defaults the slug if you leave that blank."
+          helper="The set's name."
           error={errors.title?.message}
         >
           <input
@@ -211,16 +211,12 @@ export function SetCreatorForm({ mode, userId, set }: SetCreatorFormProps) {
         </FieldGroup>
 
         <FieldGroup
-          label="Slug"
-          helper={`URL: /set/${watched.slug || slugify(watched.title || "untitled-set")}`}
-          error={errors.slug?.message}
+          label="Set URL"
+          helper="Generated automatically from the title — not editable."
         >
-          <input
-            {...register("slug")}
-            placeholder="frostbound-prologue"
-            className={inputClass(Boolean(errors.slug))}
-            autoComplete="off"
-          />
+          <p className="break-all rounded-md border border-border bg-background/60 px-3 py-2 text-sm text-muted">
+            /set/{watched.slug || slugify(watched.title || "untitled-set")}
+          </p>
         </FieldGroup>
 
         <FieldGroup
