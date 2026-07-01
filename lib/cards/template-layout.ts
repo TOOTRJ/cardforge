@@ -227,7 +227,9 @@ const M15: FrameProfile = {
     letterSpacingEm: 0.01,
   },
   type: {
-    rect: { topPct: 56.2, leftPct: 8.5, widthPct: 83, heightPct: 5.2 },
+    // Nudged down ~2px (center 58.8% → 59.1%) to sit true-center on the M15
+    // type bar — it read a hair high. Shared by snow/devoid (which spread M15).
+    rect: { topPct: 56.5, leftPct: 8.5, widthPct: 83, heightPct: 5.2 },
     sizePct: 0.034,
     colorHex: INK_DARK_SOFT,
     weight: 600,
