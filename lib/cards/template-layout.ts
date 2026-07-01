@@ -88,6 +88,11 @@ export type StatSlot = {
    *  planeswalker loyalty, which has no painted shield). */
   badgeColorHex?: string;
   shadowCss?: string;
+  /** Vertical nudge of the value text within the plate, in em (negative = up).
+   *  Corrects the display font's baseline asymmetry — digits sit low in their
+   *  line box, so a geometrically-centered value reads too close to the bottom.
+   *  Applied to the TEXT only, so the plate PNG stays aligned to the frame. */
+  valueDyEm?: number;
 };
 
 export type FrameProfile = {
@@ -257,6 +262,9 @@ const M15: FrameProfile = {
     colorHex: INK_DARK,
     weight: 700,
     plateAssetPathTemplate: "/frames/m15/pt/{color}.png",
+    // Digits read low in the plate (font baseline sits below the line-box
+    // center) — lift the value ~2px so it sits true-center on the plate.
+    valueDyEm: -0.11,
   },
 };
 

@@ -1166,6 +1166,15 @@ function StatBake({
           color: slot.colorHex,
           fontWeight: slot.weight ?? 700,
           fontSize: fpx(slot.sizePct, cardWidth),
+          // Same lift as the preview's translateY(${valueDyEm}em); computed in
+          // px here since Satori doesn't resolve em inside transforms.
+          ...(slot.valueDyEm
+            ? {
+                transform: `translateY(${Math.round(
+                  slot.valueDyEm * fpx(slot.sizePct, cardWidth),
+                )}px)`,
+              }
+            : {}),
           ...(slot.shadowCss ? { textShadow: slot.shadowCss } : {}),
         }}
       >
