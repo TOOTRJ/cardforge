@@ -111,6 +111,8 @@ describe("field → step routing", () => {
     const map = buildFieldToStep();
     expect(map.get("title")).toBe("identity");
     expect(map.get("cost")).toBe("pips");
+    // Color moved to the Frame step.
+    expect(map.get("color_identity")).toBe("frame");
     expect(map.get("rules_text")).toBe("text");
     // Stats fold into the Text step now.
     expect(map.get("power")).toBe("text");
@@ -122,10 +124,10 @@ describe("field → step routing", () => {
     expect(map.get("back_face")).toBe("art");
   });
 
-  it("routes card type to identity and color identity to pips", () => {
+  it("routes card type to identity and color identity to frame", () => {
     const map = buildFieldToStep();
     expect(map.get("card_type")).toBe("identity");
-    expect(map.get("color_identity")).toBe("pips");
+    expect(map.get("color_identity")).toBe("frame");
   });
 
   it("routes a nested back_face.* error to the Art panel", () => {

@@ -86,7 +86,6 @@ import {
 } from "@/lib/creator/frame-picker";
 import {
   defaultValuesFor,
-  deriveColorIdentity,
   mergeTag,
   parseSubtypes,
   parseTags,
@@ -469,27 +468,8 @@ export function CardCreatorForm({
     hasError: stepsWithErrors.has(step.key),
   }));
 
-  // "Match mana cost" — auto-derive color identity from the cost so picking
-  // {R}{R} can never produce a colorless frame by accident. Any manual chip
-  // edit or imported identity turns the automation off.
-  const [autoColors, setAutoColors] = useState(mode === "create");
-  const derivedColors = useMemo(
-    () => deriveColorIdentity(watched.cost ?? ""),
-    [watched.cost],
-  );
-  useEffect(() => {
-    if (!autoColors) return;
-    // A cost with no colored pips says nothing about identity (lands,
-    // artifacts) — leave whatever the user picked.
-    if (derivedColors.length === 0) return;
-    const current = watched.color_identity;
-    const same =
-      current.length === derivedColors.length &&
-      derivedColors.every((c) => current.includes(c));
-    if (!same) {
-      setValue("color_identity", derivedColors, { shouldDirty: true });
-    }
-  }, [autoColors, derivedColors, watched.color_identity, setValue]);
+  // Color is chosen on the Frame step; the cost→color relationship is now
+  // surfaced as an opt-in prompt on the Pips panel (no automatic overwrite).
 
   // Keep a type-derived STANDARD frame in sync with the card type, so changing
   // type (e.g. creature → planeswalker) swaps to the right variant (m15 → m15pw)
@@ -592,7 +572,6 @@ export function CardCreatorForm({
     setIfPresent("defense", patch.defense);
 
     if (patch.color_identity) {
-      setAutoColors(false);
       setValue(
         "color_identity",
         Array.from(patch.color_identity) as ColorIdentity[],
@@ -631,7 +610,6 @@ export function CardCreatorForm({
     setIfPresent("artist_credit", patch.artist_credit);
 
     if (patch.color_identity) {
-      setAutoColors(false);
       setValue(
         "color_identity",
         Array.from(patch.color_identity) as ColorIdentity[],
@@ -739,7 +717,6 @@ export function CardCreatorForm({
       setValue("title", card.title, { shouldDirty: true });
       setValue("cost", card.cost, { shouldDirty: true });
       setValue("card_type", card.card_type, { shouldDirty: true });
-      setAutoColors(false);
       setValue("supertype", card.supertype ?? "", { shouldDirty: true });
       setValue("subtypes_text", (card.subtypes ?? []).join(", "), {
         shouldDirty: true,
@@ -790,12 +767,26 @@ export function CardCreatorForm({
       // best-effort — reset below still clears the in-memory form
     }
     reset(defaults);
-    setAutoColors(mode === "create");
     setRemixSource(null);
     setPreviewFace("front");
     setServerError(null);
     goToIndex(0);
     toast.success("Started over — blank card ready.");
+  };
+
+  // ---- Save draft ----
+  // Explicit, on-demand version of the debounced auto-save: write the current
+  // form to this device's localStorage from any step. Create/draft mode only.
+  const handleSaveDraft = () => {
+    try {
+      window.localStorage.setItem(
+        CARD_DRAFT_STORAGE_KEY,
+        JSON.stringify(getValues()),
+      );
+      toast.success("Draft saved to this device.");
+    } catch {
+      toast.error("Couldn't save the draft — storage may be full or blocked.");
+    }
   };
 
   // ---- Submit ----
@@ -1062,8 +1053,6 @@ export function CardCreatorForm({
               <PipsPanel
                 frameTemplate={watched.frame_style?.template}
                 pipOverrides={pipOverrides}
-                autoColors={autoColors}
-                onAutoColorsChange={setAutoColors}
               />
             ) : null}
 
@@ -1171,6 +1160,19 @@ export function CardCreatorForm({
                     <span>{remixSource.name}</span>
                   )}
                 </Badge>
+              ) : null}
+              {/* Save draft — explicit, on-demand device save, available on
+                  every step (create/draft mode). Complements the auto-save. */}
+              {isDraftMode ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleSaveDraft}
+                >
+                  <Save className="h-4 w-4" aria-hidden />
+                  Save draft
+                </Button>
               ) : null}
               {/* Start over — create/draft mode only, once there's something
                   to clear. Edit mode uses Delete instead. */}
