@@ -125,6 +125,8 @@ export const generateFromConceptOutputSchema = z.object({
   flavor_text: z.string().max(280).optional(),
   power: z.string().max(16).optional(),
   toughness: z.string().max(16).optional(),
+  loyalty: z.string().max(16).optional(),
+  defense: z.string().max(16).optional(),
 });
 
 // ---------------------------------------------------------------------------
