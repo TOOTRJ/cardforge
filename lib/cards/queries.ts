@@ -747,6 +747,69 @@ export async function listRelatedCards(
 }
 
 /**
+ * How many shareable cards were remixed from this one (children whose
+ * parent_card_id points here). RLS scopes the count to cards the viewer can
+ * read, which for anon viewers is exactly the public/unlisted remixes.
+ */
+export async function countRemixesOfCard(cardId: string): Promise<number> {
+  if (!isSupabaseConfigured()) return 0;
+  try {
+    const supabase = await createClient();
+    const { count } = await supabase
+      .from("cards")
+      .select("id", { count: "exact", head: true })
+      .eq("parent_card_id", cardId)
+      .in("visibility", SHAREABLE_VISIBILITIES as unknown as string[]);
+    return count ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * How many sets this card belongs to (readable memberships).
+ */
+export async function countSetsForCard(cardId: string): Promise<number> {
+  if (!isSupabaseConfigured()) return 0;
+  try {
+    const supabase = await createClient();
+    const { count } = await supabase
+      .from("card_set_items")
+      .select("set_id", { count: "exact", head: true })
+      .eq("card_id", cardId);
+    return count ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * The most-liked shareable remixes of this card, for the analytics panel.
+ * Pulls a bounded recent pool then ranks it by likes (attachStats "popular").
+ */
+export async function listTopRemixesOfCard(
+  cardId: string,
+  limit = 3,
+): Promise<CardWithStats[]> {
+  if (!isSupabaseConfigured()) return [];
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("cards")
+      .select("*")
+      .eq("parent_card_id", cardId)
+      .in("visibility", SHAREABLE_VISIBILITIES as unknown as string[])
+      .order("created_at", { ascending: false })
+      .limit(50);
+    if (!data || data.length === 0) return [];
+    const ranked = await attachStats(data, "popular");
+    return ranked.slice(0, limit);
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Look up a profile by username plus a count of their public cards.
  * Returns null if the profile doesn't exist.
  */

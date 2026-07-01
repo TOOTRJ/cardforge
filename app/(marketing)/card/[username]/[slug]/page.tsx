@@ -2,7 +2,17 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ExternalLink, Pencil } from "lucide-react";
+import {
+  ArrowLeft,
+  CalendarDays,
+  Clock,
+  ExternalLink,
+  Heart,
+  Layers,
+  MessageCircle,
+  Pencil,
+  Repeat2,
+} from "lucide-react";
 import { CardPreview } from "@/components/cards/card-preview";
 import { ManaCostGlyphs } from "@/components/cards/mana-cost-glyphs";
 import { getPipOverrides } from "@/lib/pips/queries";
@@ -22,12 +32,15 @@ import { SurfaceCard } from "@/components/ui/surface-card";
 import { SOCIAL_PLATFORMS, type SocialPlatformKey } from "@/lib/auth/schemas";
 import {
   countCardLikes,
+  countRemixesOfCard,
+  countSetsForCard,
   getCardById,
   getCardByOwnerAndSlug,
   getProfileByUsername,
   hasUserLikedCard,
   listMoreFromOwner,
   listRelatedCards,
+  listTopRemixesOfCard,
   type CardWithStats,
   type ProfileWithStats,
 } from "@/lib/cards/queries";
@@ -162,6 +175,9 @@ export default async function CardDetailPage({
     pipOverrides,
     creatorProfile,
     viewerFollows,
+    remixCount,
+    setCount,
+    topRemixes,
   ] = await Promise.all([
     countCardLikes(card.id),
     user ? hasUserLikedCard(user.id, card.id) : Promise.resolve(false),
@@ -185,6 +201,10 @@ export default async function CardDetailPage({
     user && !isOwner
       ? isFollowing(card.owner_id)
       : Promise.resolve(false),
+    // Analytics: remix + set membership counts, and the top-liked remixes.
+    countRemixesOfCard(card.id),
+    countSetsForCard(card.id),
+    listTopRemixesOfCard(card.id, 3),
   ]);
 
   const ownerProfile = card.owner;
@@ -232,14 +252,14 @@ export default async function CardDetailPage({
       </Link>
 
       <div className="grid gap-10 lg:grid-cols-[minmax(0,360px)_1fr]">
-        <div
-          className="mx-auto w-full max-w-sm"
-          // Matches the gallery / dashboard / profile / set thumbnails'
-          // view-transition-name so chromium-class browsers can animate a
-          // shared-element transition between the grid tile and this hero.
-          style={{ viewTransitionName: `card-${card.id}` }}
-        >
-          <CardPreview
+        <div className="mx-auto flex w-full max-w-sm flex-col gap-4">
+          <div
+            // Matches the gallery / dashboard / profile / set thumbnails'
+            // view-transition-name so chromium-class browsers can animate a
+            // shared-element transition between the grid tile and this hero.
+            style={{ viewTransitionName: `card-${card.id}` }}
+          >
+            <CardPreview
             title={card.title}
             cost={card.cost}
             pipOverrides={pipOverrides}
@@ -263,6 +283,22 @@ export default async function CardDetailPage({
             backFace={(card.back_face as CardBackFace | null) ?? null}
             backCard={backCard ? cardToPreviewData(backCard) : null}
           />
+          </div>
+
+          {/* Discovery tags — sit directly under the card art. */}
+          {card.tags.length > 0 ? (
+            <div className="flex flex-wrap justify-center gap-2">
+              {card.tags.map((tag) => (
+                <Link
+                  key={tag}
+                  href={`/gallery?tag=${encodeURIComponent(tag)}`}
+                  className="inline-flex items-center rounded-full border border-border/60 bg-elevated/60 px-2.5 py-1 text-xs text-muted transition-colors hover:border-border-strong hover:text-foreground"
+                >
+                  #{tag}
+                </Link>
+              ))}
+            </div>
+          ) : null}
         </div>
 
         <div className="flex flex-col gap-6">
@@ -350,20 +386,6 @@ export default async function CardDetailPage({
             />
           ) : null}
 
-          {card.tags.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {card.tags.map((tag) => (
-                <Link
-                  key={tag}
-                  href={`/gallery?tag=${encodeURIComponent(tag)}`}
-                  className="inline-flex items-center rounded-full border border-border/60 bg-elevated/60 px-2.5 py-1 text-xs text-muted transition-colors hover:border-border-strong hover:text-foreground"
-                >
-                  #{tag}
-                </Link>
-              ))}
-            </div>
-          ) : null}
-
           <SurfaceCard className="grid gap-4 p-6 sm:grid-cols-2">
             <Detail
               label="Card type"
@@ -406,25 +428,16 @@ export default async function CardDetailPage({
             <Detail label="Visibility" value={visibilityLabel(card.visibility)} />
           </SurfaceCard>
 
-          <SurfaceCard className="flex flex-col gap-3 p-6">
-            <h2 className="font-display text-lg font-semibold text-foreground">
-              Rules text
-            </h2>
-            <p className="whitespace-pre-line text-sm leading-6 text-muted">
-              {card.rules_text?.trim() || "No rules text yet."}
-            </p>
-          </SurfaceCard>
-
-          {card.flavor_text?.trim() ? (
-            <SurfaceCard className="flex flex-col gap-3 p-6">
-              <h2 className="font-display text-lg font-semibold text-foreground">
-                Flavor text
-              </h2>
-              <p className="text-sm leading-6 italic text-muted">
-                {card.flavor_text}
-              </p>
-            </SurfaceCard>
-          ) : null}
+          <CardAnalytics
+            likes={likesCount}
+            remixes={remixCount}
+            sets={setCount}
+            comments={comments.length}
+            createdAt={card.created_at}
+            updatedAt={card.updated_at}
+            topRemixes={topRemixes}
+            isAuthed={Boolean(user)}
+          />
 
           <CardComments
             cardId={card.id}
@@ -521,6 +534,101 @@ function formatDate(value: string): string {
   } catch {
     return "—";
   }
+}
+
+// ---------------------------------------------------------------------------
+// CardAnalytics — "By the numbers": engagement + provenance stats for the
+// card, plus its most-liked remixes. Replaces the old rules/flavor panels
+// (that text already lives on the rendered card itself).
+// ---------------------------------------------------------------------------
+
+function CardAnalytics({
+  likes,
+  remixes,
+  sets,
+  comments,
+  createdAt,
+  updatedAt,
+  topRemixes,
+  isAuthed,
+}: {
+  likes: number;
+  remixes: number;
+  sets: number;
+  comments: number;
+  createdAt: string;
+  updatedAt: string;
+  topRemixes: CardWithStats[];
+  isAuthed: boolean;
+}) {
+  const stats: {
+    icon: typeof Heart;
+    label: string;
+    value: number;
+  }[] = [
+    { icon: Heart, label: "Likes", value: likes },
+    { icon: Repeat2, label: "Remixes", value: remixes },
+    { icon: Layers, label: sets === 1 ? "Set" : "Sets", value: sets },
+    { icon: MessageCircle, label: "Comments", value: comments },
+  ];
+
+  return (
+    <SurfaceCard className="flex flex-col gap-5 p-6">
+      <h2 className="font-display text-lg font-semibold text-foreground">
+        By the numbers
+      </h2>
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {stats.map((s) => {
+          const Icon = s.icon;
+          return (
+            <div
+              key={s.label}
+              className="flex flex-col items-center gap-1 rounded-lg border border-border/50 bg-elevated/40 p-3 text-center"
+            >
+              <Icon className="h-4 w-4 text-muted" aria-hidden />
+              <span className="font-display text-2xl font-semibold tabular-nums text-foreground">
+                {s.value}
+              </span>
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-subtle">
+                {s.label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-muted">
+        <span className="inline-flex items-center gap-1.5">
+          <CalendarDays className="h-3.5 w-3.5 text-subtle" aria-hidden />
+          Created {formatDate(createdAt)}
+        </span>
+        {updatedAt !== createdAt ? (
+          <span className="inline-flex items-center gap-1.5">
+            <Clock className="h-3.5 w-3.5 text-subtle" aria-hidden />
+            Updated {formatDate(updatedAt)}
+          </span>
+        ) : null}
+      </div>
+
+      {topRemixes.length > 0 ? (
+        <div className="flex flex-col gap-3">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-subtle">
+            Top remixes
+          </h3>
+          <div className="grid gap-4 sm:grid-cols-3">
+            {topRemixes.map((remix) => (
+              <GalleryCardTile
+                key={remix.id}
+                card={remix}
+                isAuthed={isAuthed}
+              />
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </SurfaceCard>
+  );
 }
 
 // ---------------------------------------------------------------------------
