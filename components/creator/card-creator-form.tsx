@@ -141,6 +141,11 @@ type CardCreatorFormProps = {
   /** The currently running challenge, if any — powers the Publish panel's
    *  "Enter the challenge" toggle (server-fetched). */
   activeChallenge?: Challenge | null;
+  /** Prefills the Artist credit on a fresh create with the signed-in user's
+   *  profile name (display name, falling back to username). Create mode only,
+   *  and only when the field would otherwise be blank — never overrides an
+   *  edit, a restored draft, or an imported value. */
+  defaultArtistCredit?: string;
 };
 
 // Step membership + field→step routing now live in lib/creator/steps.ts (pure
@@ -188,6 +193,7 @@ export function CardCreatorForm({
   pipOverrides = {},
   initialTag = null,
   activeChallenge = null,
+  defaultArtistCredit = "",
 }: CardCreatorFormProps) {
   const router = useRouter();
   const upgrade = useUpgradeModal();
@@ -264,8 +270,13 @@ export function CardCreatorForm({
     if (initialTag && !card) {
       base.tags_text = mergeTag(base.tags_text, initialTag);
     }
+    // Prefill Artist credit with the user's profile name on a fresh create,
+    // only when nothing else already filled it (defaultValuesFor leaves it "").
+    if (defaultArtistCredit && !card && !base.artist_credit) {
+      base.artist_credit = defaultArtistCredit;
+    }
     return base;
-  }, [card, gameSystems, templates, initialTag]);
+  }, [card, gameSystems, templates, initialTag, defaultArtistCredit]);
 
   // The full methods object is spread into <FormProvider> below so the step
   // components can reach the same form instance via useFormContext().

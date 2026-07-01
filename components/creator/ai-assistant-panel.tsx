@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   AlertTriangle,
   Check,
@@ -137,6 +137,10 @@ export function AIAssistantPanel({
   // clicks don't pile up overlapping streams.
   const abortRef = useRef<AbortController | null>(null);
 
+  // Abort any in-flight stream when the panel unmounts (step navigation, form
+  // reset) so the fetch/reader doesn't keep running detached.
+  useEffect(() => () => abortRef.current?.abort(), []);
+
   const isStreaming = activeAction !== null;
 
   const runAction = async (action: AIAction) => {
@@ -198,8 +202,13 @@ export function AIAssistantPanel({
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
+      // Once a terminal event (`done`/`error`) lands, stop applying anything
+      // after it — a late `partial` would otherwise re-show the streaming
+      // preview over a finished suggestion, and a trailing `error` would clobber
+      // a good result.
+      let terminal = false;
 
-      while (true) {
+      while (!terminal) {
         const { value, done } = await reader.read();
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
@@ -221,13 +230,19 @@ export function AIAssistantPanel({
           } else if ("done" in event && event.done) {
             setSuggestion(event.done as Suggestion);
             setStreamingPartial(null);
+            terminal = true;
+            break;
           } else if ("error" in event && event.error) {
             setError(event.error);
             toast.error(event.error);
             setStreamingPartial(null);
+            terminal = true;
+            break;
           }
         }
       }
+      // Release the stream if we stopped early on a terminal event.
+      if (terminal) await reader.cancel().catch(() => {});
     } catch (err) {
       // AbortError fires when the user kicks off a new action mid-stream
       // or unmounts the form. Either way it's a user-driven cancel — no

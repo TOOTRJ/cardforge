@@ -93,6 +93,7 @@ export default async function CreatePage({
           pipOverrides={await getPipOverrides(user.id)}
           initialTag={initialTag}
           activeChallenge={await getCurrentChallenge()}
+          defaultArtistCredit={profile?.display_name || profile?.username || ""}
         />
       </div>
     </div>
