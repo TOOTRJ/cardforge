@@ -2,8 +2,26 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import {
+  Bell,
+  LayoutDashboard,
+  Layers,
+  Rss,
+  Settings,
+  type LucideIcon,
+} from "lucide-react";
 import { siteConfig } from "@/lib/site-config";
 import { cn } from "@/lib/utils";
+
+// Icon per dashboard-nav destination, keyed by href so the config stays a
+// plain data array (no JSX in site-config.ts).
+const NAV_ICONS: Record<string, LucideIcon> = {
+  "/dashboard": LayoutDashboard,
+  "/feed": Rss,
+  "/dashboard/sets": Layers,
+  "/notifications": Bell,
+  "/settings": Settings,
+};
 
 // Dashboard left-rail nav with active-route highlighting (the header + mobile
 // menu already highlight; this brings the rail in line). The active item is the
@@ -24,18 +42,28 @@ export function DashboardNav() {
     >
       {siteConfig.dashboardNav.map((item) => {
         const isActive = item.href === activeHref;
+        const Icon = NAV_ICONS[item.href];
         return (
           <Link
             key={item.href}
             href={item.href}
             aria-current={isActive ? "page" : undefined}
             className={cn(
-              "whitespace-nowrap rounded-md px-3 py-2 transition-colors",
+              "flex items-center gap-2.5 whitespace-nowrap rounded-md px-3 py-2 font-medium transition-colors",
               isActive
                 ? "bg-elevated text-foreground"
                 : "text-muted hover:bg-elevated hover:text-foreground",
             )}
           >
+            {Icon ? (
+              <Icon
+                className={cn(
+                  "h-4 w-4 shrink-0",
+                  isActive ? "text-accent" : "text-subtle",
+                )}
+                aria-hidden
+              />
+            ) : null}
             {item.label}
           </Link>
         );

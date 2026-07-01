@@ -8,6 +8,7 @@ import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { CardPreviewSkeleton } from "@/components/cards/card-preview-skeleton";
 import { DashboardSelectableSections } from "@/components/creator/dashboard-selectable-sections";
+import { CreditsSummaryCard } from "@/components/dashboard/credits-summary";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { Button } from "@/components/ui/button";
@@ -114,6 +115,12 @@ export default async function DashboardPage() {
         </SurfaceCard>
       ) : null}
 
+      {/* AI credits — remaining balance, used this month, monthly allotment.
+          Independent data, so it streams in behind its own skeleton. */}
+      <Suspense fallback={<CreditsSummarySkeleton />}>
+        <CreditsSummaryCard />
+      </Suspense>
+
       {/* Quick actions — the mockup's tile row, mapped to real routes. */}
       <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {QUICK_ACTIONS.map((action) => (
@@ -141,12 +148,12 @@ export default async function DashboardPage() {
         <DashboardCards />
       </Suspense>
 
-      <SurfaceCard className="mt-12 flex flex-col gap-3 p-6 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-col gap-1.5">
+      <div className="mt-12 grid gap-4 lg:grid-cols-2">
+        <SurfaceCard className="flex flex-col gap-3 p-6">
           <Badge variant="gold" className="self-start">
             Custom pips
           </Badge>
-          <p className="flex items-center text-sm text-muted">
+          <p className="flex flex-1 items-center text-sm text-muted">
             Your pip icons:
             {PIP_STRIP_SYMBOLS.map((s) => {
               const url = pipOverrides[s];
@@ -168,32 +175,37 @@ export default async function DashboardPage() {
               );
             })}
           </p>
-        </div>
-        <Button asChild variant="outline" size="sm" className="self-start sm:self-center">
-          <Link href="/settings">Manage in Settings</Link>
-        </Button>
-      </SurfaceCard>
+          <Button asChild variant="outline" size="sm" className="self-start">
+            <Link href="/settings">Manage in Settings</Link>
+          </Button>
+        </SurfaceCard>
 
-      <SurfaceCard className="mt-4 flex flex-col gap-3 p-6">
-        <Badge variant="outline" className="self-start">
-          Account
-        </Badge>
-        <p className="text-sm text-muted">
-          Signed in as{" "}
-          <span className="font-mono text-foreground">{user?.email ?? "unknown"}</span>
-          {profile?.username ? (
-            <>
-              {" "}· profile{" "}
-              <Link
-                href={`/profile/${profile.username}`}
-                className="font-mono text-primary-bright hover:underline"
-              >
-                @{profile.username}
-              </Link>
-            </>
-          ) : null}
-        </p>
-      </SurfaceCard>
+        <SurfaceCard className="flex flex-col gap-3 p-6">
+          <Badge variant="outline" className="self-start">
+            Account
+          </Badge>
+          <p className="text-sm text-muted">
+            Signed in as{" "}
+            <span className="font-mono text-foreground">
+              {user?.email ?? "unknown"}
+            </span>
+            {profile?.username ? (
+              <>
+                {" "}· profile{" "}
+                <Link
+                  href={`/profile/${profile.username}`}
+                  className="font-mono text-primary-bright hover:underline"
+                >
+                  @{profile.username}
+                </Link>
+              </>
+            ) : null}
+          </p>
+          <Button asChild variant="outline" size="sm" className="self-start">
+            <Link href="/settings">Account settings</Link>
+          </Button>
+        </SurfaceCard>
+      </div>
     </DashboardShell>
   );
 }
@@ -224,6 +236,7 @@ async function DashboardCards() {
       helper: "Saved drafts and published cards",
       tone: "gold" as const,
       icon: <CompassStar className="h-5 w-5" />,
+      href: undefined as string | undefined,
     },
     {
       label: "Public",
@@ -231,6 +244,7 @@ async function DashboardCards() {
       helper: "Listed in the gallery",
       tone: "purple" as const,
       icon: <Globe aria-hidden />,
+      href: "#public-cards",
     },
     {
       label: "Drafts",
@@ -238,6 +252,7 @@ async function DashboardCards() {
       helper: "Private, in-progress cards",
       tone: "ember" as const,
       icon: <FilePlus2 aria-hidden />,
+      href: "#drafts",
     },
   ];
 
@@ -253,22 +268,44 @@ async function DashboardCards() {
   return (
     <>
       <div className="mt-8 grid gap-4 sm:grid-cols-3">
-        {stats.map((stat) => (
-          <SurfaceCard key={stat.label} className="flex items-center gap-4 p-5">
-            <IconTile tone={stat.tone} size="lg">
-              {stat.icon}
-            </IconTile>
-            <div className="flex flex-col">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">
-                {stat.label}
-              </p>
-              <p className="font-display text-3xl font-semibold leading-tight tracking-tight text-foreground">
-                {stat.value}
-              </p>
-              <p className="text-xs text-subtle">{stat.helper}</p>
-            </div>
-          </SurfaceCard>
-        ))}
+        {stats.map((stat) => {
+          const body = (
+            <>
+              <IconTile tone={stat.tone} size="lg">
+                {stat.icon}
+              </IconTile>
+              <div className="flex flex-col">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">
+                  {stat.label}
+                </p>
+                <p className="font-display text-3xl font-semibold leading-tight tracking-tight text-foreground">
+                  {stat.value}
+                </p>
+                <p className="text-xs text-subtle">{stat.helper}</p>
+              </div>
+            </>
+          );
+
+          // Public/Drafts jump to their section below; Cards is a plain stat.
+          return stat.href ? (
+            <Link
+              key={stat.label}
+              href={stat.href}
+              className="group rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            >
+              <SurfaceCard className="flex h-full items-center gap-4 p-5 transition-colors group-hover:border-gold/40">
+                {body}
+              </SurfaceCard>
+            </Link>
+          ) : (
+            <SurfaceCard
+              key={stat.label}
+              className="flex items-center gap-4 p-5"
+            >
+              {body}
+            </SurfaceCard>
+          );
+        })}
       </div>
 
       <DashboardSelectableSections
@@ -288,6 +325,26 @@ async function DashboardCards() {
 // section headers + 3 card placeholders per section so the layout is
 // stable from the moment the shell paints.
 // ---------------------------------------------------------------------------
+
+function CreditsSummarySkeleton() {
+  return (
+    <SurfaceCard className="mt-6 flex flex-col gap-5 p-6">
+      <div className="flex items-center gap-3">
+        <Skeleton shape="circle" className="h-10 w-10" />
+        <div className="flex flex-1 flex-col gap-1.5">
+          <Skeleton className="h-3 w-40" />
+          <Skeleton className="h-2.5 w-56" />
+        </div>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Skeleton key={i} className="h-16" />
+        ))}
+      </div>
+      <Skeleton className="h-2 w-full" />
+    </SurfaceCard>
+  );
+}
 
 function DashboardCardsSkeleton() {
   return (

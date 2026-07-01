@@ -25,6 +25,8 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import {
   Tabs,
@@ -150,6 +152,13 @@ export function CommandPalette({ username }: CommandPaletteProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent size="md" className="min-h-0">
+        {/* Radix requires a title + description for screen-reader users. The
+            palette's UI is self-evident sighted-side, so both are visually
+            hidden. */}
+        <DialogTitle className="sr-only">Command palette</DialogTitle>
+        <DialogDescription className="sr-only">
+          Search navigation, your cards, and Scryfall.
+        </DialogDescription>
         {open ? (
           <PaletteBody
             onClose={() => setOpen(false)}

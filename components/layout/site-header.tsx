@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { Bell, Coins, Sparkles } from "lucide-react";
+import { Coins, LayoutDashboard, Sparkles } from "lucide-react";
 import { Logo } from "./logo";
 import { Button } from "@/components/ui/button";
 import { NavLinks } from "./nav-links";
 import { UserMenu } from "./user-menu";
 import { MobileMenu } from "./mobile-menu";
 import { CommandPaletteTrigger } from "./command-palette-trigger";
-import { ThemeToggle } from "./theme-toggle";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import { siteConfig } from "@/lib/site-config";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { cn } from "@/lib/utils";
@@ -65,27 +65,8 @@ export function SiteHeader({
         />
 
         <div className="ml-auto flex items-center gap-2">
-          <ThemeToggle />
           {isAuthed ? (
             <>
-              <Link
-                href="/notifications"
-                title="Notifications"
-                aria-label={
-                  unread > 0
-                    ? `Notifications (${unread} unread)`
-                    : "Notifications"
-                }
-                className="relative inline-flex h-9 w-9 items-center justify-center rounded-md text-muted transition-colors hover:bg-elevated hover:text-foreground"
-              >
-                <Bell className="h-5 w-5" aria-hidden />
-                {unread > 0 ? (
-                  <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-semibold text-white">
-                    {unread > 9 ? "9+" : unread}
-                  </span>
-                ) : null}
-              </Link>
-              {variant === "app" ? <CommandPaletteTrigger /> : null}
               {billingOn ? (
                 <Link
                   href="/settings#billing"
@@ -99,6 +80,8 @@ export function SiteHeader({
                   </span>
                 </Link>
               ) : null}
+              <NotificationBell initialUnread={unread} />
+              {variant === "app" ? <CommandPaletteTrigger /> : null}
               {billingOn && !user?.isPaid ? (
                 <Button
                   asChild
@@ -113,6 +96,16 @@ export function SiteHeader({
               ) : null}
               <Button asChild size="sm" className="hidden sm:inline-flex">
                 <Link href="/create">New card</Link>
+              </Button>
+              <Button
+                asChild
+                variant="accent"
+                size="sm"
+                className="hidden sm:inline-flex"
+              >
+                <Link href="/dashboard">
+                  <LayoutDashboard className="h-4 w-4" aria-hidden /> Dashboard
+                </Link>
               </Button>
               <UserMenu
                 username={user?.username ?? null}

@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
-import { FolderOpen, Globe2, Pencil } from "lucide-react";
+import { CheckSquare, FolderOpen, Globe2, Pencil, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
@@ -40,6 +40,12 @@ export function DashboardSelectableSections({
 }: DashboardSelectableSectionsProps) {
   const [selection, setSelection] = useState<Set<string>>(new Set());
   const [lastClickedId, setLastClickedId] = useState<string | null>(null);
+  // Select mode flips plain card clicks from "navigate to editor" to "toggle
+  // checkmark" — the standard photo-grid multi-select pattern.
+  const [selectMode, setSelectMode] = useState(false);
+
+  const hasAnyCards =
+    recentCards.length > 0 || drafts.length > 0 || publicCards.length > 0;
 
   // Stable display-order list across all three sections — needed so a
   // Shift-click that spans sections selects the right intermediate cards.
@@ -111,13 +117,84 @@ export function DashboardSelectableSections({
     setLastClickedId(null);
   }, []);
 
-  const renderTile = (card: DashboardCard) => (
+  // Leaving select mode also drops any in-progress selection, matching the
+  // "Cancel" affordance users expect from photo-grid selection.
+  const exitSelectMode = useCallback(() => {
+    setSelectMode(false);
+    clearSelection();
+  }, [clearSelection]);
+
+  const selectAllVisible = useCallback(() => {
+    setSelection(new Set(flatVisibleIds));
+    setLastClickedId(flatVisibleIds[flatVisibleIds.length - 1] ?? null);
+  }, [flatVisibleIds]);
+
+  // A card can appear in several sections; `viewTransitionName` must be unique
+  // per document, so only the first-rendered instance (Recent → Drafts →
+  // Public order) carries it. These sets identify the earlier occurrences so
+  // later sections opt out.
+  const recentIds = useMemo(
+    () => new Set(recentCards.map((c) => c.id)),
+    [recentCards],
+  );
+  const draftShownIds = useMemo(
+    () => new Set(drafts.slice(0, 6).map((c) => c.id)),
+    [drafts],
+  );
+
+  const renderTile = (card: DashboardCard, enableViewTransition = true) => (
     <DashboardCardTile
       key={card.id}
       card={card}
       isSelected={selection.has(card.id)}
+      selectMode={selectMode}
+      enableViewTransition={enableViewTransition}
       onToggle={handleToggle}
     />
+  );
+
+  const allVisibleSelected =
+    flatVisibleIds.length > 0 &&
+    flatVisibleIds.every((id) => selection.has(id));
+
+  // Toolbar shown in the "Recent cards" header: a Select toggle at rest, or
+  // the count + Select all / Cancel controls once select mode is active.
+  const selectionToolbar = selectMode ? (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="text-sm text-muted">
+        <span className="font-semibold text-foreground">{selection.size}</span>{" "}
+        selected
+      </span>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={allVisibleSelected ? clearSelection : selectAllVisible}
+      >
+        {allVisibleSelected ? "Clear all" : "Select all"}
+      </Button>
+      <Button type="button" variant="outline" size="sm" onClick={exitSelectMode}>
+        <X className="h-3.5 w-3.5" aria-hidden />
+        Cancel
+      </Button>
+    </div>
+  ) : (
+    <div className="flex items-center gap-2">
+      {hasAnyCards ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setSelectMode(true)}
+        >
+          <CheckSquare className="h-4 w-4" aria-hidden />
+          Select
+        </Button>
+      ) : null}
+      <Button asChild variant="ghost" size="sm">
+        <Link href="/gallery">View gallery</Link>
+      </Button>
+    </div>
   );
 
   const selectedIds = Array.from(selection);
@@ -126,12 +203,12 @@ export function DashboardSelectableSections({
     <>
       <DashboardSection
         title="Recent cards"
-        description="Click any card to open the editor. Cmd/Shift-click or use the corner checkbox to bulk-select."
-        action={
-          <Button asChild variant="ghost" size="sm">
-            <Link href="/gallery">View gallery</Link>
-          </Button>
+        description={
+          selectMode
+            ? "Click cards to select them, then choose a bulk action below."
+            : "Click any card to open the editor, or hit Select to choose several at once."
         }
+        action={selectionToolbar}
       >
         {recentCards.length === 0 ? (
           <EmptyState
@@ -146,12 +223,13 @@ export function DashboardSelectableSections({
           />
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {recentCards.map(renderTile)}
+            {recentCards.map((card) => renderTile(card, true))}
           </div>
         )}
       </DashboardSection>
 
       <DashboardSection
+        id="drafts"
         title="Drafts"
         description="Private, in-progress cards you haven't published."
       >
@@ -163,12 +241,15 @@ export function DashboardSelectableSections({
           />
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {drafts.slice(0, 6).map(renderTile)}
+            {drafts
+              .slice(0, 6)
+              .map((card) => renderTile(card, !recentIds.has(card.id)))}
           </div>
         )}
       </DashboardSection>
 
       <DashboardSection
+        id="public-cards"
         title="Public cards"
         description="Cards visible on your public profile and the gallery."
       >
@@ -180,7 +261,14 @@ export function DashboardSelectableSections({
           />
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {publicCards.slice(0, 6).map(renderTile)}
+            {publicCards
+              .slice(0, 6)
+              .map((card) =>
+                renderTile(
+                  card,
+                  !recentIds.has(card.id) && !draftShownIds.has(card.id),
+                ),
+              )}
           </div>
         )}
       </DashboardSection>
@@ -190,7 +278,7 @@ export function DashboardSelectableSections({
           selectedIds={selectedIds}
           onClear={clearSelection}
           userSets={userSets}
-          onSuccess={clearSelection}
+          onSuccess={exitSelectMode}
         />
       ) : null}
     </>
@@ -198,18 +286,20 @@ export function DashboardSelectableSections({
 }
 
 function DashboardSection({
+  id,
   title,
   description,
   action,
   children,
 }: {
+  id?: string;
   title: string;
   description?: string;
   action?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
-    <section className="mt-12">
+    <section id={id} className="mt-12 scroll-mt-24">
       <header className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex flex-col gap-1">
           <h2 className="font-display text-xl font-semibold tracking-tight text-foreground">

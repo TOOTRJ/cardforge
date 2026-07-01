@@ -38,15 +38,15 @@ export const siteConfig = {
     { label: "Guides", href: "/articles" },
     { label: "Pricing", href: "/pricing" },
     { label: "Create", href: "/create", anonOnly: true } as NavItem,
-    { label: "Feed", href: "/feed", authedOnly: true } as NavItem,
-    { label: "Dashboard", href: "/dashboard", authedOnly: true } as NavItem,
-    { label: "My Sets", href: "/dashboard/sets", authedOnly: true } as NavItem,
   ] as readonly NavItem[],
 
-  // Dashboard left-rail nav (legacy — used inside DashboardShell).
+  // Dashboard left-rail nav (rendered inside DashboardShell). Feed + My Sets
+  // live here now instead of the global header so the top nav stays lean.
   dashboardNav: [
     { label: "Overview", href: "/dashboard" },
+    { label: "Feed", href: "/feed" },
     { label: "My Sets", href: "/dashboard/sets" },
+    { label: "Notifications", href: "/notifications" },
     { label: "Settings", href: "/settings" },
   ] as readonly NavItem[],
 
