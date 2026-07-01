@@ -16,12 +16,14 @@ import { Badge } from "@/components/ui/badge";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import {
   countCardLikes,
+  getCardById,
   getCardByOwnerAndSlug,
   hasUserLikedCard,
   listMoreFromOwner,
   listRelatedCards,
   type CardWithStats,
 } from "@/lib/cards/queries";
+import { cardToPreviewData } from "@/lib/cards/preview-data";
 import { countPublicRemixesBySource } from "@/lib/cards/source-queries";
 import { listCommentsForCard } from "@/lib/cards/comments-queries";
 import { getCurrentUser } from "@/lib/supabase/server";
@@ -132,6 +134,12 @@ export default async function CardDetailPage({
     notFound();
   }
 
+  // v2 back face: the referenced card, if any and if it's readable (RLS scopes
+  // the anon client to shareable cards). Rendered on the flip.
+  const backCard = card.back_card_id
+    ? await getCardById(card.back_card_id)
+    : null;
+
   const user = await getCurrentUser();
   const isOwner = Boolean(user && user.id === card.owner_id);
 
@@ -234,6 +242,7 @@ export default async function CardDetailPage({
             setIconUrl={card.set_icon_url}
             setIconCode={card.set_icon_code}
             backFace={(card.back_face as CardBackFace | null) ?? null}
+            backCard={backCard ? cardToPreviewData(backCard) : null}
           />
         </div>
 

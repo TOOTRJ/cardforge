@@ -9,12 +9,7 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import {
-  FormProvider,
-  useForm,
-  useWatch,
-  type SubmitHandler,
-} from "react-hook-form";
+import { FormProvider, useForm, useWatch } from "react-hook-form";
 import {
   ArrowLeft,
   ArrowRight,
@@ -79,6 +74,7 @@ import {
   DEFAULT_FRAME_TEMPLATE,
 } from "@/types/card";
 import { normalizeFrameTemplate } from "@/lib/cards/card-display";
+import { cardToPreviewData } from "@/lib/cards/preview-data";
 import {
   eraForTemplate,
   isTypeDerivedStandard,
@@ -95,6 +91,7 @@ import type { PipOverrides } from "@/lib/pips/override";
 import type { Challenge } from "@/lib/challenges/shared";
 import {
   buildFieldToStep,
+  hasInlineBackFace,
   statVisibility,
   stepIndexForField,
   stepLabel,
@@ -127,6 +124,14 @@ type CardCreatorFormProps = {
   card?: Card | null;
   /** The current user's sets — populates the "Add to set" picker on Publish. */
   mySets?: CardSetOption[];
+  /** The current user's cards — the Publish "back face" picker. Excludes the
+   *  card being edited (filtered by the page). */
+  myCards?: Card[];
+  /** The front card id + slug when building a NEW card to be its back face
+   *  (/create?backFor=…) — on save, the new card links back and we return to
+   *  the front card's edit page. */
+  backForCardId?: string | null;
+  backForSlug?: string | null;
   /** Whether ANTHROPIC_API_KEY is set on the server — gates the AI panel. */
   aiConfigured: boolean;
   /** The signed-in user's custom pip icons (server-fetched; {} when none).
@@ -184,6 +189,9 @@ export function CardCreatorForm({
   templates,
   card,
   mySets = [],
+  myCards = [],
+  backForCardId = null,
+  backForSlug = null,
   aiConfigured,
   pipOverrides = {},
   initialTag = null,
@@ -790,7 +798,10 @@ export function CardCreatorForm({
   };
 
   // ---- Submit ----
-  const onSubmit: SubmitHandler<FormValues> = (values) => {
+  // `createBackAfter` is passed by the "Create a new card" back-face flow: after
+  // this card saves, jump to a fresh creator (/create?backFor=…) to build its
+  // back, instead of the normal edit redirect.
+  const runSubmit = (values: FormValues, createBackAfter: boolean) => {
     setServerError(null);
 
     // Build the back_face payload only when the user toggled it on.
@@ -840,6 +851,8 @@ export function CardCreatorForm({
       frame_style: values.frame_style,
       visibility: values.visibility,
       back_face: backFacePayload,
+      // v2 back face: a uuid links a card as the back; empty → null clears.
+      back_card_id: values.back_card_id || null,
       // Empty string → undefined so we don't send a no-op or fail the
       // UUID validator. A future "unlink from source" button could send
       // `null` instead to explicitly clear.
@@ -894,6 +907,36 @@ export function CardCreatorForm({
         } catch {
           // best-effort
         }
+
+        // This new card was created to be another card's back face — link it
+        // to the front and return to that card's editor.
+        if (backForCardId) {
+          const linkResult = await updateCardAction(backForCardId, {
+            back_card_id: result.cardId,
+          });
+          if (!linkResult.ok) {
+            toast.error(
+              linkResult.formError ??
+                "Saved, but couldn't link it as the back face.",
+            );
+          } else {
+            toast.success("Linked as the back face.");
+          }
+          router.replace(
+            backForSlug
+              ? `/card/${backForSlug}/edit?step=publish`
+              : "/dashboard",
+          );
+          router.refresh();
+          return;
+        }
+
+        // The user chose "Create a new card" for this card's back — go build it.
+        if (createBackAfter) {
+          router.push(`/create?backFor=${result.cardId}`);
+          return;
+        }
+
         // Land on the same step in edit mode instead of resetting to Frame.
         router.replace(
           `/card/${result.slug}/edit?step=${activeStep?.key ?? "publish"}`,
@@ -916,6 +959,12 @@ export function CardCreatorForm({
       // Mark clean right away (keeping the on-screen values); the keyed reset
       // swaps in server truth when the refresh lands.
       reset(undefined, { keepValues: true });
+      // The user chose "Create a new card" for the back — go build it now that
+      // this (front) card is saved and has an id to link back to.
+      if (createBackAfter) {
+        router.push(`/create?backFor=${card.id}`);
+        return;
+      }
       // If the slug changed, follow it.
       if (result.slug !== card.slug) {
         router.replace(`/card/${result.slug}/edit`);
@@ -924,9 +973,24 @@ export function CardCreatorForm({
     });
   };
 
+  // "Create a new card" for the back: save this card first (so it has an id to
+  // link back to), then the submit flow jumps to a fresh creator.
+  const handleCreateBackFace = () => {
+    void handleSubmit((values) => runSubmit(values, true))();
+  };
+
   const cardTypeForPreview =
     watched.card_type === "" ? null : (watched.card_type as CardType);
   const rarityForPreview = watched.rarity === "" ? null : (watched.rarity as Rarity);
+
+  // v2 back face: the referenced card (from myCards) rendered on the flip with
+  // its OWN frame/colour/rarity/art. null when none is linked.
+  const selectedBackCard = watched.back_card_id
+    ? myCards.find((c) => c.id === watched.back_card_id) ?? null
+    : null;
+  const backCardPreview = selectedBackCard
+    ? cardToPreviewData(selectedBackCard)
+    : null;
 
   // Shared live-preview props for the desktop sticky aside + the mobile inline
   // preview, so they never drift. `previewFace` is state (see the sync effect
@@ -972,6 +1036,8 @@ export function CardCreatorForm({
           art_position: watched.back_face.art_position,
         }
       : null,
+    // v2 back face wins over the legacy jsonb when a card is linked.
+    backCard: backCardPreview,
     face: previewFace,
     onFaceChange: setPreviewFace,
     flipOnClick: true,
@@ -981,11 +1047,14 @@ export function CardCreatorForm({
     <FormProvider {...methods}>
       <form
         noValidate
-        onSubmit={handleSubmit(onSubmit, (formErrors) => {
-          // Client validation blocked the save — jump to the first errored step.
-          const first = Object.keys(formErrors)[0];
-          if (first) goToIndex(stepIndexForField(first, steps));
-        })}
+        onSubmit={handleSubmit(
+          (values) => runSubmit(values, false),
+          (formErrors) => {
+            // Client validation blocked the save — jump to the first errored step.
+            const first = Object.keys(formErrors)[0];
+            if (first) goToIndex(stepIndexForField(first, steps));
+          },
+        )}
         className="grid gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] xl:grid-cols-[10.5rem_minmax(0,1.05fr)_minmax(0,0.95fr)] xl:gap-6"
       >
         {/* ----- Far left (xl+): vertical icon step rail ----- */}
@@ -1064,26 +1133,30 @@ export function CardCreatorForm({
               />
             ) : null}
 
-            {/* ----- Art panel (front art + artist credit + back face) ----- */}
+            {/* ----- Art panel (front art + artist credit). The inline-layout
+                frames (Adventure/Split/Flip/Aftermath) still edit their second
+                face here; standard frames use the Publish back-face picker. */}
             {stepKey === "art" ? (
               <ArtPanel
                 userId={userId}
                 backFaceSlot={
-                  <LayoutPanel
-                    userId={userId}
-                    hasBackFace={watched.has_back_face}
-                    isAdventureFrame={isAdventureFrame}
-                    backRulesTextField={backRulesTextField}
-                    backRulesTextRef={backRulesTextRef}
-                    onInsertSymbol={(token) =>
-                      insertSymbol(
-                        "back_face.rules_text",
-                        backRulesTextRef,
-                        token,
-                      )
-                    }
-                    onBackFaceAdded={() => setPreviewFace("back")}
-                  />
+                  hasInlineBackFace(watched.frame_style?.template) ? (
+                    <LayoutPanel
+                      userId={userId}
+                      hasBackFace={watched.has_back_face}
+                      isAdventureFrame={isAdventureFrame}
+                      backRulesTextField={backRulesTextField}
+                      backRulesTextRef={backRulesTextRef}
+                      onInsertSymbol={(token) =>
+                        insertSymbol(
+                          "back_face.rules_text",
+                          backRulesTextRef,
+                          token,
+                        )
+                      }
+                      onBackFaceAdded={() => setPreviewFace("back")}
+                    />
+                  ) : undefined
                 }
               />
             ) : null}
@@ -1113,6 +1186,8 @@ export function CardCreatorForm({
                   activeChallenge={activeChallenge}
                   ownerUsername={ownerUsername}
                   mySets={mySets}
+                  myCards={myCards}
+                  onCreateBackFace={handleCreateBackFace}
                   watchedSlug={watched.slug}
                   watchedTitle={watched.title}
                 />

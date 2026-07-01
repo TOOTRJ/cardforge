@@ -296,6 +296,18 @@ export async function createCardAction(
     }
   }
 
+  // A back face references another of the user's OWN cards — pre-flight
+  // exists + ownership for a friendly error over a bare FK violation.
+  if (data.back_card_id) {
+    const backCard = await getCardById(data.back_card_id);
+    if (!backCard || backCard.owner_id !== user.id) {
+      return {
+        ok: false,
+        fieldErrors: { back_card_id: "That back-face card couldn't be found." },
+      };
+    }
+  }
+
   const setIcon = await resolvePrimarySet(supabase, user.id, data.primary_set_id);
 
   const insert: CardInsert = {
@@ -326,6 +338,8 @@ export async function createCardAction(
     // Back face (chunk 10): null when undefined or explicitly cleared,
     // jsonb object when the user has filled in DFC content.
     back_face: data.back_face ?? null,
+    // v2 back face: FK to a full owned card (fully customisable), or null.
+    back_card_id: data.back_card_id ?? null,
     // Scryfall provenance (chunk 13): the source card id when imported,
     // null otherwise. Stays null forever for forged-from-scratch cards.
     source_scryfall_id: data.source_scryfall_id ?? null,
@@ -419,6 +433,24 @@ export async function updateCardAction(
     return { ok: false, formError: "Card not found or not yours to edit." };
   }
 
+  // Back-face reference (when setting it): must be another of the user's own
+  // cards and never the card itself.
+  if (data.back_card_id) {
+    if (data.back_card_id === cardId) {
+      return {
+        ok: false,
+        fieldErrors: { back_card_id: "A card can't be its own back face." },
+      };
+    }
+    const backCard = await getCardById(data.back_card_id);
+    if (!backCard || backCard.owner_id !== user.id) {
+      return {
+        ok: false,
+        fieldErrors: { back_card_id: "That back-face card couldn't be found." },
+      };
+    }
+  }
+
   // Premium frame/finish gate (our own tech only — never WotC trade dress).
   if (data.frame_style !== undefined) {
     const entitlements = await getEntitlements();
@@ -468,6 +500,9 @@ export async function updateCardAction(
   // Back face: `null` clears it; an object replaces it whole. Omitting
   // the field leaves whatever the DB already had untouched.
   if (data.back_face !== undefined) update.back_face = data.back_face ?? null;
+  // v2 back-face reference: null clears, a uuid links, omitted leaves alone.
+  if (data.back_card_id !== undefined)
+    update.back_card_id = data.back_card_id ?? null;
   // Scryfall source: same semantics — null clears, omitted leaves alone.
   if (data.source_scryfall_id !== undefined)
     update.source_scryfall_id = data.source_scryfall_id ?? null;

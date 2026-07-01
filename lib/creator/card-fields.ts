@@ -84,6 +84,7 @@ export function defaultValuesFor(
       visibility: "public",
       has_back_face: false,
       back_face: EMPTY_BACK_FACE,
+      back_card_id: "",
       source_scryfall_id: "",
       primary_set_id: "",
     };
@@ -130,6 +131,7 @@ export function defaultValuesFor(
     visibility: card.visibility,
     has_back_face: persistedBackFace !== null,
     back_face: backFaceFormValuesFrom(persistedBackFace),
+    back_card_id: card.back_card_id ?? "",
     source_scryfall_id: card.source_scryfall_id ?? "",
     primary_set_id: card.primary_set_id ?? "",
   };

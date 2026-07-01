@@ -212,6 +212,10 @@ const baseCardSchema = z.object({
   // back face; `undefined` (omitted) leaves it untouched on update. The
   // back_face object must validate against backFaceSchema when provided.
   back_face: backFaceSchema.nullable().optional(),
+  // v2 double-faced cards: a FK to another owned card used as this card's back
+  // face (fully customisable). `null` clears; `undefined` leaves alone. The
+  // action pre-flights ownership + a self-reference guard (like parent_card_id).
+  back_card_id: uuidSchema.nullable().optional(),
   // Scryfall provenance (Phase 11 chunk 13). Set when the card was
   // imported from Scryfall via the import dialog. UUID-shaped per
   // Scryfall's id format. `null` clears; `undefined` leaves alone.
