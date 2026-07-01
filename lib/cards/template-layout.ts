@@ -93,6 +93,9 @@ export type StatSlot = {
    *  line box, so a geometrically-centered value reads too close to the bottom.
    *  Applied to the TEXT only, so the plate PNG stays aligned to the frame. */
   valueDyEm?: number;
+  /** Horizontal nudge of the value text within the plate, in em (positive =
+   *  right). Text-only, like valueDyEm. */
+  valueDxEm?: number;
 };
 
 export type FrameProfile = {
@@ -265,6 +268,8 @@ const M15: FrameProfile = {
     // Digits read low in the plate (font baseline sits below the line-box
     // center) — lift the value ~2px so it sits true-center on the plate.
     valueDyEm: -0.11,
+    // Nudge right ~2px to true-center horizontally on the plate.
+    valueDxEm: 0.09,
   },
 };
 
