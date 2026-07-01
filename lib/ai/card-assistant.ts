@@ -135,6 +135,8 @@ Task: Draft a complete card from the user's concept. Fill in every applicable fi
 - rules_text — clean, templated, 1–3 sentences max
 - flavor_text — short, evocative (optional)
 - power / toughness — only for creature/token types, otherwise omit
+- loyalty — only for planeswalker types, otherwise omit
+- defense — only for battle types, otherwise omit
 
 If the user's concept is too vague, pick reasonable defaults rather than asking follow-ups. Match the existing card state's vibes when they don't conflict with the concept.`;
   }

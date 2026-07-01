@@ -369,10 +369,15 @@ export function CardCreatorForm({
   }, [isDirty]);
   useEffect(() => {
     const handler = (event: BeforeUnloadEvent) => {
-      if (isDirtyRef.current) event.preventDefault();
+      // Draft mode auto-persists to localStorage, so there's nothing to lose
+      // by leaving — only guard edit mode, which has no local copy.
+      if (!isDraftMode && isDirtyRef.current) event.preventDefault();
     };
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
+    // isDraftMode is stable for the component's lifetime (it only flips across
+    // a create→edit navigation, which remounts).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // The Adventure frame repurposes the back-face content as the adventure spell
@@ -569,6 +574,8 @@ export function CardCreatorForm({
     setIfPresent("flavor_text", patch.flavor_text);
     setIfPresent("power", patch.power);
     setIfPresent("toughness", patch.toughness);
+    setIfPresent("loyalty", patch.loyalty);
+    setIfPresent("defense", patch.defense);
 
     if (patch.color_identity) {
       setAutoColors(false);
@@ -1204,8 +1211,9 @@ export function CardCreatorForm({
               </div>
             </div>
             <p className="text-xs leading-5 text-muted">
-              Saving doesn&apos;t publish — visibility above controls who can see
-              this card.
+              New cards are <strong className="text-foreground">public</strong> by
+              default — set Visibility on the Publish step to keep this private or
+              unlisted.
             </p>
           </div>
         </aside>

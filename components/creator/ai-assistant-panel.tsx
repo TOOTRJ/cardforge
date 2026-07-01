@@ -45,6 +45,8 @@ export type CardFieldPatch = {
   flavor_text?: string;
   power?: string;
   toughness?: string;
+  loyalty?: string;
+  defense?: string;
 };
 
 type AIAssistantPanelProps = {
@@ -601,6 +603,8 @@ function SuggestionBody({
         flavor_text: draft.flavor_text ?? "",
         power: draft.power ?? "",
         toughness: draft.toughness ?? "",
+        loyalty: draft.loyalty ?? "",
+        defense: draft.defense ?? "",
       };
 
       return (

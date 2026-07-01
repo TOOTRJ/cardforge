@@ -4,6 +4,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
   AI_ACTION_COST,
   checkAiRateLimit,
+  checkRandomCardDailyLimit,
   consumeAiCredits,
   logAiCall,
 } from "@/lib/ai/rate-limit";
@@ -67,6 +68,20 @@ export async function POST() {
       {
         status: 429,
         headers: { "Retry-After": String(globalLimit.retryAfterSeconds) },
+      },
+    );
+  }
+  // Dedicated per-user daily cap for the random-card flow (10/day). Image
+  // generation is the priciest call we make, so it gets its own ceiling on
+  // top of the global burst cap — and the UI advertises "10 random cards per
+  // day", so this is what enforces that promise.
+  const randomCardLimit = await checkRandomCardDailyLimit(user.id);
+  if (!randomCardLimit.ok) {
+    return NextResponse.json(
+      { ok: false, error: randomCardLimit.message },
+      {
+        status: 429,
+        headers: { "Retry-After": String(randomCardLimit.retryAfterSeconds) },
       },
     );
   }

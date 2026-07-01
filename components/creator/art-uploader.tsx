@@ -40,6 +40,10 @@ const MIN_SCALE = 0.5;
 const MAX_SCALE = 3;
 const ACCEPTED_TYPES = "image/png,image/jpeg,image/webp,image/gif";
 const ASPECT_RATIO_CLASS = "aspect-[5/4]";
+// Mirror the server's byte cap so we fail fast on an oversized drop/paste
+// before spending the upload round-trip. The server (upload-art-server.ts) is
+// still the source of truth.
+const MAX_FILE_BYTES = 8 * 1024 * 1024;
 
 type ArtUploaderProps = {
   userId: string | null;
@@ -62,6 +66,21 @@ export function ArtUploader({
   const [uploading, setUploading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [isDraggingArt, setIsDraggingArt] = useState(false);
+  // In-flight + mounted guards. `uploadingRef` mirrors `uploading` but is
+  // readable synchronously from the drop/paste closures (which the disabled
+  // Button can't gate) so a second file dropped mid-upload can't start a
+  // racing upload whose response order decides the winner. `mountedRef` stops
+  // the post-await state writes (and the RHF onArtChange) from firing after the
+  // panel unmounts — navigating away mid-upload otherwise warns + writes to a
+  // dead form.
+  const uploadingRef = useRef(false);
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const focalX = clamp(artPosition.focalX ?? 0.5, 0, 1);
   const focalY = clamp(artPosition.focalY ?? 0.5, 0, 1);
@@ -76,14 +95,27 @@ export function ArtUploader({
         toast.error("You need to be signed in to upload artwork.");
         return;
       }
-      // Cheap client-side gate to short-circuit obviously-wrong files
+      // One upload at a time. The Button + picker are disabled while
+      // `uploading`, but the drop and paste paths call in here directly — an
+      // unguarded second file would start a concurrent upload and the
+      // last-to-resolve response would win non-deterministically.
+      if (uploadingRef.current) {
+        toast.info("Hang on — an upload is already in progress.");
+        return;
+      }
+      // Cheap client-side gates to short-circuit obviously-wrong files
       // before the network round-trip. The real validation lives in the
       // server action — Sharp decodes the bytes and rejects anything
-      // that isn't a real PNG / JPEG / WebP / GIF.
+      // that isn't a real PNG / JPEG / WebP / GIF within the size cap.
       if (!file.type.startsWith("image/")) {
         toast.error("That doesn't look like an image.");
         return;
       }
+      if (file.size > MAX_FILE_BYTES) {
+        toast.error("That image is over 8 MB. Pick a smaller file.");
+        return;
+      }
+      uploadingRef.current = true;
       setUploading(true);
       try {
         // Pass the File via FormData. Server actions accept FormData
@@ -92,6 +124,9 @@ export function ArtUploader({
         const formData = new FormData();
         formData.append("file", file);
         const result = await uploadCardArtServerAction(formData);
+        // Bail if the panel unmounted mid-upload — writing to the (now dead)
+        // form would warn and land nowhere useful.
+        if (!mountedRef.current) return;
         if (!result.ok) {
           toast.error(result.error);
           return;
@@ -102,9 +137,12 @@ export function ArtUploader({
         });
         toast.success("Artwork uploaded.");
       } finally {
-        setUploading(false);
-        if (inputRef.current) {
-          inputRef.current.value = "";
+        uploadingRef.current = false;
+        if (mountedRef.current) {
+          setUploading(false);
+          if (inputRef.current) {
+            inputRef.current.value = "";
+          }
         }
       }
     },
