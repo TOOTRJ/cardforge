@@ -21,6 +21,7 @@
 //   6      — M15 P/T value nudged ~2px right (valueDxEm) to true-center on the
 //            plate horizontally
 //   7      — M15 P/T value: a bit more right (valueDxEm 0.09 → 0.18)
+//   8      — M15 title nudged down ~1px to true-center on the name bar
 // ---------------------------------------------------------------------------
 
-export const CARD_LAYOUT_VERSION = 7;
+export const CARD_LAYOUT_VERSION = 8;
