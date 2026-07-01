@@ -366,7 +366,7 @@ export async function createCardAction(
   // columns and logs).
   after(async () => {
     try {
-      await bakeAndPersistCardRender(row.id);
+      await bakeAndPersistCardRender(row.id, user.id);
       revalidateCardPaths(row.slug, ownerUsername);
     } catch (error) {
       console.error(`[create-card] deferred bake failed for ${row.id}:`, error);
@@ -530,7 +530,7 @@ export async function updateCardAction(
   // the old mismatched PNG in place.
   after(async () => {
     try {
-      await bakeAndPersistCardRender(row.id);
+      await bakeAndPersistCardRender(row.id, user.id);
       revalidateCardPaths(row.slug, ownerUsername);
       if (visibilityChanged) revalidatePath(`/api/cards/${row.id}/og`);
     } catch (error) {

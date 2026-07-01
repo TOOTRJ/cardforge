@@ -225,6 +225,6 @@ async function rebakeCardsUsingSymbol(
     .slice(0, REBAKE_SWEEP_CAP);
 
   for (const row of affected) {
-    await bakeAndPersistCardRender(row.id);
+    await bakeAndPersistCardRender(row.id, ownerId);
   }
 }
