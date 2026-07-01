@@ -227,7 +227,8 @@ const M15: FrameProfile = {
   costSizePct: 0.04,
   artSlot: { topPct: 11.4, leftPct: 7.8, widthPct: 84.4, heightPct: 44.0 },
   title: {
-    rect: { topPct: 4.6, leftPct: 8.5, widthPct: 83, heightPct: 6.0 },
+    // topPct nudged 4.6 → 4.8 (~1px down) to sit true-center on the name bar.
+    rect: { topPct: 4.8, leftPct: 8.5, widthPct: 83, heightPct: 6.0 },
     sizePct: 0.05,
     colorHex: INK_DARK,
     weight: 600,
