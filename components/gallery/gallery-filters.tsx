@@ -15,11 +15,12 @@ import {
 import { ManaPip } from "@/components/cards/mana-pip";
 import { cn } from "@/lib/utils";
 
-type Sort = "recent" | "popular";
+type Sort = "recent" | "popular" | "viewed";
 
 const SORT_LABELS: Record<Sort, string> = {
   recent: "Recent",
-  popular: "Popular",
+  popular: "Most liked",
+  viewed: "Most viewed",
 };
 
 
@@ -31,7 +32,9 @@ const RARITY_LABELS: Record<Rarity, string> = {
 };
 
 function readSort(value: string | null): Sort {
-  return value === "popular" ? "popular" : "recent";
+  if (value === "popular") return "popular";
+  if (value === "viewed") return "viewed";
+  return "recent";
 }
 
 export function GalleryFilters() {
@@ -45,6 +48,8 @@ export function GalleryFilters() {
   const colorParam = searchParams.get("color");
   const sortParam = readSort(searchParams.get("sort"));
   const searchParam = searchParams.get("q") ?? "";
+  const tagParam = searchParams.get("tag");
+  const remixesOnly = searchParams.get("remixes") === "1";
 
   const cardType = (CARD_TYPE_VALUES as readonly string[]).includes(
     cardTypeParam ?? "",
@@ -109,6 +114,8 @@ export function GalleryFilters() {
     rarity !== null ||
     colorIdentity !== null ||
     sortParam !== "recent" ||
+    Boolean(tagParam) ||
+    remixesOnly ||
     searchInput.trim().length > 0;
 
   return (
@@ -200,16 +207,49 @@ export function GalleryFilters() {
         >
           All
         </Chip>
-        {COLOR_IDENTITY_VALUES.map((color) => (
-          <ColorChip
-            key={color}
-            color={color}
-            active={colorIdentity === color}
-            onClick={() =>
-              updateParam({ color: colorIdentity === color ? null : color })
-            }
-          />
-        ))}
+        {COLOR_IDENTITY_VALUES.filter((color) => color !== "multicolor").map(
+          (color) => (
+            <ColorChip
+              key={color}
+              color={color}
+              active={colorIdentity === color}
+              onClick={() =>
+                updateParam({ color: colorIdentity === color ? null : color })
+              }
+            />
+          ),
+        )}
+      </div>
+
+      {tagParam ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted">
+            Tag
+          </span>
+          <button
+            type="button"
+            onClick={() => updateParam({ tag: null })}
+            aria-label={`Clear tag filter #${tagParam}`}
+            className="inline-flex items-center gap-1 rounded-full border border-primary bg-primary/15 px-3 py-1 text-xs font-medium text-primary-bright"
+          >
+            #{tagParam}
+            <X className="h-3 w-3" aria-hidden />
+          </button>
+        </div>
+      ) : null}
+
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-semibold uppercase tracking-wider text-muted">
+          Show
+        </span>
+        <Chip
+          active={remixesOnly}
+          onClick={() =>
+            updateParam({ remixes: remixesOnly ? null : "1" })
+          }
+        >
+          Remixes only
+        </Chip>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -246,6 +286,8 @@ export function GalleryFilters() {
                 rarity: null,
                 color: null,
                 sort: null,
+                tag: null,
+                remixes: null,
               });
             }}
             className="ml-auto rounded-md px-2 py-1 text-xs text-muted transition-colors hover:bg-elevated hover:text-foreground"

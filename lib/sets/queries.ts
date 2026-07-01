@@ -117,19 +117,28 @@ export async function listPublicSets(
   options: {
     limit?: number;
     offset?: number;
+    search?: string;
   } = {},
 ): Promise<PublicSetListing[]> {
   if (!isSupabaseConfigured()) return [];
-  const { limit = 24, offset = 0 } = options;
+  const { limit = 24, offset = 0, search } = options;
 
   try {
     const supabase = await createClient();
-    const { data: sets } = await supabase
+    let query = supabase
       .from("card_sets")
       .select("*")
       .eq("visibility", "public")
-      .order("updated_at", { ascending: false })
-      .range(offset, offset + limit - 1);
+      .order("updated_at", { ascending: false });
+
+    if (search?.trim()) {
+      // Same LIKE-escaping posture as the gallery card search.
+      const sqlEscaped = search.trim().replace(/[%_]/g, "\\$&");
+      const quoted = `"%${sqlEscaped.replace(/"/g, '\\"')}%"`;
+      query = query.or(`title.ilike.${quoted},description.ilike.${quoted}`);
+    }
+
+    const { data: sets } = await query.range(offset, offset + limit - 1);
     if (!sets || sets.length === 0) return [];
 
     const setIds = sets.map((s) => s.id);

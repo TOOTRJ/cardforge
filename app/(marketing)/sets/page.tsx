@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { QuickLikeButton } from "@/components/cards/quick-like-button";
+import { SetsSearch } from "@/components/sets/sets-search";
 import { breadcrumbJsonLd, JsonLd } from "@/components/seo/json-ld";
 import { listPublicSets } from "@/lib/sets/queries";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -37,6 +38,7 @@ export default async function PublicSetsPage({ searchParams }: SetsPageProps) {
   const pageParam = firstString(params.page);
   const pageRaw = Number.parseInt(pageParam ?? "1", 10);
   const page = Number.isFinite(pageRaw) && pageRaw >= 1 ? pageRaw : 1;
+  const search = firstString(params.q)?.trim() || undefined;
   const configured = isSupabaseConfigured();
 
   return (
@@ -58,6 +60,10 @@ export default async function PublicSetsPage({ searchParams }: SetsPageProps) {
         }
       />
 
+      <div className="mt-8">
+        <SetsSearch />
+      </div>
+
       <div className="mt-10">
         {!configured ? (
           <EmptyState
@@ -66,8 +72,11 @@ export default async function PublicSetsPage({ searchParams }: SetsPageProps) {
             description="Supabase isn't configured for this deployment. The sets browse will populate once env vars land."
           />
         ) : (
-          <Suspense key={page} fallback={<SetsSkeletonGrid count={PAGE_SIZE} />}>
-            <PublicSetsResults page={page} />
+          <Suspense
+            key={`${search ?? ""}-${page}`}
+            fallback={<SetsSkeletonGrid count={PAGE_SIZE} />}
+          >
+            <PublicSetsResults page={page} search={search} />
           </Suspense>
         )}
       </div>
@@ -75,11 +84,18 @@ export default async function PublicSetsPage({ searchParams }: SetsPageProps) {
   );
 }
 
-async function PublicSetsResults({ page }: { page: number }) {
+async function PublicSetsResults({
+  page,
+  search,
+}: {
+  page: number;
+  search?: string;
+}) {
   const [sets, viewer] = await Promise.all([
     listPublicSets({
       limit: PAGE_SIZE,
       offset: (page - 1) * PAGE_SIZE,
+      search,
     }),
     getCurrentUser(),
   ]);
@@ -89,8 +105,12 @@ async function PublicSetsResults({ page }: { page: number }) {
     return (
       <EmptyState
         icon={Layers}
-        title="No public sets yet"
-        description="Be the first to publish a public set — they'll show up here for everyone."
+        title={search ? "No sets match" : "No public sets yet"}
+        description={
+          search
+            ? "Try a different search, or be the first to publish a set that matches."
+            : "Be the first to publish a public set — they'll show up here for everyone."
+        }
         action={
           <Button asChild>
             <Link href="/dashboard/sets/new">Build a set</Link>
@@ -102,6 +122,11 @@ async function PublicSetsResults({ page }: { page: number }) {
 
   const hasMore = sets.length === PAGE_SIZE;
   const hasPrev = page > 1;
+  const qParam = search ? `q=${encodeURIComponent(search)}` : "";
+  const pageHref = (p: number) => {
+    const parts = [qParam, p > 1 ? `page=${p}` : ""].filter(Boolean);
+    return parts.length ? `/sets?${parts.join("&")}` : "/sets";
+  };
 
   return (
     <>
@@ -116,10 +141,7 @@ async function PublicSetsResults({ page }: { page: number }) {
           <div className="flex items-center gap-2">
             {hasPrev ? (
               <Button asChild variant="outline" size="sm">
-                <Link
-                  href={page - 1 > 1 ? `/sets?page=${page - 1}` : "/sets"}
-                  scroll
-                >
+                <Link href={pageHref(page - 1)} scroll>
                   <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
                   Previous
                 </Link>
@@ -127,7 +149,7 @@ async function PublicSetsResults({ page }: { page: number }) {
             ) : null}
             {hasMore ? (
               <Button asChild size="sm">
-                <Link href={`/sets?page=${page + 1}`} scroll>
+                <Link href={pageHref(page + 1)} scroll>
                   Next
                   <ArrowRight className="h-3.5 w-3.5" aria-hidden />
                 </Link>

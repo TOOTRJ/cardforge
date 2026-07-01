@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
-import { CommandPalette } from "@/components/layout/command-palette";
 import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import { getCreditsUsedThisMonth } from "@/lib/ai/usage-queries";
@@ -55,10 +54,6 @@ export default async function AppGroupLayout({
       }
     >
       {children}
-      {/* Global ⌘K palette — mounted once for all authenticated routes
-          so the keyboard shortcut works from anywhere in the app group.
-          Marketing routes are intentionally out of scope. */}
-      <CommandPalette username={profile?.username ?? null} />
     </AppShell>
   );
 }
