@@ -13,6 +13,8 @@ import { RemixButton } from "@/components/cards/remix-button";
 import { ShareTargets } from "@/components/cards/share-targets";
 import { ReportCardDialog } from "@/components/cards/report-card-dialog";
 import { GalleryCardTile } from "@/components/cards/gallery-card-tile";
+import { FollowButton } from "@/components/follows/follow-button";
+import { isFollowing } from "@/lib/follows/queries";
 import { SocialIcon } from "@/components/profile/social-icon";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -159,6 +161,7 @@ export default async function CardDetailPage({
     relatedCards,
     pipOverrides,
     creatorProfile,
+    viewerFollows,
   ] = await Promise.all([
     countCardLikes(card.id),
     user ? hasUserLikedCard(user.id, card.id) : Promise.resolve(false),
@@ -178,6 +181,10 @@ export default async function CardDetailPage({
     getPipOverrides(card.owner_id),
     // Full creator profile (bio + socials + avatar) for the featured card.
     getProfileByUsername(username),
+    // Whether the viewer already follows the creator (drives the Follow button).
+    user && !isOwner
+      ? isFollowing(card.owner_id)
+      : Promise.resolve(false),
   ]);
 
   const ownerProfile = card.owner;
@@ -333,6 +340,16 @@ export default async function CardDetailPage({
             {user && !isOwner ? <ReportCardDialog cardId={card.id} /> : null}
           </div>
 
+          {creatorProfile ? (
+            <CreatorFeature
+              profile={creatorProfile}
+              targetUserId={card.owner_id}
+              isOwner={isOwner}
+              initialFollowing={viewerFollows}
+              requiresSignIn={!user}
+            />
+          ) : null}
+
           {card.tags.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {card.tags.map((tag) => (
@@ -362,7 +379,7 @@ export default async function CardDetailPage({
                 card.cost?.trim() ? (
                   <ManaCostGlyphs
                     cost={card.cost}
-                    size="lg"
+                    size="sm"
                     overrides={pipOverrides}
                   />
                 ) : (
@@ -407,10 +424,6 @@ export default async function CardDetailPage({
                 {card.flavor_text}
               </p>
             </SurfaceCard>
-          ) : null}
-
-          {creatorProfile ? (
-            <CreatorFeature profile={creatorProfile} />
           ) : null}
 
           <CardComments
@@ -516,7 +529,19 @@ function formatDate(value: string): string {
 // in prominence to the card itself.
 // ---------------------------------------------------------------------------
 
-function CreatorFeature({ profile }: { profile: ProfileWithStats }) {
+function CreatorFeature({
+  profile,
+  targetUserId,
+  isOwner,
+  initialFollowing,
+  requiresSignIn,
+}: {
+  profile: ProfileWithStats;
+  targetUserId: string;
+  isOwner: boolean;
+  initialFollowing: boolean;
+  requiresSignIn: boolean;
+}) {
   const displayName =
     profile.display_name?.trim() || profile.username || "Forgemaster";
   const initial = displayName.charAt(0).toUpperCase();
@@ -579,11 +604,20 @@ function CreatorFeature({ profile }: { profile: ProfileWithStats }) {
           </span>
         </div>
 
-        {profileHref ? (
-          <Button asChild variant="outline" size="sm" className="ml-auto shrink-0">
-            <Link href={profileHref}>View profile</Link>
-          </Button>
-        ) : null}
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          {!isOwner ? (
+            <FollowButton
+              targetUserId={targetUserId}
+              initialFollowing={initialFollowing}
+              requiresSignIn={requiresSignIn}
+            />
+          ) : null}
+          {profileHref ? (
+            <Button asChild variant="outline" size="sm">
+              <Link href={profileHref}>View profile</Link>
+            </Button>
+          ) : null}
+        </div>
       </div>
 
       {profile.bio?.trim() ? (
