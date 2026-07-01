@@ -236,9 +236,9 @@ const M15: FrameProfile = {
     letterSpacingEm: 0.01,
   },
   type: {
-    // Nudged down ~2px (center 58.8% → 59.1%) to sit true-center on the M15
-    // type bar — it read a hair high. Shared by snow/devoid (which spread M15).
-    rect: { topPct: 56.5, leftPct: 8.5, widthPct: 83, heightPct: 5.2 },
+    // Nudged down ~1px (center 58.8% → 58.95%) to sit true-center on the M15
+    // type bar — 56.2 read a hair high, 56.5 a hair low. Shared by snow/devoid.
+    rect: { topPct: 56.35, leftPct: 8.5, widthPct: 83, heightPct: 5.2 },
     sizePct: 0.034,
     colorHex: INK_DARK_SOFT,
     weight: 600,
