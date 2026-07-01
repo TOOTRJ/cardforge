@@ -465,30 +465,30 @@ async function attachStats(
   const ownerIds = Array.from(new Set(rows.map((r) => r.owner_id)));
 
   // Read the viewer once up front; if they're anonymous we skip the
-  // self-like lookup entirely. The likes query never blocks on RLS — the
-  // policy is publicly readable — so this is cheap. Anonymous mode skips
-  // the lookup without touching cookies (keeps ISR callers static).
+  // self-like lookup entirely. Anonymous mode skips the lookup without
+  // touching cookies (keeps ISR callers static).
   const viewer = anonymous ? null : await getCurrentUser();
 
-  // Two queries instead of three: the like rows already carry user_id, so
-  // the viewer's own likes are derived from the same result set that
-  // feeds the counts.
-  const [likesResult, ownersResult] = await Promise.all([
-    supabase
-      .from("card_likes")
-      .select("card_id, user_id")
-      .in("card_id", cardIds),
+  // Like COUNTS come from the materialized cards.likes_count column (0043), so
+  // we no longer scan the whole card_likes table. We still need the viewer's
+  // OWN likes for the heart state — a small query scoped to this user + page.
+  const [viewerLikesResult, ownersResult] = await Promise.all([
+    viewer
+      ? supabase
+          .from("card_likes")
+          .select("card_id")
+          .eq("user_id", viewer.id)
+          .in("card_id", cardIds)
+      : Promise.resolve({ data: [] as Array<{ card_id: string }> }),
     supabase
       .from("profiles")
       .select("id, username, display_name, avatar_url")
       .in("id", ownerIds),
   ]);
 
-  const likeCount = new Map<string, number>();
   const viewerLiked = new Set<string>();
-  for (const row of likesResult.data ?? []) {
-    likeCount.set(row.card_id, (likeCount.get(row.card_id) ?? 0) + 1);
-    if (viewer && row.user_id === viewer.id) viewerLiked.add(row.card_id);
+  for (const row of viewerLikesResult.data ?? []) {
+    viewerLiked.add(row.card_id);
   }
 
   const ownerById = new Map<string, CardWithOwner["owner"]>();
@@ -503,7 +503,7 @@ async function attachStats(
   const enriched: CardWithStats[] = rows.map((row) => ({
     ...narrowCard(row),
     owner: ownerById.get(row.owner_id) ?? null,
-    likes_count: likeCount.get(row.id) ?? 0,
+    likes_count: row.likes_count ?? 0,
     liked_by_viewer: viewerLiked.has(row.id),
   }));
 
@@ -546,13 +546,20 @@ export async function listPublicCardsRich(
 
   try {
     const supabase = anonymous ? createPublicClient() : await createClient();
-    // "viewed" sorts by the materialized view tally in SQL; "recent" (and the
-    // pre-rerank pool for "popular") sort by recency.
-    const orderColumn = sort === "viewed" ? "view_count" : "updated_at";
+    // All three sorts now order in SQL off materialized columns (likes_count /
+    // view_count, both from 0042/0043), with updated_at as the tiebreaker —
+    // so pagination is correct for every sort, no in-process re-rank.
+    const orderColumn =
+      sort === "popular"
+        ? "likes_count"
+        : sort === "viewed"
+          ? "view_count"
+          : "updated_at";
     let query = supabase
       .from("cards")
       .select("*")
-      .order(orderColumn, { ascending: false });
+      .order(orderColumn, { ascending: false })
+      .order("updated_at", { ascending: false });
 
     if (visibility === "all-shareable") {
       query = query.in(
@@ -606,24 +613,14 @@ export async function listPublicCardsRich(
       );
     }
 
-    // When sorting by popularity we fetch a larger window so the in-process
-    // re-sort has more candidates to work with. 2× the page (capped at 48)
-    // is plenty at current scale — 3×/60 was measurably over-fetching.
-    const fetchLimit =
-      sort === "popular" ? Math.min(Math.max(limit * 2, 32), 48) : limit;
-    query = query.range(offset, offset + fetchLimit - 1);
+    query = query.range(offset, offset + limit - 1);
 
     const { data, error } = await query;
     if (error || !data) return [];
 
-    // Only "popular" re-ranks in-process; "recent"/"viewed" are already
-    // ordered by the SQL query above.
-    const enriched = await attachStats(
-      data,
-      sort === "popular" ? "popular" : "recent",
-      { anonymous },
-    );
-    return enriched.slice(0, limit);
+    // SQL already ordered the page correctly for every sort, so attachStats
+    // just enriches (no in-process re-rank).
+    return attachStats(data, "recent", { anonymous });
   } catch {
     return [];
   }
@@ -1341,11 +1338,13 @@ export async function countCardLikes(cardId: string): Promise<number> {
   if (!isSupabaseConfigured()) return 0;
   try {
     const supabase = await createClient();
-    const { count } = await supabase
-      .from("card_likes")
-      .select("id", { count: "exact", head: true })
-      .eq("card_id", cardId);
-    return count ?? 0;
+    // Read the materialized tally (0043) rather than COUNTing card_likes.
+    const { data } = await supabase
+      .from("cards")
+      .select("likes_count")
+      .eq("id", cardId)
+      .maybeSingle();
+    return data?.likes_count ?? 0;
   } catch {
     return 0;
   }
