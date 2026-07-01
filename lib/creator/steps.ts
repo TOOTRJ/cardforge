@@ -105,8 +105,8 @@ const STEP_DEFS: StepDef[] = [
     // — so leading with Frame never strands the picker.
     key: "frame",
     label: "Frame",
-    description: "Era & frame style",
-    fields: ["frame_style"],
+    description: "Color, era & frame style",
+    fields: ["frame_style", "color_identity"],
     isVisible: always,
   },
   {
@@ -127,8 +127,8 @@ const STEP_DEFS: StepDef[] = [
   {
     key: "pips",
     label: "Pips",
-    description: "Mana cost & color identity",
-    fields: ["cost", "color_identity"],
+    description: "Mana cost",
+    fields: ["cost"],
     isVisible: always,
   },
   {
