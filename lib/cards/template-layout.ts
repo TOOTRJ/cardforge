@@ -608,7 +608,9 @@ const MODERN: FrameProfile = {
     font: "display",
   },
   type: {
-    rect: { topPct: 56.6, leftPct: 9, widthPct: 74, heightPct: 3.9 },
+    // Nudged down ~2px (center 58.55% → 58.9%) to true-center on the 2003
+    // type bar — it read high.
+    rect: { topPct: 56.95, leftPct: 9, widthPct: 74, heightPct: 3.9 },
     sizePct: 0.0347,
     colorHex: INK_DARK,
     weight: 600,
