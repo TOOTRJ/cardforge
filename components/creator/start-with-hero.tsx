@@ -31,6 +31,8 @@ type Option = {
   description: string;
   icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
   accentClass: string;
+  /** Gated for now — renders disabled with a "Coming soon" affordance. */
+  comingSoon?: boolean;
 };
 
 const OPTIONS: Option[] = [
@@ -56,14 +58,15 @@ const OPTIONS: Option[] = [
     icon: Sparkles,
     accentClass:
       "from-accent/15 to-accent/5 hover:border-accent/60 border-accent/30",
+    comingSoon: true,
   },
 ];
 
 export function StartWithHero() {
-  const handleClick = (key: Option["key"]) => {
-    const eventName = CARDFORGE_EVENTS[key];
+  const handleClick = (option: Option) => {
+    if (option.comingSoon) return;
     if (typeof window === "undefined") return;
-    window.dispatchEvent(new CustomEvent(eventName));
+    window.dispatchEvent(new CustomEvent(CARDFORGE_EVENTS[option.key]));
   };
 
   return (
@@ -74,11 +77,22 @@ export function StartWithHero() {
           <button
             key={option.key}
             type="button"
-            onClick={() => handleClick(option.key)}
-            className={`group flex flex-col gap-3 rounded-xl border bg-linear-to-br ${option.accentClass} p-5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background`}
+            onClick={() => handleClick(option)}
+            disabled={option.comingSoon}
+            aria-disabled={option.comingSoon || undefined}
+            className={`group flex flex-col gap-3 rounded-xl border bg-linear-to-br ${option.accentClass} p-5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+              option.comingSoon ? "cursor-default opacity-60" : ""
+            }`}
           >
-            <span className="flex h-9 w-9 items-center justify-center rounded-md border border-white/10 bg-background/40 text-foreground">
-              <Icon className="h-4 w-4" aria-hidden />
+            <span className="flex items-center justify-between">
+              <span className="flex h-9 w-9 items-center justify-center rounded-md border border-white/10 bg-background/40 text-foreground">
+                <Icon className="h-4 w-4" aria-hidden />
+              </span>
+              {option.comingSoon ? (
+                <span className="rounded-full border border-border/70 bg-elevated px-2 py-px text-[9px] font-semibold uppercase tracking-wide text-subtle">
+                  Soon
+                </span>
+              ) : null}
             </span>
             <div className="flex flex-col gap-1">
               <p className="font-display text-sm font-semibold tracking-wide text-foreground">
@@ -87,11 +101,11 @@ export function StartWithHero() {
               <p className="text-xs leading-5 text-muted">{option.description}</p>
             </div>
             <span className="mt-auto text-[11px] uppercase tracking-wider text-subtle group-hover:text-foreground">
-              {option.key === "scrollToForm"
-                ? "Open the form ↓"
-                : option.key === "openScryfall"
-                  ? "Search Scryfall →"
-                  : "Open AI assistant →"}
+              {option.comingSoon
+                ? "Coming soon"
+                : option.key === "scrollToForm"
+                  ? "Open the form ↓"
+                  : "Search Scryfall →"}
             </span>
           </button>
         );
