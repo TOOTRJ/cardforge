@@ -89,6 +89,10 @@ export type CardPreviewData = {
   /** Optional back-face content. When set, the preview renders a flip button
    *  and supports a 3D flip animation between the two faces. */
   backFace?: CardBackFace | null;
+  /** v2 back face: a full referenced card rendered on the flip with its OWN
+   *  frame / colour / rarity / art (complete customisation). Takes precedence
+   *  over the legacy `backFace` jsonb, which shares the front's frame. */
+  backCard?: CardPreviewData | null;
   /** The card OWNER's custom pip icons — cost pips render these instead of
    *  the standard mana-font glyphs (preview AND bake read this field). */
   pipOverrides?: PipOverrides | null;
@@ -179,6 +183,7 @@ export function CardPreview({
   face,
   onFaceChange,
   flipOnClick = false,
+  backCard,
   className,
   staticInEditor = false,
 }: CardPreviewProps) {
@@ -241,8 +246,47 @@ export function CardPreview({
   const secondFaceData: FaceData | null = layout.secondFace
     ? backFaceData
     : null;
+
+  // v2 back face: a full referenced card, drawn with its OWN frame/colour/
+  // rarity/art. Built here so the flip's second face is fully independent.
+  const backCardFace: FaceData | null = backCard
+    ? {
+        title: backCard.title ?? null,
+        cost: backCard.cost ?? null,
+        cardType: backCard.cardType ?? null,
+        supertype: backCard.supertype ?? null,
+        subtypes: backCard.subtypes ?? [],
+        rulesText: backCard.rulesText ?? null,
+        flavorText: backCard.flavorText ?? null,
+        power: backCard.power ?? null,
+        toughness: backCard.toughness ?? null,
+        loyalty: backCard.loyalty ?? null,
+        defense: backCard.defense ?? null,
+        artistCredit: backCard.artistCredit ?? null,
+        artUrl: backCard.artUrl ?? null,
+        artPosition: backCard.artPosition ?? {},
+      }
+    : null;
+  const backCardTemplate = normalizeFrameTemplate(backCard?.frameStyle?.template);
+  const backCardFaceProps = backCard
+    ? ({
+        template: backCardTemplate,
+        colorIdentity: backCard.colorIdentity ?? [],
+        rarity: backCard.rarity ?? null,
+        layout: getFrameProfile(backCardTemplate),
+        finish: backCard.frameStyle?.finish ?? "regular",
+        staticInEditor,
+        setIconUrl: backCard.setIconUrl ?? null,
+        setIconCode: backCard.setIconCode ?? null,
+        pipOverrides: backCard.pipOverrides ?? pipOverrides ?? null,
+      } as const)
+    : null;
+
+  // The flippable second face: prefer the referenced card, fall back to the
+  // legacy jsonb. Adventure/multi-panel frames render inline, so no flip.
+  const flipBackFace = backCardFace ?? backFaceData;
   const showFlip =
-    Boolean(backFaceData) && !isAdventure && !layout.secondFace;
+    Boolean(flipBackFace) && !isAdventure && !layout.secondFace;
 
   const [internalFace, setInternalFace] = useState<"front" | "back">("front");
   const currentFace = face ?? internalFace;
@@ -303,7 +347,7 @@ export function CardPreview({
           }
         : {})}
     >
-      {showFlip && backFaceData ? (
+      {showFlip && flipBackFace ? (
         <div
           className="relative h-full w-full"
           style={{ perspective: "1400px" }}
@@ -332,7 +376,10 @@ export function CardPreview({
               }}
               aria-hidden={currentFace === "front"}
             >
-              <CardFace face={backFaceData} {...faceProps} />
+              <CardFace
+                face={flipBackFace}
+                {...(backCardFaceProps ?? faceProps)}
+              />
             </div>
           </div>
         </div>

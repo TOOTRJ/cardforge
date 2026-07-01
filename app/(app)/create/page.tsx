@@ -15,8 +15,10 @@ import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
 import { getPipOverrides } from "@/lib/pips/queries";
 import { getCurrentChallenge } from "@/lib/challenges/queries";
 import {
+  getCardById,
   getFantasyGameSystem,
   getTemplatesForGameSystem,
+  listMyCards,
 } from "@/lib/cards/queries";
 import { listMySets } from "@/lib/sets/queries";
 import { isAIConfigured } from "@/lib/ai/card-assistant";
@@ -29,12 +31,15 @@ export const metadata: Metadata = {
 
 const CHALLENGE_TAG_PATTERN = /^[a-z0-9][a-z0-9-]{0,38}[a-z0-9]$/;
 
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export default async function CreatePage({
   searchParams,
 }: {
-  searchParams: Promise<{ tag?: string }>;
+  searchParams: Promise<{ tag?: string; backFor?: string }>;
 }) {
-  const { tag: tagParam } = await searchParams;
+  const { tag: tagParam, backFor: backForParam } = await searchParams;
   const initialTag =
     tagParam && CHALLENGE_TAG_PATTERN.test(tagParam) ? tagParam : null;
   // Re-checked here in addition to the proxy/(app) layout — defense in depth.
@@ -54,7 +59,17 @@ export default async function CreatePage({
   const templates = gameSystem
     ? await getTemplatesForGameSystem(gameSystem.id)
     : [];
-  const mySets = await listMySets();
+  const [mySets, myCards] = await Promise.all([listMySets(), listMyCards()]);
+
+  // /create?backFor=<cardId> — building a NEW card that becomes another owned
+  // card's back face. Validate the target exists + is the user's before wiring
+  // the auto-link flow; otherwise ignore the param.
+  const backForCard =
+    backForParam && UUID_PATTERN.test(backForParam)
+      ? await getCardById(backForParam)
+      : null;
+  const backFor =
+    backForCard && backForCard.owner_id === user.id ? backForCard : null;
 
   if (!gameSystem) {
     return <SchemaUnseeded />;
@@ -64,8 +79,12 @@ export default async function CreatePage({
     <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
       <PageHeader
         eyebrow="Creator"
-        title="Forge a new card"
-        description="Type on the left, watch the card take shape on the right. Save when you like the result."
+        title={backFor ? "Forge the back face" : "Forge a new card"}
+        description={
+          backFor
+            ? `Build the back for “${backFor.title}”. When you save, it links back automatically.`
+            : "Type on the left, watch the card take shape on the right. Save when you like the result."
+        }
         actions={
           <>
 <Button asChild variant="ghost">
@@ -89,6 +108,9 @@ export default async function CreatePage({
           gameSystems={[gameSystem]}
           templates={templates}
           mySets={mySets}
+          myCards={myCards}
+          backForCardId={backFor?.id ?? null}
+          backForSlug={backFor?.slug ?? null}
           aiConfigured={isAIConfigured()}
           pipOverrides={await getPipOverrides(user.id)}
           initialTag={initialTag}

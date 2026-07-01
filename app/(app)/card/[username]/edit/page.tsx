@@ -18,6 +18,7 @@ import {
   getFantasyGameSystem,
   getMyCardBySlug,
   getTemplatesForGameSystem,
+  listMyCards,
 } from "@/lib/cards/queries";
 import { buildCardPath } from "@/lib/cards/utils";
 import { listMySets, listMySetsForCard } from "@/lib/sets/queries";
@@ -72,13 +73,18 @@ export default async function EditCardPage({ params }: EditCardPageProps) {
     notFound();
   }
 
-  const [gameSystem, mySets, profile, userSets, entitlements] = await Promise.all([
-    getFantasyGameSystem(),
-    listMySetsForCard(card.id),
-    getCurrentProfile(),
-    listMySets(),
-    getEntitlements(),
-  ]);
+  const [gameSystem, mySets, profile, userSets, entitlements, allMyCards] =
+    await Promise.all([
+      getFantasyGameSystem(),
+      listMySetsForCard(card.id),
+      getCurrentProfile(),
+      listMySets(),
+      getEntitlements(),
+      listMyCards(),
+    ]);
+  // Back-face picker candidates: every owned card except this one (can't be its
+  // own back). Includes the currently-linked back card so the flip renders.
+  const myCards = allMyCards.filter((c) => c.id !== card.id);
   const templates = gameSystem
     ? await getTemplatesForGameSystem(gameSystem.id)
     : [];
@@ -141,6 +147,7 @@ export default async function EditCardPage({ params }: EditCardPageProps) {
           templates={templates}
           card={card}
           mySets={userSets}
+          myCards={myCards}
           aiConfigured={isAIConfigured()}
           pipOverrides={await getPipOverrides(user.id)}
           activeChallenge={await getCurrentChallenge()}

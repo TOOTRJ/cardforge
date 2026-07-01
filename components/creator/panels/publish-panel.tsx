@@ -18,8 +18,9 @@ import {
 } from "@/components/creator/field-group";
 import { slugify } from "@/lib/validation/card";
 import { mergeTag, parseTags, removeTag } from "@/lib/creator/card-fields";
+import { BackFacePicker } from "@/components/creator/back-face-picker";
 import { daysLeft, type Challenge } from "@/lib/challenges/shared";
-import type { Visibility } from "@/types/card";
+import type { Card, Visibility } from "@/types/card";
 import type { FormValues } from "@/lib/creator/form-types";
 
 const VISIBILITY_OPTIONS: ChipOption<Visibility>[] = [
@@ -57,6 +58,10 @@ type PublishPanelProps = {
   ownerUsername?: string | null;
   /** The current user's sets — populates the "Add to set" picker. */
   mySets: CardSetOption[];
+  /** The current user's cards — the back-face picker. Excludes this card. */
+  myCards: Card[];
+  /** Save the current card + open a fresh creator to build/link a back face. */
+  onCreateBackFace: () => void;
   /** Live slug/title values from the form, for the URL helper text. */
   watchedSlug: string;
   watchedTitle: string;
@@ -66,6 +71,8 @@ export function PublishPanel({
   activeChallenge,
   ownerUsername,
   mySets,
+  myCards,
+  onCreateBackFace,
   watchedSlug,
   watchedTitle,
 }: PublishPanelProps) {
@@ -77,6 +84,7 @@ export function PublishPanel({
   } = useFormContext<FormValues>();
   const tagsText = useWatch({ control, name: "tags_text" }) ?? "";
   const visibility = useWatch({ control, name: "visibility" });
+  const backCardId = useWatch({ control, name: "back_card_id" }) ?? "";
   const entered = activeChallenge
     ? parseTags(tagsText).includes(activeChallenge.tag)
     : false;
@@ -196,6 +204,15 @@ export function PublishPanel({
           )}
         />
       </FieldGroup>
+
+      <BackFacePicker
+        myCards={myCards}
+        value={backCardId}
+        onChange={(id) =>
+          setValue("back_card_id", id, { shouldDirty: true })
+        }
+        onCreateNew={onCreateBackFace}
+      />
 
       {/* Discovery tags + the read-only card URL (the slug derives from the
           title automatically and is not user-editable), under Advanced. */}

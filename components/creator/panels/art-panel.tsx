@@ -56,7 +56,13 @@ export function ArtPanel({ userId, backFaceSlot }: ArtPanelProps) {
         )}
       />
 
-      <MoreOptions summary="More options — artist credit & back face">
+      <MoreOptions
+        summary={
+          backFaceSlot
+            ? "More options — artist credit & second face"
+            : "More options — artist credit"
+        }
+      >
         <FieldGroup
           label="Artist credit"
           helper="Who made the artwork? Yourself, a public-domain artist, or a licensed source."
