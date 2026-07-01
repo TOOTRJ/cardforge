@@ -50,7 +50,6 @@ import { ArtPanel } from "@/components/creator/panels/art-panel";
 import { TextPanel } from "@/components/creator/panels/text-panel";
 import { AbilitiesPanel } from "@/components/creator/panels/abilities-panel";
 import { LayoutPanel } from "@/components/creator/panels/layout-panel";
-import { EffectsPanel } from "@/components/creator/panels/effects-panel";
 import {
   PublishPanel,
   type CardSetOption,
@@ -184,7 +183,6 @@ const STEP_RAIL_ICONS: Record<string, React.ReactNode> = {
 export function CardCreatorForm({
   mode,
   userId,
-  ownerUsername,
   gameSystems,
   templates,
   card,
@@ -1178,20 +1176,14 @@ export function CardCreatorForm({
               </>
             ) : null}
 
-            {/* ----- Publish panel (finish + visibility/set/tags/save) ----- */}
+            {/* ----- Publish panel (visibility/set/back face + Advanced: finish/tags/save) ----- */}
             {stepKey === "publish" ? (
-              <>
-                <EffectsPanel />
-                <PublishPanel
-                  activeChallenge={activeChallenge}
-                  ownerUsername={ownerUsername}
-                  mySets={mySets}
-                  myCards={myCards}
-                  onCreateBackFace={handleCreateBackFace}
-                  watchedSlug={watched.slug}
-                  watchedTitle={watched.title}
-                />
-              </>
+              <PublishPanel
+                activeChallenge={activeChallenge}
+                mySets={mySets}
+                myCards={myCards}
+                onCreateBackFace={handleCreateBackFace}
+              />
             ) : null}
           </div>
 
@@ -1211,14 +1203,18 @@ export function CardCreatorForm({
               switching back to a "publishing" tab. */}
           <div className="sticky bottom-0 -mx-6 -mb-6 flex flex-wrap items-center justify-between gap-3 border-t border-border/50 bg-surface/95 px-6 py-4 backdrop-blur-sm">
             <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
-              {isDirty ? (
-                <Badge variant="accent" className="gap-1.5">
-                  <Sparkles className="h-3 w-3" aria-hidden />
-                  {isDraftMode ? "Draft kept on this device" : "Unsaved changes"}
-                </Badge>
-              ) : (
-                <Badge variant="default">Up to date</Badge>
-              )}
+              {/* Draft mode auto-saves silently — no chip. Edit mode still shows
+                  its real save state. */}
+              {!isDraftMode ? (
+                isDirty ? (
+                  <Badge variant="accent" className="gap-1.5">
+                    <Sparkles className="h-3 w-3" aria-hidden />
+                    Unsaved changes
+                  </Badge>
+                ) : (
+                  <Badge variant="default">Up to date</Badge>
+                )
+              ) : null}
               {remixSource ? (
                 <Badge variant="primary" className="gap-1.5">
                   Remixed from{" "}

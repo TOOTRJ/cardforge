@@ -79,14 +79,22 @@ export function TextPanel({
         />
       </FieldGroup>
 
-      {/* AI assistant — drafts/refines abilities + flavor from a prompt.
-          The hero / command palette jump here via the openAiConcept event. */}
-      <div id="ai-assistant-anchor" className="scroll-mt-20">
-        <AIAssistantPanel
-          cardContext={cardContext}
-          onApply={onAIPatch}
-          configured={aiConfigured}
-        />
+      {/* AI assistant — temporarily gated: grayed + non-interactive with a
+          "Coming soon" overlay. The panel still renders underneath so the
+          layout is preview-accurate for when it ships. */}
+      <div id="ai-assistant-anchor" className="relative scroll-mt-20">
+        <div className="pointer-events-none select-none opacity-40 blur-[1px]">
+          <AIAssistantPanel
+            cardContext={cardContext}
+            onApply={onAIPatch}
+            configured={aiConfigured}
+          />
+        </div>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="rounded-full border border-border/70 bg-background/90 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-muted shadow-lg backdrop-blur-sm">
+            Forge AI · Coming soon
+          </span>
+        </div>
       </div>
     </>
   );

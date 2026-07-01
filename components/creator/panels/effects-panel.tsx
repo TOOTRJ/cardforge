@@ -13,9 +13,17 @@ import { FieldGroup } from "@/components/creator/field-group";
 import type { CardFinish } from "@/types/card";
 import type { FormValues } from "@/lib/creator/form-types";
 
-// Finish presets — premium treatments layered on top of the base frame.
-// Descriptions are surfaced via ChipGroup's `md` size which shows the
-// description under the label.
+// Small "Soon" pill for finishes that aren't shippable yet.
+function SoonBadge() {
+  return (
+    <span className="rounded-full border border-border/70 bg-elevated px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-subtle">
+      Soon
+    </span>
+  );
+}
+
+// Finish presets — premium treatments layered on top of the base frame. Only
+// "Regular" is shippable for now; the rest are disabled with a "Soon" badge.
 const FINISH_OPTIONS: ChipOption<CardFinish>[] = [
   {
     value: "regular",
@@ -26,19 +34,22 @@ const FINISH_OPTIONS: ChipOption<CardFinish>[] = [
     value: "foil",
     label: "Foil",
     description: "Animated holographic sheen for showpieces.",
-    activeClass: "border-accent bg-accent/15 text-accent",
+    disabled: true,
+    badge: <SoonBadge />,
   },
   {
     value: "etched",
     label: "Etched",
     description: "Gold-leaf inner border with a subtle texture.",
-    activeClass: "border-amber-300 bg-amber-300/15 text-amber-200",
+    disabled: true,
+    badge: <SoonBadge />,
   },
   {
     value: "showcase",
     label: "Showcase",
     description: "Italic display title with an ornate hairline.",
-    activeClass: "border-primary bg-primary/15 text-primary-bright",
+    disabled: true,
+    badge: <SoonBadge />,
   },
 ];
 
