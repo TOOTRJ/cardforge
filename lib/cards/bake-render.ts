@@ -34,6 +34,34 @@ export type BakeRenderResult =
   | { ok: false; error: string };
 
 /**
+ * Delete a card's baked PNG from the public `card-renders` bucket, retrying
+ * once before giving up. Unlike a best-effort `.remove().catch(() => {})`,
+ * this surfaces a persistent failure loudly: the render path is deterministic
+ * and the bucket is public-read, so a render that fails to delete when a card
+ * goes private stays fetchable by anyone who has (or guesses) the URL — a
+ * privacy leak we want visible in logs rather than swallowed.
+ *
+ * Note: Supabase Storage's `remove` treats a missing object as success (no
+ * error), so the retry only fires on a genuine transient/permission error.
+ */
+async function removeRenderObject(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  path: string,
+): Promise<void> {
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    const { error } = await supabase.storage
+      .from("card-renders")
+      .remove([path]);
+    if (!error) return;
+    if (attempt === 2) {
+      console.error(
+        `[bake-render] Could not delete render object ${path} after a retry: ${error.message}. The PNG may remain publicly fetchable for a now-private card.`,
+      );
+    }
+  }
+}
+
+/**
  * Render the given card to a PNG and upload it to the card-renders bucket.
  * Returns the public URL on success (with a cache-busting `?v=` query).
  *
@@ -77,7 +105,7 @@ export async function bakeCardRender(
   // (Art is intentionally NOT removed here — remixes copy art_url, so the art
   // object can be shared; its random-id path is also never publicly exposed.)
   if (card.visibility === "private") {
-    await supabase.storage.from("card-renders").remove([path]);
+    await removeRenderObject(supabase, path);
     return { ok: true, renderedImageUrl: null };
   }
 
@@ -139,16 +167,34 @@ export async function bakeAndPersistCardRender(
   cardId: string,
 ): Promise<string | null> {
   const result = await bakeCardRender(cardId);
+  const supabase = await createClient();
+
   if (!result.ok) {
     // Best-effort logging. We deliberately don't throw — the card itself
     // saved successfully; the bake is a nice-to-have that can be retried.
     console.warn(
       `[bake-render] Failed to bake card ${cardId}: ${result.error}`,
     );
+    // Clear any previously-baked render so viewers fall back to the
+    // always-correct live <CardPreview> instead of an out-of-date PNG that
+    // no longer matches the just-saved card. (No-op for a brand-new card,
+    // whose render columns are already null.)
+    const { error: clearErr } = await supabase
+      .from("cards")
+      .update({
+        rendered_image_url: null,
+        rendered_at: null,
+        layout_version: null,
+      })
+      .eq("id", cardId);
+    if (clearErr) {
+      console.warn(
+        `[bake-render] Failed to clear stale render for card ${cardId}: ${clearErr.message}`,
+      );
+    }
     return null;
   }
 
-  const supabase = await createClient();
   const { error: updateErr } = await supabase
     .from("cards")
     .update({
