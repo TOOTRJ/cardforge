@@ -18,12 +18,16 @@ import { createClient } from "@/lib/supabase/server";
 const MINUTE_MS = 60_000;
 const DAY_MS = 24 * 60 * 60_000;
 
-// action → { perMinute, perDay }
-const LIMITS = {
+// action → { perMinute, perDay }. Single source of truth — the usage
+// panel (lib/scryfall/usage-queries.ts) and the admin dashboard consume
+// this same object.
+export const SCRYFALL_LIMITS = {
   search: { perMinute: 60, perDay: 2000 },
   named: { perMinute: 30, perDay: 500 },
   import_art: { perMinute: 10, perDay: 100 },
 } as const;
+
+const LIMITS = SCRYFALL_LIMITS;
 
 export type ScryfallActionLabel = keyof typeof LIMITS;
 
