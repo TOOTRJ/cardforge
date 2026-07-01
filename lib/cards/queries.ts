@@ -592,6 +592,12 @@ export async function listPublicCardsRich(
         query = query.or(
           "color_identity.eq.{},color_identity.cs.{colorless}",
         );
+      } else if (colorIdentity === "multicolor") {
+        // Multicolor = more than one color. color_count (0044) is the element
+        // count; also match the rare literal "multicolor" token.
+        query = query.or(
+          "color_count.gt.1,color_identity.cs.{multicolor}",
+        );
       } else {
         query = query.contains("color_identity", [colorIdentity]);
       }

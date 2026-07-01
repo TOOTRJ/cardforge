@@ -506,6 +506,7 @@ export type Database = {
           updated_at: string;
           likes_count: number;
           view_count: number;
+          color_count: number | null;
           visibility: string;
         };
         Insert: {

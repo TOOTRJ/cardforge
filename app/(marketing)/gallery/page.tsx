@@ -168,6 +168,20 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
   };
 
   const configured = isSupabaseConfigured();
+  // When the user is actively searching/filtering, the trending hero is noise —
+  // hide it so the (filtered) results are the focus, like most gallery UIs.
+  const anyFilterActive =
+    Boolean(
+      cardType ||
+        rarity ||
+        colorIdentity ||
+        searchParam ||
+        tag ||
+        remixesOnly ||
+        sourceScryfallId,
+    ) ||
+    sort !== "recent" ||
+    page > 1;
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
@@ -188,19 +202,21 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
         }
       />
 
+      {/* Search + filters lead the page, like most galleries. */}
+      <div className="mt-8">
+        <GalleryFilters />
+      </div>
+
       <FeaturedChallengeBanner />
 
-      {configured ? (
+      {/* Trending hero — only on the unfiltered default view. */}
+      {configured && !anyFilterActive ? (
         <div className="mt-10">
           <Suspense fallback={<TrendingCardsSectionSkeleton count={4} />}>
             <GalleryTrending />
           </Suspense>
         </div>
       ) : null}
-
-      <div className="mt-8">
-        <GalleryFilters />
-      </div>
 
       <div className="mt-10">
         {!configured ? (
