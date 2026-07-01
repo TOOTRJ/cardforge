@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Pencil } from "lucide-react";
+import { ArrowLeft, ExternalLink, Pencil } from "lucide-react";
 import { CardPreview } from "@/components/cards/card-preview";
+import { ManaCostGlyphs } from "@/components/cards/mana-cost-glyphs";
 import { getPipOverrides } from "@/lib/pips/queries";
 import { CardComments } from "@/components/cards/card-comments";
 import { DownloadModal } from "@/components/cards/download-modal";
@@ -11,17 +13,21 @@ import { RemixButton } from "@/components/cards/remix-button";
 import { ShareTargets } from "@/components/cards/share-targets";
 import { ReportCardDialog } from "@/components/cards/report-card-dialog";
 import { GalleryCardTile } from "@/components/cards/gallery-card-tile";
+import { SocialIcon } from "@/components/profile/social-icon";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SurfaceCard } from "@/components/ui/surface-card";
+import { SOCIAL_PLATFORMS, type SocialPlatformKey } from "@/lib/auth/schemas";
 import {
   countCardLikes,
   getCardById,
   getCardByOwnerAndSlug,
+  getProfileByUsername,
   hasUserLikedCard,
   listMoreFromOwner,
   listRelatedCards,
   type CardWithStats,
+  type ProfileWithStats,
 } from "@/lib/cards/queries";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
 import { countPublicRemixesBySource } from "@/lib/cards/source-queries";
@@ -151,6 +157,8 @@ export default async function CardDetailPage({
     entitlements,
     moreFromOwner,
     relatedCards,
+    pipOverrides,
+    creatorProfile,
   ] = await Promise.all([
     countCardLikes(card.id),
     user ? hasUserLikedCard(user.id, card.id) : Promise.resolve(false),
@@ -166,6 +174,10 @@ export default async function CardDetailPage({
       { cardId: card.id, ownerId: card.owner_id, cardType: card.card_type },
       4,
     ),
+    // The owner's custom pip icons — shared by the preview AND the cost row.
+    getPipOverrides(card.owner_id),
+    // Full creator profile (bio + socials + avatar) for the featured card.
+    getProfileByUsername(username),
   ]);
 
   const ownerProfile = card.owner;
@@ -223,7 +235,7 @@ export default async function CardDetailPage({
           <CardPreview
             title={card.title}
             cost={card.cost}
-            pipOverrides={await getPipOverrides(card.owner_id)}
+            pipOverrides={pipOverrides}
             cardType={card.card_type}
             supertype={card.supertype}
             subtypes={card.subtypes}
@@ -270,9 +282,6 @@ export default async function CardDetailPage({
             <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
               {card.title}
             </h1>
-            <p className="text-sm leading-6 text-muted">
-              Slug: <span className="font-mono text-foreground">{card.slug}</span>
-            </p>
             {/* Chunk 13: "Also remixed by N others" chip. Only renders
                 when this card was imported from Scryfall AND at least
                 one other public/unlisted remix exists. Click-through
@@ -347,7 +356,20 @@ export default async function CardDetailPage({
               label="Rarity"
               value={card.rarity ? capitalize(card.rarity) : "—"}
             />
-            <Detail label="Cost" value={card.cost ?? "—"} />
+            <Detail
+              label="Cost"
+              value={
+                card.cost?.trim() ? (
+                  <ManaCostGlyphs
+                    cost={card.cost}
+                    size="lg"
+                    overrides={pipOverrides}
+                  />
+                ) : (
+                  "—"
+                )
+              }
+            />
             <Detail
               label="Color identity"
               value={
@@ -385,6 +407,10 @@ export default async function CardDetailPage({
                 {card.flavor_text}
               </p>
             </SurfaceCard>
+          ) : null}
+
+          {creatorProfile ? (
+            <CreatorFeature profile={creatorProfile} />
           ) : null}
 
           <CardComments
@@ -484,13 +510,139 @@ function formatDate(value: string): string {
   }
 }
 
-function Detail({ label, value }: { label: string; value: string }) {
+// ---------------------------------------------------------------------------
+// CreatorFeature — the card's maker, featured beneath the card's own info.
+// Avatar + name + bio + social links, with the profile's accent tint. Second
+// in prominence to the card itself.
+// ---------------------------------------------------------------------------
+
+function CreatorFeature({ profile }: { profile: ProfileWithStats }) {
+  const displayName =
+    profile.display_name?.trim() || profile.username || "Forgemaster";
+  const initial = displayName.charAt(0).toUpperCase();
+  const profileHref = profile.username ? `/profile/${profile.username}` : null;
+  const cardsCount = profile.public_cards_count;
+
+  const socialEntries = SOCIAL_PLATFORMS.flatMap((p) => {
+    const url = profile[p.key as SocialPlatformKey];
+    return url ? [{ ...p, url }] : [];
+  });
+
+  const accentStyle = profile.accent_color
+    ? ({ "--profile-accent": profile.accent_color } as React.CSSProperties)
+    : undefined;
+
+  return (
+    <SurfaceCard
+      className="flex flex-col gap-4 border-t-2 border-t-[var(--profile-accent,var(--color-primary))] p-6"
+      style={accentStyle}
+    >
+      <span className="text-xs font-semibold uppercase tracking-wider text-subtle">
+        Creator
+      </span>
+
+      <div className="flex items-start gap-4">
+        {profile.avatar_url ? (
+          <Image
+            src={profile.avatar_url}
+            alt={`${displayName} avatar`}
+            width={56}
+            height={56}
+            className="h-14 w-14 shrink-0 rounded-full border border-border/60 object-cover"
+          />
+        ) : (
+          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-border/60 bg-elevated text-xl font-semibold text-foreground">
+            {initial}
+          </span>
+        )}
+
+        <div className="flex min-w-0 flex-col gap-0.5">
+          {profileHref ? (
+            <Link
+              href={profileHref}
+              className="font-display text-lg font-semibold tracking-tight text-foreground transition-colors hover:text-primary-bright"
+            >
+              {displayName}
+            </Link>
+          ) : (
+            <span className="font-display text-lg font-semibold tracking-tight text-foreground">
+              {displayName}
+            </span>
+          )}
+          {profile.username ? (
+            <span className="font-mono text-xs text-muted">
+              @{profile.username}
+            </span>
+          ) : null}
+          <span className="text-xs text-subtle">
+            {cardsCount} public card{cardsCount === 1 ? "" : "s"}
+          </span>
+        </div>
+
+        {profileHref ? (
+          <Button asChild variant="outline" size="sm" className="ml-auto shrink-0">
+            <Link href={profileHref}>View profile</Link>
+          </Button>
+        ) : null}
+      </div>
+
+      {profile.bio?.trim() ? (
+        <p className="whitespace-pre-line text-sm leading-6 text-muted">
+          {profile.bio}
+        </p>
+      ) : null}
+
+      {profile.website_url || socialEntries.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-3">
+          {profile.website_url ? (
+            <a
+              href={profile.website_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-xs text-primary-bright hover:underline"
+            >
+              <ExternalLink className="h-3 w-3" aria-hidden />
+              {profile.website_url.replace(/^https?:\/\//, "")}
+            </a>
+          ) : null}
+          {socialEntries.length > 0 ? (
+            <ul className="flex flex-wrap items-center gap-1.5">
+              {socialEntries.map((entry) => (
+                <li key={entry.key}>
+                  <a
+                    href={entry.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`${entry.label} profile`}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border/60 bg-elevated/60 text-muted transition-colors hover:bg-elevated hover:text-[var(--profile-accent,var(--color-primary))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50"
+                  >
+                    <SocialIcon platform={entry.key} className="h-4 w-4" />
+                  </a>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : null}
+    </SurfaceCard>
+  );
+}
+
+function Detail({
+  label,
+  value,
+}: {
+  label: string;
+  value: React.ReactNode;
+}) {
   return (
     <div className="flex flex-col gap-1">
       <span className="text-xs font-semibold uppercase tracking-wider text-subtle">
         {label}
       </span>
-      <span className="text-sm text-foreground">{value}</span>
+      <span className="flex min-h-6 items-center text-sm text-foreground">
+        {value}
+      </span>
     </div>
   );
 }
