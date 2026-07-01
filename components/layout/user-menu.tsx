@@ -4,6 +4,7 @@ import Link from "next/link";
 import {
   Activity,
   CreditCard,
+  Frame,
   LayoutDashboard,
   Layers,
   LogOut,
@@ -137,6 +138,11 @@ export function UserMenu({
             href="/admin/scryfall"
             icon={Activity}
             label="Scryfall usage"
+          />
+          <MenuItem
+            href="/admin/frame-compare"
+            icon={Frame}
+            label="Frame compare"
           />
           </>
         ) : null}
