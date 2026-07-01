@@ -20,6 +20,7 @@
 //   5      — M15 P/T value lifted ~2px (valueDyEm) to true-center on the plate
 //   6      — M15 P/T value nudged ~2px right (valueDxEm) to true-center on the
 //            plate horizontally
+//   7      — M15 P/T value: a bit more right (valueDxEm 0.09 → 0.18)
 // ---------------------------------------------------------------------------
 
-export const CARD_LAYOUT_VERSION = 6;
+export const CARD_LAYOUT_VERSION = 7;
