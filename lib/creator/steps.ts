@@ -101,6 +101,18 @@ export function statVisibility(cardType: CardType | "" | null | undefined): {
 
 const STEP_DEFS: StepDef[] = [
   {
+    // Frame leads the flow: the user picks the era + frame first, then fills in
+    // the card's identity. The frame picker reads card_type / color_identity,
+    // which start from their defaults (creature / colorless) and update the
+    // type-derived standard frame automatically as those are set on later steps
+    // — so leading with Frame never strands the picker.
+    key: "frame",
+    label: "Frame",
+    description: "Era & frame style",
+    fields: ["frame_style"],
+    isVisible: always,
+  },
+  {
     key: "identity",
     label: "Identity",
     description: "Name, type & rarity",
@@ -120,13 +132,6 @@ const STEP_DEFS: StepDef[] = [
     label: "Pips",
     description: "Mana cost & color identity",
     fields: ["cost", "color_identity"],
-    isVisible: always,
-  },
-  {
-    key: "frame",
-    label: "Frame",
-    description: "Era & frame style",
-    fields: ["frame_style"],
     isVisible: always,
   },
   {
