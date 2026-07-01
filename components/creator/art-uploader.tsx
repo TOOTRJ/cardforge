@@ -14,8 +14,6 @@ import {
   ImagePlus,
   Loader2,
   Move,
-  RotateCcw,
-  RotateCw,
   Trash2,
   Upload,
 } from "lucide-react";
@@ -30,16 +28,21 @@ import type { ArtPosition } from "@/types/card";
 //
 // Surface: a full-bleed dropzone that doubles as the artwork preview. The
 // user can drop a file onto it, click to open the file picker, paste an
-// image from the clipboard (while the page is focused), or drag the
-// already-uploaded artwork around to set the focal point. Mouse wheel /
-// pinch on the preview adjusts zoom. Sliders below stay as a fine-tune
-// surface so keyboard users can still nudge values precisely.
+// image from the clipboard (while the page is focused), or grab the
+// already-uploaded artwork and drag to PAN it under the crop. Shift + mouse
+// wheel adjusts zoom; arrow keys nudge for keyboard users. Positioning is
+// drag-first — there are no sliders. The dragged pixel tracks the cursor 1:1
+// because focalX/Y map to object-position, whose screen sensitivity is
+// exactly (boxSize − displayedSize); we divide the drag delta by that overflow.
 // ---------------------------------------------------------------------------
 
 const MIN_SCALE = 0.5;
 const MAX_SCALE = 3;
 const ACCEPTED_TYPES = "image/png,image/jpeg,image/webp,image/gif";
 const ASPECT_RATIO_CLASS = "aspect-[5/4]";
+// Pointer must travel this far before a press becomes a pan — so a plain
+// click (or a tap) never nudges the framing.
+const DRAG_THRESHOLD_PX = 3;
 // Mirror the server's byte cap so we fail fast on an oversized drop/paste
 // before spending the upload round-trip. The server (upload-art-server.ts) is
 // still the source of truth.
@@ -62,7 +65,22 @@ export function ArtUploader({
 }: ArtUploaderProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const dropzoneRef = useRef<HTMLDivElement | null>(null);
-  const isDraggingArtRef = useRef(false);
+  // Snapshot of an in-progress pan: the pointer + focal origin and the
+  // overflow (displayed − box) captured on pointer-down, plus whether the
+  // press has crossed the drag threshold yet.
+  const panRef = useRef<{
+    pointerX: number;
+    pointerY: number;
+    focalX: number;
+    focalY: number;
+    overflowX: number;
+    overflowY: number;
+    active: boolean;
+  } | null>(null);
+  // The loaded image's natural pixel size — needed to compute how far the art
+  // overflows the crop box (and thus the drag→focal conversion). Null until the
+  // <img> fires onLoad; reset when the art changes.
+  const naturalSizeRef = useRef<{ w: number; h: number } | null>(null);
   const [uploading, setUploading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [isDraggingArt, setIsDraggingArt] = useState(false);
@@ -85,7 +103,12 @@ export function ArtUploader({
   const focalX = clamp(artPosition.focalX ?? 0.5, 0, 1);
   const focalY = clamp(artPosition.focalY ?? 0.5, 0, 1);
   const scale = clamp(artPosition.scale ?? 1, MIN_SCALE, MAX_SCALE);
-  const rotation = clamp(artPosition.rotation ?? 0, -180, 180);
+
+  // A new image's natural size is unknown until it loads — clear the cached
+  // dimensions so the pan math doesn't use the previous art's overflow.
+  useEffect(() => {
+    naturalSizeRef.current = null;
+  }, [artUrl]);
 
   // ---- Upload ------------------------------------------------------------
 
@@ -215,7 +238,7 @@ export function ArtUploader({
     }
   };
 
-  // ---- Drag-to-reposition focal point -----------------------------------
+  // ---- Drag-to-pan the art ----------------------------------------------
 
   const updatePosition = useCallback(
     (patch: Partial<ArtPosition>) => {
@@ -227,25 +250,69 @@ export function ArtUploader({
     [artUrl, artPosition, onArtChange],
   );
 
+  // How far the displayed art overflows the crop box, per axis, in CSS px.
+  // The art is object-fit:cover (so it's first scaled to cover the box), then
+  // CSS-scaled by `scale`. object-position can only shift the art across this
+  // overflow, so it's exactly the pixel range one axis of focal (0→1) spans.
+  const overflowFor = (rect: DOMRect) => {
+    const nat = naturalSizeRef.current;
+    if (!nat || nat.w <= 0 || nat.h <= 0) return { x: 0, y: 0 };
+    const coverScale = Math.max(rect.width / nat.w, rect.height / nat.h);
+    const displayedW = nat.w * coverScale * scale;
+    const displayedH = nat.h * coverScale * scale;
+    return {
+      x: Math.max(0, displayedW - rect.width),
+      y: Math.max(0, displayedH - rect.height),
+    };
+  };
+
   const handleArtPointerDown = (event: PointerEvent<HTMLDivElement>) => {
     if (!artUrl || uploading) return;
     // Skip secondary buttons so right-click context menu still works and
     // middle-click doesn't accidentally enter pan mode.
     if (event.button !== 0) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const overflow = overflowFor(rect);
+    panRef.current = {
+      pointerX: event.clientX,
+      pointerY: event.clientY,
+      focalX,
+      focalY,
+      overflowX: overflow.x,
+      overflowY: overflow.y,
+      active: false,
+    };
     event.currentTarget.setPointerCapture(event.pointerId);
-    isDraggingArtRef.current = true;
-    setIsDraggingArt(true);
-    pointToFocal(event);
   };
 
   const handleArtPointerMove = (event: PointerEvent<HTMLDivElement>) => {
-    if (!isDraggingArtRef.current) return;
-    pointToFocal(event);
+    const pan = panRef.current;
+    if (!pan) return;
+    const dx = event.clientX - pan.pointerX;
+    const dy = event.clientY - pan.pointerY;
+    // Hold until the press clears the threshold, so a click never pans.
+    if (!pan.active) {
+      if (Math.hypot(dx, dy) < DRAG_THRESHOLD_PX) return;
+      pan.active = true;
+      setIsDraggingArt(true);
+    }
+    // Grab-and-drag: moving the pointer right pulls the art right, revealing
+    // its left side — i.e. focalX decreases. Dividing by the overflow makes
+    // the dragged pixel track the cursor 1:1 at any zoom.
+    const nextFocalX =
+      pan.overflowX > 0
+        ? clamp(pan.focalX - dx / pan.overflowX, 0, 1)
+        : pan.focalX;
+    const nextFocalY =
+      pan.overflowY > 0
+        ? clamp(pan.focalY - dy / pan.overflowY, 0, 1)
+        : pan.focalY;
+    updatePosition({ focalX: nextFocalX, focalY: nextFocalY });
   };
 
   const handleArtPointerUp = (event: PointerEvent<HTMLDivElement>) => {
-    if (!isDraggingArtRef.current) return;
-    isDraggingArtRef.current = false;
+    if (!panRef.current) return;
+    panRef.current = null;
     setIsDraggingArt(false);
     try {
       event.currentTarget.releasePointerCapture(event.pointerId);
@@ -254,13 +321,6 @@ export function ArtUploader({
       // (e.g. pointer-up fired on a different element); swallow.
     }
   };
-
-  function pointToFocal(event: PointerEvent<HTMLDivElement>) {
-    const rect = event.currentTarget.getBoundingClientRect();
-    const x = clamp((event.clientX - rect.left) / rect.width, 0, 1);
-    const y = clamp((event.clientY - rect.top) / rect.height, 0, 1);
-    updatePosition({ focalX: x, focalY: y });
-  }
 
   // ---- Wheel zoom --------------------------------------------------------
 
@@ -292,7 +352,7 @@ export function ArtUploader({
   };
 
   const handleResetPosition = () => {
-    updatePosition({ focalX: 0.5, focalY: 0.5, scale: 1, rotation: 0 });
+    updatePosition({ focalX: 0.5, focalY: 0.5, scale: 1 });
   };
 
   // Keyboard nudging on the dropzone — arrow keys move the focal point by
@@ -390,7 +450,7 @@ export function ArtUploader({
         role={artUrl ? "img" : "button"}
         aria-label={
           artUrl
-            ? "Drag to set focal point. Shift-scroll to zoom. Arrow keys nudge. +/- zoom. R resets."
+            ? "Drag to reposition the art. Shift-scroll to zoom. Arrow keys nudge, +/- zoom, R resets."
             : "Drop an image here or click to upload"
         }
         tabIndex={0}
@@ -418,14 +478,24 @@ export function ArtUploader({
               src={artUrl}
               alt="Card artwork preview"
               draggable={false}
+              onLoad={(event) => {
+                naturalSizeRef.current = {
+                  w: event.currentTarget.naturalWidth,
+                  h: event.currentTarget.naturalHeight,
+                };
+              }}
               className="pointer-events-none h-full w-full select-none object-cover"
               style={{
+                // Must stay identical to the bake/preview renderer
+                // (lib/render/card-image.tsx, components/cards/card-preview.tsx):
+                // object-cover + object-position + scale about the same origin,
+                // NO rotation. Any drift here would make the editor lie about
+                // the saved card.
                 objectPosition: `${focalX * 100}% ${focalY * 100}%`,
-                transform: `rotate(${rotation}deg) scale(${scale})`,
+                transform: `scale(${scale})`,
                 transformOrigin: `${focalX * 100}% ${focalY * 100}%`,
               }}
             />
-            <FocalCrosshair x={focalX} y={focalY} active={isDraggingArt} />
             <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between bg-linear-to-t from-background/80 to-transparent p-3 text-[10px] uppercase tracking-wider text-muted opacity-0 transition-opacity group-hover:opacity-100">
               <span className="inline-flex items-center gap-1.5">
                 <Move className="h-3 w-3" aria-hidden /> Drag to reposition · Shift-scroll to zoom
@@ -477,83 +547,16 @@ export function ArtUploader({
           </>
         ) : null}
       </div>
+      {artUrl ? (
+        <p className="text-[11px] leading-5 text-subtle">
+          Drag the art to position it, Shift-scroll to zoom. Arrow keys nudge for
+          fine control.
+        </p>
+      ) : null}
       {!userId ? (
         <p className="text-xs text-subtle">
           Sign in first to upload artwork. Until then the form still saves text.
         </p>
-      ) : null}
-
-      {artUrl ? (
-        <div className="flex flex-col gap-3 rounded-lg border border-border/60 bg-surface/60 p-4">
-          <p className="text-[11px] uppercase tracking-wider text-subtle">
-            Fine-tune
-          </p>
-          <SliderRow
-            label="Focal X"
-            value={focalX}
-            min={0}
-            max={1}
-            step={0.01}
-            display={`${Math.round(focalX * 100)}%`}
-            onChange={(value) => updatePosition({ focalX: value })}
-          />
-          <SliderRow
-            label="Focal Y"
-            value={focalY}
-            min={0}
-            max={1}
-            step={0.01}
-            display={`${Math.round(focalY * 100)}%`}
-            onChange={(value) => updatePosition({ focalY: value })}
-          />
-          <SliderRow
-            label="Zoom"
-            value={scale}
-            min={MIN_SCALE}
-            max={MAX_SCALE}
-            step={0.05}
-            display={`${scale.toFixed(2)}×`}
-            onChange={(value) => updatePosition({ scale: value })}
-          />
-          <div className="flex items-center gap-2">
-            <SliderRow
-              label="Rotation"
-              value={rotation}
-              min={-180}
-              max={180}
-              step={1}
-              display={`${rotation > 0 ? "+" : ""}${rotation}°`}
-              onChange={(value) => updatePosition({ rotation: value })}
-              className="flex-1"
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              aria-label="Rotate 90° counter-clockwise"
-              onClick={() =>
-                updatePosition({
-                  rotation: clamp(rotation - 90, -180, 180),
-                })
-              }
-            >
-              <RotateCcw className="h-3.5 w-3.5" aria-hidden />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              aria-label="Rotate 90° clockwise"
-              onClick={() =>
-                updatePosition({
-                  rotation: clamp(rotation + 90, -180, 180),
-                })
-              }
-            >
-              <RotateCw className="h-3.5 w-3.5" aria-hidden />
-            </Button>
-          </div>
-        </div>
       ) : null}
     </div>
   );
@@ -603,76 +606,6 @@ function EmptyDropzoneInner({
         </p>
       </div>
     </div>
-  );
-}
-
-function FocalCrosshair({
-  x,
-  y,
-  active,
-}: {
-  x: number;
-  y: number;
-  active: boolean;
-}) {
-  // The crosshair sits over the art and shows the current focal anchor.
-  // It tracks pointer drags 1:1 and fades when idle so it doesn't compete
-  // with the artwork visually.
-  return (
-    <div
-      className={cn(
-        "pointer-events-none absolute z-10 transition-opacity",
-        active ? "opacity-100" : "opacity-70",
-      )}
-      style={{
-        left: `${x * 100}%`,
-        top: `${y * 100}%`,
-        transform: "translate(-50%, -50%)",
-      }}
-      aria-hidden
-    >
-      <div className="h-6 w-6 rounded-full border-2 border-white/80 shadow-[0_0_0_2px_rgba(0,0,0,0.4)]" />
-      <div className="absolute inset-x-0 top-1/2 -mx-2 h-px -translate-y-1/2 bg-white/70" />
-      <div className="absolute inset-y-0 left-1/2 -my-2 w-px -translate-x-1/2 bg-white/70" />
-    </div>
-  );
-}
-
-function SliderRow({
-  label,
-  value,
-  min,
-  max,
-  step,
-  display,
-  onChange,
-  className,
-}: {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  step: number;
-  display: string;
-  onChange: (value: number) => void;
-  className?: string;
-}) {
-  return (
-    <label className={cn("flex flex-col gap-1.5", className)}>
-      <span className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-subtle">
-        {label}
-        <span className="font-mono text-foreground">{display}</span>
-      </span>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(event) => onChange(Number(event.target.value))}
-        className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-elevated accent-primary"
-      />
-    </label>
   );
 }
 

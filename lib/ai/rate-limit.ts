@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { isBillingEnabled } from "@/lib/billing/flags";
 
 // Per-user windowed caps. Two windows so a user can't (a) spam the assistant
@@ -186,10 +187,27 @@ export type CreditSpendResult =
   | { ok: true; balance: number }
   | {
       ok: false;
-      reason: "insufficient_credits";
+      // "insufficient_credits" — a real empty balance (always fails closed).
+      // "error" — an infra/RPC failure surfaced ONLY when the caller opts into
+      // failClosed (a reserve). Without failClosed we fail open on infra errors.
+      reason: "insufficient_credits" | "error";
       balance: number;
       message: string;
     };
+
+export type SpendOptions = {
+  /**
+   * When true, an infrastructure/RPC error fails CLOSED (returns
+   * `{ ok: false, reason: "error" }`) instead of the default fail-open.
+   * Use this to *reserve* a credit before an expensive generation so a DB
+   * hiccup can't hand out a free generation. Pair with `refundAiCredits`
+   * so the user is made whole if the generation then fails.
+   */
+  failClosed?: boolean;
+};
+
+const CREDIT_CHECK_FAILED_MESSAGE =
+  "We couldn't verify your AI credits right now. Try again in a moment.";
 
 const OUT_OF_CREDITS_MESSAGE =
   "You're out of AI credits. Upgrade your plan or grab a credit pack to keep generating.";
@@ -203,37 +221,95 @@ const OUT_OF_CREDITS_MESSAGE =
 export async function spendCredits(
   amount: number,
   reason: string,
+  options: SpendOptions = {},
 ): Promise<CreditSpendResult> {
   // Billing off → credits aren't enforced; never touch the ledger.
   if (!isBillingEnabled()) return { ok: true, balance: Number.POSITIVE_INFINITY };
   if (amount <= 0) return { ok: true, balance: Number.POSITIVE_INFINITY };
+  // On an infra error: fail closed (deny) when reserving, else fail open.
+  const onInfraError = (): CreditSpendResult =>
+    options.failClosed
+      ? {
+          ok: false,
+          reason: "error",
+          balance: Number.NaN,
+          message: CREDIT_CHECK_FAILED_MESSAGE,
+        }
+      : { ok: true, balance: Number.NaN };
   try {
     const supabase = await createClient();
     const { data, error } = await supabase.rpc("consume_credits", {
       p_amount: amount,
       p_reason: reason,
     });
-    if (error) return { ok: true, balance: Number.NaN }; // fail open
+    if (error) return onInfraError();
     const row = Array.isArray(data) ? data[0] : data;
-    if (!row || !row.ok) {
+    if (!row) return onInfraError();
+    if (!row.ok) {
       return {
         ok: false,
         reason: "insufficient_credits",
-        balance: row?.balance ?? 0,
+        balance: row.balance ?? 0,
         message: OUT_OF_CREDITS_MESSAGE,
       };
     }
     return { ok: true, balance: row.balance };
   } catch {
-    return { ok: true, balance: Number.NaN }; // fail open
+    return onInfraError();
   }
 }
 
 /** Spend the credit cost of a specific AI action (0 = free / windowed-only). */
 export async function consumeAiCredits(
   action: AiActionLabel,
+  options: SpendOptions = {},
 ): Promise<CreditSpendResult> {
   const cost = creditCostFor(action);
   if (cost <= 0) return { ok: true, balance: Number.POSITIVE_INFINITY };
-  return spendCredits(cost, action);
+  return spendCredits(cost, action, options);
+}
+
+/**
+ * Refund the credit cost of an action back to a user — used when a credit was
+ * reserved up-front (see `SpendOptions.failClosed`) but the generation then
+ * failed, so the user should not be charged for our failure. Runs via the
+ * service-role admin client because `grant_credits` is service-role only.
+ * Best-effort: a refund failure is logged loudly (the user is owed a credit)
+ * but never surfaced as the request's error.
+ */
+export async function refundAiCredits(
+  userId: string,
+  action: AiActionLabel,
+): Promise<void> {
+  const cost = creditCostFor(action);
+  if (cost <= 0) return;
+  // Billing off → we never charged, so there's nothing to refund.
+  if (!isBillingEnabled()) return;
+  if (!isAdminConfigured()) {
+    console.error(
+      `[credits] Cannot refund ${cost} credit(s) to ${userId} for ${action}: admin client not configured.`,
+    );
+    return;
+  }
+  try {
+    const admin = createAdminClient();
+    const { error } = await admin.rpc("grant_credits", {
+      p_user_id: userId,
+      p_amount: cost,
+      p_reason: "refund",
+      // Unique per refund so grant_credits' idempotency guard never collapses
+      // two distinct refunds, while a retried identical call is still deduped.
+      p_idempotency_key: `refund:${action}:${userId}:${Date.now()}`,
+    });
+    if (error) {
+      console.error(
+        `[credits] Refund of ${cost} credit(s) to ${userId} for ${action} failed: ${error.message}`,
+      );
+    }
+  } catch (err) {
+    console.error(
+      `[credits] Refund of ${cost} credit(s) to ${userId} for ${action} threw:`,
+      err,
+    );
+  }
 }

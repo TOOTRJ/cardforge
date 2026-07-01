@@ -239,9 +239,15 @@ function ScryfallImportContent({
     };
   }, [query]);
 
+  // Tracks the most recently requested card id so a slower earlier fetch can't
+  // land after a faster later one and show a detail that doesn't match the
+  // highlighted selection (clicking result A then B).
+  const latestSelectRef = useRef<string | null>(null);
+
   // When the user picks a result, fetch the full card so we can show the
   // detail preview and have a canonical patch to import.
   const handleSelect = useCallback(async (id: string) => {
+    latestSelectRef.current = id;
     setSelectedId(id);
     setSelectedCard(null);
     setLoadingSelected(true);
@@ -253,6 +259,9 @@ function ScryfallImportContent({
         | NamedResponse
         | { ok: false; error: string }
         | null;
+      // The user picked another card while this was in flight — drop the
+      // stale response entirely so it can't overwrite the newer selection.
+      if (latestSelectRef.current !== id) return;
       if (!body || body.ok !== true) {
         toast.error(
           (body && "error" in body && body.error) || "Could not load card.",
@@ -262,9 +271,11 @@ function ScryfallImportContent({
       }
       setSelectedCard(body);
     } catch {
+      if (latestSelectRef.current !== id) return;
       toast.error("Could not load card.");
     } finally {
-      setLoadingSelected(false);
+      // Only clear the spinner for the request that's still current.
+      if (latestSelectRef.current === id) setLoadingSelected(false);
     }
   }, []);
 
@@ -272,35 +283,67 @@ function ScryfallImportContent({
     if (!selectedCard) return;
     const card = selectedCard.card;
     const patch = selectedCard.patch;
+    const hasBackFace = Boolean(patch.back_face);
 
     startCommit(async () => {
-      let importedArtUrl: string | null = null;
-
-      if (importArt) {
+      // Fetch one face's art crop into the user's bucket. Returns the public
+      // URL, or null on any failure (the server re-derives the URL from a
+      // fresh Scryfall lookup — we never send it one).
+      const importArtFace = async (
+        mode: "art" | "art-back",
+      ): Promise<string | null> => {
         try {
           const response = await fetch("/api/scryfall/import-art", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ scryfallId: card.id, mode: "art" }),
+            body: JSON.stringify({ scryfallId: card.id, mode }),
           });
           const body = (await response
             .json()
             .catch(() => null)) as ImportArtResponse | null;
-          if (!body || body.ok !== true) {
-            toast.error(
-              (body && "error" in body && body.error) ||
-                "Could not import artwork.",
-            );
-          } else {
-            importedArtUrl = body.publicUrl;
-          }
+          return body && body.ok === true ? body.publicUrl : null;
         } catch {
-          toast.error("Could not import artwork.");
+          return null;
+        }
+      };
+
+      let importedArtUrl: string | null = null;
+      let importedBackArtUrl: string | null = null;
+
+      if (importArt) {
+        // Import both faces' art in parallel — the single "Also import
+        // artwork" checkbox covers the whole card, so a DFC gets art on both
+        // faces (Delver, werewolves, MDFCs) rather than a blank back.
+        [importedArtUrl, importedBackArtUrl] = await Promise.all([
+          importArtFace("art"),
+          hasBackFace ? importArtFace("art-back") : Promise.resolve(null),
+        ]);
+
+        if (!importedArtUrl) {
+          toast.error("Could not import the artwork.");
+        } else if (hasBackFace && !importedBackArtUrl) {
+          toast.message("Imported the front art", {
+            description:
+              "The back-face art couldn't be fetched — you can add it on the Layout step.",
+          });
         }
       }
 
+      // Thread the imported back-face URL into the patch so the form seeds
+      // it into back_face.art_url (see handleScryfallImport in the form).
+      const finalPatch: ScryfallImportPatch =
+        hasBackFace && patch.back_face
+          ? {
+              ...patch,
+              back_face: {
+                ...patch.back_face,
+                imported_art_url: importedBackArtUrl,
+              },
+            }
+          : patch;
+
       onImport({
-        patch,
+        patch: finalPatch,
         importedArtUrl,
         source: {
           name: card.name,

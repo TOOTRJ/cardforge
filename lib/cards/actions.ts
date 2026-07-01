@@ -741,9 +741,23 @@ export async function updateCardsVisibilityAction(
   }
 
   if (goingPrivate) {
-    await supabase.storage
-      .from("card-renders")
-      .remove(ids.map((id) => cardRenderPath(user.id, id)));
+    // Delete the now-private cards' public renders, retrying once and logging
+    // loudly on a persistent failure rather than swallowing it — the render
+    // path is deterministic and the bucket is public-read, so a leftover PNG
+    // stays fetchable for a card the DB now reports as having no render.
+    // (Mirrors removeRenderObject in lib/cards/bake-render.ts.)
+    const paths = ids.map((id) => cardRenderPath(user.id, id));
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+      const { error: removeErr } = await supabase.storage
+        .from("card-renders")
+        .remove(paths);
+      if (!removeErr) break;
+      if (attempt === 2) {
+        console.error(
+          `[bulk-visibility] Could not delete ${paths.length} render object(s) after a retry: ${removeErr.message}. Those PNGs may remain publicly fetchable for now-private cards.`,
+        );
+      }
+    }
   }
 
   // Revalidate the surfaces that show card lists. Per-card slug paths are
