@@ -41,6 +41,8 @@ type LayoutPanelProps = {
   backRulesTextRef: React.MutableRefObject<HTMLTextAreaElement | null>;
   /** Caret-preserving symbol insertion into back_face.rules_text. */
   onInsertSymbol: (token: string) => void;
+  /** Called after the user enables a back face — lets the preview flip to it. */
+  onBackFaceAdded?: () => void;
 };
 
 export function LayoutPanel({
@@ -50,6 +52,7 @@ export function LayoutPanel({
   backRulesTextField,
   backRulesTextRef,
   onInsertSymbol,
+  onBackFaceAdded,
 }: LayoutPanelProps) {
   const {
     register,
@@ -83,9 +86,10 @@ export function LayoutPanel({
             type="button"
             variant="primary"
             size="sm"
-            onClick={() =>
-              setValue("has_back_face", true, { shouldDirty: true })
-            }
+            onClick={() => {
+              setValue("has_back_face", true, { shouldDirty: true });
+              onBackFaceAdded?.();
+            }}
           >
             <Sparkles className="h-4 w-4" aria-hidden />
             {isAdventureFrame ? "Add the adventure" : "Add a back face"}

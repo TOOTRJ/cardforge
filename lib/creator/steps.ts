@@ -162,14 +162,16 @@ const STEP_DEFS: StepDef[] = [
     },
   },
   {
-    // Adventure spell (Adventure frame) or the back face (any DFC). Present when
-    // the frame's second face is intrinsic (Adventure) or the user enabled a
-    // back face. Label flips via stepLabel().
+    // Adventure spell (Adventure frame) or the back face (any DFC). Always
+    // present so a back face — and its own art upload — is discoverable on any
+    // frame: with no back face yet it shows an "Add a back face" empty state;
+    // intrinsic-second-face frames (Adventure/flip/split/aftermath) render the
+    // relevant fields directly. Label flips via stepLabel().
     key: "layout",
     label: "Back face",
     description: "The second face",
     fields: ["has_back_face", "back_face"],
-    isVisible: (ctx) => hasInlineBackFace(ctx.template) || ctx.hasBackFace,
+    isVisible: always,
   },
   {
     // Edits frame_style.finish — error routing for frame_style stays owned by

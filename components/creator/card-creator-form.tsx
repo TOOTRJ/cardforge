@@ -40,6 +40,7 @@ import { Stepper, type StepperStep } from "@/components/ui/stepper";
 import { StepRail } from "@/components/ui/step-rail";
 import { CardPreview } from "@/components/cards/card-preview";
 import { DeleteCardDialog } from "@/components/creator/delete-card-dialog";
+import { StartOverDialog } from "@/components/creator/start-over-dialog";
 import type { CardFieldPatch } from "@/components/creator/ai-assistant-panel";
 import {
   ScryfallImportDialog,
@@ -233,6 +234,10 @@ export function CardCreatorForm({
   // disables itself while a request is in flight so the user can't double-
   // submit and burn quota.
   const [generatingRandom, setGeneratingRandom] = useState(false);
+  // Which face the live preview shows. Auto-flips to the back when the user
+  // reaches the Back-face step (so they see what they're editing); they can
+  // also click the preview itself to flip it any time.
+  const [previewFace, setPreviewFace] = useState<"front" | "back">("front");
 
   // Listen for hero/palette custom events. Each event is fire-and-forget
   // — no payload, just a signal to perform a UI action.
@@ -416,7 +421,17 @@ export function CardCreatorForm({
   const goToIndex = (i: number) => {
     // Every step change disarms Save — see the arming effect below goNext.
     setSaveArmed(false);
-    setCurrent(Math.max(0, Math.min(i, steps.length - 1)));
+    const clamped = Math.max(0, Math.min(i, steps.length - 1));
+    setCurrent(clamped);
+    // Auto-show the face being edited: the back on the Back-face step (true DFC
+    // only — Adventure/flip/split render both faces at once, so they stay on
+    // front). The user can still click the preview to flip it themselves.
+    const targetKey = steps[clamped]?.key;
+    setPreviewFace(
+      targetKey === "layout" && !isAdventureFrame && watched.has_back_face
+        ? "back"
+        : "front",
+    );
   };
   const goToStepKey = (key: StepKey) => {
     const i = steps.findIndex((s) => s.key === key);
@@ -777,6 +792,24 @@ export function CardCreatorForm({
     }
   };
 
+  // ---- Start over ----
+  // Wipe the form back to a blank card (create/draft mode only). Drops the
+  // local draft, resets the derived toggles + preview, and returns to step 1.
+  const handleStartOver = () => {
+    try {
+      window.localStorage.removeItem(CARD_DRAFT_STORAGE_KEY);
+    } catch {
+      // best-effort — reset below still clears the in-memory form
+    }
+    reset(defaults);
+    setAutoColors(mode === "create");
+    setRemixSource(null);
+    setPreviewFace("front");
+    setServerError(null);
+    goToIndex(0);
+    toast.success("Started over — blank card ready.");
+  };
+
   // ---- Submit ----
   const onSubmit: SubmitHandler<FormValues> = (values) => {
     setServerError(null);
@@ -917,10 +950,8 @@ export function CardCreatorForm({
   const rarityForPreview = watched.rarity === "" ? null : (watched.rarity as Rarity);
 
   // Shared live-preview props for the desktop sticky aside + the mobile inline
-  // preview, so they never drift. `face` shows the back only on the Layout panel
-  // for a true DFC (Adventure renders its second face inline, so it stays front).
-  const previewFace: "front" | "back" =
-    stepKey === "layout" && !isAdventureFrame ? "back" : "front";
+  // preview, so they never drift. `previewFace` is state (see the sync effect
+  // above); `flipOnClick` makes the card itself a flip target with a hover hint.
   const previewProps = {
     staticInEditor: true,
     pipOverrides,
@@ -963,6 +994,8 @@ export function CardCreatorForm({
         }
       : null,
     face: previewFace,
+    onFaceChange: setPreviewFace,
+    flipOnClick: true,
   };
 
   return (
@@ -1087,6 +1120,7 @@ export function CardCreatorForm({
                 onInsertSymbol={(token) =>
                   insertSymbol("back_face.rules_text", backRulesTextRef, token)
                 }
+                onBackFaceAdded={() => setPreviewFace("back")}
               />
             ) : null}
 
@@ -1145,6 +1179,11 @@ export function CardCreatorForm({
                     <span>{remixSource.name}</span>
                   )}
                 </Badge>
+              ) : null}
+              {/* Start over — create/draft mode only, once there's something
+                  to clear. Edit mode uses Delete instead. */}
+              {isDraftMode && isDirty ? (
+                <StartOverDialog onConfirm={handleStartOver} />
               ) : null}
             </div>
             <div className="flex flex-wrap items-center gap-2">
