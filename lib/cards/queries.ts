@@ -19,6 +19,7 @@ import {
   type Rarity,
 } from "@/types/card";
 import type { Card as CardRow } from "@/types/supabase";
+import { buildCardPath } from "@/lib/cards/utils";
 import {
   TRENDING_FRESHNESS_WINDOW_DAYS,
   TRENDING_WINDOW_DAYS,
@@ -806,6 +807,265 @@ export async function listTopRemixesOfCard(
     return ranked.slice(0, limit);
   } catch {
     return [];
+  }
+}
+
+export type RemixWithParent = CardWithStats & {
+  parent: { title: string; path: string } | null;
+};
+
+/**
+ * The current user's own remixes (cards with a parent_card_id), newest first,
+ * each annotated with the original's title + canonical path. Powers the
+ * dashboard "Your remixes" section. Parent lookups are bulk (4 queries total,
+ * independent of count).
+ */
+export async function listMyRemixes(limit = 12): Promise<RemixWithParent[]> {
+  if (!isSupabaseConfigured()) return [];
+  const user = await getCurrentUser();
+  if (!user) return [];
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("cards")
+      .select("*")
+      .eq("owner_id", user.id)
+      .not("parent_card_id", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    if (!data || data.length === 0) return [];
+    const enriched = await attachStats(data, "recent");
+
+    const parentIds = Array.from(
+      new Set(
+        data
+          .map((r) => r.parent_card_id)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    );
+    const parentById = new Map<string, { title: string; path: string }>();
+    if (parentIds.length > 0) {
+      const { data: parents } = await supabase
+        .from("cards")
+        .select("id, slug, title, owner_id")
+        .in("id", parentIds);
+      const ownerIds = Array.from(
+        new Set((parents ?? []).map((p) => p.owner_id)),
+      );
+      const { data: owners } = await supabase
+        .from("profiles")
+        .select("id, username")
+        .in("id", ownerIds);
+      const usernameById = new Map(
+        (owners ?? []).map((o) => [o.id, o.username]),
+      );
+      for (const p of parents ?? []) {
+        parentById.set(p.id, {
+          title: p.title,
+          path: buildCardPath({
+            slug: p.slug,
+            owner: { username: usernameById.get(p.owner_id) ?? null },
+          }),
+        });
+      }
+    }
+
+    return enriched.map((c) => ({
+      ...c,
+      parent: c.parent_card_id
+        ? (parentById.get(c.parent_card_id) ?? null)
+        : null,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Minimal parent-card link data for the "Remixed from" credit — the original
+ * card's title + its canonical `/card/[username]/[slug]` path. Null if the
+ * parent is missing or unreadable (deleted / gone private).
+ */
+export async function getRemixParentLink(
+  parentId: string,
+): Promise<{ title: string; path: string } | null> {
+  if (!isSupabaseConfigured()) return null;
+  try {
+    const supabase = await createClient();
+    const { data: parent } = await supabase
+      .from("cards")
+      .select("id, slug, title, owner_id")
+      .eq("id", parentId)
+      .maybeSingle();
+    if (!parent) return null;
+    const { data: owner } = await supabase
+      .from("profiles")
+      .select("username")
+      .eq("id", parent.owner_id)
+      .maybeSingle();
+    return {
+      title: parent.title,
+      path: buildCardPath({
+        slug: parent.slug,
+        owner: { username: owner?.username ?? null },
+      }),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The canonical public path for a card id — used by the /go/card redirect so
+ * gallery tiles can link to an original without every list query joining the
+ * parent. Null when the card is missing / unreadable under RLS.
+ */
+export async function getCardCanonicalPath(
+  id: string,
+): Promise<string | null> {
+  const link = await getRemixParentLink(id);
+  return link?.path ?? null;
+}
+
+/**
+ * 1-based popularity rank of this card by total likes among all shareable
+ * cards. Null if the card isn't shareable. Full-scan aggregate (see 0042).
+ */
+export async function getCardLikeRankOverall(
+  cardId: string,
+): Promise<number | null> {
+  if (!isSupabaseConfigured()) return null;
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase.rpc("card_like_rank", {
+      p_card_id: cardId,
+    });
+    return typeof data === "number" ? data : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 1-based like rank of this card within a given set. Null if not a member.
+ */
+export async function getCardLikeRankInSet(
+  cardId: string,
+  setId: string,
+): Promise<number | null> {
+  if (!isSupabaseConfigured()) return null;
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase.rpc("card_like_rank_in_set", {
+      p_card_id: cardId,
+      p_set_id: setId,
+    });
+    return typeof data === "number" ? data : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Set summary for the "owner context" line + within-set rank: the set's title,
+ * public path, and card count. Null when the id is missing / unreadable.
+ */
+export async function getSetSummary(setId: string): Promise<{
+  title: string;
+  slug: string;
+  cardsCount: number;
+} | null> {
+  if (!isSupabaseConfigured()) return null;
+  try {
+    const supabase = await createClient();
+    const { data: set } = await supabase
+      .from("card_sets")
+      .select("id, title, slug")
+      .eq("id", setId)
+      .maybeSingle();
+    if (!set) return null;
+    const { count } = await supabase
+      .from("card_set_items")
+      .select("card_id", { count: "exact", head: true })
+      .eq("set_id", setId);
+    return { title: set.title, slug: set.slug, cardsCount: count ?? 0 };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * This card's 7-day trending signals (excluding the owner's own engagement),
+ * for the velocity badge. Mirrors listTrendingCards' per-card aggregation but
+ * scoped to a single card so it's cheap on the detail page.
+ */
+export async function getCardTrendingSignals(
+  cardId: string,
+  ownerId: string,
+  createdAt: string,
+): Promise<{
+  likes_7d: number;
+  comments_7d: number;
+  remixes_7d: number;
+  is_fresh: boolean;
+}> {
+  const empty = {
+    likes_7d: 0,
+    comments_7d: 0,
+    remixes_7d: 0,
+    is_fresh: false,
+  };
+  if (!isSupabaseConfigured()) return empty;
+  try {
+    const supabase = await createClient();
+    const windowStart = new Date(
+      Date.now() - 7 * 24 * 60 * 60 * 1000,
+    ).toISOString();
+    const [likes, comments, remixes] = await Promise.all([
+      supabase
+        .from("card_likes")
+        .select("user_id", { count: "exact", head: true })
+        .eq("card_id", cardId)
+        .neq("user_id", ownerId)
+        .gte("created_at", windowStart),
+      supabase
+        .from("card_comments")
+        .select("author_id", { count: "exact", head: true })
+        .eq("card_id", cardId)
+        .neq("author_id", ownerId)
+        .gte("created_at", windowStart),
+      supabase
+        .from("cards")
+        .select("id", { count: "exact", head: true })
+        .eq("parent_card_id", cardId)
+        .neq("owner_id", ownerId)
+        .gte("created_at", windowStart),
+    ]);
+    const freshCutoff =
+      Date.now() - TRENDING_FRESHNESS_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+    return {
+      likes_7d: likes.count ?? 0,
+      comments_7d: comments.count ?? 0,
+      remixes_7d: remixes.count ?? 0,
+      is_fresh: new Date(createdAt).getTime() > freshCutoff,
+    };
+  } catch {
+    return empty;
+  }
+}
+
+/**
+ * Bump a card's lifetime view tally (best-effort, fire-and-forget). Uses the
+ * public client + a SECURITY DEFINER RPC so it never touches auth/session —
+ * safe to call from after(). Skip owner views at the call site.
+ */
+export async function incrementCardView(cardId: string): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+  try {
+    const supabase = createPublicClient();
+    await supabase.rpc("increment_card_view", { p_card_id: cardId });
+  } catch {
+    // best-effort — a missed view tick isn't worth surfacing
   }
 }
 
