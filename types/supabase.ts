@@ -504,6 +504,7 @@ export type Database = {
           title: string;
           toughness: string | null;
           updated_at: string;
+          view_count: number;
           visibility: string;
         };
         Insert: {
@@ -546,6 +547,7 @@ export type Database = {
           title: string;
           toughness?: string | null;
           updated_at?: string;
+          view_count?: number;
           visibility?: string;
         };
         Update: {
@@ -588,6 +590,7 @@ export type Database = {
           title?: string;
           toughness?: string | null;
           updated_at?: string;
+          view_count?: number;
           visibility?: string;
         };
         Relationships: [
@@ -884,6 +887,18 @@ export type Database = {
           count: number;
           day: string;
         }[];
+      };
+      increment_card_view: {
+        Args: { p_card_id: string };
+        Returns: undefined;
+      };
+      card_like_rank: {
+        Args: { p_card_id: string };
+        Returns: number;
+      };
+      card_like_rank_in_set: {
+        Args: { p_card_id: string; p_set_id: string };
+        Returns: number;
       };
     };
     Enums: {

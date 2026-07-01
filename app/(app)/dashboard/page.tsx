@@ -16,9 +16,14 @@ import { Badge } from "@/components/ui/badge";
 import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
 import { getPipOverrides } from "@/lib/pips/queries";
 import { CUSTOM_PIP_SYMBOLS as PIP_STRIP_SYMBOLS } from "@/lib/pips/override";
-import { listLikedCardsByUser, listMyCards } from "@/lib/cards/queries";
+import {
+  listLikedCardsByUser,
+  listMyCards,
+  listMyRemixes,
+} from "@/lib/cards/queries";
 import { listMySets } from "@/lib/sets/queries";
 import { LikedCardsSection } from "@/components/creator/liked-cards-section";
+import { DashboardRemixesSection } from "@/components/creator/dashboard-remixes-section";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -220,10 +225,11 @@ async function DashboardCards() {
   // Cards + sets + liked cards in parallel. Sets feed the bulk "Add to set"
   // picker; liked cards feed the new "Liked cards" section below.
   const viewer = await getCurrentUser();
-  const [myCards, mySets, likedCards] = await Promise.all([
+  const [myCards, mySets, likedCards, remixes] = await Promise.all([
     listMyCards(),
     listMySets(),
     viewer ? listLikedCardsByUser(viewer.id) : Promise.resolve([]),
+    listMyRemixes(),
   ]);
   const drafts = myCards.filter((c) => c.visibility === "private");
   const publicCards = myCards.filter((c) => c.visibility === "public");
@@ -314,6 +320,8 @@ async function DashboardCards() {
         publicCards={publicCards}
         userSets={setSummaries}
       />
+
+      <DashboardRemixesSection remixes={remixes} />
 
       <LikedCardsSection likedCards={likedCards} />
     </>

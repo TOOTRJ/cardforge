@@ -2,16 +2,21 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
+import { after } from "next/server";
 import {
   ArrowLeft,
+  ArrowUpRight,
   CalendarDays,
   Clock,
   ExternalLink,
+  Eye,
+  Flame,
   Heart,
   Layers,
   MessageCircle,
   Pencil,
   Repeat2,
+  Trophy,
 } from "lucide-react";
 import { CardPreview } from "@/components/cards/card-preview";
 import { ManaCostGlyphs } from "@/components/cards/mana-cost-glyphs";
@@ -36,8 +41,14 @@ import {
   countSetsForCard,
   getCardById,
   getCardByOwnerAndSlug,
+  getCardLikeRankInSet,
+  getCardLikeRankOverall,
+  getCardTrendingSignals,
   getProfileByUsername,
+  getRemixParentLink,
+  getSetSummary,
   hasUserLikedCard,
+  incrementCardView,
   listMoreFromOwner,
   listRelatedCards,
   listTopRemixesOfCard,
@@ -178,6 +189,11 @@ export default async function CardDetailPage({
     remixCount,
     setCount,
     topRemixes,
+    remixParent,
+    overallRank,
+    setSummary,
+    inSetRank,
+    trendingSignals,
   ] = await Promise.all([
     countCardLikes(card.id),
     user ? hasUserLikedCard(user.id, card.id) : Promise.resolve(false),
@@ -204,8 +220,29 @@ export default async function CardDetailPage({
     // Analytics: remix + set membership counts, and the top-liked remixes.
     countRemixesOfCard(card.id),
     countSetsForCard(card.id),
-    listTopRemixesOfCard(card.id, 3),
+    listTopRemixesOfCard(card.id, 4),
+    // Provenance: the original card this was remixed from (if any).
+    card.parent_card_id
+      ? getRemixParentLink(card.parent_card_id)
+      : Promise.resolve(null),
+    // Popularity rank overall + within the card's primary set.
+    getCardLikeRankOverall(card.id),
+    card.primary_set_id
+      ? getSetSummary(card.primary_set_id)
+      : Promise.resolve(null),
+    card.primary_set_id
+      ? getCardLikeRankInSet(card.id, card.primary_set_id)
+      : Promise.resolve(null),
+    // 7-day velocity for the trending badge.
+    getCardTrendingSignals(card.id, card.owner_id, card.created_at),
   ]);
+
+  // Bump the view tally after the response ships — never for the owner's own
+  // views, and never blocking render. Uses a public client + SECURITY DEFINER
+  // RPC, so it can't rotate the viewer's session (see incrementCardView).
+  if (!isOwner) {
+    after(() => incrementCardView(card.id));
+  }
 
   const ownerProfile = card.owner;
 
@@ -251,15 +288,16 @@ export default async function CardDetailPage({
         Back to gallery
       </Link>
 
+      <div className="flex flex-col gap-10">
       <div className="grid gap-10 lg:grid-cols-[minmax(0,360px)_1fr]">
-        <div className="mx-auto flex w-full max-w-sm flex-col gap-4">
-          <div
-            // Matches the gallery / dashboard / profile / set thumbnails'
-            // view-transition-name so chromium-class browsers can animate a
-            // shared-element transition between the grid tile and this hero.
-            style={{ viewTransitionName: `card-${card.id}` }}
-          >
-            <CardPreview
+        <div
+          className="mx-auto w-full max-w-sm"
+          // Matches the gallery / dashboard / profile / set thumbnails'
+          // view-transition-name so chromium-class browsers can animate a
+          // shared-element transition between the grid tile and this hero.
+          style={{ viewTransitionName: `card-${card.id}` }}
+        >
+          <CardPreview
             title={card.title}
             cost={card.cost}
             pipOverrides={pipOverrides}
@@ -283,22 +321,6 @@ export default async function CardDetailPage({
             backFace={(card.back_face as CardBackFace | null) ?? null}
             backCard={backCard ? cardToPreviewData(backCard) : null}
           />
-          </div>
-
-          {/* Discovery tags — sit directly under the card art. */}
-          {card.tags.length > 0 ? (
-            <div className="flex flex-wrap justify-center gap-2">
-              {card.tags.map((tag) => (
-                <Link
-                  key={tag}
-                  href={`/gallery?tag=${encodeURIComponent(tag)}`}
-                  className="inline-flex items-center rounded-full border border-border/60 bg-elevated/60 px-2.5 py-1 text-xs text-muted transition-colors hover:border-border-strong hover:text-foreground"
-                >
-                  #{tag}
-                </Link>
-              ))}
-            </div>
-          ) : null}
         </div>
 
         <div className="flex flex-col gap-6">
@@ -338,6 +360,36 @@ export default async function CardDetailPage({
                 Also remixed by {otherRemixesCount}{" "}
                 {otherRemixesCount === 1 ? "other" : "others"}
               </Link>
+            ) : null}
+
+            {/* Provenance — a remix of another PipGlyph card, and/or based on a
+                real card imported from Scryfall. Both open in a new tab. */}
+            {remixParent ? (
+              <p className="inline-flex flex-wrap items-center gap-1.5 text-sm text-muted">
+                <Repeat2 className="h-4 w-4 text-primary-bright" aria-hidden />
+                Remixed from{" "}
+                <Link
+                  href={remixParent.path}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-0.5 font-medium text-foreground underline-offset-2 hover:text-primary-bright hover:underline"
+                >
+                  {remixParent.title}
+                  <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
+                </Link>
+              </p>
+            ) : null}
+            {card.source_scryfall_id ? (
+              <a
+                href={`/go/scryfall/${card.source_scryfall_id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex w-fit items-center gap-1.5 text-sm text-muted underline-offset-2 transition-colors hover:text-foreground hover:underline"
+              >
+                <Sparkles className="h-4 w-4 text-accent" aria-hidden />
+                Based on a real card — view on Scryfall
+                <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
+              </a>
             ) : null}
           </div>
 
@@ -428,25 +480,56 @@ export default async function CardDetailPage({
             <Detail label="Visibility" value={visibilityLabel(card.visibility)} />
           </SurfaceCard>
 
-          <CardAnalytics
-            likes={likesCount}
-            remixes={remixCount}
-            sets={setCount}
-            comments={comments.length}
-            createdAt={card.created_at}
-            updatedAt={card.updated_at}
-            topRemixes={topRemixes}
-            isAuthed={Boolean(user)}
-          />
-
-          <CardComments
-            cardId={card.id}
-            cardSlug={card.slug}
-            ownerUsername={username}
-            initialComments={comments}
-            currentUserId={user?.id ?? null}
-          />
+          {/* Discovery tags — at the bottom of the info card. */}
+          {card.tags.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {card.tags.map((tag) => (
+                <Link
+                  key={tag}
+                  href={`/gallery?tag=${encodeURIComponent(tag)}`}
+                  className="inline-flex items-center rounded-full border border-border/60 bg-elevated/60 px-2.5 py-1 text-xs text-muted transition-colors hover:border-border-strong hover:text-foreground"
+                >
+                  #{tag}
+                </Link>
+              ))}
+            </div>
+          ) : null}
         </div>
+        </div>
+
+        {/* Full-width below the card + info: analytics and the comment thread
+            get the whole content width for a bigger, more scannable display. */}
+        <CardAnalytics
+          views={card.view_count}
+          likes={likesCount}
+          remixes={remixCount}
+          sets={setCount}
+          comments={comments.length}
+          createdAt={card.created_at}
+          updatedAt={card.updated_at}
+          trendingSignals={trendingSignals}
+          overallRank={overallRank}
+          setContext={
+            setSummary
+              ? {
+                  title: setSummary.title,
+                  slug: setSummary.slug,
+                  cardsCount: setSummary.cardsCount,
+                  rank: inSetRank,
+                }
+              : null
+          }
+          topRemixes={topRemixes}
+          isAuthed={Boolean(user)}
+        />
+
+        <CardComments
+          cardId={card.id}
+          cardSlug={card.slug}
+          ownerUsername={username}
+          initialComments={comments}
+          currentUserId={user?.id ?? null}
+        />
       </div>
 
       {moreFromOwner.length > 0 || relatedCards.length > 0 ? (
@@ -543,21 +626,39 @@ function formatDate(value: string): string {
 // ---------------------------------------------------------------------------
 
 function CardAnalytics({
+  views,
   likes,
   remixes,
   sets,
   comments,
   createdAt,
   updatedAt,
+  trendingSignals,
+  overallRank,
+  setContext,
   topRemixes,
   isAuthed,
 }: {
+  views: number;
   likes: number;
   remixes: number;
   sets: number;
   comments: number;
   createdAt: string;
   updatedAt: string;
+  trendingSignals: {
+    likes_7d: number;
+    comments_7d: number;
+    remixes_7d: number;
+    is_fresh: boolean;
+  };
+  overallRank: number | null;
+  setContext: {
+    title: string;
+    slug: string;
+    cardsCount: number;
+    rank: number | null;
+  } | null;
   topRemixes: CardWithStats[];
   isAuthed: boolean;
 }) {
@@ -566,28 +667,45 @@ function CardAnalytics({
     label: string;
     value: number;
   }[] = [
+    { icon: Eye, label: "Views", value: views },
     { icon: Heart, label: "Likes", value: likes },
     { icon: Repeat2, label: "Remixes", value: remixes },
     { icon: Layers, label: sets === 1 ? "Set" : "Sets", value: sets },
     { icon: MessageCircle, label: "Comments", value: comments },
   ];
+  // "Trending" needs real momentum this week — freshness alone (a brand-new
+  // card with no engagement) shouldn't earn the badge, even though it scores.
+  const recentEngagement =
+    trendingSignals.likes_7d +
+    trendingSignals.comments_7d +
+    trendingSignals.remixes_7d;
+  const isTrending = recentEngagement > 0;
+  const hasRankLines = (overallRank && likes > 0) || setContext;
 
   return (
     <SurfaceCard className="flex flex-col gap-5 p-6">
-      <h2 className="font-display text-lg font-semibold text-foreground">
-        By the numbers
-      </h2>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="font-display text-lg font-semibold text-foreground">
+          By the numbers
+        </h2>
+        {isTrending ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-xs font-semibold text-accent">
+            <Flame className="h-3.5 w-3.5" aria-hidden />
+            Trending this week
+          </span>
+        ) : null}
+      </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {stats.map((s) => {
           const Icon = s.icon;
           return (
             <div
               key={s.label}
-              className="flex flex-col items-center gap-1 rounded-lg border border-border/50 bg-elevated/40 p-3 text-center"
+              className="flex flex-col items-center gap-1 rounded-lg border border-border/50 bg-elevated/40 p-4 text-center"
             >
-              <Icon className="h-4 w-4 text-muted" aria-hidden />
-              <span className="font-display text-2xl font-semibold tabular-nums text-foreground">
+              <Icon className="h-5 w-5 text-muted" aria-hidden />
+              <span className="font-display text-3xl font-semibold tabular-nums text-foreground">
                 {s.value}
               </span>
               <span className="text-[11px] font-semibold uppercase tracking-wider text-subtle">
@@ -597,6 +715,55 @@ function CardAnalytics({
           );
         })}
       </div>
+
+      {isTrending ? (
+        <p className="text-xs text-muted">
+          Past 7 days: {trendingSignals.likes_7d} like
+          {trendingSignals.likes_7d === 1 ? "" : "s"} ·{" "}
+          {trendingSignals.comments_7d} comment
+          {trendingSignals.comments_7d === 1 ? "" : "s"} ·{" "}
+          {trendingSignals.remixes_7d} remix
+          {trendingSignals.remixes_7d === 1 ? "" : "es"}
+          {trendingSignals.is_fresh ? " · freshly forged" : ""}.
+        </p>
+      ) : null}
+
+      {hasRankLines ? (
+        <div className="flex flex-col gap-2 text-sm">
+          {overallRank && likes > 0 ? (
+            <span className="inline-flex items-center gap-2 text-muted">
+              <Trophy className="h-4 w-4 text-gold-strong" aria-hidden />
+              <span className="font-semibold text-foreground">
+                #{overallRank}
+              </span>{" "}
+              most-liked card overall
+            </span>
+          ) : null}
+          {setContext ? (
+            <span className="inline-flex flex-wrap items-center gap-1.5 text-muted">
+              <Layers className="h-4 w-4 text-subtle" aria-hidden />
+              Part of{" "}
+              <Link
+                href={`/set/${setContext.slug}`}
+                className="font-medium text-foreground underline-offset-2 hover:text-primary-bright hover:underline"
+              >
+                {setContext.title}
+              </Link>{" "}
+              ({setContext.cardsCount} card
+              {setContext.cardsCount === 1 ? "" : "s"})
+              {setContext.rank ? (
+                <>
+                  {" · "}
+                  <span className="font-semibold text-foreground">
+                    #{setContext.rank}
+                  </span>{" "}
+                  in the set
+                </>
+              ) : null}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-muted">
         <span className="inline-flex items-center gap-1.5">
@@ -616,7 +783,7 @@ function CardAnalytics({
           <h3 className="text-xs font-semibold uppercase tracking-wider text-subtle">
             Top remixes
           </h3>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {topRemixes.map((remix) => (
               <GalleryCardTile
                 key={remix.id}
