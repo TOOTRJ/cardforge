@@ -268,8 +268,8 @@ const M15: FrameProfile = {
     // Digits read low in the plate (font baseline sits below the line-box
     // center) — lift the value ~2px so it sits true-center on the plate.
     valueDyEm: -0.11,
-    // Nudge right ~2px to true-center horizontally on the plate.
-    valueDxEm: 0.09,
+    // Nudge right to true-center horizontally on the plate.
+    valueDxEm: 0.18,
   },
 };
 
