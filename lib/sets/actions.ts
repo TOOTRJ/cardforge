@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
@@ -233,6 +234,7 @@ export async function updateSetAction(
     data.icon_code !== undefined ? data.icon_code ?? null : existing.icon_code;
   const iconChanged =
     newIconUrl !== existing.icon_url || newIconCode !== existing.icon_code;
+  let affectedCardIds: string[] = [];
   if (iconChanged) {
     const { data: affected } = await supabase
       .from("cards")
@@ -240,10 +242,7 @@ export async function updateSetAction(
       .eq("primary_set_id", setId)
       .eq("owner_id", user.id)
       .select("id");
-    // Re-bake each affected card's stored PNG (best-effort; bake never throws).
-    await Promise.all(
-      (affected ?? []).map((card) => bakeAndPersistCardRender(card.id)),
-    );
+    affectedCardIds = (affected ?? []).map((card) => card.id);
   }
 
   const ownerUsername = await getOwnerUsername();
@@ -257,6 +256,26 @@ export async function updateSetAction(
   if (iconChanged) {
     revalidatePath("/gallery");
   }
+
+  // Re-bake each affected card's stored PNG AFTER the response is sent
+  // (next/server `after`) so a set-wide icon change never fans out N HD
+  // renders on the request path. Sequential to stay gentle on memory; we
+  // revalidate the thumbnail surfaces again once done so the new symbol
+  // appears without waiting for the ISR window.
+  if (affectedCardIds.length > 0) {
+    after(async () => {
+      for (const id of affectedCardIds) {
+        try {
+          await bakeAndPersistCardRender(id);
+        } catch (error) {
+          console.error(`[update-set] deferred bake failed for ${id}:`, error);
+        }
+      }
+      revalidateSetPaths(row.slug, ownerUsername);
+      revalidatePath("/gallery");
+    });
+  }
+
   return { ok: true, setId: row.id, slug: row.slug };
 }
 
@@ -342,9 +361,24 @@ async function adoptSetIconForNewMembers(
     .is("primary_set_id", null)
     .select("id");
 
-  await Promise.all(
-    (adopted ?? []).map((row) => bakeAndPersistCardRender(row.id)),
-  );
+  const adoptedIds = (adopted ?? []).map((row) => row.id);
+  // Re-bake the adopting cards' PNGs AFTER the response (next/server `after`)
+  // so bulk "add to set" doesn't fan out N HD renders on the request path.
+  // Sequential + best-effort; refresh the thumbnail surfaces once done.
+  if (adoptedIds.length > 0) {
+    after(async () => {
+      for (const id of adoptedIds) {
+        try {
+          await bakeAndPersistCardRender(id);
+        } catch (error) {
+          console.error(`[adopt-set-icon] deferred bake failed for ${id}:`, error);
+        }
+      }
+      revalidatePath("/gallery");
+      revalidatePath("/dashboard");
+      revalidatePath("/dashboard/sets");
+    });
+  }
 }
 
 // A card leaving a set must stop pointing its denormalized symbol at a set it's
@@ -396,7 +430,17 @@ async function repointPrimaryAfterRemoval(
     .eq("id", cardId)
     .eq("owner_id", userId);
 
-  await bakeAndPersistCardRender(cardId);
+  // Re-bake the re-homed card's PNG off the request path (next/server
+  // `after`) so removal stays fast, then refresh the thumbnail surfaces.
+  after(async () => {
+    try {
+      await bakeAndPersistCardRender(cardId);
+    } catch (error) {
+      console.error(`[repoint-primary] deferred bake failed for ${cardId}:`, error);
+    }
+    revalidatePath("/gallery");
+    revalidatePath("/dashboard");
+  });
 }
 
 export async function addCardToSetAction(

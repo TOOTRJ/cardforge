@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
@@ -352,16 +353,25 @@ export async function createCardAction(
     await addCardToSetMembership(supabase, setIcon.primary_set_id, row.id);
   }
 
-  // Bake a PNG of the new card to the card-renders bucket and persist its
-  // URL on the row. This is what the gallery/profile/detail pages render —
-  // so the saved card looks identical everywhere and never reflows when
-  // viewed at a different size. Best-effort: a failure here doesn't roll
-  // back the create. The pages fall back to <CardPreview> when the URL is
-  // still null.
-  await bakeAndPersistCardRender(row.id);
-
   const ownerUsername = await getOwnerUsername();
   revalidateCardPaths(row.slug, ownerUsername);
+
+  // Bake the public PNG AFTER the response is sent (next/server `after`) so
+  // Save never blocks on HD rasterization + upload — the same posture as the
+  // custom-pip rebake sweep. This is what the gallery/profile/detail pages
+  // render; until it lands they fall back to the live <CardPreview>, and we
+  // revalidate those surfaces again once the render is persisted so the
+  // freshly baked image appears without waiting for the ISR window. Failures
+  // never roll back the create (bakeAndPersistCardRender clears stale render
+  // columns and logs).
+  after(async () => {
+    try {
+      await bakeAndPersistCardRender(row.id);
+      revalidateCardPaths(row.slug, ownerUsername);
+    } catch (error) {
+      console.error(`[create-card] deferred bake failed for ${row.id}:`, error);
+    }
+  });
 
   if (options.redirectAfterCreate) {
     redirect(
@@ -491,10 +501,6 @@ export async function updateCardAction(
     await addCardToSetMembership(supabase, resolvedSet.primary_set_id, row.id);
   }
 
-  // Re-bake the PNG so the gallery + detail thumbnails reflect the edit.
-  // Best-effort (same posture as createCardAction).
-  await bakeAndPersistCardRender(row.id);
-
   const ownerUsername = await getOwnerUsername();
   revalidateCardPaths(row.slug, ownerUsername);
   // Also revalidate the previous slug if it changed — both the legacy
@@ -516,6 +522,21 @@ export async function updateCardAction(
   if (visibilityChanged) {
     revalidatePath(`/api/cards/${row.id}/og`);
   }
+
+  // Re-bake the PNG AFTER the response is sent (next/server `after`) so Save
+  // stays fast, then revalidate the card surfaces again so the updated render
+  // (or, on failure, the live-preview fallback) appears. A bake failure clears
+  // the now-stale render columns (bakeAndPersistCardRender) instead of leaving
+  // the old mismatched PNG in place.
+  after(async () => {
+    try {
+      await bakeAndPersistCardRender(row.id);
+      revalidateCardPaths(row.slug, ownerUsername);
+      if (visibilityChanged) revalidatePath(`/api/cards/${row.id}/og`);
+    } catch (error) {
+      console.error(`[update-card] deferred bake failed for ${row.id}:`, error);
+    }
+  });
 
   return { ok: true, cardId: row.id, slug: row.slug };
 }
