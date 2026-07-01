@@ -2,13 +2,12 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
-  AI_ACTION_COST,
   checkAiRateLimit,
   checkRandomCardDailyLimit,
   consumeAiCredits,
   logAiCall,
+  refundAiCredits,
 } from "@/lib/ai/rate-limit";
-import { getEntitlements } from "@/lib/billing/entitlements";
 import {
   generateRandomCard,
   isOpenAiConfigured,
@@ -85,24 +84,28 @@ export async function POST() {
       },
     );
   }
-  // ---- Credit pre-check ----
+  // ---- Reserve the credit up-front ----
   // The random-card flow (GPT text + gpt-image-1) is the priciest call we make,
-  // so it costs AI credits. Pre-check the balance to avoid burning a generation
-  // for a user who can't pay for it; the atomic spend below is the real guard.
-  const cost = AI_ACTION_COST.generate_random_card ?? 1;
-  const entitlements = await getEntitlements();
-  if (entitlements.credits < cost) {
+  // so it costs an AI credit. We charge BEFORE generating (fail closed) so a
+  // DB hiccup can never hand out a free generation and concurrent requests
+  // serialize on consume_credits' row lock. Every failure path below refunds.
+  const reserve = await consumeAiCredits("generate_random_card", {
+    failClosed: true,
+  });
+  if (!reserve.ok) {
+    const insufficient = reserve.reason === "insufficient_credits";
     return NextResponse.json(
       {
         ok: false,
-        error:
-          "You're out of AI credits. Upgrade your plan or grab a credit pack to keep generating.",
-        code: "INSUFFICIENT_CREDITS",
-        balance: entitlements.credits,
+        error: reserve.message,
+        ...(insufficient
+          ? { code: "INSUFFICIENT_CREDITS", balance: reserve.balance }
+          : {}),
       },
-      { status: 402 },
+      { status: insufficient ? 402 : 503 },
     );
   }
+  // The credit is now spent; anything that fails from here must refund it.
 
   // ---- Generate text first (cheaper; failures here mean we never burn
   //      a gpt-image-1 call). Log the call ahead of the AI request so a noisy
@@ -114,6 +117,7 @@ export async function POST() {
   try {
     cardObject = await generateRandomCard();
   } catch (error) {
+    await refundAiCredits(user.id, "generate_random_card");
     const message =
       error instanceof Error ? error.message : "Random card generation failed.";
     return NextResponse.json(
@@ -126,6 +130,7 @@ export async function POST() {
   // refactor swaps the call this re-validates the wire output).
   const cardParse = randomCardSchema.safeParse(cardObject);
   if (!cardParse.success) {
+    await refundAiCredits(user.id, "generate_random_card");
     return NextResponse.json(
       {
         ok: false,
@@ -138,16 +143,13 @@ export async function POST() {
   const card = cardParse.data;
 
   // ---- Generate the art ----
+  // Art is a bonus on top of the card text the credit paid for: a safety-filter
+  // trip still returns a usable card, so we keep the charge (no refund) and
+  // surface a soft error instead.
   await logAiCall(user.id, "generate_random_art");
   const art = await generateRandomArt(card.art_prompt);
 
-  // Charge the credit now that generation has run. We pre-checked the balance
-  // above; the atomic consume_credits RPC is the real guard against concurrent
-  // over-spend. Best-effort — a fail-open here just means a free generation.
-  const spend = await consumeAiCredits("generate_random_card");
-  const creditsRemaining = spend.ok
-    ? spend.balance
-    : entitlements.credits - cost;
+  const creditsRemaining = reserve.balance;
 
   return NextResponse.json(
     {
