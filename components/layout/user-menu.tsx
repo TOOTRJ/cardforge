@@ -3,6 +3,7 @@
 import Link from "next/link";
 import {
   CreditCard,
+  Frame,
   LayoutDashboard,
   Layers,
   LogOut,
@@ -131,6 +132,11 @@ export function UserMenu({
             href="/admin/challenges"
             icon={Trophy}
             label="Challenges"
+          />
+          <MenuItem
+            href="/admin/frame-compare"
+            icon={Frame}
+            label="Frame compare"
           />
           </>
         ) : null}
