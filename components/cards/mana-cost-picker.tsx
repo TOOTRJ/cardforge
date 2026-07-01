@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Delete, Eraser } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ManaCostGlyphs } from "@/components/cards/mana-cost-glyphs";
+import { normalizeManaCost } from "@/lib/cards/mana-order";
 import {
   isCustomPipSymbol,
   type PipOverrides,
@@ -19,6 +20,14 @@ import {
 // the same `{...}{...}` notation the rest of the app already speaks. The
 // existing ManaCostGlyphs component is reused for the live preview row at
 // the top so the picker shows the user exactly what's saved.
+//
+// Every append runs through normalizeManaCost, so pips always land in the
+// canonical printed order (X → generic → snow → colorless → colors on the
+// wheel) no matter which button the user clicks first. Generic clicks sum
+// into one number, and backspace removes the last token of the SORTED
+// cost. Costs the normalizer doesn't recognize (custom tokens) append
+// as-is. We never normalize on mount — an existing card's stored cost is
+// only rewritten when the user interacts with the picker.
 // ---------------------------------------------------------------------------
 
 type Props = {
@@ -85,7 +94,8 @@ export function ManaCostPicker({
   // picker is mounted and never needs to round-trip to the form.
   const [generic, setGeneric] = useState<number>(1);
 
-  const append = (token: string) => onChange(value + `{${token}}`);
+  const append = (token: string) =>
+    onChange(normalizeManaCost(value + `{${token}}`));
   const backspace = () => onChange(dropLastToken(value));
   const clear = () => onChange("");
 

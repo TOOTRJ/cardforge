@@ -71,6 +71,25 @@ test.describe("create a card (text fields only)", () => {
     await page.waitForURL(/\/card\/.+\/edit/);
   });
 
+  test("mana pips auto-sort into canonical printed order", async ({
+    page,
+  }) => {
+    await signIn(page);
+    const rail = await openCreatorWithTitle(page, `Pip Order ${Date.now()}`);
+
+    // The cost picker lives on the Pips step. No save — asserting on the
+    // preview alone keeps the test outside the free-tier card capacity.
+    await rail.getByRole("button", { name: /^pips$/i }).click();
+    await page.getByRole("button", { name: /^add white$/i }).click();
+    await page.getByRole("button", { name: /^add red$/i }).click();
+
+    // Click order was W then R, but the canonical Boros pair prints {R}{W}.
+    // ManaCostGlyphs exposes the whole cost as one aria-label.
+    await expect(
+      page.getByRole("img", { name: "Cost {R}{W}" }).first(),
+    ).toBeVisible();
+  });
+
   test("a click racing the Next → Save swap doesn't submit early", async ({
     page,
   }) => {
