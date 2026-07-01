@@ -39,6 +39,15 @@ const FRAMES_PER_SET = FRAME_TEMPLATE_VALUES.reduce(
   {} as Record<FrameSet, number>,
 );
 
+// Small "Soon" pill for frames/layouts that aren't shippable yet.
+function SoonBadge() {
+  return (
+    <span className="rounded-full border border-border/70 bg-elevated px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-subtle">
+      Soon
+    </span>
+  );
+}
+
 // A numbered sub-step heading for the two-stage frame picker: a small index
 // badge, a title, an optional muted context line (the active set name), and a
 // right-aligned count. Makes "first a set, then a frame within it" legible.
@@ -154,10 +163,14 @@ export function BorderEraFramePicker({
               value: t,
               label: FRAME_TEMPLATE_LABELS[t],
               leading: <FrameThumb template={t} colorKey={colorKey} />,
+              // Saga's alignment isn't dialed in yet — gate it for now.
+              disabled: t === "saga",
+              badge: t === "saga" ? <SoonBadge /> : undefined,
             }))}
           />
         </div>
       ) : null}
+      <p className="text-[11px] text-subtle">More frames coming soon.</p>
     </div>
   );
 }

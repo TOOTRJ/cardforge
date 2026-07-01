@@ -16,9 +16,9 @@ import {
   FieldGroup,
   inputClass,
 } from "@/components/creator/field-group";
-import { slugify } from "@/lib/validation/card";
 import { mergeTag, parseTags, removeTag } from "@/lib/creator/card-fields";
 import { BackFacePicker } from "@/components/creator/back-face-picker";
+import { EffectsPanel } from "@/components/creator/panels/effects-panel";
 import { daysLeft, type Challenge } from "@/lib/challenges/shared";
 import type { Card, Visibility } from "@/types/card";
 import type { FormValues } from "@/lib/creator/form-types";
@@ -54,27 +54,19 @@ export type CardSetOption = {
 type PublishPanelProps = {
   /** The currently running challenge, if any — renders the entry toggle. */
   activeChallenge?: Challenge | null;
-  /** Current user's username, if any — previews the canonical card URL. */
-  ownerUsername?: string | null;
   /** The current user's sets — populates the "Add to set" picker. */
   mySets: CardSetOption[];
   /** The current user's cards — the back-face picker. Excludes this card. */
   myCards: Card[];
   /** Save the current card + open a fresh creator to build/link a back face. */
   onCreateBackFace: () => void;
-  /** Live slug/title values from the form, for the URL helper text. */
-  watchedSlug: string;
-  watchedTitle: string;
 };
 
 export function PublishPanel({
   activeChallenge,
-  ownerUsername,
   mySets,
   myCards,
   onCreateBackFace,
-  watchedSlug,
-  watchedTitle,
 }: PublishPanelProps) {
   const {
     register,
@@ -214,13 +206,14 @@ export function PublishPanel({
         onCreateNew={onCreateBackFace}
       />
 
-      {/* Discovery tags + the read-only card URL (the slug derives from the
-          title automatically and is not user-editable), under Advanced. */}
+      {/* Finish + discovery tags, under Advanced. */}
       <details className="rounded-lg border border-border/60 bg-elevated/30">
         <summary className="cursor-pointer list-none px-4 py-2 text-xs font-semibold uppercase tracking-wider text-subtle [&::-webkit-details-marker]:hidden">
           Advanced
         </summary>
         <div className="flex flex-col gap-4 px-4 pb-4">
+          <EffectsPanel />
+
           <FieldGroup
             label="Tags"
             helper="Comma-separated keywords for discovery (e.g. dragons, tokens). Up to 12."
@@ -231,17 +224,6 @@ export function PublishPanel({
               className={inputClass(Boolean(errors.tags_text))}
               autoComplete="off"
             />
-          </FieldGroup>
-
-          <FieldGroup
-            label="Card URL"
-            helper="Generated automatically from the title — not editable."
-          >
-            <p className="break-all rounded-md border border-border bg-background/40 px-3 py-2 text-sm text-muted">
-              {ownerUsername
-                ? `/card/${ownerUsername}/${watchedSlug || slugify(watchedTitle || "untitled-card")}`
-                : `/card/${watchedSlug || slugify(watchedTitle || "untitled-card")}`}
-            </p>
           </FieldGroup>
         </div>
       </details>

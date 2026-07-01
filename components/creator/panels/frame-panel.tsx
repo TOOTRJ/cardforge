@@ -148,6 +148,8 @@ export function FramePanel({ cardType, colorIdentity }: FramePanelProps) {
           // frame this card type.
           const eraOptions: ChipOption<FrameEra>[] = FRAME_ERA_VALUES.map(
             (era) => {
+              // Showcase & Universes Beyond is gated for now.
+              const comingSoon = era === "showcase";
               const supported = eraSupportsType(era, cardType);
               const thumbTemplate =
                 era === "showcase"
@@ -158,16 +160,19 @@ export function FramePanel({ cardType, colorIdentity }: FramePanelProps) {
               return {
                 value: era,
                 label: FRAME_ERA_LABELS[era],
-                description: supported
-                  ? FRAME_ERA_HINTS[era]
-                  : `No ${cardType || "creature"} frame in this era yet`,
+                description: comingSoon
+                  ? "IP crossover frames — coming soon"
+                  : supported
+                    ? FRAME_ERA_HINTS[era]
+                    : `No ${cardType || "creature"} frame in this era yet`,
                 leading: (
                   <FrameThumb
                     template={thumbTemplate}
                     colorKey={colorKey}
                   />
                 ),
-                disabled: !supported,
+                disabled: !supported || comingSoon,
+                badge: comingSoon ? <SoonBadge /> : undefined,
               };
             },
           );
