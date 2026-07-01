@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AuthForm } from "@/components/auth/auth-form";
+import {
+  AuthDivider,
+  GoogleSignInButton,
+} from "@/components/auth/google-sign-in-button";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { loginAction } from "@/app/(auth)/actions";
@@ -51,6 +55,13 @@ export default async function LoginPage({
           className="rounded-md border border-primary/40 bg-primary/10 px-3 py-2 text-sm text-foreground"
         >
           Account created. Check your inbox to confirm your email, then sign in.
+        </div>
+      ) : null}
+
+      {configured ? (
+        <div className="flex flex-col gap-4">
+          <GoogleSignInButton redirectTo={redirectTo} />
+          <AuthDivider label="or sign in with email" />
         </div>
       ) : null}
 

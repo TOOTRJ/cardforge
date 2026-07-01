@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AuthForm } from "@/components/auth/auth-form";
+import {
+  AuthDivider,
+  GoogleSignInButton,
+} from "@/components/auth/google-sign-in-button";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { signupAction } from "@/app/(auth)/actions";
@@ -43,6 +47,13 @@ export default async function SignupPage({
           <code className="font-mono text-xs">NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY</code>{" "}
           to <code className="font-mono text-xs">.env.local</code> to enable
           signup.
+        </div>
+      ) : null}
+
+      {configured ? (
+        <div className="flex flex-col gap-4">
+          <GoogleSignInButton redirectTo={redirectTo} />
+          <AuthDivider label="or sign up with email" />
         </div>
       ) : null}
 
