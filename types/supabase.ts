@@ -504,6 +504,7 @@ export type Database = {
           title: string;
           toughness: string | null;
           updated_at: string;
+          likes_count: number;
           view_count: number;
           visibility: string;
         };
@@ -547,6 +548,7 @@ export type Database = {
           title: string;
           toughness?: string | null;
           updated_at?: string;
+          likes_count?: number;
           view_count?: number;
           visibility?: string;
         };
@@ -590,6 +592,7 @@ export type Database = {
           title?: string;
           toughness?: string | null;
           updated_at?: string;
+          likes_count?: number;
           view_count?: number;
           visibility?: string;
         };
