@@ -99,9 +99,11 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  await logScryfallCall(user.id, "search");
-
+  // Log only after the upstream call resolves, so a network error (which
+  // rejects here) doesn't erode the user's budget. searchCards collapses an
+  // upstream 5xx into an empty list, so that case is still counted.
   const cards = await searchCards({ query, limit });
+  await logScryfallCall(user.id, "search");
   return NextResponse.json({
     ok: true,
     results: cards.map(trim),

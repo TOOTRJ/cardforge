@@ -191,7 +191,18 @@ export function mapScryfallToFormPatch(
   options: { artPreviewUrl?: string | null } = {},
 ): ScryfallImportPatch {
   const front = card.card_faces?.[0];
-  const typeParts = parseTypeLine(card.type_line ?? front?.type_line);
+  // Split / adventure / room / transform cards carry combined-or-absent data at
+  // the top level (name is "Foo // Bar", oracle/cost/PT live on the faces). For
+  // those, seed the FRONT face consistently instead of mixing top-level combined
+  // text with face data. Single-faced cards keep reading the top level first.
+  const isMultiFace = (card.card_faces?.length ?? 0) >= 2;
+  const pick = (
+    faceVal: string | null | undefined,
+    cardVal: string | null | undefined,
+  ): string | undefined =>
+    (isMultiFace ? faceVal ?? cardVal : cardVal ?? faceVal) ?? undefined;
+
+  const typeParts = parseTypeLine(pick(front?.type_line, card.type_line));
   const colorIdentity = parseColorIdentity(card);
   const rarity =
     card.rarity && SCRYFALL_RARITY[card.rarity]
@@ -212,17 +223,21 @@ export function mapScryfallToFormPatch(
       : undefined;
 
   return {
-    title: card.name,
-    cost: card.mana_cost ?? front?.mana_cost ?? undefined,
+    // For a multi-face card, the front face's own name ("Fire", not "Fire //
+    // Ice") is the right seed for the front we're populating.
+    title: (isMultiFace && front?.name) || card.name,
+    cost: pick(front?.mana_cost, card.mana_cost),
     card_type: cardType,
     supertype: typeParts.supertype,
     subtypes_text: typeParts.subtypes_text,
     rarity: rarityChecked,
     color_identity: colorIdentity.length > 0 ? colorIdentity : undefined,
-    rules_text: card.oracle_text ?? front?.oracle_text ?? undefined,
+    rules_text: pick(front?.oracle_text, card.oracle_text),
+    // flavor_text / loyalty / defense aren't on Scryfall's card_face schema, so
+    // they always come from the top-level card.
     flavor_text: card.flavor_text ?? undefined,
-    power: card.power ?? front?.power ?? undefined,
-    toughness: card.toughness ?? front?.toughness ?? undefined,
+    power: pick(front?.power, card.power),
+    toughness: pick(front?.toughness, card.toughness),
     loyalty: card.loyalty ?? undefined,
     defense: card.defense ?? undefined,
     artist_credit: card.artist ?? undefined,

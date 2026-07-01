@@ -447,7 +447,10 @@ export function ArtUploader({
           }
           handleDropzoneKeyDown(event);
         }}
-        role={artUrl ? "img" : "button"}
+        // With art loaded this is an interactive positioning surface (drag to
+        // pan, arrow keys nudge, Shift-scroll zoom) — not a static image, so
+        // "group" rather than the misleading "img". Empty, it's a picker button.
+        role={artUrl ? "group" : "button"}
         aria-label={
           artUrl
             ? "Drag to reposition the art. Shift-scroll to zoom. Arrow keys nudge, +/- zoom, R resets."

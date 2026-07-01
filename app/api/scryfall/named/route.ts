@@ -65,8 +65,6 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  await logScryfallCall(user.id, "named");
-
   const card =
     id != null
       ? await getCardById(id)
@@ -75,11 +73,15 @@ export async function GET(request: NextRequest) {
         : await getCardByName({ fuzzy: fuzzy! });
 
   if (!card) {
+    // Don't spend the user's Scryfall budget on a lookup that found nothing
+    // (or that the upstream failed) — only successful fetches are logged.
     return NextResponse.json(
       { ok: false, error: "Card not found." },
       { status: 404 },
     );
   }
+
+  await logScryfallCall(user.id, "named");
 
   const artPreviewUrl = pickArtCropUrl(card);
   const patch = mapScryfallToFormPatch(card, { artPreviewUrl });

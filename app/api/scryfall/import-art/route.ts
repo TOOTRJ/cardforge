@@ -107,17 +107,19 @@ export async function POST(request: Request) {
       },
     );
   }
-  await logScryfallCall(user.id, "import_art");
-
   // 1) Re-fetch the card from Scryfall to recover a trusted image URL. We
   // deliberately don't accept a URL from the client.
   const card = await getCardById(parsed.data.scryfallId);
   if (!card) {
+    // A missing/failed lookup shouldn't cost the user's Scryfall budget —
+    // only log once we know there's a real card to import art from.
     return NextResponse.json(
       { ok: false, error: "Scryfall card not found." },
       { status: 404 },
     );
   }
+
+  await logScryfallCall(user.id, "import_art");
 
   // For "*-back" modes, source the image from `card_faces[1]`. If the
   // card has only one face, fail with 404 — the caller asked for art
