@@ -51,8 +51,11 @@ export function FrameCompare({
     router.replace(`?${params.toString()}`);
   };
 
+  // `isolate` caps CardPreview's internal z-indexed layers inside their own
+  // stacking context — without it the card's text layers paint ABOVE the
+  // scan overlay regardless of DOM order.
   const ourCard = (
-    <div style={{ width }} className="shrink-0">
+    <div style={{ width }} className="isolate shrink-0">
       <CardPreview {...selected.preview} staticInEditor />
     </div>
   );
@@ -162,14 +165,20 @@ export function FrameCompare({
                 ? "Difference — aligned pixels go dark; drift glows"
                 : `Scan over our render at ${opacity}%`}
             </figcaption>
-            <div className="relative" style={{ width }}>
+            {/* isolation: isolate scopes the difference blend to THIS box —
+                without it the scan blends against the page background
+                instead of our render. */}
+            <div
+              className="relative"
+              style={{ width, isolation: "isolate" }}
+            >
               {ourCard}
               {referenceImageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={referenceImageUrl}
                   alt={`Official scan of ${selected.label}`}
-                  className="pointer-events-none absolute inset-0 h-full w-full rounded-[4.5%]"
+                  className="pointer-events-none absolute inset-0 z-10 h-full w-full rounded-[4.5%]"
                   style={
                     mode === "difference"
                       ? { mixBlendMode: "difference" }
