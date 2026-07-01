@@ -14,9 +14,13 @@ import type { FormValues } from "@/lib/creator/form-types";
 
 type ArtPanelProps = {
   userId: string | null;
+  /** The back-face editor, rendered inside this panel's "More options" (the
+   *  back face used to be its own step). Supplied by the orchestrator so its
+   *  caret refs / symbol insertion stay there. */
+  backFaceSlot?: React.ReactNode;
 };
 
-export function ArtPanel({ userId }: ArtPanelProps) {
+export function ArtPanel({ userId, backFaceSlot }: ArtPanelProps) {
   const {
     register,
     control,
@@ -52,7 +56,7 @@ export function ArtPanel({ userId }: ArtPanelProps) {
         )}
       />
 
-      <MoreOptions summary="More options — artist credit">
+      <MoreOptions summary="More options — artist credit & back face">
         <FieldGroup
           label="Artist credit"
           helper="Who made the artwork? Yourself, a public-domain artist, or a licensed source."
@@ -64,6 +68,7 @@ export function ArtPanel({ userId }: ArtPanelProps) {
             autoComplete="off"
           />
         </FieldGroup>
+        {backFaceSlot}
       </MoreOptions>
     </>
   );

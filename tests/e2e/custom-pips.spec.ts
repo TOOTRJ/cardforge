@@ -73,7 +73,7 @@ test.describe("custom pips", () => {
 
     // Inline rules-text pips wear the override too: type a {R} into rules
     // and check the live card preview.
-    await rail.getByRole("button", { name: /^text$/i }).click();
+    await rail.getByRole("button", { name: /^text & stats$/i }).click();
     await page
       .locator('textarea[name="rules_text"]')
       .fill("{T}: Add {R} to your mana pool.");
