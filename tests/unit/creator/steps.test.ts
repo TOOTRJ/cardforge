@@ -19,7 +19,7 @@ const base: StepContext = {
 const keys = (ctx: StepContext) => visibleSteps(ctx).map((s) => s.key);
 
 describe("visibleSteps", () => {
-  it("a plain creature has no layout panel (abilities visible)", () => {
+  it("a plain creature shows the layout panel (always) + abilities", () => {
     expect(keys(base)).toEqual([
       "frame",
       "identity",
@@ -27,18 +27,20 @@ describe("visibleSteps", () => {
       "art",
       "text",
       "abilities",
+      "layout",
       "effects",
       "publish",
     ]);
   });
 
-  it("a stat-less type (instant) hides the abilities panel", () => {
+  it("a stat-less type (instant) hides the abilities panel, keeps layout", () => {
     expect(keys({ ...base, cardType: "instant" })).toEqual([
       "frame",
       "identity",
       "pips",
       "art",
       "text",
+      "layout",
       "effects",
       "publish",
     ]);
@@ -86,6 +88,7 @@ describe("visibleSteps", () => {
       "art",
       "text",
       "abilities",
+      "layout",
       "effects",
       "publish",
     ]);
@@ -207,8 +210,9 @@ describe("field → step routing", () => {
   });
 
   it("falls back to the last panel when the target panel is hidden", () => {
-    const steps = visibleSteps(base); // no layout panel
-    const idx = stepIndexForField("back_face.title", steps);
+    // Abilities is hidden for instants, so a stat field has no home panel.
+    const steps = visibleSteps({ ...base, cardType: "instant" });
+    const idx = stepIndexForField("power", steps);
     expect(steps[idx].key).toBe("publish");
   });
 

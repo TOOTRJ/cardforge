@@ -101,6 +101,10 @@ type CardPreviewProps = CardPreviewData & {
   /** Controlled face. When omitted, the preview manages its own flip state. */
   face?: "front" | "back";
   onFaceChange?: (next: "front" | "back") => void;
+  /** When true (and the card has a flippable back face), the WHOLE card is a
+   *  click/tap target that flips it, with a hover hint prompting the user —
+   *  instead of the small corner flip button. Used in the editor preview. */
+  flipOnClick?: boolean;
 };
 
 // MPlantin is the real MTG card font, loaded as a web font in globals.css. The
@@ -174,6 +178,7 @@ export function CardPreview({
   pipOverrides,
   face,
   onFaceChange,
+  flipOnClick = false,
   className,
   staticInEditor = false,
 }: CardPreviewProps) {
@@ -246,6 +251,9 @@ export function CardPreview({
     if (onFaceChange) onFaceChange(next);
     else setInternalFace(next);
   };
+  // Whole-card click-to-flip (editor preview) vs the small corner button
+  // (gallery / detail). Only meaningful when there's a flippable back face.
+  const clickToFlip = showFlip && flipOnClick;
 
   const faceProps = {
     template,
@@ -272,9 +280,28 @@ export function CardPreview({
         staticInEditor
           ? ""
           : "hover:-translate-y-1 hover:shadow-[0_24px_80px_-30px_rgba(120,80,220,0.4)]",
+        clickToFlip &&
+          "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         className,
       )}
       style={{ containerType: "inline-size" }}
+      {...(clickToFlip
+        ? {
+            role: "button",
+            tabIndex: 0,
+            "aria-label":
+              currentFace === "front"
+                ? "Show the back face"
+                : "Show the front face",
+            onClick: () => toggleFace(),
+            onKeyDown: (event: React.KeyboardEvent) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                toggleFace();
+              }
+            },
+          }
+        : {})}
     >
       {showFlip && backFaceData ? (
         <div
@@ -282,11 +309,12 @@ export function CardPreview({
           style={{ perspective: "1400px" }}
         >
           <div
-            className="relative h-full w-full transition-transform duration-500"
+            className="relative h-full w-full transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]"
             style={{
               transformStyle: "preserve-3d",
               transform:
                 currentFace === "back" ? "rotateY(180deg)" : "rotateY(0deg)",
+              willChange: "transform",
             }}
           >
             <div
@@ -317,7 +345,22 @@ export function CardPreview({
         />
       )}
 
-      {showFlip ? (
+      {/* Whole-card click-to-flip (editor): a hover hint prompts the user; the
+          click itself is handled on the root element above. pointer-events-none
+          so it never intercepts the click. */}
+      {clickToFlip ? (
+        <div className="pointer-events-none absolute inset-x-0 bottom-3 z-40 flex justify-center px-3 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-background/85 px-3 py-1.5 text-[11px] font-medium text-foreground shadow-lg backdrop-blur-sm">
+            <RotateCw className="h-3.5 w-3.5" aria-hidden />
+            {currentFace === "front"
+              ? "Click to see the back"
+              : "Click to see the front"}
+          </span>
+        </div>
+      ) : null}
+
+      {/* Small corner flip button — gallery / detail pages (no whole-card click). */}
+      {showFlip && !clickToFlip ? (
         <button
           type="button"
           onClick={(event) => {
