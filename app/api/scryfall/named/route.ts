@@ -96,6 +96,7 @@ export async function GET(request: NextRequest) {
       print_url: pickPrintImageUrl(card),
       thumb_url: artPreviewUrl,
       scryfall_uri: card.scryfall_uri ?? null,
+      image_status: card.image_status ?? null,
     },
     patch,
   });

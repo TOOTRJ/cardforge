@@ -892,6 +892,22 @@ export type Database = {
           day: string;
         }[];
       };
+      scryfall_usage_admin_daily: {
+        Args: { since: string };
+        Returns: {
+          day: string;
+          action: string;
+          count: number;
+        }[];
+      };
+      scryfall_usage_admin_top_users: {
+        Args: { since: string; max_rows?: number };
+        Returns: {
+          user_id: string;
+          username: string | null;
+          calls: number;
+        }[];
+      };
       increment_card_view: {
         Args: { p_card_id: string };
         Returns: undefined;

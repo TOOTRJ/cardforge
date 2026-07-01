@@ -8,8 +8,13 @@ import { getSiteBaseUrl } from "@/lib/site-url";
 //
 // Scryfall's API is free and key-less. Their docs require:
 //   - User-Agent identifying your app (with a contact URL when possible)
-//   - Accept: application/json on every request
-//   - Roughly 50-100ms between requests to be a polite neighbor
+//   - Accept header on every request
+//   - Hard rate limits: /cards/search, /cards/named, /cards/random and
+//     /cards/collection are capped at 2 requests/second (500ms); every
+//     other API method allows 10/second (100ms). The cards.scryfall.io
+//     image CDN has no rate limit at all.
+//   - 429 responses lock the caller out for 30 seconds; ignoring them
+//     risks a temporary or permanent ban.
 //
 // All requests go through this module so the headers + spacing live in one
 // place. Routes import the helpers below — never call Scryfall directly
@@ -17,17 +22,25 @@ import { getSiteBaseUrl } from "@/lib/site-url";
 // ---------------------------------------------------------------------------
 
 const BASE_URL = "https://api.scryfall.com";
-const MIN_REQUEST_GAP_MS = 100;
+// Scryfall's documented hard limits: 2/sec on the card-lookup endpoints,
+// 10/sec everywhere else.
+const SLOW_GAP_MS = 500;
+const FAST_GAP_MS = 100;
+const SLOW_PATH = /^\/cards\/(search|named|random|collection)\b/;
 
-// Module-level chain enforces "no more than one outbound Scryfall request
-// every MIN_REQUEST_GAP_MS" per Vercel function instance. Concurrent
-// callers within the same instance queue politely instead of stampeding.
-// (Different instances each maintain their own chain; Vercel egresses from
-// many IPs so this is fine in practice.)
+function minGapFor(path: string): number {
+  return SLOW_PATH.test(path) ? SLOW_GAP_MS : FAST_GAP_MS;
+}
+
+// Module-level chain enforces the minimum gap between outbound Scryfall
+// requests per Vercel function instance. Concurrent callers within the
+// same instance queue politely instead of stampeding. (Different instances
+// each maintain their own chain; Vercel egresses from many IPs so this is
+// fine in practice.)
 let lastDispatchAt = 0;
-async function throttle(): Promise<void> {
+async function throttle(gapMs: number): Promise<void> {
   const now = Date.now();
-  const wait = Math.max(0, lastDispatchAt + MIN_REQUEST_GAP_MS - now);
+  const wait = Math.max(0, lastDispatchAt + gapMs - now);
   if (wait > 0) {
     await new Promise((resolve) => setTimeout(resolve, wait));
   }
@@ -47,17 +60,35 @@ function userAgent(): string {
   );
 }
 
+// Retry budget: a 429 lockout is 30s, but routes run with tight
+// maxDuration — if Scryfall asks us to wait longer than this, return the
+// error response instead of burning function time.
+const MAX_RETRIES = 2;
+const MAX_RETRY_WAIT_MS = 4_000;
+
 async function scryfallFetch(path: string): Promise<Response> {
-  await throttle();
-  return fetch(`${BASE_URL}${path}`, {
-    headers: {
-      Accept: "application/json",
-      "User-Agent": userAgent(),
-    },
-    // Don't cache server-side — this is dynamic search content, and the
-    // freshness signal we want comes from the user typing, not the CDN.
-    cache: "no-store",
-  });
+  for (let attempt = 0; ; attempt += 1) {
+    await throttle(minGapFor(path));
+    const response = await fetch(`${BASE_URL}${path}`, {
+      headers: {
+        Accept: "application/json",
+        "User-Agent": userAgent(),
+      },
+      // Don't cache server-side — this is dynamic search content, and the
+      // freshness signal we want comes from the user typing, not the CDN.
+      cache: "no-store",
+    });
+    const retriable = response.status === 429 || response.status >= 500;
+    if (!retriable || attempt >= MAX_RETRIES) return response;
+
+    const retryAfterSec = Number(response.headers.get("retry-after"));
+    const waitMs =
+      Number.isFinite(retryAfterSec) && retryAfterSec > 0
+        ? retryAfterSec * 1000
+        : 500 * 2 ** attempt;
+    if (waitMs > MAX_RETRY_WAIT_MS) return response;
+    await new Promise((resolve) => setTimeout(resolve, waitMs));
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -95,6 +126,9 @@ export const scryfallCardSchema = z
     set: z.string().optional().nullable(),
     set_name: z.string().optional().nullable(),
     artist: z.string().optional().nullable(),
+    // "missing" | "placeholder" | "lowres" | "highres_scan" — kept as a
+    // plain string so a future status value doesn't fail the whole parse.
+    image_status: z.string().optional().nullable(),
     image_uris: scryfallImageUrisSchema.optional().nullable(),
     // Some cards (double-faced, split) carry image_uris under card_faces[0]
     // instead of the top level. We pull a best-effort image out of either.
@@ -252,9 +286,11 @@ export async function fetchScryfallImage(
   ) {
     return null;
   }
-  // Scryfall doesn't publish a rate limit for images specifically, but the
-  // throttle keeps us a polite client overall.
-  await throttle();
+  // cards.scryfall.io is Scryfall's CDN and explicitly has no rate limit;
+  // only api.scryfall.com requests need to respect the request gap.
+  if (parsed.hostname === "api.scryfall.com") {
+    await throttle(FAST_GAP_MS);
+  }
   const response = await fetch(parsed.toString(), {
     headers: { "User-Agent": userAgent() },
     cache: "no-store",
@@ -288,4 +324,26 @@ export function pickArtCropUrl(card: ScryfallCard): string | null {
   const face = card.card_faces?.[0]?.image_uris ?? null;
   const source = top ?? face;
   return source?.art_crop ?? source?.normal ?? null;
+}
+
+// ---------------------------------------------------------------------------
+// Image quality.
+// ---------------------------------------------------------------------------
+
+export type ScryfallImageQuality = "ok" | "lowres" | "unusable";
+
+/**
+ * Classify a printing's scan quality from Scryfall's `image_status`.
+ * `image_status` lives at the top level only (one status per printing,
+ * covering both faces of a DFC). An absent field is treated as ok so
+ * older cached shapes never regress imports.
+ */
+export function assessPrintImageQuality(
+  card: ScryfallCard,
+): ScryfallImageQuality {
+  if (card.image_status === "missing" || card.image_status === "placeholder") {
+    return "unusable";
+  }
+  if (card.image_status === "lowres") return "lowres";
+  return "ok";
 }

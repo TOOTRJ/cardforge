@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import {
+  Activity,
   CreditCard,
   Frame,
   LayoutDashboard,
@@ -132,6 +133,11 @@ export function UserMenu({
             href="/admin/challenges"
             icon={Trophy}
             label="Challenges"
+          />
+          <MenuItem
+            href="/admin/scryfall"
+            icon={Activity}
+            label="Scryfall usage"
           />
           <MenuItem
             href="/admin/frame-compare"

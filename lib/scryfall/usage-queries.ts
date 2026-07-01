@@ -2,6 +2,7 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { SCRYFALL_LIMITS } from "@/lib/scryfall/rate-limit";
 
 // ---------------------------------------------------------------------------
 // Scryfall usage snapshot (Phase 11 chunk 15).
@@ -15,14 +16,11 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 // (search = 2000/day, named = 500/day, import_art = 100/day) and a
 // single combined limit would be misleading.
 //
-// LIMITS here mirror lib/scryfall/rate-limit.ts. Keep them in sync.
+// Limits come straight from lib/scryfall/rate-limit.ts (single source of
+// truth); re-exported here so existing consumers keep their import path.
 // ---------------------------------------------------------------------------
 
-export const SCRYFALL_USAGE_LIMITS = {
-  search: { perMinute: 60, perDay: 2000 },
-  named: { perMinute: 30, perDay: 500 },
-  import_art: { perMinute: 10, perDay: 100 },
-} as const;
+export const SCRYFALL_USAGE_LIMITS = SCRYFALL_LIMITS;
 
 export type ScryfallAction = keyof typeof SCRYFALL_USAGE_LIMITS;
 
