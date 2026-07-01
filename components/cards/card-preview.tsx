@@ -873,6 +873,9 @@ function StatOverlay({
           fontSize: cqw(slot.sizePct),
           fontWeight: slot.weight ?? 700,
           color: slot.colorHex,
+          ...(slot.valueDyEm
+            ? { transform: `translateY(${slot.valueDyEm}em)` }
+            : {}),
           ...(slot.shadowCss ? { textShadow: slot.shadowCss } : {}),
         }}
       >

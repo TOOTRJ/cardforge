@@ -17,6 +17,7 @@
 //   3      — PipGlyph rebrand: footer brand line, compass-star default set
 //            mark, watermark → pipglyph.com (2026-06-11)
 //   4      — M15 type-line nudged down ~2px to true-center on the type bar
+//   5      — M15 P/T value lifted ~2px (valueDyEm) to true-center on the plate
 // ---------------------------------------------------------------------------
 
-export const CARD_LAYOUT_VERSION = 4;
+export const CARD_LAYOUT_VERSION = 5;
