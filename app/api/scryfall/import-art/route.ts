@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
+  assessPrintImageQuality,
   fetchScryfallImage,
   getCardById,
   pickPrintImageUrl,
@@ -119,6 +120,21 @@ export async function POST(request: Request) {
     );
   }
 
+  // Quality gate before the budget is charged. A "placeholder"/"missing"
+  // scan would bake a junk frame into the user's card — reject print
+  // imports outright; art crops of a placeholder are equally useless.
+  const imageQuality = assessPrintImageQuality(card);
+  if (imageQuality === "unusable") {
+    return NextResponse.json(
+      {
+        ok: false,
+        error:
+          "Scryfall only has a placeholder image for this printing — try a different printing.",
+      },
+      { status: 422 },
+    );
+  }
+
   await logScryfallCall(user.id, "import_art");
 
   // For "*-back" modes, source the image from `card_faces[1]`. If the
@@ -209,6 +225,12 @@ export async function POST(request: Request) {
     ok: true,
     publicUrl: publicData.publicUrl,
     artist: card.artist ?? null,
+    // Non-blocking quality signal — the dialog surfaces this as a toast so
+    // the user can pick a better printing if they care.
+    warning:
+      imageQuality === "lowres"
+        ? "This printing only has a low-resolution scan on Scryfall."
+        : null,
     source: {
       scryfallId: card.id,
       cardName: card.name,

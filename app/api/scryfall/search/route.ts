@@ -38,6 +38,7 @@ type TrimmedScryfallCard = {
   thumb_url: string | null;
   print_url: string | null;
   oracle_text: string | null;
+  image_status: string | null;
 };
 
 function trim(card: ScryfallCard): TrimmedScryfallCard {
@@ -53,6 +54,7 @@ function trim(card: ScryfallCard): TrimmedScryfallCard {
     thumb_url: pickArtCropUrl(card),
     print_url: pickPrintImageUrl(card),
     oracle_text: card.oracle_text ?? null,
+    image_status: card.image_status ?? null,
   };
 }
 

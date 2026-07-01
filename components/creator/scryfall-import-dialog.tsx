@@ -59,6 +59,8 @@ type TrimmedCard = {
   thumb_url: string | null;
   print_url: string | null;
   oracle_text: string | null;
+  /** Scryfall scan quality: "missing" | "placeholder" | "lowres" | "highres_scan". */
+  image_status: string | null;
 };
 
 type NamedResponse = {
@@ -71,6 +73,7 @@ type NamedResponse = {
     print_url: string | null;
     thumb_url: string | null;
     scryfall_uri: string | null;
+    image_status: string | null;
   };
   patch: ScryfallImportPatch;
 };
@@ -80,6 +83,8 @@ type ImportArtResponse =
       ok: true;
       publicUrl: string;
       artist: string | null;
+      /** Non-blocking quality note (e.g. "low-resolution scan"). */
+      warning?: string | null;
       source: { scryfallId: string; cardName: string; scryfallUri: string | null };
     }
   | { ok: false; error: string };
@@ -302,7 +307,15 @@ function ScryfallImportContent({
           const body = (await response
             .json()
             .catch(() => null)) as ImportArtResponse | null;
-          return body && body.ok === true ? body.publicUrl : null;
+          if (body && body.ok === true) {
+            // Surface the server's quality note once (front face only, to
+            // avoid double toasts on DFCs — the status covers the printing).
+            if (body.warning && mode === "art") {
+              toast.message("Artwork imported", { description: body.warning });
+            }
+            return body.publicUrl;
+          }
+          return null;
         } catch {
           return null;
         }
@@ -460,6 +473,16 @@ function ScryfallImportContent({
                           {card.set ? card.set.toUpperCase() : "—"}
                           {card.rarity ? ` · ${card.rarity}` : ""}
                         </span>
+                        {card.image_status === "lowres" ? (
+                          <Badge variant="outline" className="self-start text-[10px]">
+                            Low-res scan
+                          </Badge>
+                        ) : card.image_status === "placeholder" ||
+                          card.image_status === "missing" ? (
+                          <Badge variant="outline" className="self-start text-[10px]">
+                            No real image yet
+                          </Badge>
+                        ) : null}
                         {card.mana_cost ? (
                           <ManaCostGlyphs cost={card.mana_cost} size="sm" />
                         ) : null}
@@ -619,6 +642,18 @@ function Detail({
           ) : (
             <div className="aspect-[5/7] w-full rounded-lg bg-elevated" />
           )}
+          {card.image_status === "lowres" ? (
+            <p className="text-[11px] leading-4 text-subtle">
+              Low-resolution scan — search for another printing for sharper
+              art.
+            </p>
+          ) : card.image_status === "placeholder" ||
+            card.image_status === "missing" ? (
+            <p className="text-[11px] leading-4 text-subtle">
+              Scryfall only has a placeholder image for this printing — art
+              import is unavailable.
+            </p>
+          ) : null}
           {card.scryfall_uri ? (
             <a
               href={card.scryfall_uri}
