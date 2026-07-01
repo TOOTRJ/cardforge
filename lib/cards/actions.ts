@@ -17,6 +17,7 @@ import {
 } from "@/lib/cards/queries";
 import { bakeAndPersistCardRender } from "@/lib/cards/bake-render";
 import { cardRenderPath } from "@/lib/cards/storage-paths";
+import { normalizeManaCost } from "@/lib/cards/mana-order";
 import {
   VISIBILITY_VALUES,
   frameStyleRequiresPremium,
@@ -316,7 +317,9 @@ export async function createCardAction(
     slug,
     game_system_id: data.game_system_id,
     template_id: data.template_id ?? null,
-    cost: data.cost ?? null,
+    // Defense in depth — the picker already normalizes pip order, but costs
+    // also arrive via drafts and imports. Unrecognized tokens pass through.
+    cost: data.cost ? normalizeManaCost(data.cost) : null,
     color_identity: data.color_identity,
     supertype: data.supertype ?? null,
     card_type: data.card_type ?? null,
@@ -478,7 +481,9 @@ export async function updateCardAction(
   }
   if (data.game_system_id !== undefined) update.game_system_id = data.game_system_id;
   if (data.template_id !== undefined) update.template_id = data.template_id;
-  if (data.cost !== undefined) update.cost = data.cost ?? null;
+  if (data.cost !== undefined) {
+    update.cost = data.cost ? normalizeManaCost(data.cost) : null;
+  }
   if (data.color_identity !== undefined) update.color_identity = data.color_identity;
   if (data.supertype !== undefined) update.supertype = data.supertype ?? null;
   if (data.card_type !== undefined) update.card_type = data.card_type ?? null;
