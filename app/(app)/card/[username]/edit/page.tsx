@@ -99,7 +99,6 @@ export default async function EditCardPage({ params }: EditCardPageProps) {
       <PageHeader
         eyebrow="Editing"
         title={card.title}
-        description={`Slug: ${publicPath}`}
         actions={
           <>
             <Badge

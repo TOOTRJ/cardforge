@@ -18,6 +18,7 @@ import {
 } from "@/components/creator/field-group";
 import { mergeTag, parseTags, removeTag } from "@/lib/creator/card-fields";
 import { BackFacePicker } from "@/components/creator/back-face-picker";
+import { ChallengeBriefDialog } from "@/components/creator/challenge-brief-dialog";
 import { EffectsPanel } from "@/components/creator/panels/effects-panel";
 import { daysLeft, type Challenge } from "@/lib/challenges/shared";
 import { cn } from "@/lib/utils";
@@ -99,12 +100,7 @@ export function PublishPanel({
                 </code>{" "}
                 tag · {daysLeft(activeChallenge)} day
                 {daysLeft(activeChallenge) === 1 ? "" : "s"} left ·{" "}
-                <Link
-                  href={`/challenges/${activeChallenge.slug}`}
-                  className="text-primary-bright underline-offset-2 hover:underline"
-                >
-                  view the brief
-                </Link>
+                <ChallengeBriefDialog challenge={activeChallenge} />
               </span>
             </span>
             <button

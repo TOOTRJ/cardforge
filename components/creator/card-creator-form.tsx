@@ -322,6 +322,10 @@ export function CardCreatorForm({
   // /create), and clears it on a successful save. Edit mode trusts the server
   // copy and instead warns before unloading with unsaved changes.
   const isDraftMode = mode === "create" && !card;
+  // A saved-but-still-private card is a draft too: while editing one we show the
+  // same Save draft + Start over controls as create mode (rather than the
+  // Delete + save-state chrome used for already-published cards).
+  const isDraft = isDraftMode || (mode === "edit" && card?.visibility === "private");
   const draftRestoredRef = useRef(false);
   useEffect(() => {
     if (!isDraftMode || draftRestoredRef.current) return;
@@ -778,30 +782,42 @@ export function CardCreatorForm({
     setPreviewFace("front");
     setServerError(null);
     goToIndex(0);
-    toast.success("Started over — blank card ready.");
+    toast.success(
+      isDraftMode
+        ? "Started over — blank card ready."
+        : "Reset to your last save.",
+    );
   };
 
   // ---- Save draft ----
-  // Explicit, on-demand version of the debounced auto-save: write the current
-  // form to this device's localStorage from any step. Create/draft mode only.
+  // Persist the card as a private draft from any step. In create mode this
+  // creates a new private card and drops us into its editor; in draft-edit mode
+  // it updates the existing private card. Runs full validation first (the
+  // server rejects incomplete cards), jumping to the first errored step.
   const handleSaveDraft = () => {
-    try {
-      window.localStorage.setItem(
-        CARD_DRAFT_STORAGE_KEY,
-        JSON.stringify(getValues()),
-      );
-      toast.success("Draft saved to this device.");
-    } catch {
-      toast.error("Couldn't save the draft — storage may be full or blocked.");
-    }
+    void handleSubmit(
+      (values) => runSubmit(values, "draft"),
+      (formErrors) => {
+        const first = Object.keys(formErrors)[0];
+        if (first) goToIndex(stepIndexForField(first, steps));
+      },
+    )();
   };
 
   // ---- Submit ----
-  // `createBackAfter` is passed by the "Create a new card" back-face flow: after
-  // this card saves, jump to a fresh creator (/create?backFor=…) to build its
-  // back, instead of the normal edit redirect.
-  const runSubmit = (values: FormValues, createBackAfter: boolean) => {
+  // `intent` decides both the saved visibility and the post-save flow:
+  //   • "publish" → force visibility public (the primary "make public" button)
+  //   • "draft"   → force visibility private (the Save draft button)
+  //   • "back"    → keep the chosen visibility; after saving, jump to a fresh
+  //                 creator (/create?backFor=…) to build this card's back face.
+  const runSubmit = (
+    values: FormValues,
+    intent: "publish" | "draft" | "back",
+  ) => {
     setServerError(null);
+    const createBackAfter = intent === "back";
+    const forcedVisibility =
+      intent === "publish" ? "public" : intent === "draft" ? "private" : null;
 
     // Build the back_face payload only when the user toggled it on.
     // When off, send `null` so the server clears any previously-persisted
@@ -848,7 +864,7 @@ export function CardCreatorForm({
       art_url: values.art_url.trim() || undefined,
       art_position: values.art_position,
       frame_style: values.frame_style,
-      visibility: values.visibility,
+      visibility: forcedVisibility ?? values.visibility,
       back_face: backFacePayload,
       // v2 back face: a uuid links a card as the back; empty → null clears.
       back_card_id: values.back_card_id || null,
@@ -900,7 +916,11 @@ export function CardCreatorForm({
           handleUpgradeOrError(result);
           return;
         }
-        toast.success(`Saved “${payload.title}”`);
+        toast.success(
+          intent === "draft"
+            ? `Draft saved — “${payload.title}”`
+            : `Published “${payload.title}”`,
+        );
         try {
           window.localStorage.removeItem(CARD_DRAFT_STORAGE_KEY);
         } catch {
@@ -954,7 +974,9 @@ export function CardCreatorForm({
         handleUpgradeOrError(result);
         return;
       }
-      toast.success("Changes saved.");
+      toast.success(
+        intent === "draft" ? "Draft saved." : "Changes saved — now public.",
+      );
       // Mark clean right away (keeping the on-screen values); the keyed reset
       // swaps in server truth when the refresh lands.
       reset(undefined, { keepValues: true });
@@ -975,7 +997,7 @@ export function CardCreatorForm({
   // "Create a new card" for the back: save this card first (so it has an id to
   // link back to), then the submit flow jumps to a fresh creator.
   const handleCreateBackFace = () => {
-    void handleSubmit((values) => runSubmit(values, true))();
+    void handleSubmit((values) => runSubmit(values, "back"))();
   };
 
   const cardTypeForPreview =
@@ -1047,7 +1069,7 @@ export function CardCreatorForm({
       <form
         noValidate
         onSubmit={handleSubmit(
-          (values) => runSubmit(values, false),
+          (values) => runSubmit(values, "publish"),
           (formErrors) => {
             // Client validation blocked the save — jump to the first errored step.
             const first = Object.keys(formErrors)[0];
@@ -1207,9 +1229,9 @@ export function CardCreatorForm({
               switching back to a "publishing" tab. */}
           <div className="sticky bottom-0 -mx-6 -mb-6 flex flex-wrap items-center justify-between gap-3 border-t border-border/50 bg-surface/95 px-6 py-4 backdrop-blur-sm">
             <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
-              {/* Draft mode auto-saves silently — no chip. Edit mode still shows
-                  its real save state. */}
-              {!isDraftMode ? (
+              {/* Drafts (create + private) save silently — no chip. Published
+                  cards still show their real save state. */}
+              {!isDraft ? (
                 isDirty ? (
                   <Badge variant="accent" className="gap-1.5">
                     <Sparkles className="h-3 w-3" aria-hidden />
@@ -1238,24 +1260,28 @@ export function CardCreatorForm({
               ) : null}
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              {/* Save draft — explicit, on-demand device save, available on
-                  every step (create/draft mode). Complements the auto-save.
+              {/* Save draft — persists the card privately from any step. Shown
+                  in create mode and while editing a still-private draft.
                   Grouped with the nav buttons so it shares their line. */}
-              {isDraftMode ? (
+              {isDraft ? (
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
                   onClick={handleSaveDraft}
+                  disabled={isSubmitting}
                 >
                   <Save className="h-4 w-4" aria-hidden />
                   Save draft
                 </Button>
               ) : null}
-              {/* Start over — create/draft mode only, once there's something
-                  to clear. Edit mode uses Delete instead. */}
-              {isDraftMode && isDirty ? (
-                <StartOverDialog onConfirm={handleStartOver} />
+              {/* Start over — drafts only, once there's something to clear.
+                  Published cards use Delete instead. */}
+              {isDraft && isDirty ? (
+                <StartOverDialog
+                  onConfirm={handleStartOver}
+                  variant={isDraftMode ? "create" : "revert"}
+                />
               ) : null}
               {idx > 0 ? (
                 <Button type="button" variant="ghost" onClick={goBack}>
@@ -1263,7 +1289,7 @@ export function CardCreatorForm({
                   Back
                 </Button>
               ) : null}
-              {mode === "edit" && card ? (
+              {mode === "edit" && card && !isDraft ? (
                 <DeleteCardDialog
                   cardId={card.id}
                   cardTitle={card.title}
@@ -1302,7 +1328,9 @@ export function CardCreatorForm({
                     ) : (
                       <>
                         <Save className="h-4 w-4" aria-hidden />
-                        {mode === "edit" ? "Save changes" : "Save card"}
+                        {mode === "edit"
+                          ? "Save changes and make public"
+                          : "Save & make public"}
                       </>
                     )}
                   </Button>
