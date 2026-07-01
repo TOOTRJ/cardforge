@@ -2,7 +2,7 @@
 
 import "server-only";
 
-import { createClient, getCurrentUser } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { renderCardImage } from "@/lib/render/card-image";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { cardRenderPath } from "@/lib/cards/storage-paths";
@@ -72,10 +72,17 @@ async function removeRenderObject(
  */
 export async function bakeCardRender(
   cardId: string,
+  ownerId: string,
 ): Promise<BakeRenderResult> {
-  const user = await getCurrentUser();
-  if (!user) {
-    return { ok: false, error: "Not signed in." };
+  // Ownership is passed in (already verified by the calling action) rather
+  // than re-derived via getCurrentUser(). This bake runs inside next/server
+  // `after()` — a post-response context where Supabase's `auth.getUser()` can
+  // trigger a token refresh whose rotated cookies are dropped, which silently
+  // invalidates the user's session (logging them out after a save). Reading
+  // rows/storage with the request-scoped client below never refreshes auth, so
+  // avoiding the auth call here keeps the deferred bake session-safe.
+  if (!ownerId) {
+    return { ok: false, error: "Missing owner." };
   }
 
   const supabase = await createClient();
@@ -92,11 +99,11 @@ export async function bakeCardRender(
   if (fetchErr || !card) {
     return { ok: false, error: fetchErr?.message ?? "Card not found." };
   }
-  if (card.owner_id !== user.id) {
+  if (card.owner_id !== ownerId) {
     return { ok: false, error: "Not the card owner." };
   }
 
-  const path = cardRenderPath(user.id, card.id);
+  const path = cardRenderPath(ownerId, card.id);
 
   // A private card must not leave its render in the public-read card-renders
   // bucket — that PNG is the full card image. Skip the bake and remove any
@@ -165,8 +172,9 @@ export async function bakeCardRender(
  */
 export async function bakeAndPersistCardRender(
   cardId: string,
+  ownerId: string,
 ): Promise<string | null> {
-  const result = await bakeCardRender(cardId);
+  const result = await bakeCardRender(cardId, ownerId);
   const supabase = await createClient();
 
   if (!result.ok) {

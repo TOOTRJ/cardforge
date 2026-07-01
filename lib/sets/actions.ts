@@ -266,7 +266,7 @@ export async function updateSetAction(
     after(async () => {
       for (const id of affectedCardIds) {
         try {
-          await bakeAndPersistCardRender(id);
+          await bakeAndPersistCardRender(id, user.id);
         } catch (error) {
           console.error(`[update-set] deferred bake failed for ${id}:`, error);
         }
@@ -369,7 +369,7 @@ async function adoptSetIconForNewMembers(
     after(async () => {
       for (const id of adoptedIds) {
         try {
-          await bakeAndPersistCardRender(id);
+          await bakeAndPersistCardRender(id, userId);
         } catch (error) {
           console.error(`[adopt-set-icon] deferred bake failed for ${id}:`, error);
         }
@@ -434,7 +434,7 @@ async function repointPrimaryAfterRemoval(
   // `after`) so removal stays fast, then refresh the thumbnail surfaces.
   after(async () => {
     try {
-      await bakeAndPersistCardRender(cardId);
+      await bakeAndPersistCardRender(cardId, userId);
     } catch (error) {
       console.error(`[repoint-primary] deferred bake failed for ${cardId}:`, error);
     }
