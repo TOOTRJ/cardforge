@@ -9,6 +9,7 @@ import {
   useTransition,
 } from "react";
 import {
+  Info,
   Loader2,
   Search,
   Sparkles,
@@ -660,6 +661,17 @@ function Detail({
               </span>
             </span>
           </label>
+
+          <p className="inline-flex items-start gap-2 rounded-md border border-border/60 bg-elevated/40 p-3 text-xs leading-5 text-muted">
+            <Info
+              className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary-bright"
+              aria-hidden
+            />
+            <span>
+              Imported details land on the default frame. Matching the card to
+              its original frame will come later, as more frames are added.
+            </span>
+          </p>
         </div>
       </div>
 
