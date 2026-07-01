@@ -22,6 +22,7 @@
 //            plate horizontally
 //   7      — M15 P/T value: a bit more right (valueDxEm 0.09 → 0.18)
 //   8      — M15 title nudged down ~1px to true-center on the name bar
+//   9      — M15 type line back up a hair (56.5 → 56.35); 56.5 read too low
 // ---------------------------------------------------------------------------
 
-export const CARD_LAYOUT_VERSION = 8;
+export const CARD_LAYOUT_VERSION = 9;
