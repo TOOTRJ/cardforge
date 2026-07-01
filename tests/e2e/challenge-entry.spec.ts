@@ -32,10 +32,13 @@ test.describe("challenge entry from the editor", () => {
 
     await page.goto("/create");
     const title = `Frontier Probe ${Date.now()}`;
+    // The editor opens on Frame; the title input lives on Identity — jump there
+    // first via the step rail.
+    const rail = page.getByRole("navigation", { name: /card editor steps/i });
+    await rail.getByRole("button", { name: /^identity$/i }).click();
     await page.locator('input[placeholder="Emberbound Wyrm"]').fill(title);
 
     // Publish panel: the challenge toggle manages the tag.
-    const rail = page.getByRole("navigation", { name: /card editor steps/i });
     await rail.getByRole("button", { name: /^publish$/i }).click();
     const toggle = page.getByRole("checkbox", {
       name: /enter the .* challenge/i,

@@ -25,12 +25,12 @@ async function signIn(page: Page) {
 }
 
 // Opens /create and fills a unique title (so reruns don't collide on the
-// slug). The editor opens on the Identity panel — where the title input
-// lives — so no navigation is needed; later jumps use the vertical step rail
-// (xl+ — the default Desktop Chrome viewport is 1280px wide). Free step
-// jumping is enabled (isStepEnabled: () => true). Returns the rail locator.
-// (The rail renders the ACTIVE panel as a non-button, so there's no
-// "Identity" button to click while standing on it.)
+// slug). The editor opens on the Frame panel; the title input lives on
+// Identity, so jump there first via the vertical step rail (xl+ — the default
+// Desktop Chrome viewport is 1280px wide). Free step jumping is enabled
+// (isStepEnabled: () => true). Returns the rail locator. (The rail renders the
+// ACTIVE panel as a non-button, so Identity is only a button while standing
+// elsewhere — which we are, on Frame.)
 async function openCreatorWithTitle(page: Page, title: string) {
   await page.goto("/create");
   await expect(
@@ -38,6 +38,7 @@ async function openCreatorWithTitle(page: Page, title: string) {
   ).toBeVisible();
 
   const rail = page.getByRole("navigation", { name: /card editor steps/i });
+  await rail.getByRole("button", { name: /^identity$/i }).click();
   await page.locator('input[placeholder="Emberbound Wyrm"]').fill(title);
   return rail;
 }

@@ -85,6 +85,13 @@ test.describe("Scryfall search → import", () => {
     await page.waitForURL("**/dashboard");
     await page.goto("/create");
 
+    // The editor opens on Frame; the identity-panel Scryfall trigger lives on
+    // the Identity step, so jump there first via the step rail.
+    await page
+      .getByRole("navigation", { name: /card editor steps/i })
+      .getByRole("button", { name: /^identity$/i })
+      .click();
+
     // Open the Scryfall import dialog from the identity panel's trigger.
     // Exact match: the quick-start hero renders a second, longer-named
     // "Search a real card …" tile; this targets the identity-panel button.

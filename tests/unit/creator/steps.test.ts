@@ -21,9 +21,9 @@ const keys = (ctx: StepContext) => visibleSteps(ctx).map((s) => s.key);
 describe("visibleSteps", () => {
   it("a plain creature has no layout panel (abilities visible)", () => {
     expect(keys(base)).toEqual([
+      "frame",
       "identity",
       "pips",
-      "frame",
       "art",
       "text",
       "abilities",
@@ -34,9 +34,9 @@ describe("visibleSteps", () => {
 
   it("a stat-less type (instant) hides the abilities panel", () => {
     expect(keys({ ...base, cardType: "instant" })).toEqual([
+      "frame",
       "identity",
       "pips",
-      "frame",
       "art",
       "text",
       "effects",
@@ -50,9 +50,9 @@ describe("visibleSteps", () => {
 
   it("the Adventure frame always adds the layout panel", () => {
     expect(keys({ ...base, template: "adventure" })).toEqual([
+      "frame",
       "identity",
       "pips",
-      "frame",
       "art",
       "text",
       "abilities",
@@ -80,9 +80,9 @@ describe("visibleSteps", () => {
 
   it("an unknown/legacy template still yields the base panels (no crash)", () => {
     expect(keys({ ...base, template: "regular" })).toEqual([
+      "frame",
       "identity",
       "pips",
-      "frame",
       "art",
       "text",
       "abilities",
