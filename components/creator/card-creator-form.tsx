@@ -48,6 +48,7 @@ import { PipsPanel } from "@/components/creator/panels/pips-panel";
 import { FramePanel } from "@/components/creator/panels/frame-panel";
 import { ArtPanel } from "@/components/creator/panels/art-panel";
 import { TextPanel } from "@/components/creator/panels/text-panel";
+import { ForgeAIPanel } from "@/components/creator/panels/forge-ai-panel";
 import { AbilitiesPanel } from "@/components/creator/panels/abilities-panel";
 import { LayoutPanel } from "@/components/creator/panels/layout-panel";
 import {
@@ -1163,9 +1164,6 @@ export function CardCreatorForm({
             {stepKey === "text" ? (
               <>
                 <TextPanel
-                  cardContext={cardContext}
-                  aiConfigured={aiConfigured}
-                  onAIPatch={handleAIPatch}
                   rulesTextField={rulesTextField}
                   rulesTextRef={rulesTextRef}
                   onInsertSymbol={(token) =>
@@ -1173,6 +1171,12 @@ export function CardCreatorForm({
                   }
                 />
                 <AbilitiesPanel statVis={statVis} />
+                {/* Forge AI last — below the power/toughness stats. */}
+                <ForgeAIPanel
+                  cardContext={cardContext}
+                  aiConfigured={aiConfigured}
+                  onAIPatch={handleAIPatch}
+                />
               </>
             ) : null}
 
@@ -1232,8 +1236,11 @@ export function CardCreatorForm({
                   )}
                 </Badge>
               ) : null}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
               {/* Save draft — explicit, on-demand device save, available on
-                  every step (create/draft mode). Complements the auto-save. */}
+                  every step (create/draft mode). Complements the auto-save.
+                  Grouped with the nav buttons so it shares their line. */}
               {isDraftMode ? (
                 <Button
                   type="button"
@@ -1250,8 +1257,6 @@ export function CardCreatorForm({
               {isDraftMode && isDirty ? (
                 <StartOverDialog onConfirm={handleStartOver} />
               ) : null}
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
               {idx > 0 ? (
                 <Button type="button" variant="ghost" onClick={goBack}>
                   <ArrowLeft className="h-4 w-4" aria-hidden />

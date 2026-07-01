@@ -159,14 +159,18 @@ export function BorderEraFramePicker({
             size="md"
             value={template}
             onChange={onChange}
-            options={specials.map((t) => ({
-              value: t,
-              label: FRAME_TEMPLATE_LABELS[t],
-              leading: <FrameThumb template={t} colorKey={colorKey} />,
-              // Saga's alignment isn't dialed in yet — gate it for now.
-              disabled: t === "saga",
-              badge: t === "saga" ? <SoonBadge /> : undefined,
-            }))}
+            options={specials.map((t) => {
+              // Every M15 special layout is gated for now (alignment WIP) —
+              // only the standard M15 frame ships. Saga stays gated in any era.
+              const comingSoon = era === "m15" || t === "saga";
+              return {
+                value: t,
+                label: FRAME_TEMPLATE_LABELS[t],
+                leading: <FrameThumb template={t} colorKey={colorKey} />,
+                disabled: comingSoon,
+                badge: comingSoon ? <SoonBadge /> : undefined,
+              };
+            })}
           />
         </div>
       ) : null}
