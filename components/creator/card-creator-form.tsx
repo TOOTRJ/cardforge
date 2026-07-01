@@ -21,14 +21,12 @@ import {
   Frame,
   IdCard,
   Image as ImageIcon,
-  Layers,
   Loader2,
   Lock,
   Save,
   ScrollText,
   Send,
   Sparkles,
-  Swords,
   Wand2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -167,14 +165,11 @@ const LEGACY_CARD_DRAFT_STORAGE_KEY = "spellwright:card-draft:v1";
 // Icons for the xl+ vertical step rail (one per StepKey; the "layout" panel's
 // dynamic labels — Adventure / Back face / Flip side — all read as Layers).
 const STEP_RAIL_ICONS: Record<string, React.ReactNode> = {
+  frame: <Frame aria-hidden />,
   identity: <IdCard aria-hidden />,
   pips: <Sparkles aria-hidden />,
-  frame: <Frame aria-hidden />,
   art: <ImageIcon aria-hidden />,
   text: <ScrollText aria-hidden />,
-  abilities: <Swords aria-hidden />,
-  layout: <Layers aria-hidden />,
-  effects: <Wand2 aria-hidden />,
   publish: <Send aria-hidden />,
 };
 
@@ -421,17 +416,10 @@ export function CardCreatorForm({
   const goToIndex = (i: number) => {
     // Every step change disarms Save — see the arming effect below goNext.
     setSaveArmed(false);
-    const clamped = Math.max(0, Math.min(i, steps.length - 1));
-    setCurrent(clamped);
-    // Auto-show the face being edited: the back on the Back-face step (true DFC
-    // only — Adventure/flip/split render both faces at once, so they stay on
-    // front). The user can still click the preview to flip it themselves.
-    const targetKey = steps[clamped]?.key;
-    setPreviewFace(
-      targetKey === "layout" && !isAdventureFrame && watched.has_back_face
-        ? "back"
-        : "front",
-    );
+    setCurrent(Math.max(0, Math.min(i, steps.length - 1)));
+    // Navigating a step always shows the front; the back is reached by adding
+    // it (auto-flips, see onBackFaceAdded) or by clicking the preview to flip.
+    setPreviewFace("front");
   };
   const goToStepKey = (key: StepKey) => {
     const i = steps.findIndex((s) => s.key === key);
@@ -476,7 +464,7 @@ export function CardCreatorForm({
 
   const stepperSteps: StepperStep[] = steps.map((step) => ({
     key: step.key,
-    label: stepLabel(step, stepCtx),
+    label: stepLabel(step),
     description: step.description,
     hasError: stepsWithErrors.has(step.key),
   }));
@@ -1087,55 +1075,59 @@ export function CardCreatorForm({
               />
             ) : null}
 
-            {/* ----- Art panel ----- */}
-            {stepKey === "art" ? <ArtPanel userId={userId} /> : null}
-
-            {/* ----- Text panel ----- */}
-            {stepKey === "text" ? (
-              <TextPanel
-                cardContext={cardContext}
-                aiConfigured={aiConfigured}
-                onAIPatch={handleAIPatch}
-                rulesTextField={rulesTextField}
-                rulesTextRef={rulesTextRef}
-                onInsertSymbol={(token) =>
-                  insertSymbol("rules_text", rulesTextRef, token)
-                }
-              />
-            ) : null}
-
-            {/* ----- Abilities panel ----- */}
-            {stepKey === "abilities" ? (
-              <AbilitiesPanel statVis={statVis} />
-            ) : null}
-
-            {/* ----- Layout (Adventure / Back face) panel ----- */}
-            {stepKey === "layout" ? (
-              <LayoutPanel
+            {/* ----- Art panel (front art + artist credit + back face) ----- */}
+            {stepKey === "art" ? (
+              <ArtPanel
                 userId={userId}
-                hasBackFace={watched.has_back_face}
-                isAdventureFrame={isAdventureFrame}
-                backRulesTextField={backRulesTextField}
-                backRulesTextRef={backRulesTextRef}
-                onInsertSymbol={(token) =>
-                  insertSymbol("back_face.rules_text", backRulesTextRef, token)
+                backFaceSlot={
+                  <LayoutPanel
+                    userId={userId}
+                    hasBackFace={watched.has_back_face}
+                    isAdventureFrame={isAdventureFrame}
+                    backRulesTextField={backRulesTextField}
+                    backRulesTextRef={backRulesTextRef}
+                    onInsertSymbol={(token) =>
+                      insertSymbol(
+                        "back_face.rules_text",
+                        backRulesTextRef,
+                        token,
+                      )
+                    }
+                    onBackFaceAdded={() => setPreviewFace("back")}
+                  />
                 }
-                onBackFaceAdded={() => setPreviewFace("back")}
               />
             ) : null}
 
-            {/* ----- Effects panel ----- */}
-            {stepKey === "effects" ? <EffectsPanel /> : null}
+            {/* ----- Text & stats panel (rules/flavor + type-gated stats) ----- */}
+            {stepKey === "text" ? (
+              <>
+                <TextPanel
+                  cardContext={cardContext}
+                  aiConfigured={aiConfigured}
+                  onAIPatch={handleAIPatch}
+                  rulesTextField={rulesTextField}
+                  rulesTextRef={rulesTextRef}
+                  onInsertSymbol={(token) =>
+                    insertSymbol("rules_text", rulesTextRef, token)
+                  }
+                />
+                <AbilitiesPanel statVis={statVis} />
+              </>
+            ) : null}
 
-            {/* ----- Publish panel ----- */}
+            {/* ----- Publish panel (finish + visibility/set/tags/save) ----- */}
             {stepKey === "publish" ? (
-              <PublishPanel
-                activeChallenge={activeChallenge}
-                ownerUsername={ownerUsername}
-                mySets={mySets}
-                watchedSlug={watched.slug}
-                watchedTitle={watched.title}
-              />
+              <>
+                <EffectsPanel />
+                <PublishPanel
+                  activeChallenge={activeChallenge}
+                  ownerUsername={ownerUsername}
+                  mySets={mySets}
+                  watchedSlug={watched.slug}
+                  watchedTitle={watched.title}
+                />
+              </>
             ) : null}
           </div>
 

@@ -18,14 +18,11 @@ import {
 import { getFrameProfile } from "@/lib/cards/template-layout";
 
 export type StepKey =
+  | "frame"
   | "identity"
   | "pips"
-  | "frame"
   | "art"
   | "text"
-  | "abilities"
-  | "layout"
-  | "effects"
   | "publish";
 
 export type StepContext = {
@@ -135,57 +132,40 @@ const STEP_DEFS: StepDef[] = [
     isVisible: always,
   },
   {
+    // Front artwork, plus (under "More options") the artist credit and the
+    // whole back-face editor — the back face used to be its own step; folding
+    // it in here keeps the stepper short. Its stat fields (P/T etc.) live on
+    // the back-face editor itself, so the "text" step's stat fields are front-
+    // only.
     key: "art",
     label: "Art",
-    description: "Upload & position art",
-    fields: ["artist_credit", "art_url", "art_position"],
+    description: "Artwork, artist & back face",
+    fields: ["artist_credit", "art_url", "art_position", "has_back_face", "back_face"],
     isVisible: always,
   },
   {
+    // Rules + flavor + the front face's stats (P/T for creatures/tokens,
+    // loyalty for planeswalkers, defense for battles). Stats are gated inside
+    // the panel by card type; the step itself is always present.
     key: "text",
-    label: "Text",
-    description: "Rules & flavor",
-    fields: ["rules_text", "flavor_text"],
+    label: "Text & stats",
+    description: "Rules, flavor & combat numbers",
+    fields: [
+      "rules_text",
+      "flavor_text",
+      "power",
+      "toughness",
+      "loyalty",
+      "defense",
+    ],
     isVisible: always,
   },
   {
-    // Stats only exist for types that display them (P/T for creatures/tokens,
-    // loyalty for planeswalkers, defense for battles); spells/etc. hide the
-    // whole panel.
-    key: "abilities",
-    label: "Abilities",
-    description: "Stats & combat numbers",
-    fields: ["power", "toughness", "loyalty", "defense"],
-    isVisible: (ctx) => {
-      const v = statVisibility(ctx.cardType);
-      return v.pt || v.loyalty || v.defense;
-    },
-  },
-  {
-    // Adventure spell (Adventure frame) or the back face (any DFC). Always
-    // present so a back face — and its own art upload — is discoverable on any
-    // frame: with no back face yet it shows an "Add a back face" empty state;
-    // intrinsic-second-face frames (Adventure/flip/split/aftermath) render the
-    // relevant fields directly. Label flips via stepLabel().
-    key: "layout",
-    label: "Back face",
-    description: "The second face",
-    fields: ["has_back_face", "back_face"],
-    isVisible: always,
-  },
-  {
-    // Edits frame_style.finish — error routing for frame_style stays owned by
-    // the "frame" panel (the primary owner), so this panel lists no fields.
-    key: "effects",
-    label: "Effects",
-    description: "Finish & treatments",
-    fields: [],
-    isVisible: always,
-  },
-  {
+    // Finish/treatment (frame_style.finish — error routing stays with the
+    // "frame" panel, so it isn't listed here) plus visibility, set, tags, save.
     key: "publish",
     label: "Publish",
-    description: "Visibility, set & save",
+    description: "Finish, visibility & save",
     fields: ["visibility", "slug", "source_scryfall_id", "tags_text"],
     isVisible: always,
   },
@@ -204,24 +184,16 @@ export function visibleSteps(ctx: StepContext): StepDef[] {
   return STEP_DEFS.filter((step) => step.isVisible(ctx));
 }
 
-/** The display label for a panel — dynamic for the "layout" panel (Adventure
- *  vs Back face). */
-export function stepLabel(step: StepDef, ctx: StepContext): string {
-  if (step.key === "layout") {
-    if (isAdventureFrame(ctx.template)) return "Adventure";
-    const t = normalizeFrameTemplate(ctx.template);
-    if (t === "flip") return "Flip side";
-    if (t === "split") return "Other half";
-    if (t === "aftermath") return "Aftermath";
-    return "Back face";
-  }
+/** The display label for a panel. Static now that the back face lives inside
+ *  the Art step; kept as a function so callers don't need to change. */
+export function stepLabel(step: StepDef): string {
   return step.label;
 }
 
 /** Map every owned field to its panel key, derived from the defs. Used to
  *  route a server validation error to the right panel. Note frame_style maps
- *  to "frame" even though the finish lives on the effects panel (frame is the
- *  primary owner). */
+ *  to "frame" even though the finish now lives on the Publish step (frame is
+ *  the primary owner). */
 export function buildFieldToStep(
   steps: StepDef[] = STEP_DEFS,
 ): Map<keyof FormValues, StepKey> {
