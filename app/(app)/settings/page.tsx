@@ -12,6 +12,7 @@ import { ProfileMediaUploader } from "@/components/auth/profile-media-uploader";
 import { PinnedCardsPicker } from "@/components/auth/pinned-cards-picker";
 import { UsagePanel } from "@/components/settings/usage-panel";
 import { CustomPipsPanel } from "@/components/settings/custom-pips-panel";
+import { ThemePreference } from "@/components/settings/theme-preference";
 import { getPipOverrides } from "@/lib/pips/queries";
 import { DeleteAccountDialog } from "@/components/settings/delete-account-dialog";
 import { BillingPanel } from "@/components/settings/billing-panel";
@@ -159,7 +160,12 @@ export default async function SettingsPage() {
           <div className="flex flex-col gap-3">
             <Row label="Default visibility" value="Private" />
             <Row label="Default rarity" value="Common" />
-            <Row label="Theme" value="Switch via the header toggle" />
+            <div className="flex flex-col gap-2 rounded-md border border-border/60 bg-background/40 px-4 py-3">
+              <span className="text-xs font-semibold uppercase tracking-wider text-subtle">
+                Theme
+              </span>
+              <ThemePreference />
+            </div>
           </div>
         </SurfaceCard>
 

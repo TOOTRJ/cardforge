@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { Coins, Menu, Sparkles, X } from "lucide-react";
+import { Coins, LayoutDashboard, Menu, Sparkles, X } from "lucide-react";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { Button } from "@/components/ui/button";
 import { siteConfig } from "@/lib/site-config";
@@ -89,6 +89,23 @@ export function MobileMenu({
             </DialogPrimitive.Close>
           </div>
 
+          {/* Dashboard sits at the very top of the drawer for signed-in
+              users — the prominent accent button mirrors the desktop header. */}
+          {isAuthed ? (
+            <Link
+              href="/dashboard"
+              onClick={() => setOpen(false)}
+              aria-current={isActive(pathname, "/dashboard") ? "page" : undefined}
+              className={cn(
+                "mb-2 inline-flex items-center gap-2 rounded-md bg-accent px-3 py-2.5 text-sm font-semibold text-accent-foreground transition-all hover:brightness-110",
+                isActive(pathname, "/dashboard") && "ring-2 ring-accent/60",
+              )}
+            >
+              <LayoutDashboard className="h-4 w-4" aria-hidden />
+              Dashboard
+            </Link>
+          ) : null}
+
           <nav className="flex flex-col gap-0.5">
             {visibleItems.map((item) => {
               const active = isActive(pathname, item.href);
@@ -132,6 +149,18 @@ export function MobileMenu({
                 </div>
               ) : null}
               <div className="flex flex-col gap-0.5">
+                <DrawerLink
+                  href="/feed"
+                  label="Feed"
+                  onNav={() => setOpen(false)}
+                  active={isActive(pathname, "/feed")}
+                />
+                <DrawerLink
+                  href="/dashboard/sets"
+                  label="My Sets"
+                  onNav={() => setOpen(false)}
+                  active={isActive(pathname, "/dashboard/sets")}
+                />
                 {username ? (
                   <DrawerLink
                     href={`/profile/${username}`}
