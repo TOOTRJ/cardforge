@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { NavLinks } from "./nav-links";
 import { UserMenu } from "./user-menu";
 import { MobileMenu } from "./mobile-menu";
-import { CommandPaletteTrigger } from "./command-palette-trigger";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { siteConfig } from "@/lib/site-config";
 import { isBillingEnabled } from "@/lib/billing/flags";
@@ -27,19 +26,14 @@ type HeaderUser = {
 };
 
 type SiteHeaderProps = {
-  /** Kept for the ⌘K trigger gating — the palette is only mounted in the
-   *  (app) route group, so showing the trigger elsewhere would be a dead
-   *  shortcut. Nav items themselves no longer depend on variant. */
+  /** Accepted for API stability (callers still pass it), but no longer used:
+   *  the header search was removed and nav items don't depend on variant. */
   variant?: "marketing" | "app";
   user?: HeaderUser | null;
   className?: string;
 };
 
-export function SiteHeader({
-  variant = "marketing",
-  user,
-  className,
-}: SiteHeaderProps) {
+export function SiteHeader({ user, className }: SiteHeaderProps) {
   const isAuthed = Boolean(user);
   const billingOn = isBillingEnabled();
   const unread = user?.unreadNotifications ?? 0;
@@ -81,7 +75,6 @@ export function SiteHeader({
                 </Link>
               ) : null}
               <NotificationBell initialUnread={unread} />
-              {variant === "app" ? <CommandPaletteTrigger /> : null}
               {billingOn && !user?.isPaid ? (
                 <Button
                   asChild

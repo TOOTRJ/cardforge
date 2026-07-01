@@ -42,13 +42,15 @@ export type ProfileWithStats = Profile & {
   public_cards_count: number;
 };
 
+export type PublicCardListSort = "recent" | "popular" | "viewed";
+
 export type PublicCardListOptions = {
   limit?: number;
   offset?: number;
   cardType?: CardType;
   rarity?: Rarity;
   search?: string;
-  sort?: "recent" | "popular";
+  sort?: PublicCardListSort;
   visibility?: "public" | "unlisted" | "all-shareable";
   /** Scryfall provenance filter (Phase 11 chunk 13). When set, restricts
    *  the result to cards imported from this Scryfall id. Powers the
@@ -56,6 +58,11 @@ export type PublicCardListOptions = {
   sourceScryfallId?: string;
   /** Filter to cards carrying this tag (the gallery ?tag= view). */
   tag?: string;
+  /** Color-identity filter. Solid colors match via array containment;
+   *  "colorless" matches an empty identity OR a literal colorless token. */
+  colorIdentity?: ColorIdentity;
+  /** Only cards that are themselves remixes of another card. */
+  remixesOnly?: boolean;
   /** Viewer-independent mode for static/ISR pages: uses the cookie-free
    *  public client and skips the viewer's like-state lookup
    *  (`liked_by_viewer` is always false). Anonymous RLS visibility is
@@ -532,15 +539,20 @@ export async function listPublicCardsRich(
     visibility = "public",
     sourceScryfallId,
     tag,
+    colorIdentity,
+    remixesOnly = false,
     anonymous = false,
   } = options;
 
   try {
     const supabase = anonymous ? createPublicClient() : await createClient();
+    // "viewed" sorts by the materialized view tally in SQL; "recent" (and the
+    // pre-rerank pool for "popular") sort by recency.
+    const orderColumn = sort === "viewed" ? "view_count" : "updated_at";
     let query = supabase
       .from("cards")
       .select("*")
-      .order("updated_at", { ascending: false });
+      .order(orderColumn, { ascending: false });
 
     if (visibility === "all-shareable") {
       query = query.in(
@@ -562,6 +574,20 @@ export async function listPublicCardsRich(
     }
     if (tag) {
       query = query.contains("tags", [tag]);
+    }
+    if (remixesOnly) {
+      query = query.not("parent_card_id", "is", null);
+    }
+    if (colorIdentity) {
+      if (colorIdentity === "colorless") {
+        // Colorless cards are stored inconsistently — some as an empty
+        // identity, some with an explicit "colorless" token. Match both.
+        query = query.or(
+          "color_identity.eq.{},color_identity.cs.{colorless}",
+        );
+      } else {
+        query = query.contains("color_identity", [colorIdentity]);
+      }
     }
     if (search?.trim()) {
       // PostgREST's `.or(...)` argument is a structural string: commas
@@ -590,7 +616,13 @@ export async function listPublicCardsRich(
     const { data, error } = await query;
     if (error || !data) return [];
 
-    const enriched = await attachStats(data, sort, { anonymous });
+    // Only "popular" re-ranks in-process; "recent"/"viewed" are already
+    // ordered by the SQL query above.
+    const enriched = await attachStats(
+      data,
+      sort === "popular" ? "popular" : "recent",
+      { anonymous },
+    );
     return enriched.slice(0, limit);
   } catch {
     return [];

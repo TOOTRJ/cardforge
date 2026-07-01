@@ -26,8 +26,10 @@ import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
   CARD_TYPE_VALUES,
+  COLOR_IDENTITY_VALUES,
   RARITY_VALUES,
   type CardType,
+  type ColorIdentity,
   type Rarity,
 } from "@/types/card";
 
@@ -43,11 +45,15 @@ type GalleryPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
+type GallerySort = "recent" | "popular" | "viewed";
+
 type ParsedFilters = {
   cardType: CardType | undefined;
   rarity: Rarity | undefined;
+  colorIdentity: ColorIdentity | undefined;
   search: string | undefined;
-  sort: "recent" | "popular";
+  sort: GallerySort;
+  remixesOnly: boolean;
   page: number;
   /** Scryfall provenance filter (Phase 11 chunk 13). When set, the
    *  gallery shows only cards imported from this Scryfall id. */
@@ -58,10 +64,12 @@ type ParsedFilters = {
   raw: {
     type: string | null;
     rarity: string | null;
+    color: string | null;
     q: string | null;
     sort: string | null;
     source: string | null;
     tag: string | null;
+    remixes: string | null;
   };
 };
 
@@ -74,10 +82,12 @@ function buildHref(filters: ParsedFilters, nextPage: number): string {
   const qs = new URLSearchParams();
   if (filters.raw.type) qs.set("type", filters.raw.type);
   if (filters.raw.rarity) qs.set("rarity", filters.raw.rarity);
+  if (filters.raw.color) qs.set("color", filters.raw.color);
   if (filters.raw.q) qs.set("q", filters.raw.q);
   if (filters.raw.sort) qs.set("sort", filters.raw.sort);
   if (filters.raw.source) qs.set("source", filters.raw.source);
   if (filters.raw.tag) qs.set("tag", filters.raw.tag);
+  if (filters.raw.remixes) qs.set("remixes", filters.raw.remixes);
   if (nextPage > 1) qs.set("page", String(nextPage));
   const query = qs.toString();
   return query ? `/gallery?${query}` : "/gallery";
@@ -90,11 +100,14 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
   const params = await searchParams;
   const cardTypeParam = firstString(params.type);
   const rarityParam = firstString(params.rarity);
+  const colorParam = firstString(params.color);
   const searchParam = firstString(params.q);
   const sortParam = firstString(params.sort);
   const pageParam = firstString(params.page);
   const sourceParam = firstString(params.source);
   const tagParam = firstString(params.tag);
+  const remixesParam = firstString(params.remixes);
+  const remixesOnly = remixesParam === "1";
   const tag = tagParam
     ? tagParam.toLowerCase().trim().slice(0, 30) || undefined
     : undefined;
@@ -117,8 +130,17 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
   )
     ? (rarityParam as Rarity)
     : undefined;
-  const sort: "recent" | "popular" =
-    sortParam === "popular" ? "popular" : "recent";
+  const colorIdentity = (COLOR_IDENTITY_VALUES as readonly string[]).includes(
+    colorParam ?? "",
+  )
+    ? (colorParam as ColorIdentity)
+    : undefined;
+  const sort: GallerySort =
+    sortParam === "popular"
+      ? "popular"
+      : sortParam === "viewed"
+        ? "viewed"
+        : "recent";
 
   const pageRaw = Number.parseInt(pageParam ?? "1", 10);
   const page = Number.isFinite(pageRaw) && pageRaw >= 1 ? pageRaw : 1;
@@ -126,18 +148,22 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
   const filters: ParsedFilters = {
     cardType,
     rarity,
+    colorIdentity,
     search: searchParam ?? undefined,
     sort,
+    remixesOnly,
     page,
     sourceScryfallId,
     tag,
     raw: {
       type: cardTypeParam,
       rarity: rarityParam,
+      color: colorIdentity ?? null,
       q: searchParam,
       sort: sortParam,
       source: sourceScryfallId ?? null,
       tag: tag ?? null,
+      remixes: remixesOnly ? "1" : null,
     },
   };
 
@@ -191,7 +217,7 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
           // the skeletons reappear during the new fetch instead of holding
           // the previous result.
           <Suspense
-            key={`${filters.raw.type ?? ""}-${filters.raw.rarity ?? ""}-${filters.raw.q ?? ""}-${filters.raw.sort ?? ""}-${filters.raw.source ?? ""}-${filters.raw.tag ?? ""}-${page}`}
+            key={`${filters.raw.type ?? ""}-${filters.raw.rarity ?? ""}-${filters.raw.color ?? ""}-${filters.raw.q ?? ""}-${filters.raw.sort ?? ""}-${filters.raw.source ?? ""}-${filters.raw.tag ?? ""}-${filters.raw.remixes ?? ""}-${page}`}
             fallback={<GallerySkeletonGrid count={PAGE_SIZE} />}
           >
             <GalleryResults filters={filters} />
@@ -221,14 +247,25 @@ async function GalleryTrending() {
 }
 
 async function GalleryResults({ filters }: { filters: ParsedFilters }) {
-  const { cardType, rarity, search, sort, page, sourceScryfallId, tag } =
-    filters;
+  const {
+    cardType,
+    rarity,
+    colorIdentity,
+    search,
+    sort,
+    remixesOnly,
+    page,
+    sourceScryfallId,
+    tag,
+  } = filters;
   const [cards, viewer] = await Promise.all([
     listPublicCardsRich({
       cardType,
       rarity,
+      colorIdentity,
       search,
       sort,
+      remixesOnly,
       sourceScryfallId,
       tag,
       limit: PAGE_SIZE,
@@ -244,7 +281,13 @@ async function GalleryResults({ filters }: { filters: ParsedFilters }) {
         icon={Sparkles}
         title="No cards match"
         description={
-          cardType || rarity || search || sourceScryfallId || tag
+          cardType ||
+          rarity ||
+          colorIdentity ||
+          search ||
+          sourceScryfallId ||
+          tag ||
+          remixesOnly
             ? "Try clearing the filters above, or be the first to publish a card that matches."
             : "Be the first to publish a public card — it'll show up here for everyone."
         }
@@ -269,9 +312,11 @@ async function GalleryResults({ filters }: { filters: ParsedFilters }) {
     page === 1 &&
     !cardType &&
     !rarity &&
+    !colorIdentity &&
     !search &&
     !sourceScryfallId &&
     !tag &&
+    !remixesOnly &&
     sort === "recent";
 
   return (
