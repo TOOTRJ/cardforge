@@ -75,6 +75,7 @@ import {
 } from "@/types/card";
 import { normalizeFrameTemplate } from "@/lib/cards/card-display";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
+import type { FrameProfileOverridesMap } from "@/lib/cards/profile-override";
 import {
   eraForTemplate,
   isTypeDerivedStandard,
@@ -152,6 +153,9 @@ type CardCreatorFormProps = {
   /** Verified (template/color) combo keys from frame_reviews — special
    *  layouts publish per color once verified in /admin/frame-compare. */
   verifiedFrameKeys?: string[];
+  /** Admin frame-layout overrides (server-fetched) — keeps the editor's
+   *  live preview identical to the gallery render and the bake. */
+  profileOverrides?: FrameProfileOverridesMap | null;
 };
 
 // Step membership + field→step routing now live in lib/creator/steps.ts (pure
@@ -200,6 +204,7 @@ export function CardCreatorForm({
   activeChallenge = null,
   defaultArtistCredit = "",
   verifiedFrameKeys = [],
+  profileOverrides = null,
 }: CardCreatorFormProps) {
   const router = useRouter();
   const upgrade = useUpgradeModal();
@@ -1023,6 +1028,7 @@ export function CardCreatorForm({
   const previewProps = {
     staticInEditor: true,
     pipOverrides,
+    profileOverrides,
     title: watched.title,
     cost: watched.cost,
     cardType: cardTypeForPreview,

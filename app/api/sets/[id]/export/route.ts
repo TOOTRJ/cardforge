@@ -3,6 +3,7 @@ import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { requireTier, UpgradeRequiredError } from "@/lib/billing/entitlements";
 import { renderCardImage } from "@/lib/render/card-image";
+import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { buildSetPdf } from "@/lib/render/card-pdf";
 import {
   isCardType,
@@ -102,7 +103,9 @@ export async function GET(
     const card = byId.get(cardId);
     if (!card) continue;
     try {
-      const img = renderCardImage(toPreviewData(card), "hd", {
+      const img = renderCardImage(
+        { ...toPreviewData(card), profileOverrides: await getFrameProfileOverrides() },
+        "hd", {
         watermark: !entitlements.removeWatermark,
       });
       pngs.push(new Uint8Array(await img.arrayBuffer()));

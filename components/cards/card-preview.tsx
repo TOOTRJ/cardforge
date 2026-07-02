@@ -32,7 +32,6 @@ import {
   type SagaChapter,
 } from "@/lib/cards/card-display";
 import {
-  getFrameProfile,
   resolveColorAsset,
   type FrameProfile,
   type Rect,
@@ -40,6 +39,10 @@ import {
   type StatSlot,
   type TextSlot,
 } from "@/lib/cards/template-layout";
+import {
+  resolveFrameProfile,
+  type FrameProfileOverridesMap,
+} from "@/lib/cards/profile-override";
 import type {
   ArtPosition,
   CardBackFace,
@@ -96,6 +99,10 @@ export type CardPreviewData = {
   /** The card OWNER's custom pip icons — cost pips render these instead of
    *  the standard mana-font glyphs (preview AND bake read this field). */
   pipOverrides?: PipOverrides | null;
+  /** Admin frame-layout overrides (frame_profile_overrides table), keyed by
+   *  template — merged over the code profiles by resolveFrameProfile so the
+   *  live preview and the Satori bake always agree. Absent = code defaults. */
+  profileOverrides?: FrameProfileOverridesMap | null;
 };
 
 type CardPreviewProps = CardPreviewData & {
@@ -180,6 +187,7 @@ export function CardPreview({
   setIconCode,
   backFace,
   pipOverrides,
+  profileOverrides,
   face,
   onFaceChange,
   flipOnClick = false,
@@ -188,7 +196,7 @@ export function CardPreview({
   staticInEditor = false,
 }: CardPreviewProps) {
   const template = normalizeFrameTemplate(frameStyle?.template);
-  const layout = getFrameProfile(template);
+  const layout = resolveFrameProfile(template, profileOverrides);
   const finish: CardFinish = frameStyle?.finish ?? "regular";
 
   const frontFace: FaceData = {
@@ -273,7 +281,7 @@ export function CardPreview({
         template: backCardTemplate,
         colorIdentity: backCard.colorIdentity ?? [],
         rarity: backCard.rarity ?? null,
-        layout: getFrameProfile(backCardTemplate),
+        layout: resolveFrameProfile(backCardTemplate, backCard.profileOverrides ?? profileOverrides),
         finish: backCard.frameStyle?.finish ?? "regular",
         staticInEditor,
         setIconUrl: backCard.setIconUrl ?? null,

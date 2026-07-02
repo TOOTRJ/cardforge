@@ -17,6 +17,7 @@ import { renderCardImage, type RenderPreset } from "@/lib/render/card-image";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import { getPipOverrides } from "@/lib/pips/queries";
+import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 
 // ---------------------------------------------------------------------------
 // /api/cards/[id]/png — Download a rendered PNG of a card
@@ -78,8 +79,10 @@ export async function GET(
   }
 
   const pipOverrides = await getPipOverrides(card.owner_id);
+  const profileOverrides = await getFrameProfileOverrides();
   const previewData: CardPreviewData = {
     pipOverrides,
+    profileOverrides,
     title: card.title,
     cost: card.cost,
     cardType: isCardType(card.card_type) ? (card.card_type as CardType) : null,
@@ -130,6 +133,13 @@ export async function GET(
         watermark ? "wm" : "clean",
         CARD_LAYOUT_VERSION,
         JSON.stringify(pipOverrides ?? null),
+        // Frame-layout overrides change baked geometry without a code
+        // deploy — fingerprint the active template's override.
+        JSON.stringify(
+          profileOverrides[
+            (previewData.frameStyle?.template as string) ?? ""
+          ] ?? null,
+        ),
       ].join("|"),
     )
     .digest("hex")

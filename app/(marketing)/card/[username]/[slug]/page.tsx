@@ -56,6 +56,7 @@ import {
   type ProfileWithStats,
 } from "@/lib/cards/queries";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
+import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { countPublicRemixesBySource } from "@/lib/cards/source-queries";
 import { listCommentsForCard } from "@/lib/cards/comments-queries";
 import { getCurrentUser } from "@/lib/supabase/server";
@@ -301,6 +302,7 @@ export default async function CardDetailPage({
             title={card.title}
             cost={card.cost}
             pipOverrides={pipOverrides}
+            profileOverrides={await getFrameProfileOverrides()}
             cardType={card.card_type}
             supertype={card.supertype}
             subtypes={card.subtypes}

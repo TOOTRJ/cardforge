@@ -9,6 +9,7 @@ import {
   type CardRowForBake,
 } from "@/lib/cards/bake-core";
 import { getPipOverrides } from "@/lib/pips/queries";
+import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
 
 // ---------------------------------------------------------------------------
@@ -98,7 +99,8 @@ export async function POST(request: Request) {
       // Same render contract as the save-time bake: HD, brand mark on the
       // public gallery surface regardless of owner tier.
       const pipOverrides = await getPipOverrides(row.owner_id);
-      const response = renderCardImage(rowToPreviewData(row, pipOverrides), "hd", {
+      const profileOverrides = await getFrameProfileOverrides();
+      const response = renderCardImage(rowToPreviewData(row, pipOverrides, profileOverrides), "hd", {
         watermark: isBillingEnabled(),
       });
       const pngBytes = await response.arrayBuffer();

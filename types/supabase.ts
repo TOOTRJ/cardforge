@@ -771,6 +771,8 @@ export type Database = {
           verified_at: string | null;
           verified_by: string | null;
           reference_scryfall_id: string | null;
+          reference_name: string | null;
+          reference_set: string | null;
         };
         Insert: {
           template: string;
@@ -779,6 +781,8 @@ export type Database = {
           verified_at?: string | null;
           verified_by?: string | null;
           reference_scryfall_id?: string | null;
+          reference_name?: string | null;
+          reference_set?: string | null;
         };
         Update: {
           template?: string;
@@ -787,6 +791,29 @@ export type Database = {
           verified_at?: string | null;
           verified_by?: string | null;
           reference_scryfall_id?: string | null;
+          reference_name?: string | null;
+          reference_set?: string | null;
+        };
+        Relationships: [];
+      };
+      frame_profile_overrides: {
+        Row: {
+          template: string;
+          overrides: Json;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          template: string;
+          overrides: Json;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          template?: string;
+          overrides?: Json;
+          updated_at?: string;
+          updated_by?: string | null;
         };
         Relationships: [];
       };
