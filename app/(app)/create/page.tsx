@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { CardCreatorForm } from "@/components/creator/card-creator-form";
 import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
+import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import {
   StartWithHero,
   FORM_SCROLL_TARGET_ID,
@@ -115,6 +116,7 @@ export default async function CreatePage({
           aiConfigured={isAIConfigured()}
           pipOverrides={await getPipOverrides(user.id)}
           verifiedFrameKeys={await getVerifiedFrameKeys()}
+          profileOverrides={await getFrameProfileOverrides()}
           initialTag={initialTag}
           activeChallenge={await getCurrentChallenge()}
           defaultArtistCredit={profile?.display_name || profile?.username || ""}

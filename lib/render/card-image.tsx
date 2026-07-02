@@ -56,13 +56,13 @@ import {
   getPlateDataUrlForPath,
 } from "@/lib/render/card-frames";
 import {
-  getFrameProfile,
   type FrameProfile,
   type Rect,
   type SlotAlign,
   type StatSlot,
   type TextSlot,
 } from "@/lib/cards/template-layout";
+import { resolveFrameProfile } from "@/lib/cards/profile-override";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import type { CardBackFace, ColorIdentity, Rarity } from "@/types/card";
 
@@ -152,7 +152,7 @@ function CardImage({
   watermark: boolean;
 }) {
   const template = normalizeFrameTemplate(card.frameStyle?.template);
-  const layout = getFrameProfile(template);
+  const layout = resolveFrameProfile(template, card.profileOverrides);
   const finish = card.frameStyle?.finish ?? "regular";
   const isFoil = finish === "foil";
   const isEtched = finish === "etched";
@@ -1535,7 +1535,7 @@ export function renderCardImage(
   // preview's landscape container. All slot rects are % of the card, so they
   // resolve correctly against the swapped dimensions.
   const landscape =
-    getFrameProfile(normalizeFrameTemplate(card.frameStyle?.template))
+    resolveFrameProfile(normalizeFrameTemplate(card.frameStyle?.template), card.profileOverrides)
       .orientation === "landscape";
   const width = landscape ? base.height : base.width;
   const height = landscape ? base.width : base.height;

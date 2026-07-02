@@ -10,6 +10,11 @@
 // then run `node scripts/rebake-renders.mjs` so stored gallery PNGs catch up
 // (detail pages and downloads always render live and need no sweep).
 //
+// DB-driven geometry (frame_profile_overrides, edited in /admin/frame-
+// compare) does NOT bump this constant — the save action marks affected
+// cards stale directly via `layout_version = null`, which the same rebake
+// sweep picks up.
+//
 // History:
 //   (null) — renders baked before versioning existed (pre 2026-06-09)
 //   2      — creation-audit pass: Beleren/MPlantin-Italic, fit-based text

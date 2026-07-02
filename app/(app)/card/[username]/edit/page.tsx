@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { CardCreatorForm } from "@/components/creator/card-creator-form";
 import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
+import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { DownloadModal } from "@/components/cards/download-modal";
 import { AddToSetButton } from "@/components/sets/add-to-set-button";
 import { PageHeader } from "@/components/layout/page-header";
@@ -151,6 +152,7 @@ export default async function EditCardPage({ params }: EditCardPageProps) {
           aiConfigured={isAIConfigured()}
           pipOverrides={await getPipOverrides(user.id)}
           verifiedFrameKeys={await getVerifiedFrameKeys()}
+          profileOverrides={await getFrameProfileOverrides()}
           activeChallenge={await getCurrentChallenge()}
         />
       </div>

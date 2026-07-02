@@ -12,6 +12,7 @@ import {
   type CardRowForBake,
 } from "@/lib/cards/bake-core";
 import { getPipOverrides } from "@/lib/pips/queries";
+import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
 
 // ---------------------------------------------------------------------------
@@ -117,7 +118,12 @@ export async function bakeCardRender(
   }
 
   const pipOverrides = await getPipOverrides(card.owner_id);
-  const previewData = rowToPreviewData(card as CardRowForBake, pipOverrides);
+  const profileOverrides = await getFrameProfileOverrides();
+  const previewData = rowToPreviewData(
+    card as CardRowForBake,
+    pipOverrides,
+    profileOverrides,
+  );
 
   let pngBytes: ArrayBuffer;
   try {

@@ -12,6 +12,7 @@ import {
   type Rarity,
 } from "@/types/card";
 import type { CardPreviewData } from "@/components/cards/card-preview";
+import type { FrameProfileOverridesMap } from "@/lib/cards/profile-override";
 import type { PipOverrides } from "@/lib/pips/override";
 
 // ---------------------------------------------------------------------------
@@ -54,9 +55,11 @@ export const BAKE_SELECT_COLUMNS =
 export function rowToPreviewData(
   card: CardRowForBake,
   pipOverrides: PipOverrides | null = null,
+  profileOverrides: FrameProfileOverridesMap | null = null,
 ): CardPreviewData {
   return {
     pipOverrides,
+    profileOverrides,
     title: card.title,
     cost: card.cost,
     cardType: isCardType(card.card_type) ? (card.card_type as CardType) : null,
