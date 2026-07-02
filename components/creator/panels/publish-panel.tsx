@@ -17,6 +17,7 @@ import {
   inputClass,
 } from "@/components/creator/field-group";
 import { mergeTag, parseTags, removeTag } from "@/lib/creator/card-fields";
+import type { FrameProfileOverridesMap } from "@/lib/cards/profile-override";
 import { BackFacePicker } from "@/components/creator/back-face-picker";
 import { ChallengeBriefDialog } from "@/components/creator/challenge-brief-dialog";
 import { EffectsPanel } from "@/components/creator/panels/effects-panel";
@@ -54,6 +55,7 @@ export type CardSetOption = {
 };
 
 type PublishPanelProps = {
+  profileOverrides?: FrameProfileOverridesMap | null;
   /** The currently running challenge, if any — renders the entry toggle. */
   activeChallenge?: Challenge | null;
   /** The current user's sets — populates the "Add to set" picker. */
@@ -65,6 +67,7 @@ type PublishPanelProps = {
 };
 
 export function PublishPanel({
+  profileOverrides = null,
   activeChallenge,
   mySets,
   myCards,
@@ -225,6 +228,7 @@ export function PublishPanel({
           </FieldGroup>
 
           <BackFacePicker
+            profileOverrides={profileOverrides}
             myCards={myCards}
             value={backCardId}
             onChange={(id) =>

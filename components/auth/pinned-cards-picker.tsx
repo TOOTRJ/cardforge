@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Check, Pin, PinOff } from "lucide-react";
 import { BakedCardThumbnail } from "@/components/cards/baked-card-thumbnail";
+import type { FrameProfileOverridesMap } from "@/lib/cards/profile-override";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { updatePinnedCardsAction } from "@/app/(app)/settings/actions";
@@ -21,11 +22,13 @@ import type { CardWithStats } from "@/lib/cards/queries";
 type PinnedCardsPickerProps = {
   cards: CardWithStats[];
   initialPinned: string[];
+  profileOverrides?: FrameProfileOverridesMap | null;
 };
 
 export function PinnedCardsPicker({
   cards,
   initialPinned,
+  profileOverrides = null,
 }: PinnedCardsPickerProps) {
   const [selected, setSelected] = useState<string[]>(initialPinned);
   const [error, setError] = useState<string | null>(null);
@@ -146,6 +149,7 @@ export function PinnedCardsPicker({
                   renderedImageUrl={card.rendered_image_url}
                   title={card.title}
                   previewData={{
+                    profileOverrides,
                     title: card.title,
                     cost: card.cost,
                     cardType: card.card_type,

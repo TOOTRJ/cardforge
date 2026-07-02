@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { ArrowLeft, PackageOpen, Pencil } from "lucide-react";
 import { BakedCardThumbnail } from "@/components/cards/baked-card-thumbnail";
+import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { CardPreviewSkeleton } from "@/components/cards/card-preview-skeleton";
 import { CardHoverEffect } from "@/components/cards/card-hover-effect";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -226,6 +227,7 @@ async function SetBody({
   isOwner: boolean;
   emitJsonLd: boolean;
 }) {
+  const profileOverrides = await getFrameProfileOverrides();
   const items = await listCardsInSet(setId);
   const analytics = computeSetAnalytics(items.map((i) => i.card));
 
@@ -299,6 +301,7 @@ async function SetBody({
                       renderedImageUrl={card.rendered_image_url}
                       title={card.title}
                       previewData={{
+                        profileOverrides,
                         title: card.title,
                         cost: card.cost,
                         cardType: card.card_type,

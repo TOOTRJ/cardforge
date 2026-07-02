@@ -4,6 +4,7 @@ import { type MouseEvent } from "react";
 import Link from "next/link";
 import { Check } from "lucide-react";
 import { BakedCardThumbnail } from "@/components/cards/baked-card-thumbnail";
+import type { FrameProfileOverridesMap } from "@/lib/cards/profile-override";
 import { CardHoverEffect } from "@/components/cards/card-hover-effect";
 import { cn } from "@/lib/utils";
 import type { ArtPosition, FrameStyle } from "@/types/card";
@@ -26,6 +27,7 @@ import type { listMyCards } from "@/lib/cards/queries";
 export type DashboardCard = Awaited<ReturnType<typeof listMyCards>>[number];
 
 type Props = {
+  profileOverrides?: FrameProfileOverridesMap | null;
   card: DashboardCard;
   isSelected: boolean;
   /** When true, a plain click toggles selection instead of navigating, and
@@ -46,6 +48,7 @@ type Props = {
 
 export function DashboardCardTile({
   card,
+  profileOverrides = null,
   isSelected,
   selectMode,
   enableViewTransition = true,
@@ -97,6 +100,7 @@ export function DashboardCardTile({
               renderedImageUrl={card.rendered_image_url}
               title={card.title}
               previewData={{
+                profileOverrides,
                 title: card.title,
                 cost: card.cost,
                 cardType: card.card_type,
