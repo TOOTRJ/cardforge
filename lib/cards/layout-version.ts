@@ -35,6 +35,9 @@
 //            prints), P/T plate reshaped to the real slim lozenge
 //            (89.3–95.1%H, digits at 86%W/91.9%H, cap 3.75%W), footer moved
 //            down+left onto the real artist line (96.2%H / 6.5%W)
+//   12     — M15 title/type right edge 94 → 92.2%W: pips and set symbol were
+//            ~1.8% too far right — the ~94% dark cluster is the bar's right
+//            bevel shading, not the pip edge (confirmed on 4 scans)
 // ---------------------------------------------------------------------------
 
-export const CARD_LAYOUT_VERSION = 11;
+export const CARD_LAYOUT_VERSION = 12;

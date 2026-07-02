@@ -229,9 +229,10 @@ const M15: FrameProfile = {
   artSlot: { topPct: 11.4, leftPct: 7.8, widthPct: 84.4, heightPct: 44.0 },
   title: {
     // 7-card scan sweep: title ink starts at 8.3–8.9% of card width (avg
-    // 8.55 — the earlier 7.9 was a scan-window artifact) and the cost pips
-    // end at ~94%. Vertical center matches the print within 0.05%.
-    rect: { topPct: 4.8, leftPct: 8.5, widthPct: 85.5, heightPct: 6.0 },
+    // 8.55). Cost pips end at 92.2%W — the dark cluster at ~94% that an
+    // earlier pass took for the pip edge is the name bar's right bevel
+    // shading (identical in every card's title AND type band).
+    rect: { topPct: 4.8, leftPct: 8.5, widthPct: 83.7, heightPct: 6.0 },
     sizePct: 0.05,
     colorHex: INK_DARK,
     weight: 600,
@@ -243,7 +244,9 @@ const M15: FrameProfile = {
     // its cap height is ~86% of the title's — real M15 type lines are much
     // larger than the old 0.034. Long lines shrink via fitSingleLineSizePct
     // instead of ellipsizing. Shared by snow/devoid.
-    rect: { topPct: 56.5, leftPct: 8.5, widthPct: 85.5, heightPct: 5.2 },
+    // Right edge 92.2%W: the real set symbol's ink ends at ~92%W (685px on
+    // the 745px scans), well left of the bar's bevel shading.
+    rect: { topPct: 56.5, leftPct: 8.5, widthPct: 83.7, heightPct: 5.2 },
     sizePct: 0.0435,
     colorHex: INK_DARK_SOFT,
     weight: 600,
