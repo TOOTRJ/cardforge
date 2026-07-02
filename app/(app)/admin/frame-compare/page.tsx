@@ -12,6 +12,7 @@ import {
 } from "@/components/admin/frame-review-checklist";
 import { FrameVerifyCheckbox } from "@/components/admin/frame-verify-checkbox";
 import { FrameReferencePicker } from "@/components/admin/frame-reference-picker";
+import { FrameGuide } from "@/components/admin/frame-guide";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import {
   FRAME_COLOR_KEYS,
@@ -95,17 +96,26 @@ export default async function AdminFrameComparePage({
       ? await buildFrameComparePayload(reference.scryfallId, template)
       : null;
 
-    // Fall back to sample content when there's no reference (or the lookup
-    // failed) — the frame can still be eyeballed.
-    const preview =
-      payload?.preview ??
-      (sampleFramePreview(template, color) as CardPreviewData);
-
     const verified = review?.verified ?? false;
     const overrides = await getFrameProfileOverrides();
 
+    // Fall back to sample content when there's no reference (or the lookup
+    // failed) — the frame can still be eyeballed. Saved layout overrides are
+    // attached so this page renders EXACTLY what users see (the editor's
+    // draft supersedes them while editing).
+    const basePreview =
+      payload?.preview ??
+      (sampleFramePreview(template, color) as CardPreviewData);
+    const preview: CardPreviewData = { ...basePreview, profileOverrides: overrides };
+
     return (
       <DashboardShell>
+        <Link
+          href="/admin/frame-compare"
+          className="mb-4 inline-flex items-center gap-1.5 rounded-md border border-border/50 px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:border-border-strong hover:text-foreground"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" aria-hidden /> Back to all frames
+        </Link>
         <PageHeader
           eyebrow="Admin · Frame compare"
           title={`${FRAME_TEMPLATE_LABELS[template]} · ${color.toUpperCase()}`}
@@ -127,17 +137,13 @@ export default async function AdminFrameComparePage({
                 verified={verified}
                 withLabel
               />
-              <Link
-                href="/admin/frame-compare"
-                className="inline-flex items-center gap-1 text-xs font-medium text-muted underline-offset-2 hover:text-foreground hover:underline"
-              >
-                <ArrowLeft className="h-3.5 w-3.5" aria-hidden /> All frames
-              </Link>
             </span>
           }
         />
-        <div className="mt-10">
+        <div className="mt-6 flex flex-col gap-4">
+          <FrameGuide />
           <FrameCompare
+            key={`${template}/${color}/${JSON.stringify(overrides[template] ?? null)}`}
             preview={preview}
             scanUrl={payload?.scanUrl ?? null}
             scanAlt={`Official scan of ${reference?.name ?? "reference card"}`}
@@ -210,7 +216,8 @@ export default async function AdminFrameComparePage({
           </Badge>
         }
       />
-      <div className="mt-10">
+      <div className="mt-6 flex flex-col gap-4">
+        <FrameGuide defaultOpen />
         <FrameReviewChecklist eras={eras} />
       </div>
     </DashboardShell>
