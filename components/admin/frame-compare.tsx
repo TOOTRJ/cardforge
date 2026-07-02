@@ -1,20 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { CardPreview } from "@/components/cards/card-preview";
+import { CardPreview, type CardPreviewData } from "@/components/cards/card-preview";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { cn } from "@/lib/utils";
-import type { FrameReferenceCard } from "@/lib/cards/frame-reference-cards";
 
 // ---------------------------------------------------------------------------
 // FrameCompare — overlays a real Scryfall scan on our rendered frame so
-// alignment/typography drift is visible at a glance.
+// alignment/typography drift is visible at a glance. One (template, color)
+// combination per view; the combo is picked on the /admin/frame-compare
+// checklist.
 //
 // Workflow (difference mode is the sharp tool):
-//   1. Pick an era. 2. Switch to "difference" — anywhere the two renders
+//   1. Open a combo. 2. Switch to "difference" — anywhere the two renders
 //   agree goes black; misaligned text/boxes glow. 3. Nudge the relevant
 //   FrameProfile rects in lib/cards/template-layout.ts, hot-reload, repeat.
+//   4. When it reads near-perfect, check the verify box (page header).
 //
 // The scan comes as a 745×1040 PNG (5:7, same aspect as our card box), so
 // stretching it over the preview container lines the two up 1:1.
@@ -23,40 +24,29 @@ import type { FrameReferenceCard } from "@/lib/cards/frame-reference-cards";
 type Mode = "overlay" | "side-by-side" | "difference";
 
 type FrameCompareProps = {
-  references: Array<Pick<FrameReferenceCard, "key" | "label">>;
-  selected: FrameReferenceCard;
-  /** 745×1040 PNG url from Scryfall for the selected printing. */
-  referenceImageUrl: string | null;
+  preview: CardPreviewData;
+  /** 745×1040 PNG url from Scryfall for the reference printing; null when
+   *  the combo has no real printing (sample content, no overlay). */
+  scanUrl: string | null;
+  scanAlt: string;
 };
 
 const CARD_WIDTH_PX = 372.5; // half of 745 — fits two side by side on laptops
 const ZOOMED_WIDTH_PX = 745;
 
-export function FrameCompare({
-  references,
-  selected,
-  referenceImageUrl,
-}: FrameCompareProps) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+export function FrameCompare({ preview, scanUrl, scanAlt }: FrameCompareProps) {
   const [mode, setMode] = useState<Mode>("overlay");
   const [opacity, setOpacity] = useState(50);
   const [zoomed, setZoomed] = useState(false);
 
   const width = zoomed ? ZOOMED_WIDTH_PX : CARD_WIDTH_PX;
 
-  const selectRef = (key: string) => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("ref", key);
-    router.replace(`?${params.toString()}`);
-  };
-
   // `isolate` caps CardPreview's internal z-indexed layers inside their own
   // stacking context — without it the card's text layers paint ABOVE the
   // scan overlay regardless of DOM order.
   const ourCard = (
     <div style={{ width }} className="isolate shrink-0">
-      <CardPreview {...selected.preview} staticInEditor />
+      <CardPreview {...preview} staticInEditor />
     </div>
   );
 
@@ -64,21 +54,6 @@ export function FrameCompare({
     <div className="flex flex-col gap-4">
       {/* Controls */}
       <SurfaceCard className="flex flex-wrap items-center gap-4 p-4">
-        <label className="flex items-center gap-2 text-sm text-muted">
-          Reference
-          <select
-            value={selected.key}
-            onChange={(event) => selectRef(event.target.value)}
-            className="h-8 rounded-md border border-border/50 bg-background/80 px-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary-bright/40"
-          >
-            {references.map((ref) => (
-              <option key={ref.key} value={ref.key}>
-                {ref.label}
-              </option>
-            ))}
-          </select>
-        </label>
-
         <div
           role="radiogroup"
           aria-label="Comparison mode"
@@ -91,11 +66,13 @@ export function FrameCompare({
               role="radio"
               aria-checked={mode === m}
               onClick={() => setMode(m)}
+              disabled={!scanUrl && m !== "side-by-side"}
               className={cn(
                 "px-3 py-1.5 text-xs font-medium capitalize transition-colors",
                 mode === m
                   ? "bg-primary/20 text-foreground"
                   : "text-muted hover:text-foreground",
+                !scanUrl && m !== "side-by-side" && "opacity-40",
               )}
             >
               {m}
@@ -103,7 +80,7 @@ export function FrameCompare({
           ))}
         </div>
 
-        {mode === "overlay" ? (
+        {mode === "overlay" && scanUrl ? (
           <label className="flex items-center gap-2 text-sm text-muted">
             Scan opacity
             <input
@@ -129,34 +106,39 @@ export function FrameCompare({
           />
           2× zoom
         </label>
+
+        {!scanUrl ? (
+          <span className="text-xs text-subtle">
+            No real printing exists for this combination — eyeball the sample
+            render.
+          </span>
+        ) : null}
       </SurfaceCard>
 
       {/* Canvas */}
       <div className="flex flex-wrap items-start gap-6 overflow-x-auto pb-4">
-        {mode === "side-by-side" ? (
+        {mode === "side-by-side" || !scanUrl ? (
           <>
             <figure className="flex flex-col gap-2">
               <figcaption className="text-[11px] uppercase tracking-wider text-subtle">
-                Our render — {selected.template}
+                Our render
               </figcaption>
               {ourCard}
             </figure>
-            <figure className="flex flex-col gap-2">
-              <figcaption className="text-[11px] uppercase tracking-wider text-subtle">
-                Scryfall scan
-              </figcaption>
-              {referenceImageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
+            {scanUrl ? (
+              <figure className="flex flex-col gap-2">
+                <figcaption className="text-[11px] uppercase tracking-wider text-subtle">
+                  Scryfall scan
+                </figcaption>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={referenceImageUrl}
-                  alt={`Official scan of ${selected.label}`}
+                  src={scanUrl}
+                  alt={scanAlt}
                   style={{ width }}
                   className="shrink-0 rounded-[4.5%]"
                 />
-              ) : (
-                <MissingScan width={width} />
-              )}
-            </figure>
+              </figure>
+            ) : null}
           </>
         ) : (
           <figure className="flex flex-col gap-2">
@@ -173,35 +155,21 @@ export function FrameCompare({
               style={{ width, isolation: "isolate" }}
             >
               {ourCard}
-              {referenceImageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={referenceImageUrl}
-                  alt={`Official scan of ${selected.label}`}
-                  className="pointer-events-none absolute inset-0 z-10 h-full w-full rounded-[4.5%]"
-                  style={
-                    mode === "difference"
-                      ? { mixBlendMode: "difference" }
-                      : { opacity: opacity / 100 }
-                  }
-                />
-              ) : null}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={scanUrl ?? undefined}
+                alt={scanAlt}
+                className="pointer-events-none absolute inset-0 z-10 h-full w-full rounded-[4.5%]"
+                style={
+                  mode === "difference"
+                    ? { mixBlendMode: "difference" }
+                    : { opacity: opacity / 100 }
+                }
+              />
             </div>
-            {!referenceImageUrl ? <MissingScan width={width} /> : null}
           </figure>
         )}
       </div>
-    </div>
-  );
-}
-
-function MissingScan({ width }: { width: number }) {
-  return (
-    <div
-      style={{ width, aspectRatio: "5 / 7" }}
-      className="flex items-center justify-center rounded-lg border border-dashed border-border/60 text-xs text-subtle"
-    >
-      Scan unavailable — Scryfall lookup failed.
     </div>
   );
 }

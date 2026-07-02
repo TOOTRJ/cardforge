@@ -37,6 +37,7 @@ import {
   standardFrameFor,
 } from "@/lib/creator/frame-picker";
 import type { FormValues } from "@/lib/creator/form-types";
+import { useMemo } from "react";
 
 // "Coming soon" chips — disabled, badge-tagged display rows for eras on the
 // roadmap (types/card.ts). A separate ChipGroup block so the real (typed) era
@@ -103,10 +104,21 @@ type FramePanelProps = {
   cardType: CardType | "";
   /** Live color identity — drives the frame thumbnails' color variant. */
   colorIdentity: ColorIdentity[];
+  /** Verified (template/color) combo keys from frame_reviews — gates the
+   *  special layouts / showcase treatments per color. */
+  verifiedFrameKeys?: string[];
 };
 
-export function FramePanel({ cardType, colorIdentity }: FramePanelProps) {
+export function FramePanel({
+  cardType,
+  colorIdentity,
+  verifiedFrameKeys = [],
+}: FramePanelProps) {
   const { control } = useFormContext<FormValues>();
+  const verifiedKeys = useMemo(
+    () => new Set(verifiedFrameKeys),
+    [verifiedFrameKeys],
+  );
 
   return (
     <div className="flex flex-col gap-5">
@@ -226,6 +238,7 @@ export function FramePanel({ cardType, colorIdentity }: FramePanelProps) {
                     activeSet={activeSet}
                     template={template}
                     colorKey={colorKey}
+                    verifiedKeys={verifiedKeys}
                     onChange={field.onChange}
                   />
                 ) : (
@@ -234,6 +247,7 @@ export function FramePanel({ cardType, colorIdentity }: FramePanelProps) {
                     cardType={cardType}
                     template={template}
                     colorKey={colorKey}
+                    verifiedKeys={verifiedKeys}
                     onChange={field.onChange}
                   />
                 )}

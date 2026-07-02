@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { CardCreatorForm } from "@/components/creator/card-creator-form";
+import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
 import {
   StartWithHero,
   FORM_SCROLL_TARGET_ID,
@@ -113,6 +114,7 @@ export default async function CreatePage({
           backForSlug={backFor?.slug ?? null}
           aiConfigured={isAIConfigured()}
           pipOverrides={await getPipOverrides(user.id)}
+          verifiedFrameKeys={await getVerifiedFrameKeys()}
           initialTag={initialTag}
           activeChallenge={await getCurrentChallenge()}
           defaultArtistCredit={profile?.display_name || profile?.username || ""}

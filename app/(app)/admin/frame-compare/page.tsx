@@ -1,29 +1,53 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { FrameCompare } from "@/components/admin/frame-compare";
 import {
-  FRAME_REFERENCE_CARDS,
-  getFrameReferenceCard,
-} from "@/lib/cards/frame-reference-cards";
-import { getCardById, pickPrintImageUrl } from "@/lib/scryfall/client";
+  FrameReviewChecklist,
+  type ChecklistEra,
+} from "@/components/admin/frame-review-checklist";
+import { FrameVerifyCheckbox } from "@/components/admin/frame-verify-checkbox";
+import {
+  FRAME_COLOR_KEYS,
+  FRAME_REFERENCES,
+  frameComboKey,
+  referenceThumbUrl,
+  sampleFramePreview,
+  type FrameColorKey,
+} from "@/lib/cards/frame-reference-registry";
+import { GRANDFATHERED_TEMPLATES } from "@/lib/cards/frame-availability";
+import { getFrameReviews } from "@/lib/cards/frame-reviews";
+import { eraForTemplate } from "@/lib/creator/frame-picker";
+import { buildFrameComparePayload } from "@/lib/scryfall/reference-preview";
 import { getCurrentProfile } from "@/lib/supabase/server";
+import type { CardPreviewData } from "@/components/cards/card-preview";
+import {
+  FRAME_ERA_LABELS,
+  FRAME_ERA_VALUES,
+  FRAME_TEMPLATE_LABELS,
+  FRAME_TEMPLATE_VALUES,
+  type FrameEra,
+  type FrameTemplate,
+} from "@/types/card";
 
 // ---------------------------------------------------------------------------
-// Admin — frame-era comparison tool.
+// Admin — frame verification.
 //
-// Renders one hand-transcribed reference card through our CardPreview and
-// overlays the official Scryfall scan of the same printing (745×1040 PNG)
-// with opacity / side-by-side / difference modes. Used to verify that each
-// frame era's geometry, text slots, and fonts match the real cards, and to
-// guide nudge fixes to lib/cards/template-layout.ts.
+// Checklist mode (default): every (template, color) combination the site
+// ships, grouped by era, with its real reference printing and a verify
+// checkbox. Checking publishes the combination to the frame picker for all
+// users (lib/cards/frame-availability.ts); templates that predate the
+// system are grandfathered live.
 //
-// The scan URL is resolved server-side per request via getCardById. This
-// is admin-only tooling, so the call isn't logged to scryfall_calls —
-// that table backs per-USER quotas for the end-user import features; a
-// couple of admin lookups would only add noise to the usage dashboard.
+// Compare mode (?template=&color=): renders the reference card through OUR
+// pipeline (content mapped live from Scryfall — no hand transcription) and
+// overlays the official scan with overlay / side-by-side / difference
+// modes. Admin-only; the Scryfall lookup isn't logged to scryfall_calls
+// (that table backs per-user quotas for end-user features).
 // ---------------------------------------------------------------------------
 
 export const metadata: Metadata = {
@@ -33,40 +57,132 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
+function isTemplate(value: string | undefined): value is FrameTemplate {
+  return (FRAME_TEMPLATE_VALUES as readonly string[]).includes(value ?? "");
+}
+
+function isColorKey(value: string | undefined): value is FrameColorKey {
+  return (FRAME_COLOR_KEYS as readonly string[]).includes(value ?? "");
+}
+
 export default async function AdminFrameComparePage({
   searchParams,
 }: {
-  searchParams: Promise<{ ref?: string }>;
+  searchParams: Promise<{ template?: string; color?: string }>;
 }) {
   const profile = await getCurrentProfile();
   // Non-admins get a 404 (don't reveal the route exists).
   if (!profile?.is_admin) notFound();
 
-  const { ref } = await searchParams;
-  const selected = getFrameReferenceCard(ref);
+  const { template, color } = await searchParams;
+  const reviews = await getFrameReviews();
 
-  // Best-effort: when the lookup fails the tool still renders our card
-  // with a "scan unavailable" placeholder.
-  const card = await getCardById(selected.scryfallId);
-  const referenceImageUrl = card ? pickPrintImageUrl(card) : null;
+  // ----- Compare mode -----
+  if (isTemplate(template) && isColorKey(color)) {
+    const reference = FRAME_REFERENCES[template][color];
+    const payload = reference
+      ? await buildFrameComparePayload(reference.scryfallId, template)
+      : null;
+
+    // Fall back to sample content when there's no reference (or the lookup
+    // failed) — the frame can still be eyeballed.
+    const preview =
+      payload?.preview ??
+      (sampleFramePreview(template, color) as CardPreviewData);
+
+    const verified =
+      reviews.get(frameComboKey(template, color))?.verified ?? false;
+
+    return (
+      <DashboardShell>
+        <PageHeader
+          eyebrow="Admin · Frame compare"
+          title={`${FRAME_TEMPLATE_LABELS[template]} · ${color.toUpperCase()}`}
+          description={
+            reference
+              ? `Reference: ${reference.name} (${reference.set.toUpperCase()}). Difference mode: aligned pixels go dark, drift glows.`
+              : "No real printing exists for this combination — eyeball the sample render."
+          }
+          actions={
+            <span className="flex items-center gap-4">
+              <FrameVerifyCheckbox
+                template={template}
+                colorKey={color}
+                verified={verified}
+                withLabel
+              />
+              <Link
+                href="/admin/frame-compare"
+                className="inline-flex items-center gap-1 text-xs font-medium text-muted underline-offset-2 hover:text-foreground hover:underline"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" aria-hidden /> All frames
+              </Link>
+            </span>
+          }
+        />
+        <div className="mt-10">
+          <FrameCompare
+            preview={preview}
+            scanUrl={payload?.scanUrl ?? null}
+            scanAlt={`Official scan of ${reference?.name ?? "reference card"}`}
+          />
+        </div>
+      </DashboardShell>
+    );
+  }
+
+  // ----- Checklist mode -----
+  const templatesByEra = new Map<FrameEra, FrameTemplate[]>();
+  for (const t of FRAME_TEMPLATE_VALUES) {
+    const era = eraForTemplate(t);
+    templatesByEra.set(era, [...(templatesByEra.get(era) ?? []), t]);
+  }
+
+  const eras: ChecklistEra[] = FRAME_ERA_VALUES.filter((era) =>
+    templatesByEra.has(era),
+  ).map((era) => ({
+    era,
+    label: FRAME_ERA_LABELS[era],
+    templates: (templatesByEra.get(era) ?? []).map((t) => ({
+      template: t,
+      label: FRAME_TEMPLATE_LABELS[t],
+      grandfathered: GRANDFATHERED_TEMPLATES.has(t),
+      combos: FRAME_COLOR_KEYS.map((colorKey) => {
+        const reference = FRAME_REFERENCES[t][colorKey];
+        return {
+          colorKey,
+          colorLabel: colorKey.toUpperCase(),
+          verified:
+            reviews.get(frameComboKey(t, colorKey))?.verified ?? false,
+          reference: reference
+            ? {
+                name: reference.name,
+                set: reference.set,
+                thumbUrl: referenceThumbUrl(reference),
+              }
+            : null,
+        };
+      }),
+    })),
+  }));
+
+  const allCombos = eras.flatMap((e) => e.templates).flatMap((t) => t.combos);
+  const verifiedCount = allCombos.filter((c) => c.verified).length;
 
   return (
     <DashboardShell>
       <PageHeader
         eyebrow="Admin"
-        title="Frame compare"
-        description="Overlay a real printing on our render to check frame alignment and fonts per era. Difference mode: aligned pixels go dark, drift glows."
-        actions={<Badge variant="primary">{selected.era} frame</Badge>}
+        title="Frame verification"
+        description="Every frame/color combination the site ships, with the real printing to verify against. Checking a box publishes that combination to the frame picker; special layouts stay hidden until verified."
+        actions={
+          <Badge variant="primary">
+            {verifiedCount}/{allCombos.length} verified
+          </Badge>
+        }
       />
       <div className="mt-10">
-        <FrameCompare
-          references={FRAME_REFERENCE_CARDS.map(({ key, label }) => ({
-            key,
-            label,
-          }))}
-          selected={selected}
-          referenceImageUrl={referenceImageUrl}
-        />
+        <FrameReviewChecklist eras={eras} />
       </div>
     </DashboardShell>
   );
