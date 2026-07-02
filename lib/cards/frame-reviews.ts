@@ -15,6 +15,8 @@ export type FrameReview = {
   verified: boolean;
   verifiedAt: string | null;
   referenceScryfallId: string | null;
+  referenceName: string | null;
+  referenceSet: string | null;
 };
 
 /** Every review row, keyed for the admin checklist. Empty map on any error —
@@ -26,7 +28,9 @@ export async function getFrameReviews(): Promise<Map<string, FrameReview>> {
     const supabase = await createClient();
     const { data } = await supabase
       .from("frame_reviews")
-      .select("template, color_key, verified, verified_at, reference_scryfall_id");
+      .select(
+        "template, color_key, verified, verified_at, reference_scryfall_id, reference_name, reference_set",
+      );
     for (const row of data ?? []) {
       reviews.set(`${row.template}/${row.color_key}`, {
         template: row.template,
@@ -34,6 +38,8 @@ export async function getFrameReviews(): Promise<Map<string, FrameReview>> {
         verified: row.verified,
         verifiedAt: row.verified_at,
         referenceScryfallId: row.reference_scryfall_id,
+        referenceName: row.reference_name,
+        referenceSet: row.reference_set,
       });
     }
   } catch {

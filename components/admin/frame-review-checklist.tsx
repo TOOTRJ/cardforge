@@ -21,6 +21,8 @@ export type ChecklistCombo = {
   colorKey: string;
   colorLabel: string;
   verified: boolean;
+  /** True when the reference is admin-pinned rather than the registry default. */
+  isCustomReference?: boolean;
   reference: { name: string; set: string; thumbUrl: string } | null;
 };
 
@@ -30,6 +32,8 @@ export type ChecklistTemplate = {
   /** True when the template was user-pickable before verification existed —
    *  gating doesn't apply to it (it's grandfathered live). */
   grandfathered: boolean;
+  /** True when a frame_profile_overrides row is active for this template. */
+  hasOverride?: boolean;
   combos: ChecklistCombo[];
 };
 
@@ -86,6 +90,14 @@ export function FrameReviewChecklist({ eras }: { eras: ChecklistEra[] }) {
                         {tpl.template}
                       </span>
                     </span>
+                    {tpl.hasOverride ? (
+                      <span
+                        className="mr-2 rounded-full border border-sky-400/50 bg-sky-400/10 px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-sky-300"
+                        title="A layout override from the visual editor is active for this template (DB, not code)."
+                      >
+                        override active
+                      </span>
+                    ) : null}
                     {tpl.grandfathered ? (
                       <span
                         className="text-[10px] uppercase tracking-wider text-subtle"
@@ -126,6 +138,7 @@ export function FrameReviewChecklist({ eras }: { eras: ChecklistEra[] }) {
                               </span>
                               <span className="text-[10px] uppercase tracking-wider text-subtle">
                                 {combo.reference.set}
+                                {combo.isCustomReference ? " · custom" : ""}
                               </span>
                             </span>
                           </>

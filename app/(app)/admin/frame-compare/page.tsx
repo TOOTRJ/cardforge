@@ -11,6 +11,8 @@ import {
   type ChecklistEra,
 } from "@/components/admin/frame-review-checklist";
 import { FrameVerifyCheckbox } from "@/components/admin/frame-verify-checkbox";
+import { FrameReferencePicker } from "@/components/admin/frame-reference-picker";
+import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import {
   FRAME_COLOR_KEYS,
   FRAME_REFERENCES,
@@ -79,7 +81,16 @@ export default async function AdminFrameComparePage({
 
   // ----- Compare mode -----
   if (isTemplate(template) && isColorKey(color)) {
-    const reference = FRAME_REFERENCES[template][color];
+    const review = reviews.get(frameComboKey(template, color));
+    // Admin-pinned reference wins over the registry default.
+    const custom = review?.referenceScryfallId
+      ? {
+          name: review.referenceName ?? "Pinned printing",
+          set: review.referenceSet ?? "",
+          scryfallId: review.referenceScryfallId,
+        }
+      : null;
+    const reference = custom ?? FRAME_REFERENCES[template][color];
     const payload = reference
       ? await buildFrameComparePayload(reference.scryfallId, template)
       : null;
@@ -90,8 +101,8 @@ export default async function AdminFrameComparePage({
       payload?.preview ??
       (sampleFramePreview(template, color) as CardPreviewData);
 
-    const verified =
-      reviews.get(frameComboKey(template, color))?.verified ?? false;
+    const verified = review?.verified ?? false;
+    const overrides = await getFrameProfileOverrides();
 
     return (
       <DashboardShell>
@@ -100,11 +111,16 @@ export default async function AdminFrameComparePage({
           title={`${FRAME_TEMPLATE_LABELS[template]} · ${color.toUpperCase()}`}
           description={
             reference
-              ? `Reference: ${reference.name} (${reference.set.toUpperCase()}). Difference mode: aligned pixels go dark, drift glows.`
+              ? `Reference: ${reference.name} (${reference.set.toUpperCase()})${custom ? " — admin-pinned" : ""}. Difference mode: aligned pixels go dark, drift glows.`
               : "No real printing exists for this combination — eyeball the sample render."
           }
           actions={
-            <span className="flex items-center gap-4">
+            <span className="flex flex-wrap items-center gap-4">
+              <FrameReferencePicker
+                template={template}
+                colorKey={color}
+                isCustom={Boolean(custom)}
+              />
               <FrameVerifyCheckbox
                 template={template}
                 colorKey={color}
@@ -125,6 +141,8 @@ export default async function AdminFrameComparePage({
             preview={preview}
             scanUrl={payload?.scanUrl ?? null}
             scanAlt={`Official scan of ${reference?.name ?? "reference card"}`}
+            template={template}
+            savedOverride={overrides[template] ?? null}
           />
         </div>
       </DashboardShell>
@@ -138,6 +156,7 @@ export default async function AdminFrameComparePage({
     templatesByEra.set(era, [...(templatesByEra.get(era) ?? []), t]);
   }
 
+  const checklistOverrides = await getFrameProfileOverrides();
   const eras: ChecklistEra[] = FRAME_ERA_VALUES.filter((era) =>
     templatesByEra.has(era),
   ).map((era) => ({
@@ -147,13 +166,22 @@ export default async function AdminFrameComparePage({
       template: t,
       label: FRAME_TEMPLATE_LABELS[t],
       grandfathered: GRANDFATHERED_TEMPLATES.has(t),
+      hasOverride: Boolean(checklistOverrides[t]),
       combos: FRAME_COLOR_KEYS.map((colorKey) => {
-        const reference = FRAME_REFERENCES[t][colorKey];
+        const review = reviews.get(frameComboKey(t, colorKey));
+        const custom = review?.referenceScryfallId
+          ? {
+              name: review.referenceName ?? "Pinned printing",
+              set: review.referenceSet ?? "",
+              scryfallId: review.referenceScryfallId,
+            }
+          : null;
+        const reference = custom ?? FRAME_REFERENCES[t][colorKey];
         return {
           colorKey,
           colorLabel: colorKey.toUpperCase(),
-          verified:
-            reviews.get(frameComboKey(t, colorKey))?.verified ?? false,
+          verified: review?.verified ?? false,
+          isCustomReference: Boolean(custom),
           reference: reference
             ? {
                 name: reference.name,
