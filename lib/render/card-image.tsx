@@ -14,7 +14,7 @@
 // declares `display: flex`.
 
 import { ImageResponse } from "next/og";
-import { fitRulesSizePct } from "@/lib/cards/render-tiers";
+import { fitRulesSizePct, fitSingleLineSizePct } from "@/lib/cards/render-tiers";
 import { tokenize, tokenSuffix } from "@/components/cards/mana-cost-glyphs";
 import {
   pipOverrideForSuffix,
@@ -353,8 +353,20 @@ function CardImage({
         )}
       </Band>
 
-      {/* Type band — type line + rarity set-symbol. */}
-      <Band slot={layout.type} cardWidth={width}>
+      {/* Type band — type line + rarity set-symbol. Long type lines shrink
+          to fit on one line, same math as the live preview. */}
+      <Band
+        slot={{
+          ...layout.type,
+          sizePct: fitSingleLineSizePct({
+            text: typeLine,
+            rect: layout.type.rect,
+            baseSizePct: layout.type.sizePct,
+            reservedPct: (layout.symbolSizePct ?? layout.type.sizePct * 1.1) * 1.3,
+          }),
+        }}
+        cardWidth={width}
+      >
         <span style={ELLIPSIS}>{typeLine}</span>
         <SetSymbolGlyph
           rarity={(card.rarity as Rarity | null) ?? "common"}

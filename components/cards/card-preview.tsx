@@ -13,7 +13,7 @@ import {
 } from "@/lib/pips/override";
 import { SetSymbol } from "@/components/cards/set-symbol";
 import { FrameLayer, pickFrameColorKey } from "@/components/cards/frame-layer";
-import { fitRulesSizePct } from "@/lib/cards/render-tiers";
+import { fitRulesSizePct, fitSingleLineSizePct } from "@/lib/cards/render-tiers";
 import {
   tokenizeRulesText,
   groupTightRuns,
@@ -611,8 +611,24 @@ function CardFace({
         ) : null}
       </BandSlot>
 
-      {/* Type band — type line (left) + rarity set-symbol (right). */}
-      <BandSlot slot={layout.type}>
+      {/* Type band — type line (left) + rarity set-symbol (right). Long type
+          lines shrink to fit on one line (fitSingleLineSizePct), matching how
+          real cards condense e.g. "Legendary Artifact Creature — …". */}
+      <BandSlot
+        slot={{
+          ...layout.type,
+          sizePct: fitSingleLineSizePct({
+            text: buildTypeLine({
+              supertype: face.supertype,
+              cardType: face.cardType,
+              subtypes: face.subtypes,
+            }),
+            rect: layout.type.rect,
+            baseSizePct: layout.type.sizePct,
+            reservedPct: (layout.symbolSizePct ?? layout.type.sizePct * 1.1) * 1.3,
+          }),
+        }}
+      >
         <span style={ELLIPSIS}>
           {buildTypeLine({
             supertype: face.supertype,

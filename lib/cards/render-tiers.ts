@@ -89,6 +89,41 @@ function estimateHeight(
   return height;
 }
 
+// Display-font (CardDisplay) average advance width as a fraction of the font
+// size. Caps ≈ 0.62em, lowercase ≈ 0.5em; 0.56 errs wide so a fitted line
+// shrinks slightly early rather than ellipsizing.
+const DISPLAY_CHAR_W = 0.56;
+
+export type LineFitInput = {
+  text: string | null | undefined;
+  /** The slot rect (card-relative percents) from the frame profile. */
+  rect: Rect;
+  /** The profile's authentic base size (fraction of card width). */
+  baseSizePct: number;
+  /** Width reserved for trailing slot content (set symbol / cost pips), as a
+   *  fraction of card width. */
+  reservedPct?: number;
+};
+
+/**
+ * Single-line fit for title/type bands: the profile's base size, shrunk only
+ * as far as needed for the text to fit the slot on one line (real cards do
+ * the same for long type lines). Deterministic and shared by preview + bake,
+ * mirroring fitRulesSizePct. `overflow: hidden` + ellipsis stay as backstop.
+ */
+export function fitSingleLineSizePct({
+  text,
+  rect,
+  baseSizePct,
+  reservedPct = 0,
+}: LineFitInput): number {
+  const chars = (text ?? "").trim().length;
+  if (chars === 0) return baseSizePct;
+  const availableW = Math.max(0.05, rect.widthPct / 100 - reservedPct);
+  const fitted = availableW / (chars * DISPLAY_CHAR_W);
+  return Math.max(MIN_SIZE_PCT, Math.min(baseSizePct, fitted));
+}
+
 /** Largest ladder size (≤ baseSizePct) whose estimated height fits the slot. */
 export function fitRulesSizePct(input: RulesFitInput): number {
   const rules = input.rulesText?.trim() ?? "";

@@ -25,6 +25,10 @@
 //   9      — M15 type line back up a hair (56.5 → 56.35); 56.5 read too low
 // (Modern-2003 type nudge — no version bump: zero existing public cards use
 //  that frame, so no stored render changed.)
+//   10     — M15 measured against a real DOM scan via the frame-compare tool:
+//            title/type left 8.5 → 7.9, row width 83 → 86.1 (pips end ~94%),
+//            pip disc 0.04 → 0.0485, type size 0.034 → 0.0435 with new
+//            single-line fit (fitSingleLineSizePct), type top 56.35 → 56.5
 // ---------------------------------------------------------------------------
 
-export const CARD_LAYOUT_VERSION = 9;
+export const CARD_LAYOUT_VERSION = 10;
