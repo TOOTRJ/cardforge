@@ -50,6 +50,15 @@ export const siteConfig = {
     { label: "Settings", href: "/settings" },
   ] as readonly NavItem[],
 
+  // Admin-only rail section (rendered under dashboardNav for is_admin
+  // profiles). Mirrors the avatar-dropdown admin entries.
+  adminNav: [
+    { label: "Moderation", href: "/admin/moderation" },
+    { label: "Challenges", href: "/admin/challenges" },
+    { label: "Scryfall usage", href: "/admin/scryfall" },
+    { label: "Frame compare", href: "/admin/frame-compare" },
+  ] as readonly NavItem[],
+
   footerNav: [
     {
       title: "Discover",
