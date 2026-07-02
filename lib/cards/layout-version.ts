@@ -29,6 +29,12 @@
 //            title/type left 8.5 → 7.9, row width 83 → 86.1 (pips end ~94%),
 //            pip disc 0.04 → 0.0485, type size 0.034 → 0.0435 with new
 //            single-line fit (fitSingleLineSizePct), type top 56.35 → 56.5
+//   11     — M15 seven-color scan sweep: title/type left back to 8.5 (the
+//            7.9 in v10 was a scan-window artifact; 7-card average is 8.55),
+//            rules block vertically centered at 77.6% (matches all seven
+//            prints), P/T plate reshaped to the real slim lozenge
+//            (89.3–95.1%H, digits at 86%W/91.9%H, cap 3.75%W), footer moved
+//            down+left onto the real artist line (96.2%H / 6.5%W)
 // ---------------------------------------------------------------------------
 
-export const CARD_LAYOUT_VERSION = 10;
+export const CARD_LAYOUT_VERSION = 11;

@@ -228,10 +228,10 @@ const M15: FrameProfile = {
   costSizePct: 0.0485,
   artSlot: { topPct: 11.4, leftPct: 7.8, widthPct: 84.4, heightPct: 44.0 },
   title: {
-    // Measured against the DOM scan: title ink starts at 7.9% of card width
-    // (was 8.5) and the cost pips end at ~94% (was 91.5). Vertical center was
-    // already within 0.05% of the print — topPct stays.
-    rect: { topPct: 4.8, leftPct: 7.9, widthPct: 86.1, heightPct: 6.0 },
+    // 7-card scan sweep: title ink starts at 8.3–8.9% of card width (avg
+    // 8.55 — the earlier 7.9 was a scan-window artifact) and the cost pips
+    // end at ~94%. Vertical center matches the print within 0.05%.
+    rect: { topPct: 4.8, leftPct: 8.5, widthPct: 85.5, heightPct: 6.0 },
     sizePct: 0.05,
     colorHex: INK_DARK,
     weight: 600,
@@ -243,39 +243,48 @@ const M15: FrameProfile = {
     // its cap height is ~86% of the title's — real M15 type lines are much
     // larger than the old 0.034. Long lines shrink via fitSingleLineSizePct
     // instead of ellipsizing. Shared by snow/devoid.
-    rect: { topPct: 56.5, leftPct: 7.9, widthPct: 86.1, heightPct: 5.2 },
+    rect: { topPct: 56.5, leftPct: 8.5, widthPct: 85.5, heightPct: 5.2 },
     sizePct: 0.0435,
     colorHex: INK_DARK_SOFT,
     weight: 600,
     font: "display",
   },
   rules: {
-    rect: { topPct: 63.4, leftPct: 8.5, widthPct: 83, heightPct: 28.0 },
+    // Top 63.6 centers the block at 77.6% of card height — the measured
+    // block center across all seven reference scans (77.2–78.0 regardless
+    // of text length).
+    rect: { topPct: 63.6, leftPct: 8.5, widthPct: 83, heightPct: 28.0 },
     sizePct: 0.0373,
     colorHex: INK_DARK,
-    vAlign: "start",
+    // Real M15 cards vertically center the rules block when it doesn't fill
+    // the box (see any short-text printing, e.g. DOM Serra Angel) — full
+    // boxes render identically either way.
+    vAlign: "center",
     font: "body",
     lineHeight: 1.32,
   },
   footer: {
-    rect: { topPct: 93.6, leftPct: 8, widthPct: 84, heightPct: 3.2 },
-    sizePct: 0.017,
+    // The real artist line's ink centers at ~96.2% of card height and its
+    // bright text starts at ~6.4% of width (7-card sweep); ours sat a full
+    // 1% higher and 1.6% right.
+    rect: { topPct: 94.6, leftPct: 6.5, widthPct: 87, heightPct: 3.2 },
+    sizePct: 0.019,
     colorHex: INK_LIGHT,
     uppercase: true,
     letterSpacingEm: 0.06,
     font: "display",
   },
   pt: {
-    rect: { topPct: 85.6, leftPct: 70.5, widthPct: 23.5, heightPct: 8.4 },
-    sizePct: 0.043,
+    // The real M15 plate is a slim wide lozenge: outline spans ~89.7–94.7%
+    // of card height (ours was 85.6–94 — far too tall) and the printed
+    // digits center at ~(86.3%W, 91.9%H) with a 28px cap on the 745px scan.
+    rect: { topPct: 89.3, leftPct: 73.0, widthPct: 23.0, heightPct: 5.8 },
+    sizePct: 0.05,
     colorHex: INK_DARK,
     weight: 700,
     plateAssetPathTemplate: "/frames/m15/pt/{color}.png",
-    // Digits read low in the plate (font baseline sits below the line-box
-    // center) — lift the value ~2px so it sits true-center on the plate.
-    valueDyEm: -0.11,
-    // Nudge right to true-center horizontally on the plate.
-    valueDxEm: 0.18,
+    valueDyEm: -0.08,
+    valueDxEm: 0.3,
   },
 };
 
