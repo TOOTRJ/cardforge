@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Pencil } from "lucide-react";
+import { Gauge, Loader2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { CardPreview, type CardPreviewData } from "@/components/cards/card-preview";
 import { SurfaceCard } from "@/components/ui/surface-card";
@@ -50,6 +50,8 @@ type FrameCompareProps = {
   scanAlt: string;
   /** The template under test — enables the layout editor when set. */
   template?: string | null;
+  /** The color key under test — enables the alignment score. */
+  colorKey?: string | null;
   /** The saved DB override for this template ({} when none). */
   savedOverride?: FrameProfileOverride | null;
 };
@@ -62,6 +64,7 @@ export function FrameCompare({
   scanUrl,
   scanAlt,
   template,
+  colorKey,
   savedOverride,
 }: FrameCompareProps) {
   const [mode, setMode] = useState<Mode>("overlay");
@@ -75,6 +78,30 @@ export function FrameCompare({
   );
   const [selected, setSelected] = useState<SlotPath | null>(null);
   const [saving, startSaving] = useTransition();
+  const [score, setScore] = useState<{
+    overall: number;
+    perSlot: Partial<Record<SlotPath, number>>;
+  } | null>(null);
+  const [scoring, setScoring] = useState(false);
+
+  const runScore = async () => {
+    if (!template || !colorKey) return;
+    setScoring(true);
+    try {
+      const response = await fetch("/api/admin/frame-align-score", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ template, color: colorKey }),
+      });
+      const body = await response.json().catch(() => null);
+      if (body?.ok) setScore({ overall: body.overall, perSlot: body.perSlot });
+      else toast.error(body?.error ?? "Scoring failed.");
+    } catch {
+      toast.error("Scoring failed.");
+    } finally {
+      setScoring(false);
+    }
+  };
 
   const dirty = useMemo(
     () => JSON.stringify(draft) !== JSON.stringify(savedOverride ?? {}),
@@ -250,6 +277,22 @@ export function FrameCompare({
           </button>
         ) : null}
 
+        {template && colorKey && scanUrl ? (
+          <button
+            type="button"
+            onClick={runScore}
+            disabled={scoring}
+            className="inline-flex items-center gap-1.5 rounded-md border border-border/50 px-2.5 py-1.5 text-xs font-medium text-muted transition-colors hover:text-foreground disabled:opacity-40"
+          >
+            {scoring ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+            ) : (
+              <Gauge className="h-3.5 w-3.5" aria-hidden />
+            )}
+            Score alignment
+          </button>
+        ) : null}
+
         {!scanUrl ? (
           <span className="text-xs text-subtle">
             No real printing exists for this combination — eyeball the sample
@@ -257,6 +300,38 @@ export function FrameCompare({
           </span>
         ) : null}
       </SurfaceCard>
+
+      {score ? (
+        <SurfaceCard className="flex flex-col gap-2 p-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className="rounded-full border border-border/60 bg-elevated px-2 py-0.5 text-xs font-semibold text-foreground"
+              title="Mean pixel difference over the whole card"
+            >
+              overall {score.overall}%
+            </span>
+            {Object.entries(score.perSlot)
+              .sort(([, a], [, b]) => (b ?? 0) - (a ?? 0))
+              .map(([path, value]) => (
+                <span
+                  key={path}
+                  className={cn(
+                    "rounded-full border px-2 py-0.5 text-[11px] font-medium",
+                    path === "artSlot"
+                      ? "border-border/40 text-subtle"
+                      : "border-border/60 text-muted",
+                  )}
+                >
+                  {path} {value}%{path === "artSlot" ? " (art differs)" : ""}
+                </span>
+              ))}
+          </div>
+          <p className="text-[10px] leading-4 text-subtle">
+            Relative/regression signal — fonts and art legitimately differ, so
+            compare before/after a nudge, not against 0.
+          </p>
+        </SurfaceCard>
+      ) : null}
 
       {/* Canvas (focusable for editor keyboard nudges) + editor panel */}
       <div

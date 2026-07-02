@@ -142,6 +142,7 @@ export default async function AdminFrameComparePage({
             scanUrl={payload?.scanUrl ?? null}
             scanAlt={`Official scan of ${reference?.name ?? "reference card"}`}
             template={template}
+            colorKey={color}
             savedOverride={overrides[template] ?? null}
           />
         </div>
