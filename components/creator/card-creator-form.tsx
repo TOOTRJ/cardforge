@@ -149,6 +149,9 @@ type CardCreatorFormProps = {
    *  and only when the field would otherwise be blank — never overrides an
    *  edit, a restored draft, or an imported value. */
   defaultArtistCredit?: string;
+  /** Verified (template/color) combo keys from frame_reviews — special
+   *  layouts publish per color once verified in /admin/frame-compare. */
+  verifiedFrameKeys?: string[];
 };
 
 // Step membership + field→step routing now live in lib/creator/steps.ts (pure
@@ -196,6 +199,7 @@ export function CardCreatorForm({
   initialTag = null,
   activeChallenge = null,
   defaultArtistCredit = "",
+  verifiedFrameKeys = [],
 }: CardCreatorFormProps) {
   const router = useRouter();
   const upgrade = useUpgradeModal();
@@ -1151,6 +1155,7 @@ export function CardCreatorForm({
               <FramePanel
                 cardType={watched.card_type}
                 colorIdentity={watched.color_identity}
+                verifiedFrameKeys={verifiedFrameKeys}
               />
             ) : null}
 

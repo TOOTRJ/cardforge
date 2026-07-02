@@ -25,6 +25,7 @@ import {
 } from "@/types/card";
 import { standardFrameFor } from "@/lib/creator/frame-picker";
 import { getFrameProfile } from "@/lib/cards/template-layout";
+import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
 import { cn } from "@/lib/utils";
 
 // How many shippable frames each set holds — surfaced on the showcase set chip
@@ -117,12 +118,16 @@ export function BorderEraFramePicker({
   cardType,
   template,
   colorKey,
+  verifiedKeys,
   onChange,
 }: {
   era: FrameEra;
   cardType: CardType | "";
   template: FrameTemplate;
   colorKey: string;
+  /** Verified (template/color) combo keys — special layouts publish per
+   *  color once an admin verifies them in /admin/frame-compare. */
+  verifiedKeys: ReadonlySet<string>;
   onChange: (next: FrameTemplate) => void;
 }) {
   const standard =
@@ -160,15 +165,19 @@ export function BorderEraFramePicker({
             value={template}
             onChange={onChange}
             options={specials.map((t) => {
-              // Every M15 special layout is gated for now (alignment WIP) —
-              // only the standard M15 frame ships. Saga stays gated in any era.
-              const comingSoon = era === "m15" || t === "saga";
+              // Special layouts publish per (template, color) through the
+              // admin verification checklist (/admin/frame-compare) — an
+              // unverified combo shows as "Soon" and can't be picked.
+              const available = isFrameComboAvailable(t, colorKey, verifiedKeys);
               return {
                 value: t,
                 label: FRAME_TEMPLATE_LABELS[t],
+                description: available
+                  ? undefined
+                  : "Awaiting verification for this color",
                 leading: <FrameThumb template={t} colorKey={colorKey} />,
-                disabled: comingSoon,
-                badge: comingSoon ? <SoonBadge /> : undefined,
+                disabled: !available,
+                badge: available ? undefined : <SoonBadge />,
               };
             })}
           />
@@ -185,11 +194,13 @@ export function ShowcaseFramePicker({
   activeSet,
   template,
   colorKey,
+  verifiedKeys,
   onChange,
 }: {
   activeSet: FrameSet;
   template: FrameTemplate;
   colorKey: string;
+  verifiedKeys: ReadonlySet<string>;
   onChange: (next: FrameTemplate) => void;
 }) {
   const showcaseSets = FRAME_SET_VALUES.filter(
@@ -208,11 +219,17 @@ export function ShowcaseFramePicker({
   }));
   const treatments: ChipOption<FrameTemplate>[] = FRAME_TEMPLATE_VALUES.filter(
     (t) => FRAME_TEMPLATE_SET[t] === activeSet,
-  ).map((t) => ({
-    value: t,
-    label: FRAME_TEMPLATE_LABELS[t],
-    leading: <FrameThumb template={t} colorKey={colorKey} />,
-  }));
+  ).map((t) => {
+    const available = isFrameComboAvailable(t, colorKey, verifiedKeys);
+    return {
+      value: t,
+      label: FRAME_TEMPLATE_LABELS[t],
+      description: available ? undefined : "Awaiting verification for this color",
+      leading: <FrameThumb template={t} colorKey={colorKey} />,
+      disabled: !available,
+      badge: available ? undefined : <SoonBadge />,
+    };
+  });
   return (
     <div className="flex flex-col gap-3">
       <ChipGroup

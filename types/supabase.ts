@@ -763,6 +763,33 @@ export type Database = {
         };
         Relationships: [];
       };
+      frame_reviews: {
+        Row: {
+          template: string;
+          color_key: string;
+          verified: boolean;
+          verified_at: string | null;
+          verified_by: string | null;
+          reference_scryfall_id: string | null;
+        };
+        Insert: {
+          template: string;
+          color_key: string;
+          verified?: boolean;
+          verified_at?: string | null;
+          verified_by?: string | null;
+          reference_scryfall_id?: string | null;
+        };
+        Update: {
+          template?: string;
+          color_key?: string;
+          verified?: boolean;
+          verified_at?: string | null;
+          verified_by?: string | null;
+          reference_scryfall_id?: string | null;
+        };
+        Relationships: [];
+      };
       scryfall_calls: {
         Row: {
           action: string;
