@@ -238,6 +238,8 @@ export default async function CardDetailPage({
     getCardTrendingSignals(card.id, card.owner_id, card.created_at),
   ]);
 
+  const profileOverrides = await getFrameProfileOverrides();
+
   // Bump the view tally after the response ships — never for the owner's own
   // views, and never blocking render. Uses a public client + SECURITY DEFINER
   // RPC, so it can't rotate the viewer's session (see incrementCardView).
@@ -302,7 +304,7 @@ export default async function CardDetailPage({
             title={card.title}
             cost={card.cost}
             pipOverrides={pipOverrides}
-            profileOverrides={await getFrameProfileOverrides()}
+            profileOverrides={profileOverrides}
             cardType={card.card_type}
             supertype={card.supertype}
             subtypes={card.subtypes}
@@ -321,7 +323,7 @@ export default async function CardDetailPage({
             setIconUrl={card.set_icon_url}
             setIconCode={card.set_icon_code}
             backFace={(card.back_face as CardBackFace | null) ?? null}
-            backCard={backCard ? cardToPreviewData(backCard) : null}
+            backCard={backCard ? cardToPreviewData(backCard, profileOverrides) : null}
           />
         </div>
 

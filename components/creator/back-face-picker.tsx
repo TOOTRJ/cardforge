@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Layers, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import type { FrameProfileOverridesMap } from "@/lib/cards/profile-override";
 import {
   Dialog,
   DialogContent,
@@ -24,6 +25,9 @@ type BackFacePickerProps = {
   onChange: (backCardId: string) => void;
   /** Save the current card + open a fresh creator whose result links back. */
   onCreateNew: () => void;
+  /** Admin frame-layout overrides — keeps back-face thumbs identical to the
+   *  full previews. */
+  profileOverrides?: FrameProfileOverridesMap | null;
 };
 
 // Publish-step control for the v2 back face: the back is a full, separate card
@@ -31,6 +35,7 @@ type BackFacePickerProps = {
 // a new one to be the back.
 export function BackFacePicker({
   myCards,
+  profileOverrides = null,
   value,
   onChange,
   onCreateNew,
@@ -50,7 +55,7 @@ export function BackFacePicker({
             <BakedCardThumbnail
               renderedImageUrl={selected.rendered_image_url}
               title={selected.title}
-              previewData={cardToPreviewData(selected)}
+              previewData={cardToPreviewData(selected, profileOverrides)}
               sizes="56px"
             />
           </div>
@@ -150,7 +155,7 @@ export function BackFacePicker({
                     <BakedCardThumbnail
                       renderedImageUrl={card.rendered_image_url}
                       title={card.title}
-                      previewData={cardToPreviewData(card)}
+                      previewData={cardToPreviewData(card, profileOverrides)}
                       sizes="180px"
                     />
                     <span className="truncate px-0.5 text-xs text-foreground">

@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { CheckSquare, FolderOpen, Globe2, Pencil, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import type { FrameProfileOverridesMap } from "@/lib/cards/profile-override";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
   DashboardCardTile,
@@ -26,6 +27,7 @@ import { DashboardBulkBar } from "@/components/creator/dashboard-bulk-bar";
 // ---------------------------------------------------------------------------
 
 type DashboardSelectableSectionsProps = {
+  profileOverrides?: FrameProfileOverridesMap | null;
   recentCards: DashboardCard[];
   drafts: DashboardCard[];
   publicCards: DashboardCard[];
@@ -33,6 +35,7 @@ type DashboardSelectableSectionsProps = {
 };
 
 export function DashboardSelectableSections({
+  profileOverrides = null,
   recentCards,
   drafts,
   publicCards,
@@ -144,6 +147,7 @@ export function DashboardSelectableSections({
 
   const renderTile = (card: DashboardCard, enableViewTransition = true) => (
     <DashboardCardTile
+      profileOverrides={profileOverrides}
       key={card.id}
       card={card}
       isSelected={selection.has(card.id)}

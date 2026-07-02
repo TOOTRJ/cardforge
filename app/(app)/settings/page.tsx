@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { PageHeader } from "@/components/layout/page-header";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -268,7 +269,13 @@ async function PinnedCardsSection({
     );
   }
   const cards = await listPublicCardsByOwner(userId, { limit: 48 });
-  return <PinnedCardsPicker cards={cards} initialPinned={initialPinned} />;
+  return (
+    <PinnedCardsPicker
+      cards={cards}
+      initialPinned={initialPinned}
+      profileOverrides={await getFrameProfileOverrides()}
+    />
+  );
 }
 
 function PinnedSkeleton() {

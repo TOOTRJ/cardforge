@@ -5,6 +5,8 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ExternalLink, Heart, Pin } from "lucide-react";
 import { BakedCardThumbnail } from "@/components/cards/baked-card-thumbnail";
+import type { FrameProfileOverridesMap } from "@/lib/cards/profile-override";
+import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { CardPreviewSkeleton } from "@/components/cards/card-preview-skeleton";
 import { CardHoverEffect } from "@/components/cards/card-hover-effect";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -321,6 +323,7 @@ async function PinnedRow({
   pinnedIds: string[];
   ownerUsername: string;
 }) {
+  const profileOverrides = await getFrameProfileOverrides();
   if (!pinnedIds || pinnedIds.length === 0) return null;
   const cards = await listPinnedCardsForProfile(pinnedIds);
   if (cards.length === 0) return null;
@@ -334,6 +337,7 @@ async function PinnedRow({
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {cards.map((card) => (
           <ProfileCardTile
+            profileOverrides={profileOverrides}
             key={card.id}
             card={card}
             ownerUsername={ownerUsername}
@@ -366,6 +370,7 @@ async function ProfileCards({
   ownerUsername: string;
   displayName: string;
 }) {
+  const profileOverrides = await getFrameProfileOverrides();
   const cards = await listPublicCardsByOwner(ownerId, { limit: 24 });
   if (cards.length === 0) {
     return (
@@ -380,6 +385,7 @@ async function ProfileCards({
     <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {cards.map((card) => (
         <ProfileCardTile
+            profileOverrides={profileOverrides}
           key={card.id}
           card={card}
           ownerUsername={ownerUsername}
@@ -408,9 +414,11 @@ function ProfileCardsSkeleton({ count }: { count: number }) {
 function ProfileCardTile({
   card,
   ownerUsername,
+  profileOverrides = null,
 }: {
   card: CardWithStats;
   ownerUsername: string;
+  profileOverrides?: FrameProfileOverridesMap | null;
 }) {
   return (
     <div className="flex flex-col gap-2">
@@ -425,6 +433,7 @@ function ProfileCardTile({
             renderedImageUrl={card.rendered_image_url}
             title={card.title}
             previewData={{
+              profileOverrides,
               title: card.title,
               cost: card.cost,
               cardType: card.card_type,

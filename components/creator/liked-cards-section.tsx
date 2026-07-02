@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Heart } from "lucide-react";
 import { BakedCardThumbnail } from "@/components/cards/baked-card-thumbnail";
+import type { FrameProfileOverridesMap } from "@/lib/cards/profile-override";
 import { CardHoverEffect } from "@/components/cards/card-hover-effect";
 import { QuickLikeButton } from "@/components/cards/quick-like-button";
 import { Button } from "@/components/ui/button";
@@ -18,9 +19,10 @@ import type { ArtPosition, FrameStyle } from "@/types/card";
 
 type LikedCardsSectionProps = {
   likedCards: CardWithStats[];
+  profileOverrides?: FrameProfileOverridesMap | null;
 };
 
-export function LikedCardsSection({ likedCards }: LikedCardsSectionProps) {
+export function LikedCardsSection({ likedCards, profileOverrides = null }: LikedCardsSectionProps) {
   return (
     <section className="mt-12">
       <header className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -52,7 +54,7 @@ export function LikedCardsSection({ likedCards }: LikedCardsSectionProps) {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {likedCards.map((card) => (
-            <LikedCardTile key={card.id} card={card} />
+            <LikedCardTile key={card.id} card={card} profileOverrides={profileOverrides} />
           ))}
         </div>
       )}
@@ -60,7 +62,13 @@ export function LikedCardsSection({ likedCards }: LikedCardsSectionProps) {
   );
 }
 
-function LikedCardTile({ card }: { card: CardWithStats }) {
+function LikedCardTile({
+  card,
+  profileOverrides = null,
+}: {
+  card: CardWithStats;
+  profileOverrides?: FrameProfileOverridesMap | null;
+}) {
   const ownerLabel =
     card.owner?.username ?? card.owner?.display_name ?? "Anonymous forger";
 
@@ -76,6 +84,7 @@ function LikedCardTile({ card }: { card: CardWithStats }) {
             renderedImageUrl={card.rendered_image_url}
             title={card.title}
             previewData={{
+              profileOverrides,
               title: card.title,
               cost: card.cost,
               cardType: card.card_type,

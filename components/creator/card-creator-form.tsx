@@ -1019,7 +1019,7 @@ export function CardCreatorForm({
     ? myCards.find((c) => c.id === watched.back_card_id) ?? null
     : null;
   const backCardPreview = selectedBackCard
-    ? cardToPreviewData(selectedBackCard)
+    ? cardToPreviewData(selectedBackCard, profileOverrides)
     : null;
 
   // Shared live-preview props for the desktop sticky aside + the mobile inline
@@ -1216,6 +1216,7 @@ export function CardCreatorForm({
             {/* ----- Publish panel (visibility/set/back face + Advanced: finish/tags/save) ----- */}
             {stepKey === "publish" ? (
               <PublishPanel
+                profileOverrides={profileOverrides}
                 activeChallenge={activeChallenge}
                 mySets={mySets}
                 myCards={myCards}

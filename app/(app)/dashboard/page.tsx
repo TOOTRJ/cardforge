@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { FilePlus2, Globe, Layers, Palette, UserCog } from "lucide-react";
 import { CompassStar } from "@/components/ui/compass-star";
+import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { IconTile } from "@/components/ui/icon-tile";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PageHeader } from "@/components/layout/page-header";
@@ -222,6 +223,7 @@ export default async function DashboardPage() {
 // ---------------------------------------------------------------------------
 
 async function DashboardCards() {
+  const profileOverrides = await getFrameProfileOverrides();
   // Cards + sets + liked cards in parallel. Sets feed the bulk "Add to set"
   // picker; liked cards feed the new "Liked cards" section below.
   const viewer = await getCurrentUser();
@@ -315,6 +317,7 @@ async function DashboardCards() {
       </div>
 
       <DashboardSelectableSections
+        profileOverrides={profileOverrides}
         recentCards={recentCards}
         drafts={drafts}
         publicCards={publicCards}
@@ -323,7 +326,7 @@ async function DashboardCards() {
 
       <DashboardRemixesSection remixes={remixes} />
 
-      <LikedCardsSection likedCards={likedCards} />
+      <LikedCardsSection likedCards={likedCards} profileOverrides={profileOverrides} />
     </>
   );
 }
