@@ -1,0 +1,3173 @@
+{
+ "m15": {
+  "source": "magic-m15.mse-style",
+  "cardDims": {
+   "w": 375,
+   "h": 523
+  },
+  "slots": {
+   "title": {
+    "mse": {
+     "leftPct": 8.53,
+     "topPct": 5.74,
+     "widthPct": null,
+     "heightPct": 4.4,
+     "fontSizeFrac": 0.0427,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "right": "{ 341 - card_style.casting_cost.content_width }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 4.8,
+      "leftPct": 8.5,
+      "widthPct": 83.7,
+      "heightPct": 6
+     },
+     "sizePct": 0.05
+    }
+   },
+   "costSizePct": {
+    "mse": 0.04,
+    "current": 0.0485
+   },
+   "artSlot": {
+    "mse": {
+     "leftPct": 7.73,
+     "topPct": 11.47,
+     "widthPct": 84.27,
+     "heightPct": 44.17,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 11.4,
+      "leftPct": 7.8,
+      "widthPct": 84.4,
+      "heightPct": 44
+     },
+     "sizePct": null
+    }
+   },
+   "type": {
+    "mse": {
+     "leftPct": 8.53,
+     "topPct": 56.6,
+     "widthPct": null,
+     "heightPct": 3.82,
+     "fontSizeFrac": 0.0347,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "width": "{ (if has_identity() then \"290\" else \"310\") - max(22,card_style.rarity.content_width) }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 56.5,
+      "leftPct": 8.5,
+      "widthPct": 83.7,
+      "heightPct": 5.2
+     },
+     "sizePct": 0.0435
+    }
+   },
+   "rules": {
+    "mse": {
+     "leftPct": 7.73,
+     "topPct": 62.52,
+     "widthPct": 83.73,
+     "heightPct": 29.45,
+     "fontSizeFrac": 0.0373,
+     "symbolFontSizeFrac": 0.0373,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 63.6,
+      "leftPct": 8.5,
+      "widthPct": 83,
+      "heightPct": 28
+     },
+     "sizePct": 0.0373
+    }
+   },
+   "pt": {
+    "mse": {
+     "leftPct": 76.27,
+     "topPct": 89.67,
+     "widthPct": 16,
+     "heightPct": 5.35,
+     "fontSizeFrac": 0.0427,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 89.3,
+      "leftPct": 73,
+      "widthPct": 23,
+      "heightPct": 5.8
+     },
+     "sizePct": 0.05
+    }
+   }
+  },
+  "extras": {}
+ },
+ "m15land": {
+  "source": "magic-m15.mse-style",
+  "cardDims": {
+   "w": 375,
+   "h": 523
+  },
+  "slots": {
+   "title": {
+    "mse": {
+     "leftPct": 8.53,
+     "topPct": 5.74,
+     "widthPct": null,
+     "heightPct": 4.4,
+     "fontSizeFrac": 0.0427,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "right": "{ 341 - card_style.casting_cost.content_width }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 4.8,
+      "leftPct": 14,
+      "widthPct": 77.5,
+      "heightPct": 6
+     },
+     "sizePct": 0.05
+    }
+   },
+   "costSizePct": {
+    "mse": 0.04,
+    "current": 0.0485
+   },
+   "artSlot": {
+    "mse": {
+     "leftPct": 7.73,
+     "topPct": 11.47,
+     "widthPct": 84.27,
+     "heightPct": 44.17,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 11.4,
+      "leftPct": 7.8,
+      "widthPct": 84.4,
+      "heightPct": 44
+     },
+     "sizePct": null
+    }
+   },
+   "type": {
+    "mse": {
+     "leftPct": 8.53,
+     "topPct": 56.6,
+     "widthPct": null,
+     "heightPct": 3.82,
+     "fontSizeFrac": 0.0347,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "width": "{ (if has_identity() then \"290\" else \"310\") - max(22,card_style.rarity.content_width) }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 56.5,
+      "leftPct": 8.5,
+      "widthPct": 83.7,
+      "heightPct": 5.2
+     },
+     "sizePct": 0.0435
+    }
+   },
+   "rules": {
+    "mse": {
+     "leftPct": 7.73,
+     "topPct": 62.52,
+     "widthPct": 83.73,
+     "heightPct": 29.45,
+     "fontSizeFrac": 0.0373,
+     "symbolFontSizeFrac": 0.0373,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 63.6,
+      "leftPct": 8.5,
+      "widthPct": 83,
+      "heightPct": 28
+     },
+     "sizePct": 0.0373
+    }
+   },
+   "pt": {
+    "mse": {
+     "leftPct": 76.27,
+     "topPct": 89.67,
+     "widthPct": 16,
+     "heightPct": 5.35,
+     "fontSizeFrac": 0.0427,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 89.3,
+      "leftPct": 73,
+      "widthPct": 23,
+      "heightPct": 5.8
+     },
+     "sizePct": 0.05
+    }
+   }
+  },
+  "extras": {}
+ },
+ "m15token": {
+  "source": "magic-m15-token.mse-style",
+  "cardDims": {
+   "w": 375,
+   "h": 523
+  },
+  "slots": {
+   "title": {
+    "mse": {
+     "leftPct": 8,
+     "topPct": 4.97,
+     "widthPct": 84,
+     "heightPct": 5.35,
+     "fontSizeFrac": 0.0507,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 4.6,
+      "leftPct": 9,
+      "widthPct": 82,
+      "heightPct": 6.4
+     },
+     "sizePct": 0.05
+    }
+   },
+   "artSlot": {
+    "mse": {
+     "leftPct": 7.73,
+     "topPct": 11.85,
+     "widthPct": 84.53,
+     "heightPct": null,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 12,
+      "leftPct": 6.5,
+      "widthPct": 87,
+      "heightPct": 69
+     },
+     "sizePct": null
+    }
+   },
+   "type": {
+    "mse": {
+     "leftPct": 8.53,
+     "topPct": null,
+     "widthPct": null,
+     "heightPct": 3.82,
+     "fontSizeFrac": 0.0373,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "width": "{ 311 - max(22,card_style.rarity.content_width) }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 82.6,
+      "leftPct": 11,
+      "widthPct": 78,
+      "heightPct": 4.2
+     },
+     "sizePct": 0.034
+    }
+   },
+   "rules": {
+    "mse": {
+     "leftPct": 8.27,
+     "topPct": null,
+     "widthPct": 82.93,
+     "heightPct": null,
+     "fontSizeFrac": 0.0373,
+     "symbolFontSizeFrac": 0.0373,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 60.5,
+      "leftPct": 12,
+      "widthPct": 76,
+      "heightPct": 12
+     },
+     "sizePct": 0.031
+    }
+   },
+   "pt": {
+    "mse": {
+     "leftPct": 76.27,
+     "topPct": 89.67,
+     "widthPct": 16,
+     "heightPct": 5.35,
+     "fontSizeFrac": 0.0427,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 88.6,
+      "leftPct": 73.5,
+      "widthPct": 20,
+      "heightPct": 6.2
+     },
+     "sizePct": 0.0427
+    }
+   }
+  },
+  "extras": {}
+ },
+ "m15snow": {
+  "source": "magic-m15-snow.mse-style",
+  "cardDims": {
+   "w": 375,
+   "h": 523
+  },
+  "slots": {
+   "title": {
+    "mse": {
+     "leftPct": 8.53,
+     "topPct": 5.74,
+     "widthPct": null,
+     "heightPct": 4.4,
+     "fontSizeFrac": 0.0427,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "right": "{ 341 - card_style.casting_cost.content_width }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 4.8,
+      "leftPct": 8.5,
+      "widthPct": 83.7,
+      "heightPct": 6
+     },
+     "sizePct": 0.05
+    }
+   },
+   "costSizePct": {
+    "mse": 0.04,
+    "current": 0.0485
+   },
+   "artSlot": {
+    "mse": {
+     "leftPct": 7.73,
+     "topPct": 11.47,
+     "widthPct": 84.27,
+     "heightPct": 44.17,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 11.4,
+      "leftPct": 7.8,
+      "widthPct": 84.4,
+      "heightPct": 44
+     },
+     "sizePct": null
+    }
+   },
+   "type": {
+    "mse": {
+     "leftPct": 8.53,
+     "topPct": 56.6,
+     "widthPct": null,
+     "heightPct": 3.82,
+     "fontSizeFrac": 0.0347,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "width": "{ (if has_identity() then \"290\" else \"310\") - max(22,card_style.rarity.content_width) }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 56.5,
+      "leftPct": 8.5,
+      "widthPct": 83.7,
+      "heightPct": 5.2
+     },
+     "sizePct": 0.0435
+    }
+   },
+   "rules": {
+    "mse": {
+     "leftPct": 7.73,
+     "topPct": 62.52,
+     "widthPct": 83.73,
+     "heightPct": null,
+     "fontSizeFrac": 0.0373,
+     "symbolFontSizeFrac": 0.0373,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 63.6,
+      "leftPct": 8.5,
+      "widthPct": 83,
+      "heightPct": 28
+     },
+     "sizePct": 0.0373
+    }
+   },
+   "pt": {
+    "mse": {
+     "leftPct": 76.27,
+     "topPct": 89.67,
+     "widthPct": 16,
+     "heightPct": 5.35,
+     "fontSizeFrac": 0.0427,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 89.3,
+      "leftPct": 73,
+      "widthPct": 23,
+      "heightPct": 5.8
+     },
+     "sizePct": 0.05
+    }
+   }
+  },
+  "extras": {}
+ },
+ "m15devoid": {
+  "source": "magic-m15-devoid.mse-style",
+  "cardDims": {
+   "w": 375,
+   "h": 523
+  },
+  "slots": {
+   "title": {
+    "mse": {
+     "leftPct": 8.53,
+     "topPct": 5.74,
+     "widthPct": null,
+     "heightPct": null,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "height": "{ 23 - to_int(0.5 * shrink_name())}",
+      "right": "{ 341 - card_style.casting_cost.content_width }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 4.8,
+      "leftPct": 8.5,
+      "widthPct": 83.7,
+      "heightPct": 6
+     },
+     "sizePct": 0.05
+    }
+   },
+   "costSizePct": {
+    "mse": 0.04,
+    "current": 0.0485
+   },
+   "artSlot": {
+    "mse": {
+     "leftPct": 3.73,
+     "topPct": 11.47,
+     "widthPct": 92.27,
+     "heightPct": 82.6,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 11.4,
+      "leftPct": 7.8,
+      "widthPct": 84.4,
+      "heightPct": 44
+     },
+     "sizePct": null
+    }
+   },
+   "type": {
+    "mse": {
+     "leftPct": 9.6,
+     "topPct": null,
+     "widthPct": null,
+     "heightPct": null,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "top": "{ 294 + shrink_type() }",
+      "width": "{ 307 - max(22,card_style.rarity.content_width) }",
+      "height": "{ 20 - shrink_type() }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 56.5,
+      "leftPct": 8.5,
+      "widthPct": 83.7,
+      "heightPct": 5.2
+     },
+     "sizePct": 0.0435
+    }
+   },
+   "rules": {
+    "mse": {
+     "leftPct": 7.73,
+     "topPct": null,
+     "widthPct": 83.73,
+     "heightPct": null,
+     "fontSizeFrac": 0.0373,
+     "symbolFontSizeFrac": 0.0373,
+     "dynamic": {
+      "top": "{ top_of_textbox() }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 63.6,
+      "leftPct": 8.5,
+      "widthPct": 83,
+      "heightPct": 28
+     },
+     "sizePct": 0.0373
+    }
+   },
+   "pt": {
+    "mse": {
+     "leftPct": 76.27,
+     "topPct": 89.67,
+     "widthPct": 16,
+     "heightPct": 5.35,
+     "fontSizeFrac": 0.0427,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 89.3,
+      "leftPct": 73,
+      "widthPct": 23,
+      "heightPct": 5.8
+     },
+     "sizePct": 0.05
+    }
+   }
+  },
+  "extras": {}
+ },
+ "m15pw": {
+  "source": "magic-m15-planeswalker.mse-style",
+  "cardDims": {
+   "w": 375,
+   "h": 523
+  },
+  "slots": {
+   "title": {
+    "mse": {
+     "leftPct": 8.27,
+     "topPct": 4.4,
+     "widthPct": null,
+     "heightPct": 4.4,
+     "fontSizeFrac": 0.0427,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "right": "{ 339 - card_style.casting_cost.content_width }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 4.4,
+      "leftPct": 8.5,
+      "widthPct": 80,
+      "heightPct": 4.4
+     },
+     "sizePct": 0.0427
+    }
+   },
+   "costSizePct": {
+    "mse": 0.04,
+    "current": null
+   },
+   "artSlot": {
+    "mse": {
+     "leftPct": 6.67,
+     "topPct": 9.94,
+     "widthPct": 86.4,
+     "heightPct": 81.74,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 9.9,
+      "leftPct": 6.7,
+      "widthPct": 86.4,
+      "heightPct": 81.7
+     },
+     "sizePct": null
+    }
+   },
+   "type": {
+    "mse": {
+     "leftPct": 8.8,
+     "topPct": 56.6,
+     "widthPct": null,
+     "heightPct": 3.82,
+     "fontSizeFrac": 0.0347,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "width": "{ 304 - max(22,card_style.rarity.content_width) }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 56.6,
+      "leftPct": 8.8,
+      "widthPct": 79,
+      "heightPct": 3.8
+     },
+     "sizePct": 0.0347
+    }
+   },
+   "rules": {
+    "mse": {
+     "leftPct": 16.8,
+     "topPct": 63.1,
+     "widthPct": 75.2,
+     "heightPct": 28.3,
+     "fontSizeFrac": 0.0373,
+     "symbolFontSizeFrac": 0.0373,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 63.1,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 28.3
+     },
+     "sizePct": 0.0373
+    }
+   }
+  },
+  "extras": {
+   "loyalty": {
+    "leftPct": 86.93,
+    "topPct": 88.34,
+    "widthPct": 3.51,
+    "heightPct": 6.62,
+    "fontSizeFrac": 0.0373,
+    "symbolFontSizeFrac": null,
+    "dynamic": {}
+   }
+  }
+ },
+ "battle": {
+  "source": "magic-m15-mainframe-battles.mse-style",
+  "cardDims": {
+   "w": 523,
+   "h": 375
+  },
+  "slots": {
+   "title": {
+    "mse": {
+     "leftPct": 12.81,
+     "topPct": null,
+     "widthPct": null,
+     "heightPct": 5.87,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "top": "{ 21 + name_font_vertical()}",
+      "width": "{ 410 - max(15,card_style.casting_cost.content_width) - (if card.transformation != \"none\" then 35 else 0) }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 5.2,
+      "leftPct": 12.8,
+      "widthPct": 74,
+      "heightPct": 6.4
+     },
+     "sizePct": 0.034
+    }
+   },
+   "artSlot": {
+    "mse": {
+     "leftPct": 7.84,
+     "topPct": 4,
+     "widthPct": 89.29,
+     "heightPct": 92,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 13.6,
+      "leftPct": 4,
+      "widthPct": 92,
+      "heightPct": 43.6
+     },
+     "sizePct": null
+    }
+   },
+   "type": {
+    "mse": {
+     "leftPct": 12.81,
+     "topPct": null,
+     "widthPct": null,
+     "heightPct": 5.87,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "top": "{ 219 + type_font_vertical() }",
+      "width": "{ 400 - rare_width() }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 58.4,
+      "leftPct": 12.8,
+      "widthPct": 74,
+      "heightPct": 6.2
+     },
+     "sizePct": 0.025
+    }
+   },
+   "rules": {
+    "mse": {
+     "leftPct": 12.05,
+     "topPct": null,
+     "widthPct": 78.39,
+     "heightPct": null,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "top": "{ 252 + body_font_vertical() + chop_top() }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 67.5,
+      "leftPct": 12.1,
+      "widthPct": 78.4,
+      "heightPct": 27
+     },
+     "sizePct": 0.0268
+    }
+   },
+   "pt": {
+    "mse": {
+     "leftPct": 86.42,
+     "topPct": 89.6,
+     "widthPct": 0,
+     "heightPct": 6.4,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": null,
+     "sizePct": null
+    }
+   }
+  },
+  "extras": {
+   "loyalty": {
+    "leftPct": 91.78,
+    "topPct": 89.6,
+    "widthPct": 4.21,
+    "heightPct": 6.4,
+    "fontSizeFrac": null,
+    "symbolFontSizeFrac": null,
+    "dynamic": {}
+   }
+  }
+ },
+ "saga": {
+  "source": "magic-m15-saga.mse-style",
+  "cardDims": {
+   "w": 375,
+   "h": 523
+  },
+  "slots": {
+   "title": {
+    "mse": {
+     "leftPct": 8.53,
+     "topPct": 5.74,
+     "widthPct": null,
+     "heightPct": null,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "height": "{ 23- (0.5 * shrink_name())}",
+      "right": "{ 341 - card_style.casting_cost.content_width }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 5.4,
+      "leftPct": 8.5,
+      "widthPct": 83,
+      "heightPct": 4.8
+     },
+     "sizePct": 0.0427
+    }
+   },
+   "costSizePct": {
+    "mse": 0.04,
+    "current": 0.04
+   },
+   "artSlot": {
+    "mse": {
+     "leftPct": 7.73,
+     "topPct": 11.28,
+     "widthPct": 41.87,
+     "heightPct": 72.47,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 11.3,
+      "leftPct": 50.1,
+      "widthPct": 41.9,
+      "heightPct": 72.5
+     },
+     "sizePct": null
+    }
+   },
+   "type": {
+    "mse": {
+     "leftPct": 8.8,
+     "topPct": null,
+     "widthPct": null,
+     "heightPct": null,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "top": "{ 444 + shrink_type() }",
+      "width": "{ 309 - rare_width() }",
+      "height": "{ 20 - shrink_type() }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 84.9,
+      "leftPct": 8.8,
+      "widthPct": 82,
+      "heightPct": 3.9
+     },
+     "sizePct": 0.0347
+    }
+   },
+   "rules": {
+    "mse": {
+     "leftPct": 50.13,
+     "topPct": 11.47,
+     "widthPct": 40.8,
+     "heightPct": null,
+     "fontSizeFrac": 0.0347,
+     "symbolFontSizeFrac": 0.0347,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 11.5,
+      "leftPct": 8,
+      "widthPct": 41,
+      "heightPct": 72
+     },
+     "sizePct": 0.029
+    }
+   },
+   "pt": {
+    "mse": {
+     "leftPct": 76.27,
+     "topPct": 89.67,
+     "widthPct": 16,
+     "heightPct": 5.35,
+     "fontSizeFrac": 0.0427,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": null,
+     "sizePct": null
+    }
+   }
+  },
+  "extras": {
+   "level 2": {
+    "leftPct": 72,
+    "topPct": null,
+    "widthPct": 0,
+    "heightPct": 3.82,
+    "fontSizeFrac": null,
+    "symbolFontSizeFrac": null,
+    "dynamic": {
+     "top": "{lev2()+3}"
+    }
+   },
+   "level 3": {
+    "leftPct": 72,
+    "topPct": null,
+    "widthPct": 0,
+    "heightPct": 3.82,
+    "fontSizeFrac": null,
+    "symbolFontSizeFrac": null,
+    "dynamic": {
+     "top": "{lev3()+3}"
+    }
+   },
+   "level 4": {
+    "leftPct": 72,
+    "topPct": null,
+    "widthPct": 0,
+    "heightPct": 3.82,
+    "fontSizeFrac": null,
+    "symbolFontSizeFrac": null,
+    "dynamic": {
+     "top": "{lev4()+3}"
+    }
+   }
+  }
+ },
+ "adventure": {
+  "source": "magic-m15-adventure.mse-style",
+  "cardDims": {
+   "w": 375,
+   "h": 523
+  },
+  "slots": {
+   "title": {
+    "mse": {
+     "leftPct": 13.33,
+     "topPct": null,
+     "widthPct": null,
+     "heightPct": null,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "top": "{30 + name_font_vertical()}",
+      "height": "{ 23 - 0.5*shrink_name() }",
+      "right": "{ 341 - card_style.casting_cost.content_width }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 4.8,
+      "leftPct": 8.5,
+      "widthPct": 83.7,
+      "heightPct": 6
+     },
+     "sizePct": 0.05
+    }
+   },
+   "costSizePct": {
+    "mse": 0.04,
+    "current": 0.0485
+   },
+   "artSlot": {
+    "mse": {
+     "leftPct": 7.73,
+     "topPct": 11.28,
+     "widthPct": 84.27,
+     "heightPct": 44.17,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 11.4,
+      "leftPct": 7.8,
+      "widthPct": 84.4,
+      "heightPct": 44
+     },
+     "sizePct": null
+    }
+   },
+   "type": {
+    "mse": {
+     "leftPct": 8.53,
+     "topPct": 56.6,
+     "widthPct": 0,
+     "heightPct": null,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "height": "{ 20 - shrink_type() }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 56.5,
+      "leftPct": 8.5,
+      "widthPct": 83.7,
+      "heightPct": 5.2
+     },
+     "sizePct": 0.0435
+    }
+   },
+   "rules": {
+    "mse": {
+     "leftPct": null,
+     "topPct": null,
+     "widthPct": 38.13,
+     "heightPct": null,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": 0.0347,
+     "dynamic": {
+      "left": "{page_coords[page_1_side()][\"text\"]}",
+      "top": "{ (if is_spot() then 335 else page_1_top()) + to_int(chop_top()) + body_font_vertical() }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 63.5,
+      "leftPct": 50.7,
+      "widthPct": 38.2,
+      "heightPct": 28.5
+     },
+     "sizePct": 0.031
+    }
+   },
+   "pt": {
+    "mse": {
+     "leftPct": 76.27,
+     "topPct": 89.67,
+     "widthPct": 16,
+     "heightPct": 5.35,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 89.3,
+      "leftPct": 73,
+      "widthPct": 23,
+      "heightPct": 5.8
+     },
+     "sizePct": 0.05
+    }
+   }
+  },
+  "extras": {
+   "name 2": {
+    "leftPct": null,
+    "topPct": 63.1,
+    "widthPct": null,
+    "heightPct": null,
+    "fontSizeFrac": null,
+    "symbolFontSizeFrac": null,
+    "dynamic": {
+     "left": "{ page_coords[page_2_side()][\"name_left\"] }",
+     "height": "{ 20 - shrink_name2() }",
+     "right": "{ page_coords[page_2_side()][\"name_right\"] - card_style.casting_cost_2.content_width }"
+    }
+   },
+   "type 2": {
+    "leftPct": 0,
+    "topPct": 67.3,
+    "widthPct": 0,
+    "heightPct": 0,
+    "fontSizeFrac": null,
+    "symbolFontSizeFrac": null,
+    "dynamic": {}
+   },
+   "text 2": {
+    "leftPct": null,
+    "topPct": null,
+    "widthPct": 38.13,
+    "heightPct": null,
+    "fontSizeFrac": null,
+    "symbolFontSizeFrac": 0.0373,
+    "dynamic": {
+     "left": "{page_coords[page_2_side()][\"text\"]}",
+     "top": "{ if page_style(page_2_side()) == \"omen_double\" then 5 + page_2_top() + to_int(back_chop_top()) + body_font_vertical() else page_2_top() + to_int(back_chop_top()) + body_font_vertical()}"
+    }
+   },
+   "casting cost 2": {
+    "leftPct": null,
+    "topPct": 62.91,
+    "widthPct": null,
+    "heightPct": 4.4,
+    "fontSizeFrac": null,
+    "symbolFontSizeFrac": 0.032,
+    "dynamic": {
+     "width": "{ max(30, card_style.casting_cost_2.content_width) + 5 }",
+     "right": "{page_coords[page_2_side()][\"cost\"]}"
+    }
+   }
+  }
+ },
+ "flip": {
+  "source": "magic-m15-flip.mse-style",
+  "cardDims": {
+   "w": 375,
+   "h": 523
+  },
+  "slots": {
+   "title": {
+    "mse": {
+     "leftPct": 8.53,
+     "topPct": 5.74,
+     "widthPct": null,
+     "heightPct": 4.4,
+     "fontSizeFrac": 0.0427,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "right": "{ 341 - card_style.casting_cost.content_width }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 5.7,
+      "leftPct": 8.5,
+      "widthPct": 82,
+      "heightPct": 4.4
+     },
+     "sizePct": 0.0427
+    }
+   },
+   "costSizePct": {
+    "mse": 0.04,
+    "current": 0.04
+   },
+   "artSlot": {
+    "mse": {
+     "leftPct": 7.73,
+     "topPct": 30.98,
+     "widthPct": 84.27,
+     "heightPct": 35.18,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 31,
+      "leftPct": 7.7,
+      "widthPct": 84.3,
+      "heightPct": 35.2
+     },
+     "sizePct": null
+    }
+   },
+   "type": {
+    "mse": {
+     "leftPct": 8.53,
+     "topPct": 25.05,
+     "widthPct": 82.67,
+     "heightPct": 3.82,
+     "fontSizeFrac": 0.0347,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 25,
+      "leftPct": 8.5,
+      "widthPct": 68,
+      "heightPct": 4.2
+     },
+     "sizePct": 0.0347
+    }
+   },
+   "rules": {
+    "mse": {
+     "leftPct": 7.73,
+     "topPct": 11.28,
+     "widthPct": 83.73,
+     "heightPct": 12.62,
+     "fontSizeFrac": 0.0373,
+     "symbolFontSizeFrac": 0.0373,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 11.3,
+      "leftPct": 7.7,
+      "widthPct": 84,
+      "heightPct": 12.5
+     },
+     "sizePct": 0.029
+    }
+   },
+   "pt": {
+    "mse": {
+     "leftPct": 82.13,
+     "topPct": 24.47,
+     "widthPct": 11.73,
+     "heightPct": 5.35,
+     "fontSizeFrac": 0.0347,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 24.5,
+      "leftPct": 82.1,
+      "widthPct": 11.7,
+      "heightPct": 5.4
+     },
+     "sizePct": 0.0347
+    }
+   }
+  },
+  "extras": {
+   "name 2": {
+    "leftPct": 90.93,
+    "topPct": null,
+    "widthPct": null,
+    "heightPct": 4.4,
+    "fontSizeFrac": 0.0427,
+    "symbolFontSizeFrac": null,
+    "dynamic": {
+     "right": "{ 32 + card_style.casting_cost_2.content_width }"
+    }
+   },
+   "type 2": {
+    "leftPct": 90.93,
+    "topPct": null,
+    "widthPct": 82.67,
+    "heightPct": 3.82,
+    "fontSizeFrac": 0.0347,
+    "symbolFontSizeFrac": null,
+    "dynamic": {}
+   },
+   "text 2": {
+    "leftPct": null,
+    "topPct": null,
+    "widthPct": 83.73,
+    "heightPct": 12.81,
+    "fontSizeFrac": 0.0373,
+    "symbolFontSizeFrac": 0.0373,
+    "dynamic": {}
+   },
+   "pt 2": {
+    "leftPct": null,
+    "topPct": null,
+    "widthPct": 11.73,
+    "heightPct": 5.35,
+    "fontSizeFrac": 0.0347,
+    "symbolFontSizeFrac": null,
+    "dynamic": {}
+   }
+  }
+ },
+ "split": {
+  "source": "magic-m15-planeshifted-split.mse-style",
+  "cardDims": {
+   "w": 523,
+   "h": 375
+  },
+  "slots": {
+   "title": {
+    "mse": {
+     "leftPct": 5.16,
+     "topPct": 7.6,
+     "widthPct": null,
+     "heightPct": 5.33,
+     "fontSizeFrac": 0.0287,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "right": "{ 242 - card_style.casting_cost.content_width }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 7.4,
+      "leftPct": 5.2,
+      "widthPct": 41.4,
+      "heightPct": 5.5
+     },
+     "sizePct": 0.0287
+    }
+   },
+   "costSizePct": {
+    "mse": 0.0344,
+    "current": 0.0344
+   },
+   "artSlot": {
+    "mse": {
+     "leftPct": 4.78,
+     "topPct": 14.67,
+     "widthPct": 41.87,
+     "heightPct": 40.8,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 14.7,
+      "leftPct": 4.8,
+      "widthPct": 41.9,
+      "heightPct": 40.8
+     },
+     "sizePct": null
+    }
+   },
+   "type": {
+    "mse": {
+     "leftPct": 5.16,
+     "topPct": 56.53,
+     "widthPct": null,
+     "heightPct": 4,
+     "fontSizeFrac": 0.0191,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "width": "{ (if has_identity() then \"204\" else \"217\") - max(16,card_style.rarity.content_width) }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 56.3,
+      "leftPct": 5.2,
+      "widthPct": 40,
+      "heightPct": 4.2
+     },
+     "sizePct": 0.02
+    }
+   },
+   "rules": {
+    "mse": {
+     "leftPct": 4.78,
+     "topPct": 62.4,
+     "widthPct": 41.87,
+     "heightPct": 28.53,
+     "fontSizeFrac": 0.0268,
+     "symbolFontSizeFrac": 0.0268,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 62.4,
+      "leftPct": 4.8,
+      "widthPct": 41.9,
+      "heightPct": 28.5
+     },
+     "sizePct": 0.027
+    }
+   },
+   "pt": {
+    "mse": {
+     "leftPct": 39.01,
+     "topPct": 88.53,
+     "widthPct": 8.22,
+     "heightPct": 5.6,
+     "fontSizeFrac": 0.0268,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": null,
+     "sizePct": null
+    }
+   },
+   "footer": {
+    "mse": {
+     "leftPct": null,
+     "topPct": 94.4,
+     "widthPct": 26.77,
+     "heightPct": 1.87,
+     "fontSizeFrac": 0.0115,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "left": "{ 38 + card_style.set_code.content_width }"
+     }
+    },
+    "current": {
+     "rect": null,
+     "sizePct": null
+    }
+   }
+  },
+  "extras": {
+   "name 2": {
+    "leftPct": 53.54,
+    "topPct": 7.6,
+    "widthPct": null,
+    "heightPct": 5.33,
+    "fontSizeFrac": 0.0287,
+    "symbolFontSizeFrac": null,
+    "dynamic": {
+     "right": "{ 495 - card_style.casting_cost_2.content_width }"
+    }
+   },
+   "type 2": {
+    "leftPct": 53.54,
+    "topPct": 56.53,
+    "widthPct": null,
+    "heightPct": 4,
+    "fontSizeFrac": 0.0191,
+    "symbolFontSizeFrac": null,
+    "dynamic": {
+     "width": "{ (if has_identity_2() then \"204\" else \"217\") - max(16,card_style.rarity.content_width) }"
+    }
+   },
+   "text 2": {
+    "leftPct": 53.15,
+    "topPct": 62.4,
+    "widthPct": 41.87,
+    "heightPct": 28.53,
+    "fontSizeFrac": 0.0268,
+    "symbolFontSizeFrac": 0.0268,
+    "dynamic": {}
+   },
+   "casting cost 2": {
+    "leftPct": null,
+    "topPct": 7.47,
+    "widthPct": null,
+    "heightPct": 4.8,
+    "fontSizeFrac": 0.0344,
+    "symbolFontSizeFrac": 0.0344,
+    "dynamic": {
+     "width": "{ max(24, card_style.casting_cost_2.content_width) + 3 }"
+    }
+   }
+  }
+ },
+ "aftermath": {
+  "source": "magic-m15-aftermath.mse-style",
+  "cardDims": {
+   "w": 375,
+   "h": 523
+  },
+  "slots": {
+   "title": {
+    "mse": {
+     "leftPct": 8.53,
+     "topPct": 5.74,
+     "widthPct": null,
+     "heightPct": 4.4,
+     "fontSizeFrac": 0.04,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "right": "{ 341 - card_style.casting_cost.content_width }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 5.7,
+      "leftPct": 8.5,
+      "widthPct": 82,
+      "heightPct": 4.4
+     },
+     "sizePct": 0.04
+    }
+   },
+   "costSizePct": {
+    "mse": 0.04,
+    "current": 0.04
+   },
+   "artSlot": {
+    "mse": {
+     "leftPct": 7.73,
+     "topPct": 11.28,
+     "widthPct": 84.53,
+     "heightPct": 22.37,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 11.3,
+      "leftPct": 7.7,
+      "widthPct": 84.5,
+      "heightPct": 22.4
+     },
+     "sizePct": null
+    }
+   },
+   "type": {
+    "mse": {
+     "leftPct": 8,
+     "topPct": 35.37,
+     "widthPct": 82.67,
+     "heightPct": 3.82,
+     "fontSizeFrac": 0.0347,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 35.4,
+      "leftPct": 8,
+      "widthPct": 82.7,
+      "heightPct": 3.8
+     },
+     "sizePct": 0.0347
+    }
+   },
+   "rules": {
+    "mse": {
+     "leftPct": 7.47,
+     "topPct": 40.92,
+     "widthPct": 84.53,
+     "heightPct": 12.43,
+     "fontSizeFrac": 0.0373,
+     "symbolFontSizeFrac": 0.0373,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 40.9,
+      "leftPct": 7.5,
+      "widthPct": 84.5,
+      "heightPct": 13
+     },
+     "sizePct": 0.0373
+    }
+   },
+   "pt": {
+    "mse": {
+     "leftPct": 80.8,
+     "topPct": 50.1,
+     "widthPct": 11.2,
+     "heightPct": 4.02,
+     "fontSizeFrac": 0.0373,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": null,
+     "sizePct": null
+    }
+   }
+  },
+  "extras": {
+   "name 2": {
+    "leftPct": 91.2,
+    "topPct": 56.41,
+    "widthPct": null,
+    "heightPct": 4.02,
+    "fontSizeFrac": 0.04,
+    "symbolFontSizeFrac": null,
+    "dynamic": {
+     "width": "{ 181 - card_style.casting_cost_2.content_width - (if card.card_symbol_2 == \"none\" then 0 else 18) }"
+    }
+   },
+   "type 2": {
+    "leftPct": 52.8,
+    "topPct": 56.6,
+    "widthPct": null,
+    "heightPct": 2.87,
+    "fontSizeFrac": 0.0347,
+    "symbolFontSizeFrac": null,
+    "dynamic": {
+     "width": "{ (if has_identity_2() then \"204\" else \"217\") - max(16,card_style.rarity.content_width) }"
+    }
+   },
+   "text 2": {
+    "leftPct": 44.53,
+    "topPct": 56.6,
+    "widthPct": 48.53,
+    "heightPct": 26.77,
+    "fontSizeFrac": 0.0373,
+    "symbolFontSizeFrac": 0.0373,
+    "dynamic": {}
+   },
+   "casting cost 2": {
+    "leftPct": 91.2,
+    "topPct": null,
+    "widthPct": null,
+    "heightPct": 4.02,
+    "fontSizeFrac": 0.048,
+    "symbolFontSizeFrac": 0.04,
+    "dynamic": {
+     "top": "{ 474 - max(24, card_style.casting_cost_2.content_width) }",
+     "width": "{ max(24, card_style.casting_cost_2.content_width) + 3 }"
+    }
+   }
+  }
+ },
+ "agclassic": {
+  "source": "magic-agclassic.mse-style",
+  "cardDims": {
+   "w": 374,
+   "h": 522
+  },
+  "slots": {
+   "title": {
+    "mse": {
+     "leftPct": 9.89,
+     "topPct": 3.83,
+     "widthPct": null,
+     "heightPct": 4.41,
+     "fontSizeFrac": 0.0428,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "right": "{ 338 - card_style.casting_cost.content_width }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 3.6,
+      "leftPct": 12,
+      "widthPct": 76,
+      "heightPct": 4.8
+     },
+     "sizePct": 0.046
+    }
+   },
+   "costSizePct": {
+    "mse": 0.0428,
+    "current": 0.042
+   },
+   "artSlot": {
+    "mse": {
+     "leftPct": 10.7,
+     "topPct": 9.2,
+     "widthPct": 78.61,
+     "heightPct": 45.4,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 9.5,
+      "leftPct": 10.6,
+      "widthPct": 78.8,
+      "heightPct": 44.8
+     },
+     "sizePct": null
+    }
+   },
+   "type": {
+    "mse": {
+     "leftPct": 9.63,
+     "topPct": 55.94,
+     "widthPct": null,
+     "heightPct": 3.26,
+     "fontSizeFrac": 0.0348,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "right": "{ 333 - max(22,card_style.rarity.content_width) }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 55.8,
+      "leftPct": 12,
+      "widthPct": 76,
+      "heightPct": 4.4
+     },
+     "sizePct": 0.03
+    }
+   },
+   "rules": {
+    "mse": {
+     "leftPct": 10.16,
+     "topPct": 61.11,
+     "widthPct": 79.68,
+     "heightPct": 28.35,
+     "fontSizeFrac": 0.0374,
+     "symbolFontSizeFrac": 0.0374,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 61.6,
+      "leftPct": 12.5,
+      "widthPct": 75,
+      "heightPct": 26.5
+     },
+     "sizePct": 0.036
+    }
+   },
+   "pt": {
+    "mse": {
+     "leftPct": null,
+     "topPct": 91.19,
+     "widthPct": 14.97,
+     "heightPct": 4.6,
+     "fontSizeFrac": 0.0481,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 88.4,
+      "leftPct": 74,
+      "widthPct": 19,
+      "heightPct": 5.8
+     },
+     "sizePct": 0.04
+    }
+   },
+   "footer": {
+    "mse": {
+     "leftPct": 9.63,
+     "topPct": 91.09,
+     "widthPct": 69.52,
+     "heightPct": 2.68,
+     "fontSizeFrac": 0.0281,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 91,
+      "leftPct": 12,
+      "widthPct": 52,
+      "heightPct": 3
+     },
+     "sizePct": 0.016
+    }
+   }
+  },
+  "extras": {}
+ },
+ "alphaland": {
+  "source": "magic-agclassic.mse-style",
+  "cardDims": {
+   "w": 374,
+   "h": 522
+  },
+  "slots": {
+   "title": {
+    "mse": {
+     "leftPct": 9.89,
+     "topPct": 3.83,
+     "widthPct": null,
+     "heightPct": 4.41,
+     "fontSizeFrac": 0.0428,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "right": "{ 338 - card_style.casting_cost.content_width }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 3.6,
+      "leftPct": 12,
+      "widthPct": 76,
+      "heightPct": 4.8
+     },
+     "sizePct": 0.046
+    }
+   },
+   "costSizePct": {
+    "mse": 0.0428,
+    "current": 0.042
+   },
+   "artSlot": {
+    "mse": {
+     "leftPct": 10.7,
+     "topPct": 9.2,
+     "widthPct": 78.61,
+     "heightPct": 45.4,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 9.5,
+      "leftPct": 10.6,
+      "widthPct": 78.8,
+      "heightPct": 44.8
+     },
+     "sizePct": null
+    }
+   },
+   "type": {
+    "mse": {
+     "leftPct": 9.63,
+     "topPct": 55.94,
+     "widthPct": null,
+     "heightPct": 3.26,
+     "fontSizeFrac": 0.0348,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "right": "{ 333 - max(22,card_style.rarity.content_width) }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 55.8,
+      "leftPct": 12,
+      "widthPct": 76,
+      "heightPct": 4.4
+     },
+     "sizePct": 0.03
+    }
+   },
+   "rules": {
+    "mse": {
+     "leftPct": 10.16,
+     "topPct": 61.11,
+     "widthPct": 79.68,
+     "heightPct": 28.35,
+     "fontSizeFrac": 0.0374,
+     "symbolFontSizeFrac": 0.0374,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 61.6,
+      "leftPct": 12.5,
+      "widthPct": 75,
+      "heightPct": 26.5
+     },
+     "sizePct": 0.036
+    }
+   },
+   "pt": {
+    "mse": {
+     "leftPct": null,
+     "topPct": 91.19,
+     "widthPct": 14.97,
+     "heightPct": 4.6,
+     "fontSizeFrac": 0.0481,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 88.4,
+      "leftPct": 74,
+      "widthPct": 19,
+      "heightPct": 5.8
+     },
+     "sizePct": 0.04
+    }
+   },
+   "footer": {
+    "mse": {
+     "leftPct": 9.63,
+     "topPct": 91.09,
+     "widthPct": 69.52,
+     "heightPct": 2.68,
+     "fontSizeFrac": 0.0281,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 91,
+      "leftPct": 12,
+      "widthPct": 52,
+      "heightPct": 3
+     },
+     "sizePct": 0.016
+    }
+   }
+  },
+  "extras": {}
+ },
+ "alphatoken": {
+  "source": "magic-agclassic-token.mse-style",
+  "cardDims": {
+   "w": 374,
+   "h": 522
+  },
+  "slots": {
+   "title": {
+    "mse": {
+     "leftPct": 5.35,
+     "topPct": 3.45,
+     "widthPct": 89.3,
+     "heightPct": 4.41,
+     "fontSizeFrac": 0.0535,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 3.2,
+      "leftPct": 12,
+      "widthPct": 76,
+      "heightPct": 5.2
+     },
+     "sizePct": 0.044
+    }
+   },
+   "artSlot": {
+    "mse": {
+     "leftPct": 10.7,
+     "topPct": 8.81,
+     "widthPct": 78.61,
+     "heightPct": 52.87,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 9,
+      "leftPct": 10,
+      "widthPct": 80,
+      "heightPct": 52.5
+     },
+     "sizePct": null
+    }
+   },
+   "type": {
+    "mse": {
+     "leftPct": 14.71,
+     "topPct": 62.64,
+     "widthPct": null,
+     "heightPct": 3.26,
+     "fontSizeFrac": 0.0348,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "right": "{ 313 - max(22,card_style.rarity.content_width) }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 70.5,
+      "leftPct": 18,
+      "widthPct": 64,
+      "heightPct": 7
+     },
+     "sizePct": 0.03
+    }
+   },
+   "rules": {
+    "mse": {
+     "leftPct": 15.24,
+     "topPct": 67.82,
+     "widthPct": 69.52,
+     "heightPct": 21.65,
+     "fontSizeFrac": 0.0374,
+     "symbolFontSizeFrac": 0.0374,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 49,
+      "leftPct": 12,
+      "widthPct": 76,
+      "heightPct": 11
+     },
+     "sizePct": 0.03
+    }
+   },
+   "pt": {
+    "mse": {
+     "leftPct": null,
+     "topPct": 91.19,
+     "widthPct": 14.97,
+     "heightPct": 4.6,
+     "fontSizeFrac": 0.0481,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 82.5,
+      "leftPct": 75,
+      "widthPct": 19,
+      "heightPct": 6.5
+     },
+     "sizePct": 0.04
+    }
+   },
+   "footer": {
+    "mse": {
+     "leftPct": 14.71,
+     "topPct": 91.09,
+     "widthPct": 59.36,
+     "heightPct": 2.68,
+     "fontSizeFrac": 0.0281,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 96.5,
+      "leftPct": 10,
+      "widthPct": 80,
+      "heightPct": 3
+     },
+     "sizePct": 0.015
+    }
+   }
+  },
+  "extras": {}
+ },
+ "retro": {
+  "source": "magic-old.mse-style",
+  "cardDims": {
+   "w": 375,
+   "h": 523
+  },
+  "slots": {
+   "title": {
+    "mse": {
+     "leftPct": 11.2,
+     "topPct": 4.59,
+     "widthPct": null,
+     "heightPct": 4.4,
+     "fontSizeFrac": 0.0413,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "right": "{ 341 - card_style.casting_cost.content_width }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 4.2,
+      "leftPct": 11,
+      "widthPct": 78,
+      "heightPct": 4.6
+     },
+     "sizePct": 0.044
+    }
+   },
+   "costSizePct": {
+    "mse": 0.0427,
+    "current": 0.04
+   },
+   "artSlot": {
+    "mse": {
+     "leftPct": 12,
+     "topPct": 9.75,
+     "widthPct": 76.27,
+     "heightPct": 44.55,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 9.6,
+      "leftPct": 11.7,
+      "widthPct": 76.6,
+      "heightPct": 44.8
+     },
+     "sizePct": null
+    }
+   },
+   "type": {
+    "mse": {
+     "leftPct": 10.4,
+     "topPct": 55.64,
+     "widthPct": null,
+     "heightPct": 3.82,
+     "fontSizeFrac": 0.032,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "width": "{ 298 - max(22,card_style.rarity.content_width) }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 55.4,
+      "leftPct": 10.4,
+      "widthPct": 74,
+      "heightPct": 3.9
+     },
+     "sizePct": 0.03
+    }
+   },
+   "rules": {
+    "mse": {
+     "leftPct": 11.47,
+     "topPct": 60.8,
+     "widthPct": 77.07,
+     "heightPct": 27.34,
+     "fontSizeFrac": 0.0373,
+     "symbolFontSizeFrac": 0.0373,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 60.6,
+      "leftPct": 11.5,
+      "widthPct": 77,
+      "heightPct": 27.2
+     },
+     "sizePct": 0.0373
+    }
+   },
+   "pt": {
+    "mse": {
+     "leftPct": 78.67,
+     "topPct": 89.87,
+     "widthPct": 12.53,
+     "heightPct": 5.16,
+     "fontSizeFrac": 0.0453,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 89.5,
+      "leftPct": 77.5,
+      "widthPct": 14,
+      "heightPct": 5.6
+     },
+     "sizePct": 0.042
+    }
+   },
+   "footer": {
+    "mse": {
+     "leftPct": 10.67,
+     "topPct": 89.87,
+     "widthPct": 79.2,
+     "heightPct": 3.06,
+     "fontSizeFrac": 0.0267,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 95.3,
+      "leftPct": 11,
+      "widthPct": 78,
+      "heightPct": 2.6
+     },
+     "sizePct": 0.015
+    }
+   }
+  },
+  "extras": {}
+ },
+ "retroland": {
+  "source": "magic-old.mse-style",
+  "cardDims": {
+   "w": 375,
+   "h": 523
+  },
+  "slots": {
+   "title": {
+    "mse": {
+     "leftPct": 11.2,
+     "topPct": 4.59,
+     "widthPct": null,
+     "heightPct": 4.4,
+     "fontSizeFrac": 0.0413,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "right": "{ 341 - card_style.casting_cost.content_width }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 4.2,
+      "leftPct": 11,
+      "widthPct": 78,
+      "heightPct": 4.6
+     },
+     "sizePct": 0.044
+    }
+   },
+   "costSizePct": {
+    "mse": 0.0427,
+    "current": 0.04
+   },
+   "artSlot": {
+    "mse": {
+     "leftPct": 12,
+     "topPct": 9.75,
+     "widthPct": 76.27,
+     "heightPct": 44.55,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 9.6,
+      "leftPct": 11.7,
+      "widthPct": 76.6,
+      "heightPct": 44.8
+     },
+     "sizePct": null
+    }
+   },
+   "type": {
+    "mse": {
+     "leftPct": 10.4,
+     "topPct": 55.64,
+     "widthPct": null,
+     "heightPct": 3.82,
+     "fontSizeFrac": 0.032,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "width": "{ 298 - max(22,card_style.rarity.content_width) }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 55.4,
+      "leftPct": 10.4,
+      "widthPct": 74,
+      "heightPct": 3.9
+     },
+     "sizePct": 0.03
+    }
+   },
+   "rules": {
+    "mse": {
+     "leftPct": 11.47,
+     "topPct": 60.8,
+     "widthPct": 77.07,
+     "heightPct": 27.34,
+     "fontSizeFrac": 0.0373,
+     "symbolFontSizeFrac": 0.0373,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 60.6,
+      "leftPct": 11.5,
+      "widthPct": 77,
+      "heightPct": 27.2
+     },
+     "sizePct": 0.0373
+    }
+   },
+   "pt": {
+    "mse": {
+     "leftPct": 78.67,
+     "topPct": 89.87,
+     "widthPct": 12.53,
+     "heightPct": 5.16,
+     "fontSizeFrac": 0.0453,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 89.5,
+      "leftPct": 77.5,
+      "widthPct": 14,
+      "heightPct": 5.6
+     },
+     "sizePct": 0.042
+    }
+   },
+   "footer": {
+    "mse": {
+     "leftPct": 10.67,
+     "topPct": 89.87,
+     "widthPct": 79.2,
+     "heightPct": 3.06,
+     "fontSizeFrac": 0.0267,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 95.3,
+      "leftPct": 11,
+      "widthPct": 78,
+      "heightPct": 2.6
+     },
+     "sizePct": 0.015
+    }
+   }
+  },
+  "extras": {}
+ },
+ "modern": {
+  "source": "magic-new.mse-style",
+  "cardDims": {
+   "w": 375,
+   "h": 523
+  },
+  "slots": {
+   "title": {
+    "mse": {
+     "leftPct": 8.53,
+     "topPct": 5.74,
+     "widthPct": null,
+     "heightPct": 4.4,
+     "fontSizeFrac": 0.0453,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "right": "{ 341 - card_style.casting_cost.content_width }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 5.5,
+      "leftPct": 8.8,
+      "widthPct": 78,
+      "heightPct": 4.4
+     },
+     "sizePct": 0.044
+    }
+   },
+   "costSizePct": {
+    "mse": 0.04,
+    "current": 0.04
+   },
+   "artSlot": {
+    "mse": {
+     "leftPct": 8.53,
+     "topPct": 11.85,
+     "widthPct": 82.93,
+     "heightPct": 43.59,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 11.6,
+      "leftPct": 8.3,
+      "widthPct": 83.2,
+      "heightPct": 43.8
+     },
+     "sizePct": null
+    }
+   },
+   "type": {
+    "mse": {
+     "leftPct": 9.33,
+     "topPct": 56.98,
+     "widthPct": null,
+     "heightPct": 3.82,
+     "fontSizeFrac": 0.0373,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "width": "{ (if has_identity() then \"288\" else \"308\") - max(22,card_style.rarity.content_width) }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 56.95,
+      "leftPct": 9,
+      "widthPct": 74,
+      "heightPct": 3.9
+     },
+     "sizePct": 0.0347
+    }
+   },
+   "rules": {
+    "mse": {
+     "leftPct": 8.27,
+     "topPct": 62.72,
+     "widthPct": 82.93,
+     "heightPct": 27.15,
+     "fontSizeFrac": 0.0373,
+     "symbolFontSizeFrac": 0.0373,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 62.5,
+      "leftPct": 8.3,
+      "widthPct": 83,
+      "heightPct": 27
+     },
+     "sizePct": 0.0373
+    }
+   },
+   "pt": {
+    "mse": {
+     "leftPct": 75.73,
+     "topPct": 89.1,
+     "widthPct": 16,
+     "heightPct": 5.35,
+     "fontSizeFrac": 0.0453,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 87.3,
+      "leftPct": 73.3,
+      "widthPct": 21,
+      "heightPct": 6.8
+     },
+     "sizePct": 0.044
+    }
+   },
+   "footer": {
+    "mse": {
+     "leftPct": 14.93,
+     "topPct": 91.4,
+     "widthPct": 57.87,
+     "heightPct": 3.06,
+     "fontSizeFrac": 0.0267,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 91.4,
+      "leftPct": 14,
+      "widthPct": 58,
+      "heightPct": 2.6
+     },
+     "sizePct": 0.015
+    }
+   }
+  },
+  "extras": {}
+ },
+ "modernland": {
+  "source": "magic-new.mse-style",
+  "cardDims": {
+   "w": 375,
+   "h": 523
+  },
+  "slots": {
+   "title": {
+    "mse": {
+     "leftPct": 8.53,
+     "topPct": 5.74,
+     "widthPct": null,
+     "heightPct": 4.4,
+     "fontSizeFrac": 0.0453,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "right": "{ 341 - card_style.casting_cost.content_width }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 5.5,
+      "leftPct": 8.8,
+      "widthPct": 78,
+      "heightPct": 4.4
+     },
+     "sizePct": 0.044
+    }
+   },
+   "costSizePct": {
+    "mse": 0.04,
+    "current": 0.04
+   },
+   "artSlot": {
+    "mse": {
+     "leftPct": 8.53,
+     "topPct": 11.85,
+     "widthPct": 82.93,
+     "heightPct": 43.59,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 11.6,
+      "leftPct": 8.3,
+      "widthPct": 83.2,
+      "heightPct": 43.8
+     },
+     "sizePct": null
+    }
+   },
+   "type": {
+    "mse": {
+     "leftPct": 9.33,
+     "topPct": 56.98,
+     "widthPct": null,
+     "heightPct": 3.82,
+     "fontSizeFrac": 0.0373,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "width": "{ (if has_identity() then \"288\" else \"308\") - max(22,card_style.rarity.content_width) }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 56.95,
+      "leftPct": 9,
+      "widthPct": 74,
+      "heightPct": 3.9
+     },
+     "sizePct": 0.0347
+    }
+   },
+   "rules": {
+    "mse": {
+     "leftPct": 8.27,
+     "topPct": 62.72,
+     "widthPct": 82.93,
+     "heightPct": 27.15,
+     "fontSizeFrac": 0.0373,
+     "symbolFontSizeFrac": 0.0373,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 62.5,
+      "leftPct": 8.3,
+      "widthPct": 83,
+      "heightPct": 27
+     },
+     "sizePct": 0.0373
+    }
+   },
+   "pt": {
+    "mse": {
+     "leftPct": 75.73,
+     "topPct": 89.1,
+     "widthPct": 16,
+     "heightPct": 5.35,
+     "fontSizeFrac": 0.0453,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 87.3,
+      "leftPct": 73.3,
+      "widthPct": 21,
+      "heightPct": 6.8
+     },
+     "sizePct": 0.044
+    }
+   },
+   "footer": {
+    "mse": {
+     "leftPct": 14.93,
+     "topPct": 91.4,
+     "widthPct": 57.87,
+     "heightPct": 3.06,
+     "fontSizeFrac": 0.0267,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 91.4,
+      "leftPct": 14,
+      "widthPct": 58,
+      "heightPct": 2.6
+     },
+     "sizePct": 0.015
+    }
+   }
+  },
+  "extras": {}
+ },
+ "lotr": {
+  "source": "magic-m15-showcase-lotr.mse-style",
+  "cardDims": {
+   "w": 646,
+   "h": 902
+  },
+  "slots": {
+   "artSlot": {
+    "mse": {
+     "leftPct": 9.6,
+     "topPct": 11.09,
+     "widthPct": 81.11,
+     "heightPct": 44.68,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 13,
+      "leftPct": 14,
+      "widthPct": 72,
+      "heightPct": 45
+     },
+     "sizePct": null
+    }
+   },
+   "rules": {
+    "mse": {
+     "leftPct": 7.74,
+     "topPct": null,
+     "widthPct": 84.21,
+     "heightPct": null,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "top": "{ 570 + chop_top() + body_font_vertical() }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 66,
+      "leftPct": 8.5,
+      "widthPct": 83,
+      "heightPct": 26
+     },
+     "sizePct": 0.033
+    }
+   },
+   "pt": {
+    "mse": {
+     "leftPct": 80.03,
+     "topPct": null,
+     "widthPct": 12.38,
+     "heightPct": 4.21,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "top": "{ 809 + pt_font_vertical() }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 86.5,
+      "leftPct": 71,
+      "widthPct": 23,
+      "heightPct": 7.5
+     },
+     "sizePct": 0.043
+    }
+   }
+  },
+  "extras": {}
+ },
+ "lotrscroll": {
+  "source": "magic-m15-showcase-lotr-scroll.mse-style",
+  "cardDims": {
+   "w": 646,
+   "h": 902
+  },
+  "slots": {
+   "artSlot": {
+    "mse": {
+     "leftPct": 7.59,
+     "topPct": 11.09,
+     "widthPct": 84.83,
+     "heightPct": 44.46,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 11.5,
+      "leftPct": 8,
+      "widthPct": 84,
+      "heightPct": 45
+     },
+     "sizePct": null
+    }
+   },
+   "rules": {
+    "mse": {
+     "leftPct": 7.74,
+     "topPct": null,
+     "widthPct": null,
+     "heightPct": null,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "top": "{ 570 + chop_top() + body_font_vertical() }",
+      "right": "{ 594 - chop_right() }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 65.5,
+      "leftPct": 8.5,
+      "widthPct": 83,
+      "heightPct": 21
+     },
+     "sizePct": 0.033
+    }
+   },
+   "pt": {
+    "mse": {
+     "leftPct": 79.88,
+     "topPct": null,
+     "widthPct": 12.54,
+     "heightPct": 4.1,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "top": "{ 810 + pt_font_vertical() }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 86.5,
+      "leftPct": 71,
+      "widthPct": 23,
+      "heightPct": 7.5
+     },
+     "sizePct": 0.043
+    }
+   }
+  },
+  "extras": {}
+ },
+ "avatar": {
+  "source": "magic-m15-showcase-avatar-elemental.mse-style",
+  "cardDims": {
+   "w": 744,
+   "h": 1039
+  },
+  "slots": {
+   "artSlot": {
+    "mse": {
+     "leftPct": null,
+     "topPct": null,
+     "widthPct": null,
+     "heightPct": null,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "left": "{ art_left() }",
+      "top": "{ art_top() }",
+      "width": "{ art_width() }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 2.5,
+      "leftPct": 6,
+      "widthPct": 88,
+      "heightPct": 54
+     },
+     "sizePct": null
+    }
+   },
+   "rules": {
+    "mse": {
+     "leftPct": 8.6,
+     "topPct": null,
+     "widthPct": null,
+     "heightPct": null,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "top": "{ 660 + chop_top() + body_font_vertical() }",
+      "right": "{ 680 - chop_right() }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 67.6,
+      "leftPct": 8,
+      "widthPct": 84,
+      "heightPct": 24.5
+     },
+     "sizePct": 0.033
+    }
+   },
+   "pt": {
+    "mse": {
+     "leftPct": 79.44,
+     "topPct": null,
+     "widthPct": 13.44,
+     "heightPct": 3.46,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "top": "{ 937 + pt_font_vertical() }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 87.2,
+      "leftPct": 71.5,
+      "widthPct": 23,
+      "heightPct": 7
+     },
+     "sizePct": 0.04
+    }
+   }
+  },
+  "extras": {}
+ },
+ "bloomburrow": {
+  "source": "magic-m15-showcase-bloomburrow-woodland.mse-style",
+  "cardDims": {
+   "w": 744,
+   "h": 1039
+  },
+  "slots": {
+   "artSlot": {
+    "mse": {
+     "leftPct": null,
+     "topPct": 11.07,
+     "widthPct": null,
+     "heightPct": 45.24,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "left": "{ 0 }",
+      "width": "{ stylesheet.card_width }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 2.5,
+      "leftPct": 6,
+      "widthPct": 88,
+      "heightPct": 54
+     },
+     "sizePct": null
+    }
+   },
+   "rules": {
+    "mse": {
+     "leftPct": 8.74,
+     "topPct": 0,
+     "widthPct": 82.53,
+     "heightPct": null,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 67.6,
+      "leftPct": 8,
+      "widthPct": 84,
+      "heightPct": 24.5
+     },
+     "sizePct": 0.033
+    }
+   },
+   "pt": {
+    "mse": {
+     "leftPct": 79.84,
+     "topPct": null,
+     "widthPct": 12.77,
+     "heightPct": 4.43,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "top": "{ 931 + pt_font_vertical() }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 87.2,
+      "leftPct": 71.5,
+      "widthPct": 23,
+      "heightPct": 7
+     },
+     "sizePct": 0.04
+    }
+   }
+  },
+  "extras": {}
+ },
+ "bloomanime": {
+  "source": "magic-m15-showcase-bloomburrow-borderless-anime.mse-style",
+  "cardDims": {
+   "w": 744,
+   "h": 1039
+  },
+  "slots": {
+   "artSlot": {
+    "mse": {
+     "leftPct": null,
+     "topPct": null,
+     "widthPct": null,
+     "heightPct": 91.63,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "left": "{ 0 }",
+      "top": "{ 0 }",
+      "width": "{ stylesheet.card_width }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 2.5,
+      "leftPct": 3.5,
+      "widthPct": 93,
+      "heightPct": 92
+     },
+     "sizePct": null
+    }
+   },
+   "rules": {
+    "mse": {
+     "leftPct": 8.74,
+     "topPct": 0,
+     "widthPct": 82.53,
+     "heightPct": null,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 62,
+      "leftPct": 7,
+      "widthPct": 86,
+      "heightPct": 28
+     },
+     "sizePct": 0.032
+    }
+   },
+   "pt": {
+    "mse": {
+     "leftPct": 79.97,
+     "topPct": null,
+     "widthPct": 11.96,
+     "heightPct": 4.33,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "top": "{ 932 + pt_font_vertical() }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 89,
+      "leftPct": 73,
+      "widthPct": 21,
+      "heightPct": 7
+     },
+     "sizePct": 0.04
+    }
+   }
+  },
+  "extras": {}
+ },
+ "tarkirdragon": {
+  "source": "magic-m15-showcase-tarkir-dragon-wing.mse-style",
+  "cardDims": {
+   "w": 646,
+   "h": 902
+  },
+  "slots": {
+   "artSlot": {
+    "mse": {
+     "leftPct": 8.82,
+     "topPct": 11.09,
+     "widthPct": 82.2,
+     "heightPct": 44.12,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {}
+    },
+    "current": {
+     "rect": {
+      "topPct": 12,
+      "leftPct": 9,
+      "widthPct": 82,
+      "heightPct": 46
+     },
+     "sizePct": null
+    }
+   },
+   "rules": {
+    "mse": {
+     "leftPct": 8.05,
+     "topPct": null,
+     "widthPct": 83.9,
+     "heightPct": null,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "top": "{ 566 + chop_top() + body_font_vertical() }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 66,
+      "leftPct": 9,
+      "widthPct": 82,
+      "heightPct": 26
+     },
+     "sizePct": 0.033
+    }
+   },
+   "pt": {
+    "mse": {
+     "leftPct": 79.88,
+     "topPct": null,
+     "widthPct": 12.38,
+     "heightPct": 3.99,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "top": "{ 810 + pt_font_vertical() }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 87,
+      "leftPct": 71,
+      "widthPct": 23,
+      "heightPct": 7.5
+     },
+     "sizePct": 0.043
+    }
+   }
+  },
+  "extras": {}
+ },
+ "tarkirdraconic": {
+  "source": "magic-m15-showcase-tarkir-draconic.mse-style",
+  "cardDims": {
+   "w": 646,
+   "h": 902
+  },
+  "slots": {
+   "artSlot": {
+    "mse": {
+     "leftPct": null,
+     "topPct": null,
+     "widthPct": null,
+     "heightPct": null,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "left": "{ art_left() }",
+      "top": "{ art_top() }",
+      "width": "{ art_width() }",
+      "height": "{ art_height() }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 12,
+      "leftPct": 9,
+      "widthPct": 82,
+      "heightPct": 46
+     },
+     "sizePct": null
+    }
+   },
+   "rules": {
+    "mse": {
+     "leftPct": 8.82,
+     "topPct": 0,
+     "widthPct": null,
+     "heightPct": null,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "right": "{ 589 - chop_right() }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 66,
+      "leftPct": 9,
+      "widthPct": 82,
+      "heightPct": 26
+     },
+     "sizePct": 0.033
+    }
+   },
+   "pt": {
+    "mse": {
+     "leftPct": 79.88,
+     "topPct": null,
+     "widthPct": 12.69,
+     "heightPct": 3.77,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "top": "{ 811 + pt_font_vertical() }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 87,
+      "leftPct": 71,
+      "widthPct": 23,
+      "heightPct": 7.5
+     },
+     "sizePct": 0.043
+    }
+   }
+  },
+  "extras": {}
+ },
+ "tarkirghostfire": {
+  "source": "magic-m15-showcase-tarkir-ghostfire-walker.mse-style",
+  "cardDims": {
+   "w": 744,
+   "h": 1039
+  },
+  "slots": {
+   "artSlot": {
+    "mse": {
+     "leftPct": null,
+     "topPct": null,
+     "widthPct": null,
+     "heightPct": null,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "left": "{ art_left() }",
+      "top": "{ art_top() }",
+      "width": "{ art_width() }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 2.5,
+      "leftPct": 3.5,
+      "widthPct": 93,
+      "heightPct": 92
+     },
+     "sizePct": null
+    }
+   },
+   "rules": {
+    "mse": {
+     "leftPct": 8.87,
+     "topPct": null,
+     "widthPct": 82.26,
+     "heightPct": null,
+     "fontSizeFrac": null,
+     "symbolFontSizeFrac": null,
+     "dynamic": {
+      "top": "{ 610 - move_typeline() + chop_top() + body_font_vertical() }"
+     }
+    },
+    "current": {
+     "rect": {
+      "topPct": 62,
+      "leftPct": 7,
+      "widthPct": 86,
+      "heightPct": 28
+     },
+     "sizePct": 0.032
+    }
+   }
+  },
+  "extras": {}
+ }
+}
