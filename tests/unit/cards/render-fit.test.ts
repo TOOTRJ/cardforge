@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fitRulesSizePct } from "@/lib/cards/render-tiers";
+import { fitRulesSizePct, fitSingleLineSizePct } from "@/lib/cards/render-tiers";
 
 // The m15 rules slot — the most common case.
 const M15_RULES = {
@@ -59,5 +59,39 @@ describe("fitRulesSizePct", () => {
     });
     expect(battle).toBeGreaterThanOrEqual(0.015);
     expect(battle).toBeLessThanOrEqual(0.028);
+  });
+});
+
+describe("fitSingleLineSizePct", () => {
+  const M15_TYPE_RECT = { topPct: 56.5, leftPct: 7.9, widthPct: 86.1, heightPct: 5.2 };
+  const fitLine = (text: string) =>
+    fitSingleLineSizePct({
+      text,
+      rect: M15_TYPE_RECT,
+      baseSizePct: 0.0435,
+      reservedPct: 0.0435 * 1.1 * 1.3,
+    });
+
+  it("keeps the base size for a normal type line", () => {
+    expect(fitLine("Creature — Angel")).toBe(0.0435);
+  });
+
+  it("shrinks a long type line instead of ellipsizing", () => {
+    const long = fitLine("Legendary Snow Artifact Creature — Phyrexian Golem Warrior");
+    expect(long).toBeLessThan(0.0435);
+    expect(long).toBeGreaterThanOrEqual(0.015);
+  });
+
+  it("longer text never gets a larger size", () => {
+    expect(fitLine("Legendary Creature — Dragon Wizard Noble")).toBeLessThanOrEqual(
+      fitLine("Creature — Dragon"),
+    );
+  });
+
+  it("passes empty text through at base size", () => {
+    expect(fitLine("")).toBe(0.0435);
+    expect(
+      fitSingleLineSizePct({ text: null, rect: M15_TYPE_RECT, baseSizePct: 0.03 }),
+    ).toBe(0.03);
   });
 });

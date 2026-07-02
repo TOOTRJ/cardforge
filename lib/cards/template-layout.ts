@@ -223,12 +223,15 @@ const OUTLINE_SHADOW =
 // painted P/T plate via the pt/ asset set.
 const M15: FrameProfile = {
   label: "M15",
-  // MSE m15 spec: cost symbols 15px / text 14px on the 375px-wide card.
-  costSizePct: 0.04,
+  // Pip disc measured on a real DOM Serra Angel scan (frame-compare tool,
+  // 745px PNG): ~34px ≈ 4.6% of card width; 0.0485 lands our disc there.
+  costSizePct: 0.0485,
   artSlot: { topPct: 11.4, leftPct: 7.8, widthPct: 84.4, heightPct: 44.0 },
   title: {
-    // topPct nudged 4.6 → 4.8 (~1px down) to sit true-center on the name bar.
-    rect: { topPct: 4.8, leftPct: 8.5, widthPct: 83, heightPct: 6.0 },
+    // Measured against the DOM scan: title ink starts at 7.9% of card width
+    // (was 8.5) and the cost pips end at ~94% (was 91.5). Vertical center was
+    // already within 0.05% of the print — topPct stays.
+    rect: { topPct: 4.8, leftPct: 7.9, widthPct: 86.1, heightPct: 6.0 },
     sizePct: 0.05,
     colorHex: INK_DARK,
     weight: 600,
@@ -236,10 +239,12 @@ const M15: FrameProfile = {
     letterSpacingEm: 0.01,
   },
   type: {
-    // Nudged down ~1px (center 58.8% → 58.95%) to sit true-center on the M15
-    // type bar — 56.2 read a hair high, 56.5 a hair low. Shared by snow/devoid.
-    rect: { topPct: 56.35, leftPct: 8.5, widthPct: 83, heightPct: 5.2 },
-    sizePct: 0.034,
+    // Measured on the scan: type ink center sits at 59.13% of card height and
+    // its cap height is ~86% of the title's — real M15 type lines are much
+    // larger than the old 0.034. Long lines shrink via fitSingleLineSizePct
+    // instead of ellipsizing. Shared by snow/devoid.
+    rect: { topPct: 56.5, leftPct: 7.9, widthPct: 86.1, heightPct: 5.2 },
+    sizePct: 0.0435,
     colorHex: INK_DARK_SOFT,
     weight: 600,
     font: "display",
