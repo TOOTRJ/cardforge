@@ -32,6 +32,15 @@
 //      column scan (transparent run = art window; cream/painted runs = the
 //      title / type / text bands). Tune in the live preview.
 // No renderer code changes — both consume this profile generically.
+//
+// TUNING happens in the admin visual editor (/admin/frame-compare → Edit
+// layout): adjustments save to the frame_profile_overrides table and merge
+// over these values at render time (lib/cards/profile-override.ts — extend
+// its zod schema when adding new numeric fields here). Fold-back workflow:
+// once a template's override is stable, use the editor's "Copy as TS",
+// merge the values into the profile below, and delete the DB row so code
+// stays the single source of truth. docs/mse-profile-report.md holds the
+// original MSE baselines for comparison.
 // ---------------------------------------------------------------------------
 
 import type { FrameTemplate } from "@/types/card";
