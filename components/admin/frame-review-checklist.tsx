@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { ArrowRight, CheckCircle2, ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { FrameVerifyCheckbox } from "@/components/admin/frame-verify-checkbox";
@@ -71,16 +71,31 @@ export function FrameReviewChecklist({ eras }: { eras: ChecklistEra[] }) {
         const combos = era.templates.flatMap((t) => t.combos);
         const done = combos.filter((c) => c.verified).length;
         return (
-          <section key={era.era} className="flex flex-col gap-4">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-subtle">
+          <details
+            key={era.era}
+            className="group rounded-lg border border-border/50 bg-elevated/30"
+          >
+            <summary
+              className="flex cursor-pointer list-none items-center gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden"
+              title="Click to expand this era's frames"
+            >
+              <ChevronDown
+                className="h-4 w-4 shrink-0 -rotate-90 text-subtle transition-transform group-open:rotate-0"
+                aria-hidden
+              />
+              <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-foreground">
                 {era.label}
               </h2>
-              <Badge variant={done === combos.length ? "primary" : "default"}>
-                {done}/{combos.length} verified
-              </Badge>
-            </div>
-            <div className="grid gap-4 lg:grid-cols-2">
+              <span className="text-xs text-subtle">
+                {era.templates.length} frame{era.templates.length === 1 ? "" : "s"}
+              </span>
+              <span className="ml-auto">
+                <Badge variant={done === combos.length ? "primary" : "default"}>
+                  {done}/{combos.length} verified
+                </Badge>
+              </span>
+            </summary>
+            <div className="grid gap-4 border-t border-border/40 p-4 lg:grid-cols-2">
               {era.templates.map((tpl) => (
                 <SurfaceCard key={tpl.template} className="flex flex-col p-4">
                   <div className="mb-2 flex items-center justify-between gap-2">
@@ -117,11 +132,13 @@ export function FrameReviewChecklist({ eras }: { eras: ChecklistEra[] }) {
                         key={combo.colorKey}
                         className="flex items-center gap-3 border-t border-border/40 py-2 first:border-t-0"
                       >
-                        <FrameVerifyCheckbox
-                          template={tpl.template}
-                          colorKey={combo.colorKey}
-                          verified={combo.verified}
-                        />
+                        <span title="Tick when this frame + color renders near-perfectly — verified combos of unreleased frames become available to all users in the card creator.">
+                          <FrameVerifyCheckbox
+                            template={tpl.template}
+                            colorKey={combo.colorKey}
+                            verified={combo.verified}
+                          />
+                        </span>
                         <ColorDot colorKey={combo.colorKey} />
                         {combo.reference ? (
                           <>
@@ -155,6 +172,7 @@ export function FrameReviewChecklist({ eras }: { eras: ChecklistEra[] }) {
                         ) : null}
                         <Link
                           href={`/admin/frame-compare?template=${tpl.template}&color=${combo.colorKey}`}
+                          title="Open the compare & edit view: overlay the real printing on our render, adjust the layout, score the alignment."
                           className={cn(
                             "inline-flex shrink-0 items-center gap-1 rounded-md border border-border/50 px-2 py-1 text-[11px] font-medium text-muted transition-colors hover:border-border-strong hover:text-foreground",
                           )}
@@ -167,7 +185,7 @@ export function FrameReviewChecklist({ eras }: { eras: ChecklistEra[] }) {
                 </SurfaceCard>
               ))}
             </div>
-          </section>
+          </details>
         );
       })}
     </div>

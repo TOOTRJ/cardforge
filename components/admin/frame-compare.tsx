@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Gauge, Loader2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { CardPreview, type CardPreviewData } from "@/components/cards/card-preview";
@@ -42,6 +43,15 @@ import {
 
 type Mode = "overlay" | "side-by-side" | "difference";
 
+const MODE_HINTS: Record<Mode, string> = {
+  overlay:
+    "The real scan sits on top of our render — slide the opacity to blend between them.",
+  "side-by-side": "Our render on the left, the real printing on the right.",
+  difference:
+    "Precision mode: pixels that match go dark, misalignment glows bright. Nudge until the glow dies.",
+};
+
+
 type FrameCompareProps = {
   preview: CardPreviewData;
   /** 745×1040 PNG url from Scryfall for the reference printing; null when
@@ -67,6 +77,7 @@ export function FrameCompare({
   colorKey,
   savedOverride,
 }: FrameCompareProps) {
+  const router = useRouter();
   const [mode, setMode] = useState<Mode>("overlay");
   const [opacity, setOpacity] = useState(50);
   const [zoomed, setZoomed] = useState(false);
@@ -132,29 +143,36 @@ export function FrameCompare({
     value: number,
   ) => setDraft((d) => ({ ...d, [name]: Math.round(value * 10000) / 10000 }));
 
-  const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+  // Global keyboard nudges while editing — a window listener so arrows work
+  // no matter what was last clicked (typing in inputs is exempt).
+  useEffect(() => {
     if (!editing || !selected || !resolvedProfile) return;
-    if ((event.target as HTMLElement).tagName === "INPUT") return;
-    const step = event.shiftKey ? 0.5 : 0.1;
-    const nudge = (field: string, delta: number) =>
-      onField(
-        selected,
-        { field, kind: "rect", step: 0.1 },
-        (readRect(resolvedProfile, selected, field) ?? 0) + delta,
-      );
-    switch (event.key) {
-      case "ArrowUp": nudge("topPct", -step); break;
-      case "ArrowDown": nudge("topPct", step); break;
-      case "ArrowLeft": nudge("leftPct", -step); break;
-      case "ArrowRight": nudge("leftPct", step); break;
-      case "[": nudge("widthPct", -step); break;
-      case "]": nudge("widthPct", step); break;
-      case "{": nudge("heightPct", -step); break;
-      case "}": nudge("heightPct", step); break;
-      default: return;
-    }
-    event.preventDefault();
-  };
+    const handler = (event: KeyboardEvent) => {
+      const tag = (event.target as HTMLElement | null)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      const step = event.shiftKey ? 0.5 : 0.1;
+      const nudge = (field: string, delta: number) =>
+        onField(
+          selected,
+          { field, kind: "rect", step: 0.1 },
+          (readRect(resolvedProfile, selected, field) ?? 0) + delta,
+        );
+      switch (event.key) {
+        case "ArrowUp": nudge("topPct", -step); break;
+        case "ArrowDown": nudge("topPct", step); break;
+        case "ArrowLeft": nudge("leftPct", -step); break;
+        case "ArrowRight": nudge("leftPct", step); break;
+        case "[": nudge("widthPct", -step); break;
+        case "]": nudge("widthPct", step); break;
+        case "{": nudge("heightPct", -step); break;
+        case "}": nudge("heightPct", step); break;
+        default: return;
+      }
+      event.preventDefault();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [editing, selected, resolvedProfile]);
 
   const save = () =>
     startSaving(async () => {
@@ -170,6 +188,7 @@ export function FrameCompare({
       toast.success(
         `Layout saved — live everywhere now. ${result.staleCount} baked card${result.staleCount === 1 ? "" : "s"} marked stale (run the rebake sweep).`,
       );
+      router.refresh();
     });
 
   const reset = () =>
@@ -185,6 +204,7 @@ export function FrameCompare({
       toast.success(
         `Reset to code defaults. ${result.staleCount} baked card${result.staleCount === 1 ? "" : "s"} marked stale.`,
       );
+      router.refresh();
     });
 
   // `isolate` caps CardPreview's internal z-indexed layers inside their own
@@ -220,6 +240,7 @@ export function FrameCompare({
               role="radio"
               aria-checked={mode === m}
               onClick={() => setMode(m)}
+              title={MODE_HINTS[m]}
               disabled={!scanUrl && m !== "side-by-side"}
               className={cn(
                 "px-3 py-1.5 text-xs font-medium capitalize transition-colors",
@@ -235,7 +256,10 @@ export function FrameCompare({
         </div>
 
         {mode === "overlay" && scanUrl ? (
-          <label className="flex items-center gap-2 text-sm text-muted">
+          <label
+            className="flex items-center gap-2 text-sm text-muted"
+            title="0% = only our render, 100% = only the real scan."
+          >
             Scan opacity
             <input
               type="range"
@@ -251,7 +275,10 @@ export function FrameCompare({
           </label>
         ) : null}
 
-        <label className="flex items-center gap-2 text-sm text-muted">
+        <label
+          className="flex items-center gap-2 text-sm text-muted"
+          title="Render the card at full scan resolution (745px wide) for close inspection."
+        >
           <input
             type="checkbox"
             checked={zoomed}
@@ -266,6 +293,7 @@ export function FrameCompare({
             type="button"
             onClick={() => setEditing((v) => !v)}
             aria-pressed={editing}
+            title="Adjust this frame's layout: click an element on the card, nudge with arrow keys or type exact numbers. Saving goes live for everyone instantly."
             className={cn(
               "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors",
               editing
@@ -281,6 +309,7 @@ export function FrameCompare({
           <button
             type="button"
             onClick={runScore}
+            title="Pixel-diff our render against the real scan, per element. Run before and after an edit — the number should drop. Fonts/art always differ, so never expect 0."
             disabled={scoring}
             className="inline-flex items-center gap-1.5 rounded-md border border-border/50 px-2.5 py-1.5 text-xs font-medium text-muted transition-colors hover:text-foreground disabled:opacity-40"
           >
@@ -300,6 +329,12 @@ export function FrameCompare({
           </span>
         ) : null}
       </SurfaceCard>
+
+      <p className="text-xs leading-5 text-subtle">
+        {editing
+          ? "Editing: click an element on the card (or a chip in the panel) to select it, then nudge with the arrow keys — 0.1% per press, Shift for 0.5%, [ ] adjusts width, { } height. Or type exact values in the panel."
+          : MODE_HINTS[mode]}
+      </p>
 
       {score ? (
         <SurfaceCard className="flex flex-col gap-2 p-4">
@@ -334,11 +369,7 @@ export function FrameCompare({
       ) : null}
 
       {/* Canvas (focusable for editor keyboard nudges) + editor panel */}
-      <div
-        className="flex flex-wrap items-start gap-6 overflow-x-auto pb-4 focus:outline-none"
-        tabIndex={editing ? 0 : -1}
-        onKeyDown={onKeyDown}
-      >
+      <div className="flex flex-wrap items-start gap-6 overflow-x-auto pb-4">
         {mode === "side-by-side" || !scanUrl ? (
           <>
             <figure className="flex flex-col gap-2">
