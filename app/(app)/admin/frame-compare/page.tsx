@@ -84,13 +84,14 @@ export default async function AdminFrameComparePage({
   if (isTemplate(template) && isColorKey(color)) {
     const review = reviews.get(frameComboKey(template, color));
     // Admin-pinned reference wins over the registry default.
-    const custom = review?.referenceScryfallId
-      ? {
-          name: review.referenceName ?? "Pinned printing",
-          set: review.referenceSet ?? "",
-          scryfallId: review.referenceScryfallId,
-        }
-      : null;
+    const custom =
+      review?.referenceScryfallId && review.referenceName
+        ? {
+            name: review.referenceName,
+            set: review.referenceSet ?? "",
+            scryfallId: review.referenceScryfallId,
+          }
+        : null;
     const reference = custom ?? FRAME_REFERENCES[template][color];
     const payload = reference
       ? await buildFrameComparePayload(reference.scryfallId, template)
@@ -176,13 +177,14 @@ export default async function AdminFrameComparePage({
       hasOverride: Boolean(checklistOverrides[t]),
       combos: FRAME_COLOR_KEYS.map((colorKey) => {
         const review = reviews.get(frameComboKey(t, colorKey));
-        const custom = review?.referenceScryfallId
-          ? {
-              name: review.referenceName ?? "Pinned printing",
-              set: review.referenceSet ?? "",
-              scryfallId: review.referenceScryfallId,
-            }
-          : null;
+        const custom =
+          review?.referenceScryfallId && review.referenceName
+            ? {
+                name: review.referenceName,
+                set: review.referenceSet ?? "",
+                scryfallId: review.referenceScryfallId,
+              }
+            : null;
         const reference = custom ?? FRAME_REFERENCES[t][colorKey];
         return {
           colorKey,

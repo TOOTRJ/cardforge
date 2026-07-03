@@ -15,6 +15,7 @@ import {
   type SCALAR_FIELDS,
 } from "@/components/admin/frame-profile-editor";
 import {
+  defaultCostRect,
   mergeProfile,
   resolveFrameProfile,
   type FrameProfileOverride,
@@ -138,6 +139,16 @@ export function FrameCompare({
   const onField = (path: SlotPath, field: EditorField, value: number) =>
     setDraft((d) => writeSlotField(d, path, field, value));
 
+  // Selecting the cost element for the first time detaches the pips from the
+  // title band: seed the draft with the region they currently occupy so the
+  // fields are editable and both renderers switch to the absolute cost box.
+  const selectSlot = (path: SlotPath) => {
+    if (path === "costRect" && resolvedProfile && !resolvedProfile.costRect) {
+      setDraft((d) => ({ ...d, costRect: defaultCostRect(resolvedProfile) }));
+    }
+    setSelected(path);
+  };
+
   const onScalar = (
     name: (typeof SCALAR_FIELDS)[number],
     value: number,
@@ -218,7 +229,7 @@ export function FrameCompare({
           profile={resolvedProfile}
           selected={selected}
           showAll={false}
-          onSelect={setSelected}
+          onSelect={selectSlot}
         />
       ) : null}
     </div>
@@ -369,7 +380,15 @@ export function FrameCompare({
       ) : null}
 
       {/* Canvas (focusable for editor keyboard nudges) + editor panel */}
-      <div className="flex flex-wrap items-start gap-6 overflow-x-auto pb-4">
+      <div
+        className={cn(
+          "items-start gap-6 pb-4",
+          editing
+            ? "grid lg:grid-cols-[minmax(0,1fr)_320px]"
+            : "flex flex-wrap overflow-x-auto",
+        )}
+      >
+        <div className="flex flex-wrap items-start gap-6 overflow-x-auto">
         {mode === "side-by-side" || !scanUrl ? (
           <>
             <figure className="flex flex-col gap-2">
@@ -427,7 +446,10 @@ export function FrameCompare({
           </figure>
         )}
 
+        </div>
+
         {editing && resolvedProfile && template ? (
+          <div className="lg:sticky lg:top-20 lg:max-h-[85vh] lg:overflow-y-auto">
           <EditorPanel
             profile={resolvedProfile}
             draft={draft}
@@ -437,13 +459,14 @@ export function FrameCompare({
             hasSavedOverride={Boolean(
               savedOverride && Object.keys(savedOverride).length > 0,
             )}
-            onSelect={setSelected}
+            onSelect={selectSlot}
             onField={onField}
             onScalar={onScalar}
             onSave={save}
             onRevert={() => setDraft(savedOverride ?? {})}
             onReset={reset}
           />
+          </div>
         ) : null}
       </div>
     </div>

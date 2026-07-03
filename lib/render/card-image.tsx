@@ -342,7 +342,7 @@ function CardImage({
       {/* Title band — name + mana cost. */}
       <Band slot={layout.title} cardWidth={width} italic={isShowcase}>
         <span style={ELLIPSIS}>{title}</span>
-        {showCost && card.cost ? (
+        {showCost && card.cost && !layout.costRect ? (
           <CostGlyphs
             cost={card.cost}
             fontSize={fpx(layout.costSizePct ?? layout.title.sizePct, width)}
@@ -352,6 +352,24 @@ function CardImage({
           <span style={{ display: "flex" }} />
         )}
       </Band>
+      {/* Independent cost box (profile.costRect) — mirrors the live preview:
+          right-aligned, vertically centered, movable apart from the name. */}
+      {showCost && card.cost && layout.costRect ? (
+        <div
+          style={{
+            ...slotBox(layout.costRect),
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "flex-end",
+          }}
+        >
+          <CostGlyphs
+            cost={card.cost}
+            fontSize={fpx(layout.costSizePct ?? layout.title.sizePct, width)}
+            overrides={card.pipOverrides}
+          />
+        </div>
+      ) : null}
 
       {/* Type band — type line + rarity set-symbol. Long type lines shrink
           to fit on one line, same math as the live preview. */}

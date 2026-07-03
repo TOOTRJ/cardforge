@@ -4,10 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getCurrentProfile } from "@/lib/supabase/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
-import {
-  FRAME_COLOR_KEYS,
-  FRAME_REFERENCES,
-} from "@/lib/cards/frame-reference-registry";
+import { FRAME_COLOR_KEYS } from "@/lib/cards/frame-reference-registry";
 import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -44,10 +41,11 @@ export async function setFrameReviewAction(
   }
 
   const { template, colorKey, verified } = parsed.data;
-  const reference =
-    FRAME_REFERENCES[template as FrameTemplate]?.[colorKey] ?? null;
 
   const admin = createAdminClient();
+  // NOTE: deliberately does NOT touch the reference_* columns — those belong
+  // to setFrameReferenceAction (admin-pinned reference). Writing them here
+  // used to make every verified combo look "admin-pinned".
   const { error } = await admin.from("frame_reviews").upsert(
     {
       template,
@@ -55,7 +53,6 @@ export async function setFrameReviewAction(
       verified,
       verified_at: verified ? new Date().toISOString() : null,
       verified_by: verified ? profile.id : null,
-      reference_scryfall_id: reference?.scryfallId ?? null,
     },
     { onConflict: "template,color_key" },
   );
