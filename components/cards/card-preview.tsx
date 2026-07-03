@@ -605,12 +605,15 @@ function CardFace({
         />
       ) : null}
 
-      {/* Title band — name (left) + mana cost (right). */}
+      {/* Title band — name (left) + mana cost (right). When the profile
+          defines a costRect, the pips render in their OWN absolutely
+          positioned box (right-aligned, vertically centered) so name and
+          cost can be aligned independently in the layout editor. */}
       <BandSlot slot={layout.title} italic={isShowcase}>
         <span style={ELLIPSIS} title={safeTitle}>
           {safeTitle}
         </span>
-        {showCost ? (
+        {showCost && !layout.costRect ? (
           <ManaCostGlyphs
             cost={face.cost}
             fontSize={pipFont(layout.costSizePct ?? layout.title.sizePct)}
@@ -618,6 +621,23 @@ function CardFace({
           />
         ) : null}
       </BandSlot>
+      {showCost && layout.costRect ? (
+        <div
+          style={{
+            ...rectStyle(layout.costRect),
+            zIndex: 20,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "flex-end",
+          }}
+        >
+          <ManaCostGlyphs
+            cost={face.cost}
+            fontSize={pipFont(layout.costSizePct ?? layout.title.sizePct)}
+            overrides={pipOverrides}
+          />
+        </div>
+      ) : null}
 
       {/* Type band — type line (left) + rarity set-symbol (right). Long type
           lines shrink to fit on one line (fitSingleLineSizePct), matching how

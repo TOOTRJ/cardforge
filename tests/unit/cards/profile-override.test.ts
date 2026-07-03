@@ -108,3 +108,30 @@ describe("listSlotPaths / slotRect", () => {
     }
   });
 });
+
+describe("costRect (independent pip box)", () => {
+  it("is offered for cost-bearing frames and synthesizes a default region", () => {
+    const modern = getFrameProfile("modern");
+    expect(listSlotPaths(modern)).toContain("costRect");
+    const rect = slotRect(modern, "costRect");
+    // Right half of the title band until an explicit costRect exists.
+    expect(rect?.topPct).toBe(modern.title.rect.topPct);
+    expect(rect ? rect.leftPct + rect.widthPct : 0).toBeCloseTo(
+      modern.title.rect.leftPct + modern.title.rect.widthPct,
+      1,
+    );
+  });
+
+  it("is not offered on hideCost frames and accepts overrides", () => {
+    expect(listSlotPaths(getFrameProfile("m15land"))).not.toContain("costRect");
+    expect(
+      parseFrameProfileOverride({
+        costRect: { topPct: 5, leftPct: 60, widthPct: 30, heightPct: 5 },
+      }),
+    ).not.toBeNull();
+    const merged = mergeProfile(getFrameProfile("modern"), {
+      costRect: { topPct: 5, leftPct: 60, widthPct: 30, heightPct: 5 },
+    });
+    expect(merged.costRect?.leftPct).toBe(60);
+  });
+});

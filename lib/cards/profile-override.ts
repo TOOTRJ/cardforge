@@ -69,6 +69,7 @@ const statSlotOverrideSchema = z
 export const frameProfileOverrideSchema = z
   .object({
     artSlot: rectOverrideSchema,
+    costRect: rectOverrideSchema,
     title: textSlotOverrideSchema,
     type: textSlotOverrideSchema,
     rules: textSlotOverrideSchema,
@@ -175,6 +176,7 @@ export function resolveFrameProfile(
 
 export type SlotPath =
   | "artSlot"
+  | "costRect"
   | "title"
   | "type"
   | "rules"
@@ -194,7 +196,9 @@ export type SlotPath =
 
 /** The slot paths a template actually renders, in editor display order. */
 export function listSlotPaths(profile: FrameProfile): SlotPath[] {
-  const paths: SlotPath[] = ["artSlot", "title", "type", "rules"];
+  const paths: SlotPath[] = ["artSlot", "title"];
+  if (!profile.hideCost) paths.push("costRect");
+  paths.push("type", "rules");
   if (profile.footer) paths.push("footer");
   if (profile.pt) paths.push("pt");
   if (profile.loyalty) paths.push("loyalty");
@@ -217,6 +221,11 @@ export function slotRect(
   profile: FrameProfile,
   path: SlotPath,
 ): { topPct: number; leftPct: number; widthPct: number; heightPct: number } | null {
+  if (path === "costRect" && !profile.costRect) {
+    // No explicit cost box yet — the pips live inline at the title band's
+    // right edge; expose that region so the editor can select and detach it.
+    return defaultCostRect(profile);
+  }
   const parts = path.split(".");
   let node: unknown = profile;
   for (const part of parts) {
@@ -231,4 +240,23 @@ export function slotRect(
     return maybe.rect as ReturnType<typeof slotRect>;
   }
   return null;
+}
+
+/** The region the inline mana cost occupies when no explicit costRect is
+ *  set: the right half of the title band. Selecting/nudging "costRect" in
+ *  the editor seeds the draft from this, detaching the pips from the name. */
+export function defaultCostRect(profile: FrameProfile): {
+  topPct: number;
+  leftPct: number;
+  widthPct: number;
+  heightPct: number;
+} {
+  const t = profile.title.rect;
+  const half = Math.round((t.widthPct / 2) * 100) / 100;
+  return {
+    topPct: t.topPct,
+    heightPct: t.heightPct,
+    leftPct: Math.round((t.leftPct + t.widthPct - half) * 100) / 100,
+    widthPct: half,
+  };
 }

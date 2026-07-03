@@ -123,6 +123,11 @@ export type FrameProfile = {
   pt?: StatSlot;
   loyalty?: StatSlot;
   defense?: StatSlot;
+  /** When set, the mana cost renders absolutely inside THIS rect
+   *  (right-aligned, vertically centered) instead of inline at the title
+   *  band's right edge — lets the pips move independently of the name.
+   *  Front face only; editable via the admin layout editor ("cost"). */
+  costRect?: Rect;
   /** Mana-cost pip size — the visual DISC DIAMETER as a fraction of card
    *  width (MSE m15 spec: 15px on a 375px card = 0.04), right-aligned in the
    *  title band. Defaults to `title.sizePct`. Both renderers treat this as the

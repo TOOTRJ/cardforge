@@ -28,8 +28,25 @@ import type { FrameProfile } from "@/lib/cards/template-layout";
 /** Slot paths whose profile value is a bare Rect (no `.rect` wrapper). */
 const BARE_RECT_PATHS: ReadonlySet<string> = new Set([
   "artSlot",
+  "costRect",
   "secondFace.artSlot",
 ]);
+
+/** Friendly display names for slot paths (chips + outline tags). */
+export const SLOT_LABELS: Partial<Record<SlotPath, string>> = {
+  artSlot: "art window",
+  costRect: "cost (pips)",
+  title: "title (name)",
+  type: "type line",
+  rules: "rules box",
+  footer: "footer",
+  pt: "P/T",
+  chapters: "saga chapters",
+};
+
+export function slotLabel(path: SlotPath): string {
+  return SLOT_LABELS[path] ?? path;
+}
 
 type FieldKind = "rect" | "scalar";
 
@@ -198,7 +215,7 @@ export function SlotOverlay({
           >
             {isSelected ? (
               <span className="absolute -top-4 left-0 rounded bg-sky-400 px-1 text-[9px] font-semibold uppercase text-black">
-                {path}
+                {slotLabel(path)}
               </span>
             ) : null}
           </div>
@@ -251,7 +268,46 @@ export function EditorPanel({
   };
 
   return (
-    <div className="flex w-full max-w-xs shrink-0 flex-col gap-3 rounded-lg border border-border/50 bg-elevated/40 p-3 text-sm">
+    <div className="flex w-full flex-col gap-3 rounded-lg border border-border/50 bg-elevated/40 p-3 text-sm">
+      <div className="flex flex-wrap gap-2 border-b border-border/40 pb-2">
+        <button
+          type="button"
+          onClick={onSave}
+          disabled={!dirty || saving}
+          className="inline-flex items-center gap-1 rounded-md border border-primary/50 bg-primary/15 px-2.5 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-primary/25 disabled:opacity-40"
+        >
+          <Save className="h-3.5 w-3.5" aria-hidden /> Save
+        </button>
+        <button
+          type="button"
+          onClick={onRevert}
+          disabled={!dirty || saving}
+          className="inline-flex items-center gap-1 rounded-md border border-border/50 px-2.5 py-1.5 text-xs font-medium text-muted transition-colors hover:text-foreground disabled:opacity-40"
+        >
+          <Undo2 className="h-3.5 w-3.5" aria-hidden /> Revert draft
+        </button>
+        <button
+          type="button"
+          onClick={copyAsTs}
+          disabled={Object.keys(draft).length === 0}
+          className="inline-flex items-center gap-1 rounded-md border border-border/50 px-2.5 py-1.5 text-xs font-medium text-muted transition-colors hover:text-foreground disabled:opacity-40"
+        >
+          <Copy className="h-3.5 w-3.5" aria-hidden /> Copy as TS
+        </button>
+        <button
+          type="button"
+          onClick={onReset}
+          disabled={saving || (!hasSavedOverride && Object.keys(draft).length === 0)}
+          className="inline-flex items-center gap-1 rounded-md border border-danger/40 px-2.5 py-1.5 text-xs font-medium text-danger transition-colors hover:bg-danger/10 disabled:opacity-40"
+        >
+          <RotateCcw className="h-3.5 w-3.5" aria-hidden /> Reset to code defaults
+        </button>
+      </div>
+      {dirty ? (
+        <p className="text-[10px] font-medium text-gold-strong">
+          Unsaved changes — Save publishes this layout everywhere.
+        </p>
+      ) : null}
       <div className="flex flex-wrap gap-1">
         {paths.map((path) => (
           <button
@@ -265,7 +321,7 @@ export function EditorPanel({
                 : "border-border/50 text-muted hover:text-foreground",
             )}
           >
-            {path}
+            {slotLabel(path)}
           </button>
         ))}
       </div>
@@ -273,7 +329,7 @@ export function EditorPanel({
       {selected ? (
         <div className="flex flex-col gap-2">
           <span className="text-[11px] uppercase tracking-wider text-subtle">
-            {selected} — arrows nudge position (Shift ×5), [ ] width, {"{ }"} height
+            {slotLabel(selected)} — arrows nudge position (Shift ×5), [ ] width, {"{ }"} height
           </span>
           {fieldsForSlot(profile, selected).map((field) => {
             const value = readSlotField(profile, selected, field);
@@ -339,40 +395,6 @@ export function EditorPanel({
         until it passes the fit threshold.
       </p>
 
-      <div className="flex flex-wrap gap-2 border-t border-border/40 pt-2">
-        <button
-          type="button"
-          onClick={onSave}
-          disabled={!dirty || saving}
-          className="inline-flex items-center gap-1 rounded-md border border-primary/50 bg-primary/15 px-2.5 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-primary/25 disabled:opacity-40"
-        >
-          <Save className="h-3.5 w-3.5" aria-hidden /> Save
-        </button>
-        <button
-          type="button"
-          onClick={onRevert}
-          disabled={!dirty || saving}
-          className="inline-flex items-center gap-1 rounded-md border border-border/50 px-2.5 py-1.5 text-xs font-medium text-muted transition-colors hover:text-foreground disabled:opacity-40"
-        >
-          <Undo2 className="h-3.5 w-3.5" aria-hidden /> Revert draft
-        </button>
-        <button
-          type="button"
-          onClick={copyAsTs}
-          disabled={Object.keys(draft).length === 0}
-          className="inline-flex items-center gap-1 rounded-md border border-border/50 px-2.5 py-1.5 text-xs font-medium text-muted transition-colors hover:text-foreground disabled:opacity-40"
-        >
-          <Copy className="h-3.5 w-3.5" aria-hidden /> Copy as TS
-        </button>
-        <button
-          type="button"
-          onClick={onReset}
-          disabled={saving || (!hasSavedOverride && Object.keys(draft).length === 0)}
-          className="inline-flex items-center gap-1 rounded-md border border-danger/40 px-2.5 py-1.5 text-xs font-medium text-danger transition-colors hover:bg-danger/10 disabled:opacity-40"
-        >
-          <RotateCcw className="h-3.5 w-3.5" aria-hidden /> Reset to code defaults
-        </button>
-      </div>
     </div>
   );
 }

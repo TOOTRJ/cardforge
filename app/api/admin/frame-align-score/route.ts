@@ -71,7 +71,8 @@ export async function POST(request: Request) {
   const reviews = await getFrameReviews();
   const review = reviews.get(frameComboKey(template, color));
   const scryfallId =
-    review?.referenceScryfallId ?? FRAME_REFERENCES[template][color]?.scryfallId;
+    (review?.referenceName ? review.referenceScryfallId : null) ??
+    FRAME_REFERENCES[template][color]?.scryfallId;
   if (!scryfallId) {
     return NextResponse.json(
       { ok: false, error: "No reference printing for this combination." },
