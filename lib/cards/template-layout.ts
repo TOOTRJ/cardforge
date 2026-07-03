@@ -134,6 +134,11 @@ export type FrameProfile = {
    *  disc size: the preview divides by mana-font's 1.3em disc ratio, the bake
    *  draws the disc at exactly this size. */
   costSizePct?: number;
+  /** When set, the rarity set-symbol renders absolutely inside THIS rect
+   *  (right-aligned, vertically centered) instead of inline at the type
+   *  band's right edge — lets the symbol move independently of the type
+   *  line. Front face only; editable via the layout editor ("set symbol"). */
+  symbolRect?: Rect;
   /** Set-symbol size (fraction of card width), right-aligned in the type band.
    *  Defaults to `type.sizePct`. */
   symbolSizePct?: number;

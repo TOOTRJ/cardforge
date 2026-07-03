@@ -135,3 +135,28 @@ describe("costRect (independent pip box)", () => {
     expect(merged.costRect?.leftPct).toBe(60);
   });
 });
+
+describe("symbolRect (independent set-symbol box)", () => {
+  it("is offered on every frame and synthesizes a default at the type band's right end", () => {
+    const modern = getFrameProfile("modern");
+    expect(listSlotPaths(modern)).toContain("symbolRect");
+    const rect = slotRect(modern, "symbolRect");
+    expect(rect?.topPct).toBe(modern.type.rect.topPct);
+    expect(rect ? rect.leftPct + rect.widthPct : 0).toBeCloseTo(
+      modern.type.rect.leftPct + modern.type.rect.widthPct,
+      1,
+    );
+  });
+
+  it("accepts overrides and merges", () => {
+    expect(
+      parseFrameProfileOverride({
+        symbolRect: { topPct: 57, leftPct: 80, widthPct: 8, heightPct: 4 },
+      }),
+    ).not.toBeNull();
+    const merged = mergeProfile(getFrameProfile("m15"), {
+      symbolRect: { topPct: 57, leftPct: 80, widthPct: 8, heightPct: 4 },
+    });
+    expect(merged.symbolRect?.leftPct).toBe(80);
+  });
+});

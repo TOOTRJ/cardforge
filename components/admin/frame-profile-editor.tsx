@@ -29,6 +29,7 @@ import type { FrameProfile } from "@/lib/cards/template-layout";
 const BARE_RECT_PATHS: ReadonlySet<string> = new Set([
   "artSlot",
   "costRect",
+  "symbolRect",
   "secondFace.artSlot",
 ]);
 
@@ -36,6 +37,7 @@ const BARE_RECT_PATHS: ReadonlySet<string> = new Set([
 export const SLOT_LABELS: Partial<Record<SlotPath, string>> = {
   artSlot: "art window",
   costRect: "cost (pips)",
+  symbolRect: "set symbol",
   title: "title (name)",
   type: "type line",
   rules: "rules box",

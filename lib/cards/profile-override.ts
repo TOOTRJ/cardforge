@@ -70,6 +70,7 @@ export const frameProfileOverrideSchema = z
   .object({
     artSlot: rectOverrideSchema,
     costRect: rectOverrideSchema,
+    symbolRect: rectOverrideSchema,
     title: textSlotOverrideSchema,
     type: textSlotOverrideSchema,
     rules: textSlotOverrideSchema,
@@ -177,6 +178,7 @@ export function resolveFrameProfile(
 export type SlotPath =
   | "artSlot"
   | "costRect"
+  | "symbolRect"
   | "title"
   | "type"
   | "rules"
@@ -198,7 +200,7 @@ export type SlotPath =
 export function listSlotPaths(profile: FrameProfile): SlotPath[] {
   const paths: SlotPath[] = ["artSlot", "title"];
   if (!profile.hideCost) paths.push("costRect");
-  paths.push("type", "rules");
+  paths.push("type", "symbolRect", "rules");
   if (profile.footer) paths.push("footer");
   if (profile.pt) paths.push("pt");
   if (profile.loyalty) paths.push("loyalty");
@@ -225,6 +227,9 @@ export function slotRect(
     // No explicit cost box yet — the pips live inline at the title band's
     // right edge; expose that region so the editor can select and detach it.
     return defaultCostRect(profile);
+  }
+  if (path === "symbolRect" && !profile.symbolRect) {
+    return defaultSymbolRect(profile);
   }
   const parts = path.split(".");
   let node: unknown = profile;
@@ -258,5 +263,25 @@ export function defaultCostRect(profile: FrameProfile): {
     heightPct: t.heightPct,
     leftPct: Math.round((t.leftPct + t.widthPct - half) * 100) / 100,
     widthPct: half,
+  };
+}
+
+/** The region the inline set symbol occupies when no explicit symbolRect is
+ *  set: the right end of the type band. Selecting/nudging "symbolRect" in
+ *  the editor seeds the draft from this, detaching the symbol from the
+ *  type line. */
+export function defaultSymbolRect(profile: FrameProfile): {
+  topPct: number;
+  leftPct: number;
+  widthPct: number;
+  heightPct: number;
+} {
+  const t = profile.type.rect;
+  const width = Math.min(12, Math.round(t.widthPct * 0.2 * 100) / 100);
+  return {
+    topPct: t.topPct,
+    heightPct: t.heightPct,
+    leftPct: Math.round((t.leftPct + t.widthPct - width) * 100) / 100,
+    widthPct: width,
   };
 }
