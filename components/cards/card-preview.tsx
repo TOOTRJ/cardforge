@@ -641,7 +641,9 @@ function CardFace({
 
       {/* Type band — type line (left) + rarity set-symbol (right). Long type
           lines shrink to fit on one line (fitSingleLineSizePct), matching how
-          real cards condense e.g. "Legendary Artifact Creature — …". */}
+          real cards condense e.g. "Legendary Artifact Creature — …". When the
+          profile defines a symbolRect, the symbol renders in its OWN
+          absolutely positioned box so it can be aligned independently. */}
       <BandSlot
         slot={{
           ...layout.type,
@@ -653,7 +655,9 @@ function CardFace({
             }),
             rect: layout.type.rect,
             baseSizePct: layout.type.sizePct,
-            reservedPct: (layout.symbolSizePct ?? layout.type.sizePct * 1.1) * 1.3,
+            reservedPct: layout.symbolRect
+              ? 0
+              : (layout.symbolSizePct ?? layout.type.sizePct * 1.1) * 1.3,
           }),
         }}
       >
@@ -664,13 +668,33 @@ function CardFace({
             subtypes: face.subtypes,
           })}
         </span>
-        <SetSymbol
-          rarity={rarity}
-          iconUrl={setIconUrl}
-          setCode={setIconCode}
-          size={cqw(layout.symbolSizePct ?? layout.type.sizePct * 1.1)}
-        />
+        {!layout.symbolRect ? (
+          <SetSymbol
+            rarity={rarity}
+            iconUrl={setIconUrl}
+            setCode={setIconCode}
+            size={cqw(layout.symbolSizePct ?? layout.type.sizePct * 1.1)}
+          />
+        ) : null}
       </BandSlot>
+      {layout.symbolRect ? (
+        <div
+          style={{
+            ...rectStyle(layout.symbolRect),
+            zIndex: 20,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "flex-end",
+          }}
+        >
+          <SetSymbol
+            rarity={rarity}
+            iconUrl={setIconUrl}
+            setCode={setIconCode}
+            size={cqw(layout.symbolSizePct ?? layout.type.sizePct * 1.1)}
+          />
+        </div>
+      ) : null}
 
       {/* Rules — Saga chapter rail or planeswalker ability rows, otherwise the
           normal rules + flavor box. */}

@@ -372,7 +372,9 @@ function CardImage({
       ) : null}
 
       {/* Type band — type line + rarity set-symbol. Long type lines shrink
-          to fit on one line, same math as the live preview. */}
+          to fit on one line, same math as the live preview. With a
+          symbolRect the symbol gets its own absolute box (mirrors the
+          preview) so it can be aligned independently of the type line. */}
       <Band
         slot={{
           ...layout.type,
@@ -380,19 +382,42 @@ function CardImage({
             text: typeLine,
             rect: layout.type.rect,
             baseSizePct: layout.type.sizePct,
-            reservedPct: (layout.symbolSizePct ?? layout.type.sizePct * 1.1) * 1.3,
+            reservedPct: layout.symbolRect
+              ? 0
+              : (layout.symbolSizePct ?? layout.type.sizePct * 1.1) * 1.3,
           }),
         }}
         cardWidth={width}
       >
         <span style={ELLIPSIS}>{typeLine}</span>
-        <SetSymbolGlyph
-          rarity={(card.rarity as Rarity | null) ?? "common"}
-          iconUrl={card.setIconUrl}
-          setCode={card.setIconCode}
-          fontSize={fpx(layout.symbolSizePct ?? layout.type.sizePct * 1.1, width)}
-        />
+        {!layout.symbolRect ? (
+          <SetSymbolGlyph
+            rarity={(card.rarity as Rarity | null) ?? "common"}
+            iconUrl={card.setIconUrl}
+            setCode={card.setIconCode}
+            fontSize={fpx(layout.symbolSizePct ?? layout.type.sizePct * 1.1, width)}
+          />
+        ) : (
+          <span style={{ display: "flex" }} />
+        )}
       </Band>
+      {layout.symbolRect ? (
+        <div
+          style={{
+            ...slotBox(layout.symbolRect),
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "flex-end",
+          }}
+        >
+          <SetSymbolGlyph
+            rarity={(card.rarity as Rarity | null) ?? "common"}
+            iconUrl={card.setIconUrl}
+            setCode={card.setIconCode}
+            fontSize={fpx(layout.symbolSizePct ?? layout.type.sizePct * 1.1, width)}
+          />
+        </div>
+      ) : null}
 
       {/* Rules — Saga chapter rail or planeswalker ability rows, otherwise the
           normal rules + flavor box. */}

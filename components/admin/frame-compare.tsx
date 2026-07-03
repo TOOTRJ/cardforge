@@ -16,6 +16,7 @@ import {
 } from "@/components/admin/frame-profile-editor";
 import {
   defaultCostRect,
+  defaultSymbolRect,
   mergeProfile,
   resolveFrameProfile,
   type FrameProfileOverride,
@@ -145,6 +146,12 @@ export function FrameCompare({
   const selectSlot = (path: SlotPath) => {
     if (path === "costRect" && resolvedProfile && !resolvedProfile.costRect) {
       setDraft((d) => ({ ...d, costRect: defaultCostRect(resolvedProfile) }));
+    }
+    if (path === "symbolRect" && resolvedProfile && !resolvedProfile.symbolRect) {
+      setDraft((d) => ({
+        ...d,
+        symbolRect: defaultSymbolRect(resolvedProfile),
+      }));
     }
     setSelected(path);
   };
