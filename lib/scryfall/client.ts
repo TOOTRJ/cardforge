@@ -128,6 +128,9 @@ export const scryfallCardSchema = z
   .object({
     id: z.string(),
     name: z.string(),
+    // Stable across printings — the printings picker groups by it.
+    oracle_id: z.string().optional().nullable(),
+    released_at: z.string().optional().nullable(),
     // Scryfall's layout enum ("normal" | "split" | "flip" | "transform" |
     // "saga" | "adventure" | …). Kept as a plain string so new layout values
     // never fail the parse — unknown layouts degrade to type-line mapping.
@@ -244,6 +247,51 @@ export async function searchCards({
   }
 
   return parsed.data.slice(0, Math.max(1, Math.min(limit, 50)));
+}
+
+/**
+ * Printings of an oracle card for the import dialog's printing picker.
+ * One page (175) covers most cards; heavily reprinted staples and basics
+ * run to hundreds, and the OLD printings — the ones that matter for frame
+ * eras — live at the tail. So when page one (newest first) says has_more,
+ * we spend one extra request on the OLDEST page and merge, giving the
+ * picker both ends of the card's history. Same soft-empty error posture
+ * as searchCards.
+ */
+export async function getCardPrintings(
+  oracleId: string,
+): Promise<ScryfallCard[]> {
+  const id = oracleId.trim();
+  if (!id) return [];
+
+  const fetchPage = async (dir: "desc" | "asc") => {
+    const url = `/cards/search?${new URLSearchParams({
+      q: `oracleid:${id}`,
+      unique: "prints",
+      order: "released",
+      dir,
+    })}`;
+    const response = await scryfallFetch(url);
+    if (!response.ok) return null;
+    try {
+      const body: unknown = await response.json();
+      return scryfallSearchResponseSchema.parse(body);
+    } catch {
+      return null;
+    }
+  };
+
+  const newest = await fetchPage("desc");
+  if (!newest) return [];
+  let cards = newest.data;
+  if (newest.has_more) {
+    const oldest = await fetchPage("asc");
+    if (oldest) {
+      const seen = new Set(cards.map((c) => c.id));
+      cards = cards.concat(oldest.data.filter((c) => !seen.has(c.id)));
+    }
+  }
+  return cards;
 }
 
 export type ScryfallNamedLookup =

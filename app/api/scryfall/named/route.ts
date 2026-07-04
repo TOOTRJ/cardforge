@@ -91,6 +91,7 @@ export async function GET(request: NextRequest) {
     card: {
       id: card.id,
       name: card.name,
+      oracle_id: card.oracle_id ?? null,
       set: card.set ?? null,
       set_name: card.set_name ?? null,
       print_url: pickPrintImageUrl(card),

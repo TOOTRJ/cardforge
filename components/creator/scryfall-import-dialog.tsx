@@ -63,11 +63,40 @@ type TrimmedCard = {
   image_status: string | null;
 };
 
+type PrintingSummary = {
+  id: string;
+  set: string | null;
+  set_name: string | null;
+  released_at: string | null;
+  frame: string | null;
+  snow: boolean;
+  devoid: boolean;
+  thumb_url: string | null;
+  image_status: string | null;
+};
+
+// Which of OUR frame eras each Scryfall border generation maps onto —
+// display twin of the adoption logic in lib/scryfall/import-mapper.ts.
+const PRINTING_FRAME_LABELS: Record<string, string> = {
+  "1993": "Classic '93",
+  "1997": "Retro '97",
+  "2003": "Modern '03",
+  "2015": "M15",
+  future: "M15",
+};
+
+function printingFrameLabel(p: PrintingSummary): string {
+  if (p.snow) return "M15 Snow";
+  if (p.devoid) return "M15 Devoid";
+  return PRINTING_FRAME_LABELS[p.frame ?? ""] ?? "M15";
+}
+
 type NamedResponse = {
   ok: true;
   card: {
     id: string;
     name: string;
+    oracle_id: string | null;
     set: string | null;
     set_name: string | null;
     print_url: string | null;
@@ -190,6 +219,17 @@ function ScryfallImportContent({
   const [selectedCard, setSelectedCard] = useState<NamedResponse | null>(null);
   const [loadingSelected, setLoadingSelected] = useState(false);
 
+  // All printings of the selected card (newest first) — picking one re-runs
+  // the normal selection flow with that printing's id, so its frame era /
+  // art / set flow through the existing patch pipeline. Cached per oracle
+  // id: switching between printings of the SAME card never refetches.
+  const [printings, setPrintings] = useState<{
+    oracleId: string;
+    items: PrintingSummary[];
+  } | null>(null);
+  const [loadingPrintings, setLoadingPrintings] = useState(false);
+  const printingsOracleRef = useRef<string | null>(null);
+
   const [importArt, setImportArt] = useState(true);
   const [committing, startCommit] = useTransition();
 
@@ -276,6 +316,31 @@ function ScryfallImportContent({
         return;
       }
       setSelectedCard(body);
+
+      // Load the printing strip for this card (once per oracle id). Failure
+      // is non-blocking — the picker section simply doesn't render.
+      const oracleId = body.card.oracle_id;
+      if (oracleId && printingsOracleRef.current !== oracleId) {
+        printingsOracleRef.current = oracleId;
+        setPrintings(null);
+        setLoadingPrintings(true);
+        void fetch(
+          `/api/scryfall/printings?${new URLSearchParams({ oracle_id: oracleId })}`,
+        )
+          .then((r) => r.json().catch(() => null))
+          .then((pb) => {
+            if (printingsOracleRef.current !== oracleId) return;
+            if (pb?.ok && Array.isArray(pb.printings)) {
+              setPrintings({ oracleId, items: pb.printings });
+            }
+          })
+          .catch(() => {})
+          .finally(() => {
+            if (printingsOracleRef.current === oracleId) {
+              setLoadingPrintings(false);
+            }
+          });
+      }
     } catch {
       if (latestSelectRef.current !== id) return;
       toast.error("Could not load card.");
@@ -511,6 +576,13 @@ function ScryfallImportContent({
               data={selectedCard}
               importArt={importArt}
               onImportArtChange={setImportArt}
+              printings={
+                printings?.oracleId === selectedCard.card.oracle_id
+                  ? printings.items
+                  : null
+              }
+              loadingPrintings={loadingPrintings}
+              onSelectPrinting={handleSelect}
             />
           ) : null}
         </div>
@@ -622,10 +694,16 @@ function Detail({
   data,
   importArt,
   onImportArtChange,
+  printings,
+  loadingPrintings,
+  onSelectPrinting,
 }: {
   data: NamedResponse;
   importArt: boolean;
   onImportArtChange: (next: boolean) => void;
+  printings: PrintingSummary[] | null;
+  loadingPrintings: boolean;
+  onSelectPrinting: (id: string) => void;
 }) {
   const { card, patch } = data;
   return (
@@ -677,6 +755,58 @@ function Detail({
           </div>
 
           <PatchPreview patch={patch} />
+
+          {loadingPrintings || (printings && printings.length > 1) ? (
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-subtle">
+                Printing · sets the frame era
+              </span>
+              {loadingPrintings ? (
+                <p className="text-[11px] text-subtle">Loading printings…</p>
+              ) : (
+                <div className="flex gap-1.5 overflow-x-auto pb-1">
+                  {printings!.map((p) => {
+                    const active = p.id === card.id;
+                    const year = p.released_at?.slice(0, 4) ?? "—";
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => {
+                          if (!active) onSelectPrinting(p.id);
+                        }}
+                        aria-pressed={active}
+                        title={`${p.set_name ?? p.set ?? "Unknown set"} (${year}) — ${printingFrameLabel(p)} frame`}
+                        className={`flex shrink-0 flex-col items-start gap-1 rounded-md border p-1.5 text-left transition-colors ${
+                          active
+                            ? "border-primary bg-primary/15"
+                            : "border-border bg-elevated/40 hover:border-border-strong"
+                        }`}
+                      >
+                        {p.thumb_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={p.thumb_url}
+                            alt=""
+                            loading="lazy"
+                            className="h-10 w-14 rounded-sm border border-border/50 object-cover"
+                          />
+                        ) : (
+                          <span className="h-10 w-14 rounded-sm bg-elevated" />
+                        )}
+                        <span className="text-[10px] font-semibold uppercase tracking-wide text-foreground">
+                          {(p.set ?? "?").toUpperCase()} · {year}
+                        </span>
+                        <span className="text-[10px] text-subtle">
+                          {printingFrameLabel(p)}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ) : null}
 
           <label className="mt-2 inline-flex cursor-pointer items-start gap-2 rounded-md border border-border/60 bg-elevated/40 p-3 text-xs leading-5 text-muted">
             <input
