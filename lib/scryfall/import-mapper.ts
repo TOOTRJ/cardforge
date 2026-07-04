@@ -7,6 +7,7 @@ import {
   type ColorIdentity,
   type Rarity,
 } from "@/types/card";
+import { kindFromCard, type CardKind } from "@/lib/creator/card-kinds";
 
 // ---------------------------------------------------------------------------
 // Map a Scryfall card into the shape the CardCreatorForm expects.
@@ -74,6 +75,11 @@ const SCRYFALL_RARITY: Record<string, Rarity> = {
 export type ScryfallImportPatch = {
   title?: string;
   cost?: string;
+  /** The derived card KIND (layout-aware: saga / adventure / split /
+   *  aftermath / flip, else the type-mapped standard kind). The form routes
+   *  this through planKindChange so the frame follows the import in one
+   *  synchronous pass. */
+  kind?: CardKind;
   card_type?: CardType;
   supertype?: string;
   subtypes_text?: string;
@@ -161,6 +167,34 @@ export function parseTypeLine(typeLine: string | null | undefined): {
 }
 
 /**
+ * Derive the card KIND from a Scryfall card. Multi-signal by necessity —
+ * `layout` alone can't do it (verified against the live API):
+ *   • planeswalkers are layout "normal" (no planeswalker layout exists)
+ *   • every printed battle is layout "transform" (layout "battle" matches
+ *     zero cards); the Battle type lives on the front face's type_line
+ *   • aftermath is layout "split" + keywords ["Aftermath"]
+ * Unmodeled layouts (class, case, leveler, prototype, prepare, meld, …)
+ * deliberately fall through to the type-line mapping so an exotic import
+ * degrades to a standard kind instead of failing.
+ */
+export function kindFromScryfall(card: ScryfallCard): CardKind | undefined {
+  const layout = (card.layout ?? "").toLowerCase();
+  if (layout === "split") {
+    const keywords = (card.keywords ?? []).map((k) => k.toLowerCase());
+    return keywords.includes("aftermath") ? "aftermath" : "split";
+  }
+  if (layout === "flip") return "flip";
+  if (layout === "adventure") return "adventure";
+  if (layout === "saga") return "saga";
+
+  const front = card.card_faces?.[0];
+  const { card_type } = parseTypeLine(front?.type_line ?? card.type_line);
+  if (!card_type) return undefined;
+  // kindFromCard folds legacy "spell" to sorcery and maps 1:1 otherwise.
+  return kindFromCard(card_type, undefined);
+}
+
+/**
  * Best-effort: pull a normalized color identity list from either Scryfall's
  * `color_identity` (preferred — accounts for lands and hybrid mana) or
  * `colors` as a fallback.
@@ -227,19 +261,20 @@ export function mapScryfallToFormPatch(
     // Ice") is the right seed for the front we're populating.
     title: (isMultiFace && front?.name) || card.name,
     cost: pick(front?.mana_cost, card.mana_cost),
+    kind: kindFromScryfall(card),
     card_type: cardType,
     supertype: typeParts.supertype,
     subtypes_text: typeParts.subtypes_text,
     rarity: rarityChecked,
     color_identity: colorIdentity.length > 0 ? colorIdentity : undefined,
     rules_text: pick(front?.oracle_text, card.oracle_text),
-    // flavor_text / loyalty / defense aren't on Scryfall's card_face schema, so
-    // they always come from the top-level card.
-    flavor_text: card.flavor_text ?? undefined,
+    flavor_text: pick(front?.flavor_text, card.flavor_text),
     power: pick(front?.power, card.power),
     toughness: pick(front?.toughness, card.toughness),
-    loyalty: card.loyalty ?? undefined,
-    defense: card.defense ?? undefined,
+    // Faces carry these on real cards (battle fronts hold defense; Origins
+    // walker backs hold loyalty) — prefer the face on multiface cards.
+    loyalty: pick(front?.loyalty, card.loyalty),
+    defense: pick(front?.defense, card.defense),
     artist_credit: card.artist ?? undefined,
     source_scryfall_id: card.id,
     preview_art_url: options.artPreviewUrl ?? null,
@@ -276,14 +311,13 @@ function mapScryfallBackFace(
     supertype: typeParts.supertype,
     subtypes_text: typeParts.subtypes_text,
     rules_text: back.oracle_text ?? undefined,
-    // Scryfall flavor_text is generally on the top-level card object, not
-    // per-face. Leave undefined; the user can fill in their own.
-    flavor_text: undefined,
+    flavor_text: back.flavor_text ?? undefined,
     power: back.power ?? undefined,
     toughness: back.toughness ?? undefined,
-    // The ScryfallCardFace schema doesn't include loyalty/defense today.
-    loyalty: undefined,
-    defense: undefined,
+    // Present on real faces: loyalty on DFC planeswalker backs (Origins
+    // walkers), defense on battle faces.
+    loyalty: back.loyalty ?? undefined,
+    defense: back.defense ?? undefined,
     // Per-face artist is the same person in practice; reuse the front's
     // artist credit so the user has something to start from.
     artist_credit: card.artist ?? undefined,

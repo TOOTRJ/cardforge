@@ -536,8 +536,8 @@ export function CardCreatorForm({
   };
   /** Programmatic kind application (import/AI): never blocks on a dialog —
    *  accepts the era fallback and tells the user what happened. */
-  const applyKindForType = (cardType: CardType) => {
-    const plan = planKindChange(kindFromCard(cardType, undefined), {
+  const applyKindProgrammatic = (nextKind: CardKind) => {
+    const plan = planKindChange(nextKind, {
       cardType: watched.card_type,
       template: getValues("frame_style.template"),
     });
@@ -667,9 +667,16 @@ export function CardCreatorForm({
 
     // Kind first, synchronously: card_type + frame land in one handler pass
     // (via planKindChange), so there's no effect left to race the rest of the
-    // patch — the old import/auto-sync race is structurally gone.
-    if (patch.card_type) {
-      applyKindForType(patch.card_type as CardType);
+    // patch — the old import/auto-sync race is structurally gone. The mapper
+    // derives a layout-aware kind (an imported Saga lands on the saga frame,
+    // an aftermath on the aftermath frame); a bare card_type is the fallback.
+    const importedKind =
+      patch.kind ??
+      (patch.card_type
+        ? kindFromCard(patch.card_type as CardType, undefined)
+        : null);
+    if (importedKind) {
+      applyKindProgrammatic(importedKind);
     }
 
     setIfPresent("title", patch.title);
@@ -792,7 +799,7 @@ export function CardCreatorForm({
 
       // Kind first (card_type + frame in one pass) — keeps the generated
       // card's frame in the user's chosen era when it has the type.
-      applyKindForType(card.card_type);
+      applyKindProgrammatic(kindFromCard(card.card_type, undefined));
       setValue("title", card.title, { shouldDirty: true });
       setValue("cost", card.cost, { shouldDirty: true });
       setValue("supertype", card.supertype ?? "", { shouldDirty: true });

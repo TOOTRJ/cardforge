@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  kindFromScryfall,
   mapScryfallToFormPatch,
   parseColorIdentity,
   parseTypeLine,
@@ -170,5 +171,91 @@ describe("mapScryfallToFormPatch", () => {
     const patch = mapScryfallToFormPatch(card);
     expect(patch.rarity).toBeUndefined();
     expect(patch.cost).toBeUndefined();
+  });
+});
+
+describe("kindFromScryfall", () => {
+  it("maps layout kinds directly (saga / adventure / flip)", () => {
+    expect(
+      kindFromScryfall(
+        fixture({ layout: "saga", type_line: "Enchantment — Saga" }),
+      ),
+    ).toBe("saga");
+    expect(
+      kindFromScryfall(
+        fixture({ layout: "adventure", type_line: "Creature — Human // Instant — Adventure" }),
+      ),
+    ).toBe("adventure");
+    expect(kindFromScryfall(fixture({ layout: "flip" }))).toBe("flip");
+  });
+
+  it("splits split vs aftermath on the Aftermath keyword", () => {
+    expect(
+      kindFromScryfall(fixture({ layout: "split", keywords: ["Fuse"] })),
+    ).toBe("split");
+    expect(
+      kindFromScryfall(fixture({ layout: "split", keywords: ["Aftermath"] })),
+    ).toBe("aftermath");
+    expect(kindFromScryfall(fixture({ layout: "split" }))).toBe("split");
+  });
+
+  it("derives planeswalker from the type line — there is no planeswalker layout", () => {
+    expect(
+      kindFromScryfall(
+        fixture({
+          layout: "normal",
+          type_line: "Legendary Planeswalker — Jace",
+          loyalty: "3",
+        }),
+      ),
+    ).toBe("planeswalker");
+  });
+
+  it("derives battle from the transform front face (layout battle matches zero real cards)", () => {
+    expect(
+      kindFromScryfall(
+        fixture({
+          layout: "transform",
+          type_line: "Battle — Siege // Land",
+          card_faces: [
+            { name: "Invasion of Zendikar", type_line: "Battle — Siege", defense: "3" },
+            { name: "Awakened Skyclave", type_line: "Land" },
+          ],
+        }),
+      ),
+    ).toBe("battle");
+  });
+
+  it("degrades unmodeled layouts to the type-mapped standard kind", () => {
+    expect(
+      kindFromScryfall(
+        fixture({ layout: "class", type_line: "Enchantment — Class" }),
+      ),
+    ).toBe("enchantment");
+    expect(
+      kindFromScryfall(
+        fixture({ layout: "leveler", type_line: "Creature — Human Warrior" }),
+      ),
+    ).toBe("creature");
+    // NOTE: parseTypeLine picks the FIRST recognized type word, so
+    // "Artifact Creature" maps to artifact (long-standing behavior — a
+    // creature-precedence change would be its own decision).
+    expect(
+      kindFromScryfall(
+        fixture({ layout: "prototype", type_line: "Artifact Creature — Construct" }),
+      ),
+    ).toBe("artifact");
+  });
+
+  it("returns undefined when nothing is derivable", () => {
+    expect(kindFromScryfall(fixture({ layout: "planar" }))).toBeUndefined();
+  });
+
+  it("lands on the patch via mapScryfallToFormPatch", () => {
+    const patch = mapScryfallToFormPatch(
+      fixture({ layout: "saga", type_line: "Enchantment — Saga" }),
+    );
+    expect(patch.kind).toBe("saga");
+    expect(patch.card_type).toBe("enchantment");
   });
 });
