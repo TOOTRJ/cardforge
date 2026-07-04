@@ -155,7 +155,7 @@ export async function GET(
   let pngBytes: Uint8Array;
   try {
     const imgResponse = renderCardImage(previewData, preset, {
-      watermark,
+      brandMark: watermark,
     });
     pngBytes = new Uint8Array(await imgResponse.arrayBuffer());
   } catch (err) {

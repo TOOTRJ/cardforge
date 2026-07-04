@@ -41,6 +41,6 @@ export async function POST(request: NextRequest) {
       : "default";
 
   return renderCardImage(body.card ?? {}, preset, {
-    watermark: body.watermark ?? false,
+    brandMark: body.watermark ?? false,
   });
 }

@@ -17,10 +17,12 @@ import {
 } from "@/types/card";
 import {
   EMPTY_BACK_FACE,
+  EMPTY_WATERMARK,
   type BackFaceFormValues,
   type FormValues,
   type LoyaltyRowFormValues,
   type SagaChapterFormValues,
+  type WatermarkFormValues,
 } from "@/lib/creator/form-types";
 import {
   loyaltyFromRulesText,
@@ -134,6 +136,7 @@ export function defaultValuesFor(
       back_card_id: "",
       source_scryfall_id: "",
       primary_set_id: "",
+      watermark: EMPTY_WATERMARK,
     };
   }
 
@@ -182,6 +185,18 @@ export function defaultValuesFor(
     back_card_id: card.back_card_id ?? "",
     source_scryfall_id: card.source_scryfall_id ?? "",
     primary_set_id: card.primary_set_id ?? "",
+    watermark: watermarkFormValuesFrom(card),
+  };
+}
+
+function watermarkFormValuesFrom(card: Card): WatermarkFormValues {
+  const wm = card.watermark;
+  if (!wm) return EMPTY_WATERMARK;
+  return {
+    kind: wm.kind,
+    key: "key" in wm ? wm.key : "",
+    url: wm.kind === "custom" ? wm.url : "",
+    size: wm.size ?? "normal",
   };
 }
 

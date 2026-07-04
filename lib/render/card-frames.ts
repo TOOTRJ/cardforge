@@ -68,5 +68,16 @@ export function getPlateDataUrlForPath(
   return loadDataUrl(path.join(process.cwd(), "public", resolved));
 }
 
+/** Watermark preset PNG as a data URL (public/watermarks/{key}.png) —
+ *  same fs-read + memoized-data-url pattern as the frames; a transparent
+ *  pixel fallback means an unknown key never throws mid-render. */
+export function getWatermarkDataUrl(key: string): string {
+  const safe = key.replace(/[^a-z0-9-]/g, "");
+  return (
+    loadDataUrl(path.join(process.cwd(), "public", "watermarks", `${safe}.png`)) ??
+    TRANSPARENT_PIXEL
+  );
+}
+
 const TRANSPARENT_PIXEL =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M8AAAMBAQDJ/pLvAAAAAElFTkSuQmCC";

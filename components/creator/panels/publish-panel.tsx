@@ -21,6 +21,7 @@ import type { FrameProfileOverridesMap } from "@/lib/cards/profile-override";
 import { BackFacePicker } from "@/components/creator/back-face-picker";
 import { ChallengeBriefDialog } from "@/components/creator/challenge-brief-dialog";
 import { EffectsPanel } from "@/components/creator/panels/effects-panel";
+import { WatermarkPicker } from "@/components/creator/panels/watermark-picker";
 import { daysLeft, type Challenge } from "@/lib/challenges/shared";
 import { cn } from "@/lib/utils";
 import type { Card, Visibility } from "@/types/card";
@@ -55,6 +56,8 @@ export type CardSetOption = {
 };
 
 type PublishPanelProps = {
+  /** Signed-in user id — gates the custom-watermark upload. */
+  userId: string | null;
   profileOverrides?: FrameProfileOverridesMap | null;
   /** The currently running challenge, if any — renders the entry toggle. */
   activeChallenge?: Challenge | null;
@@ -67,6 +70,7 @@ type PublishPanelProps = {
 };
 
 export function PublishPanel({
+  userId,
   profileOverrides = null,
   activeChallenge,
   mySets,
@@ -238,6 +242,7 @@ export function PublishPanel({
           />
 
           <EffectsPanel />
+          <WatermarkPicker userId={userId} />
         </div>
       </details>
     </>

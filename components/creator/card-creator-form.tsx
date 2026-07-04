@@ -72,6 +72,7 @@ import {
   type Card,
   type CardTemplate,
   type CardType,
+  type CardWatermark,
   type ColorIdentity,
   type FaceContent,
   type FrameTemplate,
@@ -1057,6 +1058,29 @@ export function CardCreatorForm({
       }
     }
 
+    // Design watermark: the form's flat shape → the discriminated union
+    // (null = none / clear).
+    const watermarkPayload =
+      values.watermark.kind === "mana"
+        ? {
+            kind: "mana" as const,
+            key: values.watermark.key as "w" | "u" | "b" | "r" | "g" | "c",
+            size: values.watermark.size,
+          }
+        : values.watermark.kind === "preset"
+          ? {
+              kind: "preset" as const,
+              key: values.watermark.key,
+              size: values.watermark.size,
+            }
+          : values.watermark.kind === "custom" && values.watermark.url
+            ? {
+                kind: "custom" as const,
+                url: values.watermark.url,
+                size: values.watermark.size,
+              }
+            : null;
+
     const payload = {
       title: values.title.trim(),
       slug: values.slug.trim() ? slugify(values.slug.trim()) : undefined,
@@ -1071,6 +1095,7 @@ export function CardCreatorForm({
       rarity: values.rarity || undefined,
       rules_text: rulesTextOut || undefined,
       face_content: faceContentPayload,
+      watermark: watermarkPayload,
       flavor_text: values.flavor_text.trim() || undefined,
       power: values.power.trim() || undefined,
       toughness: values.toughness.trim() || undefined,
@@ -1294,6 +1319,22 @@ export function CardCreatorForm({
     artPosition: watched.art_position,
     frameStyle: watched.frame_style,
     faceContent: liveFaceContent,
+    watermark:
+      watched.watermark && watched.watermark.kind !== ""
+        ? watched.watermark.kind === "custom"
+          ? watched.watermark.url
+            ? {
+                kind: "custom" as const,
+                url: watched.watermark.url,
+                size: watched.watermark.size,
+              }
+            : null
+          : ({
+              kind: watched.watermark.kind,
+              key: watched.watermark.key,
+              size: watched.watermark.size,
+            } as CardWatermark)
+        : null,
     backFace: watched.has_back_face
       ? {
           title: watched.back_face.title,
@@ -1483,6 +1524,7 @@ export function CardCreatorForm({
             {/* ----- Publish panel (visibility/set/back face + Advanced: finish/tags/save) ----- */}
             {stepKey === "publish" ? (
               <PublishPanel
+                userId={userId}
                 profileOverrides={profileOverrides}
                 activeChallenge={activeChallenge}
                 mySets={mySets}

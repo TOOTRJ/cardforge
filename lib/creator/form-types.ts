@@ -85,6 +85,25 @@ export type FormValues = {
   /** The set this card is added to (empty = none). Its icon becomes the card's
    *  set symbol; the action also adds the card to the set's list. */
   primary_set_id: string;
+  /** Design watermark behind the rules text. kind "" = none (default). */
+  watermark: WatermarkFormValues;
+};
+
+export type WatermarkFormValues = {
+  kind: "" | "mana" | "preset" | "custom";
+  /** Mana color key (w/u/b/r/g/c) or preset key; unused for custom. */
+  key: string;
+  /** Uploaded image URL — custom only. */
+  url: string;
+  /** "large" = the basic-land big-symbol treatment. */
+  size: "normal" | "large";
+};
+
+export const EMPTY_WATERMARK: WatermarkFormValues = {
+  kind: "",
+  key: "",
+  url: "",
+  size: "normal",
 };
 
 // Empty back-face values — used when the user toggles on "has back face" from a

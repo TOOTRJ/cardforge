@@ -133,7 +133,7 @@ export async function bakeCardRender(
     // fixed path). Paid users still get clean, hi-res output via the
     // entitlement-gated download routes.
     const response = renderCardImage(previewData, "hd", {
-      watermark: isBillingEnabled(),
+      brandMark: isBillingEnabled(),
     });
     pngBytes = await response.arrayBuffer();
   } catch (err) {

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isWatermarkPresetKey } from "@/lib/cards/watermark";
 import {
   CARD_FINISH_VALUES,
   CARD_TYPE_VALUES,
@@ -267,7 +268,8 @@ export const watermarkSchema = z.discriminatedUnion("kind", [
       kind: z.literal("preset"),
       key: z
         .string()
-        .regex(/^[a-z0-9-]{1,40}$/, "Unknown watermark preset."),
+        .regex(/^[a-z0-9-]{1,40}$/, "Unknown watermark preset.")
+        .refine(isWatermarkPresetKey, "Unknown watermark preset."),
       ...watermarkCommon,
     })
     .strict(),

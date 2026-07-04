@@ -106,7 +106,7 @@ export async function GET(
       const img = renderCardImage(
         { ...toPreviewData(card), profileOverrides: await getFrameProfileOverrides() },
         "hd", {
-        watermark: !entitlements.removeWatermark,
+        brandMark: !entitlements.removeWatermark,
       });
       pngs.push(new Uint8Array(await img.arrayBuffer()));
     } catch {

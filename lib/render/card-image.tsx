@@ -43,6 +43,12 @@ import {
   resolveSagaChapters,
 } from "@/lib/cards/face-content";
 import {
+  watermarkHeightFraction,
+  watermarkOpacity,
+  WATERMARK_INK,
+} from "@/lib/cards/watermark";
+import { getWatermarkDataUrl } from "@/lib/render/card-frames";
+import {
   DISPLAY_FONT_BYTES,
   KEYRUNE_DEFAULT_GLYPH,
   KEYRUNE_FONT_BYTES,
@@ -145,12 +151,14 @@ function CardImage({
   card,
   width,
   height,
-  watermark,
+  brandMark,
 }: {
   card: CardPreviewData;
   width: number;
   height: number;
-  watermark: boolean;
+  /** The free-tier pipglyph.com BRAND mark (billing-gated) — distinct from
+   *  card.watermark, the user's design watermark behind the rules text. */
+  brandMark: boolean;
 }) {
   const template = normalizeFrameTemplate(card.frameStyle?.template);
   const layout = resolveFrameProfile(template, card.profileOverrides);
@@ -426,6 +434,59 @@ function CardImage({
         </div>
       ) : null}
 
+      {/* Design watermark — mirrors the preview layer exactly: centered in
+          the rules rect, z above the frame / below text, suppressed where a
+          rail replaces the box. Satori-safe: flat img / font glyph +
+          opacity only. */}
+      {card.watermark && !layout.chapters && !(layout.loyaltyRows && loyaltyAbilities.length > 0) ? (
+        <div
+          style={{
+            ...slotBox(layout.rules.rect),
+            zIndex: 10,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            overflow: "hidden",
+            opacity: watermarkOpacity(card.watermark),
+          }}
+        >
+          {card.watermark.kind === "mana" ? (
+            <span
+              style={{
+                fontFamily: '"Mana"',
+                fontSize: Math.round(
+                  (layout.rules.rect.heightPct / 100) *
+                    height *
+                    watermarkHeightFraction(card.watermark),
+                ),
+                color: WATERMARK_INK,
+                lineHeight: 1,
+              }}
+            >
+              {getManaCodepoint(card.watermark.key) ?? ""}
+            </span>
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={
+                card.watermark.kind === "custom"
+                  ? card.watermark.url
+                  : getWatermarkDataUrl(card.watermark.key)
+              }
+              alt=""
+              style={{
+                height: Math.round(
+                  (layout.rules.rect.heightPct / 100) *
+                    height *
+                    watermarkHeightFraction(card.watermark),
+                ),
+                objectFit: "contain",
+              }}
+            />
+          )}
+        </div>
+      ) : null}
+
       {/* Rules — Saga chapter rail or planeswalker ability rows, otherwise the
           normal rules + flavor box. */}
       {layout.chapters
@@ -577,10 +638,10 @@ function CardImage({
       {/* Showcase tints the title italic via the Band `italic` prop above. */}
       {isShowcase ? null : null}
 
-      {/* Free-tier watermark — OUR brand mark, baked into the pixels so it
-          can't be stripped client-side. Paid exports pass watermark=false.
+      {/* Free-tier BRAND mark — pipglyph.com, baked into the pixels so it
+          can't be stripped client-side. Paid exports pass brandMark=false.
           Never a WotC mark; the MTG-style frame itself is always free. */}
-      {watermark ? (
+      {brandMark ? (
         <div
           style={{
             position: "absolute",
@@ -1578,7 +1639,7 @@ function SecondFaceBake({
 export function renderCardImage(
   card: CardPreviewData,
   preset: RenderPreset = "default",
-  opts: { watermark?: boolean } = {},
+  opts: { brandMark?: boolean } = {},
 ): ImageResponse {
   const base = RENDER_PRESETS[preset];
   // Landscape (Battle) frames swap the canvas to 7:5 so the bake matches the
@@ -1594,7 +1655,7 @@ export function renderCardImage(
       card={card}
       width={width}
       height={height}
-      watermark={opts.watermark ?? true}
+      brandMark={opts.brandMark ?? true}
     />,
     {
       width,
