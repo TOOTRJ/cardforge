@@ -12,6 +12,22 @@ import type {
   Visibility,
 } from "@/types/card";
 
+// Structured row editors (planeswalker loyalty abilities / saga chapters).
+// Strings at the form boundary; runSubmit trims + converts to the
+// FaceContent shape and dual-writes a serialized rules_text alongside
+// (lib/cards/face-content.ts owns the round-trip).
+export type LoyaltyRowFormValues = {
+  /** "+1" | "-3" | "0" | "X" | "" — empty = static (unbadged) row. */
+  cost: string;
+  text: string;
+};
+
+export type SagaChapterFormValues = {
+  /** Chapter numbers this row covers (1-based; rows may share: "I, II —"). */
+  numerals: number[];
+  text: string;
+};
+
 // Back-face form values mirror the front-face fields the back face stores.
 // Doubles as the Adventure spell's content on Adventure frames.
 export type BackFaceFormValues = {
@@ -44,6 +60,12 @@ export type FormValues = {
   tags_text: string;
   rarity: Rarity | "";
   rules_text: string;
+  /** Planeswalker loyalty rows — the Text step's editor when the kind is
+   *  planeswalker. Empty for every other kind. */
+  loyalty_abilities: LoyaltyRowFormValues[];
+  /** Saga intro line + chapter rows — the Text step's editor for sagas. */
+  saga_intro: string;
+  saga_chapters: SagaChapterFormValues[];
   flavor_text: string;
   power: string;
   toughness: string;

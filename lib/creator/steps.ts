@@ -168,6 +168,9 @@ const STEP_DEFS: StepDef[] = [
     description: "Rules, flavor & combat numbers",
     fields: [
       "rules_text",
+      "loyalty_abilities",
+      "saga_intro",
+      "saga_chapters",
       "flavor_text",
       "power",
       "toughness",
@@ -246,8 +249,10 @@ export type KindPanelConfig = {
    *  art window (split/aftermath halves each show their own illustration;
    *  flip and adventure share the front art). */
   artSlots: Array<"front" | "second">;
-  /** Which rules editor the Text step renders for the front face. */
-  textVariant: "standard" | "saga" | "adventure" | "split" | "flip";
+  /** Which rules editor the Text step renders for the front face.
+   *  "loyalty" = the planeswalker ability-row editor; "saga" = the chapter
+   *  editor; the rest use the standard rules textarea. */
+  textVariant: "standard" | "loyalty" | "saga" | "adventure" | "split" | "flip";
   /** The frame paints an intrinsic second face — has_back_face is forced on
    *  and the layout editor presents "clear", never "remove". */
   forcedBackFace: boolean;
@@ -258,9 +263,11 @@ export function panelConfigFor(ctx: StepContext): KindPanelConfig {
   const textVariant =
     kind === "saga" || kind === "adventure" || kind === "flip"
       ? kind
-      : kind === "split" || kind === "aftermath"
-        ? "split"
-        : "standard";
+      : kind === "planeswalker"
+        ? ("loyalty" as const)
+        : kind === "split" || kind === "aftermath"
+          ? ("split" as const)
+          : ("standard" as const);
   return {
     artSlots:
       kind === "split" || kind === "aftermath" ? ["front", "second"] : ["front"],
