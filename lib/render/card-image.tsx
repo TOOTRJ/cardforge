@@ -181,7 +181,7 @@ function CardImage({
   // actually defines a slot for that stat.
   const showPT =
     Boolean(layout.pt) &&
-    showsPowerToughness(card.cardType) &&
+    showsPowerToughness(card.cardType, card.subtypes) &&
     Boolean(card.power || card.toughness);
   const showLoyalty =
     Boolean(layout.loyalty) &&

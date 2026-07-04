@@ -7,6 +7,7 @@ import {
 } from "@/lib/scryfall/import-mapper";
 import type { ScryfallCard } from "@/lib/scryfall/client";
 import { statVisibility } from "@/lib/creator/steps";
+import { parseSubtypes } from "@/lib/creator/card-fields";
 
 // ---------------------------------------------------------------------------
 // Tests for lib/scryfall/import-mapper.ts.
@@ -211,6 +212,28 @@ describe("mapScryfallToFormPatch", () => {
     expect(patch.power).toBe("1");
     expect(patch.toughness).toBe("1");
     expect(statVisibility(patch.card_type).pt).toBe(true);
+  });
+
+  it("keeps P/T visible for an imported Vehicle (subtype-driven)", () => {
+    // Vehicles are artifacts with printed P/T — the type line has no
+    // creature word, so visibility comes from the Vehicle subtype.
+    const patch = mapScryfallToFormPatch(
+      fixture({
+        name: "Smuggler's Copter",
+        type_line: "Artifact — Vehicle",
+        power: "3",
+        toughness: "3",
+      }),
+    );
+    expect(patch.card_type).toBe("artifact");
+    expect(patch.subtypes_text).toBe("Vehicle");
+    expect(patch.power).toBe("3");
+    expect(patch.toughness).toBe("3");
+    // Same call shape as the form: parsed subtypes_text feeds the gate.
+    expect(
+      statVisibility(patch.card_type, parseSubtypes(patch.subtypes_text ?? ""))
+        .pt,
+    ).toBe(true);
   });
 
   it("doesn't fabricate fields when Scryfall data is missing", () => {

@@ -127,6 +127,22 @@ describe("statVisibility", () => {
     });
   });
 
+  it("Vehicle/Spacecraft subtypes → P/T even on non-creatures", () => {
+    // Vehicles print crewed stats, Spacecraft stationed stats — both are
+    // artifacts, so P/T can't gate on card_type alone.
+    expect(statVisibility("artifact", ["Vehicle"])).toEqual({
+      pt: true,
+      loyalty: false,
+      defense: false,
+    });
+    expect(statVisibility("artifact", ["Spacecraft"]).pt).toBe(true);
+    // Case-insensitive: hand-typed subtypes behave like imported ones.
+    expect(statVisibility("artifact", ["vehicle"]).pt).toBe(true);
+    // Other subtypes don't unlock P/T.
+    expect(statVisibility("artifact", ["Equipment"]).pt).toBe(false);
+    expect(statVisibility("artifact").pt).toBe(false);
+  });
+
   it("instant/sorcery/empty → no stats", () => {
     expect(statVisibility("instant")).toEqual({
       pt: false,
