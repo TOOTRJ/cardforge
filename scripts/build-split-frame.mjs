@@ -18,17 +18,23 @@ import sharp from "sharp";
 import path from "node:path";
 import fs from "node:fs";
 
+// The STANDARD M15 split style (Amonkhet-era look). The pack also carries
+// magic-m15-planeshifted-split — the Planar Chaos-styled alternate this
+// frame was originally (and wrongly) built from; its rough mottled gold is
+// not what real split cards use. The fusable style additionally ships
+// fuse_left/fuse_right arrow pieces and the Duskmourn Rooms variant for
+// future treatments.
 const PACK =
-  "/Users/redjester/Projects/other/Full-Magic-Pack/data/magic-m15-planeshifted-split.mse-style";
+  "/Users/redjester/Projects/other/Full-Magic-Pack/data/magic-m15-split-fusable.mse-style/normal";
 const OUT = "public/frames/split";
 const MAP = {
-  w: "wcard.jpg",
-  u: "ucard.jpg",
-  b: "bcard.jpg",
-  r: "rcard.jpg",
-  g: "gcard.jpg",
-  c: "ccard.jpg",
-  m: "mcard.jpg",
+  w: "wcard.png",
+  u: "ucard.png",
+  b: "bcard.png",
+  r: "rcard.png",
+  g: "gcard.png",
+  c: "ccard.png",
+  m: "mcard.png",
 };
 const W = 2100; // landscape canvas (523 × ~4.0)
 const H = 1500; // 375 × 4.0

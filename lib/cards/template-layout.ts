@@ -499,6 +499,7 @@ const M15TOKEN: FrameProfile = {
 // regions and the same painted P/T plate — so they're straight clones with a
 // different frame PNG. Their plates are light (silver/pale), so the dark M15
 // ink reads on them unchanged.
+const M15ARTIFACT: FrameProfile = { ...M15, label: "M15 Artifact" };
 const M15SNOW: FrameProfile = { ...M15, label: "M15 Snow" };
 const M15DEVOID: FrameProfile = { ...M15, label: "M15 Devoid (Eldrazi)" };
 
@@ -1267,6 +1268,7 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   m15: M15,
   m15land: M15LAND,
   m15token: M15TOKEN,
+  m15artifact: M15ARTIFACT,
   m15snow: M15SNOW,
   m15devoid: M15DEVOID,
   m15pw: M15PW,

@@ -25,20 +25,22 @@ import fs from "node:fs";
 
 // ── Config: edit these for each frame set ──────────────────────────────────
 const PACK =
-  "/Users/redjester/Projects/other/Full-Magic-Pack/data/magic-modules.mse-include/cards/375 m15 saga cut";
-const OUT = "public/frames/saga";
+  "/Users/redjester/Projects/other/Full-Magic-Pack/data/magic-modules.mse-include/cards/375 m15 simple";
+const OUT = "public/frames/m15artifact";
+// The M15 ARTIFACT frame (silver-blue acard) — identical for all seven color
+// keys in v1. Real colored artifacts blend a color wash over this frame
+// (artifact_blend_card.png in the pack); a future pass can composite that.
 const MAP = {
-  w: "wcard.jpg",
-  u: "ucard.jpg",
-  b: "bcard.jpg",
-  r: "rcard.jpg",
-  g: "gcard.jpg",
-  c: "ccard.jpg",
-  m: "mcard.jpg",
+  w: "acard.jpg",
+  u: "acard.jpg",
+  b: "acard.jpg",
+  r: "acard.jpg",
+  g: "acard.jpg",
+  c: "acard.jpg",
+  m: "acard.jpg",
 };
 // Seed point(s) inside each art window, as fractions of the card (x, y).
-// Saga's art is the black column on the RIGHT, so seed there.
-const SEEDS = [[0.7, 0.45]];
+const SEEDS = [[0.5, 0.3]];
 // Which art-window fill to cut to transparent: "black" (the m15 family) or
 // "white" (the agclassic / Alpha family). Ignored if the window is already
 // alpha-cut in the source (battle/devoid) — the fill just finds nothing.

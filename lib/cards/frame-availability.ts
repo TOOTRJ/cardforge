@@ -30,6 +30,7 @@ export const GRANDFATHERED_TEMPLATES: ReadonlySet<FrameTemplate> = new Set([
   "m15",
   "m15land",
   "m15token",
+  "m15artifact",
   "m15pw",
   "battle",
   "agclassic",
