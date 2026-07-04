@@ -469,6 +469,8 @@ export type Database = {
           art_url: string | null;
           artist_credit: string | null;
           back_face: Json | null;
+          face_content: Json | null;
+          watermark: Json | null;
           card_type: string | null;
           color_identity: string[];
           cost: string | null;
@@ -514,6 +516,8 @@ export type Database = {
           art_url?: string | null;
           artist_credit?: string | null;
           back_face?: Json | null;
+          face_content?: Json | null;
+          watermark?: Json | null;
           card_type?: string | null;
           color_identity?: string[];
           cost?: string | null;
@@ -558,6 +562,8 @@ export type Database = {
           art_url?: string | null;
           artist_credit?: string | null;
           back_face?: Json | null;
+          face_content?: Json | null;
+          watermark?: Json | null;
           card_type?: string | null;
           color_identity?: string[];
           cost?: string | null;

@@ -32,15 +32,16 @@ import { pickFrameColorKey } from "@/components/cards/frame-layer";
 import {
   buildTypeLine,
   normalizeFrameTemplate,
-  parseChapters,
-  parseSagaIntro,
-  parseLoyaltyAbilities,
   showsDefense,
   showsLoyalty,
   showsPowerToughness,
   type LoyaltyAbility,
   type SagaChapter,
 } from "@/lib/cards/card-display";
+import {
+  resolveLoyaltyRows,
+  resolveSagaChapters,
+} from "@/lib/cards/face-content";
 import {
   DISPLAY_FONT_BYTES,
   KEYRUNE_DEFAULT_GLYPH,
@@ -213,10 +214,16 @@ function CardImage({
   );
 
   // Planeswalker ability rows (badged loyalty costs, striped rows) when the
-  // frame defines them and the card actually is a planeswalker.
+  // frame defines them and the card actually is a planeswalker. Structured
+  // rows first, rules_text parsing as the legacy fallback — identical
+  // resolution to the live preview (lib/cards/face-content.ts).
   const loyaltyAbilities = usesLoyaltyRows
-    ? parseLoyaltyAbilities(card.rulesText)
+    ? resolveLoyaltyRows(card.faceContent, card.rulesText)
     : [];
+  // Saga chapter rail content — same structured-first resolution.
+  const sagaContent = layout.chapters
+    ? resolveSagaChapters(card.faceContent, card.rulesText)
+    : null;
 
   const artW = Math.round((layout.artSlot.widthPct / 100) * width);
   const artH = Math.round((layout.artSlot.heightPct / 100) * height);
@@ -424,8 +431,8 @@ function CardImage({
       {layout.chapters
         ? ChapterBake({
             slot: layout.chapters,
-            intro: parseSagaIntro(card.rulesText),
-            chapters: parseChapters(card.rulesText),
+            intro: sagaContent?.intro ?? null,
+            chapters: sagaContent?.chapters ?? [],
             cardWidth: width,
           })
         : layout.loyaltyRows && loyaltyAbilities.length > 0

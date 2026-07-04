@@ -309,6 +309,18 @@ export async function createCardAction(
     }
   }
 
+  // Cross-field sanity: loyalty rows belong to planeswalkers. (Saga chapters
+  // aren't type-gated — the saga frame carries them and card_type stays
+  // enchantment.) Friendly pre-flight over silently storing dead content.
+  if (data.face_content?.loyalty && data.card_type !== "planeswalker") {
+    return {
+      ok: false,
+      fieldErrors: {
+        rules_text: "Loyalty abilities only apply to planeswalker cards.",
+      },
+    };
+  }
+
   const setIcon = await resolvePrimarySet(supabase, user.id, data.primary_set_id);
 
   const insert: CardInsert = {
@@ -346,6 +358,10 @@ export async function createCardAction(
     // Scryfall provenance (chunk 13): the source card id when imported,
     // null otherwise. Stays null forever for forged-from-scratch cards.
     source_scryfall_id: data.source_scryfall_id ?? null,
+    // Structured loyalty/saga rows (migration 0050); null = derive from
+    // rules_text. Design watermark; null = none.
+    face_content: data.face_content ?? null,
+    watermark: data.watermark ?? null,
     primary_set_id: setIcon.primary_set_id,
     set_icon_url: setIcon.set_icon_url,
     set_icon_code: setIcon.set_icon_code,
@@ -511,6 +527,10 @@ export async function updateCardAction(
   // Scryfall source: same semantics — null clears, omitted leaves alone.
   if (data.source_scryfall_id !== undefined)
     update.source_scryfall_id = data.source_scryfall_id ?? null;
+  // Structured face content + watermark: null clears, omitted leaves alone.
+  if (data.face_content !== undefined)
+    update.face_content = data.face_content ?? null;
+  if (data.watermark !== undefined) update.watermark = data.watermark ?? null;
   // Primary set: re-resolve so the card's denormalized symbol stays in sync.
   const resolvedSet =
     data.primary_set_id !== undefined

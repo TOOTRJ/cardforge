@@ -181,6 +181,108 @@ export const backFaceSchema = z
 export type BackFaceInput = z.infer<typeof backFaceSchema>;
 
 // ---------------------------------------------------------------------------
+// Structured face content (cards.face_content, migration 0050) — loyalty
+// ability rows / saga chapters as data. Bounds match real cards: loyalty
+// rows run 1–6 (WAR uncommons = 1, Urza PW = 6), saga chapters 1–6
+// (The Night of the Doctor = 2, Long List of the Ents = I–VI).
+// ---------------------------------------------------------------------------
+
+// "+1" | "-3" | "0" | "X" | "-X" — accepts the U+2212 minus Scryfall oracle
+// text uses and normalizes it to ASCII so the stored form matches what
+// parseLoyaltyAbilities emits (the Satori bake's fonts lack U+2212).
+const loyaltyCostSchema = z
+  .string()
+  .trim()
+  .transform((v) => v.replace(/−|–/g, "-"))
+  .pipe(
+    z
+      .string()
+      .regex(
+        /^([+-]?\d{1,3}|[+-]?X|0)$/i,
+        "Loyalty cost must look like +1, -3, 0, or X.",
+      ),
+  )
+  .transform((v) => v.toUpperCase())
+  .nullable();
+
+export const faceContentSchema = z
+  .object({
+    v: z.literal(1),
+    loyalty: z
+      .object({
+        abilities: z
+          .array(
+            z.object({
+              cost: loyaltyCostSchema,
+              text: z.string().trim().min(1).max(600),
+            }),
+          )
+          .min(1)
+          .max(6),
+      })
+      .optional(),
+    saga: z
+      .object({
+        intro: z.string().trim().max(400).nullable().optional(),
+        chapters: z
+          .array(
+            z.object({
+              numerals: z
+                .array(z.number().int().min(1).max(6))
+                .min(1)
+                .max(6),
+              text: z.string().trim().min(1).max(600),
+            }),
+          )
+          .min(1)
+          .max(6),
+      })
+      .optional(),
+  })
+  .strict();
+
+export type FaceContentInput = z.infer<typeof faceContentSchema>;
+
+// ---------------------------------------------------------------------------
+// Per-card design watermark (cards.watermark, migration 0050). Preset keys
+// are validated against the shipped asset list once the preset library
+// lands (PR 7); until then the key is a bounded string.
+// ---------------------------------------------------------------------------
+
+const watermarkCommon = {
+  opacity: z.number().min(0.04).max(0.9).optional(),
+  size: z.enum(["normal", "large"]).optional(),
+};
+
+export const watermarkSchema = z.discriminatedUnion("kind", [
+  z
+    .object({
+      kind: z.literal("mana"),
+      key: z.enum(["w", "u", "b", "r", "g", "c"]),
+      ...watermarkCommon,
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal("preset"),
+      key: z
+        .string()
+        .regex(/^[a-z0-9-]{1,40}$/, "Unknown watermark preset."),
+      ...watermarkCommon,
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal("custom"),
+      url: z.string().url().max(2048),
+      ...watermarkCommon,
+    })
+    .strict(),
+]);
+
+export type WatermarkInput = z.infer<typeof watermarkSchema>;
+
+// ---------------------------------------------------------------------------
 // Composite schemas — the shapes server actions consume.
 // ---------------------------------------------------------------------------
 
@@ -224,6 +326,11 @@ const baseCardSchema = z.object({
   // denormalizes that set's icon onto the card and creates set membership.
   // `null` clears the association; `undefined` leaves it untouched on update.
   primary_set_id: uuidSchema.nullable().optional(),
+  // Structured loyalty/saga content (migration 0050). `null` clears (card
+  // reverts to rules_text parsing); `undefined` leaves alone on update.
+  face_content: faceContentSchema.nullable().optional(),
+  // Design watermark. Same null/undefined semantics.
+  watermark: watermarkSchema.nullable().optional(),
 });
 
 export const createCardSchema = baseCardSchema;
