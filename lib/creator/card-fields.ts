@@ -19,7 +19,51 @@ import {
   EMPTY_BACK_FACE,
   type BackFaceFormValues,
   type FormValues,
+  type LoyaltyRowFormValues,
+  type SagaChapterFormValues,
 } from "@/lib/creator/form-types";
+import {
+  loyaltyFromRulesText,
+  sagaFromRulesText,
+} from "@/lib/cards/face-content";
+import { kindFromCard } from "@/lib/creator/card-kinds";
+
+/** Hydrate the structured row editors from a persisted card: structured
+ *  face_content when present, else parsed from rules_text — but ONLY for the
+ *  kinds that render those rails. (Parsing a creature's rules into loyalty
+ *  rows would fabricate junk rows out of ordinary ability lines.) */
+export function structuredRowsFrom(card: Card): {
+  loyalty_abilities: LoyaltyRowFormValues[];
+  saga_intro: string;
+  saga_chapters: SagaChapterFormValues[];
+} {
+  const kind = kindFromCard(
+    card.card_type,
+    (card.frame_style as FrameStyle | null)?.template,
+  );
+  if (kind === "planeswalker") {
+    const rows =
+      card.face_content?.loyalty?.abilities ??
+      loyaltyFromRulesText(card.rules_text);
+    return {
+      loyalty_abilities: rows.map((r) => ({ cost: r.cost ?? "", text: r.text })),
+      saga_intro: "",
+      saga_chapters: [],
+    };
+  }
+  if (kind === "saga") {
+    const saga = card.face_content?.saga ?? sagaFromRulesText(card.rules_text);
+    return {
+      loyalty_abilities: [],
+      saga_intro: saga.intro ?? "",
+      saga_chapters: saga.chapters.map((ch) => ({
+        numerals: [...ch.numerals],
+        text: ch.text,
+      })),
+    };
+  }
+  return { loyalty_abilities: [], saga_intro: "", saga_chapters: [] };
+}
 
 export function backFaceFormValuesFrom(
   source: CardBackFace | null | undefined,
@@ -69,6 +113,9 @@ export function defaultValuesFor(
       tags_text: "",
       rarity: "common",
       rules_text: "",
+      loyalty_abilities: [],
+      saga_intro: "",
+      saga_chapters: [],
       flavor_text: "",
       power: "",
       toughness: "",
@@ -115,6 +162,7 @@ export function defaultValuesFor(
     tags_text: card.tags?.join(", ") ?? "",
     rarity: card.rarity ?? "",
     rules_text: card.rules_text ?? "",
+    ...structuredRowsFrom(card),
     flavor_text: card.flavor_text ?? "",
     power: card.power ?? "",
     toughness: card.toughness ?? "",

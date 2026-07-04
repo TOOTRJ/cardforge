@@ -159,6 +159,10 @@ describe("panelConfigFor", () => {
 
   it("maps kinds to their text-editor variants", () => {
     expect(
+      panelConfigFor(ctx({ cardType: "planeswalker", template: "m15pw" }))
+        .textVariant,
+    ).toBe("loyalty");
+    expect(
       panelConfigFor(ctx({ cardType: "enchantment", template: "saga" }))
         .textVariant,
     ).toBe("saga");

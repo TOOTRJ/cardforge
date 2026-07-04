@@ -46,6 +46,8 @@ import {
 } from "@/components/creator/start-with-hero";
 import { IdentityPanel } from "@/components/creator/panels/identity-panel";
 import { PipsPanel } from "@/components/creator/panels/pips-panel";
+import { LoyaltyAbilitiesEditor } from "@/components/creator/panels/loyalty-editor";
+import { SagaChaptersEditor } from "@/components/creator/panels/saga-editor";
 import { KindPanel } from "@/components/creator/panels/kind-panel";
 import { FrameGalleryPanel } from "@/components/creator/panels/frame-gallery-panel";
 import { KindChangeDialog } from "@/components/creator/kind-change-dialog";
@@ -71,12 +73,19 @@ import {
   type CardTemplate,
   type CardType,
   type ColorIdentity,
+  type FaceContent,
   type FrameTemplate,
   type GameSystem,
   type Rarity,
   DEFAULT_FRAME_TEMPLATE,
 } from "@/types/card";
 import { normalizeFrameTemplate } from "@/lib/cards/card-display";
+import {
+  loyaltyFromRulesText,
+  sagaFromRulesText,
+  serializeLoyalty,
+  serializeSaga,
+} from "@/lib/cards/face-content";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
 import type { FrameProfileOverridesMap } from "@/lib/cards/profile-override";
 import { pickFrameColorKey } from "@/components/cards/frame-layer";
@@ -99,6 +108,7 @@ import type { Challenge } from "@/lib/challenges/shared";
 import {
   buildFieldToStep,
   hasInlineBackFace,
+  panelConfigFor,
   statVisibility,
   stepIndexForField,
   stepLabel,
@@ -361,6 +371,28 @@ export function CardCreatorForm({
       if (initialTag) {
         restored.tags_text = mergeTag(restored.tags_text, initialTag);
       }
+      // Pre-editor drafts carry walker/saga text but no structured rows —
+      // hydrate them so the row editors don't open empty.
+      const restoredKind = kindFromCard(
+        restored.card_type,
+        restored.frame_style?.template,
+      );
+      if (
+        restoredKind === "planeswalker" &&
+        !(restored.loyalty_abilities?.length)
+      ) {
+        restored.loyalty_abilities = loyaltyFromRulesText(
+          restored.rules_text,
+        ).map((r) => ({ cost: r.cost ?? "", text: r.text }));
+      }
+      if (restoredKind === "saga" && !(restored.saga_chapters?.length)) {
+        const saga = sagaFromRulesText(restored.rules_text);
+        restored.saga_chapters = saga.chapters.map((ch) => ({
+          numerals: [...ch.numerals],
+          text: ch.text,
+        }));
+        restored.saga_intro = restored.saga_intro || (saga.intro ?? "");
+      }
       reset(restored);
       toast.info("Restored your unsaved draft.", {
         action: {
@@ -437,6 +469,8 @@ export function CardCreatorForm({
     kind,
   };
   const steps = visibleSteps(stepCtx);
+  // Per-kind panel config — which text editor and art slots the steps render.
+  const panelConfig = panelConfigFor(stepCtx);
   const idx = Math.min(current, steps.length - 1);
   const activeStep = steps[idx];
   const stepKey = activeStep?.key;
@@ -515,11 +549,54 @@ export function CardCreatorForm({
     KindChangePlan,
     { action: "confirm" }
   > | null>(null);
+  /** Populate the structured row editors from a rules text — used when a
+   *  card ARRIVES as a planeswalker/saga (import, AI, kind switch) so the
+   *  row editors never open empty while the text sits invisible. */
+  const seedStructuredRows = (
+    targetKind: CardKind,
+    rulesText: string | null | undefined,
+  ) => {
+    if (!rulesText?.trim()) return;
+    if (targetKind === "planeswalker") {
+      setValue(
+        "loyalty_abilities",
+        loyaltyFromRulesText(rulesText).map((r) => ({
+          cost: r.cost ?? "",
+          text: r.text,
+        })),
+        { shouldDirty: true },
+      );
+    } else if (targetKind === "saga") {
+      const saga = sagaFromRulesText(rulesText);
+      setValue(
+        "saga_chapters",
+        saga.chapters.map((ch) => ({
+          numerals: [...ch.numerals],
+          text: ch.text,
+        })),
+        { shouldDirty: true },
+      );
+      setValue("saga_intro", saga.intro ?? "", { shouldDirty: true });
+    }
+  };
+
   const applyKindPatch = (patch: KindChangePatch) => {
     setValue("card_type", patch.card_type, { shouldDirty: true });
     setValue("frame_style.template", patch.template, { shouldDirty: true });
     if (patch.has_back_face) {
       setValue("has_back_face", true, { shouldDirty: true });
+    }
+    // Switching INTO a rows-driven kind with an empty editor: seed the rows
+    // from whatever rules text exists, so prior work stays visible.
+    const nextKind = kindFromCard(patch.card_type, patch.template);
+    if (
+      nextKind === "planeswalker" &&
+      getValues("loyalty_abilities").length === 0
+    ) {
+      seedStructuredRows(nextKind, getValues("rules_text"));
+    }
+    if (nextKind === "saga" && getValues("saga_chapters").length === 0) {
+      seedStructuredRows(nextKind, getValues("rules_text"));
     }
   };
   const handleKindSelect = (next: CardKind) => {
@@ -648,6 +725,18 @@ export function CardCreatorForm({
         { shouldDirty: true },
       );
     }
+
+    // The AI writes rules_text — mirror it into the row editors when the
+    // card is a walker/saga so the Text step reflects the patch.
+    if (patch.rules_text !== undefined) {
+      const patchedKind = kindFromCard(
+        (patch.card_type as CardType) || getValues("card_type"),
+        getValues("frame_style.template"),
+      );
+      if (patchedKind === "planeswalker" || patchedKind === "saga") {
+        seedStructuredRows(patchedKind, patch.rules_text);
+      }
+    }
   };
 
   // Apply a Scryfall import payload. Fields not present in the patch are
@@ -738,6 +827,13 @@ export function CardCreatorForm({
       );
     }
 
+    // The imported rules text drives the row editors for walkers/sagas —
+    // seed them AFTER the field patches so the rows reflect the import,
+    // not whatever text was there before.
+    if (importedKind === "planeswalker" || importedKind === "saga") {
+      seedStructuredRows(importedKind, patch.rules_text);
+    }
+
     // Stamp the Scryfall provenance so the saved card joins the
     // "Also remixed by N" group on the public detail page (chunk 13).
     if (patch.source_scryfall_id) {
@@ -813,6 +909,12 @@ export function CardCreatorForm({
         { shouldDirty: true },
       );
       setValue("rules_text", card.rules_text, { shouldDirty: true });
+      {
+        const generatedKind = kindFromCard(card.card_type, undefined);
+        if (generatedKind === "planeswalker" || generatedKind === "saga") {
+          seedStructuredRows(generatedKind, card.rules_text);
+        }
+      }
       setValue("flavor_text", card.flavor_text ?? "", { shouldDirty: true });
       setValue("power", card.power ?? "", { shouldDirty: true });
       setValue("toughness", card.toughness ?? "", { shouldDirty: true });
@@ -916,6 +1018,45 @@ export function CardCreatorForm({
         }
       : null;
 
+    // Structured rows: planeswalkers + sagas dual-write face_content AND a
+    // canonically serialized rules_text (round-trip tested in
+    // lib/cards/face-content.ts), so search/AI/exports keep reading
+    // rules_text. Everything else clears face_content (null) and sends the
+    // textarea as-is. Costs normalize the U+2212 minus to ASCII up front so
+    // the serialized text matches what the server stores.
+    const submitKind = kindFromCard(
+      values.card_type,
+      values.frame_style?.template,
+    );
+    let faceContentPayload: FaceContent | null = null;
+    let rulesTextOut = values.rules_text.trim();
+    if (submitKind === "planeswalker") {
+      const rows = values.loyalty_abilities
+        .map((r) => ({
+          cost: r.cost.trim()
+            ? r.cost.trim().replace(/[\u2212\u2013]/g, "-").toUpperCase()
+            : null,
+          text: r.text.trim(),
+        }))
+        .filter((r) => r.text.length > 0);
+      if (rows.length > 0) {
+        faceContentPayload = { v: 1, loyalty: { abilities: rows } };
+        rulesTextOut = serializeLoyalty(rows);
+      }
+    } else if (submitKind === "saga") {
+      const chapters = values.saga_chapters
+        .map((r) => ({
+          numerals: [...r.numerals].sort((a, b) => a - b),
+          text: r.text.trim(),
+        }))
+        .filter((r) => r.text.length > 0 && r.numerals.length > 0);
+      if (chapters.length > 0) {
+        const intro = values.saga_intro.trim() || null;
+        faceContentPayload = { v: 1, saga: { intro, chapters } };
+        rulesTextOut = serializeSaga(intro, chapters);
+      }
+    }
+
     const payload = {
       title: values.title.trim(),
       slug: values.slug.trim() ? slugify(values.slug.trim()) : undefined,
@@ -928,7 +1069,8 @@ export function CardCreatorForm({
       subtypes: parseSubtypes(values.subtypes_text),
       tags: parseTags(values.tags_text),
       rarity: values.rarity || undefined,
-      rules_text: values.rules_text.trim() || undefined,
+      rules_text: rulesTextOut || undefined,
+      face_content: faceContentPayload,
       flavor_text: values.flavor_text.trim() || undefined,
       power: values.power.trim() || undefined,
       toughness: values.toughness.trim() || undefined,
@@ -1087,6 +1229,46 @@ export function CardCreatorForm({
     ? cardToPreviewData(selectedBackCard, profileOverrides)
     : null;
 
+  // Live structured content for the preview: the row editors drive the
+  // chapter rail / loyalty rows as the user types; empty rows fall back to
+  // rules_text parsing inside the renderer (same resolution as the bake).
+  const liveFaceContent: FaceContent | null = (() => {
+    if (kind === "planeswalker") {
+      const rows = (watched.loyalty_abilities ?? []).filter((r) =>
+        r.text.trim(),
+      );
+      if (rows.length > 0) {
+        return {
+          v: 1,
+          loyalty: {
+            abilities: rows.map((r) => ({
+              cost: r.cost.trim() ? r.cost.trim() : null,
+              text: r.text.trim(),
+            })),
+          },
+        };
+      }
+    }
+    if (kind === "saga") {
+      const chapters = (watched.saga_chapters ?? []).filter(
+        (r) => r.text.trim() && r.numerals.length > 0,
+      );
+      if (chapters.length > 0) {
+        return {
+          v: 1,
+          saga: {
+            intro: watched.saga_intro.trim() || null,
+            chapters: chapters.map((r) => ({
+              numerals: [...r.numerals].sort((a, b) => a - b),
+              text: r.text.trim(),
+            })),
+          },
+        };
+      }
+    }
+    return null;
+  })();
+
   // Shared live-preview props for the desktop sticky aside + the mobile inline
   // preview, so they never drift. `previewFace` is state (see the sync effect
   // above); `flipOnClick` makes the card itself a flip target with a hover hint.
@@ -1111,6 +1293,7 @@ export function CardCreatorForm({
     artUrl: watched.art_url || null,
     artPosition: watched.art_position,
     frameStyle: watched.frame_style,
+    faceContent: liveFaceContent,
     backFace: watched.has_back_face
       ? {
           title: watched.back_face.title,
@@ -1270,13 +1453,23 @@ export function CardCreatorForm({
             {/* ----- Text & stats panel (rules/flavor + type-gated stats) ----- */}
             {stepKey === "text" ? (
               <>
-                <TextPanel
-                  rulesTextField={rulesTextField}
-                  rulesTextRef={rulesTextRef}
-                  onInsertSymbol={(token) =>
-                    insertSymbol("rules_text", rulesTextRef, token)
-                  }
-                />
+                {panelConfig.textVariant === "loyalty" ? (
+                  // Planeswalkers: ability rows instead of a raw textarea
+                  // (and no flavor text — real walkers never carry it).
+                  <LoyaltyAbilitiesEditor />
+                ) : panelConfig.textVariant === "saga" ? (
+                  // Sagas: intro + chapter rows (flavor hidden — the rail
+                  // replaces the text box).
+                  <SagaChaptersEditor />
+                ) : (
+                  <TextPanel
+                    rulesTextField={rulesTextField}
+                    rulesTextRef={rulesTextRef}
+                    onInsertSymbol={(token) =>
+                      insertSymbol("rules_text", rulesTextRef, token)
+                    }
+                  />
+                )}
                 <AbilitiesPanel statVis={statVis} />
                 {/* Forge AI last — below the power/toughness stats. */}
                 <ForgeAIPanel
