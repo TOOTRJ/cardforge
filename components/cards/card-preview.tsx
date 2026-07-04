@@ -22,15 +22,16 @@ import {
 import {
   buildTypeLine,
   normalizeFrameTemplate,
-  parseChapters,
-  parseSagaIntro,
-  parseLoyaltyAbilities,
   showsDefense,
   showsLoyalty,
   showsPowerToughness,
   type LoyaltyAbility,
   type SagaChapter,
 } from "@/lib/cards/card-display";
+import {
+  resolveLoyaltyRows,
+  resolveSagaChapters,
+} from "@/lib/cards/face-content";
 import {
   resolveColorAsset,
   type FrameProfile,
@@ -49,6 +50,7 @@ import type {
   CardFinish,
   CardType,
   ColorIdentity,
+  FaceContent,
   FrameStyle,
   FrameTemplate,
   Rarity,
@@ -89,6 +91,11 @@ export type CardPreviewData = {
    *  absent the default rarity-tinted PipGlyph mark renders. */
   setIconUrl?: string | null;
   setIconCode?: string | null;
+  /** Structured loyalty/saga rows (cards.face_content). When present, the
+   *  chapter rail / loyalty rows render from it; absent/null falls back to
+   *  parsing rulesText — the two are round-trip equivalent
+   *  (lib/cards/face-content.ts), so legacy cards render identically. */
+  faceContent?: FaceContent | null;
   /** Optional back-face content. When set, the preview renders a flip button
    *  and supports a 3D flip animation between the two faces. */
   backFace?: CardBackFace | null;
@@ -151,6 +158,10 @@ type FaceData = {
   artistCredit: string | null;
   artUrl: string | null;
   artPosition: ArtPosition;
+  /** Structured loyalty/saga rows — null falls back to rulesText parsing.
+   *  Only the FRONT face (and a v2 back card) carries this; inline second
+   *  faces never render loyalty/chapter rails. */
+  faceContent: FaceContent | null;
 };
 
 // The adventure spell shown inline on an Adventure frame's left page. Sourced
@@ -185,6 +196,7 @@ export function CardPreview({
   frameStyle,
   setIconUrl,
   setIconCode,
+  faceContent,
   backFace,
   pipOverrides,
   profileOverrides,
@@ -214,6 +226,7 @@ export function CardPreview({
     artistCredit: artistCredit ?? null,
     artUrl: artUrl ?? null,
     artPosition: artPosition ?? {},
+    faceContent: faceContent ?? null,
   };
 
   const backFaceData: FaceData | null = backFace
@@ -232,6 +245,8 @@ export function CardPreview({
         artistCredit: backFace.artist_credit ?? null,
         artUrl: backFace.art_url ?? null,
         artPosition: backFace.art_position ?? {},
+        // Inline second faces never carry structured loyalty/saga content.
+        faceContent: null,
       }
     : null;
 
@@ -273,6 +288,7 @@ export function CardPreview({
         artistCredit: backCard.artistCredit ?? null,
         artUrl: backCard.artUrl ?? null,
         artPosition: backCard.artPosition ?? {},
+        faceContent: backCard.faceContent ?? null,
       }
     : null;
   const backCardTemplate = normalizeFrameTemplate(backCard?.frameStyle?.template);
@@ -523,10 +539,15 @@ function CardFace({
   );
 
   // Planeswalker ability rows (badged loyalty costs, striped rows) when the
-  // frame defines them and the card actually is a planeswalker.
+  // frame defines them and the card actually is a planeswalker. Structured
+  // rows first, rules_text parsing as the legacy fallback.
   const loyaltyAbilities = usesLoyaltyRows
-    ? parseLoyaltyAbilities(face.rulesText)
+    ? resolveLoyaltyRows(face.faceContent, face.rulesText)
     : [];
+  // Saga chapter rail content — same structured-first resolution.
+  const sagaContent = layout.chapters
+    ? resolveSagaChapters(face.faceContent, face.rulesText)
+    : null;
 
   return (
     <div className="absolute inset-0">
@@ -701,8 +722,8 @@ function CardFace({
       {layout.chapters ? (
         <ChapterRail
           slot={layout.chapters}
-          intro={parseSagaIntro(face.rulesText)}
-          chapters={parseChapters(face.rulesText)}
+          intro={sagaContent?.intro ?? null}
+          chapters={sagaContent?.chapters ?? []}
         />
       ) : layout.loyaltyRows && loyaltyAbilities.length > 0 ? (
         <LoyaltyRows

@@ -88,32 +88,55 @@ export type FantasyTemplateKey = (typeof FANTASY_TEMPLATE_KEYS)[number];
 
 export type Card = Omit<
   CardRow,
-  "visibility" | "rarity" | "card_type" | "color_identity"
+  | "visibility"
+  | "rarity"
+  | "card_type"
+  | "color_identity"
+  | "face_content"
+  | "watermark"
 > & {
   visibility: Visibility;
   rarity: Rarity | null;
   card_type: CardType | null;
   color_identity: ColorIdentity[];
+  // Columns added by migration 0050 — folded in here until the generated
+  // supabase types are regenerated. NULL on every legacy row.
+  face_content?: FaceContent | null;
+  watermark?: CardWatermark | null;
 };
 
 export type CardInsert = Omit<
   CardRowInsert,
-  "visibility" | "rarity" | "card_type" | "color_identity"
+  | "visibility"
+  | "rarity"
+  | "card_type"
+  | "color_identity"
+  | "face_content"
+  | "watermark"
 > & {
   visibility?: Visibility;
   rarity?: Rarity | null;
   card_type?: CardType | null;
   color_identity?: ColorIdentity[];
+  face_content?: FaceContent | null;
+  watermark?: CardWatermark | null;
 };
 
 export type CardUpdate = Omit<
   CardRowUpdate,
-  "visibility" | "rarity" | "card_type" | "color_identity"
+  | "visibility"
+  | "rarity"
+  | "card_type"
+  | "color_identity"
+  | "face_content"
+  | "watermark"
 > & {
   visibility?: Visibility;
   rarity?: Rarity | null;
   card_type?: CardType | null;
   color_identity?: ColorIdentity[];
+  face_content?: FaceContent | null;
+  watermark?: CardWatermark | null;
 };
 
 export type GameSystem = GameSystemRow;
@@ -154,6 +177,44 @@ export type CardBackFace = {
   art_url?: string;
   art_position?: ArtPosition;
 };
+
+// ---------------------------------------------------------------------------
+// Structured FRONT-face content (cards.face_content, migration 0050).
+// Loyalty ability rows and saga chapters as data instead of rules_text
+// conventions. NULL/absent = legacy card → renderers fall back to parsing
+// rules_text (lib/cards/face-content.ts owns the round-trip contract).
+// ---------------------------------------------------------------------------
+
+export type LoyaltyRowContent = {
+  /** "+1" | "-3" | "0" | "X" — ASCII sign, uppercase X; null = static row. */
+  cost: string | null;
+  text: string;
+};
+
+export type SagaChapterContent = {
+  /** Chapter numbers this row covers (real cards share text: "I, II —"). */
+  numerals: number[];
+  text: string;
+};
+
+export type FaceContent = {
+  v: 1;
+  loyalty?: { abilities: LoyaltyRowContent[] };
+  saga?: { intro?: string | null; chapters: SagaChapterContent[] };
+};
+
+// Per-card design watermark (cards.watermark, migration 0050) — the faint
+// mark behind the rules text. NULL = none (default). "large" is the
+// basic-land treatment (big centered symbol filling the text box).
+export type CardWatermark =
+  | {
+      kind: "mana";
+      key: "w" | "u" | "b" | "r" | "g" | "c";
+      opacity?: number;
+      size?: "normal" | "large";
+    }
+  | { kind: "preset"; key: string; opacity?: number; size?: "normal" | "large" }
+  | { kind: "custom"; url: string; opacity?: number; size?: "normal" | "large" };
 
 // Card finish — premium treatments layered on top of the base frame.
 // Default is "regular"; "foil" adds an animated holographic sheen,

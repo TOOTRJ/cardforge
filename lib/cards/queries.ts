@@ -9,6 +9,8 @@ import {
   isRarity,
   isVisibility,
   type Card,
+  type CardWatermark,
+  type FaceContent,
   type CardTemplate,
   type CardWithLineage,
   type CardWithOwner,
@@ -88,6 +90,11 @@ function narrowCard(row: CardRow): Card {
           ? row.card_type
           : null,
     color_identity: row.color_identity.filter(isColorIdentity) as ColorIdentity[],
+    // jsonb columns from migration 0050 — validated app-side on write
+    // (lib/validation/card.ts), so the cast is the trust boundary here,
+    // same as art_position/frame_style downstream.
+    face_content: (row.face_content as FaceContent | null) ?? null,
+    watermark: (row.watermark as CardWatermark | null) ?? null,
   };
 }
 
