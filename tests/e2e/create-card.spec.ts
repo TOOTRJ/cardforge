@@ -25,12 +25,12 @@ async function signIn(page: Page) {
 }
 
 // Opens /create and fills a unique title (so reruns don't collide on the
-// slug). The editor opens on the Frame panel; the title input lives on
+// slug). The editor opens on the Card kind panel; the title input lives on
 // Identity, so jump there first via the vertical step rail (xl+ — the default
 // Desktop Chrome viewport is 1280px wide). Free step jumping is enabled
 // (isStepEnabled: () => true). Returns the rail locator. (The rail renders the
 // ACTIVE panel as a non-button, so Identity is only a button while standing
-// elsewhere — which we are, on Frame.)
+// elsewhere — which we are, on Card kind.)
 async function openCreatorWithTitle(page: Page, title: string) {
   await page.goto("/create");
   await expect(
@@ -117,5 +117,47 @@ test.describe("create a card (text fields only)", () => {
     // happy path above).
     await saveButton.dispatchEvent("click");
     await page.waitForURL(/\/card\/.+\/edit/);
+  });
+
+  test("changing kind never silently overrides the chosen frame era", async ({
+    page,
+  }) => {
+    await signIn(page);
+    const rail = await openCreatorWithTitle(page, `Kind Card ${Date.now()}`);
+
+    // Pick the Classic (1993) standard frame from the gallery.
+    await rail.getByRole("button", { name: /^frame$/i }).click();
+    await page
+      .getByRole("radiogroup", { name: /classic \(1993\) frames/i })
+      .getByRole("radio")
+      .first()
+      .click();
+
+    // Ask for a Planeswalker — Classic has no planeswalker frame, so the
+    // era-switch dialog must appear instead of the old silent M15 fallback.
+    const kindGroup = page.getByRole("radiogroup", { name: /^card kind$/i });
+    await rail.getByRole("button", { name: /card kind/i }).click();
+    await kindGroup.getByRole("radio", { name: /planeswalker/i }).click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog.getByText(/classic .*no planeswalker/i)).toBeVisible();
+
+    // Cancel → nothing changed: still a Creature (the kind derives from the
+    // untouched form state, so the chip snaps back on its own).
+    await dialog
+      .getByRole("button", { name: /keep things as they are/i })
+      .click();
+    await expect(
+      kindGroup.getByRole("radio", { name: /^creature$/i }),
+    ).toHaveAttribute("aria-checked", "true");
+
+    // Accept → the M15 planeswalker frame takes over.
+    await kindGroup.getByRole("radio", { name: /planeswalker/i }).click();
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: /switch to m15/i })
+      .click();
+    await expect(
+      kindGroup.getByRole("radio", { name: /planeswalker/i }),
+    ).toHaveAttribute("aria-checked", "true");
   });
 });

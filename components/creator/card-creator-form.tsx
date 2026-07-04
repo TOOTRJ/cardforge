@@ -16,6 +16,7 @@ import {
   Frame,
   IdCard,
   Image as ImageIcon,
+  Layers,
   Loader2,
   Lock,
   Save,
@@ -45,7 +46,9 @@ import {
 } from "@/components/creator/start-with-hero";
 import { IdentityPanel } from "@/components/creator/panels/identity-panel";
 import { PipsPanel } from "@/components/creator/panels/pips-panel";
-import { FramePanel } from "@/components/creator/panels/frame-panel";
+import { KindPanel } from "@/components/creator/panels/kind-panel";
+import { FrameGalleryPanel } from "@/components/creator/panels/frame-gallery-panel";
+import { KindChangeDialog } from "@/components/creator/kind-change-dialog";
 import { ArtPanel } from "@/components/creator/panels/art-panel";
 import { TextPanel } from "@/components/creator/panels/text-panel";
 import { ForgeAIPanel } from "@/components/creator/panels/forge-ai-panel";
@@ -76,11 +79,14 @@ import {
 import { normalizeFrameTemplate } from "@/lib/cards/card-display";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
 import type { FrameProfileOverridesMap } from "@/lib/cards/profile-override";
+import { pickFrameColorKey } from "@/components/cards/frame-layer";
 import {
-  eraForTemplate,
-  isTypeDerivedStandard,
-  standardFrameFor,
-} from "@/lib/creator/frame-picker";
+  kindFromCard,
+  planKindChange,
+  type CardKind,
+  type KindChangePatch,
+  type KindChangePlan,
+} from "@/lib/creator/card-kinds";
 import {
   defaultValuesFor,
   mergeTag,
@@ -176,6 +182,7 @@ const LEGACY_CARD_DRAFT_STORAGE_KEY = "spellwright:card-draft:v1";
 // Icons for the xl+ vertical step rail (one per StepKey; the "layout" panel's
 // dynamic labels — Adventure / Back face / Flip side — all read as Layers).
 const STEP_RAIL_ICONS: Record<string, React.ReactNode> = {
+  kind: <Layers aria-hidden />,
   frame: <Frame aria-hidden />,
   identity: <IdCard aria-hidden />,
   pips: <Sparkles aria-hidden />,
@@ -416,14 +423,18 @@ export function CardCreatorForm({
   const isAdventureFrame =
     normalizeFrameTemplate(watched.frame_style?.template) === "adventure";
 
-  // ---- Frame-aware stepper ----
-  // The visible steps + their order depend on the frame, card type, and whether
-  // a back face exists (lib/creator/steps.ts). `current` is clamped so it stays
-  // valid when the list shrinks (e.g. the user turns a DFC back off).
+  // ---- Kind-first stepper ----
+  // The kind ("what am I making") is DERIVED from card_type + template — never
+  // stored — so drafts, edits, and legacy rows land on the right kind for free.
+  const kind = kindFromCard(watched.card_type, watched.frame_style?.template);
+  // The visible steps + their order depend on the kind/frame context
+  // (lib/creator/steps.ts). `current` is clamped so it stays valid when the
+  // list shrinks (e.g. switching to a token frame hides the Pips step).
   const stepCtx: StepContext = {
     template: watched.frame_style?.template,
     cardType: watched.card_type,
     hasBackFace: watched.has_back_face,
+    kind,
   };
   const steps = visibleSteps(stepCtx);
   const idx = Math.min(current, steps.length - 1);
@@ -491,24 +502,50 @@ export function CardCreatorForm({
   // Color is chosen on the Frame step; the cost→color relationship is now
   // surfaced as an opt-in prompt on the Pips panel (no automatic overwrite).
 
-  // Keep a type-derived STANDARD frame in sync with the card type, so changing
-  // type (e.g. creature → planeswalker) swaps to the right variant (m15 → m15pw)
-  // automatically — no more frame/type mismatches. Special layouts (Saga,
-  // Adventure…) and showcase frames are explicit picks and stay put. When the
-  // current era can't frame the new type (Classic has no planeswalker), fall
-  // forward to the M15 era which frames everything.
+  // ---- Kind changes: the ONLY writer of frame_style.template. ----
+  // The old effect that silently rewrote the frame whenever card_type changed
+  // (with a hidden M15 fallback) is gone. Kind changes flow through
+  // planKindChange: same-era remaps apply directly; era switches ask first
+  // (KindChangeDialog). Programmatic paths (Scryfall import, AI random)
+  // auto-accept the fallback with a toast — a dialog mid-import would be
+  // hostile.
   const currentTemplate = (watched.frame_style?.template ??
     DEFAULT_FRAME_TEMPLATE) as FrameTemplate;
-  useEffect(() => {
-    if (!isTypeDerivedStandard(currentTemplate)) return;
-    const era = eraForTemplate(currentTemplate);
-    const resolved =
-      standardFrameFor(era, watched.card_type) ??
-      standardFrameFor("m15", watched.card_type);
-    if (resolved && resolved !== currentTemplate) {
-      setValue("frame_style.template", resolved, { shouldDirty: true });
+  const [pendingKindPlan, setPendingKindPlan] = useState<Extract<
+    KindChangePlan,
+    { action: "confirm" }
+  > | null>(null);
+  const applyKindPatch = (patch: KindChangePatch) => {
+    setValue("card_type", patch.card_type, { shouldDirty: true });
+    setValue("frame_style.template", patch.template, { shouldDirty: true });
+    if (patch.has_back_face) {
+      setValue("has_back_face", true, { shouldDirty: true });
     }
-  }, [watched.card_type, currentTemplate, setValue]);
+  };
+  const handleKindSelect = (next: CardKind) => {
+    if (next === kind) return;
+    const plan = planKindChange(next, {
+      cardType: watched.card_type,
+      template: watched.frame_style?.template,
+    });
+    if (plan.action === "apply") {
+      applyKindPatch(plan.patch);
+    } else {
+      setPendingKindPlan(plan);
+    }
+  };
+  /** Programmatic kind application (import/AI): never blocks on a dialog —
+   *  accepts the era fallback and tells the user what happened. */
+  const applyKindForType = (cardType: CardType) => {
+    const plan = planKindChange(kindFromCard(cardType, undefined), {
+      cardType: watched.card_type,
+      template: getValues("frame_style.template"),
+    });
+    applyKindPatch(plan.patch);
+    if (plan.action === "confirm") {
+      toast.info("Switched to the M15 frame to fit the card's type.");
+    }
+  };
 
   // Frames with an intrinsic second face (Adventure's storybook page, the
   // flip/split/aftermath halves) always PAINT that face — leaving the editor
@@ -628,9 +665,15 @@ export function CardCreatorForm({
       setValue(key, value as never, { shouldDirty: true });
     };
 
+    // Kind first, synchronously: card_type + frame land in one handler pass
+    // (via planKindChange), so there's no effect left to race the rest of the
+    // patch — the old import/auto-sync race is structurally gone.
+    if (patch.card_type) {
+      applyKindForType(patch.card_type as CardType);
+    }
+
     setIfPresent("title", patch.title);
     setIfPresent("cost", patch.cost);
-    setIfPresent("card_type", patch.card_type);
     setIfPresent("supertype", patch.supertype);
     setIfPresent("subtypes_text", patch.subtypes_text);
     setIfPresent("rarity", patch.rarity);
@@ -747,9 +790,11 @@ export function CardCreatorForm({
         defense?: string;
       };
 
+      // Kind first (card_type + frame in one pass) — keeps the generated
+      // card's frame in the user's chosen era when it has the type.
+      applyKindForType(card.card_type);
       setValue("title", card.title, { shouldDirty: true });
       setValue("cost", card.cost, { shouldDirty: true });
-      setValue("card_type", card.card_type, { shouldDirty: true });
       setValue("supertype", card.supertype ?? "", { shouldDirty: true });
       setValue("subtypes_text", (card.subtypes ?? []).join(", "), {
         shouldDirty: true,
@@ -1169,10 +1214,19 @@ export function CardCreatorForm({
               />
             ) : null}
 
-            {/* ----- Frame panel ----- */}
+            {/* ----- Kind panel (step 1 — what are you making?) ----- */}
+            {stepKey === "kind" ? (
+              <KindPanel
+                kind={kind}
+                colorKey={pickFrameColorKey(watched.color_identity)}
+                onSelect={handleKindSelect}
+              />
+            ) : null}
+
+            {/* ----- Frame gallery (every era's frames for the kind + color) ----- */}
             {stepKey === "frame" ? (
-              <FramePanel
-                cardType={watched.card_type}
+              <FrameGalleryPanel
+                kind={kind}
                 colorIdentity={watched.color_identity}
                 verifiedFrameKeys={verifiedFrameKeys}
               />
@@ -1248,6 +1302,18 @@ export function CardCreatorForm({
             onImport={handleScryfallImport}
             open={scryfallOpen}
             onOpenChange={setScryfallOpen}
+          />
+
+          {/* Kind-change confirmation — only when the current era can't frame
+              the requested kind. Cancel = zero changes (the kind chip snaps
+              back since kind derives from the untouched form state). */}
+          <KindChangeDialog
+            message={pendingKindPlan?.message ?? null}
+            onConfirm={() => {
+              if (pendingKindPlan) applyKindPatch(pendingKindPlan.patch);
+              setPendingKindPlan(null);
+            }}
+            onCancel={() => setPendingKindPlan(null)}
           />
 
           {/* Action bar — sticky across all tabs so saving never requires
