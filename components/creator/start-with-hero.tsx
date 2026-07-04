@@ -23,6 +23,8 @@ export const CARDFORGE_EVENTS = {
   scrollToForm: "cardforge:scroll-to-form",
   openScryfall: "cardforge:open-scryfall",
   openAiConcept: "cardforge:open-ai-concept",
+  /** Kick off the AI random-card generation (the "Generate with AI" hero). */
+  generateRandom: "cardforge:generate-random",
 } as const;
 
 type Option = {
@@ -52,13 +54,13 @@ const OPTIONS: Option[] = [
       "from-primary/15 to-primary/5 hover:border-primary/60 border-primary/30",
   },
   {
-    key: "openAiConcept",
-    label: "Generate from concept",
-    description: "Describe an idea in a sentence; AI drafts the full card.",
+    key: "generateRandom",
+    label: "Generate with AI",
+    description:
+      "AI drafts a full card and paints original art. 10 per day.",
     icon: Sparkles,
     accentClass:
       "from-accent/15 to-accent/5 hover:border-accent/60 border-accent/30",
-    comingSoon: true,
   },
 ];
 
@@ -105,7 +107,9 @@ export function StartWithHero() {
                 ? "Coming soon"
                 : option.key === "scrollToForm"
                   ? "Open the form ↓"
-                  : "Search Scryfall →"}
+                  : option.key === "generateRandom"
+                    ? "Forge a random card →"
+                    : "Search Scryfall →"}
             </span>
           </button>
         );
