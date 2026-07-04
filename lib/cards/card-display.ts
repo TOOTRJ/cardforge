@@ -26,10 +26,17 @@ export function normalizeFrameTemplate(
     : DEFAULT_FRAME_TEMPLATE;
 }
 
+// Subtypes that print P/T without being creatures — Vehicles show their
+// crewed stats, Spacecraft their stationed stats. Matched case-insensitively
+// so hand-typed subtypes ("vehicle") behave like imported ones ("Vehicle").
+const PT_SUBTYPES = new Set(["vehicle", "spacecraft"]);
+
 export function showsPowerToughness(
   cardType: CardType | null | undefined,
+  subtypes?: readonly string[] | null,
 ): boolean {
-  return cardType === "creature" || cardType === "token";
+  if (cardType === "creature" || cardType === "token") return true;
+  return (subtypes ?? []).some((s) => PT_SUBTYPES.has(s.trim().toLowerCase()));
 }
 
 export function showsLoyalty(cardType: CardType | null | undefined): boolean {

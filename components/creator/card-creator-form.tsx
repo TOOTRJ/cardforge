@@ -476,7 +476,10 @@ export function CardCreatorForm({
   const activeStep = steps[idx];
   const stepKey = activeStep?.key;
   const isLastStep = idx === steps.length - 1;
-  const statVis = statVisibility(watched.card_type);
+  const statVis = statVisibility(
+    watched.card_type,
+    parseSubtypes(watched.subtypes_text),
+  );
 
   const goToIndex = (i: number) => {
     // Every step change disarms Save — see the arming effect below goNext.

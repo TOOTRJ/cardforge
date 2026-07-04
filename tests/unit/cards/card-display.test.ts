@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { parseChapters } from "@/lib/cards/card-display";
+import {
+  parseChapters,
+  showsPowerToughness,
+} from "@/lib/cards/card-display";
 
 describe("parseChapters", () => {
   it("parses one chapter per Roman-numeral line", () => {
@@ -45,5 +48,27 @@ describe("parseChapters", () => {
     expect(parseChapters("")).toEqual([]);
     expect(parseChapters(null)).toEqual([]);
     expect(parseChapters(undefined)).toEqual([]);
+  });
+});
+
+describe("showsPowerToughness", () => {
+  it("creature and token show P/T regardless of subtypes", () => {
+    expect(showsPowerToughness("creature")).toBe(true);
+    expect(showsPowerToughness("token", [])).toBe(true);
+  });
+
+  it("Vehicle/Spacecraft subtypes show P/T on non-creatures", () => {
+    // Vehicles print crewed stats, Spacecraft stationed stats; both render
+    // a P/T box on the real card even though they're artifacts.
+    expect(showsPowerToughness("artifact", ["Vehicle"])).toBe(true);
+    expect(showsPowerToughness("artifact", ["Spacecraft"])).toBe(true);
+    // Case/whitespace tolerant for hand-typed subtypes.
+    expect(showsPowerToughness("artifact", [" vehicle "])).toBe(true);
+  });
+
+  it("other artifacts still hide P/T", () => {
+    expect(showsPowerToughness("artifact")).toBe(false);
+    expect(showsPowerToughness("artifact", ["Equipment"])).toBe(false);
+    expect(showsPowerToughness("enchantment", [])).toBe(false);
   });
 });

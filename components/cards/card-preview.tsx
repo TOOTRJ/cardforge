@@ -515,7 +515,7 @@ function CardFace({
 
   const showPT =
     Boolean(layout.pt) &&
-    showsPowerToughness(face.cardType) &&
+    showsPowerToughness(face.cardType, face.subtypes) &&
     Boolean(face.power || face.toughness);
   const showLoyalty =
     Boolean(layout.loyalty) && showsLoyalty(face.cardType) && Boolean(face.loyalty);
