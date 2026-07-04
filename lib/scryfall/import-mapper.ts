@@ -5,9 +5,16 @@ import {
   RARITY_VALUES,
   type CardType,
   type ColorIdentity,
+  type FrameEra,
+  type FrameTemplate,
   type Rarity,
 } from "@/types/card";
-import { kindFromCard, type CardKind } from "@/lib/creator/card-kinds";
+import {
+  KIND_DEFS,
+  kindFromCard,
+  type CardKind,
+} from "@/lib/creator/card-kinds";
+import { standardFrameFor } from "@/lib/creator/frame-picker";
 
 // ---------------------------------------------------------------------------
 // Map a Scryfall card into the shape the CardCreatorForm expects.
@@ -80,6 +87,13 @@ export type ScryfallImportPatch = {
    *  this through planKindChange so the frame follows the import in one
    *  synchronous pass. */
   kind?: CardKind;
+  /** The frame matching THIS PRINTING's border era (1993→classic,
+   *  1997→retro, 2003→modern, 2015/future→m15; snow/devoid frame_effects
+   *  map onto the skin templates). Standard kinds only — layout kinds'
+   *  templates are fixed by the kind. The form applies it after the kind
+   *  patch, falling back to the era standard when a skin combo isn't
+   *  published yet. */
+  frame_template?: FrameTemplate;
   card_type?: CardType;
   supertype?: string;
   subtypes_text?: string;
@@ -200,6 +214,49 @@ export function kindFromScryfall(card: ScryfallCard): CardKind | undefined {
   return kindFromCard(card_type, undefined);
 }
 
+// Scryfall's border-generation values → our frame eras. "future" (the
+// Future Sight frame) isn't converted yet, so it lands on m15.
+const SCRYFALL_FRAME_TO_ERA: Record<string, FrameEra> = {
+  "1993": "classic",
+  "1997": "retro",
+  "2003": "modern",
+  "2015": "m15",
+  future: "m15",
+};
+
+/**
+ * The frame template matching THIS PRINTING: its border era's standard for
+ * the derived kind, upgraded to the snow/devoid skin when the printing
+ * carries that treatment. Returns undefined for layout kinds (their
+ * template is fixed by the kind — saga is saga in every era) and for
+ * unmappable cards. Falls forward to the M15 standard when the printing's
+ * era can't frame the type (e.g. 2003-frame Lorwyn planeswalkers).
+ */
+export function frameTemplateFromScryfall(
+  card: ScryfallCard,
+): FrameTemplate | undefined {
+  const kind = kindFromScryfall(card);
+  if (!kind) return undefined;
+  const def = KIND_DEFS[kind];
+  // Layout kinds: the kind itself decides the template; nothing to adopt.
+  if (def.layoutTemplates) return undefined;
+
+  const era = SCRYFALL_FRAME_TO_ERA[(card.frame ?? "").trim()] ?? "m15";
+  const base =
+    standardFrameFor(era, def.cardType) ??
+    standardFrameFor("m15", def.cardType) ??
+    undefined;
+
+  // Snow/devoid printings re-dress the plain m15 spell frame — only
+  // meaningful where that IS the era standard for the kind.
+  if (base === "m15") {
+    const effects = (card.frame_effects ?? []).map((e) => e.toLowerCase());
+    if (effects.includes("snow")) return "m15snow";
+    if (effects.includes("devoid")) return "m15devoid";
+  }
+  return base;
+}
+
 /**
  * Best-effort: pull a normalized color identity list from either Scryfall's
  * `color_identity` (preferred — accounts for lands and hybrid mana) or
@@ -268,6 +325,7 @@ export function mapScryfallToFormPatch(
     title: (isMultiFace && front?.name) || card.name,
     cost: pick(front?.mana_cost, card.mana_cost),
     kind: kindFromScryfall(card),
+    frame_template: frameTemplateFromScryfall(card),
     card_type: cardType,
     supertype: typeParts.supertype,
     subtypes_text: typeParts.subtypes_text,

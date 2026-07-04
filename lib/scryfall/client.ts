@@ -135,6 +135,13 @@ export const scryfallCardSchema = z
     // Keyword list — needed to tell aftermath apart (Scryfall folds it into
     // layout "split" + keywords ["Aftermath"]).
     keywords: z.array(z.string()).optional().nullable(),
+    // Border generation of THIS printing ("1993" | "1997" | "2003" | "2015"
+    // | "future") — drives era adoption on import. Plain string so a future
+    // frame value never fails the parse.
+    frame: z.string().optional().nullable(),
+    // Frame treatments (snow, devoid, showcase, legendary, …) — snow/devoid
+    // map onto our skin templates.
+    frame_effects: z.array(z.string()).optional().nullable(),
     mana_cost: z.string().optional().nullable(),
     type_line: z.string().optional().nullable(),
     oracle_text: z.string().optional().nullable(),

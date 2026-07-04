@@ -703,8 +703,9 @@ function Detail({
               aria-hidden
             />
             <span>
-              Imported details land on the default frame. Matching the card to
-              its original frame will come later, as more frames are added.
+              Importing <strong>overwrites the card you&apos;re currently
+              editing</strong> — name, text, type, colors, and the frame
+              (matched to this printing&apos;s border era) are all replaced.
             </span>
           </p>
         </div>

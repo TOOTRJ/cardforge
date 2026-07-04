@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  frameTemplateFromScryfall,
   kindFromScryfall,
   mapScryfallToFormPatch,
   parseColorIdentity,
@@ -356,5 +357,107 @@ describe("normalizeScryfallImageUrl", () => {
       art_crop: "https://cards.bcdn.scryfall.io/art_crop/front/x.jpg",
     });
     expect(parsed.art_crop).toBe("https://cards.scryfall.io/art_crop/front/x.jpg");
+  });
+});
+
+describe("frameTemplateFromScryfall", () => {
+  it("adopts the printing's border era for standard kinds", () => {
+    expect(
+      frameTemplateFromScryfall(
+        fixture({ frame: "1993", type_line: "Creature — Goblin" }),
+      ),
+    ).toBe("agclassic");
+    expect(
+      frameTemplateFromScryfall(
+        fixture({ frame: "1997", type_line: "Instant" }),
+      ),
+    ).toBe("retro");
+    expect(
+      frameTemplateFromScryfall(fixture({ frame: "2003", type_line: "Land" })),
+    ).toBe("modernland");
+    expect(
+      frameTemplateFromScryfall(
+        fixture({ frame: "2015", type_line: "Creature — Human" }),
+      ),
+    ).toBe("m15");
+  });
+
+  it("falls forward to M15 when the era can't frame the type", () => {
+    // Lorwyn planeswalkers were printed in the 2003 frame; we only have an
+    // M15 planeswalker frame.
+    expect(
+      frameTemplateFromScryfall(
+        fixture({ frame: "2003", type_line: "Legendary Planeswalker — Jace" }),
+      ),
+    ).toBe("m15pw");
+    // Retro-era token printings: retro has no token frame.
+    expect(
+      frameTemplateFromScryfall(
+        fixture({ frame: "1997", type_line: "Token Creature — Saproling" }),
+      ),
+    ).toBe("m15token");
+  });
+
+  it("maps snow/devoid frame effects onto the skin templates", () => {
+    expect(
+      frameTemplateFromScryfall(
+        fixture({
+          frame: "2015",
+          frame_effects: ["snow"],
+          type_line: "Snow Creature — Yeti",
+        }),
+      ),
+    ).toBe("m15snow");
+    expect(
+      frameTemplateFromScryfall(
+        fixture({
+          frame: "2015",
+          frame_effects: ["devoid"],
+          type_line: "Creature — Eldrazi",
+        }),
+      ),
+    ).toBe("m15devoid");
+    // Skins only re-dress the plain m15 spell frame — a snow LAND keeps its
+    // land frame.
+    expect(
+      frameTemplateFromScryfall(
+        fixture({
+          frame: "2015",
+          frame_effects: ["snow"],
+          type_line: "Basic Snow Land — Island",
+        }),
+      ),
+    ).toBe("m15land");
+  });
+
+  it("returns undefined for layout kinds (the kind fixes the template)", () => {
+    expect(
+      frameTemplateFromScryfall(
+        fixture({ frame: "2015", layout: "saga", type_line: "Enchantment — Saga" }),
+      ),
+    ).toBeUndefined();
+    expect(
+      frameTemplateFromScryfall(
+        fixture({ frame: "2015", layout: "split", type_line: "Instant // Instant" }),
+      ),
+    ).toBeUndefined();
+  });
+
+  it("unknown or missing frame values land on the M15 era", () => {
+    expect(
+      frameTemplateFromScryfall(fixture({ type_line: "Sorcery" })),
+    ).toBe("m15");
+    expect(
+      frameTemplateFromScryfall(
+        fixture({ frame: "3021", type_line: "Sorcery" }),
+      ),
+    ).toBe("m15");
+  });
+
+  it("rides along on the import patch", () => {
+    const patch = mapScryfallToFormPatch(
+      fixture({ frame: "1993", type_line: "Creature — Wall" }),
+    );
+    expect(patch.frame_template).toBe("agclassic");
   });
 });
