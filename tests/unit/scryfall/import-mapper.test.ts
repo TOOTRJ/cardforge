@@ -6,6 +6,7 @@ import {
   parseTypeLine,
 } from "@/lib/scryfall/import-mapper";
 import type { ScryfallCard } from "@/lib/scryfall/client";
+import { statVisibility } from "@/lib/creator/steps";
 
 // ---------------------------------------------------------------------------
 // Tests for lib/scryfall/import-mapper.ts.
@@ -55,6 +56,35 @@ describe("parseTypeLine", () => {
       supertype: undefined,
       card_type: "sorcery",
       subtypes_text: undefined,
+    });
+  });
+
+  it("lets creature win over other type words (artifact/enchantment creatures)", () => {
+    // Real MTG renders these with a P/T box, and the form gates the P/T
+    // inputs on card_type === creature — so creature must win.
+    expect(parseTypeLine("Artifact Creature — Construct")).toEqual({
+      supertype: undefined,
+      card_type: "creature",
+      subtypes_text: "Construct",
+    });
+    expect(parseTypeLine("Legendary Enchantment Creature — God")).toEqual({
+      supertype: "Legendary",
+      card_type: "creature",
+      subtypes_text: "God",
+    });
+    // Word order doesn't matter — creature wins even when listed first.
+    expect(parseTypeLine("Creature Artifact — Construct").card_type).toBe(
+      "creature",
+    );
+  });
+
+  it("keeps token precedence over creature", () => {
+    // Token type lines ("Token Creature — Goblin") stay tokens: token is
+    // a distinct kind with its own frames, and those render P/T anyway.
+    expect(parseTypeLine("Token Creature — Goblin")).toEqual({
+      supertype: undefined,
+      card_type: "token",
+      subtypes_text: "Goblin",
     });
   });
 
@@ -166,6 +196,23 @@ describe("mapScryfallToFormPatch", () => {
     expect(mapScryfallToFormPatch(card).back_face).toBeUndefined();
   });
 
+  it("keeps P/T visible for an imported artifact creature", () => {
+    // Regression: card_type "artifact" would hide the P/T inputs via
+    // statVisibility even though the card has power/toughness.
+    const patch = mapScryfallToFormPatch(
+      fixture({
+        name: "Steel Overseer",
+        type_line: "Artifact Creature — Construct",
+        power: "1",
+        toughness: "1",
+      }),
+    );
+    expect(patch.card_type).toBe("creature");
+    expect(patch.power).toBe("1");
+    expect(patch.toughness).toBe("1");
+    expect(statVisibility(patch.card_type).pt).toBe(true);
+  });
+
   it("doesn't fabricate fields when Scryfall data is missing", () => {
     const card = fixture({ name: "Mystery", rarity: undefined });
     const patch = mapScryfallToFormPatch(card);
@@ -237,14 +284,13 @@ describe("kindFromScryfall", () => {
         fixture({ layout: "leveler", type_line: "Creature — Human Warrior" }),
       ),
     ).toBe("creature");
-    // NOTE: parseTypeLine picks the FIRST recognized type word, so
-    // "Artifact Creature" maps to artifact (long-standing behavior — a
-    // creature-precedence change would be its own decision).
+    // Creature outranks the other type words, so "Artifact Creature"
+    // maps to the creature kind (it renders with a P/T box).
     expect(
       kindFromScryfall(
         fixture({ layout: "prototype", type_line: "Artifact Creature — Construct" }),
       ),
-    ).toBe("artifact");
+    ).toBe("creature");
   });
 
   it("returns undefined when nothing is derivable", () => {

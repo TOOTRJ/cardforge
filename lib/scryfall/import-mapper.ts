@@ -145,7 +145,12 @@ export function parseTypeLine(typeLine: string | null | undefined): {
   const subtypes = (rightRaw ?? "").split(/\s+/).filter(Boolean);
 
   // Walk the left words: known supertypes go into `supertype`, the
-  // remainder picks the first recognized card_type.
+  // remainder picks the card_type. "Creature" outranks the other type
+  // words — an Artifact Creature or Enchantment Creature renders with a
+  // P/T box, and the form gates the P/T inputs on card_type — except
+  // "token", which keeps precedence so "Token Creature — Goblin" stays a
+  // token (token frames render P/T too). Otherwise the first recognized
+  // word wins.
   const supers: string[] = [];
   let cardType: CardType | undefined;
   for (const word of leftWords) {
@@ -154,7 +159,8 @@ export function parseTypeLine(typeLine: string | null | undefined): {
       continue;
     }
     const mapped = TYPE_WORD_TO_CARD_TYPE[word.toLowerCase()];
-    if (mapped && !cardType) {
+    if (!mapped) continue;
+    if (!cardType || (mapped === "creature" && cardType !== "token")) {
       cardType = mapped;
     }
   }
