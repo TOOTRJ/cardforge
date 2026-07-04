@@ -240,6 +240,9 @@ export type CardFinish = (typeof CARD_FINISH_VALUES)[number];
 // "m15"       — Magic 2015-era modern frame (the default).
 // "m15land"   — M15 land frame (stone border, color-tinted text box, no cost).
 // "m15token"  — M15 token frame (art-forward; dark title bar, no cost).
+// "m15artifact" — M15 artifact frame (silver-blue acard; m15 geometry; all
+//               7 color keys share the silver art in v1 — colored artifacts'
+//               blend wash is a future pass).
 // "m15snow"   — M15 snow frame (frosty silver skin; m15 geometry).
 // "m15devoid" — M15 devoid/Eldrazi frame (washed-out colorless; m15 geometry).
 // "m15pw"     — M15 planeswalker frame (two art cut-outs + loyalty badge).
@@ -260,6 +263,7 @@ export const FRAME_TEMPLATE_VALUES = [
   "m15",
   "m15land",
   "m15token",
+  "m15artifact",
   "m15snow",
   "m15devoid",
   "m15pw",
@@ -300,6 +304,7 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   m15: "Standard",
   m15land: "Land",
   m15token: "Token",
+  m15artifact: "Artifact",
   m15snow: "Snow",
   m15devoid: "Devoid",
   m15pw: "Planeswalker",
@@ -359,6 +364,7 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   m15: "m15",
   m15land: "m15",
   m15token: "m15",
+  m15artifact: "m15",
   m15snow: "m15",
   m15devoid: "m15",
   m15pw: "m15",
@@ -483,7 +489,9 @@ export const ERA_TYPE_FRAME: Partial<
     creature: "m15",
     instant: "m15",
     sorcery: "m15",
-    artifact: "m15",
+    // Real M15 artifacts use the silver-blue artifact frame, not the plain
+    // spell frame (which doubles as our colorless "c" variant).
+    artifact: "m15artifact",
     enchantment: "m15",
     spell: "m15",
     land: "m15land",

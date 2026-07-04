@@ -41,8 +41,23 @@ export const FRAME_REFERENCES: Record<FrameTemplate, ReferenceRow> = {
     b: { name: "Murder", set: "m20", scryfallId: "6a2b22bc-e81b-4f27-a52b-9f3edad25439" },
     r: { name: "Shock", set: "m21", scryfallId: "59fa8e8d-bcb8-47bf-b71a-df11c8d0f2c9" },
     g: { name: "Llanowar Elves", set: "dom", scryfallId: "581b7327-3215-4a4f-b4ae-d9d4002ba882" },
-    c: { name: "Meteor Golem", set: "m19", scryfallId: "1bdb0b15-d651-4730-8be9-d0e01145311b" },
+    // TRUE colorless (non-artifact) reference — the artifact Meteor Golem
+    // that used to sit here moved conceptually to m15artifact.
+    c: { name: "Ulamog, the Ceaseless Hunger", set: "bfz", scryfallId: "1192f7a9-102e-4b3a-b154-18c8eb332217" },
     m: { name: "Siege Rhino", set: "ktk", scryfallId: "9011126a-20bd-4c86-a63b-1691f79ac247" },
+  },
+  m15artifact: {
+    // Colored keys anchor to the ELD legendary artifact cycle. NOTE: real
+    // colored artifacts blend a color wash over the silver frame; our v1
+    // renders the plain silver for every key, so these references verify
+    // GEOMETRY (the blend is a future compositing pass).
+    w: { name: "The Circle of Loyalty", set: "eld", scryfallId: "79093d00-362d-4d07-8a0a-cf5e1ccf9c0f" },
+    u: { name: "The Magic Mirror", set: "eld", scryfallId: "08b89af1-7b22-4153-b42d-a2ea4e0f320c" },
+    b: { name: "The Cauldron of Eternity", set: "eld", scryfallId: "eb69473f-de99-43a7-b094-429465ae735c" },
+    r: { name: "Embercleave", set: "eld", scryfallId: "aaae15dd-11b6-4421-99e9-365c7fe4a5d6" },
+    g: { name: "The Great Henge", set: "eld", scryfallId: "af915ed2-1f34-43f6-85f5-2430325b720f" },
+    c: { name: "Solemn Simulacrum", set: "m21", scryfallId: "7bbd2cab-538e-4932-a828-150e3e9d52ad" },
+    m: { name: "Shorikai, Genesis Engine", set: "nec", scryfallId: "969ac7dd-f3aa-4888-9ff0-d16a31b5e7a9" },
   },
   m15land: {
     w: { name: "Plains", set: "dom", scryfallId: "023d333b-14f2-40ad-bb76-8b9e38040f89" },

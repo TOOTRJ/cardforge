@@ -97,7 +97,7 @@ export const KIND_DEFS: Record<CardKind, KindDef> = {
     cardType: "artifact",
     layoutTemplates: null,
     inlineSecondFace: false,
-    previewTemplate: "m15",
+    previewTemplate: "m15artifact",
   },
   enchantment: {
     label: "Enchantment",
