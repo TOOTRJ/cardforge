@@ -5,7 +5,11 @@ import {
   parseColorIdentity,
   parseTypeLine,
 } from "@/lib/scryfall/import-mapper";
-import type { ScryfallCard } from "@/lib/scryfall/client";
+import {
+  normalizeScryfallImageUrl,
+  scryfallImageUrisSchema,
+  type ScryfallCard,
+} from "@/lib/scryfall/client";
 import { statVisibility } from "@/lib/creator/steps";
 import { parseSubtypes } from "@/lib/creator/card-fields";
 
@@ -326,5 +330,31 @@ describe("kindFromScryfall", () => {
     );
     expect(patch.kind).toBe("saga");
     expect(patch.card_type).toBe("enchantment");
+  });
+});
+
+describe("normalizeScryfallImageUrl", () => {
+  it("rewrites the ad-blocker-prone bcdn host to the canonical one", () => {
+    expect(
+      normalizeScryfallImageUrl(
+        "https://cards.bcdn.scryfall.io/png/front/a/a/aa8f58f1.png?123",
+      ),
+    ).toBe("https://cards.scryfall.io/png/front/a/a/aa8f58f1.png?123");
+  });
+
+  it("leaves canonical and unrelated URLs untouched", () => {
+    expect(
+      normalizeScryfallImageUrl("https://cards.scryfall.io/art_crop/x.jpg"),
+    ).toBe("https://cards.scryfall.io/art_crop/x.jpg");
+    expect(normalizeScryfallImageUrl("https://svgs.scryfall.io/a.svg")).toBe(
+      "https://svgs.scryfall.io/a.svg",
+    );
+  });
+
+  it("normalizes through the image_uris schema parse", () => {
+    const parsed = scryfallImageUrisSchema.parse({
+      art_crop: "https://cards.bcdn.scryfall.io/art_crop/front/x.jpg",
+    });
+    expect(parsed.art_crop).toBe("https://cards.scryfall.io/art_crop/front/x.jpg");
   });
 });

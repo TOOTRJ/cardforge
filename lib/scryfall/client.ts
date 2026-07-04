@@ -97,14 +97,30 @@ async function scryfallFetch(path: string): Promise<Response> {
 // Scryfall schema addition won't break us.
 // ---------------------------------------------------------------------------
 
+/** Scryfall sometimes serves image URLs from cards.bcdn.scryfall.io — a
+ *  CNAME onto BunnyCDN (scryfall-cards.b-cdn.net). b-cdn.net sits on common
+ *  ad-block / DNS-filter lists, so those images silently fail for users
+ *  behind blockers while cards.scryfall.io ones load fine. The canonical
+ *  host serves the identical paths — normalize every parsed image URL to it
+ *  so the whole app (search thumbs, detail previews, art import) only ever
+ *  emits the unblocked host. */
+export function normalizeScryfallImageUrl(url: string): string {
+  return url.replace("://cards.bcdn.scryfall.io/", "://cards.scryfall.io/");
+}
+
+const scryfallImageUrl = z
+  .string()
+  .url()
+  .transform(normalizeScryfallImageUrl);
+
 export const scryfallImageUrisSchema = z
   .object({
-    small: z.string().url().optional(),
-    normal: z.string().url().optional(),
-    large: z.string().url().optional(),
-    png: z.string().url().optional(),
-    art_crop: z.string().url().optional(),
-    border_crop: z.string().url().optional(),
+    small: scryfallImageUrl.optional(),
+    normal: scryfallImageUrl.optional(),
+    large: scryfallImageUrl.optional(),
+    png: scryfallImageUrl.optional(),
+    art_crop: scryfallImageUrl.optional(),
+    border_crop: scryfallImageUrl.optional(),
   })
   .partial();
 
