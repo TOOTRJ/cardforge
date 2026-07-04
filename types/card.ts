@@ -432,14 +432,41 @@ export const ERA_TYPE_FRAME: Partial<
   },
 };
 
-// Structural / skin frame variants the user can opt into within a border era,
-// OVERRIDING the type-derived default (a Saga is a chapter-rail enchantment, an
-// Adventure a storybook creature, etc.). Order = display order in the picker.
+// STRUCTURAL layout frames the user can opt into within a border era,
+// OVERRIDING the type-derived default. These change the card's anatomy — a
+// Saga is a chapter-rail enchantment, an Adventure a storybook creature, a
+// split/flip/aftermath card has a second face. In the kind-first creator flow
+// each of these is a first-class "card kind" (lib/creator/card-kinds.ts).
+// Order = display order in the picker.
+export const ERA_LAYOUT_TEMPLATES: Record<FrameEra, FrameTemplate[]> = {
+  classic: [],
+  retro: [],
+  modern: [],
+  m15: ["saga", "adventure", "split", "flip", "aftermath"],
+  showcase: [],
+};
+
+// SKIN variants — alternate dressings that keep the era standard's geometry
+// (m15snow/m15devoid reuse the m15 profile wholesale). Unlike layout
+// templates these are NOT kinds: a snow creature is still a creature, so the
+// gallery offers them as variants wherever the era standard is the plain
+// spell frame. Order = display order in the picker.
+export const ERA_SKIN_VARIANTS: Record<FrameEra, FrameTemplate[]> = {
+  classic: [],
+  retro: [],
+  modern: [],
+  m15: ["m15snow", "m15devoid"],
+  showcase: [],
+};
+
+/** @deprecated Split into ERA_LAYOUT_TEMPLATES (structural layouts, now card
+ *  kinds) and ERA_SKIN_VARIANTS (geometry-preserving skins). This alias keeps
+ *  the pre-kind picker compiling until it's replaced by the kind-first flow. */
 export const ERA_SPECIAL_LAYOUTS: Record<FrameEra, FrameTemplate[]> = {
   classic: [],
   retro: [],
   modern: [],
-  m15: ["saga", "adventure", "split", "flip", "aftermath", "m15snow", "m15devoid"],
+  m15: [...ERA_LAYOUT_TEMPLATES.m15, ...ERA_SKIN_VARIANTS.m15],
   showcase: [],
 };
 
