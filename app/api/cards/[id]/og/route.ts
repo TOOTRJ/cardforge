@@ -110,7 +110,7 @@ export async function GET(
   // OG previews always carry the brand mark — they're public marketing
   // surfaces, not entitlement-gated downloads — so this stays CDN-cacheable.
   const response = renderCardImage(previewData, preset, {
-    watermark: isBillingEnabled(),
+    brandMark: isBillingEnabled(),
   });
   response.headers.set("Cache-Control", CACHE_HEADER);
   response.headers.set("Content-Disposition", `inline; filename="${card.slug}.png"`);

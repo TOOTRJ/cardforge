@@ -31,5 +31,6 @@ export function cardToPreviewData(
     setIconUrl: card.set_icon_url,
     setIconCode: card.set_icon_code,
     faceContent: card.face_content ?? null,
+    watermark: card.watermark ?? null,
   };
 }

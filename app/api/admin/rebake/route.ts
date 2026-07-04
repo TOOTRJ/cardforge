@@ -101,7 +101,7 @@ export async function POST(request: Request) {
       const pipOverrides = await getPipOverrides(row.owner_id);
       const profileOverrides = await getFrameProfileOverrides();
       const response = renderCardImage(rowToPreviewData(row, pipOverrides, profileOverrides), "hd", {
-        watermark: isBillingEnabled(),
+        brandMark: isBillingEnabled(),
       });
       const pngBytes = await response.arrayBuffer();
 

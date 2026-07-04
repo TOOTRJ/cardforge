@@ -49,12 +49,18 @@ import type {
   CardBackFace,
   CardFinish,
   CardType,
+  CardWatermark,
   ColorIdentity,
   FaceContent,
   FrameStyle,
   FrameTemplate,
   Rarity,
 } from "@/types/card";
+import {
+  watermarkHeightFraction,
+  watermarkOpacity,
+  WATERMARK_INK,
+} from "@/lib/cards/watermark";
 
 // ---------------------------------------------------------------------------
 // CardPreview — the canonical card visual, shared by the creator + gallery.
@@ -96,6 +102,10 @@ export type CardPreviewData = {
    *  parsing rulesText — the two are round-trip equivalent
    *  (lib/cards/face-content.ts), so legacy cards render identically. */
   faceContent?: FaceContent | null;
+  /** Design watermark behind the rules text (cards.watermark). Front face
+   *  only; suppressed on saga (chapter rail) and planeswalker (ability rows)
+   *  frames, matching printed cards. */
+  watermark?: CardWatermark | null;
   /** Optional back-face content. When set, the preview renders a flip button
    *  and supports a 3D flip animation between the two faces. */
   backFace?: CardBackFace | null;
@@ -162,6 +172,8 @@ type FaceData = {
    *  Only the FRONT face (and a v2 back card) carries this; inline second
    *  faces never render loyalty/chapter rails. */
   faceContent: FaceContent | null;
+  /** Design watermark — front face (and v2 back card) only. */
+  watermark: CardWatermark | null;
 };
 
 // The adventure spell shown inline on an Adventure frame's left page. Sourced
@@ -197,6 +209,7 @@ export function CardPreview({
   setIconUrl,
   setIconCode,
   faceContent,
+  watermark,
   backFace,
   pipOverrides,
   profileOverrides,
@@ -227,6 +240,7 @@ export function CardPreview({
     artUrl: artUrl ?? null,
     artPosition: artPosition ?? {},
     faceContent: faceContent ?? null,
+    watermark: watermark ?? null,
   };
 
   const backFaceData: FaceData | null = backFace
@@ -245,8 +259,10 @@ export function CardPreview({
         artistCredit: backFace.artist_credit ?? null,
         artUrl: backFace.art_url ?? null,
         artPosition: backFace.art_position ?? {},
-        // Inline second faces never carry structured loyalty/saga content.
+        // Inline second faces never carry structured loyalty/saga content
+        // or their own watermark.
         faceContent: null,
+        watermark: null,
       }
     : null;
 
@@ -289,6 +305,7 @@ export function CardPreview({
         artUrl: backCard.artUrl ?? null,
         artPosition: backCard.artPosition ?? {},
         faceContent: backCard.faceContent ?? null,
+        watermark: backCard.watermark ?? null,
       }
     : null;
   const backCardTemplate = normalizeFrameTemplate(backCard?.frameStyle?.template);
@@ -719,6 +736,61 @@ function CardFace({
 
       {/* Rules — Saga chapter rail or planeswalker ability rows, otherwise the
           normal rules + flavor box. */}
+      {/* Design watermark — faint mark centered in the rules box, above the
+          frame PNG but below every text layer. Suppressed where a rail
+          replaces the box (saga chapters, planeswalker rows) — printed cards
+          do the same (Scars watermarked everything EXCEPT basics + walkers). */}
+      {face.watermark && !layout.chapters && !usesLoyaltyRows ? (
+        <div
+          aria-hidden
+          style={{
+            ...rectStyle(layout.rules.rect),
+            zIndex: 10,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            pointerEvents: "none",
+            overflow: "hidden",
+            opacity: watermarkOpacity(face.watermark),
+          }}
+        >
+          {face.watermark.kind === "mana" ? (
+            <i
+              className={`ms ms-${face.watermark.key}`}
+              style={{
+                fontSize: cqw(
+                  layout.rules.rect.heightPct *
+                    watermarkHeightFraction(face.watermark) *
+                    // ms glyphs are ~1em tall; heightPct is % of card height,
+                    // cqw sizes by width — correct by the card aspect.
+                    (layout.orientation === "landscape" ? 5 / 7 : 7 / 5) *
+                    0.01 *
+                    100,
+                ),
+                color: WATERMARK_INK,
+                lineHeight: 1,
+              }}
+            />
+          ) : (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={
+                face.watermark.kind === "custom"
+                  ? face.watermark.url
+                  : `/watermarks/${face.watermark.key}.png`
+              }
+              alt=""
+              style={{
+                height: `${watermarkHeightFraction(face.watermark) * 100}%`,
+                width: "auto",
+                maxWidth: "86%",
+                objectFit: "contain",
+              }}
+            />
+          )}
+        </div>
+      ) : null}
+
       {layout.chapters ? (
         <ChapterRail
           slot={layout.chapters}

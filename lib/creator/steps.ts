@@ -185,7 +185,7 @@ const STEP_DEFS: StepDef[] = [
     key: "publish",
     label: "Publish",
     description: "Finish, visibility & save",
-    fields: ["visibility", "slug", "source_scryfall_id", "tags_text"],
+    fields: ["visibility", "slug", "source_scryfall_id", "tags_text", "watermark"],
     isVisible: always,
   },
 ];
