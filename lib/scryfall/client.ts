@@ -112,6 +112,13 @@ export const scryfallCardSchema = z
   .object({
     id: z.string(),
     name: z.string(),
+    // Scryfall's layout enum ("normal" | "split" | "flip" | "transform" |
+    // "saga" | "adventure" | …). Kept as a plain string so new layout values
+    // never fail the parse — unknown layouts degrade to type-line mapping.
+    layout: z.string().optional().nullable(),
+    // Keyword list — needed to tell aftermath apart (Scryfall folds it into
+    // layout "split" + keywords ["Aftermath"]).
+    keywords: z.array(z.string()).optional().nullable(),
     mana_cost: z.string().optional().nullable(),
     type_line: z.string().optional().nullable(),
     oracle_text: z.string().optional().nullable(),
@@ -141,6 +148,12 @@ export const scryfallCardSchema = z
           type_line: z.string().optional().nullable(),
           power: z.string().optional().nullable(),
           toughness: z.string().optional().nullable(),
+          // Faces DO carry these on real cards: loyalty on DFC planeswalker
+          // backs (Origins walkers), defense on battle fronts (all printed
+          // battles are transform DFCs), flavor_text per face.
+          loyalty: z.string().optional().nullable(),
+          defense: z.string().optional().nullable(),
+          flavor_text: z.string().optional().nullable(),
           image_uris: scryfallImageUrisSchema.optional().nullable(),
         }),
       )
