@@ -25,12 +25,12 @@ async function signIn(page: Page) {
 }
 
 // Opens /create and fills a unique title (so reruns don't collide on the
-// slug). The editor opens on the Card kind panel; the title input lives on
+// slug). The editor opens on the Card panel; the title input lives on
 // Identity, so jump there first via the vertical step rail (xl+ — the default
 // Desktop Chrome viewport is 1280px wide). Free step jumping is enabled
 // (isStepEnabled: () => true). Returns the rail locator. (The rail renders the
 // ACTIVE panel as a non-button, so Identity is only a button while standing
-// elsewhere — which we are, on Card kind.)
+// elsewhere — which we are, on Card.)
 async function openCreatorWithTitle(page: Page, title: string) {
   await page.goto("/create");
   await expect(
@@ -125,8 +125,10 @@ test.describe("create a card (text fields only)", () => {
     await signIn(page);
     const rail = await openCreatorWithTitle(page, `Kind Card ${Date.now()}`);
 
-    // Pick the Classic (1993) standard frame from the gallery.
-    await rail.getByRole("button", { name: /^frame$/i }).click();
+    // Everything lives on the Card step now: open the Frame collapsible and
+    // pick the Classic (1993) standard frame from the gallery.
+    await rail.getByRole("button", { name: /^card$/i }).click();
+    await page.getByText(/^frame$/i).first().click();
     await page
       .getByRole("radiogroup", { name: /classic \(1993\) frames/i })
       .getByRole("radio")
@@ -135,8 +137,8 @@ test.describe("create a card (text fields only)", () => {
 
     // Ask for a Planeswalker — Classic has no planeswalker frame, so the
     // era-switch dialog must appear instead of the old silent M15 fallback.
-    const kindGroup = page.getByRole("radiogroup", { name: /^card kind$/i });
-    await rail.getByRole("button", { name: /card kind/i }).click();
+    await page.getByText(/^card type$/i).first().click();
+    const kindGroup = page.getByRole("radiogroup", { name: /^card type$/i });
     await kindGroup.getByRole("radio", { name: /planeswalker/i }).click();
     const dialog = page.getByRole("dialog");
     await expect(dialog.getByText(/classic .*no planeswalker/i)).toBeVisible();

@@ -13,9 +13,7 @@ import { FormProvider, useForm, useWatch } from "react-hook-form";
 import {
   ArrowLeft,
   ArrowRight,
-  Frame,
   IdCard,
-  Image as ImageIcon,
   Layers,
   Loader2,
   Lock,
@@ -48,8 +46,7 @@ import { IdentityPanel } from "@/components/creator/panels/identity-panel";
 import { PipsPanel } from "@/components/creator/panels/pips-panel";
 import { LoyaltyAbilitiesEditor } from "@/components/creator/panels/loyalty-editor";
 import { SagaChaptersEditor } from "@/components/creator/panels/saga-editor";
-import { KindPanel } from "@/components/creator/panels/kind-panel";
-import { FrameGalleryPanel } from "@/components/creator/panels/frame-gallery-panel";
+import { CardSetupPanel } from "@/components/creator/panels/card-setup-panel";
 import { KindChangeDialog } from "@/components/creator/kind-change-dialog";
 import { ArtPanel } from "@/components/creator/panels/art-panel";
 import { TextPanel } from "@/components/creator/panels/text-panel";
@@ -89,7 +86,6 @@ import {
 } from "@/lib/cards/face-content";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
 import type { FrameProfileOverridesMap } from "@/lib/cards/profile-override";
-import { pickFrameColorKey } from "@/components/cards/frame-layer";
 import {
   kindFromCard,
   planKindChange,
@@ -109,11 +105,13 @@ import type { Challenge } from "@/lib/challenges/shared";
 import {
   buildFieldToStep,
   hasInlineBackFace,
+  hidesCost,
   panelConfigFor,
   statVisibility,
   stepIndexForField,
   stepLabel,
   visibleSteps,
+  LEGACY_STEP_ALIASES,
   STEP_ORDER,
   type StepContext,
   type StepKey,
@@ -193,11 +191,8 @@ const LEGACY_CARD_DRAFT_STORAGE_KEY = "spellwright:card-draft:v1";
 // Icons for the xl+ vertical step rail (one per StepKey; the "layout" panel's
 // dynamic labels — Adventure / Back face / Flip side — all read as Layers).
 const STEP_RAIL_ICONS: Record<string, React.ReactNode> = {
-  kind: <Layers aria-hidden />,
-  frame: <Frame aria-hidden />,
+  card: <Layers aria-hidden />,
   identity: <IdCard aria-hidden />,
-  pips: <Sparkles aria-hidden />,
-  art: <ImageIcon aria-hidden />,
   text: <ScrollText aria-hidden />,
   publish: <Send aria-hidden />,
 };
@@ -209,6 +204,7 @@ const STEP_RAIL_ICONS: Record<string, React.ReactNode> = {
 export function CardCreatorForm({
   mode,
   userId,
+  ownerUsername = null,
   gameSystems,
   templates,
   card,
@@ -237,7 +233,8 @@ export function CardCreatorForm({
     if (typeof window === "undefined") return 0;
     const want = new URLSearchParams(window.location.search).get("step");
     if (!want) return 0;
-    const i = STEP_ORDER.indexOf(want as StepKey);
+    const resolved = (LEGACY_STEP_ALIASES[want] ?? want) as StepKey;
+    const i = STEP_ORDER.indexOf(resolved);
     return i >= 0 ? i : 0;
   });
   // Whether the "Save card" submit button accepts clicks — armed ~300ms after
@@ -247,6 +244,7 @@ export function CardCreatorForm({
   // Stable handle to the latest step-navigation fn, so the once-registered
   // custom-event listeners (hero / command palette) always call current logic.
   const goToStepKeyRef = useRef<(key: StepKey) => void>(() => {});
+  const handleRandomCardRef = useRef<() => Promise<void>>(async () => {});
   // Tracks the source card when the user seeds the form from Scryfall.
   // Surfaces as a chip near the save bar so the user remembers they need
   // to make the card their own before publishing.
@@ -272,6 +270,9 @@ export function CardCreatorForm({
   useEffect(() => {
     if (typeof window === "undefined") return;
     const openScryfall = () => setScryfallOpen(true);
+    const generateRandom = () => {
+      void handleRandomCardRef.current();
+    };
     const openAiConcept = () => {
       // The AI assistant panel lives on the Text panel. Jump there, then defer
       // the scroll one tick so the panel content mounts before we scroll to it.
@@ -289,10 +290,12 @@ export function CardCreatorForm({
     };
     window.addEventListener(CARDFORGE_EVENTS.openScryfall, openScryfall);
     window.addEventListener(CARDFORGE_EVENTS.openAiConcept, openAiConcept);
+    window.addEventListener(CARDFORGE_EVENTS.generateRandom, generateRandom);
     window.addEventListener(CARDFORGE_EVENTS.scrollToForm, scrollToForm);
     return () => {
       window.removeEventListener(CARDFORGE_EVENTS.openScryfall, openScryfall);
       window.removeEventListener(CARDFORGE_EVENTS.openAiConcept, openAiConcept);
+      window.removeEventListener(CARDFORGE_EVENTS.generateRandom, generateRandom);
       window.removeEventListener(CARDFORGE_EVENTS.scrollToForm, scrollToForm);
     };
   }, []);
@@ -948,6 +951,12 @@ export function CardCreatorForm({
     }
   };
 
+  // Keep the hero-listener handle pointed at the latest closure (the
+  // listener is registered once with a stable ref, same as goToStepKeyRef).
+  useEffect(() => {
+    handleRandomCardRef.current = handleRandomCard;
+  });
+
   // ---- Start over ----
   // Wipe the form back to a blank card (create/draft mode only). Drops the
   // local draft, resets the derived toggles + preview, and returns to step 1.
@@ -1200,7 +1209,16 @@ export function CardCreatorForm({
           return;
         }
 
-        // Land on the same step in edit mode instead of resetting to Frame.
+        if (intent === "publish") {
+          // A published card's moment of glory: land on its public page.
+          router.replace(
+            ownerUsername
+              ? `/card/${ownerUsername}/${result.slug}`
+              : `/card/${result.slug}`,
+          );
+          return;
+        }
+        // Draft saves stay in the editor, on the same step.
         router.replace(
           `/card/${result.slug}/edit?step=${activeStep?.key ?? "publish"}`,
         );
@@ -1224,6 +1242,14 @@ export function CardCreatorForm({
       // Mark clean right away (keeping the on-screen values); the keyed reset
       // swaps in server truth when the refresh lands.
       reset(undefined, { keepValues: true });
+      if (intent === "publish") {
+        router.push(
+          ownerUsername
+            ? `/card/${ownerUsername}/${result.slug}`
+            : `/card/${result.slug}`,
+        );
+        return;
+      }
       // The user chose "Create a new card" for the back — go build it now that
       // this (front) card is saved and has an id to link back to.
       if (createBackAfter) {
@@ -1430,68 +1456,52 @@ export function CardCreatorForm({
               </div>
             </details>
 
-            {/* ----- Identity panel ----- */}
-            {stepKey === "identity" ? (
-              <IdentityPanel
-                userId={userId}
-                generatingRandom={generatingRandom}
-                onRandomCard={handleRandomCard}
-                onOpenScryfall={() => setScryfallOpen(true)}
-              />
-            ) : null}
-
-            {/* ----- Pips panel ----- */}
-            {stepKey === "pips" ? (
-              <PipsPanel
-                frameTemplate={watched.frame_style?.template}
-                pipOverrides={pipOverrides}
-              />
-            ) : null}
-
-            {/* ----- Kind panel (step 1 — what are you making?) ----- */}
-            {stepKey === "kind" ? (
-              <KindPanel
-                kind={kind}
-                colorKey={pickFrameColorKey(watched.color_identity)}
-                onSelect={handleKindSelect}
-              />
-            ) : null}
-
-            {/* ----- Frame gallery (every era's frames for the kind + color) ----- */}
-            {stepKey === "frame" ? (
-              <FrameGalleryPanel
+            {/* ----- Card setup (step 1 — type, frame & color) ----- */}
+            {stepKey === "card" ? (
+              <CardSetupPanel
                 kind={kind}
                 colorIdentity={watched.color_identity}
                 verifiedFrameKeys={verifiedFrameKeys}
+                onKindSelect={handleKindSelect}
               />
             ) : null}
 
-            {/* ----- Art panel (front art + artist credit). The inline-layout
-                frames (Adventure/Split/Flip/Aftermath) still edit their second
-                face here; standard frames use the Publish back-face picker. */}
-            {stepKey === "art" ? (
-              <ArtPanel
-                userId={userId}
-                backFaceSlot={
-                  hasInlineBackFace(watched.frame_style?.template) ? (
-                    <LayoutPanel
-                      userId={userId}
-                      hasBackFace={watched.has_back_face}
-                      isAdventureFrame={isAdventureFrame}
-                      backRulesTextField={backRulesTextField}
-                      backRulesTextRef={backRulesTextRef}
-                      onInsertSymbol={(token) =>
-                        insertSymbol(
-                          "back_face.rules_text",
-                          backRulesTextRef,
-                          token,
-                        )
-                      }
-                      onBackFaceAdded={() => setPreviewFace("back")}
-                    />
-                  ) : undefined
-                }
-              />
+            {/* ----- Identity (name/rarity + mana cost + artwork). The
+                inline-layout frames (Adventure/Split/Flip/Aftermath) edit
+                their second face inside the Art block's "More options";
+                standard frames use the Publish back-face picker. ----- */}
+            {stepKey === "identity" ? (
+              <>
+                <IdentityPanel />
+                {!hidesCost(watched.frame_style?.template) ? (
+                  <PipsPanel
+                    frameTemplate={watched.frame_style?.template}
+                    pipOverrides={pipOverrides}
+                  />
+                ) : null}
+                <ArtPanel
+                  userId={userId}
+                  backFaceSlot={
+                    hasInlineBackFace(watched.frame_style?.template) ? (
+                      <LayoutPanel
+                        userId={userId}
+                        hasBackFace={watched.has_back_face}
+                        isAdventureFrame={isAdventureFrame}
+                        backRulesTextField={backRulesTextField}
+                        backRulesTextRef={backRulesTextRef}
+                        onInsertSymbol={(token) =>
+                          insertSymbol(
+                            "back_face.rules_text",
+                            backRulesTextRef,
+                            token,
+                          )
+                        }
+                        onBackFaceAdded={() => setPreviewFace("back")}
+                      />
+                    ) : undefined
+                  }
+                />
+              </>
             ) : null}
 
             {/* ----- Text & stats panel (rules/flavor + type-gated stats) ----- */}
@@ -1611,9 +1621,10 @@ export function CardCreatorForm({
                   Save draft
                 </Button>
               ) : null}
-              {/* Start over — drafts only, once there's something to clear.
-                  Published cards use Delete instead. */}
-              {isDraft && isDirty ? (
+              {/* Start over — always available while drafting (the dialog
+                  itself is the guard against a stray click). Published
+                  cards use Delete instead. */}
+              {isDraft ? (
                 <StartOverDialog
                   onConfirm={handleStartOver}
                   variant={isDraftMode ? "create" : "revert"}

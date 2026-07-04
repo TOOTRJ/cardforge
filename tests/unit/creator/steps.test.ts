@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  LEGACY_STEP_ALIASES,
   buildFieldToStep,
   hidesCost,
   isAdventureFrame,
@@ -31,46 +32,40 @@ const base = ctx();
 const keys = (c: StepContext) => visibleSteps(c).map((s) => s.key);
 
 describe("visibleSteps", () => {
-  const SEVEN: string[] = [
-    "kind",
-    "frame",
-    "identity",
-    "pips",
-    "art",
-    "text",
-    "publish",
-  ];
+  const FOUR: string[] = ["card", "identity", "text", "publish"];
 
-  it("is the kind-first seven-step flow for a plain creature", () => {
-    expect(keys(base)).toEqual(SEVEN);
+  it("is the compact four-step flow for a plain creature", () => {
+    expect(keys(base)).toEqual(FOUR);
   });
 
-  it("is the same seven steps regardless of card type (stats gate inside Text)", () => {
-    expect(keys(ctx({ cardType: "instant" }))).toEqual(SEVEN);
+  it("is the same four steps regardless of card type (stats gate inside Text)", () => {
+    expect(keys(ctx({ cardType: "instant" }))).toEqual(FOUR);
     expect(keys(ctx({ cardType: "planeswalker", template: "m15pw" }))).toEqual(
-      SEVEN,
+      FOUR,
     );
     expect(keys(ctx({ cardType: "battle", template: "battle" }))).toEqual(
-      SEVEN,
+      FOUR,
+    );
+    // Cost-less frames don't drop a step anymore — the pips block hides
+    // itself inside Identity.
+    expect(keys(ctx({ cardType: "token", template: "m15token" }))).toEqual(
+      FOUR,
     );
   });
 
   it("keeps the flow stable across layout frames and back faces", () => {
-    expect(keys(ctx({ template: "adventure" }))).toEqual(SEVEN);
-    expect(keys(ctx({ template: "flip" }))).toEqual(SEVEN);
-    expect(keys(ctx({ template: "split" }))).toEqual(SEVEN);
-    expect(keys(ctx({ hasBackFace: true }))).toEqual(SEVEN);
-    expect(keys(ctx({ template: "regular" }))).toEqual(SEVEN);
+    expect(keys(ctx({ template: "adventure" }))).toEqual(FOUR);
+    expect(keys(ctx({ template: "flip" }))).toEqual(FOUR);
+    expect(keys(ctx({ template: "split" }))).toEqual(FOUR);
+    expect(keys(ctx({ hasBackFace: true }))).toEqual(FOUR);
+    expect(keys(ctx({ template: "regular" }))).toEqual(FOUR);
   });
 
-  it("hides the Pips step for frames that paint no cost (tokens, lands)", () => {
-    expect(keys(ctx({ cardType: "token", template: "m15token" }))).not.toContain(
-      "pips",
-    );
-    expect(keys(ctx({ cardType: "land", template: "m15land" }))).not.toContain(
-      "pips",
-    );
-    expect(keys(ctx({ template: "m15" }))).toContain("pips");
+  it("maps every legacy step key to a live step", () => {
+    for (const [legacy, target] of Object.entries(LEGACY_STEP_ALIASES)) {
+      expect(legacy).not.toBe(target);
+      expect(FOUR).toContain(target);
+    }
   });
 });
 
@@ -78,8 +73,8 @@ describe("stepLabel", () => {
   it("returns each step's static label", () => {
     const byKey = (k: string) =>
       stepLabel(visibleSteps(base).find((s) => s.key === k)!);
-    expect(byKey("kind")).toBe("Card kind");
-    expect(byKey("art")).toBe("Art");
+    expect(byKey("card")).toBe("Card");
+    expect(byKey("identity")).toBe("Identity");
     expect(byKey("text")).toBe("Text & stats");
     expect(byKey("publish")).toBe("Publish");
   });
@@ -206,42 +201,34 @@ describe("field → step routing", () => {
   it("maps each owned field to exactly one panel", () => {
     const map = buildFieldToStep();
     expect(map.get("title")).toBe("identity");
-    expect(map.get("cost")).toBe("pips");
-    // Color lives on the Frame step (inline, under the gallery).
-    expect(map.get("color_identity")).toBe("frame");
+    // Cost + art fold into Identity now.
+    expect(map.get("cost")).toBe("identity");
+    expect(map.get("art_url")).toBe("identity");
+    expect(map.get("back_face")).toBe("identity");
+    expect(map.get("color_identity")).toBe("card");
+    expect(map.get("frame_style")).toBe("card");
     expect(map.get("rules_text")).toBe("text");
     // Stats fold into the Text step.
     expect(map.get("power")).toBe("text");
-    expect(map.get("art_url")).toBe("art");
-    expect(map.get("frame_style")).toBe("frame");
     expect(map.get("visibility")).toBe("publish");
     expect(map.get("tags_text")).toBe("publish");
-    // Back face folds into the Art step.
-    expect(map.get("back_face")).toBe("art");
   });
 
-  it("routes card type to the Kind step (its single writer)", () => {
+  it("routes card type to the Card step (its single writer)", () => {
     const map = buildFieldToStep();
-    expect(map.get("card_type")).toBe("kind");
-    expect(map.get("color_identity")).toBe("frame");
+    expect(map.get("card_type")).toBe("card");
   });
 
-  it("routes a nested back_face.* error to the Art panel", () => {
+  it("routes a nested back_face.* error to the Identity step", () => {
     const steps = visibleSteps(base);
     const idx = stepIndexForField("back_face.title", steps);
-    expect(steps[idx].key).toBe("art");
+    expect(steps[idx].key).toBe("identity");
   });
 
   it("falls back to the last panel for a field no panel owns", () => {
     // primary_set_id isn't listed on any step, so it routes to the last panel.
     const steps = visibleSteps(base);
     const idx = stepIndexForField("primary_set_id", steps);
-    expect(steps[idx].key).toBe("publish");
-  });
-
-  it("routes a cost error to the last panel when Pips is hidden (token frame)", () => {
-    const steps = visibleSteps(ctx({ cardType: "token", template: "m15token" }));
-    const idx = stepIndexForField("cost", steps);
     expect(steps[idx].key).toBe("publish");
   });
 
