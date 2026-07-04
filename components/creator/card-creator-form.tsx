@@ -510,6 +510,19 @@ export function CardCreatorForm({
     }
   }, [watched.card_type, currentTemplate, setValue]);
 
+  // Frames with an intrinsic second face (Adventure's storybook page, the
+  // flip/split/aftermath halves) always PAINT that face — leaving the editor
+  // disabled saved cards with a blank painted half. Force it on whenever such
+  // a frame is active; the LayoutPanel's action is "clear content", never
+  // "remove the face". Deliberately not marked dirty: on edit-mode load of a
+  // legacy card this is a repair, not a user change (submit sends values, not
+  // dirty flags, so it still persists on the next save).
+  useEffect(() => {
+    if (hasInlineBackFace(currentTemplate) && !watched.has_back_face) {
+      setValue("has_back_face", true);
+    }
+  }, [currentTemplate, watched.has_back_face, setValue]);
+
   // Caret-preserving symbol insertion for the rules textareas (front + back).
   // register() is hoisted so the field ref can be merged with a local DOM ref.
   const rulesTextField = register("rules_text");
