@@ -928,6 +928,12 @@ export function CardCreatorForm({
       setValue("loyalty", card.loyalty ?? "", { shouldDirty: true });
       setValue("defense", card.defense ?? "", { shouldDirty: true });
 
+      // A generated card is an ORIGINAL. Drop any Scryfall provenance left
+      // over from a prior import — otherwise the brand-new card saves (and
+      // shows) as a remix of a card it no longer resembles.
+      setValue("source_scryfall_id", "", { shouldDirty: true });
+      setRemixSource(null);
+
       if (payload.art?.ok && payload.art.publicUrl) {
         setValue("art_url", payload.art.publicUrl, { shouldDirty: true });
         setValue(
@@ -1121,10 +1127,11 @@ export function CardCreatorForm({
       back_face: backFacePayload,
       // v2 back face: a uuid links a card as the back; empty → null clears.
       back_card_id: values.back_card_id || null,
-      // Empty string → undefined so we don't send a no-op or fail the
-      // UUID validator. A future "unlink from source" button could send
-      // `null` instead to explicitly clear.
-      source_scryfall_id: values.source_scryfall_id.trim() || undefined,
+      // Empty → null so an intentional clear (e.g. generating an AI card
+      // over an imported one) actually REMOVES the stored provenance on
+      // update; undefined would silently keep the old link. Cards whose
+      // provenance should persist hydrate the field non-empty on load.
+      source_scryfall_id: values.source_scryfall_id.trim() || null,
       // Empty → null clears the association; a UUID adds the card to that set.
       primary_set_id: values.primary_set_id || null,
     };
