@@ -78,6 +78,9 @@ import {
   DEFAULT_FRAME_TEMPLATE,
 } from "@/types/card";
 import { normalizeFrameTemplate } from "@/lib/cards/card-display";
+import { pickFrameColorKey } from "@/components/cards/frame-layer";
+import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
+import { eraForTemplate, standardFrameFor } from "@/lib/creator/frame-picker";
 import {
   loyaltyFromRulesText,
   sagaFromRulesText,
@@ -773,6 +776,32 @@ export function CardCreatorForm({
         : null);
     if (importedKind) {
       applyKindProgrammatic(importedKind);
+    }
+
+    // Adopt THIS PRINTING's border era (always — the import overrides the
+    // whole card, frame included; the dialog says so). Layout kinds carry no
+    // frame_template (their template is fixed by the kind above). When the
+    // suggested skin (snow/devoid) isn't published for the imported color,
+    // fall back to the era's standard frame, which is always available.
+    if (patch.frame_template) {
+      const importedColors = patch.color_identity
+        ? (Array.from(patch.color_identity) as ColorIdentity[])
+        : getValues("color_identity");
+      const colorKey = pickFrameColorKey(importedColors);
+      const verified = new Set(verifiedFrameKeys);
+      const template = isFrameComboAvailable(
+        patch.frame_template,
+        colorKey,
+        verified,
+      )
+        ? patch.frame_template
+        : standardFrameFor(
+            eraForTemplate(patch.frame_template),
+            (patch.card_type as CardType) || getValues("card_type") || "creature",
+          );
+      if (template) {
+        setValue("frame_style.template", template, { shouldDirty: true });
+      }
     }
 
     setIfPresent("title", patch.title);
