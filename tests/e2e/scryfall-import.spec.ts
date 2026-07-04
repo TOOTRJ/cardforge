@@ -85,8 +85,8 @@ test.describe("Scryfall search → import", () => {
     await page.waitForURL("**/dashboard");
     await page.goto("/create");
 
-    // The editor opens on Frame; the identity-panel Scryfall trigger lives on
-    // the Identity step, so jump there first via the step rail.
+    // The editor opens on Card kind; the identity-panel Scryfall trigger lives
+    // on the Identity step, so jump there first via the step rail.
     await page
       .getByRole("navigation", { name: /card editor steps/i })
       .getByRole("button", { name: /^identity$/i })

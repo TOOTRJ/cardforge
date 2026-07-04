@@ -13,7 +13,6 @@ import {
   type ChipOption,
 } from "@/components/ui/chip-group";
 import {
-  CARD_TYPE_OPTIONS,
   FieldGroup,
   MoreOptions,
   inputClass,
@@ -149,23 +148,9 @@ export function IdentityPanel({
         />
       </FieldGroup>
 
-      {/* What are you making — the card type drives the frame's type-variant
-          (the Frame panel derives from it). */}
-      <FieldGroup label="Card type" error={errors.card_type?.message}>
-        <Controller
-          control={control}
-          name="card_type"
-          render={({ field }) => (
-            <ChipGroup
-              ariaLabel="Card type"
-              layout="grid-3"
-              value={field.value}
-              onChange={(next) => field.onChange(next)}
-              options={CARD_TYPE_OPTIONS}
-            />
-          )}
-        />
-      </FieldGroup>
+      {/* Card type now lives on the Kind step (step 1) — the kind IS the
+          type choice, and routing every type change through planKindChange
+          is what makes silent frame overrides impossible. */}
 
       {/* Rarity. (The old "Template" select was removed: template_id is
           a vestigial DB field — no renderer reads it; the visual layout is

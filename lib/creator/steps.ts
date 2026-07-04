@@ -16,8 +16,10 @@ import {
   showsPowerToughness,
 } from "@/lib/cards/card-display";
 import { getFrameProfile } from "@/lib/cards/template-layout";
+import { KIND_DEFS, type CardKind } from "@/lib/creator/card-kinds";
 
 export type StepKey =
+  | "kind"
   | "frame"
   | "identity"
   | "pips"
@@ -29,6 +31,9 @@ export type StepContext = {
   template: FrameTemplate | string | undefined;
   cardType: CardType | "" | null | undefined;
   hasBackFace: boolean;
+  /** Derived via kindFromCard(cardType, template) — the wizard-level "what
+   *  am I making" that drives step visibility and per-kind panel config. */
+  kind: CardKind;
 };
 
 export type StepDef = {
@@ -98,24 +103,33 @@ export function statVisibility(cardType: CardType | "" | null | undefined): {
 
 const STEP_DEFS: StepDef[] = [
   {
-    // Frame leads the flow: the user picks the era + frame first, then fills in
-    // the card's identity. The frame picker reads card_type / color_identity,
-    // which start from their defaults (creature / colorless) and update the
-    // type-derived standard frame automatically as those are set on later steps
-    // — so leading with Frame never strands the picker.
+    // Kind leads the flow: the broadest structural choice (creature? saga?
+    // split?) comes first, and everything downstream — which frames the
+    // gallery offers, which art/text inputs appear — derives from it. The
+    // kind writes card_type (+ the frame template, via planKindChange), so
+    // this step owns card_type for error routing.
+    key: "kind",
+    label: "Card kind",
+    description: "What are you making?",
+    fields: ["card_type"],
+    isVisible: always,
+  },
+  {
+    // Every frame across every era that fits the chosen kind, grouped by
+    // era, with the frame's color picked inline underneath (color is a pure
+    // PNG swap — geometry is per-template — so it's safely last).
     key: "frame",
     label: "Frame",
-    description: "Color, era & frame style",
+    description: "Every era's frame & its color",
     fields: ["frame_style", "color_identity"],
     isVisible: always,
   },
   {
     key: "identity",
     label: "Identity",
-    description: "Name, type & rarity",
+    description: "Name & rarity",
     fields: [
       "title",
-      "card_type",
       "supertype",
       "subtypes_text",
       "rarity",
@@ -129,7 +143,9 @@ const STEP_DEFS: StepDef[] = [
     label: "Pips",
     description: "Mana cost",
     fields: ["cost"],
-    isVisible: always,
+    // Token/land frames paint no mana cost — skip the step entirely instead
+    // of showing an empty panel.
+    isVisible: (ctx) => !hidesCost(ctx.template),
   },
   {
     // Front artwork, plus (under "More options") the artist credit and the
@@ -217,4 +233,38 @@ export function stepIndexForField(
   const key = fieldToStep.get(root);
   const idx = key ? steps.findIndex((s) => s.key === key) : -1;
   return idx >= 0 ? idx : steps.length - 1;
+}
+
+// ---------------------------------------------------------------------------
+// Per-kind panel configuration — which inputs the Art and Text steps render.
+// Pure config, consumed by the panels; the structured editors themselves land
+// in later PRs, so "standard" panels ignore variants they don't know yet.
+// ---------------------------------------------------------------------------
+
+export type KindPanelConfig = {
+  /** Art inputs the Art step renders. "second" = the inline second face's own
+   *  art window (split/aftermath halves each show their own illustration;
+   *  flip and adventure share the front art). */
+  artSlots: Array<"front" | "second">;
+  /** Which rules editor the Text step renders for the front face. */
+  textVariant: "standard" | "saga" | "adventure" | "split" | "flip";
+  /** The frame paints an intrinsic second face — has_back_face is forced on
+   *  and the layout editor presents "clear", never "remove". */
+  forcedBackFace: boolean;
+};
+
+export function panelConfigFor(ctx: StepContext): KindPanelConfig {
+  const kind = ctx.kind;
+  const textVariant =
+    kind === "saga" || kind === "adventure" || kind === "flip"
+      ? kind
+      : kind === "split" || kind === "aftermath"
+        ? "split"
+        : "standard";
+  return {
+    artSlots:
+      kind === "split" || kind === "aftermath" ? ["front", "second"] : ["front"],
+    textVariant,
+    forcedBackFace: KIND_DEFS[kind].inlineSecondFace,
+  };
 }

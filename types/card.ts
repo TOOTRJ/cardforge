@@ -340,10 +340,10 @@ export const FRAME_SET_DEFAULT_TEMPLATE: Record<FrameSet, FrameTemplate> = {
 // Frame ERAS — the top tier of the creator's frame picker. An era is a border
 // generation (the visual trade-dress family), NOT a play format. Play formats
 // (Modern, Pioneer…) span multiple borders, so they can't group frames; border
-// years can. The picker flow is: pick card type + color → pick era → the
-// specific frame is derived from the type (ERA_TYPE_FRAME), with optional
-// special layouts (ERA_SPECIAL_LAYOUTS) and a set→treatment sub-picker for the
-// "showcase" era.
+// years can. The kind-first picker flow is: pick a card KIND → the gallery
+// shows every era's frame for it (ERA_TYPE_FRAME inverted by framesForKind in
+// lib/creator/card-kinds.ts, plus skins and showcase treatments) → pick the
+// frame's color.
 //
 // Eras group the existing FrameSets: alpha→classic, m15→m15, and the four
 // Universes Beyond / showcase IP sets (lotr/avatar/bloomburrow/tarkir)→showcase.
@@ -459,16 +459,6 @@ export const ERA_SKIN_VARIANTS: Record<FrameEra, FrameTemplate[]> = {
   showcase: [],
 };
 
-/** @deprecated Split into ERA_LAYOUT_TEMPLATES (structural layouts, now card
- *  kinds) and ERA_SKIN_VARIANTS (geometry-preserving skins). This alias keeps
- *  the pre-kind picker compiling until it's replaced by the kind-first flow. */
-export const ERA_SPECIAL_LAYOUTS: Record<FrameEra, FrameTemplate[]> = {
-  classic: [],
-  retro: [],
-  modern: [],
-  m15: [...ERA_LAYOUT_TEMPLATES.m15, ...ERA_SKIN_VARIANTS.m15],
-  showcase: [],
-};
 
 export type FrameStyle = {
   /** Premium treatment layered on the base frame (foil / etched / showcase). */

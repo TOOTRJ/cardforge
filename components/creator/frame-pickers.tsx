@@ -1,47 +1,18 @@
 "use client";
 
-// Frame-picker building blocks for the card creator's Frame step: the numbered
-// sub-step label, the frame thumbnail chip art, and the two era-scoped pickers
-// (border eras vs. the showcase set→treatment two-stage). Extracted from
-// card-creator-form.tsx.
+// Shared building blocks for the creator's Kind + Frame steps: the numbered
+// sub-step label, the frame thumbnail chip art, and the "Soon" pill for
+// verification-gated combos. The era/showcase pickers that used to live here
+// were replaced by the kind-first FrameGalleryPanel
+// (components/creator/panels/frame-gallery-panel.tsx).
 
-import {
-  ChipGroup,
-  type ChipOption,
-} from "@/components/ui/chip-group";
-import {
-  type CardType,
-  type FrameEra,
-  type FrameSet,
-  type FrameTemplate,
-  ERA_SPECIAL_LAYOUTS,
-  FRAME_SET_DEFAULT_TEMPLATE,
-  FRAME_SET_ERA,
-  FRAME_SET_LABELS,
-  FRAME_SET_VALUES,
-  FRAME_TEMPLATE_LABELS,
-  FRAME_TEMPLATE_SET,
-  FRAME_TEMPLATE_VALUES,
-} from "@/types/card";
-import { standardFrameFor } from "@/lib/creator/frame-picker";
+import { type FrameTemplate } from "@/types/card";
 import { getFrameProfile } from "@/lib/cards/template-layout";
-import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
 import { cn } from "@/lib/utils";
 
-// How many shippable frames each set holds — surfaced on the showcase set chip
-// so a set reads as a *family* of frames, not a single style. Derived from the
-// template→set map so it stays correct as frames are added.
-const FRAMES_PER_SET = FRAME_TEMPLATE_VALUES.reduce(
-  (acc, template) => {
-    const set = FRAME_TEMPLATE_SET[template];
-    acc[set] = (acc[set] ?? 0) + 1;
-    return acc;
-  },
-  {} as Record<FrameSet, number>,
-);
-
-// Small "Soon" pill for frames/layouts that aren't shippable yet.
-function SoonBadge() {
+// Small "Soon" pill for frames/layouts whose (template, color) combo hasn't
+// been verified/published yet (/admin/frame-compare).
+export function SoonBadge() {
   return (
     <span className="rounded-full border border-border/70 bg-elevated px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-subtle">
       Soon
@@ -49,9 +20,8 @@ function SoonBadge() {
   );
 }
 
-// A numbered sub-step heading for the two-stage frame picker: a small index
-// badge, a title, an optional muted context line (the active set name), and a
-// right-aligned count. Makes "first a set, then a frame within it" legible.
+// A numbered sub-step heading for the pickers: a small index badge, a title,
+// an optional muted context line, and a right-aligned count.
 export function PickerStepLabel({
   n,
   title,
@@ -92,7 +62,7 @@ export function FrameThumb({
 }: {
   template: FrameTemplate;
   /** Frame color variant to preview. Defaults to blue (representative) for the
-   *  static module-level chips; the in-step picker passes the card's live color
+   *  static module-level chips; the in-step pickers pass the card's live color
    *  so the thumbnails match what the user will get. */
   colorKey?: string;
 }) {
@@ -106,159 +76,5 @@ export function FrameThumb({
       )}
       style={{ backgroundImage: `url(/frames/${template}/${colorKey}.png)` }}
     />
-  );
-}
-
-// Border-era frame picker (Classic / M15): the type-derived standard frame as a
-// single chip, plus an optional "Special layouts" row (Saga, Adventure, Split,
-// Flip, Aftermath, Snow, Devoid for M15) that overrides it. Both chip groups
-// bind to the same template value, so exactly one shows as selected.
-export function BorderEraFramePicker({
-  era,
-  cardType,
-  template,
-  colorKey,
-  verifiedKeys,
-  onChange,
-}: {
-  era: FrameEra;
-  cardType: CardType | "";
-  template: FrameTemplate;
-  colorKey: string;
-  /** Verified (template/color) combo keys — special layouts publish per
-   *  color once an admin verifies them in /admin/frame-compare. */
-  verifiedKeys: ReadonlySet<string>;
-  onChange: (next: FrameTemplate) => void;
-}) {
-  const standard =
-    standardFrameFor(era, cardType) ?? standardFrameFor("m15", cardType);
-  const specials = ERA_SPECIAL_LAYOUTS[era];
-  const standardOptions: ChipOption<FrameTemplate>[] = standard
-    ? [
-        {
-          value: standard,
-          label: FRAME_TEMPLATE_LABELS[standard],
-          description: "The standard frame for this card type",
-          leading: <FrameThumb template={standard} colorKey={colorKey} />,
-        },
-      ]
-    : [];
-  return (
-    <div className="flex flex-col gap-3">
-      <ChipGroup
-        ariaLabel="Standard frame"
-        layout="grid-2"
-        size="md"
-        value={template}
-        onChange={onChange}
-        options={standardOptions}
-      />
-      {specials.length > 0 ? (
-        <div className="flex flex-col gap-2">
-          <span className="text-[11px] uppercase tracking-wider text-subtle">
-            Special layouts — replace the standard frame
-          </span>
-          <ChipGroup
-            ariaLabel="Special layouts"
-            layout="grid-2"
-            size="md"
-            value={template}
-            onChange={onChange}
-            options={specials.map((t) => {
-              // Special layouts publish per (template, color) through the
-              // admin verification checklist (/admin/frame-compare) — an
-              // unverified combo shows as "Soon" and can't be picked.
-              const available = isFrameComboAvailable(t, colorKey, verifiedKeys);
-              return {
-                value: t,
-                label: FRAME_TEMPLATE_LABELS[t],
-                description: available
-                  ? undefined
-                  : "Awaiting verification for this color",
-                leading: <FrameThumb template={t} colorKey={colorKey} />,
-                disabled: !available,
-                badge: available ? undefined : <SoonBadge />,
-              };
-            })}
-          />
-        </div>
-      ) : null}
-      <p className="text-[11px] text-subtle">More frames coming soon.</p>
-    </div>
-  );
-}
-
-// Showcase & Universes Beyond picker: the existing set → treatment two-stage,
-// scoped to the showcase IP families (LOTR / Avatar / Bloomburrow / Tarkir).
-export function ShowcaseFramePicker({
-  activeSet,
-  template,
-  colorKey,
-  verifiedKeys,
-  onChange,
-}: {
-  activeSet: FrameSet;
-  template: FrameTemplate;
-  colorKey: string;
-  verifiedKeys: ReadonlySet<string>;
-  onChange: (next: FrameTemplate) => void;
-}) {
-  const showcaseSets = FRAME_SET_VALUES.filter(
-    (s) => FRAME_SET_ERA[s] === "showcase",
-  );
-  const setOptions: ChipOption<FrameSet>[] = showcaseSets.map((set) => ({
-    value: set,
-    label: FRAME_SET_LABELS[set],
-    description: `${FRAMES_PER_SET[set]} frame${FRAMES_PER_SET[set] === 1 ? "" : "s"}`,
-    leading: (
-      <FrameThumb
-        template={FRAME_SET_DEFAULT_TEMPLATE[set]}
-        colorKey={colorKey}
-      />
-    ),
-  }));
-  const treatments: ChipOption<FrameTemplate>[] = FRAME_TEMPLATE_VALUES.filter(
-    (t) => FRAME_TEMPLATE_SET[t] === activeSet,
-  ).map((t) => {
-    const available = isFrameComboAvailable(t, colorKey, verifiedKeys);
-    return {
-      value: t,
-      label: FRAME_TEMPLATE_LABELS[t],
-      description: available ? undefined : "Awaiting verification for this color",
-      leading: <FrameThumb template={t} colorKey={colorKey} />,
-      disabled: !available,
-      badge: available ? undefined : <SoonBadge />,
-    };
-  });
-  return (
-    <div className="flex flex-col gap-3">
-      <ChipGroup
-        ariaLabel="Showcase set"
-        layout="grid-2"
-        size="md"
-        value={activeSet}
-        onChange={(nextSet) => {
-          if (nextSet !== activeSet) {
-            onChange(FRAME_SET_DEFAULT_TEMPLATE[nextSet]);
-          }
-        }}
-        options={setOptions}
-      />
-      {treatments.length > 1 ? (
-        <div className="flex flex-col gap-2">
-          <span className="text-[11px] uppercase tracking-wider text-subtle">
-            Treatment · {FRAME_SET_LABELS[activeSet]}
-          </span>
-          <ChipGroup
-            ariaLabel={`Treatments in ${FRAME_SET_LABELS[activeSet]}`}
-            layout="grid-2"
-            size="md"
-            value={template}
-            onChange={onChange}
-            options={treatments}
-          />
-        </div>
-      ) : null}
-    </div>
   );
 }
