@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
@@ -63,29 +63,45 @@ function PipSlot({
   const fileRef = useRef<HTMLInputElement>(null);
   const [pending, startTransition] = useTransition();
   // Optimistic thumbnail while the round-trip completes, so the slot doesn't
-  // flash the old icon between upload and router.refresh().
-  const [localPreview, setLocalPreview] = useState<string | null>(null);
+  // flash the old icon between upload and router.refresh(). `supersedes`
+  // pins the override the preview replaced: once refresh() delivers a
+  // DIFFERENT override (a replacement is always a new ?v= url), the derived
+  // shownUrl switches to the server truth with no state write needed.
+  const [optimistic, setOptimistic] = useState<{
+    url: string;
+    supersedes: string | null;
+  } | null>(null);
+
+  // Release the blob only once it's no longer referenced — replaced by a
+  // newer pick, cleared, or on unmount. Revoking inside the save transition
+  // (while the URL was still the rendered src) blanked the slot until the
+  // refreshed override arrived.
+  useEffect(() => {
+    if (!optimistic) return;
+    return () => URL.revokeObjectURL(optimistic.url);
+  }, [optimistic]);
 
   const label = CUSTOM_PIP_SYMBOL_LABELS[symbol];
-  const shownUrl = localPreview ?? overrideUrl;
+  const shownUrl =
+    optimistic && overrideUrl === optimistic.supersedes
+      ? optimistic.url
+      : overrideUrl;
 
   const onFilePicked = (file: File | undefined) => {
     if (!file) return;
     const formData = new FormData();
     formData.set("symbol", symbol);
     formData.set("file", file);
-    const objectUrl = URL.createObjectURL(file);
-    setLocalPreview(objectUrl);
+    setOptimistic({ url: URL.createObjectURL(file), supersedes: overrideUrl });
     startTransition(async () => {
       const result = await saveCustomPipAction(formData);
       if (result.ok) {
         toast.success(`Custom ${label.toLowerCase()} pip saved.`);
         router.refresh();
       } else {
-        setLocalPreview(null);
+        setOptimistic(null);
         toast.error(result.error);
       }
-      URL.revokeObjectURL(objectUrl);
     });
   };
 
@@ -93,7 +109,7 @@ function PipSlot({
     startTransition(async () => {
       const result = await deleteCustomPipAction(symbol);
       if (result.ok) {
-        setLocalPreview(null);
+        setOptimistic(null);
         toast.success(`${label} pip reset to standard.`);
         router.refresh();
       } else {

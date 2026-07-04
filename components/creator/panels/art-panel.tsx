@@ -24,7 +24,6 @@ export function ArtPanel({ userId, backFaceSlot }: ArtPanelProps) {
   const {
     register,
     control,
-    setValue,
     formState: { errors },
   } = useFormContext<FormValues>();
 
@@ -43,12 +42,11 @@ export function ArtPanel({ userId, backFaceSlot }: ArtPanelProps) {
                 artUrl={artUrlField.value}
                 artPosition={artPosField.value}
                 onArtChange={({ artUrl, artPosition }) => {
+                  // Controller onChange is the single write path — it updates
+                  // the value AND dirties the field. A second setValue on the
+                  // same fields raced it under React batching.
                   artUrlField.onChange(artUrl ?? "");
                   artPosField.onChange(artPosition);
-                  setValue("art_url", artUrl ?? "", { shouldDirty: true });
-                  setValue("art_position", artPosition, {
-                    shouldDirty: true,
-                  });
                 }}
               />
             )}

@@ -257,15 +257,12 @@ export function LayoutPanel({
                         userId={userId}
                         artUrl={artUrlField.value}
                         artPosition={artPosField.value}
+                        primaryPasteTarget={false}
                         onArtChange={({ artUrl, artPosition }) => {
+                          // Controller onChange is the single write path —
+                          // it updates the value AND dirties the field.
                           artUrlField.onChange(artUrl ?? "");
                           artPosField.onChange(artPosition);
-                          setValue("back_face.art_url", artUrl ?? "", {
-                            shouldDirty: true,
-                          });
-                          setValue("back_face.art_position", artPosition, {
-                            shouldDirty: true,
-                          });
                         }}
                       />
                     )}
@@ -281,14 +278,18 @@ export function LayoutPanel({
               variant="ghost"
               size="sm"
               onClick={() => {
-                setValue("has_back_face", false, { shouldDirty: true });
-                // Clear nested values so a re-enable starts fresh.
+                // This panel only mounts for frames whose second face is
+                // intrinsic (Adventure page, flip/split/aftermath half) —
+                // the frame paints that face no matter what, so the action
+                // is "clear the content", not "remove the face". Disabling
+                // has_back_face here just produced cards with a blank
+                // painted half (the orchestrator now force-enables it).
                 setValue("back_face", EMPTY_BACK_FACE, {
                   shouldDirty: true,
                 });
               }}
             >
-              {isAdventureFrame ? "Remove adventure" : "Remove back face"}
+              {isAdventureFrame ? "Clear adventure" : "Clear second face"}
             </Button>
           </div>
         </>

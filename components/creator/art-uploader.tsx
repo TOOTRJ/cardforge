@@ -53,6 +53,11 @@ type ArtUploaderProps = {
   artUrl: string | null | undefined;
   artPosition: ArtPosition;
   onArtChange: (next: { artUrl: string | null; artPosition: ArtPosition }) => void;
+  /** When several uploaders are mounted at once (front art + an inline second
+   *  face), a page-level paste must land in exactly one of them. A hovered or
+   *  focused dropzone always wins; failing that, the single primary instance
+   *  takes the paste. Mark every non-front uploader `primaryPasteTarget={false}`. */
+  primaryPasteTarget?: boolean;
   className?: string;
 };
 
@@ -61,6 +66,7 @@ export function ArtUploader({
   artUrl,
   artPosition,
   onArtChange,
+  primaryPasteTarget = true,
   className,
 }: ArtUploaderProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -189,6 +195,21 @@ export function ArtUploader({
       ) {
         return;
       }
+      // Route the paste to exactly ONE uploader when several are mounted
+      // (front art + an inline second face): the dropzone the user is
+      // pointing at or has focused wins; with no engaged dropzone, the
+      // primary (front) instance takes it. Without this gate, one ⌘V
+      // uploaded into every mounted uploader — replacing the front art and
+      // resetting its crop while the user was aiming at the back face.
+      const zone = dropzoneRef.current;
+      if (!zone) return;
+      if (!zone.matches(":hover, :focus-within")) {
+        if (!primaryPasteTarget) return;
+        const engagedSibling = document.querySelector(
+          "[data-art-uploader]:hover, [data-art-uploader]:focus-within",
+        );
+        if (engagedSibling) return;
+      }
       const items = event.clipboardData?.items;
       if (!items) return;
       for (const item of items) {
@@ -204,7 +225,7 @@ export function ArtUploader({
     }
     window.addEventListener("paste", onPaste);
     return () => window.removeEventListener("paste", onPaste);
-  }, [handleFile]);
+  }, [handleFile, primaryPasteTarget]);
 
   // ---- Drag-drop file ----------------------------------------------------
 
@@ -430,6 +451,7 @@ export function ArtUploader({
       {/* Dropzone + preview surface. */}
       <div
         ref={dropzoneRef}
+        data-art-uploader=""
         onDragEnter={handleDragOver}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
