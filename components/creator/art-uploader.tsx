@@ -629,6 +629,11 @@ function EmptyDropzoneInner({
             Ctrl V
           </kbd>
         </p>
+        {/* The M15 art window on the print-quality export (1500×2100) is
+            ~1266×924 px — recommend a touch above it. */}
+        <p className="text-[11px] text-subtle">
+          Best results: 1300 × 950 px or larger
+        </p>
       </div>
     </div>
   );
