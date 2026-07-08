@@ -21,12 +21,37 @@ const COLORS = ["w", "u", "b", "r", "g", "m"];
 
 fs.mkdirSync(OUT, { recursive: true });
 
-const maskRaw = await sharp(path.join(SRC, "artifact_blend_card.png"))
+const maskWide = await sharp(path.join(SRC, "artifact_blend_card.png"))
   .resize(375, 523, { fit: "fill" })
   .removeAlpha()
   .greyscale()
   .raw()
   .toBuffer();
+
+// ERODE the white (artifact) region by ~2px so the thin pinlines around the
+// art window and textbox stay on the COLOR side — real colored artifacts
+// (The Great Henge, Embercleave) have color pinlines around a silver
+// interior. Min-filter over a 5x5 neighborhood.
+const W = 375;
+const H = 523;
+const R = 2;
+const maskRaw = Buffer.alloc(maskWide.length);
+for (let y = 0; y < H; y++) {
+  for (let x = 0; x < W; x++) {
+    let min = 255;
+    for (let dy = -R; dy <= R; dy++) {
+      const yy = y + dy;
+      if (yy < 0 || yy >= H) continue;
+      for (let dx = -R; dx <= R; dx++) {
+        const xx = x + dx;
+        if (xx < 0 || xx >= W) continue;
+        const v = maskWide[yy * W + xx];
+        if (v < min) min = v;
+      }
+    }
+    maskRaw[y * W + x] = min;
+  }
+}
 
 const artifact = await sharp(path.join(SRC, "acard.jpg"))
   .resize(375, 523, { fit: "fill" })

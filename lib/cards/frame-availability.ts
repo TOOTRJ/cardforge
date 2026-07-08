@@ -22,31 +22,18 @@ import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 // keys the page fetched server-side.
 // ---------------------------------------------------------------------------
 
-// Templates users could already pick when the verification system shipped
-// (2026-07): the era standards + type-derived frames. The M15 special
-// layouts and the showcase treatments were "coming soon" — those now gate
-// on verification instead.
-export const GRANDFATHERED_TEMPLATES: ReadonlySet<FrameTemplate> = new Set([
-  "m15",
-  "m15land",
-  "m15token",
-  "m15artifact",
-  "m15pw",
-  "battle",
-  "agclassic",
-  "alphaland",
-  "alphatoken",
-  "retro",
-  "retroland",
-  "modern",
-  "modernland",
-]);
+// Verification is the ONLY gate (owner decision, 2026-07-04): a combo is
+// pickable exactly when its frame_reviews checkbox is checked in
+// /admin/frame-compare. The old grandfathered list (era standards open by
+// default) is gone — new frames stay "Soon" until the owner marks them
+// ready. Existing cards keep rendering whatever they saved; gating only
+// affects NEW frame selection.
+export const GRANDFATHERED_TEMPLATES: ReadonlySet<FrameTemplate> = new Set();
 
 export function isFrameComboAvailable(
   template: FrameTemplate,
   colorKey: string,
   verifiedKeys: ReadonlySet<string>,
 ): boolean {
-  if (GRANDFATHERED_TEMPLATES.has(template)) return true;
   return verifiedKeys.has(frameComboKey(template, colorKey));
 }
