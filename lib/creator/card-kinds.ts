@@ -296,6 +296,30 @@ export function framesForKind(
   return out;
 }
 
+// Reverse skin map: variant → its base (m15snow → m15). Built from
+// TEMPLATE_SKIN_VARIANTS so the two can't drift.
+const SKIN_BASE: ReadonlyMap<FrameTemplate, FrameTemplate> = new Map(
+  (Object.entries(TEMPLATE_SKIN_VARIANTS) as [FrameTemplate, FrameTemplate[]][]).flatMap(
+    ([base, skins]) => (skins ?? []).map((s) => [s, base] as const),
+  ),
+);
+
+/** The FRAME-section template a stored template maps to: a skin resolves to
+ *  its base, a showcase treatment to the kind's M15 standard (showcase is
+ *  M15-era trade dress), everything else to itself. The Variations section
+ *  owns the difference between this and the actual template. */
+export function baseFrameFor(
+  kind: CardKind,
+  template: FrameTemplate,
+): FrameTemplate {
+  const skinBase = SKIN_BASE.get(template);
+  if (skinBase) return skinBase;
+  if (FRAME_SET_ERA[FRAME_TEMPLATE_SET[template]] === "showcase") {
+    return standardFrameFor("m15", KIND_DEFS[kind].cardType) ?? template;
+  }
+  return template;
+}
+
 /** True when the template has at least one PUBLISHED color. */
 export function templateHasAvailableColor(
   template: FrameTemplate,
