@@ -16,6 +16,7 @@
 import { ImageResponse } from "next/og";
 import { fitRulesSizePct, fitSingleLineSizePct } from "@/lib/cards/render-tiers";
 import { tokenize, tokenSuffix } from "@/components/cards/mana-cost-glyphs";
+import { ROSE_GEM_PATH, ROSE_STAR_PATH } from "@/lib/brand/geometry";
 import {
   pipOverrideForSuffix,
   pipOverrideForToken,
@@ -705,10 +706,7 @@ function CardImage({
             viewBox="0 0 32 32"
             style={{ marginRight: Math.round(fpx(0.008, width)) }}
           >
-            <path
-              d="M16 2.6 L18.5 13.5 L29.4 16 L18.5 18.5 L16 29.4 L13.5 18.5 L2.6 16 L13.5 13.5 Z"
-              fill="rgba(255,255,255,0.82)"
-            />
+            <path d={ROSE_STAR_PATH} fill="rgba(255,255,255,0.82)" />
           </svg>
           pipglyph.com
         </div>
@@ -1283,19 +1281,15 @@ function SetSymbolGlyph({
     );
   }
 
-  // 3. Default — the PipGlyph mark, rarity-tinted (matches the preview's
-  //    PipGlyphSetMark — keep geometry in sync with
-  //    components/cards/set-symbol.tsx). Inline SVG so Satori renders it
-  //    without a font.
+  // 3. Default — the PipGlyph Astral Rose star, rarity-tinted (same
+  //    lib/brand/geometry constants as the preview's PipGlyphSetMark, so
+  //    the two can't drift). Inline SVG so Satori renders it without a font.
   const s = Math.round(fontSize);
   return (
     <span style={{ display: "flex" }}>
       <svg width={s} height={s} viewBox="0 0 32 32">
-        <path
-          d="M16 2.6 L18.5 13.5 L29.4 16 L18.5 18.5 L16 29.4 L13.5 18.5 L2.6 16 L13.5 13.5 Z"
-          fill={color}
-        />
-        <circle cx="16" cy="16" r="2.7" fill="rgba(0,0,0,0.5)" />
+        <path d={ROSE_STAR_PATH} fill={color} />
+        <path d={ROSE_GEM_PATH} fill="rgba(0,0,0,0.5)" />
       </svg>
     </span>
   );

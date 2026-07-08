@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import type { Rarity } from "@/types/card";
 import { RARITY_INK } from "@/lib/brand/constants";
+import { ROSE_GEM_PATH, ROSE_STAR_PATH } from "@/lib/brand/geometry";
 
 // ---------------------------------------------------------------------------
 // SetSymbol — the small set-symbol pip at the right end of the type line.
@@ -33,10 +34,11 @@ type SetSymbolProps = {
 };
 
 // The PipGlyph house mark, drawn as a solid rarity-tintable silhouette: the
-// compass star filled with `currentColor` so the rarity ink shows through,
-// with the hub knocked out in translucent black so the mark reads on silver,
-// gold, or orange alike. KEEP GEOMETRY IN SYNC with the inline SVG in
-// lib/render/card-image.tsx (bake side) — preview and export must match.
+// Astral Rose star filled with `currentColor` so the rarity ink shows
+// through, with the gem heart knocked out in translucent black so the mark
+// reads on silver, gold, or orange alike. Geometry comes from
+// lib/brand/geometry — the bake side (lib/render/card-image.tsx) imports the
+// same constants, so preview and export can't drift.
 export function PipGlyphSetMark({
   className,
   style,
@@ -52,11 +54,8 @@ export function PipGlyphSetMark({
       role="img"
       aria-label="PipGlyph set"
     >
-      <path
-        d="M16 2.6 L18.5 13.5 L29.4 16 L18.5 18.5 L16 29.4 L13.5 18.5 L2.6 16 L13.5 13.5 Z"
-        fill="currentColor"
-      />
-      <circle cx="16" cy="16" r="2.7" fill="rgba(0,0,0,0.5)" />
+      <path d={ROSE_STAR_PATH} fill="currentColor" />
+      <path d={ROSE_GEM_PATH} fill="rgba(0,0,0,0.5)" />
     </svg>
   );
 }
