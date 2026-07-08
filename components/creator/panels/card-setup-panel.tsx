@@ -69,19 +69,28 @@ const KIND_HINTS: Partial<Record<CardKind, string>> = {
 };
 
 // Collapsible chooser section: the summary always shows the CURRENT value,
-// so a collapsed step still reads as a complete sentence.
+// so a collapsed step still reads as a complete sentence. All sections start
+// CLOSED (new cards carry sensible defaults) and close themselves once a
+// selection lands.
 function SetupSection({
   title,
   value,
-  defaultOpen = false,
   children,
 }: {
   title: string;
   value: string;
-  defaultOpen?: boolean;
   children: React.ReactNode;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
+  const [open, setOpen] = useState(false);
+  // Auto-close on selection: the summary value changing while the section is
+  // open means the user just picked something — collapse so the step reads
+  // as its result. (Derived during render — no effect — so the kind-change
+  // confirm dialog closes the section only when the change actually lands.)
+  const [prevValue, setPrevValue] = useState(value);
+  if (value !== prevValue) {
+    setPrevValue(value);
+    if (open) setOpen(false);
+  }
   return (
     <details
       open={open}
