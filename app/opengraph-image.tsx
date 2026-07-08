@@ -1,22 +1,15 @@
 import { ImageResponse } from "next/og";
+import { BRAND, MANA_PIPS, OG_SIZE } from "@/lib/brand/constants";
+import { BrandMarkTile } from "@/lib/brand/glyph";
 
 // Site-wide Open Graph image for PipGlyph — used as the social preview on
 // any page that doesn't define its own (gallery, profiles, legal pages).
 // Individual card pages have their own /api/cards/[id]/og asset.
 
 export const alt = "PipGlyph — Precision tools for legendary ideas.";
-export const size = { width: 1200, height: 630 };
+export const size = OG_SIZE;
 export const contentType = "image/png";
 export const runtime = "edge";
-
-// WUBRG mana color dots for the decorative motif
-const MANA_PIPS = [
-  { color: "#f0ede0", label: "W" }, // White
-  { color: "#4a90d9", label: "U" }, // Blue
-  { color: "#9b72cf", label: "B" }, // Black
-  { color: "#e05252", label: "R" }, // Red
-  { color: "#4caf72", label: "G" }, // Green
-];
 
 export default function OpenGraphImage() {
   return new ImageResponse(
@@ -31,9 +24,8 @@ export default function OpenGraphImage() {
           justifyContent: "center",
           padding: "72px 96px",
           gap: 20,
-          background:
-            "linear-gradient(135deg, #0d1320 0%, #1a2030 50%, #0d1320 100%)",
-          color: "#f2f3f5",
+          background: `linear-gradient(135deg, ${BRAND.navy} 0%, ${BRAND.surface} 50%, ${BRAND.navy} 100%)`,
+          color: BRAND.foreground,
           fontFamily: "system-ui, sans-serif",
           position: "relative",
           overflow: "hidden",
@@ -78,48 +70,15 @@ export default function OpenGraphImage() {
           ))}
         </div>
 
-        {/* Brand lockup — compass-star mark + wordmark */}
+        {/* Brand lockup — Astral Rose mark + wordmark */}
         <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
-          <div
-            style={{
-              width: 64,
-              height: 64,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              background: "#111827",
-              borderRadius: 14,
-              border: "2px solid #d8b26e",
-            }}
-          >
-            <svg width="40" height="40" viewBox="0 0 32 32" fill="none">
-              <circle
-                cx="16"
-                cy="16"
-                r="13.5"
-                stroke="#d8b26e"
-                strokeWidth="1.2"
-                opacity="0.55"
-              />
-              <path
-                d="M16 3.4 L18.3 13.7 L28.6 16 L18.3 18.3 L16 28.6 L13.7 18.3 L3.4 16 L13.7 13.7 Z"
-                fill="#d8b26e"
-              />
-              <path
-                d="M22.2 9.8 L24.4 7.6 M9.8 22.2 L7.6 24.4 M22.2 22.2 L24.4 24.4 M9.8 9.8 L7.6 7.6"
-                stroke="#8e72c9"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                opacity="0.9"
-              />
-            </svg>
-          </div>
+          <BrandMarkTile size={64} />
           <span
             style={{
               fontSize: 30,
               letterSpacing: 5,
               textTransform: "uppercase",
-              color: "#d8b26e",
+              color: BRAND.gold,
               fontWeight: 600,
             }}
           >
@@ -144,8 +103,7 @@ export default function OpenGraphImage() {
           <span>Custom MTG cards</span>
           <span
             style={{
-              backgroundImage:
-                "linear-gradient(90deg, #d8b26e 0%, #b794e6 60%, #8e72c9 100%)",
+              backgroundImage: `linear-gradient(90deg, ${BRAND.gold} 0%, ${BRAND.lilac} 60%, ${BRAND.purple} 100%)`,
               backgroundClip: "text",
               color: "transparent",
             }}
@@ -160,7 +118,7 @@ export default function OpenGraphImage() {
             margin: 0,
             fontSize: 26,
             lineHeight: 1.45,
-            color: "#9aa3b5",
+            color: BRAND.muted,
             maxWidth: 760,
           }}
         >
@@ -201,7 +159,7 @@ export default function OpenGraphImage() {
             display: "flex",
             alignItems: "center",
             fontSize: 18,
-            color: "#6e6248",
+            color: BRAND.bronze,
             letterSpacing: 2,
             textTransform: "uppercase",
           }}
