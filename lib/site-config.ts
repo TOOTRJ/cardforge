@@ -50,6 +50,7 @@ export const siteConfig = {
     { label: "Feed", href: "/feed" },
     { label: "My Sets", href: "/dashboard/sets" },
     { label: "Notifications", href: "/notifications" },
+    { label: "Feedback", href: "/feedback" },
     { label: "Settings", href: "/settings" },
   ] as readonly NavItem[],
 
@@ -57,6 +58,7 @@ export const siteConfig = {
   // profiles). Mirrors the avatar-dropdown admin entries.
   adminNav: [
     { label: "Moderation", href: "/admin/moderation" },
+    { label: "Feedback", href: "/admin/feedback" },
     { label: "Challenges", href: "/admin/challenges" },
     { label: "Scryfall usage", href: "/admin/scryfall" },
     { label: "Frame compare", href: "/admin/frame-compare" },
@@ -87,6 +89,7 @@ export const siteConfig = {
       title: "Company",
       links: [
         { label: "About", href: "/about" },
+        { label: "Feedback", href: "/feedback" },
         { label: "Disclaimer", href: "/disclaimer" },
       ],
     },
