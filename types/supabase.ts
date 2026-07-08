@@ -910,6 +910,62 @@ export type Database = {
         };
         Relationships: [];
       };
+      feedback: {
+        Row: {
+          admin_note: string | null;
+          card_id: string | null;
+          category: string;
+          created_at: string;
+          frame_template: string | null;
+          id: string;
+          message: string;
+          page_url: string | null;
+          resolved_at: string | null;
+          resolved_by: string | null;
+          status: string;
+          subject: string;
+          user_id: string | null;
+        };
+        Insert: {
+          admin_note?: string | null;
+          card_id?: string | null;
+          category: string;
+          created_at?: string;
+          frame_template?: string | null;
+          id?: string;
+          message: string;
+          page_url?: string | null;
+          resolved_at?: string | null;
+          resolved_by?: string | null;
+          status?: string;
+          subject: string;
+          user_id?: string | null;
+        };
+        Update: {
+          admin_note?: string | null;
+          card_id?: string | null;
+          category?: string;
+          created_at?: string;
+          frame_template?: string | null;
+          id?: string;
+          message?: string;
+          page_url?: string | null;
+          resolved_at?: string | null;
+          resolved_by?: string | null;
+          status?: string;
+          subject?: string;
+          user_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "feedback_card_id_fkey";
+            columns: ["card_id"];
+            isOneToOne: false;
+            referencedRelation: "cards";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -1159,8 +1215,13 @@ export type CardReportInsert = TablesInsert<"card_reports">;
 export type CommentReport = Tables<"comment_reports">;
 export type CommentReportInsert = TablesInsert<"comment_reports">;
 
-// In-app creator notifications (likes / comments / remixes / follows).
+// In-app creator notifications (likes / comments / remixes / follows) +
+// admin notifications (feedback / moderation).
 export type Notification = Tables<"notifications">;
+
+// User feedback intake (bugs, frame issues, feature/frame requests).
+export type FeedbackRow = Tables<"feedback">;
+export type FeedbackInsert = TablesInsert<"feedback">;
 
 // Creator follow graph.
 export type Follow = Tables<"follows">;

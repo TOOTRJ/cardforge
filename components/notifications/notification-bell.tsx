@@ -3,7 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bell, Heart, MessageCircle, Sparkles, UserPlus } from "lucide-react";
+import { Bell, Heart, MessageCircle, Sparkles, UserPlus,
+  MailWarning,
+  ShieldAlert,
+} from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -34,6 +37,8 @@ const ICON: Record<string, typeof Bell> = {
   comment: MessageCircle,
   remix: Sparkles,
   follow: UserPlus,
+  feedback: MailWarning,
+  moderation: ShieldAlert,
 };
 
 type NotificationBellProps = {
@@ -117,12 +122,18 @@ export function NotificationBell({ initialUnread }: NotificationBellProps) {
                     ? `@${item.actor.username}`
                     : "Someone");
                 const verb = VERB[item.type] ?? "interacted with";
+                // Admin notification types deep-link to their inbox; the
+                // social types link to the card or the actor.
                 const href =
-                  item.card && item.card.ownerUsername
-                    ? `/card/${item.card.ownerUsername}/${item.card.slug}`
-                    : item.actor?.username
-                      ? `/profile/${item.actor.username}`
-                      : "#";
+                  item.type === "feedback"
+                    ? "/admin/feedback"
+                    : item.type === "moderation"
+                      ? "/admin/moderation"
+                      : item.card && item.card.ownerUsername
+                        ? `/card/${item.card.ownerUsername}/${item.card.slug}`
+                        : item.actor?.username
+                          ? `/profile/${item.actor.username}`
+                          : "#";
 
                 return (
                   <li key={item.id}>
@@ -140,7 +151,11 @@ export function NotificationBell({ initialUnread }: NotificationBellProps) {
                       <div className="flex min-w-0 flex-1 flex-col">
                         <p className="text-sm leading-5 text-foreground">
                           <span className="font-medium">{actorName}</span>{" "}
-                          {item.type === "follow" ? (
+                          {item.type === "feedback" ? (
+                            "sent feedback — open the inbox."
+                          ) : item.type === "moderation" ? (
+                            "filed a content report."
+                          ) : item.type === "follow" ? (
                             "started following you."
                           ) : (
                             <>
