@@ -90,6 +90,7 @@ export const siteConfig = {
       title: "Company",
       links: [
         { label: "About", href: "/about" },
+        { label: "Press kit", href: "/press" },
         { label: "Feedback", href: "/feedback" },
         { label: "Disclaimer", href: "/disclaimer" },
       ],
