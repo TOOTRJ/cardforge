@@ -43,6 +43,12 @@
 //   12     — M15 title/type right edge 94 → 92.2%W: pips and set symbol were
 //            ~1.8% too far right — the ~94% dark cluster is the bar's right
 //            bevel shading, not the pip edge (confirmed on 4 scans)
+//   13     — Frame PNG rebuilds from the correct Full-Magic-Pack sources:
+//            m15land + saga from the dot-free sets ("375 m15 simple" lands /
+//            "375 m15 saga") and m15pw from mainframe-planeswalker — the
+//            "cut" module twins bake an MSE produced-mana indicator disc
+//            into the title bar's top-left that real cards don't have.
+//            Geometry unchanged (same frames minus the disc).
 // ---------------------------------------------------------------------------
 
-export const CARD_LAYOUT_VERSION = 12;
+export const CARD_LAYOUT_VERSION = 13;
