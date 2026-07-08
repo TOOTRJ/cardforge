@@ -65,7 +65,7 @@ import {
   getPlateDataUrlForPath,
 } from "@/lib/render/card-frames";
 import {
-  LOYALTY_BADGE_POINTS,
+  loyaltyBadgeAssetFor,
   SAGA_MARKER_POINTS,
   loyaltyBadgeShapeFor,
   type FrameProfile,
@@ -353,32 +353,6 @@ function CardImage({
         }}
       />
 
-      {/* Stat overlays. */}
-      {showPT && layout.pt
-        ? StatBake({
-            slot: layout.pt,
-            value: `${card.power ?? "—"}/${card.toughness ?? "—"}`,
-            colorKey,
-            cardWidth: width,
-          })
-        : null}
-      {showLoyalty && layout.loyalty
-        ? StatBake({
-            slot: layout.loyalty,
-            value: String(card.loyalty ?? "—"),
-            colorKey,
-            cardWidth: width,
-          })
-        : null}
-      {showDefense && layout.defense
-        ? StatBake({
-            slot: layout.defense,
-            value: String(card.defense ?? "—"),
-            colorKey,
-            cardWidth: width,
-          })
-        : null}
-
       {/* Title band — name + mana cost. */}
       <Band slot={layout.title} cardWidth={width} italic={isShowcase}>
         <span style={ELLIPSIS}>{title}</span>
@@ -602,6 +576,35 @@ function CardImage({
             cardWidth: width,
             aspect,
             pipOverrides: card.pipOverrides,
+          })
+        : null}
+
+      {/* Stat overlays — AFTER the text blocks: Satori paints in document
+          order, and printed cards draw the P/T plate / starting-loyalty
+          shield OVER the text box edge, never under it (mirrors the
+          preview's z22). */}
+      {showPT && layout.pt
+        ? StatBake({
+            slot: layout.pt,
+            value: `${card.power ?? "—"}/${card.toughness ?? "—"}`,
+            colorKey,
+            cardWidth: width,
+          })
+        : null}
+      {showLoyalty && layout.loyalty
+        ? StatBake({
+            slot: layout.loyalty,
+            value: String(card.loyalty ?? "—"),
+            colorKey,
+            cardWidth: width,
+          })
+        : null}
+      {showDefense && layout.defense
+        ? StatBake({
+            slot: layout.defense,
+            value: String(card.defense ?? "—"),
+            colorKey,
+            cardWidth: width,
           })
         : null}
 
@@ -1185,19 +1188,22 @@ function LoyaltyRowsBake({
             }}
           >
             {ab.cost ? (
-              // The printed loyalty shield — same polygons as the preview.
-              <svg
-                viewBox="0 0 100 100"
-                preserveAspectRatio="none"
+              // The printed loyalty shield — same MSE asset as the preview.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={getPlateDataUrlForPath(loyaltyBadgeAssetFor(ab.cost), "c") ?? ""}
                 width={badgeW}
                 height={badgeH}
-                style={{ position: "absolute", top: 0, left: 0 }}
-              >
-                <polygon
-                  points={LOYALTY_BADGE_POINTS[loyaltyBadgeShapeFor(ab.cost)]}
-                  fill={rows.badgeFillHex}
-                />
-              </svg>
+                alt=""
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "fill",
+                }}
+              />
             ) : null}
             <span
               style={{
@@ -1318,7 +1324,9 @@ function StatBake({
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        zIndex: 15,
+        // Above the text layers (z20/21): printed cards draw the P/T plate
+        // and the starting-loyalty shield OVER the text box edge.
+        zIndex: 22,
       }}
     >
       {plateUrl ? (

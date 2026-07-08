@@ -33,8 +33,8 @@ import {
   resolveSagaChapters,
 } from "@/lib/cards/face-content";
 import {
-  LOYALTY_BADGE_POINTS,
   SAGA_MARKER_POINTS,
+  loyaltyBadgeAssetFor,
   loyaltyBadgeShapeFor,
   resolveColorAsset,
   type FrameProfile,
@@ -852,6 +852,25 @@ function CardFace({
           abilities={loyaltyAbilities}
           sizePct={rulesSizePct}
         />
+      ) : layout.loyaltyRows && usesLoyaltyRows && staticInEditor ? (
+        // Editor-only: an empty planeswalker still shows the striped ability
+        // rows (with a hint) instead of the bare art cut-out reading as a
+        // black box. Never rendered in the gallery or the bake.
+        <LoyaltyRows
+          pipOverrides={pipOverrides}
+          slot={layout.rules}
+          rows={layout.loyaltyRows}
+          abilities={[
+            {
+              cost: null,
+              text: "Loyalty abilities appear here — add them on the Text & stats step.",
+            },
+            { cost: null, text: "" },
+            { cost: null, text: "" },
+          ]}
+          sizePct={rulesSizePct}
+          placeholder
+        />
       ) : isBasicLand ? null : (
       <div
         style={{
@@ -1046,7 +1065,9 @@ function StatOverlay({
   return (
     <div
       className="pointer-events-none absolute flex items-center justify-center"
-      style={{ ...rectStyle(slot.rect), zIndex: 15 }}
+      // Above the text layers (z20/21): printed cards draw the P/T plate and
+      // the starting-loyalty shield OVER the text box edge, never under it.
+      style={{ ...rectStyle(slot.rect), zIndex: 22 }}
     >
       {slot.plateAssetPathTemplate ? (
         /* eslint-disable-next-line @next/next/no-img-element */
@@ -1607,12 +1628,15 @@ function LoyaltyRows({
   abilities,
   sizePct,
   pipOverrides = null,
+  placeholder = false,
 }: {
   slot: TextSlot;
   rows: NonNullable<FrameProfile["loyaltyRows"]>;
   abilities: LoyaltyAbility[];
   sizePct: number;
   pipOverrides?: PipOverrides | null;
+  /** Editor-only empty state — mutes the row text into a hint. */
+  placeholder?: boolean;
 }) {
   return (
     <div
@@ -1654,24 +1678,21 @@ function LoyaltyRows({
             }}
           >
             {ab.cost ? (
-              // The printed loyalty shield: peaked top for +, pointed
+              // The printed loyalty shield asset: peaked top for +, pointed
               // bottom for -, flat hexagon for 0.
-              <svg
-                viewBox="0 0 100 100"
-                preserveAspectRatio="none"
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={loyaltyBadgeAssetFor(ab.cost)}
+                alt=""
                 aria-hidden
                 style={{
                   position: "absolute",
                   inset: 0,
                   width: "100%",
                   height: "100%",
+                  objectFit: "fill",
                 }}
-              >
-                <polygon
-                  points={LOYALTY_BADGE_POINTS[loyaltyBadgeShapeFor(ab.cost)]}
-                  fill={rows.badgeFillHex}
-                />
-              </svg>
+              />
             ) : null}
             <span
               style={{
@@ -1693,7 +1714,13 @@ function LoyaltyRows({
               {ab.cost ?? ""}
             </span>
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
+          <div
+            style={{
+              flex: 1,
+              minWidth: 0,
+              ...(placeholder ? { fontStyle: "italic", opacity: 0.55 } : {}),
+            }}
+          >
             <RulesBody text={ab.text} overrides={pipOverrides} />
           </div>
         </div>

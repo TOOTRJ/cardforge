@@ -53,6 +53,12 @@
 //            the drawn polygon was invisible on the black border); aftermath
 //            bottom-half art window cut to alpha + secondFace.artSlot (user
 //            art was silently dropped; the window was painted white).
+//   15     — stat plates/shields lifted above the text layers (z22 — printed
+//            cards draw them OVER the text box edge; the cream box was
+//            covering the pw shield); loyalty ROW badges are the real MSE
+//            shield assets (loyaltyup/down/naught.png) instead of drawn
+//            polygons; saga gains the standard M15 footer (artist line was
+//            missing entirely).
 // ---------------------------------------------------------------------------
 
-export const CARD_LAYOUT_VERSION = 14;
+export const CARD_LAYOUT_VERSION = 15;
