@@ -10,6 +10,7 @@ import {
   type CardKind,
 } from "@/lib/creator/card-kinds";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
+import { normalizeColorSelection } from "@/lib/creator/card-fields";
 
 const NO_VERIFIED: ReadonlySet<string> = new Set();
 
@@ -247,5 +248,19 @@ describe("basic-land auto-identity", () => {
         subtypes_text: "Forest",
       }),
     ).toBe(false);
+  });
+});
+
+describe("normalizeColorSelection", () => {
+  it("collapses 2+ real colors to multicolor, passes singles through", () => {
+    expect(normalizeColorSelection(["white", "blue"])).toEqual(["multicolor"]);
+    expect(normalizeColorSelection(["red"])).toEqual(["red"]);
+    expect(normalizeColorSelection(["multicolor"])).toEqual(["multicolor"]);
+    expect(normalizeColorSelection(["colorless"])).toEqual(["colorless"]);
+    expect(normalizeColorSelection([])).toEqual([]);
+    // A real color beside colorless keeps the real color.
+    expect(normalizeColorSelection(["colorless", "green"])).toEqual(["green"]);
+    // Duplicates don't fake a multicolor.
+    expect(normalizeColorSelection(["red", "red"])).toEqual(["red"]);
   });
 });

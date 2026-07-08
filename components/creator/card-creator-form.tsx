@@ -105,6 +105,7 @@ import {
 import {
   defaultValuesFor,
   mergeTag,
+  normalizeColorSelection,
   parseSubtypes,
   parseTags,
 } from "@/lib/creator/card-fields";
@@ -811,7 +812,10 @@ export function CardCreatorForm({
     if (patch.color_identity) {
       setValue(
         "color_identity",
-        Array.from(patch.color_identity) as ColorIdentity[],
+        // Single-select color model: 2+ colors collapse to multicolor.
+        normalizeColorSelection(
+          Array.from(patch.color_identity) as ColorIdentity[],
+        ),
         { shouldDirty: true },
       );
     }

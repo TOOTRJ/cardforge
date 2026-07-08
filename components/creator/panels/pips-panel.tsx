@@ -12,7 +12,11 @@ import { CustomPipDialog } from "@/components/creator/custom-pip-dialog";
 import { FieldGroup } from "@/components/creator/field-group";
 import { Button } from "@/components/ui/button";
 import { hidesCost } from "@/lib/creator/steps";
-import { deriveColorIdentity } from "@/lib/creator/card-fields";
+import {
+  deriveColorIdentity,
+  normalizeColorSelection,
+} from "@/lib/creator/card-fields";
+import { pickFrameColorKey } from "@/components/cards/frame-layer";
 import type { FormValues } from "@/lib/creator/form-types";
 import type { PipOverrides } from "@/lib/pips/override";
 
@@ -34,9 +38,23 @@ export function PipsPanel({ frameTemplate, pipOverrides }: PipsPanelProps) {
   const cost = useWatch({ control, name: "cost" }) ?? "";
   const colorIdentity = useWatch({ control, name: "color_identity" }) ?? [];
 
-  // Colors the cost implies that the frame (color identity) isn't wearing yet.
+  // Colors the cost implies. The color model is single-select (2+ colors =
+  // the multicolor frame), so "mismatch" means the cost's FRAME differs from
+  // the current one — a WU cost on the multicolor frame already matches.
   const derived = deriveColorIdentity(cost);
-  const missing = derived.filter((c) => !colorIdentity.includes(c));
+  const target = normalizeColorSelection(derived);
+  const framesDiffer =
+    derived.length > 0 &&
+    pickFrameColorKey(target) !== pickFrameColorKey(colorIdentity);
+  const notWearing = derived.filter((c) => !colorIdentity.includes(c));
+  // Name the colors the frame is missing; when the frames differ but every
+  // cost color is technically in a (legacy multi-value) identity, name the
+  // whole cost instead so the prompt never renders empty.
+  const missing = framesDiffer
+    ? notWearing.length > 0
+      ? notWearing
+      : derived
+    : [];
   // Dismissal is keyed to the cost string, so the prompt reappears the moment a
   // NEW mismatching pip is added but stays hidden after the user waves it off.
   const [dismissedCost, setDismissedCost] = useState<string | null>(null);
@@ -87,7 +105,7 @@ export function PipsPanel({ frameTemplate, pipOverrides }: PipsPanelProps) {
               variant="primary"
               size="sm"
               onClick={() =>
-                setValue("color_identity", derived, { shouldDirty: true })
+                setValue("color_identity", target, { shouldDirty: true })
               }
             >
               Switch
