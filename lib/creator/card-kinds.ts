@@ -276,6 +276,39 @@ export function framesForKind(
   return out;
 }
 
+/** True when the template has at least one PUBLISHED color. */
+export function templateHasAvailableColor(
+  template: FrameTemplate,
+  verifiedKeys: ReadonlySet<string>,
+): boolean {
+  return FRAME_COLOR_KEYS.some((k) =>
+    isFrameComboAvailable(template, k, verifiedKeys),
+  );
+}
+
+/** The first gallery frame for a kind with any published color, or null when
+ *  the whole kind is unpublished. Kind selection falls back through this so
+ *  picking a card type can never land on an unverified frame. */
+export function firstAvailableFrame(
+  kind: CardKind,
+  verifiedKeys: ReadonlySet<string>,
+): FrameChoice | null {
+  return (
+    framesForKind(kind, verifiedKeys).find(
+      (f) => f.availableColorKeys.length > 0,
+    ) ?? null
+  );
+}
+
+/** True when the kind has at least one published frame — drives the kind
+ *  chips' enable/disable in the creator. */
+export function kindHasAvailableFrame(
+  kind: CardKind,
+  verifiedKeys: ReadonlySet<string>,
+): boolean {
+  return firstAvailableFrame(kind, verifiedKeys) !== null;
+}
+
 /** True when the template is one the gallery would offer for the kind. Used
  *  by edit mode to pin a saved-but-mismatched legacy frame ("Current frame")
  *  instead of silently swapping it. */

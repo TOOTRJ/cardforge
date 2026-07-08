@@ -555,10 +555,6 @@ function CardFace({
     lineHeight: layout.rules.lineHeight ?? 1.3,
     aspect,
   });
-  const hasRulesContent = Boolean(
-    face.rulesText?.trim() || face.flavorText?.trim(),
-  );
-
   // Planeswalker ability rows (badged loyalty costs, striped rows) when the
   // frame defines them and the card actually is a planeswalker. Structured
   // rows first, rules_text parsing as the legacy fallback.
@@ -576,6 +572,13 @@ function CardFace({
     face.cardType,
     face.subtypes,
   );
+  // Basic lands print NO rules text — just the big symbol (the creator hides
+  // the field; imported reminder text would smear across the mark).
+  const isBasicLandSymbol =
+    !face.watermark && effectiveWatermark?.size === "large";
+  const hasRulesContent =
+    !isBasicLandSymbol &&
+    Boolean(face.rulesText?.trim() || face.flavorText?.trim());
 
   return (
     <div className="absolute inset-0">
@@ -747,6 +750,26 @@ function CardFace({
 
       {/* Rules — Saga chapter rail or planeswalker ability rows, otherwise the
           normal rules + flavor box. */}
+      {/* Rules-box backdrop — split into its OWN layer so the watermark can
+          sit between it and the text (backdrop z9 < watermark z10 < text
+          z20). Previously the backdrop was the text container's background,
+          which painted over the watermark — basic lands' big mana symbol
+          vanished behind the tinted land text box. */}
+      {layout.rules.backdropHex &&
+      hasRulesContent &&
+      !layout.chapters &&
+      !(layout.loyaltyRows && loyaltyAbilities.length > 0) ? (
+        <div
+          aria-hidden
+          style={{
+            ...rectStyle(layout.rules.rect),
+            zIndex: 9,
+            background: layout.rules.backdropHex,
+            borderRadius: "1.5cqw",
+          }}
+        />
+      ) : null}
+
       {/* Design watermark — faint mark centered in the rules box, above the
           frame PNG but below every text layer. Suppressed where a rail
           replaces the box (saga chapters, planeswalker rows) — printed cards
@@ -770,13 +793,13 @@ function CardFace({
               className={`ms ms-${effectiveWatermark.key}`}
               style={{
                 fontSize: cqw(
+                  // cqw() takes a width FRACTION (it does the ×100 itself);
+                  // heightPct is % of card height, so scale by 0.01 and
+                  // correct by the card aspect (ms glyphs are ~1em tall).
                   layout.rules.rect.heightPct *
-                    watermarkHeightFraction(effectiveWatermark) *
-                    // ms glyphs are ~1em tall; heightPct is % of card height,
-                    // cqw sizes by width — correct by the card aspect.
-                    (layout.orientation === "landscape" ? 5 / 7 : 7 / 5) *
                     0.01 *
-                    100,
+                    watermarkHeightFraction(effectiveWatermark) *
+                    (layout.orientation === "landscape" ? 5 / 7 : 7 / 5),
                 ),
                 color: WATERMARK_INK,
                 lineHeight: 1,
@@ -816,7 +839,7 @@ function CardFace({
           abilities={loyaltyAbilities}
           sizePct={rulesSizePct}
         />
-      ) : (
+      ) : isBasicLandSymbol ? null : (
       <div
         style={{
           ...rectStyle(layout.rules.rect),
@@ -833,12 +856,6 @@ function CardFace({
           lineHeight: layout.rules.lineHeight ?? 1.3,
           color: layout.rules.colorHex,
           textAlign: "left",
-          ...(layout.rules.backdropHex && hasRulesContent
-            ? {
-                background: layout.rules.backdropHex,
-                borderRadius: "1.5cqw",
-              }
-            : {}),
         }}
       >
         {face.rulesText?.trim() ? (

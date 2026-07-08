@@ -221,10 +221,6 @@ function CardImage({
     lineHeight: layout.rules.lineHeight ?? 1.3,
     aspect,
   });
-  const hasRulesContent = Boolean(
-    card.rulesText?.trim() || card.flavorText?.trim(),
-  );
-
   // Planeswalker ability rows (badged loyalty costs, striped rows) when the
   // frame defines them and the card actually is a planeswalker. Structured
   // rows first, rules_text parsing as the legacy fallback — identical
@@ -243,6 +239,13 @@ function CardImage({
     card.cardType,
     card.subtypes,
   );
+  // Basic lands print NO rules text — just the big symbol (identical
+  // suppression to the live preview).
+  const isBasicLandSymbol =
+    !card.watermark && effectiveWatermark?.size === "large";
+  const hasRulesContent =
+    !isBasicLandSymbol &&
+    Boolean(card.rulesText?.trim() || card.flavorText?.trim());
 
   const artW = Math.round((layout.artSlot.widthPct / 100) * width);
   const artH = Math.round((layout.artSlot.heightPct / 100) * height);
@@ -445,6 +448,22 @@ function CardImage({
         </div>
       ) : null}
 
+      {/* Rules-box backdrop — own layer under the watermark (see the
+          preview's twin comment). */}
+      {layout.rules.backdropHex &&
+      hasRulesContent &&
+      !layout.chapters &&
+      !(layout.loyaltyRows && loyaltyAbilities.length > 0) ? (
+        <div
+          style={{
+            ...slotBox(layout.rules.rect),
+            zIndex: 9,
+            background: layout.rules.backdropHex,
+            borderRadius: Math.round(width * 0.015),
+          }}
+        />
+      ) : null}
+
       {/* Design watermark — mirrors the preview layer exactly: centered in
           the rules rect, z above the frame / below text, suppressed where a
           rail replaces the box. Satori-safe: flat img / font glyph +
@@ -516,7 +535,9 @@ function CardImage({
               pipOverrides: card.pipOverrides,
               cardWidth: width,
             })
-          : (
+          : isBasicLandSymbol
+            ? null
+            : (
       <div
         style={{
           ...slotBox(layout.rules.rect),
@@ -532,12 +553,7 @@ function CardImage({
           color: layout.rules.colorHex,
           textAlign: "left",
           zIndex: 20,
-          ...(layout.rules.backdropHex && hasRulesContent
-            ? {
-                background: layout.rules.backdropHex,
-                borderRadius: Math.round(width * 0.015),
-              }
-            : {}),
+
         }}
       >
         {card.rulesText?.trim() ? (

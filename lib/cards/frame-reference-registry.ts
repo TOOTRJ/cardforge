@@ -255,11 +255,45 @@ const SAMPLE_COST: Record<FrameColorKey, string> = {
 /** Placeholder CardPreviewData-shaped content for a (template, color) combo
  *  without a real reference. Kept schema-free (plain object) so this module
  *  stays client-safe; the page casts it where CardPreviewData is expected. */
+// The reference scans for the land templates are BASIC lands (big centered
+// mana symbol, no rules text) — the sample must match or the compare reads
+// as broken. Multicolor land references are nonbasic (Command Tower), so
+// "m" keeps sample rules text.
+const SAMPLE_BASIC_BY_KEY: Partial<Record<FrameColorKey, string>> = {
+  w: "Plains",
+  u: "Island",
+  b: "Swamp",
+  r: "Mountain",
+  g: "Forest",
+  c: "Wastes",
+};
+
 export function sampleFramePreview(template: FrameTemplate, colorKey: FrameColorKey) {
   const isLand = template.endsWith("land");
   const isToken = template.includes("token");
   const isPw = template === "m15pw";
   const isBattle = template === "battle";
+  const basicName = isLand ? SAMPLE_BASIC_BY_KEY[colorKey] : undefined;
+  if (isLand && basicName) {
+    return {
+      title: basicName,
+      cost: null,
+      cardType: "land",
+      supertype: "Basic",
+      subtypes: [basicName],
+      rarity: "common",
+      colorIdentity: SAMPLE_COLOR_IDENTITY[colorKey],
+      rulesText: null,
+      flavorText: null,
+      power: null,
+      toughness: null,
+      loyalty: null,
+      defense: null,
+      artistCredit: "Sample Artist",
+      artUrl: null,
+      frameStyle: { template },
+    };
+  }
   return {
     title: "Sample Card",
     cost: isLand ? null : SAMPLE_COST[colorKey],

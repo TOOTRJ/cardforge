@@ -91,8 +91,10 @@ import { basicLandManaKey } from "@/lib/cards/watermark";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
 import type { FrameProfileOverridesMap } from "@/lib/cards/profile-override";
 import {
+  firstAvailableFrame,
   kindFromCard,
   planKindChange,
+  templateHasAvailableColor,
   type CardKind,
   type KindChangePatch,
   type KindChangePlan,
@@ -592,14 +594,39 @@ export function CardCreatorForm({
   };
 
   const applyKindPatch = (patch: KindChangePatch) => {
+    // The verification gate applies to KIND changes too — a card type pick
+    // must never land on an unpublished frame. When the planned template has
+    // no published color, fall back to the kind's first published frame; if
+    // the whole kind is unpublished (programmatic paths — the chips are
+    // already disabled in the UI), set the type but keep the current frame.
+    const verified = new Set(verifiedFrameKeys);
+    let template = patch.template;
+    if (!templateHasAvailableColor(template, verified)) {
+      const alt = firstAvailableFrame(
+        kindFromCard(patch.card_type, patch.template),
+        verified,
+      );
+      if (alt) {
+        template = alt.template;
+      } else {
+        setValue("card_type", patch.card_type, { shouldDirty: true });
+        if (patch.has_back_face) {
+          setValue("has_back_face", true, { shouldDirty: true });
+        }
+        toast.info(
+          "That card type's frames aren't published yet — keeping the current frame.",
+        );
+        return;
+      }
+    }
     setValue("card_type", patch.card_type, { shouldDirty: true });
-    setValue("frame_style.template", patch.template, { shouldDirty: true });
+    setValue("frame_style.template", template, { shouldDirty: true });
     if (patch.has_back_face) {
       setValue("has_back_face", true, { shouldDirty: true });
     }
     // Switching INTO a rows-driven kind with an empty editor: seed the rows
     // from whatever rules text exists, so prior work stays visible.
-    const nextKind = kindFromCard(patch.card_type, patch.template);
+    const nextKind = kindFromCard(patch.card_type, template);
     if (
       nextKind === "planeswalker" &&
       getValues("loyalty_abilities").length === 0
