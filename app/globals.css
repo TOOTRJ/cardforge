@@ -101,6 +101,10 @@
   --font-display: var(--font-cinzel), Georgia, "Times New Roman", serif;
 
   /* ── Radii ───────────────────────────────────────────────────── */
+  /* One scale: control (buttons/inputs) < card (panels) < frame (hero
+     panels, card tiles). UI-kit components reference these instead of
+     literal rounded-* steps. */
+  --radius-control: 0.375rem;
   --radius-card: 1rem;
   --radius-frame: 1.25rem;
 }
@@ -133,12 +137,18 @@
   --color-subtle: oklch(0.52 0.018 262);
   --color-primary: oklch(0.45 0.14 300);
   --color-primary-foreground: oklch(0.99 0 0);
-  --color-primary-bright: oklch(0.45 0.14 300);
+  /* Text-strength primary, same contract as dark mode but inverted: on a
+     light canvas "bright" means deeper, not lighter. Kept distinct from the
+     fill-strength primary above (9.3:1 vs background). */
+  --color-primary-bright: oklch(0.4 0.15 300);
   --color-accent: oklch(0.6 0.11 84);
   --color-accent-foreground: oklch(0.18 0.02 262);
   --color-danger: oklch(0.55 0.22 25);
-  --color-gold: oklch(0.62 0.1 84);
-  --color-gold-strong: oklch(0.55 0.11 84);
+  /* Gold is used as body-size text (badges, kickers) — these values clear
+     4.5:1 against both background and surface; the previous 0.62/0.55 pair
+     sat at ~3.3-4.4:1. */
+  --color-gold: oklch(0.52 0.11 84);
+  --color-gold-strong: oklch(0.47 0.11 84);
   --color-ember: oklch(0.58 0.16 47);
 }
 
