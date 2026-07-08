@@ -1,0 +1,26 @@
+PipGlyph brand kit
+==================
+
+The mark: the Astral Rose — a compass rose become astrolabe. Graduation
+ticks for the craft of measurement, a violet plane riding the ring, a
+wake of three stars behind it, a cut gem at the heart.
+
+Palette
+  Gold        #d8b26e   (gradient #ecca8a -> #b8904a)
+  Purple      #8e72c9 (deep #6b4d9a)
+  Navy        #0d1320   (surface #1a2030)
+  Foreground  #f2f3f5
+
+Type
+  Display: Cinzel SemiBold (wordmark is outlined — no font needed)
+  Body:    Geist
+
+Usage
+  - Prefer the medallion or plaque variants on backgrounds we don't control.
+  - Keep clear space of at least 25% of the mark's width on all sides.
+  - Don't recolor, rotate, outline, or add effects beyond the provided
+    treatments; use the mono marks for single-ink contexts.
+  - Name: "PipGlyph", one word, capital P and G.
+
+PipGlyph is unofficial Fan Content permitted under the Wizards of the
+Coast Fan Content Policy. Not approved or endorsed by Wizards. pipglyph.com
