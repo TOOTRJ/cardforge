@@ -24,27 +24,30 @@ import path from "node:path";
 import fs from "node:fs";
 
 // ── Config: edit these for each frame set ──────────────────────────────────
+// Mainframe planeswalker cards — the SAME frame as "750 m15 planeswalker
+// cut" but WITHOUT the baked color-indicator disc (real walker fronts have
+// none). {c}card2.png are the tall-textbox variants; we use the short ones.
 const PACK =
-  "/Users/redjester/Projects/other/Full-Magic-Pack/data/magic-modules.mse-include/cards/375 m15 simple";
-const OUT = "public/frames/m15artifact";
-// The M15 ARTIFACT frame (silver-blue acard) — identical for all seven color
-// keys in v1. Real colored artifacts blend a color wash over this frame
-// (artifact_blend_card.png in the pack); a future pass can composite that.
+  "/Users/redjester/Projects/other/Full-Magic-Pack/data/magic-m15-mainframe-planeswalker.mse-style/cards";
+const OUT = "public/frames/m15pw";
+// M15 lands from the SIMPLE set — the "cut" *lcard twins bake an MSE
+// produced-mana indicator disc into the title bar's top-left corner, which
+// real M15 lands don't have. The simple set is the same frame without it.
 const MAP = {
-  w: "acard.jpg",
-  u: "acard.jpg",
-  b: "acard.jpg",
-  r: "acard.jpg",
-  g: "acard.jpg",
-  c: "acard.jpg",
-  m: "acard.jpg",
+  w: "wcard.png",
+  u: "ucard.png",
+  b: "bcard.png",
+  r: "rcard.png",
+  g: "gcard.png",
+  c: "ccard.png",
+  m: "mcard.png",
 };
 // Seed point(s) inside each art window, as fractions of the card (x, y).
-const SEEDS = [[0.5, 0.3]];
+const SEEDS = [[0.5, 0.32], [0.5, 0.8]];
 // Which art-window fill to cut to transparent: "black" (the m15 family) or
 // "white" (the agclassic / Alpha family). Ignored if the window is already
 // alpha-cut in the source (battle/devoid) — the fill just finds nothing.
-const FILL = "black";
+const FILL = "white";
 // Output canvas. Portrait frames are 1500×2100; landscape (battle) is 2100×1500.
 const OUT_W = 1500;
 const OUT_H = 2100;
