@@ -21,7 +21,7 @@ export default async function AdminFeaturedPage() {
   if (!profile?.is_admin) notFound();
 
   let featured: { username: string; displayName: string | null }[] = [];
-  let cardSlots: [
+  const cardSlots: [
     { slot: number; title: string; ownerUsername: string; slug: string } | null,
     { slot: number; title: string; ownerUsername: string; slug: string } | null,
   ] = [null, null];
