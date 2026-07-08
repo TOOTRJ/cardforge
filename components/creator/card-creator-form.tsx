@@ -1120,9 +1120,21 @@ export function CardCreatorForm({
   //                 creator (/create?backFor=…) to build this card's back face.
   const runSubmit = (
     values: FormValues,
-    intent: "publish" | "draft" | "back",
+    requestedIntent: "publish" | "draft" | "back",
   ) => {
     setServerError(null);
+    // No artwork → no gallery (server-enforced in create/updateCardAction):
+    // a Publish click without art saves as a DRAFT and says why, instead of
+    // publishing an unfinished card and redirecting to its public page.
+    const intent =
+      requestedIntent === "publish" && !values.art_url.trim()
+        ? "draft"
+        : requestedIntent;
+    if (intent !== requestedIntent) {
+      toast.info(
+        "Saved as a draft — add artwork to publish it to the gallery.",
+      );
+    }
     const createBackAfter = intent === "back";
     const forcedVisibility =
       intent === "publish" ? "public" : intent === "draft" ? "private" : null;
@@ -1243,7 +1255,13 @@ export function CardCreatorForm({
       art_url: values.art_url.trim() || undefined,
       art_position: values.art_position,
       frame_style: values.frame_style,
-      visibility: forcedVisibility ?? values.visibility,
+      // Same no-art rule for the visibility dropdown (covers the "create
+      // back face" save path, where intent doesn't force a visibility).
+      visibility:
+        (forcedVisibility ?? values.visibility) === "public" &&
+        !values.art_url.trim()
+          ? "private"
+          : forcedVisibility ?? values.visibility,
       back_face: backFacePayload,
       // v2 back face: a uuid links a card as the back; empty → null clears.
       back_card_id: values.back_card_id || null,

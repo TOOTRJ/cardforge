@@ -348,7 +348,14 @@ export async function createCardAction(
     art_url: data.art_url ?? null,
     art_position: data.art_position ?? {},
     frame_style: data.frame_style ?? {},
-    visibility: data.visibility,
+    // No artwork → no gallery. A public save without art lands as a draft
+    // (private) so test/unfinished cards never occupy gallery space; the
+    // creator predicts this client-side and tells the user. Unlisted stays
+    // allowed — link-only sharing of a WIP is deliberate and gallery-free.
+    visibility:
+      data.visibility === "public" && !data.art_url
+        ? "private"
+        : data.visibility,
     parent_card_id: data.parent_card_id ?? null,
     // Back face (chunk 10): null when undefined or explicitly cleared,
     // jsonb object when the user has filled in DFC content.
@@ -517,6 +524,19 @@ export async function updateCardAction(
   if (data.art_position !== undefined) update.art_position = data.art_position;
   if (data.frame_style !== undefined) update.frame_style = data.frame_style;
   if (data.visibility !== undefined) update.visibility = data.visibility;
+  // No artwork → no gallery (same rule as create). The EFFECTIVE art is the
+  // patched value when present, else what the row already stores — so both
+  // "publish an artless card" and "remove the art from a public card"
+  // demote to draft.
+  {
+    const effectiveArt =
+      data.art_url !== undefined ? data.art_url : existing.art_url;
+    const effectiveVisibility =
+      update.visibility !== undefined ? update.visibility : existing.visibility;
+    if (!effectiveArt && effectiveVisibility === "public") {
+      update.visibility = "private";
+    }
+  }
   if (data.parent_card_id !== undefined) update.parent_card_id = data.parent_card_id;
   // Back face: `null` clears it; an object replaces it whole. Omitting
   // the field leaves whatever the DB already had untouched.
