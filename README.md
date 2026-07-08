@@ -42,6 +42,8 @@ npx playwright test               # full suite, on its own :3100 server
 | `scripts/seed-e2e.mjs` | Seed the e2e user into the **local** stack (refuses non-local URLs). |
 | `scripts/rebake-renders.mjs` | Re-render stored card PNGs after a renderer/layout change (bump `CARD_LAYOUT_VERSION` first — see `lib/cards/layout-version.ts`). |
 | `scripts/visual-audit.mjs` | Side-by-side render comparisons against reference scans. |
+| `scripts/generate-brand-assets.mjs` | Regenerate the brand kit (`public/brand/*` + `app/favicon.ico`) from `lib/brand` after any mark/palette change. Node ≥ 23.6. |
+| `scripts/build-wordmark-path.mjs` | One-time: re-outline the Cinzel wordmark into `lib/brand/wordmark.ts` (only if the wordmark text/face changes). |
 
 ## Architecture notes
 
