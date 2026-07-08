@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import type { Rarity } from "@/types/card";
+import { RARITY_INK } from "@/lib/brand/constants";
 
 // ---------------------------------------------------------------------------
 // SetSymbol — the small set-symbol pip at the right end of the type line.
@@ -11,14 +12,9 @@ import type { Rarity } from "@/types/card";
 // font; its CSS is imported globally in app/globals.css.
 // ---------------------------------------------------------------------------
 
-const RARITY_COLOR: Record<Rarity, string> = {
-  // Standard real-card rarity inks. Common a flat dark stamp, uncommon polished
-  // silver, rare gold, mythic the orange-red of recent sets.
-  common: "#0f0f12",
-  uncommon: "#a5a5b5",
-  rare: "#c9a14a",
-  mythic: "#d35327",
-};
+// Standard real-card rarity inks (see lib/brand/constants for why this is
+// a different palette than the identity panel's gem tints).
+const RARITY_COLOR: Record<Rarity, string> = RARITY_INK;
 
 export function setSymbolColor(rarity: Rarity | null): string {
   return rarity ? RARITY_COLOR[rarity] : RARITY_COLOR.common;

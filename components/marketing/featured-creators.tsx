@@ -17,7 +17,7 @@ export async function FeaturedCreators() {
   return (
     <section aria-label="Featured creators" className="mt-10 flex flex-col gap-6">
       {creators.map((c) => {
-        const accent = c.accentColor ?? "#c9a54c";
+        const accent = c.accentColor ?? "#d8b26e";
         const name = c.displayName || `@${c.username}`;
         return (
           <div

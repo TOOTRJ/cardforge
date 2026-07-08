@@ -59,3 +59,30 @@ export const MANA_PIPS = [
 ] as const;
 
 export const OG_SIZE = { width: 1200, height: 630 } as const;
+
+// ---------------------------------------------------------------------------
+// Rarity palettes. These are two intentionally DIFFERENT palettes for the
+// same semantic scale — do not merge them:
+//   RARITY_INK  — printed set-symbol ink tones (flat dark stamp, polished
+//                 silver, gold, mythic orange-red), used where the symbol
+//                 mimics a real printed card (components/cards/set-symbol).
+//   RARITY_TINT — bright gem tints for UI chips on dark surfaces, used in
+//                 the creator's identity panel where the ink tones would be
+//                 illegible at chip size.
+// ---------------------------------------------------------------------------
+
+type RarityKey = "common" | "uncommon" | "rare" | "mythic";
+
+export const RARITY_INK: Record<RarityKey, string> = {
+  common: "#0f0f12",
+  uncommon: "#a5a5b5",
+  rare: "#c9a14a",
+  mythic: "#d35327",
+};
+
+export const RARITY_TINT: Record<RarityKey, string> = {
+  common: "#cfcfd4",
+  uncommon: "#c6e2f5",
+  rare: "#f3d57c",
+  mythic: "#f08a4a",
+};

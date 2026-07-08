@@ -36,7 +36,7 @@ Checkout + Customer Portal + a thin webhook → Supabase + app-managed credits**
 supabase db push          # or apply via the Supabase MCP / dashboard
 ```
 
-> **Heads-up (verified on a real branch):** the CardForge project has **no
+> **Heads-up (verified on a real branch):** the PipGlyph project has **no
 > tracked migration history** (its schema was applied out-of-band), so a plain
 > `supabase db push` may try to replay 0001–0027 and choke on a non-idempotent
 > earlier migration. Safest path: apply **just 0027** via the Supabase SQL editor
