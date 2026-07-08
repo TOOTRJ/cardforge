@@ -26,6 +26,7 @@ import {
   CARD_KIND_VALUES,
   KIND_DEFS,
   framesForKind,
+  kindHasAvailableFrame,
   type CardKind,
   type FrameChoice,
 } from "@/lib/creator/card-kinds";
@@ -140,14 +141,25 @@ export function CardSetupPanel({
   );
   const colorKey = pickFrameColorKey(colorIdentity);
 
-  const kindOptions: ChipOption<CardKind>[] = CARD_KIND_VALUES.map((k) => ({
-    value: k,
-    label: KIND_DEFS[k].label,
-    description: KIND_HINTS[k],
-    leading: (
-      <FrameThumb template={KIND_DEFS[k].previewTemplate} colorKey={colorKey} />
-    ),
-  }));
+  const kindOptions: ChipOption<CardKind>[] = CARD_KIND_VALUES.map((k) => {
+    // A kind is pickable only when at least one of its frames has a
+    // published color — otherwise selecting the type would bypass the
+    // verification gate and land on an unreviewed frame.
+    const available = k === kind || kindHasAvailableFrame(k, verifiedKeys);
+    return {
+      value: k,
+      label: KIND_DEFS[k].label,
+      description: available ? KIND_HINTS[k] : "Frames awaiting verification",
+      leading: (
+        <FrameThumb
+          template={KIND_DEFS[k].previewTemplate}
+          colorKey={colorKey}
+        />
+      ),
+      disabled: !available,
+      badge: available ? undefined : <SoonBadge />,
+    };
+  });
 
   const colorSummary =
     colorIdentity.length === 0
