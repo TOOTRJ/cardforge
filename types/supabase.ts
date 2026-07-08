@@ -253,6 +253,32 @@ export type Database = {
           },
         ];
       };
+      featured_cards: {
+        Row: {
+          card_id: string;
+          created_at: string;
+          slot: number;
+        };
+        Insert: {
+          card_id: string;
+          created_at?: string;
+          slot: number;
+        };
+        Update: {
+          card_id?: string;
+          created_at?: string;
+          slot?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "featured_cards_card_id_fkey";
+            columns: ["card_id"];
+            isOneToOne: false;
+            referencedRelation: "cards";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       follows: {
         Row: {
           created_at: string;

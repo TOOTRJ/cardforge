@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FileDown, Sparkles, Type } from "lucide-react";
+import { Crown, FileDown, Sparkles, Type } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CompassStar } from "@/components/ui/compass-star";
 import { StarfieldBackdrop } from "@/components/ui/starfield-backdrop";
@@ -22,7 +22,19 @@ const MICRO_FEATURES = [
   { icon: FileDown, label: "Print-ready exports" },
 ];
 
-export function MarketingHero() {
+export type HeroFeaturedCard = {
+  slug: string;
+  title: string;
+  imageUrl: string;
+  owner: { username: string; displayName: string | null };
+};
+
+export function MarketingHero({
+  featured = [],
+}: {
+  /** Admin-curated hero cards (0053). Empty → the placeholder pair below. */
+  featured?: HeroFeaturedCard[];
+}) {
   return (
     <section className="relative overflow-hidden border-b border-border/40">
       <div className="absolute inset-0 bg-radial-glow" aria-hidden />
@@ -96,33 +108,84 @@ export function MarketingHero() {
           </p>
         </div>
 
-        {/* Hero card preview — two tilted placeholder cards */}
+        {/* Hero card preview — admin-featured community cards when curated,
+            otherwise the two tilted placeholder cards. */}
         <div className="relative">
           <div className="absolute -inset-8 -z-10 rounded-[2rem] bg-linear-to-br from-primary/25 via-gold/10 to-transparent blur-2xl" aria-hidden />
-          <div className="grid grid-cols-2 gap-4 sm:gap-6">
-            <CardPreviewPlaceholder
-              className="rotate-[-4deg]"
-              card={{
-                title: "Cinderclaws Drake",
-                cost: "{2}{R}{R}",
-                cardType: "creature",
-                rarity: "mythic",
-                colorIdentity: "red",
-                artistCredit: "You",
-              }}
-            />
-            <CardPreviewPlaceholder
-              className="mt-12 rotate-[4deg]"
-              card={{
-                title: "Veilwarden Sage",
-                cost: "{1}{U}{U}",
-                cardType: "creature",
-                rarity: "rare",
-                colorIdentity: "blue",
-                artistCredit: "You",
-              }}
-            />
-          </div>
+          {featured.length > 0 ? (
+            <div className="flex flex-col gap-4">
+              <span className="inline-flex items-center gap-1.5 self-center rounded-full border border-gold/50 bg-gold/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-gold-strong">
+                <Crown className="h-3.5 w-3.5" aria-hidden />
+                Featured cards
+              </span>
+              <div
+                className={
+                  featured.length === 1
+                    ? "mx-auto grid max-w-xs grid-cols-1"
+                    : "grid grid-cols-2 gap-4 sm:gap-6"
+                }
+              >
+                {featured.slice(0, 2).map((card, i) => (
+                  <div
+                    key={card.slug}
+                    className={
+                      featured.length === 1
+                        ? ""
+                        : i === 0
+                          ? "rotate-[-4deg]"
+                          : "mt-12 rotate-[4deg]"
+                    }
+                  >
+                    <Link
+                      href={`/card/${card.owner.username}/${card.slug}`}
+                      className="group block"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={card.imageUrl}
+                        alt={card.title}
+                        className="w-full rounded-xl border border-gold/30 shadow-xl transition-transform group-hover:-translate-y-1"
+                      />
+                    </Link>
+                    <p className="mt-2 text-center text-xs text-muted">
+                      by{" "}
+                      <Link
+                        href={`/profile/${card.owner.username}`}
+                        className="font-medium text-primary-bright hover:underline"
+                      >
+                        {card.owner.displayName ?? `@${card.owner.username}`}
+                      </Link>
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4 sm:gap-6">
+              <CardPreviewPlaceholder
+                className="rotate-[-4deg]"
+                card={{
+                  title: "Cinderclaws Drake",
+                  cost: "{2}{R}{R}",
+                  cardType: "creature",
+                  rarity: "mythic",
+                  colorIdentity: "red",
+                  artistCredit: "You",
+                }}
+              />
+              <CardPreviewPlaceholder
+                className="mt-12 rotate-[4deg]"
+                card={{
+                  title: "Veilwarden Sage",
+                  cost: "{1}{U}{U}",
+                  cardType: "creature",
+                  rarity: "rare",
+                  colorIdentity: "blue",
+                  artistCredit: "You",
+                }}
+              />
+            </div>
+          )}
         </div>
       </div>
     </section>
