@@ -17,13 +17,11 @@ import {
 } from "@/components/creator/field-group";
 import { RARITY_VALUES, type Rarity } from "@/types/card";
 import type { FormValues } from "@/lib/creator/form-types";
+import { RARITY_TINT } from "@/lib/brand/constants";
 
-const RARITY_COLOR_HEX: Record<Rarity, string> = {
-  common: "#cfcfd4",
-  uncommon: "#c6e2f5",
-  rare: "#f3d57c",
-  mythic: "#f08a4a",
-};
+// Bright gem tints for chips on dark surfaces (see lib/brand/constants for
+// why this differs from the set-symbol's printed ink palette).
+const RARITY_COLOR_HEX: Record<Rarity, string> = RARITY_TINT;
 
 function SmallGem({ color }: { color: string }) {
   // Tiny diamond gem, matches the larger RarityGem in the card preview but

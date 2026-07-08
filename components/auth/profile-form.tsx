@@ -285,7 +285,7 @@ function ColorField({
 }: Omit<FieldProps, "type" | "value" | "readOnly" | "autoComplete">) {
   const fallback = defaultValue && /^#[0-9a-fA-F]{6}$/.test(defaultValue)
     ? defaultValue
-    : "#d4af37";
+    : "#d8b26e"; // BRAND.gold — the one true brand gold
   return (
     <label className="flex flex-col gap-1.5">
       <span className="text-xs font-semibold uppercase tracking-wider text-subtle">
@@ -309,7 +309,7 @@ function ColorField({
           name={name}
           type="text"
           defaultValue={defaultValue}
-          placeholder="#d4af37"
+          placeholder="#d8b26e"
           aria-invalid={error ? "true" : undefined}
           className={cn(
             "h-10 flex-1 rounded-md border bg-background/60 px-3 font-mono text-sm text-foreground placeholder:text-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
