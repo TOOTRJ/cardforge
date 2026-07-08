@@ -17,6 +17,8 @@ export type NavItem = {
    *  Create nav entry, which is hidden once the user has the prominent
    *  "New card" CTA in the right-side toolbar. */
   anonOnly?: boolean;
+  /** Small pill rendered after the label (e.g. "Soon" for stub pages). */
+  badge?: string;
 };
 
 export const siteConfig = {
@@ -34,6 +36,7 @@ export const siteConfig = {
   primaryNav: [
     { label: "Gallery", href: "/gallery" },
     { label: "Sets", href: "/sets" },
+    { label: "Decks", href: "/decks", badge: "Soon" },
     { label: "Challenges", href: "/challenges" },
     { label: "Guides", href: "/articles" },
     { label: "Pricing", href: "/pricing" },

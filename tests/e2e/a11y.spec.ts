@@ -20,6 +20,7 @@ const PAGES = [
   "/",
   "/login",
   "/gallery",
+  "/decks",
   "/challenges",
   "/faq",
   "/articles",

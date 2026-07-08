@@ -58,6 +58,11 @@ export function NavLinks({
             )}
           >
             {item.label}
+            {item.badge ? (
+              <span className="ml-1.5 rounded-full border border-border/70 bg-elevated px-1.5 py-px align-middle text-[9px] font-semibold uppercase tracking-wide text-subtle">
+                {item.badge}
+              </span>
+            ) : null}
           </Link>
         );
       })}
