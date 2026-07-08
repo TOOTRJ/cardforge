@@ -1,22 +1,17 @@
 import type { ReactNode } from "react";
+import { BRAND, MANA_PIPS, OG_SIZE } from "@/lib/brand/constants";
+import { BrandMarkTile } from "@/lib/brand/glyph";
 
 // ---------------------------------------------------------------------------
 // Shared chrome for dynamic Open Graph images (challenge / set / profile
 // fallbacks). Mirrors the visual language of the site-wide
 // app/opengraph-image.tsx: dark gradient, gold brand lockup, WUBRG pip
 // strip. Rendered by Satori via next/og — every multi-child <div> must
-// declare display:flex, and colors are literal (no CSS variables).
+// declare display:flex, and colors are literal (no CSS variables); the
+// brand literals live in lib/brand/constants.
 // ---------------------------------------------------------------------------
 
-export const OG_SIZE = { width: 1200, height: 630 };
-
-export const MANA_PIPS = [
-  { color: "#f0ede0", label: "W" },
-  { color: "#4a90d9", label: "U" },
-  { color: "#9b72cf", label: "B" },
-  { color: "#e05252", label: "R" },
-  { color: "#4caf72", label: "G" },
-];
+export { MANA_PIPS, OG_SIZE };
 
 /** Fetch a remote image into a data URI so Satori never does its own
  *  network fetch (which would fail the whole render on a dead URL).
@@ -42,46 +37,13 @@ export async function fetchImageAsDataUri(
 export function BrandLockup() {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-      <div
-        style={{
-          width: 56,
-          height: 56,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          background: "#111827",
-          borderRadius: 12,
-          border: "2px solid #d8b26e",
-        }}
-      >
-        <svg width="34" height="34" viewBox="0 0 32 32" fill="none">
-          <circle
-            cx="16"
-            cy="16"
-            r="13.5"
-            stroke="#d8b26e"
-            strokeWidth="1.2"
-            opacity="0.55"
-          />
-          <path
-            d="M16 3.4 L18.3 13.7 L28.6 16 L18.3 18.3 L16 28.6 L13.7 18.3 L3.4 16 L13.7 13.7 Z"
-            fill="#d8b26e"
-          />
-          <path
-            d="M22.2 9.8 L24.4 7.6 M9.8 22.2 L7.6 24.4 M22.2 22.2 L24.4 24.4 M9.8 9.8 L7.6 7.6"
-            stroke="#8e72c9"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            opacity="0.9"
-          />
-        </svg>
-      </div>
+      <BrandMarkTile size={56} />
       <span
         style={{
           fontSize: 26,
           letterSpacing: 5,
           textTransform: "uppercase",
-          color: "#d8b26e",
+          color: BRAND.gold,
           fontWeight: 600,
         }}
       >
@@ -104,8 +66,8 @@ export function OgShell({ children }: { children: ReactNode }) {
         padding: "64px 96px",
         gap: 22,
         background:
-          "linear-gradient(135deg, #0d1320 0%, #1a2030 50%, #0d1320 100%)",
-        color: "#f2f3f5",
+          `linear-gradient(135deg, ${BRAND.navy} 0%, ${BRAND.surface} 50%, ${BRAND.navy} 100%)`,
+        color: BRAND.foreground,
         fontFamily: "system-ui, sans-serif",
         position: "relative",
         overflow: "hidden",
@@ -159,7 +121,7 @@ export function OgShell({ children }: { children: ReactNode }) {
           display: "flex",
           alignItems: "center",
           fontSize: 18,
-          color: "#6e6248",
+          color: BRAND.bronze,
           letterSpacing: 2,
           textTransform: "uppercase",
         }}
@@ -177,7 +139,7 @@ export function OgEyebrow({ children }: { children: ReactNode }) {
         fontSize: 22,
         letterSpacing: 4,
         textTransform: "uppercase",
-        color: "#8e72c9",
+        color: BRAND.purple,
         fontWeight: 600,
       }}
     >
@@ -196,8 +158,8 @@ export function OgChip({
 }) {
   const palette =
     tone === "gold"
-      ? { border: "#d8b26e", color: "#d8b26e", bg: "rgba(216,178,110,0.12)" }
-      : { border: "#3a4256", color: "#9aa3b5", bg: "rgba(154,163,181,0.10)" };
+      ? { border: BRAND.gold, color: BRAND.gold, bg: "rgba(216,178,110,0.12)" }
+      : { border: "#3a4256", color: BRAND.muted, bg: "rgba(154,163,181,0.10)" };
   return (
     <div
       style={{
