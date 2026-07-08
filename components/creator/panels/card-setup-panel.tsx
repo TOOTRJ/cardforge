@@ -258,9 +258,13 @@ export function CardSetupPanel({
           ): ChipOption<FrameTemplate> => {
             const available = choice.availableColorKeys.length > 0;
             const isShowcase = choice.group === "showcase";
+            const setLabel = FRAME_SET_LABELS[FRAME_TEMPLATE_SET[choice.template]];
+            const tplLabel = FRAME_TEMPLATE_LABELS[choice.template];
             const label = isShowcase
-              ? `${FRAME_SET_LABELS[FRAME_TEMPLATE_SET[choice.template]]} — ${FRAME_TEMPLATE_LABELS[choice.template]}`
-              : FRAME_TEMPLATE_LABELS[choice.template];
+              ? setLabel === tplLabel
+                ? tplLabel
+                : `${setLabel} — ${tplLabel}`
+              : tplLabel;
             const colorAvailable = isFrameComboAvailable(
               choice.template,
               colorKey,

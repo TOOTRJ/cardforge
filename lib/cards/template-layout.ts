@@ -1303,6 +1303,124 @@ const TARKIRGHOSTFIRE = borderlessShowcase("Ghostfire", {
   ptInk: INK_DARK,
 });
 
+// ---------------------------------------------------------------------------
+// 2026-07 variation frames (scripts/build-variation-frames.mjs). Geometry
+// from the MSE style specs (375×523 / 750×1046 → percent); fine-tune in the
+// admin layout editor before verifying — all five start unpublished.
+// ---------------------------------------------------------------------------
+
+// Extended Art — M15 skeleton; the art window is tall and the frame has no
+// side borders, so art bleeds to the card edges beside the white text box.
+const EXTENDEDART: FrameProfile = {
+  ...M15,
+  label: "Extended Art",
+  artSlot: { topPct: 11.9, leftPct: 4, widthPct: 92, heightPct: 48.4 },
+  rules: {
+    ...M15.rules,
+    rect: { topPct: 60.5, leftPct: 9.1, widthPct: 82.9, heightPct: 29 },
+  },
+};
+
+// Zendikar Expedition land — dark stone frame, art fills the upper 2/3,
+// translucent dark text box over the art (MSE text 29,315 314×112).
+const EXPEDITIONLAND: FrameProfile = {
+  ...M15,
+  label: "Expedition Land",
+  hideCost: true,
+  artSlot: { topPct: 11.5, leftPct: 4, widthPct: 92, heightPct: 70 },
+  title: {
+    ...M15.title,
+    colorHex: INK_LIGHT,
+    shadowCss: SHOWCASE_SHADOW,
+  },
+  type: {
+    ...M15.type,
+    colorHex: INK_LIGHT,
+    shadowCss: SHOWCASE_SHADOW,
+  },
+  rules: {
+    rect: { topPct: 60.5, leftPct: 8, widthPct: 83.5, heightPct: 21 },
+    sizePct: 0.0373,
+    colorHex: INK_LIGHT,
+    vAlign: "start",
+    font: "body",
+    lineHeight: 1.3,
+    backdropHex: "rgba(8,8,10,0.72)",
+  },
+  footer: { ...M15.footer!, colorHex: INK_LIGHT },
+};
+
+// Nyx constellation — M15 layout at 750×1046 with a starfield border and a
+// baked-in translucent dark text box (light ink).
+const NYX: FrameProfile = {
+  ...M15,
+  label: "Nyx Constellation",
+  artSlot: { topPct: 11.2, leftPct: 6, widthPct: 88, heightPct: 70 },
+  title: { ...M15.title, colorHex: INK_LIGHT, shadowCss: SHOWCASE_SHADOW },
+  type: { ...M15.type, colorHex: INK_LIGHT, shadowCss: SHOWCASE_SHADOW },
+  rules: { ...M15.rules, colorHex: INK_LIGHT },
+  footer: { ...M15.footer!, colorHex: INK_LIGHT },
+};
+
+// Full art (Zendikar hedron) — edge-to-edge art, floating title bar, and a
+// baked-in translucent text box in the bottom quarter.
+const FULLART: FrameProfile = {
+  ...M15,
+  label: "Full Art",
+  artSlot: { topPct: 2.9, leftPct: 4, widthPct: 92, heightPct: 88.3 },
+  title: {
+    ...M15.title,
+    rect: { topPct: 5.4, leftPct: 8.5, widthPct: 83, heightPct: 5 },
+  },
+  type: {
+    rect: { topPct: 73.6, leftPct: 8.5, widthPct: 83, heightPct: 4.2 },
+    sizePct: 0.0347,
+    colorHex: INK_LIGHT,
+    weight: 600,
+    font: "display",
+    shadowCss: SHOWCASE_SHADOW,
+  },
+  rules: {
+    rect: { topPct: 78.6, leftPct: 8, widthPct: 84, heightPct: 13.5 },
+    sizePct: 0.034,
+    colorHex: INK_LIGHT,
+    vAlign: "start",
+    font: "body",
+    lineHeight: 1.28,
+  },
+  footer: { ...M15.footer!, colorHex: INK_LIGHT },
+};
+
+// Full-art basic land — floating name + type bars over edge-to-edge art; the
+// big mana symbol comes from the basic-land watermark (deliberately not
+// baked into the frame, so it stays tintable and overridable).
+const FULLARTLAND: FrameProfile = {
+  ...M15,
+  label: "Full-Art Basic Land",
+  hideCost: true,
+  artSlot: { topPct: 0, leftPct: 0, widthPct: 100, heightPct: 100 },
+  title: {
+    ...M15.title,
+    rect: { topPct: 5.6, leftPct: 9, widthPct: 80, heightPct: 4.6 },
+  },
+  type: {
+    ...M15.type,
+    rect: { topPct: 85.4, leftPct: 18, widthPct: 66, heightPct: 4.2 },
+  },
+  rules: {
+    rect: { topPct: 16, leftPct: 15, widthPct: 70, heightPct: 62 },
+    sizePct: 0.0373,
+    colorHex: INK_LIGHT,
+    font: "body",
+  },
+  footer: {
+    ...M15.footer!,
+    rect: { topPct: 93.2, leftPct: 6.5, widthPct: 87, heightPct: 3 },
+    colorHex: INK_LIGHT,
+    shadowCss: OUTLINE_SHADOW,
+  },
+};
+
 const PROFILES: Record<FrameTemplate, FrameProfile> = {
   m15: M15,
   m15land: M15LAND,
@@ -1330,6 +1448,11 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   tarkirdragon: TARKIRDRAGON,
   tarkirdraconic: TARKIRDRACONIC,
   tarkirghostfire: TARKIRGHOSTFIRE,
+  extendedart: EXTENDEDART,
+  fullart: FULLART,
+  fullartland: FULLARTLAND,
+  expeditionland: EXPEDITIONLAND,
+  nyx: NYX,
   retro: RETRO,
   retroland: RETROLAND,
   modern: MODERN,
