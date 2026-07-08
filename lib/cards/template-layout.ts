@@ -156,7 +156,6 @@ export type FrameProfile = {
    *  printed M15 planeswalkers — instead of the plain text body. Lines without
    *  a leading loyalty cost (static abilities) render unbadged. */
   loyaltyRows?: {
-    badgeFillHex: string;
     badgeTextHex: string;
     /** Alternating row backdrops (odd/even), translucent over the art. */
     stripeAHex: string;
@@ -225,22 +224,27 @@ export function resolveColorAsset(pathTemplate: string, colorKey: string): strin
 // near-black; values that sit directly on the frame (footer on a dark border,
 // loyalty on a drawn badge) flip to a warm white.
 // ---------------------------------------------------------------------------
-// Printed-MTG badge silhouettes (SVG polygon points in a 0-100 box), shared
+// Printed-MTG loyalty badges — the real MSE mainframe-planeswalker shield
+// assets (public/frames/m15pw/loyalty*.png, silver rim + black fill), shared
 // by the live preview and the Satori bake so both draw identical icons.
-// Loyalty: +N = peaked top, -N = pointed bottom, 0/static = flat hexagon.
-// Saga markers: the flat-top crest that tapers to a bottom point.
-export const LOYALTY_BADGE_POINTS = {
-  up: "0,26 50,0 100,26 100,100 0,100",
-  down: "0,0 100,0 100,74 50,100 0,74",
-  zero: "6,0 94,0 100,50 94,100 6,100 0,50",
+// +N = peaked top, -N = pointed bottom, 0/static = flat hexagon.
+const LOYALTY_BADGE_ASSETS = {
+  up: "/frames/m15pw/loyaltyup.png",
+  down: "/frames/m15pw/loyaltydown.png",
+  zero: "/frames/m15pw/loyaltynaught.png",
 } as const;
 
 export function loyaltyBadgeShapeFor(
   cost: string,
-): keyof typeof LOYALTY_BADGE_POINTS {
+): keyof typeof LOYALTY_BADGE_ASSETS {
   if (cost.startsWith("+")) return "up";
   if (cost.startsWith("-") || cost.startsWith("\u2212")) return "down";
   return "zero";
+}
+
+/** The badge PNG for a loyalty cost ("+1" → the peaked-top shield). */
+export function loyaltyBadgeAssetFor(cost: string): string {
+  return LOYALTY_BADGE_ASSETS[loyaltyBadgeShapeFor(cost)];
 }
 
 export const SAGA_MARKER_POINTS = "0,0 100,0 100,62 50,100 0,62";
@@ -436,7 +440,6 @@ const M15PW: FrameProfile = {
   // Printed planeswalkers stripe each ability row and badge its loyalty cost
   // in the left rail; parseLoyaltyAbilities supplies the rows.
   loyaltyRows: {
-    badgeFillHex: "#141008",
     badgeTextHex: "#f5f0e4",
     stripeAHex: "rgba(244,238,226,0.78)",
     stripeBHex: "rgba(229,221,202,0.78)",
@@ -794,6 +797,15 @@ const SAGA: FrameProfile = {
     markerFillHex: "#1c1712",
     markerTextHex: "#f4eee2",
     dividerHex: "rgba(40,32,22,0.35)",
+  },
+  // Standard M15-family bottom border — same artist line as M15.
+  footer: {
+    rect: { topPct: 94.6, leftPct: 6.5, widthPct: 87, heightPct: 3.2 },
+    sizePct: 0.019,
+    colorHex: INK_LIGHT,
+    uppercase: true,
+    letterSpacingEm: 0.06,
+    font: "display",
   },
 };
 
