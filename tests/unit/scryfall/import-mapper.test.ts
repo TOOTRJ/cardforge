@@ -112,8 +112,10 @@ describe("parseTypeLine", () => {
 
 describe("parseColorIdentity", () => {
   it("maps W/U/B/R/G to the readable enum", () => {
+    // 2+ colors collapse to multicolor — the creator's color model is
+    // single-select (one frame dress per card).
     const card = fixture({ color_identity: ["W", "U"] });
-    expect(parseColorIdentity(card)).toEqual(["white", "blue"]);
+    expect(parseColorIdentity(card)).toEqual(["multicolor"]);
   });
 
   it("falls back to `colors` when color_identity is missing", () => {

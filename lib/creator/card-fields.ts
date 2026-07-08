@@ -220,6 +220,20 @@ const COST_COLOR_NAME: Record<string, ColorIdentity> = {
   G: "green",
 };
 
+/** Collapse a color list to the creator's SINGLE-select model: two or more
+ *  real colors become ["multicolor"] (the frame system has one multicolor
+ *  dress, not per-pair blends). Stored cards keep the array shape. */
+export function normalizeColorSelection(
+  colors: readonly ColorIdentity[],
+): ColorIdentity[] {
+  const real = [...new Set(colors)].filter(
+    (c) => c !== "colorless" && c !== "multicolor",
+  );
+  if (colors.includes("multicolor") || real.length > 1) return ["multicolor"];
+  if (real.length === 1) return real;
+  return colors.includes("colorless") ? ["colorless"] : [];
+}
+
 export function deriveColorIdentity(cost: string): ColorIdentity[] {
   const found: ColorIdentity[] = [];
   const add = (key: string) => {

@@ -258,9 +258,10 @@ export function frameTemplateFromScryfall(
 }
 
 /**
- * Best-effort: pull a normalized color identity list from either Scryfall's
+ * Best-effort: pull a normalized color identity from either Scryfall's
  * `color_identity` (preferred — accounts for lands and hybrid mana) or
- * `colors` as a fallback.
+ * `colors` as a fallback. Two or more colors collapse to ["multicolor"] —
+ * the creator's color model is single-select (one frame dress per card).
  */
 export function parseColorIdentity(
   card: ScryfallCard,
@@ -271,6 +272,7 @@ export function parseColorIdentity(
     const mapped = SCRYFALL_COLOR_TO_IDENTITY[code];
     if (mapped && !out.includes(mapped)) out.push(mapped);
   }
+  if (out.length > 1) return ["multicolor"];
   // Empty identity means "colorless" — surface that so the form picks it up.
   if (out.length === 0) out.push("colorless");
   return out.filter((v) =>

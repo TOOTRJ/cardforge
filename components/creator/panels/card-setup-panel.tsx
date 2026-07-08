@@ -175,10 +175,13 @@ export function CardSetupPanel({
     };
   });
 
-  const colorSummary =
-    colorIdentity.length === 0
-      ? "Colorless"
-      : colorIdentity.map((c) => c[0].toUpperCase() + c.slice(1)).join(" + ");
+  const colorSummary = (() => {
+    const c =
+      colorIdentity.length > 1
+        ? "multicolor"
+        : colorIdentity[0] ?? "colorless";
+    return c[0].toUpperCase() + c.slice(1);
+  })();
 
   return (
     <div className="flex flex-col gap-3">
@@ -349,16 +352,20 @@ function ColorSection({
     verifiedKeys,
   );
 
+  // SINGLE-select: a card wears exactly one frame dress, so the picker is
+  // one chip per dress — a gold card is the "Multicolor" chip, not a stack
+  // of color toggles. (Legacy multi-value identities display as Multicolor,
+  // which IS the frame they render with.)
+  const selected: ColorIdentity =
+    selection.length > 1 ? "multicolor" : selection[0] ?? "colorless";
+
   const options: ChipOption<ColorIdentity>[] = COLOR_IDENTITY_VALUES.map(
     (color) => {
-      // Disable a chip when TOGGLING it would land on a color variant this
-      // frame doesn't have published yet (a selected chip stays clickable
-      // when backing out leads somewhere valid).
-      const next = selection.includes(color)
-        ? selection.filter((c) => c !== color)
-        : [...selection, color];
-      const nextKey = pickFrameColorKey(next);
-      const reachable = isFrameComboAvailable(template, nextKey, verifiedKeys);
+      const reachable = isFrameComboAvailable(
+        template,
+        IDENTITY_COLOR_KEY[color],
+        verifiedKeys,
+      );
       return {
         value: color,
         label: color,
@@ -375,12 +382,11 @@ function ColorSection({
   return (
     <SetupSection title="Color" value={summary}>
       <ChipGroup
-        multiSelect
         ariaLabel="Color identity"
         layout="grid-2"
         size="md"
-        value={selection}
-        onChange={onChange}
+        value={selected}
+        onChange={(color) => onChange([color])}
         options={options}
       />
       {!currentAvailable ? (
