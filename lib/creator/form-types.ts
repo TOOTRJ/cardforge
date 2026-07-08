@@ -97,6 +97,8 @@ export type WatermarkFormValues = {
   url: string;
   /** "large" = the basic-land big-symbol treatment. */
   size: "normal" | "large";
+  /** Ink opacity 0.04–0.9; null = the size's default (0.14 / 0.85). */
+  opacity: number | null;
 };
 
 export const EMPTY_WATERMARK: WatermarkFormValues = {
@@ -104,6 +106,7 @@ export const EMPTY_WATERMARK: WatermarkFormValues = {
   key: "",
   url: "",
   size: "normal",
+  opacity: null,
 };
 
 // Empty back-face values — used when the user toggles on "has back face" from a

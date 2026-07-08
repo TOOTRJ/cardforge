@@ -14,7 +14,11 @@ import { Button } from "@/components/ui/button";
 import { ChipGroup, type ChipOption } from "@/components/ui/chip-group";
 import { FieldGroup } from "@/components/creator/field-group";
 import { uploadWatermarkServerAction } from "@/lib/cards/upload-watermark-server";
-import { WATERMARK_PRESETS } from "@/lib/cards/watermark";
+import {
+  WATERMARK_PRESETS,
+  watermarkOpacity,
+} from "@/lib/cards/watermark";
+import type { CardWatermark } from "@/types/card";
 import { hidesCost } from "@/lib/creator/steps";
 import type { FormValues, WatermarkFormValues } from "@/lib/creator/form-types";
 
@@ -53,7 +57,13 @@ export function WatermarkPicker({ userId }: WatermarkPickerProps) {
       }
       setValue(
         "watermark",
-        { kind: "custom", key: "", url: result.publicUrl, size: "normal" },
+        {
+          kind: "custom",
+          key: "",
+          url: result.publicUrl,
+          size: "normal",
+          opacity: null,
+        },
         { shouldDirty: true },
       );
       toast.success("Watermark uploaded.");
@@ -107,7 +117,13 @@ export function WatermarkPicker({ userId }: WatermarkPickerProps) {
           const [kind, key] = value.split(":");
           if (selected === value) {
             // Re-clicking the active chip clears the watermark.
-            field.onChange({ kind: "", key: "", url: "", size: "normal" });
+            field.onChange({
+              kind: "",
+              key: "",
+              url: "",
+              size: "normal",
+              opacity: null,
+            });
             return;
           }
           set({ kind: kind as "mana" | "preset", key, url: "" });
@@ -171,7 +187,13 @@ export function WatermarkPicker({ userId }: WatermarkPickerProps) {
                       variant="ghost"
                       size="sm"
                       onClick={() =>
-                        field.onChange({ kind: "", key: "", url: "", size: "normal" })
+                        field.onChange({
+                          kind: "",
+                          key: "",
+                          url: "",
+                          size: "normal",
+                          opacity: null,
+                        })
                       }
                     >
                       <X className="h-4 w-4" aria-hidden />
@@ -194,6 +216,46 @@ export function WatermarkPicker({ userId }: WatermarkPickerProps) {
                     }
                   />
                   Large (the classic basic-land big-symbol treatment)
+                </label>
+              ) : null}
+
+              {wm.kind !== "" ? (
+                <label className="flex items-center gap-3 text-sm text-muted">
+                  <span className="shrink-0">Opacity</span>
+                  <input
+                    type="range"
+                    min={4}
+                    max={90}
+                    step={1}
+                    className="max-w-48 flex-1"
+                    value={Math.round(
+                      (wm.opacity ??
+                        watermarkOpacity({
+                          size: wm.size,
+                        } as CardWatermark)) * 100,
+                    )}
+                    onChange={(e) =>
+                      set({ opacity: Number(e.target.value) / 100 })
+                    }
+                  />
+                  <span className="w-10 tabular-nums text-xs text-subtle">
+                    {Math.round(
+                      (wm.opacity ??
+                        watermarkOpacity({
+                          size: wm.size,
+                        } as CardWatermark)) * 100,
+                    )}
+                    %
+                  </span>
+                  {wm.opacity != null ? (
+                    <button
+                      type="button"
+                      className="text-xs text-subtle underline-offset-2 hover:underline"
+                      onClick={() => set({ opacity: null })}
+                    >
+                      Reset
+                    </button>
+                  ) : null}
                 </label>
               ) : null}
             </div>

@@ -197,6 +197,7 @@ function watermarkFormValuesFrom(card: Card): WatermarkFormValues {
     key: "key" in wm ? wm.key : "",
     url: wm.kind === "custom" ? wm.url : "",
     size: wm.size ?? "normal",
+    opacity: wm.opacity ?? null,
   };
 }
 

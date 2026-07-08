@@ -15,7 +15,11 @@ import {
   showsPowerToughness,
 } from "@/lib/cards/card-display";
 import { getFrameProfile } from "@/lib/cards/template-layout";
-import { KIND_DEFS, type CardKind } from "@/lib/creator/card-kinds";
+import {
+  KIND_DEFS,
+  templatePaintsSecondFace,
+  type CardKind,
+} from "@/lib/creator/card-kinds";
 
 export type StepKey = "card" | "identity" | "text" | "publish";
 
@@ -66,12 +70,13 @@ export function isAdventureFrame(
 /** True when the frame has an INTRINSIC second face drawn from the back-face
  *  content (Adventure's storybook page, or a flip/split/aftermath rotated face).
  *  Such frames always show the back-face/layout panel — the second face isn't
- *  optional, it's part of the frame. */
+ *  optional, it's part of the frame. Thin alias of the shared profile-derived
+ *  predicate (card-kinds.ts) so this and KIND_DEFS.inlineSecondFace can never
+ *  disagree. */
 export function hasInlineBackFace(
   template: FrameTemplate | string | undefined,
 ): boolean {
-  const p = getFrameProfile(normalizeFrameTemplate(template));
-  return p.adventure != null || p.secondFace != null;
+  return templatePaintsSecondFace(template);
 }
 
 /** True when the frame paints no mana cost (tokens, some lands), so the cost

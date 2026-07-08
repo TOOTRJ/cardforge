@@ -1187,24 +1187,31 @@ export function CardCreatorForm({
 
     // Design watermark: the form's flat shape → the discriminated union
     // (null = none / clear).
+    const watermarkOpacityPayload =
+      values.watermark.opacity != null
+        ? { opacity: values.watermark.opacity }
+        : {};
     const watermarkPayload =
       values.watermark.kind === "mana"
         ? {
             kind: "mana" as const,
             key: values.watermark.key as "w" | "u" | "b" | "r" | "g" | "c",
             size: values.watermark.size,
+            ...watermarkOpacityPayload,
           }
         : values.watermark.kind === "preset"
           ? {
               kind: "preset" as const,
               key: values.watermark.key,
               size: values.watermark.size,
+              ...watermarkOpacityPayload,
             }
           : values.watermark.kind === "custom" && values.watermark.url
             ? {
                 kind: "custom" as const,
                 url: values.watermark.url,
                 size: values.watermark.size,
+                ...watermarkOpacityPayload,
               }
             : null;
 
@@ -1472,12 +1479,14 @@ export function CardCreatorForm({
                 kind: "custom" as const,
                 url: watched.watermark.url,
                 size: watched.watermark.size,
+                opacity: watched.watermark.opacity ?? undefined,
               }
             : null
           : ({
               kind: watched.watermark.kind,
               key: watched.watermark.key,
               size: watched.watermark.size,
+              opacity: watched.watermark.opacity ?? undefined,
             } as CardWatermark)
         : null,
     backFace: watched.has_back_face

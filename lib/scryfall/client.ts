@@ -371,9 +371,11 @@ export async function fetchScryfallImage(
     return null;
   }
   // cards.scryfall.io is Scryfall's CDN and explicitly has no rate limit;
-  // only api.scryfall.com requests need to respect the request gap.
+  // only api.scryfall.com requests need to respect the request gap — at the
+  // path's own tier, in case a caller ever passes a named/search-based
+  // image URL (those are hard-capped at 2/s).
   if (parsed.hostname === "api.scryfall.com") {
-    await throttle(FAST_GAP_MS);
+    await throttle(minGapFor(parsed.pathname));
   }
   const response = await fetch(parsed.toString(), {
     headers: { "User-Agent": userAgent() },
