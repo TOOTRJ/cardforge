@@ -32,6 +32,26 @@ const SUPABASE_PUBLIC_BUCKETS = [
   "custom-pips",
 ];
 
+// NEXT_PUBLIC_SUPABASE_URL moved to the custom domain (auth.pipglyph.com)
+// in 2026-07, but every storage URL minted before then is stored in the
+// database as an absolute URL on the project's original hostname — which
+// Supabase keeps serving forever. next/image must accept both origins or
+// every pre-migration card image 400s.
+const LEGACY_SUPABASE_HOSTNAME = "zkwkisxoqdhdchqyjwdc.supabase.co";
+
+const supabaseImageOrigins = (() => {
+  if (!supabaseOrigin) return [];
+  const origins = [supabaseOrigin];
+  if (supabaseOrigin.hostname !== LEGACY_SUPABASE_HOSTNAME) {
+    origins.push({
+      protocol: "https" as const,
+      hostname: LEGACY_SUPABASE_HOSTNAME,
+      port: "",
+    });
+  }
+  return origins;
+})();
+
 const nextConfig: NextConfig = {
   // Phase 11 chunk 14: bump the server-action body size limit so the
   // Sharp-validated card-art upload (max 8 MB enforced server-side) can
@@ -45,14 +65,14 @@ const nextConfig: NextConfig = {
   // Allow next/image to optimize user-uploaded card art + set covers from
   // our Supabase Storage origin (per-bucket, see SUPABASE_PUBLIC_BUCKETS).
   images: {
-    remotePatterns: supabaseOrigin
-      ? SUPABASE_PUBLIC_BUCKETS.map((bucket) => ({
-          protocol: supabaseOrigin.protocol,
-          hostname: supabaseOrigin.hostname,
-          ...(supabaseOrigin.port ? { port: supabaseOrigin.port } : {}),
-          pathname: `/storage/v1/object/public/${bucket}/**`,
-        }))
-      : [],
+    remotePatterns: supabaseImageOrigins.flatMap((origin) =>
+      SUPABASE_PUBLIC_BUCKETS.map((bucket) => ({
+        protocol: origin.protocol,
+        hostname: origin.hostname,
+        ...(origin.port ? { port: origin.port } : {}),
+        pathname: `/storage/v1/object/public/${bucket}/**`,
+      })),
+    ),
   },
 };
 
