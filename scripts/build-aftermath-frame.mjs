@@ -5,9 +5,10 @@
 // rotated 90° (cast from the graveyard). MSE stores the two halves as separate
 // per-color pieces already in their final orientation — wcard.png (375×285,
 // top, upright) and wcard2.png (375×238, bottom, pre-rotated sideways). This
-// stacks them into the 1500×2100 card and flood-fills the TOP art window (a
-// white box, like the Alpha frames) to alpha. The bottom half is text-only
-// (name/type/rules), rendered rotated 270° by the layout profile.
+// stacks them into the 1500×2100 card and flood-fills BOTH art windows (white
+// boxes, like the Alpha frames) to alpha: the top half's, and the bottom
+// half's sideways window (MSE "image 2" at 314,295 183×108 angle 270 → card
+// space x 54.9–83.7%, y 56.4–91.4%). The bottom text renders rotated 270°.
 //
 //   node scripts/build-aftermath-frame.mjs
 // ---------------------------------------------------------------------------
@@ -32,8 +33,12 @@ const H = 2100;
 const NEAR_WHITE = 235;
 const TOP_H = 1144; // 285 × 2100/523
 const BOT_H = H - TOP_H; // 956
-// Top art window (MSE 29,59–346,176) center, as a canvas fraction.
-const SEEDS = [[0.5, 0.2]];
+// Art window centers as canvas fractions: top (MSE 29,59–346,176) and the
+// bottom half's sideways window (MSE image 2).
+const SEEDS = [
+  [0.5, 0.2],
+  [0.693, 0.739],
+];
 
 fs.mkdirSync(OUT, { recursive: true });
 

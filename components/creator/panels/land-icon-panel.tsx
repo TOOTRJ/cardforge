@@ -47,7 +47,7 @@ export function LandIconPanel({ userId, autoKey }: LandIconPanelProps) {
       render={({ field }) => {
         const wm = field.value as WatermarkFormValues;
         const clearOverride = () =>
-          field.onChange({ kind: "", key: "", url: "", size: "normal" });
+          field.onChange({ kind: "", key: "", url: "", size: "normal", opacity: null });
 
         const onFilePicked = async (file: File | undefined) => {
           if (!file) return;
@@ -65,6 +65,7 @@ export function LandIconPanel({ userId, autoKey }: LandIconPanelProps) {
               key: "",
               url: result.publicUrl,
               size: "large",
+              opacity: null,
             });
             toast.success("Icon uploaded.");
           } finally {
@@ -112,6 +113,7 @@ export function LandIconPanel({ userId, autoKey }: LandIconPanelProps) {
                     key,
                     url: "",
                     size: "large",
+                    opacity: null,
                   });
                 }}
                 options={options}

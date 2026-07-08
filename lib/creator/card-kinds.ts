@@ -29,6 +29,7 @@ import {
   type FrameTemplate,
 } from "@/types/card";
 import { normalizeFrameTemplate } from "@/lib/cards/card-display";
+import { getFrameProfile } from "@/lib/cards/template-layout";
 import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
 import {
   BASIC_LAND_NAME_BY_KEY,
@@ -68,112 +69,127 @@ export type KindDef = {
    *  frames come from ERA_TYPE_FRAME per era (+ skins + showcase). */
   layoutTemplates: readonly FrameTemplate[] | null;
   /** The frame paints an intrinsic second face (Adventure's storybook page,
-   *  a flip/split/aftermath half) → the wizard force-enables has_back_face. */
+   *  a flip/split/aftermath half) → the wizard force-enables has_back_face.
+   *  DERIVED from the frame profile (templatePaintsSecondFace) — never
+   *  hand-kept, so it can't drift from what the renderer actually paints. */
   inlineSecondFace: boolean;
   /** Representative template for the kind chip's thumbnail. */
   previewTemplate: FrameTemplate;
 };
 
-export const KIND_DEFS: Record<CardKind, KindDef> = {
+/** True when the template's profile paints an intrinsic second face drawn
+ *  from back-face content (Adventure's storybook page, a flip/split/
+ *  aftermath half). The ONE source of truth — steps.ts hasInlineBackFace and
+ *  KIND_DEFS.inlineSecondFace both resolve through it. */
+export function templatePaintsSecondFace(
+  template: FrameTemplate | string | undefined,
+): boolean {
+  const p = getFrameProfile(normalizeFrameTemplate(template));
+  return p.adventure != null || p.secondFace != null;
+}
+
+const RAW_KIND_DEFS: Record<CardKind, Omit<KindDef, "inlineSecondFace">> = {
   creature: {
     label: "Creature",
     cardType: "creature",
     layoutTemplates: null,
-    inlineSecondFace: false,
     previewTemplate: "m15",
   },
   instant: {
     label: "Instant",
     cardType: "instant",
     layoutTemplates: null,
-    inlineSecondFace: false,
     previewTemplate: "m15",
   },
   sorcery: {
     label: "Sorcery",
     cardType: "sorcery",
     layoutTemplates: null,
-    inlineSecondFace: false,
     previewTemplate: "m15",
   },
   artifact: {
     label: "Artifact",
     cardType: "artifact",
     layoutTemplates: null,
-    inlineSecondFace: false,
     previewTemplate: "m15artifact",
   },
   enchantment: {
     label: "Enchantment",
     cardType: "enchantment",
     layoutTemplates: null,
-    inlineSecondFace: false,
     previewTemplate: "m15",
   },
   land: {
     label: "Land",
     cardType: "land",
     layoutTemplates: null,
-    inlineSecondFace: false,
     previewTemplate: "m15land",
   },
   planeswalker: {
     label: "Planeswalker",
     cardType: "planeswalker",
     layoutTemplates: null,
-    inlineSecondFace: false,
     previewTemplate: "m15pw",
   },
   battle: {
     label: "Battle",
     cardType: "battle",
     layoutTemplates: null,
-    inlineSecondFace: false,
     previewTemplate: "battle",
   },
   token: {
     label: "Token",
     cardType: "token",
     layoutTemplates: null,
-    inlineSecondFace: false,
     previewTemplate: "m15token",
   },
   saga: {
     label: "Saga",
     cardType: "enchantment",
     layoutTemplates: ["saga"],
-    inlineSecondFace: false,
     previewTemplate: "saga",
   },
   adventure: {
     label: "Adventure",
     cardType: "creature",
     layoutTemplates: ["adventure"],
-    inlineSecondFace: true,
     previewTemplate: "adventure",
   },
   split: {
     label: "Split",
     cardType: "instant",
     layoutTemplates: ["split"],
-    inlineSecondFace: true,
     previewTemplate: "split",
   },
   aftermath: {
     label: "Aftermath",
     cardType: "sorcery",
     layoutTemplates: ["aftermath"],
-    inlineSecondFace: true,
     previewTemplate: "aftermath",
   },
   flip: {
     label: "Flip",
     cardType: "creature",
     layoutTemplates: ["flip"],
-    inlineSecondFace: true,
     previewTemplate: "flip",
   },
 };
+
+export const KIND_DEFS: Record<CardKind, KindDef> = Object.fromEntries(
+  (Object.entries(RAW_KIND_DEFS) as [CardKind, Omit<KindDef, "inlineSecondFace">][]).map(
+    ([kind, def]) => [
+      kind,
+      {
+        ...def,
+        // Standard kinds never paint a second face; layout kinds ask their
+        // template's profile (saga's chapter rail is NOT a second face).
+        inlineSecondFace: def.layoutTemplates
+          ? templatePaintsSecondFace(def.layoutTemplates[0])
+          : false,
+      },
+    ],
+  ),
+) as Record<CardKind, KindDef>;
 
 // Reverse map: layout template → its kind (saga → saga, adventure →
 // adventure, …). Skins and standards are deliberately absent — they resolve

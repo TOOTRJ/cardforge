@@ -49,6 +49,10 @@
 //            "cut" module twins bake an MSE produced-mana indicator disc
 //            into the title bar's top-left that real cards don't have.
 //            Geometry unchanged (same frames minus the disc).
+//   14     — m15pw starting-loyalty shield plate (the real MSE loyalty.png —
+//            the drawn polygon was invisible on the black border); aftermath
+//            bottom-half art window cut to alpha + secondFace.artSlot (user
+//            art was silently dropped; the window was painted white).
 // ---------------------------------------------------------------------------
 
-export const CARD_LAYOUT_VERSION = 13;
+export const CARD_LAYOUT_VERSION = 14;

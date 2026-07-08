@@ -11,10 +11,26 @@
 
 import type { CardWatermark } from "@/types/card";
 
-/** Neutral ink for mana-glyph watermarks — a darker shade of the cream text
- *  box, per the printed convention. (Tinting toward the frame color is a
- *  future polish: thread a colorHex through resolveWatermarkStyle.) */
+/** Neutral ink for preset/fallback watermarks — a darker shade of the cream
+ *  text box, per the printed convention. */
 export const WATERMARK_INK = "#3b3126";
+
+/** Mana-glyph watermark ink per FRAME color key — printed cards tint the
+ *  mark toward the card's color (the DOM Forest's big symbol is green, not
+ *  gray). Multicolor and unknown keys fall back to the neutral ink. */
+const WATERMARK_COLOR_INKS: Record<string, string> = {
+  w: "#7d6e4d",
+  u: "#28527a",
+  b: "#2e2b29",
+  r: "#8c3b2a",
+  g: "#3d7247",
+  c: "#55514b",
+};
+
+/** The ink a mana-glyph watermark renders in for a frame color key. */
+export function watermarkInk(colorKey: string | null | undefined): string {
+  return (colorKey && WATERMARK_COLOR_INKS[colorKey]) || WATERMARK_INK;
+}
 
 const WATERMARK_DEFAULT_OPACITY = 0.14;
 /** The "large" (basic-land big symbol) treatment reads as line art, not a

@@ -46,8 +46,8 @@ import {
   basicLandManaKey,
   resolveWatermark,
   watermarkHeightFraction,
+  watermarkInk,
   watermarkOpacity,
-  WATERMARK_INK,
 } from "@/lib/cards/watermark";
 import { getWatermarkDataUrl } from "@/lib/render/card-frames";
 import {
@@ -307,9 +307,18 @@ function CardImage({
         )}
       </div>
 
-      {/* Second art — the right half's art window (Split). Below the frame. */}
+      {/* Second art — the second face's own window (split's right half,
+          aftermath's sideways bottom window). Rotates in place with the face. */}
       {secondArtSlot && secondArtUrl ? (
-        <div style={{ ...slotBox(secondArtSlot), display: "flex", overflow: "hidden" }}>
+        <div
+          style={{
+            ...slotBox(secondArtSlot),
+            display: "flex",
+            overflow: "hidden",
+            transform: `rotate(${layout.secondFace!.rotation}deg)`,
+            transformOrigin: "center",
+          }}
+        >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={secondArtUrl}
@@ -491,7 +500,7 @@ function CardImage({
                     height *
                     watermarkHeightFraction(effectiveWatermark),
                 ),
-                color: WATERMARK_INK,
+                color: watermarkInk(colorKey),
                 lineHeight: 1,
               }}
             >
@@ -1326,16 +1335,6 @@ function StatBake({
             objectFit: "fill",
           }}
         />
-      ) : slot.badgeColorHex && slot.badgeShape === "loyaltyStart" ? (
-        <svg
-          viewBox="0 0 100 100"
-          preserveAspectRatio="none"
-          width="80%"
-          height="96%"
-          style={{ position: "absolute", top: "2%", left: "10%" }}
-        >
-          <polygon points={LOYALTY_BADGE_POINTS.down} fill={slot.badgeColorHex} />
-        </svg>
       ) : slot.badgeColorHex ? (
         <div
           style={{

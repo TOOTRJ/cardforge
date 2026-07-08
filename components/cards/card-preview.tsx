@@ -63,8 +63,8 @@ import {
   basicLandManaKey,
   resolveWatermark,
   watermarkHeightFraction,
+  watermarkInk,
   watermarkOpacity,
-  WATERMARK_INK,
 } from "@/lib/cards/watermark";
 
 // ---------------------------------------------------------------------------
@@ -522,8 +522,12 @@ function CardFace({
     Boolean(layout.pt) &&
     showsPowerToughness(face.cardType, face.subtypes) &&
     Boolean(face.power || face.toughness);
+  // In the editor the starting-loyalty shield shows even before a value is
+  // typed (empty plate > invisible element); the gallery/bake require one.
   const showLoyalty =
-    Boolean(layout.loyalty) && showsLoyalty(face.cardType) && Boolean(face.loyalty);
+    Boolean(layout.loyalty) &&
+    showsLoyalty(face.cardType) &&
+    Boolean(face.loyalty || staticInEditor);
   const showDefense =
     Boolean(layout.defense) && showsDefense(face.cardType) && Boolean(face.defense);
 
@@ -616,12 +620,19 @@ function CardFace({
         )}
       </div>
 
-      {/* Second art — the right half's art window (Split). Below the frame. */}
+      {/* Second art — the second face's own window (split's right half,
+          aftermath's sideways bottom window). Below the frame; rotates in
+          place with the face, same as its text slots. */}
       {layout.secondFace?.artSlot && secondFace?.artUrl ? (
         <div
           aria-hidden
           className="absolute overflow-hidden"
-          style={{ ...rectStyle(layout.secondFace.artSlot), zIndex: 0 }}
+          style={{
+            ...rectStyle(layout.secondFace.artSlot),
+            zIndex: 0,
+            transform: `rotate(${layout.secondFace.rotation}deg)`,
+            transformOrigin: "center",
+          }}
         >
           <ArtImage
             src={secondFace.artUrl}
@@ -647,7 +658,7 @@ function CardFace({
       {showLoyalty && layout.loyalty ? (
         <StatOverlay
           slot={layout.loyalty}
-          value={String(face.loyalty)}
+          value={String(face.loyalty ?? "")}
           colorKey={colorKey}
         />
       ) : null}
@@ -803,7 +814,7 @@ function CardFace({
                     watermarkHeightFraction(effectiveWatermark) *
                     (layout.orientation === "landscape" ? 5 / 7 : 7 / 5),
                 ),
-                color: WATERMARK_INK,
+                color: watermarkInk(colorKey),
                 lineHeight: 1,
               }}
             />
@@ -1045,17 +1056,6 @@ function StatOverlay({
           aria-hidden
           className="absolute inset-0 h-full w-full object-fill"
         />
-      ) : slot.badgeColorHex && slot.badgeShape === "loyaltyStart" ? (
-        // The printed starting-loyalty shield: flat top, pointed bottom.
-        <svg
-          viewBox="0 0 100 100"
-          preserveAspectRatio="none"
-          aria-hidden
-          className="absolute"
-          style={{ inset: "2% 10%", width: "80%", height: "96%" }}
-        >
-          <polygon points={LOYALTY_BADGE_POINTS.down} fill={slot.badgeColorHex} />
-        </svg>
       ) : slot.badgeColorHex ? (
         <div
           aria-hidden

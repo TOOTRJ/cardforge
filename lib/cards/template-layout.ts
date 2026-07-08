@@ -93,13 +93,9 @@ export type StatSlot = {
   /** Plate PNG template, {color} → frame color key. Renders behind the value
    *  (M15 P/T plate). */
   plateAssetPathTemplate?: string;
-  /** Drawn rounded badge behind the value when there's no plate PNG (M15
-   *  planeswalker loyalty, which has no painted shield). */
+  /** Drawn rounded badge behind the value when there's no plate PNG (the
+   *  Battle frame's defense disc). */
   badgeColorHex?: string;
-  /** Badge silhouette: "loyaltyStart" draws the printed planeswalker
-   *  starting-loyalty shield (flat top, pointed bottom) instead of the
-   *  default rounded blob. */
-  badgeShape?: "loyaltyStart";
   shadowCss?: string;
   /** Vertical nudge of the value text within the plate, in em (negative = up).
    *  Corrects the display font's baseline asymmetry — digits sit low in their
@@ -458,8 +454,9 @@ const M15PW: FrameProfile = {
     sizePct: 0.04,
     colorHex: "#ffffff",
     weight: 700,
-    badgeColorHex: "#141008",
-    badgeShape: "loyaltyStart",
+    // The printed starting-loyalty shield (MSE mainframe-planeswalker
+    // loyalty.png) — a drawn polygon reads as invisible on the black border.
+    plateAssetPathTemplate: "/frames/m15pw/loyalty.png",
     shadowCss: OUTLINE_SHADOW,
   },
 };
@@ -1028,6 +1025,11 @@ const AFTERMATH: FrameProfile = {
   secondFace: {
     rotation: 270,
     costSizePct: 0.034,
+    // The bottom half's art window (MSE image 2): x 54.9–83.7%, y 56.4–91.4%
+    // in card space. Like the text slots this is the PRE-rotation wide box
+    // centered on the window — rotate(270°) in place lands exactly on it and
+    // the art reads upright when the card is turned.
+    artSlot: { topPct: 63.6, leftPct: 44.8, widthPct: 49.0, heightPct: 20.6 },
     // Wide boxes centered on each rotated bar (rotate 270° → vertical bar).
     title: {
       rect: { topPct: 72, leftPct: 69, widthPct: 39, heightPct: 7 },
