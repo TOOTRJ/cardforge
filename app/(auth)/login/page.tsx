@@ -15,14 +15,14 @@ export const metadata: Metadata = {
   description: "Sign in to your PipGlyph account.",
 };
 
-type SearchParams = { redirectTo?: string; notice?: string };
+type SearchParams = { redirectTo?: string; notice?: string; error?: string };
 
 export default async function LoginPage({
   searchParams,
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  const { redirectTo, notice } = await searchParams;
+  const { redirectTo, notice, error } = await searchParams;
   const configured = isSupabaseConfigured();
 
   return (
@@ -58,6 +58,33 @@ export default async function LoginPage({
         </div>
       ) : null}
 
+      {notice === "reset-sent" ? (
+        <div
+          role="status"
+          className="rounded-md border border-primary/40 bg-primary/10 px-3 py-2 text-sm text-foreground"
+        >
+          If an account exists for that email, a password reset link is on its
+          way. Check your inbox.
+        </div>
+      ) : null}
+
+      {error === "auth-callback-failed" ? (
+        <div
+          role="alert"
+          className="rounded-md border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-foreground"
+        >
+          That sign-in link didn&apos;t work — it may have expired or already
+          been used. Sign in below, or request a fresh{" "}
+          <Link
+            href="/forgot-password"
+            className="font-medium text-primary-bright hover:underline"
+          >
+            password reset
+          </Link>
+          .
+        </div>
+      ) : null}
+
       {configured ? (
         <div className="flex flex-col gap-4">
           <GoogleSignInButton redirectTo={redirectTo} />
@@ -87,6 +114,15 @@ export default async function LoginPage({
           },
         ]}
       />
+
+      <p className="text-sm text-muted">
+        <Link
+          href="/forgot-password"
+          className="font-medium text-primary-bright hover:underline"
+        >
+          Forgot your password?
+        </Link>
+      </p>
 
       <p className="text-sm text-muted">
         New to PipGlyph?{" "}

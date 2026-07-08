@@ -20,6 +20,14 @@ export const loginSchema = z.object({
   password: z.string().min(1, "Password is required."),
 });
 
+export const forgotPasswordSchema = z.object({
+  email: z.string().trim().email("Enter a valid email address."),
+});
+
+export const resetPasswordSchema = z.object({
+  password: passwordSchema,
+});
+
 export const signupSchema = z.object({
   email: z.string().trim().email("Enter a valid email address."),
   username: usernameSchema,
@@ -129,6 +137,8 @@ export const pinnedCardIdsSchema = z
 
 export type LoginInput = z.infer<typeof loginSchema>;
 export type SignupInput = z.infer<typeof signupSchema>;
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type ProfileUpdateInput = z.infer<typeof profileUpdateSchema>;
 export type PinnedCardIdsInput = z.infer<typeof pinnedCardIdsSchema>;
 
