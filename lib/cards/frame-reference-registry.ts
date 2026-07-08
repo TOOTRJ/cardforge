@@ -196,6 +196,16 @@ export const FRAME_REFERENCES: Record<FrameTemplate, ReferenceRow> = {
     w: { name: "Serra Angel", set: "dmr", scryfallId: "e430b8c9-9439-4256-9066-e9b57f257fe7" },
   },
   retroland: { ...NONE },
+  // 2026-07 variation frames — references TBD; pin real printings via the
+  // compare tool's "Change reference card" picker as each gets its
+  // verification pass (e.g. extendedart: any collector-booster extended-art
+  // print; expeditionland: BFZ Expeditions; nyx: THB constellation frames;
+  // fullart/fullartland: ZNR full-art prints).
+  extendedart: { ...NONE },
+  fullart: { ...NONE },
+  fullartland: { ...NONE },
+  expeditionland: { ...NONE },
+  nyx: { ...NONE },
   // Modern border (2003)
   modern: {
     ...NONE,

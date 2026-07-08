@@ -238,6 +238,15 @@ const SHOWCASE_TEMPLATES: readonly FrameTemplate[] =
     (t) => FRAME_SET_ERA[FRAME_TEMPLATE_SET[t]] === "showcase",
   );
 
+// Type-specific showcase treatments: real expeditions / full-art basics are
+// land trade dress, Nyx constellation is enchantment dress. Absent = any
+// standard kind (stats still gate on type).
+const SHOWCASE_KIND_RESTRICTION: Partial<Record<FrameTemplate, CardKind[]>> = {
+  expeditionland: ["land"],
+  fullartland: ["land"],
+  nyx: ["enchantment"],
+};
+
 /** All frames offered for a kind, across every era, in gallery display
  *  order: border-era standards (+ their skin variants) oldest→newest, then
  *  layout templates, then showcase treatments. There is deliberately NO
@@ -284,8 +293,11 @@ export function framesForKind(
       });
     }
   }
-  // Showcase treatments dress any standard kind (stats still gate on type).
+  // Showcase treatments dress any standard kind (stats still gate on type),
+  // except the type-restricted premium dresses above.
   for (const t of SHOWCASE_TEMPLATES) {
+    const restriction = SHOWCASE_KIND_RESTRICTION[t];
+    if (restriction && !restriction.includes(kind)) continue;
     out.push({
       template: t,
       era: "showcase",
