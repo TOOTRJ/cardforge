@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import Link from "next/link";
 import { ArrowRight, Hash } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
+import { FeaturedCreators } from "@/components/marketing/featured-creators";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SurfaceCard } from "@/components/ui/surface-card";
@@ -48,6 +50,10 @@ export default async function ChallengesPage() {
         title="Design challenges"
         description="A brief, a tag, and the gallery as the arena. Publish a card with the challenge tag to enter — community likes decide the spotlight."
       />
+
+      <Suspense fallback={null}>
+        <FeaturedCreators />
+      </Suspense>
 
       {/* Active challenges — hero treatment */}
       <div className="mt-10 flex flex-col gap-6">
