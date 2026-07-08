@@ -87,8 +87,33 @@ async function main() {
     [1500, 500, "x-header-1500x500.png"],
     [1280, 640, "github-social-1280x640.png"],
     [960, 540, "discord-banner-960x540.png"],
+    [820, 312, "facebook-cover-820x312.png"],
+    [1920, 384, "reddit-profile-banner-1920x384.png"],
+    [4000, 256, "reddit-community-banner-4000x256.png"],
   ]) {
     await png(bannerSvg({ width: w, height: h, manaPips: MANA_PIPS }), w, path.join(OUT_DIR, name), { viewWidth: w });
+  }
+  // YouTube channel art: full 2560×1440 canvas, but every device is only
+  // guaranteed the central 1546×423 — the lockup is sized to that safe zone
+  // while the stage bleeds to the edges for desktop/TV.
+  await png(
+    bannerSvg({ width: 2560, height: 1440, manaPips: MANA_PIPS, safeWidth: 1546, safeHeight: 423 }),
+    2560,
+    path.join(OUT_DIR, "youtube-banner-2560x1440.png"),
+    { viewWidth: 2560 },
+  );
+
+  // 4b. Platform avatars — the Medallion (self-contained coin) at each
+  // platform's recommended upload size; all of these get circle-cropped by
+  // the platform, which the coin's padding is designed to survive.
+  for (const [size, name] of [
+    [800, "avatar-youtube-800.png"],
+    [1080, "avatar-instagram-1080.png"],
+    [720, "avatar-facebook-720.png"],
+    [1080, "avatar-tiktok-1080.png"],
+    [512, "avatar-reddit-512.png"],
+  ]) {
+    await png(svgs["pipglyph-mark-medallion.svg"], size, path.join(OUT_DIR, name));
   }
 
   // 5. favicon.ico (16 + 32 + 48, chip-style like app/icon.tsx)

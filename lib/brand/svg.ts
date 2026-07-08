@@ -192,15 +192,23 @@ export function lockupSvg({
   return `<svg viewBox="0 0 240 ${Math.ceil(h)}" fill="none" ${XMLNS}><defs>${GOLD_GRAD}</defs><g transform="translate(70 0)">${mark}</g>${wm(0, 126, s)}</svg>`;
 }
 
-/** Social banner: navy gradient stage, centered lockup, WUBRG base strip. */
+/** Social banner: navy gradient stage, centered lockup, WUBRG base strip.
+ *  `safeWidth`/`safeHeight` describe the platform's guaranteed-visible
+ *  region (centered) — e.g. YouTube channel art is 2560×1440 but only the
+ *  central 1546×423 survives every device crop; the lockup is sized to fit
+ *  inside it while the gradient and strip bleed to the full canvas. */
 export function bannerSvg({
   width,
   height,
   manaPips,
+  safeWidth = width,
+  safeHeight = height,
 }: {
   width: number;
   height: number;
   manaPips: ReadonlyArray<{ color: string; label: string }>;
+  safeWidth?: number;
+  safeHeight?: number;
 }): string {
   const stripH = Math.round(height * 0.012) + 4;
   const pipW = width / manaPips.length;
@@ -210,11 +218,14 @@ export function bannerSvg({
         `<rect x="${i * pipW}" y="${height - stripH}" width="${pipW + 1}" height="${stripH}" fill="${p.color}" opacity="0.7"/>`,
     )
     .join("");
-  // Horizontal lockup sized to ~46% of banner width, centered.
+  // Horizontal lockup at ~46% of the safe width, clamped to 42% of the safe
+  // height so skinny strips (Reddit's 4000×256) don't overflow vertically.
   // 558 = the horizontal lockup's intrinsic viewBox width (mark 100 +
   // gap 28 + wordmark 429.5 at 62 tall).
-  const lockupW = Math.round(width * 0.46);
-  const lockupH = Math.round(lockupW * (100 / 558));
+  const lockupH = Math.round(
+    Math.min(safeWidth * 0.46 * (100 / 558), safeHeight * 0.42),
+  );
+  const lockupW = Math.round(lockupH * (558 / 100));
   const lx = Math.round((width - lockupW) / 2);
   const ly = Math.round((height - stripH - lockupH) / 2);
   const s = lockupH / 100;
