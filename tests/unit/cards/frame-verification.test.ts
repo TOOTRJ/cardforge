@@ -46,11 +46,18 @@ describe("frame reference registry", () => {
       "flip/c",
       "flip/m",
       "aftermath/c",
+      // Printed artifact tokens are all colorless — no colored anchors.
+      "m15tokenartifact/w",
+      "m15tokenartifact/u",
+      "m15tokenartifact/b",
+      "m15tokenartifact/r",
+      "m15tokenartifact/g",
+      "m15tokenartifact/m",
     ]);
     const m15Templates = FRAME_TEMPLATE_VALUES.filter(
       (t) => eraForTemplate(t) === "m15",
     );
-    expect(m15Templates.length).toBe(13);
+    expect(m15Templates.length).toBe(15);
     for (const template of m15Templates) {
       for (const colorKey of FRAME_COLOR_KEYS) {
         const key = frameComboKey(template, colorKey);

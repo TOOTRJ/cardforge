@@ -87,17 +87,17 @@ describe("framesForKind", () => {
     }
   });
 
-  it("offers snow/devoid skins only where the era standard is the plain m15 frame", () => {
-    const creatureSkins = framesForKind("creature", NO_VERIFIED)
-      .filter((f) => f.group === "skin")
-      .map((f) => f.template);
-    expect(creatureSkins).toEqual(["m15snow", "m15devoid"]);
-
-    for (const kind of ["land", "token", "planeswalker", "battle"] as CardKind[]) {
-      const skins = framesForKind(kind, NO_VERIFIED).filter(
-        (f) => f.group === "skin",
-      );
-      expect(skins).toEqual([]);
+  it("brings each era standard exactly its own skin variants", () => {
+    const skinsFor = (kind: CardKind) =>
+      framesForKind(kind, NO_VERIFIED)
+        .filter((f) => f.group === "skin")
+        .map((f) => f.template);
+    expect(skinsFor("creature")).toEqual(["m15snow", "m15devoid"]);
+    expect(skinsFor("land")).toEqual(["m15snowland"]);
+    expect(skinsFor("token")).toEqual(["m15tokenartifact"]);
+    // Standards with their own geometry and no skin set stay bare.
+    for (const kind of ["planeswalker", "battle", "artifact"] as CardKind[]) {
+      expect(skinsFor(kind)).toEqual([]);
     }
   });
 
