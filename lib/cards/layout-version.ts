@@ -59,6 +59,10 @@
 //            shield assets (loyaltyup/down/naught.png) instead of drawn
 //            polygons; saga gains the standard M15 footer (artist line was
 //            missing entirely).
+//   16     — Astral Rose rebrand reaches the card face: default set mark and
+//            the free-tier watermark swap the old compass-star for the rose
+//            star silhouette (geometry now imported from lib/brand/geometry
+//            so preview and bake can't drift).
 // ---------------------------------------------------------------------------
 
-export const CARD_LAYOUT_VERSION = 15;
+export const CARD_LAYOUT_VERSION = 16;
