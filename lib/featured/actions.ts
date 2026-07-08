@@ -47,3 +47,75 @@ export async function setFeaturedAction(
   revalidatePath("/admin/featured");
   return { ok: true };
 }
+
+/** Admin: set or clear a homepage hero slot from a pasted card-page URL
+ *  (/card/{username}/{slug}, absolute or relative). The card must be PUBLIC
+ *  and have a baked render — the hero shows the stored image. */
+export async function setFeaturedCardAction(
+  slot: 1 | 2,
+  cardUrl: string | null,
+): Promise<FeaturedActionResult> {
+  const profile = await getCurrentProfile();
+  if (!profile?.is_admin) return { ok: false, error: "Not authorized." };
+  if (!isAdminConfigured()) {
+    return { ok: false, error: "Admin client isn't configured." };
+  }
+  if (slot !== 1 && slot !== 2) return { ok: false, error: "Unknown slot." };
+
+  const admin = createAdminClient();
+
+  if (!cardUrl || !cardUrl.trim()) {
+    await admin.from("featured_cards").delete().eq("slot", slot);
+    revalidatePath("/");
+    revalidatePath("/admin/featured");
+    return { ok: true };
+  }
+
+  // Accept absolute or relative card URLs; extract /card/{username}/{slug}.
+  const match = cardUrl
+    .trim()
+    .match(/\/card\/([a-z0-9_]+)\/([a-z0-9-]+)\/?(?:[?#]|$)/i);
+  if (!match) {
+    return {
+      ok: false,
+      error: "Paste a card page URL, e.g. /card/username/card-slug.",
+    };
+  }
+  const [, username, slug] = match;
+
+  const { data: owner } = await admin
+    .from("profiles")
+    .select("id")
+    .eq("username", username.toLowerCase())
+    .maybeSingle();
+  if (!owner) return { ok: false, error: `No user named @${username}.` };
+
+  const { data: card } = await admin
+    .from("cards")
+    .select("id, visibility, rendered_image_url")
+    .eq("owner_id", owner.id)
+    .eq("slug", slug.toLowerCase())
+    .maybeSingle();
+  if (!card) return { ok: false, error: "No card at that URL." };
+  if (card.visibility !== "public") {
+    return { ok: false, error: "That card isn't public — feature public cards only." };
+  }
+  if (!card.rendered_image_url) {
+    return {
+      ok: false,
+      error: "That card has no baked render yet — open and re-save it first.",
+    };
+  }
+
+  const { error } = await admin
+    .from("featured_cards")
+    .upsert({ slot, card_id: card.id });
+  if (error) {
+    console.warn("setFeaturedCardAction: upsert error", error.message);
+    return { ok: false, error: "Couldn't save the featured card." };
+  }
+
+  revalidatePath("/");
+  revalidatePath("/admin/featured");
+  return { ok: true };
+}

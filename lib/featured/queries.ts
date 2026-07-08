@@ -91,3 +91,70 @@ export async function listFeaturedCreators(
   }
   return out;
 }
+
+export type FeaturedHomeCard = {
+  slot: number;
+  slug: string;
+  title: string;
+  imageUrl: string;
+  owner: { username: string; displayName: string | null };
+};
+
+/** The admin-curated homepage hero cards (0053). Public-client read keeps
+ *  the homepage static; a featured card that later goes non-public (or
+ *  loses its render) silently drops out — the hero falls back to the
+ *  placeholder pair. */
+export async function listFeaturedHomeCards(): Promise<FeaturedHomeCard[]> {
+  if (!isSupabaseConfigured()) return [];
+  const supabase = createPublicClient();
+  const { data } = await supabase
+    .from("featured_cards")
+    .select(
+      "slot, cards(slug, title, visibility, rendered_image_url, owner_id)",
+    )
+    .order("slot", { ascending: true });
+  if (!data || data.length === 0) return [];
+
+  const rows = data
+    .map((r) => ({ slot: r.slot, card: r.cards as unknown as {
+      slug: string;
+      title: string;
+      visibility: string;
+      rendered_image_url: string | null;
+      owner_id: string;
+    } | null }))
+    .filter(
+      (r) =>
+        r.card &&
+        r.card.visibility === "public" &&
+        Boolean(r.card.rendered_image_url),
+    ) as { slot: number; card: NonNullable<{
+      slug: string;
+      title: string;
+      visibility: string;
+      rendered_image_url: string | null;
+      owner_id: string;
+    }> }[];
+  if (rows.length === 0) return [];
+
+  const ownerIds = [...new Set(rows.map((r) => r.card.owner_id))];
+  const { data: owners } = await supabase
+    .from("profiles")
+    .select("id, username, display_name")
+    .in("id", ownerIds);
+  const byId = new Map((owners ?? []).map((o) => [o.id, o]));
+
+  return rows
+    .map((r) => {
+      const owner = byId.get(r.card.owner_id);
+      if (!owner?.username) return null;
+      return {
+        slot: r.slot,
+        slug: r.card.slug,
+        title: r.card.title,
+        imageUrl: r.card.rendered_image_url as string,
+        owner: { username: owner.username, displayName: owner.display_name },
+      };
+    })
+    .filter((r): r is FeaturedHomeCard => r !== null);
+}

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { ArrowRight } from "lucide-react";
 import { MarketingHero } from "@/components/marketing/marketing-hero";
+import { listFeaturedHomeCards } from "@/lib/featured/queries";
 import { FeatureGrid } from "@/components/marketing/feature-grid";
 import { CardPreviewPlaceholder } from "@/components/cards/card-preview-placeholder";
 import {
@@ -78,10 +79,12 @@ const VIEW_GALLERY_LINK = (
   </Button>
 );
 
-export default function HomePage() {
+export default async function HomePage() {
+  // Admin-curated hero cards (public-client read — keeps this page ISR).
+  const featuredCards = await listFeaturedHomeCards();
   return (
     <>
-      <MarketingHero />
+      <MarketingHero featured={featuredCards} />
       <FeatureGrid />
 
       {/* Stat strip + brand epigraph — the "engineered for precision" band. */}
