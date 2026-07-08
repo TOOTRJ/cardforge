@@ -148,7 +148,7 @@ export default function PressPage() {
         />
         <BrandAssetCard
           title="Social banners"
-          note="OG, X header, GitHub, Discord."
+          note="Sized per platform; YouTube fits the TV/mobile safe zone."
           previewSrc="/brand/og-default-1200x630.png"
           previewSize={56}
           downloads={[
@@ -156,6 +156,22 @@ export default function PressPage() {
             { label: "X", href: "/brand/x-header-1500x500.png" },
             { label: "GitHub", href: "/brand/github-social-1280x640.png" },
             { label: "Discord", href: "/brand/discord-banner-960x540.png" },
+            { label: "YouTube", href: "/brand/youtube-banner-2560x1440.png" },
+            { label: "Facebook", href: "/brand/facebook-cover-820x312.png" },
+            { label: "Reddit sub", href: "/brand/reddit-community-banner-4000x256.png" },
+            { label: "Reddit profile", href: "/brand/reddit-profile-banner-1920x384.png" },
+          ]}
+        />
+        <BrandAssetCard
+          title="Platform avatars"
+          note="The Medallion at each platform's upload size — survives circle crops. Instagram and TikTok have no profile banners, so avatars are the full kit there."
+          previewSrc="/brand/pipglyph-mark-medallion.svg"
+          downloads={[
+            { label: "YouTube 800", href: "/brand/avatar-youtube-800.png" },
+            { label: "Instagram 1080", href: "/brand/avatar-instagram-1080.png" },
+            { label: "Facebook 720", href: "/brand/avatar-facebook-720.png" },
+            { label: "TikTok 1080", href: "/brand/avatar-tiktok-1080.png" },
+            { label: "Reddit 512", href: "/brand/avatar-reddit-512.png" },
           ]}
         />
       </div>
