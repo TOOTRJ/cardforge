@@ -1,12 +1,13 @@
 # PipGlyph
 
 **Precision tools for legendary ideas.** PipGlyph ([www.pipglyph.com](https://www.pipglyph.com))
-is an MTG-style custom card creator: a nine-panel editor with precise mana
-pips (including per-user **custom pip icons**), frames spanning three decades
-of card design, an AI rules-text assistant, a community gallery with likes
-and remixing, full expansion-set building, design challenges, and print-ready
-PNG/PDF export. The live preview and the exported image share one layout
-engine, so what you see is exactly what renders.
+is an MTG-style custom card creator: a kind-first, four-step editor
+(Card → Identity → Text & stats → Publish) with precise mana pips (including
+per-user **custom pip icons**), frames spanning three decades of card design,
+an AI rules-text assistant, a community gallery with likes and remixing, full
+expansion-set building, design challenges, and print-ready PNG/PDF export.
+The live preview and the exported image share one layout engine, so what you
+see is exactly what renders.
 
 ## Stack
 
@@ -44,9 +45,19 @@ npx playwright test               # full suite, on its own :3100 server
 
 ## Architecture notes
 
-- **Editor**: `components/creator/card-creator-form.tsx` orchestrates nine
-  contextual panels (`components/creator/panels/`) over a pure step model in
-  `lib/creator/steps.ts`.
+- **Editor**: `components/creator/card-creator-form.tsx` orchestrates the
+  contextual panels (`components/creator/panels/`) over a pure 4-step model in
+  `lib/creator/steps.ts`; the card KIND (creature/saga/split/…) is derived,
+  never stored (`lib/creator/card-kinds.ts`).
+- **Frame availability**: verification is the only gate. A (template, color)
+  combo is user-pickable exactly when its `frame_reviews` checkbox is checked
+  in `/admin/frame-compare` (`lib/cards/frame-availability.ts`); unverified
+  kinds/frames render as disabled "Soon" chips.
+- **Watermarks & basic lands**: `cards.watermark` (jsonb) holds the faint
+  mark behind rules text. Basic lands (by subtype) automatically print the
+  large mana symbol instead of rules text (`lib/cards/watermark.ts`); the
+  creator seeds Land cards as the basic matching the frame color and offers
+  an icon picker on the Text & stats step.
 - **Preview ↔ export parity**: both renderers read the same frame profiles
   (`lib/cards/template-layout.ts`); any change inside card pixels must land in
   `components/cards/card-preview.tsx` **and** `lib/render/card-image.tsx`

@@ -53,7 +53,6 @@ const MODE_HINTS: Record<Mode, string> = {
     "Precision mode: pixels that match go dark, misalignment glows bright. Nudge until the glow dies.",
 };
 
-
 type FrameCompareProps = {
   preview: CardPreviewData;
   /** 745×1040 PNG url from Scryfall for the reference printing; null when
@@ -64,7 +63,7 @@ type FrameCompareProps = {
   template?: string | null;
   /** The color key under test — enables the alignment score. */
   colorKey?: string | null;
-  /** The saved DB override for this template ({} when none). */
+  /** The saved DB override for this template (null when none). */
   savedOverride?: FrameProfileOverride | null;
 };
 
@@ -168,7 +167,9 @@ export function FrameCompare({
     const handler = (event: KeyboardEvent) => {
       const tag = (event.target as HTMLElement | null)?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
-      const step = event.shiftKey ? 0.5 : 0.1;
+      // Alt = coarse. (Shift can't be the modifier: { and } already
+      // require it, which would lock height nudges to the coarse step.)
+      const step = event.altKey ? 0.5 : 0.1;
       const nudge = (field: string, delta: number) =>
         onField(
           selected,
@@ -327,8 +328,12 @@ export function FrameCompare({
           <button
             type="button"
             onClick={runScore}
-            title="Pixel-diff our render against the real scan, per element. Run before and after an edit — the number should drop. Fonts/art always differ, so never expect 0."
-            disabled={scoring}
+            title={
+              dirty
+                ? "Save your layout edits first — the score always measures the SAVED layout, not the on-screen draft."
+                : "Pixel-diff our render against the real scan, per element. Run before and after an edit — the number should drop. Fonts/art always differ, so never expect 0."
+            }
+            disabled={scoring || dirty}
             className="inline-flex items-center gap-1.5 rounded-md border border-border/50 px-2.5 py-1.5 text-xs font-medium text-muted transition-colors hover:text-foreground disabled:opacity-40"
           >
             {scoring ? (
@@ -350,7 +355,7 @@ export function FrameCompare({
 
       <p className="text-xs leading-5 text-subtle">
         {editing
-          ? "Editing: click an element on the card (or a chip in the panel) to select it, then nudge with the arrow keys — 0.1% per press, Shift for 0.5%, [ ] adjusts width, { } height. Or type exact values in the panel."
+          ? "Editing: click an element on the card (or a chip in the panel) to select it, then nudge with the arrow keys — 0.1% per press, Alt for 0.5%, [ ] adjusts width, { } height. Or type exact values in the panel."
           : MODE_HINTS[mode]}
       </p>
 

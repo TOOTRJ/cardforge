@@ -8,7 +8,6 @@ import {
   sampleFramePreview,
 } from "@/lib/cards/frame-reference-registry";
 import {
-  GRANDFATHERED_TEMPLATES,
   isFrameComboAvailable,
 } from "@/lib/cards/frame-availability";
 import { getFrameProfile } from "@/lib/cards/template-layout";
@@ -96,23 +95,6 @@ describe("frame reference registry", () => {
 });
 
 describe("frame availability", () => {
-  it("grandfathers only templates users could already pick", () => {
-    // Verification is the ONLY gate (owner decision) — nothing is
-    // grandfathered anymore; every template publishes per (template, color)
-    // through /admin/frame-compare.
-    expect(GRANDFATHERED_TEMPLATES.size).toBe(0);
-    for (const gated of [
-      "m15",
-      "m15pw",
-      "battle",
-      "retro",
-      "saga",
-      "lotr",
-    ] as const) {
-      expect(GRANDFATHERED_TEMPLATES.has(gated), gated).toBe(false);
-    }
-  });
-
   it("verifying a combo publishes exactly that combo", () => {
     const verified = new Set([frameComboKey("saga", "w")]);
     expect(isFrameComboAvailable("saga", "w", verified)).toBe(true);

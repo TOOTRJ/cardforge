@@ -29,9 +29,6 @@ export type ChecklistCombo = {
 export type ChecklistTemplate = {
   template: string;
   label: string;
-  /** True when the template was user-pickable before verification existed —
-   *  gating doesn't apply to it (it's grandfathered live). */
-  grandfathered: boolean;
   /** True when a frame_profile_overrides row is active for this template. */
   hasOverride?: boolean;
   combos: ChecklistCombo[];
@@ -113,18 +110,9 @@ export function FrameReviewChecklist({ eras }: { eras: ChecklistEra[] }) {
                         override active
                       </span>
                     ) : null}
-                    {tpl.grandfathered ? (
-                      <span
-                        className="text-[10px] uppercase tracking-wider text-subtle"
-                        title="Already user-pickable before verification existed — the checkbox tracks QA but can't withdraw it."
-                      >
-                        live (grandfathered)
-                      </span>
-                    ) : (
-                      <span className="text-[10px] uppercase tracking-wider text-gold-strong">
-                        publishes on verify
-                      </span>
-                    )}
+                    <span className="text-[10px] uppercase tracking-wider text-gold-strong">
+                      publishes on verify
+                    </span>
                   </div>
                   <ul className="flex flex-col">
                     {tpl.combos.map((combo) => (

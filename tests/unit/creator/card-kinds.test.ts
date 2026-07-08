@@ -3,12 +3,12 @@ import {
   CARD_KIND_VALUES,
   KIND_DEFS,
   framesForKind,
-  isFrameValidForKind,
+  basicLandSeedForColorKey,
+  isSeedableLandIdentity,
   kindFromCard,
   planKindChange,
   type CardKind,
 } from "@/lib/creator/card-kinds";
-import { GRANDFATHERED_TEMPLATES } from "@/lib/cards/frame-availability";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 
 const NO_VERIFIED: ReadonlySet<string> = new Set();
@@ -108,7 +108,6 @@ describe("framesForKind", () => {
   });
 
   it("gates every combo on verification — nothing is grandfathered", () => {
-    expect(GRANDFATHERED_TEMPLATES.size).toBe(0);
     // With nothing verified, EVERY frame tile is gated.
     for (const f of framesForKind("creature", NO_VERIFIED)) {
       expect(f.availableColorKeys).toEqual([]);
@@ -123,18 +122,6 @@ describe("framesForKind", () => {
       new Set([frameComboKey("m15", "w")]),
     ).find((f) => f.template === "m15");
     expect(m15?.availableColorKeys).toEqual(["w"]);
-  });
-});
-
-describe("isFrameValidForKind", () => {
-  it("accepts frames the gallery offers and rejects mismatches", () => {
-    expect(isFrameValidForKind("creature", "m15", NO_VERIFIED)).toBe(true);
-    expect(isFrameValidForKind("creature", "retro", NO_VERIFIED)).toBe(true);
-    expect(isFrameValidForKind("planeswalker", "agclassic", NO_VERIFIED)).toBe(
-      false,
-    );
-    expect(isFrameValidForKind("creature", "saga", NO_VERIFIED)).toBe(false);
-    expect(isFrameValidForKind("saga", "saga", NO_VERIFIED)).toBe(true);
   });
 });
 
@@ -211,5 +198,54 @@ describe("planKindChange", () => {
       action: "apply",
       patch: { card_type: "land", template: "m15land" },
     });
+  });
+});
+
+describe("basic-land auto-identity", () => {
+  it("seeds the basic matching the frame color, none for multicolor", () => {
+    expect(basicLandSeedForColorKey("c")).toEqual({
+      title: "Wastes",
+      supertype: "Basic",
+      subtypes_text: "Wastes",
+    });
+    expect(basicLandSeedForColorKey("g")?.title).toBe("Forest");
+    expect(basicLandSeedForColorKey("m")).toBeNull();
+    expect(basicLandSeedForColorKey("nope")).toBeNull();
+  });
+
+  it("treats empty or exactly-seeded identities as rewritable, user text as owned", () => {
+    expect(
+      isSeedableLandIdentity({ title: "", supertype: "", subtypes_text: "" }),
+    ).toBe(true);
+    expect(
+      isSeedableLandIdentity({
+        title: "Forest",
+        supertype: "Basic",
+        subtypes_text: "Forest",
+      }),
+    ).toBe(true);
+    // A renamed card is user-owned even with the seeded subtype intact.
+    expect(
+      isSeedableLandIdentity({
+        title: "Mystic Grove",
+        supertype: "Basic",
+        subtypes_text: "Forest",
+      }),
+    ).toBe(false);
+    // Mixed seed (title from one basic, subtype from another) is user-owned.
+    expect(
+      isSeedableLandIdentity({
+        title: "Forest",
+        supertype: "Basic",
+        subtypes_text: "Island",
+      }),
+    ).toBe(false);
+    expect(
+      isSeedableLandIdentity({
+        title: "Forest",
+        supertype: "",
+        subtypes_text: "Forest",
+      }),
+    ).toBe(false);
   });
 });

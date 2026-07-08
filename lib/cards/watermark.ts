@@ -16,10 +16,10 @@ import type { CardWatermark } from "@/types/card";
  *  future polish: thread a colorHex through resolveWatermarkStyle.) */
 export const WATERMARK_INK = "#3b3126";
 
-export const WATERMARK_DEFAULT_OPACITY = 0.14;
+const WATERMARK_DEFAULT_OPACITY = 0.14;
 /** The "large" (basic-land big symbol) treatment reads as line art, not a
  *  faint stamp — real basics print it near-solid. */
-export const WATERMARK_LARGE_DEFAULT_OPACITY = 0.85;
+const WATERMARK_LARGE_DEFAULT_OPACITY = 0.85;
 
 /** Original PipGlyph faction-style marks (public/watermarks/{key}.png,
  *  1024px dark-ink line art on transparency). IP-safe: our own designs,
@@ -35,9 +35,7 @@ export const WATERMARK_PRESETS = [
   { key: "crown-laurel", label: "Crown Laurel" },
 ] as const;
 
-export type WatermarkPresetKey = (typeof WATERMARK_PRESETS)[number]["key"];
-
-export const WATERMARK_PRESET_KEYS = WATERMARK_PRESETS.map((p) => p.key);
+const WATERMARK_PRESET_KEYS = WATERMARK_PRESETS.map((p) => p.key);
 
 export function isWatermarkPresetKey(key: string): boolean {
   return (WATERMARK_PRESET_KEYS as string[]).includes(key);
@@ -54,6 +52,28 @@ const BASIC_LAND_KEYS: Record<string, "w" | "u" | "b" | "r" | "g" | "c"> = {
   forest: "g",
   wastes: "c",
 };
+
+/** Frame color key → the basic land it maps to ("m" has no basic — real
+ *  multicolor lands are nonbasics like Command Tower). Single source for the
+ *  creator's land auto-naming and the frame-compare sample cards. */
+export const BASIC_LAND_NAME_BY_KEY: Record<
+  "w" | "u" | "b" | "r" | "g" | "c",
+  string
+> = {
+  w: "Plains",
+  u: "Island",
+  b: "Swamp",
+  r: "Mountain",
+  g: "Forest",
+  c: "Wastes",
+};
+
+/** The basic land name for a frame color key, or null for "m"/unknown. */
+export function basicLandNameForColorKey(key: string): string | null {
+  return (
+    BASIC_LAND_NAME_BY_KEY[key as keyof typeof BASIC_LAND_NAME_BY_KEY] ?? null
+  );
+}
 
 /** The mana key for a basic land (card_type land + a basic subtype), else
  *  null. Drives the automatic big-symbol treatment in both renderers and

@@ -50,6 +50,7 @@ import { CardSetupPanel } from "@/components/creator/panels/card-setup-panel";
 import { KindChangeDialog } from "@/components/creator/kind-change-dialog";
 import { ArtPanel } from "@/components/creator/panels/art-panel";
 import { TextPanel } from "@/components/creator/panels/text-panel";
+import { LandIconPanel } from "@/components/creator/panels/land-icon-panel";
 import { ForgeAIPanel } from "@/components/creator/panels/forge-ai-panel";
 import { AbilitiesPanel } from "@/components/creator/panels/abilities-panel";
 import { LayoutPanel } from "@/components/creator/panels/layout-panel";
@@ -91,7 +92,9 @@ import { basicLandManaKey } from "@/lib/cards/watermark";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
 import type { FrameProfileOverridesMap } from "@/lib/cards/profile-override";
 import {
+  basicLandSeedForColorKey,
   firstAvailableFrame,
+  isSeedableLandIdentity,
   kindFromCard,
   planKindChange,
   templateHasAvailableColor,
@@ -619,14 +622,43 @@ export function CardCreatorForm({
         return;
       }
     }
+    // Snapshot BEFORE the writes — the land auto-identity below must judge
+    // the state the user is leaving, not the one we're creating.
+    const prevCardType = getValues("card_type");
+    const identitySnapshot = {
+      title: getValues("title") ?? "",
+      supertype: getValues("supertype") ?? "",
+      subtypes_text: getValues("subtypes_text") ?? "",
+    };
     setValue("card_type", patch.card_type, { shouldDirty: true });
     setValue("frame_style.template", template, { shouldDirty: true });
     if (patch.has_back_face) {
       setValue("has_back_face", true, { shouldDirty: true });
     }
+    const nextKind = kindFromCard(patch.card_type, template);
+    // Land auto-identity: picking Land starts you on the basic of the current
+    // frame color (colorless → Wastes) — that's what makes the big mana
+    // symbol render immediately. Only fires while the identity is untouched
+    // (or a previous seed), so it can never overwrite a typed name; leaving
+    // Land clears a still-pristine seed the same way.
+    if (isSeedableLandIdentity(identitySnapshot)) {
+      if (nextKind === "land") {
+        const seed = basicLandSeedForColorKey(
+          pickFrameColorKey(getValues("color_identity")),
+        );
+        if (seed) {
+          setValue("title", seed.title, { shouldDirty: true });
+          setValue("supertype", seed.supertype, { shouldDirty: true });
+          setValue("subtypes_text", seed.subtypes_text, { shouldDirty: true });
+        }
+      } else if (prevCardType === "land" && identitySnapshot.title.trim()) {
+        setValue("title", "", { shouldDirty: true });
+        setValue("supertype", "", { shouldDirty: true });
+        setValue("subtypes_text", "", { shouldDirty: true });
+      }
+    }
     // Switching INTO a rows-driven kind with an empty editor: seed the rows
     // from whatever rules text exists, so prior work stays visible.
-    const nextKind = kindFromCard(patch.card_type, template);
     if (
       nextKind === "planeswalker" &&
       getValues("loyalty_abilities").length === 0
@@ -649,6 +681,26 @@ export function CardCreatorForm({
       setPendingKindPlan(plan);
     }
   };
+  /** Color chips → keep a pristine basic-land identity in step with the
+   *  color (Forest → Mountain when green flips to red; multicolor has no
+   *  basic, so the seed clears for the user to name their dual). Inert the
+   *  moment the user renames the card. */
+  const handleColorIdentityChange = (next: ColorIdentity[]) => {
+    if (watched.card_type !== "land") return;
+    const identity = {
+      title: getValues("title") ?? "",
+      supertype: getValues("supertype") ?? "",
+      subtypes_text: getValues("subtypes_text") ?? "",
+    };
+    if (!identity.title.trim() || !isSeedableLandIdentity(identity)) return;
+    const seed = basicLandSeedForColorKey(pickFrameColorKey(next));
+    setValue("title", seed?.title ?? "", { shouldDirty: true });
+    setValue("supertype", seed?.supertype ?? "", { shouldDirty: true });
+    setValue("subtypes_text", seed?.subtypes_text ?? "", {
+      shouldDirty: true,
+    });
+  };
+
   /** Programmatic kind application (import/AI): never blocks on a dialog —
    *  accepts the era fallback and tells the user what happened. */
   const applyKindProgrammatic = (nextKind: CardKind) => {
@@ -1527,6 +1579,7 @@ export function CardCreatorForm({
                 colorIdentity={watched.color_identity}
                 verifiedFrameKeys={verifiedFrameKeys}
                 onKindSelect={handleKindSelect}
+                onColorIdentityChange={handleColorIdentityChange}
               />
             ) : null}
 
@@ -1576,16 +1629,17 @@ export function CardCreatorForm({
                   parseSubtypes(watched.subtypes_text),
                 ) ? (
                   // Basic lands print a large mana symbol instead of rules
-                  // text — the preview/bake add it automatically from the
-                  // basic subtype (Plains/Island/…), so there's nothing to
-                  // type here.
-                  <div className="rounded-lg border border-dashed border-border/60 bg-elevated/40 p-6 text-sm leading-6 text-muted">
-                    Basic lands don&apos;t carry rules text — the card prints
-                    a large mana symbol in the text box instead, added
-                    automatically from the land type. Remove the basic land
-                    subtype (Plains, Island, Swamp, Mountain, Forest, Wastes)
-                    on the Identity step to write rules text.
-                  </div>
+                  // text — so this step is the ICON step: follow the land
+                  // type, override with another symbol, or upload your own.
+                  <LandIconPanel
+                    userId={userId}
+                    autoKey={
+                      basicLandManaKey(
+                        watched.card_type,
+                        parseSubtypes(watched.subtypes_text),
+                      )!
+                    }
+                  />
                 ) : panelConfig.textVariant === "loyalty" ? (
                   // Planeswalkers: ability rows instead of a raw textarea
                   // (and no flavor text — real walkers never carry it).
@@ -1604,12 +1658,18 @@ export function CardCreatorForm({
                   />
                 )}
                 <AbilitiesPanel statVis={statVis} />
-                {/* Forge AI last — below the power/toughness stats. */}
-                <ForgeAIPanel
-                  cardContext={cardContext}
-                  aiConfigured={aiConfigured}
-                  onAIPatch={handleAIPatch}
-                />
+                {/* Forge AI last — below the power/toughness stats. Hidden on
+                    basic lands: the step is icon-only there. */}
+                {!basicLandManaKey(
+                  watched.card_type,
+                  parseSubtypes(watched.subtypes_text),
+                ) ? (
+                  <ForgeAIPanel
+                    cardContext={cardContext}
+                    aiConfigured={aiConfigured}
+                    onAIPatch={handleAIPatch}
+                  />
+                ) : null}
               </>
             ) : null}
 

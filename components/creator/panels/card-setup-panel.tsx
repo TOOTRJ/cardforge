@@ -122,6 +122,10 @@ type CardSetupPanelProps = {
   /** Kind selection routes through the orchestrator's planKindChange so a
    *  change can remap the frame in-era or ask — never silently. */
   onKindSelect: (next: CardKind) => void;
+  /** Fires AFTER a color-identity change lands in the form — the orchestrator
+   *  uses it to keep a pristine basic-land name/subtype in step with the
+   *  color. */
+  onColorIdentityChange?: (next: ColorIdentity[]) => void;
 };
 
 export function CardSetupPanel({
@@ -129,6 +133,7 @@ export function CardSetupPanel({
   colorIdentity,
   verifiedFrameKeys = [],
   onKindSelect,
+  onColorIdentityChange,
 }: CardSetupPanelProps) {
   const { control } = useFormContext<FormValues>();
   const verifiedKeys = useMemo(
@@ -302,7 +307,10 @@ export function CardSetupPanel({
           <ColorSection
             summary={colorSummary}
             selection={(field.value ?? []) as ColorIdentity[]}
-            onChange={field.onChange}
+            onChange={(next) => {
+              field.onChange(next);
+              onColorIdentityChange?.(next);
+            }}
             verifiedKeys={verifiedKeys}
           />
         )}
