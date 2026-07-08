@@ -30,6 +30,10 @@ import {
 } from "@/types/card";
 import { normalizeFrameTemplate } from "@/lib/cards/card-display";
 import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
+import {
+  BASIC_LAND_NAME_BY_KEY,
+  basicLandNameForColorKey,
+} from "@/lib/cards/watermark";
 import { eraForTemplate, standardFrameFor } from "@/lib/creator/frame-picker";
 
 // ---------------------------------------------------------------------------
@@ -309,15 +313,42 @@ export function kindHasAvailableFrame(
   return firstAvailableFrame(kind, verifiedKeys) !== null;
 }
 
-/** True when the template is one the gallery would offer for the kind. Used
- *  by edit mode to pin a saved-but-mismatched legacy frame ("Current frame")
- *  instead of silently swapping it. */
-export function isFrameValidForKind(
-  kind: CardKind,
-  template: FrameTemplate,
-  verifiedKeys: ReadonlySet<string>,
-): boolean {
-  return framesForKind(kind, verifiedKeys).some((f) => f.template === template);
+// ---------------------------------------------------------------------------
+// Basic-land auto-identity — picking the Land kind starts you on a real
+// basic (name + Basic supertype + subtype), which is what makes the big
+// mana symbol render immediately. The seed follows the frame color while
+// untouched and is cleared when the user leaves the Land kind, so it can
+// never overwrite a name the user typed.
+// ---------------------------------------------------------------------------
+
+export type BasicLandSeed = {
+  title: string;
+  supertype: string;
+  subtypes_text: string;
+};
+
+/** The identity the creator seeds for a land of the given frame color
+ *  ("c" → Wastes). "m" has no basic — multicolor lands are nonbasics the
+ *  user names themselves — so it returns null. */
+export function basicLandSeedForColorKey(key: string): BasicLandSeed | null {
+  const name = basicLandNameForColorKey(key);
+  return name
+    ? { title: name, supertype: "Basic", subtypes_text: name }
+    : null;
+}
+
+/** True when the identity fields are untouched (all empty) or still exactly
+ *  match one of the auto-seeds — the only states the creator is allowed to
+ *  rewrite (color-follow, or cleanup on leaving the Land kind). */
+export function isSeedableLandIdentity(v: BasicLandSeed): boolean {
+  const title = v.title.trim();
+  const supertype = v.supertype.trim();
+  const subtypes = v.subtypes_text.trim();
+  if (!title && !supertype && !subtypes) return true;
+  return Object.values(BASIC_LAND_NAME_BY_KEY).some(
+    (name) =>
+      title === name && supertype === "Basic" && subtypes === name,
+  );
 }
 
 // ---------------------------------------------------------------------------

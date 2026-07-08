@@ -71,14 +71,6 @@ export const COLOR_IDENTITY_VALUES = [
 ] as const;
 export type ColorIdentity = (typeof COLOR_IDENTITY_VALUES)[number];
 
-export const FANTASY_TEMPLATE_KEYS = [
-  "fantasy_creature",
-  "fantasy_spell",
-  "fantasy_artifact",
-  "fantasy_land",
-] as const;
-export type FantasyTemplateKey = (typeof FANTASY_TEMPLATE_KEYS)[number];
-
 // ---------------------------------------------------------------------------
 // Narrowed row types — the DB stores enums as text, so we re-export rows with
 // the enum unions baked in. Use these everywhere downstream (queries,
@@ -397,18 +389,6 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   modernland: "modern",
 };
 
-// The frame a set defaults to when the picker switches to it.
-export const FRAME_SET_DEFAULT_TEMPLATE: Record<FrameSet, FrameTemplate> = {
-  m15: "m15",
-  alpha: "agclassic",
-  lotr: "lotr",
-  avatar: "avatar",
-  bloomburrow: "bloomburrow",
-  tarkir: "tarkirdragon",
-  retro: "retro",
-  modern: "modern",
-};
-
 // ---------------------------------------------------------------------------
 // Frame ERAS — the top tier of the creator's frame picker. An era is a border
 // generation (the visual trade-dress family), NOT a play format. Play formats
@@ -507,20 +487,6 @@ export const ERA_TYPE_FRAME: Partial<
   },
 };
 
-// STRUCTURAL layout frames the user can opt into within a border era,
-// OVERRIDING the type-derived default. These change the card's anatomy — a
-// Saga is a chapter-rail enchantment, an Adventure a storybook creature, a
-// split/flip/aftermath card has a second face. In the kind-first creator flow
-// each of these is a first-class "card kind" (lib/creator/card-kinds.ts).
-// Order = display order in the picker.
-export const ERA_LAYOUT_TEMPLATES: Record<FrameEra, FrameTemplate[]> = {
-  classic: [],
-  retro: [],
-  modern: [],
-  m15: ["saga", "adventure", "split", "flip", "aftermath"],
-  showcase: [],
-};
-
 // SKIN variants — alternate dressings that keep their BASE template's
 // geometry wholesale (m15snow reuses the m15 profile, m15snowland the
 // m15land profile, …). Unlike layout templates these are NOT kinds: a snow
@@ -586,22 +552,6 @@ export function frameStyleRequiresPremium(
   );
 }
 
-// ---------------------------------------------------------------------------
-// Roadmap frames — on the to-do list but not yet selectable. The picker shows
-// these as disabled "Soon" chips so users can see what's coming. They are NOT
-// part of FRAME_TEMPLATE_VALUES (which is compile-enforced and needs a layout
-// profile + the 7 color PNGs), so they're plain display rows keyed by a string.
-//
-// To ship one: build the frame (see scripts/build-adventure-frame.mjs for the
-// multi-panel composite approach), add it to FRAME_TEMPLATE_VALUES + a profile,
-// and remove it from here.
-// ---------------------------------------------------------------------------
-export type ComingSoonFrame = { key: string; label: string; set: FrameSet };
-export const COMING_SOON_FRAMES: ComingSoonFrame[] = [
-  // All m15 multi-panel frames now ship (adventure/flip/split/aftermath); add
-  // future roadmap frames here to surface them as disabled "Soon" chips.
-];
-
 // Roadmap ERAS — border generations not yet converted, shown as disabled "Soon"
 // chips in the era tier so users see what's coming. The MSE pack has all three
 // (magic-old / magic-new / magic-future); to ship one, convert its frames, add
@@ -610,11 +560,6 @@ export type ComingSoonEra = { key: string; label: string; hint: string };
 export const COMING_SOON_ERAS: ComingSoonEra[] = [
   { key: "future", label: "Future Sight (2007)", hint: "The futureshifted frame" },
 ];
-
-// (Universes Beyond is now LIVE inside the "showcase" era — LOTR/Avatar are UB —
-//  so it's no longer a roadmap item.)
-export type ComingSoonSet = { key: string; label: string };
-export const COMING_SOON_SETS: ComingSoonSet[] = [];
 
 // ---------------------------------------------------------------------------
 // Composed types for queries that join cards with related tables.

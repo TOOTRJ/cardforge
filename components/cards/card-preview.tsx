@@ -60,6 +60,7 @@ import type {
   Rarity,
 } from "@/types/card";
 import {
+  basicLandManaKey,
   resolveWatermark,
   watermarkHeightFraction,
   watermarkOpacity,
@@ -572,12 +573,13 @@ function CardFace({
     face.cardType,
     face.subtypes,
   );
-  // Basic lands print NO rules text — just the big symbol (the creator hides
-  // the field; imported reminder text would smear across the mark).
-  const isBasicLandSymbol =
-    !face.watermark && effectiveWatermark?.size === "large";
+  // Basic lands (by subtype) print NO rules text — just the big symbol.
+  // Keyed on the subtype, not the watermark, so an explicit override icon
+  // suppresses the text the same way the automatic one does.
+  const isBasicLand =
+    basicLandManaKey(face.cardType, face.subtypes) !== null;
   const hasRulesContent =
-    !isBasicLandSymbol &&
+    !isBasicLand &&
     Boolean(face.rulesText?.trim() || face.flavorText?.trim());
 
   return (
@@ -839,7 +841,7 @@ function CardFace({
           abilities={loyaltyAbilities}
           sizePct={rulesSizePct}
         />
-      ) : isBasicLandSymbol ? null : (
+      ) : isBasicLand ? null : (
       <div
         style={{
           ...rectStyle(layout.rules.rect),

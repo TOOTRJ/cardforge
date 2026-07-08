@@ -1,4 +1,5 @@
 import type { FrameTemplate } from "@/types/card";
+import { basicLandNameForColorKey } from "@/lib/cards/watermark";
 
 // ---------------------------------------------------------------------------
 // Frame reference registry — one REAL printed card per (template, color)
@@ -9,11 +10,10 @@ import type { FrameTemplate } from "@/types/card";
 // and is a `highres_scan` printing. `null` means no real printing exists
 // for that combination (e.g. mono-color split cards were never printed in
 // the M15 frame) — the combo can still be eyeballed in the tool, just
-// without a scan overlay.
-//
-// M15-era combos are fully researched. Other eras carry the Serra Angel
-// anchors from the tool's first iteration; fill them in as those eras get
-// their verification pass.
+// without a scan overlay. M15-era templates (incl. the special layouts and
+// skins) are fully researched; the old-border eras carry single w anchors
+// and the showcase/UB + old-border land templates are still TBD — fill them
+// in as those eras get their verification pass.
 // ---------------------------------------------------------------------------
 
 export type FrameReference = {
@@ -259,21 +259,13 @@ const SAMPLE_COST: Record<FrameColorKey, string> = {
 // mana symbol, no rules text) — the sample must match or the compare reads
 // as broken. Multicolor land references are nonbasic (Command Tower), so
 // "m" keeps sample rules text.
-const SAMPLE_BASIC_BY_KEY: Partial<Record<FrameColorKey, string>> = {
-  w: "Plains",
-  u: "Island",
-  b: "Swamp",
-  r: "Mountain",
-  g: "Forest",
-  c: "Wastes",
-};
 
 export function sampleFramePreview(template: FrameTemplate, colorKey: FrameColorKey) {
   const isLand = template.endsWith("land");
   const isToken = template.includes("token");
   const isPw = template === "m15pw";
   const isBattle = template === "battle";
-  const basicName = isLand ? SAMPLE_BASIC_BY_KEY[colorKey] : undefined;
+  const basicName = isLand ? basicLandNameForColorKey(colorKey) : null;
   if (isLand && basicName) {
     return {
       title: basicName,

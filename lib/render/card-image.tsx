@@ -43,6 +43,7 @@ import {
   resolveSagaChapters,
 } from "@/lib/cards/face-content";
 import {
+  basicLandManaKey,
   resolveWatermark,
   watermarkHeightFraction,
   watermarkOpacity,
@@ -239,12 +240,13 @@ function CardImage({
     card.cardType,
     card.subtypes,
   );
-  // Basic lands print NO rules text — just the big symbol (identical
-  // suppression to the live preview).
-  const isBasicLandSymbol =
-    !card.watermark && effectiveWatermark?.size === "large";
+  // Basic lands (by subtype) print NO rules text — just the big symbol.
+  // Keyed on the subtype, not the watermark, so an explicit override icon
+  // suppresses the text too (identical to the live preview).
+  const isBasicLand =
+    basicLandManaKey(card.cardType, card.subtypes) !== null;
   const hasRulesContent =
-    !isBasicLandSymbol &&
+    !isBasicLand &&
     Boolean(card.rulesText?.trim() || card.flavorText?.trim());
 
   const artW = Math.round((layout.artSlot.widthPct / 100) * width);
@@ -535,7 +537,7 @@ function CardImage({
               pipOverrides: card.pipOverrides,
               cardWidth: width,
             })
-          : isBasicLandSymbol
+          : isBasicLand
             ? null
             : (
       <div

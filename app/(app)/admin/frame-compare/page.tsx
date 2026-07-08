@@ -22,7 +22,6 @@ import {
   sampleFramePreview,
   type FrameColorKey,
 } from "@/lib/cards/frame-reference-registry";
-import { GRANDFATHERED_TEMPLATES } from "@/lib/cards/frame-availability";
 import { getFrameReviews } from "@/lib/cards/frame-reviews";
 import { eraForTemplate } from "@/lib/creator/frame-picker";
 import { buildFrameComparePayload } from "@/lib/scryfall/reference-preview";
@@ -43,8 +42,8 @@ import {
 // Checklist mode (default): every (template, color) combination the site
 // ships, grouped by era, with its real reference printing and a verify
 // checkbox. Checking publishes the combination to the frame picker for all
-// users (lib/cards/frame-availability.ts); templates that predate the
-// system are grandfathered live.
+// users; unchecking withdraws it — verification is the only availability
+// gate (lib/cards/frame-availability.ts).
 //
 // Compare mode (?template=&color=): renders the reference card through OUR
 // pipeline (content mapped live from Scryfall — no hand transcription) and
@@ -121,9 +120,11 @@ export default async function AdminFrameComparePage({
           eyebrow="Admin · Frame compare"
           title={`${FRAME_TEMPLATE_LABELS[template]} · ${color.toUpperCase()}`}
           description={
-            reference
+            reference && payload
               ? `Reference: ${reference.name} (${reference.set.toUpperCase()})${custom ? " — admin-pinned" : ""}. Difference mode: aligned pixels go dark, drift glows.`
-              : "No real printing exists for this combination — eyeball the sample render."
+              : reference
+                ? `Reference lookup failed (${reference.name}) — showing sample content instead. Reload to retry.`
+                : "No real printing exists for this combination — eyeball the sample render."
           }
           actions={
             <span className="flex flex-wrap items-center gap-4">
@@ -173,7 +174,6 @@ export default async function AdminFrameComparePage({
     templates: (templatesByEra.get(era) ?? []).map((t) => ({
       template: t,
       label: FRAME_TEMPLATE_LABELS[t],
-      grandfathered: GRANDFATHERED_TEMPLATES.has(t),
       hasOverride: Boolean(checklistOverrides[t]),
       combos: FRAME_COLOR_KEYS.map((colorKey) => {
         const review = reviews.get(frameComboKey(t, colorKey));

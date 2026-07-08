@@ -2,10 +2,9 @@
 // free so it's unit-testable under the node test env and so both the client
 // form and the tests derive the SAME panel list from the same rules.
 //
-// The editor is FRAME-AWARE: which panels appear (and a couple of panel
-// labels) depend on the chosen frame template + card type + whether a back
-// face exists. Field→panel routing is derived from the panel defs (no
-// hand-kept map to drift).
+// The editor is FRAME-AWARE: what each panel renders depends on the chosen
+// frame template + card type + whether a back face exists. Field→panel
+// routing is derived from the panel defs (no hand-kept map to drift).
 
 import type { CardType, FrameTemplate } from "@/types/card";
 import type { FormValues } from "@/lib/creator/form-types";
@@ -40,7 +39,7 @@ export type StepContext = {
 
 export type StepDef = {
   key: StepKey;
-  /** Fallback label. The "layout" panel's label is dynamic — use stepLabel(). */
+  /** Display label (see stepLabel()). */
   label: string;
   /** Short helper shown under the panel label on mobile. */
   description: string;
@@ -166,7 +165,8 @@ const STEP_DEFS: StepDef[] = [
   },
   {
     // Finish/treatment (frame_style.finish — error routing stays with the
-    // "frame" panel, so it isn't listed here) plus visibility, set, tags, save.
+    // Card panel, frame_style's primary owner, so it isn't listed here) plus
+    // visibility, set, tags, save.
     key: "publish",
     label: "Publish",
     description: "Finish, visibility & save",
@@ -196,8 +196,8 @@ export function stepLabel(step: StepDef): string {
 
 /** Map every owned field to its panel key, derived from the defs. Used to
  *  route a server validation error to the right panel. Note frame_style maps
- *  to "frame" even though the finish now lives on the Publish step (frame is
- *  the primary owner). */
+ *  to "card" even though the finish now lives on the Publish step (the Card
+ *  panel is the primary owner). */
 export function buildFieldToStep(
   steps: StepDef[] = STEP_DEFS,
 ): Map<keyof FormValues, StepKey> {
