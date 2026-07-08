@@ -25,6 +25,7 @@ import {
 import {
   CARD_KIND_VALUES,
   KIND_DEFS,
+  baseFrameFor,
   framesForKind,
   kindHasAvailableFrame,
   type CardKind,
@@ -34,6 +35,7 @@ import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
 import {
   COLOR_IDENTITY_VALUES,
   COMING_SOON_ERAS,
+  TEMPLATE_SKIN_VARIANTS,
   DEFAULT_FRAME_TEMPLATE,
   FRAME_ERA_HINTS,
   FRAME_ERA_LABELS,
@@ -197,7 +199,12 @@ export function CardSetupPanel({
         />
       </SetupSection>
 
-      {/* 2 · Frame — every era's frame for the type, plus showcase & UB. */}
+      {/* 2 · Frame (border eras + layouts) and 3 · Variations (skins +
+          showcase treatments of the chosen frame). One stored value —
+          frame_style.template — drives both: the Frame section highlights
+          the template's BASE (baseFrameFor), the Variations section owns
+          the difference. Picking a frame writes the base itself, so the
+          variation resets to Standard by construction. */}
       <Controller
         control={control}
         name="frame_style.template"
@@ -205,23 +212,46 @@ export function CardSetupPanel({
           const template = (field.value ??
             DEFAULT_FRAME_TEMPLATE) as FrameTemplate;
           const normalized = normalizeFrameTemplate(template);
-          const frameSummary =
-            eraForTemplate(normalized) === "showcase"
-              ? `${FRAME_SET_LABELS[FRAME_TEMPLATE_SET[normalized]]} — ${FRAME_TEMPLATE_LABELS[normalized]}`
-              : `${FRAME_ERA_LABELS[eraForTemplate(normalized)]} — ${FRAME_TEMPLATE_LABELS[normalized]}`;
+          const base = baseFrameFor(kind, normalized);
 
-          // Group the flat choice list into era sections, preserving order.
+          // Split the availability universe: standards + layouts belong to
+          // the Frame section; skins + showcase are variations of the base.
+          const frameChoices = choices.filter(
+            (c) => c.group === "standard" || c.group === "layout",
+          );
+          const skinChoices = choices.filter(
+            (c) =>
+              c.group === "skin" &&
+              (TEMPLATE_SKIN_VARIANTS[base] ?? []).includes(c.template),
+          );
+          const showcaseChoices = choices.filter(
+            (c) => c.group === "showcase",
+          );
+          const variationChoices = [...skinChoices, ...showcaseChoices];
+
+          const frameSummary =
+            eraForTemplate(base) === "showcase"
+              ? FRAME_TEMPLATE_LABELS[base]
+              : `${FRAME_ERA_LABELS[eraForTemplate(base)]} — ${FRAME_TEMPLATE_LABELS[base]}`;
+          const variationSummary =
+            normalized === base
+              ? "Standard"
+              : eraForTemplate(normalized) === "showcase"
+                ? `${FRAME_SET_LABELS[FRAME_TEMPLATE_SET[normalized]]} — ${FRAME_TEMPLATE_LABELS[normalized]}`
+                : FRAME_TEMPLATE_LABELS[normalized];
+
+          // Group the frame list into era sections, preserving order.
           const byEra = new Map<FrameEra, FrameChoice[]>();
-          for (const choice of choices) {
+          for (const choice of frameChoices) {
             const list = byEra.get(choice.era) ?? [];
             list.push(choice);
             byEra.set(choice.era, list);
           }
 
-          // A saved template the gallery wouldn't offer for this kind
-          // (old-bug artifacts, withdrawn combos): pin it visibly instead of
+          // A saved template NOTHING offers for this kind (old-bug
+          // artifacts, withdrawn combos): pin it visibly instead of
           // silently swapping it out from under the card.
-          const isLegacyPin = !choices.some((c) => c.template === template);
+          const isLegacyPin = !choices.some((c) => c.template === normalized);
 
           const toOption = (
             choice: FrameChoice,
@@ -261,52 +291,83 @@ export function CardSetupPanel({
             };
           };
 
+          // The Standard chip = the base frame itself.
+          const standardOption: ChipOption<FrameTemplate> = {
+            value: base,
+            label: "Standard",
+            description: `The plain ${FRAME_TEMPLATE_LABELS[base]} frame`,
+            leading: <FrameThumb template={base} colorKey={colorKey} />,
+          };
+
           return (
-            <SetupSection title="Frame" value={frameSummary}>
-              {isLegacyPin ? (
-                <ChipGroup
-                  ariaLabel="Current frame"
-                  layout="grid-2"
-                  size="md"
-                  value={template}
-                  onChange={field.onChange}
-                  options={[
-                    {
-                      value: template,
-                      label: FRAME_TEMPLATE_LABELS[normalized],
-                      description:
-                        "Saved on this card; it stays until you pick another.",
-                      leading: (
-                        <FrameThumb template={normalized} colorKey={colorKey} />
-                      ),
-                    },
-                  ]}
-                />
-              ) : null}
-              {FRAME_ERA_VALUES.filter((era) => byEra.has(era)).map((era) => (
-                <div key={era} className="flex flex-col gap-2">
-                  <span className="text-[11px] uppercase tracking-wider text-subtle">
-                    {FRAME_ERA_LABELS[era]} · {FRAME_ERA_HINTS[era]}
-                  </span>
+            <>
+              <SetupSection title="Frame" value={frameSummary}>
+                {isLegacyPin ? (
                   <ChipGroup
-                    ariaLabel={`${FRAME_ERA_LABELS[era]} frames`}
+                    ariaLabel="Current frame"
                     layout="grid-2"
                     size="md"
-                    value={template}
+                    value={normalized}
                     onChange={field.onChange}
-                    options={byEra.get(era)!.map(toOption)}
+                    options={[
+                      {
+                        value: normalized,
+                        label: FRAME_TEMPLATE_LABELS[normalized],
+                        description:
+                          "Saved on this card; it stays until you pick another.",
+                        leading: (
+                          <FrameThumb
+                            template={normalized}
+                            colorKey={colorKey}
+                          />
+                        ),
+                      },
+                    ]}
                   />
-                </div>
-              ))}
-              {COMING_SOON_ERAS.length > 0 ? (
-                <p className="text-[11px] text-subtle">
-                  Coming soon:{" "}
-                  {COMING_SOON_ERAS.map((e) => `${e.label} — ${e.hint}`).join(
-                    " · ",
-                  )}
-                </p>
+                ) : null}
+                {FRAME_ERA_VALUES.filter((era) => byEra.has(era)).map(
+                  (era) => (
+                    <div key={era} className="flex flex-col gap-2">
+                      <span className="text-[11px] uppercase tracking-wider text-subtle">
+                        {FRAME_ERA_LABELS[era]} · {FRAME_ERA_HINTS[era]}
+                      </span>
+                      <ChipGroup
+                        ariaLabel={`${FRAME_ERA_LABELS[era]} frames`}
+                        layout="grid-2"
+                        size="md"
+                        value={base}
+                        onChange={field.onChange}
+                        options={byEra.get(era)!.map(toOption)}
+                      />
+                    </div>
+                  ),
+                )}
+                {COMING_SOON_ERAS.length > 0 ? (
+                  <p className="text-[11px] text-subtle">
+                    Coming soon:{" "}
+                    {COMING_SOON_ERAS.map(
+                      (e) => `${e.label} — ${e.hint}`,
+                    ).join(" · ")}
+                  </p>
+                ) : null}
+              </SetupSection>
+
+              {variationChoices.length > 0 ? (
+                <SetupSection title="Variations" value={variationSummary}>
+                  <ChipGroup
+                    ariaLabel="Frame variations"
+                    layout="grid-2"
+                    size="md"
+                    value={normalized}
+                    onChange={field.onChange}
+                    options={[
+                      standardOption,
+                      ...variationChoices.map(toOption),
+                    ]}
+                  />
+                </SetupSection>
               ) : null}
-            </SetupSection>
+            </>
           );
         }}
       />

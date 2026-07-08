@@ -3,6 +3,7 @@ import {
   CARD_KIND_VALUES,
   KIND_DEFS,
   framesForKind,
+  baseFrameFor,
   basicLandSeedForColorKey,
   isSeedableLandIdentity,
   kindFromCard,
@@ -262,5 +263,20 @@ describe("normalizeColorSelection", () => {
     expect(normalizeColorSelection(["colorless", "green"])).toEqual(["green"]);
     // Duplicates don't fake a multicolor.
     expect(normalizeColorSelection(["red", "red"])).toEqual(["red"]);
+  });
+});
+
+describe("baseFrameFor", () => {
+  it("maps skins to their base and showcase to the kind's M15 standard", () => {
+    expect(baseFrameFor("creature", "m15snow")).toBe("m15");
+    expect(baseFrameFor("creature", "m15devoid")).toBe("m15");
+    expect(baseFrameFor("land", "m15snowland")).toBe("m15land");
+    expect(baseFrameFor("token", "m15tokenartifact")).toBe("m15token");
+    expect(baseFrameFor("creature", "lotr")).toBe("m15");
+    expect(baseFrameFor("land", "avatar")).toBe("m15land");
+    // Standards and layouts are their own base.
+    expect(baseFrameFor("creature", "retro")).toBe("retro");
+    expect(baseFrameFor("creature", "m15")).toBe("m15");
+    expect(baseFrameFor("saga", "saga")).toBe("saga");
   });
 });
