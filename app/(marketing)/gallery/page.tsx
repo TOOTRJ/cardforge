@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { GalleryFilters } from "@/components/gallery/gallery-filters";
+import { FeaturedCreators } from "@/components/marketing/featured-creators";
 import {
   TrendingCardsSection,
   TrendingCardsSectionSkeleton,
@@ -208,6 +209,13 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
       </div>
 
       <FeaturedChallengeBanner />
+
+      {/* Featured creators — admin-curated spotlight, unfiltered view only. */}
+      {configured && !anyFilterActive ? (
+        <Suspense fallback={null}>
+          <FeaturedCreators />
+        </Suspense>
+      ) : null}
 
       {/* Trending hero — only on the unfiltered default view. */}
       {configured && !anyFilterActive ? (

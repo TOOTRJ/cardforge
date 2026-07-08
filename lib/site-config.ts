@@ -59,6 +59,7 @@ export const siteConfig = {
   adminNav: [
     { label: "Moderation", href: "/admin/moderation" },
     { label: "Feedback", href: "/admin/feedback" },
+    { label: "Featured", href: "/admin/featured" },
     { label: "Challenges", href: "/admin/challenges" },
     { label: "Scryfall usage", href: "/admin/scryfall" },
     { label: "Frame compare", href: "/admin/frame-compare" },

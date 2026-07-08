@@ -671,6 +671,7 @@ export type Database = {
           created_at: string;
           discord_url: string | null;
           display_name: string | null;
+          featured_at: string | null;
           github_url: string | null;
           id: string;
           instagram_url: string | null;
@@ -699,6 +700,7 @@ export type Database = {
           created_at?: string;
           discord_url?: string | null;
           display_name?: string | null;
+          featured_at?: string | null;
           github_url?: string | null;
           id: string;
           instagram_url?: string | null;
@@ -727,6 +729,7 @@ export type Database = {
           created_at?: string;
           discord_url?: string | null;
           display_name?: string | null;
+          featured_at?: string | null;
           github_url?: string | null;
           id?: string;
           instagram_url?: string | null;

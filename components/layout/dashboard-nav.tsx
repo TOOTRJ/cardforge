@@ -13,6 +13,7 @@ import {
   Rss,
   Settings,
   ShieldCheck,
+  Star,
   Trophy,
   type LucideIcon,
 } from "lucide-react";
@@ -30,6 +31,7 @@ const NAV_ICONS: Record<string, LucideIcon> = {
   "/settings": Settings,
   "/admin/moderation": ShieldCheck,
   "/admin/feedback": Inbox,
+  "/admin/featured": Star,
   "/admin/challenges": Trophy,
   "/admin/scryfall": Activity,
   "/admin/frame-compare": Frame,
