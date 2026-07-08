@@ -1267,7 +1267,9 @@ const TARKIRGHOSTFIRE = borderlessShowcase("Ghostfire", {
 const PROFILES: Record<FrameTemplate, FrameProfile> = {
   m15: M15,
   m15land: M15LAND,
+  m15snowland: { ...M15LAND, label: "M15 Snow Land" },
   m15token: M15TOKEN,
+  m15tokenartifact: { ...M15TOKEN, label: "M15 Artifact Token" },
   m15artifact: M15ARTIFACT,
   m15snow: M15SNOW,
   m15devoid: M15DEVOID,

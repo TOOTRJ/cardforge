@@ -59,6 +59,26 @@ export const FRAME_REFERENCES: Record<FrameTemplate, ReferenceRow> = {
     c: { name: "Solemn Simulacrum", set: "m21", scryfallId: "7bbd2cab-538e-4932-a828-150e3e9d52ad" },
     m: { name: "Shorikai, Genesis Engine", set: "nec", scryfallId: "969ac7dd-f3aa-4888-9ff0-d16a31b5e7a9" },
   },
+  m15snowland: {
+    w: { name: "Snow-Covered Plains", set: "khm", scryfallId: "afd2730f-878e-47ee-ad2a-73f8fa4e0794" },
+    u: { name: "Snow-Covered Island", set: "khm", scryfallId: "3bfa5ebc-5623-4eec-89ea-dc187489ee4a" },
+    b: { name: "Snow-Covered Swamp", set: "khm", scryfallId: "6aa85af8-15f5-4620-8aea-0b45c28372ed" },
+    r: { name: "Snow-Covered Mountain", set: "khm", scryfallId: "5474e67c-628f-41b0-aa31-3d85a267265a" },
+    g: { name: "Snow-Covered Forest", set: "khm", scryfallId: "ca17acea-f079-4e53-8176-a2f5c5c408a1" },
+    c: { name: "Snow-Covered Wastes", set: "mh3", scryfallId: "87870792-e429-4eba-8193-cdce5c7b6c55" },
+    m: { name: "Arctic Treeline", set: "khm", scryfallId: "b20e3117-f1e4-4449-ae9d-0b66abfc717d" },
+  },
+  m15tokenartifact: {
+    // Printed artifact tokens are colorless (Treasure/Clue/Food/Blood…) —
+    // colored artifact TOKENS don't exist as real prints, so only c anchors.
+    w: null,
+    u: null,
+    b: null,
+    r: null,
+    g: null,
+    c: { name: "Treasure", set: "thob", scryfallId: "c6e096bb-ad9e-4a8b-8b42-26852fa32c1d" },
+    m: null,
+  },
   m15land: {
     w: { name: "Plains", set: "dom", scryfallId: "023d333b-14f2-40ad-bb76-8b9e38040f89" },
     u: { name: "Island", set: "dom", scryfallId: "0ce67a27-aa80-46ac-955a-8fea336995d9" },

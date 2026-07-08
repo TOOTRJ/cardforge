@@ -265,8 +265,10 @@ export const FRAME_TEMPLATE_VALUES = [
   "m15token",
   "m15artifact",
   "m15snow",
+  "m15snowland",
   "m15devoid",
   "m15pw",
+  "m15tokenartifact",
   "agclassic",
   "alphaland",
   "alphatoken",
@@ -306,7 +308,9 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   m15token: "Token",
   m15artifact: "Artifact",
   m15snow: "Snow",
+  m15snowland: "Snow Land",
   m15devoid: "Devoid",
+  m15tokenartifact: "Artifact Token",
   m15pw: "Planeswalker",
   agclassic: "Standard",
   alphaland: "Land",
@@ -366,8 +370,10 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   m15token: "m15",
   m15artifact: "m15",
   m15snow: "m15",
+  m15snowland: "m15",
   m15devoid: "m15",
   m15pw: "m15",
+  m15tokenartifact: "m15",
   battle: "m15",
   saga: "m15",
   adventure: "m15",
@@ -515,17 +521,18 @@ export const ERA_LAYOUT_TEMPLATES: Record<FrameEra, FrameTemplate[]> = {
   showcase: [],
 };
 
-// SKIN variants — alternate dressings that keep the era standard's geometry
-// (m15snow/m15devoid reuse the m15 profile wholesale). Unlike layout
-// templates these are NOT kinds: a snow creature is still a creature, so the
-// gallery offers them as variants wherever the era standard is the plain
-// spell frame. Order = display order in the picker.
-export const ERA_SKIN_VARIANTS: Record<FrameEra, FrameTemplate[]> = {
-  classic: [],
-  retro: [],
-  modern: [],
+// SKIN variants — alternate dressings that keep their BASE template's
+// geometry wholesale (m15snow reuses the m15 profile, m15snowland the
+// m15land profile, …). Unlike layout templates these are NOT kinds: a snow
+// creature is still a creature, so the gallery offers them as variants
+// under whichever era standard they re-dress. Keyed by base template;
+// order = display order in the picker.
+export const TEMPLATE_SKIN_VARIANTS: Partial<
+  Record<FrameTemplate, FrameTemplate[]>
+> = {
   m15: ["m15snow", "m15devoid"],
-  showcase: [],
+  m15land: ["m15snowland"],
+  m15token: ["m15tokenartifact"],
 };
 
 

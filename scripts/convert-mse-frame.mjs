@@ -24,30 +24,29 @@ import path from "node:path";
 import fs from "node:fs";
 
 // ── Config: edit these for each frame set ──────────────────────────────────
-// Mainframe planeswalker cards — the SAME frame as "750 m15 planeswalker
-// cut" but WITHOUT the baked color-indicator disc (real walker fronts have
-// none). {c}card2.png are the tall-textbox variants; we use the short ones.
+// ARTIFACT TOKENS — the token style's silver acard (Treasure/Clue/Food
+// et al are artifact tokens on real prints). Skin variant of m15token.
 const PACK =
-  "/Users/redjester/Projects/other/Full-Magic-Pack/data/magic-m15-mainframe-planeswalker.mse-style/cards";
-const OUT = "public/frames/m15pw";
+  "/Users/redjester/Projects/other/Full-Magic-Pack/data/magic-m15-token.mse-style";
+const OUT = "public/frames/m15tokenartifact";
 // M15 lands from the SIMPLE set — the "cut" *lcard twins bake an MSE
 // produced-mana indicator disc into the title bar's top-left corner, which
 // real M15 lands don't have. The simple set is the same frame without it.
 const MAP = {
-  w: "wcard.png",
-  u: "ucard.png",
-  b: "bcard.png",
-  r: "rcard.png",
-  g: "gcard.png",
-  c: "ccard.png",
-  m: "mcard.png",
+  w: "acard.jpg",
+  u: "acard.jpg",
+  b: "acard.jpg",
+  r: "acard.jpg",
+  g: "acard.jpg",
+  c: "acard.jpg",
+  m: "acard.jpg",
 };
 // Seed point(s) inside each art window, as fractions of the card (x, y).
-const SEEDS = [[0.5, 0.32], [0.5, 0.8]];
+const SEEDS = [[0.5, 0.4]];
 // Which art-window fill to cut to transparent: "black" (the m15 family) or
 // "white" (the agclassic / Alpha family). Ignored if the window is already
 // alpha-cut in the source (battle/devoid) — the fill just finds nothing.
-const FILL = "white";
+const FILL = "black";
 // Output canvas. Portrait frames are 1500×2100; landscape (battle) is 2100×1500.
 const OUT_W = 1500;
 const OUT_H = 2100;
@@ -118,5 +117,5 @@ async function convert(colorKey, srcFile) {
   );
 }
 
-for (const [key, file] of Object.entries(MAP)) await convert(key, file);
+for (const [key, file] of Object.entries(MAP)) if (file) await convert(key, file);
 console.log(`done → ${OUT}`);

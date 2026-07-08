@@ -54,3 +54,4 @@ test-results/
 # supabase CLI scratch
 supabase/.branches
 supabase/.temp
+.artifact-blend-tmp/

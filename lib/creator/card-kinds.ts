@@ -17,7 +17,7 @@
 // by the form, panels, and import mappers.
 
 import {
-  ERA_SKIN_VARIANTS,
+  TEMPLATE_SKIN_VARIANTS,
   ERA_TYPE_FRAME,
   FRAME_ERA_LABELS,
   FRAME_ERA_VALUES,
@@ -252,20 +252,16 @@ export function framesForKind(
       group: "standard",
       availableColorKeys: colors(standard),
     });
-    // Skins re-dress the era's plain spell frame (m15snow/m15devoid keep the
-    // m15 geometry wholesale) — offer them only where the era standard for
-    // this kind IS that base frame (creature/instant/sorcery/artifact/
-    // enchantment; not land/token/planeswalker/battle, whose standards have
-    // their own geometry).
-    if (standard === "m15") {
-      for (const skin of ERA_SKIN_VARIANTS[era]) {
-        out.push({
-          template: skin,
-          era,
-          group: "skin",
-          availableColorKeys: colors(skin),
-        });
-      }
+    // Skins re-dress a specific BASE frame with identical geometry
+    // (m15snow → m15, m15snowland → m15land, m15tokenartifact → m15token),
+    // so each era standard brings exactly its own variants.
+    for (const skin of TEMPLATE_SKIN_VARIANTS[standard] ?? []) {
+      out.push({
+        template: skin,
+        era,
+        group: "skin",
+        availableColorKeys: colors(skin),
+      });
     }
   }
   // Showcase treatments dress any standard kind (stats still gate on type).

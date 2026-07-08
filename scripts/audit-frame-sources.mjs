@@ -1,6 +1,16 @@
-// Identify which Full-Magic-Pack source each PipGlyph m15-era frame PNG was
-// built from: mean |RGB diff| over the pixels where OUR frame is opaque
-// (skips the cut art windows), after resizing ours down to the source size.
+// ---------------------------------------------------------------------------
+// audit-frame-sources.mjs — frame provenance auditor.
+//
+// Answers "which Full-Magic-Pack source was this app frame built from?" by
+// mean |RGB| diff over the pixels where OUR PNG is opaque (skipping the cut
+// art windows), after resizing down to each candidate's size. Same-source
+// pairs score ~2-4; different designs score 15+.
+//
+//   node scripts/audit-frame-sources.mjs cases.json
+//
+// cases.json: [{ "template": "m15", "color": "w",
+//   "candidates": [["label", "<modules-relative or absolute path>"], …] }]
+// ---------------------------------------------------------------------------
 import sharp from "sharp";
 import path from "node:path";
 import fs from "node:fs";
@@ -31,6 +41,10 @@ async function diff(ourFile, srcFile) {
   return n ? (sum / n / 3) : null;
 }
 
+if (!process.argv[2]) {
+  console.error("usage: node scripts/audit-frame-sources.mjs <cases.json>");
+  process.exit(1);
+}
 const CASES = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
 for (const { template, color, candidates } of CASES) {
   const ourFile = path.join(APP, template, `${color}.png`);
