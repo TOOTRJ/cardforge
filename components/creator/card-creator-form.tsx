@@ -87,6 +87,7 @@ import {
   serializeLoyalty,
   serializeSaga,
 } from "@/lib/cards/face-content";
+import { basicLandManaKey } from "@/lib/cards/watermark";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
 import type { FrameProfileOverridesMap } from "@/lib/cards/profile-override";
 import {
@@ -1543,7 +1544,22 @@ export function CardCreatorForm({
             {/* ----- Text & stats panel (rules/flavor + type-gated stats) ----- */}
             {stepKey === "text" ? (
               <>
-                {panelConfig.textVariant === "loyalty" ? (
+                {basicLandManaKey(
+                  watched.card_type,
+                  parseSubtypes(watched.subtypes_text),
+                ) ? (
+                  // Basic lands print a large mana symbol instead of rules
+                  // text — the preview/bake add it automatically from the
+                  // basic subtype (Plains/Island/…), so there's nothing to
+                  // type here.
+                  <div className="rounded-lg border border-dashed border-border/60 bg-elevated/40 p-6 text-sm leading-6 text-muted">
+                    Basic lands don&apos;t carry rules text — the card prints
+                    a large mana symbol in the text box instead, added
+                    automatically from the land type. Remove the basic land
+                    subtype (Plains, Island, Swamp, Mountain, Forest, Wastes)
+                    on the Identity step to write rules text.
+                  </div>
+                ) : panelConfig.textVariant === "loyalty" ? (
                   // Planeswalkers: ability rows instead of a raw textarea
                   // (and no flavor text — real walkers never carry it).
                   <LoyaltyAbilitiesEditor />

@@ -47,17 +47,17 @@ export const FRAME_REFERENCES: Record<FrameTemplate, ReferenceRow> = {
     m: { name: "Siege Rhino", set: "ktk", scryfallId: "9011126a-20bd-4c86-a63b-1691f79ac247" },
   },
   m15artifact: {
-    // Colored keys anchor to the ELD legendary artifact cycle. NOTE: real
-    // colored artifacts blend a color wash over the silver frame; our v1
-    // renders the plain silver for every key, so these references verify
-    // GEOMETRY (the blend is a future compositing pass).
-    w: { name: "The Circle of Loyalty", set: "eld", scryfallId: "79093d00-362d-4d07-8a0a-cf5e1ccf9c0f" },
-    u: { name: "The Magic Mirror", set: "eld", scryfallId: "08b89af1-7b22-4153-b42d-a2ea4e0f320c" },
-    b: { name: "The Cauldron of Eternity", set: "eld", scryfallId: "eb69473f-de99-43a7-b094-429465ae735c" },
-    r: { name: "Embercleave", set: "eld", scryfallId: "aaae15dd-11b6-4421-99e9-365c7fe4a5d6" },
-    g: { name: "The Great Henge", set: "eld", scryfallId: "af915ed2-1f34-43f6-85f5-2430325b720f" },
+    // NON-legendary prints only — legendary artifacts carry the crown
+    // flourish (frame_effects: legendary) that our frame doesn't draw, which
+    // made the compare mismatch at the title bar. These verify the colored
+    // border blend + silver interior geometry.
+    w: { name: "Esper Sentinel", set: "mh2", scryfallId: "f3537373-ef54-4578-9d05-6216420ee349" },
+    u: { name: "Phyrexian Metamorph", set: "2xm", scryfallId: "d6afeb07-ed44-4e15-99b6-436f8365326f" },
+    b: { name: "Wishclaw Talisman", set: "eld", scryfallId: "07c17b01-ee5d-491a-8403-b3f819b778c4" },
+    r: { name: "Cursed Mirror", set: "mh3", scryfallId: "6768daa5-41b0-49e1-b71a-63f733b4dc3d" },
+    g: { name: "Conduit of Worlds", set: "one", scryfallId: "635146da-d415-4107-a7f9-2c46189e5c52" },
     c: { name: "Solemn Simulacrum", set: "m21", scryfallId: "7bbd2cab-538e-4932-a828-150e3e9d52ad" },
-    m: { name: "Shorikai, Genesis Engine", set: "nec", scryfallId: "969ac7dd-f3aa-4888-9ff0-d16a31b5e7a9" },
+    m: { name: "Baleful Strix", set: "2xm", scryfallId: "a1b799b2-bb4e-482f-9afd-5aab90090710" },
   },
   m15snowland: {
     w: { name: "Snow-Covered Plains", set: "khm", scryfallId: "afd2730f-878e-47ee-ad2a-73f8fa4e0794" },
@@ -76,7 +76,8 @@ export const FRAME_REFERENCES: Record<FrameTemplate, ReferenceRow> = {
     b: null,
     r: null,
     g: null,
-    c: { name: "Treasure", set: "thob", scryfallId: "c6e096bb-ad9e-4a8b-8b42-26852fa32c1d" },
+    // MSH print — the THB treasure uses the INVERTED frame treatment.
+    c: { name: "Treasure", set: "tmsh", scryfallId: "cec5cc8b-bc15-415a-bde6-6c783f8d0b0b" },
     m: null,
   },
   m15land: {
@@ -86,7 +87,11 @@ export const FRAME_REFERENCES: Record<FrameTemplate, ReferenceRow> = {
     r: { name: "Mountain", set: "dom", scryfallId: "621aa8e1-aebf-4eea-beb5-7fb47700a87a" },
     g: { name: "Forest", set: "dom", scryfallId: "ae21165c-cc6d-45cc-b5c1-97b73e85dddd" },
     c: { name: "Wastes", set: "ogw", scryfallId: "9cc070d3-4b83-4684-9caf-063e5c473a77" },
-    m: { name: "Azorius Guildgate", set: "rna", scryfallId: "93cf5412-c711-41b4-ab3b-7788a0a22228" },
+    // Command Tower = a real GOLD-plate land, which is what our single "m"
+    // frame is. True dual lands (Guildgates) blend their two colors across
+    // the plates — per-pair blend frames are future work our one-bucket
+    // multicolor key can't express.
+    m: { name: "Command Tower", set: "msc", scryfallId: "0548fb60-c843-4f8f-a029-6f10efc63a41" },
   },
   m15token: {
     w: { name: "Soldier", set: "tdom", scryfallId: "f9b56129-17a2-4512-a4d6-34779224473f" },

@@ -97,22 +97,19 @@ describe("frame reference registry", () => {
 
 describe("frame availability", () => {
   it("grandfathers only templates users could already pick", () => {
-    // The previously 'coming soon' M15 special layouts must NOT be
-    // grandfathered — they publish through verification.
+    // Verification is the ONLY gate (owner decision) — nothing is
+    // grandfathered anymore; every template publishes per (template, color)
+    // through /admin/frame-compare.
+    expect(GRANDFATHERED_TEMPLATES.size).toBe(0);
     for (const gated of [
+      "m15",
+      "m15pw",
+      "battle",
+      "retro",
       "saga",
-      "adventure",
-      "split",
-      "flip",
-      "aftermath",
-      "m15snow",
-      "m15devoid",
       "lotr",
     ] as const) {
       expect(GRANDFATHERED_TEMPLATES.has(gated), gated).toBe(false);
-    }
-    for (const live of ["m15", "m15land", "m15pw", "battle", "retro"] as const) {
-      expect(GRANDFATHERED_TEMPLATES.has(live), live).toBe(true);
     }
   });
 
@@ -121,7 +118,10 @@ describe("frame availability", () => {
     expect(isFrameComboAvailable("saga", "w", verified)).toBe(true);
     expect(isFrameComboAvailable("saga", "u", verified)).toBe(false);
     expect(isFrameComboAvailable("adventure", "w", verified)).toBe(false);
-    // Grandfathered templates ignore the verified set entirely.
-    expect(isFrameComboAvailable("m15", "u", new Set())).toBe(true);
+    // No grandfathering: even the M15 standard is gated until verified.
+    expect(isFrameComboAvailable("m15", "u", new Set())).toBe(false);
+    expect(
+      isFrameComboAvailable("m15", "u", new Set([frameComboKey("m15", "u")])),
+    ).toBe(true);
   });
 });

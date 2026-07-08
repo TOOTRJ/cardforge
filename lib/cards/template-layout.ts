@@ -96,6 +96,10 @@ export type StatSlot = {
   /** Drawn rounded badge behind the value when there's no plate PNG (M15
    *  planeswalker loyalty, which has no painted shield). */
   badgeColorHex?: string;
+  /** Badge silhouette: "loyaltyStart" draws the printed planeswalker
+   *  starting-loyalty shield (flat top, pointed bottom) instead of the
+   *  default rounded blob. */
+  badgeShape?: "loyaltyStart";
   shadowCss?: string;
   /** Vertical nudge of the value text within the plate, in em (negative = up).
    *  Corrects the display font's baseline asymmetry — digits sit low in their
@@ -225,6 +229,26 @@ export function resolveColorAsset(pathTemplate: string, colorKey: string): strin
 // near-black; values that sit directly on the frame (footer on a dark border,
 // loyalty on a drawn badge) flip to a warm white.
 // ---------------------------------------------------------------------------
+// Printed-MTG badge silhouettes (SVG polygon points in a 0-100 box), shared
+// by the live preview and the Satori bake so both draw identical icons.
+// Loyalty: +N = peaked top, -N = pointed bottom, 0/static = flat hexagon.
+// Saga markers: the flat-top crest that tapers to a bottom point.
+export const LOYALTY_BADGE_POINTS = {
+  up: "0,26 50,0 100,26 100,100 0,100",
+  down: "0,0 100,0 100,74 50,100 0,74",
+  zero: "6,0 94,0 100,50 94,100 6,100 0,50",
+} as const;
+
+export function loyaltyBadgeShapeFor(
+  cost: string,
+): keyof typeof LOYALTY_BADGE_POINTS {
+  if (cost.startsWith("+")) return "up";
+  if (cost.startsWith("-") || cost.startsWith("\u2212")) return "down";
+  return "zero";
+}
+
+export const SAGA_MARKER_POINTS = "0,0 100,0 100,62 50,100 0,62";
+
 const INK_DARK = "#17120c";
 const INK_DARK_SOFT = "#2a2118";
 const INK_LIGHT = "#f4eee2";
@@ -435,6 +459,7 @@ const M15PW: FrameProfile = {
     colorHex: "#ffffff",
     weight: 700,
     badgeColorHex: "#141008",
+    badgeShape: "loyaltyStart",
     shadowCss: OUTLINE_SHADOW,
   },
 };

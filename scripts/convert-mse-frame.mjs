@@ -26,23 +26,22 @@ import fs from "node:fs";
 // ── Config: edit these for each frame set ──────────────────────────────────
 // ARTIFACT TOKENS — the token style's silver acard (Treasure/Clue/Food
 // et al are artifact tokens on real prints). Skin variant of m15token.
-const PACK =
-  "/Users/redjester/Projects/other/Full-Magic-Pack/data/magic-m15-token.mse-style";
-const OUT = "public/frames/m15tokenartifact";
+const PACK = ".artifact-blend-tmp";
+const OUT = "public/frames/m15artifact";
 // M15 lands from the SIMPLE set — the "cut" *lcard twins bake an MSE
 // produced-mana indicator disc into the title bar's top-left corner, which
 // real M15 lands don't have. The simple set is the same frame without it.
 const MAP = {
-  w: "acard.jpg",
-  u: "acard.jpg",
-  b: "acard.jpg",
-  r: "acard.jpg",
-  g: "acard.jpg",
-  c: "acard.jpg",
-  m: "acard.jpg",
+  w: "wblend.png",
+  u: "ublend.png",
+  b: "bblend.png",
+  r: "rblend.png",
+  g: "gblend.png",
+  c: null, // colorless keeps the pure acard build
+  m: "mblend.png",
 };
 // Seed point(s) inside each art window, as fractions of the card (x, y).
-const SEEDS = [[0.5, 0.4]];
+const SEEDS = [[0.5, 0.3]];
 // Which art-window fill to cut to transparent: "black" (the m15 family) or
 // "white" (the agclassic / Alpha family). Ignored if the window is already
 // alpha-cut in the source (battle/devoid) — the fill just finds nothing.

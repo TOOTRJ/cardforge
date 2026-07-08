@@ -33,6 +33,9 @@ import {
   resolveSagaChapters,
 } from "@/lib/cards/face-content";
 import {
+  LOYALTY_BADGE_POINTS,
+  SAGA_MARKER_POINTS,
+  loyaltyBadgeShapeFor,
   resolveColorAsset,
   type FrameProfile,
   type Rect,
@@ -57,6 +60,7 @@ import type {
   Rarity,
 } from "@/types/card";
 import {
+  resolveWatermark,
   watermarkHeightFraction,
   watermarkOpacity,
   WATERMARK_INK,
@@ -565,6 +569,13 @@ function CardFace({
   const sagaContent = layout.chapters
     ? resolveSagaChapters(face.faceContent, face.rulesText)
     : null;
+  // Explicit watermark wins; basic lands (Plains/Island/…) automatically get
+  // the authentic large mana symbol in the text box.
+  const effectiveWatermark = resolveWatermark(
+    face.watermark,
+    face.cardType,
+    face.subtypes,
+  );
 
   return (
     <div className="absolute inset-0">
@@ -740,7 +751,7 @@ function CardFace({
           frame PNG but below every text layer. Suppressed where a rail
           replaces the box (saga chapters, planeswalker rows) — printed cards
           do the same (Scars watermarked everything EXCEPT basics + walkers). */}
-      {face.watermark && !layout.chapters && !usesLoyaltyRows ? (
+      {effectiveWatermark && !layout.chapters && !usesLoyaltyRows ? (
         <div
           aria-hidden
           style={{
@@ -751,16 +762,16 @@ function CardFace({
             justifyContent: "center",
             pointerEvents: "none",
             overflow: "hidden",
-            opacity: watermarkOpacity(face.watermark),
+            opacity: watermarkOpacity(effectiveWatermark),
           }}
         >
-          {face.watermark.kind === "mana" ? (
+          {effectiveWatermark.kind === "mana" ? (
             <i
-              className={`ms ms-${face.watermark.key}`}
+              className={`ms ms-${effectiveWatermark.key}`}
               style={{
                 fontSize: cqw(
                   layout.rules.rect.heightPct *
-                    watermarkHeightFraction(face.watermark) *
+                    watermarkHeightFraction(effectiveWatermark) *
                     // ms glyphs are ~1em tall; heightPct is % of card height,
                     // cqw sizes by width — correct by the card aspect.
                     (layout.orientation === "landscape" ? 5 / 7 : 7 / 5) *
@@ -775,13 +786,13 @@ function CardFace({
             /* eslint-disable-next-line @next/next/no-img-element */
             <img
               src={
-                face.watermark.kind === "custom"
-                  ? face.watermark.url
-                  : `/watermarks/${face.watermark.key}.png`
+                effectiveWatermark.kind === "custom"
+                  ? effectiveWatermark.url
+                  : `/watermarks/${effectiveWatermark.key}.png`
               }
               alt=""
               style={{
-                height: `${watermarkHeightFraction(face.watermark) * 100}%`,
+                height: `${watermarkHeightFraction(effectiveWatermark) * 100}%`,
                 width: "auto",
                 maxWidth: "86%",
                 objectFit: "contain",
@@ -1015,6 +1026,17 @@ function StatOverlay({
           aria-hidden
           className="absolute inset-0 h-full w-full object-fill"
         />
+      ) : slot.badgeColorHex && slot.badgeShape === "loyaltyStart" ? (
+        // The printed starting-loyalty shield: flat top, pointed bottom.
+        <svg
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+          aria-hidden
+          className="absolute"
+          style={{ inset: "2% 10%", width: "80%", height: "96%" }}
+        >
+          <polygon points={LOYALTY_BADGE_POINTS.down} fill={slot.badgeColorHex} />
+        </svg>
       ) : slot.badgeColorHex ? (
         <div
           aria-hidden
@@ -1108,22 +1130,42 @@ function ChapterRail({
           >
             <div
               style={{
+                position: "relative",
                 flexShrink: 0,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 minWidth: cqw(slot.sizePct * 1.7),
-                height: cqw(slot.sizePct * 1.7),
+                height: cqw(slot.sizePct * 1.9),
                 padding: `0 ${cqw(slot.sizePct * 0.32)}`,
-                borderRadius: "999px",
-                background: slot.markerFillHex,
-                color: slot.markerTextHex,
-                fontFamily: DISPLAY_FONT,
-                fontSize: cqw(slot.sizePct * 0.82),
-                fontWeight: 700,
               }}
             >
-              {ch.marker}
+              {/* The printed saga milestone crest: flat top, pointed bottom. */}
+              <svg
+                viewBox="0 0 100 100"
+                preserveAspectRatio="none"
+                aria-hidden
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  width: "100%",
+                  height: "100%",
+                }}
+              >
+                <polygon points={SAGA_MARKER_POINTS} fill={slot.markerFillHex} />
+              </svg>
+              <span
+                style={{
+                  position: "relative",
+                  paddingBottom: cqw(slot.sizePct * 0.3),
+                  color: slot.markerTextHex,
+                  fontFamily: DISPLAY_FONT,
+                  fontSize: cqw(slot.sizePct * 0.82),
+                  fontWeight: 700,
+                }}
+              >
+                {ch.marker}
+              </span>
             </div>
             <div
               style={{
@@ -1582,22 +1624,55 @@ function LoyaltyRows({
         >
           <div
             style={{
+              position: "relative",
               flexShrink: 0,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               width: cqw(sizePct * 2.3),
-              height: cqw(sizePct * 1.5),
+              height: cqw(sizePct * 1.6),
               marginRight: cqw(sizePct * 0.5),
-              borderRadius: cqw(sizePct * 0.35),
-              background: ab.cost ? rows.badgeFillHex : "transparent",
-              color: rows.badgeTextHex,
-              fontFamily: DISPLAY_FONT,
-              fontSize: cqw(sizePct * 0.92),
-              fontWeight: 700,
             }}
           >
-            {ab.cost ?? ""}
+            {ab.cost ? (
+              // The printed loyalty shield: peaked top for +, pointed
+              // bottom for -, flat hexagon for 0.
+              <svg
+                viewBox="0 0 100 100"
+                preserveAspectRatio="none"
+                aria-hidden
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  width: "100%",
+                  height: "100%",
+                }}
+              >
+                <polygon
+                  points={LOYALTY_BADGE_POINTS[loyaltyBadgeShapeFor(ab.cost)]}
+                  fill={rows.badgeFillHex}
+                />
+              </svg>
+            ) : null}
+            <span
+              style={{
+                position: "relative",
+                color: rows.badgeTextHex,
+                fontFamily: DISPLAY_FONT,
+                fontSize: cqw(sizePct * 0.88),
+                fontWeight: 700,
+                // Optically center inside the shield's flat region.
+                ...(ab.cost
+                  ? loyaltyBadgeShapeFor(ab.cost) === "up"
+                    ? { paddingTop: cqw(sizePct * 0.18) }
+                    : loyaltyBadgeShapeFor(ab.cost) === "down"
+                      ? { paddingBottom: cqw(sizePct * 0.18) }
+                      : {}
+                  : {}),
+              }}
+            >
+              {ab.cost ?? ""}
+            </span>
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <RulesBody text={ab.text} overrides={pipOverrides} />

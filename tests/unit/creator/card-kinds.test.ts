@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   CARD_KIND_VALUES,
-  FRAME_COLOR_KEYS,
   KIND_DEFS,
   framesForKind,
   isFrameValidForKind,
@@ -108,20 +107,22 @@ describe("framesForKind", () => {
     expect(eras).toContain("showcase");
   });
 
-  it("marks grandfathered templates fully available and gates the rest on verification", () => {
-    const creature = framesForKind("creature", NO_VERIFIED);
-    for (const f of creature) {
-      if (GRANDFATHERED_TEMPLATES.has(f.template)) {
-        expect(f.availableColorKeys).toEqual([...FRAME_COLOR_KEYS]);
-      } else {
-        expect(f.availableColorKeys).toEqual([]);
-      }
+  it("gates every combo on verification — nothing is grandfathered", () => {
+    expect(GRANDFATHERED_TEMPLATES.size).toBe(0);
+    // With nothing verified, EVERY frame tile is gated.
+    for (const f of framesForKind("creature", NO_VERIFIED)) {
+      expect(f.availableColorKeys).toEqual([]);
     }
 
     // Publishing a combo makes exactly that color available.
     const oneCombo = new Set([frameComboKey("saga", "g")]);
     const saga = framesForKind("saga", oneCombo)[0];
     expect(saga.availableColorKeys).toEqual(["g"]);
+    const m15 = framesForKind(
+      "creature",
+      new Set([frameComboKey("m15", "w")]),
+    ).find((f) => f.template === "m15");
+    expect(m15?.availableColorKeys).toEqual(["w"]);
   });
 });
 
