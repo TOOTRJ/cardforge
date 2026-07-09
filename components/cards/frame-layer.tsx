@@ -5,7 +5,7 @@ import type { ColorIdentity, FrameTemplate } from "@/types/card";
 // ---------------------------------------------------------------------------
 // FrameLayer — bottom-most z-index layer in CardPreview. Loads the chosen
 // frame from public/frames/{template}/{colorKey}.{webp,png} (WebP variant
-// preferred in the browser via image-set(); the PNG is the master) and
+// preferred in the browser via a plain url(); the PNG is the master) and
 // stretches it across the whole card. Sections (title, art, type, rules,
 // footer) sit on top with their own translucent backgrounds.
 //
@@ -50,17 +50,18 @@ export function webpVariant(pngPath: string): string {
   return pngPath.replace(/\.png$/, ".webp");
 }
 
-/** CSS background-image value that prefers the small WebP variant and falls
- *  back to the PNG master. BROWSER ONLY — the server-side Satori bake never
- *  sees this: it reads the PNG bytes straight from disk
- *  (lib/render/card-frames.ts) and must stay on PNG (Satori supports
- *  neither WebP nor image-set()). */
+/** CSS background-image value for the small WebP variant. Plain url() on
+ *  purpose: WebP decode has been universal since ~2020, while
+ *  image-set(... type(...)) only landed ~2023 — and a browser too old for
+ *  image-set would drop the whole declaration and render NO frame, so the
+ *  "PNG fallback" inside image-set protects nobody. BROWSER ONLY — the
+ *  server-side Satori bake never sees this: it reads the PNG bytes straight
+ *  from disk (lib/render/card-frames.ts) and must stay on PNG. */
 export function frameBackgroundImage(
   template: FrameTemplate,
   colorKey: string,
 ): string {
-  const png = frameAssetPath(template, colorKey);
-  return `image-set(url("${webpVariant(png)}") type("image/webp"), url("${png}") type("image/png"))`;
+  return `url("${webpVariant(frameAssetPath(template, colorKey))}")`;
 }
 
 export function FrameLayer({
