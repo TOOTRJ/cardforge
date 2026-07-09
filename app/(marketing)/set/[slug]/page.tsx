@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SetAnalyticsPanel } from "@/components/sets/set-analytics-panel";
+import { ShareTargets } from "@/components/cards/share-targets";
 import {
   getSetBySlugPublic,
   listCardsInSet,
@@ -71,6 +72,7 @@ export async function generateMetadata({
           title: `${set.title} · PipGlyph`,
           description,
           type: "article",
+          siteName: "PipGlyph",
           url: `/set/${set.slug}`,
         }
       : undefined,
@@ -187,6 +189,12 @@ export default async function SetDetailPage({
                 <PackageOpen className="h-4 w-4" aria-hidden /> Open booster
               </Link>
             </Button>
+            <ShareTargets
+              title={set.title}
+              url={`${getSiteBaseUrl()}/set/${set.slug}`}
+              entity="set"
+              itemId={set.id}
+            />
             {isOwner ? (
               <Button asChild>
                 <Link href={`/set/${set.slug}/edit`}>

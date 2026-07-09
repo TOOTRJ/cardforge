@@ -10,18 +10,26 @@ import { ShareTargets } from "@/components/cards/share-targets";
 // SSR pass didn't reflect those attributes the same way the client did.
 
 type TrendingShareButtonProps = {
+  cardId: string;
   cardTitle: string;
   cardUrl: string;
+  /** Absolute origin, for the native-share image attachment. */
+  siteBase: string;
 };
 
 export function TrendingShareButton({
+  cardId,
   cardTitle,
   cardUrl,
+  siteBase,
 }: TrendingShareButtonProps) {
   return (
     <ShareTargets
-      cardTitle={cardTitle}
-      cardUrl={cardUrl}
+      title={cardTitle}
+      url={cardUrl}
+      entity="card"
+      itemId={cardId}
+      imageUrl={`${siteBase}/api/cards/${cardId}/og`}
       trigger={
         <button
           type="button"
