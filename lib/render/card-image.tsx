@@ -16,7 +16,8 @@
 import { ImageResponse } from "next/og";
 import { fitRulesSizePct, fitSingleLineSizePct } from "@/lib/cards/render-tiers";
 import { tokenize, tokenSuffix } from "@/components/cards/mana-cost-glyphs";
-import { ROSE_GEM_PATH, ROSE_STAR_PATH } from "@/lib/brand/geometry";
+import { ROSE_GEM_BOLD_PATH, ROSE_STAR_BOLD_PATH, ROSE_STAR_PATH } from "@/lib/brand/geometry";
+import { RARITY_SET_MARK } from "@/lib/brand/constants";
 import {
   pipOverrideForSuffix,
   pipOverrideForToken,
@@ -1281,15 +1282,24 @@ function SetSymbolGlyph({
     );
   }
 
-  // 3. Default — the PipGlyph Astral Rose star, rarity-tinted (same
-  //    lib/brand/geometry constants as the preview's PipGlyphSetMark, so
-  //    the two can't drift). Inline SVG so Satori renders it without a font.
+  // 3. Default — the PipGlyph Astral Rose two-tone emblem: bold star in the
+  //    rarity ink over a contrast keyline (same lib/brand constants as the
+  //    preview's PipGlyphSetMark, so the two can't drift). Inline SVG so
+  //    Satori renders it without a font.
   const s = Math.round(fontSize);
+  const mark = RARITY_SET_MARK[rarity];
   return (
     <span style={{ display: "flex" }}>
       <svg width={s} height={s} viewBox="0 0 32 32">
-        <path d={ROSE_STAR_PATH} fill={color} />
-        <path d={ROSE_GEM_PATH} fill="rgba(0,0,0,0.5)" />
+        <path
+          d={ROSE_STAR_BOLD_PATH}
+          fill={mark.keyline}
+          stroke={mark.keyline}
+          strokeWidth={2.4}
+          strokeLinejoin="round"
+        />
+        <path d={ROSE_STAR_BOLD_PATH} fill={mark.ink} />
+        <path d={ROSE_GEM_BOLD_PATH} fill={mark.keyline} opacity={0.92} />
       </svg>
     </span>
   );

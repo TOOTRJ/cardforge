@@ -63,6 +63,9 @@
 //            the free-tier watermark swap the old compass-star for the rose
 //            star silhouette (geometry now imported from lib/brand/geometry
 //            so preview and bake can't drift).
+//   17     — default set mark bolded into a two-tone emblem: wider star in
+//            the rarity ink over a contrast keyline + keyline gem (the thin
+//            single-ink star was illegible on colored/dark frame bars).
 // ---------------------------------------------------------------------------
 
-export const CARD_LAYOUT_VERSION = 16;
+export const CARD_LAYOUT_VERSION = 17;

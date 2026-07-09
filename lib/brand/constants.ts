@@ -86,3 +86,17 @@ export const RARITY_TINT: Record<RarityKey, string> = {
   rare: "#f3d57c",
   mythic: "#f08a4a",
 };
+
+/** Two-tone palette for the default PipGlyph set mark on the type line:
+ *  rarity ink + a contrast keyline so the emblem survives any frame color
+ *  (printed cards do the same — the gold rare symbol wears a black
+ *  outline). Common inverts: near-black ink needs a light keyline. */
+export const RARITY_SET_MARK: Record<
+  RarityKey,
+  { ink: string; keyline: string }
+> = {
+  common: { ink: RARITY_INK.common, keyline: "#ece5d4" },
+  uncommon: { ink: RARITY_INK.uncommon, keyline: "#0f0f12" },
+  rare: { ink: RARITY_INK.rare, keyline: "#0f0f12" },
+  mythic: { ink: RARITY_INK.mythic, keyline: "#0f0f12" },
+};
