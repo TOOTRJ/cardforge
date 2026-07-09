@@ -1,12 +1,13 @@
 import { z } from "zod";
 import { VISIBILITY_VALUES } from "@/types/card";
+import { isSafeImageUrl } from "@/lib/validation/card";
 
 // Mirrors the DB check constraints on the card_sets table exactly.
 // supabase/migrations/0009_card_sets.sql is the source of truth.
 
 const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
-const optionalEmptyString = (schema: z.ZodString) =>
+const optionalEmptyString = (schema: z.ZodType<string>) =>
   schema.optional().or(z.literal("").transform(() => undefined));
 
 export const setTitleSchema = z
@@ -37,7 +38,8 @@ export const setCoverUrlSchema = optionalEmptyString(
     .string()
     .trim()
     .max(2048, "Cover URL must be 2048 characters or fewer.")
-    .url("Cover URL must be a valid URL."),
+    .url("Cover URL must be a valid URL.")
+    .refine(isSafeImageUrl, "Cover URL must be an https:// URL."),
 );
 
 // Set symbol: an uploaded image URL (icon_url) OR a preset Keyrune set code
@@ -48,7 +50,8 @@ export const setIconUrlSchema = optionalEmptyString(
     .string()
     .trim()
     .max(2048, "Icon URL must be 2048 characters or fewer.")
-    .url("Icon URL must be a valid URL."),
+    .url("Icon URL must be a valid URL.")
+    .refine(isSafeImageUrl, "Icon URL must be an https:// URL."),
 );
 
 export const setIconCodeSchema = optionalEmptyString(

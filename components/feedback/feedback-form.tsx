@@ -17,6 +17,7 @@ import { submitFeedbackAction } from "@/lib/feedback/actions";
 import {
   FEEDBACK_CATEGORIES,
   FEEDBACK_CATEGORY_KEYS,
+  feedbackSchema,
   type FeedbackCategory,
 } from "@/lib/feedback/schemas";
 import { FRAME_TEMPLATE_LABELS, FRAME_TEMPLATE_VALUES } from "@/types/card";
@@ -42,6 +43,11 @@ export function FeedbackForm({ signedIn }: { signedIn: boolean }) {
   const [frameTemplate, setFrameTemplate] = useState(initialTemplate);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<{
+    subject?: string;
+    message?: string;
+  }>({});
+  const [formError, setFormError] = useState<string | null>(null);
 
   const categoryOptions: ChipOption<FeedbackCategory>[] =
     FEEDBACK_CATEGORIES.map((c) => ({
@@ -54,16 +60,36 @@ export function FeedbackForm({ signedIn }: { signedIn: boolean }) {
   const activeHint = FEEDBACK_CATEGORIES.find((c) => c.key === category)?.hint;
 
   const onSubmit = async () => {
+    const payload = {
+      category,
+      subject,
+      message,
+      frame_template: showFrameSelect ? frameTemplate : "",
+      page_url: params.get("from") ?? "",
+    };
+
+    // Same schema the server action runs — catches empty/too-long fields
+    // with inline messages before a round trip. The server re-validates.
+    const parsed = feedbackSchema.safeParse(payload);
+    if (!parsed.success) {
+      const errors: { subject?: string; message?: string } = {};
+      for (const issue of parsed.error.issues) {
+        const key = String(issue.path[0]);
+        if ((key === "subject" || key === "message") && !errors[key]) {
+          errors[key] = issue.message;
+        }
+      }
+      setFieldErrors(errors);
+      return;
+    }
+    setFieldErrors({});
+    setFormError(null);
+
     setSending(true);
     try {
-      const result = await submitFeedbackAction({
-        category,
-        subject,
-        message,
-        frame_template: showFrameSelect ? frameTemplate : "",
-        page_url: params.get("from") ?? "",
-      });
+      const result = await submitFeedbackAction(payload);
       if (!result.ok) {
+        setFormError(result.error);
         toast.error(result.error);
         return;
       }
@@ -156,10 +182,11 @@ export function FeedbackForm({ signedIn }: { signedIn: boolean }) {
         </FieldGroup>
       ) : null}
 
-      <FieldGroup label="Subject">
+      <FieldGroup label="Subject" error={fieldErrors.subject}>
         <input
           value={subject}
           onChange={(e) => setSubject(e.target.value)}
+          aria-invalid={Boolean(fieldErrors.subject)}
           maxLength={120}
           required
           placeholder={
@@ -175,6 +202,7 @@ export function FeedbackForm({ signedIn }: { signedIn: boolean }) {
 
       <FieldGroup
         label="Details"
+        error={fieldErrors.message}
         helper={
           category === "bug" || category === "frame"
             ? "What did you do, what did you expect, and what happened instead? A link to the card helps a lot."
@@ -184,6 +212,7 @@ export function FeedbackForm({ signedIn }: { signedIn: boolean }) {
         <textarea
           value={message}
           onChange={(e) => setMessage(e.target.value)}
+          aria-invalid={Boolean(fieldErrors.message)}
           maxLength={2000}
           required
           rows={6}
@@ -191,6 +220,11 @@ export function FeedbackForm({ signedIn }: { signedIn: boolean }) {
           className={textareaClass(false)}
         />
       </FieldGroup>
+      {formError ? (
+        <p role="alert" className="text-sm text-danger">
+          {formError}
+        </p>
+      ) : null}
 
       <div>
         <Button type="submit" disabled={sending || !subject.trim() || !message.trim()}>

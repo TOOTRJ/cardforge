@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { isOpenAiConfigured } from "@/lib/ai/random-card";
@@ -23,6 +24,13 @@ import { createCardAction } from "@/lib/cards/actions";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
+
+// Same bounds generateDeck/clampDeckSize enforce internally, but rejected at
+// the boundary with a 400 instead of silently truncated.
+const deckRequestSchema = z.object({
+  theme: z.string().trim().max(300).optional(),
+  size: z.coerce.number().optional(),
+});
 
 export async function POST(request: Request) {
   if (!isSupabaseConfigured()) {
@@ -89,11 +97,15 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
-  const theme =
-    typeof (body as { theme?: unknown })?.theme === "string"
-      ? (body as { theme: string }).theme
-      : "";
-  const size = clampDeckSize(Number((body as { size?: unknown })?.size ?? 8));
+  const parsed = deckRequestSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { ok: false, error: "Theme must be a string of at most 300 characters." },
+      { status: 400 },
+    );
+  }
+  const theme = parsed.data.theme ?? "";
+  const size = clampDeckSize(parsed.data.size ?? 8);
 
   // Credit pre-check for the whole batch.
   const cost = size * DECK_CARD_CREDIT_COST;
