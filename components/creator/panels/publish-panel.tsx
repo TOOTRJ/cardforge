@@ -199,6 +199,7 @@ export function PublishPanel({
       <FieldGroup
         label="Tags"
         helper="Comma-separated keywords for discovery (e.g. dragons, tokens). Up to 12."
+        error={errors.tags_text?.message}
       >
         <input
           {...register("tags_text")}

@@ -17,15 +17,18 @@ export function FeaturedManager({
 }) {
   const router = useRouter();
   const [username, setUsername] = useState("");
+  // Server rejection (unknown username etc.) rendered inline under the input.
+  const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   const run = (handle: string, makeFeatured: boolean) =>
     startTransition(async () => {
       const result = await setFeaturedAction(handle, makeFeatured);
       if (!result.ok) {
-        toast.error(result.error);
+        setError(result.error);
         return;
       }
+      setError(null);
       toast.success(makeFeatured ? "Creator featured." : "Creator unfeatured.");
       setUsername("");
       router.refresh();
@@ -42,10 +45,14 @@ export function FeaturedManager({
       >
         <input
           value={username}
-          onChange={(e) => setUsername(e.target.value)}
+          onChange={(e) => {
+            setUsername(e.target.value);
+            if (error) setError(null);
+          }}
           placeholder="username"
           aria-label="Username to feature"
-          className="w-56 rounded-md border border-border bg-elevated/40 px-3 py-2 text-sm text-foreground placeholder:text-subtle focus:border-primary/60 focus:outline-none"
+          aria-invalid={Boolean(error)}
+          className={`w-56 rounded-md border bg-elevated/40 px-3 py-2 text-sm text-foreground placeholder:text-subtle focus:border-primary/60 focus:outline-none ${error ? "border-danger/60" : "border-border"}`}
         />
         <Button type="submit" disabled={pending || !username.trim()}>
           {pending ? (
@@ -55,6 +62,11 @@ export function FeaturedManager({
           )}
           Feature
         </Button>
+        {error ? (
+          <p role="alert" className="w-full text-xs text-danger">
+            {error}
+          </p>
+        ) : null}
       </form>
 
       {featured.length === 0 ? (

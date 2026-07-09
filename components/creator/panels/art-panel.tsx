@@ -53,6 +53,11 @@ export function ArtPanel({ userId, backFaceSlot }: ArtPanelProps) {
           />
         )}
       />
+      {errors.art_url?.message ? (
+        <p role="alert" className="text-xs text-danger">
+          {errors.art_url.message}
+        </p>
+      ) : null}
 
       <MoreOptions
         summary={
@@ -64,6 +69,7 @@ export function ArtPanel({ userId, backFaceSlot }: ArtPanelProps) {
         <FieldGroup
           label="Artist credit"
           helper="Who made the artwork? Yourself, a public-domain artist, or a licensed source."
+          error={errors.artist_credit?.message}
         >
           <input
             {...register("artist_credit")}

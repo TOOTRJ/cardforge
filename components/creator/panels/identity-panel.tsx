@@ -59,8 +59,11 @@ export function IdentityPanel() {
         helper="The card's name. Defaults the slug if you leave that blank."
         error={errors.title?.message}
       >
+        {/* Required-ness is enforced by the form resolver
+            (lib/creator/form-schema.ts) — register-level rules are
+            ignored once a resolver is set. */}
         <input
-          {...register("title", { required: "A title is required." })}
+          {...register("title")}
           placeholder="Emberbound Wyrm"
           className={inputClass(Boolean(errors.title))}
           autoComplete="off"
@@ -99,6 +102,7 @@ export function IdentityPanel() {
           <FieldGroup
             label="Supertype"
             helper="Optional — e.g. Legendary, Basic."
+            error={errors.supertype?.message}
           >
             <input
               {...register("supertype")}
@@ -110,6 +114,7 @@ export function IdentityPanel() {
           <FieldGroup
             label="Subtypes"
             helper="Comma-separated. Up to 10."
+            error={errors.subtypes_text?.message}
           >
             <input
               {...register("subtypes_text")}

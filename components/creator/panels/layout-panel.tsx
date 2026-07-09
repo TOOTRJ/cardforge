@@ -104,13 +104,13 @@ export function LayoutPanel({
                 ? "The adventure spell's name (shown on the left page)."
                 : "The back-face title. Required when a back face is enabled."
             }
+            error={errors.back_face?.title?.message}
           >
+            {/* Required-ness is enforced by the form resolver
+                (lib/creator/form-schema.ts, gated on has_back_face) —
+                register-level rules are ignored once a resolver is set. */}
             <input
-              {...register("back_face.title", {
-                required: hasBackFace
-                  ? `A ${isAdventureFrame ? "adventure" : "back-face"} name is required.`
-                  : false,
-              })}
+              {...register("back_face.title")}
               placeholder={isAdventureFrame ? "Stomp" : "Insectile Aberration"}
               className={inputClass(Boolean(errors.back_face?.title))}
               autoComplete="off"
