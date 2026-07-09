@@ -161,8 +161,13 @@ export const viewport: Viewport = {
 
 export default function RootLayout({
   children,
+  modal,
 }: Readonly<{
   children: React.ReactNode;
+  // Parallel slot (app/@modal) for the intercepted card-detail dialog.
+  // Renders null via @modal/default.tsx except when a card tile click
+  // soft-navigates to /card/[username]/[slug].
+  modal: React.ReactNode;
 }>) {
   // The root layout reads NO cookies — that keeps every route eligible
   // for static rendering / CDN caching. data-theme is always "dark"
@@ -199,7 +204,10 @@ export default function RootLayout({
         >
           Skip to main content
         </a>
-        <UpgradeModalProvider>{children}</UpgradeModalProvider>
+        <UpgradeModalProvider>
+          {children}
+          {modal}
+        </UpgradeModalProvider>
         <Toaster
           // Sonner's `theme="system"` follows prefers-color-scheme, which
           // matches what our `data-theme` attribute already reflects

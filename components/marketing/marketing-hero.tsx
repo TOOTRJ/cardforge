@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Crown, FileDown, Sparkles, Type } from "lucide-react";
+import { FileDown, Sparkles, Type } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CompassStar } from "@/components/ui/compass-star";
 import { StarfieldBackdrop } from "@/components/ui/starfield-backdrop";
@@ -114,10 +114,6 @@ export function MarketingHero({
           <div className="absolute -inset-8 -z-10 rounded-[2rem] bg-linear-to-br from-primary/25 via-gold/10 to-transparent blur-2xl" aria-hidden />
           {featured.length > 0 ? (
             <div className="flex flex-col gap-4">
-              <span className="inline-flex items-center gap-1.5 self-center rounded-full border border-gold/50 bg-gold/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-gold-strong">
-                <Crown className="h-3.5 w-3.5" aria-hidden />
-                Featured cards
-              </span>
               <div
                 className={
                   featured.length === 1

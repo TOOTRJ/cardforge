@@ -2,6 +2,10 @@ import "server-only";
 
 import { createPublicClient } from "@/lib/supabase/public";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import {
+  SOCIAL_PLATFORMS,
+  type SocialPlatformKey,
+} from "@/lib/auth/schemas";
 
 // ---------------------------------------------------------------------------
 // Featured creators — admin-curated via profiles.featured_at (0052). Reads
@@ -16,6 +20,8 @@ export type FeaturedCreator = {
   bannerUrl: string | null;
   accentColor: string | null;
   bio: string | null;
+  /** The creator's filled-in social profiles, in SOCIAL_PLATFORMS order. */
+  socials: { key: SocialPlatformKey; label: string; url: string }[];
   cards: { slug: string; title: string; imageUrl: string }[];
 };
 
@@ -28,7 +34,7 @@ export async function listFeaturedCreators(
   const { data: profiles } = await supabase
     .from("profiles")
     .select(
-      "id, username, display_name, avatar_url, banner_url, accent_color, bio, pinned_card_ids",
+      "id, username, display_name, avatar_url, banner_url, accent_color, bio, pinned_card_ids, twitter_url, bluesky_url, instagram_url, youtube_url, tiktok_url, discord_url, github_url",
     )
     .not("featured_at", "is", null)
     .not("username", "is", null)
@@ -86,6 +92,10 @@ export async function listFeaturedCreators(
       bannerUrl: p.banner_url,
       accentColor: p.accent_color,
       bio: p.bio,
+      socials: SOCIAL_PLATFORMS.flatMap((platform) => {
+        const url = p[platform.key];
+        return url ? [{ key: platform.key, label: platform.label, url }] : [];
+      }),
       cards,
     });
   }

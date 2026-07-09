@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Crown } from "lucide-react";
 import { listFeaturedCreators } from "@/lib/featured/queries";
+import { SocialIcon } from "@/components/profile/social-icon";
 
 // ---------------------------------------------------------------------------
 // FeaturedCreators — the admin-curated spotlight banner on the gallery and
@@ -76,12 +77,31 @@ export async function FeaturedCreators() {
                   <p className="max-w-xl text-sm leading-6 text-muted">{c.bio}</p>
                 ) : null}
 
-                <Link
-                  href={`/profile/${c.username}`}
-                  className="mt-1 inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-                >
-                  View profile
-                </Link>
+                <div className="mt-1 flex flex-wrap items-center gap-3">
+                  <Link
+                    href={`/profile/${c.username}`}
+                    className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+                  >
+                    View profile
+                  </Link>
+                  {c.socials.length > 0 ? (
+                    <ul className="flex flex-wrap items-center gap-1.5">
+                      {c.socials.map((social) => (
+                        <li key={social.key}>
+                          <a
+                            href={social.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label={`${name} on ${social.label}`}
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border/60 bg-elevated/60 text-muted backdrop-blur-sm transition-colors hover:border-gold/50 hover:bg-elevated hover:text-gold-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50"
+                          >
+                            <SocialIcon platform={social.key} className="h-4 w-4" />
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
               </div>
 
               {c.cards.length > 0 ? (
