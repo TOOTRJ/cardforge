@@ -113,16 +113,12 @@ export async function CardDetailContent({
     notFound();
   }
 
-  // v2 back face: the referenced card, if any and if it's readable (RLS scopes
-  // the anon client to shareable cards). Rendered on the flip.
-  const backCard = card.back_card_id
-    ? await getCardById(card.back_card_id)
-    : null;
-
   const user = await getCurrentUser();
   const isOwner = Boolean(user && user.id === card.owner_id);
 
   const [
+    backCard,
+    profileOverrides,
     likesCount,
     viewerLiked,
     otherRemixesCount,
@@ -142,6 +138,12 @@ export async function CardDetailContent({
     inSetRank,
     trendingSignals,
   ] = await Promise.all([
+    // v2 back face: the referenced card, if any and if it's readable (RLS
+    // scopes the anon client to shareable cards). Rendered on the flip.
+    card.back_card_id
+      ? getCardById(card.back_card_id)
+      : Promise.resolve(null),
+    getFrameProfileOverrides(),
     countCardLikes(card.id),
     user ? hasUserLikedCard(user.id, card.id) : Promise.resolve(false),
     // Chunk 13: count of OTHER public remixes of the same Scryfall card.
@@ -183,8 +185,6 @@ export async function CardDetailContent({
     // 7-day velocity for the trending badge.
     getCardTrendingSignals(card.id, card.owner_id, card.created_at),
   ]);
-
-  const profileOverrides = await getFrameProfileOverrides();
 
   // Bump the view tally after the response ships — never for the owner's own
   // views, and never blocking render. A modal open is a view of the card the

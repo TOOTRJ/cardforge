@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cache } from "react";
+
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { createPublicClient } from "@/lib/supabase/public";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -347,11 +349,15 @@ export async function resolveLegacyCardSlug(
  * Fetch a card by `(owner_username, slug)`. Used by the public `/card/[slug]`
  * page in later phases — for now we accept the *current* user's slug too,
  * since profile lookups need RLS context.
+ *
+ * React cache()-wrapped: generateMetadata and the page body both resolve the
+ * same card, so without dedup every card view paid the profile+card round
+ * trips twice (4 serial queries). Per-request scope keeps RLS semantics.
  */
-export async function getCardByOwnerAndSlug(
+export const getCardByOwnerAndSlug = cache(async (
   ownerUsername: string,
   slug: string,
-): Promise<CardWithOwner | null> {
+): Promise<CardWithOwner | null> => {
   if (!isSupabaseConfigured()) return null;
   try {
     const supabase = await createClient();
@@ -384,7 +390,7 @@ export async function getCardByOwnerAndSlug(
   } catch {
     return null;
   }
-}
+});
 
 export async function getCardWithLineage(
   id: string,
