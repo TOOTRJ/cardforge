@@ -29,13 +29,16 @@ export const ROSE_GEM_FACET_PATH = "M16 13.9 L18.1 16 L16 18.1 L13.9 16 Z";
  *  fill-rule="evenodd". */
 export const ROSE_STAR_CUT_PATH = `${ROSE_STAR_PATH} ${ROSE_GEM_PATH}`;
 
-/** Bold set-mark star (points r12, waist r5.4) and its gem (r4). The
- *  type-line emblem renders at ~14px over arbitrary frame inks — the
- *  display mark's quill-thin arms vanish there, so this variant carries
- *  more mass while keeping the same four-point rose silhouette. */
-export const ROSE_STAR_BOLD_PATH =
-  "M16 4 Q17.64 14.36 28 16 Q17.64 17.64 16 28 Q14.36 17.64 4 16 Q14.36 14.36 16 4 Z";
-export const ROSE_GEM_BOLD_PATH = "M16 12 L20 16 L16 20 L12 16 Z";
+/** The type-line set-mark emblem: the rose star ringed like the logo, so
+ *  the mark on every card reads as the PipGlyph seal (same language as the
+ *  Medallion treatment). Renders at ~14px over arbitrary frame inks, so
+ *  the star is bolder than the display mark (points r9.5, waist r4.3)
+ *  and the whole emblem is drawn two-tone — rarity ink over a contrast
+ *  keyline (see RARITY_SET_MARK in constants.ts). */
+export const SET_MARK_RING = { cx: 16, cy: 16, r: 13.4 } as const;
+export const SET_MARK_STAR_PATH =
+  "M16 6.5 Q17.33 14.67 25.5 16 Q17.33 17.33 16 25.5 Q14.67 17.33 6.5 16 Q14.67 14.67 16 6.5 Z";
+export const SET_MARK_GEM_PATH = "M16 12.8 L19.2 16 L16 19.2 L12.8 16 Z";
 
 /** The violet plane in orbit on the ring (lower-right, 45°). */
 export const ROSE_ORBIT_PIP = { cx: 25.62, cy: 25.62, r: 1.9 } as const;

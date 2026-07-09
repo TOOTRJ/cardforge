@@ -66,6 +66,10 @@
 //   17     — default set mark bolded into a two-tone emblem: wider star in
 //            the rarity ink over a contrast keyline + keyline gem (the thin
 //            single-ink star was illegible on colored/dark frame bars).
+//   18     — set mark gains the logo's ring (a minted-seal emblem, same
+//            visual language as the Medallion treatment) — star r9.5 inside
+//            ring r13.4, both keylined; geometry moved to SET_MARK_* in
+//            lib/brand/geometry.
 // ---------------------------------------------------------------------------
 
-export const CARD_LAYOUT_VERSION = 17;
+export const CARD_LAYOUT_VERSION = 18;

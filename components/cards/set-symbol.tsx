@@ -2,8 +2,9 @@ import { cn } from "@/lib/utils";
 import type { Rarity } from "@/types/card";
 import { RARITY_INK, RARITY_SET_MARK } from "@/lib/brand/constants";
 import {
-  ROSE_GEM_BOLD_PATH,
-  ROSE_STAR_BOLD_PATH,
+  SET_MARK_GEM_PATH,
+  SET_MARK_RING,
+  SET_MARK_STAR_PATH,
 } from "@/lib/brand/geometry";
 
 // ---------------------------------------------------------------------------
@@ -36,13 +37,13 @@ type SetSymbolProps = {
   className?: string;
 };
 
-// The PipGlyph house mark as a two-tone emblem: the bold Astral Rose star
-// in the rarity ink over a contrast keyline (light behind common's dark
-// ink, dark behind silver/gold/orange), with the gem heart in the keyline
-// color — so the mark stays legible on any frame ink, the way printed set
-// symbols wear an outline. Geometry + palette come from lib/brand — the
-// bake side (lib/render/card-image.tsx) imports the same constants, so
-// preview and export can't drift.
+// The PipGlyph house mark as a ringed two-tone emblem — the rose star
+// inside the logo's ring, like a minted seal. Rarity ink over a contrast
+// keyline (light behind common's dark ink, dark behind silver/gold/orange)
+// with the gem heart in the keyline color, so the mark stays legible on
+// any frame ink the way printed set symbols wear an outline. Geometry +
+// palette come from lib/brand — the bake side (lib/render/card-image.tsx)
+// imports the same constants, so preview and export can't drift.
 export function PipGlyphSetMark({
   rarity,
   className,
@@ -61,15 +62,32 @@ export function PipGlyphSetMark({
       role="img"
       aria-label="PipGlyph set"
     >
+      {/* keyline underlay first, then ink — the outline hugs every edge */}
+      <circle
+        cx={SET_MARK_RING.cx}
+        cy={SET_MARK_RING.cy}
+        r={SET_MARK_RING.r}
+        stroke={keyline}
+        strokeWidth={4.2}
+        fill="none"
+      />
       <path
-        d={ROSE_STAR_BOLD_PATH}
+        d={SET_MARK_STAR_PATH}
         fill={keyline}
         stroke={keyline}
         strokeWidth={2.4}
         strokeLinejoin="round"
       />
-      <path d={ROSE_STAR_BOLD_PATH} fill={ink} />
-      <path d={ROSE_GEM_BOLD_PATH} fill={keyline} opacity={0.92} />
+      <circle
+        cx={SET_MARK_RING.cx}
+        cy={SET_MARK_RING.cy}
+        r={SET_MARK_RING.r}
+        stroke={ink}
+        strokeWidth={2}
+        fill="none"
+      />
+      <path d={SET_MARK_STAR_PATH} fill={ink} />
+      <path d={SET_MARK_GEM_PATH} fill={keyline} opacity={0.92} />
     </svg>
   );
 }
