@@ -4,7 +4,7 @@ import type { MetadataRoute } from "next";
 import { getSiteBaseUrl } from "@/lib/site-url";
 import { listArticles, listTags } from "@/lib/content/articles";
 import { getCluster } from "@/lib/content/clusters";
-import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/public";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 // ---------------------------------------------------------------------------
@@ -27,6 +27,11 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 // return the static layer. We don't want a transient DB hiccup to drop the
 // entire sitemap.
 // ---------------------------------------------------------------------------
+
+// All reads are viewer-independent public rows, so they use the cookie-free
+// public client — cookies would force the route dynamic, regenerating the
+// whole sitemap on every crawler hit. ISR instead: rebuilt at most hourly.
+export const revalidate = 3600;
 
 const MAX_DYNAMIC_CARDS = 5000;
 
@@ -184,7 +189,7 @@ async function fetchPublicCardEntries(
   if (!isSupabaseConfigured()) return [];
 
   try {
-    const supabase = await createClient();
+    const supabase = createPublicClient();
     const { data: cards } = await supabase
       .from("cards")
       .select("slug, owner_id, updated_at, visibility")
@@ -229,7 +234,7 @@ async function fetchChallengeEntries(
 ): Promise<MetadataRoute.Sitemap> {
   if (!isSupabaseConfigured()) return [];
   try {
-    const supabase = await createClient();
+    const supabase = createPublicClient();
     const { data } = await supabase
       .from("challenges")
       .select("slug, created_at")
@@ -251,7 +256,7 @@ async function fetchPublicSetEntries(
 ): Promise<MetadataRoute.Sitemap> {
   if (!isSupabaseConfigured()) return [];
   try {
-    const supabase = await createClient();
+    const supabase = createPublicClient();
     const { data } = await supabase
       .from("card_sets")
       .select("slug, updated_at")
@@ -274,7 +279,7 @@ async function fetchProfileEntries(
 ): Promise<MetadataRoute.Sitemap> {
   if (!isSupabaseConfigured()) return [];
   try {
-    const supabase = await createClient();
+    const supabase = createPublicClient();
     const { data } = await supabase
       .from("profiles")
       .select("username, updated_at")
