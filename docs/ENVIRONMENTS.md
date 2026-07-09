@@ -1,21 +1,24 @@
-# Environments: local dev → staging → production
+# Environments: local dev → preview branches → production
 
-How PipGlyph code and database changes flow from your machine to production.
-Three environments, deliberately simple:
+How PipGlyph code and database changes flow from your machine to production,
+using **Supabase branching** (Pro plan) for the test environment.
 
 | | App runs | Database | Who sees it |
 |---|---|---|---|
 | **Local** | `next dev` on your machine | Local Supabase (Docker, `supabase start`) | Just you |
-| **Staging** | Vercel **Preview** deployments (every PR gets a URL) | `pipglyph-staging` Supabase project (free tier) | You + anyone with the preview link |
-| **Production** | Vercel Production (`main` branch) | The existing prod Supabase project | Everyone |
+| **Preview** (per PR) | Vercel Preview deployment | An ephemeral **Supabase preview branch**, created automatically for the PR | You + anyone with the preview link |
+| **Production** | Vercel Production (`main`) | The prod Supabase project | Everyone |
 
-The promotion path: **build locally against the local DB → open a PR (Vercel
-auto-deploys a preview against staging) → approve → merge to `main` (Vercel
-deploys prod) → push migrations to prod.**
+The promotion path: **build locally against the local DB → open a PR
+(Supabase spins up a preview branch with your migrations applied; Vercel
+deploys a preview wired to it) → test on the preview URL → merge → Supabase
+applies the new migrations to production and Vercel deploys `main`.**
 
 Migrations in `supabase/migrations/` are the single source of truth for the
-schema. They are complete (0001→0053) — any fresh database built from them is
-a faithful, empty copy of prod's schema, RLS policies, and storage buckets.
+schema (complete, 0001→…). With branching enabled, **you never run a manual
+migration push in the normal flow** — the GitHub integration does it on every
+preview-branch commit and again on merge to `main` (its deploy workflow is
+Clone → Pull → Health → Configure → Migrate → Seed → Deploy).
 
 ---
 
@@ -25,11 +28,8 @@ Prereqs: Docker or colima (`brew install colima docker && colima start --memory 
 and the Supabase CLI (`brew install supabase/tap/supabase`).
 
 ```bash
-# Start the local stack — applies all migrations + supabase/seed.sql
-supabase start
-
-# See your local URL + keys (API URL http://127.0.0.1:54321)
-supabase status
+supabase start    # starts the local stack, applies all migrations + supabase/seed.sql
+supabase status   # prints your local URL + keys (API http://127.0.0.1:54321)
 ```
 
 Point `.env.local` at the LOCAL stack, not prod:
@@ -41,105 +41,109 @@ SUPABASE_SECRET_KEY=<secret key from `supabase status`>
 # AI keys etc. can stay as-is; leave NEXT_PUBLIC_GA_MEASUREMENT_ID unset
 ```
 
-> ⚠️ **Until now `.env.local` pointed at production** — meaning local card
-> saves, likes, and experiments wrote to the live database. Switching to the
-> local stack is the single most important change in this document. If you
-> occasionally need to eyeball prod data locally, keep a `.env.production-peek`
-> file to swap in consciously, never as the default.
+> ⚠️ **Until now `.env.local` pointed at production** — local card saves,
+> likes, and experiments wrote to the live database. Switching to the local
+> stack is the single most important change in this document.
 
 Day-to-day:
 
 ```bash
-supabase start          # once per boot (fast if containers exist)
-npm run dev             # app on :3000 against the local DB
+supabase start             # once per boot
+npm run dev                # app on :3000 against the local DB
 node scripts/seed-e2e.mjs  # optional: create the e2e test user
-supabase db reset       # nuke + re-apply all migrations + seed when you want a clean slate
+npm run db:reset           # re-apply all migrations + seed for a clean slate
 ```
 
 Creating a schema change:
 
 ```bash
-supabase migration new my_change_name   # creates supabase/migrations/00NN_my_change_name.sql
-# write SQL in the new file, then:
-supabase db reset                        # verify the full chain applies cleanly
+supabase migration new my_change_name   # new supabase/migrations/00NN_*.sql
+# write the SQL, then verify the full chain applies cleanly:
+npm run db:reset
 ```
 
-Never edit an already-shipped migration file — always add a new one.
+Never edit an already-shipped migration — always add a new one. With
+branching, an edited historical migration will fail the branch's Migrate
+step and block the PR (which is the guard working as intended).
 
-## 2. Staging (one-time setup, ~20 minutes)
+## 2. Branching setup (one-time, ~15 minutes, dashboard-side)
 
-1. **Create the project**: Supabase dashboard → New project → name it
-   `pipglyph-staging` (free tier is fine). Choose the same region as prod.
-2. **Apply the schema** from your machine:
-   ```bash
-   supabase link --project-ref <STAGING_REF>   # ref is in the project's dashboard URL
-   supabase db push                             # applies all migrations
-   ```
-3. **Auth config** (dashboard → Authentication): set Site URL to your Vercel
-   preview domain pattern and add `https://*-<team>.vercel.app/**` to the
-   redirect allow-list. Email/password works out of the box; only configure
-   Google OAuth here if you need to test it on staging.
-4. **Wire it to Vercel Preview**: Vercel dashboard → cardforge project →
-   Settings → Environment Variables. For each of these, add a value scoped to
-   **Preview only** (Production keeps its current values):
-   - `NEXT_PUBLIC_SUPABASE_URL` → `https://<STAGING_REF>.supabase.co`
-   - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` → staging publishable key
-   - `SUPABASE_SECRET_KEY` → staging secret key
-   - `NEXT_PUBLIC_BILLING_ENABLED` → `false` (or wire Stripe **test-mode**
-     keys + a staging webhook if you want to test billing)
-   - leave `NEXT_PUBLIC_GA_MEASUREMENT_ID` unset for Preview
-5. **Seed it** (optional): run `node scripts/seed-e2e.mjs` with a temporary
-   `.env.e2e` pointing at staging, or just sign up and create a few cards on
-   the preview URL. Note the seed script's localhost guard must be bypassed
-   deliberately — it exists to protect prod; staging seeding by hand is fine.
+1. **Enable branching**: Supabase dashboard → your project → **Branches** →
+   Enable branching (Pro plan feature).
+2. **Connect GitHub**: install the Supabase GitHub App on the
+   `TOOTRJ/cardforge` repo when prompted, and set the **production branch**
+   to `main`. From now on Supabase watches PRs.
+3. **Connect Vercel**: install the
+   [Supabase integration from the Vercel Marketplace](https://vercel.com/marketplace/supabase)
+   and connect it to the `cardforge` Vercel project. This is what copies each
+   preview branch's credentials (URL + publishable key + secret key) into the
+   matching Vercel Preview deployment, and auto-registers the preview URL in
+   the branch's auth redirect allow-list.
+4. **Sanity-check the first PR**: open a trivial PR, wait for the Supabase
+   check to go green, open the Vercel preview, and confirm the app talks to
+   the branch (Vercel deployment → Environment variables should show
+   branch-specific `NEXT_PUBLIC_SUPABASE_URL` / publishable key / secret
+   key). If a variable the app needs didn't sync, add it Preview-scoped by
+   hand once — names the app reads: `NEXT_PUBLIC_SUPABASE_URL`,
+   `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`.
 
-That's it. From now on **every PR automatically gets a preview URL running
-against the staging database** — no per-PR work.
+Notes:
+
+- **Preview branches start EMPTY (schema, no data)** — by design, so prod
+  data never leaks into previews. `supabase/seed.sql` runs on every branch
+  creation: put baseline/demo rows there as the app grows so previews are
+  testable without manual clicking.
+- **Costs**: preview branches bill per hour (~$0.013/hr) and pause when
+  idle; a typical PR costs cents. Branches are deleted when the PR merges
+  or closes.
+- **Env sync happens when the PR opens** — a long-lived ("persistent")
+  branch does NOT get Vercel env syncing, which is why the per-PR flow is
+  the primary staging story. If you later want an always-on staging URL,
+  create a persistent branch + a Vercel custom environment and wire its
+  vars by hand (that's the "later, if the site grows" tier).
+- **Dashboard-side auth config** (Google OAuth client, email templates) is
+  per-branch-from-`config.toml`, not copied from prod. Email/password auth
+  works on previews out of the box; only add `[auth.external.google]` to
+  config.toml if you need to test Google sign-in on previews.
+- **Stripe** stays test-mode outside production: set the test-mode keys
+  Preview-scoped in Vercel (or leave `NEXT_PUBLIC_BILLING_ENABLED=false`
+  for Preview).
 
 ## 3. The shipping flow
 
 ```
-feature branch ──PR──▶ Vercel Preview + staging DB ──approve──▶ merge to main
-                                                                    │
-     supabase db push (staging)  ◀── if the PR has a migration      ▼
-                                                          Vercel Production build
-                                                                    │
-                                              npm run db:push:prod  ▼ (only if migrations changed)
-                                                          prod DB updated
+feature branch ──PR──▶ Supabase preview branch (migrations + seed auto-applied)
+                       Vercel Preview deployment (branch creds auto-synced)
+                                    │ test on the preview URL
+                                 approve
+                                    ▼
+                              merge to main
+                                    │
+        Supabase applies new migrations to PRODUCTION (automatic)
+        Vercel deploys main to production
 ```
 
 1. Branch, build, test locally (local DB).
-2. If the change includes a migration: `npm run db:push:staging` **before**
-   asking anyone to test the preview — the preview app expects the new schema.
-3. Open the PR, click the Vercel preview link, test against staging data.
-4. Approve + merge. Vercel deploys `main` to production automatically.
-5. If migrations shipped: `npm run db:push:prod` **before or immediately
-   after** the prod deploy goes live (new code usually tolerates the old
-   schema for seconds, but push promptly; for breaking schema changes, push
-   the migration first, then merge).
+2. Open the PR. Wait for the **Supabase check** — if a migration is broken,
+   it fails here, on the branch, not on prod.
+3. Test the Vercel preview URL (it's already pointed at the branch DB).
+4. Merge. Supabase migrates prod; Vercel ships the code. Done — no manual
+   push in the normal path.
 
-npm scripts (thin wrappers so you never push to the wrong project):
+### Manual fallback
 
-```bash
-npm run db:push:staging   # supabase db push against pipglyph-staging
-npm run db:push:prod      # supabase db push against prod — asks for confirmation
-```
+`npm run db:push:prod` still exists for out-of-band situations (hotfix SQL
+pushed outside a PR, or re-syncing if the integration hiccups). It reads
+`SUPABASE_PROD_REF` from `.env.local` and requires typing `production`.
+`npm run db:push:staging` (ref: `SUPABASE_STAGING_REF`) is only relevant if
+you later create a persistent branch — a branch has its own project ref you
+can point it at. Neither script is part of the everyday flow anymore.
 
-## 4. What stays manual (on purpose)
+## 4. Later, if the site grows
 
-- **Migration pushes** are a deliberate command, not CI magic — you asked for
-  "not overdone," and a human-triggered `db:push:prod` after approval is the
-  simplest gate that still prevents untested schema reaching prod.
-- **Dashboard-side config** (Google OAuth creds, email templates, auth
-  redirect URLs) lives per-project in the Supabase dashboard. When you change
-  one in prod, mirror it in staging. There are only a handful.
-- **Stripe** stays test-mode-only outside production.
-
-## 5. Later, if the site grows
-
-- GitHub Action that runs typecheck/lint/unit tests on PRs (cheap, add anytime).
-- Supabase **branching** (~$0.013/hr per branch) for per-PR databases instead
-  of one shared staging DB — worth it only when multiple people ship
-  conflicting schema changes simultaneously.
-- A dedicated `staging` Vercel custom environment (Pro plan) with a stable
-  `staging.pipglyph.com` domain instead of per-PR preview URLs.
+- GitHub Action for typecheck/lint/unit tests on PRs (the Supabase check
+  gates migrations; nothing currently gates app code).
+- A persistent `staging` branch + Vercel custom environment with a stable
+  `staging.pipglyph.com` domain, for QA that outlives single PRs.
+- Data-seeding strategy for previews (richer seed.sql, or a scrubbed
+  data-clone script) once "empty preview" stops being enough.
