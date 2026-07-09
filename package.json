@@ -11,7 +11,11 @@
     "test": "npm run test:unit && npm run test:e2e",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "db:start": "supabase start",
+    "db:reset": "supabase db reset",
+    "db:push:staging": "node scripts/db-push.mjs staging",
+    "db:push:prod": "node scripts/db-push.mjs prod"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.76",
