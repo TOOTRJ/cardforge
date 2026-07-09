@@ -33,7 +33,7 @@ export function AbilitiesPanel({ statVis }: AbilitiesPanelProps) {
         <div className="grid gap-4 sm:grid-cols-2">
           {statVis.pt ? (
             <>
-              <FieldGroup label="Power">
+              <FieldGroup label="Power" error={errors.power?.message}>
                 <input
                   {...register("power")}
                   placeholder="4"
@@ -41,7 +41,7 @@ export function AbilitiesPanel({ statVis }: AbilitiesPanelProps) {
                   autoComplete="off"
                 />
               </FieldGroup>
-              <FieldGroup label="Toughness">
+              <FieldGroup label="Toughness" error={errors.toughness?.message}>
                 <input
                   {...register("toughness")}
                   placeholder="4"
@@ -52,7 +52,7 @@ export function AbilitiesPanel({ statVis }: AbilitiesPanelProps) {
             </>
           ) : null}
           {statVis.loyalty ? (
-            <FieldGroup label="Loyalty">
+            <FieldGroup label="Loyalty" error={errors.loyalty?.message}>
               <input
                 {...register("loyalty")}
                 placeholder="3"
@@ -62,7 +62,7 @@ export function AbilitiesPanel({ statVis }: AbilitiesPanelProps) {
             </FieldGroup>
           ) : null}
           {statVis.defense ? (
-            <FieldGroup label="Defense">
+            <FieldGroup label="Defense" error={errors.defense?.message}>
               <input
                 {...register("defense")}
                 placeholder="4"

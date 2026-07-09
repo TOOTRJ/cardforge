@@ -26,15 +26,29 @@ export function FeaturedCardsManager({
 }) {
   const router = useRouter();
   const [urls, setUrls] = useState<[string, string]>(["", ""]);
+  // Per-slot server rejection (bad URL, unpublished card…) rendered inline
+  // under that slot's input.
+  const [errors, setErrors] = useState<[string | null, string | null]>([
+    null,
+    null,
+  ]);
   const [pending, startTransition] = useTransition();
+
+  const setSlotError = (slot: 1 | 2, message: string | null) =>
+    setErrors((prev) => {
+      const next: [string | null, string | null] = [...prev];
+      next[slot - 1] = message;
+      return next;
+    });
 
   const run = (slot: 1 | 2, url: string | null) =>
     startTransition(async () => {
       const result = await setFeaturedCardAction(slot, url);
       if (!result.ok) {
-        toast.error(result.error);
+        setSlotError(slot, result.error);
         return;
       }
+      setSlotError(slot, null);
       toast.success(url ? "Featured card set." : "Slot cleared.");
       setUrls((prev) => {
         const next: [string, string] = [...prev];
@@ -84,16 +98,18 @@ export function FeaturedCardsManager({
               >
                 <input
                   value={urls[slot - 1]}
-                  onChange={(e) =>
+                  onChange={(e) => {
                     setUrls((prev) => {
                       const next: [string, string] = [...prev];
                       next[slot - 1] = e.target.value;
                       return next;
-                    })
-                  }
+                    });
+                    if (errors[slot - 1]) setSlotError(slot, null);
+                  }}
                   placeholder="https://www.pipglyph.com/card/username/card-slug"
                   aria-label={`Card URL for slot ${slot}`}
-                  className="w-full max-w-md rounded-md border border-border bg-elevated/40 px-3 py-2 text-sm text-foreground placeholder:text-subtle focus:border-primary/60 focus:outline-none"
+                  aria-invalid={Boolean(errors[slot - 1])}
+                  className={`w-full max-w-md rounded-md border bg-elevated/40 px-3 py-2 text-sm text-foreground placeholder:text-subtle focus:border-primary/60 focus:outline-none ${errors[slot - 1] ? "border-danger/60" : "border-border"}`}
                 />
                 <Button
                   type="submit"
@@ -107,8 +123,18 @@ export function FeaturedCardsManager({
                   )}
                   Feature
                 </Button>
+                {errors[slot - 1] ? (
+                  <p role="alert" className="w-full text-xs text-danger">
+                    {errors[slot - 1]}
+                  </p>
+                ) : null}
               </form>
             )}
+            {current && errors[slot - 1] ? (
+              <p role="alert" className="text-xs text-danger">
+                {errors[slot - 1]}
+              </p>
+            ) : null}
           </div>
         );
       })}

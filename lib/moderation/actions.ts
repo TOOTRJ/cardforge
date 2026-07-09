@@ -9,20 +9,20 @@ import {
 } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { cardRenderPath } from "@/lib/cards/storage-paths";
-import { REPORT_REASONS } from "@/lib/moderation/reasons";
+import {
+  reportDetailsSchema,
+  reportReasonSchema,
+} from "@/lib/moderation/schemas";
 import { notifyAdminsOfReport } from "@/lib/moderation/notify";
 
 // User reporting + admin moderation actions for public cards.
+// Reason/details rules live in lib/moderation/schemas.ts, shared with the
+// report dialog so client and server can't drift.
 
 const reportSchema = z.object({
   cardId: z.string().uuid("Invalid card."),
-  reason: z.enum(REPORT_REASONS),
-  details: z
-    .string()
-    .trim()
-    .max(1000, "Keep details under 1000 characters.")
-    .optional()
-    .or(z.literal("").transform(() => undefined)),
+  reason: reportReasonSchema,
+  details: reportDetailsSchema,
 });
 
 export type ReportResult = { ok: true } | { ok: false; error: string };
@@ -59,13 +59,8 @@ export async function reportCardAction(input: unknown): Promise<ReportResult> {
 
 const commentReportSchema = z.object({
   commentId: z.string().uuid("Invalid comment."),
-  reason: z.enum(REPORT_REASONS),
-  details: z
-    .string()
-    .trim()
-    .max(1000, "Keep details under 1000 characters.")
-    .optional()
-    .or(z.literal("").transform(() => undefined)),
+  reason: reportReasonSchema,
+  details: reportDetailsSchema,
 });
 
 export async function reportCommentAction(input: unknown): Promise<ReportResult> {

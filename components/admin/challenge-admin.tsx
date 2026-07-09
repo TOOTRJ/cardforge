@@ -28,8 +28,12 @@ export function ChallengeAdmin({ challenges }: { challenges: Challenge[] }) {
   const [pending, startTransition] = useTransition();
   // Tag auto-derives from the title until the admin edits it by hand.
   const [tagTouched, setTagTouched] = useState(false);
+  // Server rejection of the create form, rendered inline next to the submit
+  // button (toasts vanish; the admin needs the message while fixing fields).
+  const [createError, setCreateError] = useState<string | null>(null);
 
   const onCreate = (formData: FormData) => {
+    setCreateError(null);
     startTransition(async () => {
       const result = await createChallengeAction(formData);
       if (result.ok) {
@@ -38,7 +42,7 @@ export function ChallengeAdmin({ challenges }: { challenges: Challenge[] }) {
         setTagTouched(false);
         router.refresh();
       } else {
-        toast.error(result.error);
+        setCreateError(result.error);
       }
     });
   };
@@ -136,6 +140,11 @@ export function ChallengeAdmin({ challenges }: { challenges: Challenge[] }) {
               className={inputClass(false)}
             />
           </label>
+          {createError ? (
+            <p role="alert" className="text-sm text-danger">
+              {createError}
+            </p>
+          ) : null}
           <div className="flex flex-wrap items-end gap-4">
             <label className="flex flex-col gap-1.5">
               <span className="text-xs font-semibold uppercase tracking-wider text-muted">

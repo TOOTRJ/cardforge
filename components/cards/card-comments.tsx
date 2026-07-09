@@ -30,11 +30,15 @@ import {
   deleteCommentAction,
   updateCommentAction,
 } from "@/lib/cards/comments-actions";
+import {
+  COMMENT_MAX_LENGTH,
+  commentBodySchema,
+} from "@/lib/cards/comments-schema";
 import type { CardCommentWithAuthor } from "@/types/card";
 import { ReportDialog } from "@/components/moderation/report-dialog";
 import { reportCommentAction } from "@/lib/moderation/actions";
 
-const MAX_BODY = 2000;
+const MAX_BODY = COMMENT_MAX_LENGTH;
 
 type Props = {
   cardId: string;
@@ -56,15 +60,23 @@ export function CardComments({
   const router = useRouter();
   const [comments, setComments] = useState(initialComments);
   const [draft, setDraft] = useState("");
+  const [draftError, setDraftError] = useState<string | null>(null);
   const [submitting, startSubmit] = useTransition();
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const body = draft.trim();
-    if (!body) return;
+    // Same schema the server action runs — inline errors before a round
+    // trip. The server re-validates.
+    const parsed = commentBodySchema.safeParse(draft);
+    if (!parsed.success) {
+      setDraftError(parsed.error.issues[0]?.message ?? "Invalid comment.");
+      return;
+    }
+    setDraftError(null);
     startSubmit(async () => {
-      const result = await createCommentAction(cardId, body);
+      const result = await createCommentAction(cardId, parsed.data);
       if (!result.ok) {
+        setDraftError(result.error);
         toast.error(result.error);
         return;
       }
@@ -112,16 +124,26 @@ export function CardComments({
         <form onSubmit={handleSubmit} className="flex flex-col gap-2">
           <textarea
             value={draft}
-            onChange={(event) => setDraft(event.target.value)}
+            onChange={(event) => {
+              setDraft(event.target.value);
+              if (draftError) setDraftError(null);
+            }}
             placeholder="Leave a note for the designer…"
             rows={3}
             maxLength={MAX_BODY}
             aria-label="Write a comment"
+            aria-invalid={Boolean(draftError)}
             className={cn(
-              "w-full rounded-md border border-border bg-background/60 px-3 py-2 text-sm text-foreground placeholder:text-subtle",
+              "w-full rounded-md border bg-background/60 px-3 py-2 text-sm text-foreground placeholder:text-subtle",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50",
+              draftError ? "border-danger/60" : "border-border",
             )}
           />
+          {draftError ? (
+            <p role="alert" className="text-xs text-danger">
+              {draftError}
+            </p>
+          ) : null}
           <div className="flex items-center justify-between">
             <span className="text-[10px] text-subtle">
               {draft.length}/{MAX_BODY}
@@ -199,21 +221,29 @@ function CommentRow({
   const isAuthor = currentUserId !== null && currentUserId === comment.author_id;
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(comment.body);
+  const [draftError, setDraftError] = useState<string | null>(null);
   const [busy, startBusy] = useTransition();
 
   const handleSaveEdit = () => {
-    const body = draft.trim();
-    if (!body || body === comment.body) {
+    if (draft.trim() === comment.body) {
       setEditing(false);
       return;
     }
+    // Same schema the server action runs — inline errors before a round trip.
+    const parsed = commentBodySchema.safeParse(draft);
+    if (!parsed.success) {
+      setDraftError(parsed.error.issues[0]?.message ?? "Invalid comment.");
+      return;
+    }
+    setDraftError(null);
     startBusy(async () => {
-      const result = await updateCommentAction(comment.id, body);
+      const result = await updateCommentAction(comment.id, parsed.data);
       if (!result.ok) {
+        setDraftError(result.error);
         toast.error(result.error);
         return;
       }
-      onReplace(body);
+      onReplace(parsed.data);
       setEditing(false);
       router.refresh();
     });
@@ -317,15 +347,25 @@ function CommentRow({
         <div className="flex flex-col gap-2">
           <textarea
             value={draft}
-            onChange={(event) => setDraft(event.target.value)}
+            onChange={(event) => {
+              setDraft(event.target.value);
+              if (draftError) setDraftError(null);
+            }}
             rows={3}
             maxLength={MAX_BODY}
             aria-label="Edit comment"
+            aria-invalid={Boolean(draftError)}
             className={cn(
-              "w-full rounded-md border border-border bg-background/60 px-3 py-2 text-sm text-foreground",
+              "w-full rounded-md border bg-background/60 px-3 py-2 text-sm text-foreground",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50",
+              draftError ? "border-danger/60" : "border-border",
             )}
           />
+          {draftError ? (
+            <p role="alert" className="text-xs text-danger">
+              {draftError}
+            </p>
+          ) : null}
           <div className="flex justify-end gap-2">
             <Button
               type="button"
@@ -333,6 +373,7 @@ function CommentRow({
               size="sm"
               onClick={() => {
                 setDraft(comment.body);
+                setDraftError(null);
                 setEditing(false);
               }}
               disabled={busy}

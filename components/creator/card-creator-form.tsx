@@ -10,6 +10,7 @@ import {
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   ArrowLeft,
   ArrowRight,
@@ -110,6 +111,7 @@ import {
   parseTags,
 } from "@/lib/creator/card-fields";
 import { type FormValues } from "@/lib/creator/form-types";
+import { cardFormSchema } from "@/lib/creator/form-schema";
 import type { PipOverrides } from "@/lib/pips/override";
 import type { Challenge } from "@/lib/challenges/shared";
 import {
@@ -326,9 +328,15 @@ export function CardCreatorForm({
 
   // The full methods object is spread into <FormProvider> below so the step
   // components can reach the same form instance via useFormContext().
+  // Client-side mirror of the server's createCardSchema limits
+  // (lib/creator/form-schema.ts) — the same jump-to-errored-step handling
+  // covers both: handleSubmit's error callback fires for resolver failures,
+  // and applyFieldErrors covers anything only the server can know.
   const methods = useForm<FormValues>({
     defaultValues: defaults,
+    resolver: zodResolver(cardFormSchema),
     mode: "onSubmit",
+    reValidateMode: "onChange",
   });
   const {
     register,

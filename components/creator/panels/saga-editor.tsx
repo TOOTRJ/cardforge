@@ -19,7 +19,12 @@ const MAX_CHAPTERS = 6; // Long List of the Ents runs I–VI.
 const NUMERALS = ["I", "II", "III", "IV", "V", "VI"] as const;
 
 export function SagaChaptersEditor() {
-  const { control, register, setValue } = useFormContext<FormValues>();
+  const {
+    control,
+    register,
+    setValue,
+    formState: { errors },
+  } = useFormContext<FormValues>();
   const { fields, append, remove } = useFieldArray({
     control,
     name: "saga_chapters",
@@ -32,12 +37,14 @@ export function SagaChaptersEditor() {
       <FieldGroup
         label="Intro / reminder"
         helper="The line above chapter I — e.g. the lore-counter reminder. Optional."
+        error={errors.saga_intro?.message}
       >
         <textarea
           {...register("saga_intro")}
           placeholder="(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)"
           rows={2}
-          className={textareaClass(false)}
+          aria-invalid={Boolean(errors.saga_intro)}
+          className={textareaClass(Boolean(errors.saga_intro))}
         />
       </FieldGroup>
 
@@ -103,8 +110,14 @@ export function SagaChaptersEditor() {
                   }
                   rows={2}
                   aria-label={`Chapter row ${i + 1} effect`}
-                  className={textareaClass(false)}
+                  aria-invalid={Boolean(errors.saga_chapters?.[i]?.text)}
+                  className={textareaClass(Boolean(errors.saga_chapters?.[i]?.text))}
                 />
+                {errors.saga_chapters?.[i]?.text?.message ? (
+                  <span role="alert" className="text-xs text-danger">
+                    {errors.saga_chapters[i]?.text?.message}
+                  </span>
+                ) : null}
               </div>
             );
           })}

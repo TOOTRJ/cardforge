@@ -198,7 +198,9 @@ export type BackFaceInput = z.infer<typeof backFaceSchema>;
 // "+1" | "-3" | "0" | "X" | "-X" — accepts the U+2212 minus Scryfall oracle
 // text uses and normalizes it to ASCII so the stored form matches what
 // parseLoyaltyAbilities emits (the Satori bake's fonts lack U+2212).
-const loyaltyCostSchema = z
+// Exported so the creator's client-side form schema (lib/creator/
+// form-schema.ts) validates loyalty costs with the exact same rule.
+export const loyaltyCostSchema = z
   .string()
   .trim()
   .transform((v) => v.replace(/−|–/g, "-"))

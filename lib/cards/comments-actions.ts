@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { z } from "zod";
+import { commentBodySchema } from "@/lib/cards/comments-schema";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
@@ -16,12 +16,6 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-const commentBodySchema = z
-  .string()
-  .trim()
-  .min(1, "Comment can't be empty.")
-  .max(2000, "Comment must be 2000 characters or fewer.");
 
 export type CommentActionResult =
   | { ok: true; commentId: string }

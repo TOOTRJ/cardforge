@@ -17,7 +17,11 @@ const MAX_ROWS = 6; // Urza, Planeswalker is the printed extreme.
 const COST_PRESETS = ["+1", "+2", "0", "-1", "-2", "-3", "X", ""] as const;
 
 export function LoyaltyAbilitiesEditor() {
-  const { control, register } = useFormContext<FormValues>();
+  const {
+    control,
+    register,
+    formState: { errors },
+  } = useFormContext<FormValues>();
   const { fields, append, remove } = useFieldArray({
     control,
     name: "loyalty_abilities",
@@ -29,7 +33,9 @@ export function LoyaltyAbilitiesEditor() {
       helper="One row per ability. Real walkers run 1–4 rows (plus/minus/ultimate); leave the cost blank for a static ability line."
     >
       <div className="flex flex-col gap-3">
-        {fields.map((row, i) => (
+        {fields.map((row, i) => {
+          const rowErrors = errors.loyalty_abilities?.[i];
+          return (
           <div
             key={row.id}
             className="flex flex-col gap-2 rounded-lg border border-border/60 bg-elevated/40 p-3"
@@ -39,7 +45,8 @@ export function LoyaltyAbilitiesEditor() {
                 {...register(`loyalty_abilities.${i}.cost`)}
                 placeholder="+1"
                 aria-label={`Ability ${i + 1} loyalty cost`}
-                className={`${inputClass(false)} w-20 text-center font-semibold`}
+                aria-invalid={Boolean(rowErrors?.cost)}
+                className={`${inputClass(Boolean(rowErrors?.cost))} w-20 text-center font-semibold`}
                 autoComplete="off"
               />
               <div className="flex flex-wrap gap-1" aria-hidden>
@@ -69,10 +76,17 @@ export function LoyaltyAbilitiesEditor() {
               }
               rows={2}
               aria-label={`Ability ${i + 1} text`}
-              className={textareaClass(false)}
+              aria-invalid={Boolean(rowErrors?.text)}
+              className={textareaClass(Boolean(rowErrors?.text))}
             />
+            {rowErrors?.cost?.message || rowErrors?.text?.message ? (
+              <span role="alert" className="text-xs text-danger">
+                {rowErrors?.cost?.message ?? rowErrors?.text?.message}
+              </span>
+            ) : null}
           </div>
-        ))}
+          );
+        })}
         {fields.length < MAX_ROWS ? (
           <Button
             type="button"
