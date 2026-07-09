@@ -12,6 +12,7 @@
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
     "test:e2e": "playwright test",
+    "assets:frame-webp": "node scripts/generate-frame-webp.mjs",
     "db:start": "supabase start",
     "db:reset": "supabase db reset",
     "db:push:staging": "node scripts/db-push.mjs staging",
