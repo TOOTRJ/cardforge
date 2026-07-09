@@ -27,7 +27,9 @@
 //
 // Wrapped in a Radix Dialog so the link list has a real focus trap and an
 // Esc close. The trigger button defaults to a ghost "Share" button; callers
-// can pass `trigger` to swap it.
+// can pass `trigger` to swap it, or drive the dialog programmatically with
+// `open`/`onOpenChange` (the post-publish prompt in the card creator opens
+// it with no trigger at all).
 // ---------------------------------------------------------------------------
 
 import { useState, useSyncExternalStore, type ReactNode } from "react";
@@ -63,6 +65,15 @@ type ShareTargetsProps = {
   /** Absolute URL of a PNG to attach on native file shares. */
   imageUrl?: string;
   trigger?: ReactNode;
+  /** Controlled open state — pair with `onOpenChange`. When controlled and
+   *  no `trigger` is passed, the dialog renders without a trigger and can
+   *  only be opened programmatically. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** Override the dialog title ("Share this {entity}"). */
+  heading?: string;
+  /** Override the dialog blurb under the title. */
+  description?: string;
 };
 
 /** Append the share-source attribution param without disturbing anything
@@ -84,6 +95,10 @@ export function ShareTargets({
   itemId,
   imageUrl,
   trigger,
+  open,
+  onOpenChange,
+  heading,
+  description,
 }: ShareTargetsProps) {
   const shareText =
     entity === "set"
@@ -145,21 +160,22 @@ export function ShareTargets({
   const discordMessage = `**${title}** — a custom Magic ${entity} I made on PipGlyph\n${withVia(url, "discord")}`;
 
   return (
-    <Dialog>
-      <DialogTrigger asChild>
-        {trigger ?? (
-          <Button variant="ghost">
-            <Share2 className="h-4 w-4" aria-hidden /> Share
-          </Button>
-        )}
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      {open === undefined || trigger !== undefined ? (
+        <DialogTrigger asChild>
+          {trigger ?? (
+            <Button variant="ghost">
+              <Share2 className="h-4 w-4" aria-hidden /> Share
+            </Button>
+          )}
+        </DialogTrigger>
+      ) : null}
       <DialogContent size="sm">
         <DialogHeader>
-          <DialogTitle>Share this {entity}</DialogTitle>
+          <DialogTitle>{heading ?? <>Share this {entity}</>}</DialogTitle>
           <DialogDescription>
-            Send it to a playgroup or post it to a community. We don&apos;t
-            send anything on your behalf — the buttons just prefill the
-            respective forms.
+            {description ??
+              "Send it to a playgroup or post it to a community. We don't send anything on your behalf — the buttons just prefill the respective forms."}
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-3 p-5">
