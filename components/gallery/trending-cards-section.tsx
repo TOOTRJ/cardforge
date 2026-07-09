@@ -143,7 +143,12 @@ function TrendingTile({
           </CardHoverEffect>
         </Link>
         <div className="absolute right-2 top-2 z-10">
-          <TrendingShareButton cardTitle={card.title} cardUrl={cardUrl} />
+          <TrendingShareButton
+            cardId={card.id}
+            cardTitle={card.title}
+            cardUrl={cardUrl}
+            siteBase={siteBase}
+          />
         </div>
       </div>
 

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Cinzel, Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import { UpgradeModalProvider } from "@/components/billing/upgrade-modal-provider";
+import { ShareParamCleanup } from "@/components/seo/share-param-cleanup";
 import { getSiteBaseUrl } from "@/lib/site-url";
 import { noFlashScript } from "@/lib/theme-shared";
 import { GoogleAnalytics } from "@next/third-parties/google";
@@ -227,6 +228,9 @@ export default function RootLayout({
             (@next/third-parties). Gated on the env var so only deploys
             that configure it load analytics. */}
         {GA_MEASUREMENT_ID ? <GoogleAnalytics gaId={GA_MEASUREMENT_ID} /> : null}
+        {/* Strips ?via= share-attribution params after the GA pageview
+            captures them, so re-copied URLs stay clean. */}
+        <ShareParamCleanup />
       </body>
     </html>
   );

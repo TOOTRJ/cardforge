@@ -44,12 +44,31 @@ export async function generateMetadata({
     return { title: `@${username}` };
   }
   const profile = await getProfileByUsername(username);
+  const title = profile
+    ? (profile.display_name ?? `@${profile.username}`)
+    : `@${username}`;
+  const description =
+    profile?.bio ?? `Custom cards forged by @${username} on PipGlyph.`;
+  const canonical = `/profile/${profile?.username ?? username}`;
   return {
-    title: profile
-      ? (profile.display_name ?? `@${profile.username}`)
-      : `@${username}`,
-    description: profile?.bio ?? `Custom cards forged by @${username} on PipGlyph.`,
-    alternates: { canonical: `/profile/${profile?.username ?? username}` },
+    title,
+    description,
+    alternates: { canonical },
+    // Explicit OG/Twitter blocks (the sibling opengraph-image.tsx supplies
+    // the image) so unfurls carry the profile description + site name
+    // instead of inheriting the root layout's generic copy.
+    openGraph: {
+      title: `${title} · PipGlyph`,
+      description,
+      type: "profile",
+      siteName: "PipGlyph",
+      url: canonical,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${title} · PipGlyph`,
+      description,
+    },
   };
 }
 

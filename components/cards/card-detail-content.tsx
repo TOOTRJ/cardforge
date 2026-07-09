@@ -390,11 +390,30 @@ export async function CardDetailContent({
               canBatch={entitlements.allowBatchExport}
             />
             <ShareTargets
-              cardTitle={card.title}
-              cardUrl={`${siteBase}/card/${username}/${card.slug}`}
+              title={card.title}
+              url={`${siteBase}/card/${username}/${card.slug}`}
+              entity="card"
+              itemId={card.id}
+              imageUrl={
+                isShareable ? `${siteBase}/api/cards/${card.id}/og` : undefined
+              }
             />
             {user && !isOwner ? <ReportCardDialog cardId={card.id} /> : null}
           </div>
+
+          {/* Share-traffic conversion: most anonymous visitors arrive from a
+              shared link — meet the "I could make one of these" moment with
+              the create CTA right under the card actions. Page variant only;
+              in-app modal viewers already have the header CTA. */}
+          {variant === "page" && !user ? (
+            <Link
+              href="/signup"
+              className="inline-flex w-fit items-center gap-2 rounded-md border border-gold/40 bg-gold/10 px-3.5 py-2 text-sm font-medium text-foreground transition-colors hover:border-gold hover:bg-gold/15"
+            >
+              <Sparkles className="h-4 w-4 text-gold" aria-hidden />
+              Forge your own card — free
+            </Link>
+          ) : null}
 
           {creatorProfile ? (
             <CreatorFeature
