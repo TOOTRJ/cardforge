@@ -995,6 +995,158 @@ export type Database = {
           },
         ];
       };
+      decks: {
+        Row: {
+          cover_url: string | null;
+          created_at: string;
+          description: string | null;
+          format: string;
+          id: string;
+          likes_count: number;
+          owner_id: string;
+          slug: string;
+          title: string;
+          updated_at: string;
+          view_count: number;
+          visibility: string;
+        };
+        Insert: {
+          cover_url?: string | null;
+          created_at?: string;
+          description?: string | null;
+          format?: string;
+          id?: string;
+          likes_count?: number;
+          owner_id: string;
+          slug: string;
+          title: string;
+          updated_at?: string;
+          view_count?: number;
+          visibility?: string;
+        };
+        Update: {
+          cover_url?: string | null;
+          created_at?: string;
+          description?: string | null;
+          format?: string;
+          id?: string;
+          likes_count?: number;
+          owner_id?: string;
+          slug?: string;
+          title?: string;
+          updated_at?: string;
+          view_count?: number;
+          visibility?: string;
+        };
+        Relationships: [];
+      };
+      deck_cards: {
+        Row: {
+          board: string;
+          card_id: string | null;
+          collector_number: string | null;
+          color_identity: string[];
+          created_at: string;
+          deck_id: string;
+          id: string;
+          image_url: string | null;
+          mana_cost: string | null;
+          mana_value: number | null;
+          name: string;
+          position: number;
+          quantity: number;
+          rarity: string | null;
+          scryfall_id: string | null;
+          set_code: string | null;
+          type_line: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          board?: string;
+          card_id?: string | null;
+          collector_number?: string | null;
+          color_identity?: string[];
+          created_at?: string;
+          deck_id: string;
+          id?: string;
+          image_url?: string | null;
+          mana_cost?: string | null;
+          mana_value?: number | null;
+          name: string;
+          position?: number;
+          quantity?: number;
+          rarity?: string | null;
+          scryfall_id?: string | null;
+          set_code?: string | null;
+          type_line?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          board?: string;
+          card_id?: string | null;
+          collector_number?: string | null;
+          color_identity?: string[];
+          created_at?: string;
+          deck_id?: string;
+          id?: string;
+          image_url?: string | null;
+          mana_cost?: string | null;
+          mana_value?: number | null;
+          name?: string;
+          position?: number;
+          quantity?: number;
+          rarity?: string | null;
+          scryfall_id?: string | null;
+          set_code?: string | null;
+          type_line?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "deck_cards_card_id_fkey";
+            columns: ["card_id"];
+            isOneToOne: false;
+            referencedRelation: "cards";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "deck_cards_deck_id_fkey";
+            columns: ["deck_id"];
+            isOneToOne: false;
+            referencedRelation: "decks";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      deck_likes: {
+        Row: {
+          created_at: string;
+          deck_id: string;
+          id: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          deck_id: string;
+          id?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          deck_id?: string;
+          id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "deck_likes_deck_id_fkey";
+            columns: ["deck_id"];
+            isOneToOne: false;
+            referencedRelation: "decks";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -1052,6 +1204,10 @@ export type Database = {
           username: string | null;
           calls: number;
         }[];
+      };
+      increment_deck_view: {
+        Args: { p_deck_id: string };
+        Returns: undefined;
       };
       increment_card_view: {
         Args: { p_card_id: string };
@@ -1227,6 +1383,18 @@ export type CardSetUpdate = TablesUpdate<"card_sets">;
 
 export type CardSetItem = Tables<"card_set_items">;
 export type CardSetItemInsert = TablesInsert<"card_set_items">;
+
+// Decks: quantity-aware card lists (real Scryfall cards + custom proxies).
+export type Deck = Tables<"decks">;
+export type DeckInsert = TablesInsert<"decks">;
+export type DeckUpdate = TablesUpdate<"decks">;
+
+export type DeckCard = Tables<"deck_cards">;
+export type DeckCardInsert = TablesInsert<"deck_cards">;
+export type DeckCardUpdate = TablesUpdate<"deck_cards">;
+
+export type DeckLike = Tables<"deck_likes">;
+export type DeckLikeInsert = TablesInsert<"deck_likes">;
 
 // Phase v2: comments on public cards.
 export type CardComment = Tables<"card_comments">;

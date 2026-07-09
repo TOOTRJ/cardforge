@@ -49,6 +49,7 @@ export const siteConfig = {
     { label: "Overview", href: "/dashboard" },
     { label: "Feed", href: "/feed" },
     { label: "My Sets", href: "/dashboard/sets" },
+    { label: "My Decks", href: "/dashboard/decks" },
     { label: "Notifications", href: "/notifications" },
     { label: "Feedback", href: "/feedback" },
     { label: "Settings", href: "/settings" },
