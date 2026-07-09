@@ -6,6 +6,7 @@
 // kind-first CardSetupPanel (components/creator/panels/card-setup-panel.tsx).
 
 import { type FrameTemplate } from "@/types/card";
+import { frameBackgroundImage } from "@/components/cards/frame-layer";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { cn } from "@/lib/utils";
 
@@ -36,7 +37,7 @@ export function FrameThumb({
         "block shrink-0 overflow-hidden rounded-[3px] border border-border/60 bg-[#101015] bg-cover bg-center",
         landscape ? "h-7 w-10" : "h-10 w-[29px]",
       )}
-      style={{ backgroundImage: `url(/frames/${template}/${colorKey}.png)` }}
+      style={{ backgroundImage: frameBackgroundImage(template, colorKey) }}
     />
   );
 }

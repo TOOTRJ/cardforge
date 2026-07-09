@@ -12,7 +12,11 @@ import {
   type PipOverrides,
 } from "@/lib/pips/override";
 import { SetSymbol } from "@/components/cards/set-symbol";
-import { FrameLayer, pickFrameColorKey } from "@/components/cards/frame-layer";
+import {
+  FrameLayer,
+  pickFrameColorKey,
+  webpVariant,
+} from "@/components/cards/frame-layer";
 import { fitRulesSizePct, fitSingleLineSizePct } from "@/lib/cards/render-tiers";
 import {
   tokenizeRulesText,
@@ -1070,13 +1074,22 @@ function StatOverlay({
       style={{ ...rectStyle(slot.rect), zIndex: 22 }}
     >
       {slot.plateAssetPathTemplate ? (
-        /* eslint-disable-next-line @next/next/no-img-element */
-        <img
-          src={resolveColorAsset(slot.plateAssetPathTemplate, colorKey)}
-          alt=""
-          aria-hidden
-          className="absolute inset-0 h-full w-full object-fill"
-        />
+        // Browser-side WebP variant with PNG fallback; the bake resolves the
+        // same template to the PNG master (lib/render/card-frames.ts).
+        <picture>
+          <source
+            srcSet={webpVariant(
+              resolveColorAsset(slot.plateAssetPathTemplate, colorKey),
+            )}
+            type="image/webp"
+          />
+          <img
+            src={resolveColorAsset(slot.plateAssetPathTemplate, colorKey)}
+            alt=""
+            aria-hidden
+            className="absolute inset-0 h-full w-full object-fill"
+          />
+        </picture>
       ) : slot.badgeColorHex ? (
         <div
           aria-hidden
@@ -1679,20 +1692,26 @@ function LoyaltyRows({
           >
             {ab.cost ? (
               // The printed loyalty shield asset: peaked top for +, pointed
-              // bottom for -, flat hexagon for 0.
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img
-                src={loyaltyBadgeAssetFor(ab.cost)}
-                alt=""
-                aria-hidden
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "fill",
-                }}
-              />
+              // bottom for -, flat hexagon for 0. WebP in the browser, PNG
+              // fallback (the bake reads the PNG master directly).
+              <picture>
+                <source
+                  srcSet={webpVariant(loyaltyBadgeAssetFor(ab.cost))}
+                  type="image/webp"
+                />
+                <img
+                  src={loyaltyBadgeAssetFor(ab.cost)}
+                  alt=""
+                  aria-hidden
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "fill",
+                  }}
+                />
+              </picture>
             ) : null}
             <span
               style={{
