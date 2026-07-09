@@ -1,7 +1,8 @@
 import "server-only";
 
 import { cache } from "react";
-import { createClient } from "@/lib/supabase/server";
+import { unstable_cache } from "next/cache";
+import { createPublicClient } from "@/lib/supabase/public";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
   parseFrameProfileOverride,
@@ -10,9 +11,13 @@ import {
 
 // ---------------------------------------------------------------------------
 // Server read for frame layout overrides. One tiny world-readable select
-// (≤27 rows), request-deduped via react cache(). Every failure mode — table
-// missing, bad jsonb, network — degrades to {} (code defaults), never an
-// error: a broken override row must not take down card rendering.
+// (≤27 rows). The data is viewer-independent, so it uses the cookie-free
+// public client (keeps callers eligible for static/ISR rendering) and is
+// cached ACROSS requests via unstable_cache — admin writes bust the tag
+// (see frame-profile-override-actions.ts). react cache() on top dedupes
+// within a request. Every failure mode — table missing, bad jsonb, network
+// — degrades to {} (code defaults), never an error: a broken override row
+// must not take down card rendering.
 //
 // Writes live in lib/cards/frame-profile-override-actions.ts.
 //
@@ -21,11 +26,13 @@ import {
 // fallback only fires for never-baked cards.
 // ---------------------------------------------------------------------------
 
-export const getFrameProfileOverrides = cache(
+export const FRAME_PROFILE_OVERRIDES_TAG = "frame-profile-overrides";
+
+const loadFrameProfileOverrides = unstable_cache(
   async (): Promise<FrameProfileOverridesMap> => {
     if (!isSupabaseConfigured()) return {};
     try {
-      const supabase = await createClient();
+      const supabase = createPublicClient();
       const { data } = await supabase
         .from("frame_profile_overrides")
         .select("template, overrides");
@@ -39,4 +46,8 @@ export const getFrameProfileOverrides = cache(
       return {};
     }
   },
+  [FRAME_PROFILE_OVERRIDES_TAG],
+  { revalidate: 300, tags: [FRAME_PROFILE_OVERRIDES_TAG] },
 );
+
+export const getFrameProfileOverrides = cache(loadFrameProfileOverrides);

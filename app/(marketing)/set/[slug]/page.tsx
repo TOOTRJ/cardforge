@@ -227,8 +227,10 @@ async function SetBody({
   isOwner: boolean;
   emitJsonLd: boolean;
 }) {
-  const profileOverrides = await getFrameProfileOverrides();
-  const items = await listCardsInSet(setId);
+  const [profileOverrides, items] = await Promise.all([
+    getFrameProfileOverrides(),
+    listCardsInSet(setId),
+  ]);
   const analytics = computeSetAnalytics(items.map((i) => i.card));
 
   return (

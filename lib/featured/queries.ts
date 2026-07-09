@@ -42,47 +42,66 @@ export async function listFeaturedCreators(
     .limit(limit);
   if (!profiles || profiles.length === 0) return [];
 
-  // One query for everyone's showcase cards: pinned first, padded with the
-  // creator's most-liked public cards so the banner never renders empty.
+  // Showcase cards for ALL creators in two batched queries (was a per-creator
+  // N+1 loop): pinned first, padded with each creator's most-liked public
+  // cards so the banner never renders empty.
+  const profileIds = profiles.map((p) => p.id);
+  const allPinnedIds = profiles.flatMap((p) =>
+    (p.pinned_card_ids ?? []).slice(0, 3),
+  );
+
+  const [pinnedRes, fallbackRes] = await Promise.all([
+    allPinnedIds.length > 0
+      ? supabase
+          .from("cards")
+          .select("id, slug, title, rendered_image_url, owner_id")
+          .in("id", allPinnedIds)
+          .eq("visibility", "public")
+      : Promise.resolve({ data: [] as never[] }),
+    supabase
+      .from("cards")
+      .select("slug, title, rendered_image_url, owner_id")
+      .in("owner_id", profileIds)
+      .eq("visibility", "public")
+      .not("rendered_image_url", "is", null)
+      .order("likes_count", { ascending: false })
+      // Enough per creator to pad to 3 even when all pinned rows also
+      // appear in the fallback window.
+      .limit(profiles.length * 8),
+  ]);
+
+  const pinnedById = new Map(
+    (pinnedRes.data ?? []).map((c) => [c.id as string, c]),
+  );
+  const fallbackByOwner = new Map<string, typeof fallbackRes.data>();
+  for (const c of fallbackRes.data ?? []) {
+    const list = fallbackByOwner.get(c.owner_id as string) ?? [];
+    list.push(c);
+    fallbackByOwner.set(c.owner_id as string, list);
+  }
+
   const out: FeaturedCreator[] = [];
   for (const p of profiles) {
     const pinned = (p.pinned_card_ids ?? []).slice(0, 3);
-    let cards: { slug: string; title: string; imageUrl: string }[] = [];
+    const cards: { slug: string; title: string; imageUrl: string }[] = pinned
+      .map((id: string) => pinnedById.get(id))
+      .filter((c): c is NonNullable<typeof c> =>
+        Boolean(c?.rendered_image_url),
+      )
+      .map((c) => ({
+        slug: c.slug,
+        title: c.title,
+        imageUrl: c.rendered_image_url as string,
+      }));
 
-    if (pinned.length > 0) {
-      const { data } = await supabase
-        .from("cards")
-        .select("id, slug, title, rendered_image_url")
-        .in("id", pinned)
-        .eq("visibility", "public");
-      const byId = new Map((data ?? []).map((c) => [c.id, c]));
-      cards = pinned
-        .map((id: string) => byId.get(id))
-        .filter((c): c is NonNullable<typeof c> => Boolean(c?.rendered_image_url))
-        .map((c) => ({
-          slug: c.slug,
-          title: c.title,
-          imageUrl: c.rendered_image_url as string,
-        }));
-    }
-    if (cards.length < 3) {
-      const { data } = await supabase
-        .from("cards")
-        .select("slug, title, rendered_image_url")
-        .eq("owner_id", p.id)
-        .eq("visibility", "public")
-        .not("rendered_image_url", "is", null)
-        .order("likes_count", { ascending: false })
-        .limit(3 - cards.length + 3);
-      for (const c of data ?? []) {
-        if (cards.length >= 3) break;
-        if (cards.some((x) => x.slug === c.slug)) continue;
-        cards.push({
-          slug: c.slug,
-          title: c.title,
-          imageUrl: c.rendered_image_url as string,
-        });
-      }
+    for (const c of fallbackByOwner.get(p.id) ?? []) {
+      if (cards.length >= 3) break;
+      if (cards.some((x) => x.slug === c.slug)) continue;
+      cards.push({
+        slug: c.slug,
+        title: c.title,
+        imageUrl: c.rendered_image_url as string,
+      });
     }
 
     out.push({

@@ -1,6 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { FRAME_PROFILE_OVERRIDES_TAG } from "@/lib/cards/frame-profile-overrides";
 import { z } from "zod";
 import { getCurrentProfile } from "@/lib/supabase/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
@@ -89,6 +90,7 @@ export async function saveFrameProfileOverrideAction(
   }
 
   const staleCount = await markTemplateRendersStale(admin, template);
+  revalidateTag(FRAME_PROFILE_OVERRIDES_TAG, "max");
   revalidatePath("/admin/frame-compare");
   return { ok: true, staleCount };
 }
@@ -109,6 +111,7 @@ export async function resetFrameProfileOverrideAction(
   if (error) return { ok: false, error: error.message };
 
   const staleCount = await markTemplateRendersStale(admin, parsed.data.template);
+  revalidateTag(FRAME_PROFILE_OVERRIDES_TAG, "max");
   revalidatePath("/admin/frame-compare");
   return { ok: true, staleCount };
 }

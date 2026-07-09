@@ -323,9 +323,11 @@ async function PinnedRow({
   pinnedIds: string[];
   ownerUsername: string;
 }) {
-  const profileOverrides = await getFrameProfileOverrides();
   if (!pinnedIds || pinnedIds.length === 0) return null;
-  const cards = await listPinnedCardsForProfile(pinnedIds);
+  const [profileOverrides, cards] = await Promise.all([
+    getFrameProfileOverrides(),
+    listPinnedCardsForProfile(pinnedIds),
+  ]);
   if (cards.length === 0) return null;
 
   return (
@@ -370,8 +372,10 @@ async function ProfileCards({
   ownerUsername: string;
   displayName: string;
 }) {
-  const profileOverrides = await getFrameProfileOverrides();
-  const cards = await listPublicCardsByOwner(ownerId, { limit: 24 });
+  const [profileOverrides, cards] = await Promise.all([
+    getFrameProfileOverrides(),
+    listPublicCardsByOwner(ownerId, { limit: 24 }),
+  ]);
   if (cards.length === 0) {
     return (
       <EmptyState

@@ -8,6 +8,22 @@
 /* Keyrune — same author, set symbols. `ss ss-{setcode}` classes. */
 @import "keyrune/css/keyrune.css";
 
+/* Mana font, woff2 override. The vendored mana.css above only declares
+   eot/woff/ttf sources — the browser picks the 408 KB woff even though the
+   package ships a 187 KB woff2 (copied to /public/fonts like the other card
+   faces). A later @font-face with the same family/weight/style wins, so this
+   declaration replaces mana.css's and only the woff2 is downloaded. The class
+   set (`ms ms-*`) still comes from the import above. */
+@font-face {
+  font-family: "Mana";
+  src:
+    url("/fonts/mana.woff2") format("woff2"),
+    url("/fonts/mana.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* MPlantin — the real MTG body-text font (ships with mana-font, SIL OFL 1.1).
    Loaded as a web font so the live card preview uses the exact same typeface
    the Satori bake (lib/render/card-image.tsx) renders with, making the editor

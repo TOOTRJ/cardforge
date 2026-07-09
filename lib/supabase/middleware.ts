@@ -22,6 +22,24 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.next({ request });
   }
 
+  // No Supabase auth cookie → anonymous visitor → there is no session to
+  // refresh, so skip the auth.getUser() network round trip (~50–200ms)
+  // that would otherwise tax every page view. Protected pages still get
+  // their login redirect; auth pages need no redirect for a signed-out
+  // viewer. Signed-in users (cookie present) take the full path below.
+  const hasAuthCookie = request.cookies
+    .getAll()
+    .some((c) => c.name.startsWith("sb-"));
+  if (!hasAuthCookie) {
+    if (pathMatches(path, PROTECTED_PREFIXES)) {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = "/login";
+      redirectUrl.searchParams.set("redirectTo", path);
+      return NextResponse.redirect(redirectUrl);
+    }
+    return NextResponse.next({ request });
+  }
+
   let response = NextResponse.next({ request });
 
   const { url, anonKey } = getSupabaseEnv();

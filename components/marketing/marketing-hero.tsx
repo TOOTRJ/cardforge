@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { FileDown, Sparkles, Type } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CompassStar } from "@/components/ui/compass-star";
@@ -136,11 +137,18 @@ export function MarketingHero({
                       href={`/card/${card.owner.username}/${card.slug}`}
                       className="group block"
                     >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
+                      {/* The homepage LCP element: next/image gives AVIF/WebP
+                          + responsive sizing, and priority skips lazy-load so
+                          the largest paint isn't queued behind the viewport
+                          observer. Dimensions are the 5:7 card ratio. */}
+                      <Image
                         src={card.imageUrl}
                         alt={card.title}
-                        className="w-full rounded-xl border border-gold/30 shadow-xl transition-transform group-hover:-translate-y-1"
+                        width={420}
+                        height={588}
+                        priority
+                        sizes="(max-width: 640px) 45vw, 280px"
+                        className="h-auto w-full rounded-xl border border-gold/30 shadow-xl transition-transform group-hover:-translate-y-1"
                       />
                     </Link>
                     <p className="mt-2 text-center text-xs text-muted">
