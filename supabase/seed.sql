@@ -13,3 +13,5 @@
 -- Add rows here when a feature needs pre-existing data (e.g. frame_reviews
 -- defaults or a featured challenge) so `supabase db reset` stays one command.
 select 1;
+
+-- branching smoke test 2 (fresh PR after enabling automatic branching)
