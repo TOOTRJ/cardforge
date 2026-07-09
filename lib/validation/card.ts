@@ -17,10 +17,16 @@ import {
 
 const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
-const optionalEmptyString = (schema: z.ZodString) =>
+const optionalEmptyString = (schema: z.ZodType<string>) =>
   schema
     .optional()
     .or(z.literal("").transform(() => undefined));
+
+/** Blocks javascript:/data:/etc. — image URLs must be https, or http only
+ *  for the local Supabase stack (127.0.0.1/localhost storage URLs in dev). */
+export const isSafeImageUrl = (value: string): boolean =>
+  value.startsWith("https://") ||
+  /^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?\//.test(value);
 
 export const cardTitleSchema = z
   .string()
@@ -85,7 +91,8 @@ export const cardArtUrlSchema = optionalEmptyString(
     .string()
     .trim()
     .max(2048, "Art URL must be 2048 characters or fewer.")
-    .url("Art URL must be a valid URL."),
+    .url("Art URL must be a valid URL.")
+    .refine(isSafeImageUrl, "Art URL must be an https:// URL."),
 );
 
 export const cardSubtypesSchema = z
@@ -276,7 +283,11 @@ export const watermarkSchema = z.discriminatedUnion("kind", [
   z
     .object({
       kind: z.literal("custom"),
-      url: z.string().url().max(2048),
+      url: z
+        .string()
+        .url()
+        .max(2048)
+        .refine(isSafeImageUrl, "Watermark URL must be an https:// URL."),
       ...watermarkCommon,
     })
     .strict(),

@@ -100,13 +100,12 @@ export const profileUpdateSchema = z.object({
     .max(280, "Bio must be 280 characters or fewer.")
     .optional()
     .or(z.literal("").transform(() => undefined)),
-  website_url: z
-    .string()
-    .trim()
-    .max(2048, "Website URL must be 2048 characters or fewer.")
-    .url("Enter a valid URL (including https://).")
-    .optional()
-    .or(z.literal("").transform(() => undefined)),
+  // HTTPS-gated like the social fields: this value is rendered as a
+  // clickable href on the public profile and card pages, so a bare .url()
+  // (which accepts javascript:/data: schemes) would be a stored-XSS vector.
+  website_url: HTTPS_URL_BASE.optional().or(
+    z.literal("").transform(() => undefined),
+  ),
   accent_color: z
     .string()
     .trim()
