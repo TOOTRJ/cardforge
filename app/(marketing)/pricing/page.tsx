@@ -3,9 +3,7 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { Sparkles } from "lucide-react";
 import { BillingReturnToast } from "@/components/billing/billing-return-toast";
-import { getEntitlements } from "@/lib/billing/entitlements";
 import { isBillingEnabled } from "@/lib/billing/flags";
-import { getCurrentUser } from "@/lib/supabase/server";
 import { PricingPlans } from "@/components/billing/pricing-plans";
 import { CreditPackGrid } from "@/components/billing/credit-pack-grid";
 import { siteConfig } from "@/lib/site-config";
@@ -17,16 +15,15 @@ export const metadata: Metadata = {
     "Design custom MTG-style cards for free. Upgrade for more AI generation credits, watermark-free hi-res exports, the AI set generator, and premium frames. Monthly or annual.",
 };
 
-export const dynamic = "force-dynamic";
+// ISR: the storefront is identical for every viewer — plan copy and prices
+// are build-time constants. The viewer-dependent bits (current plan badge,
+// checkout vs. manage CTA) hydrate client-side inside <PricingPlans> via
+// the /api/me auth island, so no server cookie read is needed here.
+export const revalidate = 300;
 
-export default async function PricingPage() {
+export default function PricingPage() {
   // Billing hidden for now — the page 404s until NEXT_PUBLIC_BILLING_ENABLED=true.
   if (!isBillingEnabled()) notFound();
-
-  const user = await getCurrentUser();
-  const entitlements = user ? await getEntitlements() : null;
-  const currentTier = entitlements?.tier ?? null;
-  const isPaid = entitlements?.isPaid ?? false;
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
@@ -53,12 +50,9 @@ export default async function PricingPage() {
         </p>
       </div>
 
-      {/* Plans (with monthly/annual toggle) */}
-      <PricingPlans
-        currentTier={currentTier}
-        isPaid={isPaid}
-        isSignedIn={Boolean(user)}
-      />
+      {/* Plans (with monthly/annual toggle); viewer state hydrates
+          client-side so the page stays static. */}
+      <PricingPlans />
 
       {/* Credit packs */}
       <div className="mx-auto mt-20 max-w-3xl">

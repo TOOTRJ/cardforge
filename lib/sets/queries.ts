@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/public";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
   isCardType,
@@ -71,14 +72,18 @@ function narrowCard(row: CardRow): Card {
   };
 }
 
+type SetsClient =
+  | Awaited<ReturnType<typeof createClient>>
+  | ReturnType<typeof createPublicClient>;
+
 async function countCardsForSets(
   setIds: string[],
+  supabase: SetsClient,
 ): Promise<Map<string, number>> {
   const counts = new Map<string, number>();
   if (setIds.length === 0) return counts;
 
   try {
-    const supabase = await createClient();
     const { data } = await supabase
       .from("card_set_items")
       .select("set_id")
@@ -110,7 +115,10 @@ export async function listMySets(): Promise<CardSetWithCount[]> {
       .order("updated_at", { ascending: false });
     if (!sets || sets.length === 0) return [];
 
-    const counts = await countCardsForSets(sets.map((s) => s.id));
+    const counts = await countCardsForSets(
+      sets.map((s) => s.id),
+      supabase,
+    );
     return sets.map((row) => ({
       ...narrowSet(row),
       cards_count: counts.get(row.id) ?? 0,
@@ -125,13 +133,17 @@ export async function listPublicSets(
     limit?: number;
     offset?: number;
     search?: string;
+    /** Skip the viewer lookup AND the cookie read entirely — for
+     *  static/ISR pages (e.g. /sets). `liked_by_viewer` is `false` for
+     *  every row; the like button re-checks the session client-side. */
+    anonymous?: boolean;
   } = {},
 ): Promise<PublicSetListing[]> {
   if (!isSupabaseConfigured()) return [];
-  const { limit = 24, offset = 0, search } = options;
+  const { limit = 24, offset = 0, search, anonymous = false } = options;
 
   try {
-    const supabase = await createClient();
+    const supabase = anonymous ? createPublicClient() : await createClient();
     let query = supabase
       .from("card_sets")
       .select("*")
@@ -149,10 +161,10 @@ export async function listPublicSets(
     if (!sets || sets.length === 0) return [];
 
     const setIds = sets.map((s) => s.id);
-    const viewer = await getCurrentUser();
+    const viewer = anonymous ? null : await getCurrentUser();
 
     const [counts, owners, likes, viewerLikes] = await Promise.all([
-      countCardsForSets(setIds),
+      countCardsForSets(setIds, supabase),
       (async () => {
         const ownerIds = Array.from(new Set(sets.map((s) => s.owner_id)));
         const { data } = await supabase
@@ -371,7 +383,10 @@ export async function listMySetsForCard(cardId: string): Promise<
       .order("updated_at", { ascending: false });
     if (!sets || sets.length === 0) return [];
 
-    const counts = await countCardsForSets(sets.map((s) => s.id));
+    const counts = await countCardsForSets(
+      sets.map((s) => s.id),
+      supabase,
+    );
 
     const { data: memberships } = await supabase
       .from("card_set_items")
