@@ -1,7 +1,10 @@
 import { cn } from "@/lib/utils";
 import type { Rarity } from "@/types/card";
-import { RARITY_INK } from "@/lib/brand/constants";
-import { ROSE_GEM_PATH, ROSE_STAR_PATH } from "@/lib/brand/geometry";
+import { RARITY_INK, RARITY_SET_MARK } from "@/lib/brand/constants";
+import {
+  ROSE_GEM_BOLD_PATH,
+  ROSE_STAR_BOLD_PATH,
+} from "@/lib/brand/geometry";
 
 // ---------------------------------------------------------------------------
 // SetSymbol — the small set-symbol pip at the right end of the type line.
@@ -33,19 +36,23 @@ type SetSymbolProps = {
   className?: string;
 };
 
-// The PipGlyph house mark, drawn as a solid rarity-tintable silhouette: the
-// Astral Rose star filled with `currentColor` so the rarity ink shows
-// through, with the gem heart knocked out in translucent black so the mark
-// reads on silver, gold, or orange alike. Geometry comes from
-// lib/brand/geometry — the bake side (lib/render/card-image.tsx) imports the
-// same constants, so preview and export can't drift.
+// The PipGlyph house mark as a two-tone emblem: the bold Astral Rose star
+// in the rarity ink over a contrast keyline (light behind common's dark
+// ink, dark behind silver/gold/orange), with the gem heart in the keyline
+// color — so the mark stays legible on any frame ink, the way printed set
+// symbols wear an outline. Geometry + palette come from lib/brand — the
+// bake side (lib/render/card-image.tsx) imports the same constants, so
+// preview and export can't drift.
 export function PipGlyphSetMark({
+  rarity,
   className,
   style,
 }: {
+  rarity: Rarity | null;
   className?: string;
   style?: React.CSSProperties;
 }) {
+  const { ink, keyline } = RARITY_SET_MARK[rarity ?? "common"];
   return (
     <svg
       viewBox="0 0 32 32"
@@ -54,8 +61,15 @@ export function PipGlyphSetMark({
       role="img"
       aria-label="PipGlyph set"
     >
-      <path d={ROSE_STAR_PATH} fill="currentColor" />
-      <path d={ROSE_GEM_PATH} fill="rgba(0,0,0,0.5)" />
+      <path
+        d={ROSE_STAR_BOLD_PATH}
+        fill={keyline}
+        stroke={keyline}
+        strokeWidth={2.4}
+        strokeLinejoin="round"
+      />
+      <path d={ROSE_STAR_BOLD_PATH} fill={ink} />
+      <path d={ROSE_GEM_BOLD_PATH} fill={keyline} opacity={0.92} />
     </svg>
   );
 }
@@ -96,11 +110,12 @@ export function SetSymbol({
     );
   }
 
-  // 3. Default — the PipGlyph mark, rarity-tinted.
+  // 3. Default — the PipGlyph mark, two-tone rarity emblem.
   return (
     <PipGlyphSetMark
+      rarity={rarity}
       className={className}
-      style={{ width: size, height: size, color, flexShrink: 0 }}
+      style={{ width: size, height: size, flexShrink: 0 }}
     />
   );
 }
