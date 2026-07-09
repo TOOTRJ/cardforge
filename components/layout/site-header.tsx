@@ -8,6 +8,7 @@ import { MobileMenu } from "./mobile-menu";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { siteConfig } from "@/lib/site-config";
 import { isBillingEnabled } from "@/lib/billing/flags";
+import type { PlanTier } from "@/lib/billing/plans";
 import { cn } from "@/lib/utils";
 
 type HeaderUser = {
@@ -16,6 +17,9 @@ type HeaderUser = {
   avatarUrl?: string | null;
   /** Drives the header "Upgrade" CTA — hidden for paid users. */
   isPaid?: boolean;
+  /** Subscription tier — lets billing surfaces (e.g. /pricing) hydrate the
+   *  viewer's plan client-side while the page itself stays static/ISR. */
+  tier?: PlanTier | null;
   /** AI credit balance + credits spent this month, for the header indicator. */
   credits?: number;
   creditsUsed?: number;

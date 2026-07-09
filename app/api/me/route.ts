@@ -57,6 +57,7 @@ export async function GET() {
     displayName: profile?.display_name ?? null,
     avatarUrl: profile?.avatar_url ?? null,
     isPaid: entitlements?.isPaid ?? false,
+    tier: entitlements?.tier ?? null,
     credits: entitlements?.credits ?? 0,
     creditsUsed,
     unreadNotifications,
