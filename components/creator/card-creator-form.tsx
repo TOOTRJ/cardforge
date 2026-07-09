@@ -25,6 +25,7 @@ import {
   Wand2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { sendGAEvent } from "@next/third-parties/google";
 import { useUpgradeModal } from "@/components/billing/upgrade-modal-provider";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +33,7 @@ import { SurfaceCard } from "@/components/ui/surface-card";
 import { Stepper, type StepperStep } from "@/components/ui/stepper";
 import { StepRail } from "@/components/ui/step-rail";
 import { CardPreview } from "@/components/cards/card-preview";
+import { ShareTargets } from "@/components/cards/share-targets";
 import { DeleteCardDialog } from "@/components/creator/delete-card-dialog";
 import { StartOverDialog } from "@/components/creator/start-over-dialog";
 import type { CardFieldPatch } from "@/components/creator/ai-assistant-panel";
@@ -268,6 +270,18 @@ export function CardCreatorForm({
   // hero on /create and the global command palette can open it via custom
   // DOM events. The dialog itself is rendered once below with `hideTrigger`.
   const [scryfallOpen, setScryfallOpen] = useState(false);
+  // Post-publish share prompt. UGC shares convert best at the "look what I
+  // made" moment (share research behind PR #192), so a FIRST publish opens
+  // the share dialog right here — the redirect to the card's public page
+  // waits until it closes. Re-saves of an already-public card skip it.
+  const [postSaveShare, setPostSaveShare] = useState<{
+    title: string;
+    cardId: string;
+    cardPath: string;
+    /** Whether the deferred navigation replaces history (create mode) or
+     *  pushes (edit mode) — mirrors the pre-prompt redirect behavior. */
+    replace: boolean;
+  } | null>(null);
   // Random-card generation state. Disabled until the user is signed in;
   // disables itself while a request is in flight so the user can't double-
   // submit and burn quota.
@@ -1120,6 +1134,22 @@ export function CardCreatorForm({
     )();
   };
 
+  // Arm the post-publish share prompt for a freshly-public card. The GA
+  // event marks the impression so prompt→share conversion is measurable
+  // against the per-target `share` events ShareTargets already fires.
+  const promptPostSaveShare = (share: {
+    title: string;
+    cardId: string;
+    cardPath: string;
+    replace: boolean;
+  }) => {
+    sendGAEvent("event", "post_save_share_prompt", {
+      content_type: "card",
+      item_id: share.cardId,
+    });
+    setPostSaveShare(share);
+  };
+
   // ---- Submit ----
   // `intent` decides both the saved visibility and the post-save flow:
   //   • "publish" → force visibility public (the primary "make public" button)
@@ -1363,12 +1393,20 @@ export function CardCreatorForm({
         }
 
         if (intent === "publish") {
-          // A published card's moment of glory: land on its public page.
-          router.replace(
-            ownerUsername
-              ? `/card/${ownerUsername}/${result.slug}`
-              : `/card/${result.slug}`,
-          );
+          // A published card's moment of glory: offer the share while the
+          // pride is fresh, then land on its public page when the dialog
+          // closes. (Without a username we can't build the canonical share
+          // URL, so fall back to the plain redirect.)
+          if (ownerUsername) {
+            promptPostSaveShare({
+              title: payload.title,
+              cardId: result.cardId,
+              cardPath: `/card/${ownerUsername}/${result.slug}`,
+              replace: true,
+            });
+            return;
+          }
+          router.replace(`/card/${result.slug}`);
           return;
         }
         // Draft saves stay in the editor, on the same step.
@@ -1396,6 +1434,18 @@ export function CardCreatorForm({
       // swaps in server truth when the refresh lands.
       reset(undefined, { keepValues: true });
       if (intent === "publish") {
+        // Only a FIRST publish (private draft → public) earns the share
+        // prompt — re-saving an already-public card goes straight to the
+        // page, no nagging.
+        if (ownerUsername && card.visibility === "private") {
+          promptPostSaveShare({
+            title: payload.title,
+            cardId: card.id,
+            cardPath: `/card/${ownerUsername}/${result.slug}`,
+            replace: false,
+          });
+          return;
+        }
         router.push(
           ownerUsername
             ? `/card/${ownerUsername}/${result.slug}`
@@ -1748,6 +1798,31 @@ export function CardCreatorForm({
             }}
             onCancel={() => setPendingKindPlan(null)}
           />
+
+          {/* Post-publish share prompt — the "look what I made" moment. The
+              live preview stays visible behind the dialog; closing it (Esc,
+              ✕, overlay, or after sharing) continues to the public page.
+              Only renders client-side after a successful publish, so reading
+              window.location here is safe. */}
+          {postSaveShare ? (
+            <ShareTargets
+              open
+              onOpenChange={(nextOpen) => {
+                if (nextOpen) return;
+                const { cardPath, replace } = postSaveShare;
+                setPostSaveShare(null);
+                if (replace) router.replace(cardPath);
+                else router.push(cardPath);
+              }}
+              title={postSaveShare.title}
+              url={`${window.location.origin}${postSaveShare.cardPath}`}
+              entity="card"
+              itemId={postSaveShare.cardId}
+              imageUrl={`${window.location.origin}/api/cards/${postSaveShare.cardId}/og`}
+              heading="Your card is live"
+              description={`“${postSaveShare.title}” is published. Share it while the forge is still warm — the buttons only prefill; nothing posts without you.`}
+            />
+          ) : null}
 
           {/* Action bar — sticky across all tabs so saving never requires
               switching back to a "publishing" tab. */}
