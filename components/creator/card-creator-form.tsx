@@ -2019,6 +2019,29 @@ export function CardCreatorForm({
                   while a deck-remix import sits unaltered (an exact copy is
                   the real card, not a custom proxy). Guests get the sign-in
                   path instead. */}
+              {/* Start over — always available while drafting (the dialog
+                  itself is the guard against a stray click). Published
+                  cards use Delete instead. */}
+              {isDraft ? (
+                <StartOverDialog
+                  onConfirm={handleStartOver}
+                  variant={isDraftMode ? "create" : "revert"}
+                />
+              ) : null}
+              {/* Main controls, in fixed order: Cancel · Save · Back · Next
+                  · Delete. */}
+              {mode === "edit" && card ? (
+                <Button asChild variant="ghost" size="sm">
+                  <Link href={`/go/card/${card.id}`}>Cancel</Link>
+                </Button>
+              ) : mode === "create" && idx === 0 ? (
+                <Button asChild variant="ghost" size="sm">
+                  <Link href="/dashboard">
+                    <ArrowLeft className="h-4 w-4" aria-hidden />
+                    Cancel
+                  </Link>
+                </Button>
+              ) : null}
               {!userId ? (
                 <Button asChild size="sm">
                   <Link href="/login?redirectTo=/create">
@@ -2041,29 +2064,26 @@ export function CardCreatorForm({
                   ) : (
                     <>
                       <Save className="h-4 w-4" aria-hidden />
-                      {mode === "edit" ? "Save changes" : "Save card"}
+                      Save
                     </>
                   )}
                 </Button>
               )}
-              {/* Start over — always available while drafting (the dialog
-                  itself is the guard against a stray click). Published
-                  cards use Delete instead. */}
-              {isDraft ? (
-                <StartOverDialog
-                  onConfirm={handleStartOver}
-                  variant={isDraftMode ? "create" : "revert"}
-                />
-              ) : null}
               {idx > 0 ? (
-                <Button type="button" variant="ghost" onClick={goBack}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={goBack}
+                >
                   <ArrowLeft className="h-4 w-4" aria-hidden />
                   Back
                 </Button>
               ) : null}
-              {mode === "edit" && card ? (
-                <Button asChild variant="ghost">
-                  <Link href={`/go/card/${card.id}`}>Cancel</Link>
+              {!isLastStep ? (
+                <Button type="button" size="sm" onClick={goNext}>
+                  Next
+                  <ArrowRight className="h-4 w-4" aria-hidden />
                 </Button>
               ) : null}
               {mode === "edit" && card && !isDraft ? (
@@ -2071,20 +2091,9 @@ export function CardCreatorForm({
                   cardId={card.id}
                   cardTitle={card.title}
                   redirectTo="/dashboard"
+                  triggerLabel={null}
+                  triggerSize="sm"
                 />
-              ) : mode === "create" && idx === 0 ? (
-                <Button asChild variant="ghost">
-                  <Link href="/dashboard">
-                    <ArrowLeft className="h-4 w-4" aria-hidden />
-                    Cancel
-                  </Link>
-                </Button>
-              ) : null}
-              {!isLastStep ? (
-                <Button type="button" size="lg" onClick={goNext}>
-                  Next
-                  <ArrowRight className="h-4 w-4" aria-hidden />
-                </Button>
               ) : null}
             </div>
           </div>
