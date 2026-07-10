@@ -1,89 +1,71 @@
 import "server-only";
 
-import { anthropic } from "@ai-sdk/anthropic";
-import { openai } from "@ai-sdk/openai";
 import type { LanguageModel } from "ai";
 
 // ---------------------------------------------------------------------------
 // Model resolution for the card-design engine.
 //
-// Preference order:
-//   1. Vercel AI Gateway — opt-in via AI_GATEWAY_API_KEY. Model ids are
-//      plain "provider/model" strings (the AI SDK routes strings through the
-//      gateway automatically). One key, provider fallbacks, and access to
-//      image models we have no direct key for (FLUX etc.).
-//   2. Direct Anthropic (ANTHROPIC_API_KEY — already required by the card
-//      assistant), which produces noticeably better rules templating than
-//      the legacy gpt-4o flow.
-//   3. Direct OpenAI (OPENAI_API_KEY) as the last resort so existing deploys
-//      keep working with zero new env vars.
+// The AI SDK 6.0+ uses AI Gateway string model IDs ("provider/model") by
+// default. These work with any provider API key (ANTHROPIC_API_KEY,
+// OPENAI_API_KEY, etc.) or with AI_GATEWAY_API_KEY for unified access.
 //
 // Overrides: AI_DESIGN_MODEL / AI_JUDGE_MODEL accept either a gateway string
-// ("anthropic/claude-sonnet-4-5") or a bare model id ("claude-sonnet-4-5",
-// "gpt-4o") — bare ids are routed to the matching direct SDK.
+// ("anthropic/claude-sonnet-4.5") or a bare model id ("claude-sonnet-4.5",
+// "gpt-4o") — bare ids are automatically prefixed with the provider.
 // ---------------------------------------------------------------------------
 
-const GATEWAY_DESIGN_DEFAULT = "anthropic/claude-sonnet-4-5";
-const GATEWAY_JUDGE_DEFAULT = "anthropic/claude-haiku-4-5";
-const DIRECT_ANTHROPIC_DESIGN_DEFAULT = "claude-sonnet-4-5";
-const DIRECT_ANTHROPIC_JUDGE_DEFAULT = "claude-haiku-4-5";
-const DIRECT_OPENAI_DESIGN_DEFAULT = "gpt-4o";
-const DIRECT_OPENAI_JUDGE_DEFAULT = "gpt-4o-mini";
+const DEFAULT_DESIGN_MODEL = "anthropic/claude-sonnet-4.5";
+const DEFAULT_JUDGE_MODEL = "anthropic/claude-haiku-4.5";
 
+/**
+ * True when the AI Gateway itself is reachable — an explicit key, or the
+ * OIDC token Vercel injects on deployments with the gateway enabled. Image
+ * flows use this to pick gateway models (FLUX / Gemini) over the direct
+ * OpenAI image API; text flows don't need it (string ids fall back through
+ * provider keys).
+ */
 export function isGatewayConfigured(): boolean {
-  return Boolean(process.env.AI_GATEWAY_API_KEY?.trim());
+  return Boolean(
+    process.env.AI_GATEWAY_API_KEY?.trim() ||
+      process.env.VERCEL_OIDC_TOKEN?.trim(),
+  );
 }
 
-function isAnthropicConfigured(): boolean {
-  return Boolean(process.env.ANTHROPIC_API_KEY?.trim());
-}
-
-function isOpenAiKeyConfigured(): boolean {
-  return Boolean(process.env.OPENAI_API_KEY?.trim());
-}
-
-/** Any provider capable of running the text design pipeline. */
+/** Check if any AI provider is configured. */
 export function isDesignAiConfigured(): boolean {
-  return isGatewayConfigured() || isAnthropicConfigured() || isOpenAiKeyConfigured();
+  return Boolean(
+    process.env.AI_GATEWAY_API_KEY?.trim() ||
+      process.env.ANTHROPIC_API_KEY?.trim() ||
+      process.env.OPENAI_API_KEY?.trim(),
+  );
 }
 
 function resolve(
   override: string | undefined,
-  defaults: { gateway: string; anthropic: string; openai: string },
+  defaultModel: string,
 ): LanguageModel {
-  const trimmed = override?.trim() || undefined;
+  const trimmed = override?.trim();
+  if (!trimmed) return defaultModel;
 
-  if (isGatewayConfigured()) {
-    if (!trimmed) return defaults.gateway;
-    // Gateway wants "provider/model"; tolerate bare ids by guessing the
-    // provider from the id prefix.
-    if (trimmed.includes("/")) return trimmed;
-    return trimmed.startsWith("claude") ? `anthropic/${trimmed}` : `openai/${trimmed}`;
+  // If already in "provider/model" format, use as-is
+  if (trimmed.includes("/")) return trimmed;
+
+  // Bare model id - prefix with provider based on model name pattern
+  if (trimmed.startsWith("claude")) return `anthropic/${trimmed}`;
+  if (trimmed.startsWith("gpt") || trimmed.startsWith("o1") || trimmed.startsWith("o3")) {
+    return `openai/${trimmed}`;
   }
 
-  // Direct SDKs — strip any gateway-style prefix from the override.
-  const bare = trimmed?.includes("/") ? trimmed.slice(trimmed.indexOf("/") + 1) : trimmed;
-  if (bare?.startsWith("claude") && isAnthropicConfigured()) return anthropic(bare);
-  if (bare && !bare.startsWith("claude") && isOpenAiKeyConfigured()) return openai(bare);
-
-  if (isAnthropicConfigured()) return anthropic(defaults.anthropic);
-  return openai(defaults.openai);
+  // Unknown format, return as-is and let the AI SDK handle it
+  return trimmed;
 }
 
 /** Frontier model that drafts card designs. */
 export function designModel(): LanguageModel {
-  return resolve(process.env.AI_DESIGN_MODEL, {
-    gateway: GATEWAY_DESIGN_DEFAULT,
-    anthropic: DIRECT_ANTHROPIC_DESIGN_DEFAULT,
-    openai: DIRECT_OPENAI_DESIGN_DEFAULT,
-  });
+  return resolve(process.env.AI_DESIGN_MODEL, DEFAULT_DESIGN_MODEL);
 }
 
 /** Cheaper model for the judge→fix pass. */
 export function judgeModel(): LanguageModel {
-  return resolve(process.env.AI_JUDGE_MODEL, {
-    gateway: GATEWAY_JUDGE_DEFAULT,
-    anthropic: DIRECT_ANTHROPIC_JUDGE_DEFAULT,
-    openai: DIRECT_OPENAI_JUDGE_DEFAULT,
-  });
+  return resolve(process.env.AI_JUDGE_MODEL, DEFAULT_JUDGE_MODEL);
 }
