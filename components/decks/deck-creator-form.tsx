@@ -27,7 +27,9 @@ import { cn } from "@/lib/utils";
 import {
   DECK_FORMAT_LABELS,
   DECK_FORMAT_VALUES,
+  coverObjectPosition,
   type Deck,
+  type DeckCoverPosition,
   type DeckFormat,
 } from "@/types/deck";
 import type { Visibility } from "@/types/card";
@@ -37,6 +39,8 @@ type FormValues = {
   slug: string;
   description: string;
   cover_url: string;
+  /** Cover focal point ({focalX, focalY} in 0..1); null = centered. */
+  cover_position: DeckCoverPosition | null;
   format: DeckFormat;
   visibility: Visibility;
 };
@@ -98,6 +102,7 @@ function defaultValuesFor(deck: Deck | null | undefined): FormValues {
       slug: "",
       description: "",
       cover_url: "",
+      cover_position: null,
       format: "commander",
       visibility: "private",
     };
@@ -107,6 +112,7 @@ function defaultValuesFor(deck: Deck | null | undefined): FormValues {
     slug: deck.slug,
     description: deck.description ?? "",
     cover_url: deck.cover_url ?? "",
+    cover_position: (deck.cover_position as DeckCoverPosition | null) ?? null,
     format: deck.format,
     visibility: deck.visibility,
   };
@@ -136,7 +142,7 @@ export function DeckCreatorForm({ mode, userId, deck }: DeckCreatorFormProps) {
     reset(defaults);
   }, [defaults, reset]);
 
-  const watched = useWatch({ control, defaultValue: defaults }) as FormValues;
+  const coverPosition = useWatch({ control, name: "cover_position" }) ?? null;
 
   const onSubmit: SubmitHandler<FormValues> = (values) => {
     setServerError(null);
@@ -145,6 +151,8 @@ export function DeckCreatorForm({ mode, userId, deck }: DeckCreatorFormProps) {
       slug: values.slug.trim() ? slugify(values.slug.trim()) : undefined,
       description: values.description.trim() || undefined,
       cover_url: values.cover_url.trim() || undefined,
+      // null clears back to centered; only meaningful with a cover set.
+      cover_position: values.cover_url.trim() ? values.cover_position : null,
       format: values.format,
       visibility: values.visibility,
     };
@@ -190,9 +198,8 @@ export function DeckCreatorForm({ mode, userId, deck }: DeckCreatorFormProps) {
         return;
       }
       toast.success("Changes saved.");
-      if (result.slug !== deck.slug) {
-        router.replace(`/deck/${result.slug}/edit`);
-      }
+      // Editing is done — land on the deck itself.
+      router.replace(`/deck/${result.slug}`);
       router.refresh();
     });
   };
@@ -260,15 +267,6 @@ export function DeckCreatorForm({ mode, userId, deck }: DeckCreatorFormProps) {
         </FieldGroup>
 
         <FieldGroup
-          label="Deck URL"
-          helper="Generated automatically from the title — not editable."
-        >
-          <p className="break-all rounded-md border border-border bg-background/60 px-3 py-2 text-sm text-muted">
-            /deck/{watched.slug || slugify(watched.title || "untitled-deck")}
-          </p>
-        </FieldGroup>
-
-        <FieldGroup
           label="Description"
           helper="Up to 2000 characters — strategy notes, the deck's story, upgrade ideas."
           error={errors.description?.message}
@@ -291,7 +289,13 @@ export function DeckCreatorForm({ mode, userId, deck }: DeckCreatorFormProps) {
               onChange={(next) => {
                 field.onChange(next);
                 setValue("cover_url", next, { shouldDirty: true });
+                // A new (or removed) image starts centered.
+                setValue("cover_position", null, { shouldDirty: true });
               }}
+              position={coverPosition}
+              onPositionChange={(next) =>
+                setValue("cover_position", next, { shouldDirty: true })
+              }
               error={errors.cover_url?.message}
             />
           )}
@@ -389,19 +393,30 @@ function CoverField({
   userId,
   value,
   onChange,
+  position,
+  onPositionChange,
   error,
 }: {
   userId: string | null;
   value: string;
   onChange: (next: string) => void;
+  position: DeckCoverPosition | null;
+  onPositionChange: (next: DeckCoverPosition) => void;
   error?: string;
 }) {
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const previewRef = useRef<HTMLDivElement | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const draggingRef = useRef(false);
 
   const handleFile = async (file: File) => {
     if (!userId) {
       toast.error("You need to be signed in to upload a cover.");
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      toast.error("Drop an image file (PNG, JPEG, WebP, or GIF).");
       return;
     }
     setUploading(true);
@@ -412,11 +427,24 @@ function CoverField({
         return;
       }
       onChange(result.publicUrl);
-      toast.success("Cover uploaded.");
+      toast.success("Cover uploaded — drag the image to reposition it.");
     } finally {
       setUploading(false);
       if (inputRef.current) inputRef.current.value = "";
     }
+  };
+
+  // Drag the image inside the preview to pick the focal point — the point
+  // under the pointer becomes the CSS object-position, same mental model as
+  // the card art positioner.
+  const updateFocal = (event: React.PointerEvent) => {
+    const rect = previewRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const clamp = (v: number) => Math.min(1, Math.max(0, v));
+    onPositionChange({
+      focalX: clamp((event.clientX - rect.left) / rect.width),
+      focalY: clamp((event.clientY - rect.top) / rect.height),
+    });
   };
 
   return (
@@ -442,15 +470,39 @@ function CoverField({
         }}
       />
 
-      <div className="grid gap-3 sm:grid-cols-[1fr_240px]">
-        <div className="flex flex-col gap-2">
-          <input
-            type="url"
-            value={value}
-            onChange={(event) => onChange(event.target.value)}
-            placeholder="https://example.com/cover.jpg (or upload below)"
-            className={inputClass(Boolean(error))}
-          />
+      {value ? (
+        <>
+          <div
+            ref={previewRef}
+            role="application"
+            aria-label="Cover preview — drag to reposition"
+            className="relative aspect-[5/2] w-full cursor-grab touch-none overflow-hidden rounded-lg border border-border/60 bg-elevated active:cursor-grabbing"
+            onPointerDown={(event) => {
+              draggingRef.current = true;
+              event.currentTarget.setPointerCapture(event.pointerId);
+              updateFocal(event);
+            }}
+            onPointerMove={(event) => {
+              if (draggingRef.current) updateFocal(event);
+            }}
+            onPointerUp={() => {
+              draggingRef.current = false;
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={value}
+              alt="Deck cover preview"
+              draggable={false}
+              className="pointer-events-none h-full w-full select-none object-cover"
+              style={{
+                objectPosition: coverObjectPosition(position) ?? "50% 50%",
+              }}
+            />
+            <span className="pointer-events-none absolute bottom-2 right-2 rounded-full bg-background/70 px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted backdrop-blur">
+              Drag to reposition
+            </span>
+          </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button
               type="button"
@@ -461,43 +513,60 @@ function CoverField({
             >
               {uploading ? (
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              ) : value ? (
-                <Upload className="h-4 w-4" aria-hidden />
               ) : (
-                <ImagePlus className="h-4 w-4" aria-hidden />
+                <Upload className="h-4 w-4" aria-hidden />
               )}
-              {uploading ? "Uploading…" : value ? "Replace" : "Upload"}
+              {uploading ? "Uploading…" : "Replace"}
             </Button>
-            {value ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => onChange("")}
-                disabled={uploading}
-              >
-                <Trash2 className="h-4 w-4" aria-hidden /> Remove
-              </Button>
-            ) : null}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => onChange("")}
+              disabled={uploading}
+            >
+              <Trash2 className="h-4 w-4" aria-hidden /> Remove
+            </Button>
           </div>
-          {error ? <span className="text-xs text-danger">{error}</span> : null}
-        </div>
-
-        <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-border/60 bg-elevated">
-          {value ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={value}
-              alt="Deck cover preview"
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <span className="flex h-full w-full items-center justify-center text-[10px] uppercase tracking-[0.2em] text-subtle">
-              No cover yet
-            </span>
+        </>
+      ) : (
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          onDragOver={(event) => {
+            event.preventDefault();
+            setDragOver(true);
+          }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={(event) => {
+            event.preventDefault();
+            setDragOver(false);
+            const file = event.dataTransfer.files?.[0];
+            if (file) handleFile(file);
+          }}
+          disabled={uploading || !userId}
+          className={cn(
+            "flex aspect-[5/2] w-full flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed text-sm transition-colors",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50",
+            dragOver
+              ? "border-primary bg-primary/10 text-foreground"
+              : "border-border bg-background/40 text-muted hover:border-border-strong hover:text-foreground",
           )}
-        </div>
-      </div>
+        >
+          {uploading ? (
+            <Loader2 className="h-6 w-6 animate-spin" aria-hidden />
+          ) : (
+            <ImagePlus className="h-6 w-6" aria-hidden />
+          )}
+          <span className="font-medium">
+            {uploading ? "Uploading…" : "Drag a cover here, or click to choose"}
+          </span>
+          <span className="text-[11px] text-subtle">
+            Best results: 1600 × 640 px or larger — shown as a wide banner
+          </span>
+        </button>
+      )}
+      {error ? <span className="text-xs text-danger">{error}</span> : null}
     </div>
   );
 }

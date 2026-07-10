@@ -15,6 +15,7 @@ import { listPublicDecks, type PublicDecksSort } from "@/lib/decks/queries";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
   DECK_FORMAT_LABELS,
+  coverObjectPosition,
   isDeckFormat,
   type DeckFormat,
 } from "@/types/deck";
@@ -237,6 +238,9 @@ function PublicDeckTile({
               fill
               sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
               className="object-cover transition-transform group-hover:scale-[1.03]"
+              style={{
+                objectPosition: coverObjectPosition(deck.cover_position),
+              }}
               unoptimized
             />
           ) : (
@@ -268,14 +272,14 @@ function PublicDeckTile({
                 aria-valuenow={remixPct}
                 aria-valuemin={0}
                 aria-valuemax={100}
-                aria-label="Remix progress"
+                aria-label="Proxy progress"
               >
                 <div
                   className="h-full rounded-full bg-primary"
                   style={{ width: `${remixPct}%` }}
                 />
               </div>
-              <span className="shrink-0">{remixPct}% remixed</span>
+              <span className="shrink-0">{remixPct}% proxied</span>
             </div>
           ) : null}
         </div>

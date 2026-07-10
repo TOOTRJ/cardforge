@@ -997,6 +997,7 @@ export type Database = {
       };
       decks: {
         Row: {
+          cover_position: Json | null;
           cover_url: string | null;
           created_at: string;
           description: string | null;
@@ -1011,6 +1012,7 @@ export type Database = {
           visibility: string;
         };
         Insert: {
+          cover_position?: Json | null;
           cover_url?: string | null;
           created_at?: string;
           description?: string | null;
@@ -1025,6 +1027,7 @@ export type Database = {
           visibility?: string;
         };
         Update: {
+          cover_position?: Json | null;
           cover_url?: string | null;
           created_at?: string;
           description?: string | null;

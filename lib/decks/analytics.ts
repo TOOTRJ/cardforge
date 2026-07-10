@@ -55,6 +55,19 @@ export function typeBucketFor(typeLine: string | null | undefined): TypeBucket {
   return "Other";
 }
 
+/** Effective type line of an entry: the denormalized Scryfall one, else
+ *  derived from the linked custom card. Shared by the analytics buckets AND
+ *  the deck list grouping so the two views never disagree (custom-only
+ *  entries have type_line = null). */
+export function entryTypeLine(
+  entry: Pick<DeckCardEntry, "type_line">,
+  card?: Pick<Card, "supertype" | "card_type"> | null,
+): string | null {
+  if (entry.type_line) return entry.type_line;
+  if (!card) return null;
+  return [card.supertype, card.card_type].filter(Boolean).join(" ") || null;
+}
+
 /** Mana value of an entry: the denormalized Scryfall value when present,
  *  otherwise parsed from the linked custom card's cost. */
 export function entryManaValue(
@@ -124,9 +137,7 @@ export function computeDeckAnalytics(
     total += entry.quantity;
     if (entry.card_id) remixed += entry.quantity;
 
-    const bucket = typeBucketFor(
-      entry.type_line ?? (card ? [card.supertype, card.card_type].filter(Boolean).join(" ") : null),
-    );
+    const bucket = typeBucketFor(entryTypeLine(entry, card));
     byType[bucket] += entry.quantity;
 
     const colors =

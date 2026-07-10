@@ -35,6 +35,7 @@ import { StepRail } from "@/components/ui/step-rail";
 import { CardPreview } from "@/components/cards/card-preview";
 import { ShareTargets } from "@/components/cards/share-targets";
 import { DeleteCardDialog } from "@/components/creator/delete-card-dialog";
+import { CardGlossary } from "@/components/creator/card-glossary";
 import { StartOverDialog } from "@/components/creator/start-over-dialog";
 import type { CardFieldPatch } from "@/components/creator/ai-assistant-panel";
 import {
@@ -403,7 +404,10 @@ export function CardCreatorForm({
   const isDraft = isDraftMode || (mode === "edit" && card?.visibility === "private");
   const draftRestoredRef = useRef(false);
   useEffect(() => {
-    if (!isDraftMode || draftRestoredRef.current) return;
+    // A deck-remix deep link is an explicit "start from THIS card" intent —
+    // restoring an unrelated stale draft over it (or racing the async
+    // prefill) would clobber the import. Skip restore entirely.
+    if (!isDraftMode || draftRestoredRef.current || deckRemix) return;
     draftRestoredRef.current = true;
     try {
       const raw =
@@ -995,6 +999,11 @@ export function CardCreatorForm({
       setValue("source_scryfall_id", patch.source_scryfall_id, {
         shouldDirty: true,
       });
+      // Cards that start from a real card are proxies until altered —
+      // auto-tag them so the glossary's contract holds (see CardGlossary).
+      setValue("tags_text", mergeTag(getValues("tags_text"), "proxy"), {
+        shouldDirty: true,
+      });
     }
 
     setRemixSource({ name: source.name, scryfallUri: source.scryfallUri });
@@ -1003,20 +1012,21 @@ export function CardCreatorForm({
   };
 
   // Deck remix deep-link (/create?deckCard=…): pre-fill the form from the
-  // entry's Scryfall card on mount, through the exact same patch pipeline as
-  // the import dialog. One-shot (ref-guarded) so a re-render never re-imports
-  // over the user's edits; art import stays a deliberate dialog step.
+  // entry's Scryfall card on mount — same patch pipeline as the import
+  // dialog, INCLUDING the artwork (a proxy without the original's frame
+  // data + art isn't a useful starting point).
+  //
+  // Apply-once semantics live at APPLICATION time, not fetch time: the ref
+  // is only stamped after a successful import. Stamping before the await
+  // (the original shape) let React's dev double-invoked effects — and any
+  // re-render racing the fetch — permanently swallow the prefill: run 1
+  // claimed the ref then had its response cancelled, run 2 saw the ref and
+  // bailed. There is deliberately NO cleanup cancellation for the same
+  // reason; a duplicate in-flight fetch is harmless, a dropped apply isn't.
   const deckRemixImportedRef = useRef(false);
   useEffect(() => {
-    if (
-      mode !== "create" ||
-      !deckRemix?.scryfallId ||
-      deckRemixImportedRef.current
-    ) {
-      return;
-    }
-    deckRemixImportedRef.current = true;
-    let cancelled = false;
+    if (mode !== "create" || !deckRemix?.scryfallId) return;
+    if (deckRemixImportedRef.current) return;
     (async () => {
       try {
         const response = await fetch(
@@ -1032,7 +1042,6 @@ export function CardCreatorForm({
             }
           | { ok: false; error?: string }
           | null;
-        if (cancelled) return;
         if (!body || body.ok !== true) {
           toast.error(
             (body && "error" in body && body.error) ||
@@ -1040,29 +1049,54 @@ export function CardCreatorForm({
           );
           return;
         }
+        if (deckRemixImportedRef.current) return; // a parallel run applied first
+        deckRemixImportedRef.current = true;
+
+        // Pull the original's art into the user's bucket (front face; the
+        // back face keeps the explicit Layout-step flow). Failure degrades
+        // to a text-only prefill rather than blocking the import.
+        let importedArtUrl: string | null = null;
+        try {
+          const artResponse = await fetch("/api/scryfall/import-art", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              scryfallId: deckRemix.scryfallId,
+              mode: "art",
+            }),
+          });
+          const artBody = (await artResponse.json().catch(() => null)) as
+            | { ok: true; publicUrl: string }
+            | { ok: false; error?: string }
+            | null;
+          if (artBody?.ok) importedArtUrl = artBody.publicUrl;
+        } catch {
+          // soft-fail — the user can import art from the dialog later
+        }
+
         handleScryfallImport({
           patch: body.patch,
+          importedArtUrl,
           source: {
             name: body.card.name,
             scryfallUri: body.card.scryfall_uri,
           },
         });
+        // Re-baseline: the imported card is the starting point, not user
+        // work. Save stays disabled until they actually alter something —
+        // an unchanged copy is just the real card, not a custom proxy.
+        reset(getValues());
         toast.success(
-          `Pre-filled from ${body.card.name} — make it yours, then save to link it into “${deckRemix.deckTitle}”.`,
+          `Pre-filled from ${body.card.name} — change something to make it your custom proxy, then save to link it into “${deckRemix.deckTitle}”.`,
         );
       } catch {
-        if (!cancelled) {
-          toast.error(
-            `Couldn't load “${deckRemix.entryName}” — starting from a blank card.`,
-          );
-        }
+        toast.error(
+          `Couldn't load “${deckRemix.entryName}” — starting from a blank card.`,
+        );
       }
     })();
-    return () => {
-      cancelled = true;
-    };
-    // handleScryfallImport is recreated per render; the ref guard makes this
-    // effect one-shot, so listing it would only churn the dependency array.
+    // handleScryfallImport is recreated per render; the apply-once ref makes
+    // listing it pure dependency churn.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, deckRemix]);
 
@@ -1942,7 +1976,7 @@ export function CardCreatorForm({
               ) : null}
               {remixSource ? (
                 <Badge variant="primary" className="gap-1.5">
-                  Remixed from{" "}
+                  Based on{" "}
                   {remixSource.scryfallUri ? (
                     <a
                       href={remixSource.scryfallUri}
@@ -1957,6 +1991,13 @@ export function CardCreatorForm({
                   )}
                 </Badge>
               ) : null}
+              {remixSource ? <CardGlossary /> : null}
+              {deckRemix && remixSource && !isDirty ? (
+                <span className="text-[11px] text-gold">
+                  Exact copy so far — change something to save it as your
+                  custom proxy.
+                </span>
+              ) : null}
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {/* Save draft — persists the card privately from any step. Shown
@@ -1968,7 +2009,10 @@ export function CardCreatorForm({
                   variant="ghost"
                   size="sm"
                   onClick={handleSaveDraft}
-                  disabled={isSubmitting}
+                  disabled={
+                    isSubmitting ||
+                    (Boolean(deckRemix) && Boolean(remixSource) && !isDirty)
+                  }
                 >
                   <Save className="h-4 w-4" aria-hidden />
                   Save draft
@@ -2017,7 +2061,14 @@ export function CardCreatorForm({
                 ) : (
                   <Button
                     type="submit"
-                    disabled={isSubmitting || !saveArmed}
+                    disabled={
+                      isSubmitting ||
+                      !saveArmed ||
+                      // Deck-remix flow: an unchanged import is just the real
+                      // card — require an alteration before it can be saved
+                      // as a custom proxy (hint rendered by the save-bar chip).
+                      (Boolean(deckRemix) && Boolean(remixSource) && !isDirty)
+                    }
                     size="lg"
                   >
                     {isSubmitting ? (

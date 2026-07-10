@@ -212,7 +212,7 @@ async function ProfileDecks({ ownerId }: { ownerId: string }) {
                 <span>
                   {deck.cards_count} card{deck.cards_count === 1 ? "" : "s"}
                 </span>
-                <span>{remixPct}% remixed</span>
+                <span>{remixPct}% proxied</span>
               </div>
             </SurfaceCard>
           </Link>

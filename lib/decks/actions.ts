@@ -129,6 +129,7 @@ export async function createDeckAction(
     slug: desired,
     description: parsed.data.description ?? null,
     cover_url: parsed.data.cover_url ?? null,
+    cover_position: parsed.data.cover_position ?? null,
     format: parsed.data.format,
     visibility: parsed.data.visibility,
   };
@@ -197,6 +198,8 @@ export async function updateDeckAction(
   if (data.description !== undefined)
     update.description = data.description ?? null;
   if (data.cover_url !== undefined) update.cover_url = data.cover_url ?? null;
+  if (data.cover_position !== undefined)
+    update.cover_position = data.cover_position ?? null;
   if (data.format !== undefined) update.format = data.format;
   if (data.visibility !== undefined) update.visibility = data.visibility;
 

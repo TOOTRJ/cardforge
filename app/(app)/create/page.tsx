@@ -113,14 +113,14 @@ export default async function CreatePage({
           backFor
             ? "Forge the back face"
             : deckRemix
-              ? `Remix “${deckRemix.entryName}”`
+              ? `Create a custom proxy of “${deckRemix.entryName}”`
               : "Forge a new card"
         }
         description={
           backFor
             ? `Build the back for “${backFor.title}”. When you save, it links back automatically.`
             : deckRemix
-              ? `Make your own version for “${deckRemix.deckTitle}”. The original's stats are pre-filled — change anything. Saving links it into the deck.`
+              ? `Your version of the real card, for “${deckRemix.deckTitle}”. Everything is pre-filled — change at least one thing to make it yours, then save to link it into the deck.`
               : "Type on the left, watch the card take shape on the right. Save when you like the result."
         }
         actions={

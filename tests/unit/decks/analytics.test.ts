@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   computeDeckAnalytics,
   entryManaValue,
+  entryTypeLine,
   typeBucketFor,
 } from "@/lib/decks/analytics";
 import type { DeckCardEntry } from "@/types/deck";
@@ -132,5 +133,38 @@ describe("computeDeckAnalytics", () => {
     ]);
     expect(analytics.byColor.G).toBe(1);
     expect(analytics.curve[2]).toBe(1);
+  });
+});
+
+describe("entryTypeLine", () => {
+  it("prefers the denormalized Scryfall type line", () => {
+    expect(
+      entryTypeLine({ type_line: "Instant" }, {
+        supertype: "Legendary",
+        card_type: "creature",
+      } as never),
+    ).toBe("Instant");
+  });
+
+  it("derives from the linked custom card when the entry has none", () => {
+    expect(
+      entryTypeLine({ type_line: null }, {
+        supertype: "Legendary",
+        card_type: "creature",
+      } as never),
+    ).toBe("Legendary creature");
+    expect(entryTypeLine({ type_line: null }, null)).toBeNull();
+  });
+
+  it("keeps the list grouping consistent with the analytics buckets", () => {
+    // Custom-only entry: no type_line, creature card → Creature, not Other.
+    expect(
+      typeBucketFor(
+        entryTypeLine({ type_line: null }, {
+          supertype: null,
+          card_type: "creature",
+        } as never),
+      ),
+    ).toBe("Creature");
   });
 });

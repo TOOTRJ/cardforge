@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { listMyDecks } from "@/lib/decks/queries";
-import { DECK_FORMAT_LABELS } from "@/types/deck";
+import { DECK_FORMAT_LABELS, coverObjectPosition } from "@/types/deck";
 
 export const metadata: Metadata = {
   title: "Decks",
@@ -71,7 +71,7 @@ function DeckTile({
 
   return (
     <Link
-      href={`/deck/${deck.slug}/edit`}
+      href={`/deck/${deck.slug}`}
       className="group block rounded-frame focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     >
       <SurfaceCard className="flex h-full flex-col gap-3 overflow-hidden p-0 transition-colors group-hover:border-border-strong">
@@ -82,6 +82,9 @@ function DeckTile({
               src={deck.cover_url}
               alt={`${deck.title} cover`}
               className="h-full w-full object-cover transition-transform group-hover:scale-105"
+              style={{
+                objectPosition: coverObjectPosition(deck.cover_position),
+              }}
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-linear-to-br from-elevated via-surface to-background">
@@ -112,10 +115,10 @@ function DeckTile({
           <div className="mt-2 flex items-center justify-between text-xs text-muted">
             <span>
               {deck.cards_count} card{deck.cards_count === 1 ? "" : "s"}
-              {deck.cards_count > 0 ? ` · ${remixPct}% remixed` : ""}
+              {deck.cards_count > 0 ? ` · ${remixPct}% proxied` : ""}
             </span>
             <span className="opacity-0 transition-opacity group-hover:opacity-100">
-              Click to edit →
+              Open deck →
             </span>
           </div>
           {deck.cards_count > 0 ? (
@@ -125,7 +128,7 @@ function DeckTile({
               aria-valuenow={remixPct}
               aria-valuemin={0}
               aria-valuemax={100}
-              aria-label="Remix progress"
+              aria-label="Proxy progress"
             >
               <div
                 className="h-full rounded-full bg-primary transition-[width]"

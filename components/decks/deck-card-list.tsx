@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { ManaCostGlyphs } from "@/components/cards/mana-cost-glyphs";
 import { DeckCardModal } from "@/components/decks/deck-card-modal";
-import { typeBucketFor, TYPE_BUCKETS } from "@/lib/decks/analytics";
+import { entryTypeLine, typeBucketFor, TYPE_BUCKETS } from "@/lib/decks/analytics";
 import { deckEntryState } from "@/types/deck";
 import type { DeckItem } from "@/lib/decks/queries";
 import type { DeckBoard } from "@/types/deck";
@@ -79,7 +79,7 @@ export function DeckCardList({
         <div
           className="flex flex-wrap items-center gap-1.5"
           role="group"
-          aria-label="Filter by remix state"
+          aria-label="Filter by proxy state"
         >
           <FilterChip
             label="All"
@@ -87,12 +87,12 @@ export function DeckCardList({
             onClick={() => setFilter("all")}
           />
           <FilterChip
-            label={`Needs remix${needsCount > 0 ? ` (${needsCount})` : ""}`}
+            label={`Needs proxy${needsCount > 0 ? ` (${needsCount})` : ""}`}
             active={filter === "needs"}
             onClick={() => setFilter("needs")}
           />
           <FilterChip
-            label="Remixed"
+            label="Proxied"
             active={filter === "remixed"}
             onClick={() => setFilter("remixed")}
           />
@@ -113,7 +113,7 @@ export function DeckCardList({
       {filtered.length === 0 ? (
         <p className="py-8 text-center text-sm text-muted">
           {filter === "needs"
-            ? "Every card here has been remixed. 🎉"
+            ? "Every card here has a proxy. 🎉"
             : "No cards match this filter."}
         </p>
       ) : (
@@ -197,7 +197,9 @@ function BoardGroups({
 }) {
   const byBucket = new Map<string, DeckItem[]>();
   for (const item of items) {
-    const bucket = typeBucketFor(item.entry.type_line);
+    // Same fallback as the analytics buckets — custom-only entries derive
+    // their type from the linked card instead of collapsing into "Other".
+    const bucket = typeBucketFor(entryTypeLine(item.entry, item.card));
     const list = byBucket.get(bucket) ?? [];
     list.push(item);
     byBucket.set(bucket, list);
@@ -294,7 +296,7 @@ function StateBadge({ state }: { state: ReturnType<typeof deckEntryState> }) {
   if (state === "remixed") {
     return (
       <Badge variant="primary" className="shrink-0 gap-1 text-[10px]">
-        <Sparkles className="h-2.5 w-2.5" aria-hidden /> Remixed
+        <Sparkles className="h-2.5 w-2.5" aria-hidden /> Custom proxy
       </Badge>
     );
   }
@@ -314,7 +316,7 @@ function StateBadge({ state }: { state: ReturnType<typeof deckEntryState> }) {
   }
   return (
     <Badge variant="outline" className="shrink-0 text-[10px]">
-      Remix
+      Needs proxy
     </Badge>
   );
 }

@@ -360,6 +360,23 @@ export async function countPublicDecksByOwner(ownerId: string): Promise<number> 
   }
 }
 
+/** How many distinct decks (readable by the viewer) contain this card as a
+ *  proxy/custom entry — the card detail page's "Decks" stat. A card can sit
+ *  on multiple boards of one deck; that still counts once. */
+export async function countDecksForCard(cardId: string): Promise<number> {
+  if (!isSupabaseConfigured()) return 0;
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("deck_cards")
+      .select("deck_id")
+      .eq("card_id", cardId);
+    return new Set((data ?? []).map((row) => row.deck_id)).size;
+  } catch {
+    return 0;
+  }
+}
+
 /** Sitewide public deck count (homepage stats). Cookie-free. */
 export async function countPublicDecks(): Promise<number> {
   if (!isSupabaseConfigured()) return 0;

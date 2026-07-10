@@ -93,6 +93,28 @@ export type DeckCardEntry = Omit<DeckCardRow, "board"> & {
   board: DeckBoard;
 };
 
+/** Cover focal point (migration 0057) — {focalX, focalY} in 0..1, NULL =
+ *  centered. Rendered as CSS object-position. */
+export type DeckCoverPosition = {
+  focalX: number;
+  focalY: number;
+};
+
+export function coverObjectPosition(
+  position: unknown,
+): string | undefined {
+  if (
+    position &&
+    typeof position === "object" &&
+    typeof (position as DeckCoverPosition).focalX === "number" &&
+    typeof (position as DeckCoverPosition).focalY === "number"
+  ) {
+    const { focalX, focalY } = position as DeckCoverPosition;
+    return `${Math.round(focalX * 100)}% ${Math.round(focalY * 100)}%`;
+  }
+  return undefined;
+}
+
 /** Context threaded into the card creator by /create?deckCard=<id> — the
  *  deck entry being remixed into a custom proxy. */
 export type DeckRemixContext = {

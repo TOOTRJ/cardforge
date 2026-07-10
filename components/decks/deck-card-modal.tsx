@@ -23,6 +23,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ManaCostGlyphs } from "@/components/cards/mana-cost-glyphs";
+import { CardGlossary } from "@/components/creator/card-glossary";
 import {
   linkDeckCardAction,
   listMyCardsLiteAction,
@@ -107,6 +108,7 @@ export function DeckCardModal({
           <DialogTitle className="flex flex-wrap items-center gap-2">
             {card?.title ?? entry.name}
             <StateBadgeLarge state={state} />
+            <CardGlossary />
           </DialogTitle>
           <DialogDescription className="flex flex-wrap items-center gap-2">
             {entry.type_line ?? card?.card_type ?? "Card"}
@@ -199,7 +201,7 @@ export function DeckCardModal({
                   <Button asChild size="lg">
                     <Link href={`/create?deckCard=${entry.id}`}>
                       <Sparkles className="h-4 w-4" aria-hidden />
-                      Remix this card
+                      Create a custom proxy
                     </Link>
                   </Button>
                 ) : null}
@@ -357,13 +359,13 @@ function StateBadgeLarge({
   if (state === "remixed")
     return (
       <Badge variant="primary" className="gap-1">
-        <Sparkles className="h-3 w-3" aria-hidden /> Remixed
+        <Sparkles className="h-3 w-3" aria-hidden /> Custom proxy
       </Badge>
     );
   if (state === "custom") return <Badge variant="accent">Custom card</Badge>;
   if (state === "unresolved")
     return <Badge variant="outline">Placeholder</Badge>;
-  return <Badge variant="outline">Needs remix</Badge>;
+  return <Badge variant="outline">Needs proxy</Badge>;
 }
 
 // ---------------------------------------------------------------------------
