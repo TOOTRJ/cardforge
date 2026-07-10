@@ -17,6 +17,20 @@ import type { LanguageModel } from "ai";
 const DEFAULT_DESIGN_MODEL = "anthropic/claude-sonnet-4.5";
 const DEFAULT_JUDGE_MODEL = "anthropic/claude-haiku-4.5";
 
+/**
+ * True when the AI Gateway itself is reachable — an explicit key, or the
+ * OIDC token Vercel injects on deployments with the gateway enabled. Image
+ * flows use this to pick gateway models (FLUX / Gemini) over the direct
+ * OpenAI image API; text flows don't need it (string ids fall back through
+ * provider keys).
+ */
+export function isGatewayConfigured(): boolean {
+  return Boolean(
+    process.env.AI_GATEWAY_API_KEY?.trim() ||
+      process.env.VERCEL_OIDC_TOKEN?.trim(),
+  );
+}
+
 /** Check if any AI provider is configured. */
 export function isDesignAiConfigured(): boolean {
   return Boolean(
