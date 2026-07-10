@@ -6,8 +6,16 @@
 // automatically — not user-editable.
 
 import Link from "next/link";
+import { useState, useTransition } from "react";
 import { Controller, useFormContext, useWatch } from "react-hook-form";
-import { Globe2, Link2, Lock, Trophy } from "lucide-react";
+import { Globe2, Link2, Loader2, Lock, Plus, Trophy } from "lucide-react";
+import { toast } from "sonner";
+import { createDeckAction } from "@/lib/decks/actions";
+import {
+  DECK_FORMAT_LABELS,
+  DECK_FORMAT_VALUES,
+  type DeckFormat,
+} from "@/types/deck";
 import {
   ChipGroup,
   type ChipOption,
@@ -55,6 +63,12 @@ export type CardSetOption = {
   icon_code: string | null;
 };
 
+export type DeckOption = {
+  id: string;
+  title: string;
+  format: string;
+};
+
 type PublishPanelProps = {
   /** Signed-in user id — gates the custom-watermark upload. */
   userId: string | null;
@@ -63,6 +77,10 @@ type PublishPanelProps = {
   activeChallenge?: Challenge | null;
   /** The current user's sets — populates the "Add to set" picker. */
   mySets: CardSetOption[];
+  /** The current user's decks — the "Add to deck" picker. `null` hides the
+   *  picker entirely (edit mode: deck membership is managed from the deck
+   *  dashboard, not the card editor). */
+  myDecks?: DeckOption[] | null;
   /** The current user's cards — the back-face picker. Excludes this card. */
   myCards: Card[];
   /** Save the current card + open a fresh creator to build/link a back face. */
@@ -74,6 +92,7 @@ export function PublishPanel({
   profileOverrides = null,
   activeChallenge,
   mySets,
+  myDecks = null,
   myCards,
   onCreateBackFace,
 }: PublishPanelProps) {
@@ -196,6 +215,8 @@ export function PublishPanel({
         />
       </FieldGroup>
 
+      {myDecks !== null ? <DeckPicker myDecks={myDecks} /> : null}
+
       <FieldGroup
         label="Tags"
         helper="Comma-separated keywords for discovery (e.g. dragons, tokens). Up to 12."
@@ -247,5 +268,145 @@ export function PublishPanel({
         </div>
       </details>
     </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// DeckPicker — "Add to deck" select + inline quick-create. Create mode only
+// (the parent passes myDecks: null on edit). Saving the card writes a
+// custom-only mainboard entry into the chosen deck.
+// ---------------------------------------------------------------------------
+
+function DeckPicker({ myDecks }: { myDecks: DeckOption[] }) {
+  const { control, setValue } = useFormContext<FormValues>();
+  // Quick-created decks merge into the options without a page reload.
+  const [extraDecks, setExtraDecks] = useState<DeckOption[]>([]);
+  const [creating, setCreating] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newFormat, setNewFormat] = useState<DeckFormat>("commander");
+  const [isPending, startTransition] = useTransition();
+
+  const options = [...extraDecks, ...myDecks];
+
+  const handleQuickCreate = () => {
+    const title = newTitle.trim();
+    if (!title) {
+      toast.error("Give the deck a name first.");
+      return;
+    }
+    startTransition(async () => {
+      const result = await createDeckAction({ title, format: newFormat });
+      if (!result.ok) {
+        toast.error(
+          result.formError ??
+            Object.values(result.fieldErrors ?? {})[0] ??
+            "Could not create the deck.",
+        );
+        return;
+      }
+      setExtraDecks((prev) => [
+        { id: result.deckId, title, format: newFormat },
+        ...prev,
+      ]);
+      setValue("deck_id", result.deckId, { shouldDirty: true });
+      setCreating(false);
+      setNewTitle("");
+      toast.success(`Created “${title}” — this card will be added to it.`);
+    });
+  };
+
+  return (
+    <FieldGroup
+      label="Add to deck"
+      helper="Drop this card straight into one of your decks (mainboard, ×1)."
+    >
+      <Controller
+        control={control}
+        name="deck_id"
+        render={({ field }) => (
+          <div className="flex flex-col gap-2">
+            <select
+              value={field.value}
+              onChange={(event) => field.onChange(event.target.value)}
+              disabled={options.length === 0}
+              className={inputClass(false)}
+            >
+              <option value="">No deck</option>
+              {options.map((deck) => (
+                <option key={deck.id} value={deck.id}>
+                  {deck.title}
+                  {DECK_FORMAT_LABELS[deck.format as DeckFormat]
+                    ? ` · ${DECK_FORMAT_LABELS[deck.format as DeckFormat]}`
+                    : ""}
+                </option>
+              ))}
+            </select>
+
+            {creating ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  value={newTitle}
+                  onChange={(event) => setNewTitle(event.target.value)}
+                  placeholder="Deck name"
+                  aria-label="New deck name"
+                  disabled={isPending}
+                  className={cn(inputClass(false), "h-9 flex-1 min-w-40")}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      handleQuickCreate();
+                    }
+                  }}
+                />
+                <select
+                  value={newFormat}
+                  onChange={(event) =>
+                    setNewFormat(event.target.value as DeckFormat)
+                  }
+                  aria-label="New deck format"
+                  disabled={isPending}
+                  className={cn(inputClass(false), "h-9 w-auto")}
+                >
+                  {DECK_FORMAT_VALUES.map((format) => (
+                    <option key={format} value={format}>
+                      {DECK_FORMAT_LABELS[format]}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={handleQuickCreate}
+                  disabled={isPending}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60"
+                >
+                  {isPending ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                  ) : (
+                    <Plus className="h-3.5 w-3.5" aria-hidden />
+                  )}
+                  Create
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCreating(false)}
+                  disabled={isPending}
+                  className="text-xs text-muted transition-colors hover:text-foreground"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setCreating(true)}
+                className="self-start text-[11px] text-primary-bright underline-offset-2 hover:underline"
+              >
+                ＋ New deck
+              </button>
+            )}
+          </div>
+        )}
+      />
+    </FieldGroup>
   );
 }

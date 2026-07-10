@@ -85,6 +85,9 @@ export type FormValues = {
   /** The set this card is added to (empty = none). Its icon becomes the card's
    *  set symbol; the action also adds the card to the set's list. */
   primary_set_id: string;
+  /** A deck this card is added to on create (empty = none) — becomes a
+   *  custom-only mainboard entry. Create mode only; hidden on edit. */
+  deck_id: string;
   /** Design watermark behind the rules text. kind "" = none (default). */
   watermark: WatermarkFormValues;
 };

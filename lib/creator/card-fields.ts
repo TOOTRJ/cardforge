@@ -136,6 +136,7 @@ export function defaultValuesFor(
       back_card_id: "",
       source_scryfall_id: "",
       primary_set_id: "",
+      deck_id: "",
       watermark: EMPTY_WATERMARK,
     };
   }
@@ -185,6 +186,9 @@ export function defaultValuesFor(
     back_card_id: card.back_card_id ?? "",
     source_scryfall_id: card.source_scryfall_id ?? "",
     primary_set_id: card.primary_set_id ?? "",
+    // Deck membership isn't stored on the card row — the picker is a
+    // create-flow convenience, so edits always start empty.
+    deck_id: "",
     watermark: watermarkFormValuesFrom(card),
   };
 }
