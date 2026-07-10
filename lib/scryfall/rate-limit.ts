@@ -25,6 +25,9 @@ export const SCRYFALL_LIMITS = {
   search: { perMinute: 60, perDay: 2000 },
   named: { perMinute: 30, perDay: 500 },
   import_art: { perMinute: 10, perDay: 100 },
+  // One row per decklist-import RUN (a run itself makes ≤ a handful of
+  // collection calls), so these numbers are runs, not API calls.
+  deck_import: { perMinute: 10, perDay: 50 },
 } as const;
 
 const LIMITS = SCRYFALL_LIMITS;

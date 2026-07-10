@@ -36,6 +36,7 @@ const SCRYFALL_ACTION_LABEL: Record<ScryfallAction, string> = {
   search: "Search",
   named: "Lookup",
   import_art: "Art import",
+  deck_import: "Deck import",
 };
 
 export async function UsagePanel() {

@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Eye } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { DeckCreatorForm } from "@/components/decks/deck-creator-form";
 import { DeleteDeckDialog } from "@/components/decks/delete-deck-dialog";
+import { ImportDecklistDialog } from "@/components/decks/import-decklist-dialog";
 import { getMyDeckBySlug } from "@/lib/decks/queries";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -74,6 +75,12 @@ export default async function EditDeckPage({ params }: EditDeckPageProps) {
                 <ArrowLeft className="h-4 w-4" aria-hidden /> All decks
               </Link>
             </Button>
+            <Button asChild variant="ghost">
+              <Link href={`/deck/${deck.slug}`}>
+                <Eye className="h-4 w-4" aria-hidden /> View deck
+              </Link>
+            </Button>
+            <ImportDecklistDialog deckId={deck.id} />
             <DeleteDeckDialog deckId={deck.id} deckTitle={deck.title} />
           </>
         }
