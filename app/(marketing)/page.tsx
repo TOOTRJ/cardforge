@@ -18,6 +18,7 @@ import { StatBadge } from "@/components/ui/stat-badge";
 import { PLANS } from "@/lib/billing/plans";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { countPublicCards, listTrendingCards } from "@/lib/cards/queries";
+import { countPublicDecks } from "@/lib/decks/queries";
 import { listArticles } from "@/lib/content/articles";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
@@ -271,17 +272,30 @@ function LatestGuides() {
 }
 
 async function HomeStats() {
-  const cardCount = await countPublicCards();
+  const [cardCount, deckCount] = await Promise.all([
+    countPublicCards(),
+    countPublicDecks(),
+  ]);
   // Friendly rounding: 1,234 → "1.2K+". Below 100 the raw number reads
   // more honest than a padded "+".
   const cards =
     cardCount >= 1000
       ? `${(cardCount / 1000).toFixed(1).replace(/\.0$/, "")}K+`
       : `${cardCount}`;
+  // The decks badge waits for real inventory — "3 decks" undersells more
+  // than it informs. Until then the frame-styles badge holds the slot.
+  const showDecks = deckCount >= 5;
   return (
     <div className="grid grid-cols-2 gap-8 sm:grid-cols-4">
       <StatBadge value={cards} label="Cards forged" />
-      <StatBadge value={`${FRAME_TEMPLATE_VALUES.length}+`} label="Frame styles" />
+      {showDecks ? (
+        <StatBadge value={`${deckCount}`} label="Decks built" />
+      ) : (
+        <StatBadge
+          value={`${FRAME_TEMPLATE_VALUES.length}+`}
+          label="Frame styles"
+        />
+      )}
       <StatBadge value="6" label="Mana identities" />
       <StatBadge value="∞" label="Possibilities" />
     </div>

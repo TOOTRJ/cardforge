@@ -313,6 +313,68 @@ export async function listPublicDecks(
   }
 }
 
+/** Public decks by one creator — the profile page's "Decks by X" section.
+ *  Cookie-free public client + likes off the denormalized column, so the
+ *  caller stays viewer-independent. */
+export async function listPublicDecksByOwner(
+  ownerId: string,
+  limit = 6,
+): Promise<DeckWithCounts[]> {
+  if (!isSupabaseConfigured()) return [];
+  try {
+    const supabase = createPublicClient();
+    const { data: decks } = await supabase
+      .from("decks")
+      .select("*")
+      .eq("owner_id", ownerId)
+      .eq("visibility", "public")
+      .order("updated_at", { ascending: false })
+      .limit(limit);
+    if (!decks || decks.length === 0) return [];
+    const counts = await countCardsForDecks(
+      decks.map((d) => d.id),
+      supabase,
+    );
+    return decks.map((row) => ({
+      ...narrowDeck(row),
+      ...(counts.get(row.id) ?? { cards_count: 0, remixed_count: 0 }),
+    }));
+  } catch {
+    return [];
+  }
+}
+
+/** Count of a creator's public decks (profile badge). */
+export async function countPublicDecksByOwner(ownerId: string): Promise<number> {
+  if (!isSupabaseConfigured()) return 0;
+  try {
+    const supabase = createPublicClient();
+    const { count } = await supabase
+      .from("decks")
+      .select("id", { count: "exact", head: true })
+      .eq("owner_id", ownerId)
+      .eq("visibility", "public");
+    return count ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+/** Sitewide public deck count (homepage stats). Cookie-free. */
+export async function countPublicDecks(): Promise<number> {
+  if (!isSupabaseConfigured()) return 0;
+  try {
+    const supabase = createPublicClient();
+    const { count } = await supabase
+      .from("decks")
+      .select("id", { count: "exact", head: true })
+      .eq("visibility", "public");
+    return count ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
 /** Deck + owner profile for the detail page. RLS filters non-readable rows
  *  (viewer-dependent, so the route stays dynamic — matching set pages). */
 export async function getDeckBySlugWithOwner(
