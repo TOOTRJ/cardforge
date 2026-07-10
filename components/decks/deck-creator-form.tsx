@@ -104,7 +104,7 @@ function defaultValuesFor(deck: Deck | null | undefined): FormValues {
       cover_url: "",
       cover_position: null,
       format: "commander",
-      visibility: "private",
+      visibility: "public",
     };
   }
   return {

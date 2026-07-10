@@ -1262,31 +1262,33 @@ export function CardCreatorForm({
   };
 
   // ---- Submit ----
-  // `intent` decides both the saved visibility and the post-save flow:
-  //   • "publish" → force visibility public (the primary "make public" button)
-  //   • "draft"   → force visibility private (the Save draft button)
-  //   • "back"    → keep the chosen visibility; after saving, jump to a fresh
-  //                 creator (/create?backFor=…) to build this card's back face.
+  // `intent` decides the post-save flow; only "draft" forces a visibility:
+  //   • "save"  → respect the card's Visibility setting (Publish panel;
+  //               new cards default to public). Never silently flips an
+  //               edited card's privacy.
+  //   • "draft" → force visibility private (the Save draft button)
+  //   • "back"  → keep the chosen visibility; after saving, jump to a fresh
+  //               creator (/create?backFor=…) to build this card's back face.
   const runSubmit = (
     values: FormValues,
-    requestedIntent: "publish" | "draft" | "back",
+    intent: "save" | "draft" | "back",
   ) => {
     setServerError(null);
+    const createBackAfter = intent === "back";
+    const forcedVisibility = intent === "draft" ? "private" : null;
     // No artwork → no gallery (server-enforced in create/updateCardAction):
-    // a Publish click without art saves as a DRAFT and says why, instead of
+    // a public save without art lands as a DRAFT and says why, instead of
     // publishing an unfinished card and redirecting to its public page.
-    const intent =
-      requestedIntent === "publish" && !values.art_url.trim()
-        ? "draft"
-        : requestedIntent;
-    if (intent !== requestedIntent) {
+    const chosenVisibility = forcedVisibility ?? values.visibility;
+    const finalVisibility =
+      chosenVisibility === "public" && !values.art_url.trim()
+        ? "private"
+        : chosenVisibility;
+    if (intent === "save" && chosenVisibility !== finalVisibility) {
       toast.info(
         "Saved as a draft — add artwork to publish it to the gallery.",
       );
     }
-    const createBackAfter = intent === "back";
-    const forcedVisibility =
-      intent === "publish" ? "public" : intent === "draft" ? "private" : null;
 
     // Build the back_face payload only when the user toggled it on.
     // When off, send `null` so the server clears any previously-persisted
@@ -1406,11 +1408,7 @@ export function CardCreatorForm({
       frame_style: values.frame_style,
       // Same no-art rule for the visibility dropdown (covers the "create
       // back face" save path, where intent doesn't force a visibility).
-      visibility:
-        (forcedVisibility ?? values.visibility) === "public" &&
-        !values.art_url.trim()
-          ? "private"
-          : forcedVisibility ?? values.visibility,
+      visibility: finalVisibility,
       back_face: backFacePayload,
       // v2 back face: a uuid links a card as the back; empty → null clears.
       back_card_id: values.back_card_id || null,
@@ -1467,9 +1465,9 @@ export function CardCreatorForm({
           return;
         }
         toast.success(
-          intent === "draft"
-            ? `Draft saved — “${payload.title}”`
-            : `Published “${payload.title}”`,
+          finalVisibility === "public"
+            ? `Published “${payload.title}”`
+            : `Saved “${payload.title}”`,
         );
         try {
           window.localStorage.removeItem(CARD_DRAFT_STORAGE_KEY);
@@ -1525,7 +1523,7 @@ export function CardCreatorForm({
           return;
         }
 
-        if (intent === "publish") {
+        if (intent === "save" && finalVisibility === "public") {
           // A published card's moment of glory: offer the share while the
           // pride is fresh, then land on its public page when the dialog
           // closes. (Without a username we can't build the canonical share
@@ -1560,13 +1558,11 @@ export function CardCreatorForm({
         handleUpgradeOrError(result);
         return;
       }
-      toast.success(
-        intent === "draft" ? "Draft saved." : "Changes saved — now public.",
-      );
+      toast.success(intent === "draft" ? "Draft saved." : "Changes saved.");
       // Mark clean right away (keeping the on-screen values); the keyed reset
       // swaps in server truth when the refresh lands.
       reset(undefined, { keepValues: true });
-      if (intent === "publish") {
+      if (intent === "save" && finalVisibility === "public") {
         // Only a FIRST publish (private draft → public) earns the share
         // prompt — re-saving an already-public card goes straight to the
         // page, no nagging.
@@ -1735,7 +1731,7 @@ export function CardCreatorForm({
       <form
         noValidate
         onSubmit={handleSubmit(
-          (values) => runSubmit(values, "publish"),
+          (values) => runSubmit(values, "save"),
           (formErrors) => {
             // Client validation blocked the save — jump to the first errored step.
             const first = Object.keys(formErrors)[0];
@@ -2079,9 +2075,7 @@ export function CardCreatorForm({
                     ) : (
                       <>
                         <Save className="h-4 w-4" aria-hidden />
-                        {mode === "edit"
-                          ? "Save changes and make public"
-                          : "Save & make public"}
+                        {mode === "edit" ? "Save changes" : "Save card"}
                       </>
                     )}
                   </Button>

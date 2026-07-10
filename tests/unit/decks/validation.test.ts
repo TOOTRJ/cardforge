@@ -22,7 +22,7 @@ describe("createDeckSchema", () => {
     if (!result.success) return;
     expect(result.data.title).toBe("Atraxa Superfriends");
     expect(result.data.format).toBe("commander");
-    expect(result.data.visibility).toBe("private");
+    expect(result.data.visibility).toBe("public");
     expect(result.data.description).toBeUndefined();
     expect(result.data.cover_url).toBeUndefined();
   });
