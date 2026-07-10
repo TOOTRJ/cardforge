@@ -51,21 +51,16 @@ test.describe("create a card (text fields only)", () => {
 
   test("fills the form and saves to dashboard", async ({ page }) => {
     await signIn(page);
-    const rail = await openCreatorWithTitle(page, `Test Card ${Date.now()}`);
+    await openCreatorWithTitle(page, `Test Card ${Date.now()}`);
 
-    // Jump to the Publish step and save. Save arms (enables) ~300ms after
-    // the step appears — the guard against clicks racing the Next → Save
-    // swap — and dispatchEvent skips actionability waits, so wait for it
-    // explicitly.
-    await rail.getByRole("button", { name: /^publish$/i }).click();
+    // Art-less cards save via Save draft (the persistent Save button
+    // requires a title AND artwork; this form has no art).
     const saveButton = page.getByRole("button", { name: /save card/i });
-    await expect(saveButton).toBeEnabled();
+    await expect(saveButton).toBeDisabled();
 
-    // dispatchEvent fires the click exactly once: the label swaps to
-    // "Saving…" on submit, which detaches the accessible name and would send
-    // a regular click() into its retry loop hunting a button that no longer
-    // exists.
-    await saveButton.dispatchEvent("click");
+    const draftButton = page.getByRole("button", { name: /save draft/i });
+    await expect(draftButton).toBeEnabled();
+    await draftButton.dispatchEvent("click");
 
     // After save, the editor redirects to the slug-edit URL.
     await page.waitForURL(/\/card\/.+\/edit/);
@@ -90,33 +85,33 @@ test.describe("create a card (text fields only)", () => {
     ).toBeVisible();
   });
 
-  test("a click racing the Next → Save swap doesn't submit early", async ({
+  test("Save is available on every step but gated on title + artwork", async ({
     page,
   }) => {
     await signIn(page);
-    // A valid (titled) form, so a premature submit would observably save and
-    // redirect — an invalid one would just bounce to the errored step.
-    const rail = await openCreatorWithTitle(page, `Race Card ${Date.now()}`);
 
-    // Land on the second-to-last step: jump to Publish, then one Back.
-    await rail.getByRole("button", { name: /^publish$/i }).click();
-    await page.getByRole("button", { name: /^back$/i }).click();
-
-    // The race: "Save card" replaces Next in the same action-bar slot, so the
-    // second click of a fast double-click lands on Save. It must hit the
-    // still-disarmed button and do nothing.
-    await page.getByRole("button", { name: /^next$/i }).dblclick();
-
-    // Had the trailing click submitted, the label would now read "Saving…"
-    // (failing this name lookup) or the page would already be redirecting.
+    // Fresh creator, no title yet: Save renders on the FIRST step (no more
+    // end-of-stepper gate) but stays disabled while the card is incomplete.
+    await page.goto("/create");
+    await expect(
+      page.getByRole("heading", { name: /forge a new card/i }),
+    ).toBeVisible();
     const saveButton = page.getByRole("button", { name: /save card/i });
-    await expect(saveButton).toBeEnabled();
-    expect(page.url()).toContain("/create");
+    await expect(saveButton).toBeVisible();
+    await expect(saveButton).toBeDisabled();
 
-    // Once armed, Save still works (dispatchEvent for the same reason as the
-    // happy path above).
-    await saveButton.dispatchEvent("click");
-    await page.waitForURL(/\/card\/.+\/edit/);
+    // A title alone doesn't unlock it — artwork is still missing.
+    const rail = page.getByRole("navigation", { name: /card editor steps/i });
+    await rail.getByRole("button", { name: /^identity$/i }).click();
+    await page
+      .locator('input[placeholder="Emberbound Wyrm"]')
+      .fill(`Gated Card ${Date.now()}`);
+    await expect(saveButton).toBeDisabled();
+
+    // Double-clicking Next never submits — Save is a separate button now,
+    // not a swap into Next's slot.
+    await page.getByRole("button", { name: /^next$/i }).dblclick();
+    expect(page.url()).toContain("/create");
   });
 
   test("changing kind never silently overrides the chosen frame era", async ({
