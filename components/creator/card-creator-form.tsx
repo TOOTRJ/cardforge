@@ -265,10 +265,6 @@ export function CardCreatorForm({
     const i = STEP_ORDER.indexOf(resolved);
     return i >= 0 ? i : 0;
   });
-  // Whether the "Save card" submit button accepts clicks — armed ~300ms after
-  // the last step appears, disarmed on every step change (see goToIndex and
-  // the arming effect below it).
-  const [saveArmed, setSaveArmed] = useState(false);
   // Stable handle to the latest step-navigation fn, so the once-registered
   // custom-event listeners (hero / command palette) always call current logic.
   const goToStepKeyRef = useRef<(key: StepKey) => void>(() => {});
@@ -280,6 +276,9 @@ export function CardCreatorForm({
     name: string;
     scryfallUri: string | null;
   } | null>(null);
+  // True while the deck-remix deep link is fetching + applying the original
+  // card (data + artwork) — drives the preview spinner overlay.
+  const [deckRemixImporting, setDeckRemixImporting] = useState(false);
   // Scryfall dialog open state is lifted into the form so the start-with
   // hero on /create and the global command palette can open it via custom
   // DOM events. The dialog itself is rendered once below with `hideTrigger`.
@@ -528,14 +527,21 @@ export function CardCreatorForm({
   const activeStep = steps[idx];
   const stepKey = activeStep?.key;
   const isLastStep = idx === steps.length - 1;
+  // Why the persistent Save button is disabled, if it is (doubles as its
+  // hover title). Order matters: the most actionable gap first.
+  const saveDisabledReason = !watched.title.trim()
+    ? "Add a title before saving."
+    : !watched.art_url.trim()
+      ? "Add artwork before saving."
+      : deckRemix && remixSource && !isDirty
+        ? "Change something to save it as your custom proxy."
+        : null;
   const statVis = statVisibility(
     watched.card_type,
     parseSubtypes(watched.subtypes_text),
   );
 
   const goToIndex = (i: number) => {
-    // Every step change disarms Save — see the arming effect below goNext.
-    setSaveArmed(false);
     setCurrent(Math.max(0, Math.min(i, steps.length - 1)));
     // Navigating a step always shows the front; the back is reached by adding
     // it (auto-flips, see onBackFaceAdded) or by clicking the preview to flip.
@@ -556,18 +562,6 @@ export function CardCreatorForm({
   // route to the offending step (see onSubmit's error handling) and light the
   // step marker red.
   const goNext = () => goToIndex(idx + 1);
-
-  // Save renders in the same action-bar slot Next just vacated, so the second
-  // click of a fast double-click on Next (or any click racing the swap) would
-  // land on Save and submit a half-finished card. Save stays disabled for a
-  // beat after the last step appears so stray trailing clicks hit an inert
-  // button; navigation (goToIndex) disarms it again on every step change.
-  // tests/e2e/create-card.spec.ts covers the race.
-  useEffect(() => {
-    if (idx !== steps.length - 1) return;
-    const timer = window.setTimeout(() => setSaveArmed(true), 300);
-    return () => window.clearTimeout(timer);
-  }, [idx, steps.length]);
 
   // Which steps own a field that currently has an error — drives the step
   // marker's error state. Routes nested back_face.* errors to their root.
@@ -1027,6 +1021,7 @@ export function CardCreatorForm({
   useEffect(() => {
     if (mode !== "create" || !deckRemix?.scryfallId) return;
     if (deckRemixImportedRef.current) return;
+    setDeckRemixImporting(true);
     (async () => {
       try {
         const response = await fetch(
@@ -1093,6 +1088,8 @@ export function CardCreatorForm({
         toast.error(
           `Couldn't load “${deckRemix.entryName}” — starting from a blank card.`,
         );
+      } finally {
+        setDeckRemixImporting(false);
       }
     })();
     // handleScryfallImport is recreated per render; the apply-once ref makes
@@ -1786,6 +1783,9 @@ export function CardCreatorForm({
                 <div className="relative">
                   <CardPreview {...previewProps} />
                   {generatingRandom ? <CardGeneratingOverlay /> : null}
+                {deckRemixImporting ? (
+                  <CardGeneratingOverlay label="Importing card…" />
+                ) : null}
                 </div>
               </div>
             </details>
@@ -2014,6 +2014,38 @@ export function CardCreatorForm({
                   Save draft
                 </Button>
               ) : null}
+              {/* Save — available from ANY step (no more end-of-stepper
+                  gate). Disabled until the card has a title + artwork, or
+                  while a deck-remix import sits unaltered (an exact copy is
+                  the real card, not a custom proxy). Guests get the sign-in
+                  path instead. */}
+              {!userId ? (
+                <Button asChild size="sm">
+                  <Link href="/login?redirectTo=/create">
+                    <Lock className="h-4 w-4" aria-hidden />
+                    Sign in to save
+                  </Link>
+                </Button>
+              ) : (
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={isSubmitting || Boolean(saveDisabledReason)}
+                  title={saveDisabledReason ?? undefined}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Wand2 className="h-4 w-4 animate-pulse" aria-hidden />
+                      Saving…
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4" aria-hidden />
+                      {mode === "edit" ? "Save changes" : "Save card"}
+                    </>
+                  )}
+                </Button>
+              )}
               {/* Start over — always available while drafting (the dialog
                   itself is the guard against a stray click). Published
                   cards use Delete instead. */}
@@ -2043,49 +2075,12 @@ export function CardCreatorForm({
                   </Link>
                 </Button>
               ) : null}
-              {isLastStep ? (
-                !userId ? (
-                  // Guests (e.g. the /preview creator) can't save — the server
-                  // action rejects unauthenticated writes. Send them to sign in
-                  // rather than showing a Save button that bounces with an error.
-                  <Button asChild size="lg">
-                    <Link href="/login?redirectTo=/create">
-                      <Lock className="h-4 w-4" aria-hidden />
-                      Sign in to save
-                    </Link>
-                  </Button>
-                ) : (
-                  <Button
-                    type="submit"
-                    disabled={
-                      isSubmitting ||
-                      !saveArmed ||
-                      // Deck-remix flow: an unchanged import is just the real
-                      // card — require an alteration before it can be saved
-                      // as a custom proxy (hint rendered by the save-bar chip).
-                      (Boolean(deckRemix) && Boolean(remixSource) && !isDirty)
-                    }
-                    size="lg"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Wand2 className="h-4 w-4 animate-pulse" aria-hidden />
-                        Saving…
-                      </>
-                    ) : (
-                      <>
-                        <Save className="h-4 w-4" aria-hidden />
-                        {mode === "edit" ? "Save changes" : "Save card"}
-                      </>
-                    )}
-                  </Button>
-                )
-              ) : (
+              {!isLastStep ? (
                 <Button type="button" size="lg" onClick={goNext}>
                   Next
                   <ArrowRight className="h-4 w-4" aria-hidden />
                 </Button>
-              )}
+              ) : null}
             </div>
           </div>
         </SurfaceCard>
@@ -2101,6 +2096,9 @@ export function CardCreatorForm({
               <div className="relative">
                 <CardPreview {...previewProps} />
                 {generatingRandom ? <CardGeneratingOverlay /> : null}
+                {deckRemixImporting ? (
+                  <CardGeneratingOverlay label="Importing card…" />
+                ) : null}
               </div>
             </div>
             <p className="text-xs leading-5 text-muted">
@@ -2117,7 +2115,7 @@ export function CardCreatorForm({
 
 // Spinner overlay shown on the live preview while an AI random card is being
 // generated, so it's clear the card is being (re)built.
-function CardGeneratingOverlay() {
+function CardGeneratingOverlay({ label = "Forging…" }: { label?: string }) {
   return (
     <div
       className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-[5%] bg-background/70 backdrop-blur-sm"
@@ -2129,7 +2127,7 @@ function CardGeneratingOverlay() {
         aria-hidden
       />
       <span className="text-xs font-semibold uppercase tracking-wider text-muted">
-        Forging…
+        {label}
       </span>
     </div>
   );
