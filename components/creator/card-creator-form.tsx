@@ -527,14 +527,19 @@ export function CardCreatorForm({
   const activeStep = steps[idx];
   const stepKey = activeStep?.key;
   const isLastStep = idx === steps.length - 1;
-  // Why the persistent Save button is disabled, if it is (doubles as its
-  // hover title). Order matters: the most actionable gap first.
-  const saveDisabledReason = !watched.title.trim()
-    ? "Add a title before saving."
-    : !watched.art_url.trim()
-      ? "Add artwork before saving."
+  // Why the persistent Save button is disabled, if it is. Rendered as a
+  // hint row above the action bar (and doubled as the button's hover
+  // title) — names EVERY missing requirement so the user isn't peeled one
+  // gap at a time.
+  const saveMissing = [
+    !watched.title.trim() ? "a title" : null,
+    !watched.art_url.trim() ? "artwork" : null,
+  ].filter((part): part is string => part !== null);
+  const saveDisabledReason =
+    saveMissing.length > 0
+      ? `Add ${saveMissing.join(" and ")} to enable Save.`
       : deckRemix && remixSource && !isDirty
-        ? "Change something to save it as your custom proxy."
+        ? "Change something to make it your own custom proxy — an exact copy can't be saved."
         : null;
   const statVis = statVisibility(
     watched.card_type,
@@ -1956,7 +1961,16 @@ export function CardCreatorForm({
 
           {/* Action bar — sticky across all tabs so saving never requires
               switching back to a "publishing" tab. */}
-          <div className="sticky bottom-0 -mx-6 -mb-6 flex flex-wrap items-center justify-between gap-3 border-t border-border/50 bg-surface/95 px-6 py-4 backdrop-blur-sm">
+          <div className="sticky bottom-0 -mx-6 -mb-6 flex flex-col gap-2 border-t border-border/50 bg-surface/95 px-6 py-4 backdrop-blur-sm">
+            {userId && saveDisabledReason ? (
+              <p
+                role="status"
+                className="text-xs leading-5 text-gold"
+              >
+                {saveDisabledReason}
+              </p>
+            ) : null}
+            <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
               {/* Drafts (create + private) save silently — no chip. Published
                   cards still show their real save state. */}
@@ -1988,12 +2002,6 @@ export function CardCreatorForm({
                 </Badge>
               ) : null}
               {remixSource ? <CardGlossary /> : null}
-              {deckRemix && remixSource && !isDirty ? (
-                <span className="text-[11px] text-gold">
-                  Exact copy so far — change something to save it as your
-                  custom proxy.
-                </span>
-              ) : null}
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {/* Save draft — persists the card privately from any step. Shown
@@ -2090,6 +2098,7 @@ export function CardCreatorForm({
                   triggerSize="sm"
                 />
               ) : null}
+            </div>
             </div>
           </div>
         </SurfaceCard>
