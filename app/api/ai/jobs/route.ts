@@ -5,7 +5,12 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { isDesignAiConfigured } from "@/lib/ai/provider";
 import { checkAiRateLimit, logAiCall } from "@/lib/ai/rate-limit";
 import { batchCardLimit, clampBatchSize } from "@/lib/ai/generation-limits";
-import { createSetGenerationJob } from "@/lib/ai/generation-jobs";
+import {
+  createDeckGenerationJob,
+  createDeckRemixJob,
+  createSetGenerationJob,
+} from "@/lib/ai/generation-jobs";
+import { AI_DECK_FORMATS } from "@/lib/ai/deck-design";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { getEntitlements } from "@/lib/billing/entitlements";
 
@@ -21,13 +26,28 @@ import { getEntitlements } from "@/lib/billing/entitlements";
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
-const requestSchema = z.object({
-  kind: z.literal("set"),
-  theme: z.string().trim().max(300).optional(),
-  style: z.string().trim().max(200).optional(),
-  size: z.coerce.number().optional(),
-  set_id: z.string().uuid().optional(),
-});
+const requestSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("set"),
+    theme: z.string().trim().max(300).optional(),
+    style: z.string().trim().max(200).optional(),
+    size: z.coerce.number().optional(),
+    set_id: z.string().uuid().optional(),
+  }),
+  z.object({
+    kind: z.literal("deck"),
+    theme: z.string().trim().max(300).optional(),
+    style: z.string().trim().max(200).optional(),
+    size: z.coerce.number().optional(),
+    format: z.enum(AI_DECK_FORMATS),
+  }),
+  z.object({
+    kind: z.literal("deck_remix"),
+    deck_id: z.string().uuid(),
+    style: z.string().trim().min(1, "Pick a style.").max(200),
+    theme: z.string().trim().max(300).optional(),
+  }),
+]);
 
 export async function POST(request: Request) {
   if (!isSupabaseConfigured()) {
@@ -68,7 +88,10 @@ export async function POST(request: Request) {
   }
 
   const limit = await batchCardLimit();
-  const size = clampBatchSize(parsed.data.size ?? limit, limit);
+  const size =
+    parsed.data.kind === "deck_remix"
+      ? limit // remix caps at the batch limit; entries beyond it are skipped
+      : clampBatchSize(parsed.data.size ?? limit, limit);
 
   const rate = await checkAiRateLimit(user.id);
   if (!rate.ok) {
@@ -98,18 +121,49 @@ export async function POST(request: Request) {
 
   await logAiCall(user.id, "generate_deck");
 
-  const result = await createSetGenerationJob({
-    theme: parsed.data.theme ?? "",
+  if (parsed.data.kind === "set") {
+    const result = await createSetGenerationJob({
+      theme: parsed.data.theme ?? "",
+      style: parsed.data.style,
+      size,
+      setId: parsed.data.set_id,
+    });
+    if (!result.ok) {
+      return NextResponse.json({ ok: false, error: result.error }, { status: 502 });
+    }
+    return NextResponse.json(
+      { ok: true, job: result.job, setSlug: result.setSlug, cardLimit: limit },
+      { status: 200 },
+    );
+  }
+
+  if (parsed.data.kind === "deck") {
+    const result = await createDeckGenerationJob({
+      theme: parsed.data.theme ?? "",
+      style: parsed.data.style,
+      format: parsed.data.format,
+      size,
+    });
+    if (!result.ok) {
+      return NextResponse.json({ ok: false, error: result.error }, { status: 502 });
+    }
+    return NextResponse.json(
+      { ok: true, job: result.job, deckSlug: result.deckSlug, cardLimit: limit },
+      { status: 200 },
+    );
+  }
+
+  const result = await createDeckRemixJob({
+    deckId: parsed.data.deck_id,
     style: parsed.data.style,
-    size,
-    setId: parsed.data.set_id,
+    theme: parsed.data.theme,
+    limit,
   });
   if (!result.ok) {
     return NextResponse.json({ ok: false, error: result.error }, { status: 502 });
   }
-
   return NextResponse.json(
-    { ok: true, job: result.job, setSlug: result.setSlug, cardLimit: limit },
+    { ok: true, job: result.job, deckSlug: result.deckSlug, cardLimit: limit },
     { status: 200 },
   );
 }

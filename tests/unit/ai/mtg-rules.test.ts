@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   autofixCard,
+  buildDeckSkeleton,
   buildRaritySkeleton,
   buildSetSkeleton,
   colorLettersFromWords,
@@ -283,6 +284,42 @@ describe("buildRaritySkeleton", () => {
     expect(byRarity.uncommon).toBeLessThanOrEqual(110);
     expect(byRarity.mythic).toBeGreaterThanOrEqual(20);
     expect(byRarity.mythic).toBeLessThanOrEqual(25);
+  });
+});
+
+describe("buildDeckSkeleton", () => {
+  it("leads with the commander in commander formats", () => {
+    const slots = buildDeckSkeleton("commander", 3);
+    expect(slots[0].role).toBe("commander");
+    expect(slots).toHaveLength(3);
+    expect(slots.every((slot) => slot.quantity === 1)).toBe(true);
+  });
+
+  it("has no commander in standard and doubles nonbasic lands", () => {
+    const slots = buildDeckSkeleton("standard", 12);
+    expect(slots.some((slot) => slot.role === "commander")).toBe(false);
+    const lands = slots.filter((slot) => slot.role === "land");
+    expect(lands.length).toBeGreaterThan(0);
+    expect(lands.every((slot) => slot.quantity === 2)).toBe(true);
+  });
+
+  it("skips land designs in tiny batches", () => {
+    const slots = buildDeckSkeleton("standard", 3);
+    expect(slots.some((slot) => slot.role === "land")).toBe(false);
+    expect(slots).toHaveLength(3);
+  });
+
+  it("splits spells roughly 55/45 creatures vs noncreatures along a curve", () => {
+    const slots = buildDeckSkeleton("limited", 20);
+    const creatures = slots.filter((slot) => slot.role === "creature").length;
+    const noncreatures = slots.filter(
+      (slot) => slot.role === "noncreature",
+    ).length;
+    expect(creatures).toBeGreaterThan(noncreatures);
+    const hints = slots
+      .filter((slot) => slot.manaValueHint != null)
+      .map((slot) => slot.manaValueHint);
+    expect(new Set(hints).size).toBeGreaterThan(2);
   });
 });
 
