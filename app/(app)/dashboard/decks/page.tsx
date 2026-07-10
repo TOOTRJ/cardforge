@@ -9,6 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { listMyDecks } from "@/lib/decks/queries";
 import { DECK_FORMAT_LABELS, coverObjectPosition } from "@/types/deck";
+import { isDesignAiConfigured } from "@/lib/ai/provider";
+import { batchCardLimit } from "@/lib/ai/generation-limits";
+import { AiDeckPanel } from "@/components/decks/ai-deck-panel";
 
 export const metadata: Metadata = {
   title: "Decks",
@@ -17,7 +20,7 @@ export const metadata: Metadata = {
 };
 
 export default async function DecksPage() {
-  const decks = await listMyDecks();
+  const [decks, maxCards] = await Promise.all([listMyDecks(), batchCardLimit()]);
 
   return (
     <DashboardShell>
@@ -34,6 +37,14 @@ export default async function DecksPage() {
           </Button>
         }
       />
+
+      <div className="mt-8">
+        <AiDeckPanel
+          mode="new"
+          aiConfigured={isDesignAiConfigured()}
+          maxCards={maxCards}
+        />
+      </div>
 
       <div className="mt-6">
         {decks.length === 0 ? (

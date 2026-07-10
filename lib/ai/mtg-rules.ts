@@ -488,6 +488,66 @@ export function buildRaritySkeleton(count: number): Rarity[] {
   return result;
 }
 
+// ---------------------------------------------------------------------------
+// Deck skeleton — role/curve quotas for whole-deck generation
+// ---------------------------------------------------------------------------
+
+export type DeckSlot = {
+  role: "commander" | "land" | "creature" | "noncreature";
+  /** Target mana value for the slot (null = designer's choice). */
+  manaValueHint: number | null;
+  /** deck_cards quantity for the entry this slot becomes. */
+  quantity: number;
+};
+
+// Constructed curve peaks at 2–3 MV (left-skewed bell): cycle of target MVs
+// used to spread nonland designs across the curve.
+const CURVE_CYCLE = [2, 3, 1, 2, 4, 3, 2, 5, 3, 6] as const;
+
+const COMMANDER_FORMATS = new Set(["commander", "brawl", "standard_brawl", "oathbreaker"]);
+
+/**
+ * Role/curve quotas for `count` DISTINCT card designs in a format. `count`
+ * is the number of designs (capped per user), not the final deck size —
+ * quantities let a design occupy multiple deck slots (nonbasic lands get
+ * ×2 in non-singleton formats).
+ *
+ * Shape: commander formats lead with the commander; ~1 in 5 designs is a
+ * nonbasic land once the batch is big enough to afford it; the rest split
+ * ~55/45 creatures vs. noncreature spells along the curve cycle.
+ */
+export function buildDeckSkeleton(format: string, count: number): DeckSlot[] {
+  const total = Math.max(1, Math.floor(count));
+  const slots: DeckSlot[] = [];
+
+  if (COMMANDER_FORMATS.has(format)) {
+    slots.push({ role: "commander", manaValueHint: null, quantity: 1 });
+  }
+
+  const remaining = total - slots.length;
+  const landDesigns = remaining >= 10 ? 2 : remaining >= 6 ? 1 : 0;
+  const singleton = COMMANDER_FORMATS.has(format);
+  for (let i = 0; i < landDesigns; i += 1) {
+    slots.push({
+      role: "land",
+      manaValueHint: null,
+      quantity: singleton ? 1 : 2,
+    });
+  }
+
+  const spellCount = remaining - landDesigns;
+  const creatureTarget = Math.round(spellCount * 0.55);
+  for (let i = 0; i < spellCount; i += 1) {
+    slots.push({
+      role: i < creatureTarget ? "creature" : "noncreature",
+      manaValueHint: CURVE_CYCLE[i % CURVE_CYCLE.length],
+      quantity: 1,
+    });
+  }
+
+  return slots.slice(0, total);
+}
+
 /**
  * Full skeleton: rarity + color + role hints. Colors cycle WUBRG within each
  * rarity band so even a 5-card set touches every color once; every ~7th slot
