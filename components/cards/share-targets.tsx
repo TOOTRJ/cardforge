@@ -59,7 +59,7 @@ type ShareTargetsProps = {
   /** Absolute canonical URL of the share target. */
   url: string;
   /** What the URL points at — flavors the prefilled message. */
-  entity?: "card" | "set";
+  entity?: "card" | "set" | "deck";
   /** GA item id (card/set uuid) for share-event attribution. */
   itemId?: string;
   /** Absolute URL of a PNG to attach on native file shares. */
@@ -103,7 +103,9 @@ export function ShareTargets({
   const shareText =
     entity === "set"
       ? `${title} — a custom Magic set on PipGlyph`
-      : `${title} — a custom Magic card I forged on PipGlyph`;
+      : entity === "deck"
+        ? `${title} — a Magic deck with custom cards on PipGlyph`
+        : `${title} — a custom Magic card I forged on PipGlyph`;
 
   const track = (method: string) => {
     // No-ops (with a console.warn in dev) when GA isn't configured.

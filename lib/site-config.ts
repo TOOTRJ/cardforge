@@ -36,7 +36,7 @@ export const siteConfig = {
   primaryNav: [
     { label: "Gallery", href: "/gallery" },
     { label: "Sets", href: "/sets" },
-    { label: "Decks", href: "/decks", badge: "Soon" },
+    { label: "Decks", href: "/decks" },
     { label: "Challenges", href: "/challenges" },
     { label: "Guides", href: "/articles" },
     { label: "Pricing", href: "/pricing" },
@@ -72,6 +72,7 @@ export const siteConfig = {
       links: [
         { label: "Gallery", href: "/gallery" },
         { label: "Community sets", href: "/sets" },
+        { label: "Community decks", href: "/decks" },
         { label: "Challenges", href: "/challenges" },
         { label: "Pricing", href: "/pricing" },
       ],
