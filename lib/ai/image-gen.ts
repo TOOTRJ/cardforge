@@ -1,6 +1,6 @@
 import "server-only";
 
-import { generateText } from "ai";
+import { experimental_generateImage as generateImage, generateText } from "ai";
 import OpenAI, { toFile } from "openai";
 import { isGatewayConfigured } from "@/lib/ai/provider";
 
@@ -44,6 +44,99 @@ export async function restyleImage(input: {
     return restyleViaOpenAi(input.source, prompt);
   }
   return { ok: false, error: "No image provider is configured." };
+}
+
+// ---------------------------------------------------------------------------
+// Text-to-image through the gateway (batch/set art). FLUX is the default —
+// cheap (~$0.03/image), fast, and strong at consistent painterly fantasy.
+// Callers fall back to the OpenAI random-art path when this returns
+// { ok: false } (e.g. no gateway configured).
+// ---------------------------------------------------------------------------
+
+const GATEWAY_IMAGE_DEFAULT = "bfl/flux-2-flex";
+
+export async function generateStyledImage(
+  prompt: string,
+): Promise<RestyleResult> {
+  if (!isGatewayConfigured()) {
+    return { ok: false, error: "AI Gateway isn't configured." };
+  }
+  try {
+    const model = process.env.AI_IMAGE_MODEL?.trim() || GATEWAY_IMAGE_DEFAULT;
+    const { image } = await generateImage({
+      model,
+      prompt: prompt.trim().slice(0, 4000),
+      aspectRatio: "1:1",
+    });
+    return {
+      ok: true,
+      bytes: image.uint8Array,
+      contentType: image.mediaType ?? "image/png",
+    };
+  } catch (error) {
+    const detail =
+      error instanceof Error ? error.message : "Image generation failed.";
+    return { ok: false, error: detail };
+  }
+}
+
+/**
+ * Provider-agnostic text-to-image returning raw bytes (batch jobs persist
+ * via persistGeneratedArt). Gateway first, then direct OpenAI with the same
+ * minimal-param posture as lib/ai/random-art.ts.
+ */
+export async function generatePlainImage(
+  prompt: string,
+): Promise<RestyleResult> {
+  const trimmed = prompt.trim().slice(0, 4000);
+  if (!trimmed) return { ok: false, error: "Missing image prompt." };
+
+  if (isGatewayConfigured()) {
+    const viaGateway = await generateStyledImage(trimmed);
+    if (viaGateway.ok) return viaGateway;
+    // fall through to OpenAI when both are configured
+  }
+  if (!process.env.OPENAI_API_KEY?.trim()) {
+    return { ok: false, error: "No image provider is configured." };
+  }
+  try {
+    const client = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+      timeout: 90_000,
+    });
+    const model = process.env.OPENAI_IMAGE_MODEL?.trim() || "gpt-image-1";
+    const response = await client.images.generate({
+      model,
+      prompt: trimmed,
+      size: "1024x1024",
+      quality: model.startsWith("dall-e") ? "hd" : "high",
+      n: 1,
+    });
+    const first = response.data?.[0];
+    if (first?.b64_json) {
+      return {
+        ok: true,
+        bytes: Uint8Array.from(Buffer.from(first.b64_json, "base64")),
+        contentType: "image/png",
+      };
+    }
+    if (first?.url) {
+      const fetched = await fetch(first.url);
+      if (!fetched.ok) {
+        return { ok: false, error: `Image fetch failed (${fetched.status}).` };
+      }
+      return {
+        ok: true,
+        bytes: new Uint8Array(await fetched.arrayBuffer()),
+        contentType: fetched.headers.get("content-type") ?? "image/png",
+      };
+    }
+    return { ok: false, error: "OpenAI returned no image." };
+  } catch (error) {
+    const detail =
+      error instanceof Error ? error.message : "Image generation failed.";
+    return { ok: false, error: detail };
+  }
 }
 
 async function restyleViaGateway(

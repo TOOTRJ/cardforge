@@ -17,6 +17,66 @@ export type Database = {
   };
   public: {
     Tables: {
+      ai_generation_jobs: {
+        Row: {
+          created_at: string;
+          deck_id: string | null;
+          error: string | null;
+          id: string;
+          kind: string;
+          owner_id: string;
+          plan: Json | null;
+          request: Json;
+          set_id: string | null;
+          status: string;
+          steps: Json;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          deck_id?: string | null;
+          error?: string | null;
+          id?: string;
+          kind: string;
+          owner_id: string;
+          plan?: Json | null;
+          request?: Json;
+          set_id?: string | null;
+          status?: string;
+          steps?: Json;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          deck_id?: string | null;
+          error?: string | null;
+          id?: string;
+          kind?: string;
+          owner_id?: string;
+          plan?: Json | null;
+          request?: Json;
+          set_id?: string | null;
+          status?: string;
+          steps?: Json;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "ai_generation_jobs_deck_id_fkey";
+            columns: ["deck_id"];
+            isOneToOne: false;
+            referencedRelation: "decks";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "ai_generation_jobs_set_id_fkey";
+            columns: ["set_id"];
+            isOneToOne: false;
+            referencedRelation: "card_sets";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       card_ai_calls: {
         Row: {
           action: string;
