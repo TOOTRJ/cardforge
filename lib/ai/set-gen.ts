@@ -67,6 +67,9 @@ export async function generateSet(input: {
   theme: string;
   style?: string;
   size: number;
+  /** When generating INTO an existing set, its identity anchors the concept
+   *  (the returned set_title is ignored by the caller in that case). */
+  existingSet?: { title: string; description: string | null };
 }): Promise<SetOutput> {
   const size = clampSetSize(input.size);
   const theme =
@@ -80,6 +83,11 @@ export async function generateSet(input: {
     prompt: [
       `Theme: ${theme}`,
       input.style?.trim() ? `Art/tone style: ${input.style.trim().slice(0, 200)}` : null,
+      input.existingSet
+        ? `The cards join an EXISTING set called "${input.existingSet.title}"${
+            input.existingSet.description ? ` — ${input.existingSet.description}` : ""
+          }. Keep the concept consistent with it (set_title should echo it).`
+        : null,
       `The set will contain ${size} cards.`,
     ]
       .filter(Boolean)
