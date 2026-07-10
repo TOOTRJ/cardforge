@@ -2,10 +2,14 @@ import "server-only";
 
 import type { Json } from "@/types/supabase";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
-import { createCardAction, type CreateCardResult } from "@/lib/cards/actions";
+import {
+  createCardAction,
+  updateCardAction,
+  type CreateCardResult,
+} from "@/lib/cards/actions";
 import { getCardById } from "@/lib/cards/queries";
 import { createSetAction, updateSetAction } from "@/lib/sets/actions";
-import { createDeckAction } from "@/lib/decks/actions";
+import { createDeckAction, updateDeckAction } from "@/lib/decks/actions";
 import { listDeckCards } from "@/lib/decks/queries";
 import { generateSet } from "@/lib/ai/set-gen";
 import {
@@ -16,6 +20,7 @@ import { generateRemixIdentity } from "@/lib/ai/remix";
 import {
   generatePlainImage,
   restyleImage,
+  type ImageAspect,
 } from "@/lib/ai/image-gen";
 import { persistGeneratedArt } from "@/lib/ai/random-art";
 import { logAiCall, spendCredits } from "@/lib/ai/rate-limit";
@@ -120,6 +125,7 @@ export type CreateSetJobResult =
   | { ok: false; error: string };
 
 const ICON_STEP_KEY = "icon";
+const COVER_STEP_KEY = "cover";
 
 // Shared art direction so a batch renders as ONE set, not N unrelated
 // commissions. The per-card prompt appends the card's own scene.
@@ -154,11 +160,11 @@ export async function createSetGenerationJob(
   const supabase = await createClient();
 
   // Resolve or create the target set.
-  let existingSet: { id: string; slug: string; title: string; description: string | null; icon_url: string | null; icon_code: string | null } | null = null;
+  let existingSet: { id: string; slug: string; title: string; description: string | null; icon_url: string | null; icon_code: string | null; cover_url: string | null } | null = null;
   if (input.setId) {
     const { data } = await supabase
       .from("card_sets")
-      .select("id, slug, title, description, icon_url, icon_code, owner_id")
+      .select("id, slug, title, description, icon_url, icon_code, cover_url, owner_id")
       .eq("id", input.setId)
       .maybeSingle();
     if (!data || data.owner_id !== user.id) {
@@ -186,11 +192,13 @@ export async function createSetGenerationJob(
   let setId = existingSet?.id;
   let setSlug = existingSet?.slug;
   if (!setId) {
+    // AI-generated sets ship PUBLIC by default (owner decision, 2026-07-10);
+    // every card still lands as the user's own and can be unpublished.
     const created = await createSetAction(
       {
         title: generated.set_title,
         description: generated.set_description,
-        visibility: "private",
+        visibility: "public",
       },
       { redirectAfterCreate: false },
     );
@@ -212,9 +220,12 @@ export async function createSetGenerationJob(
     label: card.title,
     status: "pending" as const,
   }));
-  // Only generate an icon when the set doesn't already have one.
+  // Only generate icon/cover when the set doesn't already have them.
   if (!existingSet?.icon_url && !existingSet?.icon_code) {
     steps.push({ key: ICON_STEP_KEY, label: "Set icon", status: "pending" });
+  }
+  if (!existingSet?.cover_url) {
+    steps.push({ key: COVER_STEP_KEY, label: "Set cover", status: "pending" });
   }
 
   const { data: jobRow, error: insertError } = await supabase
@@ -296,33 +307,37 @@ export async function runNextJobStep(
   const step = steps[index];
   const stepIndex = Number(step.key.split(":")[1]);
 
-  switch (job.kind) {
-    case "set": {
-      if (step.key === ICON_STEP_KEY) {
-        steps[index] = await runIconStep(user.id, job, step);
-      } else {
-        const card = (job.plan as SetJobPlan).cards[stepIndex];
-        steps[index] = card
-          ? await runCardStep(user.id, job, step, card)
-          : { ...step, status: "failed", error: "Missing card plan." };
+  if (step.key === COVER_STEP_KEY) {
+    steps[index] = await runCoverStep(user.id, job, step);
+  } else {
+    switch (job.kind) {
+      case "set": {
+        if (step.key === ICON_STEP_KEY) {
+          steps[index] = await runIconStep(user.id, job, step);
+        } else {
+          const card = (job.plan as SetJobPlan).cards[stepIndex];
+          steps[index] = card
+            ? await runCardStep(user.id, job, step, card)
+            : { ...step, status: "failed", error: "Missing card plan." };
+        }
+        break;
       }
-      break;
-    }
-    case "deck": {
-      const plan = job.plan as DeckJobPlan;
-      const card = plan.cards[stepIndex];
-      steps[index] = card
-        ? await runDeckCardStep(user.id, job, step, plan, stepIndex)
-        : { ...step, status: "failed", error: "Missing card plan." };
-      break;
-    }
-    case "deck_remix": {
-      const plan = job.plan as DeckRemixJobPlan;
-      const entry = plan.entries[stepIndex];
-      steps[index] = entry
-        ? await runDeckRemixStep(user.id, job, step, plan, entry)
-        : { ...step, status: "failed", error: "Missing entry plan." };
-      break;
+      case "deck": {
+        const plan = job.plan as DeckJobPlan;
+        const card = plan.cards[stepIndex];
+        steps[index] = card
+          ? await runDeckCardStep(user.id, job, step, plan, stepIndex)
+          : { ...step, status: "failed", error: "Missing card plan." };
+        break;
+      }
+      case "deck_remix": {
+        const plan = job.plan as DeckRemixJobPlan;
+        const entry = plan.entries[stepIndex];
+        steps[index] = entry
+          ? await runDeckRemixStep(user.id, job, step, plan, entry)
+          : { ...step, status: "failed", error: "Missing entry plan." };
+        break;
+      }
     }
   }
 
@@ -358,12 +373,13 @@ export async function createDeckGenerationJob(
     return { ok: false, error: `AI deck planning failed: ${detail}` };
   }
 
+  // AI-generated decks ship PUBLIC by default (owner decision, 2026-07-10).
   const created = await createDeckAction(
     {
       title: planResult.concept.deck_title,
       description: planResult.concept.deck_description,
       format: input.format,
-      visibility: "private",
+      visibility: "public",
     },
     { redirectAfterCreate: false },
   );
@@ -384,6 +400,7 @@ export async function createDeckGenerationJob(
     label: card.title,
     status: "pending" as const,
   }));
+  steps.push({ key: COVER_STEP_KEY, label: "Deck cover", status: "pending" });
 
   const supabase = await createClient();
   const { data: jobRow, error: insertError } = await supabase
@@ -453,12 +470,13 @@ export async function createDeckRemixJob(
   const taken = remixable.slice(0, input.limit);
   const skipped = remixable.length - taken.length;
 
+  // Remix copies ship PUBLIC too — same posture as generated decks.
   const created = await createDeckAction(
     {
       title: `${deck.title} (AI remix)`.slice(0, 120),
       description: deck.description ?? undefined,
       format: deck.format,
-      visibility: "private",
+      visibility: "public",
     },
     { redirectAfterCreate: false },
   );
@@ -482,6 +500,7 @@ export async function createDeckRemixJob(
     label: entry.name,
     status: "pending" as const,
   }));
+  steps.push({ key: COVER_STEP_KEY, label: "Deck cover", status: "pending" });
 
   const { data: jobRow, error: insertError } = await supabase
     .from("ai_generation_jobs")
@@ -570,30 +589,49 @@ async function runCardStep(
     await spendCredits(1, "generate_deck");
   }
 
-  // ---- Art (the expensive half; retried independently of creation) ----
+  // ---- Art + publish (the expensive half; retried independently) ----
   await logAiCall(userId, "generate_deck_cards");
-  const image = await generatePlainImage(artPrompt(job.plan as SetJobPlan, card));
-  if (!image.ok) {
-    return { ...step, status: "failed", card_id: cardId, error: image.error };
+  const published = await paintAndPublishCard(
+    cardId,
+    artPrompt(job.plan as SetJobPlan, card),
+  );
+  if (!published.ok) {
+    return { ...step, status: "failed", card_id: cardId, error: published.error };
   }
-  const persisted = await persistGeneratedArt(image.bytes, image.contentType);
-  if (!persisted.ok) {
-    return { ...step, status: "failed", card_id: cardId, error: persisted.error };
-  }
-
-  const { error: updateError } = await supabase
-    .from("cards")
-    .update({
-      art_url: persisted.publicUrl,
-      art_position: { focalX: 0.5, focalY: 0.5, scale: 1 },
-    })
-    .eq("id", cardId)
-    .eq("owner_id", userId);
-  if (updateError) {
-    return { ...step, status: "failed", card_id: cardId, error: updateError.message };
-  }
-
   return { ...step, status: "done", card_id: cardId, error: undefined };
+}
+
+/**
+ * Paint a card's art and PUBLISH it in one updateCardAction call — through
+ * the action (never a raw table update) so validation runs and the Satori
+ * bake fires for the now-public card. Cards are created private, then go
+ * public together with their art; a failed image leaves a private draft
+ * the retry re-paints. AI output defaults to public (owner decision,
+ * 2026-07-10).
+ */
+async function paintAndPublishCard(
+  cardId: string,
+  prompt: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const image = await generatePlainImage(prompt);
+  if (!image.ok) return { ok: false, error: image.error };
+
+  const persisted = await persistGeneratedArt(image.bytes, image.contentType);
+  if (!persisted.ok) return { ok: false, error: persisted.error };
+
+  const updated = await updateCardAction(cardId, {
+    art_url: persisted.publicUrl,
+    art_position: { focalX: 0.5, focalY: 0.5, scale: 1 },
+    visibility: "public",
+  });
+  if (!updated.ok) {
+    const detail =
+      updated.formError ??
+      Object.values(updated.fieldErrors ?? {})[0] ??
+      "Couldn't attach the art.";
+    return { ok: false, error: detail };
+  }
+  return { ok: true };
 }
 
 function createFailureMessage(result: Extract<CreateCardResult, { ok: false }>): string {
@@ -697,24 +735,9 @@ async function runDeckCardStep(
   }
 
   await logAiCall(userId, "generate_deck_cards");
-  const image = await generatePlainImage(deckArtPrompt(plan, card));
-  if (!image.ok) {
-    return { ...step, status: "failed", card_id: cardId, error: image.error };
-  }
-  const persisted = await persistGeneratedArt(image.bytes, image.contentType);
-  if (!persisted.ok) {
-    return { ...step, status: "failed", card_id: cardId, error: persisted.error };
-  }
-  const { error: updateError } = await supabase
-    .from("cards")
-    .update({
-      art_url: persisted.publicUrl,
-      art_position: { focalX: 0.5, focalY: 0.5, scale: 1 },
-    })
-    .eq("id", cardId)
-    .eq("owner_id", userId);
-  if (updateError) {
-    return { ...step, status: "failed", card_id: cardId, error: updateError.message };
+  const published = await paintAndPublishCard(cardId, deckArtPrompt(plan, card));
+  if (!published.ok) {
+    return { ...step, status: "failed", card_id: cardId, error: published.error };
   }
   return { ...step, status: "done", card_id: cardId, error: undefined };
 }
@@ -832,9 +855,11 @@ async function runDeckRemixStep(
     return { ...step, status: "failed", error: detail };
   }
 
-  // ---- Art ----
+  // ---- Art (REQUIRED — a remix is the art; failures fail the step so the
+  //      user can retry, rather than silently shipping the old artwork) ----
   await logAiCall(userId, "remix_art");
   let artUrl: string | undefined;
+  let artError: string | null = null;
   if (mechanics.art_url) {
     try {
       const sourceResponse = await fetch(mechanics.art_url);
@@ -852,6 +877,9 @@ async function runDeckRemixStep(
             restyled.contentType,
           );
           if (persisted.ok) artUrl = persisted.publicUrl;
+          else artError = persisted.error;
+        } else {
+          artError = restyled.error;
         }
       }
     } catch {
@@ -868,7 +896,17 @@ async function runDeckRemixStep(
         generated.contentType,
       );
       if (persisted.ok) artUrl = persisted.publicUrl;
+      else artError = persisted.error;
+    } else {
+      artError = generated.error;
     }
+  }
+  if (!artUrl) {
+    return {
+      ...step,
+      status: "failed",
+      error: artError ?? "Art generation failed — retry this card.",
+    };
   }
 
   // ---- Create the remixed custom card, linked into the new deck ----
@@ -894,7 +932,8 @@ async function runDeckRemixStep(
         : undefined,
       parent_card_id: mechanics.parent_card_id,
       source_scryfall_id: mechanics.source_scryfall_id,
-      visibility: "private",
+      // Art is guaranteed above; remixed cards ship public like the deck.
+      visibility: "public",
       deck_id: job.deck_id ?? undefined,
     },
     { redirectAfterCreate: false },
@@ -932,6 +971,80 @@ async function activeGameSystemId(): Promise<string> {
     .limit(1)
     .maybeSingle();
   return data?.id ?? "";
+}
+
+/** Wide key-art prompt for the set/deck cover tile. */
+function coverPrompt(job: GenerationJobRow): { prompt: string; aspect: ImageAspect } {
+  let title = "the collection";
+  let subject = "";
+  let style: string | null = null;
+  if (job.kind === "set") {
+    const plan = job.plan as SetJobPlan;
+    title = plan.set_title;
+    subject = `${plan.theme}. ${plan.set_description}`;
+    style = plan.style;
+  } else if (job.kind === "deck") {
+    const plan = job.plan as DeckJobPlan;
+    title = plan.deck_title;
+    subject = `${plan.theme}. ${plan.strategy}`;
+    style = plan.style;
+  } else {
+    const plan = job.plan as DeckRemixJobPlan;
+    title = plan.deck_title;
+    subject = plan.theme ?? "the deck's world, re-imagined";
+    style = plan.style;
+  }
+  const styleLine = style?.trim()
+    ? `Rendered strictly in ${style.trim()} style.`
+    : "Painterly high-fantasy illustration style.";
+  return {
+    aspect: "wide",
+    prompt: [
+      `Wide cinematic key art for a trading-card collection called "${title}".`,
+      subject.slice(0, 400),
+      styleLine,
+      "Epic establishing-shot composition with a clear focal point that survives cropping.",
+      "NO frame, NO borders, NO logo, NO text or lettering anywhere in the image.",
+    ].join(" "),
+  };
+}
+
+/** Generate + attach the set/deck cover image. */
+async function runCoverStep(
+  userId: string,
+  job: GenerationJobRow,
+  step: JobStep,
+): Promise<JobStep> {
+  await logAiCall(userId, job.kind === "set" ? "generate_deck" : "generate_deck_cards");
+  const { prompt, aspect } = coverPrompt(job);
+  const image = await generatePlainImage(prompt, aspect);
+  if (!image.ok) {
+    return { ...step, status: "failed", error: image.error };
+  }
+  const persisted = await persistGeneratedArt(image.bytes, image.contentType);
+  if (!persisted.ok) {
+    return { ...step, status: "failed", error: persisted.error };
+  }
+
+  if (job.kind === "set" && job.set_id) {
+    const updated = await updateSetAction(job.set_id, {
+      cover_url: persisted.publicUrl,
+    });
+    if (!updated.ok) {
+      return { ...step, status: "failed", error: "Couldn't attach the set cover." };
+    }
+    return { ...step, status: "done", error: undefined };
+  }
+  if (job.deck_id) {
+    const updated = await updateDeckAction(job.deck_id, {
+      cover_url: persisted.publicUrl,
+    });
+    if (!updated.ok) {
+      return { ...step, status: "failed", error: "Couldn't attach the deck cover." };
+    }
+    return { ...step, status: "done", error: undefined };
+  }
+  return { ...step, status: "failed", error: "Job has no set or deck to cover." };
 }
 
 async function runIconStep(

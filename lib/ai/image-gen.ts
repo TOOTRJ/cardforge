@@ -19,6 +19,27 @@ import { isGatewayConfigured } from "@/lib/ai/provider";
 
 const GATEWAY_REMIX_DEFAULT = "google/gemini-2.5-flash-image";
 
+/** Map raw provider errors to something a user can act on. */
+export function friendlyImageError(detail: string): string {
+  const lower = detail.toLowerCase();
+  if (lower.includes("safety") || lower.includes("policy") || lower.includes("blocked")) {
+    return "The image was blocked by the provider's safety filter — try again (each retry rewords the prompt) or adjust the theme.";
+  }
+  if (lower.includes("rate limit") || lower.includes("429") || lower.includes("too many")) {
+    return "The image provider is rate-limiting us — wait a moment and retry.";
+  }
+  if (lower.includes("quota") || lower.includes("billing") || lower.includes("insufficient")) {
+    return "The image provider's quota/billing is exhausted on the server side.";
+  }
+  if (lower.includes("timeout") || lower.includes("timed out") || lower.includes("aborted")) {
+    return "The image took too long to generate — retry usually works.";
+  }
+  if (lower.includes("unauthorized") || lower.includes("401") || lower.includes("403") || lower.includes("api key")) {
+    return "The image provider rejected our credentials — check the AI keys on the server.";
+  }
+  return `Image generation failed: ${detail}`;
+}
+
 export type RestyleResult =
   | { ok: true; bytes: Uint8Array; contentType: string }
   | { ok: false; error: string };
@@ -55,8 +76,12 @@ export async function restyleImage(input: {
 
 const GATEWAY_IMAGE_DEFAULT = "bfl/flux-2-flex";
 
+/** Card art is square (the art slot crops); covers are wide (16:9 tiles). */
+export type ImageAspect = "square" | "wide";
+
 export async function generateStyledImage(
   prompt: string,
+  aspect: ImageAspect = "square",
 ): Promise<RestyleResult> {
   if (!isGatewayConfigured()) {
     return { ok: false, error: "AI Gateway isn't configured." };
@@ -66,7 +91,7 @@ export async function generateStyledImage(
     const { image } = await generateImage({
       model,
       prompt: prompt.trim().slice(0, 4000),
-      aspectRatio: "1:1",
+      aspectRatio: aspect === "wide" ? "16:9" : "1:1",
     });
     return {
       ok: true,
@@ -76,7 +101,7 @@ export async function generateStyledImage(
   } catch (error) {
     const detail =
       error instanceof Error ? error.message : "Image generation failed.";
-    return { ok: false, error: detail };
+    return { ok: false, error: friendlyImageError(detail) };
   }
 }
 
@@ -87,12 +112,13 @@ export async function generateStyledImage(
  */
 export async function generatePlainImage(
   prompt: string,
+  aspect: ImageAspect = "square",
 ): Promise<RestyleResult> {
   const trimmed = prompt.trim().slice(0, 4000);
   if (!trimmed) return { ok: false, error: "Missing image prompt." };
 
   if (isGatewayConfigured()) {
-    const viaGateway = await generateStyledImage(trimmed);
+    const viaGateway = await generateStyledImage(trimmed, aspect);
     if (viaGateway.ok) return viaGateway;
     // fall through to OpenAI when both are configured
   }
@@ -108,7 +134,8 @@ export async function generatePlainImage(
     const response = await client.images.generate({
       model,
       prompt: trimmed,
-      size: "1024x1024",
+      // gpt-image's landscape size; card art stays square.
+      size: aspect === "wide" ? "1536x1024" : "1024x1024",
       quality: model.startsWith("dall-e") ? "hd" : "high",
       n: 1,
     });
@@ -135,7 +162,7 @@ export async function generatePlainImage(
   } catch (error) {
     const detail =
       error instanceof Error ? error.message : "Image generation failed.";
-    return { ok: false, error: detail };
+    return { ok: false, error: friendlyImageError(detail) };
   }
 }
 
@@ -176,7 +203,7 @@ async function restyleViaGateway(
   } catch (error) {
     const detail =
       error instanceof Error ? error.message : "Image restyle failed.";
-    return { ok: false, error: detail };
+    return { ok: false, error: friendlyImageError(detail) };
   }
 }
 
@@ -222,6 +249,6 @@ async function restyleViaOpenAi(
   } catch (error) {
     const detail =
       error instanceof Error ? error.message : "Image restyle failed.";
-    return { ok: false, error: detail };
+    return { ok: false, error: friendlyImageError(detail) };
   }
 }

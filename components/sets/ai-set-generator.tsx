@@ -2,25 +2,28 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Sparkles } from "lucide-react";
+import { ArrowRight, Loader2, RotateCcw, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { FieldGroup, inputClass } from "@/components/creator/field-group";
-import { useGenerationJob } from "@/components/ai/use-generation-job";
+import {
+  useGenerationJob,
+  type GenerationJobOutcome,
+} from "@/components/ai/use-generation-job";
 import { GenerationProgress } from "@/components/ai/generation-progress";
 import { StylePicker } from "@/components/ai/style-picker";
 
 // ---------------------------------------------------------------------------
 // AiSetGenerator — "Generate a set with AI" panel. Two homes:
-//   - /dashboard/sets (no setId): plans a brand-new private set
+//   - /dashboard/sets (no setId): plans a brand-new set
 //   - /set/[slug]/edit (setId): generates cards INTO that set
 //
 // Drives the client-stepped job pipeline (components/ai/use-generation-job):
 // one plan request designs the whole set's text cohesively, then one step
-// per request paints each card (and the set icon) with live progress.
-// Card count is capped server-side (3/generation until subscriptions;
-// admins exempt) — maxCards mirrors that cap in the UI.
+// per request paints each card, the set icon, and the set cover. Generated
+// sets and cards publish PUBLICLY by default; failed steps (usually an
+// image) can be retried per-step without regenerating the batch.
 // ---------------------------------------------------------------------------
 
 export function AiSetGenerator({
@@ -38,33 +41,46 @@ export function AiSetGenerator({
   const [theme, setTheme] = useState("");
   const [style, setStyle] = useState("");
   const [size, setSize] = useState(Math.min(3, maxCards));
-  const { phase, steps, busy, run } = useGenerationJob();
+  const [resultSlug, setResultSlug] = useState<string | undefined>(undefined);
+  const { phase, steps, busy, hasFailures, run, retryStep, retryFailed } =
+    useGenerationJob();
 
-  const handleGenerate = async () => {
-    const outcome = await run({
-      kind: "set",
-      theme: theme.trim() || undefined,
-      style: style.trim() || undefined,
-      size,
-      set_id: setId,
-    });
+  const settle = (outcome: GenerationJobOutcome) => {
+    setResultSlug(outcome.slug);
     if (!outcome.ok) {
       if (outcome.failures > 0) {
-        toast.error("Generation didn't produce any cards. Try again.");
+        toast.error(
+          "Generation didn't finish — retry the failed steps below.",
+        );
       }
       return;
     }
-    toast.success(
-      outcome.failures > 0
-        ? `Set generated with ${outcome.failures} failed step${outcome.failures === 1 ? "" : "s"}.`
-        : "Set generated — every card is a private draft you can polish and publish.",
-    );
+    if (outcome.failures > 0) {
+      toast.message(
+        `${outcome.successes} step${outcome.successes === 1 ? "" : "s"} done, ${outcome.failures} failed.`,
+        { description: "Retry the failed steps below — nothing gets regenerated twice." },
+      );
+      if (setId) router.refresh();
+      return;
+    }
+    toast.success("Set generated and published — every card is yours to edit.");
     if (setId) {
       router.refresh();
     } else if (outcome.slug) {
       router.push(`/set/${outcome.slug}/edit`);
     }
   };
+
+  const handleGenerate = async () =>
+    settle(
+      await run({
+        kind: "set",
+        theme: theme.trim() || undefined,
+        style: style.trim() || undefined,
+        size,
+        set_id: setId,
+      }),
+    );
 
   if (!aiConfigured) return null;
 
@@ -76,9 +92,9 @@ export function AiSetGenerator({
           {setId ? "Generate cards into this set" : "Generate a set with AI"}
         </h2>
         <p className="text-sm leading-6 text-muted">
-          AI plans a cohesive mini-set — balanced rarities, matching art
-          {setId ? "" : ", a set icon,"} and one shared world — as private
-          drafts you can edit before publishing.
+          AI plans a cohesive mini-set — balanced rarities, matching art, a
+          set icon, and a cover — published publicly and fully editable. You
+          can make anything private afterward.
         </p>
       </header>
 
@@ -110,34 +126,60 @@ export function AiSetGenerator({
         </FieldGroup>
       </div>
 
-      <FieldGroup label="Art style" helper="Applied to every card's art.">
+      <FieldGroup label="Art style" helper="Applied to every card's art, the icon, and the cover.">
         <StylePicker value={style} onChange={setStyle} disabled={busy} />
       </FieldGroup>
 
-      <GenerationProgress steps={steps} phase={phase} />
+      <GenerationProgress
+        steps={steps}
+        phase={phase}
+        onRetryStep={(key) => void retryStep(key).then(settle)}
+      />
 
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <span className="text-[11px] text-muted">
-          1 credit per card · cards land as private drafts
+          1 credit per card · publishes publicly
         </span>
-        <Button type="button" onClick={handleGenerate} disabled={busy}>
-          {phase === "planning" ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              Designing set…
-            </>
-          ) : phase === "stepping" ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              Painting cards…
-            </>
-          ) : (
-            <>
-              <Sparkles className="h-4 w-4" aria-hidden />
-              Generate set
-            </>
-          )}
-        </Button>
+        <div className="flex items-center gap-2">
+          {!busy && hasFailures ? (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => void retryFailed().then(settle)}
+            >
+              <RotateCcw className="h-4 w-4" aria-hidden />
+              Retry failed steps
+            </Button>
+          ) : null}
+          {!busy && !setId && resultSlug && phase === "done" ? (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => router.push(`/set/${resultSlug}/edit`)}
+            >
+              Open set
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </Button>
+          ) : null}
+          <Button type="button" onClick={handleGenerate} disabled={busy}>
+            {phase === "planning" ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                Designing set…
+              </>
+            ) : phase === "stepping" ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                Painting…
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4" aria-hidden />
+                Generate set
+              </>
+            )}
+          </Button>
+        </div>
       </div>
     </SurfaceCard>
   );
