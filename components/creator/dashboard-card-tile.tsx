@@ -1,11 +1,13 @@
 "use client";
 
-import { type MouseEvent } from "react";
+import { type KeyboardEvent, type MouseEvent } from "react";
 import Link from "next/link";
-import { Check } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Check, Eye, Pencil } from "lucide-react";
 import { BakedCardThumbnail } from "@/components/cards/baked-card-thumbnail";
 import type { FrameProfileOverridesMap } from "@/lib/cards/profile-override";
 import { CardHoverEffect } from "@/components/cards/card-hover-effect";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { ArtPosition, FrameStyle } from "@/types/card";
 import type { listMyCards } from "@/lib/cards/queries";
@@ -14,7 +16,10 @@ import type { listMyCards } from "@/lib/cards/queries";
 // DashboardCardTile — one tile on the dashboard grid that participates in
 // bulk selection. Behavior:
 //   - Normal mode:
-//       - Plain click on the card body → navigates to the edit page
+//       - Hovering (or focusing) the tile reveals Edit / View buttons — the
+//         user picks the action instead of guessing what a click does
+//       - Plain click on the card body → View (the card's page; matches what
+//         touch users get, where there's no hover to reveal the buttons)
 //       - Cmd / Ctrl + click → toggles selection without clearing others
 //       - Shift + click → range-selects from the last-clicked card to this one
 //       - The corner checkbox appears on hover / focus and toggles selection
@@ -54,15 +59,27 @@ export function DashboardCardTile({
   enableViewTransition = true,
   onToggle,
 }: Props) {
-  const handleLinkClick = (event: MouseEvent<HTMLAnchorElement>) => {
-    if (selectMode || event.metaKey || event.ctrlKey || event.shiftKey) {
+  const router = useRouter();
+  const editHref = `/card/${card.slug}/edit`;
+  // The id→canonical redirect resolves the owner username server-side, so
+  // the tile doesn't need it in its props.
+  const viewHref = `/go/card/${card.id}`;
+
+  const handleBodyClick = (event: MouseEvent | KeyboardEvent) => {
+    if (
+      selectMode ||
+      ("metaKey" in event && (event.metaKey || event.ctrlKey || event.shiftKey))
+    ) {
       event.preventDefault();
       onToggle(card.id, {
-        meta: event.metaKey || event.ctrlKey,
-        shift: event.shiftKey,
+        meta: "metaKey" in event && (event.metaKey || event.ctrlKey),
+        shift: "shiftKey" in event && event.shiftKey,
       });
+      return;
     }
-    // Plain click outside select mode — let the Link navigate normally.
+    // Plain activation outside select mode → View. Touch users have no
+    // hover, so the body itself must stay a useful target.
+    router.push(viewHref);
   };
 
   return (
@@ -78,17 +95,24 @@ export function DashboardCardTile({
             : "",
         )}
       >
-        <Link
-          href={`/card/${card.slug}/edit`}
-          className="group block rounded-frame focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        <div
+          role="button"
+          tabIndex={0}
           aria-label={
             selectMode
               ? isSelected
                 ? `Deselect ${card.title}`
                 : `Select ${card.title}`
-              : `Edit ${card.title}`
+              : `View ${card.title}`
           }
-          onClick={handleLinkClick}
+          onClick={handleBodyClick}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              handleBodyClick(event);
+            }
+          }}
+          className="group block cursor-pointer rounded-frame focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           style={
             enableViewTransition
               ? { viewTransitionName: `card-${card.id}` }
@@ -123,9 +147,43 @@ export function DashboardCardTile({
               }}
             />
           </CardHoverEffect>
-        </Link>
-        {/* Corner checkbox. z-30 keeps it above CardHoverEffect's glare
-            (z-20) so the tile's hover sheen never covers the click target. */}
+        </div>
+
+        {/* Hover action buttons — the user picks Edit or View explicitly.
+            Hidden (and click-transparent) at rest; revealed on tile hover or
+            keyboard focus. z-30 sits above CardHoverEffect's glare (z-20);
+            suppressed entirely in select mode where clicks mean "toggle". */}
+        {!selectMode ? (
+          <div
+            className={cn(
+              "pointer-events-none absolute inset-0 z-30 flex items-center justify-center gap-2 rounded-frame",
+              "opacity-0 transition-opacity duration-150",
+              "group-hover/tile:pointer-events-auto group-hover/tile:opacity-100",
+              "group-focus-within/tile:pointer-events-auto group-focus-within/tile:opacity-100",
+            )}
+          >
+            <Button asChild size="sm" className="shadow-lg">
+              <Link href={editHref} aria-label={`Edit ${card.title}`}>
+                <Pencil className="h-3.5 w-3.5" aria-hidden />
+                Edit
+              </Link>
+            </Button>
+            <Button
+              asChild
+              size="sm"
+              variant="secondary"
+              className="shadow-lg"
+            >
+              <Link href={viewHref} aria-label={`View ${card.title}`}>
+                <Eye className="h-3.5 w-3.5" aria-hidden />
+                View
+              </Link>
+            </Button>
+          </div>
+        ) : null}
+
+        {/* Corner checkbox. z-40 keeps it above the action-button overlay
+            (z-30) and CardHoverEffect's glare (z-20). */}
         <button
           type="button"
           onClick={(event) => {
@@ -139,7 +197,7 @@ export function DashboardCardTile({
           aria-pressed={isSelected}
           aria-label={isSelected ? `Deselect ${card.title}` : `Select ${card.title}`}
           className={cn(
-            "absolute right-3 top-3 z-30 flex h-7 w-7 items-center justify-center rounded-md border shadow-md transition-all",
+            "absolute right-3 top-3 z-40 flex h-7 w-7 items-center justify-center rounded-md border shadow-md transition-all",
             "focus-visible:outline-none focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-primary-bright/60",
             // Always visible when selected or in select mode; otherwise it
             // reveals on hover/focus so the grid stays clean at rest.
@@ -161,16 +219,12 @@ export function DashboardCardTile({
             "transition-opacity",
             selectMode
               ? isSelected
-                ? "text-primary-bright"
+                ? "text-primary-bright opacity-100"
                 : "opacity-100"
-              : "opacity-0 group-hover/tile:opacity-100",
+              : "opacity-0",
           )}
         >
-          {selectMode
-            ? isSelected
-              ? "Selected"
-              : "Click to select"
-            : "Click to edit →"}
+          {selectMode ? (isSelected ? "Selected" : "Click to select") : null}
         </span>
       </div>
     </div>
