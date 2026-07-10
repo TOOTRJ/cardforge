@@ -66,6 +66,9 @@ import {
   createCardAction,
   updateCardAction,
 } from "@/lib/cards/actions";
+import { linkDeckCardAction } from "@/lib/decks/card-actions";
+import type { DeckRemixContext } from "@/types/deck";
+import type { ScryfallImportPatch } from "@/lib/scryfall/import-mapper";
 import { slugify } from "@/lib/validation/card";
 import {
   CARD_TYPE_VALUES,
@@ -162,6 +165,10 @@ type CardCreatorFormProps = {
    *  the front card's edit page. */
   backForCardId?: string | null;
   backForSlug?: string | null;
+  /** Set when remixing a deck entry (/create?deckCard=…): the form pre-fills
+   *  from the entry's Scryfall card on mount, and on save the new card links
+   *  back as the entry's proxy before returning to the deck. */
+  deckRemix?: DeckRemixContext | null;
   /** Whether ANTHROPIC_API_KEY is set on the server — gates the AI panel. */
   aiConfigured: boolean;
   /** The signed-in user's custom pip icons (server-fetched; {} when none).
@@ -226,6 +233,7 @@ export function CardCreatorForm({
   myCards = [],
   backForCardId = null,
   backForSlug = null,
+  deckRemix = null,
   aiConfigured,
   pipOverrides = {},
   initialTag = null,
@@ -989,6 +997,70 @@ export function CardCreatorForm({
     goToStepKey("identity");
   };
 
+  // Deck remix deep-link (/create?deckCard=…): pre-fill the form from the
+  // entry's Scryfall card on mount, through the exact same patch pipeline as
+  // the import dialog. One-shot (ref-guarded) so a re-render never re-imports
+  // over the user's edits; art import stays a deliberate dialog step.
+  const deckRemixImportedRef = useRef(false);
+  useEffect(() => {
+    if (
+      mode !== "create" ||
+      !deckRemix?.scryfallId ||
+      deckRemixImportedRef.current
+    ) {
+      return;
+    }
+    deckRemixImportedRef.current = true;
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await fetch(
+          `/api/scryfall/named?${new URLSearchParams({
+            id: deckRemix.scryfallId as string,
+          })}`,
+        );
+        const body = (await response.json().catch(() => null)) as
+          | {
+              ok: true;
+              card: { name: string; scryfall_uri: string | null };
+              patch: ScryfallImportPatch;
+            }
+          | { ok: false; error?: string }
+          | null;
+        if (cancelled) return;
+        if (!body || body.ok !== true) {
+          toast.error(
+            (body && "error" in body && body.error) ||
+              `Couldn't load “${deckRemix.entryName}” — starting from a blank card.`,
+          );
+          return;
+        }
+        handleScryfallImport({
+          patch: body.patch,
+          source: {
+            name: body.card.name,
+            scryfallUri: body.card.scryfall_uri,
+          },
+        });
+        toast.success(
+          `Pre-filled from ${body.card.name} — make it yours, then save to link it into “${deckRemix.deckTitle}”.`,
+        );
+      } catch {
+        if (!cancelled) {
+          toast.error(
+            `Couldn't load “${deckRemix.entryName}” — starting from a blank card.`,
+          );
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // handleScryfallImport is recreated per render; the ref guard makes this
+    // effect one-shot, so listing it would only churn the dependency array.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, deckRemix]);
+
   // Kick off /api/ai/random-card and pour the result into the form. Art is
   // optional — the model occasionally trips gpt-image-1's safety filter even on
   // benign prompts; we surface a soft toast in that case and leave the
@@ -1361,6 +1433,25 @@ export function CardCreatorForm({
           window.localStorage.removeItem(CARD_DRAFT_STORAGE_KEY);
         } catch {
           // best-effort
+        }
+
+        // This card was forged as a deck entry's proxy — link it back and
+        // return to the deck dashboard so the progress ring ticks up.
+        if (deckRemix) {
+          const linkResult = await linkDeckCardAction(
+            deckRemix.deckCardId,
+            result.cardId,
+          );
+          if (!linkResult.ok) {
+            toast.error(
+              linkResult.error ?? "Saved, but couldn't link it into the deck.",
+            );
+          } else {
+            toast.success(`Linked into “${deckRemix.deckTitle}”.`);
+          }
+          router.replace(`/deck/${deckRemix.deckSlug}`);
+          router.refresh();
+          return;
         }
 
         // This new card was created to be another card's back face — link it

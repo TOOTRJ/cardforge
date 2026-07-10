@@ -23,6 +23,7 @@ import {
   type ParseWarning,
 } from "@/lib/decks/parse-decklist";
 import {
+  cardNameMatchesEntry,
   chunkIdentifiers,
   identifierFor,
   lookupEntry,
@@ -154,10 +155,13 @@ export async function resolveDecklistAction(
   }
 
   // Pass 3: bounded fuzzy rescue for whatever's still missing (typos).
+  // Name-mismatched printing hits don't count as found — they get the
+  // fuzzy treatment too so the user is told to double-check.
   let fuzzyBudget = MAX_FUZZY_RESCUES;
   const fuzzyByName = new Map<string, ScryfallCard | null>();
   for (const entry of entries) {
-    if (lookupEntry(byKey, entry)) continue;
+    const hit = lookupEntry(byKey, entry);
+    if (hit && cardNameMatchesEntry(hit, entry.name)) continue;
     if (fuzzyBudget <= 0) break;
     const name = frontFaceName(entry.name) ?? entry.name;
     const cacheKey = name.toLowerCase();
@@ -168,7 +172,7 @@ export async function resolveDecklistAction(
 
   const lines: ImportReviewLine[] = entries.map((entry) => {
     const exact = lookupEntry(byKey, entry);
-    if (exact) {
+    if (exact && cardNameMatchesEntry(exact, entry.name)) {
       return {
         line: entry.line,
         raw: entry.raw,
@@ -179,9 +183,11 @@ export async function resolveDecklistAction(
         resolved: toResolvedCardData(exact),
       };
     }
+    // Best guesses, in preference order: a fuzzy name rescue, then a
+    // name-mismatched printing hit (wrong collector number on the line).
     const fuzzyKey = (frontFaceName(entry.name) ?? entry.name).toLowerCase();
-    const fuzzy = fuzzyByName.get(fuzzyKey) ?? null;
-    if (fuzzy) {
+    const guess = fuzzyByName.get(fuzzyKey) ?? exact ?? null;
+    if (guess) {
       return {
         line: entry.line,
         raw: entry.raw,
@@ -189,7 +195,7 @@ export async function resolveDecklistAction(
         quantity: entry.quantity,
         board: entry.board,
         status: "fuzzy",
-        resolved: toResolvedCardData(fuzzy),
+        resolved: toResolvedCardData(guess),
       };
     }
     return {

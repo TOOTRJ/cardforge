@@ -277,7 +277,7 @@ async function DeckBody({
         <PageHeader
           eyebrow="Cards"
           title={`${analytics.total} card${analytics.total === 1 ? "" : "s"}`}
-          description="Remixed cards link to their custom proxies; originals link to Scryfall."
+          description="Click any card for details — remix originals into custom proxies, flip between versions, and track what's left."
         />
 
         <div className="mt-6">
@@ -299,7 +299,11 @@ async function DeckBody({
               }
             />
           ) : (
-            <DeckCardList items={items} ownerUsername={ownerUsername} />
+            <DeckCardList
+              items={items}
+              ownerUsername={ownerUsername}
+              canManage={isOwner}
+            />
           )}
         </div>
       </section>

@@ -93,6 +93,16 @@ export type DeckCardEntry = Omit<DeckCardRow, "board"> & {
   board: DeckBoard;
 };
 
+/** Context threaded into the card creator by /create?deckCard=<id> — the
+ *  deck entry being remixed into a custom proxy. */
+export type DeckRemixContext = {
+  deckCardId: string;
+  scryfallId: string | null;
+  deckSlug: string;
+  deckTitle: string;
+  entryName: string;
+};
+
 /**
  * Derived remix state of a deck entry (no status column in the DB — see the
  * 0055 migration header):

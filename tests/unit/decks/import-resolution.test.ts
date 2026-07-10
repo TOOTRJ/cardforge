@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  cardNameMatchesEntry,
   chunkIdentifiers,
   identifierFor,
   lookupEntry,
@@ -88,6 +89,46 @@ describe("reconcileCollection + lookupEntry", () => {
         collectorNumber: null,
       }),
     ).toBe(fable);
+  });
+});
+
+describe("wrong collector numbers — name beats printing on mismatch", () => {
+  // Regression: "1 Krenko, Mob Boss (DMC) 129" — DMC 129 is actually Beast
+  // Within. The printing hit must NOT silently win over the parsed name.
+  const beastWithin = card({
+    id: "00000000-0000-0000-0000-00000000000b",
+    name: "Beast Within",
+    set: "dmc",
+    collector_number: "129",
+  });
+  const krenko = card({
+    id: "00000000-0000-0000-0000-00000000000c",
+    name: "Krenko, Mob Boss",
+    set: "j25",
+    collector_number: "45",
+  });
+  const entry = {
+    name: "Krenko, Mob Boss",
+    setCode: "dmc",
+    collectorNumber: "129",
+  };
+
+  it("prefers a name match over a name-mismatched printing hit", () => {
+    const { byKey } = reconcileCollection([], [beastWithin, krenko]);
+    expect(lookupEntry(byKey, entry)).toBe(krenko);
+  });
+
+  it("returns the mismatched printing hit only as a last resort", () => {
+    const { byKey } = reconcileCollection([], [beastWithin]);
+    expect(lookupEntry(byKey, entry)).toBe(beastWithin);
+    expect(cardNameMatchesEntry(beastWithin, entry.name)).toBe(false);
+  });
+
+  it("requests a name fallback for the mismatched printing", () => {
+    const { byKey } = reconcileCollection([], [beastWithin]);
+    expect(nameFallbackIdentifiers([entry], byKey)).toEqual([
+      { name: "Krenko, Mob Boss" },
+    ]);
   });
 });
 

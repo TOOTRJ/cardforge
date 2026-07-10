@@ -119,14 +119,38 @@ export function reconcileCollection(
   return { byKey, unresolved };
 }
 
-/** Find the resolved card for one entry (tries exact key, then the
- *  front-face name for "Fire // Ice"-style lines). */
+/** Whether a returned card plausibly IS the named card (full name,
+ *  front-face name, or the entry's own front-face variant). */
+export function cardNameMatchesEntry(
+  card: ScryfallCard,
+  entryName: string,
+): boolean {
+  const candidates = new Set([card.name.toLowerCase()]);
+  const cardFront = frontFaceName(card.name);
+  if (cardFront) candidates.add(cardFront.toLowerCase());
+  const target = entryName.trim().toLowerCase();
+  if (candidates.has(target)) return true;
+  const entryFront = frontFaceName(entryName);
+  return entryFront ? candidates.has(entryFront.toLowerCase()) : false;
+}
+
+/**
+ * Find the resolved card for one entry. A printing hit only wins outright
+ * when its NAME agrees with the parsed line — decklists routinely carry
+ * wrong collector numbers (site numbering drift), and `(dmc) 129` silently
+ * resolving "Krenko, Mob Boss" to Beast Within is worse than falling back
+ * to a name lookup. A name-mismatched printing hit is returned only as the
+ * last resort; the caller downgrades it to a "check this" suggestion.
+ */
 export function lookupEntry(
   byKey: Map<string, ScryfallCard>,
   entry: Pick<ParsedEntry, "name" | "setCode" | "collectorNumber">,
 ): ScryfallCard | null {
-  const direct = byKey.get(identifierMatchKey(identifierFor(entry)));
-  if (direct) return direct;
+  const printingHit =
+    byKey.get(identifierMatchKey(identifierFor(entry))) ?? null;
+  if (printingHit && cardNameMatchesEntry(printingHit, entry.name)) {
+    return printingHit;
+  }
   const byName = byKey.get(`n:${entry.name.toLowerCase()}`);
   if (byName) return byName;
   const front = frontFaceName(entry.name);
@@ -134,7 +158,7 @@ export function lookupEntry(
     const byFront = byKey.get(`n:${front.toLowerCase()}`);
     if (byFront) return byFront;
   }
-  return null;
+  return printingHit;
 }
 
 /** Name-only fallback identifiers for entries whose first request missed:
@@ -148,7 +172,10 @@ export function nameFallbackIdentifiers(
   const seen = new Set<string>();
   const fallbacks: ScryfallCollectionIdentifier[] = [];
   for (const entry of entries) {
-    if (lookupEntry(byKey, entry)) continue;
+    const hit = lookupEntry(byKey, entry);
+    // A hit whose name agrees is settled; a name-MISMATCHED printing hit
+    // (wrong collector number) still wants a name lookup.
+    if (hit && cardNameMatchesEntry(hit, entry.name)) continue;
     const front = frontFaceName(entry.name);
     const hadPrinting = Boolean(entry.setCode);
     // Name-only requests already went out once — only retry those when a
