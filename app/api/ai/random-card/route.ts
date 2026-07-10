@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
@@ -11,6 +12,16 @@ import {
 import { generateRandomCard, randomCardSchema } from "@/lib/ai/random-card";
 import { isDesignAiConfigured } from "@/lib/ai/provider";
 import { generateRandomArt } from "@/lib/ai/random-art";
+import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
+import {
+  colorHintsForFrame,
+  resolveGeneratedFrame,
+} from "@/lib/creator/frame-random";
+import {
+  FRAME_TEMPLATE_VALUES,
+  RARITY_VALUES,
+  type ColorIdentity,
+} from "@/types/card";
 
 // ---------------------------------------------------------------------------
 // /api/ai/random-card
@@ -29,7 +40,34 @@ import { generateRandomArt } from "@/lib/ai/random-art";
 
 export const maxDuration = 90;
 
-export async function POST() {
+// The 9 standard card types the options dialog offers (legacy "spell" and
+// layout kinds excluded — layouts are frame choices, not designs).
+const AI_CARD_TYPE_VALUES = [
+  "creature",
+  "instant",
+  "sorcery",
+  "artifact",
+  "enchantment",
+  "land",
+  "planeswalker",
+  "battle",
+  "token",
+] as const;
+
+// All fields optional: `{}` is the classic one-click "surprise me". The
+// dialog only enables a specific frame once a card type is chosen, so a
+// frame without a type degrades to "random" server-side.
+const optionsSchema = z.object({
+  theme: z.string().trim().max(300).optional(),
+  style: z.string().trim().max(200).optional(),
+  card_type: z.enum(AI_CARD_TYPE_VALUES).optional(),
+  frame: z
+    .union([z.literal("random"), z.enum(FRAME_TEMPLATE_VALUES)])
+    .optional(),
+  rarity: z.enum(RARITY_VALUES).optional(),
+});
+
+export async function POST(request: Request) {
   if (!isSupabaseConfigured()) {
     return NextResponse.json(
       { ok: false, error: "Supabase isn't configured." },
@@ -44,6 +82,22 @@ export async function POST() {
       { status: 401 },
     );
   }
+
+  // Body is optional (legacy clients POST `{}`); reject only malformed input.
+  let rawBody: unknown = {};
+  try {
+    rawBody = await request.json();
+  } catch {
+    rawBody = {};
+  }
+  const optionsParse = optionsSchema.safeParse(rawBody ?? {});
+  if (!optionsParse.success) {
+    return NextResponse.json(
+      { ok: false, error: "Invalid generation options." },
+      { status: 400 },
+    );
+  }
+  const options = optionsParse.data;
 
   if (!isDesignAiConfigured()) {
     return NextResponse.json(
@@ -110,9 +164,31 @@ export async function POST() {
   //      existing card-assistant pattern). ----
   await logAiCall(user.id, "generate_random_card");
 
+  // When the user locked a specific frame, steer generation toward a color
+  // that frame actually has published art for — otherwise the frame would
+  // have to be dropped after the fact.
+  const verifiedKeys = new Set(await getVerifiedFrameKeys());
+  let colorHint: ColorIdentity | undefined;
+  if (options.frame && options.frame !== "random" && options.card_type) {
+    const hints = colorHintsForFrame(
+      options.card_type,
+      options.frame,
+      verifiedKeys,
+    );
+    if (hints.length > 0) {
+      colorHint = hints[Math.floor(Math.random() * hints.length)];
+    }
+  }
+
   let cardObject;
   try {
-    cardObject = await generateRandomCard();
+    cardObject = await generateRandomCard({
+      theme: options.theme,
+      style: options.style,
+      cardType: options.card_type,
+      rarity: options.rarity,
+      colorHint,
+    });
   } catch (error) {
     await refundAiCredits(user.id, "generate_random_card");
     const message =
@@ -146,6 +222,15 @@ export async function POST() {
   await logAiCall(user.id, "generate_random_art");
   const art = await generateRandomArt(card.art_prompt);
 
+  // Resolve the frame AFTER generation — it depends on the card's final
+  // colors. Null → the client keeps its era-default frame for the type.
+  const frameTemplate = resolveGeneratedFrame({
+    cardType: card.card_type,
+    requested: options.frame,
+    colorIdentity: card.color_identity,
+    verifiedKeys,
+  });
+
   const creditsRemaining = reserve.balance;
 
   return NextResponse.json(
@@ -169,6 +254,7 @@ export async function POST() {
         loyalty: card.loyalty,
         defense: card.defense,
       },
+      frame: frameTemplate ? { template: frameTemplate } : null,
       artPrompt: card.art_prompt,
       art: art.ok ? art : null,
       artError: art.ok ? null : art.error,
