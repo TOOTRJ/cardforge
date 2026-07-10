@@ -18,6 +18,9 @@ import {
 import { computeSetAnalytics } from "@/lib/sets/analytics";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { isDesignAiConfigured } from "@/lib/ai/provider";
+import { batchCardLimit } from "@/lib/ai/generation-limits";
+import { AiSetGenerator } from "@/components/sets/ai-set-generator";
 
 type EditSetPageProps = {
   params: Promise<{ slug: string }>;
@@ -61,9 +64,10 @@ export default async function EditSetPage({ params }: EditSetPageProps) {
     notFound();
   }
 
-  const [items, candidates] = await Promise.all([
+  const [items, candidates, maxCards] = await Promise.all([
     listCardsInSet(set.id),
     listMyCardsNotInSet(set.id),
+    batchCardLimit(),
   ]);
   const analytics = computeSetAnalytics(items.map((i) => i.card));
 
@@ -114,6 +118,12 @@ export default async function EditSetPage({ params }: EditSetPageProps) {
             </header>
             <SetAnalyticsPanel analytics={analytics} />
           </section>
+
+          <AiSetGenerator
+            aiConfigured={isDesignAiConfigured()}
+            maxCards={maxCards}
+            setId={set.id}
+          />
 
           <SetCardManager
             setId={set.id}

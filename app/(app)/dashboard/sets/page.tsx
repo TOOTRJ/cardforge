@@ -8,10 +8,9 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { listMySets } from "@/lib/sets/queries";
-import { getEntitlements } from "@/lib/billing/entitlements";
 import { isDesignAiConfigured } from "@/lib/ai/provider";
-import { AiDeckGenerator } from "@/components/sets/ai-deck-generator";
-import { isBillingEnabled } from "@/lib/billing/flags";
+import { batchCardLimit } from "@/lib/ai/generation-limits";
+import { AiSetGenerator } from "@/components/sets/ai-set-generator";
 
 export const metadata: Metadata = {
   title: "Sets",
@@ -19,10 +18,7 @@ export const metadata: Metadata = {
 };
 
 export default async function SetsPage() {
-  const [sets, entitlements] = await Promise.all([
-    listMySets(),
-    getEntitlements(),
-  ]);
+  const [sets, maxCards] = await Promise.all([listMySets(), batchCardLimit()]);
   const aiConfigured = isDesignAiConfigured();
 
   return (
@@ -41,14 +37,9 @@ export default async function SetsPage() {
         }
       />
 
-      {isBillingEnabled() ? (
-        <div className="mt-8">
-          <AiDeckGenerator
-            allowDeckGen={entitlements.allowDeckGen}
-            aiConfigured={aiConfigured}
-          />
-        </div>
-      ) : null}
+      <div className="mt-8">
+        <AiSetGenerator aiConfigured={aiConfigured} maxCards={maxCards} />
+      </div>
 
       <div className="mt-6">
         {sets.length === 0 ? (

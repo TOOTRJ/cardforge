@@ -685,6 +685,11 @@ export type RemixCardInput = {
   parentCardId: string;
   /** Optional title override; defaults to "<parent title> (remix)". */
   title?: string;
+  /** AI-remix overrides — replace the copied value instead of inheriting.
+   *  `flavorText: null` clears the parent's flavor; `artUrl` also resets the
+   *  art position (the new render needn't share the parent's framing). */
+  flavorText?: string | null;
+  artUrl?: string;
 };
 
 export async function remixCardAction(
@@ -718,14 +723,17 @@ export async function remixCardAction(
     tags: parent.tags ?? [],
     rarity: parent.rarity ?? undefined,
     rules_text: parent.rules_text ?? undefined,
-    flavor_text: parent.flavor_text ?? undefined,
+    flavor_text:
+      input.flavorText !== undefined
+        ? input.flavorText ?? undefined
+        : parent.flavor_text ?? undefined,
     power: parent.power ?? undefined,
     toughness: parent.toughness ?? undefined,
     loyalty: parent.loyalty ?? undefined,
     defense: parent.defense ?? undefined,
-    artist_credit: parent.artist_credit ?? undefined,
-    art_url: parent.art_url ?? undefined,
-    art_position: parent.art_position ?? {},
+    artist_credit: input.artUrl ? undefined : parent.artist_credit ?? undefined,
+    art_url: input.artUrl ?? parent.art_url ?? undefined,
+    art_position: input.artUrl ? {} : parent.art_position ?? {},
     frame_style: parent.frame_style ?? {},
     visibility: "private",
     parent_card_id: parent.id,
