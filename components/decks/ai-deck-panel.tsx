@@ -2,12 +2,15 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Sparkles, Wand2 } from "lucide-react";
+import { ArrowRight, Loader2, RotateCcw, Sparkles, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { FieldGroup, inputClass } from "@/components/creator/field-group";
-import { useGenerationJob } from "@/components/ai/use-generation-job";
+import {
+  useGenerationJob,
+  type GenerationJobOutcome,
+} from "@/components/ai/use-generation-job";
 import { GenerationProgress } from "@/components/ai/generation-progress";
 import { StylePicker } from "@/components/ai/style-picker";
 
@@ -16,14 +19,16 @@ import { StylePicker } from "@/components/ai/style-picker";
 //
 //   mode="new"   (/dashboard/decks): theme + style + format → AI plans an
 //                original deck (commander slot, land share, real mana
-//                curve) and paints every card. Lands in a new private deck.
+//                curve), paints every card, and generates a deck cover.
 //   mode="remix" (/deck/[slug]/edit): style (+ theme twist) → a NEW COPY of
 //                the deck where every resolved card keeps its rules
 //                byte-identical but gets an AI name + art in the chosen
-//                style. The original deck is untouched.
+//                style, plus a matching cover. The original is untouched.
 //
+// Generated decks and cards publish PUBLICLY by default; failed steps
+// (usually an image) retry individually without regenerating the batch.
 // Card count per generation is capped server-side (3 until subscriptions;
-// admins exempt) — remixes beyond the cap are skipped and reported.
+// admins exempt).
 // ---------------------------------------------------------------------------
 
 const FORMAT_OPTIONS = [
@@ -52,38 +57,56 @@ export function AiDeckPanel({
   const [format, setFormat] =
     useState<(typeof FORMAT_OPTIONS)[number]["value"]>("commander");
   const [size, setSize] = useState(Math.min(3, maxCards));
-  const { phase, steps, busy, run } = useGenerationJob();
+  const [resultSlug, setResultSlug] = useState<string | undefined>(undefined);
+  const { phase, steps, busy, hasFailures, run, retryStep, retryFailed } =
+    useGenerationJob();
+
+  const settle = (outcome: GenerationJobOutcome) => {
+    setResultSlug(outcome.slug);
+    if (!outcome.ok) {
+      if (outcome.failures > 0) {
+        toast.error("Generation didn't finish — retry the failed steps below.");
+      }
+      return;
+    }
+    if (outcome.failures > 0) {
+      toast.message(
+        `${outcome.successes} step${outcome.successes === 1 ? "" : "s"} done, ${outcome.failures} failed.`,
+        { description: "Retry the failed steps below — nothing gets regenerated twice." },
+      );
+      return;
+    }
+    toast.success(
+      mode === "remix"
+        ? "Deck remixed and published — the original is untouched."
+        : "Deck generated and published — every card is yours to edit.",
+    );
+    if (outcome.slug) router.push(`/deck/${outcome.slug}/edit`);
+  };
 
   const handleGenerate = async () => {
     if (mode === "remix" && !style.trim()) {
       toast.error("Pick or type a style first — that's what the remix is.");
       return;
     }
-    const outcome = await run(
-      mode === "new"
-        ? {
-            kind: "deck",
-            theme: theme.trim() || undefined,
-            style: style.trim() || undefined,
-            format,
-            size,
-          }
-        : {
-            kind: "deck_remix",
-            deck_id: deckId,
-            style: style.trim(),
-            theme: theme.trim() || undefined,
-          },
+    settle(
+      await run(
+        mode === "new"
+          ? {
+              kind: "deck",
+              theme: theme.trim() || undefined,
+              style: style.trim() || undefined,
+              format,
+              size,
+            }
+          : {
+              kind: "deck_remix",
+              deck_id: deckId,
+              style: style.trim(),
+              theme: theme.trim() || undefined,
+            },
+      ),
     );
-    if (!outcome.ok) return;
-    toast.success(
-      outcome.failures > 0
-        ? `Deck ${mode === "remix" ? "remixed" : "generated"} with ${outcome.failures} failed step${outcome.failures === 1 ? "" : "s"}.`
-        : mode === "remix"
-          ? "Deck remixed — a new private copy with restyled cards is ready."
-          : "Deck generated — every card is a private draft you can polish.",
-    );
-    if (outcome.slug) router.push(`/deck/${outcome.slug}/edit`);
   };
 
   if (!aiConfigured) return null;
@@ -101,8 +124,8 @@ export function AiDeckPanel({
         </h2>
         <p className="text-sm leading-6 text-muted">
           {mode === "new"
-            ? "AI drafts an original deck for your format — commander, curve, and matching art — as private drafts."
-            : "A new copy of this deck where each card keeps its exact rules but gets a fresh AI name and art in your style. The original stays untouched."}
+            ? "AI drafts an original deck for your format — commander, curve, matching art, and a cover — published publicly and fully editable."
+            : "A new public copy of this deck where each card keeps its exact rules but gets a fresh AI name, art, and cover in your style. The original stays untouched."}
         </p>
       </header>
 
@@ -169,36 +192,63 @@ export function AiDeckPanel({
         helper={
           mode === "remix"
             ? "Required — how the remixed cards should look."
-            : "Applied to every card's art."
+            : "Applied to every card's art and the cover."
         }
       >
         <StylePicker value={style} onChange={setStyle} disabled={busy} />
       </FieldGroup>
 
-      <GenerationProgress steps={steps} phase={phase} />
+      <GenerationProgress
+        steps={steps}
+        phase={phase}
+        onRetryStep={(key) => void retryStep(key).then(settle)}
+      />
 
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <span className="text-[11px] text-muted">
-          1 credit per card · {mode === "remix" ? `first ${maxCards} cards this generation` : "cards land as private drafts"}
+          1 credit per card · publishes publicly
+          {mode === "remix" ? ` · first ${maxCards} cards this generation` : ""}
         </span>
-        <Button type="button" onClick={handleGenerate} disabled={busy}>
-          {phase === "planning" ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              {mode === "remix" ? "Reading deck…" : "Designing deck…"}
-            </>
-          ) : phase === "stepping" ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              Painting cards…
-            </>
-          ) : (
-            <>
-              <Sparkles className="h-4 w-4" aria-hidden />
-              {mode === "remix" ? "Remix deck" : "Generate deck"}
-            </>
-          )}
-        </Button>
+        <div className="flex items-center gap-2">
+          {!busy && hasFailures ? (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => void retryFailed().then(settle)}
+            >
+              <RotateCcw className="h-4 w-4" aria-hidden />
+              Retry failed steps
+            </Button>
+          ) : null}
+          {!busy && resultSlug && phase === "done" && hasFailures ? (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => router.push(`/deck/${resultSlug}/edit`)}
+            >
+              Open deck
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </Button>
+          ) : null}
+          <Button type="button" onClick={handleGenerate} disabled={busy}>
+            {phase === "planning" ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                {mode === "remix" ? "Reading deck…" : "Designing deck…"}
+              </>
+            ) : phase === "stepping" ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                Painting…
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4" aria-hidden />
+                {mode === "remix" ? "Remix deck" : "Generate deck"}
+              </>
+            )}
+          </Button>
+        </div>
       </div>
     </SurfaceCard>
   );
