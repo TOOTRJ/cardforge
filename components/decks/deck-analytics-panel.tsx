@@ -41,12 +41,12 @@ export function DeckAnalyticsPanel({ analytics }: DeckAnalyticsPanelProps) {
           Deck size
         </span>
         <span className="font-display text-3xl font-semibold tracking-tight text-foreground">
-          {analytics.total}
+          {analytics.total - analytics.byBoard.side}
         </span>
         <span className="text-xs text-muted">
           {analytics.byBoard.side > 0
             ? `+ ${analytics.byBoard.side} sideboard`
-            : "Playable boards, quantities counted"}
+            : "Commander + mainboard, quantities counted"}
         </span>
       </SurfaceCard>
 

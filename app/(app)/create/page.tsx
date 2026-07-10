@@ -23,7 +23,9 @@ import {
   listMyCards,
 } from "@/lib/cards/queries";
 import { listMySets } from "@/lib/sets/queries";
+import { getMyDeckCardWithDeck } from "@/lib/decks/queries";
 import { isAIConfigured } from "@/lib/ai/card-assistant";
+import type { DeckRemixContext } from "@/types/deck";
 
 export const metadata: Metadata = {
   title: "Create",
@@ -39,9 +41,13 @@ const UUID_PATTERN =
 export default async function CreatePage({
   searchParams,
 }: {
-  searchParams: Promise<{ tag?: string; backFor?: string }>;
+  searchParams: Promise<{ tag?: string; backFor?: string; deckCard?: string }>;
 }) {
-  const { tag: tagParam, backFor: backForParam } = await searchParams;
+  const {
+    tag: tagParam,
+    backFor: backForParam,
+    deckCard: deckCardParam,
+  } = await searchParams;
   const initialTag =
     tagParam && CHALLENGE_TAG_PATTERN.test(tagParam) ? tagParam : null;
   // Re-checked here in addition to the proxy/(app) layout — defense in depth.
@@ -73,6 +79,24 @@ export default async function CreatePage({
   const backFor =
     backForCard && backForCard.owner_id === user.id ? backForCard : null;
 
+  // /create?deckCard=<deckCardId> — remixing a deck entry into a custom
+  // proxy. The query proves the user owns the entry's deck; on save the new
+  // card links back to the entry and we return to the deck. Ignored when
+  // invalid (someone else's deck, deleted entry, malformed id).
+  const deckRemixSource =
+    deckCardParam && UUID_PATTERN.test(deckCardParam)
+      ? await getMyDeckCardWithDeck(deckCardParam)
+      : null;
+  const deckRemix: DeckRemixContext | null = deckRemixSource
+    ? {
+        deckCardId: deckRemixSource.entry.id,
+        scryfallId: deckRemixSource.entry.scryfall_id,
+        deckSlug: deckRemixSource.deck.slug,
+        deckTitle: deckRemixSource.deck.title,
+        entryName: deckRemixSource.entry.name,
+      }
+    : null;
+
   if (!gameSystem) {
     return <SchemaUnseeded />;
   }
@@ -81,11 +105,19 @@ export default async function CreatePage({
     <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
       <PageHeader
         eyebrow="Creator"
-        title={backFor ? "Forge the back face" : "Forge a new card"}
+        title={
+          backFor
+            ? "Forge the back face"
+            : deckRemix
+              ? `Remix “${deckRemix.entryName}”`
+              : "Forge a new card"
+        }
         description={
           backFor
             ? `Build the back for “${backFor.title}”. When you save, it links back automatically.`
-            : "Type on the left, watch the card take shape on the right. Save when you like the result."
+            : deckRemix
+              ? `Make your own version for “${deckRemix.deckTitle}”. The original's stats are pre-filled — change anything. Saving links it into the deck.`
+              : "Type on the left, watch the card take shape on the right. Save when you like the result."
         }
         actions={
           <>
@@ -113,6 +145,7 @@ export default async function CreatePage({
           myCards={myCards}
           backForCardId={backFor?.id ?? null}
           backForSlug={backFor?.slug ?? null}
+          deckRemix={deckRemix}
           aiConfigured={isAIConfigured()}
           pipOverrides={await getPipOverrides(user.id)}
           verifiedFrameKeys={await getVerifiedFrameKeys()}

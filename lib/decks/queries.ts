@@ -395,6 +395,36 @@ export async function listDeckCards(deckId: string): Promise<DeckItem[]> {
   }
 }
 
+/** A single deck entry + its parent deck, only when the current user owns
+ *  the deck. Powers the /create?deckCard= remix deep-link. */
+export async function getMyDeckCardWithDeck(deckCardId: string): Promise<{
+  entry: DeckCardEntry;
+  deck: Deck;
+} | null> {
+  if (!isSupabaseConfigured()) return null;
+  const user = await getCurrentUser();
+  if (!user) return null;
+  try {
+    const supabase = await createClient();
+    const { data: entry } = await supabase
+      .from("deck_cards")
+      .select("*")
+      .eq("id", deckCardId)
+      .maybeSingle();
+    if (!entry) return null;
+    const { data: deck } = await supabase
+      .from("decks")
+      .select("*")
+      .eq("id", entry.deck_id)
+      .eq("owner_id", user.id)
+      .maybeSingle();
+    if (!deck) return null;
+    return { entry: narrowDeckCard(entry), deck: narrowDeck(deck) };
+  } catch {
+    return null;
+  }
+}
+
 /** Whether the current viewer has liked the given deck. */
 export async function viewerLikesDeck(deckId: string): Promise<boolean> {
   if (!isSupabaseConfigured()) return false;
