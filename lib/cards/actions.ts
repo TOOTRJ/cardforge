@@ -16,6 +16,7 @@ import {
   isSlugTakenForCurrentUser,
 } from "@/lib/cards/queries";
 import { bakeAndPersistCardRender } from "@/lib/cards/bake-render";
+import { addCustomCardEntryToDeck } from "@/lib/decks/membership";
 import { cardRenderPath } from "@/lib/cards/storage-paths";
 import { normalizeManaCost } from "@/lib/cards/mana-order";
 import {
@@ -391,6 +392,18 @@ export async function createCardAction(
   // denormalized on the row above).
   if (setIcon.primary_set_id) {
     await addCardToSetMembership(supabase, setIcon.primary_set_id, row.id);
+  }
+
+  // Drop the card into its chosen deck as a custom-only mainboard entry.
+  // Best-effort — a deck hiccup never rolls back the card save.
+  if (data.deck_id) {
+    await addCustomCardEntryToDeck(
+      supabase,
+      user.id,
+      data.deck_id,
+      row.id,
+      data.title,
+    );
   }
 
   const ownerUsername = await getOwnerUsername();

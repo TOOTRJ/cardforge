@@ -51,6 +51,7 @@ function baseValues(overrides: Partial<FormValues> = {}): FormValues {
     back_card_id: "",
     source_scryfall_id: "",
     primary_set_id: "",
+    deck_id: "",
     watermark: EMPTY_WATERMARK,
     ...overrides,
   };

@@ -60,6 +60,7 @@ import { LayoutPanel } from "@/components/creator/panels/layout-panel";
 import {
   PublishPanel,
   type CardSetOption,
+  type DeckOption,
 } from "@/components/creator/panels/publish-panel";
 import type { CardContext } from "@/lib/ai/schemas";
 import {
@@ -157,6 +158,9 @@ type CardCreatorFormProps = {
   card?: Card | null;
   /** The current user's sets — populates the "Add to set" picker on Publish. */
   mySets?: CardSetOption[];
+  /** The current user's decks — the Publish "Add to deck" picker. `null`
+   *  (the default) hides the picker; only /create passes a list. */
+  myDecks?: DeckOption[] | null;
   /** The current user's cards — the Publish "back face" picker. Excludes the
    *  card being edited (filtered by the page). */
   myCards?: Card[];
@@ -230,6 +234,7 @@ export function CardCreatorForm({
   templates,
   card,
   mySets = [],
+  myDecks = null,
   myCards = [],
   backForCardId = null,
   backForSlug = null,
@@ -1382,6 +1387,9 @@ export function CardCreatorForm({
       source_scryfall_id: values.source_scryfall_id.trim() || null,
       // Empty → null clears the association; a UUID adds the card to that set.
       primary_set_id: values.primary_set_id || null,
+      // Create-flow convenience: a UUID drops the saved card into that deck
+      // (custom-only mainboard entry). Ignored by updates.
+      deck_id: values.deck_id || null,
     };
 
     startTransition(async () => {
@@ -1860,6 +1868,7 @@ export function CardCreatorForm({
                 profileOverrides={profileOverrides}
                 activeChallenge={activeChallenge}
                 mySets={mySets}
+                myDecks={myDecks}
                 myCards={myCards}
                 onCreateBackFace={handleCreateBackFace}
               />

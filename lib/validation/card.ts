@@ -341,6 +341,10 @@ const baseCardSchema = z.object({
   // denormalizes that set's icon onto the card and creates set membership.
   // `null` clears the association; `undefined` leaves it untouched on update.
   primary_set_id: uuidSchema.nullable().optional(),
+  // A deck to drop this card into on create (a custom-only deck_cards entry,
+  // mainboard ×1). Create-flow convenience only — the action ignores it on
+  // update (deck membership is managed from the deck dashboard).
+  deck_id: uuidSchema.nullable().optional(),
   // Structured loyalty/saga content (migration 0050). `null` clears (card
   // reverts to rules_text parsing); `undefined` leaves alone on update.
   face_content: faceContentSchema.nullable().optional(),

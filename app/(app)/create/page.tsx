@@ -23,7 +23,7 @@ import {
   listMyCards,
 } from "@/lib/cards/queries";
 import { listMySets } from "@/lib/sets/queries";
-import { getMyDeckCardWithDeck } from "@/lib/decks/queries";
+import { getMyDeckCardWithDeck, listMyDecks } from "@/lib/decks/queries";
 import { isAIConfigured } from "@/lib/ai/card-assistant";
 import type { DeckRemixContext } from "@/types/deck";
 
@@ -67,7 +67,11 @@ export default async function CreatePage({
   const templates = gameSystem
     ? await getTemplatesForGameSystem(gameSystem.id)
     : [];
-  const [mySets, myCards] = await Promise.all([listMySets(), listMyCards()]);
+  const [mySets, myCards, myDecks] = await Promise.all([
+    listMySets(),
+    listMyCards(),
+    listMyDecks(),
+  ]);
 
   // /create?backFor=<cardId> — building a NEW card that becomes another owned
   // card's back face. Validate the target exists + is the user's before wiring
@@ -142,6 +146,11 @@ export default async function CreatePage({
           gameSystems={[gameSystem]}
           templates={templates}
           mySets={mySets}
+          myDecks={myDecks.map((deck) => ({
+            id: deck.id,
+            title: deck.title,
+            format: deck.format,
+          }))}
           myCards={myCards}
           backForCardId={backFor?.id ?? null}
           backForSlug={backFor?.slug ?? null}
