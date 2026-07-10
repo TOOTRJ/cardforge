@@ -8,11 +8,8 @@ import {
   logAiCall,
   refundAiCredits,
 } from "@/lib/ai/rate-limit";
-import {
-  generateRandomCard,
-  isOpenAiConfigured,
-  randomCardSchema,
-} from "@/lib/ai/random-card";
+import { generateRandomCard, randomCardSchema } from "@/lib/ai/random-card";
+import { isDesignAiConfigured } from "@/lib/ai/provider";
 import { generateRandomArt } from "@/lib/ai/random-art";
 
 // ---------------------------------------------------------------------------
@@ -48,12 +45,12 @@ export async function POST() {
     );
   }
 
-  if (!isOpenAiConfigured()) {
+  if (!isDesignAiConfigured()) {
     return NextResponse.json(
       {
         ok: false,
         error:
-          "AI random-card generator isn't configured on this deployment. Set OPENAI_API_KEY.",
+          "AI card generation isn't configured on this deployment. Set AI_GATEWAY_API_KEY, ANTHROPIC_API_KEY, or OPENAI_API_KEY.",
       },
       { status: 503 },
     );

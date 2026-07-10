@@ -2,14 +2,14 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { isOpenAiConfigured } from "@/lib/ai/random-card";
+import { isDesignAiConfigured } from "@/lib/ai/provider";
 import { checkAiRateLimit, logAiCall, spendCredits } from "@/lib/ai/rate-limit";
 import { requireTier, UpgradeRequiredError } from "@/lib/billing/entitlements";
 import {
-  DECK_CARD_CREDIT_COST,
-  clampDeckSize,
-  generateDeck,
-} from "@/lib/ai/deck-gen";
+  SET_CARD_CREDIT_COST,
+  clampSetSize,
+  generateSet,
+} from "@/lib/ai/set-gen";
 import { createSetAction } from "@/lib/sets/actions";
 import { createCardAction } from "@/lib/cards/actions";
 
@@ -25,10 +25,11 @@ import { createCardAction } from "@/lib/cards/actions";
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
-// Same bounds generateDeck/clampDeckSize enforce internally, but rejected at
+// Same bounds generateSet/clampSetSize enforce internally, but rejected at
 // the boundary with a 400 instead of silently truncated.
 const deckRequestSchema = z.object({
   theme: z.string().trim().max(300).optional(),
+  style: z.string().trim().max(200).optional(),
   size: z.coerce.number().optional(),
 });
 
@@ -48,7 +49,7 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!isOpenAiConfigured()) {
+  if (!isDesignAiConfigured()) {
     return NextResponse.json(
       {
         ok: false,
@@ -105,10 +106,11 @@ export async function POST(request: Request) {
     );
   }
   const theme = parsed.data.theme ?? "";
-  const size = clampDeckSize(parsed.data.size ?? 8);
+  const style = parsed.data.style;
+  const size = clampSetSize(parsed.data.size ?? 8);
 
   // Credit pre-check for the whole batch.
-  const cost = size * DECK_CARD_CREDIT_COST;
+  const cost = size * SET_CARD_CREDIT_COST;
   if (entitlements.credits < cost) {
     return NextResponse.json(
       {
@@ -141,7 +143,7 @@ export async function POST(request: Request) {
   // Generate the set (text).
   let deck;
   try {
-    deck = await generateDeck({ theme, size });
+    deck = await generateSet({ theme, style, size });
   } catch (error) {
     const detail = error instanceof Error ? error.message : "Generation failed.";
     return NextResponse.json(
@@ -201,10 +203,10 @@ export async function POST(request: Request) {
   const created = cardIds.length;
   let creditsRemaining: number | null = entitlements.credits - cost;
   if (created > 0) {
-    const spend = await spendCredits(created * DECK_CARD_CREDIT_COST, "generate_deck");
+    const spend = await spendCredits(created * SET_CARD_CREDIT_COST, "generate_deck");
     creditsRemaining = spend.ok && Number.isFinite(spend.balance)
       ? spend.balance
-      : entitlements.credits - created * DECK_CARD_CREDIT_COST;
+      : entitlements.credits - created * SET_CARD_CREDIT_COST;
   }
 
   return NextResponse.json(

@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { listMySets } from "@/lib/sets/queries";
 import { getEntitlements } from "@/lib/billing/entitlements";
-import { isOpenAiConfigured } from "@/lib/ai/random-card";
+import { isDesignAiConfigured } from "@/lib/ai/provider";
 import { AiDeckGenerator } from "@/components/sets/ai-deck-generator";
 import { isBillingEnabled } from "@/lib/billing/flags";
 
@@ -23,7 +23,7 @@ export default async function SetsPage() {
     listMySets(),
     getEntitlements(),
   ]);
-  const aiConfigured = isOpenAiConfigured();
+  const aiConfigured = isDesignAiConfigured();
 
   return (
     <DashboardShell>
