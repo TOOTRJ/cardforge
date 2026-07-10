@@ -1956,8 +1956,8 @@ export function CardCreatorForm({
 
           {/* Action bar — sticky across all tabs so saving never requires
               switching back to a "publishing" tab. */}
-          <div className="sticky bottom-0 -mx-6 -mb-6 flex flex-nowrap items-center justify-between gap-3 overflow-x-auto border-t border-border/50 bg-surface/95 px-6 py-4 backdrop-blur-sm">
-            <div className="flex min-w-0 flex-nowrap items-center gap-2 text-xs text-muted">
+          <div className="sticky bottom-0 -mx-6 -mb-6 flex flex-wrap items-center justify-between gap-3 border-t border-border/50 bg-surface/95 px-6 py-4 backdrop-blur-sm">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
               {/* Drafts (create + private) save silently — no chip. Published
                   cards still show their real save state. */}
               {!isDraft ? (
@@ -1989,13 +1989,13 @@ export function CardCreatorForm({
               ) : null}
               {remixSource ? <CardGlossary /> : null}
               {deckRemix && remixSource && !isDirty ? (
-                <span className="hidden truncate text-[11px] text-gold md:inline">
+                <span className="text-[11px] text-gold">
                   Exact copy so far — change something to save it as your
                   custom proxy.
                 </span>
               ) : null}
             </div>
-            <div className="flex flex-nowrap shrink-0 items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {/* Save draft — persists the card privately from any step. Shown
                   in create mode and while editing a still-private draft.
                   Grouped with the nav buttons so it shares their line. */}

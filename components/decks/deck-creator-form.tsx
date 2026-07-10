@@ -311,7 +311,7 @@ export function DeckCreatorForm({ mode, userId, deck }: DeckCreatorFormProps) {
           />
         </FieldGroup>
 
-        <div className="sticky bottom-0 -mx-6 -mb-6 flex flex-nowrap items-center justify-between gap-3 overflow-x-auto border-t border-border/50 bg-surface/95 px-6 py-4 backdrop-blur-sm">
+        <div className="sticky bottom-0 -mx-6 -mb-6 flex flex-wrap items-center justify-between gap-3 border-t border-border/50 bg-surface/95 px-6 py-4 backdrop-blur-sm">
           <div className="flex items-center gap-2 text-xs text-muted">
             {isDirty ? (
               <Badge variant="accent" className="gap-1.5">
@@ -321,7 +321,7 @@ export function DeckCreatorForm({ mode, userId, deck }: DeckCreatorFormProps) {
               <Badge>Up to date</Badge>
             )}
           </div>
-          <div className="flex flex-nowrap shrink-0 items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button asChild variant="ghost">
               <Link href="/dashboard/decks">
                 <ArrowLeft className="h-4 w-4" aria-hidden />
