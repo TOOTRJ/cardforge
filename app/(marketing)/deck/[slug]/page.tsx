@@ -12,6 +12,9 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { DeckAnalyticsPanel } from "@/components/decks/deck-analytics-panel";
 import { DeckCardList } from "@/components/decks/deck-card-list";
+import { DeckExportMenu } from "@/components/decks/deck-export-menu";
+import { deckToText } from "@/lib/decks/export-text";
+import { getEntitlements } from "@/lib/billing/entitlements";
 import { QuickLikeButton } from "@/components/cards/quick-like-button";
 import { ShareTargets } from "@/components/cards/share-targets";
 import {
@@ -217,6 +220,7 @@ export default async function DeckDetailPage({
         <DeckBody
           deckId={deck.id}
           deckSlug={deck.slug}
+          deckTitle={deck.title}
           format={deck.format}
           ownerUsername={deck.owner?.username ?? null}
           isOwner={isOwner}
@@ -229,12 +233,14 @@ export default async function DeckDetailPage({
 async function DeckBody({
   deckId,
   deckSlug,
+  deckTitle,
   format,
   ownerUsername,
   isOwner,
 }: {
   deckId: string;
   deckSlug: string;
+  deckTitle: string;
   format: DeckFormat;
   ownerUsername: string | null;
   isOwner: boolean;
@@ -245,6 +251,23 @@ async function DeckBody({
     format,
     items.map((i) => i.entry),
   );
+
+  // The export menu (owner-only) gets precomputed decklist text and the
+  // viewer's batch-export entitlement.
+  const exportMenu =
+    isOwner && items.length > 0 ? (
+      <DeckExportMenu
+        deckId={deckId}
+        deckSlug={deckSlug}
+        arenaText={deckToText({ title: deckTitle }, toExportEntries(items), {
+          style: "arena",
+        })}
+        plainText={deckToText({ title: deckTitle }, toExportEntries(items), {
+          style: "plain",
+        })}
+        allowBatchExport={(await getEntitlements()).allowBatchExport}
+      />
+    ) : null;
 
   return (
     <>
@@ -278,6 +301,7 @@ async function DeckBody({
           eyebrow="Cards"
           title={`${analytics.total} card${analytics.total === 1 ? "" : "s"}`}
           description="Click any card for details — remix originals into custom proxies, flip between versions, and track what's left."
+          actions={exportMenu}
         />
 
         <div className="mt-6">
@@ -309,6 +333,17 @@ async function DeckBody({
       </section>
     </>
   );
+}
+
+function toExportEntries(items: Awaited<ReturnType<typeof listDeckCards>>) {
+  return items.map(({ entry, card }) => ({
+    name: entry.name,
+    quantity: entry.quantity,
+    board: entry.board,
+    set_code: entry.set_code,
+    collector_number: entry.collector_number,
+    proxyTitle: card?.title ?? null,
+  }));
 }
 
 function DeckBodySkeleton() {
