@@ -52,9 +52,12 @@ export const deckCoverPositionSchema = z.object({
 
 export const deckFormatSchema = z.enum(DECK_FORMAT_VALUES).default("commander");
 
+// Decks default to public (like cards) — sharing the build is the point.
+// The DB column default stays 'private' as the conservative fallback for
+// writes that bypass this schema.
 export const deckVisibilitySchema = z
   .enum(VISIBILITY_VALUES)
-  .default("private");
+  .default("public");
 
 export const createDeckSchema = z.object({
   title: deckTitleSchema,
