@@ -378,9 +378,15 @@ branch; open the PR after the migration file is final, or close/reopen).
 Reminder: `.env.local` targets PROD; no local schema pokes, e2e needs the
 local stack.
 
-Delivered so far: PR 1 = #194 (`feat/decks-core`), PR 2 = #195
-(`feat/decks-public`, stacked on #194), PR 3 = #196 (`feat/decks-import`,
-stacked on #195; adds migration 0056 for the `deck_import` quota action).
+**Delivered (all merged 2026-07-09):** PR 1 = #194 (schema, migration 0055),
+PR 2 = #195 (public browse + deck page), PR 3 = #196 (import, migration
+0056), PR 4 = #197 (remix flow + wrong-collector-number resolution fix),
+PR 5 = #198 (creator add-to-deck + quick create), PR 6 = #199 (export/print
++ ZIP + text, jszip dep), PR 7 = #200 (stats surfaces + e2e).
+
+Deferred follow-ups: deck-like notifications (needs a notifications CHECK
+migration), feed events for new public decks, deck oEmbed, drag-and-drop
+reorder, AI whole-deck update.
 
 | PR | Scope | Key tests |
 |---|---|---|
