@@ -3,6 +3,7 @@ import "server-only";
 import { generateObject } from "ai";
 import { z } from "zod";
 import {
+  clampedText,
   designCards,
   type DesignedCard,
   type DesignReport,
@@ -45,19 +46,16 @@ export function clampSetSize(value: number): number {
   return Math.max(MIN_SET_SIZE, Math.min(MAX_SET_SIZE, Math.round(value)));
 }
 
+// Prose lengths are clamped, never hard-failed — see clampedText.
 const setConceptSchema = z
   .object({
-    set_title: z.string().min(1).max(80).describe("Original expansion name."),
-    set_description: z
-      .string()
-      .max(300)
-      .describe("One-sentence pitch for the set."),
-    world_blurb: z
-      .string()
-      .max(600)
-      .describe(
-        "A short paragraph describing the set's world: place names, factions, conflict, visual identity. Original names only.",
-      ),
+    set_title: clampedText(80).describe("Original expansion name."),
+    set_description: clampedText(300, 0).describe(
+      "One-sentence pitch for the set.",
+    ),
+    world_blurb: clampedText(600, 0).describe(
+      "A short paragraph (under 90 words) describing the set's world: place names, factions, conflict, visual identity. Original names only.",
+    ),
   })
   .strict();
 

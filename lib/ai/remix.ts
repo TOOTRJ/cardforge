@@ -4,6 +4,7 @@ import { generateObject } from "ai";
 import { z } from "zod";
 import type { Card } from "@/types/card";
 import { designModel } from "@/lib/ai/provider";
+import { clampedText } from "@/lib/ai/card-design";
 
 // ---------------------------------------------------------------------------
 // AI remix — a re-SKIN, never a redesign. The remix keeps the parent card's
@@ -13,27 +14,18 @@ import { designModel } from "@/lib/ai/provider";
 // like every other remix.
 // ---------------------------------------------------------------------------
 
+// Prose lengths are clamped, never hard-failed — see clampedText.
 export const remixIdentitySchema = z
   .object({
-    title: z
-      .string()
-      .min(1)
-      .max(80)
-      .describe(
-        "New ORIGINAL name that fits the new style while echoing the original card's identity.",
-      ),
-    flavor_text: z
-      .string()
-      .max(280)
+    title: clampedText(80).describe(
+      "New ORIGINAL name that fits the new style while echoing the original card's identity.",
+    ),
+    flavor_text: clampedText(280, 0)
       .nullable()
       .describe("New flavor text matching the style's tone. Null to omit."),
-    art_instruction: z
-      .string()
-      .min(20)
-      .max(600)
-      .describe(
-        "Instruction for an image model that re-renders the ORIGINAL artwork in the new style: what to keep (subject, pose, composition) and how the style changes rendering, palette, and mood.",
-      ),
+    art_instruction: clampedText(600).describe(
+      "Instruction (under 90 words) for an image model that re-renders the ORIGINAL artwork in the new style: what to keep (subject, pose, composition) and how the style changes rendering, palette, and mood.",
+    ),
   })
   .strict();
 

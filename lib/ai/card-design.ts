@@ -40,27 +40,37 @@ import {
 // Wizards-owned proper nouns forbidden.
 // ---------------------------------------------------------------------------
 
+/**
+ * Prose field that can never fail validation on length. Models cannot count
+ * characters, so a hard zod .max() on free text intermittently fails an
+ * otherwise-perfect generation (seen live: a 900-char world blurb vs a 600
+ * cap killed the whole set plan). Overlong text is trimmed instead; the
+ * .describe() guidance still keeps outputs near the target length.
+ */
+export function clampedText(max: number, min = 1) {
+  return z
+    .string()
+    .min(min)
+    .transform((value) => value.trim().slice(0, max));
+}
+
 export const designedCardSchema = z
   .object({
-    title: z
-      .string()
-      .min(1)
-      .max(80)
-      .describe("Original card name — never a published Magic card title."),
+    title: clampedText(80).describe(
+      "Original card name — never a published Magic card title.",
+    ),
     cost: z
       .string()
       .min(1)
       .max(40)
       .describe("Curly-brace mana cost (e.g. {2}{R}{R}). Use '—' for lands."),
     card_type: z.enum(CARD_TYPE_VALUES),
-    supertype: z
-      .string()
-      .max(64)
+    supertype: clampedText(64, 0)
       .nullable()
       .describe("Legendary/Basic/Snow etc. Null when none."),
     subtypes: z
-      .array(z.string().max(40))
-      .max(6)
+      .array(clampedText(40, 0))
+      .transform((values) => values.filter(Boolean).slice(0, 6))
       .describe("Subtypes like ['Dragon', 'Elder']. [] when none."),
     rarity: z.enum(RARITY_VALUES),
     color_identity: z
@@ -68,27 +78,19 @@ export const designedCardSchema = z
       .min(1)
       .max(6)
       .describe("Colors used by the mana cost and rules text."),
-    rules_text: z
-      .string()
-      .min(1)
-      .max(800)
-      .describe("Templated rules text. Reminder text in (parentheses)."),
-    flavor_text: z
-      .string()
-      .max(280)
+    rules_text: clampedText(800).describe(
+      "Templated rules text. Reminder text in (parentheses).",
+    ),
+    flavor_text: clampedText(280, 0)
       .nullable()
       .describe("Short italic flavor. Null when omitted."),
-    power: z.string().max(8).nullable(),
-    toughness: z.string().max(8).nullable(),
-    loyalty: z.string().max(8).nullable(),
-    defense: z.string().max(8).nullable(),
-    art_prompt: z
-      .string()
-      .min(40)
-      .max(600)
-      .describe(
-        "Vivid 60-100 word illustration prompt for this card: subject, action, environment, lighting, palette. NO frame, NO text.",
-      ),
+    power: clampedText(8, 0).nullable(),
+    toughness: clampedText(8, 0).nullable(),
+    loyalty: clampedText(8, 0).nullable(),
+    defense: clampedText(8, 0).nullable(),
+    art_prompt: clampedText(600).describe(
+      "Vivid 60-100 word illustration prompt for this card: subject, action, environment, lighting, palette. NO frame, NO text.",
+    ),
   })
   .strict();
 
