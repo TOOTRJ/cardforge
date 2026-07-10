@@ -3,6 +3,7 @@ import "server-only";
 import { generateObject } from "ai";
 import { z } from "zod";
 import {
+  clampedText,
   designCards,
   type DesignedCard,
   type DesignSlot,
@@ -24,19 +25,16 @@ import type { ColorIdentity } from "@/types/card";
 export const AI_DECK_FORMATS = ["commander", "standard", "limited"] as const;
 export type AiDeckFormat = (typeof AI_DECK_FORMATS)[number];
 
+// Prose lengths are clamped, never hard-failed — see clampedText.
 const deckConceptSchema = z
   .object({
-    deck_title: z.string().min(1).max(80).describe("Original deck name."),
-    deck_description: z
-      .string()
-      .max(300)
-      .describe("One-sentence pitch: what the deck does and how it wins."),
-    strategy: z
-      .string()
-      .max(600)
-      .describe(
-        "A short strategy paragraph card designers build from: game plan, key mechanics, recurring faction/world names. Original names only.",
-      ),
+    deck_title: clampedText(80).describe("Original deck name."),
+    deck_description: clampedText(300, 0).describe(
+      "One-sentence pitch: what the deck does and how it wins.",
+    ),
+    strategy: clampedText(600, 0).describe(
+      "A short strategy paragraph (under 90 words) card designers build from: game plan, key mechanics, recurring faction/world names. Original names only.",
+    ),
     colors: z
       .array(z.enum(["white", "blue", "black", "red", "green"]))
       .min(1)
