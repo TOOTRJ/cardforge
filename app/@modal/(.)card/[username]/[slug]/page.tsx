@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { CardDetailContent } from "@/components/cards/card-detail-content";
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
 import { CardDetailSkeleton } from "@/components/cards/card-detail-skeleton";
+import { HardNavigate } from "./hard-navigate";
 
 // ---------------------------------------------------------------------------
 // Intercepted card detail — renders the public card view inside a dialog.
@@ -28,11 +29,21 @@ async function InterceptedCardContent({
   return <CardDetailContent username={username} slug={slug} variant="modal" />;
 }
 
-export default function InterceptedCardPage({
+export default async function InterceptedCardPage({
   params,
 }: {
   params: Promise<Params>;
 }) {
+  // /card/[slug]/edit matches this interceptor too (the trailing "edit"
+  // lands in the [slug] position), so a soft navigation to any edit link —
+  // dashboard tiles, post-save redirects — silently opened a broken modal
+  // over the current page instead of the editor. Hand those URLs back to
+  // the real route via a hard navigation.
+  const { slug } = await params;
+  if (slug === "edit") {
+    return <HardNavigate />;
+  }
+
   return (
     <CardDetailModal>
       <Suspense fallback={<CardDetailSkeleton />}>
