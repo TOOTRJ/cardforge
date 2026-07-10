@@ -20,8 +20,11 @@ type DeleteCardDialogProps = {
   cardId: string;
   cardTitle: string;
   redirectTo?: string;
-  triggerLabel?: string;
+  /** Trigger text; pass null for an icon-only trigger (keeps an
+   *  aria-label + hover title so it stays discoverable). */
+  triggerLabel?: string | null;
   triggerVariant?: "ghost" | "outline" | "secondary";
+  triggerSize?: "sm" | "md";
 };
 
 export function DeleteCardDialog({
@@ -30,6 +33,7 @@ export function DeleteCardDialog({
   redirectTo = "/dashboard",
   triggerLabel = "Delete card",
   triggerVariant = "outline",
+  triggerSize = "md",
 }: DeleteCardDialogProps) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -52,7 +56,13 @@ export function DeleteCardDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button type="button" variant={triggerVariant}>
+        <Button
+          type="button"
+          variant={triggerVariant}
+          size={triggerSize}
+          aria-label={triggerLabel ?? "Delete card"}
+          title={triggerLabel === null ? "Delete card" : undefined}
+        >
           <Trash2 className="h-4 w-4" aria-hidden />
           {triggerLabel}
         </Button>
