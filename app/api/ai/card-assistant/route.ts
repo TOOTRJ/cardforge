@@ -44,7 +44,7 @@ export async function POST(request: Request) {
       {
         ok: false,
         error:
-          "AI assistant isn't configured on this deployment. Set ANTHROPIC_API_KEY.",
+          "AI assistant isn't configured on this deployment. Set ANTHROPIC_API_KEY or AI_GATEWAY_API_KEY.",
       },
       { status: 503 },
     );

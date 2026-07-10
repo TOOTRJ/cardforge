@@ -1,7 +1,6 @@
 import "server-only";
 
 import { streamObject } from "ai";
-import { anthropic } from "@ai-sdk/anthropic";
 import type { DeepPartial } from "ai";
 import {
   cardAssistantRequestSchema,
@@ -21,14 +20,24 @@ import {
 // Configuration
 // ---------------------------------------------------------------------------
 
-const DEFAULT_MODEL = "claude-haiku-4-5";
+const DEFAULT_MODEL = "anthropic/claude-haiku-4.5";
 
 function modelId(): string {
-  return process.env.AI_CARD_MODEL?.trim() || DEFAULT_MODEL;
+  const override = process.env.AI_CARD_MODEL?.trim();
+  if (!override) return DEFAULT_MODEL;
+
+  // If already in "provider/model" format, use as-is
+  if (override.includes("/")) return override;
+
+  // Bare model id - prefix with anthropic (this assistant is anthropic-focused)
+  return `anthropic/${override}`;
 }
 
 export function isAIConfigured(): boolean {
-  return Boolean(process.env.ANTHROPIC_API_KEY?.trim());
+  return Boolean(
+    process.env.ANTHROPIC_API_KEY?.trim() ||
+      process.env.AI_GATEWAY_API_KEY?.trim(),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -217,14 +226,14 @@ export function streamCardAssistantResponse(rawRequest: unknown): Response {
 
   if (!isAIConfigured()) {
     return ndjsonError(
-      "AI assistant isn't configured. Set ANTHROPIC_API_KEY in your environment.",
+      "AI assistant isn't configured. Set ANTHROPIC_API_KEY or AI_GATEWAY_API_KEY in your environment.",
       503,
     );
   }
 
   const request = parsed.data;
   const prompt = actionPrompt(request);
-  const model = anthropic(modelId());
+  const model = modelId();
 
   // Branch by action so each `streamObject` call gets its narrow schema.
   // The result is fed into the shared NDJSON encoder.
