@@ -50,6 +50,66 @@ export type RandomArtResult =
   | { ok: true; publicUrl: string; promptSent: string; revisedPrompt?: string }
   | { ok: false; error: string };
 
+export type PersistArtResult =
+  | { ok: true; publicUrl: string }
+  | { ok: false; error: string };
+
+/**
+ * Upload generated image bytes to the signed-in user's `card-art` folder and
+ * run the NSFW scan. Shared by every AI art flow (random card, remix, sets).
+ * The path layout matches the human-upload flow so the bucket's RLS write
+ * policy (`auth.uid()::text = (storage.foldername(name))[1]`) accepts it.
+ */
+export async function persistGeneratedArt(
+  bytes: Uint8Array,
+  contentType: string,
+): Promise<PersistArtResult> {
+  if (!isSupabaseConfigured()) {
+    return { ok: false, error: "Supabase isn't configured." };
+  }
+  const user = await getCurrentUser();
+  if (!user) {
+    return { ok: false, error: "Sign in to generate AI artwork." };
+  }
+  if (!contentType.startsWith("image/")) {
+    return { ok: false, error: "Generated asset wasn't an image." };
+  }
+
+  const id =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  const path = `${user.id}/ai-${id}.png`;
+
+  const supabase = await createClient();
+  const { error: uploadError } = await supabase.storage
+    .from("card-art")
+    .upload(path, bytes, {
+      cacheControl: "3600",
+      contentType: "image/png",
+      upsert: false,
+    });
+  if (uploadError) {
+    return { ok: false, error: uploadError.message };
+  }
+
+  const { data } = supabase.storage.from("card-art").getPublicUrl(path);
+
+  // NSFW auto-scan (fails open). Provider models are already filtered
+  // upstream, but this catches edge cases; a flag removes the object.
+  const scan = await scanImageUrl(data.publicUrl);
+  if (scan.flagged) {
+    await supabase.storage.from("card-art").remove([path]);
+    return {
+      ok: false,
+      error:
+        "The generated art was flagged by our content filter. Try generating again.",
+    };
+  }
+
+  return { ok: true, publicUrl: data.publicUrl };
+}
+
 /**
  * Generate a gpt-image-1 image for the given prompt and upload to the user's
  * card-art bucket folder. Requires a signed-in user (uploads via their
@@ -133,48 +193,15 @@ export async function generateRandomArt(rawPrompt: string): Promise<RandomArtRes
     return { ok: false, error: "Could not retrieve the generated image." };
   }
 
-  // Defensive: only accept image responses.
-  if (!contentType.startsWith("image/")) {
-    return { ok: false, error: "Generated asset wasn't an image." };
-  }
-
-  // ---- Upload to Supabase Storage ----
-  // Path layout matches the human-upload flow so the bucket's RLS write
-  // policy (`auth.uid()::text = (storage.foldername(name))[1]`) accepts it.
-  const id =
-    typeof crypto !== "undefined" && "randomUUID" in crypto
-      ? crypto.randomUUID()
-      : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-  const path = `${user.id}/ai-${id}.png`;
-
-  const supabase = await createClient();
-  const { error: uploadError } = await supabase.storage
-    .from("card-art")
-    .upload(path, pngBytes, {
-      cacheControl: "3600",
-      contentType: "image/png",
-      upsert: false,
-    });
-  if (uploadError) {
-    return { ok: false, error: uploadError.message };
-  }
-
-  const { data } = supabase.storage.from("card-art").getPublicUrl(path);
-
-  // NSFW auto-scan (fails open). gpt-image-1 is already filtered upstream, but
-  // this catches edge cases; a flag removes the object and asks for a re-roll.
-  const scan = await scanImageUrl(data.publicUrl);
-  if (scan.flagged) {
-    await supabase.storage.from("card-art").remove([path]);
-    return {
-      ok: false,
-      error: "The generated art was flagged by our content filter. Try generating again.",
-    };
+  // ---- Upload + moderation (shared path) ----
+  const persisted = await persistGeneratedArt(pngBytes, contentType);
+  if (!persisted.ok) {
+    return { ok: false, error: persisted.error };
   }
 
   return {
     ok: true,
-    publicUrl: data.publicUrl,
+    publicUrl: persisted.publicUrl,
     promptSent: prompt,
     revisedPrompt,
   };
