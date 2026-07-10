@@ -75,18 +75,26 @@ export async function persistGeneratedArt(
     return { ok: false, error: "Generated asset wasn't an image." };
   }
 
+  // Store the bytes under their REAL type — FLUX returns JPEG, Gemini and
+  // gpt-image return PNG. Serving jpeg bytes as image/png happens to render
+  // (browsers sniff), but the stored mime should not lie.
+  const extension =
+    { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" }[
+      contentType.split(";")[0].trim()
+    ] ?? "png";
+
   const id =
     typeof crypto !== "undefined" && "randomUUID" in crypto
       ? crypto.randomUUID()
       : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-  const path = `${user.id}/ai-${id}.png`;
+  const path = `${user.id}/ai-${id}.${extension}`;
 
   const supabase = await createClient();
   const { error: uploadError } = await supabase.storage
     .from("card-art")
     .upload(path, bytes, {
       cacheControl: "3600",
-      contentType: "image/png",
+      contentType: contentType.split(";")[0].trim(),
       upsert: false,
     });
   if (uploadError) {
