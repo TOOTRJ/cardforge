@@ -378,6 +378,10 @@ branch; open the PR after the migration file is final, or close/reopen).
 Reminder: `.env.local` targets PROD; no local schema pokes, e2e needs the
 local stack.
 
+Delivered so far: PR 1 = #194 (`feat/decks-core`), PR 2 = #195
+(`feat/decks-public`, stacked on #194), PR 3 = #196 (`feat/decks-import`,
+stacked on #195; adds migration 0056 for the `deck_import` quota action).
+
 | PR | Scope | Key tests |
 |---|---|---|
 | **1. `feat(decks): schema + core CRUD`** | Migration 0055 (decks, deck_cards, deck_likes, triggers, RPC), regenerated types, `types/deck.ts`, `lib/validation/deck.ts`, `lib/decks/{queries,actions}.ts`, `/dashboard/decks` (grid + new + edit meta + delete), dashboardNav/mobile entries, "AI set generator" copy rename | validation unit tests, action happy/error paths |

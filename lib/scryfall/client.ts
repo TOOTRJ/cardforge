@@ -66,13 +66,19 @@ function userAgent(): string {
 const MAX_RETRIES = 2;
 const MAX_RETRY_WAIT_MS = 4_000;
 
-async function scryfallFetch(path: string): Promise<Response> {
+async function scryfallFetch(
+  path: string,
+  init?: { method?: "POST"; body?: string },
+): Promise<Response> {
   for (let attempt = 0; ; attempt += 1) {
     await throttle(minGapFor(path));
     const response = await fetch(`${BASE_URL}${path}`, {
+      method: init?.method ?? "GET",
+      body: init?.body,
       headers: {
         Accept: "application/json",
         "User-Agent": userAgent(),
+        ...(init?.body ? { "Content-Type": "application/json" } : {}),
       },
       // Don't cache server-side — this is dynamic search content, and the
       // freshness signal we want comes from the user typing, not the CDN.
@@ -146,6 +152,10 @@ export const scryfallCardSchema = z
     // map onto our skin templates.
     frame_effects: z.array(z.string()).optional().nullable(),
     mana_cost: z.string().optional().nullable(),
+    // Converted mana cost / mana value — denormalized onto deck entries.
+    cmc: z.number().optional().nullable(),
+    // Printing-specific collector number (a string: "237a", "XLN-117", "★").
+    collector_number: z.string().optional().nullable(),
     type_line: z.string().optional().nullable(),
     oracle_text: z.string().optional().nullable(),
     flavor_text: z.string().optional().nullable(),
@@ -319,6 +329,59 @@ export async function getCardByName(
   try {
     const body: unknown = await response.json();
     return scryfallCardSchema.parse(body);
+  } catch {
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Batch collection lookup — the decklist importer's workhorse.
+// ---------------------------------------------------------------------------
+
+/** Identifier schemas accepted by POST /cards/collection (mixable). */
+export type ScryfallCollectionIdentifier =
+  | { name: string }
+  | { name: string; set: string }
+  | { set: string; collector_number: string }
+  | { id: string };
+
+const scryfallCollectionResponseSchema = z.object({
+  object: z.literal("list"),
+  not_found: z.array(z.record(z.string(), z.unknown())).default([]),
+  data: z.array(scryfallCardSchema),
+});
+
+export type ScryfallCollectionResult = {
+  cards: ScryfallCard[];
+  /** The identifier objects Scryfall couldn't resolve, echoed back verbatim.
+   *  Cards come back in request order but misses are silently dropped from
+   *  `data` — reconcile by matching these, never by array position. */
+  notFound: Array<Record<string, unknown>>;
+};
+
+/** Scryfall's documented per-request identifier cap. */
+export const SCRYFALL_COLLECTION_MAX = 75;
+
+/**
+ * Batch-resolve up to 75 identifiers via POST /cards/collection. Returns
+ * null on any transport/parse error (the caller decides how to degrade);
+ * unresolved identifiers come back in `notFound`, not as an error.
+ */
+export async function getCardCollection(
+  identifiers: ScryfallCollectionIdentifier[],
+): Promise<ScryfallCollectionResult | null> {
+  if (identifiers.length === 0) return { cards: [], notFound: [] };
+  if (identifiers.length > SCRYFALL_COLLECTION_MAX) return null;
+
+  const response = await scryfallFetch("/cards/collection", {
+    method: "POST",
+    body: JSON.stringify({ identifiers }),
+  });
+  if (!response.ok) return null;
+  try {
+    const body: unknown = await response.json();
+    const parsed = scryfallCollectionResponseSchema.parse(body);
+    return { cards: parsed.data, notFound: parsed.not_found };
   } catch {
     return null;
   }
