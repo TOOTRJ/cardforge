@@ -156,13 +156,23 @@ export function DashboardCardTile({
         {!selectMode ? (
           <div
             className={cn(
+              // The overlay itself never intercepts the pointer — hit
+              // testing passes through to CardHoverEffect so the gallery
+              // tilt + glare keep tracking while the buttons are up. The
+              // scrim fades the card so the actions stand out; only the
+              // buttons themselves become clickable, and only once
+              // revealed (invisible links must not swallow clicks).
               "pointer-events-none absolute inset-0 z-30 flex items-center justify-center gap-2 rounded-frame",
+              "bg-background/55",
               "opacity-0 transition-opacity duration-150",
-              "group-hover/tile:pointer-events-auto group-hover/tile:opacity-100",
-              "group-focus-within/tile:pointer-events-auto group-focus-within/tile:opacity-100",
+              "group-hover/tile:opacity-100 group-focus-within/tile:opacity-100",
             )}
           >
-            <Button asChild size="sm" className="shadow-lg">
+            <Button
+              asChild
+              size="sm"
+              className="pointer-events-none shadow-lg group-hover/tile:pointer-events-auto group-focus-within/tile:pointer-events-auto"
+            >
               <Link href={editHref} aria-label={`Edit ${card.title}`}>
                 <Pencil className="h-3.5 w-3.5" aria-hidden />
                 Edit
@@ -172,7 +182,7 @@ export function DashboardCardTile({
               asChild
               size="sm"
               variant="secondary"
-              className="shadow-lg"
+              className="pointer-events-none shadow-lg group-hover/tile:pointer-events-auto group-focus-within/tile:pointer-events-auto"
             >
               <Link href={viewHref} aria-label={`View ${card.title}`}>
                 <Eye className="h-3.5 w-3.5" aria-hidden />
