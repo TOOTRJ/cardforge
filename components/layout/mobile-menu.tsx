@@ -166,6 +166,12 @@ export function MobileMenu({
                   onNav={() => setOpen(false)}
                   active={isActive(pathname, "/dashboard/sets")}
                 />
+                <DrawerLink
+                  href="/dashboard/decks"
+                  label="My Decks"
+                  onNav={() => setOpen(false)}
+                  active={isActive(pathname, "/dashboard/decks")}
+                />
                 {username ? (
                   <DrawerLink
                     href={`/profile/${username}`}
