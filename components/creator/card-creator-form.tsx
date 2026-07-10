@@ -37,6 +37,10 @@ import { ShareTargets } from "@/components/cards/share-targets";
 import { DeleteCardDialog } from "@/components/creator/delete-card-dialog";
 import { CardGlossary } from "@/components/creator/card-glossary";
 import { StartOverDialog } from "@/components/creator/start-over-dialog";
+import {
+  AiGenerateDialog,
+  type AiGenerateOptions,
+} from "@/components/creator/ai-generate-dialog";
 import type { CardFieldPatch } from "@/components/creator/ai-assistant-panel";
 import {
   ScryfallImportDialog,
@@ -268,7 +272,8 @@ export function CardCreatorForm({
   // Stable handle to the latest step-navigation fn, so the once-registered
   // custom-event listeners (hero / command palette) always call current logic.
   const goToStepKeyRef = useRef<(key: StepKey) => void>(() => {});
-  const handleRandomCardRef = useRef<() => Promise<void>>(async () => {});
+  // "Generate with AI" options dialog (hero tile + command palette open it).
+  const [aiGenerateOpen, setAiGenerateOpen] = useState(false);
   // Tracks the source card when the user seeds the form from Scryfall.
   // Surfaces as a chip near the save bar so the user remembers they need
   // to make the card their own before publishing.
@@ -310,7 +315,7 @@ export function CardCreatorForm({
     if (typeof window === "undefined") return;
     const openScryfall = () => setScryfallOpen(true);
     const generateRandom = () => {
-      void handleRandomCardRef.current();
+      setAiGenerateOpen(true);
     };
     const openAiConcept = () => {
       // The AI assistant panel lives on the Text panel. Jump there, then defer
@@ -1106,17 +1111,19 @@ export function CardCreatorForm({
   // optional — the model occasionally trips gpt-image-1's safety filter even on
   // benign prompts; we surface a soft toast in that case and leave the
   // existing art_url alone so the user can upload their own.
-  const handleRandomCard = async () => {
+  const handleRandomCard = async (
+    options: AiGenerateOptions = {},
+  ): Promise<boolean> => {
     if (!userId) {
       toast.error("Sign in to use the AI random card generator.");
-      return;
+      return false;
     }
     setGeneratingRandom(true);
     try {
       const response = await fetch("/api/ai/random-card", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
+        body: JSON.stringify(options),
       });
       const payload = await response.json().catch(() => null);
       if (!response.ok || !payload?.ok) {
@@ -1130,7 +1137,7 @@ export function CardCreatorForm({
             payload?.error ?? "Random card generation failed. Try again.",
           );
         }
-        return;
+        return false;
       }
       const card = payload.card as {
         title: string;
@@ -1148,9 +1155,16 @@ export function CardCreatorForm({
         defense?: string;
       };
 
-      // Kind first (card_type + frame in one pass) — keeps the generated
-      // card's frame in the user's chosen era when it has the type.
-      applyKindProgrammatic(kindFromCard(card.card_type, undefined));
+      // Kind first (card_type + frame in one pass). When the server resolved
+      // a frame (user-picked or randomized against the published gate), apply
+      // it directly; otherwise keep the user's era default for the type.
+      const frameTemplate =
+        (payload.frame?.template as FrameTemplate | undefined) ?? null;
+      if (frameTemplate) {
+        applyKindPatch({ card_type: card.card_type, template: frameTemplate });
+      } else {
+        applyKindProgrammatic(kindFromCard(card.card_type, undefined));
+      }
       setValue("title", card.title, { shouldDirty: true });
       setValue("cost", card.cost, { shouldDirty: true });
       setValue("supertype", card.supertype ?? "", { shouldDirty: true });
@@ -1197,19 +1211,16 @@ export function CardCreatorForm({
         toast.message("Random card forged", { description: detail });
       }
       // Pop the user back to Identity so they see the new card.
+      setAiGenerateOpen(false);
       goToStepKey("identity");
+      return true;
     } catch {
       toast.error("Network error while generating a random card.");
+      return false;
     } finally {
       setGeneratingRandom(false);
     }
   };
-
-  // Keep the hero-listener handle pointed at the latest closure (the
-  // listener is registered once with a stable ref, same as goToStepKeyRef).
-  useEffect(() => {
-    handleRandomCardRef.current = handleRandomCard;
-  });
 
   // ---- Start over ----
   // Wipe the form back to a blank card (create/draft mode only). Drops the
@@ -1920,6 +1931,18 @@ export function CardCreatorForm({
             onImport={handleScryfallImport}
             open={scryfallOpen}
             onOpenChange={setScryfallOpen}
+          />
+
+          {/* "Generate with AI" options — theme/style/type/frame/rarity.
+              Opened by the start-with hero tile (and the palette event);
+              stays open with a spinner during generation and closes itself
+              on success. */}
+          <AiGenerateDialog
+            open={aiGenerateOpen}
+            onOpenChange={setAiGenerateOpen}
+            verifiedFrameKeys={verifiedFrameKeys}
+            generating={generatingRandom}
+            onGenerate={(options) => void handleRandomCard(options)}
           />
 
           {/* Kind-change confirmation — only when the current era can't frame
