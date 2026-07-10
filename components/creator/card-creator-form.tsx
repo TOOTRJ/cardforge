@@ -2030,16 +2030,11 @@ export function CardCreatorForm({
               ) : null}
               {/* Main controls, in fixed order: Cancel · Save · Back · Next
                   · Delete. */}
+              {/* Cancel is edit-only — create mode has Start over, and a
+                  bail-out just means navigating away. */}
               {mode === "edit" && card ? (
                 <Button asChild variant="ghost" size="sm">
                   <Link href={`/go/card/${card.id}`}>Cancel</Link>
-                </Button>
-              ) : mode === "create" && idx === 0 ? (
-                <Button asChild variant="ghost" size="sm">
-                  <Link href="/dashboard">
-                    <ArrowLeft className="h-4 w-4" aria-hidden />
-                    Cancel
-                  </Link>
                 </Button>
               ) : null}
               {!userId ? (
