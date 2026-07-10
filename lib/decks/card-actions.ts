@@ -47,11 +47,27 @@ async function getOwnedEntry(
   return { ok: true, entry, deckSlug: deck.slug };
 }
 
-function revalidateDeckCardPaths(deckSlug: string) {
+async function revalidateDeckCardPaths(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  deckSlug: string,
+) {
   revalidatePath(`/deck/${deckSlug}`);
   revalidatePath(`/deck/${deckSlug}/edit`);
   revalidatePath("/dashboard/decks");
   revalidatePath("/decks");
+  // The profile's "Decks by X" tiles show card counts + proxy % — entry
+  // mutations change those numbers too.
+  try {
+    const { data } = await supabase
+      .from("profiles")
+      .select("username")
+      .eq("id", userId)
+      .maybeSingle();
+    if (data?.username) revalidatePath(`/profile/${data.username}`);
+  } catch {
+    // best-effort — ISR catches up on its own
+  }
 }
 
 const updateDeckCardSchema = z
@@ -93,7 +109,7 @@ export async function updateDeckCardAction(
     .eq("id", deckCardId);
   if (error) return { ok: false, error: error.message };
 
-  revalidateDeckCardPaths(owned.deckSlug);
+  await revalidateDeckCardPaths(supabase, user.id, owned.deckSlug);
   return { ok: true, deckCardId };
 }
 
@@ -119,7 +135,7 @@ export async function removeDeckCardAction(
     .eq("id", deckCardId);
   if (error) return { ok: false, error: error.message };
 
-  revalidateDeckCardPaths(owned.deckSlug);
+  await revalidateDeckCardPaths(supabase, user.id, owned.deckSlug);
   return { ok: true, deckCardId };
 }
 
@@ -161,7 +177,7 @@ export async function linkDeckCardAction(
     .eq("id", deckCardId);
   if (error) return { ok: false, error: error.message };
 
-  revalidateDeckCardPaths(owned.deckSlug);
+  await revalidateDeckCardPaths(supabase, user.id, owned.deckSlug);
   return { ok: true, deckCardId };
 }
 
@@ -187,7 +203,7 @@ export async function unlinkDeckCardAction(
     .eq("id", deckCardId);
   if (error) return { ok: false, error: error.message };
 
-  revalidateDeckCardPaths(owned.deckSlug);
+  await revalidateDeckCardPaths(supabase, user.id, owned.deckSlug);
   return { ok: true, deckCardId };
 }
 

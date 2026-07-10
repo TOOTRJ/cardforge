@@ -5,6 +5,7 @@ import { after } from "next/server";
 import {
   ArrowLeft,
   ArrowUpRight,
+  BookOpen,
   CalendarDays,
   Clock,
   ExternalLink,
@@ -54,6 +55,7 @@ import {
   type CardWithStats,
   type ProfileWithStats,
 } from "@/lib/cards/queries";
+import { countDecksForCard } from "@/lib/decks/queries";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { countPublicRemixesBySource } from "@/lib/cards/source-queries";
@@ -131,6 +133,7 @@ export async function CardDetailContent({
     viewerFollows,
     remixCount,
     setCount,
+    deckCount,
     topRemixes,
     remixParent,
     overallRank,
@@ -169,6 +172,7 @@ export async function CardDetailContent({
     // Analytics: remix + set membership counts, and the top-liked remixes.
     countRemixesOfCard(card.id),
     countSetsForCard(card.id),
+    countDecksForCard(card.id),
     listTopRemixesOfCard(card.id, 4),
     // Provenance: the original card this was remixed from (if any).
     card.parent_card_id
@@ -451,6 +455,7 @@ export async function CardDetailContent({
           likes={likesCount}
           remixes={remixCount}
           sets={setCount}
+          decks={deckCount}
           comments={comments.length}
           createdAt={card.created_at}
           updatedAt={card.updated_at}
@@ -601,6 +606,7 @@ function CardAnalytics({
   likes,
   remixes,
   sets,
+  decks,
   comments,
   createdAt,
   updatedAt,
@@ -614,6 +620,7 @@ function CardAnalytics({
   likes: number;
   remixes: number;
   sets: number;
+  decks: number;
   comments: number;
   createdAt: string;
   updatedAt: string;
@@ -642,6 +649,7 @@ function CardAnalytics({
     { icon: Heart, label: "Likes", value: likes },
     { icon: Repeat2, label: "Remixes", value: remixes },
     { icon: Layers, label: sets === 1 ? "Set" : "Sets", value: sets },
+    { icon: BookOpen, label: decks === 1 ? "Deck" : "Decks", value: decks },
     { icon: MessageCircle, label: "Comments", value: comments },
   ];
   // "Trending" needs real momentum this week — freshness alone (a brand-new

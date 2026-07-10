@@ -60,6 +60,17 @@ export async function addCustomCardEntryToDeck(
   revalidatePath(`/deck/${deck.slug}`);
   revalidatePath(`/deck/${deck.slug}/edit`);
   revalidatePath("/dashboard/decks");
+  // Profile "Decks by X" tiles show card counts — membership changes them.
+  try {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("username")
+      .eq("id", userId)
+      .maybeSingle();
+    if (profile?.username) revalidatePath(`/profile/${profile.username}`);
+  } catch {
+    // best-effort
+  }
 
   return { ok: true, deckSlug: deck.slug };
 }

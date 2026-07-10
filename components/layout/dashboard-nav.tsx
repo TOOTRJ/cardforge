@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   Activity,
   Bell,
+  BookOpen,
   Frame,
   Inbox,
   LayoutDashboard,
@@ -26,6 +27,7 @@ const NAV_ICONS: Record<string, LucideIcon> = {
   "/dashboard": LayoutDashboard,
   "/feed": Rss,
   "/dashboard/sets": Layers,
+  "/dashboard/decks": BookOpen,
   "/notifications": Bell,
   "/feedback": MessageSquarePlus,
   "/settings": Settings,

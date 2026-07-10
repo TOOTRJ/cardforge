@@ -389,6 +389,17 @@ export async function commitDeckImportAction(
   revalidatePath(`/deck/${deck.slug}/edit`);
   revalidatePath("/dashboard/decks");
   revalidatePath("/decks");
+  // Profile "Decks by X" tiles show card counts — imports change them.
+  try {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("username")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (profile?.username) revalidatePath(`/profile/${profile.username}`);
+  } catch {
+    // best-effort
+  }
 
   return {
     ok: true,

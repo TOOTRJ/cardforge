@@ -61,7 +61,7 @@ export default async function EditDeckPage({ params }: EditDeckPageProps) {
       <PageHeader
         eyebrow="Editing deck"
         title={deck.title}
-        description={`Slug: /deck/${deck.slug}`}
+        description="Update the deck's details, import a decklist, or manage visibility."
         actions={
           <>
             <Badge

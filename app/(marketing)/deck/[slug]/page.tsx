@@ -29,7 +29,11 @@ import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getSiteBaseUrl } from "@/lib/site-url";
 import { breadcrumbJsonLd, JsonLd } from "@/components/seo/json-ld";
-import { DECK_FORMAT_LABELS, type DeckFormat } from "@/types/deck";
+import {
+  DECK_FORMAT_LABELS,
+  coverObjectPosition,
+  type DeckFormat,
+} from "@/types/deck";
 
 type Params = { slug: string };
 
@@ -155,6 +159,9 @@ export default async function DeckDetailPage({
               src={deck.cover_url}
               alt={`${deck.title} cover`}
               className="h-full w-full object-cover"
+              style={{
+                objectPosition: coverObjectPosition(deck.cover_position),
+              }}
             />
           </div>
         ) : null}

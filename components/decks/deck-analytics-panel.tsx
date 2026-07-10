@@ -41,7 +41,11 @@ export function DeckAnalyticsPanel({ analytics }: DeckAnalyticsPanelProps) {
           Deck size
         </span>
         <span className="font-display text-3xl font-semibold tracking-tight text-foreground">
-          {analytics.total - analytics.byBoard.side}
+          {/* Companions live outside the deck proper — match the number the
+              format checker validates against. */}
+          {analytics.total -
+            analytics.byBoard.side -
+            analytics.byBoard.companion}
         </span>
         <span className="text-xs text-muted">
           {analytics.byBoard.side > 0
@@ -52,7 +56,7 @@ export function DeckAnalyticsPanel({ analytics }: DeckAnalyticsPanelProps) {
 
       <SurfaceCard className="flex flex-col gap-2 p-5">
         <span className="text-xs font-semibold uppercase tracking-wider text-subtle">
-          Remixed
+          Proxied
         </span>
         <span className="font-display text-3xl font-semibold tracking-tight text-foreground">
           {remixPct}%

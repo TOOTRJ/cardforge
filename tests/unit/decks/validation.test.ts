@@ -5,6 +5,7 @@ import {
   deckSlugSchema,
 } from "@/lib/validation/deck";
 import {
+  coverObjectPosition,
   DECK_BOARD_LABELS,
   DECK_BOARD_VALUES,
   DECK_FORMAT_LABELS,
@@ -143,5 +144,28 @@ describe("deck domain types", () => {
     expect(deckEntryState({ scryfall_id: null, card_id: null })).toBe(
       "unresolved",
     );
+  });
+});
+
+describe("cover position", () => {
+  it("accepts a valid focal point and rejects out-of-range values", () => {
+    expect(
+      createDeckSchema.safeParse({
+        title: "Deck",
+        cover_position: { focalX: 0.5, focalY: 0.9 },
+      }).success,
+    ).toBe(true);
+    expect(
+      createDeckSchema.safeParse({
+        title: "Deck",
+        cover_position: { focalX: 1.5, focalY: 0 },
+      }).success,
+    ).toBe(false);
+  });
+
+  it("renders as a CSS object-position, centered when unset", () => {
+    expect(coverObjectPosition({ focalX: 0.25, focalY: 1 })).toBe("25% 100%");
+    expect(coverObjectPosition(null)).toBeUndefined();
+    expect(coverObjectPosition({ bogus: true })).toBeUndefined();
   });
 });

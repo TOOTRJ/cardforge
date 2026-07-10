@@ -43,6 +43,13 @@ export const deckCoverUrlSchema = optionalEmptyString(
     .refine(isSafeImageUrl, "Cover URL must be an https:// URL."),
 );
 
+// Cover focal point — {focalX, focalY} in 0..1 (migration 0057). `null`
+// clears back to centered.
+export const deckCoverPositionSchema = z.object({
+  focalX: z.number().min(0).max(1),
+  focalY: z.number().min(0).max(1),
+});
+
 export const deckFormatSchema = z.enum(DECK_FORMAT_VALUES).default("commander");
 
 export const deckVisibilitySchema = z
@@ -54,6 +61,7 @@ export const createDeckSchema = z.object({
   slug: deckSlugSchema.optional(),
   description: deckDescriptionSchema,
   cover_url: deckCoverUrlSchema,
+  cover_position: deckCoverPositionSchema.nullable().optional(),
   format: deckFormatSchema,
   visibility: deckVisibilitySchema,
 });
