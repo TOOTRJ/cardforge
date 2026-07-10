@@ -3,7 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ExternalLink, Heart, Pin } from "lucide-react";
+import { ArrowLeft, BookOpen, ExternalLink, Heart, Pin } from "lucide-react";
 import { BakedCardThumbnail } from "@/components/cards/baked-card-thumbnail";
 import type { FrameProfileOverridesMap } from "@/lib/cards/profile-override";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
@@ -25,6 +25,11 @@ import {
 import { buildCardPath } from "@/lib/cards/utils";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { isFollowing, getFollowCounts } from "@/lib/follows/queries";
+import {
+  countPublicDecksByOwner,
+  listPublicDecksByOwner,
+} from "@/lib/decks/queries";
+import { DECK_FORMAT_LABELS } from "@/types/deck";
 import { FollowButton } from "@/components/follows/follow-button";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { SOCIAL_PLATFORMS, type SocialPlatformKey } from "@/lib/auth/schemas";
@@ -90,9 +95,10 @@ export default async function ProfilePage({
 
   const viewer = await getCurrentUser();
   const isOwnProfile = Boolean(viewer && viewer.id === profile.id);
-  const [following, followCounts] = await Promise.all([
+  const [following, followCounts, publicDeckCount] = await Promise.all([
     viewer && !isOwnProfile ? isFollowing(profile.id) : Promise.resolve(false),
     getFollowCounts(profile.id),
+    countPublicDecksByOwner(profile.id),
   ]);
 
   const displayName =
@@ -125,6 +131,7 @@ export default async function ProfilePage({
         initial={initial}
         followers={followCounts.followers}
         following={followCounts.following}
+        publicDeckCount={publicDeckCount}
         isOwnProfile={isOwnProfile}
         viewerSignedIn={Boolean(viewer)}
         initialFollowing={following}
@@ -153,6 +160,78 @@ export default async function ProfilePage({
           />
         </Suspense>
       </div>
+
+      {publicDeckCount > 0 ? (
+        <>
+          <PageHeader
+            className="mt-14"
+            eyebrow="Decks"
+            title={`Decks by ${displayName}`}
+            description="Public decks rebuilt with custom cards."
+          />
+          <div className="mt-8">
+            <Suspense fallback={<ProfileDecksSkeleton />}>
+              <ProfileDecks ownerId={profile.id} />
+            </Suspense>
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+async function ProfileDecks({ ownerId }: { ownerId: string }) {
+  const decks = await listPublicDecksByOwner(ownerId, 6);
+  if (decks.length === 0) return null;
+
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {decks.map((deck) => {
+        const remixPct =
+          deck.cards_count > 0
+            ? Math.round((deck.remixed_count / deck.cards_count) * 100)
+            : 0;
+        return (
+          <Link
+            key={deck.id}
+            href={`/deck/${deck.slug}`}
+            className="group block rounded-frame focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            aria-label={`Open ${deck.title}`}
+          >
+            <SurfaceCard className="flex h-full flex-col gap-2 p-5 transition-colors group-hover:border-border-strong">
+              <div className="flex items-center gap-2">
+                <BookOpen className="h-4 w-4 text-subtle" aria-hidden />
+                <Badge variant="outline">
+                  {DECK_FORMAT_LABELS[deck.format]}
+                </Badge>
+              </div>
+              <h3 className="font-display text-lg font-semibold text-foreground">
+                {deck.title}
+              </h3>
+              <div className="mt-auto flex items-center justify-between text-xs text-muted">
+                <span>
+                  {deck.cards_count} card{deck.cards_count === 1 ? "" : "s"}
+                </span>
+                <span>{remixPct}% remixed</span>
+              </div>
+            </SurfaceCard>
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
+
+function ProfileDecksSkeleton() {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {Array.from({ length: 3 }).map((_, i) => (
+        <SurfaceCard key={i} className="flex flex-col gap-3 p-5">
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-5 w-2/3" />
+          <Skeleton className="h-3 w-1/2" />
+        </SurfaceCard>
+      ))}
     </div>
   );
 }
@@ -163,6 +242,7 @@ function ProfileHero({
   initial,
   followers,
   following,
+  publicDeckCount,
   isOwnProfile,
   viewerSignedIn,
   initialFollowing,
@@ -172,6 +252,7 @@ function ProfileHero({
   initial: string;
   followers: number;
   following: number;
+  publicDeckCount: number;
   isOwnProfile: boolean;
   viewerSignedIn: boolean;
   initialFollowing: boolean;
@@ -204,6 +285,11 @@ function ProfileHero({
         <div className="flex flex-col items-start gap-2 sm:items-end">
           <div className="flex flex-wrap items-center gap-2">
             <Badge>{profile.public_cards_count} public</Badge>
+            {publicDeckCount > 0 ? (
+              <Badge variant="outline">
+                {publicDeckCount} deck{publicDeckCount === 1 ? "" : "s"}
+              </Badge>
+            ) : null}
             <Badge variant="outline">
               {followers} {followers === 1 ? "follower" : "followers"}
             </Badge>

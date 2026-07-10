@@ -19,9 +19,11 @@ export async function GET() {
     profile,
     cards,
     sets,
+    decks,
     comments,
     cardLikes,
     setLikes,
+    deckLikes,
     creditLedger,
     cardReports,
     commentReports,
@@ -29,13 +31,23 @@ export async function GET() {
     supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
     supabase.from("cards").select("*").eq("owner_id", user.id),
     supabase.from("card_sets").select("*").eq("owner_id", user.id),
+    supabase.from("decks").select("*").eq("owner_id", user.id),
     supabase.from("card_comments").select("*").eq("author_id", user.id),
     supabase.from("card_likes").select("*").eq("user_id", user.id),
     supabase.from("set_likes").select("*").eq("user_id", user.id),
+    supabase.from("deck_likes").select("*").eq("user_id", user.id),
     supabase.from("credit_ledger").select("*").eq("user_id", user.id),
     supabase.from("card_reports").select("*").eq("reporter_id", user.id),
     supabase.from("comment_reports").select("*").eq("reporter_id", user.id),
   ]);
+
+  // Deck entries ride along with the user's decks (RLS scopes them to
+  // readable decks; filtering by the owned deck ids keeps it explicit).
+  const deckIds = (decks.data ?? []).map((deck) => deck.id);
+  const deckCards =
+    deckIds.length > 0
+      ? await supabase.from("deck_cards").select("*").in("deck_id", deckIds)
+      : { data: [] };
 
   const payload = {
     exportedAt: new Date().toISOString(),
@@ -43,8 +55,14 @@ export async function GET() {
     profile: profile.data ?? null,
     cards: cards.data ?? [],
     sets: sets.data ?? [],
+    decks: decks.data ?? [],
+    deckCards: deckCards.data ?? [],
     comments: comments.data ?? [],
-    likes: { cards: cardLikes.data ?? [], sets: setLikes.data ?? [] },
+    likes: {
+      cards: cardLikes.data ?? [],
+      sets: setLikes.data ?? [],
+      decks: deckLikes.data ?? [],
+    },
     creditLedger: creditLedger.data ?? [],
     reportsFiled: {
       cards: cardReports.data ?? [],

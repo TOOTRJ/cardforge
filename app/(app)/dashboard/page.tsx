@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { FilePlus2, Globe, Layers, Palette, UserCog } from "lucide-react";
+import { BookOpen, FilePlus2, Globe, Layers, Palette, UserCog } from "lucide-react";
 import { CompassStar } from "@/components/ui/compass-star";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { IconTile } from "@/components/ui/icon-tile";
@@ -23,6 +23,7 @@ import {
   listMyRemixes,
 } from "@/lib/cards/queries";
 import { listMySets } from "@/lib/sets/queries";
+import { listMyDecks } from "@/lib/decks/queries";
 import { LikedCardsSection } from "@/components/creator/liked-cards-section";
 import { DashboardRemixesSection } from "@/components/creator/dashboard-remixes-section";
 
@@ -227,9 +228,10 @@ async function DashboardCards() {
   // Cards + sets + liked cards in parallel. Sets feed the bulk "Add to set"
   // picker; liked cards feed the new "Liked cards" section below.
   const viewer = await getCurrentUser();
-  const [myCards, mySets, likedCards, remixes] = await Promise.all([
+  const [myCards, mySets, myDecks, likedCards, remixes] = await Promise.all([
     listMyCards(),
     listMySets(),
+    listMyDecks(),
     viewer ? listLikedCardsByUser(viewer.id) : Promise.resolve([]),
     listMyRemixes(),
   ]);
@@ -262,6 +264,14 @@ async function DashboardCards() {
       icon: <FilePlus2 aria-hidden />,
       href: "#drafts",
     },
+    {
+      label: "Decks",
+      value: String(myDecks.length),
+      helper: "Decks built from real cards + proxies",
+      tone: "purple" as const,
+      icon: <BookOpen aria-hidden />,
+      href: "/dashboard/decks",
+    },
   ];
 
   // Trim set rows down to what the picker dialog actually consumes — the
@@ -275,7 +285,7 @@ async function DashboardCards() {
 
   return (
     <>
-      <div className="mt-8 grid gap-4 sm:grid-cols-3">
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => {
           const body = (
             <>
