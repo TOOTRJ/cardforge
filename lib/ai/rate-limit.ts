@@ -25,12 +25,17 @@ export type AiActionLabel =
   | "generate_from_concept"
   | "generate_random_card"
   | "generate_random_art"
-  | "generate_deck";
+  | "generate_deck"
+  | "remix_card"
+  | "remix_art"
+  | "generate_set_icon"
+  | "generate_deck_cards";
 
-// Per-user daily quota specifically for the random-card flow. Image
-// generation is the priciest call we make, so it gets its own cap on top
-// of the global PER_DAY_LIMIT. 10/day matches the v2 spec.
+// Per-user daily quotas for the image-generating flows. Image generation is
+// the priciest call we make, so each flow gets its own cap on top of the
+// global PER_DAY_LIMIT. 10/day matches the v2 spec.
 const RANDOM_CARD_DAILY_LIMIT = 10;
+export const REMIX_DAILY_LIMIT = 10;
 
 export type RateLimitResult =
   | { ok: true }
@@ -115,24 +120,41 @@ export async function checkAiRateLimit(
 export async function checkRandomCardDailyLimit(
   userId: string,
 ): Promise<RateLimitResult> {
+  return checkDailyActionLimit(
+    userId,
+    "generate_random_card",
+    RANDOM_CARD_DAILY_LIMIT,
+    "random-card",
+  );
+}
+
+/**
+ * Generic per-user daily cap for one audit-label. Fails open on DB errors —
+ * same posture as the global limit.
+ */
+export async function checkDailyActionLimit(
+  userId: string,
+  action: AiActionLabel,
+  limit: number,
+  label: string,
+): Promise<RateLimitResult> {
   const supabase = await createClient();
   const dayAgo = new Date(Date.now() - DAY_MS).toISOString();
   const { count, error } = await supabase
     .from("card_ai_calls")
     .select("id", { count: "exact", head: true })
     .eq("user_id", userId)
-    .eq("action", "generate_random_card")
+    .eq("action", action)
     .gte("created_at", dayAgo);
 
-  // Fail open on errors — same posture as the global limit.
   if (error) return { ok: true };
 
-  if ((count ?? 0) >= RANDOM_CARD_DAILY_LIMIT) {
+  if ((count ?? 0) >= limit) {
     return {
       ok: false,
       reason: "per_day",
       retryAfterSeconds: 60 * 60,
-      message: `Daily random-card quota reached (${RANDOM_CARD_DAILY_LIMIT}/day). It resets in 24h.`,
+      message: `Daily ${label} quota reached (${limit}/day). It resets in 24h.`,
     };
   }
   return { ok: true };
@@ -177,6 +199,7 @@ export async function logAiCall(
 // route, so it isn't a fixed cost here.
 export const AI_ACTION_COST: Partial<Record<AiActionLabel, number>> = {
   generate_random_card: 1,
+  remix_card: 1,
 };
 
 export function creditCostFor(action: AiActionLabel): number {
