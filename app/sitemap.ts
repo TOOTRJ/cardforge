@@ -126,6 +126,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.8,
     },
     {
+      url: `${baseUrl}/decks`,
+      lastModified,
+      changeFrequency: "daily",
+      priority: 0.8,
+    },
+    {
       url: `${baseUrl}/about`,
       lastModified,
       changeFrequency: "monthly",
@@ -163,17 +169,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
-  const [dynamicCards, challengePages, setPages, profilePages] = await Promise.all([
-    fetchPublicCardEntries(baseUrl),
-    fetchChallengeEntries(baseUrl),
-    fetchPublicSetEntries(baseUrl),
-    fetchProfileEntries(baseUrl),
-  ]);
+  const [dynamicCards, challengePages, setPages, deckPages, profilePages] =
+    await Promise.all([
+      fetchPublicCardEntries(baseUrl),
+      fetchChallengeEntries(baseUrl),
+      fetchPublicSetEntries(baseUrl),
+      fetchPublicDeckEntries(baseUrl),
+      fetchProfileEntries(baseUrl),
+    ]);
 
   return [
     ...staticPages,
     ...challengePages,
     ...setPages,
+    ...deckPages,
     ...profilePages,
     ...dynamicCards,
   ];
@@ -266,6 +275,29 @@ async function fetchPublicSetEntries(
     return (data ?? []).map((s) => ({
       url: `${baseUrl}/set/${s.slug}`,
       lastModified: new Date(s.updated_at),
+      changeFrequency: "weekly" as const,
+      priority: 0.6,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+async function fetchPublicDeckEntries(
+  baseUrl: string,
+): Promise<MetadataRoute.Sitemap> {
+  if (!isSupabaseConfigured()) return [];
+  try {
+    const supabase = createPublicClient();
+    const { data } = await supabase
+      .from("decks")
+      .select("slug, updated_at")
+      .eq("visibility", "public")
+      .order("updated_at", { ascending: false })
+      .limit(500);
+    return (data ?? []).map((d) => ({
+      url: `${baseUrl}/deck/${d.slug}`,
+      lastModified: new Date(d.updated_at),
       changeFrequency: "weekly" as const,
       priority: 0.6,
     }));

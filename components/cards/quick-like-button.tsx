@@ -6,6 +6,7 @@ import { Heart } from "lucide-react";
 import { toast } from "sonner";
 import { toggleLikeAction } from "@/lib/cards/likes";
 import { toggleSetLikeAction } from "@/lib/sets/likes";
+import { toggleDeckLikeAction } from "@/lib/decks/likes";
 import { hasSupabaseSessionCookie } from "@/lib/supabase/session-cookie";
 import { cn } from "@/lib/utils";
 
@@ -49,7 +50,14 @@ type SetLikeProps = CommonProps & {
   ownerUsername?: string | null;
 };
 
-type QuickLikeButtonProps = CardLikeProps | SetLikeProps;
+type DeckLikeProps = CommonProps & {
+  kind: "deck";
+  deckId: string;
+  deckSlug?: string;
+  ownerUsername?: string | null;
+};
+
+type QuickLikeButtonProps = CardLikeProps | SetLikeProps | DeckLikeProps;
 
 type State = { liked: boolean; count: number };
 
@@ -99,11 +107,17 @@ export function QuickLikeButton(props: QuickLikeButtonProps) {
               props.cardSlug,
               props.ownerUsername,
             )
-          : await toggleSetLikeAction(
-              props.setId,
-              props.setSlug,
-              props.ownerUsername,
-            );
+          : props.kind === "set"
+            ? await toggleSetLikeAction(
+                props.setId,
+                props.setSlug,
+                props.ownerUsername,
+              )
+            : await toggleDeckLikeAction(
+                props.deckId,
+                props.deckSlug,
+                props.ownerUsername,
+              );
       if (!result.ok) {
         toast.error(result.error);
         setOptimistic({ liked: !nextLiked, count: state.count });

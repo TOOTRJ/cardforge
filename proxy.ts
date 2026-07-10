@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 import {
+  DECKS_FILTER_PARAMS,
   GALLERY_FILTER_PARAMS,
   SETS_FILTER_PARAMS,
   hasAnyParam,
@@ -20,7 +21,9 @@ export async function proxy(request: NextRequest) {
       ? GALLERY_FILTER_PARAMS
       : pathname === "/sets"
         ? SETS_FILTER_PARAMS
-        : null;
+        : pathname === "/decks"
+          ? DECKS_FILTER_PARAMS
+          : null;
   if (
     browseParams &&
     hasAnyParam(request.nextUrl.searchParams, browseParams) &&
