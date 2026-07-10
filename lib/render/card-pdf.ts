@@ -28,7 +28,7 @@
 // compatibility — passing "sheet" still produces the Letter sheet.
 // ---------------------------------------------------------------------------
 
-import { PDFDocument, PDFImage, rgb } from "pdf-lib";
+import { PDFDocument, PDFImage, rgb, StandardFonts } from "pdf-lib";
 
 // PDF point dimensions for a standard MTG card (72pt = 1 inch).
 const CARD_W_PT = 180; // 2.5"
@@ -195,6 +195,156 @@ export async function buildSetPdf(
     const img = await embedImage(doc, png);
     const page = doc.addPage([CARD_W_PT, CARD_H_PT]);
     page.drawImage(img, { x: 0, y: 0, width: CARD_W_PT, height: CARD_H_PT });
+  }
+
+  return doc.save();
+}
+
+// ---------------------------------------------------------------------------
+// Whole-deck export (decks series PR 6).
+// ---------------------------------------------------------------------------
+
+export type DeckPdfEntry = {
+  png: Uint8Array;
+  /** Physical copies to print (sheet layouts repeat the card this many
+   *  times — that's what you cut out and sleeve). */
+  copies: number;
+};
+
+export type DeckPdfChecklist = {
+  heading: string;
+  /** One line per un-printed entry, e.g. "4× Lightning Bolt". */
+  lines: string[];
+};
+
+export type DeckPdfLayout = "pages" | "sheet-letter" | "sheet-a4";
+
+const CHECKLIST_TITLE_SIZE = 16;
+const CHECKLIST_LINE_SIZE = 11;
+const CHECKLIST_MARGIN = 54;
+const CHECKLIST_LINE_GAP = 16;
+
+function drawChecklistPages(
+  doc: PDFDocument,
+  font: Awaited<ReturnType<PDFDocument["embedFont"]>>,
+  checklist: DeckPdfChecklist,
+  pageWidth: number,
+  pageHeight: number,
+): void {
+  const linesPerPage = Math.floor(
+    (pageHeight - CHECKLIST_MARGIN * 2 - CHECKLIST_TITLE_SIZE * 2) /
+      CHECKLIST_LINE_GAP,
+  );
+  for (let start = 0; start < checklist.lines.length; start += linesPerPage) {
+    const page = doc.addPage([pageWidth, pageHeight]);
+    let y = pageHeight - CHECKLIST_MARGIN;
+    if (start === 0) {
+      page.drawText(checklist.heading, {
+        x: CHECKLIST_MARGIN,
+        y,
+        size: CHECKLIST_TITLE_SIZE,
+        font,
+        color: rgb(0.1, 0.1, 0.12),
+      });
+    }
+    y -= CHECKLIST_TITLE_SIZE * 2;
+    for (const line of checklist.lines.slice(start, start + linesPerPage)) {
+      page.drawText(line.slice(0, 90), {
+        x: CHECKLIST_MARGIN,
+        y,
+        size: CHECKLIST_LINE_SIZE,
+        font,
+        color: rgb(0.2, 0.2, 0.24),
+      });
+      y -= CHECKLIST_LINE_GAP;
+    }
+  }
+}
+
+/**
+ * Build a whole-deck PDF.
+ *
+ * - "pages": one page per UNIQUE card at 2.5"×3.5" (copies listed in the
+ *   checklist instead of repeated — a 100-page PDF helps nobody).
+ * - "sheet-letter" / "sheet-a4": 3×3 proxy sheets with crop marks, each
+ *   card repeated `copies` times, different cards mixed onto shared pages.
+ *
+ * `checklist` (optional) appends text pages listing whatever wasn't
+ * printed — un-remixed real cards, per the no-Scryfall-scans decision.
+ */
+export async function buildDeckPdf(
+  entries: DeckPdfEntry[],
+  options: {
+    title?: string;
+    layout: DeckPdfLayout;
+    checklist?: DeckPdfChecklist | null;
+  },
+): Promise<Uint8Array> {
+  const { title = "PipGlyph Deck", layout, checklist = null } = options;
+  const doc = await PDFDocument.create();
+
+  doc.setTitle(title);
+  doc.setAuthor("PipGlyph");
+  doc.setSubject(
+    "Custom MTG-style deck — fan-made, not affiliated with Wizards of the Coast.",
+  );
+  doc.setCreator("PipGlyph (pipglyph.com)");
+  doc.setProducer("pdf-lib");
+
+  if (layout === "pages") {
+    for (const entry of entries) {
+      const img = await embedImage(doc, entry.png);
+      const page = doc.addPage([CARD_W_PT, CARD_H_PT]);
+      page.drawImage(img, { x: 0, y: 0, width: CARD_W_PT, height: CARD_H_PT });
+    }
+  } else {
+    const pageWidth = layout === "sheet-a4" ? A4_W_PT : LETTER_W_PT;
+    const pageHeight = layout === "sheet-a4" ? A4_H_PT : LETTER_H_PT;
+
+    // Embed each unique PNG once; the slot list repeats the PDFImage.
+    const slots: PDFImage[] = [];
+    for (const entry of entries) {
+      const img = await embedImage(doc, entry.png);
+      for (let copy = 0; copy < Math.max(1, entry.copies); copy += 1) {
+        slots.push(img);
+      }
+    }
+
+    const perPage = COLS * ROWS;
+    for (let start = 0; start < slots.length; start += perPage) {
+      const page = doc.addPage([pageWidth, pageHeight]);
+      const marginX = (pageWidth - COLS * CARD_W_PT) / 2;
+      const marginY = (pageHeight - ROWS * CARD_H_PT) / 2;
+      slots.slice(start, start + perPage).forEach((img, i) => {
+        const row = Math.floor(i / COLS);
+        const col = i % COLS;
+        const x = marginX + col * CARD_W_PT;
+        const y = pageHeight - marginY - (row + 1) * CARD_H_PT;
+        page.drawImage(img, { x, y, width: CARD_W_PT, height: CARD_H_PT });
+        const corners = [
+          { cx: x, cy: y, hDir: -1, vDir: -1 },
+          { cx: x + CARD_W_PT, cy: y, hDir: 1, vDir: -1 },
+          { cx: x, cy: y + CARD_H_PT, hDir: -1, vDir: 1 },
+          { cx: x + CARD_W_PT, cy: y + CARD_H_PT, hDir: 1, vDir: 1 },
+        ] as const;
+        for (const corner of corners) {
+          drawCropMark(page, corner.cx, corner.cy, corner.hDir, corner.vDir);
+        }
+      });
+    }
+  }
+
+  if (checklist && checklist.lines.length > 0) {
+    const font = await doc.embedFont(StandardFonts.Helvetica);
+    const pageWidth = layout === "sheet-a4" ? A4_W_PT : LETTER_W_PT;
+    const pageHeight = layout === "sheet-a4" ? A4_H_PT : LETTER_H_PT;
+    drawChecklistPages(doc, font, checklist, pageWidth, pageHeight);
+  }
+
+  // A deck with nothing printable still returns a valid (checklist-only or
+  // single blank) document rather than a corrupt zero-page file.
+  if (doc.getPageCount() === 0) {
+    doc.addPage([CARD_W_PT, CARD_H_PT]);
   }
 
   return doc.save();
