@@ -29,40 +29,40 @@ const REASON_COPY: Record<UpgradeReason, { title: string; description: string }>
     credits: {
       title: "You're out of AI credits",
       description:
-        "Upgrade for a monthly credit allotment — or grab a one-time pack. Credits power AI card and art generation.",
+        "Plans refill your credits every month — or grab a one-time pack. Credits power AI card and art generation. Your card and everything you've made stay exactly as they are.",
     },
     premium_frame: {
-      title: "That's a premium finish",
+      title: "That's a premium frame",
       description:
-        "Foil, etched, and showcase finishes are part of a paid plan. Every MTG-style frame stays free.",
+        "Original premium frames are part of a paid plan. Every MTG-style frame and finish stays free.",
     },
     capacity: {
       title: "Card limit reached",
       description:
-        "Upgrade for a much bigger library — up to unlimited saved cards on Pro.",
+        "Your forge is full. Upgrade for a much bigger library — up to unlimited saved cards on Pro.",
     },
     hi_res_export: {
-      title: "Unlock hi-res, watermark-free exports",
+      title: "Download it clean",
       description:
-        "Paid plans remove the watermark and unlock full-resolution downloads.",
+        "Paid plans remove the PipGlyph mark and unlock full-resolution (1500 × 2100) downloads. The free watermarked PNG is always available.",
     },
     pdf_export: {
       title: "Print-ready PDF export",
       description: "Clean, print-ready PDF export is a Plus feature.",
     },
     batch_export: {
-      title: "Batch & whole-set export",
-      description: "Export an entire set in one click with Pro.",
+      title: "Batch & whole-deck export",
+      description: "Export a whole deck in one click with Pro.",
     },
     deck_gen: {
-      title: "AI set generator",
+      title: "AI deck generator",
       description:
-        "Draft a whole themed set with AI in seconds — a Pro feature.",
+        "Draft a whole themed deck with AI in minutes — a Pro feature.",
     },
     generic: {
       title: "Go premium",
       description:
-        "Unlock more AI credits, clean hi-res exports, premium finishes, and the AI set generator.",
+        "More AI credits every month, clean hi-res exports, and AI deck generation.",
     },
   };
 
@@ -110,10 +110,18 @@ export function UpgradeModal({ open, reason, onOpenChange }: UpgradeModalProps) 
                 size="sm"
                 className="w-auto"
               >
-                Choose {plan.name}
+                Try {plan.name} free
               </CheckoutButton>
             </div>
           ))}
+
+          {/* Honest trial framing: checkout re-checks eligibility server-side,
+              so the footnote carries the "first-time" caveat rather than the
+              button over-promising. */}
+          <p className="text-xs leading-5 text-gold-strong">
+            7-day free trial for first-time subscribers — no card required,
+            cancel anytime.
+          </p>
 
           <Button asChild variant="ghost" size="sm" className="self-start">
             <Link href="/pricing" onClick={() => onOpenChange(false)}>

@@ -17,7 +17,14 @@
 // ---------------------------------------------------------------------------
 
 import { type ReactNode } from "react";
-import { Crown, Download, FileImage, FileText, Grid3X3 } from "lucide-react";
+import {
+  Crown,
+  Download,
+  FileImage,
+  FileText,
+  Grid3X3,
+  Sparkles,
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -118,16 +125,45 @@ export function DownloadModal({
             </TabsList>
 
             <TabsContent value="png" className="mt-5">
-              <DownloadPanel
-                title="High-resolution PNG"
-                description={
-                  isPaid
-                    ? "Clean, full-resolution (1500 × 2100) render. Great for sharing, embedding, and printing single cards."
-                    : "Free PNG export (with a small watermark). Upgrade for watermark-free, full-resolution downloads."
-                }
-                href={links.png.href}
-                filename={links.png.filename}
-              />
+              {isPaid ? (
+                <DownloadPanel
+                  title="High-resolution PNG"
+                  description="Clean, full-resolution (1500 × 2100) render. Great for sharing, embedding, and printing single cards."
+                  href={links.png.href}
+                  filename={links.png.filename}
+                />
+              ) : (
+                // The moment of value: the card is done and wanted. Free path
+                // stays a first-class button (never buried); the clean
+                // version rides beside it. No countdowns, no guilt copy.
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-1">
+                    <h3 className="font-display text-sm font-semibold text-foreground">
+                      PNG export
+                    </h3>
+                    <p className="text-xs leading-5 text-muted">
+                      Your free download carries a small PipGlyph mark in the
+                      corner. Paid plans export it clean, at full print
+                      resolution (1500 × 2100).
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button asChild variant="outline">
+                      <a href={links.png.href} download={links.png.filename}>
+                        <Download className="h-4 w-4" aria-hidden /> Download
+                        free PNG
+                      </a>
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={() => upgrade.open("hi_res_export")}
+                    >
+                      <Sparkles className="h-4 w-4" aria-hidden /> Remove the
+                      mark — try Plus free
+                    </Button>
+                  </div>
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="single" className="mt-5">
