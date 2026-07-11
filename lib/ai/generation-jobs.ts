@@ -4,6 +4,7 @@ import type { Json } from "@/types/supabase";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import {
   createCardAction,
+  remixCardAction,
   updateCardAction,
   type CreateCardResult,
 } from "@/lib/cards/actions";
@@ -23,7 +24,13 @@ import {
   type ImageAspect,
 } from "@/lib/ai/image-gen";
 import { persistGeneratedArt } from "@/lib/ai/random-art";
-import { logAiCall, refundCredits, spendCredits } from "@/lib/ai/rate-limit";
+import {
+  consumeAiCredits,
+  logAiCall,
+  refundAiCredits,
+  refundCredits,
+  spendCredits,
+} from "@/lib/ai/rate-limit";
 import { generateRandomCard } from "@/lib/ai/random-card";
 import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
 import {
@@ -75,10 +82,16 @@ export type JobStep = {
 export type GenerationJobRow = {
   id: string;
   owner_id: string;
-  kind: "set" | "deck" | "deck_remix" | "card";
+  kind: "set" | "deck" | "deck_remix" | "card" | "card_remix";
   status: "generating" | "done" | "failed" | "cancelled";
   request: Record<string, unknown>;
-  plan: SetJobPlan | DeckJobPlan | DeckRemixJobPlan | CardJobPlan | null;
+  plan:
+    | SetJobPlan
+    | DeckJobPlan
+    | DeckRemixJobPlan
+    | CardJobPlan
+    | CardRemixJobPlan
+    | null;
   steps: JobStep[];
   set_id: string | null;
   deck_id: string | null;
@@ -95,6 +108,18 @@ export type CardJobPlan = {
   /** Resolved after text generation (depends on final colors); null = the
    *  creator's era default for the type. */
   frame_template: string | null;
+};
+
+/** Single-card AI remix (migration 0062): fork one card with identical
+ *  mechanics but a new AI name/flavor and art restyled into `style`. The plan
+ *  is just the source pointer + direction — identity, art, and the fork all
+ *  run in the job's one step, replacing the synchronous /api/ai/remix-card
+ *  request (same 60–90s infra-cut/double-charge failure mode as the legacy
+ *  random-card route; see CardJobPlan). */
+export type CardRemixJobPlan = {
+  card_id: string;
+  style: string;
+  theme: string | null;
 };
 
 export type SetJobPlan = {
@@ -325,7 +350,8 @@ export async function runNextJobStep(
     return { ok: true, job };
   }
   // Card jobs have no set/deck target — the plan is the whole contract.
-  if (!job.plan || (job.kind !== "card" && !job.set_id && !job.deck_id)) {
+  const isCardKind = job.kind === "card" || job.kind === "card_remix";
+  if (!job.plan || (!isCardKind && !job.set_id && !job.deck_id)) {
     return { ok: false, error: "Job has no plan — recreate it." };
   }
 
@@ -375,6 +401,14 @@ export async function runNextJobStep(
           user.id,
           step,
           job.plan as CardJobPlan,
+        );
+        break;
+      }
+      case "card_remix": {
+        steps[index] = await runCardRemixStep(
+          user.id,
+          step,
+          job.plan as CardRemixJobPlan,
         );
         break;
       }
@@ -552,6 +586,207 @@ async function runSingleCardStep(
     return { ...step, status: "failed", card_id: cardId, error: published.error };
   }
   return { ...step, status: "done", card_id: cardId, error: undefined };
+}
+
+// ---------------------------------------------------------------------------
+// Single-card AI remix (the "Remix with AI" button on card detail pages)
+// ---------------------------------------------------------------------------
+
+export type CreateCardRemixJobInput = {
+  cardId: string;
+  style: string;
+  theme?: string;
+};
+
+/** PLAN a card-remix job: verify the source card is readable (RLS makes the
+ *  read an authorization check too) and persist the job. All the real work —
+ *  identity text, art, the fork — happens in the job's one step so no HTTP
+ *  request runs long. */
+export async function createCardRemixJob(
+  input: CreateCardRemixJobInput,
+): Promise<CreateCardJobResult> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Sign in to remix cards with AI." };
+
+  const parent = await getCardById(input.cardId);
+  if (!parent) return { ok: false, error: "Card not found." };
+
+  // Log at plan time so the remix daily cap counts attempts, matching the
+  // legacy route (logged on entry — provider failures still burn quota).
+  await logAiCall(user.id, "remix_card");
+
+  const plan: CardRemixJobPlan = {
+    card_id: parent.id,
+    style: input.style.trim(),
+    theme: input.theme?.trim() || null,
+  };
+  const steps: JobStep[] = [
+    { key: "remix:0", label: parent.title, status: "pending" },
+  ];
+
+  const supabase = await createClient();
+  const { data: jobRow, error: insertError } = await supabase
+    .from("ai_generation_jobs")
+    .insert({
+      owner_id: user.id,
+      kind: "card_remix",
+      status: "generating",
+      request: {
+        card_id: parent.id,
+        style: plan.style,
+        theme: plan.theme,
+      },
+      plan: plan as unknown as Json,
+      steps: steps as unknown as Json,
+    })
+    .select("*")
+    .single();
+  if (insertError || !jobRow) {
+    return { ok: false, error: "Couldn't persist the remix job." };
+  }
+  return { ok: true, job: jobRow as unknown as GenerationJobRow };
+}
+
+// Cap what we'll pull back in for restyling — card art is ~1-4MB; anything
+// past 12MB is not something we should buffer per-request.
+const MAX_SOURCE_ART_BYTES = 12 * 1024 * 1024;
+
+/** The remix job's single step: reserve the credit, generate the new
+ *  identity, restyle the parent's art (fresh generation when there's none),
+ *  fork via remixCardAction. Same posture as runDeckRemixStep: a failed step
+ *  carries no card_id, so its retry reruns the whole pipeline after the
+ *  refund below makes the user whole. */
+async function runCardRemixStep(
+  userId: string,
+  step: JobStep,
+  plan: CardRemixJobPlan,
+): Promise<JobStep> {
+  if (step.card_id) {
+    return { ...step, status: "done", error: undefined };
+  }
+
+  // Reserve the remix's credit up front (fail closed — see runCardStep).
+  const reserve = await consumeAiCredits("remix_card", { failClosed: true });
+  if (!reserve.ok) {
+    return { ...step, status: "failed", error: reserve.message };
+  }
+  let result: JobStep;
+  try {
+    result = await executeCardRemixStep(userId, step, plan);
+  } catch (error) {
+    await refundAiCredits(userId, "remix_card");
+    throw error;
+  }
+  if (result.status === "failed") {
+    await refundAiCredits(userId, "remix_card");
+  }
+  return result;
+}
+
+async function executeCardRemixStep(
+  userId: string,
+  step: JobStep,
+  plan: CardRemixJobPlan,
+): Promise<JobStep> {
+  // Steps run under the caller's cookie context, so RLS re-authorizes the
+  // parent read on every execution.
+  const parent = await getCardById(plan.card_id);
+  if (!parent) {
+    return { ...step, status: "failed", error: "Source card is gone." };
+  }
+
+  // ---- New identity (mechanics untouched) ----
+  let identity;
+  try {
+    identity = await generateRemixIdentity({
+      card: parent,
+      style: plan.style,
+      theme: plan.theme ?? undefined,
+    });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : "Remix failed.";
+    return { ...step, status: "failed", error: `AI remix failed: ${detail}` };
+  }
+
+  // ---- Art (REQUIRED — the remix IS the restyle; failures fail the step
+  //      for a refunded retry rather than silently keeping the old art) ----
+  await logAiCall(userId, "remix_art");
+  let artUrl: string | undefined;
+  let artError: string | null = null;
+  if (parent.art_url) {
+    try {
+      const sourceResponse = await fetch(parent.art_url);
+      const contentType =
+        sourceResponse.headers.get("content-type") ?? "image/png";
+      const contentLength = Number(
+        sourceResponse.headers.get("content-length") ?? 0,
+      );
+      if (
+        sourceResponse.ok &&
+        contentType.startsWith("image/") &&
+        contentLength <= MAX_SOURCE_ART_BYTES
+      ) {
+        const restyled = await restyleImage({
+          source: new Uint8Array(await sourceResponse.arrayBuffer()),
+          sourceContentType: contentType,
+          prompt: `Re-render this artwork in ${plan.style} style. ${identity.art_instruction}`,
+        });
+        if (restyled.ok) {
+          const persisted = await persistGeneratedArt(
+            restyled.bytes,
+            restyled.contentType,
+          );
+          if (persisted.ok) artUrl = persisted.publicUrl;
+          else artError = persisted.error;
+        } else {
+          artError = restyled.error;
+        }
+      }
+    } catch {
+      // fall through to fresh generation below
+    }
+  }
+  if (!artUrl) {
+    const generated = await generatePlainImage(
+      `${identity.art_instruction} Style: ${plan.style}.`,
+      "card",
+    );
+    if (generated.ok) {
+      const persisted = await persistGeneratedArt(
+        generated.bytes,
+        generated.contentType,
+      );
+      if (persisted.ok) artUrl = persisted.publicUrl;
+      else artError = persisted.error;
+    } else {
+      artError = generated.error;
+    }
+  }
+  if (!artUrl) {
+    return {
+      ...step,
+      status: "failed",
+      error: artError ?? "Art generation failed — retry the remix.",
+    };
+  }
+
+  // ---- Fork (identical mechanics; new identity; private) ----
+  const result = await remixCardAction({
+    parentCardId: parent.id,
+    title: identity.title,
+    flavorText: identity.flavor_text,
+    artUrl,
+  });
+  if (!result.ok) {
+    return { ...step, status: "failed", error: createFailureMessage(result) };
+  }
+  return {
+    ...step,
+    status: "done",
+    card_id: result.cardId,
+    label: identity.title,
+    error: undefined,
+  };
 }
 
 // ---------------------------------------------------------------------------

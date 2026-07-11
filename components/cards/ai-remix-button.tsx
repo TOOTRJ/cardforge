@@ -14,13 +14,17 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { FieldGroup, inputClass } from "@/components/creator/field-group";
+import { useGenerationJob } from "@/components/ai/use-generation-job";
 
 // ---------------------------------------------------------------------------
 // AiRemixButton — "Remix with AI" on the card detail page. Sits beside the
 // manual Remix (plain fork) button. Collects a style (+ optional theme) and
-// calls /api/ai/remix-card, which forks the card with IDENTICAL mechanics
-// but a new AI name, flavor, and art restyled from the original. On success
-// the user lands in the editor on their new private remix.
+// runs a "card_remix" generation job, which forks the card with IDENTICAL
+// mechanics but a new AI name, flavor, and art restyled from the original.
+// The job runs in the background via the root GenerationJobProvider
+// (floating progress widget; a closed tab pauses and auto-resumes) — this
+// replaced the old single 60–90s /api/ai/remix-card request, which
+// infrastructure timeouts cut and re-ran (double charge + phantom failure).
 // ---------------------------------------------------------------------------
 
 const STYLE_PRESETS = [
@@ -46,6 +50,7 @@ export function AiRemixButton({
   className?: string;
 }) {
   const router = useRouter();
+  const generationJob = useGenerationJob();
   const [open, setOpen] = useState(false);
   const [style, setStyle] = useState("");
   const [theme, setTheme] = useState("");
@@ -67,33 +72,32 @@ export function AiRemixButton({
       toast.error("Pick or type a style first — that's what the remix is.");
       return;
     }
+    // Close the dialog immediately — the remix runs as a background job with
+    // its own floating progress widget; it's safe to keep browsing.
+    setOpen(false);
     setPending(true);
     try {
-      const response = await fetch("/api/ai/remix-card", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          card_id: cardId,
-          style: style.trim(),
-          theme: theme.trim() || undefined,
-        }),
+      const outcome = await generationJob.run({
+        kind: "card_remix",
+        card_id: cardId,
+        style: style.trim(),
+        theme: theme.trim() || undefined,
       });
-      const payload = await response.json().catch(() => null);
-      if (!response.ok || !payload?.ok) {
-        toast.error(payload?.error ?? "AI remix failed. Try again.");
+      if (!outcome.ok) {
+        // Plan errors are toasted by the provider; step failures stay in the
+        // widget with a Retry. Nothing else to do here.
         return;
       }
-      if (payload.artError) {
-        toast.message("Remix created — art kept from the original.", {
-          description: payload.artError,
-        });
-      } else {
-        toast.success("AI remix forged — opening in the editor.");
-      }
-      setOpen(false);
-      router.push(`/card/${payload.slug}/edit`);
-    } catch {
-      toast.error("Network error while remixing.");
+      toast.success("AI remix forged — it's saved to your library.", {
+        ...(outcome.cardId
+          ? {
+              action: {
+                label: "View card",
+                onClick: () => router.push(`/go/card/${outcome.cardId}`),
+              },
+            }
+          : {}),
+      });
     } finally {
       setPending(false);
     }
@@ -105,13 +109,18 @@ export function AiRemixButton({
         type="button"
         variant="secondary"
         onClick={handleOpen}
+        disabled={pending}
         className={className}
       >
-        <Sparkles className="h-4 w-4" aria-hidden />
+        {pending ? (
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+        ) : (
+          <Sparkles className="h-4 w-4" aria-hidden />
+        )}
         AI remix
       </Button>
 
-      <Dialog open={open} onOpenChange={(next) => !pending && setOpen(next)}>
+      <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -134,7 +143,6 @@ export function AiRemixButton({
                       <button
                         key={preset}
                         type="button"
-                        disabled={pending}
                         onClick={() => setStyle(active ? "" : preset)}
                         className={`rounded-full border px-3 py-1 text-xs transition-colors ${
                           active
@@ -154,7 +162,6 @@ export function AiRemixButton({
                   maxLength={200}
                   placeholder="e.g. gritty charcoal sketch"
                   className={inputClass(false)}
-                  disabled={pending}
                 />
               </div>
             </FieldGroup>
@@ -170,7 +177,6 @@ export function AiRemixButton({
                 maxLength={300}
                 placeholder="e.g. set it in a frozen wasteland"
                 className={inputClass(false)}
-                disabled={pending}
               />
             </FieldGroup>
           </div>
@@ -180,17 +186,8 @@ export function AiRemixButton({
               Uses 1 AI credit · 10 remixes per day
             </span>
             <Button type="button" onClick={handleRemix} disabled={pending}>
-              {pending ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                  Remixing…
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-4 w-4" aria-hidden />
-                  Remix card
-                </>
-              )}
+              <Sparkles className="h-4 w-4" aria-hidden />
+              Remix card
             </Button>
           </DialogFooter>
         </DialogContent>

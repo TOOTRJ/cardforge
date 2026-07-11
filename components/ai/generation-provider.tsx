@@ -32,7 +32,7 @@ import type {
 
 type JobPayload = {
   id: string;
-  kind: "set" | "deck" | "deck_remix" | "card";
+  kind: "set" | "deck" | "deck_remix" | "card" | "card_remix";
   status: "generating" | "done" | "failed" | "cancelled";
   steps: GenerationJobStep[];
   request?: Record<string, unknown>;
@@ -63,6 +63,7 @@ const KIND_LABELS: Record<JobPayload["kind"], string> = {
   deck: "Generating deck cards",
   deck_remix: "Remixing deck",
   card: "Forging your card",
+  card_remix: "Remixing your card",
 };
 
 async function postStep(
@@ -108,7 +109,7 @@ function targetHref(
 ): string | undefined {
   // Card jobs link to the created card via the id-redirect shim (the slug
   // isn't known client-side); set/deck jobs link to their editors.
-  if (job.kind === "card") {
+  if (job.kind === "card" || job.kind === "card_remix") {
     return cardId ? `/go/card/${cardId}` : undefined;
   }
   if (!slug) return undefined;
@@ -392,7 +393,7 @@ export function GenerationJobProvider({
               View{" "}
               {job.kind === "set"
                 ? "set"
-                : job.kind === "card"
+                : job.kind === "card" || job.kind === "card_remix"
                   ? "card"
                   : "deck"}
             </Link>
