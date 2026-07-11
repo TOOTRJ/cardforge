@@ -8,7 +8,7 @@ import { MobileMenu } from "./mobile-menu";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { siteConfig } from "@/lib/site-config";
 import { isBillingEnabled } from "@/lib/billing/flags";
-import type { PlanTier } from "@/lib/billing/plans";
+import { formatCredits, type PlanTier } from "@/lib/billing/plans";
 import { cn } from "@/lib/utils";
 
 type HeaderUser = {
@@ -76,7 +76,7 @@ export function SiteHeader({ user, className }: SiteHeaderProps) {
                   className="hidden h-9 items-center gap-1.5 rounded-md border border-border/60 bg-elevated px-2.5 text-xs font-medium text-foreground transition-colors hover:border-border-strong sm:inline-flex"
                 >
                   <Coins className="h-3.5 w-3.5 text-gold-strong" aria-hidden />
-                  <span>{user?.credits ?? 0}</span>
+                  <span>{formatCredits(user?.credits ?? 0)}</span>
                   <span className="text-subtle">
                     · {user?.creditsUsed ?? 0} used
                   </span>

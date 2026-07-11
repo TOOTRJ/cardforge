@@ -118,6 +118,18 @@ export function planForTier(tier: PlanTier): PlanDisplay {
   return PLANS.find((p) => p.tier === tier) ?? PLANS[0];
 }
 
+/** True for the "unlimited" sentinel that admin/billing-off entitlements
+ *  carry (Number.MAX_SAFE_INTEGER). */
+export function isUnlimitedCredits(credits: number): boolean {
+  return credits >= Number.MAX_SAFE_INTEGER;
+}
+
+/** Human display for a credit balance — the unlimited sentinel must never
+ *  render raw (an admin's header chip once read 9007199254740991). */
+export function formatCredits(credits: number): string {
+  return isUnlimitedCredits(credits) ? "∞" : String(credits);
+}
+
 // ---------------------------------------------------------------------------
 // Monthly credit refills (cron-driven, so monthly AND annual plans both get a
 // monthly allotment). Refills are idempotent per user per calendar month via a

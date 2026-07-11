@@ -7,6 +7,7 @@ import {
   getCreditsUsedThisMonth,
 } from "@/lib/ai/usage-queries";
 import { isBillingEnabled } from "@/lib/billing/flags";
+import { formatCredits, isUnlimitedCredits } from "@/lib/billing/plans";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -26,7 +27,7 @@ export async function CreditsSummaryCard() {
 
   const { balance, monthlyAllotment, tier, isPaid } = snapshot;
   const tierLabel = tier.charAt(0).toUpperCase() + tier.slice(1);
-  const lowCredits = balance <= 5;
+  const lowCredits = balance <= 5 && !isUnlimitedCredits(balance);
   const pct =
     monthlyAllotment > 0
       ? Math.min(100, Math.round((used / monthlyAllotment) * 100))
@@ -54,7 +55,7 @@ export async function CreditsSummaryCard() {
       <div className="grid gap-3 sm:grid-cols-3">
         <Stat
           label="Remaining"
-          value={balance}
+          value={formatCredits(balance)}
           unit="credits"
           emphasis={lowCredits ? "danger" : "default"}
         />
@@ -103,7 +104,7 @@ function Stat({
   emphasis = "default",
 }: {
   label: string;
-  value: number;
+  value: number | string;
   unit: string;
   emphasis?: "default" | "danger";
 }) {

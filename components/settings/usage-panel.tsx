@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { UsageBarChart } from "@/components/settings/usage-bar-chart";
 import { getAiUsageSnapshot, getCreditSnapshot } from "@/lib/ai/usage-queries";
 import { isBillingEnabled } from "@/lib/billing/flags";
+import { formatCredits, isUnlimitedCredits } from "@/lib/billing/plans";
 import {
   getScryfallUsageSnapshot,
   type ScryfallAction,
@@ -51,7 +52,8 @@ export async function UsagePanel() {
   const aiOverMinute = ai.minute >= ai.limits.perMinute;
   const creditTierLabel =
     credits.tier.charAt(0).toUpperCase() + credits.tier.slice(1);
-  const lowCredits = credits.balance <= 5;
+  const lowCredits =
+    credits.balance <= 5 && !isUnlimitedCredits(credits.balance);
   const billingOn = isBillingEnabled();
 
   return (
@@ -95,7 +97,7 @@ export async function UsagePanel() {
                   lowCredits ? "text-danger" : "text-foreground",
                 )}
               >
-                {credits.balance}
+                {formatCredits(credits.balance)}
               </span>
               <span className="text-xs text-muted">credits</span>
             </span>

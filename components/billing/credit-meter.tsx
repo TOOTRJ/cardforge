@@ -10,6 +10,7 @@
 import { useEffect, useState } from "react";
 import { Coins, Sparkles } from "lucide-react";
 import { isBillingEnabled } from "@/lib/billing/flags";
+import { formatCredits } from "@/lib/billing/plans";
 import { hasSupabaseSessionCookie } from "@/lib/supabase/session-cookie";
 import { useUpgradeModal } from "@/components/billing/upgrade-modal-provider";
 import type { HeaderUser } from "@/components/layout/site-header";
@@ -76,7 +77,8 @@ export function CreditMeter({ className }: { className?: string }) {
       }
     >
       <Coins className="h-3.5 w-3.5 text-gold-strong" aria-hidden />
-      {state.credits} {state.credits === 1 ? "credit" : "credits"}
+      {formatCredits(state.credits)}{" "}
+      {state.credits === 1 ? "credit" : "credits"}
     </span>
   );
 }

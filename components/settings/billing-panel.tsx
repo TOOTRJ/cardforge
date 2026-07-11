@@ -2,7 +2,12 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ManageBillingButton } from "@/components/billing/manage-billing-button";
-import { planForTier, MONTHLY_CREDITS, type PlanTier } from "@/lib/billing/plans";
+import {
+  formatCredits,
+  planForTier,
+  MONTHLY_CREDITS,
+  type PlanTier,
+} from "@/lib/billing/plans";
 
 type BillingPanelProps = {
   tier: PlanTier;
@@ -67,7 +72,7 @@ export function BillingPanel({
           </span>
           <span className="flex items-baseline gap-1.5">
             <span className="font-display text-lg font-semibold text-foreground">
-              {credits}
+              {formatCredits(credits)}
             </span>
             <span className="text-xs text-muted">
               · {MONTHLY_CREDITS[tier]}/mo on {plan.name}
