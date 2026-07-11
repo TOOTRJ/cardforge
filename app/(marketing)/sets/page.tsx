@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { isSetsEnabled } from "@/lib/sets/flags";
 import { parseSetsParams, SetsView } from "./sets-view";
 
 export const metadata: Metadata = {
@@ -19,5 +21,6 @@ export const metadata: Metadata = {
 export const revalidate = 300;
 
 export default function PublicSetsPage() {
+  if (!isSetsEnabled()) notFound();
   return <SetsView {...parseSetsParams({})} />;
 }

@@ -32,39 +32,39 @@ const base = ctx();
 const keys = (c: StepContext) => visibleSteps(c).map((s) => s.key);
 
 describe("visibleSteps", () => {
-  const FOUR: string[] = ["card", "identity", "text", "publish"];
+  const FIVE: string[] = ["card", "identity", "text", "seticon", "publish"];
 
-  it("is the compact four-step flow for a plain creature", () => {
-    expect(keys(base)).toEqual(FOUR);
+  it("is the compact five-step flow for a plain creature", () => {
+    expect(keys(base)).toEqual(FIVE);
   });
 
-  it("is the same four steps regardless of card type (stats gate inside Text)", () => {
-    expect(keys(ctx({ cardType: "instant" }))).toEqual(FOUR);
+  it("is the same five steps regardless of card type (stats gate inside Text)", () => {
+    expect(keys(ctx({ cardType: "instant" }))).toEqual(FIVE);
     expect(keys(ctx({ cardType: "planeswalker", template: "m15pw" }))).toEqual(
-      FOUR,
+      FIVE,
     );
     expect(keys(ctx({ cardType: "battle", template: "battle" }))).toEqual(
-      FOUR,
+      FIVE,
     );
     // Cost-less frames don't drop a step anymore — the pips block hides
     // itself inside Identity.
     expect(keys(ctx({ cardType: "token", template: "m15token" }))).toEqual(
-      FOUR,
+      FIVE,
     );
   });
 
   it("keeps the flow stable across layout frames and back faces", () => {
-    expect(keys(ctx({ template: "adventure" }))).toEqual(FOUR);
-    expect(keys(ctx({ template: "flip" }))).toEqual(FOUR);
-    expect(keys(ctx({ template: "split" }))).toEqual(FOUR);
-    expect(keys(ctx({ hasBackFace: true }))).toEqual(FOUR);
-    expect(keys(ctx({ template: "regular" }))).toEqual(FOUR);
+    expect(keys(ctx({ template: "adventure" }))).toEqual(FIVE);
+    expect(keys(ctx({ template: "flip" }))).toEqual(FIVE);
+    expect(keys(ctx({ template: "split" }))).toEqual(FIVE);
+    expect(keys(ctx({ hasBackFace: true }))).toEqual(FIVE);
+    expect(keys(ctx({ template: "regular" }))).toEqual(FIVE);
   });
 
   it("maps every legacy step key to a live step", () => {
     for (const [legacy, target] of Object.entries(LEGACY_STEP_ALIASES)) {
       expect(legacy).not.toBe(target);
-      expect(FOUR).toContain(target);
+      expect(FIVE).toContain(target);
     }
   });
 });
@@ -76,6 +76,7 @@ describe("stepLabel", () => {
     expect(byKey("card")).toBe("Card");
     expect(byKey("identity")).toBe("Identity");
     expect(byKey("text")).toBe("Text & stats");
+    expect(byKey("seticon")).toBe("Set icon");
     expect(byKey("publish")).toBe("Publish");
   });
 });
@@ -210,6 +211,9 @@ describe("field → step routing", () => {
     expect(map.get("rules_text")).toBe("text");
     // Stats fold into the Text step.
     expect(map.get("power")).toBe("text");
+    // The direct set-symbol fields live on the Set icon step.
+    expect(map.get("set_icon_url")).toBe("seticon");
+    expect(map.get("set_icon_code")).toBe("seticon");
     expect(map.get("visibility")).toBe("publish");
     expect(map.get("tags_text")).toBe("publish");
   });

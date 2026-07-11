@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { isSetsEnabled } from "@/lib/sets/flags";
 import { parseSetsParams, SetsView } from "../sets-view";
 
 // ---------------------------------------------------------------------------
@@ -27,5 +29,6 @@ type SetsBrowsePageProps = {
 export default async function SetsBrowsePage({
   searchParams,
 }: SetsBrowsePageProps) {
+  if (!isSetsEnabled()) notFound();
   return <SetsView {...parseSetsParams(await searchParams)} />;
 }

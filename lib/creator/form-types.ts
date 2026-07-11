@@ -85,6 +85,11 @@ export type FormValues = {
   /** The set this card is added to (empty = none). Its icon becomes the card's
    *  set symbol; the action also adds the card to the set's list. */
   primary_set_id: string;
+  /** Direct set-symbol override (Set icon step): an uploaded image URL OR a
+   *  preset Keyrune code. Mutually exclusive — setting one clears the other;
+   *  both empty = the default PipGlyph mark. */
+  set_icon_url: string;
+  set_icon_code: string;
   /** A deck this card is added to on create (empty = none) — becomes a
    *  custom-only mainboard entry. Create mode only; hidden on edit. */
   deck_id: string;

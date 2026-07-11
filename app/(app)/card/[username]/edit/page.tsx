@@ -24,6 +24,7 @@ import {
 } from "@/lib/cards/queries";
 import { buildCardPath } from "@/lib/cards/utils";
 import { listMySets, listMySetsForCard } from "@/lib/sets/queries";
+import { isSetsEnabled } from "@/lib/sets/flags";
 import { isAIConfigured } from "@/lib/ai/card-assistant";
 
 // File-system param name is `username` because the sibling
@@ -75,12 +76,14 @@ export default async function EditCardPage({ params }: EditCardPageProps) {
     notFound();
   }
 
+  const setsEnabled = isSetsEnabled();
   const [gameSystem, mySets, profile, userSets, entitlements, allMyCards] =
     await Promise.all([
       getFantasyGameSystem(),
-      listMySetsForCard(card.id),
+      // Both set lists feed sets-only UI — skip the queries while hidden.
+      setsEnabled ? listMySetsForCard(card.id) : Promise.resolve([]),
       getCurrentProfile(),
-      listMySets(),
+      setsEnabled ? listMySets() : Promise.resolve([]),
       getEntitlements(),
       listMyCards(),
     ]);
@@ -112,18 +115,20 @@ export default async function EditCardPage({ params }: EditCardPageProps) {
                   ? "Unlisted"
                   : "Private"}
             </Badge>
-            <AddToSetButton
-              cardId={card.id}
-              cardSlug={card.slug}
-              ownerUsername={ownerUsername}
-              sets={mySets.map((s) => ({
-                id: s.id,
-                slug: s.slug,
-                title: s.title,
-                cards_count: s.cards_count,
-                contains_card: s.contains_card,
-              }))}
-            />
+            {setsEnabled ? (
+              <AddToSetButton
+                cardId={card.id}
+                cardSlug={card.slug}
+                ownerUsername={ownerUsername}
+                sets={mySets.map((s) => ({
+                  id: s.id,
+                  slug: s.slug,
+                  title: s.title,
+                  cards_count: s.cards_count,
+                  contains_card: s.contains_card,
+                }))}
+              />
+            ) : null}
             <DownloadModal
               cardId={card.id}
               cardSlug={card.slug}

@@ -136,6 +136,8 @@ export function defaultValuesFor(
       back_card_id: "",
       source_scryfall_id: "",
       primary_set_id: "",
+      set_icon_url: "",
+      set_icon_code: "",
       deck_id: "",
       watermark: EMPTY_WATERMARK,
     };
@@ -186,6 +188,10 @@ export function defaultValuesFor(
     back_card_id: card.back_card_id ?? "",
     source_scryfall_id: card.source_scryfall_id ?? "",
     primary_set_id: card.primary_set_id ?? "",
+    // Denormalized icon columns — for a set-membered card these hold the
+    // set's icon; the Set icon step edits them directly and wins on save.
+    set_icon_url: card.set_icon_url ?? "",
+    set_icon_code: card.set_icon_code ?? "",
     // Deck membership isn't stored on the card row — the picker is a
     // create-flow convenience, so edits always start empty.
     deck_id: "",

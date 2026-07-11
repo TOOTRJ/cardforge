@@ -23,6 +23,7 @@ import { computeSetAnalytics } from "@/lib/sets/analytics";
 import { buildCardPath } from "@/lib/cards/utils";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { isSetsEnabled } from "@/lib/sets/flags";
 import { getSiteBaseUrl } from "@/lib/site-url";
 import {
   breadcrumbJsonLd,
@@ -46,6 +47,7 @@ export async function generateMetadata({
 }: {
   params: Promise<Params>;
 }): Promise<Metadata> {
+  if (!isSetsEnabled()) return {};
   const { slug } = await params;
   if (!isSupabaseConfigured()) {
     return { title: titleFromSlug(slug) };
@@ -91,6 +93,7 @@ export default async function SetDetailPage({
 }: {
   params: Promise<Params>;
 }) {
+  if (!isSetsEnabled()) notFound();
   const { slug } = await params;
   // Set + auth are needed to render the header / owner chip — keep them on
   // the page shell. The expensive `listCardsInSet` + analytics live behind

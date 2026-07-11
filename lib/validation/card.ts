@@ -359,6 +359,26 @@ const baseCardSchema = z.object({
   // denormalizes that set's icon onto the card and creates set membership.
   // `null` clears the association; `undefined` leaves it untouched on update.
   primary_set_id: uuidSchema.nullable().optional(),
+  // Direct set-symbol override (the Set icon step, now that the sets UI is
+  // hidden): an uploaded image URL or a preset Keyrune code written straight
+  // onto the card's denormalized icon columns. When provided they WIN over
+  // the primary set's icon. `null` clears back to the default PipGlyph mark;
+  // `undefined` leaves the columns untouched on update.
+  set_icon_url: z
+    .string()
+    .trim()
+    .max(2048, "Icon URL must be 2048 characters or fewer.")
+    .url("Icon URL must be a valid URL.")
+    .refine(isSafeImageUrl, "Icon URL must be an https:// URL.")
+    .nullable()
+    .optional(),
+  set_icon_code: z
+    .string()
+    .trim()
+    .max(32, "Set code must be 32 characters or fewer.")
+    .regex(/^[a-z0-9]+$/, "Set code must be lowercase letters and numbers only.")
+    .nullable()
+    .optional(),
   // A deck to drop this card into on create (a custom-only deck_cards entry,
   // mainboard ×1). Create-flow convenience only — the action ignores it on
   // update (deck membership is managed from the deck dashboard).

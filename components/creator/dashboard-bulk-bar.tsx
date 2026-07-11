@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { QuickAddToSetDialog } from "@/components/sets/quick-add-to-set-dialog";
+import { isSetsEnabled } from "@/lib/sets/flags";
 import {
   deleteCardsAction,
   updateCardsVisibilityAction,
@@ -147,16 +148,18 @@ export function DashboardBulkBar({
               <Globe2 className="h-3.5 w-3.5" aria-hidden />
               Make public
             </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => setSetPickerOpen(true)}
-              disabled={isPending}
-            >
-              <FolderPlus className="h-3.5 w-3.5" aria-hidden />
-              Add to set
-            </Button>
+            {isSetsEnabled() ? (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => setSetPickerOpen(true)}
+                disabled={isPending}
+              >
+                <FolderPlus className="h-3.5 w-3.5" aria-hidden />
+                Add to set
+              </Button>
+            ) : null}
             <Button
               type="button"
               variant="outline"
@@ -213,17 +216,19 @@ export function DashboardBulkBar({
       </Dialog>
 
       {/* Add-to-set picker dialog. */}
-      <QuickAddToSetDialog
-        open={setPickerOpen}
-        onOpenChange={setSetPickerOpen}
-        cardIds={selectedIds}
-        userSets={userSets}
-        onSuccess={() => {
-          setSetPickerOpen(false);
-          onSuccess();
-          router.refresh();
-        }}
-      />
+      {isSetsEnabled() ? (
+        <QuickAddToSetDialog
+          open={setPickerOpen}
+          onOpenChange={setSetPickerOpen}
+          cardIds={selectedIds}
+          userSets={userSets}
+          onSuccess={() => {
+            setSetPickerOpen(false);
+            onSuccess();
+            router.refresh();
+          }}
+        />
+      ) : null}
     </>
   );
 }

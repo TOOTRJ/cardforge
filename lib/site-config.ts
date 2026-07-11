@@ -8,6 +8,8 @@
 // `/gallery` (public) and `/create` (authed).
 // ---------------------------------------------------------------------------
 
+import { isSetsEnabled } from "@/lib/sets/flags";
+
 export type NavItem = {
   label: string;
   href: string;
@@ -33,9 +35,11 @@ export const siteConfig = {
   // omitted for authed users because the right-side "New card" CTA already
   // covers that path; anon visitors still get it so they have a clear
   // entry point into the editor (which redirects them to /signup).
+  // Sets entries are spread-conditional on the feature flag (NEXT_PUBLIC_,
+  // so it's inlined at build time — safe in both server and client bundles).
   primaryNav: [
     { label: "Gallery", href: "/gallery" },
-    { label: "Sets", href: "/sets" },
+    ...(isSetsEnabled() ? [{ label: "Sets", href: "/sets" }] : []),
     { label: "Decks", href: "/decks" },
     { label: "Challenges", href: "/challenges" },
     { label: "Guides", href: "/articles" },
@@ -48,7 +52,7 @@ export const siteConfig = {
   dashboardNav: [
     { label: "Overview", href: "/dashboard" },
     { label: "Feed", href: "/feed" },
-    { label: "My Sets", href: "/dashboard/sets" },
+    ...(isSetsEnabled() ? [{ label: "My Sets", href: "/dashboard/sets" }] : []),
     { label: "My Decks", href: "/dashboard/decks" },
     { label: "AI Usage", href: "/dashboard/usage" },
     { label: "Notifications", href: "/notifications" },
@@ -72,7 +76,9 @@ export const siteConfig = {
       title: "Discover",
       links: [
         { label: "Gallery", href: "/gallery" },
-        { label: "Community sets", href: "/sets" },
+        ...(isSetsEnabled()
+          ? [{ label: "Community sets", href: "/sets" }]
+          : []),
         { label: "Community decks", href: "/decks" },
         { label: "Challenges", href: "/challenges" },
         { label: "Pricing", href: "/pricing" },

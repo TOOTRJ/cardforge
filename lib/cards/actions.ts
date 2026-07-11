@@ -323,6 +323,11 @@ export async function createCardAction(
   }
 
   const setIcon = await resolvePrimarySet(supabase, user.id, data.primary_set_id);
+  // Direct icon fields (the Set icon step) win over the set-derived symbol —
+  // they're the only icon UI while the sets feature is hidden. Callers that
+  // omit them (AI batch flows) keep the set-derived resolution.
+  const hasDirectIcon =
+    data.set_icon_url !== undefined || data.set_icon_code !== undefined;
 
   const insert: CardInsert = {
     owner_id: user.id,
@@ -371,8 +376,10 @@ export async function createCardAction(
     face_content: data.face_content ?? null,
     watermark: data.watermark ?? null,
     primary_set_id: setIcon.primary_set_id,
-    set_icon_url: setIcon.set_icon_url,
-    set_icon_code: setIcon.set_icon_code,
+    set_icon_url: hasDirectIcon ? (data.set_icon_url ?? null) : setIcon.set_icon_url,
+    set_icon_code: hasDirectIcon
+      ? (data.set_icon_code ?? null)
+      : setIcon.set_icon_code,
   };
 
   const { data: row, error } = await supabase
@@ -574,6 +581,13 @@ export async function updateCardAction(
     update.set_icon_url = resolvedSet.set_icon_url;
     update.set_icon_code = resolvedSet.set_icon_code;
   }
+  // Direct icon fields (the Set icon step) apply AFTER set resolution so an
+  // explicit edit always wins over the set-derived symbol. null clears back
+  // to the default PipGlyph mark; omitted leaves the columns alone.
+  if (data.set_icon_url !== undefined)
+    update.set_icon_url = data.set_icon_url ?? null;
+  if (data.set_icon_code !== undefined)
+    update.set_icon_code = data.set_icon_code ?? null;
 
   const { data: row, error } = await supabase
     .from("cards")

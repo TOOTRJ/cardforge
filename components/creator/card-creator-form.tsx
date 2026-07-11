@@ -22,6 +22,7 @@ import {
   ScrollText,
   Send,
   Sparkles,
+  Stamp,
   Wand2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -59,6 +60,7 @@ import { KindChangeDialog } from "@/components/creator/kind-change-dialog";
 import { ArtPanel } from "@/components/creator/panels/art-panel";
 import { TextPanel } from "@/components/creator/panels/text-panel";
 import { LandIconPanel } from "@/components/creator/panels/land-icon-panel";
+import { SetIconPanel } from "@/components/creator/panels/set-icon-panel";
 import { ForgeAIPanel } from "@/components/creator/panels/forge-ai-panel";
 import { AbilitiesPanel } from "@/components/creator/panels/abilities-panel";
 import { LayoutPanel } from "@/components/creator/panels/layout-panel";
@@ -224,6 +226,7 @@ const STEP_RAIL_ICONS: Record<string, React.ReactNode> = {
   card: <Layers aria-hidden />,
   identity: <IdCard aria-hidden />,
   text: <ScrollText aria-hidden />,
+  seticon: <Stamp aria-hidden />,
   publish: <Send aria-hidden />,
 };
 
@@ -1432,6 +1435,10 @@ export function CardCreatorForm({
       source_scryfall_id: values.source_scryfall_id.trim() || null,
       // Empty → null clears the association; a UUID adds the card to that set.
       primary_set_id: values.primary_set_id || null,
+      // Direct set-symbol fields (Set icon step). Empty → null clears back to
+      // the default PipGlyph mark; these win over the set-derived icon.
+      set_icon_url: values.set_icon_url.trim() || null,
+      set_icon_code: values.set_icon_code.trim() || null,
       // Create-flow convenience: a UUID drops the saved card into that deck
       // (custom-only mainboard entry). Ignored by updates.
       deck_id: values.deck_id || null,
@@ -1692,6 +1699,9 @@ export function CardCreatorForm({
     artUrl: watched.art_url || null,
     artPosition: watched.art_position,
     frameStyle: watched.frame_style,
+    // Live set-symbol preview (the Set icon step edits these directly).
+    setIconUrl: watched.set_icon_url || null,
+    setIconCode: watched.set_icon_code || null,
     faceContent: liveFaceContent,
     watermark:
       watched.watermark && watched.watermark.kind !== ""
@@ -1906,6 +1916,9 @@ export function CardCreatorForm({
                 ) : null}
               </>
             ) : null}
+
+            {/* ----- Set icon panel (the type-line symbol, a direct card field) ----- */}
+            {stepKey === "seticon" ? <SetIconPanel userId={userId} /> : null}
 
             {/* ----- Publish panel (visibility/set/back face + Advanced: finish/tags/save) ----- */}
             {stepKey === "publish" ? (

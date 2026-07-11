@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/popover";
 import { logoutAction } from "@/app/(auth)/actions";
 import { isBillingEnabled } from "@/lib/billing/flags";
+import { isSetsEnabled } from "@/lib/sets/flags";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -108,7 +109,9 @@ export function UserMenu({
           icon={LayoutDashboard}
           label="Dashboard"
         />
-        <MenuItem href="/dashboard/sets" icon={Layers} label="My sets" />
+        {isSetsEnabled() ? (
+          <MenuItem href="/dashboard/sets" icon={Layers} label="My sets" />
+        ) : null}
         <MenuItem href="/settings" icon={Settings} label="Settings" />
         {isBillingEnabled() ? (
           <>

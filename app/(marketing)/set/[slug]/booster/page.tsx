@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { getSetBySlugPublic, listCardsInSet } from "@/lib/sets/queries";
+import { isSetsEnabled } from "@/lib/sets/flags";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 import { BoosterViewer } from "@/components/sets/booster-viewer";
@@ -27,6 +28,7 @@ export async function generateMetadata({
 }: {
   params: Promise<Params>;
 }): Promise<Metadata> {
+  if (!isSetsEnabled()) return {};
   const { slug } = await params;
   if (!isSupabaseConfigured()) return { title: "Booster Pack" };
   const set = await getSetBySlugPublic(slug);
@@ -116,6 +118,7 @@ export default async function BoosterPage({
 }: {
   params: Promise<Params>;
 }) {
+  if (!isSetsEnabled()) notFound();
   const { slug } = await params;
   if (!isSupabaseConfigured()) notFound();
 
