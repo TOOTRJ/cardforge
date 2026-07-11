@@ -3,7 +3,6 @@ import "server-only";
 import OpenAI from "openai";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { scanImageUrl } from "@/lib/moderation/image-scan";
 
 // ---------------------------------------------------------------------------
 // gpt-image-1 art generator (Phase v2 Phase 4)
@@ -103,17 +102,12 @@ export async function persistGeneratedArt(
 
   const { data } = supabase.storage.from("card-art").getPublicUrl(path);
 
-  // NSFW auto-scan (fails open). Provider models are already filtered
-  // upstream, but this catches edge cases; a flag removes the object.
-  const scan = await scanImageUrl(data.publicUrl);
-  if (scan.flagged) {
-    await supabase.storage.from("card-art").remove([path]);
-    return {
-      ok: false,
-      error:
-        "The generated art was flagged by our content filter. Try generating again.",
-    };
-  }
+  // No post-generation moderation scan here (owner decision, 2026-07-10):
+  // the image PROVIDERS already refuse unsafe generations upstream, and our
+  // omni-moderation pass was flagging benign fantasy art and deleting it
+  // with no admin review path. Human uploads (lib/cards/upload-art-server,
+  // watermarks, pips) keep their scan; the report flow remains the backstop
+  // for anything AI-generated.
 
   return { ok: true, publicUrl: data.publicUrl };
 }
@@ -161,7 +155,9 @@ export async function generateRandomArt(rawPrompt: string): Promise<RandomArtRes
     const response = await oa.images.generate({
       model,
       prompt,
-      size: "1024x1024",
+      // Landscape (3:2) sits much closer to the frame's ~4:3 art window
+      // than a square — generated art no longer needs repositioning.
+      size: "1536x1024",
       // dall-e-3 accepts "standard" | "hd"; gpt-image-1 accepts
       // "low" | "medium" | "high" | "auto". Pick the per-model best.
       quality: isDalle ? "hd" : "high",

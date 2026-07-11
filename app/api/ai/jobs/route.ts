@@ -6,6 +6,7 @@ import { isDesignAiConfigured } from "@/lib/ai/provider";
 import { checkAiRateLimit, logAiCall } from "@/lib/ai/rate-limit";
 import { batchCardLimit, clampBatchSize } from "@/lib/ai/generation-limits";
 import {
+  SET_GENERATION_ENABLED,
   createDeckGenerationJob,
   createDeckRemixJob,
   createSetGenerationJob,
@@ -40,6 +41,8 @@ const requestSchema = z.discriminatedUnion("kind", [
     style: z.string().trim().max(200).optional(),
     size: z.coerce.number().optional(),
     format: z.enum(AI_DECK_FORMATS),
+    // Present = generate ADDITIONAL cards into this existing deck.
+    deck_id: z.string().uuid().optional(),
   }),
   z.object({
     kind: z.literal("deck_remix"),
@@ -122,6 +125,12 @@ export async function POST(request: Request) {
   await logAiCall(user.id, "generate_deck");
 
   if (parsed.data.kind === "set") {
+    if (!SET_GENERATION_ENABLED) {
+      return NextResponse.json(
+        { ok: false, error: "AI set generation is coming soon." },
+        { status: 403 },
+      );
+    }
     const result = await createSetGenerationJob({
       theme: parsed.data.theme ?? "",
       style: parsed.data.style,
@@ -143,6 +152,7 @@ export async function POST(request: Request) {
       style: parsed.data.style,
       format: parsed.data.format,
       size,
+      deckId: parsed.data.deck_id,
     });
     if (!result.ok) {
       return NextResponse.json({ ok: false, error: result.error }, { status: 502 });

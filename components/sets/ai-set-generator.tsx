@@ -26,6 +26,11 @@ import { StylePicker } from "@/components/ai/style-picker";
 // image) can be retried per-step without regenerating the batch.
 // ---------------------------------------------------------------------------
 
+// Temporarily disabled (owner decision, 2026-07-10) — the server rejects
+// kind "set" too (SET_GENERATION_ENABLED in lib/ai/generation-jobs.ts).
+// Flip both together to re-launch.
+const SET_GENERATION_UI_ENABLED = false;
+
 export function AiSetGenerator({
   aiConfigured,
   maxCards,
@@ -83,6 +88,27 @@ export function AiSetGenerator({
     );
 
   if (!aiConfigured) return null;
+
+  if (!SET_GENERATION_UI_ENABLED) {
+    return (
+      <SurfaceCard className="flex flex-col gap-2 p-6 opacity-80">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="flex items-center gap-2 font-display text-lg font-semibold tracking-tight text-foreground">
+            <Sparkles className="h-4 w-4 text-accent" aria-hidden />
+            Generate a set with AI
+          </h2>
+          <span className="rounded-full border border-border/70 bg-elevated px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-subtle">
+            Coming soon
+          </span>
+        </div>
+        <p className="text-sm leading-6 text-muted">
+          Whole-set generation — balanced rarities, matching art, a set icon,
+          and a cover in one go — is getting a polish pass and will be back
+          shortly. Deck generation is live in the meantime.
+        </p>
+      </SurfaceCard>
+    );
+  }
 
   return (
     <SurfaceCard className="flex flex-col gap-4 p-6">

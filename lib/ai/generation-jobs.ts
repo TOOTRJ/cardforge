@@ -127,6 +127,11 @@ export type CreateSetJobResult =
 const ICON_STEP_KEY = "icon";
 const COVER_STEP_KEY = "cover";
 
+/** AI set generation is temporarily disabled (owner decision, 2026-07-10) —
+ *  the UI shows "coming soon" and the jobs route rejects kind "set". All
+ *  the set machinery below stays intact for the re-enable. */
+export const SET_GENERATION_ENABLED = false;
+
 // Shared art direction so a batch renders as ONE set, not N unrelated
 // commissions. The per-card prompt appends the card's own scene.
 function artPrompt(plan: SetJobPlan, card: DesignedCard): string {
@@ -353,6 +358,10 @@ export type CreateDeckJobInput = {
   style?: string;
   format: AiDeckFormat;
   size: number;
+  /** Generate ADDITIONAL cards into this existing deck (must be owned).
+   *  The plan reads the deck's current cards so new designs synergize —
+   *  a 100-card read is a few thousand prompt tokens (~pennies). */
+  deckId?: string;
 };
 
 export type CreateDeckJobResult =
@@ -365,32 +374,80 @@ export async function createDeckGenerationJob(
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Sign in to generate decks." };
 
+  const supabase = await createClient();
+
+  // ---- Add-to-existing mode: load the deck + its cards for synergy ----
+  let existingDeck:
+    | { id: string; slug: string; title: string; description: string | null; format: string; cover_url: string | null }
+    | null = null;
+  let existingContext;
+  if (input.deckId) {
+    const { data } = await supabase
+      .from("decks")
+      .select("id, slug, title, description, format, cover_url, owner_id")
+      .eq("id", input.deckId)
+      .maybeSingle();
+    if (!data || data.owner_id !== user.id) {
+      return { ok: false, error: "Deck not found or not yours." };
+    }
+    existingDeck = data;
+    const items = await listDeckCards(data.id);
+    existingContext = {
+      title: data.title,
+      description: data.description,
+      hasCommander: items.some((item) => item.entry.board === "commander"),
+      cards: items.map((item) => ({
+        name: item.card?.title ?? item.entry.name,
+        type_line:
+          item.entry.type_line ??
+          (item.card
+            ? [item.card.supertype, item.card.card_type, ...(item.card.subtypes ?? [])]
+                .filter(Boolean)
+                .join(" ")
+            : null),
+        rules_text: item.card?.rules_text ?? null,
+      })),
+    };
+  }
+
   let planResult;
   try {
-    planResult = await generateDeckPlan(input);
+    planResult = await generateDeckPlan({
+      theme: input.theme,
+      style: input.style,
+      format: (existingDeck?.format as AiDeckFormat) ?? input.format,
+      size: input.size,
+      existing: existingContext,
+    });
   } catch (error) {
     const detail = error instanceof Error ? error.message : "Generation failed.";
     return { ok: false, error: `AI deck planning failed: ${detail}` };
   }
 
-  // AI-generated decks ship PUBLIC by default (owner decision, 2026-07-10).
-  const created = await createDeckAction(
-    {
-      title: planResult.concept.deck_title,
-      description: planResult.concept.deck_description,
-      format: input.format,
-      visibility: "public",
-    },
-    { redirectAfterCreate: false },
-  );
-  if (!created.ok) return { ok: false, error: "Couldn't create the deck." };
+  let deckId = existingDeck?.id;
+  let deckSlug = existingDeck?.slug;
+  if (!deckId) {
+    // AI-generated decks ship PUBLIC by default (owner decision, 2026-07-10).
+    const created = await createDeckAction(
+      {
+        title: planResult.concept.deck_title,
+        description: planResult.concept.deck_description,
+        format: input.format,
+        visibility: "public",
+      },
+      { redirectAfterCreate: false },
+    );
+    if (!created.ok) return { ok: false, error: "Couldn't create the deck." };
+    deckId = created.deckId;
+    deckSlug = created.slug;
+  }
 
   const plan: DeckJobPlan = {
-    deck_title: planResult.concept.deck_title,
+    deck_title: existingDeck?.title ?? planResult.concept.deck_title,
     strategy: planResult.concept.strategy,
     theme: input.theme.trim() || "designer's choice",
     style: input.style?.trim() || null,
-    format: input.format,
+    format: (existingDeck?.format as AiDeckFormat) ?? input.format,
     cards: planResult.cards,
     roles: planResult.slots.map((slot) => slot.role),
     quantities: planResult.slots.map((slot) => slot.quantity),
@@ -400,9 +457,11 @@ export async function createDeckGenerationJob(
     label: card.title,
     status: "pending" as const,
   }));
-  steps.push({ key: COVER_STEP_KEY, label: "Deck cover", status: "pending" });
+  // New decks always get a cover; add-mode only when the deck has none.
+  if (!existingDeck || !existingDeck.cover_url) {
+    steps.push({ key: COVER_STEP_KEY, label: "Deck cover", status: "pending" });
+  }
 
-  const supabase = await createClient();
   const { data: jobRow, error: insertError } = await supabase
     .from("ai_generation_jobs")
     .insert({
@@ -412,14 +471,15 @@ export async function createDeckGenerationJob(
       request: {
         theme: input.theme,
         style: input.style ?? null,
-        format: input.format,
+        format: plan.format,
         size: input.size,
-        deck_id: created.deckId,
-        deck_slug: created.slug,
+        deck_id: deckId,
+        deck_slug: deckSlug,
+        added_to_existing: Boolean(existingDeck),
       },
       plan: plan as unknown as Json,
       steps: steps as unknown as Json,
-      deck_id: created.deckId,
+      deck_id: deckId,
     })
     .select("*")
     .single();
@@ -429,7 +489,30 @@ export async function createDeckGenerationJob(
   return {
     ok: true,
     job: jobRow as unknown as GenerationJobRow,
-    deckSlug: created.slug,
+    deckSlug: deckSlug ?? "",
+  };
+}
+
+/** Theme/style the deck was originally generated with, for prefilling the
+ *  "generate more cards" panel so additions stay stylistically consistent.
+ *  Null when the deck has no AI-generation history. */
+export async function getDeckAiSeed(
+  deckId: string,
+): Promise<{ theme: string | null; style: string | null } | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("ai_generation_jobs")
+    .select("request, kind, created_at")
+    .eq("deck_id", deckId)
+    .in("kind", ["deck", "deck_remix"])
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!data) return null;
+  const request = (data.request ?? {}) as { theme?: unknown; style?: unknown };
+  return {
+    theme: typeof request.theme === "string" && request.theme ? request.theme : null,
+    style: typeof request.style === "string" && request.style ? request.style : null,
   };
 }
 
@@ -613,7 +696,8 @@ async function paintAndPublishCard(
   cardId: string,
   prompt: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const image = await generatePlainImage(prompt);
+  // "card" aspect matches the frame's art window — no manual repositioning.
+  const image = await generatePlainImage(prompt, "card");
   if (!image.ok) return { ok: false, error: image.error };
 
   const persisted = await persistGeneratedArt(image.bytes, image.contentType);
@@ -889,6 +973,7 @@ async function runDeckRemixStep(
   if (!artUrl) {
     const generated = await generatePlainImage(
       `${identity.art_instruction} Style: ${plan.style}.`,
+      "card",
     );
     if (generated.ok) {
       const persisted = await persistGeneratedArt(

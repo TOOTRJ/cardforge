@@ -6,6 +6,7 @@ import {
   createCardSchema,
   frameStyleSchema,
   slugify,
+  updateCardSchema,
 } from "@/lib/validation/card";
 
 // ---------------------------------------------------------------------------
@@ -115,6 +116,40 @@ describe("backFaceSchema (chunk 10)", () => {
   it("validates inner cost format like the front", () => {
     expect(() =>
       backFaceSchema.parse({ title: "Back", cost: "x".repeat(80) }),
+    ).toThrow();
+  });
+});
+
+describe("updateCardSchema", () => {
+  // REGRESSION (2026-07-10): zod materializes .default() values even
+  // through .partial(), so a partial update payload used to come out of
+  // parsing with color_identity: [], subtypes: [], tags: [], frame_style:
+  // {}, art_position: {}, and visibility: "private" attached — and the
+  // action layer wrote them, wiping those columns on every AI
+  // paint-and-publish update. Omitted keys must stay undefined.
+  it("leaves omitted defaulted fields undefined on partial updates", () => {
+    const parsed = updateCardSchema.parse({
+      art_url: "https://example.com/art.png",
+    });
+    expect(parsed.color_identity).toBeUndefined();
+    expect(parsed.subtypes).toBeUndefined();
+    expect(parsed.tags).toBeUndefined();
+    expect(parsed.frame_style).toBeUndefined();
+    expect(parsed.art_position).toBeUndefined();
+    expect(parsed.visibility).toBeUndefined();
+  });
+
+  it("still validates and normalizes fields that ARE provided", () => {
+    const parsed = updateCardSchema.parse({
+      color_identity: ["green"],
+      tags: ["  Big STOMPY  ", "big stompy"],
+      visibility: "public",
+    });
+    expect(parsed.color_identity).toEqual(["green"]);
+    expect(parsed.tags).toEqual(["big stompy"]);
+    expect(parsed.visibility).toBe("public");
+    expect(() =>
+      updateCardSchema.parse({ visibility: "everyone" }),
     ).toThrow();
   });
 });

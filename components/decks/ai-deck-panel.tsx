@@ -37,23 +37,29 @@ const FORMAT_OPTIONS = [
   { value: "limited", label: "Limited" },
 ] as const;
 
-type Mode = "new" | "remix";
+type Mode = "new" | "remix" | "add";
 
 export function AiDeckPanel({
   mode,
   aiConfigured,
   maxCards,
   deckId,
+  initialTheme,
+  initialStyle,
 }: {
   mode: Mode;
   aiConfigured: boolean;
   maxCards: number;
-  /** Required for mode="remix": the source deck. */
+  /** Required for mode="remix" and mode="add": the target deck. */
   deckId?: string;
+  /** Prefill (mode="add"): the theme/style the deck was originally
+   *  generated with, so additions stay stylistically consistent. */
+  initialTheme?: string | null;
+  initialStyle?: string | null;
 }) {
   const router = useRouter();
-  const [theme, setTheme] = useState("");
-  const [style, setStyle] = useState("");
+  const [theme, setTheme] = useState(initialTheme ?? "");
+  const [style, setStyle] = useState(initialStyle ?? "");
   const [format, setFormat] =
     useState<(typeof FORMAT_OPTIONS)[number]["value"]>("commander");
   const [size, setSize] = useState(Math.min(3, maxCards));
@@ -79,9 +85,15 @@ export function AiDeckPanel({
     toast.success(
       mode === "remix"
         ? "Deck remixed and published — the original is untouched."
-        : "Deck generated and published — every card is yours to edit.",
+        : mode === "add"
+          ? "New cards added to the deck — designed to synergize with what's already there."
+          : "Deck generated and published — every card is yours to edit.",
     );
-    if (outcome.slug) router.push(`/deck/${outcome.slug}/edit`);
+    if (mode === "add") {
+      router.refresh();
+    } else if (outcome.slug) {
+      router.push(`/deck/${outcome.slug}/edit`);
+    }
   };
 
   const handleGenerate = async () => {
@@ -91,19 +103,22 @@ export function AiDeckPanel({
     }
     settle(
       await run(
-        mode === "new"
+        mode === "remix"
           ? {
-              kind: "deck",
-              theme: theme.trim() || undefined,
-              style: style.trim() || undefined,
-              format,
-              size,
-            }
-          : {
               kind: "deck_remix",
               deck_id: deckId,
               style: style.trim(),
               theme: theme.trim() || undefined,
+            }
+          : {
+              kind: "deck",
+              theme: theme.trim() || undefined,
+              style: style.trim() || undefined,
+              // Add-mode decks keep their own format; the server reads it
+              // off the deck row.
+              format,
+              size,
+              ...(mode === "add" ? { deck_id: deckId } : {}),
             },
       ),
     );
@@ -115,38 +130,46 @@ export function AiDeckPanel({
     <SurfaceCard className="flex flex-col gap-4 p-6">
       <header className="flex flex-col gap-1">
         <h2 className="flex items-center gap-2 font-display text-lg font-semibold tracking-tight text-foreground">
-          {mode === "new" ? (
-            <Sparkles className="h-4 w-4 text-accent" aria-hidden />
-          ) : (
+          {mode === "remix" ? (
             <Wand2 className="h-4 w-4 text-accent" aria-hidden />
+          ) : (
+            <Sparkles className="h-4 w-4 text-accent" aria-hidden />
           )}
-          {mode === "new" ? "Generate a deck with AI" : "Remix this deck with AI"}
+          {mode === "new"
+            ? "Generate a deck with AI"
+            : mode === "add"
+              ? "Generate more cards for this deck"
+              : "Remix this deck with AI"}
         </h2>
         <p className="text-sm leading-6 text-muted">
           {mode === "new"
             ? "AI drafts an original deck for your format — commander, curve, matching art, and a cover — published publicly and fully editable."
-            : "A new public copy of this deck where each card keeps its exact rules but gets a fresh AI name, art, and cover in your style. The original stays untouched."}
+            : mode === "add"
+              ? "AI reads the deck's current cards and designs new ones that synergize — same colors, mechanics, and art style. Theme and style prefill from the original generation."
+              : "A new public copy of this deck where each card keeps its exact rules but gets a fresh AI name, art, and cover in your style. The original stays untouched."}
         </p>
       </header>
 
-      {mode === "new" ? (
+      {mode !== "remix" ? (
         <div className="grid gap-4 sm:grid-cols-2">
-          <FieldGroup label="Format">
-            <select
-              value={format}
-              onChange={(event) =>
-                setFormat(event.target.value as typeof format)
-              }
-              className={inputClass(false)}
-              disabled={busy}
-            >
-              {FORMAT_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </FieldGroup>
+          {mode === "new" ? (
+            <FieldGroup label="Format">
+              <select
+                value={format}
+                onChange={(event) =>
+                  setFormat(event.target.value as typeof format)
+                }
+                className={inputClass(false)}
+                disabled={busy}
+              >
+                {FORMAT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </FieldGroup>
+          ) : null}
           <FieldGroup label="Cards" helper={`Up to ${maxCards} per generation.`}>
             <select
               value={size}
@@ -178,9 +201,9 @@ export function AiDeckPanel({
           onChange={(event) => setTheme(event.target.value)}
           maxLength={300}
           placeholder={
-            mode === "new"
-              ? "e.g. graveyard mushroom druids"
-              : "e.g. set it in a frozen wasteland"
+            mode === "remix"
+              ? "e.g. set it in a frozen wasteland"
+              : "e.g. graveyard mushroom druids"
           }
           className={inputClass(false)}
           disabled={busy}
@@ -234,7 +257,7 @@ export function AiDeckPanel({
             {phase === "planning" ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                {mode === "remix" ? "Reading deck…" : "Designing deck…"}
+                {mode === "new" ? "Designing deck…" : "Reading deck…"}
               </>
             ) : phase === "stepping" ? (
               <>
@@ -244,7 +267,11 @@ export function AiDeckPanel({
             ) : (
               <>
                 <Sparkles className="h-4 w-4" aria-hidden />
-                {mode === "remix" ? "Remix deck" : "Generate deck"}
+                {mode === "remix"
+                  ? "Remix deck"
+                  : mode === "add"
+                    ? "Add cards"
+                    : "Generate deck"}
               </>
             )}
           </Button>

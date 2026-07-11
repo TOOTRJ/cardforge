@@ -95,7 +95,15 @@ export const cardArtUrlSchema = optionalEmptyString(
     .refine(isSafeImageUrl, "Art URL must be an https:// URL."),
 );
 
-export const cardSubtypesSchema = z
+// ⚠️ zod materializes .default() values even through .partial() — an omitted
+// key comes out of parsing as the default, NOT undefined. On the update
+// path that turns a partial payload into a destructive wipe of every
+// defaulted column (bit us live 2026-07-10: the AI paint-and-publish
+// update erased color_identity/subtypes on every generated card). Each
+// defaulted schema below therefore keeps a default-FREE base that
+// updateCardSchema uses, and only createCardSchema sees the defaults.
+
+const cardSubtypesBaseSchema = z
   .array(
     z
       .string()
@@ -103,56 +111,66 @@ export const cardSubtypesSchema = z
       .min(1, "Subtype cannot be empty.")
       .max(40, "Each subtype must be 40 characters or fewer."),
   )
-  .max(10, "A card can have up to 10 subtypes.")
-  .default([]);
+  .max(10, "A card can have up to 10 subtypes.");
+
+export const cardSubtypesSchema = cardSubtypesBaseSchema.default([]);
 
 // Freeform discovery tags. Normalized to lowercase alphanumeric + spaces/hyphens,
 // deduped, ≤30 chars each, ≤12 total — matching the DB cardinality check (0034).
+function normalizeTags(tags: string[]): string[] {
+  return Array.from(
+    new Set(
+      tags
+        .map((tag) =>
+          tag
+            .toLowerCase()
+            .replace(/[^a-z0-9\s-]/g, "")
+            .replace(/\s+/g, " ")
+            .trim(),
+        )
+        .filter((tag) => tag.length > 0 && tag.length <= 30),
+    ),
+  ).slice(0, 12);
+}
+
+const cardTagsBaseSchema = z.array(z.string()).transform(normalizeTags);
+
 export const cardTagsSchema = z
   .array(z.string())
   .default([])
-  .transform((tags) =>
-    Array.from(
-      new Set(
-        tags
-          .map((tag) =>
-            tag
-              .toLowerCase()
-              .replace(/[^a-z0-9\s-]/g, "")
-              .replace(/\s+/g, " ")
-              .trim(),
-          )
-          .filter((tag) => tag.length > 0 && tag.length <= 30),
-      ),
-    ).slice(0, 12),
-  );
+  .transform(normalizeTags);
 
-export const cardColorIdentitySchema = z
+const cardColorIdentityBaseSchema = z
   .array(z.enum(COLOR_IDENTITY_VALUES))
-  .max(7, "Color identity has at most 7 values.")
-  .default([]);
+  .max(7, "Color identity has at most 7 values.");
+
+export const cardColorIdentitySchema = cardColorIdentityBaseSchema.default([]);
 
 export const cardRaritySchema = z.enum(RARITY_VALUES).optional();
 export const cardTypeSchema = z.enum(CARD_TYPE_VALUES).optional();
-export const cardVisibilitySchema = z.enum(VISIBILITY_VALUES).default("private");
 
-export const artPositionSchema = z
+const cardVisibilityBaseSchema = z.enum(VISIBILITY_VALUES);
+export const cardVisibilitySchema = cardVisibilityBaseSchema.default("private");
+
+const artPositionBaseSchema = z
   .object({
     focalX: z.number().min(0).max(1).optional(),
     focalY: z.number().min(0).max(1).optional(),
     scale: z.number().min(0.1).max(4).optional(),
     rotation: z.number().min(-180).max(180).optional(),
   })
-  .strict()
-  .default({});
+  .strict();
 
-export const frameStyleSchema = z
+export const artPositionSchema = artPositionBaseSchema.default({});
+
+const frameStyleBaseSchema = z
   .object({
     finish: z.enum(CARD_FINISH_VALUES).optional(),
     template: z.enum(FRAME_TEMPLATE_VALUES).optional(),
   })
-  .strict()
-  .default({});
+  .strict();
+
+export const frameStyleSchema = frameStyleBaseSchema.default({});
 
 const uuidSchema = z.string().uuid("Must be a valid UUID.");
 
@@ -355,8 +373,18 @@ const baseCardSchema = z.object({
 export const createCardSchema = baseCardSchema;
 
 // Update accepts the same shape but everything is optional. We model it as a
-// partial of the base — the action layer rejects empty payloads.
-export const updateCardSchema = baseCardSchema.partial();
+// partial of the base, THEN override every defaulted field with its
+// default-free base: zod fills defaults for omitted keys even through
+// .partial(), and the action layer treats "defined" as "write this column" —
+// without the overrides a partial update silently wipes those columns.
+export const updateCardSchema = baseCardSchema.partial().extend({
+  subtypes: cardSubtypesBaseSchema.optional(),
+  tags: cardTagsBaseSchema.optional(),
+  color_identity: cardColorIdentityBaseSchema.optional(),
+  visibility: cardVisibilityBaseSchema.optional(),
+  art_position: artPositionBaseSchema.optional(),
+  frame_style: frameStyleBaseSchema.optional(),
+});
 
 export type CreateCardInput = z.infer<typeof createCardSchema>;
 export type UpdateCardInput = z.infer<typeof updateCardSchema>;
