@@ -42,13 +42,41 @@ async function findUserIdByCustomer(
   return data?.id ?? null;
 }
 
+// Map a subscription to its profile. Primary key is stripe_customer_id; the
+// fallback is the supabase_user_id the checkout action stamps into the
+// subscription metadata — and when the fallback fires we BACKFILL the missing
+// stripe_customer_id so every later event (invoice.payment_failed matches on
+// customer id only) finds the row. This made the first live trial recoverable:
+// the customer id had never been persisted (see ensureStripeCustomer), so the
+// customer lookup matched nothing and the webhook silently no-opped.
+async function resolveSubscriptionUserId(
+  sub: Stripe.Subscription,
+  admin: AdminClient,
+): Promise<string | null> {
+  const customerId = customerIdOf(sub.customer);
+  if (customerId) {
+    const byCustomer = await findUserIdByCustomer(customerId, admin);
+    if (byCustomer) return byCustomer;
+  }
+
+  const metaUserId = sub.metadata?.supabase_user_id ?? null;
+  if (!metaUserId) return null;
+  if (customerId) {
+    await admin
+      .from("profiles")
+      .update({ stripe_customer_id: customerId })
+      .eq("id", metaUserId);
+  }
+  return metaUserId;
+}
+
 async function upsertSubscriptionState(
   sub: Stripe.Subscription,
   admin: AdminClient,
   opts: { deleted?: boolean } = {},
 ): Promise<void> {
-  const customerId = customerIdOf(sub.customer);
-  if (!customerId) return;
+  const userId = await resolveSubscriptionUserId(sub, admin);
+  if (!userId) return;
 
   const item = sub.items.data[0];
   const tier = opts.deleted ? "free" : tierForPriceId(item?.price?.id) ?? "free";
@@ -66,7 +94,7 @@ async function upsertSubscriptionState(
       current_period_end: opts.deleted ? null : periodEnd,
       cancel_at_period_end: opts.deleted ? false : sub.cancel_at_period_end,
     })
-    .eq("stripe_customer_id", customerId);
+    .eq("id", userId);
 }
 
 // Grant this month's credit allotment for an active subscription. Idempotent
@@ -77,9 +105,7 @@ async function maybeGrantMonthlyCredits(
   admin: AdminClient,
 ): Promise<void> {
   if (!ACTIVE_STATUSES.has(sub.status)) return;
-  const customerId = customerIdOf(sub.customer);
-  if (!customerId) return;
-  const userId = await findUserIdByCustomer(customerId, admin);
+  const userId = await resolveSubscriptionUserId(sub, admin);
   if (!userId) return;
 
   const tier = tierForPriceId(sub.items.data[0]?.price?.id);
