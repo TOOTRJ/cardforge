@@ -15,6 +15,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { DECK_FORMAT_LABELS } from "@/types/deck";
 import { isDesignAiConfigured } from "@/lib/ai/provider";
 import { batchCardLimit } from "@/lib/ai/generation-limits";
+import { getDeckAiSeed } from "@/lib/ai/generation-jobs";
 import { AiDeckPanel } from "@/components/decks/ai-deck-panel";
 
 type EditDeckPageProps = {
@@ -59,7 +60,10 @@ export default async function EditDeckPage({ params }: EditDeckPageProps) {
     notFound();
   }
 
-  const maxCards = await batchCardLimit();
+  const [maxCards, aiSeed] = await Promise.all([
+    batchCardLimit(),
+    getDeckAiSeed(deck.id),
+  ]);
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
@@ -93,6 +97,15 @@ export default async function EditDeckPage({ params }: EditDeckPageProps) {
 
       <div className="mt-10 flex flex-col gap-10">
         <DeckCreatorForm mode="edit" userId={user.id} deck={deck} />
+
+        <AiDeckPanel
+          mode="add"
+          aiConfigured={isDesignAiConfigured()}
+          maxCards={maxCards}
+          deckId={deck.id}
+          initialTheme={aiSeed?.theme}
+          initialStyle={aiSeed?.style}
+        />
 
         <AiDeckPanel
           mode="remix"

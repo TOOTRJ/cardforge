@@ -96,15 +96,49 @@ export type DeckDesignResult = {
   slots: DeckSlot[];
 };
 
+/** Summary of a card already in the deck — the synergy context for
+ *  "generate more cards". Kept terse: a 100-card deck is still only a few
+ *  thousand tokens (~pennies) in the plan call. */
+export type ExistingDeckCard = {
+  name: string;
+  type_line: string | null;
+  rules_text: string | null;
+};
+
+export type ExistingDeckContext = {
+  title: string;
+  description: string | null;
+  cards: ExistingDeckCard[];
+  hasCommander: boolean;
+};
+
+function existingCardLines(cards: ExistingDeckCard[]): string {
+  return cards
+    .slice(0, 120)
+    .map((card) => {
+      const parts = [card.name];
+      if (card.type_line) parts.push(`(${card.type_line})`);
+      if (card.rules_text) parts.push(`— ${card.rules_text.replace(/\n/g, " / ").slice(0, 220)}`);
+      return `- ${parts.join(" ")}`;
+    })
+    .join("\n");
+}
+
 export async function generateDeckPlan(input: {
   theme: string;
   style?: string;
   format: AiDeckFormat;
   size: number;
+  /** Present when ADDING cards to an existing deck: the new cards must
+   *  synergize with what's already there, and the concept anchors on the
+   *  deck's existing identity instead of inventing a new one. */
+  existing?: ExistingDeckContext;
 }): Promise<DeckDesignResult> {
   const theme =
     input.theme.trim().slice(0, 300) ||
-    "a flavorful, fun-to-pilot original deck — surprise me";
+    (input.existing
+      ? "extend the deck's existing theme"
+      : "a flavorful, fun-to-pilot original deck — surprise me");
 
   const { object: concept } = await generateObject({
     model: judgeModel(),
@@ -116,14 +150,31 @@ export async function generateDeckPlan(input: {
       input.style?.trim()
         ? `Art/tone style: ${input.style.trim().slice(0, 200)}`
         : null,
-      `${input.size} cards will be designed.`,
+      input.existing
+        ? [
+            `IMPORTANT: this is an EXISTING deck called "${input.existing.title}"${
+              input.existing.description ? ` — ${input.existing.description}` : ""
+            }. Keep its identity (deck_title should echo it) and infer the strategy and colors FROM its current cards:`,
+            existingCardLines(input.existing.cards),
+          ].join("\n")
+        : null,
+      `${input.size} ${input.existing ? "ADDITIONAL" : ""} cards will be designed.`,
     ]
       .filter(Boolean)
       .join("\n"),
     temperature: 0.9,
   });
 
-  const slots = buildDeckSkeleton(input.format, input.size);
+  let slots = buildDeckSkeleton(input.format, input.size);
+  // Adding to a deck that already has a commander → never design another.
+  if (input.existing?.hasCommander) {
+    slots = slots.map((slot) =>
+      slot.role === "commander"
+        ? { ...slot, role: "creature" as const }
+        : slot,
+    );
+  }
+
   const { cards } = await designCards({
     theme,
     style: input.style,
@@ -134,8 +185,16 @@ export async function generateDeckPlan(input: {
       `These cards form the deck "${concept.deck_title}" — ${concept.deck_description}`,
       `Strategy: ${concept.strategy}`,
       `Format rules: ${FORMAT_NOTES[input.format]}`,
+      input.existing
+        ? [
+            "The deck ALREADY CONTAINS these cards — the new designs must SYNERGIZE with them (shared mechanics, tribal/keyword overlap, curve gaps filled) and stay inside their color identity:",
+            existingCardLines(input.existing.cards),
+          ].join("\n")
+        : null,
       "The cards must play together: shared mechanics, recurring names, a coherent game plan.",
-    ].join("\n"),
+    ]
+      .filter(Boolean)
+      .join("\n"),
   });
 
   return { concept, cards, slots };

@@ -76,8 +76,10 @@ export async function restyleImage(input: {
 
 const GATEWAY_IMAGE_DEFAULT = "bfl/flux-2-flex";
 
-/** Card art is square (the art slot crops); covers are wide (16:9 tiles). */
-export type ImageAspect = "square" | "wide";
+/** "card" matches the frame's art window (~4:3 — m15 slot is 84.4%×44% of a
+ *  63×88 card ≈ 1.37:1), so generated art fits with no manual repositioning.
+ *  "square" suits icons; "wide" (16:9) suits set/deck cover tiles. */
+export type ImageAspect = "square" | "wide" | "card";
 
 export async function generateStyledImage(
   prompt: string,
@@ -91,7 +93,8 @@ export async function generateStyledImage(
     const { image } = await generateImage({
       model,
       prompt: prompt.trim().slice(0, 4000),
-      aspectRatio: aspect === "wide" ? "16:9" : "1:1",
+      aspectRatio:
+        aspect === "wide" ? "16:9" : aspect === "card" ? "4:3" : "1:1",
     });
     return {
       ok: true,
@@ -134,8 +137,9 @@ export async function generatePlainImage(
     const response = await client.images.generate({
       model,
       prompt: trimmed,
-      // gpt-image's landscape size; card art stays square.
-      size: aspect === "wide" ? "1536x1024" : "1024x1024",
+      // gpt-image has no 4:3 — its landscape 1536x1024 (3:2) is the closest
+      // fit for both wide covers and card-window art.
+      size: aspect === "square" ? "1024x1024" : "1536x1024",
       quality: model.startsWith("dall-e") ? "hd" : "high",
       n: 1,
     });
