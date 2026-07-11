@@ -14,6 +14,7 @@ import { SurfaceCard } from "@/components/ui/surface-card";
 import { Button } from "@/components/ui/button";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
+import { ownerExportStamp } from "@/lib/billing/entitlements";
 import { getPipOverrides } from "@/lib/pips/queries";
 import { getCurrentChallenge } from "@/lib/challenges/queries";
 import {
@@ -61,9 +62,12 @@ export default async function CreatePage({
     redirect("/login?redirectTo=/create");
   }
 
-  const [gameSystem, profile] = await Promise.all([
+  const [gameSystem, profile, exportStamp] = await Promise.all([
     getFantasyGameSystem(),
     getCurrentProfile(),
+    // The owner's custom footer mark (paid perk) — shown live in the preview
+    // so the editor matches what exports and bakes will print.
+    ownerExportStamp(user.id),
   ]);
   const templates = gameSystem
     ? await getTemplatesForGameSystem(gameSystem.id)
@@ -164,6 +168,7 @@ export default async function CreatePage({
           initialTag={initialTag}
           activeChallenge={await getCurrentChallenge()}
           defaultArtistCredit={profile?.display_name || profile?.username || ""}
+          footerWatermark={exportStamp.footerText}
         />
       </div>
     </div>

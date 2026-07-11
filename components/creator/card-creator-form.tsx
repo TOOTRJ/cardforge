@@ -204,6 +204,10 @@ type CardCreatorFormProps = {
   /** Admin frame-layout overrides (server-fetched) — keeps the editor's
    *  live preview identical to the gallery render and the bake. */
   profileOverrides?: FrameProfileOverridesMap | null;
+  /** The owner's custom footer mark (server-resolved via ownerExportStamp —
+   *  paid perk, null when unset/free). Printed in the preview footer so the
+   *  editor matches exports; not form state. */
+  footerWatermark?: string | null;
 };
 
 // Step membership + field→step routing now live in lib/creator/steps.ts (pure
@@ -255,6 +259,7 @@ export function CardCreatorForm({
   defaultArtistCredit = "",
   verifiedFrameKeys = [],
   profileOverrides = null,
+  footerWatermark = null,
 }: CardCreatorFormProps) {
   const router = useRouter();
   const upgrade = useUpgradeModal();
@@ -1123,13 +1128,16 @@ export function CardCreatorForm({
       toast.error("Sign in to use the AI card generator.");
       return false;
     }
-    // Close the dialog immediately — the generation runs as a background job
-    // via the root GenerationJobProvider (floating progress widget, safe to
-    // navigate; a closed tab pauses and auto-resumes). This replaced the old
-    // single 60–90s request, which infrastructure timeouts cut and re-ran
-    // (double charge + phantom client failure).
+    // Close the dialog and land the user on the dashboard — the generation
+    // runs as a background job via the root GenerationJobProvider (floating
+    // progress widget, safe to navigate; a closed tab pauses and
+    // auto-resumes). This replaced the old single 60–90s request, which
+    // infrastructure timeouts cut and re-ran (double charge + phantom
+    // client failure). The closure below outlives this page: the provider
+    // and sonner are both mounted in the root layout.
     setAiGenerateOpen(false);
     setGeneratingRandom(true);
+    router.push("/dashboard");
     try {
       const outcome = await generationJob.run({ kind: "card", ...options });
       if (!outcome.ok) {
@@ -1137,8 +1145,12 @@ export function CardCreatorForm({
         // widget with a Retry. Nothing else to do here.
         return false;
       }
+      // Persistent by design (owner request): stays until the link is
+      // clicked or the toast is dismissed via its close button.
       toast.success("Your card is forged.", {
         description: "Original art painted — it's saved to your library.",
+        duration: Infinity,
+        closeButton: true,
         ...(outcome.cardId
           ? {
               action: {
@@ -1630,6 +1642,9 @@ export function CardCreatorForm({
     frameStyle: watched.frame_style,
     // Live set-symbol preview (the Set icon step edits these directly).
     setIconUrl: watched.set_icon_url || null,
+    // Owner's custom footer mark — server-resolved, not form state, so the
+    // preview footer matches what exports/bakes will print.
+    footerWatermark,
     setIconCode: watched.set_icon_code || null,
     faceContent: liveFaceContent,
     watermark:

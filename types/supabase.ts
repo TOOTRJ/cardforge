@@ -781,6 +781,8 @@ export type Database = {
           comp_tier: string | null;
           comp_expires_at: string | null;
           card_limit_override: number | null;
+          // Column added by migration 0063 — folded in until regeneration.
+          export_watermark_text: string | null;
         };
         Insert: {
           accent_color?: string | null;
@@ -813,6 +815,7 @@ export type Database = {
           comp_tier?: string | null;
           comp_expires_at?: string | null;
           card_limit_override?: number | null;
+          export_watermark_text?: string | null;
         };
         Update: {
           accent_color?: string | null;
@@ -845,6 +848,7 @@ export type Database = {
           comp_tier?: string | null;
           comp_expires_at?: string | null;
           card_limit_override?: number | null;
+          export_watermark_text?: string | null;
         };
         Relationships: [];
       };

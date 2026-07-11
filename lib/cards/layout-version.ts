@@ -70,6 +70,10 @@
 //            visual language as the Medallion treatment) — star r9.5 inside
 //            ring r13.4, both keylined; geometry moved to SET_MARK_* in
 //            lib/brand/geometry.
+//   19     — the hardcoded "PipGlyph" footer text is gone (it doubled up
+//            with the free-tier pipglyph.com overlay). The footer-right slot
+//            now prints the OWNER's custom watermark text (paid perk,
+//            profiles.export_watermark_text) or nothing.
 // ---------------------------------------------------------------------------
 
-export const CARD_LAYOUT_VERSION = 18;
+export const CARD_LAYOUT_VERSION = 19;

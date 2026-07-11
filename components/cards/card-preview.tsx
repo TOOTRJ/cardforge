@@ -129,6 +129,10 @@ export type CardPreviewData = {
    *  template — merged over the code profiles by resolveFrameProfile so the
    *  live preview and the Satori bake always agree. Absent = code defaults. */
   profileOverrides?: FrameProfileOverridesMap | null;
+  /** The OWNER's custom footer mark (profiles.export_watermark_text, paid
+   *  perk) — prints footer-right where the hardcoded "PipGlyph" used to sit
+   *  (removed in layout v19). Null/absent = blank. */
+  footerWatermark?: string | null;
 };
 
 type CardPreviewProps = CardPreviewData & {
@@ -222,6 +226,7 @@ export function CardPreview({
   backFace,
   pipOverrides,
   profileOverrides,
+  footerWatermark,
   face,
   onFaceChange,
   flipOnClick = false,
@@ -329,6 +334,7 @@ export function CardPreview({
         setIconUrl: backCard.setIconUrl ?? null,
         setIconCode: backCard.setIconCode ?? null,
         pipOverrides: backCard.pipOverrides ?? pipOverrides ?? null,
+        footerWatermark: backCard.footerWatermark ?? footerWatermark ?? null,
       } as const)
     : null;
 
@@ -359,6 +365,7 @@ export function CardPreview({
     setIconUrl: setIconUrl ?? null,
     setIconCode: setIconCode ?? null,
     pipOverrides: pipOverrides ?? null,
+    footerWatermark: footerWatermark ?? null,
   } as const;
 
   return (
@@ -501,6 +508,7 @@ function CardFace({
   pipOverrides = null,
   adventure = null,
   secondFace = null,
+  footerWatermark = null,
 }: {
   face: FaceData;
   template: FrameTemplate;
@@ -516,6 +524,8 @@ function CardFace({
   adventure?: AdventureData | null;
   /** Back-face content for a rotated second face (flip / split / aftermath). */
   secondFace?: FaceData | null;
+  /** The owner's custom footer mark; null = blank (layout v19). */
+  footerWatermark?: string | null;
 }) {
   const colorKey = pickFrameColorKey(colorIdentity);
   const safeTitle = face.title?.trim() || "Untitled Card";
@@ -962,7 +972,11 @@ function CardFace({
           <span style={ELLIPSIS}>
             {face.artistCredit?.trim() ? `Art: ${face.artistCredit}` : "Art: Unknown"}
           </span>
-          <span style={{ flexShrink: 0 }}>PipGlyph</span>
+          {/* Footer-right: the owner's custom mark, or nothing — mirrors the
+              bake (lib/render/card-image.tsx, layout v19). */}
+          {footerWatermark ? (
+            <span style={{ flexShrink: 0 }}>{footerWatermark}</span>
+          ) : null}
         </div>
       ) : null}
 
