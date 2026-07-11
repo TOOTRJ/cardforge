@@ -9,6 +9,7 @@ import { LogoutButton } from "@/components/auth/logout-button";
 import { Button } from "@/components/ui/button";
 import { siteConfig } from "@/lib/site-config";
 import { isBillingEnabled } from "@/lib/billing/flags";
+import { formatCredits } from "@/lib/billing/plans";
 import { isSetsEnabled } from "@/lib/sets/flags";
 import { cn } from "@/lib/utils";
 
@@ -150,7 +151,9 @@ export function MobileMenu({
               {billingOn ? (
                 <div className="mb-1 flex items-center gap-1.5 px-3 text-xs text-muted">
                   <Coins className="h-3.5 w-3.5 text-gold-strong" aria-hidden />
-                  <span className="font-medium text-foreground">{credits}</span>
+                  <span className="font-medium text-foreground">
+                    {formatCredits(credits)}
+                  </span>
                   credits · {creditsUsed} used
                 </div>
               ) : null}
