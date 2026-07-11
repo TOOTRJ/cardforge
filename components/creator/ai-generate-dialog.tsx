@@ -136,7 +136,9 @@ export function AiGenerateDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4">
+        {/* px-5 matches DialogHeader/Footer — the fields were flush with the
+            dialog edges. */}
+        <div className="flex flex-col gap-4 px-5 py-5">
           <FieldGroup
             label="Theme"
             helper="What the card is about — a place, a character, a moment."
