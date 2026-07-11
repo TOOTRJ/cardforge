@@ -24,6 +24,18 @@ import {
 } from "@/lib/ai/image-gen";
 import { persistGeneratedArt } from "@/lib/ai/random-art";
 import { logAiCall, refundCredits, spendCredits } from "@/lib/ai/rate-limit";
+import { generateRandomCard } from "@/lib/ai/random-card";
+import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
+import {
+  colorHintsForFrame,
+  resolveGeneratedFrame,
+} from "@/lib/creator/frame-random";
+import type {
+  CardType,
+  ColorIdentity,
+  FrameTemplate,
+  Rarity,
+} from "@/types/card";
 import type { DesignedCard } from "@/lib/ai/card-design";
 import { getCardById as getScryfallCardById } from "@/lib/scryfall/client";
 import { mapScryfallToFormPatch } from "@/lib/scryfall/import-mapper";
@@ -63,14 +75,26 @@ export type JobStep = {
 export type GenerationJobRow = {
   id: string;
   owner_id: string;
-  kind: "set" | "deck" | "deck_remix";
+  kind: "set" | "deck" | "deck_remix" | "card";
   status: "generating" | "done" | "failed" | "cancelled";
   request: Record<string, unknown>;
-  plan: SetJobPlan | DeckJobPlan | DeckRemixJobPlan | null;
+  plan: SetJobPlan | DeckJobPlan | DeckRemixJobPlan | CardJobPlan | null;
   steps: JobStep[];
   set_id: string | null;
   deck_id: string | null;
   error: string | null;
+};
+
+/** Single-card job (migration 0061): the card text is designed at plan time
+ *  (fast), the one step creates + paints it. Replaced the synchronous
+ *  /api/ai/random-card request, which ran 60–90s and got cut + re-run at the
+ *  infra layer (double charge, client-side "failure"; observed 2026-07-11). */
+export type CardJobPlan = {
+  card: DesignedCard;
+  style: string | null;
+  /** Resolved after text generation (depends on final colors); null = the
+   *  creator's era default for the type. */
+  frame_template: string | null;
 };
 
 export type SetJobPlan = {
@@ -300,7 +324,8 @@ export async function runNextJobStep(
   if (job.status !== "generating") {
     return { ok: true, job };
   }
-  if (!job.plan || (!job.set_id && !job.deck_id)) {
+  // Card jobs have no set/deck target — the plan is the whole contract.
+  if (!job.plan || (job.kind !== "card" && !job.set_id && !job.deck_id)) {
     return { ok: false, error: "Job has no plan — recreate it." };
   }
 
@@ -345,10 +370,188 @@ export async function runNextJobStep(
           : { ...step, status: "failed", error: "Missing entry plan." };
         break;
       }
+      case "card": {
+        steps[index] = await runSingleCardStep(
+          user.id,
+          step,
+          job.plan as CardJobPlan,
+        );
+        break;
+      }
     }
   }
 
   return persistSteps(jobId, steps);
+}
+
+// ---------------------------------------------------------------------------
+// Single-card generation (the "Generate a card with AI" dialog)
+// ---------------------------------------------------------------------------
+
+export type CreateCardJobInput = {
+  theme?: string;
+  style?: string;
+  cardType?: CardType;
+  /** "random" or a specific published frame for the chosen type. */
+  frame?: "random" | FrameTemplate;
+  rarity?: Rarity;
+};
+
+export type CreateCardJobResult =
+  | { ok: true; job: GenerationJobRow }
+  | { ok: false; error: string };
+
+/** PLAN a single-card job: one fast text call designs the card; the art +
+ *  save happen in the job's one step so no HTTP request runs long. */
+export async function createCardGenerationJob(
+  input: CreateCardJobInput,
+): Promise<CreateCardJobResult> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Sign in to generate a card." };
+
+  // When the user locked a specific frame, steer generation toward a color
+  // that frame actually has published art for (same logic as the legacy
+  // random-card route).
+  const verifiedKeys = new Set(await getVerifiedFrameKeys());
+  let colorHint: ColorIdentity | undefined;
+  if (input.frame && input.frame !== "random" && input.cardType) {
+    const hints = colorHintsForFrame(input.cardType, input.frame, verifiedKeys);
+    if (hints.length > 0) {
+      colorHint = hints[Math.floor(Math.random() * hints.length)];
+    }
+  }
+
+  await logAiCall(user.id, "generate_random_card");
+  let card: DesignedCard;
+  try {
+    card = await generateRandomCard({
+      theme: input.theme,
+      style: input.style,
+      cardType: input.cardType,
+      rarity: input.rarity,
+      colorHint,
+    });
+  } catch (error) {
+    const detail =
+      error instanceof Error ? error.message : "Card generation failed.";
+    return { ok: false, error: `AI card design failed: ${detail}` };
+  }
+
+  const frameTemplate = resolveGeneratedFrame({
+    cardType: card.card_type,
+    requested: input.frame,
+    colorIdentity: card.color_identity,
+    verifiedKeys,
+  });
+
+  const plan: CardJobPlan = {
+    card,
+    style: input.style?.trim() || null,
+    frame_template: frameTemplate ?? null,
+  };
+  const steps: JobStep[] = [
+    { key: "card:0", label: card.title, status: "pending" },
+  ];
+
+  const supabase = await createClient();
+  const { data: jobRow, error: insertError } = await supabase
+    .from("ai_generation_jobs")
+    .insert({
+      owner_id: user.id,
+      kind: "card",
+      status: "generating",
+      request: {
+        theme: input.theme ?? null,
+        style: input.style ?? null,
+        card_type: input.cardType ?? null,
+        rarity: input.rarity ?? null,
+      },
+      plan: plan as unknown as Json,
+      steps: steps as unknown as Json,
+    })
+    .select("*")
+    .single();
+  if (insertError || !jobRow) {
+    return { ok: false, error: "Couldn't persist the generation job." };
+  }
+  return { ok: true, job: jobRow as unknown as GenerationJobRow };
+}
+
+/** The card job's single step: reserve the credit, create the card, paint +
+ *  publish. Same retry semantics as batch card steps — a step whose card
+ *  exists only redoes the art (charge kept, repaint free). */
+async function runSingleCardStep(
+  userId: string,
+  step: JobStep,
+  plan: CardJobPlan,
+): Promise<JobStep> {
+  const card = plan.card;
+  let cardId = step.card_id;
+
+  if (!cardId) {
+    // Reserve fail-closed BEFORE the expensive work — see runCardStep.
+    const reserve = await spendCredits(1, "generate_random_card", {
+      failClosed: true,
+    });
+    if (!reserve.ok) {
+      return { ...step, status: "failed", error: reserve.message };
+    }
+
+    const supabase = await createClient();
+    const { data: gameSystem } = await supabase
+      .from("game_systems")
+      .select("id")
+      .eq("is_active", true)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (!gameSystem) {
+      await refundCredits(userId, 1, "generate_random_card");
+      return { ...step, status: "failed", error: "No game system configured." };
+    }
+
+    const result = await createCardAction(
+      {
+        title: card.title,
+        game_system_id: gameSystem.id,
+        cost: card.cost ?? undefined,
+        color_identity: card.color_identity,
+        supertype: card.supertype ?? undefined,
+        card_type: card.card_type,
+        subtypes: card.subtypes,
+        rarity: card.rarity,
+        rules_text: card.rules_text ?? undefined,
+        flavor_text: card.flavor_text ?? undefined,
+        power: card.power ?? undefined,
+        toughness: card.toughness ?? undefined,
+        loyalty: card.loyalty ?? undefined,
+        defense: card.defense ?? undefined,
+        visibility: "private",
+        frame_style: plan.frame_template
+          ? { template: plan.frame_template }
+          : undefined,
+      },
+      { redirectAfterCreate: false },
+    );
+    if (!result.ok) {
+      await refundCredits(userId, 1, "generate_random_card");
+      return { ...step, status: "failed", error: createFailureMessage(result) };
+    }
+    cardId = result.cardId;
+  }
+
+  await logAiCall(userId, "generate_random_art");
+  const style = plan.style?.trim()
+    ? ` Rendered strictly in ${plan.style.trim()} style.`
+    : "";
+  const published = await paintAndPublishCard(
+    cardId,
+    `${card.art_prompt}${style} NO frame, NO borders, NO card layout, NO text or lettering anywhere in the image.`,
+  );
+  if (!published.ok) {
+    return { ...step, status: "failed", card_id: cardId, error: published.error };
+  }
+  return { ...step, status: "done", card_id: cardId, error: undefined };
 }
 
 // ---------------------------------------------------------------------------

@@ -3,14 +3,20 @@ import { z } from "zod";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { isDesignAiConfigured } from "@/lib/ai/provider";
-import { checkAiRateLimit, logAiCall } from "@/lib/ai/rate-limit";
+import {
+  checkAiRateLimit,
+  checkRandomCardDailyLimit,
+  logAiCall,
+} from "@/lib/ai/rate-limit";
 import { batchCardLimit, clampBatchSize } from "@/lib/ai/generation-limits";
 import {
   SET_GENERATION_ENABLED,
+  createCardGenerationJob,
   createDeckGenerationJob,
   createDeckRemixJob,
   createSetGenerationJob,
 } from "@/lib/ai/generation-jobs";
+import { FRAME_TEMPLATE_VALUES, RARITY_VALUES } from "@/types/card";
 import { AI_DECK_FORMATS } from "@/lib/ai/deck-design";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { getEntitlements } from "@/lib/billing/entitlements";
@@ -26,6 +32,20 @@ import { getEntitlements } from "@/lib/billing/entitlements";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
+
+// The 9 standard card types the options dialog offers (matches the legacy
+// random-card route; layouts are frame choices, not designs).
+const AI_CARD_TYPE_VALUES = [
+  "creature",
+  "instant",
+  "sorcery",
+  "artifact",
+  "enchantment",
+  "land",
+  "planeswalker",
+  "battle",
+  "token",
+] as const;
 
 const requestSchema = z.discriminatedUnion("kind", [
   z.object({
@@ -49,6 +69,19 @@ const requestSchema = z.discriminatedUnion("kind", [
     deck_id: z.string().uuid(),
     style: z.string().trim().min(1, "Pick a style.").max(200),
     theme: z.string().trim().max(300).optional(),
+  }),
+  // Single card from the creator's AI dialog — same options the legacy
+  // /api/ai/random-card route took; the job pipeline replaced its long
+  // synchronous request (migration 0061).
+  z.object({
+    kind: z.literal("card"),
+    theme: z.string().trim().max(300).optional(),
+    style: z.string().trim().max(200).optional(),
+    card_type: z.enum(AI_CARD_TYPE_VALUES).optional(),
+    frame: z
+      .union([z.literal("random"), z.enum(FRAME_TEMPLATE_VALUES)])
+      .optional(),
+    rarity: z.enum(RARITY_VALUES).optional(),
   }),
 ]);
 
@@ -119,9 +152,11 @@ export async function POST(request: Request) {
 
   const limit = await batchCardLimit();
   const size =
-    parsed.data.kind === "deck_remix"
-      ? limit // remix caps at the batch limit; entries beyond it are skipped
-      : clampBatchSize(parsed.data.size ?? limit, limit);
+    parsed.data.kind === "card"
+      ? 1
+      : parsed.data.kind === "deck_remix"
+        ? limit // remix caps at the batch limit; entries beyond it are skipped
+        : clampBatchSize(parsed.data.size ?? limit, limit);
 
   const rate = await checkAiRateLimit(user.id);
   if (!rate.ok) {
@@ -129,6 +164,20 @@ export async function POST(request: Request) {
       { ok: false, error: rate.message },
       { status: 429, headers: { "Retry-After": String(rate.retryAfterSeconds) } },
     );
+  }
+  // Single-card jobs keep the legacy flow's own daily ceiling as an
+  // anti-abuse backstop (credits are the user-facing currency now).
+  if (parsed.data.kind === "card") {
+    const daily = await checkRandomCardDailyLimit(user.id);
+    if (!daily.ok) {
+      return NextResponse.json(
+        { ok: false, error: daily.message },
+        {
+          status: 429,
+          headers: { "Retry-After": String(daily.retryAfterSeconds) },
+        },
+      );
+    }
   }
 
   // Credits are metered per card as steps complete; pre-check the balance so
@@ -147,6 +196,23 @@ export async function POST(request: Request) {
         { status: 402 },
       );
     }
+  }
+
+  if (parsed.data.kind === "card") {
+    const result = await createCardGenerationJob({
+      theme: parsed.data.theme,
+      style: parsed.data.style,
+      cardType: parsed.data.card_type,
+      frame: parsed.data.frame,
+      rarity: parsed.data.rarity,
+    });
+    if (!result.ok) {
+      return NextResponse.json({ ok: false, error: result.error }, { status: 502 });
+    }
+    return NextResponse.json(
+      { ok: true, job: result.job, cardLimit: limit },
+      { status: 200 },
+    );
   }
 
   await logAiCall(user.id, "generate_deck");

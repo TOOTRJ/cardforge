@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Loader2, Sparkles } from "lucide-react";
+import { Coins, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CreditMeter } from "@/components/billing/credit-meter";
+import { isBillingEnabled } from "@/lib/billing/flags";
 import {
   Dialog,
   DialogContent,
@@ -129,7 +130,9 @@ export function AiGenerateDialog({
           </DialogTitle>
           <DialogDescription>
             Steer as much or as little as you like — everything left on
-            Random is the AI&apos;s creative call. Art is painted to match.
+            Random is the AI&apos;s creative call. Art is painted to match,
+            and the finished card lands in your library. Generation runs in
+            the background, so you&apos;re free to keep browsing.
           </DialogDescription>
         </DialogHeader>
 
@@ -252,14 +255,19 @@ export function AiGenerateDialog({
         </div>
 
         <DialogFooter className="items-center gap-3 sm:justify-between">
-          <span className="text-[11px] text-muted">
-            Uses 1 AI credit · 10 generations per day
-          </span>
+          {isBillingEnabled() ? (
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-gold-strong">
+              <Coins className="h-3.5 w-3.5" aria-hidden />
+              Uses 1 credit
+            </span>
+          ) : (
+            <span aria-hidden />
+          )}
           <Button type="button" onClick={handleGenerate} disabled={generating}>
             {generating ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                Forging…
+                Starting…
               </>
             ) : (
               <>

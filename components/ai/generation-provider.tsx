@@ -11,6 +11,7 @@ import {
 import Link from "next/link";
 import { Check, Loader2, Sparkles, TriangleAlert, X } from "lucide-react";
 import { toast } from "sonner";
+import { useUpgradeModal } from "@/components/billing/upgrade-modal-provider";
 import type {
   GenerationJobOutcome,
   GenerationJobPhase,
@@ -31,7 +32,7 @@ import type {
 
 type JobPayload = {
   id: string;
-  kind: "set" | "deck" | "deck_remix";
+  kind: "set" | "deck" | "deck_remix" | "card";
   status: "generating" | "done" | "failed" | "cancelled";
   steps: GenerationJobStep[];
   request?: Record<string, unknown>;
@@ -61,6 +62,7 @@ const KIND_LABELS: Record<JobPayload["kind"], string> = {
   set: "Generating set",
   deck: "Generating deck cards",
   deck_remix: "Remixing deck",
+  card: "Forging your card",
 };
 
 async function postStep(
@@ -89,7 +91,8 @@ function outcomeOf(
 ): GenerationJobOutcome {
   const failures = steps.filter((s) => s.status === "failed").length;
   const successes = steps.filter((s) => s.status === "done").length;
-  return { ok: successes > 0, successes, failures, slug };
+  const cardId = steps.find((s) => s.status === "done" && s.card_id)?.card_id;
+  return { ok: successes > 0, successes, failures, slug, cardId };
 }
 
 function slugOf(job: JobPayload): string | undefined {
@@ -98,7 +101,16 @@ function slugOf(job: JobPayload): string | undefined {
   return typeof value === "string" && value ? value : undefined;
 }
 
-function targetHref(job: JobPayload, slug?: string): string | undefined {
+function targetHref(
+  job: JobPayload,
+  slug?: string,
+  cardId?: string,
+): string | undefined {
+  // Card jobs link to the created card via the id-redirect shim (the slug
+  // isn't known client-side); set/deck jobs link to their editors.
+  if (job.kind === "card") {
+    return cardId ? `/go/card/${cardId}` : undefined;
+  }
   if (!slug) return undefined;
   return job.kind === "set" ? `/set/${slug}/edit` : `/deck/${slug}/edit`;
 }
@@ -113,6 +125,7 @@ export function GenerationJobProvider({
   const [job, setJob] = useState<JobPayload | null>(null);
   const [slug, setSlug] = useState<string | undefined>(undefined);
   const [widgetDismissed, setWidgetDismissed] = useState(false);
+  const upgrade = useUpgradeModal();
   // Jobs adopted by auto-resume have no panel awaiting a promise — the
   // provider owns their completion toast.
   const resumedRef = useRef(false);
@@ -170,7 +183,15 @@ export function GenerationJobProvider({
         });
         const planPayload = await planResponse.json().catch(() => null);
         if (!planResponse.ok || !planPayload?.ok) {
-          toast.error(planPayload?.error ?? "AI planning failed. Try again.");
+          // Out of credits is a selling moment, not an error toast.
+          if (
+            planResponse.status === 402 ||
+            planPayload?.code === "INSUFFICIENT_CREDITS"
+          ) {
+            upgrade.open("credits");
+          } else {
+            toast.error(planPayload?.error ?? "AI planning failed. Try again.");
+          }
           setPhase("idle");
           return { ok: false, successes: 0, failures: 0 };
         }
@@ -193,7 +214,7 @@ export function GenerationJobProvider({
         runningRef.current = false;
       }
     },
-    [stepUntilDone],
+    [stepUntilDone, upgrade],
   );
 
   const retryStep = useCallback(
@@ -290,6 +311,9 @@ export function GenerationJobProvider({
 
   const doneCount = steps.filter((s) => s.status === "done").length;
   const failedCount = steps.filter((s) => s.status === "failed").length;
+  const doneCardId = steps.find(
+    (s) => s.status === "done" && s.card_id,
+  )?.card_id;
   const showWidget =
     !widgetDismissed &&
     job !== null &&
@@ -359,13 +383,18 @@ export function GenerationJobProvider({
             )}
           </p>
 
-          {slug && job ? (
+          {job && targetHref(job, slug, doneCardId) ? (
             <Link
-              href={targetHref(job, slug) ?? "#"}
+              href={targetHref(job, slug, doneCardId) ?? "#"}
               className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary-bright underline-offset-2 hover:underline"
             >
               <Sparkles className="h-3 w-3" aria-hidden />
-              View {job.kind === "set" ? "set" : "deck"}
+              View{" "}
+              {job.kind === "set"
+                ? "set"
+                : job.kind === "card"
+                  ? "card"
+                  : "deck"}
             </Link>
           ) : null}
         </div>
