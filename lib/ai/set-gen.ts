@@ -5,6 +5,7 @@ import { z } from "zod";
 import {
   clampedText,
   designCards,
+  ensureUniqueTitles,
   type DesignedCard,
   type DesignReport,
 } from "@/lib/ai/card-design";
@@ -97,13 +98,16 @@ export async function generateSet(input: {
     theme,
     style: input.style,
     slots: buildSetSkeleton(size),
-    context: `These cards belong to the set "${concept.set_title}" — ${concept.set_description}\nWorld: ${concept.world_blurb}\nReuse this world's names and factions across the cards.`,
+    context: `These cards belong to the set "${concept.set_title}" — ${concept.set_description}\nWorld: ${concept.world_blurb}\nReuse this world's names and factions across the cards, but every card title must be unique.`,
   });
+
+  // Hard guarantee: no duplicate titles within the batch.
+  const { cards: uniqueCards } = await ensureUniqueTitles(cards, []);
 
   return {
     set_title: concept.set_title,
     set_description: concept.set_description,
-    cards,
+    cards: uniqueCards,
     report,
   };
 }

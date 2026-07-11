@@ -50,14 +50,18 @@ export const deckCoverPositionSchema = z.object({
   focalY: z.number().min(0).max(1),
 });
 
-export const deckFormatSchema = z.enum(DECK_FORMAT_VALUES).default("commander");
+// ⚠️ zod materializes .default() values even through .partial() — see the
+// matching note in lib/validation/card.ts. updateDeckSchema overrides the
+// defaulted fields with their default-free bases so a partial update (e.g.
+// the AI cover attach) can't silently reset format/visibility.
+const deckFormatBaseSchema = z.enum(DECK_FORMAT_VALUES);
+export const deckFormatSchema = deckFormatBaseSchema.default("commander");
 
 // Decks default to public (like cards) — sharing the build is the point.
 // The DB column default stays 'private' as the conservative fallback for
 // writes that bypass this schema.
-export const deckVisibilitySchema = z
-  .enum(VISIBILITY_VALUES)
-  .default("public");
+const deckVisibilityBaseSchema = z.enum(VISIBILITY_VALUES);
+export const deckVisibilitySchema = deckVisibilityBaseSchema.default("public");
 
 export const createDeckSchema = z.object({
   title: deckTitleSchema,
@@ -69,7 +73,10 @@ export const createDeckSchema = z.object({
   visibility: deckVisibilitySchema,
 });
 
-export const updateDeckSchema = createDeckSchema.partial();
+export const updateDeckSchema = createDeckSchema.partial().extend({
+  format: deckFormatBaseSchema.optional(),
+  visibility: deckVisibilityBaseSchema.optional(),
+});
 
 export type CreateDeckInput = z.infer<typeof createDeckSchema>;
 export type UpdateDeckInput = z.infer<typeof updateDeckSchema>;

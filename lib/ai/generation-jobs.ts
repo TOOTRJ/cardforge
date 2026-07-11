@@ -27,6 +27,7 @@ import { logAiCall, spendCredits } from "@/lib/ai/rate-limit";
 import type { DesignedCard } from "@/lib/ai/card-design";
 import { getCardById as getScryfallCardById } from "@/lib/scryfall/client";
 import { mapScryfallToFormPatch } from "@/lib/scryfall/import-mapper";
+import type { DeckFormat } from "@/types/deck";
 
 // ---------------------------------------------------------------------------
 // AI generation jobs — the batch pipeline behind "generate a whole set"
@@ -85,7 +86,8 @@ export type DeckJobPlan = {
   strategy: string;
   theme: string;
   style: string | null;
-  format: AiDeckFormat;
+  /** The deck's own format — add-mode inherits it, so any of the twelve. */
+  format: string;
   cards: DesignedCard[];
   /** Parallel to cards: skeleton role + deck_cards quantity. */
   roles: string[];
@@ -415,7 +417,7 @@ export async function createDeckGenerationJob(
     planResult = await generateDeckPlan({
       theme: input.theme,
       style: input.style,
-      format: (existingDeck?.format as AiDeckFormat) ?? input.format,
+      format: (existingDeck?.format as DeckFormat) ?? input.format,
       size: input.size,
       existing: existingContext,
     });
@@ -447,7 +449,7 @@ export async function createDeckGenerationJob(
     strategy: planResult.concept.strategy,
     theme: input.theme.trim() || "designer's choice",
     style: input.style?.trim() || null,
-    format: (existingDeck?.format as AiDeckFormat) ?? input.format,
+    format: (existingDeck?.format as DeckFormat) ?? input.format,
     cards: planResult.cards,
     roles: planResult.slots.map((slot) => slot.role),
     quantities: planResult.slots.map((slot) => slot.quantity),
@@ -1083,12 +1085,15 @@ function coverPrompt(job: GenerationJobRow): { prompt: string; aspect: ImageAspe
     ? `Rendered strictly in ${style.trim()} style.`
     : "Painterly high-fantasy illustration style.";
   return {
-    aspect: "wide",
+    // The deck hero crops covers to aspect-[5/2]; a 21:9 banner survives it
+    // (and the 16:9 dashboard tile) without misalignment. Set tiles are
+    // 16:9, so set covers stay "wide".
+    aspect: job.kind === "set" ? "wide" : "banner",
     prompt: [
       `Wide cinematic key art for a trading-card collection called "${title}".`,
       subject.slice(0, 400),
       styleLine,
-      "Epic establishing-shot composition with a clear focal point that survives cropping.",
+      "Epic establishing-shot composition with the focal point in the VERTICAL CENTER of the frame — the image is cropped to an ultra-wide banner, so nothing important near the top or bottom edges.",
       "NO frame, NO borders, NO logo, NO text or lettering anywhere in the image.",
     ].join(" "),
   };
@@ -1123,6 +1128,9 @@ async function runCoverStep(
   if (job.deck_id) {
     const updated = await updateDeckAction(job.deck_id, {
       cover_url: persisted.publicUrl,
+      // Explicit center focal point so the hero (aspect-[5/2]) and the
+      // dashboard tile (16:9) both crop the banner symmetrically.
+      cover_position: { focalX: 0.5, focalY: 0.5 },
     });
     if (!updated.ok) {
       return { ...step, status: "failed", error: "Couldn't attach the deck cover." };

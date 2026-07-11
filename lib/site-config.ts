@@ -50,6 +50,7 @@ export const siteConfig = {
     { label: "Feed", href: "/feed" },
     { label: "My Sets", href: "/dashboard/sets" },
     { label: "My Decks", href: "/dashboard/decks" },
+    { label: "AI Usage", href: "/dashboard/usage" },
     { label: "Notifications", href: "/notifications" },
     { label: "Feedback", href: "/feedback" },
     { label: "Settings", href: "/settings" },

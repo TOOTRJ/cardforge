@@ -62,9 +62,12 @@ export const setIconCodeSchema = optionalEmptyString(
     .regex(/^[a-z0-9]+$/, "Set code must be lowercase letters and numbers only."),
 );
 
-export const setVisibilitySchema = z
-  .enum(VISIBILITY_VALUES)
-  .default("private");
+// ⚠️ zod materializes .default() values even through .partial() — see the
+// matching note in lib/validation/card.ts. updateSetSchema overrides the
+// defaulted field with its default-free base so a partial update (e.g. the
+// AI icon/cover attach) can't silently flip a public set back to private.
+const setVisibilityBaseSchema = z.enum(VISIBILITY_VALUES);
+export const setVisibilitySchema = setVisibilityBaseSchema.default("private");
 
 export const createSetSchema = z.object({
   title: setTitleSchema,
@@ -76,7 +79,9 @@ export const createSetSchema = z.object({
   visibility: setVisibilitySchema,
 });
 
-export const updateSetSchema = createSetSchema.partial();
+export const updateSetSchema = createSetSchema.partial().extend({
+  visibility: setVisibilityBaseSchema.optional(),
+});
 
 export type CreateSetInput = z.infer<typeof createSetSchema>;
 export type UpdateSetInput = z.infer<typeof updateSetSchema>;
