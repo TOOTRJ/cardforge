@@ -88,6 +88,20 @@ export default async function SignupPage({
         ]}
       />
 
+      {/* Beta notice — set expectations before the account exists, and point
+          at the feedback loop (the /feedback page is auth-gated, so name it
+          rather than link it). */}
+      <div
+        role="note"
+        className="rounded-md border border-gold/30 bg-gold/5 px-3 py-2.5 text-xs leading-5 text-muted"
+      >
+        <span className="font-semibold text-gold-strong">Beta:</span> PipGlyph
+        is still in beta testing, so you may run into the occasional bug or
+        rough edge. Spotted one, or have an idea? The{" "}
+        <span className="font-medium text-foreground">Feedback</span> page in
+        your dashboard goes straight to the admin — we read everything.
+      </div>
+
       <p className="text-sm text-muted">
         Already have an account?{" "}
         <Link

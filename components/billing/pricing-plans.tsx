@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   PLANS,
+  TRIAL_DAYS,
   type BillingPeriod,
   type PaidTier,
   type PlanTier,
@@ -22,12 +23,15 @@ type BillingViewer = {
   isSignedIn: boolean;
   isPaid: boolean;
   currentTier: PlanTier | null;
+  /** Ever held a subscription — lapsed subscribers don't get trial copy. */
+  hasSubscribed: boolean;
 };
 
 const ANONYMOUS_VIEWER: BillingViewer = {
   isSignedIn: false,
   isPaid: false,
   currentTier: null,
+  hasSubscribed: false,
 };
 
 // Client wrapper for the pricing grid: owns the monthly/annual toggle and emits
@@ -59,6 +63,7 @@ export function PricingPlans() {
           isSignedIn: true,
           isPaid: data.user.isPaid ?? false,
           currentTier: data.user.tier ?? null,
+          hasSubscribed: data.user.hasSubscribed ?? false,
         });
       } catch {
         // Network hiccup — keep the anonymous storefront; the server
@@ -71,7 +76,7 @@ export function PricingPlans() {
     };
   }, []);
 
-  const { isSignedIn, isPaid, currentTier } = viewer;
+  const { isSignedIn, isPaid, currentTier, hasSubscribed } = viewer;
 
   function ctaFor(tier: PlanTier, featured?: boolean): React.ReactNode {
     const variant = featured ? "primary" : "outline";
@@ -86,9 +91,11 @@ export function PricingPlans() {
       return null;
     }
     if (!isSignedIn) {
+      // Anonymous storefront leads with the trial — signup is the first step
+      // of it; checkout re-validates eligibility server-side either way.
       return (
         <Button asChild variant={variant} className="w-full">
-          <Link href="/signup">Sign up to upgrade</Link>
+          <Link href="/signup">Start free — {TRIAL_DAYS}-day trial</Link>
         </Button>
       );
     }
@@ -101,12 +108,15 @@ export function PricingPlans() {
         </ManageBillingButton>
       );
     }
+    const label = hasSubscribed
+      ? `Choose ${tier === "plus" ? "Plus" : "Pro"}`
+      : `Try ${tier === "plus" ? "Plus" : "Pro"} free for ${TRIAL_DAYS} days`;
     return (
       <CheckoutButton
         input={{ kind: "subscription", tier: tier as PaidTier, period }}
         variant={variant}
       >
-        Choose {tier === "plus" ? "Plus" : "Pro"}
+        {label}
       </CheckoutButton>
     );
   }
