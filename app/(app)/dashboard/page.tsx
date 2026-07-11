@@ -9,6 +9,7 @@ import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { CardPreviewSkeleton } from "@/components/cards/card-preview-skeleton";
 import { DashboardSelectableSections } from "@/components/creator/dashboard-selectable-sections";
+import { BillingReturnToast } from "@/components/billing/billing-return-toast";
 import { CreditsSummaryCard } from "@/components/dashboard/credits-summary";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SurfaceCard } from "@/components/ui/surface-card";
@@ -88,6 +89,11 @@ export default async function DashboardPage() {
 
   return (
     <DashboardShell>
+      {/* Stripe Checkout returns here (?billing=success) — greet + refresh
+          so the webhook-written tier/credits appear without a manual reload. */}
+      <Suspense fallback={null}>
+        <BillingReturnToast />
+      </Suspense>
       <PageHeader
         eyebrow="Workspace"
         title={`Welcome back, ${greetingName}`}
