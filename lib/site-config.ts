@@ -59,6 +59,7 @@ export const siteConfig = {
   // Admin-only rail section (rendered under dashboardNav for is_admin
   // profiles). Mirrors the avatar-dropdown admin entries.
   adminNav: [
+    { label: "Users", href: "/admin/users" },
     { label: "Moderation", href: "/admin/moderation" },
     { label: "Feedback", href: "/admin/feedback" },
     { label: "Featured", href: "/admin/featured" },

@@ -97,13 +97,37 @@ const UNLOCKED: Entitlements = {
 export async function getEntitlements(): Promise<Entitlements> {
   if (!isBillingEnabled()) return UNLOCKED;
   const profile = await getCurrentProfile();
+
+  // Admins have no caps or limits anywhere (owner decision, 2026-07-10) —
+  // same shape as billing-off. is_admin is trigger-protected, so this isn't
+  // client-forgeable.
+  if (profile?.is_admin) return UNLOCKED;
+
   const tier = (profile?.subscription_tier ?? "free") as PlanTier;
   const status = profile?.subscription_status ?? null;
 
   // Free is always active; paid tiers only grant perks while active/trialing.
   const active = tier === "free" || (status ? ACTIVE_STATUSES.has(status) : false);
-  const effectiveTier: PlanTier = active ? tier : "free";
+  const subscribedTier: PlanTier = active ? tier : "free";
+
+  // Admin-granted comp: the HIGHER of the Stripe tier and the comp tier wins
+  // while the comp is unexpired, so a comp can never demote a paying user.
+  const compTier = (profile?.comp_tier ?? null) as PlanTier | null;
+  const compActive =
+    compTier != null &&
+    (profile?.comp_expires_at == null ||
+      new Date(profile.comp_expires_at) > new Date());
+  const effectiveTier: PlanTier =
+    compActive && RANK[compTier] > RANK[subscribedTier] ? compTier : subscribedTier;
+
   const perks: Perks = { ...BASE_PERKS, ...TIER_PERKS[effectiveTier] };
+
+  // Admin-raised card cap: the HIGHER of the tier cap and the override, so an
+  // override can only add headroom (-1 = unlimited always wins).
+  const override = profile?.card_limit_override ?? null;
+  if (override != null && perks.cardCapacity !== -1) {
+    perks.cardCapacity = Math.max(perks.cardCapacity, override);
+  }
 
   return {
     tier,

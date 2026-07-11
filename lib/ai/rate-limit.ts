@@ -1,8 +1,20 @@
 import "server-only";
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getCurrentProfile } from "@/lib/supabase/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { isBillingEnabled } from "@/lib/billing/flags";
+
+// Admins are exempt from every AI cap — windowed limits, per-action daily
+// limits, and credit spends (owner decision, 2026-07-10). getCurrentProfile
+// is React-cached per request, so this adds no extra query in practice, and
+// is_admin is trigger-protected against client writes.
+async function isCurrentUserAdmin(): Promise<boolean> {
+  try {
+    return (await getCurrentProfile())?.is_admin === true;
+  } catch {
+    return false;
+  }
+}
 
 // Per-user windowed caps. Two windows so a user can't (a) spam the assistant
 // in a tight burst or (b) slowly drain the Anthropic spend cap over a day.
@@ -60,6 +72,7 @@ export type RateLimitResult =
 export async function checkAiRateLimit(
   userId: string,
 ): Promise<RateLimitResult> {
+  if (await isCurrentUserAdmin()) return { ok: true };
   const supabase = await createClient();
   const now = Date.now();
   const minuteAgo = new Date(now - MINUTE_MS).toISOString();
@@ -138,6 +151,7 @@ export async function checkDailyActionLimit(
   limit: number,
   label: string,
 ): Promise<RateLimitResult> {
+  if (await isCurrentUserAdmin()) return { ok: true };
   const supabase = await createClient();
   const dayAgo = new Date(Date.now() - DAY_MS).toISOString();
   const { count, error } = await supabase
@@ -249,6 +263,10 @@ export async function spendCredits(
   // Billing off → credits aren't enforced; never touch the ledger.
   if (!isBillingEnabled()) return { ok: true, balance: Number.POSITIVE_INFINITY };
   if (amount <= 0) return { ok: true, balance: Number.POSITIVE_INFINITY };
+  // Admins generate free — no ledger row, no balance check.
+  if (await isCurrentUserAdmin()) {
+    return { ok: true, balance: Number.POSITIVE_INFINITY };
+  }
   // On an infra error: fail closed (deny) when reserving, else fail open.
   const onInfraError = (): CreditSpendResult =>
     options.failClosed

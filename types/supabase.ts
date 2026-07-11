@@ -776,6 +776,11 @@ export type Database = {
           cancel_at_period_end: boolean;
           credits: number;
           is_admin: boolean;
+          // Columns added by migration 0060 — folded in here until the
+          // generated types are regenerated.
+          comp_tier: string | null;
+          comp_expires_at: string | null;
+          card_limit_override: number | null;
         };
         Insert: {
           accent_color?: string | null;
@@ -805,6 +810,9 @@ export type Database = {
           cancel_at_period_end?: boolean;
           credits?: number;
           is_admin?: boolean;
+          comp_tier?: string | null;
+          comp_expires_at?: string | null;
+          card_limit_override?: number | null;
         };
         Update: {
           accent_color?: string | null;
@@ -834,6 +842,9 @@ export type Database = {
           cancel_at_period_end?: boolean;
           credits?: number;
           is_admin?: boolean;
+          comp_tier?: string | null;
+          comp_expires_at?: string | null;
+          card_limit_override?: number | null;
         };
         Relationships: [];
       };
