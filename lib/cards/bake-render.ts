@@ -4,7 +4,7 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 import { renderCardImage } from "@/lib/render/card-image";
-import { isBillingEnabled } from "@/lib/billing/flags";
+import { ownerExportStamp } from "@/lib/billing/entitlements";
 import { cardRenderPath } from "@/lib/cards/storage-paths";
 import {
   BAKE_SELECT_COLUMNS,
@@ -127,13 +127,15 @@ export async function bakeCardRender(
 
   let pngBytes: ArrayBuffer;
   try {
-    // The public gallery render always carries the brand mark, regardless of
-    // owner tier: it's a public marketing surface, and keeping it independent
-    // of entitlement avoids stale-cache leaks (the bake is long-cached at a
-    // fixed path). Paid users still get clean, hi-res output via the
-    // entitlement-gated download routes.
+    // The baked render follows the card OWNER's plan: paid creators bake
+    // clean (with their optional custom footer mark), free creators bake with
+    // the brand mark. Staleness isn't a leak vector — bakes re-render on
+    // every save and via /api/admin/rebake, and layout-version bumps force a
+    // global rebake sweep.
+    const stamp = await ownerExportStamp(ownerId);
     const response = renderCardImage(previewData, "hd", {
-      brandMark: isBillingEnabled(),
+      brandMark: stamp.brandMark,
+      watermarkText: stamp.footerText,
     });
     pngBytes = await response.arrayBuffer();
   } catch (err) {

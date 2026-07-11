@@ -1,7 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { requireTier, UpgradeRequiredError } from "@/lib/billing/entitlements";
+import {
+  ownerExportStamp,
+  requireTier,
+  UpgradeRequiredError,
+} from "@/lib/billing/entitlements";
 import { isSetsEnabled } from "@/lib/sets/flags";
 import { renderCardImage } from "@/lib/render/card-image";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
@@ -102,6 +106,9 @@ export async function GET(
     .in("id", orderedIds);
   const byId = new Map((cards ?? []).map((card) => [card.id, card]));
 
+  // The set owner's custom footer mark (paid perk) prints on the renders.
+  const stamp = await ownerExportStamp(set.owner_id);
+
   const pngs: Uint8Array[] = [];
   for (const cardId of orderedIds) {
     const card = byId.get(cardId);
@@ -111,6 +118,7 @@ export async function GET(
         { ...toPreviewData(card), profileOverrides: await getFrameProfileOverrides() },
         "hd", {
         brandMark: !entitlements.removeWatermark,
+        watermarkText: stamp.footerText,
       });
       pngs.push(new Uint8Array(await img.arrayBuffer()));
     } catch {

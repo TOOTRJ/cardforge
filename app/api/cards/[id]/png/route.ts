@@ -16,7 +16,7 @@ import {
 import { renderCardImage, type RenderPreset } from "@/lib/render/card-image";
 import {
   getEntitlements,
-  removesWatermarkForOwner,
+  ownerExportStamp,
 } from "@/lib/billing/entitlements";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import { getPipOverrides } from "@/lib/pips/queries";
@@ -114,9 +114,8 @@ export async function GET(
   const entitlements = await getEntitlements();
   const preset: RenderPreset =
     entitlements.maxExportPreset === "hd" ? requestedPreset : "default";
-  const watermark =
-    !entitlements.removeWatermark &&
-    !(await removesWatermarkForOwner(card.owner_id));
+  const stamp = await ownerExportStamp(card.owner_id);
+  const watermark = stamp.brandMark && !entitlements.removeWatermark;
 
   // Output varies by the authenticated viewer's entitlement (watermark +
   // resolution), so it must NOT be shared-cached at the CDN — that would leak a
@@ -137,6 +136,9 @@ export async function GET(
         card.updated_at,
         preset,
         watermark ? "wm" : "clean",
+        // The owner's custom footer mark prints into the render — fold it in
+        // so a changed mark busts the 304 path.
+        stamp.footerText ?? "",
         CARD_LAYOUT_VERSION,
         JSON.stringify(pipOverrides ?? null),
         // Frame-layout overrides change baked geometry without a code
@@ -162,6 +164,7 @@ export async function GET(
   try {
     const imgResponse = renderCardImage(previewData, preset, {
       brandMark: watermark,
+      watermarkText: stamp.footerText,
     });
     pngBytes = new Uint8Array(await imgResponse.arrayBuffer());
   } catch (err) {

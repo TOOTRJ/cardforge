@@ -1,7 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { requireTier, UpgradeRequiredError } from "@/lib/billing/entitlements";
+import {
+  ownerExportStamp,
+  requireTier,
+  UpgradeRequiredError,
+} from "@/lib/billing/entitlements";
 import { renderCardImage } from "@/lib/render/card-image";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import {
@@ -164,12 +168,16 @@ export async function GET(
   }
 
   const profileOverrides = await getFrameProfileOverrides();
+  // The deck owner's custom footer mark (paid perk) prints on live renders;
+  // baked renders already carry it from the save-time bake.
+  const stamp = await ownerExportStamp(deck.owner_id);
   const pdfEntries: DeckPdfEntry[] = [];
   for (const [cardId, copies] of copiesByCard) {
     const card = cardById.get(cardId) as CardRow | undefined;
     if (!card) continue;
     const png = await pngForCard(card, profileOverrides, {
       brandMark: !entitlements.removeWatermark,
+      watermarkText: stamp.footerText,
     });
     if (png) pdfEntries.push({ png, copies });
   }
@@ -217,7 +225,7 @@ export async function GET(
 async function pngForCard(
   card: CardRow,
   profileOverrides: Awaited<ReturnType<typeof getFrameProfileOverrides>>,
-  options: { brandMark: boolean },
+  options: { brandMark: boolean; watermarkText: string | null },
 ): Promise<Uint8Array | null> {
   if (card.rendered_image_url) {
     try {
@@ -235,7 +243,7 @@ async function pngForCard(
     const img = renderCardImage(
       { ...toPreviewData(card), profileOverrides },
       "hd",
-      { brandMark: options.brandMark },
+      { brandMark: options.brandMark, watermarkText: options.watermarkText },
     );
     return new Uint8Array(await img.arrayBuffer());
   } catch {

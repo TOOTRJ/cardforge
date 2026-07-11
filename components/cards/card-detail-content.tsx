@@ -63,7 +63,7 @@ import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { countPublicRemixesBySource } from "@/lib/cards/source-queries";
 import { listCommentsForCard } from "@/lib/cards/comments-queries";
 import { getCurrentUser } from "@/lib/supabase/server";
-import { getEntitlements } from "@/lib/billing/entitlements";
+import { getEntitlements, ownerExportStamp } from "@/lib/billing/entitlements";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getSiteBaseUrl } from "@/lib/site-url";
 import { breadcrumbJsonLd, JsonLd } from "@/components/seo/json-ld";
@@ -143,6 +143,7 @@ export async function CardDetailContent({
     setSummary,
     inSetRank,
     trendingSignals,
+    exportStamp,
   ] = await Promise.all([
     // v2 back face: the referenced card, if any and if it's readable (RLS
     // scopes the anon client to shareable cards). Rendered on the flip.
@@ -192,6 +193,9 @@ export async function CardDetailContent({
       : Promise.resolve(null),
     // 7-day velocity for the trending badge.
     getCardTrendingSignals(card.id, card.owner_id, card.created_at),
+    // The owner's custom footer mark (paid perk) — the live hero preview
+    // prints it so the page matches exports and bakes.
+    ownerExportStamp(card.owner_id),
   ]);
 
   // Bump the view tally after the response ships — never for the owner's own
@@ -296,6 +300,7 @@ export async function CardDetailContent({
             setIconCode={card.set_icon_code}
             backFace={(card.back_face as CardBackFace | null) ?? null}
             backCard={backCard ? cardToPreviewData(backCard, profileOverrides) : null}
+            footerWatermark={exportStamp.footerText}
           />
         </div>
 

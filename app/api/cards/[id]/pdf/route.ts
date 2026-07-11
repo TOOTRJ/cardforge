@@ -14,7 +14,7 @@ import {
 import { renderCardImage } from "@/lib/render/card-image";
 import {
   getEntitlements,
-  removesWatermarkForOwner,
+  ownerExportStamp,
 } from "@/lib/billing/entitlements";
 import { buildCardPdf, type PdfLayout } from "@/lib/render/card-pdf";
 import type { CardPreviewData } from "@/components/cards/card-preview";
@@ -153,13 +153,13 @@ export async function GET(
   };
 
   // Render PNG at HD quality (1500×2100) for crisp print output.
+  const stamp = await ownerExportStamp(card.owner_id);
   let pngBytes: Uint8Array;
   try {
     const imgResponse = renderCardImage(previewData, "hd", {
       // Cleared by EITHER side's plan — see the png route for the rationale.
-      brandMark:
-        !entitlements.removeWatermark &&
-        !(await removesWatermarkForOwner(card.owner_id)),
+      brandMark: stamp.brandMark && !entitlements.removeWatermark,
+      watermarkText: stamp.footerText,
     });
     pngBytes = new Uint8Array(await imgResponse.arrayBuffer());
   } catch (err) {

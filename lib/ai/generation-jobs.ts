@@ -1,7 +1,11 @@
 import "server-only";
 
 import type { Json } from "@/types/supabase";
-import { createClient, getCurrentUser } from "@/lib/supabase/server";
+import {
+  createClient,
+  getCurrentProfile,
+  getCurrentUser,
+} from "@/lib/supabase/server";
 import {
   createCardAction,
   updateCardAction,
@@ -60,6 +64,17 @@ import type { DeckFormat } from "@/types/deck";
 // "generate_deck" ledger reason as the legacy route). Free when billing is
 // disabled.
 // ---------------------------------------------------------------------------
+
+/** AI-generated cards credit the GENERATING user as the artist (owner
+ *  decision, 2026-07-11) — the art is painted for them, and a blank credit
+ *  rendered "Art: Unknown" on every AI card. React-cached profile read, so
+ *  batch steps don't pay an extra query each. */
+async function aiArtistCredit(): Promise<string | undefined> {
+  const profile = await getCurrentProfile();
+  const name =
+    profile?.display_name?.trim() || profile?.username?.trim() || "";
+  return name ? name.slice(0, 120) : undefined;
+}
 
 export type JobStepStatus = "pending" | "done" | "failed";
 
@@ -527,6 +542,7 @@ async function runSingleCardStep(
         loyalty: card.loyalty ?? undefined,
         defense: card.defense ?? undefined,
         visibility: "private",
+        artist_credit: await aiArtistCredit(),
         frame_style: plan.frame_template
           ? { template: plan.frame_template }
           : undefined,
@@ -870,6 +886,7 @@ async function runCardStep(
         loyalty: card.loyalty ?? undefined,
         defense: card.defense ?? undefined,
         visibility: "private",
+        artist_credit: await aiArtistCredit(),
         primary_set_id: job.set_id ?? undefined,
       },
       { redirectAfterCreate: false },
@@ -1019,6 +1036,7 @@ async function runDeckCardStep(
         loyalty: card.loyalty ?? undefined,
         defense: card.defense ?? undefined,
         visibility: "private",
+        artist_credit: await aiArtistCredit(),
         deck_id: job.deck_id ?? undefined,
       },
       { redirectAfterCreate: false },
@@ -1267,6 +1285,7 @@ async function executeDeckRemixStep(
       source_scryfall_id: mechanics.source_scryfall_id,
       // Art is guaranteed above; remixed cards ship public like the deck.
       visibility: "public",
+      artist_credit: await aiArtistCredit(),
       deck_id: job.deck_id ?? undefined,
     },
     { redirectAfterCreate: false },

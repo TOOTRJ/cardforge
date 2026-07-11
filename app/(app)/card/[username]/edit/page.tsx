@@ -15,7 +15,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
 import { getPipOverrides } from "@/lib/pips/queries";
 import { getCurrentChallenge } from "@/lib/challenges/queries";
-import { getEntitlements } from "@/lib/billing/entitlements";
+import { getEntitlements, ownerExportStamp } from "@/lib/billing/entitlements";
 import {
   getFantasyGameSystem,
   getMyCardBySlug,
@@ -77,7 +77,7 @@ export default async function EditCardPage({ params }: EditCardPageProps) {
   }
 
   const setsEnabled = isSetsEnabled();
-  const [gameSystem, mySets, profile, userSets, entitlements, allMyCards] =
+  const [gameSystem, mySets, profile, userSets, entitlements, allMyCards, exportStamp] =
     await Promise.all([
       getFantasyGameSystem(),
       // Both set lists feed sets-only UI — skip the queries while hidden.
@@ -86,6 +86,9 @@ export default async function EditCardPage({ params }: EditCardPageProps) {
       setsEnabled ? listMySets() : Promise.resolve([]),
       getEntitlements(),
       listMyCards(),
+      // The owner's custom footer mark (paid perk) — shown live in the
+      // preview so the editor matches what exports and bakes will print.
+      ownerExportStamp(user.id),
     ]);
   // Back-face picker candidates: every owned card except this one (can't be its
   // own back). Includes the currently-linked back card so the flip renders.
@@ -159,6 +162,7 @@ export default async function EditCardPage({ params }: EditCardPageProps) {
           verifiedFrameKeys={await getVerifiedFrameKeys()}
           profileOverrides={await getFrameProfileOverrides()}
           activeChallenge={await getCurrentChallenge()}
+          footerWatermark={exportStamp.footerText}
         />
       </div>
     </div>

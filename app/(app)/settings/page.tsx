@@ -17,6 +17,7 @@ import { ThemePreference } from "@/components/settings/theme-preference";
 import { getPipOverrides } from "@/lib/pips/queries";
 import { DeleteAccountDialog } from "@/components/settings/delete-account-dialog";
 import { BillingPanel } from "@/components/settings/billing-panel";
+import { ExportWatermarkPanel } from "@/components/settings/export-watermark-panel";
 import { BillingReturnToast } from "@/components/billing/billing-return-toast";
 import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
 import { getEntitlements } from "@/lib/billing/entitlements";
@@ -194,6 +195,22 @@ export default async function SettingsPage() {
             />
           </SurfaceCard>
         ) : null}
+
+        <SurfaceCard className="grid gap-6 p-6 sm:grid-cols-[1fr_2fr]">
+          <div className="flex flex-col gap-1">
+            <h3 className="font-display text-lg font-semibold text-foreground">
+              Card watermark
+            </h3>
+            <p className="text-sm leading-6 text-muted">
+              Paid plans can print a short custom mark in the footer of every
+              card — live previews, downloads, and shared images alike.
+            </p>
+          </div>
+          <ExportWatermarkPanel
+            initialText={profile?.export_watermark_text ?? null}
+            canCustomize={entitlements.removeWatermark}
+          />
+        </SurfaceCard>
 
         <SurfaceCard className="grid gap-6 p-6 sm:grid-cols-[1fr_2fr]">
           <div className="flex flex-col gap-1">

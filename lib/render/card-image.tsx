@@ -159,6 +159,7 @@ function CardImage({
   width,
   height,
   brandMark,
+  watermarkText,
 }: {
   card: CardPreviewData;
   width: number;
@@ -166,6 +167,9 @@ function CardImage({
   /** The free-tier pipglyph.com BRAND mark (billing-gated) — distinct from
    *  card.watermark, the user's design watermark behind the rules text. */
   brandMark: boolean;
+  /** The owner's custom footer mark (paid perk). Prints in the footer-right
+   *  slot where the hardcoded "PipGlyph" used to sit; null = blank. */
+  watermarkText: string | null;
 }) {
   const template = normalizeFrameTemplate(card.frameStyle?.template);
   const layout = resolveFrameProfile(template, card.profileOverrides);
@@ -633,7 +637,14 @@ function CardImage({
               ? `Art: ${card.artistCredit}`
               : "Art: Unknown"}
           </span>
-          <span style={{ display: "flex", flexShrink: 0 }}>PipGlyph</span>
+          {/* Footer-right: the owner's custom mark, or nothing. (The old
+              hardcoded "PipGlyph" doubled up with the brand-mark overlay —
+              layout v19 removed it.) */}
+          {watermarkText ? (
+            <span style={{ display: "flex", flexShrink: 0 }}>
+              {watermarkText}
+            </span>
+          ) : null}
         </div>
       ) : null}
 
@@ -1750,7 +1761,7 @@ function SecondFaceBake({
 export function renderCardImage(
   card: CardPreviewData,
   preset: RenderPreset = "default",
-  opts: { brandMark?: boolean } = {},
+  opts: { brandMark?: boolean; watermarkText?: string | null } = {},
 ): ImageResponse {
   const base = RENDER_PRESETS[preset];
   // Landscape (Battle) frames swap the canvas to 7:5 so the bake matches the
@@ -1767,6 +1778,7 @@ export function renderCardImage(
       width={width}
       height={height}
       brandMark={opts.brandMark ?? true}
+      watermarkText={opts.watermarkText?.trim() || null}
     />,
     {
       width,

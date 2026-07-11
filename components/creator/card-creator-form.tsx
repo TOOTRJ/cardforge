@@ -204,6 +204,10 @@ type CardCreatorFormProps = {
   /** Admin frame-layout overrides (server-fetched) — keeps the editor's
    *  live preview identical to the gallery render and the bake. */
   profileOverrides?: FrameProfileOverridesMap | null;
+  /** The owner's custom footer mark (server-resolved via ownerExportStamp —
+   *  paid perk, null when unset/free). Printed in the preview footer so the
+   *  editor matches exports; not form state. */
+  footerWatermark?: string | null;
 };
 
 // Step membership + field→step routing now live in lib/creator/steps.ts (pure
@@ -255,6 +259,7 @@ export function CardCreatorForm({
   defaultArtistCredit = "",
   verifiedFrameKeys = [],
   profileOverrides = null,
+  footerWatermark = null,
 }: CardCreatorFormProps) {
   const router = useRouter();
   const upgrade = useUpgradeModal();
@@ -1630,6 +1635,9 @@ export function CardCreatorForm({
     frameStyle: watched.frame_style,
     // Live set-symbol preview (the Set icon step edits these directly).
     setIconUrl: watched.set_icon_url || null,
+    // Owner's custom footer mark — server-resolved, not form state, so the
+    // preview footer matches what exports/bakes will print.
+    footerWatermark,
     setIconCode: watched.set_icon_code || null,
     faceContent: liveFaceContent,
     watermark:

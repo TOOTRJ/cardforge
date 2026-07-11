@@ -172,32 +172,54 @@ export async function requireTier(min: PlanTier): Promise<Entitlements> {
   return entitlements;
 }
 
+/** What the card OWNER's plan stamps onto their rendered cards. */
+export type OwnerExportStamp = {
+  /** Show the free-tier pipglyph.com brand-mark overlay. */
+  brandMark: boolean;
+  /** The owner's custom footer mark (paid perk) — null renders nothing. */
+  footerText: string | null;
+};
+
 /**
- * Whether the card OWNER's plan removes the PipGlyph brand mark. The mark is
- * the owner's presentation, not the viewer's capability — a paid creator's
- * cards render clean everywhere (OG images, bakes, other people's downloads),
- * a free creator's cards carry the mark. Uses the cookie-free public client
- * so viewer-independent callers (OG route, deferred bake, rebake) stay
- * ISR-eligible; fails toward SHOWING the mark on lookup problems.
+ * The brand mark and custom footer mark follow the card OWNER's plan, not
+ * the viewer's capability — a paid creator's cards render clean (with their
+ * own optional mark) everywhere: OG images, bakes, other people's downloads.
+ * A free creator's cards carry the pipglyph.com mark and no custom footer.
+ * Uses the cookie-free public client so viewer-independent callers (OG
+ * route, deferred bake, rebake) stay ISR-eligible; fails toward showing the
+ * brand mark on lookup problems.
  */
-export async function removesWatermarkForOwner(
+export async function ownerExportStamp(
   ownerId: string,
-): Promise<boolean> {
-  if (!isBillingEnabled()) return true;
+): Promise<OwnerExportStamp> {
   try {
     const supabase = createPublicClient();
     const { data: profile } = await supabase
       .from("profiles")
       .select(
-        "subscription_tier, subscription_status, is_admin, comp_tier, comp_expires_at",
+        "subscription_tier, subscription_status, is_admin, comp_tier, comp_expires_at, export_watermark_text",
       )
       .eq("id", ownerId)
       .maybeSingle();
-    if (!profile) return false;
-    if (profile.is_admin) return true;
+    if (!profile) return { brandMark: isBillingEnabled(), footerText: null };
+
+    const customText = profile.export_watermark_text?.trim() || null;
+    // Billing off = everything unlocked: no brand mark, custom mark honored.
+    if (!isBillingEnabled() || profile.is_admin) {
+      return { brandMark: false, footerText: customText };
+    }
     const perks = { ...BASE_PERKS, ...TIER_PERKS[effectiveTierForProfile(profile)] };
-    return perks.removeWatermark;
+    return perks.removeWatermark
+      ? { brandMark: false, footerText: customText }
+      : { brandMark: true, footerText: null };
   } catch {
-    return false;
+    return { brandMark: isBillingEnabled(), footerText: null };
   }
+}
+
+/** Back-compat convenience: does the owner's plan remove the brand mark? */
+export async function removesWatermarkForOwner(
+  ownerId: string,
+): Promise<boolean> {
+  return !(await ownerExportStamp(ownerId)).brandMark;
 }

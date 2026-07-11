@@ -14,7 +14,7 @@ import {
   type Rarity,
 } from "@/types/card";
 import { renderCardImage, type RenderPreset } from "@/lib/render/card-image";
-import { removesWatermarkForOwner } from "@/lib/billing/entitlements";
+import { ownerExportStamp } from "@/lib/billing/entitlements";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import { getPipOverrides } from "@/lib/pips/queries";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
@@ -116,10 +116,13 @@ export async function GET(
   };
 
   // OG previews follow the card OWNER's plan — a paid creator's shared cards
-  // render clean, a free creator's carry the mark. Owner-based (never
-  // viewer-based) keeps the route CDN-cacheable: scrapers have no viewer.
+  // render clean (with their optional custom footer mark), a free creator's
+  // carry the brand mark. Owner-based (never viewer-based) keeps the route
+  // CDN-cacheable: scrapers have no viewer.
+  const stamp = await ownerExportStamp(card.owner_id);
   const response = renderCardImage(previewData, preset, {
-    brandMark: !(await removesWatermarkForOwner(card.owner_id)),
+    brandMark: stamp.brandMark,
+    watermarkText: stamp.footerText,
   });
 
   if (social) {
