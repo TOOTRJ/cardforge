@@ -36,7 +36,10 @@ const DEFAULT_BATCH = 8;
 const MAX_BATCH = 25;
 
 function isAuthorized(request: Request): boolean {
-  if (process.env.NODE_ENV !== "production") return true;
+  // Explicit opt-in for local runs — NOT keyed off NODE_ENV, because a dev
+  // server pointed at the production database (the current .env.local
+  // posture) would otherwise expose an unauthenticated service-role rebake.
+  if (process.env.ALLOW_UNAUTHENTICATED_REBAKE === "true") return true;
   const secret = process.env.CRON_SECRET;
   if (!secret) return false;
   return request.headers.get("authorization") === `Bearer ${secret}`;

@@ -304,13 +304,25 @@ export async function refundAiCredits(
   userId: string,
   action: AiActionLabel,
 ): Promise<void> {
-  const cost = creditCostFor(action);
-  if (cost <= 0) return;
+  await refundCredits(userId, creditCostFor(action), action);
+}
+
+/**
+ * Amount-based variant of `refundAiCredits` for flows that meter by
+ * `spendCredits` with an explicit amount (e.g. one credit per card in the
+ * batch job pipeline) rather than a fixed per-action cost.
+ */
+export async function refundCredits(
+  userId: string,
+  amount: number,
+  reason: string,
+): Promise<void> {
+  if (amount <= 0) return;
   // Billing off → we never charged, so there's nothing to refund.
   if (!isBillingEnabled()) return;
   if (!isAdminConfigured()) {
     console.error(
-      `[credits] Cannot refund ${cost} credit(s) to ${userId} for ${action}: admin client not configured.`,
+      `[credits] Cannot refund ${amount} credit(s) to ${userId} for ${reason}: admin client not configured.`,
     );
     return;
   }
@@ -318,20 +330,20 @@ export async function refundAiCredits(
     const admin = createAdminClient();
     const { error } = await admin.rpc("grant_credits", {
       p_user_id: userId,
-      p_amount: cost,
+      p_amount: amount,
       p_reason: "refund",
       // Unique per refund so grant_credits' idempotency guard never collapses
       // two distinct refunds, while a retried identical call is still deduped.
-      p_idempotency_key: `refund:${action}:${userId}:${Date.now()}`,
+      p_idempotency_key: `refund:${reason}:${userId}:${Date.now()}`,
     });
     if (error) {
       console.error(
-        `[credits] Refund of ${cost} credit(s) to ${userId} for ${action} failed: ${error.message}`,
+        `[credits] Refund of ${amount} credit(s) to ${userId} for ${reason} failed: ${error.message}`,
       );
     }
   } catch (err) {
     console.error(
-      `[credits] Refund of ${cost} credit(s) to ${userId} for ${action} threw:`,
+      `[credits] Refund of ${amount} credit(s) to ${userId} for ${reason} threw:`,
       err,
     );
   }
