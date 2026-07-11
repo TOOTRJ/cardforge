@@ -131,7 +131,10 @@ export async function createCheckoutSessionAction(
         ...(withTrial
           ? { payment_method_collection: "if_required" as const }
           : {}),
-        success_url: `${base}/settings?billing=success`,
+        // Land new subscribers on the dashboard (the "go make something"
+        // surface, with the credits card front and center) rather than
+        // settings; BillingReturnToast is mounted there to greet them.
+        success_url: `${base}/dashboard?billing=success`,
         cancel_url: `${base}/pricing?billing=cancel`,
       });
       if (!session.url) return { ok: false, error: "Couldn't start checkout." };
