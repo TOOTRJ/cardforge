@@ -61,6 +61,9 @@ export async function GET() {
     credits: entitlements?.credits ?? 0,
     creditsUsed,
     unreadNotifications,
+    // subscription_status is webhook-written and stays set after cancel, so
+    // non-null = "has held a subscription at some point".
+    hasSubscribed: profile?.subscription_status != null,
     isAdmin: profile?.is_admin ?? false,
   };
 

@@ -4,12 +4,35 @@ import { getCurrentProfile, getCurrentUser, createClient } from "@/lib/supabase/
 import { getSiteBaseUrl } from "@/lib/site-url";
 import {
   CREDIT_PACKS,
+  TRIAL_DAYS,
   type BillingPeriod,
   type PackKey,
   type PaidTier,
 } from "@/lib/billing/plans";
 import { getStripe, isStripeConfigured } from "./client";
 import { priceIdForPack, priceIdForTier } from "./config";
+import type Stripe from "stripe";
+
+// One trial per account: a customer who has EVER held a subscription (any
+// status — trialing counts, canceled counts) doesn't get another. Stripe's
+// subscription list is the authoritative record; on an API hiccup we fail
+// TOWARD no-trial (worst case a legitimate first-timer pays immediately and
+// support comps them, rather than a repeat customer minting free weeks).
+async function isTrialEligible(
+  stripe: Stripe,
+  customerId: string,
+): Promise<boolean> {
+  try {
+    const subs = await stripe.subscriptions.list({
+      customer: customerId,
+      status: "all",
+      limit: 1,
+    });
+    return subs.data.length === 0;
+  } catch {
+    return false;
+  }
+}
 
 export type CheckoutInput =
   | { kind: "subscription"; tier: PaidTier; period?: BillingPeriod }
@@ -71,13 +94,31 @@ export async function createCheckoutSessionAction(
       const priceId = priceIdForTier(input.tier, input.period ?? "monthly");
       if (!priceId) return { ok: false, error: "That plan isn't available yet." };
 
+      // First subscription ever → 7-day free trial, card optional. Without a
+      // payment method by day 7 the subscription cancels itself (never
+      // silently pauses into limbo) and the webhook downgrades the profile.
+      const withTrial = await isTrialEligible(stripe, customer.customerId);
+
       const session = await stripe.checkout.sessions.create({
         mode: "subscription",
         customer: customer.customerId,
         client_reference_id: customer.userId,
         line_items: [{ price: priceId, quantity: 1 }],
         allow_promotion_codes: true,
-        subscription_data: { metadata: { supabase_user_id: customer.userId } },
+        subscription_data: {
+          metadata: { supabase_user_id: customer.userId },
+          ...(withTrial
+            ? {
+                trial_period_days: TRIAL_DAYS,
+                trial_settings: {
+                  end_behavior: { missing_payment_method: "cancel" as const },
+                },
+              }
+            : {}),
+        },
+        ...(withTrial
+          ? { payment_method_collection: "if_required" as const }
+          : {}),
         success_url: `${base}/settings?billing=success`,
         cancel_url: `${base}/pricing?billing=cancel`,
       });

@@ -25,6 +25,10 @@ type HeaderUser = {
   creditsUsed?: number;
   /** Unread in-app notification count for the header bell. */
   unreadNotifications?: number;
+  /** True once the user has EVER held a subscription (any status) — gates the
+   *  "free trial" CTA copy on /pricing so lapsed subscribers aren't promised
+   *  a trial checkout won't grant. */
+  hasSubscribed?: boolean;
   /** Shows the admin (moderation) entry in the user menu. */
   isAdmin?: boolean;
 };

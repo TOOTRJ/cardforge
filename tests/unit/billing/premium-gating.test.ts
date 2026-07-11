@@ -6,13 +6,11 @@ import {
 } from "@/types/card";
 
 describe("premium finish gating", () => {
-  it("flags our own premium finishes", () => {
-    expect(isPremiumFinish("foil")).toBe(true);
-    expect(isPremiumFinish("etched")).toBe(true);
-    expect(isPremiumFinish("showcase")).toBe(true);
-  });
-
-  it("keeps regular + borderless free", () => {
+  it("keeps every finish free (owner decision, 2026-07-10)", () => {
+    // The paid tease is premium custom frames (coming soon), not finishes.
+    expect(isPremiumFinish("foil")).toBe(false);
+    expect(isPremiumFinish("etched")).toBe(false);
+    expect(isPremiumFinish("showcase")).toBe(false);
     expect(isPremiumFinish("regular")).toBe(false);
     expect(isPremiumFinish("borderless")).toBe(false);
     expect(isPremiumFinish(null)).toBe(false);
@@ -37,14 +35,11 @@ describe("premium frame gating (IP-safe)", () => {
 });
 
 describe("frameStyleRequiresPremium", () => {
-  it("is true when the finish is premium", () => {
-    expect(frameStyleRequiresPremium({ finish: "foil" })).toBe(true);
+  it("is false for every finish and empty/null styles (no premium content ships yet)", () => {
+    expect(frameStyleRequiresPremium({ finish: "foil" })).toBe(false);
     expect(frameStyleRequiresPremium({ finish: "showcase", template: "m15" })).toBe(
-      true,
+      false,
     );
-  });
-
-  it("is false for free finishes/frames and empty/null styles", () => {
     expect(frameStyleRequiresPremium({ finish: "regular", template: "lotr" })).toBe(
       false,
     );

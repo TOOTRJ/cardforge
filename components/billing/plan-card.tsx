@@ -1,4 +1,4 @@
-import { Check } from "lucide-react";
+import { Check, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { cn } from "@/lib/utils";
@@ -70,6 +70,25 @@ export function PlanCard({ plan, currentTier, period = "monthly", cta }: PlanCar
           </li>
         ))}
       </ul>
+
+      {plan.comingSoon?.length ? (
+        <div className="flex flex-col gap-2 border-t border-border/60 pt-3">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-gold-strong">
+            Coming soon!
+          </span>
+          <ul className="flex flex-col gap-2">
+            {plan.comingSoon.map((feature) => (
+              <li
+                key={feature}
+                className="flex items-start gap-2.5 text-sm leading-6 text-muted"
+              >
+                <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-gold" aria-hidden />
+                <span>{feature}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       <div className="mt-auto pt-2">
         {isCurrent ? (

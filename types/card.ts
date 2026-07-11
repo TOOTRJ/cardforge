@@ -546,12 +546,11 @@ export type FrameStyle = {
 // tarkir) is NEVER paywalled — it stays free for everyone.
 // ---------------------------------------------------------------------------
 
-// Finishes that require a paid plan. "regular" and "borderless" stay free.
-export const PREMIUM_FINISHES: ReadonlySet<CardFinish> = new Set<CardFinish>([
-  "foil",
-  "etched",
-  "showcase",
-]);
+// Finishes that require a paid plan. NONE today — every finish (foil/etched/
+// showcase) is free for everyone (owner decision, 2026-07-10; the paid tease
+// is "premium custom frames", tracked in PREMIUM_FRAME_TEMPLATES below). The
+// gating plumbing stays wired so adding an entry here re-paywalls instantly.
+export const PREMIUM_FINISHES: ReadonlySet<CardFinish> = new Set<CardFinish>();
 
 // Original premium frame templates (none yet). Add ONLY original PipGlyph
 // frames here — never WotC trade dress. Wired up so gating is ready the moment
