@@ -23,7 +23,7 @@ import {
   type ImageAspect,
 } from "@/lib/ai/image-gen";
 import { persistGeneratedArt } from "@/lib/ai/random-art";
-import { logAiCall, spendCredits } from "@/lib/ai/rate-limit";
+import { logAiCall, refundCredits, spendCredits } from "@/lib/ai/rate-limit";
 import type { DesignedCard } from "@/lib/ai/card-design";
 import { getCardById as getScryfallCardById } from "@/lib/scryfall/client";
 import { mapScryfallToFormPatch } from "@/lib/scryfall/import-mapper";
@@ -627,6 +627,16 @@ async function runCardStep(
   let cardId = step.card_id;
 
   if (!cardId) {
+    // Reserve the card's credit BEFORE any work, failing closed — the
+    // plan-time balance check in the jobs route is advisory only, so this
+    // reserve is the enforcement point (concurrent jobs can't outrun the
+    // balance: consume_credits row-locks the profile). A later paint failure
+    // keeps the charge because the retry repaints the same card for free.
+    const reserve = await spendCredits(1, "generate_deck", { failClosed: true });
+    if (!reserve.ok) {
+      return { ...step, status: "failed", error: reserve.message };
+    }
+
     // Resolve the active game system (same lookup as the legacy route).
     const { data: gameSystem } = await supabase
       .from("game_systems")
@@ -636,6 +646,7 @@ async function runCardStep(
       .limit(1)
       .maybeSingle();
     if (!gameSystem) {
+      await refundCredits(userId, 1, "generate_deck");
       return { ...step, status: "failed", error: "No game system configured." };
     }
 
@@ -661,6 +672,7 @@ async function runCardStep(
       { redirectAfterCreate: false },
     );
     if (!result.ok) {
+      await refundCredits(userId, 1, "generate_deck");
       const detail =
         result.formError ??
         Object.values(result.fieldErrors ?? {})[0] ??
@@ -668,10 +680,6 @@ async function runCardStep(
       return { ...step, status: "failed", error: detail };
     }
     cardId = result.cardId;
-
-    // Meter the card (free when billing is off; ledger reason matches the
-    // legacy set flow).
-    await spendCredits(1, "generate_deck");
   }
 
   // ---- Art + publish (the expensive half; retried independently) ----
@@ -770,6 +778,13 @@ async function runDeckCardStep(
   let cardId = step.card_id;
 
   if (!cardId) {
+    // Same reserve-first posture as runCardStep: fail closed so the credit
+    // is actually charged before the expensive generation runs.
+    const reserve = await spendCredits(1, "generate_deck", { failClosed: true });
+    if (!reserve.ok) {
+      return { ...step, status: "failed", error: reserve.message };
+    }
+
     const { data: gameSystem } = await supabase
       .from("game_systems")
       .select("id")
@@ -778,6 +793,7 @@ async function runDeckCardStep(
       .limit(1)
       .maybeSingle();
     if (!gameSystem) {
+      await refundCredits(userId, 1, "generate_deck");
       return { ...step, status: "failed", error: "No game system configured." };
     }
 
@@ -805,6 +821,7 @@ async function runDeckCardStep(
       { redirectAfterCreate: false },
     );
     if (!result.ok) {
+      await refundCredits(userId, 1, "generate_deck");
       return { ...step, status: "failed", error: createFailureMessage(result) };
     }
     cardId = result.cardId;
@@ -817,7 +834,6 @@ async function runDeckCardStep(
         plan.quantities[cardIndex] ?? 1,
       );
     }
-    await spendCredits(1, "generate_deck");
   }
 
   await logAiCall(userId, "generate_deck_cards");
@@ -841,6 +857,33 @@ async function runDeckRemixStep(
     return { ...step, status: "done", error: undefined };
   }
 
+  // Reserve the remix's credit up front (fail closed — see runCardStep) and
+  // refund on ANY failure: a failed remix step carries no card_id, so its
+  // retry reruns the whole pipeline including a fresh reserve.
+  const reserve = await spendCredits(1, "generate_deck", { failClosed: true });
+  if (!reserve.ok) {
+    return { ...step, status: "failed", error: reserve.message };
+  }
+  let result: JobStep;
+  try {
+    result = await executeDeckRemixStep(userId, job, step, plan, entry);
+  } catch (error) {
+    await refundCredits(userId, 1, "generate_deck");
+    throw error;
+  }
+  if (result.status === "failed") {
+    await refundCredits(userId, 1, "generate_deck");
+  }
+  return result;
+}
+
+async function executeDeckRemixStep(
+  userId: string,
+  job: GenerationJobRow,
+  step: JobStep,
+  plan: DeckRemixJobPlan,
+  entry: DeckRemixPlanEntry,
+): Promise<JobStep> {
   // ---- Source mechanics ----
   type Mechanics = {
     title: string;
@@ -1037,7 +1080,6 @@ async function runDeckRemixStep(
       entry.quantity,
     );
   }
-  await spendCredits(1, "generate_deck");
 
   return {
     ...step,
