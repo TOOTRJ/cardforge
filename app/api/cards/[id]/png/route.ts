@@ -14,7 +14,10 @@ import {
   type Rarity,
 } from "@/types/card";
 import { renderCardImage, type RenderPreset } from "@/lib/render/card-image";
-import { getEntitlements } from "@/lib/billing/entitlements";
+import {
+  getEntitlements,
+  removesWatermarkForOwner,
+} from "@/lib/billing/entitlements";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import { getPipOverrides } from "@/lib/pips/queries";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
@@ -105,12 +108,15 @@ export async function GET(
     frameStyle: (card.frame_style as FrameStyle) ?? {},
   };
 
-  // The CURRENT viewer's entitlement decides watermark + max resolution.
-  // Free: watermarked + capped to "default". Paid: clean + the requested preset.
+  // Resolution follows the VIEWER's plan (their export capability); the
+  // brand mark clears when EITHER side's plan removes it — the owner paid
+  // for clean cards everywhere, or the viewer paid for clean downloads.
   const entitlements = await getEntitlements();
   const preset: RenderPreset =
     entitlements.maxExportPreset === "hd" ? requestedPreset : "default";
-  const watermark = !entitlements.removeWatermark;
+  const watermark =
+    !entitlements.removeWatermark &&
+    !(await removesWatermarkForOwner(card.owner_id));
 
   // Output varies by the authenticated viewer's entitlement (watermark +
   // resolution), so it must NOT be shared-cached at the CDN — that would leak a
