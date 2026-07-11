@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getCurrentProfile } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/public";
 import type { PlanTier } from "@/lib/billing/plans";
 import { isBillingEnabled } from "@/lib/billing/flags";
 
@@ -94,6 +95,38 @@ const UNLOCKED: Entitlements = {
   cancelAtPeriodEnd: false,
 };
 
+/** The billing-relevant slice of a profile row — shared by the viewer path
+ *  (getEntitlements) and the owner path (removesWatermarkForOwner) so the
+ *  tier resolution can never drift between them. */
+type BillingProfileSlice = {
+  subscription_tier: string | null;
+  subscription_status: string | null;
+  is_admin: boolean | null;
+  comp_tier: string | null;
+  comp_expires_at: string | null;
+};
+
+/** Resolve which tier's perks actually apply for a profile row: subscription
+ *  must be active/trialing, and an unexpired admin comp takes the HIGHER of
+ *  the two (a comp can never demote a paying user). */
+function effectiveTierForProfile(profile: BillingProfileSlice): PlanTier {
+  const tier = (profile.subscription_tier ?? "free") as PlanTier;
+  const status = profile.subscription_status ?? null;
+
+  // Free is always active; paid tiers only grant perks while active/trialing.
+  const active = tier === "free" || (status ? ACTIVE_STATUSES.has(status) : false);
+  const subscribedTier: PlanTier = active ? tier : "free";
+
+  const compTier = (profile.comp_tier ?? null) as PlanTier | null;
+  const compActive =
+    compTier != null &&
+    (profile.comp_expires_at == null ||
+      new Date(profile.comp_expires_at) > new Date());
+  return compActive && RANK[compTier] > RANK[subscribedTier]
+    ? compTier
+    : subscribedTier;
+}
+
 export async function getEntitlements(): Promise<Entitlements> {
   if (!isBillingEnabled()) return UNLOCKED;
   const profile = await getCurrentProfile();
@@ -105,20 +138,9 @@ export async function getEntitlements(): Promise<Entitlements> {
 
   const tier = (profile?.subscription_tier ?? "free") as PlanTier;
   const status = profile?.subscription_status ?? null;
-
-  // Free is always active; paid tiers only grant perks while active/trialing.
-  const active = tier === "free" || (status ? ACTIVE_STATUSES.has(status) : false);
-  const subscribedTier: PlanTier = active ? tier : "free";
-
-  // Admin-granted comp: the HIGHER of the Stripe tier and the comp tier wins
-  // while the comp is unexpired, so a comp can never demote a paying user.
-  const compTier = (profile?.comp_tier ?? null) as PlanTier | null;
-  const compActive =
-    compTier != null &&
-    (profile?.comp_expires_at == null ||
-      new Date(profile.comp_expires_at) > new Date());
-  const effectiveTier: PlanTier =
-    compActive && RANK[compTier] > RANK[subscribedTier] ? compTier : subscribedTier;
+  const effectiveTier = profile
+    ? effectiveTierForProfile(profile)
+    : ("free" as PlanTier);
 
   const perks: Perks = { ...BASE_PERKS, ...TIER_PERKS[effectiveTier] };
 
@@ -148,4 +170,34 @@ export async function requireTier(min: PlanTier): Promise<Entitlements> {
     throw new UpgradeRequiredError(min);
   }
   return entitlements;
+}
+
+/**
+ * Whether the card OWNER's plan removes the PipGlyph brand mark. The mark is
+ * the owner's presentation, not the viewer's capability — a paid creator's
+ * cards render clean everywhere (OG images, bakes, other people's downloads),
+ * a free creator's cards carry the mark. Uses the cookie-free public client
+ * so viewer-independent callers (OG route, deferred bake, rebake) stay
+ * ISR-eligible; fails toward SHOWING the mark on lookup problems.
+ */
+export async function removesWatermarkForOwner(
+  ownerId: string,
+): Promise<boolean> {
+  if (!isBillingEnabled()) return true;
+  try {
+    const supabase = createPublicClient();
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select(
+        "subscription_tier, subscription_status, is_admin, comp_tier, comp_expires_at",
+      )
+      .eq("id", ownerId)
+      .maybeSingle();
+    if (!profile) return false;
+    if (profile.is_admin) return true;
+    const perks = { ...BASE_PERKS, ...TIER_PERKS[effectiveTierForProfile(profile)] };
+    return perks.removeWatermark;
+  } catch {
+    return false;
+  }
 }

@@ -14,7 +14,7 @@ import {
   type Rarity,
 } from "@/types/card";
 import { renderCardImage, type RenderPreset } from "@/lib/render/card-image";
-import { isBillingEnabled } from "@/lib/billing/flags";
+import { removesWatermarkForOwner } from "@/lib/billing/entitlements";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import { getPipOverrides } from "@/lib/pips/queries";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
@@ -115,10 +115,11 @@ export async function GET(
     backFace: (card.back_face as CardBackFace | null) ?? null,
   };
 
-  // OG previews always carry the brand mark — they're public marketing
-  // surfaces, not entitlement-gated downloads — so this stays CDN-cacheable.
+  // OG previews follow the card OWNER's plan — a paid creator's shared cards
+  // render clean, a free creator's carry the mark. Owner-based (never
+  // viewer-based) keeps the route CDN-cacheable: scrapers have no viewer.
   const response = renderCardImage(previewData, preset, {
-    brandMark: isBillingEnabled(),
+    brandMark: !(await removesWatermarkForOwner(card.owner_id)),
   });
 
   if (social) {

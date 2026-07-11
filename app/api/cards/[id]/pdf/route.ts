@@ -12,7 +12,10 @@ import {
   type Rarity,
 } from "@/types/card";
 import { renderCardImage } from "@/lib/render/card-image";
-import { getEntitlements } from "@/lib/billing/entitlements";
+import {
+  getEntitlements,
+  removesWatermarkForOwner,
+} from "@/lib/billing/entitlements";
 import { buildCardPdf, type PdfLayout } from "@/lib/render/card-pdf";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import { getPipOverrides } from "@/lib/pips/queries";
@@ -153,7 +156,10 @@ export async function GET(
   let pngBytes: Uint8Array;
   try {
     const imgResponse = renderCardImage(previewData, "hd", {
-      brandMark: !entitlements.removeWatermark,
+      // Cleared by EITHER side's plan — see the png route for the rationale.
+      brandMark:
+        !entitlements.removeWatermark &&
+        !(await removesWatermarkForOwner(card.owner_id)),
     });
     pngBytes = new Uint8Array(await imgResponse.arrayBuffer());
   } catch (err) {
