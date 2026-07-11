@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CreditMeter } from "@/components/billing/credit-meter";
 import {
   Dialog,
   DialogContent,
@@ -124,6 +125,7 @@ export function AiGenerateDialog({
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-accent" aria-hidden />
             Generate a card with AI
+            <CreditMeter className="ml-auto" />
           </DialogTitle>
           <DialogDescription>
             Steer as much or as little as you like — everything left on
