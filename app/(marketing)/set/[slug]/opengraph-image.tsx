@@ -1,4 +1,6 @@
 import { ImageResponse } from "next/og";
+import { notFound } from "next/navigation";
+import { isSetsEnabled } from "@/lib/sets/flags";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createPublicClient } from "@/lib/supabase/public";
 import {
@@ -58,6 +60,7 @@ export default async function Image({
 }: {
   params: Promise<{ slug: string }>;
 }) {
+  if (!isSetsEnabled()) notFound();
   const { slug } = await params;
   const result = await getSet(slug);
 

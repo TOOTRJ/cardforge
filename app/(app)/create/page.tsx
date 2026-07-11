@@ -23,6 +23,7 @@ import {
   listMyCards,
 } from "@/lib/cards/queries";
 import { listMySets } from "@/lib/sets/queries";
+import { isSetsEnabled } from "@/lib/sets/flags";
 import { getMyDeckCardWithDeck, listMyDecks } from "@/lib/decks/queries";
 import { isAIConfigured } from "@/lib/ai/card-assistant";
 import type { DeckRemixContext } from "@/types/deck";
@@ -68,7 +69,8 @@ export default async function CreatePage({
     ? await getTemplatesForGameSystem(gameSystem.id)
     : [];
   const [mySets, myCards, myDecks] = await Promise.all([
-    listMySets(),
+    // The publish panel's set picker is flag-gated — don't pay the query.
+    isSetsEnabled() ? listMySets() : Promise.resolve([]),
     listMyCards(),
     listMyDecks(),
   ]);

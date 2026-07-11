@@ -16,6 +16,7 @@ import {
   listMyCardsNotInSet,
 } from "@/lib/sets/queries";
 import { computeSetAnalytics } from "@/lib/sets/analytics";
+import { isSetsEnabled } from "@/lib/sets/flags";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { isDesignAiConfigured } from "@/lib/ai/provider";
@@ -29,6 +30,7 @@ type EditSetPageProps = {
 export async function generateMetadata({
   params,
 }: EditSetPageProps): Promise<Metadata> {
+  if (!isSetsEnabled()) return {};
   const { slug } = await params;
   return {
     title: `Edit ${slug.replace(/-/g, " ")}`,
@@ -37,6 +39,7 @@ export async function generateMetadata({
 }
 
 export default async function EditSetPage({ params }: EditSetPageProps) {
+  if (!isSetsEnabled()) notFound();
   if (!isSupabaseConfigured()) {
     return (
       <div className="mx-auto w-full max-w-2xl px-4 py-16 sm:px-6 lg:px-8">

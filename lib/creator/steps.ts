@@ -21,7 +21,7 @@ import {
   type CardKind,
 } from "@/lib/creator/card-kinds";
 
-export type StepKey = "card" | "identity" | "text" | "publish";
+export type StepKey = "card" | "identity" | "text" | "seticon" | "publish";
 
 /** Old step keys (pre-compaction) → their new home, so bookmarked/redirect
  *  `?step=` URLs keep resolving. */
@@ -166,6 +166,18 @@ const STEP_DEFS: StepDef[] = [
       "loyalty",
       "defense",
     ],
+    isVisible: always,
+  },
+  {
+    // The set symbol printed on the type line. With the sets feature hidden,
+    // the icon is a direct card field: a preset Keyrune glyph, an uploaded
+    // image, or the default PipGlyph mark — rarity-tinted either way. Cards
+    // that belong to a set (legacy/AI flows) hydrate these fields from the
+    // set's icon, and edits here override it.
+    key: "seticon",
+    label: "Set icon",
+    description: "The symbol on the type line",
+    fields: ["set_icon_url", "set_icon_code"],
     isVisible: always,
   },
   {

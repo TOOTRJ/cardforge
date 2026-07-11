@@ -31,6 +31,7 @@ import { ChallengeBriefDialog } from "@/components/creator/challenge-brief-dialo
 import { EffectsPanel } from "@/components/creator/panels/effects-panel";
 import { WatermarkPicker } from "@/components/creator/panels/watermark-picker";
 import { daysLeft, type Challenge } from "@/lib/challenges/shared";
+import { isSetsEnabled } from "@/lib/sets/flags";
 import { cn } from "@/lib/utils";
 import type { Card, Visibility } from "@/types/card";
 import type { FormValues } from "@/lib/creator/form-types";
@@ -167,6 +168,7 @@ export function PublishPanel({
         </div>
       ) : null}
 
+      {isSetsEnabled() ? (
       <FieldGroup
         label="Add to set"
         helper="Group this card into one of your sets. If that set has an icon, the card uses it as its set symbol."
@@ -214,6 +216,7 @@ export function PublishPanel({
           )}
         />
       </FieldGroup>
+      ) : null}
 
       {myDecks !== null ? <DeckPicker myDecks={myDecks} /> : null}
 

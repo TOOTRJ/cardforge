@@ -10,6 +10,8 @@
 // real user query — that's the unit AI answer engines extract and cite.
 // ---------------------------------------------------------------------------
 
+import { isSetsEnabled } from "@/lib/sets/flags";
+
 export type FaqEntry = { q: string; a: string };
 
 export type FaqTopic = {
@@ -271,7 +273,11 @@ export const FAQ_TOPICS: FaqTopic[] = [
     entries: COMPARISON_FAQ,
   },
   { slug: "sharing", title: "Sharing & visibility", entries: SHARING_FAQ },
-  { slug: "sets", title: "Sets & expansions", entries: SETS_FAQ },
+  // Sets topic rides the feature flag — /faq and its JSON-LD both read
+  // FAQ_TOPICS, so filtering here keeps them in sync.
+  ...(isSetsEnabled()
+    ? [{ slug: "sets", title: "Sets & expansions", entries: SETS_FAQ }]
+    : []),
   { slug: "exports", title: "Exports & printing", entries: EXPORTS_FAQ },
   {
     slug: "import-remix",

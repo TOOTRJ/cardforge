@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { requireTier, UpgradeRequiredError } from "@/lib/billing/entitlements";
+import { isSetsEnabled } from "@/lib/sets/flags";
 import { renderCardImage } from "@/lib/render/card-image";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { buildSetPdf } from "@/lib/render/card-pdf";
@@ -41,6 +42,9 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<RouteParams> },
 ) {
+  if (!isSetsEnabled()) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
   const { id } = await params;
   if (!UUID_PATTERN.test(id)) {
     return NextResponse.json({ error: "Invalid set id" }, { status: 400 });

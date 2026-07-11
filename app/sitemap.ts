@@ -6,6 +6,7 @@ import { listArticles, listTags } from "@/lib/content/articles";
 import { getCluster } from "@/lib/content/clusters";
 import { createPublicClient } from "@/lib/supabase/public";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { isSetsEnabled } from "@/lib/sets/flags";
 
 // ---------------------------------------------------------------------------
 // Sitemap
@@ -263,6 +264,8 @@ async function fetchChallengeEntries(
 async function fetchPublicSetEntries(
   baseUrl: string,
 ): Promise<MetadataRoute.Sitemap> {
+  // Set pages 404 while the feature is hidden — keep them out of the index.
+  if (!isSetsEnabled()) return [];
   if (!isSupabaseConfigured()) return [];
   try {
     const supabase = createPublicClient();

@@ -9,6 +9,7 @@ import { LogoutButton } from "@/components/auth/logout-button";
 import { Button } from "@/components/ui/button";
 import { siteConfig } from "@/lib/site-config";
 import { isBillingEnabled } from "@/lib/billing/flags";
+import { isSetsEnabled } from "@/lib/sets/flags";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -160,12 +161,14 @@ export function MobileMenu({
                   onNav={() => setOpen(false)}
                   active={isActive(pathname, "/feed")}
                 />
-                <DrawerLink
-                  href="/dashboard/sets"
-                  label="My Sets"
-                  onNav={() => setOpen(false)}
-                  active={isActive(pathname, "/dashboard/sets")}
-                />
+                {isSetsEnabled() ? (
+                  <DrawerLink
+                    href="/dashboard/sets"
+                    label="My Sets"
+                    onNav={() => setOpen(false)}
+                    active={isActive(pathname, "/dashboard/sets")}
+                  />
+                ) : null}
                 <DrawerLink
                   href="/dashboard/decks"
                   label="My Decks"

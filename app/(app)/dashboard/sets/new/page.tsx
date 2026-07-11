@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { SetCreatorForm } from "@/components/sets/set-creator-form";
+import { isSetsEnabled } from "@/lib/sets/flags";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { SurfaceCard } from "@/components/ui/surface-card";
@@ -16,6 +17,7 @@ export const metadata: Metadata = {
 };
 
 export default async function NewSetPage() {
+  if (!isSetsEnabled()) notFound();
   if (!isSupabaseConfigured()) {
     return (
       <div className="mx-auto w-full max-w-2xl px-4 py-16 sm:px-6 lg:px-8">

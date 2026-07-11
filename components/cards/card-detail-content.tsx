@@ -57,6 +57,7 @@ import {
   type ProfileWithStats,
 } from "@/lib/cards/queries";
 import { countDecksForCard } from "@/lib/decks/queries";
+import { isSetsEnabled } from "@/lib/sets/flags";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { countPublicRemixesBySource } from "@/lib/cards/source-queries";
@@ -118,6 +119,7 @@ export async function CardDetailContent({
 
   const user = await getCurrentUser();
   const isOwner = Boolean(user && user.id === card.owner_id);
+  const setsEnabled = isSetsEnabled();
 
   const [
     backCard,
@@ -172,7 +174,8 @@ export async function CardDetailContent({
       : Promise.resolve(false),
     // Analytics: remix + set membership counts, and the top-liked remixes.
     countRemixesOfCard(card.id),
-    countSetsForCard(card.id),
+    // Set stats stay unqueried while the feature is hidden.
+    setsEnabled ? countSetsForCard(card.id) : Promise.resolve(0),
     countDecksForCard(card.id),
     listTopRemixesOfCard(card.id, 4),
     // Provenance: the original card this was remixed from (if any).
@@ -181,10 +184,10 @@ export async function CardDetailContent({
       : Promise.resolve(null),
     // Popularity rank overall + within the card's primary set.
     getCardLikeRankOverall(card.id),
-    card.primary_set_id
+    setsEnabled && card.primary_set_id
       ? getSetSummary(card.primary_set_id)
       : Promise.resolve(null),
-    card.primary_set_id
+    setsEnabled && card.primary_set_id
       ? getCardLikeRankInSet(card.id, card.primary_set_id)
       : Promise.resolve(null),
     // 7-day velocity for the trending badge.
@@ -461,7 +464,7 @@ export async function CardDetailContent({
           views={card.view_count}
           likes={likesCount}
           remixes={remixCount}
-          sets={setCount}
+          sets={setsEnabled ? setCount : null}
           decks={deckCount}
           comments={comments.length}
           createdAt={card.created_at}
@@ -626,7 +629,8 @@ function CardAnalytics({
   views: number;
   likes: number;
   remixes: number;
-  sets: number;
+  /** null = sets feature hidden — the stat tile is omitted entirely. */
+  sets: number | null;
   decks: number;
   comments: number;
   createdAt: string;
@@ -655,7 +659,9 @@ function CardAnalytics({
     { icon: Eye, label: "Views", value: views },
     { icon: Heart, label: "Likes", value: likes },
     { icon: Repeat2, label: "Remixes", value: remixes },
-    { icon: Layers, label: sets === 1 ? "Set" : "Sets", value: sets },
+    ...(sets === null
+      ? []
+      : [{ icon: Layers, label: sets === 1 ? "Set" : "Sets", value: sets }]),
     { icon: BookOpen, label: decks === 1 ? "Deck" : "Decks", value: decks },
     { icon: MessageCircle, label: "Comments", value: comments },
   ];

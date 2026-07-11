@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { Layers, Plus } from "lucide-react";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PageHeader } from "@/components/layout/page-header";
@@ -8,6 +9,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { listMySets } from "@/lib/sets/queries";
+import { isSetsEnabled } from "@/lib/sets/flags";
 import { isDesignAiConfigured } from "@/lib/ai/provider";
 import { batchCardLimit } from "@/lib/ai/generation-limits";
 import { AiSetGenerator } from "@/components/sets/ai-set-generator";
@@ -18,6 +20,7 @@ export const metadata: Metadata = {
 };
 
 export default async function SetsPage() {
+  if (!isSetsEnabled()) notFound();
   const [sets, maxCards] = await Promise.all([listMySets(), batchCardLimit()]);
   const aiConfigured = isDesignAiConfigured();
 

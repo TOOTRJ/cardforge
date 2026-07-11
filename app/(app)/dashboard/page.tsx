@@ -23,6 +23,7 @@ import {
   listMyRemixes,
 } from "@/lib/cards/queries";
 import { listMySets } from "@/lib/sets/queries";
+import { isSetsEnabled } from "@/lib/sets/flags";
 import { listMyDecks } from "@/lib/decks/queries";
 import { LikedCardsSection } from "@/components/creator/liked-cards-section";
 import { DashboardRemixesSection } from "@/components/creator/dashboard-remixes-section";
@@ -40,13 +41,18 @@ const QUICK_ACTIONS = [
     tone: "gold" as const,
     icon: <FilePlus2 aria-hidden />,
   },
-  {
-    title: "My sets",
-    helper: "Group cards into sets",
-    href: "/dashboard/sets",
-    tone: "purple" as const,
-    icon: <Layers aria-hidden />,
-  },
+  // Sets tile only while the feature is on — /dashboard/sets 404s otherwise.
+  ...(isSetsEnabled()
+    ? [
+        {
+          title: "My sets",
+          helper: "Group cards into sets",
+          href: "/dashboard/sets",
+          tone: "purple" as const,
+          icon: <Layers aria-hidden />,
+        },
+      ]
+    : []),
   {
     title: "Custom pips",
     helper: "Upload your own icons",
@@ -88,9 +94,11 @@ export default async function DashboardPage() {
         description="A snapshot of your cards, drafts, and sets. Click any card to edit it."
         actions={
           <>
-            <Button asChild variant="outline">
-              <Link href="/dashboard/sets">My sets</Link>
-            </Button>
+            {isSetsEnabled() ? (
+              <Button asChild variant="outline">
+                <Link href="/dashboard/sets">My sets</Link>
+              </Button>
+            ) : null}
             <Button asChild>
               <Link href="/create">
                 <FilePlus2 className="h-4 w-4" aria-hidden /> New card
@@ -230,7 +238,8 @@ async function DashboardCards() {
   const viewer = await getCurrentUser();
   const [myCards, mySets, myDecks, likedCards, remixes] = await Promise.all([
     listMyCards(),
-    listMySets(),
+    // No picker to feed when sets are off — skip the query entirely.
+    isSetsEnabled() ? listMySets() : Promise.resolve([]),
     listMyDecks(),
     viewer ? listLikedCardsByUser(viewer.id) : Promise.resolve([]),
     listMyRemixes(),
