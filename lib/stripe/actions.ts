@@ -1,6 +1,7 @@
 "use server";
 
-import { getCurrentProfile, getCurrentUser, createClient } from "@/lib/supabase/server";
+import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
+import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { getSiteBaseUrl } from "@/lib/site-url";
 import {
   CREDIT_PACKS,
@@ -43,9 +44,11 @@ export type BillingActionResult =
   | { ok: false; error: string };
 
 // Ensure the current user has a Stripe customer, creating + persisting one on
-// first use. The stripe_customer_id is written via the user's own anon client
-// (allowed by the "update own profile" RLS policy) — the webhook later writes
-// the tier/credits columns with the service role.
+// first use. stripe_customer_id MUST be written with the service role: it's a
+// protect_billing_columns-pinned column, so a write through the user's own
+// client is silently REVERTED by the trigger — which is exactly the bug that
+// broke the first live trial (the webhook maps events to profiles by
+// stripe_customer_id and matched nothing; caught 2026-07-11).
 async function ensureStripeCustomer(): Promise<
   { ok: true; customerId: string; userId: string } | { ok: false; error: string }
 > {
@@ -57,19 +60,28 @@ async function ensureStripeCustomer(): Promise<
     return { ok: true, customerId: profile.stripe_customer_id, userId: user.id };
   }
 
+  // Refuse to mint a customer we can't link — an unlinked customer means the
+  // webhook can never provision the subscription it pays for.
+  if (!isAdminConfigured()) {
+    return { ok: false, error: "Billing isn't available right now." };
+  }
+
   const stripe = getStripe();
   const customer = await stripe.customers.create({
     email: user.email ?? undefined,
     metadata: { supabase_user_id: user.id },
   });
 
-  const supabase = await createClient();
-  const { error } = await supabase
+  const admin = createAdminClient();
+  const { data, error } = await admin
     .from("profiles")
     .update({ stripe_customer_id: customer.id })
-    .eq("id", user.id);
-  if (error) {
-    // Don't strand an orphaned customer silently — surface a retryable error.
+    .eq("id", user.id)
+    .select("stripe_customer_id")
+    .single();
+  // Verify the write actually landed (a trigger revert reports no error) so
+  // this failure mode can never be silent again.
+  if (error || data?.stripe_customer_id !== customer.id) {
     return { ok: false, error: "Couldn't link your billing account. Try again." };
   }
 
