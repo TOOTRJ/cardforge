@@ -17,6 +17,8 @@ export type GenerationJobStep = {
   key: string;
   label: string;
   status: "pending" | "done" | "failed";
+  /** Set once the step's card row exists (single-card + batch card steps). */
+  card_id?: string;
   error?: string;
 };
 
@@ -28,6 +30,8 @@ export type GenerationJobOutcome = {
   failures: number;
   /** Slug of the created/target set or deck, when the server returned one. */
   slug?: string;
+  /** The created card's id for single-card jobs (link via /go/card/[id]). */
+  cardId?: string;
 };
 
 export function useGenerationJob(): GenerationContextValue {

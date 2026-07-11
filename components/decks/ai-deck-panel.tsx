@@ -2,7 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Loader2, RotateCcw, Sparkles, Wand2 } from "lucide-react";
+import {
+  ArrowRight,
+  Coins,
+  Loader2,
+  RotateCcw,
+  Sparkles,
+  Wand2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { SurfaceCard } from "@/components/ui/surface-card";
@@ -228,9 +235,17 @@ export function AiDeckPanel({
       />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <span className="text-[11px] text-muted">
-          1 credit per card · publishes publicly
-          {mode === "remix" ? ` · first ${maxCards} cards this generation` : ""}
+        <span className="inline-flex items-center gap-1.5 text-xs text-muted">
+          <Coins className="h-3.5 w-3.5 text-gold-strong" aria-hidden />
+          <span>
+            <span className="font-medium text-gold-strong">
+              {mode === "remix"
+                ? `Uses up to ${maxCards} credits`
+                : `Uses ${size} credit${size === 1 ? "" : "s"}`}
+            </span>{" "}
+            (1 per card) · publishes publicly
+            {mode === "remix" ? ` · first ${maxCards} cards this generation` : ""}
+          </span>
         </span>
         <div className="flex items-center gap-2">
           {!busy && hasFailures ? (

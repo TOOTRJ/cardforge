@@ -28,6 +28,7 @@ import {
 import { toast } from "sonner";
 import { sendGAEvent } from "@next/third-parties/google";
 import { useUpgradeModal } from "@/components/billing/upgrade-modal-provider";
+import { useGenerationJob } from "@/components/ai/use-generation-job";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SurfaceCard } from "@/components/ui/surface-card";
@@ -257,6 +258,7 @@ export function CardCreatorForm({
 }: CardCreatorFormProps) {
   const router = useRouter();
   const upgrade = useUpgradeModal();
+  const generationJob = useGenerationJob();
   const [isSubmitting, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
   // Active step index into the dynamic `steps` list (see below). Clamped on
@@ -1118,108 +1120,35 @@ export function CardCreatorForm({
     options: AiGenerateOptions = {},
   ): Promise<boolean> => {
     if (!userId) {
-      toast.error("Sign in to use the AI random card generator.");
+      toast.error("Sign in to use the AI card generator.");
       return false;
     }
+    // Close the dialog immediately — the generation runs as a background job
+    // via the root GenerationJobProvider (floating progress widget, safe to
+    // navigate; a closed tab pauses and auto-resumes). This replaced the old
+    // single 60–90s request, which infrastructure timeouts cut and re-ran
+    // (double charge + phantom client failure).
+    setAiGenerateOpen(false);
     setGeneratingRandom(true);
     try {
-      const response = await fetch("/api/ai/random-card", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(options),
-      });
-      const payload = await response.json().catch(() => null);
-      if (!response.ok || !payload?.ok) {
-        if (
-          response.status === 402 ||
-          payload?.code === "INSUFFICIENT_CREDITS"
-        ) {
-          upgrade.open("credits");
-        } else {
-          toast.error(
-            payload?.error ?? "Random card generation failed. Try again.",
-          );
-        }
+      const outcome = await generationJob.run({ kind: "card", ...options });
+      if (!outcome.ok) {
+        // Plan errors are toasted by the provider; step failures stay in the
+        // widget with a Retry. Nothing else to do here.
         return false;
       }
-      const card = payload.card as {
-        title: string;
-        cost: string;
-        card_type: CardType;
-        supertype?: string;
-        subtypes?: string[];
-        rarity: Rarity;
-        color_identity: ColorIdentity[];
-        rules_text: string;
-        flavor_text?: string;
-        power?: string;
-        toughness?: string;
-        loyalty?: string;
-        defense?: string;
-      };
-
-      // Kind first (card_type + frame in one pass). When the server resolved
-      // a frame (user-picked or randomized against the published gate), apply
-      // it directly; otherwise keep the user's era default for the type.
-      const frameTemplate =
-        (payload.frame?.template as FrameTemplate | undefined) ?? null;
-      if (frameTemplate) {
-        applyKindPatch({ card_type: card.card_type, template: frameTemplate });
-      } else {
-        applyKindProgrammatic(kindFromCard(card.card_type, undefined));
-      }
-      setValue("title", card.title, { shouldDirty: true });
-      setValue("cost", card.cost, { shouldDirty: true });
-      setValue("supertype", card.supertype ?? "", { shouldDirty: true });
-      setValue("subtypes_text", (card.subtypes ?? []).join(", "), {
-        shouldDirty: true,
+      toast.success("Your card is forged.", {
+        description: "Original art painted — it's saved to your library.",
+        ...(outcome.cardId
+          ? {
+              action: {
+                label: "View card",
+                onClick: () => router.push(`/go/card/${outcome.cardId}`),
+              },
+            }
+          : {}),
       });
-      setValue("rarity", card.rarity, { shouldDirty: true });
-      setValue(
-        "color_identity",
-        Array.from(card.color_identity) as ColorIdentity[],
-        { shouldDirty: true },
-      );
-      setValue("rules_text", card.rules_text, { shouldDirty: true });
-      {
-        const generatedKind = kindFromCard(card.card_type, undefined);
-        if (generatedKind === "planeswalker" || generatedKind === "saga") {
-          seedStructuredRows(generatedKind, card.rules_text);
-        }
-      }
-      setValue("flavor_text", card.flavor_text ?? "", { shouldDirty: true });
-      setValue("power", card.power ?? "", { shouldDirty: true });
-      setValue("toughness", card.toughness ?? "", { shouldDirty: true });
-      setValue("loyalty", card.loyalty ?? "", { shouldDirty: true });
-      setValue("defense", card.defense ?? "", { shouldDirty: true });
-
-      // A generated card is an ORIGINAL. Drop any Scryfall provenance left
-      // over from a prior import — otherwise the brand-new card saves (and
-      // shows) as a remix of a card it no longer resembles.
-      setValue("source_scryfall_id", "", { shouldDirty: true });
-      setRemixSource(null);
-
-      if (payload.art?.ok && payload.art.publicUrl) {
-        setValue("art_url", payload.art.publicUrl, { shouldDirty: true });
-        setValue(
-          "art_position",
-          { focalX: 0.5, focalY: 0.5, scale: 1 },
-          { shouldDirty: true },
-        );
-        toast.success("Random card forged — review and tweak before saving.");
-      } else {
-        const detail =
-          payload.artError ??
-          "The art generator hit a snag; the card text is ready.";
-        toast.message("Random card forged", { description: detail });
-      }
-      // Pop the user back to Identity so they see the new card.
-      setAiGenerateOpen(false);
-      goToStepKey("identity");
       return true;
-    } catch {
-      toast.error("Network error while generating a random card.");
-      return false;
     } finally {
       setGeneratingRandom(false);
     }

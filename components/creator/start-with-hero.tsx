@@ -57,7 +57,7 @@ const OPTIONS: Option[] = [
     key: "generateRandom",
     label: "Generate with AI",
     description:
-      "Pick a theme, style, type, and frame — or go full random. AI drafts the card and paints original art. 10 per day.",
+      "Pick a theme, style, type, and frame — or go full random. AI drafts the card and paints original art while you keep browsing.",
     icon: Sparkles,
     accentClass:
       "from-accent/15 to-accent/5 hover:border-accent/60 border-accent/30",
