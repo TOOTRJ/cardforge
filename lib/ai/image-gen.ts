@@ -78,8 +78,9 @@ const GATEWAY_IMAGE_DEFAULT = "bfl/flux-2-flex";
 
 /** "card" matches the frame's art window (~4:3 — m15 slot is 84.4%×44% of a
  *  63×88 card ≈ 1.37:1), so generated art fits with no manual repositioning.
- *  "square" suits icons; "wide" (16:9) suits set/deck cover tiles. */
-export type ImageAspect = "square" | "wide" | "card";
+ *  "square" suits icons; "wide" (16:9) suits set cover tiles; "banner"
+ *  (21:9) suits the deck hero, which crops covers to aspect-[5/2]. */
+export type ImageAspect = "square" | "wide" | "card" | "banner";
 
 export async function generateStyledImage(
   prompt: string,
@@ -94,7 +95,13 @@ export async function generateStyledImage(
       model,
       prompt: prompt.trim().slice(0, 4000),
       aspectRatio:
-        aspect === "wide" ? "16:9" : aspect === "card" ? "4:3" : "1:1",
+        aspect === "banner"
+          ? "21:9"
+          : aspect === "wide"
+            ? "16:9"
+            : aspect === "card"
+              ? "4:3"
+              : "1:1",
     });
     return {
       ok: true,

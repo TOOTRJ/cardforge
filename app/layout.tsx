@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Cinzel, Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import { UpgradeModalProvider } from "@/components/billing/upgrade-modal-provider";
+import { GenerationJobProvider } from "@/components/ai/generation-provider";
 import { ShareParamCleanup } from "@/components/seo/share-param-cleanup";
 import { getSiteBaseUrl } from "@/lib/site-url";
 import { noFlashScript } from "@/lib/theme-shared";
@@ -206,8 +207,13 @@ export default function RootLayout({
           Skip to main content
         </a>
         <UpgradeModalProvider>
-          {children}
-          {modal}
+          {/* AI batch-generation runner lives at the ROOT so client-side
+              navigation never interrupts a job; it also auto-resumes any
+              job a closed tab left behind. */}
+          <GenerationJobProvider>
+            {children}
+            {modal}
+          </GenerationJobProvider>
         </UpgradeModalProvider>
         <Toaster
           // Sonner's `theme="system"` follows prefers-color-scheme, which

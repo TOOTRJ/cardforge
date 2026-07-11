@@ -52,6 +52,33 @@ const requestSchema = z.discriminatedUnion("kind", [
   }),
 ]);
 
+/**
+ * GET /api/ai/jobs — the caller's most recent resumable job (status
+ * "generating" with pending steps), or job: null. Powers the provider's
+ * auto-resume after a closed tab.
+ */
+export async function GET() {
+  if (!isSupabaseConfigured()) {
+    return NextResponse.json({ ok: true, job: null }, { status: 200 });
+  }
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ ok: true, job: null }, { status: 200 });
+  }
+  const supabase = await (await import("@/lib/supabase/server")).createClient();
+  const { data } = await supabase
+    .from("ai_generation_jobs")
+    .select("*")
+    .eq("status", "generating")
+    .order("created_at", { ascending: false })
+    .limit(5);
+  const resumable = (data ?? []).find((row) => {
+    const steps = Array.isArray(row.steps) ? (row.steps as Array<{ status?: string }>) : [];
+    return steps.some((step) => step?.status === "pending");
+  });
+  return NextResponse.json({ ok: true, job: resumable ?? null }, { status: 200 });
+}
+
 export async function POST(request: Request) {
   if (!isSupabaseConfigured()) {
     return NextResponse.json(

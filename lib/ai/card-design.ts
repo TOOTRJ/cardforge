@@ -316,6 +316,85 @@ export async function designCards(
   };
 }
 
+// ---------------------------------------------------------------------------
+// Title uniqueness — the model happily reuses a name it liked (including
+// names already in the target deck/set). Detect collisions against the
+// reserved list AND within the batch, ask the judge for fresh names, and
+// fall back to a mechanical numeral suffix if it still collides.
+// ---------------------------------------------------------------------------
+
+const RENAME_SYSTEM = `You rename ORIGINAL Magic: The Gathering-style cards whose names collide with existing cards. For each card, invent a NEW original name that fits its mechanics and flavor but is clearly different from every reserved name. Never use published Magic card names, Wizards-owned proper nouns, or real-world brands. Return the new names in the SAME order.`;
+
+const ROMAN = ["II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
+
+export async function ensureUniqueTitles<T extends { title: string; rules_text: string }>(
+  cards: T[],
+  reservedNames: Iterable<string>,
+): Promise<{ cards: T[]; renamed: number }> {
+  const reserved = new Set<string>();
+  for (const name of reservedNames) reserved.add(name.trim().toLowerCase());
+
+  const collides = (list: T[]): number[] => {
+    const used = new Set(reserved);
+    const out: number[] = [];
+    list.forEach((card, index) => {
+      const key = card.title.trim().toLowerCase();
+      if (used.has(key)) out.push(index);
+      else used.add(key);
+    });
+    return out;
+  };
+
+  let result = [...cards];
+  const initialCollisions = collides(result);
+  if (initialCollisions.length === 0) return { cards, renamed: 0 };
+
+  // One judge pass for fresh, flavor-appropriate names.
+  try {
+    const allNames = new Set(reserved);
+    for (const card of result) allNames.add(card.title.trim().toLowerCase());
+    const { object } = await generateObject({
+      model: judgeModel(),
+      schema: z.object({ titles: z.array(clampedText(80)).min(1) }).strict(),
+      system: RENAME_SYSTEM,
+      prompt: [
+        `Reserved names (do NOT use any of these):\n${[...allNames].join(", ")}`,
+        `Cards needing new names:`,
+        ...initialCollisions.map(
+          (index, n) =>
+            `${n + 1}. "${result[index].title}" — ${result[index].rules_text.slice(0, 160)}`,
+        ),
+      ].join("\n"),
+      temperature: 0.9,
+    });
+    initialCollisions.forEach((cardIndex, n) => {
+      const fresh = object.titles[n]?.trim();
+      if (fresh) result[cardIndex] = { ...result[cardIndex], title: fresh };
+    });
+  } catch {
+    // fall through to the mechanical suffix below
+  }
+
+  // Deterministic sweep: anything still colliding (judge failed, or judge
+  // itself reused a name) gets a numeral suffix — ugly but never wrong.
+  const used = new Set(reserved);
+  result = result.map((card) => {
+    const base = card.title.trim();
+    let title = base;
+    let key = title.toLowerCase();
+    let n = 0;
+    while (used.has(key) && n < ROMAN.length) {
+      title = `${base} ${ROMAN[n]}`;
+      key = title.toLowerCase();
+      n += 1;
+    }
+    used.add(key);
+    return title === card.title ? card : { ...card, title };
+  });
+
+  return { cards: result, renamed: initialCollisions.length };
+}
+
 export type SingleCardOptions = {
   theme?: string;
   style?: string;

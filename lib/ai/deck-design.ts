@@ -5,12 +5,14 @@ import { z } from "zod";
 import {
   clampedText,
   designCards,
+  ensureUniqueTitles,
   type DesignedCard,
   type DesignSlot,
 } from "@/lib/ai/card-design";
 import { judgeModel } from "@/lib/ai/provider";
 import { buildDeckSkeleton, type DeckSlot } from "@/lib/ai/mtg-rules";
 import type { ColorIdentity } from "@/types/card";
+import type { DeckFormat } from "@/types/deck";
 
 // ---------------------------------------------------------------------------
 // AI deck design — concept + card batch for "generate a whole deck".
@@ -47,13 +49,35 @@ export type DeckConcept = z.infer<typeof deckConceptSchema>;
 
 const DECK_CONCEPT_SYSTEM = `You pitch ORIGINAL Magic: The Gathering-style decks for a homebrew tool. Given a theme and format, invent a deck name, a one-sentence pitch, a strategy paragraph (game plan, key mechanics, world/faction names), and pick 1-3 colors that fit. Everything must be original — never Wizards-owned proper nouns, never real-world brands.`;
 
-const FORMAT_NOTES: Record<AiDeckFormat, string> = {
+// One line of real deck-construction rules per format — mirrored from
+// lib/decks/format-rules.ts FORMAT_SPECS so generated cards respect the
+// format they're joining (add-mode uses the deck's OWN format, which can be
+// any of the twelve).
+const FORMAT_NOTES: Record<DeckFormat, string> = {
   commander:
-    "Commander (singleton, 100 cards): every card is a one-of; the first card is the deck's LEGENDARY commander and every other card must fit inside the commander's color identity.",
+    "Commander (singleton, 100 cards incl. the LEGENDARY commander): every card is a one-of and must fit inside the commander's color identity.",
+  brawl:
+    "Brawl (singleton, 100 cards incl. commander): Commander structure at a Standard-ish power level — every card a one-of inside the commander's colors.",
+  standard_brawl:
+    "Standard Brawl (singleton, 60 cards incl. commander): compact singleton decks inside the commander's colors.",
+  oathbreaker:
+    "Oathbreaker (singleton, 60 cards): a planeswalker leads the deck; every card is a one-of inside its color identity.",
   standard:
-    "Standard (60 cards, up to 4 copies): efficient, focused designs that reward playing multiples.",
+    "Standard (60 cards, up to 4 copies of a card): efficient, focused designs that reward playing multiples.",
+  pioneer:
+    "Pioneer (60 cards, up to 4 copies): efficient, synergy-driven designs slightly above Standard power.",
+  modern:
+    "Modern (60 cards, up to 4 copies): fast, mana-efficient designs — cheap interaction and low curves win.",
+  legacy:
+    "Legacy (60 cards, up to 4 copies): high-power eternal format — efficient one-mana plays are normal.",
+  vintage:
+    "Vintage (60 cards, up to 4 copies): the most powerful format — push efficiency, but keep designs fair for casual play.",
+  pauper:
+    "Pauper (60 cards, up to 4 copies, COMMONS ONLY): every design MUST be common rarity — simple, clean effects.",
   limited:
     "Limited (40 cards): simple, self-contained designs that play well without deep synergy.",
+  casual:
+    "Casual (anything goes): prioritize fun, flavor, and table talk over raw power.",
 };
 
 function slotFromDeckSlot(
@@ -127,7 +151,9 @@ function existingCardLines(cards: ExistingDeckCard[]): string {
 export async function generateDeckPlan(input: {
   theme: string;
   style?: string;
-  format: AiDeckFormat;
+  /** New decks offer AI_DECK_FORMATS; add-mode passes the deck's own
+   *  format, which can be any of the twelve. */
+  format: DeckFormat;
   size: number;
   /** Present when ADDING cards to an existing deck: the new cards must
    *  synergize with what's already there, and the concept anchors on the
@@ -175,27 +201,41 @@ export async function generateDeckPlan(input: {
     );
   }
 
+  const designSlots = slots.map((slot, index) =>
+    slotFromDeckSlot(slot, concept.colors, index),
+  );
+  // Pauper is commons-only — the format rule, not a suggestion.
+  const finalSlots =
+    input.format === "pauper"
+      ? designSlots.map((slot) => ({ ...slot, rarity: "common" as const }))
+      : designSlots;
+
   const { cards } = await designCards({
     theme,
     style: input.style,
-    slots: slots.map((slot, index) =>
-      slotFromDeckSlot(slot, concept.colors, index),
-    ),
+    slots: finalSlots,
     context: [
       `These cards form the deck "${concept.deck_title}" — ${concept.deck_description}`,
       `Strategy: ${concept.strategy}`,
       `Format rules: ${FORMAT_NOTES[input.format]}`,
       input.existing
         ? [
-            "The deck ALREADY CONTAINS these cards — the new designs must SYNERGIZE with them (shared mechanics, tribal/keyword overlap, curve gaps filled) and stay inside their color identity:",
+            "The deck ALREADY CONTAINS these cards — the new designs must SYNERGIZE with them (shared mechanics, tribal/keyword overlap, curve gaps filled) and stay inside their color identity. NEVER reuse one of their names, and NEVER design a near-duplicate of a card the deck already has — every new card must add something the deck currently lacks:",
             existingCardLines(input.existing.cards),
           ].join("\n")
         : null,
-      "The cards must play together: shared mechanics, recurring names, a coherent game plan.",
+      "The cards must play together: shared mechanics, recurring names, a coherent game plan. Every card title in this batch must be unique.",
     ]
       .filter(Boolean)
       .join("\n"),
   });
 
-  return { concept, cards, slots };
+  // Hard guarantee on names: no collisions with the deck's existing cards
+  // or within the batch (the model occasionally reuses a name it liked).
+  const { cards: uniqueCards } = await ensureUniqueTitles(
+    cards,
+    input.existing?.cards.map((card) => card.name) ?? [],
+  );
+
+  return { concept, cards: uniqueCards, slots };
 }
