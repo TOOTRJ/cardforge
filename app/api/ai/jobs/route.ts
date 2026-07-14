@@ -115,6 +115,15 @@ export async function GET() {
     return NextResponse.json({ ok: true, job: null }, { status: 200 });
   }
   const supabase = await (await import("@/lib/supabase/server")).createClient();
+  // Lazy expiry: a job that hasn't progressed in 24h has no live client and
+  // never will be resumed usefully — close it instead of surfacing zombie
+  // "generating" rows forever. Owner-scoped by RLS; best-effort.
+  await supabase
+    .from("ai_generation_jobs")
+    .update({ status: "cancelled", error: "Expired — no progress for 24 hours." })
+    .eq("owner_id", user.id)
+    .eq("status", "generating")
+    .lt("updated_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
   const { data } = await supabase
     .from("ai_generation_jobs")
     .select("*")
@@ -251,16 +260,26 @@ export async function POST(request: Request) {
 
   // Credits are metered per card as steps complete; pre-check the balance so
   // a user doesn't burn a plan call they can't afford (billing off → ∞).
+  // Batch kinds also charge for their cover (and a set's icon) — count those
+  // too rather than let the job run out one step from the finish line. The
+  // count can over-ask by 1 for add-to-deck mode when the deck already has a
+  // cover; erring toward "have one spare credit" beats a mid-job failure.
   if (isBillingEnabled()) {
+    const needed =
+      parsed.data.kind === "set"
+        ? size + 2 // cover + icon
+        : parsed.data.kind === "deck" || parsed.data.kind === "deck_remix"
+          ? size + 1 // cover
+          : size;
     const entitlements = await getEntitlements();
-    if (entitlements.credits < size) {
+    if (entitlements.credits < needed) {
       return NextResponse.json(
         {
           ok: false,
-          error: `You need ${size} credits to generate ${size} cards (you have ${entitlements.credits}).`,
+          error: `You need ${needed} credits for this generation — ${size} card${size === 1 ? "" : "s"} plus artwork extras (you have ${entitlements.credits}).`,
           code: "INSUFFICIENT_CREDITS",
           balance: entitlements.credits,
-          needed: size,
+          needed,
         },
         { status: 402 },
       );

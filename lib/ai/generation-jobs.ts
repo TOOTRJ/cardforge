@@ -102,7 +102,9 @@ export type GenerationJobRow = {
   id: string;
   owner_id: string;
   kind: "set" | "deck" | "deck_remix" | "card" | "card_remix";
-  status: "generating" | "done" | "failed" | "cancelled";
+  /** "done" = every step succeeded; "done_with_errors" = finished with a mix
+   *  of successes and failures (retryable); "failed" = nothing succeeded. */
+  status: "generating" | "done" | "done_with_errors" | "failed" | "cancelled";
   request: Record<string, unknown>;
   plan:
     | SetJobPlan
