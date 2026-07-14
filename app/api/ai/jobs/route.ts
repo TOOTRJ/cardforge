@@ -5,6 +5,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { isDesignAiConfigured } from "@/lib/ai/provider";
 import { isImageRemixConfigured } from "@/lib/ai/image-gen";
 import {
+  DECK_CARDS_DAILY_LIMIT,
   REMIX_DAILY_LIMIT,
   checkAiRateLimit,
   checkDailyActionLimit,
@@ -207,6 +208,29 @@ export async function POST(request: Request) {
       "remix_card",
       REMIX_DAILY_LIMIT,
       "AI remix",
+    );
+    if (!daily.ok) {
+      return NextResponse.json(
+        { ok: false, error: daily.message },
+        {
+          status: 429,
+          headers: { "Retry-After": String(daily.retryAfterSeconds) },
+        },
+      );
+    }
+  }
+
+  // Deck/set batch flows share one per-day image ceiling (admins exempt).
+  if (
+    parsed.data.kind === "deck" ||
+    parsed.data.kind === "deck_remix" ||
+    parsed.data.kind === "set"
+  ) {
+    const daily = await checkDailyActionLimit(
+      user.id,
+      "generate_deck_cards",
+      DECK_CARDS_DAILY_LIMIT,
+      "deck/set card",
     );
     if (!daily.ok) {
       return NextResponse.json(

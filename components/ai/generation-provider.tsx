@@ -58,6 +58,11 @@ export function useGenerationContext(): GenerationContextValue {
   return value;
 }
 
+// How many card steps to run at once. Each step is one image generation;
+// a small pool cuts a big deck's wall-clock ~POOL× without tripping the
+// per-minute AI rate limit (20/min for non-admins) at ~11s/image.
+const STEP_CONCURRENCY = 3;
+
 const KIND_LABELS: Record<JobPayload["kind"], string> = {
   set: "Generating set",
   deck: "Generating deck cards",
@@ -137,29 +142,70 @@ export function GenerationJobProvider({
 
   const stepUntilDone = useCallback(
     async (startJob: JobPayload): Promise<JobPayload> => {
-      let current = startJob;
-      let transportFailures = 0;
-      while (
-        current.status === "generating" &&
-        current.steps.some((step) => step.status === "pending")
-      ) {
-        const result = await postStep(current.id);
-        if ("error" in result) {
-          transportFailures += 1;
-          if (transportFailures >= 2) {
-            toast.error(
-              `${result.error} Generation paused — it resumes automatically next time you open the app, or use Retry.`,
-            );
-            break;
-          }
-          continue; // one silent retry for a transient blip
-        }
-        transportFailures = 0;
-        current = { ...current, ...result.job };
-        setJob(current);
-        setSteps(current.steps);
+      // Drain the job's pending steps with a small pool of workers, each
+      // POSTing a DISTINCT step key. The server runs one image per request and
+      // writes it atomically (migration 0065 + the replay guard), so parallel
+      // steps are safe and an N-card deck finishes in ~N/POOL image-times
+      // instead of strictly one-at-a-time.
+      const terminal = new Map<string, GenerationJobStep>();
+      for (const s of startJob.steps) {
+        if (s.status !== "pending") terminal.set(s.key, s);
       }
-      return current;
+      const queue = startJob.steps
+        .filter((s) => s.status === "pending")
+        .map((s) => s.key);
+      const order = startJob.steps.map((s) => s.key);
+      let transportFailures = 0;
+      let stopped = false;
+
+      const snapshot = (): JobPayload => {
+        const steps = startJob.steps.map((s) => terminal.get(s.key) ?? s);
+        const status = steps.some((s) => s.status === "pending")
+          ? "generating"
+          : steps.some((s) => s.status === "done")
+            ? "done"
+            : "failed";
+        return { ...startJob, steps, status } as JobPayload;
+      };
+
+      const publish = (job: JobPayload) => {
+        // done/failed are terminal — record the latest of each (results can
+        // arrive out of order across workers).
+        for (const s of job.steps) {
+          if (s.status === "done" || s.status === "failed") {
+            terminal.set(s.key, s);
+          }
+        }
+        const snap = snapshot();
+        setJob(snap);
+        setSteps(order.map((k) => snap.steps.find((s) => s.key === k)!));
+      };
+
+      const worker = async (): Promise<void> => {
+        while (!stopped) {
+          const key = queue.shift();
+          if (key === undefined) return;
+          const result = await postStep(startJob.id, key);
+          if ("error" in result) {
+            transportFailures += 1;
+            if (transportFailures >= 3) {
+              stopped = true;
+              toast.error(
+                `${result.error} Generation paused — it resumes automatically next time you open the app, or use Retry.`,
+              );
+              return;
+            }
+            queue.push(key); // one retry for a transient blip
+            continue;
+          }
+          transportFailures = 0;
+          publish(result.job);
+        }
+      };
+
+      const pool = Math.min(STEP_CONCURRENCY, Math.max(1, queue.length));
+      await Promise.all(Array.from({ length: pool }, () => worker()));
+      return snapshot();
     },
     [],
   );
@@ -312,6 +358,9 @@ export function GenerationJobProvider({
 
   const doneCount = steps.filter((s) => s.status === "done").length;
   const failedCount = steps.filter((s) => s.status === "failed").length;
+  const firstFailureError = steps.find(
+    (s) => s.status === "failed" && s.error,
+  )?.error;
   const doneCardId = steps.find(
     (s) => s.status === "done" && s.card_id,
   )?.card_id;
@@ -378,8 +427,9 @@ export function GenerationJobProvider({
               </>
             ) : (
               <>
-                {failedCount} step{failedCount === 1 ? "" : "s"} failed — open
-                the generator panel to retry them.
+                {failedCount} step{failedCount === 1 ? "" : "s"} failed
+                {firstFailureError ? `: ${firstFailureError}` : ""} — open the
+                generator panel to retry.
               </>
             )}
           </p>
