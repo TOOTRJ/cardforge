@@ -305,6 +305,34 @@ export async function spendCredits(
 }
 
 /**
+ * Fresh credit balance for response payloads, read AFTER spends/refunds in
+ * the same request. Reads the profile row directly — getCurrentProfile's
+ * per-request React cache was filled before the spend and would report the
+ * stale pre-charge balance. Null = a live number isn't meaningful here
+ * (billing off, admin exemption, signed out, or a read hiccup); clients
+ * leave their display unchanged in that case.
+ */
+export async function getFreshCreditBalance(): Promise<number | null> {
+  if (!isBillingEnabled()) return null;
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return null;
+    const { data } = await supabase
+      .from("profiles")
+      .select("credits, is_admin")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (!data || data.is_admin) return null;
+    return data.credits ?? 0;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Refund credits back to a user — used when a credit was reserved up-front
  * (see `SpendOptions.failClosed`) but the generation then failed, so the
  * user should not be charged for our failure. Runs via the service-role

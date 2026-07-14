@@ -10,6 +10,7 @@ import {
   checkAiRateLimit,
   checkDailyActionLimit,
   checkRandomCardDailyLimit,
+  getFreshCreditBalance,
   logAiCall,
 } from "@/lib/ai/rate-limit";
 import { batchCardLimit, clampBatchSize } from "@/lib/ai/generation-limits";
@@ -266,6 +267,11 @@ export async function POST(request: Request) {
     }
   }
 
+  // Live balance for the client's credit displays — planning itself spends
+  // nothing (steps do), so this is the pre-generation number the runner can
+  // project the job's cost against. Null when billing is off / admin.
+  const credits = await getFreshCreditBalance();
+
   if (parsed.data.kind === "card") {
     const result = await createCardGenerationJob({
       theme: parsed.data.theme,
@@ -278,7 +284,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, error: result.error }, { status: 502 });
     }
     return NextResponse.json(
-      { ok: true, job: result.job, cardLimit: limit },
+      { ok: true, job: result.job, cardLimit: limit, credits },
       { status: 200 },
     );
   }
@@ -293,7 +299,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, error: result.error }, { status: 502 });
     }
     return NextResponse.json(
-      { ok: true, job: result.job, cardLimit: limit },
+      { ok: true, job: result.job, cardLimit: limit, credits },
       { status: 200 },
     );
   }
@@ -317,7 +323,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, error: result.error }, { status: 502 });
     }
     return NextResponse.json(
-      { ok: true, job: result.job, setSlug: result.setSlug, cardLimit: limit },
+      { ok: true, job: result.job, setSlug: result.setSlug, cardLimit: limit, credits },
       { status: 200 },
     );
   }
@@ -334,7 +340,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, error: result.error }, { status: 502 });
     }
     return NextResponse.json(
-      { ok: true, job: result.job, deckSlug: result.deckSlug, cardLimit: limit },
+      { ok: true, job: result.job, deckSlug: result.deckSlug, cardLimit: limit, credits },
       { status: 200 },
     );
   }
@@ -349,7 +355,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: result.error }, { status: 502 });
   }
   return NextResponse.json(
-    { ok: true, job: result.job, deckSlug: result.deckSlug, cardLimit: limit },
+    { ok: true, job: result.job, deckSlug: result.deckSlug, cardLimit: limit, credits },
     { status: 200 },
   );
 }

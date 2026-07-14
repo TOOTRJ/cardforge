@@ -9,6 +9,7 @@
 
 import { useEffect, useState } from "react";
 import { Coins, Sparkles } from "lucide-react";
+import { subscribeCredits } from "@/components/billing/credits-bus";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { formatCredits } from "@/lib/billing/plans";
 import { hasSupabaseSessionCookie } from "@/lib/supabase/session-cookie";
@@ -44,6 +45,18 @@ export function CreditMeter({ className }: { className?: string }) {
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  // Track the generation runner's live balance broadcasts (optimistic
+  // projection at job start, authoritative numbers with each step) so the
+  // meter never shows a stale balance mid-generation.
+  useEffect(() => {
+    if (!isBillingEnabled()) return;
+    return subscribeCredits((balance) => {
+      setState((current) =>
+        current ? { ...current, credits: balance } : current,
+      );
+    });
   }, []);
 
   if (!isBillingEnabled() || state === null) return null;

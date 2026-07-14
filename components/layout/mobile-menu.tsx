@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Coins, LayoutDashboard, Menu, Sparkles, X } from "lucide-react";
 import { LogoutButton } from "@/components/auth/logout-button";
+import { useLiveCredits } from "@/components/billing/credits-bus";
 import { Button } from "@/components/ui/button";
 import { siteConfig } from "@/lib/site-config";
 import { isBillingEnabled } from "@/lib/billing/flags";
@@ -38,6 +39,7 @@ export function MobileMenu({
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const billingOn = isBillingEnabled();
+  const liveCredits = useLiveCredits(credits);
 
   const visibleItems = siteConfig.primaryNav.filter((item) => {
     if (item.authedOnly && !isAuthed) return false;
@@ -152,7 +154,7 @@ export function MobileMenu({
                 <div className="mb-1 flex items-center gap-1.5 px-3 text-xs text-muted">
                   <Coins className="h-3.5 w-3.5 text-gold-strong" aria-hidden />
                   <span className="font-medium text-foreground">
-                    {formatCredits(credits)}
+                    {formatCredits(liveCredits)}
                   </span>
                   credits · {creditsUsed} used
                 </div>

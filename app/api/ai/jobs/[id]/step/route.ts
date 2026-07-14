@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { checkAiRateLimit } from "@/lib/ai/rate-limit";
+import { checkAiRateLimit, getFreshCreditBalance } from "@/lib/ai/rate-limit";
 import { runNextJobStep } from "@/lib/ai/generation-jobs";
 
 // ---------------------------------------------------------------------------
@@ -60,8 +60,16 @@ export async function POST(
   // inFlight: the wanted step is mid-run in ANOTHER request (parallel worker,
   // second tab). Nothing was executed here — the client should poll, not
   // count a failure or re-request blindly.
+  // credits: the live post-step balance (spend or refund included), so every
+  // mounted credit display can update without refetching /api/me. Null when
+  // a live number isn't meaningful (billing off / admin).
   return NextResponse.json(
-    { ok: true, job: result.job, inFlight: result.inFlight ?? false },
+    {
+      ok: true,
+      job: result.job,
+      inFlight: result.inFlight ?? false,
+      credits: await getFreshCreditBalance(),
+    },
     { status: 200 },
   );
 }

@@ -1,14 +1,15 @@
 import Link from "next/link";
-import { Coins, LayoutDashboard, Sparkles } from "lucide-react";
+import { LayoutDashboard, Sparkles } from "lucide-react";
 import { Logo } from "./logo";
 import { Button } from "@/components/ui/button";
 import { NavLinks } from "./nav-links";
 import { UserMenu } from "./user-menu";
 import { MobileMenu } from "./mobile-menu";
+import { HeaderCreditsChip } from "./header-credits-chip";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { siteConfig } from "@/lib/site-config";
 import { isBillingEnabled } from "@/lib/billing/flags";
-import { formatCredits, type PlanTier } from "@/lib/billing/plans";
+import { type PlanTier } from "@/lib/billing/plans";
 import { cn } from "@/lib/utils";
 
 type HeaderUser = {
@@ -70,17 +71,10 @@ export function SiteHeader({ user, className }: SiteHeaderProps) {
           {isAuthed ? (
             <>
               {billingOn ? (
-                <Link
-                  href="/settings#billing"
-                  title="AI credits — balance · used this month"
-                  className="hidden h-9 items-center gap-1.5 rounded-md border border-border/60 bg-elevated px-2.5 text-xs font-medium text-foreground transition-colors hover:border-border-strong sm:inline-flex"
-                >
-                  <Coins className="h-3.5 w-3.5 text-gold-strong" aria-hidden />
-                  <span>{formatCredits(user?.credits ?? 0)}</span>
-                  <span className="text-subtle">
-                    · {user?.creditsUsed ?? 0} used
-                  </span>
-                </Link>
+                <HeaderCreditsChip
+                  credits={user?.credits ?? 0}
+                  creditsUsed={user?.creditsUsed ?? 0}
+                />
               ) : null}
               <NotificationBell initialUnread={unread} />
               {billingOn && !user?.isPaid ? (
