@@ -380,12 +380,18 @@ export async function runNextJobStep(
     // Nothing claimable: the job is finished/cancelled, the wanted step is
     // done, or it's running in another request (report that so the client
     // polls instead of counting a failure).
+    // Only a live job can have a step legitimately mid-run elsewhere — a
+    // cancelled job's leftover "running" marker must not send the client
+    // into a poll loop that can never resolve.
+    const live = job.status === "generating";
     const wanted = stepKey
       ? job.steps.find((step) => step.key === stepKey)
       : undefined;
-    const inFlight = stepKey
-      ? wanted?.status === "running"
-      : job.steps.some((step) => step.status === "running");
+    const inFlight =
+      live &&
+      (stepKey
+        ? wanted?.status === "running"
+        : job.steps.some((step) => step.status === "running"));
     return { ok: true, job, inFlight: inFlight || undefined };
   }
 
@@ -503,15 +509,21 @@ async function withCreditedStep(
   if (!reserve.ok) {
     return { ...step, status: "failed", error: reserve.message };
   }
+  // Refund ONLY what was actually debited — admin/billing-off reserves are
+  // uncharged, and refunding those would MINT credits out of thin air
+  // (grant_credits has no matching-spend check).
+  const refundIfCharged = async () => {
+    if (reserve.charged) await refundCredits(userId, amount, reason);
+  };
   let result: JobStep;
   try {
     result = await body();
   } catch (error) {
-    await refundCredits(userId, amount, reason);
+    await refundIfCharged();
     throw error;
   }
   if (result.status === "failed") {
-    await refundCredits(userId, amount, reason);
+    await refundIfCharged();
   }
   return result;
 }
@@ -771,6 +783,13 @@ export async function createCardRemixJob(
 // past 12MB is not something we should buffer per-request.
 const MAX_SOURCE_ART_BYTES = 12 * 1024 * 1024;
 
+// Remix steps chain identity (30s, lib/ai/remix.ts) + source-art fetch +
+// restyle + a t2i fallback inside the step route's 180s budget. These
+// per-leg caps keep the worst-case sum (~160s) under the platform kill —
+// a single generous cap does not compose across two image calls.
+const SOURCE_ART_FETCH_TIMEOUT_MS = 10_000;
+const REMIX_IMAGE_TIMEOUT_MS = 60_000;
+
 /** The remix job's single step: generate the new identity, restyle the
  *  parent's art (fresh generation when there's none), fork via
  *  remixCardAction. A failed step carries no card_id, so its retry reruns
@@ -824,7 +843,9 @@ async function executeCardRemixStep(
   let artError: string | null = null;
   if (parent.art_url && isAllowedServerImageFetchUrl(parent.art_url)) {
     try {
-      const sourceResponse = await fetch(parent.art_url);
+      const sourceResponse = await fetch(parent.art_url, {
+        signal: AbortSignal.timeout(SOURCE_ART_FETCH_TIMEOUT_MS),
+      });
       const contentType =
         sourceResponse.headers.get("content-type") ?? "image/png";
       const contentLength = Number(
@@ -839,6 +860,7 @@ async function executeCardRemixStep(
           source: new Uint8Array(await sourceResponse.arrayBuffer()),
           sourceContentType: contentType,
           prompt: `Re-render this artwork in ${plan.style} style. ${identity.art_instruction}`,
+          timeoutMs: REMIX_IMAGE_TIMEOUT_MS,
         });
         if (restyled.ok) {
           const persisted = await persistGeneratedArt(
@@ -859,6 +881,7 @@ async function executeCardRemixStep(
     const generated = await generatePlainImage(
       `${identity.art_instruction} Style: ${plan.style}.`,
       "card",
+      { timeoutMs: REMIX_IMAGE_TIMEOUT_MS },
     );
     if (generated.ok) {
       const persisted = await persistGeneratedArt(
@@ -1422,7 +1445,9 @@ async function executeDeckRemixStep(
   let artError: string | null = null;
   if (mechanics.art_url && isAllowedServerImageFetchUrl(mechanics.art_url)) {
     try {
-      const sourceResponse = await fetch(mechanics.art_url);
+      const sourceResponse = await fetch(mechanics.art_url, {
+        signal: AbortSignal.timeout(SOURCE_ART_FETCH_TIMEOUT_MS),
+      });
       if (sourceResponse.ok) {
         const contentType =
           sourceResponse.headers.get("content-type") ?? "image/png";
@@ -1430,6 +1455,7 @@ async function executeDeckRemixStep(
           source: new Uint8Array(await sourceResponse.arrayBuffer()),
           sourceContentType: contentType,
           prompt: `Re-render this artwork in ${plan.style} style. ${identity.art_instruction}`,
+          timeoutMs: REMIX_IMAGE_TIMEOUT_MS,
         });
         if (restyled.ok) {
           const persisted = await persistGeneratedArt(
@@ -1450,6 +1476,7 @@ async function executeDeckRemixStep(
     const generated = await generatePlainImage(
       `${identity.art_instruction} Style: ${plan.style}.`,
       "card",
+      { timeoutMs: REMIX_IMAGE_TIMEOUT_MS },
     );
     if (generated.ok) {
       const persisted = await persistGeneratedArt(
@@ -1673,7 +1700,7 @@ async function patchJobStep(
   // time we get here — losing this write means a stale reclaim would re-run
   // the whole step. The patch is a cheap row-locked RPC, so retry it a couple
   // of times before giving up rather than strand a finished step "running".
-  let lastError = "Couldn't persist step progress.";
+  let lastDetail: string | null = null;
   for (let attempt = 0; attempt < 3; attempt += 1) {
     if (attempt > 0) {
       await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
@@ -1686,7 +1713,12 @@ async function patchJobStep(
     if (!error && data) {
       return { ok: true, job: data as unknown as GenerationJobRow };
     }
-    lastError = "Couldn't persist step progress.";
+    lastDetail = error?.message ?? "no row returned";
   }
-  return { ok: false, error: lastError };
+  // Loud: the step's work is committed but its result isn't recorded — a
+  // stale reclaim will re-run it, so this needs to be findable in logs.
+  console.error(
+    `[ai-jobs] patch_job_step failed after 3 attempts (job ${jobId}, step ${step.key}, status ${step.status}): ${lastDetail}`,
+  );
+  return { ok: false, error: "Couldn't persist step progress." };
 }

@@ -22,14 +22,24 @@ import { isGatewayConfigured } from "@/lib/ai/provider";
 
 const GATEWAY_REMIX_DEFAULT = "google/gemini-2.5-flash-image";
 
-/** Hard ceiling on any single image call. The step route's function budget
- *  is 180s (maxDuration); an unbounded gateway hang used to ride straight
- *  into that platform kill, which axed the request AFTER the credit spend +
- *  card insert but BEFORE the step result persisted — the root cause of the
- *  2026-07-14 duplicate-card/credit-drain incident. Aborting at 100s keeps
- *  headroom for upload + publish and turns a hang into a HANDLED failure
- *  (step patched "failed", credit refunded, retry offered). */
+/** Hard ceiling on a single image call. The step route's function budget is
+ *  180s (maxDuration); an unbounded gateway hang used to ride straight into
+ *  that platform kill, which axed the request AFTER the credit spend + card
+ *  insert but BEFORE the step result persisted — the root cause of the
+ *  2026-07-14 duplicate-card/credit-drain incident. Aborting turns a hang
+ *  into a HANDLED failure (step patched "failed", credit refunded, retry
+ *  offered).
+ *
+ *  Steps that make ONE image call use the 100s default. Steps that stack
+ *  several bounded calls (remix: identity 30s + source fetch 10s + restyle +
+ *  t2i fallback) pass tighter per-call budgets so the SUM stays inside 180s
+ *  — a single generous cap does not compose. */
 const IMAGE_CALL_TIMEOUT_MS = 100_000;
+
+export type ImageCallOptions = {
+  /** Override the per-call abort budget (ms). */
+  timeoutMs?: number;
+};
 
 /** Map raw provider errors to something a user can act on. */
 export function friendlyImageError(detail: string): string {
@@ -66,6 +76,7 @@ export async function restyleImage(input: {
   source: Uint8Array;
   sourceContentType: string;
   prompt: string;
+  timeoutMs?: number;
 }): Promise<RestyleResult> {
   const prompt = input.prompt.trim().slice(0, 2000);
   if (!prompt) return { ok: false, error: "Missing restyle prompt." };
@@ -73,7 +84,12 @@ export async function restyleImage(input: {
   if (!isGatewayConfigured()) {
     return { ok: false, error: "AI Gateway isn't configured." };
   }
-  return restyleViaGateway(input.source, input.sourceContentType, prompt);
+  return restyleViaGateway(
+    input.source,
+    input.sourceContentType,
+    prompt,
+    input.timeoutMs,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -92,6 +108,7 @@ export type ImageAspect = "square" | "wide" | "card" | "banner";
 export async function generateStyledImage(
   prompt: string,
   aspect: ImageAspect = "square",
+  options: ImageCallOptions = {},
 ): Promise<RestyleResult> {
   if (!isGatewayConfigured()) {
     return { ok: false, error: "AI Gateway isn't configured." };
@@ -100,7 +117,9 @@ export async function generateStyledImage(
     const model = process.env.AI_IMAGE_MODEL?.trim() || GATEWAY_IMAGE_DEFAULT;
     const { image } = await generateImage({
       model,
-      abortSignal: AbortSignal.timeout(IMAGE_CALL_TIMEOUT_MS),
+      abortSignal: AbortSignal.timeout(
+        options.timeoutMs ?? IMAGE_CALL_TIMEOUT_MS,
+      ),
       // One retry within the abort budget — the SDK default (2) can push a
       // slow-failing call past the timeout for no user-visible benefit.
       maxRetries: 1,
@@ -134,23 +153,25 @@ export async function generateStyledImage(
 export async function generatePlainImage(
   prompt: string,
   aspect: ImageAspect = "square",
+  options: ImageCallOptions = {},
 ): Promise<RestyleResult> {
   const trimmed = prompt.trim().slice(0, 4000);
   if (!trimmed) return { ok: false, error: "Missing image prompt." };
-  return generateStyledImage(trimmed, aspect);
+  return generateStyledImage(trimmed, aspect, options);
 }
 
 async function restyleViaGateway(
   source: Uint8Array,
   sourceContentType: string,
   prompt: string,
+  timeoutMs?: number,
 ): Promise<RestyleResult> {
   try {
     const model =
       process.env.AI_IMAGE_REMIX_MODEL?.trim() || GATEWAY_REMIX_DEFAULT;
     const result = await generateText({
       model,
-      abortSignal: AbortSignal.timeout(IMAGE_CALL_TIMEOUT_MS),
+      abortSignal: AbortSignal.timeout(timeoutMs ?? IMAGE_CALL_TIMEOUT_MS),
       maxRetries: 1,
       messages: [
         {

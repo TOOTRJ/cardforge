@@ -72,6 +72,12 @@ export async function generateRemixIdentity(input: {
 
   const { object } = await generateObject({
     model: designModel(),
+    // Remix steps stack this call + an art fetch + up to two image calls
+    // inside the step route's 180s budget — every leg must be bounded or the
+    // composition rides into the platform kill (the original double-charge
+    // incident mode). 30s is generous for one identity.
+    abortSignal: AbortSignal.timeout(30_000),
+    maxRetries: 1,
     schema: remixIdentitySchema,
     system: SYSTEM_PROMPT,
     prompt: [
