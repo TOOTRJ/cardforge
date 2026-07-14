@@ -204,6 +204,8 @@ export const FRAME_REFERENCES: Record<FrameTemplate, ReferenceRow> = {
   extendedart: { ...NONE },
   fullart: { ...NONE },
   fullartland: { ...NONE },
+  m15textless: { ...NONE },
+  m15textlessland: { ...NONE },
   expeditionland: { ...NONE },
   nyx: { ...NONE },
   // Modern border (2003)
