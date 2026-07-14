@@ -34,7 +34,12 @@ import type {
 type JobPayload = {
   id: string;
   kind: "set" | "deck" | "deck_remix" | "card" | "card_remix";
-  status: "generating" | "done" | "failed" | "cancelled";
+  status:
+    | "generating"
+    | "done"
+    | "done_with_errors"
+    | "failed"
+    | "cancelled";
   steps: GenerationJobStep[];
   request?: Record<string, unknown>;
 };
@@ -184,13 +189,16 @@ export function GenerationJobProvider({
         const steps = startJob.steps.map(
           (s) => terminal.get(s.key) ?? latest.get(s.key) ?? s,
         );
+        // Mirrors patch_job_step's honest recompute (migration 0067).
         const status = steps.some(
           (s) => s.status === "pending" || s.status === "running",
         )
           ? "generating"
-          : steps.some((s) => s.status === "done")
+          : !steps.some((s) => s.status === "failed")
             ? "done"
-            : "failed";
+            : steps.some((s) => s.status === "done")
+              ? "done_with_errors"
+              : "failed";
         return { ...startJob, steps, status } as JobPayload;
       };
 

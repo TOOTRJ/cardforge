@@ -34,6 +34,16 @@ const JOB_KIND_LABELS: Record<string, string> = {
   set: "Set generation",
   deck: "Deck generation",
   deck_remix: "Deck remix",
+  card: "Single card generation",
+  card_remix: "Card remix",
+};
+
+const JOB_STATUS_LABELS: Record<string, string> = {
+  generating: "generating",
+  done: "done",
+  done_with_errors: "done, some failed",
+  failed: "failed",
+  cancelled: "cancelled",
 };
 
 const ACTION_LABELS: Partial<Record<AiActionLabel, string>> = {
@@ -131,15 +141,9 @@ export default async function UsagePage() {
                         {JOB_KIND_LABELS[jobRow.kind] ?? jobRow.kind}
                       </span>
                       <Badge
-                        variant={
-                          jobRow.status === "done"
-                            ? "primary"
-                            : jobRow.status === "failed"
-                              ? "outline"
-                              : "outline"
-                        }
+                        variant={jobRow.status === "done" ? "primary" : "outline"}
                       >
-                        {jobRow.status}
+                        {JOB_STATUS_LABELS[jobRow.status] ?? jobRow.status}
                       </Badge>
                     </div>
                     <span className="text-xs text-muted">
