@@ -1720,13 +1720,24 @@ async function patchJobStep(
     // The step is no longer running — drop the claim stamp.
     claimed_at: null,
   };
-  const { data, error } = await supabase.rpc("patch_job_step", {
-    p_job_id: jobId,
-    p_step_key: step.key,
-    p_patch: patch,
-  });
-  if (error || !data) {
-    return { ok: false, error: "Couldn't persist step progress." };
+  // The work (credit spend, card insert, image) is already committed by the
+  // time we get here — losing this write means a stale reclaim would re-run
+  // the whole step. The patch is a cheap row-locked RPC, so retry it a couple
+  // of times before giving up rather than strand a finished step "running".
+  let lastError = "Couldn't persist step progress.";
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    if (attempt > 0) {
+      await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
+    }
+    const { data, error } = await supabase.rpc("patch_job_step", {
+      p_job_id: jobId,
+      p_step_key: step.key,
+      p_patch: patch,
+    });
+    if (!error && data) {
+      return { ok: true, job: data as unknown as GenerationJobRow };
+    }
+    lastError = "Couldn't persist step progress.";
   }
-  return { ok: true, job: data as unknown as GenerationJobRow };
+  return { ok: false, error: lastError };
 }
