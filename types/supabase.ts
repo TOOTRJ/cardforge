@@ -1303,6 +1303,10 @@ export type Database = {
         Args: { p_job_id: string; p_step_key: string; p_patch: Json };
         Returns: Json;
       };
+      claim_job_step: {
+        Args: { p_job_id: string; p_step_key: string | null };
+        Returns: Json;
+      };
     };
     Enums: {
       [_ in never]: never;

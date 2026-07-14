@@ -22,6 +22,15 @@ import { isGatewayConfigured } from "@/lib/ai/provider";
 
 const GATEWAY_REMIX_DEFAULT = "google/gemini-2.5-flash-image";
 
+/** Hard ceiling on any single image call. The step route's function budget
+ *  is 180s (maxDuration); an unbounded gateway hang used to ride straight
+ *  into that platform kill, which axed the request AFTER the credit spend +
+ *  card insert but BEFORE the step result persisted — the root cause of the
+ *  2026-07-14 duplicate-card/credit-drain incident. Aborting at 100s keeps
+ *  headroom for upload + publish and turns a hang into a HANDLED failure
+ *  (step patched "failed", credit refunded, retry offered). */
+const IMAGE_CALL_TIMEOUT_MS = 100_000;
+
 /** Map raw provider errors to something a user can act on. */
 export function friendlyImageError(detail: string): string {
   const lower = detail.toLowerCase();
@@ -91,6 +100,10 @@ export async function generateStyledImage(
     const model = process.env.AI_IMAGE_MODEL?.trim() || GATEWAY_IMAGE_DEFAULT;
     const { image } = await generateImage({
       model,
+      abortSignal: AbortSignal.timeout(IMAGE_CALL_TIMEOUT_MS),
+      // One retry within the abort budget — the SDK default (2) can push a
+      // slow-failing call past the timeout for no user-visible benefit.
+      maxRetries: 1,
       prompt: prompt.trim().slice(0, 4000),
       aspectRatio:
         aspect === "banner"
@@ -137,6 +150,8 @@ async function restyleViaGateway(
       process.env.AI_IMAGE_REMIX_MODEL?.trim() || GATEWAY_REMIX_DEFAULT;
     const result = await generateText({
       model,
+      abortSignal: AbortSignal.timeout(IMAGE_CALL_TIMEOUT_MS),
+      maxRetries: 1,
       messages: [
         {
           role: "user",

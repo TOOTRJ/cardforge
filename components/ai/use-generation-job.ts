@@ -16,7 +16,9 @@ import {
 export type GenerationJobStep = {
   key: string;
   label: string;
-  status: "pending" | "done" | "failed";
+  /** "running" = claimed by an in-flight request (this tab or another);
+   *  the runner polls it instead of re-executing (migration 0066). */
+  status: "pending" | "running" | "done" | "failed";
   /** Set once the step's card row exists (single-card + batch card steps). */
   card_id?: string;
   error?: string;

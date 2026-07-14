@@ -57,5 +57,11 @@ export async function POST(
   if (!result.ok) {
     return NextResponse.json({ ok: false, error: result.error }, { status: 502 });
   }
-  return NextResponse.json({ ok: true, job: result.job }, { status: 200 });
+  // inFlight: the wanted step is mid-run in ANOTHER request (parallel worker,
+  // second tab). Nothing was executed here — the client should poll, not
+  // count a failure or re-request blindly.
+  return NextResponse.json(
+    { ok: true, job: result.job, inFlight: result.inFlight ?? false },
+    { status: 200 },
+  );
 }
