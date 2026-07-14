@@ -316,6 +316,13 @@ export function GenerationJobProvider({
 
         const finished = await stepUntilDone(startJob);
         setPhase("done");
+        if (finished.steps.some((s) => s.status === "running")) {
+          // Pool drained but a step is still mid-run elsewhere (or its
+          // claim hasn't gone stale yet) — that is NOT a clean finish.
+          toast.message(
+            "One step is still finishing in the background — it completes or becomes retryable on your next visit.",
+          );
+        }
         return outcomeOf(finished.steps, targetSlug);
       } catch {
         toast.error("Network error during generation.");
@@ -427,6 +434,7 @@ export function GenerationJobProvider({
 
   const doneCount = steps.filter((s) => s.status === "done").length;
   const failedCount = steps.filter((s) => s.status === "failed").length;
+  const runningCount = steps.filter((s) => s.status === "running").length;
   const firstFailureError = steps.find(
     (s) => s.status === "failed" && s.error,
   )?.error;
@@ -436,7 +444,7 @@ export function GenerationJobProvider({
   const showWidget =
     !widgetDismissed &&
     job !== null &&
-    (busy || (phase === "done" && failedCount > 0));
+    (busy || (phase === "done" && (failedCount > 0 || runningCount > 0)));
 
   return (
     <GenerationContext.Provider
@@ -494,11 +502,16 @@ export function GenerationJobProvider({
                 background. If you close the tab it pauses and resumes
                 automatically on your next visit.
               </>
-            ) : (
+            ) : failedCount > 0 ? (
               <>
                 {failedCount} step{failedCount === 1 ? "" : "s"} failed
                 {firstFailureError ? `: ${firstFailureError}` : ""} — open the
                 generator panel to retry.
+              </>
+            ) : (
+              <>
+                One step is still finishing in the background — it completes
+                or becomes retryable on your next visit.
               </>
             )}
           </p>

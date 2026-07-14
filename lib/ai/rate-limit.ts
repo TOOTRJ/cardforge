@@ -225,7 +225,15 @@ export function creditCostFor(action: AiActionLabel): number {
 }
 
 export type CreditSpendResult =
-  | { ok: true; balance: number }
+  | {
+      ok: true;
+      balance: number;
+      /** True only when the ledger was actually debited. False for the
+       *  billing-off / admin-exempt / fail-open paths — callers must NOT
+       *  refund an uncharged reserve (an admin refund would MINT credits,
+       *  since grant_credits has no matching-spend check). */
+      charged: boolean;
+    }
   | {
       ok: false;
       // "insufficient_credits" — a real empty balance (always fails closed).
@@ -265,11 +273,15 @@ export async function spendCredits(
   options: SpendOptions = {},
 ): Promise<CreditSpendResult> {
   // Billing off → credits aren't enforced; never touch the ledger.
-  if (!isBillingEnabled()) return { ok: true, balance: Number.POSITIVE_INFINITY };
-  if (amount <= 0) return { ok: true, balance: Number.POSITIVE_INFINITY };
+  if (!isBillingEnabled()) {
+    return { ok: true, balance: Number.POSITIVE_INFINITY, charged: false };
+  }
+  if (amount <= 0) {
+    return { ok: true, balance: Number.POSITIVE_INFINITY, charged: false };
+  }
   // Admins generate free — no ledger row, no balance check.
   if (await isCurrentUserAdmin()) {
-    return { ok: true, balance: Number.POSITIVE_INFINITY };
+    return { ok: true, balance: Number.POSITIVE_INFINITY, charged: false };
   }
   // On an infra error: fail closed (deny) when reserving, else fail open.
   const onInfraError = (): CreditSpendResult =>
@@ -280,7 +292,7 @@ export async function spendCredits(
           balance: Number.NaN,
           message: CREDIT_CHECK_FAILED_MESSAGE,
         }
-      : { ok: true, balance: Number.NaN };
+      : { ok: true, balance: Number.NaN, charged: false };
   try {
     const supabase = await createClient();
     const { data, error } = await supabase.rpc("consume_credits", {
@@ -298,7 +310,7 @@ export async function spendCredits(
         message: OUT_OF_CREDITS_MESSAGE,
       };
     }
-    return { ok: true, balance: row.balance };
+    return { ok: true, balance: row.balance, charged: true };
   } catch {
     return onInfraError();
   }
@@ -360,9 +372,11 @@ export async function refundCredits(
       p_user_id: userId,
       p_amount: amount,
       p_reason: "refund",
-      // Unique per refund so grant_credits' idempotency guard never collapses
-      // two distinct refunds, while a retried identical call is still deduped.
-      p_idempotency_key: `refund:${reason}:${userId}:${Date.now()}`,
+      // Globally unique per refund. Date.now() was NOT unique enough: two
+      // parallel steps of one job failing in the same millisecond shared a
+      // key, and grant_credits' idempotency guard silently swallowed the
+      // second refund.
+      p_idempotency_key: `refund:${reason}:${userId}:${crypto.randomUUID()}`,
     });
     if (error) {
       console.error(
