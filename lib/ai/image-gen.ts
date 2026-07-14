@@ -1,20 +1,23 @@
 import "server-only";
 
 import { experimental_generateImage as generateImage, generateText } from "ai";
-import OpenAI, { toFile } from "openai";
 import { isGatewayConfigured } from "@/lib/ai/provider";
 
 // ---------------------------------------------------------------------------
-// Image-to-image restyle — the engine behind "AI remix" (and later, deck
-// remix). Takes the ORIGINAL artwork plus a style instruction and returns a
-// re-rendered version, so remixes stay recognizably the same scene instead
-// of a from-scratch guess.
+// Image generation + image-to-image restyle. ALL image generation goes through
+// the Vercel AI Gateway — there is deliberately NO direct-OpenAI fallback.
 //
-// Provider order mirrors lib/ai/provider.ts:
-//   1. Vercel AI Gateway (AI_GATEWAY_API_KEY): a multimodal image model
-//      (default google/gemini-2.5-flash-image, override AI_IMAGE_REMIX_MODEL)
-//      via generateText — the edited image comes back in result.files.
-//   2. Direct OpenAI images.edit (gpt-image-1 / OPENAI_IMAGE_MODEL).
+// A silent gateway→OpenAI fallback once ran every image on gpt-image-1 (~5×
+// the FLUX cost, and far slower) for weeks because the gateway key wasn't set
+// in prod. Images now always route through the gateway; if it's not configured
+// or the call fails, we surface an error rather than quietly (and expensively)
+// falling back. gpt-image-1 is never used.
+//
+//   - Text-to-image (batch/deck/set art): FLUX via the gateway
+//     (default bfl/flux-2-flex, override AI_IMAGE_MODEL).
+//   - Image-to-image restyle ("AI remix"): a multimodal gateway model
+//     (default google/gemini-2.5-flash-image, override AI_IMAGE_REMIX_MODEL)
+//     via generateText — the edited image comes back in result.files.
 // ---------------------------------------------------------------------------
 
 const GATEWAY_REMIX_DEFAULT = "google/gemini-2.5-flash-image";
@@ -45,7 +48,7 @@ export type RestyleResult =
   | { ok: false; error: string };
 
 export function isImageRemixConfigured(): boolean {
-  return isGatewayConfigured() || Boolean(process.env.OPENAI_API_KEY?.trim());
+  return isGatewayConfigured();
 }
 
 /** Re-render `source` in a new style. `prompt` should describe both the
@@ -58,20 +61,15 @@ export async function restyleImage(input: {
   const prompt = input.prompt.trim().slice(0, 2000);
   if (!prompt) return { ok: false, error: "Missing restyle prompt." };
 
-  if (isGatewayConfigured()) {
-    return restyleViaGateway(input.source, input.sourceContentType, prompt);
+  if (!isGatewayConfigured()) {
+    return { ok: false, error: "AI Gateway isn't configured." };
   }
-  if (process.env.OPENAI_API_KEY?.trim()) {
-    return restyleViaOpenAi(input.source, prompt);
-  }
-  return { ok: false, error: "No image provider is configured." };
+  return restyleViaGateway(input.source, input.sourceContentType, prompt);
 }
 
 // ---------------------------------------------------------------------------
 // Text-to-image through the gateway (batch/set art). FLUX is the default —
 // cheap (~$0.03/image), fast, and strong at consistent painterly fantasy.
-// Callers fall back to the OpenAI random-art path when this returns
-// { ok: false } (e.g. no gateway configured).
 // ---------------------------------------------------------------------------
 
 const GATEWAY_IMAGE_DEFAULT = "bfl/flux-2-flex";
@@ -116,9 +114,9 @@ export async function generateStyledImage(
 }
 
 /**
- * Provider-agnostic text-to-image returning raw bytes (batch jobs persist
- * via persistGeneratedArt). Gateway first, then direct OpenAI with the same
- * minimal-param posture as lib/ai/random-art.ts.
+ * Text-to-image returning raw bytes (batch jobs persist via
+ * persistGeneratedArt). Gateway-only — a thin alias over generateStyledImage
+ * so callers read as "plain image, no style extras". Never touches OpenAI.
  */
 export async function generatePlainImage(
   prompt: string,
@@ -126,62 +124,7 @@ export async function generatePlainImage(
 ): Promise<RestyleResult> {
   const trimmed = prompt.trim().slice(0, 4000);
   if (!trimmed) return { ok: false, error: "Missing image prompt." };
-
-  if (isGatewayConfigured()) {
-    const viaGateway = await generateStyledImage(trimmed, aspect);
-    if (viaGateway.ok) return viaGateway;
-    // Fall through to OpenAI when both are configured — but LOUDLY. A silent
-    // fallback once ran every image on direct gpt-image-1 (~5× the FLUX cost)
-    // for weeks because the gateway key was never set in prod (2026-07-14).
-    // This warn makes a gateway outage/misconfig visible instead of just
-    // showing up on the OpenAI bill.
-    console.warn(
-      `[image-gen] AI Gateway image call failed, falling back to OpenAI (${viaGateway.error}). This costs ~5× more per image — check AI_GATEWAY_API_KEY / gateway billing.`,
-    );
-  }
-  if (!process.env.OPENAI_API_KEY?.trim()) {
-    return { ok: false, error: "No image provider is configured." };
-  }
-  try {
-    const client = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-      timeout: 90_000,
-    });
-    const model = process.env.OPENAI_IMAGE_MODEL?.trim() || "gpt-image-1";
-    const response = await client.images.generate({
-      model,
-      prompt: trimmed,
-      // gpt-image has no 4:3 — its landscape 1536x1024 (3:2) is the closest
-      // fit for both wide covers and card-window art.
-      size: aspect === "square" ? "1024x1024" : "1536x1024",
-      quality: model.startsWith("dall-e") ? "hd" : "high",
-      n: 1,
-    });
-    const first = response.data?.[0];
-    if (first?.b64_json) {
-      return {
-        ok: true,
-        bytes: Uint8Array.from(Buffer.from(first.b64_json, "base64")),
-        contentType: "image/png",
-      };
-    }
-    if (first?.url) {
-      const fetched = await fetch(first.url);
-      if (!fetched.ok) {
-        return { ok: false, error: `Image fetch failed (${fetched.status}).` };
-      }
-      return {
-        ok: true,
-        bytes: new Uint8Array(await fetched.arrayBuffer()),
-        contentType: fetched.headers.get("content-type") ?? "image/png",
-      };
-    }
-    return { ok: false, error: "OpenAI returned no image." };
-  } catch (error) {
-    const detail =
-      error instanceof Error ? error.message : "Image generation failed.";
-    return { ok: false, error: friendlyImageError(detail) };
-  }
+  return generateStyledImage(trimmed, aspect);
 }
 
 async function restyleViaGateway(
@@ -218,52 +161,6 @@ async function restyleViaGateway(
       bytes: file.uint8Array,
       contentType: file.mediaType ?? "image/png",
     };
-  } catch (error) {
-    const detail =
-      error instanceof Error ? error.message : "Image restyle failed.";
-    return { ok: false, error: friendlyImageError(detail) };
-  }
-}
-
-async function restyleViaOpenAi(
-  source: Uint8Array,
-  prompt: string,
-): Promise<RestyleResult> {
-  try {
-    const client = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-      timeout: 90_000,
-    });
-    const model = process.env.OPENAI_IMAGE_MODEL?.trim() || "gpt-image-1";
-    const response = await client.images.edit({
-      model,
-      image: await toFile(Buffer.from(source), "source.png", {
-        type: "image/png",
-      }),
-      prompt,
-      size: "1024x1024",
-      n: 1,
-    });
-    const first = response.data?.[0];
-    if (first?.b64_json) {
-      return {
-        ok: true,
-        bytes: Uint8Array.from(Buffer.from(first.b64_json, "base64")),
-        contentType: "image/png",
-      };
-    }
-    if (first?.url) {
-      const fetched = await fetch(first.url);
-      if (!fetched.ok) {
-        return { ok: false, error: `Image fetch failed (${fetched.status}).` };
-      }
-      return {
-        ok: true,
-        bytes: new Uint8Array(await fetched.arrayBuffer()),
-        contentType: fetched.headers.get("content-type") ?? "image/png",
-      };
-    }
-    return { ok: false, error: "OpenAI returned no edited image." };
   } catch (error) {
     const detail =
       error instanceof Error ? error.message : "Image restyle failed.";

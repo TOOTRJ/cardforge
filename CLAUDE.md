@@ -65,3 +65,11 @@ Rules and gotchas:
 - Card preview and the server Satori bake must stay pixel-identical: the
   `.ttf`/PNG masters in `public/` feed the bake — browser-side asset
   optimizations must not touch what the bake reads.
+- AI image generation goes through the **Vercel AI Gateway ONLY** (FLUX for
+  text-to-image, Gemini for the "AI remix" i2i) — `lib/ai/image-gen.ts` has no
+  direct-OpenAI path. `AI_GATEWAY_API_KEY` is required for any image flow; a
+  missing key returns a clear error, never a silent gpt-image-1 fallback.
+  `OPENAI_API_KEY` is moderation-only (the omni-moderation scan on human
+  uploads). AI batch jobs (deck/set/card) step through `patch_job_step`
+  (atomic per-step write); the client runs a few steps in parallel, so never
+  reintroduce a whole-`steps`-array overwrite.

@@ -18,15 +18,6 @@ import {
 // patch — the user can edit any field before saving.
 // ---------------------------------------------------------------------------
 
-/**
- * True when the OpenAI key is present. The TEXT pipeline no longer requires
- * OpenAI (see lib/ai/provider.ts — gateway/Anthropic preferred); this now
- * only gates the gpt-image art call and the moderation scan.
- */
-export function isOpenAiConfigured(): boolean {
-  return Boolean(process.env.OPENAI_API_KEY?.trim());
-}
-
 export const randomCardSchema = designedCardSchema;
 export type RandomCardOutput = DesignedCard;
 

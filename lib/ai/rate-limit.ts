@@ -48,6 +48,10 @@ export type AiActionLabel =
 // global PER_DAY_LIMIT. 10/day matches the v2 spec.
 const RANDOM_CARD_DAILY_LIMIT = 10;
 export const REMIX_DAILY_LIMIT = 10;
+// Deck/set batch flows generate many images per job, so the ceiling is the
+// per-DAY total across all batch jobs (not per job). Generous — it clears a
+// heavy design day and only bites an abuse script. Admins are exempt.
+export const DECK_CARDS_DAILY_LIMIT = 60;
 
 export type RateLimitResult =
   | { ok: true }
@@ -128,7 +132,7 @@ export async function checkAiRateLimit(
  * Per-user check specifically for the random-card flow. Lives alongside
  * `checkAiRateLimit`; the route handler runs both — the global limit
  * protects the platform AI spend, this one keeps a single user from
- * draining the gpt-image-1 budget.
+ * draining the image-generation budget (FLUX via the AI Gateway).
  */
 export async function checkRandomCardDailyLimit(
   userId: string,

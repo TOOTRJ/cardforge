@@ -1299,6 +1299,10 @@ export type Database = {
         Args: { p_card_id: string; p_set_id: string };
         Returns: number;
       };
+      patch_job_step: {
+        Args: { p_job_id: string; p_step_key: string; p_patch: Json };
+        Returns: Json;
+      };
     };
     Enums: {
       [_ in never]: never;

@@ -36,6 +36,7 @@ import {
   spendCredits,
 } from "@/lib/ai/rate-limit";
 import { generateRandomCard } from "@/lib/ai/random-card";
+import { isAllowedServerImageFetchUrl } from "@/lib/validation/card";
 import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
 import {
   colorHintsForFrame,
@@ -375,21 +376,33 @@ export async function runNextJobStep(
     ? steps.findIndex((step) => step.key === stepKey)
     : steps.findIndex((step) => step.status === "pending");
   if (index === -1) {
-    return finalizeJob(jobId, steps);
+    // No matching/pending step left — status is already recomputed on every
+    // patch, so nothing to finalize. Return the current job.
+    return { ok: true, job };
   }
   const step = steps[index];
+
+  // Replay guard: never re-run a step that's already done. Without this,
+  // re-POSTing a completed step key (or a racing client) re-ran the paid
+  // image call while skipping the credit charge — free/uncharged generation.
+  // Pending steps run; a failed step re-runs only on an EXPLICIT retry (the
+  // client passes its key), so an auto-advance (no key) never touches it.
+  if (step.status === "done") {
+    return { ok: true, job };
+  }
   const stepIndex = Number(step.key.split(":")[1]);
 
+  let result: JobStep;
   if (step.key === COVER_STEP_KEY) {
-    steps[index] = await runCoverStep(user.id, job, step);
+    result = await runCoverStep(user.id, job, step);
   } else {
     switch (job.kind) {
       case "set": {
         if (step.key === ICON_STEP_KEY) {
-          steps[index] = await runIconStep(user.id, job, step);
+          result = await runIconStep(user.id, job, step);
         } else {
           const card = (job.plan as SetJobPlan).cards[stepIndex];
-          steps[index] = card
+          result = card
             ? await runCardStep(user.id, job, step, card)
             : { ...step, status: "failed", error: "Missing card plan." };
         }
@@ -398,7 +411,7 @@ export async function runNextJobStep(
       case "deck": {
         const plan = job.plan as DeckJobPlan;
         const card = plan.cards[stepIndex];
-        steps[index] = card
+        result = card
           ? await runDeckCardStep(user.id, job, step, plan, stepIndex)
           : { ...step, status: "failed", error: "Missing card plan." };
         break;
@@ -406,13 +419,13 @@ export async function runNextJobStep(
       case "deck_remix": {
         const plan = job.plan as DeckRemixJobPlan;
         const entry = plan.entries[stepIndex];
-        steps[index] = entry
+        result = entry
           ? await runDeckRemixStep(user.id, job, step, plan, entry)
           : { ...step, status: "failed", error: "Missing entry plan." };
         break;
       }
       case "card": {
-        steps[index] = await runSingleCardStep(
+        result = await runSingleCardStep(
           user.id,
           step,
           job.plan as CardJobPlan,
@@ -420,17 +433,21 @@ export async function runNextJobStep(
         break;
       }
       case "card_remix": {
-        steps[index] = await runCardRemixStep(
+        result = await runCardRemixStep(
           user.id,
           step,
           job.plan as CardRemixJobPlan,
         );
         break;
       }
+      default:
+        result = { ...step, status: "failed", error: "Unknown job kind." };
     }
   }
 
-  return persistSteps(jobId, steps);
+  // Atomic single-step write (see migration 0065) so parallel step requests
+  // don't clobber each other's results.
+  return patchJobStep(jobId, result);
 }
 
 // ---------------------------------------------------------------------------
@@ -729,7 +746,7 @@ async function executeCardRemixStep(
   await logAiCall(userId, "remix_art");
   let artUrl: string | undefined;
   let artError: string | null = null;
-  if (parent.art_url) {
+  if (parent.art_url && isAllowedServerImageFetchUrl(parent.art_url)) {
     try {
       const sourceResponse = await fetch(parent.art_url);
       const contentType =
@@ -1445,7 +1462,7 @@ async function executeDeckRemixStep(
   await logAiCall(userId, "remix_art");
   let artUrl: string | undefined;
   let artError: string | null = null;
-  if (mechanics.art_url) {
+  if (mechanics.art_url && isAllowedServerImageFetchUrl(mechanics.art_url)) {
     try {
       const sourceResponse = await fetch(mechanics.art_url);
       if (sourceResponse.ok) {
@@ -1605,6 +1622,13 @@ async function runCoverStep(
   step: JobStep,
 ): Promise<JobStep> {
   await logAiCall(userId, job.kind === "set" ? "generate_deck" : "generate_deck_cards");
+  // Covers are a paid image generation too — charge a credit like every card
+  // step so a deck/set job doesn't produce an uncharged image (no-op while
+  // billing is off / for admins).
+  const reserve = await spendCredits(1, "generate_deck", { failClosed: true });
+  if (!reserve.ok) {
+    return { ...step, status: "failed", error: reserve.message };
+  }
   const { prompt, aspect } = coverPrompt(job);
   const image = await generatePlainImage(prompt, aspect);
   if (!image.ok) {
@@ -1645,6 +1669,10 @@ async function runIconStep(
   step: JobStep,
 ): Promise<JobStep> {
   await logAiCall(userId, "generate_set_icon");
+  const reserve = await spendCredits(1, "generate_set_icon", { failClosed: true });
+  if (!reserve.ok) {
+    return { ...step, status: "failed", error: reserve.message };
+  }
   const image = await generatePlainImage(iconPrompt(job.plan as SetJobPlan));
   if (!image.ok) {
     return { ...step, status: "failed", error: image.error };
@@ -1662,30 +1690,31 @@ async function runIconStep(
   return { ...step, status: "done", error: undefined };
 }
 
-async function persistSteps(
+/** Atomically merge ONE step's result into the job's steps array and recompute
+ *  the job status, via the row-locking patch_job_step RPC (migration 0065).
+ *  Safe under parallel step requests — each patches a distinct step key on the
+ *  freshly-committed value instead of writing the whole array last-write-wins. */
+async function patchJobStep(
   jobId: string,
-  steps: JobStep[],
+  step: JobStep,
 ): Promise<RunStepResult> {
-  const pendingLeft = steps.some((step) => step.status === "pending");
-  const anyDone = steps.some((step) => step.status === "done");
-  const status = pendingLeft ? "generating" : anyDone ? "done" : "failed";
-
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("ai_generation_jobs")
-    .update({ steps: steps as unknown as Json, status })
-    .eq("id", jobId)
-    .select("*")
-    .single();
+  // Normalize optional fields to null so the jsonb merge CLEARS a prior value
+  // (e.g. a failed→done retry must drop the old error) — JSON drops `undefined`.
+  const patch = {
+    key: step.key,
+    label: step.label,
+    status: step.status,
+    card_id: step.card_id ?? null,
+    error: step.error ?? null,
+  };
+  const { data, error } = await supabase.rpc("patch_job_step", {
+    p_job_id: jobId,
+    p_step_key: step.key,
+    p_patch: patch,
+  });
   if (error || !data) {
     return { ok: false, error: "Couldn't persist step progress." };
   }
   return { ok: true, job: data as unknown as GenerationJobRow };
-}
-
-async function finalizeJob(
-  jobId: string,
-  steps: JobStep[],
-): Promise<RunStepResult> {
-  return persistSteps(jobId, steps);
 }
