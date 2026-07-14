@@ -11,6 +11,7 @@ import {
 import Link from "next/link";
 import { Check, Loader2, Sparkles, TriangleAlert, X } from "lucide-react";
 import { toast } from "sonner";
+import { publishCredits } from "@/components/billing/credits-bus";
 import { useUpgradeModal } from "@/components/billing/upgrade-modal-provider";
 import type {
   GenerationJobOutcome,
@@ -84,6 +85,11 @@ async function postStep(
     const payload = await response.json().catch(() => null);
     if (!response.ok || !payload?.ok) {
       return { error: payload?.error ?? "Generation step failed." };
+    }
+    // Every step response carries the live post-spend/refund balance —
+    // broadcast it so credit meters track the job in real time.
+    if (typeof payload.credits === "number") {
+      publishCredits(payload.credits);
     }
     return {
       job: payload.job as JobPayload,
@@ -285,6 +291,16 @@ export function GenerationJobProvider({
         const startJob: JobPayload = planPayload.job;
         const targetSlug: string | undefined =
           planPayload.setSlug || planPayload.deckSlug || slugOf(startJob);
+        // The job is committed — project its full cost onto the credit
+        // meters IMMEDIATELY (server-reported pre-spend balance minus the
+        // steps about to charge). Each step response then overwrites the
+        // projection with the real number, including any refunds.
+        if (typeof planPayload.credits === "number") {
+          const pendingCost = startJob.steps.filter(
+            (s) => s.status === "pending",
+          ).length;
+          publishCredits(planPayload.credits - pendingCost);
+        }
         setJob(startJob);
         setSlug(targetSlug);
         setSteps(startJob.steps);
