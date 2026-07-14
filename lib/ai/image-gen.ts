@@ -130,7 +130,14 @@ export async function generatePlainImage(
   if (isGatewayConfigured()) {
     const viaGateway = await generateStyledImage(trimmed, aspect);
     if (viaGateway.ok) return viaGateway;
-    // fall through to OpenAI when both are configured
+    // Fall through to OpenAI when both are configured — but LOUDLY. A silent
+    // fallback once ran every image on direct gpt-image-1 (~5× the FLUX cost)
+    // for weeks because the gateway key was never set in prod (2026-07-14).
+    // This warn makes a gateway outage/misconfig visible instead of just
+    // showing up on the OpenAI bill.
+    console.warn(
+      `[image-gen] AI Gateway image call failed, falling back to OpenAI (${viaGateway.error}). This costs ~5× more per image — check AI_GATEWAY_API_KEY / gateway billing.`,
+    );
   }
   if (!process.env.OPENAI_API_KEY?.trim()) {
     return { ok: false, error: "No image provider is configured." };
