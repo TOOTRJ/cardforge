@@ -241,7 +241,7 @@ export type SpendOptions = {
    * When true, an infrastructure/RPC error fails CLOSED (returns
    * `{ ok: false, reason: "error" }`) instead of the default fail-open.
    * Use this to *reserve* a credit before an expensive generation so a DB
-   * hiccup can't hand out a free generation. Pair with `refundAiCredits`
+   * hiccup can't hand out a free generation. Pair with `refundCredits`
    * so the user is made whole if the generation then fails.
    */
   failClosed?: boolean;
@@ -304,35 +304,13 @@ export async function spendCredits(
   }
 }
 
-/** Spend the credit cost of a specific AI action (0 = free / windowed-only). */
-export async function consumeAiCredits(
-  action: AiActionLabel,
-  options: SpendOptions = {},
-): Promise<CreditSpendResult> {
-  const cost = creditCostFor(action);
-  if (cost <= 0) return { ok: true, balance: Number.POSITIVE_INFINITY };
-  return spendCredits(cost, action, options);
-}
-
 /**
- * Refund the credit cost of an action back to a user — used when a credit was
- * reserved up-front (see `SpendOptions.failClosed`) but the generation then
- * failed, so the user should not be charged for our failure. Runs via the
- * service-role admin client because `grant_credits` is service-role only.
- * Best-effort: a refund failure is logged loudly (the user is owed a credit)
- * but never surfaced as the request's error.
- */
-export async function refundAiCredits(
-  userId: string,
-  action: AiActionLabel,
-): Promise<void> {
-  await refundCredits(userId, creditCostFor(action), action);
-}
-
-/**
- * Amount-based variant of `refundAiCredits` for flows that meter by
- * `spendCredits` with an explicit amount (e.g. one credit per card in the
- * batch job pipeline) rather than a fixed per-action cost.
+ * Refund credits back to a user — used when a credit was reserved up-front
+ * (see `SpendOptions.failClosed`) but the generation then failed, so the
+ * user should not be charged for our failure. Runs via the service-role
+ * admin client because `grant_credits` is service-role only. Best-effort: a
+ * refund failure is logged loudly (the user is owed a credit) but never
+ * surfaced as the request's error.
  */
 export async function refundCredits(
   userId: string,

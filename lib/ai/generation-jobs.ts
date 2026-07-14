@@ -33,6 +33,7 @@ import {
   logAiCall,
   refundCredits,
   spendCredits,
+  type AiActionLabel,
 } from "@/lib/ai/rate-limit";
 import { generateRandomCard } from "@/lib/ai/random-card";
 import { isAllowedServerImageFetchUrl } from "@/lib/validation/card";
@@ -513,6 +514,82 @@ async function withCreditedStep(
   return result;
 }
 
+type GeneratedCardStepConfig = {
+  /** credit_ledger reason for this step's 1-credit charge. */
+  reason: string;
+  /** card_ai_calls label logged before the paint half. */
+  artLogAction: AiActionLabel;
+  card: DesignedCard;
+  artPrompt: string;
+  /** Flow-specific createCardAction fields layered over the shared mapping
+   *  (frame lock, set/deck linkage, supertype overrides). Validated by the
+   *  action's zod schema like every other create. */
+  createExtras?: Record<string, unknown>;
+  /** Runs once, right after the card row first exists (e.g. pointing the
+   *  deck entry at the right board/quantity). Never re-runs on a repaint. */
+  afterCreate?: (cardId: string) => Promise<void>;
+};
+
+/**
+ * THE card step — shared by single-card, set, and deck generation so the
+ * pipeline can't drift between flows (it had: three copies with different
+ * refund coverage). Charge → create private card → paint + publish, with the
+ * credit wrapper refunding any failed attempt. A retry of a step whose card
+ * exists (card_id memo) skips creation and only redoes the art.
+ */
+async function runGeneratedCardStep(
+  userId: string,
+  step: JobStep,
+  config: GeneratedCardStepConfig,
+): Promise<JobStep> {
+  return withCreditedStep(userId, 1, config.reason, step, async () => {
+    const card = config.card;
+    let cardId = step.card_id;
+
+    if (!cardId) {
+      const gameSystemId = await activeGameSystemId();
+      if (!gameSystemId) {
+        return { ...step, status: "failed", error: "No game system configured." };
+      }
+
+      const result = await createCardAction(
+        {
+          title: card.title,
+          game_system_id: gameSystemId,
+          cost: card.cost ?? undefined,
+          color_identity: card.color_identity,
+          supertype: card.supertype ?? undefined,
+          card_type: card.card_type,
+          subtypes: card.subtypes,
+          rarity: card.rarity,
+          rules_text: card.rules_text ?? undefined,
+          flavor_text: card.flavor_text ?? undefined,
+          power: card.power ?? undefined,
+          toughness: card.toughness ?? undefined,
+          loyalty: card.loyalty ?? undefined,
+          defense: card.defense ?? undefined,
+          visibility: "private",
+          artist_credit: await aiArtistCredit(),
+          ...config.createExtras,
+        },
+        { redirectAfterCreate: false },
+      );
+      if (!result.ok) {
+        return { ...step, status: "failed", error: createFailureMessage(result) };
+      }
+      cardId = result.cardId;
+      await config.afterCreate?.(cardId);
+    }
+
+    await logAiCall(userId, config.artLogAction);
+    const published = await paintAndPublishCard(cardId, config.artPrompt);
+    if (!published.ok) {
+      return { ...step, status: "failed", card_id: cardId, error: published.error };
+    }
+    return { ...step, status: "done", card_id: cardId, error: undefined };
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Single-card generation (the "Generate a card with AI" dialog)
 // ---------------------------------------------------------------------------
@@ -606,74 +683,26 @@ export async function createCardGenerationJob(
   return { ok: true, job: jobRow as unknown as GenerationJobRow };
 }
 
-/** The card job's single step: create the card, paint + publish. The credit
- *  wrapper charges each attempt and refunds on ANY failure — including a
- *  paint failure — so only the attempt that succeeds is ever paid for. A
- *  retry of a step whose card exists skips creation and only redoes art. */
+/** The card job's single step — the shared card step with the single-card
+ *  ledger reason and the user's locked frame. */
 async function runSingleCardStep(
   userId: string,
   step: JobStep,
   plan: CardJobPlan,
 ): Promise<JobStep> {
-  return withCreditedStep(userId, 1, "generate_random_card", step, async () => {
-    const card = plan.card;
-    let cardId = step.card_id;
-
-    if (!cardId) {
-      const supabase = await createClient();
-      const { data: gameSystem } = await supabase
-        .from("game_systems")
-        .select("id")
-        .eq("is_active", true)
-        .order("created_at", { ascending: true })
-        .limit(1)
-        .maybeSingle();
-      if (!gameSystem) {
-        return { ...step, status: "failed", error: "No game system configured." };
-      }
-
-      const result = await createCardAction(
-        {
-          title: card.title,
-          game_system_id: gameSystem.id,
-          cost: card.cost ?? undefined,
-          color_identity: card.color_identity,
-          supertype: card.supertype ?? undefined,
-          card_type: card.card_type,
-          subtypes: card.subtypes,
-          rarity: card.rarity,
-          rules_text: card.rules_text ?? undefined,
-          flavor_text: card.flavor_text ?? undefined,
-          power: card.power ?? undefined,
-          toughness: card.toughness ?? undefined,
-          loyalty: card.loyalty ?? undefined,
-          defense: card.defense ?? undefined,
-          visibility: "private",
-          artist_credit: await aiArtistCredit(),
-          frame_style: plan.frame_template
-            ? { template: plan.frame_template }
-            : undefined,
-        },
-        { redirectAfterCreate: false },
-      );
-      if (!result.ok) {
-        return { ...step, status: "failed", error: createFailureMessage(result) };
-      }
-      cardId = result.cardId;
-    }
-
-    await logAiCall(userId, "generate_random_art");
-    const style = plan.style?.trim()
-      ? ` Rendered strictly in ${plan.style.trim()} style.`
-      : "";
-    const published = await paintAndPublishCard(
-      cardId,
-      `${card.art_prompt}${style} NO frame, NO borders, NO card layout, NO text or lettering anywhere in the image.`,
-    );
-    if (!published.ok) {
-      return { ...step, status: "failed", card_id: cardId, error: published.error };
-    }
-    return { ...step, status: "done", card_id: cardId, error: undefined };
+  const style = plan.style?.trim()
+    ? ` Rendered strictly in ${plan.style.trim()} style.`
+    : "";
+  return runGeneratedCardStep(userId, step, {
+    reason: "generate_random_card",
+    artLogAction: "generate_random_art",
+    card: plan.card,
+    artPrompt: `${plan.card.art_prompt}${style} NO frame, NO borders, NO card layout, NO text or lettering anywhere in the image.`,
+    createExtras: {
+      frame_style: plan.frame_template
+        ? { template: plan.frame_template }
+        : undefined,
+    },
   });
 }
 
@@ -1133,71 +1162,19 @@ export async function createDeckRemixJob(
   };
 }
 
+/** One card of a SET job — the shared card step linked into the target set. */
 async function runCardStep(
   userId: string,
   job: GenerationJobRow,
   step: JobStep,
   card: DesignedCard,
 ): Promise<JobStep> {
-  // The plan-time balance check in the jobs route is advisory only — the
-  // wrapper's fail-closed reserve is the enforcement point (concurrent jobs
-  // can't outrun the balance: consume_credits row-locks the profile), and it
-  // refunds every failed attempt.
-  return withCreditedStep(userId, 1, "generate_deck", step, async () => {
-    const supabase = await createClient();
-    let cardId = step.card_id;
-
-    if (!cardId) {
-      // Resolve the active game system (same lookup as the legacy route).
-      const { data: gameSystem } = await supabase
-        .from("game_systems")
-        .select("id")
-        .eq("is_active", true)
-        .order("created_at", { ascending: true })
-        .limit(1)
-        .maybeSingle();
-      if (!gameSystem) {
-        return { ...step, status: "failed", error: "No game system configured." };
-      }
-
-      const result = await createCardAction(
-        {
-          title: card.title,
-          game_system_id: gameSystem.id,
-          cost: card.cost ?? undefined,
-          color_identity: card.color_identity,
-          supertype: card.supertype ?? undefined,
-          card_type: card.card_type,
-          subtypes: card.subtypes,
-          rarity: card.rarity,
-          rules_text: card.rules_text ?? undefined,
-          flavor_text: card.flavor_text ?? undefined,
-          power: card.power ?? undefined,
-          toughness: card.toughness ?? undefined,
-          loyalty: card.loyalty ?? undefined,
-          defense: card.defense ?? undefined,
-          visibility: "private",
-          artist_credit: await aiArtistCredit(),
-          primary_set_id: job.set_id ?? undefined,
-        },
-        { redirectAfterCreate: false },
-      );
-      if (!result.ok) {
-        return { ...step, status: "failed", error: createFailureMessage(result) };
-      }
-      cardId = result.cardId;
-    }
-
-    // ---- Art + publish (the expensive half; retried independently) ----
-    await logAiCall(userId, "generate_deck_cards");
-    const published = await paintAndPublishCard(
-      cardId,
-      artPrompt(job.plan as SetJobPlan, card),
-    );
-    if (!published.ok) {
-      return { ...step, status: "failed", card_id: cardId, error: published.error };
-    }
-    return { ...step, status: "done", card_id: cardId, error: undefined };
+  return runGeneratedCardStep(userId, step, {
+    reason: "generate_deck",
+    artLogAction: "generate_deck_cards",
+    card,
+    artPrompt: artPrompt(job.plan as SetJobPlan, card),
+    createExtras: { primary_set_id: job.set_id ?? undefined },
   });
 }
 
@@ -1273,6 +1250,8 @@ function deckArtPrompt(plan: DeckJobPlan, card: DesignedCard): string {
   ].join(" ");
 }
 
+/** One card of a DECK job — the shared card step linked into the deck, with
+ *  the commander slot forced Legendary and pointed at the right board. */
 async function runDeckCardStep(
   userId: string,
   job: GenerationJobRow,
@@ -1280,52 +1259,21 @@ async function runDeckCardStep(
   plan: DeckJobPlan,
   cardIndex: number,
 ): Promise<JobStep> {
-  return withCreditedStep(userId, 1, "generate_deck", step, async () => {
-    const card = plan.cards[cardIndex];
-    const supabase = await createClient();
-    let cardId = step.card_id;
-
-    if (!cardId) {
-      const { data: gameSystem } = await supabase
-        .from("game_systems")
-        .select("id")
-        .eq("is_active", true)
-        .order("created_at", { ascending: true })
-        .limit(1)
-        .maybeSingle();
-      if (!gameSystem) {
-        return { ...step, status: "failed", error: "No game system configured." };
-      }
-
-      // Commander slot: force the Legendary supertype the frame renders.
-      const isCommander = plan.roles[cardIndex] === "commander";
-      const result = await createCardAction(
-        {
-          title: card.title,
-          game_system_id: gameSystem.id,
-          cost: card.cost ?? undefined,
-          color_identity: card.color_identity,
-          supertype: isCommander ? card.supertype || "Legendary" : card.supertype ?? undefined,
-          card_type: card.card_type,
-          subtypes: card.subtypes,
-          rarity: card.rarity,
-          rules_text: card.rules_text ?? undefined,
-          flavor_text: card.flavor_text ?? undefined,
-          power: card.power ?? undefined,
-          toughness: card.toughness ?? undefined,
-          loyalty: card.loyalty ?? undefined,
-          defense: card.defense ?? undefined,
-          visibility: "private",
-          artist_credit: await aiArtistCredit(),
-          deck_id: job.deck_id ?? undefined,
-        },
-        { redirectAfterCreate: false },
-      );
-      if (!result.ok) {
-        return { ...step, status: "failed", error: createFailureMessage(result) };
-      }
-      cardId = result.cardId;
-
+  const card = plan.cards[cardIndex];
+  // Commander slot: force the Legendary supertype the frame renders.
+  const isCommander = plan.roles[cardIndex] === "commander";
+  return runGeneratedCardStep(userId, step, {
+    reason: "generate_deck",
+    artLogAction: "generate_deck_cards",
+    card,
+    artPrompt: deckArtPrompt(plan, card),
+    createExtras: {
+      supertype: isCommander
+        ? card.supertype || "Legendary"
+        : card.supertype ?? undefined,
+      deck_id: job.deck_id ?? undefined,
+    },
+    afterCreate: async (cardId) => {
       if (job.deck_id) {
         await setDeckEntryDetails(
           job.deck_id,
@@ -1334,14 +1282,7 @@ async function runDeckCardStep(
           plan.quantities[cardIndex] ?? 1,
         );
       }
-    }
-
-    await logAiCall(userId, "generate_deck_cards");
-    const published = await paintAndPublishCard(cardId, deckArtPrompt(plan, card));
-    if (!published.ok) {
-      return { ...step, status: "failed", card_id: cardId, error: published.error };
-    }
-    return { ...step, status: "done", card_id: cardId, error: undefined };
+    },
   });
 }
 
@@ -1528,10 +1469,14 @@ async function executeDeckRemixStep(
   }
 
   // ---- Create the remixed custom card, linked into the new deck ----
+  const gameSystemId = await activeGameSystemId();
+  if (!gameSystemId) {
+    return { ...step, status: "failed", error: "No game system configured." };
+  }
   const result = await createCardAction(
     {
       title: identity.title,
-      game_system_id: await activeGameSystemId(),
+      game_system_id: gameSystemId,
       cost: mechanics.cost,
       color_identity: (mechanics.color_identity ?? ["colorless"]) as never,
       supertype: mechanics.supertype,
@@ -1579,7 +1524,9 @@ async function executeDeckRemixStep(
   };
 }
 
-async function activeGameSystemId(): Promise<string> {
+/** The single active game system every AI-generated card is created under.
+ *  Null when none is configured — callers must fail the step, not create. */
+async function activeGameSystemId(): Promise<string | null> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("game_systems")
@@ -1588,7 +1535,7 @@ async function activeGameSystemId(): Promise<string> {
     .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle();
-  return data?.id ?? "";
+  return data?.id ?? null;
 }
 
 /** Wide key-art prompt for the set/deck cover tile. */
