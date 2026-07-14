@@ -122,7 +122,12 @@ export async function GET() {
     .limit(5);
   const resumable = (data ?? []).find((row) => {
     const steps = Array.isArray(row.steps) ? (row.steps as Array<{ status?: string }>) : [];
-    return steps.some((step) => step?.status === "pending");
+    // "running" counts too: a step claimed by a tab that has since died
+    // stays running until the 5-minute stale window lapses — the resumed
+    // client polls it and reclaims once it goes stale (migration 0066).
+    return steps.some(
+      (step) => step?.status === "pending" || step?.status === "running",
+    );
   });
   return NextResponse.json({ ok: true, job: resumable ?? null }, { status: 200 });
 }

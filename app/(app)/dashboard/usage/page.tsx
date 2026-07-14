@@ -115,7 +115,9 @@ export default async function UsagePage() {
               );
               const done = cardSteps.filter((s) => s.status === "done").length;
               const failures = steps.filter((s) => s.status === "failed");
-              const pending = steps.filter((s) => s.status === "pending").length;
+              const pending = steps.filter(
+                (s) => s.status === "pending" || s.status === "running",
+              ).length;
               const request = (jobRow.request ?? {}) as Record<string, unknown>;
               const theme =
                 typeof request.theme === "string" && request.theme

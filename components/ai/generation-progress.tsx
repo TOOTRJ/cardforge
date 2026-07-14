@@ -19,10 +19,14 @@ export function GenerationProgress({
   onRetryStep?: (stepKey: string) => void;
 }) {
   if (steps.length === 0) return null;
-  const activeKey =
+  const activeKeys = new Set(
     phase === "stepping"
-      ? steps.find((step) => step.status === "pending")?.key
-      : undefined;
+      ? steps
+          .filter((step) => step.status === "running")
+          .map((step) => step.key)
+          .concat(steps.find((step) => step.status === "pending")?.key ?? [])
+      : [],
+  );
   const canRetry = Boolean(onRetryStep) && phase === "done";
 
   return (
@@ -33,7 +37,7 @@ export function GenerationProgress({
             <Check className="h-3.5 w-3.5 shrink-0 text-primary-bright" aria-hidden />
           ) : step.status === "failed" ? (
             <TriangleAlert className="h-3.5 w-3.5 shrink-0 text-danger" aria-hidden />
-          ) : step.key === activeKey ? (
+          ) : activeKeys.has(step.key) ? (
             <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-accent" aria-hidden />
           ) : (
             <span className="h-3.5 w-3.5 shrink-0 rounded-full border border-border" />

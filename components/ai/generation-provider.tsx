@@ -74,7 +74,7 @@ const KIND_LABELS: Record<JobPayload["kind"], string> = {
 async function postStep(
   jobId: string,
   stepKey?: string,
-): Promise<{ job: JobPayload } | { error: string }> {
+): Promise<{ job: JobPayload; inFlight: boolean } | { error: string }> {
   try {
     const response = await fetch(`/api/ai/jobs/${jobId}/step`, {
       method: "POST",
@@ -85,11 +85,22 @@ async function postStep(
     if (!response.ok || !payload?.ok) {
       return { error: payload?.error ?? "Generation step failed." };
     }
-    return { job: payload.job as JobPayload };
+    return {
+      job: payload.job as JobPayload,
+      inFlight: payload.inFlight === true,
+    };
   } catch {
     return { error: "Network error during generation." };
   }
 }
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// A step someone else is running is POLLED, not re-executed. The server's
+// stale-claim window is 5 minutes, so ~24 polls at 15s guarantees we either
+// see the result or reclaim a dead attempt before giving up.
+const INFLIGHT_POLL_MS = 15_000;
+const MAX_INFLIGHT_POLLS = 24;
 
 function outcomeOf(
   steps: GenerationJobStep[],
@@ -142,25 +153,34 @@ export function GenerationJobProvider({
 
   const stepUntilDone = useCallback(
     async (startJob: JobPayload): Promise<JobPayload> => {
-      // Drain the job's pending steps with a small pool of workers, each
-      // POSTing a DISTINCT step key. The server runs one image per request and
-      // writes it atomically (migration 0065 + the replay guard), so parallel
-      // steps are safe and an N-card deck finishes in ~N/POOL image-times
-      // instead of strictly one-at-a-time.
+      // Drain the job's open steps with a small pool of workers, each
+      // POSTing a DISTINCT step key. The server CLAIMS a step atomically
+      // before executing (migration 0066) and writes its result atomically
+      // (0065), so parallel steps are safe, a retry can never race a
+      // still-running attempt into a duplicate, and an N-card deck finishes
+      // in ~N/POOL image-times instead of strictly one-at-a-time.
       const terminal = new Map<string, GenerationJobStep>();
+      const latest = new Map<string, GenerationJobStep>();
       for (const s of startJob.steps) {
-        if (s.status !== "pending") terminal.set(s.key, s);
+        if (s.status === "done" || s.status === "failed") terminal.set(s.key, s);
       }
+      // "running" steps (adopted from a dead tab) are queued too: the worker
+      // polls them and reclaims once the server marks the claim stale.
       const queue = startJob.steps
-        .filter((s) => s.status === "pending")
+        .filter((s) => s.status === "pending" || s.status === "running")
         .map((s) => s.key);
       const order = startJob.steps.map((s) => s.key);
+      const inFlightPolls = new Map<string, number>();
       let transportFailures = 0;
       let stopped = false;
 
       const snapshot = (): JobPayload => {
-        const steps = startJob.steps.map((s) => terminal.get(s.key) ?? s);
-        const status = steps.some((s) => s.status === "pending")
+        const steps = startJob.steps.map(
+          (s) => terminal.get(s.key) ?? latest.get(s.key) ?? s,
+        );
+        const status = steps.some(
+          (s) => s.status === "pending" || s.status === "running",
+        )
           ? "generating"
           : steps.some((s) => s.status === "done")
             ? "done"
@@ -170,10 +190,13 @@ export function GenerationJobProvider({
 
       const publish = (job: JobPayload) => {
         // done/failed are terminal — record the latest of each (results can
-        // arrive out of order across workers).
+        // arrive out of order across workers). Non-terminal statuses update
+        // `latest` so a running claim shows live in the progress list.
         for (const s of job.steps) {
           if (s.status === "done" || s.status === "failed") {
             terminal.set(s.key, s);
+          } else {
+            latest.set(s.key, s);
           }
         }
         const snap = snapshot();
@@ -200,6 +223,23 @@ export function GenerationJobProvider({
           }
           transportFailures = 0;
           publish(result.job);
+          if (result.inFlight) {
+            // Another request owns this step right now (an earlier attempt
+            // whose response we lost, or a second tab). Poll until it
+            // resolves — or until its claim goes stale and we reclaim it.
+            const polls = (inFlightPolls.get(key) ?? 0) + 1;
+            inFlightPolls.set(key, polls);
+            if (polls <= MAX_INFLIGHT_POLLS) {
+              await sleep(INFLIGHT_POLL_MS);
+              queue.push(key);
+            } else {
+              toast.error(
+                "A generation step is stuck — it resumes automatically next time you open the app.",
+              );
+            }
+            continue;
+          }
+          inFlightPolls.delete(key);
         }
       };
 
@@ -275,6 +315,9 @@ export function GenerationJobProvider({
           toast.error(result.error);
           return outcomeOf(steps, slug);
         }
+        if (result.inFlight) {
+          toast.message("That step is still running — give it a moment.");
+        }
         setJob({ ...job, ...result.job });
         setSteps(result.job.steps);
         return outcomeOf(result.job.steps, slug);
@@ -321,7 +364,9 @@ export function GenerationJobProvider({
         const pending: JobPayload = payload.job;
         if (
           pending.status !== "generating" ||
-          !pending.steps.some((step) => step.status === "pending") ||
+          !pending.steps.some(
+            (step) => step.status === "pending" || step.status === "running",
+          ) ||
           runningRef.current
         ) {
           return;

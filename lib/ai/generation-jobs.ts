@@ -29,9 +29,8 @@ import {
 } from "@/lib/ai/image-gen";
 import { persistGeneratedArt } from "@/lib/ai/random-art";
 import {
-  consumeAiCredits,
+  creditCostFor,
   logAiCall,
-  refundAiCredits,
   refundCredits,
   spendCredits,
 } from "@/lib/ai/rate-limit";
@@ -84,7 +83,7 @@ async function aiArtistCredit(): Promise<string | undefined> {
   return name ? name.slice(0, 120) : undefined;
 }
 
-export type JobStepStatus = "pending" | "done" | "failed";
+export type JobStepStatus = "pending" | "running" | "done" | "failed";
 
 export type JobStep = {
   key: string;
@@ -93,6 +92,9 @@ export type JobStep = {
   /** Set once the step's card row exists — retries then skip creation. */
   card_id?: string;
   error?: string;
+  /** Stamped by claim_job_step when the step flips to "running"; a claim
+   *  older than 5 minutes is treated as dead and may be reclaimed. */
+  claimed_at?: string | null;
 };
 
 export type GenerationJobRow = {
@@ -344,13 +346,21 @@ export async function getGenerationJob(
 }
 
 export type RunStepResult =
-  | { ok: true; job: GenerationJobRow }
+  | {
+      ok: true;
+      job: GenerationJobRow;
+      /** True when nothing was claimable because another request is mid-run
+       *  on the wanted step — the client should poll, not re-execute. */
+      inFlight?: boolean;
+    }
   | { ok: false; error: string };
 
 /**
- * Execute one step of a set job: the given `stepKey`, or the first
- * pending/failed step. Persists the step outcome and flips the job to
- * "done" when nothing is left. Card creation is retry-safe (a step whose
+ * Execute one step of a job: the given `stepKey`, or the first pending step.
+ * The step is CLAIMED atomically first (pending → running, migration 0066),
+ * so concurrent requests — parallel workers, a retry racing a still-running
+ * attempt, a second tab — can never execute the same step twice. Persists
+ * the outcome via patch_job_step. Card creation is retry-safe (a step whose
  * card exists only redoes the art).
  */
 export async function runNextJobStep(
@@ -360,94 +370,147 @@ export async function runNextJobStep(
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Sign in to continue generation." };
 
-  const job = await getGenerationJob(jobId);
-  if (!job) return { ok: false, error: "Job not found." };
-  if (job.status !== "generating") {
-    return { ok: true, job };
+  const claim = await claimJobStep(jobId, stepKey);
+  if (!claim.ok) return claim;
+  const job = claim.job;
+  if (!claim.stepKey) {
+    // Nothing claimable: the job is finished/cancelled, the wanted step is
+    // done, or it's running in another request (report that so the client
+    // polls instead of counting a failure).
+    const wanted = stepKey
+      ? job.steps.find((step) => step.key === stepKey)
+      : undefined;
+    const inFlight = stepKey
+      ? wanted?.status === "running"
+      : job.steps.some((step) => step.status === "running");
+    return { ok: true, job, inFlight: inFlight || undefined };
   }
+
+  const step = job.steps.find((s) => s.key === claim.stepKey)!;
+  const stepIndex = Number(step.key.split(":")[1]);
+
+  // From here the step is OURS ("running") — every exit path below must go
+  // through patchJobStep so it can't be left stranded mid-claim. Executor
+  // throws are converted to a failed step for the same reason (credits are
+  // refunded inside the executors before anything rethrows).
+  let result: JobStep;
+  try {
+    result = await executeJobStep(user.id, job, step, stepIndex);
+  } catch (error) {
+    const detail =
+      error instanceof Error ? error.message : "Generation step crashed.";
+    result = { ...step, status: "failed", error: detail };
+  }
+  return patchJobStep(jobId, result);
+}
+
+async function executeJobStep(
+  userId: string,
+  job: GenerationJobRow,
+  step: JobStep,
+  stepIndex: number,
+): Promise<JobStep> {
   // Card jobs have no set/deck target — the plan is the whole contract.
   const isCardKind = job.kind === "card" || job.kind === "card_remix";
   if (!job.plan || (!isCardKind && !job.set_id && !job.deck_id)) {
-    return { ok: false, error: "Job has no plan — recreate it." };
+    return { ...step, status: "failed", error: "Job has no plan — recreate it." };
   }
 
-  const steps = [...job.steps];
-  const index = stepKey
-    ? steps.findIndex((step) => step.key === stepKey)
-    : steps.findIndex((step) => step.status === "pending");
-  if (index === -1) {
-    // No matching/pending step left — status is already recomputed on every
-    // patch, so nothing to finalize. Return the current job.
-    return { ok: true, job };
-  }
-  const step = steps[index];
-
-  // Replay guard: never re-run a step that's already done. Without this,
-  // re-POSTing a completed step key (or a racing client) re-ran the paid
-  // image call while skipping the credit charge — free/uncharged generation.
-  // Pending steps run; a failed step re-runs only on an EXPLICIT retry (the
-  // client passes its key), so an auto-advance (no key) never touches it.
-  if (step.status === "done") {
-    return { ok: true, job };
-  }
-  const stepIndex = Number(step.key.split(":")[1]);
-
-  let result: JobStep;
   if (step.key === COVER_STEP_KEY) {
-    result = await runCoverStep(user.id, job, step);
-  } else {
-    switch (job.kind) {
-      case "set": {
-        if (step.key === ICON_STEP_KEY) {
-          result = await runIconStep(user.id, job, step);
-        } else {
-          const card = (job.plan as SetJobPlan).cards[stepIndex];
-          result = card
-            ? await runCardStep(user.id, job, step, card)
-            : { ...step, status: "failed", error: "Missing card plan." };
-        }
-        break;
-      }
-      case "deck": {
-        const plan = job.plan as DeckJobPlan;
-        const card = plan.cards[stepIndex];
-        result = card
-          ? await runDeckCardStep(user.id, job, step, plan, stepIndex)
-          : { ...step, status: "failed", error: "Missing card plan." };
-        break;
-      }
-      case "deck_remix": {
-        const plan = job.plan as DeckRemixJobPlan;
-        const entry = plan.entries[stepIndex];
-        result = entry
-          ? await runDeckRemixStep(user.id, job, step, plan, entry)
-          : { ...step, status: "failed", error: "Missing entry plan." };
-        break;
-      }
-      case "card": {
-        result = await runSingleCardStep(
-          user.id,
-          step,
-          job.plan as CardJobPlan,
-        );
-        break;
-      }
-      case "card_remix": {
-        result = await runCardRemixStep(
-          user.id,
-          step,
-          job.plan as CardRemixJobPlan,
-        );
-        break;
-      }
-      default:
-        result = { ...step, status: "failed", error: "Unknown job kind." };
-    }
+    return runCoverStep(userId, job, step);
   }
+  switch (job.kind) {
+    case "set": {
+      if (step.key === ICON_STEP_KEY) {
+        return runIconStep(userId, job, step);
+      }
+      const card = (job.plan as SetJobPlan).cards[stepIndex];
+      return card
+        ? runCardStep(userId, job, step, card)
+        : { ...step, status: "failed", error: "Missing card plan." };
+    }
+    case "deck": {
+      const plan = job.plan as DeckJobPlan;
+      const card = plan.cards[stepIndex];
+      return card
+        ? runDeckCardStep(userId, job, step, plan, stepIndex)
+        : { ...step, status: "failed", error: "Missing card plan." };
+    }
+    case "deck_remix": {
+      const plan = job.plan as DeckRemixJobPlan;
+      const entry = plan.entries[stepIndex];
+      return entry
+        ? runDeckRemixStep(userId, job, step, plan, entry)
+        : { ...step, status: "failed", error: "Missing entry plan." };
+    }
+    case "card":
+      return runSingleCardStep(userId, step, job.plan as CardJobPlan);
+    case "card_remix":
+      return runCardRemixStep(userId, step, job.plan as CardRemixJobPlan);
+    default:
+      return { ...step, status: "failed", error: "Unknown job kind." };
+  }
+}
 
-  // Atomic single-step write (see migration 0065) so parallel step requests
-  // don't clobber each other's results.
-  return patchJobStep(jobId, result);
+/** Atomically claim a step (pending/stale-running → running) via the
+ *  row-locking claim_job_step RPC (migration 0066). Returns the freshly
+ *  written job plus the claimed key, or stepKey null when nothing was
+ *  claimable (finished job, done step, or a live run elsewhere). */
+async function claimJobStep(
+  jobId: string,
+  stepKey?: string,
+): Promise<
+  | { ok: true; job: GenerationJobRow; stepKey: string | null }
+  | { ok: false; error: string }
+> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("claim_job_step", {
+    p_job_id: jobId,
+    p_step_key: stepKey ?? null,
+  });
+  if (error || !data) {
+    return { ok: false, error: "Job not found." };
+  }
+  const payload = data as unknown as {
+    job: GenerationJobRow;
+    step_key: string | null;
+  };
+  if (!payload.job) {
+    return { ok: false, error: "Job not found." };
+  }
+  return { ok: true, job: payload.job, stepKey: payload.step_key };
+}
+
+/**
+ * Reserve `amount` credits fail-closed, run the step body, and guarantee the
+ * charge never survives a failure: a failed result or a throw refunds before
+ * returning/rethrowing. Every credited step type goes through here so "any
+ * failed step returns its credit" holds uniformly (cards, remixes, covers,
+ * icons). A retried step reserves again — the charge always belongs to the
+ * attempt that succeeded.
+ */
+async function withCreditedStep(
+  userId: string,
+  amount: number,
+  reason: string,
+  step: JobStep,
+  body: () => Promise<JobStep>,
+): Promise<JobStep> {
+  const reserve = await spendCredits(amount, reason, { failClosed: true });
+  if (!reserve.ok) {
+    return { ...step, status: "failed", error: reserve.message };
+  }
+  let result: JobStep;
+  try {
+    result = await body();
+  } catch (error) {
+    await refundCredits(userId, amount, reason);
+    throw error;
+  }
+  if (result.status === "failed") {
+    await refundCredits(userId, amount, reason);
+  }
+  return result;
 }
 
 // ---------------------------------------------------------------------------
@@ -543,82 +606,75 @@ export async function createCardGenerationJob(
   return { ok: true, job: jobRow as unknown as GenerationJobRow };
 }
 
-/** The card job's single step: reserve the credit, create the card, paint +
- *  publish. Same retry semantics as batch card steps — a step whose card
- *  exists only redoes the art (charge kept, repaint free). */
+/** The card job's single step: create the card, paint + publish. The credit
+ *  wrapper charges each attempt and refunds on ANY failure — including a
+ *  paint failure — so only the attempt that succeeds is ever paid for. A
+ *  retry of a step whose card exists skips creation and only redoes art. */
 async function runSingleCardStep(
   userId: string,
   step: JobStep,
   plan: CardJobPlan,
 ): Promise<JobStep> {
-  const card = plan.card;
-  let cardId = step.card_id;
+  return withCreditedStep(userId, 1, "generate_random_card", step, async () => {
+    const card = plan.card;
+    let cardId = step.card_id;
 
-  if (!cardId) {
-    // Reserve fail-closed BEFORE the expensive work — see runCardStep.
-    const reserve = await spendCredits(1, "generate_random_card", {
-      failClosed: true,
-    });
-    if (!reserve.ok) {
-      return { ...step, status: "failed", error: reserve.message };
+    if (!cardId) {
+      const supabase = await createClient();
+      const { data: gameSystem } = await supabase
+        .from("game_systems")
+        .select("id")
+        .eq("is_active", true)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (!gameSystem) {
+        return { ...step, status: "failed", error: "No game system configured." };
+      }
+
+      const result = await createCardAction(
+        {
+          title: card.title,
+          game_system_id: gameSystem.id,
+          cost: card.cost ?? undefined,
+          color_identity: card.color_identity,
+          supertype: card.supertype ?? undefined,
+          card_type: card.card_type,
+          subtypes: card.subtypes,
+          rarity: card.rarity,
+          rules_text: card.rules_text ?? undefined,
+          flavor_text: card.flavor_text ?? undefined,
+          power: card.power ?? undefined,
+          toughness: card.toughness ?? undefined,
+          loyalty: card.loyalty ?? undefined,
+          defense: card.defense ?? undefined,
+          visibility: "private",
+          artist_credit: await aiArtistCredit(),
+          frame_style: plan.frame_template
+            ? { template: plan.frame_template }
+            : undefined,
+        },
+        { redirectAfterCreate: false },
+      );
+      if (!result.ok) {
+        return { ...step, status: "failed", error: createFailureMessage(result) };
+      }
+      cardId = result.cardId;
     }
 
-    const supabase = await createClient();
-    const { data: gameSystem } = await supabase
-      .from("game_systems")
-      .select("id")
-      .eq("is_active", true)
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle();
-    if (!gameSystem) {
-      await refundCredits(userId, 1, "generate_random_card");
-      return { ...step, status: "failed", error: "No game system configured." };
-    }
-
-    const result = await createCardAction(
-      {
-        title: card.title,
-        game_system_id: gameSystem.id,
-        cost: card.cost ?? undefined,
-        color_identity: card.color_identity,
-        supertype: card.supertype ?? undefined,
-        card_type: card.card_type,
-        subtypes: card.subtypes,
-        rarity: card.rarity,
-        rules_text: card.rules_text ?? undefined,
-        flavor_text: card.flavor_text ?? undefined,
-        power: card.power ?? undefined,
-        toughness: card.toughness ?? undefined,
-        loyalty: card.loyalty ?? undefined,
-        defense: card.defense ?? undefined,
-        visibility: "private",
-        artist_credit: await aiArtistCredit(),
-        frame_style: plan.frame_template
-          ? { template: plan.frame_template }
-          : undefined,
-      },
-      { redirectAfterCreate: false },
+    await logAiCall(userId, "generate_random_art");
+    const style = plan.style?.trim()
+      ? ` Rendered strictly in ${plan.style.trim()} style.`
+      : "";
+    const published = await paintAndPublishCard(
+      cardId,
+      `${card.art_prompt}${style} NO frame, NO borders, NO card layout, NO text or lettering anywhere in the image.`,
     );
-    if (!result.ok) {
-      await refundCredits(userId, 1, "generate_random_card");
-      return { ...step, status: "failed", error: createFailureMessage(result) };
+    if (!published.ok) {
+      return { ...step, status: "failed", card_id: cardId, error: published.error };
     }
-    cardId = result.cardId;
-  }
-
-  await logAiCall(userId, "generate_random_art");
-  const style = plan.style?.trim()
-    ? ` Rendered strictly in ${plan.style.trim()} style.`
-    : "";
-  const published = await paintAndPublishCard(
-    cardId,
-    `${card.art_prompt}${style} NO frame, NO borders, NO card layout, NO text or lettering anywhere in the image.`,
-  );
-  if (!published.ok) {
-    return { ...step, status: "failed", card_id: cardId, error: published.error };
-  }
-  return { ...step, status: "done", card_id: cardId, error: undefined };
+    return { ...step, status: "done", card_id: cardId, error: undefined };
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -684,11 +740,10 @@ export async function createCardRemixJob(
 // past 12MB is not something we should buffer per-request.
 const MAX_SOURCE_ART_BYTES = 12 * 1024 * 1024;
 
-/** The remix job's single step: reserve the credit, generate the new
- *  identity, restyle the parent's art (fresh generation when there's none),
- *  fork via remixCardAction. Same posture as runDeckRemixStep: a failed step
- *  carries no card_id, so its retry reruns the whole pipeline after the
- *  refund below makes the user whole. */
+/** The remix job's single step: generate the new identity, restyle the
+ *  parent's art (fresh generation when there's none), fork via
+ *  remixCardAction. A failed step carries no card_id, so its retry reruns
+ *  the whole pipeline; the credit wrapper refunds every failed attempt. */
 async function runCardRemixStep(
   userId: string,
   step: JobStep,
@@ -697,23 +752,13 @@ async function runCardRemixStep(
   if (step.card_id) {
     return { ...step, status: "done", error: undefined };
   }
-
-  // Reserve the remix's credit up front (fail closed — see runCardStep).
-  const reserve = await consumeAiCredits("remix_card", { failClosed: true });
-  if (!reserve.ok) {
-    return { ...step, status: "failed", error: reserve.message };
-  }
-  let result: JobStep;
-  try {
-    result = await executeCardRemixStep(userId, step, plan);
-  } catch (error) {
-    await refundAiCredits(userId, "remix_card");
-    throw error;
-  }
-  if (result.status === "failed") {
-    await refundAiCredits(userId, "remix_card");
-  }
-  return result;
+  return withCreditedStep(
+    userId,
+    creditCostFor("remix_card"),
+    "remix_card",
+    step,
+    () => executeCardRemixStep(userId, step, plan),
+  );
 }
 
 async function executeCardRemixStep(
@@ -1094,76 +1139,66 @@ async function runCardStep(
   step: JobStep,
   card: DesignedCard,
 ): Promise<JobStep> {
-  const supabase = await createClient();
-  let cardId = step.card_id;
+  // The plan-time balance check in the jobs route is advisory only — the
+  // wrapper's fail-closed reserve is the enforcement point (concurrent jobs
+  // can't outrun the balance: consume_credits row-locks the profile), and it
+  // refunds every failed attempt.
+  return withCreditedStep(userId, 1, "generate_deck", step, async () => {
+    const supabase = await createClient();
+    let cardId = step.card_id;
 
-  if (!cardId) {
-    // Reserve the card's credit BEFORE any work, failing closed — the
-    // plan-time balance check in the jobs route is advisory only, so this
-    // reserve is the enforcement point (concurrent jobs can't outrun the
-    // balance: consume_credits row-locks the profile). A later paint failure
-    // keeps the charge because the retry repaints the same card for free.
-    const reserve = await spendCredits(1, "generate_deck", { failClosed: true });
-    if (!reserve.ok) {
-      return { ...step, status: "failed", error: reserve.message };
+    if (!cardId) {
+      // Resolve the active game system (same lookup as the legacy route).
+      const { data: gameSystem } = await supabase
+        .from("game_systems")
+        .select("id")
+        .eq("is_active", true)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (!gameSystem) {
+        return { ...step, status: "failed", error: "No game system configured." };
+      }
+
+      const result = await createCardAction(
+        {
+          title: card.title,
+          game_system_id: gameSystem.id,
+          cost: card.cost ?? undefined,
+          color_identity: card.color_identity,
+          supertype: card.supertype ?? undefined,
+          card_type: card.card_type,
+          subtypes: card.subtypes,
+          rarity: card.rarity,
+          rules_text: card.rules_text ?? undefined,
+          flavor_text: card.flavor_text ?? undefined,
+          power: card.power ?? undefined,
+          toughness: card.toughness ?? undefined,
+          loyalty: card.loyalty ?? undefined,
+          defense: card.defense ?? undefined,
+          visibility: "private",
+          artist_credit: await aiArtistCredit(),
+          primary_set_id: job.set_id ?? undefined,
+        },
+        { redirectAfterCreate: false },
+      );
+      if (!result.ok) {
+        return { ...step, status: "failed", error: createFailureMessage(result) };
+      }
+      cardId = result.cardId;
     }
 
-    // Resolve the active game system (same lookup as the legacy route).
-    const { data: gameSystem } = await supabase
-      .from("game_systems")
-      .select("id")
-      .eq("is_active", true)
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle();
-    if (!gameSystem) {
-      await refundCredits(userId, 1, "generate_deck");
-      return { ...step, status: "failed", error: "No game system configured." };
-    }
-
-    const result = await createCardAction(
-      {
-        title: card.title,
-        game_system_id: gameSystem.id,
-        cost: card.cost ?? undefined,
-        color_identity: card.color_identity,
-        supertype: card.supertype ?? undefined,
-        card_type: card.card_type,
-        subtypes: card.subtypes,
-        rarity: card.rarity,
-        rules_text: card.rules_text ?? undefined,
-        flavor_text: card.flavor_text ?? undefined,
-        power: card.power ?? undefined,
-        toughness: card.toughness ?? undefined,
-        loyalty: card.loyalty ?? undefined,
-        defense: card.defense ?? undefined,
-        visibility: "private",
-        artist_credit: await aiArtistCredit(),
-        primary_set_id: job.set_id ?? undefined,
-      },
-      { redirectAfterCreate: false },
+    // ---- Art + publish (the expensive half; retried independently) ----
+    await logAiCall(userId, "generate_deck_cards");
+    const published = await paintAndPublishCard(
+      cardId,
+      artPrompt(job.plan as SetJobPlan, card),
     );
-    if (!result.ok) {
-      await refundCredits(userId, 1, "generate_deck");
-      const detail =
-        result.formError ??
-        Object.values(result.fieldErrors ?? {})[0] ??
-        "Card creation failed.";
-      return { ...step, status: "failed", error: detail };
+    if (!published.ok) {
+      return { ...step, status: "failed", card_id: cardId, error: published.error };
     }
-    cardId = result.cardId;
-  }
-
-  // ---- Art + publish (the expensive half; retried independently) ----
-  await logAiCall(userId, "generate_deck_cards");
-  const published = await paintAndPublishCard(
-    cardId,
-    artPrompt(job.plan as SetJobPlan, card),
-  );
-  if (!published.ok) {
-    return { ...step, status: "failed", card_id: cardId, error: published.error };
-  }
-  return { ...step, status: "done", card_id: cardId, error: undefined };
+    return { ...step, status: "done", card_id: cardId, error: undefined };
+  });
 }
 
 /**
@@ -1245,76 +1280,69 @@ async function runDeckCardStep(
   plan: DeckJobPlan,
   cardIndex: number,
 ): Promise<JobStep> {
-  const card = plan.cards[cardIndex];
-  const supabase = await createClient();
-  let cardId = step.card_id;
+  return withCreditedStep(userId, 1, "generate_deck", step, async () => {
+    const card = plan.cards[cardIndex];
+    const supabase = await createClient();
+    let cardId = step.card_id;
 
-  if (!cardId) {
-    // Same reserve-first posture as runCardStep: fail closed so the credit
-    // is actually charged before the expensive generation runs.
-    const reserve = await spendCredits(1, "generate_deck", { failClosed: true });
-    if (!reserve.ok) {
-      return { ...step, status: "failed", error: reserve.message };
-    }
+    if (!cardId) {
+      const { data: gameSystem } = await supabase
+        .from("game_systems")
+        .select("id")
+        .eq("is_active", true)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (!gameSystem) {
+        return { ...step, status: "failed", error: "No game system configured." };
+      }
 
-    const { data: gameSystem } = await supabase
-      .from("game_systems")
-      .select("id")
-      .eq("is_active", true)
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle();
-    if (!gameSystem) {
-      await refundCredits(userId, 1, "generate_deck");
-      return { ...step, status: "failed", error: "No game system configured." };
-    }
-
-    // Commander slot: force the Legendary supertype the frame renders.
-    const isCommander = plan.roles[cardIndex] === "commander";
-    const result = await createCardAction(
-      {
-        title: card.title,
-        game_system_id: gameSystem.id,
-        cost: card.cost ?? undefined,
-        color_identity: card.color_identity,
-        supertype: isCommander ? card.supertype || "Legendary" : card.supertype ?? undefined,
-        card_type: card.card_type,
-        subtypes: card.subtypes,
-        rarity: card.rarity,
-        rules_text: card.rules_text ?? undefined,
-        flavor_text: card.flavor_text ?? undefined,
-        power: card.power ?? undefined,
-        toughness: card.toughness ?? undefined,
-        loyalty: card.loyalty ?? undefined,
-        defense: card.defense ?? undefined,
-        visibility: "private",
-        artist_credit: await aiArtistCredit(),
-        deck_id: job.deck_id ?? undefined,
-      },
-      { redirectAfterCreate: false },
-    );
-    if (!result.ok) {
-      await refundCredits(userId, 1, "generate_deck");
-      return { ...step, status: "failed", error: createFailureMessage(result) };
-    }
-    cardId = result.cardId;
-
-    if (job.deck_id) {
-      await setDeckEntryDetails(
-        job.deck_id,
-        cardId,
-        isCommander ? "commander" : "main",
-        plan.quantities[cardIndex] ?? 1,
+      // Commander slot: force the Legendary supertype the frame renders.
+      const isCommander = plan.roles[cardIndex] === "commander";
+      const result = await createCardAction(
+        {
+          title: card.title,
+          game_system_id: gameSystem.id,
+          cost: card.cost ?? undefined,
+          color_identity: card.color_identity,
+          supertype: isCommander ? card.supertype || "Legendary" : card.supertype ?? undefined,
+          card_type: card.card_type,
+          subtypes: card.subtypes,
+          rarity: card.rarity,
+          rules_text: card.rules_text ?? undefined,
+          flavor_text: card.flavor_text ?? undefined,
+          power: card.power ?? undefined,
+          toughness: card.toughness ?? undefined,
+          loyalty: card.loyalty ?? undefined,
+          defense: card.defense ?? undefined,
+          visibility: "private",
+          artist_credit: await aiArtistCredit(),
+          deck_id: job.deck_id ?? undefined,
+        },
+        { redirectAfterCreate: false },
       );
-    }
-  }
+      if (!result.ok) {
+        return { ...step, status: "failed", error: createFailureMessage(result) };
+      }
+      cardId = result.cardId;
 
-  await logAiCall(userId, "generate_deck_cards");
-  const published = await paintAndPublishCard(cardId, deckArtPrompt(plan, card));
-  if (!published.ok) {
-    return { ...step, status: "failed", card_id: cardId, error: published.error };
-  }
-  return { ...step, status: "done", card_id: cardId, error: undefined };
+      if (job.deck_id) {
+        await setDeckEntryDetails(
+          job.deck_id,
+          cardId,
+          isCommander ? "commander" : "main",
+          plan.quantities[cardIndex] ?? 1,
+        );
+      }
+    }
+
+    await logAiCall(userId, "generate_deck_cards");
+    const published = await paintAndPublishCard(cardId, deckArtPrompt(plan, card));
+    if (!published.ok) {
+      return { ...step, status: "failed", card_id: cardId, error: published.error };
+    }
+    return { ...step, status: "done", card_id: cardId, error: undefined };
+  });
 }
 
 async function runDeckRemixStep(
@@ -1330,24 +1358,11 @@ async function runDeckRemixStep(
     return { ...step, status: "done", error: undefined };
   }
 
-  // Reserve the remix's credit up front (fail closed — see runCardStep) and
-  // refund on ANY failure: a failed remix step carries no card_id, so its
-  // retry reruns the whole pipeline including a fresh reserve.
-  const reserve = await spendCredits(1, "generate_deck", { failClosed: true });
-  if (!reserve.ok) {
-    return { ...step, status: "failed", error: reserve.message };
-  }
-  let result: JobStep;
-  try {
-    result = await executeDeckRemixStep(userId, job, step, plan, entry);
-  } catch (error) {
-    await refundCredits(userId, 1, "generate_deck");
-    throw error;
-  }
-  if (result.status === "failed") {
-    await refundCredits(userId, 1, "generate_deck");
-  }
-  return result;
+  // A failed remix step carries no card_id, so its retry reruns the whole
+  // pipeline; the credit wrapper refunds every failed attempt.
+  return withCreditedStep(userId, 1, "generate_deck", step, () =>
+    executeDeckRemixStep(userId, job, step, plan, entry),
+  );
 }
 
 async function executeDeckRemixStep(
@@ -1615,52 +1630,49 @@ function coverPrompt(job: GenerationJobRow): { prompt: string; aspect: ImageAspe
   };
 }
 
-/** Generate + attach the set/deck cover image. */
+/** Generate + attach the set/deck cover image. Covers are a paid image
+ *  generation too — the credit wrapper charges like every card step and
+ *  refunds any failure (no-op while billing is off / for admins). */
 async function runCoverStep(
   userId: string,
   job: GenerationJobRow,
   step: JobStep,
 ): Promise<JobStep> {
   await logAiCall(userId, job.kind === "set" ? "generate_deck" : "generate_deck_cards");
-  // Covers are a paid image generation too — charge a credit like every card
-  // step so a deck/set job doesn't produce an uncharged image (no-op while
-  // billing is off / for admins).
-  const reserve = await spendCredits(1, "generate_deck", { failClosed: true });
-  if (!reserve.ok) {
-    return { ...step, status: "failed", error: reserve.message };
-  }
-  const { prompt, aspect } = coverPrompt(job);
-  const image = await generatePlainImage(prompt, aspect);
-  if (!image.ok) {
-    return { ...step, status: "failed", error: image.error };
-  }
-  const persisted = await persistGeneratedArt(image.bytes, image.contentType);
-  if (!persisted.ok) {
-    return { ...step, status: "failed", error: persisted.error };
-  }
+  return withCreditedStep(userId, 1, "generate_deck", step, async () => {
+    const { prompt, aspect } = coverPrompt(job);
+    const image = await generatePlainImage(prompt, aspect);
+    if (!image.ok) {
+      return { ...step, status: "failed", error: image.error };
+    }
+    const persisted = await persistGeneratedArt(image.bytes, image.contentType);
+    if (!persisted.ok) {
+      return { ...step, status: "failed", error: persisted.error };
+    }
 
-  if (job.kind === "set" && job.set_id) {
-    const updated = await updateSetAction(job.set_id, {
-      cover_url: persisted.publicUrl,
-    });
-    if (!updated.ok) {
-      return { ...step, status: "failed", error: "Couldn't attach the set cover." };
+    if (job.kind === "set" && job.set_id) {
+      const updated = await updateSetAction(job.set_id, {
+        cover_url: persisted.publicUrl,
+      });
+      if (!updated.ok) {
+        return { ...step, status: "failed", error: "Couldn't attach the set cover." };
+      }
+      return { ...step, status: "done", error: undefined };
     }
-    return { ...step, status: "done", error: undefined };
-  }
-  if (job.deck_id) {
-    const updated = await updateDeckAction(job.deck_id, {
-      cover_url: persisted.publicUrl,
-      // Explicit center focal point so the hero (aspect-[5/2]) and the
-      // dashboard tile (16:9) both crop the banner symmetrically.
-      cover_position: { focalX: 0.5, focalY: 0.5 },
-    });
-    if (!updated.ok) {
-      return { ...step, status: "failed", error: "Couldn't attach the deck cover." };
+    if (job.deck_id) {
+      const updated = await updateDeckAction(job.deck_id, {
+        cover_url: persisted.publicUrl,
+        // Explicit center focal point so the hero (aspect-[5/2]) and the
+        // dashboard tile (16:9) both crop the banner symmetrically.
+        cover_position: { focalX: 0.5, focalY: 0.5 },
+      });
+      if (!updated.ok) {
+        return { ...step, status: "failed", error: "Couldn't attach the deck cover." };
+      }
+      return { ...step, status: "done", error: undefined };
     }
-    return { ...step, status: "done", error: undefined };
-  }
-  return { ...step, status: "failed", error: "Job has no set or deck to cover." };
+    return { ...step, status: "failed", error: "Job has no set or deck to cover." };
+  });
 }
 
 async function runIconStep(
@@ -1669,25 +1681,23 @@ async function runIconStep(
   step: JobStep,
 ): Promise<JobStep> {
   await logAiCall(userId, "generate_set_icon");
-  const reserve = await spendCredits(1, "generate_set_icon", { failClosed: true });
-  if (!reserve.ok) {
-    return { ...step, status: "failed", error: reserve.message };
-  }
-  const image = await generatePlainImage(iconPrompt(job.plan as SetJobPlan));
-  if (!image.ok) {
-    return { ...step, status: "failed", error: image.error };
-  }
-  const persisted = await persistGeneratedArt(image.bytes, image.contentType);
-  if (!persisted.ok) {
-    return { ...step, status: "failed", error: persisted.error };
-  }
-  const updated = await updateSetAction(job.set_id!, {
-    icon_url: persisted.publicUrl,
+  return withCreditedStep(userId, 1, "generate_set_icon", step, async () => {
+    const image = await generatePlainImage(iconPrompt(job.plan as SetJobPlan));
+    if (!image.ok) {
+      return { ...step, status: "failed", error: image.error };
+    }
+    const persisted = await persistGeneratedArt(image.bytes, image.contentType);
+    if (!persisted.ok) {
+      return { ...step, status: "failed", error: persisted.error };
+    }
+    const updated = await updateSetAction(job.set_id!, {
+      icon_url: persisted.publicUrl,
+    });
+    if (!updated.ok) {
+      return { ...step, status: "failed", error: "Couldn't attach the set icon." };
+    }
+    return { ...step, status: "done", error: undefined };
   });
-  if (!updated.ok) {
-    return { ...step, status: "failed", error: "Couldn't attach the set icon." };
-  }
-  return { ...step, status: "done", error: undefined };
 }
 
 /** Atomically merge ONE step's result into the job's steps array and recompute
@@ -1707,6 +1717,8 @@ async function patchJobStep(
     status: step.status,
     card_id: step.card_id ?? null,
     error: step.error ?? null,
+    // The step is no longer running — drop the claim stamp.
+    claimed_at: null,
   };
   const { data, error } = await supabase.rpc("patch_job_step", {
     p_job_id: jobId,
