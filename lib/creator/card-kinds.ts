@@ -244,6 +244,7 @@ const SHOWCASE_TEMPLATES: readonly FrameTemplate[] =
 const SHOWCASE_KIND_RESTRICTION: Partial<Record<FrameTemplate, CardKind[]>> = {
   expeditionland: ["land"],
   fullartland: ["land"],
+  m15textlessland: ["land"],
   nyx: ["enchantment"],
 };
 

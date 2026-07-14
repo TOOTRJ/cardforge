@@ -1421,6 +1421,22 @@ const FULLARTLAND: FrameProfile = {
   },
 };
 
+// M15 Textless — the plain M15 border with an edge-to-edge art window (no type
+// plate, no text box painted). Shares FULLART's over-art ink treatment (light
+// type + scrim-backed rules so any text the user adds stays legible), but the
+// art window is inset to the M15 border rather than bleeding to the card edge.
+const M15TEXTLESS: FrameProfile = {
+  ...FULLART,
+  label: "M15 Textless",
+  artSlot: { topPct: 11.3, leftPct: 7.7, widthPct: 84.0, heightPct: 80.7 },
+};
+
+const M15TEXTLESSLAND: FrameProfile = {
+  ...M15TEXTLESS,
+  label: "M15 Textless Land",
+  hideCost: true,
+};
+
 const PROFILES: Record<FrameTemplate, FrameProfile> = {
   m15: M15,
   m15land: M15LAND,
@@ -1451,6 +1467,8 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   extendedart: EXTENDEDART,
   fullart: FULLART,
   fullartland: FULLARTLAND,
+  m15textless: M15TEXTLESS,
+  m15textlessland: M15TEXTLESSLAND,
   expeditionland: EXPEDITIONLAND,
   nyx: NYX,
   retro: RETRO,

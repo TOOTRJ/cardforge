@@ -121,6 +121,20 @@ const PNG_SETS = [
     pack: `${DATA}/magic-m15-showcase-zendikar.mse-style`,
     file: (k) => `${k}card.png`,
   },
+  // M15 Textless full art — the plain M15 border with an edge-to-edge art
+  // window (no type plate, no text box painted). Already alpha-cut; the
+  // creature/spell art (`{c}card.png`) and land (`{c}lcard.png`) variants
+  // share the same border.
+  {
+    out: "public/frames/m15textless",
+    pack: `${DATA}/magic-m15-textless.mse-style`,
+    file: (k) => `${k}card.png`,
+  },
+  {
+    out: "public/frames/m15textlessland",
+    pack: `${DATA}/magic-m15-textless.mse-style`,
+    file: (k) => `${k}lcard.png`,
+  },
 ];
 
 for (const set of PNG_SETS) {
