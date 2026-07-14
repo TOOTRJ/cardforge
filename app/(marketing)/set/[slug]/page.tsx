@@ -240,7 +240,7 @@ async function SetBody({
 }) {
   const [profileOverrides, items] = await Promise.all([
     getFrameProfileOverrides(),
-    listCardsInSet(setId),
+    listCardsInSet(setId, { anonymous: true }),
   ]);
   const analytics = computeSetAnalytics(items.map((i) => i.card));
 

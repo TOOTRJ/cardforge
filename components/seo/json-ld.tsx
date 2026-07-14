@@ -9,12 +9,27 @@ import { getSiteBaseUrl } from "@/lib/site-url";
 // emit absolute URLs (schema.org consumers don't resolve relative ones).
 // ---------------------------------------------------------------------------
 
+/** Serialize a schema.org object for safe inlining inside a <script> tag.
+ *  Plain JSON.stringify does NOT escape `<`, so a user-controlled string
+ *  containing `</script>` (a card title, flavor text, or display name) would
+ *  break out of the JSON-LD block — the canonical JSON-LD XSS. Escaping the
+ *  HTML-significant characters and the two JS line terminators (which are
+ *  legal in JSON strings but break inline script parsing) closes it. */
+export function serializeJsonLd(data: Record<string, unknown>): string {
+  return JSON.stringify(data)
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e")
+    .replace(/&/g, "\\u0026")
+    .replace(/\u2028/g, "\\u2028")
+    .replace(/\u2029/g, "\\u2029");
+}
+
 /** Renders a schema.org object as an inline JSON-LD script tag. */
 export function JsonLd({ data }: { data: Record<string, unknown> }) {
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+      dangerouslySetInnerHTML={{ __html: serializeJsonLd(data) }}
     />
   );
 }

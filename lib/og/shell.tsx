@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { BRAND, MANA_PIPS, OG_SIZE } from "@/lib/brand/constants";
 import { BrandMarkTile } from "@/lib/brand/glyph";
+import { isAllowedServerImageFetchUrl } from "@/lib/validation/card";
 
 // ---------------------------------------------------------------------------
 // Shared chrome for dynamic Open Graph images (challenge / set / profile
@@ -19,6 +20,9 @@ export { MANA_PIPS, OG_SIZE };
 export async function fetchImageAsDataUri(
   url: string,
 ): Promise<string | null> {
+  // SSRF guard: only fetch from our storage bucket / Scryfall — never an
+  // arbitrary user-supplied host (cover_url etc. flow in here).
+  if (!isAllowedServerImageFetchUrl(url)) return null;
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 3500);

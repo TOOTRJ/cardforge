@@ -23,10 +23,47 @@ const optionalEmptyString = (schema: z.ZodType<string>) =>
     .or(z.literal("").transform(() => undefined));
 
 /** Blocks javascript:/data:/etc. — image URLs must be https, or http only
- *  for the local Supabase stack (127.0.0.1/localhost storage URLs in dev). */
+ *  for the local Supabase stack (127.0.0.1/localhost storage URLs in dev).
+ *  The loopback allowance is gated to non-production so a user can't store a
+ *  `http://127.0.0.1/…` value that a server-side fetch (OG bake, AI art
+ *  refetch) would then request in prod. */
 export const isSafeImageUrl = (value: string): boolean =>
   value.startsWith("https://") ||
-  /^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?\//.test(value);
+  (process.env.NODE_ENV !== "production" &&
+    /^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?\//.test(value));
+
+/** Hosts the SERVER is allowed to fetch image bytes from (OG data-URI bake,
+ *  AI parent-art refetch). A stored `*_url` is user-influenced, so fetching it
+ *  server-side is an SSRF sink — restrict to our storage bucket + Scryfall's
+ *  CDN (plus loopback in dev for the local stack). Everything else — internal
+ *  services, cloud metadata endpoints, arbitrary hosts — is refused. */
+function allowedServerImageFetchHosts(): Set<string> {
+  const hosts = new Set<string>(["cards.scryfall.io", "api.scryfall.com"]);
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (supabaseUrl) {
+    try {
+      hosts.add(new URL(supabaseUrl).host);
+    } catch {
+      /* misconfigured env — fall through with just the Scryfall hosts */
+    }
+  }
+  return hosts;
+}
+
+export function isAllowedServerImageFetchUrl(value: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return false;
+  }
+  const devLoopback =
+    process.env.NODE_ENV !== "production" &&
+    url.protocol === "http:" &&
+    (url.hostname === "127.0.0.1" || url.hostname === "localhost");
+  if (url.protocol !== "https:" && !devLoopback) return false;
+  return devLoopback || allowedServerImageFetchHosts().has(url.host);
+}
 
 export const cardTitleSchema = z
   .string()

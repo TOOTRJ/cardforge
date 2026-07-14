@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { serializeJsonLd } from "@/components/seo/json-ld";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Sparkles, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -68,7 +69,7 @@ export default function AiMtgCardGeneratorPage() {
     >
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(faqJsonLd) }}
       />
       <div className="mb-14 flex flex-col gap-5">
         <span className="text-xs font-semibold uppercase tracking-[0.18em] text-primary-bright">

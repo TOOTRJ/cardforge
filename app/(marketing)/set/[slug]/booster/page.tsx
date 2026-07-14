@@ -5,7 +5,7 @@ import { ArrowLeft } from "lucide-react";
 import { getSetBySlugPublic, listCardsInSet } from "@/lib/sets/queries";
 import { isSetsEnabled } from "@/lib/sets/flags";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/public";
 import { BoosterViewer } from "@/components/sets/booster-viewer";
 import type { ArtPosition, FrameStyle } from "@/types/card";
 
@@ -125,7 +125,7 @@ export default async function BoosterPage({
   const set = await getSetBySlugPublic(slug);
   if (!set) notFound();
 
-  const items = await listCardsInSet(set.id);
+  const items = await listCardsInSet(set.id, { anonymous: true });
   const allCards = items.map((item) => item.card);
 
   if (allCards.length === 0) {
@@ -154,7 +154,7 @@ export default async function BoosterPage({
   const ownerIds = Array.from(new Set(sampled.map((c) => c.owner_id)));
   const usernameByOwner = new Map<string, string>();
   if (ownerIds.length > 0) {
-    const supabase = await createClient();
+    const supabase = createPublicClient();
     const { data: profiles } = await supabase
       .from("profiles")
       .select("id, username")
