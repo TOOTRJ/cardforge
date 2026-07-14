@@ -801,7 +801,13 @@ function CardFace({
           frame PNG but below every text layer. Suppressed where a rail
           replaces the box (saga chapters, planeswalker rows) — printed cards
           do the same (Scars watermarked everything EXCEPT basics + walkers). */}
-      {effectiveWatermark && !layout.chapters && !usesLoyaltyRows ? (
+      {/* Match the bake (card-image.tsx) and the backdrop condition above:
+          suppress the watermark only when loyalty ROWS actually render, i.e.
+          there's at least one parsed loyalty ability — not merely because the
+          frame supports them. */}
+      {effectiveWatermark &&
+      !layout.chapters &&
+      !(layout.loyaltyRows && loyaltyAbilities.length > 0) ? (
         <div
           aria-hidden
           style={{

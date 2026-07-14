@@ -191,6 +191,7 @@ describe("handleStripeEvent", () => {
         data: {
           object: {
             mode: "payment",
+            payment_status: "paid",
             client_reference_id: "user-1",
             metadata: {
               purchase_kind: "pack",
@@ -212,6 +213,30 @@ describe("handleStripeEvent", () => {
         p_idempotency_key: "evt_pack_1",
       },
     });
+  });
+
+  it("on checkout.session.completed (pack, unpaid): no grant until funds settle", async () => {
+    const { admin, rpcs } = makeAdmin();
+    await run(
+      {
+        id: "evt_pack_unpaid",
+        type: "checkout.session.completed",
+        data: {
+          object: {
+            mode: "payment",
+            payment_status: "unpaid",
+            client_reference_id: "user-1",
+            metadata: {
+              purchase_kind: "pack",
+              supabase_user_id: "user-1",
+              pack_credits: "100",
+            },
+          },
+        },
+      },
+      admin,
+    );
+    expect(rpcs).toHaveLength(0);
   });
 
   it("on checkout.session.completed (subscription mode): no pack grant", async () => {

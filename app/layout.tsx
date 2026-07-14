@@ -4,6 +4,7 @@ import { Toaster } from "sonner";
 import { UpgradeModalProvider } from "@/components/billing/upgrade-modal-provider";
 import { GenerationJobProvider } from "@/components/ai/generation-provider";
 import { ShareParamCleanup } from "@/components/seo/share-param-cleanup";
+import { serializeJsonLd } from "@/components/seo/json-ld";
 import { getSiteBaseUrl } from "@/lib/site-url";
 import { noFlashScript } from "@/lib/theme-shared";
 import { GoogleAnalytics } from "@next/third-parties/google";
@@ -81,7 +82,7 @@ function JsonLd() {
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+      dangerouslySetInnerHTML={{ __html: serializeJsonLd(schema) }}
     />
   );
 }

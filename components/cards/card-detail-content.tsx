@@ -66,7 +66,7 @@ import { getCurrentUser } from "@/lib/supabase/server";
 import { getEntitlements, ownerExportStamp } from "@/lib/billing/entitlements";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getSiteBaseUrl } from "@/lib/site-url";
-import { breadcrumbJsonLd, JsonLd } from "@/components/seo/json-ld";
+import { breadcrumbJsonLd, JsonLd, serializeJsonLd } from "@/components/seo/json-ld";
 import type { ArtPosition, CardBackFace, FrameStyle } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -235,7 +235,7 @@ export async function CardDetailContent({
       {jsonLd ? (
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
         />
       ) : null}
       {/* Breadcrumbs only for indexable cards — unlisted pages are noindex,

@@ -33,6 +33,7 @@ import {
   type ResolvedCardData,
 } from "@/lib/decks/import-resolution";
 import { getDeckById } from "@/lib/decks/queries";
+import { isSafeImageUrl } from "@/lib/validation/card";
 import { DECK_BOARD_VALUES } from "@/types/deck";
 import type { DeckCardInsert } from "@/types/supabase";
 
@@ -231,9 +232,14 @@ const commitLineSchema = z.object({
       mana_value: z.number().nullable(),
       color_identity: z.array(z.enum(["W", "U", "B", "R", "G"])).max(5),
       rarity: z.string().max(20).nullable(),
-      // https-gated app-side; Scryfall image hosts are already normalized
-      // by the client, but the DB column just stores a URL string.
-      image_url: z.string().url().max(2048).nullable(),
+      // https-gated (isSafeImageUrl) like every other stored image URL —
+      // a bare z.url() would accept javascript:/data: schemes. Scryfall
+      // image hosts are already normalized by the client.
+      image_url: z
+        .string()
+        .max(2048)
+        .refine(isSafeImageUrl, "Image URL must be https.")
+        .nullable(),
     })
     .nullable(),
 });
@@ -303,7 +309,13 @@ export async function commitDeckImportAction(
   );
 
   const inserts: DeckCardInsert[] = [];
-  const quantityUpdates: Array<{ id: string; quantity: number }> = [];
+  // Accumulate quantity bumps PER existing row id. Two committed lines can
+  // resolve to the same existing deck row (e.g. an exact line + a fuzzy-rescued
+  // typo of it, same board/scryfall_id); pushing a separate update for each
+  // (both computed from the same base quantity) made the writes clobber each
+  // other last-write-wins, silently dropping one line's copies. Summing here
+  // and issuing one update per row fixes it.
+  const quantityAddByRowId = new Map<string, { base: number; added: number }>();
   let placeholders = 0;
 
   // Duplicate keys WITHIN the payload merge as we go.
@@ -345,13 +357,12 @@ export async function commitDeckImportAction(
 
     const existing = existingByKey.get(key);
     if (existing) {
-      quantityUpdates.push({
-        id: existing.id,
-        quantity: Math.min(
-          existing.quantity + line.quantity,
-          MAX_ENTRY_QUANTITY,
-        ),
-      });
+      const acc = quantityAddByRowId.get(existing.id) ?? {
+        base: existing.quantity,
+        added: 0,
+      };
+      acc.added += line.quantity;
+      quantityAddByRowId.set(existing.id, acc);
       continue;
     }
 
@@ -369,13 +380,15 @@ export async function commitDeckImportAction(
       return { ok: false, error: insertError.message };
     }
   }
-  if (quantityUpdates.length > 0) {
+  if (quantityAddByRowId.size > 0) {
     const results = await Promise.all(
-      quantityUpdates.map((update) =>
+      Array.from(quantityAddByRowId.entries()).map(([id, { base, added }]) =>
         supabase
           .from("deck_cards")
-          .update({ quantity: update.quantity })
-          .eq("id", update.id)
+          .update({
+            quantity: Math.min(base + added, MAX_ENTRY_QUANTITY),
+          })
+          .eq("id", id)
           .eq("deck_id", deck.id),
       ),
     );
@@ -404,7 +417,7 @@ export async function commitDeckImportAction(
   return {
     ok: true,
     added: inserts.length,
-    merged: quantityUpdates.length,
+    merged: quantityAddByRowId.size,
     placeholders,
   };
 }

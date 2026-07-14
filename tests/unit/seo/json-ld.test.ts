@@ -3,6 +3,7 @@ import {
   breadcrumbJsonLd,
   ITEM_LIST_CAP,
   itemListJsonLd,
+  serializeJsonLd,
 } from "@/components/seo/json-ld";
 import { getSiteBaseUrl } from "@/lib/site-url";
 
@@ -71,5 +72,33 @@ describe("itemListJsonLd", () => {
       items: [{ name: "A & B", path: "/card/x/y" }],
     });
     expect(JSON.parse(JSON.stringify(schema))).toEqual(schema);
+  });
+});
+
+describe("serializeJsonLd (XSS hardening)", () => {
+  it("escapes </script> so a malicious title can't break out of the tag", () => {
+    const out = serializeJsonLd({
+      name: "</script><script>alert(document.cookie)</script>",
+    });
+    // No raw angle brackets survive — the closing tag can't terminate the block.
+    expect(out).not.toContain("<");
+    expect(out).not.toContain(">");
+    expect(out).not.toContain("</script>");
+    expect(out).toContain("\\u003c");
+    expect(out).toContain("\\u003e");
+    // Still parses back to the original data (escapes are JSON unicode escapes).
+    expect(JSON.parse(out)).toEqual({
+      name: "</script><script>alert(document.cookie)</script>",
+    });
+  });
+
+  it("escapes ampersands and the U+2028/U+2029 line terminators", () => {
+    const out = serializeJsonLd({ name: "A & B C D" });
+    expect(out).toContain("\\u0026");
+    expect(out).toContain("\\u2028");
+    expect(out).toContain("\\u2029");
+    expect(out).not.toContain(" ");
+    expect(out).not.toContain(" ");
+    expect(JSON.parse(out)).toEqual({ name: "A & B C D" });
   });
 });

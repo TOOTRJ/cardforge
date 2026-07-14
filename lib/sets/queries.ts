@@ -241,7 +241,10 @@ export async function getSetBySlugPublic(
 ): Promise<CardSetWithOwner | null> {
   if (!isSupabaseConfigured()) return null;
   try {
-    const supabase = await createClient();
+    // Viewer-independent read → cookie-free public client, so the marketing
+    // `/set/[slug]` route stays ISR-eligible (marketing-chrome-reads-no-cookies
+    // invariant).
+    const supabase = createPublicClient();
     const { data: sets } = await supabase
       .from("card_sets")
       .select("*")
@@ -300,10 +303,19 @@ export type SetItem = {
   card: Card;
 };
 
-export async function listCardsInSet(setId: string): Promise<SetItem[]> {
+export async function listCardsInSet(
+  setId: string,
+  { anonymous = false }: { anonymous?: boolean } = {},
+): Promise<SetItem[]> {
   if (!isSupabaseConfigured()) return [];
   try {
-    const supabase = await createClient();
+    // Public routes (the `/set/[slug]` page + booster) pass anonymous:true so
+    // the read is cookie-free (ISR-eligible) AND scoped to the public RLS —
+    // otherwise the owner viewing their own set would seed the booster from
+    // their PRIVATE cards while everyone else sees a different sample. The
+    // owner edit page keeps the default cookie-bound client to see private
+    // cards.
+    const supabase = anonymous ? createPublicClient() : await createClient();
     const { data: items } = await supabase
       .from("card_set_items")
       .select("id, position, card_id, created_at")

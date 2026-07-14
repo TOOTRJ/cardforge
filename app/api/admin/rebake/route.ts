@@ -39,10 +39,18 @@ const DEFAULT_BATCH = 8;
 const MAX_BATCH = 25;
 
 function isAuthorized(request: Request): boolean {
-  // Explicit opt-in for local runs — NOT keyed off NODE_ENV, because a dev
-  // server pointed at the production database (the current .env.local
-  // posture) would otherwise expose an unauthenticated service-role rebake.
-  if (process.env.ALLOW_UNAUTHENTICATED_REBAKE === "true") return true;
+  // Explicit opt-in for LOCAL runs only. This drives the RLS-bypassing
+  // service-role client, so the bypass is additionally gated to non-production:
+  // even if ALLOW_UNAUTHENTICATED_REBAKE ever leaks into a deployed env, a
+  // production build (NODE_ENV === "production") will never honor it. Local dev
+  // (NODE_ENV === "development") — including the .env.local-points-at-prod
+  // posture — still works, and always falls back to requiring CRON_SECRET.
+  if (
+    process.env.ALLOW_UNAUTHENTICATED_REBAKE === "true" &&
+    process.env.NODE_ENV !== "production"
+  ) {
+    return true;
+  }
   const secret = process.env.CRON_SECRET;
   if (!secret) return false;
   return request.headers.get("authorization") === `Bearer ${secret}`;

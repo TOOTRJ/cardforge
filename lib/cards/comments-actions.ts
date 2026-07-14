@@ -88,6 +88,26 @@ export async function createCommentAction(
   if (!user) return notAuthed();
 
   const supabase = await createClient();
+
+  // Only allow commenting on a card the user can actually see — a public or
+  // unlisted card, or one they own. Without this, a user with a bare card id
+  // could comment on someone's PRIVATE card (the FK check bypasses RLS), which
+  // fires an owner notification the owner can't even see or moderate. The DB
+  // policy (migration 0064) enforces the same rule; this returns a clean error.
+  const { data: target } = await supabase
+    .from("cards")
+    .select("visibility, owner_id")
+    .eq("id", cardId)
+    .maybeSingle();
+  if (
+    !target ||
+    (target.visibility !== "public" &&
+      target.visibility !== "unlisted" &&
+      target.owner_id !== user.id)
+  ) {
+    return { ok: false, error: "You can't comment on this card." };
+  }
+
   const { data: row, error } = await supabase
     .from("card_comments")
     .insert({

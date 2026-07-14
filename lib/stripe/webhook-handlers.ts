@@ -129,6 +129,10 @@ async function handleCheckoutCompleted(
   // Subscriptions are provisioned by customer.subscription.* events; here we
   // only grant credits for one-time pack purchases (mode = "payment").
   if (session.mode !== "payment") return;
+  // Only grant once funds have actually settled. `completed` fires before
+  // payment for async/delayed methods (some bank debits, vouchers), so
+  // gating on payment_status prevents handing out credits pre-payment.
+  if (session.payment_status !== "paid") return;
   const meta = session.metadata ?? {};
   if (meta.purchase_kind !== "pack") return;
 
