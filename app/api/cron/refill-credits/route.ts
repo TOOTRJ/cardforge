@@ -42,10 +42,15 @@ export async function GET(request: Request) {
   const admin = createAdminClient();
   const period = currentCreditPeriod();
 
+  // ACTIVE only — trialing is deliberately excluded. A trial's single grant
+  // lands on subscription.created (see webhook-handlers.ts); refilling
+  // trialing here let a no-card 7-day trial spanning a month boundary bank a
+  // second never-expiring allotment without ever paying. A trial is ≤7 days,
+  // so it never legitimately needs a monthly refill.
   const { data: subscribers, error } = await admin
     .from("profiles")
     .select("id, subscription_tier")
-    .in("subscription_status", ["active", "trialing"])
+    .eq("subscription_status", "active")
     .in("subscription_tier", ["plus", "pro"]);
   if (error) {
     return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
