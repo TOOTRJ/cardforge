@@ -2,11 +2,9 @@ import "server-only";
 
 import type Stripe from "stripe";
 import type { createAdminClient } from "@/lib/supabase/admin";
-import {
-  creditRefillKey,
-  currentCreditPeriod,
-} from "@/lib/billing/plans";
-import { monthlyCreditsForTier, tierForPriceId } from "./config";
+import { currentCreditPeriod } from "@/lib/billing/plans";
+import { grantMonthlyCreditsForPeriod } from "@/lib/billing/credit-refill";
+import { tierForPriceId } from "./config";
 
 // All entitlement/credit writes happen here, via the service-role admin client
 // (RLS would block writing these columns from a user client). Handlers are
@@ -17,7 +15,8 @@ import { monthlyCreditsForTier, tierForPriceId } from "./config";
 // AND annual plans both get a monthly allotment. We additionally grant the
 // FIRST month immediately on subscription create/update — deduped against the
 // cron via the same per-user-per-month key — so a new subscriber gets credits
-// without waiting for the next cron tick.
+// without waiting for the next cron tick. Mid-month upgrades get the tier
+// delta topped up via lib/billing/credit-refill (shared with the cron).
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
@@ -97,9 +96,12 @@ async function upsertSubscriptionState(
     .eq("id", userId);
 }
 
-// Grant this month's credit allotment for an active subscription. Idempotent
-// per user per calendar month (same key the cron uses), so calling it on both
-// subscription.created and .updated — and from the cron — grants at most once.
+// Grant this month's credit allotment for an active subscription — the base
+// grant is idempotent per user per calendar month (same key the cron uses),
+// and a mid-month tier upgrade tops up the difference (see credit-refill.ts;
+// before that, the consumed month key meant an upgrade granted NOTHING until
+// the next month). A failed grant throws so the webhook 500s and Stripe
+// retries — the old code discarded the RPC error and acked a lost grant.
 async function maybeGrantMonthlyCredits(
   sub: Stripe.Subscription,
   admin: AdminClient,
@@ -110,15 +112,16 @@ async function maybeGrantMonthlyCredits(
 
   const tier = tierForPriceId(sub.items.data[0]?.price?.id);
   if (!tier || tier === "free") return;
-  const amount = monthlyCreditsForTier(tier);
-  if (amount <= 0) return;
 
-  await admin.rpc("grant_credits", {
-    p_user_id: userId,
-    p_amount: amount,
-    p_reason: "subscription_refill",
-    p_idempotency_key: creditRefillKey(userId, currentCreditPeriod()),
-  });
+  const result = await grantMonthlyCreditsForPeriod(
+    admin,
+    userId,
+    tier,
+    currentCreditPeriod(),
+  );
+  if (!result.ok) {
+    throw new Error(`Credit grant failed for ${userId}: ${result.error}`);
+  }
 }
 
 async function handleCheckoutCompleted(

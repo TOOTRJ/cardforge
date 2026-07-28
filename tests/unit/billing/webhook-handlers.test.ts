@@ -7,8 +7,15 @@ import { MONTHLY_CREDITS } from "@/lib/billing/plans";
 // `customerLookupHit: false` simulates a profile whose stripe_customer_id was
 // never persisted (the 2026-07-11 first-live-trial bug) so the metadata
 // fallback path can be exercised.
-function makeAdmin(opts: { customerLookupHit?: boolean } = {}) {
-  const { customerLookupHit = true } = opts;
+function makeAdmin(
+  opts: {
+    customerLookupHit?: boolean;
+    /** The credit_ledger row under this month's base refill key — null (the
+     *  default) means the month hasn't granted yet (base-grant path). */
+    ledgerRow?: { delta: number } | null;
+  } = {},
+) {
+  const { customerLookupHit = true, ledgerRow = null } = opts;
   const updates: Array<{
     table: string;
     values: Record<string, unknown>;
@@ -23,7 +30,12 @@ function makeAdmin(opts: { customerLookupHit?: boolean } = {}) {
             eq() {
               return {
                 maybeSingle: async () => ({
-                  data: customerLookupHit ? { id: "user-1" } : null,
+                  data:
+                    table === "credit_ledger"
+                      ? ledgerRow
+                      : customerLookupHit
+                        ? { id: "user-1" }
+                        : null,
                   error: null,
                 }),
               };
@@ -152,6 +164,71 @@ describe("handleStripeEvent", () => {
       p_user_id: "user-meta",
       p_amount: MONTHLY_CREDITS.plus,
     });
+  });
+
+  it("on subscription.updated (mid-month upgrade): tops up the tier delta", async () => {
+    // Regression: the month's refill key was already consumed by the Plus
+    // grant, so upgrading to Pro used to grant NOTHING until the next month.
+    const { admin, rpcs } = makeAdmin({
+      ledgerRow: { delta: MONTHLY_CREDITS.plus },
+    });
+    await run(
+      {
+        id: "evt_upgrade",
+        type: "customer.subscription.updated",
+        data: {
+          object: {
+            id: "sub_1",
+            customer: "cus_1",
+            status: "active",
+            cancel_at_period_end: false,
+            items: {
+              data: [
+                { price: { id: "price_pro" }, current_period_end: 1893456000 },
+              ],
+            },
+          },
+        },
+      },
+      admin,
+    );
+
+    const grant = rpcs.find((r) => r.fn === "grant_credits");
+    expect(grant?.args).toMatchObject({
+      p_user_id: "user-1",
+      p_amount: MONTHLY_CREDITS.pro - MONTHLY_CREDITS.plus,
+      p_reason: "subscription_refill",
+    });
+    expect(String(grant?.args.p_idempotency_key)).toMatch(
+      /^refill:user-1:\d{4}-\d{2}:upgrade:pro$/,
+    );
+  });
+
+  it("on subscription.updated (same tier, month already granted): no extra grant", async () => {
+    const { admin, rpcs } = makeAdmin({
+      ledgerRow: { delta: MONTHLY_CREDITS.plus },
+    });
+    await run(
+      {
+        id: "evt_same_tier",
+        type: "customer.subscription.updated",
+        data: {
+          object: {
+            id: "sub_1",
+            customer: "cus_1",
+            status: "active",
+            cancel_at_period_end: false,
+            items: {
+              data: [
+                { price: { id: "price_plus" }, current_period_end: 1893456000 },
+              ],
+            },
+          },
+        },
+      },
+      admin,
+    );
+    expect(rpcs.some((r) => r.fn === "grant_credits")).toBe(false);
   });
 
   it("on subscription.deleted: downgrades to free and clears the sub", async () => {
