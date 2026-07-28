@@ -17,6 +17,8 @@ import { tierForPriceId } from "./config";
 // cron via the same per-user-per-month key — so a new subscriber gets credits
 // without waiting for the next cron tick. Mid-month upgrades get the tier
 // delta topped up via lib/billing/credit-refill (shared with the cron).
+// Trials are the exception: one grant at creation, no refills until the
+// first payment (see maybeGrantMonthlyCredits — the cron skips trialing too).
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
@@ -105,8 +107,16 @@ async function upsertSubscriptionState(
 async function maybeGrantMonthlyCredits(
   sub: Stripe.Subscription,
   admin: AdminClient,
+  opts: { isCreationEvent: boolean },
 ): Promise<void> {
   if (!ACTIVE_STATUSES.has(sub.status)) return;
+  // A TRIAL gets exactly ONE grant: on subscription.created. Without this
+  // gate, a no-card 7-day trial spanning a calendar-month boundary banked a
+  // SECOND month's allotment (never-expiring) from any subscription.updated
+  // event — or the refill cron — firing in the new month, all without a
+  // single payment. Monthly refills resume when the trial converts: the
+  // first paid month's grant lands via the status-active update/cron.
+  if (sub.status === "trialing" && !opts.isCreationEvent) return;
   const userId = await resolveSubscriptionUserId(sub, admin);
   if (!userId) return;
 
@@ -168,7 +178,9 @@ export async function handleStripeEvent(
     case "customer.subscription.updated": {
       const sub = event.data.object as Stripe.Subscription;
       await upsertSubscriptionState(sub, admin);
-      await maybeGrantMonthlyCredits(sub, admin);
+      await maybeGrantMonthlyCredits(sub, admin, {
+        isCreationEvent: event.type === "customer.subscription.created",
+      });
       break;
     }
     case "customer.subscription.deleted":
