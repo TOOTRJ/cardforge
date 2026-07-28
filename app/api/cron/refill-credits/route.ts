@@ -1,11 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
-import {
-  MONTHLY_CREDITS,
-  creditRefillKey,
-  currentCreditPeriod,
-  type PlanTier,
-} from "@/lib/billing/plans";
+import { currentCreditPeriod, type PlanTier } from "@/lib/billing/plans";
+import { grantMonthlyCreditsForPeriod } from "@/lib/billing/credit-refill";
 
 // ---------------------------------------------------------------------------
 // /api/cron/refill-credits — monthly AI-credit refill for active subscribers.
@@ -14,7 +10,9 @@ import {
 // daily (see vercel.json); the per-user-per-month idempotency key means only
 // the first successful run each calendar month actually grants — later runs
 // (and the same-month grant on subscription.created) are no-ops. That also makes
-// the job self-healing: if one day's run fails, the next day catches up.
+// the job self-healing: if one day's run fails, the next day catches up — and
+// via the shared credit-refill helper it also backfills the mid-month upgrade
+// top-up if the webhook missed the tier change.
 //
 // Secured by CRON_SECRET — Vercel sends it as `Authorization: Bearer <secret>`
 // on scheduled invocations.
@@ -56,15 +54,13 @@ export async function GET(request: Request) {
   let granted = 0;
   let failed = 0;
   for (const profile of subscribers ?? []) {
-    const amount = MONTHLY_CREDITS[profile.subscription_tier as PlanTier] ?? 0;
-    if (amount <= 0) continue;
-    const { error: grantError } = await admin.rpc("grant_credits", {
-      p_user_id: profile.id,
-      p_amount: amount,
-      p_reason: "subscription_refill",
-      p_idempotency_key: creditRefillKey(profile.id, period),
-    });
-    if (grantError) failed += 1;
+    const result = await grantMonthlyCreditsForPeriod(
+      admin,
+      profile.id,
+      profile.subscription_tier as PlanTier,
+      period,
+    );
+    if (!result.ok) failed += 1;
     else granted += 1;
   }
 

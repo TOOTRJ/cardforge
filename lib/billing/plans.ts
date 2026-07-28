@@ -147,3 +147,14 @@ export function currentCreditPeriod(now: Date = new Date()): string {
 export function creditRefillKey(userId: string, period: string): string {
   return `refill:${userId}:${period}`;
 }
+
+/** Idempotency key for the mid-month top-up when a user upgrades tiers after
+ *  this month's refill already granted. Keyed per TIER so a re-upgrade in the
+ *  same month (plus → pro → plus → pro) can never double-grant the delta. */
+export function creditUpgradeKey(
+  userId: string,
+  period: string,
+  tier: PlanTier,
+): string {
+  return `refill:${userId}:${period}:upgrade:${tier}`;
+}
