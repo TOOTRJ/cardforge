@@ -134,17 +134,23 @@ async function maybeGrantMonthlyCredits(
   }
 }
 
-async function handleCheckoutCompleted(
+// Grant a one-time pack purchase. Runs for BOTH checkout.session.completed
+// and checkout.session.async_payment_succeeded: for cards `completed` arrives
+// already paid; for async/delayed methods (some bank debits, vouchers)
+// `completed` fires unpaid — the grant used to be silently skipped and the
+// customer's money kept with nothing delivered — and the credits now land on
+// the later async_payment_succeeded event. Idempotency is keyed by the
+// SESSION id (not the event id): the two event types carry different event
+// ids, so a session-scoped key is what guarantees one grant per purchase no
+// matter which (or how many) of them arrive.
+async function handleCheckoutPaid(
   session: Stripe.Checkout.Session,
   admin: AdminClient,
-  eventId: string,
 ): Promise<void> {
   // Subscriptions are provisioned by customer.subscription.* events; here we
   // only grant credits for one-time pack purchases (mode = "payment").
   if (session.mode !== "payment") return;
-  // Only grant once funds have actually settled. `completed` fires before
-  // payment for async/delayed methods (some bank debits, vouchers), so
-  // gating on payment_status prevents handing out credits pre-payment.
+  // Only grant once funds have actually settled.
   if (session.payment_status !== "paid") return;
   const meta = session.metadata ?? {};
   if (meta.purchase_kind !== "pack") return;
@@ -153,12 +159,17 @@ async function handleCheckoutCompleted(
   const credits = Number(meta.pack_credits ?? 0);
   if (!userId || !Number.isFinite(credits) || credits <= 0) return;
 
-  await admin.rpc("grant_credits", {
+  const { error } = await admin.rpc("grant_credits", {
     p_user_id: userId,
     p_amount: credits,
     p_reason: "pack_purchase",
-    p_idempotency_key: eventId,
+    p_idempotency_key: `pack:${session.id}`,
   });
+  // Throw so the webhook 500s and Stripe retries — a swallowed error here is
+  // money taken with no credits delivered.
+  if (error) {
+    throw new Error(`Pack grant failed for ${userId}: ${error.message}`);
+  }
 }
 
 export async function handleStripeEvent(
@@ -168,10 +179,12 @@ export async function handleStripeEvent(
   const { admin } = deps;
   switch (event.type) {
     case "checkout.session.completed":
-      await handleCheckoutCompleted(
+    // Async/delayed payment methods settle AFTER `completed` (which arrives
+    // unpaid and grants nothing) — the pack's credits land on this event.
+    case "checkout.session.async_payment_succeeded":
+      await handleCheckoutPaid(
         event.data.object as Stripe.Checkout.Session,
         admin,
-        event.id,
       );
       break;
     case "customer.subscription.created":
