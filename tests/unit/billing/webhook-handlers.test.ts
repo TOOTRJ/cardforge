@@ -166,6 +166,72 @@ describe("handleStripeEvent", () => {
     });
   });
 
+  it("on subscription.updated while trialing: NO grant (one trial grant, at creation)", async () => {
+    // Regression: a no-card 7-day trial spanning a month boundary banked a
+    // second month's allotment from any updated event (or the cron) firing
+    // in the new month — without a single payment. State writes still land.
+    const { admin, updates, rpcs } = makeAdmin();
+    await run(
+      {
+        id: "evt_trial_update",
+        type: "customer.subscription.updated",
+        data: {
+          object: {
+            id: "sub_1",
+            customer: "cus_1",
+            status: "trialing",
+            cancel_at_period_end: true,
+            items: {
+              data: [
+                { price: { id: "price_plus" }, current_period_end: 1893456000 },
+              ],
+            },
+          },
+        },
+      },
+      admin,
+    );
+    expect(updates[0].values).toMatchObject({
+      subscription_status: "trialing",
+      cancel_at_period_end: true,
+    });
+    expect(rpcs.some((r) => r.fn === "grant_credits")).toBe(false);
+  });
+
+  it("on subscription.updated when a trial converts to active: grants the month", async () => {
+    // The first PAID month's allotment lands at conversion (trial grant was
+    // last month's key, so the base grant fires fresh here).
+    const { admin, rpcs } = makeAdmin();
+    await run(
+      {
+        id: "evt_trial_convert",
+        type: "customer.subscription.updated",
+        data: {
+          object: {
+            id: "sub_1",
+            customer: "cus_1",
+            status: "active",
+            cancel_at_period_end: false,
+            items: {
+              data: [
+                { price: { id: "price_plus" }, current_period_end: 1893456000 },
+              ],
+            },
+          },
+        },
+      },
+      admin,
+    );
+    const grant = rpcs.find((r) => r.fn === "grant_credits");
+    expect(grant?.args).toMatchObject({
+      p_user_id: "user-1",
+      p_amount: MONTHLY_CREDITS.plus,
+    });
+    expect(String(grant?.args.p_idempotency_key)).toMatch(
+      /^refill:user-1:\d{4}-\d{2}$/,
+    );
+  });
+
   it("on subscription.updated (mid-month upgrade): tops up the tier delta", async () => {
     // Regression: the month's refill key was already consumed by the Plus
     // grant, so upgrading to Pro used to grant NOTHING until the next month.
