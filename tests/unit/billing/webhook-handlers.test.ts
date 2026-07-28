@@ -325,7 +325,7 @@ describe("handleStripeEvent", () => {
     expect(rpcs.some((r) => r.fn === "grant_credits")).toBe(false);
   });
 
-  it("on checkout.session.completed (pack): grants pack credits keyed by event id", async () => {
+  it("on checkout.session.completed (pack): grants pack credits keyed by SESSION id", async () => {
     const { admin, rpcs } = makeAdmin();
     await run(
       {
@@ -333,6 +333,7 @@ describe("handleStripeEvent", () => {
         type: "checkout.session.completed",
         data: {
           object: {
+            id: "cs_pack_1",
             mode: "payment",
             payment_status: "paid",
             client_reference_id: "user-1",
@@ -353,7 +354,53 @@ describe("handleStripeEvent", () => {
         p_user_id: "user-1",
         p_amount: 100,
         p_reason: "pack_purchase",
-        p_idempotency_key: "evt_pack_1",
+        // Session-scoped (not event-scoped) so completed +
+        // async_payment_succeeded for one purchase can never grant twice.
+        p_idempotency_key: "pack:cs_pack_1",
+      },
+    });
+  });
+
+  it("on checkout.session.async_payment_succeeded (pack): grants when the funds settle", async () => {
+    // Regression: async/delayed payment methods fire `completed` UNPAID (no
+    // grant, correctly) — but the later settlement event was unhandled, so
+    // the customer paid and never received the credits.
+    const { admin, rpcs } = makeAdmin();
+    const session = {
+      id: "cs_pack_async",
+      mode: "payment",
+      client_reference_id: "user-1",
+      metadata: {
+        purchase_kind: "pack",
+        supabase_user_id: "user-1",
+        pack_credits: "30",
+      },
+    };
+    await run(
+      {
+        id: "evt_pack_completed_unpaid",
+        type: "checkout.session.completed",
+        data: { object: { ...session, payment_status: "unpaid" } },
+      },
+      admin,
+    );
+    expect(rpcs).toHaveLength(0);
+
+    await run(
+      {
+        id: "evt_pack_settled",
+        type: "checkout.session.async_payment_succeeded",
+        data: { object: { ...session, payment_status: "paid" } },
+      },
+      admin,
+    );
+    expect(rpcs).toHaveLength(1);
+    expect(rpcs[0]).toMatchObject({
+      fn: "grant_credits",
+      args: {
+        p_user_id: "user-1",
+        p_amount: 30,
+        p_idempotency_key: "pack:cs_pack_async",
       },
     });
   });
