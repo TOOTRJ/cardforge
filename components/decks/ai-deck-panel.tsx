@@ -34,8 +34,8 @@ import { StylePicker } from "@/components/ai/style-picker";
 //
 // Generated decks and cards publish PUBLICLY by default; failed steps
 // (usually an image) retry individually without regenerating the batch.
-// Card count per generation is capped server-side (3 until subscriptions;
-// admins exempt).
+// Card count per generation is capped server-side (the 60-step ceiling when
+// billing is on — credits are the only limiter; 3 on billing-off deploys).
 // ---------------------------------------------------------------------------
 
 const FORMAT_OPTIONS = [

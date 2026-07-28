@@ -66,7 +66,8 @@ export function useGenerationContext(): GenerationContextValue {
 
 // How many card steps to run at once. Each step is one image generation;
 // a small pool cuts a big deck's wall-clock ~POOL× without tripping the
-// per-minute AI rate limit (20/min for non-admins) at ~11s/image.
+// per-minute AI rate limit (40/min for non-admins) at ~11s/image — a full
+// 60-step job peaks around 16 calls/min on this pool.
 const STEP_CONCURRENCY = 3;
 
 const KIND_LABELS: Record<JobPayload["kind"], string> = {

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getCurrentUser } from "@/lib/supabase/server";
+import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { isDesignAiConfigured } from "@/lib/ai/provider";
 import { isImageRemixConfigured } from "@/lib/ai/image-gen";
@@ -13,7 +13,11 @@ import {
   getFreshCreditBalance,
   logAiCall,
 } from "@/lib/ai/rate-limit";
-import { batchCardLimit, clampBatchSize } from "@/lib/ai/generation-limits";
+import {
+  BATCH_CARD_LIMIT,
+  batchCardLimit,
+  clampBatchSize,
+} from "@/lib/ai/generation-limits";
 import {
   SET_GENERATION_ENABLED,
   createCardGenerationJob,
@@ -32,8 +36,10 @@ import { getEntitlements } from "@/lib/billing/entitlements";
 // step (concept + every card's text in one cohesive batch). The client then
 // advances the job one step at a time via /api/ai/jobs/[id]/step.
 //
-// Card count is clamped to the caller's batch limit: 3 for everyone until
-// subscriptions launch, admins exempt (lib/ai/generation-limits.ts).
+// Card count is clamped to the caller's batch limit (lib/ai/generation-
+// limits.ts): the 60-step steppable ceiling when billing is on — credits are
+// the only limiter (owner decision, 2026-07-28) — or 3 on billing-off
+// deployments where images aren't credit-charged.
 // ---------------------------------------------------------------------------
 
 export const runtime = "nodejs";
@@ -181,12 +187,28 @@ export async function POST(request: Request) {
   }
 
   const limit = await batchCardLimit();
-  const size =
-    parsed.data.kind === "card" || parsed.data.kind === "card_remix"
-      ? 1
-      : parsed.data.kind === "deck_remix"
-        ? limit // remix caps at the batch limit; entries beyond it are skipped
-        : clampBatchSize(parsed.data.size ?? limit, limit);
+  let size: number;
+  if (parsed.data.kind === "card" || parsed.data.kind === "card_remix") {
+    size = 1;
+  } else if (parsed.data.kind === "deck_remix") {
+    // Remix runs min(batch limit, remixable entries) — size the credit
+    // pre-check on what will actually run, not the ceiling (with the 60-step
+    // limit, sizing on the ceiling would demand 61 credits to remix a
+    // 5-card deck). RLS hides decks that aren't the caller's; the count
+    // then reads 0 and createDeckRemixJob rejects ownership downstream.
+    const supabase = await createClient();
+    const { count } = await supabase
+      .from("deck_cards")
+      .select("*", { count: "exact", head: true })
+      .eq("deck_id", parsed.data.deck_id)
+      .or("card_id.not.is.null,scryfall_id.not.is.null");
+    size = Math.max(1, Math.min(limit, count ?? limit));
+  } else {
+    // A missing size defaults to the classic 3-card batch, never the
+    // ceiling — the UI always sends an explicit size; a bare API call
+    // shouldn't get a 60-card (and 61-credit) job by omission.
+    size = clampBatchSize(parsed.data.size ?? BATCH_CARD_LIMIT, limit);
+  }
 
   const rate = await checkAiRateLimit(user.id);
   if (!rate.ok) {
@@ -195,9 +217,12 @@ export async function POST(request: Request) {
       { status: 429, headers: { "Retry-After": String(rate.retryAfterSeconds) } },
     );
   }
-  // Single-card jobs keep the legacy flow's own daily ceiling as an
-  // anti-abuse backstop (credits are the user-facing currency now).
-  if (parsed.data.kind === "card") {
+  // Per-flow daily image ceilings apply ONLY while billing is off (previews,
+  // local): there images aren't credit-charged, so the caps are what protect
+  // AI spend. With billing on, credits are the sole limiter (owner decision,
+  // 2026-07-28) — a user can generate as many cards as they hold credits.
+  const dailyCapsActive = !isBillingEnabled();
+  if (parsed.data.kind === "card" && dailyCapsActive) {
     const daily = await checkRandomCardDailyLimit(user.id);
     if (!daily.ok) {
       return NextResponse.json(
@@ -209,8 +234,7 @@ export async function POST(request: Request) {
       );
     }
   }
-  // Card remixes likewise keep the legacy route's own daily ceiling, and need
-  // the image-to-image model on top of the design model.
+  // Card remixes need the image-to-image model on top of the design model.
   if (parsed.data.kind === "card_remix") {
     if (!isImageRemixConfigured()) {
       return NextResponse.json(
@@ -218,28 +242,31 @@ export async function POST(request: Request) {
         { status: 503 },
       );
     }
-    const daily = await checkDailyActionLimit(
-      user.id,
-      "remix_card",
-      REMIX_DAILY_LIMIT,
-      "AI remix",
-    );
-    if (!daily.ok) {
-      return NextResponse.json(
-        { ok: false, error: daily.message },
-        {
-          status: 429,
-          headers: { "Retry-After": String(daily.retryAfterSeconds) },
-        },
+    if (dailyCapsActive) {
+      const daily = await checkDailyActionLimit(
+        user.id,
+        "remix_card",
+        REMIX_DAILY_LIMIT,
+        "AI remix",
       );
+      if (!daily.ok) {
+        return NextResponse.json(
+          { ok: false, error: daily.message },
+          {
+            status: 429,
+            headers: { "Retry-After": String(daily.retryAfterSeconds) },
+          },
+        );
+      }
     }
   }
 
   // Deck/set batch flows share one per-day image ceiling (admins exempt).
   if (
-    parsed.data.kind === "deck" ||
-    parsed.data.kind === "deck_remix" ||
-    parsed.data.kind === "set"
+    dailyCapsActive &&
+    (parsed.data.kind === "deck" ||
+      parsed.data.kind === "deck_remix" ||
+      parsed.data.kind === "set")
   ) {
     const daily = await checkDailyActionLimit(
       user.id,

@@ -23,8 +23,9 @@ export const CREDIT_UNIT = "AI generation";
 // customer's Stripe subscription history.
 export const TRIAL_DAYS = 7;
 
-// Monthly credit allotment per tier. Free is the one-time signup grant (no auto
-// refill yet); Plus/Pro are granted each billing cycle on Stripe `invoice.paid`.
+// Monthly credit allotment per tier. Free is the ONE-TIME signup grant — it
+// deliberately never refills (owner decision, 2026-07-28); Plus/Pro are
+// granted monthly via the refill cron + subscription webhook.
 // Sized so even a max-usage subscriber keeps AI cost (~$0.11 per generation,
 // measured) under ~40% of net revenue. Tune in tandem with prices below.
 export const MONTHLY_CREDITS: Record<PlanTier, number> = {

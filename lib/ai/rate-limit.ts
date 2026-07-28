@@ -17,13 +17,14 @@ async function isCurrentUserAdmin(): Promise<boolean> {
 }
 
 // Per-user windowed caps. Two windows so a user can't (a) spam the assistant
-// in a tight burst or (b) slowly drain the Anthropic spend cap over a day.
-// Tuned for "comfortable solo design session" — typical use is a few calls
-// per card; aggressive use is the brainstorm spike where a user fires off
-// several actions in a minute. 200/day comfortably covers a heavy design
-// day and shuts down anything resembling an abuse script.
-const PER_MINUTE_LIMIT = 20;
-const PER_DAY_LIMIT = 200;
+// in a tight burst or (b) slowly drain the AI spend cap over a day. These are
+// pure ABUSE BACKSTOPS: credits are the user-facing limiter (owner decision,
+// 2026-07-28), so both windows are sized to never bind before credits do —
+// a full 60-step batch job on the 3-worker client pool logs ~16 calls/min,
+// and 500/day clears even a whale spending multiple credit packs in a day,
+// while still shutting down anything resembling an abuse script.
+const PER_MINUTE_LIMIT = 40;
+const PER_DAY_LIMIT = 500;
 const MINUTE_MS = 60_000;
 const DAY_MS = 24 * 60 * 60_000;
 
@@ -43,14 +44,15 @@ export type AiActionLabel =
   | "generate_set_icon"
   | "generate_deck_cards";
 
-// Per-user daily quotas for the image-generating flows. Image generation is
-// the priciest call we make, so each flow gets its own cap on top of the
-// global PER_DAY_LIMIT. 10/day matches the v2 spec.
+// Per-user daily quotas for the image-generating flows — enforced ONLY when
+// billing is DISABLED (previews, local), where image calls aren't credit-
+// charged and these caps are all that protects AI spend. With billing on,
+// credits are the sole limiter (owner decision, 2026-07-28) and the jobs
+// route skips these checks entirely.
 const RANDOM_CARD_DAILY_LIMIT = 10;
 export const REMIX_DAILY_LIMIT = 10;
 // Deck/set batch flows generate many images per job, so the ceiling is the
-// per-DAY total across all batch jobs (not per job). Generous — it clears a
-// heavy design day and only bites an abuse script. Admins are exempt.
+// per-DAY total across all batch jobs (not per job). Admins are exempt.
 export const DECK_CARDS_DAILY_LIMIT = 60;
 
 export type RateLimitResult =
