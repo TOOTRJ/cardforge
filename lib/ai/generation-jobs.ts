@@ -96,6 +96,13 @@ export type JobStep = {
   /** Stamped by claim_job_step when the step flips to "running"; a claim
    *  older than 5 minutes is treated as dead and may be reclaimed. */
   claimed_at?: string | null;
+  /** The ledger ref of the charge attempt that COMPLETED this step
+   *  ("spend:{jobId}:{stepKey}:{uuid}"), stamped on a charged "done". The
+   *  reconcile-credits cron treats a spend as legitimate only when its step
+   *  is done AND carries that exact ref — any other aged charge (crashed
+   *  attempt, superseded duplicate) gets refunded. Null when the winning
+   *  attempt didn't charge (admin / billing off). */
+  spend_ref?: string | null;
 };
 
 export type GenerationJobRow = {
@@ -453,9 +460,9 @@ async function executeJobStep(
         : { ...step, status: "failed", error: "Missing entry plan." };
     }
     case "card":
-      return runSingleCardStep(userId, step, job.plan as CardJobPlan);
+      return runSingleCardStep(userId, job.id, step, job.plan as CardJobPlan);
     case "card_remix":
-      return runCardRemixStep(userId, step, job.plan as CardRemixJobPlan);
+      return runCardRemixStep(userId, job.id, step, job.plan as CardRemixJobPlan);
     default:
       return { ...step, status: "failed", error: "Unknown job kind." };
   }
@@ -497,15 +504,27 @@ async function claimJobStep(
  * failed step returns its credit" holds uniformly (cards, remixes, covers,
  * icons). A retried step reserves again — the charge always belongs to the
  * attempt that succeeded.
+ *
+ * Every charge attempt carries a unique ledger ref (spend:{job}:{step}:{uuid})
+ * and refunds under `refund:{that ref}`, so a charge orphaned by a platform
+ * kill mid-body — the one failure this wrapper CANNOT refund — is picked up
+ * by the reconcile-credits cron, and the two refund paths can never both
+ * land for one spend. A charged success stamps the ref onto the step
+ * (spend_ref) as the cron's proof the charge earned its keep.
  */
 async function withCreditedStep(
   userId: string,
+  jobId: string,
   amount: number,
   reason: string,
   step: JobStep,
   body: () => Promise<JobStep>,
 ): Promise<JobStep> {
-  const reserve = await spendCredits(amount, reason, { failClosed: true });
+  const ref = `spend:${jobId}:${step.key}:${crypto.randomUUID()}`;
+  const reserve = await spendCredits(amount, reason, {
+    failClosed: true,
+    ref,
+  });
   if (!reserve.ok) {
     return { ...step, status: "failed", error: reserve.message };
   }
@@ -513,7 +532,9 @@ async function withCreditedStep(
   // uncharged, and refunding those would MINT credits out of thin air
   // (grant_credits has no matching-spend check).
   const refundIfCharged = async () => {
-    if (reserve.charged) await refundCredits(userId, amount, reason);
+    if (reserve.charged) {
+      await refundCredits(userId, amount, reason, `refund:${ref}`);
+    }
   };
   let result: JobStep;
   try {
@@ -524,8 +545,11 @@ async function withCreditedStep(
   }
   if (result.status === "failed") {
     await refundIfCharged();
+    return { ...result, spend_ref: null };
   }
-  return result;
+  // Success: stamp the charging ref (or clear a stale one from a prior
+  // attempt when this run was uncharged — admin / billing off).
+  return { ...result, spend_ref: reserve.charged ? ref : null };
 }
 
 type GeneratedCardStepConfig = {
@@ -553,10 +577,11 @@ type GeneratedCardStepConfig = {
  */
 async function runGeneratedCardStep(
   userId: string,
+  jobId: string,
   step: JobStep,
   config: GeneratedCardStepConfig,
 ): Promise<JobStep> {
-  return withCreditedStep(userId, 1, config.reason, step, async () => {
+  return withCreditedStep(userId, jobId, 1, config.reason, step, async () => {
     const card = config.card;
     let cardId = step.card_id;
 
@@ -701,13 +726,14 @@ export async function createCardGenerationJob(
  *  ledger reason and the user's locked frame. */
 async function runSingleCardStep(
   userId: string,
+  jobId: string,
   step: JobStep,
   plan: CardJobPlan,
 ): Promise<JobStep> {
   const style = plan.style?.trim()
     ? ` Rendered strictly in ${plan.style.trim()} style.`
     : "";
-  return runGeneratedCardStep(userId, step, {
+  return runGeneratedCardStep(userId, jobId, step, {
     reason: "generate_random_card",
     artLogAction: "generate_random_art",
     card: plan.card,
@@ -796,6 +822,7 @@ const REMIX_IMAGE_TIMEOUT_MS = 60_000;
  *  the whole pipeline; the credit wrapper refunds every failed attempt. */
 async function runCardRemixStep(
   userId: string,
+  jobId: string,
   step: JobStep,
   plan: CardRemixJobPlan,
 ): Promise<JobStep> {
@@ -804,6 +831,7 @@ async function runCardRemixStep(
   }
   return withCreditedStep(
     userId,
+    jobId,
     creditCostFor("remix_card"),
     "remix_card",
     step,
@@ -1194,7 +1222,7 @@ async function runCardStep(
   step: JobStep,
   card: DesignedCard,
 ): Promise<JobStep> {
-  return runGeneratedCardStep(userId, step, {
+  return runGeneratedCardStep(userId, job.id, step, {
     reason: "generate_deck",
     artLogAction: "generate_deck_cards",
     card,
@@ -1287,7 +1315,7 @@ async function runDeckCardStep(
   const card = plan.cards[cardIndex];
   // Commander slot: force the Legendary supertype the frame renders.
   const isCommander = plan.roles[cardIndex] === "commander";
-  return runGeneratedCardStep(userId, step, {
+  return runGeneratedCardStep(userId, job.id, step, {
     reason: "generate_deck",
     artLogAction: "generate_deck_cards",
     card,
@@ -1326,7 +1354,7 @@ async function runDeckRemixStep(
 
   // A failed remix step carries no card_id, so its retry reruns the whole
   // pipeline; the credit wrapper refunds every failed attempt.
-  return withCreditedStep(userId, 1, "generate_deck", step, () =>
+  return withCreditedStep(userId, job.id, 1, "generate_deck", step, () =>
     executeDeckRemixStep(userId, job, step, plan, entry),
   );
 }
@@ -1615,7 +1643,7 @@ async function runCoverStep(
   step: JobStep,
 ): Promise<JobStep> {
   await logAiCall(userId, job.kind === "set" ? "generate_deck" : "generate_deck_cards");
-  return withCreditedStep(userId, 1, "generate_deck", step, async () => {
+  return withCreditedStep(userId, job.id, 1, "generate_deck", step, async () => {
     const { prompt, aspect } = coverPrompt(job);
     const image = await generatePlainImage(prompt, aspect);
     if (!image.ok) {
@@ -1657,7 +1685,7 @@ async function runIconStep(
   step: JobStep,
 ): Promise<JobStep> {
   await logAiCall(userId, "generate_set_icon");
-  return withCreditedStep(userId, 1, "generate_set_icon", step, async () => {
+  return withCreditedStep(userId, job.id, 1, "generate_set_icon", step, async () => {
     const image = await generatePlainImage(iconPrompt(job.plan as SetJobPlan));
     if (!image.ok) {
       return { ...step, status: "failed", error: image.error };
@@ -1693,6 +1721,9 @@ async function patchJobStep(
     status: step.status,
     card_id: step.card_id ?? null,
     error: step.error ?? null,
+    // Which charge attempt completed the step (reconciliation proof) — null
+    // clears a stale ref from a prior attempt.
+    spend_ref: step.spend_ref ?? null,
     // The step is no longer running — drop the claim stamp.
     claimed_at: null,
   };

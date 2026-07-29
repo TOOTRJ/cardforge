@@ -255,6 +255,15 @@ export type SpendOptions = {
    * so the user is made whole if the generation then fails.
    */
   failClosed?: boolean;
+  /**
+   * Globally-unique reference stored on the ledger row
+   * ("spend:{jobId}:{stepKey}:{uuid}"). Links the charge to the job-step
+   * attempt that made it, so the reconcile-credits cron can refund a charge
+   * orphaned by a platform kill (charge committed, refund never ran). Job
+   * steps MUST pass this; leaving it unset writes a null key the
+   * reconciliation sweep can never see.
+   */
+  ref?: string;
 };
 
 const CREDIT_CHECK_FAILED_MESSAGE =
@@ -300,6 +309,7 @@ export async function spendCredits(
     const { data, error } = await supabase.rpc("consume_credits", {
       p_amount: amount,
       p_reason: reason,
+      ...(options.ref ? { p_ref: options.ref } : {}),
     });
     if (error) return onInfraError();
     const row = Array.isArray(data) ? data[0] : data;
@@ -358,6 +368,11 @@ export async function refundCredits(
   userId: string,
   amount: number,
   reason: string,
+  /** Override the refund's ledger idempotency key. Job steps pass
+   *  `refund:{spendRef}` so each charge attempt is refundable EXACTLY once —
+   *  the in-process refund and the reconcile-credits cron can then race
+   *  without ever double-refunding one spend. */
+  idempotencyKey?: string,
 ): Promise<void> {
   if (amount <= 0) return;
   // Billing off → we never charged, so there's nothing to refund.
@@ -374,11 +389,12 @@ export async function refundCredits(
       p_user_id: userId,
       p_amount: amount,
       p_reason: "refund",
-      // Globally unique per refund. Date.now() was NOT unique enough: two
-      // parallel steps of one job failing in the same millisecond shared a
-      // key, and grant_credits' idempotency guard silently swallowed the
-      // second refund.
-      p_idempotency_key: `refund:${reason}:${userId}:${crypto.randomUUID()}`,
+      // Default: globally unique per refund. Date.now() was NOT unique
+      // enough: two parallel steps of one job failing in the same
+      // millisecond shared a key, and grant_credits' idempotency guard
+      // silently swallowed the second refund.
+      p_idempotency_key:
+        idempotencyKey ?? `refund:${reason}:${userId}:${crypto.randomUUID()}`,
     });
     if (error) {
       console.error(

@@ -1231,7 +1231,7 @@ export type Database = {
     };
     Functions: {
       consume_credits: {
-        Args: { p_amount: number; p_reason: string };
+        Args: { p_amount: number; p_reason: string; p_ref?: string };
         Returns: {
           ok: boolean;
           balance: number;
