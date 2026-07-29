@@ -35,6 +35,60 @@ export type MonthlyGrantResult =
   | { ok: true; granted: number }
   | { ok: false; error: string };
 
+/** PostgREST caps un-ranged selects at 1000 rows — the refill sweep MUST
+ *  paginate or subscriber #1001+ silently never refills (and the next day's
+ *  "self-healing" rerun drops the very same tail). Exported for tests. */
+export const REFILL_PAGE_SIZE = 1000;
+
+export type RefillSweepResult =
+  | { ok: true; processed: number; granted: number; failed: number }
+  | { ok: false; error: string };
+
+/**
+ * The daily refill sweep: page through EVERY active paid subscriber (id-ordered
+ * ranges of REFILL_PAGE_SIZE) and run the monthly grant for each. Trialing is
+ * deliberately excluded — a trial's single grant lands on subscription.created
+ * (see webhook-handlers.ts); refilling trialing here let a no-card 7-day trial
+ * spanning a month boundary bank a second never-expiring allotment without
+ * ever paying. Offset pagination is stable because grants never change the
+ * filtered columns. A page-read failure aborts with the stats so far — the
+ * grants are idempotent, so the next daily run resumes harmlessly.
+ */
+export async function refillActiveSubscribers(
+  admin: CreditGrantClient,
+  period: string,
+): Promise<RefillSweepResult> {
+  let processed = 0;
+  let granted = 0;
+  let failed = 0;
+
+  for (let from = 0; ; from += REFILL_PAGE_SIZE) {
+    const { data: page, error } = await admin
+      .from("profiles")
+      .select("id, subscription_tier")
+      .eq("subscription_status", "active")
+      .in("subscription_tier", ["plus", "pro"])
+      .order("id", { ascending: true })
+      .range(from, from + REFILL_PAGE_SIZE - 1);
+    if (error) return { ok: false, error: error.message };
+
+    for (const profile of page ?? []) {
+      const result = await grantMonthlyCreditsForPeriod(
+        admin,
+        profile.id,
+        profile.subscription_tier as PlanTier,
+        period,
+      );
+      if (!result.ok) failed += 1;
+      else granted += 1;
+    }
+    processed += page?.length ?? 0;
+    if ((page?.length ?? 0) < REFILL_PAGE_SIZE) break;
+  }
+
+  return { ok: true, processed, granted, failed };
+}
+
 /**
  * Grant the user's monthly allotment for `tier` in `period` (idempotent), or
  * top up the shortfall after a mid-month upgrade. `granted` is what this call
