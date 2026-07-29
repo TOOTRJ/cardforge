@@ -74,7 +74,7 @@ export const PLANS: PlanDisplay[] = [
     priceUsd: 0,
     tagline: "Design and share custom cards, forever free.",
     features: [
-      "5 AI generation credits to start",
+      "5 AI credits to start — every AI tool included",
       "Every MTG-style frame & finish",
       "PNG export (watermarked)",
       "Up to 50 saved cards",
@@ -103,9 +103,11 @@ export const PLANS: PlanDisplay[] = [
     priceUsd: 15,
     annualUsd: 150,
     tagline: "For power users building whole decks with AI.",
+    // AI deck generation is NOT listed as a perk: every AI tool is open to
+    // every tier — credits are the only limiter (owner decision, 2026-07-28).
+    // Pro's deck story is the credit headroom, not an unlock.
     features: [
-      "75 AI credits every month",
-      "AI “generate a whole deck”",
+      "75 AI credits every month — enough for whole decks",
       "Batch & whole-deck export",
       "Unlimited saved cards",
       "Priority AI queue",
