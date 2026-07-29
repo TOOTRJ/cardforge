@@ -21,7 +21,6 @@ export type Entitlements = {
   removeWatermark: boolean;
   maxExportPreset: "default" | "hd";
   allowBatchExport: boolean;
-  allowDeckGen: boolean;
   premiumFrames: boolean;
   /** Max saved cards. -1 = unlimited. */
   cardCapacity: number;
@@ -34,7 +33,6 @@ type Perks = Pick<
   | "removeWatermark"
   | "maxExportPreset"
   | "allowBatchExport"
-  | "allowDeckGen"
   | "premiumFrames"
   | "cardCapacity"
 >;
@@ -43,7 +41,6 @@ const BASE_PERKS: Perks = {
   removeWatermark: false,
   maxExportPreset: "default",
   allowBatchExport: false,
-  allowDeckGen: false,
   premiumFrames: false,
   cardCapacity: 50,
 };
@@ -61,7 +58,6 @@ const TIER_PERKS: Record<PlanTier, Partial<Perks>> = {
     maxExportPreset: "hd",
     premiumFrames: true,
     allowBatchExport: true,
-    allowDeckGen: true,
     cardCapacity: -1,
   },
 };
@@ -88,7 +84,6 @@ const UNLOCKED: Entitlements = {
   removeWatermark: true,
   maxExportPreset: "hd",
   allowBatchExport: true,
-  allowDeckGen: true,
   premiumFrames: true,
   cardCapacity: -1,
   currentPeriodEnd: null,
