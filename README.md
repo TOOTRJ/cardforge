@@ -56,10 +56,13 @@ npx playwright test               # full suite, on its own :3100 server
   in `/admin/frame-compare` (`lib/cards/frame-availability.ts`); unverified
   kinds/frames render as disabled "Soon" chips.
 - **Watermarks & basic lands**: `cards.watermark` (jsonb) holds the faint
-  mark behind rules text. Basic lands (by subtype) automatically print the
-  large mana symbol instead of rules text (`lib/cards/watermark.ts`); the
-  creator seeds Land cards as the basic matching the frame color and offers
-  an icon picker on the Text & stats step.
+  mark behind rules text. BASIC lands — the `Basic` supertype plus a basic
+  land type (Wastes by name) — automatically print the large mana symbol
+  instead of rules text (`lib/cards/watermark.ts`, one rule for both
+  renderers and the creator); nonbasic lands always print their text. The
+  creator seeds a new Land as the basic matching the frame color, drops the
+  seed when the card is renamed or imported as a nonbasic, and the Text &
+  stats step carries a Basic/Nonbasic toggle plus the icon picker.
 - **Preview ↔ export parity**: both renderers read the same frame profiles
   (`lib/cards/template-layout.ts`); any change inside card pixels must land in
   `components/cards/card-preview.tsx` **and** `lib/render/card-image.tsx`

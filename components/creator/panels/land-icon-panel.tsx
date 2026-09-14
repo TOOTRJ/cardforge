@@ -1,11 +1,12 @@
 "use client";
 
-// Land icon panel — the Text & stats step for BASIC lands. Basics print a
-// large mana symbol instead of rules text, so the step's only job is the
-// icon: it follows the land type automatically (Forest → {G}), and the user
-// can override it with another symbol or upload their own mark. Overrides
-// write the card's `watermark` (size "large"); the automatic state stores
-// nothing — both renderers derive it from the basic subtype
+// Land icon panel — the Text & stats step for BASIC lands (the Land type
+// toggle above it decides basic vs nonbasic). Basics print a large mana
+// symbol instead of rules text, so the step's only job is the icon: it
+// follows the land type automatically (Forest → {G}), and the user can
+// override it with another symbol or upload their own mark. Overrides write
+// the card's `watermark` (size "large"); the automatic state stores nothing
+// — both renderers derive it from the card's Basic supertype + land type
 // (lib/cards/watermark.ts resolveWatermark).
 
 import { useRef, useState } from "react";
@@ -168,9 +169,8 @@ export function LandIconPanel({ userId, autoKey }: LandIconPanelProps) {
               </div>
 
               <p className="text-[11px] text-subtle">
-                Want rules text instead? Remove the basic land subtype
-                (Plains, Island, Swamp, Mountain, Forest, Wastes) on the
-                Identity step.
+                Want rules text instead? Switch the land type above to
+                Nonbasic — basics print only the symbol.
               </p>
             </div>
           </FieldGroup>

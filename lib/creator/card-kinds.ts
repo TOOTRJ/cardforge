@@ -34,6 +34,9 @@ import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
 import {
   BASIC_LAND_NAME_BY_KEY,
   basicLandNameForColorKey,
+  basicSubtypeManaKey,
+  hasBasicSupertype,
+  isBasicLandTitle,
 } from "@/lib/cards/watermark";
 import { eraForTemplate, standardFrameFor } from "@/lib/creator/frame-picker";
 
@@ -372,6 +375,13 @@ export function kindHasAvailableFrame(
 // mana symbol render immediately. The seed follows the frame color while
 // untouched and is cleared when the user leaves the Land kind, so it can
 // never overwrite a name the user typed.
+//
+// The seed must never OUTLIVE the user's intent either: a land renamed to
+// anything but a basic's name becomes a nonbasic (the Basic supertype and
+// the seed's subtype are dropped so the rules text box appears), and an
+// import always writes its own supertype/subtypes over the seed. Before
+// this, "Command Tower" typed over a seeded Plains kept "Basic — Plains"
+// and printed a big symbol with no text (feedback, 2026-09-14).
 // ---------------------------------------------------------------------------
 
 export type BasicLandSeed = {
@@ -381,13 +391,17 @@ export type BasicLandSeed = {
 };
 
 /** The identity the creator seeds for a land of the given frame color
- *  ("c" → Wastes). "m" has no basic — multicolor lands are nonbasics the
- *  user names themselves — so it returns null. */
+ *  ("c" → Wastes, which is "Basic Land" with NO land type). "m" has no
+ *  basic — multicolor lands are nonbasics the user names themselves — so it
+ *  returns null. */
 export function basicLandSeedForColorKey(key: string): BasicLandSeed | null {
   const name = basicLandNameForColorKey(key);
-  return name
-    ? { title: name, supertype: "Basic", subtypes_text: name }
-    : null;
+  if (!name) return null;
+  return {
+    title: name,
+    supertype: "Basic",
+    subtypes_text: name === "Wastes" ? "" : name,
+  };
 }
 
 /** True when the identity fields are untouched (all empty) or still exactly
@@ -400,8 +414,76 @@ export function isSeedableLandIdentity(v: BasicLandSeed): boolean {
   if (!title && !supertype && !subtypes) return true;
   return Object.values(BASIC_LAND_NAME_BY_KEY).some(
     (name) =>
-      title === name && supertype === "Basic" && subtypes === name,
+      title === name &&
+      supertype === "Basic" &&
+      // Wastes seeds no subtype; a legacy draft may still carry "Wastes".
+      (subtypes === name || (name === "Wastes" && subtypes === "")),
   );
+}
+
+/** Split the creator's comma/newline subtype field (mirrors parseSubtypes
+ *  without the React-free module needing to import it). */
+function splitSubtypes(text: string): string[] {
+  return text
+    .split(/[,\n]/)
+    .map((piece) => piece.trim())
+    .filter(Boolean);
+}
+
+/** True when the identity still carries the seed's basic-ness — a Basic
+ *  supertype with, at most, ONE subtype that is itself a basic land type
+ *  (the seed's own). A user-typed "Forest Island" or "Legendary" is not a
+ *  seed residue and is left alone. */
+export function landIdentityHasBasicSeed(v: BasicLandSeed): boolean {
+  if (!hasBasicSupertype(v.supertype)) return false;
+  const parts = splitSubtypes(v.subtypes_text);
+  if (parts.length === 0) return true;
+  return parts.length === 1 && basicSubtypeManaKey(parts) !== null;
+}
+
+/** The identity of the same card as a NONBASIC land: "Basic" leaves the
+ *  supertype, and a lone seed subtype (Plains/…/Wastes) is dropped —
+ *  anything the user typed themselves survives. */
+export function toNonbasicLandIdentity(v: BasicLandSeed): BasicLandSeed {
+  const supertype = v.supertype
+    .replace(/\bbasic\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  const parts = splitSubtypes(v.subtypes_text);
+  const subtypes_text =
+    parts.length === 1 && basicSubtypeManaKey(parts) !== null
+      ? ""
+      : parts.join(", ");
+  return { title: v.title, supertype, subtypes_text };
+}
+
+/** The identity of the same card as a BASIC land of the given frame color:
+ *  "Basic" joins the supertype and, when no basic land type is present yet,
+ *  the color's basic type becomes the subtype (none for Wastes). Returns
+ *  null for the multicolor key — no basic is multicolor. */
+export function toBasicLandIdentity(
+  v: BasicLandSeed,
+  colorKey: string,
+): BasicLandSeed | null {
+  const name = basicLandNameForColorKey(colorKey);
+  if (!name) return null;
+  const supertype = hasBasicSupertype(v.supertype)
+    ? v.supertype.trim()
+    : ["Basic", v.supertype.trim()].filter(Boolean).join(" ");
+  const parts = splitSubtypes(v.subtypes_text);
+  const subtypes_text =
+    basicSubtypeManaKey(parts) !== null || name === "Wastes"
+      ? parts.join(", ")
+      : [name, ...parts].join(", ");
+  return { title: v.title, supertype, subtypes_text };
+}
+
+/** Should the creator drop the seed because the user renamed the land?
+ *  Only for a non-empty title that isn't a basic's name, on an identity
+ *  that still carries the seed. */
+export function shouldClearBasicSeedForTitle(v: BasicLandSeed): boolean {
+  if (!v.title.trim() || isBasicLandTitle(v.title)) return false;
+  return landIdentityHasBasicSeed(v);
 }
 
 // ---------------------------------------------------------------------------

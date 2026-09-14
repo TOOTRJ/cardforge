@@ -61,6 +61,7 @@ import { KindChangeDialog } from "@/components/creator/kind-change-dialog";
 import { ArtPanel } from "@/components/creator/panels/art-panel";
 import { TextPanel } from "@/components/creator/panels/text-panel";
 import { LandIconPanel } from "@/components/creator/panels/land-icon-panel";
+import { LandModePanel } from "@/components/creator/panels/land-mode-panel";
 import { SetIconPanel } from "@/components/creator/panels/set-icon-panel";
 import { ForgeAIPanel } from "@/components/creator/panels/forge-ai-panel";
 import { AbilitiesPanel } from "@/components/creator/panels/abilities-panel";
@@ -111,6 +112,9 @@ import {
   firstAvailableFrame,
   isSeedableLandIdentity,
   kindFromCard,
+  shouldClearBasicSeedForTitle,
+  toBasicLandIdentity,
+  toNonbasicLandIdentity,
   planKindChange,
   templateHasAvailableColor,
   type CardKind,
@@ -560,6 +564,64 @@ export function CardCreatorForm({
     watched.card_type,
     parseSubtypes(watched.subtypes_text),
   );
+  // Basic-land rule (lib/cards/watermark.ts): a BASIC land prints the big
+  // symbol and no text; the Text step becomes the icon step. Computed once
+  // from the same fields both renderers read, so the editor and the preview
+  // can't disagree about which kind of land this is.
+  const landBasicKey = basicLandManaKey({
+    cardType: watched.card_type,
+    supertype: watched.supertype,
+    subtypes: parseSubtypes(watched.subtypes_text),
+    title: watched.title,
+    rulesText: watched.rules_text,
+  });
+  const landIdentity = () => ({
+    title: getValues("title") ?? "",
+    supertype: getValues("supertype") ?? "",
+    subtypes_text: getValues("subtypes_text") ?? "",
+  });
+  /** Land type toggle (Text step): rewrite the supertype/subtypes so the
+   *  card is a basic (big symbol) or a nonbasic (rules text). */
+  const handleLandModeChange = (next: "basic" | "nonbasic") => {
+    const identity = landIdentity();
+    const patch =
+      next === "basic"
+        ? toBasicLandIdentity(
+            identity,
+            pickFrameColorKey(getValues("color_identity")),
+          )
+        : toNonbasicLandIdentity(identity);
+    if (!patch) return;
+    setValue("supertype", patch.supertype, { shouldDirty: true });
+    setValue("subtypes_text", patch.subtypes_text, { shouldDirty: true });
+  };
+  // A land the user RENAMES away from its seeded basic name becomes a
+  // nonbasic: the seed's "Basic" + subtype are dropped so the rules text box
+  // appears (typing "Command Tower" over a seeded Plains used to leave
+  // "Basic — Plains" behind and print a textless big symbol). Only on real
+  // edits (isDirty) — draft restores and card loads never rewrite identity.
+  const lastLandTitleRef = useRef(watched.title);
+  useEffect(() => {
+    if (lastLandTitleRef.current === watched.title) return;
+    lastLandTitleRef.current = watched.title;
+    if (!isDirty || watched.card_type !== "land") return;
+    const identity = {
+      title: watched.title,
+      supertype: watched.supertype,
+      subtypes_text: watched.subtypes_text,
+    };
+    if (!shouldClearBasicSeedForTitle(identity)) return;
+    const next = toNonbasicLandIdentity(identity);
+    setValue("supertype", next.supertype, { shouldDirty: true });
+    setValue("subtypes_text", next.subtypes_text, { shouldDirty: true });
+  }, [
+    watched.title,
+    watched.card_type,
+    watched.supertype,
+    watched.subtypes_text,
+    isDirty,
+    setValue,
+  ]);
 
   const goToIndex = (i: number) => {
     setCurrent(Math.max(0, Math.min(i, steps.length - 1)));
@@ -943,8 +1005,20 @@ export function CardCreatorForm({
 
     setIfPresent("title", patch.title);
     setIfPresent("cost", patch.cost);
-    setIfPresent("supertype", patch.supertype);
-    setIfPresent("subtypes_text", patch.subtypes_text);
+    // The type line is imported WHOLE: a real card with no supertype and no
+    // subtypes (Command Tower, Adarkar Wastes) must clear whatever the kind
+    // change seeded a moment ago — applyKindProgrammatic("land") writes a
+    // "Basic — Wastes" seed over an empty identity, and leaving it in place
+    // turned every imported nonbasic land into a textless basic.
+    if (importedKind) {
+      setValue("supertype", patch.supertype ?? "", { shouldDirty: true });
+      setValue("subtypes_text", patch.subtypes_text ?? "", {
+        shouldDirty: true,
+      });
+    } else {
+      setIfPresent("supertype", patch.supertype);
+      setIfPresent("subtypes_text", patch.subtypes_text);
+    }
     setIfPresent("rarity", patch.rarity);
     setIfPresent("rules_text", patch.rules_text);
     setIfPresent("flavor_text", patch.flavor_text);
@@ -1812,22 +1886,24 @@ export function CardCreatorForm({
             {/* ----- Text & stats panel (rules/flavor + type-gated stats) ----- */}
             {stepKey === "text" ? (
               <>
-                {basicLandManaKey(
-                  watched.card_type,
-                  parseSubtypes(watched.subtypes_text),
-                ) ? (
+                {watched.card_type === "land" ? (
+                  // Lands choose basic (big symbol) vs nonbasic (rules text)
+                  // here — the visible escape hatch from the basic seed.
+                  <LandModePanel
+                    mode={landBasicKey ? "basic" : "nonbasic"}
+                    basicDisabledReason={
+                      pickFrameColorKey(watched.color_identity) === "m"
+                        ? "No basic land is multicolor — pick a single frame color first."
+                        : null
+                    }
+                    onChange={handleLandModeChange}
+                  />
+                ) : null}
+                {landBasicKey ? (
                   // Basic lands print a large mana symbol instead of rules
                   // text — so this step is the ICON step: follow the land
                   // type, override with another symbol, or upload your own.
-                  <LandIconPanel
-                    userId={userId}
-                    autoKey={
-                      basicLandManaKey(
-                        watched.card_type,
-                        parseSubtypes(watched.subtypes_text),
-                      )!
-                    }
-                  />
+                  <LandIconPanel userId={userId} autoKey={landBasicKey} />
                 ) : panelConfig.textVariant === "loyalty" ? (
                   // Planeswalkers: ability rows instead of a raw textarea
                   // (and no flavor text — real walkers never carry it).
@@ -1848,10 +1924,7 @@ export function CardCreatorForm({
                 <AbilitiesPanel statVis={statVis} />
                 {/* Forge AI last — below the power/toughness stats. Hidden on
                     basic lands: the step is icon-only there. */}
-                {!basicLandManaKey(
-                  watched.card_type,
-                  parseSubtypes(watched.subtypes_text),
-                ) ? (
+                {!landBasicKey ? (
                   <ForgeAIPanel
                     cardContext={cardContext}
                     aiConfigured={aiConfigured}
