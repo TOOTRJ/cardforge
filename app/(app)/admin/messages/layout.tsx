@@ -3,6 +3,7 @@ import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { getAdminUnreadThreadCount, listAllThreads } from "@/lib/messages/queries";
+import { isUserEmailConfigured } from "@/lib/messages/notify";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +25,11 @@ export default async function AdminMessagesLayout({
       <PageHeader
         eyebrow="Admin · Messages"
         title="Conversations"
-        description="Every thread between the team and a user. Replies here reach the user's Messages tab, their notification bell, and their email when Resend is configured."
+        description={
+          isUserEmailConfigured()
+            ? "Every thread between the team and a user. Replies reach the user's Messages tab, their notification bell, and their email."
+            : "Every thread between the team and a user. Replies reach the user's Messages tab and notification bell. Email is OFF — set RESEND_API_KEY and a verified ADMIN_ALERT_FROM to also email them."
+        }
         actions={
           unread > 0 ? <Badge variant="primary">{unread} awaiting reply</Badge> : null
         }

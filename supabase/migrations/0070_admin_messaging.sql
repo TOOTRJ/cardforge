@@ -149,16 +149,33 @@ begin
       then admin_unread_count + 1 else admin_unread_count end
   where id = new.thread_id;
 
+  -- One UNREAD bell entry per thread per recipient: a burst of posts in the
+  -- same thread updates the existing unread row rather than stacking five
+  -- identical "sent you a message" items. Once read, the next post makes a
+  -- fresh one.
   if new.sender_role = 'admin' then
-    -- The user gets one bell entry per admin post.
-    insert into public.notifications (recipient_id, actor_id, type, thread_id)
-    values (v_thread.user_id, new.sender_id, 'message', new.thread_id);
+    if not exists (
+      select 1 from public.notifications n
+      where n.recipient_id = v_thread.user_id
+        and n.thread_id = new.thread_id
+        and n.read_at is null
+    ) then
+      insert into public.notifications (recipient_id, actor_id, type, thread_id)
+      values (v_thread.user_id, new.sender_id, 'message', new.thread_id);
+    end if;
   else
     -- A user reply pings every admin (except the poster, if they are one).
     insert into public.notifications (recipient_id, actor_id, type, thread_id)
     select p.id, new.sender_id, 'message', new.thread_id
     from public.profiles p
-    where p.is_admin and p.id <> new.sender_id;
+    where p.is_admin
+      and p.id <> new.sender_id
+      and not exists (
+        select 1 from public.notifications n
+        where n.recipient_id = p.id
+          and n.thread_id = new.thread_id
+          and n.read_at is null
+      );
   end if;
   return new;
 end;
