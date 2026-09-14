@@ -162,7 +162,7 @@ export async function GET(
 
   let pngBytes: Uint8Array;
   try {
-    const imgResponse = renderCardImage(previewData, preset, {
+    const imgResponse = await renderCardImage(previewData, preset, {
       brandMark: watermark,
       watermarkText: stamp.footerText,
     });

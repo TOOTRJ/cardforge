@@ -114,7 +114,7 @@ export async function GET(
     const card = byId.get(cardId);
     if (!card) continue;
     try {
-      const img = renderCardImage(
+      const img = await renderCardImage(
         { ...toPreviewData(card), profileOverrides: await getFrameProfileOverrides() },
         "hd", {
         brandMark: !entitlements.removeWatermark,
