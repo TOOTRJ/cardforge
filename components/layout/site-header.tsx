@@ -26,6 +26,11 @@ type HeaderUser = {
   creditsUsed?: number;
   /** Unread in-app notification count for the header bell. */
   unreadNotifications?: number;
+  /** The user has at least one support thread — the mobile drawer and the
+   *  avatar menu show "Messages" (never for users without one). */
+  hasMessages?: boolean;
+  /** Unread admin posts across their threads. */
+  unreadMessages?: number;
   /** True once the user has EVER held a subscription (any status) — gates the
    *  "free trial" CTA copy on /pricing so lapsed subscribers aren't promised
    *  a trial checkout won't grant. */
@@ -76,7 +81,7 @@ export function SiteHeader({ user, className }: SiteHeaderProps) {
                   creditsUsed={user?.creditsUsed ?? 0}
                 />
               ) : null}
-              <NotificationBell initialUnread={unread} />
+              <NotificationBell initialUnread={unread} isAdmin={user?.isAdmin ?? false} />
               {billingOn && !user?.isPaid ? (
                 <Button
                   asChild
@@ -108,6 +113,8 @@ export function SiteHeader({ user, className }: SiteHeaderProps) {
                 avatarUrl={user?.avatarUrl ?? null}
                 isPaid={user?.isPaid ?? false}
                 isAdmin={user?.isAdmin ?? false}
+                hasMessages={user?.hasMessages ?? false}
+                unreadMessages={user?.unreadMessages ?? 0}
               />
             </>
           ) : (
@@ -131,6 +138,8 @@ export function SiteHeader({ user, className }: SiteHeaderProps) {
             isPaid={user?.isPaid ?? false}
             credits={user?.credits ?? 0}
             creditsUsed={user?.creditsUsed ?? 0}
+            hasMessages={user?.hasMessages ?? false}
+            unreadMessages={user?.unreadMessages ?? 0}
           />
         </div>
       </div>

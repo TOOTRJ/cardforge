@@ -3,9 +3,15 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bell, Heart, MessageCircle, Sparkles, UserPlus,
+import {
+  Bell,
+  Heart,
   MailWarning,
+  MessageCircle,
+  MessageSquare,
   ShieldAlert,
+  Sparkles,
+  UserPlus,
 } from "lucide-react";
 import {
   Popover,
@@ -39,13 +45,17 @@ const ICON: Record<string, typeof Bell> = {
   follow: UserPlus,
   feedback: MailWarning,
   moderation: ShieldAlert,
+  message: MessageSquare,
 };
 
 type NotificationBellProps = {
+  /** Admins' "message" entries deep-link to the team inbox, users' to
+   *  their own thread. */
+  isAdmin?: boolean;
   initialUnread: number;
 };
 
-export function NotificationBell({ initialUnread }: NotificationBellProps) {
+export function NotificationBell({ initialUnread, isAdmin = false }: NotificationBellProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState(initialUnread);
@@ -125,7 +135,13 @@ export function NotificationBell({ initialUnread }: NotificationBellProps) {
                 // Admin notification types deep-link to their inbox; the
                 // social types link to the card or the actor.
                 const href =
-                  item.type === "feedback"
+                  item.type === "message"
+                    ? item.threadId
+                      ? `${isAdmin ? "/admin/messages" : "/messages"}/${item.threadId}`
+                      : isAdmin
+                        ? "/admin/messages"
+                        : "/messages"
+                    : item.type === "feedback"
                     ? "/admin/feedback"
                     : item.type === "moderation"
                       ? "/admin/moderation"
@@ -150,8 +166,12 @@ export function NotificationBell({ initialUnread }: NotificationBellProps) {
                       </span>
                       <div className="flex min-w-0 flex-1 flex-col">
                         <p className="text-sm leading-5 text-foreground">
-                          <span className="font-medium">{actorName}</span>{" "}
-                          {item.type === "feedback" ? (
+                          <span className="font-medium">
+                            {item.type === "message" && !isAdmin ? "PipGlyph team" : actorName}
+                          </span>{" "}
+                          {item.type === "message" ? (
+                            isAdmin ? "replied in a conversation." : "sent you a message."
+                          ) : item.type === "feedback" ? (
                             "sent feedback — open the inbox."
                           ) : item.type === "moderation" ? (
                             "filed a content report."
