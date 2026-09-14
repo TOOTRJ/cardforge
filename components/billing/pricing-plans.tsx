@@ -88,6 +88,13 @@ export function PricingPlans() {
           </Button>
         );
       }
+      if (isPaid) {
+        return (
+          <ManageBillingButton variant="outline" className="w-full">
+            Manage plan
+          </ManageBillingButton>
+        );
+      }
       return null;
     }
     if (!isSignedIn) {
@@ -100,12 +107,19 @@ export function PricingPlans() {
       );
     }
     if (isPaid) {
-      // Already subscribed → switch/manage in the Stripe portal (avoids a
-      // second subscription via Checkout).
+      // Already subscribed → switch tiers IN PLACE. The server action moves an
+      // active subscription to the new price through the Customer Portal's
+      // confirm-update flow (prorated, same subscription) and supersedes a
+      // no-card trial with a paid checkout — never a second subscription.
+      // The Free card offers the portal for cancel/invoices/card changes.
+      const label = `Switch to ${tier === "plus" ? "Plus" : "Pro"}`;
       return (
-        <ManageBillingButton variant={variant} className="w-full">
-          Manage plan
-        </ManageBillingButton>
+        <CheckoutButton
+          input={{ kind: "subscription", tier: tier as PaidTier, period }}
+          variant={variant}
+        >
+          {label}
+        </CheckoutButton>
       );
     }
     const label = hasSubscribed

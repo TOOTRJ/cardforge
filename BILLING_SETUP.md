@@ -11,48 +11,46 @@ Checkout + Customer Portal + a thin webhook → Supabase + app-managed credits**
 
 ## Model at a glance
 
-| Tier | Price | AI credits/mo | Watermark | Export | Capacity | Extras |
-|------|-------|---------------|-----------|--------|----------|--------|
-| Free | $0 | 5 (signup grant) | yes | PNG, capped 750px | 50 | — |
-| Plus | $9/mo | 30 | removed | + clean HD PNG, single PDF | 500 | premium finishes |
-| Pro | $19/mo | 75 | removed | + 3×3 sheets, whole-set export | unlimited | AI set generator |
+| Tier | Price | AI credits/mo | Watermark | Export | Capacity |
+|------|-------|---------------|-----------|--------|----------|
+| Free | $0 | 5 (one-time signup grant, never refills) | yes | PNG, capped 750px | 50 |
+| Plus | $6/mo · $60/yr | 30 | removed | + clean HD PNG, single PDF | 500 |
+| Pro | $15/mo · $150/yr | 75 | removed | + 3×3 sheets, whole-deck/set export + ZIP | unlimited |
 
-- **Credits** meter AI generation (1 credit = 1 card/art generation; the AI set
-  generator costs 1/card). Cheap text-assistant actions stay on the windowed
-  rate limit (free). Plan credit amounts: `lib/billing/plans.ts` → `MONTHLY_CREDITS`.
+- Prices and perks are defined ONCE in `lib/billing/plans.ts` (`PLANS`,
+  `MONTHLY_CREDITS`, `CREDIT_PACKS`) and enforced in
+  `lib/billing/entitlements.ts`. This table is a summary — the code wins.
+- **Every AI tool is open to every tier; credits are the only limiter**
+  (owner decision, 2026-07-28). Premium finishes are free too; there is no
+  tier-gated AI feature.
+- **First subscription ever → 7-day free trial, no card required**
+  (`TRIAL_DAYS`); a trial with no payment method cancels itself at day 7.
+  A trial gets exactly ONE credit grant (at creation) — no refills until it
+  converts to paid.
+- **Credits** meter AI generation (1 credit = 1 card/art generation; deck and
+  set generation cost 1/card). Cheap text-assistant actions stay on the
+  windowed rate limit (free).
 - **Credit packs** (one-time, never expire): 30/$8 and 100/$24 — `CREDIT_PACKS`.
 - **Unit economics:** amounts are sized against a measured **~$0.11 per generation**
   so even a max-usage subscriber stays under ~40% AI COGS of net revenue (after
   Stripe fees). Re-tune `MONTHLY_CREDITS` / `CREDIT_PACKS` / prices in
   `lib/billing/plans.ts` if your provider cost changes.
 
-## 1. Apply the database migration
+## 1. Database
 
-`supabase/migrations/0027_billing_subscriptions.sql` adds the billing columns on
-`profiles`, the `credit_ledger` + `stripe_events` tables, and the
-`consume_credits` / `grant_credits` / `credit_ledger_daily` RPCs.
+The billing schema lives in `supabase/migrations/`: `0027_billing_subscriptions.sql`
+(profiles billing columns, `credit_ledger`, `stripe_events`, the
+`consume_credits` / `grant_credits` / `credit_ledger_daily` RPCs),
+`0028`/`0052`/`0060` (the `protect_billing_columns` trigger that pins every
+billing column to the service role — user-client writes are silently
+reverted), `0060` (admin comp tier / card-cap override), `0068` (per-attempt
+spend refs for reconciliation).
 
-```bash
-supabase db push          # or apply via the Supabase MCP / dashboard
-```
-
-> **Heads-up (verified on a real branch):** the PipGlyph project has **no
-> tracked migration history** (its schema was applied out-of-band), so a plain
-> `supabase db push` may try to replay 0001–0027 and choke on a non-idempotent
-> earlier migration. Safest path: apply **just 0027** via the Supabase SQL editor
-> / MCP `apply_migration` (its SQL is idempotent and was validated end-to-end on a
-> branch), or `supabase migration repair --status applied <0001..0026>` first so
-> only 0027 pushes. 0027 itself applies cleanly either way.
-
-Then regenerate types (the repo's `types/supabase.ts` was hand-extended to match;
-regenerate to stay authoritative):
-
-```bash
-supabase gen types typescript --linked > types/supabase.ts
-```
-
-Run the security advisor afterward and confirm the SECURITY DEFINER functions
-don't trip the "mutable search_path" lint (they pin `search_path = public`).
+Migrations ship through PRs and apply automatically (Supabase branching —
+see `docs/ENVIRONMENTS.md` and `CLAUDE.md`). Never apply them by hand to
+production. `types/supabase.ts` is hand-extended after each billing
+migration; regenerate with `supabase gen types typescript --linked` when
+convenient.
 
 ## 2. Stripe Dashboard
 
@@ -63,11 +61,31 @@ don't trip the "mutable search_path" lint (they pin `search_path = public`).
 2. **Customer Portal** — enable it at Settings → Billing → Customer Portal
    (lets users change plan, update card, cancel, view invoices for free).
 3. **Webhook endpoint** — add `https://YOUR_DOMAIN/api/stripe/webhook` and
-   subscribe to: `checkout.session.completed`, `customer.subscription.created`,
-   `customer.subscription.updated`, `customer.subscription.deleted`,
-   `invoice.payment_failed`. Keep the endpoint's **API version** aligned with the
-   SDK (`2026-05-27.dahlia`). Copy the signing secret (`whsec_…`).
+   subscribe to: `checkout.session.completed`,
+   `checkout.session.async_payment_succeeded` (delayed payment methods —
+   without it a bank-debit credit pack is paid for and never delivered),
+   `customer.subscription.created`, `customer.subscription.updated`,
+   `customer.subscription.deleted`, `invoice.payment_failed`. Keep the
+   endpoint's **API version** aligned with the SDK (`2026-05-27.dahlia`).
+   Copy the signing secret (`whsec_…`).
    (Credit refills are cron-driven, not webhook-driven — see §6.)
+5. **Price → tier mapping.** The webhook maps a subscription's price to a
+   tier in this order: the `STRIPE_PRICE_*` env ids → the price's
+   `metadata.tier` (`plus`/`pro`) → its lookup key / nickname → the
+   product's `metadata.tier` or name → the recurring amount vs
+   `lib/billing/plans.ts`. **Put `tier=plus` / `tier=pro` in each product's
+   metadata** so a price recreated in the Dashboard (prices are immutable —
+   every amount change is a new price) or picked through the Customer
+   Portal still resolves. If nothing matches, an ACTIVE subscription is
+   never demoted to free (the previous paid tier, or Plus, is kept and the
+   miss is logged) — run the billing health check on `/admin/users` to find
+   such rows and fix the mapping.
+6. **Customer Portal plan switching.** The portal's product catalog must list
+   the same Plus/Pro prices the env vars name. Plan changes from the app go
+   through the portal's `subscription_update_confirm` flow for active
+   subscriptions (in place, prorated) and a superseding checkout for no-card
+   trials (the trial is cancelled once the new plan is paid) — the app never
+   creates a second subscription for a customer.
 4. Use a **restricted** secret key in production.
 
 ## 3. Environment variables
@@ -114,10 +132,17 @@ no-op (deduped via `stripe_events` + `credit_ledger.stripe_event_id`).
 - Plan catalog (client-safe): `lib/billing/plans.ts`.
 - Stripe: `lib/stripe/{client,config,actions,webhook-handlers}.ts`,
   route `app/api/stripe/webhook/route.ts`, admin client `lib/supabase/admin.ts`.
-- Credits: `lib/ai/rate-limit.ts` (`consumeAiCredits`, `spendCredits`), consumed in
-  `app/api/ai/random-card` and `app/api/ai/generate-deck`.
-- Watermark/hi-res gating: `lib/render/card-image.tsx` + the `app/api/cards/[id]/{png,pdf,og}` routes.
-- Premium frame/finish + capacity gates: `lib/cards/actions.ts` + `types/card.ts`.
+- Subscription ↔ profile sync: `lib/stripe/subscription-sync.ts` — shared by
+  the webhook, the admin "Resync from Stripe" button, and the admin billing
+  health check (`lib/admin/user-actions.ts`).
+- Credits: `lib/ai/rate-limit.ts` (`consumeAiCredits`, `spendCredits`); every
+  AI generation runs as a background job (`lib/ai/generation-jobs.ts`,
+  `app/api/ai/jobs/*`) that reserves a credit per step and refunds on
+  failure; `lib/billing/credit-reconcile.ts` sweeps orphaned charges daily.
+- Watermark/hi-res gating: `lib/render/card-image.tsx` + the `app/api/cards/[id]/{png,pdf,og}` routes;
+  whole-deck/set export: `app/api/decks/[id]/{export,download}`, `app/api/sets/[id]/export`.
+- Capacity gate: `lib/cards/actions.ts` (`cardCapacity`); admin comp tier /
+  card-cap override / credit grants: `/admin/users` (`lib/admin/user-actions.ts`).
 - Selling UI: `app/(marketing)/pricing/page.tsx`, `components/billing/*`,
   settings billing panel, header/user-menu CTAs, upgrade modal (`UpgradeModalProvider`).
 
@@ -134,14 +159,16 @@ no double-grant).
 - Set **`CRON_SECRET`** in Vercel — it's sent as `Authorization: Bearer …`; the
   route rejects anything else.
 - Runs daily (`0 6 * * *`); only the first successful run each month grants.
-  Trigger manually:
+  A second daily cron (`/api/cron/reconcile-credits`, `30 6 * * *`) refunds
+  AI-job credit charges orphaned by platform kills. Trigger manually:
   `curl -H "Authorization: Bearer $CRON_SECRET" https://YOUR_DOMAIN/api/cron/refill-credits`
 
 ## 7. Known follow-ups
 
 - **Concurrency test for `consume_credits`** needs a live/branch Supabase DB
   (RPC + row lock); run it against a Supabase branch in CI.
-- Optional `scripts/reconcile-subscriptions.mjs` to re-sync tiers from Stripe if a
-  webhook is ever missed.
+- Bulk re-sync: the per-user "Resync from Stripe" button and the health check
+  on `/admin/users` cover today's scale; a cron/script that resyncs every
+  customer would be the next step past ~100 subscribers.
 - Subscription credits currently **accumulate** (roll over) on refill. For strict
   no-rollover, track subscription vs purchased credits as two buckets.

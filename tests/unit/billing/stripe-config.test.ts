@@ -3,7 +3,10 @@ import {
   creditsForPackPriceId,
   priceIdForPack,
   priceIdForTier,
+  tierForAmount,
+  tierForPrice,
   tierForPriceId,
+  tierForProduct,
 } from "@/lib/stripe/config";
 
 const ENV_KEYS = [
@@ -57,5 +60,45 @@ describe("stripe price ↔ plan mapping", () => {
   it("returns undefined when a price env var is unset", () => {
     delete process.env.STRIPE_PRICE_PLUS_ANNUAL;
     expect(priceIdForTier("plus", "annual")).toBeUndefined();
+  });
+});
+
+describe("tierForPrice (beyond the env ids)", () => {
+  beforeEach(() => {
+    process.env.STRIPE_PRICE_PLUS_MONTHLY = "price_plus_m";
+    process.env.STRIPE_PRICE_PRO_MONTHLY = "price_pro_m";
+  });
+  afterEach(() => {
+    for (const key of ENV_KEYS) delete process.env[key];
+  });
+
+  it("env id wins when configured", () => {
+    expect(tierForPrice({ id: "price_pro_m", nickname: "Plus (old)" })).toBe("pro");
+  });
+
+  it("reads price metadata, lookup keys, nicknames, and the expanded product", () => {
+    expect(tierForPrice({ id: "x", metadata: { tier: "plus" } })).toBe("plus");
+    expect(tierForPrice({ id: "x", lookup_key: "pipglyph_pro_monthly" })).toBe("pro");
+    expect(tierForPrice({ id: "x", nickname: "Plus — monthly" })).toBe("plus");
+    expect(tierForPrice({ id: "x", product: { id: "p", name: "PipGlyph Pro" } })).toBe("pro");
+    expect(tierForPrice({ id: "x", product: { id: "p", metadata: { plan: "PLUS" } } })).toBe("plus");
+    // Word-bounded: "Protection" is not "Pro".
+    expect(tierForPrice({ id: "x", nickname: "Protection plan" })).toBeNull();
+  });
+
+  it("matches recurring amounts against the plan catalog (monthly and annual)", () => {
+    expect(tierForAmount(600, "month")).toBe("plus");
+    expect(tierForAmount(1500, "month")).toBe("pro");
+    expect(tierForAmount(6000, "year")).toBe("plus");
+    expect(tierForAmount(15000, "year")).toBe("pro");
+    expect(tierForAmount(1500, "year")).toBeNull();
+    expect(tierForAmount(999, "month")).toBeNull();
+    expect(tierForPrice({ id: "x", unit_amount: 1500, recurring: { interval: "month" } })).toBe("pro");
+  });
+
+  it("returns null for a truly unknown price and never throws on a null input", () => {
+    expect(tierForPrice({ id: "x", unit_amount: 4200, recurring: { interval: "month" } })).toBeNull();
+    expect(tierForPrice(null)).toBeNull();
+    expect(tierForProduct({ id: "p", name: "Pro", deleted: true })).toBeNull();
   });
 });

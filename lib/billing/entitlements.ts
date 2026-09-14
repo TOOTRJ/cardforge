@@ -2,7 +2,7 @@ import "server-only";
 
 import { getCurrentProfile } from "@/lib/supabase/server";
 import { createPublicClient } from "@/lib/supabase/public";
-import type { PlanTier } from "@/lib/billing/plans";
+import { TIER_RANK, type PlanTier } from "@/lib/billing/plans";
 import { isBillingEnabled } from "@/lib/billing/flags";
 
 // The single server-side source of truth for what a user is allowed to do.
@@ -64,7 +64,7 @@ const TIER_PERKS: Record<PlanTier, Partial<Perks>> = {
 
 const ACTIVE_STATUSES = new Set(["active", "trialing"]);
 
-const RANK: Record<PlanTier, number> = { free: 0, plus: 1, pro: 2 };
+const RANK = TIER_RANK;
 
 export class UpgradeRequiredError extends Error {
   constructor(public readonly required: PlanTier) {

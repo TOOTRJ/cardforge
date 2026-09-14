@@ -15,6 +15,8 @@ const badgeVariants = cva(
         gold:
           "border-gold/45 bg-gold/10 text-gold-strong",
         outline: "border-border text-muted",
+        danger:
+          "border-danger/40 bg-danger/10 text-danger",
       },
     },
     defaultVariants: {
