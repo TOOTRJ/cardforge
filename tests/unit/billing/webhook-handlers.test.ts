@@ -455,3 +455,126 @@ describe("handleStripeEvent", () => {
     expect(updates[0].values).toMatchObject({ subscription_status: "past_due" });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Sync-layer regressions surfaced through the webhook entry point.
+// ---------------------------------------------------------------------------
+
+function makeStripeWithSubs(subs: unknown[]) {
+  const canceled: string[] = [];
+  const stripe = {
+    subscriptions: {
+      list: async () => ({ data: subs }),
+      retrieve: async (id: string) => subs.find((s) => (s as { id: string }).id === id),
+      cancel: async (id: string) => {
+        canceled.push(id);
+        return { id, status: "canceled" };
+      },
+    },
+    products: { retrieve: async () => { throw new Error("none"); } },
+  };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return { stripe: stripe as any, canceled };
+}
+
+describe("handleStripeEvent — price/tier resolution + multi-subscription safety", () => {
+  it("REGRESSION 2026-09-14: portal upgrade to an unlisted Pro price does NOT write tier=free", async () => {
+    const { admin, updates, rpcs } = makeAdmin({
+      ledgerRow: { delta: MONTHLY_CREDITS.plus },
+    });
+    // The subscription now carries a $15/mo price that isn't in the env.
+    const object = {
+      id: "sub_1",
+      customer: "cus_1",
+      status: "active",
+      cancel_at_period_end: false,
+      created: 10,
+      items: {
+        data: [
+          {
+            id: "si_1",
+            price: { id: "price_portal_pro", unit_amount: 1500, recurring: { interval: "month" } },
+            current_period_end: 1893456000,
+          },
+        ],
+      },
+    };
+    await handleStripeEvent(
+      { id: "evt_portal", type: "customer.subscription.updated", data: { object } } as never,
+      { admin, stripe: makeStripeWithSubs([object]).stripe },
+    );
+    const state = updates.find((u) => "subscription_tier" in u.values);
+    expect(state?.values).toMatchObject({ subscription_tier: "pro", subscription_status: "active" });
+    // …and the mid-month Pro top-up lands.
+    const grant = rpcs.find((r) => r.fn === "grant_credits");
+    expect(grant?.args).toMatchObject({ p_amount: MONTHLY_CREDITS.pro - MONTHLY_CREDITS.plus });
+  });
+
+  it("a lingering trial's deletion resyncs to the live Pro subscription instead of demoting", async () => {
+    const { admin, updates, rpcs } = makeAdmin();
+    const trial = {
+      id: "sub_trial",
+      customer: "cus_1",
+      status: "trialing",
+      created: 1,
+      items: { data: [{ id: "si_t", price: { id: "price_plus" }, current_period_end: 1 }] },
+    };
+    const pro = {
+      id: "sub_pro",
+      customer: "cus_1",
+      status: "active",
+      created: 2,
+      cancel_at_period_end: false,
+      items: { data: [{ id: "si_p", price: { id: "price_pro" }, current_period_end: 1893456000 }] },
+    };
+    await handleStripeEvent(
+      { id: "evt_del_trial", type: "customer.subscription.deleted", data: { object: { ...trial, status: "canceled" } } } as never,
+      { admin, stripe: makeStripeWithSubs([trial, pro]).stripe },
+    );
+    const state = updates.find((u) => "subscription_tier" in u.values);
+    expect(state?.values).toMatchObject({
+      subscription_tier: "pro",
+      subscription_status: "active",
+      stripe_subscription_id: "sub_pro",
+    });
+    expect(rpcs.some((r) => r.fn === "grant_credits")).toBe(false);
+  });
+
+  it("checkout.session.completed cancels the superseded trial once the new plan is paid", async () => {
+    const { admin } = makeAdmin();
+    const trial = { id: "sub_trial", status: "trialing" };
+    const { stripe, canceled } = makeStripeWithSubs([trial]);
+    await handleStripeEvent(
+      {
+        id: "evt_supersede",
+        type: "checkout.session.completed",
+        data: {
+          object: {
+            id: "cs_1",
+            mode: "subscription",
+            subscription: "sub_new",
+            metadata: { supersedes_subscription_id: "sub_trial" },
+          },
+        },
+      } as never,
+      { admin, stripe },
+    );
+    expect(canceled).toEqual(["sub_trial"]);
+  });
+
+  it("checkout.session.completed leaves an already-lapsed superseded subscription alone", async () => {
+    const { admin } = makeAdmin();
+    const { stripe, canceled } = makeStripeWithSubs([{ id: "sub_old", status: "canceled" }]);
+    await handleStripeEvent(
+      {
+        id: "evt_supersede_2",
+        type: "checkout.session.completed",
+        data: {
+          object: { id: "cs_2", mode: "subscription", subscription: "sub_new", metadata: { supersedes_subscription_id: "sub_old" } },
+        },
+      } as never,
+      { admin, stripe },
+    );
+    expect(canceled).toEqual([]);
+  });
+});

@@ -10,6 +10,10 @@
 // UI refers to plans/packs by these stable keys, never by raw price id.
 
 export type PlanTier = "free" | "plus" | "pro";
+
+/** Tier ordering — the single rank table entitlements (requireTier) and the
+ *  Stripe sync layer (primary-subscription choice) both read. */
+export const TIER_RANK: Record<PlanTier, number> = { free: 0, plus: 1, pro: 2 };
 export type PaidTier = "plus" | "pro";
 export type PackKey = "small" | "large";
 export type BillingPeriod = "monthly" | "annual";
