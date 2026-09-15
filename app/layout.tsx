@@ -12,6 +12,7 @@ import { GoogleAnalytics } from "@next/third-parties/google";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
 import { AckSplash } from "@/components/updates/ack-splash";
+import { UpdatePrompt } from "@/components/updates/update-prompt";
 import "./globals.css";
 
 // ---------------------------------------------------------------------------
@@ -221,6 +222,10 @@ export default function RootLayout({
             <DeckExportProvider>
               {children}
               {modal}
+              {/* "A new version is ready" pill — checks /api/version on
+                  focus and reloads at the next safe moment. Sits inside the
+                  runners so it never reloads over an in-flight job/export. */}
+              <UpdatePrompt />
             </DeckExportProvider>
           </GenerationJobProvider>
         </UpgradeModalProvider>

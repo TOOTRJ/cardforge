@@ -52,7 +52,20 @@ const supabaseImageOrigins = (() => {
   return origins;
 })();
 
+// Identity of THIS build, baked into the client bundle and served by
+// /api/version so an open tab can notice when production moved on
+// (components/updates/update-prompt.tsx). Vercel's deployment id is unique
+// per deployment (a redeploy of the same commit counts); local dev is "dev"
+// so the prompt never fires there.
+const BUILD_ID =
+  process.env.VERCEL_DEPLOYMENT_ID ||
+  process.env.VERCEL_GIT_COMMIT_SHA ||
+  "dev";
+
 const nextConfig: NextConfig = {
+  env: {
+    NEXT_PUBLIC_BUILD_ID: BUILD_ID,
+  },
   // Phase 11 chunk 14: bump the server-action body size limit so the
   // Sharp-validated card-art upload (max 8 MB enforced server-side) can
   // actually receive 8 MB images. Default is 1 MB, which would reject
