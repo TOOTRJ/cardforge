@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { DeckRegenerateBar } from "@/components/decks/deck-regenerate-bar";
+import { getLatestFailedDeckJob } from "@/lib/ai/generation-jobs";
 import { commanderBracket, deckTypeByKey } from "@/lib/decks/deck-types";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -269,7 +271,10 @@ async function DeckBody({
   ownerUsername: string | null;
   isOwner: boolean;
 }) {
-  const items = await listDeckCards(deckId);
+  const [items, failedJob] = await Promise.all([
+    listDeckCards(deckId),
+    isOwner ? getLatestFailedDeckJob(deckId) : Promise.resolve(null),
+  ]);
   const analytics = computeDeckAnalytics(items);
   const warnings = validateDeck(
     format,
@@ -295,6 +300,13 @@ async function DeckBody({
 
   return (
     <>
+      {failedJob ? (
+        <DeckRegenerateBar
+          jobId={failedJob.jobId}
+          failedCount={failedJob.failedCount}
+          failedLabels={failedJob.failedLabels}
+        />
+      ) : null}
       {warnings.length > 0 ? (
         <SurfaceCard className="mt-8 flex flex-col gap-2 border-gold/40 bg-gold/5 p-5">
           <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-gold">

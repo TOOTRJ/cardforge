@@ -1882,3 +1882,25 @@ async function patchJobStep(
   );
   return { ok: false, error: "Couldn't persist step progress." };
 }
+
+/** The deck's latest finished job that still has failed steps — powers the
+ *  owner's "Regenerate N cards" bar on the deck page. Owner-scoped (RLS). */
+export async function getLatestFailedDeckJob(
+  deckId: string,
+): Promise<{ jobId: string; failedCount: number; failedLabels: string[] } | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("ai_generation_jobs")
+    .select("id, status, steps")
+    .eq("deck_id", deckId)
+    .in("kind", ["deck", "deck_remix"])
+    .in("status", ["done_with_errors", "failed"])
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!data) return null;
+  const steps = (data.steps ?? []) as JobStep[];
+  const failed = steps.filter((s) => s.status === "failed");
+  if (failed.length === 0) return null;
+  return { jobId: data.id, failedCount: failed.length, failedLabels: failed.map((s) => s.label) };
+}
