@@ -1,21 +1,26 @@
 import { getBannerContent } from "@/lib/updates/queries";
-import { UpdatesBannerShell } from "./updates-banner-shell";
+import { UpdatesBannerShell, type BannerSliceProps } from "./updates-banner-shell";
 
-// Homepage banner: the newest shipped update flagged for the banner plus up
-// to three teased features. Server component over the cached public feed, so
-// the page stays ISR; dismissal is per-browser (localStorage) in the shell.
+// The what's-new ribbon under the site header (rendered by AppShell on every
+// page). Server component over the cached public feed, so static pages stay
+// static; the client shell picks the homepage slice on "/" and the site-wide
+// slice everywhere else, and handles per-browser dismissal. The admin's
+// global switch (site_settings) hides it everywhere.
 export async function UpdatesBanner() {
-  const { headline, upcoming } = await getBannerContent();
-  if (!headline && upcoming.length === 0) return null;
-  return (
-    <UpdatesBannerShell
-      dismissKey={`${headline?.id ?? "none"}:${upcoming.map((u) => u.id).join(",")}`}
-      headline={
-        headline
-          ? { title: headline.title, summary: headline.summary, href: headline.link_href ?? "/news" }
-          : null
-      }
-      upcoming={upcoming.map((u) => u.title)}
-    />
-  );
+  const { enabled, home, site } = await getBannerContent();
+  if (!enabled) return null;
+  const toProps = (s: typeof home): BannerSliceProps | null =>
+    !s.headline && s.upcoming.length === 0
+      ? null
+      : {
+          dismissKey: `${s.headline?.id ?? "none"}:${s.upcoming.map((u) => u.id).join(",")}`,
+          headline: s.headline
+            ? { title: s.headline.title, summary: s.headline.summary, href: s.headline.link_href ?? "/news" }
+            : null,
+          upcoming: s.upcoming.map((u) => u.title),
+        };
+  const homeProps = toProps(home);
+  const siteProps = toProps(site);
+  if (!homeProps && !siteProps) return null;
+  return <UpdatesBannerShell home={homeProps} site={siteProps} />;
 }

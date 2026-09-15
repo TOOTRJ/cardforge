@@ -964,6 +964,7 @@ export type Database = {
         Row: {
           ack_until: string | null;
           body: string | null;
+          banner_scope: string;
           created_at: string;
           created_by: string | null;
           id: string;
@@ -982,6 +983,7 @@ export type Database = {
         Insert: {
           ack_until?: string | null;
           body?: string | null;
+          banner_scope?: string;
           created_at?: string;
           created_by?: string | null;
           id?: string;
@@ -1000,6 +1002,7 @@ export type Database = {
         Update: {
           ack_until?: string | null;
           body?: string | null;
+          banner_scope?: string;
           created_at?: string;
           created_by?: string | null;
           id?: string;
@@ -1014,6 +1017,27 @@ export type Database = {
           summary?: string;
           title?: string;
           updated_at?: string;
+        };
+        Relationships: [];
+      };
+      site_settings: {
+        Row: {
+          key: string;
+          updated_at: string;
+          updated_by: string | null;
+          value: Json;
+        };
+        Insert: {
+          key: string;
+          updated_at?: string;
+          updated_by?: string | null;
+          value?: Json;
+        };
+        Update: {
+          key?: string;
+          updated_at?: string;
+          updated_by?: string | null;
+          value?: Json;
         };
         Relationships: [];
       };

@@ -18,7 +18,7 @@ import { needsAck, type SiteUpdate } from "@/lib/updates/shared";
 export const SITE_UPDATES_TAG = "site-updates";
 
 const SELECT =
-  "id, kind, title, summary, body, link_href, publish_at, is_published, show_in_banner, require_ack, ack_until, notified_at, notified_count, created_at, updated_at";
+  "id, kind, title, summary, body, link_href, publish_at, is_published, show_in_banner, banner_scope, require_ack, ack_until, notified_at, notified_count, created_at, updated_at";
 
 const loadReleasedUpdates = unstable_cache(
   async (): Promise<SiteUpdate[]> => {
@@ -48,19 +48,54 @@ export async function getNewsFeed(): Promise<NewsFeed> {
   };
 }
 
-export type BannerContent = {
+export type BannerSlice = {
   /** Newest released update flagged for the banner, if any. */
   headline: SiteUpdate | null;
   /** Released upcoming features flagged for the banner (newest first). */
   upcoming: SiteUpdate[];
 };
 
+export type BannerContent = {
+  /** The admin's global switch (site_settings.updates_banner.enabled). */
+  enabled: boolean;
+  /** What the homepage ribbon shows: every banner-flagged update. */
+  home: BannerSlice;
+  /** What every other page shows: only updates scoped to the whole site. */
+  site: BannerSlice;
+};
+
+function slice(rows: SiteUpdate[]): BannerSlice {
+  return {
+    headline: rows.find((r) => r.kind === "update") ?? null,
+    upcoming: rows.filter((r) => r.kind === "upcoming").slice(0, 3),
+  };
+}
+
+const loadBannerEnabled = unstable_cache(
+  async (): Promise<boolean> => {
+    if (!isSupabaseConfigured()) return true;
+    const supabase = createPublicClient();
+    const { data } = await supabase
+      .from("site_settings")
+      .select("value")
+      .eq("key", "updates_banner")
+      .maybeSingle();
+    const value = (data?.value ?? {}) as { enabled?: unknown };
+    return value.enabled !== false;
+  },
+  [SITE_UPDATES_TAG, "banner-enabled"],
+  { revalidate: 300, tags: [SITE_UPDATES_TAG] },
+);
+
+export const isBannerEnabled = cache(loadBannerEnabled);
+
 export async function getBannerContent(): Promise<BannerContent> {
-  const rows = await listReleasedUpdates();
+  const [rows, enabled] = await Promise.all([listReleasedUpdates(), isBannerEnabled()]);
   const flagged = rows.filter((r) => r.show_in_banner);
   return {
-    headline: flagged.find((r) => r.kind === "update") ?? null,
-    upcoming: flagged.filter((r) => r.kind === "upcoming").slice(0, 3),
+    enabled,
+    home: slice(flagged),
+    site: slice(flagged.filter((r) => r.banner_scope === "site")),
   };
 }
 

@@ -4,6 +4,7 @@
 // ---------------------------------------------------------------------------
 
 export type SiteUpdateKind = "update" | "upcoming";
+export type BannerScope = "home" | "site";
 
 export type SiteUpdate = {
   id: string;
@@ -15,6 +16,8 @@ export type SiteUpdate = {
   publish_at: string;
   is_published: boolean;
   show_in_banner: boolean;
+  /** Where the ribbon shows this update: the homepage only, or every page. */
+  banner_scope: BannerScope;
   require_ack: boolean;
   ack_until: string | null;
   /** Broadcast bookkeeping: when it was last pushed as a notification to
