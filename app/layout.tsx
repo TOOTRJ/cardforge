@@ -9,6 +9,7 @@ import { getSiteBaseUrl } from "@/lib/site-url";
 import { noFlashScript } from "@/lib/theme-shared";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 // ---------------------------------------------------------------------------
@@ -242,6 +243,9 @@ export default function RootLayout({
         {/* Vercel Speed Insights — tracks Core Web Vitals and page
             performance metrics for real user monitoring. */}
         <SpeedInsights />
+        {/* Vercel Web Analytics — tracks page views and user
+            interactions for analytics and insights. */}
+        <Analytics />
       </body>
     </html>
   );
