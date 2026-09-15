@@ -147,6 +147,12 @@ cron-driven (§6).
   failure; `lib/billing/credit-reconcile.ts` sweeps orphaned charges daily.
 - Watermark/hi-res gating: `lib/render/card-image.tsx` + the `app/api/cards/[id]/{png,pdf,og}` routes;
   whole-deck/set export: `app/api/decks/[id]/{export,download}`, `app/api/sets/[id]/export`.
+  **Downloads follow the VIEWER's plan only** (`downloadBrandMark` in
+  `lib/billing/entitlements.ts`): a free-tier viewer always downloads with
+  the pipglyph.com mark, whoever made the card; a paid viewer never does.
+  The card OWNER's plan only decides the display surfaces — the stored
+  gallery bake and the OG share image (`ownerExportStamp`) — plus the
+  custom footer text.
 - Capacity gate: `lib/cards/actions.ts` (`cardCapacity`); admin comp tier /
   card-cap override / credit grants: `/admin/users` (`lib/admin/user-actions.ts`).
 - Selling UI: `app/(marketing)/pricing/page.tsx`, `components/billing/*`,

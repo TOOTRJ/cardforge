@@ -176,14 +176,33 @@ export type OwnerExportStamp = {
 };
 
 /**
- * The brand mark and custom footer mark follow the card OWNER's plan, not
- * the viewer's capability — a paid creator's cards render clean (with their
- * own optional mark) everywhere: OG images, bakes, other people's downloads.
- * A free creator's cards carry the pipglyph.com mark and no custom footer.
+ * The brand mark and custom footer mark the card OWNER's plan puts on the
+ * card's DISPLAY surfaces — the stored bake behind gallery tiles and the OG
+ * share image: a paid creator's cards show clean (with their own optional
+ * mark), a free creator's carry the pipglyph.com mark and no custom footer.
+ *
+ * DOWNLOADS are different: the brand mark on a PNG/PDF download follows the
+ * VIEWER's plan only (downloadBrandMark) — a free viewer always downloads a
+ * watermarked card, whoever made it. The owner stamp still supplies the
+ * custom footer text for downloads.
  * Uses the cookie-free public client so viewer-independent callers (OG
  * route, deferred bake, rebake) stay ISR-eligible; fails toward showing the
  * brand mark on lookup problems.
  */
+/**
+ * Whether a DOWNLOAD (PNG/PDF/deck/set export) carries the pipglyph.com brand
+ * mark: yes unless the VIEWER's plan removes watermarks. Owner decision
+ * 2026-09-15 — the previous rule cleared the mark when EITHER side was paid,
+ * which let anyone download a paid creator's card clean. The card owner's
+ * plan never enters into it: free-tier viewers always download with the
+ * mark, paid viewers never do (their own cards included).
+ */
+export function downloadBrandMark(
+  viewer: Pick<Entitlements, "removeWatermark">,
+): boolean {
+  return !viewer.removeWatermark;
+}
+
 export async function ownerExportStamp(
   ownerId: string,
 ): Promise<OwnerExportStamp> {

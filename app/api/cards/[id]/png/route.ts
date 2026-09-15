@@ -10,6 +10,7 @@ import {
 } from "@/lib/render/card-image";
 import { fetchStoredRender, fitStoredRender } from "@/lib/render/stored-render";
 import {
+  downloadBrandMark,
   getEntitlements,
   ownerExportStamp,
 } from "@/lib/billing/entitlements";
@@ -89,14 +90,15 @@ export async function GET(
     profileOverrides,
   );
 
-  // Resolution follows the VIEWER's plan (their export capability); the
-  // brand mark clears when EITHER side's plan removes it — the owner paid
-  // for clean cards everywhere, or the viewer paid for clean downloads.
+  // Resolution AND the brand mark follow the VIEWER's plan: a free viewer
+  // always downloads a watermarked, capped card — whoever made it — and a
+  // paid viewer downloads clean HD (downloadBrandMark). The owner's stamp
+  // only contributes their custom footer text.
   const entitlements = await getEntitlements();
   const preset: RenderPreset =
     entitlements.maxExportPreset === "hd" ? requestedPreset : "default";
   const stamp = await ownerExportStamp(card.owner_id);
-  const watermark = stamp.brandMark && !entitlements.removeWatermark;
+  const watermark = downloadBrandMark(entitlements);
 
   // Output varies by the authenticated viewer's entitlement (watermark +
   // resolution), so it must NOT be shared-cached at the CDN — that would leak a
@@ -145,10 +147,11 @@ export async function GET(
   try {
     // The stored bake carries the OWNER's stamp. When this download would
     // carry the same one, serve it (2× downscaled for a clamped viewer)
-    // instead of re-rendering — lib/render/stored-render.ts. A paid viewer
-    // downloading a free creator's card needs the clean render the bake
-    // doesn't have, so that path (and any card without a current bake)
-    // still renders live.
+    // instead of re-rendering — lib/render/stored-render.ts. A free viewer
+    // downloading a paid creator's card needs the WATERMARKED render the
+    // bake doesn't have (and a paid viewer of a free creator's card the
+    // clean one), so those paths — and any card without a current bake —
+    // still render live.
     const stored =
       watermark === stamp.brandMark ? await fetchStoredRender(card) : null;
     if (stored) {
