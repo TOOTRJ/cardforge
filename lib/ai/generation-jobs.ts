@@ -682,8 +682,9 @@ type OwnedDeckContext = {
 
 /** The caller's deck + its cards in the shape the designers read. Null when
  *  the deck doesn't exist or isn't theirs (RLS hides other users' private
- *  decks; public ones are rejected by the owner check). */
-async function loadOwnedDeckContext(
+ *  decks; public ones are rejected by the owner check). Shared with the
+ *  card-ideas route. */
+export async function loadOwnedDeckContext(
   supabase: Awaited<ReturnType<typeof createClient>>,
   deckId: string,
   userId: string,

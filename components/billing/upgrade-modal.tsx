@@ -61,7 +61,7 @@ const REASON_COPY: Record<UpgradeReason, { title: string; description: string }>
     deck_aware_generation: {
       title: "Design cards for your deck",
       description:
-        "Pro can point the AI at one of your decks: it studies the deck's colors, curve and cards, designs the card it's missing, and adds it to the deck for you.",
+        "Pro can point the AI at one of your decks: it studies the deck's colors, curve and cards, then designs the card it's missing (and adds it to the deck) or themes a batch of ideas to it.",
     },
     generic: {
       title: "Go premium",

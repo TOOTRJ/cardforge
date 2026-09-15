@@ -156,11 +156,14 @@ cron-driven (§6).
   owner's custom footer text prints on paid downloads only
   (`ownerExportStamp`). Free viewers see the other formats greyed out and
   get no deck export options.
-- Deck-aware AI card design (Pro, owner decision 2026-09-15 — the ONE
-  tier-gated AI feature; generation itself stays open to every tier):
-  `deck_id` on the `kind: "card"` job, `requireTier("pro")` in
-  `app/api/ai/jobs/route.ts` and `createCardGenerationJob`; the brief the
-  designer gets is `lib/ai/deck-brief.ts`.
+- Deck-aware AI (Pro, owner decision 2026-09-15 — the only tier-gated AI
+  features; generation itself stays open to every tier): `deck_id` on the
+  `kind: "card"` job (`requireTier("pro")` in `app/api/ai/jobs/route.ts` and
+  `createCardGenerationJob`) and on `POST /api/ai/card-ideas` (deck-themed
+  ideas). The brief the designer gets is `lib/ai/deck-brief.ts`.
+- Card ideas (`/api/ai/card-ideas`, `lib/ai/card-ideas.ts`): 1 credit per
+  batch of text-only concepts, open to every tier; only the deck theming is
+  Pro.
 - Capacity gate: `lib/cards/actions.ts` (`cardCapacity`); admin comp tier /
   card-cap override / credit grants: `/admin/users` (`lib/admin/user-actions.ts`).
 - Selling UI: `app/(marketing)/pricing/page.tsx`, `components/billing/*`,

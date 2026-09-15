@@ -44,6 +44,7 @@ import {
   type AiGenerateOptions,
 } from "@/components/creator/ai-generate-dialog";
 import type { CardFieldPatch } from "@/components/creator/ai-assistant-panel";
+import { CardIdeasDialog } from "@/components/creator/card-ideas-dialog";
 import {
   ScryfallImportDialog,
   type ScryfallImportPayload,
@@ -326,6 +327,7 @@ export function CardCreatorForm({
   // disables itself while a request is in flight so the user can't double-
   // submit and burn quota.
   const [generatingRandom, setGeneratingRandom] = useState(false);
+  const [ideasOpen, setIdeasOpen] = useState(false);
   // Which face the live preview shows. Auto-flips to the back when the user
   // reaches the Back-face step (so they see what they're editing); they can
   // also click the preview itself to flip it any time.
@@ -338,6 +340,13 @@ export function CardCreatorForm({
     const openScryfall = () => setScryfallOpen(true);
     const generateRandom = () => {
       setAiGenerateOpen(true);
+    };
+    const openIdeas = () => {
+      if (!userId) {
+        toast.error("Sign in to use the idea generator.");
+        return;
+      }
+      setIdeasOpen(true);
     };
     const openAiConcept = () => {
       // The AI assistant panel lives on the Text panel. Jump there, then defer
@@ -357,14 +366,16 @@ export function CardCreatorForm({
     window.addEventListener(CARDFORGE_EVENTS.openScryfall, openScryfall);
     window.addEventListener(CARDFORGE_EVENTS.openAiConcept, openAiConcept);
     window.addEventListener(CARDFORGE_EVENTS.generateRandom, generateRandom);
+    window.addEventListener(CARDFORGE_EVENTS.openIdeas, openIdeas);
     window.addEventListener(CARDFORGE_EVENTS.scrollToForm, scrollToForm);
     return () => {
       window.removeEventListener(CARDFORGE_EVENTS.openScryfall, openScryfall);
       window.removeEventListener(CARDFORGE_EVENTS.openAiConcept, openAiConcept);
       window.removeEventListener(CARDFORGE_EVENTS.generateRandom, generateRandom);
+      window.removeEventListener(CARDFORGE_EVENTS.openIdeas, openIdeas);
       window.removeEventListener(CARDFORGE_EVENTS.scrollToForm, scrollToForm);
     };
-  }, []);
+  }, [userId]);
 
   const defaults = useMemo(() => {
     const base = defaultValuesFor(card, gameSystems, templates);
@@ -1997,6 +2008,13 @@ export function CardCreatorForm({
             onGenerate={(options) => void handleRandomCard(options)}
             myDecks={aiDecks ?? myDecks}
             canDesignForDeck={canDesignForDeck}
+          />
+          <CardIdeasDialog
+            open={ideasOpen}
+            onOpenChange={setIdeasOpen}
+            onApply={handleAIPatch}
+            myDecks={aiDecks ?? myDecks}
+            canUseDeckIdeas={canDesignForDeck}
           />
 
           {/* Kind-change confirmation — only when the current era can't frame

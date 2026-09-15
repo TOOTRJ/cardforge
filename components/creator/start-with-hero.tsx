@@ -1,6 +1,7 @@
 "use client";
 
-import { Search, Sparkles, FileSymlink } from "lucide-react";
+import {
+  Lightbulb, Search, Sparkles, FileSymlink } from "lucide-react";
 
 // ---------------------------------------------------------------------------
 // StartWithHero — the 3-up "Start with…" callout above the card creator
@@ -28,6 +29,8 @@ export const CARDFORGE_EVENTS = {
   openAiConcept: "cardforge:open-ai-concept",
   /** Kick off the AI random-card generation (the "Generate with AI" hero). */
   generateRandom: "cardforge:generate-random",
+  /** Open the "Get ideas" dialog — text-only concepts to pick fields from. */
+  openIdeas: "cardforge:open-ideas",
 } as const;
 
 type Option = {
@@ -57,6 +60,15 @@ const OPTIONS: Option[] = [
       "from-primary/15 to-primary/5 hover:border-primary/60 border-primary/30",
   },
   {
+    key: "openIdeas",
+    label: "Get ideas",
+    description:
+      "One credit, three complete card concepts — pick the name, type, cost and text you like and start from there. No art.",
+    icon: Lightbulb,
+    accentClass:
+      "from-gold/15 to-gold/5 hover:border-gold/60 border-gold/30",
+  },
+  {
     key: "generateRandom",
     label: "Generate with AI",
     description:
@@ -75,7 +87,7 @@ export function StartWithHero() {
   };
 
   return (
-    <div className="grid gap-3 sm:grid-cols-3">
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       {OPTIONS.map((option) => {
         const Icon = option.icon;
         return (
@@ -112,7 +124,9 @@ export function StartWithHero() {
                   ? "Open the form ↓"
                   : option.key === "generateRandom"
                     ? "Choose options & forge →"
-                    : "Search Scryfall →"}
+                    : option.key === "openIdeas"
+                      ? "Brainstorm, then pick →"
+                      : "Search Scryfall →"}
             </span>
           </button>
         );
