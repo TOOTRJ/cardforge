@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import sharp from "sharp";
 import {
+  TRANSPARENT_PIXEL_DATA_URL,
   needsSatoriTranscode,
   resolveRenderableImage,
   toSatoriDataUrl,
@@ -63,5 +64,16 @@ describe("art-source — images Satori can decode", () => {
     // An unroutable host — the fetch rejects quickly and the URL comes back.
     const url = "http://127.0.0.1:1/nope.webp";
     expect(await resolveRenderableImage(url)).toBe(url);
+  });
+});
+
+describe("resolveRenderableImage: SSRF gate", () => {
+  it("never fetches a host outside the allowlist — renders a transparent pixel instead", async () => {
+    expect(await resolveRenderableImage("https://evil.example/steal.png")).toBe(TRANSPARENT_PIXEL_DATA_URL);
+    expect(await resolveRenderableImage("https://169.254.169.254/latest/meta-data")).toBe(TRANSPARENT_PIXEL_DATA_URL);
+    // Scryfall art is allowed (a failed fetch of an allowed host falls back to the URL).
+    const scryfall = "https://cards.scryfall.io/art_crop/front/0/0/nope.jpg";
+    const resolved = await resolveRenderableImage(scryfall);
+    expect(resolved === scryfall || resolved.startsWith("data:")).toBe(true);
   });
 });
