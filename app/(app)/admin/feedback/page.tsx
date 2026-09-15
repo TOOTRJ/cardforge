@@ -7,7 +7,7 @@ import { SurfaceCard } from "@/components/ui/surface-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FeedbackStatusButtons } from "@/components/admin/feedback-status-buttons";
 import { FeedbackReplyButton } from "@/components/admin/feedback-reply-button";
-import { listAllFeedback } from "@/lib/feedback/queries";
+import { listAllFeedback, type FeedbackInboxFilter } from "@/lib/feedback/queries";
 import { threadIdsForFeedback } from "@/lib/messages/queries";
 import {
   FEEDBACK_CATEGORIES,
@@ -43,10 +43,15 @@ export default async function AdminFeedbackPage({
   searchParams: Promise<{ status?: string }>;
 }) {
   const { status } = await searchParams;
-  const filter = (FEEDBACK_STATUSES as readonly string[]).includes(status ?? "")
-    ? (status as FeedbackStatus)
-    : undefined;
-
+  // Default view: everything still needing a look (new + reviewed), newest
+  // first with untouched reports on top. "All" and the single statuses are
+  // explicit tabs.
+  const filter: FeedbackInboxFilter =
+    status === "all"
+      ? "all"
+      : (FEEDBACK_STATUSES as readonly string[]).includes(status ?? "")
+        ? (status as FeedbackStatus)
+        : "unresolved";
   const items = await listAllFeedback(filter);
   // Non-admins get a 404 (don't reveal the route exists).
   if (items === null) notFound();
@@ -63,7 +68,8 @@ export default async function AdminFeedbackPage({
       />
 
       <div className="mt-4 flex items-center gap-2">
-        <FilterTab href="/admin/feedback" active={!filter} label="All" />
+        <FilterTab href="/admin/feedback" active={filter === "unresolved"} label="Unresolved" />
+        <FilterTab href="/admin/feedback?status=all" active={filter === "all"} label="All" />
         {FEEDBACK_STATUSES.map((s) => (
           <FilterTab
             key={s}
@@ -79,9 +85,11 @@ export default async function AdminFeedbackPage({
           <EmptyState
             title="Inbox zero"
             description={
-              filter
-                ? `No ${filter} feedback right now.`
-                : "No feedback yet — when users submit, it lands here."
+              filter === "unresolved"
+                ? "Nothing needs a look right now — every submission is resolved."
+                : filter === "all"
+                  ? "No feedback yet — when users submit, it lands here."
+                  : `No ${filter} feedback right now.`
             }
           />
         ) : (

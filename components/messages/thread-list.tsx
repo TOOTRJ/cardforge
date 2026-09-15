@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CheckCircle2 } from "lucide-react";
+import { Check, CheckCheck, CheckCircle2 } from "lucide-react";
 import { TEAM_DISPLAY_NAME } from "@/lib/messages/schemas";
 import type { AdminThreadSummary, ThreadSummary } from "@/lib/messages/queries";
 import { formatBadgeCount, formatRelativeTime } from "@/components/messages/format";
@@ -84,6 +84,23 @@ export function ThreadList({ threads, basePath, className }: ThreadListProps) {
                     "No messages yet"
                   )}
                 </span>
+                {/* Admin inbox only: has the user seen the team's last post? */}
+                {isAdminThread(t) && t.lastSenderRole === "admin" ? (
+                  t.userHasUnseen ? (
+                    <span className="inline-flex shrink-0 items-center gap-1" title="The user hasn't opened this yet">
+                      <Check className="h-3 w-3" aria-hidden />
+                      Unseen
+                    </span>
+                  ) : (
+                    <span
+                      className="inline-flex shrink-0 items-center gap-1 text-success"
+                      title={t.userLastReadAt ? `Seen ${formatRelativeTime(t.userLastReadAt)}` : "Seen"}
+                    >
+                      <CheckCheck className="h-3 w-3" aria-hidden />
+                      Seen
+                    </span>
+                  )
+                ) : null}
                 <time dateTime={t.lastMessageAt} className="shrink-0">
                   {formatRelativeTime(t.lastMessageAt)}
                 </time>

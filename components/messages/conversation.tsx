@@ -1,4 +1,4 @@
-import { MessageSquareQuote } from "lucide-react";
+import { Check, CheckCheck, MessageSquareQuote } from "lucide-react";
 import { TEAM_DISPLAY_NAME } from "@/lib/messages/schemas";
 import type { ThreadDetail, ThreadMessage } from "@/lib/messages/queries";
 import { FEEDBACK_CATEGORIES } from "@/lib/feedback/schemas";
@@ -25,6 +25,10 @@ type ConversationProps = {
   adminNames?: Record<string, string>;
   /** The feedback the thread answers — rendered as a quoted header. */
   feedback?: ThreadDetail["feedback"];
+  /** ADMIN VIEW ONLY — when the user last opened the thread. Admin posts at
+   *  or before that instant show "Seen"; the newest later one shows "Not
+   *  seen yet". Users never receive the mirror of this. */
+  seenAt?: string | null;
   className?: string;
 };
 
@@ -34,8 +38,23 @@ export function Conversation({
   userLabel = "You",
   adminNames = {},
   feedback = null,
+  seenAt = null,
   className,
 }: ConversationProps) {
+  // Read receipts: only the admin side, only on admin posts. Mark the latest
+  // seen admin post and the latest unseen one, not every bubble.
+  const seenTime = viewer === "admin" && seenAt ? new Date(seenAt).getTime() : null;
+  const adminPosts = viewer === "admin" ? messages.filter((m) => m.senderRole === "admin") : [];
+  const lastSeenId =
+    seenTime != null
+      ? [...adminPosts].reverse().find((m) => new Date(m.createdAt).getTime() <= seenTime)?.id ?? null
+      : null;
+  const lastUnseenId =
+    viewer === "admin"
+      ? [...adminPosts]
+          .reverse()
+          .find((m) => seenTime == null || new Date(m.createdAt).getTime() > seenTime)?.id ?? null
+      : null;
   const senderLabel = (m: ThreadMessage): string => {
     if (m.senderRole === "admin") {
       if (viewer === "user") return TEAM_DISPLAY_NAME;
@@ -90,6 +109,20 @@ export function Conversation({
               >
                 {m.body}
               </div>
+              {m.id === lastSeenId && seenAt ? (
+                <span className="flex items-center gap-1 px-1 text-[11px] text-subtle">
+                  <CheckCheck className="h-3 w-3 text-success" aria-hidden />
+                  Seen{" "}
+                  <time dateTime={seenAt} title={formatFullTime(seenAt)}>
+                    {formatRelativeTime(seenAt)}
+                  </time>
+                </span>
+              ) : m.id === lastUnseenId ? (
+                <span className="flex items-center gap-1 px-1 text-[11px] text-subtle">
+                  <Check className="h-3 w-3" aria-hidden />
+                  Not seen yet
+                </span>
+              ) : null}
             </li>
           );
         })}
