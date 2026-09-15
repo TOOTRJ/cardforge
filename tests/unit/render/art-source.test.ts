@@ -74,6 +74,6 @@ describe("resolveRenderableImage: SSRF gate", () => {
     // Scryfall art is allowed (a failed fetch of an allowed host falls back to the URL).
     const scryfall = "https://cards.scryfall.io/art_crop/front/0/0/nope.jpg";
     const resolved = await resolveRenderableImage(scryfall);
-    expect(resolved === scryfall || resolved.startsWith("data:")).toBe(true);
+    expect(resolved === scryfall || (resolved ?? "").startsWith("data:")).toBe(true);
   });
 });
