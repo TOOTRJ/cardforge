@@ -71,7 +71,12 @@ export const DialogContent = forwardRef<
       ref={ref}
       className={cn(
         "fixed left-[50%] top-[50%] z-50 flex w-full translate-x-[-50%] translate-y-[-50%] flex-col",
-        "max-h-[85vh] overflow-hidden border border-border bg-surface shadow-2xl",
+        // Never taller than the viewport (dvh follows mobile browser chrome).
+        // The content itself scrolls as a fallback so a dialog can never hide
+        // its own buttons; content-heavy dialogs give their body
+        // `min-h-0 flex-1 overflow-y-auto` so the header and footer stay
+        // pinned while only the middle scrolls.
+        "max-h-[85dvh] overflow-y-auto border border-border bg-surface shadow-2xl",
         "rounded-xl",
         // Simple fade+scale via CSS transition. The closed-state classes
         // apply just before unmount, so this is best-effort exit animation;
@@ -110,7 +115,7 @@ export function DialogHeader({
   return (
     <div
       className={cn(
-        "flex flex-col gap-1 border-b border-border/60 px-5 py-4",
+        "flex shrink-0 flex-col gap-1 border-b border-border/60 px-5 py-4",
         className,
       )}
       {...props}
@@ -125,7 +130,7 @@ export function DialogFooter({
   return (
     <div
       className={cn(
-        "flex flex-col-reverse gap-2 border-t border-border/60 px-5 py-3 sm:flex-row sm:justify-end",
+        "flex shrink-0 flex-col-reverse gap-2 border-t border-border/60 px-5 py-3 sm:flex-row sm:justify-end",
         className,
       )}
       {...props}

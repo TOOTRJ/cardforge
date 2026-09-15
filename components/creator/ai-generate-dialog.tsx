@@ -165,7 +165,9 @@ export function AiGenerateDialog({
 
         {/* px-5 matches DialogHeader/Footer — the fields were flush with the
             dialog edges. */}
-        <div className="flex flex-col gap-4 px-5 py-5">
+        {/* The options scroll between the pinned header and footer, so the
+            Generate button is always reachable on short viewports. */}
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-5 py-5">
           {decks.length > 0 ? (
             <FieldGroup
               label="For a deck"
