@@ -13,7 +13,7 @@ import { isSetsEnabled } from "@/lib/sets/flags";
 //
 // Three layers, in priority order:
 //
-//   1. Static product pages (home, /preview, /gallery, /mtg-card-maker, etc.)
+//   1. Static product pages (home, /create, /gallery, /mtg-card-maker, etc.)
 //   2. Dynamic per-card pages — every public card with a username-resolved
 //      owner (the indexable canonical URLs).
 //
@@ -109,7 +109,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: 0.7,
       })),
     {
-      url: `${baseUrl}/preview`,
+      url: `${baseUrl}/create`,
       lastModified,
       changeFrequency: "monthly",
       priority: 0.85,
