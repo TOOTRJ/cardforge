@@ -16,6 +16,7 @@
 import { ImageResponse } from "next/og";
 import { resolveRenderableImage } from "@/lib/render/art-source";
 import { fitRulesSizePct, fitSingleLineSizePct } from "@/lib/cards/render-tiers";
+import { RULES_TEXT } from "@/lib/cards/typography";
 import { tokenize, tokenSuffix } from "@/components/cards/mana-cost-glyphs";
 import { ROSE_STAR_PATH, SET_MARK_GEM_PATH, SET_MARK_RING, SET_MARK_STAR_PATH } from "@/lib/brand/geometry";
 import { RARITY_SET_MARK } from "@/lib/brand/constants";
@@ -229,7 +230,7 @@ function CardImage({
     flavorText: card.flavorText,
     rect: fitRect,
     baseSizePct: layout.rules.sizePct,
-    lineHeight: layout.rules.lineHeight ?? 1.3,
+    lineHeight: layout.rules.lineHeight ?? RULES_TEXT.lineHeight,
     aspect,
   });
   // Planeswalker ability rows (badged loyalty costs, striped rows) when the
@@ -547,7 +548,7 @@ function CardImage({
           padding: `${Math.round(width * 0.012)}px ${Math.round(width * 0.006)}px`,
           fontFamily: fontFamilyFor(layout.rules.font),
           fontSize: fpx(rulesSizePct, width),
-          lineHeight: layout.rules.lineHeight ?? 1.3,
+          lineHeight: layout.rules.lineHeight ?? RULES_TEXT.lineHeight,
           color: layout.rules.colorHex,
           textAlign: "left",
           zIndex: 20,
@@ -564,7 +565,9 @@ function CardImage({
         {card.flavorText?.trim() ? (
           <FlavorBake
             text={card.flavorText}
-            cardWidth={width}
+            size={fpx(rulesSizePct, width)}
+            afterRules={Boolean(card.rulesText?.trim())}
+            divider={layout.flavorDivider !== false}
             dividerHex={`${layout.rules.colorHex}44`}
           />
         ) : null}
@@ -1052,11 +1055,13 @@ function RulesBodyBake({
   overrides?: PipOverrides | null;
 }) {
   const paragraphs = tokenizeRulesText(text);
-  const glyph = Math.round(size * 0.92);
-  const paraGap = Math.round(size * 0.5);
-  const runGap = Math.round(size * 0.26);
-  const lineGap = Math.round(size * 0.12);
-  const pipGap = Math.max(1, Math.round(size * 0.08));
+  // Spacing from the shared typography standard, rounded to whole pixels
+  // (Satori lays out on the pixel grid; the preview uses the same em values).
+  const glyph = Math.round(size * RULES_TEXT.pipDiscEm);
+  const paraGap = Math.round(size * RULES_TEXT.paragraphGapEm);
+  const runGap = Math.round(size * RULES_TEXT.wordGapEm);
+  const lineGap = Math.round(size * RULES_TEXT.wrapGapEm);
+  const pipGap = Math.max(1, Math.round(size * RULES_TEXT.pipGapEm));
   return (
     <div
       style={{
@@ -1076,7 +1081,7 @@ function RulesBodyBake({
             // Per-run margins instead of container `gap`: Satori's gap shifts
             // the row's content left (it uses negative margins under the hood),
             // which `overflow: hidden` then clips. Margins avoid that.
-            minHeight: items.length === 0 ? Math.round(size * 0.7) : 0,
+            minHeight: items.length === 0 ? Math.round(size * RULES_TEXT.blankLineEm) : 0,
           }}
         >
           {groupTightRuns(items).map((run, ri) => (
@@ -1110,28 +1115,38 @@ function RulesBodyBake({
   );
 }
 
-// FlavorBake — italic flavor text under a hairline divider, with source line
-// breaks preserved (real cards put quote attributions on their own line).
+// FlavorBake — italic flavor text under the rules, with source line breaks
+// preserved (real cards put quote attributions on their own line). M15-family
+// frames print a hairline between rules and flavor; pre-M15 frames leave a
+// gap only. Spacing is in em of the rules size, like the preview's FlavorBlock.
 function FlavorBake({
   text,
-  cardWidth,
+  size,
+  afterRules,
+  divider,
   dividerHex,
 }: {
   text: string;
-  cardWidth: number;
+  size: number;
+  afterRules: boolean;
+  divider: boolean;
   dividerHex: string;
 }) {
   const lines = text.split(/\n/).filter((l) => l.trim().length > 0);
+  const gap = Math.round(size * RULES_TEXT.flavorGapEm);
   return (
     <div
       style={{
         display: "flex",
         flexDirection: "column",
         fontStyle: "italic",
-        marginTop: Math.round(cardWidth * 0.012),
-        paddingTop: Math.round(cardWidth * 0.012),
-        borderTop: `1px solid ${dividerHex}`,
-        rowGap: Math.round(cardWidth * 0.004),
+        lineHeight: RULES_TEXT.lineHeight,
+        rowGap: Math.round(size * RULES_TEXT.wrapGapEm),
+        ...(afterRules
+          ? divider
+            ? { marginTop: gap, paddingTop: gap, borderTop: `1px solid ${dividerHex}` }
+            : { marginTop: gap * 2 }
+          : {}),
       }}
     >
       {lines.map((line, i) => (
@@ -1175,7 +1190,7 @@ function LoyaltyRowsBake({
         overflow: "hidden",
         fontFamily: fontFamilyFor(slot.font),
         fontSize: size,
-        lineHeight: slot.lineHeight ?? 1.25,
+        lineHeight: slot.lineHeight ?? RULES_TEXT.lineHeight,
         color: slot.colorHex,
         zIndex: 20,
         borderRadius: Math.round(cardWidth * 0.012),
@@ -1561,7 +1576,7 @@ function AdventureBake({
     flavorText: null,
     rect: slot.rules.rect,
     baseSizePct: slot.rules.sizePct,
-    lineHeight: slot.rules.lineHeight ?? 1.25,
+    lineHeight: slot.rules.lineHeight ?? RULES_TEXT.lineHeight,
     aspect: 7 / 5,
   });
   // Full-size positioned wrapper so the three % slots resolve against the card
@@ -1605,7 +1620,7 @@ function AdventureBake({
           padding: `${Math.round(cardWidth * 0.01)}px ${Math.round(cardWidth * 0.006)}px`,
           fontFamily: fontFamilyFor(slot.rules.font),
           fontSize: fpx(rulesSize, cardWidth),
-          lineHeight: slot.rules.lineHeight ?? 1.25,
+          lineHeight: slot.rules.lineHeight ?? RULES_TEXT.lineHeight,
           color: slot.rules.colorHex,
           textAlign: "center",
           zIndex: 20,
@@ -1653,7 +1668,7 @@ function SecondFaceBake({
     flavorText: null,
     rect: slot.rules.rect,
     baseSizePct: slot.rules.sizePct,
-    lineHeight: slot.rules.lineHeight ?? 1.25,
+    lineHeight: slot.rules.lineHeight ?? RULES_TEXT.lineHeight,
     aspect,
   });
   return (
@@ -1723,7 +1738,7 @@ function SecondFaceBake({
           transformOrigin: "50% 50%",
           fontFamily: fontFamilyFor(slot.rules.font),
           fontSize: fpx(rulesSize, cardWidth),
-          lineHeight: slot.rules.lineHeight ?? 1.25,
+          lineHeight: slot.rules.lineHeight ?? RULES_TEXT.lineHeight,
           color: slot.rules.colorHex,
           textAlign: "center",
           zIndex: 20,

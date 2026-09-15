@@ -44,6 +44,7 @@
 // ---------------------------------------------------------------------------
 
 import type { FrameTemplate } from "@/types/card";
+import { ptToPct } from "@/lib/cards/typography";
 
 /** A rectangle in card-relative percent (0–100), origin top-left. The card's
  *  full outer rect (corner to corner, the area the frame PNG fills) is the
@@ -116,8 +117,15 @@ export type FrameProfile = {
   title: TextSlot;
   /** Type band. Type line left; rarity set-symbol right. */
   type: TextSlot;
-  /** Rules + flavor text box. */
+  /** Rules + flavor text box. Its `sizePct` is the printed standard from
+   *  lib/cards/typography.ts (9 pt on a full box, 7.5–8 pt on half boxes);
+   *  the fit ladder shrinks from there. `lineHeight` is left unset so the
+   *  standard leading applies. */
   rules: TextSlot;
+  /** Draw the M15-family hairline between rules and flavor text. Pre-M15
+   *  frames (1997 retro, 2003 modern, Alpha-era) separate them with a gap
+   *  only. Default true. */
+  flavorDivider?: boolean;
   /** Bottom info line (artist credit + brand). */
   footer?: TextSlot;
   pt?: StatSlot;
@@ -300,14 +308,13 @@ const M15: FrameProfile = {
     // block center across all seven reference scans (77.2–78.0 regardless
     // of text length).
     rect: { topPct: 63.6, leftPct: 8.5, widthPct: 83, heightPct: 28.0 },
-    sizePct: 0.0373,
+    sizePct: ptToPct(9),
     colorHex: INK_DARK,
     // Real M15 cards vertically center the rules block when it doesn't fill
     // the box (see any short-text printing, e.g. DOM Serra Angel) — full
     // boxes render identically either way.
     vAlign: "center",
     font: "body",
-    lineHeight: 1.32,
   },
   footer: {
     // The real artist line's ink centers at ~96.2% of card height and its
@@ -360,6 +367,7 @@ const M15LAND: FrameProfile = {
 // box (61–89%), bottom tan border. No painted P/T plate, so P/T is white text
 // with a black outline in the bottom-right.
 const AGCLASSIC: FrameProfile = {
+  flavorDivider: false,
   label: "Alpha (1993)",
   costSizePct: 0.042,
   artSlot: { topPct: 9.5, leftPct: 10.6, widthPct: 78.8, heightPct: 44.8 },
@@ -379,11 +387,10 @@ const AGCLASSIC: FrameProfile = {
   },
   rules: {
     rect: { topPct: 61.6, leftPct: 12.5, widthPct: 75, heightPct: 26.5 },
-    sizePct: 0.036,
+    sizePct: ptToPct(9),
     colorHex: INK_DARK,
     vAlign: "start",
     font: "body",
-    lineHeight: 1.3,
   },
   footer: {
     rect: { topPct: 91.0, leftPct: 12, widthPct: 52, heightPct: 3.0 },
@@ -430,11 +437,10 @@ const M15PW: FrameProfile = {
   },
   rules: {
     rect: { topPct: 63.1, leftPct: 8.5, widthPct: 83.5, heightPct: 28.3 },
-    sizePct: 0.0373,
+    sizePct: ptToPct(8),
     colorHex: INK_DARK,
     vAlign: "start",
     font: "body",
-    lineHeight: 1.3,
     backdropHex: "rgba(244,238,226,0.72)",
   },
   // Printed planeswalkers stripe each ability row and badge its loyalty cost
@@ -494,11 +500,10 @@ const M15TOKEN: FrameProfile = {
   },
   rules: {
     rect: { topPct: 60.5, leftPct: 12, widthPct: 76, heightPct: 12 },
-    sizePct: 0.031,
+    sizePct: ptToPct(8),
     colorHex: INK_LIGHT,
     vAlign: "center",
     font: "body",
-    lineHeight: 1.28,
     backdropHex: "rgba(10,8,6,0.5)",
   },
   footer: {
@@ -543,6 +548,7 @@ const ALPHALAND: FrameProfile = {
 // dark top border in light ink) and no cost. P/T is white text over the tan box
 // bottom-right; token abilities render over the lower art on a dark scrim.
 const ALPHATOKEN: FrameProfile = {
+  flavorDivider: false,
   label: "Alpha Token",
   hideCost: true,
   artSlot: { topPct: 9.0, leftPct: 10, widthPct: 80, heightPct: 52.5 },
@@ -565,11 +571,10 @@ const ALPHATOKEN: FrameProfile = {
   },
   rules: {
     rect: { topPct: 49.0, leftPct: 12, widthPct: 76, heightPct: 11 },
-    sizePct: 0.03,
+    sizePct: ptToPct(7.5),
     colorHex: INK_LIGHT,
     vAlign: "center",
     font: "body",
-    lineHeight: 1.28,
     backdropHex: "rgba(10,8,6,0.5)",
   },
   footer: {
@@ -599,6 +604,7 @@ const ALPHATOKEN: FrameProfile = {
 // type 39,291 (20h); text 43,318 289×143; pt 295,470 47×27.
 // ---------------------------------------------------------------------------
 const RETRO: FrameProfile = {
+  flavorDivider: false,
   label: "Retro (1997)",
   costSizePct: 0.04,
   artSlot: { topPct: 9.6, leftPct: 11.7, widthPct: 76.6, heightPct: 44.8 },
@@ -618,11 +624,10 @@ const RETRO: FrameProfile = {
   },
   rules: {
     rect: { topPct: 60.6, leftPct: 11.5, widthPct: 77, heightPct: 27.2 },
-    sizePct: 0.0373,
+    sizePct: ptToPct(9),
     colorHex: INK_DARK,
-    vAlign: "start",
+    vAlign: "center",
     font: "body",
-    lineHeight: 1.3,
   },
   footer: {
     rect: { topPct: 95.3, leftPct: 11, widthPct: 78, heightPct: 2.6 },
@@ -659,6 +664,7 @@ const RETROLAND: FrameProfile = {
 // type 298 (20h); text 31,328 311×142; pt box 284,466 60×28 (+plate overlay).
 // ---------------------------------------------------------------------------
 const MODERN: FrameProfile = {
+  flavorDivider: false,
   label: "Modern border (2003)",
   costSizePct: 0.04,
   artSlot: { topPct: 11.6, leftPct: 8.3, widthPct: 83.2, heightPct: 43.8 },
@@ -680,11 +686,10 @@ const MODERN: FrameProfile = {
   },
   rules: {
     rect: { topPct: 62.5, leftPct: 8.3, widthPct: 83, heightPct: 27 },
-    sizePct: 0.0373,
+    sizePct: ptToPct(9),
     colorHex: INK_DARK,
-    vAlign: "start",
+    vAlign: "center",
     font: "body",
-    lineHeight: 1.3,
   },
   footer: {
     rect: { topPct: 91.4, leftPct: 14, widthPct: 58, heightPct: 2.6 },
@@ -742,11 +747,10 @@ const BATTLE: FrameProfile = {
   },
   rules: {
     rect: { topPct: 67.5, leftPct: 12.1, widthPct: 78.4, heightPct: 27 },
-    sizePct: 0.0268,
+    sizePct: ptToPct(8, "landscape"),
     colorHex: INK_DARK,
     vAlign: "start",
     font: "body",
-    lineHeight: 1.3,
   },
   defense: {
     rect: { topPct: 87.3, leftPct: 89.9, widthPct: 8, heightPct: 11 },
@@ -786,7 +790,7 @@ const SAGA: FrameProfile = {
   // a frame has no `chapters`).
   rules: {
     rect: { topPct: 11.5, leftPct: 8, widthPct: 41, heightPct: 72 },
-    sizePct: 0.029,
+    sizePct: ptToPct(7.5),
     colorHex: INK_DARK,
     font: "body",
   },
@@ -825,11 +829,10 @@ const ADVENTURE: FrameProfile = {
   // Creature rules → RIGHT page (MSE text left 190, top 332, width 143 → 481).
   rules: {
     rect: { topPct: 63.5, leftPct: 50.7, widthPct: 38.2, heightPct: 28.5 },
-    sizePct: 0.031,
+    sizePct: ptToPct(8),
     colorHex: INK_DARK,
     vAlign: "start",
     font: "body",
-    lineHeight: 1.28,
   },
   adventure: {
     // Adventure name (+ its cost) — MSE name 2 (left 32, top ~330, → cost 180).
@@ -853,11 +856,10 @@ const ADVENTURE: FrameProfile = {
     // Adventure rules — MSE text 2 (left 27, top 375, width 143 → 481).
     rules: {
       rect: { topPct: 71.6, leftPct: 7.2, widthPct: 38.1, heightPct: 20.3 },
-      sizePct: 0.029,
+      sizePct: ptToPct(7.5),
       colorHex: INK_DARK,
       vAlign: "start",
       font: "body",
-      lineHeight: 1.25,
     },
     costSizePct: 0.03,
   },
@@ -890,11 +892,10 @@ const FLIP: FrameProfile = {
   },
   rules: {
     rect: { topPct: 11.3, leftPct: 7.7, widthPct: 84, heightPct: 12.5 },
-    sizePct: 0.029,
+    sizePct: ptToPct(7.5),
     colorHex: INK_DARK,
     vAlign: "center",
     font: "body",
-    lineHeight: 1.22,
   },
   pt: {
     rect: { topPct: 24.5, leftPct: 82.1, widthPct: 11.7, heightPct: 5.4 },
@@ -922,11 +923,10 @@ const FLIP: FrameProfile = {
     },
     rules: {
       rect: { topPct: 73.4, leftPct: 8.3, widthPct: 84, heightPct: 11.8 },
-      sizePct: 0.029,
+      sizePct: ptToPct(7.5),
       colorHex: INK_DARK,
       vAlign: "center",
       font: "body",
-      lineHeight: 1.22,
     },
     pt: {
       rect: { topPct: 68.2, leftPct: 6.2, widthPct: 11.7, heightPct: 5.4 },
@@ -966,11 +966,10 @@ const SPLIT: FrameProfile = {
   },
   rules: {
     rect: { topPct: 62.4, leftPct: 4.8, widthPct: 41.9, heightPct: 28.5 },
-    sizePct: 0.027,
+    sizePct: ptToPct(8, "landscape"),
     colorHex: INK_DARK,
     vAlign: "start",
     font: "body",
-    lineHeight: 1.28,
   },
   secondFace: {
     rotation: 0,
@@ -992,11 +991,10 @@ const SPLIT: FrameProfile = {
     },
     rules: {
       rect: { topPct: 62.4, leftPct: 53.2, widthPct: 41.9, heightPct: 28.5 },
-      sizePct: 0.027,
+      sizePct: ptToPct(8, "landscape"),
       colorHex: INK_DARK,
       vAlign: "start",
       font: "body",
-      lineHeight: 1.28,
     },
   },
 };
@@ -1028,11 +1026,10 @@ const AFTERMATH: FrameProfile = {
   },
   rules: {
     rect: { topPct: 40.9, leftPct: 7.5, widthPct: 84.5, heightPct: 13.0 },
-    sizePct: 0.0373,
+    sizePct: ptToPct(9),
     colorHex: INK_DARK,
     vAlign: "start",
     font: "body",
-    lineHeight: 1.3,
   },
   secondFace: {
     rotation: 270,
@@ -1059,11 +1056,10 @@ const AFTERMATH: FrameProfile = {
     },
     rules: {
       rect: { topPct: 56.5, leftPct: 4.5, widthPct: 39, heightPct: 38 },
-      sizePct: 0.029,
+      sizePct: ptToPct(7.5),
       colorHex: INK_DARK,
       vAlign: "center",
       font: "body",
-      lineHeight: 1.25,
     },
   },
 };
@@ -1103,11 +1099,10 @@ function artForwardShowcase(
     },
     rules: {
       rect: { topPct: 67.6, leftPct: 8, widthPct: 84, heightPct: 24.5 },
-      sizePct: 0.033,
+      sizePct: ptToPct(8),
       colorHex: INK_DARK,
       vAlign: "start",
       font: "body",
-      lineHeight: 1.3,
     },
     pt: {
       rect: { topPct: 87.2, leftPct: 71.5, widthPct: 23, heightPct: 7 },
@@ -1157,11 +1152,10 @@ function tarkirCard(
     },
     rules: {
       rect: { topPct: 66, leftPct: 9, widthPct: 82, heightPct: 26 },
-      sizePct: 0.033,
+      sizePct: ptToPct(8),
       colorHex: inks.rules,
       vAlign: "start",
       font: "body",
-      lineHeight: 1.3,
     },
     pt: {
       rect: { topPct: 87, leftPct: 71, widthPct: 23, heightPct: 7.5 },
@@ -1208,11 +1202,10 @@ const LOTR: FrameProfile = {
   },
   rules: {
     rect: { topPct: 66, leftPct: 8.5, widthPct: 83, heightPct: 26 },
-    sizePct: 0.033,
+    sizePct: ptToPct(8),
     colorHex: INK_DARK,
     vAlign: "start",
     font: "body",
-    lineHeight: 1.3,
   },
   pt: {
     rect: { topPct: 86.5, leftPct: 71, widthPct: 23, heightPct: 7.5 },
@@ -1280,11 +1273,10 @@ function borderlessShowcase(
     },
     rules: {
       rect: { topPct: 62, leftPct: 7, widthPct: 86, heightPct: 28 },
-      sizePct: 0.032,
+      sizePct: ptToPct(8),
       colorHex: INK_LIGHT,
       vAlign: "center",
       font: "body",
-      lineHeight: 1.3,
       backdropHex: "rgba(8,8,12,0.55)",
     },
     pt: {
@@ -1340,11 +1332,10 @@ const EXPEDITIONLAND: FrameProfile = {
   },
   rules: {
     rect: { topPct: 60.5, leftPct: 8, widthPct: 83.5, heightPct: 21 },
-    sizePct: 0.0373,
+    sizePct: ptToPct(9),
     colorHex: INK_LIGHT,
     vAlign: "start",
     font: "body",
-    lineHeight: 1.3,
     backdropHex: "rgba(8,8,10,0.72)",
   },
   footer: { ...M15.footer!, colorHex: INK_LIGHT },
@@ -1382,11 +1373,10 @@ const FULLART: FrameProfile = {
   },
   rules: {
     rect: { topPct: 78.6, leftPct: 8, widthPct: 84, heightPct: 13.5 },
-    sizePct: 0.034,
+    sizePct: ptToPct(8),
     colorHex: INK_LIGHT,
     vAlign: "start",
     font: "body",
-    lineHeight: 1.28,
   },
   footer: { ...M15.footer!, colorHex: INK_LIGHT },
 };
@@ -1409,7 +1399,7 @@ const FULLARTLAND: FrameProfile = {
   },
   rules: {
     rect: { topPct: 16, leftPct: 15, widthPct: 70, heightPct: 62 },
-    sizePct: 0.0373,
+    sizePct: ptToPct(9),
     colorHex: INK_LIGHT,
     font: "body",
   },

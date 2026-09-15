@@ -3,45 +3,51 @@
 // both sides import the SAME math — the editor preview and the exported PNG
 // pick the same size for the same text by construction.
 //
-// Real cards (and the MSE styles these frames derive from) start the rules box
-// at a fixed size — 14px on a 375px-wide card, i.e. 3.73% of card width — and
-// shrink ONLY as far as needed for the text to fit the box (MSE: "scale down
-// to: 6"). The old implementation here used four discrete tiers keyed on raw
-// character count, which both undersized short text (max tier was 3.2%) and
-// silently clipped long text (no relationship to the box at all).
+// Real cards start the rules box at the printed standard — 9 pt MPlantin on a
+// full text box (lib/cards/typography.ts) — and an editor shrinks it in
+// half-point steps ONLY as far as needed for the text to fit, down to the
+// 7.5 pt floor WotC works to; past that we keep stepping down to a hard floor
+// rather than clip, since a custom card can carry far more text than a
+// printed one.
 //
-// `fitRulesSizePct` estimates, per candidate size on a discrete ladder, how
-// many wrapped lines the text needs and returns the largest size that fits the
+// `fitRulesSizePct` estimates, per candidate size on that ladder, how many
+// wrapped lines the text needs and returns the largest size that fits the
 // slot rect. The estimate is deliberately conservative (SAFETY) — the box keeps
 // `overflow: hidden` as a backstop — and fully deterministic, so preview and
 // bake always agree.
 
 import type { Rect } from "@/lib/cards/template-layout";
+import {
+  RULES_LINE_PITCH_EM,
+  RULES_TEXT,
+  orientationFromAspect,
+  ptToPct,
+} from "@/lib/cards/typography";
 
 // Average MPlantin advance width as a fraction of the font size. Measured
 // loosely (lowercase latin ≈ 0.46em, capitals ≈ 0.62em); 0.5 errs wide so the
 // estimate over-counts lines rather than under-counting them.
 const CHAR_W = 0.5;
-// An inline mana pip occupies ~0.92em disc + run gap ≈ 1.1em ≈ 2.2 CHAR_W.
-const MANA_CHARS = 2.2;
+// An inline mana pip occupies the disc + its word gap ≈ 1.1em ≈ 2.2 CHAR_W.
+const MANA_CHARS = (RULES_TEXT.pipDiscEm + RULES_TEXT.wordGapEm) / CHAR_W;
 // Headroom for estimate error: accept a size only if the estimated height
 // stays under this fraction of the box.
 const SAFETY = 0.96;
-// The shrink ladder: each step is 8% smaller than the last. ~12 steps takes a
-// 3.7% base down to the ~1.5% floor (MSE's "scale down to 6" ≈ 1.6%).
-const LADDER_STEP = 0.92;
-const MIN_SIZE_PCT = 0.015;
 
 export type RulesFitInput = {
   rulesText: string | null | undefined;
   flavorText: string | null | undefined;
   /** The rules slot rect (card-relative percents) from the frame profile. */
   rect: Rect;
-  /** The profile's authentic base size (fraction of card width). */
+  /** The profile's base size (fraction of card width) — normally
+   *  ptToPct(RULES_TEXT.standardPt) or the compact size. */
   baseSizePct: number;
-  lineHeight: number;
+  /** Line box height as a multiple of the size. Wrapped lines add the
+   *  standard wrap gap on top (RULES_TEXT.wrapGapEm), like both renderers. */
+  lineHeight?: number;
   /** Card height ÷ card width — 7/5 portrait, 5/7 landscape. Converts the
-   *  rect's height-percent into card-width units so all math shares a unit. */
+   *  rect's height-percent into card-width units so all math shares a unit,
+   *  and picks the physical width the point ladder is measured against. */
   aspect: number;
 };
 
@@ -64,27 +70,32 @@ function estimateHeight(
 ): number {
   // Characters that fit on one wrapped line at this size.
   const lineCapacity = Math.max(4, boxWidthW / (sizePct * CHAR_W));
+  const pitch = lineHeight + RULES_TEXT.wrapGapEm;
   let lines = 0;
   let paragraphs = 0;
+  let blanks = 0;
   for (const line of rulesLines) {
     const chars = lineCharCount(line);
     if (chars === 0) {
-      lines += 0.7; // blank source line → paragraph spacer
+      blanks += 1; // blank source line → paragraph spacer
       continue;
     }
     lines += Math.ceil(chars / lineCapacity);
     paragraphs += 1;
   }
   let height =
-    lines * lineHeight * sizePct +
-    Math.max(0, paragraphs - 1) * 0.5 * sizePct; // inter-paragraph row gap
+    lines * pitch * sizePct +
+    blanks * RULES_TEXT.blankLineEm * sizePct +
+    Math.max(0, paragraphs + blanks - 1) * RULES_TEXT.paragraphGapEm * sizePct;
   if (flavorLines.length > 0) {
     let flavorLineCount = 0;
     for (const line of flavorLines) {
       flavorLineCount += Math.max(1, Math.ceil(lineCharCount(line) / lineCapacity));
     }
-    // divider margin + padding (≈0.024 card widths) + the italic lines
-    height += 0.024 + flavorLineCount * lineHeight * sizePct;
+    // the gap/hairline above the flavor block + the italic lines
+    height +=
+      (rulesLines.length > 0 ? 2 * RULES_TEXT.flavorGapEm * sizePct : 0) +
+      flavorLineCount * pitch * sizePct;
   }
   return height;
 }
@@ -121,7 +132,26 @@ export function fitSingleLineSizePct({
   if (chars === 0) return baseSizePct;
   const availableW = Math.max(0.05, rect.widthPct / 100 - reservedPct);
   const fitted = availableW / (chars * DISPLAY_CHAR_W);
-  return Math.max(MIN_SIZE_PCT, Math.min(baseSizePct, fitted));
+  return Math.max(ptToPct(RULES_TEXT.hardFloorPt), Math.min(baseSizePct, fitted));
+}
+
+/**
+ * The shrink ladder for a base size: the base, then every half-point step
+ * below it down to the hard floor — with the printed floor (7.5 pt) as a
+ * plain step on the way, since a custom card may need to go further.
+ */
+export function rulesSizeLadder(baseSizePct: number, aspect: number): number[] {
+  const orientation = orientationFromAspect(aspect);
+  const step = ptToPct(RULES_TEXT.stepPt, orientation);
+  const floor = ptToPct(RULES_TEXT.hardFloorPt, orientation);
+  const ladder = [baseSizePct];
+  let size = baseSizePct - step;
+  while (size >= floor - 1e-9) {
+    ladder.push(size);
+    size -= step;
+  }
+  if (ladder[ladder.length - 1] > floor + 1e-9) ladder.push(floor);
+  return ladder;
 }
 
 /** Largest ladder size (≤ baseSizePct) whose estimated height fits the slot. */
@@ -137,18 +167,16 @@ export function fitRulesSizePct(input: RulesFitInput): number {
   // 0.6% rules-box padding).
   const boxWidthW = input.rect.widthPct / 100 - 0.012;
   const boxHeightW = (input.rect.heightPct / 100) * input.aspect - 0.024;
+  const lineHeight = input.lineHeight ?? RULES_TEXT.lineHeight;
 
-  let size = input.baseSizePct;
-  while (size > MIN_SIZE_PCT) {
-    const height = estimateHeight(
-      rulesLines,
-      flavorLines,
-      size,
-      input.lineHeight,
-      boxWidthW,
-    );
+  const ladder = rulesSizeLadder(input.baseSizePct, input.aspect);
+  for (const size of ladder) {
+    const height = estimateHeight(rulesLines, flavorLines, size, lineHeight, boxWidthW);
     if (height <= boxHeightW * SAFETY) return size;
-    size *= LADDER_STEP;
   }
-  return MIN_SIZE_PCT;
+  return ladder[ladder.length - 1];
 }
+
+/** Re-exported so callers can size the whole line pitch without importing
+ *  the typography module directly. */
+export { RULES_LINE_PITCH_EM };
