@@ -4,6 +4,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { renderCardImage } from "@/lib/render/card-image";
 import { fetchStoredRender } from "@/lib/render/stored-render";
 import {
+  downloadBrandMark,
   getEntitlements,
   ownerExportStamp,
 } from "@/lib/billing/entitlements";
@@ -133,8 +134,10 @@ export async function GET(
   // same stamp we embed the stored bytes and skip Satori entirely
   // (lib/render/stored-render.ts); otherwise render live.
   const stamp = await ownerExportStamp(card.owner_id);
-  // Cleared by EITHER side's plan — see the png route for the rationale.
-  const brandMark = stamp.brandMark && !entitlements.removeWatermark;
+  // The brand mark follows the VIEWER's plan only — see the png route. (PDF
+  // is a paid feature, so in practice this is always clean; the rule is
+  // spelled out here so the two routes can't drift.)
+  const brandMark = downloadBrandMark(entitlements);
   let pngBytes: Uint8Array;
   try {
     const stored =
