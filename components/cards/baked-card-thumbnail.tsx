@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 import { CardPreview, type CardPreviewData } from "@/components/cards/card-preview";
 import { normalizeFrameTemplate } from "@/lib/cards/card-display";
 import { getFrameProfile } from "@/lib/cards/template-layout";
+import { toRenderCdnUrl } from "@/lib/cards/render-cdn";
 
 // ---------------------------------------------------------------------------
 // BakedCardThumbnail — the canonical way to render a *saved* card in any
@@ -102,7 +103,7 @@ export function BakedCardThumbnail({
       {renderedThumbUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={renderedThumbUrl}
+          src={toRenderCdnUrl(renderedThumbUrl) ?? renderedThumbUrl}
           alt={alt ?? (title?.trim() || "Card")}
           loading={priority ? "eager" : "lazy"}
           fetchPriority={priority ? "high" : "auto"}
