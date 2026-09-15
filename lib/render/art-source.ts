@@ -1,6 +1,7 @@
 import "server-only";
 
 import sharp from "sharp";
+import { isAllowedServerImageFetchUrl } from "@/lib/validation/card";
 
 // ---------------------------------------------------------------------------
 // Image sources for the Satori bake.
@@ -17,12 +18,22 @@ import sharp from "sharp";
 // Satori can't decode to PNG with sharp, and hands the renderer a data: URL
 // — the same shape the frame PNGs already use. PNG/JPEG pass through as a
 // data: URL too (one fetch here instead of Satori's own, with a timeout we
-// control). Any failure falls back to the original URL so a flaky fetch
-// degrades to Satori's own attempt rather than a blank art window.
+// control). A flaky fetch of an ALLOWED host falls back to the original URL
+// so it degrades to Satori's own attempt rather than a blank art window.
+//
+// It is also the SSRF gate for the bake: art/watermark/set-icon/pip URLs are
+// owner-writable columns, and Satori would otherwise fetch whatever they
+// point at from inside the function. Only the app's own storage host and
+// Scryfall (lib/validation/card.ts isAllowedServerImageFetchUrl) are fetched;
+// anything else renders as a transparent pixel — never as a request.
 // ---------------------------------------------------------------------------
 
 /** Formats Satori decodes natively — passed through untouched. */
 const SATORI_NATIVE_FORMATS: ReadonlySet<string> = new Set(["png", "jpeg", "jpg"]);
+
+/** What a disallowed or unusable source renders as: nothing, quietly. */
+export const TRANSPARENT_PIXEL_DATA_URL =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M8AAAMBAQDJ/pLvAAAAAElFTkSuQmCC";
 
 /** Refuse to inline anything larger than this (a 1500×2100 HD render never
  *  needs more) — protects the function's memory on hostile URLs. */
@@ -74,6 +85,10 @@ export async function resolveRenderableImage(
       return await toSatoriDataUrl(Buffer.from(url.slice(comma + 1), "base64"));
     }
     if (!/^https?:\/\//i.test(url)) return url;
+    if (!isAllowedServerImageFetchUrl(url)) {
+      console.warn(`[render] Refusing to fetch image from a non-allowlisted host: ${url.slice(0, 120)}`);
+      return TRANSPARENT_PIXEL_DATA_URL;
+    }
 
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
