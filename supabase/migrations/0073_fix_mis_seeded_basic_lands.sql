@@ -1,4 +1,4 @@
--- 0069_fix_mis_seeded_basic_lands.sql — nonbasic lands that carried the
+-- 0073_fix_mis_seeded_basic_lands.sql — nonbasic lands that carried the
 -- creator's basic-land seed and printed a big mana symbol instead of their
 -- rules text.
 --
