@@ -188,25 +188,23 @@ export async function ownerExportStamp(
   ownerId: string,
 ): Promise<OwnerExportStamp> {
   try {
+    // The owner's billing columns are private (migration 0074); the
+    // SECURITY DEFINER owner_export_stamp() RPC answers the ONE question
+    // public renders need — does the plan remove the brand mark — with the
+    // same tier resolution as effectiveTierForProfile.
     const supabase = createPublicClient();
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select(
-        "subscription_tier, subscription_status, is_admin, comp_tier, comp_expires_at, export_watermark_text",
-      )
-      .eq("id", ownerId)
-      .maybeSingle();
-    if (!profile) return { brandMark: isBillingEnabled(), footerText: null };
+    const { data } = await supabase.rpc("owner_export_stamp", {
+      p_owner_id: ownerId,
+    });
+    const stamp = data?.[0];
+    if (!stamp) return { brandMark: isBillingEnabled(), footerText: null };
 
-    const customText = profile.export_watermark_text?.trim() || null;
+    const customText = stamp.footer_text?.trim() || null;
     // Billing off = everything unlocked: no brand mark, custom mark honored.
-    if (!isBillingEnabled() || profile.is_admin) {
+    if (!isBillingEnabled() || stamp.paid) {
       return { brandMark: false, footerText: customText };
     }
-    const perks = { ...BASE_PERKS, ...TIER_PERKS[effectiveTierForProfile(profile)] };
-    return perks.removeWatermark
-      ? { brandMark: false, footerText: customText }
-      : { brandMark: true, footerText: null };
+    return { brandMark: true, footerText: null };
   } catch {
     return { brandMark: isBillingEnabled(), footerText: null };
   }

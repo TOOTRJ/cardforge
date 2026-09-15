@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -62,9 +62,13 @@ export function NotificationBell({ initialUnread, isAdmin = false }: Notificatio
   // The server re-renders the header with a fresh count after router.refresh()
   // (a thread or the notifications page marking itself read) — without this
   // sync the badge kept the number it mounted with until a full reload.
-  useEffect(() => {
+  // Adjusting state during render (not in an effect) is React's pattern for
+  // "reset local state when a prop changes" and avoids a cascading re-render.
+  const [syncedInitial, setSyncedInitial] = useState(initialUnread);
+  if (syncedInitial !== initialUnread) {
+    setSyncedInitial(initialUnread);
     setUnread(initialUnread);
-  }, [initialUnread]);
+  }
   const [items, setItems] = useState<NotificationItem[] | null>(null);
   const [loading, setLoading] = useState(false);
 

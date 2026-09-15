@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient, getCurrentUser } from "@/lib/supabase/server";
+import { createClient, getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
 
 // GDPR-style data export: the signed-in user downloads everything we hold for
 // them as a single JSON file. Reads through the user's own session (RLS-scoped),
@@ -28,7 +28,9 @@ export async function GET() {
     cardReports,
     commentReports,
   ] = await Promise.all([
-    supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
+    // Public columns + the user's own billing slice (migration 0074 made
+    // `select *` on profiles a permission error for user clients).
+    getCurrentProfile().then((data) => ({ data })),
     supabase.from("cards").select("*").eq("owner_id", user.id),
     supabase.from("card_sets").select("*").eq("owner_id", user.id),
     supabase.from("decks").select("*").eq("owner_id", user.id),

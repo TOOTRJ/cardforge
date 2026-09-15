@@ -1441,6 +1441,27 @@ export type Database = {
           total_count: number;
         }[];
       };
+      // Migration 0074 — private billing columns.
+      get_my_billing: {
+        Args: Record<string, never>;
+        Returns: {
+          subscription_tier: string;
+          subscription_status: string | null;
+          stripe_customer_id: string | null;
+          stripe_subscription_id: string | null;
+          current_period_end: string | null;
+          cancel_at_period_end: boolean;
+          credits: number;
+          comp_tier: string | null;
+          comp_expires_at: string | null;
+          card_limit_override: number | null;
+          is_admin: boolean;
+        }[];
+      };
+      owner_export_stamp: {
+        Args: { p_owner_id: string };
+        Returns: { paid: boolean; footer_text: string | null }[];
+      };
       admin_user_stats: {
         Args: { p_user_id: string };
         Returns: {

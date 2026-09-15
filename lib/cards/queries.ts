@@ -2,7 +2,12 @@ import "server-only";
 
 import { cache } from "react";
 
-import { createClient, getCurrentUser } from "@/lib/supabase/server";
+import {
+  PUBLIC_PROFILE_COLUMNS,
+  PUBLIC_PROFILE_DEFAULTS,
+  createClient,
+  getCurrentUser,
+} from "@/lib/supabase/server";
 import { createPublicClient } from "@/lib/supabase/public";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
@@ -1000,12 +1005,15 @@ export async function getProfileByUsername(
 
   try {
     const supabase = await createClient();
-    const { data: profile } = await supabase
+    // Public columns only — the billing/admin slice is private (migration
+    // 0074) and a public profile page has no business reading it.
+    const { data: publicProfile } = await supabase
       .from("profiles")
-      .select("*")
+      .select(PUBLIC_PROFILE_COLUMNS)
       .eq("username", username)
       .maybeSingle();
-    if (!profile) return null;
+    if (!publicProfile) return null;
+    const profile = { ...PUBLIC_PROFILE_DEFAULTS, ...publicProfile } as Profile;
 
     const { count } = await supabase
       .from("cards")
