@@ -11,6 +11,7 @@ import {
   rowToPreviewData,
   type CardRowForBake,
 } from "@/lib/cards/bake-core";
+import { makeRenderThumb, renderThumbPath } from "@/lib/cards/render-thumb";
 import { getPipOverrides } from "@/lib/pips/queries";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
@@ -31,7 +32,7 @@ import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
 // ---------------------------------------------------------------------------
 
 export type BakeRenderResult =
-  | { ok: true; renderedImageUrl: string | null }
+  | { ok: true; renderedImageUrl: string | null; renderedThumbUrl: string | null }
   | { ok: false; error: string };
 
 /**
@@ -114,7 +115,8 @@ export async function bakeCardRender(
   // object can be shared; its random-id path is also never publicly exposed.)
   if (card.visibility === "private") {
     await removeRenderObject(supabase, path);
-    return { ok: true, renderedImageUrl: null };
+    await removeRenderObject(supabase, renderThumbPath(path));
+    return { ok: true, renderedImageUrl: null, renderedThumbUrl: null };
   }
 
   const pipOverrides = await getPipOverrides(card.owner_id);
@@ -156,15 +158,44 @@ export async function bakeCardRender(
     return { ok: false, error: `Upload failed: ${uploadErr.message}` };
   }
 
+  // The tile-sized WebP beside the PNG (lib/cards/render-thumb.ts). A thumb
+  // failure is not a bake failure: tiles fall back to next/image over the PNG.
+  const thumbPath = renderThumbPath(path);
+  let thumbOk = false;
+  try {
+    const thumbBytes = await makeRenderThumb(pngBytes);
+    const { error: thumbErr } = await supabase.storage
+      .from("card-renders")
+      .upload(thumbPath, thumbBytes, {
+        cacheControl: "31536000",
+        contentType: "image/webp",
+        upsert: true,
+      });
+    if (thumbErr) {
+      console.warn(`[bake-render] Thumb upload failed for ${cardId}: ${thumbErr.message}`);
+    } else {
+      thumbOk = true;
+    }
+  } catch (err) {
+    console.warn(
+      `[bake-render] Thumb encode failed for ${cardId}: ${err instanceof Error ? err.message : "error"}`,
+    );
+  }
+
   const { data: urlData } = supabase.storage
     .from("card-renders")
     .getPublicUrl(path);
 
   // Cache-bust query so next/image and the browser don't serve the prior
-  // version after a resave. The base URL is stable; only the ?v changes.
-  const renderedImageUrl = `${urlData.publicUrl}?v=${Date.now()}`;
+  // version after a resave. The base URL is stable; only the ?v changes —
+  // shared by the PNG and its thumb so both bust together.
+  const version = Date.now();
+  const renderedImageUrl = `${urlData.publicUrl}?v=${version}`;
+  const renderedThumbUrl = thumbOk
+    ? `${supabase.storage.from("card-renders").getPublicUrl(thumbPath).data.publicUrl}?v=${version}`
+    : null;
 
-  return { ok: true, renderedImageUrl };
+  return { ok: true, renderedImageUrl, renderedThumbUrl };
 }
 
 /**
@@ -198,6 +229,7 @@ export async function bakeAndPersistCardRender(
       .from("cards")
       .update({
         rendered_image_url: null,
+        rendered_thumb_url: null,
         rendered_at: null,
         layout_version: null,
       })
@@ -215,6 +247,7 @@ export async function bakeAndPersistCardRender(
     .update({
       // null for private cards (no public render); a URL otherwise.
       rendered_image_url: result.renderedImageUrl,
+      rendered_thumb_url: result.renderedThumbUrl,
       rendered_at: result.renderedImageUrl ? new Date().toISOString() : null,
       // Records WHICH renderer/profile generation baked this PNG, so
       // scripts/rebake-renders.mjs can find stale renders after template

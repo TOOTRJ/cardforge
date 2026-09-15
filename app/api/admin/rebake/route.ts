@@ -8,6 +8,7 @@ import {
   rowToPreviewData,
   type CardRowForBake,
 } from "@/lib/cards/bake-core";
+import { makeRenderThumb, renderThumbPath } from "@/lib/cards/render-thumb";
 import { getPipOverrides } from "@/lib/pips/queries";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import {
@@ -146,13 +147,34 @@ export async function POST(request: Request) {
         });
       if (uploadErr) throw new Error(`Upload failed: ${uploadErr.message}`);
 
+      // Tile-sized WebP beside the PNG (lib/cards/render-thumb.ts); a thumb
+      // failure leaves the column null and tiles on the next/image path.
+      const thumbPath = renderThumbPath(path);
+      let thumbOk = false;
+      try {
+        const { error: thumbErr } = await supabase.storage
+          .from("card-renders")
+          .upload(thumbPath, await makeRenderThumb(pngBytes), {
+            cacheControl: "31536000",
+            contentType: "image/webp",
+            upsert: true,
+          });
+        thumbOk = !thumbErr;
+      } catch {
+        thumbOk = false;
+      }
+
       const { data: urlData } = supabase.storage
         .from("card-renders")
         .getPublicUrl(path);
+      const version = Date.now();
       const { error: updateErr } = await supabase
         .from("cards")
         .update({
-          rendered_image_url: `${urlData.publicUrl}?v=${Date.now()}`,
+          rendered_image_url: `${urlData.publicUrl}?v=${version}`,
+          rendered_thumb_url: thumbOk
+            ? `${supabase.storage.from("card-renders").getPublicUrl(thumbPath).data.publicUrl}?v=${version}`
+            : null,
           rendered_at: new Date().toISOString(),
           layout_version: CARD_LAYOUT_VERSION,
         })

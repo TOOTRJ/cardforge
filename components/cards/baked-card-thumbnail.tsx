@@ -8,8 +8,10 @@ import { getFrameProfile } from "@/lib/cards/template-layout";
 // BakedCardThumbnail — the canonical way to render a *saved* card in any
 // gallery-style list (gallery, profile, set, dashboard, booster).
 //
-// When the card has a baked render URL (the PNG written to the
-// card-renders bucket by lib/cards/bake-render.ts), we serve that PNG via
+// When the card has a baked render, we show it: the 600 px WebP thumbnail
+// the bake writes beside the HD PNG (cards.rendered_thumb_url,
+// lib/cards/render-thumb.ts) as a plain lazy <img> — ~40 KB, no optimizer
+// hop — or, for cards baked before thumbnails existed, the HD PNG through
 // next/image. The card's layout is frozen at save time and looks identical
 // to every other card on the page, regardless of how long its rules text
 // is.
@@ -33,6 +35,9 @@ import { getFrameProfile } from "@/lib/cards/template-layout";
 export type BakedCardThumbnailProps = {
   /** Public URL of the baked PNG (cards.rendered_image_url). */
   renderedImageUrl: string | null | undefined;
+  /** Public URL of the tile-sized WebP (cards.rendered_thumb_url). Preferred
+   *  over the PNG whenever present. */
+  renderedThumbUrl?: string | null;
   /** Card title — used as the <img>'s accessible label. */
   title: string | null | undefined;
   /** Image alt override — defaults to the card title. */
@@ -54,6 +59,7 @@ const DEFAULT_SIZES =
 
 export function BakedCardThumbnail({
   renderedImageUrl,
+  renderedThumbUrl = null,
   title,
   alt,
   previewData,
@@ -93,14 +99,29 @@ export function BakedCardThumbnail({
         className,
       )}
     >
-      <Image
-        src={renderedImageUrl}
-        alt={alt ?? (title?.trim() || "Card")}
-        fill
-        sizes={sizes}
-        priority={priority}
-        className={isLandscape ? "object-contain" : "object-cover"}
-      />
+      {renderedThumbUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={renderedThumbUrl}
+          alt={alt ?? (title?.trim() || "Card")}
+          loading={priority ? "eager" : "lazy"}
+          fetchPriority={priority ? "high" : "auto"}
+          decoding="async"
+          className={cn(
+            "absolute inset-0 h-full w-full",
+            isLandscape ? "object-contain" : "object-cover",
+          )}
+        />
+      ) : (
+        <Image
+          src={renderedImageUrl}
+          alt={alt ?? (title?.trim() || "Card")}
+          fill
+          sizes={sizes}
+          priority={priority}
+          className={isLandscape ? "object-contain" : "object-cover"}
+        />
+      )}
     </div>
   );
 }

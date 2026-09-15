@@ -51,11 +51,23 @@ export function hasCurrentStoredRender(row: StoredRenderRow): boolean {
 }
 
 /**
- * Fetch the current stored render's bytes, or null when there is none, it is
- * stale, its host is not ours, or the fetch fails (callers render live).
+ * Fetch the stored render's bytes, or null when there is none, it is stale,
+ * its host is not ours, or the fetch fails (callers render live).
+ *
+ * `allowStale` serves the stored bake even when a newer renderer exists —
+ * for DISPLAY surfaces like the share image, where the owner-driven update
+ * flow (lib/cards/layout-version.ts) means a card may legitimately keep its
+ * older look for a long time and the gallery tile already shows exactly
+ * that image. Downloads keep the default: a stale bake renders live.
  */
-export async function fetchStoredRender(row: StoredRenderRow): Promise<Buffer | null> {
-  if (!hasCurrentStoredRender(row)) return null;
+export async function fetchStoredRender(
+  row: StoredRenderRow,
+  opts: { allowStale?: boolean } = {},
+): Promise<Buffer | null> {
+  const usable = opts.allowStale
+    ? typeof row.rendered_image_url === "string" && row.rendered_image_url.length > 0
+    : hasCurrentStoredRender(row);
+  if (!usable) return null;
   const url = row.rendered_image_url as string;
   // rendered_image_url is written by the bake, but it is still a row column —
   // the same SSRF gate the art fetch uses keeps this to our storage host.
