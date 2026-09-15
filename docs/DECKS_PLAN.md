@@ -11,6 +11,13 @@ Archidekt / Moxfield / MTG Arena / ManaBox export syntax; Scryfall
 
 ---
 
+> **2026-09-15 update:** the server-side `/api/decks/[id]/export` print route is gone. Whole-deck
+> exports (ZIP and print PDF) are assembled **in the browser** by `lib/decks/export-client.ts`
+> (driven by `components/decks/deck-export-provider.tsx`, a background runner with a progress card):
+> the client fetches `/api/decks/[id]/download?part=manifest|report|decklist|cover` and every card's
+> CLEAN render from `/api/cards/[id]/png` (viewer-plan aware — a Pro download is never the
+> watermarked bake). References to the old route below are historical.
+
 ## 1. Product summary
 
 A **deck** is an ordered, quantity-aware list of MTG cards in a chosen play

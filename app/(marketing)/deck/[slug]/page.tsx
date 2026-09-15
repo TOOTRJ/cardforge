@@ -275,6 +275,7 @@ export default async function DeckDetailPage({
           format={deck.format}
           ownerUsername={deck.owner?.username ?? null}
           isOwner={isOwner}
+          hasCover={Boolean(deck.cover_url)}
         />
       </Suspense>
     </div>
@@ -288,6 +289,7 @@ async function DeckBody({
   format,
   ownerUsername,
   isOwner,
+  hasCover,
 }: {
   deckId: string;
   deckSlug: string;
@@ -295,6 +297,7 @@ async function DeckBody({
   format: DeckFormat;
   ownerUsername: string | null;
   isOwner: boolean;
+  hasCover: boolean;
 }) {
   const [items, failedJob, guide, entitlements] = await Promise.all([
     listDeckCards(deckId),
@@ -323,6 +326,9 @@ async function DeckBody({
           style: "plain",
         })}
         allowBatchExport={entitlements.allowBatchExport}
+        customCardCount={new Set(items.filter((i) => i.card && i.entry.board !== "maybe").map((i) => i.card!.id)).size}
+        realCardCount={items.filter((i) => !i.card && i.entry.board !== "maybe").length}
+        hasCover={hasCover}
       />
     ) : null;
 

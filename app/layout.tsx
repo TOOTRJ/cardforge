@@ -3,6 +3,7 @@ import { Cinzel, Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import { UpgradeModalProvider } from "@/components/billing/upgrade-modal-provider";
 import { GenerationJobProvider } from "@/components/ai/generation-provider";
+import { DeckExportProvider } from "@/components/decks/deck-export-provider";
 import { ShareParamCleanup } from "@/components/seo/share-param-cleanup";
 import { serializeJsonLd } from "@/components/seo/json-ld";
 import { getSiteBaseUrl } from "@/lib/site-url";
@@ -215,8 +216,12 @@ export default function RootLayout({
               navigation never interrupts a job; it also auto-resumes any
               job a closed tab left behind. */}
           <GenerationJobProvider>
-            {children}
-            {modal}
+            {/* Whole-deck exports (Pro) build in the background the same
+                way, with their own progress card. */}
+            <DeckExportProvider>
+              {children}
+              {modal}
+            </DeckExportProvider>
           </GenerationJobProvider>
         </UpgradeModalProvider>
         <Toaster
