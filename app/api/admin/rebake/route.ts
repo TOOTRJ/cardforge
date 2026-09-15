@@ -13,7 +13,11 @@ import {
 } from "@/lib/cards/bake-core";
 import { getPipOverrides } from "@/lib/pips/queries";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
-import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
+import {
+  CARD_LAYOUT_VERSION,
+  isRenderStale,
+  templateOfFrameStyle,
+} from "@/lib/cards/layout-version";
 
 // ---------------------------------------------------------------------------
 // POST /api/admin/rebake — re-bake stored card renders whose layout_version
@@ -83,7 +87,7 @@ export async function POST(request: Request) {
 
   const { data: rows, error: fetchErr } = await supabase
     .from("cards")
-    .select(BAKE_SELECT_COLUMNS)
+    .select(`${BAKE_SELECT_COLUMNS}, layout_version, rendered_image_url`)
     .in("visibility", ["public", "unlisted"])
     .or(staleOr)
     .order("updated_at", { ascending: true })
@@ -118,6 +122,22 @@ export async function POST(request: Request) {
           .from("cards")
           .update({ rendered_image_url: null, rendered_at: null, layout_version: null })
           .eq("id", row.id);
+        processed.push(row.id);
+        continue;
+      }
+
+      // A bump that only touched other templates leaves this render
+      // correct — stamp it current without spending a render.
+      const stale = row as unknown as { layout_version: number | null; rendered_image_url: string | null };
+      if (
+        stale.rendered_image_url &&
+        !isRenderStale(stale.layout_version, templateOfFrameStyle(row.frame_style))
+      ) {
+        const { error: stampErr } = await supabase
+          .from("cards")
+          .update({ layout_version: CARD_LAYOUT_VERSION })
+          .eq("id", row.id);
+        if (stampErr) throw new Error(`Row update failed: ${stampErr.message}`);
         processed.push(row.id);
         continue;
       }
