@@ -19,6 +19,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { useUpgradeModal } from "@/components/billing/upgrade-modal-provider";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -26,6 +27,9 @@ import { cn } from "@/lib/utils";
 //   Copy decklist (Arena / plain text)         — free
 //   Print PDF (pages / 3×3 letter / 3×3 A4)    — Pro
 //   Download PNGs as ZIP                       — Pro
+// Viewers without batch export don't get the Pro buttons at all (owner
+// decision 2026-09-15) — one line says what Pro unlocks, with an upgrade
+// CTA, so a free user is never offered a whole-deck download.
 // The decklist text variants are precomputed server-side and passed in;
 // PDF/ZIP stream from the API routes (fetch → blob so a 403 shows a toast
 // instead of a JSON page).
@@ -51,6 +55,7 @@ export function DeckExportMenu({
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [, startTransition] = useTransition();
+  const upgrade = useUpgradeModal();
 
   const copyText = async (label: string, text: string) => {
     try {
@@ -134,6 +139,30 @@ export function DeckExportMenu({
             </div>
           </section>
 
+          {!allowBatchExport ? (
+            <section className="flex flex-col gap-3 rounded-lg border border-border/60 bg-elevated/40 p-4">
+              <SectionLabel>
+                Print &amp; save
+                <ProBadge />
+              </SectionLabel>
+              <p className="text-xs leading-5 text-muted">
+                Printing custom proxies (one per page or 3×3 sheets) and
+                downloading the deck&apos;s card images as a ZIP are Pro
+                features.
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                className="self-start"
+                onClick={() => upgrade.open("batch_export")}
+              >
+                Upgrade to Pro
+              </Button>
+            </section>
+          ) : null}
+
+          {allowBatchExport ? (
+          <>
           <section className="flex flex-col gap-2">
             <SectionLabel>
               Print custom proxies
@@ -207,6 +236,8 @@ export function DeckExportMenu({
               />
             </div>
           </section>
+          </>
+          ) : null}
         </div>
       </DialogContent>
     </Dialog>

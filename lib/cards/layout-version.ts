@@ -97,9 +97,17 @@
 //            with the free-tier pipglyph.com overlay). The footer-right slot
 //            now prints the OWNER's custom watermark text (paid perk,
 //            profiles.export_watermark_text) or nothing.
+//   20     — display is ALWAYS watermarked (owner decision 2026-09-15): the
+//            stored bake, the OG share image and every live preview carry
+//            the pipglyph.com mark whatever the owner's plan, and print no
+//            custom footer text. The only clean output is a paid viewer's
+//            download, which is also where the owner's custom footer text
+//            now prints. Every previously-clean bake (paid owners) is stale
+//            and must be swept, not offered as an optional update — run
+//            scripts/rebake-renders.mjs right after the deploy.
 // ---------------------------------------------------------------------------
 
-export const CARD_LAYOUT_VERSION = 19;
+export const CARD_LAYOUT_VERSION = 20;
 
 /**
  * Bumps that changed the output of only some frame templates, keyed by the

@@ -4,7 +4,7 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 import { renderCardImage } from "@/lib/render/card-image";
-import { ownerExportStamp } from "@/lib/billing/entitlements";
+import { isBillingEnabled } from "@/lib/billing/flags";
 import { cardRenderPath } from "@/lib/cards/storage-paths";
 import {
   BAKE_SELECT_COLUMNS,
@@ -127,15 +127,14 @@ export async function bakeCardRender(
 
   let pngBytes: ArrayBuffer;
   try {
-    // The baked render follows the card OWNER's plan: paid creators bake
-    // clean (with their optional custom footer mark), free creators bake with
-    // the brand mark. Staleness isn't a leak vector — bakes re-render on
-    // every save and via /api/admin/rebake, and layout-version bumps force a
-    // global rebake sweep.
-    const stamp = await ownerExportStamp(ownerId);
+    // The baked render is the DISPLAY copy (gallery tiles, OG image, free
+    // downloads) and is always watermarked, whatever the owner's plan —
+    // layout v20. The only clean output is a paid viewer's download, which
+    // renders live (app/api/cards/[id]/png). No custom footer text here
+    // either: that prints on downloads only.
     const response = await renderCardImage(previewData, "hd", {
-      brandMark: stamp.brandMark,
-      watermarkText: stamp.footerText,
+      brandMark: isBillingEnabled(),
+      watermarkText: null,
     });
     pngBytes = await response.arrayBuffer();
   } catch (err) {

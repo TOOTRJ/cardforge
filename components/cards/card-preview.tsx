@@ -3,6 +3,8 @@
 import { useState, type CSSProperties, type ReactNode } from "react";
 import { RotateCw } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { isBillingEnabled } from "@/lib/billing/flags";
+import { ROSE_STAR_PATH } from "@/lib/brand/geometry";
 import {
   ManaCostGlyphs,
   PipOverrideImg,
@@ -131,8 +133,14 @@ export type CardPreviewData = {
   profileOverrides?: FrameProfileOverridesMap | null;
   /** The OWNER's custom footer mark (profiles.export_watermark_text, paid
    *  perk) — prints footer-right where the hardcoded "PipGlyph" used to sit
-   *  (removed in layout v19). Null/absent = blank. */
+   *  (removed in layout v19). Null/absent = blank. Since layout v20 display
+   *  surfaces pass nothing here: the text prints on paid downloads only. */
   footerWatermark?: string | null;
+  /** The pipglyph.com brand mark, bottom-right — mirrors the bake's overlay
+   *  (lib/render/card-image.tsx). Defaults to "on whenever billing is on":
+   *  every display surface is watermarked (layout v20); only the paid
+   *  download renders clean. */
+  brandMark?: boolean;
 };
 
 type CardPreviewProps = CardPreviewData & {
@@ -227,6 +235,7 @@ export function CardPreview({
   pipOverrides,
   profileOverrides,
   footerWatermark,
+  brandMark = isBillingEnabled(),
   face,
   onFaceChange,
   flipOnClick = false,
@@ -335,6 +344,7 @@ export function CardPreview({
         setIconCode: backCard.setIconCode ?? null,
         pipOverrides: backCard.pipOverrides ?? pipOverrides ?? null,
         footerWatermark: backCard.footerWatermark ?? footerWatermark ?? null,
+        brandMark,
       } as const)
     : null;
 
@@ -366,6 +376,7 @@ export function CardPreview({
     setIconCode: setIconCode ?? null,
     pipOverrides: pipOverrides ?? null,
     footerWatermark: footerWatermark ?? null,
+    brandMark,
   } as const;
 
   return (
@@ -509,6 +520,7 @@ function CardFace({
   adventure = null,
   secondFace = null,
   footerWatermark = null,
+  brandMark = false,
 }: {
   face: FaceData;
   template: FrameTemplate;
@@ -526,6 +538,8 @@ function CardFace({
   secondFace?: FaceData | null;
   /** The owner's custom footer mark; null = blank (layout v19). */
   footerWatermark?: string | null;
+  /** pipglyph.com overlay bottom-right — the bake's brand mark. */
+  brandMark?: boolean;
 }) {
   const colorKey = pickFrameColorKey(colorIdentity);
   const safeTitle = face.title?.trim() || "Untitled Card";
@@ -986,6 +1000,36 @@ function CardFace({
           {footerWatermark ? (
             <span style={{ flexShrink: 0 }}>{footerWatermark}</span>
           ) : null}
+        </div>
+      ) : null}
+
+      {/* Brand mark — pipglyph.com, bottom-right, mirroring the bake's
+          overlay (lib/render/card-image.tsx: right 3.5%, bottom 1.8%, 2.6%
+          of the width, display font). Display surfaces always show it
+          (layout v20); only a paid download renders without it. */}
+      {brandMark ? (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute z-40 flex items-center"
+          style={{
+            right: "3.5%",
+            bottom: "1.8%",
+            fontFamily: DISPLAY_FONT,
+            // cqw() takes a FRACTION of the card width (0.026 = 2.6%).
+            fontSize: cqw(0.026),
+            fontWeight: 600,
+            letterSpacing: "0.02em",
+            color: "rgba(255,255,255,0.82)",
+            textShadow: "0 1px 3px rgba(0,0,0,0.8)",
+          }}
+        >
+          <svg
+            viewBox="0 0 32 32"
+            style={{ width: cqw(0.03), height: cqw(0.03), marginRight: cqw(0.008) }}
+          >
+            <path d={ROSE_STAR_PATH} fill="rgba(255,255,255,0.82)" />
+          </svg>
+          pipglyph.com
         </div>
       ) : null}
 

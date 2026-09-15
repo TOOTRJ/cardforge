@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { renderCardImage } from "@/lib/render/card-image";
-import {
-  ownerExportStamp,
-  type OwnerExportStamp,
-} from "@/lib/billing/entitlements";
+import { isBillingEnabled } from "@/lib/billing/flags";
 import { cardRenderPath } from "@/lib/cards/storage-paths";
 import {
   BAKE_SELECT_COLUMNS,
@@ -99,18 +96,6 @@ export async function POST(request: Request) {
   const processed: string[] = [];
   const failed: { id: string; error: string }[] = [];
 
-  // Owner-based brand-mark/footer resolution, cached per owner across the
-  // batch so N cards from one creator cost one profile lookup.
-  const stampByOwner = new Map<string, Promise<OwnerExportStamp>>();
-  const stampForOwner = (ownerId: string): Promise<OwnerExportStamp> => {
-    let stamp = stampByOwner.get(ownerId);
-    if (!stamp) {
-      stamp = ownerExportStamp(ownerId);
-      stampByOwner.set(ownerId, stamp);
-    }
-    return stamp;
-  };
-
   for (const row of (rows ?? []) as RebakeRow[]) {
     const path = cardRenderPath(row.owner_id, row.id);
     try {
@@ -142,14 +127,13 @@ export async function POST(request: Request) {
         continue;
       }
 
-      // Same render contract as the save-time bake: HD, brand mark + custom
-      // footer follow the card OWNER's plan (see lib/cards/bake-render.ts).
+      // Same render contract as the save-time bake: HD, always watermarked,
+      // no custom footer text (layout v20 — see lib/cards/bake-render.ts).
       const pipOverrides = await getPipOverrides(row.owner_id);
       const profileOverrides = await getFrameProfileOverrides();
-      const stamp = await stampForOwner(row.owner_id);
       const response = await renderCardImage(rowToPreviewData(row, pipOverrides, profileOverrides), "hd", {
-        brandMark: stamp.brandMark,
-        watermarkText: stamp.footerText,
+        brandMark: isBillingEnabled(),
+        watermarkText: null,
       });
       const pngBytes = await response.arrayBuffer();
 

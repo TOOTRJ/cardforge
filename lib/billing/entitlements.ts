@@ -176,15 +176,13 @@ export type OwnerExportStamp = {
 };
 
 /**
- * The brand mark and custom footer mark the card OWNER's plan puts on the
- * card's DISPLAY surfaces — the stored bake behind gallery tiles and the OG
- * share image: a paid creator's cards show clean (with their own optional
- * mark), a free creator's carry the pipglyph.com mark and no custom footer.
- *
- * DOWNLOADS are different: the brand mark on a PNG/PDF download follows the
- * VIEWER's plan only (downloadBrandMark) — a free viewer always downloads a
- * watermarked card, whoever made it. The owner stamp still supplies the
- * custom footer text for downloads.
+ * What the card OWNER's plan contributes to a DOWNLOAD of their card: the
+ * custom footer text (profiles.export_watermark_text, paid perk). Since
+ * layout v20 that is ALL it decides — every display surface (stored bake,
+ * gallery tile, OG share image, live preview) is watermarked and prints no
+ * footer text whatever the owner's plan, and the brand mark on a download
+ * follows the VIEWER's plan only (downloadBrandMark). `brandMark` here is
+ * kept for the RPC's shape; no render path reads it any more.
  * Uses the cookie-free public client so viewer-independent callers (OG
  * route, deferred bake, rebake) stay ISR-eligible; fails toward showing the
  * brand mark on lookup problems.

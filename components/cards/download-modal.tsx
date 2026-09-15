@@ -5,15 +5,18 @@
 //
 // One dialog covering every "get the card off the screen" path:
 //
-//   PNG          — render of the card (free: watermarked + capped; paid: clean HD).
+//   PNG          — render of the card (free: 750 px with the PipGlyph mark;
+//                  paid: clean 1500 × 2100).
 //   Single PDF   — 2.5"×3.5" page sized exactly to the card; sleeve-ready. (Plus+)
 //   3×3 Letter   — 9 copies on US Letter with corner crop marks. (Pro)
 //   3×3 A4       — 9 copies on A4 with corner crop marks. (Pro)
 //
-// PNG is always available. PDF/sheet formats are gated by the viewer's plan
-// (enforced server-side too); locked tabs open the upgrade modal instead of
-// downloading. Available formats are plain anchors with `download` so the
-// browser saves the file without a client-side fetch.
+// A free viewer gets exactly ONE live option — the low-resolution
+// watermarked PNG — and sees the other formats greyed out (owner decision
+// 2026-09-15); the upgrade CTA sits on the PNG panel. Paid tabs are gated by
+// the viewer's plan (enforced server-side too). Available formats are plain
+// anchors with `download` so the browser saves the file without a
+// client-side fetch.
 // ---------------------------------------------------------------------------
 
 import { type ReactNode } from "react";
@@ -74,7 +77,12 @@ export function DownloadModal({
   // Free users start on the PNG tab — the one format they can actually use.
   const initialTab: DownloadTab = isPaid ? defaultTab : "png";
   const links: Record<DownloadTab, { href: string; filename: string }> = {
-    png: { href: `${base}/png?preset=hd`, filename: `${cardSlug}.png` },
+    // The server clamps a free viewer to 750 px anyway; asking for it
+    // outright keeps the URL honest about what they get.
+    png: {
+      href: `${base}/png?preset=${isPaid ? "hd" : "default"}`,
+      filename: `${cardSlug}.png`,
+    },
     single: { href: `${base}/pdf?layout=card`, filename: `${cardSlug}.pdf` },
     letter: {
       href: `${base}/pdf?layout=sheet&paper=letter`,
@@ -110,19 +118,40 @@ export function DownloadModal({
                 <FileImage className="h-3.5 w-3.5" aria-hidden />
                 PNG
               </TabsTrigger>
-              <TabsTrigger value="single">
+              <TabsTrigger
+                value="single"
+                disabled={!isPaid}
+                title={isPaid ? undefined : "PDF export is a Plus feature"}
+              >
                 <FileText className="h-3.5 w-3.5" aria-hidden />
                 PDF
               </TabsTrigger>
-              <TabsTrigger value="letter">
+              <TabsTrigger
+                value="letter"
+                disabled={!canBatch}
+                title={canBatch ? undefined : "Sheet layouts are a Pro feature"}
+              >
                 <Grid3X3 className="h-3.5 w-3.5" aria-hidden />
                 3×3 Letter
               </TabsTrigger>
-              <TabsTrigger value="a4">
+              <TabsTrigger
+                value="a4"
+                disabled={!canBatch}
+                title={canBatch ? undefined : "Sheet layouts are a Pro feature"}
+              >
                 <Grid3X3 className="h-3.5 w-3.5" aria-hidden />
                 3×3 A4
               </TabsTrigger>
             </TabsList>
+            {!isPaid ? (
+              <p className="mt-2 text-[11px] leading-4 text-subtle">
+                PDF is a Plus feature; 3×3 sheets are Pro.
+              </p>
+            ) : !canBatch ? (
+              <p className="mt-2 text-[11px] leading-4 text-subtle">
+                3×3 sheets are a Pro feature.
+              </p>
+            ) : null}
 
             <TabsContent value="png" className="mt-5">
               {isPaid ? (
@@ -139,12 +168,12 @@ export function DownloadModal({
                 <div className="flex flex-col gap-4">
                   <div className="flex flex-col gap-1">
                     <h3 className="font-display text-sm font-semibold text-foreground">
-                      PNG export
+                      Low-resolution PNG
                     </h3>
                     <p className="text-xs leading-5 text-muted">
-                      Your free download carries a small PipGlyph mark in the
-                      corner. Paid plans export it clean, at full print
-                      resolution (1500 × 2100).
+                      750 × 1050 with the PipGlyph mark — fine for sharing and
+                      playtesting. Plus and Pro download a clean, print-ready
+                      1500 × 2100 PNG.
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
