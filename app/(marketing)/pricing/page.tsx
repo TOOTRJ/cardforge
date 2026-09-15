@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   title: "Pricing",
   alternates: { canonical: "/pricing" },
   description:
-    "Design custom MTG-style cards for free — every AI tool included. Upgrade for more AI generation credits and watermark-free hi-res exports, with a 7-day free trial, no card required. Monthly or annual.",
+    "Design custom MTG-style cards for free — every AI tool included, 5 AI credits a month. Upgrade for more monthly credits, watermark-free hi-res downloads and deck-aware AI, with a 7-day free trial, no card required. Monthly or annual.",
 };
 
 // ISR: the storefront is identical for every viewer — plan copy and prices
@@ -44,9 +44,10 @@ export default function PricingPage() {
         </h1>
         <p className="text-base leading-7 text-muted">
           The card maker is free forever — every frame, every finish, every
-          card type, and every AI tool. Plans add monthly AI generation
-          credits and watermark-free hi-res exports. You only ever pay for
-          our technology, never for MTG-style rendering.
+          card type, and every AI tool, with 5 AI credits a month. Plans add
+          far more monthly credits, watermark-free hi-res downloads, and
+          Pro&apos;s deck-aware AI. You only ever pay for our technology, never
+          for MTG-style rendering.
         </p>
         <p className="text-sm font-medium text-gold-strong">
           Try any plan free for 7 days — no card required.

@@ -4,7 +4,8 @@ import { currentCreditPeriod } from "@/lib/billing/plans";
 import { refillActiveSubscribers } from "@/lib/billing/credit-refill";
 
 // ---------------------------------------------------------------------------
-// /api/cron/refill-credits — monthly AI-credit refill for active subscribers.
+// /api/cron/refill-credits — monthly AI-credit refill for every account
+// (Free's 5 included; paid tiers their allotment).
 //
 // Cron-driven so BOTH monthly and annual plans get a monthly allotment. Runs
 // daily (see vercel.json); the per-user-per-month idempotency key means only
@@ -13,7 +14,8 @@ import { refillActiveSubscribers } from "@/lib/billing/credit-refill";
 // the job self-healing: if one day's run fails, the next day catches up — and
 // via the shared credit-refill helper it also backfills the mid-month upgrade
 // top-up if the webhook missed the tier change. The sweep itself (pagination,
-// trialing exclusion, per-user grants) lives in lib/billing/credit-refill.ts.
+// trialing exclusion, free-tier signup-month skip, per-user grants) lives in
+// lib/billing/credit-refill.ts.
 //
 // Secured by CRON_SECRET — Vercel sends it as `Authorization: Bearer <secret>`
 // on scheduled invocations.

@@ -106,11 +106,11 @@ export const AI_GENERATOR_FAQ: FaqEntry[] = [
   },
   {
     q: "Can the AI generate artwork for my card?",
-    a: "Yes. After the AI drafts the card's text, it composes a vivid art prompt and generates a single original image via OpenAI's image model. The image is uploaded to your card's art slot and you can replace it with your own upload at any time. Generated artwork is yours under the underlying OpenAI usage policy — typically free to use for non-commercial purposes.",
+    a: "Yes. After the AI drafts the card's text, it composes a vivid art prompt and generates a single original image with an AI image model. The image lands in your card's art slot and you can replace it with your own upload at any time — or use the AI remix to restyle art you already have. Generated artwork is yours to use for your custom cards.",
   },
   {
     q: "Is the AI random card generator free?",
-    a: "Yes, within a daily quota. You need a free account to use the AI generator (it's disabled for signed-out visitors), and each account can generate up to 10 random cards per day so a single user can't drain the AI budget for everyone. Heavy users will eventually have an option to bring their own OpenAI API key.",
+    a: "Yes. Every AI tool is available on the free plan — AI generation runs on credits, and a free account gets 5 credits every month (one credit designs and illustrates one card, or buys a batch of three text-only ideas). Plus and Pro refill with 30 and 75 credits a month, and anyone can buy a top-up pack that never expires. The only Pro-exclusive AI features are the deck-aware ones: designing a card for a specific deck and theming ideas to a deck.",
   },
   {
     q: "Will the AI design balanced cards?",
@@ -241,7 +241,7 @@ export const COMPARISON_FAQ: FaqEntry[] = [
   },
   {
     q: "Is PipGlyph free?",
-    a: "Yes. PipGlyph's card maker is free — every card type, every frame, and the live preview, with no account needed to start. A free account adds saving, publishing to the gallery, set building, and custom pip uploads; paid plans add AI generation credits, watermark-free hi-res exports, and the AI set generator.",
+    a: "Yes. PipGlyph's card maker is free — every card type, every frame, and the live preview, with no account needed to start. A free account adds saving, publishing to the gallery, set building, and custom pip uploads; every account gets 5 AI credits a month; Plus and Pro add far more monthly credits, watermark-free hi-res downloads and print-ready PDFs, and Pro adds deck-aware AI design plus whole-deck export.",
   },
 ];
 

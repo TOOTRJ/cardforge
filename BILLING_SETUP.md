@@ -13,16 +13,17 @@ Checkout + Customer Portal + a thin webhook → Supabase + app-managed credits**
 
 | Tier | Price | AI credits/mo | Watermark | Export | Capacity |
 |------|-------|---------------|-----------|--------|----------|
-| Free | $0 | 5 (one-time signup grant, never refills) | yes | PNG, capped 750px | 50 |
+| Free | $0 | 5 (monthly, like the paid tiers; the signup default covers the first month) | yes | low-res PNG only, capped 750px | 50 |
 | Plus | $6/mo · $60/yr | 30 | removed | + clean HD PNG, single PDF | 500 |
 | Pro | $15/mo · $150/yr | 75 | removed | + 3×3 sheets, whole-deck/set export + ZIP | unlimited |
 
 - Prices and perks are defined ONCE in `lib/billing/plans.ts` (`PLANS`,
   `MONTHLY_CREDITS`, `CREDIT_PACKS`) and enforced in
   `lib/billing/entitlements.ts`. This table is a summary — the code wins.
-- **Every AI tool is open to every tier; credits are the only limiter**
-  (owner decision, 2026-07-28). Premium finishes are free too; there is no
-  tier-gated AI feature.
+- **Every AI tool is open to every tier; credits are the limiter** (owner
+  decision, 2026-07-28). Premium finishes are free too. The ONLY tier-gated
+  AI features are the deck-aware ones — "design a card for this deck" and
+  deck-themed ideas — which need Pro (owner decision, 2026-09-15).
 - **First subscription ever → 7-day free trial, no card required**
   (`TRIAL_DAYS`); a trial with no payment method cancels itself at day 7.
   A trial gets exactly ONE credit grant (at creation) — no refills until it
@@ -173,7 +174,11 @@ cron-driven (§6).
 
 Monthly credit allotments are granted by a **daily cron** (`vercel.json` →
 `/api/cron/refill-credits`), not by `invoice.paid` — so **monthly and annual
-plans behave identically**. Grants are idempotent per user per calendar month
+plans behave identically**, and **Free accounts refill too** (5/mo, owner
+decision 2026-09-15; the sweep walks every profile, treats lapsed/canceled
+paid subscriptions as Free, skips admins and trials, and skips Free
+accounts created in the current month because `profiles.credits` defaults to
+the allotment at signup). Grants are idempotent per user per calendar month
 (`refill:{user}:{YYYY-MM}` stored in `credit_ledger.idempotency_key`), so daily
 runs are self-healing and never double-grant. New subscribers also get their
 first month immediately on `customer.subscription.created`/`.updated` (same key →

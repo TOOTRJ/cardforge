@@ -24,9 +24,10 @@ export type BillingPeriod = "monthly" | "annual";
 // customer's Stripe subscription history.
 export const TRIAL_DAYS = 7;
 
-// Monthly credit allotment per tier. Free is the ONE-TIME signup grant — it
-// deliberately never refills (owner decision, 2026-07-28); Plus/Pro are
-// granted monthly via the refill cron + subscription webhook.
+// Monthly credit allotment per tier — EVERY tier refills monthly via the
+// daily cron (Free included, owner decision 2026-09-15; Plus/Pro also on
+// the subscription webhook). A new account starts with Free's allotment via
+// the profiles.credits default.
 // Sized so even a max-usage subscriber keeps AI cost (~$0.11 per generation,
 // measured) under ~40% of net revenue. Tune in tandem with prices below.
 export const MONTHLY_CREDITS: Record<PlanTier, number> = {
@@ -75,9 +76,9 @@ export const PLANS: PlanDisplay[] = [
     priceUsd: 0,
     tagline: "Design and share custom cards, forever free.",
     features: [
-      "5 AI credits to start — every AI tool included",
+      "5 AI credits every month — every AI tool included",
       "Every MTG-style frame & finish",
-      "PNG export (watermarked)",
+      "Low-res PNG export (watermarked)",
       "Up to 50 saved cards",
       "Community gallery, decks & sharing",
     ],
@@ -91,8 +92,9 @@ export const PLANS: PlanDisplay[] = [
     featured: true,
     features: [
       "30 AI credits every month",
-      "Watermark-free exports",
-      "High-resolution (1500×2100) downloads",
+      "Watermark-free downloads",
+      "High-resolution (1500×2100) PNG",
+      "Print-ready PDF export",
       "Up to 500 saved cards",
       "Everything in Free",
     ],
@@ -104,15 +106,15 @@ export const PLANS: PlanDisplay[] = [
     priceUsd: 15,
     annualUsd: 150,
     tagline: "For power users building whole decks with AI.",
-    // AI deck generation is NOT listed as a perk: every AI tool is open to
-    // every tier — credits are the only limiter (owner decision, 2026-07-28).
-    // Pro's deck story is the credit headroom, not an unlock.
+    // Every AI tool is open to every tier and credits are the limiter; the
+    // ONLY tier-gated AI features are the deck-aware ones (owner decision,
+    // 2026-09-15). Never list perks that aren't shipped (the old "priority
+    // AI queue" line had no implementation behind it).
     features: [
       "75 AI credits every month — enough for whole decks",
       "AI cards & ideas designed for a specific deck",
-      "Batch & whole-deck export",
+      "Batch & whole-deck export, 3×3 print sheets",
       "Unlimited saved cards",
-      "Priority AI queue",
       "Everything in Plus",
     ],
     comingSoon: PAID_COMING_SOON,
