@@ -17,6 +17,9 @@ import { getCardById } from "@/lib/cards/queries";
 import { createSetAction, updateSetAction } from "@/lib/sets/actions";
 import { createDeckAction, updateDeckAction } from "@/lib/decks/actions";
 import { listDeckCards } from "@/lib/decks/queries";
+import { computeDeckAnalytics } from "@/lib/decks/analytics";
+import { buildDeckBrief } from "@/lib/ai/deck-brief";
+import { requireTier } from "@/lib/billing/entitlements";
 import { generateSet } from "@/lib/ai/set-gen";
 import {
   generateDeckPlan,
@@ -137,6 +140,8 @@ export type CardJobPlan = {
   /** Resolved after text generation (depends on final colors); null = the
    *  creator's era default for the type. */
   frame_template: string | null;
+  /** Deck-aware design: the step adds the finished card to this deck. */
+  deck_id?: string | null;
 };
 
 /** Single-card AI remix (migration 0062): fork one card with identical
@@ -652,7 +657,65 @@ export type CreateCardJobInput = {
   /** "random" or a specific published frame for the chosen type. */
   frame?: "random" | FrameTemplate;
   rarity?: Rarity;
+  /** Pro: design the card FOR this deck (owner's) — the deck is analyzed
+   *  and briefed to the designer, and the finished card is added to it. */
+  deckId?: string;
 };
+
+type OwnedDeckContext = {
+  deck: {
+    id: string;
+    slug: string;
+    title: string;
+    description: string | null;
+    format: string;
+    cover_url: string | null;
+  };
+  items: Awaited<ReturnType<typeof listDeckCards>>;
+  context: {
+    title: string;
+    description: string | null;
+    hasCommander: boolean;
+    cards: { name: string; type_line: string | null; rules_text: string | null }[];
+  };
+};
+
+/** The caller's deck + its cards in the shape the designers read. Null when
+ *  the deck doesn't exist or isn't theirs (RLS hides other users' private
+ *  decks; public ones are rejected by the owner check). */
+async function loadOwnedDeckContext(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  deckId: string,
+  userId: string,
+): Promise<OwnedDeckContext | null> {
+  const { data } = await supabase
+    .from("decks")
+    .select("id, slug, title, description, format, cover_url, owner_id")
+    .eq("id", deckId)
+    .maybeSingle();
+  if (!data || data.owner_id !== userId) return null;
+  const items = await listDeckCards(data.id);
+  return {
+    deck: data,
+    items,
+    context: {
+      title: data.title,
+      description: data.description,
+      hasCommander: items.some((item) => item.entry.board === "commander"),
+      cards: items.map((item) => ({
+        name: item.card?.title ?? item.entry.name,
+        type_line:
+          item.entry.type_line ??
+          (item.card
+            ? [item.card.supertype, item.card.card_type, ...(item.card.subtypes ?? [])]
+                .filter(Boolean)
+                .join(" ")
+            : null),
+        rules_text: item.card?.rules_text ?? null,
+      })),
+    },
+  };
+}
 
 export type CreateCardJobResult =
   | { ok: true; job: GenerationJobRow }
@@ -666,11 +729,31 @@ export async function createCardGenerationJob(
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Sign in to generate a card." };
 
+  // Deck-aware design (Pro): brief the designer with the deck's colors,
+  // curve, type mix and card list so the card fills a real gap, and remember
+  // the deck so the step adds the card to it. Gated here as well as in the
+  // route — this function is the only path that reads someone's deck.
+  let deckContext: OwnedDeckContext | null = null;
+  let deckBrief: ReturnType<typeof buildDeckBrief> | null = null;
+  if (input.deckId) {
+    await requireTier("pro");
+    deckContext = await loadOwnedDeckContext(await createClient(), input.deckId, user.id);
+    if (!deckContext) return { ok: false, error: "Deck not found or not yours." };
+    deckBrief = buildDeckBrief({
+      title: deckContext.deck.title,
+      description: deckContext.deck.description,
+      format: deckContext.deck.format,
+      cards: deckContext.context.cards,
+      analytics: computeDeckAnalytics(deckContext.items),
+    });
+  }
+
   // When the user locked a specific frame, steer generation toward a color
   // that frame actually has published art for (same logic as the legacy
-  // random-card route).
+  // random-card route). A deck brief's dominant color steers the same way
+  // when the frame is left random.
   const verifiedKeys = new Set(await getVerifiedFrameKeys());
-  let colorHint: ColorIdentity | undefined;
+  let colorHint: ColorIdentity | undefined = deckBrief?.colorHint;
   if (input.frame && input.frame !== "random" && input.cardType) {
     const hints = colorHintsForFrame(input.cardType, input.frame, verifiedKeys);
     if (hints.length > 0) {
@@ -687,6 +770,7 @@ export async function createCardGenerationJob(
       cardType: input.cardType,
       rarity: input.rarity,
       colorHint,
+      context: deckBrief?.context,
     });
   } catch (error) {
     const detail =
@@ -705,6 +789,7 @@ export async function createCardGenerationJob(
     card,
     style: input.style?.trim() || null,
     frame_template: frameTemplate ?? null,
+    deck_id: deckContext?.deck.id ?? null,
   };
   const steps: JobStep[] = [
     { key: "card:0", label: card.title, status: "pending" },
@@ -717,11 +802,13 @@ export async function createCardGenerationJob(
       owner_id: user.id,
       kind: "card",
       status: "generating",
+      deck_id: deckContext?.deck.id ?? null,
       request: {
         theme: input.theme ?? null,
         style: input.style ?? null,
         card_type: input.cardType ?? null,
         rarity: input.rarity ?? null,
+        deck_id: deckContext?.deck.id ?? null,
       },
       plan: plan as unknown as Json,
       steps: steps as unknown as Json,
@@ -754,6 +841,9 @@ async function runSingleCardStep(
       frame_style: plan.frame_template
         ? { template: plan.frame_template }
         : undefined,
+      // Designed for a deck → the same create-time linkage the Publish
+      // panel's deck picker uses (createCardAction → deck_cards, main ×1).
+      deck_id: plan.deck_id ?? undefined,
     },
   });
 }
@@ -989,37 +1079,13 @@ export async function createDeckGenerationJob(
   const supabase = await createClient();
 
   // ---- Add-to-existing mode: load the deck + its cards for synergy ----
-  let existingDeck:
-    | { id: string; slug: string; title: string; description: string | null; format: string; cover_url: string | null }
-    | null = null;
-  let existingContext;
+  let existingDeck: OwnedDeckContext["deck"] | null = null;
+  let existingContext: OwnedDeckContext["context"] | undefined;
   if (input.deckId) {
-    const { data } = await supabase
-      .from("decks")
-      .select("id, slug, title, description, format, cover_url, owner_id")
-      .eq("id", input.deckId)
-      .maybeSingle();
-    if (!data || data.owner_id !== user.id) {
-      return { ok: false, error: "Deck not found or not yours." };
-    }
-    existingDeck = data;
-    const items = await listDeckCards(data.id);
-    existingContext = {
-      title: data.title,
-      description: data.description,
-      hasCommander: items.some((item) => item.entry.board === "commander"),
-      cards: items.map((item) => ({
-        name: item.card?.title ?? item.entry.name,
-        type_line:
-          item.entry.type_line ??
-          (item.card
-            ? [item.card.supertype, item.card.card_type, ...(item.card.subtypes ?? [])]
-                .filter(Boolean)
-                .join(" ")
-            : null),
-        rules_text: item.card?.rules_text ?? null,
-      })),
-    };
+    const owned = await loadOwnedDeckContext(supabase, input.deckId, user.id);
+    if (!owned) return { ok: false, error: "Deck not found or not yours." };
+    existingDeck = owned.deck;
+    existingContext = owned.context;
   }
 
   let planResult;
@@ -1126,6 +1192,31 @@ export async function getDeckAiSeed(
     theme: typeof request.theme === "string" && request.theme ? request.theme : null,
     style: typeof request.style === "string" && request.style ? request.style : null,
   };
+}
+
+/** getDeckAiSeed for many decks in one query — the creator's deck picker
+ *  prefills theme/style from whichever AI job last touched each deck. */
+export async function getDeckAiSeeds(
+  deckIds: string[],
+): Promise<Map<string, { theme: string | null; style: string | null }>> {
+  const out = new Map<string, { theme: string | null; style: string | null }>();
+  if (deckIds.length === 0) return out;
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("ai_generation_jobs")
+    .select("deck_id, request, created_at")
+    .in("deck_id", deckIds)
+    .in("kind", ["deck", "deck_remix", "card"])
+    .order("created_at", { ascending: false })
+    .limit(deckIds.length * 5);
+  for (const row of data ?? []) {
+    if (!row.deck_id || out.has(row.deck_id)) continue;
+    const request = (row.request ?? {}) as { theme?: unknown; style?: unknown };
+    const theme = typeof request.theme === "string" && request.theme ? request.theme : null;
+    const style = typeof request.style === "string" && request.style ? request.style : null;
+    if (theme || style) out.set(row.deck_id, { theme, style });
+  }
+  return out;
 }
 
 export type CreateDeckRemixJobInput = {

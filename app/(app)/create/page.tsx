@@ -26,6 +26,8 @@ import { listMySets } from "@/lib/sets/queries";
 import { isSetsEnabled } from "@/lib/sets/flags";
 import { getMyDeckCardWithDeck, listMyDecks } from "@/lib/decks/queries";
 import { isAIConfigured } from "@/lib/ai/card-assistant";
+import { getEntitlements } from "@/lib/billing/entitlements";
+import { getDeckAiSeeds } from "@/lib/ai/generation-jobs";
 import type { DeckRemixContext } from "@/types/deck";
 
 export const metadata: Metadata = {
@@ -70,12 +72,16 @@ export default async function CreatePage({
   const templates = gameSystem
     ? await getTemplatesForGameSystem(gameSystem.id)
     : [];
-  const [mySets, myCards, myDecks] = await Promise.all([
+  const [mySets, myCards, myDecks, entitlements] = await Promise.all([
     // The publish panel's set picker is flag-gated — don't pay the query.
     isSetsEnabled() ? listMySets() : Promise.resolve([]),
     listMyCards(),
     listMyDecks(),
+    getEntitlements(),
   ]);
+  // Theme/style each deck was last generated with — the AI dialog imports
+  // them when a deck is picked (Pro deck-aware generation).
+  const deckSeeds = await getDeckAiSeeds(myDecks.map((deck) => deck.id));
 
   // /create?backFor=<cardId> — building a NEW card that becomes another owned
   // card's back face. Validate the target exists + is the user's before wiring
@@ -154,7 +160,11 @@ export default async function CreatePage({
             id: deck.id,
             title: deck.title,
             format: deck.format,
+            slug: deck.slug,
+            theme: deckSeeds.get(deck.id)?.theme ?? null,
+            style: deckSeeds.get(deck.id)?.style ?? null,
           }))}
+          canDesignForDeck={entitlements.effectiveTier === "pro"}
           myCards={myCards}
           backForCardId={backFor?.id ?? null}
           backForSlug={backFor?.slug ?? null}

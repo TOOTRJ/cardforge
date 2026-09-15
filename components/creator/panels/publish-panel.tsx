@@ -68,6 +68,12 @@ export type DeckOption = {
   id: string;
   title: string;
   format: string;
+  /** Deck page slug — the AI dialog's "Open deck" toast link. */
+  slug?: string;
+  /** Theme/style the deck was last generated with (lib/ai/generation-jobs
+   *  getDeckAiSeeds) — the AI dialog imports them when the deck is picked. */
+  theme?: string | null;
+  style?: string | null;
 };
 
 type PublishPanelProps = {

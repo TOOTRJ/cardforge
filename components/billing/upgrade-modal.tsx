@@ -21,6 +21,7 @@ export type UpgradeReason =
   | "hi_res_export"
   | "pdf_export"
   | "batch_export"
+  | "deck_aware_generation"
   | "generic";
 
 const REASON_COPY: Record<UpgradeReason, { title: string; description: string }> =
@@ -53,9 +54,15 @@ const REASON_COPY: Record<UpgradeReason, { title: string; description: string }>
       title: "Batch & whole-deck export",
       description: "Export a whole deck in one click with Pro.",
     },
-    // NOTE: no deck_gen reason — AI deck generation isn't a tier perk. Every
-    // AI tool is open to every tier; credits are the only limiter (owner
-    // decision, 2026-07-28). Running dry mid-deck surfaces the credits reason.
+    // AI deck/set/card generation itself is open to every tier — credits are
+    // the only limiter (owner decision 2026-07-28). The ONE tier-gated AI
+    // feature is designing a card FOR a specific deck (owner decision
+    // 2026-09-15): the deck is analyzed and the card lands in it.
+    deck_aware_generation: {
+      title: "Design cards for your deck",
+      description:
+        "Pro can point the AI at one of your decks: it studies the deck's colors, curve and cards, designs the card it's missing, and adds it to the deck for you.",
+    },
     generic: {
       title: "Go premium",
       description: "More AI credits every month and clean hi-res exports.",

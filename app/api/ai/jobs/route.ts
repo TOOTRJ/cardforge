@@ -27,6 +27,7 @@ import {
   createSetGenerationJob,
 } from "@/lib/ai/generation-jobs";
 import { FRAME_TEMPLATE_VALUES, RARITY_VALUES } from "@/types/card";
+import { requireTier, UpgradeRequiredError } from "@/lib/billing/entitlements";
 import { AI_DECK_FORMATS } from "@/lib/ai/deck-design";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { getEntitlements } from "@/lib/billing/entitlements";
@@ -94,6 +95,8 @@ const requestSchema = z.discriminatedUnion("kind", [
       .union([z.literal("random"), z.enum(FRAME_TEMPLATE_VALUES)])
       .optional(),
     rarity: z.enum(RARITY_VALUES).optional(),
+    /** Pro: design the card for one of the caller's decks and add it there. */
+    deck_id: z.string().uuid().optional(),
   }),
   // AI remix of one card — fork with identical mechanics, new AI identity +
   // restyled art. Replaced the synchronous /api/ai/remix-card request
@@ -321,12 +324,32 @@ export async function POST(request: Request) {
   const credits = await getFreshCreditBalance();
 
   if (parsed.data.kind === "card") {
+    // Deck-aware design is a Pro perk (owner decision 2026-09-15 — the one
+    // AI feature that is tier-gated; every other AI tool stays open to all).
+    if (parsed.data.deck_id) {
+      try {
+        await requireTier("pro");
+      } catch (error) {
+        if (error instanceof UpgradeRequiredError) {
+          return NextResponse.json(
+            {
+              ok: false,
+              error: "Designing a card for a specific deck is a Pro feature.",
+              code: "UPGRADE_REQUIRED",
+            },
+            { status: 403 },
+          );
+        }
+        throw error;
+      }
+    }
     const result = await createCardGenerationJob({
       theme: parsed.data.theme,
       style: parsed.data.style,
       cardType: parsed.data.card_type,
       frame: parsed.data.frame,
       rarity: parsed.data.rarity,
+      deckId: parsed.data.deck_id,
     });
     if (!result.ok) {
       return NextResponse.json({ ok: false, error: result.error }, { status: 502 });

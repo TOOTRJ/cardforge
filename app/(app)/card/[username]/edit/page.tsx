@@ -29,6 +29,8 @@ import { buildCardPath } from "@/lib/cards/utils";
 import { listMySets, listMySetsForCard } from "@/lib/sets/queries";
 import { isSetsEnabled } from "@/lib/sets/flags";
 import { isAIConfigured } from "@/lib/ai/card-assistant";
+import { getDeckAiSeeds } from "@/lib/ai/generation-jobs";
+import { listMyDecks } from "@/lib/decks/queries";
 
 // File-system param name is `username` because the sibling
 // `(marketing)/card/[username]/[slug]` route uses the same first
@@ -80,7 +82,7 @@ export default async function EditCardPage({ params }: EditCardPageProps) {
   }
 
   const setsEnabled = isSetsEnabled();
-  const [gameSystem, mySets, profile, userSets, entitlements, allMyCards] =
+  const [gameSystem, mySets, profile, userSets, entitlements, allMyCards, myDecks] =
     await Promise.all([
       getFantasyGameSystem(),
       // Both set lists feed sets-only UI — skip the queries while hidden.
@@ -89,9 +91,10 @@ export default async function EditCardPage({ params }: EditCardPageProps) {
       setsEnabled ? listMySets() : Promise.resolve([]),
       getEntitlements(),
       listMyCards(),
-      // The owner's custom footer mark (paid perk) — shown live in the
-      // preview so the editor matches what exports and bakes will print.
+      // The AI dialog's "For a deck" picker (Pro deck-aware generation).
+      listMyDecks(),
     ]);
+  const deckSeeds = await getDeckAiSeeds(myDecks.map((deck) => deck.id));
   // Back-face picker candidates: every owned card except this one (can't be its
   // own back). Includes the currently-linked back card so the flip renders.
   const myCards = allMyCards.filter((c) => c.id !== card.id);
@@ -173,6 +176,15 @@ export default async function EditCardPage({ params }: EditCardPageProps) {
           card={card}
           mySets={userSets}
           myCards={myCards}
+          aiDecks={myDecks.map((deck) => ({
+            id: deck.id,
+            title: deck.title,
+            format: deck.format,
+            slug: deck.slug,
+            theme: deckSeeds.get(deck.id)?.theme ?? null,
+            style: deckSeeds.get(deck.id)?.style ?? null,
+          }))}
+          canDesignForDeck={entitlements.effectiveTier === "pro"}
           aiConfigured={isAIConfigured()}
           pipOverrides={await getPipOverrides(user.id)}
           verifiedFrameKeys={await getVerifiedFrameKeys()}
