@@ -3,7 +3,6 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { ArrowRight } from "lucide-react";
 import { MarketingHero } from "@/components/marketing/marketing-hero";
-import { UpdatesBanner } from "@/components/marketing/updates-banner";
 import { listFeaturedHomeCards } from "@/lib/featured/queries";
 import { FeatureGrid } from "@/components/marketing/feature-grid";
 import { CardPreviewPlaceholder } from "@/components/cards/card-preview-placeholder";
@@ -86,13 +85,7 @@ export default async function HomePage() {
   const featuredCards = await listFeaturedHomeCards();
   return (
     <>
-      {/* What's new — sits right under the header, above the hero, so the
-          newest update and the teased features are the first thing seen. */}
-      {isSupabaseConfigured() ? (
-        <Suspense fallback={null}>
-          <UpdatesBanner />
-        </Suspense>
-      ) : null}
+      {/* The what's-new ribbon renders in AppShell, right under the header. */}
       <MarketingHero featured={featuredCards} />
       <FeatureGrid />
 

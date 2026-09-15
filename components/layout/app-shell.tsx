@@ -1,6 +1,9 @@
 import { SiteHeader, type HeaderUser } from "./site-header";
 import { SiteHeaderClient } from "./site-header-client";
+import { Suspense } from "react";
 import { SiteFooter } from "./site-footer";
+import { UpdatesBanner } from "@/components/marketing/updates-banner";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { cn } from "@/lib/utils";
 
 type AppShellProps = {
@@ -34,6 +37,16 @@ export function AppShell({
       ) : (
         <SiteHeader user={user} />
       )}
+      {/* What's-new ribbon, right under the header on every page: the
+          homepage shows every banner-flagged update, other pages only the
+          ones the admin scoped to the whole site (or nothing when the admin
+          has hidden the ribbon). Cookie-free cached read — static pages stay
+          static. */}
+      {isSupabaseConfigured() ? (
+        <Suspense fallback={null}>
+          <UpdatesBanner />
+        </Suspense>
+      ) : null}
       <main id="main" className="flex-1">
         {children}
       </main>

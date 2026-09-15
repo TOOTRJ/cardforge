@@ -33,6 +33,7 @@ const updateInputSchema = z.object({
   publishAt: z.string().trim().optional().or(z.literal("")),
   isPublished: z.coerce.boolean(),
   showInBanner: z.coerce.boolean(),
+  bannerScope: z.enum(["home", "site"]).default("home"),
   requireAck: z.coerce.boolean(),
   ackUntil: z.string().trim().optional().or(z.literal("")),
 });
@@ -48,6 +49,7 @@ function readForm(formData: FormData) {
     publishAt: formData.get("publishAt") ?? "",
     isPublished: bool("isPublished"),
     showInBanner: bool("showInBanner"),
+    bannerScope: formData.get("bannerScope") ?? "home",
     requireAck: bool("requireAck"),
     ackUntil: formData.get("ackUntil") ?? "",
   });
@@ -83,6 +85,7 @@ function rowFromInput(input: z.infer<typeof updateInputSchema>, existingPublishA
     publish_at: toIso(input.publishAt, existingPublishAt) ?? new Date().toISOString(),
     is_published: input.isPublished,
     show_in_banner: input.showInBanner,
+    banner_scope: input.bannerScope,
     require_ack: input.requireAck,
     ack_until: toIso(input.ackUntil, null),
   };
@@ -293,4 +296,27 @@ export async function notifyAllUsersAction(id: string): Promise<BroadcastResult>
     .eq("id", id);
   purge();
   return { ok: true, sent, skipped };
+}
+
+/** Admin: the global ribbon switch. Off hides the ribbon on every page
+ *  without touching any update's own banner flag. */
+export async function setBannerEnabledAction(enabled: boolean): Promise<UpdateActionResult> {
+  const gate = await requireAdmin();
+  if (!gate.ok) return gate;
+  const supabase = await createClient();
+  const { error } = await supabase.from("site_settings").upsert(
+    {
+      key: "updates_banner",
+      value: { enabled: Boolean(enabled) },
+      updated_at: new Date().toISOString(),
+      updated_by: gate.userId,
+    },
+    { onConflict: "key" },
+  );
+  if (error) {
+    console.warn("setBannerEnabledAction:", error.message);
+    return { ok: false, error: "Couldn't change the ribbon setting." };
+  }
+  purge();
+  return { ok: true };
 }

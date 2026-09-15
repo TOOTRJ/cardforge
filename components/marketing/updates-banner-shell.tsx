@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { ArrowRight, Sparkles, X } from "lucide-react";
 
 const STORAGE_KEY = "pipglyph:updates-banner:dismissed";
@@ -25,17 +26,29 @@ function subscribeStorage(onChange: () => void): () => void {
 // with a pulsing NEW beacon, the headline, the teased features and an arrow
 // that slides on hover. Dismiss is a small X that doesn't follow the link.
 // ---------------------------------------------------------------------------
-export function UpdatesBannerShell({
-  dismissKey,
-  headline,
-  upcoming,
-}: {
+export type BannerSliceProps = {
   /** Changes whenever the banner's content changes, so a dismissed banner
    *  comes back the next time there is genuinely new news. */
   dismissKey: string;
   headline: { title: string; summary: string; href: string } | null;
   upcoming: string[];
+};
+
+export function UpdatesBannerShell({
+  home,
+  site,
+}: {
+  /** The homepage ribbon (every banner-flagged update). */
+  home: BannerSliceProps | null;
+  /** The every-page ribbon (updates scoped to the whole site). */
+  site: BannerSliceProps | null;
 }) {
+  const pathname = usePathname();
+  const active = pathname === "/" ? home : site;
+  return active ? <RibbonBody key={active.dismissKey} {...active} /> : null;
+}
+
+function RibbonBody({ dismissKey, headline, upcoming }: BannerSliceProps) {
   // Read the stored dismissal without an effect. The server (and hydration)
   // snapshot is "not dismissed", so the banner is in the static HTML and
   // never pops in late; a viewer who dismissed it sees it vanish right after

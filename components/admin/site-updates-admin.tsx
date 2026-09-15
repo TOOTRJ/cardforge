@@ -19,6 +19,7 @@ import {
   createSiteUpdateAction,
   deleteSiteUpdateAction,
   notifyAllUsersAction,
+  setBannerEnabledAction,
   setSiteUpdateFlagAction,
   updateSiteUpdateAction,
 } from "@/lib/updates/actions";
@@ -32,10 +33,28 @@ import { cn } from "@/lib/utils";
 
 const STATUS_LABEL = { draft: "Draft", scheduled: "Scheduled", live: "Live" } as const;
 
-export function SiteUpdatesAdmin({ updates }: { updates: SiteUpdate[] }) {
+export function SiteUpdatesAdmin({
+  updates,
+  bannerEnabled,
+}: {
+  updates: SiteUpdate[];
+  /** The global ribbon switch (site_settings.updates_banner). */
+  bannerEnabled: boolean;
+}) {
   const router = useRouter();
   const [editing, setEditing] = useState<SiteUpdate | null>(null);
   const [pending, startTransition] = useTransition();
+
+  const toggleRibbon = () =>
+    startTransition(async () => {
+      const result = await setBannerEnabledAction(!bannerEnabled);
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(bannerEnabled ? "Ribbon hidden on every page." : "Ribbon is showing again.");
+      router.refresh();
+    });
 
   const toggle = (u: SiteUpdate, flag: "is_published" | "show_in_banner" | "require_ack") =>
     startTransition(async () => {
@@ -84,8 +103,38 @@ export function SiteUpdatesAdmin({ updates }: { updates: SiteUpdate[] }) {
     });
   };
 
+  const onBanner = updates.filter((u) => u.show_in_banner && siteUpdateStatus(u) === "live");
+  const siteWide = onBanner.filter((u) => u.banner_scope === "site").length;
+
   return (
     <div className="flex flex-col gap-8">
+      <SurfaceCard
+        tone={bannerEnabled ? "default" : "gold"}
+        className="flex flex-wrap items-center gap-4 p-5"
+      >
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <h2 className="font-display text-lg font-semibold text-foreground">
+            What&apos;s-new ribbon {bannerEnabled ? "is showing" : "is hidden"}
+          </h2>
+          <p className="text-sm leading-6 text-muted">
+            {bannerEnabled
+              ? onBanner.length === 0
+                ? "Nothing is flagged for it right now — tick “Show on the ribbon” on a live update to fill it."
+                : `${onBanner.length} live update${onBanner.length === 1 ? "" : "s"} on the ribbon; ${siteWide} shown on every page, the rest on the homepage only.`
+              : "Hidden everywhere until you turn it back on. Updates keep their own ribbon settings."}
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant={bannerEnabled ? "outline" : "primary"}
+          onClick={toggleRibbon}
+          disabled={pending}
+        >
+          {bannerEnabled ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
+          {bannerEnabled ? "Hide ribbon everywhere" : "Show ribbon"}
+        </Button>
+      </SurfaceCard>
+
       <UpdateForm
         key={editing?.id ?? "new"}
         editing={editing}
@@ -128,7 +177,9 @@ export function SiteUpdatesAdmin({ updates }: { updates: SiteUpdate[] }) {
                     {status === "scheduled" ? "Releases " : "Released "}
                     {formatReleaseDate(u.publish_at)}
                   </span>
-                  {u.show_in_banner ? <Badge>On banner</Badge> : null}
+                  {u.show_in_banner ? (
+                    <Badge>{u.banner_scope === "site" ? "Ribbon · every page" : "Ribbon · homepage"}</Badge>
+                  ) : null}
                   {u.require_ack ? <Badge>Must-read</Badge> : null}
                   {u.notified_at ? (
                     <Badge title={`Last sent ${formatReleaseDate(u.notified_at)}`}>
@@ -151,7 +202,7 @@ export function SiteUpdatesAdmin({ updates }: { updates: SiteUpdate[] }) {
                     {u.is_published ? "Unpublish" : "Publish"}
                   </Button>
                   <Button type="button" variant="outline" size="sm" onClick={() => toggle(u, "show_in_banner")} disabled={pending}>
-                    {u.show_in_banner ? "Remove from banner" : "Show on banner"}
+                    {u.show_in_banner ? "Remove from ribbon" : "Show on ribbon"}
                   </Button>
                   <Button type="button" variant="outline" size="sm" onClick={() => toggle(u, "require_ack")} disabled={pending}>
                     {u.require_ack ? "Stop requiring read" : "Require read"}
@@ -268,7 +319,14 @@ function UpdateForm({
           </label>
           <label className="flex items-center gap-2 text-sm text-foreground">
             <input type="checkbox" name="showInBanner" defaultChecked={editing?.show_in_banner ?? false} />
-            Show on the homepage banner
+            Show on the ribbon
+          </label>
+          <label className="flex items-center gap-2 text-sm text-foreground">
+            <span className="text-muted">Ribbon on</span>
+            <select name="bannerScope" defaultValue={editing?.banner_scope ?? "home"} className={`${inputClass(false)} h-9 w-auto`}>
+              <option value="home">the homepage only</option>
+              <option value="site">every page</option>
+            </select>
           </label>
           <label className="flex items-center gap-2 text-sm text-foreground">
             <input type="checkbox" name="requireAck" defaultChecked={editing?.require_ack ?? false} />
