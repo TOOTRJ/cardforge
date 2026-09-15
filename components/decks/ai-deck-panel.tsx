@@ -107,7 +107,7 @@ export function AiDeckPanel({
     if (mode === "add") {
       router.refresh();
     } else if (outcome.slug) {
-      router.push(`/deck/${outcome.slug}/edit`);
+      router.push(`/deck/${outcome.slug}`);
     }
   };
 
@@ -271,7 +271,7 @@ export function AiDeckPanel({
             <Button
               type="button"
               variant="secondary"
-              onClick={() => router.push(`/deck/${resultSlug}/edit`)}
+              onClick={() => router.push(`/deck/${resultSlug}`)}
             >
               Open deck
               <ArrowRight className="h-4 w-4" aria-hidden />

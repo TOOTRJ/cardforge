@@ -224,12 +224,12 @@ export function DeckWizard({
       setCreatedSlug(result.slug);
       if (mode === "import") {
         toast.success("Deck created — paste your decklist to fill it.");
-        router.push(`/deck/${result.slug}/edit?import=1`);
+        router.push(`/deck/${result.slug}?import=1`);
         return;
       }
       if (mode === "empty") {
         toast.success("Deck created.");
-        router.push(`/deck/${result.slug}/edit`);
+        router.push(`/deck/${result.slug}`);
         return;
       }
       // AI build: generate INTO the new deck (add-mode) so the user's title,
