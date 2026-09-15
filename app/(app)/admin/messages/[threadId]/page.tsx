@@ -81,6 +81,7 @@ export default async function AdminThreadPage({ params }: { params: Promise<Para
         userLabel={userLabel}
         adminNames={thread.adminNames}
         feedback={thread.feedback}
+        seenAt={thread.userLastReadAt}
       />
 
       <div className="border-t border-border/50 pt-4">

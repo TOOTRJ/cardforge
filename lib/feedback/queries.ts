@@ -57,10 +57,19 @@ export async function countNewFeedback(): Promise<number> {
   return count ?? 0;
 }
 
+/** Which submissions the admin inbox shows: one status, everything, or the
+ *  default "unresolved" (new + reviewed — anything still needing a look). */
+export type FeedbackInboxFilter = FeedbackStatus | "unresolved" | "all";
+
+/** Statuses that still need attention (the inbox default). */
+export const UNRESOLVED_FEEDBACK_STATUSES: readonly FeedbackStatus[] = ["new", "reviewed"];
+
 /** Admin inbox. Returns null when the caller isn't an admin (page 404s),
- *  [] when the inbox is empty. Service-role read gated on is_admin. */
+ *  [] when the inbox is empty. Service-role read gated on is_admin. Newest
+ *  first; the unresolved view additionally lifts untouched ("new") rows
+ *  above reviewed ones so fresh reports are always at the top. */
 export async function listAllFeedback(
-  status?: FeedbackStatus,
+  filter: FeedbackInboxFilter = "unresolved",
 ): Promise<AdminFeedbackItem[] | null> {
   const profile = await getCurrentProfile();
   if (!profile?.is_admin) return null;
@@ -72,9 +81,17 @@ export async function listAllFeedback(
     .select("id, category, subject, message, frame_template, page_url, status, created_at, user_id")
     .order("created_at", { ascending: false })
     .limit(200);
-  if (status) query = query.eq("status", status);
-  const { data, error } = await query;
-  if (error || !data) return [];
+  if (filter === "unresolved") query = query.in("status", [...UNRESOLVED_FEEDBACK_STATUSES]);
+  else if (filter !== "all") query = query.eq("status", filter);
+  const { data: fetched, error } = await query;
+  if (error || !fetched) return [];
+  const data =
+    filter === "unresolved"
+      ? [...fetched].sort((a, b) => {
+          const rank = (s: string) => (s === "new" ? 0 : 1);
+          return rank(a.status) - rank(b.status) || (a.created_at < b.created_at ? 1 : -1);
+        })
+      : fetched;
 
   // Resolve submitter names in one shot (feedback.user_id has no FK to
   // profiles, so no implicit join).

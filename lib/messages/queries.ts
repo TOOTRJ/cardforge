@@ -59,10 +59,11 @@ type ThreadRow = {
   last_sender_role: string | null;
   user_unread_count: number;
   admin_unread_count: number;
+  user_last_read_at: string | null;
 };
 
 const THREAD_COLUMNS =
-  "id, subject, status, feedback_id, created_at, last_message_at, last_message_preview, last_sender_role, user_unread_count, admin_unread_count";
+  "id, subject, status, feedback_id, created_at, last_message_at, last_message_preview, last_sender_role, user_unread_count, admin_unread_count, user_last_read_at";
 
 function toSummary(row: ThreadRow, side: MessageSenderRole): ThreadSummary {
   return {
@@ -207,7 +208,19 @@ export type AdminThreadSummary = ThreadSummary & {
     displayName: string | null;
     avatarUrl: string | null;
   };
+  /** Read receipt for the ADMIN side only: when the user last opened the
+   *  thread (mark_message_thread_read) and whether anything the team sent is
+   *  still unseen. Users never get the mirror of this. */
+  userLastReadAt: string | null;
+  userHasUnseen: boolean;
 };
+
+function adminReceipt(row: ThreadRow): Pick<AdminThreadSummary, "userLastReadAt" | "userHasUnseen"> {
+  return {
+    userLastReadAt: row.user_last_read_at,
+    userHasUnseen: row.user_unread_count > 0,
+  };
+}
 
 export type AdminThreadDetail = AdminThreadSummary & {
   messages: ThreadMessage[];
@@ -266,6 +279,7 @@ export async function listAllThreads(
     const p = people.get(row.user_id);
     return {
       ...toSummary(row, "admin"),
+    ...adminReceipt(row),
       user: {
         id: row.user_id,
         username: p?.username ?? null,
@@ -291,6 +305,7 @@ export async function listThreadsForUser(userId: string): Promise<AdminThreadSum
   const p = people.get(userId);
   return rows.map((row) => ({
     ...toSummary(row, "admin"),
+    ...adminReceipt(row),
     user: {
       id: userId,
       username: p?.username ?? null,
@@ -333,6 +348,7 @@ export async function getThreadForAdmin(threadId: string): Promise<AdminThreadDe
   }
   return {
     ...toSummary(row, "admin"),
+    ...adminReceipt(row),
     user: {
       id: row.user_id,
       username: p?.username ?? null,

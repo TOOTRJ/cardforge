@@ -13,12 +13,12 @@ describe("parseUserListParams", () => {
       tier: "",
       status: "",
       flag: "",
-      sort: "newest",
+      sort: "active",
       page: 1,
     });
     expect(parseUserListParams({ tier: "gold", sort: "loudest", flag: "x", page: "-3" })).toMatchObject({
       tier: "",
-      sort: "newest",
+      sort: "active",
       flag: "",
       page: 1,
     });

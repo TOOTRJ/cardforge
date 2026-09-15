@@ -14,6 +14,8 @@ export const USER_STATUS_FILTERS = [
 ] as const;
 export const USER_FLAG_FILTERS = ["", "paid", "comped", "admins", "mismatch"] as const;
 export const USER_SORTS = ["newest", "oldest", "active", "cards", "credits"] as const;
+/** The list opens on recently active users (owner decision, 2026-09-15). */
+export const DEFAULT_USER_SORT: (typeof USER_SORTS)[number] = "active";
 
 export type UserListParams = {
   q: string;
@@ -63,7 +65,7 @@ export function parseUserListParams(raw: RawParams): UserListParams {
     tier: pick(raw.tier, USER_TIER_FILTERS, ""),
     status: pick(raw.status, USER_STATUS_FILTERS, ""),
     flag: pick(raw.flag, USER_FLAG_FILTERS, ""),
-    sort: pick(raw.sort, USER_SORTS, "newest"),
+    sort: pick(raw.sort, USER_SORTS, DEFAULT_USER_SORT),
     page,
   };
 }
@@ -83,7 +85,7 @@ export function userListHref(
   if (next.tier) search.set("tier", next.tier);
   if (next.status) search.set("status", next.status);
   if (next.flag) search.set("flag", next.flag);
-  if (next.sort !== "newest") search.set("sort", next.sort);
+  if (next.sort !== DEFAULT_USER_SORT) search.set("sort", next.sort);
   if (page > 1) search.set("page", String(page));
   for (const [key, value] of Object.entries(extra)) {
     if (value) search.set(key, value);

@@ -33,6 +33,7 @@ import {
   type AdminUserRow,
 } from "@/lib/admin/users-queries";
 import {
+  DEFAULT_USER_SORT,
   FLAG_LABELS,
   SORT_LABELS,
   USER_FLAG_FILTERS,
@@ -255,7 +256,7 @@ function UserFilters({ params }: { params: UserListParams }) {
         <Button type="submit" variant="outline" size="sm" className="h-9">
           Apply
         </Button>
-        {params.q || params.tier || params.status || params.flag || params.sort !== "newest" ? (
+        {params.q || params.tier || params.status || params.flag || params.sort !== DEFAULT_USER_SORT ? (
           <Button asChild variant="ghost" size="sm" className="h-9">
             <Link href="/admin/users">Reset</Link>
           </Button>
