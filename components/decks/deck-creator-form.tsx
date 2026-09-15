@@ -49,6 +49,10 @@ type DeckCreatorFormProps = {
   mode: "create" | "edit";
   userId: string | null;
   deck?: Deck | null;
+  /** Inside a dialog on the deck page: no card chrome, no "All decks" link,
+   *  and a successful save calls `onSaved` instead of navigating. */
+  embedded?: boolean;
+  onSaved?: (slug: string) => void;
 };
 
 const VISIBILITY_OPTIONS: Array<{
@@ -118,7 +122,9 @@ function defaultValuesFor(deck: Deck | null | undefined): FormValues {
   };
 }
 
-export function DeckCreatorForm({ mode, userId, deck }: DeckCreatorFormProps) {
+export function DeckCreatorForm({ mode, userId, deck,
+  embedded = false,
+  onSaved }: DeckCreatorFormProps) {
   const router = useRouter();
   const [isSubmitting, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
@@ -174,7 +180,7 @@ export function DeckCreatorForm({ mode, userId, deck }: DeckCreatorFormProps) {
           return;
         }
         toast.success(`Created “${payload.title}”`);
-        router.replace(`/deck/${result.slug}/edit`);
+        router.replace(`/deck/${result.slug}`);
         router.refresh();
         return;
       }
@@ -198,14 +204,20 @@ export function DeckCreatorForm({ mode, userId, deck }: DeckCreatorFormProps) {
         return;
       }
       toast.success("Changes saved.");
+      if (onSaved) {
+        onSaved(result.slug);
+        router.refresh();
+        return;
+      }
       // Editing is done — land on the deck itself.
       router.replace(`/deck/${result.slug}`);
       router.refresh();
     });
   };
 
+  const Wrapper = embedded ? "div" : SurfaceCard;
   return (
-    <SurfaceCard className="flex flex-col gap-6 p-6">
+    <Wrapper className="flex flex-col gap-6 p-6">
       <form
         noValidate
         onSubmit={handleSubmit(onSubmit)}
@@ -322,12 +334,14 @@ export function DeckCreatorForm({ mode, userId, deck }: DeckCreatorFormProps) {
             )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Button asChild variant="ghost">
-              <Link href="/dashboard/decks">
-                <ArrowLeft className="h-4 w-4" aria-hidden />
-                {mode === "edit" ? "All decks" : "Back to decks"}
-              </Link>
-            </Button>
+            {embedded ? null : (
+              <Button asChild variant="ghost">
+                <Link href="/dashboard/decks">
+                  <ArrowLeft className="h-4 w-4" aria-hidden />
+                  {mode === "edit" ? "All decks" : "Back to decks"}
+                </Link>
+              </Button>
+            )}
             <Button type="submit" disabled={isSubmitting} size="lg">
               {isSubmitting ? (
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
@@ -343,7 +357,7 @@ export function DeckCreatorForm({ mode, userId, deck }: DeckCreatorFormProps) {
           </div>
         </div>
       </form>
-    </SurfaceCard>
+    </Wrapper>
   );
 }
 

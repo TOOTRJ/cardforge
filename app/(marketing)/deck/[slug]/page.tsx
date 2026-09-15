@@ -1,4 +1,8 @@
 import type { Metadata } from "next";
+import { DeckOwnerTools, DeckToolButton } from "@/components/decks/deck-owner-tools";
+import { isDesignAiConfigured } from "@/lib/ai/provider";
+import { batchCardLimit } from "@/lib/ai/generation-limits";
+import { getDeckAiSeed } from "@/lib/ai/generation-jobs";
 import { DeckRegenerateBar } from "@/components/decks/deck-regenerate-bar";
 import { getLatestFailedDeckJob } from "@/lib/ai/generation-jobs";
 import { commanderBracket, deckTypeByKey } from "@/lib/decks/deck-types";
@@ -10,7 +14,6 @@ import { AlertTriangle, ArrowLeft, BookOpen, Pencil } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { DeckAnalyticsPanel } from "@/components/decks/deck-analytics-panel";
@@ -96,8 +99,10 @@ export async function generateMetadata({
 
 export default async function DeckDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<Params>;
+  searchParams: Promise<{ import?: string }>;
 }) {
   const { slug } = await params;
   // Deck + auth are needed to render the header / owner chip — keep them on
@@ -174,6 +179,15 @@ export default async function DeckDetailPage({
                 <BookOpen className="h-10 w-10 text-subtle" aria-hidden />
               </div>
             )}
+            {isOwner ? (
+              <DeckToolButton
+                tool="details"
+                label="Change cover"
+                className="absolute bottom-3 right-3 rounded-full border border-border/60 bg-background/80 px-3 py-1 text-xs font-medium text-foreground backdrop-blur hover:bg-background"
+              >
+                <Pencil className="h-3.5 w-3.5" aria-hidden /> {deck.cover_url ? "Change cover" : "Add cover"}
+              </DeckToolButton>
+            ) : null}
           </div>
         <div className="flex flex-col gap-4 p-6 sm:flex-row sm:items-start sm:justify-between md:p-8">
           <div className="flex flex-col gap-2">
@@ -202,13 +216,19 @@ export default async function DeckDetailPage({
                 </Link>
               ) : null}
             </div>
-            <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+            <h1 className="flex items-center gap-2 font-display text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
               {deck.title}
+              {isOwner ? <DeckToolButton tool="details" label="Edit deck details" className="text-base" /> : null}
             </h1>
             {deck.description ? (
               <p className="max-w-2xl text-sm leading-6 text-muted">
                 {deck.description}
+                {isOwner ? <DeckToolButton tool="details" label="Edit description" className="ml-1.5 align-middle" /> : null}
               </p>
+            ) : isOwner ? (
+              <DeckToolButton tool="details" label="Add a description" className="self-start text-xs">
+                <Pencil className="h-3.5 w-3.5" aria-hidden /> Add a description
+              </DeckToolButton>
             ) : null}
           </div>
 
@@ -230,12 +250,15 @@ export default async function DeckDetailPage({
               entity="deck"
               itemId={deck.id}
             />
-            {isOwner ? (
-              <Button asChild>
-                <Link href={`/deck/${deck.slug}/edit`}>
-                  <Pencil className="h-4 w-4" aria-hidden /> Edit deck
-                </Link>
-              </Button>
+            {isOwner && user ? (
+              <DeckOwnerTools
+                deck={deck}
+                userId={user.id}
+                aiConfigured={isDesignAiConfigured()}
+                maxCards={await batchCardLimit()}
+                aiSeed={await getDeckAiSeed(deck.id)}
+                openImport={(await searchParams).import === "1"}
+              />
             ) : null}
           </div>
         </div>
@@ -347,14 +370,12 @@ async function DeckBody({
               title="No cards yet"
               description={
                 isOwner
-                  ? "Add cards from the deck editor to start building."
+                  ? "Import a decklist, add cards with AI, or link your own creations."
                   : "This deck is empty for now."
               }
               action={
                 isOwner ? (
-                  <Button asChild>
-                    <Link href={`/deck/${deckSlug}/edit`}>Manage deck</Link>
-                  </Button>
+                  <span className="text-sm text-muted">Use Import decklist or Add with AI above to fill it.</span>
                 ) : null
               }
             />

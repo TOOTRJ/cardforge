@@ -44,6 +44,8 @@ type ImportDecklistDialogProps = {
   deckId: string;
   /** Rendered as the trigger; defaults to an "Import decklist" button. */
   triggerLabel?: string;
+  /** Open on mount (the wizard's "Import a decklist" path lands here). */
+  defaultOpen?: boolean;
 };
 
 type Step = "paste" | "review";
@@ -51,9 +53,10 @@ type Step = "paste" | "review";
 export function ImportDecklistDialog({
   deckId,
   triggerLabel = "Import decklist",
+  defaultOpen = false,
 }: ImportDecklistDialogProps) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const [step, setStep] = useState<Step>("paste");
   const [text, setText] = useState("");
   const [lines, setLines] = useState<ImportReviewLine[]>([]);

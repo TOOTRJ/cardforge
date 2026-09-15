@@ -150,7 +150,7 @@ function targetHref(
     return cardId ? `/go/card/${cardId}` : undefined;
   }
   if (!slug) return undefined;
-  return job.kind === "set" ? `/set/${slug}/edit` : `/deck/${slug}/edit`;
+  return job.kind === "set" ? `/set/${slug}/edit` : `/deck/${slug}`;
 }
 
 export function GenerationJobProvider({
