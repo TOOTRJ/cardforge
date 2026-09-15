@@ -45,7 +45,8 @@ export type AiActionLabel =
   | "remix_card"
   | "remix_art"
   | "generate_set_icon"
-  | "generate_deck_cards";
+  | "generate_deck_cards"
+  | "generate_card_ideas";
 
 // Per-user daily quotas for the image-generating flows — enforced ONLY when
 // billing is DISABLED (previews, local), where image calls aren't credit-
@@ -227,6 +228,8 @@ export async function logAiCall(
 export const AI_ACTION_COST: Partial<Record<AiActionLabel, number>> = {
   generate_random_card: 1,
   remix_card: 1,
+  /** One credit buys the whole batch of text-only ideas (no art). */
+  generate_card_ideas: 1,
 };
 
 export function creditCostFor(action: AiActionLabel): number {
@@ -347,17 +350,15 @@ export async function getFreshCreditBalance(): Promise<number | null> {
   if (!isBillingEnabled()) return null;
   try {
     const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return null;
-    const { data } = await supabase
-      .from("profiles")
-      .select("credits, is_admin")
-      .eq("id", user.id)
-      .maybeSingle();
-    if (!data || data.is_admin) return null;
-    return data.credits ?? 0;
+    // The billing columns are not selectable through the user's session
+    // since migration 0074 (they used to be world-readable); get_my_billing()
+    // is the SECURITY DEFINER read of the caller's own row. Reading the
+    // table directly here returned null after every spend and left the
+    // credit chips stale (found 2026-09-15 via the ideas dialog).
+    const { data } = await supabase.rpc("get_my_billing");
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row || row.is_admin) return null;
+    return row.credits ?? 0;
   } catch {
     return null;
   }
