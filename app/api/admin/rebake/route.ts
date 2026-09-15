@@ -127,7 +127,7 @@ export async function POST(request: Request) {
       const pipOverrides = await getPipOverrides(row.owner_id);
       const profileOverrides = await getFrameProfileOverrides();
       const stamp = await stampForOwner(row.owner_id);
-      const response = renderCardImage(rowToPreviewData(row, pipOverrides, profileOverrides), "hd", {
+      const response = await renderCardImage(rowToPreviewData(row, pipOverrides, profileOverrides), "hd", {
         brandMark: stamp.brandMark,
         watermarkText: stamp.footerText,
       });

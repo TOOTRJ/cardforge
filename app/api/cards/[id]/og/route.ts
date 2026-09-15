@@ -120,7 +120,7 @@ export async function GET(
   // carry the brand mark. Owner-based (never viewer-based) keeps the route
   // CDN-cacheable: scrapers have no viewer.
   const stamp = await ownerExportStamp(card.owner_id);
-  const response = renderCardImage(previewData, preset, {
+  const response = await renderCardImage(previewData, preset, {
     brandMark: stamp.brandMark,
     watermarkText: stamp.footerText,
   });

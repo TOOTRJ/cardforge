@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
       ? (body.preset as RenderPreset)
       : "default";
 
-  return renderCardImage(body.card ?? {}, preset, {
+  return await renderCardImage(body.card ?? {}, preset, {
     brandMark: body.watermark ?? false,
   });
 }

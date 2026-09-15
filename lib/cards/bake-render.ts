@@ -133,7 +133,7 @@ export async function bakeCardRender(
     // every save and via /api/admin/rebake, and layout-version bumps force a
     // global rebake sweep.
     const stamp = await ownerExportStamp(ownerId);
-    const response = renderCardImage(previewData, "hd", {
+    const response = await renderCardImage(previewData, "hd", {
       brandMark: stamp.brandMark,
       watermarkText: stamp.footerText,
     });
