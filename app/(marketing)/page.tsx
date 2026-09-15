@@ -124,9 +124,10 @@ export default async function HomePage() {
               Upgrade when you need more
             </h2>
             <p className="mx-auto max-w-2xl text-base leading-7 text-muted">
-              The card maker is free forever — every frame, every card type.
-              Plans add AI generation credits, watermark-free hi-res exports, the
-              AI set generator, and premium finishes.
+              The card maker is free forever — every frame, every card type,
+              every AI tool, with 5 AI credits a month. Plans add far more
+              monthly credits, watermark-free hi-res downloads, and Pro&apos;s
+              deck-aware AI design.
             </p>
           </div>
           <div className="grid w-full gap-4 sm:grid-cols-3">

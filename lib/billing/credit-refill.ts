@@ -5,6 +5,7 @@ import {
   MONTHLY_CREDITS,
   creditRefillKey,
   creditUpgradeKey,
+  currentCreditPeriod,
   type PlanTier,
 } from "@/lib/billing/plans";
 
@@ -25,6 +26,13 @@ import {
 // upgrade key (idempotent, so a re-upgrade in the same month can't
 // double-grant, and the cron backfills the top-up if the webhook missed it).
 // Downgrades grant nothing — credits already banked are never clawed back.
+//
+// Free tier (owner decision 2026-09-15, reversing 2026-07-28): Free refills
+// monthly too — 5 credits — so the pricing page's "every month" is true for
+// every tier. The daily sweep therefore walks EVERY profile, not just paid
+// subscribers; a profile's effective tier decides the amount. The signup
+// default (`profiles.credits default 5`, no ledger row) is that month's
+// allotment, so free profiles created in the current period are skipped.
 // ---------------------------------------------------------------------------
 
 /** The service-role client (grant_credits is service-role only). Exported so
@@ -44,15 +52,44 @@ export type RefillSweepResult =
   | { ok: true; processed: number; granted: number; failed: number }
   | { ok: false; error: string };
 
+/** The profile columns the sweep reads. */
+export type RefillProfileRow = {
+  id: string;
+  subscription_tier: string | null;
+  subscription_status: string | null;
+  is_admin: boolean | null;
+  created_at: string | null;
+};
+
 /**
- * The daily refill sweep: page through EVERY active paid subscriber (id-ordered
- * ranges of REFILL_PAGE_SIZE) and run the monthly grant for each. Trialing is
- * deliberately excluded — a trial's single grant lands on subscription.created
- * (see webhook-handlers.ts); refilling trialing here let a no-card 7-day trial
- * spanning a month boundary bank a second never-expiring allotment without
- * ever paying. Offset pagination is stable because grants never change the
- * filtered columns. A page-read failure aborts with the stats so far — the
- * grants are idempotent, so the next daily run resumes harmlessly.
+ * Which tier's allotment a profile is owed this period, or null when the
+ * sweep should leave it alone:
+ *   • admins — unlimited credits, a grant is ledger noise;
+ *   • trialing — a trial's single grant lands on subscription.created
+ *     (see subscription-sync.ts); refilling here let a no-card 7-day trial
+ *     spanning a month boundary bank a second allotment without paying;
+ *   • active plus/pro → that tier;
+ *   • everyone else (free, lapsed, canceled) → free — except a free profile
+ *     created THIS period, whose signup default already is the allotment.
+ */
+export function refillTierFor(profile: RefillProfileRow, period: string): PlanTier | null {
+  if (profile.is_admin) return null;
+  const status = profile.subscription_status ?? null;
+  if (status === "trialing") return null;
+  const tier = profile.subscription_tier ?? "free";
+  if (status === "active" && (tier === "plus" || tier === "pro")) return tier;
+  if (profile.created_at && currentCreditPeriod(new Date(profile.created_at)) === period) {
+    return null;
+  }
+  return "free";
+}
+
+/**
+ * The daily refill sweep: page through EVERY profile (id-ordered ranges of
+ * REFILL_PAGE_SIZE) and grant each the allotment `refillTierFor` says it is
+ * owed. Offset pagination is stable because grants never change the read
+ * columns. A page-read failure aborts with the stats so far — the grants are
+ * idempotent, so the next daily run resumes harmlessly.
  */
 export async function refillActiveSubscribers(
   admin: CreditGrantClient,
@@ -61,31 +98,23 @@ export async function refillActiveSubscribers(
   let processed = 0;
   let granted = 0;
   let failed = 0;
-
   for (let from = 0; ; from += REFILL_PAGE_SIZE) {
     const { data: page, error } = await admin
       .from("profiles")
-      .select("id, subscription_tier")
-      .eq("subscription_status", "active")
-      .in("subscription_tier", ["plus", "pro"])
+      .select("id, subscription_tier, subscription_status, is_admin, created_at")
       .order("id", { ascending: true })
       .range(from, from + REFILL_PAGE_SIZE - 1);
     if (error) return { ok: false, error: error.message };
-
-    for (const profile of page ?? []) {
-      const result = await grantMonthlyCreditsForPeriod(
-        admin,
-        profile.id,
-        profile.subscription_tier as PlanTier,
-        period,
-      );
+    for (const profile of (page ?? []) as RefillProfileRow[]) {
+      const tier = refillTierFor(profile, period);
+      if (!tier) continue;
+      const result = await grantMonthlyCreditsForPeriod(admin, profile.id, tier, period);
       if (!result.ok) failed += 1;
       else granted += 1;
     }
     processed += page?.length ?? 0;
     if ((page?.length ?? 0) < REFILL_PAGE_SIZE) break;
   }
-
   return { ok: true, processed, granted, failed };
 }
 
@@ -101,11 +130,6 @@ export async function grantMonthlyCreditsForPeriod(
   tier: PlanTier,
   period: string,
 ): Promise<MonthlyGrantResult> {
-  // Free NEVER refills — its 5 credits are the one-time signup grant (owner
-  // decision, 2026-07-28). Guarded here, not just at the callers, because
-  // MONTHLY_CREDITS.free is 5 (display copy) and a future call site passing
-  // "free" through would otherwise quietly start a monthly free allotment.
-  if (tier === "free") return { ok: true, granted: 0 };
 
   const amount = MONTHLY_CREDITS[tier] ?? 0;
   if (amount <= 0) return { ok: true, granted: 0 };

@@ -4,7 +4,9 @@ import {
   REFILL_PAGE_SIZE,
   grantMonthlyCreditsForPeriod,
   refillActiveSubscribers,
+  refillTierFor,
   type CreditGrantClient,
+  type RefillProfileRow,
 } from "@/lib/billing/credit-refill";
 import {
   MONTHLY_CREDITS,
@@ -107,8 +109,22 @@ describe("grantMonthlyCreditsForPeriod", () => {
     expect(grants).toHaveLength(0);
   });
 
-  it("grants nothing for the free tier", async () => {
+  it("grants the free tier its monthly allotment (owner decision, 2026-09-15)", async () => {
     const { admin, grants } = stubAdmin({ baseRow: null });
+    const result = await grantMonthlyCreditsForPeriod(admin, USER, "free", PERIOD);
+
+    expect(result).toEqual({ ok: true, granted: MONTHLY_CREDITS.free });
+    expect(grants).toHaveLength(1);
+    expect(grants[0]).toMatchObject({
+      p_amount: MONTHLY_CREDITS.free,
+      p_idempotency_key: creditRefillKey(USER, PERIOD),
+    });
+  });
+
+  it("grants nothing to a lapsed trial in the month its 30-credit grant landed", async () => {
+    // Trial converted to nothing → effective free; the month's key already
+    // holds a bigger grant, so the free allotment is a no-op (never clawed back).
+    const { admin, grants } = stubAdmin({ baseRow: { delta: MONTHLY_CREDITS.plus } });
     const result = await grantMonthlyCreditsForPeriod(admin, USER, "free", PERIOD);
 
     expect(result).toEqual({ ok: true, granted: 0 });
@@ -141,7 +157,7 @@ describe("grantMonthlyCreditsForPeriod", () => {
 // ---------------------------------------------------------------------------
 
 type SweepStubOpts = {
-  subscribers: Array<{ id: string; subscription_tier: string }>;
+  subscribers: Array<Partial<RefillProfileRow> & { id: string }>;
   /** 0-based page index whose read should fail. */
   failPageRead?: number;
 };
@@ -156,25 +172,24 @@ function stubSweepAdmin(opts: SweepStubOpts): {
   const admin = {
     from: (table: string) => ({
       select: () => ({
-        // profiles path: .eq().in().order().range(); ledger path: .eq().maybeSingle()
+        // ledger path: .eq().maybeSingle()
         eq: () => ({
           maybeSingle: async () => ({ data: null, error: null }),
-          in: () => ({
-            order: () => ({
-              range: async (from: number, to: number) => {
-                pageReads.push([from, to]);
-                const pageIndex = Math.floor(from / REFILL_PAGE_SIZE);
-                if (table !== "profiles") throw new Error("unexpected table");
-                if (opts.failPageRead === pageIndex) {
-                  return { data: null, error: { message: "page read failed" } };
-                }
-                return {
-                  data: opts.subscribers.slice(from, to + 1),
-                  error: null,
-                };
-              },
-            }),
-          }),
+        }),
+        // profiles path: .order().range()
+        order: () => ({
+          range: async (from: number, to: number) => {
+            pageReads.push([from, to]);
+            const pageIndex = Math.floor(from / REFILL_PAGE_SIZE);
+            if (table !== "profiles") throw new Error("unexpected table");
+            if (opts.failPageRead === pageIndex) {
+              return { data: null, error: { message: "page read failed" } };
+            }
+            return {
+              data: opts.subscribers.slice(from, to + 1),
+              error: null,
+            };
+          },
         }),
       }),
     }),
@@ -190,8 +205,56 @@ function fakeSubscribers(count: number) {
   return Array.from({ length: count }, (_, i) => ({
     id: `user-${String(i).padStart(5, "0")}`,
     subscription_tier: i % 3 === 0 ? "pro" : "plus",
+    subscription_status: "active",
+    is_admin: false,
+    created_at: "2026-01-10T00:00:00Z",
   }));
 }
+
+describe("refillTierFor", () => {
+  const base: RefillProfileRow = {
+    id: USER,
+    subscription_tier: "free",
+    subscription_status: null,
+    is_admin: false,
+    created_at: "2026-01-10T00:00:00Z",
+  };
+
+  it("owes free accounts the free allotment", () => {
+    expect(refillTierFor(base, PERIOD)).toBe("free");
+  });
+
+  it("treats a lapsed or canceled paid subscription as free", () => {
+    expect(
+      refillTierFor({ ...base, subscription_tier: "pro", subscription_status: "canceled" }, PERIOD),
+    ).toBe("free");
+    expect(
+      refillTierFor({ ...base, subscription_tier: "plus", subscription_status: "past_due" }, PERIOD),
+    ).toBe("free");
+  });
+
+  it("owes active paid subscribers their tier", () => {
+    expect(
+      refillTierFor({ ...base, subscription_tier: "plus", subscription_status: "active" }, PERIOD),
+    ).toBe("plus");
+  });
+
+  it("skips trials (single grant at creation), admins, and free accounts created this month", () => {
+    expect(
+      refillTierFor({ ...base, subscription_tier: "pro", subscription_status: "trialing" }, PERIOD),
+    ).toBeNull();
+    expect(refillTierFor({ ...base, is_admin: true }, PERIOD)).toBeNull();
+    // The signup default (profiles.credits = 5) is this month's allotment.
+    expect(refillTierFor({ ...base, created_at: "2026-07-20T12:00:00Z" }, PERIOD)).toBeNull();
+    // …but a paid subscriber who signed up this month still gets their tier.
+    expect(
+      refillTierFor(
+        { ...base, subscription_tier: "plus", subscription_status: "active", created_at: "2026-07-20T12:00:00Z" },
+        PERIOD,
+      ),
+    ).toBe("plus");
+  });
+});
 
 describe("refillActiveSubscribers", () => {
   it("pages past the 1000-row PostgREST cap and grants to every subscriber", async () => {
@@ -228,6 +291,25 @@ describe("refillActiveSubscribers", () => {
     expect(result).toEqual({ ok: true, processed: 3, granted: 3, failed: 0 });
     expect(grants).toHaveLength(3);
     expect(pageReads).toEqual([[0, REFILL_PAGE_SIZE - 1]]);
+  });
+
+  it("grants free accounts 5, skips this month's signups, trials and admins", async () => {
+    const subscribers = [
+      { id: "free-old", subscription_tier: "free", subscription_status: null, is_admin: false, created_at: "2026-01-01T00:00:00Z" },
+      { id: "free-new", subscription_tier: "free", subscription_status: null, is_admin: false, created_at: "2026-07-03T00:00:00Z" },
+      { id: "trial", subscription_tier: "pro", subscription_status: "trialing", is_admin: false, created_at: "2026-01-01T00:00:00Z" },
+      { id: "admin", subscription_tier: "free", subscription_status: null, is_admin: true, created_at: "2026-01-01T00:00:00Z" },
+      { id: "lapsed", subscription_tier: "plus", subscription_status: "canceled", is_admin: false, created_at: "2026-01-01T00:00:00Z" },
+    ];
+    const { admin, grants } = stubSweepAdmin({ subscribers });
+
+    const result = await refillActiveSubscribers(admin, PERIOD);
+
+    expect(result).toEqual({ ok: true, processed: 5, granted: 2, failed: 0 });
+    expect(grants.map((g) => [g.p_user_id, g.p_amount])).toEqual([
+      ["free-old", MONTHLY_CREDITS.free],
+      ["lapsed", MONTHLY_CREDITS.free],
+    ]);
   });
 
   it("aborts with the stats-so-far error when a page read fails", async () => {
