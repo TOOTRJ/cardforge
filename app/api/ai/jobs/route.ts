@@ -123,8 +123,10 @@ export async function GET() {
   const supabase = await (await import("@/lib/supabase/server")).createClient();
   // Lazy expiry: a job that hasn't progressed in 24h has no live client and
   // never will be resumed usefully — close it instead of surfacing zombie
-  // "generating" rows forever. Owner-scoped by RLS; best-effort.
-  await supabase
+  // "generating" rows forever. Job rows aren't owner-writable any more
+  // (migration 0073), so this runs with the service role, scoped to the
+  // caller's own rows by the explicit owner_id filter. Best-effort.
+  await (await import("@/lib/supabase/admin")).createAdminClient()
     .from("ai_generation_jobs")
     .update({ status: "cancelled", error: "Expired — no progress for 24 hours." })
     .eq("owner_id", user.id)
