@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Coins, Lightbulb, Loader2, RefreshCw, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { InlinePips } from "@/components/cards/inline-pips";
 import { CreditMeter } from "@/components/billing/credit-meter";
 import { PremiumBadge } from "@/components/billing/premium-badge";
 import { publishCredits } from "@/components/billing/credits-bus";
@@ -294,7 +295,14 @@ export function CardIdeasDialog({
                           <span className="mb-0.5 block text-[10px] uppercase tracking-wider text-subtle">
                             Idea {index + 1}
                           </span>
-                          {ideaFieldSummary(idea, group)}
+                          {group === "rulesText" || group === "costColors" ? (
+                            <InlinePips
+                              text={ideaFieldSummary(idea, group)}
+                              className="whitespace-pre-line"
+                            />
+                          ) : (
+                            ideaFieldSummary(idea, group)
+                          )}
                         </button>
                       );
                     })}

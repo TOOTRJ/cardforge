@@ -75,7 +75,7 @@ test.describe("custom pips", () => {
     // and check the live card preview.
     await rail.getByRole("button", { name: /^text & stats$/i }).click();
     await page
-      .locator('textarea[name="rules_text"]')
+      .locator('[data-field="rules_text"]')
       .fill("{T}: Add {R} to your mana pool.");
     await expect
       .poll(async () => customPipImgs.count(), { timeout: 10_000 })
