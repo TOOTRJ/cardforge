@@ -1,11 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Bell,
+  Coins,
+  Crown,
   Heart,
+  Layers,
   MailWarning,
   MessageCircle,
   MessageSquare,
@@ -23,6 +26,8 @@ import {
   markAllNotificationsRead,
 } from "@/lib/notifications/actions";
 import type { NotificationItem } from "@/lib/notifications/queries";
+import { describeNotification } from "@/lib/notifications/describe";
+import { subscribeNotificationArrivals } from "@/lib/notifications/bus";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -32,13 +37,7 @@ import { cn } from "@/lib/utils";
 // still reachable via the "View all" footer link.
 // ---------------------------------------------------------------------------
 
-const VERB: Record<string, string> = {
-  like: "liked",
-  comment: "commented on",
-  remix: "remixed",
-};
-
-const ICON: Record<string, typeof Bell> = {
+export const NOTIFICATION_ICON: Record<string, typeof Bell> = {
   like: Heart,
   comment: MessageCircle,
   remix: Sparkles,
@@ -46,6 +45,9 @@ const ICON: Record<string, typeof Bell> = {
   feedback: MailWarning,
   moderation: ShieldAlert,
   message: MessageSquare,
+  credit_grant: Coins,
+  comp_plan: Crown,
+  card_limit: Layers,
 };
 
 type NotificationBellProps = {
@@ -71,6 +73,17 @@ export function NotificationBell({ initialUnread, isAdmin = false }: Notificatio
   }
   const [items, setItems] = useState<NotificationItem[] | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // A real-time arrival (components/notifications/realtime-alerts.tsx) bumps
+  // the badge and drops the cached list so the next open refetches.
+  useEffect(
+    () =>
+      subscribeNotificationArrivals(() => {
+        setUnread((n) => n + 1);
+        setItems(null);
+      }),
+    [],
+  );
 
   const handleOpenChange = (next: boolean) => {
     setOpen(next);
@@ -135,36 +148,13 @@ export function NotificationBell({ initialUnread, isAdmin = false }: Notificatio
           ) : items && items.length > 0 ? (
             <ul className="divide-y divide-border/60">
               {items.map((item) => {
-                const Icon = ICON[item.type] ?? Bell;
-                const actorName =
-                  item.actor?.displayName ||
-                  (item.actor?.username
-                    ? `@${item.actor.username}`
-                    : "Someone");
-                const verb = VERB[item.type] ?? "interacted with";
-                // Admin notification types deep-link to their inbox; the
-                // social types link to the card or the actor.
-                const href =
-                  item.type === "message"
-                    ? item.threadId
-                      ? `${isAdmin ? "/admin/messages" : "/messages"}/${item.threadId}`
-                      : isAdmin
-                        ? "/admin/messages"
-                        : "/messages"
-                    : item.type === "feedback"
-                    ? "/admin/feedback"
-                    : item.type === "moderation"
-                      ? "/admin/moderation"
-                      : item.card && item.card.ownerUsername
-                        ? `/card/${item.card.ownerUsername}/${item.card.slug}`
-                        : item.actor?.username
-                          ? `/profile/${item.actor.username}`
-                          : "#";
+                const Icon = NOTIFICATION_ICON[item.type] ?? Bell;
+                const d = describeNotification(item, { isAdmin });
 
                 return (
                   <li key={item.id}>
                     <Link
-                      href={href}
+                      href={d.href}
                       onClick={() => setOpen(false)}
                       className={cn(
                         "flex items-start gap-3 px-4 py-3 transition-colors hover:bg-elevated/50",
@@ -176,30 +166,7 @@ export function NotificationBell({ initialUnread, isAdmin = false }: Notificatio
                       </span>
                       <div className="flex min-w-0 flex-1 flex-col">
                         <p className="text-sm leading-5 text-foreground">
-                          <span className="font-medium">
-                            {item.type === "message" && !isAdmin ? "PipGlyph team" : actorName}
-                          </span>{" "}
-                          {item.type === "message" ? (
-                            isAdmin ? "replied in a conversation." : "sent you a message."
-                          ) : item.type === "feedback" ? (
-                            "sent feedback — open the inbox."
-                          ) : item.type === "moderation" ? (
-                            "filed a content report."
-                          ) : item.type === "follow" ? (
-                            "started following you."
-                          ) : (
-                            <>
-                              {verb}{" "}
-                              {item.card ? (
-                                <span className="font-medium">
-                                  {item.card.title}
-                                </span>
-                              ) : (
-                                "your card"
-                              )}
-                              .
-                            </>
-                          )}
+                          <span className="font-medium">{d.subject}</span> {d.body}
                         </p>
                         <span className="text-xs text-subtle">
                           {formatRelative(item.createdAt)}
@@ -219,7 +186,7 @@ export function NotificationBell({ initialUnread, isAdmin = false }: Notificatio
                 No notifications yet
               </p>
               <p className="text-xs leading-5 text-muted">
-                Likes, comments, and remixes on your cards show up here.
+                Likes, comments, remixes, and messages from the team show up here.
               </p>
             </div>
           )}

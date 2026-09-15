@@ -37,7 +37,7 @@ import { getEntitlements } from "@/lib/billing/entitlements";
 // advances the job one step at a time via /api/ai/jobs/[id]/step.
 //
 // Card count is clamped to the caller's batch limit (lib/ai/generation-
-// limits.ts): the 60-step steppable ceiling when billing is on — credits are
+// limits.ts): the 100-step steppable ceiling when billing is on — credits are
 // the only limiter (owner decision, 2026-07-28) — or 3 on billing-off
 // deployments where images aren't credit-charged.
 // ---------------------------------------------------------------------------
@@ -194,8 +194,8 @@ export async function POST(request: Request) {
     size = 1;
   } else if (parsed.data.kind === "deck_remix") {
     // Remix runs min(batch limit, remixable entries) — size the credit
-    // pre-check on what will actually run, not the ceiling (with the 60-step
-    // limit, sizing on the ceiling would demand 61 credits to remix a
+    // pre-check on what will actually run, not the ceiling (with the 100-step
+    // limit, sizing on the ceiling would demand 101 credits to remix a
     // 5-card deck). RLS hides decks that aren't the caller's; the count
     // then reads 0 and createDeckRemixJob rejects ownership downstream.
     const supabase = await createClient();
@@ -208,7 +208,7 @@ export async function POST(request: Request) {
   } else {
     // A missing size defaults to the classic 3-card batch, never the
     // ceiling — the UI always sends an explicit size; a bare API call
-    // shouldn't get a 60-card (and 61-credit) job by omission.
+    // shouldn't get a 100-card (and 101-credit) job by omission.
     size = clampBatchSize(parsed.data.size ?? BATCH_CARD_LIMIT, limit);
   }
 

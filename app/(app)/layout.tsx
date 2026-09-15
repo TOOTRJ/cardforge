@@ -44,6 +44,7 @@ export default async function AppGroupLayout({
       user={
         user
           ? {
+              id: user.id,
               username: profile?.username ?? null,
               displayName: profile?.display_name ?? null,
               avatarUrl: profile?.avatar_url ?? null,

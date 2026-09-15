@@ -1,15 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import {
-  Bell,
-  Heart,
-  MailWarning,
-  MessageCircle,
-  MessageSquare,
-  ShieldAlert,
-  Sparkles,
-  UserPlus,
-} from "lucide-react";
+import { Bell } from "lucide-react";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { SurfaceCard } from "@/components/ui/surface-card";
@@ -17,6 +8,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { listNotifications } from "@/lib/notifications/queries";
 import { getCurrentProfile } from "@/lib/supabase/server";
 import { MarkReadOnView } from "@/components/notifications/mark-read-on-view";
+import { NOTIFICATION_ICON } from "@/components/notifications/notification-bell";
+import { describeNotification } from "@/lib/notifications/describe";
 
 export const metadata: Metadata = {
   title: "Notifications",
@@ -24,22 +17,6 @@ export const metadata: Metadata = {
 };
 
 export const dynamic = "force-dynamic";
-
-const VERB: Record<string, string> = {
-  like: "liked",
-  comment: "commented on",
-  remix: "remixed",
-};
-
-const ICON: Record<string, typeof Bell> = {
-  like: Heart,
-  comment: MessageCircle,
-  remix: Sparkles,
-  follow: UserPlus,
-  feedback: MailWarning,
-  moderation: ShieldAlert,
-  message: MessageSquare,
-};
 
 export default async function NotificationsPage() {
   const [items, profile] = await Promise.all([listNotifications(50), getCurrentProfile()]);
@@ -52,7 +29,7 @@ export default async function NotificationsPage() {
       <PageHeader
         eyebrow="Activity"
         title="Notifications"
-        description="Likes, comments, remixes — and messages from the PipGlyph team."
+        description="Likes, comments, remixes — and messages, credits and plan changes from the PipGlyph team."
       />
 
       <div className="mt-8">
@@ -65,33 +42,13 @@ export default async function NotificationsPage() {
         ) : (
           <SurfaceCard className="divide-y divide-border/60 p-0">
             {items.map((item) => {
-              const Icon = ICON[item.type] ?? Bell;
-              const actorName =
-                item.actor?.displayName ||
-                (item.actor?.username ? `@${item.actor.username}` : "Someone");
-              const verb = VERB[item.type] ?? "interacted with";
-              // Admin notification types deep-link to their inbox.
-              const href =
-                item.type === "message"
-                  ? item.threadId
-                    ? `${isAdmin ? "/admin/messages" : "/messages"}/${item.threadId}`
-                    : isAdmin
-                      ? "/admin/messages"
-                      : "/messages"
-                  : item.type === "feedback"
-                  ? "/admin/feedback"
-                  : item.type === "moderation"
-                    ? "/admin/moderation"
-                    : item.card && item.card.ownerUsername
-                      ? `/card/${item.card.ownerUsername}/${item.card.slug}`
-                      : item.actor?.username
-                        ? `/profile/${item.actor.username}`
-                        : "#";
+              const Icon = NOTIFICATION_ICON[item.type] ?? Bell;
+              const d = describeNotification(item, { isAdmin });
 
               return (
                 <Link
                   key={item.id}
-                  href={href}
+                  href={d.href}
                   className={`flex items-start gap-3 px-5 py-4 transition-colors hover:bg-elevated/50 ${
                     item.readAt ? "" : "bg-primary/5"
                   }`}
@@ -101,28 +58,7 @@ export default async function NotificationsPage() {
                   </span>
                   <div className="flex min-w-0 flex-1 flex-col">
                     <p className="text-sm leading-6 text-foreground">
-                      <span className="font-medium">
-                        {item.type === "message" && !isAdmin ? "PipGlyph team" : actorName}
-                      </span>{" "}
-                      {item.type === "message" ? (
-                        isAdmin ? "replied in a conversation." : "sent you a message."
-                      ) : item.type === "feedback" ? (
-                        "sent feedback — open the inbox."
-                      ) : item.type === "moderation" ? (
-                        "filed a content report."
-                      ) : item.type === "follow" ? (
-                        "started following you."
-                      ) : (
-                        <>
-                          {verb}{" "}
-                          {item.card ? (
-                            <span className="font-medium">{item.card.title}</span>
-                          ) : (
-                            "your card"
-                          )}
-                          .
-                        </>
-                      )}
+                      <span className="font-medium">{d.subject}</span> {d.body}
                     </p>
                     <span className="text-xs text-subtle">
                       {formatRelative(item.createdAt)}

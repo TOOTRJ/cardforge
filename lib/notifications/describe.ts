@@ -1,0 +1,153 @@
+// ---------------------------------------------------------------------------
+// One source of copy + deep link for every notification kind. Shared by the
+// header bell, the /notifications page and the real-time toast so the three
+// never drift (they used to carry three hand-written copies of the same
+// ternary chain). Client-safe: no server imports.
+// ---------------------------------------------------------------------------
+
+export type NotificationPayload = Record<string, unknown>;
+
+export type DescribableNotification = {
+  type: string;
+  actor: { username: string | null; displayName: string | null } | null;
+  card: { slug: string; title: string; ownerUsername: string | null } | null;
+  threadId: string | null;
+  payload?: NotificationPayload | null;
+};
+
+export type NotificationDescription = {
+  /** Who/what the line is about — rendered bold. */
+  subject: string;
+  /** The rest of the sentence, including the trailing period. */
+  body: string;
+  /** Where clicking the entry goes. */
+  href: string;
+};
+
+const VERB: Record<string, string> = {
+  like: "liked",
+  comment: "commented on",
+  remix: "remixed",
+};
+
+function num(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function str(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value : null;
+}
+
+function formatDate(iso: string): string {
+  try {
+    return new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }).format(new Date(iso));
+  } catch {
+    return iso;
+  }
+}
+
+const TIER_LABEL: Record<string, string> = { plus: "Plus", pro: "Pro" };
+
+export function describeNotification(
+  item: DescribableNotification,
+  opts: { isAdmin: boolean },
+): NotificationDescription {
+  const { isAdmin } = opts;
+  const actorName =
+    item.actor?.displayName ||
+    (item.actor?.username ? `@${item.actor.username}` : "Someone");
+  const payload = item.payload ?? {};
+
+  switch (item.type) {
+    case "message":
+      return {
+        subject: isAdmin ? actorName : "PipGlyph team",
+        body: isAdmin ? "replied in a conversation." : "sent you a message.",
+        href: item.threadId
+          ? `${isAdmin ? "/admin/messages" : "/messages"}/${item.threadId}`
+          : isAdmin
+            ? "/admin/messages"
+            : "/messages",
+      };
+    case "feedback":
+      return {
+        subject: actorName,
+        body: "sent feedback — open the inbox.",
+        href: "/admin/feedback",
+      };
+    case "moderation":
+      return {
+        subject: actorName,
+        body: "filed a content report.",
+        href: "/admin/moderation",
+      };
+    case "follow":
+      return {
+        subject: actorName,
+        body: "started following you.",
+        href: item.actor?.username ? `/profile/${item.actor.username}` : "#",
+      };
+    case "credit_grant": {
+      const amount = num(payload.amount);
+      const balance = num(payload.balance);
+      const note = str(payload.note);
+      return {
+        subject: "PipGlyph team",
+        body: `added ${amount ?? "some"} AI credit${amount === 1 ? "" : "s"} to your account${
+          balance != null ? ` — you now have ${balance}` : ""
+        }${note ? ` (${note})` : ""}.`,
+        href: "/dashboard/usage",
+      };
+    }
+    case "comp_plan": {
+      const tier = str(payload.tier);
+      const expiresAt = str(payload.expiresAt);
+      return {
+        subject: "PipGlyph team",
+        body: tier
+          ? `gave you ${TIER_LABEL[tier] ?? tier} plan access${
+              expiresAt ? ` until ${formatDate(expiresAt)}` : ""
+            } — enjoy.`
+          : "ended your complimentary plan access.",
+        href: "/settings",
+      };
+    }
+    case "card_limit": {
+      const limit = num(payload.limit);
+      return {
+        subject: "PipGlyph team",
+        body:
+          limit != null
+            ? `raised your saved-card limit to ${limit.toLocaleString("en-US")}.`
+            : "reset your saved-card limit to your plan's default.",
+        href: "/dashboard",
+      };
+    }
+    default: {
+      const verb = VERB[item.type] ?? "interacted with";
+      return {
+        subject: actorName,
+        body: `${verb} ${item.card ? item.card.title : "your card"}.`,
+        href:
+          item.card && item.card.ownerUsername
+            ? `/card/${item.card.ownerUsername}/${item.card.slug}`
+            : item.actor?.username
+              ? `/profile/${item.actor.username}`
+              : "#",
+      };
+    }
+  }
+}
+
+/** Single-line form for toasts and accessible labels. */
+export function notificationSentence(
+  item: DescribableNotification,
+  opts: { isAdmin: boolean },
+): string {
+  const d = describeNotification(item, opts);
+  return `${d.subject} ${d.body}`;
+}

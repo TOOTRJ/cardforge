@@ -75,6 +75,16 @@ Rules and gotchas:
   Vercel. OG/PNG/PDF serve the stored bake when it is current
   (`lib/render/stored-render.ts`) — a renderer change still needs the
   `CARD_LAYOUT_VERSION` bump + rebake sweep.
+- Notifications are push, not pull: `notifications` is on the
+  `supabase_realtime` publication (migration 0075) and
+  `components/notifications/realtime-alerts.tsx` subscribes to the signed-in
+  user's rows (toast + bell badge + debounced `router.refresh()`; polls the
+  unread count if the socket fails). Anything that should alert a user or
+  admin in real time just needs a `notifications` row — DB triggers for the
+  social/feedback/message kinds, `notifyUser()` in `lib/admin/user-actions.ts`
+  for credit grants, comp plans and card-limit overrides. New kinds go in the
+  type CHECK + `lib/notifications/describe.ts` (the ONE copy source for bell,
+  page and toast).
 - AI image generation goes through the **Vercel AI Gateway ONLY** (FLUX for
   text-to-image, Gemini for the "AI remix" i2i) — `lib/ai/image-gen.ts` has no
   direct-OpenAI path. `AI_GATEWAY_API_KEY` is required for any image flow; a

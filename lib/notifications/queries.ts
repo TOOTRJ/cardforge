@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
+import type { NotificationPayload } from "./describe";
 
 // All reads go through the user's RLS-scoped session, so a user only ever sees
 // their own notifications. actor/card are FK'd to auth.users/cards (no direct
@@ -19,6 +20,23 @@ export type NotificationItem = {
   card: { slug: string; title: string; ownerUsername: string | null } | null;
   /** For type "message": the support thread to deep-link to. */
   threadId: string | null;
+  /** Kind-specific numbers for the copy (credits granted, comp tier, card
+   *  limit) — see lib/notifications/describe.ts. */
+  payload: NotificationPayload;
+};
+
+const SELECT_COLUMNS =
+  "id, type, created_at, read_at, actor_id, card_id, thread_id, payload";
+
+type Row = {
+  id: string;
+  type: string;
+  created_at: string;
+  read_at: string | null;
+  actor_id: string | null;
+  card_id: string | null;
+  thread_id: string | null;
+  payload: unknown;
 };
 
 export async function getUnreadNotificationCount(): Promise<number> {
@@ -40,12 +58,38 @@ export async function listNotifications(limit = 30): Promise<NotificationItem[]>
 
   const { data: rows } = await supabase
     .from("notifications")
-    .select("id, type, created_at, read_at, actor_id, card_id, thread_id")
+    .select(SELECT_COLUMNS)
     .eq("recipient_id", user.id)
     .order("created_at", { ascending: false })
     .limit(limit);
   if (!rows || rows.length === 0) return [];
+  return hydrate(supabase, rows as Row[]);
+}
 
+/** One notification, RLS-scoped (null when it isn't the caller's). The
+ *  real-time subscriber calls this with the id it just received so the toast
+ *  carries the same stitched actor/card copy the bell shows. */
+export async function getNotificationById(
+  id: string,
+): Promise<NotificationItem | null> {
+  const user = await getCurrentUser();
+  if (!user) return null;
+  const supabase = await createClient();
+  const { data: row } = await supabase
+    .from("notifications")
+    .select(SELECT_COLUMNS)
+    .eq("id", id)
+    .eq("recipient_id", user.id)
+    .maybeSingle();
+  if (!row) return null;
+  const [item] = await hydrate(supabase, [row as Row]);
+  return item ?? null;
+}
+
+async function hydrate(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  rows: Row[],
+): Promise<NotificationItem[]> {
   const cardIds = [
     ...new Set(rows.map((r) => r.card_id).filter(Boolean)),
   ] as string[];
@@ -107,6 +151,10 @@ export async function listNotifications(limit = 30): Promise<NotificationItem[]>
         ? { slug: card.slug, title: card.title, ownerUsername: owner?.username ?? null }
         : null,
       threadId: r.thread_id ?? null,
+      payload:
+        r.payload && typeof r.payload === "object" && !Array.isArray(r.payload)
+          ? (r.payload as NotificationPayload)
+          : {},
     };
   });
 }

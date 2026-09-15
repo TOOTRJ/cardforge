@@ -23,14 +23,41 @@ type ActionError = { ok: false; error: string };
 /** Shared gate: caller must be an is_admin profile AND the service-role
  *  client must be configured. Returns the admin client, or an error result. */
 async function requireAdmin(): Promise<
-  { ok: true; admin: ReturnType<typeof createAdminClient> } | ActionError
+  | { ok: true; admin: ReturnType<typeof createAdminClient>; adminId: string }
+  | ActionError
 > {
   const profile = await getCurrentProfile();
   if (!profile?.is_admin) return { ok: false, error: "Not authorized." };
   if (!isAdminConfigured()) {
     return { ok: false, error: "Admin client isn't configured." };
   }
-  return { ok: true, admin: createAdminClient() };
+  return { ok: true, admin: createAdminClient(), adminId: profile.id };
+}
+
+/**
+ * Tell the affected user what an admin just did. Service-role insert (the
+ * table has no INSERT policy for end users); Realtime delivers it to their
+ * open tab as a toast + bell badge (components/notifications/realtime-alerts).
+ * Best-effort: a failed notification never fails the grant itself.
+ */
+async function notifyUser(
+  admin: ReturnType<typeof createAdminClient>,
+  input: {
+    recipientId: string;
+    actorId: string;
+    type: "credit_grant" | "comp_plan" | "card_limit";
+    payload: Record<string, string | number | null>;
+  },
+): Promise<void> {
+  const { error } = await admin.from("notifications").insert({
+    recipient_id: input.recipientId,
+    actor_id: input.actorId,
+    type: input.type,
+    payload: input.payload,
+  });
+  if (error) {
+    console.warn(`notifyUser(${input.type}): insert error`, error.message);
+  }
 }
 
 async function targetExists(
@@ -102,6 +129,13 @@ export async function adminGrantCreditsAction(input: {
     return { ok: false, error: "Couldn't grant credits." };
   }
 
+  await notifyUser(admin, {
+    recipientId: userId,
+    actorId: gate.adminId,
+    type: "credit_grant",
+    payload: { amount, balance, note: note ?? null },
+  });
+
   return { ok: true, balance };
 }
 
@@ -163,6 +197,13 @@ export async function adminSetCompTierAction(input: {
     return { ok: false, error: "Couldn't update the comp tier." };
   }
 
+  await notifyUser(admin, {
+    recipientId: userId,
+    actorId: gate.adminId,
+    type: "comp_plan",
+    payload: { tier, expiresAt: tier == null ? null : expiresAt },
+  });
+
   return { ok: true };
 }
 
@@ -211,6 +252,13 @@ export async function adminSetCardLimitAction(input: {
     console.warn("adminSetCardLimitAction: update error", error.message);
     return { ok: false, error: "Couldn't update the card limit." };
   }
+
+  await notifyUser(admin, {
+    recipientId: userId,
+    actorId: gate.adminId,
+    type: "card_limit",
+    payload: { limit },
+  });
 
   return { ok: true };
 }
