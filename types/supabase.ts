@@ -1280,6 +1280,8 @@ export type Database = {
         Row: {
           cover_position: Json | null;
           cover_url: string | null;
+          deck_type: string | null;
+          bracket: number | null;
           created_at: string;
           description: string | null;
           format: string;
@@ -1295,6 +1297,8 @@ export type Database = {
         Insert: {
           cover_position?: Json | null;
           cover_url?: string | null;
+          deck_type?: string | null;
+          bracket?: number | null;
           created_at?: string;
           description?: string | null;
           format?: string;
@@ -1310,6 +1314,8 @@ export type Database = {
         Update: {
           cover_position?: Json | null;
           cover_url?: string | null;
+          deck_type?: string | null;
+          bracket?: number | null;
           created_at?: string;
           description?: string | null;
           format?: string;

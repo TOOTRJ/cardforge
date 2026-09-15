@@ -73,9 +73,13 @@ const requestSchema = z.discriminatedUnion("kind", [
     theme: z.string().trim().max(300).optional(),
     style: z.string().trim().max(200).optional(),
     size: z.coerce.number().optional(),
-    format: z.enum(AI_DECK_FORMATS),
+    // Optional when deck_id is set (the deck's own format applies).
+    format: z.enum(AI_DECK_FORMATS).optional(),
     // Present = generate ADDITIONAL cards into this existing deck.
     deck_id: z.string().uuid().optional(),
+    // The wizard's starting point + power level (lib/decks/deck-types.ts).
+    deck_type: z.string().trim().max(60).optional(),
+    bracket: z.coerce.number().int().min(1).max(5).optional(),
   }),
   z.object({
     kind: z.literal("deck_remix"),
@@ -394,12 +398,17 @@ export async function POST(request: Request) {
   }
 
   if (parsed.data.kind === "deck") {
+    if (!parsed.data.format && !parsed.data.deck_id) {
+      return NextResponse.json({ ok: false, error: "Pick a format." }, { status: 400 });
+    }
     const result = await createDeckGenerationJob({
       theme: parsed.data.theme ?? "",
       style: parsed.data.style,
-      format: parsed.data.format,
+      format: parsed.data.format ?? "commander",
       size,
       deckId: parsed.data.deck_id,
+      deckType: parsed.data.deck_type,
+      bracket: parsed.data.bracket,
     });
     if (!result.ok) {
       return NextResponse.json({ ok: false, error: result.error }, { status: 502 });

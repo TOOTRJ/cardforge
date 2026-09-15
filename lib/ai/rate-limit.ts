@@ -46,7 +46,8 @@ export type AiActionLabel =
   | "remix_art"
   | "generate_set_icon"
   | "generate_deck_cards"
-  | "generate_card_ideas";
+  | "generate_card_ideas"
+  | "generate_deck_ideas";
 
 // Per-user daily quotas for the image-generating flows — enforced ONLY when
 // billing is DISABLED (previews, local), where image calls aren't credit-
@@ -230,6 +231,8 @@ export const AI_ACTION_COST: Partial<Record<AiActionLabel, number>> = {
   remix_card: 1,
   /** One credit buys the whole batch of text-only ideas (no art). */
   generate_card_ideas: 1,
+  /** One credit buys three deck theme + style suggestions. */
+  generate_deck_ideas: 1,
 };
 
 export function creditCostFor(action: AiActionLabel): number {

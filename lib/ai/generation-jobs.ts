@@ -1,4 +1,5 @@
 import "server-only";
+import { deckTypeByKey } from "@/lib/decks/deck-types";
 
 import type { Json } from "@/types/supabase";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -671,6 +672,8 @@ type OwnedDeckContext = {
     description: string | null;
     format: string;
     cover_url: string | null;
+    deck_type: string | null;
+    bracket: number | null;
   };
   items: Awaited<ReturnType<typeof listDeckCards>>;
   context: {
@@ -692,7 +695,7 @@ export async function loadOwnedDeckContext(
 ): Promise<OwnedDeckContext | null> {
   const { data } = await supabase
     .from("decks")
-    .select("id, slug, title, description, format, cover_url, owner_id")
+    .select("id, slug, title, description, format, cover_url, owner_id, deck_type, bracket")
     .eq("id", deckId)
     .maybeSingle();
   if (!data || data.owner_id !== userId) return null;
@@ -1066,6 +1069,10 @@ export type CreateDeckJobInput = {
    *  The plan reads the deck's current cards so new designs synergize —
    *  a 100-card read is a few thousand prompt tokens (~pennies). */
   deckId?: string;
+  /** Tribe/archetype key (lib/decks/deck-types.ts) the deck is built around. */
+  deckType?: string;
+  /** Commander power bracket 1–5. */
+  bracket?: number;
 };
 
 export type CreateDeckJobResult =
@@ -1098,6 +1105,8 @@ export async function createDeckGenerationJob(
       format: (existingDeck?.format as DeckFormat) ?? input.format,
       size: input.size,
       existing: existingContext,
+      deckType: deckTypeByKey(input.deckType ?? existingDeck?.deck_type ?? null),
+      bracket: input.bracket ?? existingDeck?.bracket ?? null,
     });
   } catch (error) {
     const detail = error instanceof Error ? error.message : "Generation failed.";
@@ -1114,6 +1123,8 @@ export async function createDeckGenerationJob(
         description: planResult.concept.deck_description,
         format: input.format,
         visibility: "public",
+        deck_type: input.deckType ?? null,
+        bracket: input.format === "commander" ? (input.bracket ?? null) : null,
       },
       { redirectAfterCreate: false },
     );

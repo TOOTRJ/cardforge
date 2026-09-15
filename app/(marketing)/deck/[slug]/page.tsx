@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { commanderBracket, deckTypeByKey } from "@/lib/decks/deck-types";
 import Link from "next/link";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
@@ -176,6 +177,14 @@ export default async function DeckDetailPage({
           <div className="flex flex-col gap-2">
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="primary">{DECK_FORMAT_LABELS[deck.format]}</Badge>
+              {deckTypeByKey(deck.deck_type)?.label ? (
+                <Badge variant="outline">{deckTypeByKey(deck.deck_type)?.label}</Badge>
+              ) : null}
+              {deck.format === "commander" && commanderBracket(deck.bracket) ? (
+                <Badge variant="outline" title={commanderBracket(deck.bracket)?.blurb}>
+                  Bracket {deck.bracket} · {commanderBracket(deck.bracket)?.name}
+                </Badge>
+              ) : null}
               {deck.visibility !== "public" ? (
                 <Badge variant="outline">{deck.visibility}</Badge>
               ) : null}

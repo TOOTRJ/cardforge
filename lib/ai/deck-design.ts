@@ -1,4 +1,5 @@
 import "server-only";
+import { commanderBracket, describeColors, type DeckType } from "@/lib/decks/deck-types";
 
 import { generateObject } from "ai";
 import { z } from "zod";
@@ -161,7 +162,18 @@ export async function generateDeckPlan(input: {
    *  synergize with what's already there, and the concept anchors on the
    *  deck's existing identity instead of inventing a new one. */
   existing?: ExistingDeckContext;
+  /** The tribe/archetype the deck is built around (lib/decks/deck-types.ts)
+   *  — its colours become the deck's colour identity. */
+  deckType?: DeckType | null;
+  /** Commander power bracket 1–5 — the AI is told how pushed to be. */
+  bracket?: number | null;
 }): Promise<DeckDesignResult> {
+  const typeLine = input.deckType
+    ? `Deck type: ${input.deckType.label} ${input.deckType.kind === "tribe" ? "tribal" : "archetype"} — ${input.deckType.hint}. The deck's colour identity MUST be ${describeColors(input.deckType.colors)}${
+        input.deckType.colors.length === 0 ? " (colourless — generic costs only)" : ""
+      }.`
+    : null;
+  const bracketLine = commanderBracket(input.bracket)?.guidance ?? null;
   const theme =
     input.theme.trim().slice(0, 300) ||
     (input.existing
@@ -178,6 +190,8 @@ export async function generateDeckPlan(input: {
       input.style?.trim()
         ? `Art/tone style: ${input.style.trim().slice(0, 200)}`
         : null,
+      typeLine,
+      bracketLine,
       input.existing
         ? [
             `IMPORTANT: this is an EXISTING deck called "${input.existing.title}"${
@@ -220,6 +234,8 @@ export async function generateDeckPlan(input: {
       `These cards form the deck "${concept.deck_title}" — ${concept.deck_description}`,
       `Strategy: ${concept.strategy}`,
       `Format rules: ${FORMAT_NOTES[input.format]}`,
+      typeLine,
+      bracketLine,
       input.existing
         ? [
             "The deck ALREADY CONTAINS these cards — the new designs must SYNERGIZE with them (shared mechanics, tribal/keyword overlap, curve gaps filled) and stay inside their color identity. NEVER reuse one of their names, and NEVER design a near-duplicate of a card the deck already has — every new card must add something the deck currently lacks:",
