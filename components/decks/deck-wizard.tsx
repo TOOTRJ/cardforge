@@ -233,18 +233,31 @@ export function DeckWizard({
         return;
       }
       // AI build: generate INTO the new deck (add-mode) so the user's title,
-      // format, type and bracket stick. The global runner shows progress
-      // everywhere; this step mirrors it with per-card retries.
-      const outcome = await run({
-        kind: "deck",
-        deck_id: result.deckId,
-        theme: theme.trim() || undefined,
-        style: style.trim() || undefined,
-        size,
-        deck_type: deckType || undefined,
-        bracket: isCommander ? bracket : undefined,
+      // format, type and bracket stick. The runner is DETACHED: as soon as
+      // the AI has designed the deck we move to the deck page, which fills
+      // in card by card while the global runner keeps painting — a 100-card
+      // build no longer parks the user on this screen for ten minutes.
+      const outcome = await run(
+        {
+          kind: "deck",
+          deck_id: result.deckId,
+          theme: theme.trim() || undefined,
+          style: style.trim() || undefined,
+          size,
+          deck_type: deckType || undefined,
+          bracket: isCommander ? bracket : undefined,
+        },
+        { detach: true },
+      );
+      if (!outcome.ok) {
+        // Planning failed (toast already shown) — the empty deck exists;
+        // let the user retry from its page or fix the prompt here.
+        return;
+      }
+      toast.success(`Designed — painting ${size} card${size === 1 ? "" : "s"} in the background.`, {
+        description: "They appear on the deck page as they finish. Safe to keep browsing.",
       });
-      settle(outcome, result.slug);
+      router.push(`/deck/${result.slug}`);
     });
   };
 

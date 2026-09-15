@@ -61,6 +61,7 @@ export function AiDeckPanel({
   deckId,
   initialTheme,
   initialStyle,
+  onStarted,
 }: {
   mode: Mode;
   aiConfigured: boolean;
@@ -71,6 +72,9 @@ export function AiDeckPanel({
    *  generated with, so additions stay stylistically consistent. */
   initialTheme?: string | null;
   initialStyle?: string | null;
+  /** Add/remix: called once the job is planned and painting in the
+   *  background (the host dialog closes). */
+  onStarted?: () => void;
 }) {
   const router = useRouter();
   const [theme, setTheme] = useState(initialTheme ?? "");
@@ -116,27 +120,46 @@ export function AiDeckPanel({
       toast.error("Pick or type a style first — that's what the remix is.");
       return;
     }
-    settle(
-      await run(
-        mode === "remix"
-          ? {
-              kind: "deck_remix",
-              deck_id: deckId,
-              style: style.trim(),
-              theme: theme.trim() || undefined,
-            }
-          : {
-              kind: "deck",
-              theme: theme.trim() || undefined,
-              style: style.trim() || undefined,
-              // Add-mode decks keep their own format; the server reads it
-              // off the deck row.
-              format,
-              size,
-              ...(mode === "add" ? { deck_id: deckId } : {}),
-            },
-      ),
-    );
+    const body =
+      mode === "remix"
+        ? {
+            kind: "deck_remix",
+            deck_id: deckId,
+            style: style.trim(),
+            theme: theme.trim() || undefined,
+          }
+        : {
+            kind: "deck",
+            theme: theme.trim() || undefined,
+            style: style.trim() || undefined,
+            // Add-mode decks keep their own format; the server reads it
+            // off the deck row.
+            format,
+            size,
+            ...(mode === "add" ? { deck_id: deckId } : {}),
+          };
+    if (mode === "add") {
+      // Detached: the deck page behind this dialog fills in live
+      // (DeckLiveProgress) while the global runner paints.
+      const outcome = await run(body, { detach: true });
+      if (!outcome.ok) return;
+      toast.success(`Designed — painting ${size} new card${size === 1 ? "" : "s"} in the background.`, {
+        description: "They appear in the list as they finish.",
+      });
+      onStarted?.();
+      return;
+    }
+    if (mode === "remix") {
+      const outcome = await run(body, { detach: true });
+      if (!outcome.ok) return;
+      toast.success("Remix designed — painting the new copy in the background.", {
+        description: "Opening the new deck; cards appear as they finish.",
+      });
+      onStarted?.();
+      if (outcome.slug) router.push(`/deck/${outcome.slug}`);
+      return;
+    }
+    settle(await run(body));
   };
 
   if (!aiConfigured) return null;

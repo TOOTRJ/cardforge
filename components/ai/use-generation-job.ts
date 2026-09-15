@@ -34,6 +34,10 @@ export type GenerationJobOutcome = {
   slug?: string;
   /** The created card's id for single-card jobs (link via /go/card/[id]). */
   cardId?: string;
+  /** Set when `run` was called with `detach`: the job is planned and still
+   *  painting in the background; successes/failures are not final. */
+  detached?: boolean;
+  jobId?: string;
 };
 
 export function useGenerationJob(): GenerationContextValue {

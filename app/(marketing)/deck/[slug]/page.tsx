@@ -4,7 +4,8 @@ import { isDesignAiConfigured } from "@/lib/ai/provider";
 import { batchCardLimit } from "@/lib/ai/generation-limits";
 import { getDeckAiSeed } from "@/lib/ai/generation-jobs";
 import { DeckRegenerateBar } from "@/components/decks/deck-regenerate-bar";
-import { getLatestFailedDeckJob } from "@/lib/ai/generation-jobs";
+import { getActiveDeckJob, getLatestFailedDeckJob } from "@/lib/ai/generation-jobs";
+import { DeckLiveProgress } from "@/components/decks/deck-live-progress";
 import { commanderBracket, deckTypeByKey } from "@/lib/decks/deck-types";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -299,9 +300,10 @@ async function DeckBody({
   isOwner: boolean;
   hasCover: boolean;
 }) {
-  const [items, failedJob, guide, entitlements] = await Promise.all([
+  const [items, failedJob, activeJob, guide, entitlements] = await Promise.all([
     listDeckCards(deckId),
     isOwner ? getLatestFailedDeckJob(deckId) : Promise.resolve(null),
+    isOwner ? getActiveDeckJob(deckId) : Promise.resolve(null),
     getDeckGuide(deckId),
     getEntitlements(),
   ]);
@@ -334,7 +336,8 @@ async function DeckBody({
 
   return (
     <>
-      {failedJob ? (
+      {isOwner ? <DeckLiveProgress deckId={deckId} pendingJob={activeJob} /> : null}
+      {failedJob && !activeJob ? (
         <DeckRegenerateBar
           jobId={failedJob.jobId}
           failedCount={failedJob.failedCount}

@@ -141,6 +141,7 @@ export function DeckOwnerTools({
               deckId={deck.id}
               initialTheme={aiSeed?.theme}
               initialStyle={aiSeed?.style}
+              onStarted={() => setOpen(null)}
             />
           </div>
         </DialogContent>
@@ -158,7 +159,13 @@ export function DeckOwnerTools({
             </DialogDescription>
           </DialogHeader>
           <div className="min-h-0 flex-1 overflow-y-auto p-5">
-            <AiDeckPanel mode="remix" aiConfigured={aiConfigured} maxCards={maxCards} deckId={deck.id} />
+            <AiDeckPanel
+              mode="remix"
+              aiConfigured={aiConfigured}
+              maxCards={maxCards}
+              deckId={deck.id}
+              onStarted={() => setOpen(null)}
+            />
           </div>
         </DialogContent>
       </Dialog>

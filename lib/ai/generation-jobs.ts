@@ -1903,6 +1903,32 @@ async function patchJobStep(
 
 /** The deck's latest finished job that still has failed steps — powers the
  *  owner's "Regenerate N cards" bar on the deck page. Owner-scoped (RLS). */
+/** A deck's job that is still generating (open steps) — what the deck page
+ *  shows as live progress and offers to resume after a reload. */
+export async function getActiveDeckJob(
+  deckId: string,
+): Promise<{ jobId: string; done: number; total: number } | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("ai_generation_jobs")
+    .select("id, status, steps")
+    .eq("deck_id", deckId)
+    .in("kind", ["deck", "deck_remix"])
+    .eq("status", "generating")
+    .gt("updated_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!data) return null;
+  const steps = (data.steps ?? []) as JobStep[];
+  if (!steps.some((s) => s.status === "pending" || s.status === "running")) return null;
+  return {
+    jobId: data.id,
+    done: steps.filter((s) => s.status === "done" || s.status === "failed").length,
+    total: steps.length,
+  };
+}
+
 export async function getLatestFailedDeckJob(
   deckId: string,
 ): Promise<{ jobId: string; failedCount: number; failedLabels: string[] } | null> {

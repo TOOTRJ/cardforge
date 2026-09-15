@@ -28,5 +28,8 @@ export async function GET(
       { status: 404 },
     );
   }
-  return NextResponse.json({ ok: true, job }, { status: 200 });
+  // Server-only plan stays server-side (see the step route).
+  const { plan: _plan, ...payload } = job;
+  void _plan;
+  return NextResponse.json({ ok: true, job: payload }, { status: 200 });
 }

@@ -66,10 +66,14 @@ export async function POST(
   // credits: the live post-step balance (spend or refund included), so every
   // mounted credit display can update without refetching /api/me. Null when
   // a live number isn't meaningful (billing off / admin).
+  // The plan is server-only (and, for a 100-card deck, most of the bytes of
+  // every one of the ~100 step responses) — the client only needs the steps.
+  const { plan: _plan, ...job } = result.job;
+  void _plan;
   return NextResponse.json(
     {
       ok: true,
-      job: result.job,
+      job,
       inFlight: result.inFlight ?? false,
       credits: await getFreshCreditBalance(),
     },
