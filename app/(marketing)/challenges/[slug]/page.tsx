@@ -27,9 +27,11 @@ type Params = { slug: string };
 
 // ISR: a challenge page is identical for every viewer (entries come from
 // the anonymous query; hearts re-check the session cookie client-side at
-// click time). 60s keeps the entries grid feeling live mid-challenge
-// while still absorbing traffic spikes on the CDN.
-export const revalidate = 60;
+// click time). 300s matches the gallery pages — the old 60s window made
+// this the single largest source of ISR writes for no visible gain (a new
+// entry shows within five minutes; the entry action can revalidate on
+// demand if that ever needs to be instant).
+export const revalidate = 300;
 
 // No params prebuilt (challenges are admin-seeded rows, unknown at build
 // time) — exporting this opts the segment into on-demand ISR: each slug

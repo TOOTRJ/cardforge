@@ -66,6 +66,9 @@ import {
 import {
   getFrameDataUrl,
   getPlateDataUrlForPath,
+  plateAssetPath,
+  preloadFrame,
+  preloadFrameAssets,
 } from "@/lib/render/card-frames";
 import {
   loyaltyBadgeAssetFor,
@@ -1800,19 +1803,64 @@ async function withRenderableImages(
   };
 }
 
+/** True for frames (Battle) whose canvas is 7:5 instead of 5:7. */
+export function isLandscapeRender(card: CardPreviewData): boolean {
+  return (
+    resolveFrameProfile(normalizeFrameTemplate(card.frameStyle?.template), card.profileOverrides)
+      .orientation === "landscape"
+  );
+}
+
+/**
+ * Every public/frames asset (frame master aside — preloadFrame handles that
+ * one and its template fallback) a render of `card` asks for synchronously:
+ * the color-keyed stat plates the frame profile defines and the loyalty
+ * badges of a planeswalker's ability rows. On Vercel these are fetched, not
+ * bundled (lib/render/card-frames.ts), so they must be warmed before the JSX
+ * is built. Exported for tests — keep it in step with the
+ * getPlateDataUrlForPath call sites in CardImage.
+ */
+export function frameAssetPathsFor(card: CardPreviewData): string[] {
+  const template = normalizeFrameTemplate(card.frameStyle?.template);
+  const layout = resolveFrameProfile(template, card.profileOverrides);
+  const colorKey = pickFrameColorKey(
+    card.colorIdentity as ColorIdentity[] | undefined,
+  );
+  const paths: string[] = [];
+  for (const slot of [layout.pt, layout.loyalty, layout.defense]) {
+    if (slot?.plateAssetPathTemplate) {
+      paths.push(plateAssetPath(slot.plateAssetPathTemplate, colorKey));
+    }
+  }
+  if (layout.loyaltyRows && showsLoyalty(card.cardType)) {
+    for (const ability of resolveLoyaltyRows(card.faceContent, card.rulesText)) {
+      if (ability.cost) paths.push(loyaltyBadgeAssetFor(ability.cost));
+    }
+  }
+  return Array.from(new Set(paths));
+}
+
 export async function renderCardImage(
   source: CardPreviewData,
   preset: RenderPreset = "default",
   opts: { brandMark?: boolean; watermarkText?: string | null } = {},
 ): Promise<ImageResponse> {
   const card = await withRenderableImages(source);
+  // Frame PNGs are not in the function bundle on Vercel — warm the loader's
+  // cache with exactly what this card needs so the sync getters inside the
+  // JSX below hit the cache (a miss renders a transparent pixel, logged).
+  await Promise.all([
+    preloadFrame(
+      normalizeFrameTemplate(card.frameStyle?.template),
+      pickFrameColorKey(card.colorIdentity as ColorIdentity[] | undefined),
+    ),
+    preloadFrameAssets(frameAssetPathsFor(card)),
+  ]);
   const base = RENDER_PRESETS[preset];
   // Landscape (Battle) frames swap the canvas to 7:5 so the bake matches the
   // preview's landscape container. All slot rects are % of the card, so they
   // resolve correctly against the swapped dimensions.
-  const landscape =
-    resolveFrameProfile(normalizeFrameTemplate(card.frameStyle?.template), card.profileOverrides)
-      .orientation === "landscape";
+  const landscape = isLandscapeRender(card);
   const width = landscape ? base.height : base.width;
   const height = landscape ? base.width : base.height;
   return new ImageResponse(

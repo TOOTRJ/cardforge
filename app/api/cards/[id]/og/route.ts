@@ -2,7 +2,12 @@ import { NextResponse, type NextRequest } from "next/server";
 import sharp from "sharp";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { renderCardImage, type RenderPreset } from "@/lib/render/card-image";
+import {
+  isLandscapeRender,
+  renderCardImage,
+  type RenderPreset,
+} from "@/lib/render/card-image";
+import { fetchStoredRender, fitStoredRender } from "@/lib/render/stored-render";
 import { ownerExportStamp } from "@/lib/billing/entitlements";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import { rowToPreviewData, type CardRowForBake } from "@/lib/cards/bake-core";
@@ -11,12 +16,16 @@ import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { buildTypeLine } from "@/lib/cards/card-display";
 import { cardAccentColor, renderCardSocialImage } from "@/lib/og/card-social";
 
-// Cache aggressively at the CDN — the renderer is pure of card row + URL
-// query (preset). When a card is edited, its `updated_at` changes; we don't
-// include that in the URL so the CDN cache can serve up to s-maxage seconds
-// of stale content. Browsers re-validate every 60s.
+// Cache aggressively at the CDN — the response is pure of card row + URL
+// query. The bare URL keeps a short window so an edit shows within minutes;
+// a `?v=` URL (the card page and oEmbed stamp it from `updated_at`) is
+// self-versioning, so it can sit at the CDN for a day and stay warm for a
+// week — every crawler re-fetch past the old 10-minute window used to be a
+// fresh Satori render.
 const CACHE_HEADER =
   "public, max-age=60, s-maxage=600, stale-while-revalidate=86400";
+const VERSIONED_CACHE_HEADER =
+  "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -47,6 +56,9 @@ export async function GET(
   // (A `v` query param may also be present purely as a CDN cache-buster —
   // the page metadata stamps it from `updated_at` so edited cards re-unfurl.)
   const social = request.nextUrl.searchParams.get("variant") === "social";
+  const cacheHeader = request.nextUrl.searchParams.has("v")
+    ? VERSIONED_CACHE_HEADER
+    : CACHE_HEADER;
 
   let card;
   try {
@@ -87,19 +99,35 @@ export async function GET(
   // render clean (with their optional custom footer mark), a free creator's
   // carry the brand mark. Owner-based (never viewer-based) keeps the route
   // CDN-cacheable: scrapers have no viewer.
-  const stamp = await ownerExportStamp(card.owner_id);
-  const response = await renderCardImage(previewData, preset, {
-    brandMark: stamp.brandMark,
-    watermarkText: stamp.footerText,
-  });
-
-  if (social) {
-    return renderSocialComposite(card, previewData, response);
+  //
+  // That is exactly the stamp the save-time bake used, so when the stored
+  // render is current we serve (or 2× downscale) those bytes instead of
+  // re-running Satori — see lib/render/stored-render.ts. Live render only
+  // when there is no current bake.
+  const stored = await fetchStoredRender(card);
+  let portraitBytes: Buffer;
+  if (stored) {
+    portraitBytes = await fitStoredRender(stored, preset, isLandscapeRender(previewData));
+  } else {
+    const stamp = await ownerExportStamp(card.owner_id);
+    const response = await renderCardImage(previewData, preset, {
+      brandMark: stamp.brandMark,
+      watermarkText: stamp.footerText,
+    });
+    portraitBytes = Buffer.from(await response.arrayBuffer());
   }
 
-  response.headers.set("Cache-Control", CACHE_HEADER);
-  response.headers.set("Content-Disposition", `inline; filename="${card.slug}.png"`);
-  return response;
+  if (social) {
+    return renderSocialComposite(card, previewData, portraitBytes, cacheHeader);
+  }
+
+  return new NextResponse(new Uint8Array(portraitBytes), {
+    headers: {
+      "Content-Type": "image/png",
+      "Cache-Control": cacheHeader,
+      "Content-Disposition": `inline; filename="${card.slug}.png"`,
+    },
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -122,9 +150,9 @@ type SocialCard = {
 async function renderSocialComposite(
   card: SocialCard,
   previewData: CardPreviewData,
-  portraitResponse: Response,
+  portraitBytes: Buffer,
+  cacheHeader: string,
 ) {
-  const portraitBytes = Buffer.from(await portraitResponse.arrayBuffer());
   const cardImageDataUri = `data:image/png;base64,${portraitBytes.toString("base64")}`;
 
   let creatorHandle: string | null = null;
@@ -159,7 +187,7 @@ async function renderSocialComposite(
   return new NextResponse(new Uint8Array(jpeg), {
     headers: {
       "Content-Type": "image/jpeg",
-      "Cache-Control": CACHE_HEADER,
+      "Cache-Control": cacheHeader,
       "Content-Disposition": `inline; filename="${card.slug}-social.jpg"`,
     },
   });

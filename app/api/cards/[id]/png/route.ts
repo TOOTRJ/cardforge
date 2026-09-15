@@ -3,7 +3,12 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { renderCardImage, type RenderPreset } from "@/lib/render/card-image";
+import {
+  isLandscapeRender,
+  renderCardImage,
+  type RenderPreset,
+} from "@/lib/render/card-image";
+import { fetchStoredRender, fitStoredRender } from "@/lib/render/stored-render";
 import {
   getEntitlements,
   ownerExportStamp,
@@ -138,11 +143,25 @@ export async function GET(
 
   let pngBytes: Uint8Array;
   try {
-    const imgResponse = await renderCardImage(previewData, preset, {
-      brandMark: watermark,
-      watermarkText: stamp.footerText,
-    });
-    pngBytes = new Uint8Array(await imgResponse.arrayBuffer());
+    // The stored bake carries the OWNER's stamp. When this download would
+    // carry the same one, serve it (2× downscaled for a clamped viewer)
+    // instead of re-rendering — lib/render/stored-render.ts. A paid viewer
+    // downloading a free creator's card needs the clean render the bake
+    // doesn't have, so that path (and any card without a current bake)
+    // still renders live.
+    const stored =
+      watermark === stamp.brandMark ? await fetchStoredRender(card) : null;
+    if (stored) {
+      pngBytes = new Uint8Array(
+        await fitStoredRender(stored, preset, isLandscapeRender(previewData)),
+      );
+    } else {
+      const imgResponse = await renderCardImage(previewData, preset, {
+        brandMark: watermark,
+        watermarkText: stamp.footerText,
+      });
+      pngBytes = new Uint8Array(await imgResponse.arrayBuffer());
+    }
   } catch (err) {
     const detail = err instanceof Error ? err.message : "Render error";
     return NextResponse.json(
