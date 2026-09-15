@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   Layers,
   LogOut,
+  MessageSquare,
   Settings,
   ShieldCheck,
   Trophy,
@@ -36,6 +37,9 @@ type UserMenuProps = {
   avatarUrl?: string | null;
   isPaid?: boolean;
   isAdmin?: boolean;
+  /** Shows "Messages" — only for users with a support thread. */
+  hasMessages?: boolean;
+  unreadMessages?: number;
 };
 
 export function UserMenu({
@@ -44,6 +48,8 @@ export function UserMenu({
   avatarUrl,
   isPaid = false,
   isAdmin = false,
+  hasMessages = false,
+  unreadMessages = 0,
 }: UserMenuProps) {
   const label = displayName?.trim() || username || "Account";
   const initial = (label[0] ?? "?").toUpperCase();
@@ -112,6 +118,13 @@ export function UserMenu({
         {isSetsEnabled() ? (
           <MenuItem href="/dashboard/sets" icon={Layers} label="My sets" />
         ) : null}
+        {hasMessages ? (
+          <MenuItem
+            href="/messages"
+            icon={MessageSquare}
+            label={unreadMessages > 0 ? `Messages (${unreadMessages > 9 ? "9+" : unreadMessages})` : "Messages"}
+          />
+        ) : null}
         <MenuItem href="/settings" icon={Settings} label="Settings" />
         {isBillingEnabled() ? (
           <>
@@ -127,6 +140,11 @@ export function UserMenu({
         ) : null}
         {isAdmin ? (
           <>
+          <MenuItem
+            href="/admin/messages"
+            icon={MessageSquare}
+            label="Conversations"
+          />
           <MenuItem
             href="/admin/moderation"
             icon={ShieldCheck}

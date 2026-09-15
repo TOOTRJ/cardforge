@@ -17,6 +17,8 @@ export type NotificationItem = {
     avatarUrl: string | null;
   } | null;
   card: { slug: string; title: string; ownerUsername: string | null } | null;
+  /** For type "message": the support thread to deep-link to. */
+  threadId: string | null;
 };
 
 export async function getUnreadNotificationCount(): Promise<number> {
@@ -38,7 +40,7 @@ export async function listNotifications(limit = 30): Promise<NotificationItem[]>
 
   const { data: rows } = await supabase
     .from("notifications")
-    .select("id, type, created_at, read_at, actor_id, card_id")
+    .select("id, type, created_at, read_at, actor_id, card_id, thread_id")
     .eq("recipient_id", user.id)
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -104,6 +106,7 @@ export async function listNotifications(limit = 30): Promise<NotificationItem[]>
       card: card
         ? { slug: card.slug, title: card.title, ownerUsername: owner?.username ?? null }
         : null,
+      threadId: r.thread_id ?? null,
     };
   });
 }

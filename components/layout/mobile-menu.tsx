@@ -27,6 +27,9 @@ type MobileMenuProps = {
   isPaid?: boolean;
   credits?: number;
   creditsUsed?: number;
+  /** Shows "Messages" — only for users with a support thread. */
+  hasMessages?: boolean;
+  unreadMessages?: number;
 };
 
 export function MobileMenu({
@@ -35,6 +38,8 @@ export function MobileMenu({
   isPaid = false,
   credits = 0,
   creditsUsed = 0,
+  hasMessages = false,
+  unreadMessages = 0,
 }: MobileMenuProps) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
@@ -180,6 +185,18 @@ export function MobileMenu({
                   onNav={() => setOpen(false)}
                   active={isActive(pathname, "/dashboard/decks")}
                 />
+                {hasMessages ? (
+                  <DrawerLink
+                    href="/messages"
+                    label={
+                      unreadMessages > 0
+                        ? `Messages (${unreadMessages > 9 ? "9+" : unreadMessages})`
+                        : "Messages"
+                    }
+                    onNav={() => setOpen(false)}
+                    active={isActive(pathname, "/messages")}
+                  />
+                ) : null}
                 {username ? (
                   <DrawerLink
                     href={`/profile/${username}`}
