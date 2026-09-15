@@ -7,9 +7,11 @@ import { SurfaceCard } from "@/components/ui/surface-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Badge } from "@/components/ui/badge";
 import {
+  BillingHealthPanel,
   CardLimitForm,
   CompTierForm,
   GrantCreditsForm,
+  ResyncSubscriptionButton,
 } from "@/components/admin/user-billing-controls";
 import { getCurrentProfile } from "@/lib/supabase/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
@@ -103,6 +105,10 @@ export default async function AdminUsersPage({
         description="Look up an account, grant credits, comp a plan, or raise a saved-card cap. Every write lands in the billing columns via the service role."
       />
 
+      <div className="mt-6">
+        <BillingHealthPanel />
+      </div>
+
       <form action="/admin/users" method="get" className="mt-6 flex gap-2">
         <input
           type="search"
@@ -178,6 +184,11 @@ function TierBadges({ user }: { user: UserRow }) {
       </Badge>
       {compActive ? <Badge variant="accent">comp {user.comp_tier}</Badge> : null}
       {user.is_admin ? <Badge variant="gold">admin</Badge> : null}
+      {user.subscription_tier === "free" &&
+      (user.subscription_status === "active" ||
+        user.subscription_status === "trialing") ? (
+        <Badge variant="danger">tier mismatch</Badge>
+      ) : null}
     </span>
   );
 }
@@ -290,6 +301,19 @@ async function UserDetail({
 
       <SurfaceCard className="flex flex-col gap-6 p-5">
         <section className="flex flex-col gap-3">
+          <SectionTitle
+            title="Subscription"
+            hint="Rewrites tier/status/period from the customer's live Stripe subscriptions (the webhook's own sync) and grants any monthly credits the tier is owed. Use it when Stripe and the profile disagree."
+          />
+          <div>
+            <ResyncSubscriptionButton
+              userId={user.id}
+              hasStripeCustomer={Boolean(user.stripe_customer_id)}
+            />
+          </div>
+        </section>
+
+        <section className="flex flex-col gap-3 border-t border-border/50 pt-5">
           <SectionTitle
             title="Grant credits"
             hint="Adds to the balance via the grant_credits ledger RPC. The note lands in the ledger reason."

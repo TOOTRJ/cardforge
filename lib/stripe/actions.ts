@@ -12,6 +12,7 @@ import {
 } from "@/lib/billing/plans";
 import { getStripe, isStripeConfigured } from "./client";
 import { priceIdForPack, priceIdForTier } from "./config";
+import { findLiveSubscription } from "./subscription-sync";
 import type Stripe from "stripe";
 
 // One trial per account: a customer who has EVER held a subscription (any
@@ -88,6 +89,41 @@ async function ensureStripeCustomer(): Promise<
   return { ok: true, customerId: customer.id, userId: user.id };
 }
 
+/**
+ * Switch an ACTIVE (paid) subscription to another price in place through the
+ * Customer Portal's confirm-update flow: Stripe shows the proration, charges
+ * the difference on the card already on file, and the subscription keeps
+ * its id — no second subscription, no double billing. The webhook's
+ * subscription.updated event then resyncs the profile.
+ */
+async function createPlanSwitchSession(
+  stripe: Stripe,
+  customerId: string,
+  current: Stripe.Subscription,
+  priceId: string,
+  base: string,
+): Promise<BillingActionResult> {
+  const itemId = current.items.data[0]?.id;
+  if (!itemId) return { ok: false, error: "Couldn't read your current plan." };
+  const session = await stripe.billingPortal.sessions.create({
+    customer: customerId,
+    return_url: `${base}/settings#billing`,
+    flow_data: {
+      type: "subscription_update_confirm",
+      subscription_update_confirm: {
+        subscription: current.id,
+        items: [{ id: itemId, price: priceId, quantity: 1 }],
+      },
+      after_completion: {
+        type: "redirect",
+        redirect: { return_url: `${base}/dashboard?billing=success` },
+      },
+    },
+  });
+  if (!session.url) return { ok: false, error: "Couldn't start the plan change." };
+  return { ok: true, url: session.url };
+}
+
 export async function createCheckoutSessionAction(
   input: CheckoutInput,
 ): Promise<BillingActionResult> {
@@ -106,10 +142,29 @@ export async function createCheckoutSessionAction(
       const priceId = priceIdForTier(input.tier, input.period ?? "monthly");
       if (!priceId) return { ok: false, error: "That plan isn't available yet." };
 
+      // Already subscribed? Never start a SECOND subscription (that's how a
+      // customer ends up billed twice, and how a lingering trial's later
+      // cancellation used to demote the paid plan). An active subscription
+      // switches price in place; a no-card trial is superseded: a fresh
+      // checkout collects payment now, and the webhook cancels the trial
+      // once the new subscription is paid (handleSupersededSubscription).
+      const live = await findLiveSubscription(stripe, customer.customerId);
+      let supersedes: string | null = null;
+      if (live) {
+        if (live.items.data[0]?.price?.id === priceId) {
+          return { ok: false, error: "You're already on that plan." };
+        }
+        if (live.status === "active") {
+          return createPlanSwitchSession(stripe, customer.customerId, live, priceId, base);
+        }
+        supersedes = live.id;
+      }
+
       // First subscription ever → 7-day free trial, card optional. Without a
       // payment method by day 7 the subscription cancels itself (never
       // silently pauses into limbo) and the webhook downgrades the profile.
-      const withTrial = await isTrialEligible(stripe, customer.customerId);
+      const withTrial =
+        !live && (await isTrialEligible(stripe, customer.customerId));
 
       const session = await stripe.checkout.sessions.create({
         mode: "subscription",
@@ -117,6 +172,9 @@ export async function createCheckoutSessionAction(
         client_reference_id: customer.userId,
         line_items: [{ price: priceId, quantity: 1 }],
         allow_promotion_codes: true,
+        ...(supersedes
+          ? { metadata: { supersedes_subscription_id: supersedes } }
+          : {}),
         subscription_data: {
           metadata: { supabase_user_id: customer.userId },
           ...(withTrial
