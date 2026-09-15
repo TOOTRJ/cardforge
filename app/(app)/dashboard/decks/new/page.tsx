@@ -4,7 +4,9 @@ import { redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
-import { DeckCreatorForm } from "@/components/decks/deck-creator-form";
+import { DeckWizard } from "@/components/decks/deck-wizard";
+import { isDesignAiConfigured } from "@/lib/ai/provider";
+import { batchCardLimit } from "@/lib/ai/generation-limits";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { SurfaceCard } from "@/components/ui/surface-card";
@@ -36,12 +38,13 @@ export default async function NewDeckPage() {
     redirect("/login?redirectTo=/dashboard/decks/new");
   }
 
+  const maxCards = await batchCardLimit();
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
+    <div className="mx-auto w-full max-w-4xl px-4 py-10 sm:px-6 lg:px-8">
       <PageHeader
         eyebrow="New deck"
         title="Create a deck"
-        description="Set the basics first — you can add cards and import a decklist once it's saved."
+        description="Name it, choose how the cards arrive — AI, a pasted decklist, or by hand — add a cover, and forge."
         actions={
           <Button asChild variant="ghost">
             <Link href="/dashboard/decks">
@@ -52,7 +55,7 @@ export default async function NewDeckPage() {
       />
 
       <div className="mt-10">
-        <DeckCreatorForm mode="create" userId={user.id} />
+        <DeckWizard userId={user.id} aiConfigured={isDesignAiConfigured()} maxCards={maxCards} />
       </div>
     </div>
   );

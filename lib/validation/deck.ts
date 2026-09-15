@@ -71,6 +71,10 @@ export const createDeckSchema = z.object({
   cover_position: deckCoverPositionSchema.nullable().optional(),
   format: deckFormatSchema,
   visibility: deckVisibilitySchema,
+  /** Tribe/archetype key from lib/decks/deck-types.ts (AI starting point). */
+  deck_type: z.string().trim().max(60).nullable().optional(),
+  /** Commander power bracket 1–5; null for other formats. */
+  bracket: z.coerce.number().int().min(1).max(5).nullable().optional(),
 });
 
 export const updateDeckSchema = createDeckSchema.partial().extend({

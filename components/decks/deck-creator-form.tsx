@@ -389,7 +389,7 @@ function textareaClass(hasError: boolean): string {
   );
 }
 
-function CoverField({
+export function CoverField({
   userId,
   value,
   onChange,

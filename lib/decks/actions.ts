@@ -132,6 +132,8 @@ export async function createDeckAction(
     cover_position: parsed.data.cover_position ?? null,
     format: parsed.data.format,
     visibility: parsed.data.visibility,
+    deck_type: parsed.data.deck_type ?? null,
+    bracket: parsed.data.bracket ?? null,
   };
 
   let row: { id: string; slug: string } | null = null;
@@ -200,6 +202,8 @@ export async function updateDeckAction(
   if (data.cover_url !== undefined) update.cover_url = data.cover_url ?? null;
   if (data.cover_position !== undefined)
     update.cover_position = data.cover_position ?? null;
+  if (data.deck_type !== undefined) update.deck_type = data.deck_type ?? null;
+  if (data.bracket !== undefined) update.bracket = data.bracket ?? null;
   if (data.format !== undefined) update.format = data.format;
   if (data.visibility !== undefined) update.visibility = data.visibility;
 
