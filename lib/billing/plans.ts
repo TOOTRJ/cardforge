@@ -33,7 +33,7 @@ export const TRIAL_DAYS = 7;
 export const MONTHLY_CREDITS: Record<PlanTier, number> = {
   free: 5,
   plus: 30,
-  pro: 75,
+  pro: 100,
 };
 
 // Consumable top-up packs (one-time Stripe `payment` checkout). Purchased
@@ -82,8 +82,8 @@ export const PLANS: PlanDisplay[] = [
     priceUsd: 0,
     tagline: "Design and share custom cards, forever free.",
     features: [
-      "5 AI credits every month — every AI tool included",
-      "Every MTG-style frame & finish",
+      "5 AI credits every month",
+      "Every MTG-style frame currently available on PipGlyph",
       "Low-res PNG export (watermarked)",
       "Up to 50 saved cards",
       "Community gallery, decks & sharing",
@@ -117,7 +117,7 @@ export const PLANS: PlanDisplay[] = [
     // 2026-09-15). Never list perks that aren't shipped (the old "priority
     // AI queue" line had no implementation behind it).
     features: [
-      "75 AI credits every month — enough for whole decks",
+      "100 AI credits every month — a full Commander deck",
       "AI cards & ideas designed for a specific deck",
       "Batch & whole-deck export, 3×3 print sheets",
       "Unlimited saved cards",

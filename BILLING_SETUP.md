@@ -15,7 +15,7 @@ Checkout + Customer Portal + a thin webhook → Supabase + app-managed credits**
 |------|-------|---------------|-----------|--------|----------|
 | Free | $0 | 5 (monthly, like the paid tiers; the signup default covers the first month) | yes | low-res PNG only, capped 750px | 50 |
 | Plus | $6/mo · $60/yr | 30 | removed | + clean HD PNG, single PDF | 500 |
-| Pro | $15/mo · $150/yr | 75 | removed | + 3×3 sheets, whole-deck/set export + ZIP | unlimited |
+| Pro | $15/mo · $150/yr | 100 | removed | + 3×3 sheets, whole-deck/set export + ZIP | unlimited |
 
 - Prices and perks are defined ONCE in `lib/billing/plans.ts` (`PLANS`,
   `MONTHLY_CREDITS`, `CREDIT_PACKS`) and enforced in
