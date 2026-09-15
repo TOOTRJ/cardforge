@@ -68,6 +68,12 @@ const PAID_COMING_SOON = [
   "Card printing",
   "Custom sets",
 ];
+// Pro-only teasers (owner, 2026-09-15): the deck-building layer on top of
+// today's deck-aware card design — still a tease, never sold as live.
+const PRO_COMING_SOON = [
+  ...PAID_COMING_SOON,
+  "Smart AI deck building with AI deck intelligence",
+];
 
 export const PLANS: PlanDisplay[] = [
   {
@@ -117,7 +123,7 @@ export const PLANS: PlanDisplay[] = [
       "Unlimited saved cards",
       "Everything in Plus",
     ],
-    comingSoon: PAID_COMING_SOON,
+    comingSoon: PRO_COMING_SOON,
   },
 ];
 
