@@ -62,9 +62,27 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "10mb",
     },
   },
+  // public/frames (~163 MB of PNG masters) must NOT be traced into function
+  // bundles. The bake reads frames through lib/render/card-frames.ts, which
+  // fetches them from this deployment's own static CDN when they are not on
+  // disk. Tracing them in put ~1.5 GB of functions into EVERY deployment
+  // (save-time bake → nearly every page function) and blew Vercel's
+  // Functions Storage quota. Fonts + watermarks (< 2 MB) stay traced.
+  outputFileTracingExcludes: {
+    "*": ["./public/frames/**"],
+  },
   // Allow next/image to optimize user-uploaded card art + set covers from
   // our Supabase Storage origin (per-bucket, see SUPABASE_PUBLIC_BUCKETS).
   images: {
+    // Every optimized source is content-addressed (`?v=` on baked renders,
+    // random object names on uploads): a variant never changes under its
+    // URL, so keep it for 31 days instead of re-writing it every few hours.
+    // (Image Optimization cache writes sat at the plan quota.)
+    minimumCacheTTL: 2678400,
+    // Fewer candidate widths = fewer variants written per image. Card tiles
+    // span 25–100vw; three device widths cover 1×/2× phones to desktop.
+    deviceSizes: [640, 1080, 1920],
+    imageSizes: [64, 128, 256, 384],
     remotePatterns: supabaseImageOrigins.flatMap((origin) =>
       SUPABASE_PUBLIC_BUCKETS.map((bucket) => ({
         protocol: origin.protocol,

@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { renderCardImage } from "@/lib/render/card-image";
+import { fetchStoredRender } from "@/lib/render/stored-render";
 import {
   getEntitlements,
   ownerExportStamp,
@@ -127,16 +128,26 @@ export async function GET(
     profileOverrides,
   );
 
-  // Render PNG at HD quality (1500×2100) for crisp print output.
+  // The print source is the HD (1500×2100) render. The stored bake IS that
+  // render with the owner's stamp, so when the viewer's PDF would carry the
+  // same stamp we embed the stored bytes and skip Satori entirely
+  // (lib/render/stored-render.ts); otherwise render live.
   const stamp = await ownerExportStamp(card.owner_id);
+  // Cleared by EITHER side's plan — see the png route for the rationale.
+  const brandMark = stamp.brandMark && !entitlements.removeWatermark;
   let pngBytes: Uint8Array;
   try {
-    const imgResponse = await renderCardImage(previewData, "hd", {
-      // Cleared by EITHER side's plan — see the png route for the rationale.
-      brandMark: stamp.brandMark && !entitlements.removeWatermark,
-      watermarkText: stamp.footerText,
-    });
-    pngBytes = new Uint8Array(await imgResponse.arrayBuffer());
+    const stored =
+      brandMark === stamp.brandMark ? await fetchStoredRender(card) : null;
+    if (stored) {
+      pngBytes = new Uint8Array(stored);
+    } else {
+      const imgResponse = await renderCardImage(previewData, "hd", {
+        brandMark,
+        watermarkText: stamp.footerText,
+      });
+      pngBytes = new Uint8Array(await imgResponse.arrayBuffer());
+    }
   } catch (err) {
     const detail = err instanceof Error ? err.message : "Render error";
     return NextResponse.json(

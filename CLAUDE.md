@@ -67,6 +67,14 @@ Rules and gotchas:
 - Card preview and the server Satori bake must stay pixel-identical: the
   `.ttf`/PNG masters in `public/` feed the bake — browser-side asset
   optimizations must not touch what the bake reads.
+  `public/frames` is excluded from function tracing (`next.config.ts`) —
+  the bake fetches frames from the deployment's own CDN and memoizes them
+  (`lib/render/card-frames.ts`); any new `public/frames` asset the renderer
+  reads synchronously must be added to `frameAssetPathsFor()` in
+  `lib/render/card-image.tsx` or it renders as a transparent pixel on
+  Vercel. OG/PNG/PDF serve the stored bake when it is current
+  (`lib/render/stored-render.ts`) — a renderer change still needs the
+  `CARD_LAYOUT_VERSION` bump + rebake sweep.
 - AI image generation goes through the **Vercel AI Gateway ONLY** (FLUX for
   text-to-image, Gemini for the "AI remix" i2i) — `lib/ai/image-gen.ts` has no
   direct-OpenAI path. `AI_GATEWAY_API_KEY` is required for any image flow; a
