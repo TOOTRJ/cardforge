@@ -1,7 +1,7 @@
 import "server-only";
 
 import sharp from "sharp";
-import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
+import { isRenderStale, templateOfFrameStyle } from "@/lib/cards/layout-version";
 import { isAllowedServerImageFetchUrl } from "@/lib/validation/card";
 import { RENDER_PRESETS, type RenderPreset } from "@/lib/render/card-image";
 
@@ -16,11 +16,12 @@ import { RENDER_PRESETS, type RenderPreset } from "@/lib/render/card-image";
 // and would carry the same stamp the request needs, serving (or downscaling)
 // those bytes is a ~10 ms sharp call instead of a ~1 s render.
 //
-// "Current" = the row carries a render URL AND its layout_version equals the
-// renderer's. A save whose bake failed clears the URL (bake-render.ts), and a
-// renderer/frame change bumps CARD_LAYOUT_VERSION until the rebake sweep
-// catches up — so a present URL at the current version is the bake of the
-// row as saved. Anything else falls back to a live render, exactly as before.
+// "Current" = the row carries a render URL AND no bump since its
+// layout_version touched its frame template (lib/cards/layout-version.ts
+// isRenderStale — a template-scoped bump leaves other templates current). A
+// save whose bake failed clears the URL (bake-render.ts), so a present URL
+// that isn't stale is the bake of the row as saved. Anything else falls back
+// to a live render, exactly as before.
 //
 // This is NOT the preview↔bake invariant: a downscale of the HD bake differs
 // from a native 750 px render by resampling only, which is fine for a share
@@ -35,6 +36,9 @@ const MAX_RENDER_BYTES = 25 * 1024 * 1024;
 export type StoredRenderRow = {
   rendered_image_url: string | null;
   layout_version: number | null;
+  /** `cards.frame_style` jsonb — lets a template-scoped bump leave other
+   *  templates' renders current. Optional: without it every bump counts. */
+  frame_style?: unknown;
 };
 
 /** True when the row's baked PNG reflects the current renderer and row. */
@@ -42,7 +46,7 @@ export function hasCurrentStoredRender(row: StoredRenderRow): boolean {
   return (
     typeof row.rendered_image_url === "string" &&
     row.rendered_image_url.length > 0 &&
-    row.layout_version === CARD_LAYOUT_VERSION
+    !isRenderStale(row.layout_version, templateOfFrameStyle(row.frame_style))
   );
 }
 

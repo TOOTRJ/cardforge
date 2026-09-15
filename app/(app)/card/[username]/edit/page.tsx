@@ -6,6 +6,9 @@ import { CardCreatorForm } from "@/components/creator/card-creator-form";
 import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { DownloadModal } from "@/components/cards/download-modal";
+import { RenderUpdateNotice } from "@/components/cards/render-update";
+import { cardToPreviewData } from "@/lib/cards/preview-data";
+import { isRenderStale, templateOfFrameStyle } from "@/lib/cards/layout-version";
 import { AddToSetButton } from "@/components/sets/add-to-set-button";
 import { PageHeader } from "@/components/layout/page-header";
 import { SurfaceCard } from "@/components/ui/surface-card";
@@ -146,6 +149,20 @@ export default async function EditCardPage({ params }: EditCardPageProps) {
           </>
         }
       />
+
+      {card.visibility !== "private" &&
+      isRenderStale(card.layout_version, templateOfFrameStyle(card.frame_style)) ? (
+        <div className="mt-8">
+          <RenderUpdateNotice
+            card={{
+              id: card.id,
+              title: card.title,
+              renderedImageUrl: card.rendered_image_url,
+              previewData: cardToPreviewData(card, await getFrameProfileOverrides()),
+            }}
+          />
+        </div>
+      ) : null}
 
       <div className="mt-10">
         <CardCreatorForm

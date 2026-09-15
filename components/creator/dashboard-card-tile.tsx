@@ -5,11 +5,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, Eye, Pencil } from "lucide-react";
 import { BakedCardThumbnail } from "@/components/cards/baked-card-thumbnail";
+import { RenderUpdateBadge } from "@/components/cards/render-update";
+import { cardToPreviewData } from "@/lib/cards/preview-data";
+import { isRenderStale, templateOfFrameStyle } from "@/lib/cards/layout-version";
 import type { FrameProfileOverridesMap } from "@/lib/cards/profile-override";
 import { CardHoverEffect } from "@/components/cards/card-hover-effect";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { ArtPosition, FrameStyle } from "@/types/card";
 import type { listMyCards } from "@/lib/cards/queries";
 
 // ---------------------------------------------------------------------------
@@ -61,6 +63,13 @@ export function DashboardCardTile({
 }: Props) {
   const router = useRouter();
   const editHref = `/card/${card.slug}/edit`;
+  const previewData = cardToPreviewData(card, profileOverrides);
+  // Owner-facing "newer look available": a published card whose stored
+  // image predates the current renderer for its frame. Private cards never
+  // carry a stored render, so there is nothing to update there.
+  const needsRenderUpdate =
+    card.visibility !== "private" &&
+    isRenderStale(card.layout_version, templateOfFrameStyle(card.frame_style));
   // The id→canonical redirect resolves the owner username server-side, so
   // the tile doesn't need it in its props.
   const viewHref = `/go/card/${card.id}`;
@@ -123,28 +132,7 @@ export function DashboardCardTile({
             <BakedCardThumbnail
               renderedImageUrl={card.rendered_image_url}
               title={card.title}
-              previewData={{
-                profileOverrides,
-                title: card.title,
-                cost: card.cost,
-                cardType: card.card_type,
-                supertype: card.supertype,
-                subtypes: card.subtypes,
-                rarity: card.rarity,
-                colorIdentity: card.color_identity,
-                rulesText: card.rules_text,
-                flavorText: card.flavor_text,
-                power: card.power,
-                toughness: card.toughness,
-                loyalty: card.loyalty,
-                defense: card.defense,
-                artistCredit: card.artist_credit,
-                artUrl: card.art_url,
-                artPosition: card.art_position as ArtPosition,
-                frameStyle: card.frame_style as FrameStyle,
-                setIconUrl: card.set_icon_url,
-                setIconCode: card.set_icon_code,
-              }}
+              previewData={previewData}
             />
           </CardHoverEffect>
         </div>
@@ -190,6 +178,19 @@ export function DashboardCardTile({
               </Link>
             </Button>
           </div>
+        ) : null}
+
+        {/* Newer-look badge (top-left, z-40 like the checkbox). Only in
+            normal mode — select mode means every click is a toggle. */}
+        {needsRenderUpdate && !selectMode ? (
+          <RenderUpdateBadge
+            card={{
+              id: card.id,
+              title: card.title,
+              renderedImageUrl: card.rendered_image_url,
+              previewData,
+            }}
+          />
         ) : null}
 
         {/* Corner checkbox. z-40 keeps it above the action-button overlay
