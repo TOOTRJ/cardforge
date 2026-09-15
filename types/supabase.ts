@@ -960,6 +960,75 @@ export type Database = {
         };
         Relationships: [];
       };
+      site_updates: {
+        Row: {
+          ack_until: string | null;
+          body: string | null;
+          created_at: string;
+          created_by: string | null;
+          id: string;
+          is_published: boolean;
+          kind: string;
+          link_href: string | null;
+          publish_at: string;
+          require_ack: boolean;
+          show_in_banner: boolean;
+          summary: string;
+          title: string;
+          updated_at: string;
+        };
+        Insert: {
+          ack_until?: string | null;
+          body?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          is_published?: boolean;
+          kind: string;
+          link_href?: string | null;
+          publish_at?: string;
+          require_ack?: boolean;
+          show_in_banner?: boolean;
+          summary: string;
+          title: string;
+          updated_at?: string;
+        };
+        Update: {
+          ack_until?: string | null;
+          body?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          is_published?: boolean;
+          kind?: string;
+          link_href?: string | null;
+          publish_at?: string;
+          require_ack?: boolean;
+          show_in_banner?: boolean;
+          summary?: string;
+          title?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      site_update_acks: {
+        Row: {
+          acked_at: string;
+          update_id: string;
+          user_id: string;
+        };
+        Insert: {
+          acked_at?: string;
+          update_id: string;
+          user_id: string;
+        };
+        Update: {
+          acked_at?: string;
+          update_id?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       challenges: {
         Row: {
           created_at: string;
