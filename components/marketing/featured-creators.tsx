@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { toRenderCdnUrl } from "@/lib/cards/render-cdn";
 import { Crown } from "lucide-react";
 import { listFeaturedCreators } from "@/lib/featured/queries";
 import { SocialIcon } from "@/components/profile/social-icon";
@@ -120,7 +121,7 @@ export async function FeaturedCreators() {
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
-                          src={card.imageUrl}
+                          src={toRenderCdnUrl(card.imageUrl) ?? card.imageUrl}
                           alt={card.title}
                           loading="lazy"
                           className="h-40 w-auto rounded-md border border-border/60 shadow-lg transition-shadow group-hover:shadow-[0_8px_30px_-8px_rgba(201,165,76,0.5)] sm:h-48"

@@ -52,7 +52,32 @@ const supabaseImageOrigins = (() => {
   return origins;
 })();
 
+// Thumbnails and renders live in Supabase Storage, whose public endpoint
+// answers browsers with `cache-control: no-cache` (the object's own
+// max-age is honoured only edge-side), so every tile revalidated on every
+// page view. `/render-cdn/*` proxies the card-renders bucket through this
+// deployment with an immutable one-year header: every object under it is
+// content-addressed (`?v=` stamp per bake), so it can never go stale.
+// BakedCardThumbnail rewrites thumb URLs onto this path
+// (lib/cards/render-cdn.ts).
+const RENDER_CDN_PREFIX = "/render-cdn";
+const RENDER_CDN_HEADERS = [
+  { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+];
+
 const nextConfig: NextConfig = {
+  async rewrites() {
+    if (!supabaseUrl) return [];
+    return [
+      {
+        source: `${RENDER_CDN_PREFIX}/:path*`,
+        destination: `${supabaseUrl.replace(/\/$/, "")}/storage/v1/object/public/card-renders/:path*`,
+      },
+    ];
+  },
+  async headers() {
+    return [{ source: `${RENDER_CDN_PREFIX}/:path*`, headers: RENDER_CDN_HEADERS }];
+  },
   // Phase 11 chunk 14: bump the server-action body size limit so the
   // Sharp-validated card-art upload (max 8 MB enforced server-side) can
   // actually receive 8 MB images. Default is 1 MB, which would reject
