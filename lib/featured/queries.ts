@@ -54,13 +54,13 @@ export async function listFeaturedCreators(
     allPinnedIds.length > 0
       ? supabase
           .from("cards")
-          .select("id, slug, title, rendered_image_url, owner_id")
+          .select("id, slug, title, rendered_image_url, rendered_thumb_url, owner_id")
           .in("id", allPinnedIds)
           .eq("visibility", "public")
       : Promise.resolve({ data: [] as never[] }),
     supabase
       .from("cards")
-      .select("slug, title, rendered_image_url, owner_id")
+      .select("slug, title, rendered_image_url, rendered_thumb_url, owner_id")
       .in("owner_id", profileIds)
       .eq("visibility", "public")
       .not("rendered_image_url", "is", null)
@@ -91,7 +91,7 @@ export async function listFeaturedCreators(
       .map((c) => ({
         slug: c.slug,
         title: c.title,
-        imageUrl: c.rendered_image_url as string,
+        imageUrl: (c.rendered_thumb_url ?? c.rendered_image_url) as string,
       }));
 
     for (const c of fallbackByOwner.get(p.id) ?? []) {
@@ -100,7 +100,7 @@ export async function listFeaturedCreators(
       cards.push({
         slug: c.slug,
         title: c.title,
-        imageUrl: c.rendered_image_url as string,
+        imageUrl: (c.rendered_thumb_url ?? c.rendered_image_url) as string,
       });
     }
 
@@ -139,7 +139,7 @@ export async function listFeaturedHomeCards(): Promise<FeaturedHomeCard[]> {
   const { data } = await supabase
     .from("featured_cards")
     .select(
-      "slot, cards(slug, title, visibility, rendered_image_url, owner_id)",
+      "slot, cards(slug, title, visibility, rendered_image_url, rendered_thumb_url, owner_id)",
     )
     .order("slot", { ascending: true });
   if (!data || data.length === 0) return [];
@@ -150,6 +150,7 @@ export async function listFeaturedHomeCards(): Promise<FeaturedHomeCard[]> {
       title: string;
       visibility: string;
       rendered_image_url: string | null;
+      rendered_thumb_url?: string | null;
       owner_id: string;
     } | null }))
     .filter(
@@ -162,6 +163,7 @@ export async function listFeaturedHomeCards(): Promise<FeaturedHomeCard[]> {
       title: string;
       visibility: string;
       rendered_image_url: string | null;
+      rendered_thumb_url?: string | null;
       owner_id: string;
     }> }[];
   if (rows.length === 0) return [];
@@ -181,7 +183,7 @@ export async function listFeaturedHomeCards(): Promise<FeaturedHomeCard[]> {
         slot: r.slot,
         slug: r.card.slug,
         title: r.card.title,
-        imageUrl: r.card.rendered_image_url as string,
+        imageUrl: (r.card.rendered_thumb_url ?? r.card.rendered_image_url) as string,
         owner: { username: owner.username, displayName: owner.display_name },
       };
     })

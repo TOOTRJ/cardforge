@@ -54,6 +54,7 @@ export function BackFacePicker({
           <div className="w-14 shrink-0">
             <BakedCardThumbnail
               renderedImageUrl={selected.rendered_image_url}
+              renderedThumbUrl={selected.rendered_thumb_url}
               title={selected.title}
               previewData={cardToPreviewData(selected, profileOverrides)}
               sizes="56px"
@@ -154,6 +155,7 @@ export function BackFacePicker({
                   >
                     <BakedCardThumbnail
                       renderedImageUrl={card.rendered_image_url}
+                      renderedThumbUrl={card.rendered_thumb_url}
                       title={card.title}
                       previewData={cardToPreviewData(card, profileOverrides)}
                       sizes="180px"

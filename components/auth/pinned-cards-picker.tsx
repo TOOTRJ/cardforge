@@ -147,6 +147,7 @@ export function PinnedCardsPicker({
               <div className="relative">
                 <BakedCardThumbnail
                   renderedImageUrl={card.rendered_image_url}
+                  renderedThumbUrl={card.rendered_thumb_url}
                   title={card.title}
                   previewData={{
                     profileOverrides,

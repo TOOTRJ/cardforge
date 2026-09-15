@@ -64,6 +64,28 @@ describe("stored-render — when the baked PNG can stand in for a live render", 
     expect(bytes!.equals(png)).toBe(true);
   });
 
+  it("serves a stale bake for display surfaces when allowStale is set", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://zkwkisxoqdhdchqyjwdc.supabase.co");
+    const png = await sharp({
+      create: { width: 2, height: 2, channels: 4, background: { r: 9, g: 9, b: 9, alpha: 1 } },
+    })
+      .png()
+      .toBuffer();
+    const fetchSpy = vi.fn(async () =>
+      new Response(new Uint8Array(png), { status: 200, headers: { "content-type": "image/png" } }),
+    );
+    vi.stubGlobal("fetch", fetchSpy);
+    const stale = { rendered_image_url: STORAGE_URL, layout_version: CARD_LAYOUT_VERSION - 1 };
+    expect(await fetchStoredRender(stale)).toBeNull();
+    const bytes = await fetchStoredRender(stale, { allowStale: true });
+    expect(bytes?.equals(png)).toBe(true);
+    // Still nothing without a bake at all, stale or not.
+    expect(
+      await fetchStoredRender({ rendered_image_url: null, layout_version: null }, { allowStale: true }),
+    ).toBeNull();
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
   it("rejects a non-PNG or failed response", async () => {
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://zkwkisxoqdhdchqyjwdc.supabase.co");
     vi.stubGlobal(

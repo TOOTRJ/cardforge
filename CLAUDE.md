@@ -77,9 +77,15 @@ Rules and gotchas:
   (`lib/render/card-frames.ts`); any new `public/frames` asset the renderer
   reads synchronously must be added to `frameAssetPathsFor()` in
   `lib/render/card-image.tsx` or it renders as a transparent pixel on
-  Vercel. OG/PNG/PDF serve the stored bake when it is current
-  (`lib/render/stored-render.ts`) — a renderer change still needs the
-  `CARD_LAYOUT_VERSION` bump + rebake sweep.
+  Vercel. PNG/PDF serve the stored bake when it is current
+  (`lib/render/stored-render.ts`); the OG share image serves it even when
+  stale (`allowStale`) because the gallery tile shows that same image. A
+  renderer change still needs the `CARD_LAYOUT_VERSION` bump (owners then
+  update via the badge; a sweep is optional). Every bake also writes a
+  600 px WebP thumbnail beside the HD PNG (`cards.rendered_thumb_url`,
+  `lib/cards/render-thumb.ts`) — gallery-style tiles MUST use
+  `BakedCardThumbnail` with `renderedThumbUrl`, never the 3 MB PNG;
+  `scripts/backfill-render-thumbs.mjs` fills thumbs for older bakes.
 - Notifications are push, not pull: `notifications` is on the
   `supabase_realtime` publication (migration 0075) and
   `components/notifications/realtime-alerts.tsx` subscribes to the signed-in

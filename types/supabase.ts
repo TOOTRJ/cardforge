@@ -589,6 +589,7 @@ export type Database = {
           rarity: string | null;
           rendered_at: string | null;
           rendered_image_url: string | null;
+          rendered_thumb_url: string | null;
           rules_text: string | null;
           set_icon_code: string | null;
           set_icon_url: string | null;
@@ -636,6 +637,7 @@ export type Database = {
           layout_version?: number | null;
           rendered_at?: string | null;
           rendered_image_url?: string | null;
+          rendered_thumb_url?: string | null;
           rules_text?: string | null;
           set_icon_code?: string | null;
           set_icon_url?: string | null;
@@ -682,6 +684,7 @@ export type Database = {
           layout_version?: number | null;
           rendered_at?: string | null;
           rendered_image_url?: string | null;
+          rendered_thumb_url?: string | null;
           rules_text?: string | null;
           set_icon_code?: string | null;
           set_icon_url?: string | null;

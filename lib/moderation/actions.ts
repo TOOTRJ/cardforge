@@ -153,7 +153,7 @@ export async function resolveCardReportsAction(input: {
 
     await admin
       .from("cards")
-      .update({ visibility: "private", rendered_image_url: null, rendered_at: null })
+      .update({ visibility: "private", rendered_image_url: null, rendered_thumb_url: null, rendered_at: null })
       .eq("id", input.cardId);
 
     if (card?.owner_id) {

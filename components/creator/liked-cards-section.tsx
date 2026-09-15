@@ -82,6 +82,7 @@ function LikedCardTile({
         <CardHoverEffect>
           <BakedCardThumbnail
             renderedImageUrl={card.rendered_image_url}
+            renderedThumbUrl={card.rendered_thumb_url}
             title={card.title}
             previewData={{
               profileOverrides,

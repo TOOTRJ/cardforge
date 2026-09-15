@@ -848,7 +848,7 @@ export async function updateCardsVisibilityAction(
     .from("cards")
     .update(
       goingPrivate
-        ? { visibility: "private", rendered_image_url: null, rendered_at: null }
+        ? { visibility: "private", rendered_image_url: null, rendered_thumb_url: null, rendered_at: null }
         : { visibility: parsed.data.visibility },
     )
     .in("id", ids)

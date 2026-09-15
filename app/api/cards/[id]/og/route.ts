@@ -96,11 +96,14 @@ export async function GET(
   );
 
   // The share image is a DISPLAY surface: always watermarked, no custom
-  // footer text (layout v20) — the same contract as the stored bake, so
-  // when that bake is current we serve (or 2× downscale) its bytes instead
-  // of re-running Satori (lib/render/stored-render.ts). Viewer-independent
-  // by construction, which keeps the route CDN-cacheable.
-  const stored = await fetchStoredRender(card);
+  // footer text (layout v20) — the same contract as the stored bake, so we
+  // serve (or 2× downscale) its bytes instead of re-running Satori
+  // (lib/render/stored-render.ts) — even when the bake predates the current
+  // renderer: the gallery tile shows that same image, and re-rendering every
+  // stale card on each crawler hit cost ~3 s of CPU per share. Only a card
+  // with no bake at all renders live. Viewer-independent by construction,
+  // which keeps the route CDN-cacheable.
+  const stored = await fetchStoredRender(card, { allowStale: true });
   let portraitBytes: Buffer;
   if (stored) {
     portraitBytes = await fitStoredRender(stored, preset, isLandscapeRender(previewData));

@@ -45,6 +45,7 @@ export function GalleryCardTile({
           <CardHoverEffect>
             <BakedCardThumbnail
               renderedImageUrl={card.rendered_image_url}
+              renderedThumbUrl={card.rendered_thumb_url}
               title={card.title}
               alt={`${card.title} — custom MTG-style ${card.card_type ?? "card"}${card.rarity ? `, ${card.rarity} rarity` : ""}`}
               previewData={{
