@@ -49,6 +49,8 @@ export const siteConfig = {
 
   // Dashboard left-rail nav (rendered inside DashboardShell). Feed + My Sets
   // live here now instead of the global header so the top nav stays lean.
+  // "Messages" (/messages) is NOT listed: DashboardNav inserts it after
+  // Notifications only for users who have a support thread.
   dashboardNav: [
     { label: "Overview", href: "/dashboard" },
     { label: "Feed", href: "/feed" },
@@ -64,6 +66,7 @@ export const siteConfig = {
   // profiles). Mirrors the avatar-dropdown admin entries.
   adminNav: [
     { label: "Users", href: "/admin/users" },
+    { label: "Messages", href: "/admin/messages" },
     { label: "Moderation", href: "/admin/moderation" },
     { label: "Feedback", href: "/admin/feedback" },
     { label: "Featured", href: "/admin/featured" },

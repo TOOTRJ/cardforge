@@ -10,6 +10,7 @@ import {
   Inbox,
   LayoutDashboard,
   Layers,
+  MessageSquare,
   MessageSquarePlus,
   Rss,
   Settings,
@@ -31,7 +32,9 @@ const NAV_ICONS: Record<string, LucideIcon> = {
   "/dashboard/decks": BookOpen,
   "/dashboard/usage": Sparkles,
   "/notifications": Bell,
+  "/messages": MessageSquare,
   "/feedback": MessageSquarePlus,
+  "/admin/messages": MessageSquare,
   "/settings": Settings,
   "/admin/moderation": ShieldCheck,
   "/admin/feedback": Inbox,
@@ -45,18 +48,37 @@ type DashboardNavProps = {
   /** Renders the Admin rail section. Set by DashboardShell from the
    *  caller's profile — never from client-side state. */
   isAdmin?: boolean;
+  /** The user has at least one support thread — shows "Messages". Never
+   *  rendered for users the team hasn't written to. */
+  showMessages?: boolean;
+  /** Unread counts per href, rendered as a pill (0/undefined = none). */
+  badges?: Record<string, number>;
 };
+
+const MESSAGES_ITEM = { label: "Messages", href: "/messages" } as const;
+
+/** dashboardNav with "Messages" slotted right after Notifications. */
+function userItems(showMessages: boolean) {
+  const items = [...siteConfig.dashboardNav];
+  if (!showMessages) return items;
+  const at = items.findIndex((item) => item.href === "/notifications");
+  items.splice(at >= 0 ? at + 1 : items.length, 0, MESSAGES_ITEM);
+  return items;
+}
 
 // Dashboard left-rail nav with active-route highlighting (the header + mobile
 // menu already highlight; this brings the rail in line). The active item is the
 // one whose href is the LONGEST prefix of the current path (exact, or
 // `${href}/...`), so "Overview" (/dashboard) doesn't also light up on
 // /dashboard/sets — only "My Sets" does.
-export function DashboardNav({ isAdmin = false }: DashboardNavProps) {
+export function DashboardNav({
+  isAdmin = false,
+  showMessages = false,
+  badges = {},
+}: DashboardNavProps) {
   const pathname = usePathname();
-  const items = isAdmin
-    ? [...siteConfig.dashboardNav, ...siteConfig.adminNav]
-    : [...siteConfig.dashboardNav];
+  const base = userItems(showMessages);
+  const items = isAdmin ? [...base, ...siteConfig.adminNav] : base;
   const activeHref = items
     .map((item) => item.href)
     .filter((href) => pathname === href || pathname.startsWith(`${href}/`))
@@ -65,6 +87,7 @@ export function DashboardNav({ isAdmin = false }: DashboardNavProps) {
   const renderItem = (item: (typeof items)[number]) => {
     const isActive = item.href === activeHref;
     const Icon = NAV_ICONS[item.href];
+    const badge = badges[item.href] ?? 0;
     return (
       <Link
         key={item.href}
@@ -87,6 +110,14 @@ export function DashboardNav({ isAdmin = false }: DashboardNavProps) {
           />
         ) : null}
         {item.label}
+        {badge > 0 ? (
+          <span
+            className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-semibold text-primary-foreground"
+            aria-label={`${badge} unread`}
+          >
+            {badge > 9 ? "9+" : badge}
+          </span>
+        ) : null}
       </Link>
     );
   };
@@ -96,7 +127,7 @@ export function DashboardNav({ isAdmin = false }: DashboardNavProps) {
       aria-label="Dashboard navigation"
       className="flex gap-1 overflow-x-auto rounded-lg border border-border/70 bg-surface p-1 text-sm lg:flex-col lg:overflow-visible lg:bg-transparent lg:p-0"
     >
-      {siteConfig.dashboardNav.map(renderItem)}
+      {base.map(renderItem)}
       {isAdmin ? (
         <>
           <div
