@@ -9,7 +9,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarClock, Eye, EyeOff, Megaphone, Pencil, Plus, Sparkles, Trash2, X } from "lucide-react";
+import { BellRing, CalendarClock, Eye, EyeOff, Megaphone, Pencil, Plus, Sparkles, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import { inputClass, textareaClass } from "@/components/creator/field-group";
 import {
   createSiteUpdateAction,
   deleteSiteUpdateAction,
+  notifyAllUsersAction,
   setSiteUpdateFlagAction,
   updateSiteUpdateAction,
 } from "@/lib/updates/actions";
@@ -45,6 +46,29 @@ export function SiteUpdatesAdmin({ updates }: { updates: SiteUpdate[] }) {
       }
       router.refresh();
     });
+
+  const notifyAll = (u: SiteUpdate) => {
+    const again = u.notified_at != null;
+    const ok = window.confirm(
+      again
+        ? `Send "${u.title}" again? Only users who haven't received it yet (new sign-ups) will get a notification.`
+        : `Notify every user about "${u.title}"? Each person gets a bell notification and, if online, a toast.`,
+    );
+    if (!ok) return;
+    startTransition(async () => {
+      const result = await notifyAllUsersAction(u.id);
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(
+        result.sent === 0
+          ? "Everyone already has this notification."
+          : `Sent to ${result.sent.toLocaleString("en-US")} user${result.sent === 1 ? "" : "s"}.`,
+      );
+      router.refresh();
+    });
+  };
 
   const remove = (u: SiteUpdate) => {
     if (!window.confirm(`Delete "${u.title}"? This can't be undone.`)) return;
@@ -106,6 +130,12 @@ export function SiteUpdatesAdmin({ updates }: { updates: SiteUpdate[] }) {
                   </span>
                   {u.show_in_banner ? <Badge>On banner</Badge> : null}
                   {u.require_ack ? <Badge>Must-read</Badge> : null}
+                  {u.notified_at ? (
+                    <Badge title={`Last sent ${formatReleaseDate(u.notified_at)}`}>
+                      <BellRing className="mr-1 h-3 w-3" aria-hidden />
+                      Notified {u.notified_count.toLocaleString("en-US")}
+                    </Badge>
+                  ) : null}
                 </div>
                 <div>
                   <h3 className="font-display text-lg font-semibold text-foreground">{u.title}</h3>
@@ -125,6 +155,17 @@ export function SiteUpdatesAdmin({ updates }: { updates: SiteUpdate[] }) {
                   </Button>
                   <Button type="button" variant="outline" size="sm" onClick={() => toggle(u, "require_ack")} disabled={pending}>
                     {u.require_ack ? "Stop requiring read" : "Require read"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={u.notified_at ? "outline" : "primary"}
+                    size="sm"
+                    onClick={() => notifyAll(u)}
+                    disabled={pending || status !== "live"}
+                    title={status !== "live" ? "Publish it first — only a live update can be sent" : undefined}
+                  >
+                    <BellRing className="h-3.5 w-3.5" aria-hidden />
+                    {u.notified_at ? "Notify new users" : "Notify all users"}
                   </Button>
                   <Button type="button" variant="ghost" size="sm" className="ml-auto text-danger" onClick={() => remove(u)} disabled={pending}>
                     <Trash2 className="h-3.5 w-3.5" aria-hidden />

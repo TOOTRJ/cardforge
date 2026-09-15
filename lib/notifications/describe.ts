@@ -126,6 +126,19 @@ export function describeNotification(
         href: "/dashboard?update-cards=1",
       };
     }
+    case "site_update": {
+      const title = str(payload.title);
+      const summary = str(payload.summary);
+      const link = str(payload.link);
+      const upcoming = str(payload.kind) === "upcoming";
+      return {
+        subject: "PipGlyph team",
+        body: `${upcoming ? "teased what's coming next" : "shipped something new"}: ${title ?? "a site update"}${
+          summary ? ` — ${summary}` : ""
+        }`,
+        href: link && (link.startsWith("/") || link.startsWith("https://")) ? link : "/news",
+      };
+    }
     case "card_limit": {
       const limit = num(payload.limit);
       return {
