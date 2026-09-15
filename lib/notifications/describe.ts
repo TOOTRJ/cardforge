@@ -139,6 +139,19 @@ export function describeNotification(
         href: link && (link.startsWith("/") || link.startsWith("https://")) ? link : "/news",
       };
     }
+    case "deck_generated": {
+      const title = str(payload.title);
+      const slug = str(payload.slug);
+      const done = num(payload.done);
+      const failed = num(payload.failed);
+      return {
+        subject: "Your deck",
+        body: `${title ? `"${title}" ` : ""}finished generating — ${done ?? "the"} card${done === 1 ? "" : "s"} ready${
+          failed ? `, ${failed} need${failed === 1 ? "s" : ""} a retry` : ""
+        }.`,
+        href: slug ? `/deck/${slug}` : "/dashboard/decks",
+      };
+    }
     case "card_limit": {
       const limit = num(payload.limit);
       return {

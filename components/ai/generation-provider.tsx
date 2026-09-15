@@ -8,10 +8,14 @@ import {
   useRef,
   useState,
 } from "react";
-import Link from "next/link";
 import { Check, Loader2, Sparkles, TriangleAlert, X } from "lucide-react";
 import { toast } from "sonner";
 import { publishCredits } from "@/components/billing/credits-bus";
+import { cn } from "@/lib/utils";
+import {
+  GenerationDetailsDialog,
+  type GenerationStats,
+} from "@/components/ai/generation-details-dialog";
 import { useUpgradeModal } from "@/components/billing/upgrade-modal-provider";
 import type {
   GenerationJobOutcome,
@@ -50,6 +54,11 @@ export type GenerationContextValue = {
   busy: boolean;
   hasFailures: boolean;
   run: (body: Record<string, unknown>) => Promise<GenerationJobOutcome>;
+  /** Adopt a finished-with-failures job by id and re-run its failed steps
+   *  (the deck page's "Regenerate" bar). */
+  retryJob: (jobId: string) => Promise<GenerationJobOutcome>;
+  /** Open the progress details dialog (also opened by clicking the widget). */
+  openDetails: () => void;
   retryStep: (stepKey: string) => Promise<GenerationJobOutcome>;
   retryFailed: () => Promise<GenerationJobOutcome>;
 };
@@ -154,6 +163,33 @@ export function GenerationJobProvider({
   const [job, setJob] = useState<JobPayload | null>(null);
   const [slug, setSlug] = useState<string | undefined>(undefined);
   const [widgetDismissed, setWidgetDismissed] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  // Pace bookkeeping for the details dialog's estimate: when the run began
+  // and when each step finished during this session.
+  const [stats, setStats] = useState<GenerationStats>({
+    startedAt: null,
+    completions: [],
+    concurrency: STEP_CONCURRENCY,
+  });
+  const seenTerminalRef = useRef<Set<string>>(new Set());
+  const noteTerminal = useCallback((job: JobPayload) => {
+    const fresh: number[] = [];
+    for (const s of job.steps) {
+      if ((s.status === "done" || s.status === "failed") && !seenTerminalRef.current.has(s.key)) {
+        seenTerminalRef.current.add(s.key);
+        fresh.push(Date.now());
+      }
+    }
+    if (fresh.length > 0) {
+      setStats((prev) => ({ ...prev, completions: [...prev.completions, ...fresh] }));
+    }
+  }, []);
+  const beginStats = useCallback((job: JobPayload) => {
+    seenTerminalRef.current = new Set(
+      job.steps.filter((s) => s.status === "done" || s.status === "failed").map((s) => s.key),
+    );
+    setStats({ startedAt: Date.now(), completions: [], concurrency: STEP_CONCURRENCY });
+  }, []);
   const upgrade = useUpgradeModal();
   // Jobs adopted by auto-resume have no panel awaiting a promise — the
   // provider owns their completion toast.
@@ -217,6 +253,7 @@ export function GenerationJobProvider({
         const snap = snapshot();
         setJob(snap);
         setSteps(order.map((k) => snap.steps.find((s) => s.key === k)!));
+        noteTerminal(snap);
       };
 
       const worker = async (): Promise<void> => {
@@ -262,7 +299,7 @@ export function GenerationJobProvider({
       await Promise.all(Array.from({ length: pool }, () => worker()));
       return snapshot();
     },
-    [],
+    [noteTerminal],
   );
 
   const run = useCallback(
@@ -277,6 +314,8 @@ export function GenerationJobProvider({
       setPhase("planning");
       setSteps([]);
       setJob(null);
+      setStats({ startedAt: Date.now(), completions: [], concurrency: STEP_CONCURRENCY });
+      seenTerminalRef.current = new Set();
       try {
         const planResponse = await fetch("/api/ai/jobs", {
           method: "POST",
@@ -314,6 +353,8 @@ export function GenerationJobProvider({
         setSlug(targetSlug);
         setSteps(startJob.steps);
         setPhase("stepping");
+        // Planning is done; measure painting pace from here.
+        beginStats(startJob);
 
         const finished = await stepUntilDone(startJob);
         setPhase("done");
@@ -333,7 +374,7 @@ export function GenerationJobProvider({
         runningRef.current = false;
       }
     },
-    [stepUntilDone, upgrade],
+    [stepUntilDone, upgrade, beginStats],
   );
 
   const retryStep = useCallback(
@@ -385,6 +426,54 @@ export function GenerationJobProvider({
     }
   }, [job, steps, slug, stepUntilDone]);
 
+  const retryJob = useCallback(
+    async (jobId: string): Promise<GenerationJobOutcome> => {
+      if (runningRef.current) {
+        toast.error("Another generation is already running — let it finish first.");
+        return { ok: false, successes: 0, failures: 0 };
+      }
+      let adopted: JobPayload | null = null;
+      try {
+        const response = await fetch(`/api/ai/jobs/${jobId}`);
+        const payload = await response.json().catch(() => null);
+        if (response.ok && payload?.ok && payload.job) adopted = payload.job as JobPayload;
+      } catch {
+        adopted = null;
+      }
+      if (!adopted) {
+        toast.error("Couldn't load that generation.");
+        return { ok: false, successes: 0, failures: 0 };
+      }
+      runningRef.current = true;
+      setWidgetDismissed(false);
+      setJob(adopted);
+      setSlug(slugOf(adopted));
+      setSteps(adopted.steps);
+      setPhase("stepping");
+      beginStats(adopted);
+      try {
+        let current: JobPayload = adopted;
+        for (const step of adopted.steps.filter((s) => s.status === "failed")) {
+          const result = await postStep(adopted.id, step.key);
+          if ("error" in result) {
+            toast.error(result.error);
+            return outcomeOf(current.steps, slugOf(current));
+          }
+          current = { ...current, ...result.job };
+          setJob(current);
+          setSteps(current.steps);
+          noteTerminal(current);
+        }
+        current = await stepUntilDone(current);
+        return outcomeOf(current.steps, slugOf(current));
+      } finally {
+        setPhase("done");
+        runningRef.current = false;
+      }
+    },
+    [stepUntilDone, beginStats, noteTerminal],
+  );
+
   // ---- Auto-resume: pick up an in-flight job from a previous visit ----
   useEffect(() => {
     let cancelled = false;
@@ -409,6 +498,7 @@ export function GenerationJobProvider({
         setSlug(slugOf(pending));
         setSteps(pending.steps);
         setPhase("stepping");
+        beginStats(pending);
         try {
           const finished = await stepUntilDone(pending);
           setPhase("done");
@@ -442,21 +532,38 @@ export function GenerationJobProvider({
   const doneCardId = steps.find(
     (s) => s.status === "done" && s.card_id,
   )?.card_id;
+  // The widget appears the instant a run starts (planning, before the job
+  // row exists) and stays while stepping or when something needs a retry.
   const showWidget =
     !widgetDismissed &&
-    job !== null &&
-    (busy || (phase === "done" && (failedCount > 0 || runningCount > 0)));
+    (phase === "planning" ||
+      (job !== null && (busy || (phase === "done" && (failedCount > 0 || runningCount > 0)))));
+  const widgetLabel = job ? KIND_LABELS[job.kind] : "Designing…";
+  const href = job ? targetHref(job, slug, doneCardId) : undefined;
+  const targetLabel = job
+    ? `Open ${job.kind === "set" ? "set" : job.kind === "card" || job.kind === "card_remix" ? "card" : "deck"}`
+    : undefined;
+  const openDetails = useCallback(() => setDetailsOpen(true), []);
 
   return (
     <GenerationContext.Provider
-      value={{ phase, steps, busy, hasFailures, run, retryStep, retryFailed }}
+      value={{ phase, steps, busy, hasFailures, run, retryStep, retryFailed, retryJob, openDetails }}
     >
       {children}
 
       {showWidget ? (
-        <div className="fixed bottom-4 right-4 z-50 w-80 rounded-xl border border-border bg-surface/95 p-4 shadow-xl backdrop-blur">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+        <div
+          className="fixed bottom-24 right-4 z-50 w-80 rounded-xl border border-border bg-surface/95 shadow-xl backdrop-blur sm:bottom-28"
+          role="status"
+          aria-live="polite"
+        >
+          <button
+            type="button"
+            onClick={openDetails}
+            className="flex w-full flex-col gap-2 rounded-xl p-4 text-left transition-colors hover:bg-elevated/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60"
+            aria-label={`${widgetLabel} — open details`}
+          >
+            <span className="flex items-center gap-2 pr-6 text-sm font-semibold text-foreground">
               {busy ? (
                 <Loader2 className="h-4 w-4 animate-spin text-accent" aria-hidden />
               ) : failedCount > 0 ? (
@@ -464,75 +571,77 @@ export function GenerationJobProvider({
               ) : (
                 <Check className="h-4 w-4 text-primary-bright" aria-hidden />
               )}
-              {job ? KIND_LABELS[job.kind] : "Generating"}
-            </div>
-            <button
-              type="button"
-              onClick={() => setWidgetDismissed(true)}
-              aria-label="Hide generation status"
-              className="rounded p-0.5 text-subtle transition-colors hover:text-foreground"
-            >
-              <X className="h-3.5 w-3.5" aria-hidden />
-            </button>
-          </div>
-
-          <div className="mt-2 flex items-center gap-2">
-            <div
-              className="h-1.5 flex-1 overflow-hidden rounded-full bg-elevated"
-              role="progressbar"
-              aria-valuenow={doneCount}
-              aria-valuemin={0}
-              aria-valuemax={steps.length}
-            >
-              <div
-                className="h-full rounded-full bg-accent transition-[width]"
-                style={{
-                  width: `${steps.length ? Math.round(((doneCount + failedCount) / steps.length) * 100) : 0}%`,
-                }}
-              />
-            </div>
-            <span className="text-xs tabular-nums text-muted">
-              {doneCount + failedCount}/{steps.length}
+              {widgetLabel}
             </span>
-          </div>
-
-          <p className="mt-2 text-xs leading-5 text-muted">
-            {busy ? (
-              <>
-                Safe to keep browsing — generation continues in the
-                background. If you close the tab it pauses and resumes
-                automatically on your next visit.
-              </>
-            ) : failedCount > 0 ? (
-              <>
-                {failedCount} step{failedCount === 1 ? "" : "s"} failed
-                {firstFailureError ? `: ${firstFailureError}` : ""} — open the
-                generator panel to retry.
-              </>
-            ) : (
-              <>
-                One step is still finishing in the background — it completes
-                or becomes retryable on your next visit.
-              </>
-            )}
-          </p>
-
-          {job && targetHref(job, slug, doneCardId) ? (
-            <Link
-              href={targetHref(job, slug, doneCardId) ?? "#"}
-              className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary-bright underline-offset-2 hover:underline"
-            >
-              <Sparkles className="h-3 w-3" aria-hidden />
-              View{" "}
-              {job.kind === "set"
-                ? "set"
-                : job.kind === "card" || job.kind === "card_remix"
-                  ? "card"
-                  : "deck"}
-            </Link>
-          ) : null}
+            <span className="flex items-center gap-2">
+              <span
+                className={cn(
+                  "h-1.5 flex-1 overflow-hidden rounded-full bg-elevated",
+                  phase === "planning" && "animate-pulse",
+                )}
+                role="progressbar"
+                aria-valuenow={doneCount}
+                aria-valuemin={0}
+                aria-valuemax={steps.length || undefined}
+              >
+                <span
+                  className="block h-full rounded-full bg-accent transition-[width]"
+                  style={{
+                    width:
+                      phase === "planning"
+                        ? "35%"
+                        : `${steps.length ? Math.round(((doneCount + failedCount) / steps.length) * 100) : 0}%`,
+                  }}
+                />
+              </span>
+              <span className="text-xs tabular-nums text-muted">
+                {phase === "planning" ? "plan" : `${doneCount + failedCount}/${steps.length}`}
+              </span>
+            </span>
+            <span className="text-xs leading-5 text-muted">
+              {phase === "planning" ? (
+                <>The AI is designing the deck — painting starts in a moment.</>
+              ) : busy ? (
+                <>Tap for stats and time left. Safe to keep browsing.</>
+              ) : failedCount > 0 ? (
+                <>
+                  {failedCount} step{failedCount === 1 ? "" : "s"} failed
+                  {firstFailureError ? `: ${firstFailureError}` : ""} — tap to retry.
+                </>
+              ) : (
+                <>One step is still finishing in the background — tap for details.</>
+              )}
+            </span>
+            {href ? (
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-primary-bright">
+                <Sparkles className="h-3 w-3" aria-hidden />
+                {targetLabel}
+              </span>
+            ) : null}
+          </button>
+          <button
+            type="button"
+            onClick={() => setWidgetDismissed(true)}
+            aria-label="Hide generation status"
+            className="absolute right-3 top-3 rounded p-0.5 text-subtle transition-colors hover:text-foreground"
+          >
+            <X className="h-3.5 w-3.5" aria-hidden />
+          </button>
         </div>
       ) : null}
+
+      <GenerationDetailsDialog
+        open={detailsOpen}
+        onOpenChange={setDetailsOpen}
+        label={widgetLabel}
+        phase={phase}
+        steps={steps}
+        stats={stats}
+        targetHref={href}
+        targetLabel={targetLabel}
+        onRetryStep={(key) => void retryStep(key)}
+        onRetryFailed={() => void retryFailed()}
+      />
     </GenerationContext.Provider>
   );
 }

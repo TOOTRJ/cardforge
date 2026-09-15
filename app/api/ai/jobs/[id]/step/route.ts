@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { checkAiRateLimit, getFreshCreditBalance } from "@/lib/ai/rate-limit";
 import { runNextJobStep } from "@/lib/ai/generation-jobs";
+import { notifyDeckJobFinished } from "@/lib/ai/job-notify";
 
 // ---------------------------------------------------------------------------
 // POST /api/ai/jobs/[id]/step — execute one step of a generation job (one
@@ -57,6 +58,8 @@ export async function POST(
   if (!result.ok) {
     return NextResponse.json({ ok: false, error: result.error }, { status: 502 });
   }
+  // A finished deck job tells its owner once (bell + realtime toast).
+  if (!result.inFlight) await notifyDeckJobFinished(result.job);
   // inFlight: the wanted step is mid-run in ANOTHER request (parallel worker,
   // second tab). Nothing was executed here — the client should poll, not
   // count a failure or re-request blindly.

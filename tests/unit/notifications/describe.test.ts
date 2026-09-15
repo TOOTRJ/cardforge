@@ -115,3 +115,21 @@ describe("describeNotification — site updates", () => {
     expect(d.href).toBe("/news");
   });
 });
+
+describe("describeNotification — deck generated", () => {
+  it("links to the deck and counts retries", () => {
+    const d = describeNotification(
+      {
+        actor: null,
+        card: null,
+        threadId: null,
+        type: "deck_generated",
+        payload: { jobId: "j", deckId: "d", slug: "gorgon-gaze", title: "Gorgon Gaze", done: 99, failed: 1 },
+      },
+      { isAdmin: false },
+    );
+    expect(d.subject).toBe("Your deck");
+    expect(d.body).toBe('"Gorgon Gaze" finished generating — 99 cards ready, 1 needs a retry.');
+    expect(d.href).toBe("/deck/gorgon-gaze");
+  });
+});
