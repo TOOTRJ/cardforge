@@ -240,7 +240,7 @@ async function pngForCard(
     }
   }
   try {
-    const img = renderCardImage(
+    const img = await renderCardImage(
       { ...toPreviewData(card), profileOverrides },
       "hd",
       { brandMark: options.brandMark, watermarkText: options.watermarkText },

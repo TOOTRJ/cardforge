@@ -14,6 +14,7 @@
 // declares `display: flex`.
 
 import { ImageResponse } from "next/og";
+import { resolveRenderableImage } from "@/lib/render/art-source";
 import { fitRulesSizePct, fitSingleLineSizePct } from "@/lib/cards/render-tiers";
 import { tokenize, tokenSuffix } from "@/components/cards/mana-cost-glyphs";
 import { ROSE_STAR_PATH, SET_MARK_GEM_PATH, SET_MARK_RING, SET_MARK_STAR_PATH } from "@/lib/brand/geometry";
@@ -1758,11 +1759,53 @@ function SecondFaceBake({
 // Public renderer
 // ---------------------------------------------------------------------------
 
-export function renderCardImage(
+/**
+ * Every raster the card embeds, resolved to a Satori-decodable data: URL
+ * (lib/render/art-source.ts): the art (front + inline second face), a custom
+ * design watermark, an uploaded set icon, and the owner's custom pips. WebP
+ * and GIF sources used to throw inside Satori and fail the whole render.
+ */
+async function withRenderableImages(
   card: CardPreviewData,
+): Promise<CardPreviewData> {
+  const pipEntries = Object.entries(card.pipOverrides ?? {});
+  const [artUrl, secondArtUrl, watermarkUrl, setIconUrl, ...pipUrls] =
+    await Promise.all([
+      resolveRenderableImage(card.artUrl),
+      resolveRenderableImage(card.backFace?.art_url),
+      resolveRenderableImage(
+        card.watermark?.kind === "custom" ? card.watermark.url : null,
+      ),
+      resolveRenderableImage(card.setIconUrl),
+      ...pipEntries.map(([, url]) => resolveRenderableImage(url)),
+    ]);
+  const pipOverrides =
+    pipEntries.length > 0
+      ? (Object.fromEntries(
+          pipEntries.map(([symbol], i) => [symbol, pipUrls[i] ?? null]),
+        ) as CardPreviewData["pipOverrides"])
+      : card.pipOverrides;
+  return {
+    ...card,
+    artUrl: artUrl ?? card.artUrl,
+    setIconUrl: setIconUrl ?? card.setIconUrl,
+    pipOverrides,
+    backFace: card.backFace
+      ? { ...card.backFace, art_url: secondArtUrl ?? card.backFace.art_url }
+      : card.backFace,
+    watermark:
+      card.watermark?.kind === "custom" && watermarkUrl
+        ? { ...card.watermark, url: watermarkUrl }
+        : card.watermark,
+  };
+}
+
+export async function renderCardImage(
+  source: CardPreviewData,
   preset: RenderPreset = "default",
   opts: { brandMark?: boolean; watermarkText?: string | null } = {},
-): ImageResponse {
+): Promise<ImageResponse> {
+  const card = await withRenderableImages(source);
   const base = RENDER_PRESETS[preset];
   // Landscape (Battle) frames swap the canvas to 7:5 so the bake matches the
   // preview's landscape container. All slot rects are % of the card, so they

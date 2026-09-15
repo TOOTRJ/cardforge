@@ -156,7 +156,7 @@ export async function GET(
   const stamp = await ownerExportStamp(card.owner_id);
   let pngBytes: Uint8Array;
   try {
-    const imgResponse = renderCardImage(previewData, "hd", {
+    const imgResponse = await renderCardImage(previewData, "hd", {
       // Cleared by EITHER side's plan — see the png route for the rationale.
       brandMark: stamp.brandMark && !entitlements.removeWatermark,
       watermarkText: stamp.footerText,
