@@ -7,13 +7,30 @@
 //   * renderer changes (lib/render/card-image.tsx) or shared text logic
 //     (rules-text tokenizer, fit sizing, fonts)
 //   * frame PNG asset replacements
-// then run `node scripts/rebake-renders.mjs` so stored gallery PNGs catch up
-// (detail pages and downloads always render live and need no sweep).
+//
+// What happens to existing cards after a bump (2026-09 onward):
+//   * The OWNER sees a "newer look available" badge on each affected card
+//     (dashboard tile + edit page), can compare the stored image with the
+//     live preview, and re-bakes it — one card or all of them
+//     (lib/cards/render-actions.ts, components/cards/render-update.tsx).
+//   * Stale cards render live for OG images and downloads anyway
+//     (lib/render/stored-render.ts), so nothing is wrong meanwhile — only
+//     the gallery tile shows the older image.
+//   * `node scripts/rebake-renders.mjs` (admin sweep) still exists for
+//     corrections every card should get without asking (text clipping, the
+//     2026-09 land fix) — reserve owner-driven updates for changes a user
+//     might reasonably prefer to keep.
+//
+// If a bump only touches SOME frame templates, list them in
+// TEMPLATE_SCOPED_VERSIONS below: cards on other templates are not marked
+// stale by it (and the sweep / "update all" fast-forward their stamp
+// without a render, because their stored PNG is already what the renderer
+// would produce). A bump missing from the map touches every card.
 //
 // DB-driven geometry (frame_profile_overrides, edited in /admin/frame-
 // compare) does NOT bump this constant — the save action marks affected
-// cards stale directly via `layout_version = null`, which the same rebake
-// sweep picks up.
+// cards stale directly via `layout_version = null`, which every stale
+// check below treats as "needs a render".
 //
 // History:
 //   (null) — renders baked before versioning existed (pre 2026-06-09)
@@ -77,3 +94,45 @@
 // ---------------------------------------------------------------------------
 
 export const CARD_LAYOUT_VERSION = 19;
+
+/**
+ * Bumps that changed the output of only some frame templates, keyed by the
+ * version they introduced. Every bump through 19 touched every card (fonts,
+ * brand mark, set emblem, footer), so the map starts empty; add an entry
+ * with the next template-scoped change, e.g. `20: ["m15", "m15land"]`.
+ * Template keys match `frame_style.template` (types/card.ts
+ * FRAME_TEMPLATE_VALUES).
+ */
+export const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {};
+
+/** `frame_style.template` from the jsonb column, or null when absent. */
+export function templateOfFrameStyle(frameStyle: unknown): string | null {
+  if (!frameStyle || typeof frameStyle !== "object") return null;
+  const template = (frameStyle as { template?: unknown }).template;
+  return typeof template === "string" && template ? template : null;
+}
+
+/**
+ * True when a stored render baked at `layoutVersion` no longer matches what
+ * the current renderer would produce for a card on `template`.
+ *
+ *   null version → stale (never versioned, or marked stale by a frame-profile
+ *   override save). A version at or above the current one → current. In
+ *   between → stale only if some later bump touched every template or this
+ *   one (an unknown template is treated as touched — conservative).
+ */
+export function isRenderStale(
+  layoutVersion: number | null | undefined,
+  template: string | null | undefined,
+  scoped: Readonly<Record<number, readonly string[]>> = TEMPLATE_SCOPED_VERSIONS,
+  current: number = CARD_LAYOUT_VERSION,
+): boolean {
+  if (layoutVersion == null || !Number.isFinite(layoutVersion)) return true;
+  if (layoutVersion >= current) return false;
+  for (let version = layoutVersion + 1; version <= current; version += 1) {
+    const templates = scoped[version];
+    if (!templates) return true; // touched every card
+    if (!template || templates.includes(template)) return true;
+  }
+  return false;
+}
