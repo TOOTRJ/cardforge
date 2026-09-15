@@ -169,9 +169,16 @@ type CardCreatorFormProps = {
   card?: Card | null;
   /** The current user's sets — populates the "Add to set" picker on Publish. */
   mySets?: CardSetOption[];
-  /** The current user's decks — the Publish "Add to deck" picker. `null`
-   *  (the default) hides the picker; only /create passes a list. */
+  /** The current user's decks — the Publish "Add to deck" picker and the AI
+   *  dialog's "For a deck" picker. `null` (the default) hides both. */
   myDecks?: DeckOption[] | null;
+  /** Decks for the AI dialog's "For a deck" picker when the Publish deck
+   *  picker must stay hidden (edit mode — deck linkage is create-only).
+   *  Defaults to `myDecks`. */
+  aiDecks?: DeckOption[] | null;
+  /** Pro entitlement for deck-aware AI generation (the AI dialog's "For a
+   *  deck" picker renders locked without it). */
+  canDesignForDeck?: boolean;
   /** The current user's cards — the Publish "back face" picker. Excludes the
    *  card being edited (filtered by the page). */
   myCards?: Card[];
@@ -251,6 +258,8 @@ export function CardCreatorForm({
   card,
   mySets = [],
   myDecks = null,
+  aiDecks = null,
+  canDesignForDeck = false,
   myCards = [],
   backForCardId = null,
   backForSlug = null,
@@ -1222,8 +1231,13 @@ export function CardCreatorForm({
       }
       // Persistent by design (owner request): stays until the link is
       // clicked or the toast is dismissed via its close button.
+      const forDeck = options.deck_id
+        ? (aiDecks ?? myDecks ?? []).find((d) => d.id === options.deck_id) ?? null
+        : null;
       toast.success("Your card is forged.", {
-        description: "Original art painted — it's saved to your library.",
+        description: forDeck
+          ? `Designed for ${forDeck.title} and added to it — original art painted.`
+          : "Original art painted — it's saved to your library.",
         duration: Infinity,
         closeButton: true,
         ...(outcome.cardId
@@ -1231,6 +1245,14 @@ export function CardCreatorForm({
               action: {
                 label: "View card",
                 onClick: () => router.push(`/go/card/${outcome.cardId}`),
+              },
+            }
+          : {}),
+        ...(forDeck?.slug
+          ? {
+              cancel: {
+                label: "Open deck",
+                onClick: () => router.push(`/deck/${forDeck.slug}/edit`),
               },
             }
           : {}),
@@ -1973,6 +1995,8 @@ export function CardCreatorForm({
             verifiedFrameKeys={verifiedFrameKeys}
             generating={generatingRandom}
             onGenerate={(options) => void handleRandomCard(options)}
+            myDecks={aiDecks ?? myDecks}
+            canDesignForDeck={canDesignForDeck}
           />
 
           {/* Kind-change confirmation — only when the current era can't frame

@@ -109,6 +109,7 @@ export const PLANS: PlanDisplay[] = [
     // Pro's deck story is the credit headroom, not an unlock.
     features: [
       "75 AI credits every month — enough for whole decks",
+      "AI cards designed for a specific deck",
       "Batch & whole-deck export",
       "Unlimited saved cards",
       "Priority AI queue",

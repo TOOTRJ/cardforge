@@ -4,7 +4,10 @@ import { useMemo, useState } from "react";
 import { Coins, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CreditMeter } from "@/components/billing/credit-meter";
+import { PremiumBadge } from "@/components/billing/premium-badge";
+import { useUpgradeModal } from "@/components/billing/upgrade-modal-provider";
 import { isBillingEnabled } from "@/lib/billing/flags";
+import type { DeckOption } from "@/components/creator/panels/publish-panel";
 import {
   Dialog,
   DialogContent,
@@ -43,6 +46,8 @@ export type AiGenerateOptions = {
   card_type?: CardType;
   frame?: FrameTemplate | "random";
   rarity?: Rarity;
+  /** Pro: design the card for this deck and add it there. */
+  deck_id?: string;
 };
 
 const AI_CARD_TYPES: CardType[] = [
@@ -79,18 +84,38 @@ export function AiGenerateDialog({
   verifiedFrameKeys,
   generating,
   onGenerate,
+  myDecks = null,
+  canDesignForDeck = false,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   verifiedFrameKeys: string[];
   generating: boolean;
   onGenerate: (options: AiGenerateOptions) => void;
+  /** The user's decks for the "For a deck" picker; null/empty hides it. */
+  myDecks?: DeckOption[] | null;
+  /** Pro entitlement: without it the picker is shown locked. */
+  canDesignForDeck?: boolean;
 }) {
+  const upgrade = useUpgradeModal();
   const [theme, setTheme] = useState("");
   const [style, setStyle] = useState("");
   const [cardType, setCardType] = useState<CardType | "random">("random");
   const [frame, setFrame] = useState<FrameTemplate | "random">("random");
   const [rarity, setRarity] = useState<Rarity | "random">("random");
+  const [deckId, setDeckId] = useState<string>("");
+  const decks = myDecks ?? [];
+  const selectedDeck = decks.find((d) => d.id === deckId) ?? null;
+
+  // Picking a deck imports the theme/style it was last generated with, so
+  // the new card reads as part of the same set. Clearing the deck leaves
+  // whatever the user typed.
+  const handleDeckChange = (nextId: string) => {
+    setDeckId(nextId);
+    const deck = decks.find((d) => d.id === nextId);
+    if (deck?.theme) setTheme(deck.theme);
+    if (deck?.style) setStyle(deck.style);
+  };
 
   const frameOptions = useMemo(() => {
     if (cardType === "random") return [];
@@ -117,6 +142,7 @@ export function AiGenerateDialog({
       // this dialog — only API callers that omit `frame` get it.
       frame: cardType === "random" && frame === "random" ? "random" : frame,
       rarity: rarity === "random" ? undefined : rarity,
+      deck_id: canDesignForDeck && deckId ? deckId : undefined,
     });
   };
 
@@ -140,6 +166,50 @@ export function AiGenerateDialog({
         {/* px-5 matches DialogHeader/Footer — the fields were flush with the
             dialog edges. */}
         <div className="flex flex-col gap-4 px-5 py-5">
+          {decks.length > 0 ? (
+            <FieldGroup
+              label="For a deck"
+              helper={
+                canDesignForDeck
+                  ? selectedDeck
+                    ? `The AI studies ${selectedDeck.title}'s colors, curve and cards, designs the card it's missing, and adds it to the deck.`
+                    : "Optional. Pick a deck and the AI designs a card that fits it — theme and style come along."
+                  : "Pro: point the AI at one of your decks and it designs the card that deck is missing, then adds it there."
+              }
+            >
+              {canDesignForDeck ? (
+                <select
+                  value={deckId}
+                  onChange={(event) => handleDeckChange(event.target.value)}
+                  className={inputClass(false)}
+                  disabled={generating}
+                >
+                  <option value="">Not for a deck</option>
+                  {decks.map((deck) => (
+                    <option key={deck.id} value={deck.id}>
+                      {deck.title}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <div className="flex flex-wrap items-center gap-2">
+                  <select className={inputClass(false)} disabled>
+                    <option>Not for a deck</option>
+                  </select>
+                  <PremiumBadge />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => upgrade.open("deck_aware_generation")}
+                  >
+                    Unlock with Pro
+                  </Button>
+                </div>
+              )}
+            </FieldGroup>
+          ) : null}
+
           <FieldGroup
             label="Theme"
             helper="What the card is about — a place, a character, a moment."

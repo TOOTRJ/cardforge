@@ -179,7 +179,11 @@ function batchPrompt(input: DesignBatchInput): string {
       `Art & tone style: ${input.style.trim().slice(0, 200)} — every art_prompt must explicitly render in this style, and names/flavor should suit it.`,
     );
   }
-  if (input.context?.trim()) lines.push(input.context.trim().slice(0, 1400));
+  // A deck brief (single-card, deck-aware) is far longer than a set/deck
+  // blurb; one card per call leaves room for it.
+  if (input.context?.trim()) {
+    lines.push(input.context.trim().slice(0, input.slots.length === 1 ? 6000 : 1400));
+  }
   lines.push(
     `Design exactly ${input.slots.length} card${input.slots.length === 1 ? "" : "s"}:`,
   );
@@ -458,6 +462,9 @@ export type SingleCardOptions = {
   cardType?: CardType;
   rarity?: Rarity;
   colorHint?: ColorIdentity;
+  /** Extra prose — the deck brief when the card is designed for a deck
+   *  (lib/ai/deck-brief.ts). */
+  context?: string;
 };
 
 /** Design one card. Used by the random-card flow and the options dialog. */
@@ -467,13 +474,15 @@ export async function designSingleCard(
   const { cards, report } = await designCards({
     theme: options.theme,
     style: options.style,
+    context: options.context,
     slots: [
       {
         cardType: options.cardType,
         rarity: options.rarity,
         colorHint: options.colorHint,
-        note:
-          options.theme || options.style || options.cardType
+        note: options.context
+          ? "The one card this deck is missing — see the deck brief above."
+          : options.theme || options.style || options.cardType
             ? undefined
             : "No steering — surprise the user with a creative, well-rounded design.",
       },
