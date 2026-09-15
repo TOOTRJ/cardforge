@@ -11,8 +11,14 @@
 // What happens to existing cards after a bump (2026-09 onward):
 //   * The OWNER sees a "newer look available" badge on each affected card
 //     (dashboard tile + edit page), can compare the stored image with the
-//     live preview, and re-bakes it — one card or all of them
-//     (lib/cards/render-actions.ts, components/cards/render-update.tsx).
+//     live preview, and re-bakes it — one card at a time in the dashboard
+//     walkthrough or all of them, each behind a "this is permanent"
+//     confirmation (lib/cards/render-actions.ts,
+//     components/cards/render-update.tsx).
+//   * The daily cron /api/cron/notify-render-updates tells each affected
+//     owner ONCE per version (a `render_update` notification whose link
+//     opens the walkthrough). Trigger it by hand right after the deploy:
+//     curl -H "Authorization: Bearer $CRON_SECRET" .../api/cron/notify-render-updates
 //   * Stale cards render live for OG images and downloads anyway
 //     (lib/render/stored-render.ts), so nothing is wrong meanwhile — only
 //     the gallery tile shows the older image.

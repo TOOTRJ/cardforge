@@ -116,6 +116,16 @@ export function describeNotification(
         href: "/settings",
       };
     }
+    case "render_update": {
+      const count = num(payload.count);
+      return {
+        subject: "PipGlyph team",
+        body: `updated the card frames — ${count ?? "some"} of your cards ${
+          count === 1 ? "has" : "have"
+        } a newer look available. Compare each one and choose whether to update it.`,
+        href: "/dashboard?update-cards=1",
+      };
+    }
     case "card_limit": {
       const limit = num(payload.limit);
       return {

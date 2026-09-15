@@ -70,3 +70,18 @@ describe("describeNotification — one copy source for bell, page and toast", ()
     });
   });
 });
+
+describe("describeNotification — render updates", () => {
+  it("counts the affected cards and links to the walkthrough", () => {
+    const d = describeNotification(
+      { type: "render_update", actor: null, card: null, threadId: null, payload: { version: 20, count: 3 } },
+      { isAdmin: false },
+    );
+    expect(d.subject).toBe("PipGlyph team");
+    expect(d.body).toBe("updated the card frames — 3 of your cards have a newer look available. Compare each one and choose whether to update it.");
+    expect(d.href).toBe("/dashboard?update-cards=1");
+    expect(
+      describeNotification({ type: "render_update", actor: null, card: null, threadId: null, payload: { version: 20, count: 1 } }, { isAdmin: false }).body,
+    ).toMatch(/1 of your cards has a newer look/);
+  });
+});

@@ -48,6 +48,7 @@ export const NOTIFICATION_ICON: Record<string, typeof Bell> = {
   credit_grant: Coins,
   comp_plan: Crown,
   card_limit: Layers,
+  render_update: Sparkles,
 };
 
 type NotificationBellProps = {
