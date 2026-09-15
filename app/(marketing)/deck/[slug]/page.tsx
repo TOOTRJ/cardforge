@@ -150,22 +150,29 @@ export default async function DeckDetailPage({
         Back to decks
       </Link>
 
-      {/* Cover + header */}
+      {/* Cover + header. The cover is the same 16:9 box every deck tile
+          uses (lib/decks/cover.ts), so it crops identically here, on the
+          public grid and on the dashboard. */}
       <SurfaceCard className="overflow-hidden p-0">
-        {deck.cover_url ? (
-          <div className="relative aspect-[5/2] w-full overflow-hidden bg-elevated">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={deck.cover_url}
-              alt={`${deck.title} cover`}
-              className="h-full w-full object-cover"
-              style={{
-                objectPosition: coverObjectPosition(deck.cover_position),
-              }}
-            />
+        <div className="grid gap-0 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+          <div className="relative aspect-video w-full overflow-hidden bg-elevated md:h-full md:min-h-full">
+            {deck.cover_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={deck.cover_url}
+                alt={`${deck.title} cover`}
+                className="absolute inset-0 h-full w-full object-cover"
+                style={{
+                  objectPosition: coverObjectPosition(deck.cover_position),
+                }}
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center bg-linear-to-br from-elevated via-surface to-background">
+                <BookOpen className="h-10 w-10 text-subtle" aria-hidden />
+              </div>
+            )}
           </div>
-        ) : null}
-        <div className="flex flex-col gap-4 p-8 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-4 p-6 sm:flex-row sm:items-start sm:justify-between md:p-8">
           <div className="flex flex-col gap-2">
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="primary">{DECK_FORMAT_LABELS[deck.format]}</Badge>
@@ -220,6 +227,7 @@ export default async function DeckDetailPage({
               </Button>
             ) : null}
           </div>
+        </div>
         </div>
       </SurfaceCard>
 

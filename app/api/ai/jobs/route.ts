@@ -292,23 +292,17 @@ export async function POST(request: Request) {
 
   // Credits are metered per card as steps complete; pre-check the balance so
   // a user doesn't burn a plan call they can't afford (billing off → ∞).
-  // Batch kinds also charge for their cover (and a set's icon) — count those
-  // too rather than let the job run out one step from the finish line. The
-  // count can over-ask by 1 for add-to-deck mode when the deck already has a
-  // cover; erring toward "have one spare credit" beats a mid-job failure.
+  // Covers are free (owner decision, 2026-09-15) — only the cards cost
+  // credits. A set still charges for its icon, so count that one extra
+  // rather than let the job run out one step from the finish line.
   if (isBillingEnabled()) {
-    const needed =
-      parsed.data.kind === "set"
-        ? size + 2 // cover + icon
-        : parsed.data.kind === "deck" || parsed.data.kind === "deck_remix"
-          ? size + 1 // cover
-          : size;
+    const needed = parsed.data.kind === "set" ? size + 1 : size;
     const entitlements = await getEntitlements();
     if (entitlements.credits < needed) {
       return NextResponse.json(
         {
           ok: false,
-          error: `You need ${needed} credits for this generation — ${size} card${size === 1 ? "" : "s"} plus artwork extras (you have ${entitlements.credits}).`,
+          error: `You need ${needed} credit${needed === 1 ? "" : "s"} for this generation — ${size} card${size === 1 ? "" : "s"}${needed > size ? " plus the set icon" : ""} (you have ${entitlements.credits}).`,
           code: "INSUFFICIENT_CREDITS",
           balance: entitlements.credits,
           needed,

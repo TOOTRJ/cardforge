@@ -252,7 +252,7 @@ export function AiDeckPanel({
                 ? `Uses up to ${maxCards} credits`
                 : `Uses ${size} credit${size === 1 ? "" : "s"}`}
             </span>{" "}
-            (1 per card) · publishes publicly
+            (1 per card · cover art is free) · publishes publicly
             {mode === "remix" ? ` · first ${maxCards} cards this generation` : ""}
           </span>
         </span>
