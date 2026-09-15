@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -59,6 +59,12 @@ export function NotificationBell({ initialUnread, isAdmin = false }: Notificatio
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState(initialUnread);
+  // The server re-renders the header with a fresh count after router.refresh()
+  // (a thread or the notifications page marking itself read) — without this
+  // sync the badge kept the number it mounted with until a full reload.
+  useEffect(() => {
+    setUnread(initialUnread);
+  }, [initialUnread]);
   const [items, setItems] = useState<NotificationItem[] | null>(null);
   const [loading, setLoading] = useState(false);
 
