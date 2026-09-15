@@ -3,12 +3,17 @@
 // Text panel — rules/flavor text with the symbol toolbar. Regrouped from the
 // old rules step (the stat inputs moved to the Abilities panel; the AI
 // assistant moved to the ForgeAIPanel, rendered at the bottom of the step).
-// The caret-preserving symbol insertion (shared with the Layout panel's
-// back-face textarea) stays in the orchestrator and arrives here as the
-// hoisted field registration + ref + insert callback.
+// The rules box is a PipTextEditor: it draws {T}/{G} codes as real pips while
+// the form keeps the brace-code string. The orchestrator owns the handle ref
+// so the toolbar (here and on the Layout panel's back face) can insert at the
+// caret.
 
-import { useFormContext, type UseFormRegisterReturn } from "react-hook-form";
+import { useController, useFormContext } from "react-hook-form";
 import { RulesSymbolToolbar } from "@/components/creator/rules-symbol-toolbar";
+import {
+  PipTextEditor,
+  type PipTextEditorHandle,
+} from "@/components/creator/pip-text-editor";
 import {
   FieldGroup,
   textareaClass,
@@ -16,41 +21,42 @@ import {
 import type { FormValues } from "@/lib/creator/form-types";
 
 type TextPanelProps = {
-  /** Hoisted register("rules_text") result — merged with the caret ref below. */
-  rulesTextField: UseFormRegisterReturn<"rules_text">;
-  rulesTextRef: React.MutableRefObject<HTMLTextAreaElement | null>;
-  /** Caret-preserving symbol insertion into rules_text (orchestrator-owned). */
+  rulesTextRef: React.MutableRefObject<PipTextEditorHandle | null>;
+  /** Symbol insertion into rules_text at the caret (orchestrator-owned). */
   onInsertSymbol: (token: string) => void;
 };
 
-export function TextPanel({
-  rulesTextField,
-  rulesTextRef,
-  onInsertSymbol,
-}: TextPanelProps) {
+export function TextPanel({ rulesTextRef, onInsertSymbol }: TextPanelProps) {
   const {
+    control,
     register,
     formState: { errors },
   } = useFormContext<FormValues>();
+  const { field, fieldState } = useController({ control, name: "rules_text" });
 
   return (
     <>
       <FieldGroup
         label="Rules text"
-        error={errors.rules_text?.message}
-        helper="Symbols render as real pips on the card — click one above or type the {T} / {2} / {W/U} code. Up to 4000 characters."
+        error={fieldState.error?.message}
+        helper="Click a symbol to drop it in at the cursor — or type its code ({T}, {2}, {W/U}) and it turns into the icon. Up to 4000 characters."
       >
         <div className="flex flex-col gap-2">
           <RulesSymbolToolbar onInsert={onInsertSymbol} />
-          <textarea
-            {...rulesTextField}
-            ref={(el) => {
-              rulesTextField.ref(el);
-              rulesTextRef.current = el;
+          <PipTextEditor
+            ref={(handle) => {
+              rulesTextRef.current = handle;
+              field.ref(handle);
             }}
+            name={field.name}
+            value={field.value ?? ""}
+            onChange={field.onChange}
+            onBlur={field.onBlur}
+            aria-label="Rules text"
+            aria-invalid={Boolean(fieldState.error)}
             placeholder="{T}: Add {G}. Whenever this creature attacks, draw a card."
             rows={6}
-            className={textareaClass(Boolean(errors.rules_text))}
+            className={textareaClass(Boolean(fieldState.error))}
           />
         </div>
       </FieldGroup>

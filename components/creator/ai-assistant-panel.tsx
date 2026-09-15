@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { InlinePips } from "@/components/cards/inline-pips";
 import { Badge } from "@/components/ui/badge";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { cn } from "@/lib/utils";
@@ -477,7 +478,7 @@ function SuggestionBody({
       return (
         <div className="flex flex-col gap-3">
           <p className="whitespace-pre-line rounded-md border border-border/60 bg-surface/60 p-3 text-sm text-foreground">
-            {rules_text}
+            <InlinePips text={rules_text} />
           </p>
           <p className="text-xs italic leading-5 text-muted">{reasoning}</p>
           <div className="flex flex-wrap items-center justify-end gap-2">
@@ -626,7 +627,7 @@ function SuggestionBody({
         <div className="flex flex-col gap-3">
           <dl className="grid gap-x-4 gap-y-1.5 text-sm sm:grid-cols-2">
             <DraftRow label="Title" value={draft.title} />
-            <DraftRow label="Cost" value={draft.cost ?? "—"} mono />
+            <DraftRow label="Cost" value={draft.cost ? <InlinePips text={draft.cost} /> : "—"} />
             <DraftRow label="Type" value={draft.card_type} />
             {draft.supertype ? (
               <DraftRow label="Supertype" value={draft.supertype} />
@@ -655,7 +656,7 @@ function SuggestionBody({
               Rules text
             </span>
             <p className="whitespace-pre-line rounded-md border border-border/60 bg-surface/60 p-3 text-sm text-foreground">
-              {draft.rules_text}
+              <InlinePips text={draft.rules_text} />
             </p>
           </div>
           {draft.flavor_text ? (
@@ -765,7 +766,7 @@ function DraftRow({
   mono = false,
 }: {
   label: string;
-  value: string;
+  value: React.ReactNode;
   mono?: boolean;
 }) {
   return (

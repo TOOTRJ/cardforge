@@ -61,6 +61,7 @@ import { CardSetupPanel } from "@/components/creator/panels/card-setup-panel";
 import { KindChangeDialog } from "@/components/creator/kind-change-dialog";
 import { ArtPanel } from "@/components/creator/panels/art-panel";
 import { TextPanel } from "@/components/creator/panels/text-panel";
+import type { PipTextEditorHandle } from "@/components/creator/pip-text-editor";
 import { LandIconPanel } from "@/components/creator/panels/land-icon-panel";
 import { SetIconPanel } from "@/components/creator/panels/set-icon-panel";
 import { ForgeAIPanel } from "@/components/creator/panels/forge-ai-panel";
@@ -404,7 +405,6 @@ export function CardCreatorForm({
     reValidateMode: "onChange",
   });
   const {
-    register,
     handleSubmit,
     setValue,
     setError,
@@ -863,32 +863,16 @@ export function CardCreatorForm({
     }
   }, [currentTemplate, watched.has_back_face, setValue]);
 
-  // Caret-preserving symbol insertion for the rules textareas (front + back).
-  // register() is hoisted so the field ref can be merged with a local DOM ref.
-  const rulesTextField = register("rules_text");
-  const backRulesTextField = register("back_face.rules_text");
-  const rulesTextRef = useRef<HTMLTextAreaElement | null>(null);
-  const backRulesTextRef = useRef<HTMLTextAreaElement | null>(null);
+  // Symbol insertion for the rules editors (front + back): the PipTextEditor
+  // owns the caret and drops the pip in place, then reports the new
+  // brace-code string through its field onChange.
+  const rulesTextRef = useRef<PipTextEditorHandle | null>(null);
+  const backRulesTextRef = useRef<PipTextEditorHandle | null>(null);
   const insertSymbol = (
-    field: "rules_text" | "back_face.rules_text",
-    ref: React.MutableRefObject<HTMLTextAreaElement | null>,
+    ref: React.MutableRefObject<PipTextEditorHandle | null>,
     token: string,
   ) => {
-    const el = ref.current;
-    const current =
-      field === "rules_text"
-        ? getValues("rules_text") ?? ""
-        : getValues("back_face.rules_text") ?? "";
-    const start = el?.selectionStart ?? current.length;
-    const end = el?.selectionEnd ?? current.length;
-    const next = current.slice(0, start) + token + current.slice(end);
-    setValue(field, next, { shouldDirty: true });
-    requestAnimationFrame(() => {
-      if (!el) return;
-      el.focus();
-      const caret = start + token.length;
-      el.setSelectionRange(caret, caret);
-    });
+    ref.current?.insertToken(token);
   };
 
   // Slice of the live form state the AI panel sends as context. Stripping
@@ -1913,14 +1897,9 @@ export function CardCreatorForm({
                         userId={userId}
                         hasBackFace={watched.has_back_face}
                         isAdventureFrame={isAdventureFrame}
-                        backRulesTextField={backRulesTextField}
                         backRulesTextRef={backRulesTextRef}
                         onInsertSymbol={(token) =>
-                          insertSymbol(
-                            "back_face.rules_text",
-                            backRulesTextRef,
-                            token,
-                          )
+                          insertSymbol(backRulesTextRef, token)
                         }
                         onBackFaceAdded={() => setPreviewFace("back")}
                       />
@@ -1948,10 +1927,9 @@ export function CardCreatorForm({
                   <SagaChaptersEditor />
                 ) : (
                   <TextPanel
-                    rulesTextField={rulesTextField}
                     rulesTextRef={rulesTextRef}
                     onInsertSymbol={(token) =>
-                      insertSymbol("rules_text", rulesTextRef, token)
+                      insertSymbol(rulesTextRef, token)
                     }
                   />
                 )}

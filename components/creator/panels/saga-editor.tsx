@@ -5,13 +5,24 @@
 // Replaces the raw rules textarea on the Text step for sagas; rows serialize
 // into face_content AND a canonical rules_text on save.
 
-import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
+import { useRef } from "react";
+import {
+  useController,
+  useFieldArray,
+  useFormContext,
+  useWatch,
+} from "react-hook-form";
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   FieldGroup,
   textareaClass,
 } from "@/components/creator/field-group";
+import {
+  PipTextEditor,
+  type PipTextEditorHandle,
+} from "@/components/creator/pip-text-editor";
+import { RulesSymbolToolbar } from "@/components/creator/rules-symbol-toolbar";
 import { cn } from "@/lib/utils";
 import type { FormValues } from "@/lib/creator/form-types";
 
@@ -21,7 +32,6 @@ const NUMERALS = ["I", "II", "III", "IV", "V", "VI"] as const;
 export function SagaChaptersEditor() {
   const {
     control,
-    register,
     setValue,
     formState: { errors },
   } = useFormContext<FormValues>();
@@ -31,6 +41,13 @@ export function SagaChaptersEditor() {
   });
   // Live numeral values so the toggles reflect state (fields snapshots lag).
   const rows = useWatch({ control, name: "saga_chapters" }) ?? [];
+  // One toolbar for the whole editor: symbols go into the box that last had
+  // focus (the intro line until one is clicked).
+  const focusedBox = useRef<PipTextEditorHandle | null>(null);
+  const introBox = useRef<PipTextEditorHandle | null>(null);
+  const insertSymbol = (token: string) =>
+    (focusedBox.current ?? introBox.current)?.insertToken(token);
+  const intro = useController({ control, name: "saga_intro" });
 
   return (
     <>
@@ -39,13 +56,27 @@ export function SagaChaptersEditor() {
         helper="The line above chapter I — e.g. the lore-counter reminder. Optional."
         error={errors.saga_intro?.message}
       >
-        <textarea
-          {...register("saga_intro")}
-          placeholder="(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)"
-          rows={2}
-          aria-invalid={Boolean(errors.saga_intro)}
-          className={textareaClass(Boolean(errors.saga_intro))}
-        />
+        <div className="flex flex-col gap-2">
+          <RulesSymbolToolbar onInsert={insertSymbol} />
+          <PipTextEditor
+            ref={(handle) => {
+              introBox.current = handle;
+              intro.field.ref(handle);
+            }}
+            name={intro.field.name}
+            value={intro.field.value ?? ""}
+            onChange={intro.field.onChange}
+            onBlur={intro.field.onBlur}
+            onFocus={() => {
+              focusedBox.current = introBox.current;
+            }}
+            placeholder="(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)"
+            rows={2}
+            aria-label="Saga intro"
+            aria-invalid={Boolean(errors.saga_intro)}
+            className={textareaClass(Boolean(errors.saga_intro))}
+          />
+        </div>
       </FieldGroup>
 
       <FieldGroup
@@ -101,17 +132,12 @@ export function SagaChaptersEditor() {
                     <Trash2 className="h-4 w-4" aria-hidden />
                   </Button>
                 </div>
-                <textarea
-                  {...register(`saga_chapters.${i}.text`)}
-                  placeholder={
-                    i === 0
-                      ? "Create a 2/2 white Knight creature token with vigilance."
-                      : "Knights you control get +2/+1 until end of turn."
-                  }
-                  rows={2}
-                  aria-label={`Chapter row ${i + 1} effect`}
-                  aria-invalid={Boolean(errors.saga_chapters?.[i]?.text)}
-                  className={textareaClass(Boolean(errors.saga_chapters?.[i]?.text))}
+                <SagaRowText
+                  index={i}
+                  hasError={Boolean(errors.saga_chapters?.[i]?.text)}
+                  onFocus={(handle) => {
+                    focusedBox.current = handle;
+                  }}
                 />
                 {errors.saga_chapters?.[i]?.text?.message ? (
                   <span role="alert" className="text-xs text-danger">
@@ -143,5 +169,44 @@ export function SagaChaptersEditor() {
         </div>
       </FieldGroup>
     </>
+  );
+}
+
+function SagaRowText({
+  index,
+  hasError,
+  onFocus,
+}: {
+  index: number;
+  hasError: boolean;
+  onFocus: (handle: PipTextEditorHandle | null) => void;
+}) {
+  const { control } = useFormContext<FormValues>();
+  const { field } = useController({
+    control,
+    name: `saga_chapters.${index}.text`,
+  });
+  const handleRef = useRef<PipTextEditorHandle | null>(null);
+  return (
+    <PipTextEditor
+      ref={(handle) => {
+        handleRef.current = handle;
+        field.ref(handle);
+      }}
+      name={field.name}
+      value={field.value ?? ""}
+      onChange={field.onChange}
+      onBlur={field.onBlur}
+      onFocus={() => onFocus(handleRef.current)}
+      placeholder={
+        index === 0
+          ? "Create a 2/2 white Knight creature token with vigilance."
+          : "Knights you control get +2/+1 until end of turn."
+      }
+      rows={2}
+      aria-label={`Chapter row ${index + 1} effect`}
+      aria-invalid={hasError}
+      className={textareaClass(hasError)}
+    />
   );
 }

@@ -2,21 +2,21 @@
 
 // Layout (Adventure / Back face) panel — the empty-state toggle card plus the
 // full back-face (or adventure-spell) field set. Renamed wholesale from the
-// old extra step; the back-face rules textarea's caret-preserving symbol
-// insertion stays in the orchestrator (shared logic with the Text panel) and
-// arrives as the hoisted registration + ref + insert callback.
+// old extra step; the back-face rules box is a PipTextEditor (pips drawn in
+// place of brace codes) whose handle ref + symbol insertion the orchestrator
+// owns, shared with the Text panel's toolbar.
 
-import {
-  Controller,
-  useFormContext,
-  type UseFormRegisterReturn,
-} from "react-hook-form";
+import { Controller, useController, useFormContext } from "react-hook-form";
 import { Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { ChipGroup } from "@/components/ui/chip-group";
 import { ManaCostPicker } from "@/components/cards/mana-cost-picker";
 import { RulesSymbolToolbar } from "@/components/creator/rules-symbol-toolbar";
+import {
+  PipTextEditor,
+  type PipTextEditorHandle,
+} from "@/components/creator/pip-text-editor";
 import { ArtUploader } from "@/components/creator/art-uploader";
 import {
   CARD_TYPE_OPTIONS,
@@ -37,8 +37,7 @@ type LayoutPanelProps = {
    *  adventure spell (copy + which fields show flip accordingly). */
   isAdventureFrame: boolean;
   /** Hoisted register("back_face.rules_text") — merged with the caret ref. */
-  backRulesTextField: UseFormRegisterReturn<"back_face.rules_text">;
-  backRulesTextRef: React.MutableRefObject<HTMLTextAreaElement | null>;
+  backRulesTextRef: React.MutableRefObject<PipTextEditorHandle | null>;
   /** Caret-preserving symbol insertion into back_face.rules_text. */
   onInsertSymbol: (token: string) => void;
   /** Called after the user enables a back face — lets the preview flip to it. */
@@ -49,7 +48,6 @@ export function LayoutPanel({
   userId,
   hasBackFace,
   isAdventureFrame,
-  backRulesTextField,
   backRulesTextRef,
   onInsertSymbol,
   onBackFaceAdded,
@@ -60,6 +58,10 @@ export function LayoutPanel({
     setValue,
     formState: { errors },
   } = useFormContext<FormValues>();
+  const { field: backRulesField } = useController({
+    control,
+    name: "back_face.rules_text",
+  });
 
   return (
     <>
@@ -170,12 +172,16 @@ export function LayoutPanel({
           <FieldGroup label="Rules text">
             <div className="flex flex-col gap-2">
               <RulesSymbolToolbar onInsert={onInsertSymbol} />
-              <textarea
-                {...backRulesTextField}
-                ref={(el) => {
-                  backRulesTextField.ref(el);
-                  backRulesTextRef.current = el;
+              <PipTextEditor
+                ref={(handle) => {
+                  backRulesTextRef.current = handle;
+                  backRulesField.ref(handle);
                 }}
+                name={backRulesField.name}
+                value={backRulesField.value ?? ""}
+                onChange={backRulesField.onChange}
+                onBlur={backRulesField.onBlur}
+                aria-label="Back face rules text"
                 placeholder={
                   isAdventureFrame
                     ? "Stomp deals 2 damage to any target. (The adventure's rules.)"

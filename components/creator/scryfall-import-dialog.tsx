@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { InlinePips } from "@/components/cards/inline-pips";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -881,9 +882,10 @@ function PatchPreview({ patch }: { patch: ScryfallImportPatch }) {
     rows.push({
       label: "Rules",
       value: (
-        <span className="block whitespace-pre-line text-foreground/85">
-          {patch.rules_text}
-        </span>
+        <InlinePips
+          text={patch.rules_text}
+          className="block whitespace-pre-line text-foreground/85"
+        />
       ),
     });
   }
