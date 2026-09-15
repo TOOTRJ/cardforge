@@ -129,10 +129,10 @@ export async function GET(
     profileOverrides,
   );
 
-  // The print source is the HD (1500×2100) render. The stored bake IS that
-  // render with the owner's stamp, so when the viewer's PDF would carry the
-  // same stamp we embed the stored bytes and skip Satori entirely
-  // (lib/render/stored-render.ts); otherwise render live.
+  // The print source is the HD (1500×2100) render. The stored bake is the
+  // always-watermarked display copy (layout v20); a PDF is a paid feature
+  // and therefore clean, so it renders live — the stored path below only
+  // fires if the mark is ever wanted on a PDF.
   const stamp = await ownerExportStamp(card.owner_id);
   // The brand mark follows the VIEWER's plan only — see the png route. (PDF
   // is a paid feature, so in practice this is always clean; the rule is
@@ -140,8 +140,7 @@ export async function GET(
   const brandMark = downloadBrandMark(entitlements);
   let pngBytes: Uint8Array;
   try {
-    const stored =
-      brandMark === stamp.brandMark ? await fetchStoredRender(card) : null;
+    const stored = brandMark ? await fetchStoredRender(card) : null;
     if (stored) {
       pngBytes = new Uint8Array(stored);
     } else {

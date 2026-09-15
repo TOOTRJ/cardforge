@@ -8,7 +8,7 @@ import {
   type RenderPreset,
 } from "@/lib/render/card-image";
 import { fetchStoredRender, fitStoredRender } from "@/lib/render/stored-render";
-import { ownerExportStamp } from "@/lib/billing/entitlements";
+import { isBillingEnabled } from "@/lib/billing/flags";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import { rowToPreviewData, type CardRowForBake } from "@/lib/cards/bake-core";
 import { getPipOverrides } from "@/lib/pips/queries";
@@ -95,24 +95,19 @@ export async function GET(
     profileOverrides,
   );
 
-  // OG previews follow the card OWNER's plan — a paid creator's shared cards
-  // render clean (with their optional custom footer mark), a free creator's
-  // carry the brand mark. Owner-based (never viewer-based) keeps the route
-  // CDN-cacheable: scrapers have no viewer.
-  //
-  // That is exactly the stamp the save-time bake used, so when the stored
-  // render is current we serve (or 2× downscale) those bytes instead of
-  // re-running Satori — see lib/render/stored-render.ts. Live render only
-  // when there is no current bake.
+  // The share image is a DISPLAY surface: always watermarked, no custom
+  // footer text (layout v20) — the same contract as the stored bake, so
+  // when that bake is current we serve (or 2× downscale) its bytes instead
+  // of re-running Satori (lib/render/stored-render.ts). Viewer-independent
+  // by construction, which keeps the route CDN-cacheable.
   const stored = await fetchStoredRender(card);
   let portraitBytes: Buffer;
   if (stored) {
     portraitBytes = await fitStoredRender(stored, preset, isLandscapeRender(previewData));
   } else {
-    const stamp = await ownerExportStamp(card.owner_id);
     const response = await renderCardImage(previewData, preset, {
-      brandMark: stamp.brandMark,
-      watermarkText: stamp.footerText,
+      brandMark: isBillingEnabled(),
+      watermarkText: null,
     });
     portraitBytes = Buffer.from(await response.arrayBuffer());
   }

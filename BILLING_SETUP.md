@@ -147,12 +147,15 @@ cron-driven (§6).
   failure; `lib/billing/credit-reconcile.ts` sweeps orphaned charges daily.
 - Watermark/hi-res gating: `lib/render/card-image.tsx` + the `app/api/cards/[id]/{png,pdf,og}` routes;
   whole-deck/set export: `app/api/decks/[id]/{export,download}`, `app/api/sets/[id]/export`.
-  **Downloads follow the VIEWER's plan only** (`downloadBrandMark` in
-  `lib/billing/entitlements.ts`): a free-tier viewer always downloads with
-  the pipglyph.com mark, whoever made the card; a paid viewer never does.
-  The card OWNER's plan only decides the display surfaces — the stored
-  gallery bake and the OG share image (`ownerExportStamp`) — plus the
-  custom footer text.
+  **Display is always watermarked; only paid downloads are clean** (owner
+  decision 2026-09-15, layout v20). The stored bake, gallery tiles, the OG
+  share image and every live preview carry the pipglyph.com mark whatever
+  the owner's plan. `downloadBrandMark` (`lib/billing/entitlements.ts`)
+  decides a download from the VIEWER's plan only: free-tier viewers always
+  get the mark and a 750 px PNG, paid viewers a clean 1500 px PNG / PDF; the
+  owner's custom footer text prints on paid downloads only
+  (`ownerExportStamp`). Free viewers see the other formats greyed out and
+  get no deck export options.
 - Capacity gate: `lib/cards/actions.ts` (`cardCapacity`); admin comp tier /
   card-cap override / credit grants: `/admin/users` (`lib/admin/user-actions.ts`).
 - Selling UI: `app/(marketing)/pricing/page.tsx`, `components/billing/*`,

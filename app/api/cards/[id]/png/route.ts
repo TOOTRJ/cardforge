@@ -93,7 +93,8 @@ export async function GET(
   // Resolution AND the brand mark follow the VIEWER's plan: a free viewer
   // always downloads a watermarked, capped card — whoever made it — and a
   // paid viewer downloads clean HD (downloadBrandMark). The owner's stamp
-  // only contributes their custom footer text.
+  // only contributes their custom footer text, which prints on paid
+  // downloads and nowhere else (display is always the plain mark).
   const entitlements = await getEntitlements();
   const preset: RenderPreset =
     entitlements.maxExportPreset === "hd" ? requestedPreset : "default";
@@ -145,15 +146,12 @@ export async function GET(
 
   let pngBytes: Uint8Array;
   try {
-    // The stored bake carries the OWNER's stamp. When this download would
-    // carry the same one, serve it (2× downscaled for a clamped viewer)
-    // instead of re-rendering — lib/render/stored-render.ts. A free viewer
-    // downloading a paid creator's card needs the WATERMARKED render the
-    // bake doesn't have (and a paid viewer of a free creator's card the
-    // clean one), so those paths — and any card without a current bake —
-    // still render live.
-    const stored =
-      watermark === stamp.brandMark ? await fetchStoredRender(card) : null;
+    // The stored bake is always watermarked with no footer text (layout
+    // v20) — exactly what a FREE viewer downloads, so serve it (2×
+    // downscaled) instead of re-rendering — lib/render/stored-render.ts. A
+    // paid viewer's clean download, and any card without a current bake,
+    // render live.
+    const stored = watermark ? await fetchStoredRender(card) : null;
     if (stored) {
       pngBytes = new Uint8Array(
         await fitStoredRender(stored, preset, isLandscapeRender(previewData)),

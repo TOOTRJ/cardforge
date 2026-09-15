@@ -138,6 +138,11 @@ type TabsTriggerProps = {
   children: ReactNode;
   /** Optional badge to show next to the label (e.g. dirty-state dot). */
   badge?: ReactNode;
+  /** Greyed out and inert — the tab exists (so the viewer sees what a plan
+   *  unlocks) but can't be selected. */
+  disabled?: boolean;
+  /** Tooltip for a disabled tab, e.g. "Plus feature". */
+  title?: string;
 };
 
 export function TabsTrigger({
@@ -145,6 +150,8 @@ export function TabsTrigger({
   className,
   children,
   badge,
+  disabled = false,
+  title,
 }: TabsTriggerProps) {
   const { value, baseId, setValue, registerTrigger, triggerOrder } =
     useTabsContext("TabsTrigger");
@@ -187,7 +194,12 @@ export function TabsTrigger({
       aria-controls={`${baseId}-panel-${triggerValue}`}
       tabIndex={active ? 0 : -1}
       ref={(el) => registerTrigger(triggerValue, el)}
-      onClick={() => setValue(triggerValue)}
+      disabled={disabled}
+      aria-disabled={disabled || undefined}
+      title={title}
+      onClick={() => {
+        if (!disabled) setValue(triggerValue);
+      }}
       onKeyDown={onKeyDown}
       className={cn(
         "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors",
@@ -195,6 +207,7 @@ export function TabsTrigger({
         active
           ? "bg-surface text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_1px_4px_rgba(0,0,0,0.25)]"
           : "text-subtle hover:text-foreground",
+        disabled ? "cursor-not-allowed opacity-40 hover:text-subtle" : "",
         className,
       )}
     >

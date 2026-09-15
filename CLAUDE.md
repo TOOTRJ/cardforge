@@ -64,6 +64,11 @@ Rules and gotchas:
   a route dynamic. `lib/supabase/admin.ts` bypasses RLS — webhook/cron,
   credit grants/refunds, protected billing columns, and is_admin-gated
   tooling only; every non-cron caller checks auth itself.
+- Watermark policy (layout v20): every DISPLAY surface — stored bake,
+  gallery tile, OG image, live preview — carries the pipglyph.com mark and
+  no custom footer text, whatever the owner's plan. Only a paid VIEWER's
+  download renders clean (`downloadBrandMark`); never make display
+  viewer-dependent (the stored PNG is one public URL).
 - Card preview and the server Satori bake must stay pixel-identical: the
   `.ttf`/PNG masters in `public/` feed the bake — browser-side asset
   optimizations must not touch what the bake reads.

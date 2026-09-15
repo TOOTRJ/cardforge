@@ -206,7 +206,8 @@ export default async function SettingsPage() {
             </h3>
             <p className="text-sm leading-6 text-muted">
               Paid plans can print a short custom mark in the footer of every
-              card — live previews, downloads, and shared images alike.
+              card you download. Previews, gallery images and shared links
+              always carry the PipGlyph mark instead.
             </p>
           </div>
           <ExportWatermarkPanel
