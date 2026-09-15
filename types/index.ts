@@ -29,18 +29,3 @@ export type CardPreview = {
   colorIdentity?: ColorIdentity;
   artistCredit?: string;
 };
-
-export type SetPreview = {
-  id: string;
-  slug: string;
-  title: string;
-  cardCount: number;
-  description?: string;
-};
-
-export type ProfilePreview = {
-  username: string;
-  displayName: string;
-  bio?: string;
-  cardCount: number;
-};

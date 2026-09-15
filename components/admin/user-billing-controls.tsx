@@ -7,13 +7,17 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Loader2, RefreshCw, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
+  adminBillingHealthAction,
   adminGrantCreditsAction,
+  adminResyncSubscriptionAction,
   adminSetCardLimitAction,
   adminSetCompTierAction,
+  type BillingHealthIssue,
 } from "@/lib/admin/user-actions";
 
 const inputClass =
@@ -251,4 +255,141 @@ function toLocalInputValue(iso: string): string {
   if (Number.isNaN(d.getTime())) return "";
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+// ---------------------------------------------------------------------------
+// Subscription resync — rewrite the profile from the customer's live Stripe
+// state (lib/stripe/subscription-sync.ts, the same code the webhook runs).
+// ---------------------------------------------------------------------------
+
+export function ResyncSubscriptionButton({
+  userId,
+  hasStripeCustomer,
+}: {
+  userId: string;
+  hasStripeCustomer: boolean;
+}) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+
+  function submit() {
+    startTransition(async () => {
+      const result = await adminResyncSubscriptionAction({ userId });
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(
+        result.subscriptionId
+          ? `Synced: ${result.tier} · ${result.status}${
+              result.unresolvedPrice ? " (price not mapped — kept tier)" : ""
+            }`
+          : "Synced: no live subscription in Stripe.",
+      );
+      router.refresh();
+    });
+  }
+
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      disabled={pending || !hasStripeCustomer}
+      title={
+        hasStripeCustomer
+          ? "Rewrite tier/status from the customer's live Stripe subscriptions"
+          : "No Stripe customer yet"
+      }
+      onClick={submit}
+    >
+      {pending ? (
+        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+      ) : (
+        <RefreshCw className="h-4 w-4" aria-hidden />
+      )}
+      Resync from Stripe
+    </Button>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Billing health check — on demand (it calls Stripe per customer), lists
+// every profile whose tier/status disagrees with its live subscription.
+// ---------------------------------------------------------------------------
+
+const PROBLEM_LABEL: Record<BillingHealthIssue["problem"], string> = {
+  "active-but-free": "Paying but on the free tier",
+  "tier-mismatch": "Tier differs from Stripe",
+  "status-mismatch": "Live/lapsed differs from Stripe",
+  "unmapped-price": "Price can't be mapped to a tier",
+};
+
+export function BillingHealthPanel() {
+  const [pending, startTransition] = useTransition();
+  const [result, setResult] = useState<
+    | { checked: number; issues: BillingHealthIssue[]; truncated: boolean }
+    | null
+  >(null);
+
+  function run() {
+    startTransition(async () => {
+      const outcome = await adminBillingHealthAction();
+      if (!outcome.ok) {
+        toast.error(outcome.error);
+        return;
+      }
+      setResult({
+        checked: outcome.checked,
+        issues: outcome.issues,
+        truncated: outcome.truncated,
+      });
+    });
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <Button type="button" variant="outline" size="sm" disabled={pending} onClick={run}>
+          {pending ? (
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+          ) : (
+            <ShieldAlert className="h-4 w-4" aria-hidden />
+          )}
+          Run billing health check
+        </Button>
+        {result ? (
+          <span className="text-xs text-muted">
+            Checked {result.checked} Stripe customer{result.checked === 1 ? "" : "s"}
+            {result.truncated ? " (newest 100 — rerun after fixing)" : ""} ·{" "}
+            {result.issues.length === 0
+              ? "no mismatches"
+              : `${result.issues.length} mismatch${result.issues.length === 1 ? "" : "es"}`}
+          </span>
+        ) : null}
+      </div>
+      {result && result.issues.length > 0 ? (
+        <ul className="flex flex-col divide-y divide-border/40 rounded-lg border border-danger/40 bg-danger/5">
+          {result.issues.map((issue) => (
+            <li
+              key={issue.userId}
+              className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-sm"
+            >
+              <Link
+                href={`/admin/users?u=${issue.userId}`}
+                className="font-medium text-primary-bright hover:underline"
+              >
+                {issue.username ? `@${issue.username}` : issue.userId.slice(0, 8)}
+              </Link>
+              <span className="text-foreground">{PROBLEM_LABEL[issue.problem]}</span>
+              <span className="text-xs text-muted">
+                profile {issue.profileTier} · {issue.profileStatus ?? "—"} — Stripe{" "}
+                {issue.stripeTier ?? "?"} · {issue.stripeStatus ?? "none"}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
 }

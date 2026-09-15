@@ -92,7 +92,7 @@ export async function POST(request: Request) {
   const preview = { ...payload.preview, profileOverrides: overrides };
 
   const [oursRaw, scanFetched] = await Promise.all([
-    renderCardImage(preview, "default").arrayBuffer(),
+    renderCardImage(preview, "default").then((r) => r.arrayBuffer()),
     fetchScryfallImage(payload.scanUrl),
   ]);
   if (!scanFetched) {

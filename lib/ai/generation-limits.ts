@@ -16,9 +16,12 @@ import { isBillingEnabled } from "@/lib/billing/flags";
 
 export const BATCH_CARD_LIMIT = 3;
 
-/** Absolute ceiling for everyone — one job must stay steppable in a
- *  reasonable session (60 art steps ≈ an hour of stepping). */
-export const BATCH_CARD_HARD_MAX = 60;
+/** Absolute ceiling for everyone: a full 100-card Commander deck in one
+ *  job. Still steppable in one sitting — the client runs three art steps at
+ *  a time (~11 s each), so 100 steps land in roughly six minutes — and the
+ *  plan call designs the cards in parallel chunks (lib/ai/card-design.ts)
+ *  so one model call never has to emit 100 cards. */
+export const BATCH_CARD_HARD_MAX = 100;
 
 /** The caller's per-generation card cap: the steppable ceiling when credits
  *  meter usage (billing on) or for admins; 3 on billing-off deployments. */

@@ -5,7 +5,6 @@ import { cn } from "@/lib/utils";
 
 type AppShellProps = {
   children: React.ReactNode;
-  variant?: "marketing" | "app";
   user?: HeaderUser | null;
   /**
    * How the header learns who's signed in:
@@ -23,7 +22,6 @@ type AppShellProps = {
 
 export function AppShell({
   children,
-  variant = "marketing",
   user,
   authMode = "server",
   hideFooter = false,
@@ -32,9 +30,9 @@ export function AppShell({
   return (
     <div className={cn("flex min-h-svh flex-col", className)}>
       {authMode === "client" ? (
-        <SiteHeaderClient variant={variant} />
+        <SiteHeaderClient />
       ) : (
-        <SiteHeader variant={variant} user={user} />
+        <SiteHeader user={user} />
       )}
       <main id="main" className="flex-1">
         {children}

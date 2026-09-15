@@ -5,6 +5,7 @@ import { getEntitlements } from "@/lib/billing/entitlements";
 import { getCreditsUsedThisMonth } from "@/lib/ai/usage-queries";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { getUnreadNotificationCount } from "@/lib/notifications/queries";
+import { getMessageNavState } from "@/lib/messages/queries";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 export const dynamic = "force-dynamic";
@@ -17,30 +18,33 @@ export default async function AppGroupLayout({
   const configured = isSupabaseConfigured();
   const user = configured ? await getCurrentUser() : null;
 
-  // Defense in depth — middleware should already have redirected unauthed
-  // users away from /(app)/* routes.
+  // Defense in depth — middleware redirects unauthed users (with a
+  // redirectTo) only for its PROTECTED_PREFIXES (/dashboard, /create,
+  // /settings); the other (app) routes (/feed, /notifications, /feedback,
+  // /deck, /set, /card, /admin) rely on this bare redirect and lose the
+  // return path.
   if (configured && !user) {
     redirect("/login");
   }
 
-  // The four chrome lookups are independent — run them concurrently
-  // instead of serially (same data, ~one round-trip of latency instead
-  // of four).
-  const [profile, entitlements, creditsUsed, unreadNotifications] = user
+  // The chrome lookups are independent — run them concurrently instead of
+  // serially (same data, ~one round-trip of latency instead of five).
+  const [profile, entitlements, creditsUsed, unreadNotifications, messages] = user
     ? await Promise.all([
         getCurrentProfile(),
         getEntitlements(),
         isBillingEnabled() ? getCreditsUsedThisMonth() : Promise.resolve(0),
         getUnreadNotificationCount(),
+        getMessageNavState(),
       ])
-    : [null, null, 0, 0];
+    : [null, null, 0, 0, { hasThreads: false, unread: 0 }];
 
   return (
     <AppShell
-      variant="app"
       user={
         user
           ? {
+              id: user.id,
               username: profile?.username ?? null,
               displayName: profile?.display_name ?? null,
               avatarUrl: profile?.avatar_url ?? null,
@@ -48,6 +52,8 @@ export default async function AppGroupLayout({
               credits: entitlements?.credits ?? 0,
               creditsUsed,
               unreadNotifications,
+              hasMessages: messages.hasThreads,
+              unreadMessages: messages.unread,
               isAdmin: profile?.is_admin ?? false,
             }
           : null

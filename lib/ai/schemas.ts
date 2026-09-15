@@ -147,7 +147,3 @@ export type Suggestion =
       action: "generate_from_concept";
       data: z.infer<typeof generateFromConceptOutputSchema>;
     };
-
-export type CardAssistantResponse =
-  | { ok: true; suggestion: Suggestion }
-  | { ok: false; error: string };

@@ -29,7 +29,8 @@ Rules and gotchas:
   via the Supabase MCP/dashboard** — ad-hoc applies write timestamped
   versions into the migration history and break the integration (this
   happened once; repaired 2026-07-09). Never edit an already-merged
-  migration file.
+  migration file — stale header comments are corrected in
+  `supabase/migrations/README.md` (errata) instead.
 - Preview branches are created **when the PR opens** — pushes to an
   already-open PR won't create one; close/reopen the PR instead.
 - "Supabase changes only" is ON: PRs without `supabase/` changes get no
@@ -60,11 +61,30 @@ Rules and gotchas:
   accepts `javascript:` schemes.
 - Viewer-independent server reads use `createPublicClient()` (cookie-free,
   keeps routes ISR-eligible); cookie-bound reads via `createClient()` make
-  a route dynamic. `lib/supabase/admin.ts` bypasses RLS — webhook/cron use
-  only.
+  a route dynamic. `lib/supabase/admin.ts` bypasses RLS — webhook/cron,
+  credit grants/refunds, protected billing columns, and is_admin-gated
+  tooling only; every non-cron caller checks auth itself.
 - Card preview and the server Satori bake must stay pixel-identical: the
   `.ttf`/PNG masters in `public/` feed the bake — browser-side asset
   optimizations must not touch what the bake reads.
+  `public/frames` is excluded from function tracing (`next.config.ts`) —
+  the bake fetches frames from the deployment's own CDN and memoizes them
+  (`lib/render/card-frames.ts`); any new `public/frames` asset the renderer
+  reads synchronously must be added to `frameAssetPathsFor()` in
+  `lib/render/card-image.tsx` or it renders as a transparent pixel on
+  Vercel. OG/PNG/PDF serve the stored bake when it is current
+  (`lib/render/stored-render.ts`) — a renderer change still needs the
+  `CARD_LAYOUT_VERSION` bump + rebake sweep.
+- Notifications are push, not pull: `notifications` is on the
+  `supabase_realtime` publication (migration 0075) and
+  `components/notifications/realtime-alerts.tsx` subscribes to the signed-in
+  user's rows (toast + bell badge + debounced `router.refresh()`; polls the
+  unread count if the socket fails). Anything that should alert a user or
+  admin in real time just needs a `notifications` row — DB triggers for the
+  social/feedback/message kinds, `notifyUser()` in `lib/admin/user-actions.ts`
+  for credit grants, comp plans and card-limit overrides. New kinds go in the
+  type CHECK + `lib/notifications/describe.ts` (the ONE copy source for bell,
+  page and toast).
 - AI image generation goes through the **Vercel AI Gateway ONLY** (FLUX for
   text-to-image, Gemini for the "AI remix" i2i) — `lib/ai/image-gen.ts` has no
   direct-OpenAI path. `AI_GATEWAY_API_KEY` is required for any image flow; a

@@ -10,19 +10,8 @@ import { isSetsEnabled } from "@/lib/sets/flags";
 import { renderCardImage } from "@/lib/render/card-image";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { buildSetPdf } from "@/lib/render/card-pdf";
-import {
-  isCardType,
-  isColorIdentity,
-  isRarity,
-  type ArtPosition,
-  type CardBackFace,
-  type CardType,
-  type ColorIdentity,
-  type FrameStyle,
-  type Rarity,
-} from "@/types/card";
-import type { Card as CardRow } from "@/types/supabase";
-import type { CardPreviewData } from "@/components/cards/card-preview";
+import { rowToPreviewData, type CardRowForBake } from "@/lib/cards/bake-core";
+import { getPipOverrides } from "@/lib/pips/queries";
 
 // ---------------------------------------------------------------------------
 // /api/sets/[id]/export — Pro "whole-set export".
@@ -108,14 +97,19 @@ export async function GET(
 
   // The set owner's custom footer mark (paid perk) prints on the renders.
   const stamp = await ownerExportStamp(set.owner_id);
+  const profileOverrides = await getFrameProfileOverrides();
 
   const pngs: Uint8Array[] = [];
   for (const cardId of orderedIds) {
     const card = byId.get(cardId);
     if (!card) continue;
     try {
-      const img = renderCardImage(
-        { ...toPreviewData(card), profileOverrides: await getFrameProfileOverrides() },
+      const img = await renderCardImage(
+        rowToPreviewData(
+          card as CardRowForBake,
+          await getPipOverrides(card.owner_id),
+          profileOverrides,
+        ),
         "hd", {
         brandMark: !entitlements.removeWatermark,
         watermarkText: stamp.footerText,
@@ -149,31 +143,4 @@ export async function GET(
       "Cache-Control": "private, no-store",
     },
   });
-}
-
-function toPreviewData(card: CardRow): CardPreviewData {
-  return {
-    title: card.title,
-    cost: card.cost,
-    cardType: isCardType(card.card_type) ? (card.card_type as CardType) : null,
-    supertype: card.supertype,
-    subtypes: card.subtypes,
-    rarity: isRarity(card.rarity) ? (card.rarity as Rarity) : null,
-    colorIdentity: (card.color_identity ?? []).filter(
-      isColorIdentity,
-    ) as ColorIdentity[],
-    rulesText: card.rules_text,
-    flavorText: card.flavor_text,
-    power: card.power,
-    toughness: card.toughness,
-    loyalty: card.loyalty,
-    defense: card.defense,
-    artistCredit: card.artist_credit,
-    artUrl: card.art_url,
-    artPosition: (card.art_position as ArtPosition) ?? {},
-    frameStyle: (card.frame_style as FrameStyle) ?? {},
-    setIconUrl: card.set_icon_url,
-    setIconCode: card.set_icon_code,
-    backFace: (card.back_face as CardBackFace | null) ?? null,
-  };
 }

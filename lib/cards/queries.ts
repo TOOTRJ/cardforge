@@ -2,7 +2,12 @@ import "server-only";
 
 import { cache } from "react";
 
-import { createClient, getCurrentUser } from "@/lib/supabase/server";
+import {
+  PUBLIC_PROFILE_COLUMNS,
+  PUBLIC_PROFILE_DEFAULTS,
+  createClient,
+  getCurrentUser,
+} from "@/lib/supabase/server";
 import { createPublicClient } from "@/lib/supabase/public";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
@@ -14,7 +19,6 @@ import {
   type CardWatermark,
   type FaceContent,
   type CardTemplate,
-  type CardWithLineage,
   type CardWithOwner,
   type CardType,
   type ColorIdentity,
@@ -104,22 +108,6 @@ function narrowCard(row: CardRow): Card {
 // Catalog reads — cached per-request via Supabase's auto-batched fetches.
 // ---------------------------------------------------------------------------
 
-export async function getActiveGameSystems(): Promise<GameSystem[]> {
-  if (!isSupabaseConfigured()) return [];
-  try {
-    const supabase = await createClient();
-    const { data, error } = await supabase
-      .from("game_systems")
-      .select("*")
-      .eq("is_active", true)
-      .order("created_at", { ascending: true });
-    if (error) return [];
-    return data ?? [];
-  } catch {
-    return [];
-  }
-}
-
 export async function getFantasyGameSystem(): Promise<GameSystem | null> {
   if (!isSupabaseConfigured()) return null;
   try {
@@ -161,61 +149,6 @@ export async function getTemplatesForGameSystem(
 // ---------------------------------------------------------------------------
 // Card reads
 // ---------------------------------------------------------------------------
-
-type ListPublicCardsOptions = {
-  limit?: number;
-  offset?: number;
-  cardType?: string;
-};
-
-export async function listPublicCards(
-  options: ListPublicCardsOptions = {},
-): Promise<CardWithOwner[]> {
-  if (!isSupabaseConfigured()) return [];
-  const { limit = 24, offset = 0, cardType } = options;
-
-  try {
-    const supabase = await createClient();
-    // We can't embed profiles via PostgREST: cards.owner_id references
-    // auth.users(id), not profiles(id), so the relationship isn't auto-
-    // discovered. Fetch in two steps and stitch by owner_id.
-    let cardQuery = supabase
-      .from("cards")
-      .select("*")
-      .eq("visibility", "public")
-      .order("updated_at", { ascending: false })
-      .range(offset, offset + limit - 1);
-
-    if (cardType) {
-      cardQuery = cardQuery.eq("card_type", cardType);
-    }
-
-    const { data: cardRows, error: cardErr } = await cardQuery;
-    if (cardErr || !cardRows || cardRows.length === 0) return [];
-
-    const ownerIds = Array.from(new Set(cardRows.map((c) => c.owner_id)));
-    const { data: ownerRows } = await supabase
-      .from("profiles")
-      .select("id, username, display_name, avatar_url")
-      .in("id", ownerIds);
-
-    const ownerById = new Map<string, CardWithOwner["owner"]>();
-    for (const row of ownerRows ?? []) {
-      ownerById.set(row.id, {
-        username: row.username,
-        display_name: row.display_name,
-        avatar_url: row.avatar_url,
-      });
-    }
-
-    return cardRows.map((row) => ({
-      ...narrowCard(row),
-      owner: ownerById.get(row.owner_id) ?? null,
-    }));
-  } catch {
-    return [];
-  }
-}
 
 export async function listMyCards(): Promise<Card[]> {
   if (!isSupabaseConfigured()) return [];
@@ -272,31 +205,6 @@ export async function getMyCardBySlug(slug: string): Promise<Card | null> {
       .eq("slug", slug)
       .maybeSingle();
     return data ? narrowCard(data) : null;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Find a card by slug across all owners — RLS filters out anything the viewer
- * isn't allowed to see. If multiple cards share the slug (slugs are unique
- * per owner, not globally), we return the most recently updated one.
- *
- * Used by the public `/card/[slug]` page. A future phase can disambiguate
- * via `/card/[username]/[slug]` if collisions become common.
- */
-export async function getCardBySlugPublic(slug: string): Promise<Card | null> {
-  if (!isSupabaseConfigured()) return null;
-  try {
-    const supabase = await createClient();
-    const { data } = await supabase
-      .from("cards")
-      .select("*")
-      .eq("slug", slug)
-      .order("updated_at", { ascending: false })
-      .limit(1);
-    if (!data || data.length === 0) return null;
-    return narrowCard(data[0]);
   } catch {
     return null;
   }
@@ -391,38 +299,6 @@ export const getCardByOwnerAndSlug = cache(async (
     return null;
   }
 });
-
-export async function getCardWithLineage(
-  id: string,
-): Promise<CardWithLineage | null> {
-  if (!isSupabaseConfigured()) return null;
-  try {
-    const supabase = await createClient();
-    const { data: cardRow } = await supabase
-      .from("cards")
-      .select("*")
-      .eq("id", id)
-      .maybeSingle();
-    if (!cardRow) return null;
-
-    let parent: CardWithLineage["parent"] = null;
-    if (cardRow.parent_card_id) {
-      const { data: parentRow } = await supabase
-        .from("cards")
-        .select("id, slug, title")
-        .eq("id", cardRow.parent_card_id)
-        .maybeSingle();
-      parent = parentRow ?? null;
-    }
-
-    return {
-      ...narrowCard(cardRow),
-      parent,
-    };
-  } catch {
-    return null;
-  }
-}
 
 /**
  * True if the given slug is already used by the current user. The DB
@@ -1129,12 +1005,15 @@ export async function getProfileByUsername(
 
   try {
     const supabase = await createClient();
-    const { data: profile } = await supabase
+    // Public columns only — the billing/admin slice is private (migration
+    // 0074) and a public profile page has no business reading it.
+    const { data: publicProfile } = await supabase
       .from("profiles")
-      .select("*")
+      .select(PUBLIC_PROFILE_COLUMNS)
       .eq("username", username)
       .maybeSingle();
-    if (!profile) return null;
+    if (!publicProfile) return null;
+    const profile = { ...PUBLIC_PROFILE_DEFAULTS, ...publicProfile } as Profile;
 
     const { count } = await supabase
       .from("cards")

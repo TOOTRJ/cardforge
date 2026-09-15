@@ -179,7 +179,7 @@ function batchPrompt(input: DesignBatchInput): string {
       `Art & tone style: ${input.style.trim().slice(0, 200)} — every art_prompt must explicitly render in this style, and names/flavor should suit it.`,
     );
   }
-  if (input.context?.trim()) lines.push(input.context.trim().slice(0, 1000));
+  if (input.context?.trim()) lines.push(input.context.trim().slice(0, 1400));
   lines.push(
     `Design exactly ${input.slots.length} card${input.slots.length === 1 ? "" : "s"}:`,
   );
@@ -246,6 +246,28 @@ const batchSchema = z
   })
   .strict();
 
+/** Most cards one structured-output call is asked to emit. A 100-card
+ *  Commander deck as a single object is where the plan route would fail
+ *  first (output length, then the 300 s budget) — so larger batches are
+ *  split into chunks designed IN PARALLEL, each with the full shared context
+ *  plus a "part N of M" note. Names are de-duplicated afterwards by the
+ *  callers' ensureUniqueTitles pass, which already existed for the
+ *  single-call case (the model reuses names it likes even within one call). */
+export const DESIGN_CHUNK_SIZE = 25;
+
+/** Split slots into near-equal chunks of at most DESIGN_CHUNK_SIZE, keeping
+ *  order (chunk i holds slots [start, end) so indexes map back trivially). */
+export function splitDesignSlots<T>(slots: T[], chunkSize = DESIGN_CHUNK_SIZE): T[][] {
+  if (slots.length <= chunkSize) return [slots];
+  const parts = Math.ceil(slots.length / chunkSize);
+  const per = Math.ceil(slots.length / parts);
+  const out: T[][] = [];
+  for (let start = 0; start < slots.length; start += per) {
+    out.push(slots.slice(start, start + per));
+  }
+  return out;
+}
+
 /**
  * Design a batch of cards (1..N). Callers own auth/rate-limit/credits; this
  * function owns quality. Always returns exactly `input.slots.length` cards,
@@ -254,6 +276,41 @@ const batchSchema = z
 export async function designCards(
   input: DesignBatchInput,
 ): Promise<DesignBatchResult> {
+  const chunks = splitDesignSlots(input.slots);
+  if (chunks.length === 1) return designChunk(input);
+
+  const results = await Promise.all(
+    chunks.map((slots, index) =>
+      designChunk({
+        ...input,
+        slots,
+        context: [
+          input.context?.trim() || null,
+          `This is part ${index + 1} of ${chunks.length} of ONE larger batch of ${input.slots.length} cards; the other parts are designed separately from the same brief. Keep to this part's ${slots.length} cards, share the world and mechanics, and prefer distinctive names so the parts don't collide.`,
+        ]
+          .filter(Boolean)
+          .join("\n"),
+      }),
+    ),
+  );
+
+  // Stitch back in slot order; report indexes are re-based to the batch.
+  let offset = 0;
+  const cards: DesignedCard[] = [];
+  const report: DesignReport = { judged: false, autofixed: [], warnings: [] };
+  for (const result of results) {
+    cards.push(...result.cards);
+    report.judged = report.judged || result.report.judged;
+    report.autofixed.push(...result.report.autofixed.map((i) => i + offset));
+    report.warnings.push(
+      ...result.report.warnings.map((w) => ({ ...w, index: w.index + offset })),
+    );
+    offset += result.cards.length;
+  }
+  return { cards, report };
+}
+
+async function designChunk(input: DesignBatchInput): Promise<DesignBatchResult> {
   const { object } = await generateObject({
     model: designModel(),
     schema: batchSchema,

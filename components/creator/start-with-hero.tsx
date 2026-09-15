@@ -9,8 +9,11 @@ import { Search, Sparkles, FileSymlink } from "lucide-react";
 // Each option fires a custom DOM event the CardCreatorForm listens for:
 //   - "cardforge:scroll-to-form"   → smooth-scroll the form into view
 //   - "cardforge:open-scryfall"    → open the Scryfall import dialog
-//   - "cardforge:open-ai-concept"  → switch to the Publishing tab and
-//                                    scroll the AI assistant into view
+//   - "cardforge:open-ai-concept"  → jump to the Text & stats step and scroll
+//                                    the AI assistant anchor into view
+//                                    (ForgeAIPanel, currently a "Coming soon"
+//                                    overlay)
+//   - "cardforge:generate-random"  → open the "Generate with AI" options dialog
 //
 // Event-based wiring keeps the hero decoupled from the form — they're
 // siblings in the page tree but the page itself is a server component, so

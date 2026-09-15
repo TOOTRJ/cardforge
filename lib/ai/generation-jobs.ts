@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { Json } from "@/types/supabase";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   createClient,
   getCurrentProfile,
@@ -380,6 +381,14 @@ export async function runNextJobStep(
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Sign in to continue generation." };
 
+  // Ownership gate through the user's OWN session (RLS: owners read only
+  // their jobs). Everything after this writes with the service role, so
+  // this read is what keeps one user from stepping another user's job.
+  const owned = await getGenerationJob(jobId);
+  if (!owned || owned.owner_id !== user.id) {
+    return { ok: false, error: "Job not found." };
+  }
+
   const claim = await claimJobStep(jobId, stepKey);
   if (!claim.ok) return claim;
   const job = claim.job;
@@ -479,7 +488,10 @@ async function claimJobStep(
   | { ok: true; job: GenerationJobRow; stepKey: string | null }
   | { ok: false; error: string }
 > {
-  const supabase = await createClient();
+  // Service role: job rows are no longer owner-writable (migration 0073) —
+  // ownership is checked by the caller BEFORE this runs (runNextJobStep
+  // reads the job through the user's RLS-scoped session first).
+  const supabase = createAdminClient();
   const { data, error } = await supabase.rpc("claim_job_step", {
     p_job_id: jobId,
     p_step_key: stepKey ?? null,
@@ -1712,7 +1724,10 @@ async function patchJobStep(
   jobId: string,
   step: JobStep,
 ): Promise<RunStepResult> {
-  const supabase = await createClient();
+  // Service role (see claimJobStep): the step's result is the reconcile
+  // cron's proof that a charge earned its keep, so it must be written by
+  // the server, never by a client-controlled row update.
+  const supabase = createAdminClient();
   // Normalize optional fields to null so the jsonb merge CLEARS a prior value
   // (e.g. a failed→done retry must drop the old error) — JSON drops `undefined`.
   const patch = {

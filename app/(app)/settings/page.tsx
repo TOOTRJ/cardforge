@@ -160,7 +160,9 @@ export default async function SettingsPage() {
             </p>
           </div>
           <div className="flex flex-col gap-3">
-            <Row label="Default visibility" value="Private" />
+            {/* Mirrors defaultValuesFor() in lib/creator/card-fields.ts —
+                new cards start Public (art-less saves are demoted to draft). */}
+            <Row label="Default visibility" value="Public" />
             <Row label="Default rarity" value="Common" />
             <div className="flex flex-col gap-2 rounded-md border border-border/60 bg-background/40 px-4 py-3">
               <span className="text-xs font-semibold uppercase tracking-wider text-subtle">
@@ -192,6 +194,7 @@ export default async function SettingsPage() {
               credits={entitlements.credits}
               renewLabel={renewLabel}
               cancelAtPeriodEnd={entitlements.cancelAtPeriodEnd}
+              hasBillingAccount={Boolean(profile?.stripe_customer_id)}
             />
           </SurfaceCard>
         ) : null}

@@ -13,8 +13,10 @@ import { AI_GENERATOR_FAQ } from "@/lib/content/faq";
 // Targets the long-tail query family "AI MTG card generator", "AI magic
 // card generator", "ChatGPT custom magic card", etc. Mirrors the structure
 // of /mtg-card-maker but with copy and FAQ focused on the AI features:
-// the in-editor assistant (Claude) and the random-card generator (GPT-4o
-// + gpt-image-1, Phase 4).
+// the in-editor assistant (Claude — currently gated "Coming soon", see
+// components/creator/panels/forge-ai-panel.tsx) and the random-card generator
+// (card-design engine on Claude via the Vercel AI Gateway, lib/ai/provider.ts,
+// with FLUX text-to-image and Gemini image-to-image remix, lib/ai/image-gen.ts).
 // ---------------------------------------------------------------------------
 
 // Hard guarantee of static rendering: if a future change introduces a

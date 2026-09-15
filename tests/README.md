@@ -2,13 +2,14 @@
 
 Two-tier test layer:
 
-- **Unit tests** (`tests/unit/`) — Vitest, run in Node. Cover pure
-  `lib/` helpers: validation schemas, Scryfall import mapper, mana-cost
-  tokenizer, pip overrides.
+- **Unit tests** (`tests/unit/`) — Vitest, run in Node. Cover `lib/`
+  helpers, grouped by area under `tests/unit/<area>/` (ai, auth, billing,
+  cards, creator, decks, moderation, mse, pips, scryfall, seo).
 - **End-to-end tests** (`tests/e2e/`) — Playwright, run against a live
   dev server. Marketing + a11y smoke run anywhere; the auth / create /
-  Scryfall / pricing specs run against the **local Supabase stack**
-  (see below) and `test.skip()` cleanly when it isn't set up.
+  custom-pips / Scryfall / decks / challenges / frame-editor / pricing
+  specs run against the **local Supabase stack** (see below) and
+  `test.skip()` cleanly when it isn't set up.
 
 ## Running locally
 
@@ -29,8 +30,8 @@ npm test
 
 ## Full e2e coverage (local Supabase stack)
 
-The auth / create / Scryfall / pricing specs need a database they can
-freely write to. That's the local stack — never production:
+The auth / create / custom-pips / Scryfall / decks / challenges /
+frame-editor / pricing specs need a database they can freely write to. That's the local stack — never production:
 
 ```bash
 # one-time
@@ -42,7 +43,7 @@ cp .env.e2e.example .env.e2e    # then paste the publishable + secret keys
 node scripts/seed-e2e.mjs       # creates the e2e user (idempotent)
 
 # every run
-npx playwright test             # 12/12 — full suite
+npx playwright test             # full suite (13 specs)
 ```
 
 When `.env.e2e` exists, `playwright.config.ts` boots its **own** dev
@@ -57,11 +58,14 @@ smoke only, cred-gated specs skip with a documented reason.
 
 ## Conventions
 
-- One file per logical area (`validation.test.ts`, `import-mapper.test.ts`).
+- One file per logical area under `tests/unit/<area>/` (e.g.
+  `cards/validation.test.ts`, `scryfall/import-mapper.test.ts`).
 - Use `describe` blocks for the function under test; individual `it`
   cases assert one behavior each.
-- Don't mock the database — unit tests cover pure functions only. E2E
-  tests run against the real (local) stack.
+- Don't spin up a database in unit tests. Pure `lib/` helpers are tested
+  directly; DB-touching billing logic (webhook handlers, refill, reconcile)
+  is tested against a minimal recording stub of the admin client (see
+  `tests/unit/billing/`). E2E tests run against the real (local) stack.
 - E2E specs that depend on env vars should `test.skip` (with a
   documented reason) when the vars are absent, so a contributor without
   the setup sees a clear skip rather than a confusing failure.

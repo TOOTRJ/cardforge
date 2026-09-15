@@ -7,6 +7,7 @@ import {
   UpgradeRequiredError,
 } from "@/lib/billing/entitlements";
 import { renderCardImage } from "@/lib/render/card-image";
+import { isAllowedServerImageFetchUrl } from "@/lib/validation/card";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import {
   buildDeckPdf,
@@ -14,19 +15,9 @@ import {
   type DeckPdfLayout,
 } from "@/lib/render/card-pdf";
 import { DECK_BOARD_LABELS, isDeckBoard } from "@/types/deck";
-import {
-  isCardType,
-  isColorIdentity,
-  isRarity,
-  type ArtPosition,
-  type CardBackFace,
-  type CardType,
-  type ColorIdentity,
-  type FrameStyle,
-  type Rarity,
-} from "@/types/card";
 import type { Card as CardRow, DeckCard as DeckCardRow } from "@/types/supabase";
-import type { CardPreviewData } from "@/components/cards/card-preview";
+import { rowToPreviewData, type CardRowForBake } from "@/lib/cards/bake-core";
+import { getPipOverrides } from "@/lib/pips/queries";
 
 // ---------------------------------------------------------------------------
 // /api/decks/[id]/export — Pro "print the whole deck".
@@ -227,7 +218,9 @@ async function pngForCard(
   profileOverrides: Awaited<ReturnType<typeof getFrameProfileOverrides>>,
   options: { brandMark: boolean; watermarkText: string | null },
 ): Promise<Uint8Array | null> {
-  if (card.rendered_image_url) {
+  // Owner-writable column → only fetch it from the app's own storage host;
+  // anything else falls through to a live render (SSRF guard).
+  if (card.rendered_image_url && isAllowedServerImageFetchUrl(card.rendered_image_url)) {
     try {
       const response = await fetch(card.rendered_image_url, {
         cache: "no-store",
@@ -240,8 +233,14 @@ async function pngForCard(
     }
   }
   try {
-    const img = renderCardImage(
-      { ...toPreviewData(card), profileOverrides },
+    // Shared row → render-input mapper (same as the bake), so the print
+    // carries the owner's custom pips, watermark, face content and back face.
+    const img = await renderCardImage(
+      rowToPreviewData(
+        card as CardRowForBake,
+        await getPipOverrides(card.owner_id),
+        profileOverrides,
+      ),
       "hd",
       { brandMark: options.brandMark, watermarkText: options.watermarkText },
     );
@@ -249,32 +248,4 @@ async function pngForCard(
   } catch {
     return null;
   }
-}
-
-// Raw row → preview data (same narrowing as the set export route).
-function toPreviewData(card: CardRow): CardPreviewData {
-  return {
-    title: card.title,
-    cost: card.cost,
-    cardType: isCardType(card.card_type) ? (card.card_type as CardType) : null,
-    supertype: card.supertype,
-    subtypes: card.subtypes,
-    rarity: isRarity(card.rarity) ? (card.rarity as Rarity) : null,
-    colorIdentity: (card.color_identity ?? []).filter(
-      isColorIdentity,
-    ) as ColorIdentity[],
-    rulesText: card.rules_text,
-    flavorText: card.flavor_text,
-    power: card.power,
-    toughness: card.toughness,
-    loyalty: card.loyalty,
-    defense: card.defense,
-    artistCredit: card.artist_credit,
-    artUrl: card.art_url,
-    artPosition: (card.art_position as ArtPosition) ?? {},
-    frameStyle: (card.frame_style as FrameStyle) ?? {},
-    setIconUrl: card.set_icon_url,
-    setIconCode: card.set_icon_code,
-    backFace: (card.back_face as CardBackFace | null) ?? null,
-  };
 }

@@ -206,7 +206,7 @@ export function visibleSteps(ctx: StepContext): StepDef[] {
 }
 
 /** The display label for a panel. Static now that the back face lives inside
- *  the Art step; kept as a function so callers don't need to change. */
+ *  the Identity step; kept as a function so callers don't need to change. */
 export function stepLabel(step: StepDef): string {
   return step.label;
 }
@@ -241,13 +241,14 @@ export function stepIndexForField(
 }
 
 // ---------------------------------------------------------------------------
-// Per-kind panel configuration — which inputs the Art and Text steps render.
-// Pure config, consumed by the panels; the structured editors themselves land
-// in later PRs, so "standard" panels ignore variants they don't know yet.
+// Per-kind panel configuration — which inputs the Identity (art) and Text
+// steps render. Pure config consumed by the panels; the structured
+// loyalty/saga editors are live, and "standard" panels ignore variants
+// they don't know.
 // ---------------------------------------------------------------------------
 
 export type KindPanelConfig = {
-  /** Art inputs the Art step renders. "second" = the inline second face's own
+  /** Art inputs the Identity step renders. "second" = the inline second face's own
    *  art window (split/aftermath halves each show their own illustration;
    *  flip and adventure share the front art). */
   artSlots: Array<"front" | "second">;

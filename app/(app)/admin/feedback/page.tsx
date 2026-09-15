@@ -6,7 +6,9 @@ import { PageHeader } from "@/components/layout/page-header";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FeedbackStatusButtons } from "@/components/admin/feedback-status-buttons";
+import { FeedbackReplyButton } from "@/components/admin/feedback-reply-button";
 import { listAllFeedback } from "@/lib/feedback/queries";
+import { threadIdsForFeedback } from "@/lib/messages/queries";
 import {
   FEEDBACK_CATEGORIES,
   FEEDBACK_STATUSES,
@@ -48,13 +50,16 @@ export default async function AdminFeedbackPage({
   const items = await listAllFeedback(filter);
   // Non-admins get a 404 (don't reveal the route exists).
   if (items === null) notFound();
+  // Submissions that already have a conversation link to it instead of
+  // opening a second one (one thread per feedback row, migration 0070).
+  const threadByFeedback = await threadIdsForFeedback(items.map((item) => item.id));
 
   return (
     <DashboardShell>
       <PageHeader
         eyebrow="Admin · Feedback"
         title="Feedback inbox"
-        description="Bug reports, frame issues, and feature/frame requests from users. New submissions also ping the notification bell."
+        description="Bug reports, frame issues, and feature/frame requests from users. New submissions ping the notification bell; Reply opens a conversation the user sees under Messages."
       />
 
       <div className="mt-4 flex items-center gap-2">
@@ -131,7 +136,13 @@ export default async function AdminFeedbackPage({
                   </span>
                 ) : null}
                 {item.pageUrl ? <span>Page: {item.pageUrl}</span> : null}
-                <span className="ml-auto">
+                <span className="ml-auto flex flex-wrap items-center gap-2">
+                  <FeedbackReplyButton
+                    feedbackId={item.id}
+                    subject={item.subject}
+                    existingThreadId={threadByFeedback.get(item.id) ?? null}
+                    disabledReason={item.user ? null : "The sender's account was deleted."}
+                  />
                   <FeedbackStatusButtons
                     feedbackId={item.id}
                     status={item.status}

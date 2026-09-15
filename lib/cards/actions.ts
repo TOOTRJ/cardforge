@@ -106,9 +106,12 @@ async function ensureUniqueSlugForUser(
   if (!taken) return { slug: desired, conflict: false };
 
   // Try numeric suffixes first; cap attempts so a hostile workspace can't
-  // wedge the action.
+  // wedge the action. Trim the BASE to make room for the suffix — slicing
+  // the joined string cut the suffix off an 80-char slug, so every attempt
+  // produced the same taken slug and the insert hit the unique index.
   for (let attempt = 2; attempt <= 50; attempt += 1) {
-    const candidate = `${desired}-${attempt}`.slice(0, 80);
+    const suffix = `-${attempt}`;
+    const candidate = `${desired.slice(0, 80 - suffix.length)}${suffix}`;
     const stillTaken = await isSlugTakenForCurrentUser(candidate, excludeCardId);
     if (!stillTaken) return { slug: candidate, conflict: true };
   }

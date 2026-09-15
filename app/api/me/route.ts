@@ -8,6 +8,7 @@ import { getEntitlements } from "@/lib/billing/entitlements";
 import { getCreditsUsedThisMonth } from "@/lib/ai/usage-queries";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { getUnreadNotificationCount } from "@/lib/notifications/queries";
+import { getMessageNavState } from "@/lib/messages/queries";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import type { HeaderUser } from "@/components/layout/site-header";
 
@@ -44,15 +45,17 @@ export async function GET() {
     return NextResponse.json({ user: null }, { headers: NO_STORE });
   }
 
-  const [profile, entitlements, creditsUsed, unreadNotifications] =
+  const [profile, entitlements, creditsUsed, unreadNotifications, messages] =
     await Promise.all([
       getCurrentProfile(),
       getEntitlements(),
       isBillingEnabled() ? getCreditsUsedThisMonth() : Promise.resolve(0),
       getUnreadNotificationCount(),
+      getMessageNavState(),
     ]);
 
   const headerUser: HeaderUser = {
+    id: user.id,
     username: profile?.username ?? null,
     displayName: profile?.display_name ?? null,
     avatarUrl: profile?.avatar_url ?? null,
@@ -61,6 +64,8 @@ export async function GET() {
     credits: entitlements?.credits ?? 0,
     creditsUsed,
     unreadNotifications,
+    hasMessages: messages.hasThreads,
+    unreadMessages: messages.unread,
     // subscription_status is webhook-written and stays set after cancel, so
     // non-null = "has held a subscription at some point".
     hasSubscribed: profile?.subscription_status != null,

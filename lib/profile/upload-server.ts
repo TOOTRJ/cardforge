@@ -6,6 +6,7 @@ import sharp from "sharp";
 import { revalidatePath } from "next/cache";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { scanImageUrl } from "@/lib/moderation/image-scan";
 
 // ---------------------------------------------------------------------------
 // Profile-media upload (avatar / banner). Mirrors lib/cards/upload-art-
@@ -167,6 +168,19 @@ export async function uploadProfileMediaServerAction(
 
   const { data } = supabase.storage.from("profile-media").getPublicUrl(path);
   const publicUrl = data.publicUrl;
+
+  // NSFW auto-scan, same as card art (lib/cards/upload-art-server.ts) — the
+  // profile copy of this pipeline predates the scan and never got it, so an
+  // avatar/banner was the one human upload that skipped moderation. Fails
+  // open on a missing key; a positive flag removes the object and rejects.
+  const scan = await scanImageUrl(publicUrl);
+  if (scan.flagged) {
+    await supabase.storage.from("profile-media").remove([path]);
+    return {
+      ok: false,
+      error: "That image was flagged by our content filter and can't be used.",
+    };
+  }
 
   const update =
     kind === "avatar"

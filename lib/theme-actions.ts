@@ -6,13 +6,13 @@ import {
   THEME_COOKIE_MAX_AGE_SECONDS,
   isTheme,
   type Theme,
-} from "@/lib/theme";
+} from "@/lib/theme-shared";
 
 // ---------------------------------------------------------------------------
 // Theme server actions (Phase 11 chunk 12).
 //
-// Split from lib/theme.ts so the utilities there (getTheme,
-// noFlashScript, THEME_COOKIE, isTheme) can be imported from server
+// Split from lib/theme-shared.ts so the utilities there (noFlashScript,
+// THEME_COOKIE, isTheme) can be imported from server and client
 // components without flipping every export into a server-action RPC
 // reference.
 // ---------------------------------------------------------------------------

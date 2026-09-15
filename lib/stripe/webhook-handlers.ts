@@ -2,14 +2,24 @@ import "server-only";
 
 import type Stripe from "stripe";
 import type { createAdminClient } from "@/lib/supabase/admin";
-import { currentCreditPeriod } from "@/lib/billing/plans";
-import { grantMonthlyCreditsForPeriod } from "@/lib/billing/credit-refill";
-import { tierForPriceId } from "./config";
+import {
+  customerIdOf,
+  grantCreditsForSync,
+  isLiveStatus,
+  syncSubscriptionForUser,
+} from "./subscription-sync";
 
 // All entitlement/credit writes happen here, via the service-role admin client
 // (RLS would block writing these columns from a user client). Handlers are
-// idempotent: subscription writes are upserts keyed by stripe_customer_id, and
+// idempotent: subscription writes are upserts keyed by profile id, and
 // credit grants are deduped by idempotency_key inside grant_credits().
+//
+// Subscription state is written by lib/stripe/subscription-sync.ts — the same
+// code the admin "Resync from Stripe" tool runs — so an event never decides
+// the profile's tier on its own: the sync reads the customer's full
+// subscription list, picks the primary live subscription, resolves its tier
+// from the price/product (not only the env ids), and refuses to demote an
+// active subscriber whose price it cannot map.
 //
 // Credit refills are cron-driven (see app/api/cron/refill-credits) so monthly
 // AND annual plans both get a monthly allotment. We additionally grant the
@@ -18,18 +28,9 @@ import { tierForPriceId } from "./config";
 // without waiting for the next cron tick. Mid-month upgrades get the tier
 // delta topped up via lib/billing/credit-refill (shared with the cron).
 // Trials are the exception: one grant at creation, no refills until the
-// first payment (see maybeGrantMonthlyCredits — the cron skips trialing too).
+// first payment (grantCreditsForSync — the cron skips trialing too).
 
 type AdminClient = ReturnType<typeof createAdminClient>;
-
-const ACTIVE_STATUSES = new Set(["active", "trialing"]);
-
-function customerIdOf(
-  customer: string | Stripe.Customer | Stripe.DeletedCustomer | null,
-): string | null {
-  if (!customer) return null;
-  return typeof customer === "string" ? customer : customer.id;
-}
 
 async function findUserIdByCustomer(
   customerId: string,
@@ -71,66 +72,60 @@ async function resolveSubscriptionUserId(
   return metaUserId;
 }
 
-async function upsertSubscriptionState(
+async function handleSubscriptionEvent(
   sub: Stripe.Subscription,
-  admin: AdminClient,
-  opts: { deleted?: boolean } = {},
+  deps: { admin: AdminClient; stripe: Stripe },
+  opts: { deleted: boolean; isCreationEvent: boolean },
 ): Promise<void> {
+  const { admin, stripe } = deps;
   const userId = await resolveSubscriptionUserId(sub, admin);
   if (!userId) return;
 
-  const item = sub.items.data[0];
-  const tier = opts.deleted ? "free" : tierForPriceId(item?.price?.id) ?? "free";
-  // Basil/Dahlia: the period lives on the subscription ITEM, not the sub.
-  const periodEnd = item?.current_period_end
-    ? new Date(item.current_period_end * 1000).toISOString()
-    : null;
+  const result = await syncSubscriptionForUser(admin, stripe, userId, {
+    eventSub: sub,
+    eventDeleted: opts.deleted,
+    customerId: customerIdOf(sub.customer),
+  });
+  if (opts.deleted) return; // no credit grant on cancellation
 
-  await admin
-    .from("profiles")
-    .update({
-      subscription_tier: tier,
-      subscription_status: opts.deleted ? "canceled" : sub.status,
-      stripe_subscription_id: opts.deleted ? null : sub.id,
-      current_period_end: opts.deleted ? null : periodEnd,
-      cancel_at_period_end: opts.deleted ? false : sub.cancel_at_period_end,
-    })
-    .eq("id", userId);
+  // The one-grant-per-trial rule keys on the CREATED event of the synced
+  // subscription — a created event for a secondary subscription must not
+  // re-grant the primary's month.
+  await grantCreditsForSync(result, admin, {
+    isCreationEvent: opts.isCreationEvent && result.subscriptionId === sub.id,
+  });
 }
 
-// Grant this month's credit allotment for an active subscription — the base
-// grant is idempotent per user per calendar month (same key the cron uses),
-// and a mid-month tier upgrade tops up the difference (see credit-refill.ts;
-// before that, the consumed month key meant an upgrade granted NOTHING until
-// the next month). A failed grant throws so the webhook 500s and Stripe
-// retries — the old code discarded the RPC error and acked a lost grant.
-async function maybeGrantMonthlyCredits(
-  sub: Stripe.Subscription,
-  admin: AdminClient,
-  opts: { isCreationEvent: boolean },
+// A subscription checkout that SUPERSEDES an earlier no-card trial (the user
+// bought a plan mid-trial — see createCheckoutSessionAction): once the new
+// subscription is paid for, cancel the trial so the customer never carries
+// two subscriptions. Done here, on completion, rather than before checkout,
+// so an abandoned checkout leaves the trial untouched. The trial's later
+// `deleted` event then resyncs against the customer's subscription list and
+// finds the paid plan still live — no demotion.
+async function handleSupersededSubscription(
+  session: Stripe.Checkout.Session,
+  stripe: Stripe,
 ): Promise<void> {
-  if (!ACTIVE_STATUSES.has(sub.status)) return;
-  // A TRIAL gets exactly ONE grant: on subscription.created. Without this
-  // gate, a no-card 7-day trial spanning a calendar-month boundary banked a
-  // SECOND month's allotment (never-expiring) from any subscription.updated
-  // event — or the refill cron — firing in the new month, all without a
-  // single payment. Monthly refills resume when the trial converts: the
-  // first paid month's grant lands via the status-active update/cron.
-  if (sub.status === "trialing" && !opts.isCreationEvent) return;
-  const userId = await resolveSubscriptionUserId(sub, admin);
-  if (!userId) return;
-
-  const tier = tierForPriceId(sub.items.data[0]?.price?.id);
-  if (!tier || tier === "free") return;
-
-  const result = await grantMonthlyCreditsForPeriod(
-    admin,
-    userId,
-    tier,
-    currentCreditPeriod(),
-  );
-  if (!result.ok) {
-    throw new Error(`Credit grant failed for ${userId}: ${result.error}`);
+  if (session.mode !== "subscription") return;
+  const oldId = session.metadata?.supersedes_subscription_id;
+  const newId =
+    typeof session.subscription === "string"
+      ? session.subscription
+      : session.subscription?.id ?? null;
+  if (!oldId || oldId === newId) return;
+  try {
+    const old = await stripe.subscriptions.retrieve(oldId);
+    if (isLiveStatus(old.status)) {
+      await stripe.subscriptions.cancel(oldId, { prorate: false });
+    }
+  } catch (error) {
+    // Best effort: a lingering trial cancels itself at day 7 (missing
+    // payment method → cancel). Log so it's visible, never fail the event.
+    console.error(
+      `[stripe] Could not cancel superseded subscription ${oldId}:`,
+      error instanceof Error ? error.message : error,
+    );
   }
 }
 
@@ -176,9 +171,14 @@ export async function handleStripeEvent(
   event: Stripe.Event,
   deps: { admin: AdminClient; stripe: Stripe },
 ): Promise<void> {
-  const { admin } = deps;
+  const { admin, stripe } = deps;
   switch (event.type) {
-    case "checkout.session.completed":
+    case "checkout.session.completed": {
+      const session = event.data.object as Stripe.Checkout.Session;
+      await handleCheckoutPaid(session, admin);
+      await handleSupersededSubscription(session, stripe);
+      break;
+    }
     // Async/delayed payment methods settle AFTER `completed` (which arrives
     // unpaid and grants nothing) — the pack's credits land on this event.
     case "checkout.session.async_payment_succeeded":
@@ -188,18 +188,22 @@ export async function handleStripeEvent(
       );
       break;
     case "customer.subscription.created":
-    case "customer.subscription.updated": {
-      const sub = event.data.object as Stripe.Subscription;
-      await upsertSubscriptionState(sub, admin);
-      await maybeGrantMonthlyCredits(sub, admin, {
-        isCreationEvent: event.type === "customer.subscription.created",
-      });
+    case "customer.subscription.updated":
+      await handleSubscriptionEvent(
+        event.data.object as Stripe.Subscription,
+        deps,
+        {
+          deleted: false,
+          isCreationEvent: event.type === "customer.subscription.created",
+        },
+      );
       break;
-    }
     case "customer.subscription.deleted":
-      await upsertSubscriptionState(event.data.object as Stripe.Subscription, admin, {
-        deleted: true,
-      });
+      await handleSubscriptionEvent(
+        event.data.object as Stripe.Subscription,
+        deps,
+        { deleted: true, isCreationEvent: false },
+      );
       break;
     case "invoice.payment_failed": {
       const invoice = event.data.object as Stripe.Invoice;

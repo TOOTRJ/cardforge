@@ -4,16 +4,15 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 // ---------------------------------------------------------------------------
 // Scryfall source-tracking queries (Phase 11 chunk 13).
 //
-// Two queries:
-//   - countPublicRemixesBySource — for the "Also remixed by N others"
-//     chip on a card's public detail page. Excludes the current card so
-//     the count is "OTHER remixes," not "all remixes including this one."
-//   - listPublicRemixesBySource — not yet used in the UI; ready for a
-//     future "Lineage" view on the source card. Kept here for symmetry.
+// One query: countPublicRemixesBySource — for the "Also remixed by N others"
+// chip on a card's public detail page. Excludes the current card so the
+// count is "OTHER remixes," not "all remixes including this one." The
+// lineage view itself is the gallery's ?source= filter (sourceScryfallId in
+// lib/cards/queries.ts), not this module.
 //
-// Both queries filter to public + unlisted visibilities so a private
-// remix doesn't bump the counter. RLS would also block reads, but the
-// explicit filter makes the query intent clear.
+// Filters to public + unlisted visibilities so a private remix doesn't bump
+// the counter. RLS would also block reads, but the explicit filter makes
+// the query intent clear.
 // ---------------------------------------------------------------------------
 
 export async function countPublicRemixesBySource(

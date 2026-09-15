@@ -14,8 +14,13 @@
 //   3. If the frame's art window isn't near (50%,33%), adjust SEEDS. For frames
 //      with two cut-outs (planeswalker), add a second seed point.
 //   4. node scripts/convert-mse-frame.mjs
-//   5. Add the frame to FRAME_TEMPLATE_VALUES (types/card.ts) + a profile in
-//      lib/cards/template-layout.ts.
+//   5. Register it in types/card.ts (FRAME_TEMPLATE_VALUES, FRAME_TEMPLATE_LABELS,
+//      FRAME_TEMPLATE_SET — the last two are exhaustive) and wire it into the
+//      picker via ERA_TYPE_FRAME / TEMPLATE_SKIN_VARIANTS / a showcase set, or
+//      a kind's layoutTemplates in lib/creator/card-kinds.ts; add a profile in
+//      lib/cards/template-layout.ts; run `npm run assets:frame-webp`; then
+//      verify each color in /admin/frame-compare — combos stay hidden until
+//      checked.
 //
 // Requires `sharp` (already a dependency). Run from the project root.
 // ---------------------------------------------------------------------------

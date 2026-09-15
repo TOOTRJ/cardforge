@@ -284,9 +284,9 @@ export function CardCreatorForm({
     return i >= 0 ? i : 0;
   });
   // Stable handle to the latest step-navigation fn, so the once-registered
-  // custom-event listeners (hero / command palette) always call current logic.
+  // custom-event listeners (start-with hero) always call current logic.
   const goToStepKeyRef = useRef<(key: StepKey) => void>(() => {});
-  // "Generate with AI" options dialog (hero tile + command palette open it).
+  // "Generate with AI" options dialog (the hero tile opens it via cardforge:generate-random).
   const [aiGenerateOpen, setAiGenerateOpen] = useState(false);
   // Tracks the source card when the user seeds the form from Scryfall.
   // Surfaces as a chip near the save bar so the user remembers they need
@@ -1191,10 +1191,11 @@ export function CardCreatorForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, deckRemix]);
 
-  // Kick off /api/ai/random-card and pour the result into the form. Art is
-  // optional — the model occasionally trips gpt-image-1's safety filter even on
-  // benign prompts; we surface a soft toast in that case and leave the
-  // existing art_url alone so the user can upload their own.
+  // Kick off a single-card generation job (kind "card", stepped through
+  // useGenerationJob → POST /api/ai/jobs + /step) and pour the result into the
+  // form. Art is optional — the FLUX image step can fail or be refused by the
+  // provider; we surface a soft toast in that case and leave the existing
+  // art_url alone so the user can upload their own.
   const handleRandomCard = async (
     options: AiGenerateOptions = {},
   ): Promise<boolean> => {
@@ -1953,9 +1954,8 @@ export function CardCreatorForm({
 
           {/* Controlled Scryfall import dialog. Rendered once; opened by:
               - the Identity-tab inline trigger (above)
-              - the start-with hero on /create
-              - the global command palette
-              All three paths just flip `scryfallOpen` via state or events. */}
+              - the start-with hero on /create (cardforge:open-scryfall)
+              Both paths just flip `scryfallOpen` via state or events. */}
           <ScryfallImportDialog
             signedIn={Boolean(userId)}
             onImport={handleScryfallImport}

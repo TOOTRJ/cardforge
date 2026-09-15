@@ -41,9 +41,11 @@ SUPABASE_SECRET_KEY=<secret key from `supabase status`>
 # AI keys etc. can stay as-is; leave NEXT_PUBLIC_GA_MEASUREMENT_ID unset
 ```
 
-> ⚠️ **Until now `.env.local` pointed at production** — local card saves,
-> likes, and experiments wrote to the live database. Switching to the local
-> stack is the single most important change in this document.
+> ⚠️ **`.env.local` STILL points at production** (TODO.md item #1, deliberately
+> deferred 2026-07-09) — local card saves, likes, and experiments write to the
+> live database. Treat every local write as a prod write until you switch to
+> the local stack per §1; that switch is the single most important change in
+> this document.
 
 Day-to-day:
 
@@ -57,7 +59,9 @@ npm run db:reset           # re-apply all migrations + seed for a clean slate
 Creating a schema change:
 
 ```bash
-supabase migration new my_change_name   # new supabase/migrations/00NN_*.sql
+# create supabase/migrations/NNNN_my_change_name.sql by hand, NNNN = highest
+# existing number + 1 (do NOT use `supabase migration new` — it emits a
+# timestamped filename that breaks the NNNN ordering)
 # write the SQL, then verify the full chain applies cleanly:
 npm run db:reset
 ```

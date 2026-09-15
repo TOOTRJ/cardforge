@@ -366,7 +366,12 @@ export type Database = {
           id: string;
           read_at: string | null;
           recipient_id: string;
+          // Added by migration 0070 (admin messaging) — folded in until the
+          // generated types are regenerated.
+          thread_id: string | null;
           type: string;
+          // Added by migration 0075 (real-time notifications).
+          payload: Json;
         };
         Insert: {
           actor_id?: string | null;
@@ -376,7 +381,9 @@ export type Database = {
           id?: string;
           read_at?: string | null;
           recipient_id: string;
+          thread_id?: string | null;
           type: string;
+          payload?: Json;
         };
         Update: {
           actor_id?: string | null;
@@ -386,7 +393,9 @@ export type Database = {
           id?: string;
           read_at?: string | null;
           recipient_id?: string;
+          thread_id?: string | null;
           type?: string;
+          payload?: Json;
         };
         Relationships: [
           {
@@ -1070,6 +1079,101 @@ export type Database = {
           },
         ];
       };
+      // Migration 0070 — admin ↔ user messaging (hand-extended).
+      message_threads: {
+        Row: {
+          admin_last_read_at: string | null;
+          admin_unread_count: number;
+          created_at: string;
+          created_by: string | null;
+          feedback_id: string | null;
+          id: string;
+          last_message_at: string;
+          last_message_preview: string | null;
+          last_sender_role: string | null;
+          status: string;
+          subject: string;
+          user_id: string;
+          user_last_read_at: string | null;
+          user_unread_count: number;
+        };
+        Insert: {
+          admin_last_read_at?: string | null;
+          admin_unread_count?: number;
+          created_at?: string;
+          created_by?: string | null;
+          feedback_id?: string | null;
+          id?: string;
+          last_message_at?: string;
+          last_message_preview?: string | null;
+          last_sender_role?: string | null;
+          status?: string;
+          subject: string;
+          user_id: string;
+          user_last_read_at?: string | null;
+          user_unread_count?: number;
+        };
+        Update: {
+          admin_last_read_at?: string | null;
+          admin_unread_count?: number;
+          created_at?: string;
+          created_by?: string | null;
+          feedback_id?: string | null;
+          id?: string;
+          last_message_at?: string;
+          last_message_preview?: string | null;
+          last_sender_role?: string | null;
+          status?: string;
+          subject?: string;
+          user_id?: string;
+          user_last_read_at?: string | null;
+          user_unread_count?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "message_threads_feedback_id_fkey";
+            columns: ["feedback_id"];
+            isOneToOne: false;
+            referencedRelation: "feedback";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      messages: {
+        Row: {
+          body: string;
+          created_at: string;
+          id: string;
+          sender_id: string | null;
+          sender_role: string;
+          thread_id: string;
+        };
+        Insert: {
+          body: string;
+          created_at?: string;
+          id?: string;
+          sender_id?: string | null;
+          sender_role: string;
+          thread_id: string;
+        };
+        Update: {
+          body?: string;
+          created_at?: string;
+          id?: string;
+          sender_id?: string | null;
+          sender_role?: string;
+          thread_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "messages_thread_id_fkey";
+            columns: ["thread_id"];
+            isOneToOne: false;
+            referencedRelation: "message_threads";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       decks: {
         Row: {
           cover_position: Json | null;
@@ -1306,6 +1410,77 @@ export type Database = {
       claim_job_step: {
         Args: { p_job_id: string; p_step_key: string | null };
         Returns: Json;
+      };
+      // Migration 0070/0071 — messaging + admin user directory (hand-extended).
+      mark_message_thread_read: {
+        Args: { p_thread_id: string };
+        Returns: number;
+      };
+      admin_list_users: {
+        Args: {
+          p_q?: string | null;
+          p_tier?: string | null;
+          p_status?: string | null;
+          p_flag?: string | null;
+          p_sort?: string | null;
+          p_limit?: number;
+          p_offset?: number;
+        };
+        Returns: {
+          id: string;
+          username: string | null;
+          display_name: string | null;
+          avatar_url: string | null;
+          email: string | null;
+          subscription_tier: string;
+          subscription_status: string | null;
+          comp_tier: string | null;
+          comp_expires_at: string | null;
+          credits: number;
+          is_admin: boolean;
+          card_count: number;
+          deck_count: number;
+          created_at: string;
+          last_active_at: string | null;
+          total_count: number;
+        }[];
+      };
+      // Migration 0074 — private billing columns.
+      get_my_billing: {
+        Args: Record<string, never>;
+        Returns: {
+          subscription_tier: string;
+          subscription_status: string | null;
+          stripe_customer_id: string | null;
+          stripe_subscription_id: string | null;
+          current_period_end: string | null;
+          cancel_at_period_end: boolean;
+          credits: number;
+          comp_tier: string | null;
+          comp_expires_at: string | null;
+          card_limit_override: number | null;
+          is_admin: boolean;
+        }[];
+      };
+      owner_export_stamp: {
+        Args: { p_owner_id: string };
+        Returns: { paid: boolean; footer_text: string | null }[];
+      };
+      admin_user_stats: {
+        Args: { p_user_id: string };
+        Returns: {
+          cards_total: number;
+          cards_public: number;
+          cards_unlisted: number;
+          cards_private: number;
+          decks: number;
+          sets: number;
+          likes_received: number;
+          credits_spent_month: number;
+          feedback_count: number;
+          thread_count: number;
+          unread_from_user: number;
+        }[];
       };
     };
     Enums: {

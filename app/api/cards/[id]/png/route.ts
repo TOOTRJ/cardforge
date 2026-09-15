@@ -4,36 +4,32 @@ import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
-  isCardType,
-  isColorIdentity,
-  isRarity,
-  type ArtPosition,
-  type CardType,
-  type ColorIdentity,
-  type FrameStyle,
-  type Rarity,
-} from "@/types/card";
-import { renderCardImage, type RenderPreset } from "@/lib/render/card-image";
+  isLandscapeRender,
+  renderCardImage,
+  type RenderPreset,
+} from "@/lib/render/card-image";
+import { fetchStoredRender, fitStoredRender } from "@/lib/render/stored-render";
 import {
   getEntitlements,
   ownerExportStamp,
 } from "@/lib/billing/entitlements";
-import type { CardPreviewData } from "@/components/cards/card-preview";
+import { rowToPreviewData, type CardRowForBake } from "@/lib/cards/bake-core";
 import { getPipOverrides } from "@/lib/pips/queries";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 
 // ---------------------------------------------------------------------------
 // /api/cards/[id]/png — Download a rendered PNG of a card
 //
-// Mirrors the visibility model of /api/cards/[id]/pdf and /og: public cards
-// are CDN-cacheable, unlisted cards require the link (no cache), private
-// cards require the owner. Returns the rendered card image with a
-// Content-Disposition: attachment header so browsers offer it as a file
-// download rather than rendering inline (the OG route is inline by design,
-// this route is download by design).
+// Visibility mirrors /api/cards/[id]/pdf and /og (public/unlisted readable
+// by anyone with the link, private owner-only), but the BYTES vary by the
+// viewer's plan (resolution clamp + brand mark), so every response is
+// `private, must-revalidate` with an ETag — never shared-cached at the CDN.
+// Returns the rendered card image with Content-Disposition: attachment so
+// browsers offer it as a download (the OG route is inline by design).
 //
 // Query params:
-//   ?preset=hd       → 1500×2100 (default, suitable for print)
+//   ?preset=hd       → 1500×2100 (default; honored only when the viewer's
+//                      plan allows HD — free viewers are clamped to default)
 //   ?preset=default  → 750×1050 (smaller, for sharing)
 // ---------------------------------------------------------------------------
 
@@ -83,30 +79,15 @@ export async function GET(
 
   const pipOverrides = await getPipOverrides(card.owner_id);
   const profileOverrides = await getFrameProfileOverrides();
-  const previewData: CardPreviewData = {
+  // The ONE row → render-input mapper (shared with the save-time bake and
+  // the admin rebake). A hand-rolled copy here used to drop the set icon,
+  // the design watermark, structured face content and the back face, so a
+  // downloaded PNG differed from the gallery render of the same card.
+  const previewData = rowToPreviewData(
+    card as CardRowForBake,
     pipOverrides,
     profileOverrides,
-    title: card.title,
-    cost: card.cost,
-    cardType: isCardType(card.card_type) ? (card.card_type as CardType) : null,
-    supertype: card.supertype,
-    subtypes: card.subtypes,
-    rarity: isRarity(card.rarity) ? (card.rarity as Rarity) : null,
-    colorIdentity: card.color_identity.filter(isColorIdentity) as ColorIdentity[],
-    rulesText: card.rules_text,
-    flavorText: card.flavor_text,
-    power: card.power,
-    toughness: card.toughness,
-    loyalty: card.loyalty,
-    defense: card.defense,
-    artistCredit: card.artist_credit,
-    artUrl: card.art_url,
-    artPosition: (card.art_position as ArtPosition) ?? {},
-    // Pass the persisted frame style through so downloaded PNGs use the card's
-    // actual frame template + finish (previously hard-coded to {}, which forced
-    // every download back to the default frame).
-    frameStyle: (card.frame_style as FrameStyle) ?? {},
-  };
+  );
 
   // Resolution follows the VIEWER's plan (their export capability); the
   // brand mark clears when EITHER side's plan removes it — the owner paid
@@ -162,11 +143,25 @@ export async function GET(
 
   let pngBytes: Uint8Array;
   try {
-    const imgResponse = renderCardImage(previewData, preset, {
-      brandMark: watermark,
-      watermarkText: stamp.footerText,
-    });
-    pngBytes = new Uint8Array(await imgResponse.arrayBuffer());
+    // The stored bake carries the OWNER's stamp. When this download would
+    // carry the same one, serve it (2× downscaled for a clamped viewer)
+    // instead of re-rendering — lib/render/stored-render.ts. A paid viewer
+    // downloading a free creator's card needs the clean render the bake
+    // doesn't have, so that path (and any card without a current bake)
+    // still renders live.
+    const stored =
+      watermark === stamp.brandMark ? await fetchStoredRender(card) : null;
+    if (stored) {
+      pngBytes = new Uint8Array(
+        await fitStoredRender(stored, preset, isLandscapeRender(previewData)),
+      );
+    } else {
+      const imgResponse = await renderCardImage(previewData, preset, {
+        brandMark: watermark,
+        watermarkText: stamp.footerText,
+      });
+      pngBytes = new Uint8Array(await imgResponse.arrayBuffer());
+    }
   } catch (err) {
     const detail = err instanceof Error ? err.message : "Render error";
     return NextResponse.json(

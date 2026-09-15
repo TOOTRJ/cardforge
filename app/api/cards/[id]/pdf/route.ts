@@ -1,23 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import {
-  isCardType,
-  isColorIdentity,
-  isRarity,
-  type ArtPosition,
-  type CardType,
-  type ColorIdentity,
-  type FrameStyle,
-  type Rarity,
-} from "@/types/card";
 import { renderCardImage } from "@/lib/render/card-image";
+import { fetchStoredRender } from "@/lib/render/stored-render";
 import {
   getEntitlements,
   ownerExportStamp,
 } from "@/lib/billing/entitlements";
 import { buildCardPdf, type PdfLayout } from "@/lib/render/card-pdf";
-import type { CardPreviewData } from "@/components/cards/card-preview";
+import { rowToPreviewData, type CardRowForBake } from "@/lib/cards/bake-core";
 import { getPipOverrides } from "@/lib/pips/queries";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 
@@ -32,10 +23,12 @@ import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 // Legacy alias (preserved for existing share/embed links):
 //   ?sheet=true                   ≡ ?layout=sheet&paper=letter
 //
-// Auth / visibility rules (mirrors the OG image route):
-//   - public cards    → accessible to everyone, cached at CDN
-//   - unlisted cards  → accessible to anyone with the link (no CDN cache)
-//   - private cards   → only the owning user can download
+// Auth / visibility (mirrors the OG image route for WHO may see the card):
+//   - public / unlisted cards → any viewer with the link
+//   - private cards           → only the owning user
+// but the PDF itself is a paid export: Plus+ for single cards, Pro for sheet
+// layouts (enforced below). Responses are entitlement-scoped, so they are
+// never shared-cached (Cache-Control: private, no-store).
 // ---------------------------------------------------------------------------
 
 const UUID_PATTERN =
@@ -126,42 +119,35 @@ export async function GET(
     );
   }
 
-  // Build the CardPreviewData shape the renderer expects.
+  // The shared row → render-input mapper (same as the bake), so the print
+  // carries the set icon, design watermark, face content and back face.
   const profileOverrides = await getFrameProfileOverrides();
-  const previewData: CardPreviewData = {
+  const previewData = rowToPreviewData(
+    card as CardRowForBake,
+    await getPipOverrides(card.owner_id),
     profileOverrides,
-    pipOverrides: await getPipOverrides(card.owner_id),
-    title: card.title,
-    cost: card.cost,
-    cardType: isCardType(card.card_type) ? (card.card_type as CardType) : null,
-    supertype: card.supertype,
-    subtypes: card.subtypes,
-    rarity: isRarity(card.rarity) ? (card.rarity as Rarity) : null,
-    colorIdentity: card.color_identity.filter(isColorIdentity) as ColorIdentity[],
-    rulesText: card.rules_text,
-    flavorText: card.flavor_text,
-    power: card.power,
-    toughness: card.toughness,
-    loyalty: card.loyalty,
-    defense: card.defense,
-    artistCredit: card.artist_credit,
-    artUrl: card.art_url,
-    artPosition: (card.art_position as ArtPosition) ?? {},
-    // Pass the persisted frame style through so printed PDFs use the card's
-    // actual frame template + finish (previously hard-coded to {}).
-    frameStyle: (card.frame_style as FrameStyle) ?? {},
-  };
+  );
 
-  // Render PNG at HD quality (1500×2100) for crisp print output.
+  // The print source is the HD (1500×2100) render. The stored bake IS that
+  // render with the owner's stamp, so when the viewer's PDF would carry the
+  // same stamp we embed the stored bytes and skip Satori entirely
+  // (lib/render/stored-render.ts); otherwise render live.
   const stamp = await ownerExportStamp(card.owner_id);
+  // Cleared by EITHER side's plan — see the png route for the rationale.
+  const brandMark = stamp.brandMark && !entitlements.removeWatermark;
   let pngBytes: Uint8Array;
   try {
-    const imgResponse = renderCardImage(previewData, "hd", {
-      // Cleared by EITHER side's plan — see the png route for the rationale.
-      brandMark: stamp.brandMark && !entitlements.removeWatermark,
-      watermarkText: stamp.footerText,
-    });
-    pngBytes = new Uint8Array(await imgResponse.arrayBuffer());
+    const stored =
+      brandMark === stamp.brandMark ? await fetchStoredRender(card) : null;
+    if (stored) {
+      pngBytes = new Uint8Array(stored);
+    } else {
+      const imgResponse = await renderCardImage(previewData, "hd", {
+        brandMark,
+        watermarkText: stamp.footerText,
+      });
+      pngBytes = new Uint8Array(await imgResponse.arrayBuffer());
+    }
   } catch (err) {
     const detail = err instanceof Error ? err.message : "Render error";
     return NextResponse.json(

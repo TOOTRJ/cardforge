@@ -20,11 +20,14 @@ async function isCurrentUserAdmin(): Promise<boolean> {
 // in a tight burst or (b) slowly drain the AI spend cap over a day. These are
 // pure ABUSE BACKSTOPS: credits are the user-facing limiter (owner decision,
 // 2026-07-28), so both windows are sized to never bind before credits do —
-// a full 60-step batch job on the 3-worker client pool logs ~16 calls/min,
+// a full 100-step batch job on the 3-worker client pool logs ~16 calls/min,
 // and 500/day clears even a whale spending multiple credit packs in a day,
 // while still shutting down anything resembling an abuse script.
-const PER_MINUTE_LIMIT = 40;
-const PER_DAY_LIMIT = 500;
+// Exported so the usage panel (lib/ai/usage-queries.ts) shows the SAME caps
+// this limiter enforces — the panel used to hard-code 20/200 and flagged
+// users as over-limit at the wrong numbers.
+export const PER_MINUTE_LIMIT = 40;
+export const PER_DAY_LIMIT = 500;
 const MINUTE_MS = 60_000;
 const DAY_MS = 24 * 60 * 60_000;
 
@@ -53,7 +56,8 @@ const RANDOM_CARD_DAILY_LIMIT = 10;
 export const REMIX_DAILY_LIMIT = 10;
 // Deck/set batch flows generate many images per job, so the ceiling is the
 // per-DAY total across all batch jobs (not per job). Admins are exempt.
-export const DECK_CARDS_DAILY_LIMIT = 60;
+// Matches the per-job ceiling so one full Commander deck fits in a day.
+export const DECK_CARDS_DAILY_LIMIT = 100;
 
 export type RateLimitResult =
   | { ok: true }
@@ -208,15 +212,18 @@ export async function logAiCall(
 // Credits meter the operations with real marginal cost — AI card/art
 // generation. Cheap text-assistant actions stay governed by the windowed
 // rate limit above (cost 0), so free users can keep using them. Paid tiers get
-// a monthly credit allotment (granted on Stripe `invoice.paid`); everyone can
+// a monthly credit allotment (granted by the daily refill cron and on the
+// Stripe subscription webhook — lib/billing/credit-refill.ts); everyone can
 // buy consumable top-up packs. Spending goes through the atomic consume_credits
 // RPC (which row-locks the profile), so concurrent generations can't
-// double-spend the balance.
+// double-spend the balance; background jobs reserve a credit per step and
+// refund on failure (lib/ai/generation-jobs.ts).
 // ---------------------------------------------------------------------------
 
 // Cost in credits per AI action. Anything not listed is free (0) and relies on
-// the windowed rate limit only. Deck generation is metered per-card by the deck
-// route, so it isn't a fixed cost here.
+// the windowed rate limit only. Set/deck generation charges 1 credit per card
+// step (plus 1 for a cover and 1 for a set icon) inside the job engine, so it
+// isn't a fixed cost here.
 export const AI_ACTION_COST: Partial<Record<AiActionLabel, number>> = {
   generate_random_card: 1,
   remix_card: 1,

@@ -34,12 +34,16 @@ const GENERIC_SIGNUP_ERROR =
 const GENERIC_LOGIN_ERROR =
   "Invalid email or password. Check your details and try again.";
 
-const SAFE_REDIRECT = /^\/[^\s]*$/;
+// A same-origin path only: one leading slash, then anything but whitespace,
+// a second slash OR a backslash. `//evil.com` is protocol-relative, and
+// `/\evil.com` is rewritten to `https://evil.com/` by the WHATWG URL parser
+// (and by Next's client router), so both must be rejected — the old check
+// only caught the double slash.
+const SAFE_REDIRECT = /^\/(?![\/\\])[^\s\\]*$/;
 
 function safeRedirectTo(value: FormDataEntryValue | null) {
   if (typeof value !== "string" || !value) return "/dashboard";
   if (!SAFE_REDIRECT.test(value)) return "/dashboard";
-  if (value.startsWith("//")) return "/dashboard";
   return value;
 }
 
@@ -123,6 +127,24 @@ export async function signupAction(
   }
 
   const supabase = await createClient();
+
+  // The profile trigger drops a username that is already taken (the row is
+  // created with username NULL) — the user landed on the dashboard with no
+  // handle and no explanation. Check first and say so. Usernames are
+  // case-insensitively unique (0001), so ilike matches the constraint.
+  const { data: taken } = await supabase
+    .from("profiles")
+    .select("id")
+    .ilike("username", parsed.data.username)
+    .maybeSingle();
+  if (taken) {
+    return {
+      status: "error",
+      fieldErrors: { username: "That username is taken — try another." },
+      values: { email: parsed.data.email, username: parsed.data.username },
+    };
+  }
+
   // Build the email confirmation redirect from our own resolver instead of
   // trusting the Origin / X-Forwarded-Host request headers. Supabase's
   // allow-list still gates the final destination, but using the canonical

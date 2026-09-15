@@ -26,14 +26,13 @@ import { buildSetSkeleton } from "@/lib/ai/mtg-rules";
 //      context so names and factions recur across the whole set.
 //
 // Text only — art/icon generation joins in the jobs pipeline (set gen v2).
-// Each generated card costs credits (SET_CARD_CREDIT_COST), metered by the
-// route. IP guardrails live in the engine's system prompt.
+// Each generated card is metered per step by withCreditedStep in
+// lib/ai/generation-jobs.ts. IP guardrails live in the engine's system prompt.
 // ---------------------------------------------------------------------------
 
 export const MIN_SET_SIZE = 3;
 export const MAX_SET_SIZE = 12;
 export const DEFAULT_SET_SIZE = 8;
-export const SET_CARD_CREDIT_COST = 1;
 
 export type SetOutput = {
   set_title: string;

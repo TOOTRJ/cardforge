@@ -6,8 +6,10 @@
 //
 // ADDITIVE ONLY: the PNG masters are never touched — the server-side Satori
 // bake (lib/render/card-frames.ts) reads those exact bytes and preview ==
-// baked-PNG fidelity depends on them. Browser code prefers the .webp via
-// CSS image-set() with a PNG fallback (components/cards/frame-layer.tsx).
+// baked-PNG fidelity depends on them. Browser code loads the .webp through a
+// plain CSS url() (components/cards/frame-layer.tsx frameBackgroundImage) —
+// there is NO PNG fallback in the browser, so every frame PNG must have its
+// .webp sibling; the PNG is read only by the Satori bake.
 //
 // Idempotent; skips any .webp that is newer than its source PNG. Rerun
 // after adding or rebuilding frames:
