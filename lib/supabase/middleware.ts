@@ -6,6 +6,10 @@ import { getSupabaseEnv, isSupabaseConfigured } from "./env";
 // /sets is now the PUBLIC community browse (mirrors /gallery) and is not
 // protected. Personal sets live under /dashboard/sets and are covered by
 // the /dashboard prefix.
+// /create: proxy.ts rewrites COOKIE-LESS visitors to the guest creator before
+// this runs, so the no-cookie fast path below never sees /create; keeping it
+// protected here means a visitor whose cookie no longer holds a valid
+// session still gets the proper /login?redirectTo=/create redirect.
 const PROTECTED_PREFIXES = ["/dashboard", "/create", "/settings"];
 const AUTH_REDIRECT_PREFIXES = ["/login", "/signup"];
 

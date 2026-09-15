@@ -27,7 +27,7 @@
       the browser?", "Can I import my Card Conjurer cards?"), a comparison
       table (feature × PipGlyph / Card Conjurer), FAQ section rendered with
       the `FAQPage` JSON-LD helper (`components/seo/json-ld.tsx`), internal
-      links to `/mtg-card-maker`, `/best-mtg-card-makers`, `/preview`,
+      links to `/mtg-card-maker`, `/best-mtg-card-makers`, `/create`,
       `/articles/how-to-print-proxy-mtg-cards`, and a `<Callout>` CTA to
       `/preview` (no account needed). Add the slug to the "Best card makers"
       page's cross-links and to `lib/content/clusters.ts`; regenerate the

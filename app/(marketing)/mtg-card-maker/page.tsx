@@ -90,7 +90,7 @@ export default function MtgCardMakerPage() {
         </p>
         <div className="flex flex-wrap gap-3">
           <Button asChild size="lg">
-            <Link href="/preview">
+            <Link href="/create">
               Create your first card <ArrowRight className="h-4 w-4" aria-hidden />
             </Link>
           </Button>
@@ -150,7 +150,7 @@ export default function MtgCardMakerPage() {
           </p>
           <div className="flex flex-wrap gap-3">
             <Button asChild size="lg">
-              <Link href="/preview">Open the card creator</Link>
+              <Link href="/create">Open the card creator</Link>
             </Button>
             <Button asChild size="lg" variant="ghost">
               <Link href="/signup">Create a free account</Link>

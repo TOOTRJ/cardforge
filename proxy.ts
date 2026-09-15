@@ -7,7 +7,36 @@ import {
   hasAnyParam,
 } from "@/lib/routing/browse-params";
 
+/** @supabase/ssr session cookies: sb-<ref>-auth-token(.N). Presence is a
+ *  HINT (the (app) create page re-validates) — enough to pick which creator
+ *  to serve. */
+const SUPABASE_AUTH_COOKIE = /^sb-[^=]*-auth-token(\.\d+)?$/;
+
 export async function proxy(request: NextRequest) {
+  const { pathname: requestPath } = request.nextUrl;
+
+  // The card creator lives at ONE URL. /create serves the signed-in creator
+  // (app/(app)/create) to visitors with a session cookie and the static,
+  // hourly-cached guest creator (app/(marketing)/create-guest — no cookies,
+  // ISR) to everyone else, via an internal rewrite so the visible URL never
+  // changes. The old /preview URL (and the internal path) 308 to /create so
+  // inbound links and search rankings carry over.
+  if (requestPath === "/preview" || requestPath === "/create-guest") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/create";
+    return NextResponse.redirect(url, 308);
+  }
+  if (requestPath === "/create") {
+    const signedIn = request.cookies
+      .getAll()
+      .some((c) => SUPABASE_AUTH_COOKIE.test(c.name));
+    if (!signedIn) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/create-guest";
+      return NextResponse.rewrite(url, { request });
+    }
+  }
+
   const sessionResponse = await updateSession(request);
 
   // /gallery and /sets are prerendered (ISR) and never read searchParams

@@ -140,7 +140,7 @@ export default function FaqPage() {
           </p>
           <div className="flex flex-wrap gap-3">
             <Button asChild size="lg">
-              <Link href="/preview">Try the card creator</Link>
+              <Link href="/create">Try the card creator</Link>
             </Button>
             <Button asChild size="lg" variant="ghost">
               <Link href="/gallery">Browse the gallery</Link>

@@ -49,7 +49,7 @@ export const CLUSTERS: Record<string, Cluster> = {
       "A custom card isn't finished when the art lands — it's finished when it survives a real game. These guides cover playtesting your designs, printing clean proxies at home, and running community design challenges that sharpen your whole playgroup.",
     blurb:
       "Guides on playtesting custom MTG cards, printing proxies at home, and running community design challenges.",
-    toolHref: "/preview",
+    toolHref: "/create",
     toolLabel: "Open the card creator",
   },
 };

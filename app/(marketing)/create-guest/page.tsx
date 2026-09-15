@@ -14,14 +14,15 @@ import { isAIConfigured } from "@/lib/ai/card-assistant";
 import { getVerifiedFrameKeysPublic } from "@/lib/cards/frame-reviews";
 
 // ---------------------------------------------------------------------------
-// /preview — guest card creator
+// The GUEST card creator — served at /create for signed-out visitors.
 //
-// Renders the full card creator with live preview, mana pip builder, and
-// oracle text — no account required. The action bar shows "Sign in to save"
-// instead of a Save button when userId is null.
-//
-// This fulfills the marketing promise: "No account required to preview."
-// Signing up unlocks saving, publishing to the gallery, and set management.
+// proxy.ts rewrites anonymous /create requests here (and 308s the old
+// /preview URL and this internal path to /create), so the creator has ONE
+// public URL: signed-in visitors get app/(app)/create, everyone else this
+// page. It renders the full creator with live preview, mana pip builder and
+// oracle text — no account required; the action bar shows "Sign in to save"
+// instead of Save when userId is null. It reads only seeded reference data
+// through the cookie-free public client, so it stays ISR.
 // ---------------------------------------------------------------------------
 
 // ISR: the guest creator only reads seeded reference data (game system +
@@ -29,10 +30,10 @@ import { getVerifiedFrameKeysPublic } from "@/lib/cards/frame-reviews";
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
-  title: "Preview — Try the MTG Card Creator",
+  title: "Create a Custom MTG Card — Free Card Creator",
   description:
-    "Try PipGlyph's custom MTG card creator without signing up. Build any card type, pick mana costs, write oracle text, and see a live preview instantly.",
-  alternates: { canonical: "/preview" },
+    "Design a custom MTG-style card in PipGlyph's free card creator — no signup needed. Build any card type, pick mana costs, write oracle text, and see a live preview instantly.",
+  alternates: { canonical: "/create" },
   openGraph: {
     title: "Try the MTG Card Creator — No Account Needed | PipGlyph",
     description:
@@ -67,7 +68,7 @@ export default async function PreviewPage() {
       <div className="mb-6 flex items-center gap-3 rounded-frame border border-accent/30 bg-accent/10 px-4 py-3">
         <Eye className="h-4 w-4 shrink-0 text-accent" aria-hidden />
         <p className="text-sm text-foreground">
-          <span className="font-semibold text-accent">Preview mode</span> — your
+          <span className="font-semibold text-accent">Guest mode</span> — your
           card is visible here but won&apos;t be saved.{" "}
           <Link
             href="/signup"

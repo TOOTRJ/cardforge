@@ -156,7 +156,7 @@ export default async function ArticlePage({
           </p>
           <div className="flex flex-wrap gap-3 pt-1">
             <Button asChild>
-              <Link href="/preview">Open the card creator</Link>
+              <Link href="/create">Open the card creator</Link>
             </Button>
             <Button asChild variant="ghost">
               <Link href="/faq">Read the FAQ</Link>

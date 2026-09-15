@@ -208,7 +208,7 @@ const CHALLENGES_FAQ: FaqEntry[] = [
 const ACCOUNTS_FAQ: FaqEntry[] = [
   {
     q: "Do I need an account to use PipGlyph?",
-    a: "No account is needed to design and preview a card — the full editor is open at /preview. A free account unlocks saving cards to your dashboard, publishing to the gallery, building sets, uploading custom mana pips, and entering design challenges.",
+    a: "No account is needed to design and preview a card — the full editor is open at /create. A free account unlocks saving cards to your dashboard, publishing to the gallery, building sets, uploading custom mana pips, and entering design challenges.",
   },
   {
     q: "Does the editor autosave my work?",

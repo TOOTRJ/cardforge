@@ -82,7 +82,7 @@ export function MarketingHero({
           {/* CTAs */}
           <div className="flex flex-wrap items-center gap-3">
             <Button asChild size="lg">
-              <Link href="/preview">Start creating</Link>
+              <Link href="/create">Start creating</Link>
             </Button>
             <Button asChild size="lg" variant="outline">
               <Link href="/gallery">Explore the gallery</Link>
