@@ -1,7 +1,7 @@
 "use client";
 
 // Land icon panel — the Text & stats step for BASIC lands (the Land type
-// toggle above it decides basic vs nonbasic). Basics print a large mana
+// variation on the Card step decides basic vs nonbasic). Basics print a large mana
 // symbol instead of rules text, so the step's only job is the icon: it
 // follows the land type automatically (Forest → {G}), and the user can
 // override it with another symbol or upload their own mark. Overrides write
@@ -169,8 +169,8 @@ export function LandIconPanel({ userId, autoKey }: LandIconPanelProps) {
               </div>
 
               <p className="text-[11px] text-subtle">
-                Want rules text instead? Switch the land type above to
-                Nonbasic — basics print only the symbol.
+                Want rules text instead? On the Card step, set the Land
+                variation to Nonbasic — basics print only the symbol.
               </p>
             </div>
           </FieldGroup>

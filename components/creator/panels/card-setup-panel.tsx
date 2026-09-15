@@ -17,6 +17,11 @@ import { useMemo, useState } from "react";
 import { Controller, useFormContext } from "react-hook-form";
 import { ChevronDown } from "lucide-react";
 import { ChipGroup, type ChipOption } from "@/components/ui/chip-group";
+import {
+  LandModeChips,
+  landModeLabel,
+  type LandMode,
+} from "@/components/creator/panels/land-mode-panel";
 import { pickFrameColorKey } from "@/components/cards/frame-layer";
 import {
   FrameThumb,
@@ -137,6 +142,12 @@ type CardSetupPanelProps = {
    *  uses it to keep a pristine basic-land name/subtype in step with the
    *  color. */
   onColorIdentityChange?: (next: ColorIdentity[]) => void;
+  /** Lands only: Basic (big symbol, no text) vs Nonbasic (rules text) —
+   *  rendered as the Land kind's first Variation. */
+  landMode?: LandMode;
+  /** Why "Basic" is unavailable right now (multicolor frame), else null. */
+  landBasicDisabledReason?: string | null;
+  onLandModeChange?: (next: LandMode) => void;
 };
 
 export function CardSetupPanel({
@@ -145,6 +156,9 @@ export function CardSetupPanel({
   verifiedFrameKeys = [],
   onKindSelect,
   onColorIdentityChange,
+  landMode,
+  landBasicDisabledReason = null,
+  onLandModeChange,
 }: CardSetupPanelProps) {
   const { control } = useFormContext<FormValues>();
   const verifiedKeys = useMemo(
@@ -233,12 +247,21 @@ export function CardSetupPanel({
             eraForTemplate(base) === "showcase"
               ? FRAME_TEMPLATE_LABELS[base]
               : `${FRAME_ERA_LABELS[eraForTemplate(base)]} — ${FRAME_TEMPLATE_LABELS[base]}`;
-          const variationSummary =
+          const frameVariationSummary =
             normalized === base
               ? "Standard"
               : eraForTemplate(normalized) === "showcase"
                 ? `${FRAME_SET_LABELS[FRAME_TEMPLATE_SET[normalized]]} — ${FRAME_TEMPLATE_LABELS[normalized]}`
                 : FRAME_TEMPLATE_LABELS[normalized];
+          // Lands lead their Variations with Basic vs Nonbasic — the choice
+          // that decides whether the card prints a big symbol or rules text.
+          const showLandMode =
+            kind === "land" && landMode !== undefined && Boolean(onLandModeChange);
+          const variationSummary = showLandMode
+            ? normalized === base
+              ? landModeLabel(landMode as LandMode)
+              : `${landModeLabel(landMode as LandMode)} · ${frameVariationSummary}`
+            : frameVariationSummary;
 
           // Group the frame list into era sections, preserving order.
           const byEra = new Map<FrameEra, FrameChoice[]>();
@@ -356,19 +379,47 @@ export function CardSetupPanel({
                 ) : null}
               </SetupSection>
 
-              {variationChoices.length > 0 ? (
+              {showLandMode || variationChoices.length > 0 ? (
                 <SetupSection title="Variations" value={variationSummary}>
-                  <ChipGroup
-                    ariaLabel="Frame variations"
-                    layout="grid-2"
-                    size="md"
-                    value={normalized}
-                    onChange={field.onChange}
-                    options={[
-                      standardOption,
-                      ...variationChoices.map(toOption),
-                    ]}
-                  />
+                  <div className="flex flex-col gap-4">
+                    {showLandMode ? (
+                      <div className="flex flex-col gap-2">
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">
+                          Land type
+                        </p>
+                        <LandModeChips
+                          mode={landMode as LandMode}
+                          basicDisabledReason={landBasicDisabledReason}
+                          onChange={onLandModeChange!}
+                        />
+                        <p className="text-[11px] leading-4 text-subtle">
+                          {landMode === "basic"
+                            ? "Basic lands print the big mana symbol and no rules text."
+                            : "Nonbasic lands print rules text on the Text & stats step."}
+                        </p>
+                      </div>
+                    ) : null}
+                    {variationChoices.length > 0 ? (
+                      <div className="flex flex-col gap-2">
+                        {showLandMode ? (
+                          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">
+                            Frame
+                          </p>
+                        ) : null}
+                        <ChipGroup
+                          ariaLabel="Frame variations"
+                          layout="grid-2"
+                          size="md"
+                          value={normalized}
+                          onChange={field.onChange}
+                          options={[
+                            standardOption,
+                            ...variationChoices.map(toOption),
+                          ]}
+                        />
+                      </div>
+                    ) : null}
+                  </div>
                 </SetupSection>
               ) : null}
             </>

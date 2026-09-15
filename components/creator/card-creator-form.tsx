@@ -61,7 +61,6 @@ import { KindChangeDialog } from "@/components/creator/kind-change-dialog";
 import { ArtPanel } from "@/components/creator/panels/art-panel";
 import { TextPanel } from "@/components/creator/panels/text-panel";
 import { LandIconPanel } from "@/components/creator/panels/land-icon-panel";
-import { LandModePanel } from "@/components/creator/panels/land-mode-panel";
 import { SetIconPanel } from "@/components/creator/panels/set-icon-panel";
 import { ForgeAIPanel } from "@/components/creator/panels/forge-ai-panel";
 import { AbilitiesPanel } from "@/components/creator/panels/abilities-panel";
@@ -580,8 +579,9 @@ export function CardCreatorForm({
     supertype: getValues("supertype") ?? "",
     subtypes_text: getValues("subtypes_text") ?? "",
   });
-  /** Land type toggle (Text step): rewrite the supertype/subtypes so the
-   *  card is a basic (big symbol) or a nonbasic (rules text). */
+  /** Land type (the Land kind's first Variation on the Card step): rewrite
+   *  the supertype/subtypes so the card is a basic (big symbol) or a
+   *  nonbasic (rules text). */
   const handleLandModeChange = (next: "basic" | "nonbasic") => {
     const identity = landIdentity();
     const patch =
@@ -1843,6 +1843,19 @@ export function CardCreatorForm({
                 verifiedFrameKeys={verifiedFrameKeys}
                 onKindSelect={handleKindSelect}
                 onColorIdentityChange={handleColorIdentityChange}
+                landMode={
+                  watched.card_type === "land"
+                    ? landBasicKey
+                      ? "basic"
+                      : "nonbasic"
+                    : undefined
+                }
+                landBasicDisabledReason={
+                  pickFrameColorKey(watched.color_identity) === "m"
+                    ? "No basic land is multicolor — pick a single frame color first."
+                    : null
+                }
+                onLandModeChange={handleLandModeChange}
               />
             ) : null}
 
@@ -1887,19 +1900,6 @@ export function CardCreatorForm({
             {/* ----- Text & stats panel (rules/flavor + type-gated stats) ----- */}
             {stepKey === "text" ? (
               <>
-                {watched.card_type === "land" ? (
-                  // Lands choose basic (big symbol) vs nonbasic (rules text)
-                  // here — the visible escape hatch from the basic seed.
-                  <LandModePanel
-                    mode={landBasicKey ? "basic" : "nonbasic"}
-                    basicDisabledReason={
-                      pickFrameColorKey(watched.color_identity) === "m"
-                        ? "No basic land is multicolor — pick a single frame color first."
-                        : null
-                    }
-                    onChange={handleLandModeChange}
-                  />
-                ) : null}
                 {landBasicKey ? (
                   // Basic lands print a large mana symbol instead of rules
                   // text — so this step is the ICON step: follow the land
