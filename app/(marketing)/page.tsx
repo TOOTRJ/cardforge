@@ -86,12 +86,14 @@ export default async function HomePage() {
   const featuredCards = await listFeaturedHomeCards();
   return (
     <>
-      <MarketingHero featured={featuredCards} />
+      {/* What's new — sits right under the header, above the hero, so the
+          newest update and the teased features are the first thing seen. */}
       {isSupabaseConfigured() ? (
         <Suspense fallback={null}>
           <UpdatesBanner />
         </Suspense>
       ) : null}
+      <MarketingHero featured={featuredCards} />
       <FeatureGrid />
 
       {/* Stat strip + brand epigraph — the "engineered for precision" band. */}

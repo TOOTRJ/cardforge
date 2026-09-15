@@ -3,7 +3,9 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 import { createClient, getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
+import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { SITE_UPDATES_TAG } from "@/lib/updates/queries";
+import { isReleased } from "@/lib/updates/shared";
 
 // ---------------------------------------------------------------------------
 // Site updates — admin writes (RLS admin policies on site_updates enforce the
@@ -191,4 +193,104 @@ export async function acknowledgeUpdatesAction(ids: string[]): Promise<UpdateAct
     return { ok: false, error: "Couldn't record that." };
   }
   return { ok: true };
+}
+
+const BROADCAST_PAGE = 1000;
+const BROADCAST_INSERT_CHUNK = 500;
+
+export type BroadcastResult =
+  | { ok: true; sent: number; skipped: number }
+  | { ok: false; error: string };
+
+/**
+ * Admin: push a released update to EVERY user as a `site_update` notification
+ * (bell badge, /notifications page, realtime toast for anyone online).
+ * Service-role insert in chunks; users who already hold a notification for
+ * this update are skipped, so re-sending only reaches people who signed up
+ * since. Admins are skipped too (they wrote it).
+ */
+export async function notifyAllUsersAction(id: string): Promise<BroadcastResult> {
+  const gate = await requireAdmin();
+  if (!gate.ok) return gate;
+  if (!z.string().uuid().safeParse(id).success) return { ok: false, error: "Unknown update." };
+  if (!isAdminConfigured()) return { ok: false, error: "Admin client isn't configured." };
+  const supabase = await createClient();
+  const { data: update } = await supabase
+    .from("site_updates")
+    .select("id, kind, title, summary, link_href, is_published, publish_at, notified_count")
+    .eq("id", id)
+    .maybeSingle();
+  if (!update) return { ok: false, error: "Unknown update." };
+  if (!isReleased(update)) {
+    return { ok: false, error: "Publish it first — only a live update can be sent to users." };
+  }
+
+  const admin = createAdminClient();
+  // Everyone who already has this notification (from an earlier send).
+  const already = new Set<string>();
+  for (let from = 0; ; from += BROADCAST_PAGE) {
+    const { data, error } = await admin
+      .from("notifications")
+      .select("recipient_id")
+      .eq("type", "site_update")
+      .filter("payload->>updateId", "eq", id)
+      .range(from, from + BROADCAST_PAGE - 1);
+    if (error) return { ok: false, error: "Couldn't read earlier sends." };
+    for (const row of data ?? []) already.add(row.recipient_id as string);
+    if ((data?.length ?? 0) < BROADCAST_PAGE) break;
+  }
+
+  const payload = {
+    updateId: update.id,
+    kind: update.kind,
+    title: update.title,
+    summary: update.summary,
+    link: update.link_href,
+  };
+  let sent = 0;
+  let skipped = 0;
+  let pending: { recipient_id: string; actor_id: string; type: "site_update"; payload: typeof payload }[] = [];
+  const flush = async () => {
+    if (pending.length === 0) return true;
+    const { error } = await admin.from("notifications").insert(pending);
+    if (error) {
+      console.warn("notifyAllUsersAction: insert error", error.message);
+      return false;
+    }
+    sent += pending.length;
+    pending = [];
+    return true;
+  };
+  for (let from = 0; ; from += BROADCAST_PAGE) {
+    const { data, error } = await admin
+      .from("profiles")
+      .select("id, is_admin")
+      .order("id", { ascending: true })
+      .range(from, from + BROADCAST_PAGE - 1);
+    if (error) return { ok: false, error: "Couldn't list users." };
+    for (const profile of data ?? []) {
+      if (profile.is_admin || already.has(profile.id)) {
+        skipped += 1;
+        continue;
+      }
+      pending.push({ recipient_id: profile.id, actor_id: gate.userId, type: "site_update", payload });
+      if (pending.length >= BROADCAST_INSERT_CHUNK && !(await flush())) {
+        return { ok: false, error: `Stopped after ${sent} notifications — try again to resume.` };
+      }
+    }
+    if ((data?.length ?? 0) < BROADCAST_PAGE) break;
+  }
+  if (!(await flush())) {
+    return { ok: false, error: `Stopped after ${sent} notifications — try again to resume.` };
+  }
+  await admin
+    .from("site_updates")
+    .update({
+      notified_at: new Date().toISOString(),
+      notified_count: (update.notified_count ?? 0) + sent,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+  purge();
+  return { ok: true, sent, skipped };
 }

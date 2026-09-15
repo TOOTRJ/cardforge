@@ -970,6 +970,8 @@ export type Database = {
           is_published: boolean;
           kind: string;
           link_href: string | null;
+          notified_at: string | null;
+          notified_count: number;
           publish_at: string;
           require_ack: boolean;
           show_in_banner: boolean;
@@ -986,6 +988,8 @@ export type Database = {
           is_published?: boolean;
           kind: string;
           link_href?: string | null;
+          notified_at?: string | null;
+          notified_count?: number;
           publish_at?: string;
           require_ack?: boolean;
           show_in_banner?: boolean;
@@ -1002,6 +1006,8 @@ export type Database = {
           is_published?: boolean;
           kind?: string;
           link_href?: string | null;
+          notified_at?: string | null;
+          notified_count?: number;
           publish_at?: string;
           require_ack?: boolean;
           show_in_banner?: boolean;

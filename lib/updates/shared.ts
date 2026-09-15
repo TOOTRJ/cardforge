@@ -17,6 +17,10 @@ export type SiteUpdate = {
   show_in_banner: boolean;
   require_ack: boolean;
   ack_until: string | null;
+  /** Broadcast bookkeeping: when it was last pushed as a notification to
+   *  every user, and how many received it in total. */
+  notified_at: string | null;
+  notified_count: number;
   created_at: string;
   updated_at: string;
 };

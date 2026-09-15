@@ -85,3 +85,33 @@ describe("describeNotification — render updates", () => {
     ).toMatch(/1 of your cards has a newer look/);
   });
 });
+
+describe("describeNotification — site updates", () => {
+  const base = { actor: null, card: null, threadId: null } as const;
+  it("announces a shipped update and links to its page", () => {
+    const d = describeNotification(
+      {
+        ...base,
+        type: "site_update",
+        payload: { updateId: "u1", kind: "update", title: "Pips as icons", summary: "Type {G} and see the pip.", link: "/create" },
+      },
+      { isAdmin: false },
+    );
+    expect(d.subject).toBe("PipGlyph team");
+    expect(d.body).toBe("shipped something new: Pips as icons — Type {G} and see the pip.");
+    expect(d.href).toBe("/create");
+  });
+
+  it("teases an upcoming feature and falls back to /news for unsafe links", () => {
+    const d = describeNotification(
+      {
+        ...base,
+        type: "site_update",
+        payload: { updateId: "u2", kind: "upcoming", title: "Smart deck building", summary: "", link: "javascript:alert(1)" },
+      },
+      { isAdmin: false },
+    );
+    expect(d.body).toBe("teased what's coming next: Smart deck building");
+    expect(d.href).toBe("/news");
+  });
+});
