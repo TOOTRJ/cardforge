@@ -8,6 +8,7 @@ import { serializeJsonLd } from "@/components/seo/json-ld";
 import { getSiteBaseUrl } from "@/lib/site-url";
 import { noFlashScript } from "@/lib/theme-shared";
 import { GoogleAnalytics } from "@next/third-parties/google";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 
 // ---------------------------------------------------------------------------
@@ -235,6 +236,9 @@ export default function RootLayout({
             (@next/third-parties). Gated on the env var so only deploys
             that configure it load analytics. */}
         {GA_MEASUREMENT_ID ? <GoogleAnalytics gaId={GA_MEASUREMENT_ID} /> : null}
+        {/* Vercel Speed Insights — tracks performance metrics on all
+            pages, automatically enabled on Vercel deployments. */}
+        <SpeedInsights />
         {/* Strips ?via= share-attribution params after the GA pageview
             captures them, so re-copied URLs stay clean. */}
         <ShareParamCleanup />
