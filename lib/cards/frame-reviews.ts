@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/public";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 // ---------------------------------------------------------------------------
@@ -54,6 +55,27 @@ export async function getVerifiedFrameKeys(): Promise<string[]> {
   if (!isSupabaseConfigured()) return [];
   try {
     const supabase = await createClient();
+    const { data } = await supabase
+      .from("frame_reviews")
+      .select("template, color_key")
+      .eq("verified", true);
+    return (data ?? []).map((row) => `${row.template}/${row.color_key}`);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * The same verified keys through the cookie-free public client — for pages
+ * that must stay static/ISR (the guest creator at /preview). The table is
+ * world-readable by policy, so anonymous visibility is identical; only the
+ * cookie access differs. Before this existed, /preview passed no keys at
+ * all and every kind but Creature rendered as "Soon" for guests.
+ */
+export async function getVerifiedFrameKeysPublic(): Promise<string[]> {
+  if (!isSupabaseConfigured()) return [];
+  try {
+    const supabase = createPublicClient();
     const { data } = await supabase
       .from("frame_reviews")
       .select("template, color_key")

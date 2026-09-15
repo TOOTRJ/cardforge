@@ -11,6 +11,7 @@ import {
   getTemplatesForGameSystem,
 } from "@/lib/cards/queries";
 import { isAIConfigured } from "@/lib/ai/card-assistant";
+import { getVerifiedFrameKeysPublic } from "@/lib/cards/frame-reviews";
 
 // ---------------------------------------------------------------------------
 // /preview — guest card creator
@@ -45,9 +46,16 @@ export default async function PreviewPage() {
   }
 
   const gameSystem = await getFantasyGameSystem();
-  const templates = gameSystem
-    ? await getTemplatesForGameSystem(gameSystem.id)
-    : [];
+  // Published (template, color) combos gate every kind chip and frame tile;
+  // read through the public client so the page stays ISR. Without these
+  // the guest creator offered only Creature — every other kind sat behind a
+  // "Soon" badge — which contradicted the copy above.
+  const [templates, verifiedFrameKeys] = gameSystem
+    ? await Promise.all([
+        getTemplatesForGameSystem(gameSystem.id),
+        getVerifiedFrameKeysPublic(),
+      ])
+    : [[], []];
 
   if (!gameSystem) {
     return <SchemaUnseeded />;
@@ -90,6 +98,7 @@ export default async function PreviewPage() {
           userId={null}
           gameSystems={[gameSystem]}
           templates={templates}
+          verifiedFrameKeys={verifiedFrameKeys}
           aiConfigured={isAIConfigured()}
         />
       </div>

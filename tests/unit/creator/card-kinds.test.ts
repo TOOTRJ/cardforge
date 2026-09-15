@@ -7,7 +7,11 @@ import {
   basicLandSeedForColorKey,
   isSeedableLandIdentity,
   kindFromCard,
+  landIdentityHasBasicSeed,
   planKindChange,
+  shouldClearBasicSeedForTitle,
+  toBasicLandIdentity,
+  toNonbasicLandIdentity,
   type CardKind,
 } from "@/lib/creator/card-kinds";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
@@ -205,10 +209,16 @@ describe("planKindChange", () => {
 
 describe("basic-land auto-identity", () => {
   it("seeds the basic matching the frame color, none for multicolor", () => {
+    // Wastes is "Basic Land" with NO land type in the rules.
     expect(basicLandSeedForColorKey("c")).toEqual({
       title: "Wastes",
       supertype: "Basic",
-      subtypes_text: "Wastes",
+      subtypes_text: "",
+    });
+    expect(basicLandSeedForColorKey("g")).toEqual({
+      title: "Forest",
+      supertype: "Basic",
+      subtypes_text: "Forest",
     });
     expect(basicLandSeedForColorKey("g")?.title).toBe("Forest");
     expect(basicLandSeedForColorKey("m")).toBeNull();
@@ -249,6 +259,51 @@ describe("basic-land auto-identity", () => {
         subtypes_text: "Forest",
       }),
     ).toBe(false);
+    // The Wastes seed (no subtype) and a legacy Wastes draft are both seeds.
+    expect(
+      isSeedableLandIdentity({ title: "Wastes", supertype: "Basic", subtypes_text: "" }),
+    ).toBe(true);
+    expect(
+      isSeedableLandIdentity({ title: "Wastes", supertype: "Basic", subtypes_text: "Wastes" }),
+    ).toBe(true);
+  });
+
+  it("REGRESSION 2026-09-14: renaming a seeded basic drops the seed so the text box appears", () => {
+    const renamed = { title: "Command Tower", supertype: "Basic", subtypes_text: "Plains" };
+    expect(landIdentityHasBasicSeed(renamed)).toBe(true);
+    expect(shouldClearBasicSeedForTitle(renamed)).toBe(true);
+    expect(toNonbasicLandIdentity(renamed)).toEqual({
+      title: "Command Tower",
+      supertype: "",
+      subtypes_text: "",
+    });
+    // A basic's own name keeps the seed; an empty title changes nothing yet.
+    expect(shouldClearBasicSeedForTitle({ title: "Forest", supertype: "Basic", subtypes_text: "Forest" })).toBe(false);
+    expect(shouldClearBasicSeedForTitle({ title: "Snow-Covered Forest", supertype: "Basic", subtypes_text: "Forest" })).toBe(false);
+    expect(shouldClearBasicSeedForTitle({ title: "", supertype: "Basic", subtypes_text: "Forest" })).toBe(false);
+    // User-typed identity is never a seed residue.
+    expect(landIdentityHasBasicSeed({ title: "Breeding Pool", supertype: "Basic", subtypes_text: "Forest, Island" })).toBe(false);
+    expect(landIdentityHasBasicSeed({ title: "X", supertype: "Legendary", subtypes_text: "Forest" })).toBe(false);
+  });
+
+  it("toNonbasic keeps user-typed subtypes and other supertypes; toBasic adds Basic + the color's type", () => {
+    expect(
+      toNonbasicLandIdentity({ title: "X", supertype: "Legendary Basic", subtypes_text: "Forest, Island" }),
+    ).toEqual({ title: "X", supertype: "Legendary", subtypes_text: "Forest, Island" });
+    expect(
+      toBasicLandIdentity({ title: "Elven Grove", supertype: "", subtypes_text: "" }, "g"),
+    ).toEqual({ title: "Elven Grove", supertype: "Basic", subtypes_text: "Forest" });
+    expect(
+      toBasicLandIdentity({ title: "X", supertype: "Legendary", subtypes_text: "Elf" }, "r"),
+    ).toEqual({ title: "X", supertype: "Basic Legendary", subtypes_text: "Mountain, Elf" });
+    // Already has a basic type: no duplicate; Wastes adds no subtype.
+    expect(
+      toBasicLandIdentity({ title: "X", supertype: "", subtypes_text: "Island" }, "g"),
+    ).toEqual({ title: "X", supertype: "Basic", subtypes_text: "Island" });
+    expect(
+      toBasicLandIdentity({ title: "Wastes", supertype: "", subtypes_text: "" }, "c"),
+    ).toEqual({ title: "Wastes", supertype: "Basic", subtypes_text: "" });
+    expect(toBasicLandIdentity({ title: "X", supertype: "", subtypes_text: "" }, "m")).toBeNull();
   });
 });
 

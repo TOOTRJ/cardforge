@@ -586,16 +586,19 @@ function CardFace({
     : null;
   // Explicit watermark wins; basic lands (Plains/Island/…) automatically get
   // the authentic large mana symbol in the text box.
-  const effectiveWatermark = resolveWatermark(
-    face.watermark,
-    face.cardType,
-    face.subtypes,
-  );
-  // Basic lands (by subtype) print NO rules text — just the big symbol.
-  // Keyed on the subtype, not the watermark, so an explicit override icon
-  // suppresses the text the same way the automatic one does.
-  const isBasicLand =
-    basicLandManaKey(face.cardType, face.subtypes) !== null;
+  const basicLandFace = {
+    cardType: face.cardType,
+    supertype: face.supertype,
+    subtypes: face.subtypes,
+    title: face.title,
+    rulesText: face.rulesText,
+  };
+  const effectiveWatermark = resolveWatermark(face.watermark, basicLandFace);
+  // BASIC lands (Basic supertype — see lib/cards/watermark.ts) print NO
+  // rules text, just the big symbol. Keyed on the card's identity, not the
+  // watermark, so an explicit override icon suppresses the text the same
+  // way the automatic one does; nonbasic lands always print their text.
+  const isBasicLand = basicLandManaKey(basicLandFace) !== null;
   const hasRulesContent =
     !isBasicLand &&
     Boolean(face.rulesText?.trim() || face.flavorText?.trim());

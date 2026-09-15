@@ -57,9 +57,28 @@ export function isWatermarkPresetKey(key: string): boolean {
   return (WATERMARK_PRESET_KEYS as string[]).includes(key);
 }
 
+// ---------------------------------------------------------------------------
+// Basic-land detection — the ONE rule both renderers and the creator use to
+// decide "big mana symbol, no rules text" vs "rules text".
+//
+// A land is BASIC when it carries the Basic supertype (the printed rule:
+// "Basic Land — Forest", "Basic Snow Land — Island"; Wastes is "Basic Land"
+// with no land type and is recognised by name). The subtype alone is NOT
+// enough — dual lands like Breeding Pool ("Land — Forest Island") print
+// rules text — and, until 2026-09, keying on the subtype alone was what made
+// nonbasics go textless: the creator seeds every new Land as a basic, and a
+// card renamed to Command Tower (or a Scryfall import that carried no
+// supertype/subtypes of its own) kept the seed's "Plains"/"Wastes" subtype
+// and lost its text box. One legacy fallback remains for rows written
+// before the seed existed and for AI output: a land with a basic subtype,
+// NO supertype and NO rules text has nothing else to print, so it stays a
+// basic.
+// ---------------------------------------------------------------------------
+
 // Basic land types → the mana symbol their text box prints. Real basics
-// replace the rules text with a large centered symbol (Portal/6ED+); Wastes
-// keeps its one rules line printed over it.
+// replace the rules text with a large centered symbol (Portal/6ED+). Wastes
+// has no land type in the rules; "wastes" stays here only so legacy rows
+// that stored it as a subtype keep rendering.
 const BASIC_LAND_KEYS: Record<string, "w" | "u" | "b" | "r" | "g" | "c"> = {
   plains: "w",
   island: "u",
@@ -91,17 +110,65 @@ export function basicLandNameForColorKey(key: string): string | null {
   );
 }
 
-/** The mana key for a basic land (card_type land + a basic subtype), else
- *  null. Drives the automatic big-symbol treatment in both renderers and
- *  hides the rules field in the editor. */
-export function basicLandManaKey(
-  cardType: string | null | undefined,
+/** The fields the basic-land rule reads — a slice every renderer's face
+ *  object and the creator's live form both provide. */
+export type BasicLandFace = {
+  cardType: string | null | undefined;
+  supertype?: string | null;
+  subtypes?: readonly string[] | null;
+  title?: string | null;
+  rulesText?: string | null;
+};
+
+/** True when the supertype carries "Basic" ("Basic", "Basic Snow", …). */
+export function hasBasicSupertype(supertype: string | null | undefined): boolean {
+  return /\bbasic\b/i.test(supertype ?? "");
+}
+
+/** Strip an optional "Snow-Covered " prefix and normalise for name checks. */
+function normalizeLandTitle(title: string | null | undefined): string {
+  return (title ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/^snow-covered\s+/, "");
+}
+
+/** True when the title IS one of the six basics (Snow-Covered variants too)
+ *  — what the creator's seed writes, and what a user keeps when they really
+ *  are making a basic. */
+export function isBasicLandTitle(title: string | null | undefined): boolean {
+  return normalizeLandTitle(title) in BASIC_LAND_KEYS;
+}
+
+/** The mana key of the first basic land type among the subtypes. */
+export function basicSubtypeManaKey(
   subtypes: readonly string[] | null | undefined,
 ): "w" | "u" | "b" | "r" | "g" | "c" | null {
-  if (cardType !== "land") return null;
   for (const s of subtypes ?? []) {
     const key = BASIC_LAND_KEYS[s.trim().toLowerCase()];
     if (key) return key;
+  }
+  return null;
+}
+
+/**
+ * The mana key a BASIC land prints as its big symbol, else null (the land is
+ * nonbasic and prints rules text — or the card isn't a land). Drives the
+ * automatic big-symbol treatment in both renderers and the Text step's
+ * icon-vs-text editor in the creator.
+ */
+export function basicLandManaKey(
+  face: BasicLandFace,
+): "w" | "u" | "b" | "r" | "g" | "c" | null {
+  if (face.cardType !== "land") return null;
+  const subtypeKey = basicSubtypeManaKey(face.subtypes);
+  if (hasBasicSupertype(face.supertype)) {
+    // Wastes: "Basic Land" with no land type — the name identifies it.
+    return subtypeKey ?? (normalizeLandTitle(face.title) === "wastes" ? "c" : null);
+  }
+  // Legacy/AI shape: basic subtype, no supertype, nothing else to print.
+  if (subtypeKey && !face.supertype?.trim() && !face.rulesText?.trim()) {
+    return subtypeKey;
   }
   return null;
 }
@@ -110,11 +177,10 @@ export function basicLandManaKey(
  *  otherwise basic lands get the authentic large mana symbol automatically. */
 export function resolveWatermark(
   watermark: CardWatermark | null | undefined,
-  cardType: string | null | undefined,
-  subtypes: readonly string[] | null | undefined,
+  face: BasicLandFace,
 ): CardWatermark | null {
   if (watermark) return watermark;
-  const key = basicLandManaKey(cardType, subtypes);
+  const key = basicLandManaKey(face);
   return key ? { kind: "mana", key, size: "large" } : null;
 }
 
