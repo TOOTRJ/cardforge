@@ -4,10 +4,20 @@ import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { requireTier, UpgradeRequiredError } from "@/lib/billing/entitlements";
 import { isAllowedServerImageFetchUrl } from "@/lib/validation/card";
+import { listDeckCards } from "@/lib/decks/queries";
+import { computeDeckAnalytics } from "@/lib/decks/analytics";
+import { deckToText } from "@/lib/decks/export-text";
+import { getDeckGuide } from "@/lib/decks/guides";
+import { buildDeckReportPdf } from "@/lib/decks/deck-report-pdf";
+import { commanderBracket, deckTypeByKey } from "@/lib/decks/deck-types";
+import { DECK_FORMAT_LABELS, isDeckFormat } from "@/types/deck";
+import { getSiteBaseUrl } from "@/lib/site-url";
 
 // ---------------------------------------------------------------------------
-// /api/decks/[id]/download — Pro "save all cards": a ZIP of the deck's
-// custom cards' baked PNG renders. Owner-only. Cards without a baked render
+// /api/decks/[id]/download — the Pro whole-deck export: a ZIP with the
+// deck's custom cards' baked PNG renders, the cover art, decklist.txt, and
+// deck.pdf (stats, decklist by board, and the AI how-to-play guide with
+// combos when the deck has one). Owner-only. Cards without a baked render
 // are listed in a MISSING.txt inside the archive rather than silently
 // dropped. PNGs are already compressed — STORE keeps the CPU bill near zero.
 // ---------------------------------------------------------------------------
@@ -64,7 +74,7 @@ export async function GET(
 
   const { data: deck } = await supabase
     .from("decks")
-    .select("id, slug, title, owner_id, cover_url")
+    .select("id, slug, title, description, format, deck_type, bracket, owner_id, cover_url")
     .eq("id", id)
     .maybeSingle();
   if (!deck) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -83,12 +93,45 @@ export async function GET(
   const cardIds = Array.from(
     new Set((entries ?? []).map((entry) => entry.card_id as string)),
   ).slice(0, MAX_ZIP_CARDS);
-  if (cardIds.length === 0) {
+
+  // The report + decklist ride along whatever the card situation — a deck
+  // of unremixed real cards still exports its stats and guide.
+  const [items, guide, ownerProfile] = await Promise.all([
+    listDeckCards(id),
+    getDeckGuide(id),
+    supabase.from("profiles").select("username, display_name").eq("id", user.id).maybeSingle(),
+  ]);
+  if (items.length === 0) {
     return NextResponse.json(
-      { error: "No custom cards in this deck yet — remix some first." },
+      { error: "This deck has no cards yet — add some first." },
       { status: 404 },
     );
   }
+  const exportEntries = items.map(({ entry, card }) => ({
+    name: entry.name,
+    quantity: entry.quantity,
+    board: entry.board,
+    set_code: entry.set_code,
+    collector_number: entry.collector_number,
+    type_line: entry.type_line,
+    mana_cost: entry.mana_cost,
+    proxyTitle: card?.title ?? null,
+  }));
+  const format = isDeckFormat(deck.format) ? deck.format : "casual";
+  const type = deckTypeByKey(deck.deck_type);
+  const bracket = commanderBracket(deck.bracket);
+  const report = await buildDeckReportPdf({
+    title: deck.title,
+    description: deck.description,
+    formatLabel: DECK_FORMAT_LABELS[format],
+    deckTypeLabel: type ? `${type.label} deck` : null,
+    bracketLabel: bracket ? `Bracket ${bracket.level} · ${bracket.name}` : null,
+    ownerName: ownerProfile.data?.display_name || ownerProfile.data?.username || null,
+    url: `${getSiteBaseUrl()}/deck/${deck.slug}`,
+    analytics: computeDeckAnalytics(items),
+    entries: exportEntries,
+    guide,
+  });
 
   const { data: cards } = await supabase
     .from("cards")
@@ -98,6 +141,12 @@ export async function GET(
   const zip = new JSZip();
   const missing: string[] = [];
   let added = 0;
+
+  zip.file("deck.pdf", report);
+  zip.file(
+    "decklist.txt",
+    deckToText({ title: deck.title }, exportEntries, { style: "plain" }),
+  );
 
   // The deck's cover art rides along (same storage-host rule as the cards).
   if (deck.cover_url && isAllowedServerImageFetchUrl(deck.cover_url)) {
@@ -139,20 +188,15 @@ export async function GET(
     }
   }
 
-  if (added === 0) {
-    return NextResponse.json(
-      {
-        error:
-          "None of the deck's cards have a baked image yet — open them once to bake, then retry.",
-      },
-      { status: 404 },
-    );
-  }
-
-  if (missing.length > 0) {
+  if (cardIds.length === 0) {
     zip.file(
       "MISSING.txt",
-      `These cards had no baked image and were skipped:\n${missing.join("\n")}\n`,
+      "No custom card images yet — remix cards into your own proxies and they will be included here.\n",
+    );
+  } else if (missing.length > 0) {
+    zip.file(
+      "MISSING.txt",
+      `These cards had no baked image and were skipped${added === 0 ? " (open them once to bake, then export again)" : ""}:\n${missing.join("\n")}\n`,
     );
   }
 

@@ -19,6 +19,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { DeckAnalyticsPanel } from "@/components/decks/deck-analytics-panel";
 import { DeckCardList } from "@/components/decks/deck-card-list";
 import { DeckExportMenu } from "@/components/decks/deck-export-menu";
+import { DeckGuideSection } from "@/components/decks/deck-guide-section";
+import { getDeckGuide } from "@/lib/decks/guides";
 import { deckToText } from "@/lib/decks/export-text";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import { QuickLikeButton } from "@/components/cards/quick-like-button";
@@ -294,10 +296,13 @@ async function DeckBody({
   ownerUsername: string | null;
   isOwner: boolean;
 }) {
-  const [items, failedJob] = await Promise.all([
+  const [items, failedJob, guide, entitlements] = await Promise.all([
     listDeckCards(deckId),
     isOwner ? getLatestFailedDeckJob(deckId) : Promise.resolve(null),
+    getDeckGuide(deckId),
+    getEntitlements(),
   ]);
+  const viewerIsPro = entitlements.effectiveTier === "pro";
   const analytics = computeDeckAnalytics(items);
   const warnings = validateDeck(
     format,
@@ -317,7 +322,7 @@ async function DeckBody({
         plainText={deckToText({ title: deckTitle }, toExportEntries(items), {
           style: "plain",
         })}
-        allowBatchExport={(await getEntitlements()).allowBatchExport}
+        allowBatchExport={entitlements.allowBatchExport}
       />
     ) : null;
 
@@ -354,6 +359,15 @@ async function DeckBody({
           <DeckAnalyticsPanel analytics={analytics} />
         </div>
       </section>
+
+      <DeckGuideSection
+        deckId={deckId}
+        guide={guide}
+        isOwner={isOwner}
+        viewerIsPro={viewerIsPro}
+        aiConfigured={isDesignAiConfigured()}
+        hasCards={items.length > 0}
+      />
 
       <section className="mt-12">
         <PageHeader

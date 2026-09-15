@@ -1,4 +1,5 @@
 import "server-only";
+import { buildAndStoreDeckGuide } from "@/lib/decks/guides";
 import { deckTypeByKey } from "@/lib/decks/deck-types";
 
 import type { Json } from "@/types/supabase";
@@ -213,6 +214,8 @@ export type CreateSetJobResult =
 
 const ICON_STEP_KEY = "icon";
 const COVER_STEP_KEY = "cover";
+/** Free "how to play" guide written after the cards (deck jobs only). */
+const GUIDE_STEP_KEY = "guide";
 
 /** AI set generation is temporarily disabled (owner decision, 2026-07-10) —
  *  the UI shows "coming soon" and the jobs route rejects kind "set". All
@@ -450,6 +453,9 @@ async function executeJobStep(
 
   if (step.key === COVER_STEP_KEY) {
     return runCoverStep(userId, job, step);
+  }
+  if (step.key === GUIDE_STEP_KEY) {
+    return runGuideStep(job, step);
   }
   switch (job.kind) {
     case "set": {
@@ -1152,6 +1158,8 @@ export async function createDeckGenerationJob(
   if (!existingDeck || !existingDeck.cover_url) {
     steps.push({ key: COVER_STEP_KEY, label: "Deck cover", status: "pending" });
   }
+  // The free how-to-play guide, written once every card is in.
+  steps.push({ key: GUIDE_STEP_KEY, label: "How to play guide", status: "pending" });
 
   const { data: jobRow, error: insertError } = await supabase
     .from("ai_generation_jobs")
@@ -1324,6 +1332,7 @@ export async function createDeckRemixJob(
   if (insertError || !jobRow) {
     return { ok: false, error: "Couldn't persist the remix job." };
   }
+  steps.push({ key: GUIDE_STEP_KEY, label: "How to play guide", status: "pending" });
   return {
     ok: true,
     job: jobRow as unknown as GenerationJobRow,
@@ -1803,6 +1812,15 @@ async function runCoverStep(
     }
     return { ...step, status: "failed", error: "Job has no set or deck to cover." };
   }
+}
+
+/** The free guide step: reads the finished deck and stores its primer.
+ *  Never charged; a failure is retryable like any other step. */
+async function runGuideStep(job: GenerationJobRow, step: JobStep): Promise<JobStep> {
+  if (!job.deck_id) return { ...step, status: "failed", error: "Job has no deck to describe." };
+  const result = await buildAndStoreDeckGuide(job.deck_id, "generation");
+  if (!result.ok) return { ...step, status: "failed", error: result.error };
+  return { ...step, status: "done", error: undefined };
 }
 
 async function runIconStep(

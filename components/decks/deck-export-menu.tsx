@@ -20,16 +20,16 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useUpgradeModal } from "@/components/billing/upgrade-modal-provider";
-import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
 // DeckExportMenu — the deck owner's export hub:
 //   Copy decklist (Arena / plain text)         — free
 //   Print PDF (pages / 3×3 letter / 3×3 A4)    — Pro
 //   Download PNGs as ZIP                       — Pro
-// Viewers without batch export don't get the Pro buttons at all (owner
-// decision 2026-09-15) — one line says what Pro unlocks, with an upgrade
-// CTA, so a free user is never offered a whole-deck download.
+// Whole-deck export is Pro-only (owner decision 2026-09-15): for a free or
+// Plus owner the Export button doesn't open this dialog at all — it opens
+// the upgrade modal straight away ("deck_export" copy). Copying the
+// decklist as text stays free from the card list's own tools.
 // The decklist text variants are precomputed server-side and passed in;
 // PDF/ZIP stream from the API routes (fetch → blob so a 403 shows a toast
 // instead of a JSON page).
@@ -67,10 +67,6 @@ export function DeckExportMenu({
   };
 
   const downloadFile = (key: string, url: string, filename: string) => {
-    if (!allowBatchExport) {
-      toast.error("Whole-deck export is a Pro feature.");
-      return;
-    }
     setBusy(key);
     startTransition(async () => {
       try {
@@ -97,6 +93,19 @@ export function DeckExportMenu({
       }
     });
   };
+
+  if (!allowBatchExport) {
+    return (
+      <Button
+        variant="outline"
+        type="button"
+        onClick={() => upgrade.open("deck_export")}
+      >
+        <Download className="h-4 w-4" aria-hidden /> Export
+        <ProBadge />
+      </Button>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -139,41 +148,14 @@ export function DeckExportMenu({
             </div>
           </section>
 
-          {!allowBatchExport ? (
-            <section className="flex flex-col gap-3 rounded-lg border border-border/60 bg-elevated/40 p-4">
-              <SectionLabel>
-                Print &amp; save
-                <ProBadge />
-              </SectionLabel>
-              <p className="text-xs leading-5 text-muted">
-                Printing custom proxies (one per page or 3×3 sheets) and
-                downloading the deck&apos;s card images as a ZIP are Pro
-                features.
-              </p>
-              <Button
-                type="button"
-                size="sm"
-                className="self-start"
-                onClick={() => upgrade.open("batch_export")}
-              >
-                Upgrade to Pro
-              </Button>
-            </section>
-          ) : null}
 
-          {allowBatchExport ? (
-          <>
           <section className="flex flex-col gap-2">
-            <SectionLabel>
-              Print custom proxies
-              {!allowBatchExport ? <ProBadge /> : null}
-            </SectionLabel>
+            <SectionLabel>Print custom proxies</SectionLabel>
             <div className="flex flex-wrap gap-2">
               <ExportButton
                 label="One per page"
                 icon={<FileText className="h-3.5 w-3.5" aria-hidden />}
                 pending={busy === "pages"}
-                dimmed={!allowBatchExport}
                 onClick={() =>
                   downloadFile(
                     "pages",
@@ -186,7 +168,6 @@ export function DeckExportMenu({
                 label="3×3 sheets · Letter"
                 icon={<Printer className="h-3.5 w-3.5" aria-hidden />}
                 pending={busy === "sheet-letter"}
-                dimmed={!allowBatchExport}
                 onClick={() =>
                   downloadFile(
                     "sheet-letter",
@@ -199,7 +180,6 @@ export function DeckExportMenu({
                 label="3×3 sheets · A4"
                 icon={<Printer className="h-3.5 w-3.5" aria-hidden />}
                 pending={busy === "sheet-a4"}
-                dimmed={!allowBatchExport}
                 onClick={() =>
                   downloadFile(
                     "sheet-a4",
@@ -216,16 +196,12 @@ export function DeckExportMenu({
           </section>
 
           <section className="flex flex-col gap-2">
-            <SectionLabel>
-              Save images
-              {!allowBatchExport ? <ProBadge /> : null}
-            </SectionLabel>
+            <SectionLabel>Download the deck</SectionLabel>
             <div className="flex flex-wrap gap-2">
               <ExportButton
-                label="Download PNGs (.zip)"
+                label="Deck ZIP · images, cover, report PDF"
                 icon={<Download className="h-3.5 w-3.5" aria-hidden />}
                 pending={busy === "zip"}
-                dimmed={!allowBatchExport}
                 onClick={() =>
                   downloadFile(
                     "zip",
@@ -235,9 +211,12 @@ export function DeckExportMenu({
                 }
               />
             </div>
+            <p className="text-[11px] leading-4 text-muted">
+              The ZIP holds every baked card image, the cover art, a
+              decklist.txt, and deck.pdf — stats, the decklist by board, and
+              the how-to-play guide with combos when the deck has one.
+            </p>
           </section>
-          </>
-          ) : null}
         </div>
       </DialogContent>
     </Dialog>
@@ -264,13 +243,11 @@ function ExportButton({
   label,
   icon,
   pending,
-  dimmed,
   onClick,
 }: {
   label: string;
   icon: React.ReactNode;
   pending: boolean;
-  dimmed: boolean;
   onClick: () => void;
 }) {
   return (
@@ -280,7 +257,6 @@ function ExportButton({
       size="sm"
       disabled={pending}
       onClick={onClick}
-      className={cn(dimmed && "opacity-60")}
     >
       {pending ? (
         <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />

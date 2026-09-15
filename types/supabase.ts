@@ -1276,6 +1276,42 @@ export type Database = {
           },
         ];
       };
+      deck_guides: {
+        Row: {
+          combos: Json;
+          deck_id: string;
+          game_plan: Json;
+          generated_at: string;
+          key_cards: Json;
+          mulligan: string | null;
+          overview: string;
+          source: string;
+          weaknesses: string | null;
+        };
+        Insert: {
+          combos?: Json;
+          deck_id: string;
+          game_plan?: Json;
+          generated_at?: string;
+          key_cards?: Json;
+          mulligan?: string | null;
+          overview: string;
+          source: string;
+          weaknesses?: string | null;
+        };
+        Update: {
+          combos?: Json;
+          deck_id?: string;
+          game_plan?: Json;
+          generated_at?: string;
+          key_cards?: Json;
+          mulligan?: string | null;
+          overview?: string;
+          source?: string;
+          weaknesses?: string | null;
+        };
+        Relationships: [];
+      };
       decks: {
         Row: {
           cover_position: Json | null;
