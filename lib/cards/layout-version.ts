@@ -111,9 +111,18 @@
 //            stamped 20. Bumping invalidates those bakes so the sweep can be
 //            re-run with the flag set. Lesson: the sweep server's env must
 //            match production's billing flag (see scripts/rebake-renders.mjs).
+//   22     — rules-text typography standard (lib/cards/typography.ts): every
+//            frame's rules box starts at the printed size (9 pt MPlantin on a
+//            full box, 8 / 7.5 pt on tokens, planeswalker rows, sagas, split /
+//            flip / adventure halves, battles) and shrinks in half-point
+//            steps; tighter print leading (≈1.15 em), half-line ability
+//            gaps, inline pips at 0.86 em with a hairline between adjacent
+//            pips, flavor text spaced in em with the M15 hairline only on
+//            M15-family frames (retro / modern / classic use a gap); retro
+//            and modern text blocks vertically centred like print.
 // ---------------------------------------------------------------------------
 
-export const CARD_LAYOUT_VERSION = 21;
+export const CARD_LAYOUT_VERSION = 22;
 
 /**
  * Bumps that changed the output of only some frame templates, keyed by the

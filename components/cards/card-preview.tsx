@@ -21,6 +21,11 @@ import {
 } from "@/components/cards/frame-layer";
 import { fitRulesSizePct, fitSingleLineSizePct } from "@/lib/cards/render-tiers";
 import {
+  PLACEHOLDER_FLAVOR_TEXT,
+  PLACEHOLDER_RULES_TEXT,
+  RULES_TEXT,
+} from "@/lib/cards/typography";
+import {
   tokenizeRulesText,
   groupTightRuns,
   type RulesItem,
@@ -585,7 +590,7 @@ function CardFace({
     flavorText: face.flavorText,
     rect: fitRect,
     baseSizePct: layout.rules.sizePct,
-    lineHeight: layout.rules.lineHeight ?? 1.3,
+    lineHeight: layout.rules.lineHeight ?? RULES_TEXT.lineHeight,
     aspect,
   });
   // Planeswalker ability rows (badged loyalty costs, striped rows) when the
@@ -919,38 +924,37 @@ function CardFace({
           justifyContent: vJustify(layout.rules.vAlign ?? "start"),
           overflow: "hidden",
           padding: "1.2cqw 0.6cqw",
-          gap: "1.2cqw",
           fontFamily: CARD_FONT,
           fontSize: cqw(rulesSizePct),
-          lineHeight: layout.rules.lineHeight ?? 1.3,
+          lineHeight: layout.rules.lineHeight ?? RULES_TEXT.lineHeight,
           color: layout.rules.colorHex,
           textAlign: "left",
         }}
       >
         {face.rulesText?.trim() ? (
           <RulesBody text={face.rulesText} overrides={pipOverrides} />
-        ) : staticInEditor ? (
-          // Editor-only hint; never shown in the gallery preview or the bake.
-          <span style={{ fontStyle: "italic", opacity: 0.55 }}>
-            Rules text appears here.
-          </span>
+        ) : staticInEditor && !face.flavorText?.trim() ? (
+          // Editor-only sample in the real type, size and pips; never shown
+          // in the gallery preview or the bake.
+          <div style={{ display: "contents", opacity: 0.5 }}>
+            <RulesBody text={PLACEHOLDER_RULES_TEXT} overrides={pipOverrides} />
+          </div>
         ) : null}
         {face.flavorText?.trim() ? (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              rowGap: "0.4cqw",
-              fontStyle: "italic",
-              borderTop: `1px solid ${layout.rules.colorHex}44`,
-              paddingTop: "1.2cqw",
-              marginTop: "0.4cqw",
-            }}
-          >
-            {face.flavorText.split(/\n/).filter((l) => l.trim()).map((line, i) => (
-              <span key={i}>{line}</span>
-            ))}
-          </div>
+          <FlavorBlock
+            text={face.flavorText}
+            afterRules={Boolean(face.rulesText?.trim())}
+            divider={layout.flavorDivider !== false}
+            colorHex={layout.rules.colorHex}
+          />
+        ) : staticInEditor && !face.rulesText?.trim() ? (
+          <FlavorBlock
+            text={PLACEHOLDER_FLAVOR_TEXT}
+            afterRules
+            divider={layout.flavorDivider !== false}
+            colorHex={layout.rules.colorHex}
+            placeholder
+          />
         ) : null}
       </div>
       )}
@@ -1381,11 +1385,11 @@ function AdventurePanel({
               flavorText: null,
               rect: slot.rules.rect,
               baseSizePct: slot.rules.sizePct,
-              lineHeight: slot.rules.lineHeight ?? 1.25,
+              lineHeight: slot.rules.lineHeight ?? RULES_TEXT.lineHeight,
               aspect: 7 / 5,
             }),
           ),
-          lineHeight: slot.rules.lineHeight ?? 1.25,
+          lineHeight: slot.rules.lineHeight ?? RULES_TEXT.lineHeight,
           color: slot.rules.colorHex,
           textAlign: "center",
         }}
@@ -1434,7 +1438,7 @@ function SecondFacePanel({
     flavorText: null,
     rect: slot.rules.rect,
     baseSizePct: slot.rules.sizePct,
-    lineHeight: slot.rules.lineHeight ?? 1.25,
+    lineHeight: slot.rules.lineHeight ?? RULES_TEXT.lineHeight,
     aspect,
   });
   return (
@@ -1495,7 +1499,7 @@ function SecondFacePanel({
           padding: "0.8cqw 1.2cqw",
           fontFamily: CARD_FONT,
           fontSize: cqw(rulesSizePct),
-          lineHeight: slot.rules.lineHeight ?? 1.25,
+          lineHeight: slot.rules.lineHeight ?? RULES_TEXT.lineHeight,
           color: slot.rules.colorHex,
           textAlign: "center",
         }}
@@ -1618,7 +1622,7 @@ function RulesBody({
       style={{
         display: "flex",
         flexDirection: "column",
-        rowGap: "0.5em",
+        rowGap: `${RULES_TEXT.paragraphGapEm}em`,
         width: "100%",
       }}
     >
@@ -1630,9 +1634,9 @@ function RulesBody({
             flexWrap: "wrap",
             alignItems: "center",
             justifyContent: "flex-start",
-            columnGap: "0.26em",
-            rowGap: "0.1em",
-            minHeight: items.length === 0 ? "0.7em" : undefined,
+            columnGap: `${RULES_TEXT.wordGapEm}em`,
+            rowGap: `${RULES_TEXT.wrapGapEm}em`,
+            minHeight: items.length === 0 ? `${RULES_TEXT.blankLineEm}em` : undefined,
           }}
         >
           {groupTightRuns(items).map((run, ri) => (
@@ -1661,8 +1665,9 @@ function RulesBody({
 }
 
 // One item inside an unbreakable run. Inline pips size so the visible disc is
-// 0.92em (mana-font's 1.3em disc ÷ the 0.708em font), matching the bake's
-// ManaGem; reminder/ability emphasis is italic at full ink, like print.
+// RULES_TEXT.pipDiscEm of the text size (mana-font draws its disc at 1.3em of
+// the font size, hence the division), matching the bake's ManaGem; reminder /
+// ability emphasis is italic at full ink, like print.
 function RulesRunItem({
   item,
   pipGapBefore,
@@ -1678,8 +1683,8 @@ function RulesRunItem({
       return (
         <PipOverrideImg
           src={overrideSrc}
-          fontSizeEm={0.92 / MS_COST_DISC_EM}
-          style={pipGapBefore ? { marginLeft: "0.08em" } : undefined}
+          fontSizeEm={RULES_TEXT.pipDiscEm / MS_COST_DISC_EM}
+          style={pipGapBefore ? { marginLeft: `${RULES_TEXT.pipGapEm}em` } : undefined}
         />
       );
     }
@@ -1688,14 +1693,54 @@ function RulesRunItem({
         aria-hidden
         className={cn("ms ms-cost ms-shadow", `ms-${item.suffix}`)}
         style={{
-          fontSize: `${(0.92 / MS_COST_DISC_EM).toFixed(4)}em`,
-          ...(pipGapBefore ? { marginLeft: "0.08em" } : {}),
+          fontSize: `${(RULES_TEXT.pipDiscEm / MS_COST_DISC_EM).toFixed(4)}em`,
+          ...(pipGapBefore ? { marginLeft: `${RULES_TEXT.pipGapEm}em` } : {}),
         }}
       />
     );
   }
   return (
     <span style={item.em ? { fontStyle: "italic" } : undefined}>{item.v}</span>
+  );
+}
+
+// FlavorBlock — italic flavor text under the rules. M15-family frames print a
+// hairline between the two; pre-M15 frames leave a gap only. Spacing is in em
+// of the rules size so it shrinks with the text, like print. Mirrors FlavorBake.
+function FlavorBlock({
+  text,
+  afterRules,
+  divider,
+  colorHex,
+  placeholder = false,
+}: {
+  text: string;
+  afterRules: boolean;
+  divider: boolean;
+  colorHex: string;
+  placeholder?: boolean;
+}) {
+  const gap = `${RULES_TEXT.flavorGapEm}em`;
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        rowGap: `${RULES_TEXT.wrapGapEm}em`,
+        fontStyle: "italic",
+        lineHeight: RULES_TEXT.lineHeight,
+        ...(afterRules
+          ? divider
+            ? { marginTop: gap, paddingTop: gap, borderTop: `1px solid ${colorHex}44` }
+            : { marginTop: `calc(${gap} * 2)` }
+          : {}),
+        ...(placeholder ? { opacity: 0.5 } : {}),
+      }}
+    >
+      {text.split(/\n/).filter((l) => l.trim()).map((line, i) => (
+        <span key={i}>{line}</span>
+      ))}
+    </div>
   );
 }
 
@@ -1729,7 +1774,7 @@ function LoyaltyRows({
         overflow: "hidden",
         fontFamily: CARD_FONT,
         fontSize: cqw(sizePct),
-        lineHeight: slot.lineHeight ?? 1.25,
+        lineHeight: slot.lineHeight ?? RULES_TEXT.lineHeight,
         color: slot.colorHex,
         borderRadius: "1.2cqw",
       }}

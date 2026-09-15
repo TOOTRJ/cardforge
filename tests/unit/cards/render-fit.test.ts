@@ -1,13 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { fitRulesSizePct, fitSingleLineSizePct } from "@/lib/cards/render-tiers";
+import { fitRulesSizePct, fitSingleLineSizePct, rulesSizeLadder } from "@/lib/cards/render-tiers";
+import { RULES_TEXT, pctToPt, ptToPct } from "@/lib/cards/typography";
 
 // The m15 rules slot — the most common case.
 const M15_RULES = {
   rect: { topPct: 63.4, leftPct: 8.5, widthPct: 83, heightPct: 28.0 },
-  baseSizePct: 0.0373,
-  lineHeight: 1.32,
+  baseSizePct: ptToPct(RULES_TEXT.standardPt),
   aspect: 7 / 5,
 };
+const HARD_FLOOR = ptToPct(RULES_TEXT.hardFloorPt);
 
 const fit = (rulesText: string, flavorText: string | null = null) =>
   fitRulesSizePct({ rulesText, flavorText, ...M15_RULES });
@@ -25,7 +26,7 @@ describe("fitRulesSizePct", () => {
     for (const repeats of [1, 4, 8, 16, 40]) {
       const size = fit(sentence.repeat(repeats));
       expect(size).toBeLessThanOrEqual(last);
-      expect(size).toBeGreaterThanOrEqual(0.015);
+      expect(size).toBeGreaterThanOrEqual(HARD_FLOOR - 1e-9);
       last = size;
     }
     expect(last).toBeLessThan(M15_RULES.baseSizePct);
@@ -53,12 +54,29 @@ describe("fitRulesSizePct", () => {
       rulesText: "When this Siege enters, search your library. ".repeat(6),
       flavorText: null,
       rect: { topPct: 67.5, leftPct: 13, widthPct: 80, heightPct: 25 },
-      baseSizePct: 0.028,
-      lineHeight: 1.3,
+      baseSizePct: ptToPct(8, "landscape"),
       aspect: 5 / 7,
     });
-    expect(battle).toBeGreaterThanOrEqual(0.015);
-    expect(battle).toBeLessThanOrEqual(0.028);
+    expect(battle).toBeGreaterThanOrEqual(ptToPct(RULES_TEXT.hardFloorPt, "landscape") - 1e-9);
+    expect(battle).toBeLessThanOrEqual(ptToPct(8, "landscape"));
+  });
+});
+
+describe("rulesSizeLadder", () => {
+  it("steps down from 9 pt in half points through the 7.5 pt floor to the hard floor", () => {
+    const ladder = rulesSizeLadder(ptToPct(9), 7 / 5).map((pct) => Math.round(pctToPt(pct) * 10) / 10);
+    expect(ladder.slice(0, 4)).toEqual([9, 8.5, 8, 7.5]);
+    expect(ladder[ladder.length - 1]).toBe(RULES_TEXT.hardFloorPt);
+    expect(ladder).toContain(7);
+  });
+
+  it("measures the step against the landscape width for landscape frames", () => {
+    const [base, next] = rulesSizeLadder(ptToPct(8, "landscape"), 5 / 7);
+    expect(pctToPt(base - next, "landscape")).toBeCloseTo(RULES_TEXT.stepPt, 6);
+  });
+
+  it("uses the standard as the M15 base size", () => {
+    expect(fit("Trample")).toBeCloseTo(0.05, 6); // 9 pt on a 2.5 in card
   });
 });
 
@@ -79,7 +97,7 @@ describe("fitSingleLineSizePct", () => {
   it("shrinks a long type line instead of ellipsizing", () => {
     const long = fitLine("Legendary Snow Artifact Creature — Phyrexian Golem Warrior");
     expect(long).toBeLessThan(0.0435);
-    expect(long).toBeGreaterThanOrEqual(0.015);
+    expect(long).toBeGreaterThanOrEqual(ptToPct(RULES_TEXT.hardFloorPt));
   });
 
   it("longer text never gets a larger size", () => {
