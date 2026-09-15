@@ -64,7 +64,7 @@ export async function GET(
 
   const { data: deck } = await supabase
     .from("decks")
-    .select("id, slug, title, owner_id")
+    .select("id, slug, title, owner_id, cover_url")
     .eq("id", id)
     .maybeSingle();
   if (!deck) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -98,6 +98,20 @@ export async function GET(
   const zip = new JSZip();
   const missing: string[] = [];
   let added = 0;
+
+  // The deck's cover art rides along (same storage-host rule as the cards).
+  if (deck.cover_url && isAllowedServerImageFetchUrl(deck.cover_url)) {
+    try {
+      const response = await fetch(deck.cover_url, { cache: "no-store" });
+      if (response.ok) {
+        const type = response.headers.get("content-type") ?? "";
+        const ext = type.includes("webp") ? "webp" : type.includes("jpeg") ? "jpg" : "png";
+        zip.file(`cover.${ext}`, await response.arrayBuffer());
+      }
+    } catch {
+      // A missing cover never blocks the card download.
+    }
+  }
 
   for (const card of cards ?? []) {
     // rendered_image_url is an owner-writable column: only fetch it from the

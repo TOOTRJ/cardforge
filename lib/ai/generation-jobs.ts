@@ -32,6 +32,7 @@ import {
   type ImageAspect,
 } from "@/lib/ai/image-gen";
 import { persistGeneratedArt } from "@/lib/ai/random-art";
+import { normalizeDeckCover } from "@/lib/decks/cover";
 import {
   creditCostFor,
   logAiCall,
@@ -1724,36 +1725,47 @@ function coverPrompt(job: GenerationJobRow): { prompt: string; aspect: ImageAspe
     ? `Rendered strictly in ${style.trim()} style.`
     : "Painterly high-fantasy illustration style.";
   return {
-    // The deck hero crops covers to aspect-[5/2]; a 21:9 banner survives it
-    // (and the 16:9 dashboard tile) without misalignment. Set tiles are
-    // 16:9, so set covers stay "wide".
-    aspect: job.kind === "set" ? "wide" : "banner",
+    // Every deck-cover surface is a 16:9 box (lib/decks/cover.ts) and set
+    // tiles are 16:9 too, so both are generated "wide" and need no crop.
+    aspect: "wide",
     prompt: [
       `Wide cinematic key art for a trading-card collection called "${title}".`,
       subject.slice(0, 400),
       styleLine,
-      "Epic establishing-shot composition with the focal point in the VERTICAL CENTER of the frame — the image is cropped to an ultra-wide banner, so nothing important near the top or bottom edges.",
+      "Epic establishing-shot composition, 16:9, with the focal point near the center of the frame and nothing important touching the edges.",
       "NO frame, NO borders, NO logo, NO text or lettering anywhere in the image.",
     ].join(" "),
   };
 }
 
-/** Generate + attach the set/deck cover image. Covers are a paid image
- *  generation too — the credit wrapper charges like every card step and
- *  refunds any failure (no-op while billing is off / for admins). */
+/** Generate + attach the set/deck cover image. The cover is FREE (owner
+ *  decision, 2026-09-15): no credit is reserved or charged for it — only
+ *  the cards cost credits. Deck covers are normalised to the 16:9 standard
+ *  (lib/decks/cover.ts) before upload so every surface shows the same image. */
 async function runCoverStep(
   userId: string,
   job: GenerationJobRow,
   step: JobStep,
 ): Promise<JobStep> {
   await logAiCall(userId, job.kind === "set" ? "generate_deck" : "generate_deck_cards");
-  return withCreditedStep(userId, job.id, 1, "generate_deck", step, async () => {
+  {
     const { prompt, aspect } = coverPrompt(job);
     const image = await generatePlainImage(prompt, aspect);
     if (!image.ok) {
       return { ...step, status: "failed", error: image.error };
     }
-    const persisted = await persistGeneratedArt(image.bytes, image.contentType);
+    let bytes: Uint8Array = image.bytes;
+    let contentType = image.contentType;
+    if (job.kind !== "set") {
+      try {
+        const normalized = await normalizeDeckCover(image.bytes);
+        bytes = normalized.bytes;
+        contentType = normalized.contentType;
+      } catch (err) {
+        console.warn(`[cover] normalise failed for job ${job.id}:`, err instanceof Error ? err.message : err);
+      }
+    }
+    const persisted = await persistGeneratedArt(bytes, contentType);
     if (!persisted.ok) {
       return { ...step, status: "failed", error: persisted.error };
     }
@@ -1770,8 +1782,7 @@ async function runCoverStep(
     if (job.deck_id) {
       const updated = await updateDeckAction(job.deck_id, {
         cover_url: persisted.publicUrl,
-        // Explicit center focal point so the hero (aspect-[5/2]) and the
-        // dashboard tile (16:9) both crop the banner symmetrically.
+        // Already 16:9 — a centred focal point means zero crop everywhere.
         cover_position: { focalX: 0.5, focalY: 0.5 },
       });
       if (!updated.ok) {
@@ -1780,7 +1791,7 @@ async function runCoverStep(
       return { ...step, status: "done", error: undefined };
     }
     return { ...step, status: "failed", error: "Job has no set or deck to cover." };
-  });
+  }
 }
 
 async function runIconStep(
