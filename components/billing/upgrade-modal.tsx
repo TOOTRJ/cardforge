@@ -29,7 +29,7 @@ const REASON_COPY: Record<UpgradeReason, { title: string; description: string }>
     credits: {
       title: "You're out of AI credits",
       description:
-        "Every plan refills monthly — 5 credits on Free, 30 on Plus, 75 on Pro — or grab a one-time pack that never expires. Credits power AI card, idea and art generation. Your card and everything you've made stay exactly as they are.",
+        "Every plan refills monthly — 5 credits on Free, 30 on Plus, 100 on Pro — or grab a one-time pack that never expires. Credits power AI card, idea and art generation. Your card and everything you've made stay exactly as they are.",
     },
     premium_frame: {
       title: "That's a premium frame",

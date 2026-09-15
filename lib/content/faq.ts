@@ -110,7 +110,7 @@ export const AI_GENERATOR_FAQ: FaqEntry[] = [
   },
   {
     q: "Is the AI random card generator free?",
-    a: "Yes. Every AI tool is available on the free plan — AI generation runs on credits, and a free account gets 5 credits every month (one credit designs and illustrates one card, or buys a batch of three text-only ideas). Plus and Pro refill with 30 and 75 credits a month, and anyone can buy a top-up pack that never expires. The only Pro-exclusive AI features are the deck-aware ones: designing a card for a specific deck and theming ideas to a deck.",
+    a: "Yes. Every AI tool is available on the free plan — AI generation runs on credits, and a free account gets 5 credits every month (one credit designs and illustrates one card, or buys a batch of three text-only ideas). Plus and Pro refill with 30 and 100 credits a month, and anyone can buy a top-up pack that never expires. The only Pro-exclusive AI features are the deck-aware ones: designing a card for a specific deck and theming ideas to a deck.",
   },
   {
     q: "Will the AI design balanced cards?",
