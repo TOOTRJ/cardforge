@@ -20,7 +20,7 @@ async function isCurrentUserAdmin(): Promise<boolean> {
 // in a tight burst or (b) slowly drain the AI spend cap over a day. These are
 // pure ABUSE BACKSTOPS: credits are the user-facing limiter (owner decision,
 // 2026-07-28), so both windows are sized to never bind before credits do —
-// a full 60-step batch job on the 3-worker client pool logs ~16 calls/min,
+// a full 100-step batch job on the 3-worker client pool logs ~16 calls/min,
 // and 500/day clears even a whale spending multiple credit packs in a day,
 // while still shutting down anything resembling an abuse script.
 // Exported so the usage panel (lib/ai/usage-queries.ts) shows the SAME caps
@@ -56,7 +56,8 @@ const RANDOM_CARD_DAILY_LIMIT = 10;
 export const REMIX_DAILY_LIMIT = 10;
 // Deck/set batch flows generate many images per job, so the ceiling is the
 // per-DAY total across all batch jobs (not per job). Admins are exempt.
-export const DECK_CARDS_DAILY_LIMIT = 60;
+// Matches the per-job ceiling so one full Commander deck fits in a day.
+export const DECK_CARDS_DAILY_LIMIT = 100;
 
 export type RateLimitResult =
   | { ok: true }

@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { FieldGroup, inputClass } from "@/components/creator/field-group";
+import { BatchSizeField } from "@/components/ai/batch-size-field";
 import {
   useGenerationJob,
   type GenerationJobOutcome,
@@ -136,20 +137,19 @@ export function AiSetGenerator({
             disabled={busy}
           />
         </FieldGroup>
-        <FieldGroup label="Cards" helper={`Up to ${maxCards} per generation.`}>
-          <select
-            value={size}
-            onChange={(event) => setSize(Number(event.target.value))}
-            className={inputClass(false)}
-            disabled={busy}
-          >
-            {Array.from({ length: maxCards }, (_, i) => i + 1).map((n) => (
-              <option key={n} value={n}>
-                {n} card{n === 1 ? "" : "s"}
-              </option>
-            ))}
-          </select>
-        </FieldGroup>
+        <BatchSizeField
+          value={size}
+          onChange={setSize}
+          max={maxCards}
+          disabled={busy}
+          presets={[
+            { label: "3", value: 3 },
+            { label: "10", value: 10 },
+            { label: "25", value: 25 },
+            { label: "50", value: 50 },
+            { label: "100", value: 100 },
+          ]}
+        />
       </div>
 
       <FieldGroup label="Art style" helper="Applied to every card's art, the icon, and the cover.">

@@ -55,6 +55,7 @@ export async function GET() {
     ]);
 
   const headerUser: HeaderUser = {
+    id: user.id,
     username: profile?.username ?? null,
     displayName: profile?.display_name ?? null,
     avatarUrl: profile?.avatar_url ?? null,

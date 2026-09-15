@@ -7,12 +7,15 @@ import { UserMenu } from "./user-menu";
 import { MobileMenu } from "./mobile-menu";
 import { HeaderCreditsChip } from "./header-credits-chip";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+import { RealtimeAlerts } from "@/components/notifications/realtime-alerts";
 import { siteConfig } from "@/lib/site-config";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { type PlanTier } from "@/lib/billing/plans";
 import { cn } from "@/lib/utils";
 
 type HeaderUser = {
+  /** auth.users id — the real-time notification subscriber filters on it. */
+  id?: string | null;
   username: string | null;
   displayName: string | null;
   avatarUrl?: string | null;
@@ -79,6 +82,9 @@ export function SiteHeader({ user, className }: SiteHeaderProps) {
                 />
               ) : null}
               <NotificationBell initialUnread={unread} isAdmin={user?.isAdmin ?? false} />
+              {user?.id ? (
+                <RealtimeAlerts userId={user.id} isAdmin={user.isAdmin ?? false} />
+              ) : null}
               {billingOn && !user?.isPaid ? (
                 <Button
                   asChild

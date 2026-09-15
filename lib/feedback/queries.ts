@@ -45,6 +45,18 @@ export type AdminFeedbackItem = {
   user: { username: string | null; displayName: string | null } | null;
 };
 
+/** Unread work for the admin rail badge: feedback still marked 'new'.
+ *  0 for non-admins. */
+export async function countNewFeedback(): Promise<number> {
+  const profile = await getCurrentProfile();
+  if (!profile?.is_admin || !isAdminConfigured()) return 0;
+  const { count } = await createAdminClient()
+    .from("feedback")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "new");
+  return count ?? 0;
+}
+
 /** Admin inbox. Returns null when the caller isn't an admin (page 404s),
  *  [] when the inbox is empty. Service-role read gated on is_admin. */
 export async function listAllFeedback(

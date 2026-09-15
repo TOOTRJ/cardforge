@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { FieldGroup, inputClass } from "@/components/creator/field-group";
+import { BatchSizeField } from "@/components/ai/batch-size-field";
 import {
   useGenerationJob,
   type GenerationJobOutcome,
@@ -43,6 +44,13 @@ const FORMAT_OPTIONS = [
   { value: "standard", label: "Standard" },
   { value: "limited", label: "Limited" },
 ] as const;
+
+/** The legal deck size per format — the "Full deck" quick pick. */
+const FULL_DECK_SIZE: Record<(typeof FORMAT_OPTIONS)[number]["value"], number> = {
+  commander: 100,
+  standard: 60,
+  limited: 40,
+};
 
 type Mode = "new" | "remix" | "add";
 
@@ -177,20 +185,21 @@ export function AiDeckPanel({
               </select>
             </FieldGroup>
           ) : null}
-          <FieldGroup label="Cards" helper={`Up to ${maxCards} per generation.`}>
-            <select
-              value={size}
-              onChange={(event) => setSize(Number(event.target.value))}
-              className={inputClass(false)}
-              disabled={busy}
-            >
-              {Array.from({ length: maxCards }, (_, i) => i + 1).map((n) => (
-                <option key={n} value={n}>
-                  {n} card{n === 1 ? "" : "s"}
-                </option>
-              ))}
-            </select>
-          </FieldGroup>
+          <BatchSizeField
+            value={size}
+            onChange={setSize}
+            max={maxCards}
+            disabled={busy}
+            presets={[
+              { label: "3", value: 3 },
+              { label: "10", value: 10 },
+              { label: "25", value: 25 },
+              {
+                label: `Full deck (${FULL_DECK_SIZE[format]})`,
+                value: FULL_DECK_SIZE[format],
+              },
+            ]}
+          />
         </div>
       ) : null}
 

@@ -370,6 +370,8 @@ export type Database = {
           // generated types are regenerated.
           thread_id: string | null;
           type: string;
+          // Added by migration 0075 (real-time notifications).
+          payload: Json;
         };
         Insert: {
           actor_id?: string | null;
@@ -381,6 +383,7 @@ export type Database = {
           recipient_id: string;
           thread_id?: string | null;
           type: string;
+          payload?: Json;
         };
         Update: {
           actor_id?: string | null;
@@ -392,6 +395,7 @@ export type Database = {
           recipient_id?: string;
           thread_id?: string | null;
           type?: string;
+          payload?: Json;
         };
         Relationships: [
           {
