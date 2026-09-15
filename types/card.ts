@@ -91,8 +91,9 @@ export type Card = Omit<
   rarity: Rarity | null;
   card_type: CardType | null;
   color_identity: ColorIdentity[];
-  // Columns added by migration 0050 — folded in here until the generated
-  // supabase types are regenerated. NULL on every legacy row.
+  // Narrowed from the generated Json columns (migration 0050, present in
+  // types/supabase.ts): the DB stores opaque jsonb, downstream code gets the
+  // typed FaceContent / CardWatermark shapes. NULL on every legacy row.
   face_content?: FaceContent | null;
   watermark?: CardWatermark | null;
 };
@@ -232,9 +233,9 @@ export type CardFinish = (typeof CARD_FINISH_VALUES)[number];
 // "m15"       — Magic 2015-era modern frame (the default).
 // "m15land"   — M15 land frame (stone border, color-tinted text box, no cost).
 // "m15token"  — M15 token frame (art-forward; dark title bar, no cost).
-// "m15artifact" — M15 artifact frame (silver-blue acard; m15 geometry; all
-//               7 color keys share the silver art in v1 — colored artifacts'
-//               blend wash is a future pass).
+// "m15artifact" — M15 artifact frame (silver plates + textbox with the COLOR's
+//               outer border, blended through MSE's artifact_blend mask —
+//               scripts/build-artifact-blend.mjs; m15 geometry).
 // "m15snow"   — M15 snow frame (frosty silver skin; m15 geometry).
 // "m15devoid" — M15 devoid/Eldrazi frame (washed-out colorless; m15 geometry).
 // "m15pw"     — M15 planeswalker frame (two art cut-outs + loyalty badge).
@@ -248,9 +249,14 @@ export type CardFinish = (typeof CARD_FINISH_VALUES)[number];
 //               name/type/cost/rules come from the card's back-face content) on
 //               the LEFT page, the creature's own rules on the RIGHT page.
 //
-// Adding a frame: drop the PNGs, add a value here + a label below, and add one
-// profile entry in lib/cards/template-layout.ts. No renderer changes needed
-// (landscape frames just set orientation: "landscape" in their profile).
+// Adding a frame: drop the PNGs (+ .webp siblings via `npm run assets:frame-webp`),
+// add a value here, a label in FRAME_TEMPLATE_LABELS, a set in FRAME_TEMPLATE_SET
+// (both exhaustive — the compiler will tell you), a picker mapping
+// (ERA_TYPE_FRAME / TEMPLATE_SKIN_VARIANTS / a showcase set / a kind's
+// layoutTemplates in lib/creator/card-kinds.ts), and one profile entry in
+// lib/cards/template-layout.ts. No renderer changes needed (landscape frames
+// just set orientation: "landscape" in their profile). It stays hidden until
+// each color is verified in /admin/frame-compare.
 export const FRAME_TEMPLATE_VALUES = [
   "m15",
   "m15land",
@@ -600,10 +606,6 @@ export const COMING_SOON_ERAS: ComingSoonEra[] = [
 
 export type CardWithOwner = Card & {
   owner: Pick<Profile, "username" | "display_name" | "avatar_url"> | null;
-};
-
-export type CardWithLineage = Card & {
-  parent: Pick<Card, "id" | "slug" | "title"> | null;
 };
 
 // ---------------------------------------------------------------------------

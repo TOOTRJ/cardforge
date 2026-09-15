@@ -5,6 +5,7 @@ import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import { isBillingEnabled } from "@/lib/billing/flags";
+import { getStripe, isStripeConfigured } from "@/lib/stripe/client";
 
 // Permanent account deletion. Hard-deletes the auth user (which cascades every
 // user-owned DB row — profile, cards, sets, comments, likes, reports, ledger)
@@ -16,7 +17,49 @@ const ACCOUNT_BUCKETS = [
   "card-exports",
   "set-covers",
   "profile-media",
+  "custom-pips",
 ];
+
+/**
+ * Stop billing BEFORE the profile row (and its stripe_customer_id) is gone.
+ * Without this a deleted subscriber kept paying with no portal to cancel
+ * from, and every later webhook no-op'd against a profile that no longer
+ * existed. Cancels every live subscription immediately (no proration —
+ * the account is being destroyed) and returns false only when Stripe
+ * refused, so the caller can stop and keep the account intact.
+ */
+async function cancelStripeSubscriptions(
+  admin: ReturnType<typeof createAdminClient>,
+  userId: string,
+): Promise<boolean> {
+  if (!isStripeConfigured()) return true;
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("stripe_customer_id")
+    .eq("id", userId)
+    .maybeSingle();
+  const customerId = profile?.stripe_customer_id;
+  if (!customerId) return true;
+  try {
+    const stripe = getStripe();
+    const subs = await stripe.subscriptions.list({
+      customer: customerId,
+      status: "all",
+      limit: 20,
+    });
+    for (const sub of subs.data) {
+      if (sub.status === "canceled" || sub.status === "incomplete_expired") continue;
+      await stripe.subscriptions.cancel(sub.id, { prorate: false });
+    }
+    return true;
+  } catch (error) {
+    console.error(
+      `[account] Could not cancel Stripe subscriptions for ${userId}:`,
+      error instanceof Error ? error.message : error,
+    );
+    return false;
+  }
+}
 
 export type DeleteAccountResult = { ok: true } | { ok: false; error: string };
 
@@ -91,7 +134,17 @@ export async function deleteAccountAction(input: {
 
   const admin = createAdminClient();
 
-  // Storage cleanup first (best-effort — objects are not cascade-deleted with
+  // Billing first — if Stripe won't let us stop the subscription, refuse to
+  // delete rather than strand a paying customer with no way to cancel.
+  if (!(await cancelStripeSubscriptions(admin, user.id))) {
+    return {
+      ok: false,
+      error:
+        "We couldn't cancel your subscription just now. Cancel it under Settings → Manage subscription, then try again — or contact support.",
+    };
+  }
+
+  // Storage cleanup next (best-effort — objects are not cascade-deleted with
   // the DB rows). Layout is flat: {userId}/{file} in every bucket.
   for (const bucket of ACCOUNT_BUCKETS) {
     try {

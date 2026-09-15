@@ -1,11 +1,13 @@
 # PipGlyph
 
 **Precision tools for legendary ideas.** PipGlyph ([www.pipglyph.com](https://www.pipglyph.com))
-is an MTG-style custom card creator: a kind-first, four-step editor
-(Card → Identity → Text & stats → Publish) with precise mana pips (including
-per-user **custom pip icons**), frames spanning three decades of card design,
-an AI rules-text assistant, a community gallery with likes and remixing, full
-expansion-set building, design challenges, and print-ready PNG/PDF export.
+is an MTG-style custom card creator: a kind-first, five-step editor
+(Card → Identity → Text & stats → Set icon → Publish) with precise mana pips
+(including per-user **custom pip icons**), frames spanning three decades of
+card design, an AI rules-text assistant and AI card/art generation, a
+community gallery with likes and remixing, decks with proxy printing, design
+challenges, and print-ready PNG/PDF export. (Expansion-set building exists
+behind the `NEXT_PUBLIC_SETS_ENABLED` flag and is currently switched off.)
 The live preview and the exported image share one layout engine, so what you
 see is exactly what renders.
 
@@ -48,7 +50,7 @@ npx playwright test               # full suite, on its own :3100 server
 ## Architecture notes
 
 - **Editor**: `components/creator/card-creator-form.tsx` orchestrates the
-  contextual panels (`components/creator/panels/`) over a pure 4-step model in
+  contextual panels (`components/creator/panels/`) over a pure 5-step model in
   `lib/creator/steps.ts`; the card KIND (creature/saga/split/…) is derived,
   never stored (`lib/creator/card-kinds.ts`).
 - **Frame availability**: verification is the only gate. A (template, color)
@@ -64,9 +66,13 @@ npx playwright test               # full suite, on its own :3100 server
   (`lib/cards/template-layout.ts`); any change inside card pixels must land in
   `components/cards/card-preview.tsx` **and** `lib/render/card-image.tsx`
   together, with a `CARD_LAYOUT_VERSION` bump + rebake.
-- **Migrations**: `supabase/migrations/` is canonical; apply to the remote via
-  the Supabase MCP/CLI. Storage upserts need owner `SELECT` policies (see
-  migrations `0038`–`0040` for the pattern).
+- **Migrations**: `supabase/migrations/` is canonical. A schema change is a
+  new numbered file shipped through a PR — the Supabase GitHub integration
+  applies it to the PR's preview branch and, on merge, to production
+  (`docs/ENVIRONMENTS.md`). Never apply migrations to production by hand via
+  the Supabase MCP/dashboard/CLI, and never edit a merged migration
+  (corrections go in `supabase/migrations/README.md`). Storage upserts need
+  owner `SELECT` policies (see migrations `0038`–`0040` for the pattern).
 - **Billing setup**: [BILLING_SETUP.md](BILLING_SETUP.md).
 
 ## History

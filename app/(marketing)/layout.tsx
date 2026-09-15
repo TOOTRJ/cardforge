@@ -14,7 +14,7 @@ export default function MarketingLayout({
   children: React.ReactNode;
 }) {
   return (
-    <AppShell variant="marketing" authMode="client">
+    <AppShell authMode="client">
       {children}
     </AppShell>
   );

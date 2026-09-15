@@ -2,20 +2,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import sharp from "sharp";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import {
-  isCardType,
-  isColorIdentity,
-  isRarity,
-  type ArtPosition,
-  type CardBackFace,
-  type CardType,
-  type ColorIdentity,
-  type FrameStyle,
-  type Rarity,
-} from "@/types/card";
 import { renderCardImage, type RenderPreset } from "@/lib/render/card-image";
 import { ownerExportStamp } from "@/lib/billing/entitlements";
 import type { CardPreviewData } from "@/components/cards/card-preview";
+import { rowToPreviewData, type CardRowForBake } from "@/lib/cards/bake-core";
 import { getPipOverrides } from "@/lib/pips/queries";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { buildTypeLine } from "@/lib/cards/card-display";
@@ -85,35 +75,13 @@ export async function GET(
   }
 
   const profileOverrides = await getFrameProfileOverrides();
-  const previewData: CardPreviewData = {
+  // The shared row → render-input mapper (same as the bake), so the social
+  // image carries the set icon, design watermark, face content and back face.
+  const previewData = rowToPreviewData(
+    card as CardRowForBake,
+    await getPipOverrides(card.owner_id),
     profileOverrides,
-    pipOverrides: await getPipOverrides(card.owner_id),
-    title: card.title,
-    cost: card.cost,
-    cardType: isCardType(card.card_type) ? (card.card_type as CardType) : null,
-    supertype: card.supertype,
-    subtypes: card.subtypes,
-    rarity: isRarity(card.rarity) ? (card.rarity as Rarity) : null,
-    colorIdentity: card.color_identity.filter(isColorIdentity) as ColorIdentity[],
-    rulesText: card.rules_text,
-    flavorText: card.flavor_text,
-    power: card.power,
-    toughness: card.toughness,
-    loyalty: card.loyalty,
-    defense: card.defense,
-    artistCredit: card.artist_credit,
-    artUrl: card.art_url,
-    artPosition: (card.art_position as ArtPosition) ?? {},
-    // Pass the persisted frame style through to the renderer so finishes
-    // (foil / etched / borderless / showcase from Phase 11 chunk 03) show
-    // up in OG previews and downloaded PNGs. Previously hard-coded to {}.
-    frameStyle: (card.frame_style as FrameStyle) ?? {},
-    // Back-face content drives the inline second face on multi-panel frames
-    // (adventure left page, flip / split / aftermath rotated faces). Without
-    // this the baked PNG renders those panels empty even though the live
-    // preview + persisted render (bake-render.ts) include them.
-    backFace: (card.back_face as CardBackFace | null) ?? null,
-  };
+  );
 
   // OG previews follow the card OWNER's plan — a paid creator's shared cards
   // render clean (with their optional custom footer mark), a free creator's

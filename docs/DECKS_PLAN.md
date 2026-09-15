@@ -1,7 +1,7 @@
 # Decks — Feature Plan
 
-Status: **APPROVED 2026-07-09** — delivery in progress (see §10 for the PR
-series). Approved decisions: globally-unique `/deck/[slug]` URLs; no printing
+Status: **SHIPPED 2026-07-09** (PRs #194–#200, see §10). Kept as the design
+record; open follow-ups are listed at the end of §10. Approved decisions: globally-unique `/deck/[slug]` URLs; no printing
 of Scryfall scans (checklist page instead); export gating mirrors sets
 (PDF/ZIP = Pro, text free); import quota 10/min · 50/day.
 Research basis: full codebase audit (routes/UI, data layer, creation/print/share
@@ -382,11 +382,14 @@ local stack.
 PR 2 = #195 (public browse + deck page), PR 3 = #196 (import, migration
 0056), PR 4 = #197 (remix flow + wrong-collector-number resolution fix),
 PR 5 = #198 (creator add-to-deck + quick create), PR 6 = #199 (export/print
-+ ZIP + text, jszip dep), PR 7 = #200 (stats surfaces + e2e).
++ ZIP + text, jszip dep), PR 7 = #200 (stats surfaces + e2e). AI deck
+generation and whole-deck remix into real decks shipped 2026-07-10 as
+client-stepped jobs (kinds `deck` / `deck_remix`, migration 0059,
+lib/ai/generation-jobs.ts).
 
 Deferred follow-ups: deck-like notifications (needs a notifications CHECK
 migration), feed events for new public decks, deck oEmbed, drag-and-drop
-reorder, AI whole-deck update.
+reorder.
 
 | PR | Scope | Key tests |
 |---|---|---|
@@ -398,8 +401,7 @@ reorder, AI whole-deck update.
 | **6. `feat(decks): export + print`** | `/api/decks/[id]/export` (pages + quantity-aware 3×3 sheets, baked-render fast path, checklist page for un-remixed), ZIP route, text export (Arena/plain), export menu UI + gating | PDF layout unit tests (page counts vs quantities), text-export round-trip through our own parser |
 | **7. `feat(decks): stats + polish`** | Profile deck section/badge, dashboard tile, HomeStats (flag-gated), GDPR export, empty states, loading skeletons, a11y pass, e2e specs (deck CRUD, import happy-path, remix link — local-Supabase mode), optional: deck-like notifications, feed events | Playwright e2e |
 
-Later (explicitly out of scope now): AI whole-deck update/generation into real
-decks, deck comments, deck versioning/history, price data, drag-and-drop
+Later (explicitly out of scope now): deck comments, deck versioning/history, price data, drag-and-drop
 reorder, maybeboard-first UI, Discord bot integration.
 
 ---

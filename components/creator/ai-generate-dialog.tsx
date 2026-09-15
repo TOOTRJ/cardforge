@@ -111,9 +111,10 @@ export function AiGenerateDialog({
       theme: theme.trim() || undefined,
       style: style.trim() || undefined,
       card_type: cardType === "random" ? undefined : cardType,
-      // "random" is meaningful to the server (pick any published frame);
-      // omit it entirely only when the user never touched frames AND never
-      // picked a type — that keeps the classic era-default behavior.
+      // Every submit sends a frame: a specific template, or "random" (the
+      // server picks any published frame for the generated card). The
+      // server's era-default path (no frame requested) is never reached from
+      // this dialog — only API callers that omit `frame` get it.
       frame: cardType === "random" && frame === "random" ? "random" : frame,
       rarity: rarity === "random" ? undefined : rarity,
     });

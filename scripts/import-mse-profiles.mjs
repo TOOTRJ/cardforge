@@ -18,7 +18,7 @@ const PACK = "/Users/redjester/Projects/other/Full-Magic-Pack/data";
 const OUT_MD = "docs/mse-profile-report.md";
 const OUT_JSON = "docs/mse-profile-report.json";
 
-const { parseMseStyle, extractElement, cardDimensions, getNode } = await import(
+const { parseMseStyle, extractElement, cardDimensions } = await import(
   "../lib/mse/parse-mse-style.ts"
 );
 const { getFrameProfile } = await import("../lib/cards/template-layout.ts");

@@ -8,13 +8,6 @@ import type { Card } from "@/types/card";
 // maybeboard is a scratchpad and never counts toward totals or the curve.
 // ---------------------------------------------------------------------------
 
-export const PLAYABLE_BOARDS: readonly DeckBoard[] = [
-  "commander",
-  "companion",
-  "main",
-  "side",
-];
-
 /** Type buckets in canonical deck-list display order. First matching word in
  *  the type line wins (an Artifact Creature is a creature, matching how deck
  *  sites group). */

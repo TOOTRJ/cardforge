@@ -17,8 +17,11 @@ export default async function AppGroupLayout({
   const configured = isSupabaseConfigured();
   const user = configured ? await getCurrentUser() : null;
 
-  // Defense in depth — middleware should already have redirected unauthed
-  // users away from /(app)/* routes.
+  // Defense in depth — middleware redirects unauthed users (with a
+  // redirectTo) only for its PROTECTED_PREFIXES (/dashboard, /create,
+  // /settings); the other (app) routes (/feed, /notifications, /feedback,
+  // /deck, /set, /card, /admin) rely on this bare redirect and lose the
+  // return path.
   if (configured && !user) {
     redirect("/login");
   }
@@ -37,7 +40,6 @@ export default async function AppGroupLayout({
 
   return (
     <AppShell
-      variant="app"
       user={
         user
           ? {

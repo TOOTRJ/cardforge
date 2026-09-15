@@ -1,5 +1,6 @@
-// Pure frame selection for AI-generated cards. Shared by the random-card
-// route (server) and unit tests — no React, no Supabase.
+// Pure frame selection for AI-generated cards. Shared by createCardGenerationJob
+// (lib/ai/generation-jobs.ts), the AI options dialog (frameChoicesForType)
+// and unit tests — no React, no Supabase.
 //
 // The AI options dialog lets the user pick a specific frame, ask for a
 // random one, or leave it alone. Selection respects the same verification

@@ -25,7 +25,8 @@ export type DeepPartial<T> = {
 
 export type FrameProfileOverride = DeepPartial<FrameProfile>;
 
-/** Keyed by template ("m15", "saga", …). ≤27 rows, world-readable. */
+/** Keyed by template ("m15", "saga", …). At most one row per template
+ *  (FRAME_TEMPLATE_VALUES.length), world-readable. */
 export type FrameProfileOverridesMap = Record<string, FrameProfileOverride>;
 
 // ---------------------------------------------------------------------------

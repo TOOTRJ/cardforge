@@ -22,12 +22,10 @@ import { hasSupabaseSessionCookie } from "@/lib/supabase/session-cookie";
 // ---------------------------------------------------------------------------
 
 type SiteHeaderClientProps = {
-  variant?: "marketing" | "app";
   className?: string;
 };
 
 export function SiteHeaderClient({
-  variant = "marketing",
   className,
 }: SiteHeaderClientProps) {
   const pathname = usePathname();
@@ -58,5 +56,5 @@ export function SiteHeaderClient({
     };
   }, [pathname]);
 
-  return <SiteHeader variant={variant} user={user} className={className} />;
+  return <SiteHeader user={user} className={className} />;
 }

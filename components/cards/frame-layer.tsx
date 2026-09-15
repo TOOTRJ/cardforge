@@ -9,14 +9,17 @@ import type { ColorIdentity, FrameTemplate } from "@/types/card";
 // stretches it across the whole card. Sections (title, art, type, rules,
 // footer) sit on top with their own translucent backgrounds.
 //
-// Color resolution rule (matches the existing pickGradient logic):
+// Color resolution rule:
 //   - 0 colors → colorless "c"
 //   - 1 color  → that color's key
 //   - 2+       → multicolor "m"
 //
-// The PNGs are clean original placeholders (see scripts/generate-frame-
-// placeholders.ts). Drop your own PNGs at the same paths to upgrade the
-// look — the file naming is the only contract.
+// The PNGs are MSE-derived frames converted by scripts/convert-mse-frame.mjs
+// and its siblings (build-era-frames / build-variation-frames); see the
+// template notes in types/card.ts. Each template's geometry lives in
+// lib/cards/template-layout.ts, and a (template, color) combo is only offered
+// once verified in /admin/frame-compare — swapping a PNG is not a drop-in
+// change.
 // ---------------------------------------------------------------------------
 
 const COLOR_KEY_LETTER: Record<ColorIdentity, string> = {

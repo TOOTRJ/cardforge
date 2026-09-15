@@ -91,7 +91,7 @@ const UNLOCKED: Entitlements = {
 };
 
 /** The billing-relevant slice of a profile row — shared by the viewer path
- *  (getEntitlements) and the owner path (removesWatermarkForOwner) so the
+ *  (getEntitlements) and the owner path (ownerExportStamp) so the
  *  tier resolution can never drift between them. */
 type BillingProfileSlice = {
   subscription_tier: string | null;
@@ -210,11 +210,4 @@ export async function ownerExportStamp(
   } catch {
     return { brandMark: isBillingEnabled(), footerText: null };
   }
-}
-
-/** Back-compat convenience: does the owner's plan remove the brand mark? */
-export async function removesWatermarkForOwner(
-  ownerId: string,
-): Promise<boolean> {
-  return !(await ownerExportStamp(ownerId)).brandMark;
 }

@@ -79,7 +79,9 @@ async function ensureUniqueSetSlug(
   const taken = await isSetSlugTakenForCurrentUser(desired, excludeSetId);
   if (!taken) return desired;
   for (let attempt = 2; attempt <= 50; attempt += 1) {
-    const candidate = `${desired}-${attempt}`.slice(0, 80);
+    // Trim the base, not the joined string, so the suffix always survives.
+    const suffix = `-${attempt}`;
+    const candidate = `${desired.slice(0, 80 - suffix.length)}${suffix}`;
     const stillTaken = await isSetSlugTakenForCurrentUser(
       candidate,
       excludeSetId,

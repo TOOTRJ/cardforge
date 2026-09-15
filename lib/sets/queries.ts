@@ -241,9 +241,10 @@ export async function getSetBySlugPublic(
 ): Promise<CardSetWithOwner | null> {
   if (!isSupabaseConfigured()) return null;
   try {
-    // Viewer-independent read → cookie-free public client, so the marketing
-    // `/set/[slug]` route stays ISR-eligible (marketing-chrome-reads-no-cookies
-    // invariant).
+    // Viewer-independent read → cookie-free public client (marketing-chrome-
+    // reads-no-cookies invariant). Note `/set/[slug]` is still dynamic today:
+    // its page shell calls getCurrentUser() for the owner chip, so this read
+    // alone does not make the route ISR-eligible.
     const supabase = createPublicClient();
     const { data: sets } = await supabase
       .from("card_sets")

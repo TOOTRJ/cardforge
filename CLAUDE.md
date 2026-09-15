@@ -29,7 +29,8 @@ Rules and gotchas:
   via the Supabase MCP/dashboard** — ad-hoc applies write timestamped
   versions into the migration history and break the integration (this
   happened once; repaired 2026-07-09). Never edit an already-merged
-  migration file.
+  migration file — stale header comments are corrected in
+  `supabase/migrations/README.md` (errata) instead.
 - Preview branches are created **when the PR opens** — pushes to an
   already-open PR won't create one; close/reopen the PR instead.
 - "Supabase changes only" is ON: PRs without `supabase/` changes get no
@@ -60,8 +61,9 @@ Rules and gotchas:
   accepts `javascript:` schemes.
 - Viewer-independent server reads use `createPublicClient()` (cookie-free,
   keeps routes ISR-eligible); cookie-bound reads via `createClient()` make
-  a route dynamic. `lib/supabase/admin.ts` bypasses RLS — webhook/cron use
-  only.
+  a route dynamic. `lib/supabase/admin.ts` bypasses RLS — webhook/cron,
+  credit grants/refunds, protected billing columns, and is_admin-gated
+  tooling only; every non-cron caller checks auth itself.
 - Card preview and the server Satori bake must stay pixel-identical: the
   `.ttf`/PNG masters in `public/` feed the bake — browser-side asset
   optimizations must not touch what the bake reads.

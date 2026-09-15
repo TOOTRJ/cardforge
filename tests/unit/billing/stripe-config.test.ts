@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
-  creditsForPackPriceId,
   priceIdForPack,
   priceIdForTier,
   tierForAmount,
@@ -48,13 +47,9 @@ describe("stripe price ↔ plan mapping", () => {
     expect(priceIdForTier("pro", "annual")).toBe("price_pro_y");
   });
 
-  it("maps pack price ids to a credit amount", () => {
-    const small = creditsForPackPriceId("price_pack_s");
-    const large = creditsForPackPriceId("price_pack_l");
-    expect(small).toBeGreaterThan(0);
-    expect(large).toBeGreaterThan(small ?? 0);
-    expect(creditsForPackPriceId("nope")).toBeNull();
+  it("resolves the configured price id for a pack", () => {
     expect(priceIdForPack("large")).toBe("price_pack_l");
+    expect(priceIdForPack("small")).toBe("price_pack_s");
   });
 
   it("returns undefined when a price env var is unset", () => {

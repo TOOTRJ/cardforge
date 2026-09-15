@@ -24,23 +24,12 @@
 export const THEME_COOKIE = "cardforge-theme";
 
 export type Theme = "dark" | "light" | "system";
-export type ResolvedTheme = "dark" | "light";
 
 const THEME_VALUES: ReadonlySet<Theme> = new Set(["dark", "light", "system"]);
 export const THEME_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
 
 export function isTheme(value: unknown): value is Theme {
   return typeof value === "string" && THEME_VALUES.has(value as Theme);
-}
-
-/**
- * Resolve "system" to a concrete dark/light on the server. Without
- * access to prefers-color-scheme we conservatively render dark and let
- * the client's inline script fix it up before first paint.
- */
-export function resolveThemeForServer(theme: Theme): ResolvedTheme {
-  if (theme === "light") return "light";
-  return "dark";
 }
 
 /** Client-side cookie read for the header toggle — mirrors the no-flash

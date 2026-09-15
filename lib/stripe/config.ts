@@ -1,8 +1,6 @@
 import "server-only";
 
 import {
-  CREDIT_PACKS,
-  MONTHLY_CREDITS,
   PLANS,
   type BillingPeriod,
   type PackKey,
@@ -169,17 +167,4 @@ export function tierForPrice(price: PriceLike | null | undefined): PlanTier | nu
 export function tierForProduct(product: ProductLike | null | undefined): PlanTier | null {
   if (!product || product.deleted === true) return null;
   return tierFromMetadata(product.metadata) ?? tierFromLabel(product.name);
-}
-
-/** Reverse map a Stripe one-time price id → the credit pack size (webhook). */
-export function creditsForPackPriceId(priceId: string | null | undefined): number | null {
-  if (!priceId) return null;
-  for (const pack of Object.keys(CREDIT_PACKS) as PackKey[]) {
-    if (readEnv(PACK_PRICE_ENV[pack]) === priceId) return CREDIT_PACKS[pack].credits;
-  }
-  return null;
-}
-
-export function monthlyCreditsForTier(tier: PlanTier): number {
-  return MONTHLY_CREDITS[tier] ?? 0;
 }

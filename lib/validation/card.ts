@@ -241,8 +241,6 @@ export const backFaceSchema = z
   })
   .strict();
 
-export type BackFaceInput = z.infer<typeof backFaceSchema>;
-
 // ---------------------------------------------------------------------------
 // Structured face content (cards.face_content, migration 0050) — loyalty
 // ability rows / saga chapters as data. Bounds match real cards: loyalty
@@ -306,8 +304,6 @@ export const faceContentSchema = z
   })
   .strict();
 
-export type FaceContentInput = z.infer<typeof faceContentSchema>;
-
 // ---------------------------------------------------------------------------
 // Per-card design watermark (cards.watermark, migration 0050). Preset keys
 // are validated against the shipped asset list once the preset library
@@ -349,8 +345,6 @@ export const watermarkSchema = z.discriminatedUnion("kind", [
     })
     .strict(),
 ]);
-
-export type WatermarkInput = z.infer<typeof watermarkSchema>;
 
 // ---------------------------------------------------------------------------
 // Composite schemas — the shapes server actions consume.
@@ -442,9 +436,6 @@ export const updateCardSchema = baseCardSchema.partial().extend({
   art_position: artPositionBaseSchema.optional(),
   frame_style: frameStyleBaseSchema.optional(),
 });
-
-export type CreateCardInput = z.infer<typeof createCardSchema>;
-export type UpdateCardInput = z.infer<typeof updateCardSchema>;
 
 // ---------------------------------------------------------------------------
 // Slug helpers

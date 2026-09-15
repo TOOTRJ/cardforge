@@ -90,24 +90,6 @@ export const KEYRUNE_FONT_BYTES: Buffer = fs.readFileSync(KEYRUNE_FONT_PATH);
 export const DISPLAY_FONT_BYTES: Buffer = fs.readFileSync(DISPLAY_FONT_PATH);
 
 // ---------------------------------------------------------------------------
-// Per-color tints for the monochrome Mana font glyphs.
-//
-// The Mana font is single-color; the W/U/B/R/G/C colorization on a real
-// pip comes from CSS variables (--ms-mana-w etc.) the live preview gets
-// for free. Satori doesn't honor CSS variables, so we tint manually using
-// the same hex values mana-font publishes.
-// ---------------------------------------------------------------------------
-
-export const MANA_GLYPH_COLOR: Record<string, string> = {
-  w: "#fdfbce",
-  u: "#bcdaf7",
-  b: "#a7999e",
-  r: "#f19b79",
-  g: "#9fcba6",
-  c: "#d0c6bb",
-};
-
-// ---------------------------------------------------------------------------
 // Codepoint extraction
 //
 // mana.css blocks look like:

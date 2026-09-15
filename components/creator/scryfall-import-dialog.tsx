@@ -143,7 +143,7 @@ type ScryfallImportDialogProps = {
   /** When provided, the dialog open state is controlled externally. The
    *  built-in trigger button is suppressed in that mode so the parent
    *  decides where the open affordance lives (e.g. the start-with hero
-   *  on /create, or a programmatic open from the command palette). */
+   *  on /create, or a programmatic open from the start-with hero on /create (a custom DOM event)). */
   open?: boolean;
   onOpenChange?: (next: boolean) => void;
   /** Hide the built-in trigger button even in uncontrolled mode. Useful

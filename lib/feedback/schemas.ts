@@ -70,5 +70,3 @@ export const feedbackSchema = z.object({
     .optional()
     .or(z.literal("").transform(() => undefined)),
 });
-
-export type FeedbackInput = z.infer<typeof feedbackSchema>;

@@ -4,9 +4,9 @@ Premium subscriptions + AI credits for PipGlyph, built on **Stripe hosted
 Checkout + Customer Portal + a thin webhook → Supabase + app-managed credits**.
 
 > **IP posture (important):** the paid value is *our technology* — AI generation
-> credits, watermark-free hi-res exports, the AI set generator, original premium
-> finishes. The MTG-style card maker (every frame, every card type) stays free,
-> and no WotC trade dress is ever paywalled. Keep this in all store/marketing
+> credits, watermark-free hi-res exports, whole-deck/set printing, saved-card
+> capacity. The MTG-style card maker (every frame, every card type, every
+> finish) stays free, and no WotC trade dress is ever paywalled. Keep this in all store/marketing
 > copy. Get an IP attorney to review before a public launch.
 
 ## Model at a glance
@@ -49,8 +49,9 @@ spend refs for reconciliation).
 Migrations ship through PRs and apply automatically (Supabase branching —
 see `docs/ENVIRONMENTS.md` and `CLAUDE.md`). Never apply them by hand to
 production. `types/supabase.ts` is hand-extended after each billing
-migration; regenerate with `supabase gen types typescript --linked` when
-convenient.
+migration. If you regenerate it with `supabase gen types typescript --linked`,
+re-apply the hand-written aliases at the top of the file first (several
+modules import them) — a blind overwrite breaks the typecheck.
 
 ## 2. Stripe Dashboard
 
@@ -93,6 +94,7 @@ convenient.
 Add to `.env.local` (and Vercel project env). See `.env.example`.
 
 ```
+NEXT_PUBLIC_BILLING_ENABLED=true                # master switch — off hides the whole paid layer
 NEXT_PUBLIC_SITE_URL=https://your-domain        # checkout/portal redirects
 STRIPE_SECRET_KEY=sk_or_rk_...
 STRIPE_WEBHOOK_SECRET=whsec_...
@@ -116,14 +118,17 @@ stripe login
 stripe listen --forward-to localhost:3000/api/stripe/webhook   # prints whsec_…
 # in another shell:
 stripe trigger checkout.session.completed
+stripe trigger customer.subscription.created
 stripe trigger customer.subscription.updated
-stripe trigger invoice.paid
 stripe trigger invoice.payment_failed
 ```
 
 Verify: a test profile's `subscription_tier`/`status`/`current_period_end`
-update; `invoice.paid` grants monthly credits; running a trigger twice is a
-no-op (deduped via `stripe_events` + `credit_ledger.stripe_event_id`).
+update; `customer.subscription.created` grants the first month's credits
+(`refill:{user}:{YYYY-MM}` in `credit_ledger.idempotency_key`); running a
+trigger twice is a no-op (event ids are claimed in `stripe_events`, grants
+dedupe on the ledger key). `invoice.paid` is not handled — refills are
+cron-driven (§6).
 
 ## 5. Where things live
 
@@ -135,7 +140,8 @@ no-op (deduped via `stripe_events` + `credit_ledger.stripe_event_id`).
 - Subscription ↔ profile sync: `lib/stripe/subscription-sync.ts` — shared by
   the webhook, the admin "Resync from Stripe" button, and the admin billing
   health check (`lib/admin/user-actions.ts`).
-- Credits: `lib/ai/rate-limit.ts` (`consumeAiCredits`, `spendCredits`); every
+- Credits: `lib/ai/rate-limit.ts` (`spendCredits` → the `consume_credits` RPC;
+  `lib/billing/credit-refill.ts` for the monthly grants); every
   AI generation runs as a background job (`lib/ai/generation-jobs.ts`,
   `app/api/ai/jobs/*`) that reserves a credit per step and refunds on
   failure; `lib/billing/credit-reconcile.ts` sweeps orphaned charges daily.
@@ -154,7 +160,11 @@ plans behave identically**. Grants are idempotent per user per calendar month
 (`refill:{user}:{YYYY-MM}` stored in `credit_ledger.idempotency_key`), so daily
 runs are self-healing and never double-grant. New subscribers also get their
 first month immediately on `customer.subscription.created`/`.updated` (same key →
-no double-grant).
+no double-grant). Two refinements live in `lib/billing/credit-refill.ts`: a
+**trial** gets exactly one grant (at creation — no refills until it converts),
+and a **mid-month upgrade** tops up the tier difference under
+`refill:{user}:{YYYY-MM}:upgrade:{tier}` so Plus → Pro gets its extra credits
+immediately.
 
 - Set **`CRON_SECRET`** in Vercel — it's sent as `Authorization: Bearer …`; the
   route rejects anything else.

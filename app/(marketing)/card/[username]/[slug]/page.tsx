@@ -12,8 +12,10 @@ import { getSiteBaseUrl } from "@/lib/site-url";
 //
 // The username-namespaced URL eliminates slug ambiguity — two different
 // owners can each have a card named "lightning-bolt" without one
-// hijacking the other's public link. The legacy `/card/[slug]` route is
-// preserved as a 301 redirector (see app/(marketing)/card/[slug]/page.tsx).
+// hijacking the other's public link. The legacy `/card/<slug>` route is
+// preserved as a 301 redirector at app/(marketing)/card/[username]/page.tsx
+// (the folder must be named [username] for Next.js segment-name consistency;
+// it treats the param as a slug).
 //
 // The body lives in CardDetailContent, shared with the intercepting route
 // at app/@modal/(.)card/[username]/[slug] that renders the same view in a

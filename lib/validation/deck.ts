@@ -77,6 +77,3 @@ export const updateDeckSchema = createDeckSchema.partial().extend({
   format: deckFormatBaseSchema.optional(),
   visibility: deckVisibilityBaseSchema.optional(),
 });
-
-export type CreateDeckInput = z.infer<typeof createDeckSchema>;
-export type UpdateDeckInput = z.infer<typeof updateDeckSchema>;
