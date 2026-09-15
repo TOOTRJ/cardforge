@@ -22,6 +22,8 @@ export type UpgradeReason =
   | "pdf_export"
   | "batch_export"
   | "deck_aware_generation"
+  | "deck_export"
+  | "deck_guide"
   | "generic";
 
 const REASON_COPY: Record<UpgradeReason, { title: string; description: string }> =
@@ -62,6 +64,16 @@ const REASON_COPY: Record<UpgradeReason, { title: string; description: string }>
       title: "Design cards for your deck",
       description:
         "Pro can point the AI at one of your decks: it studies the deck's colors, curve and cards, then designs the card it's missing (and adds it to the deck) or themes a batch of ideas to it.",
+    },
+    deck_export: {
+      title: "Download the whole deck",
+      description:
+        "Exporting a deck — the card images as a ZIP, print-ready PDFs, and the deck report with stats, how to play and combos — is a Pro feature. Copying and sharing the deck stays free.",
+    },
+    deck_guide: {
+      title: "How to play & combos",
+      description:
+        "Pro members see an AI-written guide on every deck: the game plan, mulligan advice, the combos hiding in the list, and its weak spots. AI-generated decks come with one; any other deck can be analyzed for a credit.",
     },
     generic: {
       title: "Go premium",
