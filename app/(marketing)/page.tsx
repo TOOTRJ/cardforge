@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { ArrowRight } from "lucide-react";
 import { MarketingHero } from "@/components/marketing/marketing-hero";
+import { UpdatesBanner } from "@/components/marketing/updates-banner";
 import { listFeaturedHomeCards } from "@/lib/featured/queries";
 import { FeatureGrid } from "@/components/marketing/feature-grid";
 import { CardPreviewPlaceholder } from "@/components/cards/card-preview-placeholder";
@@ -86,6 +87,11 @@ export default async function HomePage() {
   return (
     <>
       <MarketingHero featured={featuredCards} />
+      {isSupabaseConfigured() ? (
+        <Suspense fallback={null}>
+          <UpdatesBanner />
+        </Suspense>
+      ) : null}
       <FeatureGrid />
 
       {/* Stat strip + brand epigraph — the "engineered for precision" band. */}

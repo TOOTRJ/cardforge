@@ -10,6 +10,7 @@ import { noFlashScript } from "@/lib/theme-shared";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
+import { AckSplash } from "@/components/updates/ack-splash";
 import "./globals.css";
 
 // ---------------------------------------------------------------------------
@@ -246,6 +247,8 @@ export default function RootLayout({
         {/* Vercel Web Analytics — tracks page views and user
             interactions for analytics and insights. */}
         <Analytics />
+        {/* Must-read site updates for signed-in users (see /admin/updates). */}
+        <AckSplash />
       </body>
     </html>
   );

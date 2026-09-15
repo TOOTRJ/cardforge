@@ -16,6 +16,7 @@ import {
   Settings,
   ShieldCheck,
   Sparkles,
+  Megaphone,
   Star,
   Trophy,
   type LucideIcon,
@@ -40,6 +41,7 @@ const NAV_ICONS: Record<string, LucideIcon> = {
   "/admin/feedback": Inbox,
   "/admin/featured": Star,
   "/admin/challenges": Trophy,
+  "/admin/updates": Megaphone,
   "/admin/scryfall": Activity,
   "/admin/frame-compare": Frame,
 };
