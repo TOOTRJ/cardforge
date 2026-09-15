@@ -274,7 +274,7 @@ export async function syncSubscriptionForUser(
       ? new Date(item.current_period_end * 1000).toISOString()
       : null;
 
-  await admin
+  const { error: writeError } = await admin
     .from("profiles")
     .update({
       subscription_tier: tier,
@@ -284,6 +284,12 @@ export async function syncSubscriptionForUser(
       cancel_at_period_end: chosenDeleted ? false : Boolean(chosen.cancel_at_period_end),
     })
     .eq("id", userId);
+  // A failed profile write must surface: the webhook then 500s and Stripe
+  // retries (handlers are idempotent). The old handler discarded this error
+  // and acked the event, leaving the profile silently out of sync.
+  if (writeError) {
+    throw new Error(`Profile subscription write failed for ${userId}: ${writeError.message}`);
+  }
 
   return {
     userId,
