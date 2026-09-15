@@ -158,23 +158,6 @@ export async function getDeckById(id: string): Promise<Deck | null> {
   }
 }
 
-/** Deck slugs are globally unique (migration 0055), so a bare slug lookup is
- *  unambiguous — RLS still filters decks the viewer can't read. */
-export async function getDeckBySlug(slug: string): Promise<Deck | null> {
-  if (!isSupabaseConfigured()) return null;
-  try {
-    const supabase = await createClient();
-    const { data } = await supabase
-      .from("decks")
-      .select("*")
-      .eq("slug", slug)
-      .maybeSingle();
-    return data ? narrowDeck(data) : null;
-  } catch {
-    return null;
-  }
-}
-
 export async function getMyDeckBySlug(slug: string): Promise<Deck | null> {
   if (!isSupabaseConfigured()) return null;
   const user = await getCurrentUser();

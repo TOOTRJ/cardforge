@@ -11,7 +11,7 @@ import {
 
 // ---------------------------------------------------------------------------
 // Server read for frame layout overrides. One tiny world-readable select
-// (≤27 rows). The data is viewer-independent, so it uses the cookie-free
+// (at most one row per frame template). The data is viewer-independent, so it uses the cookie-free
 // public client (keeps callers eligible for static/ISR rendering) and is
 // cached ACROSS requests via unstable_cache — admin writes bust the tag
 // (see frame-profile-override-actions.ts). react cache() on top dedupes

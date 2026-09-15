@@ -264,8 +264,9 @@ function drawChecklistPages(
 /**
  * Build a whole-deck PDF.
  *
- * - "pages": one page per UNIQUE card at 2.5"×3.5" (copies listed in the
- *   checklist instead of repeated — a 100-page PDF helps nobody).
+ * - "pages": one page per UNIQUE card at 2.5"×3.5" — `copies` is ignored
+ *   and nothing records the quantity (a 100-page PDF helps nobody; the
+ *   export route's checklist lists only un-remixed real cards, not counts).
  * - "sheet-letter" / "sheet-a4": 3×3 proxy sheets with crop marks, each
  *   card repeated `copies` times, different cards mixed onto shared pages.
  *

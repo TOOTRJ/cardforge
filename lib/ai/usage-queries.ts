@@ -4,23 +4,19 @@ import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import { MONTHLY_CREDITS, type PlanTier } from "@/lib/billing/plans";
+import { PER_DAY_LIMIT, PER_MINUTE_LIMIT } from "@/lib/ai/rate-limit";
 
 // ---------------------------------------------------------------------------
-// AI usage snapshot (Phase 11 chunk 15).
+// AI usage snapshot for the settings usage panel.
 //
-// Mirrors the windows the rate limiter enforces — see lib/ai/rate-limit.ts:
-//   - PER_MINUTE_LIMIT = 20
-//   - PER_DAY_LIMIT    = 200
-//
-// Re-importing the constants here would be tighter but risks drift if
-// someone updates one and not the other. We hard-code the same values in
-// USAGE_LIMITS and keep the rate-limit file as the source of truth — if
-// you change them, change both.
+// The windows come straight from the rate limiter (lib/ai/rate-limit.ts) —
+// a hand-copied 20/200 here drifted from the enforced 40/500 and the panel
+// warned users at the wrong caps.
 // ---------------------------------------------------------------------------
 
 export const AI_USAGE_LIMITS = {
-  perMinute: 20,
-  perDay: 200,
+  perMinute: PER_MINUTE_LIMIT,
+  perDay: PER_DAY_LIMIT,
 };
 
 const DAY_MS = 24 * 60 * 60 * 1000;

@@ -40,9 +40,6 @@ type HeaderUser = {
 };
 
 type SiteHeaderProps = {
-  /** Accepted for API stability (callers still pass it), but no longer used:
-   *  the header search was removed and nav items don't depend on variant. */
-  variant?: "marketing" | "app";
   user?: HeaderUser | null;
   className?: string;
 };

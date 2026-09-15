@@ -21,7 +21,9 @@ import type { DeckFormat } from "@/types/deck";
 // deck's name, colors, and strategy; the shared card-design engine then
 // fills a format-aware skeleton (commander slot, land share, 55/45
 // creature/spell split along a real mana curve — lib/ai/mtg-rules.ts).
-// All cards are ORIGINAL customs; the deck ships private.
+// All cards are ORIGINAL customs. Generated decks — and their cards, once
+// art lands — ship PUBLIC by default (owner decision 2026-07-10; see
+// createDeckGenerationJob / paintAndPublishCard in generation-jobs.ts).
 // ---------------------------------------------------------------------------
 
 export const AI_DECK_FORMATS = ["commander", "standard", "limited"] as const;

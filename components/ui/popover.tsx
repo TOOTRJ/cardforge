@@ -7,15 +7,12 @@ import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
 // Popover — thin wrapper over @radix-ui/react-popover with the shadcn API
-// surface. Used by later chunks (08 bulk actions confirm, 13 source chip,
-// future per-card menus). Not consumed anywhere yet — this primitive is
-// staged for chunks that depend on it.
+// surface. Consumed by components/layout/user-menu.tsx and
+// components/notifications/notification-bell.tsx.
 // ---------------------------------------------------------------------------
 
 export const Popover = PopoverPrimitive.Root;
 export const PopoverTrigger = PopoverPrimitive.Trigger;
-export const PopoverAnchor = PopoverPrimitive.Anchor;
-export const PopoverClose = PopoverPrimitive.Close;
 
 export const PopoverContent = forwardRef<
   ComponentRef<typeof PopoverPrimitive.Content>,

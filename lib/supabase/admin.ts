@@ -3,11 +3,12 @@ import "server-only";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/supabase";
 
-// Service-role Supabase client. BYPASSES Row-Level Security, so it must NEVER be
-// imported from a client component or a user-facing route. Only the Stripe
-// webhook (app/api/stripe/webhook) and server-side reconcile jobs use it to
-// write billing/entitlement columns that the user's own client is not trusted
-// to set.
+// Service-role Supabase client. BYPASSES Row-Level Security. Allowed only
+// where the user's own client cannot do the write: the Stripe webhook and
+// cron sweeps, credit grants/refunds (grant_credits is service-role only),
+// trigger-protected billing columns (stripe_customer_id etc.), and admin
+// tooling behind an is_admin gate. NEVER import it from a client component,
+// and every non-cron caller must authenticate/authorize the caller itself.
 
 // The new `sb_secret_...` key (individually rotatable/revocable) — grants
 // RLS-bypassing privileges. The legacy service_role JWT is disabled in the

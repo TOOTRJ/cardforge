@@ -36,8 +36,10 @@ export const RECONCILE_GRACE_MS = 15 * 60_000;
  *  to the refund key, and a couple of days of cron outage drops nothing. */
 export const RECONCILE_WINDOW_MS = 72 * 60 * 60_000;
 
-/** Per-run row bound (defense against a pathological backlog; the hourly
- *  cadence catches anything a full page leaves behind). */
+/** Per-run row bound (defense against a pathological backlog). With the
+ *  DAILY cadence a backlog beyond this drains at 500/day, so it must stay
+ *  inside RECONCILE_WINDOW_MS — raise the limit (or the window) while a
+ *  large incident is being reconciled. */
 export const RECONCILE_SCAN_LIMIT = 500;
 
 export type ParsedSpendRef = { jobId: string; stepKey: string };

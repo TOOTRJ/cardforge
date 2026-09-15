@@ -3,6 +3,7 @@ import JSZip from "jszip";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { requireTier, UpgradeRequiredError } from "@/lib/billing/entitlements";
+import { isAllowedServerImageFetchUrl } from "@/lib/validation/card";
 
 // ---------------------------------------------------------------------------
 // /api/decks/[id]/download — Pro "save all cards": a ZIP of the deck's
@@ -99,7 +100,10 @@ export async function GET(
   let added = 0;
 
   for (const card of cards ?? []) {
-    if (!card.rendered_image_url) {
+    // rendered_image_url is an owner-writable column: only fetch it from the
+    // app's own storage host (never an arbitrary URL from inside the
+    // function — that was an SSRF vector). Anything else counts as missing.
+    if (!card.rendered_image_url || !isAllowedServerImageFetchUrl(card.rendered_image_url)) {
       missing.push(card.title);
       continue;
     }

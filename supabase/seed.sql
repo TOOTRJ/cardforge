@@ -1,15 +1,22 @@
 -- ---------------------------------------------------------------------------
--- Local-development seed. Applied by `supabase start` / `supabase db reset`
--- AFTER all migrations (config.toml → [db.seed]). Runs ONLY against the local
--- stack — remote pushes (`supabase db push`) never execute seeds.
+-- Seed file. Applied AFTER all migrations by `supabase start` / `supabase db reset`
+-- (config.toml → [db.seed]) AND by the Supabase GitHub integration whenever a
+-- preview branch is created for a PR. It never runs against production (merge
+-- applies migrations only; `supabase db push` never executes seeds). Preview
+-- branches are shared, publicly reachable databases — never put local-only
+-- conveniences (fixed admin users, dev flags) here.
 --
 -- Keep this minimal: baseline rows the app expects to exist, not sample
 -- content. For a test user + admin flag, run `node scripts/seed-e2e.mjs`
 -- after the stack is up (it needs the API, not raw SQL).
 -- ---------------------------------------------------------------------------
 
--- No baseline rows required today: profiles are created by the auth trigger
--- (0001), storage buckets by migrations, and all app content is user-made.
--- Add rows here when a feature needs pre-existing data (e.g. frame_reviews
--- defaults or a featured challenge) so `supabase db reset` stays one command.
+-- Baseline rows needed: frame_reviews. Frame verification is the ONLY gate the
+-- creator has (lib/cards/frame-availability.ts) — with this table empty, /create
+-- offers no frames and every card kind renders as "Soon", on every preview
+-- branch and fresh `supabase db reset`. Profiles come from the auth trigger
+-- (0001) and storage buckets from migrations, so nothing else is required.
+-- TODO: seed the verified (template, color_key) combos here (verified = true),
+-- kept in sync with what the owner has verified in /admin/frame-compare on
+-- production, so preview branches and local resets get a usable creator.
 select 1;

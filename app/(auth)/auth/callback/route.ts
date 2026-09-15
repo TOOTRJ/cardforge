@@ -2,12 +2,11 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
-const SAFE_REDIRECT = /^\/[^\s]*$/;
-
 function safeRedirectTo(value: string | null) {
-  if (!value || !SAFE_REDIRECT.test(value) || value.startsWith("//")) {
-    return "/dashboard";
-  }
+  // Same rule as app/(auth)/actions.ts: a bare same-origin path; reject
+  // protocol-relative (`//`) and backslash (`/\`) forms the URL parser
+  // would turn into an off-site navigation.
+  if (!value || !/^\/(?![\/\\])[^\s\\]*$/.test(value)) return "/dashboard";
   return value;
 }
 

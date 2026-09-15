@@ -82,6 +82,3 @@ export const createSetSchema = z.object({
 export const updateSetSchema = createSetSchema.partial().extend({
   visibility: setVisibilityBaseSchema.optional(),
 });
-
-export type CreateSetInput = z.infer<typeof createSetSchema>;
-export type UpdateSetInput = z.infer<typeof updateSetSchema>;

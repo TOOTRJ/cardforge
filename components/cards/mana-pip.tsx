@@ -3,21 +3,15 @@ import { cn } from "@/lib/utils";
 // ---------------------------------------------------------------------------
 // Mana pip renderer
 //
-// Parses a cost string like "{2}{R}{R}" or "{W}{U}{B}{G}{C}" into an array
-// of visual pip elements. Each pip is a small circle with the mana symbol
-// inside. Generic mana numbers (e.g. {2}) and special symbols (X, C) get
-// their own neutral style.
+// Renders a single mana symbol ("2", "R", "X", "C") as a small circle with
+// the symbol inside. Colored symbols get their mana color; generic mana
+// numbers and special symbols (X, C) get their own neutral style.
 //
 // Usage:
-//   <ManaString cost="{2}{R}{R}" size="md" />
 //   <ManaPip symbol="W" size="sm" />
 // ---------------------------------------------------------------------------
 
 export type PipSize = "xs" | "sm" | "md" | "lg";
-
-// The subset of mana symbols we render with distinct color styles.
-// Anything else falls through to the generic "colorless" look.
-const COLORED_SYMBOLS = new Set(["W", "U", "B", "R", "G"]);
 
 const PIP_SIZE_CLASSES: Record<PipSize, string> = {
   xs: "h-3.5 w-3.5 text-[7px]",
@@ -64,10 +58,7 @@ export function ManaPip({
   size?: PipSize;
   className?: string;
 }) {
-  const displaySymbol =
-    COLORED_SYMBOLS.has(symbol)
-      ? symbol
-      : symbol; // numbers and X pass through unchanged
+  const displaySymbol = symbol;
 
   return (
     <span
@@ -80,45 +71,6 @@ export function ManaPip({
       aria-label={`${symbol} mana`}
     >
       {displaySymbol}
-    </span>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Parse "{2}{R}{R}{G}" → ["2", "R", "R", "G"]
-// ---------------------------------------------------------------------------
-
-export function parseCost(cost: string | null | undefined): string[] {
-  if (!cost?.trim()) return [];
-  const matches = cost.match(/\{([^}]+)\}/g);
-  if (!matches) return [];
-  return matches.map((m) => m.slice(1, -1).toUpperCase());
-}
-
-// ---------------------------------------------------------------------------
-// ManaString — renders a full cost string as a row of pips
-// ---------------------------------------------------------------------------
-
-export function ManaString({
-  cost,
-  size = "md",
-  className,
-}: {
-  cost?: string | null;
-  size?: PipSize;
-  className?: string;
-}) {
-  const pips = parseCost(cost);
-  if (pips.length === 0) return null;
-
-  return (
-    <span
-      className={cn("inline-flex items-center gap-0.5", className)}
-      aria-label={`Mana cost: ${cost}`}
-    >
-      {pips.map((sym, i) => (
-        <ManaPip key={`${sym}-${i}`} symbol={sym} size={size} />
-      ))}
     </span>
   );
 }

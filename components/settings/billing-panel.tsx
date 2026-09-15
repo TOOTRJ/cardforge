@@ -18,6 +18,11 @@ type BillingPanelProps = {
    *  hydration mismatch). Null when there's no active subscription. */
   renewLabel: string | null;
   cancelAtPeriodEnd: boolean;
+  /** The user has a Stripe customer — the portal can open for them. A comp'd
+   *  user without one used to see a "Manage subscription" button that could
+   *  only fail; a past-due subscriber (isPaid false) had NO way to reach the
+   *  portal and fix their card. */
+  hasBillingAccount: boolean;
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -37,11 +42,17 @@ export function BillingPanel({
   credits,
   renewLabel,
   cancelAtPeriodEnd,
+  hasBillingAccount,
 }: BillingPanelProps) {
   const plan = planForTier(tier);
+  // A lapsed paid plan shows its real status (Past due / Unpaid / …) rather
+  // than pretending to be the free plan.
+  const lapsed = !isPaid && tier !== "free" && status != null;
   const statusLabel = isPaid
     ? STATUS_LABEL[status ?? ""] ?? "Active"
-    : "Free plan";
+    : lapsed
+      ? STATUS_LABEL[status ?? ""] ?? "Lapsed"
+      : "Free plan";
 
   return (
     <div className="flex flex-col gap-4">
@@ -57,7 +68,12 @@ export function BillingPanel({
         <Badge variant={isPaid ? "primary" : "outline"}>{statusLabel}</Badge>
       </div>
 
-      {renewLabel ? (
+      {lapsed ? (
+        <p className="text-xs leading-5 text-danger">
+          Your last payment didn&apos;t go through, so paid perks are paused.
+          Update your card under Manage subscription to restore them.
+        </p>
+      ) : renewLabel ? (
         <p className="text-xs leading-5 text-muted">
           {cancelAtPeriodEnd
             ? `Your plan ends on ${renewLabel}.`
@@ -82,13 +98,16 @@ export function BillingPanel({
       </div>
 
       <div className="flex flex-wrap gap-2">
-        {isPaid ? (
-          <ManageBillingButton size="sm">Manage subscription</ManageBillingButton>
-        ) : (
-          <Button asChild size="sm">
-            <Link href="/pricing">Upgrade your plan</Link>
+        {hasBillingAccount ? (
+          <ManageBillingButton size="sm">
+            {isPaid ? "Manage subscription" : lapsed ? "Fix payment" : "Billing history"}
+          </ManageBillingButton>
+        ) : null}
+        {!isPaid ? (
+          <Button asChild size="sm" variant={hasBillingAccount ? "outline" : "primary"}>
+            <Link href="/pricing">{lapsed ? "See plans" : "Upgrade your plan"}</Link>
           </Button>
-        )}
+        ) : null}
         <Button asChild variant="outline" size="sm">
           <Link href="/pricing">Buy credits</Link>
         </Button>
