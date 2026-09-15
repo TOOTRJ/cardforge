@@ -154,7 +154,10 @@ export async function GET() {
       (step) => step?.status === "pending" || step?.status === "running",
     );
   });
-  return NextResponse.json({ ok: true, job: resumable ?? null }, { status: 200 });
+  if (!resumable) return NextResponse.json({ ok: true, job: null }, { status: 200 });
+  const { plan: _plan, ...payload } = resumable;
+  void _plan;
+  return NextResponse.json({ ok: true, job: payload }, { status: 200 });
 }
 
 export async function POST(request: Request) {

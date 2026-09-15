@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -17,6 +18,7 @@ import {
   type GenerationStats,
 } from "@/components/ai/generation-details-dialog";
 import { useUpgradeModal } from "@/components/billing/upgrade-modal-provider";
+import { jobStatusOf, openStepKeys } from "@/lib/ai/job-queue";
 import type {
   GenerationJobOutcome,
   GenerationJobPhase,
@@ -46,6 +48,23 @@ type JobPayload = {
     | "cancelled";
   steps: GenerationJobStep[];
   request?: Record<string, unknown>;
+  deck_id?: string | null;
+  set_id?: string | null;
+};
+
+export type ActiveGenerationJob = {
+  id: string;
+  kind: JobPayload["kind"];
+  deckId: string | null;
+  setId: string | null;
+};
+
+export type RunOptions = {
+  /** Resolve as soon as the job is PLANNED (steps exist) and keep stepping
+   *  in the background — for flows that navigate away and let the target
+   *  page fill in live (deck builds). The outcome then carries `detached`
+   *  and `jobId`, with zero successes/failures. */
+  detach?: boolean;
 };
 
 export type GenerationContextValue = {
@@ -53,10 +72,16 @@ export type GenerationContextValue = {
   steps: GenerationJobStep[];
   busy: boolean;
   hasFailures: boolean;
-  run: (body: Record<string, unknown>) => Promise<GenerationJobOutcome>;
+  run: (body: Record<string, unknown>, options?: RunOptions) => Promise<GenerationJobOutcome>;
   /** Adopt a finished-with-failures job by id and re-run its failed steps
    *  (the deck page's "Regenerate" bar). */
   retryJob: (jobId: string) => Promise<GenerationJobOutcome>;
+  /** Adopt a still-generating job by id (a build interrupted by a reload)
+   *  and finish its open steps — never re-runs failed ones. */
+  resumeJob: (jobId: string) => Promise<GenerationJobOutcome>;
+  /** The job this runner currently owns (or last finished), for pages that
+   *  want to show live progress for THEIR deck/set. */
+  activeJob: ActiveGenerationJob | null;
   /** Open the progress details dialog (also opened by clicking the widget). */
   openDetails: () => void;
   retryStep: (stepKey: string) => Promise<GenerationJobOutcome>;
@@ -92,10 +117,16 @@ async function postStep(
   stepKey?: string,
 ): Promise<{ job: JobPayload; inFlight: boolean } | { error: string }> {
   try {
+    // keepalive: a reload or navigation must not tear down the socket while
+    // a card is mid-paint — a reset connection failed the step server-side
+    // (card row created, art lost) and the resumed tab then re-ran it,
+    // which is what "refreshing regenerated my cards" was. The body is a
+    // few bytes, well inside the keepalive budget.
     const response = await fetch(`/api/ai/jobs/${jobId}/step`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(stepKey ? { step: stepKey } : {}),
+      keepalive: true,
     });
     const payload = await response.json().catch(() => null);
     if (!response.ok || !payload?.ok) {
@@ -200,7 +231,10 @@ export function GenerationJobProvider({
   const hasFailures = steps.some((step) => step.status === "failed");
 
   const stepUntilDone = useCallback(
-    async (startJob: JobPayload): Promise<JobPayload> => {
+    async (
+      startJob: JobPayload,
+      options: { includeFailed?: boolean } = {},
+    ): Promise<JobPayload> => {
       // Drain the job's open steps with a small pool of workers, each
       // POSTing a DISTINCT step key. The server CLAIMS a step atomically
       // before executing (migration 0066) and writes its result atomically
@@ -209,14 +243,22 @@ export function GenerationJobProvider({
       // in ~N/POOL image-times instead of strictly one-at-a-time.
       const terminal = new Map<string, GenerationJobStep>();
       const latest = new Map<string, GenerationJobStep>();
-      for (const s of startJob.steps) {
-        if (s.status === "done" || s.status === "failed") terminal.set(s.key, s);
-      }
       // "running" steps (adopted from a dead tab) are queued too: the worker
-      // polls them and reclaims once the server marks the claim stale.
-      const queue = startJob.steps
-        .filter((s) => s.status === "pending" || s.status === "running")
-        .map((s) => s.key);
+      // polls them and reclaims once the server marks the claim stale. An
+      // explicit retry queues the failed steps as well — the pool posts them
+      // by key, so N failed cards regenerate N/POOL at a time instead of
+      // one after another.
+      const queue = openStepKeys(startJob.steps, options);
+      const queued = new Set(queue);
+      for (const s of startJob.steps) {
+        if ((s.status === "done" || s.status === "failed") && !queued.has(s.key)) {
+          terminal.set(s.key, s);
+        } else if (s.status === "failed") {
+          // A failed step queued for retry shows as open again right away
+          // (progress reads 3/4, not "4/4 · 1 failed") until its claim lands.
+          latest.set(s.key, { ...s, status: "pending", error: undefined });
+        }
+      }
       const order = startJob.steps.map((s) => s.key);
       const inFlightPolls = new Map<string, number>();
       let transportFailures = 0;
@@ -227,16 +269,7 @@ export function GenerationJobProvider({
           (s) => terminal.get(s.key) ?? latest.get(s.key) ?? s,
         );
         // Mirrors patch_job_step's honest recompute (migration 0067).
-        const status = steps.some(
-          (s) => s.status === "pending" || s.status === "running",
-        )
-          ? "generating"
-          : !steps.some((s) => s.status === "failed")
-            ? "done"
-            : steps.some((s) => s.status === "done")
-              ? "done_with_errors"
-              : "failed";
-        return { ...startJob, steps, status } as JobPayload;
+        return { ...startJob, steps, status: jobStatusOf(steps) } as JobPayload;
       };
 
       const publish = (job: JobPayload) => {
@@ -303,7 +336,7 @@ export function GenerationJobProvider({
   );
 
   const run = useCallback(
-    async (body: Record<string, unknown>): Promise<GenerationJobOutcome> => {
+    async (body: Record<string, unknown>, options: RunOptions = {}): Promise<GenerationJobOutcome> => {
       if (runningRef.current) {
         toast.error("Another generation is already running — let it finish first.");
         return { ok: false, successes: 0, failures: 0 };
@@ -356,22 +389,57 @@ export function GenerationJobProvider({
         // Planning is done; measure painting pace from here.
         beginStats(startJob);
 
-        const finished = await stepUntilDone(startJob);
-        setPhase("done");
-        if (finished.steps.some((s) => s.status === "running")) {
-          // Pool drained but a step is still mid-run elsewhere (or its
-          // claim hasn't gone stale yet) — that is NOT a clean finish.
-          toast.message(
-            "One step is still finishing in the background — it completes or becomes retryable on your next visit.",
-          );
+        const finishStepping = async (): Promise<JobPayload> => {
+          const finished = await stepUntilDone(startJob);
+          setPhase("done");
+          if (finished.steps.some((s) => s.status === "running")) {
+            // Pool drained but a step is still mid-run elsewhere (or its
+            // claim hasn't gone stale yet) — that is NOT a clean finish.
+            toast.message(
+              "One step is still finishing in the background — it completes or becomes retryable on your next visit.",
+            );
+          }
+          return finished;
+        };
+
+        if (options.detach) {
+          // The caller moves on (e.g. to the deck page, which fills in
+          // live); this runner keeps painting and owns the wrap-up toast.
+          void finishStepping()
+            .then((finished) => {
+              const outcome = outcomeOf(finished.steps, targetSlug);
+              if (outcome.failures > 0) {
+                toast.message(
+                  `${outcome.successes} card${outcome.successes === 1 ? "" : "s"} done, ${outcome.failures} failed.`,
+                  { description: "Use Regenerate on the deck page — nothing gets generated twice." },
+                );
+              }
+            })
+            .catch(() => {
+              toast.error("Network error during generation — it resumes next time you open the app.");
+              setPhase("done");
+            })
+            .finally(() => {
+              runningRef.current = false;
+            });
+          return {
+            ok: true,
+            successes: 0,
+            failures: 0,
+            slug: targetSlug,
+            jobId: startJob.id,
+            detached: true,
+          };
         }
+
+        const finished = await finishStepping();
+        runningRef.current = false;
         return outcomeOf(finished.steps, targetSlug);
       } catch {
         toast.error("Network error during generation.");
         setPhase("idle");
-        return { ok: false, successes: 0, failures: 0 };
-      } finally {
         runningRef.current = false;
+        return { ok: false, successes: 0, failures: 0 };
       }
     },
     [stepUntilDone, upgrade, beginStats],
@@ -407,18 +475,7 @@ export function GenerationJobProvider({
     runningRef.current = true;
     setPhase("stepping");
     try {
-      let current: JobPayload = { ...job, steps };
-      for (const step of steps.filter((s) => s.status === "failed")) {
-        const result = await postStep(job.id, step.key);
-        if ("error" in result) {
-          toast.error(result.error);
-          return outcomeOf(current.steps, slug);
-        }
-        current = { ...current, ...result.job };
-        setJob(current);
-        setSteps(current.steps);
-      }
-      current = await stepUntilDone(current);
+      const current = await stepUntilDone({ ...job, steps }, { includeFailed: true });
       return outcomeOf(current.steps, slug);
     } finally {
       setPhase("done");
@@ -426,8 +483,8 @@ export function GenerationJobProvider({
     }
   }, [job, steps, slug, stepUntilDone]);
 
-  const retryJob = useCallback(
-    async (jobId: string): Promise<GenerationJobOutcome> => {
+  const adoptJob = useCallback(
+    async (jobId: string, options: { includeFailed: boolean }): Promise<GenerationJobOutcome> => {
       if (runningRef.current) {
         toast.error("Another generation is already running — let it finish first.");
         return { ok: false, successes: 0, failures: 0 };
@@ -444,7 +501,15 @@ export function GenerationJobProvider({
         toast.error("Couldn't load that generation.");
         return { ok: false, successes: 0, failures: 0 };
       }
+      if (openStepKeys(adopted.steps, options).length === 0) {
+        setJob(adopted);
+        setSlug(slugOf(adopted));
+        setSteps(adopted.steps);
+        setPhase("done");
+        return outcomeOf(adopted.steps, slugOf(adopted));
+      }
       runningRef.current = true;
+      resumedRef.current = false;
       setWidgetDismissed(false);
       setJob(adopted);
       setSlug(slugOf(adopted));
@@ -452,32 +517,37 @@ export function GenerationJobProvider({
       setPhase("stepping");
       beginStats(adopted);
       try {
-        let current: JobPayload = adopted;
-        for (const step of adopted.steps.filter((s) => s.status === "failed")) {
-          const result = await postStep(adopted.id, step.key);
-          if ("error" in result) {
-            toast.error(result.error);
-            return outcomeOf(current.steps, slugOf(current));
-          }
-          current = { ...current, ...result.job };
-          setJob(current);
-          setSteps(current.steps);
-          noteTerminal(current);
-        }
-        current = await stepUntilDone(current);
+        const current = await stepUntilDone(adopted, options);
         return outcomeOf(current.steps, slugOf(current));
       } finally {
         setPhase("done");
         runningRef.current = false;
       }
     },
-    [stepUntilDone, beginStats, noteTerminal],
+    [stepUntilDone, beginStats],
+  );
+  const retryJob = useCallback(
+    (jobId: string) => adoptJob(jobId, { includeFailed: true }),
+    [adoptJob],
+  );
+  const resumeJob = useCallback(
+    (jobId: string) => adoptJob(jobId, { includeFailed: false }),
+    [adoptJob],
   );
 
   // ---- Auto-resume: pick up an in-flight job from a previous visit ----
+  // Checked on mount and again whenever the tab regains focus/visibility
+  // (throttled): a reload during a long PLAN request lands before the job
+  // row exists, so a mount-only check would miss it and the user would see
+  // nothing running — and might start a second build.
+  const lastResumeCheckRef = useRef(0);
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    const check = async () => {
+      if (runningRef.current) return;
+      const now = Date.now();
+      if (now - lastResumeCheckRef.current < 10_000) return;
+      lastResumeCheckRef.current = now;
       try {
         const response = await fetch("/api/ai/jobs", { method: "GET" });
         const payload = await response.json().catch(() => null);
@@ -516,9 +586,17 @@ export function GenerationJobProvider({
       } catch {
         // No resumable job / signed out — nothing to do.
       }
-    })();
+    };
+    void check();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void check();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
     return () => {
       cancelled = true;
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -544,11 +622,19 @@ export function GenerationJobProvider({
     ? `Open ${job.kind === "set" ? "set" : job.kind === "card" || job.kind === "card_remix" ? "card" : "deck"}`
     : undefined;
   const openDetails = useCallback(() => setDetailsOpen(true), []);
+  const activeJob = useMemo<ActiveGenerationJob | null>(
+    () => (job ? { id: job.id, kind: job.kind, deckId: job.deck_id ?? null, setId: job.set_id ?? null } : null),
+    [job],
+  );
+  // Memoized so a step landing re-renders only the consumers whose inputs
+  // changed — with a 100-card job the provider publishes ~100 times.
+  const contextValue = useMemo<GenerationContextValue>(
+    () => ({ phase, steps, busy, hasFailures, run, retryStep, retryFailed, retryJob, resumeJob, openDetails, activeJob }),
+    [phase, steps, busy, hasFailures, run, retryStep, retryFailed, retryJob, resumeJob, openDetails, activeJob],
+  );
 
   return (
-    <GenerationContext.Provider
-      value={{ phase, steps, busy, hasFailures, run, retryStep, retryFailed, retryJob, openDetails }}
-    >
+    <GenerationContext.Provider value={contextValue}>
       {children}
 
       {showWidget ? (
