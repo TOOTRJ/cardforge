@@ -105,9 +105,15 @@
 //            now prints. Every previously-clean bake (paid owners) is stale
 //            and must be swept, not offered as an optional update — run
 //            scripts/rebake-renders.mjs right after the deploy.
+//   21     — no renderer change. The v20 sweep was run from a local dev
+//            server whose env had NEXT_PUBLIC_BILLING_ENABLED unset, so
+//            isBillingEnabled() was false and every card baked CLEAN and was
+//            stamped 20. Bumping invalidates those bakes so the sweep can be
+//            re-run with the flag set. Lesson: the sweep server's env must
+//            match production's billing flag (see scripts/rebake-renders.mjs).
 // ---------------------------------------------------------------------------
 
-export const CARD_LAYOUT_VERSION = 20;
+export const CARD_LAYOUT_VERSION = 21;
 
 /**
  * Bumps that changed the output of only some frame templates, keyed by the
