@@ -8,7 +8,9 @@ describe("staleCountsByOwner — who gets a render_update notification", () => {
     const counts = staleCountsByOwner([
       // Not baked yet (an AI card between publish and bake) — no newer look.
       { owner_id: "a", layout_version: null, rendered_image_url: null, frame_style: { template: "m15" } },
-      { owner_id: "a", layout_version: CARD_LAYOUT_VERSION - 1, rendered_image_url: png, frame_style: { template: "m15" } },
+      { owner_id: "a", layout_version: CARD_LAYOUT_VERSION - 1, rendered_image_url: png, frame_style: { template: "m15" }, rarity: "common" },
+      // v23 is card-scoped: an uncommon's bake didn't change.
+      { owner_id: "a", layout_version: CARD_LAYOUT_VERSION - 1, rendered_image_url: png, frame_style: { template: "m15" }, rarity: "uncommon" },
       { owner_id: "a", layout_version: CARD_LAYOUT_VERSION, rendered_image_url: png, frame_style: { template: "m15" } },
       { owner_id: "b", layout_version: 3, rendered_image_url: png, frame_style: {} },
       // A bake that failed after publish stays quiet too.

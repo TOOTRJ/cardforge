@@ -141,7 +141,13 @@ export async function POST(request: Request) {
       if (
         scope === "stale" &&
         stale.rendered_image_url &&
-        !isRenderStale(stale.layout_version, templateOfFrameStyle(row.frame_style))
+        !isRenderStale(
+          stale.layout_version,
+          templateOfFrameStyle(row.frame_style),
+          undefined,
+          undefined,
+          row,
+        )
       ) {
         const { error: stampErr } = await supabase
           .from("cards")

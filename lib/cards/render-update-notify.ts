@@ -21,6 +21,9 @@ export type StaleCardRow = {
   frame_style: unknown;
   rendered_image_url?: string | null;
   visibility?: string | null;
+  rarity?: string | null;
+  set_icon_url?: string | null;
+  set_icon_code?: string | null;
 };
 
 /** Template-aware stale count per owner. Pure — unit-tested. */
@@ -35,6 +38,9 @@ export function staleCountsByOwner(rows: Iterable<StaleCardRow>): Map<string, nu
         layout_version: row.layout_version,
         rendered_image_url: row.rendered_image_url ?? null,
         frame_style: row.frame_style,
+        rarity: row.rarity,
+        set_icon_url: row.set_icon_url,
+        set_icon_code: row.set_icon_code,
       })
     ) {
       continue;
@@ -93,7 +99,7 @@ export async function notifyOwnersOfRenderUpdates(
   for (let from = 0; from < MAX_ROWS; from += PAGE) {
     const { data, error } = await admin
       .from("cards")
-      .select("owner_id, layout_version, frame_style, rendered_image_url, visibility")
+      .select("owner_id, layout_version, frame_style, rendered_image_url, visibility, rarity, set_icon_url, set_icon_code")
       .in("visibility", ["public", "unlisted"])
       .or(staleOr)
       .order("id", { ascending: true })

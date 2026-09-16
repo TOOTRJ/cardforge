@@ -39,6 +39,9 @@ type StaleRow = {
   layout_version: number | null;
   rendered_image_url: string | null;
   frame_style: unknown;
+  rarity: string | null;
+  set_icon_url: string | null;
+  set_icon_code: string | null;
 };
 
 function revalidateForCard(slug: string, ownerUsername: string | null) {
@@ -156,7 +159,7 @@ export async function rebakeNextStaleOwnCardAction(): Promise<RebakeNextStaleRes
   const candidates = () =>
     supabase
       .from("cards")
-      .select("id, slug, owner_id, visibility, layout_version, rendered_image_url, frame_style")
+      .select("id, slug, owner_id, visibility, layout_version, rendered_image_url, frame_style, rarity, set_icon_url, set_icon_code")
       .eq("owner_id", user.id)
       .in("visibility", ["public", "unlisted"])
       .or(STALE_OR)
@@ -168,7 +171,10 @@ export async function rebakeNextStaleOwnCardAction(): Promise<RebakeNextStaleRes
   let updated: { id: string; slug: string } | null = null;
   for (const row of (rows ?? []) as StaleRow[]) {
     const template = templateOfFrameStyle(row.frame_style);
-    if (row.rendered_image_url && !isRenderStale(row.layout_version, template)) {
+    if (
+      row.rendered_image_url &&
+      !isRenderStale(row.layout_version, template, undefined, undefined, row)
+    ) {
       // Untouched template: the stored render already matches — stamp it.
       await supabase
         .from("cards")

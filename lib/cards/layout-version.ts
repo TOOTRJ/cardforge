@@ -124,7 +124,8 @@
 //            same dark keyline outline (lib/brand/constants.ts
 //            RARITY_SET_MARK); commons used a light keyline over black ink
 //            and read as a different, thinner symbol beside an uncommon's.
-//            Touches every card without a custom set icon.
+//            Only COMMON cards on the default mark changed (VERSION_SCOPES);
+//            every other bake is stamped current without a re-render.
 // ---------------------------------------------------------------------------
 
 export const CARD_LAYOUT_VERSION = 23;
@@ -138,6 +139,32 @@ export const CARD_LAYOUT_VERSION = 23;
  * FRAME_TEMPLATE_VALUES).
  */
 export const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {};
+
+/** The card fields a scoped bump can look at. Optional so partial rows
+ *  work — a predicate treats a missing `rarity` as "can't tell" and answers
+ *  conservatively (affected), the same as passing no card at all. */
+export type ScopeCard = {
+  rarity?: string | null;
+  set_icon_url?: string | null;
+  set_icon_code?: string | null;
+};
+
+/**
+ * Bumps that changed the output of only SOME cards regardless of template,
+ * keyed by the version they introduced: the predicate says whether a card's
+ * bake actually changed. Cards it returns false for are stamped current by
+ * the sweep / update flow without a re-render, and never see the "newer
+ * look" badge. Template scoping (above) and card scoping compose: a version
+ * affects a card only when both say so.
+ */
+export const VERSION_SCOPES: Readonly<Record<number, (card: ScopeCard) => boolean>> = {
+  // v23 — the default set mark's COMMON colourway changed; uncommon / rare /
+  // mythic and any card with a custom icon render exactly as before.
+  // A row that doesn't carry `rarity` can't be judged → conservative.
+  23: (card) =>
+    card.rarity === undefined ||
+    (!card.set_icon_url && !card.set_icon_code && card.rarity === "common"),
+};
 
 /** `frame_style.template` from the jsonb column, or null when absent. */
 export function templateOfFrameStyle(frameStyle: unknown): string | null {
@@ -160,13 +187,19 @@ export function isRenderStale(
   template: string | null | undefined,
   scoped: Readonly<Record<number, readonly string[]>> = TEMPLATE_SCOPED_VERSIONS,
   current: number = CARD_LAYOUT_VERSION,
+  card?: ScopeCard,
+  scopes: Readonly<Record<number, (card: ScopeCard) => boolean>> = VERSION_SCOPES,
 ): boolean {
   if (layoutVersion == null || !Number.isFinite(layoutVersion)) return true;
   if (layoutVersion >= current) return false;
   for (let version = layoutVersion + 1; version <= current; version += 1) {
     const templates = scoped[version];
-    if (!templates) return true; // touched every card
-    if (!template || templates.includes(template)) return true;
+    // Unknown template is treated as touched — conservative.
+    const templateHit = !templates || !template || templates.includes(template);
+    const predicate = scopes[version];
+    // No card to judge by → conservative (affected).
+    const cardHit = !predicate || !card || predicate(card);
+    if (templateHit && cardHit) return true;
   }
   return false;
 }
@@ -180,13 +213,21 @@ export function isRenderStale(
  * "out of date" — flagging it sent freshly generated cards straight into
  * the update prompt (2026-09-16).
  */
-export function hasNewerLook(card: {
-  visibility: string | null | undefined;
-  layout_version: number | null | undefined;
-  rendered_image_url: string | null | undefined;
-  frame_style: unknown;
-}): boolean {
+export function hasNewerLook(
+  card: {
+    visibility: string | null | undefined;
+    layout_version: number | null | undefined;
+    rendered_image_url: string | null | undefined;
+    frame_style: unknown;
+  } & ScopeCard,
+): boolean {
   if (card.visibility === "private") return false;
   if (!card.rendered_image_url) return false;
-  return isRenderStale(card.layout_version, templateOfFrameStyle(card.frame_style));
+  return isRenderStale(
+    card.layout_version,
+    templateOfFrameStyle(card.frame_style),
+    TEMPLATE_SCOPED_VERSIONS,
+    CARD_LAYOUT_VERSION,
+    card,
+  );
 }
