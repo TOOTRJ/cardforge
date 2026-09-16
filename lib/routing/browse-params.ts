@@ -24,6 +24,7 @@ export const GALLERY_FILTER_PARAMS = [
   "tag",
   "remixes",
   "page",
+  "seed",
 ] as const;
 
 export const SETS_FILTER_PARAMS = ["q", "page"] as const;

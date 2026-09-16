@@ -1,6 +1,8 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Flame } from "lucide-react";
+import { Flame, Heart, MessageCircle, Repeat2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { rowTileClass, ROW_GRID_CLASS } from "@/components/gallery/card-row";
 import { BakedCardThumbnail } from "@/components/cards/baked-card-thumbnail";
 import { CardHoverEffect } from "@/components/cards/card-hover-effect";
 import { CardPreviewSkeleton } from "@/components/cards/card-preview-skeleton";
@@ -37,6 +39,10 @@ type TrendingCardsSectionProps = {
   action?: React.ReactNode;
   /** Eager-load images for the first row when the section is above the fold. */
   priority?: boolean;
+  /** "hero" wraps the row in a glowing surface with rank badges and the
+   *  week's stats on every tile — the gallery's headline block. "plain" is
+   *  the quiet version the homepage uses. */
+  variant?: "hero" | "plain";
 };
 
 export function TrendingCardsSection({
@@ -47,19 +53,32 @@ export function TrendingCardsSection({
   description,
   action,
   priority = false,
+  variant = "plain",
 }: TrendingCardsSectionProps) {
   if (cards.length === 0) return null;
 
   // Resolved once for the section so per-tile renders don't each pay the
   // env-var lookup; falls back to localhost during local dev.
   const siteBase = getSiteBaseUrl();
+  const hero = variant === "hero";
 
   return (
-    <section aria-labelledby="trending-heading">
+    <section
+      aria-labelledby="trending-heading"
+      className={cn(
+        hero &&
+          "relative overflow-hidden rounded-2xl border border-gold/35 bg-[radial-gradient(120%_80%_at_0%_0%,color-mix(in_oklab,var(--color-gold)_16%,transparent),transparent_60%),radial-gradient(90%_70%_at_100%_100%,color-mix(in_oklab,var(--color-accent)_14%,transparent),transparent_60%)] bg-surface/70 p-5 shadow-[0_30px_80px_-40px_color-mix(in_oklab,var(--color-gold)_45%,transparent)] sm:p-7",
+      )}
+    >
       <div className="mb-6 flex flex-col items-start justify-between gap-3 md:flex-row md:items-end">
         <div className="flex flex-col gap-1.5">
-          <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-primary-bright">
-            <Flame className="h-3.5 w-3.5" aria-hidden />
+          <span
+            className={cn(
+              "inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.18em]",
+              hero ? "text-gold-strong" : "text-primary-bright",
+            )}
+          >
+            <Flame className={cn("h-3.5 w-3.5", hero && "animate-pulse")} aria-hidden />
             {eyebrow}
           </span>
           <h2
@@ -76,14 +95,18 @@ export function TrendingCardsSection({
         </div>
         {action ? <div>{action}</div> : null}
       </div>
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {cards.map((card) => (
+      {/* ONE row, always: the grid's column count follows the viewport and
+          tiles past the last column are hidden, never wrapped. */}
+      <div className={ROW_GRID_CLASS}>
+        {cards.map((card, index) => (
           <TrendingTile
             key={card.id}
             card={card}
+            rank={hero ? index + 1 : null}
             priority={priority}
             siteBase={siteBase}
             isAuthed={isAuthed}
+            className={rowTileClass(index)}
           />
         ))}
       </div>
@@ -91,22 +114,57 @@ export function TrendingCardsSection({
   );
 }
 
+function TrendingStats({ stats }: { stats: NonNullable<CardWithStats["trending"]> }) {
+  const bits: Array<{ icon: typeof Heart; value: number; label: string }> = [
+    { icon: Heart, value: stats.likes7d, label: "likes this week" },
+    { icon: MessageCircle, value: stats.comments7d, label: "comments this week" },
+    { icon: Repeat2, value: stats.remixes7d, label: "remixes this week" },
+  ].filter((b) => b.value > 0);
+  if (bits.length === 0) {
+    return <span className="text-[11px] text-subtle">New this week</span>;
+  }
+  return (
+    <span className="flex flex-wrap items-center gap-2 text-[11px] text-muted">
+      {bits.map((b) => (
+        <span key={b.label} className="inline-flex items-center gap-1" title={`${b.value} ${b.label}`}>
+          <b.icon className="h-3 w-3 text-gold" aria-hidden />
+          <span className="tabular-nums">{b.value}</span>
+          <span className="sr-only">{b.label}</span>
+        </span>
+      ))}
+      <span className="text-subtle">this week</span>
+    </span>
+  );
+}
+
 function TrendingTile({
   card,
+  rank,
   priority,
   siteBase,
   isAuthed,
+  className,
 }: {
   card: CardWithStats;
+  rank: number | null;
   priority: boolean;
   siteBase: string;
   isAuthed: boolean;
+  className?: string;
 }) {
   const cardUrl = buildCardUrl(card, siteBase);
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className={cn("flex flex-col gap-2", className)}>
       <div className="group relative">
+        {rank !== null ? (
+          <span
+            className="pointer-events-none absolute left-2 top-2 z-10 inline-flex h-7 min-w-7 items-center justify-center rounded-full border border-gold/50 bg-background/85 px-2 font-display text-xs font-semibold text-gold-strong shadow backdrop-blur"
+            aria-label={`Trending rank ${rank}`}
+          >
+            #{rank}
+          </span>
+        ) : null}
         <Link
           href={buildCardPath(card)}
           className="block rounded-frame focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
@@ -153,6 +211,7 @@ function TrendingTile({
         </div>
       </div>
 
+      {rank !== null && card.trending ? <TrendingStats stats={card.trending} /> : null}
       <ProfileChip
         owner={card.owner}
         likeNode={
@@ -248,9 +307,9 @@ export function TrendingCardsSectionSkeleton({ count = 4 }: { count?: number }) 
         <Skeleton className="h-3 w-28" />
         <Skeleton className="h-7 w-56" />
       </div>
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div className={ROW_GRID_CLASS}>
         {Array.from({ length: count }).map((_, i) => (
-          <div key={i} className="flex flex-col gap-2">
+          <div key={i} className={cn("flex flex-col gap-2", rowTileClass(i))}>
             <CardPreviewSkeleton />
             <div className="flex items-center justify-between gap-2 text-xs">
               <Skeleton shape="circle" className="h-6 w-6" />

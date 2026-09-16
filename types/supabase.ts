@@ -604,6 +604,8 @@ export type Database = {
           updated_at: string;
           likes_count: number;
           view_count: number;
+          share_count: number;
+          search_vector: unknown | null;
           color_count: number | null;
           visibility: string;
         };
@@ -652,6 +654,8 @@ export type Database = {
           updated_at?: string;
           likes_count?: number;
           view_count?: number;
+          share_count?: number;
+          search_vector?: unknown | null;
           visibility?: string;
         };
         Update: {
@@ -699,6 +703,8 @@ export type Database = {
           updated_at?: string;
           likes_count?: number;
           view_count?: number;
+          share_count?: number;
+          search_vector?: unknown | null;
           visibility?: string;
         };
         Relationships: [
@@ -1542,6 +1548,26 @@ export type Database = {
       card_like_rank: {
         Args: { p_card_id: string };
         Returns: number;
+      };
+      increment_card_share: {
+        Args: { p_card_id: string };
+        Returns: undefined;
+      };
+      list_gallery_cards: {
+        Args: {
+          p_search?: string | null;
+          p_card_type?: string | null;
+          p_rarity?: string | null;
+          p_color?: string | null;
+          p_tag?: string | null;
+          p_source_scryfall_id?: string | null;
+          p_remixes_only?: boolean;
+          p_sort?: string;
+          p_seed?: string;
+          p_limit?: number;
+          p_offset?: number;
+        };
+        Returns: Database["public"]["Tables"]["cards"]["Row"][];
       };
       card_like_rank_in_set: {
         Args: { p_card_id: string; p_set_id: string };

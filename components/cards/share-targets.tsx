@@ -34,6 +34,7 @@
 
 import { useState, useSyncExternalStore, type ReactNode } from "react";
 import { sendGAEvent } from "@next/third-parties/google";
+import { recordCardShareAction } from "@/lib/cards/actions";
 import {
   Check,
   Copy,
@@ -114,6 +115,8 @@ export function ShareTargets({
       content_type: entity,
       item_id: itemId ?? url,
     });
+    // Card shares also feed the gallery's discover weighting (fire-and-forget).
+    if (entity === "card" && itemId) void recordCardShareAction(itemId);
   };
 
   const networks: { key: string; label: string; icon: ReactNode; href: string }[] = [

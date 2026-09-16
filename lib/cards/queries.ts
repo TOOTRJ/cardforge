@@ -41,7 +41,16 @@ import {
 // `liked_by_viewer` is `false` for anonymous viewers and for cards the
 // current user hasn't liked. The flag lets tile UIs render the heart in
 // the right state without a follow-up client fetch.
+/** Why a card is trending this week (listTrendingCards only). */
+export type TrendingStats = {
+  likes7d: number;
+  comments7d: number;
+  remixes7d: number;
+  score: number;
+};
+
 export type CardWithStats = CardWithOwner & {
+  trending?: TrendingStats;
   likes_count: number;
   liked_by_viewer: boolean;
 };
@@ -51,6 +60,8 @@ export type ProfileWithStats = Profile & {
 };
 
 export type PublicCardListSort = "recent" | "popular" | "viewed";
+/** Gallery orders (list_gallery_cards, migration 0086). */
+export type GalleryListSort = "discover" | "recent" | "newest" | "popular" | "viewed";
 
 export type PublicCardListOptions = {
   limit?: number;
@@ -516,6 +527,55 @@ export async function listPublicCardsRich(
     // SQL already ordered the page correctly for every sort, so attachStats
     // just enriches (no in-process re-rank).
     return attachStats(data, "recent", { anonymous });
+  } catch {
+    return [];
+  }
+}
+
+export type GalleryListOptions = {
+  search?: string;
+  cardType?: CardType;
+  rarity?: Rarity;
+  colorIdentity?: ColorIdentity;
+  tag?: string;
+  sourceScryfallId?: string;
+  remixesOnly?: boolean;
+  sort?: GalleryListSort;
+  /** Discover shuffle seed — the same seed gives the same order. */
+  seed?: string;
+  limit?: number;
+  offset?: number;
+  anonymous?: boolean;
+};
+
+/**
+ * The public gallery's list: filtering, full-text search with ranking, and
+ * every sort (including the weighted-random "discover" default) run in ONE
+ * SQL function (migration 0086) so pagination is correct and the ILIKE
+ * scan is gone. Anonymous mode keeps the ISR route static.
+ */
+export async function listGalleryCards(
+  options: GalleryListOptions = {},
+): Promise<CardWithStats[]> {
+  if (!isSupabaseConfigured()) return [];
+  const { limit = 24, offset = 0, sort = "discover", anonymous = false } = options;
+  try {
+    const supabase = anonymous ? createPublicClient() : await createClient();
+    const { data, error } = await supabase.rpc("list_gallery_cards", {
+      p_search: options.search?.trim() || null,
+      p_card_type: options.cardType ?? null,
+      p_rarity: options.rarity ?? null,
+      p_color: options.colorIdentity ?? null,
+      p_tag: options.tag ?? null,
+      p_source_scryfall_id: options.sourceScryfallId ?? null,
+      p_remixes_only: options.remixesOnly === true,
+      p_sort: sort,
+      p_seed: options.seed ?? "",
+      p_limit: limit,
+      p_offset: offset,
+    });
+    if (error || !data || data.length === 0) return [];
+    return attachStats(data as CardRow[], "recent", { anonymous });
   } catch {
     return [];
   }
@@ -1159,27 +1219,34 @@ export async function listTrendingCards(
     }
 
     const scored = cardRows.map((row) => {
-      const score = trendingScore({
+      const signals = {
         likes_7d: recentLikes.get(row.id) ?? 0,
         comments_7d: recentComments.get(row.id) ?? 0,
         remixes_7d: recentRemixes.get(row.id) ?? 0,
         is_fresh: new Date(row.created_at).getTime() > freshnessCutoffMs,
-      });
+      };
       return {
         card: row,
-        score,
+        score: trendingScore(signals),
         likesTotal: totalLikes.get(row.id) ?? 0,
         createdAt: row.created_at,
+        signals,
       };
     });
 
     return sortTrending(scored)
       .slice(0, limit)
-      .map(({ card, likesTotal }) => ({
+      .map(({ card, likesTotal, score, signals }) => ({
         ...narrowCard(card),
         owner: ownerProfileById.get(card.owner_id) ?? null,
         likes_count: likesTotal,
         liked_by_viewer: viewerLiked.has(card.id),
+        trending: {
+          likes7d: signals.likes_7d,
+          comments7d: signals.comments_7d,
+          remixes7d: signals.remixes_7d,
+          score,
+        },
       }));
   } catch {
     return [];
