@@ -39,6 +39,13 @@ export const TRANSPARENT_PIXEL_DATA_URL =
  *  needs more) — protects the function's memory on hostile URLs. */
 const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
 const FETCH_TIMEOUT_MS = 10_000;
+/** Largest payload inlined as-is. Above this (or for any transcode) the
+ *  image is re-encoded to fit MAX_INLINE_EDGE — the HD bake's art slot is
+ *  ~1300 px wide, so nothing visible is lost — keeping the SVG handed to
+ *  resvg far below its ~10 MB XML buffer limit. */
+export const MAX_INLINE_BYTES = 3 * 1024 * 1024;
+export const MAX_INLINE_EDGE = 1600;
+const INLINE_JPEG_QUALITY = 88;
 
 /** True when Satori would reject the format and a PNG transcode is needed. */
 export function needsSatoriTranscode(format: string | null | undefined): boolean {
@@ -58,12 +65,28 @@ const MIME_BY_FORMAT: Record<string, string> = {
  * input (the caller falls back to the URL).
  */
 export async function toSatoriDataUrl(bytes: Buffer): Promise<string> {
-  const { format } = await sharp(bytes, { animated: false }).metadata();
-  if (format && !needsSatoriTranscode(format)) {
-    return `data:${MIME_BY_FORMAT[format] ?? "image/png"};base64,${bytes.toString("base64")}`;
+  const meta = await sharp(bytes, { animated: false }).metadata();
+  const native = Boolean(meta.format) && !needsSatoriTranscode(meta.format);
+  if (native && bytes.byteLength <= MAX_INLINE_BYTES) {
+    return `data:${MIME_BY_FORMAT[meta.format as string] ?? "image/png"};base64,${bytes.toString("base64")}`;
   }
-  const png = await sharp(bytes, { animated: false }).png().toBuffer();
-  return `data:image/png;base64,${png.toString("base64")}`;
+  // Re-encode for inlining: fit the bake's largest art slot and pick JPEG
+  // for opaque images (a lossless PNG of a 1600×1920 photo is ~7 MB, base64
+  // ~10 MB — past resvg's XML buffer limit, which is how one card's re-bake
+  // died with "Buffer size limit exceeded" on 2026-09-16); PNG only when
+  // there is alpha to keep.
+  const fitted = sharp(bytes, { animated: false }).resize({
+    width: MAX_INLINE_EDGE,
+    height: MAX_INLINE_EDGE,
+    fit: "inside",
+    withoutEnlargement: true,
+  });
+  if (meta.hasAlpha) {
+    const png = await fitted.png().toBuffer();
+    return `data:image/png;base64,${png.toString("base64")}`;
+  }
+  const jpeg = await fitted.jpeg({ quality: INLINE_JPEG_QUALITY, mozjpeg: true }).toBuffer();
+  return `data:image/jpeg;base64,${jpeg.toString("base64")}`;
 }
 
 /**
