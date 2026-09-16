@@ -10,6 +10,7 @@ import { getCurrentProfile } from "@/lib/supabase/server";
 import { MarkReadOnView } from "@/components/notifications/mark-read-on-view";
 import { NOTIFICATION_ICON } from "@/components/notifications/notification-bell";
 import { describeNotification } from "@/lib/notifications/describe";
+import { ClearNotificationsButton } from "@/components/notifications/clear-notifications-button";
 
 export const metadata: Metadata = {
   title: "Notifications",
@@ -30,6 +31,7 @@ export default async function NotificationsPage() {
         eyebrow="Activity"
         title="Notifications"
         description="Likes, comments, remixes — and messages, credits and plan changes from the PipGlyph team."
+        actions={<ClearNotificationsButton count={items.length} />}
       />
 
       <div className="mt-8">
