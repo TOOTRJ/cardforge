@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import sharp from "sharp";
 import {
+  MAX_INLINE_BYTES,
+  MAX_INLINE_EDGE,
   TRANSPARENT_PIXEL_DATA_URL,
   needsSatoriTranscode,
   resolveRenderableImage,
@@ -40,6 +42,32 @@ describe("art-source — images Satori can decode", () => {
     expect(mimeOf(await toSatoriDataUrl(await tinyImage("gif")))).toBe("image/png");
     expect(mimeOf(await toSatoriDataUrl(await tinyImage("png")))).toBe("image/png");
     expect(mimeOf(await toSatoriDataUrl(await tinyImage("jpeg")))).toBe("image/jpeg");
+  });
+
+  it("REGRESSION: a large photo is re-encoded to fit the bake instead of being inlined whole", async () => {
+    // A 1600×1920 WebP photo transcoded losslessly to PNG came out ~7 MB
+    // (base64 ~10 MB) and blew resvg's XML buffer limit; one card's re-bake
+    // failed on 2026-09-16. Opaque → fitted JPEG; alpha → fitted PNG.
+    const noise = Buffer.alloc(2400 * 2400 * 3);
+    for (let i = 0; i < noise.length; i += 1) noise[i] = (i * 2654435761) >>> 24;
+    const bigOpaque = await sharp(noise, { raw: { width: 2400, height: 2400, channels: 3 } }).webp({ quality: 95 }).toBuffer();
+    const inlined = await toSatoriDataUrl(bigOpaque);
+    expect(mimeOf(inlined)).toBe("image/jpeg");
+    const out = await sharp(Buffer.from(inlined.split(",")[1], "base64")).metadata();
+    expect(Math.max(out.width ?? 0, out.height ?? 0)).toBeLessThanOrEqual(MAX_INLINE_EDGE);
+    expect(inlined.length).toBeLessThan(MAX_INLINE_BYTES * 1.4);
+
+    const bigPng = await sharp(noise, { raw: { width: 2400, height: 2400, channels: 3 } }).png({ compressionLevel: 0 }).toBuffer();
+    expect(bigPng.byteLength).toBeGreaterThan(MAX_INLINE_BYTES);
+    const inlinedPng = await toSatoriDataUrl(bigPng);
+    expect(mimeOf(inlinedPng)).toBe("image/jpeg");
+
+    const alphaWebp = await sharp({ create: { width: 2000, height: 2000, channels: 4, background: { r: 10, g: 20, b: 30, alpha: 0.5 } } }).webp().toBuffer();
+    const inlinedAlpha = await toSatoriDataUrl(alphaWebp);
+    expect(mimeOf(inlinedAlpha)).toBe("image/png");
+    const alphaOut = await sharp(Buffer.from(inlinedAlpha.split(",")[1], "base64")).metadata();
+    expect(alphaOut.hasAlpha).toBe(true);
+    expect(alphaOut.width).toBe(MAX_INLINE_EDGE);
   });
 
   it("rejects bytes that aren't an image", async () => {
