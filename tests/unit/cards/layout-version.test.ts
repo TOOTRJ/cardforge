@@ -43,3 +43,18 @@ describe("isRenderStale — which stored renders a version bump invalidates", ()
     expect(templateOfFrameStyle("m15")).toBeNull();
   });
 });
+
+describe("hasNewerLook", () => {
+  it("only flags a published card that HAS a render baked by an older layout", async () => {
+    const { hasNewerLook, CARD_LAYOUT_VERSION } = await import("@/lib/cards/layout-version");
+    const base = { visibility: "public", layout_version: CARD_LAYOUT_VERSION - 1, rendered_image_url: "https://x/y.png", frame_style: { template: "m15" } };
+    expect(hasNewerLook(base)).toBe(true);
+    // Current render → nothing newer.
+    expect(hasNewerLook({ ...base, layout_version: CARD_LAYOUT_VERSION })).toBe(false);
+    // Private cards never carry a render.
+    expect(hasNewerLook({ ...base, visibility: "private" })).toBe(false);
+    // Not baked yet (an AI card between publish and bake, or a failed bake)
+    // is "not baked", not "newer look" — no update prompt.
+    expect(hasNewerLook({ ...base, rendered_image_url: null, layout_version: null })).toBe(false);
+  });
+});

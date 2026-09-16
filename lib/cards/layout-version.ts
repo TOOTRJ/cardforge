@@ -165,3 +165,23 @@ export function isRenderStale(
   }
   return false;
 }
+
+/**
+ * Owner-facing "a newer look is available" — the badge, the dashboard
+ * count, the update walkthrough and the daily notification. Only a
+ * PUBLISHED card with a STORED render can have a newer look: a private
+ * card never carries a render, and a public card whose bake hasn't landed
+ * yet (an AI card between publish and bake) or failed is "not baked", not
+ * "out of date" — flagging it sent freshly generated cards straight into
+ * the update prompt (2026-09-16).
+ */
+export function hasNewerLook(card: {
+  visibility: string | null | undefined;
+  layout_version: number | null | undefined;
+  rendered_image_url: string | null | undefined;
+  frame_style: unknown;
+}): boolean {
+  if (card.visibility === "private") return false;
+  if (!card.rendered_image_url) return false;
+  return isRenderStale(card.layout_version, templateOfFrameStyle(card.frame_style));
+}

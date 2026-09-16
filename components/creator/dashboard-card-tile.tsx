@@ -7,7 +7,7 @@ import { Check, Eye, Pencil } from "lucide-react";
 import { BakedCardThumbnail } from "@/components/cards/baked-card-thumbnail";
 import { RenderUpdateBadge } from "@/components/cards/render-update";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
-import { isRenderStale, templateOfFrameStyle } from "@/lib/cards/layout-version";
+import { hasNewerLook } from "@/lib/cards/layout-version";
 import type { FrameProfileOverridesMap } from "@/lib/cards/profile-override";
 import { CardHoverEffect } from "@/components/cards/card-hover-effect";
 import { Button } from "@/components/ui/button";
@@ -67,9 +67,7 @@ export function DashboardCardTile({
   // Owner-facing "newer look available": a published card whose stored
   // image predates the current renderer for its frame. Private cards never
   // carry a stored render, so there is nothing to update there.
-  const needsRenderUpdate =
-    card.visibility !== "private" &&
-    isRenderStale(card.layout_version, templateOfFrameStyle(card.frame_style));
+  const needsRenderUpdate = hasNewerLook(card);
   // The id→canonical redirect resolves the owner username server-side, so
   // the tile doesn't need it in its props.
   const viewHref = `/go/card/${card.id}`;

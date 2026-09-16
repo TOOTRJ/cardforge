@@ -8,11 +8,7 @@ import { listMyCards } from "@/lib/cards/queries";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import type { CardPreviewData } from "@/components/cards/card-preview";
-import {
-  CARD_LAYOUT_VERSION,
-  isRenderStale,
-  templateOfFrameStyle,
-} from "@/lib/cards/layout-version";
+import { CARD_LAYOUT_VERSION, hasNewerLook, isRenderStale, templateOfFrameStyle } from "@/lib/cards/layout-version";
 
 // ---------------------------------------------------------------------------
 // Owner-driven render updates.
@@ -122,11 +118,7 @@ export async function listStaleOwnCardsAction(): Promise<ListStaleOwnCardsResult
     getFrameProfileOverrides(),
   ]);
   const stale = cards
-    .filter(
-      (c) =>
-        c.visibility !== "private" &&
-        isRenderStale(c.layout_version, templateOfFrameStyle(c.frame_style)),
-    )
+    .filter((c) => hasNewerLook(c))
     .slice(0, WIZARD_LIMIT)
     .map((c) => ({
       id: c.id,
