@@ -43,6 +43,9 @@ type TrendingCardsSectionProps = {
    *  week's stats on every tile — the gallery's headline block. "plain" is
    *  the quiet version the homepage uses. */
   variant?: "hero" | "plain";
+  /** Rendered under the row, inside the surface — the landing page's
+   *  "live from the forge" pulse + calls to action. */
+  footer?: React.ReactNode;
 };
 
 export function TrendingCardsSection({
@@ -54,6 +57,7 @@ export function TrendingCardsSection({
   action,
   priority = false,
   variant = "plain",
+  footer,
 }: TrendingCardsSectionProps) {
   if (cards.length === 0) return null;
 
@@ -110,6 +114,7 @@ export function TrendingCardsSection({
           />
         ))}
       </div>
+      {footer ? <div className="mt-6 border-t border-border/40 pt-5">{footer}</div> : null}
     </section>
   );
 }

@@ -1342,6 +1342,39 @@ export async function hasUserLikedCard(
  * public/unlisted rows for anonymous viewers). Powers the marketing
  * stat strip; returns 0 on any failure so the strip degrades quietly.
  */
+export type CommunityPulse = {
+  /** Public cards created in the last 7 days. */
+  cardsThisWeek: number;
+  /** Distinct creators behind those cards. */
+  creatorsThisWeek: number;
+};
+
+/**
+ * "Live from the forge" numbers for the landing page's trending block —
+ * how much got made this week and by how many people. Cookie-free public
+ * client so the homepage stays ISR; bounded read counted in JS.
+ */
+export async function getCommunityPulse(): Promise<CommunityPulse> {
+  if (!isSupabaseConfigured()) return { cardsThisWeek: 0, creatorsThisWeek: 0 };
+  try {
+    const supabase = createPublicClient();
+    const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const { data, error } = await supabase
+      .from("cards")
+      .select("owner_id")
+      .eq("visibility", "public")
+      .gte("created_at", since)
+      .limit(2000);
+    if (error || !data) return { cardsThisWeek: 0, creatorsThisWeek: 0 };
+    return {
+      cardsThisWeek: data.length,
+      creatorsThisWeek: new Set(data.map((row) => row.owner_id)).size,
+    };
+  } catch {
+    return { cardsThisWeek: 0, creatorsThisWeek: 0 };
+  }
+}
+
 export async function countPublicCards(): Promise<number> {
   if (!isSupabaseConfigured()) return 0;
   try {
