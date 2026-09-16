@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { LEGACY_SUPABASE_HOSTS } from "@/lib/validation/card";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { renderCardImage } from "@/lib/render/card-image";
 import { isBillingEnabled } from "@/lib/billing/flags";
@@ -83,12 +84,33 @@ export async function POST(request: Request) {
   // stored render — the save path deletes it.)
   const staleOr = `rendered_image_url.is.null,layout_version.is.null,layout_version.lt.${CARD_LAYOUT_VERSION}`;
 
-  const { data: rows, error: fetchErr } = await supabase
-    .from("cards")
-    .select(`${BAKE_SELECT_COLUMNS}, layout_version, rendered_image_url`)
-    .in("visibility", ["public", "unlisted"])
-    .or(staleOr)
-    .order("updated_at", { ascending: true })
+  // ?scope=legacy-art&before=<iso>: re-bake cards whose art lives on a
+  // legacy storage host and whose render predates `before` — the 2026-09-16
+  // fix (lib/validation/card.ts LEGACY_SUPABASE_HOSTS) made those bakes
+  // fetch their art again; every bake before it painted a black art box.
+  // `before` is what keeps the sweep finite: a re-baked row moves its
+  // rendered_at past it and drops out of the selection.
+  const scope = url.searchParams.get("scope") === "legacy-art" ? "legacy-art" : "stale";
+  const before = url.searchParams.get("before");
+  if (scope === "legacy-art" && (!before || Number.isNaN(Date.parse(before)))) {
+    return NextResponse.json(
+      { ok: false, error: "scope=legacy-art needs before=<ISO timestamp>." },
+      { status: 400 },
+    );
+  }
+  const legacyArtOr = LEGACY_SUPABASE_HOSTS.map((host) => `art_url.like.%${host}%`).join(",");
+  const applyScope = <Q extends { or: (f: string) => Q; lt: (c: string, v: string) => Q; not: (c: string, op: string, v: null) => Q }>(query: Q): Q =>
+    scope === "legacy-art"
+      ? query.or(legacyArtOr).not("rendered_image_url", "is", null).lt("rendered_at", before as string)
+      : query.or(staleOr);
+
+  const { data: rows, error: fetchErr } = await applyScope(
+    supabase
+      .from("cards")
+      .select(`${BAKE_SELECT_COLUMNS}, layout_version, rendered_image_url`)
+      .in("visibility", ["public", "unlisted"]),
+  )
+    .order(scope === "legacy-art" ? "rendered_at" : "updated_at", { ascending: true })
     .limit(limit);
   if (fetchErr) {
     return NextResponse.json({ ok: false, error: fetchErr.message }, { status: 500 });
@@ -113,9 +135,11 @@ export async function POST(request: Request) {
       }
 
       // A bump that only touched other templates leaves this render
-      // correct — stamp it current without spending a render.
+      // correct — stamp it current without spending a render. (Never in the
+      // legacy-art scope: those renders are wrong whatever their version.)
       const stale = row as unknown as { layout_version: number | null; rendered_image_url: string | null };
       if (
+        scope === "stale" &&
         stale.rendered_image_url &&
         !isRenderStale(stale.layout_version, templateOfFrameStyle(row.frame_style))
       ) {
@@ -190,15 +214,17 @@ export async function POST(request: Request) {
     }
   }
 
-  const { count: remaining } = await supabase
-    .from("cards")
-    .select("id", { count: "exact", head: true })
-    .in("visibility", ["public", "unlisted"])
-    .or(staleOr);
+  const { count: remaining } = await applyScope(
+    supabase
+      .from("cards")
+      .select("id", { count: "exact", head: true })
+      .in("visibility", ["public", "unlisted"]),
+  );
 
   return NextResponse.json({
     ok: true,
     layoutVersion: CARD_LAYOUT_VERSION,
+    scope,
     processed,
     failed,
     remaining: remaining ?? 0,

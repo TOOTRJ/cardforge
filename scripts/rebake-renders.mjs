@@ -21,12 +21,18 @@
 const URL_ = process.env.REBAKE_URL ?? "http://localhost:3000/api/admin/rebake";
 const SECRET = process.env.CRON_SECRET ?? "";
 const BATCH = process.env.BATCH ?? "8";
+// SCOPE=legacy-art re-bakes cards whose art lives on a legacy storage host
+// (black art boxes before the 2026-09-16 allowlist fix); BEFORE defaults to
+// the moment the sweep starts so re-baked rows drop out of the selection.
+const SCOPE = process.env.SCOPE === "legacy-art" ? "legacy-art" : "stale";
+const BEFORE = process.env.BEFORE ?? new Date().toISOString();
+const SCOPE_QS = SCOPE === "legacy-art" ? `&scope=legacy-art&before=${encodeURIComponent(BEFORE)}` : "";
 
 let totalProcessed = 0;
 let totalFailed = 0;
 
 for (let round = 1; ; round++) {
-  const res = await fetch(`${URL_}?limit=${BATCH}`, {
+  const res = await fetch(`${URL_}?limit=${BATCH}${SCOPE_QS}`, {
     method: "POST",
     headers: SECRET ? { Authorization: `Bearer ${SECRET}` } : {},
   });
