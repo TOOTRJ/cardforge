@@ -14,6 +14,7 @@ import {
   MessageSquare,
   ShieldAlert,
   Sparkles,
+  Trash2,
   UserPlus,
 } from "lucide-react";
 import {
@@ -22,6 +23,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
+  clearAllNotifications,
   fetchNotifications,
   markAllNotificationsRead,
 } from "@/lib/notifications/actions";
@@ -74,6 +76,21 @@ export function NotificationBell({ initialUnread, isAdmin = false }: Notificatio
   }
   const [items, setItems] = useState<NotificationItem[] | null>(null);
   const [loading, setLoading] = useState(false);
+  const [clearing, setClearing] = useState(false);
+
+  // "Clear all": empty the list optimistically, delete server-side, then
+  // refresh so /notifications and the badge agree.
+  const clearAll = async () => {
+    setClearing(true);
+    setItems([]);
+    setUnread(0);
+    try {
+      await clearAllNotifications();
+      router.refresh();
+    } finally {
+      setClearing(false);
+    }
+  };
 
   // A real-time arrival (components/notifications/realtime-alerts.tsx) bumps
   // the badge and drops the cached list so the next open refetches.
@@ -132,13 +149,26 @@ export function NotificationBell({ initialUnread, isAdmin = false }: Notificatio
           <span className="font-display text-sm font-semibold text-foreground">
             Notifications
           </span>
-          <Link
-            href="/notifications"
-            onClick={() => setOpen(false)}
-            className="text-xs font-semibold text-primary-bright underline-offset-4 hover:underline"
-          >
-            View all
-          </Link>
+          <span className="flex items-center gap-3">
+            {items && items.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => void clearAll()}
+                disabled={clearing}
+                className="inline-flex items-center gap-1 text-xs font-semibold text-muted transition-colors hover:text-danger disabled:opacity-60"
+              >
+                <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                Clear all
+              </button>
+            ) : null}
+            <Link
+              href="/notifications"
+              onClick={() => setOpen(false)}
+              className="text-xs font-semibold text-primary-bright underline-offset-4 hover:underline"
+            >
+              View all
+            </Link>
+          </span>
         </div>
 
         <div className="max-h-[min(26rem,60vh)] overflow-y-auto">

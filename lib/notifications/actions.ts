@@ -45,3 +45,17 @@ export async function markAllNotificationsRead(): Promise<{ ok: boolean }> {
   revalidatePath("/notifications");
   return { ok: true };
 }
+
+/** Delete every notification for the current user ("Clear all"). RLS
+ *  (migration 0087) restricts the delete to the caller's own rows. */
+export async function clearAllNotifications(): Promise<{ ok: boolean }> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false };
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("notifications")
+    .delete()
+    .eq("recipient_id", user.id);
+  revalidatePath("/notifications");
+  return { ok: !error };
+}

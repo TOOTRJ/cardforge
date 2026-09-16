@@ -81,7 +81,6 @@ export function SiteHeader({ user, className }: SiteHeaderProps) {
                   creditsUsed={user?.creditsUsed ?? 0}
                 />
               ) : null}
-              <NotificationBell initialUnread={unread} isAdmin={user?.isAdmin ?? false} />
               {user?.id ? (
                 <RealtimeAlerts userId={user.id} isAdmin={user.isAdmin ?? false} />
               ) : null}
@@ -110,6 +109,8 @@ export function SiteHeader({ user, className }: SiteHeaderProps) {
                   <LayoutDashboard className="h-4 w-4" aria-hidden /> Dashboard
                 </Link>
               </Button>
+              {/* Bell sits right beside the avatar — one "you" cluster. */}
+              <NotificationBell initialUnread={unread} isAdmin={user?.isAdmin ?? false} />
               <UserMenu
                 username={user?.username ?? null}
                 displayName={user?.displayName ?? null}
