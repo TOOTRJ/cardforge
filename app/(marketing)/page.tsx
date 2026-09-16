@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Flame, Sparkles, Users } from "lucide-react";
 import { MarketingHero } from "@/components/marketing/marketing-hero";
 import { listFeaturedHomeCards } from "@/lib/featured/queries";
 import { FeatureGrid } from "@/components/marketing/feature-grid";
@@ -17,7 +17,8 @@ import { GUIDE_LINKS } from "@/components/marketing/guide-cross-links";
 import { StatBadge } from "@/components/ui/stat-badge";
 import { PLANS } from "@/lib/billing/plans";
 import { isBillingEnabled } from "@/lib/billing/flags";
-import { countPublicCards, listTrendingCards } from "@/lib/cards/queries";
+import { countPublicCards, getCommunityPulse, listTrendingCards } from "@/lib/cards/queries";
+import { ROW_MAX } from "@/components/gallery/card-row";
 import { countPublicDecks } from "@/lib/decks/queries";
 import { listArticles } from "@/lib/content/articles";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -74,7 +75,7 @@ const galleryPlaceholder = [
 const VIEW_GALLERY_LINK = (
   <Button asChild variant="outline">
     <Link href="/gallery">
-      View gallery
+      Full gallery
       <ArrowRight className="h-4 w-4" aria-hidden />
     </Link>
   </Button>
@@ -87,6 +88,20 @@ export default async function HomePage() {
     <>
       {/* The what's-new ribbon renders in AppShell, right under the header. */}
       <MarketingHero featured={featuredCards} />
+
+      {/* Proof before pitch: what the community forged THIS WEEK, right
+          under the hero — live rank badges + weekly stats, one row, with the
+          pulse line and the two doors out (forge one / see the gallery). */}
+      <section className="mx-auto w-full max-w-7xl px-4 pb-10 pt-4 sm:px-6 lg:px-8">
+        {isSupabaseConfigured() ? (
+          <Suspense fallback={<TrendingCardsSectionSkeleton count={ROW_MAX} />}>
+            <HomeTrending />
+          </Suspense>
+        ) : (
+          <PlaceholderGallery />
+        )}
+      </section>
+
       <FeatureGrid />
 
       {/* Stat strip + brand epigraph — the "engineered for precision" band. */}
@@ -102,16 +117,6 @@ export default async function HomePage() {
           imagination.&rdquo;
         </p>
         <GlyphDivider glyph="diamond" className="mt-10" />
-      </section>
-
-      <section className="mx-auto w-full max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
-        {isSupabaseConfigured() ? (
-          <Suspense fallback={<TrendingCardsSectionSkeleton count={4} />}>
-            <HomeTrending />
-          </Suspense>
-        ) : (
-          <PlaceholderGallery />
-        )}
       </section>
 
       {isBillingEnabled() ? (
@@ -309,19 +314,67 @@ async function HomeTrending() {
   // read. isAuthed=false just means the tile hearts render the
   // signed-out hint — QuickLikeButton re-checks the session cookie at
   // click time, so signed-in users on the cached page still like fine.
-  const trending = await listTrendingCards({ limit: 4, anonymous: true });
+  const [trending, pulse] = await Promise.all([
+    listTrendingCards({ limit: ROW_MAX, anonymous: true }),
+    getCommunityPulse(),
+  ]);
   if (trending.length === 0) return <PlaceholderGallery />;
   return (
     <TrendingCardsSection
       cards={trending}
       isAuthed={false}
       eyebrow="Trending now"
-      heading="Top trending cards"
-      description="The cards racking up the most likes, comments, and remixes this week."
+      heading="What the community is forging this week"
+      description="Real cards from real creators — ranked by this week's likes, comments and remixes. Tap one to see it up close."
+      variant="hero"
       action={VIEW_GALLERY_LINK}
+      footer={<TrendingPulseFooter pulse={pulse} />}
       // First card images in the viewport — preload instead of lazy-load.
       priority
     />
+  );
+}
+
+/** The conversion strip under the trending row: this week's activity, then
+ *  the two doors — forge a card (free, no account to preview) or browse. */
+function TrendingPulseFooter({ pulse }: { pulse: Awaited<ReturnType<typeof getCommunityPulse>> }) {
+  const hasPulse = pulse.cardsThisWeek > 0;
+  return (
+    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-1">
+        <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-gold-strong">
+          <Flame className="h-3.5 w-3.5" aria-hidden />
+          Live from the forge
+        </span>
+        {hasPulse ? (
+          <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
+            <span className="inline-flex items-center gap-1.5">
+              <Sparkles className="h-3.5 w-3.5 text-gold" aria-hidden />
+              <span className="font-semibold tabular-nums text-foreground">{pulse.cardsThisWeek}</span>
+              {pulse.cardsThisWeek === 1 ? "card" : "cards"} forged this week
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <Users className="h-3.5 w-3.5 text-gold" aria-hidden />
+              by <span className="font-semibold tabular-nums text-foreground">{pulse.creatorsThisWeek}</span>
+              {pulse.creatorsThisWeek === 1 ? "creator" : "creators"}
+            </span>
+          </p>
+        ) : (
+          <p className="text-sm text-muted">Every card here started as a blank frame. Yours can be next.</p>
+        )}
+      </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button asChild size="lg">
+          <Link href="/create">
+            Forge your own — free
+            <ArrowRight className="h-4 w-4" aria-hidden />
+          </Link>
+        </Button>
+        <Button asChild size="lg" variant="ghost">
+          <Link href="/gallery">See what&apos;s trending</Link>
+        </Button>
+      </div>
+    </div>
   );
 }
 
