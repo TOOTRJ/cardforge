@@ -39,6 +39,11 @@ export type StoredRenderRow = {
   /** `cards.frame_style` jsonb — lets a template-scoped bump leave other
    *  templates' renders current. Optional: without it every bump counts. */
   frame_style?: unknown;
+  /** Card-scoped bumps (lib/cards/layout-version.ts VERSION_SCOPES) look at
+   *  these; optional for the same reason. */
+  rarity?: string | null;
+  set_icon_url?: string | null;
+  set_icon_code?: string | null;
 };
 
 /** True when the row's baked PNG reflects the current renderer and row. */
@@ -46,7 +51,13 @@ export function hasCurrentStoredRender(row: StoredRenderRow): boolean {
   return (
     typeof row.rendered_image_url === "string" &&
     row.rendered_image_url.length > 0 &&
-    !isRenderStale(row.layout_version, templateOfFrameStyle(row.frame_style))
+    !isRenderStale(
+      row.layout_version,
+      templateOfFrameStyle(row.frame_style),
+      undefined,
+      undefined,
+      row,
+    )
   );
 }
 

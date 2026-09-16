@@ -10,7 +10,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { CardPreviewSkeleton } from "@/components/cards/card-preview-skeleton";
 import { DashboardSelectableSections } from "@/components/creator/dashboard-selectable-sections";
 import { RenderUpdateAll } from "@/components/cards/render-update";
-import { isRenderStale, templateOfFrameStyle } from "@/lib/cards/layout-version";
+import { hasNewerLook } from "@/lib/cards/layout-version";
 import { BillingReturnToast } from "@/components/billing/billing-return-toast";
 import { CreditsSummaryCard } from "@/components/dashboard/credits-summary";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -257,11 +257,7 @@ async function DashboardCards() {
   const recentCards = myCards.slice(0, 6);
   // Published cards whose stored image predates the current renderer for
   // their frame — the owner decides when to re-bake them.
-  const staleRenderCount = myCards.filter(
-    (c) =>
-      c.visibility !== "private" &&
-      isRenderStale(c.layout_version, templateOfFrameStyle(c.frame_style)),
-  ).length;
+  const staleRenderCount = myCards.filter((c) => hasNewerLook(c)).length;
 
   const stats = [
     {

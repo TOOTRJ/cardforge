@@ -8,7 +8,7 @@ import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { DownloadModal } from "@/components/cards/download-modal";
 import { RenderUpdateNotice } from "@/components/cards/render-update";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
-import { isRenderStale, templateOfFrameStyle } from "@/lib/cards/layout-version";
+import { hasNewerLook } from "@/lib/cards/layout-version";
 import { AddToSetButton } from "@/components/sets/add-to-set-button";
 import { PageHeader } from "@/components/layout/page-header";
 import { SurfaceCard } from "@/components/ui/surface-card";
@@ -152,8 +152,7 @@ export default async function EditCardPage({ params }: EditCardPageProps) {
         }
       />
 
-      {card.visibility !== "private" &&
-      isRenderStale(card.layout_version, templateOfFrameStyle(card.frame_style)) ? (
+      {hasNewerLook(card) ? (
         <div className="mt-8">
           <RenderUpdateNotice
             card={{

@@ -71,12 +71,20 @@ export function PipGlyphSetMark({
         strokeWidth={4.2}
         fill="none"
       />
+      {/* Screen hinting: the star's keyline halo and an ink outline are
+          drawn in DEVICE pixels (non-scaling) rather than mark units. At
+          the editor preview's ~14–24 px the halo used to swallow the thin
+          quill arms and the emblem read as a ring with a dot; at the HD
+          bake's ~64 px these strokes are sub-pixel and the look is the
+          same as the bake's mark (lib/render/card-image.tsx, unchanged —
+          no layout-version bump). */}
       <path
         d={SET_MARK_STAR_PATH}
         fill={keyline}
         stroke={keyline}
-        strokeWidth={2.4}
+        strokeWidth={1.5}
         strokeLinejoin="round"
+        vectorEffect="non-scaling-stroke"
       />
       <circle
         cx={SET_MARK_RING.cx}
@@ -86,7 +94,14 @@ export function PipGlyphSetMark({
         strokeWidth={2}
         fill="none"
       />
-      <path d={SET_MARK_STAR_PATH} fill={ink} />
+      <path
+        d={SET_MARK_STAR_PATH}
+        fill={ink}
+        stroke={ink}
+        strokeWidth={1.1}
+        strokeLinejoin="round"
+        vectorEffect="non-scaling-stroke"
+      />
       <path d={SET_MARK_GEM_PATH} fill={keyline} opacity={0.92} />
     </svg>
   );

@@ -1,11 +1,7 @@
 import "server-only";
 
 import type { createAdminClient } from "@/lib/supabase/admin";
-import {
-  CARD_LAYOUT_VERSION,
-  isRenderStale,
-  templateOfFrameStyle,
-} from "@/lib/cards/layout-version";
+import { CARD_LAYOUT_VERSION, hasNewerLook } from "@/lib/cards/layout-version";
 
 // ---------------------------------------------------------------------------
 // "Your cards have a newer look" notifications.
@@ -23,13 +19,32 @@ export type StaleCardRow = {
   owner_id: string;
   layout_version: number | null;
   frame_style: unknown;
+  rendered_image_url?: string | null;
+  visibility?: string | null;
+  rarity?: string | null;
+  set_icon_url?: string | null;
+  set_icon_code?: string | null;
 };
 
 /** Template-aware stale count per owner. Pure — unit-tested. */
 export function staleCountsByOwner(rows: Iterable<StaleCardRow>): Map<string, number> {
   const counts = new Map<string, number>();
   for (const row of rows) {
-    if (!isRenderStale(row.layout_version, templateOfFrameStyle(row.frame_style))) continue;
+    // Rows come from a public/unlisted scan; a missing render is "not baked
+    // yet", not a newer look (lib/cards/layout-version.ts hasNewerLook).
+    if (
+      !hasNewerLook({
+        visibility: row.visibility ?? "public",
+        layout_version: row.layout_version,
+        rendered_image_url: row.rendered_image_url ?? null,
+        frame_style: row.frame_style,
+        rarity: row.rarity,
+        set_icon_url: row.set_icon_url,
+        set_icon_code: row.set_icon_code,
+      })
+    ) {
+      continue;
+    }
     counts.set(row.owner_id, (counts.get(row.owner_id) ?? 0) + 1);
   }
   return counts;
@@ -84,7 +99,7 @@ export async function notifyOwnersOfRenderUpdates(
   for (let from = 0; from < MAX_ROWS; from += PAGE) {
     const { data, error } = await admin
       .from("cards")
-      .select("owner_id, layout_version, frame_style")
+      .select("owner_id, layout_version, frame_style, rendered_image_url, visibility, rarity, set_icon_url, set_icon_code")
       .in("visibility", ["public", "unlisted"])
       .or(staleOr)
       .order("id", { ascending: true })
