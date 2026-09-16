@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Loader2, Sparkles, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { useCreditConfirm } from "@/components/billing/credit-confirm-provider";
 import { useUpgradeModal } from "@/components/billing/upgrade-modal-provider";
 
 // Owner-only "Analyze this deck · 1 credit" (or "Refresh analysis") — POSTs
@@ -14,9 +15,20 @@ import { useUpgradeModal } from "@/components/billing/upgrade-modal-provider";
 export function DeckAnalyzeButton({ deckId, refresh }: { deckId: string; refresh: boolean }) {
   const router = useRouter();
   const upgrade = useUpgradeModal();
+  const confirmSpend = useCreditConfirm();
   const [busy, setBusy] = useState(false);
 
   const analyze = async () => {
+    if (
+      !(await confirmSpend({
+        cost: 1,
+        title: refresh ? "Refresh the deck guide?" : "Analyze this deck?",
+        description: "The AI reads the whole list and writes the game plan, mulligans, combos and weaknesses.",
+        confirmLabel: refresh ? "Refresh" : "Analyze",
+      }))
+    ) {
+      return;
+    }
     setBusy(true);
     try {
       const response = await fetch(`/api/decks/${deckId}/guide`, { method: "POST" });

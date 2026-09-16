@@ -29,6 +29,7 @@ import { toast } from "sonner";
 import { sendGAEvent } from "@next/third-parties/google";
 import { useUpgradeModal } from "@/components/billing/upgrade-modal-provider";
 import { useGenerationJob } from "@/components/ai/use-generation-job";
+import { useCreditConfirm } from "@/components/billing/credit-confirm-provider";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SurfaceCard } from "@/components/ui/surface-card";
@@ -278,6 +279,7 @@ export function CardCreatorForm({
   const router = useRouter();
   const upgrade = useUpgradeModal();
   const generationJob = useGenerationJob();
+  const confirmSpend = useCreditConfirm();
   const [isSubmitting, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
   // Active step index into the dynamic `steps` list (see below). Clamped on
@@ -1205,6 +1207,15 @@ export function CardCreatorForm({
   ): Promise<boolean> => {
     if (!userId) {
       toast.error("Sign in to use the AI card generator.");
+      return false;
+    }
+    if (
+      !(await confirmSpend({
+        cost: 1,
+        title: "Generate a card with AI?",
+        description: "One card, designed and painted — saved to your library.",
+      }))
+    ) {
       return false;
     }
     // Close the dialog and land the user on the dashboard — the generation

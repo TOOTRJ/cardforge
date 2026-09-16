@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, Loader2, RotateCcw, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { useCreditConfirm } from "@/components/billing/credit-confirm-provider";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { FieldGroup, inputClass } from "@/components/creator/field-group";
 import { BatchSizeField } from "@/components/ai/batch-size-field";
@@ -50,6 +51,7 @@ export function AiSetGenerator({
   const [resultSlug, setResultSlug] = useState<string | undefined>(undefined);
   const { phase, steps, busy, hasFailures, run, retryStep, retryFailed } =
     useGenerationJob();
+  const confirmSpend = useCreditConfirm();
 
   const settle = (outcome: GenerationJobOutcome) => {
     setResultSlug(outcome.slug);
@@ -77,7 +79,17 @@ export function AiSetGenerator({
     }
   };
 
-  const handleGenerate = async () =>
+  const handleGenerate = async () => {
+    if (
+      !(await confirmSpend({
+        cost: size + 1,
+        title: `Generate a ${size}-card set?`,
+        description: "One credit per card plus one for the set icon.",
+        confirmLabel: "Generate",
+      }))
+    ) {
+      return;
+    }
     settle(
       await run({
         kind: "set",
@@ -87,6 +99,7 @@ export function AiSetGenerator({
         set_id: setId,
       }),
     );
+  };
 
   if (!aiConfigured) return null;
 

@@ -18,6 +18,7 @@ import {
   type GenerationStats,
 } from "@/components/ai/generation-details-dialog";
 import { useUpgradeModal } from "@/components/billing/upgrade-modal-provider";
+import { useCreditConfirm } from "@/components/billing/credit-confirm-provider";
 import { jobStatusOf, openStepKeys } from "@/lib/ai/job-queue";
 import type {
   GenerationJobOutcome,
@@ -148,6 +149,12 @@ async function postStep(
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/** Credits a set of steps will reserve when (re)run: one per card/icon
+ *  step; the deck cover and the how-to-play guide are free. */
+function creditedStepCount(steps: ReadonlyArray<{ key: string }>): number {
+  return steps.filter((s) => s.key !== "cover" && s.key !== "guide").length;
+}
+
 // A step someone else is running is POLLED, not re-executed. The server's
 // stale-claim window is 5 minutes, so ~24 polls at 15s guarantees we either
 // see the result or reclaim a dead attempt before giving up.
@@ -222,6 +229,7 @@ export function GenerationJobProvider({
     setStats({ startedAt: Date.now(), completions: [], concurrency: STEP_CONCURRENCY });
   }, []);
   const upgrade = useUpgradeModal();
+  const confirmSpend = useCreditConfirm();
   // Jobs adopted by auto-resume have no panel awaiting a promise — the
   // provider owns their completion toast.
   const resumedRef = useRef(false);
@@ -448,6 +456,19 @@ export function GenerationJobProvider({
   const retryStep = useCallback(
     async (stepKey: string): Promise<GenerationJobOutcome> => {
       if (!job || runningRef.current) return outcomeOf(steps, slug);
+      const stepCost = creditedStepCount(steps.filter((s) => s.key === stepKey));
+      if (
+        stepCost > 0 &&
+        !(await confirmSpend({
+          cost: stepCost,
+          title: "Retry this step?",
+          description: "The failed attempt was refunded; retrying reserves the credit again.",
+          confirmLabel: "Retry",
+        }))
+      ) {
+        return outcomeOf(steps, slug);
+      }
+      if (runningRef.current) return outcomeOf(steps, slug);
       runningRef.current = true;
       setPhase("stepping");
       try {
@@ -467,11 +488,25 @@ export function GenerationJobProvider({
         runningRef.current = false;
       }
     },
-    [job, steps, slug],
+    [job, steps, slug, confirmSpend],
   );
 
   const retryFailed = useCallback(async (): Promise<GenerationJobOutcome> => {
     if (!job || runningRef.current) return outcomeOf(steps, slug);
+    const failedSteps = steps.filter((s) => s.status === "failed");
+    const retryCost = creditedStepCount(failedSteps);
+    if (
+      retryCost > 0 &&
+      !(await confirmSpend({
+        cost: retryCost,
+        title: `Retry ${failedSteps.length} failed step${failedSteps.length === 1 ? "" : "s"}?`,
+        description: "Failed attempts were refunded; retrying reserves the credits again.",
+        confirmLabel: "Retry",
+      }))
+    ) {
+      return outcomeOf(steps, slug);
+    }
+    if (runningRef.current) return outcomeOf(steps, slug);
     runningRef.current = true;
     setPhase("stepping");
     try {
@@ -481,7 +516,7 @@ export function GenerationJobProvider({
       setPhase("done");
       runningRef.current = false;
     }
-  }, [job, steps, slug, stepUntilDone]);
+  }, [job, steps, slug, stepUntilDone, confirmSpend]);
 
   const adoptJob = useCallback(
     async (jobId: string, options: { includeFailed: boolean }): Promise<GenerationJobOutcome> => {
@@ -508,6 +543,25 @@ export function GenerationJobProvider({
         setPhase("done");
         return outcomeOf(adopted.steps, slugOf(adopted));
       }
+      if (options.includeFailed) {
+        const failedSteps = adopted.steps.filter((s) => s.status === "failed");
+        const retryCost = creditedStepCount(failedSteps);
+        if (
+          retryCost > 0 &&
+          !(await confirmSpend({
+            cost: retryCost,
+            title: `Regenerate ${failedSteps.length} card${failedSteps.length === 1 ? "" : "s"}?`,
+            description: "The failed attempts were refunded; regenerating reserves the credits again.",
+            confirmLabel: "Regenerate",
+          }))
+        ) {
+          return { ok: false, successes: 0, failures: failedSteps.length };
+        }
+        if (runningRef.current) {
+          toast.error("Another generation is already running — let it finish first.");
+          return { ok: false, successes: 0, failures: 0 };
+        }
+      }
       runningRef.current = true;
       resumedRef.current = false;
       setWidgetDismissed(false);
@@ -524,7 +578,7 @@ export function GenerationJobProvider({
         runningRef.current = false;
       }
     },
-    [stepUntilDone, beginStats],
+    [stepUntilDone, beginStats, confirmSpend],
   );
   const retryJob = useCallback(
     (jobId: string) => adoptJob(jobId, { includeFailed: true }),

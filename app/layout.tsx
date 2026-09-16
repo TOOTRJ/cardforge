@@ -3,6 +3,7 @@ import { Cinzel, Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import { UpgradeModalProvider } from "@/components/billing/upgrade-modal-provider";
 import { GenerationJobProvider } from "@/components/ai/generation-provider";
+import { CreditConfirmProvider } from "@/components/billing/credit-confirm-provider";
 import { DeckExportProvider } from "@/components/decks/deck-export-provider";
 import { ShareParamCleanup } from "@/components/seo/share-param-cleanup";
 import { serializeJsonLd } from "@/components/seo/json-ld";
@@ -216,18 +217,22 @@ export default function RootLayout({
           {/* AI batch-generation runner lives at the ROOT so client-side
               navigation never interrupts a job; it also auto-resumes any
               job a closed tab left behind. */}
-          <GenerationJobProvider>
-            {/* Whole-deck exports (Pro) build in the background the same
-                way, with their own progress card. */}
-            <DeckExportProvider>
-              {children}
-              {modal}
-              {/* "A new version is ready" pill — checks /api/version on
-                  focus and reloads at the next safe moment. Sits inside the
-                  runners so it never reloads over an in-flight job/export. */}
-              <UpdatePrompt />
-            </DeckExportProvider>
-          </GenerationJobProvider>
+          {/* Every credit spend asks first (cost + balance after) — above
+              the runner so retries confirm too. */}
+          <CreditConfirmProvider>
+            <GenerationJobProvider>
+              {/* Whole-deck exports (Pro) build in the background the same
+                  way, with their own progress card. */}
+              <DeckExportProvider>
+                {children}
+                {modal}
+                {/* "A new version is ready" pill — checks /api/version on
+                    focus and reloads at the next safe moment. Sits inside the
+                    runners so it never reloads over an in-flight job/export. */}
+                <UpdatePrompt />
+              </DeckExportProvider>
+            </GenerationJobProvider>
+          </CreditConfirmProvider>
         </UpgradeModalProvider>
         <Toaster
           // Sonner's `theme="system"` follows prefers-color-scheme, which
