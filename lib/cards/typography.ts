@@ -83,5 +83,5 @@ export const RULES_LINE_PITCH_EM = RULES_TEXT.lineHeight + RULES_TEXT.wrapGapEm;
 /** Editor-only sample shown in the live preview of a card with no rules text
  *  yet — real pips, a keyword line and a flavor line, so a fresh card reads
  *  like a card from the first second. Never baked or shown in the gallery. */
-export const PLACEHOLDER_RULES_TEXT = "{T}: Add {G}.\nWhenever this creature attacks, draw a card.";
+export const PLACEHOLDER_RULES_TEXT = "Add text and rules here.";
 export const PLACEHOLDER_FLAVOR_TEXT = "Flavor text goes here.";

@@ -96,7 +96,7 @@ import {
   type Rarity,
   DEFAULT_FRAME_TEMPLATE,
 } from "@/types/card";
-import { normalizeFrameTemplate } from "@/lib/cards/card-display";
+import { normalizeFrameTemplate, showsPowerToughness } from "@/lib/cards/card-display";
 import { pickFrameColorKey } from "@/components/cards/frame-layer";
 import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
 import { eraForTemplate, standardFrameFor } from "@/lib/creator/frame-picker";
@@ -485,14 +485,18 @@ export function CardCreatorForm({
         }));
         restored.saga_intro = restored.saga_intro || (saga.intro ?? "");
       }
-      reset(restored);
-      toast.info("Restored your unsaved draft.", {
+      // A new card always opens on the standard defaults (owner decision
+      // 2026-09-16) — an old draft is OFFERED, never silently restored over
+      // them. Resume puts it back in one tap; Discard forgets it.
+      toast.info("You have an unsaved draft from earlier.", {
+        duration: 15_000,
         action: {
-          label: "Start fresh",
-          onClick: () => {
-            window.localStorage.removeItem(CARD_DRAFT_STORAGE_KEY);
-            reset(defaults);
-          },
+          label: "Resume draft",
+          onClick: () => reset(restored),
+        },
+        cancel: {
+          label: "Discard",
+          onClick: () => window.localStorage.removeItem(CARD_DRAFT_STORAGE_KEY),
         },
       });
     } catch {
@@ -1458,8 +1462,14 @@ export function CardCreatorForm({
       face_content: faceContentPayload,
       watermark: watermarkPayload,
       flavor_text: values.flavor_text.trim() || undefined,
-      power: values.power.trim() || undefined,
-      toughness: values.toughness.trim() || undefined,
+      // The 1/1 default only belongs on P/T types — an instant or sorcery
+      // never carries the creature stats it started the form with.
+      power: showsPowerToughness(values.card_type as CardType, parseSubtypes(values.subtypes_text))
+        ? values.power.trim() || undefined
+        : undefined,
+      toughness: showsPowerToughness(values.card_type as CardType, parseSubtypes(values.subtypes_text))
+        ? values.toughness.trim() || undefined
+        : undefined,
       loyalty: values.loyalty.trim() || undefined,
       defense: values.defense.trim() || undefined,
       artist_credit: values.artist_credit.trim() || undefined,
