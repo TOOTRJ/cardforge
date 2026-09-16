@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { useCreditConfirm } from "@/components/billing/credit-confirm-provider";
+import { getDeckRemixCost } from "@/lib/ai/deck-remix-cost";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { FieldGroup, inputClass } from "@/components/creator/field-group";
 import { BatchSizeField } from "@/components/ai/batch-size-field";
@@ -85,6 +87,7 @@ export function AiDeckPanel({
   const [resultSlug, setResultSlug] = useState<string | undefined>(undefined);
   const { phase, steps, busy, hasFailures, run, retryStep, retryFailed } =
     useGenerationJob();
+  const confirmSpend = useCreditConfirm();
 
   const settle = (outcome: GenerationJobOutcome) => {
     setResultSlug(outcome.slug);
@@ -120,6 +123,22 @@ export function AiDeckPanel({
       toast.error("Pick or type a style first — that's what the remix is.");
       return;
     }
+    const cost = mode === "remix" ? await getDeckRemixCost(deckId ?? "") : size;
+    const confirmed = await confirmSpend({
+      cost,
+      title:
+        mode === "remix"
+          ? `Remix ${cost} card${cost === 1 ? "" : "s"} with AI?`
+          : mode === "add"
+            ? `Add ${size} AI card${size === 1 ? "" : "s"} to this deck?`
+            : `Generate a ${size}-card deck?`,
+      description:
+        mode === "remix"
+          ? "A new public copy: every card keeps its rules and gets fresh AI art and a name in your style."
+          : "One credit per card. The deck cover and how-to-play guide are free.",
+      confirmLabel: mode === "remix" ? "Remix" : "Generate",
+    });
+    if (!confirmed) return;
     const body =
       mode === "remix"
         ? {

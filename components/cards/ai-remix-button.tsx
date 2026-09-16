@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { FieldGroup, inputClass } from "@/components/creator/field-group";
 import { useGenerationJob } from "@/components/ai/use-generation-job";
+import { useCreditConfirm } from "@/components/billing/credit-confirm-provider";
 
 // ---------------------------------------------------------------------------
 // AiRemixButton — "Remix with AI" on the card detail page. Sits beside the
@@ -51,6 +52,7 @@ export function AiRemixButton({
 }) {
   const router = useRouter();
   const generationJob = useGenerationJob();
+  const confirmSpend = useCreditConfirm();
   const [open, setOpen] = useState(false);
   const [style, setStyle] = useState("");
   const [theme, setTheme] = useState("");
@@ -70,6 +72,16 @@ export function AiRemixButton({
   const handleRemix = async () => {
     if (!style.trim()) {
       toast.error("Pick or type a style first — that's what the remix is.");
+      return;
+    }
+    if (
+      !(await confirmSpend({
+        cost: 1,
+        title: "Remix this card with AI?",
+        description: "A new copy with fresh AI art and identity in your style — the original is untouched.",
+        confirmLabel: "Remix",
+      }))
+    ) {
       return;
     }
     // Close the dialog immediately — the remix runs as a background job with

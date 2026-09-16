@@ -9,6 +9,7 @@ import { CreditMeter } from "@/components/billing/credit-meter";
 import { PremiumBadge } from "@/components/billing/premium-badge";
 import { publishCredits } from "@/components/billing/credits-bus";
 import { useUpgradeModal } from "@/components/billing/upgrade-modal-provider";
+import { useCreditConfirm } from "@/components/billing/credit-confirm-provider";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import {
   Dialog,
@@ -75,6 +76,7 @@ export function CardIdeasDialog({
   canUseDeckIdeas?: boolean;
 }) {
   const upgrade = useUpgradeModal();
+  const confirmSpend = useCreditConfirm();
   const [theme, setTheme] = useState("");
   const [cardType, setCardType] = useState<CardType | "random">("random");
   const [rarity, setRarity] = useState<Rarity | "random">("random");
@@ -86,6 +88,16 @@ export function CardIdeasDialog({
   const selectedDeck = decks.find((d) => d.id === deckId) ?? null;
 
   const generate = async () => {
+    if (
+      !(await confirmSpend({
+        cost: 1,
+        title: ideas ? "Get another batch of ideas?" : "Get card ideas?",
+        description: "Three text-only concepts you can pick from — no art is painted.",
+        confirmLabel: "Get ideas",
+      }))
+    ) {
+      return;
+    }
     setBusy(true);
     try {
       const response = await fetch("/api/ai/card-ideas", {

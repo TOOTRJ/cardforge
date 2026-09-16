@@ -42,6 +42,7 @@ import { BatchSizeField } from "@/components/ai/batch-size-field";
 import { StylePicker } from "@/components/ai/style-picker";
 import { GenerationProgress } from "@/components/ai/generation-progress";
 import { useGenerationJob, type GenerationJobOutcome } from "@/components/ai/use-generation-job";
+import { useCreditConfirm } from "@/components/billing/credit-confirm-provider";
 import { CoverField } from "@/components/decks/deck-creator-form";
 import { createDeckAction } from "@/lib/decks/actions";
 import { publishCredits } from "@/components/billing/credits-bus";
@@ -112,6 +113,7 @@ export function DeckWizard({
   const [creating, startCreate] = useTransition();
   const [createdSlug, setCreatedSlug] = useState<string | null>(null);
   const { phase, steps, busy, hasFailures, run, retryStep, retryFailed } = useGenerationJob();
+  const confirmSpend = useCreditConfirm();
 
   const isCommander = format === "commander";
   const chosenType = deckTypeByKey(deckType);
@@ -140,6 +142,16 @@ export function DeckWizard({
   };
 
   const getIdeas = async () => {
+    if (
+      !(await confirmSpend({
+        cost: 1,
+        title: "Get theme ideas?",
+        description: "Three theme + art-style suggestions for this deck.",
+        confirmLabel: "Get ideas",
+      }))
+    ) {
+      return;
+    }
     setIdeasBusy(true);
     try {
       const res = await fetch("/api/ai/deck-ideas", {
@@ -193,10 +205,21 @@ export function DeckWizard({
     router.push(`/deck/${slug}`);
   };
 
-  const create = () => {
+  const create = async () => {
     if (titleError) {
       setStep(0);
       toast.error(titleError);
+      return;
+    }
+    if (
+      mode === "ai" &&
+      !(await confirmSpend({
+        cost: size,
+        title: `Generate ${size} card${size === 1 ? "" : "s"} for this deck?`,
+        description: "The AI designs and paints every card. The deck cover and the how-to-play guide are free.",
+        confirmLabel: "Create & generate",
+      }))
+    ) {
       return;
     }
     startCreate(async () => {
@@ -565,7 +588,7 @@ export function DeckWizard({
               </Button>
             ) : null}
             {!createdSlug ? (
-              <Button type="button" onClick={create} disabled={creating || busy}>
+              <Button type="button" onClick={() => void create()} disabled={creating || busy}>
                 {creating || busy ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
