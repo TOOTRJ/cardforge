@@ -95,7 +95,13 @@ export const RARITY_SET_MARK: Record<
   RarityKey,
   { ink: string; keyline: string }
 > = {
-  common: { ink: RARITY_INK.common, keyline: "#ece5d4" },
+  // Every rarity wears the SAME construction — a dark keyline outline with
+  // the rarity's ink inside — so the seal reads as one emblem across a set
+  // (owner decision 2026-09-16: a common's icon looked like a different
+  // symbol next to an uncommon's). Common's "ink" is the pale stamp tone
+  // the outline can hold; the flat-black printed-common ink would swallow
+  // the ring, star and gem into one blot.
+  common: { ink: "#e6e0d1", keyline: "#0f0f12" },
   uncommon: { ink: RARITY_INK.uncommon, keyline: "#0f0f12" },
   rare: { ink: RARITY_INK.rare, keyline: "#0f0f12" },
   mythic: { ink: RARITY_INK.mythic, keyline: "#0f0f12" },

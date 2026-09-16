@@ -120,9 +120,14 @@
 //            pips, flavor text spaced in em with the M15 hairline only on
 //            M15-family frames (retro / modern / classic use a gap); retro
 //            and modern text blocks vertically centred like print.
+//   23     — default set mark: every rarity draws the PipGlyph seal with the
+//            same dark keyline outline (lib/brand/constants.ts
+//            RARITY_SET_MARK); commons used a light keyline over black ink
+//            and read as a different, thinner symbol beside an uncommon's.
+//            Touches every card without a custom set icon.
 // ---------------------------------------------------------------------------
 
-export const CARD_LAYOUT_VERSION = 22;
+export const CARD_LAYOUT_VERSION = 23;
 
 /**
  * Bumps that changed the output of only some frame templates, keyed by the
