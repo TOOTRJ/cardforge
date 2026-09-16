@@ -46,16 +46,24 @@ export async function markAllNotificationsRead(): Promise<{ ok: boolean }> {
   return { ok: true };
 }
 
-/** Delete every notification for the current user ("Clear all"). RLS
- *  (migration 0087) restricts the delete to the caller's own rows. */
-export async function clearAllNotifications(): Promise<{ ok: boolean }> {
+/** "Clear all" — every alert marked read: the badge, the dashboard count and
+ *  the unread dots clear; the notifications themselves stay. */
+export async function clearNotificationAlerts(): Promise<{ ok: boolean }> {
+  return markAllNotificationsRead();
+}
+
+/** One notification marked read (opening it from the bell or the page). */
+export async function markNotificationRead(id: string): Promise<{ ok: boolean }> {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return { ok: false };
   const user = await getCurrentUser();
   if (!user) return { ok: false };
   const supabase = await createClient();
-  const { error } = await supabase
+  await supabase
     .from("notifications")
-    .delete()
-    .eq("recipient_id", user.id);
+    .update({ read_at: new Date().toISOString() })
+    .eq("id", id)
+    .eq("recipient_id", user.id)
+    .is("read_at", null);
   revalidatePath("/notifications");
-  return { ok: !error };
+  return { ok: true };
 }

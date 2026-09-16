@@ -13,8 +13,8 @@ import {
   MessageCircle,
   MessageSquare,
   ShieldAlert,
+  CheckCheck,
   Sparkles,
-  Trash2,
   UserPlus,
 } from "lucide-react";
 import {
@@ -23,9 +23,9 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
-  clearAllNotifications,
+  clearNotificationAlerts,
   fetchNotifications,
-  markAllNotificationsRead,
+  markNotificationRead,
 } from "@/lib/notifications/actions";
 import type { NotificationItem } from "@/lib/notifications/queries";
 import { describeNotification } from "@/lib/notifications/describe";
@@ -34,9 +34,10 @@ import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
 // NotificationBell — header bell that opens an in-place popover instead of
-// navigating to /notifications. On open it fetches the latest items and
-// auto-marks everything read (clearing the badge); the full-history page is
-// still reachable via the "View all" footer link.
+// navigating to /notifications. Opening it fetches the latest items; the
+// badge and unread dots clear only when the user opens a notification or
+// hits "Clear all" (two-step), like most apps — nothing is deleted. The
+// full-history page is still reachable via "View all".
 // ---------------------------------------------------------------------------
 
 export const NOTIFICATION_ICON: Record<string, typeof Bell> = {
@@ -77,19 +78,31 @@ export function NotificationBell({ initialUnread, isAdmin = false }: Notificatio
   const [items, setItems] = useState<NotificationItem[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [clearing, setClearing] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
 
-  // "Clear all": empty the list optimistically, delete server-side, then
-  // refresh so /notifications and the badge agree.
+  // "Clear all": mark everything read — badge to zero and dots gone
+  // optimistically, persisted, then a refresh so the dashboard count agrees.
   const clearAll = async () => {
     setClearing(true);
-    setItems([]);
+    setConfirmClear(false);
+    const now = new Date().toISOString();
+    setItems((prev) => prev?.map((item) => (item.readAt ? item : { ...item, readAt: now })) ?? prev);
     setUnread(0);
     try {
-      await clearAllNotifications();
+      await clearNotificationAlerts();
       router.refresh();
     } finally {
       setClearing(false);
     }
+  };
+
+  // Opening one notification marks just that one read.
+  const openItem = (item: NotificationItem) => {
+    setOpen(false);
+    if (item.readAt) return;
+    setItems((prev) => prev?.map((it) => (it.id === item.id ? { ...it, readAt: new Date().toISOString() } : it)) ?? prev);
+    setUnread((n) => Math.max(0, n - 1));
+    void markNotificationRead(item.id).then(() => router.refresh());
   };
 
   // A real-time arrival (components/notifications/realtime-alerts.tsx) bumps
@@ -105,22 +118,17 @@ export function NotificationBell({ initialUnread, isAdmin = false }: Notificatio
 
   const handleOpenChange = (next: boolean) => {
     setOpen(next);
+    setConfirmClear(false);
     if (!next) return;
-
     setLoading(true);
     void (async () => {
       const list = await fetchNotifications(20);
       setItems(list);
       setLoading(false);
-      // Auto-mark read on open: zero the badge optimistically, persist, then
-      // refresh so server-rendered surfaces (and a future re-open) agree.
-      if (list.some((item) => !item.readAt)) {
-        setUnread(0);
-        await markAllNotificationsRead();
-        router.refresh();
-      }
     })();
   };
+
+  const hasUnreadItems = Boolean(items?.some((item) => !item.readAt)) || unread > 0;
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
@@ -150,16 +158,36 @@ export function NotificationBell({ initialUnread, isAdmin = false }: Notificatio
             Notifications
           </span>
           <span className="flex items-center gap-3">
-            {items && items.length > 0 ? (
-              <button
-                type="button"
-                onClick={() => void clearAll()}
-                disabled={clearing}
-                className="inline-flex items-center gap-1 text-xs font-semibold text-muted transition-colors hover:text-danger disabled:opacity-60"
-              >
-                <Trash2 className="h-3.5 w-3.5" aria-hidden />
-                Clear all
-              </button>
+            {items && items.length > 0 && hasUnreadItems ? (
+              confirmClear ? (
+                <span className="inline-flex items-center gap-2 text-xs">
+                  <span className="text-muted">Clear alerts?</span>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmClear(false)}
+                    className="font-semibold text-muted hover:text-foreground"
+                  >
+                    Keep
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void clearAll()}
+                    disabled={clearing}
+                    className="font-semibold text-primary-bright hover:underline disabled:opacity-60"
+                  >
+                    Clear
+                  </button>
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setConfirmClear(true)}
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-muted transition-colors hover:text-foreground"
+                >
+                  <CheckCheck className="h-3.5 w-3.5" aria-hidden />
+                  Clear all
+                </button>
+              )
             ) : null}
             <Link
               href="/notifications"
@@ -186,7 +214,7 @@ export function NotificationBell({ initialUnread, isAdmin = false }: Notificatio
                   <li key={item.id}>
                     <Link
                       href={d.href}
-                      onClick={() => setOpen(false)}
+                      onClick={() => openItem(item)}
                       className={cn(
                         "flex items-start gap-3 px-4 py-3 transition-colors hover:bg-elevated/50",
                         item.readAt ? "" : "bg-primary/5",
@@ -203,6 +231,9 @@ export function NotificationBell({ initialUnread, isAdmin = false }: Notificatio
                           {formatRelative(item.createdAt)}
                         </span>
                       </div>
+                      {item.readAt ? null : (
+                        <span role="img" aria-label="Unread" className="mt-2 h-2 w-2 shrink-0 rounded-full bg-primary" />
+                      )}
                     </Link>
                   </li>
                 );

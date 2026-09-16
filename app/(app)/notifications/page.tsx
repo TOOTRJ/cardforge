@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Bell } from "lucide-react";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PageHeader } from "@/components/layout/page-header";
@@ -7,10 +6,10 @@ import { SurfaceCard } from "@/components/ui/surface-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { listNotifications } from "@/lib/notifications/queries";
 import { getCurrentProfile } from "@/lib/supabase/server";
-import { MarkReadOnView } from "@/components/notifications/mark-read-on-view";
 import { NOTIFICATION_ICON } from "@/components/notifications/notification-bell";
 import { describeNotification } from "@/lib/notifications/describe";
 import { ClearNotificationsButton } from "@/components/notifications/clear-notifications-button";
+import { NotificationLink } from "@/components/notifications/notification-link";
 
 export const metadata: Metadata = {
   title: "Notifications",
@@ -22,16 +21,15 @@ export const dynamic = "force-dynamic";
 export default async function NotificationsPage() {
   const [items, profile] = await Promise.all([listNotifications(50), getCurrentProfile()]);
   const isAdmin = Boolean(profile?.is_admin);
-  const hasUnread = items.some((item) => !item.readAt);
+  const unreadCount = items.filter((item) => !item.readAt).length;
 
   return (
     <DashboardShell>
-      <MarkReadOnView hasUnread={hasUnread} />
       <PageHeader
         eyebrow="Activity"
         title="Notifications"
         description="Likes, comments, remixes — and messages, credits and plan changes from the PipGlyph team."
-        actions={<ClearNotificationsButton count={items.length} />}
+        actions={<ClearNotificationsButton count={unreadCount} />}
       />
 
       <div className="mt-8">
@@ -48,9 +46,11 @@ export default async function NotificationsPage() {
               const d = describeNotification(item, { isAdmin });
 
               return (
-                <Link
+                <NotificationLink
                   key={item.id}
+                  id={item.id}
                   href={d.href}
+                  unread={!item.readAt}
                   className={`flex items-start gap-3 px-5 py-4 transition-colors hover:bg-elevated/50 ${
                     item.readAt ? "" : "bg-primary/5"
                   }`}
@@ -73,7 +73,7 @@ export default async function NotificationsPage() {
                       className="mt-2 h-2 w-2 shrink-0 rounded-full bg-primary"
                     />
                   )}
-                </Link>
+                </NotificationLink>
               );
             })}
           </SurfaceCard>
