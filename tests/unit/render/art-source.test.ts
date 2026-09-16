@@ -19,6 +19,8 @@ async function tinyImage(format: "png" | "jpeg" | "webp" | "gif"): Promise<Buffe
   return base.gif().toBuffer();
 }
 
+const NATIVE = ["image/png", "image/jpeg"];
+
 function mimeOf(dataUrl: string): string {
   return dataUrl.slice(5, dataUrl.indexOf(";"));
 }
@@ -32,14 +34,16 @@ describe("art-source — images Satori can decode", () => {
     expect(needsSatoriTranscode(null)).toBe(false);
   });
 
-  it("REGRESSION: WebP (and GIF) art becomes a PNG data URL; PNG/JPEG pass through", async () => {
+  it("REGRESSION: WebP (and GIF) art becomes a Satori-native data URL; PNG/JPEG pass through", async () => {
+    // Opaque transcodes land as JPEG, alpha ones as PNG (see the cap test) —
+    // either way Satori can decode it, which is what broke in 2026-07.
     const webp = await toSatoriDataUrl(await tinyImage("webp"));
-    expect(mimeOf(webp)).toBe("image/png");
+    expect(NATIVE).toContain(mimeOf(webp));
     const decoded = await sharp(Buffer.from(webp.split(",")[1], "base64")).metadata();
-    expect(decoded.format).toBe("png");
+    expect(["png", "jpeg"]).toContain(decoded.format);
     expect(decoded.width).toBe(4);
 
-    expect(mimeOf(await toSatoriDataUrl(await tinyImage("gif")))).toBe("image/png");
+    expect(NATIVE).toContain(mimeOf(await toSatoriDataUrl(await tinyImage("gif"))));
     expect(mimeOf(await toSatoriDataUrl(await tinyImage("png")))).toBe("image/png");
     expect(mimeOf(await toSatoriDataUrl(await tinyImage("jpeg")))).toBe("image/jpeg");
   });
@@ -78,7 +82,7 @@ describe("art-source — images Satori can decode", () => {
     const webpBytes = await tinyImage("webp");
     const webpData = `data:image/webp;base64,${webpBytes.toString("base64")}`;
     const resolved = await resolveRenderableImage(webpData);
-    expect(resolved && mimeOf(resolved)).toBe("image/png");
+    expect(NATIVE).toContain(resolved && mimeOf(resolved));
 
     const pngData = `data:image/png;base64,${(await tinyImage("png")).toString("base64")}`;
     expect(await resolveRenderableImage(pngData)).toBe(pngData);
