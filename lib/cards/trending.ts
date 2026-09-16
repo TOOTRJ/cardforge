@@ -52,9 +52,9 @@ export type TrendingRanked<T> = {
  * created_at desc. Exposed so the unit test can hit it without standing up
  * a Supabase fixture.
  */
-export function sortTrending<T>(
-  rows: ReadonlyArray<TrendingRanked<T>>,
-): TrendingRanked<T>[] {
+export function sortTrending<R extends TrendingRanked<unknown>>(
+  rows: ReadonlyArray<R>,
+): R[] {
   return [...rows].sort((a, b) => {
     if (b.score !== a.score) return b.score - a.score;
     if (b.likesTotal !== a.likesTotal) return b.likesTotal - a.likesTotal;

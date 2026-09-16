@@ -21,10 +21,12 @@ import {
 import { ManaPip } from "@/components/cards/mana-pip";
 import { cn } from "@/lib/utils";
 
-type Sort = "recent" | "popular" | "viewed";
+type Sort = "discover" | "recent" | "newest" | "popular" | "viewed";
 
 const SORT_LABELS: Record<Sort, string> = {
-  recent: "Recent",
+  discover: "Discover",
+  newest: "Newest",
+  recent: "Recently updated",
   popular: "Most liked",
   viewed: "Most viewed",
 };
@@ -38,9 +40,8 @@ const RARITY_LABELS: Record<Rarity, string> = {
 };
 
 function readSort(value: string | null): Sort {
-  if (value === "popular") return "popular";
-  if (value === "viewed") return "viewed";
-  return "recent";
+  if (value === "popular" || value === "viewed" || value === "newest" || value === "recent") return value;
+  return "discover";
 }
 
 export function GalleryFilters() {
@@ -88,6 +89,9 @@ export function GalleryFilters() {
   const updateParam = useCallback(
     (patch: Record<string, string | null>) => {
       const next = new URLSearchParams(searchParams.toString());
+      // A new filter/sort/search is a new shuffle — drop the discover seed
+      // (pagination links re-add it so page 2 matches page 1).
+      next.delete("seed");
       for (const [key, value] of Object.entries(patch)) {
         if (value === null || value === "") {
           next.delete(key);
@@ -140,7 +144,7 @@ export function GalleryFilters() {
     (remixesOnly ? 1 : 0);
 
   const anyActive =
-    activeCount > 0 || searchInput.trim().length > 0 || sortParam !== "recent";
+    activeCount > 0 || searchInput.trim().length > 0 || sortParam !== "discover";
 
   // Removable summary pills shown when the advanced panel is collapsed, so the
   // active filters stay visible + one-click clearable without opening it.
@@ -220,7 +224,7 @@ export function GalleryFilters() {
               onChange={(event) =>
                 updateParam({
                   sort:
-                    event.target.value === "recent"
+                    event.target.value === "discover"
                       ? null
                       : event.target.value,
                 })

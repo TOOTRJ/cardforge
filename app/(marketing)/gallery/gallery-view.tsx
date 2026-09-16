@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { ArrowLeft, ArrowRight, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, Compass, Sparkles } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { CardPreviewSkeleton } from "@/components/cards/card-preview-skeleton";
 import { GalleryCardTile } from "@/components/cards/gallery-card-tile";
@@ -13,7 +13,9 @@ import {
   TrendingCardsSection,
   TrendingCardsSectionSkeleton,
 } from "@/components/gallery/trending-cards-section";
-import { listPublicCardsRich, listTrendingCards } from "@/lib/cards/queries";
+import { listGalleryCards, listTrendingCards, type GalleryListSort } from "@/lib/cards/queries";
+import { CardRowSection, CardRowSkeleton, ROW_MAX } from "@/components/gallery/card-row";
+import { discoverSeedNow, normalizeDiscoverSeed } from "@/lib/cards/discover";
 import { buildCardPath } from "@/lib/cards/utils";
 import { daysLeft, getFeaturedActiveChallenge } from "@/lib/challenges/queries";
 import {
@@ -49,7 +51,7 @@ import {
 
 const PAGE_SIZE = 24;
 
-type GallerySort = "recent" | "popular" | "viewed";
+type GallerySort = GalleryListSort;
 
 export type ParsedFilters = {
   cardType: CardType | undefined;
@@ -63,6 +65,9 @@ export type ParsedFilters = {
    *  gallery shows only cards imported from this Scryfall id. */
   sourceScryfallId: string | undefined;
   tag: string | undefined;
+  /** Discover shuffle seed (from the URL on paged views; a fresh time
+   *  bucket otherwise). */
+  seed: string;
   // Raw values preserved so `buildHref` reflects exactly what the user
   // typed (rather than the post-cleanup typed values).
   raw: {
@@ -74,6 +79,7 @@ export type ParsedFilters = {
     source: string | null;
     tag: string | null;
     remixes: string | null;
+    seed: string | null;
   };
 };
 
@@ -95,6 +101,7 @@ export function parseGalleryFilters(
   const tagParam = firstString(params.tag);
   const remixesParam = firstString(params.remixes);
   const remixesOnly = remixesParam === "1";
+  const seedParam = normalizeDiscoverSeed(firstString(params.seed));
   const tag = tagParam
     ? tagParam.toLowerCase().trim().slice(0, 30) || undefined
     : undefined;
@@ -123,11 +130,9 @@ export function parseGalleryFilters(
     ? (colorParam as ColorIdentity)
     : undefined;
   const sort: GallerySort =
-    sortParam === "popular"
-      ? "popular"
-      : sortParam === "viewed"
-        ? "viewed"
-        : "recent";
+    sortParam === "popular" || sortParam === "viewed" || sortParam === "newest" || sortParam === "recent"
+      ? sortParam
+      : "discover";
 
   const pageRaw = Number.parseInt(pageParam ?? "1", 10);
   const page = Number.isFinite(pageRaw) && pageRaw >= 1 ? pageRaw : 1;
@@ -142,6 +147,7 @@ export function parseGalleryFilters(
     page,
     sourceScryfallId,
     tag,
+    seed: seedParam ?? discoverSeedNow(),
     raw: {
       type: cardTypeParam,
       rarity: rarityParam,
@@ -151,6 +157,7 @@ export function parseGalleryFilters(
       source: sourceScryfallId ?? null,
       tag: tag ?? null,
       remixes: remixesOnly ? "1" : null,
+      seed: seedParam,
     },
   };
 }
@@ -165,6 +172,9 @@ function buildHref(filters: ParsedFilters, nextPage: number): string {
   if (filters.raw.source) qs.set("source", filters.raw.source);
   if (filters.raw.tag) qs.set("tag", filters.raw.tag);
   if (filters.raw.remixes) qs.set("remixes", filters.raw.remixes);
+  // Discover pages are slices of one shuffle: carry the seed so page 2 is
+  // the continuation of page 1, not a reshuffle.
+  if (filters.sort === "discover") qs.set("seed", filters.seed);
   if (nextPage > 1) qs.set("page", String(nextPage));
   const query = qs.toString();
   return query ? `/gallery?${query}` : "/gallery";
@@ -196,7 +206,7 @@ export function GalleryView({ filters }: { filters: ParsedFilters }) {
         remixesOnly ||
         sourceScryfallId,
     ) ||
-    sort !== "recent" ||
+    sort !== "discover" ||
     page > 1;
 
   return (
@@ -218,11 +228,21 @@ export function GalleryView({ filters }: { filters: ParsedFilters }) {
         }
       />
 
-      {/* Search + filters lead the page, like most galleries. The Suspense
-          boundary contains GalleryFilters' useSearchParams() CSR bailout —
-          without it the ENTIRE prerendered page deopts to an empty
-          client-rendered shell (bad LCP + no SSR'd content for crawlers). */}
-      <div className="mt-8">
+      {/* Trending hero leads the page (one row, never wraps) — only on the
+          unfiltered default view; searching/filtering makes it noise. */}
+      {configured && !anyFilterActive ? (
+        <div className="mt-8">
+          <Suspense fallback={<TrendingCardsSectionSkeleton count={ROW_MAX} />}>
+            <GalleryTrending />
+          </Suspense>
+        </div>
+      ) : null}
+
+      {/* Search + filters. The Suspense boundary contains GalleryFilters'
+          useSearchParams() CSR bailout — without it the ENTIRE prerendered
+          page deopts to an empty client-rendered shell (bad LCP + no SSR'd
+          content for crawlers). */}
+      <div className="mt-10">
         <Suspense fallback={null}>
           <GalleryFilters />
         </Suspense>
@@ -237,16 +257,31 @@ export function GalleryView({ filters }: { filters: ParsedFilters }) {
         </Suspense>
       ) : null}
 
-      {/* Trending hero — only on the unfiltered default view. */}
+      {/* Fresh off the forge — the newest public cards, one row. */}
       {configured && !anyFilterActive ? (
         <div className="mt-10">
-          <Suspense fallback={<TrendingCardsSectionSkeleton count={4} />}>
-            <GalleryTrending />
+          <Suspense fallback={<CardRowSkeleton />}>
+            <GalleryNewest />
           </Suspense>
         </div>
       ) : null}
 
-      <div className="mt-10">
+      {configured && !anyFilterActive ? (
+        <div className="mt-12 flex flex-col gap-1 border-t border-border/40 pt-8">
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-primary-bright">
+            <Compass className="h-3.5 w-3.5" aria-hidden />
+            Discover
+          </span>
+          <h2 className="font-display text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+            Explore the gallery
+          </h2>
+          <p className="max-w-2xl text-sm leading-6 text-muted">
+            A fresh shuffle on every visit — cards the community views, likes, shares and remixes most turn up more often, but every card gets its turn.
+          </p>
+        </div>
+      ) : null}
+
+      <div className={anyFilterActive ? "mt-10" : "mt-6"}>
         {!configured ? (
           <EmptyState
             icon={Sparkles}
@@ -277,7 +312,7 @@ async function GalleryTrending() {
   // read. isAuthed=false just means the tile hearts render the signed-out
   // hint — QuickLikeButton re-checks the session cookie at click time, so
   // signed-in users on the cached page still like fine.
-  const trending = await listTrendingCards({ limit: 4, anonymous: true });
+  const trending = await listTrendingCards({ limit: ROW_MAX, anonymous: true });
   if (trending.length === 0) return null;
   return (
     <TrendingCardsSection
@@ -286,7 +321,25 @@ async function GalleryTrending() {
       eyebrow="Trending now"
       heading="Hot this week"
       description="Cards picking up steam — fresh likes, comments, and remixes from the last 7 days."
+      variant="hero"
       priority
+    />
+  );
+}
+
+async function GalleryNewest() {
+  const newest = await listGalleryCards({ sort: "newest", limit: ROW_MAX, anonymous: true });
+  return (
+    <CardRowSection
+      id="newest"
+      icon={Sparkles}
+      eyebrow="Just forged"
+      heading="Fresh off the forge"
+      description="The newest public cards, straight from the creator."
+      href="/gallery?sort=newest"
+      hrefLabel="See all newest"
+      cards={newest}
+      isAuthed={false}
     />
   );
 }
@@ -307,7 +360,7 @@ async function GalleryResults({ filters }: { filters: ParsedFilters }) {
   // ISR-cacheable. liked_by_viewer comes back false on the cached page;
   // QuickLikeButton re-checks the session cookie at click time and the
   // server action is the real validator.
-  const cards = await listPublicCardsRich({
+  const cards = await listGalleryCards({
     cardType,
     rarity,
     colorIdentity,
@@ -316,6 +369,7 @@ async function GalleryResults({ filters }: { filters: ParsedFilters }) {
     remixesOnly,
     sourceScryfallId,
     tag,
+    seed: filters.seed,
     limit: PAGE_SIZE,
     offset: (page - 1) * PAGE_SIZE,
     anonymous: true,
@@ -363,7 +417,7 @@ async function GalleryResults({ filters }: { filters: ParsedFilters }) {
     !sourceScryfallId &&
     !tag &&
     !remixesOnly &&
-    sort === "recent";
+    sort === "discover";
 
   return (
     <>

@@ -953,3 +953,19 @@ export async function deleteCardsAction(
 
   return { ok: true, count: ids.length };
 }
+
+/**
+ * A share happened (any target in the share dialog). Best-effort tally that
+ * feeds the gallery's discover weighting (migration 0086) — never blocks the
+ * share UI and never surfaces an error.
+ */
+export async function recordCardShareAction(cardId: string): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cardId)) return;
+  try {
+    const supabase = await createClient();
+    await supabase.rpc("increment_card_share", { p_card_id: cardId });
+  } catch {
+    // best-effort
+  }
+}
