@@ -54,7 +54,7 @@ export function TextPanel({ rulesTextRef, onInsertSymbol }: TextPanelProps) {
             onBlur={field.onBlur}
             aria-label="Rules text"
             aria-invalid={Boolean(fieldState.error)}
-            placeholder="{T}: Add {G}. Whenever this creature attacks, draw a card."
+            placeholder="Add text and rules here."
             rows={6}
             className={textareaClass(Boolean(fieldState.error))}
           />

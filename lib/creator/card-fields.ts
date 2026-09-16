@@ -119,8 +119,11 @@ export function defaultValuesFor(
       saga_intro: "",
       saga_chapters: [],
       flavor_text: "",
-      power: "",
-      toughness: "",
+      // A fresh card is a 1/1 creature until the maker says otherwise — the
+      // preview shows a real P/T box instead of an empty corner. Non-P/T
+      // types drop these on save (card-creator-form.tsx onSubmit).
+      power: "1",
+      toughness: "1",
       loyalty: "",
       defense: "",
       artist_credit: "",
