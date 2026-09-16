@@ -5,6 +5,7 @@ import {
   getMessageNavState,
 } from "@/lib/messages/queries";
 import { countNewFeedback } from "@/lib/feedback/queries";
+import { getUnreadNotificationCount } from "@/lib/notifications/queries";
 import { cn } from "@/lib/utils";
 
 type DashboardShellProps = {
@@ -24,10 +25,11 @@ export async function DashboardShell({
   // "Messages" only exists for users the team has written to; the badge is
   // their unread admin posts. Admins also get the inbox's awaiting-reply
   // count. Both reads are request-cached (shared with the app layout).
-  const [messages, adminUnread, newFeedback] = await Promise.all([
+  const [messages, adminUnread, newFeedback, unreadNotifications] = await Promise.all([
     getMessageNavState(),
     isAdmin ? getAdminUnreadThreadCount() : Promise.resolve(0),
     isAdmin ? countNewFeedback() : Promise.resolve(0),
+    getUnreadNotificationCount(),
   ]);
 
   return (
@@ -38,6 +40,7 @@ export async function DashboardShell({
             isAdmin={isAdmin}
             showMessages={messages.hasThreads}
             badges={{
+              "/notifications": unreadNotifications,
               "/messages": messages.unread,
               "/admin/messages": adminUnread,
               "/admin/feedback": newFeedback,
