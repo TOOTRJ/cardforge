@@ -75,3 +75,36 @@ describe("card-scoped bumps (VERSION_SCOPES)", () => {
     expect(isRenderStale(21, "m15", {}, 23, { ...common, rarity: "rare" }, scopes)).toBe(true);
   });
 });
+
+describe("rollout policy + sweep classification", () => {
+  it("v22 is owner opt-in; unlisted versions default to sweep", async () => {
+    const { rolloutPolicy } = await import("@/lib/cards/layout-version");
+    expect(rolloutPolicy(22)).toBe("opt-in");
+    expect(rolloutPolicy(23)).toBe("sweep");
+    expect(rolloutPolicy(7)).toBe("sweep");
+  });
+
+  it("classifies what a sweep may do to a card", async () => {
+    const { classifyForSweep } = await import("@/lib/cards/layout-version");
+    const rollout = { 22: "opt-in" as const, 23: "sweep" as const };
+    const scopes = { 23: (c: { rarity?: string | null; set_icon_url?: string | null; set_icon_code?: string | null }) => !c.set_icon_url && !c.set_icon_code && c.rarity === "common" };
+    const opts = { rollout, scopes, scoped: {}, current: 23 };
+    const png = "https://x/y.png";
+    const row = (over: Record<string, unknown>) => ({ layout_version: 22, rendered_image_url: png, frame_style: { template: "m15" }, rarity: "uncommon", set_icon_url: null, set_icon_code: null, ...over });
+
+    // v22 → v23: an uncommon's bake didn't change → stamp, no render.
+    expect(classifyForSweep(row({}), undefined, opts)).toBe("stamp");
+    // A common on the default mark changed → re-bake.
+    expect(classifyForSweep(row({ rarity: "common" }), undefined, opts)).toBe("rebake");
+    expect(classifyForSweep(row({ rarity: "common" }), 23, opts)).toBe("rebake");
+    // Still on v21: only the opt-in v22 is pending for an uncommon → leave it.
+    expect(classifyForSweep(row({ layout_version: 21 }), undefined, opts)).toBe("opt-in");
+    expect(classifyForSweep(row({ layout_version: 21 }), 23, opts)).toBe("opt-in");
+    // A common on v21 has v22 (opt-in) AND v23 (sweep) pending → the v23
+    // sweep re-bakes it (v22 rides along — unavoidable, documented).
+    expect(classifyForSweep(row({ layout_version: 21, rarity: "common" }), 23, opts)).toBe("rebake");
+    // Never baked → rebake; already current → current.
+    expect(classifyForSweep(row({ rendered_image_url: null }), 23, opts)).toBe("rebake");
+    expect(classifyForSweep(row({ layout_version: 23 }), 23, opts)).toBe("current");
+  });
+});

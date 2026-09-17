@@ -191,7 +191,28 @@ export function isRenderStale(
   scopes: Readonly<Record<number, (card: ScopeCard) => boolean>> = VERSION_SCOPES,
 ): boolean {
   if (layoutVersion == null || !Number.isFinite(layoutVersion)) return true;
-  if (layoutVersion >= current) return false;
+  return pendingVersions(layoutVersion, template, card, { scoped, scopes, current }).length > 0;
+}
+
+/**
+ * The bumps between a card's baked version and `current` that actually
+ * changed ITS output — template scope and card scope both have to say so.
+ * Empty = the stored bake still matches the current renderer.
+ */
+export function pendingVersions(
+  layoutVersion: number,
+  template: string | null | undefined,
+  card: ScopeCard | undefined,
+  opts: {
+    scoped?: Readonly<Record<number, readonly string[]>>;
+    scopes?: Readonly<Record<number, (card: ScopeCard) => boolean>>;
+    current?: number;
+  } = {},
+): number[] {
+  const scoped = opts.scoped ?? TEMPLATE_SCOPED_VERSIONS;
+  const scopes = opts.scopes ?? VERSION_SCOPES;
+  const current = opts.current ?? CARD_LAYOUT_VERSION;
+  const pending: number[] = [];
   for (let version = layoutVersion + 1; version <= current; version += 1) {
     const templates = scoped[version];
     // Unknown template is treated as touched — conservative.
@@ -199,9 +220,92 @@ export function isRenderStale(
     const predicate = scopes[version];
     // No card to judge by → conservative (affected).
     const cardHit = !predicate || !card || predicate(card);
-    if (templateHit && cardHit) return true;
+    if (templateHit && cardHit) pending.push(version);
   }
-  return false;
+  return pending;
+}
+
+// ---------------------------------------------------------------------------
+// Rollout policy — WHO gets to trigger the re-bake for a bump.
+//
+//   "sweep"  — the platform refreshes every affected card centrally
+//              (scripts/rebake-renders.mjs). For changes that must not
+//              linger: watermark policy, a broken bake, a wrong emblem.
+//   "opt-in" — the owner decides, through the "newer look" badge and the
+//              update walkthrough. For taste changes (typography, spacing).
+//
+// The sweep never re-bakes, and never stamps, a card whose only pending
+// bumps are opt-in — stamping would erase the badge the owner is meant to
+// see. This is what the v22 decision ("don't sweep; let users decide")
+// looked like in a conversation until a later sweep for v23 re-rendered
+// 329 cards that were still on v21 (2026-09-16). Policy now lives here.
+// Versions not listed are historical and count as "sweep".
+// ---------------------------------------------------------------------------
+
+export type RolloutPolicy = "sweep" | "opt-in";
+
+export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
+  20: "sweep", // display always watermarked — must not linger
+  21: "sweep", // re-do of the v20 sweep with the billing flag set
+  22: "opt-in", // rules-text typography standard — owner's call
+  23: "sweep", // default set mark for commons — one emblem across a set
+};
+
+export function rolloutPolicy(version: number, rollout = VERSION_ROLLOUT): RolloutPolicy {
+  return rollout[version] ?? "sweep";
+}
+
+export type SweepRow = ScopeCard & {
+  layout_version: number | null;
+  rendered_image_url: string | null;
+  frame_style: unknown;
+};
+
+export type SweepVerdict =
+  | "current" // already at the current version
+  | "rebake" // a sweep-policy bump changed this card's output — re-render
+  | "stamp" // nothing pending changed this card — stamp it current, no render
+  | "opt-in"; // only opt-in bumps pending — leave it (and its badge) alone
+
+/**
+ * What a sweep may do to a card.
+ *
+ *   `targetVersion` — sweep ONE bump: re-bake only cards that bump changed
+ *   (and only if its policy is "sweep"); otherwise stamp/opt-in as usual.
+ *   No target — re-bake cards with ANY pending sweep-policy bump.
+ *
+ * A re-bake always renders with the current renderer, so any opt-in bumps
+ * pending on THAT card come along — unavoidable, and the reason a sweep
+ * must be as narrow as the bump that needs it. Never-baked or unversioned
+ * cards are re-baked (there is no render to leave alone).
+ */
+export function classifyForSweep(
+  row: SweepRow,
+  targetVersion?: number,
+  opts: {
+    rollout?: Readonly<Record<number, RolloutPolicy>>;
+    current?: number;
+    scoped?: Readonly<Record<number, readonly string[]>>;
+    scopes?: Readonly<Record<number, (card: ScopeCard) => boolean>>;
+  } = {},
+): SweepVerdict {
+  const current = opts.current ?? CARD_LAYOUT_VERSION;
+  const rollout = opts.rollout ?? VERSION_ROLLOUT;
+  if (row.layout_version == null || !Number.isFinite(row.layout_version) || !row.rendered_image_url) {
+    return "rebake";
+  }
+  if (row.layout_version >= current) return "current";
+  const pending = pendingVersions(row.layout_version, templateOfFrameStyle(row.frame_style), row, {
+    scoped: opts.scoped,
+    scopes: opts.scopes,
+    current,
+  });
+  if (pending.length === 0) return "stamp";
+  const sweepPending = pending.filter((v) => rolloutPolicy(v, rollout) === "sweep");
+  if (targetVersion !== undefined) {
+    return sweepPending.includes(targetVersion) ? "rebake" : "opt-in";
+  }
+  return sweepPending.length > 0 ? "rebake" : "opt-in";
 }
 
 /**
