@@ -477,6 +477,11 @@ export function CardCreatorForm({
     [subscribe],
   );
 
+  // Signed-out visitors may LOOK at the creator (every step, the live
+  // preview) but not use it (owner decision 2026-09-16): the panels are
+  // inert under a sign-up gate, and nothing they see is theirs to lose.
+  const readOnly = !userId;
+
   // Revise = edit or remix of an existing card. The Card step is gone and
   // the structural fields are read-only (LockedSummary); the submit path
   // only ever sends the revisable subset (lib/creator/revise.ts).
@@ -2019,6 +2024,12 @@ export function CardCreatorForm({
               </div>
             </details>
 
+            <div className="relative">
+            {readOnly ? <GuestGate /> : null}
+            <div
+              className={readOnly ? "flex flex-col gap-6 select-none opacity-60" : "flex flex-col gap-6"}
+              inert={readOnly || undefined}
+            >
             {/* ----- Card setup (step 1 — type, frame & color) ----- */}
             {stepKey === "card" ? (
               <CardSetupPanel
@@ -2158,6 +2169,8 @@ export function CardCreatorForm({
                 revise={isRevise}
               />
             ) : null}
+            </div>
+            </div>
           </div>
 
           {/* Controlled Scryfall import dialog. Rendered once; opened by:
@@ -2324,7 +2337,7 @@ export function CardCreatorForm({
                   custom proxy). Guests get the sign-in path instead. */}
               {/* Start over (create) / Reset (edit + remix, once something
                   changed) — the dialog itself guards against a stray click. */}
-              {mode === "create" || isDirty ? (
+              {!readOnly && (mode === "create" || isDirty) ? (
                 <StartOverDialog
                   onConfirm={handleStartOver}
                   variant={mode === "create" ? "create" : "revert"}
@@ -2341,9 +2354,9 @@ export function CardCreatorForm({
               ) : null}
               {!userId ? (
                 <Button asChild size="sm">
-                  <Link href="/login?redirectTo=/create" data-no-guard>
+                  <Link href="/signup?redirectTo=/create" data-no-guard>
                     <Lock className="h-4 w-4" aria-hidden />
-                    Sign in to save
+                    Sign up free to forge
                   </Link>
                 </Button>
               ) : (
@@ -2435,6 +2448,43 @@ export function CardCreatorForm({
         </aside>
       </form>
     </FormProvider>
+  );
+}
+
+// The sign-up gate over the guest creator's panels: the form stays visible
+// (and the steps browsable) behind it, but nothing is interactive.
+function GuestGate() {
+  return (
+    <div
+      className="absolute inset-0 z-10 flex items-start justify-center pt-10"
+      data-testid="guest-gate"
+    >
+      <div className="sticky top-28 flex max-w-sm flex-col items-center gap-3 rounded-xl border border-primary/40 bg-surface/95 px-6 py-5 text-center shadow-xl backdrop-blur-sm">
+        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/15 text-primary-bright">
+          <Lock className="h-5 w-5" aria-hidden />
+        </span>
+        <p className="font-display text-lg font-semibold text-foreground">
+          Sign up free to start forging
+        </p>
+        <p className="text-sm leading-6 text-muted">
+          Every card type, three decades of frames, a live preview and AI
+          that writes and paints on demand. Your cards save to your account
+          and go wherever you do.
+        </p>
+        <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+          <Button asChild size="sm">
+            <Link href="/signup?redirectTo=/create" data-no-guard>
+              Create a free account
+            </Link>
+          </Button>
+          <Button asChild size="sm" variant="ghost">
+            <Link href="/login?redirectTo=/create" data-no-guard>
+              Sign in
+            </Link>
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }
 

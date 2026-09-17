@@ -36,7 +36,7 @@ export const CARD_MAKER_FAQ: FaqEntry[] = [
   },
   {
     q: "Is PipGlyph free to use?",
-    a: "Yes. PipGlyph is completely free to use. You can preview and design cards without creating an account. Creating an account (also free) lets you save cards, build sets, publish to the community gallery, and remix other players' cards.",
+    a: "Yes. PipGlyph's card maker is free — every card type, every frame, the live preview and the AI tools. A free account (it takes seconds) is all you need: it saves your cards, lets you publish to the community gallery, build sets, and remix other players' cards.",
   },
   {
     q: "Can I make a custom planeswalker card?",
@@ -208,7 +208,7 @@ const CHALLENGES_FAQ: FaqEntry[] = [
 const ACCOUNTS_FAQ: FaqEntry[] = [
   {
     q: "Do I need an account to use PipGlyph?",
-    a: "No account is needed to design and preview a card — the full editor is open at /create. A free account unlocks saving cards to your dashboard, publishing to the gallery, building sets, uploading custom mana pips, and entering design challenges.",
+    a: "Yes — a free one, which takes seconds. You can look around the creator at /create without signing in, but designing, saving and publishing need an account so your cards are always yours, on any device. The same free account unlocks the gallery, sets, custom mana pips, design challenges and 5 AI credits a month.",
   },
   {
     q: "Does the editor autosave my work?",
@@ -241,7 +241,7 @@ export const COMPARISON_FAQ: FaqEntry[] = [
   },
   {
     q: "Is PipGlyph free?",
-    a: "Yes. PipGlyph's card maker is free — every card type, every frame, and the live preview, with no account needed to start. A free account adds saving, publishing to the gallery, set building, and custom pip uploads; every account gets 5 AI credits a month; Plus and Pro add far more monthly credits, watermark-free hi-res downloads and print-ready PDFs, and Pro adds deck-aware AI design plus whole-deck export.",
+    a: "Yes. PipGlyph's card maker is free with a free account — every card type, every frame, the live preview, saving, publishing to the gallery, set building and custom pip uploads, plus 5 AI credits a month. Plus and Pro add far more monthly credits, watermark-free hi-res downloads and print-ready PDFs, and Pro adds deck-aware AI design plus whole-deck export.",
   },
 ];
 

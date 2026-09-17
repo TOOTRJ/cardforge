@@ -19,10 +19,11 @@ import { getVerifiedFrameKeysPublic } from "@/lib/cards/frame-reviews";
 // proxy.ts rewrites anonymous /create requests here (and 308s the old
 // /preview URL and this internal path to /create), so the creator has ONE
 // public URL: signed-in visitors get app/(app)/create, everyone else this
-// page. It renders the full creator with live preview, mana pip builder and
-// oracle text — no account required; the action bar shows "Sign in to save"
-// instead of Save when userId is null. It reads only seeded reference data
-// through the cookie-free public client, so it stays ISR.
+// page. It renders the full creator READ-ONLY (owner decision 2026-09-16):
+// every step and the live preview are visible behind a sign-up gate, the
+// panels are inert, and the action bar offers "Sign up free to forge"
+// instead of Save. It reads only seeded reference data through the
+// cookie-free public client, so it stays ISR.
 // ---------------------------------------------------------------------------
 
 // ISR: the guest creator only reads seeded reference data (game system +
@@ -32,12 +33,12 @@ export const revalidate = 3600;
 export const metadata: Metadata = {
   title: "Create a Custom MTG Card — Free Card Creator",
   description:
-    "Design a custom MTG-style card in PipGlyph's free card creator — no signup needed. Build any card type, pick mana costs, write oracle text, and see a live preview instantly.",
+    "Design custom MTG-style cards in PipGlyph's free card creator. Sign up in seconds, then build any card type, pick mana costs, write oracle text, add art and watch the live preview.",
   alternates: { canonical: "/create" },
   openGraph: {
-    title: "Try the MTG Card Creator — No Account Needed | PipGlyph",
+    title: "The Free MTG Card Creator | PipGlyph",
     description:
-      "Design custom Magic: The Gathering cards in seconds. Live preview, visual mana pip builder, full card type support. Free, no signup required.",
+      "Design custom Magic: The Gathering cards in minutes. Live preview, visual mana pip builder, every card type, AI that writes and paints. Free with an account.",
   },
 };
 
@@ -68,22 +69,23 @@ export default async function PreviewPage() {
       <div className="mb-6 flex items-center gap-3 rounded-frame border border-accent/30 bg-accent/10 px-4 py-3">
         <Eye className="h-4 w-4 shrink-0 text-accent" aria-hidden />
         <p className="text-sm text-foreground">
-          <span className="font-semibold text-accent">Guest mode</span> — your
-          card is visible here but won&apos;t be saved.{" "}
+          <span className="font-semibold text-accent">Just looking?</span>{" "}
+          Browse every step of the creator here.{" "}
           <Link
-            href="/signup"
+            href="/signup?redirectTo=/create"
             className="font-medium text-primary-bright underline-offset-2 hover:underline"
           >
             Create a free account
           </Link>{" "}
-          to save, publish, and build full expansion sets.
+          to start designing — it takes seconds, and your cards save,
+          publish and share from any device.
         </p>
       </div>
 
       <PageHeader
-        eyebrow="Try it free"
+        eyebrow="Free to join"
         title="Forge a custom card"
-        description="No account required. Design any card type — creatures, instants, planeswalkers — with a live preview. Sign in when you're ready to save."
+        description="Every card type — creatures, instants, planeswalkers, sagas — with three decades of frames, a live preview and AI that writes and paints on demand. Free with an account; sign up in seconds to start."
         actions={
           <Button asChild variant="ghost">
             <Link href="/">

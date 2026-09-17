@@ -62,7 +62,7 @@ export function MarketingHero({
             Set mana costs with precision pips, write oracle text with smart
             tools, and pick frames from three decades of card design — then
             share the result with your playgroup or the community. Free to
-            start; no account needed to preview.
+            start — sign up in seconds and forge your first card.
           </p>
 
           {/* WUBRG pip strip */}

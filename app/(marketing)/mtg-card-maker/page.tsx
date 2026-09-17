@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "MTG Card Maker — Create Custom Magic Cards for Free | PipGlyph",
     description:
-      "Build custom MTG cards online in seconds. Set mana cost, oracle text, color identity, rarity, and art. Free, browser-based, no account required to preview.",
+      "Build custom MTG cards online in minutes. Set mana cost, oracle text, color identity, rarity, and art. Free, browser-based, no download required.",
     type: "article",
   },
 };
@@ -44,7 +44,7 @@ const FEATURES = [
   "WUBRG color identity selection",
   "Four rarities: Common, Uncommon, Rare, Mythic",
   "Art upload and focal point control",
-  "AI assistant for rules text and flavor text",
+  "AI that writes rules text, flavor, stats — or paints the art — on demand",
   "Export card as PNG",
   "Community gallery to share and remix",
   "Full expansion set builder",
@@ -145,8 +145,8 @@ export default function MtgCardMakerPage() {
             Ready to forge your first spell?
           </h2>
           <p className="max-w-lg text-sm leading-6 text-muted">
-            No account required to start. Design your card, see the live preview,
-            and sign up only when you want to save or share it.
+            A free account takes seconds. Then design your card, watch the
+            live preview, and save, share or print it whenever it&apos;s ready.
           </p>
           <div className="flex flex-wrap gap-3">
             <Button asChild size="lg">

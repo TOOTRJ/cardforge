@@ -336,7 +336,7 @@ async function HomeTrending() {
 }
 
 /** The conversion strip under the trending row: this week's activity, then
- *  the two doors — forge a card (free, no account to preview) or browse. */
+ *  the two doors — forge a card (free with an account) or browse. */
 function TrendingPulseFooter({ pulse }: { pulse: Awaited<ReturnType<typeof getCommunityPulse>> }) {
   const hasPulse = pulse.cardsThisWeek > 0;
   return (

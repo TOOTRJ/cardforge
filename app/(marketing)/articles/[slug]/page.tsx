@@ -151,8 +151,7 @@ export default async function ArticlePage({
             Put it into practice
           </h2>
           <p className="max-w-lg text-sm leading-6 text-muted">
-            The card creator is open without an account — try what you just
-            read on a real card.
+            Sign up free and try what you just read on a real card.
           </p>
           <div className="flex flex-wrap gap-3 pt-1">
             <Button asChild>
