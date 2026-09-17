@@ -246,7 +246,9 @@ type CardCreatorFormProps = {
   profileOverrides?: FrameProfileOverridesMap | null;
   /** The owner's custom footer mark (server-resolved via ownerExportStamp —
    *  paid perk, null when unset/free). Printed in the preview footer so the
-   *  editor matches exports; not form state. */
+   *  editor matches the owner's DOWNLOADS; the public bake still carries
+   *  the pipglyph.com mark (watermark policy), which the preview note says.
+   *  Not form state. */
   footerWatermark?: string | null;
   /** "stepper" (shipped) or the lab's "canvas" — the centred live preview
    *  with clickable regions (lib/creator/lab-shared.ts). */
@@ -1982,6 +1984,13 @@ export function CardCreatorForm({
   );
   const visibilityNote = (
     <p className="text-xs leading-5 text-muted">
+      {footerWatermark ? (
+        <>
+          Your footer mark &ldquo;{footerWatermark}&rdquo; prints on your
+          downloads and shows here; the public card keeps the pipglyph.com
+          mark.{" "}
+        </>
+      ) : null}
       {isEdit ? (
         <>
           Nothing changes until you click Save. Visibility and
