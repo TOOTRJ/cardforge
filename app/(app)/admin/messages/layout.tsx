@@ -28,7 +28,7 @@ export default async function AdminMessagesLayout({
         description={
           isUserEmailConfigured()
             ? "Every thread between the team and a user. Replies reach the user's Messages tab, their notification bell, and their email."
-            : "Every thread between the team and a user. Replies reach the user's Messages tab and notification bell. Email is OFF — set RESEND_API_KEY and a verified ADMIN_ALERT_FROM to also email them."
+            : "Every thread between the team and a user. Replies reach the user's Messages tab and notification bell. Email is OFF — set RESEND_API_KEY and a verified EMAIL_FROM sender to also email them (docs/EMAIL.md)."
         }
         actions={
           unread > 0 ? <Badge variant="primary">{unread} awaiting reply</Badge> : null

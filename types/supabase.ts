@@ -405,6 +405,66 @@ export type Database = {
         };
         Relationships: [];
       };
+      email_preferences: {
+        Row: {
+          user_id: string;
+          account_emails: boolean;
+          activity_emails: boolean;
+          newsletter: boolean;
+          newsletter_consented_at: string | null;
+          unsubscribe_token: string;
+          last_digest_at: string | null;
+          suppressed_at: string | null;
+          suppressed_reason: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          account_emails?: boolean;
+          activity_emails?: boolean;
+          newsletter?: boolean;
+          newsletter_consented_at?: string | null;
+          unsubscribe_token?: string;
+          last_digest_at?: string | null;
+          suppressed_at?: string | null;
+          suppressed_reason?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          account_emails?: boolean;
+          activity_emails?: boolean;
+          newsletter?: boolean;
+          newsletter_consented_at?: string | null;
+          unsubscribe_token?: string;
+          last_digest_at?: string | null;
+          suppressed_at?: string | null;
+          suppressed_reason?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      newsletter_deliveries: {
+        Row: {
+          update_id: string;
+          user_id: string;
+          sent_at: string;
+        };
+        Insert: {
+          update_id: string;
+          user_id: string;
+          sent_at?: string;
+        };
+        Update: {
+          update_id?: string;
+          user_id?: string;
+          sent_at?: string;
+        };
+        Relationships: [];
+      };
       notifications: {
         Row: {
           actor_id: string | null;
@@ -834,6 +894,7 @@ export type Database = {
           tiktok_url: string | null;
           twitter_url: string | null;
           updated_at: string;
+          onboarded_at: string | null;
           username: string;
           website_url: string | null;
           youtube_url: string | null;
@@ -870,6 +931,7 @@ export type Database = {
           tiktok_url?: string | null;
           twitter_url?: string | null;
           updated_at?: string;
+          onboarded_at?: string | null;
           username: string;
           website_url?: string | null;
           youtube_url?: string | null;
@@ -903,6 +965,7 @@ export type Database = {
           tiktok_url?: string | null;
           twitter_url?: string | null;
           updated_at?: string;
+          onboarded_at?: string | null;
           username?: string;
           website_url?: string | null;
           youtube_url?: string | null;
@@ -1030,6 +1093,8 @@ export type Database = {
           link_href: string | null;
           notified_at: string | null;
           notified_count: number;
+          emailed_at: string | null;
+          emailed_count: number;
           publish_at: string;
           require_ack: boolean;
           show_in_banner: boolean;
@@ -1049,6 +1114,8 @@ export type Database = {
           link_href?: string | null;
           notified_at?: string | null;
           notified_count?: number;
+          emailed_at?: string | null;
+          emailed_count?: number;
           publish_at?: string;
           require_ack?: boolean;
           show_in_banner?: boolean;
@@ -1068,6 +1135,8 @@ export type Database = {
           link_href?: string | null;
           notified_at?: string | null;
           notified_count?: number;
+          emailed_at?: string | null;
+          emailed_count?: number;
           publish_at?: string;
           require_ack?: boolean;
           show_in_banner?: boolean;
@@ -1674,6 +1743,24 @@ export type Database = {
           last_active_at: string | null;
           total_count: number;
         }[];
+      };
+      // Migrations 0094/0095 — usernames + email preferences.
+      email_recipients: {
+        Args: { p_list: string; p_user_ids?: string[] | null };
+        Returns: {
+          user_id: string;
+          email: string;
+          unsubscribe_token: string;
+          last_digest_at: string | null;
+        }[];
+      };
+      suppress_email: {
+        Args: { p_email: string; p_reason: string };
+        Returns: number;
+      };
+      is_reserved_username: {
+        Args: { p_username: string };
+        Returns: boolean;
       };
       // Migration 0074 — private billing columns.
       get_my_billing: {

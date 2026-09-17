@@ -6,6 +6,8 @@ import { createClient, getCurrentProfile, getCurrentUser } from "@/lib/supabase/
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { SITE_UPDATES_TAG } from "@/lib/updates/queries";
 import { isReleased } from "@/lib/updates/shared";
+import { newsletterEmail } from "@/lib/email/messages";
+import { isEmailConfigured, sendEmailBatch } from "@/lib/email/send";
 
 // ---------------------------------------------------------------------------
 // Site updates — admin writes (RLS admin policies on site_updates enforce the
@@ -296,6 +298,101 @@ export async function notifyAllUsersAction(id: string): Promise<BroadcastResult>
     .eq("id", id);
   purge();
   return { ok: true, sent, skipped };
+}
+
+export type NewsletterResult =
+  | { ok: true; sent: number; skipped: number; failed: number }
+  | { ok: false; error: string };
+
+/** Admin: email a LIVE update to everyone subscribed to the newsletter
+ *  (email_preferences.newsletter — explicit opt-in, confirmed address, not
+ *  suppressed). newsletter_deliveries records each accepted send, so pressing
+ *  it again only reaches people who subscribed since; a provider failure
+ *  mid-way is resumable the same way. Every email carries the RFC 8058
+ *  one-click unsubscribe headers (lib/email/messages.ts). */
+export async function emailNewsletterAction(id: string): Promise<NewsletterResult> {
+  const gate = await requireAdmin();
+  if (!gate.ok) return gate;
+  if (!z.string().uuid().safeParse(id).success) return { ok: false, error: "Unknown update." };
+  if (!isAdminConfigured()) return { ok: false, error: "Admin client isn't configured." };
+  if (!isEmailConfigured("newsletter")) {
+    return {
+      ok: false,
+      error: "Email isn't configured — set RESEND_API_KEY and EMAIL_FROM (docs/EMAIL.md).",
+    };
+  }
+
+  const supabase = await createClient();
+  const { data: update } = await supabase
+    .from("site_updates")
+    .select("id, kind, title, summary, body, link_href, is_published, publish_at, emailed_count")
+    .eq("id", id)
+    .maybeSingle();
+  if (!update) return { ok: false, error: "Unknown update." };
+  if (!isReleased(update)) {
+    return { ok: false, error: "Publish it first — only a live update can be emailed." };
+  }
+
+  const admin = createAdminClient();
+  const already = new Set<string>();
+  for (let from = 0; ; from += BROADCAST_PAGE) {
+    const { data, error } = await admin
+      .from("newsletter_deliveries")
+      .select("user_id")
+      .eq("update_id", id)
+      .range(from, from + BROADCAST_PAGE - 1);
+    if (error) return { ok: false, error: "Couldn't read earlier sends." };
+    for (const row of data ?? []) already.add(row.user_id);
+    if ((data?.length ?? 0) < BROADCAST_PAGE) break;
+  }
+
+  const { data: subscribers, error: subscribersError } = await admin.rpc("email_recipients", {
+    p_list: "newsletter",
+  });
+  if (subscribersError) return { ok: false, error: "Couldn't list subscribers." };
+
+  const pending = (subscribers ?? []).filter((s) => !already.has(s.user_id));
+  const skipped = (subscribers?.length ?? 0) - pending.length;
+  if (pending.length === 0) return { ok: true, sent: 0, skipped, failed: 0 };
+
+  const content = {
+    kind: update.kind as "update" | "upcoming",
+    title: update.title,
+    summary: update.summary,
+    body: update.body,
+    linkHref: update.link_href,
+  };
+  const userByAddress = new Map(pending.map((s) => [s.email, s.user_id]));
+  const result = await sendEmailBatch(
+    pending.map((s) =>
+      newsletterEmail({ email: s.email, unsubscribeToken: s.unsubscribe_token }, content),
+    ),
+    { stream: "newsletter", idempotencyPrefix: `newsletter:${id}:${already.size}` },
+  );
+
+  const delivered = result.accepted
+    .map((address) => userByAddress.get(address))
+    .filter((userId): userId is string => Boolean(userId));
+  if (delivered.length > 0) {
+    const { error } = await admin
+      .from("newsletter_deliveries")
+      .upsert(
+        delivered.map((userId) => ({ update_id: id, user_id: userId })),
+        { onConflict: "update_id,user_id", ignoreDuplicates: true },
+      );
+    if (error) console.warn("emailNewsletterAction: delivery log failed", error.message);
+    await admin
+      .from("site_updates")
+      .update({
+        emailed_at: new Date().toISOString(),
+        emailed_count: (update.emailed_count ?? 0) + delivered.length,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id);
+  }
+  purge();
+  if (delivered.length === 0 && result.error) return { ok: false, error: result.error };
+  return { ok: true, sent: delivered.length, skipped, failed: result.failed };
 }
 
 /** Admin: the global ribbon switch. Off hides the ribbon on every page

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
+import type { createAdminClient } from "@/lib/supabase/admin";
 import type { NotificationPayload } from "./describe";
 
 // All reads go through the user's RLS-scoped session, so a user only ever sees
@@ -25,10 +26,11 @@ export type NotificationItem = {
   payload: NotificationPayload;
 };
 
-const SELECT_COLUMNS =
+export const NOTIFICATION_SELECT_COLUMNS =
   "id, type, created_at, read_at, actor_id, card_id, thread_id, payload";
+const SELECT_COLUMNS = NOTIFICATION_SELECT_COLUMNS;
 
-type Row = {
+export type NotificationRow = {
   id: string;
   type: string;
   created_at: string;
@@ -38,6 +40,7 @@ type Row = {
   thread_id: string | null;
   payload: unknown;
 };
+type Row = NotificationRow;
 
 export async function getUnreadNotificationCount(): Promise<number> {
   const user = await getCurrentUser();
@@ -86,8 +89,12 @@ export async function getNotificationById(
   return item ?? null;
 }
 
-async function hydrate(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+/** Stitch actor + card (+ card owner) onto raw rows. Exported for the email
+ *  digest, which reads many users' rows through the service-role client. */
+export async function hydrate(
+  supabase:
+    | Awaited<ReturnType<typeof createClient>>
+    | ReturnType<typeof createAdminClient>,
   rows: Row[],
 ): Promise<NotificationItem[]> {
   const cardIds = [

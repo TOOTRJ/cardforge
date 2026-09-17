@@ -70,7 +70,13 @@ const { error: profileError } = await admin
   .from("profiles")
   // is_admin powers the /admin e2e specs (challenge authoring). Only the
   // LOCAL stack ever runs this script (the URL guard above).
-  .update({ username: "e2e_forger", display_name: "E2E Forger", is_admin: true })
+  .update({
+    username: "e2e_forger",
+    display_name: "E2E Forger",
+    is_admin: true,
+    // Past the first-run wizard (migration 0095) — the specs expect /dashboard.
+    onboarded_at: new Date().toISOString(),
+  })
   .eq("id", userId);
 if (profileError) {
   console.error(`✗ profile update failed: ${profileError.message}`);

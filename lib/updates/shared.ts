@@ -24,6 +24,10 @@ export type SiteUpdate = {
    *  every user, and how many received it in total. */
   notified_at: string | null;
   notified_count: number;
+  /** Newsletter bookkeeping: when it was last emailed to newsletter
+   *  subscribers, and how many were sent it in total. */
+  emailed_at: string | null;
+  emailed_count: number;
   created_at: string;
   updated_at: string;
 };

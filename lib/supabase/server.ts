@@ -49,7 +49,7 @@ export const getCurrentUser = cache(async () => {
  *  replaced the blanket grant with this list). The billing/admin slice is
  *  private and comes back through get_my_billing() for the user's OWN row. */
 export const PUBLIC_PROFILE_COLUMNS =
-  "id, username, display_name, avatar_url, bio, website_url, created_at, updated_at, banner_url, accent_color, twitter_url, bluesky_url, instagram_url, youtube_url, tiktok_url, discord_url, github_url, pinned_card_ids, featured_at, export_watermark_text";
+  "id, username, display_name, avatar_url, bio, website_url, created_at, updated_at, banner_url, accent_color, twitter_url, bluesky_url, instagram_url, youtube_url, tiktok_url, discord_url, github_url, pinned_card_ids, featured_at, export_watermark_text, onboarded_at";
 
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 
