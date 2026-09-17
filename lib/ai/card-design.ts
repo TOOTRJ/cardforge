@@ -91,6 +91,19 @@ export const designedCardSchema = z
     art_prompt: clampedText(600).describe(
       "Vivid 60-100 word illustration prompt for this card: subject, action, environment, lighting, palette. NO frame, NO text.",
     ),
+    tags: z
+      .array(clampedText(30, 0))
+      .max(8)
+      .optional()
+      .transform((values) =>
+        values
+          ?.map((v) => v.toLowerCase().replace(/[^a-z0-9\s-]/g, "").trim())
+          .filter(Boolean)
+          .slice(0, 6),
+      )
+      .describe(
+        "3-6 short lowercase discovery tags for the card (e.g. dragons, tribal, tokens, removal). Omit when unsure.",
+      ),
   })
   .strict();
 

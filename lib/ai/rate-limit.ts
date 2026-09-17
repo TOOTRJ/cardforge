@@ -41,6 +41,7 @@ export type AiActionLabel =
   | "generate_from_concept"
   | "generate_random_card"
   | "generate_random_art"
+  | "fill_card"
   | "generate_deck"
   | "remix_card"
   | "remix_art"
@@ -228,6 +229,8 @@ export async function logAiCall(
 // isn't a fixed cost here.
 export const AI_ACTION_COST: Partial<Record<AiActionLabel, number>> = {
   generate_random_card: 1,
+  /** One credit fills the ticked fields of the open card (art included). */
+  fill_card: 1,
   remix_card: 1,
   /** One credit buys the whole batch of text-only ideas (no art). */
   generate_card_ideas: 1,

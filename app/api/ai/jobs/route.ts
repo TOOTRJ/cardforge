@@ -18,12 +18,18 @@ import {
 } from "@/lib/ai/generation-limits";
 import {
   SET_GENERATION_ENABLED,
+  createCardFillJob,
   createCardGenerationJob,
   createDeckGenerationJob,
   createDeckRemixJob,
   createSetGenerationJob,
 } from "@/lib/ai/generation-jobs";
-import { FRAME_TEMPLATE_VALUES, RARITY_VALUES } from "@/types/card";
+import {
+  COLOR_IDENTITY_VALUES,
+  FRAME_TEMPLATE_VALUES,
+  RARITY_VALUES,
+} from "@/types/card";
+import { CARD_FILL_FIELDS } from "@/lib/ai/card-fill-shared";
 import { requireTier, UpgradeRequiredError } from "@/lib/billing/entitlements";
 import { AI_DECK_FORMATS } from "@/lib/ai/deck-design";
 import { isBillingEnabled } from "@/lib/billing/flags";
@@ -99,6 +105,44 @@ const requestSchema = z.discriminatedUnion("kind", [
     /** Pro: design the card for one of the caller's decks and add it there. */
     deck_id: z.string().uuid().optional(),
   }),
+  // Per-field generation INTO the open creator (migration 0089): `want`
+  // lists the ticked fields, `locked` carries the form's current values for
+  // everything else (pinned as fixed context, never overwritten). One
+  // credit whatever is ticked; no card row is created.
+  z.object({
+    kind: z.literal("card_fill"),
+    want: z.array(z.enum(CARD_FILL_FIELDS)).min(1).max(CARD_FILL_FIELDS.length),
+    locked: z
+      .object({
+        title: z.string().trim().max(120).optional(),
+        cost: z.string().trim().max(64).optional(),
+        card_type: z.enum(AI_CARD_TYPE_VALUES).optional(),
+        supertype: z.string().trim().max(64).optional(),
+        subtypes: z.array(z.string().trim().max(40)).max(10).optional(),
+        rarity: z.enum(RARITY_VALUES).optional(),
+        color_identity: z.array(z.enum(COLOR_IDENTITY_VALUES)).max(6).optional(),
+        rules_text: z.string().trim().max(4000).optional(),
+        flavor_text: z.string().trim().max(1000).optional(),
+        power: z.string().trim().max(16).optional(),
+        toughness: z.string().trim().max(16).optional(),
+        loyalty: z.string().trim().max(16).optional(),
+        defense: z.string().trim().max(16).optional(),
+        tags: z.array(z.string().trim().max(30)).max(12).optional(),
+      })
+      .default({}),
+    steer: z
+      .object({
+        card_type: z.enum(AI_CARD_TYPE_VALUES).optional(),
+        rarity: z.enum(RARITY_VALUES).optional(),
+      })
+      .default({}),
+    theme: z.string().trim().max(300).optional(),
+    style: z.string().trim().max(200).optional(),
+    frame: z
+      .union([z.literal("random"), z.enum(FRAME_TEMPLATE_VALUES)])
+      .optional(),
+    deck_id: z.string().uuid().optional(),
+  }),
 ]);
 
 /**
@@ -126,10 +170,13 @@ export async function GET() {
     .eq("owner_id", user.id)
     .eq("status", "generating")
     .lt("updated_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+  // Fill jobs belong to the creator form that started them — there is no
+  // sensible background resume for one, so they are never offered here.
   const { data } = await supabase
     .from("ai_generation_jobs")
     .select("*")
     .eq("status", "generating")
+    .neq("kind", "card_fill")
     .order("created_at", { ascending: false })
     .limit(5);
   const resumable = (data ?? []).find((row) => {
@@ -187,7 +234,7 @@ export async function POST(request: Request) {
 
   const limit = await batchCardLimit();
   let size: number;
-  if (parsed.data.kind === "card") {
+  if (parsed.data.kind === "card" || parsed.data.kind === "card_fill") {
     size = 1;
   } else if (parsed.data.kind === "deck_remix") {
     // Remix runs min(batch limit, remixable entries) — size the credit
@@ -221,7 +268,10 @@ export async function POST(request: Request) {
   // AI spend. With billing on, credits are the sole limiter (owner decision,
   // 2026-07-28) — a user can generate as many cards as they hold credits.
   const dailyCapsActive = !isBillingEnabled();
-  if (parsed.data.kind === "card" && dailyCapsActive) {
+  if (
+    (parsed.data.kind === "card" || parsed.data.kind === "card_fill") &&
+    dailyCapsActive
+  ) {
     const daily = await checkRandomCardDailyLimit(user.id);
     if (!daily.ok) {
       return NextResponse.json(
@@ -310,6 +360,42 @@ export async function POST(request: Request) {
       cardType: parsed.data.card_type,
       frame: parsed.data.frame,
       rarity: parsed.data.rarity,
+      deckId: parsed.data.deck_id,
+    });
+    if (!result.ok) {
+      return NextResponse.json({ ok: false, error: result.error }, { status: 502 });
+    }
+    return NextResponse.json(
+      { ok: true, job: result.job, cardLimit: limit, credits },
+      { status: 200 },
+    );
+  }
+
+  if (parsed.data.kind === "card_fill") {
+    if (parsed.data.deck_id) {
+      try {
+        await requireTier("pro");
+      } catch (error) {
+        if (error instanceof UpgradeRequiredError) {
+          return NextResponse.json(
+            {
+              ok: false,
+              error: "Designing a card for a specific deck is a Pro feature.",
+              code: "UPGRADE_REQUIRED",
+            },
+            { status: 403 },
+          );
+        }
+        throw error;
+      }
+    }
+    const result = await createCardFillJob({
+      want: parsed.data.want,
+      locked: parsed.data.locked,
+      steer: parsed.data.steer,
+      theme: parsed.data.theme,
+      style: parsed.data.style,
+      frame: parsed.data.frame,
       deckId: parsed.data.deck_id,
     });
     if (!result.ok) {

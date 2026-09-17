@@ -18,9 +18,11 @@ type ArtPanelProps = {
    *  back face used to be its own step). Supplied by the orchestrator so its
    *  caret refs / symbol insertion stay there. */
   backFaceSlot?: React.ReactNode;
+  /** The "Generate AI artwork and title" button, beside Choose file. */
+  aiSlot?: React.ReactNode;
 };
 
-export function ArtPanel({ userId, backFaceSlot }: ArtPanelProps) {
+export function ArtPanel({ userId, backFaceSlot, aiSlot }: ArtPanelProps) {
   const {
     register,
     control,
@@ -48,6 +50,7 @@ export function ArtPanel({ userId, backFaceSlot }: ArtPanelProps) {
                   artUrlField.onChange(artUrl ?? "");
                   artPosField.onChange(artPosition);
                 }}
+                actionSlot={aiSlot}
               />
             )}
           />

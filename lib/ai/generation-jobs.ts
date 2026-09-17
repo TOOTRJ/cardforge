@@ -41,6 +41,13 @@ import {
   type AiActionLabel,
 } from "@/lib/ai/rate-limit";
 import { generateRandomCard } from "@/lib/ai/random-card";
+import { designCardFill } from "@/lib/ai/card-fill";
+import type {
+  CardFillField,
+  CardFillLocked,
+  CardFillResult,
+  CardFillSteer,
+} from "@/lib/ai/card-fill-shared";
 import { isAllowedServerImageFetchUrl } from "@/lib/validation/card";
 import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
 import {
@@ -108,12 +115,15 @@ export type JobStep = {
    *  attempt, superseded duplicate) gets refunded. Null when the winning
    *  attempt didn't charge (admin / billing off). */
   spend_ref?: string | null;
+  /** card_fill only: the generated fields, poured into the open creator
+   *  form by the client (nothing is inserted into `cards`). */
+  fill?: CardFillResult | null;
 };
 
 export type GenerationJobRow = {
   id: string;
   owner_id: string;
-  kind: "set" | "deck" | "deck_remix" | "card" | "card_remix";
+  kind: "set" | "deck" | "deck_remix" | "card" | "card_remix" | "card_fill";
   /** "done" = every step succeeded; "done_with_errors" = finished with a mix
    *  of successes and failures (retryable); "failed" = nothing succeeded. */
   status: "generating" | "done" | "done_with_errors" | "failed" | "cancelled";
@@ -124,6 +134,7 @@ export type GenerationJobRow = {
     | DeckRemixJobPlan
     | CardJobPlan
     | CardRemixJobPlan
+    | CardFillJobPlan
     | null;
   steps: JobStep[];
   set_id: string | null;
@@ -152,6 +163,21 @@ export type CardRemixJobPlan = {
   card_id: string;
   style: string;
   theme: string | null;
+};
+
+/** Per-field generation INTO the open creator (migration 0089): the wanted
+ *  fields are designed at plan time around the user's pinned values; the
+ *  one step paints the art when it was wanted and hands everything back on
+ *  the step (`JobStep.fill`). No card row is ever created by this kind. */
+export type CardFillJobPlan = {
+  want: CardFillField[];
+  fields: CardFillResult;
+  art_prompt: string;
+  style: string | null;
+  /** Resolved when the card type was generated (create only). */
+  frame_template: string | null;
+  /** Deck-aware design (Pro): the client links the card to this deck. */
+  deck_id: string | null;
 };
 
 export type SetJobPlan = {
@@ -441,7 +467,8 @@ async function executeJobStep(
   stepIndex: number,
 ): Promise<JobStep> {
   // Card jobs have no set/deck target — the plan is the whole contract.
-  const isCardKind = job.kind === "card" || job.kind === "card_remix";
+  const isCardKind =
+    job.kind === "card" || job.kind === "card_remix" || job.kind === "card_fill";
   if (!job.plan || (!isCardKind && !job.set_id && !job.deck_id)) {
     return { ...step, status: "failed", error: "Job has no plan — recreate it." };
   }
@@ -485,6 +512,8 @@ async function executeJobStep(
         error:
           "AI remix has been retired — open the card and use Remix, then Generate with AI.",
       };
+    case "card_fill":
+      return runCardFillStep(userId, job.id, step, job.plan as CardFillJobPlan);
     default:
       return { ...step, status: "failed", error: "Unknown job kind." };
   }
@@ -830,6 +859,168 @@ export async function createCardGenerationJob(
     return { ok: false, error: "Couldn't persist the generation job." };
   }
   return { ok: true, job: jobRow as unknown as GenerationJobRow };
+}
+
+// ---------------------------------------------------------------------------
+// Per-field fill (the creator's "Generate with AI" dialog, migration 0089)
+// ---------------------------------------------------------------------------
+
+export type CreateCardFillJobInput = {
+  want: CardFillField[];
+  locked: CardFillLocked;
+  steer: CardFillSteer;
+  theme?: string;
+  style?: string;
+  /** Create only, with card_type wanted: "random" or a specific frame. */
+  frame?: "random" | FrameTemplate;
+  /** Pro: brief the designer with this deck. */
+  deckId?: string;
+};
+
+/** PLAN a fill job: design the wanted fields around the pinned ones (fast
+ *  text call); the step paints the art if it was wanted. Same 1-credit
+ *  price whatever was ticked — charged by the step, refunded on failure. */
+export async function createCardFillJob(
+  input: CreateCardFillJobInput,
+): Promise<CreateCardJobResult> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Sign in to generate with AI." };
+
+  let deckContext: OwnedDeckContext | null = null;
+  let deckBrief: ReturnType<typeof buildDeckBrief> | null = null;
+  if (input.deckId) {
+    await requireTier("pro");
+    deckContext = await loadOwnedDeckContext(await createClient(), input.deckId, user.id);
+    if (!deckContext) return { ok: false, error: "Deck not found or not yours." };
+    deckBrief = buildDeckBrief({
+      title: deckContext.deck.title,
+      description: deckContext.deck.description,
+      format: deckContext.deck.format,
+      cards: deckContext.context.cards,
+      analytics: computeDeckAnalytics(deckContext.items),
+    });
+  }
+
+  const verifiedKeys = new Set(await getVerifiedFrameKeys());
+  const wantsType = input.want.includes("card_type");
+  let colorHint: ColorIdentity | undefined = deckBrief?.colorHint;
+  if (wantsType && input.frame && input.frame !== "random" && input.steer.card_type) {
+    const hints = colorHintsForFrame(input.steer.card_type, input.frame, verifiedKeys);
+    if (hints.length > 0) {
+      colorHint = hints[Math.floor(Math.random() * hints.length)];
+    }
+  }
+
+  await logAiCall(user.id, "fill_card");
+  let designed: Awaited<ReturnType<typeof designCardFill>>;
+  try {
+    designed = await designCardFill({
+      want: input.want,
+      locked: input.locked,
+      steer: input.steer,
+      theme: input.theme,
+      style: input.style,
+      context: deckBrief?.context,
+      colorHint,
+    });
+  } catch (error) {
+    const detail =
+      error instanceof Error ? error.message : "Card generation failed.";
+    return { ok: false, error: `AI card design failed: ${detail}` };
+  }
+
+  // A generated card type needs a frame that can wear it (create only —
+  // revise never asks for the type). Colors: generated ones, else pinned.
+  const frameTemplate =
+    wantsType && designed.fields.card_type
+      ? resolveGeneratedFrame({
+          cardType: designed.fields.card_type,
+          requested: input.frame ?? "random",
+          colorIdentity:
+            designed.fields.color_identity ??
+            input.locked.color_identity ??
+            [],
+          verifiedKeys,
+        })
+      : null;
+
+  const plan: CardFillJobPlan = {
+    want: input.want,
+    fields: designed.fields,
+    art_prompt: designed.art_prompt,
+    style: input.style?.trim() || null,
+    frame_template: frameTemplate ?? null,
+    deck_id: deckContext?.deck.id ?? null,
+  };
+  const steps: JobStep[] = [
+    {
+      key: "fill:0",
+      label: designed.fields.title ?? input.locked.title ?? "Your card",
+      status: "pending",
+    },
+  ];
+
+  const supabase = await createClient();
+  const { data: jobRow, error: insertError } = await supabase
+    .from("ai_generation_jobs")
+    .insert({
+      owner_id: user.id,
+      kind: "card_fill",
+      status: "generating",
+      deck_id: deckContext?.deck.id ?? null,
+      request: {
+        want: input.want,
+        theme: input.theme ?? null,
+        style: input.style ?? null,
+        deck_id: deckContext?.deck.id ?? null,
+      },
+      plan: plan as unknown as Json,
+      steps: steps as unknown as Json,
+    })
+    .select("*")
+    .single();
+  if (insertError || !jobRow) {
+    return { ok: false, error: "Couldn't persist the generation job." };
+  }
+  return { ok: true, job: jobRow as unknown as GenerationJobRow };
+}
+
+/** The fill job's single step: paint the art when it was wanted, then hand
+ *  every generated field back on the step. One credit either way. */
+async function runCardFillStep(
+  userId: string,
+  jobId: string,
+  step: JobStep,
+  plan: CardFillJobPlan,
+): Promise<JobStep> {
+  if (step.fill) {
+    return { ...step, status: "done", error: undefined };
+  }
+  return withCreditedStep(userId, jobId, 1, "fill_card", step, async () => {
+    const fill: CardFillResult = {
+      ...plan.fields,
+      frame_template: plan.frame_template,
+      deck_id: plan.deck_id,
+    };
+    if (plan.want.includes("art")) {
+      const style = plan.style?.trim()
+        ? ` Rendered strictly in ${plan.style.trim()} style.`
+        : "";
+      await logAiCall(userId, "generate_random_art");
+      const image = await generatePlainImage(
+        `${plan.art_prompt}${style} NO frame, NO borders, NO card layout, NO text or lettering anywhere in the image.`,
+        "card",
+      );
+      if (!image.ok) return { ...step, status: "failed", error: image.error };
+      const persisted = await persistGeneratedArt(image.bytes, image.contentType);
+      if (!persisted.ok) {
+        return { ...step, status: "failed", error: persisted.error };
+      }
+      fill.art_url = persisted.publicUrl;
+      fill.artist_credit = await aiArtistCredit();
+    }
+    return { ...step, status: "done", fill, error: undefined };
+  });
 }
 
 /** The card job's single step — the shared card step with the single-card
@@ -1675,6 +1866,9 @@ async function patchJobStep(
     // Which charge attempt completed the step (reconciliation proof) — null
     // clears a stale ref from a prior attempt.
     spend_ref: step.spend_ref ?? null,
+    // card_fill: the generated fields ride on the step (the plan is never
+    // sent to the client). null keeps the key explicit for other kinds.
+    fill: step.fill ?? null,
     // The step is no longer running — drop the claim stamp.
     claimed_at: null,
   };

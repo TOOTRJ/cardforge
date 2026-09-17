@@ -59,6 +59,9 @@ type ArtUploaderProps = {
    *  takes the paste. Mark every non-front uploader `primaryPasteTarget={false}`. */
   primaryPasteTarget?: boolean;
   className?: string;
+  /** Rendered beside the Choose file button — the creator's "Generate AI
+   *  artwork and title" button lives here. */
+  actionSlot?: React.ReactNode;
 };
 
 export function ArtUploader({
@@ -68,6 +71,7 @@ export function ArtUploader({
   onArtChange,
   primaryPasteTarget = true,
   className,
+  actionSlot,
 }: ArtUploaderProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const dropzoneRef = useRef<HTMLDivElement | null>(null);
@@ -548,6 +552,7 @@ export function ArtUploader({
           )}
           {uploading ? "Uploading…" : artUrl ? "Replace artwork" : "Choose file"}
         </Button>
+        {actionSlot}
         {artUrl ? (
           <>
             <Button
@@ -579,9 +584,7 @@ export function ArtUploader({
         </p>
       ) : null}
       {!userId ? (
-        <p className="text-xs text-subtle">
-          Sign in first to upload artwork. Until then the form still saves text.
-        </p>
+        <p className="text-xs text-subtle">Sign in to upload artwork.</p>
       ) : null}
     </div>
   );
