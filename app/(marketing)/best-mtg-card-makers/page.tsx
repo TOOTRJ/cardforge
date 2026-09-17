@@ -47,12 +47,12 @@ const CRITERIA = [
 const PIPGLYPH_STRENGTHS = [
   "Live-preview editor — your card renders as you type",
   "The complete mana-symbol vocabulary, plus custom pip uploads",
-  "AI assistant for oracle text, flavor, and whole-card generation",
+  "AI that fills in any field — rules, flavor, stats, art — or the whole card",
   "Expansion-set builder with a booster-draft simulator",
   "Public gallery with likes, comments, and card remixing",
   "PNG and print-ready PDF export sized for real cards",
   "Original frames and fonts — not Wizards' proprietary assets",
-  "Free to start, no account needed to preview",
+  "Free to start — a free account is all you need",
 ];
 
 type Tool = {
@@ -331,9 +331,9 @@ export default function BestMtgCardMakersPage() {
             Make your first card free
           </h2>
           <p className="max-w-lg text-sm leading-6 text-muted">
-            No account required to start. Design your card, see the live
-            preview, and sign up only when you want to save, share, or build a
-            full set.
+            A free account takes seconds. Then design your card, watch the
+            live preview, and save, share or build a full set whenever
+            you&apos;re ready.
           </p>
           <div className="flex flex-wrap gap-3">
             <Button asChild size="lg">

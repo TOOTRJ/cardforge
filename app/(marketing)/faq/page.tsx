@@ -135,8 +135,8 @@ export default function FaqPage() {
             Still curious? The editor answers fastest.
           </h2>
           <p className="max-w-lg text-sm leading-6 text-muted">
-            The whole card creator is open without an account — build something
-            and see for yourself.
+            A free account takes seconds — build something and see for
+            yourself.
           </p>
           <div className="flex flex-wrap gap-3">
             <Button asChild size="lg">

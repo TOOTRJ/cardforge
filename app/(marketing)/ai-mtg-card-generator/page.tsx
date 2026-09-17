@@ -75,7 +75,7 @@ export default function AiMtgCardGeneratorPage() {
       />
       <div className="mb-14 flex flex-col gap-5">
         <span className="text-xs font-semibold uppercase tracking-[0.18em] text-primary-bright">
-          AI-powered · Free · No setup
+          AI-powered · Free account · 5 credits a month
         </span>
         <h1 className="font-display text-4xl font-semibold leading-tight tracking-tight text-foreground sm:text-5xl">
           The AI MTG Card Generator
@@ -85,13 +85,15 @@ export default function AiMtgCardGeneratorPage() {
           tapping creatures&rdquo;, &ldquo;a Simic ramp instant that scales
           with snow lands&rdquo; — and PipGlyph drafts a complete,
           original Magic: The Gathering card. AI writes the rules text, AI
-          generates the art, you edit and publish.
+          paints the art, you edit and publish — or tick just the fields
+          you want written and keep the rest. Every free account gets 5
+          credits a month.
         </p>
         <div className="flex flex-wrap gap-3">
           <Button asChild size="lg">
             <Link href="/create">
               <Wand2 className="h-4 w-4" aria-hidden />
-              Generate a random card
+              Generate a card with AI
               <ArrowRight className="h-4 w-4" aria-hidden />
             </Link>
           </Button>
