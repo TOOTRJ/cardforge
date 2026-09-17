@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
+import type { Json } from "@/types/supabase";
 import { z } from "zod";
 import { getCurrentUser, createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -124,6 +125,23 @@ export async function POST(request: Request) {
       rarity: parsed.data.rarity,
       deckContext,
     });
+    // Keep the batch (migration 0092) so a closed tab doesn't waste the
+    // credit — the dialog offers "reopen your last ideas". Best-effort.
+    try {
+      const supabase = await createClient();
+      await supabase.from("card_idea_batches").insert({
+        owner_id: user.id,
+        request: {
+          theme: parsed.data.theme ?? null,
+          card_type: parsed.data.card_type ?? null,
+          rarity: parsed.data.rarity ?? null,
+          deck_id: parsed.data.deck_id ?? null,
+        },
+        ideas: ideas as unknown as Json,
+      });
+    } catch {
+      // never fail the response over the archive write
+    }
     return NextResponse.json({ ok: true, ideas, credits: await getFreshCreditBalance() });
   } catch (error) {
     if (spend.charged) {

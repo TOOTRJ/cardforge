@@ -142,6 +142,10 @@ const requestSchema = z.discriminatedUnion("kind", [
       .union([z.literal("random"), z.enum(FRAME_TEMPLATE_VALUES)])
       .optional(),
     deck_id: z.string().uuid().optional(),
+    /** Which creator this fill belongs to ("create", "card:<id>",
+     *  "remix:<id>") so an unclaimed result is offered back on the right
+     *  page (app/api/ai/card-fill). */
+    scope: z.string().trim().min(1).max(80).optional(),
   }),
 ]);
 
@@ -397,6 +401,7 @@ export async function POST(request: Request) {
       style: parsed.data.style,
       frame: parsed.data.frame,
       deckId: parsed.data.deck_id,
+      scope: parsed.data.scope,
     });
     if (!result.ok) {
       return NextResponse.json({ ok: false, error: result.error }, { status: 502 });

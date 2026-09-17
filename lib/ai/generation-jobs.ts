@@ -875,6 +875,8 @@ export type CreateCardFillJobInput = {
   frame?: "random" | FrameTemplate;
   /** Pro: brief the designer with this deck. */
   deckId?: string;
+  /** The creator this fill belongs to — see app/api/ai/card-fill. */
+  scope?: string;
 };
 
 /** PLAN a fill job: design the wanted fields around the pinned ones (fast
@@ -973,6 +975,8 @@ export async function createCardFillJob(
         theme: input.theme ?? null,
         style: input.style ?? null,
         deck_id: deckContext?.deck.id ?? null,
+        scope: input.scope ?? "create",
+        claimed_at: null,
       },
       plan: plan as unknown as Json,
       steps: steps as unknown as Json,
