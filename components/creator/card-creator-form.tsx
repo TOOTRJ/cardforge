@@ -5,6 +5,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   useTransition,
 } from "react";
 import { useRouter } from "next/navigation";
@@ -39,6 +40,7 @@ import { CardPreview } from "@/components/cards/card-preview";
 import { ShareTargets } from "@/components/cards/share-targets";
 import { DeleteCardDialog } from "@/components/creator/delete-card-dialog";
 import { CardGlossary } from "@/components/creator/card-glossary";
+import { LockedSummary } from "@/components/creator/locked-summary";
 import { StartOverDialog } from "@/components/creator/start-over-dialog";
 import {
   AiGenerateDialog,
@@ -81,7 +83,6 @@ import {
 import { linkDeckCardAction } from "@/lib/decks/card-actions";
 import type { DeckRemixContext } from "@/types/deck";
 import type { ScryfallImportPatch } from "@/lib/scryfall/import-mapper";
-import { slugify } from "@/lib/validation/card";
 import {
   CARD_TYPE_VALUES,
   RARITY_VALUES,
@@ -96,7 +97,12 @@ import {
   type Rarity,
   DEFAULT_FRAME_TEMPLATE,
 } from "@/types/card";
-import { normalizeFrameTemplate, showsPowerToughness } from "@/lib/cards/card-display";
+import {
+  normalizeFrameTemplate,
+  showsDefense,
+  showsLoyalty,
+  showsPowerToughness,
+} from "@/lib/cards/card-display";
 import { pickFrameColorKey } from "@/components/cards/frame-layer";
 import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
 import { eraForTemplate, standardFrameFor } from "@/lib/creator/frame-picker";
@@ -129,8 +135,13 @@ import {
   normalizeColorSelection,
   parseSubtypes,
   parseTags,
+  remixValuesFrom,
 } from "@/lib/creator/card-fields";
-import { type FormValues } from "@/lib/creator/form-types";
+import { EMPTY_BACK_FACE, type FormValues } from "@/lib/creator/form-types";
+import {
+  hasMeaningfulChange,
+  pickRevisablePayload,
+} from "@/lib/creator/revise";
 import { cardFormSchema } from "@/lib/creator/form-schema";
 import type { PipOverrides } from "@/lib/pips/override";
 import type { Challenge } from "@/lib/challenges/shared";
@@ -161,7 +172,12 @@ import {
 // reference them without importing this client component.
 
 type CardCreatorFormProps = {
-  mode: "create" | "edit";
+  /** "create" = a blank new card; "edit" = revise `card` in place; "remix" =
+   *  a NEW card prefilled from `card` (the parent), linked via parent_card_id
+   *  on save. Edit and remix share the REVISE rules: the structural fields
+   *  (type, frame, variation, colour, type line, finish, set, deck) are locked
+   *  and only content changes (lib/creator/revise.ts). */
+  mode: "create" | "edit" | "remix";
   userId: string | null;
   /** Current user's username, if any. Lets the slug helper preview the
    *  canonical `/card/[username]/[slug]` URL the card will live at. Null when
@@ -169,6 +185,7 @@ type CardCreatorFormProps = {
   ownerUsername?: string | null;
   gameSystems: GameSystem[];
   templates: CardTemplate[];
+  /** The card being edited (edit) or remixed from (remix). */
   card?: Card | null;
   /** The current user's sets — populates the "Add to set" picker on Publish. */
   mySets?: CardSetOption[];
@@ -238,6 +255,10 @@ const CARD_DRAFT_STORAGE_KEY = "pipglyph:card-draft:v1";
 // drafts survive the brand swap, then deleted. Safe to remove after 2026-09.
 const LEGACY_CARD_DRAFT_STORAGE_KEY = "spellwright:card-draft:v1";
 
+// The URL is read once per render via useSyncExternalStore; it never
+// changes underneath the form, so there is nothing to subscribe to.
+const subscribeToNothing = () => () => {};
+
 // Icons for the xl+ vertical step rail (one per StepKey; the "layout" panel's
 // dynamic labels — Adventure / Back face / Flip side — all read as Layers).
 const STEP_RAIL_ICONS: Record<string, React.ReactNode> = {
@@ -284,17 +305,30 @@ export function CardCreatorForm({
   const [serverError, setServerError] = useState<string | null>(null);
   // Active step index into the dynamic `steps` list (see below). Clamped on
   // read so it stays valid when the visible steps shrink (e.g. a DFC is removed).
-  const [current, setCurrent] = useState(() => {
-    // The create→edit redirect carries ?step=<key> so saving doesn't bounce
-    // the user back to the Frame step. Resolved against the full step order;
-    // visibleSteps clamps the index if the step isn't visible for this card.
-    if (typeof window === "undefined") return 0;
-    const want = new URLSearchParams(window.location.search).get("step");
+  // The create→edit redirect carries ?step=<key> so saving doesn't bounce
+  // the user back to the first step. Read through useSyncExternalStore so
+  // the server snapshot ("" → step 0) and the client's real URL can differ
+  // WITHOUT a hydration error (reading window.location in a useState
+  // initializer threw one on every ?step= URL). Resolved against this
+  // mode's step order (edit/remix have no Card step); visibleSteps clamps
+  // the index if the step isn't visible for this card.
+  const urlSearch = useSyncExternalStore(
+    subscribeToNothing,
+    () => window.location.search,
+    () => "",
+  );
+  const urlStepIndex = useMemo(() => {
+    const want = new URLSearchParams(urlSearch).get("step");
     if (!want) return 0;
     const resolved = (LEGACY_STEP_ALIASES[want] ?? want) as StepKey;
-    const i = STEP_ORDER.indexOf(resolved);
+    const order =
+      mode === "create" ? STEP_ORDER : STEP_ORDER.filter((k) => k !== "card");
+    const i = order.indexOf(resolved);
     return i >= 0 ? i : 0;
-  });
+  }, [urlSearch, mode]);
+  // null = "still on the URL's landing step"; any navigation overrides it.
+  const [currentOverride, setCurrent] = useState<number | null>(null);
+  const current = currentOverride ?? urlStepIndex;
   // Stable handle to the latest step-navigation fn, so the once-registered
   // custom-event listeners (start-with hero) always call current logic.
   const goToStepKeyRef = useRef<(key: StepKey) => void>(() => {});
@@ -381,7 +415,10 @@ export function CardCreatorForm({
   }, [userId]);
 
   const defaults = useMemo(() => {
-    const base = defaultValuesFor(card, gameSystems, templates);
+    const base =
+      mode === "remix" && card
+        ? remixValuesFrom(card, gameSystems, templates)
+        : defaultValuesFor(card, gameSystems, templates);
     // Seed the challenge tag for fresh creates (edits keep the card's tags).
     if (initialTag && !card) {
       base.tags_text = mergeTag(base.tags_text, initialTag);
@@ -392,7 +429,7 @@ export function CardCreatorForm({
       base.artist_credit = defaultArtistCredit;
     }
     return base;
-  }, [card, gameSystems, templates, initialTag, defaultArtistCredit]);
+  }, [mode, card, gameSystems, templates, initialTag, defaultArtistCredit]);
 
   // The full methods object is spread into <FormProvider> below so the step
   // components can reach the same form instance via useFormContext().
@@ -413,8 +450,15 @@ export function CardCreatorForm({
     getValues,
     control,
     reset,
-    formState: { errors, isDirty },
+    formState: { errors, isDirty, dirtyFields },
   } = methods;
+
+  // Revise = edit or remix of an existing card. The Card step is gone and
+  // the structural fields are read-only (LockedSummary); the submit path
+  // only ever sends the revisable subset (lib/creator/revise.ts).
+  const isRevise = mode !== "create";
+  const isEdit = mode === "edit";
+  const isRemix = mode === "remix";
 
   // Reset only when the SAVED card actually changes (navigating between
   // cards, or fresh server truth after our own save) — never on mere prop
@@ -440,7 +484,8 @@ export function CardCreatorForm({
   // A saved-but-still-private card is a draft too: while editing one we show the
   // same Save draft + Start over controls as create mode (rather than the
   // Delete + save-state chrome used for already-published cards).
-  const isDraft = isDraftMode || (mode === "edit" && card?.visibility === "private");
+  const isDraft =
+    isDraftMode || isRemix || (isEdit && card?.visibility === "private");
   const draftRestoredRef = useRef(false);
   useEffect(() => {
     // A deck-remix deep link is an explicit "start from THIS card" intent —
@@ -563,6 +608,7 @@ export function CardCreatorForm({
     cardType: watched.card_type,
     hasBackFace: watched.has_back_face,
     kind,
+    revise: isRevise,
   };
   const steps = visibleSteps(stepCtx);
   // Per-kind panel config — which text editor and art slots the steps render.
@@ -579,12 +625,24 @@ export function CardCreatorForm({
     !watched.title.trim() ? "a title" : null,
     !watched.art_url.trim() ? "artwork" : null,
   ].filter((part): part is string => part !== null);
+  // Edit / remix: at least one field must change (owner decision
+  // 2026-09-16). For a remix the visibility choice alone doesn't count — the
+  // card itself has to differ from the original.
+  const reviseUnchanged = isEdit
+    ? !isDirty
+    : isRemix
+      ? !hasMeaningfulChange(Object.keys(dirtyFields), "remix")
+      : false;
   const saveDisabledReason =
     saveMissing.length > 0
       ? `Add ${saveMissing.join(" and ")} to enable Save.`
       : deckRemix && remixSource && !isDirty
         ? "Change something to make it your own custom proxy — an exact copy can't be saved."
-        : null;
+        : reviseUnchanged
+          ? isRemix
+            ? "Change something — the name, art, text or numbers — to make this remix your own."
+            : "Change something to enable Save."
+          : null;
   const statVis = statVisibility(
     watched.card_type,
     parseSubtypes(watched.subtypes_text),
@@ -630,7 +688,8 @@ export function CardCreatorForm({
   useEffect(() => {
     if (lastLandTitleRef.current === watched.title) return;
     lastLandTitleRef.current = watched.title;
-    if (!isDirty || watched.card_type !== "land") return;
+    // The type line is locked while revising — renaming never rewrites it.
+    if (isRevise || !isDirty || watched.card_type !== "land") return;
     const identity = {
       title: watched.title,
       supertype: watched.supertype,
@@ -646,6 +705,7 @@ export function CardCreatorForm({
     watched.supertype,
     watched.subtypes_text,
     isDirty,
+    isRevise,
     setValue,
   ]);
 
@@ -767,17 +827,56 @@ export function CardCreatorForm({
     // Snapshot BEFORE the writes — the land auto-identity below must judge
     // the state the user is leaving, not the one we're creating.
     const prevCardType = getValues("card_type");
+    const prevTemplate = getValues("frame_style.template");
+    const prevKind = kindFromCard(prevCardType, prevTemplate);
+    const nextKind = kindFromCard(patch.card_type, template);
     const identitySnapshot = {
       title: getValues("title") ?? "",
       supertype: getValues("supertype") ?? "",
       subtypes_text: getValues("subtypes_text") ?? "",
     };
+    // Leaving a rows-driven kind: fold the structured rows into rules_text
+    // so the work survives as plain text (the rows only ever serialized at
+    // submit, and only for the matching kind — switching kind used to drop
+    // every chapter/ability on the floor).
+    if (prevKind === "planeswalker" && nextKind !== "planeswalker") {
+      const rows = getValues("loyalty_abilities")
+        .map((r) => ({
+          cost: r.cost.trim() ? r.cost.trim() : null,
+          text: r.text.trim(),
+        }))
+        .filter((r) => r.text.length > 0);
+      if (rows.length > 0) {
+        setValue("rules_text", serializeLoyalty(rows), { shouldDirty: true });
+      }
+    } else if (prevKind === "saga" && nextKind !== "saga") {
+      const chapters = getValues("saga_chapters")
+        .map((r) => ({
+          numerals: [...r.numerals].sort((a, b) => a - b),
+          text: r.text.trim(),
+        }))
+        .filter((r) => r.text.length > 0 && r.numerals.length > 0);
+      if (chapters.length > 0) {
+        setValue(
+          "rules_text",
+          serializeSaga(getValues("saga_intro").trim() || null, chapters),
+          { shouldDirty: true },
+        );
+      }
+    }
+    // Leaving a frame with an intrinsic second face (Adventure/split/flip):
+    // that face was forced on for the frame, so drop it with the frame —
+    // otherwise an invisible, unfixable back_face.title error followed the
+    // card around.
+    if (hasInlineBackFace(prevTemplate) && !hasInlineBackFace(template)) {
+      setValue("has_back_face", false, { shouldDirty: true });
+      setValue("back_face", EMPTY_BACK_FACE, { shouldDirty: true });
+    }
     setValue("card_type", patch.card_type, { shouldDirty: true });
     setValue("frame_style.template", template, { shouldDirty: true });
     if (patch.has_back_face) {
       setValue("has_back_face", true, { shouldDirty: true });
     }
-    const nextKind = kindFromCard(patch.card_type, template);
     // Land auto-identity: picking Land starts you on the basic of the current
     // frame color (colorless → Wastes) — that's what makes the big mana
     // symbol render immediately. Only fires while the identity is untouched
@@ -1446,16 +1545,25 @@ export function CardCreatorForm({
               }
             : null;
 
+    // Stats only ship for the type that prints them — a planeswalker turned
+    // creature used to keep its loyalty in the row (and a battle its
+    // defense). P/T already had this rule; loyalty/defense now match it.
+    const submitSubtypes = parseSubtypes(values.subtypes_text);
+    const submitCardType = (values.card_type || null) as CardType | null;
+    const printsPT = showsPowerToughness(submitCardType, submitSubtypes);
+
+    // No `slug`: a NEW card's slug is derived server-side from the title it
+    // is saved with (so a remix lives at ITS name, not the original's), and
+    // an edit never rewrites the slug (links stay stable).
     const payload = {
       title: values.title.trim(),
-      slug: values.slug.trim() ? slugify(values.slug.trim()) : undefined,
       game_system_id: values.game_system_id,
       template_id: values.template_id || undefined,
       cost: values.cost.trim() || undefined,
       color_identity: values.color_identity,
       supertype: values.supertype.trim() || undefined,
       card_type: values.card_type || undefined,
-      subtypes: parseSubtypes(values.subtypes_text),
+      subtypes: submitSubtypes,
       tags: parseTags(values.tags_text),
       rarity: values.rarity || undefined,
       rules_text: rulesTextOut || undefined,
@@ -1464,14 +1572,14 @@ export function CardCreatorForm({
       flavor_text: values.flavor_text.trim() || undefined,
       // The 1/1 default only belongs on P/T types — an instant or sorcery
       // never carries the creature stats it started the form with.
-      power: showsPowerToughness(values.card_type as CardType, parseSubtypes(values.subtypes_text))
-        ? values.power.trim() || undefined
+      power: printsPT ? values.power.trim() || undefined : undefined,
+      toughness: printsPT ? values.toughness.trim() || undefined : undefined,
+      loyalty: showsLoyalty(submitCardType)
+        ? values.loyalty.trim() || undefined
         : undefined,
-      toughness: showsPowerToughness(values.card_type as CardType, parseSubtypes(values.subtypes_text))
-        ? values.toughness.trim() || undefined
+      defense: showsDefense(submitCardType)
+        ? values.defense.trim() || undefined
         : undefined,
-      loyalty: values.loyalty.trim() || undefined,
-      defense: values.defense.trim() || undefined,
       artist_credit: values.artist_credit.trim() || undefined,
       art_url: values.art_url.trim() || undefined,
       art_position: values.art_position,
@@ -1496,6 +1604,8 @@ export function CardCreatorForm({
       // Create-flow convenience: a UUID drops the saved card into that deck
       // (custom-only mainboard entry). Ignored by updates.
       deck_id: values.deck_id || null,
+      // Remix: the new card links back to the original it started from.
+      parent_card_id: isRemix && card ? card.id : undefined,
     };
 
     startTransition(async () => {
@@ -1532,7 +1642,7 @@ export function CardCreatorForm({
         }
       };
 
-      if (mode === "create") {
+      if (mode === "create" || isRemix) {
         const result = await createCardAction(payload);
         if (!result.ok) {
           handleUpgradeOrError(result);
@@ -1543,10 +1653,12 @@ export function CardCreatorForm({
             ? `Published “${payload.title}”`
             : `Saved “${payload.title}”`,
         );
-        try {
-          window.localStorage.removeItem(CARD_DRAFT_STORAGE_KEY);
-        } catch {
-          // best-effort
+        if (mode === "create") {
+          try {
+            window.localStorage.removeItem(CARD_DRAFT_STORAGE_KEY);
+          } catch {
+            // best-effort
+          }
         }
 
         // This card was forged as a deck entry's proxy — link it back and
@@ -1611,7 +1723,8 @@ export function CardCreatorForm({
             });
             return;
           }
-          router.replace(`/card/${result.slug}`);
+          // No username yet → the id-based redirector resolves the page.
+          router.replace(`/go/card/${result.cardId}`);
           return;
         }
         // Draft saves stay in the editor, on the same step.
@@ -1627,7 +1740,12 @@ export function CardCreatorForm({
         setServerError("Cannot find this card to update.");
         return;
       }
-      const result = await updateCardAction(card.id, payload);
+      // An edit only ever carries the revisable fields — the locked
+      // structure never leaves the client (lib/creator/revise.ts).
+      const result = await updateCardAction(
+        card.id,
+        pickRevisablePayload(payload),
+      );
       if (!result.ok) {
         handleUpgradeOrError(result);
         return;
@@ -1652,7 +1770,7 @@ export function CardCreatorForm({
         router.push(
           ownerUsername
             ? `/card/${ownerUsername}/${result.slug}`
-            : `/card/${result.slug}`,
+            : `/go/card/${card.id}`,
         );
         return;
       }
@@ -1903,11 +2021,13 @@ export function CardCreatorForm({
                 standard frames use the Publish back-face picker. ----- */}
             {stepKey === "identity" ? (
               <>
-                <IdentityPanel />
+                {isRevise ? <LockedSummary mode={mode} /> : null}
+                <IdentityPanel revise={isRevise} />
                 {!hidesCost(watched.frame_style?.template) ? (
                   <PipsPanel
                     frameTemplate={watched.frame_style?.template}
                     pipOverrides={pipOverrides}
+                    frameLocked={isRevise}
                   />
                 ) : null}
                 <ArtPanel
@@ -1977,9 +2097,10 @@ export function CardCreatorForm({
                 profileOverrides={profileOverrides}
                 activeChallenge={activeChallenge}
                 mySets={mySets}
-                myDecks={myDecks}
+                myDecks={isRevise ? null : myDecks}
                 myCards={myCards}
                 onCreateBackFace={handleCreateBackFace}
+                revise={isRevise}
               />
             ) : null}
           </div>
@@ -2101,7 +2222,7 @@ export function CardCreatorForm({
               {/* Save draft — persists the card privately from any step. Shown
                   in create mode and while editing a still-private draft.
                   Grouped with the nav buttons so it shares their line. */}
-              {isDraft ? (
+              {isDraft && userId ? (
                 <Button
                   type="button"
                   variant="ghost"
@@ -2134,7 +2255,7 @@ export function CardCreatorForm({
                   · Delete. */}
               {/* Cancel is edit-only — create mode has Start over, and a
                   bail-out just means navigating away. */}
-              {mode === "edit" && card ? (
+              {isRevise && card ? (
                 <Button asChild variant="ghost" size="sm">
                   <Link href={`/go/card/${card.id}`}>Cancel</Link>
                 </Button>
@@ -2183,7 +2304,7 @@ export function CardCreatorForm({
                   <ArrowRight className="h-4 w-4" aria-hidden />
                 </Button>
               ) : null}
-              {mode === "edit" && card && !isDraft ? (
+              {isEdit && card && !isDraft ? (
                 <DeleteCardDialog
                   cardId={card.id}
                   cardTitle={card.title}
@@ -2214,9 +2335,15 @@ export function CardCreatorForm({
               </div>
             </div>
             <p className="text-xs leading-5 text-muted">
-              New cards are <strong className="text-foreground">public</strong> by
-              default — set Visibility on the Publish step to keep this private or
-              unlisted.
+              {isEdit ? (
+                <>Visibility lives on the Publish step, under Advanced.</>
+              ) : (
+                <>
+                  New cards are <strong className="text-foreground">public</strong> by
+                  default — set Visibility on the Publish step to keep this private or
+                  unlisted.
+                </>
+              )}
             </p>
           </div>
         </aside>

@@ -3,10 +3,8 @@ import { z } from "zod";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { isDesignAiConfigured } from "@/lib/ai/provider";
-import { isImageRemixConfigured } from "@/lib/ai/image-gen";
 import {
   DECK_CARDS_DAILY_LIMIT,
-  REMIX_DAILY_LIMIT,
   checkAiRateLimit,
   checkDailyActionLimit,
   checkRandomCardDailyLimit,
@@ -21,7 +19,6 @@ import {
 import {
   SET_GENERATION_ENABLED,
   createCardGenerationJob,
-  createCardRemixJob,
   createDeckGenerationJob,
   createDeckRemixJob,
   createSetGenerationJob,
@@ -101,16 +98,6 @@ const requestSchema = z.discriminatedUnion("kind", [
     rarity: z.enum(RARITY_VALUES).optional(),
     /** Pro: design the card for one of the caller's decks and add it there. */
     deck_id: z.string().uuid().optional(),
-  }),
-  // AI remix of one card — fork with identical mechanics, new AI identity +
-  // restyled art. Replaced the synchronous /api/ai/remix-card request
-  // (migration 0062), which had the same infra-cut/double-charge failure
-  // mode the single-card route did.
-  z.object({
-    kind: z.literal("card_remix"),
-    card_id: z.string().uuid(),
-    style: z.string().trim().min(1, "Pick a style.").max(200),
-    theme: z.string().trim().max(300).optional(),
   }),
 ]);
 
@@ -200,7 +187,7 @@ export async function POST(request: Request) {
 
   const limit = await batchCardLimit();
   let size: number;
-  if (parsed.data.kind === "card" || parsed.data.kind === "card_remix") {
+  if (parsed.data.kind === "card") {
     size = 1;
   } else if (parsed.data.kind === "deck_remix") {
     // Remix runs min(batch limit, remixable entries) — size the credit
@@ -246,33 +233,6 @@ export async function POST(request: Request) {
       );
     }
   }
-  // Card remixes need the image-to-image model on top of the design model.
-  if (parsed.data.kind === "card_remix") {
-    if (!isImageRemixConfigured()) {
-      return NextResponse.json(
-        { ok: false, error: "AI remix isn't configured on this deployment." },
-        { status: 503 },
-      );
-    }
-    if (dailyCapsActive) {
-      const daily = await checkDailyActionLimit(
-        user.id,
-        "remix_card",
-        REMIX_DAILY_LIMIT,
-        "AI remix",
-      );
-      if (!daily.ok) {
-        return NextResponse.json(
-          { ok: false, error: daily.message },
-          {
-            status: 429,
-            headers: { "Retry-After": String(daily.retryAfterSeconds) },
-          },
-        );
-      }
-    }
-  }
-
   // Deck/set batch flows share one per-day image ceiling (admins exempt).
   if (
     dailyCapsActive &&
@@ -351,21 +311,6 @@ export async function POST(request: Request) {
       frame: parsed.data.frame,
       rarity: parsed.data.rarity,
       deckId: parsed.data.deck_id,
-    });
-    if (!result.ok) {
-      return NextResponse.json({ ok: false, error: result.error }, { status: 502 });
-    }
-    return NextResponse.json(
-      { ok: true, job: result.job, cardLimit: limit, credits },
-      { status: 200 },
-    );
-  }
-
-  if (parsed.data.kind === "card_remix") {
-    const result = await createCardRemixJob({
-      cardId: parsed.data.card_id,
-      style: parsed.data.style,
-      theme: parsed.data.theme,
     });
     if (!result.ok) {
       return NextResponse.json({ ok: false, error: result.error }, { status: 502 });

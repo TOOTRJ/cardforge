@@ -92,6 +92,9 @@ type PublishPanelProps = {
   myCards: Card[];
   /** Save the current card + open a fresh creator to build/link a back face. */
   onCreateBackFace: () => void;
+  /** Edit / remix: set membership, deck and finish are locked structure
+   *  (owner decision 2026-09-16) and are not offered. */
+  revise?: boolean;
 };
 
 export function PublishPanel({
@@ -102,6 +105,7 @@ export function PublishPanel({
   myDecks = null,
   myCards,
   onCreateBackFace,
+  revise = false,
 }: PublishPanelProps) {
   const {
     register,
@@ -174,7 +178,7 @@ export function PublishPanel({
         </div>
       ) : null}
 
-      {isSetsEnabled() ? (
+      {isSetsEnabled() && !revise ? (
       <FieldGroup
         label="Add to set"
         helper="Group this card into one of your sets. If that set has an icon, the card uses it as its set symbol."
@@ -224,7 +228,7 @@ export function PublishPanel({
       </FieldGroup>
       ) : null}
 
-      {myDecks !== null ? <DeckPicker myDecks={myDecks} /> : null}
+      {myDecks !== null && !revise ? <DeckPicker myDecks={myDecks} /> : null}
 
       <FieldGroup
         label="Tags"
@@ -262,21 +266,54 @@ export function PublishPanel({
             />
           </FieldGroup>
 
-          <BackFacePicker
-            profileOverrides={profileOverrides}
-            myCards={myCards}
-            value={backCardId}
-            onChange={(id) =>
-              setValue("back_card_id", id, { shouldDirty: true })
-            }
-            onCreateNew={onCreateBackFace}
-          />
+          {/* Double-faced cards (a second full card as the back) are parked
+              behind a "coming soon" veil (owner decision 2026-09-16): the
+              picker stays mounted so an already-linked back still shows,
+              but nothing here is interactive. */}
+          <ComingSoon label="Double-faced cards">
+            <BackFacePicker
+              profileOverrides={profileOverrides}
+              myCards={myCards}
+              value={backCardId}
+              onChange={(id) =>
+                setValue("back_card_id", id, { shouldDirty: true })
+              }
+              onCreateNew={onCreateBackFace}
+            />
+          </ComingSoon>
 
-          <EffectsPanel />
+          {revise ? null : <EffectsPanel />}
           <WatermarkPicker userId={userId} />
         </div>
       </details>
     </>
+  );
+}
+
+/** Veils a control that isn't shippable yet: greyed, inert, with a pill
+ *  saying so. Keeps the real control mounted so the layout stays honest. */
+function ComingSoon({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="relative" aria-disabled="true" data-testid="coming-soon">
+      <div
+        className="pointer-events-none select-none opacity-40 blur-[1px]"
+        // Inert keeps the veiled controls out of the tab order too.
+        inert
+      >
+        {children}
+      </div>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span className="rounded-full border border-border bg-surface/95 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-foreground shadow-sm">
+          {label} · Coming soon
+        </span>
+      </div>
+    </div>
   );
 }
 

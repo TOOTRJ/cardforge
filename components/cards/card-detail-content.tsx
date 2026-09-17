@@ -25,7 +25,6 @@ import { CardComments } from "@/components/cards/card-comments";
 import { DownloadModal } from "@/components/cards/download-modal";
 import { LikeButton } from "@/components/cards/like-button";
 import { RemixButton } from "@/components/cards/remix-button";
-import { AiRemixButton } from "@/components/cards/ai-remix-button";
 import { ShareTargets } from "@/components/cards/share-targets";
 import { ReportCardDialog } from "@/components/cards/report-card-dialog";
 import { GalleryCardTile } from "@/components/cards/gallery-card-tile";
@@ -380,18 +379,7 @@ export async function CardDetailContent({
               initialCount={likesCount}
               requiresSignIn={!user}
             />
-            <RemixButton
-              cardId={card.id}
-              cardSlug={card.slug}
-              ownerUsername={username}
-              requiresSignIn={!user}
-            />
-            <AiRemixButton
-              cardId={card.id}
-              cardSlug={card.slug}
-              ownerUsername={username}
-              requiresSignIn={!user}
-            />
+            <RemixButton cardId={card.id} requiresSignIn={!user} />
             {isOwner ? (
               <Button asChild>
                 <Link href={`/card/${card.slug}/edit`}>

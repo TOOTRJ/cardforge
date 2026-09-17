@@ -29,6 +29,7 @@ import {
   sagaFromRulesText,
 } from "@/lib/cards/face-content";
 import { kindFromCard } from "@/lib/creator/card-kinds";
+import { remixTitleFor } from "@/lib/creator/revise";
 
 /** Hydrate the structured row editors from a persisted card: structured
  *  face_content when present, else parsed from rules_text — but ONLY for the
@@ -199,6 +200,30 @@ export function defaultValuesFor(
     // create-flow convenience, so edits always start empty.
     deck_id: "",
     watermark: watermarkFormValuesFrom(card),
+  };
+}
+
+/** Form values for a NEW card remixed from `parent`: the parent's content and
+ *  structure, retitled "… (remix)", with everything that belongs to the
+ *  parent's OWNER left behind — its set membership and set icon, its deck,
+ *  its linked back card, its slug. Nothing is inserted until the user saves
+ *  (owner decision 2026-09-16); the slug then follows the saved title. */
+export function remixValuesFrom(
+  parent: Card,
+  gameSystems: GameSystem[],
+  templates: CardTemplate[],
+): FormValues {
+  const base = defaultValuesFor(parent, gameSystems, templates);
+  return {
+    ...base,
+    title: remixTitleFor(parent.title),
+    slug: "",
+    visibility: "public",
+    primary_set_id: "",
+    set_icon_url: "",
+    set_icon_code: "",
+    back_card_id: "",
+    deck_id: "",
   };
 }
 

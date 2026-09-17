@@ -61,6 +61,16 @@ describe("visibleSteps", () => {
     expect(keys(ctx({ template: "regular" }))).toEqual(FIVE);
   });
 
+  it("drops the Card step entirely when revising (edit / remix)", () => {
+    // Owner decision 2026-09-16: type/frame/colour are locked after create.
+    expect(keys({ ...base, revise: true })).toEqual(
+      FIVE.filter((k) => k !== "card"),
+    );
+    expect(keys({ ...ctx({ template: "adventure" }), revise: true })).toEqual(
+      FIVE.filter((k) => k !== "card"),
+    );
+  });
+
   it("maps every legacy step key to a live step", () => {
     for (const [legacy, target] of Object.entries(LEGACY_STEP_ALIASES)) {
       expect(legacy).not.toBe(target);

@@ -11,7 +11,6 @@ import {
 } from "@/lib/supabase/server";
 import {
   createCardAction,
-  remixCardAction,
   updateCardAction,
   type CreateCardResult,
 } from "@/lib/cards/actions";
@@ -36,7 +35,6 @@ import {
 import { persistGeneratedArt } from "@/lib/ai/random-art";
 import { normalizeDeckCover } from "@/lib/decks/cover";
 import {
-  creditCostFor,
   logAiCall,
   refundCredits,
   spendCredits,
@@ -147,12 +145,9 @@ export type CardJobPlan = {
   deck_id?: string | null;
 };
 
-/** Single-card AI remix (migration 0062): fork one card with identical
- *  mechanics but a new AI name/flavor and art restyled into `style`. The plan
- *  is just the source pointer + direction — identity, art, and the fork all
- *  run in the job's one step, replacing the synchronous /api/ai/remix-card
- *  request (same 60–90s infra-cut/double-charge failure mode as the legacy
- *  random-card route; see CardJobPlan). */
+/** RETIRED 2026-09-16 (owner decision): the image-to-image "Remix with AI"
+ *  job. The kind stays in the union so historical rows still list; no new
+ *  jobs of this kind are created and a leftover pending step fails cleanly. */
 export type CardRemixJobPlan = {
   card_id: string;
   style: string;
@@ -484,7 +479,12 @@ async function executeJobStep(
     case "card":
       return runSingleCardStep(userId, job.id, step, job.plan as CardJobPlan);
     case "card_remix":
-      return runCardRemixStep(userId, job.id, step, job.plan as CardRemixJobPlan);
+      return {
+        ...step,
+        status: "failed",
+        error:
+          "AI remix has been retired — open the card and use Remix, then Generate with AI.",
+      };
     default:
       return { ...step, status: "failed", error: "Unknown job kind." };
   }
@@ -859,208 +859,12 @@ async function runSingleCardStep(
   });
 }
 
-// ---------------------------------------------------------------------------
-// Single-card AI remix (the "Remix with AI" button on card detail pages)
-// ---------------------------------------------------------------------------
-
-export type CreateCardRemixJobInput = {
-  cardId: string;
-  style: string;
-  theme?: string;
-};
-
-/** PLAN a card-remix job: verify the source card is readable (RLS makes the
- *  read an authorization check too) and persist the job. All the real work —
- *  identity text, art, the fork — happens in the job's one step so no HTTP
- *  request runs long. */
-export async function createCardRemixJob(
-  input: CreateCardRemixJobInput,
-): Promise<CreateCardJobResult> {
-  const user = await getCurrentUser();
-  if (!user) return { ok: false, error: "Sign in to remix cards with AI." };
-
-  const parent = await getCardById(input.cardId);
-  if (!parent) return { ok: false, error: "Card not found." };
-
-  // Log at plan time so the remix daily cap counts attempts, matching the
-  // legacy route (logged on entry — provider failures still burn quota).
-  await logAiCall(user.id, "remix_card");
-
-  const plan: CardRemixJobPlan = {
-    card_id: parent.id,
-    style: input.style.trim(),
-    theme: input.theme?.trim() || null,
-  };
-  const steps: JobStep[] = [
-    { key: "remix:0", label: parent.title, status: "pending" },
-  ];
-
-  const supabase = await createClient();
-  const { data: jobRow, error: insertError } = await supabase
-    .from("ai_generation_jobs")
-    .insert({
-      owner_id: user.id,
-      kind: "card_remix",
-      status: "generating",
-      request: {
-        card_id: parent.id,
-        style: plan.style,
-        theme: plan.theme,
-      },
-      plan: plan as unknown as Json,
-      steps: steps as unknown as Json,
-    })
-    .select("*")
-    .single();
-  if (insertError || !jobRow) {
-    return { ok: false, error: "Couldn't persist the remix job." };
-  }
-  return { ok: true, job: jobRow as unknown as GenerationJobRow };
-}
-
-// Cap what we'll pull back in for restyling — card art is ~1-4MB; anything
-// past 12MB is not something we should buffer per-request.
-const MAX_SOURCE_ART_BYTES = 12 * 1024 * 1024;
-
 // Remix steps chain identity (30s, lib/ai/remix.ts) + source-art fetch +
 // restyle + a t2i fallback inside the step route's 180s budget. These
 // per-leg caps keep the worst-case sum (~160s) under the platform kill —
 // a single generous cap does not compose across two image calls.
 const SOURCE_ART_FETCH_TIMEOUT_MS = 10_000;
 const REMIX_IMAGE_TIMEOUT_MS = 60_000;
-
-/** The remix job's single step: generate the new identity, restyle the
- *  parent's art (fresh generation when there's none), fork via
- *  remixCardAction. A failed step carries no card_id, so its retry reruns
- *  the whole pipeline; the credit wrapper refunds every failed attempt. */
-async function runCardRemixStep(
-  userId: string,
-  jobId: string,
-  step: JobStep,
-  plan: CardRemixJobPlan,
-): Promise<JobStep> {
-  if (step.card_id) {
-    return { ...step, status: "done", error: undefined };
-  }
-  return withCreditedStep(
-    userId,
-    jobId,
-    creditCostFor("remix_card"),
-    "remix_card",
-    step,
-    () => executeCardRemixStep(userId, step, plan),
-  );
-}
-
-async function executeCardRemixStep(
-  userId: string,
-  step: JobStep,
-  plan: CardRemixJobPlan,
-): Promise<JobStep> {
-  // Steps run under the caller's cookie context, so RLS re-authorizes the
-  // parent read on every execution.
-  const parent = await getCardById(plan.card_id);
-  if (!parent) {
-    return { ...step, status: "failed", error: "Source card is gone." };
-  }
-
-  // ---- New identity (mechanics untouched) ----
-  let identity;
-  try {
-    identity = await generateRemixIdentity({
-      card: parent,
-      style: plan.style,
-      theme: plan.theme ?? undefined,
-    });
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : "Remix failed.";
-    return { ...step, status: "failed", error: `AI remix failed: ${detail}` };
-  }
-
-  // ---- Art (REQUIRED — the remix IS the restyle; failures fail the step
-  //      for a refunded retry rather than silently keeping the old art) ----
-  await logAiCall(userId, "remix_art");
-  let artUrl: string | undefined;
-  let artError: string | null = null;
-  if (parent.art_url && isAllowedServerImageFetchUrl(parent.art_url)) {
-    try {
-      const sourceResponse = await fetch(parent.art_url, {
-        signal: AbortSignal.timeout(SOURCE_ART_FETCH_TIMEOUT_MS),
-      });
-      const contentType =
-        sourceResponse.headers.get("content-type") ?? "image/png";
-      const contentLength = Number(
-        sourceResponse.headers.get("content-length") ?? 0,
-      );
-      if (
-        sourceResponse.ok &&
-        contentType.startsWith("image/") &&
-        contentLength <= MAX_SOURCE_ART_BYTES
-      ) {
-        const restyled = await restyleImage({
-          source: new Uint8Array(await sourceResponse.arrayBuffer()),
-          sourceContentType: contentType,
-          prompt: `Re-render this artwork in ${plan.style} style. ${identity.art_instruction}`,
-          timeoutMs: REMIX_IMAGE_TIMEOUT_MS,
-        });
-        if (restyled.ok) {
-          const persisted = await persistGeneratedArt(
-            restyled.bytes,
-            restyled.contentType,
-          );
-          if (persisted.ok) artUrl = persisted.publicUrl;
-          else artError = persisted.error;
-        } else {
-          artError = restyled.error;
-        }
-      }
-    } catch {
-      // fall through to fresh generation below
-    }
-  }
-  if (!artUrl) {
-    const generated = await generatePlainImage(
-      `${identity.art_instruction} Style: ${plan.style}.`,
-      "card",
-      { timeoutMs: REMIX_IMAGE_TIMEOUT_MS },
-    );
-    if (generated.ok) {
-      const persisted = await persistGeneratedArt(
-        generated.bytes,
-        generated.contentType,
-      );
-      if (persisted.ok) artUrl = persisted.publicUrl;
-      else artError = persisted.error;
-    } else {
-      artError = generated.error;
-    }
-  }
-  if (!artUrl) {
-    return {
-      ...step,
-      status: "failed",
-      error: artError ?? "Art generation failed — retry the remix.",
-    };
-  }
-
-  // ---- Fork (identical mechanics; new identity; private) ----
-  const result = await remixCardAction({
-    parentCardId: parent.id,
-    title: identity.title,
-    flavorText: identity.flavor_text,
-    artUrl,
-  });
-  if (!result.ok) {
-    return { ...step, status: "failed", error: createFailureMessage(result) };
-  }
-  return {
-    ...step,
-    status: "done",
-    card_id: result.cardId,
-    label: identity.title,
-    error: undefined,
-  };
-}
 
 // ---------------------------------------------------------------------------
 // Deck generation
