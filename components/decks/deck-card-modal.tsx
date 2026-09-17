@@ -146,7 +146,11 @@ export function DeckCardModal({
         {/* Body padding matches the header's px-5 (the grid used to sit
             flush against the dialog edge). The image column is card-page
             sized; the whole image is a link to the card's page. */}
-        <div className="grid min-h-0 gap-6 overflow-y-auto px-5 py-5 md:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]">
+        {/* The padding lives on an inner block: padding on the scroll
+            container itself is dropped at the bottom once the content
+            overflows, which is why the last row sat flush on the edge. */}
+        <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="grid gap-6 px-5 py-5 md:grid-cols-[auto_minmax(0,1fr)]">
           {/* Image + flipper */}
           <div className="flex flex-col gap-2">
             <CardImageLink
@@ -346,6 +350,7 @@ export function DeckCardModal({
             ) : null}
           </div>
         </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
@@ -368,8 +373,10 @@ function CardImageLink({
   onNavigate?: () => void;
   children: React.ReactNode;
 }) {
+  // On wide screens the card is sized to the viewport height (5:7 kept), so
+  // the whole dialog — padding included — fits without scrolling.
   const frame =
-    "relative block aspect-[5/7] w-full overflow-hidden rounded-xl border border-border/60 bg-elevated";
+    "relative block aspect-[5/7] w-full overflow-hidden rounded-xl border border-border/60 bg-elevated md:h-[min(60dvh,36rem)] md:w-auto";
   if (!href) return <div className={frame}>{children}</div>;
   const hint = (
     <span className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center bg-linear-to-t from-background/85 to-transparent px-3 pb-3 pt-8 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
