@@ -69,7 +69,8 @@ export default function MtgCardMakerPage() {
     })),
   };
   return (
-    <main id="main" className="mx-auto w-full max-w-4xl px-4 py-16 sm:px-6 lg:px-8">
+    <main id="main" className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+      <div className="max-w-4xl">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: serializeJsonLd(faqJsonLd) }}
@@ -162,6 +163,7 @@ export default function MtgCardMakerPage() {
           </p>
         </div>
       </section>
+    </div>
     </main>
   );
 }

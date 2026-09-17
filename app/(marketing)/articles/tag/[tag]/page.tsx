@@ -78,7 +78,7 @@ export default async function ArticleTagPage({
     `Every PipGlyph guide tagged “${found.label}” — custom MTG card design, in one place.`;
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-4 py-16 sm:px-6 lg:px-8">
+    <div className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Home", path: "/" },
@@ -117,7 +117,7 @@ export default async function ArticleTagPage({
         </div>
       ) : null}
 
-      <div className="mt-10 flex flex-col gap-5">
+      <div className="mt-10 grid gap-5 lg:grid-cols-2">
         {found.articles.map((article) => (
           <ArticleCard key={article.slug} article={article} />
         ))}

@@ -130,7 +130,7 @@ export default async function BoosterPage({
 
   if (allCards.length === 0) {
     return (
-      <div className="mx-auto w-full max-w-4xl px-4 py-16 text-center sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-7xl px-4 py-16 text-center sm:px-6 lg:px-8">
         <p className="text-muted">
           This set has no cards yet — add some before opening a booster.
         </p>

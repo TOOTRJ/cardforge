@@ -29,7 +29,7 @@ export default function ArticlesIndexPage() {
   const articles = listArticles();
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-4 py-16 sm:px-6 lg:px-8">
+    <div className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Home", path: "/" },
@@ -54,7 +54,7 @@ export default function ArticlesIndexPage() {
         description="Long-form guides on the craft of custom card design — templating rules text, mana symbols, balance, frame history, and community challenges."
       />
 
-      <div className="mt-10 flex flex-col gap-5">
+      <div className="mt-10 grid gap-5 lg:grid-cols-2">
         {articles.map((article) => (
           <ArticleCard key={article.slug} article={article} />
         ))}
