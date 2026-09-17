@@ -21,7 +21,13 @@ import {
   type CardKind,
 } from "@/lib/creator/card-kinds";
 
-export type StepKey = "card" | "identity" | "text" | "seticon" | "publish";
+export type StepKey =
+  | "card"
+  | "identity"
+  | "text"
+  | "seticon"
+  | "subscriber"
+  | "publish";
 
 /** Old step keys (pre-compaction) → their new home, so bookmarked/redirect
  *  `?step=` URLs keep resolving. */
@@ -187,6 +193,17 @@ const STEP_DEFS: StepDef[] = [
     label: "Set icon",
     description: "The symbol on the type line",
     fields: ["set_icon_url", "set_icon_code"],
+    isVisible: always,
+  },
+  {
+    // Paid perks that touch THIS card (owner decision 2026-09-17): the
+    // footer mark on downloads (removed by default), the watermark choice on
+    // creatures/spells, and the custom-frames veil. Free accounts get the
+    // same step as an upsell, so the step is always present.
+    key: "subscriber",
+    label: "Subscriber",
+    description: "Footer mark, watermark & more",
+    fields: ["footer_text"],
     isVisible: always,
   },
   {

@@ -21,6 +21,7 @@ import { addCustomCardEntryToDeck } from "@/lib/decks/membership";
 import { cardRenderPath } from "@/lib/cards/storage-paths";
 import { renderThumbPath } from "@/lib/cards/render-thumb";
 import { normalizeManaCost } from "@/lib/cards/mana-order";
+import { PIPGLYPH_ROSE_WATERMARK, usesDefaultWatermark } from "@/lib/cards/watermark";
 import {
   VISIBILITY_VALUES,
   frameStyleRequiresPremium,
@@ -420,7 +421,16 @@ export async function createCardAction(
     // Structured loyalty/saga rows (migration 0050); null = derive from
     // rules_text. Design watermark; null = none.
     face_content: data.face_content ?? null,
-    watermark: data.watermark ?? null,
+    // Free accounts: creatures and spells always carry the PipGlyph Rose
+    // (owner decision 2026-09-17) — enforced here so AI, proxy and remix
+    // paths agree with the form. Subscribers keep whatever they chose.
+    watermark:
+      usesDefaultWatermark(data.card_type) && !entitlements.removeWatermark
+        ? PIPGLYPH_ROSE_WATERMARK
+        : data.watermark ?? null,
+    // Per-card footer mark (subscribers only; migration 0090). null = fall
+    // back to the profile default at download time.
+    footer_text: entitlements.removeWatermark ? data.footer_text ?? null : null,
     primary_set_id: setIcon.primary_set_id,
     set_icon_url: hasDirectIcon ? (data.set_icon_url ?? null) : setIcon.set_icon_url,
     set_icon_code: hasDirectIcon
@@ -620,6 +630,11 @@ export async function updateCardAction(
   if (data.face_content !== undefined)
     update.face_content = data.face_content ?? null;
   if (data.watermark !== undefined) update.watermark = data.watermark ?? null;
+  // Footer mark: subscribers only — a free account's edit never touches it.
+  if (data.footer_text !== undefined) {
+    const entitlements = await getEntitlements();
+    if (entitlements.removeWatermark) update.footer_text = data.footer_text ?? null;
+  }
   // Primary set: re-resolve so the card's denormalized symbol stays in sync.
   const resolvedSet =
     data.primary_set_id !== undefined

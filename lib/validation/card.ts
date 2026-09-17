@@ -428,6 +428,10 @@ const baseCardSchema = z.object({
   face_content: faceContentSchema.nullable().optional(),
   // Design watermark. Same null/undefined semantics.
   watermark: watermarkSchema.nullable().optional(),
+  /** Subscriber footer mark for THIS card (migration 0090): "" = none,
+   *  null/omitted = fall back to the profile default. Ignored for free
+   *  accounts by the actions. */
+  footer_text: z.string().trim().max(40, "Keep it under 40 characters.").nullable().optional(),
 });
 
 export const createCardSchema = baseCardSchema;

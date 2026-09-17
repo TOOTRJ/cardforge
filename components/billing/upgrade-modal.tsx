@@ -22,6 +22,7 @@ export type UpgradeReason =
   | "pdf_export"
   | "batch_export"
   | "deck_aware_generation"
+  | "subscriber_perks"
   | "deck_export"
   | "deck_guide"
   | "generic";
@@ -64,6 +65,11 @@ const REASON_COPY: Record<UpgradeReason, { title: string; description: string }>
       title: "Design cards for your deck",
       description:
         "Pro can point the AI at one of your decks: it studies the deck's colors, curve and cards, then designs the card it's missing (and adds it to the deck) or themes a batch of ideas to it.",
+    },
+    subscriber_perks: {
+      title: "Make the card yours, all the way down",
+      description:
+        "Plus and Pro downloads print without the pipglyph.com mark — or with your own footer mark — and let you choose the watermark on creatures and spells, or none at all. Custom frames are coming soon.",
     },
     deck_export: {
       title: "Download the whole deck",

@@ -100,6 +100,8 @@ export type FormValues = {
   deck_id: string;
   /** Design watermark behind the rules text. kind "" = none (default). */
   watermark: WatermarkFormValues;
+  /** Subscriber footer mark for this card (Subscriber step). "" = none. */
+  footer_text: string;
 };
 
 export type WatermarkFormValues = {

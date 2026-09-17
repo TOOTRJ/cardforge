@@ -32,7 +32,7 @@ const base = ctx();
 const keys = (c: StepContext) => visibleSteps(c).map((s) => s.key);
 
 describe("visibleSteps", () => {
-  const FIVE: string[] = ["card", "identity", "text", "seticon", "publish"];
+  const FIVE: string[] = ["card", "identity", "text", "seticon", "subscriber", "publish"];
 
   it("is the compact five-step flow for a plain creature", () => {
     expect(keys(base)).toEqual(FIVE);
@@ -87,6 +87,7 @@ describe("stepLabel", () => {
     expect(byKey("identity")).toBe("Identity");
     expect(byKey("text")).toBe("Text & stats");
     expect(byKey("seticon")).toBe("Set icon");
+    expect(byKey("subscriber")).toBe("Subscriber");
     expect(byKey("publish")).toBe("Publish");
   });
 });

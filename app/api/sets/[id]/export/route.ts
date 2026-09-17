@@ -112,7 +112,11 @@ export async function GET(
         ),
         "hd", {
         brandMark: !entitlements.removeWatermark,
-        watermarkText: stamp.footerText,
+        // Each card's own footer mark (migration 0090) over the set owner's
+        // profile default; "" = none.
+        watermarkText: stamp.brandMark
+          ? null
+          : ((card as { footer_text?: string | null }).footer_text ?? stamp.footerText) || null,
       });
       pngs.push(new Uint8Array(await img.arrayBuffer()));
     } catch {

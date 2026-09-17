@@ -56,6 +56,7 @@ function baseValues(overrides: Partial<FormValues> = {}): FormValues {
     set_icon_code: "",
     deck_id: "",
     watermark: EMPTY_WATERMARK,
+    footer_text: "",
     ...overrides,
   };
 }
