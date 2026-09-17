@@ -20,12 +20,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { FieldGroup, inputClass } from "@/components/creator/field-group";
-import type { CardFieldPatch } from "@/components/creator/ai-assistant-panel";
 import type { DeckOption } from "@/components/creator/panels/publish-panel";
 import {
   IDEA_FIELD_GROUPS,
   IDEA_FIELD_LABELS,
   composeIdeaPatch,
+  type CardFieldPatch,
   ideaFieldSummary,
   ideaHasField,
   wholeIdeaSelection,

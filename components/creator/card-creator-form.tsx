@@ -29,8 +29,9 @@ import {
 import { toast } from "sonner";
 import { sendGAEvent } from "@next/third-parties/google";
 import { useUpgradeModal } from "@/components/billing/upgrade-modal-provider";
-import { useGenerationJob } from "@/components/ai/use-generation-job";
 import { useCreditConfirm } from "@/components/billing/credit-confirm-provider";
+import { publishCredits } from "@/components/billing/credits-bus";
+import { isBillingEnabled } from "@/lib/billing/flags";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SurfaceCard } from "@/components/ui/surface-card";
@@ -47,10 +48,16 @@ import {
   useUnsavedChangesGuard,
 } from "@/components/creator/unsaved-changes-guard";
 import {
-  AiGenerateDialog,
-  type AiGenerateOptions,
-} from "@/components/creator/ai-generate-dialog";
-import type { CardFieldPatch } from "@/components/creator/ai-assistant-panel";
+  AiFillDialog,
+  type AiFillOptions,
+} from "@/components/creator/ai-fill-dialog";
+import {
+  FILL_PRESETS,
+  type CardFillField,
+  type CardFillLocked,
+  type CardFillResult,
+} from "@/lib/ai/card-fill-shared";
+import type { CardFieldPatch } from "@/lib/ai/card-ideas-select";
 import { CardIdeasDialog } from "@/components/creator/card-ideas-dialog";
 import {
   ScryfallImportDialog,
@@ -71,7 +78,6 @@ import { TextPanel } from "@/components/creator/panels/text-panel";
 import type { PipTextEditorHandle } from "@/components/creator/pip-text-editor";
 import { LandIconPanel } from "@/components/creator/panels/land-icon-panel";
 import { SetIconPanel } from "@/components/creator/panels/set-icon-panel";
-import { ForgeAIPanel } from "@/components/creator/panels/forge-ai-panel";
 import { AbilitiesPanel } from "@/components/creator/panels/abilities-panel";
 import { LayoutPanel } from "@/components/creator/panels/layout-panel";
 import {
@@ -79,7 +85,6 @@ import {
   type CardSetOption,
   type DeckOption,
 } from "@/components/creator/panels/publish-panel";
-import type { CardContext } from "@/lib/ai/schemas";
 import {
   createCardAction,
   updateCardAction,
@@ -88,8 +93,6 @@ import { linkDeckCardAction } from "@/lib/decks/card-actions";
 import type { DeckRemixContext } from "@/types/deck";
 import type { ScryfallImportPatch } from "@/lib/scryfall/import-mapper";
 import {
-  CARD_TYPE_VALUES,
-  RARITY_VALUES,
   type Card,
   type CardTemplate,
   type CardType,
@@ -302,7 +305,6 @@ export function CardCreatorForm({
 }: CardCreatorFormProps) {
   const router = useRouter();
   const upgrade = useUpgradeModal();
-  const generationJob = useGenerationJob();
   const confirmSpend = useCreditConfirm();
   const [isSubmitting, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
@@ -339,8 +341,29 @@ export function CardCreatorForm({
   // Stable handle to the latest step-navigation fn, so the once-registered
   // custom-event listeners (start-with hero) always call current logic.
   const goToStepKeyRef = useRef<(key: StepKey) => void>(() => {});
-  // "Generate with AI" options dialog (the hero tile opens it via cardforge:generate-random).
-  const [aiGenerateOpen, setAiGenerateOpen] = useState(false);
+  // Per-field "Generate with AI" dialog. `fillDefaults` is the tick-set the
+  // opening entry point asks for (hero = everything, the Identity button =
+  // art + title, the Text step = its own fields); `fillPhase` blocks the
+  // form while a run is in flight — the user waits for the result.
+  const [aiFillOpen, setAiFillOpen] = useState(false);
+  const [fillDefaults, setFillDefaults] = useState<CardFillField[]>(
+    FILL_PRESETS.all,
+  );
+  const [fillPhase, setFillPhase] = useState<null | "designing" | "painting">(
+    null,
+  );
+  const openFill = (fields: CardFillField[]) => {
+    if (!userId) {
+      toast.error("Sign in to generate with AI.");
+      return;
+    }
+    setFillDefaults(fields);
+    setAiFillOpen(true);
+  };
+  const openFillRef = useRef(openFill);
+  useEffect(() => {
+    openFillRef.current = openFill;
+  });
   // Tracks the source card when the user seeds the form from Scryfall.
   // Surfaces as a chip near the save bar so the user remembers they need
   // to make the card their own before publishing.
@@ -367,10 +390,6 @@ export function CardCreatorForm({
      *  pushes (edit mode) — mirrors the pre-prompt redirect behavior. */
     replace: boolean;
   } | null>(null);
-  // Random-card generation state. Disabled until the user is signed in;
-  // disables itself while a request is in flight so the user can't double-
-  // submit and burn quota.
-  const [generatingRandom, setGeneratingRandom] = useState(false);
   const [ideasOpen, setIdeasOpen] = useState(false);
   // Which face the live preview shows. Auto-flips to the back when the user
   // reaches the Back-face step (so they see what they're editing); they can
@@ -382,9 +401,7 @@ export function CardCreatorForm({
   useEffect(() => {
     if (typeof window === "undefined") return;
     const openScryfall = () => setScryfallOpen(true);
-    const generateRandom = () => {
-      setAiGenerateOpen(true);
-    };
+    const generateRandom = () => openFillRef.current(FILL_PRESETS.all);
     const openIdeas = () => {
       if (!userId) {
         toast.error("Sign in to use the idea generator.");
@@ -392,29 +409,17 @@ export function CardCreatorForm({
       }
       setIdeasOpen(true);
     };
-    const openAiConcept = () => {
-      // The AI assistant panel lives on the Text panel. Jump there, then defer
-      // the scroll one tick so the panel content mounts before we scroll to it.
-      goToStepKeyRef.current("text");
-      requestAnimationFrame(() => {
-        document
-          .getElementById("ai-assistant-anchor")
-          ?.scrollIntoView({ behavior: "smooth", block: "start" });
-      });
-    };
     const scrollToForm = () => {
       document
         .getElementById(FORM_SCROLL_TARGET_ID)
         ?.scrollIntoView({ behavior: "smooth", block: "start" });
     };
     window.addEventListener(CARDFORGE_EVENTS.openScryfall, openScryfall);
-    window.addEventListener(CARDFORGE_EVENTS.openAiConcept, openAiConcept);
     window.addEventListener(CARDFORGE_EVENTS.generateRandom, generateRandom);
     window.addEventListener(CARDFORGE_EVENTS.openIdeas, openIdeas);
     window.addEventListener(CARDFORGE_EVENTS.scrollToForm, scrollToForm);
     return () => {
       window.removeEventListener(CARDFORGE_EVENTS.openScryfall, openScryfall);
-      window.removeEventListener(CARDFORGE_EVENTS.openAiConcept, openAiConcept);
       window.removeEventListener(CARDFORGE_EVENTS.generateRandom, generateRandom);
       window.removeEventListener(CARDFORGE_EVENTS.openIdeas, openIdeas);
       window.removeEventListener(CARDFORGE_EVENTS.scrollToForm, scrollToForm);
@@ -888,34 +893,6 @@ export function CardCreatorForm({
     ref.current?.insertToken(token);
   };
 
-  // Slice of the live form state the AI panel sends as context. Stripping
-  // empty strings keeps the prompt tight.
-  const cardContext: CardContext = {
-    title: watched.title.trim() || undefined,
-    cost: watched.cost.trim() || undefined,
-    card_type:
-      watched.card_type && (CARD_TYPE_VALUES as readonly string[]).includes(watched.card_type)
-        ? (watched.card_type as CardType)
-        : undefined,
-    supertype: watched.supertype.trim() || undefined,
-    subtypes:
-      parseSubtypes(watched.subtypes_text).length > 0
-        ? parseSubtypes(watched.subtypes_text)
-        : undefined,
-    rarity:
-      watched.rarity && (RARITY_VALUES as readonly string[]).includes(watched.rarity)
-        ? (watched.rarity as Rarity)
-        : undefined,
-    color_identity:
-      watched.color_identity.length > 0 ? watched.color_identity : undefined,
-    rules_text: watched.rules_text.trim() || undefined,
-    flavor_text: watched.flavor_text.trim() || undefined,
-    power: watched.power.trim() || undefined,
-    toughness: watched.toughness.trim() || undefined,
-    loyalty: watched.loyalty.trim() || undefined,
-    defense: watched.defense.trim() || undefined,
-  };
-
   // Apply an AI patch through setValue so RHF marks every touched field
   // dirty. Strings are passed through as-is; the color_identity readonly
   // tuple from the schema is widened to a mutable array.
@@ -1208,75 +1185,211 @@ export function CardCreatorForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, deckRemix]);
 
-  // Kick off a single-card generation job (kind "card", stepped through
-  // useGenerationJob → POST /api/ai/jobs + /step) and pour the result into the
-  // form. Art is optional — the FLUX image step can fail or be refused by the
-  // provider; we surface a soft toast in that case and leave the existing
-  // art_url alone so the user can upload their own.
-  const handleRandomCard = async (
-    options: AiGenerateOptions = {},
-  ): Promise<boolean> => {
-    if (!userId) {
-      toast.error("Sign in to use the AI card generator.");
-      return false;
+  // ---- Per-field AI fill ----
+  // The dialog's tick-set becomes a "card_fill" job (plan = fast text
+  // design around the pinned fields; one step = the art, when wanted). The
+  // form drives the two requests itself and waits — the result belongs to
+  // THIS form, so there is no background widget and no dashboard hop. One
+  // credit per run, charged by the step and refunded if it fails.
+  const statsLabel = statVis.loyalty
+    ? "Loyalty"
+    : statVis.defense
+      ? "Defense"
+      : "Power / toughness";
+  // An instant has no stat line — the dialog doesn't offer one and the Text
+  // step's button doesn't promise one.
+  const hasStats = statVis.pt || statVis.loyalty || statVis.defense;
+  const lockedFieldsFor = (
+    values: FormValues,
+    want: readonly CardFillField[],
+  ): CardFillLocked => {
+    const has = (f: CardFillField) => want.includes(f);
+    const str = (v: string) => (v.trim() ? v.trim() : undefined);
+    const kindNow = kindFromCard(values.card_type, values.frame_style?.template);
+    // Walkers/sagas keep their text in rows; pin the serialized form so the
+    // designer reads the same thing the card prints.
+    let rulesNow = values.rules_text;
+    if (kindNow === "planeswalker") {
+      const rows = values.loyalty_abilities
+        .map((r) => ({ cost: r.cost.trim() || null, text: r.text.trim() }))
+        .filter((r) => r.text);
+      if (rows.length) rulesNow = serializeLoyalty(rows);
+    } else if (kindNow === "saga") {
+      const chapters = values.saga_chapters
+        .map((r) => ({ numerals: [...r.numerals].sort((a, b) => a - b), text: r.text.trim() }))
+        .filter((r) => r.text && r.numerals.length);
+      if (chapters.length) {
+        rulesNow = serializeSaga(values.saga_intro.trim() || null, chapters);
+      }
     }
+    return {
+      title: has("title") ? undefined : str(values.title),
+      cost: has("cost") ? undefined : str(values.cost),
+      card_type: has("card_type") ? undefined : values.card_type || undefined,
+      supertype: has("card_type") ? undefined : str(values.supertype),
+      subtypes: has("card_type") ? undefined : parseSubtypes(values.subtypes_text),
+      rarity: has("rarity") ? undefined : values.rarity || undefined,
+      color_identity:
+        has("color_identity") || values.color_identity.length === 0
+          ? undefined
+          : values.color_identity,
+      rules_text: has("rules_text") ? undefined : str(rulesNow),
+      flavor_text: has("flavor_text") ? undefined : str(values.flavor_text),
+      power: has("stats") || !statVis.pt ? undefined : str(values.power),
+      toughness: has("stats") || !statVis.pt ? undefined : str(values.toughness),
+      loyalty: has("stats") || !statVis.loyalty ? undefined : str(values.loyalty),
+      defense: has("stats") || !statVis.defense ? undefined : str(values.defense),
+      tags: has("tags") ? undefined : parseTags(values.tags_text),
+    };
+  };
+
+  /** Pour a fill result into the form — only the keys present are touched. */
+  const applyFill = (fill: CardFillResult) => {
+    if (fill.card_type && !isRevise) {
+      applyKindProgrammatic(kindFromCard(fill.card_type, undefined));
+      if (fill.frame_template) {
+        setValue("frame_style.template", fill.frame_template as FrameTemplate, {
+          shouldDirty: true,
+        });
+      }
+      setValue("supertype", fill.supertype ?? "", { shouldDirty: true });
+      setValue("subtypes_text", (fill.subtypes ?? []).join(", "), {
+        shouldDirty: true,
+      });
+    }
+    if (fill.color_identity && !isRevise) {
+      setValue(
+        "color_identity",
+        normalizeColorSelection(fill.color_identity),
+        { shouldDirty: true },
+      );
+    }
+    if (fill.title !== undefined) setValue("title", fill.title, { shouldDirty: true });
+    if (fill.cost !== undefined) setValue("cost", fill.cost, { shouldDirty: true });
+    if (fill.rarity !== undefined) setValue("rarity", fill.rarity, { shouldDirty: true });
+    if (fill.rules_text !== undefined) {
+      setValue("rules_text", fill.rules_text, { shouldDirty: true });
+      const k = kindFromCard(getValues("card_type"), getValues("frame_style.template"));
+      if (k === "planeswalker" || k === "saga") seedStructuredRows(k, fill.rules_text);
+    }
+    if (fill.flavor_text !== undefined) {
+      setValue("flavor_text", fill.flavor_text ?? "", { shouldDirty: true });
+    }
+    if (fill.power !== undefined || fill.loyalty !== undefined || fill.defense !== undefined) {
+      setValue("power", fill.power ?? "", { shouldDirty: true });
+      setValue("toughness", fill.toughness ?? "", { shouldDirty: true });
+      setValue("loyalty", fill.loyalty ?? "", { shouldDirty: true });
+      setValue("defense", fill.defense ?? "", { shouldDirty: true });
+    }
+    if (fill.tags !== undefined) {
+      // Generated tags replace the list; a challenge CTA's tag survives.
+      let next = fill.tags.join(", ");
+      if (initialTag) next = mergeTag(next, initialTag);
+      setValue("tags_text", next, { shouldDirty: true });
+    }
+    if (fill.art_url) {
+      setValue("art_url", fill.art_url, { shouldDirty: true });
+      setValue("art_position", { focalX: 0.5, focalY: 0.5, scale: 1 }, { shouldDirty: true });
+      if (fill.artist_credit) {
+        setValue("artist_credit", fill.artist_credit, { shouldDirty: true });
+      }
+    }
+    if (fill.deck_id && mode === "create") {
+      setValue("deck_id", fill.deck_id, { shouldDirty: true });
+    }
+  };
+
+  const handleAiFill = async (options: AiFillOptions): Promise<void> => {
+    if (!userId) {
+      toast.error("Sign in to generate with AI.");
+      return;
+    }
+    if (!aiConfigured) {
+      toast.error("AI generation isn't configured on this deployment.");
+      return;
+    }
+    const wantsArt = options.want.includes("art");
     if (
       !(await confirmSpend({
         cost: 1,
-        title: "Generate a card with AI?",
-        description: "One card, designed and painted — saved to your library.",
+        title: "Generate with AI?",
+        description: wantsArt
+          ? "Writes the ticked fields into this card and paints its artwork. Nothing is saved until you click Save."
+          : "Writes the ticked fields into this card. Nothing is saved until you click Save.",
       }))
     ) {
-      return false;
+      return;
     }
-    // Close the dialog and land the user on the dashboard — the generation
-    // runs as a background job via the root GenerationJobProvider (floating
-    // progress widget, safe to navigate; a closed tab pauses and
-    // auto-resumes). This replaced the old single 60–90s request, which
-    // infrastructure timeouts cut and re-ran (double charge + phantom
-    // client failure). The closure below outlives this page: the provider
-    // and sonner are both mounted in the root layout.
-    setAiGenerateOpen(false);
-    setGeneratingRandom(true);
-    router.push("/dashboard");
+    setAiFillOpen(false);
+    setFillPhase("designing");
     try {
-      const outcome = await generationJob.run({ kind: "card", ...options });
-      if (!outcome.ok) {
-        // Plan errors are toasted by the provider; step failures stay in the
-        // widget with a Retry. Nothing else to do here.
-        return false;
-      }
-      // Persistent by design (owner request): stays until the link is
-      // clicked or the toast is dismissed via its close button.
-      const forDeck = options.deck_id
-        ? (aiDecks ?? myDecks ?? []).find((d) => d.id === options.deck_id) ?? null
-        : null;
-      toast.success("Your card is forged.", {
-        description: forDeck
-          ? `Designed for ${forDeck.title} and added to it — original art painted.`
-          : "Original art painted — it's saved to your library.",
-        duration: Infinity,
-        closeButton: true,
-        ...(outcome.cardId
-          ? {
-              action: {
-                label: "View card",
-                onClick: () => router.push(`/go/card/${outcome.cardId}`),
-              },
-            }
-          : {}),
-        ...(forDeck?.slug
-          ? {
-              cancel: {
-                label: "Open deck",
-                onClick: () => router.push(`/deck/${forDeck.slug}/edit`),
-              },
-            }
-          : {}),
+      const planResponse = await fetch("/api/ai/jobs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kind: "card_fill",
+          want: options.want,
+          locked: lockedFieldsFor(getValues(), options.want),
+          steer: { card_type: options.card_type, rarity: options.rarity },
+          theme: options.theme,
+          style: options.style,
+          frame: options.frame,
+          deck_id: options.deck_id,
+        }),
       });
-      return true;
+      const plan = await planResponse.json().catch(() => null);
+      if (!planResponse.ok || !plan?.ok) {
+        if (planResponse.status === 402 || plan?.code === "INSUFFICIENT_CREDITS") {
+          upgrade.open("credits");
+        } else if (plan?.code === "UPGRADE_REQUIRED") {
+          upgrade.open("deck_aware_generation");
+        } else {
+          toast.error(plan?.error ?? "AI generation failed. Try again.");
+        }
+        return;
+      }
+      if (typeof plan.credits === "number") publishCredits(plan.credits - 1);
+      const jobId: string = plan.job.id;
+      if (wantsArt) setFillPhase("painting");
+
+      // One step; poll while another request holds it (double-click, second
+      // tab) instead of counting that as a failure.
+      let step: { status?: string; error?: string; fill?: CardFillResult } | undefined;
+      for (let attempt = 0; attempt < 40; attempt += 1) {
+        const stepResponse = await fetch(`/api/ai/jobs/${jobId}/step`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: "{}",
+        });
+        const payload = await stepResponse.json().catch(() => null);
+        if (!stepResponse.ok || !payload?.ok) {
+          toast.error(payload?.error ?? "AI generation failed. Try again.");
+          return;
+        }
+        if (typeof payload.credits === "number") publishCredits(payload.credits);
+        step = payload.job?.steps?.[0];
+        if (payload.inFlight || step?.status === "running") {
+          await new Promise((resolve) => setTimeout(resolve, 3000));
+          continue;
+        }
+        break;
+      }
+      if (!step || step.status !== "done" || !step.fill) {
+        // A FAILED step was refunded by the server; anything else is a
+        // missing result, which must not claim a refund it can't prove.
+        toast.error(
+          step?.status === "failed"
+            ? `${step.error ?? "AI generation failed."} Your credit was refunded.`
+            : "AI generation didn't return a result. Try again.",
+        );
+        return;
+      }
+      applyFill(step.fill);
+      toast.success("Generated — look it over and save when you're happy.");
+    } catch {
+      toast.error("Network error during generation. Try again.");
     } finally {
-      setGeneratingRandom(false);
+      setFillPhase(null);
     }
   };
 
@@ -1842,7 +1955,24 @@ export function CardCreatorForm({
         />
 
         {/* ----- Left: form ----- */}
-        <SurfaceCard className="flex flex-col gap-6 p-6">
+        <SurfaceCard
+          className="relative flex flex-col gap-6 p-6"
+          aria-busy={fillPhase !== null || undefined}
+        >
+          {fillPhase ? (
+            <div
+              className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 rounded-[inherit] bg-background/60 backdrop-blur-[1px]"
+              role="status"
+              aria-live="polite"
+            >
+              <Loader2 className="h-6 w-6 animate-spin text-accent" aria-hidden />
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted">
+                {fillPhase === "painting"
+                  ? "Painting the artwork — this takes about a minute"
+                  : "Designing your card…"}
+              </span>
+            </div>
+          ) : null}
           {serverError ? (
             <div
               role="alert"
@@ -1876,7 +2006,11 @@ export function CardCreatorForm({
               <div className="mx-auto w-full max-w-[220px] px-4 pb-4">
                 <div className="relative">
                   <CardPreview {...previewProps} />
-                  {generatingRandom ? <CardGeneratingOverlay /> : null}
+                  {fillPhase ? (
+                    <CardGeneratingOverlay
+                      label={fillPhase === "painting" ? "Painting art…" : "Designing…"}
+                    />
+                  ) : null}
                 {deckRemixImporting ? (
                   <CardGeneratingOverlay label="Importing card…" />
                 ) : null}
@@ -1925,6 +2059,13 @@ export function CardCreatorForm({
                 ) : null}
                 <ArtPanel
                   userId={userId}
+                  aiSlot={
+                    <AiFillButton
+                      label="Generate AI artwork and title"
+                      disabled={!userId || !aiConfigured || fillPhase !== null}
+                      onClick={() => openFill(FILL_PRESETS.artAndTitle)}
+                    />
+                  }
                   backFaceSlot={
                     hasInlineBackFace(watched.frame_style?.template) ? (
                       <LayoutPanel
@@ -1968,14 +2109,32 @@ export function CardCreatorForm({
                   />
                 )}
                 <AbilitiesPanel statVis={statVis} />
-                {/* Forge AI last — below the power/toughness stats. Hidden on
-                    basic lands: the step is icon-only there. */}
+                {/* AI last — below the stats. Hidden on basic lands: the
+                    step is icon-only there. */}
                 {!landBasicKey ? (
-                  <ForgeAIPanel
-                    cardContext={cardContext}
-                    aiConfigured={aiConfigured}
-                    onAIPatch={handleAIPatch}
-                  />
+                  <div className="flex flex-col gap-2 rounded-lg border border-accent/30 bg-accent/5 px-4 py-3">
+                    <p className="text-xs leading-5 text-muted">
+                      Stuck on the words? The AI writes the rules
+                      {hasStats ? `, flavor and ${statsLabel.toLowerCase()}` : " and flavor"}
+                      {" "}to fit the rest of the card — the name, type, cost
+                      and art stay yours.
+                    </p>
+                    <AiFillButton
+                      label={
+                        hasStats
+                          ? `Generate rules, flavor & ${statsLabel.toLowerCase()} with AI`
+                          : "Generate rules & flavor with AI"
+                      }
+                      disabled={!userId || !aiConfigured || fillPhase !== null}
+                      onClick={() =>
+                        openFill(
+                          hasStats
+                            ? FILL_PRESETS.textStep
+                            : FILL_PRESETS.textStep.filter((f) => f !== "stats"),
+                        )
+                      }
+                    />
+                  </div>
                 ) : null}
               </>
             ) : null}
@@ -2009,16 +2168,19 @@ export function CardCreatorForm({
             onOpenChange={setScryfallOpen}
           />
 
-          {/* "Generate with AI" options — theme/style/type/frame/rarity.
-              Opened by the start-with hero tile (and the palette event);
-              stays open with a spinner during generation and closes itself
-              on success. */}
-          <AiGenerateDialog
-            open={aiGenerateOpen}
-            onOpenChange={setAiGenerateOpen}
+          {/* Per-field "Generate with AI" — opened by the hero tile, the
+              Identity art button and the Text step button, each with its own
+              starting tick-set. */}
+          <AiFillDialog
+            open={aiFillOpen}
+            onOpenChange={setAiFillOpen}
+            initialFields={fillDefaults}
+            revise={isRevise}
+            statsLabel={statsLabel}
+            statsAvailable={hasStats}
             verifiedFrameKeys={verifiedFrameKeys}
-            generating={generatingRandom}
-            onGenerate={(options) => void handleRandomCard(options)}
+            generating={fillPhase !== null}
+            onGenerate={(options) => void handleAiFill(options)}
             myDecks={aiDecks ?? myDecks}
             canDesignForDeck={canDesignForDeck}
           />
@@ -2242,7 +2404,11 @@ export function CardCreatorForm({
             <div className="mx-auto w-full max-w-sm">
               <div className="relative">
                 <CardPreview {...previewProps} />
-                {generatingRandom ? <CardGeneratingOverlay /> : null}
+                {fillPhase ? (
+                  <CardGeneratingOverlay
+                    label={fillPhase === "painting" ? "Painting art…" : "Designing…"}
+                  />
+                ) : null}
                 {deckRemixImporting ? (
                   <CardGeneratingOverlay label="Importing card…" />
                 ) : null}
@@ -2269,8 +2435,39 @@ export function CardCreatorForm({
   );
 }
 
-// Spinner overlay shown on the live preview while an AI random card is being
-// generated, so it's clear the card is being (re)built.
+// The two in-form AI entry points (Identity art slot, Text step) — one
+// credit each; the price tag only shows when billing is on.
+function AiFillButton({
+  label,
+  disabled,
+  onClick,
+}: {
+  label: string;
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      onClick={onClick}
+      disabled={disabled}
+      className="border-accent/50 text-foreground hover:border-accent"
+    >
+      <Sparkles className="h-4 w-4 text-accent" aria-hidden />
+      {label}
+      {isBillingEnabled() ? (
+        <span className="ml-1 rounded-full bg-gold/15 px-1.5 py-px text-[10px] font-semibold text-gold-strong">
+          1 credit
+        </span>
+      ) : null}
+    </Button>
+  );
+}
+
+// Spinner overlay shown on the live preview while an AI fill is running, so
+// it's clear the card is being (re)built.
 function CardGeneratingOverlay({ label = "Forging…" }: { label?: string }) {
   return (
     <div

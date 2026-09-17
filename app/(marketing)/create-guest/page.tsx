@@ -10,7 +10,7 @@ import {
   getFantasyGameSystem,
   getTemplatesForGameSystem,
 } from "@/lib/cards/queries";
-import { isAIConfigured } from "@/lib/ai/card-assistant";
+import { isDesignAiConfigured } from "@/lib/ai/provider";
 import { getVerifiedFrameKeysPublic } from "@/lib/cards/frame-reviews";
 
 // ---------------------------------------------------------------------------
@@ -100,7 +100,7 @@ export default async function PreviewPage() {
           gameSystems={[gameSystem]}
           templates={templates}
           verifiedFrameKeys={verifiedFrameKeys}
-          aiConfigured={isAIConfigured()}
+          aiConfigured={isDesignAiConfigured()}
         />
       </div>
     </div>

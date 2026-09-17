@@ -25,7 +25,7 @@ import {
 import { listMySets } from "@/lib/sets/queries";
 import { isSetsEnabled } from "@/lib/sets/flags";
 import { getMyDeckCardWithDeck, listMyDecks } from "@/lib/decks/queries";
-import { isAIConfigured } from "@/lib/ai/card-assistant";
+import { isDesignAiConfigured } from "@/lib/ai/provider";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import { getDeckAiSeeds } from "@/lib/ai/generation-jobs";
 import type { DeckRemixContext } from "@/types/deck";
@@ -198,7 +198,7 @@ export default async function CreatePage({
           backForCardId={backFor?.id ?? null}
           backForSlug={backFor?.slug ?? null}
           deckRemix={deckRemix}
-          aiConfigured={isAIConfigured()}
+          aiConfigured={isDesignAiConfigured()}
           pipOverrides={await getPipOverrides(user.id)}
           verifiedFrameKeys={await getVerifiedFrameKeys()}
           profileOverrides={await getFrameProfileOverrides()}

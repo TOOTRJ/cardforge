@@ -28,7 +28,7 @@ import {
 import { buildCardPath } from "@/lib/cards/utils";
 import { listMySets, listMySetsForCard } from "@/lib/sets/queries";
 import { isSetsEnabled } from "@/lib/sets/flags";
-import { isAIConfigured } from "@/lib/ai/card-assistant";
+import { isDesignAiConfigured } from "@/lib/ai/provider";
 import { getDeckAiSeeds } from "@/lib/ai/generation-jobs";
 import { listMyDecks } from "@/lib/decks/queries";
 
@@ -184,7 +184,7 @@ export default async function EditCardPage({ params }: EditCardPageProps) {
             style: deckSeeds.get(deck.id)?.style ?? null,
           }))}
           canDesignForDeck={entitlements.effectiveTier === "pro"}
-          aiConfigured={isAIConfigured()}
+          aiConfigured={isDesignAiConfigured()}
           pipOverrides={await getPipOverrides(user.id)}
           verifiedFrameKeys={await getVerifiedFrameKeys()}
           profileOverrides={await getFrameProfileOverrides()}

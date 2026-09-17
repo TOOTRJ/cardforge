@@ -1,4 +1,21 @@
-import type { CardFieldPatch } from "@/components/creator/ai-assistant-panel";
+/** A partial set of creator form values an AI flow writes into the open
+ *  form (only present keys are applied). Shared by the ideas dialog and the
+ *  per-field fill flow. */
+export type CardFieldPatch = {
+  title?: string;
+  cost?: string;
+  card_type?: string;
+  supertype?: string;
+  subtypes_text?: string;
+  rarity?: string;
+  color_identity?: readonly string[];
+  rules_text?: string;
+  flavor_text?: string;
+  power?: string;
+  toughness?: string;
+  loyalty?: string;
+  defense?: string;
+};
 
 // ---------------------------------------------------------------------------
 // Card ideas → form patch. The ideas dialog shows N complete concepts and

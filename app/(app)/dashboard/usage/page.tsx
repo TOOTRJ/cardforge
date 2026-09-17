@@ -36,6 +36,7 @@ const JOB_KIND_LABELS: Record<string, string> = {
   deck_remix: "Deck remix",
   card: "Single card generation",
   card_remix: "Card remix",
+  card_fill: "Card fields (creator)",
 };
 
 const JOB_STATUS_LABELS: Record<string, string> = {
@@ -49,6 +50,7 @@ const JOB_STATUS_LABELS: Record<string, string> = {
 const ACTION_LABELS: Partial<Record<AiActionLabel, string>> = {
   generate_random_card: "Single card generation",
   remix_card: "Card remix",
+  fill_card: "Card fields (creator)",
 };
 
 function formatWhen(iso: string): string {
@@ -121,7 +123,9 @@ export default async function UsagePage() {
                 : []) as JobStepLite[];
               const cardSteps = steps.filter(
                 (step) =>
-                  step.key?.startsWith("card:") || step.key?.startsWith("remix:"),
+                  step.key?.startsWith("card:") ||
+                  step.key?.startsWith("remix:") ||
+                  step.key?.startsWith("fill:"),
               );
               const done = cardSteps.filter((s) => s.status === "done").length;
               const failures = steps.filter((s) => s.status === "failed");

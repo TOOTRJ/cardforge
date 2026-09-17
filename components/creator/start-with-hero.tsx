@@ -10,11 +10,9 @@ import {
 // Each option fires a custom DOM event the CardCreatorForm listens for:
 //   - "cardforge:scroll-to-form"   → smooth-scroll the form into view
 //   - "cardforge:open-scryfall"    → open the Scryfall import dialog
-//   - "cardforge:open-ai-concept"  → jump to the Text & stats step and scroll
-//                                    the AI assistant anchor into view
-//                                    (ForgeAIPanel, currently a "Coming soon"
-//                                    overlay)
-//   - "cardforge:generate-random"  → open the "Generate with AI" options dialog
+//   - "cardforge:generate-random"  → open the "Generate with AI" dialog
+//                                    (every field ticked; the result fills
+//                                    THIS form and the user saves it)
 //
 // Event-based wiring keeps the hero decoupled from the form — they're
 // siblings in the page tree but the page itself is a server component, so
@@ -26,8 +24,7 @@ import {
 export const CARDFORGE_EVENTS = {
   scrollToForm: "cardforge:scroll-to-form",
   openScryfall: "cardforge:open-scryfall",
-  openAiConcept: "cardforge:open-ai-concept",
-  /** Kick off the AI random-card generation (the "Generate with AI" hero). */
+  /** Open the per-field "Generate with AI" dialog with everything ticked. */
   generateRandom: "cardforge:generate-random",
   /** Open the "Get ideas" dialog — text-only concepts to pick fields from. */
   openIdeas: "cardforge:open-ideas",
@@ -72,7 +69,7 @@ const OPTIONS: Option[] = [
     key: "generateRandom",
     label: "Generate with AI",
     description:
-      "Pick a theme, style, type, and frame — or go full random. AI drafts the card and paints original art while you keep browsing.",
+      "Pick a theme and style — or go full random. AI drafts every field and paints original art right here; tweak anything, then save.",
     icon: Sparkles,
     accentClass:
       "from-accent/15 to-accent/5 hover:border-accent/60 border-accent/30",

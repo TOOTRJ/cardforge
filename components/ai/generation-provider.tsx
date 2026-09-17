@@ -40,7 +40,7 @@ import type {
 
 type JobPayload = {
   id: string;
-  kind: "set" | "deck" | "deck_remix" | "card" | "card_remix";
+  kind: "set" | "deck" | "deck_remix" | "card" | "card_remix" | "card_fill";
   status:
     | "generating"
     | "done"
@@ -111,6 +111,7 @@ const KIND_LABELS: Record<JobPayload["kind"], string> = {
   deck_remix: "Remixing deck",
   card: "Forging your card",
   card_remix: "Remixing your card",
+  card_fill: "Generating card fields",
 };
 
 async function postStep(
@@ -607,6 +608,10 @@ export function GenerationJobProvider({
         const payload = await response.json().catch(() => null);
         if (cancelled || !payload?.ok || !payload.job) return;
         const pending: JobPayload = payload.job;
+        // A fill job's result belongs to the creator form that started it —
+        // there is nothing to resume without that form (the GET already
+        // filters these out; belt and braces).
+        if (pending.kind === "card_fill") return;
         if (
           pending.status !== "generating" ||
           !pending.steps.some(
