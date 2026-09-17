@@ -39,7 +39,7 @@ export default async function NewSetPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
+    <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
       <PageHeader
         eyebrow="New set"
         title="Create a custom set"
@@ -55,7 +55,7 @@ export default async function NewSetPage() {
         }
       />
 
-      <div className="mt-10">
+      <div className="mt-10 max-w-3xl">
         <SetCreatorForm mode="create" userId={user.id} />
       </div>
     </div>

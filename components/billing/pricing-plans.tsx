@@ -169,7 +169,7 @@ export function PricingPlans() {
         </div>
       </div>
 
-      <div className="mx-auto mt-8 grid max-w-5xl gap-6 md:grid-cols-3">
+      <div className="mt-8 grid gap-6 md:grid-cols-3">
         {PLANS.map((plan) => (
           <PlanCard
             key={plan.tier}

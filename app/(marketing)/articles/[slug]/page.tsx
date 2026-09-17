@@ -74,7 +74,8 @@ export default async function ArticlePage({
   const others = getRelatedArticles(meta.slug, 3);
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
+    <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      <div className="max-w-3xl">
       <JsonLd data={buildArticleJsonLd(meta)} />
       <JsonLd
         data={breadcrumbJsonLd([
@@ -193,6 +194,7 @@ export default async function ArticlePage({
           </ul>
         </section>
       ) : null}
+    </div>
     </div>
   );
 }
