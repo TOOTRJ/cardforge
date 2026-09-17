@@ -7,6 +7,7 @@ import {
   ExternalLink,
   Link2,
   Loader2,
+  Maximize2,
   Search,
   Sparkles,
   Trash2,
@@ -87,6 +88,13 @@ export function DeckCardModal({
 
   const shownImage =
     (showProxy ? proxyImage : originalImage) ?? proxyImage ?? originalImage;
+  // Where the card "lives": a custom card / proxy has a PipGlyph page (a
+  // soft navigation there opens the site's large card modal over this
+  // deck); a real card points at Scryfall.
+  const cardPath = card
+    ? buildCardPath({ slug: card.slug, owner: { username: ownerUsername } })
+    : null;
+  const scryfallHref = entry.scryfall_id ? `/go/scryfall/${entry.scryfall_id}` : null;
 
   const [linkPickerOpen, setLinkPickerOpen] = useState(false);
 
@@ -103,10 +111,22 @@ export function DeckCardModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="lg">
+      {/* xl, like the gallery's card modal — the card is the point here. */}
+      <DialogContent size="xl" className="min-h-0">
         <DialogHeader>
           <DialogTitle className="flex flex-wrap items-center gap-2">
-            {card?.title ?? entry.name}
+            {cardPath ? (
+              <Link
+                href={cardPath}
+                onClick={() => onOpenChange(false)}
+                className="underline-offset-4 transition-colors hover:text-primary-bright hover:underline"
+                title="Open this card's page"
+              >
+                {card?.title ?? entry.name}
+              </Link>
+            ) : (
+              card?.title ?? entry.name
+            )}
             <StateBadgeLarge state={state} />
             <CardGlossary />
           </DialogTitle>
@@ -123,10 +143,18 @@ export function DeckCardModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-5 sm:grid-cols-[minmax(0,260px)_1fr]">
+        {/* Body padding matches the header's px-5 (the grid used to sit
+            flush against the dialog edge). The image column is card-page
+            sized; the whole image is a link to the card's page. */}
+        <div className="grid min-h-0 gap-6 overflow-y-auto px-5 py-5 md:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]">
           {/* Image + flipper */}
           <div className="flex flex-col gap-2">
-            <div className="relative aspect-[5/7] w-full overflow-hidden rounded-xl border border-border/60 bg-elevated">
+            <CardImageLink
+              href={cardPath ?? scryfallHref}
+              external={!cardPath && Boolean(scryfallHref)}
+              label={cardPath ? "Open this card's page" : "View on Scryfall"}
+              onNavigate={() => onOpenChange(false)}
+            >
               {shownImage ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -139,7 +167,7 @@ export function DeckCardModal({
                   No image — {entry.name}
                 </span>
               )}
-            </div>
+            </CardImageLink>
             {hasBoth ? (
               <div
                 className="grid grid-cols-2 gap-1 rounded-md border border-border bg-background/60 p-1 text-xs"
@@ -180,16 +208,14 @@ export function DeckCardModal({
                   View the original on Scryfall
                 </a>
               ) : null}
-              {card ? (
+              {cardPath ? (
                 <Link
-                  href={buildCardPath({
-                    slug: card.slug,
-                    owner: { username: ownerUsername },
-                  })}
+                  href={cardPath}
+                  onClick={() => onOpenChange(false)}
                   className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-foreground"
                 >
-                  <Sparkles className="h-3.5 w-3.5" aria-hidden />
-                  Open the custom proxy&apos;s page
+                  <Maximize2 className="h-3.5 w-3.5" aria-hidden />
+                  Open this card&apos;s page
                 </Link>
               ) : null}
             </div>
@@ -322,6 +348,55 @@ export function DeckCardModal({
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** The card image as a link — soft navigation for a PipGlyph card (the
+ *  site's card modal opens over the deck), a new tab for Scryfall. Falls
+ *  back to a plain frame when there is nowhere to go. */
+function CardImageLink({
+  href,
+  external,
+  label,
+  onNavigate,
+  children,
+}: {
+  href: string | null;
+  external: boolean;
+  label: string;
+  /** Called when an in-app link is followed (closes the deck dialog). */
+  onNavigate?: () => void;
+  children: React.ReactNode;
+}) {
+  const frame =
+    "relative block aspect-[5/7] w-full overflow-hidden rounded-xl border border-border/60 bg-elevated";
+  if (!href) return <div className={frame}>{children}</div>;
+  const hint = (
+    <span className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center bg-linear-to-t from-background/85 to-transparent px-3 pb-3 pt-8 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/90 px-3 py-1 text-xs font-medium text-foreground">
+        {external ? (
+          <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+        ) : (
+          <Maximize2 className="h-3.5 w-3.5" aria-hidden />
+        )}
+        {label}
+      </span>
+    </span>
+  );
+  const classes = `${frame} group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60`;
+  if (external) {
+    return (
+      <a href={href} target="_blank" rel="noopener noreferrer" className={classes} aria-label={label}>
+        {children}
+        {hint}
+      </a>
+    );
+  }
+  return (
+    <Link href={href} onClick={onNavigate} className={classes} aria-label={label}>
+      {children}
+      {hint}
+    </Link>
   );
 }
 
