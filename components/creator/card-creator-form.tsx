@@ -329,9 +329,18 @@ export function CardCreatorForm({
   const [isSubmitting, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
   // Unsaved-changes guard. Armed from the form's dirty state below (a
-  // mirrored ref-free flag, since useForm is created after this hook).
+  // mirrored ref-free flag, since useForm is created after this hook), and
+  // whenever an AI request is spending a credit (owner decision 2026-09-17:
+  // leaving mid-generation used to lose the credit silently).
   const [guardArmed, setGuardArmed] = useState(false);
-  const guard = useUnsavedChangesGuard({ enabled: Boolean(userId) && guardArmed });
+  const [ideasBusy, setIdeasBusy] = useState(false);
+  const [fillPhase, setFillPhase] = useState<null | "designing" | "painting">(
+    null,
+  );
+  const aiBusy = fillPhase !== null || ideasBusy;
+  const guard = useUnsavedChangesGuard({
+    enabled: Boolean(userId) && (guardArmed || aiBusy),
+  });
   // Active step index into the dynamic `steps` list (see below). Clamped on
   // read so it stays valid when the visible steps shrink (e.g. a DFC is removed).
   // The create→edit redirect carries ?step=<key> so saving doesn't bounce
@@ -369,9 +378,21 @@ export function CardCreatorForm({
   const [fillDefaults, setFillDefaults] = useState<CardFillField[]>(
     FILL_PRESETS.all,
   );
-  const [fillPhase, setFillPhase] = useState<null | "designing" | "painting">(
-    null,
-  );
+  // Which creator a fill belongs to — an unclaimed result is only offered
+  // back on the matching page (app/api/ai/card-fill).
+  const fillScope =
+    mode === "edit" && card
+      ? `card:${card.id}`
+      : mode === "remix" && card
+        ? `remix:${card.id}`
+        : "create";
+  const claimFill = (jobId: string) => {
+    void fetch("/api/ai/card-fill", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jobId }),
+    }).catch(() => {});
+  };
   const openFill = (fields: CardFillField[]) => {
     if (!userId) {
       toast.error("Sign in to generate with AI.");
@@ -1378,6 +1399,7 @@ export function CardCreatorForm({
           style: options.style,
           frame: options.frame,
           deck_id: options.deck_id,
+          scope: fillScope,
         }),
       });
       const plan = await planResponse.json().catch(() => null);
@@ -1428,6 +1450,7 @@ export function CardCreatorForm({
         return;
       }
       applyFill(step.fill);
+      claimFill(jobId);
       toast.success("Generated — look it over and save when you're happy.");
     } catch {
       toast.error("Network error during generation. Try again.");
@@ -1435,6 +1458,47 @@ export function CardCreatorForm({
       setFillPhase(null);
     }
   };
+
+  // A generation that finished after the tab was closed (the credit was
+  // spent, the result stored on the job): offer it once on the matching
+  // page — Apply pours it into this form, Discard just claims it.
+  const unclaimedCheckedRef = useRef(false);
+  useEffect(() => {
+    if (!userId || readOnly || unclaimedCheckedRef.current) return;
+    unclaimedCheckedRef.current = true;
+    let cancelled = false;
+    fetch(`/api/ai/card-fill?scope=${encodeURIComponent(fillScope)}`)
+      .then((r) => r.json())
+      .then(
+        (payload: {
+          ok: boolean;
+          fill: { jobId: string; result: CardFillResult; createdAt: string } | null;
+        }) => {
+          if (cancelled || !payload?.ok || !payload.fill) return;
+          const { jobId, result } = payload.fill;
+          toast.info("An AI generation finished while you were away.", {
+            description: "Apply it to this card, or discard it.",
+            duration: Infinity,
+            closeButton: true,
+            action: {
+              label: "Apply",
+              onClick: () => {
+                applyFill(result);
+                claimFill(jobId);
+              },
+            },
+            cancel: { label: "Discard", onClick: () => claimFill(jobId) },
+          });
+        },
+      )
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+    // Mount-only per creator page; applyFill/claimFill are stable closures
+    // over the same form instance.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, readOnly, fillScope]);
 
   // ---- Start over / Reset ----
   // Wipe the form back to its starting values (a blank card, the original
@@ -2235,6 +2299,7 @@ export function CardCreatorForm({
             onApply={handleAIPatch}
             myDecks={aiDecks ?? myDecks}
             canUseDeckIdeas={canDesignForDeck}
+            onBusyChange={setIdeasBusy}
           />
 
           {/* Kind-change confirmation — only when the current era can't frame
@@ -2253,6 +2318,7 @@ export function CardCreatorForm({
               or save changes (edit), leave, or stay. */}
           <UnsavedChangesDialog
             open={guard.pending !== null}
+            generating={aiBusy}
             saveKind={isEdit ? "changes" : "draft"}
             saveBlockedReason={
               isEdit

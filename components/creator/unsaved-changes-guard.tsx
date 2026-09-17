@@ -120,6 +120,9 @@ export function useUnsavedChangesGuard({ enabled }: UseUnsavedChangesGuardOption
 
 type UnsavedChangesDialogProps = {
   open: boolean;
+  /** True while an AI request that already spent (or is spending) a credit
+   *  is in flight: the dialog only offers to wait or to leave. */
+  generating?: boolean;
   /** "draft" offers "Save as draft" (create / remix); "changes" offers
    *  "Save changes" (edit). */
   saveKind: "draft" | "changes";
@@ -134,6 +137,7 @@ type UnsavedChangesDialogProps = {
 
 export function UnsavedChangesDialog({
   open,
+  generating = false,
   saveKind,
   saveBlockedReason,
   saving,
@@ -141,6 +145,34 @@ export function UnsavedChangesDialog({
   onLeave,
   onStay,
 }: UnsavedChangesDialogProps) {
+  if (generating) {
+    return (
+      <Dialog open={open} onOpenChange={(next) => (next ? undefined : onStay())}>
+        <DialogContent size="sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <TriangleAlert className="h-4 w-4 text-gold-strong" aria-hidden />
+              AI is still working
+            </DialogTitle>
+            <DialogDescription>
+              Your credit is already in use. Leave now and this generation
+              carries on without you — if it finishes, it will be offered the
+              next time you open this editor, but the safest thing is to wait.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-wrap px-5 pb-5 pt-2">
+            <Button type="button" variant="outline" onClick={onLeave}>
+              Leave anyway
+            </Button>
+            <Button type="button" variant="primary" onClick={onStay}>
+              Keep waiting
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={(next) => (next ? undefined : onStay())}>
       <DialogContent size="sm">

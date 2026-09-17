@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Coins, Lightbulb, Loader2, RefreshCw, Sparkles } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Coins, History, Lightbulb, Loader2, RefreshCw, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { InlinePips } from "@/components/cards/inline-pips";
@@ -66,6 +66,7 @@ export function CardIdeasDialog({
   onApply,
   myDecks = null,
   canUseDeckIdeas = false,
+  onBusyChange,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -74,6 +75,9 @@ export function CardIdeasDialog({
   myDecks?: DeckOption[] | null;
   /** Pro entitlement for deck-themed ideas. */
   canUseDeckIdeas?: boolean;
+  /** Reports the in-flight request so the creator can warn before the user
+   *  navigates away while the credit is being spent. */
+  onBusyChange?: (busy: boolean) => void;
 }) {
   const upgrade = useUpgradeModal();
   const confirmSpend = useCreditConfirm();
@@ -81,8 +85,38 @@ export function CardIdeasDialog({
   const [cardType, setCardType] = useState<CardType | "random">("random");
   const [rarity, setRarity] = useState<Rarity | "random">("random");
   const [deckId, setDeckId] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusyState] = useState(false);
+  const setBusy = (next: boolean) => {
+    setBusyState(next);
+    onBusyChange?.(next);
+  };
   const [ideas, setIdeas] = useState<CardIdea[] | null>(null);
+  // The caller's last generated batch (migration 0092) — reopenable free
+  // of charge, e.g. after a closed tab. Fetched each time the dialog opens.
+  const [lastBatch, setLastBatch] = useState<{
+    ideas: CardIdea[];
+    created_at: string;
+  } | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    fetch("/api/ai/card-ideas/last")
+      .then((r) => r.json())
+      .then((payload: { ok: boolean; batch: { ideas: CardIdea[]; created_at: string } | null }) => {
+        if (!cancelled && payload?.ok && payload.batch?.ideas?.length) {
+          setLastBatch(payload.batch);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
+  const reopenLast = () => {
+    if (!lastBatch) return;
+    setIdeas(lastBatch.ideas);
+    setSelection(wholeIdeaSelection(0));
+  };
   const [selection, setSelection] = useState<IdeaSelection>(wholeIdeaSelection(0));
   const decks = myDecks ?? [];
   const selectedDeck = decks.find((d) => d.id === deckId) ?? null;
@@ -120,6 +154,7 @@ export function CardIdeasDialog({
       }
       setIdeas(data.ideas);
       setSelection(wholeIdeaSelection(0));
+      setLastBatch({ ideas: data.ideas, created_at: new Date().toISOString() });
     } catch {
       toast.error("Couldn't reach the idea generator — try again.");
     } finally {
@@ -163,6 +198,17 @@ export function CardIdeasDialog({
 
         {!ideas ? (
           <div className="flex flex-col gap-4 px-5 py-5">
+            {lastBatch ? (
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gold/40 bg-gold/5 px-4 py-3">
+                <span className="flex items-center gap-2 text-sm text-foreground">
+                  <History className="h-4 w-4 text-gold-strong" aria-hidden />
+                  Your last batch of ideas is still here — no credit needed.
+                </span>
+                <Button type="button" variant="outline" size="sm" onClick={reopenLast} disabled={busy}>
+                  Reopen last ideas
+                </Button>
+              </div>
+            ) : null}
             {decks.length > 0 ? (
               <FieldGroup
                 label="Theme the ideas to a deck"
