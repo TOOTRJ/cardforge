@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useLeaveWarning } from "@/components/ai/use-leave-warning";
 import { Loader2, Sparkles, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,9 @@ export function DeckAnalyzeButton({ deckId, refresh }: { deckId: string; refresh
   const upgrade = useUpgradeModal();
   const confirmSpend = useCreditConfirm();
   const [busy, setBusy] = useState(false);
+  // The guide is stored on the deck when it finishes, but the credit is
+  // spent up front — warn before the tab closes mid-request.
+  useLeaveWarning(busy);
 
   const analyze = async () => {
     if (

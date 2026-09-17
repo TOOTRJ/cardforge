@@ -12,6 +12,7 @@ import {
 import { Check, Loader2, Sparkles, TriangleAlert, X } from "lucide-react";
 import { toast } from "sonner";
 import { publishCredits } from "@/components/billing/credits-bus";
+import { useLeaveWarning } from "@/components/ai/use-leave-warning";
 import { cn } from "@/lib/utils";
 import {
   GenerationDetailsDialog,
@@ -237,6 +238,9 @@ export function GenerationJobProvider({
   const runningRef = useRef(false);
 
   const busy = phase === "planning" || phase === "stepping";
+  // Closing the tab mid-run is safe (the job resumes on the next visit)
+  // but never intended — ask first (owner decision 2026-09-17).
+  useLeaveWarning(busy);
   const hasFailures = steps.some((step) => step.status === "failed");
 
   const stepUntilDone = useCallback(
