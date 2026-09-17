@@ -74,7 +74,7 @@ export default async function ArticlePage({
   const others = getRelatedArticles(meta.slug, 3);
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+    <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:grid lg:grid-cols-[minmax(0,48rem)_minmax(0,1fr)] lg:gap-x-12">
       <div className="max-w-3xl">
       <JsonLd data={buildArticleJsonLd(meta)} />
       <JsonLd
@@ -135,7 +135,9 @@ export default async function ArticlePage({
         ) : null}
       </header>
 
-      <ArticleToc items={toc} />
+      <div className="lg:hidden">
+        <ArticleToc items={toc} />
+      </div>
 
       {/* Body — prose styling via arbitrary variants, same approach as
           LegalPageShell but tuned for long-form reading. */}
@@ -195,6 +197,14 @@ export default async function ArticlePage({
         </section>
       ) : null}
     </div>
+
+      {/* Sticky "On this page" in the spare width right of the article
+          (owner request 2026-09-17). Same anchor links as the inline card. */}
+      <aside className="hidden lg:block">
+        <div className="sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto pt-16">
+          <ArticleToc items={toc} variant="sidebar" />
+        </div>
+      </aside>
     </div>
   );
 }
