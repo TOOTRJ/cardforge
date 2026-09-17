@@ -26,7 +26,7 @@ import { listMySets } from "@/lib/sets/queries";
 import { isSetsEnabled } from "@/lib/sets/flags";
 import { getMyDeckCardWithDeck, listMyDecks } from "@/lib/decks/queries";
 import { isDesignAiConfigured } from "@/lib/ai/provider";
-import { getEntitlements } from "@/lib/billing/entitlements";
+import { getEntitlements, ownerExportStamp } from "@/lib/billing/entitlements";
 import { getDeckAiSeeds } from "@/lib/ai/generation-jobs";
 import type { DeckRemixContext } from "@/types/deck";
 import { getCreatorLabMode } from "@/lib/creator/lab";
@@ -97,12 +97,15 @@ export default async function CreatePage({
   const templates = gameSystem
     ? await getTemplatesForGameSystem(gameSystem.id)
     : [];
-  const [mySets, myCards, myDecks, entitlements] = await Promise.all([
+  const [mySets, myCards, myDecks, entitlements, exportStamp] = await Promise.all([
     // The publish panel's set picker is flag-gated — don't pay the query.
     isSetsEnabled() ? listMySets() : Promise.resolve([]),
     listMyCards(),
     listMyDecks(),
     getEntitlements(),
+    // The owner's custom footer mark (paid perk): shown live in the preview
+    // so the editor matches their downloads (owner decision 2026-09-17).
+    ownerExportStamp(user.id),
   ]);
   // Theme/style each deck was last generated with — the AI dialog imports
   // them when a deck is picked (Pro deck-aware generation).
@@ -240,6 +243,7 @@ export default async function CreatePage({
           activeChallenge={await getCurrentChallenge()}
           defaultArtistCredit={profile?.display_name || profile?.username || ""}
           layout={layout}
+          footerWatermark={exportStamp.footerText}
         />
       </div>
     </div>

@@ -458,6 +458,24 @@ const SLUG_TRIM = /^-+|-+$/g;
  * `cards_slug_format` check constraint. Caller should still ensure
  * uniqueness within the owner's namespace.
  */
+/** Slugs a card can never take because the URL segment after
+ *  /card/<username>/ or /card/ is a route of its own (the owner editor lives
+ *  at /card/<slug>/edit). A card slugged "edit" was unreachable at its
+ *  public URL; ensureUniqueSlugForUser treats these as taken and suffixes
+ *  them like a duplicate title. */
+export const RESERVED_CARD_SLUGS: ReadonlySet<string> = new Set([
+  "edit",
+  "new",
+  "create",
+  "remix",
+  "delete",
+  "api",
+]);
+
+export function isReservedCardSlug(slug: string): boolean {
+  return RESERVED_CARD_SLUGS.has(slug.toLowerCase());
+}
+
 export function slugify(input: string, max = 80): string {
   // U+0300–U+036F is the Unicode combining diacritical marks block; stripping
   // those after NFKD-normalizing folds "café" → "cafe" before slug cleanup.

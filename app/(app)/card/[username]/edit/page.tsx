@@ -18,7 +18,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
 import { getPipOverrides } from "@/lib/pips/queries";
 import { getCurrentChallenge } from "@/lib/challenges/queries";
-import { getEntitlements } from "@/lib/billing/entitlements";
+import { getEntitlements, ownerExportStamp } from "@/lib/billing/entitlements";
 import {
   getFantasyGameSystem,
   getMyCardBySlug,
@@ -82,7 +82,7 @@ export default async function EditCardPage({ params }: EditCardPageProps) {
   }
 
   const setsEnabled = isSetsEnabled();
-  const [gameSystem, mySets, profile, userSets, entitlements, allMyCards, myDecks] =
+  const [gameSystem, mySets, profile, userSets, entitlements, allMyCards, myDecks, exportStamp] =
     await Promise.all([
       getFantasyGameSystem(),
       // Both set lists feed sets-only UI — skip the queries while hidden.
@@ -93,6 +93,9 @@ export default async function EditCardPage({ params }: EditCardPageProps) {
       listMyCards(),
       // The AI dialog's "For a deck" picker (Pro deck-aware generation).
       listMyDecks(),
+      // The owner's custom footer mark (paid perk) — live in the preview so
+      // the editor matches their downloads.
+      ownerExportStamp(user.id),
     ]);
   const deckSeeds = await getDeckAiSeeds(myDecks.map((deck) => deck.id));
   // Back-face picker candidates: every owned card except this one (can't be its
@@ -189,6 +192,7 @@ export default async function EditCardPage({ params }: EditCardPageProps) {
           verifiedFrameKeys={await getVerifiedFrameKeys()}
           profileOverrides={await getFrameProfileOverrides()}
           activeChallenge={await getCurrentChallenge()}
+          footerWatermark={exportStamp.footerText}
         />
       </div>
     </div>

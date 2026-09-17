@@ -8,6 +8,7 @@ import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
   createCardSchema,
+  isReservedCardSlug,
   slugify,
   updateCardSchema,
 } from "@/lib/validation/card";
@@ -103,7 +104,12 @@ async function ensureUniqueSlugForUser(
   desired: string,
   excludeCardId?: string,
 ): Promise<{ slug: string; conflict: boolean }> {
-  const taken = await isSlugTakenForCurrentUser(desired, excludeCardId);
+  // Route words (/card/<slug>/edit …) count as taken so a card can never
+  // shadow its own editor URL — it gets the same "-2" suffix a duplicate
+  // title would.
+  const taken =
+    isReservedCardSlug(desired) ||
+    (await isSlugTakenForCurrentUser(desired, excludeCardId));
   if (!taken) return { slug: desired, conflict: false };
 
   // Try numeric suffixes first; cap attempts so a hostile workspace can't
