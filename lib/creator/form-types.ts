@@ -76,6 +76,11 @@ export type FormValues = {
   art_position: ArtPosition;
   frame_style: FrameStyle;
   visibility: Visibility;
+  /** Publish-step "Save as a draft" checkbox (owner decision 2026-09-16):
+   *  checked = the card saves PRIVATE and needs only a title; unchecked =
+   *  the visibility choice applies and artwork is required. Client-only —
+   *  it maps onto `visibility` at submit and never reaches the server. */
+  save_as_draft: boolean;
   has_back_face: boolean;
   back_face: BackFaceFormValues;
   /** v2 back face: id of another owned card used as the back (empty = none).

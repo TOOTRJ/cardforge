@@ -1,14 +1,15 @@
 "use client";
 
-// Publish panel — set membership + discovery tags up top, with visibility,
-// back face, and finish tucked into Advanced. The challenge entry toggle
-// leads when a challenge is running. The slug is derived from the title
-// automatically — not user-editable.
+// Publish panel — the "Save as a draft" checkbox + visibility lead, then
+// set membership + discovery tags, with back face, finish and watermark
+// tucked into Advanced. The challenge entry toggle leads when a challenge is
+// running. The slug is derived from the title automatically — not
+// user-editable.
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { Controller, useFormContext, useWatch } from "react-hook-form";
-import { Globe2, Link2, Loader2, Lock, Plus, Trophy } from "lucide-react";
+import { FileEdit, Globe2, Link2, Loader2, Plus, Trophy } from "lucide-react";
 import { toast } from "sonner";
 import { createDeckAction } from "@/lib/decks/actions";
 import {
@@ -36,13 +37,9 @@ import { cn } from "@/lib/utils";
 import type { Card, Visibility } from "@/types/card";
 import type { FormValues } from "@/lib/creator/form-types";
 
+// Private is not a chip any more — it is the "Save as a draft" checkbox
+// above the chips (owner decision 2026-09-16: drafts simply force private).
 const VISIBILITY_OPTIONS: ChipOption<Visibility>[] = [
-  {
-    value: "private",
-    label: "Private",
-    description: "Only you can see it.",
-    icon: Lock,
-  },
   {
     value: "unlisted",
     label: "Unlisted",
@@ -115,7 +112,18 @@ export function PublishPanel({
   } = useFormContext<FormValues>();
   const tagsText = useWatch({ control, name: "tags_text" }) ?? "";
   const visibility = useWatch({ control, name: "visibility" });
+  const saveAsDraft = useWatch({ control, name: "save_as_draft" }) ?? false;
   const backCardId = useWatch({ control, name: "back_card_id" }) ?? "";
+  // The checkbox and the visibility field move together: ticking it forces
+  // private; unticking a private card offers public (the default) again.
+  const setSaveAsDraft = (next: boolean) => {
+    setValue("save_as_draft", next, { shouldDirty: true });
+    if (next) {
+      setValue("visibility", "private", { shouldDirty: true });
+    } else if (visibility === "private") {
+      setValue("visibility", "public", { shouldDirty: true });
+    }
+  };
   const entered = activeChallenge
     ? parseTags(tagsText).includes(activeChallenge.tag)
     : false;
@@ -171,12 +179,55 @@ export function PublishPanel({
           {entered && visibility !== "public" ? (
             <p className="text-xs leading-5 text-accent">
               Entries must be public to appear on the challenge page — this
-              card is currently {visibility || "private"}. Switch Visibility
-              to Public in Advanced below.
+              card is currently {visibility || "private"}.
+              {saveAsDraft
+                ? " Untick “Save as a draft” and choose Public below."
+                : " Choose Public below."}
             </p>
           ) : null}
         </div>
       ) : null}
+
+      {/* Draft vs. publish — the one decision this step is for. */}
+      <FieldGroup label="Publishing">
+        <div className="flex flex-col gap-3">
+          <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border/60 bg-elevated/30 px-4 py-3 text-sm text-foreground has-[:checked]:border-primary/50 has-[:checked]:bg-primary/5">
+            <input
+              type="checkbox"
+              checked={saveAsDraft}
+              onChange={(event) => setSaveAsDraft(event.target.checked)}
+              className="mt-0.5 h-4 w-4 accent-[var(--color-primary)]"
+              data-testid="save-as-draft"
+            />
+            <span className="flex flex-col gap-0.5">
+              <span className="inline-flex items-center gap-1.5 font-medium">
+                <FileEdit className="h-4 w-4 text-muted" aria-hidden />
+                Save as a draft
+              </span>
+              <span className="text-xs leading-5 text-muted">
+                Private — only you can see it, and it needs just a title.
+                Untick it whenever you&apos;re ready to publish.
+              </span>
+            </span>
+          </label>
+          {saveAsDraft ? null : (
+            <Controller
+              control={control}
+              name="visibility"
+              render={({ field }) => (
+                <ChipGroup
+                  ariaLabel="Visibility"
+                  layout="grid-2"
+                  size="md"
+                  value={field.value}
+                  onChange={(next) => field.onChange(next)}
+                  options={VISIBILITY_OPTIONS}
+                />
+              )}
+            />
+          )}
+        </div>
+      </FieldGroup>
 
       {isSetsEnabled() && !revise ? (
       <FieldGroup
@@ -243,29 +294,12 @@ export function PublishPanel({
         />
       </FieldGroup>
 
-      {/* Visibility + back face + finish, under Advanced. */}
+      {/* Back face + finish + watermark, under Advanced. */}
       <details className="rounded-lg border border-border/60 bg-elevated/30">
         <summary className="cursor-pointer list-none px-4 py-2 text-xs font-semibold uppercase tracking-wider text-subtle [&::-webkit-details-marker]:hidden">
           Advanced
         </summary>
         <div className="flex flex-col gap-4 px-4 pb-4">
-          <FieldGroup label="Visibility">
-            <Controller
-              control={control}
-              name="visibility"
-              render={({ field }) => (
-                <ChipGroup
-                  ariaLabel="Visibility"
-                  layout="grid-3"
-                  size="md"
-                  value={field.value}
-                  onChange={(next) => field.onChange(next)}
-                  options={VISIBILITY_OPTIONS}
-                />
-              )}
-            />
-          </FieldGroup>
-
           {/* Double-faced cards (a second full card as the back) are parked
               behind a "coming soon" veil (owner decision 2026-09-16): the
               picker stays mounted so an already-linked back still shows,

@@ -43,6 +43,10 @@ import { CardGlossary } from "@/components/creator/card-glossary";
 import { LockedSummary } from "@/components/creator/locked-summary";
 import { StartOverDialog } from "@/components/creator/start-over-dialog";
 import {
+  UnsavedChangesDialog,
+  useUnsavedChangesGuard,
+} from "@/components/creator/unsaved-changes-guard";
+import {
   AiGenerateDialog,
   type AiGenerateOptions,
 } from "@/components/creator/ai-generate-dialog";
@@ -246,14 +250,13 @@ type CardCreatorFormProps = {
 // Panel JSX lives in components/creator/panels/* (one client component per
 // panel); shared presentational helpers in field-group.tsx + frame-pickers.tsx;
 // pure field helpers in lib/creator/card-fields.ts. This orchestrator owns the
-// form instance, draft persistence, panel navigation, submit, and the preview.
-
-// One shared key: a guest's /preview draft survives sign-up and reappears on
-// /create. Versioned so a future FormValues shape change can invalidate.
-const CARD_DRAFT_STORAGE_KEY = "pipglyph:card-draft:v1";
-// Pre-rebrand draft key — read once as a migration fallback so in-flight
-// drafts survive the brand swap, then deleted. Safe to remove after 2026-09.
-const LEGACY_CARD_DRAFT_STORAGE_KEY = "spellwright:card-draft:v1";
+// form instance, panel navigation, submit, the unsaved-changes guard and
+// the preview.
+//
+// Save model (owner decision 2026-09-16): NOTHING is saved automatically.
+// A card is written only when the user clicks Save; "Save as a draft" on
+// the Publish step forces it private (and needs only a title). Leaving the
+// editor with changes asks first (unsaved-changes-guard.tsx).
 
 // The URL is read once per render via useSyncExternalStore; it never
 // changes underneath the form, so there is nothing to subscribe to.
@@ -303,6 +306,10 @@ export function CardCreatorForm({
   const confirmSpend = useCreditConfirm();
   const [isSubmitting, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
+  // Unsaved-changes guard. Armed from the form's dirty state below (a
+  // mirrored ref-free flag, since useForm is created after this hook).
+  const [guardArmed, setGuardArmed] = useState(false);
+  const guard = useUnsavedChangesGuard({ enabled: Boolean(userId) && guardArmed });
   // Active step index into the dynamic `steps` list (see below). Clamped on
   // read so it stays valid when the visible steps shrink (e.g. a DFC is removed).
   // The create→edit redirect carries ?step=<key> so saving doesn't bounce
@@ -450,8 +457,19 @@ export function CardCreatorForm({
     getValues,
     control,
     reset,
+    subscribe,
     formState: { errors, isDirty, dirtyFields },
   } = methods;
+  // Arm the guard whenever the form becomes dirty (RHF's subscribe API runs
+  // outside React's render/effect cycle, so no setState-in-effect).
+  useEffect(
+    () =>
+      subscribe({
+        formState: { isDirty: true },
+        callback: ({ isDirty: dirty }) => setGuardArmed(Boolean(dirty)),
+      }),
+    [subscribe],
+  );
 
   // Revise = edit or remix of an existing card. The Card step is gone and
   // the structural fields are read-only (LockedSummary); the submit path
@@ -473,122 +491,10 @@ export function CardCreatorForm({
     reset(defaults);
   }, [resetKey, defaults, reset]);
 
-  // ----- Save model: explicit Save button + automatic LOCAL draft. -----
-  // The server save is deliberate (it bakes the public PNG and carries
-  // publish semantics), but unsaved work should never be lost: in create/
-  // preview mode the form persists a debounced draft to localStorage, restores
-  // it on the next visit (including a guest signing in and landing on
-  // /create), and clears it on a successful save. Edit mode trusts the server
-  // copy and instead warns before unloading with unsaved changes.
-  const isDraftMode = mode === "create" && !card;
-  // A saved-but-still-private card is a draft too: while editing one we show the
-  // same Save draft + Start over controls as create mode (rather than the
-  // Delete + save-state chrome used for already-published cards).
-  const isDraft =
-    isDraftMode || isRemix || (isEdit && card?.visibility === "private");
-  const draftRestoredRef = useRef(false);
-  useEffect(() => {
-    // A deck-remix deep link is an explicit "start from THIS card" intent —
-    // restoring an unrelated stale draft over it (or racing the async
-    // prefill) would clobber the import. Skip restore entirely.
-    if (!isDraftMode || draftRestoredRef.current || deckRemix) return;
-    draftRestoredRef.current = true;
-    try {
-      const raw =
-        window.localStorage.getItem(CARD_DRAFT_STORAGE_KEY) ??
-        window.localStorage.getItem(LEGACY_CARD_DRAFT_STORAGE_KEY);
-      if (!raw) return;
-      const draft = JSON.parse(raw) as Partial<FormValues>;
-      if (!draft || typeof draft !== "object") return;
-      // Migrate pre-rebrand drafts forward; future writes use the new key.
-      window.localStorage.setItem(CARD_DRAFT_STORAGE_KEY, raw);
-      window.localStorage.removeItem(LEGACY_CARD_DRAFT_STORAGE_KEY);
-      const restored = { ...defaults, ...draft };
-      // A challenge CTA's tag survives draft restoration too.
-      if (initialTag) {
-        restored.tags_text = mergeTag(restored.tags_text, initialTag);
-      }
-      // Pre-editor drafts carry walker/saga text but no structured rows —
-      // hydrate them so the row editors don't open empty.
-      const restoredKind = kindFromCard(
-        restored.card_type,
-        restored.frame_style?.template,
-      );
-      if (
-        restoredKind === "planeswalker" &&
-        !(restored.loyalty_abilities?.length)
-      ) {
-        restored.loyalty_abilities = loyaltyFromRulesText(
-          restored.rules_text,
-        ).map((r) => ({ cost: r.cost ?? "", text: r.text }));
-      }
-      if (restoredKind === "saga" && !(restored.saga_chapters?.length)) {
-        const saga = sagaFromRulesText(restored.rules_text);
-        restored.saga_chapters = saga.chapters.map((ch) => ({
-          numerals: [...ch.numerals],
-          text: ch.text,
-        }));
-        restored.saga_intro = restored.saga_intro || (saga.intro ?? "");
-      }
-      // A new card always opens on the standard defaults (owner decision
-      // 2026-09-16) — an old draft is OFFERED, never silently restored over
-      // them. Resume puts it back in one tap; Discard forgets it.
-      toast.info("You have an unsaved draft from earlier.", {
-        duration: 15_000,
-        action: {
-          label: "Resume draft",
-          onClick: () => reset(restored),
-        },
-        cancel: {
-          label: "Discard",
-          onClick: () => window.localStorage.removeItem(CARD_DRAFT_STORAGE_KEY),
-        },
-      });
-    } catch {
-      // Corrupt/blocked storage — start clean.
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDraftMode]);
-
   // useWatch is the React Compiler-friendly subscription variant of watch().
   // We feed it the same defaults useForm has, so RHF always populates every
   // field; the cast just lifts useWatch's DeepPartial<> back to FormValues.
   const watched = useWatch({ control, defaultValue: defaults }) as FormValues;
-
-  // Debounced draft writes — every change while dirty, 800ms after the last.
-  useEffect(() => {
-    if (!isDraftMode || !isDirty) return;
-    const timer = window.setTimeout(() => {
-      try {
-        window.localStorage.setItem(
-          CARD_DRAFT_STORAGE_KEY,
-          JSON.stringify(watched),
-        );
-      } catch {
-        // Storage full/blocked — the explicit Save path still works.
-      }
-    }, 800);
-    return () => window.clearTimeout(timer);
-  }, [isDraftMode, isDirty, watched]);
-
-  // Native "leave site?" guard whenever there are unsaved changes. Draft mode
-  // is covered by localStorage, but edit mode has no local copy.
-  const isDirtyRef = useRef(isDirty);
-  useEffect(() => {
-    isDirtyRef.current = isDirty;
-  }, [isDirty]);
-  useEffect(() => {
-    const handler = (event: BeforeUnloadEvent) => {
-      // Draft mode auto-persists to localStorage, so there's nothing to lose
-      // by leaving — only guard edit mode, which has no local copy.
-      if (!isDraftMode && isDirtyRef.current) event.preventDefault();
-    };
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
-    // isDraftMode is stable for the component's lifetime (it only flips across
-    // a create→edit navigation, which remounts).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // The Adventure frame repurposes the back-face content as the adventure spell
   // (rendered inline on the card's left page, not as a flippable face), so the
@@ -621,9 +527,11 @@ export function CardCreatorForm({
   // hint row above the action bar (and doubled as the button's hover
   // title) — names EVERY missing requirement so the user isn't peeled one
   // gap at a time.
+  // A draft (Publish step checkbox → private) needs only a title; anything
+  // that can be seen by others needs artwork too.
   const saveMissing = [
     !watched.title.trim() ? "a title" : null,
-    !watched.art_url.trim() ? "artwork" : null,
+    !watched.save_as_draft && !watched.art_url.trim() ? "artwork" : null,
   ].filter((part): part is string => part !== null);
   // Edit / remix: at least one field must change (owner decision
   // 2026-09-16). For a remix the visibility choice alone doesn't count — the
@@ -1372,40 +1280,23 @@ export function CardCreatorForm({
     }
   };
 
-  // ---- Start over ----
-  // Wipe the form back to a blank card (create/draft mode only). Drops the
-  // local draft, resets the derived toggles + preview, and returns to step 1.
+  // ---- Start over / Reset ----
+  // Wipe the form back to its starting values (a blank card, the original
+  // being remixed, or the last save), reset the derived toggles + preview,
+  // and return to step 1.
   const handleStartOver = () => {
-    try {
-      window.localStorage.removeItem(CARD_DRAFT_STORAGE_KEY);
-    } catch {
-      // best-effort — reset below still clears the in-memory form
-    }
     reset(defaults);
     setRemixSource(null);
     setPreviewFace("front");
     setServerError(null);
     goToIndex(0);
     toast.success(
-      isDraftMode
+      mode === "create"
         ? "Started over — blank card ready."
-        : "Reset to your last save.",
+        : isRemix
+          ? "Reset to the original card."
+          : "Reset to your last save.",
     );
-  };
-
-  // ---- Save draft ----
-  // Persist the card as a private draft from any step. In create mode this
-  // creates a new private card and drops us into its editor; in draft-edit mode
-  // it updates the existing private card. Runs full validation first (the
-  // server rejects incomplete cards), jumping to the first errored step.
-  const handleSaveDraft = () => {
-    void handleSubmit(
-      (values) => runSubmit(values, "draft"),
-      (formErrors) => {
-        const first = Object.keys(formErrors)[0];
-        if (first) goToIndex(stepIndexForField(first, steps));
-      },
-    )();
   };
 
   // Arm the post-publish share prompt for a freshly-public card. The GA
@@ -1425,33 +1316,30 @@ export function CardCreatorForm({
   };
 
   // ---- Submit ----
-  // `intent` decides the post-save flow; only "draft" forces a visibility:
-  //   • "save"  → respect the card's Visibility setting (Publish panel;
-  //               new cards default to public). Never silently flips an
-  //               edited card's privacy.
-  //   • "draft" → force visibility private (the Save draft button)
-  //   • "back"  → keep the chosen visibility; after saving, jump to a fresh
-  //               creator (/create?backFor=…) to build this card's back face.
+  // `intent` decides the post-save flow:
+  //   • "save"  → the Publish step decides: "Save as a draft" forces
+  //               private, otherwise the chosen visibility applies.
+  //   • "back"  → same, then jump to a fresh creator (/create?backFor=…) to
+  //               build this card's back face.
+  // `afterSave` (the unsaved-changes dialog) replaces the default post-save
+  // destination with the navigation the user was attempting.
   const runSubmit = (
     values: FormValues,
-    intent: "save" | "draft" | "back",
+    intent: "save" | "back",
+    options: { afterSave?: () => void } = {},
   ) => {
     setServerError(null);
     const createBackAfter = intent === "back";
-    const forcedVisibility = intent === "draft" ? "private" : null;
-    // No artwork → no gallery (server-enforced in create/updateCardAction):
-    // a public save without art lands as a DRAFT and says why, instead of
-    // publishing an unfinished card and redirecting to its public page.
-    const chosenVisibility = forcedVisibility ?? values.visibility;
+    const chosenVisibility = values.save_as_draft
+      ? "private"
+      : values.visibility;
+    // No artwork → no gallery (server-enforced in create/updateCardAction).
+    // The Save button already refuses a public save without art, so this
+    // is only a belt-and-braces mirror of the server rule.
     const finalVisibility =
       chosenVisibility === "public" && !values.art_url.trim()
         ? "private"
         : chosenVisibility;
-    if (intent === "save" && chosenVisibility !== finalVisibility) {
-      toast.info(
-        "Saved as a draft — add artwork to publish it to the gallery.",
-      );
-    }
 
     // Build the back_face payload only when the user toggled it on.
     // When off, send `null` so the server clears any previously-persisted
@@ -1651,14 +1539,14 @@ export function CardCreatorForm({
         toast.success(
           finalVisibility === "public"
             ? `Published “${payload.title}”`
-            : `Saved “${payload.title}”`,
+            : finalVisibility === "private"
+              ? `Saved “${payload.title}” as a draft`
+              : `Saved “${payload.title}”`,
         );
-        if (mode === "create") {
-          try {
-            window.localStorage.removeItem(CARD_DRAFT_STORAGE_KEY);
-          } catch {
-            // best-effort
-          }
+        guard.disarm();
+        if (options.afterSave) {
+          options.afterSave();
+          return;
         }
 
         // This card was forged as a deck entry's proxy — link it back and
@@ -1750,10 +1638,15 @@ export function CardCreatorForm({
         handleUpgradeOrError(result);
         return;
       }
-      toast.success(intent === "draft" ? "Draft saved." : "Changes saved.");
+      toast.success("Changes saved.");
       // Mark clean right away (keeping the on-screen values); the keyed reset
       // swaps in server truth when the refresh lands.
       reset(undefined, { keepValues: true });
+      guard.disarm();
+      if (options.afterSave) {
+        options.afterSave();
+        return;
+      }
       if (intent === "save" && finalVisibility === "public") {
         // Only a FIRST publish (private draft → public) earns the share
         // prompt — re-saving an already-public card goes straight to the
@@ -2149,6 +2042,48 @@ export function CardCreatorForm({
             onCancel={() => setPendingKindPlan(null)}
           />
 
+          {/* Leaving with unsaved changes — save as a draft (create/remix)
+              or save changes (edit), leave, or stay. */}
+          <UnsavedChangesDialog
+            open={guard.pending !== null}
+            saveKind={isEdit ? "changes" : "draft"}
+            saveBlockedReason={
+              isEdit
+                ? saveDisabledReason
+                : !watched.title.trim()
+                  ? "Add a title first to save it as a draft."
+                  : isRemix && reviseUnchanged
+                    ? saveDisabledReason
+                    : null
+            }
+            saving={isSubmitting}
+            onStay={guard.clearPending}
+            onLeave={() => {
+              const pending = guard.pending;
+              guard.clearPending();
+              guard.disarm();
+              pending?.proceed();
+            }}
+            onSave={() => {
+              const pending = guard.pending;
+              if (!pending) return;
+              guard.clearPending();
+              if (!isEdit) {
+                // "Save as draft": force private for this save only.
+                setValue("save_as_draft", true, { shouldDirty: true });
+                setValue("visibility", "private", { shouldDirty: true });
+              }
+              void handleSubmit(
+                (values) =>
+                  runSubmit(values, "save", { afterSave: pending.proceed }),
+                (formErrors) => {
+                  const first = Object.keys(formErrors)[0];
+                  if (first) goToIndex(stepIndexForField(first, steps));
+                },
+              )();
+            }}
+          />
+
           {/* Post-publish share prompt — the "look what I made" moment. The
               live preview stays visible behind the dialog; closing it (Esc,
               ✕, overlay, or after sharing) continues to the public page.
@@ -2187,18 +2122,16 @@ export function CardCreatorForm({
             ) : null}
             <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
-              {/* Drafts (create + private) save silently — no chip. Published
-                  cards still show their real save state. */}
-              {!isDraft ? (
-                isDirty ? (
-                  <Badge variant="accent" className="gap-1.5">
-                    <Sparkles className="h-3 w-3" aria-hidden />
-                    Unsaved changes
-                  </Badge>
-                ) : (
-                  <Badge variant="default">Up to date</Badge>
-                )
-              ) : null}
+              {isDirty ? (
+                <Badge variant="accent" className="gap-1.5">
+                  <Sparkles className="h-3 w-3" aria-hidden />
+                  Unsaved changes
+                </Badge>
+              ) : (
+                <Badge variant="default">
+                  {mode === "create" ? "Not saved yet" : "Up to date"}
+                </Badge>
+              )}
               {remixSource ? (
                 <Badge variant="primary" className="gap-1.5">
                   Based on{" "}
@@ -2219,36 +2152,17 @@ export function CardCreatorForm({
               {remixSource ? <CardGlossary /> : null}
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              {/* Save draft — persists the card privately from any step. Shown
-                  in create mode and while editing a still-private draft.
-                  Grouped with the nav buttons so it shares their line. */}
-              {isDraft && userId ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleSaveDraft}
-                  disabled={
-                    isSubmitting ||
-                    (Boolean(deckRemix) && Boolean(remixSource) && !isDirty)
-                  }
-                >
-                  <Save className="h-4 w-4" aria-hidden />
-                  Save draft
-                </Button>
-              ) : null}
               {/* Save — available from ANY step (no more end-of-stepper
-                  gate). Disabled until the card has a title + artwork, or
-                  while a deck-remix import sits unaltered (an exact copy is
-                  the real card, not a custom proxy). Guests get the sign-in
-                  path instead. */}
-              {/* Start over — always available while drafting (the dialog
-                  itself is the guard against a stray click). Published
-                  cards use Delete instead. */}
-              {isDraft ? (
+                  gate). Disabled until the card has a title + artwork (a
+                  draft needs only the title), or while a deck-remix import
+                  sits unaltered (an exact copy is the real card, not a
+                  custom proxy). Guests get the sign-in path instead. */}
+              {/* Start over (create) / Reset (edit + remix, once something
+                  changed) — the dialog itself guards against a stray click. */}
+              {mode === "create" || isDirty ? (
                 <StartOverDialog
                   onConfirm={handleStartOver}
-                  variant={isDraftMode ? "create" : "revert"}
+                  variant={mode === "create" ? "create" : "revert"}
                 />
               ) : null}
               {/* Main controls, in fixed order: Cancel · Save · Back · Next
@@ -2262,7 +2176,7 @@ export function CardCreatorForm({
               ) : null}
               {!userId ? (
                 <Button asChild size="sm">
-                  <Link href="/login?redirectTo=/create">
+                  <Link href="/login?redirectTo=/create" data-no-guard>
                     <Lock className="h-4 w-4" aria-hidden />
                     Sign in to save
                   </Link>
@@ -2304,7 +2218,7 @@ export function CardCreatorForm({
                   <ArrowRight className="h-4 w-4" aria-hidden />
                 </Button>
               ) : null}
-              {isEdit && card && !isDraft ? (
+              {isEdit && card ? (
                 <DeleteCardDialog
                   cardId={card.id}
                   cardTitle={card.title}
@@ -2336,12 +2250,15 @@ export function CardCreatorForm({
             </div>
             <p className="text-xs leading-5 text-muted">
               {isEdit ? (
-                <>Visibility lives on the Publish step, under Advanced.</>
+                <>
+                  Nothing changes until you click Save. Visibility and
+                  &ldquo;Save as a draft&rdquo; live on the Publish step.
+                </>
               ) : (
                 <>
                   New cards are <strong className="text-foreground">public</strong> by
-                  default — set Visibility on the Publish step to keep this private or
-                  unlisted.
+                  default — tick &ldquo;Save as a draft&rdquo; on the Publish step
+                  to keep it private until it&apos;s ready.
                 </>
               )}
             </p>

@@ -53,14 +53,16 @@ test.describe("create a card (text fields only)", () => {
     await signIn(page);
     await openCreatorWithTitle(page, `Test Card ${Date.now()}`);
 
-    // Art-less cards save via Save draft (the persistent Save button
-    // requires a title AND artwork; this form has no art).
+    // Art-less cards save as DRAFTS: Save needs a title AND artwork unless
+    // "Save as a draft" is ticked on the Publish step (drafts need a title).
     const saveButton = page.getByRole("button", { name: /save card/i });
     await expect(saveButton).toBeDisabled();
 
-    const draftButton = page.getByRole("button", { name: /save draft/i });
-    await expect(draftButton).toBeEnabled();
-    await draftButton.dispatchEvent("click");
+    const rail = page.getByRole("navigation", { name: /card editor steps/i });
+    await rail.getByRole("button", { name: /^publish$/i }).click();
+    await page.getByTestId("save-as-draft").check();
+    await expect(saveButton).toBeEnabled();
+    await saveButton.dispatchEvent("click");
 
     // After save, the editor redirects to the slug-edit URL.
     await page.waitForURL(/\/card\/.+\/edit/);

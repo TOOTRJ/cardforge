@@ -46,6 +46,7 @@ function baseValues(overrides: Partial<FormValues> = {}): FormValues {
     art_position: { focalX: 0.5, focalY: 0.5, scale: 1 },
     frame_style: { finish: "regular", template: DEFAULT_FRAME_TEMPLATE },
     visibility: "public",
+    save_as_draft: false,
     has_back_face: false,
     back_face: EMPTY_BACK_FACE,
     back_card_id: "",
