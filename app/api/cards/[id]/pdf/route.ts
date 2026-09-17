@@ -134,6 +134,9 @@ export async function GET(
   // and therefore clean, so it renders live — the stored path below only
   // fires if the mark is ever wanted on a PDF.
   const stamp = await ownerExportStamp(card.owner_id);
+  const footerText = stamp.brandMark
+    ? null
+    : ((card as { footer_text?: string | null }).footer_text ?? stamp.footerText) || null;
   // The brand mark follows the VIEWER's plan only — see the png route. (PDF
   // is a paid feature, so in practice this is always clean; the rule is
   // spelled out here so the two routes can't drift.)
@@ -146,7 +149,7 @@ export async function GET(
     } else {
       const imgResponse = await renderCardImage(previewData, "hd", {
         brandMark,
-        watermarkText: stamp.footerText,
+        watermarkText: footerText,
       });
       pngBytes = new Uint8Array(await imgResponse.arrayBuffer());
     }

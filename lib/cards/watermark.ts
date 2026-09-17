@@ -55,6 +55,36 @@ export const WATERMARK_PRESETS = [
 
 const WATERMARK_PRESET_KEYS = WATERMARK_PRESETS.map((p) => p.key);
 
+/** Card types that carry the PipGlyph Rose watermark by default for free
+ *  accounts and NO watermark for subscribers (owner decision 2026-09-17).
+ *  Every other type keeps the user's own choice under Advanced. */
+export const DEFAULT_WATERMARK_CARD_TYPES: ReadonlySet<string> = new Set([
+  "creature",
+  "instant",
+  "sorcery",
+  "artifact",
+  "enchantment",
+]);
+
+export function usesDefaultWatermark(cardType: string | null | undefined): boolean {
+  return Boolean(cardType && DEFAULT_WATERMARK_CARD_TYPES.has(cardType));
+}
+
+export const PIPGLYPH_ROSE_WATERMARK: CardWatermark = {
+  kind: "preset",
+  key: "pipglyph-rose",
+  size: "normal",
+};
+
+/** The watermark a NEW card of `cardType` starts with: the Rose for a free
+ *  account on the default types, nothing otherwise. */
+export function defaultWatermarkFor(
+  cardType: string | null | undefined,
+  paid: boolean,
+): CardWatermark | null {
+  return usesDefaultWatermark(cardType) && !paid ? PIPGLYPH_ROSE_WATERMARK : null;
+}
+
 export function isWatermarkPresetKey(key: string): boolean {
   return (WATERMARK_PRESET_KEYS as string[]).includes(key);
 }

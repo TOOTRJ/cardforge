@@ -31,6 +31,7 @@ export const REVISABLE_FIELDS = [
   "set_icon_code",
   "tags_text",
   "watermark",
+  "footer_text",
   "visibility",
   // The inline second face (Adventure spell / split half) is CONTENT of the
   // frame the card already has, so it stays editable; the standard-frame
@@ -69,6 +70,7 @@ export const REVISABLE_PAYLOAD_KEYS = [
   "set_icon_code",
   "tags",
   "watermark",
+  "footer_text",
   "visibility",
   "back_face",
 ] as const;

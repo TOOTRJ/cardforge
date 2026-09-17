@@ -30,6 +30,7 @@ import {
 } from "@/lib/cards/face-content";
 import { kindFromCard } from "@/lib/creator/card-kinds";
 import { remixTitleFor } from "@/lib/creator/revise";
+import { defaultWatermarkFor } from "@/lib/cards/watermark";
 
 /** Hydrate the structured row editors from a persisted card: structured
  *  face_content when present, else parsed from rules_text — but ONLY for the
@@ -94,13 +95,24 @@ export function backFaceFormValuesFrom(
   };
 }
 
+/** Viewer facts the defaults depend on (owner decision 2026-09-17): paid
+ *  accounts start creatures/spells with no watermark (free: the PipGlyph
+ *  Rose) and new cards prefill the account's footer mark. */
+export type DefaultValueOptions = {
+  paid?: boolean;
+  /** profiles.export_watermark_text — the prefill for a new card. */
+  footerText?: string | null;
+};
+
 export function defaultValuesFor(
   card: Card | null | undefined,
   gameSystems: GameSystem[],
   templates: CardTemplate[],
+  options: DefaultValueOptions = {},
 ): FormValues {
   const fallbackGameSystem = gameSystems[0]?.id ?? "";
   const fallbackTemplate = templates[0]?.id ?? "";
+  const paid = options.paid ?? false;
 
   if (!card) {
     return {
@@ -144,7 +156,8 @@ export function defaultValuesFor(
       set_icon_url: "",
       set_icon_code: "",
       deck_id: "",
-      watermark: EMPTY_WATERMARK,
+      watermark: watermarkFormValuesFromValue(defaultWatermarkFor("creature", paid)),
+      footer_text: paid ? (options.footerText ?? "") : "",
     };
   }
 
@@ -204,6 +217,9 @@ export function defaultValuesFor(
     // create-flow convenience, so edits always start empty.
     deck_id: "",
     watermark: watermarkFormValuesFrom(card),
+    // null on a legacy row = the profile default applies at download time,
+    // so that is what the field shows; "" = explicitly none.
+    footer_text: card.footer_text ?? (paid ? options.footerText ?? "" : ""),
   };
 }
 
@@ -216,14 +232,17 @@ export function remixValuesFrom(
   parent: Card,
   gameSystems: GameSystem[],
   templates: CardTemplate[],
+  options: DefaultValueOptions = {},
 ): FormValues {
-  const base = defaultValuesFor(parent, gameSystems, templates);
+  const base = defaultValuesFor(parent, gameSystems, templates, options);
   return {
     ...base,
     title: remixTitleFor(parent.title),
     slug: "",
     visibility: "public",
     save_as_draft: false,
+    // The footer mark is the REMIXER's, never the parent owner's.
+    footer_text: options.paid ? (options.footerText ?? "") : "",
     primary_set_id: "",
     set_icon_url: "",
     set_icon_code: "",
@@ -233,7 +252,12 @@ export function remixValuesFrom(
 }
 
 function watermarkFormValuesFrom(card: Card): WatermarkFormValues {
-  const wm = card.watermark;
+  return watermarkFormValuesFromValue(card.watermark);
+}
+
+export function watermarkFormValuesFromValue(
+  wm: Card["watermark"] | null | undefined,
+): WatermarkFormValues {
   if (!wm) return EMPTY_WATERMARK;
   return {
     kind: wm.kind,

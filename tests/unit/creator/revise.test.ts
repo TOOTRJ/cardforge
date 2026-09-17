@@ -39,6 +39,7 @@ describe("revise contract", () => {
       "set_icon_url",
       "tags_text",
       "watermark",
+      "footer_text",
       "visibility",
     ]) {
       expect(REVISABLE_FIELDS).toContain(open);

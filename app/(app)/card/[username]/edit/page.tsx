@@ -192,7 +192,8 @@ export default async function EditCardPage({ params }: EditCardPageProps) {
           verifiedFrameKeys={await getVerifiedFrameKeys()}
           profileOverrides={await getFrameProfileOverrides()}
           activeChallenge={await getCurrentChallenge()}
-          footerWatermark={exportStamp.footerText}
+          isPaid={entitlements.removeWatermark}
+          defaultFooterText={exportStamp.footerText}
         />
       </div>
     </div>

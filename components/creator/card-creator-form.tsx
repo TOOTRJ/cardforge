@@ -17,6 +17,7 @@ import {
   ArrowRight,
   IdCard,
   Layers,
+  Crown,
   Loader2,
   Lock,
   Save,
@@ -42,6 +43,11 @@ import { ShareTargets } from "@/components/cards/share-targets";
 import { DeleteCardDialog } from "@/components/creator/delete-card-dialog";
 import { CardGlossary } from "@/components/creator/card-glossary";
 import { LockedSummary } from "@/components/creator/locked-summary";
+import { SubscriberPanel } from "@/components/creator/panels/subscriber-panel";
+import {
+  defaultWatermarkFor,
+  usesDefaultWatermark,
+} from "@/lib/cards/watermark";
 import { CanvasHotspots } from "@/components/creator/canvas-hotspots";
 import type { CreatorLayout } from "@/lib/creator/lab-shared";
 import { StartOverDialog } from "@/components/creator/start-over-dialog";
@@ -146,6 +152,7 @@ import {
   parseSubtypes,
   parseTags,
   remixValuesFrom,
+  watermarkFormValuesFromValue,
 } from "@/lib/creator/card-fields";
 import { EMPTY_BACK_FACE, type FormValues } from "@/lib/creator/form-types";
 import {
@@ -244,12 +251,14 @@ type CardCreatorFormProps = {
   /** Admin frame-layout overrides (server-fetched) — keeps the editor's
    *  live preview identical to the gallery render and the bake. */
   profileOverrides?: FrameProfileOverridesMap | null;
-  /** The owner's custom footer mark (server-resolved via ownerExportStamp —
-   *  paid perk, null when unset/free). Printed in the preview footer so the
-   *  editor matches the owner's DOWNLOADS; the public bake still carries
-   *  the pipglyph.com mark (watermark policy), which the preview note says.
-   *  Not form state. */
-  footerWatermark?: string | null;
+  /** Plus / Pro / comp / admin — the rule downloads use
+   *  (entitlements.removeWatermark). Drives the Subscriber step, the
+   *  watermark defaults on creatures/spells, and the preview's brand mark
+   *  (owner decision 2026-09-17: subscribers preview their downloads). */
+  isPaid?: boolean;
+  /** The account's footer mark (profiles.export_watermark_text) — the
+   *  prefill for a new card's per-card footer_text. */
+  defaultFooterText?: string | null;
   /** "stepper" (shipped) or the lab's "canvas" — the centred live preview
    *  with clickable regions (lib/creator/lab-shared.ts). */
   layout?: CreatorLayout;
@@ -280,6 +289,7 @@ const STEP_RAIL_ICONS: Record<string, React.ReactNode> = {
   identity: <IdCard aria-hidden />,
   text: <ScrollText aria-hidden />,
   seticon: <Stamp aria-hidden />,
+  subscriber: <Crown aria-hidden />,
   publish: <Send aria-hidden />,
 };
 
@@ -309,7 +319,8 @@ export function CardCreatorForm({
   defaultArtistCredit = "",
   verifiedFrameKeys = [],
   profileOverrides = null,
-  footerWatermark = null,
+  isPaid = false,
+  defaultFooterText = null,
   layout = "stepper",
 }: CardCreatorFormProps) {
   const router = useRouter();
@@ -436,10 +447,11 @@ export function CardCreatorForm({
   }, [userId]);
 
   const defaults = useMemo(() => {
+    const viewer = { paid: isPaid, footerText: defaultFooterText };
     const base =
       mode === "remix" && card
-        ? remixValuesFrom(card, gameSystems, templates)
-        : defaultValuesFor(card, gameSystems, templates);
+        ? remixValuesFrom(card, gameSystems, templates, viewer)
+        : defaultValuesFor(card, gameSystems, templates, viewer);
     // Seed the challenge tag for fresh creates (edits keep the card's tags).
     if (initialTag && !card) {
       base.tags_text = mergeTag(base.tags_text, initialTag);
@@ -450,7 +462,7 @@ export function CardCreatorForm({
       base.artist_credit = defaultArtistCredit;
     }
     return base;
-  }, [mode, card, gameSystems, templates, initialTag, defaultArtistCredit]);
+  }, [mode, card, gameSystems, templates, initialTag, defaultArtistCredit, isPaid, defaultFooterText]);
 
   // The full methods object is spread into <FormProvider> below so the step
   // components can reach the same form instance via useFormContext().
@@ -803,6 +815,23 @@ export function CardCreatorForm({
     setValue("frame_style.template", template, { shouldDirty: true });
     if (patch.has_back_face) {
       setValue("has_back_face", true, { shouldDirty: true });
+    }
+    // The default watermark follows the type (owner decision 2026-09-17):
+    // a free account's creature/spell always carries the PipGlyph Rose, and
+    // leaving those types drops the forced Rose (it was never a choice).
+    // Subscribers keep whatever they picked.
+    if (!isPaid) {
+      const wasDefault = usesDefaultWatermark(prevCardType);
+      const isDefault = usesDefaultWatermark(patch.card_type);
+      if (isDefault) {
+        setValue(
+          "watermark",
+          watermarkFormValuesFromValue(defaultWatermarkFor(patch.card_type, false)),
+          { shouldDirty: true },
+        );
+      } else if (wasDefault) {
+        setValue("watermark", watermarkFormValuesFromValue(null), { shouldDirty: true });
+      }
     }
     // Land auto-identity: picking Land starts you on the basic of the current
     // frame color (colorless → Wastes) — that's what makes the big mana
@@ -1621,6 +1650,9 @@ export function CardCreatorForm({
       deck_id: values.deck_id || null,
       // Remix: the new card links back to the original it started from.
       parent_card_id: isRemix && card ? card.id : undefined,
+      // Subscriber footer mark for this card ("" = none). The action ignores
+      // it for free accounts.
+      footer_text: values.footer_text.trim(),
     };
 
     startTransition(async () => {
@@ -1893,9 +1925,11 @@ export function CardCreatorForm({
     frameStyle: watched.frame_style,
     // Live set-symbol preview (the Set icon step edits these directly).
     setIconUrl: watched.set_icon_url || null,
-    // Owner's custom footer mark — server-resolved, not form state, so the
-    // preview footer matches what exports/bakes will print.
-    footerWatermark,
+    // Subscribers preview their DOWNLOADS (owner decision 2026-09-17): no
+    // pipglyph.com mark, their own footer mark if set. Free accounts see
+    // the public look. The bake/gallery always keep the mark either way.
+    brandMark: !isPaid && isBillingEnabled(),
+    footerWatermark: isPaid ? watched.footer_text.trim() || null : null,
     setIconCode: watched.set_icon_code || null,
     faceContent: liveFaceContent,
     watermark:
@@ -1984,11 +2018,13 @@ export function CardCreatorForm({
   );
   const visibilityNote = (
     <p className="text-xs leading-5 text-muted">
-      {footerWatermark ? (
+      {isPaid ? (
         <>
-          Your footer mark &ldquo;{footerWatermark}&rdquo; prints on your
-          downloads and shows here; the public card keeps the pipglyph.com
-          mark.{" "}
+          This preview shows your downloads: no pipglyph.com mark
+          {watched.footer_text.trim()
+            ? ` and your footer mark “${watched.footer_text.trim()}”`
+            : ""}
+          . The public card keeps the pipglyph.com mark.{" "}
         </>
       ) : null}
       {isEdit ? (
@@ -2138,6 +2174,15 @@ export function CardCreatorForm({
             {/* ----- Set icon panel (the type-line symbol, a direct card field) ----- */}
             {stepKey === "seticon" ? <SetIconPanel userId={userId} /> : null}
 
+            {/* ----- Subscriber step (paid perks for this card; upsell for free) ----- */}
+            {stepKey === "subscriber" ? (
+              <SubscriberPanel
+                userId={userId}
+                isPaid={isPaid}
+                showWatermark={usesDefaultWatermark(watched.card_type)}
+              />
+            ) : null}
+
             {/* ----- Publish panel (visibility/set/back face + Advanced: finish/tags/save) ----- */}
             {stepKey === "publish" ? (
               <PublishPanel
@@ -2149,6 +2194,7 @@ export function CardCreatorForm({
                 myCards={myCards}
                 onCreateBackFace={handleCreateBackFace}
                 revise={isRevise}
+                showWatermark={!usesDefaultWatermark(watched.card_type)}
               />
             ) : null}
       </div>

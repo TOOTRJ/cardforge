@@ -99,6 +99,11 @@ export async function GET(
   const preset: RenderPreset =
     entitlements.maxExportPreset === "hd" ? requestedPreset : "default";
   const stamp = await ownerExportStamp(card.owner_id);
+  // This card's own footer mark (migration 0090) wins over the profile
+  // default; "" means none. Only a paid owner's mark ever prints.
+  const footerText = stamp.brandMark
+    ? null
+    : ((card as { footer_text?: string | null }).footer_text ?? stamp.footerText) || null;
   const watermark = downloadBrandMark(entitlements);
 
   // Output varies by the authenticated viewer's entitlement (watermark +
@@ -122,7 +127,7 @@ export async function GET(
         watermark ? "wm" : "clean",
         // The owner's custom footer mark prints into the render — fold it in
         // so a changed mark busts the 304 path.
-        stamp.footerText ?? "",
+        footerText ?? "",
         CARD_LAYOUT_VERSION,
         JSON.stringify(pipOverrides ?? null),
         // Frame-layout overrides change baked geometry without a code
@@ -159,7 +164,7 @@ export async function GET(
     } else {
       const imgResponse = await renderCardImage(previewData, preset, {
         brandMark: watermark,
-        watermarkText: stamp.footerText,
+        watermarkText: footerText,
       });
       pngBytes = new Uint8Array(await imgResponse.arrayBuffer());
     }

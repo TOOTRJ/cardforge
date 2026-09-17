@@ -30,6 +30,7 @@ import type { FrameProfileOverridesMap } from "@/lib/cards/profile-override";
 import { BackFacePicker } from "@/components/creator/back-face-picker";
 import { ChallengeBriefDialog } from "@/components/creator/challenge-brief-dialog";
 import { EffectsPanel } from "@/components/creator/panels/effects-panel";
+import { ComingSoon } from "@/components/creator/coming-soon";
 import { WatermarkPicker } from "@/components/creator/panels/watermark-picker";
 import { daysLeft, type Challenge } from "@/lib/challenges/shared";
 import { isSetsEnabled } from "@/lib/sets/flags";
@@ -92,6 +93,10 @@ type PublishPanelProps = {
   /** Edit / remix: set membership, deck and finish are locked structure
    *  (owner decision 2026-09-16) and are not offered. */
   revise?: boolean;
+  /** False for creature/instant/sorcery/artifact/enchantment — their
+   *  watermark is a subscriber perk on the Subscriber step (free accounts
+   *  always carry the PipGlyph Rose there). */
+  showWatermark?: boolean;
 };
 
 export function PublishPanel({
@@ -103,6 +108,7 @@ export function PublishPanel({
   myCards,
   onCreateBackFace,
   revise = false,
+  showWatermark = true,
 }: PublishPanelProps) {
   const {
     register,
@@ -317,37 +323,10 @@ export function PublishPanel({
           </ComingSoon>
 
           {revise ? null : <EffectsPanel />}
-          <WatermarkPicker userId={userId} />
+          {showWatermark ? <WatermarkPicker userId={userId} /> : null}
         </div>
       </details>
     </>
-  );
-}
-
-/** Veils a control that isn't shippable yet: greyed, inert, with a pill
- *  saying so. Keeps the real control mounted so the layout stays honest. */
-function ComingSoon({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="relative" aria-disabled="true" data-testid="coming-soon">
-      <div
-        className="pointer-events-none select-none opacity-40 blur-[1px]"
-        // Inert keeps the veiled controls out of the tab order too.
-        inert
-      >
-        {children}
-      </div>
-      <div className="absolute inset-0 flex items-center justify-center">
-        <span className="rounded-full border border-border bg-surface/95 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-foreground shadow-sm">
-          {label} · Coming soon
-        </span>
-      </div>
-    </div>
   );
 }
 

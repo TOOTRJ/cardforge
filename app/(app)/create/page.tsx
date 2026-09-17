@@ -243,7 +243,8 @@ export default async function CreatePage({
           activeChallenge={await getCurrentChallenge()}
           defaultArtistCredit={profile?.display_name || profile?.username || ""}
           layout={layout}
-          footerWatermark={exportStamp.footerText}
+          isPaid={entitlements.removeWatermark}
+          defaultFooterText={exportStamp.footerText}
         />
       </div>
     </div>
