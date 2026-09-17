@@ -135,6 +135,7 @@ export function defaultValuesFor(
         template: DEFAULT_FRAME_TEMPLATE,
       },
       visibility: "public",
+      save_as_draft: false,
       has_back_face: false,
       back_face: EMPTY_BACK_FACE,
       back_card_id: "",
@@ -187,6 +188,9 @@ export function defaultValuesFor(
     },
     frame_style: normalizedFrameStyle,
     visibility: card.visibility,
+    // A saved private card IS a draft — the checkbox reflects that so
+    // unticking it is how the card gets published.
+    save_as_draft: card.visibility === "private",
     has_back_face: persistedBackFace !== null,
     back_face: backFaceFormValuesFrom(persistedBackFace),
     back_card_id: card.back_card_id ?? "",
@@ -219,6 +223,7 @@ export function remixValuesFrom(
     title: remixTitleFor(parent.title),
     slug: "",
     visibility: "public",
+    save_as_draft: false,
     primary_set_id: "",
     set_icon_url: "",
     set_icon_code: "",

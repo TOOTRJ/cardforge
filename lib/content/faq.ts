@@ -212,7 +212,7 @@ const ACCOUNTS_FAQ: FaqEntry[] = [
   },
   {
     q: "Does the editor autosave my work?",
-    a: "While you design, the editor keeps an in-browser draft, so an accidental tab close or refresh restores your work-in-progress when you come back on the same device. Clicking Save writes the card to your account permanently and makes it available from any device.",
+    a: "No — a card is only saved when you click Save, so nothing half-finished ever lands in your library by accident. Tick “Save as a draft” on the Publish step to keep a work-in-progress private (a draft only needs a title). If you try to leave the editor with unsaved changes, PipGlyph asks whether to save it as a draft first.",
   },
 ];
 
