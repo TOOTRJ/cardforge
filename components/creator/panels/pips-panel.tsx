@@ -26,9 +26,16 @@ type PipsPanelProps = {
   /** The signed-in user's custom pip icons (server-fetched). Drives the
    *  picker's icons and the "Customize pips" dialog beside it. */
   pipOverrides: PipOverrides;
+  /** Edit / remix lock the frame colour, so a cost that implies another
+   *  colour is simply allowed (owner decision 2026-09-16) — no prompt. */
+  frameLocked?: boolean;
 };
 
-export function PipsPanel({ frameTemplate, pipOverrides }: PipsPanelProps) {
+export function PipsPanel({
+  frameTemplate,
+  pipOverrides,
+  frameLocked = false,
+}: PipsPanelProps) {
   const {
     control,
     setValue,
@@ -58,7 +65,8 @@ export function PipsPanel({ frameTemplate, pipOverrides }: PipsPanelProps) {
   // Dismissal is keyed to the cost string, so the prompt reappears the moment a
   // NEW mismatching pip is added but stays hidden after the user waves it off.
   const [dismissedCost, setDismissedCost] = useState<string | null>(null);
-  const showColorPrompt = missing.length > 0 && dismissedCost !== cost;
+  const showColorPrompt =
+    !frameLocked && missing.length > 0 && dismissedCost !== cost;
 
   return (
     <>

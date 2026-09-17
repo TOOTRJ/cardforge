@@ -56,7 +56,6 @@ export type AiActionLabel =
 // credits are the sole limiter (owner decision, 2026-07-28) and the jobs
 // route skips these checks entirely.
 const RANDOM_CARD_DAILY_LIMIT = 10;
-export const REMIX_DAILY_LIMIT = 10;
 // Deck/set batch flows generate many images per job, so the ceiling is the
 // per-DAY total across all batch jobs (not per job). Admins are exempt.
 // Matches the per-job ceiling so one full Commander deck fits in a day.

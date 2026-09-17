@@ -45,7 +45,13 @@ const RARITY_OPTIONS: ChipOption<Rarity>[] = RARITY_VALUES.map((rarity) => ({
   activeClass: "border-foreground/50 bg-elevated text-foreground",
 }));
 
-export function IdentityPanel() {
+type IdentityPanelProps = {
+  /** Edit / remix: supertype + subtypes are part of the locked type line
+   *  (see LockedSummary), so the "More options" editor is not offered. */
+  revise?: boolean;
+};
+
+export function IdentityPanel({ revise = false }: IdentityPanelProps) {
   const {
     register,
     control,
@@ -97,6 +103,7 @@ export function IdentityPanel() {
 
       {/* Quick path stops here: title + type + rarity make a real card.
           Everything below is detail control. */}
+      {revise ? null : (
       <MoreOptions summary="More options — supertype, subtypes">
         <div className="grid gap-4 sm:grid-cols-2">
           <FieldGroup
@@ -125,6 +132,7 @@ export function IdentityPanel() {
           </FieldGroup>
         </div>
       </MoreOptions>
+      )}
     </>
   );
 }

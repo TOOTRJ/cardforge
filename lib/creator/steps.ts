@@ -39,6 +39,11 @@ export type StepContext = {
   /** Derived via kindFromCard(cardType, template) — the wizard-level "what
    *  am I making" that drives step visibility and per-kind panel config. */
   kind: CardKind;
+  /** Edit / remix of an existing card: the structural fields (type, frame,
+   *  variation, colour, type line, finish) are LOCKED, so the Card step is
+   *  not offered at all — a saved card can't be turned into a bad one by
+   *  changing what it structurally is (owner decision 2026-09-16). */
+  revise?: boolean;
 };
 
 export type StepDef = {
@@ -123,7 +128,8 @@ const STEP_DEFS: StepDef[] = [
     label: "Card",
     description: "Type, frame & color",
     fields: ["card_type", "frame_style", "color_identity"],
-    isVisible: always,
+    // Create only — see StepContext.revise.
+    isVisible: (ctx) => !ctx.revise,
   },
   {
     // The card's substance in one pass: name + rarity, the mana cost (the

@@ -18,6 +18,7 @@ import {
 import { bakeAndPersistCardRender } from "@/lib/cards/bake-render";
 import { addCustomCardEntryToDeck } from "@/lib/decks/membership";
 import { cardRenderPath } from "@/lib/cards/storage-paths";
+import { renderThumbPath } from "@/lib/cards/render-thumb";
 import { normalizeManaCost } from "@/lib/cards/mana-order";
 import {
   VISIBILITY_VALUES,
@@ -147,6 +148,42 @@ function revalidateCardPaths(slug: string, ownerUsername?: string | null) {
     revalidatePath(`/profile/${ownerUsername}`);
     // Canonical public detail URL (Phase 11 chunk 11).
     revalidatePath(`/card/${ownerUsername}/${slug}`);
+  }
+}
+
+/** Every public object a bake writes for a card — the HD PNG and its WebP
+ *  thumbnail (lib/cards/render-thumb.ts). Deleting or privatising a card must
+ *  drop BOTH; the thumb used to be left behind, publicly fetchable. */
+function renderObjectPaths(ownerId: string, cardId: string): string[] {
+  const png = cardRenderPath(ownerId, cardId);
+  return [png, renderThumbPath(png)];
+}
+
+/** A remix changes what its PARENT's page shows (remix count, "Top
+ *  remixes"), so bust the parent's canonical path too. Best-effort — the
+ *  parent may belong to someone else, so the username is looked up. */
+async function revalidateParentCardPaths(parentCardId: string): Promise<void> {
+  try {
+    const supabase = await createClient();
+    // owner_id references auth.users, not profiles, so PostgREST can't join
+    // the two — two small reads instead.
+    const { data: parent } = await supabase
+      .from("cards")
+      .select("slug, owner_id")
+      .eq("id", parentCardId)
+      .maybeSingle();
+    if (!parent) return;
+    const { data: owner } = await supabase
+      .from("profiles")
+      .select("username")
+      .eq("id", parent.owner_id)
+      .maybeSingle();
+    revalidatePath(`/card/${parent.slug}`);
+    if (owner?.username) {
+      revalidatePath(`/card/${owner.username}/${parent.slug}`);
+    }
+  } catch {
+    // best-effort
   }
 }
 
@@ -418,6 +455,9 @@ export async function createCardAction(
 
   const ownerUsername = await getOwnerUsername();
   revalidateCardPaths(row.slug, ownerUsername);
+  if (data.parent_card_id) {
+    await revalidateParentCardPaths(data.parent_card_id);
+  }
 
   // Bake the public PNG AFTER the response is sent (next/server `after`) so
   // Save never blocks on HD rasterization + upload — the same posture as the
@@ -680,81 +720,18 @@ export async function deleteCardAction(
     return { ok: false, formError: error.message };
   }
 
-  // Remove the card's baked render from the public bucket (best-effort; the
-  // render path is per-card, so this never touches another card's render). Art
-  // is left alone — remixes copy art_url, so it can be shared.
+  // Remove the card's baked render + thumbnail from the public bucket
+  // (best-effort; the render path is per-card, so this never touches another
+  // card's render). Art is left alone — remixes copy art_url, so it can be
+  // shared.
   await supabase.storage
     .from("card-renders")
-    .remove([cardRenderPath(existing.owner_id, cardId)]);
+    .remove(renderObjectPaths(existing.owner_id, cardId));
 
   const ownerUsername = await getOwnerUsername();
   revalidateCardPaths(existing.slug, ownerUsername);
 
   return { ok: true, cardId };
-}
-
-// ---------------------------------------------------------------------------
-// Remix (fork) — convenience wrapper around createCard that copies fields
-// from a parent and stamps parent_card_id.
-// ---------------------------------------------------------------------------
-
-export type RemixCardInput = {
-  parentCardId: string;
-  /** Optional title override; defaults to "<parent title> (remix)". */
-  title?: string;
-  /** AI-remix overrides — replace the copied value instead of inheriting.
-   *  `flavorText: null` clears the parent's flavor; `artUrl` also resets the
-   *  art position (the new render needn't share the parent's framing). */
-  flavorText?: string | null;
-  artUrl?: string;
-};
-
-export async function remixCardAction(
-  input: RemixCardInput,
-): Promise<CreateCardResult> {
-  if (!isSupabaseConfigured()) return notConfigured();
-
-  const user = await getCurrentUser();
-  if (!user) return notAuthed();
-
-  const parent = await getCardById(input.parentCardId);
-  if (!parent) {
-    return { ok: false, formError: "Parent card not found." };
-  }
-
-  // RLS already prevents reading private cards belonging to others, so the
-  // existence check above is also an authorization check by virtue of RLS.
-
-  const title = (input.title?.trim() || `${parent.title} (remix)`).slice(0, 120);
-
-  return createCardAction({
-    title,
-    slug: undefined,
-    game_system_id: parent.game_system_id,
-    template_id: parent.template_id ?? undefined,
-    cost: parent.cost ?? undefined,
-    color_identity: parent.color_identity,
-    supertype: parent.supertype ?? undefined,
-    card_type: parent.card_type ?? undefined,
-    subtypes: parent.subtypes,
-    tags: parent.tags ?? [],
-    rarity: parent.rarity ?? undefined,
-    rules_text: parent.rules_text ?? undefined,
-    flavor_text:
-      input.flavorText !== undefined
-        ? input.flavorText ?? undefined
-        : parent.flavor_text ?? undefined,
-    power: parent.power ?? undefined,
-    toughness: parent.toughness ?? undefined,
-    loyalty: parent.loyalty ?? undefined,
-    defense: parent.defense ?? undefined,
-    artist_credit: input.artUrl ? undefined : parent.artist_credit ?? undefined,
-    art_url: input.artUrl ?? parent.art_url ?? undefined,
-    art_position: input.artUrl ? {} : parent.art_position ?? {},
-    frame_style: parent.frame_style ?? {},
-    visibility: "private",
-    parent_card_id: parent.id,
-  });
 }
 
 // ---------------------------------------------------------------------------
@@ -864,7 +841,7 @@ export async function updateCardsVisibilityAction(
     // path is deterministic and the bucket is public-read, so a leftover PNG
     // stays fetchable for a card the DB now reports as having no render.
     // (Mirrors removeRenderObject in lib/cards/bake-render.ts.)
-    const paths = ids.map((id) => cardRenderPath(user.id, id));
+    const paths = ids.flatMap((id) => renderObjectPaths(user.id, id));
     for (let attempt = 1; attempt <= 2; attempt += 1) {
       const { error: removeErr } = await supabase.storage
         .from("card-renders")
@@ -941,10 +918,11 @@ export async function deleteCardsAction(
     return { ok: false, error: error.message };
   }
 
-  // Remove the deleted cards' baked renders from the public bucket (best-effort).
+  // Remove the deleted cards' baked renders + thumbnails from the public
+  // bucket (best-effort).
   await supabase.storage
     .from("card-renders")
-    .remove(ids.map((id) => cardRenderPath(user.id, id)));
+    .remove(ids.flatMap((id) => renderObjectPaths(user.id, id)));
 
   revalidatePath("/dashboard");
   revalidatePath("/gallery");

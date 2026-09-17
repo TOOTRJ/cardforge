@@ -44,12 +44,18 @@ const UUID_PATTERN =
 export default async function CreatePage({
   searchParams,
 }: {
-  searchParams: Promise<{ tag?: string; backFor?: string; deckCard?: string }>;
+  searchParams: Promise<{
+    tag?: string;
+    backFor?: string;
+    deckCard?: string;
+    remix?: string;
+  }>;
 }) {
   const {
     tag: tagParam,
     backFor: backForParam,
     deckCard: deckCardParam,
+    remix: remixParam,
   } = await searchParams;
   const initialTag =
     tagParam && CHALLENGE_TAG_PATTERN.test(tagParam) ? tagParam : null;
@@ -111,27 +117,47 @@ export default async function CreatePage({
       }
     : null;
 
+  // /create?remix=<cardId> — a NEW card prefilled from another card (yours or
+  // anyone's public/unlisted one; RLS decides what's readable). The creator
+  // opens in remix mode with the structural fields locked; nothing is
+  // inserted until Save, when the slug follows the chosen title and
+  // parent_card_id links it back.
+  const remixParent =
+    !backFor && !deckRemix && remixParam && UUID_PATTERN.test(remixParam)
+      ? await getCardById(remixParam)
+      : null;
+
   if (!gameSystem) {
     return <SchemaUnseeded />;
+  }
+
+  if (remixParam && !remixParent) {
+    // A deleted / private / malformed source — say so rather than silently
+    // opening a blank creator the user didn't ask for.
+    return <RemixSourceMissing />;
   }
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
       <PageHeader
-        eyebrow="Creator"
+        eyebrow={remixParent ? "Remix" : "Creator"}
         title={
           backFor
             ? "Forge the back face"
             : deckRemix
               ? `Create a custom proxy of “${deckRemix.entryName}”`
-              : "Forge a new card"
+              : remixParent
+                ? `Remix “${remixParent.title}”`
+                : "Forge a new card"
         }
         description={
           backFor
             ? `Build the back for “${backFor.title}”. When you save, it links back automatically.`
             : deckRemix
               ? `Your version of the real card, for “${deckRemix.deckTitle}”. Everything is pre-filled — change at least one thing to make it yours, then save to link it into the deck.`
-              : "Type on the left, watch the card take shape on the right. Save when you like the result."
+              : remixParent
+                ? "Your take on this card. The type, frame and colour stay as they are — change the name, art, text or numbers, then save it as a new card of your own."
+                : "Type on the left, watch the card take shape on the right. Save when you like the result."
         }
         actions={
           <>
@@ -144,13 +170,16 @@ export default async function CreatePage({
         }
       />
 
-      <div className="mt-10">
-        <StartWithHero />
-      </div>
+      {remixParent ? null : (
+        <div className="mt-10">
+          <StartWithHero />
+        </div>
+      )}
 
       <div id={FORM_SCROLL_TARGET_ID} className="mt-10 scroll-mt-24">
         <CardCreatorForm
-          mode="create"
+          mode={remixParent ? "remix" : "create"}
+          card={remixParent}
           userId={user.id}
           ownerUsername={profile?.username ?? null}
           gameSystems={[gameSystem]}
@@ -178,6 +207,29 @@ export default async function CreatePage({
           defaultArtistCredit={profile?.display_name || profile?.username || ""}
         />
       </div>
+    </div>
+  );
+}
+
+function RemixSourceMissing() {
+  return (
+    <div className="mx-auto w-full max-w-2xl px-4 py-16 sm:px-6 lg:px-8">
+      <SurfaceCard className="flex flex-col gap-3 p-8 text-center">
+        <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground">
+          That card can&apos;t be remixed
+        </h1>
+        <p className="text-sm leading-6 text-muted">
+          It may have been deleted or made private by its owner.
+        </p>
+        <div className="mt-2 flex justify-center gap-2">
+          <Button asChild variant="ghost">
+            <Link href="/gallery">Browse the gallery</Link>
+          </Button>
+          <Button asChild>
+            <Link href="/create">Forge a new card</Link>
+          </Button>
+        </div>
+      </SurfaceCard>
     </div>
   );
 }
