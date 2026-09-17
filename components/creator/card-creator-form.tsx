@@ -42,6 +42,8 @@ import { ShareTargets } from "@/components/cards/share-targets";
 import { DeleteCardDialog } from "@/components/creator/delete-card-dialog";
 import { CardGlossary } from "@/components/creator/card-glossary";
 import { LockedSummary } from "@/components/creator/locked-summary";
+import { CanvasHotspots } from "@/components/creator/canvas-hotspots";
+import type { CreatorLayout } from "@/lib/creator/lab-shared";
 import { StartOverDialog } from "@/components/creator/start-over-dialog";
 import {
   UnsavedChangesDialog,
@@ -246,6 +248,9 @@ type CardCreatorFormProps = {
    *  paid perk, null when unset/free). Printed in the preview footer so the
    *  editor matches exports; not form state. */
   footerWatermark?: string | null;
+  /** "stepper" (shipped) or the lab's "canvas" — the centred live preview
+   *  with clickable regions (lib/creator/lab-shared.ts). */
+  layout?: CreatorLayout;
 };
 
 // Step membership + field→step routing now live in lib/creator/steps.ts (pure
@@ -303,6 +308,7 @@ export function CardCreatorForm({
   verifiedFrameKeys = [],
   profileOverrides = null,
   footerWatermark = null,
+  layout = "stepper",
 }: CardCreatorFormProps) {
   const router = useRouter();
   const upgrade = useUpgradeModal();
@@ -1936,100 +1942,67 @@ export function CardCreatorForm({
     flipOnClick: true,
   };
 
-  return (
-    <FormProvider {...methods}>
-      <form
-        noValidate
-        onSubmit={handleSubmit(
-          (values) => runSubmit(values, "save"),
-          (formErrors) => {
-            // Client validation blocked the save — jump to the first errored step.
-            const first = Object.keys(formErrors)[0];
-            if (first) goToIndex(stepIndexForField(first, steps));
-          },
-        )}
-        className="grid gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] xl:grid-cols-[10.5rem_minmax(0,1.05fr)_minmax(0,0.95fr)] xl:gap-6"
-      >
-        {/* ----- Far left (xl+): vertical icon step rail ----- */}
-        <StepRail
-          steps={stepperSteps}
-          current={idx}
-          onStepSelect={goToIndex}
-          isStepEnabled={() => true}
-          icons={STEP_RAIL_ICONS}
-          className="hidden xl:sticky xl:top-24 xl:block xl:self-start"
+  // ---- Render pieces shared by both layouts ----
+  // The step panels, the once-mounted dialogs and the action bar are the
+  // same in the shipped stepper and in the lab's canvas layout; only the
+  // shell around them differs.
+  const fillOverlay = fillPhase ? (
+    <div
+      className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 rounded-[inherit] bg-background/60 backdrop-blur-[1px]"
+      role="status"
+      aria-live="polite"
+    >
+      <Loader2 className="h-6 w-6 animate-spin text-accent" aria-hidden />
+      <span className="text-xs font-semibold uppercase tracking-wider text-muted">
+        {fillPhase === "painting"
+          ? "Painting the artwork — this takes about a minute"
+          : "Designing your card…"}
+      </span>
+    </div>
+  ) : null;
+  const serverErrorBlock = serverError ? (
+    <div
+      role="alert"
+      className="rounded-md border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-foreground"
+    >
+      {serverError}
+    </div>
+  ) : null;
+  const previewOverlays = (
+    <>
+      {fillPhase ? (
+        <CardGeneratingOverlay
+          label={fillPhase === "painting" ? "Painting art…" : "Designing…"}
         />
-
-        {/* ----- Left: form ----- */}
-        <SurfaceCard
-          className="relative flex flex-col gap-6 p-6"
-          aria-busy={fillPhase !== null || undefined}
-        >
-          {fillPhase ? (
-            <div
-              className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 rounded-[inherit] bg-background/60 backdrop-blur-[1px]"
-              role="status"
-              aria-live="polite"
-            >
-              <Loader2 className="h-6 w-6 animate-spin text-accent" aria-hidden />
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted">
-                {fillPhase === "painting"
-                  ? "Painting the artwork — this takes about a minute"
-                  : "Designing your card…"}
-              </span>
-            </div>
-          ) : null}
-          {serverError ? (
-            <div
-              role="alert"
-              className="rounded-md border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-foreground"
-            >
-              {serverError}
-            </div>
-          ) : null}
-
-          <div className="flex flex-col gap-6">
-            <Stepper
-              steps={stepperSteps}
-              current={idx}
-              onStepSelect={goToIndex}
-              isStepEnabled={() => true}
-              className="xl:hidden"
-            />
-
-            {/* Mobile inline preview — keeps the card visible while editing
-                (the desktop sticky aside is hidden below lg). CSS-only toggle. */}
-            <details
-              className="rounded-lg border border-border/60 bg-elevated/30 lg:hidden"
-              open
-            >
-              <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-2 text-xs font-semibold uppercase tracking-wider text-subtle [&::-webkit-details-marker]:hidden">
-                Live preview
-                <span className="text-[10px] normal-case text-muted">
-                  tap to toggle
-                </span>
-              </summary>
-              <div className="mx-auto w-full max-w-[220px] px-4 pb-4">
-                <div className="relative">
-                  <CardPreview {...previewProps} />
-                  {fillPhase ? (
-                    <CardGeneratingOverlay
-                      label={fillPhase === "painting" ? "Painting art…" : "Designing…"}
-                    />
-                  ) : null}
-                {deckRemixImporting ? (
-                  <CardGeneratingOverlay label="Importing card…" />
-                ) : null}
-                </div>
-              </div>
-            </details>
-
-            <div className="relative">
-            {readOnly ? <GuestGate /> : null}
-            <div
-              className={readOnly ? "flex flex-col gap-6 select-none opacity-60" : "flex flex-col gap-6"}
-              inert={readOnly || undefined}
-            >
+      ) : null}
+      {deckRemixImporting ? (
+        <CardGeneratingOverlay label="Importing card…" />
+      ) : null}
+    </>
+  );
+  const visibilityNote = (
+    <p className="text-xs leading-5 text-muted">
+      {isEdit ? (
+        <>
+          Nothing changes until you click Save. Visibility and
+          &ldquo;Save as a draft&rdquo; live on the Publish step.
+        </>
+      ) : (
+        <>
+          New cards are <strong className="text-foreground">public</strong> by
+          default — tick &ldquo;Save as a draft&rdquo; on the Publish step
+          to keep it private until it&apos;s ready.
+        </>
+      )}
+    </p>
+  );
+  const stepPanels = (
+    <div className="relative">
+      {readOnly ? <GuestGate /> : null}
+      <div
+        className={readOnly ? "flex flex-col gap-6 select-none opacity-60" : "flex flex-col gap-6"}
+        inert={readOnly || undefined}
+      >
             {/* ----- Card setup (step 1 — type, frame & color) ----- */}
             {stepKey === "card" ? (
               <CardSetupPanel
@@ -2169,10 +2142,11 @@ export function CardCreatorForm({
                 revise={isRevise}
               />
             ) : null}
-            </div>
-            </div>
-          </div>
-
+      </div>
+    </div>
+  );
+  const dialogs = (
+    <>
           {/* Controlled Scryfall import dialog. Rendered once; opened by:
               - the Identity-tab inline trigger (above)
               - the start-with hero on /create (cardforge:open-scryfall)
@@ -2287,6 +2261,10 @@ export function CardCreatorForm({
             />
           ) : null}
 
+    </>
+  );
+  const actionBar = (
+    <>
           {/* Action bar — sticky across all tabs so saving never requires
               switching back to a "publishing" tab. */}
           <div className="sticky bottom-0 -mx-6 -mb-6 flex flex-col gap-2 border-t border-border/50 bg-surface/95 px-6 py-4 backdrop-blur-sm">
@@ -2408,6 +2386,130 @@ export function CardCreatorForm({
             </div>
             </div>
           </div>
+    </>
+  );
+
+  const formSubmit = handleSubmit(
+    (values) => runSubmit(values, "save"),
+    (formErrors) => {
+      // Client validation blocked the save — jump to the first errored step.
+      const first = Object.keys(formErrors)[0];
+      if (first) goToIndex(stepIndexForField(first, steps));
+    },
+  );
+
+  if (layout === "canvas") {
+    // ---- Lab: the canvas layout. The live card is the page; clicking a
+    // region opens that field's panel beside it (below it on phones). Same
+    // form state, panels, dialogs, save rules and AI as the stepper.
+    return (
+      <FormProvider {...methods}>
+        <form
+          noValidate
+          onSubmit={formSubmit}
+          className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,30rem)] lg:items-start"
+          data-testid="creator-canvas"
+        >
+          <div className="flex flex-col items-center gap-5 lg:sticky lg:top-24">
+            <p className="text-xs font-semibold uppercase tracking-wider text-subtle">
+              Live preview · click a part of the card to edit it
+            </p>
+            <div className="relative w-full max-w-md">
+              <CardPreview {...previewProps} flipOnClick={false} />
+              {previewOverlays}
+              {readOnly ? null : (
+                <CanvasHotspots
+                  active={stepKey}
+                  revise={isRevise}
+                  hasStats={hasStats}
+                  onPick={goToStepKey}
+                />
+              )}
+            </div>
+            <Stepper
+              steps={stepperSteps}
+              current={idx}
+              onStepSelect={goToIndex}
+              isStepEnabled={() => true}
+              className="w-full max-w-md"
+            />
+            <div className="max-w-md">{visibilityNote}</div>
+          </div>
+
+          <SurfaceCard
+            className="relative flex flex-col gap-6 p-6"
+            aria-busy={fillPhase !== null || undefined}
+          >
+            {fillOverlay}
+            {serverErrorBlock}
+            {stepPanels}
+            {dialogs}
+            {actionBar}
+          </SurfaceCard>
+        </form>
+      </FormProvider>
+    );
+  }
+
+  return (
+    <FormProvider {...methods}>
+      <form
+        noValidate
+        onSubmit={formSubmit}
+        className="grid gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] xl:grid-cols-[10.5rem_minmax(0,1.05fr)_minmax(0,0.95fr)] xl:gap-6"
+      >
+        {/* ----- Far left (xl+): vertical icon step rail ----- */}
+        <StepRail
+          steps={stepperSteps}
+          current={idx}
+          onStepSelect={goToIndex}
+          isStepEnabled={() => true}
+          icons={STEP_RAIL_ICONS}
+          className="hidden xl:sticky xl:top-24 xl:block xl:self-start"
+        />
+
+        {/* ----- Left: form ----- */}
+        <SurfaceCard
+          className="relative flex flex-col gap-6 p-6"
+          aria-busy={fillPhase !== null || undefined}
+        >
+          {fillOverlay}
+          {serverErrorBlock}
+
+          <div className="flex flex-col gap-6">
+            <Stepper
+              steps={stepperSteps}
+              current={idx}
+              onStepSelect={goToIndex}
+              isStepEnabled={() => true}
+              className="xl:hidden"
+            />
+
+            {/* Mobile inline preview — keeps the card visible while editing
+                (the desktop sticky aside is hidden below lg). CSS-only toggle. */}
+            <details
+              className="rounded-lg border border-border/60 bg-elevated/30 lg:hidden"
+              open
+            >
+              <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-2 text-xs font-semibold uppercase tracking-wider text-subtle [&::-webkit-details-marker]:hidden">
+                Live preview
+                <span className="text-[10px] normal-case text-muted">
+                  tap to toggle
+                </span>
+              </summary>
+              <div className="mx-auto w-full max-w-[220px] px-4 pb-4">
+                <div className="relative">
+                  <CardPreview {...previewProps} />
+                  {previewOverlays}
+                </div>
+              </div>
+            </details>
+
+            {stepPanels}
+          </div>
+
+          {dialogs}
+          {actionBar}
         </SurfaceCard>
 
         {/* ----- Right: live preview (desktop; mobile uses the inline
@@ -2420,30 +2522,10 @@ export function CardCreatorForm({
             <div className="mx-auto w-full max-w-sm">
               <div className="relative">
                 <CardPreview {...previewProps} />
-                {fillPhase ? (
-                  <CardGeneratingOverlay
-                    label={fillPhase === "painting" ? "Painting art…" : "Designing…"}
-                  />
-                ) : null}
-                {deckRemixImporting ? (
-                  <CardGeneratingOverlay label="Importing card…" />
-                ) : null}
+                {previewOverlays}
               </div>
             </div>
-            <p className="text-xs leading-5 text-muted">
-              {isEdit ? (
-                <>
-                  Nothing changes until you click Save. Visibility and
-                  &ldquo;Save as a draft&rdquo; live on the Publish step.
-                </>
-              ) : (
-                <>
-                  New cards are <strong className="text-foreground">public</strong> by
-                  default — tick &ldquo;Save as a draft&rdquo; on the Publish step
-                  to keep it private until it&apos;s ready.
-                </>
-              )}
-            </p>
+            {visibilityNote}
           </div>
         </aside>
       </form>
