@@ -21,6 +21,7 @@ import {
   Star,
   Trophy,
   type LucideIcon,
+  FlaskConical,
 } from "lucide-react";
 import { siteConfig } from "@/lib/site-config";
 import { cn } from "@/lib/utils";
@@ -46,6 +47,7 @@ const NAV_ICONS: Record<string, LucideIcon> = {
   "/admin/updates": Megaphone,
   "/admin/scryfall": Activity,
   "/admin/frame-compare": Frame,
+  "/admin/creator-lab": FlaskConical,
 };
 
 type DashboardNavProps = {

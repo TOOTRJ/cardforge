@@ -29,6 +29,9 @@ import { isDesignAiConfigured } from "@/lib/ai/provider";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import { getDeckAiSeeds } from "@/lib/ai/generation-jobs";
 import type { DeckRemixContext } from "@/types/deck";
+import { getCreatorLabMode } from "@/lib/creator/lab";
+import { canUseCreatorLab, resolveCreatorLayout } from "@/lib/creator/lab-shared";
+import { FlaskConical, Layers3 } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Create",
@@ -49,6 +52,7 @@ export default async function CreatePage({
     backFor?: string;
     deckCard?: string;
     remix?: string;
+    lab?: string;
   }>;
 }) {
   const {
@@ -56,6 +60,7 @@ export default async function CreatePage({
     backFor: backForParam,
     deckCard: deckCardParam,
     remix: remixParam,
+    lab: labParam,
   } = await searchParams;
   const initialTag =
     tagParam && CHALLENGE_TAG_PATTERN.test(tagParam) ? tagParam : null;
@@ -69,12 +74,26 @@ export default async function CreatePage({
     redirect("/login?redirectTo=/create");
   }
 
-  const [gameSystem, profile] = await Promise.all([
+  const [gameSystem, profile, labMode] = await Promise.all([
     getFantasyGameSystem(),
     getCurrentProfile(),
-    // The owner's custom footer mark (paid perk) — shown live in the preview
-    // so the editor matches what exports and bakes will print.
+    // The admin's switch for the hidden canvas walkthrough (creator lab).
+    getCreatorLabMode(),
   ]);
+  // The lab is opt-in twice over: the admin switch must allow this viewer
+  // AND the URL must ask for it, so nobody lands on the canvas by surprise.
+  const labAllowed = canUseCreatorLab(labMode, Boolean(profile?.is_admin));
+  const layout = resolveCreatorLayout(labAllowed, labParam);
+  const labToggleHref = (() => {
+    const params = new URLSearchParams();
+    if (tagParam) params.set("tag", tagParam);
+    if (backForParam) params.set("backFor", backForParam);
+    if (deckCardParam) params.set("deckCard", deckCardParam);
+    if (remixParam) params.set("remix", remixParam);
+    if (layout === "stepper") params.set("lab", "1");
+    const query = params.toString();
+    return query ? `/create?${query}` : "/create";
+  })();
   const templates = gameSystem
     ? await getTemplatesForGameSystem(gameSystem.id)
     : [];
@@ -161,7 +180,22 @@ export default async function CreatePage({
         }
         actions={
           <>
-<Button asChild variant="ghost">
+            {labAllowed ? (
+              <Button asChild variant="outline">
+                <Link href={labToggleHref} data-testid="creator-lab-toggle">
+                  {layout === "canvas" ? (
+                    <>
+                      <Layers3 className="h-4 w-4" aria-hidden /> Back to the steps
+                    </>
+                  ) : (
+                    <>
+                      <FlaskConical className="h-4 w-4" aria-hidden /> Try the canvas creator
+                    </>
+                  )}
+                </Link>
+              </Button>
+            ) : null}
+            <Button asChild variant="ghost">
               <Link href="/dashboard">
                 <ArrowLeft className="h-4 w-4" aria-hidden /> Dashboard
               </Link>
@@ -170,7 +204,7 @@ export default async function CreatePage({
         }
       />
 
-      {remixParent ? null : (
+      {remixParent || layout === "canvas" ? null : (
         <div className="mt-10">
           <StartWithHero />
         </div>
@@ -205,6 +239,7 @@ export default async function CreatePage({
           initialTag={initialTag}
           activeChallenge={await getCurrentChallenge()}
           defaultArtistCredit={profile?.display_name || profile?.username || ""}
+          layout={layout}
         />
       </div>
     </div>
