@@ -328,7 +328,12 @@ async function GalleryTrending() {
 }
 
 async function GalleryNewest() {
-  const newest = await listGalleryCards({ sort: "newest", limit: ROW_MAX, anonymous: true });
+  const newest = await listGalleryCards({
+    sort: "newest",
+    limit: ROW_MAX,
+    anonymous: true,
+    hideAdminCards: true,
+  });
   return (
     <CardRowSection
       id="newest"

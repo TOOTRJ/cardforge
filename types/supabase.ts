@@ -1569,8 +1569,17 @@ export type Database = {
           p_seed?: string;
           p_limit?: number;
           p_offset?: number;
+          p_hide_admin_cards?: boolean;
         };
         Returns: Database["public"]["Tables"]["cards"]["Row"][];
+      };
+      list_trending_pool: {
+        Args: { p_limit?: number };
+        Returns: Database["public"]["Tables"]["cards"]["Row"][];
+      };
+      owner_is_admin: {
+        Args: { p_owner_id: string };
+        Returns: boolean;
       };
       card_like_rank_in_set: {
         Args: { p_card_id: string; p_set_id: string };

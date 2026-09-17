@@ -546,6 +546,9 @@ export type GalleryListOptions = {
   limit?: number;
   offset?: number;
   anonymous?: boolean;
+  /** Leave out cards owned by admin accounts (the "Fresh off the forge"
+   *  row). Default false: the gallery grid shows everyone. */
+  hideAdminCards?: boolean;
 };
 
 /**
@@ -573,6 +576,9 @@ export async function listGalleryCards(
       p_seed: options.seed ?? "",
       p_limit: limit,
       p_offset: offset,
+      // Staff cards stay out of the showcase rows (owner decision
+      // 2026-09-17); the main grid keeps them.
+      p_hide_admin_cards: options.hideAdminCards === true,
     });
     if (error || !data || data.length === 0) return [];
     return attachStats(data as CardRow[], "recent", { anonymous });
@@ -1114,12 +1120,12 @@ export async function listTrendingCards(
   try {
     const supabase = anonymous ? createPublicClient() : await createClient();
 
-    const { data: cardRows, error: cardErr } = await supabase
-      .from("cards")
-      .select("*")
-      .eq("visibility", "public")
-      .order("updated_at", { ascending: false })
-      .limit(TRENDING_CANDIDATE_CAP);
+    // The pool is a SQL function (migration 0091) so admin-owned cards never
+    // enter the ranking — "Hot this week" is the community's showcase.
+    const { data: cardRows, error: cardErr } = await supabase.rpc(
+      "list_trending_pool",
+      { p_limit: TRENDING_CANDIDATE_CAP },
+    );
 
     if (cardErr || !cardRows || cardRows.length === 0) return [];
 
