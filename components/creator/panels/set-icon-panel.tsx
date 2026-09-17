@@ -76,7 +76,7 @@ export function SetIconPanel({ userId }: { userId: string | null }) {
   return (
     <FieldGroup
       label="Set icon"
-      helper="The small symbol at the right end of the type line. It takes the card's rarity color — try switching rarity on the Identity step to see it change."
+      helper="The small symbol at the right end of the type line. It takes the card's rarity color — try switching rarity on the Text & stats step to see it change."
     >
       <div className="flex flex-col gap-4">
         {/* Current selection preview at type-line-ish size + larger detail. */}
