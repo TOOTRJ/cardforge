@@ -81,7 +81,7 @@ export function ProfileForm({ defaultValues, email }: ProfileFormProps) {
           name="email"
           value={email}
           readOnly
-          helper="Email is managed by your account."
+          helper="Change it under Sign-in & security below."
         />
         <Field
           label="Username"
@@ -89,7 +89,7 @@ export function ProfileForm({ defaultValues, email }: ProfileFormProps) {
           defaultValue={value("username")}
           placeholder="forgemaster"
           autoComplete="username"
-          helper="Lowercase letters, numbers, underscores. 3–32 characters."
+          helper="Letters, numbers, underscores. 3–32 characters. Your profile and card links use it — changing it breaks links you've already shared."
           error={error("username")}
         />
         <Field

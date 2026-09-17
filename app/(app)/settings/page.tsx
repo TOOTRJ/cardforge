@@ -18,6 +18,7 @@ import { getPipOverrides } from "@/lib/pips/queries";
 import { DeleteAccountDialog } from "@/components/settings/delete-account-dialog";
 import { BillingPanel } from "@/components/settings/billing-panel";
 import { ExportWatermarkPanel } from "@/components/settings/export-watermark-panel";
+import { SecurityPanel } from "@/components/settings/security-panel";
 import { BillingReturnToast } from "@/components/billing/billing-return-toast";
 import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
 import { getEntitlements } from "@/lib/billing/entitlements";
@@ -30,7 +31,12 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function SettingsPage() {
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ notice?: string }>;
+}) {
+  const { notice } = await searchParams;
   const user = await getCurrentUser();
   const profile = await getCurrentProfile();
   const entitlements = await getEntitlements();
@@ -128,6 +134,28 @@ export default async function SettingsPage() {
               discord_url: profile?.discord_url ?? "",
               github_url: profile?.github_url ?? "",
             }}
+          />
+        </SurfaceCard>
+
+        <SurfaceCard
+          id="security"
+          className="grid scroll-mt-24 gap-6 p-6 sm:grid-cols-[1fr_2fr]"
+        >
+          <div className="flex flex-col gap-1">
+            <h3 className="font-display text-lg font-semibold text-foreground">
+              Sign-in &amp; security
+            </h3>
+            <p className="text-sm leading-6 text-muted">
+              The email address and password you sign in with, and the devices
+              that are signed in.
+            </p>
+          </div>
+          <SecurityPanel
+            email={user?.email ?? ""}
+            providers={Array.from(
+              new Set((user?.identities ?? []).map((identity) => identity.provider)),
+            )}
+            emailJustChanged={notice === "email-changed"}
           />
         </SurfaceCard>
 

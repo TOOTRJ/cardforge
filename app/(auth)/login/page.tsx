@@ -58,6 +58,15 @@ export default async function LoginPage({
         </div>
       ) : null}
 
+      {notice === "signed-out-everywhere" ? (
+        <div
+          role="status"
+          className="rounded-md border border-primary/40 bg-primary/10 px-3 py-2 text-sm text-foreground"
+        >
+          You&apos;ve been signed out on every device.
+        </div>
+      ) : null}
+
       {notice === "reset-sent" ? (
         <div
           role="status"
@@ -68,7 +77,7 @@ export default async function LoginPage({
         </div>
       ) : null}
 
-      {error === "auth-callback-failed" ? (
+      {error === "auth-callback-failed" || error === "link-expired" ? (
         <div
           role="alert"
           className="rounded-md border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-foreground"

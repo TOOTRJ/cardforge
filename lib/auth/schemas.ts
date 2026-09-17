@@ -1,27 +1,54 @@
 import { z } from "zod";
+import {
+  USERNAME_MAX,
+  USERNAME_MIN,
+  USERNAME_PATTERN,
+  isReservedUsername,
+} from "@/lib/auth/usernames";
 
-const usernameSchema = z
+// Mirrors profiles_username_format (0001) + is_reserved_username() (0094).
+// Lowercased before the pattern check so "ForgeMaster" is accepted as
+// "forgemaster" instead of bouncing on a rule the user can't see.
+export const usernameSchema = z
   .string()
   .trim()
-  .min(3, "Username must be at least 3 characters.")
-  .max(32, "Username must be 32 characters or fewer.")
-  .regex(
-    /^[a-z0-9_]+$/,
-    "Use lowercase letters, numbers, and underscores only.",
-  );
+  .toLowerCase()
+  .min(USERNAME_MIN, `Username must be at least ${USERNAME_MIN} characters.`)
+  .max(USERNAME_MAX, `Username must be ${USERNAME_MAX} characters or fewer.`)
+  .regex(USERNAME_PATTERN, "Use letters, numbers, and underscores only.")
+  .refine((v) => !isReservedUsername(v), "That username is reserved — try another.");
 
-const passwordSchema = z
+// 72 is bcrypt's input ceiling (GoTrue hashes with bcrypt) — longer
+// passwords would be silently truncated, so refuse them instead.
+export const passwordSchema = z
   .string()
   .min(8, "Password must be at least 8 characters.")
   .max(72, "Password must be 72 characters or fewer.");
 
+const emailSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .max(254, "Email must be 254 characters or fewer.")
+  .email("Enter a valid email address.");
+
 export const loginSchema = z.object({
-  email: z.string().trim().email("Enter a valid email address."),
-  password: z.string().min(1, "Password is required."),
+  email: emailSchema,
+  password: z.string().min(1, "Password is required.").max(72),
 });
 
 export const forgotPasswordSchema = z.object({
-  email: z.string().trim().email("Enter a valid email address."),
+  email: emailSchema,
+});
+
+export const changeEmailSchema = z.object({
+  email: emailSchema,
+});
+
+export const changePasswordSchema = z.object({
+  // Empty for accounts that have never had a password (Google sign-in).
+  current_password: z.string().max(72).optional().or(z.literal("")),
+  password: passwordSchema,
 });
 
 export const resetPasswordSchema = z.object({
@@ -29,7 +56,7 @@ export const resetPasswordSchema = z.object({
 });
 
 export const signupSchema = z.object({
-  email: z.string().trim().email("Enter a valid email address."),
+  email: emailSchema,
   username: usernameSchema,
   password: passwordSchema,
 });
@@ -138,6 +165,8 @@ export type LoginInput = z.infer<typeof loginSchema>;
 export type SignupInput = z.infer<typeof signupSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+export type ChangeEmailInput = z.infer<typeof changeEmailSchema>;
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 export type ProfileUpdateInput = z.infer<typeof profileUpdateSchema>;
 export type PinnedCardIdsInput = z.infer<typeof pinnedCardIdsSchema>;
 
@@ -146,7 +175,13 @@ export type FieldErrors<T extends Record<string, unknown>> = Partial<
 >;
 
 export type ActionState<T extends Record<string, unknown>> = {
-  status: "idle" | "error";
+  /** "sent" = the action's email is on its way (signup confirmation); the
+   *  form swaps to a check-your-inbox panel with a resend control. */
+  status: "idle" | "error" | "sent";
+  /** Sign-in was refused only because the address is unconfirmed (GoTrue
+   *  checks the password first, so this never leaks account existence) —
+   *  the form offers to resend the confirmation email. */
+  unconfirmed?: boolean;
   formError?: string;
   fieldErrors?: FieldErrors<T>;
   values?: Partial<Record<keyof T, string>>;

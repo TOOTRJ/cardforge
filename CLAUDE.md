@@ -59,6 +59,21 @@ Rules and gotchas:
   `safeParse` and return typed field errors. URL fields must be
   https-gated (`HTTPS_URL_BASE` / `isSafeImageUrl`) — bare `z.url()`
   accepts `javascript:` schemes.
+- Auth: `profiles.username` is NOT NULL + unique (0094) — the signup trigger
+  mints a generated handle (`ember_sphinx_4821`) when none/invalid/taken is
+  supplied and NEVER derives one from the email. Reserved handles live in
+  `is_reserved_username()` AND `lib/auth/usernames.ts` (a unit test keeps them
+  in sync). Post-auth redirects go through `safeRedirectPath()` only. Auth
+  errors stay generic (anti-enumeration) except codes that can't leak account
+  existence (`weak_password`, rate limits, `email_not_confirmed` — GoTrue
+  checks the password first).
+- Email: ONE shell, `lib/email/layout.ts` (dependency-free; BRAND hexes).
+  Supabase auth templates are GENERATED from it
+  (`npm run email:build-auth-templates` → `supabase/templates/`, never
+  hand-edited) and link to `/auth/confirm?token_hash=…` (button-press verify;
+  works cross-device). `config.toml` templates reach local + preview branches
+  only — production needs `npm run email:push-auth-templates`. Details +
+  owner setup: `docs/EMAIL.md`.
 - Viewer-independent server reads use `createPublicClient()` (cookie-free,
   keeps routes ISR-eligible); cookie-bound reads via `createClient()` make
   a route dynamic. `lib/supabase/admin.ts` bypasses RLS — webhook/cron,
