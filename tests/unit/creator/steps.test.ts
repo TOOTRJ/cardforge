@@ -213,7 +213,8 @@ describe("field → step routing", () => {
     const map = buildFieldToStep();
     expect(map.get("title")).toBe("identity");
     // Cost + art fold into Identity now.
-    expect(map.get("cost")).toBe("identity");
+    expect(map.get("cost")).toBe("text");
+    expect(map.get("rarity")).toBe("text");
     expect(map.get("art_url")).toBe("identity");
     expect(map.get("back_face")).toBe("identity");
     expect(map.get("color_identity")).toBe("card");

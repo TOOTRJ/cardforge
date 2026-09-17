@@ -69,6 +69,7 @@ import {
 } from "@/components/creator/start-with-hero";
 import { IdentityPanel } from "@/components/creator/panels/identity-panel";
 import { PipsPanel } from "@/components/creator/panels/pips-panel";
+import { RarityPanel } from "@/components/creator/panels/rarity-panel";
 import { LoyaltyAbilitiesEditor } from "@/components/creator/panels/loyalty-editor";
 import { SagaChaptersEditor } from "@/components/creator/panels/saga-editor";
 import { CardSetupPanel } from "@/components/creator/panels/card-setup-panel";
@@ -2042,21 +2043,13 @@ export function CardCreatorForm({
               />
             ) : null}
 
-            {/* ----- Identity (name/rarity + mana cost + artwork). The
-                inline-layout frames (Adventure/Split/Flip/Aftermath) edit
-                their second face inside the Art block's "More options";
-                standard frames use the Publish back-face picker. ----- */}
+            {/* ----- Identity (name + artwork). The inline-layout frames
+                (Adventure/Split/Flip/Aftermath) edit their second face
+                inside the Art block's "More options". ----- */}
             {stepKey === "identity" ? (
               <>
                 {isRevise ? <LockedSummary mode={mode} /> : null}
                 <IdentityPanel revise={isRevise} />
-                {!hidesCost(watched.frame_style?.template) ? (
-                  <PipsPanel
-                    frameTemplate={watched.frame_style?.template}
-                    pipOverrides={pipOverrides}
-                    frameLocked={isRevise}
-                  />
-                ) : null}
                 <ArtPanel
                   userId={userId}
                   aiSlot={
@@ -2084,9 +2077,19 @@ export function CardCreatorForm({
               </>
             ) : null}
 
-            {/* ----- Text & stats panel (rules/flavor + type-gated stats) ----- */}
+            {/* ----- Text & stats panel (cost + rarity, rules/flavor, type-gated
+                stats). Cost and rarity moved here from Identity (owner
+                decision 2026-09-16). ----- */}
             {stepKey === "text" ? (
               <>
+                {!hidesCost(watched.frame_style?.template) ? (
+                  <PipsPanel
+                    frameTemplate={watched.frame_style?.template}
+                    pipOverrides={pipOverrides}
+                    frameLocked={isRevise}
+                  />
+                ) : null}
+                <RarityPanel />
                 {landBasicKey ? (
                   // Basic lands print a large mana symbol instead of rules
                   // text — so this step is the ICON step: follow the land

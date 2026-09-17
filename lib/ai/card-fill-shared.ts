@@ -48,8 +48,8 @@ export const FILL_PRESETS = {
   all: [...CARD_FILL_FIELDS] as CardFillField[],
   /** "Generate AI artwork and title" beside Choose file (Identity step). */
   artAndTitle: ["title", "art"] as CardFillField[],
-  /** The Text & stats step's button. */
-  textStep: ["rules_text", "flavor_text", "stats"] as CardFillField[],
+  /** The Text & stats step's button — that step's own fields. */
+  textStep: ["cost", "rarity", "rules_text", "flavor_text", "stats"] as CardFillField[],
 } as const;
 
 /** The current form values the designer must respect — everything the user

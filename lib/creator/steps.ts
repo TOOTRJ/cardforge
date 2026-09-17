@@ -132,20 +132,19 @@ const STEP_DEFS: StepDef[] = [
     isVisible: (ctx) => !ctx.revise,
   },
   {
-    // The card's substance in one pass: name + rarity, the mana cost (the
-    // pips panel hides itself for cost-less frames), and the artwork with
-    // the back-face editor under its "More options".
+    // Who the card is: name (+ the type line under "More options") and the
+    // artwork, with the inline second-face editor under the art block's
+    // "More options". Rarity and cost moved to Text & stats (owner
+    // decision 2026-09-16) so this step is name + picture.
     key: "identity",
     label: "Identity",
-    description: "Name, cost & art",
+    description: "Name & art",
     fields: [
       "title",
       "supertype",
       "subtypes_text",
-      "rarity",
       "game_system_id",
       "template_id",
-      "cost",
       "artist_credit",
       "art_url",
       "art_position",
@@ -155,13 +154,17 @@ const STEP_DEFS: StepDef[] = [
     isVisible: always,
   },
   {
-    // Rules + flavor + the front face's stats (P/T for creatures/tokens,
-    // loyalty for planeswalkers, defense for battles). Stats are gated inside
-    // the panel by card type; the step itself is always present.
+    // Everything printed in ink: the mana cost (the pips panel hides itself
+    // for cost-less frames), rarity, rules + flavor and the front face's
+    // stats (P/T for creatures/tokens, loyalty for planeswalkers, defense
+    // for battles). Stats are gated inside the panel by card type; the step
+    // itself is always present.
     key: "text",
     label: "Text & stats",
-    description: "Rules, flavor & combat numbers",
+    description: "Cost, rarity, rules & numbers",
     fields: [
+      "cost",
+      "rarity",
       "rules_text",
       "loyalty_abilities",
       "saga_intro",

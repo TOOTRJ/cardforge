@@ -132,7 +132,7 @@ export function WatermarkPicker({ userId }: WatermarkPickerProps) {
         return (
           <FieldGroup
             label="Watermark"
-            helper="A faint mark behind the rules text — a mana symbol, a PipGlyph faction mark, or your own transparent PNG. Click the active mark again to remove it."
+            helper="A faint mark behind the rules text — a mana symbol, the PipGlyph Rose or one of our faction marks, or your own transparent PNG. Click the active mark again to remove it."
           >
             <div className="flex flex-col gap-3">
               <ChipGroup

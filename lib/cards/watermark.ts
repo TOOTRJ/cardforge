@@ -37,10 +37,12 @@ const WATERMARK_DEFAULT_OPACITY = 0.14;
  *  faint stamp — real basics print it near-solid. */
 const WATERMARK_LARGE_DEFAULT_OPACITY = 0.85;
 
-/** Original PipGlyph faction-style marks (public/watermarks/{key}.png,
- *  1024px dark-ink line art on transparency). IP-safe: our own designs,
- *  never WotC trade dress. */
+/** Original PipGlyph marks (public/watermarks/{key}.png, 1024px dark-ink
+ *  line art on transparency). IP-safe: our own designs, never WotC trade
+ *  dress. The PipGlyph Rose (the brand's Astral Rose seal, generated from
+ *  public/brand/pipglyph-mark-mono-black.svg) leads the list. */
 export const WATERMARK_PRESETS = [
+  { key: "pipglyph-rose", label: "PipGlyph Rose" },
   { key: "order-sun", label: "Order of the Sun" },
   { key: "tide-crest", label: "Tide Crest" },
   { key: "raven-skull", label: "Raven Skull" },
