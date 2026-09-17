@@ -17,6 +17,30 @@ export type Database = {
   };
   public: {
     Tables: {
+      deck_idea_batches: {
+        Row: {
+          id: string;
+          owner_id: string;
+          request: Json;
+          ideas: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_id: string;
+          request?: Json;
+          ideas: Json;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          owner_id?: string;
+          request?: Json;
+          ideas?: Json;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       card_idea_batches: {
         Row: {
           id: string;

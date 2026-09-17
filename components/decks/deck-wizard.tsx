@@ -16,7 +16,7 @@
 // bracket the user chose are the deck's from the first second.
 // ---------------------------------------------------------------------------
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -25,6 +25,7 @@ import {
   Coins,
   Dices,
   FileText,
+  History,
   Lightbulb,
   Loader2,
   Lock,
@@ -46,6 +47,7 @@ import { useCreditConfirm } from "@/components/billing/credit-confirm-provider";
 import { CoverField } from "@/components/decks/deck-creator-form";
 import { createDeckAction } from "@/lib/decks/actions";
 import { publishCredits } from "@/components/billing/credits-bus";
+import { useLeaveWarning } from "@/components/ai/use-leave-warning";
 import {
   COMMANDER_BRACKETS,
   DECK_TYPES,
@@ -104,6 +106,24 @@ export function DeckWizard({
   const [size, setSize] = useState(Math.min(10, maxCards));
   const [ideas, setIdeas] = useState<DeckIdea[] | null>(null);
   const [ideasBusy, setIdeasBusy] = useState(false);
+  useLeaveWarning(ideasBusy);
+  // The last generated batch (migration 0093) — reopenable free of charge,
+  // e.g. after a closed tab. Fetched once on mount.
+  const [lastIdeas, setLastIdeas] = useState<DeckIdea[] | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/ai/deck-ideas/last")
+      .then((r) => r.json())
+      .then((payload: { ok: boolean; batch: { ideas: DeckIdea[] } | null }) => {
+        if (!cancelled && payload?.ok && payload.batch?.ideas?.length) {
+          setLastIdeas(payload.batch.ideas);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Cover
   const [coverUrl, setCoverUrl] = useState("");
@@ -177,6 +197,7 @@ export function DeckWizard({
       }
       if (typeof data.credits === "number") publishCredits(data.credits);
       setIdeas(data.ideas);
+      setLastIdeas(data.ideas);
     } catch {
       toast.error("Couldn't reach the AI. Try again in a moment.");
     } finally {
@@ -419,6 +440,12 @@ export function DeckWizard({
                     {ideasBusy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Lightbulb className="h-4 w-4" aria-hidden />}
                     Get theme ideas · 1 credit
                   </Button>
+                  {lastIdeas && !ideas ? (
+                    <Button type="button" variant="ghost" size="sm" onClick={() => setIdeas(lastIdeas)} disabled={busy || ideasBusy} title="Your last batch of theme ideas, no credit needed">
+                      <History className="h-4 w-4" aria-hidden />
+                      Reopen last ideas
+                    </Button>
+                  ) : null}
                 </div>
               </div>
 
