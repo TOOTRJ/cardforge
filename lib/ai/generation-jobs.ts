@@ -28,10 +28,16 @@ import {
 } from "@/lib/ai/deck-design";
 import { generateRemixIdentity } from "@/lib/ai/remix";
 import {
+  generateImageWithFallbacks,
   generatePlainImage,
   restyleImage,
   type ImageAspect,
 } from "@/lib/ai/image-gen";
+import {
+  artPromptLadder,
+  softenArtPrompt,
+  type FallbackArtInputs,
+} from "@/lib/ai/art-prompt-safety";
 import { persistGeneratedArt } from "@/lib/ai/random-art";
 import { normalizeDeckCover } from "@/lib/decks/cover";
 import {
@@ -118,6 +124,10 @@ export type JobStep = {
   /** card_fill only: the generated fields, poured into the open creator
    *  form by the client (nothing is inserted into `cards`). */
   fill?: CardFillResult | null;
+  /** How many times this step has run. Each run sends a DIFFERENT art
+   *  prompt (lib/ai/art-prompt-safety.ts) — the moderation filter refuses
+   *  the same prompt every time, so a plain retry could never succeed. */
+  attempts?: number | null;
 };
 
 export type GenerationJobRow = {
@@ -613,6 +623,8 @@ type GeneratedCardStepConfig = {
   artLogAction: AiActionLabel;
   card: DesignedCard;
   artPrompt: string;
+  /** Style line for the safe fallback prompt (attempt 3+). */
+  style?: string | null;
   /** Flow-specific createCardAction fields layered over the shared mapping
    *  (frame lock, set/deck linkage, supertype overrides). Validated by the
    *  action's zod schema like every other create. */
@@ -675,12 +687,30 @@ async function runGeneratedCardStep(
     }
 
     await logAiCall(userId, config.artLogAction);
-    const published = await paintAndPublishCard(cardId, config.artPrompt);
+    // Every run rewords the art prompt (moderation refuses identical text),
+    // and a refusal walks straight to the next rung inside this step.
+    const attempt = (step.attempts ?? 0) + 1;
+    const published = await paintAndPublishCard(
+      cardId,
+      artPromptLadder(attempt, config.artPrompt, fallbackInputsFor(card, config.style)),
+    );
     if (!published.ok) {
-      return { ...step, status: "failed", card_id: cardId, error: published.error };
+      return { ...step, status: "failed", card_id: cardId, attempts: attempt, error: published.error };
     }
-    return { ...step, status: "done", card_id: cardId, error: undefined };
+    return { ...step, status: "done", card_id: cardId, attempts: attempt, error: undefined };
   });
+}
+
+/** What the safe fallback prompt may use: only the card's identity. */
+function fallbackInputsFor(card: DesignedCard, style?: string | null): FallbackArtInputs {
+  return {
+    title: card.title,
+    typeLine: [card.supertype, card.card_type, card.subtypes?.length ? `— ${card.subtypes.join(" ")}` : null]
+      .filter(Boolean)
+      .join(" "),
+    colors: card.color_identity,
+    style: style ?? null,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -1006,16 +1036,26 @@ async function runCardFillStep(
       frame_template: plan.frame_template,
       deck_id: plan.deck_id,
     };
+    const attempt = (step.attempts ?? 0) + 1;
     if (plan.want.includes("art")) {
       const style = plan.style?.trim()
         ? ` Rendered strictly in ${plan.style.trim()} style.`
         : "";
       await logAiCall(userId, "generate_random_art");
-      const image = await generatePlainImage(
-        `${plan.art_prompt}${style} NO frame, NO borders, NO card layout, NO text or lettering anywhere in the image.`,
+      const image = await generateImageWithFallbacks(
+        artPromptLadder(
+          attempt,
+          `${plan.art_prompt}${style} NO frame, NO borders, NO card layout, NO text or lettering anywhere in the image.`,
+          {
+            title: plan.fields.title ?? step.label,
+            typeLine: plan.fields.card_type ?? null,
+            colors: plan.fields.color_identity ?? null,
+            style: plan.style,
+          },
+        ),
         "card",
       );
-      if (!image.ok) return { ...step, status: "failed", error: image.error };
+      if (!image.ok) return { ...step, status: "failed", attempts: attempt, error: image.error };
       const persisted = await persistGeneratedArt(image.bytes, image.contentType);
       if (!persisted.ok) {
         return { ...step, status: "failed", error: persisted.error };
@@ -1023,7 +1063,7 @@ async function runCardFillStep(
       fill.art_url = persisted.publicUrl;
       fill.artist_credit = await aiArtistCredit();
     }
-    return { ...step, status: "done", fill, error: undefined };
+    return { ...step, status: "done", fill, attempts: attempt, error: undefined };
   });
 }
 
@@ -1042,6 +1082,7 @@ async function runSingleCardStep(
     reason: "generate_random_card",
     artLogAction: "generate_random_art",
     card: plan.card,
+    style: plan.style,
     artPrompt: `${plan.card.art_prompt}${style} NO frame, NO borders, NO card layout, NO text or lettering anywhere in the image.`,
     createExtras: {
       frame_style: plan.frame_template
@@ -1351,6 +1392,7 @@ async function runCardStep(
     artLogAction: "generate_deck_cards",
     card,
     artPrompt: artPrompt(job.plan as SetJobPlan, card),
+    style: (job.plan as SetJobPlan).style,
     createExtras: { primary_set_id: job.set_id ?? undefined },
   });
 }
@@ -1365,10 +1407,10 @@ async function runCardStep(
  */
 async function paintAndPublishCard(
   cardId: string,
-  prompt: string,
+  prompts: readonly string[],
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   // "card" aspect matches the frame's art window — no manual repositioning.
-  const image = await generatePlainImage(prompt, "card");
+  const image = await generateImageWithFallbacks(prompts, "card");
   if (!image.ok) return { ok: false, error: image.error };
 
   const persisted = await persistGeneratedArt(image.bytes, image.contentType);
@@ -1444,6 +1486,7 @@ async function runDeckCardStep(
     artLogAction: "generate_deck_cards",
     card,
     artPrompt: deckArtPrompt(plan, card),
+    style: plan.style,
     createExtras: {
       supertype: isCommander
         ? card.supertype || "Legendary"
@@ -1769,7 +1812,7 @@ async function runCoverStep(
   await logAiCall(userId, job.kind === "set" ? "generate_deck" : "generate_deck_cards");
   {
     const { prompt, aspect } = coverPrompt(job);
-    const image = await generatePlainImage(prompt, aspect);
+    const image = await generateImageWithFallbacks([prompt, softenArtPrompt(prompt)], aspect);
     if (!image.ok) {
       return { ...step, status: "failed", error: image.error };
     }
@@ -1829,7 +1872,9 @@ async function runIconStep(
 ): Promise<JobStep> {
   await logAiCall(userId, "generate_set_icon");
   return withCreditedStep(userId, job.id, 1, "generate_set_icon", step, async () => {
-    const image = await generatePlainImage(iconPrompt(job.plan as SetJobPlan));
+    const image = await generateImageWithFallbacks(
+      [iconPrompt(job.plan as SetJobPlan), softenArtPrompt(iconPrompt(job.plan as SetJobPlan))],
+    );
     if (!image.ok) {
       return { ...step, status: "failed", error: image.error };
     }
@@ -1873,6 +1918,7 @@ async function patchJobStep(
     // card_fill: the generated fields ride on the step (the plan is never
     // sent to the client). null keeps the key explicit for other kinds.
     fill: step.fill ?? null,
+    attempts: step.attempts ?? null,
     // The step is no longer running — drop the claim stamp.
     claimed_at: null,
   };

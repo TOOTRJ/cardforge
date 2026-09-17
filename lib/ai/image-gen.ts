@@ -1,4 +1,5 @@
 import "server-only";
+import { isSafetyBlockError, shouldRewordAfter } from "@/lib/ai/art-prompt-safety";
 
 import { experimental_generateImage as generateImage, generateText } from "ai";
 import { isGatewayConfigured } from "@/lib/ai/provider";
@@ -44,7 +45,7 @@ export type ImageCallOptions = {
 /** Map raw provider errors to something a user can act on. */
 export function friendlyImageError(detail: string): string {
   const lower = detail.toLowerCase();
-  if (lower.includes("safety") || lower.includes("policy") || lower.includes("blocked")) {
+  if (isSafetyBlockError(detail)) {
     return "The image was blocked by the provider's safety filter — try again (each retry rewords the prompt) or adjust the theme.";
   }
   if (lower.includes("rate limit") || lower.includes("429") || lower.includes("too many")) {
@@ -54,7 +55,7 @@ export function friendlyImageError(detail: string): string {
     return "The image provider's quota/billing is exhausted on the server side.";
   }
   if (lower.includes("timeout") || lower.includes("timed out") || lower.includes("aborted")) {
-    return "The image took too long to generate — retry usually works.";
+    return "The image took too long — often a sign the prompt was quietly blocked. Retry: each attempt rewords it.";
   }
   if (lower.includes("unauthorized") || lower.includes("401") || lower.includes("403") || lower.includes("api key")) {
     return "The image provider rejected our credentials — check the AI keys on the server.";
@@ -65,6 +66,43 @@ export function friendlyImageError(detail: string): string {
 export type RestyleResult =
   | { ok: true; bytes: Uint8Array; contentType: string }
   | { ok: false; error: string };
+
+/** A moderated prompt hangs at the gateway instead of erroring, so each
+ *  rung gets a tighter cap than a lone call: a healthy render is ~10–40s,
+ *  and two rungs still fit the step route's budget. */
+const RUNG_TIMEOUT_MS = 70_000;
+
+/** Try each prompt in order until one renders. A moderation refusal OR a
+ *  timeout (how a refusal actually surfaces through the gateway) moves to
+ *  the next, safer prompt while the step budget allows; any other failure
+ *  stops immediately (a rate limit won't be cured by rewording).
+ *  `promptIndex` says which rung succeeded. */
+export async function generateImageWithFallbacks(
+  prompts: readonly string[],
+  aspect: ImageAspect = "square",
+  options: ImageCallOptions & { budgetMs?: number } = {},
+): Promise<
+  | { ok: true; bytes: Uint8Array; contentType: string; promptIndex: number }
+  | { ok: false; error: string; safetyBlocked: boolean }
+> {
+  const started = Date.now();
+  const budget = options.budgetMs ?? 160_000;
+  let lastError = "Missing image prompt.";
+  let blocked = false;
+  for (let i = 0; i < prompts.length; i += 1) {
+    const remaining = budget - (Date.now() - started);
+    // Don't start a rung we can't finish inside the step budget.
+    if (i > 0 && remaining < 45_000) break;
+    const result = await generatePlainImage(prompts[i], aspect, {
+      timeoutMs: Math.min(options.timeoutMs ?? RUNG_TIMEOUT_MS, Math.max(remaining, 10_000)),
+    });
+    if (result.ok) return { ...result, promptIndex: i };
+    lastError = result.error;
+    blocked = shouldRewordAfter(result.error);
+    if (!blocked) break;
+  }
+  return { ok: false, error: lastError, safetyBlocked: blocked };
+}
 
 export function isImageRemixConfigured(): boolean {
   return isGatewayConfigured();
