@@ -21,6 +21,21 @@ export function publishNotificationArrival(arrival: NotificationArrival): void {
   );
 }
 
+const SEEN_EVENT = "pipglyph:notifications-seen";
+
+/** Fired by a surface that just marked everything seen (the /notifications
+ *  page on load) so the header badge drops to zero without a refresh. */
+export function publishNotificationsSeen(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(SEEN_EVENT));
+}
+
+export function subscribeNotificationsSeen(onSeen: () => void): () => void {
+  if (typeof window === "undefined") return () => {};
+  window.addEventListener(SEEN_EVENT, onSeen);
+  return () => window.removeEventListener(SEEN_EVENT, onSeen);
+}
+
 export function subscribeNotificationArrivals(
   onArrival: (arrival: NotificationArrival) => void,
 ): () => void {

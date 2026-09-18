@@ -54,6 +54,21 @@ export async function getUnreadNotificationCount(): Promise<number> {
   return count ?? 0;
 }
 
+/** Every unread notification of the signed-in user marked seen. Shared by
+ *  the bell's server action and the /notifications page (which calls it
+ *  during render, so no revalidatePath here). RLS scopes the update. */
+export async function markAllNotificationsSeen(): Promise<boolean> {
+  const user = await getCurrentUser();
+  if (!user) return false;
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("notifications")
+    .update({ read_at: new Date().toISOString() })
+    .eq("recipient_id", user.id)
+    .is("read_at", null);
+  return !error;
+}
+
 export async function listNotifications(limit = 30): Promise<NotificationItem[]> {
   const user = await getCurrentUser();
   if (!user) return [];
