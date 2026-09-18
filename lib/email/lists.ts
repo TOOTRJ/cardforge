@@ -30,7 +30,7 @@ export const EMAIL_LIST_COPY: Record<
   activity: {
     label: "Activity digest",
     description:
-      "At most one email a day when there's unread activity — likes, comments, remixes and new followers. Nothing to report, no email.",
+      "A weekly round-up of unread activity — likes, comments, remixes and new followers. Nothing to report, no email.",
     defaultOn: true,
   },
   newsletter: {

@@ -80,7 +80,7 @@ Sent by the app through Resend's REST API (`lib/email/send.ts`, plain
 | --- | --- | --- |
 | Welcome | account | once, when onboarding is finished or skipped |
 | Team message | account | immediately, when the team posts in the user's thread |
-| Activity digest | activity | daily cron (`/api/cron/email-digest`, 15:00 UTC), only to users with UNREAD notifications since their last digest — never one email per like |
+| Activity digest | activity | weekly cron (`/api/cron/email-digest`, Mondays 15:00 UTC), only to users with UNREAD notifications since their last digest — never one email per like. The body links straight to the "Activity digest" switch in Settings → Email |
 | Newsletter | newsletter | admin presses **Email newsletter** on a live update in `/admin/updates` |
 
 Preferences live in `email_preferences` (migration 0095): three switches the
@@ -112,8 +112,8 @@ Vercel env:
 | `RESEND_WEBHOOK_SECRET` | from Resend → Webhooks, after adding `https://pipglyph.com/api/webhooks/resend` for `email.bounced` + `email.complained` |
 | `CRON_SECRET` | already expected by the other cron routes; **without it every cron route (this one included) fails closed with 401** |
 
-Volume: the free tier's 100/day cap is reachable on a busy day of digests —
-plan on Resend Pro ($20/month) once the site grows.
+Volume: the free tier's 100/day cap is reachable on digest Mondays once
+there are a few hundred active users — plan on Resend Pro ($20/month) then.
 
 ### Alternatives considered
 

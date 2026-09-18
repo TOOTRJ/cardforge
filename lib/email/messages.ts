@@ -134,7 +134,7 @@ export function activityDigestEmail(
   const f = footer(
     "activity",
     recipient,
-    "You're receiving this daily digest because there's unread activity on your PipGlyph account.",
+    "You're receiving this weekly digest because there's unread activity on your PipGlyph account.",
   );
   const shown = input.lines.slice(0, DIGEST_MAX_LINES);
   const more = input.total - shown.length;
@@ -142,6 +142,12 @@ export function activityDigestEmail(
   const heading =
     input.total === 1 ? "1 new notification" : `${input.total} new notifications`;
   const cta = { label: "See all notifications", url: `${site}/notifications` };
+  const settingsUrl = `${site}/settings#email`;
+  // The opt-out is in the body, not only the footer: "Activity digest" is a
+  // named switch in Settings → Email, and this points straight at it.
+  const optOut = emailNote(
+    `Don't want these round-ups? Turn off <strong>Activity digest</strong> in your ${emailLink(settingsUrl, "email settings")} — the bell on the site keeps working as usual.`,
+  );
   return {
     to: recipient.email,
     subject: `${heading} on PipGlyph`,
@@ -163,6 +169,7 @@ export function activityDigestEmail(
         ...(more > 0 ? [`…and ${more} more.`] : []),
       ],
       cta,
+      after: [optOut],
       footerNote: f.footerNote,
       unsubscribeUrl: f.unsubscribeUrl,
       settingsUrl: f.settingsUrl,
@@ -172,6 +179,8 @@ export function activityDigestEmail(
       lines: [
         ...shown.map((line) => `• ${line.subject} ${line.body} — ${absolute(line.href)}`),
         ...(more > 0 ? [`…and ${more} more.`] : []),
+        "",
+        `Don't want these round-ups? Turn off "Activity digest" in your email settings: ${settingsUrl}`,
       ],
       cta,
       footerNote: f.footerNote,

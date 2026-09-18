@@ -11,14 +11,15 @@ import { activityDigestEmail, type DigestLine } from "@/lib/email/messages";
 import { isEmailConfigured, sendEmailBatch, type OutgoingEmail } from "@/lib/email/send";
 
 // ---------------------------------------------------------------------------
-// The daily activity digest. Notifications are push-first (Realtime toast +
+// The weekly activity digest. Notifications are push-first (Realtime toast +
 // bell); this is the catch-up for people who weren't on the site: ONE email a
-// day, only when something is still UNREAD, never a mail per like.
+// week, only when something is still UNREAD, never a mail per like.
 //
 // Window per user: notifications created after their last digest (capped at
-// LOOKBACK so a long-idle account isn't sent a month of history) that are
-// still unread at send time. `last_digest_at` then moves to "now", so nothing
-// is mailed twice. Idempotent within a day: a second run finds no new rows.
+// LOOKBACK — a little over the week between runs — so a long-idle account
+// isn't sent a month of history) that are still unread at send time.
+// `last_digest_at` then moves to "now", so nothing is mailed twice. A second
+// run the same day finds no new rows.
 //
 // Not in the digest:
 //   message      — emailed immediately (lib/messages/notify.ts)
@@ -27,7 +28,7 @@ import { isEmailConfigured, sendEmailBatch, type OutgoingEmail } from "@/lib/ema
 // ---------------------------------------------------------------------------
 
 const EXCLUDED_TYPES = ["message", "site_update"];
-const LOOKBACK_MS = 3 * 24 * 60 * 60 * 1000;
+const LOOKBACK_MS = 8 * 24 * 60 * 60 * 1000;
 const RECIPIENT_PAGE = 200;
 
 export type DigestRunResult = {

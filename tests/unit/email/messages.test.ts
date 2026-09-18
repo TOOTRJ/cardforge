@@ -67,6 +67,17 @@ describe("email builders", () => {
     expect(email.html).not.toContain("User 19");
   });
 
+  it("digest links straight to the Activity digest switch in settings", () => {
+    const email = activityDigestEmail(recipient, {
+      lines: [{ subject: "Ann", body: "liked Bolt.", href: "/card/ann/bolt" }],
+      total: 1,
+    });
+    expect(email.html).toContain("Turn off <strong>Activity digest</strong>");
+    expect(email.html).toMatch(/href="https?:\/\/[^"]+\/settings#email"/);
+    expect(email.text).toContain('Turn off "Activity digest" in your email settings:');
+    expect(email.text).toContain("/settings#email");
+  });
+
   it("newsletter uses the marketing sender's postal address when set", () => {
     const email = newsletterEmail(recipient, {
       kind: "upcoming",

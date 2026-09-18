@@ -73,7 +73,7 @@ Rules and gotchas:
   hand-edited) and link to `/auth/confirm?token_hash=…` (button-press verify;
   works cross-device). `config.toml` templates reach local + preview branches
   only — production needs `npm run email:push-auth-templates`. App emails
-  (welcome, team message, daily digest, newsletter) are built in
+  (welcome, team message, weekly digest, newsletter) are built in
   `lib/email/messages.ts`, sent by `lib/email/send.ts` (Resend REST, batch
   ≤100), gated by `email_preferences` (0095: newsletter is OPT-IN, consent
   stamped by trigger) and always carry RFC 8058 one-click unsubscribe headers.
