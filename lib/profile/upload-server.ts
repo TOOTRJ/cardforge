@@ -7,6 +7,11 @@ import { revalidatePath } from "next/cache";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { scanImageUrl } from "@/lib/moderation/image-scan";
+import {
+  isDefaultProfileMedia,
+  randomDefaultMedia,
+  type ProfileMediaKind,
+} from "@/lib/profile/default-media";
 
 // ---------------------------------------------------------------------------
 // Profile-media upload (avatar / banner). Mirrors lib/cards/upload-art-
@@ -44,8 +49,6 @@ const CONTENT_TYPE_BY_FORMAT: Record<string, string> = {
   webp: "image/webp",
   gif: "image/gif",
 };
-
-export type ProfileMediaKind = "avatar" | "banner";
 
 /**
  * Pulls the bucket-relative key out of a Supabase Storage public URL so we
@@ -210,6 +213,69 @@ export async function uploadProfileMediaServerAction(
   return { ok: true, publicUrl };
 }
 
+/** Bucket object behind the profile's current avatar/banner, if it is one of
+ *  ours (a default path or an OAuth avatar has nothing to delete). */
+async function removeStoredMedia(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  kind: ProfileMediaKind,
+) {
+  const column = kind === "avatar" ? "avatar_url" : "banner_url";
+  const { data } = await supabase
+    .from("profiles")
+    .select(column)
+    .eq("id", userId)
+    .maybeSingle();
+  const currentUrl = (data as Record<string, string | null> | null)?.[column] ?? null;
+  const path = currentUrl ? extractBucketPath(currentUrl, "profile-media") : null;
+  if (path) await supabase.storage.from("profile-media").remove([path]);
+  return currentUrl;
+}
+
+async function revalidateProfile(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+) {
+  revalidatePath("/settings");
+  revalidatePath("/onboarding");
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("username")
+    .eq("id", userId)
+    .maybeSingle();
+  if (profile?.username) revalidatePath(`/profile/${profile.username}`);
+}
+
+/** Use one of the built-in images (public/defaults). `path` must be a value
+ *  from lib/profile/default-media — anything else is refused, so this can
+ *  never be used to point a profile at an arbitrary URL. */
+export async function chooseDefaultProfileMediaAction(
+  kind: ProfileMediaKind,
+  path: string,
+): Promise<UploadProfileMediaResult> {
+  if (!isSupabaseConfigured()) {
+    return { ok: false, error: "Supabase is not configured." };
+  }
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Sign in first." };
+  if (!isDefaultProfileMedia(path, kind)) {
+    return { ok: false, error: "That isn't one of the built-in images." };
+  }
+
+  const supabase = await createClient();
+  await removeStoredMedia(supabase, user.id, kind);
+  const { error } = await supabase
+    .from("profiles")
+    .update(kind === "avatar" ? { avatar_url: path } : { banner_url: path })
+    .eq("id", user.id);
+  if (error) return { ok: false, error: "Couldn't save that image. Please try again." };
+
+  await revalidateProfile(supabase, user.id);
+  return { ok: true, publicUrl: path };
+}
+
+/** "Remove" never leaves a profile imageless: the upload is deleted and a
+ *  random built-in image (different from the current one) takes its place. */
 export async function clearProfileMediaServerAction(
   kind: ProfileMediaKind,
 ): Promise<UploadProfileMediaResult> {
@@ -222,22 +288,14 @@ export async function clearProfileMediaServerAction(
   }
 
   const supabase = await createClient();
-  const update =
-    kind === "avatar" ? { avatar_url: null } : { banner_url: null };
+  const previous = await removeStoredMedia(supabase, user.id, kind);
+  const replacement = randomDefaultMedia(kind, previous);
   const { error } = await supabase
     .from("profiles")
-    .update(update)
+    .update(kind === "avatar" ? { avatar_url: replacement } : { banner_url: replacement })
     .eq("id", user.id);
   if (error) return { ok: false, error: error.message };
 
-  revalidatePath("/settings");
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("username")
-    .eq("id", user.id)
-    .maybeSingle();
-  if (profile?.username) {
-    revalidatePath(`/profile/${profile.username}`);
-  }
-  return { ok: true, publicUrl: "" };
+  await revalidateProfile(supabase, user.id);
+  return { ok: true, publicUrl: replacement };
 }

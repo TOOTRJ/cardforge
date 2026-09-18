@@ -72,8 +72,20 @@ Rules and gotchas:
   (`npm run email:build-auth-templates` → `supabase/templates/`, never
   hand-edited) and link to `/auth/confirm?token_hash=…` (button-press verify;
   works cross-device). `config.toml` templates reach local + preview branches
-  only — production needs `npm run email:push-auth-templates`. Details +
+  only — production needs `npm run email:push-auth-templates`. App emails
+  (welcome, team message, daily digest, newsletter) are built in
+  `lib/email/messages.ts`, sent by `lib/email/send.ts` (Resend REST, batch
+  ≤100), gated by `email_preferences` (0095: newsletter is OPT-IN, consent
+  stamped by trigger) and always carry RFC 8058 one-click unsubscribe headers.
+  Never email `site_update` rows outside the newsletter list. Details +
   owner setup: `docs/EMAIL.md`.
+- Onboarding: `profiles.onboarded_at` NULL → the (app) layout redirects to
+  `/onboarding` (its own route group, so no loop). Every profile always has an
+  avatar + banner: the DB deals a random built-in pair at insert (0095,
+  `public/defaults`, site-relative paths — use `absoluteProfileMediaUrl()`
+  for OG/JSON-LD/email), "Remove" swaps in another built-in, and
+  `chooseDefaultProfileMediaAction` only accepts paths `isDefaultProfileMedia`
+  recognises. The seeded e2e user is pre-onboarded (`scripts/seed-e2e.mjs`).
 - Viewer-independent server reads use `createPublicClient()` (cookie-free,
   keeps routes ISR-eligible); cookie-bound reads via `createClient()` make
   a route dynamic. `lib/supabase/admin.ts` bypasses RLS — webhook/cron,

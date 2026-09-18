@@ -831,6 +831,9 @@ function CreatorFeature({
             width={56}
             height={56}
             className="h-14 w-14 shrink-0 rounded-full border border-border/60 object-cover"
+            // Avatars can be OAuth-provider URLs (not in remotePatterns) or a
+            // /defaults path — never worth an optimizer variant at 56px.
+            unoptimized
           />
         ) : (
           <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-border/60 bg-elevated text-xl font-semibold text-foreground">

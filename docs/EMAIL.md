@@ -69,3 +69,57 @@ integration only deploys migrations, functions and buckets. So:
 http://127.0.0.1:54324. After changing a template: rebuild, then
 `supabase stop && supabase start` (the auth container reads them at boot).
 `tests/e2e/auth-flows.spec.ts` drives a real password reset through Mailpit.
+
+## App emails (welcome, team messages, activity digest, newsletter)
+
+Sent by the app through Resend's REST API (`lib/email/send.ts`, plain
+`fetch`). All of them use the same shell as the auth emails
+(`lib/email/layout.ts`) via the builders in `lib/email/messages.ts`.
+
+| Email | List | When |
+| --- | --- | --- |
+| Welcome | account | once, when onboarding is finished or skipped |
+| Team message | account | immediately, when the team posts in the user's thread |
+| Activity digest | activity | daily cron (`/api/cron/email-digest`, 15:00 UTC), only to users with UNREAD notifications since their last digest — never one email per like |
+| Newsletter | newsletter | admin presses **Email newsletter** on a live update in `/admin/updates` |
+
+Preferences live in `email_preferences` (migration 0095): three switches the
+user sets during onboarding and under Settings → Email. **Newsletter is
+opt-in** (unchecked by default; the consent timestamp is stamped by a DB
+trigger). Security emails from Supabase Auth are never gated.
+
+Every list email carries `List-Unsubscribe` + `List-Unsubscribe-Post`
+(RFC 8058 one-click, required by Gmail/Yahoo for bulk senders) pointing at
+`POST /api/email/unsubscribe?token=…&list=…`, plus a visible `/unsubscribe`
+footer link that asks for a button press (mail scanners can't unsubscribe
+anyone). The token is `email_preferences.unsubscribe_token`.
+
+Bounces and complaints: `POST /api/webhooks/resend` (Svix-signed) calls
+`suppress_email()`, which stops all non-auth email to that address; a
+complaint also withdraws newsletter consent. Settings shows the user why.
+
+### Production setup (owner)
+
+Vercel env:
+
+| Var | Purpose |
+| --- | --- |
+| `RESEND_API_KEY` | required for any app email |
+| `EMAIL_FROM` | verified sender, e.g. `PipGlyph <hello@pipglyph.com>` (the older `ADMIN_ALERT_FROM` still works as a fallback) |
+| `EMAIL_FROM_NEWSLETTER` | optional separate sender for the newsletter — a subdomain like `news.pipglyph.com` keeps marketing reputation away from transactional mail |
+| `EMAIL_REPLY_TO` | optional |
+| `EMAIL_POSTAL_ADDRESS` | postal address printed in the newsletter footer (CAN-SPAM) |
+| `RESEND_WEBHOOK_SECRET` | from Resend → Webhooks, after adding `https://pipglyph.com/api/webhooks/resend` for `email.bounced` + `email.complained` |
+| `CRON_SECRET` | already expected by the other cron routes; **without it every cron route (this one included) fails closed with 401** |
+
+Volume: the free tier's 100/day cap is reachable on a busy day of digests —
+plan on Resend Pro ($20/month) once the site grows.
+
+### Alternatives considered
+
+Resend Broadcasts (hosted newsletter editor, Segments/Topics, hosted
+preference page) would replace the in-app newsletter send at the cost of
+syncing subscribers to Resend and a second $40/month plan past 1,000
+contacts; the in-app send keeps one source of truth (our DB) and is free at
+today's size. Postmark ($15/month) is the deliverability runner-up; SES is
+cheapest but has no list tooling; SendGrid retired its free plan.

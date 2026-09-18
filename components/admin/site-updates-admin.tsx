@@ -9,7 +9,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { BellRing, CalendarClock, Eye, EyeOff, Megaphone, Pencil, Plus, Sparkles, Trash2, X } from "lucide-react";
+import { BellRing, CalendarClock, Eye, EyeOff, Mail, Megaphone, Pencil, Plus, Sparkles, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ import {
   createSiteUpdateAction,
   deleteSiteUpdateAction,
   notifyAllUsersAction,
+  emailNewsletterAction,
   setBannerEnabledAction,
   setSiteUpdateFlagAction,
   updateSiteUpdateAction,
@@ -84,6 +85,31 @@ export function SiteUpdatesAdmin({
         result.sent === 0
           ? "Everyone already has this notification."
           : `Sent to ${result.sent.toLocaleString("en-US")} user${result.sent === 1 ? "" : "s"}.`,
+      );
+      router.refresh();
+    });
+  };
+
+  const emailNewsletter = (u: SiteUpdate) => {
+    const again = u.emailed_at != null;
+    const ok = window.confirm(
+      again
+        ? `Email "${u.title}" again? Only newsletter subscribers who haven't been sent it yet will get it.`
+        : `Email "${u.title}" to every newsletter subscriber? This can't be unsent.`,
+    );
+    if (!ok) return;
+    startTransition(async () => {
+      const result = await emailNewsletterAction(u.id);
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(
+        result.sent === 0
+          ? "No new subscribers to email."
+          : `Emailed ${result.sent.toLocaleString("en-US")} subscriber${result.sent === 1 ? "" : "s"}${
+              result.failed > 0 ? ` — ${result.failed} failed, send again to retry` : ""
+            }.`,
       );
       router.refresh();
     });
@@ -217,6 +243,23 @@ export function SiteUpdatesAdmin({
                   >
                     <BellRing className="h-3.5 w-3.5" aria-hidden />
                     {u.notified_at ? "Notify new users" : "Notify all users"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => emailNewsletter(u)}
+                    disabled={pending || status !== "live"}
+                    title={
+                      status !== "live"
+                        ? "Publish it first — only a live update can be emailed"
+                        : "Email this update to newsletter subscribers"
+                    }
+                  >
+                    <Mail className="h-3.5 w-3.5" aria-hidden />
+                    {u.emailed_at
+                      ? `Email new subscribers (${u.emailed_count.toLocaleString("en-US")} sent)`
+                      : "Email newsletter"}
                   </Button>
                   <Button type="button" variant="ghost" size="sm" className="ml-auto text-danger" onClick={() => remove(u)} disabled={pending}>
                     <Trash2 className="h-3.5 w-3.5" aria-hidden />

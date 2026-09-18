@@ -18,7 +18,7 @@ import { needsAck, type SiteUpdate } from "@/lib/updates/shared";
 export const SITE_UPDATES_TAG = "site-updates";
 
 const SELECT =
-  "id, kind, title, summary, body, link_href, publish_at, is_published, show_in_banner, banner_scope, require_ack, ack_until, notified_at, notified_count, created_at, updated_at";
+  "id, kind, title, summary, body, link_href, publish_at, is_published, show_in_banner, banner_scope, require_ack, ack_until, notified_at, notified_count, emailed_at, emailed_count, created_at, updated_at";
 
 const loadReleasedUpdates = unstable_cache(
   async (): Promise<SiteUpdate[]> => {

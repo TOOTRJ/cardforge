@@ -34,6 +34,7 @@ import { FollowButton } from "@/components/follows/follow-button";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { SOCIAL_PLATFORMS, type SocialPlatformKey } from "@/lib/auth/schemas";
 import { getSiteBaseUrl } from "@/lib/site-url";
+import { absoluteProfileMediaUrl } from "@/lib/profile/default-media";
 import { JsonLd } from "@/components/seo/json-ld";
 import type { ArtPosition, FrameStyle } from "@/types/card";
 
@@ -603,7 +604,9 @@ function buildProfileJsonLd(
     description:
       profile.bio?.trim() || `Custom cards forged by @${profile.username} on PipGlyph.`,
   };
-  if (profile.avatar_url) person.image = profile.avatar_url;
+  // Built-in avatars are stored site-relative; structured data needs absolute.
+  const avatarUrl = absoluteProfileMediaUrl(profile.avatar_url, base);
+  if (avatarUrl) person.image = avatarUrl;
   if (sameAs.length > 0) person.sameAs = sameAs;
 
   return {

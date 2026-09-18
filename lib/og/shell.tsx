@@ -2,6 +2,9 @@ import type { ReactNode } from "react";
 import { BRAND, MANA_PIPS, OG_SIZE } from "@/lib/brand/constants";
 import { BrandMarkTile } from "@/lib/brand/glyph";
 import { isAllowedServerImageFetchUrl } from "@/lib/validation/card";
+import { isDefaultProfileMedia } from "@/lib/profile/default-media";
+import { toSatoriDataUrl } from "@/lib/render/art-source";
+import { getSiteBaseUrl } from "@/lib/site-url";
 
 // ---------------------------------------------------------------------------
 // Shared chrome for dynamic Open Graph images (challenge / set / profile
@@ -20,9 +23,16 @@ export { MANA_PIPS, OG_SIZE };
 export async function fetchImageAsDataUri(
   url: string,
 ): Promise<string | null> {
-  // SSRF guard: only fetch from our storage bucket / Scryfall — never an
-  // arbitrary user-supplied host (cover_url etc. flow in here).
-  if (!isAllowedServerImageFetchUrl(url)) return null;
+  // A built-in avatar/banner is stored as a site-relative path
+  // (lib/profile/default-media) — it is one of OUR static files, matched by a
+  // strict pattern, so it is fetched from this deployment's own origin.
+  if (isDefaultProfileMedia(url)) {
+    url = `${getSiteBaseUrl()}${url}`;
+  } else if (!isAllowedServerImageFetchUrl(url)) {
+    // SSRF guard: only fetch from our storage bucket / Scryfall — never an
+    // arbitrary user-supplied host (cover_url etc. flow in here).
+    return null;
+  }
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 3500);
@@ -31,8 +41,9 @@ export async function fetchImageAsDataUri(
     if (!res.ok) return null;
     const contentType = res.headers.get("content-type") ?? "image/png";
     if (!contentType.startsWith("image/")) return null;
-    const buffer = Buffer.from(await res.arrayBuffer());
-    return `data:${contentType};base64,${buffer.toString("base64")}`;
+    // Satori only decodes PNG/JPEG — WebP (every built-in avatar, many
+    // uploads) and GIF are transcoded, the same path card art takes.
+    return await toSatoriDataUrl(Buffer.from(await res.arrayBuffer()));
   } catch {
     return null;
   }

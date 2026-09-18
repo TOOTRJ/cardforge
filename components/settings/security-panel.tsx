@@ -100,7 +100,7 @@ export function SecurityPanel({ email, providers, emailJustChanged }: SecurityPa
         {/* Lets password managers attach the new password to the right account. */}
         <input
           type="text"
-          name="username"
+          name="account_email"
           autoComplete="username"
           value={email}
           readOnly

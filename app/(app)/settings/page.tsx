@@ -9,7 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { ProfileForm } from "@/components/auth/profile-form";
-import { ProfileMediaUploader } from "@/components/auth/profile-media-uploader";
+import { ProfileMediaField } from "@/components/profile/profile-media-field";
+import { EmailPreferencesPanel } from "@/components/settings/email-preferences-panel";
+import { getMyEmailPreferences } from "@/lib/email/preferences";
+import { isGeneratedUsername } from "@/lib/auth/usernames";
 import { PinnedCardsPicker } from "@/components/auth/pinned-cards-picker";
 import { UsagePanel } from "@/components/settings/usage-panel";
 import { CustomPipsPanel } from "@/components/settings/custom-pips-panel";
@@ -48,7 +51,9 @@ export default async function SettingsPage({
       })
     : null;
 
-  const profileIncomplete = !profile?.username;
+  const emailPreferences = await getMyEmailPreferences();
+  // "Incomplete" = still on the handle the signup trigger minted.
+  const profileIncomplete = isGeneratedUsername(profile?.username);
 
   return (
     <DashboardShell>
@@ -77,27 +82,23 @@ export default async function SettingsPage({
               Avatar & banner
             </h3>
             <p className="text-sm leading-6 text-muted">
-              Customize the imagery on your public profile. PNG, JPEG, WebP,
-              or GIF, up to 8 MB.
+              The imagery on your public profile. Upload your own (PNG, JPEG,
+              WebP or GIF, up to 8 MB) or pick from the built-in set.
             </p>
           </div>
-          <div className="flex flex-col gap-6 sm:flex-row">
-            <ProfileMediaUploader
+          <div className="flex flex-col gap-8">
+            <ProfileMediaField
               kind="avatar"
               currentUrl={profile?.avatar_url ?? null}
               label="Avatar"
               hint="Square crops look best — 256×256 or larger."
-              previewClassName="aspect-square w-32"
             />
-            <div className="flex-1">
-              <ProfileMediaUploader
-                kind="banner"
-                currentUrl={profile?.banner_url ?? null}
-                label="Banner"
-                hint="Wide aspect (≈ 4:1). Renders at the top of your profile."
-                previewClassName="aspect-[4/1] w-full"
-              />
-            </div>
+            <ProfileMediaField
+              kind="banner"
+              currentUrl={profile?.banner_url ?? null}
+              label="Banner"
+              hint="Wide aspect (≈ 4:1). Renders at the top of your profile."
+            />
           </div>
         </SurfaceCard>
 
@@ -114,7 +115,8 @@ export default async function SettingsPage({
             </p>
             {profileIncomplete ? (
               <p className="mt-2 text-xs leading-5 text-accent">
-                Pick a username so creators can find you in the gallery.
+                You&apos;re still on the handle we minted at signup — claim one
+                that&apos;s yours.
               </p>
             ) : null}
           </div>
@@ -156,6 +158,29 @@ export default async function SettingsPage({
               new Set((user?.identities ?? []).map((identity) => identity.provider)),
             )}
             emailJustChanged={notice === "email-changed"}
+          />
+        </SurfaceCard>
+
+        <SurfaceCard
+          id="email"
+          className="grid scroll-mt-24 gap-6 p-6 sm:grid-cols-[1fr_2fr]"
+        >
+          <div className="flex flex-col gap-1">
+            <h3 className="font-display text-lg font-semibold text-foreground">
+              Email
+            </h3>
+            <p className="text-sm leading-6 text-muted">
+              What we send to {user?.email ?? "your address"}. Security emails
+              about your account are always sent.
+            </p>
+          </div>
+          <EmailPreferencesPanel
+            initial={{
+              account: emailPreferences.account,
+              activity: emailPreferences.activity,
+              newsletter: emailPreferences.newsletter,
+            }}
+            suppressed={emailPreferences.suppressed}
           />
         </SurfaceCard>
 

@@ -39,6 +39,13 @@ export default async function AppGroupLayout({
       ])
     : [null, null, 0, 0, { hasThreads: false, unread: 0 }];
 
+  // First visit: the account exists (handle, default art, email defaults are
+  // all in place) but the user hasn't been through /onboarding yet. That page
+  // lives outside this group, so this can't loop.
+  if (profile && !profile.onboarded_at) {
+    redirect("/onboarding");
+  }
+
   return (
     <AppShell
       user={
