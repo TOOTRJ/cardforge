@@ -3,9 +3,9 @@ import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { sendActivityDigests } from "@/lib/email/digest";
 
 // ---------------------------------------------------------------------------
-// /api/cron/email-digest — the daily activity digest (lib/email/digest.ts).
-// Daily in vercel.json (Hobby crons run at most once a day); safe to trigger
-// by hand, a repeat run the same day finds nothing new to send:
+// /api/cron/email-digest — the weekly activity digest (lib/email/digest.ts).
+// Mondays 15:00 UTC in vercel.json; safe to trigger by hand, a repeat run
+// the same day finds nothing new to send:
 //
 //   curl https://www.pipglyph.com/api/cron/email-digest \
 //        -H "Authorization: Bearer $CRON_SECRET"
