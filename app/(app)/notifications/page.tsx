@@ -4,11 +4,11 @@ import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { listNotifications } from "@/lib/notifications/queries";
+import { listNotifications, markAllNotificationsSeen } from "@/lib/notifications/queries";
 import { getCurrentProfile } from "@/lib/supabase/server";
 import { NOTIFICATION_ICON } from "@/components/notifications/notification-bell";
 import { describeNotification } from "@/lib/notifications/describe";
-import { ClearNotificationsButton } from "@/components/notifications/clear-notifications-button";
+import { NotificationsSeen } from "@/components/notifications/notifications-seen";
 import { NotificationLink } from "@/components/notifications/notification-link";
 
 export const metadata: Metadata = {
@@ -21,15 +21,19 @@ export const dynamic = "force-dynamic";
 export default async function NotificationsPage() {
   const [items, profile] = await Promise.all([listNotifications(50), getCurrentProfile()]);
   const isAdmin = Boolean(profile?.is_admin);
-  const unreadCount = items.filter((item) => !item.readAt).length;
+  // Viewing the page is the acknowledgement (same as opening the bell): the
+  // list above was read BEFORE this write, so the new items keep their
+  // highlight for this visit, while the dashboard count (rendered below,
+  // after this await) is already zero.
+  if (items.some((item) => !item.readAt)) await markAllNotificationsSeen();
 
   return (
     <DashboardShell>
+      <NotificationsSeen />
       <PageHeader
         eyebrow="Activity"
         title="Notifications"
         description="Likes, comments, remixes — and messages, credits and plan changes from the PipGlyph team."
-        actions={<ClearNotificationsButton count={unreadCount} />}
       />
 
       <div className="mt-8">
@@ -48,9 +52,7 @@ export default async function NotificationsPage() {
               return (
                 <NotificationLink
                   key={item.id}
-                  id={item.id}
                   href={d.href}
-                  unread={!item.readAt}
                   className={`flex items-start gap-3 px-5 py-4 transition-colors hover:bg-elevated/50 ${
                     item.readAt ? "" : "bg-primary/5"
                   }`}
@@ -69,7 +71,7 @@ export default async function NotificationsPage() {
                   {item.readAt ? null : (
                     <span
                       role="img"
-                      aria-label="Unread"
+                      aria-label="New"
                       className="mt-2 h-2 w-2 shrink-0 rounded-full bg-primary"
                     />
                   )}

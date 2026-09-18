@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -13,7 +13,6 @@ import {
   MessageCircle,
   MessageSquare,
   ShieldAlert,
-  CheckCheck,
   Sparkles,
   UserPlus,
 } from "lucide-react";
@@ -23,21 +22,26 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
-  clearNotificationAlerts,
   fetchNotifications,
-  markNotificationRead,
+  markAllNotificationsRead,
 } from "@/lib/notifications/actions";
 import type { NotificationItem } from "@/lib/notifications/queries";
 import { describeNotification } from "@/lib/notifications/describe";
-import { subscribeNotificationArrivals } from "@/lib/notifications/bus";
+import {
+  subscribeNotificationArrivals,
+  subscribeNotificationsSeen,
+} from "@/lib/notifications/bus";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
 // NotificationBell — header bell that opens an in-place popover instead of
-// navigating to /notifications. Opening it fetches the latest items; the
-// badge and unread dots clear only when the user opens a notification or
-// hits "Clear all" (two-step), like most apps — nothing is deleted. The
-// full-history page is still reachable via "View all".
+// navigating to /notifications. OPENING IT IS THE ACKNOWLEDGEMENT: the list
+// is fetched, everything is marked seen, and the badge + dashboard count
+// drop to zero — but the items that were new keep their highlight for the
+// rest of that open so the user can see what changed; the next open shows
+// them plain. Nothing is deleted. A notification that arrives while the
+// popover is open joins the list already seen (no badge). The full-history
+// page is reachable via "View all" and marks seen on load the same way.
 // ---------------------------------------------------------------------------
 
 export const NOTIFICATION_ICON: Record<string, typeof Bell> = {
@@ -77,58 +81,51 @@ export function NotificationBell({ initialUnread, isAdmin = false }: Notificatio
   }
   const [items, setItems] = useState<NotificationItem[] | null>(null);
   const [loading, setLoading] = useState(false);
-  const [clearing, setClearing] = useState(false);
-  const [confirmClear, setConfirmClear] = useState(false);
+  // The arrival subscription needs the live open state without re-subscribing.
+  const openRef = useRef(false);
 
-  // "Clear all": mark everything read — badge to zero and dots gone
-  // optimistically, persisted, then a refresh so the dashboard count agrees.
-  const clearAll = async () => {
-    setClearing(true);
-    setConfirmClear(false);
-    const now = new Date().toISOString();
-    setItems((prev) => prev?.map((item) => (item.readAt ? item : { ...item, readAt: now })) ?? prev);
-    setUnread(0);
-    try {
-      await clearNotificationAlerts();
+  // Fetch the list (keeping each item's read state for the highlight), then
+  // mark everything seen: badge to zero here, dashboard count via refresh.
+  const loadAndMarkSeen = async () => {
+    const list = await fetchNotifications(20);
+    setItems(list);
+    setLoading(false);
+    if (list.some((item) => !item.readAt)) {
+      setUnread(0);
+      await markAllNotificationsRead();
       router.refresh();
-    } finally {
-      setClearing(false);
+    } else {
+      setUnread(0);
     }
   };
 
-  // Opening one notification marks just that one read.
-  const openItem = (item: NotificationItem) => {
-    setOpen(false);
-    if (item.readAt) return;
-    setItems((prev) => prev?.map((it) => (it.id === item.id ? { ...it, readAt: new Date().toISOString() } : it)) ?? prev);
-    setUnread((n) => Math.max(0, n - 1));
-    void markNotificationRead(item.id).then(() => router.refresh());
-  };
-
-  // A real-time arrival (components/notifications/realtime-alerts.tsx) bumps
-  // the badge and drops the cached list so the next open refetches.
+  // Real-time arrivals (components/notifications/realtime-alerts.tsx): while
+  // the popover is open the new item joins the list already seen; otherwise
+  // the badge bumps and the cached list is dropped so the next open refetches.
   useEffect(
     () =>
       subscribeNotificationArrivals(() => {
-        setUnread((n) => n + 1);
-        setItems(null);
+        if (openRef.current) {
+          void loadAndMarkSeen();
+        } else {
+          setUnread((n) => n + 1);
+          setItems(null);
+        }
       }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- loadAndMarkSeen only reads stable setters + router
     [],
   );
 
+  // /notifications marks seen on load and announces it so the badge agrees.
+  useEffect(() => subscribeNotificationsSeen(() => setUnread(0)), []);
+
   const handleOpenChange = (next: boolean) => {
     setOpen(next);
-    setConfirmClear(false);
+    openRef.current = next;
     if (!next) return;
     setLoading(true);
-    void (async () => {
-      const list = await fetchNotifications(20);
-      setItems(list);
-      setLoading(false);
-    })();
+    void loadAndMarkSeen();
   };
-
-  const hasUnreadItems = Boolean(items?.some((item) => !item.readAt)) || unread > 0;
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
@@ -158,37 +155,6 @@ export function NotificationBell({ initialUnread, isAdmin = false }: Notificatio
             Notifications
           </span>
           <span className="flex items-center gap-3">
-            {items && items.length > 0 && hasUnreadItems ? (
-              confirmClear ? (
-                <span className="inline-flex items-center gap-2 text-xs">
-                  <span className="text-muted">Clear alerts?</span>
-                  <button
-                    type="button"
-                    onClick={() => setConfirmClear(false)}
-                    className="font-semibold text-muted hover:text-foreground"
-                  >
-                    Keep
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void clearAll()}
-                    disabled={clearing}
-                    className="font-semibold text-primary-bright hover:underline disabled:opacity-60"
-                  >
-                    Clear
-                  </button>
-                </span>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setConfirmClear(true)}
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-muted transition-colors hover:text-foreground"
-                >
-                  <CheckCheck className="h-3.5 w-3.5" aria-hidden />
-                  Clear all
-                </button>
-              )
-            ) : null}
             <Link
               href="/notifications"
               onClick={() => setOpen(false)}
@@ -214,7 +180,7 @@ export function NotificationBell({ initialUnread, isAdmin = false }: Notificatio
                   <li key={item.id}>
                     <Link
                       href={d.href}
-                      onClick={() => openItem(item)}
+                      onClick={() => handleOpenChange(false)}
                       className={cn(
                         "flex items-start gap-3 px-4 py-3 transition-colors hover:bg-elevated/50",
                         item.readAt ? "" : "bg-primary/5",
@@ -232,7 +198,7 @@ export function NotificationBell({ initialUnread, isAdmin = false }: Notificatio
                         </span>
                       </div>
                       {item.readAt ? null : (
-                        <span role="img" aria-label="Unread" className="mt-2 h-2 w-2 shrink-0 rounded-full bg-primary" />
+                        <span role="img" aria-label="New" className="mt-2 h-2 w-2 shrink-0 rounded-full bg-primary" />
                       )}
                     </Link>
                   </li>
