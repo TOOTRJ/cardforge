@@ -11,7 +11,12 @@ export const metadata: Metadata = {
   robots: { index: false },
 };
 
-export default function ForgotPasswordPage() {
+export default async function ForgotPasswordPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const { error } = await searchParams;
   return (
     <SurfaceCard tone="gold" className="flex flex-col gap-6 p-8">
       <div className="flex flex-col gap-2">
@@ -23,6 +28,16 @@ export default function ForgotPasswordPage() {
           password.
         </p>
       </div>
+
+      {error === "link-expired" ? (
+        <div
+          role="alert"
+          className="rounded-md border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-foreground"
+        >
+          That reset link has expired or was already used. Request a fresh one
+          below.
+        </div>
+      ) : null}
 
       <AuthForm<ForgotPasswordInput>
         action={forgotPasswordAction}

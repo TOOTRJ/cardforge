@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@/types/supabase";
+import { safeRedirectPath } from "@/lib/auth/safe-redirect";
 import { getSupabaseEnv, isSupabaseConfigured } from "./env";
 
 // /sets is now the PUBLIC community browse (mirrors /gallery) and is not
@@ -10,11 +11,40 @@ import { getSupabaseEnv, isSupabaseConfigured } from "./env";
 // this runs, so the no-cookie fast path below never sees /create; keeping it
 // protected here means a visitor whose cookie no longer holds a valid
 // session still gets the proper /login?redirectTo=/create redirect.
-const PROTECTED_PREFIXES = ["/dashboard", "/create", "/settings"];
+//
+// Every signed-in-only route is listed so a signed-out visitor keeps their
+// destination (`/login?redirectTo=…`). The (app) layout's own bare
+// redirect("/login") stays as defense in depth, but it cannot know the path.
+const PROTECTED_PREFIXES = [
+  "/dashboard",
+  "/create",
+  "/settings",
+  "/onboarding",
+  "/feed",
+  "/notifications",
+  "/messages",
+  "/feedback",
+  "/admin",
+];
+// /card/…, /deck/… and /set/… are public; only their editors are private.
+const PROTECTED_PATTERN = /^\/(card|deck|set)\/.+\/edit\/?$/;
 const AUTH_REDIRECT_PREFIXES = ["/login", "/signup"];
 
 function pathMatches(path: string, prefixes: readonly string[]) {
   return prefixes.some((p) => path === p || path.startsWith(`${p}/`));
+}
+
+function isProtectedPath(path: string) {
+  return pathMatches(path, PROTECTED_PREFIXES) || PROTECTED_PATTERN.test(path);
+}
+
+function loginRedirect(request: NextRequest) {
+  const redirectUrl = request.nextUrl.clone();
+  const destination = `${request.nextUrl.pathname}${request.nextUrl.search}`;
+  redirectUrl.pathname = "/login";
+  redirectUrl.search = "";
+  redirectUrl.searchParams.set("redirectTo", destination);
+  return NextResponse.redirect(redirectUrl);
 }
 
 export async function updateSession(request: NextRequest) {
@@ -35,12 +65,7 @@ export async function updateSession(request: NextRequest) {
     .getAll()
     .some((c) => c.name.startsWith("sb-"));
   if (!hasAuthCookie) {
-    if (pathMatches(path, PROTECTED_PREFIXES)) {
-      const redirectUrl = request.nextUrl.clone();
-      redirectUrl.pathname = "/login";
-      redirectUrl.searchParams.set("redirectTo", path);
-      return NextResponse.redirect(redirectUrl);
-    }
+    if (isProtectedPath(path)) return loginRedirect(request);
     return NextResponse.next({ request });
   }
 
@@ -72,21 +97,19 @@ export async function updateSession(request: NextRequest) {
     user = null;
   }
 
-  const isProtected = pathMatches(path, PROTECTED_PREFIXES);
+  const isProtected = isProtectedPath(path);
   const isAuthPage = pathMatches(path, AUTH_REDIRECT_PREFIXES);
 
-  if (!user && isProtected) {
-    const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = "/login";
-    redirectUrl.searchParams.set("redirectTo", path);
-    return NextResponse.redirect(redirectUrl);
-  }
+  if (!user && isProtected) return loginRedirect(request);
 
   if (user && isAuthPage) {
-    const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = "/dashboard";
-    redirectUrl.search = "";
-    return NextResponse.redirect(redirectUrl);
+    // Already signed in: go where the login link was headed, not always the
+    // dashboard (an expired tab re-opening /login?redirectTo=/create).
+    const destination = new URL(
+      safeRedirectPath(request.nextUrl.searchParams.get("redirectTo")),
+      request.nextUrl.origin,
+    );
+    return NextResponse.redirect(destination);
   }
 
   return response;

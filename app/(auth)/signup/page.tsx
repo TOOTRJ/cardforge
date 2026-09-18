@@ -76,7 +76,8 @@ export default async function SignupPage({
             type: "text",
             autoComplete: "username",
             placeholder: "forgemaster",
-            helper: "Lowercase letters, numbers, underscores. 3–32 characters.",
+            helper:
+              "Letters, numbers, underscores. 3–32 characters. This is your public handle — you can change it later.",
           },
           {
             name: "password",
@@ -84,9 +85,22 @@ export default async function SignupPage({
             type: "password",
             autoComplete: "new-password",
             placeholder: "At least 8 characters",
+            helper: "8–72 characters. A passphrase you don't use anywhere else is best.",
           },
         ]}
       />
+
+      <p className="text-xs leading-5 text-subtle">
+        By creating an account you agree to the{" "}
+        <Link href="/terms" className="underline hover:text-foreground">
+          Terms
+        </Link>{" "}
+        and{" "}
+        <Link href="/privacy" className="underline hover:text-foreground">
+          Privacy Policy
+        </Link>
+        .
+      </p>
 
       {/* Beta notice — set expectations before the account exists, and point
           at the feedback loop (the /feedback page is auth-gated, so name it

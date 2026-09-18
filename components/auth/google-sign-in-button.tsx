@@ -5,14 +5,7 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
-
-// Only same-origin, single-leading-slash paths are honored as a post-login
-// destination; anything else falls back to the dashboard (mirrors the guard in
-// app/(auth)/auth/callback/route.ts).
-function safeDest(value: string | undefined): string {
-  if (!value || !/^\/[^/\s]/.test(value)) return "/dashboard";
-  return value;
-}
+import { safeRedirectPath } from "@/lib/auth/safe-redirect";
 
 export function GoogleSignInButton({ redirectTo }: { redirectTo?: string }) {
   const [loading, setLoading] = useState(false);
@@ -21,7 +14,7 @@ export function GoogleSignInButton({ redirectTo }: { redirectTo?: string }) {
     setLoading(true);
     try {
       const supabase = createClient();
-      const dest = safeDest(redirectTo);
+      const dest = safeRedirectPath(redirectTo);
       // Google → Supabase → our /auth/callback (PKCE code exchange) → dest.
       const callback = `${window.location.origin}/auth/callback?redirectTo=${encodeURIComponent(
         dest,

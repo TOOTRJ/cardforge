@@ -834,7 +834,7 @@ export type Database = {
           tiktok_url: string | null;
           twitter_url: string | null;
           updated_at: string;
-          username: string | null;
+          username: string;
           website_url: string | null;
           youtube_url: string | null;
           stripe_customer_id: string | null;
@@ -870,7 +870,7 @@ export type Database = {
           tiktok_url?: string | null;
           twitter_url?: string | null;
           updated_at?: string;
-          username?: string | null;
+          username: string;
           website_url?: string | null;
           youtube_url?: string | null;
           stripe_customer_id?: string | null;
@@ -903,7 +903,7 @@ export type Database = {
           tiktok_url?: string | null;
           twitter_url?: string | null;
           updated_at?: string;
-          username?: string | null;
+          username?: string;
           website_url?: string | null;
           youtube_url?: string | null;
           stripe_customer_id?: string | null;

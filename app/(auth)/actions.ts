@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getSiteBaseUrl } from "@/lib/site-url";
+import { safeRedirectPath } from "@/lib/auth/safe-redirect";
+import { EMAIL_LINK_COPY, parseEmailLinkType } from "@/lib/auth/email-links";
 import {
   fieldErrorsFromZod,
   forgotPasswordSchema,
@@ -34,17 +36,24 @@ const GENERIC_SIGNUP_ERROR =
 const GENERIC_LOGIN_ERROR =
   "Invalid email or password. Check your details and try again.";
 
-// A same-origin path only: one leading slash, then anything but whitespace,
-// a second slash OR a backslash. `//evil.com` is protocol-relative, and
-// `/\evil.com` is rewritten to `https://evil.com/` by the WHATWG URL parser
-// (and by Next's client router), so both must be rejected — the old check
-// only caught the double slash.
-const SAFE_REDIRECT = /^\/(?![\/\\])[^\s\\]*$/;
+const UNCONFIRMED_LOGIN_ERROR =
+  "Confirm your email address before signing in — the link is in your inbox.";
+
+const RATE_LIMITED_ERROR =
+  "Too many attempts. Wait a minute, then try again.";
 
 function safeRedirectTo(value: FormDataEntryValue | null) {
-  if (typeof value !== "string" || !value) return "/dashboard";
-  if (!SAFE_REDIRECT.test(value)) return "/dashboard";
-  return value;
+  return safeRedirectPath(value);
+}
+
+/** Supabase auth error codes that are safe to surface: none of them says
+ *  whether an account exists for the address. */
+function isRateLimited(error: { code?: string; status?: number }) {
+  return (
+    error.status === 429 ||
+    error.code === "over_email_send_rate_limit" ||
+    error.code === "over_request_rate_limit"
+  );
 }
 
 export async function loginAction(
@@ -83,9 +92,19 @@ export async function loginAction(
   if (error) {
     // Log the underlying reason for debugging; never surface it to the client.
     console.warn("loginAction: signInWithPassword error", error.message);
+    // GoTrue verifies the password BEFORE the confirmation check, so this
+    // code only ever reaches someone who already knows the credentials.
+    if (error.code === "email_not_confirmed") {
+      return {
+        status: "error",
+        formError: UNCONFIRMED_LOGIN_ERROR,
+        unconfirmed: true,
+        values: { email: parsed.data.email },
+      };
+    }
     return {
       status: "error",
-      formError: GENERIC_LOGIN_ERROR,
+      formError: isRateLimited(error) ? RATE_LIMITED_ERROR : GENERIC_LOGIN_ERROR,
       values: { email: parsed.data.email },
     };
   }
@@ -128,14 +147,17 @@ export async function signupAction(
 
   const supabase = await createClient();
 
-  // The profile trigger drops a username that is already taken (the row is
-  // created with username NULL) — the user landed on the dashboard with no
-  // handle and no explanation. Check first and say so. Usernames are
-  // case-insensitively unique (0001), so ilike matches the constraint.
+  // The profile trigger replaces a username that is already taken with a
+  // generated one — without this check the user landed on the dashboard with a
+  // handle and no explanation. Check first and say so. The schema has
+  // already lowercased the value and the column only admits lowercase, so
+  // this is an exact match (ilike would treat the `_` in a handle as a
+  // wildcard and report free names as taken). The trigger (0094) still
+  // settles a race by minting a generated handle.
   const { data: taken } = await supabase
     .from("profiles")
     .select("id")
-    .ilike("username", parsed.data.username)
+    .eq("username", parsed.data.username)
     .maybeSingle();
   if (taken) {
     return {
@@ -169,9 +191,21 @@ export async function signupAction(
     // "already-registered" / "rate-limited" / "weak-password" via response
     // timing or text. Real signup failures still log to the server.
     console.warn("signupAction: supabase.auth.signUp error", error.message);
+    // A rejected password (project password policy / leaked-password
+    // protection) says nothing about the address — tell the user what to fix.
+    if (error.code === "weak_password") {
+      return {
+        status: "error",
+        fieldErrors: {
+          password:
+            "That password is too weak or has appeared in a data breach — choose a different one.",
+        },
+        values: { email: parsed.data.email, username: parsed.data.username },
+      };
+    }
     return {
       status: "error",
-      formError: GENERIC_SIGNUP_ERROR,
+      formError: isRateLimited(error) ? RATE_LIMITED_ERROR : GENERIC_SIGNUP_ERROR,
       values: { email: parsed.data.email, username: parsed.data.username },
     };
   }
@@ -185,7 +219,34 @@ export async function signupAction(
     redirect(redirectTo);
   }
 
-  redirect("/login?notice=check-email");
+  // Same answer whether the address is new or already registered (Supabase
+  // returns an obfuscated user for the latter) — the form swaps to a
+  // check-your-inbox panel with a resend control.
+  return { status: "sent", values: { email: parsed.data.email } };
+}
+
+/** Re-send the signup confirmation email. Always reports success: whether
+ *  the address has a pending signup is not the caller's business. Supabase
+ *  rate-limits the send per address (60s) on its side. */
+export async function resendConfirmationAction(
+  email: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  // Same shape as the forgot-password form: one validated email.
+  const parsed = forgotPasswordSchema.safeParse({ email });
+  if (!parsed.success) return { ok: false, error: "Enter a valid email address." };
+  if (!isSupabaseConfigured()) return { ok: true };
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resend({
+    type: "signup",
+    email: parsed.data.email,
+    options: { emailRedirectTo: `${getSiteBaseUrl()}/auth/callback` },
+  });
+  if (error) {
+    console.warn("resendConfirmationAction: resend error", error.message);
+    if (isRateLimited(error)) return { ok: false, error: RATE_LIMITED_ERROR };
+  }
+  return { ok: true };
 }
 
 /** Request a password-reset email. ALWAYS lands on the same confirmation
@@ -219,8 +280,10 @@ export async function forgotPasswordAction(
 
   const supabase = await createClient();
   // Same canonical-URL reasoning as signup: never trust request headers for
-  // the email's destination. The recovery link lands on /auth/callback,
-  // which exchanges the code and forwards to /reset-password.
+  // the email's destination. The branded template links straight to
+  // /auth/confirm (token hash — works in any browser); this redirectTo only
+  // matters for a project still on Supabase's default template, whose PKCE
+  // link lands on /auth/callback and forwards to /reset-password.
   const { error } = await supabase.auth.resetPasswordForEmail(
     parsed.data.email,
     {
@@ -267,12 +330,54 @@ export async function resetPasswordAction(
     return {
       status: "error",
       formError:
-        "We couldn't update your password — the reset link may have expired. Request a new one and try again.",
+        error.code === "weak_password"
+          ? "That password is too weak or has appeared in a data breach — choose a different one."
+          : error.code === "same_password"
+            ? "Choose a password you haven't used on this account before."
+            : "We couldn't update your password — the reset link may have expired. Request a new one and try again.",
     };
+  }
+
+  // A reset usually means the old password is compromised or forgotten:
+  // revoke every OTHER session so a stolen one dies with it. Best-effort.
+  try {
+    await supabase.auth.signOut({ scope: "others" });
+  } catch {
+    // non-fatal
   }
 
   revalidatePath("/", "layout");
   redirect("/dashboard");
+}
+
+export type ConfirmLinkState =
+  | { status: "idle" }
+  | { status: "error"; error: string };
+
+/** Exchange an email link's token hash for a session — the POST half of
+ *  /auth/confirm (the page explains why this isn't a GET). */
+export async function confirmEmailLinkAction(
+  _prev: ConfirmLinkState,
+  formData: FormData,
+): Promise<ConfirmLinkState> {
+  const tokenHash = formData.get("token_hash");
+  const type = parseEmailLinkType(formData.get("type"));
+  if (typeof tokenHash !== "string" || !tokenHash || !type || !isSupabaseConfigured()) {
+    return { status: "error", error: "This link isn't valid." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash });
+  if (error) {
+    console.warn("confirmEmailLinkAction: verifyOtp error", error.message);
+    return {
+      status: "error",
+      error: "This link has expired or was already used.",
+    };
+  }
+
+  revalidatePath("/", "layout");
+  redirect(safeRedirectPath(formData.get("next"), EMAIL_LINK_COPY[type].next));
 }
 
 export async function logoutAction() {

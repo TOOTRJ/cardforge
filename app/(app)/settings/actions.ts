@@ -87,22 +87,28 @@ export async function updateProfileAction(
 
   const supabase = await createClient();
 
-  if (parsed.data.username) {
-    const { data: existing } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("username", parsed.data.username)
-      .neq("id", user.id)
-      .maybeSingle();
+  const { data: existing } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("username", parsed.data.username)
+    .neq("id", user.id)
+    .maybeSingle();
 
-    if (existing) {
-      return {
-        status: "error",
-        fieldErrors: { username: "That username is already taken." },
-        values: echoValues(raw),
-      };
-    }
+  if (existing) {
+    return {
+      status: "error",
+      fieldErrors: { username: "That username is already taken." },
+      values: echoValues(raw),
+    };
   }
+
+  // The old handle's profile page must be purged too, or it keeps serving
+  // the cached page for a username that no longer exists.
+  const { data: before } = await supabase
+    .from("profiles")
+    .select("username")
+    .eq("id", user.id)
+    .maybeSingle();
 
   // Build the update object by mapping every social key → its parsed value
   // (or null when the user cleared it). Keeps the columns and the schema
@@ -111,23 +117,40 @@ export async function updateProfileAction(
     SOCIAL_PLATFORMS.map((p) => [p.key, parsed.data[p.key] ?? null]),
   );
 
-  const { error } = await supabase.from("profiles").upsert(
-    {
-      id: user.id,
+  // The profile row always exists (handle_new_user, 0094), so this is a plain
+  // UPDATE — an upsert would run the INSERT policy + triggers first for no
+  // benefit.
+  const { error } = await supabase
+    .from("profiles")
+    .update({
       username: parsed.data.username,
       display_name: parsed.data.display_name,
       bio: parsed.data.bio ?? null,
       website_url: parsed.data.website_url ?? null,
       accent_color: parsed.data.accent_color ?? null,
       ...socialFields,
-    },
-    { onConflict: "id" },
-  );
+    })
+    .eq("id", user.id);
 
   if (error) {
+    // The pre-check races with other writers; the unique index (23505) and
+    // the reserved-handle guard (23514, migration 0094) are the authority.
+    if (error.code === "23505" || error.code === "23514") {
+      return {
+        status: "error",
+        fieldErrors: {
+          username:
+            error.code === "23505"
+              ? "That username is already taken."
+              : "That username is reserved — try another.",
+        },
+        values: echoValues(raw),
+      };
+    }
+    console.warn("updateProfileAction: update error", error.message);
     return {
       status: "error",
-      formError: error.message,
+      formError: "We couldn't save your profile. Please try again.",
       values: echoValues(raw),
     };
   }
@@ -135,6 +158,9 @@ export async function updateProfileAction(
   revalidatePath("/settings");
   revalidatePath("/dashboard");
   revalidatePath(`/profile/${parsed.data.username}`);
+  if (before?.username && before.username !== parsed.data.username) {
+    revalidatePath(`/profile/${before.username}`);
+  }
 
   return { status: "idle", success: true };
 }

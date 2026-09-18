@@ -1,19 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-
-function safeRedirectTo(value: string | null) {
-  // Same rule as app/(auth)/actions.ts: a bare same-origin path; reject
-  // protocol-relative (`//`) and backslash (`/\`) forms the URL parser
-  // would turn into an off-site navigation.
-  if (!value || !/^\/(?![\/\\])[^\s\\]*$/.test(value)) return "/dashboard";
-  return value;
-}
+import { safeRedirectPath } from "@/lib/auth/safe-redirect";
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
   const code = searchParams.get("code");
-  const redirectTo = safeRedirectTo(searchParams.get("redirectTo"));
+  const redirectTo = safeRedirectPath(searchParams.get("redirectTo"));
 
   if (code && isSupabaseConfigured()) {
     try {
