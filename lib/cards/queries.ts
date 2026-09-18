@@ -32,6 +32,7 @@ import {
   TRENDING_FRESHNESS_WINDOW_DAYS,
   TRENDING_WINDOW_DAYS,
   sortTrending,
+  onePerCreator,
   trendingScore,
 } from "@/lib/cards/trending";
 
@@ -1240,7 +1241,10 @@ export async function listTrendingCards(
       };
     });
 
-    return sortTrending(scored)
+    // One card per creator: dedupe AFTER ranking (so each creator's best
+    // card is the one that survives) and BEFORE the limit (so the row still
+    // fills up from the next creators down).
+    return onePerCreator(sortTrending(scored))
       .slice(0, limit)
       .map(({ card, likesTotal, score, signals }) => ({
         ...narrowCard(card),

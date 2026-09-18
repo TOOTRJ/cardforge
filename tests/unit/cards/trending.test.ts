@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   TRENDING_WEIGHTS,
+  onePerCreator,
   sortTrending,
   trendingScore,
   type TrendingRanked,
@@ -150,5 +151,26 @@ describe("sortTrending", () => {
     const snapshot = rows.map((r) => r.card.id);
     sortTrending(rows);
     expect(rows.map((r) => r.card.id)).toEqual(snapshot);
+  });
+});
+
+describe("onePerCreator", () => {
+  it("keeps each creator's first (highest-ranked) card and preserves order", () => {
+    const ranked = [
+      { card: { id: "a1", owner_id: "ann" } },
+      { card: { id: "b1", owner_id: "bob" } },
+      { card: { id: "a2", owner_id: "ann" } },
+      { card: { id: "c1", owner_id: "cara" } },
+      { card: { id: "b2", owner_id: "bob" } },
+    ];
+    expect(onePerCreator(ranked).map((r) => r.card.id)).toEqual(["a1", "b1", "c1"]);
+  });
+
+  it("is a no-op when every creator appears once", () => {
+    const ranked = [
+      { card: { id: "a1", owner_id: "ann" } },
+      { card: { id: "b1", owner_id: "bob" } },
+    ];
+    expect(onePerCreator(ranked)).toEqual(ranked);
   });
 });

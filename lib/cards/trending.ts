@@ -52,6 +52,24 @@ export type TrendingRanked<T> = {
  * created_at desc. Exposed so the unit test can hit it without standing up
  * a Supabase fixture.
  */
+/**
+ * At most one card per creator, keeping each creator's highest-ranked entry.
+ * Runs on the already-sorted list, so "Hot this week" is a showcase of
+ * creators rather than one prolific account's whole week. Order is kept.
+ */
+export function onePerCreator<R extends { card: { owner_id: string } }>(
+  ranked: ReadonlyArray<R>,
+): R[] {
+  const seen = new Set<string>();
+  const out: R[] = [];
+  for (const row of ranked) {
+    if (seen.has(row.card.owner_id)) continue;
+    seen.add(row.card.owner_id);
+    out.push(row);
+  }
+  return out;
+}
+
 export function sortTrending<R extends TrendingRanked<unknown>>(
   rows: ReadonlyArray<R>,
 ): R[] {

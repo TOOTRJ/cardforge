@@ -199,7 +199,7 @@ const CHALLENGES_FAQ: FaqEntry[] = [
   },
   {
     q: "How does the trending section work?",
-    a: "Trending ranks public cards by their recent momentum: likes, comments, and remixes received over the last 7 days, with a freshness boost for newly published cards. Your own engagement on your own cards doesn't count, so trending reflects genuine community interest.",
+    a: "Trending ranks public cards by their recent momentum: likes, comments, and remixes received over the last 7 days, with a freshness boost for newly published cards. Your own engagement on your own cards doesn't count, so trending reflects genuine community interest — and it shows at most one card per creator, so the row is a showcase of the community rather than one account's week.",
   },
 ];
 
