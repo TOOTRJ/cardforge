@@ -35,9 +35,12 @@ Rules and gotchas:
   already-open PR won't create one; close/reopen the PR instead.
 - "Supabase changes only" is ON: PRs without `supabase/` changes get no
   preview branch; their Vercel previews use Preview-scoped env vars.
-- Preview branches start EMPTY by design. Baseline rows belong in
+- Preview branches start with NO content by design. Baseline rows belong in
   `supabase/seed.sql` (runs on branch creation + local `db reset`); it does
-  NOT run against prod.
+  NOT run against prod. It seeds the verified `frame_reviews` combos —
+  frame verification is the creator's only gate, so without them every
+  frame is a disabled "Soon" chip. That list mirrors production (refresh
+  query is in the file) — never seed a frame prod hasn't verified.
 - Manual fallback only: `npm run db:push:prod` (guard-railed, see
   `scripts/db-push.mjs`).
 
