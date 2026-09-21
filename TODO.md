@@ -1,11 +1,19 @@
 # TODO
 
-- [ ] **Point `.env.local` at the local Supabase stack** instead of
-      production (docs/ENVIRONMENTS.md §1). Deliberately deferred on
-      2026-07-09 — until then, local dev reads AND WRITES the live DB, so
-      no destructive local experiments. When switching: `npm run db:start`,
-      copy the keys from `supabase status`, optionally keep a
-      `.env.production-peek` to swap in consciously.
+- [x] **Local dev no longer touches production** (2026-09-21). `.env.local`
+      → the shared `dev` Supabase branch; `npm run dev` refuses to start
+      against prod; prod creds parked in `.env.prod-peek`. Full environment
+      rework + audit: docs/ENVIRONMENTS.md.
+
+- [ ] **Owner: separate AI Gateway key for Preview + Development.** Create a
+      budget-capped key in Vercel → AI Gateway, then
+      `vercel env rm AI_GATEWAY_API_KEY preview` and
+      `vercel env add AI_GATEWAY_API_KEY preview` / `development` with the new
+      one (and swap it into `.env.local`). Until then preview + local AI
+      testing spends the production budget.
+
+- [ ] **Make the `CI` and `Supabase Preview` checks required on `main`**
+      (GitHub → Settings → Branches) once CI has a few green runs.
 
 - [ ] **New guide: "Card Conjurer alternative"** (target keyword: *card
       conjurer alternative*; secondary: *cardconjurer alternative*, *card
@@ -69,7 +77,7 @@ the evidence.
 - [ ] **[medium] deleteSetAction leaves every member card rendering the deleted set's symbol (stale set_icon_url/set_icon_code, no re-bake)** — `lib/sets/actions.ts`:302. In `deleteSetAction`, before the delete, select `cards.id` where `primary_set_id = setId`, then for each either re-home to the oldest remaining membership (reuse `repointPrimaryAfterRemoval`) or clear `set_icon_url`/`set_icon_code`, and schedule the deferred b
 - [ ] **[medium] build-variation-frames.mjs writes the Expedition frame to public/frames/expedition, but the shipped template is expeditionland** — `scripts/build-variation-frames.mjs`:90. Change scripts/build-variation-frames.mjs:90 to `out: "public/frames/expeditionland"` and the header at :7 to `expeditionland`.
 - [ ] **[medium] cards.updated_at is bumped by every view and like — gallery 'Recent' sort means 'recently viewed' (the 0057 deck fix was never applied to cards)** — `supabase/migrations/0003_card_data_model.sql`:160. New migration porting the 0057 guard into set_cards_updated_at: `if (to_jsonb(new) - 'view_count' - 'likes_count' - 'updated_at') is distinct from (to_jsonb(old) - ...) then new.updated_at = now(); else new.updated_at = old.updated_at; end if;`. Note in the PR
-- [ ] **[medium] seed.sql claims no baseline rows are required, but an empty frame_reviews table leaves the creator with zero pickable frames on every preview branch and fresh local stack** — `supabase/seed.sql`:11. Replace L11-14 with:
+- [x] **[medium] (fixed 2026-09-21 — seed.sql seeds prod's verified frames, seeds/10_dev_data.sql the rest) seed.sql claims no baseline rows are required, but an empty frame_reviews table leaves the creator with zero pickable frames on every preview branch and fresh local stack** — `supabase/seed.sql`:11. Replace L11-14 with:
 -- Baseline rows: frame_reviews. Frame verification is the ONLY gate the creator
 -- has (lib/cards/frame-availability.ts) — with this table empty, /create offers
 -- no frames and every card kind renders as "Soon". Seed the verified

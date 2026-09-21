@@ -28,7 +28,26 @@ npm run test:e2e
 npm test
 ```
 
+## CI
+
+`.github/workflows/ci.yml` runs on every PR and on `main`: typecheck, lint,
+unit tests, and the **full** Playwright suite against a Supabase stack booted
+inside the runner (its keys are generated per run; no secrets involved). A red
+e2e job is a real signal — in 2026-09 the suite had drifted to 12 failures
+locally and two of them were production bugs.
+
 ## Full e2e coverage (local Supabase stack)
+
+E2E tests create and wipe data, so they **only** run against the local Docker
+stack — never the shared `dev` branch (other previews and your own local
+session are using it) and never production. `scripts/seed-e2e.mjs` refuses any
+non-local URL.
+
+The stack comes up already seeded (`supabase/seed.sql` +
+`supabase/seeds/10_dev_data.sql`): five `dev_*` accounts, 22 cards, decks,
+challenges. Specs may read that content, but must not depend on its exact
+counts — assert on what the spec itself created. The e2e user is separate
+(`e2e_forger`) and is wiped on every `seed-e2e` run.
 
 The auth / create / custom-pips / Scryfall / decks / challenges /
 frame-editor / pricing specs need a database they can freely write to. That's the local stack — never production:
