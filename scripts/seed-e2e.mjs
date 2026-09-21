@@ -97,6 +97,32 @@ if (wipeError) {
   process.exit(1);
 }
 
+// Frame verification is the creator's ONLY gate (lib/cards/frame-availability):
+// an empty frame_reviews table renders every frame as a disabled "Soon" chip,
+// so the frame-era spec (create-card.spec.ts) can't pick a Classic frame or
+// accept the "switch to M15" planeswalker offer. Verify exactly the combos
+// the specs click through — all seven color keys, so a spec that changes the
+// card's color first still finds them. (Local-only by the URL guard above.)
+const E2E_VERIFIED_TEMPLATES = ["m15", "m15pw", "agclassic"];
+const E2E_COLOR_KEYS = ["w", "u", "b", "r", "g", "c", "m"];
+const verifiedAt = new Date().toISOString();
+const { error: framesError } = await admin.from("frame_reviews").upsert(
+  E2E_VERIFIED_TEMPLATES.flatMap((template) =>
+    E2E_COLOR_KEYS.map((color_key) => ({
+      template,
+      color_key,
+      verified: true,
+      verified_at: verifiedAt,
+      verified_by: userId,
+    })),
+  ),
+  { onConflict: "template,color_key" },
+);
+if (framesError) {
+  console.error(`✗ frame_reviews seed failed: ${framesError.message}`);
+  process.exit(1);
+}
+
 console.log(
-  `✓ Seeded ${email} (${userId}) with username e2e_forger (wiped ${wiped ?? 0} stale cards)`,
+  `✓ Seeded ${email} (${userId}) with username e2e_forger (wiped ${wiped ?? 0} stale cards, verified ${E2E_VERIFIED_TEMPLATES.join("/")} frames)`,
 );

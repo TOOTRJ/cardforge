@@ -26,26 +26,25 @@ test.describe("marketing header — anonymous", () => {
   });
 });
 
-test.describe("theme toggle on a static page", () => {
-  test("cycles to light, persists across reload via cookie", async ({
+// The header theme toggle is gone — Settings is the only place the theme
+// changes (components/settings/theme-preference.tsx). What still matters on
+// a STATIC page is unchanged: the server HTML is always dark, and the <head>
+// no-flash script must restore the saved theme from the cookie before paint.
+test.describe("saved theme on a static page", () => {
+  test("restores light from the cookie although the HTML ships dark", async ({
     page,
+    context,
+    baseURL,
   }) => {
     await page.goto("/about");
     const html = page.locator("html");
     await expect(html).toHaveAttribute("data-theme", "dark");
 
-    // dark → light. The toggle writes the cookie client-side and updates
-    // data-theme synchronously.
-    await page.getByRole("button", { name: /theme: dark/i }).click();
-    await expect(html).toHaveAttribute("data-theme", "light");
-
-    // Reload: the server HTML is always dark; the <head> no-flash script
-    // must restore light from the cookie before paint.
+    await context.addCookies([
+      { name: "cardforge-theme", value: "light", url: baseURL! },
+    ]);
     await page.reload();
     await expect(html).toHaveAttribute("data-theme", "light");
-    await expect(
-      page.getByRole("button", { name: /theme: light/i }),
-    ).toBeVisible();
   });
 });
 
@@ -74,7 +73,11 @@ test.describe("marketing header — signed in", () => {
     await expect(
       page.getByRole("button", { name: /open account menu/i }),
     ).toBeVisible();
-    await expect(page.getByRole("link", { name: /notifications/i })).toBeVisible();
+    // The bell is a popover BUTTON (it marks everything seen on open), not a
+    // link to /notifications.
+    await expect(
+      page.getByRole("button", { name: /^notifications/i }),
+    ).toBeVisible();
     await expect(
       page.getByRole("link", { name: /^sign in$/i }),
     ).toHaveCount(0);
@@ -84,5 +87,37 @@ test.describe("marketing header — signed in", () => {
     await expect(
       page.getByRole("button", { name: /open account menu/i }),
     ).toBeVisible();
+  });
+
+  test("the Settings theme control carries over to static marketing pages", async ({
+    page,
+  }) => {
+    await page.goto("/login");
+    await page
+      .locator('input[type="email"]')
+      .fill(process.env.SUPABASE_E2E_USER_EMAIL!);
+    await page
+      .locator('input[type="password"]')
+      .fill(process.env.SUPABASE_E2E_USER_PASSWORD!);
+    await page.getByRole("button", { name: /sign in/i }).click();
+    await page.waitForURL("**/dashboard");
+
+    await page.goto("/settings");
+    const html = page.locator("html");
+    const theme = page.getByRole("radiogroup", { name: /^theme$/i });
+    // Writes the cookie client-side and flips data-theme synchronously.
+    await theme.getByRole("radio", { name: /^light$/i }).click();
+    await expect(html).toHaveAttribute("data-theme", "light");
+
+    await page.goto("/about");
+    await expect(html).toHaveAttribute("data-theme", "light");
+
+    // Put it back — the preference is a cookie, but keep the run tidy.
+    await page.goto("/settings");
+    await page
+      .getByRole("radiogroup", { name: /^theme$/i })
+      .getByRole("radio", { name: /^dark$/i })
+      .click();
+    await expect(html).toHaveAttribute("data-theme", "dark");
   });
 });

@@ -58,9 +58,14 @@ test.describe("challenge admin", () => {
 
     // Close it from the admin list so old runs don't pile up as "active".
     await page.goto("/admin/challenges");
+    // Scope to this challenge's row without leaning on styling classes: of
+    // every div holding BOTH this title link and a "Close now" button, the
+    // last in document order is the innermost — the row card itself.
     await page
-      .getByRole("link", { name: title })
-      .locator("xpath=ancestor::div[contains(@class,'rounded-xl')][1]")
+      .locator("div")
+      .filter({ has: page.getByRole("link", { name: title }) })
+      .filter({ has: page.getByRole("button", { name: /close now/i }) })
+      .last()
       .getByRole("button", { name: /close now/i })
       .click();
     await expect(page.getByText(/challenge closed/i)).toBeVisible({

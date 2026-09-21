@@ -578,7 +578,11 @@ function ScryfallImportContent({
               importArt={importArt}
               onImportArtChange={setImportArt}
               printings={
-                printings?.oracleId === selectedCard.card.oracle_id
+                // `printings &&` matters: a card with no top-level oracle_id
+                // (Scryfall's reversible_card layout) made the bare optional
+                // chain compare undefined === undefined and read .items off
+                // null — crashing the whole creator.
+                printings && printings.oracleId === selectedCard.card.oracle_id
                   ? printings.items
                   : null
               }
