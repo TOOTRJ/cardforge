@@ -145,6 +145,7 @@ function revalidateDiscoverySurfaces() {
 
 function revalidateCardPaths(slug: string, ownerUsername?: string | null) {
   revalidatePath("/dashboard");
+  revalidatePath("/dashboard/cards");
   revalidatePath("/dashboard/sets");
   revalidatePath("/gallery");
   revalidateDiscoverySurfaces();
@@ -880,6 +881,7 @@ export async function updateCardsVisibilityAction(
   // skipped here — they'll refresh on next visit. Same posture as the
   // single-card updateCardAction.
   revalidatePath("/dashboard");
+  revalidatePath("/dashboard/cards");
   revalidatePath("/gallery");
   revalidatePath("/dashboard/sets");
   revalidateDiscoverySurfaces();
@@ -946,6 +948,7 @@ export async function deleteCardsAction(
     .remove(ids.flatMap((id) => renderObjectPaths(user.id, id)));
 
   revalidatePath("/dashboard");
+  revalidatePath("/dashboard/cards");
   revalidatePath("/gallery");
   revalidatePath("/dashboard/sets");
   revalidateDiscoverySurfaces();

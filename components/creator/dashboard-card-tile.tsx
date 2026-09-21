@@ -45,6 +45,11 @@ type Props = {
    *  so only the first-rendered instance owns the shared-element transition;
    *  duplicates would abort the transition and spam the console. */
   enableViewTransition?: boolean;
+  /** "compact" is the small-tile My Cards view: the hover actions stack and
+   *  the footer drops its select hint so nothing overflows a narrow tile. */
+  density?: "regular" | "compact";
+  /** Extra line under the tile (e.g. the "Remixed from …" credit). */
+  caption?: React.ReactNode;
   /** Called for Cmd/Ctrl/Shift-modifier clicks (and plain clicks in select
    *  mode) on the card body, plus any click on the corner checkbox. */
   onToggle: (
@@ -59,8 +64,11 @@ export function DashboardCardTile({
   isSelected,
   selectMode,
   enableViewTransition = true,
+  density = "regular",
+  caption,
   onToggle,
 }: Props) {
+  const compact = density === "compact";
   const router = useRouter();
   const editHref = `/card/${card.slug}/edit`;
   const previewData = cardToPreviewData(card, profileOverrides);
@@ -150,6 +158,7 @@ export function DashboardCardTile({
               // buttons themselves become clickable, and only once
               // revealed (invisible links must not swallow clicks).
               "pointer-events-none absolute inset-0 z-30 flex items-center justify-center gap-2 rounded-frame",
+              compact && "flex-col",
               "bg-background/55",
               "opacity-0 transition-opacity duration-150",
               "group-hover/tile:opacity-100 group-focus-within/tile:opacity-100",
@@ -234,14 +243,21 @@ export function DashboardCardTile({
               : "opacity-0",
           )}
         >
-          {selectMode ? (isSelected ? "Selected" : "Click to select") : null}
+          {selectMode
+            ? isSelected
+              ? "Selected"
+              : compact
+                ? null
+                : "Click to select"
+            : null}
         </span>
       </div>
+      {caption}
     </div>
   );
 }
 
-function visibilityLabel(visibility: "private" | "unlisted" | "public"): string {
+export function visibilityLabel(visibility: "private" | "unlisted" | "public"): string {
   switch (visibility) {
     case "public":
       return "Public";

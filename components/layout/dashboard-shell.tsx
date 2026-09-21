@@ -35,7 +35,10 @@ export async function DashboardShell({
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="grid gap-8 lg:grid-cols-[220px_1fr]">
-        <aside className="lg:sticky lg:top-24 lg:self-start">
+        {/* min-w-0: a grid item defaults to min-width:auto, which lets the
+            nav's one-line mobile strip widen the whole page instead of
+            scrolling inside its own overflow-x-auto. */}
+        <aside className="min-w-0 lg:sticky lg:top-24 lg:self-start">
           <DashboardNav
             isAdmin={isAdmin}
             showMessages={messages.hasThreads}

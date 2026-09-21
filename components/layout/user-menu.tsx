@@ -5,6 +5,7 @@ import {
   Activity,
   CreditCard,
   Frame,
+  GalleryVerticalEnd,
   LayoutDashboard,
   Layers,
   LogOut,
@@ -114,6 +115,11 @@ export function UserMenu({
           href="/dashboard"
           icon={LayoutDashboard}
           label="Dashboard"
+        />
+        <MenuItem
+          href="/dashboard/cards"
+          icon={GalleryVerticalEnd}
+          label="My cards"
         />
         {isSetsEnabled() ? (
           <MenuItem href="/dashboard/sets" icon={Layers} label="My sets" />

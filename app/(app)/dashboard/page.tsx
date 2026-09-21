@@ -1,14 +1,20 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { BookOpen, FilePlus2, Globe, Layers, Palette, UserCog } from "lucide-react";
+import {
+  BookOpen,
+  ExternalLink,
+  FilePlus2,
+  GalleryVerticalEnd,
+  Globe,
+  Layers,
+  Palette,
+  UserCog,
+} from "lucide-react";
 import { CompassStar } from "@/components/ui/compass-star";
-import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { IconTile } from "@/components/ui/icon-tile";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PageHeader } from "@/components/layout/page-header";
-import { CardPreviewSkeleton } from "@/components/cards/card-preview-skeleton";
-import { DashboardSelectableSections } from "@/components/creator/dashboard-selectable-sections";
 import { RenderUpdateAll } from "@/components/cards/render-update";
 import { hasNewerLook } from "@/lib/cards/layout-version";
 import { BillingReturnToast } from "@/components/billing/billing-return-toast";
@@ -20,16 +26,9 @@ import { Badge } from "@/components/ui/badge";
 import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
 import { getPipOverrides } from "@/lib/pips/queries";
 import { CUSTOM_PIP_SYMBOLS as PIP_STRIP_SYMBOLS } from "@/lib/pips/override";
-import {
-  listLikedCardsByUser,
-  listMyCards,
-  listMyRemixes,
-} from "@/lib/cards/queries";
-import { listMySets } from "@/lib/sets/queries";
+import { listMyCards } from "@/lib/cards/queries";
 import { isSetsEnabled } from "@/lib/sets/flags";
 import { listMyDecks } from "@/lib/decks/queries";
-import { LikedCardsSection } from "@/components/creator/liked-cards-section";
-import { DashboardRemixesSection } from "@/components/creator/dashboard-remixes-section";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -43,6 +42,13 @@ const QUICK_ACTIONS = [
     href: "/create",
     tone: "gold" as const,
     icon: <FilePlus2 aria-hidden />,
+  },
+  {
+    title: "My cards",
+    helper: "Everything you've made",
+    href: "/dashboard/cards",
+    tone: "purple" as const,
+    icon: <GalleryVerticalEnd aria-hidden />,
   },
   // Sets tile only while the feature is on — /dashboard/sets 404s otherwise.
   ...(isSetsEnabled()
@@ -63,19 +69,25 @@ const QUICK_ACTIONS = [
     tone: "ember" as const,
     icon: <Palette aria-hidden />,
   },
-  {
-    title: "Explore gallery",
-    helper: "Find the community's best",
-    href: "/gallery",
-    tone: "gold" as const,
-    icon: <Globe aria-hidden />,
-  },
+  // With sets on, the row is already four tiles — the gallery is one click
+  // away in the header, so it yields its slot to "My cards".
+  ...(isSetsEnabled()
+    ? []
+    : [
+        {
+          title: "Explore gallery",
+          helper: "Find the community's best",
+          href: "/gallery",
+          tone: "gold" as const,
+          icon: <Globe aria-hidden />,
+        },
+      ]),
 ];
 
 export default async function DashboardPage() {
   // User + profile lookups are cheap (single-row); fetch them in parallel
-  // so the header/profile-warning render immediately. The cards listing
-  // (more expensive) suspends below with a skeleton fallback.
+  // so the header/profile-warning render immediately. The card counts
+  // (more expensive) suspend below with a skeleton fallback.
   const [user, profile] = await Promise.all([
     getCurrentUser(),
     getCurrentProfile(),
@@ -99,9 +111,23 @@ export default async function DashboardPage() {
       <PageHeader
         eyebrow="Workspace"
         title={`Welcome back, ${greetingName}`}
-        description="A snapshot of your cards, drafts, and sets. Click any card to edit it."
+        description="A snapshot of your workspace. Your cards, drafts, remixes and likes live in My cards."
         actions={
           <>
+            {/* Opens in a new tab: it's the page OTHER people see, and the
+                owner usually wants to flip back to the workspace after. */}
+            {profile?.username ? (
+              <Button asChild variant="outline">
+                <Link
+                  href={`/profile/${profile.username}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <ExternalLink className="h-4 w-4" aria-hidden /> View public
+                  profile
+                </Link>
+              </Button>
+            ) : null}
             {isSetsEnabled() ? (
               <Button asChild variant="outline">
                 <Link href="/dashboard/sets">My sets</Link>
@@ -167,8 +193,8 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      <Suspense fallback={<DashboardCardsSkeleton />}>
-        <DashboardCards />
+      <Suspense fallback={<DashboardStatsSkeleton />}>
+        <DashboardStats />
       </Suspense>
 
       <div className="mt-12 grid gap-4 lg:grid-cols-2">
@@ -234,27 +260,16 @@ export default async function DashboardPage() {
 }
 
 // ---------------------------------------------------------------------------
-// Cards-dependent section. Splits out from the page shell so the (cheap)
-// header + profile warning paint immediately and the (more expensive)
-// listMyCards() query streams in behind a skeleton.
+// Card-count stats. Split out from the page shell so the (cheap) header +
+// profile warning paint immediately and the (more expensive) listMyCards()
+// query streams in behind a skeleton. The cards themselves live on
+// /dashboard/cards — every stat here deep-links to the matching tab.
 // ---------------------------------------------------------------------------
 
-async function DashboardCards() {
-  const profileOverrides = await getFrameProfileOverrides();
-  // Cards + sets + liked cards in parallel. Sets feed the bulk "Add to set"
-  // picker; liked cards feed the new "Liked cards" section below.
-  const viewer = await getCurrentUser();
-  const [myCards, mySets, myDecks, likedCards, remixes] = await Promise.all([
-    listMyCards(),
-    // No picker to feed when sets are off — skip the query entirely.
-    isSetsEnabled() ? listMySets() : Promise.resolve([]),
-    listMyDecks(),
-    viewer ? listLikedCardsByUser(viewer.id) : Promise.resolve([]),
-    listMyRemixes(),
-  ]);
+async function DashboardStats() {
+  const [myCards, myDecks] = await Promise.all([listMyCards(), listMyDecks()]);
   const drafts = myCards.filter((c) => c.visibility === "private");
   const publicCards = myCards.filter((c) => c.visibility === "public");
-  const recentCards = myCards.slice(0, 6);
   // Published cards whose stored image predates the current renderer for
   // their frame — the owner decides when to re-bake them.
   const staleRenderCount = myCards.filter((c) => hasNewerLook(c)).length;
@@ -266,7 +281,7 @@ async function DashboardCards() {
       helper: "Saved drafts and published cards",
       tone: "gold" as const,
       icon: <CompassStar className="h-5 w-5" />,
-      href: undefined as string | undefined,
+      href: "/dashboard/cards",
     },
     {
       label: "Public",
@@ -274,7 +289,7 @@ async function DashboardCards() {
       helper: "Listed in the gallery",
       tone: "purple" as const,
       icon: <Globe aria-hidden />,
-      href: "#public-cards",
+      href: "/dashboard/cards?show=public",
     },
     {
       label: "Drafts",
@@ -282,7 +297,7 @@ async function DashboardCards() {
       helper: "Private, in-progress cards",
       tone: "ember" as const,
       icon: <FilePlus2 aria-hidden />,
-      href: "#drafts",
+      href: "/dashboard/cards?show=drafts",
     },
     {
       label: "Decks",
@@ -294,21 +309,16 @@ async function DashboardCards() {
     },
   ];
 
-  // Trim set rows down to what the picker dialog actually consumes — the
-  // full `CardSetWithCount` carries description / cover / etc. that we
-  // don't want serialized down to the client.
-  const setSummaries = mySets.map((s) => ({
-    id: s.id,
-    title: s.title,
-    slug: s.slug,
-  }));
-
   return (
     <>
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => {
-          const body = (
-            <>
+        {stats.map((stat) => (
+          <Link
+            key={stat.label}
+            href={stat.href}
+            className="group rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          >
+            <SurfaceCard className="flex h-full items-center gap-4 p-5 transition-colors group-hover:border-gold/40">
               <IconTile tone={stat.tone} size="lg">
                 {stat.icon}
               </IconTile>
@@ -321,53 +331,15 @@ async function DashboardCards() {
                 </p>
                 <p className="text-xs text-subtle">{stat.helper}</p>
               </div>
-            </>
-          );
-
-          // Public/Drafts jump to their section below; Cards is a plain stat.
-          return stat.href ? (
-            <Link
-              key={stat.label}
-              href={stat.href}
-              className="group rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            >
-              <SurfaceCard className="flex h-full items-center gap-4 p-5 transition-colors group-hover:border-gold/40">
-                {body}
-              </SurfaceCard>
-            </Link>
-          ) : (
-            <SurfaceCard
-              key={stat.label}
-              className="flex items-center gap-4 p-5"
-            >
-              {body}
             </SurfaceCard>
-          );
-        })}
+          </Link>
+        ))}
       </div>
 
       <RenderUpdateAll staleCount={staleRenderCount} />
-
-      <DashboardSelectableSections
-        profileOverrides={profileOverrides}
-        recentCards={recentCards}
-        drafts={drafts}
-        publicCards={publicCards}
-        userSets={setSummaries}
-      />
-
-      <DashboardRemixesSection remixes={remixes} />
-
-      <LikedCardsSection likedCards={likedCards} profileOverrides={profileOverrides} />
     </>
   );
 }
-
-// ---------------------------------------------------------------------------
-// Skeleton fallback for <DashboardCards>. Mirrors the stats grid + three
-// section headers + 3 card placeholders per section so the layout is
-// stable from the moment the shell paints.
-// ---------------------------------------------------------------------------
 
 function CreditsSummarySkeleton() {
   return (
@@ -389,32 +361,16 @@ function CreditsSummarySkeleton() {
   );
 }
 
-function DashboardCardsSkeleton() {
+function DashboardStatsSkeleton() {
   return (
-    <>
-      <div className="mt-8 grid gap-4 sm:grid-cols-3">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <SurfaceCard key={i} className="p-6">
-            <Skeleton className="h-3 w-12" />
-            <Skeleton className="mt-3 h-7 w-16" />
-            <Skeleton className="mt-2 h-3 w-3/4" />
-          </SurfaceCard>
-        ))}
-      </div>
-      {["Recent cards", "Drafts", "Public cards"].map((title) => (
-        <section key={title} className="mt-12">
-          <header className="mb-4">
-            <h2 className="font-display text-xl font-semibold tracking-tight text-foreground">
-              {title}
-            </h2>
-          </header>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <CardPreviewSkeleton key={i} />
-            ))}
-          </div>
-        </section>
+    <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <SurfaceCard key={i} className="p-6">
+          <Skeleton className="h-3 w-12" />
+          <Skeleton className="mt-3 h-7 w-16" />
+          <Skeleton className="mt-2 h-3 w-3/4" />
+        </SurfaceCard>
       ))}
-    </>
+    </div>
   );
 }

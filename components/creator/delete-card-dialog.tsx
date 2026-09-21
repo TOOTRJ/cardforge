@@ -30,7 +30,7 @@ type DeleteCardDialogProps = {
 export function DeleteCardDialog({
   cardId,
   cardTitle,
-  redirectTo = "/dashboard",
+  redirectTo = "/dashboard/cards",
   triggerLabel = "Delete card",
   triggerVariant = "outline",
   triggerSize = "md",

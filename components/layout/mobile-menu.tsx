@@ -166,10 +166,10 @@ export function MobileMenu({
               ) : null}
               <div className="flex flex-col gap-0.5">
                 <DrawerLink
-                  href="/feed"
-                  label="Feed"
+                  href="/dashboard/cards"
+                  label="My Cards"
                   onNav={() => setOpen(false)}
-                  active={isActive(pathname, "/feed")}
+                  active={isActive(pathname, "/dashboard/cards")}
                 />
                 {isSetsEnabled() ? (
                   <DrawerLink
@@ -184,6 +184,12 @@ export function MobileMenu({
                   label="My Decks"
                   onNav={() => setOpen(false)}
                   active={isActive(pathname, "/dashboard/decks")}
+                />
+                <DrawerLink
+                  href="/feed"
+                  label="Feed"
+                  onNav={() => setOpen(false)}
+                  active={isActive(pathname, "/feed")}
                 />
                 {hasMessages ? (
                   <DrawerLink

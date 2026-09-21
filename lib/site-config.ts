@@ -50,13 +50,15 @@ export const siteConfig = {
 
   // Dashboard left-rail nav (rendered inside DashboardShell). Feed + My Sets
   // live here now instead of the global header so the top nav stays lean.
+  // Order: the user's own library (cards → sets → decks) first, then Feed.
   // "Messages" (/messages) is NOT listed: DashboardNav inserts it after
   // Notifications only for users who have a support thread.
   dashboardNav: [
     { label: "Overview", href: "/dashboard" },
-    { label: "Feed", href: "/feed" },
+    { label: "My Cards", href: "/dashboard/cards" },
     ...(isSetsEnabled() ? [{ label: "My Sets", href: "/dashboard/sets" }] : []),
     { label: "My Decks", href: "/dashboard/decks" },
+    { label: "Feed", href: "/feed" },
     { label: "AI Usage", href: "/dashboard/usage" },
     { label: "Notifications", href: "/notifications" },
     { label: "Feedback", href: "/feedback" },
