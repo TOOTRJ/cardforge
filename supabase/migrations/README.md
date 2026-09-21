@@ -50,3 +50,9 @@ instead. Each bullet: what the header says, and what is true now.
   the admin UI shipped at `/admin/challenges`
   (`components/admin/challenge-admin.tsx`, `lib/challenges/actions.ts`);
   writes remain `is_admin`-gated.
+- **0080 ("those tables' admin writes go through the service role, which is
+  why nothing broke")** — not true for `challenges`: its admin writes use the
+  admin's own session, so 0074 broke create / edit / close / delete on
+  `/admin/challenges` until 0096 moved its three write policies to
+  `viewer_is_admin()`. New admin policies must use `viewer_is_admin()`, never
+  a subquery on `profiles.is_admin`.
