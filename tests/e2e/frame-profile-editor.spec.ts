@@ -31,8 +31,9 @@ test.describe("frame profile editor", () => {
     await page.goto("/admin/frame-compare?template=m15&color=w");
     await page.getByRole("button", { name: /edit layout/i }).click();
 
-    // Select the title slot from the chip list.
-    await page.getByRole("button", { name: /^title$/ }).click();
+    // Select the title slot from the chip list (chips carry the friendly
+    // SLOT_LABELS name; the inputs below still use the raw slot path).
+    await page.getByRole("button", { name: /^title \(name\)$/ }).click();
     const topInput = page.getByLabel("title topPct");
     const base = Number(await topInput.inputValue());
 

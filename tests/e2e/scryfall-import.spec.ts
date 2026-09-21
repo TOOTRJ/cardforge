@@ -85,18 +85,11 @@ test.describe("Scryfall search → import", () => {
     await page.waitForURL("**/dashboard");
     await page.goto("/create");
 
-    // The editor opens on Card kind; the identity-panel Scryfall trigger lives
-    // on the Identity step, so jump there first via the step rail.
+    // The Scryfall import opens from the quick-start tiles at the top of the
+    // creator (the old identity-panel trigger is gone). The tile's accessible
+    // name is its title + description, hence the prefix match.
     await page
-      .getByRole("navigation", { name: /card editor steps/i })
-      .getByRole("button", { name: /^identity$/i })
-      .click();
-
-    // Open the Scryfall import dialog from the identity panel's trigger.
-    // Exact match: the quick-start hero renders a second, longer-named
-    // "Search a real card …" tile; this targets the identity-panel button.
-    await page
-      .getByRole("button", { name: "Search a real card", exact: true })
+      .getByRole("button", { name: /^search a real card/i })
       .click();
 
     // Type into the search input → triggers the mocked /search.
@@ -112,7 +105,13 @@ test.describe("Scryfall search → import", () => {
       .getByRole("button", { name: /use as starting point/i })
       .click();
 
-    // Title field on the Identity tab now reflects the imported value.
+    // Title field on the Identity step now reflects the imported value. Hop
+    // there if the import left us on another step (the ACTIVE step renders
+    // as plain text, not a button).
+    const identityStep = page
+      .getByRole("navigation", { name: /card editor steps/i })
+      .getByRole("button", { name: /^identity$/i });
+    if (await identityStep.count()) await identityStep.click();
     await expect(
       page.locator('input[placeholder="Emberbound Wyrm"]'),
     ).toHaveValue("Lightning Bolt");

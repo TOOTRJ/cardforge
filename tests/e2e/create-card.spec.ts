@@ -55,7 +55,7 @@ test.describe("create a card (text fields only)", () => {
 
     // Art-less cards save as DRAFTS: Save needs a title AND artwork unless
     // "Save as a draft" is ticked on the Publish step (drafts need a title).
-    const saveButton = page.getByRole("button", { name: /save card/i });
+    const saveButton = page.getByRole("button", { name: /^save$/i });
     await expect(saveButton).toBeDisabled();
 
     const rail = page.getByRole("navigation", { name: /card editor steps/i });
@@ -74,9 +74,10 @@ test.describe("create a card (text fields only)", () => {
     await signIn(page);
     const rail = await openCreatorWithTitle(page, `Pip Order ${Date.now()}`);
 
-    // The cost picker lives on the Pips step. No save — asserting on the
-    // preview alone keeps the test outside the free-tier card capacity.
-    await rail.getByRole("button", { name: /^pips$/i }).click();
+    // The cost picker lives on the Text & stats step (cost + rarity moved
+    // there from their own Pips step). No save — asserting on the preview
+    // alone keeps the test outside the free-tier card capacity.
+    await rail.getByRole("button", { name: /^text & stats$/i }).click();
     await page.getByRole("button", { name: /^add white$/i }).click();
     await page.getByRole("button", { name: /^add red$/i }).click();
 
@@ -98,7 +99,7 @@ test.describe("create a card (text fields only)", () => {
     await expect(
       page.getByRole("heading", { name: /forge a new card/i }),
     ).toBeVisible();
-    const saveButton = page.getByRole("button", { name: /save card/i });
+    const saveButton = page.getByRole("button", { name: /^save$/i });
     await expect(saveButton).toBeVisible();
     await expect(saveButton).toBeDisabled();
 
@@ -155,8 +156,15 @@ test.describe("create a card (text fields only)", () => {
       .getByRole("dialog")
       .getByRole("button", { name: /switch to m15/i })
       .click();
+    // A successful kind change collapses the section, so read the result off
+    // the two collapsible summaries instead of the (now unmounted) chips.
     await expect(
-      kindGroup.getByRole("radio", { name: /planeswalker/i }),
-    ).toHaveAttribute("aria-checked", "true");
+      page.locator("summary").filter({ hasText: /card type\s*planeswalker/i }),
+    ).toBeVisible();
+    await expect(
+      page
+        .locator("summary")
+        .filter({ hasText: /frame\s*m15 \(2015\) — planeswalker/i }),
+    ).toBeVisible();
   });
 });

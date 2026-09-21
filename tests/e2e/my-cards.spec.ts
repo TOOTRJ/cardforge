@@ -100,9 +100,11 @@ test.describe("dashboard overview + My Cards", () => {
     await expect(page.getByRole("button", { name: `View ${title}` })).toBeVisible();
 
     // Filter tabs: a draft is under Drafts, not Public. The tab lands in the URL.
+    // (Other specs may have published cards on this account, so assert the
+    // draft is absent rather than that Public is empty.)
     await page.getByRole("radio", { name: /^public/i }).click();
-    await expect(page.getByText(/nothing public yet/i)).toBeVisible();
     await expect(page).toHaveURL(/show=public/);
+    await expect(page.getByRole("button", { name: `View ${title}` })).toHaveCount(0);
     await page.getByRole("radio", { name: /^drafts/i }).click();
     await expect(page.getByRole("button", { name: `View ${title}` })).toBeVisible();
 

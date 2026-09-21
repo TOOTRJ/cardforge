@@ -56,13 +56,21 @@ test.describe("deck CRUD + import", () => {
     // Create.
     const title = `E2E Deck ${Date.now()}`;
     await page.goto("/dashboard/decks/new");
-    await page.locator('input[placeholder="Atraxa Superfriends"]').fill(title);
-    await page.getByRole("button", { name: /create deck/i }).click();
-    await page.waitForURL("**/deck/*/edit");
-    await expect(page.getByRole("heading", { name: title })).toBeVisible();
+    // The wizard: Basics → Build → Cover → Review. Pick "Import a decklist"
+    // explicitly — the default build mode is AI whenever a gateway is
+    // configured, and that path spends credits.
+    await page.getByRole("textbox", { name: /deck name/i }).fill(title);
+    await page.getByRole("button", { name: /^next$/i }).click();
+    await page.getByRole("radio", { name: /import a decklist/i }).click();
+    await page.getByRole("button", { name: /^next$/i }).click(); // Cover (optional)
+    await page.getByRole("button", { name: /^next$/i }).click(); // Review
+    await page.getByRole("button", { name: /^create deck$/i }).click();
+
+    // Import mode lands on the deck page with the import dialog already open
+    // (?import=1) — decks are edited inline now, there is no /edit hop.
+    await page.waitForURL(/\/deck\/[^/?]+\?import=1/);
 
     // Import a tiny list (basics only — a single Scryfall collection call).
-    await page.getByRole("button", { name: /import decklist/i }).click();
     await page
       .locator('textarea[aria-label="Decklist text"]')
       .fill("4 Mountain\n2 Island");
@@ -72,15 +80,22 @@ test.describe("deck CRUD + import", () => {
     ).toBeVisible({ timeout: 30_000 });
     await page.getByRole("button", { name: /add 6 cards/i }).click();
 
-    // The deck page shows the imported lands.
-    await page.getByRole("link", { name: /view deck/i }).click();
-    await page.waitForURL("**/deck/*");
-    await expect(page.getByText(/6 cards/i).first()).toBeVisible();
-    await expect(page.getByText("Mountain").first()).toBeVisible();
+    // Dialog gone: it's our deck, and it shows the imported lands (the page
+    // behind an open dialog is aria-hidden, so the heading is asserted here,
+    // not on arrival). Tiles are image-first — the
+    // card name lives in the button's accessible name).
+    await expect(page.getByRole("heading", { name: title })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(
+      page.getByRole("button", { name: /^open mountain$/i }),
+    ).toBeVisible({ timeout: 15_000 });
+    await expect(
+      page.getByRole("button", { name: /^open island$/i }),
+    ).toBeVisible();
 
-    // Delete (cleanup — also exercises the destructive path).
-    await page.getByRole("link", { name: /edit deck/i }).click();
-    await page.waitForURL("**/deck/*/edit");
+    // Delete (cleanup — also exercises the destructive path). Owner tools
+    // sit on the deck page itself.
     await page.getByRole("button", { name: /delete deck/i }).click();
     await page
       .getByRole("dialog")

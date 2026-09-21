@@ -44,10 +44,11 @@ test.describe("custom pips", () => {
     await page.getByRole("button", { name: /sign in/i }).click();
     await page.waitForURL("**/dashboard");
 
-    // Open the creator on the Pips panel (cost picker + pip dialog).
+    // Open the creator on Text & stats — the cost picker + pip dialog moved
+    // there when the standalone Pips step was folded in.
     await page.goto("/create");
     const rail = page.getByRole("navigation", { name: /card editor steps/i });
-    await rail.getByRole("button", { name: /^pips$/i }).click();
+    await rail.getByRole("button", { name: /^text & stats$/i }).click();
 
     // Upload a custom red pip through the dialog.
     await page.getByRole("button", { name: /customize pips/i }).click();
@@ -72,8 +73,8 @@ test.describe("custom pips", () => {
       .toBeGreaterThanOrEqual(2); // picker button + cost row
 
     // Inline rules-text pips wear the override too: type a {R} into rules
-    // and check the live card preview.
-    await rail.getByRole("button", { name: /^text & stats$/i }).click();
+    // and check the live card preview. (Same step — rules text sits right
+    // under the cost picker now, so there is no rail hop.)
     await page
       .locator('[data-field="rules_text"]')
       .fill("{T}: Add {R} to your mana pool.");
@@ -82,7 +83,6 @@ test.describe("custom pips", () => {
       .toBeGreaterThanOrEqual(2); // cost (title band) + rules-text pip on the preview
 
     // Remove → revert to standard.
-    await rail.getByRole("button", { name: /^pips$/i }).click();
     await page.getByRole("button", { name: /customize pips/i }).click();
     await page
       .getByRole("button", { name: /remove custom red mana pip/i })
