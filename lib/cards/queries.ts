@@ -801,74 +801,64 @@ export async function listTopRemixesOfCard(
   }
 }
 
-export type RemixWithParent = CardWithStats & {
-  parent: { title: string; path: string } | null;
-};
+export type RemixParentLink = { title: string; path: string };
 
 /**
- * The current user's own remixes (cards with a parent_card_id), newest first,
- * each annotated with the original's title + canonical path. Powers the
- * dashboard "Your remixes" section. Parent lookups are bulk (4 queries total,
- * independent of count).
+ * Bulk "Remixed from" lookup: parent card ids → title + canonical path.
+ * Two queries whatever the count. Parents the viewer can't read (deleted /
+ * gone private) are simply absent from the map.
  */
-export async function listMyRemixes(limit = 12): Promise<RemixWithParent[]> {
-  if (!isSupabaseConfigured()) return [];
-  const user = await getCurrentUser();
-  if (!user) return [];
+async function resolveRemixParents(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  parentCardIds: Array<string | null>,
+): Promise<Map<string, RemixParentLink>> {
+  const parentById = new Map<string, RemixParentLink>();
+  const parentIds = Array.from(
+    new Set(parentCardIds.filter((id): id is string => Boolean(id))),
+  );
+  if (parentIds.length === 0) return parentById;
+
+  const { data: parents } = await supabase
+    .from("cards")
+    .select("id, slug, title, owner_id")
+    .in("id", parentIds);
+  const ownerIds = Array.from(new Set((parents ?? []).map((p) => p.owner_id)));
+  const { data: owners } = await supabase
+    .from("profiles")
+    .select("id, username")
+    .in("id", ownerIds);
+  const usernameById = new Map((owners ?? []).map((o) => [o.id, o.username]));
+  for (const p of parents ?? []) {
+    parentById.set(p.id, {
+      title: p.title,
+      path: buildCardPath({
+        slug: p.slug,
+        owner: { username: usernameById.get(p.owner_id) ?? null },
+      }),
+    });
+  }
+  return parentById;
+}
+
+/**
+ * "Remixed from" captions for the My Cards page, keyed by PARENT card id.
+ * Takes the already-loaded card list so it costs two small queries instead of
+ * re-reading the user's remixes.
+ */
+export async function listRemixParentLinks(
+  cards: ReadonlyArray<{ parent_card_id: string | null }>,
+): Promise<Record<string, RemixParentLink>> {
+  if (!isSupabaseConfigured()) return {};
+  if (!cards.some((c) => c.parent_card_id)) return {};
   try {
     const supabase = await createClient();
-    const { data } = await supabase
-      .from("cards")
-      .select("*")
-      .eq("owner_id", user.id)
-      .not("parent_card_id", "is", null)
-      .order("created_at", { ascending: false })
-      .limit(limit);
-    if (!data || data.length === 0) return [];
-    const enriched = await attachStats(data, "recent");
-
-    const parentIds = Array.from(
-      new Set(
-        data
-          .map((r) => r.parent_card_id)
-          .filter((id): id is string => Boolean(id)),
-      ),
+    const parentById = await resolveRemixParents(
+      supabase,
+      cards.map((c) => c.parent_card_id),
     );
-    const parentById = new Map<string, { title: string; path: string }>();
-    if (parentIds.length > 0) {
-      const { data: parents } = await supabase
-        .from("cards")
-        .select("id, slug, title, owner_id")
-        .in("id", parentIds);
-      const ownerIds = Array.from(
-        new Set((parents ?? []).map((p) => p.owner_id)),
-      );
-      const { data: owners } = await supabase
-        .from("profiles")
-        .select("id, username")
-        .in("id", ownerIds);
-      const usernameById = new Map(
-        (owners ?? []).map((o) => [o.id, o.username]),
-      );
-      for (const p of parents ?? []) {
-        parentById.set(p.id, {
-          title: p.title,
-          path: buildCardPath({
-            slug: p.slug,
-            owner: { username: usernameById.get(p.owner_id) ?? null },
-          }),
-        });
-      }
-    }
-
-    return enriched.map((c) => ({
-      ...c,
-      parent: c.parent_card_id
-        ? (parentById.get(c.parent_card_id) ?? null)
-        : null,
-    }));
+    return Object.fromEntries(parentById);
   } catch {
-    return [];
+    return {};
   }
 }
 

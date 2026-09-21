@@ -1,68 +1,20 @@
 import Link from "next/link";
-import { Heart } from "lucide-react";
 import { BakedCardThumbnail } from "@/components/cards/baked-card-thumbnail";
 import type { FrameProfileOverridesMap } from "@/lib/cards/profile-override";
 import { CardHoverEffect } from "@/components/cards/card-hover-effect";
 import { QuickLikeButton } from "@/components/cards/quick-like-button";
-import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/empty-state";
 import { buildCardPath } from "@/lib/cards/utils";
 import type { CardWithStats } from "@/lib/cards/queries";
 import type { ArtPosition, FrameStyle } from "@/types/card";
 
 // ---------------------------------------------------------------------------
-// LikedCardsSection — dashboard view of the cards the current user has
-// liked. Renders read-only tiles (the user doesn't own these cards) with a
-// QuickLikeButton so they can unlike from here. Distinct from the bulk-
-// selectable "my cards" sections above because the actions differ.
+// LikedCardTile — one card the current user has liked, on the My Cards
+// "Liked" tab. Read-only (the user doesn't own it) with a QuickLikeButton so
+// they can unlike from here. Distinct from DashboardCardTile because the
+// actions differ: no edit, no bulk selection.
 // ---------------------------------------------------------------------------
 
-type LikedCardsSectionProps = {
-  likedCards: CardWithStats[];
-  profileOverrides?: FrameProfileOverridesMap | null;
-};
-
-export function LikedCardsSection({ likedCards, profileOverrides = null }: LikedCardsSectionProps) {
-  return (
-    <section className="mt-12">
-      <header className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex flex-col gap-1">
-          <h2 className="font-display text-xl font-semibold tracking-tight text-foreground">
-            Liked cards
-          </h2>
-          <p className="max-w-2xl text-sm text-muted">
-            Cards from other forgers you&apos;ve hearted. Click any heart to
-            unlike.
-          </p>
-        </div>
-        <Button asChild variant="ghost" size="sm">
-          <Link href="/gallery">Browse gallery</Link>
-        </Button>
-      </header>
-
-      {likedCards.length === 0 ? (
-        <EmptyState
-          icon={Heart}
-          title="No liked cards yet"
-          description="Tap the heart on any card in the gallery or trending section to save it here."
-          action={
-            <Button asChild>
-              <Link href="/gallery">Browse the gallery</Link>
-            </Button>
-          }
-        />
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {likedCards.map((card) => (
-            <LikedCardTile key={card.id} card={card} profileOverrides={profileOverrides} />
-          ))}
-        </div>
-      )}
-    </section>
-  );
-}
-
-function LikedCardTile({
+export function LikedCardTile({
   card,
   profileOverrides = null,
 }: {

@@ -46,6 +46,7 @@ type StaleRow = {
 
 function revalidateForCard(slug: string, ownerUsername: string | null) {
   revalidatePath("/dashboard");
+  revalidatePath("/dashboard/cards");
   revalidatePath(`/card/${slug}/edit`);
   revalidatePath("/gallery");
   if (ownerUsername) {

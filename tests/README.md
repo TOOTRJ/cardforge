@@ -43,7 +43,7 @@ cp .env.e2e.example .env.e2e    # then paste the publishable + secret keys
 node scripts/seed-e2e.mjs       # creates the e2e user (idempotent)
 
 # every run
-npx playwright test             # full suite (13 specs)
+npx playwright test             # full suite (17 specs)
 ```
 
 When `.env.e2e` exists, `playwright.config.ts` boots its **own** dev

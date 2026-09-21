@@ -2499,7 +2499,7 @@ export function CardCreatorForm({
                 <DeleteCardDialog
                   cardId={card.id}
                   cardTitle={card.title}
-                  redirectTo="/dashboard"
+                  redirectTo="/dashboard/cards"
                   triggerLabel={null}
                   triggerSize="sm"
                 />

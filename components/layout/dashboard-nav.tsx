@@ -7,6 +7,7 @@ import {
   Bell,
   BookOpen,
   Frame,
+  GalleryVerticalEnd,
   Inbox,
   LayoutDashboard,
   Layers,
@@ -30,9 +31,10 @@ import { cn } from "@/lib/utils";
 // plain data array (no JSX in site-config.ts).
 const NAV_ICONS: Record<string, LucideIcon> = {
   "/dashboard": LayoutDashboard,
-  "/feed": Rss,
+  "/dashboard/cards": GalleryVerticalEnd,
   "/dashboard/sets": Layers,
   "/dashboard/decks": BookOpen,
+  "/feed": Rss,
   "/dashboard/usage": Sparkles,
   "/notifications": Bell,
   "/messages": MessageSquare,
