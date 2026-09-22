@@ -36,6 +36,7 @@ import {
 } from "@/types/card";
 import { eraForTemplate } from "@/lib/creator/frame-picker";
 import { cn } from "@/lib/utils";
+import { StylePicker } from "@/components/ai/style-picker";
 
 // ---------------------------------------------------------------------------
 // AiFillDialog — "Generate with AI", per field. The user ticks which fields
@@ -71,14 +72,6 @@ const AI_CARD_TYPES: CardType[] = [
   "token",
 ];
 
-const STYLE_PRESETS = [
-  "Anime",
-  "Pixel art",
-  "Oil painting",
-  "Watercolor",
-  "Comic book",
-  "Dark fantasy",
-];
 
 
 type AiFillDialogProps = {
@@ -319,37 +312,12 @@ function AiFillDialogBody({
             label="Art style"
             helper="How the art and tone should feel. Pick a preset or write your own."
           >
-            <div className="flex flex-col gap-2">
-              <div className="flex flex-wrap gap-1.5">
-                {STYLE_PRESETS.map((preset) => {
-                  const active = style.toLowerCase() === preset.toLowerCase();
-                  return (
-                    <button
-                      key={preset}
-                      type="button"
-                      disabled={generating}
-                      onClick={() => setStyle(active ? "" : preset)}
-                      className={`rounded-full border px-3 py-1 text-xs transition-colors ${
-                        active
-                          ? "border-accent/70 bg-accent/15 text-foreground"
-                          : "border-border bg-elevated/50 text-muted hover:border-border-strong hover:text-foreground"
-                      }`}
-                    >
-                      {preset}
-                    </button>
-                  );
-                })}
-              </div>
-              <input
-                type="text"
-                value={style}
-                onChange={(event) => setStyle(event.target.value)}
-                maxLength={200}
-                placeholder="e.g. gritty charcoal sketch"
-                className={inputClass(false)}
-                disabled={generating}
-              />
-            </div>
+            <StylePicker
+              value={style}
+              onChange={setStyle}
+              disabled={generating}
+              placeholder="e.g. gritty charcoal sketch"
+            />
           </FieldGroup>
 
           {wantsType || wantsRarity ? (
