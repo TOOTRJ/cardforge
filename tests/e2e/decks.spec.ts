@@ -1,4 +1,5 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect } from "@playwright/test";
+import { signIn } from "./helpers/sign-in";
 
 // ---------------------------------------------------------------------------
 // Decks e2e (decks series PR 7).
@@ -14,18 +15,6 @@ import { test, expect, type Page } from "@playwright/test";
 const hasCredentials =
   !!process.env.SUPABASE_E2E_USER_EMAIL &&
   !!process.env.SUPABASE_E2E_USER_PASSWORD;
-
-async function signIn(page: Page) {
-  await page.goto("/login");
-  await page
-    .locator('input[type="email"]')
-    .fill(process.env.SUPABASE_E2E_USER_EMAIL!);
-  await page
-    .locator('input[type="password"]')
-    .fill(process.env.SUPABASE_E2E_USER_PASSWORD!);
-  await page.getByRole("button", { name: /sign in/i }).click();
-  await page.waitForURL("**/dashboard");
-}
 
 test.describe("public decks browse", () => {
   test("renders the browse page with format filters", async ({ page }) => {

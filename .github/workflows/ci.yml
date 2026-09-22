@@ -1,6 +1,8 @@
 # CI — runs on every pull request and on main.
 #
-#   checks  typecheck + lint + unit tests (~2 min)
+#   checks  typecheck + lint + unit tests with coverage floors + `next build`
+#           (~5 min). The build is the only thing that catches a cookie read
+#           on a `dynamic = "error"` page or an undefined Satori style value.
 #   e2e     the full Playwright suite against a LOCAL Supabase stack booted
 #           inside the runner (never the dev branch, never production). This is
 #           the job that would have caught the 12 specs that drifted — and the
@@ -26,7 +28,7 @@ jobs:
   checks:
     name: Typecheck, lint, unit
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -36,7 +38,19 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
-      - run: npm run test:unit
+      - run: npm run test:coverage
+      - name: Upload coverage report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+          retention-days: 7
+      # No Supabase/Stripe env: every page falls back cleanly when nothing is
+      # configured, and that is exactly what the build must prove.
+      - run: npm run build
+        env:
+          NEXT_PUBLIC_SITE_URL: https://www.pipglyph.com
 
   e2e:
     name: E2E (local Supabase)
@@ -67,7 +81,9 @@ jobs:
             echo "NEXT_PUBLIC_SUPABASE_URL=$(get API_URL)"
             echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$(get PUBLISHABLE_KEY)"
             echo "SUPABASE_SECRET_KEY=$(get SECRET_KEY)"
-            echo "NEXT_PUBLIC_BILLING_ENABLED=false"
+            # The paid layer stays visible so the pricing specs run (no Stripe
+            # keys needed to render the storefront).
+            echo "NEXT_PUBLIC_BILLING_ENABLED=true"
             echo "SUPABASE_E2E_USER_EMAIL=e2e@pipglyph.test"
             echo "SUPABASE_E2E_USER_PASSWORD=ci-$(openssl rand -hex 12)"
           } > .env.e2e
@@ -79,7 +95,15 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Run Playwright
-        run: npx playwright test
+        run: npx playwright test --reporter=github,json
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_NAME: test-results/report.json
+
+      # Skips and retried-then-passed ("flaky") tests never fail the job, so
+      # they hide — list them on the run summary instead.
+      - name: Summarise skips and flakes
+        if: ${{ !cancelled() }}
+        run: node scripts/e2e-summary.mjs test-results/report.json >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload Playwright report
         if: ${{ !cancelled() }}
