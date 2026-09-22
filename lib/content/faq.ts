@@ -36,7 +36,7 @@ export const CARD_MAKER_FAQ: FaqEntry[] = [
   },
   {
     q: "Is PipGlyph free to use?",
-    a: "Yes. PipGlyph's card maker is free — every card type, every frame, the live preview and the AI tools. A free account (it takes seconds) is all you need: it saves your cards, lets you publish to the community gallery, build sets, and remix other players' cards.",
+    a: "Yes. PipGlyph's card maker is free — every card type, every frame, the live preview and the AI tools. A free account (it takes seconds) is all you need: it saves your cards, lets you publish to the community gallery, build decks, and remix other players' cards.",
   },
   {
     q: "Can I make a custom planeswalker card?",
@@ -94,11 +94,11 @@ export const MANA_PIP_FAQ: FaqEntry[] = [
 export const AI_GENERATOR_FAQ: FaqEntry[] = [
   {
     q: "What is an AI MTG card generator?",
-    a: "An AI MTG card generator uses a large language model to draft a complete Magic: The Gathering card from a brief prompt or a click. PipGlyph's generator picks a rarity, color identity, type, mana cost, and rules text — then optionally generates original art with OpenAI's image model — and drops the result into the editor where you can tweak any field before publishing.",
+    a: "An AI MTG card generator uses a large language model to draft a complete Magic: The Gathering card from a brief prompt or a click. PipGlyph's generator picks a rarity, color identity, type, mana cost, and rules text — then optionally paints original art with the FLUX image model (through the Vercel AI Gateway) — and drops the result into the editor where you can tweak any field before publishing.",
   },
   {
     q: "How do I generate a random MTG card with AI?",
-    a: "Open the card creator at /create and click 'Generate random card'. The AI picks every field for you and renders the result in the live preview. If you want a specific direction (e.g. 'a Selesnya Saga about a city of trees'), use the AI Assistant panel and pick 'Generate from concept'.",
+    a: "Open the card creator at /create and choose 'Generate with AI'. Pick a theme and art style — or hit 'Surprise me' — and the AI fills every field and paints the art, then drops the card into the editor. Each generation costs one AI credit (Free accounts get 5 a month). Want just ideas first? 'Get ideas' gives you three concepts to pick from for a single credit.",
   },
   {
     q: "Does the AI use real MTG keyword abilities?",
@@ -208,7 +208,7 @@ const CHALLENGES_FAQ: FaqEntry[] = [
 const ACCOUNTS_FAQ: FaqEntry[] = [
   {
     q: "Do I need an account to use PipGlyph?",
-    a: "Yes — a free one, which takes seconds. You can look around the creator at /create without signing in, but designing, saving and publishing need an account so your cards are always yours, on any device. The same free account unlocks the gallery, sets, custom mana pips, design challenges and 5 AI credits a month.",
+    a: "Yes — a free one, which takes seconds. You can look around the creator at /create without signing in, but designing, saving and publishing need an account so your cards are always yours, on any device. The same free account unlocks the gallery, decks, custom mana pips, design challenges and 5 AI credits a month.",
   },
   {
     q: "Does the editor autosave my work?",

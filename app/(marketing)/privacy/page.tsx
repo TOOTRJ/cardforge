@@ -74,9 +74,32 @@ export default function PrivacyPage() {
           your card pages.
         </li>
         <li>
-          <strong>Anthropic</strong> — only when you click an action in the AI
-          assistant. The prompt we send contains the relevant card fields
-          (title, rules, cost, etc.) — never your account email or password.
+          <strong>Stripe</strong> — payments and subscriptions. Stripe handles
+          your card details; we never see them. We store your Stripe customer
+          and subscription ids and your plan status.
+        </li>
+        <li>
+          <strong>Resend</strong> — transactional email (account emails, team
+          messages, the optional digest and newsletter you can switch off in
+          Settings). Resend receives your email address and the message.
+        </li>
+        <li>
+          <strong>AI providers, through the Vercel AI Gateway</strong> — only
+          when you use an AI feature. Card text and design prompts go to
+          Anthropic (Claude); image generation goes to Black Forest Labs
+          (FLUX) and, for the AI remix, Google (Gemini). The prompt contains
+          the relevant card fields (title, rules, cost, your theme) — never
+          your account email or password.
+        </li>
+        <li>
+          <strong>OpenAI</strong> — an automated moderation scan of images you
+          upload (card art, covers, avatars, custom pips), so the gallery stays
+          safe. OpenAI receives the image, nothing else.
+        </li>
+        <li>
+          <strong>Slack</strong> — when someone reports content, an alert with
+          the report reason and note is posted to our private moderation
+          channel.
         </li>
       </ul>
       <p>We don&apos;t sell data to third parties or use it for advertising.</p>

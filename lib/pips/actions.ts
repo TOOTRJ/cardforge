@@ -96,6 +96,37 @@ export async function saveCustomPipAction(
   const path = `${user.id}/${symbol}.png`;
   const supabase = await createClient();
 
+  // Moderate BEFORE touching the canonical object. The canonical path is
+  // deterministic and overwritten in place, so scanning after the upsert
+  // meant a flagged image had already replaced the owner's approved pip —
+  // and the rejection then deleted that object while the custom_pips row
+  // kept pointing at it. Stage the bytes under a pending name, scan THAT
+  // (versioned, so a cached copy of an older pending upload can't answer
+  // for the new bytes), and only then write the real object.
+  const pendingPath = `${user.id}/${symbol}.pending.png`;
+  const { error: stageError } = await supabase.storage
+    .from("custom-pips")
+    .upload(pendingPath, pngBytes, {
+      cacheControl: "0",
+      contentType: "image/png",
+      upsert: true,
+    });
+  if (stageError) {
+    return { ok: false, error: stageError.message };
+  }
+  const pendingUrl = `${supabase.storage.from("custom-pips").getPublicUrl(pendingPath).data.publicUrl}?v=${Date.now()}`;
+
+  // NSFW auto-scan — fails open (a moderation hiccup never blocks uploads);
+  // a positive flag drops the staged bytes and leaves the current pip alone.
+  const scan = await scanImageUrl(pendingUrl);
+  if (scan.flagged) {
+    await supabase.storage.from("custom-pips").remove([pendingPath]);
+    return {
+      ok: false,
+      error: "That image was flagged by our content filter and can't be used.",
+    };
+  }
+
   const { error: uploadError } = await supabase.storage
     .from("custom-pips")
     .upload(path, pngBytes, {
@@ -103,6 +134,7 @@ export async function saveCustomPipAction(
       contentType: "image/png",
       upsert: true,
     });
+  await supabase.storage.from("custom-pips").remove([pendingPath]);
   if (uploadError) {
     return { ok: false, error: uploadError.message };
   }
@@ -113,17 +145,6 @@ export async function saveCustomPipAction(
   // Deterministic path + upsert means CDNs may hold the previous bytes —
   // version the URL the same way bake-render.ts versions card renders.
   const imageUrl = `${urlData.publicUrl}?v=${Date.now()}`;
-
-  // NSFW auto-scan — fails open (a moderation hiccup never blocks uploads);
-  // a positive flag removes the object and rejects.
-  const scan = await scanImageUrl(urlData.publicUrl);
-  if (scan.flagged) {
-    await supabase.storage.from("custom-pips").remove([path]);
-    return {
-      ok: false,
-      error: "That image was flagged by our content filter and can't be used.",
-    };
-  }
 
   const { error: upsertError } = await supabase
     .from("custom_pips")
@@ -209,18 +230,24 @@ async function rebakeCardsUsingSymbol(
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("cards")
-    .select("id, cost, back_face")
+    .select("id, cost, rules_text, back_face")
     .eq("owner_id", ownerId)
     .order("updated_at", { ascending: false })
     .limit(400);
   if (error || !data) return;
 
+  // The renderers draw custom pips in the cost AND inline in rules text
+  // ({T}: Add {R}), on both faces — a sweep that only looked at the cost
+  // left every rules-text pip on the old icon until the card was resaved.
   const token = `{${symbol}}`;
   const affected = data
     .filter((row) => {
-      if (row.cost?.includes(token)) return true;
-      const backCost = (row.back_face as { cost?: string } | null)?.cost;
-      return typeof backCost === "string" && backCost.includes(token);
+      if (row.cost?.includes(token) || row.rules_text?.includes(token)) return true;
+      const back = row.back_face as { cost?: string; rules_text?: string } | null;
+      return (
+        (typeof back?.cost === "string" && back.cost.includes(token)) ||
+        (typeof back?.rules_text === "string" && back.rules_text.includes(token))
+      );
     })
     .slice(0, REBAKE_SWEEP_CAP);
 

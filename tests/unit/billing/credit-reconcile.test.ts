@@ -47,8 +47,11 @@ function stubAdmin(opts: {
                 gte: () => ({
                   lte: () => ({
                     order: () => ({
-                      limit: async () => ({
-                        data: opts.ledgerReadError ? null : opts.spends,
+                      // The sweep pages with .range(from, to) (inclusive),
+                      // like PostgREST; the stub slices the same way so a
+                      // paging test can hand it more than one page.
+                      range: async (from: number, to: number) => ({
+                        data: opts.ledgerReadError ? null : opts.spends.slice(from, to + 1),
                         error: opts.ledgerReadError
                           ? { message: opts.ledgerReadError }
                           : null,
@@ -201,5 +204,20 @@ describe("reconcileOrphanedSpends", () => {
   it("exposes a grace window that outlives any live attempt", () => {
     // 180s function budget + 5-minute stale claim < grace.
     expect(RECONCILE_GRACE_MS).toBeGreaterThanOrEqual(10 * 60_000);
+  });
+});
+
+describe("reconcileOrphanedSpends paging", () => {
+  it("REGRESSION: walks past the first 500 spends instead of silently skipping the rest", async () => {
+    // 1,203 orphaned spends (no job rows at all) → every one must be refunded.
+    const spends = Array.from({ length: 1203 }, (_, i) => ({
+      user_id: "u1",
+      delta: -1,
+      idempotency_key: `spend:job-${i}:card:0:attempt-${i}`,
+    }));
+    const { admin, grants } = stubAdmin({ spends, jobs: [] });
+    const result = await reconcileOrphanedSpends(admin);
+    expect(result).toMatchObject({ ok: true, scanned: 1203, refunded: 1203, legitimate: 0, failed: 0 });
+    expect(grants).toHaveLength(1203);
   });
 });

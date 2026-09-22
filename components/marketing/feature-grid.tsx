@@ -1,7 +1,7 @@
 import {
+  BookOpen,
   Frame,
   GitFork,
-  Layers,
   Sparkles,
   Swords,
   Type,
@@ -48,11 +48,11 @@ const features: Feature[] = [
       "Creatures, instants, sorceries, enchantments, artifacts, lands, planeswalkers, battles, sagas, and double-faced cards. Set power and toughness, loyalty, defense, and chapter abilities exactly the way you want.",
   },
   {
-    icon: Layers,
+    icon: BookOpen,
     tone: "gold",
-    title: "Full expansion sets",
+    title: "Decks and proxies",
     description:
-      "Group cards into named sets. Track rarity distribution, color spread, and creature-type themes across your whole set from a single workspace — like a one-person R&D team.",
+      "Build decks from real cards and your own creations, import a decklist from Arena, Moxfield or Archidekt, and remix every real card into a custom proxy — then print the whole deck as PDF sheets.",
   },
   {
     icon: GitFork,

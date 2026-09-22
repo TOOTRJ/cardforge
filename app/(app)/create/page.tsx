@@ -215,6 +215,11 @@ export default async function CreatePage({
 
       <div id={FORM_SCROLL_TARGET_ID} className="mt-10 scroll-mt-24">
         <CardCreatorForm
+          // A different flow = a different form: "Create a new card" for a
+          // back face navigates /create → /create?backFor=… without leaving
+          // the page, and without a key the old form (and its filled-in
+          // state) stayed mounted for the new card.
+          key={backFor?.id ?? deckRemix?.deckCardId ?? remixParent?.id ?? "new"}
           mode={remixParent ? "remix" : "create"}
           card={remixParent}
           userId={user.id}
