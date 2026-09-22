@@ -2,7 +2,16 @@
 title: "Designing Custom MTG Tokens"
 description: "Design custom MTG tokens that play right: what a token is, the traits that define one, balancing the maker card's cost, and token-matters synergies."
 date: "2026-06-23"
-tags: ["tokens", "card design"]
+tags: ["card types", "card design"]
+faq:
+  - q: "Do tokens have a mana cost?"
+    a: "No. A token is created by another card's ability, never cast, so it has no mana cost. Its color comes only from the words in the ability that makes it; if no color is stated, the token is colorless."
+  - q: "What happens when a token leaves the battlefield?"
+    a: "It ceases to exist. The moment a token would move to any other zone — graveyard, hand, exile, library — it's removed as a state-based action and is gone. There's no graveyard value and nothing to bounce back, which is why generating tokens stays fair against board wipes and \"leaves the battlefield\" effects."
+  - q: "How do I balance a card that makes tokens?"
+    a: "Price the maker, not the token. Add up quantity, the size and abilities of each token, and whether the effect is one-shot or repeatable, then set the mana cost and rarity to match. Repeatable token engines are worth far more than their numbers suggest because they compound every turn; a one-shot swarm is a finisher; a single small token is a minor upside."
+  - q: "Can I design custom token cards in PipGlyph?"
+    a: "Yes. PipGlyph's editor at /create supports token cards — set the name, color, power and toughness, type line, and any abilities, and the frame renders as you build. You can publish tokens to the gallery next to the spell or permanent that creates them so the pair shares context."
 ---
 
 A token is a marker that represents a creature or other permanent on the battlefield, created by another card's ability rather than cast from your deck. Tokens have no mana cost, are never in your deck or hand, and cease to exist the moment they leave the battlefield. Designing one is really two jobs: building the token itself, and building the card or ability that makes it.

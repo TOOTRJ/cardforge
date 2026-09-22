@@ -11,7 +11,7 @@ export const dynamic = "error";
 export const metadata: Metadata = {
   title: "About",
   description:
-    "PipGlyph is a modern, creator-first platform for designing custom trading cards. Learn what we're building.",
+    "PipGlyph is a free, browser-based custom Magic: The Gathering card creator with deck building, AI help, and a community gallery. What it is and what it stands for.",
   alternates: { canonical: "/about" },
 };
 
@@ -23,11 +23,13 @@ export default function AboutPage() {
       description={siteConfig.description}
     >
       <p>
-        PipGlyph is a modern platform for designing, sharing, and remixing
-        custom trading cards. The MVP launches with a polished fantasy-card
-        creator and is built to grow into any custom card game — your homebrew
-        Commander deck, your indie TCG, your tabletop RPG cards, classroom
-        flashcards, whatever you can imagine.
+        PipGlyph is a free, browser-based workshop for designing, sharing, and
+        remixing custom Magic: The Gathering-style cards — and for turning them
+        into playable decks. It began as a card creator with precise mana pips
+        and grew into the whole loop: design a card in a live-preview editor,
+        publish it to a community gallery, build a deck around it, print
+        proxies, and playtest. It is a fan-made tool, not affiliated with
+        Wizards of the Coast.
       </p>
 
       <h2>Principles</h2>
@@ -35,7 +37,8 @@ export default function AboutPage() {
         <li>
           <strong>Originality first.</strong> We do not use proprietary card
           frames, fonts, set symbols, or trademarked names. Every visual element
-          shipped with PipGlyph is original to the project.
+          shipped with PipGlyph is original to the project, measured against
+          real printings so it looks right without copying them.
         </li>
         <li>
           <strong>Creators own their work.</strong> Cards are structured data —
@@ -43,50 +46,59 @@ export default function AboutPage() {
           your designs without lock-in.
         </li>
         <li>
-          <strong>Sharing without surrendering.</strong> Visibility is
-          per-card: private, link-only, or public. We don&apos;t claim rights
-          to your art or rules text.
+          <strong>Sharing without surrendering.</strong> Visibility is per card
+          and per deck: private, link-only, or public. We don&apos;t claim
+          rights to your art or rules text.
         </li>
         <li>
-          <strong>AI is a power-up, not the product.</strong> Forge AI helps
-          you tighten templating, balance, and flavor. It never overwrites
-          fields without an explicit apply.
+          <strong>AI is a power-up, not the product.</strong> The AI drafts a
+          field, a card, an art piece or a whole deck when you ask it to, and
+          never overwrites anything without an explicit apply.
         </li>
       </ul>
 
       <h2>What ships today</h2>
       <ul>
         <li>
-          A nine-panel card editor with live preview — frames from three
-          decades of card design, double-faced and adventure cards, and
-          precise mana pips with per-user <strong>custom pip icons</strong>
+          A step-by-step card creator with a live preview — every card type
+          including sagas, adventures, split, aftermath and flip cards and
+          double-faced backs; frames from three decades of card design; the
+          full mana-symbol vocabulary plus your own uploaded pip icons; and a
+          printed set symbol of your choosing
+        </li>
+        <li>
+          AI on demand: generate any single field, get three costed ideas for a
+          theme, draft a whole card from a concept, restyle a card&apos;s art,
+          or generate a full deck with a how-to-play guide
+        </li>
+        <li>
+          Decks: import a decklist from the popular deck sites, remix real
+          cards into custom versions, see the curve and color analytics, and
+          print proxy sheets
         </li>
         <li>Scryfall import for remixing real cards, with lineage tracking</li>
-        <li>Print-ready PNG and PDF export (single cards and 9-up sheets)</li>
-        <li>A public gallery with filters, search, likes, and remix</li>
-        <li>Custom sets with analytics and shareable detail pages</li>
+        <li>
+          Downloads: a watermarked PNG on every account; watermark-free
+          high-resolution PNG and print-ready PDF on paid plans, and whole-deck
+          proxy sheets on Pro
+        </li>
+        <li>A public gallery with search, likes, comments, and remixing</li>
         <li>Community design challenges with briefs, entry tags, and spotlights</li>
-        <li>An optional AI design assistant powered by Anthropic Claude</li>
-        <li>Account creation, profiles, visibility controls, and light/dark themes</li>
+        <li>Profiles, a following feed, notifications, and light/dark themes</li>
+        <li>
+          A free plan with monthly AI credits, and Plus and Pro plans for more
+          credits, clean downloads and a bigger card library — see{" "}
+          <Link href="/pricing">pricing</Link>
+        </li>
       </ul>
 
-      <h2>The roadmap</h2>
+      <h2>What&apos;s next</h2>
       <p>
-        Phase Zero locked the scope; phases 1 through 9 shipped the MVP. From
-        here, the direction we&apos;re excited about includes:
+        Premium custom frames and finishes, card printing, and richer deck
+        tools are in development. Releases are announced on the{" "}
+        <Link href="/news">news page</Link>, and the{" "}
+        <Link href="/articles">guides</Link> grow alongside the product.
       </p>
-      <ul>
-        <li>
-          Card version history and per-card change logs.
-        </li>
-        <li>
-          A more flexible template system so you can ship your own card
-          layouts (planeswalker-style, board game style, RPG cards).
-        </li>
-        <li>
-          A sets index for discovery, plus pinning featured sets.
-        </li>
-      </ul>
 
       <h2>Contact</h2>
       <p>

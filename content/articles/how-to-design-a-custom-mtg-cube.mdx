@@ -2,7 +2,17 @@
 title: "How to Design a Custom MTG Cube"
 description: "How to design a custom MTG cube — cube size, power level, the ten color archetypes, singleton tradeoffs, and the draft-test-iterate loop that tunes it."
 date: "2026-06-23"
-tags: ["cube", "playtesting", "card design"]
+tags: ["formats", "playtesting", "card design"]
+updated: "2026-09-22"
+faq:
+  - q: "What is an MTG cube?"
+    a: "An MTG cube is a curated, singleton collection of cards — no duplicates — assembled by its owner to be drafted and played, then reset and drafted again. Unlike a sealed set you buy, a cube is hand-picked and tunable: you choose every card, set the power level, and revise the list whenever you like. A custom cube is one built from your own original card designs."
+  - q: "How many cards are in a cube?"
+    a: "The classic size is 360, which exactly fills an eight-player draft (8 players × 45 cards). Smaller cubes are common and often better to start with: 120 for a four-player pod, 180 for four to six players, and 270 for six. Cube size is just players times cards-per-player, so you can scale it to whatever group you actually play with."
+  - q: "What does singleton mean in a cube?"
+    a: "Singleton means each card appears exactly once — there are no duplicate copies anywhere in the cube. That forces every card to justify its slot on its own, since you can't rely on multiples to define a color or strategy. It also makes drafts more varied, because no two packs are stocked with the same repeated commons."
+  - q: "How do I make my custom cube balanced?"
+    a: "Keep the five colors roughly even in card count, give each of the ten two-color pairs a clear archetype with both payoffs and support, and make sure every deck can find a creature curve, removal, and mana fixing. Then draft and play it repeatedly, cutting cards that never get picked or always dominate. Balance comes from the test loop, not from getting it right on paper the first time."
 ---
 
 A Magic: The Gathering cube is a curated, singleton pool of cards — no duplicates — that you and your friends draft, play, then shuffle back together and re-draft. It's a replayable, owner-designed draft environment rather than a sealed product you buy: you hand-pick every card, tune the power level, and revise the list over time. A custom cube takes that one step further — instead of filling it with existing cards, you fill it with your own designs.
@@ -79,7 +89,7 @@ Resist the urge to overhaul everything between drafts. Cubes converge slowly; tr
 
 ## Building your cube in PipGlyph
 
-PipGlyph is built for exactly this loop. Design each card in the [editor](/create), tracking the cube's color balance, rarity spread, and mana curve as the list grows — so a color that's short on two-drops, or a curve that tops out too high, shows up while you're building instead of surfacing mid-draft.
+PipGlyph is built for exactly this loop. Design each card in the [editor](/create), then collect the list in a [deck](/decks), whose analytics track color balance and the mana curve as the list grows — so a color that's short on two-drops, or a curve that tops out too high, shows up while you're building instead of surfacing mid-draft.
 
 When the list is ready to test, deal booster-style hands and draft-test the cube with your pod. Note which cards never get taken and which ones dominate, then go back to the editor, revise, and run it again.
 

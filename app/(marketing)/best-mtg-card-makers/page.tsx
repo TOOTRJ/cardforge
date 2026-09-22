@@ -11,7 +11,7 @@ import { COMPARISON_FAQ } from "@/lib/content/faq";
 // SEO landing page: /best-mtg-card-makers
 //
 // Comparison / capture page targeting "best MTG card maker" and the displaced
-// "CardConjurer alternative" demand (CardConjurer was taken down in late 2023
+// "CardConjurer alternative" demand (CardConjurer was taken down in November 2022
 // after a WotC cease-and-desist). Factual and neutral about other tools; the
 // differentiator we lean on is PipGlyph's original, fan-policy-compliant
 // assets. FAQ uses the shared COMPARISON_FAQ so the hub and structured data
@@ -38,7 +38,7 @@ const CRITERIA = [
   "Accurate mana pips, including custom uploaded pip icons",
   "Faithful card frames built from original (non-WotC) assets",
   "High-resolution PNG and print-ready PDF export for proxies",
-  "Full expansion-set building, not just one-off cards",
+  "Deck building around your cards, not just one-off renders",
   "A community to share, get feedback, and remix designs",
   "An AI assistant for rules text and flavor",
   "Respects Wizards' intellectual property and Fan Content Policy",
@@ -48,7 +48,7 @@ const PIPGLYPH_STRENGTHS = [
   "Live-preview editor — your card renders as you type",
   "The complete mana-symbol vocabulary, plus custom pip uploads",
   "AI that fills in any field — rules, flavor, stats, art — or the whole card",
-  "Expansion-set builder with a booster-draft simulator",
+  "Deck builder with decklist import, card remixing, and proxy sheets",
   "Public gallery with likes, comments, and card remixing",
   "PNG and print-ready PDF export sized for real cards",
   "Original frames and fonts — not Wizards' proprietary assets",
@@ -66,7 +66,7 @@ const LANDSCAPE: Tool[] = [
     name: "PipGlyph",
     type: "Free · Browser",
     bestFor:
-      "Live-preview editing, custom mana pips, AI text, set building, sharing and remixing, and proxy export.",
+      "Live-preview editing, custom mana pips, AI text, deck building, sharing and remixing, and proxy export.",
   },
   {
     name: "MTG Cardsmith",
@@ -88,7 +88,7 @@ const LANDSCAPE: Tool[] = [
   },
   {
     name: "CardConjurer",
-    type: "Discontinued (2023)",
+    type: "Discontinued (2022)",
     bestFor:
       "Was prized for high-fidelity rendering; taken down after a WotC cease-and-desist.",
   },
@@ -130,7 +130,7 @@ export default function BestMtgCardMakersPage() {
           Looking for the best way to make custom Magic: The Gathering cards —
           or a CardConjurer alternative? Here&apos;s an honest look at the
           landscape and where PipGlyph fits: a free, browser-based card maker
-          with a live preview, custom mana pips, an AI assistant, set building,
+          with a live preview, custom mana pips, an AI assistant, deck building,
           and proxy export.
         </p>
         <div className="flex flex-wrap gap-3">
@@ -228,9 +228,11 @@ export default function BestMtgCardMakersPage() {
         <div className="flex flex-col gap-4 text-sm leading-7 text-muted">
           <p>
             CardConjurer was, for years, one of the most popular custom-card
-            renderers, prized for its high-fidelity frames. In late 2023 its
-            creator took it offline after receiving a cease-and-desist from
-            Wizards of the Coast over the use of official intellectual property.
+            renderers, prized for its high-fidelity frames. In November 2022
+            its creator took it offline after receiving a cease-and-desist from
+            Wizards of the Coast over the use of official intellectual property;
+            the site later returned as a stripped-down template tool without
+            the official frames.
           </p>
           <p>
             The takeaway for anyone choosing a tool today: custom-card platforms
@@ -339,7 +341,7 @@ export default function BestMtgCardMakersPage() {
           </h2>
           <p className="max-w-lg text-sm leading-6 text-muted">
             A free account takes seconds. Then design your card, watch the
-            live preview, and save, share or build a full set whenever
+            live preview, and save, share or build a deck whenever
             you&apos;re ready.
           </p>
           <div className="flex flex-wrap gap-3">

@@ -29,7 +29,7 @@ export function IdentityPanel({ revise = false }: IdentityPanelProps) {
     <>
       <FieldGroup
         label="Title"
-        helper="The card's name. Defaults the slug if you leave that blank."
+        helper="The card's name. It also becomes the card's web address."
         error={errors.title?.message}
       >
         {/* Required-ness is enforced by the form resolver

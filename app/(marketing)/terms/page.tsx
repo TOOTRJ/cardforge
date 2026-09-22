@@ -46,12 +46,12 @@ export default function TermsPage() {
 
       <h2>3. Content you create</h2>
       <p>
-        You own the cards, sets, art, and text you upload to PipGlyph. By
+        You own the cards, decks, art, and text you upload to PipGlyph. By
         publishing a card publicly or as unlisted, you grant PipGlyph a
         non-exclusive license to host, display, and reproduce that content for
         the purpose of running the platform (e.g. rendering it in the gallery,
         generating Open Graph previews, etc.). You can revoke this license at
-        any time by deleting the card, set, or your account.
+        any time by deleting the card, deck, or your account.
       </p>
 
       <h2>4. Content you don&apos;t own</h2>

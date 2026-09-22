@@ -11,6 +11,12 @@ import {
  *  to serve. */
 const SUPABASE_AUTH_COOKIE = /^sb-[^=]*-auth-token(\.\d+)?$/;
 
+const RETIRED_TAG_HUBS: Record<string, string> = {
+  "/articles/tag/templating": "/articles/tag/oracle-text",
+  "/articles/tag/abilities": "/articles/tag/oracle-text",
+  "/articles/tag/proxies": "/articles/tag/printing",
+};
+
 export async function proxy(request: NextRequest) {
   const { pathname: requestPath } = request.nextUrl;
 
@@ -28,6 +34,15 @@ export async function proxy(request: NextRequest) {
   // The sets feature was removed (PR #337, migration 0105) after months of
   // inbound links and indexed copy for /sets and /set/<slug>. Send that
   // equity to the nearest living collection surface instead of 404ing.
+  // Guide tag hubs were consolidated on 2026-09-22 (content refresh): the
+  // three retired hubs that had been indexable keep resolving.
+  const retiredTagHub = RETIRED_TAG_HUBS[requestPath];
+  if (retiredTagHub) {
+    const url = request.nextUrl.clone();
+    url.pathname = retiredTagHub;
+    url.search = "";
+    return NextResponse.redirect(url, 308);
+  }
   if (requestPath === "/sets" || requestPath.startsWith("/set/")) {
     const url = request.nextUrl.clone();
     url.pathname = "/decks";

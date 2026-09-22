@@ -58,7 +58,7 @@ export default function PressPage() {
       <p>
         PipGlyph is a custom card creator for Magic: The Gathering fans —
         precision mana pips, advanced text tools, and frames from three
-        decades of card design, with a public gallery, custom sets, and
+        decades of card design, with a public gallery, custom decks, and
         community challenges. Boilerplate: &ldquo;{siteConfig.name} —{" "}
         {siteConfig.tagline}&rdquo;
       </p>

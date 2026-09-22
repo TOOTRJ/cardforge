@@ -2,7 +2,15 @@
 title: "The Complete Guide to MTG Mana Symbols"
 description: "Every mana pip explained — generic, colored, hybrid, twobrid, phyrexian, snow, energy, tap and untap — what each one means in a cost, how color identity works, and how to build them on a custom card."
 date: "2026-06-11"
-tags: ["mana pips", "symbols", "reference"]
+tags: ["mana", "reference"]
+updated: "2026-09-22"
+faq:
+  - q: "What's the difference between colorless {C} and generic {1}?"
+    a: "Generic ({1}, {2}, …) accepts mana of any type. Colorless {C} demands specifically colorless mana — from a Wastes, an artifact source, an Eldrazi. Use {C} in a custom cost only when \"must be colorless\" is the point."
+  - q: "Do hybrid pips make a card cheaper?"
+    a: "Effectively yes — hybrid is the easier cost shape because more decks can pay it. Designers usually compensate: hybrid cards are templated so they'd be fair as a mono-color card of either half."
+  - q: "Can a custom card mix hybrid and phyrexian in one cost?"
+    a: "Mechanically yes ({W/U}{B/P} is parseable), and PipGlyph renders it — but real cards almost never do it, so expect it to read as deliberately exotic. Exotic is sometimes the brief."
 ---
 
 Mana symbols — *pips*, in designer slang — are the densest information channel on a Magic card. Five circles in the corner tell you a card's color, its cost, its deck-building constraints, and often its design intent before you read a word of rules text. If you're making custom cards, fluency in the full symbol vocabulary is the difference between a cost that looks printed and one that looks pasted on.
@@ -29,7 +37,7 @@ This is the complete vocabulary, symbol by symbol, with the rules meaning of eac
 
 ## Phyrexian: mana or life
 
-**`{W/P}`, `{U/P}`, `{B/P}`, `{R/P}`, `{G/P}`** (and colorless `{C/P}`) — the phi symbol means the pip can be paid with the colored mana *or 2 life*. Phyrexian costs are infamous in competitive history precisely because "free" is a price players love; cost custom phyrexian designs conservatively. A phyrexian pip still makes the card that color.
+**`{W/P}`, `{U/P}`, `{B/P}`, `{R/P}`, `{G/P}`** (PipGlyph also offers a colorless `{C/P}` — a custom extension, since no printed card uses one) — the phi symbol means the pip can be paid with the colored mana *or 2 life*. Phyrexian costs are infamous in competitive history precisely because "free" is a price players love; cost custom phyrexian designs conservatively. A phyrexian pip still makes the card that color.
 
 ## Utility symbols
 

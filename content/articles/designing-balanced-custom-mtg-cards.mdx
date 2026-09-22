@@ -3,6 +3,14 @@ title: "Designing Balanced Custom MTG Cards"
 description: "A practical framework for costing custom Magic cards — rate baselines, the color pie, downside design, rarity as a balance tool, and the playtest questions that catch broken designs before your playgroup does."
 date: "2026-06-10"
 tags: ["balance", "card design", "playtesting"]
+updated: "2026-09-22"
+faq:
+  - q: "Is there a formula for creature costs?"
+    a: "A rough modern baseline: power + toughness ≈ 2 × converted cost, adjusted by color and keywords. A {2}{G} creature can be a 3/3; add trample and it's a 3/2 or costs {3}{G}. Formulas get you to the neighborhood; playtesting parks the car."
+  - q: "Should custom cards be balanced against modern power level or older eras?"
+    a: "Pick a deliberate reference point and state it in the card's tags or set description. A card that's fair in 2003 Magic is unplayable next to 2024 designs — neither is wrong, but mixing eras in one set without intent reads as inconsistency."
+  - q: "How do I balance a card for Commander specifically?"
+    a: "Multiply every \"once per game\" effect by three (you'll see it more often than in 1v1), discount aggro stats, and price card advantage up — 40-life games are attrition games. The fun test matters triple at a four-player table."
 ---
 
 Every custom card designer eventually hears the same review: *"cool, but broken."* Balance is the craft half of card design — the part that turns a flavor idea into something your playgroup actually lets you play. The good news: Magic has thirty years of public data about what fair looks like. This guide compresses it into a working method.
@@ -44,7 +52,7 @@ Rarity isn't prestige — it's a complexity and impact budget:
 - **Rare**: build-arounds, engines, and rate-pushers with real constraints.
 - **Mythic**: splashy, game-warping, *narrow*. Mythic should be the card the table talks about, not the card every deck plays four of.
 
-If your design needs three paragraphs, it isn't a common. PipGlyph's [editor](/create) lets you set rarity per card, so a custom expansion can hold a realistic curve (roughly 10 commons per 3 uncommons per rare in printed set skeletons).
+If your design needs three paragraphs, it isn't a common. PipGlyph's [editor](/create) lets you set rarity per card, so a custom deck or cube can keep a realistic rarity mix (roughly 10 commons per 3 uncommons per rare in printed set skeletons).
 
 ## The five playtest questions
 
@@ -56,7 +64,7 @@ Before publishing, run the card through these:
 4. **The floor/ceiling test** — what's the card's worst reasonable mode? Cards with a high floor AND high ceiling are the broken ones; great designs buy ceiling by lowering the floor.
 5. **The fun test** — does the loser of the exchange get to make a decision? Effects that remove the opponent's agency (mass land destruction, extra-turn chains) need to be priced like mythics even when their rate looks fair.
 
-PipGlyph's AI assistant includes a **balance check** that reads your card and returns a risk assessment with specific cost suggestions — useful as a second opinion before you [publish to the gallery](/mtg-card-maker).
+PipGlyph's per-field **Generate with AI** buttons will draft a cost, a rarity, or rules text for the card you've described — useful as a second opinion on rate before you [publish to the gallery](/mtg-card-maker).
 
 ## Balance is a conversation
 

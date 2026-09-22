@@ -2,7 +2,16 @@
 title: "Designing Custom Instants and Sorceries"
 description: "How to design custom MTG instants and sorceries — timing as a cost, card advantage math, color-pie-correct removal, spell archetypes, and clean templating."
 date: "2026-06-19"
-tags: ["spells", "card design", "instants"]
+tags: ["card types", "card design"]
+faq:
+  - q: "When should an effect be an instant instead of a sorcery?"
+    a: "Make it an instant when the flexibility genuinely matters — interaction (removal, counters, tricks), or reactive value you'd want to hold up. Make it a sorcery when the effect is proactive and you're happy paying less for it, like ramp, sweepers, or big card draw on your own turn."
+  - q: "How much extra should I charge for instant speed?"
+    a: "Roughly half a mana to a full mana over the sorcery-speed rate, or keep the cost the same and weaken the effect (narrow the targets, lower the numbers). The exact tax depends on how scary the card is when you leave mana open."
+  - q: "Can a custom sorcery be cast at instant speed?"
+    a: "Not by its type alone — the type line is what sets timing, so a sorcery is hard-locked to your main phase. If you want a sorcery-flavored effect at instant speed, either make it an instant or give a permanent an ability that lets you cast sorceries any time you could cast an instant."
+  - q: "What's the difference between \"destroy\" and \"deals damage\" on removal?"
+    a: "\"Destroy\" sends a creature to the graveyard outright (dodged only by indestructible or regeneration) and belongs to white and black. \"Deals N damage\" is red's method — it's capped, can be prevented, and won't kill anything with toughness above N. Use the verb that matches your color."
 ---
 
 Instants and sorceries are Magic's noncreature spells: one-shot effects that resolve, do their thing, and head to the graveyard. The only mechanical difference between the two card types is timing — an instant can be cast any time you have priority, including during an opponent's turn and in response to other spells, while a sorcery can only be cast during your own main phase with an empty stack. That timing gap is the single most important lever in spell design, and most beginner customs misprice it.

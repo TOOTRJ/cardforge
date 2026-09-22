@@ -170,7 +170,7 @@ export function DashboardBulkBar({
             </DialogTitle>
             <DialogDescription>
               This can&apos;t be undone. The cards will be removed from your
-              dashboard, the gallery, and any sets they belong to.
+              dashboard, the gallery, and any decks they belong to.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="px-5 pb-5 pt-2">
