@@ -8,8 +8,8 @@
 - [x] **Separate AI Gateway key for Preview + Development** (done 2026-09-21;
       production keeps its original key).
 
-- [ ] **Make the `CI` and `Supabase Preview` checks required on `main`**
-      (GitHub → Settings → Branches) once CI has a few green runs.
+- [x] **`main` ruleset** (2026-09-21): PR-only, required checks `Typecheck, lint,
+      unit` / `E2E (local Supabase)` / `Supabase Preview`, admin bypass.
 
 - [ ] **New guide: "Card Conjurer alternative"** (target keyword: *card
       conjurer alternative*; secondary: *cardconjurer alternative*, *card
