@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
+  DELINQUENT_SUBSCRIPTION_STATUSES,
   PLANS,
   TRIAL_DAYS,
   type BillingPeriod,
@@ -25,6 +26,7 @@ type BillingViewer = {
   currentTier: PlanTier | null;
   /** Ever held a subscription — lapsed subscribers don't get trial copy. */
   hasSubscribed: boolean;
+  subscriptionStatus?: string | null;
 };
 
 const ANONYMOUS_VIEWER: BillingViewer = {
@@ -64,6 +66,7 @@ export function PricingPlans() {
           isPaid: data.user.isPaid ?? false,
           currentTier: data.user.tier ?? null,
           hasSubscribed: data.user.hasSubscribed ?? false,
+          subscriptionStatus: data.user.subscriptionStatus ?? null,
         });
       } catch {
         // Network hiccup — keep the anonymous storefront; the server
@@ -76,10 +79,22 @@ export function PricingPlans() {
     };
   }, []);
 
-  const { isSignedIn, isPaid, currentTier, hasSubscribed } = viewer;
+  const { isSignedIn, isPaid, currentTier, hasSubscribed, subscriptionStatus } = viewer;
+  // Payment broken on an existing subscription: perks are off (isPaid false)
+  // but a fresh checkout would sell a SECOND subscription — the portal is the
+  // only right button, on every paid card.
+  const lapsed =
+    isSignedIn && !isPaid && DELINQUENT_SUBSCRIPTION_STATUSES.has(subscriptionStatus ?? "");
 
   function ctaFor(tier: PlanTier, featured?: boolean): React.ReactNode {
     const variant = featured ? "primary" : "outline";
+    if (lapsed && tier !== "free") {
+      return (
+        <ManageBillingButton variant={variant} className="w-full">
+          Update payment to continue
+        </ManageBillingButton>
+      );
+    }
     if (tier === "free") {
       if (!isSignedIn) {
         return (

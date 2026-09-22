@@ -28,8 +28,11 @@ export async function notifyDeckJobFinished(job: GenerationJobRow): Promise<void
     .select("slug, title")
     .eq("id", job.deck_id)
     .maybeSingle();
-  const done = job.steps.filter((s) => s.status === "done" && s.key !== "cover").length;
-  const failed = job.steps.filter((s) => s.status === "failed").length;
+  // Cards only: the free cover and guide steps are neither "cards ready"
+  // nor "cards needing a retry".
+  const isCard = (s: { key: string }) => s.key !== "cover" && s.key !== "guide";
+  const done = job.steps.filter((s) => s.status === "done" && isCard(s)).length;
+  const failed = job.steps.filter((s) => s.status === "failed" && isCard(s)).length;
   const { error } = await admin.from("notifications").insert({
     recipient_id: job.owner_id,
     actor_id: job.owner_id,

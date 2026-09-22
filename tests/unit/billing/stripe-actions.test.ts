@@ -20,6 +20,7 @@ const s = vi.hoisted(() => ({
   stripeConfigured: true,
   linkedId: "cus_new",
   live: null as null | { id: string; status: string; items: { data: Array<{ id: string; price: { id: string } }> } },
+  delinquent: null as null | { id: string; status: string },
   history: [] as Array<{ id: string }>,
   checkoutThrows: false,
   customersCreate: vi.fn(),
@@ -59,7 +60,10 @@ vi.mock("@/lib/stripe/config", () => ({
   priceIdForTier: (tier: string, period: string) => `price_${tier}_${period}`,
   priceIdForPack: (pack: string) => `price_pack_${pack}`,
 }));
-vi.mock("@/lib/stripe/subscription-sync", () => ({ findLiveSubscription: async () => s.live }));
+vi.mock("@/lib/stripe/subscription-sync", () => ({
+  findLiveSubscription: async () => s.live,
+  findDelinquentSubscription: async () => s.delinquent,
+}));
 
 import { createCheckoutSessionAction, createPortalSessionAction } from "@/lib/stripe/actions";
 
@@ -76,6 +80,7 @@ beforeEach(() => {
   s.stripeConfigured = true;
   s.linkedId = "cus_new";
   s.live = null;
+  s.delinquent = null;
   s.history = [];
   s.checkoutThrows = false;
   s.customersCreate.mockReset().mockResolvedValue({ id: "cus_new" });
@@ -142,6 +147,18 @@ describe("createCheckoutSessionAction", () => {
           items: [{ id: "si_1", price: "price_pro_monthly", quantity: 1 }],
         },
       },
+    });
+  });
+
+  it("sends a past-due customer to the portal to fix the card — never a second subscription", async () => {
+    s.live = null;
+    s.delinquent = { id: "sub_pd", status: "past_due" };
+    const result = await createCheckoutSessionAction({ kind: "subscription", tier: "pro" });
+    expect(result).toEqual({ ok: true, url: "https://portal.test/session" });
+    expect(s.checkoutCreate).not.toHaveBeenCalled();
+    expect(s.portalCreate).toHaveBeenCalledWith({
+      customer: "cus_1",
+      return_url: "https://test.local/settings#billing",
     });
   });
 

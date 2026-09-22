@@ -57,9 +57,23 @@ export type RefillProfileRow = {
   id: string;
   subscription_tier: string | null;
   subscription_status: string | null;
+  /** Admin comp (lib/billing/entitlements.ts): an unexpired comp is owed its
+   *  tier's allotment like a paying subscriber — the pricing page promises
+   *  the credits with the plan, and a comp IS the plan. */
+  comp_tier?: string | null;
+  comp_expires_at?: string | null;
   is_admin: boolean | null;
   created_at: string | null;
 };
+
+const TIER_RANK: Record<PlanTier, number> = { free: 0, plus: 1, pro: 2 };
+
+function activeCompTier(profile: RefillProfileRow, now: Date): PlanTier | null {
+  const comp = profile.comp_tier;
+  if (comp !== "plus" && comp !== "pro") return null;
+  if (profile.comp_expires_at && new Date(profile.comp_expires_at) <= now) return null;
+  return comp;
+}
 
 /**
  * Which tier's allotment a profile is owed this period, or null when the
@@ -68,16 +82,27 @@ export type RefillProfileRow = {
  *   • trialing — a trial's single grant lands on subscription.created
  *     (see subscription-sync.ts); refilling here let a no-card 7-day trial
  *     spanning a month boundary bank a second allotment without paying;
- *   • active plus/pro → that tier;
+ *   • active plus/pro → that tier; an unexpired admin comp counts the same
+ *     way (higher of the two);
  *   • everyone else (free, lapsed, canceled) → free — except a free profile
  *     created THIS period, whose signup default already is the allotment.
  */
-export function refillTierFor(profile: RefillProfileRow, period: string): PlanTier | null {
+export function refillTierFor(
+  profile: RefillProfileRow,
+  period: string,
+  now: Date = new Date(),
+): PlanTier | null {
   if (profile.is_admin) return null;
   const status = profile.subscription_status ?? null;
-  if (status === "trialing") return null;
+  const comp = activeCompTier(profile, now);
+  if (status === "trialing" && !comp) return null;
   const tier = profile.subscription_tier ?? "free";
-  if (status === "active" && (tier === "plus" || tier === "pro")) return tier;
+  const subscribed: PlanTier | null =
+    status === "active" && (tier === "plus" || tier === "pro") ? tier : null;
+  // An unexpired comp can only ADD: the higher of comp and live subscription.
+  const owed =
+    comp && (!subscribed || TIER_RANK[comp] > TIER_RANK[subscribed]) ? comp : subscribed;
+  if (owed) return owed;
   if (profile.created_at && currentCreditPeriod(new Date(profile.created_at)) === period) {
     return null;
   }
@@ -101,7 +126,7 @@ export async function refillActiveSubscribers(
   for (let from = 0; ; from += REFILL_PAGE_SIZE) {
     const { data: page, error } = await admin
       .from("profiles")
-      .select("id, subscription_tier, subscription_status, is_admin, created_at")
+      .select("id, subscription_tier, subscription_status, comp_tier, comp_expires_at, is_admin, created_at")
       .order("id", { ascending: true })
       .range(from, from + REFILL_PAGE_SIZE - 1);
     if (error) return { ok: false, error: error.message };
