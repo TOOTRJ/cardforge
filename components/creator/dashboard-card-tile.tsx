@@ -1,6 +1,7 @@
 "use client";
 
 import { type KeyboardEvent, type MouseEvent } from "react";
+import { VISIBILITY_LABELS } from "@/types/card";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, Eye, Pencil } from "lucide-react";
@@ -232,7 +233,7 @@ export function DashboardCardTile({
         </button>
       </div>
       <div className="mt-2 flex items-center justify-between text-xs text-muted">
-        <span>{visibilityLabel(card.visibility)}</span>
+        <span>{VISIBILITY_LABELS[card.visibility]}</span>
         <span
           className={cn(
             "transition-opacity",
@@ -257,13 +258,3 @@ export function DashboardCardTile({
   );
 }
 
-export function visibilityLabel(visibility: "private" | "unlisted" | "public"): string {
-  switch (visibility) {
-    case "public":
-      return "Public";
-    case "unlisted":
-      return "Unlisted";
-    default:
-      return "Private";
-  }
-}

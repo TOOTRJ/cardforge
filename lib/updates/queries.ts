@@ -36,7 +36,7 @@ const loadReleasedUpdates = unstable_cache(
 );
 
 /** Every released row, newest first (RLS hides drafts + scheduled). */
-export const listReleasedUpdates = cache(loadReleasedUpdates);
+const listReleasedUpdates = cache(loadReleasedUpdates);
 
 export type NewsFeed = { updates: SiteUpdate[]; upcoming: SiteUpdate[] };
 
@@ -48,7 +48,7 @@ export async function getNewsFeed(): Promise<NewsFeed> {
   };
 }
 
-export type BannerSlice = {
+type BannerSlice = {
   /** Newest released update flagged for the banner, if any. */
   headline: SiteUpdate | null;
   /** Released upcoming features flagged for the banner (newest first). */

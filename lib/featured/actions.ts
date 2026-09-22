@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { USERNAME_MAX, USERNAME_MIN, USERNAME_PATTERN } from "@/lib/auth/usernames";
 import { getCurrentProfile } from "@/lib/supabase/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 
@@ -19,7 +20,11 @@ export async function setFeaturedAction(
   }
 
   const handle = username.trim().replace(/^@/, "").toLowerCase();
-  if (!/^[a-z0-9_]{3,32}$/.test(handle)) {
+  if (
+    handle.length < USERNAME_MIN ||
+    handle.length > USERNAME_MAX ||
+    !USERNAME_PATTERN.test(handle)
+  ) {
     return { ok: false, error: "Enter a valid username." };
   }
 

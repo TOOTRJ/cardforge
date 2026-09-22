@@ -17,17 +17,17 @@ import { isUuid } from "@/lib/ids";
 // Result shapes — discriminated unions so callers pattern-match without throwing.
 // ---------------------------------------------------------------------------
 
-export type DeckFieldErrors = Partial<Record<string, string>>;
+type DeckFieldErrors = Partial<Record<string, string>>;
 
-export type DeckActionFailure = {
+type DeckActionFailure = {
   ok: false;
   formError?: string;
   fieldErrors?: DeckFieldErrors;
 };
 
-export type CreateDeckSuccess = { ok: true; deckId: string; slug: string };
-export type UpdateDeckSuccess = { ok: true; deckId: string; slug: string };
-export type DeleteDeckSuccess = { ok: true; deckId: string };
+type CreateDeckSuccess = { ok: true; deckId: string; slug: string };
+type UpdateDeckSuccess = { ok: true; deckId: string; slug: string };
+type DeleteDeckSuccess = { ok: true; deckId: string };
 
 export type CreateDeckResult = CreateDeckSuccess | DeckActionFailure;
 export type UpdateDeckResult = UpdateDeckSuccess | DeckActionFailure;

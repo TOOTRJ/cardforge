@@ -15,8 +15,8 @@ import { cronRouteGuard } from "@/lib/api/cron-auth";
 // creation, no build logs (learned 2026-07-28). An eaten credit comes back
 // within a day (vs. never, before this sweep existed); on Pro this can
 // tighten to hourly by editing the schedule alone — every pass is
-// idempotent, so cadence is purely a latency knob. NOTE: Hobby also caps
-// crons at 2 total, and refill + reconcile now use both slots.
+// idempotent, so cadence is purely a latency knob. (vercel.json schedules four
+// crons today, so the plan is no longer Hobby-limited.)
 //
 // Secured by CRON_SECRET — Vercel sends it as `Authorization: Bearer <secret>`
 // on scheduled invocations.

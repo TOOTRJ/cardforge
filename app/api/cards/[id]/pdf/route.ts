@@ -2,7 +2,6 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { renderCardImage } from "@/lib/render/card-image";
-import { fetchStoredRender } from "@/lib/render/stored-render";
 import {
   downloadBrandMark,
   getEntitlements,
@@ -129,28 +128,22 @@ export async function GET(
 
   // The print source is the HD (1500×2100) render. The stored bake is the
   // always-watermarked display copy (layout v20); a PDF is a paid feature
-  // and therefore clean, so it renders live — the stored path below only
-  // fires if the mark is ever wanted on a PDF.
+  // and therefore clean, so it always renders live.
   const stamp = await ownerExportStamp(card.owner_id);
   const footerText = stamp.brandMark
     ? null
     : ((card as { footer_text?: string | null }).footer_text ?? stamp.footerText) || null;
   // The brand mark follows the VIEWER's plan only — see the png route. (PDF
-  // is a paid feature, so in practice this is always clean; the rule is
-  // spelled out here so the two routes can't drift.)
+  // is a paid feature, so this is always false; the rule is spelled out here
+  // so the two routes can't drift.)
   const brandMark = downloadBrandMark(entitlements);
   let pngBytes: Uint8Array;
   try {
-    const stored = brandMark ? await fetchStoredRender(card) : null;
-    if (stored) {
-      pngBytes = new Uint8Array(stored);
-    } else {
-      const imgResponse = await renderCardImage(previewData, "hd", {
-        brandMark,
-        watermarkText: footerText,
-      });
-      pngBytes = new Uint8Array(await imgResponse.arrayBuffer());
-    }
+    const imgResponse = await renderCardImage(previewData, "hd", {
+      brandMark,
+      watermarkText: footerText,
+    });
+    pngBytes = new Uint8Array(await imgResponse.arrayBuffer());
   } catch (err) {
     const detail = err instanceof Error ? err.message : "Render error";
     return NextResponse.json(

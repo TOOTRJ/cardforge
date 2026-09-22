@@ -35,7 +35,7 @@ export function isSafetyBlockError(message: string): boolean {
  *  prompts all ended as timeouts). So a timeout is treated as a probable
  *  block and the next, safer rung is tried; a genuinely slow render simply
  *  gets a second chance with a tamer prompt. */
-export function isTimeoutError(message: string): boolean {
+function isTimeoutError(message: string): boolean {
   const lower = message.toLowerCase();
   return lower.includes("timeout") || lower.includes("timed out") || lower.includes("aborted");
 }

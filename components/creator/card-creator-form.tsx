@@ -2268,7 +2268,7 @@ export function CardCreatorForm({
               />
             ) : null}
 
-            {/* ----- Publish panel (visibility/set/back face + Advanced: finish/tags/save) ----- */}
+            {/* ----- Publish panel (visibility/back face + Advanced: finish/tags/save) ----- */}
             {stepKey === "publish" ? (
               <PublishPanel
                 userId={userId}

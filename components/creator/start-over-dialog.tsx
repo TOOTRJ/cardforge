@@ -17,7 +17,7 @@ type StartOverDialogProps = {
   /** Reset the form. Called after the user confirms. */
   onConfirm: () => void;
   /**
-   * "create" wipes the form to a blank card (and drops the on-device draft).
+   * "create" wipes the form to a blank card.
    * "revert" discards unsaved edits and restores the last saved draft.
    */
   variant?: "create" | "revert";

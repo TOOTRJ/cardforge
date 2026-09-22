@@ -13,7 +13,6 @@ import {
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useCreditConfirm } from "@/components/billing/credit-confirm-provider";
-import { getDeckRemixCost } from "@/lib/ai/deck-remix-cost";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { FieldGroup, inputClass } from "@/components/creator/field-group";
 import { BatchSizeField } from "@/components/ai/batch-size-field";
@@ -39,8 +38,8 @@ import type { CardCapacity } from "@/lib/billing/capacity-copy";
 //
 // Generated decks and cards publish PUBLICLY by default; failed steps
 // (usually an image) retry individually without regenerating the batch.
-// Card count per generation is capped server-side (the 60-step ceiling when
-// billing is on — credits are the only limiter; 3 on billing-off deploys).
+// Card count per generation is capped server-side (lib/ai/generation-limits:
+// 100 when billing is on — credits are the only limiter; 3 on billing-off deploys).
 // ---------------------------------------------------------------------------
 
 const FORMAT_OPTIONS = [
@@ -131,7 +130,9 @@ export function AiDeckPanel({
       toast.error("Pick or type a style first — that's what the remix is.");
       return;
     }
-    const cost = mode === "remix" ? await getDeckRemixCost(deckId ?? "") : size;
+    // The deck page already passes the remixable count and the batch ceiling —
+    // the same clamp the jobs route applies (no extra round trip).
+    const cost = mode === "remix" ? Math.max(1, Math.min(maxCards, remixableCount ?? 1)) : size;
     const confirmed = await confirmSpend({
       cost,
       title:

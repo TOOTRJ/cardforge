@@ -18,7 +18,7 @@ import sharp from "sharp";
 // ---------------------------------------------------------------------------
 
 export const RENDER_THUMB_WIDTH = 600;
-export const RENDER_THUMB_QUALITY = 78;
+const RENDER_THUMB_QUALITY = 78;
 
 export function renderThumbPath(renderPath: string): string {
   return renderPath.replace(/\.png$/, "") + ".thumb.webp";

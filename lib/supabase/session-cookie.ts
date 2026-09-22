@@ -14,6 +14,13 @@
 
 const SUPABASE_AUTH_COOKIE = /^sb-[^=]*-auth-token(\.\d+)?$/;
 
+/** Is this cookie name one of @supabase/ssr's session cookies? The ONE test
+ *  shared by the browser hint below, proxy.ts, the middleware's signed-out
+ *  fast path and /api/me's anonymous fast path. */
+export function isSupabaseAuthCookieName(name: string): boolean {
+  return SUPABASE_AUTH_COOKIE.test(name);
+}
+
 export function hasSupabaseSessionCookie(): boolean {
   if (typeof document === "undefined") return false;
   return document.cookie

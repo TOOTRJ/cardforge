@@ -62,7 +62,7 @@ export async function countNewFeedback(): Promise<number> {
 export type FeedbackInboxFilter = FeedbackStatus | "unresolved" | "all";
 
 /** Statuses that still need attention (the inbox default). */
-export const UNRESOLVED_FEEDBACK_STATUSES: readonly FeedbackStatus[] = ["new", "reviewed"];
+const UNRESOLVED_FEEDBACK_STATUSES: readonly FeedbackStatus[] = ["new", "reviewed"];
 
 /** Admin inbox. Returns null when the caller isn't an admin (page 404s),
  *  [] when the inbox is empty. Service-role read gated on is_admin. Newest

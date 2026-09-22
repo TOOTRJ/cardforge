@@ -155,13 +155,13 @@ export function planForTier(tier: PlanTier): PlanDisplay {
 /** "Running low" = at or under a fifth of the plan's monthly allotment (min 1):
  *  Free 5 → ≤1, Plus 30 → ≤6, Pro 100 → ≤20. The old flat `≤ 5` equalled Free's
  *  whole monthly refill, so every free user saw the red warning permanently. */
-export const LOW_CREDIT_FRACTION = 0.2;
+const LOW_CREDIT_FRACTION = 0.2;
 export function isLowCredits(balance: number, monthlyAllotment: number): boolean {
   if (isUnlimitedCredits(balance)) return false;
   return balance <= Math.max(1, Math.floor(monthlyAllotment * LOW_CREDIT_FRACTION));
 }
 
-export function isUnlimitedCredits(credits: number): boolean {
+function isUnlimitedCredits(credits: number): boolean {
   return credits >= Number.MAX_SAFE_INTEGER;
 }
 

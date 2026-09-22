@@ -8,7 +8,7 @@ import { isBillingEnabled } from "@/lib/billing/flags";
 import { getStripe, isStripeConfigured } from "@/lib/stripe/client";
 
 // Permanent account deletion. Hard-deletes the auth user (which cascades every
-// user-owned DB row — profile, cards, sets, comments, likes, reports, ledger)
+// user-owned DB row — profile, cards, decks, comments, likes, reports, ledger)
 // and best-effort removes the user's storage folders (objects aren't cascaded).
 
 const ACCOUNT_BUCKETS = [

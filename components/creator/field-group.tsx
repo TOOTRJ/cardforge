@@ -101,6 +101,6 @@ export function FieldGroup({
   );
 }
 
-// The field looks live in components/ui/field-classes (the deck/set editors
+// The field looks live in components/ui/field-classes (the deck editor
 // and admin dialogs use them too); re-exported for the creator's importers.
 export { inputClass, textareaClass } from "@/components/ui/field-classes";

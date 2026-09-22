@@ -176,19 +176,7 @@ export type OwnerExportStamp = {
 };
 
 /**
- * What the card OWNER's plan contributes to a DOWNLOAD of their card: the
- * custom footer text (profiles.export_watermark_text, paid perk). Since
- * layout v20 that is ALL it decides — every display surface (stored bake,
- * gallery tile, OG share image, live preview) is watermarked and prints no
- * footer text whatever the owner's plan, and the brand mark on a download
- * follows the VIEWER's plan only (downloadBrandMark). `brandMark` here is
- * kept for the RPC's shape; no render path reads it any more.
- * Uses the cookie-free public client so viewer-independent callers (OG
- * route, deferred bake, rebake) stay ISR-eligible; fails toward showing the
- * brand mark on lookup problems.
- */
-/**
- * Whether a DOWNLOAD (PNG/PDF/deck/set export) carries the pipglyph.com brand
+ * Whether a DOWNLOAD (PNG/PDF/deck export) carries the pipglyph.com brand
  * mark: yes unless the VIEWER's plan removes watermarks. Owner decision
  * 2026-09-15 — the previous rule cleared the mark when EITHER side was paid,
  * which let anyone download a paid creator's card clean. The card owner's
@@ -201,6 +189,18 @@ export function downloadBrandMark(
   return !viewer.removeWatermark;
 }
 
+/**
+ * What the card OWNER's plan contributes to a DOWNLOAD of their card: the
+ * custom footer text (profiles.export_watermark_text, paid perk). Since
+ * layout v20 that is ALL it decides — every display surface (stored bake,
+ * gallery tile, OG share image, live preview) is watermarked and prints no
+ * footer text whatever the owner's plan, and the brand mark on a download
+ * follows the VIEWER's plan only (downloadBrandMark). `brandMark` here is
+ * kept for the RPC's shape; no render path reads it any more.
+ * Uses the cookie-free public client so viewer-independent callers (OG
+ * route, deferred bake, rebake) stay ISR-eligible; fails toward showing the
+ * brand mark on lookup problems.
+ */
 export async function ownerExportStamp(
   ownerId: string,
 ): Promise<OwnerExportStamp> {

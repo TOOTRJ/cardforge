@@ -138,7 +138,7 @@ export const CARD_LAYOUT_VERSION = 23;
  * Template keys match `frame_style.template` (types/card.ts
  * FRAME_TEMPLATE_VALUES).
  */
-export const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {};
+const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {};
 
 /** The card fields a scoped bump can look at. Optional so partial rows
  *  work — a predicate treats a missing `rarity` as "can't tell" and answers
@@ -199,7 +199,7 @@ export function isRenderStale(
  * changed ITS output — template scope and card scope both have to say so.
  * Empty = the stored bake still matches the current renderer.
  */
-export function pendingVersions(
+function pendingVersions(
   layoutVersion: number,
   template: string | null | undefined,
   card: ScopeCard | undefined,

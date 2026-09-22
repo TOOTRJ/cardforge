@@ -3,7 +3,7 @@ import "server-only";
 import { getCurrentProfile } from "@/lib/supabase/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 
-export type ModerationReport = {
+type ModerationReport = {
   id: string;
   reason: string;
   details: string | null;

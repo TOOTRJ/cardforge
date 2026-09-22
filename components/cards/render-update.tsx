@@ -138,7 +138,7 @@ function CompareView({ card }: { card: CardForUpdate }) {
 // Single card
 // ---------------------------------------------------------------------------
 
-export function RenderUpdateDialog({
+function RenderUpdateDialog({
   card,
   open,
   onOpenChange,
@@ -259,7 +259,7 @@ export function RenderUpdateNotice({ card }: { card: CardForUpdate }) {
 
 type WizardStatus = "pending" | "updated" | "skipped" | "failed";
 
-export function RenderUpdateWizard({
+function RenderUpdateWizard({
   open,
   onOpenChange,
 }: {

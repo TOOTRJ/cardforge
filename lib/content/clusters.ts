@@ -21,7 +21,7 @@ export type Cluster = {
   toolLabel?: string;
 };
 
-export const CLUSTERS: Record<string, Cluster> = {
+const CLUSTERS: Record<string, Cluster> = {
   "card-design": {
     slug: "card-design",
     title: "Custom Card Design",

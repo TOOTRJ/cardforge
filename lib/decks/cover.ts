@@ -12,8 +12,8 @@ import sharp from "sharp";
 
 export const DECK_COVER_WIDTH = 1600;
 export const DECK_COVER_HEIGHT = 900;
-export const DECK_COVER_QUALITY = 82;
-export const DECK_COVER_CONTENT_TYPE = "image/webp";
+const DECK_COVER_QUALITY = 82;
+const DECK_COVER_CONTENT_TYPE = "image/webp";
 
 /** Centre-crop + resize any image to the 16:9 cover standard, as WebP. */
 export async function normalizeDeckCover(

@@ -17,7 +17,7 @@
 // every DISCOVER_SEED_MINUTES, in step with the page's ISR revalidation.
 // ---------------------------------------------------------------------------
 
-export const DISCOVER_WEIGHTS = {
+const DISCOVER_WEIGHTS = {
   view: 0.05,
   like: 1,
   share: 1.5,

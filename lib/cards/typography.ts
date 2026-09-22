@@ -27,7 +27,7 @@
 // ---------------------------------------------------------------------------
 
 /** Physical card width in inches for the two frame orientations. */
-export const CARD_WIDTH_IN = { portrait: 2.5, landscape: 3.5 } as const;
+const CARD_WIDTH_IN = { portrait: 2.5, landscape: 3.5 } as const;
 
 export type CardOrientation = keyof typeof CARD_WIDTH_IN;
 

@@ -12,7 +12,7 @@ import type { EmailOtpType } from "@supabase/supabase-js";
 // the browser that requested it (the verifier lives in a cookie).
 // ---------------------------------------------------------------------------
 
-export const EMAIL_LINK_TYPES = [
+const EMAIL_LINK_TYPES = [
   "signup",
   "email",
   "magiclink",

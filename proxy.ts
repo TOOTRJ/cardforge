@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { isSupabaseAuthCookieName } from "@/lib/supabase/session-cookie";
 import { updateSession } from "@/lib/supabase/middleware";
 import {
   DECKS_FILTER_PARAMS,
@@ -9,7 +10,6 @@ import {
 /** @supabase/ssr session cookies: sb-<ref>-auth-token(.N). Presence is a
  *  HINT (the (app) create page re-validates) — enough to pick which creator
  *  to serve. */
-const SUPABASE_AUTH_COOKIE = /^sb-[^=]*-auth-token(\.\d+)?$/;
 
 const RETIRED_TAG_HUBS: Record<string, string> = {
   "/articles/tag/templating": "/articles/tag/oracle-text",
@@ -52,7 +52,7 @@ export async function proxy(request: NextRequest) {
   if (requestPath === "/create") {
     const signedIn = request.cookies
       .getAll()
-      .some((c) => SUPABASE_AUTH_COOKIE.test(c.name));
+      .some((c) => isSupabaseAuthCookieName(c.name));
     if (!signedIn) {
       const url = request.nextUrl.clone();
       url.pathname = "/create-guest";

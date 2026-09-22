@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 // resolved there) — this component only renders and mutates.
 // ---------------------------------------------------------------------------
 
-export type ChecklistCombo = {
+type ChecklistCombo = {
   colorKey: string;
   colorLabel: string;
   verified: boolean;
@@ -26,7 +26,7 @@ export type ChecklistCombo = {
   reference: { name: string; set: string; thumbUrl: string } | null;
 };
 
-export type ChecklistTemplate = {
+type ChecklistTemplate = {
   template: string;
   label: string;
   /** True when a frame_profile_overrides row is active for this template. */

@@ -6,8 +6,7 @@ is an MTG-style custom card creator: a kind-first, five-step editor
 (including per-user **custom pip icons**), frames spanning three decades of
 card design, an AI rules-text assistant and AI card/art generation, a
 community gallery with likes and remixing, decks with proxy printing, design
-challenges, and print-ready PNG/PDF export. (Expansion-set building exists
-behind the `NEXT_PUBLIC_SETS_ENABLED` flag and is currently switched off.)
+challenges, and print-ready PNG/PDF export.
 The live preview and the exported image share one layout engine, so what you
 see is exactly what renders.
 

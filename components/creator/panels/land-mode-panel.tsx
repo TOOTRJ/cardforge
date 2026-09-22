@@ -13,7 +13,7 @@ import { ChipGroup, type ChipOption } from "@/components/ui/chip-group";
 
 export type LandMode = "basic" | "nonbasic";
 
-export function landModeOptions(
+function landModeOptions(
   basicDisabledReason: string | null = null,
 ): ChipOption<LandMode>[] {
   return [

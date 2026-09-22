@@ -81,7 +81,7 @@ const ABILITY_WORDS = new Set<string>([
   "will of the council",
 ]);
 
-export type RulesEmphasis = "ability" | "reminder";
+type RulesEmphasis = "ability" | "reminder";
 
 export type RulesItem =
   | { t: "w"; v: string; em?: RulesEmphasis; tight?: boolean }

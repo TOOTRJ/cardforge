@@ -6,7 +6,7 @@ import { adminMarkThreadReadAction, markThreadReadAction } from "@/lib/messages/
 
 // Marks a thread read for the viewer's side once per mount (only when there
 // is something unread), then refreshes so the nav badge and the list agree.
-// Mirrors components/notifications/mark-read-on-view.tsx.
+// Same pattern as the notifications page's seen-on-open mark.
 export function MarkThreadRead({
   threadId,
   side,

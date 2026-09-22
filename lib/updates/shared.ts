@@ -4,7 +4,7 @@
 // ---------------------------------------------------------------------------
 
 export type SiteUpdateKind = "update" | "upcoming";
-export type BannerScope = "home" | "site";
+type BannerScope = "home" | "site";
 
 export type SiteUpdate = {
   id: string;

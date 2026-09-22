@@ -12,7 +12,7 @@ import type { DeckFormat } from "@/types/deck";
 // title, theme and style fields. 1 credit per batch, charged by the route.
 // ---------------------------------------------------------------------------
 
-export const DECK_IDEA_COUNT = 3;
+const DECK_IDEA_COUNT = 3;
 
 const deckIdeasSchema = z
   .object({

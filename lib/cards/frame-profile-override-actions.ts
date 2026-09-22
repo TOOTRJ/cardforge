@@ -7,7 +7,7 @@ import { getCurrentProfile } from "@/lib/supabase/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { frameProfileOverrideSchema } from "@/lib/cards/profile-override";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
-import { DEFAULT_FRAME_TEMPLATE } from "@/lib/render/card-frames";
+import { DEFAULT_FRAME_TEMPLATE } from "@/types/card";
 
 // ---------------------------------------------------------------------------
 // Admin mutations for frame layout overrides (the visual editor's Save /

@@ -90,7 +90,7 @@ export function formatBytes(bytes: number): string {
 }
 
 /** How many card renders run at once — each is a live Satori render. */
-export const EXPORT_CONCURRENCY = 3;
+const EXPORT_CONCURRENCY = 3;
 
 type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 
@@ -99,7 +99,7 @@ async function readError(response: Response, fallback: string): Promise<DeckExpo
   return new DeckExportError(body?.error ?? fallback, body?.code);
 }
 
-export async function fetchDeckExportManifest(
+async function fetchDeckExportManifest(
   deckId: string,
   fetchImpl: FetchLike = fetch,
   signal?: AbortSignal,

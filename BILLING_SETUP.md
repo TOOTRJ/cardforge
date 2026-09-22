@@ -28,8 +28,8 @@ Checkout + Customer Portal + a thin webhook → Supabase + app-managed credits**
   (`TRIAL_DAYS`); a trial with no payment method cancels itself at day 7.
   A trial gets exactly ONE credit grant (at creation) — no refills until it
   converts to paid.
-- **Credits** meter AI generation (1 credit = 1 card/art generation; deck and
-  set generation cost 1/card). Cheap text-assistant actions stay on the
+- **Credits** meter AI generation (1 credit = 1 card/art generation; deck
+  generation costs 1/card). Cheap text-assistant actions stay on the
   windowed rate limit (free).
 - **Credit packs** (one-time, never expire): 30/$8 and 100/$24 — `CREDIT_PACKS`.
 - **Unit economics:** amounts are sized against a measured **~$0.11 per generation**
@@ -147,7 +147,7 @@ cron-driven (§6).
   `app/api/ai/jobs/*`) that reserves a credit per step and refunds on
   failure; `lib/billing/credit-reconcile.ts` sweeps orphaned charges daily.
 - Watermark/hi-res gating: `lib/render/card-image.tsx` + the `app/api/cards/[id]/{png,pdf,og}` routes;
-  whole-deck/set export: `app/api/decks/[id]/{export,download}`, `app/api/sets/[id]/export`.
+  whole-deck export: `app/api/decks/[id]/download` (assembled in the browser by `lib/decks/export-client.ts`).
   **Display is always watermarked; only paid downloads are clean** (owner
   decision 2026-09-15, layout v20). The stored bake, gallery tiles, the OG
   share image and every live preview carry the pipglyph.com mark whatever

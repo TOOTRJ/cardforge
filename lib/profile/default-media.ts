@@ -15,7 +15,7 @@
 
 export type ProfileMediaKind = "avatar" | "banner";
 
-export const DEFAULT_MEDIA_COUNT: Record<ProfileMediaKind, number> = {
+const DEFAULT_MEDIA_COUNT: Record<ProfileMediaKind, number> = {
   avatar: 25,
   banner: 25,
 };
@@ -28,7 +28,7 @@ const FOLDER: Record<ProfileMediaKind, string> = {
 const DEFAULT_MEDIA_PATTERN = /^\/defaults\/(avatars\/avatar|banners\/banner)-(\d{2})\.webp$/;
 
 /** 1-based index → stored path. */
-export function defaultMediaPath(kind: ProfileMediaKind, index: number): string {
+function defaultMediaPath(kind: ProfileMediaKind, index: number): string {
   const n = String(index).padStart(2, "0");
   return `/defaults/${FOLDER[kind]}/${kind}-${n}.webp`;
 }

@@ -5,7 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 // ---------------------------------------------------------------------------
 // useSearchParamPatch — URL-as-state for the browse surfaces (gallery, decks,
-// sets). Every filter/sort/search change is one `patch()`; the server page
+// decks). Every filter/sort/search change is one `patch()`; the server page
 // re-queries from the new query string.
 // ---------------------------------------------------------------------------
 

@@ -17,7 +17,7 @@ const optionalEmptyString = (schema: z.ZodType<string>) =>
 const clearableString = (schema: z.ZodType<string>) =>
   optionalEmptyString(schema).or(z.null());
 
-export const deckTitleSchema = z
+const deckTitleSchema = z
   .string()
   .trim()
   .min(1, "Title is required.")
@@ -33,14 +33,14 @@ export const deckSlugSchema = z
     "Slug must use lowercase letters, numbers, and hyphens (no leading/trailing hyphen).",
   );
 
-export const deckDescriptionSchema = clearableString(
+const deckDescriptionSchema = clearableString(
   z
     .string()
     .trim()
     .max(2000, "Description must be 2000 characters or fewer."),
 );
 
-export const deckCoverUrlSchema = clearableString(
+const deckCoverUrlSchema = clearableString(
   z
     .string()
     .trim()
@@ -51,7 +51,7 @@ export const deckCoverUrlSchema = clearableString(
 
 // Cover focal point — {focalX, focalY} in 0..1 (migration 0057). `null`
 // clears back to centered.
-export const deckCoverPositionSchema = z.object({
+const deckCoverPositionSchema = z.object({
   focalX: z.number().min(0).max(1),
   focalY: z.number().min(0).max(1),
 });
@@ -61,13 +61,13 @@ export const deckCoverPositionSchema = z.object({
 // defaulted fields with their default-free bases so a partial update (e.g.
 // the AI cover attach) can't silently reset format/visibility.
 const deckFormatBaseSchema = z.enum(DECK_FORMAT_VALUES);
-export const deckFormatSchema = deckFormatBaseSchema.default("commander");
+const deckFormatSchema = deckFormatBaseSchema.default("commander");
 
 // Decks default to public (like cards) — sharing the build is the point.
 // The DB column default stays 'private' as the conservative fallback for
 // writes that bypass this schema.
 const deckVisibilityBaseSchema = z.enum(VISIBILITY_VALUES);
-export const deckVisibilitySchema = deckVisibilityBaseSchema.default("public");
+const deckVisibilitySchema = deckVisibilityBaseSchema.default("public");
 
 export const createDeckSchema = z.object({
   title: deckTitleSchema,

@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
-// The text-field looks every form shares (creator, deck/set editors, admin
+// The text-field looks every form shares (creator, deck editor, admin
 // dialogs, message replies). `hasError` swaps the border to the danger tone.
 // ---------------------------------------------------------------------------
 

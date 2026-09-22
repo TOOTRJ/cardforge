@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 
 export type BatchPreset = { label: string; value: number };
 
-export function clampBatchInput(raw: number, max: number): number {
+function clampBatchInput(raw: number, max: number): number {
   if (!Number.isFinite(raw)) return 1;
   return Math.max(1, Math.min(max, Math.round(raw)));
 }

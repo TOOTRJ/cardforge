@@ -20,7 +20,7 @@ export type PersistArtResult =
 
 /**
  * Upload generated image bytes to the signed-in user's `card-art` folder.
- * Shared by every AI art flow (random card, remix, decks, sets). The path
+ * Shared by every AI art flow (random card, remix, decks). The path
  * layout matches the human-upload flow so the bucket's RLS write policy
  * (`auth.uid()::text = (storage.foldername(name))[1]`) accepts it.
  */

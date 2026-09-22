@@ -31,9 +31,9 @@ export type OutgoingEmail = {
 
 const RESEND_API = "https://api.resend.com";
 /** Resend's batch endpoint takes at most 100 emails per call. */
-export const EMAIL_BATCH_SIZE = 100;
+const EMAIL_BATCH_SIZE = 100;
 
-export function emailFrom(stream: EmailStream = "transactional"): string | null {
+function emailFrom(stream: EmailStream = "transactional"): string | null {
   const base =
     process.env.EMAIL_FROM?.trim() || process.env.ADMIN_ALERT_FROM?.trim() || null;
   if (stream === "newsletter") {

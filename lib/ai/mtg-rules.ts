@@ -445,49 +445,6 @@ export type SkeletonSlot = {
   roleHint: "creature" | "noncreature" | "any";
 };
 
-// Post-2024 "play booster era" main-set ratios: 81C/100U/60R/20M ≈ 31/38/23/8.
-const RARITY_RATIO: Array<{ rarity: Rarity; weight: number }> = [
-  { rarity: "common", weight: 0.31 },
-  { rarity: "uncommon", weight: 0.38 },
-  { rarity: "rare", weight: 0.23 },
-  { rarity: "mythic", weight: 0.08 },
-];
-
-const COLOR_WHEEL: ColorIdentity[] = ["white", "blue", "black", "red", "green"];
-
-// Descending creature share by color at common (Rosewater design skeleton):
-// white/green run creature-heavy, blue runs spell-heavy.
-const CREATURE_SHARE: Partial<Record<ColorIdentity, number>> = {
-  white: 0.7,
-  green: 0.7,
-  red: 0.62,
-  black: 0.6,
-  blue: 0.52,
-};
-
-/**
- * Allocate rarities for an N-card set using largest-remainder rounding on
- * real set ratios. Small sets degrade sensibly (3 → 1C/1U/1R).
- */
-export function buildRaritySkeleton(count: number): Rarity[] {
-  const total = Math.max(1, Math.floor(count));
-  const allocations = RARITY_RATIO.map(({ rarity, weight }) => {
-    const exact = total * weight;
-    return { rarity, base: Math.floor(exact), remainder: exact - Math.floor(exact) };
-  });
-  let assigned = allocations.reduce((sum, a) => sum + a.base, 0);
-  const byRemainder = [...allocations].sort((a, b) => b.remainder - a.remainder);
-  for (let i = 0; assigned < total; i += 1, assigned += 1) {
-    byRemainder[i % byRemainder.length].base += 1;
-  }
-
-  const result: Rarity[] = [];
-  for (const { rarity, base } of allocations) {
-    for (let i = 0; i < base; i += 1) result.push(rarity);
-  }
-  return result;
-}
-
 // ---------------------------------------------------------------------------
 // Deck skeleton — role/curve quotas for whole-deck generation
 // ---------------------------------------------------------------------------
@@ -546,29 +503,4 @@ export function buildDeckSkeleton(format: string, count: number): DeckSlot[] {
   }
 
   return slots.slice(0, total);
-}
-
-/**
- * Full skeleton: rarity + color + role hints. Colors cycle WUBRG within each
- * rarity band so even a 5-card set touches every color once; every ~7th slot
- * frees the color so the model can add artifacts/multicolor glue.
- */
-export function buildSetSkeleton(count: number): SkeletonSlot[] {
-  const rarities = buildRaritySkeleton(count);
-  return rarities.map((rarity, index) => {
-    const freeSlot = count >= 7 && index % 7 === 6;
-    const colorHint = freeSlot ? null : COLOR_WHEEL[index % COLOR_WHEEL.length];
-    const creatureShare = colorHint ? (CREATURE_SHARE[colorHint] ?? 0.6) : 0.4;
-    // Deterministic creature/noncreature interleave approximating the share:
-    // slot i within its color is a creature while the running ratio is below
-    // target. index/5 ≈ position within the color's own sequence.
-    const positionInColor = Math.floor(index / COLOR_WHEEL.length);
-    const roleHint: SkeletonSlot["roleHint"] =
-      rarity === "mythic"
-        ? "any"
-        : (positionInColor + 1) * creatureShare >= positionInColor + 0.5
-          ? "creature"
-          : "noncreature";
-    return { rarity, colorHint, roleHint };
-  });
 }

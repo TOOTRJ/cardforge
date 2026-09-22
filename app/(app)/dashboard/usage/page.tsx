@@ -32,7 +32,6 @@ type JobStepLite = {
 };
 
 const JOB_KIND_LABELS: Record<string, string> = {
-  set: "Set generation",
   deck: "Deck generation",
   deck_remix: "Deck remix",
   card: "Single card generation",
@@ -114,7 +113,7 @@ export default async function UsagePage() {
           <EmptyState
             icon={Sparkles}
             title="No batch generations yet"
-            description="Set, deck, and deck-remix generations will show up here with their credit cost and per-step results."
+            description="Deck, deck-remix, and card generations will show up here with their credit cost and per-step results."
           />
         ) : (
           <div className="flex flex-col gap-3">

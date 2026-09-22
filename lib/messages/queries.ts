@@ -361,18 +361,6 @@ export async function getThreadForAdmin(threadId: string): Promise<AdminThreadDe
   };
 }
 
-/** The thread already answering a feedback submission, if any (admin). */
-export async function findThreadIdForFeedback(feedbackId: string): Promise<string | null> {
-  const admin = await requireAdminClient();
-  if (!admin) return null;
-  const { data } = await admin
-    .from("message_threads")
-    .select("id")
-    .eq("feedback_id", feedbackId)
-    .maybeSingle();
-  return data?.id ?? null;
-}
-
 /** Threads awaiting an admin reply — the admin inbox badge. */
 export const getAdminUnreadThreadCount = cache(async (): Promise<number> => {
   const admin = await requireAdminClient();

@@ -16,7 +16,7 @@ export type EmailPreferences = Record<EmailList, boolean> & {
   suppressed: boolean;
 };
 
-export const DEFAULT_EMAIL_PREFERENCES: EmailPreferences = {
+const DEFAULT_EMAIL_PREFERENCES: EmailPreferences = {
   account: EMAIL_LIST_COPY.account.defaultOn,
   activity: EMAIL_LIST_COPY.activity.defaultOn,
   newsletter: EMAIL_LIST_COPY.newsletter.defaultOn,

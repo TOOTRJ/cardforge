@@ -101,8 +101,8 @@ async function aiArtistCredit(): Promise<string | undefined> {
   return name ? name.slice(0, 120) : undefined;
 }
 
-export type JobStepStatus = "pending" | "running" | "done" | "failed";
-export type JobStepErrorCode = "CARD_CAPACITY" | "INSUFFICIENT_CREDITS";
+type JobStepStatus = "pending" | "running" | "done" | "failed";
+type JobStepErrorCode = "CARD_CAPACITY" | "INSUFFICIENT_CREDITS";
 
 export type JobStep = {
   key: string;
@@ -159,7 +159,7 @@ export type GenerationJobRow = {
  *  (fast), the one step creates + paints it. Replaced the synchronous
  *  /api/ai/random-card request, which ran 60–90s and got cut + re-run at the
  *  infra layer (double charge, client-side "failure"; observed 2026-07-11). */
-export type CardJobPlan = {
+type CardJobPlan = {
   card: DesignedCard;
   style: string | null;
   /** Resolved after text generation (depends on final colors); null = the
@@ -172,7 +172,7 @@ export type CardJobPlan = {
 /** RETIRED 2026-09-16 (owner decision): the image-to-image "Remix with AI"
  *  job. The kind stays in the union so historical rows still list; no new
  *  jobs of this kind are created and a leftover pending step fails cleanly. */
-export type CardRemixJobPlan = {
+type CardRemixJobPlan = {
   card_id: string;
   style: string;
   theme: string | null;
@@ -182,7 +182,7 @@ export type CardRemixJobPlan = {
  *  fields are designed at plan time around the user's pinned values; the
  *  one step paints the art when it was wanted and hands everything back on
  *  the step (`JobStep.fill`). No card row is ever created by this kind. */
-export type CardFillJobPlan = {
+type CardFillJobPlan = {
   want: CardFillField[];
   fields: CardFillResult;
   art_prompt: string;
@@ -194,7 +194,7 @@ export type CardFillJobPlan = {
 };
 
 
-export type DeckJobPlan = {
+type DeckJobPlan = {
   deck_title: string;
   strategy: string;
   theme: string;
@@ -207,7 +207,7 @@ export type DeckJobPlan = {
   quantities: number[];
 };
 
-export type DeckRemixPlanEntry = {
+type DeckRemixPlanEntry = {
   board: string;
   quantity: number;
   name: string;
@@ -218,7 +218,7 @@ export type DeckRemixPlanEntry = {
   scryfall_id: string | null;
 };
 
-export type DeckRemixJobPlan = {
+type DeckRemixJobPlan = {
   deck_title: string;
   style: string;
   theme: string | null;

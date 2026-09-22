@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SurfaceCard } from "@/components/ui/surface-card";
-import { createDeckAction, updateDeckAction } from "@/lib/decks/actions";
+import { updateDeckAction } from "@/lib/decks/actions";
 import { slugify } from "@/lib/validation/card";
 import { uploadCoverImage } from "@/lib/media/upload-cover";
 import { cn } from "@/lib/utils";
@@ -45,7 +45,8 @@ type FormValues = {
 };
 
 type DeckCreatorFormProps = {
-  mode: "create" | "edit";
+  /** Only "edit" exists: creation goes through the wizard (DeckWizard). */
+  mode: "edit";
   userId: string | null;
   deck?: Deck | null;
   /** Inside a dialog on the deck page: no card chrome, no "All decks" link,
@@ -146,27 +147,6 @@ export function DeckCreatorForm({ mode, userId, deck,
     };
 
     startTransition(async () => {
-      if (mode === "create") {
-        const result = await createDeckAction(payload);
-        if (!result.ok) {
-          if (result.fieldErrors) {
-            for (const [name, message] of Object.entries(result.fieldErrors)) {
-              if (!message) continue;
-              setError(name as keyof FormValues, { message });
-            }
-          }
-          if (result.formError) {
-            setServerError(result.formError);
-            toast.error(result.formError);
-          }
-          return;
-        }
-        toast.success(`Created “${payload.title}”`);
-        router.replace(`/deck/${result.slug}`);
-        router.refresh();
-        return;
-      }
-
       if (!deck?.id) {
         setServerError("Cannot find this deck to update.");
         return;

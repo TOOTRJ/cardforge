@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { isUuid } from "@/lib/ids";
 import {
   getNotificationById,
   getUnreadNotificationCount,
@@ -22,7 +23,7 @@ export async function fetchNotifications(
 export async function fetchNotificationById(
   id: string,
 ): Promise<NotificationItem | null> {
-  if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
+  if (!isUuid(id)) return null;
   return getNotificationById(id);
 }
 

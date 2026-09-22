@@ -14,7 +14,7 @@ import { PER_DAY_LIMIT, PER_MINUTE_LIMIT } from "@/lib/ai/rate-limit";
 // warned users at the wrong caps.
 // ---------------------------------------------------------------------------
 
-export const AI_USAGE_LIMITS = {
+const AI_USAGE_LIMITS = {
   perMinute: PER_MINUTE_LIMIT,
   perDay: PER_DAY_LIMIT,
 };

@@ -159,7 +159,7 @@ const cardSubtypesBaseSchema = z
   )
   .max(10, "A card can have up to 10 subtypes.");
 
-export const cardSubtypesSchema = cardSubtypesBaseSchema.default([]);
+const cardSubtypesSchema = cardSubtypesBaseSchema.default([]);
 
 // Freeform discovery tags. Normalized to lowercase alphanumeric + spaces/hyphens,
 // deduped, ≤30 chars each, ≤12 total — matching the DB cardinality check (0034).
@@ -190,13 +190,13 @@ const cardColorIdentityBaseSchema = z
   .array(z.enum(COLOR_IDENTITY_VALUES))
   .max(7, "Color identity has at most 7 values.");
 
-export const cardColorIdentitySchema = cardColorIdentityBaseSchema.default([]);
+const cardColorIdentitySchema = cardColorIdentityBaseSchema.default([]);
 
-export const cardRaritySchema = z.enum(RARITY_VALUES).optional();
-export const cardTypeSchema = z.enum(CARD_TYPE_VALUES).optional();
+const cardRaritySchema = z.enum(RARITY_VALUES).optional();
+const cardTypeSchema = z.enum(CARD_TYPE_VALUES).optional();
 
 const cardVisibilityBaseSchema = z.enum(VISIBILITY_VALUES);
-export const cardVisibilitySchema = cardVisibilityBaseSchema.default("private");
+const cardVisibilitySchema = cardVisibilityBaseSchema.default("private");
 
 const artPositionBaseSchema = z
   .object({
@@ -209,7 +209,7 @@ const artPositionBaseSchema = z
   })
   .strict();
 
-export const artPositionSchema = artPositionBaseSchema.default({});
+const artPositionSchema = artPositionBaseSchema.default({});
 
 const frameStyleBaseSchema = z
   .object({
@@ -279,7 +279,7 @@ export const loyaltyCostSchema = z
   .transform((v) => v.toUpperCase())
   .nullable();
 
-export const faceContentSchema = z
+const faceContentSchema = z
   .object({
     v: z.literal(1),
     loyalty: z
@@ -326,7 +326,7 @@ const watermarkCommon = {
   size: z.enum(["normal", "large"]).optional(),
 };
 
-export const watermarkSchema = z.discriminatedUnion("kind", [
+const watermarkSchema = z.discriminatedUnion("kind", [
   z
     .object({
       kind: z.literal("mana"),
@@ -397,12 +397,12 @@ const baseCardSchema = z.object({
   // Scryfall's id format. `null` clears; `undefined` leaves alone.
   source_scryfall_id: uuidSchema.nullable().optional(),
   // The set this card is added to + whose symbol it displays. The action
-  // denormalizes that set's icon onto the card and creates set membership.
+  // denormalized a set's icon onto the card (the sets feature is gone; the
   // `null` clears the association; `undefined` leaves it untouched on update.
   // Direct set-symbol override (the Set icon step, now that the sets UI is
   // hidden): an uploaded image URL or a preset Keyrune code written straight
   // onto the card's denormalized icon columns. When provided they WIN over
-  // the primary set's icon. `null` clears back to the default PipGlyph mark;
+  // icon is a plain card field now). `null` clears back to the default PipGlyph mark;
   // `undefined` leaves the columns untouched on update.
   set_icon_url: z
     .string()

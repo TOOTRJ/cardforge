@@ -2,12 +2,13 @@
 // ---------------------------------------------------------------------------
 // db-push.mjs — guard-railed `supabase db push` wrapper.
 //
-//   npm run db:push:staging   → links + pushes migrations to the staging project
-//   npm run db:push:prod      → same for production, but requires typing
-//                               "production" to confirm
+//   npm run db:push:prod      → links + pushes migrations to PRODUCTION, and
+//                               requires typing "production" to confirm.
+//                               (There is no staging project: the shared dev
+//                               branch has its own target-verified script,
+//                               scripts/db-dev.mjs.)
 //
-// Project refs are read from .env.local (or the shell env):
-//   SUPABASE_STAGING_REF=abcdefghijklmnop
+// The project ref is read from .env.local (or the shell env):
 //   SUPABASE_PROD_REF=qrstuvwxyz123456
 //
 // Refs are not secrets (they're visible in every client request URL); they
@@ -21,8 +22,8 @@ import { createInterface } from "node:readline/promises";
 import path from "node:path";
 
 const target = process.argv[2];
-if (target !== "staging" && target !== "prod") {
-  console.error("Usage: node scripts/db-push.mjs <staging|prod>");
+if (target !== "prod") {
+  console.error("Usage: node scripts/db-push.mjs prod");
   process.exit(1);
 }
 
@@ -39,7 +40,7 @@ function loadEnvLocal() {
 }
 
 const envLocal = loadEnvLocal();
-const refVar = target === "prod" ? "SUPABASE_PROD_REF" : "SUPABASE_STAGING_REF";
+const refVar = "SUPABASE_PROD_REF";
 const ref = process.env[refVar] ?? envLocal[refVar];
 
 if (!ref || !/^[a-z]{16,24}$/.test(ref)) {
@@ -55,7 +56,7 @@ if (target === "prod") {
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   const answer = await rl.question(
     `⚠️  About to push migrations to PRODUCTION (${ref}).\n` +
-      `   Has this schema change been verified on staging?\n` +
+      `   Has this schema change been verified on a preview branch?\n` +
       `   Type "production" to continue: `,
   );
   rl.close();
@@ -85,6 +86,3 @@ run("supabase", ["link", "--project-ref", ref]);
 run("supabase", ["db", "push"]);
 
 console.log(`\n✓ Migrations pushed to ${target} (${ref}); CLI unlinked.`);
-if (target === "prod") {
-  console.log("Remember: mirror any dashboard-side config changes to staging.");
-}

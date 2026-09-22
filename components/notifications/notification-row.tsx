@@ -25,7 +25,7 @@ import { cn } from "@/lib/utils";
 // of the same markup). Copy + deep link come from lib/notifications/describe.
 // ---------------------------------------------------------------------------
 
-export const NOTIFICATION_ICON: Record<string, typeof Bell> = {
+const NOTIFICATION_ICON: Record<string, typeof Bell> = {
   like: Heart,
   comment: MessageCircle,
   remix: Sparkles,

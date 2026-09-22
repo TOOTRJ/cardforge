@@ -203,7 +203,7 @@ export async function POST(request: Request) {
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json(
-      { ok: false, error: "Sign in to generate a set." },
+      { ok: false, error: "Sign in to generate cards." },
       { status: 401 },
     );
   }

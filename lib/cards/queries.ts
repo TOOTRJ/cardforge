@@ -55,7 +55,7 @@ export type ProfileWithStats = Profile & {
   public_cards_count: number;
 };
 
-export type PublicCardListSort = "recent" | "popular" | "viewed";
+type PublicCardListSort = "recent" | "popular" | "viewed";
 /** Gallery orders (list_gallery_cards, migration 0086). */
 export type GalleryListSort = "discover" | "recent" | "newest" | "popular" | "viewed";
 
@@ -211,9 +211,9 @@ export async function resolveLegacyCardSlug(
 }
 
 /**
- * Fetch a card by `(owner_username, slug)`. Used by the public `/card/[slug]`
- * page in later phases — for now we accept the *current* user's slug too,
- * since profile lookups need RLS context.
+ * Fetch a card by `(owner_username, slug)` — the canonical public card page
+ * and its metadata/viewport/layout. Viewer-dependent (RLS decides whether a
+ * private card is readable), which is why the route stays dynamic.
  *
  * React cache()-wrapped: generateMetadata and the page body both resolve the
  * same card, so without dedup every card view paid the profile+card round

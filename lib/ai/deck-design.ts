@@ -18,7 +18,7 @@ import type { DeckFormat } from "@/types/deck";
 // ---------------------------------------------------------------------------
 // AI deck design — concept + card batch for "generate a whole deck".
 //
-// Same two-step shape as set generation: a cheap concept call picks the
+// Two-step shape: a cheap concept call picks the
 // deck's name, colors, and strategy; the shared card-design engine then
 // fills a format-aware skeleton (commander slot, land share, 55/45
 // creature/spell split along a real mana curve — lib/ai/mtg-rules.ts).
@@ -48,7 +48,7 @@ const deckConceptSchema = z
   })
   .strict();
 
-export type DeckConcept = z.infer<typeof deckConceptSchema>;
+type DeckConcept = z.infer<typeof deckConceptSchema>;
 
 const DECK_CONCEPT_SYSTEM = `You pitch ORIGINAL Magic: The Gathering-style decks for a homebrew tool. Given a theme and format, invent a deck name, a one-sentence pitch, a strategy paragraph (game plan, key mechanics, world/faction names), and pick 1-3 colors that fit. Everything must be original — never Wizards-owned proper nouns, never real-world brands.`;
 
@@ -126,7 +126,7 @@ export type DeckDesignResult = {
 /** Summary of a card already in the deck — the synergy context for
  *  "generate more cards". Kept terse: a 100-card deck is still only a few
  *  thousand tokens (~pennies) in the plan call. */
-export type ExistingDeckCard = {
+type ExistingDeckCard = {
   name: string;
   type_line: string | null;
   rules_text: string | null;

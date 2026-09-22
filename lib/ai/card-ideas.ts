@@ -11,7 +11,7 @@ import type { CardType, Rarity } from "@/types/card";
 // charged by the route. A deck brief (Pro) themes every idea to the deck.
 // ---------------------------------------------------------------------------
 
-export const IDEA_COUNT = 3;
+const IDEA_COUNT = 3;
 
 export type CardIdeasInput = {
   theme?: string;

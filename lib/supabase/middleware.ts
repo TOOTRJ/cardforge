@@ -1,11 +1,12 @@
 import { createServerClient } from "@supabase/ssr";
+import { isSupabaseAuthCookieName } from "@/lib/supabase/session-cookie";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@/types/supabase";
 import { safeRedirectPath } from "@/lib/auth/safe-redirect";
 import { getSupabaseEnv, isSupabaseConfigured } from "./env";
 
-// /sets is now the PUBLIC community browse (mirrors /gallery) and is not
-// protected. Personal sets live under /dashboard/sets and are covered by
+// /gallery and /decks are the PUBLIC community browses and are not
+// protected. Personal libraries live under /dashboard and are covered by
 // the /dashboard prefix.
 // /create: proxy.ts rewrites COOKIE-LESS visitors to the guest creator before
 // this runs, so the no-cookie fast path below never sees /create; keeping it
@@ -26,7 +27,7 @@ const PROTECTED_PREFIXES = [
   "/feedback",
   "/admin",
 ];
-// /card/…, /deck/… and /set/… are public; only their editors are private.
+// /card/… and /deck/… are public; only their editors are private.
 const PROTECTED_PATTERN = /^\/(card|deck)\/.+\/edit\/?$/;
 const AUTH_REDIRECT_PREFIXES = ["/login", "/signup"];
 
@@ -63,7 +64,7 @@ export async function updateSession(request: NextRequest) {
   // viewer. Signed-in users (cookie present) take the full path below.
   const hasAuthCookie = request.cookies
     .getAll()
-    .some((c) => c.name.startsWith("sb-"));
+    .some((c) => isSupabaseAuthCookieName(c.name));
   if (!hasAuthCookie) {
     if (isProtectedPath(path)) return loginRedirect(request);
     return NextResponse.next({ request });

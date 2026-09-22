@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { VISIBILITY_LABELS } from "@/types/card";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
@@ -275,7 +276,7 @@ export async function CardDetailContent({
               <Badge
                 variant={card.visibility === "public" ? "primary" : "outline"}
               >
-                {visibilityLabel(card.visibility)}
+                {VISIBILITY_LABELS[card.visibility]}
               </Badge>
               {ownerProfile?.username ? (
                 <Link
@@ -529,16 +530,6 @@ function RelatedRow({
   );
 }
 
-function visibilityLabel(visibility: "private" | "unlisted" | "public"): string {
-  switch (visibility) {
-    case "public":
-      return "Public";
-    case "unlisted":
-      return "Unlisted";
-    default:
-      return "Private";
-  }
-}
 
 
 // ---------------------------------------------------------------------------

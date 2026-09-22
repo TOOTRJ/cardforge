@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
  *  roughly cap-height so it sits in running text like the card preview's. */
 export const INLINE_PIP_FONT_SIZE = `${(0.92 / 1.3).toFixed(4)}em`;
 
-export function InlinePip({ suffix, code }: { suffix: string; code: string }) {
+function InlinePip({ suffix, code }: { suffix: string; code: string }) {
   return (
     <i
       role="img"

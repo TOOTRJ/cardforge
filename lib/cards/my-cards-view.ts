@@ -8,9 +8,9 @@
 // ---------------------------------------------------------------------------
 
 /** How the grid is drawn. Remembered per browser (see MY_CARDS_VIEW_COOKIE). */
-export const MY_CARDS_VIEWS = ["grid", "compact", "list"] as const;
+const MY_CARDS_VIEWS = ["grid", "compact", "list"] as const;
 export type MyCardsView = (typeof MY_CARDS_VIEWS)[number];
-export const DEFAULT_MY_CARDS_VIEW: MyCardsView = "grid";
+const DEFAULT_MY_CARDS_VIEW: MyCardsView = "grid";
 
 /** Cookie (not localStorage) so the server renders the chosen view on the
  *  first paint — no flash of the default grid before hydration. */
@@ -39,7 +39,7 @@ export const MY_CARDS_SORT_LABELS: Record<MyCardsSort, string> = {
 
 /** Which slice of the library is showing. `liked` is the one tab of cards
  *  the user does NOT own. */
-export const MY_CARDS_FILTERS = [
+const MY_CARDS_FILTERS = [
   "all",
   "public",
   "unlisted",
