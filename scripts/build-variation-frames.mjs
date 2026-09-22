@@ -4,7 +4,7 @@
 // 1500×2100):
 //
 //   extendedart  magic-extended-art            *card.jpg,  WHITE art window
-//   expedition   magic-m15-expedition          *lcard.jpg, BLACK art window
+//   expeditionland   magic-m15-expedition          *lcard.jpg, BLACK art window
 //   nyx          …showcase-theros-constellation card/*.png, already alpha-cut
 //   fullart      …showcase-zendikar            *card.png,  already alpha-cut
 //   fullartland  …full-art-basic-land-symbol   composite: shadow + pinline +
@@ -87,7 +87,7 @@ const JPG_SETS = [
     maxYFrac: 0.6,
   },
   {
-    out: "public/frames/expedition",
+    out: "public/frames/expeditionland", // the shipped template is expeditionland
     pack: `${DATA}/magic-m15-expedition.mse-style`,
     file: (k) => `${k}lcard.jpg`,
     fill: "black",

@@ -21,7 +21,7 @@ const STEPS: Array<{ title: string; body: string }> = [
   },
   {
     title: "Edit the layout",
-    body: "Turn on \"Edit layout\", then click any element on the card (title bar, rules box, P/T plate…) or pick it from the chips. Nudge with the arrow keys (0.1% per press, hold Shift for 0.5%), resize with [ ] and { }, or type exact numbers. The card updates live — keep Difference mode on and nudge until the glow goes dark.",
+    body: "Turn on \"Edit layout\", then click any element on the card (title bar, rules box, P/T plate…) or pick it from the chips. Nudge with the arrow keys (0.1% per press, hold Alt / Option for 0.5%), resize with [ ] and { }, or type exact numbers. The card updates live — keep Difference mode on and nudge until the glow goes dark.",
   },
   {
     title: "Save & check",

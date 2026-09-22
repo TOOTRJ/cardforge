@@ -463,3 +463,13 @@ describe("frameTemplateFromScryfall", () => {
     expect(patch.frame_template).toBe("agclassic");
   });
 });
+
+describe("parseTypeLine — Kindred", () => {
+  it("REGRESSION: keeps the Kindred supertype (Scryfall renamed Tribal → Kindred)", () => {
+    const parsed = parseTypeLine("Kindred Instant — Elf");
+    expect(parsed.supertype).toContain("Kindred");
+    expect(parsed.card_type).toBe("instant");
+    // The old spelling still works for older printings' type lines.
+    expect(parseTypeLine("Tribal Sorcery — Goblin").supertype).toContain("Tribal");
+  });
+});

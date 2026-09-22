@@ -103,8 +103,9 @@ export default function TermsPage() {
 
       <h2>9. Contact</h2>
       <p>
-        Questions about these terms? See the contact channels on the{" "}
-        <Link href="/about">about page</Link>.
+        Questions about these terms, or a takedown request? Send it through
+        the <Link href="/feedback">feedback form</Link> — it reaches the team
+        directly.
       </p>
     </LegalPageShell>
   );

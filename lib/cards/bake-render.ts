@@ -1,5 +1,8 @@
-"use server";
-
+// NOT a "use server" module: it used to be, which registered these internal
+// helpers as callable server actions (bakeAndPersistCardRender takes a caller-
+// supplied ownerId — reachable by any client that knew the action id). Every
+// caller is itself a server action or route handler; "server-only" keeps it
+// out of client bundles.
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";

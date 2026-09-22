@@ -35,6 +35,7 @@ import { isSetsEnabled } from "@/lib/sets/flags";
 export const revalidate = 3600;
 
 const MAX_DYNAMIC_CARDS = 5000;
+const OWNER_LOOKUP_CHUNK = 200;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = getSiteBaseUrl();
@@ -46,6 +47,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified,
       changeFrequency: "weekly",
       priority: 1,
+    },
+    {
+      url: `${baseUrl}/pricing`,
+      lastModified,
+      changeFrequency: "monthly",
+      priority: 0.8,
     },
     {
       url: `${baseUrl}/mtg-card-maker`,
@@ -209,15 +216,25 @@ async function fetchPublicCardEntries(
 
     if (!cards || cards.length === 0) return [];
 
+    // Chunked owner lookup: one `.in()` over up to 5,000 ids is a URL-length
+    // gamble on PostgREST, and its error used to be thrown away — every card
+    // URL then silently vanished from the sitemap. A failed chunk is logged
+    // and only its cards are skipped.
     const ownerIds = Array.from(new Set(cards.map((c) => c.owner_id)));
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("id, username")
-      .in("id", ownerIds);
-
     const usernameById = new Map<string, string>();
-    for (const profile of profiles ?? []) {
-      if (profile.username) usernameById.set(profile.id, profile.username);
+    for (let i = 0; i < ownerIds.length; i += OWNER_LOOKUP_CHUNK) {
+      const chunk = ownerIds.slice(i, i + OWNER_LOOKUP_CHUNK);
+      const { data: profiles, error } = await supabase
+        .from("profiles")
+        .select("id, username")
+        .in("id", chunk);
+      if (error) {
+        console.error(`[sitemap] owner lookup failed for ${chunk.length} ids: ${error.message}`);
+        continue;
+      }
+      for (const profile of profiles ?? []) {
+        if (profile.username) usernameById.set(profile.id, profile.username);
+      }
     }
 
     const entries: MetadataRoute.Sitemap = [];

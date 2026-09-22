@@ -50,7 +50,9 @@ export type ScryfallAdminUsageSnapshot = {
   limits: typeof SCRYFALL_USAGE_LIMITS;
 };
 
-const ACTIONS: ScryfallAction[] = ["search", "named", "import_art"];
+// deck_import (0056) was missing here, so the today / per-minute / per-action
+// figures excluded it while the 30-day total (a plain count) included it.
+const ACTIONS: ScryfallAction[] = ["search", "named", "import_art", "deck_import"];
 
 /**
  * App-wide usage snapshot. Null when the caller isn't an admin; an empty

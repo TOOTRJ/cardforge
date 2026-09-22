@@ -37,16 +37,21 @@ async function recountDeckLikes(
   return count ?? 0;
 }
 
+const SLUG_SHAPE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+const USERNAME_SHAPE = /^[a-z0-9_]{3,32}$/;
+
 function revalidateDeckLikePaths(
   deckSlug: string | undefined,
   ownerUsername: string | null | undefined,
 ) {
   revalidatePath("/decks");
   revalidatePath("/dashboard");
-  if (deckSlug) {
+  // Both values come from the client; only well-formed ones are turned into
+  // paths (a stray string here would revalidate an arbitrary route).
+  if (deckSlug && SLUG_SHAPE.test(deckSlug)) {
     revalidatePath(`/deck/${deckSlug}`);
   }
-  if (ownerUsername) {
+  if (ownerUsername && USERNAME_SHAPE.test(ownerUsername)) {
     revalidatePath(`/profile/${ownerUsername}`);
   }
 }
