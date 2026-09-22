@@ -6,7 +6,6 @@
 // running. The slug is derived from the title automatically — not
 // user-editable.
 
-import Link from "next/link";
 import { useState, useTransition } from "react";
 import { Controller, useFormContext, useWatch } from "react-hook-form";
 import { FileEdit, Globe2, Link2, Loader2, Plus, Trophy } from "lucide-react";
@@ -33,7 +32,6 @@ import { EffectsPanel } from "@/components/creator/panels/effects-panel";
 import { ComingSoon } from "@/components/creator/coming-soon";
 import { WatermarkPicker } from "@/components/creator/panels/watermark-picker";
 import { daysLeft, type Challenge } from "@/lib/challenges/shared";
-import { isSetsEnabled } from "@/lib/sets/flags";
 import { cn } from "@/lib/utils";
 import type { Card, Visibility } from "@/types/card";
 import type { FormValues } from "@/lib/creator/form-types";
@@ -55,13 +53,6 @@ const VISIBILITY_OPTIONS: ChipOption<Visibility>[] = [
   },
 ];
 
-export type CardSetOption = {
-  id: string;
-  title: string;
-  icon_url: string | null;
-  icon_code: string | null;
-};
-
 export type DeckOption = {
   id: string;
   title: string;
@@ -80,8 +71,6 @@ type PublishPanelProps = {
   profileOverrides?: FrameProfileOverridesMap | null;
   /** The currently running challenge, if any — renders the entry toggle. */
   activeChallenge?: Challenge | null;
-  /** The current user's sets — populates the "Add to set" picker. */
-  mySets: CardSetOption[];
   /** The current user's decks — the "Add to deck" picker. `null` hides the
    *  picker entirely (edit mode: deck membership is managed from the deck
    *  dashboard, not the card editor). */
@@ -90,7 +79,7 @@ type PublishPanelProps = {
   myCards: Card[];
   /** Save the current card + open a fresh creator to build/link a back face. */
   onCreateBackFace: () => void;
-  /** Edit / remix: set membership, deck and finish are locked structure
+  /** Edit / remix: deck and finish are locked structure
    *  (owner decision 2026-09-16) and are not offered. */
   revise?: boolean;
   /** False for creature/instant/sorcery/artifact/enchantment — their
@@ -103,7 +92,6 @@ export function PublishPanel({
   userId,
   profileOverrides = null,
   activeChallenge,
-  mySets,
   myDecks = null,
   myCards,
   onCreateBackFace,
@@ -235,55 +223,6 @@ export function PublishPanel({
         </div>
       </FieldGroup>
 
-      {isSetsEnabled() && !revise ? (
-      <FieldGroup
-        label="Add to set"
-        helper="Group this card into one of your sets. If that set has an icon, the card uses it as its set symbol."
-      >
-        <Controller
-          control={control}
-          name="primary_set_id"
-          render={({ field }) => (
-            <div className="flex flex-col gap-2">
-              <select
-                value={field.value}
-                onChange={(event) => field.onChange(event.target.value)}
-                disabled={mySets.length === 0}
-                className={inputClass(false)}
-              >
-                <option value="">No set</option>
-                {mySets.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.title}
-                  </option>
-                ))}
-              </select>
-              <span className="text-[11px] text-muted">
-                {mySets.length === 0 ? (
-                  <>
-                    You don&apos;t have any sets yet.{" "}
-                    <Link
-                      href="/dashboard/sets/new"
-                      className="text-primary-bright underline-offset-2 hover:underline"
-                    >
-                      Create one
-                    </Link>
-                    .
-                  </>
-                ) : (
-                  <Link
-                    href="/dashboard/sets/new"
-                    className="text-primary-bright underline-offset-2 hover:underline"
-                  >
-                    Create a new set
-                  </Link>
-                )}
-              </span>
-            </div>
-          )}
-        />
-      </FieldGroup>
-      ) : null}
 
       {myDecks !== null && !revise ? <DeckPicker myDecks={myDecks} /> : null}
 

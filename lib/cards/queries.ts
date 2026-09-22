@@ -712,22 +712,6 @@ export async function countRemixesOfCard(cardId: string): Promise<number> {
   }
 }
 
-/**
- * How many sets this card belongs to (readable memberships).
- */
-export async function countSetsForCard(cardId: string): Promise<number> {
-  if (!isSupabaseConfigured()) return 0;
-  try {
-    const supabase = await createClient();
-    const { count } = await supabase
-      .from("card_set_items")
-      .select("set_id", { count: "exact", head: true })
-      .eq("card_id", cardId);
-    return count ?? 0;
-  } catch {
-    return 0;
-  }
-}
 
 /**
  * The most-liked shareable remixes of this card, for the analytics panel.
@@ -876,53 +860,7 @@ export async function getCardLikeRankOverall(
   }
 }
 
-/**
- * 1-based like rank of this card within a given set. Null if not a member.
- */
-export async function getCardLikeRankInSet(
-  cardId: string,
-  setId: string,
-): Promise<number | null> {
-  if (!isSupabaseConfigured()) return null;
-  try {
-    const supabase = await createClient();
-    const { data } = await supabase.rpc("card_like_rank_in_set", {
-      p_card_id: cardId,
-      p_set_id: setId,
-    });
-    return typeof data === "number" ? data : null;
-  } catch {
-    return null;
-  }
-}
 
-/**
- * Set summary for the "owner context" line + within-set rank: the set's title,
- * public path, and card count. Null when the id is missing / unreadable.
- */
-export async function getSetSummary(setId: string): Promise<{
-  title: string;
-  slug: string;
-  cardsCount: number;
-} | null> {
-  if (!isSupabaseConfigured()) return null;
-  try {
-    const supabase = await createClient();
-    const { data: set } = await supabase
-      .from("card_sets")
-      .select("id, title, slug")
-      .eq("id", setId)
-      .maybeSingle();
-    if (!set) return null;
-    const { count } = await supabase
-      .from("card_set_items")
-      .select("card_id", { count: "exact", head: true })
-      .eq("set_id", setId);
-    return { title: set.title, slug: set.slug, cardsCount: count ?? 0 };
-  } catch {
-    return null;
-  }
-}
 
 /**
  * This card's 7-day trending signals (excluding the owner's own engagement),

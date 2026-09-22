@@ -30,7 +30,6 @@ export function revalidateDiscoverySurfaces() {
 export function revalidateCardListSurfaces() {
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/cards");
-  revalidatePath("/dashboard/sets");
   revalidatePath("/gallery");
   revalidateDiscoverySurfaces();
 }

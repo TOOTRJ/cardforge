@@ -110,7 +110,6 @@ type MyCardsBrowserProps = {
   likedCards: CardWithStats[];
   /** "Remixed from" links keyed by PARENT card id. */
   remixParents: Record<string, RemixParentLink>;
-  userSets: Array<{ id: string; title: string; slug: string }>;
   profileOverrides?: FrameProfileOverridesMap | null;
   initialView: MyCardsView;
   initialFilter: MyCardsFilter;
@@ -121,7 +120,6 @@ export function MyCardsBrowser({
   cards,
   likedCards,
   remixParents,
-  userSets,
   profileOverrides = null,
   initialView,
   initialFilter,
@@ -487,7 +485,6 @@ export function MyCardsBrowser({
         <DashboardBulkBar
           selectedIds={selectedIds}
           onClear={clearSelection}
-          userSets={userSets}
           onSuccess={exitSelectMode}
         />
       ) : null}

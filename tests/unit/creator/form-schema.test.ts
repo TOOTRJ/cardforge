@@ -50,7 +50,6 @@ function baseValues(overrides: Partial<FormValues> = {}): FormValues {
     back_face: EMPTY_BACK_FACE,
     back_card_id: "",
     source_scryfall_id: "",
-    primary_set_id: "",
     set_icon_url: "",
     set_icon_code: "",
     deck_id: "",

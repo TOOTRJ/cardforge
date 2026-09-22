@@ -24,8 +24,6 @@ import {
   listMyCards,
   listRemixParentLinks,
 } from "@/lib/cards/queries";
-import { isSetsEnabled } from "@/lib/sets/flags";
-import { listMySets } from "@/lib/sets/queries";
 import { getCurrentUser } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -81,11 +79,9 @@ async function MyCardsLibrary({
   sort: MyCardsSort;
 }) {
   const viewer = await getCurrentUser();
-  const [profileOverrides, myCards, mySets, likedCards] = await Promise.all([
+  const [profileOverrides, myCards, likedCards] = await Promise.all([
     getFrameProfileOverrides(),
     listMyCards(),
-    // No "Add to set" picker to feed when sets are off — skip the query.
-    isSetsEnabled() ? listMySets() : Promise.resolve([]),
     viewer
       ? listLikedCardsByUser(viewer.id, { limit: LIKED_LIMIT })
       : Promise.resolve([]),
@@ -97,9 +93,6 @@ async function MyCardsLibrary({
       cards={myCards}
       likedCards={likedCards}
       remixParents={remixParents}
-      // Trimmed to what the picker dialog consumes — the full set row carries
-      // description / cover / etc. that shouldn't serialize to the client.
-      userSets={mySets.map((s) => ({ id: s.id, title: s.title, slug: s.slug }))}
       profileOverrides={profileOverrides}
       initialView={view}
       initialFilter={filter}

@@ -21,8 +21,6 @@ import {
   getFantasyGameSystem,
   listMyCards,
 } from "@/lib/cards/queries";
-import { listMySets } from "@/lib/sets/queries";
-import { isSetsEnabled } from "@/lib/sets/flags";
 import { getMyDeckCardWithDeck, listMyDecks } from "@/lib/decks/queries";
 import { isDesignAiConfigured } from "@/lib/ai/provider";
 import { getEntitlements, ownerExportStamp } from "@/lib/billing/entitlements";
@@ -91,9 +89,7 @@ export default async function CreatePage({
     const query = params.toString();
     return query ? `/create?${query}` : "/create";
   })();
-  const [mySets, myCards, myDecks, entitlements, exportStamp] = await Promise.all([
-    // The publish panel's set picker is flag-gated — don't pay the query.
-    isSetsEnabled() ? listMySets() : Promise.resolve([]),
+  const [myCards, myDecks, entitlements, exportStamp] = await Promise.all([
     listMyCards(),
     listMyDecks(),
     getEntitlements(),
@@ -219,7 +215,6 @@ export default async function CreatePage({
           userId={user.id}
           ownerUsername={profile?.username ?? null}
           gameSystems={[gameSystem]}
-          mySets={mySets}
           myDecks={myDecks.map((deck) => ({
             id: deck.id,
             title: deck.title,

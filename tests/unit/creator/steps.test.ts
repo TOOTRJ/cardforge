@@ -242,9 +242,9 @@ describe("field → step routing", () => {
   });
 
   it("falls back to the last panel for a field no panel owns", () => {
-    // primary_set_id isn't listed on any step, so it routes to the last panel.
+    // A field no panel lists routes to the last panel.
     const steps = visibleSteps(base);
-    const idx = stepIndexForField("primary_set_id", steps);
+    const idx = stepIndexForField("not_on_any_panel", steps);
     expect(steps[idx].key).toBe("publish");
   });
 

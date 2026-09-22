@@ -3,7 +3,6 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
-  FolderPlus,
   Globe2,
   Link2,
   Loader2,
@@ -21,8 +20,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { QuickAddToSetDialog } from "@/components/sets/quick-add-to-set-dialog";
-import { isSetsEnabled } from "@/lib/sets/flags";
 import {
   deleteCardsAction,
   updateCardsVisibilityAction,
@@ -31,17 +28,14 @@ import type { Visibility } from "@/types/card";
 
 // ---------------------------------------------------------------------------
 // DashboardBulkBar — sticky bottom bar shown when ≥1 card is selected.
-// Renders three bulk actions: change visibility, add to set, delete.
-// All three call into server actions that pre-flight ownership and
+// Renders two bulk actions: change visibility, delete.
+// Both call into server actions that pre-flight ownership and
 // abort the whole batch on any cross-user attempt.
 // ---------------------------------------------------------------------------
 
 type DashboardBulkBarProps = {
   selectedIds: string[];
   onClear: () => void;
-  /** Sets the user owns — passed in so the picker dialog avoids a
-   *  client-side fetch on every render. */
-  userSets: Array<{ id: string; title: string; slug: string }>;
   /** Called when an action completes successfully — the parent uses this
    *  to clear selection + refresh the route. */
   onSuccess: () => void;
@@ -50,13 +44,11 @@ type DashboardBulkBarProps = {
 export function DashboardBulkBar({
   selectedIds,
   onClear,
-  userSets,
   onSuccess,
 }: DashboardBulkBarProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [setPickerOpen, setSetPickerOpen] = useState(false);
 
   const count = selectedIds.length;
 
@@ -148,18 +140,6 @@ export function DashboardBulkBar({
               <Globe2 className="h-3.5 w-3.5" aria-hidden />
               Make public
             </Button>
-            {isSetsEnabled() ? (
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={() => setSetPickerOpen(true)}
-                disabled={isPending}
-              >
-                <FolderPlus className="h-3.5 w-3.5" aria-hidden />
-                Add to set
-              </Button>
-            ) : null}
             <Button
               type="button"
               variant="outline"
@@ -215,20 +195,6 @@ export function DashboardBulkBar({
         </DialogContent>
       </Dialog>
 
-      {/* Add-to-set picker dialog. */}
-      {isSetsEnabled() ? (
-        <QuickAddToSetDialog
-          open={setPickerOpen}
-          onOpenChange={setSetPickerOpen}
-          cardIds={selectedIds}
-          userSets={userSets}
-          onSuccess={() => {
-            setSetPickerOpen(false);
-            onSuccess();
-            router.refresh();
-          }}
-        />
-      ) : null}
     </>
   );
 }

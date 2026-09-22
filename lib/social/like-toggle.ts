@@ -9,11 +9,10 @@ import { USERNAME_PATTERN } from "@/lib/auth/usernames";
 import { SLUG_PATTERN } from "@/lib/validation/card";
 
 // ---------------------------------------------------------------------------
-// ONE like toggle for cards, decks and sets. The three "use server" modules
-// (lib/cards/likes.ts, lib/decks/likes.ts, lib/sets/likes.ts) are thin
-// wrappers that only differ in the table and the paths to revalidate — they
-// used to be three self-described "mirror" copies whose revalidation
-// policies had drifted apart.
+// ONE like toggle for cards and decks. The two "use server" modules
+// (lib/cards/likes.ts, lib/decks/likes.ts) are thin wrappers that only
+// differ in the table and the paths to revalidate — they used to be
+// self-described "mirror" copies whose revalidation policies had drifted.
 //
 // Race-safety comes from the (user_id, <fk>) unique constraint: a double
 // like becomes one row (the 23505 branch), an unlike of nothing is a no-op.
@@ -30,13 +29,13 @@ export type ToggleLikeResult =
   | { ok: true; liked: boolean; likes_count: number }
   | { ok: false; error: string };
 
-type LikeTable = "card_likes" | "deck_likes" | "set_likes";
+type LikeTable = "card_likes" | "deck_likes";
 
 export type LikeTarget = {
   table: LikeTable;
   /** The FK column naming the liked row. */
   column: "card_id" | "deck_id" | "set_id";
-  /** "card" | "deck" | "set" — for the error copy. */
+  /** "card" | "deck" — for the error copy. */
   noun: string;
   /** Paths to revalidate. Both arguments are already shape-checked (null
    *  when the client-supplied value wasn't a well-formed slug / handle). */
@@ -70,7 +69,7 @@ export async function toggleLike(
   }
 
   const supabase = await createClient();
-  // The three like tables share one shape (id, user_id, <fk>, created_at);
+  // Both like tables share one shape (id, user_id, <fk>, created_at);
   // typing the builder through card_likes keeps every other column checked
   // while the FK column goes through the string-typed .filter() overload.
   const likes = () => supabase.from(target.table as "card_likes");

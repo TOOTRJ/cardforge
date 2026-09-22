@@ -15,13 +15,11 @@ import {
   type CreateCardResult,
 } from "@/lib/cards/actions";
 import { getCardById } from "@/lib/cards/queries";
-import { createSetAction, updateSetAction } from "@/lib/sets/actions";
 import { createDeckAction, updateDeckAction } from "@/lib/decks/actions";
 import { listDeckCards } from "@/lib/decks/queries";
 import { computeDeckAnalytics } from "@/lib/decks/analytics";
 import { buildDeckBrief } from "@/lib/ai/deck-brief";
 import { requireTier } from "@/lib/billing/entitlements";
-import { generateSet } from "@/lib/ai/set-gen";
 import {
   generateDeckPlan,
   type AiDeckFormat,
@@ -71,19 +69,19 @@ import type { DeckFormat } from "@/types/deck";
 import { withCreditedStep } from "@/lib/ai/credited-step";
 
 // ---------------------------------------------------------------------------
-// AI generation jobs — the batch pipeline behind "generate a whole set"
-// (decks reuse the same table/step machinery in the deck PR).
+// AI generation jobs — the batch pipeline behind deck generation, deck
+// remixes and the single-card / per-field flows (the set kind was removed
+// with the sets feature on 2026-09-22).
 //
 // A job is a persisted plan the CLIENT advances one HTTP step at a time
 // (there is no queue/worker in this stack; see migration 0059):
 //
-//   PLAN  (createSetGenerationJob): one concept call + ONE batched text
-//         call for every card (single batch = cross-card cohesion), then
-//         the target set is created/loaded and the job row written with
-//         one step per card + an icon step.
+//   PLAN  (create*Job): one design call for every card (single batch =
+//         cross-card cohesion), then the target deck is created/loaded and
+//         the job row written with one step per card (+ cover / guide).
 //   STEP  (runNextJobStep): create one card (private → no bake) and paint
-//         its art, or paint the set icon. Steps are retry-safe: a step that
-//         already created its card only redoes the art.
+//         its art. Steps are retry-safe: a step that already created its
+//         card only redoes the art.
 //
 // Credits: 1 per card, spent as each card step completes (same
 // "generate_deck" ledger reason as the legacy route). Free when billing is
@@ -132,13 +130,12 @@ export type JobStep = {
 export type GenerationJobRow = {
   id: string;
   owner_id: string;
-  kind: "set" | "deck" | "deck_remix" | "card" | "card_remix" | "card_fill";
+  kind: "deck" | "deck_remix" | "card" | "card_remix" | "card_fill";
   /** "done" = every step succeeded; "done_with_errors" = finished with a mix
    *  of successes and failures (retryable); "failed" = nothing succeeded. */
   status: "generating" | "done" | "done_with_errors" | "failed" | "cancelled";
   request: Record<string, unknown>;
   plan:
-    | SetJobPlan
     | DeckJobPlan
     | DeckRemixJobPlan
     | CardJobPlan
@@ -146,7 +143,6 @@ export type GenerationJobRow = {
     | CardFillJobPlan
     | null;
   steps: JobStep[];
-  set_id: string | null;
   deck_id: string | null;
   error: string | null;
 };
@@ -189,13 +185,6 @@ export type CardFillJobPlan = {
   deck_id: string | null;
 };
 
-export type SetJobPlan = {
-  set_title: string;
-  set_description: string;
-  theme: string;
-  style: string | null;
-  cards: DesignedCard[];
-};
 
 export type DeckJobPlan = {
   deck_title: string;
@@ -230,159 +219,15 @@ export type DeckRemixJobPlan = {
   skipped: number;
 };
 
-export type CreateSetJobInput = {
-  theme: string;
-  style?: string;
-  size: number;
-  /** Generate INTO this set (must be owned) instead of creating a new one. */
-  setId?: string;
-};
 
-export type CreateSetJobResult =
-  | { ok: true; job: GenerationJobRow; setSlug: string }
-  | { ok: false; error: string };
 
-const ICON_STEP_KEY = "icon";
 const COVER_STEP_KEY = "cover";
 /** Free "how to play" guide written after the cards (deck jobs only). */
 const GUIDE_STEP_KEY = "guide";
 
-/** AI set generation is temporarily disabled (owner decision, 2026-07-10) —
- *  the UI shows "coming soon" and the jobs route rejects kind "set". All
- *  the set machinery below stays intact for the re-enable. */
-export const SET_GENERATION_ENABLED = false;
 
-// Shared art direction so a batch renders as ONE set, not N unrelated
-// commissions. The per-card prompt appends the card's own scene.
-function artPrompt(plan: SetJobPlan, card: DesignedCard): string {
-  const style = plan.style?.trim()
-    ? `Rendered strictly in ${plan.style.trim()} style.`
-    : "Painterly high-fantasy illustration style.";
-  return [
-    `Fantasy trading-card illustration for the set "${plan.set_title}".`,
-    style,
-    "One cohesive set: consistent rendering technique, palette, and lighting across all cards.",
-    card.art_prompt,
-    "NO frame, NO borders, NO card layout, NO text or lettering anywhere in the image.",
-  ].join(" ");
-}
 
-function iconPrompt(plan: SetJobPlan): string {
-  const style = plan.style?.trim() ? ` with a hint of ${plan.style.trim()} styling` : "";
-  return [
-    `A single flat emblem representing the trading-card set "${plan.set_title}" (${plan.theme})${style}.`,
-    "Bold simple silhouette readable at 16 pixels, one dark color on a plain white background, centered, generous margin.",
-    "No text, no letters, no frame, no gradients.",
-  ].join(" ");
-}
 
-export async function createSetGenerationJob(
-  input: CreateSetJobInput,
-): Promise<CreateSetJobResult> {
-  const user = await getCurrentUser();
-  if (!user) return { ok: false, error: "Sign in to generate sets." };
-
-  const supabase = await createClient();
-
-  // Resolve or create the target set.
-  let existingSet: { id: string; slug: string; title: string; description: string | null; icon_url: string | null; icon_code: string | null; cover_url: string | null } | null = null;
-  if (input.setId) {
-    const { data } = await supabase
-      .from("card_sets")
-      .select("id, slug, title, description, icon_url, icon_code, cover_url, owner_id")
-      .eq("id", input.setId)
-      .maybeSingle();
-    if (!data || data.owner_id !== user.id) {
-      return { ok: false, error: "Set not found or not yours." };
-    }
-    existingSet = data;
-  }
-
-  // ---- PLAN: concept + all card text in one cohesive batch ----
-  let generated;
-  try {
-    generated = await generateSet({
-      theme: input.theme,
-      style: input.style,
-      size: input.size,
-      existingSet: existingSet
-        ? { title: existingSet.title, description: existingSet.description }
-        : undefined,
-    });
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : "Generation failed.";
-    return { ok: false, error: `AI set planning failed: ${detail}` };
-  }
-
-  let setId = existingSet?.id;
-  let setSlug = existingSet?.slug;
-  if (!setId) {
-    // AI-generated sets ship PUBLIC by default (owner decision, 2026-07-10);
-    // every card still lands as the user's own and can be unpublished.
-    const created = await createSetAction(
-      {
-        title: generated.set_title,
-        description: generated.set_description,
-        visibility: "public",
-      },
-      { redirectAfterCreate: false },
-    );
-    if (!created.ok) return { ok: false, error: "Couldn't create the set." };
-    setId = created.setId;
-    setSlug = created.slug;
-  }
-
-  const plan: SetJobPlan = {
-    set_title: existingSet?.title ?? generated.set_title,
-    set_description: generated.set_description,
-    theme: input.theme.trim() || "designer's choice",
-    style: input.style?.trim() || null,
-    cards: generated.cards,
-  };
-
-  const steps: JobStep[] = generated.cards.map((card, index) => ({
-    key: `card:${index}`,
-    label: card.title,
-    status: "pending" as const,
-  }));
-  // Only generate icon/cover when the set doesn't already have them.
-  if (!existingSet?.icon_url && !existingSet?.icon_code) {
-    steps.push({ key: ICON_STEP_KEY, label: "Set icon", status: "pending" });
-  }
-  if (!existingSet?.cover_url) {
-    steps.push({ key: COVER_STEP_KEY, label: "Set cover", status: "pending" });
-  }
-
-  const { data: jobRow, error: insertError } = await supabase
-    .from("ai_generation_jobs")
-    .insert({
-      owner_id: user.id,
-      kind: "set",
-      status: "generating",
-      request: {
-        theme: input.theme,
-        style: input.style ?? null,
-        size: input.size,
-        set_id: setId,
-        set_slug: setSlug,
-      },
-      // Typed shapes → the table's jsonb columns.
-      plan: plan as unknown as Json,
-      steps: steps as unknown as Json,
-      set_id: setId,
-    })
-    .select("*")
-    .single();
-  if (insertError || !jobRow) {
-    return { ok: false, error: "Couldn't persist the generation job." };
-  }
-
-  return {
-    ok: true,
-    job: jobRow as unknown as GenerationJobRow,
-    setSlug: setSlug ?? "",
-  };
-}
 
 export async function getGenerationJob(
   jobId: string,
@@ -475,10 +320,10 @@ async function executeJobStep(
   step: JobStep,
   stepIndex: number,
 ): Promise<JobStep> {
-  // Card jobs have no set/deck target — the plan is the whole contract.
+  // Card jobs have no deck target — the plan is the whole contract.
   const isCardKind =
     job.kind === "card" || job.kind === "card_remix" || job.kind === "card_fill";
-  if (!job.plan || (!isCardKind && !job.set_id && !job.deck_id)) {
+  if (!job.plan || (!isCardKind && !job.deck_id)) {
     return { ...step, status: "failed", error: "Job has no plan — recreate it." };
   }
 
@@ -489,15 +334,6 @@ async function executeJobStep(
     return runGuideStep(job, step);
   }
   switch (job.kind) {
-    case "set": {
-      if (step.key === ICON_STEP_KEY) {
-        return runIconStep(userId, job, step);
-      }
-      const card = (job.plan as SetJobPlan).cards[stepIndex];
-      return card
-        ? runCardStep(userId, job, step, card)
-        : { ...step, status: "failed", error: "Missing card plan." };
-    }
     case "deck": {
       const plan = job.plan as DeckJobPlan;
       const card = plan.cards[stepIndex];
@@ -571,7 +407,7 @@ type GeneratedCardStepConfig = {
   /** Style line for the safe fallback prompt (attempt 3+). */
   style?: string | null;
   /** Flow-specific createCardAction fields layered over the shared mapping
-   *  (frame lock, set/deck linkage, supertype overrides). Validated by the
+   *  (frame lock, deck linkage, supertype overrides). Validated by the
    *  action's zod schema like every other create. */
   createExtras?: Record<string, unknown>;
   /** Runs once, right after the card row first exists (e.g. pointing the
@@ -580,7 +416,7 @@ type GeneratedCardStepConfig = {
 };
 
 /**
- * THE card step — shared by single-card, set, and deck generation so the
+ * THE card step — shared by single-card and deck generation so the
  * pipeline can't drift between flows (it had: three copies with different
  * refund coverage). Charge → create private card → paint + publish, with the
  * credit wrapper refunding any failed attempt. A retry of a step whose card
@@ -1325,22 +1161,6 @@ export async function createDeckRemixJob(
   };
 }
 
-/** One card of a SET job — the shared card step linked into the target set. */
-async function runCardStep(
-  userId: string,
-  job: GenerationJobRow,
-  step: JobStep,
-  card: DesignedCard,
-): Promise<JobStep> {
-  return runGeneratedCardStep(userId, job.id, step, {
-    reason: "generate_deck",
-    artLogAction: "generate_deck_cards",
-    card,
-    artPrompt: artPrompt(job.plan as SetJobPlan, card),
-    style: (job.plan as SetJobPlan).style,
-    createExtras: { primary_set_id: job.set_id ?? undefined },
-  });
-}
 
 /**
  * Paint a card's art and PUBLISH it in one updateCardAction call — through
@@ -1707,17 +1527,12 @@ async function activeGameSystemId(): Promise<string | null> {
   return data?.id ?? null;
 }
 
-/** Wide key-art prompt for the set/deck cover tile. */
+/** Wide key-art prompt for the deck cover tile. */
 function coverPrompt(job: GenerationJobRow): { prompt: string; aspect: ImageAspect } {
   let title = "the collection";
   let subject = "";
   let style: string | null = null;
-  if (job.kind === "set") {
-    const plan = job.plan as SetJobPlan;
-    title = plan.set_title;
-    subject = `${plan.theme}. ${plan.set_description}`;
-    style = plan.style;
-  } else if (job.kind === "deck") {
+  if (job.kind === "deck") {
     const plan = job.plan as DeckJobPlan;
     title = plan.deck_title;
     subject = `${plan.theme}. ${plan.strategy}`;
@@ -1732,8 +1547,8 @@ function coverPrompt(job: GenerationJobRow): { prompt: string; aspect: ImageAspe
     ? `Rendered strictly in ${style.trim()} style.`
     : "Painterly high-fantasy illustration style.";
   return {
-    // Every deck-cover surface is a 16:9 box (lib/decks/cover.ts) and set
-    // tiles are 16:9 too, so both are generated "wide" and need no crop.
+    // Every deck-cover surface is a 16:9 box (lib/decks/cover.ts), so the
+    // cover is generated "wide" and needs no crop.
     aspect: "wide",
     prompt: [
       `Wide cinematic key art for a trading-card collection called "${title}".`,
@@ -1745,7 +1560,7 @@ function coverPrompt(job: GenerationJobRow): { prompt: string; aspect: ImageAspe
   };
 }
 
-/** Generate + attach the set/deck cover image. The cover is FREE (owner
+/** Generate + attach the deck cover image. The cover is FREE (owner
  *  decision, 2026-09-15): no credit is reserved or charged for it — only
  *  the cards cost credits. Deck covers are normalised to the 16:9 standard
  *  (lib/decks/cover.ts) before upload so every surface shows the same image. */
@@ -1754,7 +1569,7 @@ async function runCoverStep(
   job: GenerationJobRow,
   step: JobStep,
 ): Promise<JobStep> {
-  await logAiCall(userId, job.kind === "set" ? "generate_deck" : "generate_deck_cards");
+  await logAiCall(userId, "generate_deck_cards");
   {
     const { prompt, aspect } = coverPrompt(job);
     const image = await generateImageWithFallbacks([prompt, softenArtPrompt(prompt)], aspect);
@@ -1763,29 +1578,18 @@ async function runCoverStep(
     }
     let bytes: Uint8Array = image.bytes;
     let contentType = image.contentType;
-    if (job.kind !== "set") {
-      try {
-        const normalized = await normalizeDeckCover(image.bytes);
-        bytes = normalized.bytes;
-        contentType = normalized.contentType;
-      } catch (err) {
-        console.warn(`[cover] normalise failed for job ${job.id}:`, err instanceof Error ? err.message : err);
-      }
+    try {
+      const normalized = await normalizeDeckCover(image.bytes);
+      bytes = normalized.bytes;
+      contentType = normalized.contentType;
+    } catch (err) {
+      console.warn(`[cover] normalise failed for job ${job.id}:`, err instanceof Error ? err.message : err);
     }
     const persisted = await persistGeneratedArt(bytes, contentType);
     if (!persisted.ok) {
       return { ...step, status: "failed", error: persisted.error };
     }
 
-    if (job.kind === "set" && job.set_id) {
-      const updated = await updateSetAction(job.set_id, {
-        cover_url: persisted.publicUrl,
-      });
-      if (!updated.ok) {
-        return { ...step, status: "failed", error: "Couldn't attach the set cover." };
-      }
-      return { ...step, status: "done", error: undefined };
-    }
     if (job.deck_id) {
       const updated = await updateDeckAction(job.deck_id, {
         cover_url: persisted.publicUrl,
@@ -1797,7 +1601,7 @@ async function runCoverStep(
       }
       return { ...step, status: "done", error: undefined };
     }
-    return { ...step, status: "failed", error: "Job has no set or deck to cover." };
+    return { ...step, status: "failed", error: "Job has no deck to cover." };
   }
 }
 
@@ -1810,32 +1614,6 @@ async function runGuideStep(job: GenerationJobRow, step: JobStep): Promise<JobSt
   return { ...step, status: "done", error: undefined };
 }
 
-async function runIconStep(
-  userId: string,
-  job: GenerationJobRow,
-  step: JobStep,
-): Promise<JobStep> {
-  await logAiCall(userId, "generate_set_icon");
-  return withCreditedStep(userId, job.id, 1, "generate_set_icon", step, async () => {
-    const image = await generateImageWithFallbacks(
-      [iconPrompt(job.plan as SetJobPlan), softenArtPrompt(iconPrompt(job.plan as SetJobPlan))],
-    );
-    if (!image.ok) {
-      return { ...step, status: "failed", error: image.error };
-    }
-    const persisted = await persistGeneratedArt(image.bytes, image.contentType);
-    if (!persisted.ok) {
-      return { ...step, status: "failed", error: persisted.error };
-    }
-    const updated = await updateSetAction(job.set_id!, {
-      icon_url: persisted.publicUrl,
-    });
-    if (!updated.ok) {
-      return { ...step, status: "failed", error: "Couldn't attach the set icon." };
-    }
-    return { ...step, status: "done", error: undefined };
-  });
-}
 
 /** Atomically merge ONE step's result into the job's steps array and recompute
  *  the job status, via the row-locking patch_job_step RPC (migration 0065).

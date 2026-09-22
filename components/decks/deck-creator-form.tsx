@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { createDeckAction, updateDeckAction } from "@/lib/decks/actions";
 import { slugify } from "@/lib/validation/card";
-import { uploadSetCover } from "@/lib/sets/upload-cover";
+import { uploadCoverImage } from "@/lib/media/upload-cover";
 import { cn } from "@/lib/utils";
 import {
   DECK_FORMAT_LABELS,
@@ -403,7 +403,7 @@ export function CoverField({
     }
     setUploading(true);
     try {
-      const result = await uploadSetCover(userId, file);
+      const result = await uploadCoverImage(userId, file);
       if (!result.ok) {
         toast.error(result.error);
         return;

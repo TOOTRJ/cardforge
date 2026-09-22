@@ -6,7 +6,6 @@ import { listArticles, listTags } from "@/lib/content/articles";
 import { getCluster } from "@/lib/content/clusters";
 import { createPublicClient } from "@/lib/supabase/public";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { isSetsEnabled } from "@/lib/sets/flags";
 
 // ---------------------------------------------------------------------------
 // Sitemap
@@ -177,11 +176,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
-  const [dynamicCards, challengePages, setPages, deckPages, profilePages] =
+  const [dynamicCards, challengePages, deckPages, profilePages] =
     await Promise.all([
       fetchPublicCardEntries(baseUrl),
       fetchChallengeEntries(baseUrl),
-      fetchPublicSetEntries(baseUrl),
       fetchPublicDeckEntries(baseUrl),
       fetchProfileEntries(baseUrl),
     ]);
@@ -189,7 +187,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     ...staticPages,
     ...challengePages,
-    ...setPages,
     ...deckPages,
     ...profilePages,
     ...dynamicCards,
@@ -278,30 +275,6 @@ async function fetchChallengeEntries(
   }
 }
 
-async function fetchPublicSetEntries(
-  baseUrl: string,
-): Promise<MetadataRoute.Sitemap> {
-  // Set pages 404 while the feature is hidden — keep them out of the index.
-  if (!isSetsEnabled()) return [];
-  if (!isSupabaseConfigured()) return [];
-  try {
-    const supabase = createPublicClient();
-    const { data } = await supabase
-      .from("card_sets")
-      .select("slug, updated_at")
-      .eq("visibility", "public")
-      .order("updated_at", { ascending: false })
-      .limit(500);
-    return (data ?? []).map((s) => ({
-      url: `${baseUrl}/set/${s.slug}`,
-      lastModified: new Date(s.updated_at),
-      changeFrequency: "weekly" as const,
-      priority: 0.6,
-    }));
-  } catch {
-    return [];
-  }
-}
 
 async function fetchPublicDeckEntries(
   baseUrl: string,

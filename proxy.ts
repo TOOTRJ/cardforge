@@ -3,7 +3,6 @@ import { updateSession } from "@/lib/supabase/middleware";
 import {
   DECKS_FILTER_PARAMS,
   GALLERY_FILTER_PARAMS,
-  SETS_FILTER_PARAMS,
   hasAnyParam,
 } from "@/lib/routing/browse-params";
 
@@ -39,7 +38,7 @@ export async function proxy(request: NextRequest) {
 
   const sessionResponse = await updateSession(request);
 
-  // /gallery and /sets are prerendered (ISR) and never read searchParams
+  // /gallery and /decks are prerendered (ISR) and never read searchParams
   // themselves; a request carrying a REAL filter/search/pagination param is
   // rewritten to the dynamic /browse sibling, which renders it per-request.
   // The visitor-facing URL is unchanged. Junk params (utm_*, fbclid, …)
@@ -48,11 +47,9 @@ export async function proxy(request: NextRequest) {
   const browseParams =
     pathname === "/gallery"
       ? GALLERY_FILTER_PARAMS
-      : pathname === "/sets"
-        ? SETS_FILTER_PARAMS
-        : pathname === "/decks"
-          ? DECKS_FILTER_PARAMS
-          : null;
+      : pathname === "/decks"
+        ? DECKS_FILTER_PARAMS
+        : null;
   if (
     browseParams &&
     hasAnyParam(request.nextUrl.searchParams, browseParams) &&

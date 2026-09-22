@@ -1,4 +1,3 @@
-import { parseCost } from "@/lib/sets/analytics";
 import type { DeckBoard, DeckCardEntry } from "@/types/deck";
 import type { Card } from "@/types/card";
 
@@ -193,4 +192,29 @@ export function computeDeckAnalytics(
     lands,
     averageManaValue: mvSample > 0 ? mvTotal / mvSample : null,
   };
+}
+
+/**
+ * Mana value of a cost string (`{2}{W}{W}` → 4). Generic `{N}` adds N, a
+ * single-letter pip adds 1, hybrids / `{X}` count 0 but still make the cost
+ * parseable. A bare number is accepted; anything else is null.
+ */
+export function parseCost(cost: string | null | undefined): number | null {
+  if (!cost) return null;
+  const tokens = Array.from(cost.matchAll(/\{([^}]+)\}/g));
+  if (tokens.length === 0) {
+    const bare = cost.trim();
+    if (/^\d+$/.test(bare)) return Number(bare);
+    return null;
+  }
+  let total = 0;
+  for (const token of tokens) {
+    const value = token[1];
+    if (/^\d+$/.test(value)) {
+      total += Number(value);
+    } else if (/^[WUBRGC]$/i.test(value)) {
+      total += 1;
+    }
+  }
+  return total;
 }

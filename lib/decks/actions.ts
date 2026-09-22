@@ -12,7 +12,7 @@ import type { ZodIssue } from "zod";
 import { isUuid } from "@/lib/ids";
 
 // ---------------------------------------------------------------------------
-// Result shapes — same discriminated-union posture as lib/sets/actions.ts.
+// Result shapes — discriminated unions so callers pattern-match without throwing.
 // ---------------------------------------------------------------------------
 
 export type DeckFieldErrors = Partial<Record<string, string>>;

@@ -41,7 +41,7 @@ import type {
 
 type JobPayload = {
   id: string;
-  kind: "set" | "deck" | "deck_remix" | "card" | "card_remix" | "card_fill";
+  kind: "deck" | "deck_remix" | "card" | "card_remix" | "card_fill";
   status:
     | "generating"
     | "done"
@@ -51,14 +51,12 @@ type JobPayload = {
   steps: GenerationJobStep[];
   request?: Record<string, unknown>;
   deck_id?: string | null;
-  set_id?: string | null;
 };
 
 export type ActiveGenerationJob = {
   id: string;
   kind: JobPayload["kind"];
   deckId: string | null;
-  setId: string | null;
 };
 
 export type RunOptions = {
@@ -107,7 +105,6 @@ export function useGenerationContext(): GenerationContextValue {
 const STEP_CONCURRENCY = 3;
 
 const KIND_LABELS: Record<JobPayload["kind"], string> = {
-  set: "Generating set",
   deck: "Generating deck cards",
   deck_remix: "Remixing deck",
   card: "Forging your card",
@@ -185,12 +182,12 @@ function targetHref(
   cardId?: string,
 ): string | undefined {
   // Card jobs link to the created card via the id-redirect shim (the slug
-  // isn't known client-side); set/deck jobs link to their editors.
+  // isn't known client-side); deck jobs link to the deck page.
   if (job.kind === "card" || job.kind === "card_remix") {
     return cardId ? `/go/card/${cardId}` : undefined;
   }
   if (!slug) return undefined;
-  return job.kind === "set" ? `/set/${slug}/edit` : `/deck/${slug}`;
+  return `/deck/${slug}`;
 }
 
 export function GenerationJobProvider({
@@ -682,11 +679,11 @@ export function GenerationJobProvider({
   const widgetLabel = job ? KIND_LABELS[job.kind] : "Designing…";
   const href = job ? targetHref(job, slug, doneCardId) : undefined;
   const targetLabel = job
-    ? `Open ${job.kind === "set" ? "set" : job.kind === "card" || job.kind === "card_remix" ? "card" : "deck"}`
+    ? `Open ${job.kind === "card" || job.kind === "card_remix" ? "card" : "deck"}`
     : undefined;
   const openDetails = useCallback(() => setDetailsOpen(true), []);
   const activeJob = useMemo<ActiveGenerationJob | null>(
-    () => (job ? { id: job.id, kind: job.kind, deckId: job.deck_id ?? null, setId: job.set_id ?? null } : null),
+    () => (job ? { id: job.id, kind: job.kind, deckId: job.deck_id ?? null } : null),
     [job],
   );
   // Memoized so a step landing re-renders only the consumers whose inputs
