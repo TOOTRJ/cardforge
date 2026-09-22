@@ -20,12 +20,13 @@ import {
 } from "@/components/ai/generation-details-dialog";
 import { useUpgradeModal } from "@/components/billing/upgrade-modal-provider";
 import { useCreditConfirm } from "@/components/billing/credit-confirm-provider";
-import { jobStatusOf, openStepKeys } from "@/lib/ai/job-queue";
+import { jobStatusOf, openStepKeys, stepsNeedingCards } from "@/lib/ai/job-queue";
 import type {
   GenerationJobOutcome,
   GenerationJobPhase,
   GenerationJobStep,
 } from "@/components/ai/use-generation-job";
+import { describeCapacity, remainingCapacity, type CardCapacity } from "@/lib/billing/capacity-copy";
 
 // ---------------------------------------------------------------------------
 // GenerationJobProvider — the AI batch-job runner, lifted to the ROOT layout
@@ -154,6 +155,21 @@ function creditedStepCount(steps: ReadonlyArray<{ key: string }>): number {
   return steps.filter((s) => s.key !== "cover" && s.key !== "guide").length;
 }
 
+/** The viewer's saved-card usage vs. plan cap (GET /api/me), null when
+ *  unknown — the retry pre-check treats unknown as "go ahead"; the server
+ *  and the DB still enforce the cap. */
+async function fetchCardCapacity(): Promise<CardCapacity | null> {
+  try {
+    const response = await fetch("/api/me", { cache: "no-store" });
+    const payload = await response.json().catch(() => null);
+    return (payload?.cardCapacity as CardCapacity | null | undefined) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+type BlockedBy = { code: "CARD_CAPACITY" | "INSUFFICIENT_CREDITS"; message: string };
+
 // A step someone else is running is POLLED, not re-executed. The server's
 // stale-claim window is 5 minutes, so ~24 polls at 15s guarantees we either
 // see the result or reclaim a dead attempt before giving up.
@@ -273,6 +289,13 @@ export function GenerationJobProvider({
       const inFlightPolls = new Map<string, number>();
       let transportFailures = 0;
       let stopped = false;
+      // A step that failed on a PLAN LIMIT (saved-card cap, empty balance):
+      // every remaining step would fail the same way, so the pool stops and
+      // the matching upgrade prompt opens once — never "out of credits" for
+      // a full library.
+      // (A holder object: TS narrows a `let` initialised to null and can't see
+      // the worker closure's assignment.)
+      const blocked: { by: BlockedBy | null } = { by: null };
 
       const snapshot = (): JobPayload => {
         const steps = startJob.steps.map(
@@ -318,6 +341,12 @@ export function GenerationJobProvider({
           }
           transportFailures = 0;
           publish(result.job);
+          const posted = result.job.steps.find((s) => s.key === key);
+          if (posted?.status === "failed" && posted.error_code) {
+            blocked.by ??= { code: posted.error_code, message: posted.error ?? "" };
+            stopped = true;
+            continue;
+          }
           if (result.inFlight) {
             // Another request owns this step right now (an earlier attempt
             // whose response we lost, or a second tab). Poll until it
@@ -340,9 +369,13 @@ export function GenerationJobProvider({
 
       const pool = Math.min(STEP_CONCURRENCY, Math.max(1, queue.length));
       await Promise.all(Array.from({ length: pool }, () => worker()));
+      if (blocked.by) {
+        if (blocked.by.message) toast.error(blocked.by.message);
+        upgrade.open(blocked.by.code === "CARD_CAPACITY" ? "capacity" : "credits");
+      }
       return snapshot();
     },
-    [noteTerminal],
+    [noteTerminal, upgrade],
   );
 
   const run = useCallback(
@@ -377,6 +410,9 @@ export function GenerationJobProvider({
             // The saved-card cap — say the numbers, then offer the upgrade.
             toast.error(planPayload.error);
             upgrade.open("capacity");
+          } else if (planPayload?.code === "UPGRADE_REQUIRED") {
+            // Deck-aware design is the only Pro gate on this route.
+            upgrade.open("deck_aware_generation");
           } else {
             toast.error(planPayload?.error ?? "AI planning failed. Try again.");
           }
@@ -459,10 +495,30 @@ export function GenerationJobProvider({
     [stepUntilDone, upgrade, beginStats],
   );
 
+  // Cards a retry would CREATE (failed card steps with no card row yet) vs.
+  // the saved-card cap — asked BEFORE the credit confirm, so a full library
+  // gets the capacity prompt with the numbers rather than "out of credits".
+  const ensureCapacityFor = useCallback(
+    async (retrying: ReadonlyArray<GenerationJobStep>): Promise<boolean> => {
+      const needed = stepsNeedingCards(retrying);
+      if (needed === 0) return true;
+      const capacity = await fetchCardCapacity();
+      const remaining = capacity ? remainingCapacity(capacity) : null;
+      if (!capacity || remaining === null || needed <= remaining) return true;
+      const notice = describeCapacity(capacity, needed);
+      if (notice) toast.error(notice.message);
+      upgrade.open("capacity");
+      return false;
+    },
+    [upgrade],
+  );
+
   const retryStep = useCallback(
     async (stepKey: string): Promise<GenerationJobOutcome> => {
       if (!job || runningRef.current) return outcomeOf(steps, slug);
-      const stepCost = creditedStepCount(steps.filter((s) => s.key === stepKey));
+      const retrying = steps.filter((s) => s.key === stepKey);
+      if (!(await ensureCapacityFor(retrying))) return outcomeOf(steps, slug);
+      const stepCost = creditedStepCount(retrying);
       if (
         stepCost > 0 &&
         !(await confirmSpend({
@@ -494,12 +550,13 @@ export function GenerationJobProvider({
         runningRef.current = false;
       }
     },
-    [job, steps, slug, confirmSpend],
+    [job, steps, slug, confirmSpend, ensureCapacityFor],
   );
 
   const retryFailed = useCallback(async (): Promise<GenerationJobOutcome> => {
     if (!job || runningRef.current) return outcomeOf(steps, slug);
     const failedSteps = steps.filter((s) => s.status === "failed");
+    if (!(await ensureCapacityFor(failedSteps))) return outcomeOf(steps, slug);
     const retryCost = creditedStepCount(failedSteps);
     if (
       retryCost > 0 &&
@@ -522,7 +579,7 @@ export function GenerationJobProvider({
       setPhase("done");
       runningRef.current = false;
     }
-  }, [job, steps, slug, stepUntilDone, confirmSpend]);
+  }, [job, steps, slug, stepUntilDone, confirmSpend, ensureCapacityFor]);
 
   const adoptJob = useCallback(
     async (jobId: string, options: { includeFailed: boolean }): Promise<GenerationJobOutcome> => {
@@ -551,6 +608,9 @@ export function GenerationJobProvider({
       }
       if (options.includeFailed) {
         const failedSteps = adopted.steps.filter((s) => s.status === "failed");
+        if (!(await ensureCapacityFor(failedSteps))) {
+          return { ok: false, successes: 0, failures: failedSteps.length };
+        }
         const retryCost = creditedStepCount(failedSteps);
         if (
           retryCost > 0 &&
@@ -584,7 +644,7 @@ export function GenerationJobProvider({
         runningRef.current = false;
       }
     },
-    [stepUntilDone, beginStats, confirmSpend],
+    [stepUntilDone, beginStats, confirmSpend, ensureCapacityFor],
   );
   const retryJob = useCallback(
     (jobId: string) => adoptJob(jobId, { includeFailed: true }),

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { jobStatusOf, openStepKeys } from "@/lib/ai/job-queue";
+import { jobStatusOf, openStepKeys, stepsNeedingCards } from "@/lib/ai/job-queue";
 
 const steps = [
   { key: "card:0", status: "done" as const },
@@ -24,5 +24,21 @@ describe("jobStatusOf", () => {
     expect(jobStatusOf([{ key: "a", status: "done" }, { key: "b", status: "failed" }])).toBe("done_with_errors");
     expect(jobStatusOf([{ key: "a", status: "failed" }])).toBe("failed");
     expect(jobStatusOf([{ key: "a", status: "done" }])).toBe("done");
+  });
+});
+
+describe("stepsNeedingCards", () => {
+  it("counts only the not-done card/remix steps that still have to create a card row", () => {
+    expect(
+      stepsNeedingCards([
+        { key: "card:0", status: "failed" }, // paint failed before the card existed
+        { key: "card:1", status: "failed", card_id: "c1" }, // card exists — retry only repaints
+        { key: "remix:2", status: "pending" },
+        { key: "cover", status: "failed" }, // never a card
+        { key: "guide", status: "pending" },
+        { key: "fill:0", status: "failed" }, // field fill — no card row
+        { key: "card:3", status: "done" },
+      ]),
+    ).toBe(2);
   });
 });

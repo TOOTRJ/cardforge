@@ -57,6 +57,9 @@ export type CardActionFailure = {
   /** "UPGRADE_REQUIRED" when a paid plan is needed — the UI opens the upgrade
    *  modal instead of showing a generic error. */
   code?: string;
+  /** Which limit was hit, so the modal (and a batch job's step) can say the
+   *  right thing: the saved-card cap or a premium frame/finish. */
+  reason?: "capacity" | "premium_frame";
 };
 
 export type CreateCardSuccess = {
@@ -216,6 +219,7 @@ export async function createCardAction(
     return {
       ok: false,
       code: "UPGRADE_REQUIRED",
+      reason: "premium_frame",
       fieldErrors: {
         frame_style: "That finish is a premium feature — upgrade to use it.",
       },
@@ -230,6 +234,7 @@ export async function createCardAction(
       return {
         ok: false,
         code: "UPGRADE_REQUIRED",
+        reason: "capacity",
         formError: `You've reached your ${entitlements.cardCapacity}-card limit. Upgrade for more space.`,
       };
     }
@@ -346,6 +351,7 @@ export async function createCardAction(
     return {
       ok: false,
       code: "UPGRADE_REQUIRED",
+      reason: "capacity",
       formError:
         entitlements.cardCapacity === CARD_CAPACITY_UNLIMITED
           ? "You've reached your plan's card limit. Upgrade for more space."

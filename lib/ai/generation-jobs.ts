@@ -67,6 +67,8 @@ import { getCardById as getScryfallCardById } from "@/lib/scryfall/client";
 import { mapScryfallToFormPatch } from "@/lib/scryfall/import-mapper";
 import type { DeckFormat } from "@/types/deck";
 import { withCreditedStep } from "@/lib/ai/credited-step";
+import { getCardCapacity } from "@/lib/cards/capacity";
+import { describeCapacity, remainingCapacity } from "@/lib/billing/capacity-copy";
 
 // ---------------------------------------------------------------------------
 // AI generation jobs — the batch pipeline behind deck generation, deck
@@ -100,6 +102,7 @@ async function aiArtistCredit(): Promise<string | undefined> {
 }
 
 export type JobStepStatus = "pending" | "running" | "done" | "failed";
+export type JobStepErrorCode = "CARD_CAPACITY" | "INSUFFICIENT_CREDITS";
 
 export type JobStep = {
   key: string;
@@ -108,6 +111,10 @@ export type JobStep = {
   /** Set once the step's card row exists — retries then skip creation. */
   card_id?: string;
   error?: string;
+  /** Set when the failure is a PLAN LIMIT rather than a hiccup — the client
+   *  stops the run and opens the matching upgrade prompt instead of
+   *  retrying into the same wall (the saved-card cap or an empty balance). */
+  error_code?: JobStepErrorCode | null;
   /** Stamped by claim_job_step when the step flips to "running"; a claim
    *  older than 5 minutes is treated as dead and may be reclaimed. */
   claimed_at?: string | null;
@@ -428,6 +435,22 @@ async function runGeneratedCardStep(
   step: JobStep,
   config: GeneratedCardStepConfig,
 ): Promise<JobStep> {
+  // A step that still has to CREATE its card needs a free slot. Check before
+  // reserving a credit: at the cap every remaining step would fail the same
+  // way, and the client stops the run on this code instead of churning
+  // reserve → fail → refund for each one.
+  if (!step.card_id) {
+    const capacity = await getCardCapacity();
+    if (capacity && remainingCapacity(capacity) === 0) {
+      return {
+        ...step,
+        status: "failed",
+        error: describeCapacity(capacity, 1)?.message ?? "Your saved-card limit is full.",
+        error_code: "CARD_CAPACITY",
+        spend_ref: null,
+      };
+    }
+  }
   return withCreditedStep(userId, jobId, 1, config.reason, step, async () => {
     const card = config.card;
     let cardId = step.card_id;
@@ -461,7 +484,14 @@ async function runGeneratedCardStep(
         { redirectAfterCreate: false },
       );
       if (!result.ok) {
-        return { ...step, status: "failed", error: createFailureMessage(result) };
+        return {
+          ...step,
+          status: "failed",
+          error: createFailureMessage(result),
+          // The DB trigger (migration 0104) can still say no when parallel
+          // steps race for the last slot — same code, same client handling.
+          error_code: result.reason === "capacity" ? "CARD_CAPACITY" : undefined,
+        };
       }
       cardId = result.cardId;
       await config.afterCreate?.(cardId);
@@ -1635,6 +1665,7 @@ async function patchJobStep(
     status: step.status,
     card_id: step.card_id ?? null,
     error: step.error ?? null,
+    error_code: step.error_code ?? null,
     // Which charge attempt completed the step (reconciliation proof) — null
     // clears a stale ref from a prior attempt.
     spend_ref: step.spend_ref ?? null,

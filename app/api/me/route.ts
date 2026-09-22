@@ -11,6 +11,7 @@ import { getUnreadNotificationCount } from "@/lib/notifications/queries";
 import { getMessageNavState } from "@/lib/messages/queries";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import type { HeaderUser } from "@/components/layout/site-header";
+import { getCardCapacity } from "@/lib/cards/capacity";
 
 // ---------------------------------------------------------------------------
 // GET /api/me — the header auth island's data source.
@@ -72,5 +73,8 @@ export async function GET() {
     isAdmin: profile?.is_admin ?? false,
   };
 
-  return NextResponse.json({ user: headerUser }, { headers: NO_STORE });
+  // The saved-card cap alongside the header data: AI retries check it before
+  // asking to spend credits (components/ai/generation-provider.tsx).
+  const cardCapacity = await getCardCapacity();
+  return NextResponse.json({ user: headerUser, cardCapacity }, { headers: NO_STORE });
 }

@@ -37,7 +37,14 @@ export async function withCreditedStep(
     ref,
   });
   if (!reserve.ok) {
-    return { ...step, status: "failed", error: reserve.message };
+    return {
+      ...step,
+      status: "failed",
+      error: reserve.message,
+      // An empty balance is a plan limit the client should stop on; an infra
+      // error is a retryable hiccup and carries no code.
+      error_code: reserve.reason === "insufficient_credits" ? "INSUFFICIENT_CREDITS" : undefined,
+    };
   }
   // Refund ONLY what was actually debited — admin/billing-off reserves are
   // uncharged, and refunding those would MINT credits out of thin air
