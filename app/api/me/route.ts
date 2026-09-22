@@ -61,7 +61,10 @@ export async function GET() {
     displayName: profile?.display_name ?? null,
     avatarUrl: profile?.avatar_url ?? null,
     isPaid: entitlements?.isPaid ?? false,
-    tier: entitlements?.tier ?? null,
+    // The EFFECTIVE tier (comp + live subscription), not the display tier a
+    // lapsed subscription keeps — /pricing decides "your current plan" on it.
+    tier: entitlements?.effectiveTier ?? null,
+    subscriptionStatus: profile?.subscription_status ?? null,
     credits: entitlements?.credits ?? 0,
     creditsUsed,
     unreadNotifications,

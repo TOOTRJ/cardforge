@@ -24,6 +24,10 @@ type HeaderUser = {
   /** Subscription tier — lets billing surfaces (e.g. /pricing) hydrate the
    *  viewer's plan client-side while the page itself stays static/ISR. */
   tier?: PlanTier | null;
+  /** Raw Stripe status (`active`, `past_due`, `canceled`, …) — lets /pricing
+   *  offer "update your payment" instead of a second checkout when a
+   *  subscription's payment is broken. */
+  subscriptionStatus?: string | null;
   /** AI credit balance + credits spent this month, for the header indicator. */
   credits?: number;
   creditsUsed?: number;

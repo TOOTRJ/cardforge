@@ -3,8 +3,9 @@ import "server-only";
 import type Stripe from "stripe";
 import type { createAdminClient } from "@/lib/supabase/admin";
 import {
-  TIER_RANK,
   currentCreditPeriod,
+  DELINQUENT_SUBSCRIPTION_STATUSES,
+  TIER_RANK,
   type PlanTier,
 } from "@/lib/billing/plans";
 import { grantMonthlyCreditsForPeriod } from "@/lib/billing/credit-refill";
@@ -325,6 +326,23 @@ export async function grantCreditsForSync(
   if (!granted.ok) {
     throw new Error(`Credit grant failed for ${result.userId}: ${granted.error}`);
   }
+}
+
+/** The customer's newest subscription whose payment is broken (past_due,
+ *  unpaid, incomplete) — the checkout action sends such a customer to the
+ *  portal to fix the card instead of selling them a second subscription
+ *  that would bill twice once Stripe's retry on the old invoice succeeds. */
+export async function findDelinquentSubscription(
+  stripe: Stripe,
+  customerId: string,
+): Promise<Stripe.Subscription | null> {
+  const subs = await listCustomerSubscriptions(stripe, customerId);
+  if (!subs) return null;
+  return (
+    subs
+      .filter((sub) => DELINQUENT_SUBSCRIPTION_STATUSES.has(sub.status))
+      .sort((a, b) => (b.created ?? 0) - (a.created ?? 0))[0] ?? null
+  );
 }
 
 /** The customer's live subscription (if any) — what the checkout action

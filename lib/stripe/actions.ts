@@ -12,7 +12,7 @@ import {
 } from "@/lib/billing/plans";
 import { getStripe, isStripeConfigured } from "./client";
 import { priceIdForPack, priceIdForTier } from "./config";
-import { findLiveSubscription } from "./subscription-sync";
+import { findDelinquentSubscription, findLiveSubscription } from "./subscription-sync";
 import type Stripe from "stripe";
 
 // One trial per account: a customer who has EVER held a subscription (any
@@ -149,6 +149,20 @@ export async function createCheckoutSessionAction(
       // checkout collects payment now, and the webhook cancels the trial
       // once the new subscription is paid (handleSupersededSubscription).
       const live = await findLiveSubscription(stripe, customer.customerId);
+      if (!live) {
+        // A subscription whose payment failed still exists: selling a second
+        // one bills twice once Stripe's retry succeeds. The portal is where
+        // the card gets fixed (and where Stripe reactivates the plan).
+        const delinquent = await findDelinquentSubscription(stripe, customer.customerId);
+        if (delinquent) {
+          const portal = await stripe.billingPortal.sessions.create({
+            customer: customer.customerId,
+            return_url: `${base}/settings#billing`,
+          });
+          if (!portal.url) return { ok: false, error: "Couldn't open the billing portal." };
+          return { ok: true, url: portal.url };
+        }
+      }
       let supersedes: string | null = null;
       if (live) {
         if (live.items.data[0]?.price?.id === priceId) {

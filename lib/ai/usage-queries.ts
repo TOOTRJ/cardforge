@@ -124,9 +124,11 @@ export async function getCreditSnapshot(): Promise<CreditSnapshot> {
   const entitlements = await getEntitlements();
   const base: CreditSnapshot = {
     balance: entitlements.credits,
-    tier: entitlements.tier,
+    // The EFFECTIVE tier — a comped Pro is Pro here, exactly as the cards
+    // panel (lib/cards/capacity.ts) and every gate already treat them.
+    tier: entitlements.effectiveTier,
     isPaid: entitlements.isPaid,
-    monthlyAllotment: MONTHLY_CREDITS[entitlements.tier] ?? 0,
+    monthlyAllotment: MONTHLY_CREDITS[entitlements.effectiveTier] ?? 0,
     daily: [],
   };
   if (!isSupabaseConfigured()) return base;

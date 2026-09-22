@@ -72,6 +72,14 @@ async function resolveSubscriptionUserId(
   return metaUserId;
 }
 
+/** The subscription an invoice bills, if any (API 2025-03+ nests it under
+ *  `parent.subscription_details`; a pack purchase invoice has none). */
+function invoiceSubscriptionId(invoice: Stripe.Invoice): string | null {
+  const ref = invoice.parent?.subscription_details?.subscription ?? null;
+  if (!ref) return null;
+  return typeof ref === "string" ? ref : ref.id;
+}
+
 async function handleSubscriptionEvent(
   sub: Stripe.Subscription,
   deps: { admin: AdminClient; stripe: Stripe },
@@ -208,7 +216,25 @@ export async function handleStripeEvent(
     case "invoice.payment_failed": {
       const invoice = event.data.object as Stripe.Invoice;
       const customerId = customerIdOf(invoice.customer);
-      if (customerId) {
+      if (!customerId) break;
+      // Through the sync layer like every other subscription event: the
+      // failed invoice may belong to a SECONDARY subscription (the lingering
+      // no-card trial next to a paid plan), and writing past_due by customer
+      // id demoted the primary until its next event. With the API reachable
+      // the primary's live state wins; without it, the old customer-keyed
+      // write is the fallback.
+      const subscriptionId = invoiceSubscriptionId(invoice);
+      let synced = false;
+      if (subscriptionId) {
+        try {
+          const sub = await stripe.subscriptions.retrieve(subscriptionId);
+          await handleSubscriptionEvent(sub, deps, { deleted: false, isCreationEvent: false });
+          synced = true;
+        } catch {
+          synced = false;
+        }
+      }
+      if (!synced) {
         await admin
           .from("profiles")
           .update({ subscription_status: "past_due" })

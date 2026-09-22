@@ -71,6 +71,16 @@ export type PlanDisplay = {
   featured?: boolean;
 };
 
+/** Stripe subscription statuses that mean "the subscription still exists but
+ *  its payment is broken": perks are off (entitlements treat them as free) and
+ *  the fix is the billing portal — never a second subscription. Client-safe so
+ *  /pricing can offer the right button. */
+export const DELINQUENT_SUBSCRIPTION_STATUSES: ReadonlySet<string> = new Set([
+  "past_due",
+  "unpaid",
+  "incomplete",
+]);
+
 // Perks in development that paid tiers will get at no extra cost. Shared by
 // both paid tiers so the storefront can't drift.
 const PAID_COMING_SOON = [

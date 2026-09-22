@@ -242,7 +242,16 @@ export async function POST(request: Request) {
     // 5-card deck). RLS hides decks that aren't the caller's; the count
     // then reads 0 and createDeckRemixJob rejects ownership downstream.
     const count = await countRemixableDeckCards(parsed.data.deck_id);
-    size = Math.max(1, Math.min(limit, count || limit));
+    if (count === 0) {
+      // Nothing to remix — or a deck RLS hides (not the caller's). Refuse
+      // here instead of sizing the job at the ceiling and answering "you
+      // need 100 credits" for a 5-card deck.
+      return NextResponse.json(
+        { ok: false, error: "That deck has no cards to remix, or it isn't yours." },
+        { status: 400 },
+      );
+    }
+    size = Math.max(1, Math.min(limit, count));
   } else {
     // A missing size defaults to the classic 3-card batch, never the
     // ceiling — the UI always sends an explicit size; a bare API call

@@ -239,6 +239,32 @@ describe("refillTierFor", () => {
     ).toBe("plus");
   });
 
+  it("owes an unexpired admin comp its tier — the higher of comp and live plan", () => {
+    const now = new Date("2026-07-15T00:00:00Z");
+    // Comped Pro on a free account.
+    expect(refillTierFor({ ...base, comp_tier: "pro", comp_expires_at: null }, PERIOD, now)).toBe("pro");
+    // Comped Pro on a lapsed Plus subscription.
+    expect(
+      refillTierFor(
+        { ...base, subscription_tier: "plus", subscription_status: "canceled", comp_tier: "pro", comp_expires_at: "2026-12-31T00:00:00Z" },
+        PERIOD,
+        now,
+      ),
+    ).toBe("pro");
+    // Comped Plus never demotes an active Pro.
+    expect(
+      refillTierFor(
+        { ...base, subscription_tier: "pro", subscription_status: "active", comp_tier: "plus", comp_expires_at: null },
+        PERIOD,
+        now,
+      ),
+    ).toBe("pro");
+    // An expired comp is no comp.
+    expect(
+      refillTierFor({ ...base, comp_tier: "pro", comp_expires_at: "2026-07-01T00:00:00Z" }, PERIOD, now),
+    ).toBe("free");
+  });
+
   it("skips trials (single grant at creation), admins, and free accounts created this month", () => {
     expect(
       refillTierFor({ ...base, subscription_tier: "pro", subscription_status: "trialing" }, PERIOD),

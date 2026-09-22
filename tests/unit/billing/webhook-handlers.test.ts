@@ -540,6 +540,63 @@ describe("handleStripeEvent — price/tier resolution + multi-subscription safet
     expect(rpcs.some((r) => r.fn === "grant_credits")).toBe(false);
   });
 
+  it("invoice.payment_failed on a secondary subscription resyncs to the live Pro plan instead of demoting", async () => {
+    const { admin, updates } = makeAdmin();
+    const failing = {
+      id: "sub_trial",
+      customer: "cus_1",
+      status: "past_due",
+      created: 1,
+      items: { data: [{ id: "si_t", price: { id: "price_plus" }, current_period_end: 1 }] },
+    };
+    const pro = {
+      id: "sub_pro",
+      customer: "cus_1",
+      status: "active",
+      created: 2,
+      cancel_at_period_end: false,
+      items: { data: [{ id: "si_p", price: { id: "price_pro" }, current_period_end: 1893456000 }] },
+    };
+    await handleStripeEvent(
+      {
+        id: "evt_fail_secondary",
+        type: "invoice.payment_failed",
+        data: {
+          object: {
+            customer: "cus_1",
+            parent: { subscription_details: { subscription: "sub_trial" } },
+          },
+        },
+      } as never,
+      { admin, stripe: makeStripeWithSubs([failing, pro]).stripe },
+    );
+    const state = updates.find((u) => "subscription_tier" in u.values);
+    expect(state?.values).toMatchObject({ subscription_tier: "pro", subscription_status: "active" });
+    expect(updates.some((u) => u.values.subscription_status === "past_due")).toBe(false);
+  });
+
+  it("invoice.payment_failed on the ONLY subscription still marks it past_due through the sync layer", async () => {
+    const { admin, updates } = makeAdmin();
+    const only = {
+      id: "sub_only",
+      customer: "cus_1",
+      status: "past_due",
+      created: 1,
+      cancel_at_period_end: false,
+      items: { data: [{ id: "si_o", price: { id: "price_pro" }, current_period_end: 1893456000 }] },
+    };
+    await handleStripeEvent(
+      {
+        id: "evt_fail_only",
+        type: "invoice.payment_failed",
+        data: { object: { customer: "cus_1", parent: { subscription_details: { subscription: "sub_only" } } } },
+      } as never,
+      { admin, stripe: makeStripeWithSubs([only]).stripe },
+    );
+    const state = updates.find((u) => "subscription_status" in u.values);
+    expect(state?.values).toMatchObject({ subscription_status: "past_due" });
+  });
+
   it("checkout.session.completed cancels the superseded trial once the new plan is paid", async () => {
     const { admin } = makeAdmin();
     const trial = { id: "sub_trial", status: "trialing" };
