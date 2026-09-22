@@ -58,6 +58,25 @@ export type BakeRenderResult =
  * lets us avoid an awkward double-mutation pattern in the save action
  * (insert → render → second update).
  */
+/**
+ * Resolve a card's front art to a data URL the renderer can embed, or refuse.
+ * The renderer's image resolver fails SOFT (a transparent pixel for a refused
+ * host, the raw URL for a fetch error, which Satori then draws as nothing) —
+ * so a storage hiccup used to bake an art-less PNG and persist it as the
+ * card's current, gallery-worthy render. Every path that STORES a render
+ * (the save-time bake and the admin sweep) goes through this first.
+ */
+export async function resolveBakeArt(
+  artUrl: string | null | undefined,
+): Promise<{ ok: true; artUrl: string | null } | { ok: false; error: string }> {
+  if (!artUrl) return { ok: true, artUrl: null };
+  const resolved = await resolveRenderableImage(artUrl);
+  if (!resolved || resolved === TRANSPARENT_PIXEL_DATA_URL || resolved === artUrl) {
+    return { ok: false, error: "Art unavailable — not baking an art-less render." };
+  }
+  return { ok: true, artUrl: resolved };
+}
+
 export async function bakeCardRender(
   cardId: string,
   ownerId: string,
@@ -113,19 +132,11 @@ export async function bakeCardRender(
     profileOverrides,
   );
 
-  // The art has to actually load. The renderer's image resolver fails SOFT
-  // (a transparent pixel for a refused host, the raw URL for a fetch error,
-  // which Satori then draws as nothing) — so a storage hiccup used to bake
-  // an art-less PNG and persist it as the card's current, gallery-worthy
-  // render. Resolve the front art up front and refuse to bake without it;
-  // the caller then clears the stale render and tiles show the live preview.
-  if (card.art_url) {
-    const resolved = await resolveRenderableImage(card.art_url);
-    if (!resolved || resolved === TRANSPARENT_PIXEL_DATA_URL || resolved === card.art_url) {
-      return { ok: false, error: "Art unavailable — not baking an art-less render." };
-    }
-    previewData.artUrl = resolved; // already a data URL: no second fetch
-  }
+  // The art has to actually load (resolveBakeArt) — the caller then clears
+  // the stale render on refusal and tiles show the live preview.
+  const art = await resolveBakeArt(card.art_url);
+  if (!art.ok) return { ok: false, error: art.error };
+  if (art.artUrl) previewData.artUrl = art.artUrl; // already a data URL: no second fetch
 
   let pngBytes: ArrayBuffer;
   try {

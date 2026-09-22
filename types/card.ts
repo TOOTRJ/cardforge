@@ -175,8 +175,9 @@ export type ArtPosition = {
   focalY?: number;
   /** 1.0 = no zoom, >1 zooms in, <1 zooms out. */
   scale?: number;
-  /** Rotation in degrees, -180 to 180. 0 (default) = no rotation. */
-  rotation?: number;
+  // `rotation` is NOT a field: neither renderer draws it and the uploader never
+  // writes it. lib/validation/card.ts still accepts the key so the two legacy
+  // rows that carry `rotation: 0` keep saving.
 };
 
 // Back-face content for double-faced cards (DFCs). Persisted as jsonb on

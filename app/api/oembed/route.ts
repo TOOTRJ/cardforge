@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createPublicClient } from "@/lib/supabase/public";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getSiteBaseUrl } from "@/lib/site-url";
-import { RENDER_PRESETS } from "@/lib/render/card-image";
+import { isLandscapeTemplate, naturalRenderSize } from "@/lib/render/card-image";
 
 // ---------------------------------------------------------------------------
 // oEmbed provider endpoint (https://oembed.com) for public card pages.
@@ -66,6 +66,7 @@ export async function GET(request: NextRequest) {
     id: string;
     title: string;
     updated_at: string;
+    frame_style: unknown;
   } | null = null;
   let ownerDisplay = username;
   try {
@@ -82,7 +83,7 @@ export async function GET(request: NextRequest) {
 
     const { data } = await supabase
       .from("cards")
-      .select("id, title, updated_at, visibility")
+      .select("id, title, updated_at, visibility, frame_style")
       .eq("owner_id", profile.id)
       .eq("slug", slug)
       .in("visibility", ["public", "unlisted"])
@@ -96,8 +97,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  // Scale the reported size to the consumer's cap (never upscale).
-  const natural = RENDER_PRESETS.default;
+  // Scale the reported size to the consumer's cap (never upscale). A landscape
+  // frame (Battle) is served as 1050×750, so report that — not the portrait
+  // size the embed would then letterbox.
+  const natural = naturalRenderSize(isLandscapeTemplate(card.frame_style));
   const maxWidth = positiveInt(params.get("maxwidth")) ?? natural.width;
   const maxHeight = positiveInt(params.get("maxheight")) ?? natural.height;
   const scale = Math.min(maxWidth / natural.width, maxHeight / natural.height, 1);

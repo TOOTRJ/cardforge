@@ -203,6 +203,8 @@ const artPositionBaseSchema = z
     focalX: z.number().min(0).max(1).optional(),
     focalY: z.number().min(0).max(1).optional(),
     scale: z.number().min(0.1).max(4).optional(),
+    // Legacy key: accepted (two old rows carry rotation: 0) but never rendered
+    // — it is not part of ArtPosition (types/card.ts).
     rotation: z.number().min(-180).max(180).optional(),
   })
   .strict();
