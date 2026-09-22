@@ -31,6 +31,7 @@ import {
   reconcileCollection,
   toResolvedCardData,
   type ResolvedCardData,
+  clampManaValue,
 } from "@/lib/decks/import-resolution";
 import { getDeckById } from "@/lib/decks/queries";
 import { isSafeImageUrl } from "@/lib/validation/card";
@@ -335,7 +336,7 @@ export async function commitDeckImportAction(
       collector_number: resolved?.collector_number ?? null,
       type_line: resolved?.type_line ?? null,
       mana_cost: resolved?.mana_cost ?? null,
-      mana_value: resolved?.mana_value ?? null,
+      mana_value: clampManaValue(resolved?.mana_value),
       color_identity: resolved?.color_identity ?? [],
       rarity: resolved?.rarity ?? null,
       image_url: safeImage(resolved?.image_url ?? null),

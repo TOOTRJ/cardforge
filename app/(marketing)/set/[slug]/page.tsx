@@ -30,8 +30,8 @@ import {
   itemListJsonLd,
   JsonLd,
 } from "@/components/seo/json-ld";
-import type { ArtPosition, FrameStyle } from "@/types/card";
 import { Layers } from "lucide-react";
+import { cardToPreviewData } from "@/lib/cards/preview-data";
 
 type Params = { slug: string };
 
@@ -314,28 +314,7 @@ async function SetBody({
                       renderedImageUrl={card.rendered_image_url}
                       renderedThumbUrl={card.rendered_thumb_url}
                       title={card.title}
-                      previewData={{
-                        profileOverrides,
-                        title: card.title,
-                        cost: card.cost,
-                        cardType: card.card_type,
-                        supertype: card.supertype,
-                        subtypes: card.subtypes,
-                        rarity: card.rarity,
-                        colorIdentity: card.color_identity,
-                        rulesText: card.rules_text,
-                        flavorText: card.flavor_text,
-                        power: card.power,
-                        toughness: card.toughness,
-                        loyalty: card.loyalty,
-                        defense: card.defense,
-                        artistCredit: card.artist_credit,
-                        artUrl: card.art_url,
-                        artPosition: card.art_position as ArtPosition,
-                        frameStyle: card.frame_style as FrameStyle,
-                        setIconUrl: card.set_icon_url,
-                        setIconCode: card.set_icon_code,
-                      }}
+                      previewData={cardToPreviewData(card, profileOverrides)}
                     />
                   </CardHoverEffect>
                 </Link>

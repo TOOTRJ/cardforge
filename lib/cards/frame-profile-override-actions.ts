@@ -7,6 +7,7 @@ import { getCurrentProfile } from "@/lib/supabase/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { frameProfileOverrideSchema } from "@/lib/cards/profile-override";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
+import { DEFAULT_FRAME_TEMPLATE } from "@/lib/render/card-frames";
 
 // ---------------------------------------------------------------------------
 // Admin mutations for frame layout overrides (the visual editor's Save /
@@ -46,13 +47,19 @@ async function markTemplateRendersStale(
   admin: ReturnType<typeof createAdminClient>,
   template: string,
 ): Promise<number> {
-  const { data } = await admin
+  let query = admin
     .from("cards")
     .update({ layout_version: null })
     .in("visibility", ["public", "unlisted"])
-    .not("rendered_image_url", "is", null)
-    .filter("frame_style->>template", "eq", template)
-    .select("id");
+    .not("rendered_image_url", "is", null);
+  // Cards with no explicit template render on the DEFAULT one — an override
+  // of that template changes their geometry too, but `->>template = 'm15'`
+  // never matched a NULL, so they were left "current" with a stale PNG.
+  query =
+    template === DEFAULT_FRAME_TEMPLATE
+      ? query.or(`frame_style->>template.eq.${template},frame_style->>template.is.null`)
+      : query.filter("frame_style->>template", "eq", template);
+  const { data } = await query.select("id");
   return data?.length ?? 0;
 }
 

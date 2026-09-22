@@ -50,6 +50,9 @@ function challengeSlugFromTitle(title: string): string {
 
 function revalidateChallengeSurfaces() {
   revalidatePath("/challenges");
+  // Every /challenges/[slug] page — "Close now" and the feature toggle
+  // change what the detail page says (days left, banner), and it's ISR'd.
+  revalidatePath("/challenges/[slug]", "page");
   revalidatePath("/gallery");
   revalidatePath("/admin/challenges");
 }

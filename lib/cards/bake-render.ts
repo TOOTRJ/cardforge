@@ -11,6 +11,7 @@ import {
   rowToPreviewData,
   type CardRowForBake,
 } from "@/lib/cards/bake-core";
+import { TRANSPARENT_PIXEL_DATA_URL, resolveRenderableImage } from "@/lib/render/art-source";
 import { makeRenderThumb, renderThumbPath } from "@/lib/cards/render-thumb";
 import { getPipOverrides } from "@/lib/pips/queries";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
@@ -32,8 +33,15 @@ import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
 // ---------------------------------------------------------------------------
 
 export type BakeRenderResult =
-  | { ok: true; renderedImageUrl: string | null; renderedThumbUrl: string | null }
-  | { ok: false; error: string };
+  | {
+      ok: true;
+      renderedImageUrl: string | null;
+      renderedThumbUrl: string | null;
+      /** The row's updated_at the bake rendered from — the persist step's
+       *  compare-and-set key (see bakeAndPersistCardRender). */
+      bakedFrom?: string;
+    }
+  | { ok: false; error: string; superseded?: boolean };
 
 /**
  * Delete a card's baked PNG from the public `card-renders` bucket, retrying
@@ -127,6 +135,20 @@ export async function bakeCardRender(
     profileOverrides,
   );
 
+  // The art has to actually load. The renderer's image resolver fails SOFT
+  // (a transparent pixel for a refused host, the raw URL for a fetch error,
+  // which Satori then draws as nothing) — so a storage hiccup used to bake
+  // an art-less PNG and persist it as the card's current, gallery-worthy
+  // render. Resolve the front art up front and refuse to bake without it;
+  // the caller then clears the stale render and tiles show the live preview.
+  if (card.art_url) {
+    const resolved = await resolveRenderableImage(card.art_url);
+    if (!resolved || resolved === TRANSPARENT_PIXEL_DATA_URL || resolved === card.art_url) {
+      return { ok: false, error: "Art unavailable — not baking an art-less render." };
+    }
+    previewData.artUrl = resolved; // already a data URL: no second fetch
+  }
+
   let pngBytes: ArrayBuffer;
   try {
     // The baked render is the DISPLAY copy (gallery tiles, OG image, free
@@ -142,6 +164,19 @@ export async function bakeCardRender(
   } catch (err) {
     const detail = err instanceof Error ? err.message : "Render error";
     return { ok: false, error: `Render failed: ${detail}` };
+  }
+
+  // Overlap guard, part 1: rendering is the slow step (seconds). If the card
+  // was saved again meanwhile, THAT save's bake owns the row now — uploading
+  // ours would overwrite the newer PNG with older pixels. (A residual race
+  // between this read and the upload remains; part 2 below catches the row.)
+  const { data: fresh } = await supabase
+    .from("cards")
+    .select("updated_at")
+    .eq("id", cardId)
+    .maybeSingle();
+  if (!fresh || fresh.updated_at !== card.updated_at) {
+    return { ok: false, error: "Superseded by a newer save.", superseded: true };
   }
 
   // upsert: true overwrites on resave instead of creating a pile of versioned
@@ -195,7 +230,7 @@ export async function bakeCardRender(
     ? `${supabase.storage.from("card-renders").getPublicUrl(thumbPath).data.publicUrl}?v=${version}`
     : null;
 
-  return { ok: true, renderedImageUrl, renderedThumbUrl };
+  return { ok: true, renderedImageUrl, renderedThumbUrl, bakedFrom: card.updated_at };
 }
 
 /**
@@ -216,6 +251,10 @@ export async function bakeAndPersistCardRender(
   const supabase = await createClient();
 
   if (!result.ok) {
+    // A superseded bake is not a failure: the newer save's bake is (or was)
+    // running and will persist its own render. Touching the row here would
+    // clear THAT render.
+    if (result.superseded) return null;
     // Best-effort logging. We deliberately don't throw — the card itself
     // saved successfully; the bake is a nice-to-have that can be retried.
     console.warn(
@@ -242,7 +281,10 @@ export async function bakeAndPersistCardRender(
     return null;
   }
 
-  const { error: updateErr } = await supabase
+  // Overlap guard, part 2 (compare-and-set): only the bake that rendered the
+  // row as it currently is may write its URL. `bakedFrom` is the updated_at
+  // the bake read; a newer save changed it, so a stale bake matches no row.
+  let query = supabase
     .from("cards")
     .update({
       // null for private cards (no public render); a URL otherwise.
@@ -255,7 +297,13 @@ export async function bakeAndPersistCardRender(
       layout_version: result.renderedImageUrl ? CARD_LAYOUT_VERSION : null,
     })
     .eq("id", cardId);
+  if (result.bakedFrom) query = query.eq("updated_at", result.bakedFrom);
+  const { data: written, error: updateErr } = await query.select("id");
 
+  if (!updateErr && (!written || written.length === 0)) {
+    console.warn(`[bake-render] Bake for card ${cardId} was superseded before persisting; skipped.`);
+    return null;
+  }
   if (updateErr) {
     console.warn(
       `[bake-render] Failed to persist render URL for card ${cardId}: ${updateErr.message}`,

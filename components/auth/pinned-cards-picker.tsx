@@ -8,8 +8,8 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { updatePinnedCardsAction } from "@/app/(app)/settings/actions";
 import { PINNED_CARDS_MAX } from "@/lib/auth/schemas";
-import type { ArtPosition, FrameStyle } from "@/types/card";
 import type { CardWithStats } from "@/lib/cards/queries";
+import { cardToPreviewData } from "@/lib/cards/preview-data";
 
 // ---------------------------------------------------------------------------
 // PinnedCardsPicker — toggleable grid of the user's public cards. At most
@@ -149,28 +149,7 @@ export function PinnedCardsPicker({
                   renderedImageUrl={card.rendered_image_url}
                   renderedThumbUrl={card.rendered_thumb_url}
                   title={card.title}
-                  previewData={{
-                    profileOverrides,
-                    title: card.title,
-                    cost: card.cost,
-                    cardType: card.card_type,
-                    supertype: card.supertype,
-                    subtypes: card.subtypes,
-                    rarity: card.rarity,
-                    colorIdentity: card.color_identity,
-                    rulesText: card.rules_text,
-                    flavorText: card.flavor_text,
-                    power: card.power,
-                    toughness: card.toughness,
-                    loyalty: card.loyalty,
-                    defense: card.defense,
-                    artistCredit: card.artist_credit,
-                    artUrl: card.art_url,
-                    artPosition: card.art_position as ArtPosition,
-                    frameStyle: card.frame_style as FrameStyle,
-                    setIconUrl: card.set_icon_url,
-                    setIconCode: card.set_icon_code,
-                  }}
+                  previewData={cardToPreviewData(card, profileOverrides)}
                 />
                 {isPinned ? (
                   <span className="absolute right-2 top-2 flex h-7 min-w-7 items-center justify-center gap-1 rounded-full bg-primary px-2 text-xs font-semibold text-primary-foreground shadow">

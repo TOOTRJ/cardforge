@@ -5,7 +5,7 @@ import { QuickLikeButton } from "@/components/cards/quick-like-button";
 import { CardHoverEffect } from "@/components/cards/card-hover-effect";
 import { buildCardPath } from "@/lib/cards/utils";
 import type { CardWithStats } from "@/lib/cards/queries";
-import type { ArtPosition, FrameStyle } from "@/types/card";
+import { cardToPreviewData } from "@/lib/cards/preview-data";
 
 // Public card thumbnail + owner/like footer. Shared by the gallery grid and the
 // following feed so they stay visually identical.
@@ -48,27 +48,7 @@ export function GalleryCardTile({
               renderedThumbUrl={card.rendered_thumb_url}
               title={card.title}
               alt={`${card.title} — custom MTG-style ${card.card_type ?? "card"}${card.rarity ? `, ${card.rarity} rarity` : ""}`}
-              previewData={{
-                title: card.title,
-                cost: card.cost,
-                cardType: card.card_type,
-                supertype: card.supertype,
-                subtypes: card.subtypes,
-                rarity: card.rarity,
-                colorIdentity: card.color_identity,
-                rulesText: card.rules_text,
-                flavorText: card.flavor_text,
-                power: card.power,
-                toughness: card.toughness,
-                loyalty: card.loyalty,
-                defense: card.defense,
-                artistCredit: card.artist_credit,
-                artUrl: card.art_url,
-                artPosition: card.art_position as ArtPosition,
-                frameStyle: card.frame_style as FrameStyle,
-                setIconUrl: card.set_icon_url,
-                setIconCode: card.set_icon_code,
-              }}
+              previewData={cardToPreviewData(card, null)}
             />
           </CardHoverEffect>
         </Link>
