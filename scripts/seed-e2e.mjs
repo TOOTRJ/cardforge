@@ -125,6 +125,29 @@ if (framesError) {
   process.exit(1);
 }
 
+// The challenge specs (tests/e2e/challenges.spec.ts, challenge-entry.spec.ts)
+// need an ACTIVE "Arcane Frontiers". Migration 0040 seeds it ending 14 days
+// after the migrations ran, so a long-lived local stack outlives it — re-open
+// it (started yesterday, ends in 14 days) on every seed run.
+const DAY_MS = 86_400_000;
+const { error: challengeError } = await admin.from("challenges").upsert(
+  {
+    slug: "arcane-frontiers",
+    title: "Arcane Frontiers",
+    description:
+      "Explore the unknown. Design a card that pushes the boundaries of magic and technology — an artifact creature, a spell that bends the rules, a place where ley lines meet circuitry. Show us what lies beyond. Publish your card with the challenge tag to enter; the community's likes decide the spotlight.",
+    tag: "arcane-frontiers",
+    starts_at: new Date(Date.now() - DAY_MS).toISOString(),
+    ends_at: new Date(Date.now() + 14 * DAY_MS).toISOString(),
+    featured: true,
+  },
+  { onConflict: "slug" },
+);
+if (challengeError) {
+  console.error(`✗ challenge seed failed: ${challengeError.message}`);
+  process.exit(1);
+}
+
 console.log(
-  `✓ Seeded ${email} (${userId}) with username e2e_forger (wiped ${wiped ?? 0} stale cards, verified ${E2E_VERIFIED_TEMPLATES.join("/")} frames)`,
+  `✓ Seeded ${email} (${userId}) with username e2e_forger (wiped ${wiped ?? 0} stale cards, verified ${E2E_VERIFIED_TEMPLATES.join("/")} frames, re-opened arcane-frontiers for 14 days)`,
 );

@@ -185,13 +185,13 @@ the evidence.
 - [x] (fixed 2026-09-21 — dup — 0102) deck_likes SELECT policy is `using (true)` — anyone can enumerate who liked private/unlisted decks (never received the 0012/0024 hardening) — `supabase/migrations/0055_decks.sql`:296
 - [x] (fixed 2026-09-21 — dup — 0102) deck_likes SELECT is `using (true)` — anonymous callers can enumerate who liked private/unlisted decks (the leak 0012 and 0024 already closed for cards and sets) — `supabase/migrations/0055_decks.sql`:299
 - [x] (verified fixed — 0073 dropped owner UPDATE/DELETE; step RPCs are service_role-only) ai_generation_jobs rows are fully client-writable (plan/steps/kind) and the step route trusts them — `supabase/migrations/0059_ai_generation_jobs.sql`:69
-- [ ] No unit coverage for the admin credit-grant / comp / card-cap actions — `lib/admin/user-actions.ts`:61
-- [ ] No unit coverage of the credit reserve → refund → spend_ref stamping path in job steps — `lib/ai/generation-jobs.ts`:515
-- [ ] Import commit merge/accumulate logic has no tests despite a documented prior data-loss bug — `lib/decks/import.ts`:318
-- [ ] No automated coverage at all for the sets subsystem (membership authz, icon denormalization, deferred re-bake, slug uniqueness) — `lib/sets/actions.ts`:333
-- [ ] No unit tests for checkout/portal actions or the entitlement resolver — `lib/stripe/actions.ts`:22
-- [ ] Challenge e2e specs depend on a migration-seeded challenge that expires 14 days after the migration runs — `tests/e2e/challenges.spec.ts`:18
-- [ ] No tests cover the auth redirect guard, middleware session gate, or account deletion — `tests/unit/auth/profile-schema.test.ts`:1
+- [x] (fixed 2026-09-21 — tests/unit/admin/user-actions.test.ts, chain-stub client) No unit coverage for the admin credit-grant / comp / card-cap actions — `lib/admin/user-actions.ts`:61
+- [x] (fixed 2026-09-21 — withCreditedStep extracted to lib/ai/credited-step.ts + tests/unit/ai/credited-step.test.ts) No unit coverage of the credit reserve → refund → spend_ref stamping path in job steps — `lib/ai/generation-jobs.ts`:515
+- [x] (fixed 2026-09-21 — planImportWrites extracted to lib/decks/import-plan.ts + tests/unit/decks/import-plan.test.ts incl. the same-row accumulation regression) Import commit merge/accumulate logic has no tests despite a documented prior data-loss bug — `lib/decks/import.ts`:318
+- [x] (fixed 2026-09-21 — tests/unit/sets/actions.test.ts: membership authz, icon adopt/re-home + deferred bake, slug suffixing) No automated coverage at all for the sets subsystem (membership authz, icon denormalization, deferred re-bake, slug uniqueness) — `lib/sets/actions.ts`:333
+- [x] (fixed 2026-09-21 — tests/unit/billing/stripe-actions.test.ts + entitlement-resolver.test.ts; effectiveTierForProfile exported) No unit tests for checkout/portal actions or the entitlement resolver — `lib/stripe/actions.ts`:22
+- [x] (fixed 2026-09-21 — scripts/seed-e2e.mjs re-opens arcane-frontiers for 14 days on every run) Challenge e2e specs depend on a migration-seeded challenge that expires 14 days after the migration runs — `tests/e2e/challenges.spec.ts`:18
+- [x] (fixed 2026-09-21 — safeRedirectPath was already covered in tests/unit/auth/usernames.test.ts; added tests/unit/routing/proxy.test.ts + tests/unit/auth/account-deletion.test.ts) No tests cover the auth redirect guard, middleware session gate, or account deletion — `tests/unit/auth/profile-schema.test.ts`:1
 - [ ] Owner's 'View public page' / 'View set' links 404 for private sets because the detail page resolves via the anonymous client — `app/(app)/set/[slug]/edit/page.tsx`:91
 - [x] (fixed 2026-09-21 — About / Terms / Privacy point at the feedback form) Legal pages send takedown/privacy requests to a contact channel the About page says does not exist yet (circular dead end) — `app/(marketing)/about/page.tsx`:91
 - [x] (fixed 2026-09-21 — copy now says first-time subscribers; PricingPlans already switched the CTA on hasSubscribed) Pricing page hero and meta description unconditionally promise a 7-day free trial that checkout refuses to lapsed subscribers — `app/(marketing)/pricing/page.tsx`:51

@@ -59,7 +59,8 @@ supabase start                  # boots the stack + applies supabase/migrations/
                                 # colima docker && colima start --memory 4`)
 cp .env.e2e.example .env.e2e    # then paste the publishable + secret keys
                                 # printed by `supabase status` into it
-node scripts/seed-e2e.mjs       # creates the e2e user (idempotent)
+node scripts/seed-e2e.mjs       # creates the e2e user (idempotent); also re-opens the
+                                # "Arcane Frontiers" challenge the challenge specs use
 
 # every run
 npx playwright test             # full suite (17 specs)

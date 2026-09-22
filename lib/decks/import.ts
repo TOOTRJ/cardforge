@@ -31,13 +31,12 @@ import {
   reconcileCollection,
   toResolvedCardData,
   type ResolvedCardData,
-  clampManaValue,
 } from "@/lib/decks/import-resolution";
 import { getDeckById } from "@/lib/decks/queries";
 import { isSafeImageUrl } from "@/lib/validation/card";
 import { DECK_BOARD_VALUES } from "@/types/deck";
-import type { DeckCardInsert } from "@/types/supabase";
 import { revalidateProfilePage } from "@/lib/profile/username";
+import { planImportWrites } from "@/lib/decks/import-plan";
 
 // ---------------------------------------------------------------------------
 // Decklist import — two-step, review-before-commit:
@@ -279,11 +278,6 @@ export async function commitDeckImportAction(
     return { ok: false, error: "Deck not found or not yours." };
   }
 
-  // Only image URLs from Scryfall's CDN survive — belt-and-braces against a
-  // tampered client posting arbitrary hotlinks into public deck pages.
-  const safeImage = (url: string | null): string | null =>
-    url && url.startsWith("https://cards.scryfall.io/") ? url : null;
-
   const supabase = await createClient();
   const { data: existingRows, error: existingError } = await supabase
     .from("deck_cards")
@@ -293,103 +287,24 @@ export async function commitDeckImportAction(
     return { ok: false, error: existingError.message };
   }
 
-  // Merge key: same board + same card. Scryfall id when both sides have
-  // one, else case-insensitive name (covers placeholders).
-  const keyFor = (row: {
-    board: string;
-    scryfall_id: string | null;
-    name: string;
-  }) =>
-    `${row.board}|${row.scryfall_id ?? `name:${row.name.trim().toLowerCase()}`}`;
+  // Merge keys, in-payload duplicates, per-row quantity accumulation and
+  // the Scryfall-only image guard all live in the (unit-tested) planner.
+  const plan = planImportWrites(deck.id, existingRows ?? [], parsed.data.lines);
 
-  const existingByKey = new Map(
-    (existingRows ?? []).map((row) => [keyFor(row), row]),
-  );
-  let maxPosition = (existingRows ?? []).reduce(
-    (max, row) => Math.max(max, row.position ?? 0),
-    -1,
-  );
-
-  const inserts: DeckCardInsert[] = [];
-  // Accumulate quantity bumps PER existing row id. Two committed lines can
-  // resolve to the same existing deck row (e.g. an exact line + a fuzzy-rescued
-  // typo of it, same board/scryfall_id); pushing a separate update for each
-  // (both computed from the same base quantity) made the writes clobber each
-  // other last-write-wins, silently dropping one line's copies. Summing here
-  // and issuing one update per row fixes it.
-  const quantityAddByRowId = new Map<string, { base: number; added: number }>();
-  let placeholders = 0;
-
-  // Duplicate keys WITHIN the payload merge as we go.
-  const pendingByKey = new Map<string, DeckCardInsert>();
-
-  for (const line of parsed.data.lines) {
-    const resolved = line.resolved;
-    if (!resolved) placeholders += 1;
-    const candidate: DeckCardInsert = {
-      deck_id: deck.id,
-      board: line.board,
-      quantity: line.quantity,
-      position: 0, // assigned below for fresh inserts
-      scryfall_id: resolved?.scryfall_id ?? null,
-      name: resolved?.name ?? line.name,
-      set_code: resolved?.set_code ?? null,
-      collector_number: resolved?.collector_number ?? null,
-      type_line: resolved?.type_line ?? null,
-      mana_cost: resolved?.mana_cost ?? null,
-      mana_value: clampManaValue(resolved?.mana_value),
-      color_identity: resolved?.color_identity ?? [],
-      rarity: resolved?.rarity ?? null,
-      image_url: safeImage(resolved?.image_url ?? null),
-    };
-    const key = keyFor({
-      board: candidate.board ?? "main",
-      scryfall_id: candidate.scryfall_id ?? null,
-      name: candidate.name,
-    });
-
-    const pending = pendingByKey.get(key);
-    if (pending) {
-      pending.quantity = Math.min(
-        (pending.quantity ?? 1) + line.quantity,
-        MAX_ENTRY_QUANTITY,
-      );
-      continue;
-    }
-
-    const existing = existingByKey.get(key);
-    if (existing) {
-      const acc = quantityAddByRowId.get(existing.id) ?? {
-        base: existing.quantity,
-        added: 0,
-      };
-      acc.added += line.quantity;
-      quantityAddByRowId.set(existing.id, acc);
-      continue;
-    }
-
-    maxPosition += 1;
-    candidate.position = maxPosition;
-    pendingByKey.set(key, candidate);
-    inserts.push(candidate);
-  }
-
-  if (inserts.length > 0) {
+  if (plan.inserts.length > 0) {
     const { error: insertError } = await supabase
       .from("deck_cards")
-      .insert(inserts);
+      .insert(plan.inserts);
     if (insertError) {
       return { ok: false, error: insertError.message };
     }
   }
-  if (quantityAddByRowId.size > 0) {
+  if (plan.quantityUpdates.length > 0) {
     const results = await Promise.all(
-      Array.from(quantityAddByRowId.entries()).map(([id, { base, added }]) =>
+      plan.quantityUpdates.map(({ id, quantity }) =>
         supabase
           .from("deck_cards")
-          .update({
-            quantity: Math.min(base + added, MAX_ENTRY_QUANTITY),
-          })
+          .update({ quantity })
           .eq("id", id)
           .eq("deck_id", deck.id),
       ),
@@ -409,8 +324,8 @@ export async function commitDeckImportAction(
 
   return {
     ok: true,
-    added: inserts.length,
-    merged: quantityAddByRowId.size,
-    placeholders,
+    added: plan.inserts.length,
+    merged: plan.quantityUpdates.length,
+    placeholders: plan.placeholders,
   };
 }

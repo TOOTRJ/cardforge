@@ -5,7 +5,7 @@ import sharp from "sharp";
 // Challenge entry toggle — the Publish panel's "Enter the challenge"
 // switch manages the submission tag, and a public save lands the card on
 // the challenge page. Runs against the seeded "Arcane Frontiers" challenge
-// (active for 14 days after the local migrations apply).
+// (re-opened for 14 days by every scripts/seed-e2e.mjs run).
 // ---------------------------------------------------------------------------
 
 const hasCredentials =
