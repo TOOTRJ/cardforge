@@ -173,7 +173,7 @@ const { data: gameSystem } = await target
 async function rehost(sourceUrl, bucket, objectPath) {
   if (!sourceUrl) return null;
   try {
-    const response = await fetch(sourceUrl);
+    const response = await fetch(sourceUrl, { signal: AbortSignal.timeout(30_000) });
     if (!response.ok) return null;
     const bytes = Buffer.from(await response.arrayBuffer());
     const contentType = response.headers.get("content-type") ?? "application/octet-stream";
@@ -193,10 +193,13 @@ function extensionOf(url, fallback) {
 }
 
 // Columns that must NOT travel: identity, ownership, cross-table links that
-// don't exist in the target, and counters that belong to production.
+// don't exist in the target, counters that belong to production, and the
+// GENERATED columns Postgres refuses explicit values for (color_count,
+// search_vector).
 const DROP = new Set([
   "owner_id", "game_system_id", "template_id", "parent_card_id", "back_card_id",
   "primary_set_id", "view_count", "likes_count", "share_count", "search_vector",
+  "color_count",
 ]);
 
 let copied = 0;

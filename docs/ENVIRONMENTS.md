@@ -136,8 +136,11 @@ Other scoping, on purpose:
 - **Production only:** Stripe secret + webhook secret, `NEXT_PUBLIC_BILLING_ENABLED`,
   Resend key + senders, `CRON_SECRET`, GA id. Previews can't charge, can't
   email, and Vercel only runs crons on production deployments anyway.
-- **`AI_GATEWAY_API_KEY`:** use a *separate, budget-capped* key for Preview +
-  Development so testing AI features can't spend the production budget.
+- **`AI_GATEWAY_API_KEY`:** a *separate, budget-capped* key on Preview +
+  Development (set 2026-09-21); production keeps its own. Gotcha: `vercel env
+  rm NAME preview` removes the WHOLE record when one record spans several
+  scopes — it took Production's key with it and had to be re-added. Split a
+  multi-scope variable by adding the new scopes first, then removing.
 - Previews sit behind **Vercel Authentication** (Deployment Protection →
   Standard). They also carry `X-Robots-Tag: noindex` automatically.
 - A preview knows its own URL: `lib/site-url.ts` prefers `VERCEL_BRANCH_URL` /
@@ -223,5 +226,5 @@ feature branch ──PR──▶ CI: typecheck · lint · unit · e2e (local Sup
 | 5 | No CI — the e2e suite drifted to 12 failures hiding 2 real bugs | `.github/workflows/ci.yml` |
 | 6 | Previews believed they were pipglyph.com (auth links went to prod) | `lib/site-url.ts` |
 | 7 | Branch auth redirect allow-list had only `127.0.0.1` | `config.toml` wildcard for the team's `*.vercel.app` |
-| 8 | Previews shared production's paid AI key | Separate budgeted key for Preview + Development (owner step) |
+| 8 | Previews shared production's paid AI key | Separate budgeted key on Preview + Development (done 2026-09-21) |
 | 9 | Branch failures were silent (hung checks, empty DBs) | Runbook table above |

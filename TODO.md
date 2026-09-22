@@ -5,12 +5,8 @@
       against prod; prod creds parked in `.env.prod-peek`. Full environment
       rework + audit: docs/ENVIRONMENTS.md.
 
-- [ ] **Owner: separate AI Gateway key for Preview + Development.** Create a
-      budget-capped key in Vercel → AI Gateway, then
-      `vercel env rm AI_GATEWAY_API_KEY preview` and
-      `vercel env add AI_GATEWAY_API_KEY preview` / `development` with the new
-      one (and swap it into `.env.local`). Until then preview + local AI
-      testing spends the production budget.
+- [x] **Separate AI Gateway key for Preview + Development** (done 2026-09-21;
+      production keeps its original key).
 
 - [ ] **Make the `CI` and `Supabase Preview` checks required on `main`**
       (GitHub → Settings → Branches) once CI has a few green runs.
