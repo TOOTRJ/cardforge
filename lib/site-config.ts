@@ -8,7 +8,6 @@
 // `/gallery` (public) and `/create` (authed).
 // ---------------------------------------------------------------------------
 
-import { isSetsEnabled } from "@/lib/sets/flags";
 
 export type NavItem = {
   label: string;
@@ -27,7 +26,7 @@ export const siteConfig = {
   name: "PipGlyph",
   tagline: "Precision tools for legendary ideas.",
   description:
-    "PipGlyph is the MTG card creator, mana pip editor, and custom card maker for Magic: The Gathering fans. Design cards with precise mana pips, advanced text tools, and beautiful frames — then share full expansion sets with your playgroup in seconds.",
+    "PipGlyph is the MTG card creator, mana pip editor, and custom card maker for Magic: The Gathering fans. Design cards with precise mana pips, advanced text tools, and beautiful frames — then share them with your playgroup in seconds.",
   disclaimer:
     "PipGlyph is an unofficial fan tool for custom Magic: The Gathering card design and playtesting. It is not affiliated with, endorsed by, or sponsored by Wizards of the Coast, Hasbro, or any official trading card game publisher. Magic: The Gathering is a trademark of Wizards of the Coast LLC. Users are responsible for ensuring they have rights to any uploaded artwork.",
 
@@ -35,11 +34,8 @@ export const siteConfig = {
   // omitted for authed users because the right-side "New card" CTA already
   // covers that path; anon visitors still get it so they have a clear
   // entry point into the editor (which redirects them to /signup).
-  // Sets entries are spread-conditional on the feature flag (NEXT_PUBLIC_,
-  // so it's inlined at build time — safe in both server and client bundles).
   primaryNav: [
     { label: "Gallery", href: "/gallery" },
-    ...(isSetsEnabled() ? [{ label: "Sets", href: "/sets" }] : []),
     { label: "Decks", href: "/decks" },
     { label: "Challenges", href: "/challenges" },
     { label: "Guides", href: "/articles" },
@@ -48,15 +44,14 @@ export const siteConfig = {
     { label: "Create", href: "/create", anonOnly: true } as NavItem,
   ] as readonly NavItem[],
 
-  // Dashboard left-rail nav (rendered inside DashboardShell). Feed + My Sets
-  // live here now instead of the global header so the top nav stays lean.
-  // Order: the user's own library (cards → sets → decks) first, then Feed.
+  // Dashboard left-rail nav (rendered inside DashboardShell). Feed lives
+  // here instead of the global header so the top nav stays lean.
+  // Order: the user's own library (cards → decks) first, then Feed.
   // "Messages" (/messages) is NOT listed: DashboardNav inserts it after
   // Notifications only for users who have a support thread.
   dashboardNav: [
     { label: "Overview", href: "/dashboard" },
     { label: "My Cards", href: "/dashboard/cards" },
-    ...(isSetsEnabled() ? [{ label: "My Sets", href: "/dashboard/sets" }] : []),
     { label: "My Decks", href: "/dashboard/decks" },
     { label: "Feed", href: "/feed" },
     { label: "AI Usage", href: "/dashboard/usage" },
@@ -85,9 +80,6 @@ export const siteConfig = {
       title: "Discover",
       links: [
         { label: "Gallery", href: "/gallery" },
-        ...(isSetsEnabled()
-          ? [{ label: "Community sets", href: "/sets" }]
-          : []),
         { label: "Community decks", href: "/decks" },
         { label: "Challenges", href: "/challenges" },
         { label: "What's new", href: "/news" },

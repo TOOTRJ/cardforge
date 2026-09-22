@@ -5,13 +5,14 @@ import { cn } from "@/lib/utils";
 import type { Visibility } from "@/types/card";
 
 // ---------------------------------------------------------------------------
-// VisibilityPicker — the three-tile private / unlisted / public choice the
-// deck and set editors share. (The card creator has its own two-chip version
+// VisibilityPicker — the three-tile private / unlisted / public choice of
+// the deck editor. (The card creator has its own two-chip version
 // in components/creator/panels/publish-panel.tsx: there, drafts force
 // private.)
 // ---------------------------------------------------------------------------
 
-export type VisibilitySubject = "deck" | "set";
+/** Kept as a union for the next collection type; sets were removed 2026-09-22. */
+export type VisibilitySubject = "deck";
 
 type VisibilityOption = {
   value: Visibility;

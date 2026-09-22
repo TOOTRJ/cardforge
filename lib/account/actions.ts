@@ -15,7 +15,7 @@ const ACCOUNT_BUCKETS = [
   "card-art",
   "card-renders",
   "card-exports",
-  "set-covers",
+  "set-covers", // deck covers + card set icons (historical bucket name)
   "profile-media",
   "custom-pips",
 ];

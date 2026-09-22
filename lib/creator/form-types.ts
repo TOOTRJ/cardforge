@@ -86,9 +86,6 @@ export type FormValues = {
    *  Standard frames use this; the inline frames keep using `back_face`. */
   back_card_id: string;
   source_scryfall_id: string;
-  /** The set this card is added to (empty = none). Its icon becomes the card's
-   *  set symbol; the action also adds the card to the set's list. */
-  primary_set_id: string;
   /** Direct set-symbol override (Set icon step): an uploaded image URL OR a
    *  preset Keyrune code. Mutually exclusive — setting one clears the other;
    *  both empty = the default PipGlyph mark. */

@@ -3,16 +3,15 @@
 // Set icon panel — the "Set icon" step. Writes the card's denormalized
 // symbol columns (set_icon_url / set_icon_code) directly: the default
 // PipGlyph mark, a preset Keyrune glyph, or an uploaded image. Rarity
-// tinting previews live against the card's current rarity. Replaces the
-// set-membership picker as the icon's input path while the sets feature
-// is hidden (lib/sets/flags.ts).
+// tinting previews live against the card's current rarity. This is the
+// symbol's only input path (the sets feature was removed 2026-09-22).
 
 import { useRef, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { FieldGroup } from "@/components/creator/field-group";
 import { SetSymbol } from "@/components/cards/set-symbol";
-import { uploadSetCover } from "@/lib/sets/upload-cover";
+import { uploadCoverImage } from "@/lib/media/upload-cover";
 import { cn } from "@/lib/utils";
 import type { Rarity } from "@/types/card";
 import type { FormValues } from "@/lib/creator/form-types";
@@ -58,7 +57,7 @@ export function SetIconPanel({ userId }: { userId: string | null }) {
     }
     setUploading(true);
     try {
-      const result = await uploadSetCover(userId, file);
+      const result = await uploadCoverImage(userId, file);
       if (!result.ok) {
         toast.error(result.error);
         return;

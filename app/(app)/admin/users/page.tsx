@@ -398,7 +398,6 @@ async function UserDetail({ userId, backHref }: { userId: string; backHref: stri
     ? [
         { label: "Cards", value: stats.cardsTotal, hint: `${stats.cardsPublic} public · ${stats.cardsUnlisted} unlisted · ${stats.cardsPrivate} private` },
         { label: "Decks", value: stats.decks },
-        { label: "Sets", value: stats.sets },
         { label: "Likes received", value: stats.likesReceived },
         { label: "Credits spent this month", value: stats.creditsSpentMonth },
         { label: "Feedback sent", value: stats.feedbackCount },

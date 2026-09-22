@@ -397,7 +397,6 @@ const baseCardSchema = z.object({
   // The set this card is added to + whose symbol it displays. The action
   // denormalizes that set's icon onto the card and creates set membership.
   // `null` clears the association; `undefined` leaves it untouched on update.
-  primary_set_id: uuidSchema.nullable().optional(),
   // Direct set-symbol override (the Set icon step, now that the sets UI is
   // hidden): an uploaded image URL or a preset Keyrune code written straight
   // onto the card's denormalized icon columns. When provided they WIN over

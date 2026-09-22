@@ -1,9 +1,9 @@
 "use client";
 
-import { uploadCoverServerAction } from "@/lib/sets/upload-cover-server";
+import { uploadCoverServerAction } from "@/lib/media/upload-cover-server";
 
-// Client entry point for deck / set cover and set-icon uploads. The upload
-// itself runs server-side (lib/sets/upload-cover-server.ts) so every image
+// Client entry point for deck-cover and card set-icon uploads. The upload
+// itself runs server-side (lib/media/upload-cover-server.ts) so every image
 // passes the moderation scan; this wrapper only gives instant feedback on the
 // obvious rejections before the bytes leave the browser.
 
@@ -24,7 +24,7 @@ export type UploadCoverResult =
  * user's folder. `_userId` is kept for call-site compatibility; the server
  * derives the owner from the session, never from the argument.
  */
-export async function uploadSetCover(
+export async function uploadCoverImage(
   _userId: string,
   file: File,
 ): Promise<UploadCoverResult> {

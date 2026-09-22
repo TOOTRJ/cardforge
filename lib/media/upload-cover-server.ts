@@ -8,8 +8,9 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { scanImageUrl } from "@/lib/moderation/image-scan";
 
 // ---------------------------------------------------------------------------
-// Moderated upload for the `set-covers` bucket — deck covers, set covers and
-// custom set icons. Mirrors lib/cards/upload-art-server.ts: the bytes are
+// Moderated upload for the `set-covers` bucket — deck covers and custom card
+// set icons (the bucket keeps its historical name; the sets feature itself was
+// removed 2026-09-22). Mirrors lib/cards/upload-art-server.ts: the bytes are
 // validated with Sharp (never the client-declared MIME), stored under the
 // caller's own folder (the bucket RLS demands it), then run through the same
 // NSFW scan as card art. Until 2026-09-21 these went browser → storage with

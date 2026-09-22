@@ -7,7 +7,6 @@ import {
   FilePlus2,
   GalleryVerticalEnd,
   Globe,
-  Layers,
   Palette,
   UserCog,
 } from "lucide-react";
@@ -27,7 +26,6 @@ import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
 import { getPipOverrides } from "@/lib/pips/queries";
 import { CUSTOM_PIP_SYMBOLS as PIP_STRIP_SYMBOLS } from "@/lib/pips/override";
 import { listMyCards } from "@/lib/cards/queries";
-import { isSetsEnabled } from "@/lib/sets/flags";
 import { listMyDecks } from "@/lib/decks/queries";
 
 export const metadata: Metadata = {
@@ -50,18 +48,6 @@ const QUICK_ACTIONS = [
     tone: "purple" as const,
     icon: <GalleryVerticalEnd aria-hidden />,
   },
-  // Sets tile only while the feature is on — /dashboard/sets 404s otherwise.
-  ...(isSetsEnabled()
-    ? [
-        {
-          title: "My sets",
-          helper: "Group cards into sets",
-          href: "/dashboard/sets",
-          tone: "purple" as const,
-          icon: <Layers aria-hidden />,
-        },
-      ]
-    : []),
   {
     title: "Custom pips",
     helper: "Upload your own icons",
@@ -69,19 +55,13 @@ const QUICK_ACTIONS = [
     tone: "ember" as const,
     icon: <Palette aria-hidden />,
   },
-  // With sets on, the row is already four tiles — the gallery is one click
-  // away in the header, so it yields its slot to "My cards".
-  ...(isSetsEnabled()
-    ? []
-    : [
-        {
-          title: "Explore gallery",
-          helper: "Find the community's best",
-          href: "/gallery",
-          tone: "gold" as const,
-          icon: <Globe aria-hidden />,
-        },
-      ]),
+  {
+    title: "Explore gallery",
+    helper: "Find the community's best",
+    href: "/gallery",
+    tone: "gold" as const,
+    icon: <Globe aria-hidden />,
+  },
 ];
 
 export default async function DashboardPage() {
@@ -126,11 +106,6 @@ export default async function DashboardPage() {
                   <ExternalLink className="h-4 w-4" aria-hidden /> View public
                   profile
                 </Link>
-              </Button>
-            ) : null}
-            {isSetsEnabled() ? (
-              <Button asChild variant="outline">
-                <Link href="/dashboard/sets">My sets</Link>
               </Button>
             ) : null}
             <Button asChild>

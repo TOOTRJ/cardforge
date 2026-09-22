@@ -10,7 +10,6 @@
 // real user query — that's the unit AI answer engines extract and cite.
 // ---------------------------------------------------------------------------
 
-import { isSetsEnabled } from "@/lib/sets/flags";
 
 export type FaqEntry = { q: string; a: string };
 
@@ -145,16 +144,6 @@ const SHARING_FAQ: FaqEntry[] = [
 
 // --- Sets & expansions (new — /faq only) ------------------------------------
 
-const SETS_FAQ: FaqEntry[] = [
-  {
-    q: "Can I build a full custom MTG set or expansion?",
-    a: "Yes. PipGlyph has a dedicated set builder: group any of your cards into a named set with a cover image and description, reorder them, and publish the set publicly. Set pages show a live analytics breakdown — color distribution, rarity counts, and average mana cost — so you can balance the set like a real expansion.",
-  },
-  {
-    q: "What does 'Open booster' on a set page do?",
-    a: "Every set page has a booster simulator: it deals a random booster-style hand from the cards in that set, so you and your playgroup can preview what drafting the set would feel like. It works on any public set in the community, not just your own.",
-  },
-];
 
 // --- Exports & printing (new — /faq only) -----------------------------------
 
@@ -221,11 +210,11 @@ const ACCOUNTS_FAQ: FaqEntry[] = [
 export const COMPARISON_FAQ: FaqEntry[] = [
   {
     q: "What is the best MTG card maker?",
-    a: "The best MTG card maker depends on what you need. PipGlyph is a strong all-rounder: a free, browser-based editor with a live preview, precise mana pips (including custom uploaded pip icons), an AI assistant for rules and flavor text, a full expansion-set builder, and PNG/PDF export for proxies. MTG Cardsmith and MTGNexus are other popular browser tools with large communities, and Magic Set Editor is a free offline desktop program favored for building whole sets.",
+    a: "The best MTG card maker depends on what you need. PipGlyph is a strong all-rounder: a free, browser-based editor with a live preview, precise mana pips (including custom uploaded pip icons), an AI assistant for rules and flavor text, deck building with proxy printing, and PNG/PDF export for proxies. MTG Cardsmith and MTGNexus are other popular browser tools with large communities, and Magic Set Editor is a free offline desktop program favored for building whole sets.",
   },
   {
     q: "Is there a CardConjurer alternative?",
-    a: "Yes. CardConjurer was a popular browser-based card renderer that was taken down in late 2023 after its creator received a cease-and-desist from Wizards of the Coast. PipGlyph is a free, browser-based alternative with a live-preview editor, the full mana-symbol vocabulary, custom pip uploads, set building, sharing, and high-resolution PNG and PDF export — built on original frames and fonts rather than Wizards' proprietary assets.",
+    a: "Yes. CardConjurer was a popular browser-based card renderer that was taken down in late 2023 after its creator received a cease-and-desist from Wizards of the Coast. PipGlyph is a free, browser-based alternative with a live-preview editor, the full mana-symbol vocabulary, custom pip uploads, deck building, sharing, and high-resolution PNG and PDF export — built on original frames and fonts rather than Wizards' proprietary assets.",
   },
   {
     q: "Why was CardConjurer taken down?",
@@ -273,11 +262,6 @@ export const FAQ_TOPICS: FaqTopic[] = [
     entries: COMPARISON_FAQ,
   },
   { slug: "sharing", title: "Sharing & visibility", entries: SHARING_FAQ },
-  // Sets topic rides the feature flag — /faq and its JSON-LD both read
-  // FAQ_TOPICS, so filtering here keeps them in sync.
-  ...(isSetsEnabled()
-    ? [{ slug: "sets", title: "Sets & expansions", entries: SETS_FAQ }]
-    : []),
   { slug: "exports", title: "Exports & printing", entries: EXPORTS_FAQ },
   {
     slug: "import-remix",

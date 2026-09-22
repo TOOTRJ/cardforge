@@ -91,7 +91,6 @@ import { AbilitiesPanel } from "@/components/creator/panels/abilities-panel";
 import { LayoutPanel } from "@/components/creator/panels/layout-panel";
 import {
   PublishPanel,
-  type CardSetOption,
   type DeckOption,
 } from "@/components/creator/panels/publish-panel";
 import {
@@ -203,8 +202,6 @@ type CardCreatorFormProps = {
   gameSystems: GameSystem[];
   /** The card being edited (edit) or remixed from (remix). */
   card?: Card | null;
-  /** The current user's sets — populates the "Add to set" picker on Publish. */
-  mySets?: CardSetOption[];
   /** The current user's decks — the Publish "Add to deck" picker and the AI
    *  dialog's "For a deck" picker. `null` (the default) hides both. */
   myDecks?: DeckOption[] | null;
@@ -302,7 +299,6 @@ export function CardCreatorForm({
   ownerUsername = null,
   gameSystems,
   card,
-  mySets = [],
   myDecks = null,
   aiDecks = null,
   canDesignForDeck = false,
@@ -1707,10 +1703,8 @@ export function CardCreatorForm({
       // update; undefined would silently keep the old link. Cards whose
       // provenance should persist hydrate the field non-empty on load.
       source_scryfall_id: values.source_scryfall_id.trim() || null,
-      // Empty → null clears the association; a UUID adds the card to that set.
-      primary_set_id: values.primary_set_id || null,
-      // Direct set-symbol fields (Set icon step). Empty → null clears back to
-      // the default PipGlyph mark; these win over the set-derived icon.
+      // Set-symbol fields (Set icon step). Empty → null clears back to the
+      // default PipGlyph mark.
       set_icon_url: values.set_icon_url.trim() || null,
       set_icon_code: values.set_icon_code.trim() || null,
       // Create-flow convenience: a UUID drops the saved card into that deck
@@ -2268,7 +2262,6 @@ export function CardCreatorForm({
                 userId={userId}
                 profileOverrides={profileOverrides}
                 activeChallenge={activeChallenge}
-                mySets={mySets}
                 myDecks={isRevise ? null : myDecks}
                 myCards={myCards}
                 onCreateBackFace={handleCreateBackFace}

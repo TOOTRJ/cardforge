@@ -17,12 +17,10 @@ import {
   clampBatchSize,
 } from "@/lib/ai/generation-limits";
 import {
-  SET_GENERATION_ENABLED,
   createCardFillJob,
   createCardGenerationJob,
   createDeckGenerationJob,
   createDeckRemixJob,
-  createSetGenerationJob,
 } from "@/lib/ai/generation-jobs";
 import {
   COLOR_IDENTITY_VALUES,
@@ -65,13 +63,6 @@ const AI_CARD_TYPE_VALUES = [
 ] as const;
 
 const requestSchema = z.discriminatedUnion("kind", [
-  z.object({
-    kind: z.literal("set"),
-    theme: z.string().trim().max(300).optional(),
-    style: z.string().trim().max(200).optional(),
-    size: z.coerce.number().optional(),
-    set_id: z.string().uuid().optional(),
-  }),
   z.object({
     kind: z.literal("deck"),
     theme: z.string().trim().max(300).optional(),
@@ -279,18 +270,16 @@ export async function POST(request: Request) {
       return rateLimitedResponse(daily);
     }
   }
-  // Deck/set batch flows share one per-day image ceiling (admins exempt).
+  // Deck batch flows share one per-day image ceiling (admins exempt).
   if (
     dailyCapsActive &&
-    (parsed.data.kind === "deck" ||
-      parsed.data.kind === "deck_remix" ||
-      parsed.data.kind === "set")
+    (parsed.data.kind === "deck" || parsed.data.kind === "deck_remix")
   ) {
     const daily = await checkDailyActionLimit(
       user.id,
       "generate_deck_cards",
       DECK_CARDS_DAILY_LIMIT,
-      "deck/set card",
+      "deck card",
     );
     if (!daily.ok) {
       return rateLimitedResponse(daily);
@@ -300,16 +289,15 @@ export async function POST(request: Request) {
   // Credits are metered per card as steps complete; pre-check the balance so
   // a user doesn't burn a plan call they can't afford (billing off → ∞).
   // Covers are free (owner decision, 2026-09-15) — only the cards cost
-  // credits. A set still charges for its icon, so count that one extra
-  // rather than let the job run out one step from the finish line.
+  // credits.
   if (isBillingEnabled()) {
-    const needed = parsed.data.kind === "set" ? size + 1 : size;
+    const needed = size;
     const entitlements = await getEntitlements();
     if (entitlements.credits < needed) {
       return NextResponse.json(
         {
           ok: false,
-          error: `You need ${needed} credit${needed === 1 ? "" : "s"} for this generation — ${size} card${size === 1 ? "" : "s"}${needed > size ? " plus the set icon" : ""} (you have ${entitlements.credits}).`,
+          error: `You need ${needed} credit${needed === 1 ? "" : "s"} for this generation — ${size} card${size === 1 ? "" : "s"} (you have ${entitlements.credits}).`,
           code: "INSUFFICIENT_CREDITS",
           balance: entitlements.credits,
           needed,
@@ -400,27 +388,6 @@ export async function POST(request: Request) {
 
   await logAiCall(user.id, "generate_deck");
 
-  if (parsed.data.kind === "set") {
-    if (!SET_GENERATION_ENABLED) {
-      return NextResponse.json(
-        { ok: false, error: "AI set generation is coming soon." },
-        { status: 403 },
-      );
-    }
-    const result = await createSetGenerationJob({
-      theme: parsed.data.theme ?? "",
-      style: parsed.data.style,
-      size,
-      setId: parsed.data.set_id,
-    });
-    if (!result.ok) {
-      return NextResponse.json({ ok: false, error: result.error }, { status: 502 });
-    }
-    return NextResponse.json(
-      { ok: true, job: result.job, setSlug: result.setSlug, cardLimit: limit, credits },
-      { status: 200 },
-    );
-  }
 
   if (parsed.data.kind === "deck") {
     if (!parsed.data.format && !parsed.data.deck_id) {

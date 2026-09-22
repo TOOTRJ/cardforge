@@ -5,18 +5,17 @@ import { useRouter } from "next/navigation";
 import { Heart } from "lucide-react";
 import { toast } from "sonner";
 import { toggleLikeAction } from "@/lib/cards/likes";
-import { toggleSetLikeAction } from "@/lib/sets/likes";
 import { toggleDeckLikeAction } from "@/lib/decks/likes";
 import { hasSupabaseSessionCookie } from "@/lib/supabase/session-cookie";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
-// QuickLikeButton — compact heart+count toggle for use inside card/set tiles.
+// QuickLikeButton — compact heart+count toggle for use inside card/deck tiles.
 // Optimistic via useOptimistic; reverts on server error and reconciles to
 // the authoritative count on success. Anonymous viewers are bounced to
 // /login with a redirectTo back to the page they came from.
 //
-// Works with either a card or a set — pass the matching `kind` so the
+// Works with either a card or a deck — pass the matching `kind` so the
 // right server action is dispatched. The visual treatment is identical;
 // only the underlying mutation differs.
 // ---------------------------------------------------------------------------
@@ -43,13 +42,6 @@ type CardLikeProps = CommonProps & {
   ownerUsername?: string | null;
 };
 
-type SetLikeProps = CommonProps & {
-  kind: "set";
-  setId: string;
-  setSlug?: string;
-  ownerUsername?: string | null;
-};
-
 type DeckLikeProps = CommonProps & {
   kind: "deck";
   deckId: string;
@@ -57,7 +49,7 @@ type DeckLikeProps = CommonProps & {
   ownerUsername?: string | null;
 };
 
-type QuickLikeButtonProps = CardLikeProps | SetLikeProps | DeckLikeProps;
+type QuickLikeButtonProps = CardLikeProps | DeckLikeProps;
 
 type State = { liked: boolean; count: number };
 
@@ -120,17 +112,11 @@ export function QuickLikeButton(props: QuickLikeButtonProps) {
               props.cardSlug,
               props.ownerUsername,
             )
-          : props.kind === "set"
-            ? await toggleSetLikeAction(
-                props.setId,
-                props.setSlug,
-                props.ownerUsername,
-              )
-            : await toggleDeckLikeAction(
-                props.deckId,
-                props.deckSlug,
-                props.ownerUsername,
-              );
+          : await toggleDeckLikeAction(
+              props.deckId,
+              props.deckSlug,
+              props.ownerUsername,
+            );
       if (!result.ok) {
         toast.error(result.error);
         return; // the optimistic value drops back to `settled` on its own

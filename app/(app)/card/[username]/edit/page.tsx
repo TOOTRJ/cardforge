@@ -9,7 +9,6 @@ import { DownloadModal } from "@/components/cards/download-modal";
 import { RenderUpdateNotice } from "@/components/cards/render-update";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
 import { hasNewerLook } from "@/lib/cards/layout-version";
-import { AddToSetButton } from "@/components/sets/add-to-set-button";
 import { PageHeader } from "@/components/layout/page-header";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { Button } from "@/components/ui/button";
@@ -25,8 +24,6 @@ import {
   listMyCards,
 } from "@/lib/cards/queries";
 import { buildCardPath } from "@/lib/cards/utils";
-import { listMySets, listMySetsForCard } from "@/lib/sets/queries";
-import { isSetsEnabled } from "@/lib/sets/flags";
 import { isDesignAiConfigured } from "@/lib/ai/provider";
 import { getDeckAiSeeds } from "@/lib/ai/generation-jobs";
 import { listMyDecks } from "@/lib/decks/queries";
@@ -80,14 +77,10 @@ export default async function EditCardPage({ params }: EditCardPageProps) {
     notFound();
   }
 
-  const setsEnabled = isSetsEnabled();
-  const [gameSystem, mySets, profile, userSets, entitlements, allMyCards, myDecks, exportStamp] =
+  const [gameSystem, profile, entitlements, allMyCards, myDecks, exportStamp] =
     await Promise.all([
       getFantasyGameSystem(),
-      // Both set lists feed sets-only UI — skip the queries while hidden.
-      setsEnabled ? listMySetsForCard(card.id) : Promise.resolve([]),
       getCurrentProfile(),
-      setsEnabled ? listMySets() : Promise.resolve([]),
       getEntitlements(),
       listMyCards(),
       // The AI dialog's "For a deck" picker (Pro deck-aware generation).
@@ -122,20 +115,6 @@ export default async function EditCardPage({ params }: EditCardPageProps) {
                   ? "Unlisted"
                   : "Private"}
             </Badge>
-            {setsEnabled ? (
-              <AddToSetButton
-                cardId={card.id}
-                cardSlug={card.slug}
-                ownerUsername={ownerUsername}
-                sets={mySets.map((s) => ({
-                  id: s.id,
-                  slug: s.slug,
-                  title: s.title,
-                  cards_count: s.cards_count,
-                  contains_card: s.contains_card,
-                }))}
-              />
-            ) : null}
             <DownloadModal
               cardId={card.id}
               cardSlug={card.slug}
@@ -171,7 +150,6 @@ export default async function EditCardPage({ params }: EditCardPageProps) {
           ownerUsername={ownerUsername}
           gameSystems={gameSystem ? [gameSystem] : []}
           card={card}
-          mySets={userSets}
           myCards={myCards}
           aiDecks={myDecks.map((deck) => ({
             id: deck.id,

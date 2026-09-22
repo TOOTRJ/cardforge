@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 //   * /create is served to session-cookie holders, rewritten to the static
 //     guest creator for everyone else (the cookie is a HINT — the page
 //     re-validates);
-//   * /gallery, /sets and /decks with a REAL filter param are rewritten to
+//   * /gallery and /decks with a REAL filter param are rewritten to
 //     their dynamic /browse sibling; junk params keep the CDN-cached page;
 //   * a redirect from updateSession is never clobbered.
 // ---------------------------------------------------------------------------
@@ -65,13 +65,14 @@ describe("proxy", () => {
     expect(rewriteOf(await proxy(request("/decks?format=commander")))).toBe(
       "http://localhost:3000/decks/browse?format=commander",
     );
-    expect(rewriteOf(await proxy(request("/sets?q=alpha")))).toBe("http://localhost:3000/sets/browse?q=alpha");
   });
 
   it("leaves junk params and other paths on the cached page", async () => {
     expect(rewriteOf(await proxy(request("/gallery?utm_source=x&fbclid=y")))).toBeNull();
     expect(rewriteOf(await proxy(request("/gallery")))).toBeNull();
     expect(rewriteOf(await proxy(request("/challenges?q=x")))).toBeNull();
+    // Sets were removed 2026-09-22 — no browse sibling to rewrite to.
+    expect(rewriteOf(await proxy(request("/sets?q=alpha")))).toBeNull();
   });
 
   it("never clobbers a redirect that updateSession issued", async () => {

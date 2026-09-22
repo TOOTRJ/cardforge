@@ -12,7 +12,6 @@ import {
   Eye,
   Flame,
   Heart,
-  Layers,
   MessageCircle,
   Pencil,
   Repeat2,
@@ -38,15 +37,12 @@ import { SOCIAL_PLATFORMS, type SocialPlatformKey } from "@/lib/auth/schemas";
 import {
   countCardLikes,
   countRemixesOfCard,
-  countSetsForCard,
   getCardById,
   getCardByOwnerAndSlug,
-  getCardLikeRankInSet,
   getCardLikeRankOverall,
   getCardTrendingSignals,
   getProfileByUsername,
   getRemixParentLink,
-  getSetSummary,
   hasUserLikedCard,
   incrementCardView,
   listMoreFromOwner,
@@ -56,7 +52,6 @@ import {
   type ProfileWithStats,
 } from "@/lib/cards/queries";
 import { countDecksForCard } from "@/lib/decks/queries";
-import { isSetsEnabled } from "@/lib/sets/flags";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { countPublicRemixesBySource } from "@/lib/cards/source-queries";
@@ -119,7 +114,6 @@ export async function CardDetailContent({
 
   const user = await getCurrentUser();
   const isOwner = Boolean(user && user.id === card.owner_id);
-  const setsEnabled = isSetsEnabled();
 
   const [
     backCard,
@@ -135,13 +129,10 @@ export async function CardDetailContent({
     creatorProfile,
     viewerFollows,
     remixCount,
-    setCount,
     deckCount,
     topRemixes,
     remixParent,
     overallRank,
-    setSummary,
-    inSetRank,
     trendingSignals,
   ] = await Promise.all([
     // v2 back face: the referenced card, if any and if it's readable (RLS
@@ -172,24 +163,16 @@ export async function CardDetailContent({
     user && !isOwner
       ? isFollowing(card.owner_id)
       : Promise.resolve(false),
-    // Analytics: remix + set membership counts, and the top-liked remixes.
+    // Analytics: remix + deck membership counts, and the top-liked remixes.
     countRemixesOfCard(card.id),
-    // Set stats stay unqueried while the feature is hidden.
-    setsEnabled ? countSetsForCard(card.id) : Promise.resolve(0),
     countDecksForCard(card.id),
     listTopRemixesOfCard(card.id, 4),
     // Provenance: the original card this was remixed from (if any).
     card.parent_card_id
       ? getRemixParentLink(card.parent_card_id)
       : Promise.resolve(null),
-    // Popularity rank overall + within the card's primary set.
+    // Popularity rank overall.
     getCardLikeRankOverall(card.id),
-    setsEnabled && card.primary_set_id
-      ? getSetSummary(card.primary_set_id)
-      : Promise.resolve(null),
-    setsEnabled && card.primary_set_id
-      ? getCardLikeRankInSet(card.id, card.primary_set_id)
-      : Promise.resolve(null),
     // 7-day velocity for the trending badge.
     getCardTrendingSignals(card.id, card.owner_id, card.created_at),
     // The owner's custom footer mark (paid perk) — the live hero preview
@@ -440,23 +423,12 @@ export async function CardDetailContent({
           views={card.view_count}
           likes={likesCount}
           remixes={remixCount}
-          sets={setsEnabled ? setCount : null}
           decks={deckCount}
           comments={comments.length}
           createdAt={card.created_at}
           updatedAt={card.updated_at}
           trendingSignals={trendingSignals}
           overallRank={overallRank}
-          setContext={
-            setSummary
-              ? {
-                  title: setSummary.title,
-                  slug: setSummary.slug,
-                  cardsCount: setSummary.cardsCount,
-                  rank: inSetRank,
-                }
-              : null
-          }
           topRemixes={topRemixes}
           isAuthed={Boolean(user)}
         />
@@ -579,22 +551,18 @@ function CardAnalytics({
   views,
   likes,
   remixes,
-  sets,
   decks,
   comments,
   createdAt,
   updatedAt,
   trendingSignals,
   overallRank,
-  setContext,
   topRemixes,
   isAuthed,
 }: {
   views: number;
   likes: number;
   remixes: number;
-  /** null = sets feature hidden — the stat tile is omitted entirely. */
-  sets: number | null;
   decks: number;
   comments: number;
   createdAt: string;
@@ -606,12 +574,6 @@ function CardAnalytics({
     is_fresh: boolean;
   };
   overallRank: number | null;
-  setContext: {
-    title: string;
-    slug: string;
-    cardsCount: number;
-    rank: number | null;
-  } | null;
   topRemixes: CardWithStats[];
   isAuthed: boolean;
 }) {
@@ -623,9 +585,6 @@ function CardAnalytics({
     { icon: Eye, label: "Views", value: views },
     { icon: Heart, label: "Likes", value: likes },
     { icon: Repeat2, label: "Remixes", value: remixes },
-    ...(sets === null
-      ? []
-      : [{ icon: Layers, label: sets === 1 ? "Set" : "Sets", value: sets }]),
     { icon: BookOpen, label: decks === 1 ? "Deck" : "Decks", value: decks },
     { icon: MessageCircle, label: "Comments", value: comments },
   ];
@@ -636,7 +595,7 @@ function CardAnalytics({
     trendingSignals.comments_7d +
     trendingSignals.remixes_7d;
   const isTrending = recentEngagement > 0;
-  const hasRankLines = (overallRank && likes > 0) || setContext;
+  const hasRankLines = Boolean(overallRank && likes > 0);
 
   return (
     <SurfaceCard className="flex flex-col gap-5 p-6">
@@ -693,29 +652,6 @@ function CardAnalytics({
                 #{overallRank}
               </span>{" "}
               most-liked card overall
-            </span>
-          ) : null}
-          {setContext ? (
-            <span className="inline-flex flex-wrap items-center gap-1.5 text-muted">
-              <Layers className="h-4 w-4 text-subtle" aria-hidden />
-              Part of{" "}
-              <Link
-                href={`/set/${setContext.slug}`}
-                className="font-medium text-foreground underline-offset-2 hover:text-primary-bright hover:underline"
-              >
-                {setContext.title}
-              </Link>{" "}
-              ({setContext.cardsCount} card
-              {setContext.cardsCount === 1 ? "" : "s"})
-              {setContext.rank ? (
-                <>
-                  {" · "}
-                  <span className="font-semibold text-foreground">
-                    #{setContext.rank}
-                  </span>{" "}
-                  in the set
-                </>
-              ) : null}
             </span>
           ) : null}
         </div>

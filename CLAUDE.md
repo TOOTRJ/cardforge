@@ -174,3 +174,11 @@ Rules and gotchas:
   `lib/og/chrome.tsx` (edge-safe; the sharp pre-fetch lives in
   `lib/og/shell.tsx`), like toggles through `lib/social/like-toggle.ts`,
   render upload/delete through `lib/cards/bake-core.ts`.
+- Sets (`card_sets` / `card_set_items` / `set_likes`, the `/sets` and
+  `/set/[slug]` routes, the AI "set" job kind) were REMOVED from the app on
+  2026-09-22. The tables, `cards.primary_set_id`, `ai_generation_jobs.set_id`,
+  the `card_like_rank_in_set` / `admin_user_stats` functions and the
+  `set-covers` bucket (deck covers and card set icons live there) still exist
+  until a confirmed drop migration — production held 8 sets from 5 owners at
+  removal time. A card's printed set symbol (`set_icon_url` / `set_icon_code`,
+  the Set icon step) is a rendering feature and stays.
