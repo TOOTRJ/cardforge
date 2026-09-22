@@ -82,7 +82,11 @@ Rules and gotchas:
 ## Conventions
 
 - PR-based flow; merge commits (`gh pr merge --merge`). Conventional-commit
-  titles (`feat(cards): …`, `perf: …`, `fix(validation): …`).
+  titles (`feat(cards): …`, `perf: …`, `fix(validation): …`). Every PR whose
+  change is visible in the app ends with a **"## Manual testing (preview)"**
+  section: preview URL, which `dev_*` account, the exact clicks, the expected
+  result (and the old wrong behaviour when that helps), plus what can't be
+  tested on a preview. Docs/test-only/refactor PRs say so in one line.
 - Validation: zod schemas shared client+server (`lib/validation/*`,
   `lib/auth/schemas.ts`) mirroring DB CHECK constraints; server actions
   `safeParse` and return typed field errors. URL fields must be
