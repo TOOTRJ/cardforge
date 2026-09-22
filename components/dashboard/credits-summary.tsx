@@ -7,7 +7,7 @@ import {
   getCreditsUsedThisMonth,
 } from "@/lib/ai/usage-queries";
 import { isBillingEnabled } from "@/lib/billing/flags";
-import { formatCredits, isUnlimitedCredits } from "@/lib/billing/plans";
+import { formatCredits, isLowCredits, planForTier } from "@/lib/billing/plans";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -26,8 +26,8 @@ export async function CreditsSummaryCard() {
   ]);
 
   const { balance, monthlyAllotment, tier, isPaid } = snapshot;
-  const tierLabel = tier.charAt(0).toUpperCase() + tier.slice(1);
-  const lowCredits = balance <= 5 && !isUnlimitedCredits(balance);
+  const tierLabel = planForTier(tier).name;
+  const lowCredits = isLowCredits(balance, monthlyAllotment);
   const pct =
     monthlyAllotment > 0
       ? Math.min(100, Math.round((used / monthlyAllotment) * 100))

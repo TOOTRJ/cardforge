@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   title: "Pricing",
   alternates: { canonical: "/pricing" },
   description:
-    "Design custom MTG-style cards for free — every AI tool included, 5 AI credits a month. Upgrade for more monthly credits, watermark-free hi-res downloads and deck-aware AI, with a 7-day free trial, no card required. Monthly or annual.",
+    "Design custom MTG-style cards for free — every AI tool included, 5 AI credits a month. Upgrade for more monthly credits, watermark-free hi-res downloads and deck-aware AI — first-time subscribers get a 7-day free trial, no card required. Monthly or annual.",
 };
 
 // ISR: the storefront is identical for every viewer — plan copy and prices
@@ -50,7 +50,7 @@ export default function PricingPage() {
           for MTG-style rendering.
         </p>
         <p className="text-sm font-medium text-gold-strong">
-          Try any plan free for 7 days — no card required.
+          First time subscribing? Try any plan free for 7 days — no card required.
         </p>
       </div>
 

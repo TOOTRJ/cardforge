@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { UsageBarChart } from "@/components/settings/usage-bar-chart";
 import { getAiUsageSnapshot, getCreditSnapshot } from "@/lib/ai/usage-queries";
 import { isBillingEnabled } from "@/lib/billing/flags";
-import { formatCredits, isUnlimitedCredits } from "@/lib/billing/plans";
+import { formatCredits, isLowCredits, planForTier } from "@/lib/billing/plans";
 import {
   getScryfallUsageSnapshot,
   type ScryfallAction,
@@ -50,10 +50,8 @@ export async function UsagePanel() {
 
   const aiOverDay = ai.today >= ai.limits.perDay;
   const aiOverMinute = ai.minute >= ai.limits.perMinute;
-  const creditTierLabel =
-    credits.tier.charAt(0).toUpperCase() + credits.tier.slice(1);
-  const lowCredits =
-    credits.balance <= 5 && !isUnlimitedCredits(credits.balance);
+  const creditTierLabel = planForTier(credits.tier).name;
+  const lowCredits = isLowCredits(credits.balance, credits.monthlyAllotment);
   const billingOn = isBillingEnabled();
 
   return (

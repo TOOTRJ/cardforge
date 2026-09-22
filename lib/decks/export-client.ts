@@ -12,6 +12,20 @@ import { buildDeckPdf, type DeckPdfLayout } from "@/lib/render/card-pdf";
 //   3. package    ZIP → cover + deck.pdf report + decklist.txt + PNGs
 //                 PDF → pdf-lib pages / 3×3 sheets + checklist page
 //
+/** The card body face, shipped as a static asset. Null on any failure. */
+async function fetchChecklistFont(
+  fetchImpl: FetchLike,
+  signal?: AbortSignal,
+): Promise<ArrayBuffer | null> {
+  try {
+    const response = await fetchImpl("/fonts/mplantin.ttf", { signal });
+    if (!response.ok) return null;
+    return await response.arrayBuffer();
+  } catch {
+    return null;
+  }
+}
+
 // `fetchImpl` is injectable so the pipeline unit-tests without a network.
 // ---------------------------------------------------------------------------
 
@@ -183,6 +197,10 @@ export async function runDeckExport(
               lines: manifest.checklist,
             }
           : null,
+      // Unicode-capable font for the checklist text (card-pdf falls back to
+      // Helvetica + "?" substitution if this fails, so it is best-effort).
+      checklistFont:
+        manifest.checklist.length > 0 ? await fetchChecklistFont(fetchImpl, signal) : null,
     });
     const suffix = request.layout === "pages" ? "" : request.layout === "sheet-a4" ? "-sheets-a4" : "-sheets";
     return {

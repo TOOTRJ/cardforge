@@ -1,81 +1,40 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
+import { uploadCoverServerAction } from "@/lib/sets/upload-cover-server";
 
-const ALLOWED_MIME_TYPES = [
+// Client entry point for deck / set cover and set-icon uploads. The upload
+// itself runs server-side (lib/sets/upload-cover-server.ts) so every image
+// passes the moderation scan; this wrapper only gives instant feedback on the
+// obvious rejections before the bytes leave the browser.
+
+const ALLOWED_MIME_TYPES = new Set([
   "image/png",
   "image/jpeg",
   "image/webp",
   "image/gif",
-] as const;
+]);
 const MAX_BYTES = 5 * 1024 * 1024; // 5 MB — matches the set-covers bucket cap.
 
 export type UploadCoverResult =
   | { ok: true; publicUrl: string; path: string }
   | { ok: false; error: string };
 
-function extensionFromMime(mime: string): string {
-  switch (mime) {
-    case "image/png":
-      return "png";
-    case "image/jpeg":
-      return "jpg";
-    case "image/webp":
-      return "webp";
-    case "image/gif":
-      return "gif";
-    default:
-      return "bin";
-  }
-}
-
 /**
- * Upload a set-cover image to the public `set-covers` bucket.
- *
- * Path layout: `set-covers/{userId}/{uuid}.{ext}` — matches the storage RLS
- * policy that requires `auth.uid()::text = (storage.foldername(name))[1]`.
+ * Upload an image to the public `set-covers` bucket under the signed-in
+ * user's folder. `_userId` is kept for call-site compatibility; the server
+ * derives the owner from the session, never from the argument.
  */
 export async function uploadSetCover(
-  userId: string,
+  _userId: string,
   file: File,
 ): Promise<UploadCoverResult> {
-  if (
-    !ALLOWED_MIME_TYPES.includes(
-      file.type as (typeof ALLOWED_MIME_TYPES)[number],
-    )
-  ) {
-    return {
-      ok: false,
-      error: "Only PNG, JPEG, WebP, and GIF images are allowed.",
-    };
+  if (!ALLOWED_MIME_TYPES.has(file.type)) {
+    return { ok: false, error: "Only PNG, JPEG, WebP, and GIF images are allowed." };
   }
   if (file.size > MAX_BYTES) {
-    return {
-      ok: false,
-      error: "Cover image must be 5 MB or smaller.",
-    };
+    return { ok: false, error: "Cover image must be 5 MB or smaller." };
   }
-
-  const supabase = createClient();
-  const ext = extensionFromMime(file.type);
-  const id =
-    typeof crypto !== "undefined" && "randomUUID" in crypto
-      ? crypto.randomUUID()
-      : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-  const path = `${userId}/${id}.${ext}`;
-
-  const { error } = await supabase.storage
-    .from("set-covers")
-    .upload(path, file, {
-      cacheControl: "3600",
-      contentType: file.type,
-      upsert: false,
-    });
-
-  if (error) {
-    return { ok: false, error: error.message };
-  }
-
-  const { data } = supabase.storage.from("set-covers").getPublicUrl(path);
-  return { ok: true, publicUrl: data.publicUrl, path };
+  const formData = new FormData();
+  formData.append("file", file);
+  return uploadCoverServerAction(formData);
 }
