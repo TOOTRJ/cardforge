@@ -32,9 +32,13 @@ describe("withCreditedStep", () => {
     spendCredits.mockResolvedValue({ ok: false, reason: "insufficient_credits", balance: 0, message: "Out of credits." });
     const body = vi.fn();
     const result = await withCreditedStep(USER, JOB, 1, "spend:card", STEP, body);
-    expect(result).toMatchObject({ status: "failed", error: "Out of credits." });
+    // An empty balance is a plan limit the runner stops on (credits modal);
+    // an infra hiccup carries no code and stays retryable.
+    expect(result).toMatchObject({ status: "failed", error: "Out of credits.", error_code: "INSUFFICIENT_CREDITS" });
     expect(body).not.toHaveBeenCalled();
     expect(refundCredits).not.toHaveBeenCalled();
+    spendCredits.mockResolvedValue({ ok: false, reason: "error", balance: Number.NaN, message: "Try again." });
+    expect((await withCreditedStep(USER, JOB, 1, "spend:card", STEP, body)).error_code).toBeUndefined();
   });
 
   it("reserves with a unique ref, fail-closed, and stamps it onto a charged success", async () => {

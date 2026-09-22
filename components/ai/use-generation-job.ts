@@ -22,6 +22,9 @@ export type GenerationJobStep = {
   /** Set once the step's card row exists (single-card + batch card steps). */
   card_id?: string;
   error?: string;
+  /** A plan limit (not a hiccup): the runner stops and opens the matching
+   *  upgrade prompt. */
+  error_code?: "CARD_CAPACITY" | "INSUFFICIENT_CREDITS" | null;
 };
 
 export type GenerationJobPhase = "idle" | "planning" | "stepping" | "done";

@@ -188,5 +188,8 @@ Rules and gotchas:
   `describeCapacity()` feed the `CapacityNotice` warnings (creator, deck
   wizard, in-deck AI panel, My Cards meter), the jobs route refuses an
   over-cap batch with `code: "CARD_CAPACITY"`, and `createCardAction` maps the
-  trigger's `card_capacity_exceeded` to the upgrade prompt. Change the caps in
-  both places together.
+  trigger's `card_capacity_exceeded` to the upgrade prompt. A batch step that
+  hits a plan limit fails with `error_code` (`CARD_CAPACITY` /
+  `INSUFFICIENT_CREDITS`); the runner stops on it and opens the matching
+  modal, and retries check `/api/me`'s `cardCapacity` before the credit
+  confirm. Change the caps in both places together.

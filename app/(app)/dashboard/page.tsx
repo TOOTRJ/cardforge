@@ -27,6 +27,7 @@ import { getPipOverrides } from "@/lib/pips/queries";
 import { CUSTOM_PIP_SYMBOLS as PIP_STRIP_SYMBOLS } from "@/lib/pips/override";
 import { listMyCards } from "@/lib/cards/queries";
 import { listMyDecks } from "@/lib/decks/queries";
+import { CardsSummaryCard } from "@/components/dashboard/cards-summary";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -143,6 +144,11 @@ export default async function DashboardPage() {
           Independent data, so it streams in behind its own skeleton. */}
       <Suspense fallback={<CreditsSummarySkeleton />}>
         <CreditsSummaryCard />
+      </Suspense>
+
+      {/* Saved cards vs. the plan's limit — the other quota that stops a save. */}
+      <Suspense fallback={<CreditsSummarySkeleton />}>
+        <CardsSummaryCard />
       </Suspense>
 
       {/* Quick actions — the mockup's tile row, mapped to real routes. */}

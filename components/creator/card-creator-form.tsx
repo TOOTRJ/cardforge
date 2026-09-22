@@ -1753,11 +1753,14 @@ export function CardCreatorForm({
         formError?: string;
         fieldErrors?: Record<string, string | undefined>;
         code?: string;
+        reason?: "capacity" | "premium_frame";
       }) => {
         const unrendered = applyFieldErrors(failure.fieldErrors);
         if (failure.code === "UPGRADE_REQUIRED") {
           upgrade.open(
-            failure.fieldErrors?.frame_style ? "premium_frame" : "capacity",
+            failure.reason === "premium_frame" || failure.fieldErrors?.frame_style
+              ? "premium_frame"
+              : "capacity",
           );
           return;
         }

@@ -29,3 +29,17 @@ export function jobStatusOf(steps: QueueableStep[]): JobStatusOf {
   if (!steps.some((s) => s.status === "failed")) return "done";
   return steps.some((s) => s.status === "done") ? "done_with_errors" : "failed";
 }
+
+/**
+ * Steps a retry would turn into NEW card rows: not-done card/remix steps with
+ * no card yet (a step whose card exists only redoes the art). Checked against
+ * the saved-card cap before the credit confirm, so a full library shows the
+ * capacity prompt and never "out of credits".
+ */
+export function stepsNeedingCards(
+  steps: ReadonlyArray<{ key: string; status: string; card_id?: string | null }>,
+): number {
+  return steps.filter(
+    (s) => s.status !== "done" && !s.card_id && /^(card|remix):\d+$/.test(s.key),
+  ).length;
+}
