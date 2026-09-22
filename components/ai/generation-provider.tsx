@@ -417,6 +417,10 @@ export function GenerationJobProvider({
             toast.error(planPayload?.error ?? "AI planning failed. Try again.");
           }
           setPhase("idle");
+          // Nothing started — release the runner. Leaving this set wedged
+          // every later Generate/Retry/Resume behind "Another generation is
+          // already running" until a full reload.
+          runningRef.current = false;
           return { ok: false, successes: 0, failures: 0 };
         }
         const startJob: JobPayload = planPayload.job;
@@ -544,13 +548,20 @@ export function GenerationJobProvider({
         }
         setJob({ ...job, ...result.job });
         setSteps(result.job.steps);
+        // A plan-limit failure on the retried step gets the same treatment
+        // as in the pool: say why, open the matching upgrade prompt.
+        const posted = result.job.steps.find((s) => s.key === stepKey);
+        if (posted?.status === "failed" && posted.error_code) {
+          if (posted.error) toast.error(posted.error);
+          upgrade.open(posted.error_code === "CARD_CAPACITY" ? "capacity" : "credits");
+        }
         return outcomeOf(result.job.steps, slug);
       } finally {
         setPhase("done");
         runningRef.current = false;
       }
     },
-    [job, steps, slug, confirmSpend, ensureCapacityFor],
+    [job, steps, slug, confirmSpend, ensureCapacityFor, upgrade],
   );
 
   const retryFailed = useCallback(async (): Promise<GenerationJobOutcome> => {

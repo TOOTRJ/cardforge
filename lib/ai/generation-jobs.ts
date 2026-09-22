@@ -1160,6 +1160,10 @@ export async function createDeckRemixJob(
     status: "pending" as const,
   }));
   steps.push({ key: COVER_STEP_KEY, label: "Deck cover", status: "pending" });
+  // Same free guide step as a generated deck — pushed BEFORE the insert (it
+  // used to land after, into the discarded local array, so remix decks never
+  // got a "How to play" guide).
+  steps.push({ key: GUIDE_STEP_KEY, label: "How to play guide", status: "pending" });
 
   const { data: jobRow, error: insertError } = await supabase
     .from("ai_generation_jobs")
@@ -1184,7 +1188,6 @@ export async function createDeckRemixJob(
   if (insertError || !jobRow) {
     return { ok: false, error: "Couldn't persist the remix job." };
   }
-  steps.push({ key: GUIDE_STEP_KEY, label: "How to play guide", status: "pending" });
   return {
     ok: true,
     job: jobRow as unknown as GenerationJobRow,

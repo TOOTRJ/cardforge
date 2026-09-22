@@ -4,6 +4,7 @@ import { AuthForm } from "@/components/auth/auth-form";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { isRecoverySession } from "@/lib/auth/recovery-session";
 import { resetPasswordAction } from "@/app/(auth)/actions";
 import type { ResetPasswordInput } from "@/lib/auth/schemas";
 
@@ -14,17 +15,23 @@ export const metadata: Metadata = {
 };
 
 export default async function ResetPasswordPage() {
-  // The email link lands on /auth/callback, which exchanges the recovery
-  // code for a session and forwards here. No session = the link was opened
-  // stale/expired or the page was visited directly — point back at the
-  // request form instead of showing a form that can only fail.
-  let hasSession = false;
+  // The email link lands on /auth/confirm (or /auth/callback), which turns
+  // the recovery token into a session and forwards here. Only a session
+  // that came from a RECENT recovery link may set a password without the
+  // current one (lib/auth/recovery-session.ts): an ordinary signed-in
+  // session — say, an unattended browser — is sent to Settings instead, and
+  // no session at all means the link was stale, expired or visited directly.
+  let recovery = false;
+  let signedIn = false;
   if (isSupabaseConfigured()) {
     const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    hasSession = Boolean(user);
+    recovery = await isRecoverySession(supabase);
+    if (!recovery) {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      signedIn = Boolean(user);
+    }
   }
 
   return (
@@ -34,13 +41,15 @@ export default async function ResetPasswordPage() {
           Choose a new password
         </h1>
         <p className="text-sm text-muted">
-          {hasSession
+          {recovery
             ? "Set a new password for your account. You'll stay signed in."
-            : "This reset link is missing or has expired."}
+            : signedIn
+              ? "You're signed in, so this reset link isn't needed — change your password from Settings, where your current password confirms it's you."
+              : "This reset link is missing, has expired, or was already used."}
         </p>
       </div>
 
-      {hasSession ? (
+      {recovery ? (
         <AuthForm<ResetPasswordInput>
           action={resetPasswordAction}
           submitLabel="Update password"
@@ -58,10 +67,10 @@ export default async function ResetPasswordPage() {
         />
       ) : (
         <Link
-          href="/forgot-password"
+          href={signedIn ? "/settings" : "/forgot-password"}
           className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
         >
-          Request a new reset link
+          {signedIn ? "Go to Settings" : "Request a new reset link"}
         </Link>
       )}
     </SurfaceCard>

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { isRecoverySession } from "@/lib/auth/recovery-session";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getSiteBaseUrl } from "@/lib/site-url";
 import { safeRedirectPath } from "@/lib/auth/safe-redirect";
@@ -322,6 +323,18 @@ export async function resetPasswordAction(
   }
 
   const supabase = await createClient();
+  // Only a session from a recent recovery link may change the password
+  // without the current one — never an ordinary signed-in session (an
+  // unattended browser must not be enough to take the account; Settings is
+  // the current-password path). Same copy as the page's expired state so a
+  // stale link and a forged request look identical.
+  if (!(await isRecoverySession(supabase))) {
+    return {
+      status: "error",
+      formError:
+        "This reset link has expired or was already used. Request a new one and try again.",
+    };
+  }
   const { error } = await supabase.auth.updateUser({
     password: parsed.data.password,
   });

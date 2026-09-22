@@ -127,6 +127,24 @@ test.describe("auth flows", () => {
   });
 });
 
+test.describe("password reset gate", () => {
+  test("a plain signed-in session gets no reset form — Settings is the current-password path", async ({
+    page,
+  }) => {
+    test.skip(!hasStack, "needs the seeded e2e user (local stack)");
+    await page.goto("/login");
+    await page.locator('input[name="email"]').fill(process.env.SUPABASE_E2E_USER_EMAIL!);
+    await page.locator('input[name="password"]').fill(process.env.SUPABASE_E2E_USER_PASSWORD!);
+    await page.getByRole("button", { name: /^sign in$/i }).click();
+    await page.waitForURL(/\/(dashboard|onboarding)/);
+
+    await page.goto("/reset-password");
+    await expect(page.locator('input[name="password"]')).toHaveCount(0);
+    await expect(page.getByText(/you're signed in/i)).toBeVisible();
+    await expect(page.getByRole("link", { name: /go to settings/i })).toBeVisible();
+  });
+});
+
 test.describe("redirect guards", () => {
   test.skip(!hasStack, "Needs the local Supabase stack (.env.e2e).");
 
