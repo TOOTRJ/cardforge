@@ -86,3 +86,20 @@ export function itemListJsonLd({
     })),
   };
 }
+
+export type FaqItem = { q: string; a: string };
+
+/** FAQPage structured data — the Q&A becomes eligible for rich results. Pass
+ *  the same questions the page renders visibly (Google requires the FAQ to
+ *  be on the page, not JSON-LD only). */
+export function faqJsonLd(items: FaqItem[]): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: items.map((item) => ({
+      "@type": "Question",
+      name: item.q,
+      acceptedAnswer: { "@type": "Answer", text: item.a },
+    })),
+  };
+}

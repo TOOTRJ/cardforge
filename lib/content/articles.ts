@@ -23,6 +23,9 @@ export type ArticleMeta = {
    *  schema.org dateModified so a revised guide signals freshness. */
   updated?: string;
   tags: string[];
+  /** Optional `faq` frontmatter — the questions the guide also renders as
+   *  headings; the article page emits them as FAQPage JSON-LD. */
+  faq?: Array<{ q: string; a: string }>;
   /** Rough read time from word count — display sugar only. */
   readingMinutes: number;
 };
@@ -53,6 +56,18 @@ export type Article = {
 
 const ARTICLES_DIR = path.join(process.cwd(), "content", "articles");
 
+function parseFaq(value: unknown): ArticleMeta["faq"] {
+  if (!Array.isArray(value)) return undefined;
+  const items = value
+    .filter(
+      (item): item is { q: unknown; a: unknown } =>
+        typeof item === "object" && item !== null && "q" in item && "a" in item,
+    )
+    .map((item) => ({ q: String(item.q).trim(), a: String(item.a).trim() }))
+    .filter((item) => item.q && item.a);
+  return items.length > 0 ? items : undefined;
+}
+
 function readArticleFile(filename: string): Article | null {
   const slug = filename.replace(/\.mdx$/, "");
   try {
@@ -70,6 +85,7 @@ function readArticleFile(filename: string): Article | null {
           ? new Date(data.updated as string | Date).toISOString()
           : undefined,
         tags: Array.isArray(data.tags) ? data.tags.map(String) : [],
+        faq: parseFaq(data.faq),
         readingMinutes: Math.max(1, Math.round(words / 220)),
       },
       content,

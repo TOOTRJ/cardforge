@@ -42,6 +42,16 @@ export const CLUSTERS: Record<string, Cluster> = {
     toolHref: "/mana-pip-editor",
     toolLabel: "Open the pip editor",
   },
+  "card-makers": {
+    slug: "card-makers",
+    title: "MTG Card Makers Compared",
+    intro:
+      "Which custom card maker should you use? These guides compare the tools people actually reach for — PipGlyph, Magic Set Editor, MTG Cardsmith, the Card Conjurer forks — on the things that matter when a card has to look printed: frame accuracy, live preview, export quality, sharing, and whether the tool will still be online next year.",
+    blurb:
+      "Honest comparisons of MTG card makers — PipGlyph, Magic Set Editor, MTG Cardsmith and Card Conjurer alternatives.",
+    toolHref: "/best-mtg-card-makers",
+    toolLabel: "See the full comparison",
+  },
   playtesting: {
     slug: "playtesting",
     title: "Playtesting & Printing",

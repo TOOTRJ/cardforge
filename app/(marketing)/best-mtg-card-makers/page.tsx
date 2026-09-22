@@ -254,7 +254,14 @@ export default function BestMtgCardMakersPage() {
         <p className="mb-6 max-w-2xl text-sm leading-7 text-muted">
           PipGlyph is built for designers who want their cards to look printed,
           not pasted together — and who want to take a design from idea to a
-          full, shareable set. Learn the craft with our{" "}
+          full, shareable set. Coming from Card Conjurer? Start with{" "}
+          <Link
+            href="/articles/card-conjurer-alternative"
+            className="font-medium text-primary-bright underline-offset-2 hover:underline"
+          >
+            the Card Conjurer alternative guide
+          </Link>
+          . Learn the craft with our{" "}
           <Link
             href="/articles"
             className="font-medium text-primary-bright underline-offset-2 hover:underline"

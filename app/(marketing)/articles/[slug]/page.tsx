@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { GlyphDivider } from "@/components/ui/glyph-divider";
 import { ArticleToc } from "@/components/content/article-toc";
 import { mdxComponents } from "@/components/content/mdx-components";
-import { breadcrumbJsonLd, JsonLd } from "@/components/seo/json-ld";
+import { breadcrumbJsonLd, faqJsonLd, JsonLd } from "@/components/seo/json-ld";
 import {
   extractToc,
   getArticle,
@@ -78,6 +78,7 @@ export default async function ArticlePage({
     <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:grid lg:grid-cols-[minmax(0,48rem)_minmax(0,1fr)] lg:gap-x-12">
       <div className="max-w-3xl">
       <JsonLd data={buildArticleJsonLd(meta)} />
+      {meta.faq ? <JsonLd data={faqJsonLd(meta.faq)} /> : null}
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Home", path: "/" },
