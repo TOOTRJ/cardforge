@@ -62,7 +62,10 @@ schema_paths = []
 enabled = true
 # Specifies an ordered list of seed files to load during db reset.
 # Supports glob patterns relative to supabase directory: "./seeds/*.sql"
-sql_paths = ["./seed.sql"]
+# seed.sql = baseline rows the app needs (verified frames); seeds/*.sql =
+# synthetic test data (accounts, cards, decks…), applied in filename order.
+# Neither ever runs against production — merges apply migrations only.
+sql_paths = ["./seed.sql", "./seeds/*.sql"]
 
 [db.network_restrictions]
 # Enable management of network restrictions.
@@ -153,7 +156,15 @@ enabled = true
 # in emails.
 site_url = "http://127.0.0.1:3000"
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://127.0.0.1:3000"]
+additional_redirect_urls = [
+  "https://127.0.0.1:3000",
+  "http://127.0.0.1:3000/**",
+  "http://localhost:3000/**",
+  # Every Vercel preview deployment of this project (per-PR preview branches
+  # inherit this block). Production's Auth settings live in the dashboard —
+  # the GitHub integration ignores [auth] when merging to main.
+  "https://*-orderoftheredjester.vercel.app/**",
+]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to the local API URL (http://127.0.0.1:<port>/auth/v1).
@@ -428,3 +439,27 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 # declarative_schema_path = "./declarative"
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
+
+# ---------------------------------------------------------------------------
+# Persistent `dev` branch — the shared dev database behind every Vercel preview
+# that has no per-PR branch of its own, and behind local `npm run dev`.
+# docs/ENVIRONMENTS.md. `project_id` is the BRANCH's ref (not a secret), and
+# scripts/db-dev.mjs reads it from here. Remotes apply to persistent branches
+# only; if the ref is wrong Supabase skips the block rather than guessing.
+# ---------------------------------------------------------------------------
+[remotes.dev]
+project_id = "znipzaxgpaiandwiqabn"
+
+[remotes.dev.db.seed]
+# Persistent branches only seed when told to.
+enabled = true
+sql_paths = ["./seed.sql", "./seeds/*.sql"]
+
+[remotes.dev.auth]
+# The `dev` git branch's stable Vercel URL.
+site_url = "https://cardforge-git-dev-orderoftheredjester.vercel.app"
+additional_redirect_urls = [
+  "http://127.0.0.1:3000/**",
+  "http://localhost:3000/**",
+  "https://*-orderoftheredjester.vercel.app/**",
+]

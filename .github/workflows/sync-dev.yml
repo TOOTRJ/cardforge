@@ -1,0 +1,37 @@
+# Keeps the `dev` git branch identical to `main`.
+#
+# The persistent `dev` Supabase branch (the shared dev database behind Vercel
+# previews and local development) tracks the `dev` GIT branch: when it moves,
+# Supabase's GitHub integration applies any new migrations to the dev
+# database. Nobody commits to `dev` by hand — this fast-forwards it after
+# every merge, so the dev schema follows production's automatically.
+#
+# If Supabase's runner is down when this fires, `npm run db:push:dev` does the
+# same thing by hand (docs/ENVIRONMENTS.md).
+name: Sync dev branch
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-dev
+  cancel-in-progress: false
+
+jobs:
+  fast-forward:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      # Fast-forward only: if someone committed to `dev` directly this fails
+      # loudly instead of overwriting their work.
+      - name: Fast-forward dev to main
+        run: git push origin main:dev

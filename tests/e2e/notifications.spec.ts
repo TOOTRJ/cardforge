@@ -29,14 +29,25 @@ async function seedUnread(count: number) {
   await admin.from("notifications").insert(
     Array.from({ length: count }, () => ({ recipient_id: me.id, actor_id: other.id, type: "follow" })),
   );
-  return admin;
+  // Count ONLY the e2e user's rows: the stack is seeded with other accounts'
+  // notifications (supabase/seeds/10_dev_data.sql), which are none of this
+  // spec's business and must stay unread.
+  const unreadForMe = async () => {
+    const { count: unread } = await admin
+      .from("notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("recipient_id", me.id)
+      .is("read_at", null);
+    return unread;
+  };
+  return { admin, unreadForMe };
 }
 
 test.describe("notifications are seen on open", () => {
   test.skip(!hasStack, "Needs the local Supabase stack (.env.e2e).");
 
   test("opening the bell clears the badge and the dashboard count", async ({ page }) => {
-    const admin = await seedUnread(2);
+    const { unreadForMe } = await seedUnread(2);
 
     await page.goto("/login");
     await page.locator('input[name="email"]').fill(email);
@@ -54,15 +65,7 @@ test.describe("notifications are seen on open", () => {
     await expect(page.getByRole("img", { name: "New" })).toHaveCount(2);
     // …but the badge is gone and the DB agrees.
     await expect(page.getByRole("button", { name: /^notifications$/i })).toBeVisible();
-    await expect
-      .poll(async () => {
-        const { count } = await admin
-          .from("notifications")
-          .select("id", { count: "exact", head: true })
-          .is("read_at", null);
-        return count;
-      })
-      .toBe(0);
+    await expect.poll(unreadForMe).toBe(0);
 
     // Dashboard count refreshes to zero; the next open shows items plain.
     await page.keyboard.press("Escape");
@@ -73,7 +76,7 @@ test.describe("notifications are seen on open", () => {
   });
 
   test("visiting /notifications marks everything seen", async ({ page }) => {
-    const admin = await seedUnread(1);
+    const { unreadForMe } = await seedUnread(1);
 
     await page.goto("/login");
     await page.locator('input[name="email"]').fill(email);
@@ -84,11 +87,7 @@ test.describe("notifications are seen on open", () => {
     await page.goto("/notifications");
     await expect(page.getByRole("img", { name: "New" })).toHaveCount(1);
     await expect(page.getByRole("button", { name: /^notifications$/i })).toBeVisible();
-    const { count } = await admin
-      .from("notifications")
-      .select("id", { count: "exact", head: true })
-      .is("read_at", null);
-    expect(count).toBe(0);
+    expect(await unreadForMe()).toBe(0);
     await page.reload();
     await expect(page.getByRole("img", { name: "New" })).toHaveCount(0);
   });

@@ -4,13 +4,24 @@ Custom MTG-style card creator. Next.js 16 App Router + Supabase + Tailwind v4
 (CSS-first tokens in `app/globals.css`, dark default). Full environment story:
 `docs/ENVIRONMENTS.md`.
 
-## ⚠️ Local env points at PRODUCTION
+## Environments (full story: `docs/ENVIRONMENTS.md`)
 
-`.env.local` currently targets the LIVE database (deliberate, see TODO.md).
-Until that changes: treat every local mutation as a prod write — no
-destructive experiments, no test-data seeding, no schema pokes from local.
-The local Supabase stack (`npm run db:start`) exists and works; switching to
-it is TODO.md item #1.
+- **Production** = Vercel Production + the prod Supabase project. Nothing else
+  may touch it.
+- **Dev database** = the persistent Supabase branch `dev`
+  (`znipzaxgpaiandwiqabn`), seeded with test data. It backs **local
+  `npm run dev`** AND every **Vercel preview** that has no per-PR branch.
+  Writes there are fine — it's what it's for. Test logins:
+  `{admin,pro,free,artist,new}@dev.pipglyph.test`, password =
+  `DEV_SEED_PASSWORD` in `.env.local` (`npm run seed:dev` sets it).
+- **Local Docker stack** (`npm run db:start`) = migration work + e2e only.
+- `npm run dev` REFUSES to start against production
+  (`scripts/check-dev-env.mjs`; every script shares
+  `scripts/lib/prod-guard.mjs`). `npm run dev:prod` is the deliberate, loud
+  exception (reads `.env.prod-peek`). Never weaken these guards, never put
+  production keys back in `.env.local`, never use `--with-data` branching.
+- The repo is **public**: no credentials in seeds, fixtures or docs — not even
+  test passwords.
 
 ## Shipping workflow (Supabase branching is live)
 
@@ -35,9 +46,23 @@ Rules and gotchas:
   already-open PR won't create one; close/reopen the PR instead.
 - "Supabase changes only" is ON: PRs without `supabase/` changes get no
   preview branch; their Vercel previews use Preview-scoped env vars.
-- Preview branches start EMPTY by design. Baseline rows belong in
-  `supabase/seed.sql` (runs on branch creation + local `db reset`); it does
-  NOT run against prod.
+- Seeds never run against prod. `supabase/seed.sql` = baseline rows the app
+  needs (the verified `frame_reviews` combos — frame verification is the
+  creator's only gate; the list mirrors production, never runs ahead of it).
+  `supabase/seeds/*.sql` = synthetic test data (5 accounts, cards, decks,
+  challenges…) for branches, the dev DB and local resets. Both are
+  idempotent. New feature with new tables → add seed rows so previews can
+  exercise it.
+- **Every migration states its grants.** Prod is an old Supabase project that
+  auto-grants new `public` objects to the API roles; NEW projects (every
+  branch) do not. 0097 made the existing schema explicit — never replace it
+  with a blanket `grant all on all tables` (that undoes the 0073/0074/0088
+  lockdowns). Forgotten grants = `permission denied` (42501) on a branch whose
+  Supabase check is green.
+- The `dev` git branch is machine-owned (`sync-dev.yml` fast-forwards it to
+  `main`; Supabase migrates the dev DB from it). Never commit to it.
+- Supabase's branch runner fails silently sometimes (hung check, empty DB,
+  "Capacity is unavailable"). Runbook: `docs/ENVIRONMENTS.md` §4.
 - Manual fallback only: `npm run db:push:prod` (guard-railed, see
   `scripts/db-push.mjs`).
 
@@ -48,7 +73,11 @@ Rules and gotchas:
 - `npm run test:e2e` (Playwright; full suite needs the local Supabase stack
   + `.env.e2e` — see `tests/README.md`; without it only marketing/a11y
   specs run)
-- `npm run db:start` / `npm run db:reset` (local stack)
+- `npm run db:start` / `npm run db:reset` (local Docker stack)
+- `npm run db:push:dev` / `npm run db:seed:dev` / `npm run seed:dev` (the
+  shared dev branch — target-verified, see `scripts/db-dev.mjs`)
+- CI (`.github/workflows/ci.yml`) runs typecheck + lint + unit + the full e2e
+  suite on every PR. Keep it green — a red e2e may be a real bug, not drift.
 
 ## Conventions
 

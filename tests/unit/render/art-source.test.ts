@@ -72,7 +72,9 @@ describe("art-source — images Satori can decode", () => {
     const alphaOut = await sharp(Buffer.from(inlinedAlpha.split(",")[1], "base64")).metadata();
     expect(alphaOut.hasAlpha).toBe(true);
     expect(alphaOut.width).toBe(MAX_INLINE_EDGE);
-  });
+    // Encodes + re-encodes two 1600×1920 images with sharp: ~1s on a dev
+    // machine, past vitest's 5s default on a 2-core CI runner.
+  }, 30_000);
 
   it("rejects bytes that aren't an image", async () => {
     await expect(toSatoriDataUrl(Buffer.from("not an image"))).rejects.toThrow();

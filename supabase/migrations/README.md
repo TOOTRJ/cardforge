@@ -17,6 +17,22 @@ The "Apply via the Supabase CLI (`supabase db push`) or the Supabase MCP"
 lines in headers up to 0054 (0054 itself says `npm run db:push:*`) predate
 Supabase branching and are superseded by the rule above.
 
+## Grants are part of the migration
+
+Production is an **old** Supabase project: anything `postgres` creates in
+`public` is auto-granted to `anon` / `authenticated` / `service_role`. **New
+projects — which every preview branch and the `dev` branch are — don't.**
+0001–0096 relied on the old behaviour without saying so; `0097` stated the
+whole schema's grants explicitly (generated from production's own ACLs, grants
+only, so a no-op there) and aligned the default privileges.
+
+From now on a migration that creates a table or function says who may use it
+(`grant … on table … to authenticated, service_role;`,
+`grant execute on function … to …;`). Never "fix" a permission error with a
+blanket `grant all on all tables in schema public` — that silently undoes the
+deliberate lockdowns (0073 job RPCs, 0074 profile billing columns, 0088
+notifications, 0095 email tables).
+
 ## Errata — corrections to merged migration headers
 
 A migration file is never edited after it merges (the integration tracks it
