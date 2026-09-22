@@ -69,13 +69,15 @@ export function OgGlow({
   size?: number;
   color?: string;
 }) {
+  // Satori throws on an `undefined` style value (it .trim()s every value),
+  // so only the anchor that was given may appear in the style object.
+  const anchor = left !== undefined ? { left } : { right: right ?? -80 };
   return (
     <div
       style={{
         position: "absolute",
         top,
-        left,
-        right,
+        ...anchor,
         width: size,
         height: size,
         borderRadius: "50%",
