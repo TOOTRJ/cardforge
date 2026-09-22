@@ -2,7 +2,16 @@
 title: "An MTG Templating Cookbook: Common Rules Text Patterns"
 description: "A cookbook of correctly-templated MTG rules text patterns: ETB and dies triggers, tap and sacrifice costs, modal, anthems, and replacement effects."
 date: "2026-06-23"
-tags: ["templating", "oracle text", "card design"]
+tags: ["oracle text", "card design"]
+faq:
+  - q: "What is the difference between \"dies\" and \"is destroyed\"?"
+    a: "\"Dies\" means a creature is put into a graveyard from the battlefield, for any reason — destruction, lethal damage, sacrifice, or zero toughness. \"Destroyed\" is just one of those causes. A dies trigger fires when the creature is sacrificed; a \"when this is destroyed\" effect would not. Use \"dies\" unless you specifically want to exclude sacrifice and state-based deaths."
+  - q: "When do I write \"target\" instead of \"a\" or \"each\"?"
+    a: "Write \"target\" when a player actively chooses the object and an opponent could respond to that choice before the effect resolves — typical of spells and many activated abilities. Use \"a\" or \"each\" for non-targeting effects, which are common on triggered abilities and board-wide effects. A single-target removal spell says \"destroy target creature\"; a sweeper says \"destroy each creature.\" If there's no meaningful choice to respond to, don't write \"target.\""
+  - q: "Why does my activated ability need a colon?"
+    a: "The colon is how the rules distinguish a cost you pay from an effect that happens. Everything before the colon is the cost; everything after is the effect. Without it, the line reads as a static ability or breaks entirely. So \": Add one mana of any color\" is an activated ability, while the same words without a colon would not be."
+  - q: "How do I capitalize keyword abilities versus keyword actions?"
+    a: "Keyword abilities (Flying, Trample, Deathtouch, Lifelink, Menace) are capitalized and usually listed together on their own line, comma-separated — and in modern templating only the first keyword on that line takes a capital letter, as in \"Flying, lifelink.\" Keyword actions (scry, surveil, mill, fight) are ordinary verbs that stay lowercase when they appear mid-sentence, as in \"When this dies, surveil 2.\""
 ---
 
 Most custom-card rules text is built from a small set of reusable patterns, and each one has a fixed shape Wizards' editors have used for years. Learn the shapes — trigger words, the cost-colon-effect form, "target" versus "each" — and templating becomes fill-in-the-blank instead of guesswork. This cookbook collects the patterns designers reach for most, each with its template and a one-line note on when to use it.

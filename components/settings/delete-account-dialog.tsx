@@ -56,7 +56,7 @@ export function DeleteAccountDialog() {
         <DialogHeader>
           <DialogTitle>Delete your account</DialogTitle>
           <DialogDescription>
-            This permanently deletes your account, profile, and every card, set,
+            This permanently deletes your account, profile, and every card, deck,
             and comment you&apos;ve made. It can&apos;t be undone.
           </DialogDescription>
         </DialogHeader>

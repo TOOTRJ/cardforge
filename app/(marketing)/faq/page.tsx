@@ -23,12 +23,12 @@ export const dynamic = "error";
 export const metadata: Metadata = {
   title: "FAQ — Custom MTG Card Making, Answered",
   description:
-    "Every common question about making custom Magic: The Gathering cards on PipGlyph — the card maker, mana pips and custom symbols, AI generation, sharing, sets, printing, remixing, and challenges.",
+    "Every common question about making custom Magic: The Gathering cards on PipGlyph — the card maker, mana pips and custom symbols, AI generation, sharing, decks, printing, remixing, and challenges.",
   alternates: { canonical: "/faq" },
   openGraph: {
     title: "PipGlyph FAQ — Custom MTG Card Making, Answered",
     description:
-      "Direct answers about the card maker, mana pip editor, AI generation, exports and printing, sets, sharing, and community challenges.",
+      "Direct answers about the card maker, mana pip editor, AI generation, exports and printing, decks, sharing, and community challenges.",
     type: "article",
   },
 };

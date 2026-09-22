@@ -47,7 +47,7 @@ const FEATURES = [
   "AI that writes rules text, flavor, stats — or paints the art — on demand",
   "Export card as PNG",
   "Community gallery to share and remix",
-  "Full expansion set builder",
+  "Deck builder with decklist import and proxy printing",
 ];
 
 // ---------------------------------------------------------------------------
@@ -86,7 +86,7 @@ export default function MtgCardMakerPage() {
         </h1>
         <p className="max-w-2xl text-lg leading-7 text-muted">
           PipGlyph is a free, browser-based Magic: The Gathering card creator.
-          Design any card type — creatures, instants, planeswalkers, full sets —
+          Design any card type — creatures, instants, planeswalkers, sagas, double-faced cards —
           with a live preview editor, then share with your playgroup in seconds.
         </p>
         <div className="flex flex-wrap gap-3">

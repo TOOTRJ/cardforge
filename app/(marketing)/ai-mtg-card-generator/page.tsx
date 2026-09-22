@@ -12,11 +12,12 @@ import { AI_GENERATOR_FAQ } from "@/lib/content/faq";
 //
 // Targets the long-tail query family "AI MTG card generator", "AI magic
 // card generator", "ChatGPT custom magic card", etc. Mirrors the structure
-// of /mtg-card-maker but with copy and FAQ focused on the AI features:
-// the in-editor assistant (Claude — currently gated "Coming soon", see
-// components/creator/panels/forge-ai-panel.tsx) and the random-card generator
-// (card-design engine on Claude via the Vercel AI Gateway, lib/ai/provider.ts,
-// with FLUX text-to-image and Gemini image-to-image remix, lib/ai/image-gen.ts).
+// of /mtg-card-maker but with copy and FAQ focused on the AI features that
+// actually ship: per-field "Generate with AI" in the creator (kind card_fill),
+// the "Get ideas" batches, concept-to-card / random-card jobs, AI remix (i2i)
+// and deck generation — all on the card-design engine (Claude via the Vercel
+// AI Gateway, lib/ai/provider.ts) with FLUX text-to-image and Gemini
+// image-to-image (lib/ai/image-gen.ts). Never list a tool that doesn't exist.
 // ---------------------------------------------------------------------------
 
 // Hard guarantee of static rendering: if a future change introduces a
@@ -42,11 +43,10 @@ const FEATURES = [
   "Concept-to-card: type a theme and the AI drafts every field",
   "AI-generated original art sized for the card frame",
   "Live preview as the AI fills the editor",
-  "Rules-text improver — clean templating + correct keyword capitalization",
-  "Balance check — risk level, specific concerns, suggested tweaks",
-  "Cost suggester — picks a mana value appropriate for the card's effect",
-  "Rarity recommender — fits the card's complexity and impact",
-  "Flavor-text writer in the voice of your color identity",
+  "Generate with AI on any single field — rules text, flavor, cost, stats, or the art",
+  "Get ideas — three costed concepts for a theme; keep the fields you like",
+  "AI remix — restyle a card's art in one click, lineage kept",
+  "Deck generation — up to 100 cards from a theme, with a how-to-play guide",
   "All work stays editable — the AI seeds the form, you ship the design",
 ];
 

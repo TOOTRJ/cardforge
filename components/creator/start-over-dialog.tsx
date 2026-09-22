@@ -48,7 +48,7 @@ export function StartOverDialog({
           <DialogDescription>
             {isRevert
               ? "This discards your unsaved edits and restores the card to its last saved state. This can’t be undone."
-              : "This clears every field and resets the card to a blank slate. The draft saved on this device is discarded too. This can’t be undone."}
+              : "This clears every field and resets the card to a blank slate. This can’t be undone."}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="px-5 pb-5 pt-2">

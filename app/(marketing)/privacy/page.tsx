@@ -40,7 +40,7 @@ export default function PrivacyPage() {
       <h3>Content you create</h3>
       <ul>
         <li>Cards: title, slug, cost, rules text, flavor text, artwork URL, etc.</li>
-        <li>Sets and the cards inside them.</li>
+        <li>Decks and the cards inside them.</li>
         <li>Likes you give to other people&apos;s cards.</li>
         <li>Exported PNGs of your cards in the export bucket.</li>
       </ul>
@@ -107,7 +107,7 @@ export default function PrivacyPage() {
       <h2>4. How long we keep it</h2>
       <ul>
         <li>Account data: until you delete your account.</li>
-        <li>Public cards and sets: until you delete them.</li>
+        <li>Public cards and decks: until you delete them.</li>
         <li>
           Server logs: rolling 30-day window for security investigations.
         </li>
@@ -125,14 +125,14 @@ export default function PrivacyPage() {
           own.
         </li>
         <li>
-          <strong>Deletion</strong> — delete individual cards and sets any time,
+          <strong>Deletion</strong> — delete individual cards and decks any time,
           or permanently delete your whole account from{" "}
           <Link href="/settings">settings</Link>. Account deletion immediately
           and irreversibly removes your profile, content, and uploaded files.
         </li>
         <li>
           <strong>Portability</strong> — download a full JSON export of your
-          account data (profile, cards, sets, comments) from{" "}
+          account data (profile, cards, decks, comments) from{" "}
           <Link href="/settings">settings</Link>, and export any card as PNG or
           PDF from the editor.
         </li>

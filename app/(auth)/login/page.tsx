@@ -32,7 +32,7 @@ export default async function LoginPage({
           Welcome back
         </h1>
         <p className="text-sm text-muted">
-          Sign in to access your dashboard, drafts, and sets.
+          Sign in to access your dashboard, drafts, and decks.
         </p>
       </div>
 

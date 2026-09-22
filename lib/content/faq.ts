@@ -47,7 +47,7 @@ export const CARD_MAKER_FAQ: FaqEntry[] = [
   },
   {
     q: "What is the difference between PipGlyph and MTG Cardsmith or Card Conjurer?",
-    a: "PipGlyph, MTG Cardsmith, and Card Conjurer are all free browser-based MTG card makers. PipGlyph differentiates itself with a modern UI, a built-in AI assistant for oracle text and flavor text, full set management (group cards into named expansions), and a structured data model that keeps every card editable as JSON — not just a flat image.",
+    a: "PipGlyph, MTG Cardsmith, and Card Conjurer are all free browser-based MTG card makers. PipGlyph differentiates itself with a modern UI, a built-in AI assistant for oracle text and flavor text, deck building with decklist import and proxy printing, and a structured data model that keeps every card editable as JSON — not just a flat image.",
   },
   {
     q: "Is it legal to make custom MTG cards?",
@@ -113,7 +113,7 @@ export const AI_GENERATOR_FAQ: FaqEntry[] = [
   },
   {
     q: "Will the AI design balanced cards?",
-    a: "The AI is trained to follow MTG's color pie and mana curve heuristics, but it isn't infallible — a generated mythic might still be undercosted, and a generated common might be too weak. Run the 'Balance check' tool inside the AI assistant panel to get a risk-level read and concrete tweaks before publishing to the gallery.",
+    a: "The AI is trained to follow MTG's color pie and mana curve heuristics, but it isn't infallible — a generated mythic might still be undercosted, and a generated common might be too weak. Use the per-field Generate with AI buttons to draft an alternative cost or rules text and compare, then playtest before publishing to the gallery.",
   },
   {
     q: "Can I edit the AI's output after it generates a card?",
@@ -142,19 +142,16 @@ const SHARING_FAQ: FaqEntry[] = [
   },
 ];
 
-// --- Sets & expansions (new — /faq only) ------------------------------------
-
-
 // --- Exports & printing (new — /faq only) -----------------------------------
 
 const EXPORTS_FAQ: FaqEntry[] = [
   {
     q: "What export formats does PipGlyph support?",
-    a: "Cards export as PNG at two sizes — a share-friendly 750×1050 and a print-oriented 1500×2100 — and as a print-ready PDF sized for standard card dimensions (2.5 × 3.5 inches). Sets can be exported as a JSON bundle for backup or external tools.",
+    a: "Cards export as PNG at two sizes — a share-friendly 750×1050 and a print-oriented 1500×2100 — and as a print-ready PDF sized for standard card dimensions (2.5 × 3.5 inches). Every account gets the 750×1050 PNG with the PipGlyph mark; the 1500×2100 PNG and the PDF are watermark-free on Plus and Pro, and Pro also exports a whole deck as 3 × 3 proxy sheets. Your account data (profile, cards, decks, comments) downloads as JSON from Settings.",
   },
   {
     q: "How do I print a custom card at real card size?",
-    a: "Use the PDF export from the card page's download menu and print it at 100% scale (turn OFF 'fit to page' in your print dialog). The PDF is laid out for standard MTG card dimensions — 63 × 88 mm — so the printed card matches a sleeved real card. For best results print on heavy matte stock or insert the cut-out in a sleeve in front of a basic land.",
+    a: "On Plus or Pro, use the PDF export from the card page's download menu and print it at 100% scale (turn OFF 'fit to page' in your print dialog). The PDF is laid out for standard MTG card dimensions — 63 × 88 mm — so the printed card matches a sleeved real card. For best results print on heavy matte stock or insert the cut-out in a sleeve in front of a basic land.",
   },
   {
     q: "Do exported cards look exactly like the editor preview?",
@@ -214,11 +211,11 @@ export const COMPARISON_FAQ: FaqEntry[] = [
   },
   {
     q: "Is there a CardConjurer alternative?",
-    a: "Yes. CardConjurer was a popular browser-based card renderer that was taken down in late 2023 after its creator received a cease-and-desist from Wizards of the Coast. PipGlyph is a free, browser-based alternative with a live-preview editor, the full mana-symbol vocabulary, custom pip uploads, deck building, sharing, and high-resolution PNG and PDF export — built on original frames and fonts rather than Wizards' proprietary assets.",
+    a: "Yes. CardConjurer was a popular browser-based card renderer that was taken down in November 2022 after its creator received a cease-and-desist from Wizards of the Coast. PipGlyph is a free, browser-based alternative with a live-preview editor, the full mana-symbol vocabulary, custom pip uploads, deck building, sharing, and high-resolution PNG and PDF export — built on original frames and fonts rather than Wizards' proprietary assets.",
   },
   {
     q: "Why was CardConjurer taken down?",
-    a: "CardConjurer was discontinued in late 2023 after receiving a cease-and-desist from Wizards of the Coast over the use of their intellectual property. It's a reminder that custom-card tools last only if they respect WotC's IP — which is why PipGlyph uses its own original card frames, fonts, and mana symbols and follows the spirit of the Wizards Fan Content Policy.",
+    a: "CardConjurer was discontinued in November 2022 after receiving a cease-and-desist from Wizards of the Coast over the use of their intellectual property. It's a reminder that custom-card tools last only if they respect WotC's IP — which is why PipGlyph uses its own original card frames, fonts, and mana symbols and follows the spirit of the Wizards Fan Content Policy.",
   },
   {
     q: "Can I rebuild my CardConjurer cards in PipGlyph?",
@@ -230,7 +227,7 @@ export const COMPARISON_FAQ: FaqEntry[] = [
   },
   {
     q: "Is PipGlyph free?",
-    a: "Yes. PipGlyph's card maker is free with a free account — every card type, every frame, the live preview, saving, publishing to the gallery, set building and custom pip uploads, plus 5 AI credits a month. Plus and Pro add far more monthly credits, watermark-free hi-res downloads and print-ready PDFs, and Pro adds deck-aware AI design plus whole-deck export.",
+    a: "Yes. PipGlyph's card maker is free with a free account — every card type, every frame, the live preview, saving, publishing to the gallery, deck building and custom pip uploads, plus 5 AI credits a month. Plus and Pro add far more monthly credits, watermark-free hi-res downloads and print-ready PDFs, and Pro adds deck-aware AI design plus whole-deck export.",
   },
 ];
 

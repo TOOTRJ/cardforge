@@ -2,7 +2,17 @@
 title: "MTG Card Layouts Explained: Split, Adventure, Saga, and Double-Faced"
 description: "How non-standard MTG card layouts work — split, adventure, saga, and double-faced cards — and when each layout earns a place on a custom card."
 date: "2026-06-23"
-tags: ["card layouts", "reference", "frames"]
+tags: ["frames", "reference"]
+updated: "2026-09-22"
+faq:
+  - q: "What is the difference between an MDFC and a TDFC?"
+    a: "Both are double-faced cards with two printed faces, but they play differently. A modal double-faced card (MDFC) has two independent, fully playable faces, and you choose which side to use at the moment you play it — there's no flipping. A transforming double-faced card (TDFC) has a front face and a back face that are the same permanent in two states; you always start on the front and reach the back by transforming it through gameplay."
+  - q: "Can I cast both halves of a split card?"
+    a: "Only if the card has the fuse keyword. A normal split card lets you cast one of its two halves per casting, and the other half is ignored for that cast. Fuse is the exception that allows casting both halves together from your hand for both costs. The aftermath variant is different again: its second half is cast from the graveyard, not the hand, and only after the first half has already been used."
+  - q: "How does a saga's chapter sequence work?"
+    a: "A saga is an enchantment that gains a lore counter when it enters and again at the start of its controller's following turns. Each time it reaches a new numbered chapter (I, II, III, and so on) that chapter's ability triggers once. After the last chapter has triggered and resolved, the saga is sacrificed, so it plays out as a short, finite story rather than a permanent that sticks around."
+  - q: "Does PipGlyph support these special layouts?"
+    a: "The standard single-face layout plus sagas, adventures, split and aftermath cards, flip cards, and double-faced cards with a back face — each is a kind you pick in the card creator, and the frame follows. Layouts it doesn't draw (meld, leveler, class) are best treated as design concepts you describe in rules text and art direction. For the frame, border, and typography side of card appearance, see MTG card frame eras explained."
 ---
 
 A Magic card's **layout** is its structural blueprint: how many faces it has, how the text box is divided, and how you play it. Most cards use the standard single-face layout, but a handful of special layouts — split, adventure, saga, and the two kinds of double-faced cards — pack two spells, two sides, or a sequence of abilities onto one physical card. This guide explains each layout in plain terms and notes which ones are practical to design as custom cards.
@@ -13,7 +23,7 @@ Layout is distinct from *frame era* — the typeface, border weight, and trade d
 
 The baseline. One face, one casting cost top-right, one art box, one type line, one text box, and — for creatures — a power/toughness box bottom-right. The overwhelming majority of cards ever printed use this layout, and it's the canvas every other layout modifies. If you're learning where each region lives, [MTG card anatomy explained](/articles/mtg-card-anatomy-explained) walks the standard frame zone by zone.
 
-PipGlyph renders this standard single-face layout. The exotic layouts below are best understood as design concepts you can describe in a card's rules text and art direction, even when a single-face frame is doing the rendering.
+PipGlyph renders the standard single-face layout and most of the special ones below — sagas, adventures, split and aftermath cards, flip cards, and double-faced cards with a real back face — so each section notes what the [card creator](/create) does with it.
 
 ## Split cards
 
@@ -82,7 +92,7 @@ Like adventure and saga, each is a single physical face whose *text box* is rest
 
 Special layouts cost more than standard cards in two currencies. The first is **text budget**: split, MDFC, and saga layouts write two-plus cards' worth of rules into one frame, and crowded text is the fastest way to make a custom card feel amateur. The second is **printing and proxying**: double-faced cards need both sides rendered and can't share the normal card back, while split cards want a rotated layout. If you intend to print, the simplest layouts travel best.
 
-The rule of thumb: use a special layout only when the mechanic genuinely earns it. If a design works as a standard single-face card, keep it standard — that's the layout PipGlyph renders cleanly, the one that proxies without fuss, and the one most players parse instantly. Reach for split or double-faced when the *idea itself* is "two things in one," not merely to look fancy. When you're ready to build, the [card editor](/create) and the [MTG card maker](/mtg-card-maker) focus on that dependable single-face layout, with the era-based frame picker handling the trade-dress side of the equation.
+The rule of thumb: use a special layout only when the mechanic genuinely earns it. If a design works as a standard single-face card, keep it standard — it proxies without fuss and most players parse it instantly. Reach for split or double-faced when the *idea itself* is "two things in one," not merely to look fancy. When you're ready to build, pick the layout as the card's kind in the [card editor](/create) — saga, adventure, split, aftermath, flip, or a double-faced back — and the era-based frame picker handles the trade-dress side of the equation.
 
 ## FAQ
 
@@ -100,4 +110,4 @@ A saga is an enchantment that gains a lore counter when it enters and again at t
 
 ### Does PipGlyph support these special layouts?
 
-PipGlyph renders the standard single-face layout. You can absolutely design cards that *describe* special-layout mechanics in their rules text and art direction, but the frame itself is the single-face one — exotic multi-face and split structures are treated as design concepts here. For the frame, border, and typography side of card appearance, see [MTG card frame eras explained](/articles/mtg-card-frame-eras-explained).
+The standard single-face layout plus sagas, adventures, split and aftermath cards, flip cards, and double-faced cards with a back face — each is a kind you pick in the card creator, and the frame follows. Layouts it doesn't draw (meld, leveler, class) are best treated as design concepts you describe in rules text and art direction. For the frame, border, and typography side of card appearance, see [MTG card frame eras explained](/articles/mtg-card-frame-eras-explained).

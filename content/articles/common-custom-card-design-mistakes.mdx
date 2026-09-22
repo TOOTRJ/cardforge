@@ -2,7 +2,17 @@
 title: "Common Custom Card Design Mistakes (and How to Fix Them)"
 description: "The seven mistakes that mark a custom MTG card as fake — undercosting, sloppy templating, color-pie breaks, kitchen-sink design, strictly-better cards, parasitism — and a concrete fix for each."
 date: "2026-06-17"
-tags: ["card design", "balance", "mistakes"]
+tags: ["card design", "balance"]
+updated: "2026-09-22"
+faq:
+  - q: "What is the most common custom card design mistake?"
+    a: "Undercosting — packing too much power into too little mana. New designers cost from feel instead of measuring against printed cards, so they end up with pushed rates. The fix is to cost by diff: find the closest real card and price the difference."
+  - q: "How do I know if my custom card breaks the color pie?"
+    a: "Check whether the effect belongs to that color's job. Blue doesn't deal direct damage, green doesn't draw cards flatly, and white doesn't get raw card draw. If your card hands a color something off its menu, relocate the effect or find the in-color version that does the same work."
+  - q: "What makes a card \"strictly better\" and why is that bad?"
+    a: "A strictly-better card does everything another card does plus more, at the same cost, with no tradeoff. It's bad because pure upside with no downside is just power creep — there's no decision to make. Add a real cost or drawback that a deck actually has to weigh."
+  - q: "How can I check my custom card's balance quickly?"
+    a: "Run it through the four-of test (would a competitive deck play four copies?) and ask which deck wants each of its drawbacks. For a second opinion, ask the AI card generator for its own version of the effect and compare the two costs."
 ---
 
 Almost every weak custom Magic card fails for one of a handful of reasons, and they repeat across thousands of designs. Undercosting, vague rules text, and color-pie breaks account for most of them, and each has a fix you can apply in minutes. This guide walks the seven most common mistakes and shows how to turn a card that reads as fake into one that reads as printed.
@@ -65,7 +75,7 @@ The fix is to spend your design budget on choices rather than magnitude. A card 
 
 ## Catch mistakes before you publish
 
-You don't have to catch all of this by eye. PipGlyph's AI assistant includes a [balance check](/ai-mtg-card-generator) that reads your card and returns a risk assessment with specific cost suggestions — a fast second opinion that flags undercosting and pie breaks before your playgroup does. And building the card in the [PipGlyph editor](/create) surfaces the structural mistakes on its own: when you see the text crammed into the box, the kitchen-sink problem becomes obvious, and seeing the body next to its cost makes the rate jump out. Describe, render, compare, fix — most of these mistakes don't survive a single honest look.
+You don't have to catch all of this by eye. PipGlyph's [AI card generator](/ai-mtg-card-generator) can draft its own costed, rarity-appropriate version of the same idea to compare against — a fast second opinion on rate before your playgroup gives you a slower one. And building the card in the [PipGlyph editor](/create) surfaces the structural mistakes on its own: when you see the text crammed into the box, the kitchen-sink problem becomes obvious, and seeing the body next to its cost makes the rate jump out. Describe, render, compare, fix — most of these mistakes don't survive a single honest look.
 
 ## FAQ
 
@@ -83,4 +93,4 @@ A strictly-better card does everything another card does plus more, at the same 
 
 ### How can I check my custom card's balance quickly?
 
-Run it through the four-of test (would a competitive deck play four copies?) and ask which deck *wants* each of its drawbacks. For a second opinion, the [AI balance check](/ai-mtg-card-generator) reads the card and returns a risk assessment with cost suggestions.
+Run it through the four-of test (would a competitive deck play four copies?) and ask which deck *wants* each of its drawbacks. For a second opinion, ask the [AI card generator](/ai-mtg-card-generator) for its own version of the effect and compare the two costs.

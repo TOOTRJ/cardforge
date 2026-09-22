@@ -2,7 +2,16 @@
 title: "How to Design a Custom Planeswalker"
 description: "How to design a custom Magic planeswalker — starting loyalty, plus/minus/ultimate abilities, loyalty math, templating, and a full worked example."
 date: "2026-06-18"
-tags: ["planeswalkers", "card design", "loyalty"]
+tags: ["card types", "card design"]
+faq:
+  - q: "How much starting loyalty should a custom planeswalker have?"
+    a: "For a normal four-to-five-mana planeswalker, three to five is the standard range. Use three for a cheap, fragile design and five for an expensive, sticky one; tie the number to how easily the card protects itself the turn it enters."
+  - q: "Can a planeswalker use two loyalty abilities in one turn?"
+    a: "No. You may activate only one loyalty ability per planeswalker per turn, and only at sorcery speed. Different planeswalkers you control each get their own activation, but a single one is limited to one ability per turn."
+  - q: "What happens when a planeswalker reaches zero loyalty?"
+    a: "It's put into its owner's graveyard as a state-based action, just like a creature with zero toughness. Combat and direct damage to a planeswalker remove that much loyalty, which is how opponents race it down."
+  - q: "Does a planeswalker have to have an ultimate?"
+    a: "No. Two-ability planeswalkers with just a plus and a minus are entirely legal and often well-balanced — skipping the ultimate lowers the card's ceiling, which suits cheaper or more focused designs. See our notes on balancing custom cards for how to set that ceiling deliberately."
 ---
 
 A planeswalker is a permanent that enters with a number of loyalty counters and carries loyalty abilities you activate by adding or removing those counters. You may activate only one loyalty ability per planeswalker per turn, and only at sorcery speed — your main phase, empty stack. The classic shape is three abilities: a plus that builds advantage, a minus that affects the board right now, and a game-ending ultimate. Get those three numbers talking to each other and you have a card; get them wrong and you have a 24-cent rare.

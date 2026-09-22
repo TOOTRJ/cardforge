@@ -76,7 +76,6 @@ export type PlanDisplay = {
 const PAID_COMING_SOON = [
   "Premium custom frames",
   "Card printing",
-  "Custom sets",
 ];
 // Pro-only teasers (owner, 2026-09-15): the deck-building layer on top of
 // today's deck-aware card design — still a tease, never sold as live.

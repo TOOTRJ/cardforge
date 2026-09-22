@@ -302,7 +302,7 @@ export default async function SettingsPage({
                   Export your data
                 </p>
                 <p className="text-xs text-muted">
-                  Download your profile, cards, sets, and comments as a JSON file.
+                  Download your profile, cards, decks, and comments as a JSON file.
                 </p>
               </div>
               <Button asChild variant="secondary">
