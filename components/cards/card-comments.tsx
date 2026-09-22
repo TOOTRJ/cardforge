@@ -37,6 +37,7 @@ import {
 import type { CardCommentWithAuthor } from "@/types/card";
 import { ReportDialog } from "@/components/moderation/report-dialog";
 import { reportCommentAction } from "@/lib/moderation/actions";
+import { formatRelativeTime } from "@/lib/format/dates";
 
 const MAX_BODY = COMMENT_MAX_LENGTH;
 
@@ -305,7 +306,7 @@ function CommentRow({
             )}
           </span>
           <span className="text-[10px] text-subtle" title={comment.created_at}>
-            {formatRelative(comment.created_at)}
+            {formatRelativeTime(comment.created_at)}
             {comment.updated_at !== comment.created_at ? " · edited" : null}
           </span>
         </div>
@@ -410,26 +411,6 @@ function CommentRow({
 // Helpers
 // ---------------------------------------------------------------------------
 
-function formatRelative(value: string): string {
-  try {
-    const date = new Date(value);
-    const diffMs = Date.now() - date.getTime();
-    const minutes = Math.round(diffMs / 60_000);
-    if (minutes < 1) return "just now";
-    if (minutes < 60) return `${minutes}m ago`;
-    const hours = Math.round(minutes / 60);
-    if (hours < 24) return `${hours}h ago`;
-    const days = Math.round(hours / 24);
-    if (days < 7) return `${days}d ago`;
-    return new Intl.DateTimeFormat("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    }).format(date);
-  } catch {
-    return value;
-  }
-}
 
 // When the server-rendered `initialComments` changes (because of a
 // router.refresh after a mutation), pull the new list in. We do this with a

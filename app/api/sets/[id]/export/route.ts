@@ -12,6 +12,7 @@ import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { buildSetPdf } from "@/lib/render/card-pdf";
 import { rowToPreviewData, type CardRowForBake } from "@/lib/cards/bake-core";
 import { getPipOverrides } from "@/lib/pips/queries";
+import { isUuid } from "@/lib/ids";
 
 // ---------------------------------------------------------------------------
 // /api/sets/[id]/export — Pro "whole-set export".
@@ -23,9 +24,6 @@ import { getPipOverrides } from "@/lib/pips/queries";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
-
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const MAX_SET_EXPORT_CARDS = 60;
 
@@ -39,7 +37,7 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
   const { id } = await params;
-  if (!UUID_PATTERN.test(id)) {
+  if (!isUuid(id)) {
     return NextResponse.json({ error: "Invalid set id" }, { status: 400 });
   }
   if (!isSupabaseConfigured()) {

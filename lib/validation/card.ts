@@ -363,7 +363,6 @@ const baseCardSchema = z.object({
   title: cardTitleSchema,
   slug: cardSlugSchema.optional(),
   game_system_id: uuidSchema,
-  template_id: uuidSchema.optional(),
   cost: cardCostSchema,
   color_identity: cardColorIdentitySchema,
   supertype: cardSupertypeSchema,
@@ -480,7 +479,9 @@ export function isReservedCardSlug(slug: string): boolean {
   return RESERVED_CARD_SLUGS.has(slug.toLowerCase());
 }
 
-export function slugify(input: string, max = 80): string {
+/** Lowercase, diacritics folded, non-alphanumerics collapsed to single
+ *  hyphens, cut at `max` — `fallback` when nothing survives. */
+export function slugify(input: string, max = 80, fallback = "untitled-card"): string {
   // U+0300–U+036F is the Unicode combining diacritical marks block; stripping
   // those after NFKD-normalizing folds "café" → "cafe" before slug cleanup.
   const DIACRITIC_PATTERN = /[̀-ͯ]/g;
@@ -490,8 +491,10 @@ export function slugify(input: string, max = 80): string {
     .replace(DIACRITIC_PATTERN, "")
     .replace(SLUG_REPLACE, "-")
     .replace(SLUG_TRIM, "")
-    .slice(0, max);
-  return cleaned.length > 0 ? cleaned : "untitled-card";
+    .slice(0, max)
+    // A cut that lands on a hyphen would fail the slug CHECK constraints.
+    .replace(SLUG_TRIM, "");
+  return cleaned.length > 0 ? cleaned : fallback;
 }
 
 export { SLUG_PATTERN };

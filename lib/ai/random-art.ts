@@ -2,6 +2,7 @@ import "server-only";
 
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { randomId } from "@/lib/ids";
 
 // ---------------------------------------------------------------------------
 // Generated-art persistence.
@@ -46,10 +47,7 @@ export async function persistGeneratedArt(
       contentType.split(";")[0].trim()
     ] ?? "png";
 
-  const id =
-    typeof crypto !== "undefined" && "randomUUID" in crypto
-      ? crypto.randomUUID()
-      : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  const id = randomId();
   const path = `${user.id}/ai-${id}.${extension}`;
 
   const supabase = await createClient();

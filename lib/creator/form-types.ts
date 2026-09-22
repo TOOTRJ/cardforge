@@ -51,7 +51,6 @@ export type FormValues = {
   title: string;
   slug: string;
   game_system_id: string;
-  template_id: string;
   cost: string;
   color_identity: ColorIdentity[];
   supertype: string;

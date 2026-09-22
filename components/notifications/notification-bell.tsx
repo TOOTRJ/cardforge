@@ -3,19 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  Bell,
-  Coins,
-  Crown,
-  Heart,
-  Layers,
-  MailWarning,
-  MessageCircle,
-  MessageSquare,
-  ShieldAlert,
-  Sparkles,
-  UserPlus,
-} from "lucide-react";
+import { Bell } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -26,12 +14,11 @@ import {
   markAllNotificationsRead,
 } from "@/lib/notifications/actions";
 import type { NotificationItem } from "@/lib/notifications/queries";
-import { describeNotification } from "@/lib/notifications/describe";
 import {
   subscribeNotificationArrivals,
   subscribeNotificationsSeen,
 } from "@/lib/notifications/bus";
-import { cn } from "@/lib/utils";
+import { NotificationRow } from "@/components/notifications/notification-row";
 
 // ---------------------------------------------------------------------------
 // NotificationBell — header bell that opens an in-place popover instead of
@@ -44,19 +31,6 @@ import { cn } from "@/lib/utils";
 // page is reachable via "View all" and marks seen on load the same way.
 // ---------------------------------------------------------------------------
 
-export const NOTIFICATION_ICON: Record<string, typeof Bell> = {
-  like: Heart,
-  comment: MessageCircle,
-  remix: Sparkles,
-  follow: UserPlus,
-  feedback: MailWarning,
-  moderation: ShieldAlert,
-  message: MessageSquare,
-  credit_grant: Coins,
-  comp_plan: Crown,
-  card_limit: Layers,
-  render_update: Sparkles,
-};
 
 type NotificationBellProps = {
   /** Admins' "message" entries deep-link to the team inbox, users' to
@@ -172,38 +146,16 @@ export function NotificationBell({ initialUnread, isAdmin = false }: Notificatio
             </div>
           ) : items && items.length > 0 ? (
             <ul className="divide-y divide-border/60">
-              {items.map((item) => {
-                const Icon = NOTIFICATION_ICON[item.type] ?? Bell;
-                const d = describeNotification(item, { isAdmin });
-
-                return (
-                  <li key={item.id}>
-                    <Link
-                      href={d.href}
-                      onClick={() => handleOpenChange(false)}
-                      className={cn(
-                        "flex items-start gap-3 px-4 py-3 transition-colors hover:bg-elevated/50",
-                        item.readAt ? "" : "bg-primary/5",
-                      )}
-                    >
-                      <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-elevated text-primary-bright">
-                        <Icon className="h-4 w-4" aria-hidden />
-                      </span>
-                      <div className="flex min-w-0 flex-1 flex-col">
-                        <p className="text-sm leading-5 text-foreground">
-                          <span className="font-medium">{d.subject}</span> {d.body}
-                        </p>
-                        <span className="text-xs text-subtle">
-                          {formatRelative(item.createdAt)}
-                        </span>
-                      </div>
-                      {item.readAt ? null : (
-                        <span role="img" aria-label="New" className="mt-2 h-2 w-2 shrink-0 rounded-full bg-primary" />
-                      )}
-                    </Link>
-                  </li>
-                );
-              })}
+              {items.map((item) => (
+                <li key={item.id}>
+                  <NotificationRow
+                    item={item}
+                    isAdmin={isAdmin}
+                    density="popover"
+                    onNavigate={() => handleOpenChange(false)}
+                  />
+                </li>
+              ))}
             </ul>
           ) : (
             <div className="flex flex-col items-center gap-2 px-6 py-10 text-center">
@@ -224,22 +176,3 @@ export function NotificationBell({ initialUnread, isAdmin = false }: Notificatio
   );
 }
 
-function formatRelative(value: string): string {
-  try {
-    const date = new Date(value);
-    const minutes = Math.round((Date.now() - date.getTime()) / 60_000);
-    if (minutes < 1) return "just now";
-    if (minutes < 60) return `${minutes}m ago`;
-    const hours = Math.round(minutes / 60);
-    if (hours < 24) return `${hours}h ago`;
-    const days = Math.round(hours / 24);
-    if (days < 7) return `${days}d ago`;
-    return new Intl.DateTimeFormat("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    }).format(date);
-  } catch {
-    return value;
-  }
-}

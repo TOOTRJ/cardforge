@@ -6,6 +6,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { createClient, getCurrentProfile } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { slugify } from "@/lib/validation/card";
 
 // ---------------------------------------------------------------------------
 // Challenge admin writes. RLS already restricts writes to profiles.is_admin;
@@ -38,14 +39,10 @@ async function requireAdmin(): Promise<string | null> {
   return null;
 }
 
+/** Same normalisation as card/deck/set slugs (diacritics folded). An empty
+ *  result gets no fallback here — the SLUG_PATTERN check below rejects it. */
 function challengeSlugFromTitle(title: string): string {
-  const slug = title
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 64)
-    .replace(/-+$/g, "");
-  return slug;
+  return slugify(title, 64, "");
 }
 
 function revalidateChallengeSurfaces() {

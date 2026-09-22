@@ -12,6 +12,8 @@ import {
   randomDefaultMedia,
   type ProfileMediaKind,
 } from "@/lib/profile/default-media";
+import { revalidateProfilePage } from "@/lib/profile/username";
+import { randomId } from "@/lib/ids";
 
 // ---------------------------------------------------------------------------
 // Profile-media upload (avatar / banner). Mirrors lib/cards/upload-art-
@@ -129,10 +131,7 @@ export async function uploadProfileMediaServerAction(
   // very first upload. Matches the proven card-art pattern exactly. The
   // previous object (if any) is deleted just below so the bucket doesn't
   // accumulate dead files per user.
-  const id =
-    typeof crypto !== "undefined" && "randomUUID" in crypto
-      ? crypto.randomUUID()
-      : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  const id = randomId();
   const path = `${user.id}/${kind}-${id}.${ext}`;
   const supabase = await createClient();
 
@@ -205,14 +204,7 @@ export async function uploadProfileMediaServerAction(
   // Bust both the settings page (so the form re-renders the new URL) and
   // any profile view of this user.
   revalidatePath("/settings");
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("username")
-    .eq("id", user.id)
-    .maybeSingle();
-  if (profile?.username) {
-    revalidatePath(`/profile/${profile.username}`);
-  }
+  await revalidateProfilePage(supabase, user.id);
 
   return { ok: true, publicUrl };
 }
@@ -242,12 +234,7 @@ async function revalidateProfile(
 ) {
   revalidatePath("/settings");
   revalidatePath("/onboarding");
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("username")
-    .eq("id", userId)
-    .maybeSingle();
-  if (profile?.username) revalidatePath(`/profile/${profile.username}`);
+  await revalidateProfilePage(supabase, userId);
 }
 
 /** Use one of the built-in images (public/defaults). `path` must be a value

@@ -84,6 +84,7 @@ import {
 import { resolveFrameProfile } from "@/lib/cards/profile-override";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import type { CardBackFace, ColorIdentity, Rarity } from "@/types/card";
+import { clamp } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
 // Sizing presets — 5:7 card aspect ratio, matching the live preview.
@@ -142,10 +143,6 @@ function vJustify(align: SlotAlign | undefined): string {
       : "flex-start";
 }
 
-function clamp(value: number, min: number, max: number): number {
-  if (Number.isNaN(value)) return min;
-  return Math.min(max, Math.max(min, value));
-}
 
 // MPlantin (the bake's body font) has no U+2212 MINUS SIGN glyph and Satori has
 // no font fallback, so a raw "−2:" loyalty ability would lose its sign. Map it

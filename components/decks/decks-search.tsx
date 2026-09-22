@@ -1,20 +1,19 @@
 "use client";
 
-import { useCallback, useState, useTransition } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Loader2, Search, X } from "lucide-react";
 import { DECK_FORMAT_LABELS, DECK_FORMAT_VALUES, isDeckFormat } from "@/types/deck";
 import { cn } from "@/lib/utils";
+import { useSearchParamPatch } from "@/lib/routing/use-search-param-patch";
 
 // DecksSearch — search box + format filter chips for the public decks browse.
 // Drives the ?q= / ?format= params; the server page re-queries
 // listPublicDecks on change. Mirrors SetsSearch so the browse surfaces feel
 // the same.
 export function DecksSearch() {
-  const router = useRouter();
-  const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [isPending, startTransition] = useTransition();
+  const { patch, isPending } = useSearchParamPatch();
 
   const searchParam = searchParams.get("q") ?? "";
   const formatParam = searchParams.get("format");
@@ -27,33 +26,12 @@ export function DecksSearch() {
     setLastSynced(searchParam);
   }
 
-  const apply = useCallback(
-    (patch: { q?: string | null; format?: string | null }) => {
-      const next = new URLSearchParams(searchParams.toString());
-      if (patch.q !== undefined) {
-        if (patch.q) next.set("q", patch.q);
-        else next.delete("q");
-      }
-      if (patch.format !== undefined) {
-        if (patch.format) next.set("format", patch.format);
-        else next.delete("format");
-      }
-      // Any filter change resets pagination to page 1.
-      next.delete("page");
-      const qs = next.toString();
-      startTransition(() => {
-        router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-      });
-    },
-    [router, pathname, searchParams],
-  );
-
   return (
     <div className="flex flex-col gap-3">
       <form
         onSubmit={(event) => {
           event.preventDefault();
-          apply({ q: value.trim() || null });
+          patch({ q: value.trim() || null });
         }}
         className="relative flex w-full max-w-md items-center"
       >
@@ -74,7 +52,7 @@ export function DecksSearch() {
             type="button"
             onClick={() => {
               setValue("");
-              apply({ q: null });
+              patch({ q: null });
             }}
             aria-label="Clear search"
             className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted hover:bg-elevated hover:text-foreground"
@@ -101,14 +79,14 @@ export function DecksSearch() {
         <FormatChip
           label="All formats"
           active={activeFormat === null}
-          onClick={() => apply({ format: null })}
+          onClick={() => patch({ format: null })}
         />
         {DECK_FORMAT_VALUES.map((format) => (
           <FormatChip
             key={format}
             label={DECK_FORMAT_LABELS[format]}
             active={activeFormat === format}
-            onClick={() => apply({ format })}
+            onClick={() => patch({ format })}
           />
         ))}
       </div>

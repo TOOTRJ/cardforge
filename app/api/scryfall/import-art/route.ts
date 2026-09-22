@@ -12,6 +12,8 @@ import {
   checkScryfallRateLimit,
   logScryfallCall,
 } from "@/lib/scryfall/rate-limit";
+import { rateLimitedResponse } from "@/lib/api/responses";
+import { randomId } from "@/lib/ids";
 
 // ---------------------------------------------------------------------------
 // POST /api/scryfall/import-art
@@ -100,13 +102,7 @@ export async function POST(request: Request) {
 
   const limit = await checkScryfallRateLimit(user.id, "import_art");
   if (!limit.ok) {
-    return NextResponse.json(
-      { ok: false, error: limit.message },
-      {
-        status: 429,
-        headers: { "Retry-After": String(limit.retryAfterSeconds) },
-      },
-    );
+    return rateLimitedResponse(limit);
   }
   // 1) Re-fetch the card from Scryfall to recover a trusted image URL. We
   // deliberately don't accept a URL from the client.
@@ -194,10 +190,7 @@ export async function POST(request: Request) {
 
   // 3) Upload via the user's session — RLS binds the destination prefix.
   const ext = extensionFromContentType(fetched.contentType);
-  const id =
-    typeof crypto !== "undefined" && "randomUUID" in crypto
-      ? crypto.randomUUID()
-      : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  const id = randomId();
   const path = `${user.id}/${id}.${ext}`;
 
   const supabase = await createClient();

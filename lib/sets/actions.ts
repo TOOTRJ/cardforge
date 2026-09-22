@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { createClient, getCurrentUser } from "@/lib/supabase/server";
+import { createClient, getCurrentUser, getCurrentUsername } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
   createSetSchema,
@@ -18,6 +18,7 @@ import {
 import { bakeAndPersistCardRender } from "@/lib/cards/bake-render";
 import type { CardSetInsert, CardSetUpdate } from "@/types/supabase";
 import type { ZodIssue } from "zod";
+import { isUuid } from "@/lib/ids";
 
 // ---------------------------------------------------------------------------
 // Result shapes
@@ -40,9 +41,6 @@ export type CreateSetResult = CreateSetSuccess | SetActionFailure;
 export type UpdateSetResult = UpdateSetSuccess | SetActionFailure;
 export type DeleteSetResult = DeleteSetSuccess | SetActionFailure;
 export type SetItemResult = SetItemSuccess | SetActionFailure;
-
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function fieldErrorsFromZod(
   issues: ReadonlyArray<ZodIssue>,
@@ -89,22 +87,6 @@ async function ensureUniqueSetSlug(
     if (!stillTaken) return candidate;
   }
   return desired;
-}
-
-async function getOwnerUsername(): Promise<string | null> {
-  const user = await getCurrentUser();
-  if (!user) return null;
-  try {
-    const supabase = await createClient();
-    const { data } = await supabase
-      .from("profiles")
-      .select("username")
-      .eq("id", user.id)
-      .maybeSingle();
-    return data?.username ?? null;
-  } catch {
-    return null;
-  }
 }
 
 function revalidateSetPaths(slug: string, ownerUsername?: string | null) {
@@ -163,7 +145,7 @@ export async function createSetAction(
     return { ok: false, formError: error?.message ?? "Could not create set." };
   }
 
-  const ownerUsername = await getOwnerUsername();
+  const ownerUsername = await getCurrentUsername();
   revalidateSetPaths(row.slug, ownerUsername);
 
   if (options.redirectAfterCreate) {
@@ -180,7 +162,7 @@ export async function updateSetAction(
   setId: string,
   payload: unknown,
 ): Promise<UpdateSetResult> {
-  if (!UUID_PATTERN.test(setId)) {
+  if (!isUuid(setId)) {
     return { ok: false, formError: "Invalid set id." };
   }
   const parsed = updateSetSchema.safeParse(payload);
@@ -247,7 +229,7 @@ export async function updateSetAction(
     affectedCardIds = (affected ?? []).map((card) => card.id);
   }
 
-  const ownerUsername = await getOwnerUsername();
+  const ownerUsername = await getCurrentUsername();
   revalidateSetPaths(row.slug, ownerUsername);
   if (existing.slug !== row.slug) {
     revalidatePath(`/set/${existing.slug}`);
@@ -288,7 +270,7 @@ export async function updateSetAction(
 export async function deleteSetAction(
   setId: string,
 ): Promise<DeleteSetResult> {
-  if (!UUID_PATTERN.test(setId)) {
+  if (!isUuid(setId)) {
     return { ok: false, formError: "Invalid set id." };
   }
   if (!isSupabaseConfigured()) return notConfigured();
@@ -310,7 +292,7 @@ export async function deleteSetAction(
     return { ok: false, formError: error.message };
   }
 
-  const ownerUsername = await getOwnerUsername();
+  const ownerUsername = await getCurrentUsername();
   revalidateSetPaths(existing.slug, ownerUsername);
   return { ok: true, setId };
 }
@@ -449,7 +431,7 @@ export async function addCardToSetAction(
   setId: string,
   cardId: string,
 ): Promise<SetItemResult> {
-  if (!UUID_PATTERN.test(setId) || !UUID_PATTERN.test(cardId)) {
+  if (!isUuid(setId) || !isUuid(cardId)) {
     return { ok: false, formError: "Invalid id." };
   }
   if (!isSupabaseConfigured()) return notConfigured();
@@ -519,7 +501,7 @@ export async function removeCardFromSetAction(
   setId: string,
   cardId: string,
 ): Promise<SetItemResult> {
-  if (!UUID_PATTERN.test(setId) || !UUID_PATTERN.test(cardId)) {
+  if (!isUuid(setId) || !isUuid(cardId)) {
     return { ok: false, formError: "Invalid id." };
   }
   if (!isSupabaseConfigured()) return notConfigured();

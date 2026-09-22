@@ -33,6 +33,8 @@ import {
   type ColorIdentity,
   type Rarity,
 } from "@/types/card";
+import { isUuid } from "@/lib/ids";
+import { firstString } from "@/lib/routing/search-params";
 
 // ---------------------------------------------------------------------------
 // GalleryView — the shared body of the community gallery.
@@ -83,11 +85,6 @@ export type ParsedFilters = {
   };
 };
 
-function firstString(value: string | string[] | undefined): string | null {
-  if (Array.isArray(value)) return value[0] ?? null;
-  return value ?? null;
-}
-
 export function parseGalleryFilters(
   params: Record<string, string | string[] | undefined>,
 ): ParsedFilters {
@@ -108,9 +105,8 @@ export function parseGalleryFilters(
   // UUID-format check on the source filter. Scryfall ids are UUIDs;
   // anything else (e.g. a probe with `?source=' OR 1=1`) is silently
   // ignored. Same posture as the cardType/rarity guards above.
-  const SCRYFALL_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const sourceScryfallId =
-    sourceParam && SCRYFALL_ID_PATTERN.test(sourceParam)
+    isUuid(sourceParam)
       ? sourceParam
       : undefined;
 

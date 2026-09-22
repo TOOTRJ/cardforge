@@ -18,6 +18,7 @@ import {
   type ArticleMeta,
 } from "@/lib/content/articles";
 import { getSiteBaseUrl } from "@/lib/site-url";
+import { formatCalendarDate } from "@/lib/format/dates";
 
 // ---------------------------------------------------------------------------
 // /articles/[slug] — one guide, rendered from its MDX file. Fully static:
@@ -98,7 +99,7 @@ export default async function ArticlePage({
         <div className="flex flex-wrap items-center gap-2 text-xs text-subtle">
           <span className="text-muted">By the PipGlyph Team</span>
           <span aria-hidden>·</span>
-          <time dateTime={meta.date}>{formatDate(meta.date)}</time>
+          <time dateTime={meta.date}>{formatCalendarDate(meta.date)}</time>
           <span aria-hidden>·</span>
           <span className="inline-flex items-center gap-1">
             <Clock className="h-3 w-3" aria-hidden />
@@ -107,7 +108,7 @@ export default async function ArticlePage({
           {meta.updated ? (
             <>
               <span aria-hidden>·</span>
-              <span>Updated {formatDate(meta.updated)}</span>
+              <span>Updated {formatCalendarDate(meta.updated)}</span>
             </>
           ) : null}
         </div>
@@ -209,16 +210,6 @@ export default async function ArticlePage({
   );
 }
 
-function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-    // Frontmatter dates are calendar dates stored at UTC midnight; format in
-    // UTC so they don't shift a day back in negative-offset timezones.
-    timeZone: "UTC",
-  }).format(new Date(iso));
-}
 
 // ---------------------------------------------------------------------------
 // Article JSON-LD — authored by the PipGlyph organization (guides are

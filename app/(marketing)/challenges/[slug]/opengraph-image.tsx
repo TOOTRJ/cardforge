@@ -13,6 +13,7 @@ import {
   OgShell,
   OgTitle,
 } from "@/lib/og/shell";
+import { BRAND } from "@/lib/brand/constants";
 
 // Social-preview card for challenge detail pages — challenges have no
 // uploaded artwork of their own, so without this they'd unfurl with the
@@ -51,7 +52,7 @@ export default async function Image({
         <OgShell>
           <OgEyebrow>Community</OgEyebrow>
           <OgTitle text="Design challenges" />
-          <p style={{ margin: 0, fontSize: 26, color: "#9aa3b5" }}>
+          <p style={{ margin: 0, fontSize: 26, color: BRAND.muted }}>
             A brief, a tag, and the gallery as the arena.
           </p>
         </OgShell>
@@ -73,7 +74,7 @@ export default async function Image({
             margin: 0,
             fontSize: 26,
             lineHeight: 1.45,
-            color: "#9aa3b5",
+            color: BRAND.muted,
             maxWidth: 880,
           }}
         >

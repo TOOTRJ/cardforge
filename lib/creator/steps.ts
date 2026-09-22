@@ -150,7 +150,6 @@ const STEP_DEFS: StepDef[] = [
       "supertype",
       "subtypes_text",
       "game_system_id",
-      "template_id",
       "artist_credit",
       "art_url",
       "art_position",

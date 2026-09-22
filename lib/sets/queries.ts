@@ -4,21 +4,15 @@ import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { createPublicClient } from "@/lib/supabase/public";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
-  isCardType,
-  isColorIdentity,
-  isRarity,
   isVisibility,
   type Card,
-  type CardWatermark,
-  type FaceContent,
-  type ColorIdentity,
   type Visibility,
 } from "@/types/card";
 import type {
-  Card as CardRow,
   CardSet as CardSetRow,
   Profile,
 } from "@/types/supabase";
+import { narrowCard } from "@/lib/cards/narrow";
 
 export type CardSet = Omit<CardSetRow, "visibility"> & {
   visibility: Visibility;
@@ -52,25 +46,6 @@ function narrowSet(row: CardSetRow): CardSet {
   };
 }
 
-function narrowCard(row: CardRow): Card {
-  return {
-    ...row,
-    visibility: isVisibility(row.visibility) ? row.visibility : "private",
-    rarity: row.rarity === null ? null : isRarity(row.rarity) ? row.rarity : null,
-    card_type:
-      row.card_type === null
-        ? null
-        : isCardType(row.card_type)
-          ? row.card_type
-          : null,
-    color_identity: row.color_identity.filter(isColorIdentity) as ColorIdentity[],
-    // jsonb columns from migration 0050 — validated app-side on write
-    // (lib/validation/card.ts), so the cast is the trust boundary here,
-    // same as art_position/frame_style downstream.
-    face_content: (row.face_content as FaceContent | null) ?? null,
-    watermark: (row.watermark as CardWatermark | null) ?? null,
-  };
-}
 
 type SetsClient =
   | Awaited<ReturnType<typeof createClient>>

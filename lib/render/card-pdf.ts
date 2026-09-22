@@ -87,9 +87,34 @@ function drawCropMark(
   });
 }
 
-function drawSheet(
+/** A new document carrying PipGlyph's metadata block. */
+async function newDocument(title: string, subject: string): Promise<PDFDocument> {
+  const doc = await PDFDocument.create();
+  doc.setTitle(title);
+  doc.setAuthor("PipGlyph");
+  doc.setSubject(subject);
+  doc.setCreator("PipGlyph (pipglyph.com)");
+  doc.setProducer("pdf-lib");
+  return doc;
+}
+
+/** One card on a page exactly 2.5" × 3.5". */
+function addCardPage(doc: PDFDocument, img: PDFImage): void {
+  const page = doc.addPage([CARD_W_PT, CARD_H_PT]);
+  page.drawImage(img, { x: 0, y: 0, width: CARD_W_PT, height: CARD_H_PT });
+}
+
+/** Paper for a sheet layout — A4 when asked for, US Letter otherwise
+ *  ("sheet", "sheet-letter", and the checklist pages of a "pages" deck). */
+function sheetSize(layout: string): readonly [number, number] {
+  return layout === "sheet-a4" ? [A4_W_PT, A4_H_PT] : [LETTER_W_PT, LETTER_H_PT];
+}
+
+/** A 3×3 proxy sheet with crop marks. `slots` fills the grid row by row —
+ *  at most COLS × ROWS images; fewer leaves the remaining cells blank. */
+function drawSheetPage(
   doc: PDFDocument,
-  img: PDFImage,
+  slots: readonly PDFImage[],
   pageWidth: number,
   pageHeight: number,
 ): void {
@@ -97,25 +122,24 @@ function drawSheet(
   const marginX = (pageWidth - COLS * CARD_W_PT) / 2;
   const marginY = (pageHeight - ROWS * CARD_H_PT) / 2;
 
-  for (let row = 0; row < ROWS; row++) {
-    for (let col = 0; col < COLS; col++) {
-      const x = marginX + col * CARD_W_PT;
-      const y = pageHeight - marginY - (row + 1) * CARD_H_PT;
+  slots.slice(0, COLS * ROWS).forEach((img, i) => {
+    const row = Math.floor(i / COLS);
+    const col = i % COLS;
+    const x = marginX + col * CARD_W_PT;
+    const y = pageHeight - marginY - (row + 1) * CARD_H_PT;
 
-      page.drawImage(img, { x, y, width: CARD_W_PT, height: CARD_H_PT });
+    page.drawImage(img, { x, y, width: CARD_W_PT, height: CARD_H_PT });
 
-      const corners = [
-        { cx: x, cy: y, hDir: -1, vDir: -1 },
-        { cx: x + CARD_W_PT, cy: y, hDir: 1, vDir: -1 },
-        { cx: x, cy: y + CARD_H_PT, hDir: -1, vDir: 1 },
-        { cx: x + CARD_W_PT, cy: y + CARD_H_PT, hDir: 1, vDir: 1 },
-      ] as const;
-
-      for (const corner of corners) {
-        drawCropMark(page, corner.cx, corner.cy, corner.hDir, corner.vDir);
-      }
+    const corners = [
+      { cx: x, cy: y, hDir: -1, vDir: -1 },
+      { cx: x + CARD_W_PT, cy: y, hDir: 1, vDir: -1 },
+      { cx: x, cy: y + CARD_H_PT, hDir: -1, vDir: 1 },
+      { cx: x + CARD_W_PT, cy: y + CARD_H_PT, hDir: 1, vDir: 1 },
+    ] as const;
+    for (const corner of corners) {
+      drawCropMark(page, corner.cx, corner.cy, corner.hDir, corner.vDir);
     }
-  }
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -145,24 +169,18 @@ export async function buildCardPdf(
   layout: PdfLayout = "card",
   cardTitle = "PipGlyph Card",
 ): Promise<Uint8Array> {
-  const doc = await PDFDocument.create();
-
-  doc.setTitle(cardTitle);
-  doc.setAuthor("PipGlyph");
-  doc.setSubject("Custom MTG card — fan-made, not affiliated with Wizards of the Coast.");
-  doc.setCreator("PipGlyph (pipglyph.com)");
-  doc.setProducer("pdf-lib");
-
+  const doc = await newDocument(
+    cardTitle,
+    "Custom MTG card — fan-made, not affiliated with Wizards of the Coast.",
+  );
   const img = await embedImage(doc, pngBytes);
 
   if (layout === "card") {
-    const page = doc.addPage([CARD_W_PT, CARD_H_PT]);
-    page.drawImage(img, { x: 0, y: 0, width: CARD_W_PT, height: CARD_H_PT });
-  } else if (layout === "sheet-a4") {
-    drawSheet(doc, img, A4_W_PT, A4_H_PT);
+    addCardPage(doc, img);
   } else {
     // "sheet" (legacy) and "sheet-letter" both produce the US Letter sheet.
-    drawSheet(doc, img, LETTER_W_PT, LETTER_H_PT);
+    const [pageWidth, pageHeight] = sheetSize(layout);
+    drawSheetPage(doc, Array.from({ length: COLS * ROWS }, () => img), pageWidth, pageHeight);
   }
 
   return doc.save();
@@ -177,15 +195,10 @@ export async function buildSetPdf(
   cardPngs: Uint8Array[],
   setTitle = "PipGlyph Set",
 ): Promise<Uint8Array> {
-  const doc = await PDFDocument.create();
-
-  doc.setTitle(setTitle);
-  doc.setAuthor("PipGlyph");
-  doc.setSubject(
+  const doc = await newDocument(
+    setTitle,
     "Custom MTG-style set — fan-made, not affiliated with Wizards of the Coast.",
   );
-  doc.setCreator("PipGlyph (pipglyph.com)");
-  doc.setProducer("pdf-lib");
 
   if (cardPngs.length === 0) {
     doc.addPage([CARD_W_PT, CARD_H_PT]);
@@ -193,9 +206,7 @@ export async function buildSetPdf(
   }
 
   for (const png of cardPngs) {
-    const img = await embedImage(doc, png);
-    const page = doc.addPage([CARD_W_PT, CARD_H_PT]);
-    page.drawImage(img, { x: 0, y: 0, width: CARD_W_PT, height: CARD_H_PT });
+    addCardPage(doc, await embedImage(doc, png));
   }
 
   return doc.save();
@@ -320,26 +331,17 @@ export async function buildDeckPdf(
   },
 ): Promise<Uint8Array> {
   const { title = "PipGlyph Deck", layout, checklist = null, checklistFont = null } = options;
-  const doc = await PDFDocument.create();
-
-  doc.setTitle(title);
-  doc.setAuthor("PipGlyph");
-  doc.setSubject(
+  const doc = await newDocument(
+    title,
     "Custom MTG-style deck — fan-made, not affiliated with Wizards of the Coast.",
   );
-  doc.setCreator("PipGlyph (pipglyph.com)");
-  doc.setProducer("pdf-lib");
+  const [pageWidth, pageHeight] = sheetSize(layout);
 
   if (layout === "pages") {
     for (const entry of entries) {
-      const img = await embedImage(doc, entry.png);
-      const page = doc.addPage([CARD_W_PT, CARD_H_PT]);
-      page.drawImage(img, { x: 0, y: 0, width: CARD_W_PT, height: CARD_H_PT });
+      addCardPage(doc, await embedImage(doc, entry.png));
     }
   } else {
-    const pageWidth = layout === "sheet-a4" ? A4_W_PT : LETTER_W_PT;
-    const pageHeight = layout === "sheet-a4" ? A4_H_PT : LETTER_H_PT;
-
     // Embed each unique PNG once; the slot list repeats the PDFImage.
     const slots: PDFImage[] = [];
     for (const entry of entries) {
@@ -351,32 +353,12 @@ export async function buildDeckPdf(
 
     const perPage = COLS * ROWS;
     for (let start = 0; start < slots.length; start += perPage) {
-      const page = doc.addPage([pageWidth, pageHeight]);
-      const marginX = (pageWidth - COLS * CARD_W_PT) / 2;
-      const marginY = (pageHeight - ROWS * CARD_H_PT) / 2;
-      slots.slice(start, start + perPage).forEach((img, i) => {
-        const row = Math.floor(i / COLS);
-        const col = i % COLS;
-        const x = marginX + col * CARD_W_PT;
-        const y = pageHeight - marginY - (row + 1) * CARD_H_PT;
-        page.drawImage(img, { x, y, width: CARD_W_PT, height: CARD_H_PT });
-        const corners = [
-          { cx: x, cy: y, hDir: -1, vDir: -1 },
-          { cx: x + CARD_W_PT, cy: y, hDir: 1, vDir: -1 },
-          { cx: x, cy: y + CARD_H_PT, hDir: -1, vDir: 1 },
-          { cx: x + CARD_W_PT, cy: y + CARD_H_PT, hDir: 1, vDir: 1 },
-        ] as const;
-        for (const corner of corners) {
-          drawCropMark(page, corner.cx, corner.cy, corner.hDir, corner.vDir);
-        }
-      });
+      drawSheetPage(doc, slots.slice(start, start + perPage), pageWidth, pageHeight);
     }
   }
 
   if (checklist && checklist.lines.length > 0) {
     const font = await embedChecklistFont(doc, checklistFont);
-    const pageWidth = layout === "sheet-a4" ? A4_W_PT : LETTER_W_PT;
-    const pageHeight = layout === "sheet-a4" ? A4_H_PT : LETTER_H_PT;
     drawChecklistPages(doc, font, checklist, pageWidth, pageHeight);
   }
 

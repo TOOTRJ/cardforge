@@ -17,17 +17,9 @@ import {
   FRAME_ERA_LABELS,
   FRAME_TEMPLATE_LABELS,
   type FrameTemplate,
+  COLOR_IDENTITY_LABELS,
 } from "@/types/card";
 
-const COLOR_LABELS: Record<string, string> = {
-  white: "White",
-  blue: "Blue",
-  black: "Black",
-  red: "Red",
-  green: "Green",
-  colorless: "Colorless",
-  multicolor: "Multicolor",
-};
 
 export function LockedSummary({ mode }: { mode: "edit" | "remix" }) {
   const { control } = useFormContext<FormValues>();
@@ -52,7 +44,7 @@ export function LockedSummary({ mode }: { mode: "edit" | "remix" }) {
   const colorLabel =
     colors.length === 0
       ? "Colorless"
-      : colors.map((c) => COLOR_LABELS[c] ?? c).join(" / ");
+      : colors.map((c) => (COLOR_IDENTITY_LABELS as Record<string, string>)[c] ?? c).join(" / ");
   const finish = frameStyle?.finish ?? "regular";
 
   return (

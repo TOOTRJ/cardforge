@@ -12,6 +12,7 @@ import {
   type PinnedCardIdsInput,
   type ProfileUpdateInput,
 } from "@/lib/auth/schemas";
+import { revalidateProfilePage } from "@/lib/profile/username";
 
 export type ProfileActionState = ActionState<ProfileUpdateInput> & {
   success?: boolean;
@@ -251,14 +252,7 @@ export async function updatePinnedCardsAction(
 
   revalidatePath("/settings");
   revalidatePath("/dashboard");
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("username")
-    .eq("id", user.id)
-    .maybeSingle();
-  if (profile?.username) {
-    revalidatePath(`/profile/${profile.username}`);
-  }
+  await revalidateProfilePage(supabase, user.id);
 
   return { status: "idle", success: true };
 }

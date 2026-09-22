@@ -12,6 +12,7 @@ import {
   spendCredits,
 } from "@/lib/ai/rate-limit";
 import { buildAndStoreDeckGuide } from "@/lib/decks/guides";
+import { rateLimitedResponse } from "@/lib/api/responses";
 
 // ---------------------------------------------------------------------------
 // POST /api/decks/[id]/guide — analyze the owner's deck into a how-to-play
@@ -50,10 +51,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
   if (deck.owner_id !== user.id) return NextResponse.json({ ok: false, error: "Not your deck." }, { status: 403 });
   const rate = await checkAiRateLimit(user.id);
   if (!rate.ok) {
-    return NextResponse.json(
-      { ok: false, error: rate.message },
-      { status: 429, headers: { "Retry-After": String(rate.retryAfterSeconds) } },
-    );
+    return rateLimitedResponse(rate);
   }
   const ref = `spend:deckguide:${randomUUID()}`;
   const spend = await spendCredits(1, "analyze_deck", { failClosed: true, ref });

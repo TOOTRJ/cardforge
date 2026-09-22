@@ -24,7 +24,6 @@ function baseValues(overrides: Partial<FormValues> = {}): FormValues {
     title: "Emberbound Wyrm",
     slug: "emberbound-wyrm",
     game_system_id: UUID,
-    template_id: UUID,
     cost: "{2}{R}{R}",
     color_identity: ["red"],
     supertype: "Legendary",

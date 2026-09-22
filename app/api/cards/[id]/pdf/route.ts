@@ -12,6 +12,7 @@ import { buildCardPdf, type PdfLayout } from "@/lib/render/card-pdf";
 import { rowToPreviewData, type CardRowForBake } from "@/lib/cards/bake-core";
 import { getPipOverrides } from "@/lib/pips/queries";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
+import { isUuid } from "@/lib/ids";
 
 // ---------------------------------------------------------------------------
 // /api/cards/[id]/pdf — Print-ready PDF download
@@ -32,9 +33,6 @@ import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 // never shared-cached (Cache-Control: private, no-store).
 // ---------------------------------------------------------------------------
 
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 type RouteParams = { id: string };
 
 export async function GET(
@@ -43,7 +41,7 @@ export async function GET(
 ) {
   const { id } = await params;
 
-  if (!UUID_PATTERN.test(id)) {
+  if (!isUuid(id)) {
     return NextResponse.json({ error: "Invalid card id" }, { status: 400 });
   }
 

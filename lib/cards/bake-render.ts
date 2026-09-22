@@ -13,9 +13,11 @@ import {
   BAKE_SELECT_COLUMNS,
   rowToPreviewData,
   type CardRowForBake,
+  removeRenderObject,
+  uploadRenderObjects,
 } from "@/lib/cards/bake-core";
 import { TRANSPARENT_PIXEL_DATA_URL, resolveRenderableImage } from "@/lib/render/art-source";
-import { makeRenderThumb, renderThumbPath } from "@/lib/cards/render-thumb";
+import { renderThumbPath } from "@/lib/cards/render-thumb";
 import { getPipOverrides } from "@/lib/pips/queries";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
@@ -46,33 +48,6 @@ export type BakeRenderResult =
     }
   | { ok: false; error: string; superseded?: boolean };
 
-/**
- * Delete a card's baked PNG from the public `card-renders` bucket, retrying
- * once before giving up. Unlike a best-effort `.remove().catch(() => {})`,
- * this surfaces a persistent failure loudly: the render path is deterministic
- * and the bucket is public-read, so a render that fails to delete when a card
- * goes private stays fetchable by anyone who has (or guesses) the URL — a
- * privacy leak we want visible in logs rather than swallowed.
- *
- * Note: Supabase Storage's `remove` treats a missing object as success (no
- * error), so the retry only fires on a genuine transient/permission error.
- */
-async function removeRenderObject(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  path: string,
-): Promise<void> {
-  for (let attempt = 1; attempt <= 2; attempt += 1) {
-    const { error } = await supabase.storage
-      .from("card-renders")
-      .remove([path]);
-    if (!error) return;
-    if (attempt === 2) {
-      console.error(
-        `[bake-render] Could not delete render object ${path} after a retry: ${error.message}. The PNG may remain publicly fetchable for a now-private card.`,
-      );
-    }
-  }
-}
 
 /**
  * Render the given card to a PNG and upload it to the card-renders bucket.
@@ -182,58 +157,9 @@ export async function bakeCardRender(
     return { ok: false, error: "Superseded by a newer save.", superseded: true };
   }
 
-  // upsert: true overwrites on resave instead of creating a pile of versioned
-  // files we'd then need to garbage-collect.
-  const { error: uploadErr } = await supabase.storage
-    .from("card-renders")
-    .upload(path, pngBytes, {
-      cacheControl: "31536000",
-      contentType: "image/png",
-      upsert: true,
-    });
-
-  if (uploadErr) {
-    return { ok: false, error: `Upload failed: ${uploadErr.message}` };
-  }
-
-  // The tile-sized WebP beside the PNG (lib/cards/render-thumb.ts). A thumb
-  // failure is not a bake failure: tiles fall back to next/image over the PNG.
-  const thumbPath = renderThumbPath(path);
-  let thumbOk = false;
-  try {
-    const thumbBytes = await makeRenderThumb(pngBytes);
-    const { error: thumbErr } = await supabase.storage
-      .from("card-renders")
-      .upload(thumbPath, thumbBytes, {
-        cacheControl: "31536000",
-        contentType: "image/webp",
-        upsert: true,
-      });
-    if (thumbErr) {
-      console.warn(`[bake-render] Thumb upload failed for ${cardId}: ${thumbErr.message}`);
-    } else {
-      thumbOk = true;
-    }
-  } catch (err) {
-    console.warn(
-      `[bake-render] Thumb encode failed for ${cardId}: ${err instanceof Error ? err.message : "error"}`,
-    );
-  }
-
-  const { data: urlData } = supabase.storage
-    .from("card-renders")
-    .getPublicUrl(path);
-
-  // Cache-bust query so next/image and the browser don't serve the prior
-  // version after a resave. The base URL is stable; only the ?v changes —
-  // shared by the PNG and its thumb so both bust together.
-  const version = Date.now();
-  const renderedImageUrl = `${urlData.publicUrl}?v=${version}`;
-  const renderedThumbUrl = thumbOk
-    ? `${supabase.storage.from("card-renders").getPublicUrl(thumbPath).data.publicUrl}?v=${version}`
-    : null;
-
-  return { ok: true, renderedImageUrl, renderedThumbUrl, bakedFrom: card.updated_at };
+  const uploaded = await uploadRenderObjects(supabase, path, pngBytes, cardId);
+  if (!uploaded.ok) return uploaded;
+  return { ...uploaded, bakedFrom: card.updated_at };
 }
 
 /**

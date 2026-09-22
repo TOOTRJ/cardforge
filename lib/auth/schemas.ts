@@ -5,6 +5,7 @@ import {
   USERNAME_PATTERN,
   isReservedUsername,
 } from "@/lib/auth/usernames";
+import { UUID_PATTERN } from "@/lib/ids";
 
 // Mirrors profiles_username_format (0001) + is_reserved_username() (0094).
 // Lowercased before the pattern check so "ForgeMaster" is accepted as
@@ -150,11 +151,8 @@ export const profileUpdateSchema = z.object({
 
 export const PINNED_CARDS_MAX = 3;
 
-const UUID_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 export const pinnedCardIdsSchema = z
-  .array(z.string().regex(UUID_REGEX, "Invalid card id."))
+  .array(z.string().regex(UUID_PATTERN, "Invalid card id."))
   .max(PINNED_CARDS_MAX, `Pick up to ${PINNED_CARDS_MAX} cards.`)
   .refine(
     (ids) => new Set(ids).size === ids.length,

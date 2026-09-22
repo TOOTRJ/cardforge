@@ -1,3 +1,5 @@
+import { formatShortDate } from "@/lib/format/dates";
+
 // ---------------------------------------------------------------------------
 // One source of copy + deep link for every notification kind. Shared by the
 // header bell, the /notifications page and the real-time toast so the three
@@ -38,17 +40,6 @@ function str(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value : null;
 }
 
-function formatDate(iso: string): string {
-  try {
-    return new Intl.DateTimeFormat("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    }).format(new Date(iso));
-  } catch {
-    return iso;
-  }
-}
 
 const TIER_LABEL: Record<string, string> = { plus: "Plus", pro: "Pro" };
 
@@ -110,7 +101,7 @@ export function describeNotification(
         subject: "PipGlyph team",
         body: tier
           ? `gave you ${TIER_LABEL[tier] ?? tier} plan access${
-              expiresAt ? ` until ${formatDate(expiresAt)}` : ""
+              expiresAt ? ` until ${formatShortDate(expiresAt)}` : ""
             } — enjoy.`
           : "ended your complimentary plan access.",
         href: "/settings",

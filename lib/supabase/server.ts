@@ -45,6 +45,25 @@ export const getCurrentUser = cache(async () => {
   }
 });
 
+/** The signed-in user's handle, cached per request — for the canonical
+ *  /card/[username]/[slug] and /profile/[username] paths an action needs to
+ *  revalidate or redirect to after a write. Null when signed out. */
+export const getCurrentUsername = cache(async (): Promise<string | null> => {
+  const user = await getCurrentUser();
+  if (!user) return null;
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("profiles")
+      .select("username")
+      .eq("id", user.id)
+      .maybeSingle();
+    return data?.username ?? null;
+  } catch {
+    return null;
+  }
+});
+
 /** The columns anon/authenticated may read from profiles (migration 0074
  *  replaced the blanket grant with this list). The billing/admin slice is
  *  private and comes back through get_my_billing() for the user's OWN row. */

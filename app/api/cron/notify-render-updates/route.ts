@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
 import { notifyOwnersOfRenderUpdates } from "@/lib/cards/render-update-notify";
+import { cronRouteGuard } from "@/lib/api/cron-auth";
 
 // ---------------------------------------------------------------------------
 // /api/cron/notify-render-updates — tell owners their cards have a newer
@@ -20,22 +21,9 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
-function isAuthorized(request: Request): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
-  return request.headers.get("authorization") === `Bearer ${secret}`;
-}
-
 export async function GET(request: Request) {
-  if (!isAuthorized(request)) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-  }
-  if (!isAdminConfigured()) {
-    return NextResponse.json(
-      { ok: false, error: "Service role not configured." },
-      { status: 503 },
-    );
-  }
+  const denied = cronRouteGuard(request);
+  if (denied) return denied;
   try {
     const result = await notifyOwnersOfRenderUpdates(createAdminClient());
     return NextResponse.json({ ok: true, layoutVersion: CARD_LAYOUT_VERSION, ...result });

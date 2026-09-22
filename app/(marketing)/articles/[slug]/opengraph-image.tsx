@@ -7,6 +7,7 @@ import {
   OgShell,
   OgTitle,
 } from "@/lib/og/shell";
+import { BRAND } from "@/lib/brand/constants";
 
 // Social-preview card for guide pages. Articles carry no uploaded art, so
 // without this they'd unfurl with the generic site-wide OG image and lose the
@@ -35,7 +36,7 @@ export default async function Image({
         <OgShell>
           <OgEyebrow>Guide</OgEyebrow>
           <OgTitle text="Custom MTG card design guides" />
-          <p style={{ margin: 0, fontSize: 26, color: "#9aa3b5" }}>
+          <p style={{ margin: 0, fontSize: 26, color: BRAND.muted }}>
             The craft of custom card design, one guide at a time.
           </p>
         </OgShell>
@@ -56,7 +57,7 @@ export default async function Image({
             margin: 0,
             fontSize: 26,
             lineHeight: 1.45,
-            color: "#9aa3b5",
+            color: BRAND.muted,
             maxWidth: 900,
           }}
         >

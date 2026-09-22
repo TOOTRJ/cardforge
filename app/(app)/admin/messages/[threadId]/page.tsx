@@ -10,11 +10,9 @@ import { ReplyForm } from "@/components/messages/reply-form";
 import { MarkThreadRead } from "@/components/messages/mark-thread-read";
 import { ThreadStatusButtons } from "@/components/admin/thread-status-buttons";
 import { getThreadForAdmin } from "@/lib/messages/queries";
+import { isUuid } from "@/lib/ids";
 
 export const dynamic = "force-dynamic";
-
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type Params = { threadId: string };
 
@@ -24,7 +22,7 @@ export async function generateMetadata({
   params: Promise<Params>;
 }): Promise<Metadata> {
   const { threadId } = await params;
-  const thread = UUID_PATTERN.test(threadId) ? await getThreadForAdmin(threadId) : null;
+  const thread = isUuid(threadId) ? await getThreadForAdmin(threadId) : null;
   return {
     title: thread ? `${thread.subject} — Conversations` : "Conversations",
     robots: { index: false, follow: false },
@@ -33,7 +31,7 @@ export async function generateMetadata({
 
 export default async function AdminThreadPage({ params }: { params: Promise<Params> }) {
   const { threadId } = await params;
-  if (!UUID_PATTERN.test(threadId)) notFound();
+  if (!isUuid(threadId)) notFound();
   const thread = await getThreadForAdmin(threadId);
   if (!thread) notFound();
 

@@ -6,10 +6,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { Button } from "@/components/ui/button";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import {
-  getFantasyGameSystem,
-  getTemplatesForGameSystem,
-} from "@/lib/cards/queries";
+import { getFantasyGameSystem } from "@/lib/cards/queries";
 import { isDesignAiConfigured } from "@/lib/ai/provider";
 import { getVerifiedFrameKeysPublic } from "@/lib/cards/frame-reviews";
 
@@ -52,12 +49,7 @@ export default async function PreviewPage() {
   // read through the public client so the page stays ISR. Without these
   // the guest creator offered only Creature — every other kind sat behind a
   // "Soon" badge — which contradicted the copy above.
-  const [templates, verifiedFrameKeys] = gameSystem
-    ? await Promise.all([
-        getTemplatesForGameSystem(gameSystem.id),
-        getVerifiedFrameKeysPublic(),
-      ])
-    : [[], []];
+  const verifiedFrameKeys = gameSystem ? await getVerifiedFrameKeysPublic() : [];
 
   if (!gameSystem) {
     return <SchemaUnseeded />;
@@ -100,7 +92,6 @@ export default async function PreviewPage() {
           mode="create"
           userId={null}
           gameSystems={[gameSystem]}
-          templates={templates}
           verifiedFrameKeys={verifiedFrameKeys}
           aiConfigured={isDesignAiConfigured()}
         />

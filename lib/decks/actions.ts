@@ -2,13 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createClient, getCurrentUser } from "@/lib/supabase/server";
+import { createClient, getCurrentUser, getCurrentUsername } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createDeckSchema, updateDeckSchema } from "@/lib/validation/deck";
 import { slugify } from "@/lib/validation/card";
 import { getDeckById } from "@/lib/decks/queries";
 import type { DeckInsert, DeckUpdate } from "@/types/supabase";
 import type { ZodIssue } from "zod";
+import { isUuid } from "@/lib/ids";
 
 // ---------------------------------------------------------------------------
 // Result shapes — same discriminated-union posture as lib/sets/actions.ts.
@@ -29,9 +30,6 @@ export type DeleteDeckSuccess = { ok: true; deckId: string };
 export type CreateDeckResult = CreateDeckSuccess | DeckActionFailure;
 export type UpdateDeckResult = UpdateDeckSuccess | DeckActionFailure;
 export type DeleteDeckResult = DeleteDeckSuccess | DeckActionFailure;
-
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Postgres unique-constraint violation.
 const UNIQUE_VIOLATION = "23505";
@@ -74,22 +72,6 @@ function slugCandidate(desired: string, attempt: number): string {
   // Trim any hyphen the cut leaves at the end — "my-deck-" + "-2" would fail
   // the decks_slug_format CHECK with a raw Postgres error.
   return `${desired.slice(0, 80 - suffix.length).replace(/-+$/, "")}${suffix}`;
-}
-
-async function getOwnerUsername(): Promise<string | null> {
-  const user = await getCurrentUser();
-  if (!user) return null;
-  try {
-    const supabase = await createClient();
-    const { data } = await supabase
-      .from("profiles")
-      .select("username")
-      .eq("id", user.id)
-      .maybeSingle();
-    return data?.username ?? null;
-  } catch {
-    return null;
-  }
 }
 
 function revalidateDeckPaths(slug: string, ownerUsername?: string | null) {
@@ -158,7 +140,7 @@ export async function createDeckAction(
     return { ok: false, formError: lastError ?? "Could not create deck." };
   }
 
-  const ownerUsername = await getOwnerUsername();
+  const ownerUsername = await getCurrentUsername();
   revalidateDeckPaths(row.slug, ownerUsername);
 
   if (options.redirectAfterCreate) {
@@ -175,7 +157,7 @@ export async function updateDeckAction(
   deckId: string,
   payload: unknown,
 ): Promise<UpdateDeckResult> {
-  if (!UUID_PATTERN.test(deckId)) {
+  if (!isUuid(deckId)) {
     return { ok: false, formError: "Invalid deck id." };
   }
   const parsed = updateDeckSchema.safeParse(payload);
@@ -239,7 +221,7 @@ export async function updateDeckAction(
     return { ok: false, formError: lastError ?? "Could not update deck." };
   }
 
-  const ownerUsername = await getOwnerUsername();
+  const ownerUsername = await getCurrentUsername();
   revalidateDeckPaths(row.slug, ownerUsername);
   if (existing.slug !== row.slug) {
     revalidatePath(`/deck/${existing.slug}`);
@@ -256,7 +238,7 @@ export async function updateDeckAction(
 export async function deleteDeckAction(
   deckId: string,
 ): Promise<DeleteDeckResult> {
-  if (!UUID_PATTERN.test(deckId)) {
+  if (!isUuid(deckId)) {
     return { ok: false, formError: "Invalid deck id." };
   }
   if (!isSupabaseConfigured()) return notConfigured();
@@ -278,7 +260,7 @@ export async function deleteDeckAction(
     return { ok: false, formError: error.message };
   }
 
-  const ownerUsername = await getOwnerUsername();
+  const ownerUsername = await getCurrentUsername();
   revalidateDeckPaths(existing.slug, ownerUsername);
   return { ok: true, deckId };
 }

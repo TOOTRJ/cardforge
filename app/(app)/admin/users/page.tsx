@@ -47,6 +47,7 @@ import {
 } from "@/lib/admin/users-params";
 import { listThreadsForUser } from "@/lib/messages/queries";
 import { cn } from "@/lib/utils";
+import { isUuid } from "@/lib/ids";
 
 export const metadata: Metadata = {
   title: "Users",
@@ -54,9 +55,6 @@ export const metadata: Metadata = {
 };
 
 export const dynamic = "force-dynamic";
-
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // ---------------------------------------------------------------------------
 // /admin/users — the user directory. URL is the state (?q=&tier=&status=
@@ -79,7 +77,7 @@ export default async function AdminUsersPage({
   const raw = await searchParams;
   const params = parseUserListParams(raw);
   const selectedRaw = Array.isArray(raw.u) ? raw.u[0] : raw.u;
-  const selectedId = selectedRaw && UUID_PATTERN.test(selectedRaw) ? selectedRaw : null;
+  const selectedId = selectedRaw && isUuid(selectedRaw) ? selectedRaw : null;
 
   if (selectedId) {
     return (

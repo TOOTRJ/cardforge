@@ -6,10 +6,8 @@ import { SurfaceCard } from "@/components/ui/surface-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { listNotifications, markAllNotificationsSeen } from "@/lib/notifications/queries";
 import { getCurrentProfile } from "@/lib/supabase/server";
-import { NOTIFICATION_ICON } from "@/components/notifications/notification-bell";
-import { describeNotification } from "@/lib/notifications/describe";
 import { NotificationsSeen } from "@/components/notifications/notifications-seen";
-import { NotificationLink } from "@/components/notifications/notification-link";
+import { NotificationRow } from "@/components/notifications/notification-row";
 
 export const metadata: Metadata = {
   title: "Notifications",
@@ -45,39 +43,9 @@ export default async function NotificationsPage() {
           />
         ) : (
           <SurfaceCard className="divide-y divide-border/60 p-0">
-            {items.map((item) => {
-              const Icon = NOTIFICATION_ICON[item.type] ?? Bell;
-              const d = describeNotification(item, { isAdmin });
-
-              return (
-                <NotificationLink
-                  key={item.id}
-                  href={d.href}
-                  className={`flex items-start gap-3 px-5 py-4 transition-colors hover:bg-elevated/50 ${
-                    item.readAt ? "" : "bg-primary/5"
-                  }`}
-                >
-                  <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-elevated text-primary-bright">
-                    <Icon className="h-4 w-4" aria-hidden />
-                  </span>
-                  <div className="flex min-w-0 flex-1 flex-col">
-                    <p className="text-sm leading-6 text-foreground">
-                      <span className="font-medium">{d.subject}</span> {d.body}
-                    </p>
-                    <span className="text-xs text-subtle">
-                      {formatRelative(item.createdAt)}
-                    </span>
-                  </div>
-                  {item.readAt ? null : (
-                    <span
-                      role="img"
-                      aria-label="New"
-                      className="mt-2 h-2 w-2 shrink-0 rounded-full bg-primary"
-                    />
-                  )}
-                </NotificationLink>
-              );
-            })}
+            {items.map((item) => (
+              <NotificationRow key={item.id} item={item} isAdmin={isAdmin} />
+            ))}
           </SurfaceCard>
         )}
       </div>
@@ -85,22 +53,3 @@ export default async function NotificationsPage() {
   );
 }
 
-function formatRelative(value: string): string {
-  try {
-    const date = new Date(value);
-    const minutes = Math.round((Date.now() - date.getTime()) / 60_000);
-    if (minutes < 1) return "just now";
-    if (minutes < 60) return `${minutes}m ago`;
-    const hours = Math.round(minutes / 60);
-    if (hours < 24) return `${hours}h ago`;
-    const days = Math.round(hours / 24);
-    if (days < 7) return `${days}d ago`;
-    return new Intl.DateTimeFormat("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    }).format(date);
-  } catch {
-    return value;
-  }
-}

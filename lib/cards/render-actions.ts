@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient, getCurrentUser } from "@/lib/supabase/server";
+import { createClient, getCurrentUser, getCurrentUsername } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { bakeAndPersistCardRender } from "@/lib/cards/bake-render";
 import { listMyCards } from "@/lib/cards/queries";
@@ -55,16 +55,6 @@ function revalidateForCard(slug: string, ownerUsername: string | null) {
   }
 }
 
-async function ownerUsername(userId: string): Promise<string | null> {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("profiles")
-    .select("username")
-    .eq("id", userId)
-    .maybeSingle();
-  return data?.username ?? null;
-}
-
 /** Re-bake ONE of the caller's cards with the current renderer. */
 export async function rebakeOwnCardAction(cardId: string): Promise<RebakeOwnCardResult> {
   if (!isSupabaseConfigured()) return { ok: false, error: "Supabase isn't configured." };
@@ -90,7 +80,7 @@ export async function rebakeOwnCardAction(cardId: string): Promise<RebakeOwnCard
   if (url === null) {
     return { ok: false, error: "The render didn't complete — try again in a moment." };
   }
-  revalidateForCard(card.slug, await ownerUsername(user.id));
+  revalidateForCard(card.slug, await getCurrentUsername());
   return { ok: true, renderedImageUrl: url };
 }
 
@@ -200,7 +190,7 @@ export async function rebakeNextStaleOwnCardAction(): Promise<RebakeNextStaleRes
   const remaining = count ?? 0;
 
   if (updated || remaining === 0) {
-    revalidateForCard(updated?.slug ?? "", await ownerUsername(user.id));
+    revalidateForCard(updated?.slug ?? "", await getCurrentUsername());
   }
   return { ok: true, remaining, updated };
 }

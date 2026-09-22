@@ -5,6 +5,8 @@ import { z } from "zod";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { DECK_BOARD_VALUES } from "@/types/deck";
+import { isUuid } from "@/lib/ids";
+import { revalidateProfilePage } from "@/lib/profile/username";
 
 // ---------------------------------------------------------------------------
 // Deck entry actions — the deck-card modal's mutations: quantity/board
@@ -15,9 +17,6 @@ import { DECK_BOARD_VALUES } from "@/types/deck";
 export type DeckCardActionResult =
   | { ok: true; deckCardId: string }
   | { ok: false; error: string };
-
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Load an entry + prove the caller owns its deck. Returns the deck slug
  *  for revalidation. */
@@ -58,16 +57,7 @@ async function revalidateDeckCardPaths(
   revalidatePath("/decks");
   // The profile's "Decks by X" tiles show card counts + proxy % — entry
   // mutations change those numbers too.
-  try {
-    const { data } = await supabase
-      .from("profiles")
-      .select("username")
-      .eq("id", userId)
-      .maybeSingle();
-    if (data?.username) revalidatePath(`/profile/${data.username}`);
-  } catch {
-    // best-effort — ISR catches up on its own
-  }
+  await revalidateProfilePage(supabase, userId);
 }
 
 const updateDeckCardSchema = z
@@ -83,7 +73,7 @@ export async function updateDeckCardAction(
   deckCardId: string,
   payload: unknown,
 ): Promise<DeckCardActionResult> {
-  if (!UUID_PATTERN.test(deckCardId)) {
+  if (!isUuid(deckCardId)) {
     return { ok: false, error: "Invalid deck entry id." };
   }
   const parsed = updateDeckCardSchema.safeParse(payload);
@@ -116,7 +106,7 @@ export async function updateDeckCardAction(
 export async function removeDeckCardAction(
   deckCardId: string,
 ): Promise<DeckCardActionResult> {
-  if (!UUID_PATTERN.test(deckCardId)) {
+  if (!isUuid(deckCardId)) {
     return { ok: false, error: "Invalid deck entry id." };
   }
   if (!isSupabaseConfigured()) {
@@ -146,7 +136,7 @@ export async function linkDeckCardAction(
   deckCardId: string,
   cardId: string,
 ): Promise<DeckCardActionResult> {
-  if (!UUID_PATTERN.test(deckCardId) || !UUID_PATTERN.test(cardId)) {
+  if (!isUuid(deckCardId) || !isUuid(cardId)) {
     return { ok: false, error: "Invalid id." };
   }
   if (!isSupabaseConfigured()) {
@@ -184,7 +174,7 @@ export async function linkDeckCardAction(
 export async function unlinkDeckCardAction(
   deckCardId: string,
 ): Promise<DeckCardActionResult> {
-  if (!UUID_PATTERN.test(deckCardId)) {
+  if (!isUuid(deckCardId)) {
     return { ok: false, error: "Invalid deck entry id." };
   }
   if (!isSupabaseConfigured()) {

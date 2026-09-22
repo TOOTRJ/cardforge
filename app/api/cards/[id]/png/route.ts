@@ -17,6 +17,7 @@ import {
 import { rowToPreviewData, type CardRowForBake } from "@/lib/cards/bake-core";
 import { getPipOverrides } from "@/lib/pips/queries";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
+import { isUuid } from "@/lib/ids";
 
 // ---------------------------------------------------------------------------
 // /api/cards/[id]/png — Download a rendered PNG of a card
@@ -34,9 +35,6 @@ import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 //   ?preset=default  → 750×1050 (smaller, for sharing)
 // ---------------------------------------------------------------------------
 
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 type RouteParams = { id: string };
 
 export async function GET(
@@ -45,7 +43,7 @@ export async function GET(
 ) {
   const { id } = await params;
 
-  if (!UUID_PATTERN.test(id)) {
+  if (!isUuid(id)) {
     return NextResponse.json({ error: "Invalid card id" }, { status: 400 });
   }
 

@@ -16,6 +16,8 @@ import {
   reportReasonSchema,
 } from "@/lib/moderation/schemas";
 import { notifyAdminsOfReport } from "@/lib/moderation/notify";
+import { isUuid } from "@/lib/ids";
+import { lookupUsername } from "@/lib/profile/username";
 
 // User reporting + admin moderation actions for public cards.
 // Reason/details rules live in lib/moderation/schemas.ts, shared with the
@@ -171,8 +173,7 @@ export async function resolveCommentReportsAction(input: {
   const profile = await getCurrentProfile();
   if (!profile?.is_admin) return { ok: false, error: "Not authorized." };
 
-  const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  if (!UUID.test(input.commentId)) return { ok: false, error: "Invalid comment id." };
+  if (!isUuid(input.commentId)) return { ok: false, error: "Invalid comment id." };
 
   const admin = createAdminClient();
   if (input.action === "remove") {
@@ -188,7 +189,7 @@ export async function resolveCommentReportsAction(input: {
     const card = (comment as { cards?: { slug: string | null; owner_id: string } | null } | null)
       ?.cards;
     if (card?.slug) {
-      revalidateCardPaths(card.slug, await usernameOf(admin, card.owner_id));
+      revalidateCardPaths(card.slug, await lookupUsername(admin, card.owner_id));
     }
   } else {
     const { error } = await admin
@@ -207,18 +208,6 @@ export async function resolveCommentReportsAction(input: {
   return { ok: true };
 }
 
-async function usernameOf(
-  admin: ReturnType<typeof createAdminClient>,
-  ownerId: string,
-): Promise<string | null> {
-  const { data } = await admin
-    .from("profiles")
-    .select("username")
-    .eq("id", ownerId)
-    .maybeSingle();
-  return data?.username ?? null;
-}
-
 export type ResolveAction = "hide" | "dismiss";
 export type ResolveResult = { ok: true } | { ok: false; error: string };
 
@@ -233,8 +222,7 @@ export async function resolveCardReportsAction(input: {
   const profile = await getCurrentProfile();
   if (!profile?.is_admin) return { ok: false, error: "Not authorized." };
 
-  const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  if (!UUID.test(input.cardId)) return { ok: false, error: "Invalid card id." };
+  if (!isUuid(input.cardId)) return { ok: false, error: "Invalid card id." };
 
   const admin = createAdminClient();
   const nowIso = new Date().toISOString();
@@ -277,7 +265,7 @@ export async function resolveCardReportsAction(input: {
     // discovery surfaces AND the CDN copy of the share image.
     await purgeHiddenCard(
       { id: input.cardId, slug: card.slug },
-      await usernameOf(admin, card.owner_id),
+      await lookupUsername(admin, card.owner_id),
     );
   } else {
     const { error } = await admin

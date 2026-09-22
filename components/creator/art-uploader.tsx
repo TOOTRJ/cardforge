@@ -20,7 +20,7 @@ import {
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { uploadCardArtServerAction } from "@/lib/cards/upload-art-server";
-import { cn } from "@/lib/utils";
+import { cn, clamp } from "@/lib/utils";
 import type { ArtPosition } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -642,7 +642,3 @@ function EmptyDropzoneInner({
   );
 }
 
-function clamp(value: number, min: number, max: number): number {
-  if (Number.isNaN(value)) return min;
-  return Math.min(max, Math.max(min, value));
-}

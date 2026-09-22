@@ -2,7 +2,7 @@
 
 import { useState, type CSSProperties, type ReactNode } from "react";
 import { RotateCw } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, clamp } from "@/lib/utils";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { ROSE_STAR_PATH } from "@/lib/brand/geometry";
 import {
@@ -1570,10 +1570,6 @@ function vJustify(align: SlotAlign): string {
   return align === "center" ? "center" : align === "end" ? "flex-end" : "flex-start";
 }
 
-function clamp(value: number, min: number, max: number): number {
-  if (Number.isNaN(value)) return min;
-  return Math.min(max, Math.max(min, value));
-}
 
 function ArtImage({
   src,

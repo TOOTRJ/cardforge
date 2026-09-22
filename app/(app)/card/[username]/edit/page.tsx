@@ -22,7 +22,6 @@ import { getEntitlements, ownerExportStamp } from "@/lib/billing/entitlements";
 import {
   getFantasyGameSystem,
   getMyCardBySlug,
-  getTemplatesForGameSystem,
   listMyCards,
 } from "@/lib/cards/queries";
 import { buildCardPath } from "@/lib/cards/utils";
@@ -101,9 +100,6 @@ export default async function EditCardPage({ params }: EditCardPageProps) {
   // Back-face picker candidates: every owned card except this one (can't be its
   // own back). Includes the currently-linked back card so the flip renders.
   const myCards = allMyCards.filter((c) => c.id !== card.id);
-  const templates = gameSystem
-    ? await getTemplatesForGameSystem(gameSystem.id)
-    : [];
   const ownerUsername = profile?.username ?? null;
   const publicPath = buildCardPath({
     slug: card.slug,
@@ -174,7 +170,6 @@ export default async function EditCardPage({ params }: EditCardPageProps) {
           userId={user.id}
           ownerUsername={ownerUsername}
           gameSystems={gameSystem ? [gameSystem] : []}
-          templates={templates}
           card={card}
           mySets={userSets}
           myCards={myCards}

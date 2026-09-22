@@ -103,7 +103,6 @@ import type { DeckRemixContext } from "@/types/deck";
 import type { ScryfallImportPatch } from "@/lib/scryfall/import-mapper";
 import {
   type Card,
-  type CardTemplate,
   type CardType,
   type CardWatermark,
   type ColorIdentity,
@@ -176,6 +175,7 @@ import {
   type StepContext,
   type StepKey,
 } from "@/lib/creator/steps";
+import { buildCardPath } from "@/lib/cards/utils";
 
 // ---------------------------------------------------------------------------
 // Form values — mirror createCardSchema but typed at the component boundary.
@@ -201,7 +201,6 @@ type CardCreatorFormProps = {
    *  the user is signed out (preview mode) or hasn't picked a username yet. */
   ownerUsername?: string | null;
   gameSystems: GameSystem[];
-  templates: CardTemplate[];
   /** The card being edited (edit) or remixed from (remix). */
   card?: Card | null;
   /** The current user's sets — populates the "Add to set" picker on Publish. */
@@ -302,7 +301,6 @@ export function CardCreatorForm({
   userId,
   ownerUsername = null,
   gameSystems,
-  templates,
   card,
   mySets = [],
   myDecks = null,
@@ -471,8 +469,8 @@ export function CardCreatorForm({
     const viewer = { paid: isPaid, footerText: defaultFooterText };
     const base =
       mode === "remix" && card
-        ? remixValuesFrom(card, gameSystems, templates, viewer)
-        : defaultValuesFor(card, gameSystems, templates, viewer);
+        ? remixValuesFrom(card, gameSystems, viewer)
+        : defaultValuesFor(card, gameSystems, viewer);
     // Seed the challenge tag for fresh creates (edits keep the card's tags).
     if (initialTag && !card) {
       base.tags_text = mergeTag(base.tags_text, initialTag);
@@ -483,7 +481,7 @@ export function CardCreatorForm({
       base.artist_credit = defaultArtistCredit;
     }
     return base;
-  }, [mode, card, gameSystems, templates, initialTag, defaultArtistCredit, isPaid, defaultFooterText]);
+  }, [mode, card, gameSystems, initialTag, defaultArtistCredit, isPaid, defaultFooterText]);
 
   // The full methods object is spread into <FormProvider> below so the step
   // components can reach the same form instance via useFormContext().
@@ -533,7 +531,7 @@ export function CardCreatorForm({
   // Reset only when the SAVED card actually changes (navigating between
   // cards, or fresh server truth after our own save) — never on mere prop
   // identity churn. router.refresh() re-renders the page with brand-new
-  // card/gameSystems/templates objects every time; resetting on those wiped
+  // card/gameSystems objects every time; resetting on those wiped
   // live edits "randomly" while users were typing.
   const resetKey = card ? `${card.id}:${card.updated_at}` : "new";
   const lastResetKey = useRef(resetKey);
@@ -1673,7 +1671,6 @@ export function CardCreatorForm({
     const payload = {
       title: values.title.trim(),
       game_system_id: values.game_system_id,
-      template_id: values.template_id || undefined,
       cost: values.cost.trim() || undefined,
       color_identity: values.color_identity,
       supertype: values.supertype.trim() || undefined,
@@ -1847,7 +1844,7 @@ export function CardCreatorForm({
             promptPostSaveShare({
               title: payload.title,
               cardId: result.cardId,
-              cardPath: `/card/${ownerUsername}/${result.slug}`,
+              cardPath: buildCardPath({ slug: result.slug, owner: { username: ownerUsername } }),
               replace: true,
             });
             return;
@@ -1896,7 +1893,7 @@ export function CardCreatorForm({
           promptPostSaveShare({
             title: payload.title,
             cardId: card.id,
-            cardPath: `/card/${ownerUsername}/${result.slug}`,
+            cardPath: buildCardPath({ slug: result.slug, owner: { username: ownerUsername } }),
             replace: false,
           });
           return;

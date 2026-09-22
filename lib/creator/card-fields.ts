@@ -10,7 +10,6 @@ import {
   type ArtPosition,
   type Card,
   type CardBackFace,
-  type CardTemplate,
   type ColorIdentity,
   type FrameStyle,
   type GameSystem,
@@ -107,11 +106,9 @@ export type DefaultValueOptions = {
 export function defaultValuesFor(
   card: Card | null | undefined,
   gameSystems: GameSystem[],
-  templates: CardTemplate[],
   options: DefaultValueOptions = {},
 ): FormValues {
   const fallbackGameSystem = gameSystems[0]?.id ?? "";
-  const fallbackTemplate = templates[0]?.id ?? "";
   const paid = options.paid ?? false;
 
   if (!card) {
@@ -119,7 +116,6 @@ export function defaultValuesFor(
       title: "",
       slug: "",
       game_system_id: fallbackGameSystem,
-      template_id: fallbackTemplate,
       cost: "",
       color_identity: [],
       supertype: "",
@@ -177,7 +173,6 @@ export function defaultValuesFor(
     title: card.title,
     slug: card.slug,
     game_system_id: card.game_system_id,
-    template_id: card.template_id ?? fallbackTemplate,
     cost: card.cost ?? "",
     color_identity: card.color_identity,
     supertype: card.supertype ?? "",
@@ -231,10 +226,9 @@ export function defaultValuesFor(
 export function remixValuesFrom(
   parent: Card,
   gameSystems: GameSystem[],
-  templates: CardTemplate[],
   options: DefaultValueOptions = {},
 ): FormValues {
-  const base = defaultValuesFor(parent, gameSystems, templates, options);
+  const base = defaultValuesFor(parent, gameSystems, options);
   return {
     ...base,
     title: remixTitleFor(parent.title),

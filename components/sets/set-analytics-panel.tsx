@@ -4,42 +4,19 @@ import {
   CARD_TYPE_VALUES,
   COLOR_IDENTITY_VALUES,
   RARITY_VALUES,
-  type ColorIdentity,
-  type Rarity,
+  RARITY_LABELS,
+  COLOR_IDENTITY_LABELS,
 } from "@/types/card";
 import type { SetAnalytics } from "@/lib/sets/analytics";
+import { BarList, COLOR_DOT_CLASS } from "@/components/analytics/bar-list";
 
 type SetAnalyticsPanelProps = {
   analytics: SetAnalytics;
 };
 
 
-const RARITY_LABELS: Record<Rarity, string> = {
-  common: "Common",
-  uncommon: "Uncommon",
-  rare: "Rare",
-  mythic: "Mythic",
-};
 
-const COLOR_LABELS: Record<ColorIdentity, string> = {
-  white: "White",
-  blue: "Blue",
-  black: "Black",
-  red: "Red",
-  green: "Green",
-  colorless: "Colorless",
-  multicolor: "Multicolor",
-};
 
-const COLOR_DOT: Record<ColorIdentity, string> = {
-  white: "bg-amber-200",
-  blue: "bg-sky-400",
-  black: "bg-zinc-500",
-  red: "bg-rose-400",
-  green: "bg-emerald-400",
-  colorless: "bg-slate-400",
-  multicolor: "bg-linear-to-r from-fuchsia-400 to-amber-300",
-};
 
 export function SetAnalyticsPanel({ analytics }: SetAnalyticsPanelProps) {
   return (
@@ -109,10 +86,10 @@ export function SetAnalyticsPanel({ analytics }: SetAnalyticsPanelProps) {
             >
               <span className="flex items-center gap-2">
                 <span
-                  className={`inline-block h-2.5 w-2.5 rounded-full ${COLOR_DOT[color]}`}
+                  className={`inline-block h-2.5 w-2.5 rounded-full ${COLOR_DOT_CLASS[color]}`}
                   aria-hidden
                 />
-                <span className="text-foreground">{COLOR_LABELS[color]}</span>
+                <span className="text-foreground">{COLOR_IDENTITY_LABELS[color]}</span>
               </span>
               <span className="font-mono text-muted">
                 {analytics.byColor[color] ?? 0}
@@ -125,28 +102,3 @@ export function SetAnalyticsPanel({ analytics }: SetAnalyticsPanelProps) {
   );
 }
 
-function BarList({
-  rows,
-}: {
-  rows: Array<{ key: string; label: string; count: number }>;
-}) {
-  const max = rows.reduce((m, r) => Math.max(m, r.count), 0) || 1;
-  return (
-    <ul className="flex flex-col gap-1.5">
-      {rows.map((row) => (
-        <li key={row.key} className="flex items-center gap-2 text-xs">
-          <span className="w-20 shrink-0 text-muted">{row.label}</span>
-          <span className="relative h-2 flex-1 overflow-hidden rounded-full bg-elevated">
-            <span
-              className="absolute inset-y-0 left-0 bg-linear-to-r from-primary to-accent"
-              style={{ width: `${(row.count / max) * 100}%` }}
-            />
-          </span>
-          <span className="w-6 shrink-0 text-right font-mono text-muted">
-            {row.count}
-          </span>
-        </li>
-      ))}
-    </ul>
-  );
-}

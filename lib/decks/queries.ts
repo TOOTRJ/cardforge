@@ -12,21 +12,14 @@ import {
   type DeckFormat,
 } from "@/types/deck";
 import {
-  isCardType,
-  isColorIdentity,
-  isRarity,
-  isVisibility,
   type Card,
-  type CardWatermark,
-  type ColorIdentity,
-  type FaceContent,
 } from "@/types/card";
 import type {
-  Card as CardRow,
   Deck as DeckRow,
   DeckCard as DeckCardRow,
   Profile,
 } from "@/types/supabase";
+import { narrowCard } from "@/lib/cards/narrow";
 
 // ---------------------------------------------------------------------------
 // Narrowers — keep enum-typed text columns honest (types/deck.ts convention).
@@ -47,24 +40,6 @@ function narrowDeckCard(row: DeckCardRow): DeckCardEntry {
   };
 }
 
-// Same trust-boundary narrowing as lib/sets/queries.ts — jsonb columns are
-// validated app-side on write.
-function narrowCard(row: CardRow): Card {
-  return {
-    ...row,
-    visibility: isVisibility(row.visibility) ? row.visibility : "private",
-    rarity: row.rarity === null ? null : isRarity(row.rarity) ? row.rarity : null,
-    card_type:
-      row.card_type === null
-        ? null
-        : isCardType(row.card_type)
-          ? row.card_type
-          : null,
-    color_identity: row.color_identity.filter(isColorIdentity) as ColorIdentity[],
-    face_content: (row.face_content as FaceContent | null) ?? null,
-    watermark: (row.watermark as CardWatermark | null) ?? null,
-  };
-}
 
 type DecksClient =
   | Awaited<ReturnType<typeof createClient>>

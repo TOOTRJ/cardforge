@@ -3,6 +3,7 @@ import { ArrowRight, Clock } from "lucide-react";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { Badge } from "@/components/ui/badge";
 import { slugifyTag, type ArticleMeta } from "@/lib/content/articles";
+import { formatCalendarDate } from "@/lib/format/dates";
 
 // ---------------------------------------------------------------------------
 // ArticleCard — one guide in a list (the /articles index and every tag hub
@@ -20,7 +21,7 @@ export function ArticleCard({ article }: { article: ArticleMeta }) {
           className="group flex flex-col gap-3 rounded-frame focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60"
         >
           <div className="flex flex-wrap items-center gap-2 text-xs text-subtle">
-            <time dateTime={article.date}>{formatDate(article.date)}</time>
+            <time dateTime={article.date}>{formatCalendarDate(article.date)}</time>
             <span aria-hidden>·</span>
             <span className="inline-flex items-center gap-1">
               <Clock className="h-3 w-3" aria-hidden />
@@ -64,13 +65,3 @@ export function ArticleCard({ article }: { article: ArticleMeta }) {
   );
 }
 
-function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-    // Frontmatter dates are calendar dates stored at UTC midnight; format in
-    // UTC so they don't shift a day back in negative-offset timezones.
-    timeZone: "UTC",
-  }).format(new Date(iso));
-}

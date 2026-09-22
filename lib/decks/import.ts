@@ -37,6 +37,7 @@ import { getDeckById } from "@/lib/decks/queries";
 import { isSafeImageUrl } from "@/lib/validation/card";
 import { DECK_BOARD_VALUES } from "@/types/deck";
 import type { DeckCardInsert } from "@/types/supabase";
+import { revalidateProfilePage } from "@/lib/profile/username";
 
 // ---------------------------------------------------------------------------
 // Decklist import — two-step, review-before-commit:
@@ -404,16 +405,7 @@ export async function commitDeckImportAction(
   revalidatePath("/dashboard/decks");
   revalidatePath("/decks");
   // Profile "Decks by X" tiles show card counts — imports change them.
-  try {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("username")
-      .eq("id", user.id)
-      .maybeSingle();
-    if (profile?.username) revalidatePath(`/profile/${profile.username}`);
-  } catch {
-    // best-effort
-  }
+  await revalidateProfilePage(supabase, user.id);
 
   return {
     ok: true,
