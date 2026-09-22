@@ -1,4 +1,5 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect } from "@playwright/test";
+import { signIn } from "./helpers/sign-in";
 import { createClient } from "@supabase/supabase-js";
 
 // ---------------------------------------------------------------------------
@@ -18,14 +19,6 @@ const hasStack =
 // Seeded public card owned by dev_artist (supabase/seeds/10_dev_data.sql).
 const CARD_ID = "c0000000-0000-4000-a000-000000000005"; // Thornback Behemoth
 const OWNER_ID = "d0000000-0000-4000-a000-000000000004";
-
-async function signIn(page: Page) {
-  await page.goto("/login");
-  await page.locator('input[type="email"]').fill(email);
-  await page.locator('input[type="password"]').fill(password);
-  await page.getByRole("button", { name: /sign in/i }).click();
-  await page.waitForURL("**/dashboard");
-}
 
 test.describe("like toggle", () => {
   test.skip(!hasStack, "Needs the local Supabase stack (.env.e2e).");

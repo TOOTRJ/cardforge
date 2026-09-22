@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { signIn } from "./helpers/sign-in";
 
 // ---------------------------------------------------------------------------
 // Create-card e2e (Phase 11 chunk 16 — scaffolded).
@@ -11,18 +12,6 @@ import { test, expect, type Page } from "@playwright/test";
 const hasCredentials =
   !!process.env.SUPABASE_E2E_USER_EMAIL &&
   !!process.env.SUPABASE_E2E_USER_PASSWORD;
-
-async function signIn(page: Page) {
-  await page.goto("/login");
-  await page
-    .locator('input[type="email"]')
-    .fill(process.env.SUPABASE_E2E_USER_EMAIL!);
-  await page
-    .locator('input[type="password"]')
-    .fill(process.env.SUPABASE_E2E_USER_PASSWORD!);
-  await page.getByRole("button", { name: /sign in/i }).click();
-  await page.waitForURL("**/dashboard");
-}
 
 // Opens /create and fills a unique title (so reruns don't collide on the
 // slug). The editor opens on the Card panel; the title input lives on

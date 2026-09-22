@@ -31,7 +31,18 @@ export default defineConfig({
         "lib/supabase/**",
         "lib/render/**",
       ],
-      reporter: ["text", "html"],
+      reporter: ["text", "html", "lcov", "json-summary"],
+      // Floors, not targets: a few points under the 2026-09-22 baseline of
+      // the areas that guard money and auth, so a PR that deletes their
+      // tests (or adds a large untested surface there) fails `test:coverage`
+      // in CI. Raise them as coverage grows; never lower without saying why.
+      thresholds: {
+        "lib/billing/**": { lines: 75, functions: 65 },
+        "lib/stripe/**": { lines: 85, functions: 80 },
+        "lib/auth/**": { lines: 80 },
+        "lib/seo/**": { lines: 95 },
+        "lib/ai/**": { lines: 25 },
+      },
     },
   },
   resolve: {
