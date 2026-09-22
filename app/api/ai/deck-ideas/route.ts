@@ -15,6 +15,7 @@ import {
 import { generateDeckIdeas } from "@/lib/ai/deck-ideas";
 import { deckTypeByKey } from "@/lib/decks/deck-types";
 import { DECK_FORMAT_VALUES } from "@/types/deck";
+import { rateLimitedResponse } from "@/lib/api/responses";
 
 // ---------------------------------------------------------------------------
 // POST /api/ai/deck-ideas — three deck concepts (name, theme, art style,
@@ -55,10 +56,7 @@ export async function POST(request: Request) {
   }
   const rate = await checkAiRateLimit(user.id);
   if (!rate.ok) {
-    return NextResponse.json(
-      { ok: false, error: rate.message },
-      { status: 429, headers: { "Retry-After": String(rate.retryAfterSeconds) } },
-    );
+    return rateLimitedResponse(rate);
   }
   const ref = `spend:deckideas:${randomUUID()}`;
   const spend = await spendCredits(1, "generate_deck_ideas", { failClosed: true, ref });

@@ -34,6 +34,7 @@ import { requireTier, UpgradeRequiredError } from "@/lib/billing/entitlements";
 import { AI_DECK_FORMATS } from "@/lib/ai/deck-design";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { getEntitlements } from "@/lib/billing/entitlements";
+import { rateLimitedResponse } from "@/lib/api/responses";
 
 // ---------------------------------------------------------------------------
 // POST /api/ai/jobs — create an AI batch-generation job and run its PLAN
@@ -262,10 +263,7 @@ export async function POST(request: Request) {
 
   const rate = await checkAiRateLimit(user.id);
   if (!rate.ok) {
-    return NextResponse.json(
-      { ok: false, error: rate.message },
-      { status: 429, headers: { "Retry-After": String(rate.retryAfterSeconds) } },
-    );
+    return rateLimitedResponse(rate);
   }
   // Per-flow daily image ceilings apply ONLY while billing is off (previews,
   // local): there images aren't credit-charged, so the caps are what protect
@@ -278,13 +276,7 @@ export async function POST(request: Request) {
   ) {
     const daily = await checkRandomCardDailyLimit(user.id);
     if (!daily.ok) {
-      return NextResponse.json(
-        { ok: false, error: daily.message },
-        {
-          status: 429,
-          headers: { "Retry-After": String(daily.retryAfterSeconds) },
-        },
-      );
+      return rateLimitedResponse(daily);
     }
   }
   // Deck/set batch flows share one per-day image ceiling (admins exempt).
@@ -301,13 +293,7 @@ export async function POST(request: Request) {
       "deck/set card",
     );
     if (!daily.ok) {
-      return NextResponse.json(
-        { ok: false, error: daily.message },
-        {
-          status: 429,
-          headers: { "Retry-After": String(daily.retryAfterSeconds) },
-        },
-      );
+      return rateLimitedResponse(daily);
     }
   }
 

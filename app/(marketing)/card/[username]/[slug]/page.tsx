@@ -2,7 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { CardDetailContent } from "@/components/cards/card-detail-content";
 import { getCardByOwnerAndSlug } from "@/lib/cards/queries";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { CARD_SOCIAL_SIZE, cardAccentColor } from "@/lib/og/card-social";
+import { cardAccentColor } from "@/lib/og/card-accent";
+import { CARD_SOCIAL_SIZE } from "@/lib/og/card-social";
 import { getSiteBaseUrl } from "@/lib/site-url";
 
 // ---------------------------------------------------------------------------

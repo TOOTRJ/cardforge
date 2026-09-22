@@ -7,6 +7,7 @@ import {
   OgEyebrow,
   OgShell,
 } from "@/lib/og/shell";
+import { BRAND } from "@/lib/brand/constants";
 
 // Social-preview card for creator profiles — avatar, display name, and
 // handle, so a shared profile link unfurls as the person rather than the
@@ -87,7 +88,7 @@ export default async function Image({
               style={{
                 borderRadius: 999,
                 objectFit: "cover",
-                border: "4px solid #d8b26e",
+                border: `4px solid ${BRAND.gold}`,
               }}
             />
           ) : (
@@ -99,11 +100,11 @@ export default async function Image({
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                background: "linear-gradient(135deg, #6b4d9a 0%, #8e72c9 100%)",
-                border: "4px solid #d8b26e",
+                background: `linear-gradient(135deg, ${BRAND.purpleDeep} 0%, ${BRAND.purple} 100%)`,
+                border: `4px solid ${BRAND.gold}`,
                 fontSize: 72,
                 fontWeight: 700,
-                color: "#f2f3f5",
+                color: BRAND.foreground,
               }}
             >
               {initial}
@@ -121,7 +122,7 @@ export default async function Image({
               {displayName}
             </span>
             {profile.username ? (
-              <span style={{ fontSize: 28, color: "#8e72c9" }}>
+              <span style={{ fontSize: 28, color: BRAND.purple }}>
                 @{profile.username}
               </span>
             ) : null}
@@ -134,7 +135,7 @@ export default async function Image({
               marginTop: 6,
               fontSize: 26,
               lineHeight: 1.45,
-              color: "#9aa3b5",
+              color: BRAND.muted,
               maxWidth: 900,
             }}
           >
@@ -143,7 +144,7 @@ export default async function Image({
               : profile.bio}
           </p>
         ) : (
-          <p style={{ margin: 0, marginTop: 6, fontSize: 26, color: "#9aa3b5" }}>
+          <p style={{ margin: 0, marginTop: 6, fontSize: 26, color: BRAND.muted }}>
             Custom cards forged on PipGlyph.
           </p>
         )}

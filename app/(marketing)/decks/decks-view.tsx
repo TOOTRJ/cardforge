@@ -19,6 +19,7 @@ import {
   isDeckFormat,
   type DeckFormat,
 } from "@/types/deck";
+import { firstString } from "@/lib/routing/search-params";
 
 // ---------------------------------------------------------------------------
 // DecksView — the shared body of the community decks browse.
@@ -35,11 +36,6 @@ import {
 // ---------------------------------------------------------------------------
 
 const PAGE_SIZE = 24;
-
-function firstString(value: string | string[] | undefined): string | null {
-  if (Array.isArray(value)) return value[0] ?? null;
-  return value ?? null;
-}
 
 export type DecksViewParams = {
   page: number;

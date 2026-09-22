@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { currentCreditPeriod } from "@/lib/billing/plans";
 import { refillActiveSubscribers } from "@/lib/billing/credit-refill";
+import { cronRouteGuard } from "@/lib/api/cron-auth";
 
 // ---------------------------------------------------------------------------
 // /api/cron/refill-credits — monthly AI-credit refill for every account
@@ -25,22 +26,9 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
-function isAuthorized(request: Request): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
-  return request.headers.get("authorization") === `Bearer ${secret}`;
-}
-
 export async function GET(request: Request) {
-  if (!isAuthorized(request)) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-  }
-  if (!isAdminConfigured()) {
-    return NextResponse.json(
-      { ok: false, error: "Service role not configured." },
-      { status: 503 },
-    );
-  }
+  const denied = cronRouteGuard(request);
+  if (denied) return denied;
 
   const admin = createAdminClient();
   const period = currentCreditPeriod();

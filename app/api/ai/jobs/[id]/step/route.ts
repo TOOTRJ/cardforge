@@ -5,6 +5,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { checkAiRateLimit, getFreshCreditBalance } from "@/lib/ai/rate-limit";
 import { runNextJobStep } from "@/lib/ai/generation-jobs";
 import { notifyDeckJobFinished } from "@/lib/ai/job-notify";
+import { rateLimitedResponse } from "@/lib/api/responses";
 
 // ---------------------------------------------------------------------------
 // POST /api/ai/jobs/[id]/step — execute one step of a generation job (one
@@ -38,10 +39,7 @@ export async function POST(
 
   const rate = await checkAiRateLimit(user.id);
   if (!rate.ok) {
-    return NextResponse.json(
-      { ok: false, error: rate.message },
-      { status: 429, headers: { "Retry-After": String(rate.retryAfterSeconds) } },
-    );
+    return rateLimitedResponse(rate);
   }
 
   let stepKey: string | undefined;

@@ -1,3 +1,5 @@
+import { COLOR_LETTER_IDENTITY } from "@/types/card";
+
 // ---------------------------------------------------------------------------
 // Deck starting points for the AI builder (client-safe, no server imports).
 //
@@ -75,19 +77,11 @@ export function deckTypeByKey(key: string | null | undefined): DeckType | null {
   return DECK_TYPES.find((t) => t.key === key) ?? null;
 }
 
-const COLOR_NAME: Record<ManaColor, string> = {
-  W: "white",
-  U: "blue",
-  B: "black",
-  R: "red",
-  G: "green",
-};
-
 /** "black-green (B/G)" for the AI prompt; "colourless" for Eldrazi. */
 export function describeColors(colors: readonly ManaColor[]): string {
   if (colors.length === 0) return "colourless";
   if (colors.length === 5) return "all five colours (W/U/B/R/G)";
-  return `${colors.map((c) => COLOR_NAME[c]).join("-")} (${colors.join("/")})`;
+  return `${colors.map((c) => COLOR_LETTER_IDENTITY[c]).join("-")} (${colors.join("/")})`;
 }
 
 export type CommanderBracket = {

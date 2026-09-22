@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { commentBodySchema } from "@/lib/cards/comments-schema";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { isUuid } from "@/lib/ids";
+import { lookupUsername } from "@/lib/profile/username";
 
 // ---------------------------------------------------------------------------
 // Card comment Server Actions
@@ -13,9 +15,6 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 // RLS already enforces ownership (author_id = auth.uid()) — these actions
 // surface friendlier errors before the DB is hit.
 // ---------------------------------------------------------------------------
-
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export type CommentActionResult =
   | { ok: true; commentId: string }
@@ -56,12 +55,7 @@ async function lookupCardForRevalidation(cardId: string) {
       .eq("id", cardId)
       .maybeSingle();
     if (!card) return null;
-    const { data: owner } = await supabase
-      .from("profiles")
-      .select("username")
-      .eq("id", card.owner_id)
-      .maybeSingle();
-    return { slug: card.slug, ownerUsername: owner?.username ?? null };
+    return { slug: card.slug, ownerUsername: await lookupUsername(supabase, card.owner_id) };
   } catch {
     return null;
   }
@@ -75,7 +69,7 @@ export async function createCommentAction(
   cardId: string,
   rawBody: string,
 ): Promise<CommentActionResult> {
-  if (!UUID_PATTERN.test(cardId)) {
+  if (!isUuid(cardId)) {
     return { ok: false, error: "Invalid card id." };
   }
   const parsed = commentBodySchema.safeParse(rawBody);
@@ -136,7 +130,7 @@ export async function updateCommentAction(
   commentId: string,
   rawBody: string,
 ): Promise<CommentActionResult> {
-  if (!UUID_PATTERN.test(commentId)) {
+  if (!isUuid(commentId)) {
     return { ok: false, error: "Invalid comment id." };
   }
   const parsed = commentBodySchema.safeParse(rawBody);
@@ -174,7 +168,7 @@ export async function updateCommentAction(
 export async function deleteCommentAction(
   commentId: string,
 ): Promise<CommentActionResult> {
-  if (!UUID_PATTERN.test(commentId)) {
+  if (!isUuid(commentId)) {
     return { ok: false, error: "Invalid comment id." };
   }
 

@@ -164,3 +164,13 @@ Rules and gotchas:
   uploads). AI batch jobs (deck/set/card) step through `patch_job_step`
   (atomic per-step write); the client runs a few steps in parallel, so never
   reintroduce a whole-`steps`-array overwrite.
+- Shared helpers — never re-implement: `isUuid`/`randomId` (`lib/ids.ts`),
+  `rateLimitedResponse` + `cronRouteGuard` (`lib/api/*`), date strings
+  (`lib/format/dates.ts`), `lookupUsername`/`revalidateProfilePage`
+  (`lib/profile/username.ts`) + `getCurrentUsername()` for handles,
+  `narrowCard` (`lib/cards/narrow.ts`), `useSearchParamPatch` for browse
+  filters (always resets `page`), `RARITY_LABELS`/`COLOR_IDENTITY_LABELS`/
+  `COLOR_LETTER_IDENTITY` in `types/card.ts`, OG chrome in
+  `lib/og/chrome.tsx` (edge-safe; the sharp pre-fetch lives in
+  `lib/og/shell.tsx`), like toggles through `lib/social/like-toggle.ts`,
+  render upload/delete through `lib/cards/bake-core.ts`.

@@ -15,6 +15,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { AckSplash } from "@/components/updates/ack-splash";
 import { UpdatePrompt } from "@/components/updates/update-prompt";
 import "./globals.css";
+import { BRAND } from "@/lib/brand/constants";
 
 // ---------------------------------------------------------------------------
 // JSON-LD structured data — consumed by Google, ChatGPT, Perplexity, and
@@ -163,7 +164,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#fafafa" },
-    { media: "(prefers-color-scheme: dark)", color: "#0d1320" },
+    { media: "(prefers-color-scheme: dark)", color: BRAND.navy },
   ],
   colorScheme: "light dark",
 };

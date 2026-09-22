@@ -11,14 +11,7 @@ import {
 import { createPublicClient } from "@/lib/supabase/public";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
-  isCardType,
-  isColorIdentity,
-  isRarity,
-  isVisibility,
   type Card,
-  type CardWatermark,
-  type FaceContent,
-  type CardTemplate,
   type CardWithOwner,
   type CardType,
   type ColorIdentity,
@@ -35,6 +28,8 @@ import {
   onePerCreator,
   trendingScore,
 } from "@/lib/cards/trending";
+import { narrowCard } from "@/lib/cards/narrow";
+import { lookupUsername } from "@/lib/profile/username";
 
 // Composed shape: card + owner profile + like count + viewer's like state.
 // Used by the gallery and any "card tile" listing.
@@ -90,31 +85,6 @@ export type PublicCardListOptions = {
   anonymous?: boolean;
 };
 
-// ---------------------------------------------------------------------------
-// Narrowing helper — every query returns rows whose enum-typed text columns
-// are typed as plain `string`. We cast through this so the rest of the app
-// gets the narrower domain type from `types/card.ts`.
-// ---------------------------------------------------------------------------
-
-function narrowCard(row: CardRow): Card {
-  return {
-    ...row,
-    visibility: isVisibility(row.visibility) ? row.visibility : "private",
-    rarity: row.rarity === null ? null : isRarity(row.rarity) ? row.rarity : null,
-    card_type:
-      row.card_type === null
-        ? null
-        : isCardType(row.card_type)
-          ? row.card_type
-          : null,
-    color_identity: row.color_identity.filter(isColorIdentity) as ColorIdentity[],
-    // jsonb columns from migration 0050 — validated app-side on write
-    // (lib/validation/card.ts), so the cast is the trust boundary here,
-    // same as art_position/frame_style downstream.
-    face_content: (row.face_content as FaceContent | null) ?? null,
-    watermark: (row.watermark as CardWatermark | null) ?? null,
-  };
-}
 
 // ---------------------------------------------------------------------------
 // Catalog reads — cached per-request via Supabase's auto-batched fetches.
@@ -135,26 +105,6 @@ export async function getFantasyGameSystem(): Promise<GameSystem | null> {
     return data ?? null;
   } catch {
     return null;
-  }
-}
-
-export async function getTemplatesForGameSystem(
-  gameSystemId: string,
-): Promise<CardTemplate[]> {
-  if (!isSupabaseConfigured()) return [];
-  try {
-    // Seeded reference data — see getFantasyGameSystem.
-    const supabase = createPublicClient();
-    const { data, error } = await supabase
-      .from("card_templates")
-      .select("*")
-      .eq("game_system_id", gameSystemId)
-      .eq("is_active", true)
-      .order("created_at", { ascending: true });
-    if (error) return [];
-    return data ?? [];
-  } catch {
-    return [];
   }
 }
 
@@ -251,12 +201,7 @@ export async function resolveLegacyCardSlug(
     if (!rows || rows.length !== 1) return null;
 
     const row = rows[0];
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("username")
-      .eq("id", row.owner_id)
-      .maybeSingle();
-    const username = profile?.username;
+    const username = await lookupUsername(supabase, row.owner_id);
     if (!username) return null;
 
     return { username, slug: row.slug };
@@ -888,16 +833,11 @@ export async function getRemixParentLink(
       .eq("id", parentId)
       .maybeSingle();
     if (!parent) return null;
-    const { data: owner } = await supabase
-      .from("profiles")
-      .select("username")
-      .eq("id", parent.owner_id)
-      .maybeSingle();
     return {
       title: parent.title,
       path: buildCardPath({
         slug: parent.slug,
-        owner: { username: owner?.username ?? null },
+        owner: { username: await lookupUsername(supabase, parent.owner_id) },
       }),
     };
   } catch {

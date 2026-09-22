@@ -1,4 +1,5 @@
 import { getSiteBaseUrl } from "@/lib/site-url";
+import { isUuid } from "@/lib/ids";
 
 // ---------------------------------------------------------------------------
 // The three opt-in/out lists (columns of email_preferences, migration 0095)
@@ -45,10 +46,8 @@ export function parseEmailList(value: unknown): EmailList | null {
   return EMAIL_LISTS.find((list) => list === value) ?? null;
 }
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 export function isUnsubscribeToken(value: unknown): value is string {
-  return typeof value === "string" && UUID.test(value);
+  return isUuid(value);
 }
 
 export function unsubscribeLinks(token: string, list: EmailList) {

@@ -18,7 +18,6 @@ import {
 } from "lucide-react";
 import { type ChipOption } from "@/components/ui/chip-group";
 import type { CardType } from "@/types/card";
-import { cn } from "@/lib/utils";
 
 // Modern MTG card type picker. The legacy "spell" value is still accepted
 // by the DB (migration 0018 keeps it in the check constraint) so existing
@@ -102,18 +101,6 @@ export function FieldGroup({
   );
 }
 
-export function inputClass(hasError: boolean): string {
-  return cn(
-    "h-10 w-full rounded-md border bg-background/60 px-3 text-sm text-foreground placeholder:text-subtle",
-    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-    hasError ? "border-danger/60" : "border-border",
-  );
-}
-
-export function textareaClass(hasError: boolean): string {
-  return cn(
-    "w-full rounded-md border bg-background/60 px-3 py-2 text-sm text-foreground placeholder:text-subtle",
-    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-    hasError ? "border-danger/60" : "border-border",
-  );
-}
+// The field looks live in components/ui/field-classes (the deck/set editors
+// and admin dialogs use them too); re-exported for the creator's importers.
+export { inputClass, textareaClass } from "@/components/ui/field-classes";

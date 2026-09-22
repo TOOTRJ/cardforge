@@ -6,11 +6,8 @@ import Link from "next/link";
 import { Controller, useForm, useWatch, type SubmitHandler } from "react-hook-form";
 import {
   ArrowLeft,
-  Globe2,
   ImagePlus,
-  Link2,
   Loader2,
-  Lock,
   Save,
   Sparkles,
   Trash2,
@@ -27,6 +24,8 @@ import { SetSymbol } from "@/components/cards/set-symbol";
 import { cn } from "@/lib/utils";
 import type { CardSet } from "@/lib/sets/queries";
 import type { Visibility } from "@/types/card";
+import { VisibilityPicker } from "@/components/ui/visibility-picker";
+import { inputClass, textareaClass } from "@/components/ui/field-classes";
 
 type FormValues = {
   title: string;
@@ -46,31 +45,6 @@ type SetCreatorFormProps = {
   set?: CardSet | null;
 };
 
-const VISIBILITY_OPTIONS: Array<{
-  value: Visibility;
-  label: string;
-  description: string;
-  icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
-}> = [
-  {
-    value: "private",
-    label: "Private",
-    description: "Only you can see this set.",
-    icon: Lock,
-  },
-  {
-    value: "unlisted",
-    label: "Unlisted",
-    description: "Anyone with the link can view. Not in listings.",
-    icon: Link2,
-  },
-  {
-    value: "public",
-    label: "Public",
-    description: "Listed publicly in the future sets index.",
-    icon: Globe2,
-  },
-];
 
 function defaultValuesFor(set: CardSet | null | undefined): FormValues {
   if (!set) {
@@ -264,6 +238,7 @@ export function SetCreatorForm({ mode, userId, set }: SetCreatorFormProps) {
             name="visibility"
             render={({ field }) => (
               <VisibilityPicker
+                subject="set"
                 value={field.value}
                 onChange={field.onChange}
               />
@@ -333,21 +308,7 @@ function FieldGroup({
   );
 }
 
-function inputClass(hasError: boolean): string {
-  return cn(
-    "h-10 w-full rounded-md border bg-background/60 px-3 text-sm text-foreground placeholder:text-subtle",
-    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-    hasError ? "border-danger/60" : "border-border",
-  );
-}
 
-function textareaClass(hasError: boolean): string {
-  return cn(
-    "w-full rounded-md border bg-background/60 px-3 py-2 text-sm text-foreground placeholder:text-subtle",
-    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-    hasError ? "border-danger/60" : "border-border",
-  );
-}
 
 // A curated set of recognizable Keyrune set-symbol codes for the "pick a glyph"
 // option. The full Keyrune library has hundreds; these cover popular sets.
@@ -599,41 +560,3 @@ function CoverField({
   );
 }
 
-function VisibilityPicker({
-  value,
-  onChange,
-}: {
-  value: Visibility;
-  onChange: (next: Visibility) => void;
-}) {
-  return (
-    <div className="grid gap-2 sm:grid-cols-3">
-      {VISIBILITY_OPTIONS.map((option) => {
-        const Icon = option.icon;
-        const active = value === option.value;
-        return (
-          <button
-            key={option.value}
-            type="button"
-            onClick={() => onChange(option.value)}
-            aria-pressed={active}
-            className={cn(
-              "flex flex-col gap-1 rounded-lg border bg-background/40 p-3 text-left transition-colors",
-              active
-                ? "border-primary bg-primary/10"
-                : "border-border hover:border-border-strong",
-            )}
-          >
-            <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
-              <Icon className="h-4 w-4" aria-hidden />
-              {option.label}
-            </span>
-            <span className="text-xs leading-5 text-muted">
-              {option.description}
-            </span>
-          </button>
-        );
-      })}
-    </div>
-  );
-}

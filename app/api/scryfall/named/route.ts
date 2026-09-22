@@ -12,6 +12,7 @@ import {
   logScryfallCall,
 } from "@/lib/scryfall/rate-limit";
 import { mapScryfallToFormPatch } from "@/lib/scryfall/import-mapper";
+import { rateLimitedResponse } from "@/lib/api/responses";
 
 // ---------------------------------------------------------------------------
 // GET /api/scryfall/named?id=<scryfall_id>
@@ -56,13 +57,7 @@ export async function GET(request: NextRequest) {
 
   const limit = await checkScryfallRateLimit(user.id, "named");
   if (!limit.ok) {
-    return NextResponse.json(
-      { ok: false, error: limit.message },
-      {
-        status: 429,
-        headers: { "Retry-After": String(limit.retryAfterSeconds) },
-      },
-    );
+    return rateLimitedResponse(limit);
   }
 
   const card =

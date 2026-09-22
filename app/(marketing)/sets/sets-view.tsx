@@ -12,6 +12,7 @@ import { SetsSearch } from "@/components/sets/sets-search";
 import { breadcrumbJsonLd, JsonLd } from "@/components/seo/json-ld";
 import { listPublicSets } from "@/lib/sets/queries";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { firstString } from "@/lib/routing/search-params";
 
 // ---------------------------------------------------------------------------
 // SetsView — the shared body of the community sets browse.
@@ -28,11 +29,6 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 // ---------------------------------------------------------------------------
 
 const PAGE_SIZE = 24;
-
-function firstString(value: string | string[] | undefined): string | null {
-  if (Array.isArray(value)) return value[0] ?? null;
-  return value ?? null;
-}
 
 export type SetsViewParams = {
   page: number;

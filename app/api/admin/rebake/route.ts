@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { LEGACY_SUPABASE_HOSTS } from "@/lib/validation/card";
-import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { renderCardImage } from "@/lib/render/card-image";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { cardRenderPath } from "@/lib/cards/storage-paths";
@@ -8,8 +8,8 @@ import {
   BAKE_SELECT_COLUMNS,
   rowToPreviewData,
   type CardRowForBake,
+  uploadRenderObjects,
 } from "@/lib/cards/bake-core";
-import { makeRenderThumb, renderThumbPath } from "@/lib/cards/render-thumb";
 import { getPipOverrides } from "@/lib/pips/queries";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import {
@@ -18,6 +18,7 @@ import {
   rolloutPolicy,
   type SweepVerdict,
 } from "@/lib/cards/layout-version";
+import { cronRouteGuard, isCronAuthorized } from "@/lib/api/cron-auth";
 
 // ---------------------------------------------------------------------------
 // POST /api/admin/rebake — re-bake stored card renders, one batch per call.
@@ -59,16 +60,12 @@ const MAX_BATCH = 25;
 const SCAN_PAGE = 250;
 const SCAN_MAX = 5000;
 
-function isAuthorized(request: Request): boolean {
-  if (
+/** A local dev server may skip the bearer — never in production. */
+function devBypass(): boolean {
+  return (
     process.env.ALLOW_UNAUTHENTICATED_REBAKE === "true" &&
     process.env.NODE_ENV !== "production"
-  ) {
-    return true;
-  }
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
-  return request.headers.get("authorization") === `Bearer ${secret}`;
+  );
 }
 
 type RebakeRow = CardRowForBake & {
@@ -114,15 +111,10 @@ function verdictFor(row: RebakeRow, scope: Scope): SweepVerdict {
 }
 
 export async function POST(request: Request) {
-  if (!isAuthorized(request)) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-  }
-  if (!isAdminConfigured()) {
-    return NextResponse.json(
-      { ok: false, error: "Admin key not configured (SUPABASE_SECRET_KEY)." },
-      { status: 503 },
-    );
-  }
+  const denied = cronRouteGuard(request, {
+    authorized: devBypass() || isCronAuthorized(request),
+  });
+  if (denied) return denied;
 
   const url = new URL(request.url);
   const scope = parseScope(url);
@@ -221,36 +213,14 @@ export async function POST(request: Request) {
       });
       const pngBytes = await response.arrayBuffer();
 
-      const { error: uploadErr } = await supabase.storage
-        .from("card-renders")
-        .upload(path, pngBytes, { cacheControl: "31536000", contentType: "image/png", upsert: true });
-      if (uploadErr) throw new Error(`Upload failed: ${uploadErr.message}`);
-
-      const thumbPath = renderThumbPath(path);
-      let thumbOk = false;
-      try {
-        const { error: thumbErr } = await supabase.storage
-          .from("card-renders")
-          .upload(thumbPath, await makeRenderThumb(pngBytes), {
-            cacheControl: "31536000",
-            contentType: "image/webp",
-            upsert: true,
-          });
-        thumbOk = !thumbErr;
-      } catch {
-        thumbOk = false;
-      }
-
-      const { data: urlData } = supabase.storage.from("card-renders").getPublicUrl(path);
-      const version = Date.now();
-      const renderedImageUrl = `${urlData.publicUrl}?v=${version}`;
+      const uploaded = await uploadRenderObjects(supabase, path, pngBytes, row.id);
+      if (!uploaded.ok) throw new Error(uploaded.error);
+      const { renderedImageUrl } = uploaded;
       const { error: updateErr } = await supabase
         .from("cards")
         .update({
           rendered_image_url: renderedImageUrl,
-          rendered_thumb_url: thumbOk
-            ? `${supabase.storage.from("card-renders").getPublicUrl(thumbPath).data.publicUrl}?v=${version}`
-            : null,
+          rendered_thumb_url: uploaded.renderedThumbUrl,
           rendered_at: new Date().toISOString(),
           layout_version: CARD_LAYOUT_VERSION,
         })

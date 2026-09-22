@@ -36,6 +36,8 @@ export const BRAND = {
   muted: "#9aa3b5",
   /** OG footer bronze (domain label) */
   bronze: "#6e6248",
+  /** OG bylines / secondary copy — between muted and the surface */
+  dim: "#6e7687",
 } as const;
 
 /** WUBRG pip colors — sRGB of the --color-mana-* tokens in

@@ -1,10 +1,18 @@
 import { BRAND, MANA_PIPS } from "@/lib/brand/constants";
-import { BrandMarkTile } from "@/lib/brand/glyph";
+import {
+  BrandLockup,
+  OG_BACKGROUND,
+  OG_FONT,
+  OgDomainStamp,
+  OgGlow,
+  OgPipStrip,
+} from "@/lib/og/chrome";
 
 // ---------------------------------------------------------------------------
 // The site-wide social card body, shared by app/opengraph-image.tsx and
-// app/twitter-image.tsx (thin ImageResponse shells). Satori rules apply:
-// display:flex on every multi-child <div>, literal colors from BRAND.
+// app/twitter-image.tsx (thin ImageResponse shells on the EDGE runtime —
+// hence lib/og/chrome, not lib/og/shell). Satori rules apply: display:flex
+// on every multi-child <div>, literal colors from BRAND.
 // ---------------------------------------------------------------------------
 
 export const HOME_OG_ALT = "PipGlyph — Precision tools for legendary ideas.";
@@ -21,67 +29,16 @@ export function HomeOgCard() {
         justifyContent: "center",
         padding: "72px 96px",
         gap: 20,
-        background: `linear-gradient(135deg, ${BRAND.navy} 0%, ${BRAND.surface} 50%, ${BRAND.navy} 100%)`,
+        background: OG_BACKGROUND,
         color: BRAND.foreground,
-        fontFamily: "system-ui, sans-serif",
+        fontFamily: OG_FONT,
         position: "relative",
         overflow: "hidden",
       }}
     >
-      {/* Decorative radial glow — purple tinted */}
-      <div
-        style={{
-          position: "absolute",
-          top: -120,
-          left: -80,
-          width: 600,
-          height: 600,
-          borderRadius: "50%",
-          background:
-            "radial-gradient(circle, rgba(107,77,154,0.28) 0%, transparent 70%)",
-          display: "flex",
-        }}
-      />
-
-      {/* WUBRG pip strip — decorative bottom bar */}
-      <div
-        style={{
-          position: "absolute",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          height: 6,
-          display: "flex",
-        }}
-      >
-        {MANA_PIPS.map((pip) => (
-          <div
-            key={pip.label}
-            style={{
-              flex: 1,
-              background: pip.color,
-              opacity: 0.7,
-              display: "flex",
-            }}
-          />
-        ))}
-      </div>
-
-      {/* Brand lockup — Astral Rose mark + wordmark */}
-      <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
-        <BrandMarkTile size={64} />
-        <span
-          style={{
-            fontSize: 30,
-            letterSpacing: 5,
-            textTransform: "uppercase",
-            color: BRAND.gold,
-            fontWeight: 600,
-          }}
-        >
-          PipGlyph
-        </span>
-      </div>
+      <OgGlow top={-120} left={-80} />
+      <OgPipStrip />
+      <BrandLockup markSize={64} fontSize={30} gap={18} />
 
       {/* Main headline — explicit column flex; Satori won't reliably break
           a display:block span inside flowing h1 text. */}
@@ -147,22 +104,7 @@ export function HomeOgCard() {
         ))}
       </div>
 
-      {/* Bottom-right domain */}
-      <div
-        style={{
-          position: "absolute",
-          right: 96,
-          bottom: 36,
-          display: "flex",
-          alignItems: "center",
-          fontSize: 18,
-          color: BRAND.bronze,
-          letterSpacing: 2,
-          textTransform: "uppercase",
-        }}
-      >
-        pipglyph.com
-      </div>
+      <OgDomainStamp />
     </div>
   );
 }

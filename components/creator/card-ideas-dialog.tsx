@@ -33,7 +33,7 @@ import {
   type IdeaFieldGroup,
   type IdeaSelection,
 } from "@/lib/ai/card-ideas-select";
-import { CARD_TYPE_LABELS, RARITY_VALUES, type CardType, type Rarity } from "@/types/card";
+import { CARD_TYPE_LABELS, RARITY_VALUES, type CardType, type Rarity, RARITY_LABELS } from "@/types/card";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -49,12 +49,6 @@ const AI_CARD_TYPES: CardType[] = [
   "creature", "instant", "sorcery", "artifact", "enchantment", "land", "planeswalker", "battle", "token",
 ];
 
-const RARITY_LABELS: Record<Rarity, string> = {
-  common: "Common",
-  uncommon: "Uncommon",
-  rare: "Rare",
-  mythic: "Mythic",
-};
 
 type IdeasResponse =
   | { ok: true; ideas: CardIdea[]; credits: number | null }

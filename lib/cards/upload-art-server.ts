@@ -6,6 +6,7 @@ import sharp from "sharp";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { scanImageUrl } from "@/lib/moderation/image-scan";
+import { randomId } from "@/lib/ids";
 
 // ---------------------------------------------------------------------------
 // Server-side card-art upload (Phase 11 chunk 14 — M1 hardening).
@@ -127,10 +128,7 @@ export async function uploadCardArtServerAction(
   // (`auth.uid()::text = (storage.foldername(name))[1]`) continues to
   // gate writes.
   const ext = EXTENSION_BY_FORMAT[format] ?? "bin";
-  const id =
-    typeof crypto !== "undefined" && "randomUUID" in crypto
-      ? crypto.randomUUID()
-      : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  const id = randomId();
   const path = `${user.id}/${id}.${ext}`;
 
   const supabase = await createClient();

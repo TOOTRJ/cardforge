@@ -67,6 +67,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getSiteBaseUrl } from "@/lib/site-url";
 import { breadcrumbJsonLd, JsonLd, serializeJsonLd } from "@/components/seo/json-ld";
 import type { CardBackFace } from "@/types/card";
+import { formatShortDate } from "@/lib/format/dates";
 
 // ---------------------------------------------------------------------------
 // CardDetailContent — the shared body of the public card detail view.
@@ -205,7 +206,7 @@ export async function CardDetailContent({
 
   const ownerProfile = card.owner;
 
-  const createdAt = formatDate(card.created_at);
+  const createdAt = formatShortDate(card.created_at);
 
   const siteBase = getSiteBaseUrl();
   const isShareable =
@@ -567,18 +568,6 @@ function visibilityLabel(visibility: "private" | "unlisted" | "public"): string 
   }
 }
 
-function formatDate(value: string): string {
-  try {
-    const date = new Date(value);
-    return new Intl.DateTimeFormat("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    }).format(date);
-  } catch {
-    return "—";
-  }
-}
 
 // ---------------------------------------------------------------------------
 // CardAnalytics — "By the numbers": engagement + provenance stats for the
@@ -735,12 +724,12 @@ function CardAnalytics({
       <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-muted">
         <span className="inline-flex items-center gap-1.5">
           <CalendarDays className="h-3.5 w-3.5 text-subtle" aria-hidden />
-          Created {formatDate(createdAt)}
+          Created {formatShortDate(createdAt)}
         </span>
         {updatedAt !== createdAt ? (
           <span className="inline-flex items-center gap-1.5">
             <Clock className="h-3.5 w-3.5 text-subtle" aria-hidden />
-            Updated {formatDate(updatedAt)}
+            Updated {formatShortDate(updatedAt)}
           </span>
         ) : null}
       </div>

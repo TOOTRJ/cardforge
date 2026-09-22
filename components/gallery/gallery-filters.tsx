@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useState, useTransition } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   ChevronDown,
   Loader2,
@@ -17,9 +17,12 @@ import {
   type CardType,
   type ColorIdentity,
   type Rarity,
+  RARITY_LABELS,
+  COLOR_IDENTITY_LABELS,
 } from "@/types/card";
 import { ManaPip } from "@/components/cards/mana-pip";
 import { cn } from "@/lib/utils";
+import { useSearchParamPatch } from "@/lib/routing/use-search-param-patch";
 
 type Sort = "discover" | "recent" | "newest" | "popular" | "viewed";
 
@@ -32,12 +35,6 @@ const SORT_LABELS: Record<Sort, string> = {
 };
 
 
-const RARITY_LABELS: Record<Rarity, string> = {
-  common: "Common",
-  uncommon: "Uncommon",
-  rare: "Rare",
-  mythic: "Mythic",
-};
 
 function readSort(value: string | null): Sort {
   if (value === "popular" || value === "viewed" || value === "newest" || value === "recent") return value;
@@ -45,10 +42,7 @@ function readSort(value: string | null): Sort {
 }
 
 export function GalleryFilters() {
-  const router = useRouter();
-  const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [isPending, startTransition] = useTransition();
 
   const cardTypeParam = searchParams.get("type");
   const rarityParam = searchParams.get("rarity");
@@ -86,27 +80,10 @@ export function GalleryFilters() {
     setLastSyncedParam(searchParam);
   }
 
-  const updateParam = useCallback(
-    (patch: Record<string, string | null>) => {
-      const next = new URLSearchParams(searchParams.toString());
-      // A new filter/sort/search is a new shuffle — drop the discover seed
-      // (pagination links re-add it so page 2 matches page 1).
-      next.delete("seed");
-      for (const [key, value] of Object.entries(patch)) {
-        if (value === null || value === "") {
-          next.delete(key);
-        } else {
-          next.set(key, value);
-        }
-      }
-      const queryString = next.toString();
-      const href = queryString ? `${pathname}?${queryString}` : pathname;
-      startTransition(() => {
-        router.replace(href, { scroll: false });
-      });
-    },
-    [router, pathname, searchParams],
-  );
+  // A new filter/sort/search is a new shuffle — drop the discover seed
+  // (pagination links re-add it so page 2 matches page 1) and, like every
+  // browse surface, start over on page 1.
+  const { patch: updateParam, isPending } = useSearchParamPatch({ alsoReset: ["seed"] });
 
   const onSubmitSearch = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -165,7 +142,7 @@ export function GalleryFilters() {
   if (colorIdentity)
     activePills.push({
       key: "color",
-      label: COLOR_LABEL[colorIdentity],
+      label: COLOR_IDENTITY_LABELS[colorIdentity],
       onRemove: () => updateParam({ color: null }),
     });
   if (tagParam)
@@ -461,15 +438,6 @@ const COLOR_TO_PIP: Record<ColorIdentity, string> = {
 };
 
 // Human-readable label for aria purposes.
-const COLOR_LABEL: Record<ColorIdentity, string> = {
-  white: "White",
-  blue: "Blue",
-  black: "Black",
-  red: "Red",
-  green: "Green",
-  colorless: "Colorless",
-  multicolor: "Multicolor",
-};
 
 function ColorChip({
   color,
@@ -486,7 +454,7 @@ function ColorChip({
     <button
       type="button"
       onClick={onClick}
-      aria-label={`Filter by ${COLOR_LABEL[color]}`}
+      aria-label={`Filter by ${COLOR_IDENTITY_LABELS[color]}`}
       aria-pressed={active}
       className={cn(
         "rounded-full transition-all",

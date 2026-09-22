@@ -30,6 +30,13 @@ export const RARITY_VALUES = [
 ] as const;
 export type Rarity = (typeof RARITY_VALUES)[number];
 
+export const RARITY_LABELS: Record<Rarity, string> = {
+  common: "Common",
+  uncommon: "Uncommon",
+  rare: "Rare",
+  mythic: "Mythic",
+};
+
 export const CARD_TYPE_VALUES = [
   "creature",
   "instant",
@@ -70,6 +77,28 @@ export const COLOR_IDENTITY_VALUES = [
   "multicolor",
 ] as const;
 export type ColorIdentity = (typeof COLOR_IDENTITY_VALUES)[number];
+
+export const COLOR_IDENTITY_LABELS: Record<ColorIdentity, string> = {
+  white: "White",
+  blue: "Blue",
+  black: "Black",
+  red: "Red",
+  green: "Green",
+  colorless: "Colorless",
+  multicolor: "Multicolor",
+};
+
+/** WUBRG letter (plus C) → color identity, for deck data that stores letters
+ *  (deck_cards.colors, mana costs, the deck analytics buckets). */
+export const COLOR_LETTER_IDENTITY = {
+  W: "white",
+  U: "blue",
+  B: "black",
+  R: "red",
+  G: "green",
+  C: "colorless",
+} as const satisfies Record<string, ColorIdentity>;
+export type ColorLetter = keyof typeof COLOR_LETTER_IDENTITY;
 
 // ---------------------------------------------------------------------------
 // Narrowed row types — the DB stores enums as text, so we re-export rows with

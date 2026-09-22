@@ -2,6 +2,7 @@ import "server-only";
 
 import { revalidatePath } from "next/cache";
 import type { createClient } from "@/lib/supabase/server";
+import { revalidateProfilePage } from "@/lib/profile/username";
 
 // ---------------------------------------------------------------------------
 // Deck membership helper for the card-create flow: dropping a freshly saved
@@ -61,16 +62,7 @@ export async function addCustomCardEntryToDeck(
   revalidatePath(`/deck/${deck.slug}/edit`);
   revalidatePath("/dashboard/decks");
   // Profile "Decks by X" tiles show card counts — membership changes them.
-  try {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("username")
-      .eq("id", userId)
-      .maybeSingle();
-    if (profile?.username) revalidatePath(`/profile/${profile.username}`);
-  } catch {
-    // best-effort
-  }
+  await revalidateProfilePage(supabase, userId);
 
   return { ok: true, deckSlug: deck.slug };
 }

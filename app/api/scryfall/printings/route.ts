@@ -10,6 +10,7 @@ import {
   checkScryfallRateLimit,
   logScryfallCall,
 } from "@/lib/scryfall/rate-limit";
+import { rateLimitedResponse } from "@/lib/api/responses";
 
 // ---------------------------------------------------------------------------
 // GET /api/scryfall/printings?oracle_id=<uuid>
@@ -79,13 +80,7 @@ export async function GET(request: NextRequest) {
 
   const limit = await checkScryfallRateLimit(user.id, "search");
   if (!limit.ok) {
-    return NextResponse.json(
-      { ok: false, error: limit.message },
-      {
-        status: 429,
-        headers: { "Retry-After": String(limit.retryAfterSeconds) },
-      },
-    );
+    return rateLimitedResponse(limit);
   }
 
   const all = await getCardPrintings(oracleId);

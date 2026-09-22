@@ -14,8 +14,11 @@ import { rowToPreviewData, type CardRowForBake } from "@/lib/cards/bake-core";
 import { getPipOverrides } from "@/lib/pips/queries";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { buildTypeLine } from "@/lib/cards/card-display";
-import { cardAccentColor, renderCardSocialImage } from "@/lib/og/card-social";
+import { renderCardSocialImage } from "@/lib/og/card-social";
+import { cardAccentColor } from "@/lib/og/card-accent";
 import { cardCacheTag } from "@/lib/cards/cache-purge";
+import { isUuid } from "@/lib/ids";
+import { lookupUsername } from "@/lib/profile/username";
 
 // Cache aggressively at the CDN — the response is pure of card row + URL
 // query. The bare URL keeps a short window so an edit shows within minutes;
@@ -31,9 +34,6 @@ const VERSIONED_CACHE_HEADER =
 // Every image response carries `Vercel-Cache-Tag: card-<id>` so a card that
 // goes private / gets hidden can be purged from the CDN at once
 // (lib/cards/cache-purge.ts) — revalidatePath never reached this layer.
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 type RouteParams = { id: string };
 
 export async function GET(
@@ -42,7 +42,7 @@ export async function GET(
 ) {
   const { id } = await params;
 
-  if (!UUID_PATTERN.test(id)) {
+  if (!isUuid(id)) {
     return NextResponse.json({ error: "Invalid card id" }, { status: 400 });
   }
 
@@ -183,13 +183,7 @@ async function renderSocialComposite(
 
   let creatorHandle: string | null = null;
   try {
-    const supabase = await createClient();
-    const { data: owner } = await supabase
-      .from("profiles")
-      .select("username")
-      .eq("id", card.owner_id)
-      .maybeSingle();
-    creatorHandle = owner?.username ?? null;
+    creatorHandle = await lookupUsername(await createClient(), card.owner_id);
   } catch {
     // Composite still renders without the handle.
   }

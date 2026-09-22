@@ -11,6 +11,7 @@ import {
   checkScryfallRateLimit,
   logScryfallCall,
 } from "@/lib/scryfall/rate-limit";
+import { rateLimitedResponse } from "@/lib/api/responses";
 
 // ---------------------------------------------------------------------------
 // GET /api/scryfall/search?q=<query>&limit=<n>
@@ -92,13 +93,7 @@ export async function GET(request: NextRequest) {
 
   const limit_check = await checkScryfallRateLimit(user.id, "search");
   if (!limit_check.ok) {
-    return NextResponse.json(
-      { ok: false, error: limit_check.message },
-      {
-        status: 429,
-        headers: { "Retry-After": String(limit_check.retryAfterSeconds) },
-      },
-    );
+    return rateLimitedResponse(limit_check);
   }
 
   // Log only after the upstream call resolves, so a network error (which

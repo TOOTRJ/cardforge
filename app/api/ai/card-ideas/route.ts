@@ -18,6 +18,7 @@ import { loadOwnedDeckContext } from "@/lib/ai/generation-jobs";
 import { computeDeckAnalytics } from "@/lib/decks/analytics";
 import { requireTier, UpgradeRequiredError } from "@/lib/billing/entitlements";
 import { RARITY_VALUES } from "@/types/card";
+import { rateLimitedResponse } from "@/lib/api/responses";
 
 /** Card types the ideas can be pinned to (mirrors the creator's AI dialog). */
 const IDEA_CARD_TYPES = [
@@ -68,10 +69,7 @@ export async function POST(request: Request) {
 
   const rate = await checkAiRateLimit(user.id);
   if (!rate.ok) {
-    return NextResponse.json(
-      { ok: false, error: rate.message },
-      { status: 429, headers: { "Retry-After": String(rate.retryAfterSeconds) } },
-    );
+    return rateLimitedResponse(rate);
   }
 
   // Deck-themed ideas: Pro, and the deck must be the caller's.

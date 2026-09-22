@@ -32,6 +32,7 @@ import {
   type CardType,
   type FrameTemplate,
   type Rarity,
+  RARITY_LABELS,
 } from "@/types/card";
 import { eraForTemplate } from "@/lib/creator/frame-picker";
 import { cn } from "@/lib/utils";
@@ -79,12 +80,6 @@ const STYLE_PRESETS = [
   "Dark fantasy",
 ];
 
-const RARITY_LABELS: Record<Rarity, string> = {
-  common: "Common",
-  uncommon: "Uncommon",
-  rare: "Rare",
-  mythic: "Mythic",
-};
 
 type AiFillDialogProps = {
   open: boolean;

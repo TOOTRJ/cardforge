@@ -1,7 +1,13 @@
 import { ImageResponse } from "next/og";
-import { BRAND, MANA_HEX, MANA_PIPS, OG_SIZE } from "@/lib/brand/constants";
-import { BrandMarkTile } from "@/lib/brand/glyph";
-import type { ColorIdentity } from "@/types/card";
+import { BRAND, OG_SIZE } from "@/lib/brand/constants";
+import {
+  BrandLockup,
+  OG_BACKGROUND,
+  OG_FONT,
+  OgDomainStamp,
+  OgGlow,
+  OgPipStrip,
+} from "@/lib/og/chrome";
 
 // ---------------------------------------------------------------------------
 // CardSocialImage — the 1200×630 landscape unfurl for card pages.
@@ -26,16 +32,7 @@ export { OG_SIZE as CARD_SOCIAL_SIZE };
 const CARD_HEIGHT = 590;
 const CARD_WIDTH = Math.round(CARD_HEIGHT * (5 / 7));
 
-/** Discord's embed accent bar (theme-color) + the composite's accent line:
- *  the card's mana color, gold for multicolor, neutral for colorless. */
-export function cardAccentColor(colorIdentity: string[]): string {
-  const pips = colorIdentity.filter(
-    (c): c is ColorIdentity => c in MANA_HEX,
-  );
-  if (pips.length === 1) return MANA_HEX[pips[0] as keyof typeof MANA_HEX];
-  if (pips.length > 1) return BRAND.gold;
-  return MANA_HEX.C;
-}
+
 
 /** PNG ImageResponse of the composite — kept here so the (JSX-free)
  *  route handler at app/api/cards/[id]/og/route.ts can stay a .ts file. */
@@ -69,50 +66,16 @@ function CardSocialImage({
         alignItems: "center",
         padding: "0 64px",
         gap: 56,
-        background: `linear-gradient(135deg, ${BRAND.navy} 0%, ${BRAND.surface} 55%, ${BRAND.navy} 100%)`,
+        background: OG_BACKGROUND,
         color: BRAND.foreground,
-        fontFamily: "system-ui, sans-serif",
+        fontFamily: OG_FONT,
         position: "relative",
         overflow: "hidden",
       }}
     >
-      {/* Decorative radial glow behind the card, tinted by the accent */}
-      <div
-        style={{
-          position: "absolute",
-          top: -140,
-          right: -60,
-          width: 640,
-          height: 640,
-          borderRadius: "50%",
-          background: `radial-gradient(circle, ${hexToRgba(accent, 0.22)} 0%, transparent 70%)`,
-          display: "flex",
-        }}
-      />
-
-      {/* WUBRG pip strip — same bottom bar as every other PipGlyph OG */}
-      <div
-        style={{
-          position: "absolute",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          height: 6,
-          display: "flex",
-        }}
-      >
-        {MANA_PIPS.map((pip) => (
-          <div
-            key={pip.label}
-            style={{
-              flex: 1,
-              background: pip.color,
-              opacity: 0.7,
-              display: "flex",
-            }}
-          />
-        ))}
-      </div>
+      {/* Glow behind the card, tinted by the accent */}
+      <OgGlow top={-140} right={-60} size={640} color={hexToRgba(accent, 0.22)} />
+      <OgPipStrip />
 
       {/* Left column: lockup, title, type line, creator, domain */}
       <div
@@ -126,20 +89,7 @@ function CardSocialImage({
           paddingBottom: 8,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <BrandMarkTile size={52} />
-          <span
-            style={{
-              fontSize: 24,
-              letterSpacing: 5,
-              textTransform: "uppercase",
-              color: BRAND.gold,
-              fontWeight: 600,
-            }}
-          >
-            PipGlyph
-          </span>
-        </div>
+        <BrandLockup markSize={52} fontSize={24} />
 
         <div
           style={{
@@ -190,16 +140,7 @@ function CardSocialImage({
               forged by @{creatorHandle}
             </span>
           ) : null}
-          <span
-            style={{
-              fontSize: 18,
-              color: BRAND.bronze,
-              letterSpacing: 2,
-              textTransform: "uppercase",
-            }}
-          >
-            pipglyph.com · make your own
-          </span>
+          <OgDomainStamp inline>pipglyph.com · make your own</OgDomainStamp>
         </div>
       </div>
 

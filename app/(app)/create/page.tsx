@@ -19,7 +19,6 @@ import { getCurrentChallenge } from "@/lib/challenges/queries";
 import {
   getCardById,
   getFantasyGameSystem,
-  getTemplatesForGameSystem,
   listMyCards,
 } from "@/lib/cards/queries";
 import { listMySets } from "@/lib/sets/queries";
@@ -32,6 +31,7 @@ import type { DeckRemixContext } from "@/types/deck";
 import { getCreatorLabMode } from "@/lib/creator/lab";
 import { canUseCreatorLab, resolveCreatorLayout } from "@/lib/creator/lab-shared";
 import { FlaskConical, Layers3 } from "lucide-react";
+import { isUuid } from "@/lib/ids";
 
 export const metadata: Metadata = {
   title: "Create",
@@ -40,9 +40,6 @@ export const metadata: Metadata = {
 };
 
 const CHALLENGE_TAG_PATTERN = /^[a-z0-9][a-z0-9-]{0,38}[a-z0-9]$/;
-
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default async function CreatePage({
   searchParams,
@@ -94,9 +91,6 @@ export default async function CreatePage({
     const query = params.toString();
     return query ? `/create?${query}` : "/create";
   })();
-  const templates = gameSystem
-    ? await getTemplatesForGameSystem(gameSystem.id)
-    : [];
   const [mySets, myCards, myDecks, entitlements, exportStamp] = await Promise.all([
     // The publish panel's set picker is flag-gated — don't pay the query.
     isSetsEnabled() ? listMySets() : Promise.resolve([]),
@@ -115,7 +109,7 @@ export default async function CreatePage({
   // card's back face. Validate the target exists + is the user's before wiring
   // the auto-link flow; otherwise ignore the param.
   const backForCard =
-    backForParam && UUID_PATTERN.test(backForParam)
+    backForParam && isUuid(backForParam)
       ? await getCardById(backForParam)
       : null;
   const backFor =
@@ -126,7 +120,7 @@ export default async function CreatePage({
   // card links back to the entry and we return to the deck. Ignored when
   // invalid (someone else's deck, deleted entry, malformed id).
   const deckRemixSource =
-    deckCardParam && UUID_PATTERN.test(deckCardParam)
+    deckCardParam && isUuid(deckCardParam)
       ? await getMyDeckCardWithDeck(deckCardParam)
       : null;
   const deckRemix: DeckRemixContext | null = deckRemixSource
@@ -145,7 +139,7 @@ export default async function CreatePage({
   // inserted until Save, when the slug follows the chosen title and
   // parent_card_id links it back.
   const remixParent =
-    !backFor && !deckRemix && remixParam && UUID_PATTERN.test(remixParam)
+    !backFor && !deckRemix && remixParam && isUuid(remixParam)
       ? await getCardById(remixParam)
       : null;
 
@@ -225,7 +219,6 @@ export default async function CreatePage({
           userId={user.id}
           ownerUsername={profile?.username ?? null}
           gameSystems={[gameSystem]}
-          templates={templates}
           mySets={mySets}
           myDecks={myDecks.map((deck) => ({
             id: deck.id,

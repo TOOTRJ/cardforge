@@ -1,17 +1,16 @@
 "use client";
 
-import { useCallback, useState, useTransition } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Loader2, Search, X } from "lucide-react";
+import { useSearchParamPatch } from "@/lib/routing/use-search-param-patch";
 
 // SetsSearch — a title/description search box for the public sets browse. Drives
 // the ?q= param; the server page re-queries listPublicSets on change. Mirrors
 // the gallery search input so the two browse surfaces feel the same.
 export function SetsSearch() {
-  const router = useRouter();
-  const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [isPending, startTransition] = useTransition();
+  const { patch, isPending } = useSearchParamPatch();
 
   const searchParam = searchParams.get("q") ?? "";
   const [value, setValue] = useState(searchParam);
@@ -21,26 +20,11 @@ export function SetsSearch() {
     setLastSynced(searchParam);
   }
 
-  const apply = useCallback(
-    (q: string | null) => {
-      const next = new URLSearchParams(searchParams.toString());
-      if (q) next.set("q", q);
-      else next.delete("q");
-      // A new search resets pagination to page 1.
-      next.delete("page");
-      const qs = next.toString();
-      startTransition(() => {
-        router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-      });
-    },
-    [router, pathname, searchParams],
-  );
-
   return (
     <form
       onSubmit={(event) => {
         event.preventDefault();
-        apply(value.trim() || null);
+        patch({ q: value.trim() || null });
       }}
       className="relative flex w-full max-w-md items-center"
     >
@@ -61,7 +45,7 @@ export function SetsSearch() {
           type="button"
           onClick={() => {
             setValue("");
-            apply(null);
+            patch({ q: null });
           }}
           aria-label="Clear search"
           className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted hover:bg-elevated hover:text-foreground"

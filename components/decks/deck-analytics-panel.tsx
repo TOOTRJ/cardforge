@@ -1,5 +1,7 @@
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { TYPE_BUCKETS, type DeckAnalytics } from "@/lib/decks/analytics";
+import { COLOR_IDENTITY_LABELS, COLOR_LETTER_IDENTITY } from "@/types/card";
+import { BarList, COLOR_DOT_CLASS } from "@/components/analytics/bar-list";
 
 // Deck-flavored sibling of SetAnalyticsPanel: mana curve, color pips, type
 // breakdown, and the remix-progress headline number.
@@ -8,23 +10,7 @@ type DeckAnalyticsPanelProps = {
   analytics: DeckAnalytics;
 };
 
-const COLOR_LABELS: Record<keyof DeckAnalytics["byColor"], string> = {
-  W: "White",
-  U: "Blue",
-  B: "Black",
-  R: "Red",
-  G: "Green",
-  C: "Colorless",
-};
 
-const COLOR_DOT: Record<keyof DeckAnalytics["byColor"], string> = {
-  W: "bg-amber-200",
-  U: "bg-sky-400",
-  B: "bg-zinc-500",
-  R: "bg-rose-400",
-  G: "bg-emerald-400",
-  C: "bg-slate-400",
-};
 
 const COLOR_KEYS = ["W", "U", "B", "R", "G", "C"] as const;
 
@@ -94,10 +80,10 @@ export function DeckAnalyticsPanel({ analytics }: DeckAnalyticsPanelProps) {
               >
                 <span className="flex items-center gap-2">
                   <span
-                    className={`inline-block h-2.5 w-2.5 rounded-full ${COLOR_DOT[color]}`}
+                    className={`inline-block h-2.5 w-2.5 rounded-full ${COLOR_DOT_CLASS[COLOR_LETTER_IDENTITY[color]]}`}
                     aria-hidden
                   />
-                  <span className="text-foreground">{COLOR_LABELS[color]}</span>
+                  <span className="text-foreground">{COLOR_IDENTITY_LABELS[COLOR_LETTER_IDENTITY[color]]}</span>
                 </span>
                 <span className="font-mono text-muted">
                   {analytics.byColor[color]}
@@ -123,6 +109,7 @@ export function DeckAnalyticsPanel({ analytics }: DeckAnalyticsPanelProps) {
           By type
         </span>
         <BarList
+          emptyMessage="Add cards to see types."
           rows={TYPE_BUCKETS.filter(
             (bucket) => (analytics.byType[bucket] ?? 0) > 0,
           ).map((bucket) => ({
@@ -159,31 +146,3 @@ function ManaCurve({ curve }: { curve: number[] }) {
   );
 }
 
-function BarList({
-  rows,
-}: {
-  rows: Array<{ key: string; label: string; count: number }>;
-}) {
-  if (rows.length === 0) {
-    return <span className="text-xs text-muted">Add cards to see types.</span>;
-  }
-  const max = rows.reduce((m, r) => Math.max(m, r.count), 0) || 1;
-  return (
-    <ul className="flex flex-col gap-1.5">
-      {rows.map((row) => (
-        <li key={row.key} className="flex items-center gap-2 text-xs">
-          <span className="w-24 shrink-0 text-muted">{row.label}</span>
-          <span className="relative h-2 flex-1 overflow-hidden rounded-full bg-elevated">
-            <span
-              className="absolute inset-y-0 left-0 bg-linear-to-r from-primary to-accent"
-              style={{ width: `${(row.count / max) * 100}%` }}
-            />
-          </span>
-          <span className="w-8 shrink-0 text-right font-mono text-muted">
-            {row.count}
-          </span>
-        </li>
-      ))}
-    </ul>
-  );
-}

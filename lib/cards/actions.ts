@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { createClient, getCurrentUser } from "@/lib/supabase/server";
+import { createClient, getCurrentUser, getCurrentUsername } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
   createCardSchema,
@@ -37,6 +37,9 @@ import {
 } from "@/types/card";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import type { ZodIssue } from "zod";
+import { isUuid } from "@/lib/ids";
+import { lookupUsername } from "@/lib/profile/username";
+import { buildCardPath } from "@/lib/cards/utils";
 
 // ---------------------------------------------------------------------------
 // Result shape — every action returns either a typed success payload or a
@@ -156,34 +159,13 @@ async function revalidateParentCardPaths(parentCardId: string): Promise<void> {
       .eq("id", parentCardId)
       .maybeSingle();
     if (!parent) return;
-    const { data: owner } = await supabase
-      .from("profiles")
-      .select("username")
-      .eq("id", parent.owner_id)
-      .maybeSingle();
+    const ownerUsername = await lookupUsername(supabase, parent.owner_id);
     revalidatePath(`/card/${parent.slug}`);
-    if (owner?.username) {
-      revalidatePath(`/card/${owner.username}/${parent.slug}`);
+    if (ownerUsername) {
+      revalidatePath(`/card/${ownerUsername}/${parent.slug}`);
     }
   } catch {
     // best-effort
-  }
-}
-
-async function getOwnerUsername(): Promise<string | null> {
-  if (!isSupabaseConfigured()) return null;
-  const user = await getCurrentUser();
-  if (!user) return null;
-  try {
-    const supabase = await createClient();
-    const { data } = await supabase
-      .from("profiles")
-      .select("username")
-      .eq("id", user.id)
-      .maybeSingle();
-    return data?.username ?? null;
-  } catch {
-    return null;
   }
 }
 
@@ -357,7 +339,6 @@ export async function createCardAction(
     title: data.title,
     slug,
     game_system_id: data.game_system_id,
-    template_id: data.template_id ?? null,
     // Defense in depth — the picker already normalizes pip order, but costs
     // also arrive via drafts and imports. Unrecognized tokens pass through.
     cost: data.cost ? normalizeManaCost(data.cost) : null,
@@ -445,7 +426,7 @@ export async function createCardAction(
     );
   }
 
-  const ownerUsername = await getOwnerUsername();
+  const ownerUsername = await getCurrentUsername();
   revalidateCardPaths(row.slug, ownerUsername);
   if (data.parent_card_id) {
     await revalidateParentCardPaths(data.parent_card_id);
@@ -470,9 +451,7 @@ export async function createCardAction(
 
   if (options.redirectAfterCreate) {
     redirect(
-      ownerUsername
-        ? `/card/${ownerUsername}/${row.slug}`
-        : `/card/${row.slug}`,
+      buildCardPath({ slug: row.slug, owner: { username: ownerUsername } }),
     );
   }
 
@@ -558,7 +537,6 @@ export async function updateCardAction(
     update.slug = slug;
   }
   if (data.game_system_id !== undefined) update.game_system_id = data.game_system_id;
-  if (data.template_id !== undefined) update.template_id = data.template_id;
   if (data.cost !== undefined) {
     update.cost = data.cost ? normalizeManaCost(data.cost) : null;
   }
@@ -661,7 +639,7 @@ export async function updateCardAction(
     await addCardToSetMembership(supabase, resolvedSet.primary_set_id, row.id);
   }
 
-  const ownerUsername = await getOwnerUsername();
+  const ownerUsername = await getCurrentUsername();
   revalidateCardPaths(row.slug, ownerUsername);
   // Also revalidate the previous slug if it changed — both the legacy
   // redirector and the canonical username-namespaced URL need busting so
@@ -741,7 +719,7 @@ export async function deleteCardAction(
     .from("card-renders")
     .remove(renderObjectPaths(existing.owner_id, cardId));
 
-  const ownerUsername = await getOwnerUsername();
+  const ownerUsername = await getCurrentUsername();
   await purgeHiddenCard({ id: cardId, slug: existing.slug }, ownerUsername);
 
   return { ok: true, cardId };
@@ -948,7 +926,7 @@ export async function deleteCardsAction(
  */
 export async function recordCardShareAction(cardId: string): Promise<void> {
   if (!isSupabaseConfigured()) return;
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cardId)) return;
+  if (!isUuid(cardId)) return;
   try {
     const supabase = await createClient();
     await supabase.rpc("increment_card_share", { p_card_id: cardId });

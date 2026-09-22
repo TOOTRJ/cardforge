@@ -12,6 +12,7 @@ import { commanderBracket, deckTypeByKey } from "@/lib/decks/deck-types";
 import { DECK_BOARD_LABELS, DECK_FORMAT_LABELS, isDeckFormat } from "@/types/deck";
 import { getSiteBaseUrl } from "@/lib/site-url";
 import type { DeckExportManifest } from "@/lib/decks/export-client";
+import { isUuid } from "@/lib/ids";
 
 // ---------------------------------------------------------------------------
 // /api/decks/[id]/download — the pieces of a Pro whole-deck export.
@@ -34,9 +35,6 @@ import type { DeckExportManifest } from "@/lib/decks/export-client";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 /** Unique custom cards per export and physical copies on print sheets. */
 export const MAX_EXPORT_CARDS = 150;
 const MAX_PHYSICAL_COPIES = 150;
@@ -48,7 +46,7 @@ export async function GET(
   { params }: { params: Promise<RouteParams> },
 ) {
   const { id } = await params;
-  if (!UUID_PATTERN.test(id)) {
+  if (!isUuid(id)) {
     return NextResponse.json({ error: "Invalid deck id" }, { status: 400 });
   }
   if (!isSupabaseConfigured()) {
