@@ -93,7 +93,7 @@ const UNLOCKED: Entitlements = {
 /** The billing-relevant slice of a profile row — shared by the viewer path
  *  (getEntitlements) and the owner path (ownerExportStamp) so the
  *  tier resolution can never drift between them. */
-type BillingProfileSlice = {
+export type BillingProfileSlice = {
   subscription_tier: string | null;
   subscription_status: string | null;
   is_admin: boolean | null;
@@ -104,7 +104,7 @@ type BillingProfileSlice = {
 /** Resolve which tier's perks actually apply for a profile row: subscription
  *  must be active/trialing, and an unexpired admin comp takes the HIGHER of
  *  the two (a comp can never demote a paying user). */
-function effectiveTierForProfile(profile: BillingProfileSlice): PlanTier {
+export function effectiveTierForProfile(profile: BillingProfileSlice): PlanTier {
   const tier = (profile.subscription_tier ?? "free") as PlanTier;
   const status = profile.subscription_status ?? null;
 

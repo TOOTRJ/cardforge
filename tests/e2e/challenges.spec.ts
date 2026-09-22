@@ -2,8 +2,9 @@ import { test, expect } from "@playwright/test";
 
 // ---------------------------------------------------------------------------
 // Challenges smoke (Community Phase 1) — anonymous flows over the seeded
-// "Arcane Frontiers" challenge (supabase/migrations/0040 seeds it, so the
-// local stack always has it). No credentials required.
+// "Arcane Frontiers" challenge. Migration 0040 seeds it ending 14 days after
+// the migrations run; scripts/seed-e2e.mjs re-opens it on every seed so a
+// long-lived local stack never outlives it. No credentials required.
 // ---------------------------------------------------------------------------
 
 test("challenges index lists the seeded challenge", async ({ page }) => {
