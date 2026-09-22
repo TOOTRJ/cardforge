@@ -175,13 +175,12 @@ Rules and gotchas:
   `lib/og/shell.tsx`), like toggles through `lib/social/like-toggle.ts`,
   render upload/delete through `lib/cards/bake-core.ts`.
 - Sets (`card_sets` / `card_set_items` / `set_likes`, the `/sets` and
-  `/set/[slug]` routes, the AI "set" job kind) were REMOVED from the app on
-  2026-09-22. The tables, `cards.primary_set_id`, `ai_generation_jobs.set_id`,
-  the `card_like_rank_in_set` / `admin_user_stats` functions and the
-  `set-covers` bucket (deck covers and card set icons live there) still exist
-  until a confirmed drop migration — production held 8 sets from 5 owners at
-  removal time. A card's printed set symbol (`set_icon_url` / `set_icon_code`,
-  the Set icon step) is a rendering feature and stays.
+  `/set/[slug]` routes, the AI "set" job kind) were REMOVED on 2026-09-22 —
+  app in #337, schema in migration 0105 (owner-confirmed; 8 sets from 5
+  owners were dropped). The `set-covers` bucket keeps its historical name
+  because deck covers and card set icons live there. A card's printed set
+  symbol (`set_icon_url` / `set_icon_code`, the Set icon step) is a rendering
+  feature and stays.
 - Saved-card capacity is enforced in the DATABASE (migration 0104:
   `card_capacity_for()` + the `cards_enforce_capacity` trigger, advisory-locked
   per owner) and mirrored in the app: `CARD_CAPACITY` in `lib/billing/plans.ts`

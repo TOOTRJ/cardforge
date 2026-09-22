@@ -34,7 +34,7 @@ type LikeTable = "card_likes" | "deck_likes";
 export type LikeTarget = {
   table: LikeTable;
   /** The FK column naming the liked row. */
-  column: "card_id" | "deck_id" | "set_id";
+  column: "card_id" | "deck_id";
   /** "card" | "deck" — for the error copy. */
   noun: string;
   /** Paths to revalidate. Both arguments are already shape-checked (null
