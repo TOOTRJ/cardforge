@@ -15,6 +15,7 @@ import { getPipOverrides } from "@/lib/pips/queries";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { buildTypeLine } from "@/lib/cards/card-display";
 import { cardAccentColor, renderCardSocialImage } from "@/lib/og/card-social";
+import { cardCacheTag } from "@/lib/cards/cache-purge";
 
 // Cache aggressively at the CDN — the response is pure of card row + URL
 // query. The bare URL keeps a short window so an edit shows within minutes;
@@ -27,6 +28,9 @@ const CACHE_HEADER =
 const VERSIONED_CACHE_HEADER =
   "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800";
 
+// Every image response carries `Vercel-Cache-Tag: card-<id>` so a card that
+// goes private / gets hidden can be purged from the CDN at once
+// (lib/cards/cache-purge.ts) — revalidatePath never reached this layer.
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -123,6 +127,7 @@ export async function GET(
     headers: {
       "Content-Type": "image/png",
       "Cache-Control": cacheHeader,
+      "Vercel-Cache-Tag": cardCacheTag(card.id),
       "Content-Disposition": `inline; filename="${card.slug}.png"`,
     },
   });
@@ -136,6 +141,7 @@ export async function GET(
 // ---------------------------------------------------------------------------
 
 type SocialCard = {
+  id: string;
   slug: string;
   title: string;
   owner_id: string;
@@ -186,6 +192,7 @@ async function renderSocialComposite(
     headers: {
       "Content-Type": "image/jpeg",
       "Cache-Control": cacheHeader,
+      "Vercel-Cache-Tag": cardCacheTag(card.id),
       "Content-Disposition": `inline; filename="${card.slug}-social.jpg"`,
     },
   });

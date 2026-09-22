@@ -19,6 +19,12 @@ import {
 import { bakeAndPersistCardRender } from "@/lib/cards/bake-render";
 import { addCustomCardEntryToDeck } from "@/lib/decks/membership";
 import { cardRenderPath } from "@/lib/cards/storage-paths";
+import {
+  purgeHiddenCard,
+  purgeHiddenCards,
+  revalidateCardListSurfaces,
+  revalidateCardPaths,
+} from "@/lib/cards/revalidate";
 import { renderThumbPath } from "@/lib/cards/render-thumb";
 import { normalizeManaCost } from "@/lib/cards/mana-order";
 import { PIPGLYPH_ROSE_WATERMARK, usesDefaultWatermark } from "@/lib/cards/watermark";
@@ -125,38 +131,6 @@ async function ensureUniqueSlugForUser(
   }
 
   return { slug: desired, conflict: true };
-}
-
-/**
- * Purge the ISR'd discovery pages (home trending/stats, challenges index,
- * every challenge detail). Card mutations are rare relative to reads, so
- * eager purging keeps those pages fresh without shrinking their
- * revalidate windows. Like-toggles deliberately do NOT purge — the ISR
- * window absorbs that churn.
- */
-function revalidateDiscoverySurfaces() {
-  revalidatePath("/");
-  revalidatePath("/challenges");
-  // Purges every /challenges/[slug] page — a published card may be an
-  // entry in whichever challenge matches its tags; resolving which one
-  // isn't worth a lookup when the purge is this cheap.
-  revalidatePath("/challenges/[slug]", "page");
-}
-
-function revalidateCardPaths(slug: string, ownerUsername?: string | null) {
-  revalidatePath("/dashboard");
-  revalidatePath("/dashboard/cards");
-  revalidatePath("/dashboard/sets");
-  revalidatePath("/gallery");
-  revalidateDiscoverySurfaces();
-  // Legacy slug-only path still serves as the redirector — busting its
-  // cache keeps stale redirects from sticking after a slug edit.
-  revalidatePath(`/card/${slug}`);
-  if (ownerUsername) {
-    revalidatePath(`/profile/${ownerUsername}`);
-    // Canonical public detail URL (Phase 11 chunk 11).
-    revalidatePath(`/card/${ownerUsername}/${slug}`);
-  }
 }
 
 /** Every public object a bake writes for a card — the HD PNG and its WebP
@@ -692,7 +666,8 @@ export async function updateCardAction(
   const visibilityChanged =
     update.visibility !== undefined && update.visibility !== existing.visibility;
   if (visibilityChanged) {
-    revalidatePath(`/api/cards/${row.id}/og`);
+    // Also purges the CDN copy — revalidatePath alone never reached it.
+    await purgeHiddenCard({ id: row.id, slug: row.slug }, ownerUsername);
   }
 
   // Re-bake the PNG AFTER the response is sent (next/server `after`) so Save
@@ -704,7 +679,9 @@ export async function updateCardAction(
     try {
       await bakeAndPersistCardRender(row.id, user.id);
       revalidateCardPaths(row.slug, ownerUsername);
-      if (visibilityChanged) revalidatePath(`/api/cards/${row.id}/og`);
+      if (visibilityChanged) {
+        await purgeHiddenCard({ id: row.id, slug: row.slug }, ownerUsername);
+      }
     } catch (error) {
       console.error(`[update-card] deferred bake failed for ${row.id}:`, error);
     }
@@ -751,7 +728,7 @@ export async function deleteCardAction(
     .remove(renderObjectPaths(existing.owner_id, cardId));
 
   const ownerUsername = await getOwnerUsername();
-  revalidateCardPaths(existing.slug, ownerUsername);
+  await purgeHiddenCard({ id: cardId, slug: existing.slug }, ownerUsername);
 
   return { ok: true, cardId };
 }
@@ -879,12 +856,10 @@ export async function updateCardsVisibilityAction(
 
   // Revalidate the surfaces that show card lists. Per-card slug paths are
   // skipped here — they'll refresh on next visit. Same posture as the
-  // single-card updateCardAction.
-  revalidatePath("/dashboard");
-  revalidatePath("/dashboard/cards");
-  revalidatePath("/gallery");
-  revalidatePath("/dashboard/sets");
-  revalidateDiscoverySurfaces();
+  // single-card updateCardAction. Cards going private also lose their CDN
+  // share image right away.
+  if (goingPrivate) await purgeHiddenCards(ids);
+  else revalidateCardListSurfaces();
 
   return { ok: true, count: ids.length };
 }
@@ -947,11 +922,7 @@ export async function deleteCardsAction(
     .from("card-renders")
     .remove(ids.flatMap((id) => renderObjectPaths(user.id, id)));
 
-  revalidatePath("/dashboard");
-  revalidatePath("/dashboard/cards");
-  revalidatePath("/gallery");
-  revalidatePath("/dashboard/sets");
-  revalidateDiscoverySurfaces();
+  await purgeHiddenCards(ids);
 
   return { ok: true, count: ids.length };
 }
