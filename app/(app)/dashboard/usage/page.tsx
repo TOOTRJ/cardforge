@@ -10,6 +10,7 @@ import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { AI_ACTION_COST, type AiActionLabel } from "@/lib/ai/rate-limit";
 import { isBillingEnabled } from "@/lib/billing/flags";
+import { describeLedgerReason } from "@/lib/billing/ledger-reasons";
 
 export const metadata: Metadata = {
   title: "AI usage",
@@ -233,7 +234,7 @@ export default async function UsagePage() {
                   key={entry.id}
                   className="flex items-center justify-between gap-3 px-5 py-3 text-sm"
                 >
-                  <span className="text-foreground">{entry.reason}</span>
+                  <span className="text-foreground">{describeLedgerReason(entry.reason)}</span>
                   <span className="flex items-center gap-4 text-xs text-muted">
                     <span
                       className={

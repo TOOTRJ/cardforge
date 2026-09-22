@@ -140,6 +140,7 @@ export default async function ProfilePage({
 
       <Suspense fallback={<PinnedRowSkeleton />}>
         <PinnedRow
+          ownerId={profile.id}
           pinnedIds={profile.pinned_card_ids ?? []}
           ownerUsername={profile.username ?? username}
         />
@@ -423,16 +424,18 @@ function ProfileLinks({ profile }: { profile: ProfileWithStats }) {
 }
 
 async function PinnedRow({
+  ownerId,
   pinnedIds,
   ownerUsername,
 }: {
+  ownerId: string;
   pinnedIds: string[];
   ownerUsername: string;
 }) {
   if (!pinnedIds || pinnedIds.length === 0) return null;
   const [profileOverrides, cards] = await Promise.all([
     getFrameProfileOverrides(),
-    listPinnedCardsForProfile(pinnedIds),
+    listPinnedCardsForProfile(ownerId, pinnedIds),
   ]);
   if (cards.length === 0) return null;
 

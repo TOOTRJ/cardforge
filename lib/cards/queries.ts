@@ -597,6 +597,7 @@ export async function listGalleryCards(
  * chose which card sits first.
  */
 export async function listPinnedCardsForProfile(
+  ownerId: string,
   pinnedIds: readonly string[],
 ): Promise<CardWithStats[]> {
   if (!isSupabaseConfigured()) return [];
@@ -604,10 +605,14 @@ export async function listPinnedCardsForProfile(
 
   try {
     const supabase = await createClient();
+    // Only the profile owner's own cards: the write path checks ownership,
+    // but a pinned_card_ids row written directly through PostgREST could
+    // still put someone else's card on this profile.
     const { data, error } = await supabase
       .from("cards")
       .select("*")
       .in("id", pinnedIds as string[])
+      .eq("owner_id", ownerId)
       .eq("visibility", "public");
 
     if (error || !data || data.length === 0) return [];

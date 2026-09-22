@@ -90,10 +90,11 @@ export default function AboutPage() {
 
       <h2>Contact</h2>
       <p>
-        Bugs, feature requests, partnership questions: open an issue on the
-        repo or email the team at the address listed in your{" "}
-        <Link href="/settings">account settings</Link> once we publish a
-        contact channel publicly.
+        Bugs, feature requests, takedown or privacy requests, partnership
+        questions: use the <Link href="/feedback">feedback form</Link> (pick
+        the category that fits, or &ldquo;Other&rdquo;). It lands in the
+        team&apos;s inbox and you&apos;ll get a reply in your account
+        messages.
       </p>
 
       <h2>Legal</h2>

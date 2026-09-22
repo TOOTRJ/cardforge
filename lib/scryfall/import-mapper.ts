@@ -36,6 +36,8 @@ const KNOWN_SUPERTYPES = new Set([
   "World",
   "Ongoing",
   "Tribal",
+  // Scryfall renamed Tribal → Kindred (2024); both spellings appear in type lines.
+  "Kindred",
   "Host",
   "Elite",
 ]);

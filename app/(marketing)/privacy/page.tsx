@@ -176,8 +176,9 @@ export default function PrivacyPage() {
 
       <h2>9. Contact</h2>
       <p>
-        Questions or requests? See the contact channels on the{" "}
-        <Link href="/about">about page</Link>.
+        Questions, access or deletion requests? Send them through the{" "}
+        <Link href="/feedback">feedback form</Link> — it reaches the team
+        directly. (Account deletion itself is self-serve under Settings.)
       </p>
     </LegalPageShell>
   );

@@ -182,9 +182,13 @@ async function convert(out, pack, colorKey, srcFile, fill, seeds) {
   return ((cut / (W * H)) * 100).toFixed(1);
 }
 
+// `future` is a starting config for a frame no template references yet — it
+// only builds when asked for by name, so a plain run doesn't emit an unused
+// public/frames/future asset set.
+const OPT_IN_ONLY = new Set(["future"]);
 const only = process.argv.slice(2);
 for (const [name, cfg] of Object.entries(FRAMES)) {
-  if (only.length && !only.includes(name)) continue;
+  if (only.length ? !only.includes(name) : OPT_IN_ONLY.has(name)) continue;
   fs.mkdirSync(cfg.out, { recursive: true });
   for (const [key, file] of Object.entries(cfg.map)) {
     const pct = await convert(cfg.out, cfg.pack, key, file, cfg.fill, cfg.seeds);
