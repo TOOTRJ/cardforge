@@ -63,6 +63,8 @@ import {
   type DeckFormat,
 } from "@/types/deck";
 import type { Visibility } from "@/types/card";
+import { CapacityNotice } from "@/components/billing/capacity-notice";
+import type { CardCapacity } from "@/lib/billing/capacity-copy";
 
 type BuildMode = "ai" | "import" | "empty";
 
@@ -83,10 +85,13 @@ export function DeckWizard({
   userId,
   aiConfigured,
   maxCards,
+  capacity,
 }: {
   userId: string;
   aiConfigured: boolean;
   maxCards: number;
+  /** Saved-card usage vs. the plan cap — every generated card is a saved card. */
+  capacity: CardCapacity | null;
 }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
@@ -535,6 +540,7 @@ export function DeckWizard({
                   { label: `Full deck (${fullSize})`, value: Math.min(fullSize, maxCards) },
                 ]}
               />
+              <CapacityNotice capacity={capacity} adding={size} />
 
               <div className="flex flex-wrap items-center gap-3 rounded-lg border border-dashed border-border/60 bg-elevated/30 px-4 py-3">
                 <Lock className="h-4 w-4 text-subtle" aria-hidden />

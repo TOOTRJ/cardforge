@@ -182,3 +182,12 @@ Rules and gotchas:
   until a confirmed drop migration — production held 8 sets from 5 owners at
   removal time. A card's printed set symbol (`set_icon_url` / `set_icon_code`,
   the Set icon step) is a rendering feature and stays.
+- Saved-card capacity is enforced in the DATABASE (migration 0104:
+  `card_capacity_for()` + the `cards_enforce_capacity` trigger, advisory-locked
+  per owner) and mirrored in the app: `CARD_CAPACITY` in `lib/billing/plans.ts`
+  (a unit test keeps the SQL in sync), `getCardCapacity()` +
+  `describeCapacity()` feed the `CapacityNotice` warnings (creator, deck
+  wizard, in-deck AI panel, My Cards meter), the jobs route refuses an
+  over-cap batch with `code: "CARD_CAPACITY"`, and `createCardAction` maps the
+  trigger's `card_capacity_exceeded` to the upgrade prompt. Change the caps in
+  both places together.

@@ -31,6 +31,7 @@ import {
   incrementDeckView,
   listDeckCards,
   viewerLikesDeck,
+  countRemixableDeckCards,
 } from "@/lib/decks/queries";
 import { computeDeckAnalytics } from "@/lib/decks/analytics";
 import { validateDeck } from "@/lib/decks/format-rules";
@@ -43,6 +44,7 @@ import {
   coverObjectPosition,
   type DeckFormat,
 } from "@/types/deck";
+import { getCardCapacity } from "@/lib/cards/capacity";
 
 type Params = { slug: string };
 
@@ -259,6 +261,8 @@ export default async function DeckDetailPage({
                 userId={user.id}
                 aiConfigured={isDesignAiConfigured()}
                 maxCards={await batchCardLimit()}
+                capacity={await getCardCapacity()}
+                remixableCount={await countRemixableDeckCards(deck.id)}
                 aiSeed={await getDeckAiSeed(deck.id)}
                 openImport={(await searchParams).import === "1"}
               />

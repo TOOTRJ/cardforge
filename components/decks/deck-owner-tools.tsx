@@ -31,6 +31,7 @@ import { DeleteDeckDialog } from "@/components/decks/delete-deck-dialog";
 import { AiDeckPanel } from "@/components/decks/ai-deck-panel";
 import { cn } from "@/lib/utils";
 import type { Deck } from "@/types/deck";
+import type { CardCapacity } from "@/lib/billing/capacity-copy";
 
 export type DeckTool = "details" | "add" | "remix";
 const EVENT = "pipglyph:deck-tool";
@@ -70,11 +71,15 @@ export function DeckOwnerTools({
   maxCards,
   aiSeed,
   openImport = false,
+  capacity,
+  remixableCount,
 }: {
   deck: Deck;
   userId: string;
   aiConfigured: boolean;
   maxCards: number;
+  capacity: CardCapacity | null;
+  remixableCount: number;
   aiSeed: { theme: string | null; style: string | null } | null;
   openImport?: boolean;
 }) {
@@ -138,6 +143,7 @@ export function DeckOwnerTools({
               mode="add"
               aiConfigured={aiConfigured}
               maxCards={maxCards}
+              capacity={capacity}
               deckId={deck.id}
               initialTheme={aiSeed?.theme}
               initialStyle={aiSeed?.style}
@@ -163,6 +169,8 @@ export function DeckOwnerTools({
               mode="remix"
               aiConfigured={aiConfigured}
               maxCards={maxCards}
+              capacity={capacity}
+              remixableCount={remixableCount}
               deckId={deck.id}
               onStarted={() => setOpen(null)}
             />

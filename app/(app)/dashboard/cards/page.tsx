@@ -25,6 +25,8 @@ import {
   listRemixParentLinks,
 } from "@/lib/cards/queries";
 import { getCurrentUser } from "@/lib/supabase/server";
+import { CapacityNotice } from "@/components/billing/capacity-notice";
+import { getCardCapacity } from "@/lib/cards/capacity";
 
 export const metadata: Metadata = {
   title: "My cards",
@@ -61,6 +63,8 @@ export default async function MyCardsPage({ searchParams }: PageProps) {
           </Button>
         }
       />
+
+      <CapacityNotice capacity={await getCardCapacity()} variant="usage" className="mt-6" />
 
       <Suspense fallback={<MyCardsSkeleton view={view} />}>
         <MyCardsLibrary view={view} filter={filter} sort={sort} />

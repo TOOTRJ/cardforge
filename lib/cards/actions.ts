@@ -40,6 +40,8 @@ import type { ZodIssue } from "zod";
 import { isUuid } from "@/lib/ids";
 import { lookupUsername } from "@/lib/profile/username";
 import { buildCardPath } from "@/lib/cards/utils";
+import { isCapacityViolation } from "@/lib/billing/capacity-copy";
+import { CARD_CAPACITY_UNLIMITED } from "@/lib/billing/plans";
 
 // ---------------------------------------------------------------------------
 // Result shape — every action returns either a typed success payload or a
@@ -338,6 +340,18 @@ export async function createCardAction(
     .select("id, slug")
     .single();
 
+  // The database enforces the cap too (migration 0104) — the pre-check above
+  // can lose a race between two saves, the trigger can't.
+  if (error && isCapacityViolation(error.message)) {
+    return {
+      ok: false,
+      code: "UPGRADE_REQUIRED",
+      formError:
+        entitlements.cardCapacity === CARD_CAPACITY_UNLIMITED
+          ? "You've reached your plan's card limit. Upgrade for more space."
+          : `You've reached your ${entitlements.cardCapacity}-card limit. Upgrade for more space.`,
+    };
+  }
   if (error || !row) {
     return {
       ok: false,

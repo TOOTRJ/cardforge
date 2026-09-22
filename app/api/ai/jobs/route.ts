@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createClient, getCurrentUser } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { isDesignAiConfigured } from "@/lib/ai/provider";
 import {
@@ -33,6 +33,9 @@ import { AI_DECK_FORMATS } from "@/lib/ai/deck-design";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import { rateLimitedResponse } from "@/lib/api/responses";
+import { getCardCapacity } from "@/lib/cards/capacity";
+import { countRemixableDeckCards } from "@/lib/decks/queries";
+import { describeCapacity, remainingCapacity } from "@/lib/billing/capacity-copy";
 
 // ---------------------------------------------------------------------------
 // POST /api/ai/jobs — create an AI batch-generation job and run its PLAN
@@ -238,18 +241,33 @@ export async function POST(request: Request) {
     // limit, sizing on the ceiling would demand 101 credits to remix a
     // 5-card deck). RLS hides decks that aren't the caller's; the count
     // then reads 0 and createDeckRemixJob rejects ownership downstream.
-    const supabase = await createClient();
-    const { count } = await supabase
-      .from("deck_cards")
-      .select("*", { count: "exact", head: true })
-      .eq("deck_id", parsed.data.deck_id)
-      .or("card_id.not.is.null,scryfall_id.not.is.null");
-    size = Math.max(1, Math.min(limit, count ?? limit));
+    const count = await countRemixableDeckCards(parsed.data.deck_id);
+    size = Math.max(1, Math.min(limit, count || limit));
   } else {
     // A missing size defaults to the classic 3-card batch, never the
     // ceiling — the UI always sends an explicit size; a bare API call
     // shouldn't get a 100-card (and 101-credit) job by omission.
     size = clampBatchSize(parsed.data.size ?? BATCH_CARD_LIMIT, limit);
+  }
+
+  // Every generated card is a saved card: refuse an over-cap batch up front
+  // with the numbers rather than let it fail mid-way (the pre-flight notice
+  // in the UI says the same; migration 0104's trigger is the backstop).
+  if (parsed.data.kind !== "card_fill") {
+    const capacity = await getCardCapacity();
+    const remaining = capacity ? remainingCapacity(capacity) : null;
+    if (capacity && remaining !== null && size > remaining) {
+      return NextResponse.json(
+        {
+          ok: false,
+          code: "CARD_CAPACITY",
+          error:
+            describeCapacity(capacity, size)?.message ??
+            "This would take you over your saved-card limit.",
+        },
+        { status: 403 },
+      );
+    }
   }
 
   const rate = await checkAiRateLimit(user.id);

@@ -30,6 +30,7 @@ import { getCreatorLabMode } from "@/lib/creator/lab";
 import { canUseCreatorLab, resolveCreatorLayout } from "@/lib/creator/lab-shared";
 import { FlaskConical, Layers3 } from "lucide-react";
 import { isUuid } from "@/lib/ids";
+import { getCardCapacity } from "@/lib/cards/capacity";
 
 export const metadata: Metadata = {
   title: "Create",
@@ -234,6 +235,7 @@ export default async function CreatePage({
           profileOverrides={await getFrameProfileOverrides()}
           initialTag={initialTag}
           activeChallenge={await getCurrentChallenge()}
+          capacity={await getCardCapacity()}
           defaultArtistCredit={profile?.display_name || profile?.username || ""}
           layout={layout}
           isPaid={entitlements.removeWatermark}

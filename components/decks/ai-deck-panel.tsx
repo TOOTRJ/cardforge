@@ -23,6 +23,8 @@ import {
 } from "@/components/ai/use-generation-job";
 import { GenerationProgress } from "@/components/ai/generation-progress";
 import { StylePicker } from "@/components/ai/style-picker";
+import { CapacityNotice } from "@/components/billing/capacity-notice";
+import type { CardCapacity } from "@/lib/billing/capacity-copy";
 
 // ---------------------------------------------------------------------------
 // AiDeckPanel — deck-side AI generation. Two modes on the jobs pipeline:
@@ -64,10 +66,16 @@ export function AiDeckPanel({
   initialTheme,
   initialStyle,
   onStarted,
+  capacity,
+  remixableCount,
 }: {
   mode: Mode;
   aiConfigured: boolean;
   maxCards: number;
+  /** Saved-card usage vs. the plan cap — every generated card is a saved card. */
+  capacity: CardCapacity | null;
+  /** Remix mode: entries that will become cards (the batch is min of this and maxCards). */
+  remixableCount?: number;
   /** Required for mode="remix" and mode="add": the target deck. */
   deckId?: string;
   /** Prefill (mode="add"): the theme/style the deck was originally
@@ -244,6 +252,11 @@ export function AiDeckPanel({
           />
         </div>
       ) : null}
+
+      <CapacityNotice
+        capacity={capacity}
+        adding={mode === "remix" ? Math.min(maxCards, remixableCount ?? maxCards) : size}
+      />
 
       <FieldGroup
         label="Theme"
