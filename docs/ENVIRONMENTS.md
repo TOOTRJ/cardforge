@@ -134,7 +134,7 @@ auth Site URL + redirect allow-list. To wipe dev completely: Supabase dashboard
 Other scoping, on purpose:
 
 - **Production only:** Stripe secret + webhook secret, `NEXT_PUBLIC_BILLING_ENABLED`,
-  Resend key + senders, `CRON_SECRET`, GA id. Previews can't charge, can't
+  Resend key + senders, `CRON_SECRET`, `INDEXNOW_KEY` (production only, see `lib/seo/indexnow.ts`), GA id. Previews can't charge, can't
   email, and Vercel only runs crons on production deployments anyway.
 - **`AI_GATEWAY_API_KEY`:** a *separate, budget-capped* key on Preview +
   Development (set 2026-09-21); production keeps its own. Gotcha: `vercel env

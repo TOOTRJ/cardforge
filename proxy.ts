@@ -25,6 +25,15 @@ export async function proxy(request: NextRequest) {
     url.pathname = "/create";
     return NextResponse.redirect(url, 308);
   }
+  // The sets feature was removed (PR #337, migration 0105) after months of
+  // inbound links and indexed copy for /sets and /set/<slug>. Send that
+  // equity to the nearest living collection surface instead of 404ing.
+  if (requestPath === "/sets" || requestPath.startsWith("/set/")) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/decks";
+    url.search = "";
+    return NextResponse.redirect(url, 308);
+  }
   if (requestPath === "/create") {
     const signedIn = request.cookies
       .getAll()

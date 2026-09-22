@@ -48,7 +48,8 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const challenge = await getChallengeBySlug(slug);
-  if (!challenge) return { title: "Challenge not found" };
+  // An unknown challenge is a real 404, never a titled 200 (soft 404).
+  if (!challenge) notFound();
   return {
     title: `${challenge.title} — Design Challenge`,
     description: challenge.description.slice(0, 160),

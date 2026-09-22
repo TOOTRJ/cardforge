@@ -33,7 +33,7 @@ function JsonLd() {
         name: "PipGlyph",
         url: baseUrl,
         description:
-          "PipGlyph is a free custom Magic: The Gathering card creator and mana pip editor. Design creatures, instants, sorceries, planeswalkers, enchantments, artifacts, and full expansion sets with a live preview editor.",
+          "PipGlyph is a free custom Magic: The Gathering card creator and mana pip editor. Design creatures, instants, sorceries, planeswalkers, enchantments, artifacts, and whole decks with a live preview editor.",
         applicationCategory: "GameApplication",
         operatingSystem: "Web Browser",
         offers: {
@@ -48,7 +48,7 @@ function JsonLd() {
           "Oracle text editor",
           "WUBRG color identity",
           "Planeswalker loyalty abilities",
-          "Card set builder",
+          "Deck builder with AI generation",
           "AI rules text assistant",
           "PNG export",
           "Community gallery",
@@ -116,7 +116,7 @@ const cinzel = Cinzel({
 const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
 const description =
-  "PipGlyph is the MTG card creator and mana pip editor for Magic: The Gathering fans. Design cards with perfect pips, text, and frames — then share full expansion sets with your playgroup in seconds.";
+  "PipGlyph is the MTG card creator and mana pip editor for Magic: The Gathering fans. Design cards with perfect pips, text, and frames — then share cards and whole decks with your playgroup in seconds.";
 
 export const metadata: Metadata = {
   // metadataBase lets relative OG image URLs (e.g. /api/cards/[id]/og)

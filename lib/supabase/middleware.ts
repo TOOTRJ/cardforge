@@ -27,7 +27,7 @@ const PROTECTED_PREFIXES = [
   "/admin",
 ];
 // /card/…, /deck/… and /set/… are public; only their editors are private.
-const PROTECTED_PATTERN = /^\/(card|deck|set)\/.+\/edit\/?$/;
+const PROTECTED_PATTERN = /^\/(card|deck)\/.+\/edit\/?$/;
 const AUTH_REDIRECT_PREFIXES = ["/login", "/signup"];
 
 function pathMatches(path: string, prefixes: readonly string[]) {

@@ -1,3 +1,4 @@
+import { cache } from "react";
 import "server-only";
 
 import { createPublicClient } from "@/lib/supabase/public";
@@ -37,9 +38,9 @@ export async function listChallenges(): Promise<Challenge[]> {
   }
 }
 
-export async function getChallengeBySlug(
+export const getChallengeBySlug = cache(async (
   slug: string,
-): Promise<Challenge | null> {
+): Promise<Challenge | null> => {
   if (!isSupabaseConfigured()) return null;
   try {
     const supabase = createPublicClient();
@@ -53,7 +54,7 @@ export async function getChallengeBySlug(
   } catch {
     return null;
   }
-}
+});
 
 /** The featured challenge currently in its window (gallery banner / hero).
  *  Soonest-closing wins when several are featured. */

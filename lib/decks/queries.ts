@@ -1,3 +1,4 @@
+import { cache } from "react";
 import "server-only";
 
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
@@ -352,9 +353,9 @@ export async function countPublicDecks(): Promise<number> {
 
 /** Deck + owner profile for the detail page. RLS filters non-readable rows
  *  (viewer-dependent, so the route stays dynamic — matching set pages). */
-export async function getDeckBySlugWithOwner(
+export const getDeckBySlugWithOwner = cache(async (
   slug: string,
-): Promise<DeckWithOwner | null> {
+): Promise<DeckWithOwner | null> => {
   if (!isSupabaseConfigured()) return null;
   try {
     const supabase = await createClient();
@@ -384,7 +385,7 @@ export async function getDeckBySlugWithOwner(
   } catch {
     return null;
   }
-}
+});
 
 // ---------------------------------------------------------------------------
 // Entries inside a deck
@@ -516,3 +517,20 @@ export async function countRemixableDeckCards(deckId: string): Promise<number> {
     return 0;
   }
 }
+
+/** How many entries a deck holds — the indexing gate for /deck/[slug]: an
+ *  empty deck page is thin and stays out of the index (noindex, follow) until
+ *  it has cards. Viewer-independent, cookie-free, cache()-deduped per request. */
+export const countDeckEntries = cache(async (deckId: string): Promise<number> => {
+  if (!isSupabaseConfigured()) return 0;
+  try {
+    const supabase = createPublicClient();
+    const { count } = await supabase
+      .from("deck_cards")
+      .select("id", { count: "exact", head: true })
+      .eq("deck_id", deckId);
+    return count ?? 0;
+  } catch {
+    return 0;
+  }
+});

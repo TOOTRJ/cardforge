@@ -27,11 +27,12 @@ import { getEntitlements } from "@/lib/billing/entitlements";
 import { QuickLikeButton } from "@/components/cards/quick-like-button";
 import { ShareTargets } from "@/components/cards/share-targets";
 import {
+  countDeckEntries,
+  countRemixableDeckCards,
   getDeckBySlugWithOwner,
   incrementDeckView,
   listDeckCards,
   viewerLikesDeck,
-  countRemixableDeckCards,
 } from "@/lib/decks/queries";
 import { computeDeckAnalytics } from "@/lib/decks/analytics";
 import { validateDeck } from "@/lib/decks/format-rules";
@@ -65,7 +66,9 @@ export async function generateMetadata({
     return { title: titleFromSlug(slug) };
   }
   const deck = await getDeckBySlugWithOwner(slug);
-  if (!deck) return { title: titleFromSlug(slug) };
+  // A missing/unreadable deck is a real 404, never a titled 200 (soft 404).
+  if (!deck) notFound();
+  const entryCount = deck.visibility === "public" ? await countDeckEntries(deck.id) : 0;
 
   const isShareable =
     deck.visibility === "public" || deck.visibility === "unlisted";
@@ -77,11 +80,15 @@ export async function generateMetadata({
   return {
     title: deck.title,
     description,
-    // Unlisted decks are reachable by link but shouldn't enter the index.
+    // Unlisted decks are reachable by link but shouldn't enter the index;
+    // an EMPTY public deck is thin content — crawlable, followed, not
+    // indexed until it holds cards.
     robots:
       deck.visibility !== "public"
         ? { index: false, follow: false }
-        : undefined,
+        : entryCount === 0
+          ? { index: false, follow: true }
+          : undefined,
     alternates: { canonical: `/deck/${deck.slug}` },
     openGraph: isShareable
       ? {

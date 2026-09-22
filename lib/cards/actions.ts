@@ -378,7 +378,7 @@ export async function createCardAction(
   }
 
   const ownerUsername = await getCurrentUsername();
-  revalidateCardPaths(row.slug, ownerUsername);
+  revalidateCardPaths(row.slug, ownerUsername, { visibility: insert.visibility });
   if (data.parent_card_id) {
     await revalidateParentCardPaths(data.parent_card_id);
   }
@@ -394,7 +394,7 @@ export async function createCardAction(
   after(async () => {
     try {
       await bakeAndPersistCardRender(row.id, user.id);
-      revalidateCardPaths(row.slug, ownerUsername);
+      revalidateCardPaths(row.slug, ownerUsername, { visibility: insert.visibility });
     } catch (error) {
       console.error(`[create-card] deferred bake failed for ${row.id}:`, error);
     }
@@ -576,7 +576,7 @@ export async function updateCardAction(
   }
 
   const ownerUsername = await getCurrentUsername();
-  revalidateCardPaths(row.slug, ownerUsername);
+  revalidateCardPaths(row.slug, ownerUsername, { visibility: update.visibility ?? existing.visibility });
   // Also revalidate the previous slug if it changed — both the legacy
   // redirector and the canonical username-namespaced URL need busting so
   // the old URL stops resolving to stale data.
@@ -606,7 +606,7 @@ export async function updateCardAction(
   after(async () => {
     try {
       await bakeAndPersistCardRender(row.id, user.id);
-      revalidateCardPaths(row.slug, ownerUsername);
+      revalidateCardPaths(row.slug, ownerUsername, { visibility: update.visibility ?? existing.visibility });
       if (visibilityChanged) {
         await purgeHiddenCard({ id: row.id, slug: row.slug }, ownerUsername);
       }
