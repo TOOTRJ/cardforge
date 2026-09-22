@@ -198,7 +198,7 @@ function extensionOf(url, fallback) {
 // search_vector).
 const DROP = new Set([
   "owner_id", "game_system_id", "template_id", "parent_card_id", "back_card_id",
-  "primary_set_id", "view_count", "likes_count", "share_count", "search_vector",
+  "view_count", "likes_count", "share_count", "search_vector",
   "color_count",
 ]);
 

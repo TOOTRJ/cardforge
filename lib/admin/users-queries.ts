@@ -101,7 +101,6 @@ export type AdminUserStats = {
   cardsUnlisted: number;
   cardsPrivate: number;
   decks: number;
-  sets: number;
   likesReceived: number;
   creditsSpentMonth: number;
   feedbackCount: number;
@@ -121,7 +120,6 @@ export async function getAdminUserStats(userId: string): Promise<AdminUserStats 
     cardsUnlisted: n(row.cards_unlisted),
     cardsPrivate: n(row.cards_private),
     decks: n(row.decks),
-    sets: n(row.sets),
     likesReceived: n(row.likes_received),
     creditsSpentMonth: n(row.credits_spent_month),
     feedbackCount: n(row.feedback_count),

@@ -75,7 +75,6 @@ export type Database = {
           owner_id: string;
           plan: Json | null;
           request: Json;
-          set_id: string | null;
           status: string;
           steps: Json;
           updated_at: string;
@@ -89,7 +88,6 @@ export type Database = {
           owner_id: string;
           plan?: Json | null;
           request?: Json;
-          set_id?: string | null;
           status?: string;
           steps?: Json;
           updated_at?: string;
@@ -103,7 +101,6 @@ export type Database = {
           owner_id?: string;
           plan?: Json | null;
           request?: Json;
-          set_id?: string | null;
           status?: string;
           steps?: Json;
           updated_at?: string;
@@ -114,13 +111,6 @@ export type Database = {
             columns: ["deck_id"];
             isOneToOne: false;
             referencedRelation: "decks";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "ai_generation_jobs_set_id_fkey";
-            columns: ["set_id"];
-            isOneToOne: false;
-            referencedRelation: "card_sets";
             referencedColumns: ["id"];
           },
         ];
@@ -547,87 +537,6 @@ export type Database = {
           },
         ];
       };
-      card_set_items: {
-        Row: {
-          card_id: string;
-          created_at: string;
-          id: string;
-          position: number;
-          set_id: string;
-        };
-        Insert: {
-          card_id: string;
-          created_at?: string;
-          id?: string;
-          position?: number;
-          set_id: string;
-        };
-        Update: {
-          card_id?: string;
-          created_at?: string;
-          id?: string;
-          position?: number;
-          set_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "card_set_items_card_id_fkey";
-            columns: ["card_id"];
-            isOneToOne: false;
-            referencedRelation: "cards";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "card_set_items_set_id_fkey";
-            columns: ["set_id"];
-            isOneToOne: false;
-            referencedRelation: "card_sets";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      card_sets: {
-        Row: {
-          cover_url: string | null;
-          created_at: string;
-          description: string | null;
-          icon_code: string | null;
-          icon_url: string | null;
-          id: string;
-          owner_id: string;
-          slug: string;
-          title: string;
-          updated_at: string;
-          visibility: string;
-        };
-        Insert: {
-          cover_url?: string | null;
-          created_at?: string;
-          description?: string | null;
-          icon_code?: string | null;
-          icon_url?: string | null;
-          id?: string;
-          owner_id: string;
-          slug: string;
-          title: string;
-          updated_at?: string;
-          visibility?: string;
-        };
-        Update: {
-          cover_url?: string | null;
-          created_at?: string;
-          description?: string | null;
-          icon_code?: string | null;
-          icon_url?: string | null;
-          id?: string;
-          owner_id?: string;
-          slug?: string;
-          title?: string;
-          updated_at?: string;
-          visibility?: string;
-        };
-        Relationships: [];
-      };
       card_templates: {
         Row: {
           config: Json;
@@ -697,7 +606,6 @@ export type Database = {
           back_card_id: string | null;
           parent_card_id: string | null;
           power: string | null;
-          primary_set_id: string | null;
           rarity: string | null;
           rendered_at: string | null;
           rendered_image_url: string | null;
@@ -747,7 +655,6 @@ export type Database = {
           back_card_id?: string | null;
           parent_card_id?: string | null;
           power?: string | null;
-          primary_set_id?: string | null;
           rarity?: string | null;
           layout_version?: number | null;
           rendered_at?: string | null;
@@ -797,7 +704,6 @@ export type Database = {
           back_card_id?: string | null;
           parent_card_id?: string | null;
           power?: string | null;
-          primary_set_id?: string | null;
           rarity?: string | null;
           layout_version?: number | null;
           rendered_at?: string | null;
@@ -834,13 +740,6 @@ export type Database = {
             columns: ["parent_card_id"];
             isOneToOne: false;
             referencedRelation: "cards";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "cards_primary_set_id_fkey";
-            columns: ["primary_set_id"];
-            isOneToOne: false;
-            referencedRelation: "card_sets";
             referencedColumns: ["id"];
           },
           {
@@ -984,27 +883,6 @@ export type Database = {
           comp_expires_at?: string | null;
           card_limit_override?: number | null;
           export_watermark_text?: string | null;
-        };
-        Relationships: [];
-      };
-      set_likes: {
-        Row: {
-          created_at: string;
-          id: string;
-          set_id: string;
-          user_id: string;
-        };
-        Insert: {
-          created_at?: string;
-          id?: string;
-          set_id: string;
-          user_id: string;
-        };
-        Update: {
-          created_at?: string;
-          id?: string;
-          set_id?: string;
-          user_id?: string;
         };
         Relationships: [];
       };
@@ -1701,10 +1579,6 @@ export type Database = {
         Args: { p_owner_id: string };
         Returns: boolean;
       };
-      card_like_rank_in_set: {
-        Args: { p_card_id: string; p_set_id: string };
-        Returns: number;
-      };
       patch_job_step: {
         Args: { p_job_id: string; p_step_key: string; p_patch: Json };
         Returns: Json;
@@ -1794,7 +1668,6 @@ export type Database = {
           cards_unlisted: number;
           cards_private: number;
           decks: number;
-          sets: number;
           likes_received: number;
           credits_spent_month: number;
           feedback_count: number;
@@ -1958,12 +1831,7 @@ export type ScryfallCallInsert = TablesInsert<"scryfall_calls">;
 export type CardLike = Tables<"card_likes">;
 export type CardLikeInsert = TablesInsert<"card_likes">;
 
-export type CardSet = Tables<"card_sets">;
-export type CardSetInsert = TablesInsert<"card_sets">;
-export type CardSetUpdate = TablesUpdate<"card_sets">;
 
-export type CardSetItem = Tables<"card_set_items">;
-export type CardSetItemInsert = TablesInsert<"card_set_items">;
 
 // Decks: quantity-aware card lists (real Scryfall cards + custom proxies).
 export type Deck = Tables<"decks">;
