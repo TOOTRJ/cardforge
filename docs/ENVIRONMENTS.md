@@ -204,6 +204,18 @@ feature branch ──PR──▶ CI: typecheck · lint · unit · e2e (local Sup
 `npm run db:push:prod` still exists (reads `SUPABASE_PROD_REF`, requires typing
 `production`). For genuine emergencies only.
 
+### Branch protection on `main` (ruleset "main", created 2026-09-21)
+
+Direct pushes and force-pushes to `main` are blocked; changes arrive by PR
+only, and the merge button stays grey until **`Typecheck, lint, unit`**,
+**`E2E (local Supabase)`** and **`Supabase Preview`** all pass on the PR's
+latest commit (a *skipped* Supabase Preview — PRs without `supabase/`
+changes — satisfies it). "Require up to date" is off, so merging one PR
+doesn't force the others to rebase. **Repository admins can bypass** the
+ruleset (the merge button offers it, and it's logged) — that is the escape
+hatch for the day Supabase's runner is down and a PR's check never reports.
+Manage it at Settings → Rules → Rulesets.
+
 ## 5. What is deliberately NOT done
 
 - **No production data in dev.** `--with-data` branching clones real users'
