@@ -119,11 +119,12 @@ export type JobStep = {
    *  older than 5 minutes is treated as dead and may be reclaimed. */
   claimed_at?: string | null;
   /** The ledger ref of the charge attempt that COMPLETED this step
-   *  ("spend:{jobId}:{stepKey}:{uuid}"), stamped on a charged "done". The
-   *  reconcile-credits cron treats a spend as legitimate only when its step
-   *  is done AND carries that exact ref — any other aged charge (crashed
-   *  attempt, superseded duplicate) gets refunded. Null when the winning
-   *  attempt didn't charge (admin / billing off). */
+   *  ("spend:{jobId}:{stepKey}:{uuid}"), stamped on a charged "done".
+   *  patch_job_step settles that ledger row (credit_ledger.settled_at,
+   *  migration 0106) in the same transaction as the done-write; the
+   *  reconcile-credits cron refunds any aged UNSETTLED spend (crashed
+   *  attempt, superseded duplicate) without reading job rows. Null when the
+   *  winning attempt didn't charge (admin / billing off). */
   spend_ref?: string | null;
   /** card_fill only: the generated fields, poured into the open creator
    *  form by the client (nothing is inserted into `cards`). */
@@ -1653,9 +1654,9 @@ async function patchJobStep(
   jobId: string,
   step: JobStep,
 ): Promise<RunStepResult> {
-  // Service role (see claimJobStep): the step's result is the reconcile
-  // cron's proof that a charge earned its keep, so it must be written by
-  // the server, never by a client-controlled row update.
+  // Service role (see claimJobStep): the step's done-write is what settles
+  // its charge (patch_job_step → settle_spend, migration 0106), so it must
+  // be written by the server, never by a client-controlled row update.
   const supabase = createAdminClient();
   // Normalize optional fields to null so the jsonb merge CLEARS a prior value
   // (e.g. a failed→done retry must drop the old error) — JSON drops `undefined`.
@@ -1666,8 +1667,9 @@ async function patchJobStep(
     card_id: step.card_id ?? null,
     error: step.error ?? null,
     error_code: step.error_code ?? null,
-    // Which charge attempt completed the step (reconciliation proof) — null
-    // clears a stale ref from a prior attempt.
+    // Which charge attempt completed the step — patch_job_step settles it
+    // atomically with this write. null clears a stale ref from a prior
+    // attempt (and settles nothing).
     spend_ref: step.spend_ref ?? null,
     // card_fill: the generated fields ride on the step (the plan is never
     // sent to the client). null keeps the key explicit for other kinds.

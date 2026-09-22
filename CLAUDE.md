@@ -163,7 +163,12 @@ Rules and gotchas:
   `OPENAI_API_KEY` is moderation-only (the omni-moderation scan on human
   uploads). AI batch jobs (deck/set/card) step through `patch_job_step`
   (atomic per-step write); the client runs a few steps in parallel, so never
-  reintroduce a whole-`steps`-array overwrite.
+  reintroduce a whole-`steps`-array overwrite. Credit settlement (0106):
+  `patch_job_step` stamps `credit_ledger.settled_at` (via `settle_spend`) in
+  the same transaction as a step's done-write and the sync idea routes call
+  `settleSpend()`; the reconcile cron refunds every aged UNSETTLED `spend:`
+  row and never reads job rows — a new charged flow that forgets to settle
+  its ref hands the credit back to the user a day later.
 - Shared helpers — never re-implement: `isUuid`/`randomId` (`lib/ids.ts`),
   `rateLimitedResponse` + `cronRouteGuard` (`lib/api/*`), date strings
   (`lib/format/dates.ts`), `lookupUsername`/`revalidateProfilePage`

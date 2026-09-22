@@ -21,7 +21,9 @@ import type { JobStep } from "@/lib/ai/generation-jobs";
  * kill mid-body — the one failure this wrapper CANNOT refund — is picked up
  * by the reconcile-credits cron, and the two refund paths can never both
  * land for one spend. A charged success stamps the ref onto the step
- * (spend_ref) as the cron's proof the charge earned its keep.
+ * (spend_ref); patch_job_step then settles that ledger row in the same
+ * transaction as the done-write (migration 0106), which is what keeps the
+ * cron's hands off it.
  */
 export async function withCreditedStep(
   userId: string,

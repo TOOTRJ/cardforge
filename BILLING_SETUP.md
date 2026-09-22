@@ -192,7 +192,12 @@ immediately.
   route rejects anything else.
 - Runs daily (`0 6 * * *`); only the first successful run each month grants.
   A second daily cron (`/api/cron/reconcile-credits`, `30 6 * * *`) refunds
-  AI-job credit charges orphaned by platform kills. Trigger manually:
+  AI credit charges orphaned by platform kills: every `spend:` ledger row
+  older than 15 minutes that was never settled (`credit_ledger.settled_at`,
+  stamped by `patch_job_step` / `settleSpend()`; migration 0106). Its JSON
+  reports `scanned` / `settled` / `refunded` / `failed` — `settled: 0` next
+  to many refunds means settlement broke, not that users crashed. Trigger
+  manually:
   `curl -H "Authorization: Bearer $CRON_SECRET" https://YOUR_DOMAIN/api/cron/refill-credits`
 
 ## 7. Known follow-ups
