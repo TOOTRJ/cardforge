@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { renderVersionOf } from "@/lib/cards/render-version";
 import { createPublicClient } from "@/lib/supabase/public";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getSiteBaseUrl } from "@/lib/site-url";
@@ -66,6 +67,7 @@ export async function GET(request: NextRequest) {
     id: string;
     title: string;
     updated_at: string;
+    rendered_at: string | null;
     frame_style: unknown;
   } | null = null;
   let ownerDisplay = username;
@@ -83,7 +85,7 @@ export async function GET(request: NextRequest) {
 
     const { data } = await supabase
       .from("cards")
-      .select("id, title, updated_at, visibility, frame_style")
+      .select("id, title, updated_at, rendered_at, visibility, frame_style")
       .eq("owner_id", profile.id)
       .eq("slug", slug)
       .in("visibility", ["public", "unlisted"])
@@ -107,9 +109,9 @@ export async function GET(request: NextRequest) {
   const width = Math.round(natural.width * scale);
   const height = Math.round(natural.height * scale);
 
-  const version = Date.parse(card.updated_at);
+  const version = renderVersionOf(card);
   const imageUrl = `${siteBase}/api/cards/${card.id}/og${
-    Number.isFinite(version) ? `?v=${version}` : ""
+    version ? `?v=${version}` : ""
   }`;
 
   return NextResponse.json(

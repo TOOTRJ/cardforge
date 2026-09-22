@@ -1593,6 +1593,19 @@ export type Database = {
         Args: { p_ref: string };
         Returns: boolean;
       };
+      // Migration 0108 — hub-page aggregates (public reads).
+      gallery_tag_counts: {
+        Args: Record<string, never>;
+        Returns: { tag: string; card_count: number }[];
+      };
+      gallery_type_counts: {
+        Args: Record<string, never>;
+        Returns: { card_type: string; card_count: number }[];
+      };
+      public_deck_format_counts: {
+        Args: Record<string, never>;
+        Returns: { format: string; deck_count: number }[];
+      };
       claim_job_step: {
         Args: { p_job_id: string; p_step_key: string | null };
         Returns: Json;

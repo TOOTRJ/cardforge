@@ -25,6 +25,20 @@ test.describe("unknown public pages are real 404s", () => {
   }
 });
 
+test.describe("browse hubs", () => {
+  test.skip(!hasDatabase, "needs the local Supabase stack (.env.e2e)");
+  test("type and format hubs render; unknown tags and the legacy type are 404s", async ({ request }) => {
+    for (const path of ["/gallery/type/creature", "/decks/format/commander"]) {
+      const response = await request.get(path);
+      expect(response.status(), path).toBe(200);
+      expect(await response.text()).toContain("<h1");
+    }
+    for (const path of ["/gallery/tag/no-such-tag-ever", "/gallery/type/spell", "/decks/format/nope"]) {
+      expect((await request.get(path, { maxRedirects: 0 })).status(), path).toBe(404);
+    }
+  });
+});
+
 test("retired URLs 308 to living pages", async ({ request }) => {
   for (const [from, to] of [
     ["/preview", "/create"],

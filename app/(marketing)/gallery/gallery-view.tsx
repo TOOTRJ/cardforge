@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, Compass, Sparkles } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { CardPreviewSkeleton } from "@/components/cards/card-preview-skeleton";
 import { GalleryCardTile } from "@/components/cards/gallery-card-tile";
+import { HubLinks } from "@/components/cards/hub-links";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -465,6 +466,7 @@ async function GalleryResults({ filters }: { filters: ParsedFilters }) {
           <GalleryCardTile key={card.id} card={card} isAuthed={false} />
         ))}
       </div>
+      <HubLinks currentType={filters.cardType} />
       {hasPrev || hasMore ? (
         <div className="mt-10 flex items-center justify-between gap-3 border-t border-border/40 pt-6">
           <span className="text-xs text-subtle">Page {page}</span>

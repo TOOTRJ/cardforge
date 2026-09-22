@@ -79,3 +79,9 @@ instead. Each bullet: what the header says, and what is true now.
   `settle_spend`) in the same transaction as the done-write, the sync idea
   routes settle their own refs through `settleSpend()`, and the sweep
   refunds aged UNSETTLED spends without reading `ai_generation_jobs` at all.
+- **0100 ("ignore the counters when deciding whether a card changed")** —
+  the guard also ignores the RENDER columns since 0108 (`rendered_image_url`,
+  `rendered_thumb_url`, `rendered_at`, `layout_version`): a bake or a render
+  sweep is not an edit, so `updated_at`, the sitemap's lastmod and the card
+  page's `dateModified` stay honest. The share-image cache-buster keys on
+  `max(updated_at, rendered_at)` (`lib/cards/render-version.ts`).

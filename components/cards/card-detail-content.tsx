@@ -1,5 +1,13 @@
 import Link from "next/link";
-import { VISIBILITY_LABELS } from "@/types/card";
+import { tagSlug } from "@/lib/cards/tag-slug";
+import {
+  VISIBILITY_LABELS,
+  COLOR_IDENTITY_LABELS,
+  RARITY_LABELS,
+  type CardType,
+  type ColorIdentity,
+  type Rarity,
+} from "@/types/card";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
@@ -54,6 +62,10 @@ import {
 } from "@/lib/cards/queries";
 import { countDecksForCard } from "@/lib/decks/queries";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
+import { listPublicDecksContaining } from "@/lib/decks/queries";
+import { buildTypeLine, describeManaCost } from "@/lib/cards/card-display";
+import { renderVersionOf } from "@/lib/cards/render-version";
+import { isLandscapeTemplate, naturalRenderSize } from "@/lib/render/card-image";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { countPublicRemixesBySource } from "@/lib/cards/source-queries";
 import { listCommentsForCard } from "@/lib/cards/comments-queries";
@@ -135,6 +147,7 @@ export async function CardDetailContent({
     remixParent,
     overallRank,
     trendingSignals,
+    inDecks,
   ] = await Promise.all([
     // v2 back face: the referenced card, if any and if it's readable (RLS
     // scopes the anon client to shareable cards). Rendered on the flip.
@@ -178,6 +191,7 @@ export async function CardDetailContent({
     getCardTrendingSignals(card.id, card.owner_id, card.created_at),
     // The owner's custom footer mark (paid perk) — the live hero preview
     // prints it so the page matches exports and bakes.
+    variant === "page" ? listPublicDecksContaining(card.id) : Promise.resolve([]),
   ]);
 
   // Bump the view tally after the response ships — never for the owner's own
@@ -198,6 +212,7 @@ export async function CardDetailContent({
   const jsonLd =
     variant === "page" && isShareable
       ? buildCardJsonLd({
+          inDecks,
           card,
           username,
           ownerDisplay:
@@ -399,15 +414,19 @@ export async function CardDetailContent({
             />
           ) : null}
 
-          {/* Discovery tags — at the bottom of the info card. Type, rarity,
-              cost, and P/T panels were dropped: the rendered card preview
-              already displays all of that. */}
+          {/* Card details as TEXT. The rendered preview shows all of this, but
+              a crawler or answer engine reads none of it from an image — this
+              block is what makes the page citable for "custom MTG {type}"
+              queries. Page variant only; the modal is for people. */}
+          {variant === "page" ? <CardDetails card={card} inDecks={inDecks} /> : null}
+
+          {/* Discovery tags — at the bottom of the info card. */}
           {card.tags.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {card.tags.map((tag) => (
                 <Link
                   key={tag}
-                  href={`/gallery?tag=${encodeURIComponent(tag)}`}
+                  href={`/gallery/tag/${tagSlug(tag)}`}
                   className="inline-flex items-center rounded-full border border-border/60 bg-elevated/60 px-2.5 py-1 text-xs text-muted transition-colors hover:border-border-strong hover:text-foreground"
                 >
                   #{tag}
@@ -833,20 +852,31 @@ function CreatorFeature({
 // ---------------------------------------------------------------------------
 
 function buildCardJsonLd({
+  inDecks,
   card,
   username,
   ownerDisplay,
   siteBase,
 }: {
+  inDecks: Array<{ slug: string; title: string }>;
   card: {
     id: string;
     title: string;
     slug: string;
     created_at: string;
     updated_at: string;
+    rendered_at: string | null;
     flavor_text: string | null;
     rules_text: string | null;
     artist_credit: string | null;
+    card_type: string | null;
+    supertype: string | null;
+    subtypes: string[] | null;
+    rarity: string | null;
+    color_identity: string[] | null;
+    cost: string | null;
+    tags: string[];
+    frame_style: unknown;
   };
   username: string;
   ownerDisplay: string;
@@ -860,6 +890,26 @@ function buildCardJsonLd({
     description.length > 280 ? `${description.slice(0, 277)}…` : description;
 
   const canonical = `${siteBase}/card/${username}/${card.slug}`;
+  const typeLine = buildTypeLine({
+    supertype: card.supertype,
+    cardType: card.card_type as CardType | null,
+    subtypes: card.subtypes ?? [],
+  });
+  const version = renderVersionOf(card);
+  const imageSize = naturalRenderSize(isLandscapeTemplate(card.frame_style));
+  const keywords = Array.from(
+    new Set(
+      [
+        ...card.tags,
+        card.rarity ?? "",
+        ...typeLine.split(/[\s—–-]+/),
+        ...(card.color_identity ?? []),
+        "custom MTG card",
+      ]
+        .map((k) => k.trim().toLowerCase())
+        .filter((k) => k.length > 1),
+    ),
+  );
 
   const schema: Record<string, unknown> = {
     "@context": "https://schema.org",
@@ -870,8 +920,18 @@ function buildCardJsonLd({
     url: canonical,
     mainEntityOfPage: canonical,
     datePublished: card.created_at,
+    // Edits only — a re-render no longer bumps updated_at (migration 0108).
     dateModified: card.updated_at,
-    image: `${siteBase}/api/cards/${card.id}/og`,
+    image: {
+      "@type": "ImageObject",
+      url: `${siteBase}/api/cards/${card.id}/og${version ? `?v=${version}` : ""}`,
+      width: imageSize.width,
+      height: imageSize.height,
+      caption: `${card.title} — custom MTG-style ${typeLine}${card.rarity ? `, ${card.rarity}` : ""}${
+        card.cost ? `, mana cost ${describeManaCost(card.cost)}` : ""
+      }`,
+    },
+    keywords: keywords.join(", "),
     author: {
       "@type": "Person",
       name: ownerDisplay,
@@ -898,6 +958,100 @@ function buildCardJsonLd({
       name: card.artist_credit.trim(),
     };
   }
+  if (inDecks.length > 0) {
+    schema.isPartOf = inDecks.map((deck) => ({
+      "@type": "CollectionPage",
+      name: deck.title,
+      url: `${siteBase}/deck/${deck.slug}`,
+    }));
+  }
 
   return schema;
+}
+
+// ---------------------------------------------------------------------------
+// The details block — every fact the rendered card shows, as text.
+// ---------------------------------------------------------------------------
+
+function CardDetails({
+  card,
+  inDecks,
+}: {
+  card: {
+    cost: string | null;
+    card_type: string | null;
+    supertype: string | null;
+    subtypes: string[] | null;
+    rarity: string | null;
+    color_identity: string[] | null;
+    power: string | null;
+    toughness: string | null;
+    loyalty: string | null;
+    defense: string | null;
+    set_icon_code: string | null;
+    layout: string | null;
+    artist_credit: string | null;
+    created_at: string;
+    updated_at: string;
+  };
+  inDecks: Array<{ slug: string; title: string }>;
+}) {
+  const typeLine = buildTypeLine({
+    supertype: card.supertype,
+    cardType: card.card_type as CardType | null,
+    subtypes: card.subtypes ?? [],
+  });
+  const costWords = describeManaCost(card.cost);
+  const colors = (card.color_identity ?? [])
+    .map((c) => COLOR_IDENTITY_LABELS[c as ColorIdentity] ?? c)
+    .join(", ");
+  const stats =
+    card.power != null || card.toughness != null
+      ? `${card.power ?? "?"}/${card.toughness ?? "?"}`
+      : card.loyalty != null
+        ? `Loyalty ${card.loyalty}`
+        : card.defense != null
+          ? `Defense ${card.defense}`
+          : null;
+  const rows: Array<[string, React.ReactNode]> = [
+    ["Type", typeLine],
+    ["Mana cost", card.cost ? `${card.cost} (${costWords})` : "None"],
+    ["Rarity", card.rarity ? RARITY_LABELS[card.rarity as Rarity] ?? card.rarity : "—"],
+    ["Color identity", colors || "Colorless"],
+  ];
+  if (stats) rows.push(["Stats", stats]);
+  if (card.layout && card.layout !== "normal") rows.push(["Layout", card.layout]);
+  if (card.set_icon_code) rows.push(["Set symbol", card.set_icon_code.toUpperCase()]);
+  if (card.artist_credit?.trim()) rows.push(["Art", card.artist_credit.trim()]);
+  rows.push(["Created", formatShortDate(card.created_at)]);
+  if (Date.parse(card.updated_at) - Date.parse(card.created_at) > 60_000) {
+    rows.push(["Updated", formatShortDate(card.updated_at)]);
+  }
+  if (inDecks.length > 0) {
+    rows.push([
+      "In decks",
+      <span key="decks" className="flex flex-wrap gap-x-2 gap-y-1">
+        {inDecks.map((deck) => (
+          <Link key={deck.slug} href={`/deck/${deck.slug}`} className="underline decoration-border-strong underline-offset-4 hover:decoration-foreground">
+            {deck.title}
+          </Link>
+        ))}
+      </span>,
+    ]);
+  }
+  return (
+    <section aria-labelledby="card-details-heading" className="flex flex-col gap-2">
+      <h2 id="card-details-heading" className="font-mono text-[11px] uppercase tracking-wider text-muted">
+        Card details
+      </h2>
+      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
+        {rows.map(([label, value]) => (
+          <div key={label} className="contents">
+            <dt className="text-muted">{label}</dt>
+            <dd className="text-foreground">{value}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  );
 }
