@@ -1,7 +1,9 @@
 import "server-only";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { purgeCardCdnCache } from "@/lib/cards/cache-purge";
+import { notifyIndexNow } from "@/lib/seo/indexnow";
 
 // ---------------------------------------------------------------------------
 // Cache invalidation for card mutations — shared by the owner's actions
@@ -34,7 +36,17 @@ export function revalidateCardListSurfaces() {
   revalidateDiscoverySurfaces();
 }
 
-export function revalidateCardPaths(slug: string, ownerUsername?: string | null) {
+export function revalidateCardPaths(
+  slug: string,
+  ownerUsername?: string | null,
+  options: {
+    /** The card's visibility after the mutation. Private cards are never
+     *  announced to search engines; anything else (including a card that just
+     *  became private or was deleted — pass nothing) is, so engines recrawl
+     *  the URL and see the new page or its 404. */
+    visibility?: string | null;
+  } = {},
+) {
   revalidateCardListSurfaces();
   // Legacy slug-only path still serves as the redirector — busting its
   // cache keeps stale redirects from sticking after a slug edit.
@@ -43,6 +55,12 @@ export function revalidateCardPaths(slug: string, ownerUsername?: string | null)
     revalidatePath(`/profile/${ownerUsername}`);
     // Canonical public detail URL (Phase 11 chunk 11).
     revalidatePath(`/card/${ownerUsername}/${slug}`);
+    if (options.visibility !== "private") {
+      // Off the request path — IndexNow is best-effort and never delays a save.
+      after(() =>
+        notifyIndexNow([`/card/${ownerUsername}/${slug}`, `/profile/${ownerUsername}`]),
+      );
+    }
   }
 }
 

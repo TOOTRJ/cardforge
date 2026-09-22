@@ -941,9 +941,9 @@ export async function incrementCardView(cardId: string): Promise<void> {
  * Look up a profile by username plus a count of their public cards.
  * Returns null if the profile doesn't exist.
  */
-export async function getProfileByUsername(
+export const getProfileByUsername = cache(async (
   username: string,
-): Promise<ProfileWithStats | null> {
+): Promise<ProfileWithStats | null> => {
   if (!isSupabaseConfigured()) return null;
   if (!username) return null;
 
@@ -973,7 +973,7 @@ export async function getProfileByUsername(
   } catch {
     return null;
   }
-}
+});
 
 // ---------------------------------------------------------------------------
 // Trending — 7-day windowed weighted velocity (see lib/cards/trending.ts).

@@ -50,16 +50,21 @@ export async function generateMetadata({
     return { title: `@${username}` };
   }
   const profile = await getProfileByUsername(username);
-  const title = profile
-    ? (profile.display_name ?? `@${profile.username}`)
-    : `@${username}`;
+  // An unknown handle is a real 404, never a titled 200 (soft 404).
+  if (!profile) notFound();
+  const title = profile.display_name ?? `@${profile.username}`;
   const description =
-    profile?.bio ?? `Custom cards forged by @${username} on PipGlyph.`;
-  const canonical = `/profile/${profile?.username ?? username}`;
+    profile.bio ?? `Custom cards forged by @${profile.username} on PipGlyph.`;
+  const canonical = `/profile/${profile.username}`;
+  // A handle-only profile (no public cards, no bio) is thin content: keep it
+  // crawlable and followed, but out of the index until there is something
+  // to rank. The sitemap applies the same bar.
+  const thin = profile.public_cards_count === 0 && !profile.bio;
   return {
     title,
     description,
     alternates: { canonical },
+    robots: thin ? { index: false, follow: true } : undefined,
     // Explicit OG/Twitter blocks (the sibling opengraph-image.tsx supplies
     // the image) so unfurls carry the profile description + site name
     // instead of inheriting the root layout's generic copy.

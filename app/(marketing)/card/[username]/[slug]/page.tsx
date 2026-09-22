@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { notFound } from "next/navigation";
 import { CardDetailContent } from "@/components/cards/card-detail-content";
 import { getCardByOwnerAndSlug } from "@/lib/cards/queries";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -43,9 +44,9 @@ export async function generateMetadata({
     return { title: titleFromSlug(slug) };
   }
   const card = await getCardByOwnerAndSlug(username, slug);
-  if (!card) {
-    return { title: titleFromSlug(slug) };
-  }
+  // A missing/unreadable card is a real 404 (the segment layout throws the
+  // same before the skeleton streams) — never a titled 200.
+  if (!card) notFound();
 
   const isShareable =
     card.visibility === "public" || card.visibility === "unlisted";
