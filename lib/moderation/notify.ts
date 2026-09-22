@@ -16,11 +16,17 @@ type ReportAlert = {
   context?: string | null;
 };
 
+/** Slack mrkdwn treats `&`, `<` and `>` as markup — a reporter could smuggle
+ *  a link or an @-mention into the admin channel through the free-text note. */
+export function escapeSlackText(text: string): string {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 export async function notifyAdminsOfReport(alert: ReportAlert): Promise<void> {
   const link = `${getSiteBaseUrl()}/admin/moderation`;
   const parts = [`New ${alert.kind} report — reason: ${alert.reason}`];
-  if (alert.context) parts.push(`“${alert.context.slice(0, 140)}”`);
-  if (alert.details) parts.push(`note: ${alert.details.slice(0, 200)}`);
+  if (alert.context) parts.push(`“${escapeSlackText(alert.context.slice(0, 140))}”`);
+  if (alert.details) parts.push(`note: ${escapeSlackText(alert.details.slice(0, 200))}`);
   const summary = parts.join(" · ");
 
   await Promise.allSettled([sendSlack(summary, link), sendEmail(summary, link)]);

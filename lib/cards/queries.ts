@@ -636,11 +636,15 @@ export async function listPublicCardsByOwner(
 
   try {
     const supabase = await createClient();
+    // PUBLIC only. Unlisted means "anyone with the link" — listing those cards
+    // on the creator's profile (and counting them in the "N public" badge)
+    // handed out the link to everyone. Direct-link and OG routes keep using
+    // SHAREABLE_VISIBILITIES; this is the one place that enumerates.
     const { data } = await supabase
       .from("cards")
       .select("*")
       .eq("owner_id", ownerId)
-      .in("visibility", SHAREABLE_VISIBILITIES as unknown as string[])
+      .eq("visibility", "public")
       .order("updated_at", { ascending: false })
       .range(offset, offset + limit - 1);
 
@@ -1076,7 +1080,8 @@ export async function getProfileByUsername(
       .from("cards")
       .select("id", { count: "exact", head: true })
       .eq("owner_id", profile.id)
-      .in("visibility", SHAREABLE_VISIBILITIES as unknown as string[]);
+      // Matches listPublicCardsByOwner: unlisted cards are not "public".
+      .eq("visibility", "public");
 
     return {
       ...profile,

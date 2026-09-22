@@ -28,7 +28,7 @@ test.describe("seeded dev data renders", () => {
     await expect(page.getByRole("link", { name: /void tithe/i })).toHaveCount(0);
   });
 
-  test("a seeded creator's public profile shows their cards", async ({ page }) => {
+  test("a seeded creator's public profile shows PUBLIC cards only", async ({ page }) => {
     await page.goto("/profile/dev_artist");
     await expect(
       page.getByRole("heading", { name: "Ari the Artificer", exact: true }),
@@ -36,6 +36,15 @@ test.describe("seeded dev data renders", () => {
     await expect(
       page.getByRole("link", { name: /thornback behemoth/i }).first(),
     ).toBeVisible();
+    // "Void Tithe" is seeded UNLISTED: reachable by link, never listed here —
+    // and not counted in the "N public" badge (dev_artist has 14 public cards).
+    await expect(page.getByRole("link", { name: /void tithe/i })).toHaveCount(0);
+    await expect(page.getByText(/^14 public$/)).toBeVisible();
+  });
+
+  test("an unlisted card still opens by direct link", async ({ page }) => {
+    await page.goto("/card/dev_artist/void-tithe");
+    await expect(page.getByRole("heading", { name: "Void Tithe", exact: true })).toBeVisible();
   });
 
   test("the seeded planeswalker and saga pages open, with their comments", async ({
