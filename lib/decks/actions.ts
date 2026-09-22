@@ -71,7 +71,9 @@ function notAuthed(): DeckActionFailure {
 function slugCandidate(desired: string, attempt: number): string {
   if (attempt === 1) return desired;
   const suffix = `-${attempt}`;
-  return `${desired.slice(0, 80 - suffix.length)}${suffix}`;
+  // Trim any hyphen the cut leaves at the end — "my-deck-" + "-2" would fail
+  // the decks_slug_format CHECK with a raw Postgres error.
+  return `${desired.slice(0, 80 - suffix.length).replace(/-+$/, "")}${suffix}`;
 }
 
 async function getOwnerUsername(): Promise<string | null> {

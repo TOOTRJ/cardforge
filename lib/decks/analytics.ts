@@ -25,15 +25,21 @@ export const TYPE_BUCKETS = [
 
 export type TypeBucket = (typeof TYPE_BUCKETS)[number];
 
+// Creature still wins over everything (a Land Creature like Dryad Arbor is a
+// creature on every deck site), but Land is matched BEFORE Artifact and
+// Enchantment: "Artifact Land" / "Enchantment Land" are lands for curve and
+// land-count purposes — with Land last they were bucketed as
+// Artifact/Enchantment, so they entered the mana curve and vanished from
+// the land count.
 const BUCKET_MATCH_ORDER: readonly Exclude<TypeBucket, "Other">[] = [
   "Creature",
   "Planeswalker",
   "Battle",
   "Instant",
   "Sorcery",
+  "Land",
   "Artifact",
   "Enchantment",
-  "Land",
 ];
 
 export function typeBucketFor(typeLine: string | null | undefined): TypeBucket {

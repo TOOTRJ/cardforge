@@ -37,6 +37,12 @@ describe("typeBucketFor", () => {
     expect(typeBucketFor("Instant")).toBe("Instant");
     expect(typeBucketFor("Legendary Planeswalker — Jace")).toBe("Planeswalker");
     expect(typeBucketFor("Basic Land — Mountain")).toBe("Land");
+    // REGRESSION: artifact / enchantment lands are lands — they were bucketed
+    // as Artifact/Enchantment, entering the mana curve and leaving the land
+    // count. (Creature still wins: see "creature wins over …" below.)
+    expect(typeBucketFor("Artifact Land")).toBe("Land");
+    expect(typeBucketFor("Enchantment Land — Urza's Saga")).toBe("Land");
+    expect(typeBucketFor("Artifact Creature — Golem")).toBe("Creature");
     expect(typeBucketFor(null)).toBe("Other");
   });
 

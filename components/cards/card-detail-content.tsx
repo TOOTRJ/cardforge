@@ -66,7 +66,7 @@ import { getEntitlements } from "@/lib/billing/entitlements";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getSiteBaseUrl } from "@/lib/site-url";
 import { breadcrumbJsonLd, JsonLd, serializeJsonLd } from "@/components/seo/json-ld";
-import type { ArtPosition, CardBackFace, FrameStyle } from "@/types/card";
+import type { CardBackFace } from "@/types/card";
 
 // ---------------------------------------------------------------------------
 // CardDetailContent — the shared body of the public card detail view.
@@ -273,28 +273,13 @@ export async function CardDetailContent({
               : undefined
           }
         >
+          {/* The ONE row → preview mapper (shared with the bake and every
+              tile), so the hero carries the design watermark and the
+              structured loyalty / saga content — a hand-built prop bag here
+              used to drop both and diverge from the stored render. */}
           <CardPreview
-            title={card.title}
-            cost={card.cost}
+            {...cardToPreviewData(card, profileOverrides)}
             pipOverrides={pipOverrides}
-            profileOverrides={profileOverrides}
-            cardType={card.card_type}
-            supertype={card.supertype}
-            subtypes={card.subtypes}
-            rarity={card.rarity}
-            colorIdentity={card.color_identity}
-            rulesText={card.rules_text}
-            flavorText={card.flavor_text}
-            power={card.power}
-            toughness={card.toughness}
-            loyalty={card.loyalty}
-            defense={card.defense}
-            artistCredit={card.artist_credit}
-            artUrl={card.art_url}
-            artPosition={card.art_position as ArtPosition}
-            frameStyle={card.frame_style as FrameStyle}
-            setIconUrl={card.set_icon_url}
-            setIconCode={card.set_icon_code}
             backFace={(card.back_face as CardBackFace | null) ?? null}
             backCard={backCard ? cardToPreviewData(backCard, profileOverrides) : null}
           />

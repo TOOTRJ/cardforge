@@ -65,7 +65,8 @@ export async function setFeaturedCardAction(
   const admin = createAdminClient();
 
   if (!cardUrl || !cardUrl.trim()) {
-    await admin.from("featured_cards").delete().eq("slot", slot);
+    const { error } = await admin.from("featured_cards").delete().eq("slot", slot);
+    if (error) return { ok: false, error: `Couldn't clear slot ${slot}: ${error.message}` };
     revalidatePath("/");
     revalidatePath("/admin/featured");
     return { ok: true };

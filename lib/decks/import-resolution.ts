@@ -29,6 +29,15 @@ export type ResolvedCardData = {
 
 const WUBRG = new Set(["W", "U", "B", "R", "G"]);
 
+/** deck_cards.mana_value is numeric(6,2). Scryfall reports a few absurd
+ *  costs (Gleemax: 1,000,000) that overflowed it and aborted the whole
+ *  import; clamp to what the column can hold. */
+export const MAX_MANA_VALUE = 9999.99;
+export function clampManaValue(value: number | null | undefined): number | null {
+  if (value === null || value === undefined || !Number.isFinite(value)) return null;
+  return Math.min(Math.max(value, 0), MAX_MANA_VALUE);
+}
+
 export function toResolvedCardData(card: ScryfallCard): ResolvedCardData {
   const face = card.card_faces?.[0] ?? null;
   const image =

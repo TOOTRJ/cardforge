@@ -7,6 +7,8 @@ import {
   nameFallbackIdentifiers,
   reconcileCollection,
   toResolvedCardData,
+  clampManaValue,
+  MAX_MANA_VALUE,
 } from "@/lib/decks/import-resolution";
 import type { ScryfallCard } from "@/lib/scryfall/client";
 
@@ -202,5 +204,21 @@ describe("toResolvedCardData", () => {
   it("filters color identity to WUBRG letters only", () => {
     const weird = card({ color_identity: ["R", "C", "nonsense"] });
     expect(toResolvedCardData(weird).color_identity).toEqual(["R"]);
+  });
+});
+
+describe("clampManaValue", () => {
+  it("keeps ordinary values and nulls", () => {
+    expect(clampManaValue(3)).toBe(3);
+    expect(clampManaValue(2.5)).toBe(2.5);
+    expect(clampManaValue(0)).toBe(0);
+    expect(clampManaValue(null)).toBeNull();
+    expect(clampManaValue(undefined)).toBeNull();
+  });
+
+  it("REGRESSION: Gleemax's cmc 1,000,000 no longer overflows numeric(6,2) and aborts the import", () => {
+    expect(clampManaValue(1_000_000)).toBe(MAX_MANA_VALUE);
+    expect(clampManaValue(Number.POSITIVE_INFINITY)).toBeNull();
+    expect(clampManaValue(-4)).toBe(0);
   });
 });

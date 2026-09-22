@@ -54,7 +54,7 @@ export type CardRowForBake = {
 
 /** Every column the renderer needs (plus owner/visibility for gating). */
 export const BAKE_SELECT_COLUMNS =
-  "id, owner_id, visibility, title, cost, card_type, supertype, subtypes, rarity, color_identity, rules_text, flavor_text, power, toughness, loyalty, defense, artist_credit, art_url, art_position, frame_style, set_icon_url, set_icon_code, back_face, face_content, watermark";
+  "id, owner_id, visibility, updated_at, title, cost, card_type, supertype, subtypes, rarity, color_identity, rules_text, flavor_text, power, toughness, loyalty, defense, artist_credit, art_url, art_position, frame_style, set_icon_url, set_icon_code, back_face, face_content, watermark";
 
 export function rowToPreviewData(
   card: CardRowForBake,

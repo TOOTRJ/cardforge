@@ -125,7 +125,8 @@ async function ensureUniqueSlugForUser(
   // produced the same taken slug and the insert hit the unique index.
   for (let attempt = 2; attempt <= 50; attempt += 1) {
     const suffix = `-${attempt}`;
-    const candidate = `${desired.slice(0, 80 - suffix.length)}${suffix}`;
+    // The cut must not leave a trailing hyphen ("-" + "-2" fails the CHECK).
+    const candidate = `${desired.slice(0, 80 - suffix.length).replace(/-+$/, "")}${suffix}`;
     const stillTaken = await isSlugTakenForCurrentUser(candidate, excludeCardId);
     if (!stillTaken) return { slug: candidate, conflict: true };
   }
@@ -591,7 +592,20 @@ export async function updateCardAction(
       update.visibility = "private";
     }
   }
-  if (data.parent_card_id !== undefined) update.parent_card_id = data.parent_card_id;
+  if (data.parent_card_id !== undefined) {
+    // Same pre-flight createCardAction runs: the parent must exist and a
+    // card can't be its own remix (a dangling id used to be stored as-is).
+    if (data.parent_card_id) {
+      if (data.parent_card_id === cardId) {
+        return { ok: false, fieldErrors: { parent_card_id: "A card can't be a remix of itself." } };
+      }
+      const parent = await getCardById(data.parent_card_id);
+      if (!parent) {
+        return { ok: false, fieldErrors: { parent_card_id: "The card to remix could not be found." } };
+      }
+    }
+    update.parent_card_id = data.parent_card_id;
+  }
   // Back face: `null` clears it; an object replaces it whole. Omitting
   // the field leaves whatever the DB already had untouched.
   if (data.back_face !== undefined) update.back_face = data.back_face ?? null;
