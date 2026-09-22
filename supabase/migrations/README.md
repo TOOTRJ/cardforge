@@ -72,3 +72,10 @@ instead. Each bullet: what the header says, and what is true now.
   `/admin/challenges` until 0096 moved its three write policies to
   `viewer_is_admin()`. New admin policies must use `viewer_is_admin()`, never
   a subquery on `profiles.is_admin`.
+- **0068 / 0073 ("the sweep refunds any aged spend whose step didn't
+  complete from that very attempt" / "a `done` step carrying the winning
+  spend_ref" as the cron's proof)** — the settlement proof moved off the job
+  JSON in 0106: `patch_job_step` stamps `credit_ledger.settled_at` (via
+  `settle_spend`) in the same transaction as the done-write, the sync idea
+  routes settle their own refs through `settleSpend()`, and the sweep
+  refunds aged UNSETTLED spends without reading `ai_generation_jobs` at all.

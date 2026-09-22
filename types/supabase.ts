@@ -144,6 +144,7 @@ export type Database = {
           id: string;
           reason: string;
           idempotency_key: string | null;
+          settled_at: string | null;
           user_id: string;
         };
         Insert: {
@@ -153,6 +154,7 @@ export type Database = {
           id?: string;
           reason: string;
           idempotency_key?: string | null;
+          settled_at?: string | null;
           user_id: string;
         };
         Update: {
@@ -162,6 +164,7 @@ export type Database = {
           id?: string;
           reason?: string;
           idempotency_key?: string | null;
+          settled_at?: string | null;
           user_id?: string;
         };
         Relationships: [];
@@ -1582,6 +1585,13 @@ export type Database = {
       patch_job_step: {
         Args: { p_job_id: string; p_step_key: string; p_patch: Json };
         Returns: Json;
+      };
+      // Migration 0106 — stamps credit_ledger.settled_at for a spend ref
+      // (service_role only; patch_job_step calls it atomically, sync routes
+      // through settleSpend()). False when no spend carries the ref.
+      settle_spend: {
+        Args: { p_ref: string };
+        Returns: boolean;
       };
       claim_job_step: {
         Args: { p_job_id: string; p_step_key: string | null };

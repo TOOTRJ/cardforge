@@ -6,8 +6,9 @@ import { cronRouteGuard } from "@/lib/api/cron-auth";
 // ---------------------------------------------------------------------------
 // /api/cron/reconcile-credits — daily sweep refunding credit charges
 // orphaned by a platform kill (charge committed mid-step, refund never ran).
-// The rule, the ref format, and the exactly-once refund keying live in
-// lib/billing/credit-reconcile.ts (migration 0068 made spends traceable).
+// The rule (aged + unsettled = refund), the ref format, and the exactly-once
+// refund keying live in lib/billing/credit-reconcile.ts (migration 0068 made
+// spends traceable; 0106 moved the settlement proof onto the ledger row).
 //
 // Cadence is DAILY (see vercel.json) because the Hobby plan rejects any
 // schedule more frequent than once per day — the whole deployment fails at
@@ -37,7 +38,7 @@ export async function GET(request: Request) {
   return NextResponse.json({
     ok: true,
     scanned: result.scanned,
-    legitimate: result.legitimate,
+    settled: result.settled,
     refunded: result.refunded,
     failed: result.failed,
   });

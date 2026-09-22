@@ -10,7 +10,8 @@ import { withCreditedStep } from "@/lib/ai/credited-step";
 import type { JobStep } from "@/lib/ai/generation-jobs";
 
 // ---------------------------------------------------------------------------
-// withCreditedStep — the contract the reconcile-credits cron relies on:
+// withCreditedStep — the contract settlement relies on (patch_job_step
+// settles the stamped ref; the reconcile-credits cron refunds the rest):
 //   * a charged success stamps spend_ref = the reserving ref,
 //   * a failure (result or throw) refunds under refund:{ref} and clears it,
 //   * an UNCHARGED reserve (admin, billing off) is never refunded — that

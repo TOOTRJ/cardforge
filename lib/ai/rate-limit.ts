@@ -275,11 +275,15 @@ export type SpendOptions = {
   failClosed?: boolean;
   /**
    * Globally-unique reference stored on the ledger row
-   * ("spend:{jobId}:{stepKey}:{uuid}"). Links the charge to the job-step
-   * attempt that made it, so the reconcile-credits cron can refund a charge
-   * orphaned by a platform kill (charge committed, refund never ran). Job
-   * steps MUST pass this; leaving it unset writes a null key the
-   * reconciliation sweep can never see.
+   * ("spend:{jobId}:{stepKey}:{uuid}", or "spend:ideas:{uuid}" for a sync
+   * route). Links the charge to the attempt that made it, so the
+   * reconcile-credits cron can refund a charge orphaned by a platform kill
+   * (charge committed, refund never ran). Every charged flow MUST pass this
+   * AND settle it once its work is recorded — job steps via patch_job_step
+   * (atomic with the `done` write), sync routes via `settleSpend()` —
+   * because the sweep refunds every aged spend that is not settled
+   * (migration 0106). Leaving it unset writes a null key the sweep can
+   * never see.
    */
   ref?: string;
 };
@@ -422,5 +426,37 @@ export async function refundCredits(
       `[credits] Refund of ${amount} credit(s) to ${userId} for ${reason} threw:`,
       err,
     );
+  }
+}
+
+/**
+ * Settle a charge whose work is now durably recorded — the sync-route half
+ * of the settlement contract (job steps settle inside patch_job_step,
+ * atomically with the step's `done` write; migration 0106). Until a spend is
+ * settled the reconcile-credits cron treats it as orphaned once it ages past
+ * the grace window and refunds it, so a missed settle costs us a credit,
+ * never the user. Service-role only (`settle_spend`). Best-effort: a failure
+ * is logged loudly and never surfaced as the request's error.
+ */
+export async function settleSpend(ref: string): Promise<void> {
+  // Billing off → nothing was charged, so there is no ledger row to settle.
+  if (!isBillingEnabled()) return;
+  if (!isAdminConfigured()) {
+    console.error(`[credits] Cannot settle ${ref}: admin client not configured.`);
+    return;
+  }
+  try {
+    const admin = createAdminClient();
+    const { data, error } = await admin.rpc("settle_spend", { p_ref: ref });
+    if (error) {
+      console.error(`[credits] Settling ${ref} failed: ${error.message}`);
+    } else if (data === false) {
+      // No spend row carries this ref — the charge never landed (or landed
+      // under another key). Nothing to refund later either, but it breaks
+      // the contract, so say so.
+      console.error(`[credits] Settling ${ref}: no ledger spend carries that ref.`);
+    }
+  } catch (err) {
+    console.error(`[credits] Settling ${ref} threw:`, err);
   }
 }

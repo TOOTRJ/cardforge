@@ -10,6 +10,7 @@ import {
   getFreshCreditBalance,
   logAiCall,
   refundCredits,
+  settleSpend,
   spendCredits,
 } from "@/lib/ai/rate-limit";
 import { generateDeckIdeas } from "@/lib/ai/deck-ideas";
@@ -95,6 +96,12 @@ export async function POST(request: Request) {
       });
     } catch {
       // never fail the response over the archive write
+    }
+    // The ideas are delivered (the batch archive above is best-effort, the
+    // response is what the user paid for): settle the charge so the
+    // reconcile-credits sweep leaves it alone.
+    if (spend.charged) {
+      await settleSpend(ref);
     }
     return NextResponse.json({ ok: true, ideas, credits: await getFreshCreditBalance() });
   } catch (error) {
