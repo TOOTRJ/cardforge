@@ -99,7 +99,9 @@ Rules and gotchas:
   in sync). Post-auth redirects go through `safeRedirectPath()` only. Auth
   errors stay generic (anti-enumeration) except codes that can't leak account
   existence (`weak_password`, rate limits, `email_not_confirmed` — GoTrue
-  checks the password first).
+  checks the password first). `/reset-password` accepts only a session from a
+  RECENT recovery link (`lib/auth/recovery-session.ts`, JWT `amr`); a plain
+  signed-in session changes its password in Settings with the current one.
 - Email: ONE shell, `lib/email/layout.ts` (dependency-free; BRAND hexes).
   Supabase auth templates are GENERATED from it
   (`npm run email:build-auth-templates` → `supabase/templates/`, never

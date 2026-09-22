@@ -700,6 +700,11 @@ export type BulkCardsFailure = {
 
 export type BulkCardsResult = BulkCardsSuccess | BulkCardsFailure;
 
+/** Wall-clock budget for the deferred bakes of one bulk publish — well inside
+ *  the function's lifetime; whatever doesn't fit renders live until its next
+ *  individual save. */
+const BULK_BAKE_BUDGET_MS = 200_000;
+
 export async function updateCardsVisibilityAction(
   cardIds: string[],
   visibility: Visibility,
@@ -726,7 +731,7 @@ export async function updateCardsVisibilityAction(
   // Pre-flight ownership: every id must exist AND be owned by the caller.
   const { data: existing, error: existingError } = await supabase
     .from("cards")
-    .select("id, owner_id")
+    .select("id, owner_id, rendered_image_url")
     .in("id", ids);
   if (existingError) {
     return { ok: false, error: existingError.message };
@@ -746,7 +751,7 @@ export async function updateCardsVisibilityAction(
 
   // Going private must also drop the public render (the full card image) — both
   // the row's URL and the stored object — for the same reason the single-card
-  // path does. (Going public again re-bakes on the next individual save.)
+  // path does. Going public/unlisted bakes the missing renders below.
   const goingPrivate = parsed.data.visibility === "private";
   const { error } = await supabase
     .from("cards")
@@ -788,6 +793,38 @@ export async function updateCardsVisibilityAction(
   // share image right away.
   if (goingPrivate) await purgeHiddenCards(ids);
   else revalidateCardListSurfaces();
+
+  if (!goingPrivate) {
+    // A draft published from the library has no stored render (going private
+    // cleared it), and nothing else would ever bake it: tiles fell back to
+    // the live preview forever and every uncached /og or /png hit re-ran
+    // Satori. Bake the missing ones after the response, one at a time, inside
+    // a time budget — the single-card save path does the same in after().
+    const toBake = existing
+      .filter((c) => !c.rendered_image_url)
+      .map((c) => c.id);
+    if (toBake.length > 0) {
+      after(async () => {
+        const deadline = Date.now() + BULK_BAKE_BUDGET_MS;
+        let baked = 0;
+        for (const cardId of toBake) {
+          if (Date.now() > deadline) {
+            console.warn(
+              `[bulk-visibility] bake budget spent after ${baked}/${toBake.length} cards; the rest render live until their next save.`,
+            );
+            break;
+          }
+          try {
+            await bakeAndPersistCardRender(cardId, user.id);
+            baked += 1;
+          } catch (error) {
+            console.error(`[bulk-visibility] deferred bake failed for ${cardId}:`, error);
+          }
+        }
+        if (baked > 0) revalidateCardListSurfaces();
+      });
+    }
+  }
 
   return { ok: true, count: ids.length };
 }
