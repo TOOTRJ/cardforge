@@ -175,6 +175,8 @@ import {
   type StepKey,
 } from "@/lib/creator/steps";
 import { buildCardPath } from "@/lib/cards/utils";
+import { CapacityNotice } from "@/components/billing/capacity-notice";
+import type { CardCapacity } from "@/lib/billing/capacity-copy";
 
 // ---------------------------------------------------------------------------
 // Form values — mirror createCardSchema but typed at the component boundary.
@@ -236,6 +238,9 @@ type CardCreatorFormProps = {
   /** The currently running challenge, if any — powers the Publish panel's
    *  "Enter the challenge" toggle (server-fetched). */
   activeChallenge?: Challenge | null;
+  /** Saved-card usage against the plan cap — the warning shown BEFORE a
+   *  save that would add a card (create / remix; an edit adds nothing). */
+  capacity?: CardCapacity | null;
   /** Prefills the Artist credit on a fresh create with the signed-in user's
    *  profile name (display name, falling back to username). Create mode only,
    *  and only when the field would otherwise be blank — never overrides an
@@ -309,6 +314,7 @@ export function CardCreatorForm({
   aiConfigured,
   pipOverrides = {},
   initialTag = null,
+  capacity = null,
   activeChallenge = null,
   defaultArtistCredit = "",
   verifiedFrameKeys = [],
@@ -2117,6 +2123,9 @@ export function CardCreatorForm({
   const stepPanels = (
     <div className="relative">
       {readOnly ? <GuestGate /> : null}
+      {mode !== "edit" && !readOnly ? (
+        <CapacityNotice capacity={capacity} adding={1} className="mb-6" />
+      ) : null}
       <div
         className={readOnly ? "flex flex-col gap-6 select-none opacity-60" : "flex flex-col gap-6"}
         inert={readOnly || undefined}

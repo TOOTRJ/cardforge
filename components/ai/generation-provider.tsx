@@ -373,6 +373,10 @@ export function GenerationJobProvider({
             planPayload?.code === "INSUFFICIENT_CREDITS"
           ) {
             upgrade.open("credits");
+          } else if (planPayload?.code === "CARD_CAPACITY") {
+            // The saved-card cap — say the numbers, then offer the upgrade.
+            toast.error(planPayload.error);
+            upgrade.open("capacity");
           } else {
             toast.error(planPayload?.error ?? "AI planning failed. Try again.");
           }

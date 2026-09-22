@@ -2,7 +2,7 @@ import "server-only";
 
 import { getCurrentProfile } from "@/lib/supabase/server";
 import { createPublicClient } from "@/lib/supabase/public";
-import { TIER_RANK, type PlanTier } from "@/lib/billing/plans";
+import { CARD_CAPACITY, TIER_RANK, type PlanTier } from "@/lib/billing/plans";
 import { isBillingEnabled } from "@/lib/billing/flags";
 
 // The single server-side source of truth for what a user is allowed to do.
@@ -42,7 +42,7 @@ const BASE_PERKS: Perks = {
   maxExportPreset: "default",
   allowBatchExport: false,
   premiumFrames: false,
-  cardCapacity: 50,
+  cardCapacity: CARD_CAPACITY.free,
 };
 
 const TIER_PERKS: Record<PlanTier, Partial<Perks>> = {
@@ -51,14 +51,14 @@ const TIER_PERKS: Record<PlanTier, Partial<Perks>> = {
     removeWatermark: true,
     maxExportPreset: "hd",
     premiumFrames: true,
-    cardCapacity: 500,
+    cardCapacity: CARD_CAPACITY.plus,
   },
   pro: {
     removeWatermark: true,
     maxExportPreset: "hd",
     premiumFrames: true,
     allowBatchExport: true,
-    cardCapacity: -1,
+    cardCapacity: CARD_CAPACITY.pro,
   },
 };
 

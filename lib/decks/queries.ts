@@ -495,3 +495,24 @@ export async function incrementDeckView(deckId: string): Promise<void> {
     // best-effort — a missed view tick isn't worth surfacing
   }
 }
+
+/**
+ * Entries a remix job turns into cards: those with a linked custom card or a
+ * Scryfall printing. The jobs route sizes a deck_remix batch on this (never
+ * the ceiling), and the deck page's capacity warning uses the same number.
+ * RLS hides decks that aren't the caller's, so a foreign deck reads 0.
+ */
+export async function countRemixableDeckCards(deckId: string): Promise<number> {
+  if (!isSupabaseConfigured()) return 0;
+  try {
+    const supabase = await createClient();
+    const { count } = await supabase
+      .from("deck_cards")
+      .select("*", { count: "exact", head: true })
+      .eq("deck_id", deckId)
+      .or("card_id.not.is.null,scryfall_id.not.is.null");
+    return count ?? 0;
+  } catch {
+    return 0;
+  }
+}

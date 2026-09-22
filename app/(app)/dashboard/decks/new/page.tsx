@@ -10,6 +10,7 @@ import { batchCardLimit } from "@/lib/ai/generation-limits";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { SurfaceCard } from "@/components/ui/surface-card";
+import { getCardCapacity } from "@/lib/cards/capacity";
 
 export const metadata: Metadata = {
   title: "New deck",
@@ -55,7 +56,12 @@ export default async function NewDeckPage() {
       />
 
       <div className="mt-10">
-        <DeckWizard userId={user.id} aiConfigured={isDesignAiConfigured()} maxCards={maxCards} />
+        <DeckWizard
+          userId={user.id}
+          aiConfigured={isDesignAiConfigured()}
+          maxCards={maxCards}
+          capacity={await getCardCapacity()}
+        />
       </div>
     </div>
   );
