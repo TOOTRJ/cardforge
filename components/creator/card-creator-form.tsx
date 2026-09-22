@@ -735,20 +735,27 @@ export function CardCreatorForm({
     rulesText: string | null | undefined,
   ) => {
     if (!rulesText?.trim()) return;
+    // Both editors cap at 6 rows (the printed extreme) and the server refuses
+    // more; a long rules text used to seed 7+ rows that could never be saved
+    // — and the server's error landed on `face_content`, a key no panel
+    // renders, so the card just silently wouldn't save.
+    const MAX_STRUCTURED_ROWS = 6;
     if (targetKind === "planeswalker") {
       setValue(
         "loyalty_abilities",
-        loyaltyFromRulesText(rulesText).map((r) => ({
-          cost: r.cost ?? "",
-          text: r.text,
-        })),
+        loyaltyFromRulesText(rulesText)
+          .slice(0, MAX_STRUCTURED_ROWS)
+          .map((r) => ({
+            cost: r.cost ?? "",
+            text: r.text,
+          })),
         { shouldDirty: true },
       );
     } else if (targetKind === "saga") {
       const saga = sagaFromRulesText(rulesText);
       setValue(
         "saga_chapters",
-        saga.chapters.map((ch) => ({
+        saga.chapters.slice(0, MAX_STRUCTURED_ROWS).map((ch) => ({
           numerals: [...ch.numerals],
           text: ch.text,
         })),
@@ -1722,17 +1729,27 @@ export function CardCreatorForm({
     startTransition(async () => {
       const applyFieldErrors = (
         fieldErrors: Record<string, string | undefined> | undefined,
-      ) => {
-        if (!fieldErrors) return;
+      ): string | null => {
+        if (!fieldErrors) return null;
+        const rendered = buildFieldToStep(steps);
         let firstErrorField: string | null = null;
+        const unrendered: string[] = [];
         for (const [name, message] of Object.entries(fieldErrors)) {
           if (!message) continue;
-          setError(name as keyof FormValues, { message });
-          if (!firstErrorField) firstErrorField = name;
+          const root = name.split(".")[0] as keyof FormValues;
+          if (rendered.has(root)) {
+            setError(name as keyof FormValues, { message });
+            if (!firstErrorField) firstErrorField = name;
+          } else {
+            // No panel shows this key (face_content, back_card_id, …) — a
+            // setError here would vanish. Hand it back for the toast instead.
+            unrendered.push(message);
+          }
         }
         // Jump to the step owning the first errored field (falls back to the
         // last step if that step isn't currently visible).
         if (firstErrorField) goToIndex(stepIndexForField(firstErrorField, steps));
+        return unrendered.length > 0 ? unrendered.join(" ") : null;
       };
 
       const handleUpgradeOrError = (failure: {
@@ -1740,16 +1757,17 @@ export function CardCreatorForm({
         fieldErrors?: Record<string, string | undefined>;
         code?: string;
       }) => {
-        applyFieldErrors(failure.fieldErrors);
+        const unrendered = applyFieldErrors(failure.fieldErrors);
         if (failure.code === "UPGRADE_REQUIRED") {
           upgrade.open(
             failure.fieldErrors?.frame_style ? "premium_frame" : "capacity",
           );
           return;
         }
-        if (failure.formError) {
-          setServerError(failure.formError);
-          toast.error(failure.formError);
+        const message = failure.formError ?? unrendered;
+        if (message) {
+          setServerError(message);
+          toast.error(message);
         }
       };
 

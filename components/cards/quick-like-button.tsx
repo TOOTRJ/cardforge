@@ -1,6 +1,6 @@
 "use client";
 
-import { useOptimistic, useTransition } from "react";
+import { useOptimistic, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Heart } from "lucide-react";
 import { toast } from "sonner";
@@ -73,10 +73,23 @@ export function QuickLikeButton(props: QuickLikeButtonProps) {
 
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [state, setOptimistic] = useOptimistic<State, State>(
-    { liked: initialLiked, count: initialCount },
-    (_prev, next) => next,
-  );
+  // The SETTLED value: what the server last confirmed for THIS viewer.
+  // useOptimistic falls back to its base when the transition ends, and the
+  // listing pages (gallery, decks, home) are rendered anonymously — their
+  // props say `liked: false` for everyone, and after an action Next
+  // re-renders the tile with those same anonymous props. So the base must be
+  // this component's own state, and once the viewer has acted, a prop change
+  // must NOT override it (the anonymous render can never know their like).
+  // Props only seed the value, and re-sync while the viewer hasn't touched it.
+  const [settled, setSettled] = useState<State>({ liked: initialLiked, count: initialCount });
+  const [touched, setTouched] = useState(false);
+  // Adjust-state-on-prop-change (during render, not in an effect).
+  const [seen, setSeen] = useState({ initialLiked, initialCount });
+  if (seen.initialLiked !== initialLiked || seen.initialCount !== initialCount) {
+    setSeen({ initialLiked, initialCount });
+    if (!touched) setSettled({ liked: initialLiked, count: initialCount });
+  }
+  const [state, setOptimistic] = useOptimistic<State, State>(settled, (_prev, next) => next);
 
   const handleClick = (e: React.MouseEvent) => {
     // Tile parents sometimes wrap the heart in a Link to the card detail;
@@ -120,10 +133,10 @@ export function QuickLikeButton(props: QuickLikeButtonProps) {
               );
       if (!result.ok) {
         toast.error(result.error);
-        setOptimistic({ liked: !nextLiked, count: state.count });
-        return;
+        return; // the optimistic value drops back to `settled` on its own
       }
-      setOptimistic({ liked: result.liked, count: result.likes_count });
+      setSettled({ liked: result.liked, count: result.likes_count });
+      setTouched(true);
     });
   };
 

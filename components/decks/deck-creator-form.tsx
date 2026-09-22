@@ -144,8 +144,13 @@ export function DeckCreatorForm({ mode, userId, deck,
     mode: "onSubmit",
   });
 
+  // Re-sync from the server row when it changes (another panel saved a cover,
+  // a router.refresh() landed) — but NEVER over the user's unsaved edits.
+  // `defaults` is a fresh object on every refresh, so without the isDirty
+  // guard every refresh silently wiped whatever was being typed.
   useEffect(() => {
-    reset(defaults);
+    if (!isDirty) reset(defaults);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- isDirty is read, not a trigger
   }, [defaults, reset]);
 
   const coverPosition = useWatch({ control, name: "cover_position" }) ?? null;
@@ -155,8 +160,11 @@ export function DeckCreatorForm({ mode, userId, deck,
     const payload = {
       title: values.title.trim(),
       slug: values.slug.trim() ? slugify(values.slug.trim()) : undefined,
-      description: values.description.trim() || undefined,
-      cover_url: values.cover_url.trim() || undefined,
+      // Edit mode sends an explicit null for an emptied field so the server
+      // CLEARS it; `undefined` means "leave as is" and used to make "Remove
+      // cover" / clearing the description a silent no-op.
+      description: values.description.trim() || (mode === "edit" ? null : undefined),
+      cover_url: values.cover_url.trim() || (mode === "edit" ? null : undefined),
       // null clears back to centered; only meaningful with a cover set.
       cover_position: values.cover_url.trim() ? values.cover_position : null,
       format: values.format,

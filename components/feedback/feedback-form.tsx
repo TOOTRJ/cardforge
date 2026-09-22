@@ -60,12 +60,16 @@ export function FeedbackForm({ signedIn }: { signedIn: boolean }) {
   const activeHint = FEEDBACK_CATEGORIES.find((c) => c.key === category)?.hint;
 
   const onSubmit = async () => {
+    // `?from=` is context, not user input: a value the schema rejects (an
+    // absolute URL, a stray space) is dropped rather than allowed to block
+    // the submit — it used to make the Send button do nothing at all.
+    const from = params.get("from") ?? "";
     const payload = {
       category,
       subject,
       message,
       frame_template: showFrameSelect ? frameTemplate : "",
-      page_url: params.get("from") ?? "",
+      page_url: feedbackSchema.shape.page_url.safeParse(from).success ? from : "",
     };
 
     // Same schema the server action runs — catches empty/too-long fields
@@ -73,13 +77,18 @@ export function FeedbackForm({ signedIn }: { signedIn: boolean }) {
     const parsed = feedbackSchema.safeParse(payload);
     if (!parsed.success) {
       const errors: { subject?: string; message?: string } = {};
+      let other: string | null = null;
       for (const issue of parsed.error.issues) {
         const key = String(issue.path[0]);
         if ((key === "subject" || key === "message") && !errors[key]) {
           errors[key] = issue.message;
+        } else if (key !== "subject" && key !== "message" && !other) {
+          other = issue.message;
         }
       }
       setFieldErrors(errors);
+      // Anything the form has no field for still gets said out loud.
+      setFormError(other && !errors.subject && !errors.message ? other : null);
       return;
     }
     setFieldErrors({});

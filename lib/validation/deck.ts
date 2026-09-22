@@ -11,6 +11,12 @@ const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const optionalEmptyString = (schema: z.ZodType<string>) =>
   schema.optional().or(z.literal("").transform(() => undefined));
 
+/** Like optionalEmptyString, but an explicit `null` is a valid value meaning
+ *  "clear this field" — the edit form sends it for an emptied input (0055
+ *  columns are nullable). `undefined`/"" still mean "unchanged". */
+const clearableString = (schema: z.ZodType<string>) =>
+  optionalEmptyString(schema).or(z.null());
+
 export const deckTitleSchema = z
   .string()
   .trim()
@@ -27,14 +33,14 @@ export const deckSlugSchema = z
     "Slug must use lowercase letters, numbers, and hyphens (no leading/trailing hyphen).",
   );
 
-export const deckDescriptionSchema = optionalEmptyString(
+export const deckDescriptionSchema = clearableString(
   z
     .string()
     .trim()
     .max(2000, "Description must be 2000 characters or fewer."),
 );
 
-export const deckCoverUrlSchema = optionalEmptyString(
+export const deckCoverUrlSchema = clearableString(
   z
     .string()
     .trim()
