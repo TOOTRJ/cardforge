@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -39,18 +39,63 @@ describe("migration 0106", () => {
     expect(MIGRATION).toContain("set settled_at = coalesce(settled_at, now())");
   });
 
-  it("backfills every sync-route ref prefix the app charges under", () => {
-    // Each credited sync route mints "spend:<prefix>:{uuid}"; a prefix the
-    // backfill doesn't know would have its historical charges refunded by
-    // the first sweep. Job-step refs (spend:{jobId}:…) are covered by (a).
-    const routes = ["app/api/ai/card-ideas/route.ts", "app/api/ai/deck-ideas/route.ts"];
-    for (const route of routes) {
-      const source = read(route);
-      const match = source.match(/`spend:([a-z]+):\$\{randomUUID\(\)\}`/);
-      expect(match, `${route} charges under a spend:<prefix>: ref`).not.toBeNull();
-      expect(MIGRATION).toContain(`like 'spend:${match![1]}:%'`);
-      // …and settles it once the work is delivered.
-      expect(source).toContain("await settleSpend(ref);");
+  it("backfills the sync-route ref prefixes that existed before it", () => {
+    // Charges minted before 0106 had no settlement proof; the backfill
+    // settles the never-refunded ones so the first sweep doesn't hand them
+    // back. Prefixes introduced later start settled by their own route.
+    for (const prefix of ["ideas", "deckideas"]) {
+      expect(MIGRATION).toContain(`like 'spend:${prefix}:%'`);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Every sync route that charges a credit outside a job step mints
+// "spend:<prefix>:{uuid}" and MUST settle it once its work is delivered —
+// otherwise the sweep refunds the charge a day later (the deck-guide route
+// shipped without it and made "Analyze this deck" free). This walks app/ and
+// lib/ so a new charged route can't forget.
+// ---------------------------------------------------------------------------
+
+const SYNC_REF = /`spend:([a-z]+):\$\{(?:crypto\.)?randomUUID\(\)\}`/g;
+
+function walk(dir: string): string[] {
+  const out: string[] = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) out.push(...walk(path));
+    else if (/\.tsx?$/.test(entry.name)) out.push(path);
+  }
+  return out;
+}
+
+const syncCharges = ["app", "lib"]
+  .flatMap((dir) => walk(join(process.cwd(), dir)))
+  .map((file) => ({
+    file: file.slice(process.cwd().length + 1),
+    source: readFileSync(file, "utf8"),
+  }))
+  .map((entry) => ({
+    ...entry,
+    prefixes: [...entry.source.matchAll(SYNC_REF)].map((m) => m[1]),
+  }))
+  .filter((entry) => entry.prefixes.length > 0);
+
+describe("sync credit charges", () => {
+  it("finds the known charged routes", () => {
+    const files = syncCharges.map((c) => c.file).sort();
+    expect(files).toEqual([
+      "app/api/ai/card-ideas/route.ts",
+      "app/api/ai/deck-ideas/route.ts",
+      "app/api/decks/[id]/guide/route.ts",
+    ]);
+  });
+
+  it("every charged route settles its ref once the work is delivered", () => {
+    for (const charge of syncCharges) {
+      expect(charge.source, `${charge.file} mints ${charge.prefixes.join(", ")}`).toContain(
+        "await settleSpend(ref)",
+      );
     }
   });
 });

@@ -9,6 +9,7 @@ import {
   getFreshCreditBalance,
   logAiCall,
   refundCredits,
+  settleSpend,
   spendCredits,
 } from "@/lib/ai/rate-limit";
 import { buildAndStoreDeckGuide } from "@/lib/decks/guides";
@@ -72,5 +73,8 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     if (spend.charged) await refundCredits(user.id, 1, "analyze_deck", `refund:${ref}`);
     return NextResponse.json({ ok: false, error: result.error }, { status: 502 });
   }
+  // The analysis is stored: settle the charge so the reconcile-credits sweep
+  // (which refunds every aged UNSETTLED spend) leaves it alone.
+  if (spend.charged) await settleSpend(ref);
   return NextResponse.json({ ok: true, guide: result.guide, credits: await getFreshCreditBalance() });
 }
