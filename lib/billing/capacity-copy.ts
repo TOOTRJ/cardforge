@@ -25,6 +25,14 @@ export function remainingCapacity(capacity: CardCapacity): number | null {
   return Math.max(0, capacity.cap - capacity.used);
 }
 
+/** How many cards the user holds BEYOND the cap — a lapsed Plus/Pro
+ *  subscriber keeps every card (the capacity trigger fires on insert only),
+ *  so this is the honest number to show instead of "212 of 50 used". */
+export function overCapacity(capacity: CardCapacity): number {
+  if (capacity.cap === CARD_CAPACITY_UNLIMITED) return 0;
+  return Math.max(0, capacity.used - capacity.cap);
+}
+
 export type CapacityMessage = {
   tone: "danger" | "warning" | "info";
   message: string;
@@ -45,6 +53,18 @@ export function describeCapacity(
   const plan = TIER_NAME[capacity.tier];
   const slots = (n: number) => `${n} slot${n === 1 ? "" : "s"}`;
 
+  const over = overCapacity(capacity);
+  if (over > 0) {
+    // Over the cap (a lapsed plan, or an admin override that was lowered):
+    // the cards are safe; only new saves are blocked.
+    const room = (over + adding).toLocaleString("en-US");
+    return {
+      tone: "danger",
+      message: `You have ${capacity.used.toLocaleString("en-US")} cards — ${over.toLocaleString("en-US")} over your ${plan} plan's ${cap}-card limit. They're safe, but ${
+        adding <= 1 ? "saving this card" : `adding ${adding} cards`
+      } needs room: delete ${room} card${over + adding === 1 ? "" : "s"}, or move to a plan with space.`,
+    };
+  }
   if (remaining === 0) {
     return {
       tone: "danger",
@@ -80,6 +100,13 @@ export function describeUsage(capacity: CardCapacity | null): CapacityMessage | 
   if (remaining === null) return null;
   const cap = capacity.cap.toLocaleString("en-US");
   const plan = TIER_NAME[capacity.tier];
+  const over = overCapacity(capacity);
+  if (over > 0) {
+    return {
+      tone: "danger",
+      message: `You have ${capacity.used.toLocaleString("en-US")} cards, ${over.toLocaleString("en-US")} over the ${plan} plan's ${cap}-card limit. They're safe — new saves need room or a plan with space.`,
+    };
+  }
   const message = `${capacity.used.toLocaleString("en-US")} of ${cap} card slots used on ${plan}.`;
   return {
     tone: remaining === 0 ? "danger" : remaining <= CAPACITY_WARN_AT ? "warning" : "info",

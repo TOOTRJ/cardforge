@@ -3,7 +3,7 @@ import { Layers } from "lucide-react";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { Badge } from "@/components/ui/badge";
 import { getCardCapacity } from "@/lib/cards/capacity";
-import { CAPACITY_WARN_AT, remainingCapacity } from "@/lib/billing/capacity-copy";
+import { CAPACITY_WARN_AT, overCapacity, remainingCapacity } from "@/lib/billing/capacity-copy";
 import { planForTier } from "@/lib/billing/plans";
 import { cn } from "@/lib/utils";
 
@@ -31,11 +31,16 @@ export async function CardsSummaryCard() {
         ? "warning"
         : "default";
   const pct = unlimited ? 0 : Math.min(100, Math.round((capacity.used / capacity.cap) * 100));
+  // Over the cap — a lapsed Plus/Pro plan keeps every card (the capacity
+  // trigger only blocks inserts): say so plainly instead of "50 of 50".
+  const over = unlimited ? 0 : overCapacity(capacity);
   const sentence = unlimited
     ? `Unlimited saved cards on ${plan.name} — ${used} so far.`
-    : remaining === 0
-      ? `You've used all ${cap} card slots on ${plan.name}. Delete a card or upgrade to save more.`
-      : `${remaining.toLocaleString("en-US")} more card${remaining === 1 ? "" : "s"} before you reach the ${plan.name} plan's ${cap}-card limit.`;
+    : over > 0
+      ? `You have ${used} cards, ${over.toLocaleString("en-US")} over the ${plan.name} plan's ${cap}-card limit. They're safe — but new saves need room or a plan with space.`
+      : remaining === 0
+        ? `You've used all ${cap} card slots on ${plan.name}. Delete a card or upgrade to save more.`
+        : `${remaining.toLocaleString("en-US")} more card${remaining === 1 ? "" : "s"} before you reach the ${plan.name} plan's ${cap}-card limit.`;
 
   return (
     <SurfaceCard
@@ -65,12 +70,16 @@ export async function CardsSummaryCard() {
       <div className="grid gap-3 sm:grid-cols-3">
         <Stat label="Saved" value={used} unit="cards" emphasis={tone} />
         <Stat label="Limit" value={unlimited ? "∞" : cap} unit={unlimited ? "unlimited" : "cards"} />
-        <Stat
+        {over > 0 ? (
+          <Stat label="Over by" value={over.toLocaleString("en-US")} unit={over === 1 ? "card" : "cards"} emphasis="danger" />
+        ) : (
+          <Stat
           label="Remaining"
           value={unlimited ? "∞" : remaining.toLocaleString("en-US")}
           unit={unlimited ? "" : remaining === 1 ? "slot" : "slots"}
           emphasis={tone}
         />
+        )}
       </div>
 
       {unlimited ? null : (

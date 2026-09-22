@@ -6,6 +6,7 @@ import {
   CAPACITY_WARN_AT,
   describeCapacity,
   describeUsage,
+  overCapacity,
   isCapacityViolation,
   remainingCapacity,
   type CardCapacity,
@@ -39,6 +40,23 @@ describe("migration 0104 mirrors CARD_CAPACITY", () => {
 });
 
 const free = (used: number): CardCapacity => ({ used, cap: CARD_CAPACITY.free, tier: "free" });
+
+describe("over the cap (lapsed plan)", () => {
+  it("says the cards are safe and how much room a save needs", () => {
+    const lapsed = { used: 212, cap: CARD_CAPACITY.free, tier: "free" as const };
+    expect(overCapacity(lapsed)).toBe(212 - CARD_CAPACITY.free);
+    expect(remainingCapacity(lapsed)).toBe(0);
+    expect(describeUsage(lapsed)).toMatchObject({ tone: "danger" });
+    expect(describeUsage(lapsed)?.message).toContain("212 cards, 162 over the Free plan's 50-card limit");
+    expect(describeUsage(lapsed)?.message).toContain("They're safe");
+    expect(describeCapacity(lapsed, 1)?.message).toContain("162 over your Free plan's 50-card limit");
+    expect(describeCapacity(lapsed, 1)?.message).toContain("delete 163 cards");
+    expect(describeCapacity(lapsed, 3)?.message).toContain("adding 3 cards needs room: delete 165 cards");
+    // Exactly at the cap is "full", not "over".
+    expect(overCapacity({ used: CARD_CAPACITY.free, cap: CARD_CAPACITY.free, tier: "free" })).toBe(0);
+    expect(overCapacity({ used: 9_000, cap: CARD_CAPACITY_UNLIMITED, tier: "pro" })).toBe(0);
+  });
+});
 
 describe("describeCapacity", () => {
   it("says nothing on an unlimited plan or with plenty of room", () => {
