@@ -136,11 +136,10 @@ export async function uploadProfileMediaServerAction(
   const path = `${user.id}/${kind}-${id}.${ext}`;
   const supabase = await createClient();
 
-  // Best-effort cleanup of the previous object for this kind so we don't
-  // leak storage. We read the current URL from the profile row, parse its
-  // bucket-relative path, and DELETE it. Failures are swallowed — the
-  // upload still wins, and a rogue stale object in the user's own folder
-  // isn't a security concern (RLS prevents cross-user access).
+  // Remember the previous object for this kind; it is deleted only AFTER
+  // the new upload, its moderation scan and the profile update all
+  // succeed. Deleting first meant a failed upload (or a flagged image) left
+  // the profile pointing at an object that no longer existed.
   const { data: existingProfile } = await supabase
     .from("profiles")
     .select(kind === "avatar" ? "avatar_url" : "banner_url")
@@ -150,12 +149,7 @@ export async function uploadProfileMediaServerAction(
     (existingProfile as Record<string, string | null> | null)?.[
       kind === "avatar" ? "avatar_url" : "banner_url"
     ] ?? null;
-  if (previousUrl) {
-    const previousPath = extractBucketPath(previousUrl, "profile-media");
-    if (previousPath) {
-      await supabase.storage.from("profile-media").remove([previousPath]);
-    }
-  }
+  const previousPath = previousUrl ? extractBucketPath(previousUrl, "profile-media") : null;
 
   const { error: uploadErr } = await supabase.storage
     .from("profile-media")
@@ -195,7 +189,17 @@ export async function uploadProfileMediaServerAction(
     .eq("id", user.id);
 
   if (updateErr) {
+    // The new object is orphaned but the profile still shows the OLD image —
+    // remove the new one so nothing dangles.
+    await supabase.storage.from("profile-media").remove([path]);
     return { ok: false, error: updateErr.message };
+  }
+
+  // Best-effort cleanup of the previous object, now that the row points at
+  // the new one. (A stale object in the user's own folder isn't a security
+  // concern — RLS prevents cross-user access — just storage.)
+  if (previousPath && previousPath !== path) {
+    await supabase.storage.from("profile-media").remove([previousPath]);
   }
 
   // Bust both the settings page (so the form re-renders the new URL) and

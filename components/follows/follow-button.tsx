@@ -6,6 +6,7 @@ import { Loader2, UserCheck, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { toggleFollowAction } from "@/lib/follows/actions";
+import { hasSupabaseSessionCookie } from "@/lib/supabase/session-cookie";
 
 export function FollowButton({
   targetUserId,
@@ -21,8 +22,12 @@ export function FollowButton({
   const [pending, startTransition] = useTransition();
 
   function onClick() {
-    if (requiresSignIn) {
-      router.push("/login");
+    // Same rule as QuickLikeButton: the anonymous-rendered hint only ever
+    // PROMOTES — with a session cookie present we try the action (the server
+    // is the real check); without one, bounce to login and come back here.
+    if (requiresSignIn && !hasSupabaseSessionCookie()) {
+      const next = typeof window !== "undefined" ? window.location.pathname : "/";
+      router.push(`/login?redirectTo=${encodeURIComponent(next)}`);
       return;
     }
     startTransition(async () => {

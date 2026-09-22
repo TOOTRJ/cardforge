@@ -38,13 +38,23 @@ function minGapFor(path: string): number {
 // each maintain their own chain; Vercel egresses from many IPs so this is
 // fine in practice.)
 let lastDispatchAt = 0;
-async function throttle(gapMs: number): Promise<void> {
-  const now = Date.now();
-  const wait = Math.max(0, lastDispatchAt + gapMs - now);
-  if (wait > 0) {
-    await new Promise((resolve) => setTimeout(resolve, wait));
-  }
-  lastDispatchAt = Date.now();
+// The chain is what makes concurrent callers queue: each throttle() call
+// waits for the previous one to have dispatched before computing its own
+// gap. The old version read lastDispatchAt synchronously, so N concurrent
+// callers all saw the same stale value, computed the same wait, and fired
+// together — a stampede the comment above promised never happened.
+let chain: Promise<void> = Promise.resolve();
+function throttle(gapMs: number): Promise<void> {
+  const turn = chain.then(async () => {
+    const wait = Math.max(0, lastDispatchAt + gapMs - Date.now());
+    if (wait > 0) {
+      await new Promise((resolve) => setTimeout(resolve, wait));
+    }
+    lastDispatchAt = Date.now();
+  });
+  // A rejected turn must not poison the queue for the next caller.
+  chain = turn.catch(() => {});
+  return turn;
 }
 
 function userAgent(): string {

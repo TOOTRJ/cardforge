@@ -68,15 +68,35 @@ export function FieldGroup({
   children: React.ReactNode;
 }) {
   return (
-    <label className="flex flex-col gap-1.5">
-      <span className="text-xs font-semibold uppercase tracking-wider text-subtle">
+    <label
+      className="flex flex-col gap-1.5"
+      onClick={(event) => {
+        // A <label> forwards a click to its first labelable descendant — and
+        // a BUTTON is labelable. For groups that wrap a toolbar or chip row,
+        // clicking the caption or helper text used to press the first
+        // button (change the card type, add a mana pip…). Only forward to
+        // real form controls; inputs keep the click-to-focus behaviour.
+        const target = event.target as HTMLElement;
+        if (!target.closest("[data-fieldgroup-text]")) return;
+        const first = event.currentTarget.querySelector(
+          "input, textarea, select, button, [role='radio'], [role='switch']",
+        );
+        if (first && first.tagName !== "INPUT" && first.tagName !== "TEXTAREA" && first.tagName !== "SELECT") {
+          event.preventDefault();
+        }
+      }}
+    >
+      <span
+        data-fieldgroup-text
+        className="text-xs font-semibold uppercase tracking-wider text-subtle"
+      >
         {label}
       </span>
       {children}
       {error ? (
-        <span className="text-xs text-danger">{error}</span>
+        <span data-fieldgroup-text className="text-xs text-danger">{error}</span>
       ) : helper ? (
-        <span className="text-xs text-muted">{helper}</span>
+        <span data-fieldgroup-text className="text-xs text-muted">{helper}</span>
       ) : null}
     </label>
   );

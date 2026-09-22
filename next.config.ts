@@ -62,9 +62,30 @@ const BUILD_ID =
   process.env.VERCEL_GIT_COMMIT_SHA ||
   "dev";
 
+// Baseline security headers on every response. No full Content-Security-
+// Policy yet (Next's inline runtime, Stripe.js and GA would each need
+// allow-listing and a nonce pipeline); these four carry no such risk:
+//   - frame-ancestors 'none' + X-Frame-Options: nothing here is meant to be
+//     framed (oEmbed is type "photo", an image URL) — the signed-in pages
+//     were clickjackable.
+//   - nosniff: uploaded images are served under our origin via /render-cdn.
+//   - Referrer-Policy: card URLs carry usernames + slugs; don't leak them in
+//     full to third-party image hosts.
+//   - Permissions-Policy: the app uses none of these device APIs.
+const SECURITY_HEADERS = [
+  { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
+  { key: "X-Frame-Options", value: "DENY" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" },
+];
+
 const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_BUILD_ID: BUILD_ID,
+  },
+  async headers() {
+    return [{ source: "/(.*)", headers: SECURITY_HEADERS }];
   },
   // Phase 11 chunk 14: bump the server-action body size limit so the
   // Sharp-validated card-art upload (max 8 MB enforced server-side) can

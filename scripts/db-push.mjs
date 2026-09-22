@@ -71,10 +71,20 @@ function run(cmd, args) {
   if (res.status !== 0) process.exit(res.status ?? 1);
 }
 
+// Unlink on EVERY exit path — a CLI left linked to production turns the
+// next absent-minded `supabase db push` / `db reset --linked` into a prod
+// write. (The everyday flow never links at all: scripts/db-dev.mjs and the
+// GitHub integration use explicit connection strings.)
+const unlink = () => spawnSync("supabase", ["unlink"], { stdio: "ignore" });
+process.on("exit", unlink);
+for (const signal of ["SIGINT", "SIGTERM"]) {
+  process.on(signal, () => process.exit(130));
+}
+
 run("supabase", ["link", "--project-ref", ref]);
 run("supabase", ["db", "push"]);
 
-console.log(`\n✓ Migrations pushed to ${target} (${ref}).`);
+console.log(`\n✓ Migrations pushed to ${target} (${ref}); CLI unlinked.`);
 if (target === "prod") {
   console.log("Remember: mirror any dashboard-side config changes to staging.");
 }

@@ -41,6 +41,8 @@ export const RECONCILE_WINDOW_MS = 72 * 60 * 60_000;
  *  inside RECONCILE_WINDOW_MS — raise the limit (or the window) while a
  *  large incident is being reconciled. */
 export const RECONCILE_SCAN_LIMIT = 500;
+/** Pages of RECONCILE_SCAN_LIMIT per run — 20 × 500 = 10,000 spends, far above any day so far. */
+const RECONCILE_MAX_PAGES = 20;
 
 export type ParsedSpendRef = { jobId: string; stepKey: string };
 
@@ -87,18 +89,27 @@ export async function reconcileOrphanedSpends(
   const windowStart = new Date(now.getTime() - RECONCILE_WINDOW_MS);
   const graceCutoff = new Date(now.getTime() - RECONCILE_GRACE_MS);
 
-  const { data, error } = await admin
-    .from("credit_ledger")
-    .select("user_id, delta, idempotency_key")
-    .like("idempotency_key", "spend:%")
-    .lt("delta", 0)
-    .gte("created_at", windowStart.toISOString())
-    .lte("created_at", graceCutoff.toISOString())
-    .order("created_at", { ascending: true })
-    .limit(RECONCILE_SCAN_LIMIT);
-  if (error) return { ok: false, error: error.message };
-
-  const spends = (data ?? []) as LedgerSpend[];
+  // Page through the whole window. A single .limit(500) meant a busy day
+  // reconciled only its oldest 500 spends and silently skipped the rest —
+  // and the window is a sliding one, so skipped spends could age out
+  // unreconciled. The page cap is a runaway guard, not a budget.
+  const spends: LedgerSpend[] = [];
+  for (let page = 0; page < RECONCILE_MAX_PAGES; page += 1) {
+    const from = page * RECONCILE_SCAN_LIMIT;
+    const { data, error } = await admin
+      .from("credit_ledger")
+      .select("user_id, delta, idempotency_key")
+      .like("idempotency_key", "spend:%")
+      .lt("delta", 0)
+      .gte("created_at", windowStart.toISOString())
+      .lte("created_at", graceCutoff.toISOString())
+      .order("created_at", { ascending: true })
+      .range(from, from + RECONCILE_SCAN_LIMIT - 1);
+    if (error) return { ok: false, error: error.message };
+    const rows = (data ?? []) as LedgerSpend[];
+    spends.push(...rows);
+    if (rows.length < RECONCILE_SCAN_LIMIT) break;
+  }
   if (spends.length === 0) {
     return { ok: true, scanned: 0, legitimate: 0, refunded: 0, failed: 0 };
   }
