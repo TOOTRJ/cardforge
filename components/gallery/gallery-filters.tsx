@@ -23,8 +23,22 @@ import {
 import { ManaPip } from "@/components/cards/mana-pip";
 import { cn } from "@/lib/utils";
 import { useSearchParamPatch } from "@/lib/routing/use-search-param-patch";
+import { ChipGroup, type ChipOption } from "@/components/ui/chip-group";
 
 type Sort = "discover" | "recent" | "newest" | "popular" | "viewed";
+
+// The filter chips are the shared ChipGroup (single-select rows carry an
+// explicit "All" option; "Remixes only" is a one-chip multi-select toggle).
+const TYPE_OPTIONS: ChipOption<CardType | "all">[] = [
+  { value: "all", label: "All" },
+  ...CARD_TYPE_VALUES.map((type) => ({ value: type, label: CARD_TYPE_LABELS[type] })),
+];
+const RARITY_OPTIONS: ChipOption<Rarity | "all">[] = [
+  { value: "all", label: "All" },
+  ...RARITY_VALUES.map((value) => ({ value, label: RARITY_LABELS[value] })),
+];
+const ALL_COLORS_OPTION: ChipOption<"all">[] = [{ value: "all", label: "All" }];
+const SHOW_OPTIONS: ChipOption<"remixes">[] = [{ value: "remixes", label: "Remixes only" }];
 
 const SORT_LABELS: Record<Sort, string> = {
   discover: "Discover",
@@ -278,52 +292,30 @@ export function GalleryFilters() {
       {advancedOpen ? (
         <div className="flex flex-col gap-4 rounded-xl border border-border bg-surface/60 p-4">
           <FilterRow label="Type">
-            <Chip
-              active={cardType === null}
-              onClick={() => updateParam({ type: null })}
-            >
-              All
-            </Chip>
-            {CARD_TYPE_VALUES.map((type) => (
-              <Chip
-                key={type}
-                active={cardType === type}
-                onClick={() =>
-                  updateParam({ type: cardType === type ? null : type })
-                }
-              >
-                {CARD_TYPE_LABELS[type]}
-              </Chip>
-            ))}
+            <ChipGroup
+              ariaLabel="Card type"
+              value={cardType ?? "all"}
+              onChange={(next) => updateParam({ type: next === "all" ? null : next })}
+              options={TYPE_OPTIONS}
+            />
           </FilterRow>
 
           <FilterRow label="Rarity">
-            <Chip
-              active={rarity === null}
-              onClick={() => updateParam({ rarity: null })}
-            >
-              All
-            </Chip>
-            {RARITY_VALUES.map((value) => (
-              <Chip
-                key={value}
-                active={rarity === value}
-                onClick={() =>
-                  updateParam({ rarity: rarity === value ? null : value })
-                }
-              >
-                {RARITY_LABELS[value]}
-              </Chip>
-            ))}
+            <ChipGroup
+              ariaLabel="Rarity"
+              value={rarity ?? "all"}
+              onChange={(next) => updateParam({ rarity: next === "all" ? null : next })}
+              options={RARITY_OPTIONS}
+            />
           </FilterRow>
 
           <FilterRow label="Color">
-            <Chip
-              active={colorIdentity === null}
-              onClick={() => updateParam({ color: null })}
-            >
-              All
-            </Chip>
+            <ChipGroup
+              ariaLabel="Color"
+              value={colorIdentity === null ? "all" : ""}
+              onChange={() => updateParam({ color: null })}
+              options={ALL_COLORS_OPTION}
+            />
             {COLOR_IDENTITY_VALUES.map((color) => (
               <ColorChip
                 key={color}
@@ -337,14 +329,15 @@ export function GalleryFilters() {
           </FilterRow>
 
           <FilterRow label="Show">
-            <Chip
-              active={remixesOnly}
-              onClick={() =>
-                updateParam({ remixes: remixesOnly ? null : "1" })
+            <ChipGroup
+              multiSelect
+              ariaLabel="Show"
+              value={remixesOnly ? ["remixes"] : []}
+              onChange={(next) =>
+                updateParam({ remixes: next.includes("remixes") ? "1" : null })
               }
-            >
-              Remixes only
-            </Chip>
+              options={SHOW_OPTIONS}
+            />
             {tagParam ? (
               <button
                 type="button"
@@ -400,31 +393,6 @@ function FilterRow({
   );
 }
 
-function Chip({
-  children,
-  active,
-  onClick,
-}: {
-  children: React.ReactNode;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-        active
-          ? "border-primary bg-primary/15 text-primary-bright"
-          : "border-border bg-elevated text-muted hover:border-border-strong hover:text-foreground",
-      )}
-      aria-pressed={active}
-    >
-      {children}
-    </button>
-  );
-}
 
 // Maps a ColorIdentity value to the mana pip symbol used for rendering.
 const COLOR_TO_PIP: Record<ColorIdentity, string> = {
