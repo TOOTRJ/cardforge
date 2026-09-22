@@ -72,7 +72,7 @@ export function CreditMeter({ className }: { className?: string }) {
         )}
       >
         <Sparkles className="h-3.5 w-3.5" aria-hidden />
-        0 credits — start your free trial
+        0 credits — get more
       </button>
     );
   }

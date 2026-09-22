@@ -36,6 +36,8 @@ export function GrantCreditsForm({ userId }: { userId: string }) {
   const [pending, startTransition] = useTransition();
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
+  // One idempotency id per fill-in — see adminGrantCreditsAction.
+  const [requestId, setRequestId] = useState(() => crypto.randomUUID());
 
   function submit() {
     const parsed = Number(amount);
@@ -48,6 +50,7 @@ export function GrantCreditsForm({ userId }: { userId: string }) {
         userId,
         amount: parsed,
         note: note.trim() || undefined,
+        requestId,
       });
       if (!result.ok) {
         toast.error(result.error);
@@ -56,6 +59,8 @@ export function GrantCreditsForm({ userId }: { userId: string }) {
       toast.success(`Granted ${parsed} credits — new balance ${result.balance}.`);
       setAmount("");
       setNote("");
+      // Fresh idempotency id: the NEXT grant must not be deduped against this one.
+      setRequestId(crypto.randomUUID());
       router.refresh();
     });
   }

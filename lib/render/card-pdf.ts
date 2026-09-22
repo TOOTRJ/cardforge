@@ -28,7 +28,8 @@
 // compatibility — passing "sheet" still produces the Letter sheet.
 // ---------------------------------------------------------------------------
 
-import { PDFDocument, PDFImage, rgb, StandardFonts } from "pdf-lib";
+import fontkit from "@pdf-lib/fontkit";
+import { PDFDocument, PDFFont, PDFImage, rgb, StandardFonts } from "pdf-lib";
 
 // PDF point dimensions for a standard MTG card (72pt = 1 inch).
 const CARD_W_PT = 180; // 2.5"
@@ -224,9 +225,44 @@ const CHECKLIST_LINE_SIZE = 11;
 const CHECKLIST_MARGIN = 54;
 const CHECKLIST_LINE_GAP = 16;
 
+/**
+ * The checklist font. pdf-lib's built-in Helvetica can only encode WinAnsi —
+ * a deck titled "Æther Storm", a card called "Lim-Dûl's Vault" or anything in
+ * Japanese used to throw inside drawText and 500 the whole export. Callers
+ * pass the bytes of a real TTF (the browser fetches /fonts/mplantin.ttf, a
+ * server route reads it from disk) and it is embedded through fontkit; with
+ * no bytes we fall back to Helvetica. Either way every code point the font
+ * lacks is swapped for "?" before drawing — the export never throws on text.
+ * (This module also runs in the browser, so it must not touch node:fs.)
+ */
+async function embedChecklistFont(
+  doc: PDFDocument,
+  fontBytes: Uint8Array | ArrayBuffer | null | undefined,
+): Promise<PDFFont> {
+  if (fontBytes && fontBytes.byteLength > 0) {
+    try {
+      doc.registerFontkit(fontkit);
+      return await doc.embedFont(fontBytes, { subset: true });
+    } catch {
+      // Corrupt / unreadable bytes — Helvetica still produces a document.
+    }
+  }
+  return doc.embedFont(StandardFonts.Helvetica);
+}
+
+function encodable(font: PDFFont, text: string): string {
+  const supported = new Set(font.getCharacterSet());
+  let out = "";
+  for (const ch of text) {
+    const cp = ch.codePointAt(0);
+    out += cp !== undefined && supported.has(cp) ? ch : "?";
+  }
+  return out;
+}
+
 function drawChecklistPages(
   doc: PDFDocument,
-  font: Awaited<ReturnType<PDFDocument["embedFont"]>>,
+  font: PDFFont,
   checklist: DeckPdfChecklist,
   pageWidth: number,
   pageHeight: number,
@@ -239,7 +275,7 @@ function drawChecklistPages(
     const page = doc.addPage([pageWidth, pageHeight]);
     let y = pageHeight - CHECKLIST_MARGIN;
     if (start === 0) {
-      page.drawText(checklist.heading, {
+      page.drawText(encodable(font, checklist.heading).slice(0, 120), {
         x: CHECKLIST_MARGIN,
         y,
         size: CHECKLIST_TITLE_SIZE,
@@ -249,7 +285,7 @@ function drawChecklistPages(
     }
     y -= CHECKLIST_TITLE_SIZE * 2;
     for (const line of checklist.lines.slice(start, start + linesPerPage)) {
-      page.drawText(line.slice(0, 90), {
+      page.drawText(encodable(font, line).slice(0, 90), {
         x: CHECKLIST_MARGIN,
         y,
         size: CHECKLIST_LINE_SIZE,
@@ -279,9 +315,11 @@ export async function buildDeckPdf(
     title?: string;
     layout: DeckPdfLayout;
     checklist?: DeckPdfChecklist | null;
+    /** TTF bytes for the checklist text (see embedChecklistFont). */
+    checklistFont?: Uint8Array | ArrayBuffer | null;
   },
 ): Promise<Uint8Array> {
-  const { title = "PipGlyph Deck", layout, checklist = null } = options;
+  const { title = "PipGlyph Deck", layout, checklist = null, checklistFont = null } = options;
   const doc = await PDFDocument.create();
 
   doc.setTitle(title);
@@ -336,7 +374,7 @@ export async function buildDeckPdf(
   }
 
   if (checklist && checklist.lines.length > 0) {
-    const font = await doc.embedFont(StandardFonts.Helvetica);
+    const font = await embedChecklistFont(doc, checklistFont);
     const pageWidth = layout === "sheet-a4" ? A4_W_PT : LETTER_W_PT;
     const pageHeight = layout === "sheet-a4" ? A4_H_PT : LETTER_H_PT;
     drawChecklistPages(doc, font, checklist, pageWidth, pageHeight);

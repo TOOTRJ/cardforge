@@ -179,17 +179,20 @@ export type Database = {
       stripe_events: {
         Row: {
           id: string;
-          processed_at: string;
+          claimed_at: string;
+          processed_at: string | null;
           type: string;
         };
         Insert: {
           id: string;
-          processed_at?: string;
+          claimed_at?: string;
+          processed_at?: string | null;
           type: string;
         };
         Update: {
           id?: string;
-          processed_at?: string;
+          claimed_at?: string;
+          processed_at?: string | null;
           type?: string;
         };
         Relationships: [];

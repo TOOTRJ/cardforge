@@ -88,6 +88,9 @@ const grantCreditsSchema = z.object({
     .trim()
     .max(200, "Note must be 200 characters or fewer.")
     .optional(),
+  /** Minted by the form once per fill-in; a double-submit reuses it (deduped
+   *  inside grant_credits), a deliberate later grant gets a fresh one. */
+  requestId: z.string().uuid("Invalid request id."),
 });
 
 export type AdminGrantCreditsResult =
@@ -98,6 +101,7 @@ export async function adminGrantCreditsAction(input: {
   userId: string;
   amount: number;
   note?: string;
+  requestId: string;
 }): Promise<AdminGrantCreditsResult> {
   const gate = await requireAdmin();
   if (!gate.ok) return gate;
@@ -109,20 +113,22 @@ export async function adminGrantCreditsAction(input: {
       error: parsed.error.issues[0]?.message ?? "Invalid input.",
     };
   }
-  const { userId, amount, note } = parsed.data;
+  const { userId, amount, note, requestId } = parsed.data;
 
   const { admin } = gate;
   if (!(await targetExists(admin, userId))) {
     return { ok: false, error: "No user with that id." };
   }
 
-  // Unique key per grant — dedupes a double-submitted identical call without
-  // blocking a deliberate second grant later.
+  // The key is the FORM's request id, not a timestamp: a double-click sends
+  // the same id twice and grant_credits dedupes it; the form mints a new id
+  // after each success so a deliberate second grant still goes through.
+  // (The old `${Date.now()}` key made every call unique — no dedupe at all.)
   const { data: balance, error } = await admin.rpc("grant_credits", {
     p_user_id: userId,
     p_amount: amount,
     p_reason: note ? `admin_grant: ${note}` : "admin_grant",
-    p_idempotency_key: `admin-grant:${userId}:${Date.now()}`,
+    p_idempotency_key: `admin-grant:${requestId}`,
   });
   if (error || typeof balance !== "number") {
     console.warn("adminGrantCreditsAction: rpc error", error?.message);

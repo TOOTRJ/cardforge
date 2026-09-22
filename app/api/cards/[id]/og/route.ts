@@ -53,16 +53,15 @@ export async function GET(
     );
   }
 
-  const presetParam = request.nextUrl.searchParams.get("preset");
-  const preset: RenderPreset = presetParam === "hd" ? "hd" : "default";
+  // Share images are always the 750×1050 display render. `?preset=hd` used to
+  // hand the 1500×2100 render to anyone — the very thing the PNG route gates
+  // behind a paid plan — so the parameter is no longer read.
+  const preset: RenderPreset = "default";
   // `?variant=social` returns the 1200×630 landscape composite used as the
   // card page's og:image; the default is the raw portrait card render.
-  // (A `v` query param may also be present purely as a CDN cache-buster —
-  // the page metadata stamps it from `updated_at` so edited cards re-unfurl.)
   const social = request.nextUrl.searchParams.get("variant") === "social";
-  const cacheHeader = request.nextUrl.searchParams.has("v")
-    ? VERSIONED_CACHE_HEADER
-    : CACHE_HEADER;
+  const requestedVersion = request.nextUrl.searchParams.get("v");
+  const cacheHeader = requestedVersion !== null ? VERSIONED_CACHE_HEADER : CACHE_HEADER;
 
   let card;
   try {
@@ -88,6 +87,29 @@ export async function GET(
 
   if (!card) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  // `v` is the card's updated_at epoch (the card page and oEmbed stamp it) —
+  // a self-versioning URL that can sit at the CDN for a day. Any OTHER value
+  // is redirected to the canonical one: the CDN keys on the full URL, so a
+  // free-form `v` was an unlimited cache-buster (every distinct value = a
+  // fresh storage fetch + resize, or a whole Satori render for an un-baked
+  // card). This bounds a card to two cacheable URLs per variant, and a
+  // scraper holding the OLD version after an edit lands on the fresh image.
+  const currentVersion = Date.parse(card.updated_at);
+  if (
+    requestedVersion !== null &&
+    Number.isFinite(currentVersion) &&
+    requestedVersion !== String(currentVersion)
+  ) {
+    const canonical = new URL(request.nextUrl);
+    canonical.search = "";
+    if (social) canonical.searchParams.set("variant", "social");
+    canonical.searchParams.set("v", String(currentVersion));
+    return NextResponse.redirect(canonical, {
+      status: 308,
+      headers: { "Cache-Control": CACHE_HEADER },
+    });
   }
 
   const profileOverrides = await getFrameProfileOverrides();
