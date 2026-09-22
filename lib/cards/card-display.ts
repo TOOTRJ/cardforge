@@ -155,3 +155,52 @@ export function buildTypeLine({
   if (left && right) return `${left} — ${right}`;
   return left || right || "Type";
 }
+
+// ---------------------------------------------------------------------------
+// Mana cost as words — the plain-text twin of the pips a crawler can't read
+// from the rendered card. "{2}{U}{U}" → "2 generic, 2 blue"; hybrid,
+// Phyrexian, snow, energy and X symbols spelled out. Unknown tokens are
+// passed through verbatim rather than dropped.
+// ---------------------------------------------------------------------------
+
+const MANA_WORDS: Record<string, string> = {
+  W: "white",
+  U: "blue",
+  B: "black",
+  R: "red",
+  G: "green",
+  C: "colorless",
+  S: "snow",
+  E: "energy",
+  X: "X",
+  Y: "Y",
+  Z: "Z",
+};
+
+export function describeManaCost(cost: string | null | undefined): string {
+  if (!cost) return "";
+  const tokens = [...cost.matchAll(/\{([^}]+)\}/g)].map((m) => m[1].toUpperCase());
+  if (tokens.length === 0) return "";
+  const parts: string[] = [];
+  const counts = new Map<string, number>();
+  for (const token of tokens) counts.set(token, (counts.get(token) ?? 0) + 1);
+  for (const [token, n] of counts) {
+    if (/^\d+$/.test(token)) {
+      parts.push(`${Number(token) * n} generic`);
+      continue;
+    }
+    const halves = token.split("/");
+    let word: string;
+    if (halves.length === 2 && halves[1] === "P") {
+      word = `${MANA_WORDS[halves[0]] ?? halves[0]} or 2 life`;
+    } else if (halves.length === 2 && /^\d+$/.test(halves[0])) {
+      word = `${halves[0]} generic or ${MANA_WORDS[halves[1]] ?? halves[1]}`;
+    } else if (halves.length === 2) {
+      word = `${MANA_WORDS[halves[0]] ?? halves[0]} or ${MANA_WORDS[halves[1]] ?? halves[1]}`;
+    } else {
+      word = MANA_WORDS[token] ?? token;
+    }
+    parts.push(n > 1 ? `${n} ${word}` : word);
+  }
+  return parts.join(", ");
+}

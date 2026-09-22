@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { renderVersionOf } from "@/lib/cards/render-version";
 import { notFound } from "next/navigation";
 import { CardDetailContent } from "@/components/cards/card-detail-content";
 import { getCardByOwnerAndSlug } from "@/lib/cards/queries";
@@ -61,9 +62,9 @@ export async function generateMetadata({
   // composite renders uncropped everywhere. `v` is a pure cache-buster so
   // an edited card re-unfurls instead of serving the CDN/scraper-cached
   // stale image forever (Discord in particular never refetches a URL).
-  const version = Date.parse(card.updated_at);
+  const version = renderVersionOf(card);
   const ogImageUrl = isShareable
-    ? `/api/cards/${card.id}/og?variant=social${Number.isFinite(version) ? `&v=${version}` : ""}`
+    ? `/api/cards/${card.id}/og?variant=social${version ? `&v=${version}` : ""}`
     : undefined;
   const { width, height } = CARD_SOCIAL_SIZE;
 

@@ -516,3 +516,31 @@ export const countDeckEntries = cache(async (deckId: string): Promise<number> =>
     return 0;
   }
 });
+
+/** The public decks a card appears in — the card page's "In decks" row and
+ *  its CreativeWork `isPartOf`. Cookie-free; cache()-deduped per request. */
+export const listPublicDecksContaining = cache(
+  async (cardId: string): Promise<Array<{ slug: string; title: string }>> => {
+    if (!isSupabaseConfigured()) return [];
+    try {
+      const supabase = createPublicClient();
+      const { data: rows } = await supabase
+        .from("deck_cards")
+        .select("deck_id")
+        .eq("card_id", cardId)
+        .limit(50);
+      const deckIds = Array.from(new Set((rows ?? []).map((r) => r.deck_id)));
+      if (deckIds.length === 0) return [];
+      const { data: decks } = await supabase
+        .from("decks")
+        .select("slug, title")
+        .in("id", deckIds)
+        .eq("visibility", "public")
+        .order("updated_at", { ascending: false })
+        .limit(5);
+      return (decks ?? []).map((d) => ({ slug: d.slug, title: d.title }));
+    } catch {
+      return [];
+    }
+  },
+);

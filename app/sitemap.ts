@@ -7,6 +7,14 @@ import { getCluster } from "@/lib/content/clusters";
 import { createPublicClient } from "@/lib/supabase/public";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { isBillingEnabled } from "@/lib/billing/flags";
+import {
+  FORMAT_HUB_MIN_DECKS,
+  isIndexableTagHub,
+  listFormatHubs,
+  listTagHubs,
+  listTypeHubs,
+  TYPE_HUB_MIN_CARDS,
+} from "@/lib/cards/hubs";
 
 // ---------------------------------------------------------------------------
 // Sitemap
@@ -104,13 +112,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     staticEntry(baseUrl, "/signup", "yearly", 0.2),
   ];
 
-  const [{ cards, profiles }, challengePages, deckPages] = await Promise.all([
+  const [{ cards, profiles }, challengePages, deckPages, hubPages] = await Promise.all([
     fetchCardAndProfileEntries(baseUrl),
     fetchChallengeEntries(baseUrl),
     fetchPublicDeckEntries(baseUrl),
+    fetchHubEntries(baseUrl),
   ]);
 
-  return [...staticPages, ...challengePages, ...deckPages, ...profiles, ...cards];
+  return [...staticPages, ...hubPages, ...challengePages, ...deckPages, ...profiles, ...cards];
 }
 
 // ---------------------------------------------------------------------------
@@ -243,6 +252,28 @@ async function fetchPublicDeckEntries(
         changeFrequency: "weekly" as const,
         priority: 0.6,
       }));
+  } catch {
+    return [];
+  }
+}
+
+/** The browse hubs that are indexable today (lib/cards/hubs.ts thresholds) —
+ *  a hub below its bar is noindex on its own page and stays out of here. */
+async function fetchHubEntries(baseUrl: string): Promise<MetadataRoute.Sitemap> {
+  if (!isSupabaseConfigured()) return [];
+  try {
+    const [types, tags, formats] = await Promise.all([listTypeHubs(), listTagHubs(), listFormatHubs()]);
+    return [
+      ...types
+        .filter((hub) => hub.count >= TYPE_HUB_MIN_CARDS)
+        .map((hub) => staticEntry(baseUrl, `/gallery/type/${hub.type}`, "weekly", 0.75)),
+      ...tags
+        .filter(isIndexableTagHub)
+        .map((hub) => staticEntry(baseUrl, `/gallery/tag/${hub.slug}`, "weekly", 0.65)),
+      ...formats
+        .filter((hub) => hub.count >= FORMAT_HUB_MIN_DECKS)
+        .map((hub) => staticEntry(baseUrl, `/decks/format/${hub.format}`, "weekly", 0.65)),
+    ];
   } catch {
     return [];
   }

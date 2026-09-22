@@ -10,6 +10,7 @@ import { SurfaceCard } from "@/components/ui/surface-card";
 import { Badge } from "@/components/ui/badge";
 import { QuickLikeButton } from "@/components/cards/quick-like-button";
 import { DecksSearch } from "@/components/decks/decks-search";
+import { DeckFormatLinks } from "@/components/decks/deck-format-links";
 import { breadcrumbJsonLd, JsonLd } from "@/components/seo/json-ld";
 import { listPublicDecks, type PublicDecksSort } from "@/lib/decks/queries";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -176,6 +177,7 @@ async function PublicDecksResults({
           <PublicDeckTile key={deck.id} deck={deck} />
         ))}
       </div>
+      <DeckFormatLinks current={format} />
       {hasPrev || hasMore ? (
         <div className="mt-10 flex items-center justify-between gap-3 border-t border-border/40 pt-6">
           <span className="text-xs text-subtle">Page {page}</span>
@@ -203,7 +205,7 @@ async function PublicDecksResults({
   );
 }
 
-function PublicDeckTile({
+export function PublicDeckTile({
   deck,
 }: {
   deck: Awaited<ReturnType<typeof listPublicDecks>>[number];

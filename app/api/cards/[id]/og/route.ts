@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { renderVersionOf } from "@/lib/cards/render-version";
 import sharp from "sharp";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -96,10 +97,10 @@ export async function GET(
   // fresh storage fetch + resize, or a whole Satori render for an un-baked
   // card). This bounds a card to two cacheable URLs per variant, and a
   // scraper holding the OLD version after an edit lands on the fresh image.
-  const currentVersion = Date.parse(card.updated_at);
+  const currentVersion = renderVersionOf(card);
   if (
     requestedVersion !== null &&
-    Number.isFinite(currentVersion) &&
+    currentVersion !== null &&
     requestedVersion !== String(currentVersion)
   ) {
     const canonical = new URL(request.nextUrl);

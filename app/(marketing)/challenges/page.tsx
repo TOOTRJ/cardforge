@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { tagSlug } from "@/lib/cards/tag-slug";
 import { Suspense } from "react";
 import Link from "next/link";
 import { ArrowRight, Hash } from "lucide-react";
@@ -125,7 +126,7 @@ export default async function ChallengesPage() {
             {trendingTags.map(({ tag, count }) => (
               <Link
                 key={tag}
-                href={`/gallery?tag=${encodeURIComponent(tag)}`}
+                href={`/gallery/tag/${tagSlug(tag)}`}
                 className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-elevated/50 px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:border-gold/40 hover:text-foreground"
               >
                 <Hash className="h-3 w-3 text-gold" aria-hidden />
