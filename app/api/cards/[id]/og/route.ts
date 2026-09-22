@@ -198,6 +198,7 @@ async function renderSocialComposite(
     creatorHandle,
     cardImageDataUri,
     accent: cardAccentColor(card.color_identity),
+    landscape: isLandscapeRender(previewData),
   });
 
   const jpeg = await sharp(Buffer.from(await composite.arrayBuffer()))

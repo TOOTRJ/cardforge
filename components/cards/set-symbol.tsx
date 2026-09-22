@@ -129,15 +129,15 @@ export function SetSymbol({
     );
   }
 
-  // 2. Preset Keyrune glyph — rarity-tinted, with the metallic gradient on the
-  //    higher rarities like a real rare/mythic stamp.
+  // 2. Preset Keyrune glyph — flat rarity ink, exactly as the stored render
+  //    draws it (lib/render/card-image.tsx). Keyrune's metallic `text gradient`
+  //    text gradient can't be reproduced by Satori, so the preview must not
+  //    show what the bake can't: preview and bake stay pixel-identical.
   if (setCode) {
-    const useGradient =
-      rarity === "rare" || rarity === "mythic" || rarity === "uncommon";
     return (
       <i
         aria-label={rarity ? `${rarity} rarity` : "Set symbol"}
-        className={cn("ss", `ss-${setCode.toLowerCase()}`, useGradient && "ss-grad", className)}
+        className={cn("ss", `ss-${setCode.toLowerCase()}`, className)}
         style={{ fontSize: size, color }}
       />
     );

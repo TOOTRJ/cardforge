@@ -28,9 +28,18 @@ import {
 export { OG_SIZE as CARD_SOCIAL_SIZE };
 
 // Fills the 630px canvas height minus 40px of breathing room, at the card's
-// 5:7 aspect: 590 × (5/7) ≈ 421.
-const CARD_HEIGHT = 590;
-const CARD_WIDTH = Math.round(CARD_HEIGHT * (5 / 7));
+// 5:7 aspect: 590 × (5/7) ≈ 421. A landscape render (Battle frames, 7:5)
+// keeps the same 590 long edge, so the card box is 590 × 421 instead — it
+// used to be squeezed into the portrait box.
+const CARD_LONG_EDGE = 590;
+const CARD_SHORT_EDGE = Math.round(CARD_LONG_EDGE * (5 / 7));
+
+/** The card box in the composite for a portrait or landscape render. */
+export function socialCardBox(landscape: boolean): { width: number; height: number } {
+  return landscape
+    ? { width: CARD_LONG_EDGE, height: CARD_SHORT_EDGE }
+    : { width: CARD_SHORT_EDGE, height: CARD_LONG_EDGE };
+}
 
 
 
@@ -48,14 +57,18 @@ function CardSocialImage({
   creatorHandle,
   cardImageDataUri,
   accent,
+  landscape = false,
 }: {
   title: string;
   typeLine: string;
   creatorHandle: string | null;
   cardImageDataUri: string;
   accent: string;
+  /** The render is a landscape frame (Battle): draw it 7:5, not 5:7. */
+  landscape?: boolean;
 }) {
   const titleSize = title.length > 40 ? 44 : title.length > 24 ? 54 : 64;
+  const box = socialCardBox(landscape);
   return (
     <div
       style={{
@@ -149,11 +162,11 @@ function CardSocialImage({
       <img
         src={cardImageDataUri}
         alt=""
-        width={CARD_WIDTH}
-        height={CARD_HEIGHT}
+        width={box.width}
+        height={box.height}
         style={{
-          width: CARD_WIDTH,
-          height: CARD_HEIGHT,
+          width: box.width,
+          height: box.height,
           borderRadius: 22,
           boxShadow: "0 24px 60px rgba(0,0,0,0.55)",
         }}

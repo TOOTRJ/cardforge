@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { resolveBakeArt } from "@/lib/cards/bake-render";
 import { LEGACY_SUPABASE_HOSTS } from "@/lib/validation/card";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { renderCardImage } from "@/lib/render/card-image";
@@ -207,7 +208,13 @@ export async function POST(request: Request) {
       // (when billing is on), no custom footer text (layout v20).
       profileOverrides ??= await getFrameProfileOverrides();
       const pipOverrides = await getPipOverrides(row.owner_id);
-      const response = await renderCardImage(rowToPreviewData(row, pipOverrides, profileOverrides), "hd", {
+      const previewData = rowToPreviewData(row, pipOverrides, profileOverrides);
+      // Same art guard as the save-time bake: never store an art-less PNG as
+      // the card's current render because its art host refused or hiccuped.
+      const art = await resolveBakeArt(row.art_url);
+      if (!art.ok) throw new Error(art.error);
+      if (art.artUrl) previewData.artUrl = art.artUrl;
+      const response = await renderCardImage(previewData, "hd", {
         brandMark: billingEnabled,
         watermarkText: null,
       });

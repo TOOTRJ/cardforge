@@ -19,7 +19,7 @@ import { fitRulesSizePct, fitSingleLineSizePct } from "@/lib/cards/render-tiers"
 import { RULES_TEXT } from "@/lib/cards/typography";
 import { tokenize, tokenSuffix } from "@/components/cards/mana-cost-glyphs";
 import { ROSE_STAR_PATH, SET_MARK_GEM_PATH, SET_MARK_RING, SET_MARK_STAR_PATH } from "@/lib/brand/geometry";
-import { RARITY_SET_MARK } from "@/lib/brand/constants";
+import { RARITY_INK, RARITY_SET_MARK } from "@/lib/brand/constants";
 import {
   pipOverrideForSuffix,
   pipOverrideForToken,
@@ -98,13 +98,11 @@ export const RENDER_PRESETS = {
 
 export type RenderPreset = keyof typeof RENDER_PRESETS;
 
-// Real-card rarity inks for the Keyrune set-symbol glyph in the type line.
-const RARITY_SET_SYMBOL_COLOR: Record<Rarity, string> = {
-  common: "#0f0f12",
-  uncommon: "#9a9aa8",
-  rare: "#c9a14a",
-  mythic: "#d35327",
-};
+// Real-card rarity inks for the set symbol — the SAME table the preview's
+// components/cards/set-symbol.tsx reads (lib/brand/constants RARITY_INK), so
+// a stored PNG and the editor agree on every rarity (uncommon used to be a
+// different grey here).
+const RARITY_SET_SYMBOL_COLOR: Record<Rarity, string> = RARITY_INK;
 
 // Rules/flavor body text uses MPlantin (the real MTG body face); titles, type
 // lines, footer, and stat values use CardDisplay (an OFL Beleren stand-in),
@@ -185,7 +183,9 @@ function CardImage({
   );
   const frameDataUrl = getFrameDataUrl(template, colorKey);
 
-  const title = (card.title?.trim() || "Untitled Card").slice(0, 80);
+  // No bake-only truncation: titles up to the validated 120 chars ellipsize
+  // in the band exactly as the preview does.
+  const title = card.title?.trim() || "Untitled Card";
   const showCost =
     !layout.hideCost && card.cardType !== "land" && Boolean(card.cost?.trim());
   const typeLine = buildTypeLine(card);
@@ -506,6 +506,10 @@ function CardImage({
                     height *
                     watermarkHeightFraction(effectiveWatermark),
                 ),
+                // Same 86%-of-the-rules-box width cap as the preview: a wide
+                // custom upload shrinks instead of overflowing (then clipping)
+                // in the stored PNG.
+                maxWidth: Math.round((layout.rules.rect.widthPct / 100) * width * 0.86),
                 objectFit: "contain",
               }}
             />
@@ -771,6 +775,9 @@ function Band({
             : slot.align === "end"
               ? "flex-end"
               : "space-between",
+        // The preview's `gap: 2cqw` between name and cost — without it a long
+        // title ellipsized ~2% of the card width later in the bake.
+        gap: fpx(0.02, cardWidth),
         fontFamily: DISPLAY_FONT,
         fontSize: fpx(slot.sizePct, cardWidth),
         fontWeight: slot.weight ?? 600,
@@ -1820,10 +1827,33 @@ async function withRenderableImages(
 
 /** True for frames (Battle) whose canvas is 7:5 instead of 5:7. */
 export function isLandscapeRender(card: CardPreviewData): boolean {
+  return isLandscapeTemplate(card.frameStyle, card.profileOverrides);
+}
+
+/** Same answer from a raw `frame_style` column (or any object carrying
+ *  `template`) — for routes that don't build full preview data (oEmbed). */
+export function isLandscapeTemplate(
+  frameStyle: unknown,
+  profileOverrides?: CardPreviewData["profileOverrides"],
+): boolean {
+  const template =
+    frameStyle && typeof frameStyle === "object" && "template" in frameStyle
+      ? (frameStyle as { template?: unknown }).template
+      : undefined;
   return (
-    resolveFrameProfile(normalizeFrameTemplate(card.frameStyle?.template), card.profileOverrides)
-      .orientation === "landscape"
+    resolveFrameProfile(
+      normalizeFrameTemplate(typeof template === "string" ? template : undefined),
+      profileOverrides,
+    ).orientation === "landscape"
   );
+}
+
+/** The DISPLAY render's pixel size: the default preset, rotated for a
+ *  landscape frame (lib/render/stored-render.ts fits landscape bakes the
+ *  same way). */
+export function naturalRenderSize(landscape: boolean): { width: number; height: number } {
+  const { width, height } = RENDER_PRESETS.default;
+  return landscape ? { width: height, height: width } : { width, height };
 }
 
 /**
