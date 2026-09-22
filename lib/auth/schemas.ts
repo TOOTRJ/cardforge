@@ -21,7 +21,7 @@ export const usernameSchema = z
 
 // 72 is bcrypt's input ceiling (GoTrue hashes with bcrypt) — longer
 // passwords would be silently truncated, so refuse them instead.
-export const passwordSchema = z
+const passwordSchema = z
   .string()
   .min(8, "Password must be at least 8 characters.")
   .max(72, "Password must be 72 characters or fewer.");

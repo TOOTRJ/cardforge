@@ -106,7 +106,7 @@ function isPlainBr(node: Node | null | undefined): node is HTMLBRElement {
   );
 }
 
-export function serializePipDom(node: Node): string {
+function serializePipDom(node: Node): string {
   if (node.nodeType === Node.TEXT_NODE) return node.nodeValue ?? "";
   if (node.nodeType === Node.ELEMENT_NODE) {
     const el = node as Element;

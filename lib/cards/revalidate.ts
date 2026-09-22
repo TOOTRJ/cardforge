@@ -19,7 +19,7 @@ import { notifyIndexNow } from "@/lib/seo/indexnow";
  * revalidate windows. Like-toggles deliberately do NOT purge — the ISR
  * window absorbs that churn.
  */
-export function revalidateDiscoverySurfaces() {
+function revalidateDiscoverySurfaces() {
   revalidatePath("/");
   revalidatePath("/challenges");
   // Purges every /challenges/[slug] page — a published card may be an

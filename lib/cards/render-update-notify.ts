@@ -56,7 +56,7 @@ type Admin = ReturnType<typeof createAdminClient>;
  * Insert the owner's notification for the CURRENT version unless one exists.
  * Returns true when a row was inserted.
  */
-export async function ensureRenderUpdateNotification(
+async function ensureRenderUpdateNotification(
   admin: Admin,
   ownerId: string,
   count: number,

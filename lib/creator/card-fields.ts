@@ -35,7 +35,7 @@ import { defaultWatermarkFor } from "@/lib/cards/watermark";
  *  face_content when present, else parsed from rules_text — but ONLY for the
  *  kinds that render those rails. (Parsing a creature's rules into loyalty
  *  rows would fabricate junk rows out of ordinary ability lines.) */
-export function structuredRowsFrom(card: Card): {
+function structuredRowsFrom(card: Card): {
   loyalty_abilities: LoyaltyRowFormValues[];
   saga_intro: string;
   saga_chapters: SagaChapterFormValues[];
@@ -68,7 +68,7 @@ export function structuredRowsFrom(card: Card): {
   return { loyalty_abilities: [], saga_intro: "", saga_chapters: [] };
 }
 
-export function backFaceFormValuesFrom(
+function backFaceFormValuesFrom(
   source: CardBackFace | null | undefined,
 ): BackFaceFormValues {
   if (!source) return EMPTY_BACK_FACE;

@@ -32,7 +32,6 @@ const LABELS: Record<string, string> = {
   suggest_cost: "AI cost suggestion",
   suggest_rarity: "AI rarity suggestion",
   check_balance: "AI balance check",
-  generate_set_icon: "Set icon",
 };
 
 export const LEDGER_REASON_LABELS: Readonly<Record<string, string>> = LABELS;

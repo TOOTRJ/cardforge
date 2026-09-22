@@ -8,7 +8,7 @@ import { listMyCards } from "@/lib/cards/queries";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import type { CardPreviewData } from "@/components/cards/card-preview";
-import { CARD_LAYOUT_VERSION, hasNewerLook, isRenderStale, templateOfFrameStyle } from "@/lib/cards/layout-version";
+import { hasNewerLook } from "@/lib/cards/layout-version";
 
 // ---------------------------------------------------------------------------
 // Owner-driven render updates.
@@ -28,21 +28,6 @@ import { CARD_LAYOUT_VERSION, hasNewerLook, isRenderStale, templateOfFrameStyle 
 export type RebakeOwnCardResult =
   | { ok: true; renderedImageUrl: string | null }
   | { ok: false; error: string };
-
-const STALE_OR = `rendered_image_url.is.null,layout_version.is.null,layout_version.lt.${CARD_LAYOUT_VERSION}`;
-
-type StaleRow = {
-  id: string;
-  slug: string;
-  owner_id: string;
-  visibility: string;
-  layout_version: number | null;
-  rendered_image_url: string | null;
-  frame_style: unknown;
-  rarity: string | null;
-  set_icon_url: string | null;
-  set_icon_code: string | null;
-};
 
 function revalidateForCard(slug: string, ownerUsername: string | null) {
   revalidatePath("/dashboard");
@@ -122,75 +107,4 @@ export async function listStaleOwnCardsAction(): Promise<ListStaleOwnCardsResult
       previewData: cardToPreviewData(c, profileOverrides),
     }));
   return { ok: true, cards: stale };
-}
-
-export type RebakeNextStaleResult =
-  | {
-      ok: true;
-      /** Stale cards left AFTER this step (0 = done). */
-      remaining: number;
-      /** The card this step re-baked, when it baked one. */
-      updated: { id: string; slug: string } | null;
-    }
-  | { ok: false; error: string };
-
-/**
- * "Update all", one card per call so each request stays a couple of seconds:
- * the client loops until `remaining` is 0. Cards whose template was not
- * touched by any bump since their bake are fast-forwarded (stamped current
- * without a render — the stored PNG is already what the renderer would
- * produce); everything else is re-baked oldest-first.
- */
-export async function rebakeNextStaleOwnCardAction(): Promise<RebakeNextStaleResult> {
-  if (!isSupabaseConfigured()) return { ok: false, error: "Supabase isn't configured." };
-  const user = await getCurrentUser();
-  if (!user) return { ok: false, error: "Sign in to update your cards." };
-
-  const supabase = await createClient();
-  const candidates = () =>
-    supabase
-      .from("cards")
-      .select("id, slug, owner_id, visibility, layout_version, rendered_image_url, frame_style, rarity, set_icon_url, set_icon_code")
-      .eq("owner_id", user.id)
-      .in("visibility", ["public", "unlisted"])
-      .or(STALE_OR)
-      .order("updated_at", { ascending: true });
-
-  const { data: rows, error } = await candidates().limit(25);
-  if (error) return { ok: false, error: "Couldn't list your cards." };
-
-  let updated: { id: string; slug: string } | null = null;
-  for (const row of (rows ?? []) as StaleRow[]) {
-    const template = templateOfFrameStyle(row.frame_style);
-    if (
-      row.rendered_image_url &&
-      !isRenderStale(row.layout_version, template, undefined, undefined, row)
-    ) {
-      // Untouched template: the stored render already matches — stamp it.
-      await supabase
-        .from("cards")
-        .update({ layout_version: CARD_LAYOUT_VERSION })
-        .eq("id", row.id);
-      continue;
-    }
-    const url = await bakeAndPersistCardRender(row.id, user.id);
-    if (url === null) {
-      return { ok: false, error: "A render didn't complete — try again in a moment." };
-    }
-    updated = { id: row.id, slug: row.slug };
-    break;
-  }
-
-  const { count } = await supabase
-    .from("cards")
-    .select("id", { count: "exact", head: true })
-    .eq("owner_id", user.id)
-    .in("visibility", ["public", "unlisted"])
-    .or(STALE_OR);
-  const remaining = count ?? 0;
-
-  if (updated || remaining === 0) {
-    revalidateForCard(updated?.slug ?? "", await getCurrentUsername());
-  }
-  return { ok: true, remaining, updated };
 }

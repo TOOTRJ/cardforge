@@ -124,7 +124,7 @@ export function teamMessageEmail(
 export type DigestLine = { subject: string; body: string; href: string };
 
 /** Lines shown in full; the rest collapse into "and N more". */
-export const DIGEST_MAX_LINES = 12;
+const DIGEST_MAX_LINES = 12;
 
 export function activityDigestEmail(
   recipient: Recipient,

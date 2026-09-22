@@ -17,8 +17,8 @@ import type { Rarity } from "@/types/card";
 import type { FormValues } from "@/lib/creator/form-types";
 
 // A curated set of recognizable Keyrune set-symbol codes (same list as the
-// set editor's picker). The full Keyrune library has hundreds; these cover
-// popular sets.
+// picker). The full Keyrune library has hundreds; these cover popular
+// real-world sets.
 const PRESET_SET_CODES = [
   "dom",
   "war",

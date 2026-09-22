@@ -2,13 +2,14 @@ import { LEGACY_SUPABASE_HOSTS } from "@/lib/validation/card";
 // ---------------------------------------------------------------------------
 // render-cdn — map a stored card-render URL (Supabase Storage, `card-renders`
 // bucket) onto this deployment's `/render-cdn/<owner>/<object>?v=…` path,
-// which next.config.ts rewrites to the bucket and serves with an immutable
-// one-year Cache-Control (the storage host answers browsers `no-cache`).
+// which the route handler at app/render-cdn/[...path]/route.ts proxies to the
+// bucket and serves with an immutable one-year Cache-Control (the storage
+// host answers browsers `no-cache`).
 // Only URLs on our own storage hosts are mapped; anything else is returned
 // untouched so a foreign or malformed value can never be proxied.
 // ---------------------------------------------------------------------------
 
-export const RENDER_CDN_PREFIX = "/render-cdn";
+const RENDER_CDN_PREFIX = "/render-cdn";
 
 const BUCKET_PATH = "/storage/v1/object/public/card-renders/";
 

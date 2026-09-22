@@ -49,7 +49,7 @@ const CALLOUT_TONES = {
   warning: { Icon: TriangleAlert, ring: "border-accent/40", icon: "text-accent" },
 } as const;
 
-export function Callout({
+function Callout({
   tone = "note",
   title,
   children,

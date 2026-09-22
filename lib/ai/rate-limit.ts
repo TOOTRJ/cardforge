@@ -45,7 +45,6 @@ export type AiActionLabel =
   | "generate_deck"
   | "remix_card"
   | "remix_art"
-  | "generate_set_icon"
   | "generate_deck_cards"
   | "generate_card_ideas"
   | "generate_deck_ideas"
@@ -239,10 +238,6 @@ export const AI_ACTION_COST: Partial<Record<AiActionLabel, number>> = {
   /** One credit analyses a deck into a how-to-play guide with combos (Pro). */
   analyze_deck: 1,
 };
-
-export function creditCostFor(action: AiActionLabel): number {
-  return AI_ACTION_COST[action] ?? 0;
-}
 
 export type CreditSpendResult =
   | {

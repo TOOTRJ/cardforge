@@ -9,7 +9,6 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { scanImageUrl } from "@/lib/moderation/image-scan";
 import {
   isDefaultProfileMedia,
-  randomDefaultMedia,
   type ProfileMediaKind,
 } from "@/lib/profile/default-media";
 import { revalidateProfilePage } from "@/lib/profile/username";
@@ -263,30 +262,4 @@ export async function chooseDefaultProfileMediaAction(
 
   await revalidateProfile(supabase, user.id);
   return { ok: true, publicUrl: path };
-}
-
-/** "Remove" never leaves a profile imageless: the upload is deleted and a
- *  random built-in image (different from the current one) takes its place. */
-export async function clearProfileMediaServerAction(
-  kind: ProfileMediaKind,
-): Promise<UploadProfileMediaResult> {
-  if (!isSupabaseConfigured()) {
-    return { ok: false, error: "Supabase is not configured." };
-  }
-  const user = await getCurrentUser();
-  if (!user) {
-    return { ok: false, error: "Sign in first." };
-  }
-
-  const supabase = await createClient();
-  const previous = await removeStoredMedia(supabase, user.id, kind);
-  const replacement = randomDefaultMedia(kind, previous);
-  const { error } = await supabase
-    .from("profiles")
-    .update(kind === "avatar" ? { avatar_url: replacement } : { banner_url: replacement })
-    .eq("id", user.id);
-  if (error) return { ok: false, error: error.message };
-
-  await revalidateProfile(supabase, user.id);
-  return { ok: true, publicUrl: replacement };
 }

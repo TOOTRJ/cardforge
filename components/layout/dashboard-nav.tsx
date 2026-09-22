@@ -10,7 +10,6 @@ import {
   GalleryVerticalEnd,
   Inbox,
   LayoutDashboard,
-  Layers,
   MessageSquare,
   MessageSquarePlus,
   Rss,
@@ -32,7 +31,6 @@ import { cn } from "@/lib/utils";
 const NAV_ICONS: Record<string, LucideIcon> = {
   "/dashboard": LayoutDashboard,
   "/dashboard/cards": GalleryVerticalEnd,
-  "/dashboard/sets": Layers,
   "/dashboard/decks": BookOpen,
   "/feed": Rss,
   "/dashboard/usage": Sparkles,
@@ -78,7 +76,7 @@ function userItems(showMessages: boolean) {
 // menu already highlight; this brings the rail in line). The active item is the
 // one whose href is the LONGEST prefix of the current path (exact, or
 // `${href}/...`), so "Overview" (/dashboard) doesn't also light up on
-// /dashboard/sets — only "My Sets" does.
+// a sibling section.
 export function DashboardNav({
   isAdmin = false,
   showMessages = false,

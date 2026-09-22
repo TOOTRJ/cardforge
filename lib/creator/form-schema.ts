@@ -14,7 +14,7 @@
 //
 // No transforms: input and output are both FormValues, so react-hook-form's
 // zodResolver hands runSubmit the untouched form state and drafts /
-// localStorage restores are unaffected.
+// nothing else reads the raw form state.
 
 import { z } from "zod";
 import {

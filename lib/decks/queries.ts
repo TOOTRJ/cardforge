@@ -46,7 +46,7 @@ type DecksClient =
   | Awaited<ReturnType<typeof createClient>>
   | ReturnType<typeof createPublicClient>;
 
-export type DeckCounts = {
+type DeckCounts = {
   /** Physical cards across playable boards (quantities summed, maybeboard
    *  excluded) — the "99 cards" number. */
   cards_count: number;
@@ -134,29 +134,11 @@ export async function getDeckById(id: string): Promise<Deck | null> {
   }
 }
 
-export async function getMyDeckBySlug(slug: string): Promise<Deck | null> {
-  if (!isSupabaseConfigured()) return null;
-  const user = await getCurrentUser();
-  if (!user) return null;
-  try {
-    const supabase = await createClient();
-    const { data } = await supabase
-      .from("decks")
-      .select("*")
-      .eq("owner_id", user.id)
-      .eq("slug", slug)
-      .maybeSingle();
-    return data ? narrowDeck(data) : null;
-  } catch {
-    return null;
-  }
-}
-
 // ---------------------------------------------------------------------------
 // Public browse + detail
 // ---------------------------------------------------------------------------
 
-export type DeckOwner = Pick<
+type DeckOwner = Pick<
   Profile,
   "username" | "display_name" | "avatar_url"
 > | null;

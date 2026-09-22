@@ -10,7 +10,7 @@ import { RENDER_PRESETS, type RenderPreset } from "@/lib/render/card-image";
 //
 // Every public/unlisted card already has a 1500×2100 PNG in the card-renders
 // bucket, baked at save time by the same renderer (lib/cards/bake-render.ts)
-// with the card OWNER's export stamp. The OG image, the PNG download and the
+// as the always-watermarked DISPLAY copy (layout v20). The OG image, the PNG download and the
 // PDF used to re-run Satori + resvg on every request anyway — the single
 // largest consumer of Vercel Active CPU. When the stored render is current
 // and would carry the same stamp the request needs, serving (or downscaling)

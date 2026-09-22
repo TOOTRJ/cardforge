@@ -64,8 +64,8 @@ if (!userId) {
   process.exit(1);
 }
 
-// Username unlocks the canonical card URL path; the signup trigger created
-// the profile row with username null.
+// A fixed username unlocks the canonical card URL path; the signup trigger
+// (0094) minted a generated handle, which we overwrite with e2e_forger.
 const { error: profileError } = await admin
   .from("profiles")
   // is_admin powers the /admin e2e specs (challenge authoring). Only the

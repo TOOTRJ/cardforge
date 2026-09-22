@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath, revalidateTag } from "next/cache";
+import { isUuid } from "@/lib/ids";
 import { z } from "zod";
 import { createClient, getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
@@ -117,7 +118,7 @@ export async function createSiteUpdateAction(formData: FormData): Promise<Update
 export async function updateSiteUpdateAction(id: string, formData: FormData): Promise<UpdateActionResult> {
   const gate = await requireAdmin();
   if (!gate.ok) return gate;
-  if (!z.string().uuid().safeParse(id).success) return { ok: false, error: "Unknown update." };
+  if (!isUuid(id)) return { ok: false, error: "Unknown update." };
   const parsed = readForm(formData);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Check the form." };
@@ -149,7 +150,7 @@ export async function setSiteUpdateFlagAction(
 ): Promise<UpdateActionResult> {
   const gate = await requireAdmin();
   if (!gate.ok) return gate;
-  if (!z.string().uuid().safeParse(id).success) return { ok: false, error: "Unknown update." };
+  if (!isUuid(id)) return { ok: false, error: "Unknown update." };
   const supabase = await createClient();
   const patch: { is_published?: boolean; show_in_banner?: boolean; require_ack?: boolean; updated_at: string } = {
     updated_at: new Date().toISOString(),
@@ -167,7 +168,7 @@ export async function setSiteUpdateFlagAction(
 export async function deleteSiteUpdateAction(id: string): Promise<UpdateActionResult> {
   const gate = await requireAdmin();
   if (!gate.ok) return gate;
-  if (!z.string().uuid().safeParse(id).success) return { ok: false, error: "Unknown update." };
+  if (!isUuid(id)) return { ok: false, error: "Unknown update." };
   const supabase = await createClient();
   const { error } = await supabase.from("site_updates").delete().eq("id", id);
   if (error) {
@@ -184,7 +185,7 @@ export async function deleteSiteUpdateAction(id: string): Promise<UpdateActionRe
 export async function acknowledgeUpdatesAction(ids: string[]): Promise<UpdateActionResult> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Sign in first." };
-  const valid = ids.filter((id) => z.string().uuid().safeParse(id).success).slice(0, 20);
+  const valid = ids.filter((id) => isUuid(id)).slice(0, 20);
   if (valid.length === 0) return { ok: true };
   const supabase = await createClient();
   const { error } = await supabase
@@ -217,7 +218,7 @@ export type BroadcastResult =
 export async function notifyAllUsersAction(id: string): Promise<BroadcastResult> {
   const gate = await requireAdmin();
   if (!gate.ok) return gate;
-  if (!z.string().uuid().safeParse(id).success) return { ok: false, error: "Unknown update." };
+  if (!isUuid(id)) return { ok: false, error: "Unknown update." };
   if (!isAdminConfigured()) return { ok: false, error: "Admin client isn't configured." };
   const supabase = await createClient();
   const { data: update } = await supabase
@@ -313,7 +314,7 @@ export type NewsletterResult =
 export async function emailNewsletterAction(id: string): Promise<NewsletterResult> {
   const gate = await requireAdmin();
   if (!gate.ok) return gate;
-  if (!z.string().uuid().safeParse(id).success) return { ok: false, error: "Unknown update." };
+  if (!isUuid(id)) return { ok: false, error: "Unknown update." };
   if (!isAdminConfigured()) return { ok: false, error: "Admin client isn't configured." };
   if (!isEmailConfigured("newsletter")) {
     return {

@@ -21,7 +21,7 @@ import {
 // a different palette than the identity panel's gem tints).
 const RARITY_COLOR: Record<Rarity, string> = RARITY_INK;
 
-export function setSymbolColor(rarity: Rarity | null): string {
+function setSymbolColor(rarity: Rarity | null): string {
   return rarity ? RARITY_COLOR[rarity] : RARITY_COLOR.common;
 }
 

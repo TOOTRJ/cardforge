@@ -1,7 +1,7 @@
 "use client";
 
 // Publish panel — the "Save as a draft" checkbox + visibility lead, then
-// set membership + discovery tags, with back face, finish and watermark
+// discovery tags, with back face, finish and watermark
 // tucked into Advanced. The challenge entry toggle leads when a challenge is
 // running. The slug is derived from the title automatically — not
 // user-editable.

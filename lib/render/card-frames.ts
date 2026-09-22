@@ -1,4 +1,6 @@
 import "server-only";
+import { DEFAULT_FRAME_TEMPLATE } from "@/types/card";
+import { FRAME_COLOR_KEYS } from "@/lib/cards/frame-reference-registry";
 
 import fs from "node:fs";
 import path from "node:path";
@@ -46,8 +48,6 @@ import { getSiteBaseUrl } from "@/lib/site-url";
 // a PR that adds or changes a frame PNG.
 // ---------------------------------------------------------------------------
 
-const FRAME_COLOR_KEYS = ["w", "u", "b", "r", "g", "c", "m"] as const;
-export const DEFAULT_FRAME_TEMPLATE = "m15";
 
 const FETCH_TIMEOUT_MS = 10_000;
 /** A frame master is ~1–3 MB; refuse anything absurd from a misconfigured origin. */

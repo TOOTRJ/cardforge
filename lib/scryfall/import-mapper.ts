@@ -121,7 +121,7 @@ export type ScryfallImportPatch = {
   back_face?: ScryfallImportBackFacePatch;
 };
 
-export type ScryfallImportBackFacePatch = {
+type ScryfallImportBackFacePatch = {
   title?: string;
   cost?: string;
   card_type?: CardType;

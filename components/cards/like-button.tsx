@@ -44,8 +44,8 @@ export function LikeButton({
 
   const handleClick = () => {
     if (requiresSignIn) {
-      // No slug-only route exists any more (/card/[slug] was removed) — with
-      // no username, come back to wherever the button was rendered.
+      // The slug-only /card/[slug] route is only a redirector now — with no
+      // username, come back to wherever the button was rendered.
       const next =
         ownerUsername && cardSlug
           ? `/card/${ownerUsername}/${cardSlug}`

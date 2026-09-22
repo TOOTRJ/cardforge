@@ -273,9 +273,8 @@ function FieldArea({
 }
 
 // Color picker paired with a text input so the user can either pick visually
-// or paste a hex value. Both controls share the same `name` so only one
-// submits — the text input wins because it's the second control with the
-// same name (FormData last-wins for plain inputs).
+// or paste a hex value. Only the text input carries the field's `name`; the
+// picker posts as `${name}_picker` and only mirrors its value into the text.
 function ColorField({
   label,
   name,

@@ -20,7 +20,7 @@ type NavLinksProps = {
  *
  * Active state matches:
  *   - exact path equality, OR
- *   - the current path begins with `${href}/` (so /dashboard/sets keeps
+ *   - the current path begins with `${href}/` (so /dashboard/decks keeps
  *     "Dashboard" highlighted as a parent — except for "/" which would
  *     match everything).
  */

@@ -57,7 +57,7 @@ const REASON_COPY: Record<UpgradeReason, { title: string; description: string }>
       title: "Batch & whole-deck export",
       description: "Export a whole deck in one click with Pro.",
     },
-    // AI deck/set/card generation itself is open to every tier — credits are
+    // AI deck/card generation itself is open to every tier — credits are
     // the only limiter (owner decision 2026-07-28). The ONE tier-gated AI
     // feature is designing a card FOR a specific deck (owner decision
     // 2026-09-15): the deck is analyzed and the card lands in it.

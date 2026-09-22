@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { VISIBILITY_LABELS, type Visibility } from "@/types/card";
 import Link from "next/link";
 import { BookOpen, Plus } from "lucide-react";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
@@ -98,7 +99,7 @@ function DeckTile({
             <Badge
               variant={deck.visibility === "public" ? "primary" : "outline"}
             >
-              {visibilityLabel(deck.visibility)}
+              {(VISIBILITY_LABELS[deck.visibility as Visibility] ?? deck.visibility)}
             </Badge>
             <Badge variant="outline">{DECK_FORMAT_LABELS[deck.format]}</Badge>
           </div>
@@ -145,13 +146,3 @@ function DeckTile({
   );
 }
 
-function visibilityLabel(visibility: string): string {
-  switch (visibility) {
-    case "public":
-      return "Public";
-    case "unlisted":
-      return "Unlisted";
-    default:
-      return "Private";
-  }
-}

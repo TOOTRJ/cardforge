@@ -10,7 +10,7 @@ import type { DeckBoard } from "@/types/deck";
 // advice, combos, weaknesses, key cards. Pure (no I/O) so it unit-tests.
 // ---------------------------------------------------------------------------
 
-export type DeckReportEntry = {
+type DeckReportEntry = {
   name: string;
   quantity: number;
   board: DeckBoard;

@@ -20,19 +20,19 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const MINUTE_MS = 60 * 1000;
 const TREND_DAYS = 30;
 
-export type ScryfallAdminActionUsage = {
+type ScryfallAdminActionUsage = {
   action: ScryfallAction;
   today: number;
   minute: number;
 };
 
-export type ScryfallAdminDailyRow = {
+type ScryfallAdminDailyRow = {
   day: string;
   action: string;
   count: number;
 };
 
-export type ScryfallAdminTopUser = {
+type ScryfallAdminTopUser = {
   userId: string;
   username: string | null;
   calls: number;

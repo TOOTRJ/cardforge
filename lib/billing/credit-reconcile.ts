@@ -39,7 +39,7 @@ export const RECONCILE_GRACE_MS = 15 * 60_000;
 /** How far back one sweep looks. Runs daily (Hobby-plan cron cadence), so
  *  each pass overlaps the previous two — redundant passes are no-ops thanks
  *  to the refund key, and a couple of days of cron outage drops nothing. */
-export const RECONCILE_WINDOW_MS = 72 * 60 * 60_000;
+const RECONCILE_WINDOW_MS = 72 * 60 * 60_000;
 
 /** Per-run row bound (defense against a pathological backlog). With the
  *  DAILY cadence a backlog beyond this drains at 500/day, so it must stay

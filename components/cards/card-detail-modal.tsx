@@ -24,7 +24,7 @@ import {
 //     keeps the tree mounted until the CSS animation finishes.
 //   - "Open full page" is a plain <a> (hard navigation), which skips the
 //     interceptor and renders the real /card/... page.
-//   - In-modal links to OTHER routes (profile, tags, sets) soft-navigate;
+//   - In-modal links to OTHER routes (profile, tags, decks) soft-navigate;
 //     parallel-route slots keep their state on soft nav, so we watch the
 //     pathname and render nothing once it stops being a card detail URL.
 //   - Navigating modal → another card swaps content in place; the scroll

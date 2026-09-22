@@ -20,7 +20,7 @@ import {
 
 // ---------------------------------------------------------------------------
 // Card-design engine — the one text pipeline behind every AI generation flow
-// (single card, options dialog, remix, sets, decks).
+// (single card, options dialog, remix, decks).
 //
 // Pipeline per batch:
 //   1. DESIGN  — one structured call to the design model with per-slot
@@ -54,7 +54,7 @@ export function clampedText(max: number, min = 1) {
     .transform((value) => value.trim().slice(0, max));
 }
 
-export const designedCardSchema = z
+const designedCardSchema = z
   .object({
     title: clampedText(80).describe(
       "Original card name — never a published Magic card title.",

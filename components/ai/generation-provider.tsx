@@ -188,7 +188,7 @@ function outcomeOf(
 
 function slugOf(job: JobPayload): string | undefined {
   const request = job.request ?? {};
-  const value = request["deck_slug"] ?? request["set_slug"];
+  const value = request["deck_slug"];
   return typeof value === "string" && value ? value : undefined;
 }
 
@@ -425,7 +425,7 @@ export function GenerationJobProvider({
         }
         const startJob: JobPayload = planPayload.job;
         const targetSlug: string | undefined =
-          planPayload.setSlug || planPayload.deckSlug || slugOf(startJob);
+          planPayload.deckSlug || slugOf(startJob);
         // The job is committed — project its full cost onto the credit
         // meters IMMEDIATELY (server-reported pre-spend balance minus the
         // steps about to charge). Each step response then overwrites the

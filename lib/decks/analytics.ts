@@ -199,7 +199,7 @@ export function computeDeckAnalytics(
  * single-letter pip adds 1, hybrids / `{X}` count 0 but still make the cost
  * parseable. A bare number is accepted; anything else is null.
  */
-export function parseCost(cost: string | null | undefined): number | null {
+function parseCost(cost: string | null | undefined): number | null {
   if (!cost) return null;
   const tokens = Array.from(cost.matchAll(/\{([^}]+)\}/g));
   if (tokens.length === 0) {

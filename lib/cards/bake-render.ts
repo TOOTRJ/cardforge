@@ -37,7 +37,7 @@ import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
 //   * RLS (migration 0021) restricts writes to the card owner
 // ---------------------------------------------------------------------------
 
-export type BakeRenderResult =
+type BakeRenderResult =
   | {
       ok: true;
       renderedImageUrl: string | null;
@@ -77,7 +77,7 @@ export async function resolveBakeArt(
   return { ok: true, artUrl: resolved };
 }
 
-export async function bakeCardRender(
+async function bakeCardRender(
   cardId: string,
   ownerId: string,
 ): Promise<BakeRenderResult> {

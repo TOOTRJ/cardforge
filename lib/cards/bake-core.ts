@@ -22,7 +22,7 @@ import { makeRenderThumb, renderThumbPath } from "@/lib/cards/render-thumb";
 
 // ---------------------------------------------------------------------------
 // Shared bake plumbing — the card-row shape, column list, and row→render-input
-// mapping used by BOTH the user-scoped save bake (lib/cards/bake-render.ts, a
+// mapping used by BOTH the user-scoped save bake (lib/cards/bake-render.ts,
 // "use server" module) and the admin re-bake sweep (app/api/admin/rebake).
 // Lives outside the "use server" module so importing it never exposes a
 // server action.

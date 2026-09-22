@@ -191,9 +191,9 @@ function SignedOutNudge({
   cardSlug: string;
   ownerUsername?: string | null;
 }) {
-  // /card/[slug] no longer exists; the comments only render on the canonical
-  // page, so fall back to it by id-less current location when the username
-  // is unknown.
+  // The canonical page is /card/[username]/[slug] (the legacy /card/[slug]
+  // only redirects); the comments only render on the canonical page, so fall
+  // back to the current location when the username is unknown.
   const redirectTo = encodeURIComponent(
     ownerUsername
       ? `/card/${ownerUsername}/${cardSlug}`

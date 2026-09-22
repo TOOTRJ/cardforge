@@ -46,7 +46,7 @@ export const SLOT_LABELS: Partial<Record<SlotPath, string>> = {
   chapters: "saga chapters",
 };
 
-export function slotLabel(path: SlotPath): string {
+function slotLabel(path: SlotPath): string {
   return SLOT_LABELS[path] ?? path;
 }
 
@@ -79,7 +79,7 @@ const STAT_FIELDS: EditorField[] = [
 ];
 
 /** The editable fields for a slot path on this profile. */
-export function fieldsForSlot(
+function fieldsForSlot(
   profile: FrameProfile,
   path: SlotPath,
 ): EditorField[] {
@@ -105,7 +105,7 @@ function getNodeAtPath(obj: unknown, path: string): unknown {
 }
 
 /** Resolved (base + draft) value for a slot field. */
-export function readSlotField(
+function readSlotField(
   profile: FrameProfile,
   path: SlotPath,
   field: EditorField,

@@ -2,8 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   autofixCard,
   buildDeckSkeleton,
-  buildRaritySkeleton,
-  buildSetSkeleton,
   colorLettersFromWords,
   colorWordsFromLetters,
   deriveColorLetters,
@@ -260,33 +258,6 @@ describe("autofixCard", () => {
 // Set skeleton
 // ---------------------------------------------------------------------------
 
-describe("buildRaritySkeleton", () => {
-  it("gives a 3-card set one common, one uncommon, one rare", () => {
-    expect(buildRaritySkeleton(3)).toEqual(["common", "uncommon", "rare"]);
-  });
-
-  it("always allocates exactly the requested count", () => {
-    for (const count of [1, 2, 3, 5, 8, 12, 30, 281]) {
-      expect(buildRaritySkeleton(count)).toHaveLength(count);
-    }
-  });
-
-  it("approximates real set ratios at scale", () => {
-    const skeleton = buildRaritySkeleton(281);
-    const byRarity = skeleton.reduce<Record<string, number>>((acc, rarity) => {
-      acc[rarity] = (acc[rarity] ?? 0) + 1;
-      return acc;
-    }, {});
-    // Bloomburrow-era ratios: 81C/100U/60R/20M (+ basics) ≈ 31/38/23/8.
-    expect(byRarity.common).toBeGreaterThanOrEqual(84);
-    expect(byRarity.common).toBeLessThanOrEqual(91);
-    expect(byRarity.uncommon).toBeGreaterThanOrEqual(103);
-    expect(byRarity.uncommon).toBeLessThanOrEqual(110);
-    expect(byRarity.mythic).toBeGreaterThanOrEqual(20);
-    expect(byRarity.mythic).toBeLessThanOrEqual(25);
-  });
-});
-
 describe("buildDeckSkeleton", () => {
   it("leads with the commander in commander formats", () => {
     const slots = buildDeckSkeleton("commander", 3);
@@ -323,24 +294,3 @@ describe("buildDeckSkeleton", () => {
   });
 });
 
-describe("buildSetSkeleton", () => {
-  it("touches every color in a 5-card set", () => {
-    const slots = buildSetSkeleton(5);
-    const colors = new Set(slots.map((slot) => slot.colorHint));
-    expect(colors).toEqual(
-      new Set(["white", "blue", "black", "red", "green"]),
-    );
-  });
-
-  it("mixes creature and noncreature roles", () => {
-    const slots = buildSetSkeleton(12);
-    const roles = new Set(slots.map((slot) => slot.roleHint));
-    expect(roles.has("creature")).toBe(true);
-    expect(roles.has("noncreature")).toBe(true);
-  });
-
-  it("frees a slot for artifacts/multicolor in bigger sets", () => {
-    const slots = buildSetSkeleton(12);
-    expect(slots.some((slot) => slot.colorHint === null)).toBe(true);
-  });
-});

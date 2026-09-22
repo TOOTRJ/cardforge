@@ -30,7 +30,7 @@ const TREND_DAYS = 30;
 
 export type DailyCount = { day: string; count: number };
 
-export type ScryfallActionUsage = {
+type ScryfallActionUsage = {
   action: ScryfallAction;
   today: number;
   minute: number;
@@ -67,7 +67,7 @@ export async function getScryfallUsageSnapshot(): Promise<ScryfallUsageSnapshot>
     const sinceDay = new Date(now - DAY_MS).toISOString();
     const sinceTrend = new Date(now - TREND_DAYS * DAY_MS).toISOString();
 
-    // 7 parallel queries: 1 daily-trend RPC + 3 actions × (minute, day).
+    // Parallel queries: 1 daily-trend RPC + one (minute, day) pair per action.
     // All are head-only counts (cheap), and bounded by user via RLS.
     const actions: ScryfallAction[] = ["search", "named", "import_art"];
     const [trendResult, ...perActionResults] = await Promise.all([

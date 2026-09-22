@@ -49,7 +49,7 @@ const FONT_BODY =
   "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
 const FONT_DISPLAY = "Cinzel, 'Trajan Pro', Georgia, 'Times New Roman', serif";
 
-export const EMAIL_DISCLAIMER =
+const EMAIL_DISCLAIMER =
   "PipGlyph is unofficial Fan Content permitted under the Wizards of the Coast Fan Content Policy. Not approved/endorsed by Wizards.";
 
 export function escapeHtml(value: string): string {

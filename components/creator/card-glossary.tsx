@@ -23,7 +23,7 @@ import {
 //                  wording, your frame — your version of the real thing.
 // ---------------------------------------------------------------------------
 
-export const GLOSSARY_TERMS = [
+const GLOSSARY_TERMS = [
   {
     term: "Remix",
     definition:

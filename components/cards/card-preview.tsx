@@ -108,7 +108,7 @@ export type CardPreviewData = {
   artUrl?: string | null;
   artPosition?: ArtPosition;
   frameStyle?: FrameStyle;
-  /** Set symbol the card displays (from its primary set). An uploaded image
+  /** Set symbol the card displays (a plain card field). An uploaded image
    *  (setIconUrl) wins over a preset Keyrune code (setIconCode); when both are
    *  absent the default rarity-tinted PipGlyph mark renders. */
   setIconUrl?: string | null;

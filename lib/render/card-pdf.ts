@@ -186,32 +186,6 @@ export async function buildCardPdf(
   return doc.save();
 }
 
-/**
- * Build a multi-page PDF for a whole set — one card per page at 2.5"×3.5".
- * (Pro "whole-set export".) Pass the rendered PNG bytes for each card, in the
- * order they should appear.
- */
-export async function buildSetPdf(
-  cardPngs: Uint8Array[],
-  setTitle = "PipGlyph Set",
-): Promise<Uint8Array> {
-  const doc = await newDocument(
-    setTitle,
-    "Custom MTG-style set — fan-made, not affiliated with Wizards of the Coast.",
-  );
-
-  if (cardPngs.length === 0) {
-    doc.addPage([CARD_W_PT, CARD_H_PT]);
-    return doc.save();
-  }
-
-  for (const png of cardPngs) {
-    addCardPage(doc, await embedImage(doc, png));
-  }
-
-  return doc.save();
-}
-
 // ---------------------------------------------------------------------------
 // Whole-deck export (decks series PR 6).
 // ---------------------------------------------------------------------------

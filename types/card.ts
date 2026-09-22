@@ -21,6 +21,12 @@ import type {
 
 export const VISIBILITY_VALUES = ["private", "unlisted", "public"] as const;
 export type Visibility = (typeof VISIBILITY_VALUES)[number];
+/** The ONE copy source for a visibility's human label. */
+export const VISIBILITY_LABELS: Record<Visibility, string> = {
+  private: "Private",
+  unlisted: "Unlisted",
+  public: "Public",
+};
 
 export const RARITY_VALUES = [
   "common",
@@ -588,10 +594,12 @@ export type FrameStyle = {
 // tarkir) is NEVER paywalled — it stays free for everyone.
 // ---------------------------------------------------------------------------
 
-// Finishes that require a paid plan. NONE today — every finish (foil/etched/
-// showcase) is free for everyone (owner decision, 2026-07-10; the paid tease
-// is "premium custom frames", tracked in PREMIUM_FRAME_TEMPLATES below). The
-// gating plumbing stays wired so adding an entry here re-paywalls instantly.
+// Finishes that require a paid plan. NONE today — and none is selectable yet
+// either: the creator's effects panel keeps foil/etched/showcase disabled
+// ("Soon") until they ship, at which point the owner decides free vs paid
+// (2026-07-10 leaning: free; the paid tease is "premium custom frames",
+// tracked in PREMIUM_FRAME_TEMPLATES below). The gating plumbing stays wired
+// so adding an entry here re-paywalls instantly.
 export const PREMIUM_FINISHES: ReadonlySet<CardFinish> = new Set<CardFinish>();
 
 // Original premium frame templates (none yet). Add ONLY original PipGlyph

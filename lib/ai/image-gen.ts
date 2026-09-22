@@ -43,7 +43,7 @@ export type ImageCallOptions = {
 };
 
 /** Map raw provider errors to something a user can act on. */
-export function friendlyImageError(detail: string): string {
+function friendlyImageError(detail: string): string {
   const lower = detail.toLowerCase();
   if (isSafetyBlockError(detail)) {
     return "The image was blocked by the provider's safety filter — try again (each retry rewords the prompt) or adjust the theme.";
@@ -104,10 +104,6 @@ export async function generateImageWithFallbacks(
   return { ok: false, error: lastError, safetyBlocked: blocked };
 }
 
-export function isImageRemixConfigured(): boolean {
-  return isGatewayConfigured();
-}
-
 /** Re-render `source` in a new style. `prompt` should describe both the
  *  target style and what must stay (subject, composition). */
 export async function restyleImage(input: {
@@ -143,7 +139,7 @@ const GATEWAY_IMAGE_DEFAULT = "bfl/flux-2-flex";
  *  (21:9) suits the deck hero, which crops covers to aspect-[5/2]. */
 export type ImageAspect = "square" | "wide" | "card" | "banner";
 
-export async function generateStyledImage(
+async function generateStyledImage(
   prompt: string,
   aspect: ImageAspect = "square",
   options: ImageCallOptions = {},

@@ -48,7 +48,7 @@ import { planImportWrites } from "@/lib/decks/import-plan";
 // each, 500ms spacing) plus a bounded fuzzy rescue — all server-side.
 // ---------------------------------------------------------------------------
 
-export type ImportLineStatus = "resolved" | "fuzzy" | "unresolved";
+type ImportLineStatus = "resolved" | "fuzzy" | "unresolved";
 
 export type ImportReviewLine = {
   /** 1-based source line (first occurrence when duplicates merged). */

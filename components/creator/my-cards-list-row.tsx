@@ -1,16 +1,14 @@
 "use client";
 
 import { type MouseEvent } from "react";
+import { VISIBILITY_LABELS } from "@/types/card";
 import Link from "next/link";
 import { Check, Eye, Heart, Pencil } from "lucide-react";
 import { BakedCardThumbnail } from "@/components/cards/baked-card-thumbnail";
 import { QuickLikeButton } from "@/components/cards/quick-like-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  visibilityLabel,
-  type DashboardCard,
-} from "@/components/creator/dashboard-card-tile";
+import { type DashboardCard } from "@/components/creator/dashboard-card-tile";
 import { formatRelativeTime } from "@/components/messages/format";
 import { buildTypeLine } from "@/lib/cards/card-display";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
@@ -169,7 +167,7 @@ export function MyCardListRow({
         variant={card.visibility === "public" ? "primary" : "default"}
         className="hidden shrink-0 sm:inline-flex"
       >
-        {visibilityLabel(card.visibility)}
+        {VISIBILITY_LABELS[card.visibility]}
       </Badge>
       <EditedAt value={card.updated_at} className="hidden w-16 text-right md:block" />
 

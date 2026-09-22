@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isSupabaseAuthCookieName } from "@/lib/supabase/session-cookie";
 import { cookies } from "next/headers";
 import {
   getCurrentProfile,
@@ -36,7 +37,7 @@ export async function GET() {
   const store = await cookies();
   const hasSessionCookie = store
     .getAll()
-    .some(({ name }) => /^sb-.*-auth-token(\.\d+)?$/.test(name));
+    .some(({ name }) => isSupabaseAuthCookieName(name));
   if (!hasSessionCookie) {
     return NextResponse.json({ user: null }, { headers: NO_STORE });
   }

@@ -15,7 +15,7 @@ import { clampedText } from "@/lib/ai/card-design";
 // ---------------------------------------------------------------------------
 
 // Prose lengths are clamped, never hard-failed — see clampedText.
-export const remixIdentitySchema = z
+const remixIdentitySchema = z
   .object({
     title: clampedText(80).describe(
       "New ORIGINAL name that fits the new style while echoing the original card's identity.",

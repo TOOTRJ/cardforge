@@ -48,9 +48,9 @@ import { CARD_CAPACITY_UNLIMITED } from "@/lib/billing/plans";
 // shared error envelope. UI layers can pattern-match without throwing.
 // ---------------------------------------------------------------------------
 
-export type CardActionFieldErrors = Partial<Record<string, string>>;
+type CardActionFieldErrors = Partial<Record<string, string>>;
 
-export type CardActionFailure = {
+type CardActionFailure = {
   ok: false;
   formError?: string;
   fieldErrors?: CardActionFieldErrors;
@@ -62,19 +62,19 @@ export type CardActionFailure = {
   reason?: "capacity" | "premium_frame";
 };
 
-export type CreateCardSuccess = {
+type CreateCardSuccess = {
   ok: true;
   cardId: string;
   slug: string;
 };
 
-export type UpdateCardSuccess = {
+type UpdateCardSuccess = {
   ok: true;
   cardId: string;
   slug: string;
 };
 
-export type DeleteCardSuccess = {
+type DeleteCardSuccess = {
   ok: true;
   cardId: string;
 };
@@ -670,7 +670,7 @@ export async function deleteCardAction(
 //      missing or belongs to another user, abort the whole batch.
 //   3. Single mutation across the set, bounded to `owner_id = user.id` as
 //      a belt-and-braces guard alongside RLS.
-//   4. Revalidate the dashboard / gallery / sets surfaces.
+//   4. Revalidate the dashboard / gallery surfaces.
 //
 // We bound batches at 100 ids to keep request payloads reasonable + so the
 // pre-flight `IN (...)` query stays index-friendly.
@@ -688,12 +688,12 @@ const bulkVisibilitySchema = z.object({
   visibility: z.enum(VISIBILITY_VALUES),
 });
 
-export type BulkCardsSuccess = {
+type BulkCardsSuccess = {
   ok: true;
   count: number;
 };
 
-export type BulkCardsFailure = {
+type BulkCardsFailure = {
   ok: false;
   error: string;
 };

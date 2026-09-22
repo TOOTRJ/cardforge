@@ -4,7 +4,7 @@ import { inputClass } from "@/components/creator/field-group";
 
 // Shared style presets + free-text input used by every AI generation panel.
 
-export const AI_STYLE_PRESETS = [
+const AI_STYLE_PRESETS = [
   "Anime",
   "Pixel art",
   "Oil painting",
