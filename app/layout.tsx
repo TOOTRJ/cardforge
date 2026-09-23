@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
-import { Cinzel, Geist, Geist_Mono } from "next/font/google";
+import localFont from "next/font/local";
+import { GeistSans } from "geist/font/sans";
+import { GeistMono } from "geist/font/mono";
 import { Toaster } from "sonner";
 import { UpgradeModalProvider } from "@/components/billing/upgrade-modal-provider";
 import { GenerationJobProvider } from "@/components/ai/generation-provider";
@@ -94,20 +96,26 @@ function JsonLd() {
   );
 }
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-const cinzel = Cinzel({
+// Self-hosted fonts — never `next/font/google`. That loader fetches from
+// fonts.googleapis.com during the BUILD, and on 2026-09-22 the production
+// deploy of a green merge failed inside it ("next/font/google queries have
+// exactly one entry" / can't resolve …/internal/font/google/font) while the
+// same tree had built fine minutes earlier. A deploy must not depend on a
+// third-party fetch. Geist comes from Vercel's own `geist` package
+// (next/font/local under the hood, same --font-geist-* variables); Cinzel is
+// the OFL variable font from github.com/google/fonts, committed under
+// app/fonts/cinzel with its licence. tests/unit/content/fonts-self-hosted
+// guards the import. Every other font (card renders, OG images) is already
+// a committed .ttf under public/.
+const geistSans = GeistSans; // --font-geist-sans, weight 100–900
+const geistMono = GeistMono; // --font-geist-mono
+const cinzel = localFont({
+  src: "./fonts/cinzel/Cinzel-Variable.woff2",
   variable: "--font-cinzel",
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
+  // One variable file covers the 500/600/700 the UI uses (and every other
+  // weight), latin + latin-ext included — no per-subset files to juggle.
+  weight: "400 900",
+  display: "swap",
 });
 
 // GA4 loads only where NEXT_PUBLIC_GA_MEASUREMENT_ID is configured (the

@@ -226,6 +226,12 @@ Rules and gotchas:
   shows. A render write is NOT an edit: `updated_at` ignores the render
   columns (0108) and the OG cache-buster is `renderVersionOf()`
   (`max(updated_at, rendered_at)`), never `updated_at` alone.
+- Fonts are SELF-HOSTED: Geist via Vercel's `geist` package, Cinzel as the OFL
+  variable woff2 in `app/fonts/cinzel` (licence beside it), card/OG fonts as
+  committed `.ttf`s under `public/`. Never import `next/font/google` — it
+  fetches fonts.googleapis.com at BUILD time and the 2026-09-22 production
+  deploy of a green merge failed inside that loader
+  (`tests/unit/content/fonts-self-hosted.test.ts` guards it).
 - Billing storefront: `/pricing` and the upgrade modal pick every button from
   `pricingCtaFor()` (`components/billing/pricing-cta.ts`) fed by
   `useBillingViewer()` (/api/me: `hasBillingAccount`, `hasLiveSubscription`,
