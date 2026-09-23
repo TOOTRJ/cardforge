@@ -106,7 +106,7 @@ export default async function TypeHubPage({ params }: { params: Promise<Params> 
           </Button>
         ) : null}
         <Button asChild variant="ghost" size="sm">
-          <Link href={`/gallery?type=${type}`}>
+          <Link href={`/gallery/browse?type=${type}`}>
             Every {label} in the gallery
             <ArrowRight className="h-3.5 w-3.5" aria-hidden />
           </Link>

@@ -1,31 +1,43 @@
 import type { Metadata } from "next";
-import { parseDecksParams, DecksView } from "../decks-view";
+import { DecksBrowse, parseDecksParams } from "../decks-view";
+import { DECKS_FILTER_PARAMS, hasAnyParamKey } from "@/lib/routing/browse-params";
 
 // ---------------------------------------------------------------------------
-// /decks/browse — the dynamic twin of /decks.
+// /decks/browse — search, the format filter and paging for every public
+// deck.
 //
-// Reached via the proxy.ts rewrite whenever /decks is requested with a
-// search/filter/pagination param (the visitor's URL stays /decks?…). Reading
-// searchParams makes THIS route dynamic per-request while the bare /decks
-// stays static/ISR on the CDN.
-//
-// Direct hits are harmless: the canonical points at /decks, matching the
-// posture every searched/paged decks variant always had.
+// The visible dynamic sibling of the static /decks landing. Reading
+// searchParams makes THIS route dynamic per-request while the landing stays
+// on the CDN. Every control on the page navigates within this route
+// (useSearchParamPatch / pageHref) — see lib/routing/browse-params.ts for
+// why the landing can't host them.
 // ---------------------------------------------------------------------------
 
-export const metadata: Metadata = {
-  title: "Community decks",
-  description:
-    "Browse public MTG decks rebuilt with custom cards — Commander, Standard, Modern and more, remixed by PipGlyph forgers.",
-  alternates: { canonical: "/decks" },
-};
+type SearchParams = Record<string, string | string[] | undefined>;
 
-type DecksBrowsePageProps = {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-};
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}): Promise<Metadata> {
+  const params = await searchParams;
+  // The bare page is the one self-canonical, indexable variant; searched/
+  // filtered/paged URLs canonicalize back to it and stay out of the index
+  // while crawlers still follow the deck links they contain.
+  const filtered = hasAnyParamKey(params, DECKS_FILTER_PARAMS);
+  return {
+    title: "Browse decks",
+    description:
+      "Search every public MTG deck rebuilt with custom cards on PipGlyph and filter by format — Commander, Standard, Modern and more.",
+    alternates: { canonical: "/decks/browse" },
+    robots: filtered ? { index: false, follow: true } : undefined,
+  };
+}
 
 export default async function DecksBrowsePage({
   searchParams,
-}: DecksBrowsePageProps) {
-  return <DecksView {...parseDecksParams(await searchParams)} />;
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  return <DecksBrowse {...parseDecksParams(await searchParams)} />;
 }

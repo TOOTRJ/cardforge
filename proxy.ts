@@ -62,11 +62,18 @@ export async function proxy(request: NextRequest) {
 
   const sessionResponse = await updateSession(request);
 
-  // /gallery and /decks are prerendered (ISR) and never read searchParams
-  // themselves; a request carrying a REAL filter/search/pagination param is
-  // rewritten to the dynamic /browse sibling, which renders it per-request.
-  // The visitor-facing URL is unchanged. Junk params (utm_*, fbclid, …)
-  // fall through to the CDN-cached static page.
+  // /gallery and /decks are prerendered (ISR) landings that never read
+  // searchParams; searching, filtering, sorting and paging live on their
+  // VISIBLE dynamic siblings (/gallery/browse, /decks/browse). A landing
+  // request that still carries a REAL filter/search/pagination param (an old
+  // inbound link, a bookmark) is 308'd to the sibling with its query intact.
+  //
+  // This used to be a hidden rewrite. It broke every in-app filter/sort/
+  // search click: Next's client router reuses the cached static route tree
+  // for a same-path query-string change and never asks the server, so the
+  // rewrite was invisible to soft navigations and the grid stayed frozen on
+  // the landing's content. Junk params (utm_*, fbclid, …) fall through to
+  // the CDN-cached static page.
   const { pathname } = request.nextUrl;
   const browseParams =
     pathname === "/gallery"
@@ -83,12 +90,12 @@ export async function proxy(request: NextRequest) {
   ) {
     const url = request.nextUrl.clone();
     url.pathname = `${pathname}/browse`;
-    const rewritten = NextResponse.rewrite(url, { request });
+    const redirected = NextResponse.redirect(url, 308);
     // Preserve any auth cookies updateSession refreshed on this response.
     for (const cookie of sessionResponse.cookies.getAll()) {
-      rewritten.cookies.set(cookie);
+      redirected.cookies.set(cookie);
     }
-    return rewritten;
+    return redirected;
   }
 
   return sessionResponse;

@@ -83,7 +83,7 @@ export default async function FormatHubPage({ params }: { params: Promise<Params
           </Link>
         </Button>
         <Button asChild variant="ghost" size="sm">
-          <Link href={`/decks?format=${format}`}>
+          <Link href={`/decks/browse?format=${format}`}>
             Every deck in this format
             <ArrowRight className="h-3.5 w-3.5" aria-hidden />
           </Link>

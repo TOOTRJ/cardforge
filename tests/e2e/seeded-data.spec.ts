@@ -19,7 +19,7 @@ test.describe("seeded dev data renders", () => {
   test("gallery lists the seeded public cards — and never the private ones", async ({
     page,
   }) => {
-    await page.goto("/gallery?sort=newest");
+    await page.goto("/gallery/browse?sort=newest");
     await expect(
       page.getByRole("link", { name: /cinderwing matriarch/i }).first(),
     ).toBeVisible();

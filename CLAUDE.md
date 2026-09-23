@@ -226,4 +226,13 @@ Rules and gotchas:
   shows. A render write is NOT an edit: `updated_at` ignores the render
   columns (0108) and the OG cache-buster is `renderVersionOf()`
   (`max(updated_at, rendered_at)`), never `updated_at` alone.
+- Browse surfaces: `/gallery` and `/decks` are static (ISR) LANDINGS — search
+  box + hub chips on top, curated rows below — that never read
+  `searchParams`. Every search/filter/sort/page control lives on the VISIBLE
+  dynamic siblings `/gallery/browse` and `/decks/browse` and navigates within
+  them (`useSearchParamPatch`, `buildHref`/`pageHref`, `BrowseSearchBox`).
+  Never link to `/gallery?…` or `/decks?…` (`proxy.ts` 308s known params to
+  the sibling) and never bring back a hidden rewrite: Next's client router
+  reuses the cached static tree for a same-path query change and never calls
+  the server, so the URL changed while the grid stayed frozen (2026-09-22).
 

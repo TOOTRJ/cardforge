@@ -55,7 +55,7 @@ test.describe("like toggle", () => {
     await signIn(page);
     // The GALLERY is the anonymous-rendered (ISR) surface where the tile's
     // props never change after a like — the case that used to snap back.
-    await page.goto("/gallery?sort=newest");
+    await page.goto("/gallery/browse?sort=newest");
     const tile = page
       .locator("div")
       .filter({ has: page.locator('a[href="/card/dev_artist/thornback-behemoth"]') })

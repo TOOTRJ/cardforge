@@ -79,7 +79,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // free) — it belongs here AND must stay crawlable in robots.ts.
     staticEntry(baseUrl, "/create", "monthly", 0.85),
     staticEntry(baseUrl, "/gallery", "daily", 0.9),
+    // The bare browse pages (every public card / deck, paged) are the one
+    // self-canonical variant; every filtered/searched/paged URL under them
+    // canonicalizes back and is noindex.
+    staticEntry(baseUrl, "/gallery/browse", "daily", 0.7),
     staticEntry(baseUrl, "/decks", "daily", 0.8),
+    staticEntry(baseUrl, "/decks/browse", "daily", 0.6),
     staticEntry(baseUrl, "/challenges", "weekly", 0.8),
     staticEntry(baseUrl, "/faq", "monthly", 0.85),
     staticEntry(baseUrl, "/articles", "weekly", 0.85),
