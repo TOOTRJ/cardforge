@@ -6,8 +6,13 @@ import {
   customerIdOf,
   grantCreditsForSync,
   isLiveStatus,
+  resolveSubscriptionTier,
   syncSubscriptionForUser,
 } from "./subscription-sync";
+import { trialEndingEmail } from "@/lib/email/messages";
+import { getRecipientFor } from "@/lib/email/preferences";
+import { isEmailConfigured, sendEmail } from "@/lib/email/send";
+import { formatMoney } from "@/lib/billing/subscription-details";
 
 // All entitlement/credit writes happen here, via the service-role admin client
 // (RLS would block writing these columns from a user client). Handlers are
@@ -102,6 +107,102 @@ async function handleSubscriptionEvent(
   await grantCreditsForSync(result, admin, {
     isCreationEvent: opts.isCreationEvent && result.subscriptionId === sub.id,
   });
+}
+
+/** Stripe checks the subscription's default payment method AND the
+ *  customer's when a trial ends — mirror that so the reminder is honest. */
+async function subscriptionHasPaymentMethod(
+  sub: Stripe.Subscription,
+  stripe: Stripe,
+): Promise<boolean> {
+  if (sub.default_payment_method || sub.default_source) return true;
+  const customerId = customerIdOf(sub.customer);
+  if (!customerId) return false;
+  try {
+    const customer = await stripe.customers.retrieve(customerId);
+    if ("deleted" in customer && customer.deleted) return false;
+    return Boolean(customer.invoice_settings?.default_payment_method || customer.default_source);
+  } catch {
+    return false;
+  }
+}
+
+const TIER_NAME: Record<string, string> = { plus: "Plus", pro: "Pro" };
+
+// customer.subscription.trial_will_end — three days before a trial ends (at
+// once for shorter trials). ONE in-app notification + ONE "account" email per
+// subscription, honest about whether the plan converts (a card is on file)
+// or simply ends. Stripe's card-network rules require a reminder before a
+// trial converts; this is ours (docs/BILLING.md). The notification insert is
+// the durable part: a failure throws so Stripe retries; the email is best
+// effort on top (idempotent at the provider by subscription id).
+async function handleTrialWillEnd(
+  sub: Stripe.Subscription,
+  deps: { admin: AdminClient; stripe: Stripe },
+): Promise<void> {
+  const { admin, stripe } = deps;
+  if (sub.status !== "trialing") return;
+  const userId = await resolveSubscriptionUserId(sub, admin);
+  if (!userId) return;
+
+  // Once per subscription — a retried delivery (or a second event after a
+  // trial extension) must not notify twice.
+  const { data: existing } = await admin
+    .from("notifications")
+    .select("id")
+    .eq("type", "trial_ending")
+    .eq("payload->>subscriptionId", sub.id)
+    .limit(1)
+    .maybeSingle();
+  if (existing) return;
+
+  const [tier, hasPaymentMethod] = await Promise.all([
+    resolveSubscriptionTier(sub, stripe),
+    subscriptionHasPaymentMethod(sub, stripe),
+  ]);
+  const price = sub.items?.data?.[0]?.price ?? null;
+  const interval = price?.recurring?.interval ?? null;
+  const payload = {
+    subscriptionId: sub.id,
+    tier,
+    trialEnd: sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null,
+    hasPaymentMethod,
+    amountCents: typeof price?.unit_amount === "number" ? price.unit_amount : null,
+    currency: price?.currency ?? "usd",
+    interval,
+  };
+  const { error } = await admin.from("notifications").insert({
+    recipient_id: userId,
+    actor_id: null,
+    type: "trial_ending",
+    payload,
+  });
+  if (error) {
+    throw new Error(`trial_ending notification failed for ${userId}: ${error.message}`);
+  }
+
+  if (!isEmailConfigured() || !payload.trialEnd) return;
+  try {
+    const recipient = await getRecipientFor(admin, userId, "account");
+    if (!recipient) return;
+    await sendEmail(
+      trialEndingEmail(recipient, {
+        plan: TIER_NAME[tier ?? ""] ?? "PipGlyph",
+        trialEndsAt: payload.trialEnd,
+        hasPaymentMethod,
+        priceLabel:
+          payload.amountCents != null && interval
+            ? `${formatMoney(payload.amountCents, payload.currency)} / ${interval}`
+            : null,
+      }),
+      { idempotencyKey: `trial-ending:${sub.id}` },
+    );
+  } catch (error) {
+    console.warn(
+      "[stripe] trial-ending email failed:",
+      error instanceof Error ? error.message : error,
+    );
+  }
 }
 
 // A subscription checkout that SUPERSEDES an earlier no-card trial (the user
@@ -212,6 +313,9 @@ export async function handleStripeEvent(
         deps,
         { deleted: true, isCreationEvent: false },
       );
+      break;
+    case "customer.subscription.trial_will_end":
+      await handleTrialWillEnd(event.data.object as Stripe.Subscription, deps);
       break;
     case "invoice.payment_failed": {
       const invoice = event.data.object as Stripe.Invoice;

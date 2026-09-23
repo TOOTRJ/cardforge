@@ -143,6 +143,20 @@ export function describeNotification(
         href: slug ? `/deck/${slug}` : "/dashboard/decks",
       };
     }
+    case "trial_ending": {
+      const tier = str(payload.tier);
+      const trialEnd = str(payload.trialEnd);
+      const hasPaymentMethod = payload.hasPaymentMethod === true;
+      return {
+        subject: `Your ${TIER_LABEL[tier ?? ""] ?? "plan"} trial`,
+        body: `ends ${trialEnd ? `on ${formatShortDate(trialEnd)}` : "soon"} — ${
+          hasPaymentMethod
+            ? "your card is charged then; change or cancel any time."
+            : "add a card to keep the plan, or it simply ends and your cards stay."
+        }`,
+        href: "/dashboard/billing",
+      };
+    }
     case "card_limit": {
       const limit = num(payload.limit);
       return {

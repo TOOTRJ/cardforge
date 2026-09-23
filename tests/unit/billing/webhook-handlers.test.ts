@@ -1,4 +1,23 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+// The trial-ending reminder's email side: configured or not, and who the
+// "account" list resolves the user to.
+const email = vi.hoisted(() => ({
+  configured: true,
+  recipient: { email: "trial@example.test", unsubscribeToken: "tok" } as null | {
+    email: string;
+    unsubscribeToken: string;
+  },
+  send: vi.fn(),
+}));
+vi.mock("@/lib/email/send", () => ({
+  isEmailConfigured: () => email.configured,
+  sendEmail: (...args: unknown[]) => email.send(...args),
+}));
+vi.mock("@/lib/email/preferences", () => ({
+  getRecipientFor: async () => email.recipient,
+}));
+
 import { handleStripeEvent } from "@/lib/stripe/webhook-handlers";
 import { MONTHLY_CREDITS, creditRefillKey, currentCreditPeriod } from "@/lib/billing/plans";
 
@@ -73,6 +92,9 @@ const run = (event: any, admin: any) =>
 beforeEach(() => {
   process.env.STRIPE_PRICE_PLUS_MONTHLY = "price_plus";
   process.env.STRIPE_PRICE_PRO_MONTHLY = "price_pro";
+  email.configured = true;
+  email.recipient = { email: "trial@example.test", unsubscribeToken: "tok" };
+  email.send.mockReset().mockResolvedValue({ ok: true });
 });
 afterEach(() => {
   delete process.env.STRIPE_PRICE_PLUS_MONTHLY;
@@ -689,3 +711,135 @@ describe("handleStripeEvent — price/tier resolution + multi-subscription safet
     expect(canceled).toEqual([]);
   });
 });
+
+// ---------------------------------------------------------------------------
+// customer.subscription.trial_will_end → ONE notification + ONE email per
+// subscription, honest about whether the plan converts.
+// ---------------------------------------------------------------------------
+describe("handleStripeEvent — trial_will_end", () => {
+  function makeTrialAdmin(opts: { alreadyNotified?: boolean; insertError?: string } = {}) {
+    const inserts: Array<{ table: string; row: Record<string, unknown> }> = [];
+    const admin = {
+      from(table: string) {
+        return {
+          select() {
+            const chain = {
+              eq: () => chain,
+              limit: () => chain,
+              maybeSingle: async () =>
+                table === "profiles"
+                  ? { data: { id: "user-1" }, error: null }
+                  : { data: opts.alreadyNotified ? { id: "n_1" } : null, error: null },
+            };
+            return chain;
+          },
+          insert: async (row: Record<string, unknown>) => {
+            inserts.push({ table, row });
+            return { error: opts.insertError ? { message: opts.insertError } : null };
+          },
+        };
+      },
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return { admin: admin as any, inserts };
+  }
+  const customers = { retrieve: vi.fn() };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const trialStripe = { customers } as any;
+  const trialSub = (extra: Record<string, unknown> = {}) => ({
+    id: "sub_trial",
+    customer: "cus_1",
+    status: "trialing",
+    trial_end: 1_790_735_200,
+    default_payment_method: null,
+    default_source: null,
+    items: { data: [{ price: { id: "price_pro", unit_amount: 1500, currency: "usd", recurring: { interval: "month" } } }] },
+    ...extra,
+  });
+  const event = (object: unknown) =>
+    ({ id: "evt_twe", type: "customer.subscription.trial_will_end", data: { object } }) as never;
+
+  beforeEach(() => {
+    customers.retrieve.mockReset().mockResolvedValue({ id: "cus_1", invoice_settings: { default_payment_method: null } });
+  });
+
+  it("no card anywhere: notification says so, email says the plan simply ends", async () => {
+    const { admin, inserts } = makeTrialAdmin();
+    await handleStripeEvent(event(trialSub()), { admin, stripe: trialStripe });
+    expect(inserts).toEqual([
+      {
+        table: "notifications",
+        row: {
+          recipient_id: "user-1",
+          actor_id: null,
+          type: "trial_ending",
+          payload: {
+            subscriptionId: "sub_trial",
+            tier: "pro",
+            trialEnd: "2026-09-30T02:26:40.000Z",
+            hasPaymentMethod: false,
+            amountCents: 1500,
+            currency: "usd",
+            interval: "month",
+          },
+        },
+      },
+    ]);
+    expect(email.send).toHaveBeenCalledTimes(1);
+    const [message, options] = email.send.mock.calls[0];
+    expect(message.to).toBe("trial@example.test");
+    expect(message.subject).toContain("add a card to keep it");
+    expect(message.html).toContain("$15 / month");
+    expect(options).toEqual({ idempotencyKey: "trial-ending:sub_trial" });
+  });
+
+  it("a card on the CUSTOMER (Checkout stores it there) counts, like Stripe's own conversion check", async () => {
+    customers.retrieve.mockResolvedValue({ id: "cus_1", invoice_settings: { default_payment_method: "pm_1" } });
+    const { admin, inserts } = makeTrialAdmin();
+    await handleStripeEvent(event(trialSub()), { admin, stripe: trialStripe });
+    expect(inserts[0].row.payload).toMatchObject({ hasPaymentMethod: true });
+    expect(email.send.mock.calls[0][0].subject).not.toContain("add a card");
+    // A card on the subscription itself needs no customer read at all.
+    customers.retrieve.mockClear();
+    const second = makeTrialAdmin();
+    await handleStripeEvent(event(trialSub({ default_payment_method: "pm_2" })), { admin: second.admin, stripe: trialStripe });
+    expect(second.inserts[0].row.payload).toMatchObject({ hasPaymentMethod: true });
+    expect(customers.retrieve).not.toHaveBeenCalled();
+  });
+
+  it("once per subscription: a redelivered event neither notifies nor emails again", async () => {
+    const { admin, inserts } = makeTrialAdmin({ alreadyNotified: true });
+    await handleStripeEvent(event(trialSub()), { admin, stripe: trialStripe });
+    expect(inserts).toEqual([]);
+    expect(email.send).not.toHaveBeenCalled();
+  });
+
+  it("the notification is the durable part: an insert failure throws (Stripe retries); a missing email setup or recipient is fine", async () => {
+    await expect(
+      handleStripeEvent(event(trialSub()), { admin: makeTrialAdmin({ insertError: "boom" }).admin, stripe: trialStripe }),
+    ).rejects.toThrow(/trial_ending notification failed/);
+
+    email.configured = false;
+    const { admin, inserts } = makeTrialAdmin();
+    await handleStripeEvent(event(trialSub()), { admin, stripe: trialStripe });
+    expect(inserts).toHaveLength(1);
+    expect(email.send).not.toHaveBeenCalled();
+
+    email.configured = true;
+    email.recipient = null;
+    await handleStripeEvent(event(trialSub()), { admin: makeTrialAdmin().admin, stripe: trialStripe });
+    expect(email.send).not.toHaveBeenCalled();
+  });
+
+  it("a send failure never fails the webhook, and a non-trialing subscription is ignored", async () => {
+    email.send.mockRejectedValue(new Error("resend down"));
+    const { admin, inserts } = makeTrialAdmin();
+    await expect(handleStripeEvent(event(trialSub()), { admin, stripe: trialStripe })).resolves.toBeUndefined();
+    expect(inserts).toHaveLength(1);
+
+    const active = makeTrialAdmin();
+    await handleStripeEvent(event(trialSub({ status: "active" })), { admin: active.admin, stripe: trialStripe });
+    expect(active.inserts).toEqual([]);
+  });
+});
+

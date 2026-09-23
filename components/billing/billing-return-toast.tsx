@@ -31,6 +31,14 @@ export function BillingReturnToast() {
       timers.push(setTimeout(() => router.refresh(), 1500));
     } else if (billing === "cancel") {
       toast("Checkout canceled — no charge was made.");
+    } else if (billing === "scheduled") {
+      toast.success(
+        "Your plan change is scheduled for the end of your billing period — nothing changes until then.",
+      );
+      timers.push(setTimeout(() => router.refresh(), 800));
+    } else if (billing === "kept") {
+      toast.success("Scheduled plan change cancelled — you're staying on your current plan.");
+      timers.push(setTimeout(() => router.refresh(), 800));
     }
 
     // Drop the query param so re-renders / back-nav don't replay the toast.

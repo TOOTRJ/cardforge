@@ -55,6 +55,11 @@ export type SubscriptionLike = {
   created?: number;
   cancel_at_period_end?: boolean;
   metadata?: Record<string, string> | null;
+  trial_end?: number | null;
+  default_payment_method?: string | { id: string } | null;
+  default_source?: string | { id: string } | null;
+  /** A subscription schedule attached to it (a pending plan change). */
+  schedule?: string | { id: string } | null;
   items: {
     data: Array<{
       id?: string;

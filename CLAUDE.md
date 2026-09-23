@@ -259,12 +259,21 @@ Rules and gotchas:
   trial per account, Plus or Pro: `createCheckoutSessionAction` grants
   `trial_period_days` only when the profile has never synced a subscription
   AND Stripe's history (status "all") is empty; a plan switch mid-trial
-  carries `trial_end` over (≥48 h left, Stripe's minimum). Active plans
-  switch in place through the portal confirm flow; the month's credit top-up
-  is measured against EVERY refill row of the month (`refill:<user>:<period>%`),
-  never the base row alone. The seeded e2e user is an ADMIN (unlocked) —
-  billing specs sign in as the free `e2e_free` user (`signIn(page, { as:
-  "free" })`).
+  carries `trial_end` over (≥48 h left, Stripe's minimum). Active plans:
+  an UPGRADE switches in place through the portal confirm flow (prorated,
+  charged now); a DOWNGRADE (`isPlanDowngrade` in `lib/billing/plan-change.ts`: lower tier, or
+  annual → monthly) is scheduled for the end of the paid period with a subscription
+  schedule (`scheduleDowngrade`; "Keep {Plan}" =
+  `cancelScheduledPlanChangeAction` releases it; the billing page reads
+  `pendingChange` from the expanded schedule) — never through the portal,
+  whose `schedule_at_period_end` only works within one product. Stripe's
+  `trial_will_end` becomes ONE `trial_ending` notification + "account" email
+  per subscription (migration 0109; honest about whether a card is on file);
+  the event must be subscribed on every webhook endpoint. The month's
+  credit top-up is measured against EVERY refill row of the month
+  (`refill:<user>:<period>%`), never the base row alone. The seeded e2e user
+  is an ADMIN (unlocked) — billing specs sign in as the free `e2e_free` user
+  (`signIn(page, { as: "free" })`).
 - Browse surfaces: `/gallery` and `/decks` are static (ISR) LANDINGS — search
   box + hub chips on top, curated rows below — that never read
   `searchParams`. Every search/filter/sort/page control lives on the VISIBLE

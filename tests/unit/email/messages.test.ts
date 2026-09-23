@@ -4,6 +4,7 @@ import {
   activityDigestEmail,
   newsletterEmail,
   teamMessageEmail,
+  trialEndingEmail,
   welcomeEmail,
 } from "@/lib/email/messages";
 import { isUnsubscribeToken, parseEmailList, unsubscribeLinks } from "@/lib/email/lists";
@@ -30,6 +31,12 @@ describe("email builders", () => {
         summary: "Three new eras.",
         body: null,
         linkHref: "/news",
+      }),
+      trialEndingEmail(recipient, {
+        plan: "Pro",
+        trialEndsAt: "2026-09-29T12:00:00Z",
+        hasPaymentMethod: true,
+        priceLabel: "$15 / month",
       }),
     ];
     for (const email of emails) {
@@ -76,6 +83,31 @@ describe("email builders", () => {
     expect(email.html).toMatch(/href="https?:\/\/[^"]+\/settings#email"/);
     expect(email.text).toContain('Turn off "Activity digest" in your email settings:');
     expect(email.text).toContain("/settings#email");
+  });
+
+  it("trial-ending email says what happens on the date: charged (card on file) or simply ends (no card)", () => {
+    const converts = trialEndingEmail(recipient, {
+      plan: "Pro",
+      trialEndsAt: "2026-09-29T12:00:00Z",
+      hasPaymentMethod: true,
+      priceLabel: "$15 / month",
+    });
+    expect(converts.subject).toBe("Your PipGlyph Pro trial ends September 29, 2026");
+    expect(converts.html).toContain("your card is charged $15 / month");
+    expect(converts.html).toContain("/dashboard/billing");
+    expect(converts.text).toContain("cancel any time before the date and you won't be charged");
+    expect(converts.text).not.toContain("<strong>");
+
+    const ends = trialEndingEmail(recipient, {
+      plan: "Plus",
+      trialEndsAt: "2026-09-29T12:00:00Z",
+      hasPaymentMethod: false,
+      priceLabel: null,
+    });
+    expect(ends.subject).toBe("Your PipGlyph Plus trial ends September 29, 2026 — add a card to keep it");
+    expect(ends.html).toContain("nothing is charged");
+    expect(ends.html).toContain("To keep Plus, add a card before the date");
+    expect(ends.headers?.["List-Unsubscribe"]).toContain("list=account");
   });
 
   it("newsletter uses the marketing sender's postal address when set", () => {

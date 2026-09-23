@@ -1,6 +1,8 @@
 import "server-only";
 
 import { getStripe, isStripeConfigured } from "@/lib/stripe/client";
+import { tierForPrice, type PriceLike } from "@/lib/stripe/config";
+import type { PlanTier } from "@/lib/billing/plans";
 
 // ---------------------------------------------------------------------------
 // What the billing page shows from Stripe itself — the bits the profile row
@@ -30,6 +32,17 @@ export type InvoiceSummary = {
   hostedUrl: string | null;
 };
 
+/** A downgrade scheduled for the end of the period (lib/stripe/actions.ts
+ *  scheduleDowngrade): the price the subscription moves to, and when. */
+export type PendingChangeSummary = {
+  /** ISO timestamp the new price starts. */
+  startsAt: string;
+  tier: PlanTier | null;
+  interval: "month" | "year" | null;
+  amountCents: number | null;
+  currency: string;
+};
+
 export type SubscriptionSummary = {
   status: string;
   interval: "month" | "year" | null;
@@ -40,6 +53,7 @@ export type SubscriptionSummary = {
   currentPeriodEnd: string | null;
   trialEnd: string | null;
   cancelAtPeriodEnd: boolean;
+  pendingChange: PendingChangeSummary | null;
 };
 
 export type StripeBillingDetails = {
@@ -57,11 +71,25 @@ export type CustomerLike = {
   invoice_settings?: { default_payment_method?: string | PaymentMethodLike | null } | null;
 };
 
+export type ScheduleLike = {
+  current_phase?: { start_date: number; end_date: number } | null;
+  phases: Array<{
+    start_date: number;
+    end_date: number;
+    items: Array<{
+      price?: string | (PriceLike & { currency?: string | null }) | null;
+      quantity?: number | null;
+    }>;
+  }>;
+};
+
 export type SubscriptionDetailsLike = {
   status: string;
   cancel_at_period_end?: boolean | null;
   trial_end?: number | null;
   default_payment_method?: string | PaymentMethodLike | null;
+  /** Expanded (`schedule.phases.items.price`) when a change is pending. */
+  schedule?: string | ScheduleLike | null;
   items: {
     data: Array<{
       current_period_end?: number | null;
@@ -101,6 +129,34 @@ function paymentMethodSummary(pm: string | PaymentMethodLike | null | undefined)
   };
 }
 
+function asInterval(value: string | null | undefined): "month" | "year" | null {
+  return value === "month" || value === "year" ? value : null;
+}
+
+/** The first phase that starts after the current one — the plan the
+ *  subscription moves to. Null without a schedule, or when every remaining
+ *  phase is the current one (a released or exhausted schedule). */
+function pendingChangeOf(
+  schedule: SubscriptionDetailsLike["schedule"],
+  now = Date.now() / 1000,
+): PendingChangeSummary | null {
+  if (!schedule || typeof schedule === "string") return null;
+  const currentEnd = schedule.current_phase?.end_date ?? now;
+  const next = [...schedule.phases]
+    .filter((phase) => phase.start_date >= currentEnd && phase.start_date > now)
+    .sort((a, b) => a.start_date - b.start_date)[0];
+  if (!next) return null;
+  const price = next.items[0]?.price;
+  const expanded = price && typeof price === "object" ? price : null;
+  return {
+    startsAt: new Date(next.start_date * 1000).toISOString(),
+    tier: tierForPrice(expanded),
+    interval: asInterval(expanded?.recurring?.interval),
+    amountCents: typeof expanded?.unit_amount === "number" ? expanded.unit_amount : null,
+    currency: expanded?.currency ?? "usd",
+  };
+}
+
 /** Pure: shape Stripe's objects into what the page renders. */
 export function summarizeBillingDetails(input: {
   customer: CustomerLike | null;
@@ -109,16 +165,16 @@ export function summarizeBillingDetails(input: {
 }): StripeBillingDetails {
   const sub = input.subscription;
   const item = sub?.items?.data?.[0];
-  const interval = item?.price?.recurring?.interval;
   const subscription: SubscriptionSummary | null = sub
     ? {
         status: sub.status,
-        interval: interval === "month" || interval === "year" ? interval : null,
+        interval: asInterval(item?.price?.recurring?.interval),
         amountCents: typeof item?.price?.unit_amount === "number" ? item.price.unit_amount : null,
         currency: item?.price?.currency ?? "usd",
         currentPeriodEnd: iso(item?.current_period_end),
         trialEnd: iso(sub.trial_end),
         cancelAtPeriodEnd: Boolean(sub.cancel_at_period_end),
+        pendingChange: pendingChangeOf(sub.schedule),
       }
     : null;
 
@@ -163,7 +219,9 @@ export async function getStripeBillingDetails(
       }),
       subscriptionId
         ? stripe.subscriptions
-            .retrieve(subscriptionId, { expand: ["default_payment_method"] })
+            .retrieve(subscriptionId, {
+              expand: ["default_payment_method", "schedule.phases.items.price"],
+            })
             .catch(() => null)
         : Promise.resolve(null),
       stripe.invoices.list({ customer: customerId, limit: 6 }),

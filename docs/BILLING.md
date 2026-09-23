@@ -11,8 +11,8 @@ how the integration compares with the standard Stripe SaaS pattern.
 | Stripe prices | **lookup keys** on the catalog (`plus_monthly`, `plus_annual`, `pro_monthly`, `pro_annual`, `pack_small`, `pack_large`) — `lib/stripe/prices.ts` resolves them at checkout; the `STRIPE_PRICE_*` env vars are an optional fallback | Since 2026-09-22 (PR #360): a stale env id had every live credit-pack checkout failing with `resource_missing` for weeks. `lib/stripe/config.ts` still maps a price back to a tier (env id → metadata → lookup key → product → amount) for the webhook. |
 | Storefront | `/pricing` (static, anonymous) + `/pricing-member` (dynamic, signed-in; `proxy.ts` rewrite) | Buttons come from `pricingCtaFor()` fed by a `BillingViewer` (`lib/billing/viewer.ts`). Paid accounts are redirected to the billing page. |
 | Billing page | `/dashboard/billing` | Plan, renewal/trial/cancel dates, plan changes (the same grid), credits + packs, card on file + invoices (`lib/billing/subscription-details.ts`), portal shortcuts. |
-| Checkout / portal | `lib/stripe/actions.ts` (server actions) | New subscription → Stripe Checkout (7-day no-card trial for first-timers). Live subscription → Customer Portal **confirm-update** flow (in-place price switch, prorated). Broken payment → portal. Packs → Checkout in `payment` mode. |
-| Webhook | `app/api/stripe/webhook/route.ts` → `lib/stripe/webhook-handlers.ts` → `lib/stripe/subscription-sync.ts` | Events: `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `customer.subscription.{created,updated,deleted}`, `invoice.payment_failed`. Idempotent (`stripe_events` claim table, migration 0099). |
+| Checkout / portal | `lib/stripe/actions.ts` (server actions) | New subscription → Stripe Checkout (7-day no-card trial for first-timers). Live subscription: an **upgrade** goes through the Customer Portal **confirm-update** flow (in-place price switch, prorated, charged now); a **downgrade** (Pro → Plus, or annual → monthly) is **scheduled for the end of the paid period** with a subscription schedule (§6). Broken payment → portal. Packs → Checkout in `payment` mode. |
+| Webhook | `app/api/stripe/webhook/route.ts` → `lib/stripe/webhook-handlers.ts` → `lib/stripe/subscription-sync.ts` | Events: `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `customer.subscription.{created,updated,deleted,trial_will_end}`, `invoice.payment_failed`. Idempotent (`stripe_events` claim table, migration 0099). |
 | Entitlements | `lib/billing/entitlements.ts` | The ONE server-side truth: subscription active/trialing + admin comp → effective tier → perks. Never trust a client tier. |
 | Credits | `lib/billing/credit-refill.ts` (monthly refill, cron + webhook), `lib/billing/credit-reconcile.ts` (refund orphaned spends), `settle_spend` (0106) | Refill is idempotent per user per month; upgrades top up the difference against everything the month already granted. |
 
@@ -114,13 +114,69 @@ does all of that, plus a few things most apps skip:
 
 Gaps against the standard, in priority order:
 
-1. **`customer.subscription.trial_will_end`** (3 days before the trial ends) is not subscribed. Standard practice is an email + in-app nudge; the notification and email infrastructure exists (`lib/email/messages.ts`, `notifications`). Add the event to both endpoints and a handler that writes a notification row and sends the email.
+1. ~~**`customer.subscription.trial_will_end`** is not subscribed.~~ **Done 2026-09-22** (§6): the sandbox endpoint subscribes to it; the live endpoint needs the event added (owner, Dashboard → Developers → Webhooks → the pipglyph.com endpoint → add `customer.subscription.trial_will_end`) — until then live trials get no reminder.
 2. **`invoice.paid`** is not handled. Access is granted from `customer.subscription.updated` (status → `active`), which is correct, but `invoice.paid` is the canonical "money arrived" signal and the cheapest place to log revenue / send a receipt-style notification.
 3. **`checkout.session.expired`**: today's live data shows eight abandoned checkouts and zero completions. The standard recovery is a "finish signing up" email a day later; Stripe fires this event when a session expires (24 h).
-4. **Scheduled downgrades**: the portal is configured to apply price changes immediately with `always_invoice`. Many SaaS apps schedule *downgrades* to the period end so the customer keeps what they paid for; Stripe supports it via `subscription_update.schedule_at_period_end.conditions` (`decreasing_item_amount`). Worth switching on.
+4. ~~**Scheduled downgrades**~~ **Done 2026-09-22** (§6), in the app rather than the portal: the portal's `schedule_at_period_end` only schedules between prices of the SAME product, so Pro → Plus (two products) could never use it.
 5. **Smart Retries / dunning emails**: confirm they are on in Dashboard → Settings → Billing → Subscriptions and emails (free; recovers a share of failed renewals).
 6. **Stripe Tax** is off (`automatic_tax` false). Fine while volume is tiny; revisit before EU/UK volume.
 7. **Test coverage for the hosted pieces**: nothing automated completes a real checkout. The Preview setup above plus a monthly manual run (or a Playwright job with the Stripe test card on the `dev` alias) closes that.
+
+## 6. Trial reminder + scheduled downgrades (2026-09-22)
+
+**Trial reminder.** Stripe fires `customer.subscription.trial_will_end`
+three days before a trial ends (at once for a shorter trial).
+`handleTrialWillEnd` (`lib/stripe/webhook-handlers.ts`) turns it into ONE
+`trial_ending` notification (migration 0109 adds the kind; bell, toast and
+`/notifications` copy in `lib/notifications/describe.ts`) and ONE "account"
+email (`trialEndingEmail` in `lib/email/messages.ts`) per subscription:
+
+- the payload records whether a payment method is on file, checked the way
+  Stripe checks it at conversion — the subscription's
+  `default_payment_method`/`default_source` OR the customer's
+  `invoice_settings.default_payment_method`/`default_source` — so the copy
+  is honest: "your card is charged on {date}" vs "add a card or it simply
+  ends";
+- once per subscription: the handler skips when a `trial_ending` row for
+  that `subscriptionId` exists (a redelivered event, or a second event after
+  a trial extension) and the email carries `idempotencyKey`
+  `trial-ending:<sub>` at the provider;
+- the notification insert is the durable part — a failure throws so Stripe
+  retries; the email is best effort on top; a subscription that is no
+  longer `trialing` is ignored.
+
+Card-network rules require a reminder before a trial converts to a charge;
+this is it. The event must be subscribed on EVERY endpoint (sandbox: done;
+live: owner step — see gap 1 above).
+
+**Scheduled downgrades.** `createCheckoutSessionAction` classifies a plan
+switch on an ACTIVE subscription with `isPlanDowngrade()` (`lib/billing/plan-change.ts`) — a lower tier, or
+the same tier from annual to monthly:
+
+| Switch | What happens | Money |
+|---|---|---|
+| Upgrade (Plus → Pro, monthly → annual) | Portal confirm-update flow, as before; any pending downgrade is released first (the portal refuses to update a subscription a schedule manages) | Prorated difference charged now |
+| Downgrade (Pro → Plus, annual → monthly) | `scheduleDowngrade`: `subscriptionSchedules.create({ from_subscription })`, then `update` with the current phase kept exactly as it is (same price, same end date) and ONE phase on the new price (`duration` = one interval, `proration_behavior: none`), `end_behavior: release` — the subscription carries on renewing on the new price. A pending change is replaced, never stacked; a plan set to `cancel_at_period_end` is un-cancelled first (the click asked for "Plus after this period", not "nothing after this period"). Lands on `/dashboard/billing?billing=scheduled`. | Nothing now; the new price bills from the next period |
+| "Keep {Plan}" | `cancelScheduledPlanChangeAction` releases the schedule (`?billing=kept`) | — |
+
+The billing page reads the schedule back with
+`expand: ["schedule.phases.items.price"]` (`pendingChange` in
+`lib/billing/subscription-details.ts`: the first phase after the current
+one → tier, price, start date), shows "Changes to Plus ($6 / month) on
+{date}" with the Keep button, and hides "Cancel plan" while a change is
+pending (cancelling a scheduled subscription through the portal is not
+supported — keep the plan first, then cancel). The phase change itself
+arrives as an ordinary `customer.subscription.updated` (new price on the
+same subscription), which the sync layer already handles; the month's
+credit top-up logic never grants for a downgrade.
+
+Sandbox config that backs this: the webhook endpoint
+`we_1UIfs5QFLEpCg9s2TgN3OiCm` subscribes to `trial_will_end`; portal
+configuration `bpc_1UIhLYQFLEpCg9s2lOOGehBA` has
+`schedule_at_period_end` for same-product decreases (harmless, and it makes
+the portal agree with the app when a customer changes plan there). Live:
+the endpoint `we_1TrupnQFLEpCg9s2bSILz13V` and portal
+`bpc_1TruxhQFLEpCg9s22wWCrEgw` are unchanged until the owner says so.
 
 ## Addendum — sandbox lifecycle run (2026-09-22, test clock `clock_1UIftGQFLEpCg9s2uoFgd7kf`)
 
