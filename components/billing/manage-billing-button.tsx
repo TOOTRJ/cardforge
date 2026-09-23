@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { createPortalSessionAction } from "@/lib/stripe/actions";
 import { cn } from "@/lib/utils";
+import { navigateTo } from "@/lib/routing/navigate";
 
 type ManageBillingButtonProps = {
   children: React.ReactNode;
@@ -28,7 +29,7 @@ export function ManageBillingButton({
     startTransition(async () => {
       const result = await createPortalSessionAction();
       if (result.ok) {
-        window.location.href = result.url;
+        navigateTo(result.url);
       } else {
         toast.error(result.error);
       }

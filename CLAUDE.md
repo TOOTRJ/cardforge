@@ -226,6 +226,21 @@ Rules and gotchas:
   shows. A render write is NOT an edit: `updated_at` ignores the render
   columns (0108) and the OG cache-buster is `renderVersionOf()`
   (`max(updated_at, rendered_at)`), never `updated_at` alone.
+- Billing storefront: `/pricing` and the upgrade modal pick every button from
+  `pricingCtaFor()` (`components/billing/pricing-cta.ts`) fed by
+  `useBillingViewer()` (/api/me: `hasBillingAccount`, `hasLiveSubscription`,
+  `hasSubscribed`, effective `tier`). `isPaid` is NOT "has a subscription" —
+  admins and comped accounts are paid with no Stripe customer, and offering
+  them "Manage plan" opened a portal that doesn't exist (2026-09-22). One
+  trial per account, Plus or Pro: `createCheckoutSessionAction` grants
+  `trial_period_days` only when the profile has never synced a subscription
+  AND Stripe's history (status "all") is empty; a plan switch mid-trial
+  carries `trial_end` over (≥48 h left, Stripe's minimum). Active plans
+  switch in place through the portal confirm flow; the month's credit top-up
+  is measured against EVERY refill row of the month (`refill:<user>:<period>%`),
+  never the base row alone. The seeded e2e user is an ADMIN (unlocked) —
+  billing specs sign in as the free `e2e_free` user (`signIn(page, { as:
+  "free" })`).
 - Browse surfaces: `/gallery` and `/decks` are static (ISR) LANDINGS — search
   box + hub chips on top, curated rows below — that never read
   `searchParams`. Every search/filter/sort/page control lives on the VISIBLE

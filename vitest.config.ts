@@ -10,9 +10,10 @@ import path from "node:path";
 //   - Integration / e2e tests live under tests/e2e and run via
 //     Playwright (playwright.config.ts).
 //
-// Environment: `node` is the default — sufficient for the current unit
-// suite. When component tests join later, individual files can opt into
-// `happy-dom` via `// @vitest-environment happy-dom` at the file top.
+// Environment: `node` is the default. Component tests
+// (tests/unit/components/*.test.tsx) opt into `happy-dom` with
+// `// @vitest-environment happy-dom` at the file top; Vite's default
+// transform already compiles their JSX with the automatic React runtime.
 // ---------------------------------------------------------------------------
 
 export default defineConfig({

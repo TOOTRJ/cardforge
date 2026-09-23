@@ -16,10 +16,13 @@ import { findDelinquentSubscription, findLiveSubscription } from "./subscription
 import type Stripe from "stripe";
 
 // One trial per account: a customer who has EVER held a subscription (any
-// status — trialing counts, canceled counts) doesn't get another. Stripe's
-// subscription list is the authoritative record; on an API hiccup we fail
-// TOWARD no-trial (worst case a legitimate first-timer pays immediately and
-// support comps them, rather than a repeat customer minting free weeks).
+// status — trialing counts, canceled counts, an abandoned incomplete counts)
+// doesn't get another, on Plus OR Pro. Stripe's subscription list is the
+// authoritative record; on an API hiccup we fail TOWARD no-trial (worst case
+// a legitimate first-timer pays immediately and support comps them, rather
+// than a repeat customer minting free weeks). The profile's webhook-written
+// subscription_status is the second, independent record (see
+// createCheckoutSessionAction) — both must say "never" for a trial.
 async function isTrialEligible(
   stripe: Stripe,
   customerId: string,
@@ -51,14 +54,29 @@ export type BillingActionResult =
 // broke the first live trial (the webhook maps events to profiles by
 // stripe_customer_id and matched nothing; caught 2026-07-11).
 async function ensureStripeCustomer(): Promise<
-  { ok: true; customerId: string; userId: string } | { ok: false; error: string }
+  | {
+      ok: true;
+      customerId: string;
+      userId: string;
+      /** The profile has synced a subscription at some point (the webhook
+       *  writes subscription_status and never clears it) — trial-ineligible
+       *  even if Stripe's customer record were ever lost or replaced. */
+      hasSubscribedBefore: boolean;
+    }
+  | { ok: false; error: string }
 > {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Please sign in to manage billing." };
 
   const profile = await getCurrentProfile();
+  const hasSubscribedBefore = profile?.subscription_status != null;
   if (profile?.stripe_customer_id) {
-    return { ok: true, customerId: profile.stripe_customer_id, userId: user.id };
+    return {
+      ok: true,
+      customerId: profile.stripe_customer_id,
+      userId: user.id,
+      hasSubscribedBefore,
+    };
   }
 
   // Refuse to mint a customer we can't link — an unlinked customer means the
@@ -86,8 +104,12 @@ async function ensureStripeCustomer(): Promise<
     return { ok: false, error: "Couldn't link your billing account. Try again." };
   }
 
-  return { ok: true, customerId: customer.id, userId: user.id };
+  return { ok: true, customerId: customer.id, userId: user.id, hasSubscribedBefore };
 }
+
+/** Stripe only accepts a Checkout `trial_end` at least 48 hours out; below
+ *  that a mid-trial plan switch simply starts paying (the old behaviour). */
+const MIN_TRIAL_CARRY_SECONDS = 48 * 60 * 60 + 15 * 60;
 
 /**
  * Switch an ACTIVE (paid) subscription to another price in place through the
@@ -164,6 +186,11 @@ export async function createCheckoutSessionAction(
         }
       }
       let supersedes: string | null = null;
+      // A plan switch DURING the trial keeps the rest of the trial on the
+      // new plan (same end date, still no card required) instead of forcing
+      // payment a few days early — the trial is the same one, just on a
+      // different tier, so the one-trial rule is untouched.
+      let carryTrialEnd: number | null = null;
       if (live) {
         if (live.items.data[0]?.price?.id === priceId) {
           return { ok: false, error: "You're already on that plan." };
@@ -172,13 +199,25 @@ export async function createCheckoutSessionAction(
           return createPlanSwitchSession(stripe, customer.customerId, live, priceId, base);
         }
         supersedes = live.id;
+        const remaining =
+          typeof live.trial_end === "number"
+            ? live.trial_end - Math.floor(Date.now() / 1000)
+            : 0;
+        if (live.status === "trialing" && remaining >= MIN_TRIAL_CARRY_SECONDS) {
+          carryTrialEnd = live.trial_end as number;
+        }
       }
 
       // First subscription ever → 7-day free trial, card optional. Without a
       // payment method by day 7 the subscription cancels itself (never
       // silently pauses into limbo) and the webhook downgrades the profile.
+      // Two independent records must both say "never subscribed": the
+      // profile's webhook-written status and Stripe's subscription history.
       const withTrial =
-        !live && (await isTrialEligible(stripe, customer.customerId));
+        !live &&
+        !customer.hasSubscribedBefore &&
+        (await isTrialEligible(stripe, customer.customerId));
+      const noCardTrial = withTrial || carryTrialEnd != null;
 
       const session = await stripe.checkout.sessions.create({
         mode: "subscription",
@@ -198,9 +237,16 @@ export async function createCheckoutSessionAction(
                   end_behavior: { missing_payment_method: "cancel" as const },
                 },
               }
-            : {}),
+            : carryTrialEnd != null
+              ? {
+                  trial_end: carryTrialEnd,
+                  trial_settings: {
+                    end_behavior: { missing_payment_method: "cancel" as const },
+                  },
+                }
+              : {}),
         },
-        ...(withTrial
+        ...(noCardTrial
           ? { payment_method_collection: "if_required" as const }
           : {}),
         // Land new subscribers on the dashboard (the "go make something"

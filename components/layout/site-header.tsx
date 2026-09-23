@@ -42,6 +42,12 @@ type HeaderUser = {
    *  "free trial" CTA copy on /pricing so lapsed subscribers aren't promised
    *  a trial checkout won't grant. */
   hasSubscribed?: boolean;
+  /** A Stripe customer exists for this user — the billing portal can open.
+   *  False for comped/admin accounts that never checked out. */
+  hasBillingAccount?: boolean;
+  /** A subscription Stripe is still billing (active or trialing) — the
+   *  storefront offers "Switch to …", not a fresh subscription. */
+  hasLiveSubscription?: boolean;
   /** Shows the admin (moderation) entry in the user menu. */
   isAdmin?: boolean;
 };

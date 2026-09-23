@@ -20,11 +20,15 @@ import {
 // Upgrade top-up (the bug this module fixed, 2026-07-28): a mid-month tier
 // upgrade used to grant NOTHING — the month's refill key was already consumed
 // by the lower tier's grant, so a Plus subscriber upgrading to Pro paid
-// prorated Pro immediately but saw none of the 75 credits until the next
-// calendar month. Now, when the month's base grant is smaller than the
+// prorated Pro immediately but saw none of the extra 70 credits until the
+// next calendar month. Now, when everything the month has granted so far
+// (the base grant PLUS any earlier upgrade top-ups) is smaller than the
 // current tier's allotment, the difference is granted under a tier-scoped
 // upgrade key (idempotent, so a re-upgrade in the same month can't
 // double-grant, and the cron backfills the top-up if the webhook missed it).
+// The shortfall is measured against the month's TOTAL, not the base row
+// alone: Free (5) → Plus (+25) → Pro in one month used to top up 100 − 5
+// again and hand out 125 credits for a 100-credit plan (found 2026-09-22).
 // Downgrades grant nothing — credits already banked are never clawed back.
 //
 // Free tier (owner decision 2026-09-15, reversing 2026-07-28): Free refills
@@ -143,6 +147,28 @@ export async function refillActiveSubscribers(
   return { ok: true, processed, granted, failed };
 }
 
+/** Every grant the month has made for this user: the base refill row plus
+ *  any tier-scoped upgrade top-ups (`refill:<user>:<period>` and
+ *  `refill:<user>:<period>:upgrade:<tier>`). One LIKE read, no joins. */
+async function readMonthRefills(
+  admin: CreditGrantClient,
+  baseKey: string,
+): Promise<{ ok: true; hasBase: boolean; total: number } | { ok: false }> {
+  const { data, error } = await admin
+    .from("credit_ledger")
+    .select("delta, idempotency_key")
+    .like("idempotency_key", `${baseKey}%`);
+  if (error || !data) return { ok: false };
+  const rows = (data as Array<{ delta: unknown; idempotency_key: string | null }>).filter(
+    (row) => typeof row.delta === "number" && Number.isFinite(row.delta),
+  );
+  return {
+    ok: true,
+    hasBase: rows.some((row) => row.idempotency_key === baseKey),
+    total: rows.reduce((sum, row) => sum + (row.delta as number), 0),
+  };
+}
+
 /**
  * Grant the user's monthly allotment for `tier` in `period` (idempotent), or
  * top up the shortfall after a mid-month upgrade. `granted` is what this call
@@ -160,18 +186,13 @@ export async function grantMonthlyCreditsForPeriod(
   if (amount <= 0) return { ok: true, granted: 0 };
 
   const baseKey = creditRefillKey(userId, period);
-  const { data: baseRow, error: readError } = await admin
-    .from("credit_ledger")
-    .select("delta")
-    .eq("idempotency_key", baseKey)
-    .maybeSingle();
+  const month = await readMonthRefills(admin, baseKey);
 
-  // A month that already granted: top up only a positive shortfall (upgrade).
-  // Same tier or a downgrade leaves the banked credits untouched. A malformed
-  // row (delta not a number) falls through to the idempotent base grant
-  // rather than arithmetic on garbage.
-  if (!readError && baseRow && Number.isFinite(baseRow.delta)) {
-    const shortfall = amount - baseRow.delta;
+  // A month that already granted: top up only a positive shortfall against
+  // EVERYTHING granted so far (upgrade). Same tier, a downgrade, or a
+  // re-upgrade after a downgrade leaves the banked credits untouched.
+  if (month.ok && month.hasBase) {
+    const shortfall = amount - month.total;
     if (shortfall <= 0) return { ok: true, granted: 0 };
     const { error } = await admin.rpc("grant_credits", {
       p_user_id: userId,

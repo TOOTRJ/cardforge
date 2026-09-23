@@ -74,6 +74,15 @@ export async function GET() {
     // subscription_status is webhook-written and stays set after cancel, so
     // non-null = "has held a subscription at some point".
     hasSubscribed: profile?.subscription_status != null,
+    // A Stripe customer exists → the billing portal can open. A comped or
+    // admin account is "paid" without one, and used to be offered a
+    // "Manage plan" button that could only fail.
+    hasBillingAccount: Boolean(profile?.stripe_customer_id),
+    // A subscription Stripe still bills (active or trialing) → "switch plan"
+    // is the right verb; anyone else starts a subscription.
+    hasLiveSubscription:
+      profile?.subscription_status === "active" ||
+      profile?.subscription_status === "trialing",
     isAdmin: profile?.is_admin ?? false,
   };
 

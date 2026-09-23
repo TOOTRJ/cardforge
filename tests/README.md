@@ -55,7 +55,11 @@ The stack comes up already seeded (`supabase/seed.sql` +
 `supabase/seeds/10_dev_data.sql`): five `dev_*` accounts, 22 cards, decks,
 challenges. Specs may read that content, but must not depend on its exact
 counts — assert on what the spec itself created. The e2e user is separate
-(`e2e_forger`) and is wiped on every `seed-e2e` run.
+(`e2e_forger`, an admin) and is wiped on every `seed-e2e` run; a second,
+plain FREE account (`e2e_free`, the main email with a `+free` tag, same
+password — override with `SUPABASE_E2E_FREE_USER_EMAIL`) exists for the
+billing specs, because an admin is fully unlocked and never sees what a
+customer sees on `/pricing`. `signIn(page, { as: "free" })` picks it.
 
 The auth / create / custom-pips / Scryfall / decks / challenges /
 frame-editor / pricing specs need a database they can freely write to. That's the local stack — never production:

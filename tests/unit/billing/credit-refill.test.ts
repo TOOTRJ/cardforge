@@ -32,22 +32,32 @@ type GrantCall = {
   p_idempotency_key: string;
 };
 
+type LedgerRow = { delta: number; idempotency_key: string };
+
 function stubAdmin(opts: {
   /** The ledger row found under the month's base refill key. */
   baseRow?: { delta: number } | null;
+  /** Every refill row of the month (base + upgrade top-ups) when the
+   *  scenario needs more than the base row. Overrides `baseRow`. */
+  rows?: LedgerRow[];
   readError?: string;
   grantError?: string;
 }): { admin: CreditGrantClient; grants: GrantCall[] } {
   const grants: GrantCall[] = [];
+  const rows: LedgerRow[] =
+    opts.rows ??
+    (opts.baseRow ? [{ delta: opts.baseRow.delta, idempotency_key: creditRefillKey(USER, PERIOD) }] : []);
   const admin = {
     from: () => ({
       select: () => ({
-        eq: () => ({
-          maybeSingle: async () => ({
-            data: opts.readError ? null : (opts.baseRow ?? null),
+        // The month's refill rows share the base key as a prefix — one LIKE.
+        like: async (_column: string, pattern: string) => {
+          expect(pattern).toBe(`${creditRefillKey(USER, PERIOD)}%`);
+          return {
+            data: opts.readError ? null : rows,
             error: opts.readError ? { message: opts.readError } : null,
-          }),
-        }),
+          };
+        },
       }),
     }),
     rpc: async (_fn: string, args: GrantCall) => {
@@ -74,7 +84,7 @@ describe("grantMonthlyCreditsForPeriod", () => {
   });
 
   it("tops up the shortfall under the upgrade key after a mid-month upgrade", async () => {
-    // Month already granted as Plus (30); the user upgraded to Pro (75).
+    // Month already granted as Plus (30); the user upgraded to Pro (100).
     const { admin, grants } = stubAdmin({
       baseRow: { delta: MONTHLY_CREDITS.plus },
     });
@@ -87,6 +97,41 @@ describe("grantMonthlyCreditsForPeriod", () => {
       p_amount: shortfall,
       p_idempotency_key: creditUpgradeKey(USER, PERIOD, "pro"),
     });
+  });
+
+  it("measures the shortfall against EVERYTHING the month granted — Free → Plus → Pro is 100, not 125", async () => {
+    // Regression (2026-09-22): the free refill (5) held the base key, the
+    // Plus upgrade topped up 25, and the Pro upgrade then topped up 100 − 5
+    // again — 125 credits for a 100-credit plan.
+    const afterPlus = stubAdmin({
+      rows: [
+        { delta: MONTHLY_CREDITS.free, idempotency_key: creditRefillKey(USER, PERIOD) },
+        {
+          delta: MONTHLY_CREDITS.plus - MONTHLY_CREDITS.free,
+          idempotency_key: creditUpgradeKey(USER, PERIOD, "plus"),
+        },
+      ],
+    });
+    const result = await grantMonthlyCreditsForPeriod(afterPlus.admin, USER, "pro", PERIOD);
+    expect(result).toEqual({ ok: true, granted: MONTHLY_CREDITS.pro - MONTHLY_CREDITS.plus });
+    expect(afterPlus.grants[0]).toMatchObject({
+      p_amount: MONTHLY_CREDITS.pro - MONTHLY_CREDITS.plus,
+      p_idempotency_key: creditUpgradeKey(USER, PERIOD, "pro"),
+    });
+  });
+
+  it("grants nothing on a re-upgrade after a downgrade in the same month (Pro → Plus → Pro)", async () => {
+    const { admin, grants } = stubAdmin({
+      rows: [
+        { delta: MONTHLY_CREDITS.plus, idempotency_key: creditRefillKey(USER, PERIOD) },
+        {
+          delta: MONTHLY_CREDITS.pro - MONTHLY_CREDITS.plus,
+          idempotency_key: creditUpgradeKey(USER, PERIOD, "pro"),
+        },
+      ],
+    });
+    expect(await grantMonthlyCreditsForPeriod(admin, USER, "pro", PERIOD)).toEqual({ ok: true, granted: 0 });
+    expect(grants).toHaveLength(0);
   });
 
   it("grants nothing when the month's grant already covers the tier (same tier)", async () => {
@@ -172,10 +217,8 @@ function stubSweepAdmin(opts: SweepStubOpts): {
   const admin = {
     from: (table: string) => ({
       select: () => ({
-        // ledger path: .eq().maybeSingle()
-        eq: () => ({
-          maybeSingle: async () => ({ data: null, error: null }),
-        }),
+        // ledger path: .like() — no refill rows yet this month
+        like: async () => ({ data: [], error: null }),
         // profiles path: .order().range()
         order: () => ({
           range: async (from: number, to: number) => {

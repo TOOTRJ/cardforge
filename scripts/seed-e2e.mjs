@@ -6,7 +6,12 @@
 //   node scripts/seed-e2e.mjs
 //
 // Creates the auth user (pre-confirmed) and gives its profile a username so
-// canonical /card/[username]/[slug] routes exist for the created cards.
+// canonical /card/[username]/[slug] routes exist for the created cards. Also
+// creates a second, FREE (non-admin) user for the billing specs: the main
+// e2e user is an admin, and admins are fully unlocked, so they can never see
+// what a paying customer sees on /pricing. Its email is
+// SUPABASE_E2E_FREE_USER_EMAIL or, by default, the main address with a
+// `+free` tag; it shares the main password (no new secret to configure).
 // Refuses to run against anything that isn't a local URL — this script must
 // never touch production.
 // ---------------------------------------------------------------------------
@@ -25,6 +30,9 @@ const url = env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceKey = env.SUPABASE_SECRET_KEY;
 const email = env.SUPABASE_E2E_USER_EMAIL;
 const password = env.SUPABASE_E2E_USER_PASSWORD;
+const freeEmail =
+  env.SUPABASE_E2E_FREE_USER_EMAIL ||
+  (email ? email.replace(/@/, "+free@") : null);
 
 if (!url || !serviceKey || !email || !password) {
   console.error("✗ .env.e2e is missing one of: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SECRET_KEY, SUPABASE_E2E_USER_EMAIL, SUPABASE_E2E_USER_PASSWORD");
@@ -39,30 +47,34 @@ const admin = createClient(url, serviceKey, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
 
-const { data: created, error } = await admin.auth.admin.createUser({
-  email,
-  password,
-  email_confirm: true,
-});
-
-let userId = created?.user?.id ?? null;
-if (error) {
-  if (!/already|exists|registered/i.test(error.message)) {
-    console.error(`✗ createUser failed: ${error.message}`);
+/** Create (or find) a pre-confirmed auth user; returns its id. */
+async function ensureUser(userEmail) {
+  const { data: created, error } = await admin.auth.admin.createUser({
+    email: userEmail,
+    password,
+    email_confirm: true,
+  });
+  let id = created?.user?.id ?? null;
+  if (error) {
+    if (!/already|exists|registered/i.test(error.message)) {
+      console.error(`✗ createUser failed for ${userEmail}: ${error.message}`);
+      process.exit(1);
+    }
+    const { data: list, error: listError } = await admin.auth.admin.listUsers();
+    if (listError) {
+      console.error(`✗ listUsers failed: ${listError.message}`);
+      process.exit(1);
+    }
+    id = list.users.find((u) => u.email === userEmail)?.id ?? null;
+  }
+  if (!id) {
+    console.error(`✗ Could not resolve the id of ${userEmail}.`);
     process.exit(1);
   }
-  const { data: list, error: listError } = await admin.auth.admin.listUsers();
-  if (listError) {
-    console.error(`✗ listUsers failed: ${listError.message}`);
-    process.exit(1);
-  }
-  userId = list.users.find((u) => u.email === email)?.id ?? null;
+  return id;
 }
 
-if (!userId) {
-  console.error("✗ Could not resolve the e2e user id.");
-  process.exit(1);
-}
+const userId = await ensureUser(email);
 
 // A fixed username unlocks the canonical card URL path; the signup trigger
 // (0094) minted a generated handle, which we overwrite with e2e_forger.
@@ -80,6 +92,29 @@ const { error: profileError } = await admin
   .eq("id", userId);
 if (profileError) {
   console.error(`✗ profile update failed: ${profileError.message}`);
+  process.exit(1);
+}
+
+// The free user: a plain, onboarded, never-subscribed account — what a real
+// customer looks like on /pricing and in Settings → billing. Its cards are
+// wiped like the main user's so it stays under the free cap.
+const freeUserId = await ensureUser(freeEmail);
+const { error: freeProfileError } = await admin
+  .from("profiles")
+  .update({
+    username: "e2e_free",
+    display_name: "E2E Free Forger",
+    is_admin: false,
+    onboarded_at: new Date().toISOString(),
+  })
+  .eq("id", freeUserId);
+if (freeProfileError) {
+  console.error(`✗ free-user profile update failed: ${freeProfileError.message}`);
+  process.exit(1);
+}
+const { error: freeWipeError } = await admin.from("cards").delete().eq("owner_id", freeUserId);
+if (freeWipeError) {
+  console.error(`✗ free-user card wipe failed: ${freeWipeError.message}`);
   process.exit(1);
 }
 
@@ -149,5 +184,5 @@ if (challengeError) {
 }
 
 console.log(
-  `✓ Seeded ${email} (${userId}) with username e2e_forger (wiped ${wiped ?? 0} stale cards, verified ${E2E_VERIFIED_TEMPLATES.join("/")} frames, re-opened arcane-frontiers for 14 days)`,
+  `✓ Seeded ${email} (${userId}) with username e2e_forger (wiped ${wiped ?? 0} stale cards, verified ${E2E_VERIFIED_TEMPLATES.join("/")} frames, re-opened arcane-frontiers for 14 days) and the free user ${freeEmail} (${freeUserId}, e2e_free)`,
 );

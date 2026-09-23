@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  findDelinquentSubscription,
   findLiveSubscription,
   grantCreditsForSync,
   pickPrimarySubscription,
@@ -30,6 +31,8 @@ function makeAdmin(profile: Record<string, unknown> = {}) {
                 }),
               };
             },
+            // No refill rows this month (credit-refill.ts's LIKE read).
+            like: async () => ({ data: [], error: null }),
           };
         },
         update(values: Record<string, unknown>) {
@@ -265,6 +268,18 @@ describe("grantCreditsForSync", () => {
       { isCreationEvent: true },
     );
     expect(lapsed.rpcs).toHaveLength(0);
+  });
+});
+
+describe("findDelinquentSubscription", () => {
+  it("returns the NEWEST past_due / unpaid / incomplete subscription, ignoring live and canceled ones", async () => {
+    const canceled = sub("sub_c", "canceled", { id: "price_plus" }, { created: 9 });
+    const older = sub("sub_old", "unpaid", { id: "price_plus" }, { created: 1 });
+    const newer = sub("sub_new", "incomplete", { id: "price_pro" }, { created: 2 });
+    expect((await findDelinquentSubscription(makeStripe([canceled, older, newer]), "cus_1"))?.id).toBe("sub_new");
+    expect((await findDelinquentSubscription(makeStripe([sub("sub_pd", "past_due", { id: "price_pro" })]), "cus_1"))?.id).toBe("sub_pd");
+    expect(await findDelinquentSubscription(makeStripe([sub("sub_ok", "active", { id: "price_pro" })]), "cus_1")).toBeNull();
+    expect(await findDelinquentSubscription(makeStripe(null), "cus_1")).toBeNull();
   });
 });
 
