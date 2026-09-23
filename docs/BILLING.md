@@ -8,7 +8,7 @@ how the integration compares with the standard Stripe SaaS pattern.
 | Piece | Where | Notes |
 |---|---|---|
 | Plan catalog (copy, prices, credits, caps) | `lib/billing/plans.ts` | Client-safe. Stripe price ids are NOT here. |
-| Stripe price ids | env `STRIPE_PRICE_{PLUS,PRO}_{MONTHLY,ANNUAL}`, `STRIPE_PRICE_PACK_{SMALL,LARGE}` | `lib/stripe/config.ts` maps key → id and resolves a price back to a tier (env id → metadata → lookup key → product → amount). |
+| Stripe prices | **lookup keys** on the catalog (`plus_monthly`, `plus_annual`, `pro_monthly`, `pro_annual`, `pack_small`, `pack_large`) — `lib/stripe/prices.ts` resolves them at checkout; the `STRIPE_PRICE_*` env vars are an optional fallback | Since 2026-09-22 (PR #360): a stale env id had every live credit-pack checkout failing with `resource_missing` for weeks. `lib/stripe/config.ts` still maps a price back to a tier (env id → metadata → lookup key → product → amount) for the webhook. |
 | Storefront | `/pricing` (static, anonymous) + `/pricing-member` (dynamic, signed-in; `proxy.ts` rewrite) | Buttons come from `pricingCtaFor()` fed by a `BillingViewer` (`lib/billing/viewer.ts`). Paid accounts are redirected to the billing page. |
 | Billing page | `/dashboard/billing` | Plan, renewal/trial/cancel dates, plan changes (the same grid), credits + packs, card on file + invoices (`lib/billing/subscription-details.ts`), portal shortcuts. |
 | Checkout / portal | `lib/stripe/actions.ts` (server actions) | New subscription → Stripe Checkout (7-day no-card trial for first-timers). Live subscription → Customer Portal **confirm-update** flow (in-place price switch, prorated). Broken payment → portal. Packs → Checkout in `payment` mode. |
@@ -23,12 +23,14 @@ Environment matrix (Vercel):
 | `NEXT_PUBLIC_BILLING_ENABLED` | `true` | `true` (set 2026-09-22 — before that previews 404'd `/pricing`) | as needed |
 | `STRIPE_SECRET_KEY` | live `sk_live_…` | **sandbox** `sk_test_…` | sandbox key, or unset (billing UI works, every checkout answers "Billing isn't available") |
 | `STRIPE_WEBHOOK_SECRET` | live endpoint | sandbox endpoint for the `dev` branch alias (below) | Stripe CLI `stripe listen` secret |
-| `STRIPE_PRICE_*` (6) | live ids | sandbox ids (below) | sandbox ids |
+| `STRIPE_PRICE_*` (6) | optional (the catalog's lookup keys are authoritative) | optional | optional |
 
 ## 2. Sandbox (test mode) setup — created 2026-09-22
 
 The sandbox mirrors the live catalog (same names, lookup keys and `tier` /
-`pack` metadata, so `tierForPrice()` resolves them the same way):
+`pack` metadata, so checkout resolves the right price by lookup key and
+`tierForPrice()` maps it back the same way). The ids below are for reference
+only — nothing needs them configured:
 
 | Key | Sandbox price id |
 |---|---|
@@ -42,7 +44,12 @@ The sandbox mirrors the live catalog (same names, lookup keys and `tier` /
 Sandbox webhook endpoint `we_1UIfs5QFLEpCg9s2TgN3OiCm` → the `dev` branch
 alias (`https://cardforge-git-dev-orderoftheredjester.vercel.app/api/stripe/webhook`,
 API version `2026-05-27.dahlia`, the same six events as production). Its
-signing secret is what Preview's `STRIPE_WEBHOOK_SECRET` holds.
+signing secret is what Preview's `STRIPE_WEBHOOK_SECRET` holds. Preview
+deployments sit behind Vercel Deployment Protection, which answers 401 to
+anything without a Vercel session — including Stripe. The endpoint URL
+therefore carries `?x-vercel-protection-bypass=<secret>` (Vercel → Settings →
+Deployment Protection → Protection Bypass for Automation); rotate both
+together.
 
 Limits to know: only the `dev`-alias deployment receives sandbox webhooks. On
 any other preview a checkout still completes on Stripe, but the profile is
@@ -60,7 +67,7 @@ charge (past-due path).
    - `STRIPE_SECRET_KEY`: add a new entry scoped to **Preview** only, value `sk_test_…`.
    - `STRIPE_WEBHOOK_SECRET`: Preview only, the sandbox endpoint's signing secret (Dashboard → Developers → Webhooks → the `cardforge-git-dev…` endpoint → Reveal).
    - `NEXT_PUBLIC_BILLING_ENABLED`: Preview only, `true`.
-   - The six `STRIPE_PRICE_*` vars currently span **Preview + Production** with the live ids. For each: edit the existing entry so its environment is **Production only**, then add a second entry scoped to **Preview** with the sandbox id from the table.
+   - No price ids needed: checkout resolves them from the sandbox catalog by lookup key. (The six `STRIPE_PRICE_*` vars can stay as they are or be deleted.)
 3. Redeploy any open preview (Deployments → ⋯ → Redeploy) — env changes apply at build time.
 4. Check: on the preview, `/pricing` renders; as `dev_free` a checkout button opens Stripe's **test** checkout (orange "TEST MODE" banner); pay with `4242…`; on the `dev` alias the webhook lands and `/dashboard/billing` shows the plan; on other previews, resync from `/admin/users`.
 

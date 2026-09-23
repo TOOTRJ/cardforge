@@ -248,7 +248,11 @@ Rules and gotchas:
   monthly↔annual switches, credits + packs, card + invoices via
   `lib/billing/subscription-details.ts`, portal deep links via
   `createPortalSessionAction(flow)`) and the header/mobile nav hide Pricing.
-  Full picture, env matrix, sandbox ids and the standards comparison:
+  Checkout resolves prices from Stripe's catalog by LOOKUP KEY
+  (`lib/stripe/prices.ts`; `STRIPE_PRICE_*` is only a fallback) — a stale env
+  id silently broke every live pack purchase until 2026-09-22 — and every
+  Stripe error in `lib/stripe/actions.ts` is logged, never just toasted. Full
+  picture, env matrix, sandbox ids and the standards comparison:
   `docs/BILLING.md`. `isPaid` is NOT "has a subscription" —
   admins and comped accounts are paid with no Stripe customer, and offering
   them "Manage plan" opened a portal that doesn't exist (2026-09-22). One
