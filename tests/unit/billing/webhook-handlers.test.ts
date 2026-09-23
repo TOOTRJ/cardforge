@@ -843,3 +843,271 @@ describe("handleStripeEvent — trial_will_end", () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// invoice.paid (revenue row + resync + ONE "payment received") and
+// checkout.session.expired (ONE reminder per user per 30 days, only while
+// still relevant). A small chainable admin stub: every query builder call
+// returns the chain; awaiting it (or maybeSingle) answers per table.
+// ---------------------------------------------------------------------------
+type Rows = Record<string, Array<Record<string, unknown>>>;
+function makeChainAdmin(rows: Rows, opts: { insertError?: string; upsertError?: string } = {}) {
+  const inserts: Array<{ table: string; row: Record<string, unknown> }> = [];
+  const upserts: Array<{ table: string; row: Record<string, unknown>; opts: unknown }> = [];
+  const updates: Array<{ table: string; values: Record<string, unknown> }> = [];
+  const rpcs: Array<{ fn: string; args: Record<string, unknown> }> = [];
+  function chain(table: string, result: () => { data: unknown; error: unknown }) {
+    const c: Record<string, unknown> = {};
+    const self = () => c;
+    for (const m of ["eq", "neq", "like", "gte", "lte", "lt", "gt", "is", "in", "order", "limit", "select"]) c[m] = self;
+    c.maybeSingle = async () => {
+      const r = result();
+      return { data: Array.isArray(r.data) ? (r.data[0] ?? null) : r.data, error: r.error };
+    };
+    c.then = (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) =>
+      Promise.resolve(result()).then(resolve, reject);
+    return c;
+  }
+  const admin = {
+    from(table: string) {
+      return {
+        select: () => chain(table, () => ({ data: rows[table] ?? [], error: null })),
+        insert: (row: Record<string, unknown>) => {
+          inserts.push({ table, row });
+          return chain(table, () => ({ data: null, error: opts.insertError ? { message: opts.insertError } : null }));
+        },
+        upsert: (row: Record<string, unknown>, o: unknown) => {
+          upserts.push({ table, row, opts: o });
+          return chain(table, () => ({ data: null, error: opts.upsertError ? { message: opts.upsertError } : null }));
+        },
+        update: (values: Record<string, unknown>) => {
+          updates.push({ table, values });
+          return chain(table, () => ({ data: null, error: null }));
+        },
+      };
+    },
+    rpc: async (fn: string, args: Record<string, unknown>) => {
+      rpcs.push({ fn, args });
+      return { data: 0, error: null };
+    },
+  };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return { admin: admin as any, inserts, upserts, updates, rpcs };
+}
+
+describe("handleStripeEvent — invoice.paid", () => {
+  const profile = { id: "user-1", subscription_tier: "pro", subscription_status: "active", stripe_subscription_id: "sub_1", stripe_customer_id: "cus_1" };
+  const sub = {
+    id: "sub_1",
+    customer: "cus_1",
+    status: "active",
+    cancel_at_period_end: false,
+    items: { data: [{ price: { id: "price_pro", recurring: { interval: "month" } }, current_period_end: 1792722400 }] },
+  };
+  const retrieve = vi.fn();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const invoiceStripe = { subscriptions: { retrieve, list: async () => { throw new Error("no api"); } } } as any;
+  const invoice = (extra: Record<string, unknown> = {}) => ({
+    id: "in_1",
+    customer: "cus_1",
+    amount_paid: 1500,
+    currency: "usd",
+    billing_reason: "subscription_cycle",
+    number: "ABC-0002",
+    hosted_invoice_url: "https://invoice.stripe.com/i/x",
+    created: 1790130400,
+    status_transitions: { paid_at: 1790130450 },
+    period_start: 1790130000,
+    period_end: 1792722000,
+    lines: { data: [{ period: { start: 1790130400, end: 1792722400 } }] },
+    parent: { type: "subscription_details", subscription_details: { subscription: "sub_1", metadata: { supabase_user_id: "user-1" } } },
+    ...extra,
+  });
+  const event = (object: unknown) => ({ id: "evt_inv", type: "invoice.paid", data: { object } }) as never;
+
+  beforeEach(() => {
+    retrieve.mockReset().mockResolvedValue(sub);
+  });
+
+  it("writes the revenue row (upsert by invoice id), resyncs + grants, and notifies ONCE with money taken", async () => {
+    const { admin, inserts, upserts, updates, rpcs } = makeChainAdmin({ profiles: [profile], notifications: [], credit_ledger: [] });
+    await handleStripeEvent(event(invoice()), { admin, stripe: invoiceStripe });
+    expect(upserts).toEqual([
+      {
+        table: "billing_payments",
+        row: {
+          invoice_id: "in_1",
+          user_id: "user-1",
+          stripe_customer_id: "cus_1",
+          stripe_subscription_id: "sub_1",
+          amount_cents: 1500,
+          currency: "usd",
+          billing_reason: "subscription_cycle",
+          tier: "pro",
+          billing_interval: "month",
+          period_start: "2026-09-23T02:26:40.000Z",
+          period_end: "2026-10-23T02:26:40.000Z",
+          paid_at: "2026-09-23T02:27:30.000Z",
+          invoice_number: "ABC-0002",
+          hosted_invoice_url: "https://invoice.stripe.com/i/x",
+        },
+        opts: { onConflict: "invoice_id" },
+      },
+    ]);
+    expect(retrieve).toHaveBeenCalledWith("sub_1");
+    expect(updates.find((u) => u.table === "profiles")?.values).toMatchObject({ subscription_tier: "pro", subscription_status: "active" });
+    expect(rpcs.find((r) => r.fn === "grant_credits")?.args).toMatchObject({ p_user_id: "user-1", p_amount: MONTHLY_CREDITS.pro });
+    expect(inserts).toEqual([
+      {
+        table: "notifications",
+        row: {
+          recipient_id: "user-1",
+          actor_id: null,
+          type: "payment_received",
+          payload: {
+            invoiceId: "in_1",
+            amountCents: 1500,
+            currency: "usd",
+            tier: "pro",
+            interval: "month",
+            billingReason: "subscription_cycle",
+            hostedInvoiceUrl: "https://invoice.stripe.com/i/x",
+          },
+        },
+      },
+    ]);
+  });
+
+  it("a $0 invoice (trial start, full coupon) is logged but never announced; an already-announced invoice isn't repeated", async () => {
+    const zero = makeChainAdmin({ profiles: [profile], notifications: [], credit_ledger: [] });
+    await handleStripeEvent(event(invoice({ amount_paid: 0, billing_reason: "subscription_create" })), { admin: zero.admin, stripe: invoiceStripe });
+    expect(zero.upserts[0].row).toMatchObject({ amount_cents: 0 });
+    expect(zero.inserts).toEqual([]);
+
+    const again = makeChainAdmin({ profiles: [profile], notifications: [{ id: "n_1" }], credit_ledger: [] });
+    await handleStripeEvent(event(invoice()), { admin: again.admin, stripe: invoiceStripe });
+    expect(again.upserts).toHaveLength(1);
+    expect(again.inserts).toEqual([]);
+  });
+
+  it("falls back to the invoice's subscription metadata when the customer isn't linked, and backfills the link", async () => {
+    const { admin, upserts, updates } = makeChainAdmin({ profiles: [], notifications: [], credit_ledger: [] });
+    await handleStripeEvent(event(invoice()), { admin, stripe: invoiceStripe });
+    expect(updates[0]).toEqual({ table: "profiles", values: { stripe_customer_id: "cus_1" } });
+    expect(upserts[0].row).toMatchObject({ user_id: "user-1" });
+  });
+
+  it("a one-off invoice with no subscription is logged without a resync; a failed row write throws so Stripe retries", async () => {
+    const { admin, upserts } = makeChainAdmin({ profiles: [profile], notifications: [], credit_ledger: [] });
+    await handleStripeEvent(event(invoice({ parent: null, billing_reason: "manual" })), { admin, stripe: invoiceStripe });
+    expect(retrieve).not.toHaveBeenCalled();
+    expect(upserts[0].row).toMatchObject({ stripe_subscription_id: null, tier: null, billing_interval: null, billing_reason: "manual" });
+
+    const failing = makeChainAdmin({ profiles: [profile], notifications: [], credit_ledger: [] }, { upsertError: "disk full" });
+    await expect(handleStripeEvent(event(invoice()), { admin: failing.admin, stripe: invoiceStripe })).rejects.toThrow(/billing_payments write failed/);
+  });
+
+  it("a Stripe read failure skips the resync but still records the payment", async () => {
+    retrieve.mockRejectedValue(new Error("stripe down"));
+    const { admin, upserts, updates } = makeChainAdmin({ profiles: [profile], notifications: [], credit_ledger: [] });
+    await handleStripeEvent(event(invoice()), { admin, stripe: invoiceStripe });
+    expect(updates.filter((u) => u.table === "profiles")).toEqual([]);
+    expect(upserts[0].row).toMatchObject({ invoice_id: "in_1", tier: null });
+  });
+});
+
+describe("handleStripeEvent — checkout.session.expired", () => {
+  const dayAgo = Math.floor(Date.now() / 1000) - 24 * 60 * 60;
+  const session = (extra: Record<string, unknown> = {}) => ({
+    id: "cs_exp",
+    mode: "subscription",
+    status: "expired",
+    created: dayAgo,
+    customer: "cus_1",
+    client_reference_id: "user-1",
+    metadata: { supabase_user_id: "user-1", purchase_kind: "subscription", tier: "pro", period: "monthly" },
+    ...extra,
+  });
+  const packSession = (extra: Record<string, unknown> = {}) =>
+    session({ mode: "payment", metadata: { supabase_user_id: "user-1", purchase_kind: "pack", pack_credits: "30" }, ...extra });
+  const event = (object: unknown) => ({ id: "evt_exp", type: "checkout.session.expired", data: { object } }) as never;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const noStripe = {} as any;
+  const free = { id: "user-1", subscription_status: null };
+
+  it("a never-subscribed user gets ONE reminder that still offers the trial, plus the email", async () => {
+    const { admin, inserts } = makeChainAdmin({ profiles: [free], notifications: [], credit_ledger: [] });
+    await handleStripeEvent(event(session()), { admin, stripe: noStripe });
+    expect(inserts).toEqual([
+      {
+        table: "notifications",
+        row: {
+          recipient_id: "user-1",
+          actor_id: null,
+          type: "checkout_reminder",
+          payload: { sessionId: "cs_exp", kind: "subscription", tier: "pro", period: "monthly", packCredits: null, trialEligible: true },
+        },
+      },
+    ]);
+    expect(email.send).toHaveBeenCalledTimes(1);
+    const [message, options] = email.send.mock.calls[0];
+    expect(message.subject).toBe("Your PipGlyph Pro trial is still waiting");
+    expect(message.html).toContain("$15 / month");
+    expect(options).toEqual({ idempotencyKey: "checkout-reminder:cs_exp" });
+  });
+
+  it("a lapsed subscriber is nudged without trial copy; an annual session quotes the annual price", async () => {
+    const { admin, inserts } = makeChainAdmin({ profiles: [{ id: "user-1", subscription_status: "canceled" }], notifications: [], credit_ledger: [] });
+    await handleStripeEvent(event(session({ metadata: { supabase_user_id: "user-1", purchase_kind: "subscription", tier: "plus", period: "annual" } })), { admin, stripe: noStripe });
+    expect(inserts[0].row.payload).toMatchObject({ tier: "plus", period: "annual", trialEligible: false });
+    const [message] = email.send.mock.calls[0];
+    expect(message.subject).toBe("Finish upgrading to PipGlyph Plus");
+    expect(message.html).toContain("$60 / year");
+  });
+
+  it("stays quiet when the plan was bought after all, when a reminder went out in the last 30 days, or when there's no user", async () => {
+    const live = makeChainAdmin({ profiles: [{ id: "user-1", subscription_status: "trialing" }], notifications: [], credit_ledger: [] });
+    await handleStripeEvent(event(session()), { admin: live.admin, stripe: noStripe });
+    expect(live.inserts).toEqual([]);
+
+    const recent = makeChainAdmin({ profiles: [free], notifications: [{ id: "n_recent" }], credit_ledger: [] });
+    await handleStripeEvent(event(session()), { admin: recent.admin, stripe: noStripe });
+    expect(recent.inserts).toEqual([]);
+
+    const anon = makeChainAdmin({ profiles: [free], notifications: [], credit_ledger: [] });
+    await handleStripeEvent(event(session({ client_reference_id: null, metadata: {} })), { admin: anon.admin, stripe: noStripe });
+    expect(anon.inserts).toEqual([]);
+    expect(email.send).not.toHaveBeenCalled();
+  });
+
+  it("packs: reminded with the credit count and price, unless a pack was bought after the session opened", async () => {
+    const { admin, inserts } = makeChainAdmin({ profiles: [free], notifications: [], credit_ledger: [] });
+    await handleStripeEvent(event(packSession()), { admin, stripe: noStripe });
+    expect(inserts[0].row.payload).toMatchObject({ kind: "pack", packCredits: 30, trialEligible: false });
+    const [message] = email.send.mock.calls[0];
+    expect(message.subject).toBe("Your 30 PipGlyph credits are waiting");
+    expect(message.html).toContain("($8)");
+
+    email.send.mockClear();
+    const bought = makeChainAdmin({ profiles: [free], notifications: [], credit_ledger: [{ id: "l_1" }] });
+    await handleStripeEvent(event(packSession()), { admin: bought.admin, stripe: noStripe });
+    expect(bought.inserts).toEqual([]);
+    expect(email.send).not.toHaveBeenCalled();
+  });
+
+  it("the notification is the durable part (insert failure throws); a send failure or no email setup never fails the event", async () => {
+    await expect(
+      handleStripeEvent(event(session()), { admin: makeChainAdmin({ profiles: [free], notifications: [], credit_ledger: [] }, { insertError: "boom" }).admin, stripe: noStripe }),
+    ).rejects.toThrow(/checkout_reminder notification failed/);
+
+    email.send.mockRejectedValue(new Error("resend down"));
+    const { admin, inserts } = makeChainAdmin({ profiles: [free], notifications: [], credit_ledger: [] });
+    await expect(handleStripeEvent(event(session()), { admin, stripe: noStripe })).resolves.toBeUndefined();
+    expect(inserts).toHaveLength(1);
+
+    email.configured = false;
+    email.send.mockReset();
+    await handleStripeEvent(event(session()), { admin: makeChainAdmin({ profiles: [free], notifications: [], credit_ledger: [] }).admin, stripe: noStripe });
+    expect(email.send).not.toHaveBeenCalled();
+  });
+});
+

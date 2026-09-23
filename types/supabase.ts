@@ -190,6 +190,60 @@ export type Database = {
         };
         Relationships: [];
       };
+      billing_payments: {
+        Row: {
+          invoice_id: string;
+          user_id: string | null;
+          stripe_customer_id: string;
+          stripe_subscription_id: string | null;
+          amount_cents: number;
+          currency: string;
+          billing_reason: string | null;
+          tier: string | null;
+          billing_interval: string | null;
+          period_start: string | null;
+          period_end: string | null;
+          paid_at: string;
+          invoice_number: string | null;
+          hosted_invoice_url: string | null;
+          created_at: string;
+        };
+        Insert: {
+          invoice_id: string;
+          user_id?: string | null;
+          stripe_customer_id: string;
+          stripe_subscription_id?: string | null;
+          amount_cents: number;
+          currency?: string;
+          billing_reason?: string | null;
+          tier?: string | null;
+          billing_interval?: string | null;
+          period_start?: string | null;
+          period_end?: string | null;
+          paid_at: string;
+          invoice_number?: string | null;
+          hosted_invoice_url?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          invoice_id?: string;
+          user_id?: string | null;
+          stripe_customer_id?: string;
+          stripe_subscription_id?: string | null;
+          amount_cents?: number;
+          currency?: string;
+          billing_reason?: string | null;
+          tier?: string | null;
+          billing_interval?: string | null;
+          period_start?: string | null;
+          period_end?: string | null;
+          paid_at?: string;
+          invoice_number?: string | null;
+          hosted_invoice_url?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       comment_reports: {
         Row: {
           comment_id: string;

@@ -1,4 +1,5 @@
 import { formatShortDate } from "@/lib/format/dates";
+import { formatMoney } from "@/lib/format/money";
 
 // ---------------------------------------------------------------------------
 // One source of copy + deep link for every notification kind. Shared by the
@@ -155,6 +156,47 @@ export function describeNotification(
             : "add a card to keep the plan, or it simply ends and your cards stay."
         }`,
         href: "/dashboard/billing",
+      };
+    }
+    case "payment_received": {
+      const amount = num(payload.amountCents);
+      const money = amount != null ? formatMoney(amount, str(payload.currency) ?? "usd") : "Your payment";
+      const plan = TIER_LABEL[str(payload.tier) ?? ""] ?? null;
+      const reason = str(payload.billingReason);
+      if (reason === "subscription_cycle" && plan) {
+        return {
+          subject: `Your ${plan} plan`,
+          body: `renewed — ${money} charged; your monthly AI credits are refilled.`,
+          href: "/dashboard/billing",
+        };
+      }
+      return {
+        subject: "Payment received",
+        body:
+          reason === "subscription_update" && plan
+            ? `${money} for your switch to ${plan} — thanks!`
+            : plan
+              ? `${money} for ${plan} — thanks! Your receipt is on the billing page.`
+              : `${money} — thanks! Your receipt is on the billing page.`,
+        href: "/dashboard/billing",
+      };
+    }
+    case "checkout_reminder": {
+      if (str(payload.kind) === "pack") {
+        const credits = num(payload.packCredits);
+        return {
+          subject: "Your credit top-up",
+          body: `wasn't finished — ${credits ? `${credits} credits are` : "your credits are"} one click away.`,
+          href: "/dashboard/billing#packs",
+        };
+      }
+      const plan = TIER_LABEL[str(payload.tier) ?? ""] ?? "plan";
+      return {
+        subject: `Your ${plan} checkout`,
+        body: payload.trialEligible === true
+          ? "wasn't finished — your 7-day free trial is still waiting, no card needed."
+          : "wasn't finished — pick up where you left off whenever you're ready.",
+        href: "/dashboard/billing#plans",
       };
     }
     case "card_limit": {

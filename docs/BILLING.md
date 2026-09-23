@@ -12,7 +12,8 @@ how the integration compares with the standard Stripe SaaS pattern.
 | Storefront | `/pricing` (static, anonymous) + `/pricing-member` (dynamic, signed-in; `proxy.ts` rewrite) | Buttons come from `pricingCtaFor()` fed by a `BillingViewer` (`lib/billing/viewer.ts`). Paid accounts are redirected to the billing page. |
 | Billing page | `/dashboard/billing` | Plan, renewal/trial/cancel dates, plan changes (the same grid), credits + packs, card on file + invoices (`lib/billing/subscription-details.ts`), portal shortcuts. |
 | Checkout / portal | `lib/stripe/actions.ts` (server actions) | New subscription → Stripe Checkout (7-day no-card trial for first-timers). Live subscription: an **upgrade** goes through the Customer Portal **confirm-update** flow (in-place price switch, prorated, charged now); a **downgrade** (Pro → Plus, or annual → monthly) is **scheduled for the end of the paid period** with a subscription schedule (§6). Broken payment → portal. Packs → Checkout in `payment` mode. |
-| Webhook | `app/api/stripe/webhook/route.ts` → `lib/stripe/webhook-handlers.ts` → `lib/stripe/subscription-sync.ts` | Events: `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `customer.subscription.{created,updated,deleted,trial_will_end}`, `invoice.payment_failed`. Idempotent (`stripe_events` claim table, migration 0099). |
+| Webhook | `app/api/stripe/webhook/route.ts` → `lib/stripe/webhook-handlers.ts` → `lib/stripe/subscription-sync.ts` | Events: `checkout.session.{completed,async_payment_succeeded,expired}`, `customer.subscription.{created,updated,deleted,trial_will_end}`, `invoice.{paid,payment_failed}`. Idempotent (`stripe_events` claim table, migration 0099). Every endpoint (live + sandbox) must subscribe to all nine. |
+| Revenue log | `billing_payments` (migration 0110) ← `invoice.paid`; admin Revenue panel on `/admin/users` (`lib/admin/revenue-queries.ts`) | One row per paid invoice; admins read, the webhook writes. |
 | Entitlements | `lib/billing/entitlements.ts` | The ONE server-side truth: subscription active/trialing + admin comp → effective tier → perks. Never trust a client tier. |
 | Credits | `lib/billing/credit-refill.ts` (monthly refill, cron + webhook), `lib/billing/credit-reconcile.ts` (refund orphaned spends), `settle_spend` (0106) | Refill is idempotent per user per month; upgrades top up the difference against everything the month already granted. |
 
@@ -114,9 +115,9 @@ does all of that, plus a few things most apps skip:
 
 Gaps against the standard, in priority order:
 
-1. ~~**`customer.subscription.trial_will_end`** is not subscribed.~~ **Done 2026-09-22** (§6): the sandbox endpoint subscribes to it; the live endpoint needs the event added (owner, Dashboard → Developers → Webhooks → the pipglyph.com endpoint → add `customer.subscription.trial_will_end`) — until then live trials get no reminder.
-2. **`invoice.paid`** is not handled. Access is granted from `customer.subscription.updated` (status → `active`), which is correct, but `invoice.paid` is the canonical "money arrived" signal and the cheapest place to log revenue / send a receipt-style notification.
-3. **`checkout.session.expired`**: today's live data shows eight abandoned checkouts and zero completions. The standard recovery is a "finish signing up" email a day later; Stripe fires this event when a session expires (24 h).
+1. ~~**`customer.subscription.trial_will_end`** is not subscribed.~~ **Done 2026-09-22** (§6); the live endpoint has subscribed to it since 2026-09-23.
+2. ~~**`invoice.paid`** is not handled.~~ **Done 2026-09-23** (§7): revenue log + resync + "Payment received" notification.
+3. ~~**`checkout.session.expired`** recovery.~~ **Done 2026-09-23** (§7): one reminder per user per 30 days, in-app + email.
 4. ~~**Scheduled downgrades**~~ **Done 2026-09-22** (§6), in the app rather than the portal: the portal's `schedule_at_period_end` only schedules between prices of the SAME product, so Pro → Plus (two products) could never use it.
 5. **Smart Retries / dunning emails**: confirm they are on in Dashboard → Settings → Billing → Subscriptions and emails (free; recovers a share of failed renewals).
 6. **Stripe Tax** is off (`automatic_tax` false). Fine while volume is tiny; revisit before EU/UK volume.
@@ -146,8 +147,8 @@ email (`trialEndingEmail` in `lib/email/messages.ts`) per subscription:
   longer `trialing` is ignored.
 
 Card-network rules require a reminder before a trial converts to a charge;
-this is it. The event must be subscribed on EVERY endpoint (sandbox: done;
-live: owner step — see gap 1 above).
+this is it. The event must be subscribed on EVERY endpoint (sandbox and
+live: both done).
 
 **Scheduled downgrades.** `createCheckoutSessionAction` classifies a plan
 switch on an ACTIVE subscription with `isPlanDowngrade()` (`lib/billing/plan-change.ts`) — a lower tier, or
@@ -174,9 +175,58 @@ Sandbox config that backs this: the webhook endpoint
 `we_1UIfs5QFLEpCg9s2TgN3OiCm` subscribes to `trial_will_end`; portal
 configuration `bpc_1UIhLYQFLEpCg9s2lOOGehBA` has
 `schedule_at_period_end` for same-product decreases (harmless, and it makes
-the portal agree with the app when a customer changes plan there). Live:
-the endpoint `we_1TrupnQFLEpCg9s2bSILz13V` and portal
-`bpc_1TruxhQFLEpCg9s22wWCrEgw` are unchanged until the owner says so.
+the portal agree with the app when a customer changes plan there). Live: the
+endpoint `we_1TrupnQFLEpCg9s2bSILz13V` got `trial_will_end` on 2026-09-23
+(owner-authorized); the live portal `bpc_1TruxhQFLEpCg9s22wWCrEgw` is
+unchanged.
+
+## 7. Revenue log, payment notifications, checkout recovery (2026-09-23)
+
+**`invoice.paid`** (`handleInvoicePaid`) — Stripe's canonical "money
+arrived" signal — does three things:
+
+1. **Revenue row.** `billing_payments` (migration 0110): one row per invoice
+   (upsert by invoice id, so retries are harmless) with the user, amount,
+   `billing_reason` (`subscription_create` / `subscription_cycle` /
+   `subscription_update` / `manual`), tier + interval, the billed period,
+   `paid_at`, invoice number and hosted URL. The admin **Revenue** panel on
+   `/admin/users` shows last-30-days and all-time totals plus the newest
+   payments; it reads only this table, never Stripe. Seeds give `dev_pro`
+   three renewals so branches show rows.
+2. **Resync.** The subscription the invoice bills is re-read and run through
+   `syncSubscriptionForUser` + the idempotent credit grant — a recovered
+   past-due plan or a converted trial is current the moment it's paid, even
+   if the matching `subscription.updated` is late. A Stripe read failure
+   skips this and still writes the row.
+3. **One "Payment received" notification** when money was actually taken
+   (`amount_paid > 0` — a $0 trial invoice or a 100 %-off coupon says
+   nothing), once per invoice (guarded on `payload.invoiceId`). Copy in
+   `describe.ts`: renewals read "Your Pro plan renewed — $15 charged; your
+   monthly AI credits are refilled", first payments and plan changes say
+   thanks. No email from the app: Stripe's own receipt covers the inbox —
+   **owner step: Dashboard → Settings → Business → Emails → "Successful
+   payments" on** (not readable through the API).
+
+**`checkout.session.expired`** (`handleCheckoutExpired`) — Stripe expires an
+unfinished Checkout page 24 h after it opened, so the event IS the
+"a day later" nudge. One `checkout_reminder` notification + one "account"
+email (`checkoutReminderEmail`), and only while it still matters:
+
+- subscription sessions are dropped when the user has a live plan by now;
+  pack sessions when a `pack:` grant landed after the session opened;
+- at most one reminder per user per 30 days, whatever they abandoned;
+- the copy offers the trial only while the profile has never synced a
+  subscription ("your 7-day free trial is still waiting, no card needed"),
+  otherwise "pick up where you left off"; packs count the credits and price;
+- the session's `metadata` (`purchase_kind`, `tier`, `period`, or
+  `pack_credits`) says what was being bought — the session object carries no
+  line items — so `createCheckoutSessionAction` stamps it on every session.
+
+Both handlers: the notification insert is the durable part (a failure throws
+so Stripe retries); the email is best effort with a provider idempotency key
+(`checkout-reminder:<session>`). Both events must be subscribed on every
+endpoint: sandbox done 2026-09-23; live `we_1TrupnQFLEpCg9s2bSILz13V`
+needs `invoice.paid` + `checkout.session.expired` added (owner's OK).
 
 ## Addendum — sandbox lifecycle run (2026-09-22, test clock `clock_1UIftGQFLEpCg9s2uoFgd7kf`)
 

@@ -40,7 +40,7 @@ export type AdminUserPage = {
   pageSize: number;
 };
 
-async function requireAdminClient(): Promise<ReturnType<typeof createAdminClient> | null> {
+export async function requireAdminClient(): Promise<ReturnType<typeof createAdminClient> | null> {
   const profile = await getCurrentProfile();
   if (!profile?.is_admin) return null;
   if (!isAdminConfigured()) return null;

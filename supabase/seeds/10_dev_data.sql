@@ -269,3 +269,21 @@ values
   ('f1000000-0000-4000-a000-000000000001', 'update', 'Welcome to the dev forge', 'This is seeded test data — break things freely.', 'Every account, card and deck here comes from supabase/seeds/10_dev_data.sql. Nothing on this database is real, and nothing here reaches production.', now() - interval '2 days', true, true, 'site', 'd0000000-0000-4000-a000-000000000001'),
   ('f1000000-0000-4000-a000-000000000002', 'upcoming', 'Scheduled update (not yet live)', 'Tests the scheduler: visible to admins only until its publish time.', null, now() + interval '3 days', true, false, 'home', 'd0000000-0000-4000-a000-000000000001')
 on conflict (id) do nothing;
+
+-- ---------------------------------------------------------------------------
+-- 7. Revenue log (0110). dev_pro's last three renewals, so the admin Revenue
+--    panel has rows on a fresh branch. No Stripe objects behind them.
+-- ---------------------------------------------------------------------------
+
+insert into public.billing_payments (
+  invoice_id, user_id, stripe_customer_id, stripe_subscription_id, amount_cents, currency,
+  billing_reason, tier, billing_interval, period_start, period_end, paid_at, invoice_number, hosted_invoice_url
+)
+values
+  ('in_dev_pro_0001', 'd0000000-0000-4000-a000-000000000002', 'cus_dev_pro', 'sub_dev_pro', 1500, 'usd',
+   'subscription_create', 'pro', 'month', now() - interval '90 days', now() - interval '60 days', now() - interval '90 days', 'DEV-0001', null),
+  ('in_dev_pro_0002', 'd0000000-0000-4000-a000-000000000002', 'cus_dev_pro', 'sub_dev_pro', 1500, 'usd',
+   'subscription_cycle', 'pro', 'month', now() - interval '60 days', now() - interval '30 days', now() - interval '60 days', 'DEV-0002', null),
+  ('in_dev_pro_0003', 'd0000000-0000-4000-a000-000000000002', 'cus_dev_pro', 'sub_dev_pro', 1500, 'usd',
+   'subscription_cycle', 'pro', 'month', now() - interval '30 days', now(), now() - interval '30 days', 'DEV-0003', null)
+on conflict (invoice_id) do nothing;
