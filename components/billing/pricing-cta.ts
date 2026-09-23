@@ -3,7 +3,7 @@ import {
   TRIAL_DAYS,
   type PlanTier,
 } from "@/lib/billing/plans";
-import type { BillingViewer } from "./use-billing-viewer";
+import type { BillingViewer } from "@/lib/billing/viewer";
 
 // ---------------------------------------------------------------------------
 // Which button a plan card (or an upgrade-modal row) shows for a viewer. A
