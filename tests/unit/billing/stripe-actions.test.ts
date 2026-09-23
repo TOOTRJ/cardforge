@@ -58,6 +58,13 @@ vi.mock("@/lib/stripe/client", () => ({
   isStripeConfigured: () => s.stripeConfigured,
   getStripe: () => ({
     customers: { create: s.customersCreate },
+    // The catalog answers by lookup key ("pro_monthly" → "price_pro_monthly"),
+    // the same ids the mocked env mapping below produces.
+    prices: {
+      list: async ({ lookup_keys }: { lookup_keys: string[] }) => ({
+        data: [{ id: `price_${lookup_keys[0]}` }],
+      }),
+    },
     subscriptions: { list: (args: unknown) => s.subscriptionsList(args) },
     checkout: { sessions: { create: s.checkoutCreate } },
     billingPortal: { sessions: { create: s.portalCreate } },
@@ -73,6 +80,7 @@ vi.mock("@/lib/stripe/subscription-sync", () => ({
 }));
 
 import { createCheckoutSessionAction, createPortalSessionAction } from "@/lib/stripe/actions";
+import { clearPriceCache } from "@/lib/stripe/prices";
 
 const USER = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const checkoutParams = () => s.checkoutCreate.mock.calls[0]?.[0] as Record<string, unknown> & {
@@ -81,6 +89,7 @@ const checkoutParams = () => s.checkoutCreate.mock.calls[0]?.[0] as Record<strin
 };
 
 beforeEach(() => {
+  clearPriceCache();
   s.user = { id: USER, email: "x@example.test" };
   s.profile = { stripe_customer_id: "cus_1" };
   s.adminConfigured = true;

@@ -11,7 +11,7 @@ import {
   type PaidTier,
 } from "@/lib/billing/plans";
 import { getStripe, isStripeConfigured } from "./client";
-import { priceIdForPack, priceIdForTier } from "./config";
+import { packLookupKey, resolvePriceId, tierLookupKey } from "./prices";
 import { findDelinquentSubscription, findLiveSubscription } from "./subscription-sync";
 import type Stripe from "stripe";
 
@@ -34,7 +34,11 @@ async function isTrialEligible(
       limit: 1,
     });
     return subs.data.length === 0;
-  } catch {
+  } catch (error) {
+    console.error(
+      "[stripe] Trial eligibility check failed (denying the trial):",
+      error instanceof Error ? error.message : error,
+    );
     return false;
   }
 }
@@ -161,7 +165,9 @@ export async function createCheckoutSessionAction(
 
   try {
     if (input.kind === "subscription") {
-      const priceId = priceIdForTier(input.tier, input.period ?? "monthly");
+      // From the catalog's lookup key (env id only as a fallback) — see
+      // lib/stripe/prices.ts for the outage a stale env id caused.
+      const priceId = await resolvePriceId(stripe, tierLookupKey(input.tier, input.period ?? "monthly"));
       if (!priceId) return { ok: false, error: "That plan isn't available yet." };
 
       // Already subscribed? Never start a SECOND subscription (that's how a
@@ -260,7 +266,7 @@ export async function createCheckoutSessionAction(
     }
 
     // One-time credit pack.
-    const priceId = priceIdForPack(input.pack);
+    const priceId = await resolvePriceId(stripe, packLookupKey(input.pack));
     if (!priceId) return { ok: false, error: "That pack isn't available yet." };
     const credits = CREDIT_PACKS[input.pack].credits;
 
@@ -280,8 +286,17 @@ export async function createCheckoutSessionAction(
     });
     if (!session.url) return { ok: false, error: "Couldn't start checkout." };
     return { ok: true, url: session.url };
-  } catch {
-    return { ok: false, error: "Stripe checkout failed. Please try again." };
+  } catch (error) {
+    // Log the real reason: this used to be swallowed, and 22 live checkout
+    // failures in one day were invisible to every log the app writes.
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`[stripe] Checkout session failed (${JSON.stringify(input)}):`, message);
+    return {
+      ok: false,
+      error: /No such price/i.test(message)
+        ? "That plan isn't set up in Stripe yet — please let us know."
+        : "Stripe checkout failed. Please try again.",
+    };
   }
 }
 
@@ -304,7 +319,11 @@ export async function createPortalSessionAction(): Promise<BillingActionResult> 
       return_url: `${getSiteBaseUrl()}/settings`,
     });
     return { ok: true, url: session.url };
-  } catch {
+  } catch (error) {
+    console.error(
+      "[stripe] Portal session failed:",
+      error instanceof Error ? error.message : error,
+    );
     return { ok: false, error: "Couldn't open the billing portal. Try again." };
   }
 }
