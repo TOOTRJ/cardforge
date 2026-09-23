@@ -2,6 +2,7 @@ import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import {
   activityDigestEmail,
+  checkoutReminderEmail,
   newsletterEmail,
   teamMessageEmail,
   trialEndingEmail,
@@ -38,6 +39,8 @@ describe("email builders", () => {
         hasPaymentMethod: true,
         priceLabel: "$15 / month",
       }),
+      checkoutReminderEmail(recipient, { kind: "subscription", plan: "Pro", priceLabel: "$15 / month", trialEligible: true }),
+      checkoutReminderEmail(recipient, { kind: "pack", credits: 30, priceLabel: "$8" }),
     ];
     for (const email of emails) {
       expect(email.headers?.["List-Unsubscribe-Post"]).toBe("List-Unsubscribe=One-Click");
@@ -108,6 +111,25 @@ describe("email builders", () => {
     expect(ends.html).toContain("nothing is charged");
     expect(ends.html).toContain("To keep Plus, add a card before the date");
     expect(ends.headers?.["List-Unsubscribe"]).toContain("list=account");
+  });
+
+  it("checkout reminder: trial copy only while eligible, 'nothing was charged' always, packs count the credits", () => {
+    const trial = checkoutReminderEmail(recipient, { kind: "subscription", plan: "Pro", priceLabel: "$15 / month", trialEligible: true });
+    expect(trial.subject).toBe("Your PipGlyph Pro trial is still waiting");
+    expect(trial.html).toContain("nothing was charged");
+    expect(trial.html).toContain("7-day free trial");
+    expect(trial.html).toContain("/dashboard/billing#plans");
+    expect(trial.text).toContain("Start the Pro trial");
+
+    const lapsed = checkoutReminderEmail(recipient, { kind: "subscription", plan: "Plus", priceLabel: null, trialEligible: false });
+    expect(lapsed.subject).toBe("Finish upgrading to PipGlyph Plus");
+    expect(lapsed.html).not.toContain("free trial");
+    expect(lapsed.html).toContain("cancel any time");
+
+    const pack = checkoutReminderEmail(recipient, { kind: "pack", credits: 30, priceLabel: "$8" });
+    expect(pack.subject).toBe("Your 30 PipGlyph credits are waiting");
+    expect(pack.html).toContain("<strong>30 AI credits</strong> ($8)");
+    expect(pack.html).toContain("/dashboard/billing#packs");
   });
 
   it("newsletter uses the marketing sender's postal address when set", () => {

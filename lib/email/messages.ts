@@ -186,6 +186,103 @@ export function trialEndingEmail(
   };
 }
 
+// --- Checkout reminder (account list) ----------------------------------------------
+
+export type CheckoutReminderInput =
+  | {
+      kind: "subscription";
+      /** "Plus" | "Pro" */
+      plan: string;
+      /** "$6 / month" — null when unknown. */
+      priceLabel: string | null;
+      /** Still eligible for the no-card trial. */
+      trialEligible: boolean;
+    }
+  | { kind: "pack"; credits: number; priceLabel: string | null };
+
+/** A Checkout session expired unfinished (24 h after it opened). One nudge,
+ *  transactional in tone: where they left off, what it costs, one button.
+ *  The handler sends at most one of these per user per 30 days. */
+export function checkoutReminderEmail(
+  recipient: Recipient,
+  input: CheckoutReminderInput,
+): OutgoingEmail {
+  const site = getSiteBaseUrl();
+  const f = footer(
+    "account",
+    recipient,
+    "You're receiving this because you started a checkout on PipGlyph that wasn't completed.",
+  );
+  const price = input.priceLabel ? escapeHtml(input.priceLabel) : null;
+  const faq = emailLink(`${site}/faq`, "the FAQ");
+  if (input.kind === "pack") {
+    const cta = { label: "Get the credits", url: `${site}/dashboard/billing#packs` };
+    const paragraphs = [
+      `You started buying <strong>${input.credits} AI credits</strong>${price ? ` (${price})` : ""} but the checkout wasn't completed, so nothing was charged.`,
+      "Purchased credits sit alongside your monthly refill and never expire — pick them up whenever you're ready.",
+      `Something go wrong at checkout? ${faq} covers plans and billing, and you can message us from your dashboard.`,
+    ];
+    return {
+      to: recipient.email,
+      subject: `Your ${input.credits} PipGlyph credits are waiting`,
+      headers: f.headers,
+      html: renderEmailLayout({
+        siteUrl: site,
+        preheader: "Nothing was charged — finish the top-up whenever you like.",
+        heading: "Your credits are waiting",
+        paragraphs,
+        cta,
+        footerNote: f.footerNote,
+        unsubscribeUrl: f.unsubscribeUrl,
+        settingsUrl: f.settingsUrl,
+      }),
+      text: renderEmailText({
+        heading: "Your credits are waiting",
+        lines: paragraphs.map((p) => p.replace(/<[^>]+>/g, "")),
+        cta,
+        footerNote: f.footerNote,
+        unsubscribeUrl: f.unsubscribeUrl,
+      }),
+    };
+  }
+  const plan = escapeHtml(input.plan);
+  const cta = {
+    label: input.trialEligible ? `Start the ${input.plan} trial` : `Finish upgrading to ${input.plan}`,
+    url: `${site}/dashboard/billing#plans`,
+  };
+  const paragraphs = [
+    `You started upgrading to <strong>${plan}</strong>${price ? ` (${price})` : ""} but the checkout wasn't completed, so nothing was charged.`,
+    input.trialEligible
+      ? `Your <strong>7-day free trial</strong> is still waiting — no card needed to start it, and if you don't add one it simply ends. ${plan} means more monthly AI credits, clean hi-res downloads and more room for your cards.`
+      : `${plan} means more monthly AI credits, clean hi-res downloads and more room for your cards — and you can cancel any time.`,
+    `Something go wrong at checkout? ${faq} covers plans and billing, and you can message us from your dashboard.`,
+  ];
+  return {
+    to: recipient.email,
+    subject: input.trialEligible
+      ? `Your PipGlyph ${input.plan} trial is still waiting`
+      : `Finish upgrading to PipGlyph ${input.plan}`,
+    headers: f.headers,
+    html: renderEmailLayout({
+      siteUrl: site,
+      preheader: "Nothing was charged — pick up where you left off.",
+      heading: input.trialEligible ? `Your ${plan} trial is waiting` : `Finish upgrading to ${plan}`,
+      paragraphs,
+      cta,
+      footerNote: f.footerNote,
+      unsubscribeUrl: f.unsubscribeUrl,
+      settingsUrl: f.settingsUrl,
+    }),
+    text: renderEmailText({
+      heading: input.trialEligible ? `Your ${input.plan} trial is waiting` : `Finish upgrading to ${input.plan}`,
+      lines: paragraphs.map((p) => p.replace(/<[^>]+>/g, "")),
+      cta,
+      footerNote: f.footerNote,
+      unsubscribeUrl: f.unsubscribeUrl,
+    }),
+  };
+}
+
 // --- Activity digest (activity list) -----------------------------------------------
 
 export type DigestLine = { subject: string; body: string; href: string };

@@ -268,8 +268,15 @@ Rules and gotchas:
   `pendingChange` from the expanded schedule) — never through the portal,
   whose `schedule_at_period_end` only works within one product. Stripe's
   `trial_will_end` becomes ONE `trial_ending` notification + "account" email
-  per subscription (migration 0109; honest about whether a card is on file);
-  the event must be subscribed on every webhook endpoint. The month's
+  per subscription (migration 0109; honest about whether a card is on file).
+  `invoice.paid` writes ONE `billing_payments` row per invoice (0110; the
+  admin Revenue panel reads only that table), resyncs the subscription, and
+  notifies `payment_received` only when money was taken; a
+  `checkout.session.expired` session becomes ONE `checkout_reminder`
+  notification + email per user per 30 days, skipped once the plan/pack was
+  bought — every Checkout session carries `purchase_kind`/`tier`/`period`
+  metadata for it. Every event must be subscribed on every webhook
+  endpoint (live + sandbox). The month's
   credit top-up is measured against EVERY refill row of the month
   (`refill:<user>:<period>%`), never the base row alone. The seeded e2e user
   is an ADMIN (unlocked) — billing specs sign in as the free `e2e_free` user

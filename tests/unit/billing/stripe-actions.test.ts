@@ -180,6 +180,8 @@ describe("createCheckoutSessionAction", () => {
       customer: "cus_1",
       client_reference_id: USER,
       line_items: [{ price: "price_pro_monthly", quantity: 1 }],
+      // checkout.session.expired reads what was being bought from here.
+      metadata: { supabase_user_id: USER, purchase_kind: "subscription", tier: "pro", period: "monthly" },
       payment_method_collection: "if_required",
       success_url: "https://test.local/dashboard?billing=success",
     });
@@ -188,7 +190,8 @@ describe("createCheckoutSessionAction", () => {
       trial_period_days: TRIAL_DAYS,
       trial_settings: { end_behavior: { missing_payment_method: "cancel" } },
     });
-    expect(params.metadata).toBeUndefined();
+    // Nothing superseded on a first subscription — only the purchase stamp.
+    expect(params.metadata).not.toHaveProperty("supersedes_subscription_id");
   });
 
   it("gives no second trial once Stripe has ANY subscription on record", async () => {
@@ -245,7 +248,13 @@ describe("createCheckoutSessionAction", () => {
     };
     await createCheckoutSessionAction({ kind: "subscription", tier: "pro" });
     const params = checkoutParams();
-    expect(params.metadata).toEqual({ supersedes_subscription_id: "sub_trial" });
+    expect(params.metadata).toEqual({
+      supabase_user_id: USER,
+      purchase_kind: "subscription",
+      tier: "pro",
+      period: "monthly",
+      supersedes_subscription_id: "sub_trial",
+    });
     expect(params.subscription_data).toMatchObject({
       trial_end: fiveDaysOut,
       trial_settings: { end_behavior: { missing_payment_method: "cancel" } },
@@ -426,7 +435,13 @@ describe("createCheckoutSessionAction", () => {
     s.live = { id: "sub_trial", status: "trialing", items: { data: [{ id: "si_1", price: { id: "price_plus_monthly" } }] } };
     await createCheckoutSessionAction({ kind: "subscription", tier: "pro" });
     const params = checkoutParams();
-    expect(params.metadata).toEqual({ supersedes_subscription_id: "sub_trial" });
+    expect(params.metadata).toEqual({
+      supabase_user_id: USER,
+      purchase_kind: "subscription",
+      tier: "pro",
+      period: "monthly",
+      supersedes_subscription_id: "sub_trial",
+    });
     expect(params.subscription_data).not.toHaveProperty("trial_period_days");
     expect(s.portalCreate).not.toHaveBeenCalled();
   });

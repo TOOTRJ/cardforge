@@ -155,4 +155,49 @@ describe("describeNotification — deck generated", () => {
       body: "ends soon — add a card to keep the plan, or it simply ends and your cards stay.",
     });
   });
+
+  it("payment received: renewals name the plan and the refill, first payments and plan changes say thanks", () => {
+    const base = { actor: null, card: null, threadId: null, type: "payment_received" };
+    const renewal = describeNotification(
+      { ...base, payload: { invoiceId: "in_1", amountCents: 1500, currency: "usd", tier: "pro", billingReason: "subscription_cycle" } },
+      { isAdmin: false },
+    );
+    expect(renewal).toEqual({
+      subject: "Your Pro plan",
+      body: "renewed — $15 charged; your monthly AI credits are refilled.",
+      href: "/dashboard/billing",
+    });
+    expect(
+      describeNotification({ ...base, payload: { amountCents: 600, tier: "plus", billingReason: "subscription_create" } }, { isAdmin: false }).body,
+    ).toBe("$6 for Plus — thanks! Your receipt is on the billing page.");
+    expect(
+      describeNotification({ ...base, payload: { amountCents: 900, tier: "pro", billingReason: "subscription_update" } }, { isAdmin: false }).body,
+    ).toBe("$9 for your switch to Pro — thanks!");
+    expect(describeNotification({ ...base, payload: { amountCents: 1250 } }, { isAdmin: false })).toMatchObject({
+      subject: "Payment received",
+      body: "$12.50 — thanks! Your receipt is on the billing page.",
+    });
+  });
+
+  it("checkout reminder: the trial if still available, otherwise where they left off; packs count the credits", () => {
+    const base = { actor: null, card: null, threadId: null, type: "checkout_reminder" };
+    expect(
+      describeNotification({ ...base, payload: { kind: "subscription", tier: "pro", trialEligible: true } }, { isAdmin: false }),
+    ).toEqual({
+      subject: "Your Pro checkout",
+      body: "wasn't finished — your 7-day free trial is still waiting, no card needed.",
+      href: "/dashboard/billing#plans",
+    });
+    expect(
+      describeNotification({ ...base, payload: { kind: "subscription", tier: "plus", trialEligible: false } }, { isAdmin: false }).body,
+    ).toBe("wasn't finished — pick up where you left off whenever you're ready.");
+    expect(
+      describeNotification({ ...base, payload: { kind: "pack", packCredits: 30 } }, { isAdmin: false }),
+    ).toEqual({
+      subject: "Your credit top-up",
+      body: "wasn't finished — 30 credits are one click away.",
+      href: "/dashboard/billing#packs",
+    });
+  });
 });
+

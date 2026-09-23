@@ -304,9 +304,15 @@ export async function createCheckoutSessionAction(
         client_reference_id: customer.userId,
         line_items: [{ price: priceId, quantity: 1 }],
         allow_promotion_codes: true,
-        ...(supersedes
-          ? { metadata: { supersedes_subscription_id: supersedes } }
-          : {}),
+        // What was being bought, for checkout.session.expired (the session
+        // object carries no line items) — plus the trial it supersedes.
+        metadata: {
+          supabase_user_id: customer.userId,
+          purchase_kind: "subscription",
+          tier: input.tier,
+          period: input.period ?? "monthly",
+          ...(supersedes ? { supersedes_subscription_id: supersedes } : {}),
+        },
         subscription_data: {
           metadata: { supabase_user_id: customer.userId },
           ...(withTrial

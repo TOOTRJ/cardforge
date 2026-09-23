@@ -22,6 +22,8 @@ import {
   GrantCreditsForm,
   ResyncSubscriptionButton,
 } from "@/components/admin/user-billing-controls";
+import { RevenuePanel } from "@/components/admin/revenue-panel";
+import { getRevenueSummary } from "@/lib/admin/revenue-queries";
 import { NewMessageDialog } from "@/components/admin/new-message-dialog";
 import { ThreadList } from "@/components/messages/thread-list";
 import { formatRelativeTime } from "@/components/messages/format";
@@ -87,7 +89,7 @@ export default async function AdminUsersPage({
     );
   }
 
-  const page = await listAdminUsers(params);
+  const [page, revenue] = await Promise.all([listAdminUsers(params), getRevenueSummary()]);
   if (!page) notFound();
   const pages = totalPages(page.total, page.pageSize);
 
@@ -99,6 +101,12 @@ export default async function AdminUsersPage({
         description="Every account, with plan, credits, activity and support context. Open a user to grant credits, comp a plan, resync billing, or message them."
         actions={<Badge variant="primary">{page.total.toLocaleString()} total</Badge>}
       />
+
+      {revenue ? (
+        <div className="mt-6">
+          <RevenuePanel summary={revenue} />
+        </div>
+      ) : null}
 
       <div className="mt-6">
         <BillingHealthPanel />
