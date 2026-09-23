@@ -1,7 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
-import { GeistSans } from "geist/font/sans";
-import { GeistMono } from "geist/font/mono";
 import { Toaster } from "sonner";
 import { UpgradeModalProvider } from "@/components/billing/upgrade-modal-provider";
 import { GenerationJobProvider } from "@/components/ai/generation-provider";
@@ -101,14 +99,26 @@ function JsonLd() {
 // deploy of a green merge failed inside it ("next/font/google queries have
 // exactly one entry" / can't resolve …/internal/font/google/font) while the
 // same tree had built fine minutes earlier. A deploy must not depend on a
-// third-party fetch. Geist comes from Vercel's own `geist` package
-// (next/font/local under the hood, same --font-geist-* variables); Cinzel is
-// the OFL variable font from github.com/google/fonts, committed under
-// app/fonts/cinzel with its licence. tests/unit/content/fonts-self-hosted
-// guards the import. Every other font (card renders, OG images) is already
-// a committed .ttf under public/.
-const geistSans = GeistSans; // --font-geist-sans, weight 100–900
-const geistMono = GeistMono; // --font-geist-mono
+// third-party fetch. All three UI fonts are OFL variable fonts committed
+// under app/fonts with their licences: Geist Sans/Mono from Vercel's `geist`
+// package, SUBSETTED to latin + latin-ext (Google's ranges) with fontTools —
+// 70 KB → 40 KB each, the wght axis intact (see scripts/subset-geist.mjs
+// for the exact command); Cinzel from github.com/google/fonts as-is (49 KB,
+// every subset). tests/unit/content/fonts-self-hosted guards the import.
+// Every other font (card renders, OG images) is already a committed .ttf
+// under public/.
+const geistSans = localFont({
+  src: "./fonts/geist/Geist-Variable.woff2",
+  variable: "--font-geist-sans",
+  weight: "100 900",
+  display: "swap",
+});
+const geistMono = localFont({
+  src: "./fonts/geist/GeistMono-Variable.woff2",
+  variable: "--font-geist-mono",
+  weight: "100 900",
+  display: "swap",
+});
 const cinzel = localFont({
   src: "./fonts/cinzel/Cinzel-Variable.woff2",
   variable: "--font-cinzel",
