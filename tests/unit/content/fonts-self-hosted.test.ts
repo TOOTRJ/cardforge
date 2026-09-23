@@ -30,13 +30,23 @@ describe("self-hosted fonts", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("the root layout loads Geist from the geist package and Cinzel from the committed variable font", () => {
+  it("the root layout loads all three fonts from committed variable files, each beside its OFL licence", () => {
     const layout = readFileSync(path.join(ROOT, "app/layout.tsx"), "utf8");
-    expect(layout).toContain('from "geist/font/sans"');
-    expect(layout).toContain('from "geist/font/mono"');
-    expect(layout).toContain('src: "./fonts/cinzel/Cinzel-Variable.woff2"');
-    expect(existsSync(path.join(ROOT, "app/fonts/cinzel/Cinzel-Variable.woff2"))).toBe(true);
-    // The OFL licence travels with the file.
-    expect(readFileSync(path.join(ROOT, "app/fonts/cinzel/OFL.txt"), "utf8")).toMatch(/SIL Open Font License/);
+    for (const [src, licence] of [
+      ["fonts/geist/Geist-Variable.woff2", "fonts/geist/OFL.txt"],
+      ["fonts/geist/GeistMono-Variable.woff2", "fonts/geist/OFL.txt"],
+      ["fonts/cinzel/Cinzel-Variable.woff2", "fonts/cinzel/OFL.txt"],
+    ]) {
+      expect(layout).toContain(`src: "./${src}"`);
+      expect(existsSync(path.join(ROOT, "app", src))).toBe(true);
+      expect(readFileSync(path.join(ROOT, "app", licence), "utf8")).toMatch(/SIL Open Font License/);
+    }
+    expect(layout).not.toContain("geist/font/");
+  });
+
+  it("the Geist subsets stay small — the reason they were subset from the 70 KB package files", () => {
+    for (const file of ["Geist-Variable.woff2", "GeistMono-Variable.woff2"]) {
+      expect(statSync(path.join(ROOT, "app/fonts/geist", file)).size).toBeLessThan(50_000);
+    }
   });
 });

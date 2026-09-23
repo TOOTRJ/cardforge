@@ -226,9 +226,11 @@ Rules and gotchas:
   shows. A render write is NOT an edit: `updated_at` ignores the render
   columns (0108) and the OG cache-buster is `renderVersionOf()`
   (`max(updated_at, rendered_at)`), never `updated_at` alone.
-- Fonts are SELF-HOSTED: Geist via Vercel's `geist` package, Cinzel as the OFL
-  variable woff2 in `app/fonts/cinzel` (licence beside it), card/OG fonts as
-  committed `.ttf`s under `public/`. Never import `next/font/google` — it
+- Fonts are SELF-HOSTED as OFL variable woff2 files under `app/fonts/*` with
+  their licences: Geist Sans/Mono subset to latin + latin-ext
+  (`scripts/subset-geist.mjs` regenerates them from the `geist` package),
+  Cinzel from google/fonts; card/OG fonts are committed `.ttf`s under
+  `public/`. Never import `next/font/google` — it
   fetches fonts.googleapis.com at BUILD time and the 2026-09-22 production
   deploy of a green merge failed inside that loader
   (`tests/unit/content/fonts-self-hosted.test.ts` guards it).
