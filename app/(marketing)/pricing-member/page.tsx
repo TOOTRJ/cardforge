@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
@@ -35,17 +35,19 @@ export default async function PricingMemberPage() {
     return <PricingContent initialViewer={{ ...ANONYMOUS_BILLING_VIEWER, loaded: true }} />;
   }
   const [profile, entitlements] = await Promise.all([getCurrentProfile(), getEntitlements()]);
-  return (
-    <PricingContent
-      initialViewer={billingViewerFromProfile(
-        profile
-          ? {
-              subscription_status: profile.subscription_status ?? null,
-              stripe_customer_id: profile.stripe_customer_id ?? null,
-            }
-          : null,
-        entitlements,
-      )}
-    />
+  const viewer = billingViewerFromProfile(
+    profile
+      ? {
+          subscription_status: profile.subscription_status ?? null,
+          stripe_customer_id: profile.stripe_customer_id ?? null,
+        }
+      : null,
+    entitlements,
   );
+  // A paid account (live Plus/Pro, an admin comp, an admin) has nothing to
+  // shop for here: its plan, plan changes and credit packs live on the
+  // billing page (owner decision 2026-09-22 — the storefront is hidden once
+  // a user is Plus or Pro).
+  if (viewer.isPaid) redirect("/dashboard/billing");
+  return <PricingContent initialViewer={viewer} />;
 }

@@ -98,18 +98,21 @@ export function BillingPanel({
       </div>
 
       <div className="flex flex-wrap gap-2">
+        <Button asChild size="sm">
+          <Link href="/dashboard/billing">Billing &amp; subscription</Link>
+        </Button>
         {hasBillingAccount ? (
           <ManageBillingButton size="sm">
             {isPaid ? "Manage subscription" : lapsed ? "Fix payment" : "Billing history"}
           </ManageBillingButton>
         ) : null}
         {!isPaid ? (
-          <Button asChild size="sm" variant={hasBillingAccount ? "outline" : "primary"}>
+          <Button asChild size="sm" variant="outline">
             <Link href="/pricing">{lapsed ? "See plans" : "Upgrade your plan"}</Link>
           </Button>
         ) : null}
         <Button asChild variant="outline" size="sm">
-          <Link href="/pricing">Buy credits</Link>
+          <Link href="/dashboard/billing#packs">Buy credits</Link>
         </Button>
       </div>
     </div>

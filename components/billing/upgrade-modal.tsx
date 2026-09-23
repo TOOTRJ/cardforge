@@ -203,8 +203,11 @@ export function UpgradeModal({ open, reason, onOpenChange }: UpgradeModalProps) 
           ) : null}
 
           <Button asChild variant="ghost" size="sm" className="self-start">
-            <Link href="/pricing" onClick={() => onOpenChange(false)}>
-              See full pricing &amp; credit packs →
+            <Link
+              href={viewer.isPaid ? "/dashboard/billing" : "/pricing"}
+              onClick={() => onOpenChange(false)}
+            >
+              {viewer.isPaid ? "Open billing & credit packs →" : "See full pricing & credit packs →"}
             </Link>
           </Button>
         </div>

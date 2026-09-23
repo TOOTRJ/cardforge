@@ -242,7 +242,14 @@ Rules and gotchas:
   session cookie to the dynamic `app/(marketing)/pricing-member` twin, which
   resolves the viewer on the server and passes `initialViewer` — so the HTML
   carries the right buttons and nothing flashes (a client-side /api/me swap
-  is only for the upgrade modal). `isPaid` is NOT "has a subscription" —
+  is only for the upgrade modal). PAID accounts (live Plus/Pro, comp, admin)
+  never see the storefront: `/pricing` redirects them to `/dashboard/billing`
+  (plan + dates, the same PricingPlans grid for in-place Plus↔Pro /
+  monthly↔annual switches, credits + packs, card + invoices via
+  `lib/billing/subscription-details.ts`, portal deep links via
+  `createPortalSessionAction(flow)`) and the header/mobile nav hide Pricing.
+  Full picture, env matrix, sandbox ids and the standards comparison:
+  `docs/BILLING.md`. `isPaid` is NOT "has a subscription" —
   admins and comped accounts are paid with no Stripe customer, and offering
   them "Manage plan" opened a portal that doesn't exist (2026-09-22). One
   trial per account, Plus or Pro: `createCheckoutSessionAction` grants
