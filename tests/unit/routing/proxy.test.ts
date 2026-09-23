@@ -7,8 +7,10 @@ import { NextRequest, NextResponse } from "next/server";
 //   * /create is served to session-cookie holders, rewritten to the static
 //     guest creator for everyone else (the cookie is a HINT — the page
 //     re-validates);
-//   * /gallery and /decks with a REAL filter param are rewritten to
-//     their dynamic /browse sibling; junk params keep the CDN-cached page;
+//   * /gallery and /decks with a REAL filter param 308 to their visible
+//     dynamic /browse sibling (query intact); junk params keep the
+//     CDN-cached page. A rewrite would be invisible to the client router,
+//     which reuses the cached static tree for same-path query changes;
 //   * a redirect from updateSession is never clobbered.
 // ---------------------------------------------------------------------------
 
@@ -30,6 +32,7 @@ import { proxy } from "@/proxy";
 const request = (path: string, cookie?: string) =>
   new NextRequest(`http://localhost:3000${path}`, cookie ? { headers: { cookie } } : undefined);
 const rewriteOf = (response: Response) => response.headers.get("x-middleware-rewrite");
+const locationOf = (response: Response) => response.headers.get("location");
 
 beforeEach(() => {
   s.session = null;
@@ -58,27 +61,41 @@ describe("proxy", () => {
     expect(s.updateSession).toHaveBeenCalledTimes(1);
   });
 
-  it("rewrites browse requests carrying a real filter param to the dynamic sibling, query intact", async () => {
-    expect(rewriteOf(await proxy(request("/gallery?type=creature&page=2")))).toBe(
-      "http://localhost:3000/gallery/browse?type=creature&page=2",
-    );
-    expect(rewriteOf(await proxy(request("/decks?format=commander")))).toBe(
-      "http://localhost:3000/decks/browse?format=commander",
-    );
+  it("308s landing requests carrying a real filter param to the visible browse sibling, query intact", async () => {
+    const gallery = await proxy(request("/gallery?type=creature&page=2"));
+    expect(gallery.status).toBe(308);
+    expect(locationOf(gallery)).toBe("http://localhost:3000/gallery/browse?type=creature&page=2");
+    // A redirect, never a rewrite: the client router would reuse the cached
+    // static /gallery tree for a rewritten same-path query change.
+    expect(rewriteOf(gallery)).toBeNull();
+
+    const decks = await proxy(request("/decks?format=commander"));
+    expect(decks.status).toBe(308);
+    expect(locationOf(decks)).toBe("http://localhost:3000/decks/browse?format=commander");
   });
 
-  it("leaves junk params and other paths on the cached page", async () => {
-    expect(rewriteOf(await proxy(request("/gallery?utm_source=x&fbclid=y")))).toBeNull();
-    expect(rewriteOf(await proxy(request("/gallery")))).toBeNull();
-    expect(rewriteOf(await proxy(request("/challenges?q=x")))).toBeNull();
-    // Sets were removed 2026-09-22 — no browse sibling to rewrite to.
-    expect(rewriteOf(await proxy(request("/sets?q=alpha")))).toBeNull();
+  it("leaves junk params, the bare landings, the browse routes and other paths alone", async () => {
+    for (const path of [
+      "/gallery?utm_source=x&fbclid=y",
+      "/gallery",
+      "/gallery/browse?type=creature",
+      "/decks/browse?format=commander",
+      "/challenges?q=x",
+    ]) {
+      const response = await proxy(request(path));
+      expect(response.status, path).toBe(200);
+      expect(locationOf(response), path).toBeNull();
+      expect(rewriteOf(response), path).toBeNull();
+    }
+    // Sets were removed 2026-09-22 — the path itself 308s to /decks.
+    expect(locationOf(await proxy(request("/sets?q=alpha")))).toBe("http://localhost:3000/decks");
   });
 
   it("never clobbers a redirect that updateSession issued", async () => {
     s.session = () => NextResponse.redirect("http://localhost:3000/login?redirectTo=%2Fgallery", 307);
     const response = await proxy(request("/gallery?type=creature"));
     expect(response.status).toBe(307);
+    expect(locationOf(response)).toBe("http://localhost:3000/login?redirectTo=%2Fgallery");
     expect(rewriteOf(response)).toBeNull();
   });
 });

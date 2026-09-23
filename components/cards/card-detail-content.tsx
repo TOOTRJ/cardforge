@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { tagSlug } from "@/lib/cards/tag-slug";
+import { isHubType } from "@/lib/cards/hubs";
 import {
   VISIBILITY_LABELS,
   COLOR_IDENTITY_LABELS,
@@ -315,7 +316,7 @@ export async function CardDetailContent({
                 lands on the gallery filtered by the same source. */}
             {card.source_scryfall_id && otherRemixesCount > 0 ? (
               <Link
-                href={`/gallery?source=${encodeURIComponent(card.source_scryfall_id)}`}
+                href={`/gallery/browse?source=${encodeURIComponent(card.source_scryfall_id)}`}
                 className="inline-flex w-fit items-center gap-1.5 rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-xs text-foreground transition-colors hover:border-accent hover:bg-accent/15"
               >
                 <Sparkles className="h-3 w-3 text-accent" aria-hidden />
@@ -476,7 +477,9 @@ export async function CardDetailContent({
             <RelatedRow
               title="More like this"
               viewAllHref={
-                card.card_type ? `/gallery?type=${card.card_type}` : "/gallery"
+                card.card_type && isHubType(card.card_type)
+                  ? `/gallery/type/${card.card_type}`
+                  : "/gallery/browse"
               }
               cards={relatedCards}
               isAuthed={Boolean(user)}

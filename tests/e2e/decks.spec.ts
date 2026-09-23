@@ -17,11 +17,20 @@ const hasCredentials =
   !!process.env.SUPABASE_E2E_USER_PASSWORD;
 
 test.describe("public decks browse", () => {
-  test("renders the browse page with format filters", async ({ page }) => {
+  test("the landing offers search + browse-all; /decks/browse carries the format filters", async ({
+    page,
+  }) => {
+    // /decks is a static landing: search box + browse-all link (+ format hub
+    // chips when there are public decks). The filter chips live on the
+    // dynamic /decks/browse route, where a click actually re-queries.
     await page.goto("/decks");
     await expect(
       page.getByRole("heading", { name: /community decks/i }),
     ).toBeVisible();
+    await expect(page.getByRole("searchbox", { name: "Search decks" })).toBeVisible();
+    await page.getByRole("link", { name: /browse all decks/i }).click();
+    await expect(page).toHaveURL(/\/decks\/browse$/);
+    await expect(page.getByRole("heading", { name: /browse decks/i })).toBeVisible();
     await expect(
       page.getByRole("group", { name: /filter by format/i }),
     ).toBeVisible();

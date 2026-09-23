@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { CardPreviewSkeleton } from "@/components/cards/card-preview-skeleton";
 import { GalleryCardTile } from "@/components/cards/gallery-card-tile";
 import { HubLinks } from "@/components/cards/hub-links";
+import { BrowseSearchBox } from "@/components/browse/browse-search-box";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -38,21 +39,28 @@ import { isUuid } from "@/lib/ids";
 import { firstString } from "@/lib/routing/search-params";
 
 // ---------------------------------------------------------------------------
-// GalleryView — the shared body of the community gallery.
+// The community gallery is two routes with one result grid:
 //
-// Rendered from two routes so the anonymous-heavy default view stays on the
-// CDN (see lib/routing/browse-params.ts):
-//   - /gallery          → static/ISR, never reads searchParams, default filters
-//   - /gallery/browse   → dynamic, parses searchParams (reached via the
-//                         proxy.ts rewrite when filter params are present —
-//                         the visitor's URL stays /gallery?…)
+//   - /gallery (GalleryLanding) → static/ISR. Search box + browse-by hub chips
+//     on top, then the curated rows (trending, featured, newest) and the
+//     discover shuffle. Never reads searchParams, so it stays on the CDN.
+//   - /gallery/browse (GalleryBrowse) → dynamic. The search + filter bar and
+//     the results; every filter/sort/search/page control navigates WITHIN
+//     this route (see lib/routing/browse-params.ts for why the landing can't
+//     host them: the client router reuses the cached static tree for a
+//     same-path query change and never calls the server).
 //
-// All reads are anonymous (public client, no cookies) so the static route
-// stays prerenderable; like-state hydrates client-side (QuickLikeButton
-// re-checks the session cookie at click time).
+// All reads are anonymous (public client, no cookies) so the landing stays
+// prerenderable; like-state hydrates client-side (QuickLikeButton re-checks
+// the session cookie at click time).
 // ---------------------------------------------------------------------------
 
 const PAGE_SIZE = 24;
+
+/** The one place search, filters, sort and paging live. */
+export const GALLERY_BROWSE_PATH = "/gallery/browse";
+
+const FRAME = "mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8";
 
 type GallerySort = GalleryListSort;
 
@@ -159,6 +167,8 @@ export function parseGalleryFilters(
   };
 }
 
+/** A page link within the browse route — never the landing, which is static
+ *  and would ignore (and, via proxy.ts, 308 away from) the query. */
 function buildHref(filters: ParsedFilters, nextPage: number): string {
   const qs = new URLSearchParams();
   if (filters.raw.type) qs.set("type", filters.raw.type);
@@ -174,40 +184,20 @@ function buildHref(filters: ParsedFilters, nextPage: number): string {
   if (filters.sort === "discover") qs.set("seed", filters.seed);
   if (nextPage > 1) qs.set("page", String(nextPage));
   const query = qs.toString();
-  return query ? `/gallery?${query}` : "/gallery";
+  return query ? `${GALLERY_BROWSE_PATH}?${query}` : GALLERY_BROWSE_PATH;
 }
 
-export function GalleryView({ filters }: { filters: ParsedFilters }) {
-  const {
-    cardType,
-    rarity,
-    colorIdentity,
-    sort,
-    remixesOnly,
-    page,
-    sourceScryfallId,
-    tag,
-  } = filters;
-  const searchParam = filters.raw.q;
+const GALLERY_DESCRIPTION =
+  "Discover custom cards forged by the PipGlyph community. Browse by type or tag, search every public card, and click into any card to view, like, or remix.";
 
+/** /gallery — the static landing. */
+export function GalleryLanding() {
   const configured = isSupabaseConfigured();
-  // When the user is actively searching/filtering, the trending hero is noise —
-  // hide it so the (filtered) results are the focus, like most gallery UIs.
-  const anyFilterActive =
-    Boolean(
-      cardType ||
-        rarity ||
-        colorIdentity ||
-        searchParam ||
-        tag ||
-        remixesOnly ||
-        sourceScryfallId,
-    ) ||
-    sort !== "discover" ||
-    page > 1;
+  // Default filters: the discover shuffle, page 1, a fresh seed per ISR bake.
+  const filters = parseGalleryFilters({});
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+    <div className={FRAME}>
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Home", path: "/" },
@@ -217,7 +207,7 @@ export function GalleryView({ filters }: { filters: ParsedFilters }) {
       <PageHeader
         eyebrow="Public"
         title="Community gallery"
-        description="Discover custom cards forged by the PipGlyph community. Filter, sort, and click into any card to view, like, or remix."
+        description={GALLERY_DESCRIPTION}
         actions={
           <Button asChild>
             <Link href="/create">Forge your own</Link>
@@ -225,37 +215,42 @@ export function GalleryView({ filters }: { filters: ParsedFilters }) {
         }
       />
 
-      {/* Trending hero leads the page (one row, never wraps) — only on the
-          unfiltered default view; searching/filtering makes it noise. */}
-      {configured && !anyFilterActive ? (
-        <div className="mt-8">
+      {/* Search + browse-by first: a search is a navigation to the browse
+          route, and the hub chips are the crawlable way in. */}
+      <div className="mt-8">
+        <BrowseSearchBox
+          browsePath={GALLERY_BROWSE_PATH}
+          placeholder="Search cards by name, rules, or flavor"
+          label="Search cards"
+          browseLabel="Browse all cards"
+        />
+      </div>
+      {configured ? (
+        <Suspense fallback={null}>
+          <HubLinks placement="top" />
+        </Suspense>
+      ) : null}
+
+      {/* Trending hero (one row, never wraps). */}
+      {configured ? (
+        <div className="mt-10">
           <Suspense fallback={<TrendingCardsSectionSkeleton count={ROW_MAX} />}>
             <GalleryTrending />
           </Suspense>
         </div>
       ) : null}
 
-      {/* Search + filters. The Suspense boundary contains GalleryFilters'
-          useSearchParams() CSR bailout — without it the ENTIRE prerendered
-          page deopts to an empty client-rendered shell (bad LCP + no SSR'd
-          content for crawlers). */}
-      <div className="mt-10">
-        <Suspense fallback={null}>
-          <GalleryFilters />
-        </Suspense>
-      </div>
-
       <FeaturedChallengeBanner />
 
-      {/* Featured creators — admin-curated spotlight, unfiltered view only. */}
-      {configured && !anyFilterActive ? (
+      {/* Featured creators — admin-curated spotlight. */}
+      {configured ? (
         <Suspense fallback={null}>
           <FeaturedCreators />
         </Suspense>
       ) : null}
 
       {/* Fresh off the forge — the newest public cards, one row. */}
-      {configured && !anyFilterActive ? (
+      {configured ? (
         <div className="mt-10">
           <Suspense fallback={<CardRowSkeleton />}>
             <GalleryNewest />
@@ -263,7 +258,7 @@ export function GalleryView({ filters }: { filters: ParsedFilters }) {
         </div>
       ) : null}
 
-      {configured && !anyFilterActive ? (
+      {configured ? (
         <div className="mt-12 flex flex-col gap-1 border-t border-border/40 pt-8">
           <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-primary-bright">
             <Compass className="h-3.5 w-3.5" aria-hidden />
@@ -278,29 +273,87 @@ export function GalleryView({ filters }: { filters: ParsedFilters }) {
         </div>
       ) : null}
 
-      <div className={anyFilterActive ? "mt-10" : "mt-6"}>
+      <div className="mt-6">
         {!configured ? (
-          <EmptyState
-            icon={Sparkles}
-            title="Gallery is offline"
-            description="Supabase isn't configured for this deployment. The gallery will populate once env vars land."
-          />
+          <GalleryOffline />
+        ) : (
+          <Suspense fallback={<GallerySkeletonGrid count={PAGE_SIZE} />}>
+            <GalleryResults filters={filters} />
+          </Suspense>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** /gallery/browse — the dynamic search + filter surface. */
+export function GalleryBrowse({ filters }: { filters: ParsedFilters }) {
+  const configured = isSupabaseConfigured();
+
+  return (
+    <div className={FRAME}>
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: "Home", path: "/" },
+          { name: "Gallery", path: "/gallery" },
+          { name: "Browse", path: GALLERY_BROWSE_PATH },
+        ])}
+      />
+      <PageHeader
+        eyebrow="Gallery"
+        title="Browse cards"
+        description="Search every public card by name, rules or flavor text, then narrow by type, rarity, color and tag."
+        actions={
+          <Button asChild variant="outline">
+            <Link href="/gallery">
+              <ArrowLeft className="h-4 w-4" aria-hidden />
+              Back to the gallery
+            </Link>
+          </Button>
+        }
+      />
+
+      {/* Search + filters. The Suspense boundary contains GalleryFilters'
+          useSearchParams() CSR bailout so the shell still server-renders. */}
+      <div className="mt-8">
+        <Suspense fallback={null}>
+          <GalleryFilters />
+        </Suspense>
+      </div>
+
+      <div className="mt-8">
+        {!configured ? (
+          <GalleryOffline />
         ) : (
           // Suspense + skeleton fallback while the server query runs. The
-          // page shell (header + filters) is sent ahead of the streamed
-          // results, so users see a populated frame immediately.
-          // The key forces Suspense to re-suspend when filters change so
-          // the skeletons reappear during the new fetch instead of holding
-          // the previous result.
+          // key forces Suspense to re-suspend when filters change so the
+          // skeletons reappear during the new fetch instead of holding the
+          // previous result.
           <Suspense
-            key={`${filters.raw.type ?? ""}-${filters.raw.rarity ?? ""}-${filters.raw.color ?? ""}-${filters.raw.q ?? ""}-${filters.raw.sort ?? ""}-${filters.raw.source ?? ""}-${filters.raw.tag ?? ""}-${filters.raw.remixes ?? ""}-${page}`}
+            key={`${filters.raw.type ?? ""}-${filters.raw.rarity ?? ""}-${filters.raw.color ?? ""}-${filters.raw.q ?? ""}-${filters.raw.sort ?? ""}-${filters.raw.source ?? ""}-${filters.raw.tag ?? ""}-${filters.raw.remixes ?? ""}-${filters.page}`}
             fallback={<GallerySkeletonGrid count={PAGE_SIZE} />}
           >
             <GalleryResults filters={filters} />
           </Suspense>
         )}
       </div>
+
+      {configured ? (
+        <Suspense fallback={null}>
+          <HubLinks currentType={filters.cardType} />
+        </Suspense>
+      ) : null}
     </div>
+  );
+}
+
+function GalleryOffline() {
+  return (
+    <EmptyState
+      icon={Sparkles}
+      title="Gallery is offline"
+      description="Supabase isn't configured for this deployment. The gallery will populate once env vars land."
+    />
   );
 }
 
@@ -338,7 +391,7 @@ async function GalleryNewest() {
       eyebrow="Just forged"
       heading="Fresh off the forge"
       description="The newest public cards, straight from the creator."
-      href="/gallery?sort=newest"
+      href={`${GALLERY_BROWSE_PATH}?sort=newest`}
       hrefLabel="See all newest"
       cards={newest}
       isAuthed={false}
@@ -358,7 +411,7 @@ async function GalleryResults({ filters }: { filters: ParsedFilters }) {
     sourceScryfallId,
     tag,
   } = filters;
-  // Anonymous mode (public client, no cookie read) keeps the bare route
+  // Anonymous mode (public client, no cookie read) keeps the landing
   // ISR-cacheable. liked_by_viewer comes back false on the cached page;
   // QuickLikeButton re-checks the session cookie at click time and the
   // server action is the real validator.
@@ -407,9 +460,9 @@ async function GalleryResults({ filters }: { filters: ParsedFilters }) {
   const hasMore = cards.length === PAGE_SIZE;
   const hasPrev = page > 1;
 
-  // ItemList only on the canonical default view — every filtered/paged
-  // variant canonicalizes to /gallery, so describing a filtered slice
-  // there would mislabel the page's content.
+  // ItemList only on the unfiltered first page — the landing and the bare
+  // browse page. Every filtered/paged variant canonicalizes to the bare
+  // browse page, so describing a filtered slice there would mislabel it.
   const isCanonicalView =
     page === 1 &&
     !cardType &&
@@ -440,7 +493,7 @@ async function GalleryResults({ filters }: { filters: ParsedFilters }) {
             Showing cards tagged <span className="font-semibold">#{tag}</span>
           </span>
           <Link
-            href="/gallery"
+            href={GALLERY_BROWSE_PATH}
             className="font-mono text-[11px] uppercase tracking-wider text-muted transition-colors hover:text-foreground"
           >
             Clear filter
@@ -454,7 +507,7 @@ async function GalleryResults({ filters }: { filters: ParsedFilters }) {
             Showing remixes of a single Scryfall card.
           </span>
           <Link
-            href="/gallery"
+            href={GALLERY_BROWSE_PATH}
             className="font-mono text-[11px] uppercase tracking-wider text-muted transition-colors hover:text-foreground"
           >
             Clear filter
@@ -466,7 +519,6 @@ async function GalleryResults({ filters }: { filters: ParsedFilters }) {
           <GalleryCardTile key={card.id} card={card} isAuthed={false} />
         ))}
       </div>
-      <HubLinks currentType={filters.cardType} />
       {hasPrev || hasMore ? (
         <div className="mt-10 flex items-center justify-between gap-3 border-t border-border/40 pt-6">
           <span className="text-xs text-subtle">Page {page}</span>

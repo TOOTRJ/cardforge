@@ -52,7 +52,7 @@ export default async function TagHubPage({ params }: { params: Promise<Params> }
   const hub = await resolveTagHub(tag);
   if (!hub) notFound();
   const cards = await listGalleryCards({ tag: hub.tag, sort: "popular", limit: 24, anonymous: true });
-  const galleryHref = `/gallery?tag=${encodeURIComponent(hub.tag)}`;
+  const galleryHref = `/gallery/browse?tag=${encodeURIComponent(hub.tag)}`;
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8">

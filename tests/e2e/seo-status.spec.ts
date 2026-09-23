@@ -52,6 +52,32 @@ test("retired URLs 308 to living pages", async ({ request }) => {
   }
 });
 
+test("filtered landing URLs 308 to the browse sibling with the query intact; junk params stay on the static page", async ({
+  request,
+}) => {
+  for (const [from, to] of [
+    ["/gallery?type=creature&page=2", "/gallery/browse?type=creature&page=2"],
+    ["/gallery?q=dragon", "/gallery/browse?q=dragon"],
+    ["/decks?format=commander", "/decks/browse?format=commander"],
+  ]) {
+    const response = await request.get(from, { maxRedirects: 0 });
+    expect(response.status(), from).toBe(308);
+    const location = new URL(response.headers()["location"], "http://x");
+    expect(location.pathname + location.search, from).toBe(to);
+  }
+  for (const path of ["/gallery?utm_source=x&fbclid=y", "/decks?utm_medium=social"]) {
+    const response = await request.get(path, { maxRedirects: 0 });
+    expect(response.status(), path).toBe(200);
+  }
+  // The bare browse pages are indexable, self-canonical listings; a filtered
+  // variant is noindex + follow.
+  const bare = await (await request.get("/gallery/browse")).text();
+  expect(bare).toMatch(/rel="canonical" href="[^"]*\/gallery\/browse"/);
+  expect(bare).not.toMatch(/name="robots" content="noindex/);
+  const filtered = await (await request.get("/gallery/browse?type=creature")).text();
+  expect(filtered).toMatch(/name="robots" content="noindex, follow"/);
+});
+
 test("robots.txt keeps /create crawlable, blocks auth surfaces, names the sitemap", async ({ request }) => {
   const response = await request.get("/robots.txt");
   expect(response.status()).toBe(200);

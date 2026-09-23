@@ -69,7 +69,7 @@ export type PublicCardListOptions = {
   visibility?: "public" | "unlisted" | "all-shareable";
   /** Scryfall provenance filter (Phase 11 chunk 13). When set, restricts
    *  the result to cards imported from this Scryfall id. Powers the
-   *  /gallery?source=<id> "lineage" view. */
+   *  /gallery/browse?source=<id> "lineage" view. */
   sourceScryfallId?: string;
   /** Filter to cards carrying this tag (the gallery ?tag= view). */
   tag?: string;

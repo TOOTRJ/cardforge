@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { Badge } from "@/components/ui/badge";
 import { QuickLikeButton } from "@/components/cards/quick-like-button";
+import { BrowseSearchBox } from "@/components/browse/browse-search-box";
 import { DecksSearch } from "@/components/decks/decks-search";
 import { DeckFormatLinks } from "@/components/decks/deck-format-links";
 import { breadcrumbJsonLd, JsonLd } from "@/components/seo/json-ld";
@@ -23,20 +24,25 @@ import {
 import { firstString } from "@/lib/routing/search-params";
 
 // ---------------------------------------------------------------------------
-// DecksView — the shared body of the community decks browse.
+// The community decks browse is two routes with one result grid:
 //
-// Rendered from two routes so the anonymous-heavy default view stays on the
-// CDN (see lib/routing/browse-params.ts):
-//   - /decks          → static/ISR, never reads searchParams, default view
-//   - /decks/browse   → dynamic, parses searchParams (reached via the
-//                       proxy.ts rewrite when q/format/sort/page params are
-//                       present — the visitor's URL stays /decks?…)
+//   - /decks (DecksLanding) → static/ISR. Search box + browse-by-format chips
+//     on top, then the newest public decks. Never reads searchParams, so it
+//     stays on the CDN.
+//   - /decks/browse (DecksBrowse) → dynamic. Search + format chips and the
+//     results; every search/filter/page control navigates WITHIN this route
+//     (see lib/routing/browse-params.ts for why the landing can't host them).
 //
 // All reads are anonymous (public client, no cookies); like-state hydrates
 // client-side (QuickLikeButton re-checks the session cookie at click time).
 // ---------------------------------------------------------------------------
 
 const PAGE_SIZE = 24;
+
+/** The one place search, the format filter and paging live. */
+export const DECKS_BROWSE_PATH = "/decks/browse";
+
+const FRAME = "mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8";
 
 export type DecksViewParams = {
   page: number;
@@ -60,11 +66,15 @@ export function parseDecksParams(
   return { page, search, format, sort };
 }
 
-export function DecksView({ page, search, format, sort }: DecksViewParams) {
+const DECKS_DESCRIPTION =
+  "MTG decks rebuilt with custom cards — Commander brews, Standard ladders, and kitchen-table classics remixed by PipGlyph forgers. Open one to see the originals side by side with their proxies.";
+
+/** /decks — the static landing. */
+export function DecksLanding() {
   const configured = isSupabaseConfigured();
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+    <div className={FRAME}>
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Home", path: "/" },
@@ -74,7 +84,7 @@ export function DecksView({ page, search, format, sort }: DecksViewParams) {
       <PageHeader
         eyebrow="Public"
         title="Community decks"
-        description="MTG decks rebuilt with custom cards — Commander brews, Standard ladders, and kitchen-table classics remixed by PipGlyph forgers. Open one to see the originals side by side with their proxies."
+        description={DECKS_DESCRIPTION}
         actions={
           <Button asChild>
             <Link href="/dashboard/decks/new">Build a deck</Link>
@@ -82,22 +92,81 @@ export function DecksView({ page, search, format, sort }: DecksViewParams) {
         }
       />
 
+      {/* Search + browse-by first: a search is a navigation to the browse
+          route, and the format chips are the crawlable way in. */}
+      <div className="mt-8">
+        <BrowseSearchBox
+          browsePath={DECKS_BROWSE_PATH}
+          placeholder="Search decks by name or description"
+          label="Search decks"
+          browseLabel="Browse all decks"
+        />
+      </div>
+      {configured ? (
+        <Suspense fallback={null}>
+          <DeckFormatLinks placement="top" />
+        </Suspense>
+      ) : null}
+
+      <div className="mt-10 flex flex-col gap-1">
+        <h2 className="font-display text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+          Newest public decks
+        </h2>
+        <p className="max-w-2xl text-sm leading-6 text-muted">
+          The latest builds published by the community.
+        </p>
+      </div>
+      <div className="mt-6">
+        {!configured ? (
+          <DecksOffline />
+        ) : (
+          <Suspense fallback={<DecksSkeletonGrid count={PAGE_SIZE} />}>
+            <PublicDecksResults page={1} sort="recent" />
+          </Suspense>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** /decks/browse — the dynamic search + filter surface. */
+export function DecksBrowse({ page, search, format, sort }: DecksViewParams) {
+  const configured = isSupabaseConfigured();
+
+  return (
+    <div className={FRAME}>
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: "Home", path: "/" },
+          { name: "Community decks", path: "/decks" },
+          { name: "Browse", path: DECKS_BROWSE_PATH },
+        ])}
+      />
+      <PageHeader
+        eyebrow="Community decks"
+        title="Browse decks"
+        description="Search every public deck by name or description and narrow by format."
+        actions={
+          <Button asChild variant="outline">
+            <Link href="/decks">
+              <ArrowLeft className="h-4 w-4" aria-hidden />
+              Back to decks
+            </Link>
+          </Button>
+        }
+      />
+
       {/* The Suspense boundary contains DecksSearch's useSearchParams() CSR
-          bailout — without it the entire prerendered page deopts to an
-          empty client-rendered shell. */}
+          bailout so the shell still server-renders. */}
       <div className="mt-8">
         <Suspense fallback={null}>
           <DecksSearch />
         </Suspense>
       </div>
 
-      <div className="mt-10">
+      <div className="mt-8">
         {!configured ? (
-          <EmptyState
-            icon={Sparkles}
-            title="Decks are offline"
-            description="Supabase isn't configured for this deployment. The decks browse will populate once env vars land."
-          />
+          <DecksOffline />
         ) : (
           <Suspense
             key={`${search ?? ""}-${format ?? ""}-${sort}-${page}`}
@@ -112,7 +181,23 @@ export function DecksView({ page, search, format, sort }: DecksViewParams) {
           </Suspense>
         )}
       </div>
+
+      {configured ? (
+        <Suspense fallback={null}>
+          <DeckFormatLinks current={format} />
+        </Suspense>
+      ) : null}
     </div>
+  );
+}
+
+function DecksOffline() {
+  return (
+    <EmptyState
+      icon={Sparkles}
+      title="Decks are offline"
+      description="Supabase isn't configured for this deployment. The decks browse will populate once env vars land."
+    />
   );
 }
 
@@ -127,7 +212,7 @@ async function PublicDecksResults({
   format?: DeckFormat;
   sort: PublicDecksSort;
 }) {
-  // Anonymous mode (public client, no cookie read) keeps the bare route
+  // Anonymous mode (public client, no cookie read) keeps the landing
   // ISR-cacheable. liked_by_viewer is false on the cached page; the
   // QuickLikeButton re-checks the session cookie at click time.
   const decks = await listPublicDecks({
@@ -160,6 +245,8 @@ async function PublicDecksResults({
 
   const hasMore = decks.length === PAGE_SIZE;
   const hasPrev = page > 1;
+  // Page links stay within the browse route — the landing is static and
+  // would ignore (and, via proxy.ts, 308 away from) the query.
   const pageHref = (p: number) => {
     const parts = [
       search ? `q=${encodeURIComponent(search)}` : "",
@@ -167,7 +254,7 @@ async function PublicDecksResults({
       sort !== "recent" ? `sort=${sort}` : "",
       p > 1 ? `page=${p}` : "",
     ].filter(Boolean);
-    return parts.length ? `/decks?${parts.join("&")}` : "/decks";
+    return parts.length ? `${DECKS_BROWSE_PATH}?${parts.join("&")}` : DECKS_BROWSE_PATH;
   };
 
   return (
@@ -177,7 +264,6 @@ async function PublicDecksResults({
           <PublicDeckTile key={deck.id} deck={deck} />
         ))}
       </div>
-      <DeckFormatLinks current={format} />
       {hasPrev || hasMore ? (
         <div className="mt-10 flex items-center justify-between gap-3 border-t border-border/40 pt-6">
           <span className="text-xs text-subtle">Page {page}</span>
