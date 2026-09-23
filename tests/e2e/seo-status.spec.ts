@@ -45,6 +45,7 @@ test("retired URLs 308 to living pages", async ({ request }) => {
     ["/sets", "/decks"],
     ["/set/anything-at-all", "/decks"],
     ["/set/anything/edit", "/decks"],
+    ["/pricing-member", "/pricing"],
   ]) {
     const response = await request.get(from, { maxRedirects: 0 });
     expect(response.status(), from).toBe(308);

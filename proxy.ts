@@ -31,6 +31,13 @@ export async function proxy(request: NextRequest) {
     url.pathname = "/create";
     return NextResponse.redirect(url, 308);
   }
+  // /pricing-member is the internal, signed-in twin of /pricing (see below);
+  // it is only ever reached by rewrite.
+  if (requestPath === "/pricing-member") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/pricing";
+    return NextResponse.redirect(url, 308);
+  }
   // The sets feature was removed (PR #337, migration 0105) after months of
   // inbound links and indexed copy for /sets and /set/<slug>. Send that
   // equity to the nearest living collection surface instead of 404ing.
@@ -61,6 +68,30 @@ export async function proxy(request: NextRequest) {
   }
 
   const sessionResponse = await updateSession(request);
+
+  // /pricing is a static (ISR) storefront for anonymous visitors. A visitor
+  // with a session cookie is rewritten to the dynamic pricing-member route,
+  // which resolves their plan on the server and renders their real buttons
+  // into the HTML — the static page used to render the anonymous buttons
+  // first and swap them after a client fetch ("the button flashes and the
+  // text changes", 2026-09-22). The visible URL stays /pricing; the cookie is
+  // a hint and the member page re-validates the session itself. (A path
+  // rewrite keyed on a cookie is the /create pattern — unlike the retired
+  // query-keyed browse rewrite, the client router handles it.)
+  if (
+    request.nextUrl.pathname === "/pricing" &&
+    request.cookies.getAll().some((c) => isSupabaseAuthCookieName(c.name)) &&
+    !sessionResponse.headers.has("location")
+  ) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/pricing-member";
+    const rewritten = NextResponse.rewrite(url, { request });
+    // Preserve any auth cookies updateSession refreshed on this response.
+    for (const cookie of sessionResponse.cookies.getAll()) {
+      rewritten.cookies.set(cookie);
+    }
+    return rewritten;
+  }
 
   // /gallery and /decks are prerendered (ISR) landings that never read
   // searchParams; searching, filtering, sorting and paging live on their

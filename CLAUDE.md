@@ -233,9 +233,14 @@ Rules and gotchas:
   deploy of a green merge failed inside that loader
   (`tests/unit/content/fonts-self-hosted.test.ts` guards it).
 - Billing storefront: `/pricing` and the upgrade modal pick every button from
-  `pricingCtaFor()` (`components/billing/pricing-cta.ts`) fed by
-  `useBillingViewer()` (/api/me: `hasBillingAccount`, `hasLiveSubscription`,
-  `hasSubscribed`, effective `tier`). `isPaid` is NOT "has a subscription" —
+  `pricingCtaFor()` (`components/billing/pricing-cta.ts`) fed by a
+  `BillingViewer` (`lib/billing/viewer.ts`: `hasBillingAccount`,
+  `hasLiveSubscription`, `hasSubscribed`, effective `tier`). `/pricing` is
+  the static ANONYMOUS storefront; `proxy.ts` rewrites a visitor with a
+  session cookie to the dynamic `app/(marketing)/pricing-member` twin, which
+  resolves the viewer on the server and passes `initialViewer` — so the HTML
+  carries the right buttons and nothing flashes (a client-side /api/me swap
+  is only for the upgrade modal). `isPaid` is NOT "has a subscription" —
   admins and comped accounts are paid with no Stripe customer, and offering
   them "Manage plan" opened a portal that doesn't exist (2026-09-22). One
   trial per account, Plus or Pro: `createCheckoutSessionAction` grants

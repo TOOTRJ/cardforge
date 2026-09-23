@@ -11,6 +11,8 @@ import { NextRequest, NextResponse } from "next/server";
 //     dynamic /browse sibling (query intact); junk params keep the
 //     CDN-cached page. A rewrite would be invisible to the client router,
 //     which reuses the cached static tree for same-path query changes;
+//   * a signed-in /pricing is rewritten to the dynamic pricing-member twin
+//     (server-rendered buttons, no anonymous flash); the internal path 308s;
 //   * a redirect from updateSession is never clobbered.
 // ---------------------------------------------------------------------------
 
@@ -89,6 +91,23 @@ describe("proxy", () => {
     }
     // Sets were removed 2026-09-22 — the path itself 308s to /decks.
     expect(locationOf(await proxy(request("/sets?q=alpha")))).toBe("http://localhost:3000/decks");
+  });
+
+  it("rewrites a signed-in /pricing to the member twin (query intact) and leaves anonymous /pricing static", async () => {
+    const member = await proxy(request("/pricing?billing=cancel", "sb-abcdefgh-auth-token.0=eyJ; other=1"));
+    expect(rewriteOf(member)).toBe("http://localhost:3000/pricing-member?billing=cancel");
+    expect(member.status).toBe(200);
+
+    const anonymous = await proxy(request("/pricing"));
+    expect(rewriteOf(anonymous)).toBeNull();
+    expect(locationOf(anonymous)).toBeNull();
+  });
+
+  it("308s the internal /pricing-member path back to /pricing", async () => {
+    const response = await proxy(request("/pricing-member", "sb-abcdefgh-auth-token.0=eyJ"));
+    expect(response.status).toBe(308);
+    expect(locationOf(response)).toBe("http://localhost:3000/pricing");
+    expect(s.updateSession).not.toHaveBeenCalled();
   });
 
   it("never clobbers a redirect that updateSession issued", async () => {

@@ -67,6 +67,15 @@ test.describe("pricing page — signed in", () => {
     page,
   }) => {
     await signIn(page, { as: "free" });
+    // The SERVER response for a signed-in visitor already carries their
+    // buttons (proxy.ts → pricing-member): no anonymous storefront first, no
+    // text swap after hydration.
+    const html = await (await page.request.get("/pricing")).text();
+    expect(html).toContain("Try Plus free for 7 days");
+    expect(html).toContain("Your current plan");
+    expect(html).not.toContain("Start free — 7-day trial");
+    expect(html).not.toContain("Get started free");
+
     await page.goto("/pricing");
     await expect(page.getByText("Your current plan")).toBeVisible();
     await expect(page.getByRole("button", { name: /try plus free for 7 days/i })).toBeVisible();

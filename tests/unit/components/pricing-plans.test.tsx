@@ -68,6 +68,30 @@ describe("PricingPlans", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
+  it("a server-provided viewer renders the signed-in buttons on the FIRST render, with no fetch and no anonymous flash", () => {
+    s.signedIn = true;
+    render(
+      <PricingPlans
+        initialViewer={{
+          loaded: true,
+          isSignedIn: true,
+          isPaid: true,
+          currentTier: "pro",
+          hasSubscribed: false,
+          hasBillingAccount: false,
+          hasLiveSubscription: false,
+          subscriptionStatus: null,
+        }}
+      />,
+    );
+    // Synchronous assertions: what the server HTML carries is what shows.
+    expect(screen.getByText("Your current plan")).toBeTruthy();
+    expect(button(/try plus free for 7 days/i)).toBeTruthy();
+    expect(screen.queryByRole("link", { name: /start free — 7-day trial/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /manage plan/i })).toBeNull();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it("free account: 'Your current plan' on Free, trial checkouts on Plus and Pro, no portal button", async () => {
     s.signedIn = true;
     s.me = freeUser;

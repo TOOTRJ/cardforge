@@ -10,19 +10,20 @@ import { CheckoutButton } from "./checkout-button";
 import { ManageBillingButton } from "./manage-billing-button";
 import { pricingCtaFor } from "./pricing-cta";
 import { useBillingViewer } from "./use-billing-viewer";
+import type { BillingViewer } from "@/lib/billing/viewer";
 
 // Client wrapper for the pricing grid: owns the monthly/annual toggle and emits
 // the right CTA per plan (signup link / Stripe checkout / portal) from the
 // pricingCtaFor table. Enforcement is all server-side; this is the storefront.
 //
-// Server HTML (and first client render) is the anonymous storefront — byte-
-// identical for every visitor, so /pricing lives on the CDN. After hydration,
-// a session cookie triggers a /api/me fetch (useBillingViewer) that swaps in
-// the signed-in CTAs. The brief anonymous flash for signed-in viewers is the
-// deliberate trade for a cacheable page.
-export function PricingPlans() {
+// Anonymous visitors get the static/ISR storefront (no viewer → the hook
+// resolves "anonymous" without a fetch). Signed-in visitors never see it:
+// proxy.ts rewrites their /pricing to the dynamic pricing-member route, which
+// passes the viewer it resolved on the server, so the HTML already carries
+// their buttons — no anonymous-first flash, no text swap after hydration.
+export function PricingPlans({ initialViewer }: { initialViewer?: BillingViewer }) {
   const [period, setPeriod] = useState<BillingPeriod>("monthly");
-  const viewer = useBillingViewer();
+  const viewer = useBillingViewer({ initial: initialViewer });
 
   function ctaFor(tier: PlanTier, featured?: boolean): React.ReactNode {
     const variant = featured ? "primary" : "outline";
