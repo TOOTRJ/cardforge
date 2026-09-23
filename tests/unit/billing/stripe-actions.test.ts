@@ -27,13 +27,22 @@ const s = vi.hoisted(() => ({
     id: string;
     status: string;
     trial_end?: number | null;
-    items: { data: Array<{ id?: string; price: { id: string } }> };
+    cancel_at_period_end?: boolean;
+    schedule?: string | null;
+    items: {
+      data: Array<{ id?: string; price: { id: string; recurring?: { interval: string } } }>;
+    };
   },
   delinquent: null as null | { id: string; status: string },
   history: [] as Array<{ id: string; status?: string }>,
   historyThrows: false,
   checkoutThrows: false,
   subscriptionsList: vi.fn(),
+  subscriptionsUpdate: vi.fn(),
+  subscriptionsRetrieve: vi.fn(),
+  scheduleCreate: vi.fn(),
+  scheduleUpdate: vi.fn(),
+  scheduleRelease: vi.fn(),
   customersCreate: vi.fn(),
   checkoutCreate: vi.fn(),
   portalCreate: vi.fn(),
@@ -69,7 +78,16 @@ vi.mock("@/lib/stripe/client", () => ({
         data: [{ id: `price_${lookup_keys[0]}` }],
       }),
     },
-    subscriptions: { list: (args: unknown) => s.subscriptionsList(args) },
+    subscriptions: {
+      list: (args: unknown) => s.subscriptionsList(args),
+      update: s.subscriptionsUpdate,
+      retrieve: s.subscriptionsRetrieve,
+    },
+    subscriptionSchedules: {
+      create: s.scheduleCreate,
+      update: s.scheduleUpdate,
+      release: s.scheduleRelease,
+    },
     checkout: { sessions: { create: s.checkoutCreate } },
     billingPortal: { sessions: { create: s.portalCreate } },
   }),
@@ -81,9 +99,19 @@ vi.mock("@/lib/stripe/config", () => ({
 vi.mock("@/lib/stripe/subscription-sync", () => ({
   findLiveSubscription: async () => s.live,
   findDelinquentSubscription: async () => s.delinquent,
+  // The mocked catalog's ids spell their tier ("price_pro_annual").
+  resolveSubscriptionTier: async (sub: { items: { data: Array<{ price: { id: string } }> } }) => {
+    const id = sub.items.data[0]?.price.id ?? "";
+    return id.includes("pro") ? "pro" : id.includes("plus") ? "plus" : null;
+  },
 }));
 
-import { createCheckoutSessionAction, createPortalSessionAction } from "@/lib/stripe/actions";
+import {
+  cancelScheduledPlanChangeAction,
+  createCheckoutSessionAction,
+  createPortalSessionAction,
+} from "@/lib/stripe/actions";
+import { isPlanDowngrade } from "@/lib/billing/plan-change";
 import { clearPriceCache } from "@/lib/stripe/prices";
 
 const USER = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
@@ -108,6 +136,20 @@ beforeEach(() => {
     if (s.historyThrows) throw new Error("stripe down");
     return { data: s.history };
   });
+  s.subscriptionsUpdate.mockReset().mockResolvedValue({});
+  s.subscriptionsRetrieve.mockReset().mockImplementation(async () => s.live);
+  s.scheduleCreate.mockReset().mockResolvedValue({
+    id: "sub_sched_1",
+    phases: [
+      {
+        start_date: 1_790_000_000,
+        end_date: 1_792_600_000,
+        items: [{ price: { id: "price_pro_monthly" }, quantity: 1 }],
+      },
+    ],
+  });
+  s.scheduleUpdate.mockReset().mockResolvedValue({ id: "sub_sched_1" });
+  s.scheduleRelease.mockReset().mockResolvedValue({ id: "sub_sched_1" });
   s.customersCreate.mockReset().mockResolvedValue({ id: "cus_new" });
   s.checkoutCreate.mockReset().mockImplementation(async () => {
     if (s.checkoutThrows) throw new Error("stripe down");
@@ -227,27 +269,117 @@ describe("createCheckoutSessionAction", () => {
     expect(params).not.toHaveProperty("payment_method_collection");
   });
 
-  it("downgrades Pro → Plus (and annual ↔ monthly) in place through the same portal confirm flow", async () => {
-    s.live = { id: "sub_live", status: "active", items: { data: [{ id: "si_1", price: { id: "price_pro_monthly" } }] } };
+  it("schedules a DOWNGRADE (Pro → Plus) for the end of the paid period: schedule from the subscription, current phase kept as is, one phase on the new price, then release", async () => {
+    s.live = {
+      id: "sub_live",
+      status: "active",
+      items: { data: [{ id: "si_1", price: { id: "price_pro_monthly", recurring: { interval: "month" } } }] },
+    };
     const down = await createCheckoutSessionAction({ kind: "subscription", tier: "plus" });
-    expect(down).toEqual({ ok: true, url: "https://portal.test/session" });
+    expect(down).toEqual({ ok: true, url: "https://test.local/dashboard/billing?billing=scheduled" });
+    expect(s.scheduleCreate).toHaveBeenCalledWith({ from_subscription: "sub_live" });
+    expect(s.scheduleUpdate).toHaveBeenCalledWith("sub_sched_1", {
+      end_behavior: "release",
+      phases: [
+        {
+          start_date: 1_790_000_000,
+          end_date: 1_792_600_000,
+          items: [{ price: "price_pro_monthly", quantity: 1 }],
+        },
+        {
+          items: [{ price: "price_plus_monthly", quantity: 1 }],
+          duration: { interval: "month", interval_count: 1 },
+          proration_behavior: "none",
+        },
+      ],
+    });
+    // Nothing charged or credited now, no portal, no second subscription.
+    expect(s.portalCreate).not.toHaveBeenCalled();
+    expect(s.checkoutCreate).not.toHaveBeenCalled();
+    expect(s.scheduleRelease).not.toHaveBeenCalled();
+    expect(s.subscriptionsUpdate).not.toHaveBeenCalled();
+  });
+
+  it("annual → monthly on the same tier is a downgrade (scheduled, a one-year phase is not); monthly → annual is an upgrade (portal, at once)", async () => {
+    s.live = {
+      id: "sub_live",
+      status: "active",
+      items: { data: [{ id: "si_1", price: { id: "price_pro_annual", recurring: { interval: "year" } } }] },
+    };
+    const toMonthly = await createCheckoutSessionAction({ kind: "subscription", tier: "pro", period: "monthly" });
+    expect(toMonthly).toEqual({ ok: true, url: "https://test.local/dashboard/billing?billing=scheduled" });
+    expect(s.scheduleUpdate.mock.calls[0]?.[1].phases[1]).toMatchObject({
+      items: [{ price: "price_pro_monthly", quantity: 1 }],
+      duration: { interval: "month", interval_count: 1 },
+    });
+    expect(s.portalCreate).not.toHaveBeenCalled();
+
+    s.scheduleCreate.mockClear();
+    s.live = {
+      id: "sub_live",
+      status: "active",
+      items: { data: [{ id: "si_1", price: { id: "price_pro_monthly", recurring: { interval: "month" } } }] },
+    };
+    const toAnnual = await createCheckoutSessionAction({ kind: "subscription", tier: "pro", period: "annual" });
+    expect(toAnnual).toEqual({ ok: true, url: "https://portal.test/session" });
     expect(s.portalCreate.mock.calls[0]?.[0]).toMatchObject({
       return_url: "https://test.local/dashboard/billing",
       flow_data: {
-        subscription_update_confirm: { subscription: "sub_live", items: [{ id: "si_1", price: "price_plus_monthly", quantity: 1 }] },
+        subscription_update_confirm: { subscription: "sub_live", items: [{ id: "si_1", price: "price_pro_annual", quantity: 1 }] },
         after_completion: { type: "redirect", redirect: { return_url: "https://test.local/dashboard?billing=success" } },
       },
     });
-    s.portalCreate.mockClear();
-    const period = await createCheckoutSessionAction({ kind: "subscription", tier: "pro", period: "annual" });
-    expect(period.ok).toBe(true);
-    expect(s.portalCreate.mock.calls[0]?.[0].flow_data.subscription_update_confirm.items[0].price).toBe("price_pro_annual");
-    expect(s.checkoutCreate).not.toHaveBeenCalled();
+    expect(s.scheduleCreate).not.toHaveBeenCalled();
+  });
+
+  it("a downgrade replaces a pending one and un-cancels a plan set to end — the click asked for Plus after this period, not nothing", async () => {
+    s.live = {
+      id: "sub_live",
+      status: "active",
+      cancel_at_period_end: true,
+      schedule: "sub_sched_old",
+      items: { data: [{ id: "si_1", price: { id: "price_pro_monthly", recurring: { interval: "month" } } }] },
+    };
+    const result = await createCheckoutSessionAction({ kind: "subscription", tier: "plus" });
+    expect(result.ok).toBe(true);
+    expect(s.scheduleRelease).toHaveBeenCalledWith("sub_sched_old");
+    expect(s.subscriptionsUpdate).toHaveBeenCalledWith("sub_live", { cancel_at_period_end: false });
+    expect(s.scheduleCreate).toHaveBeenCalledWith({ from_subscription: "sub_live" });
+    // Order: release → un-cancel → new schedule (Stripe refuses a schedule
+    // on a subscription that already has one or is set to cancel).
+    const order = [s.scheduleRelease, s.subscriptionsUpdate, s.scheduleCreate].map(
+      (fn) => fn.mock.invocationCallOrder[0],
+    );
+    expect(order).toEqual([...order].sort((a, b) => a - b));
+  });
+
+  it("an UPGRADE drops a pending downgrade first, then confirms in the portal (a scheduled subscription can't be updated there)", async () => {
+    s.live = {
+      id: "sub_live",
+      status: "active",
+      schedule: "sub_sched_old",
+      items: { data: [{ id: "si_1", price: { id: "price_plus_monthly", recurring: { interval: "month" } } }] },
+    };
+    const result = await createCheckoutSessionAction({ kind: "subscription", tier: "pro" });
+    expect(result).toEqual({ ok: true, url: "https://portal.test/session" });
+    expect(s.scheduleRelease).toHaveBeenCalledWith("sub_sched_old");
+    expect(s.scheduleRelease.mock.invocationCallOrder[0]).toBeLessThan(s.portalCreate.mock.invocationCallOrder[0]);
+    expect(s.scheduleCreate).not.toHaveBeenCalled();
+  });
+
+  it("isPlanDowngrade: lower tier, or annual → monthly on the same tier; an unknown current price counts as an upgrade", () => {
+    expect(isPlanDowngrade({ tier: "pro", interval: "month" }, { tier: "plus", period: "monthly" })).toBe(true);
+    expect(isPlanDowngrade({ tier: "pro", interval: "year" }, { tier: "plus", period: "annual" })).toBe(true);
+    expect(isPlanDowngrade({ tier: "pro", interval: "year" }, { tier: "pro", period: "monthly" })).toBe(true);
+    expect(isPlanDowngrade({ tier: "pro", interval: "month" }, { tier: "pro", period: "annual" })).toBe(false);
+    expect(isPlanDowngrade({ tier: "plus", interval: "year" }, { tier: "pro", period: "monthly" })).toBe(false);
+    expect(isPlanDowngrade({ tier: "plus", interval: "month" }, { tier: "pro", period: "annual" })).toBe(false);
+    expect(isPlanDowngrade({ tier: null, interval: "month" }, { tier: "plus", period: "monthly" })).toBe(false);
   });
 
   it("refuses a plan switch it can't address (no subscription item)", async () => {
-    s.live = { id: "sub_live", status: "active", items: { data: [{ price: { id: "price_pro_monthly" } }] } };
-    expect(await createCheckoutSessionAction({ kind: "subscription", tier: "plus" })).toEqual({
+    s.live = { id: "sub_live", status: "active", items: { data: [{ price: { id: "price_plus_monthly" } }] } };
+    expect(await createCheckoutSessionAction({ kind: "subscription", tier: "pro" })).toEqual({
       ok: false,
       error: "Couldn't read your current plan.",
     });
@@ -344,6 +476,41 @@ describe("createCheckoutSessionAction", () => {
     expect(await createCheckoutSessionAction({ kind: "pack", pack: "large" })).toEqual({
       ok: false,
       error: "Stripe checkout failed. Please try again.",
+    });
+  });
+});
+
+describe("cancelScheduledPlanChangeAction", () => {
+  it("releases the schedule on the profile's subscription and lands back on the billing page", async () => {
+    s.profile = { stripe_customer_id: "cus_1", stripe_subscription_id: "sub_live" };
+    s.live = { id: "sub_live", status: "active", schedule: "sub_sched_1", items: { data: [] } };
+    expect(await cancelScheduledPlanChangeAction()).toEqual({
+      ok: true,
+      url: "https://test.local/dashboard/billing?billing=kept",
+    });
+    expect(s.subscriptionsRetrieve).toHaveBeenCalledWith("sub_live");
+    expect(s.scheduleRelease).toHaveBeenCalledWith("sub_sched_1");
+  });
+
+  it("reports when there is nothing scheduled, and needs a subscription + a signed-in user", async () => {
+    s.profile = { stripe_customer_id: "cus_1", stripe_subscription_id: "sub_live" };
+    s.live = { id: "sub_live", status: "active", schedule: null, items: { data: [] } };
+    expect(await cancelScheduledPlanChangeAction()).toEqual({ ok: false, error: "There's no scheduled plan change." });
+    expect(s.scheduleRelease).not.toHaveBeenCalled();
+
+    s.profile = { stripe_customer_id: "cus_1", stripe_subscription_id: null };
+    expect((await cancelScheduledPlanChangeAction()).ok).toBe(false);
+    s.user = null;
+    expect((await cancelScheduledPlanChangeAction()).ok).toBe(false);
+  });
+
+  it("turns a Stripe failure into a friendly error", async () => {
+    s.profile = { stripe_customer_id: "cus_1", stripe_subscription_id: "sub_live" };
+    s.live = { id: "sub_live", status: "active", schedule: "sub_sched_1", items: { data: [] } };
+    s.scheduleRelease.mockRejectedValueOnce(new Error("stripe down"));
+    expect(await cancelScheduledPlanChangeAction()).toEqual({
+      ok: false,
+      error: "Couldn't cancel the plan change. Try again.",
     });
   });
 });

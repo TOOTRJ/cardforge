@@ -66,6 +66,7 @@ describe("summarizeBillingDetails", () => {
       currentPeriodEnd: "2026-10-23T02:26:40.000Z",
       trialEnd: null,
       cancelAtPeriodEnd: false,
+      pendingChange: null,
     });
     expect(details.paymentMethod).toEqual({ brand: "visa", last4: "4242", expMonth: 12, expYear: 2034 });
     // Drafts are Stripe's in-progress objects, never something to show.
@@ -105,6 +106,72 @@ describe("summarizeBillingDetails", () => {
     expect(details.subscription).toBeNull();
     expect(details.paymentMethod).toBeNull();
     expect(details.invoices[0]).toMatchObject({ status: "open", amountCents: 1500 });
+  });
+});
+
+describe("summarizeBillingDetails — scheduled downgrade", () => {
+  // The shape lib/stripe/actions.ts scheduleDowngrade leaves behind, read
+  // back with expand: ["schedule.phases.items.price"].
+  const farFuture = Math.floor(Date.now() / 1000) + 20 * 24 * 60 * 60;
+  const schedule = {
+    current_phase: { start_date: farFuture - 30 * 24 * 60 * 60, end_date: farFuture },
+    phases: [
+      {
+        start_date: farFuture - 30 * 24 * 60 * 60,
+        end_date: farFuture,
+        items: [{ price: { id: "price_pro", unit_amount: 1500, currency: "usd", recurring: { interval: "month" }, lookup_key: "pro_monthly" }, quantity: 1 }],
+      },
+      {
+        start_date: farFuture,
+        end_date: farFuture + 30 * 24 * 60 * 60,
+        items: [{ price: { id: "price_plus", unit_amount: 600, currency: "usd", recurring: { interval: "month" }, lookup_key: "plus_monthly" }, quantity: 1 }],
+      },
+    ],
+  };
+
+  it("reads the NEXT phase's price, tier and start date", () => {
+    const details = summarizeBillingDetails({
+      customer: null,
+      subscription: { ...paidSubscription, schedule },
+      invoices: [],
+    });
+    expect(details.subscription?.pendingChange).toEqual({
+      startsAt: new Date(farFuture * 1000).toISOString(),
+      tier: "plus",
+      interval: "month",
+      amountCents: 600,
+      currency: "usd",
+    });
+  });
+
+  it("no schedule, an unexpanded schedule id, or a schedule with nothing after the current phase → no pending change", () => {
+    const of = (value: unknown) =>
+      summarizeBillingDetails({
+        customer: null,
+        subscription: { ...paidSubscription, schedule: value as never },
+        invoices: [],
+      }).subscription?.pendingChange;
+    expect(of(null)).toBeNull();
+    expect(of("sub_sched_1")).toBeNull();
+    expect(of({ ...schedule, phases: schedule.phases.slice(0, 1) })).toBeNull();
+  });
+
+  it("an unexpanded price still yields the date, with no tier or amount", () => {
+    const details = summarizeBillingDetails({
+      customer: null,
+      subscription: {
+        ...paidSubscription,
+        schedule: { ...schedule, phases: [schedule.phases[0], { ...schedule.phases[1], items: [{ price: "price_plus" }] }] },
+      },
+      invoices: [],
+    });
+    expect(details.subscription?.pendingChange).toEqual({
+      startsAt: new Date(farFuture * 1000).toISOString(),
+      tier: null,
+      interval: null,
+      amountCents: null,
+      currency: "usd",
+    });
   });
 });
 

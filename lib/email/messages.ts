@@ -119,6 +119,73 @@ export function teamMessageEmail(
   };
 }
 
+// --- Trial ending (account list) ---------------------------------------------------
+
+export function trialEndingEmail(
+  recipient: Recipient,
+  input: {
+    /** "Plus" | "Pro" */
+    plan: string;
+    /** ISO timestamp of the trial's end. */
+    trialEndsAt: string;
+    /** A card (or other payment method) is on file — the plan converts. */
+    hasPaymentMethod: boolean;
+    /** "$6 / month" — null when the price isn't known. */
+    priceLabel: string | null;
+  },
+): OutgoingEmail {
+  const site = getSiteBaseUrl();
+  const f = footer(
+    "account",
+    recipient,
+    "You're receiving this because your PipGlyph free trial is about to end.",
+  );
+  const date = new Date(input.trialEndsAt).toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+  const plan = escapeHtml(input.plan);
+  const price = input.priceLabel ? escapeHtml(input.priceLabel) : null;
+  const cta = { label: "Open billing", url: `${site}/dashboard/billing` };
+  const subject = input.hasPaymentMethod
+    ? `Your PipGlyph ${input.plan} trial ends ${date}`
+    : `Your PipGlyph ${input.plan} trial ends ${date} — add a card to keep it`;
+  const paragraphs = input.hasPaymentMethod
+    ? [
+        `Your free ${plan} trial ends on <strong>${date}</strong>. From then on your card is charged ${price ?? "the plan price"} and everything stays exactly as it is: your credits refill every month, downloads stay clean and hi-res, and your cards stay where they are.`,
+        "Want to change plans or cancel first? Both take one click on the billing page — cancel any time before the date and you won't be charged.",
+      ]
+    : [
+        `Your free ${plan} trial ends on <strong>${date}</strong>. There's no card on your account yet, so the plan will simply end then — nothing is charged.`,
+        `To keep ${plan}${price ? ` (${price})` : ""}, add a card before the date. Either way, every card you've made stays yours.`,
+      ];
+  return {
+    to: recipient.email,
+    subject,
+    headers: f.headers,
+    html: renderEmailLayout({
+      siteUrl: site,
+      preheader: input.hasPaymentMethod
+        ? `Your ${input.plan} trial converts on ${date}.`
+        : `Add a card before ${date} to keep ${input.plan}.`,
+      heading: `Your ${plan} trial ends ${escapeHtml(date)}`,
+      paragraphs,
+      cta,
+      footerNote: f.footerNote,
+      unsubscribeUrl: f.unsubscribeUrl,
+      settingsUrl: f.settingsUrl,
+    }),
+    text: renderEmailText({
+      heading: `Your ${input.plan} trial ends ${date}`,
+      lines: paragraphs.map((p) => p.replace(/<[^>]+>/g, "")),
+      cta,
+      footerNote: f.footerNote,
+      unsubscribeUrl: f.unsubscribeUrl,
+    }),
+  };
+}
+
 // --- Activity digest (activity list) -----------------------------------------------
 
 export type DigestLine = { subject: string; body: string; href: string };

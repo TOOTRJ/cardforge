@@ -132,4 +132,27 @@ describe("describeNotification — deck generated", () => {
     expect(d.body).toBe('"Gorgon Gaze" finished generating — 99 cards ready, 1 needs a retry.');
     expect(d.href).toBe("/deck/gorgon-gaze");
   });
+
+  it("warns about a trial ending — honest about whether a card is on file — and links to billing", () => {
+    const base = { actor: null, card: null, threadId: null, type: "trial_ending" };
+    const withCard = describeNotification(
+      { ...base, payload: { tier: "pro", trialEnd: "2026-09-29T12:00:00Z", hasPaymentMethod: true } },
+      { isAdmin: false },
+    );
+    expect(withCard.subject).toBe("Your Pro trial");
+    expect(withCard.body).toBe("ends on Sep 29, 2026 — your card is charged then; change or cancel any time.");
+    expect(withCard.href).toBe("/dashboard/billing");
+
+    const noCard = describeNotification(
+      { ...base, payload: { tier: "plus", trialEnd: "2026-09-29T12:00:00Z", hasPaymentMethod: false } },
+      { isAdmin: false },
+    );
+    expect(noCard.subject).toBe("Your Plus trial");
+    expect(noCard.body).toBe("ends on Sep 29, 2026 — add a card to keep the plan, or it simply ends and your cards stay.");
+
+    expect(describeNotification({ ...base, payload: {} }, { isAdmin: false })).toMatchObject({
+      subject: "Your plan trial",
+      body: "ends soon — add a card to keep the plan, or it simply ends and your cards stay.",
+    });
+  });
 });

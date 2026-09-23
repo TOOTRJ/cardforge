@@ -10,9 +10,14 @@ import {
   type PackKey,
   type PaidTier,
 } from "@/lib/billing/plans";
+import { isPlanDowngrade } from "@/lib/billing/plan-change";
 import { getStripe, isStripeConfigured } from "./client";
 import { packLookupKey, resolvePriceId, tierLookupKey } from "./prices";
-import { findDelinquentSubscription, findLiveSubscription } from "./subscription-sync";
+import {
+  findDelinquentSubscription,
+  findLiveSubscription,
+  resolveSubscriptionTier,
+} from "./subscription-sync";
 import type Stripe from "stripe";
 
 // One trial per account: a customer who has EVER held a subscription (any
@@ -150,6 +155,64 @@ async function createPlanSwitchSession(
   return { ok: true, url: session.url };
 }
 
+function scheduleIdOf(schedule: Stripe.Subscription["schedule"]): string | null {
+  if (!schedule) return null;
+  return typeof schedule === "string" ? schedule : schedule.id;
+}
+
+/** Drop a pending plan change (the subscription stays on its current
+ *  price). A no-op without one. */
+async function releasePendingChange(stripe: Stripe, sub: Stripe.Subscription): Promise<void> {
+  const scheduleId = scheduleIdOf(sub.schedule);
+  if (scheduleId) await stripe.subscriptionSchedules.release(scheduleId);
+}
+
+/**
+ * Schedule a downgrade for the end of the current period: a subscription
+ * schedule takes the subscription over, keeps the current phase exactly as
+ * it is (same price, same end date), adds ONE phase on the new price, and
+ * then releases the subscription — which carries on renewing on that price.
+ * Nothing is charged or credited now; the webhook's subscription.updated at
+ * the phase change resyncs the profile. A pending change is replaced, never
+ * stacked, and a plan set to cancel is un-cancelled first: the click asked
+ * for "Plus after this period", not "nothing after this period".
+ */
+async function scheduleDowngrade(
+  stripe: Stripe,
+  live: Stripe.Subscription,
+  target: { priceId: string; period: BillingPeriod },
+  base: string,
+): Promise<BillingActionResult> {
+  await releasePendingChange(stripe, live);
+  if (live.cancel_at_period_end) {
+    await stripe.subscriptions.update(live.id, { cancel_at_period_end: false });
+  }
+  const schedule = await stripe.subscriptionSchedules.create({ from_subscription: live.id });
+  const current = schedule.phases[0];
+  if (!current) return { ok: false, error: "Couldn't read your current plan." };
+  await stripe.subscriptionSchedules.update(schedule.id, {
+    end_behavior: "release",
+    phases: [
+      {
+        start_date: current.start_date,
+        end_date: current.end_date,
+        items: current.items.map((item) => ({
+          price: typeof item.price === "string" ? item.price : item.price.id,
+          quantity: item.quantity ?? 1,
+        })),
+      },
+      {
+        items: [{ price: target.priceId, quantity: 1 }],
+        // One billing interval of the new price; `release` then hands the
+        // subscription back, renewing on that price.
+        duration: { interval: target.period === "annual" ? "year" : "month", interval_count: 1 },
+        proration_behavior: "none",
+      },
+    ],
+  });
+  return { ok: true, url: `${base}/dashboard/billing?billing=scheduled` };
+}
+
 export async function createCheckoutSessionAction(
   input: CheckoutInput,
 ): Promise<BillingActionResult> {
@@ -202,6 +265,16 @@ export async function createCheckoutSessionAction(
           return { ok: false, error: "You're already on that plan." };
         }
         if (live.status === "active") {
+          const currentTier = await resolveSubscriptionTier(live, stripe);
+          const currentInterval = live.items.data[0]?.price?.recurring?.interval ?? null;
+          const target = { tier: input.tier, period: input.period ?? "monthly" };
+          if (isPlanDowngrade({ tier: currentTier, interval: currentInterval }, target)) {
+            return scheduleDowngrade(stripe, live, { priceId, period: target.period }, base);
+          }
+          // An upgrade replaces any pending downgrade (the portal refuses to
+          // update a subscription a schedule manages, and the old downgrade
+          // must not sneak back in at period end).
+          await releasePendingChange(stripe, live);
           return createPlanSwitchSession(stripe, customer.customerId, live, priceId, base);
         }
         supersedes = live.id;
@@ -297,6 +370,37 @@ export async function createCheckoutSessionAction(
         ? "That plan isn't set up in Stripe yet — please let us know."
         : "Stripe checkout failed. Please try again.",
     };
+  }
+}
+
+/**
+ * "Keep current plan": drop the downgrade scheduled for the end of the
+ * period. The subscription is read from the profile (never trusted from the
+ * client); releasing the schedule leaves it exactly as it is today.
+ */
+export async function cancelScheduledPlanChangeAction(): Promise<BillingActionResult> {
+  if (!isStripeConfigured()) {
+    return { ok: false, error: "Billing isn't available right now." };
+  }
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Please sign in to manage billing." };
+  const profile = await getCurrentProfile();
+  if (!profile?.stripe_subscription_id) {
+    return { ok: false, error: "There's no scheduled plan change." };
+  }
+  try {
+    const stripe = getStripe();
+    const sub = await stripe.subscriptions.retrieve(profile.stripe_subscription_id);
+    const scheduleId = scheduleIdOf(sub.schedule);
+    if (!scheduleId) return { ok: false, error: "There's no scheduled plan change." };
+    await stripe.subscriptionSchedules.release(scheduleId);
+    return { ok: true, url: `${getSiteBaseUrl()}/dashboard/billing?billing=kept` };
+  } catch (error) {
+    console.error(
+      "[stripe] Releasing the scheduled plan change failed:",
+      error instanceof Error ? error.message : error,
+    );
+    return { ok: false, error: "Couldn't cancel the plan change. Try again." };
   }
 }
 

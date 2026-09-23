@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BillingReturnToast } from "@/components/billing/billing-return-toast";
 import { ManageBillingButton } from "@/components/billing/manage-billing-button";
+import { KeepPlanButton } from "@/components/billing/keep-plan-button";
 import { PricingPlans } from "@/components/billing/pricing-plans";
 import { CreditPackGrid } from "@/components/billing/credit-pack-grid";
 import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
@@ -95,6 +96,14 @@ export default async function BillingPage() {
       : "Free forever";
   const periodEnd = sub?.currentPeriodEnd ?? entitlements.currentPeriodEnd;
   const cancelScheduled = sub?.cancelAtPeriodEnd ?? entitlements.cancelAtPeriodEnd;
+  // A downgrade scheduled for the end of the period (Pro → Plus, annual →
+  // monthly) — the plan card says so and offers to keep the current plan.
+  const pending = live ? (sub?.pendingChange ?? null) : null;
+  const pendingPlanName = pending?.tier ? planForTier(pending.tier).name : "a new plan";
+  const pendingPriceLine =
+    pending?.amountCents != null && pending.interval
+      ? ` (${formatMoney(pending.amountCents, pending.currency)} / ${pending.interval})`
+      : "";
   const capacity = entitlements.cardCapacity;
 
   return (
@@ -148,6 +157,11 @@ export default async function BillingPage() {
                   ? `, then ${priceLine} on the card below.`
                   : ". Add a card in the portal before then to keep the plan — without one it simply ends."}
               </>
+            ) : live && pending ? (
+              <>
+                Changes to <strong className="text-foreground">{pendingPlanName}</strong>
+                {pendingPriceLine} on <strong className="text-foreground">{formatCalendarDate(pending.startsAt)}</strong>. You keep {plan.name} and everything you paid for until then; nothing is charged now. Changed your mind? Keep your current plan below.
+              </>
             ) : live && cancelScheduled && periodEnd ? (
               <>
                 Your plan is set to end on <strong className="text-foreground">{formatCalendarDate(periodEnd)}</strong>. You keep every perk until then. Changed your mind? Reactivate it in the portal.
@@ -192,7 +206,10 @@ export default async function BillingPage() {
                 </ManageBillingButton>
               ) : null}
               <ManageBillingButton size="sm">Invoices &amp; receipts</ManageBillingButton>
-              {live && !cancelScheduled ? (
+              {live && pending ? (
+                <KeepPlanButton>Keep {plan.name}</KeepPlanButton>
+              ) : null}
+              {live && !cancelScheduled && !pending ? (
                 <ManageBillingButton flow="subscription_cancel" variant="ghost" size="sm">
                   Cancel plan
                 </ManageBillingButton>
@@ -212,7 +229,7 @@ export default async function BillingPage() {
         </h2>
         <p className="mt-1 max-w-2xl text-sm leading-6 text-muted">
           {live
-            ? "Switch between Plus and Pro, or monthly and annual, in place — Stripe shows the prorated difference before you confirm, and the plan keeps its renewal date. Downgrading to Free is a cancellation: you keep the plan until the period ends."
+            ? "Upgrades apply right away — Stripe shows the prorated difference before you confirm, and the plan keeps its renewal date. Downgrades (Pro to Plus, or annual to monthly) take effect at the end of the period you've paid for, so nothing is lost. Downgrading to Free is a cancellation: you keep the plan until the period ends."
             : entitlements.isPaid
               ? "Your account is unlocked without a subscription. Starting a plan is optional."
               : "First-time subscribers get a 7-day free trial, no card required. Cancel anytime."}
