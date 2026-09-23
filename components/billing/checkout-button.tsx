@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { createCheckoutSessionAction, type CheckoutInput } from "@/lib/stripe/actions";
 import { cn } from "@/lib/utils";
+import { navigateTo } from "@/lib/routing/navigate";
 
 type CheckoutButtonProps = {
   input: CheckoutInput;
@@ -31,7 +32,7 @@ export function CheckoutButton({
     startTransition(async () => {
       const result = await createCheckoutSessionAction(input);
       if (result.ok) {
-        window.location.href = result.url;
+        navigateTo(result.url);
       } else {
         toast.error(result.error);
       }

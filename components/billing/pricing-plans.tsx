@@ -1,153 +1,57 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import {
-  DELINQUENT_SUBSCRIPTION_STATUSES,
-  PLANS,
-  TRIAL_DAYS,
-  type BillingPeriod,
-  type PaidTier,
-  type PlanTier,
-} from "@/lib/billing/plans";
+import { PLANS, type BillingPeriod, type PaidTier, type PlanTier } from "@/lib/billing/plans";
 import { Button } from "@/components/ui/button";
-import { hasSupabaseSessionCookie } from "@/lib/supabase/session-cookie";
-import type { HeaderUser } from "@/components/layout/site-header";
 import { cn } from "@/lib/utils";
 import { PlanCard } from "./plan-card";
 import { CheckoutButton } from "./checkout-button";
 import { ManageBillingButton } from "./manage-billing-button";
-
-// Viewer billing state, hydrated client-side (auth-island pattern — same
-// /api/me source as the site header) so /pricing can render static/ISR.
-type BillingViewer = {
-  isSignedIn: boolean;
-  isPaid: boolean;
-  currentTier: PlanTier | null;
-  /** Ever held a subscription — lapsed subscribers don't get trial copy. */
-  hasSubscribed: boolean;
-  subscriptionStatus?: string | null;
-};
-
-const ANONYMOUS_VIEWER: BillingViewer = {
-  isSignedIn: false,
-  isPaid: false,
-  currentTier: null,
-  hasSubscribed: false,
-};
+import { pricingCtaFor } from "./pricing-cta";
+import { useBillingViewer } from "./use-billing-viewer";
 
 // Client wrapper for the pricing grid: owns the monthly/annual toggle and emits
-// the right CTA per plan (signup link / Stripe checkout / portal). Enforcement
-// is all server-side; this is just the storefront.
+// the right CTA per plan (signup link / Stripe checkout / portal) from the
+// pricingCtaFor table. Enforcement is all server-side; this is the storefront.
 //
 // Server HTML (and first client render) is the anonymous storefront — byte-
 // identical for every visitor, so /pricing lives on the CDN. After hydration,
-// a session cookie triggers a /api/me fetch that swaps in the signed-in CTAs
-// (checkout / manage plan). Anonymous visitors pay zero extra network. The
-// brief anonymous flash for signed-in viewers is the deliberate trade for a
-// cacheable page; Stripe checkout/portal actions re-validate server-side.
+// a session cookie triggers a /api/me fetch (useBillingViewer) that swaps in
+// the signed-in CTAs. The brief anonymous flash for signed-in viewers is the
+// deliberate trade for a cacheable page.
 export function PricingPlans() {
   const [period, setPeriod] = useState<BillingPeriod>("monthly");
-  const [viewer, setViewer] = useState<BillingViewer>(ANONYMOUS_VIEWER);
-
-  useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      // No session cookie → anonymous, zero network.
-      if (!hasSupabaseSessionCookie()) return;
-      try {
-        const res = await fetch("/api/me");
-        const data: { user: HeaderUser | null } = res.ok
-          ? await res.json()
-          : { user: null };
-        if (cancelled || !data.user) return;
-        setViewer({
-          isSignedIn: true,
-          isPaid: data.user.isPaid ?? false,
-          currentTier: data.user.tier ?? null,
-          hasSubscribed: data.user.hasSubscribed ?? false,
-          subscriptionStatus: data.user.subscriptionStatus ?? null,
-        });
-      } catch {
-        // Network hiccup — keep the anonymous storefront; the server
-        // re-validates on checkout anyway.
-      }
-    };
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const { isSignedIn, isPaid, currentTier, hasSubscribed, subscriptionStatus } = viewer;
-  // Payment broken on an existing subscription: perks are off (isPaid false)
-  // but a fresh checkout would sell a SECOND subscription — the portal is the
-  // only right button, on every paid card.
-  const lapsed =
-    isSignedIn && !isPaid && DELINQUENT_SUBSCRIPTION_STATUSES.has(subscriptionStatus ?? "");
+  const viewer = useBillingViewer();
 
   function ctaFor(tier: PlanTier, featured?: boolean): React.ReactNode {
     const variant = featured ? "primary" : "outline";
-    if (lapsed && tier !== "free") {
-      return (
-        <ManageBillingButton variant={variant} className="w-full">
-          Update payment to continue
-        </ManageBillingButton>
-      );
-    }
-    if (tier === "free") {
-      if (!isSignedIn) {
+    const cta = pricingCtaFor(viewer, tier);
+    switch (cta.kind) {
+      case "signup":
         return (
-          <Button asChild variant="outline" className="w-full">
-            <Link href="/signup">Get started free</Link>
+          <Button asChild variant={tier === "free" ? "outline" : variant} className="w-full">
+            <Link href="/signup">{cta.label}</Link>
           </Button>
         );
-      }
-      if (isPaid) {
+      case "portal":
         return (
-          <ManageBillingButton variant="outline" className="w-full">
-            Manage plan
+          <ManageBillingButton variant={tier === "free" ? "outline" : variant} className="w-full">
+            {cta.label}
           </ManageBillingButton>
         );
-      }
-      return null;
+      case "checkout":
+        return (
+          <CheckoutButton
+            input={{ kind: "subscription", tier: tier as PaidTier, period }}
+            variant={variant}
+          >
+            {cta.label}
+          </CheckoutButton>
+        );
+      default:
+        return null;
     }
-    if (!isSignedIn) {
-      // Anonymous storefront leads with the trial — signup is the first step
-      // of it; checkout re-validates eligibility server-side either way.
-      return (
-        <Button asChild variant={variant} className="w-full">
-          <Link href="/signup">Start free — {TRIAL_DAYS}-day trial</Link>
-        </Button>
-      );
-    }
-    if (isPaid) {
-      // Already subscribed → switch tiers IN PLACE. The server action moves an
-      // active subscription to the new price through the Customer Portal's
-      // confirm-update flow (prorated, same subscription) and supersedes a
-      // no-card trial with a paid checkout — never a second subscription.
-      // The Free card offers the portal for cancel/invoices/card changes.
-      const label = `Switch to ${tier === "plus" ? "Plus" : "Pro"}`;
-      return (
-        <CheckoutButton
-          input={{ kind: "subscription", tier: tier as PaidTier, period }}
-          variant={variant}
-        >
-          {label}
-        </CheckoutButton>
-      );
-    }
-    const label = hasSubscribed
-      ? `Choose ${tier === "plus" ? "Plus" : "Pro"}`
-      : `Try ${tier === "plus" ? "Plus" : "Pro"} free for ${TRIAL_DAYS} days`;
-    return (
-      <CheckoutButton
-        input={{ kind: "subscription", tier: tier as PaidTier, period }}
-        variant={variant}
-      >
-        {label}
-      </CheckoutButton>
-    );
   }
 
   return (
@@ -190,7 +94,7 @@ export function PricingPlans() {
             key={plan.tier}
             plan={plan}
             period={period}
-            currentTier={currentTier}
+            currentTier={viewer.currentTier}
             cta={ctaFor(plan.tier, plan.featured)}
           />
         ))}

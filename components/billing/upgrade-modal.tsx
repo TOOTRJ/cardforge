@@ -12,7 +12,10 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CheckoutButton } from "./checkout-button";
-import { PLANS, type PaidTier } from "@/lib/billing/plans";
+import { ManageBillingButton } from "./manage-billing-button";
+import { pricingCtaFor } from "./pricing-cta";
+import { useBillingViewer } from "./use-billing-viewer";
+import { PLANS, TRIAL_DAYS, type PaidTier } from "@/lib/billing/plans";
 
 export type UpgradeReason =
   | "credits"
@@ -89,6 +92,57 @@ const REASON_COPY: Record<UpgradeReason, { title: string; description: string }>
 
 const PAID_PLANS = PLANS.filter((plan) => plan.tier !== "free");
 
+function PlanCta({
+  tier,
+  featured,
+  cta,
+  isCurrent,
+  loaded,
+}: {
+  tier: PaidTier;
+  featured?: boolean;
+  cta: ReturnType<typeof pricingCtaFor>;
+  isCurrent: boolean;
+  loaded: boolean;
+}) {
+  const variant = featured ? "primary" : "outline";
+  if (isCurrent) return <Badge variant="outline">Your current plan</Badge>;
+  if (!loaded) {
+    return (
+      <Button variant={variant} size="sm" className="w-auto" disabled>
+        Loading…
+      </Button>
+    );
+  }
+  switch (cta.kind) {
+    case "signup":
+      return (
+        <Button asChild variant={variant} size="sm" className="w-auto">
+          <Link href="/signup">{cta.label}</Link>
+        </Button>
+      );
+    case "portal":
+      return (
+        <ManageBillingButton variant={variant} size="sm" className="w-auto">
+          {cta.label}
+        </ManageBillingButton>
+      );
+    case "checkout":
+      return (
+        <CheckoutButton
+          input={{ kind: "subscription", tier }}
+          variant={variant}
+          size="sm"
+          className="w-auto"
+        >
+          {cta.label}
+        </CheckoutButton>
+      );
+    default:
+      return null;
+  }
+}
+
 type UpgradeModalProps = {
   open: boolean;
   reason: UpgradeReason;
@@ -97,6 +151,10 @@ type UpgradeModalProps = {
 
 export function UpgradeModal({ open, reason, onOpenChange }: UpgradeModalProps) {
   const copy = REASON_COPY[reason] ?? REASON_COPY.generic;
+  // The same CTA table as /pricing, fetched only once the modal opens: a
+  // lapsed subscriber sees "Choose Pro", a live one "Switch to Pro", a
+  // broken card "Update payment" — never a trial the checkout won't grant.
+  const viewer = useBillingViewer({ enabled: open });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -125,24 +183,24 @@ export function UpgradeModal({ open, reason, onOpenChange }: UpgradeModalProps) 
                 </div>
                 <span className="truncate text-xs text-muted">{plan.tagline}</span>
               </div>
-              <CheckoutButton
-                input={{ kind: "subscription", tier: plan.tier as PaidTier }}
-                variant={plan.featured ? "primary" : "outline"}
-                size="sm"
-                className="w-auto"
-              >
-                Try {plan.name} free
-              </CheckoutButton>
+              <PlanCta
+                tier={plan.tier as PaidTier}
+                featured={plan.featured}
+                cta={pricingCtaFor(viewer, plan.tier)}
+                isCurrent={viewer.currentTier === plan.tier && viewer.hasLiveSubscription}
+                loaded={viewer.loaded}
+              />
             </div>
           ))}
 
-          {/* Honest trial framing: checkout re-checks eligibility server-side,
-              so the footnote carries the "first-time" caveat rather than the
-              button over-promising. */}
-          <p className="text-xs leading-5 text-gold-strong">
-            7-day free trial for first-time subscribers — no card required,
-            cancel anytime.
-          </p>
+          {/* Honest trial framing: only an account that has never subscribed
+              is promised the trial (checkout re-checks server-side). */}
+          {!viewer.hasSubscribed ? (
+            <p className="text-xs leading-5 text-gold-strong">
+              {TRIAL_DAYS}-day free trial for first-time subscribers — no card
+              required, cancel anytime.
+            </p>
+          ) : null}
 
           <Button asChild variant="ghost" size="sm" className="self-start">
             <Link href="/pricing" onClick={() => onOpenChange(false)}>

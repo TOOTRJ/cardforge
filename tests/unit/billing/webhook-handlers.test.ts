@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { handleStripeEvent } from "@/lib/stripe/webhook-handlers";
-import { MONTHLY_CREDITS } from "@/lib/billing/plans";
+import { MONTHLY_CREDITS, creditRefillKey, currentCreditPeriod } from "@/lib/billing/plans";
 
 // Minimal admin-client stand-in that records the writes the handlers make, so
 // we can assert dispatch behavior without a real Supabase client.
@@ -30,16 +30,19 @@ function makeAdmin(
             eq() {
               return {
                 maybeSingle: async () => ({
-                  data:
-                    table === "credit_ledger"
-                      ? ledgerRow
-                      : customerLookupHit
-                        ? { id: "user-1" }
-                        : null,
+                  data: customerLookupHit ? { id: "user-1" } : null,
                   error: null,
                 }),
               };
             },
+            // The month's refill rows (credit-refill.ts reads them with one
+            // LIKE on the base key prefix).
+            like: async () => ({
+              data: ledgerRow
+                ? [{ ...ledgerRow, idempotency_key: creditRefillKey("user-1", currentCreditPeriod()) }]
+                : [],
+              error: null,
+            }),
           };
         },
         update(values: Record<string, unknown>) {
@@ -295,6 +298,57 @@ describe("handleStripeEvent", () => {
       admin,
     );
     expect(rpcs.some((r) => r.fn === "grant_credits")).toBe(false);
+  });
+
+  it("cancel at period end: the update keeps the plan (flag set), the later deleted event ends it", async () => {
+    // The portal's cancel writes cancel_at_period_end=true on an ACTIVE
+    // subscription: perks stay until the period ends; only the deleted
+    // event that Stripe sends at period end demotes the profile.
+    const { admin, updates, rpcs } = makeAdmin({ ledgerRow: { delta: MONTHLY_CREDITS.pro } });
+    const sub = {
+      id: "sub_1",
+      customer: "cus_1",
+      status: "active",
+      cancel_at_period_end: true,
+      items: { data: [{ price: { id: "price_pro" }, current_period_end: 1893456000 }] },
+    };
+    await run({ id: "evt_cancel_scheduled", type: "customer.subscription.updated", data: { object: sub } }, admin);
+    expect(updates.at(-1)?.values).toMatchObject({
+      subscription_tier: "pro",
+      subscription_status: "active",
+      cancel_at_period_end: true,
+      stripe_subscription_id: "sub_1",
+    });
+    expect(rpcs.some((r) => r.fn === "grant_credits")).toBe(false);
+
+    await run(
+      { id: "evt_cancel_done", type: "customer.subscription.deleted", data: { object: { ...sub, status: "canceled" } } },
+      admin,
+    );
+    expect(updates.at(-1)?.values).toMatchObject({
+      subscription_tier: "free",
+      subscription_status: "canceled",
+      cancel_at_period_end: false,
+      stripe_subscription_id: null,
+    });
+    expect(rpcs.some((r) => r.fn === "grant_credits")).toBe(false);
+  });
+
+  it("a pack paid on `completed` AND echoed by `async_payment_succeeded` asks for the SAME session key twice", async () => {
+    // grant_credits dedupes on the idempotency key inside the database; the
+    // handler's job is to never mint a different key for the same purchase.
+    const { admin, rpcs } = makeAdmin();
+    const session = {
+      id: "cs_pack_twice",
+      mode: "payment",
+      payment_status: "paid",
+      client_reference_id: "user-1",
+      metadata: { purchase_kind: "pack", supabase_user_id: "user-1", pack_credits: "30" },
+    };
+    await run({ id: "evt_a", type: "checkout.session.completed", data: { object: session } }, admin);
+    await run({ id: "evt_b", type: "checkout.session.async_payment_succeeded", data: { object: session } }, admin);
+    expect(rpcs).toHaveLength(2);
+    expect(new Set(rpcs.map((r) => r.args.p_idempotency_key))).toEqual(new Set(["pack:cs_pack_twice"]));
   });
 
   it("on subscription.deleted: downgrades to free and clears the sub", async () => {
