@@ -130,9 +130,9 @@ export function UserMenu({
         {isBillingEnabled() ? (
           <>
             <MenuItem
-              href="/settings#billing"
+              href="/dashboard/billing"
               icon={CreditCard}
-              label="Plans & billing"
+              label="Billing & subscription"
             />
             {isPaid ? null : (
               <MenuItem href="/pricing" icon={Sparkles} label="Upgrade to Pro" />

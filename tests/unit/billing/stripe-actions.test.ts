@@ -15,7 +15,11 @@ import { CREDIT_PACKS, TRIAL_DAYS } from "@/lib/billing/plans";
 
 const s = vi.hoisted(() => ({
   user: null as null | { id: string; email: string },
-  profile: null as null | { stripe_customer_id: string | null; subscription_status?: string | null },
+  profile: null as null | {
+    stripe_customer_id: string | null;
+    subscription_status?: string | null;
+    stripe_subscription_id?: string | null;
+  },
   adminConfigured: true,
   stripeConfigured: true,
   linkedId: "cus_new",
@@ -228,7 +232,7 @@ describe("createCheckoutSessionAction", () => {
     const down = await createCheckoutSessionAction({ kind: "subscription", tier: "plus" });
     expect(down).toEqual({ ok: true, url: "https://portal.test/session" });
     expect(s.portalCreate.mock.calls[0]?.[0]).toMatchObject({
-      return_url: "https://test.local/settings#billing",
+      return_url: "https://test.local/dashboard/billing",
       flow_data: {
         subscription_update_confirm: { subscription: "sub_live", items: [{ id: "si_1", price: "price_plus_monthly", quantity: 1 }] },
         after_completion: { type: "redirect", redirect: { return_url: "https://test.local/dashboard?billing=success" } },
@@ -274,7 +278,7 @@ describe("createCheckoutSessionAction", () => {
     expect(s.checkoutCreate).not.toHaveBeenCalled();
     expect(s.portalCreate).toHaveBeenCalledWith({
       customer: "cus_1",
-      return_url: "https://test.local/settings#billing",
+      return_url: "https://test.local/dashboard/billing",
     });
   });
 
@@ -331,7 +335,7 @@ describe("createCheckoutSessionAction", () => {
         purchase_kind: "pack",
         pack_credits: String(CREDIT_PACKS.small.credits),
       },
-      success_url: "https://test.local/settings?billing=credits",
+      success_url: "https://test.local/dashboard/billing?billing=credits",
     });
   });
 
@@ -349,8 +353,28 @@ describe("createPortalSessionAction", () => {
     s.profile = { stripe_customer_id: null };
     expect(await createPortalSessionAction()).toEqual({ ok: false, error: "You don't have a billing account yet." });
   });
-  it("opens the portal for the customer and returns to settings", async () => {
+  it("opens the portal home for the customer and returns to the billing page", async () => {
     expect(await createPortalSessionAction()).toEqual({ ok: true, url: "https://portal.test/session" });
-    expect(s.portalCreate).toHaveBeenCalledWith({ customer: "cus_1", return_url: "https://test.local/settings" });
+    expect(s.portalCreate).toHaveBeenCalledWith({ customer: "cus_1", return_url: "https://test.local/dashboard/billing" });
+  });
+
+  it("deep-links the payment-method and cancel flows; cancel needs the profile's live subscription", async () => {
+    await createPortalSessionAction("payment_method_update");
+    expect(s.portalCreate.mock.calls[0]?.[0]).toMatchObject({ flow_data: { type: "payment_method_update" } });
+
+    s.portalCreate.mockClear();
+    s.profile = { stripe_customer_id: "cus_1", stripe_subscription_id: "sub_live" };
+    await createPortalSessionAction("subscription_cancel");
+    expect(s.portalCreate.mock.calls[0]?.[0]).toMatchObject({
+      flow_data: { type: "subscription_cancel", subscription_cancel: { subscription: "sub_live" } },
+    });
+
+    s.portalCreate.mockClear();
+    s.profile = { stripe_customer_id: "cus_1", stripe_subscription_id: null };
+    expect(await createPortalSessionAction("subscription_cancel")).toEqual({
+      ok: false,
+      error: "There's no active subscription to cancel.",
+    });
+    expect(s.portalCreate).not.toHaveBeenCalled();
   });
 });

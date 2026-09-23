@@ -48,7 +48,8 @@ export function MobileMenu({
   const visibleItems = siteConfig.primaryNav.filter((item) => {
     if (item.authedOnly && !isAuthed) return false;
     if (item.anonOnly && isAuthed) return false;
-    if (item.href === "/pricing" && !billingOn) return false;
+    // Paid accounts manage (and buy credits) on /dashboard/billing.
+    if (item.href === "/pricing" && (!billingOn || isPaid)) return false;
     return true;
   });
 

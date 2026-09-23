@@ -86,7 +86,7 @@ export async function CreditsSummaryCard() {
       </div>
 
       <Link
-        href={isPaid ? "/settings#billing" : "/pricing"}
+        href={isPaid ? "/dashboard/billing" : "/pricing"}
         className="text-xs font-semibold text-primary-bright underline-offset-4 hover:underline"
       >
         {isPaid

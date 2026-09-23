@@ -105,21 +105,57 @@ test.describe("pricing page — signed in", () => {
     const billing = page.locator("#billing");
     await expect(billing.getByText("Free plan", { exact: true })).toBeVisible();
     await expect(billing.getByRole("link", { name: /upgrade your plan/i })).toHaveAttribute("href", "/pricing");
-    await expect(billing.getByRole("link", { name: /buy credits/i })).toHaveAttribute("href", "/pricing");
+    // Packs live on the billing page now (the Settings panel is a summary).
+    await expect(billing.getByRole("link", { name: /buy credits/i })).toHaveAttribute("href", "/dashboard/billing#packs");
+    await expect(billing.getByRole("link", { name: /billing & subscription/i })).toHaveAttribute("href", "/dashboard/billing");
     await expect(
       billing.getByRole("button", { name: /manage subscription|billing history|fix payment/i }),
     ).toHaveCount(0);
   });
 
-  test("an admin (unlocked, no Stripe customer) is never offered 'Manage plan' — the owner's broken button", async ({
+  test("a paid account (the unlocked admin) is sent from /pricing to its billing page and has no Pricing link", async ({
     page,
   }) => {
     await signIn(page);
+    // The storefront is for buyers: once Plus/Pro (or unlocked), /pricing
+    // redirects to the billing page and the header stops offering it.
     await page.goto("/pricing");
-    // Unlocked = effectively Pro, so Pro is the current plan …
+    await expect(page).toHaveURL(/\/dashboard\/billing$/);
+    await expect(page.getByRole("heading", { name: /billing & subscription/i })).toBeVisible();
+    await expect(page.getByRole("banner").getByRole("link", { name: /^pricing$/i })).toHaveCount(0);
+    // The plan grid is here instead — Pro is the current plan, and the
+    // account is never offered a portal it doesn't have.
     await expect(page.getByText("Your current plan")).toBeVisible();
-    // … and the Free card used to offer a portal this account doesn't have.
     await expect(page.getByRole("button", { name: /manage plan/i })).toHaveCount(0);
     await expect(page.getByRole("button", { name: /try plus free for 7 days/i })).toBeVisible();
+  });
+});
+
+test.describe("billing page", () => {
+  test.skip(
+    process.env.NEXT_PUBLIC_BILLING_ENABLED !== "true" || !hasCredentials,
+    "Needs billing enabled and the seeded e2e users (.env.e2e).",
+  );
+
+  test("a free account sees its plan, credits, the credit packs and the upgrade grid; the rail links to it", async ({
+    page,
+  }) => {
+    await signIn(page, { as: "free" });
+    await page.getByRole("navigation", { name: /dashboard navigation/i }).getByRole("link", { name: "Billing" }).click();
+    await expect(page).toHaveURL(/\/dashboard\/billing$/);
+    await expect(page.getByRole("heading", { name: /billing & subscription/i })).toBeVisible();
+    await expect(page.getByText("Free plan", { exact: true })).toBeVisible();
+    await expect(page.getByText("AI credits a month", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: /buy 30 credits/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /try plus free for 7 days/i })).toBeVisible();
+    // No billing account yet → nothing to open in the portal.
+    await expect(page.getByRole("button", { name: /open the stripe portal|update payment method|cancel plan/i })).toHaveCount(0);
+    // Without a Stripe customer there is nothing to show — and on the local
+    // stack Stripe isn't configured at all, which the page also says plainly.
+    await expect(
+      page.getByText(/billing account is created the first time|stripe isn't connected in this environment/i),
+    ).toBeVisible();
+    // The header still offers Pricing to a free account.
+    await expect(page.getByRole("banner").getByRole("link", { name: /^pricing$/i })).toBeVisible();
   });
 });

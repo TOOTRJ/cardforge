@@ -38,7 +38,8 @@ describe("BillingPanel", () => {
     render(<BillingPanel {...base} />);
     expect(screen.getByText("Free plan")).toBeTruthy();
     expect(screen.getByRole("link", { name: /upgrade your plan/i })).toHaveProperty("href", expect.stringContaining("/pricing"));
-    expect(screen.getByRole("link", { name: /buy credits/i })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /billing & subscription/i })).toHaveProperty("href", expect.stringContaining("/dashboard/billing"));
+    expect(screen.getByRole("link", { name: /buy credits/i })).toHaveProperty("href", expect.stringContaining("/dashboard/billing"));
     expect(screen.queryByRole("button", { name: /billing history|manage subscription|fix payment/i })).toBeNull();
   });
 

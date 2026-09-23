@@ -61,9 +61,13 @@ export function SiteHeader({ user, className }: SiteHeaderProps) {
   const isAuthed = Boolean(user);
   const billingOn = isBillingEnabled();
   const unread = user?.unreadNotifications ?? 0;
-  const navItems = billingOn
-    ? siteConfig.primaryNav
-    : siteConfig.primaryNav.filter((item) => item.href !== "/pricing");
+  // Pricing is for accounts that can buy a plan: billing on AND not already
+  // paid (a Plus/Pro/comped/admin account manages its plan — and buys credit
+  // packs — on /dashboard/billing instead; /pricing redirects them there).
+  const navItems =
+    billingOn && !user?.isPaid
+      ? siteConfig.primaryNav
+      : siteConfig.primaryNav.filter((item) => item.href !== "/pricing");
 
   return (
     <header

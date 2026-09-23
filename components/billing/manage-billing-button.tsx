@@ -4,12 +4,14 @@ import { useTransition } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { createPortalSessionAction } from "@/lib/stripe/actions";
+import { createPortalSessionAction, type PortalFlow } from "@/lib/stripe/actions";
 import { cn } from "@/lib/utils";
 import { navigateTo } from "@/lib/routing/navigate";
 
 type ManageBillingButtonProps = {
   children: React.ReactNode;
+  /** Open the portal straight into one flow (default: its home page). */
+  flow?: PortalFlow;
   variant?: "primary" | "secondary" | "outline" | "accent" | "ghost";
   size?: "sm" | "md" | "lg";
   className?: string;
@@ -19,6 +21,7 @@ type ManageBillingButtonProps = {
 // updates, invoices, and cancellation.
 export function ManageBillingButton({
   children,
+  flow = "home",
   variant = "outline",
   size = "md",
   className,
@@ -27,7 +30,7 @@ export function ManageBillingButton({
 
   function handleClick() {
     startTransition(async () => {
-      const result = await createPortalSessionAction();
+      const result = await createPortalSessionAction(flow);
       if (result.ok) {
         navigateTo(result.url);
       } else {

@@ -133,7 +133,7 @@ async function createPlanSwitchSession(
   if (!itemId) return { ok: false, error: "Couldn't read your current plan." };
   const session = await stripe.billingPortal.sessions.create({
     customer: customerId,
-    return_url: `${base}/settings#billing`,
+    return_url: `${base}/dashboard/billing`,
     flow_data: {
       type: "subscription_update_confirm",
       subscription_update_confirm: {
@@ -185,7 +185,7 @@ export async function createCheckoutSessionAction(
         if (delinquent) {
           const portal = await stripe.billingPortal.sessions.create({
             customer: customer.customerId,
-            return_url: `${base}/settings#billing`,
+            return_url: `${base}/dashboard/billing`,
           });
           if (!portal.url) return { ok: false, error: "Couldn't open the billing portal." };
           return { ok: true, url: portal.url };
@@ -281,7 +281,7 @@ export async function createCheckoutSessionAction(
         purchase_kind: "pack",
         pack_credits: String(credits),
       },
-      success_url: `${base}/settings?billing=credits`,
+      success_url: `${base}/dashboard/billing?billing=credits`,
       cancel_url: `${base}/pricing?billing=cancel`,
     });
     if (!session.url) return { ok: false, error: "Couldn't start checkout." };
@@ -300,7 +300,14 @@ export async function createCheckoutSessionAction(
   }
 }
 
-export async function createPortalSessionAction(): Promise<BillingActionResult> {
+/** Where the Customer Portal opens: its home, or straight into one flow.
+ *  The cancel flow needs the live subscription (read from the profile —
+ *  never trusted from the client). */
+export type PortalFlow = "home" | "payment_method_update" | "subscription_cancel";
+
+export async function createPortalSessionAction(
+  flow: PortalFlow = "home",
+): Promise<BillingActionResult> {
   if (!isStripeConfigured()) {
     return { ok: false, error: "Billing isn't available right now." };
   }
@@ -311,12 +318,27 @@ export async function createPortalSessionAction(): Promise<BillingActionResult> 
   if (!profile?.stripe_customer_id) {
     return { ok: false, error: "You don't have a billing account yet." };
   }
+  const returnUrl = `${getSiteBaseUrl()}/dashboard/billing`;
+
+  let flowData: Stripe.BillingPortal.SessionCreateParams.FlowData | undefined;
+  if (flow === "payment_method_update") {
+    flowData = { type: "payment_method_update" };
+  } else if (flow === "subscription_cancel") {
+    if (!profile.stripe_subscription_id) {
+      return { ok: false, error: "There's no active subscription to cancel." };
+    }
+    flowData = {
+      type: "subscription_cancel",
+      subscription_cancel: { subscription: profile.stripe_subscription_id },
+    };
+  }
 
   try {
     const stripe = getStripe();
     const session = await stripe.billingPortal.sessions.create({
       customer: profile.stripe_customer_id,
-      return_url: `${getSiteBaseUrl()}/settings`,
+      return_url: returnUrl,
+      ...(flowData ? { flow_data: flowData } : {}),
     });
     return { ok: true, url: session.url };
   } catch (error) {
