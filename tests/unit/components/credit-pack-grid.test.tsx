@@ -5,6 +5,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 vi.mock("@/lib/stripe/actions", () => ({ createCheckoutSessionAction: vi.fn() }));
 vi.mock("@/lib/routing/navigate", () => ({ navigateTo: vi.fn() }));
+vi.mock("@/lib/analytics/funnel-client", () => ({ trackFunnelEvent: vi.fn() }));
 
 import { CreditPackGrid } from "@/components/billing/credit-pack-grid";
 

@@ -28,6 +28,7 @@ vi.mock("@/lib/stripe/actions", () => ({
   createPortalSessionAction: vi.fn(),
 }));
 vi.mock("@/lib/routing/navigate", () => ({ navigateTo: vi.fn() }));
+vi.mock("@/lib/analytics/funnel-client", () => ({ trackFunnelEvent: vi.fn() }));
 vi.mock("@/lib/supabase/session-cookie", () => ({ hasSupabaseSessionCookie: () => true }));
 
 import { UpgradeModal } from "@/components/billing/upgrade-modal";
