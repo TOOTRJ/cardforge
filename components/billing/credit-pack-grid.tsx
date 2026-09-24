@@ -15,13 +15,15 @@ type CreditPackGridProps = {
   discounted?: boolean;
   /** Tight three-up rows for the upgrade modal. */
   compact?: boolean;
+  /** Where the grid sits (funnel `cta_click.surface`). */
+  surface?: "pricing" | "billing" | "modal" | "other";
   className?: string;
 };
 
 // Consumable credit top-up packs (one-time purchase). Purchased credits never
 // expire, so this monetizes everyone — Free accounts (5 credits at signup, no
 // refill) most of all. Server-safe: no hooks; callers pass `discounted`.
-export function CreditPackGrid({ discounted = false, compact = false, className }: CreditPackGridProps) {
+export function CreditPackGrid({ discounted = false, compact = false, surface = "other", className }: CreditPackGridProps) {
   return (
     <div className={cn("grid sm:grid-cols-3", compact ? "gap-2" : "gap-4", className)}>
       {PACK_ORDER.map((key) => {
@@ -45,7 +47,7 @@ export function CreditPackGrid({ discounted = false, compact = false, className 
             >
               <span className="font-display text-sm font-semibold text-foreground">{pack.credits} credits</span>
               <span className="text-xs text-muted">{priceLine}</span>
-              <CheckoutButton input={{ kind: "pack", pack: key }} variant="outline" size="sm">
+              <CheckoutButton input={{ kind: "pack", pack: key }} surface={surface} variant="outline" size="sm">
                 Buy {pack.credits} credits
               </CheckoutButton>
             </div>
@@ -64,7 +66,7 @@ export function CreditPackGrid({ discounted = false, compact = false, className 
                 <span className="text-sm text-muted">{priceLine}</span>
               </div>
             </div>
-            <CheckoutButton input={{ kind: "pack", pack: key }} variant="outline">
+            <CheckoutButton input={{ kind: "pack", pack: key }} surface={surface} variant="outline">
               Buy {pack.credits} credits
             </CheckoutButton>
           </SurfaceCard>

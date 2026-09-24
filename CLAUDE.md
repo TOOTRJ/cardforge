@@ -290,7 +290,14 @@ Rules and gotchas:
   "5 to start", never "a month". Three packs (`PACK_ORDER` mini/small/large,
   lookup keys `pack_<key>`), listed inside the out-of-credits modal;
   ACTIVE subscribers get coupon `PACK_SUBSCRIBER_COUPON_ID` applied by the
-  checkout action (never client-supplied). The month's
+  checkout action (never client-supplied). FUNNEL: every money step writes
+  a `funnel_events` row (0112) via `recordFunnelEvent()` — server steps in
+  the checkout action/webhook, browser steps through `trackFunnelEvent()` →
+  POST `/api/events` (allow-listed names in `lib/analytics/funnel-events.ts`,
+  allow-listed scalar props, anonymous rows carry NO identifier); a new CTA
+  passes `surface`, a new gate opens the upgrade modal (that IS the
+  `upgrade_modal_open` event); the admin Funnel panel reads
+  `admin_funnel_counts()`. The month's
   credit top-up is measured against EVERY refill row of the month
   (`refill:<user>:<period>%`), never the base row alone. The seeded e2e user
   is an ADMIN (unlocked) — billing specs sign in as the free `e2e_free` user

@@ -39,6 +39,7 @@ const s = vi.hoisted(() => ({
   history: [] as Array<{ id: string; status?: string }>,
   historyThrows: false,
   checkoutThrows: false,
+  funnelInserts: [] as Array<Record<string, unknown>>,
   subscriptionsList: vi.fn(),
   subscriptionsUpdate: vi.fn(),
   subscriptionsRetrieve: vi.fn(),
@@ -58,6 +59,11 @@ vi.mock("@/lib/supabase/admin", () => ({
   isAdminConfigured: () => s.adminConfigured,
   createAdminClient: () => ({
     from: () => ({
+      // Funnel rows (checkout_started) — recorded, answered with an id.
+      insert: (row: Record<string, unknown>) => {
+        s.funnelInserts.push(row);
+        return { select: () => ({ single: async () => ({ data: { id: "fe_1" }, error: null }) }) };
+      },
       update: () => ({
         eq: () => ({
           select: () => ({
@@ -143,6 +149,7 @@ beforeEach(() => {
   s.linkedId = "cus_new";
   s.live = null;
   s.lapsedTrial = false;
+  s.funnelInserts = [];
   s.delinquent = null;
   s.history = [];
   s.historyThrows = false;
@@ -210,6 +217,12 @@ describe("createCheckoutSessionAction", () => {
     // Card required: Checkout's default collection, never `if_required`.
     expect(params).not.toHaveProperty("payment_method_collection");
     expect(params.metadata).toMatchObject({ discount: "none" });
+    // Funnel: the click became a checkout_started row, and its id rides in the
+    // session metadata so the webhook can tie completion back to it.
+    expect(s.funnelInserts).toEqual([
+      { event: "checkout_started", user_id: USER, props: { kind: "subscription", tier: "pro", period: "monthly", trial: true, discount: "none" }, source: "server" },
+    ]);
+    expect(params.metadata).toMatchObject({ funnel_id: "fe_1" });
   });
 
   it("gives no second trial once Stripe has ANY subscription on record", async () => {
@@ -273,6 +286,7 @@ describe("createCheckoutSessionAction", () => {
       period: "monthly",
       discount: "none",
       supersedes_subscription_id: "sub_trial",
+      funnel_id: "fe_1",
     });
     expect(params.subscription_data).toMatchObject({
       trial_end: fiveDaysOut,
@@ -513,6 +527,7 @@ describe("createCheckoutSessionAction", () => {
       period: "monthly",
       discount: "none",
       supersedes_subscription_id: "sub_trial",
+      funnel_id: "fe_1",
     });
     expect(params.subscription_data).not.toHaveProperty("trial_period_days");
     expect(s.portalCreate).not.toHaveBeenCalled();
@@ -559,6 +574,10 @@ describe("createCheckoutSessionAction", () => {
       success_url: "https://test.local/dashboard/billing?billing=credits",
     });
     expect(checkoutParams()).not.toHaveProperty("discounts");
+    expect(s.funnelInserts).toEqual([
+      { event: "checkout_started", user_id: USER, props: { kind: "pack", pack: "small", credits: 30, discount: "none" }, source: "server" },
+    ]);
+    expect(checkoutParams().metadata).toMatchObject({ funnel_id: "fe_1" });
   });
 
   it("the 10-credit impulse pack resolves by its own lookup key", async () => {

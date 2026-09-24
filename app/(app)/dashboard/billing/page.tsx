@@ -243,7 +243,7 @@ export default async function BillingPage() {
               ? "Your account is unlocked without a subscription. Starting a plan is optional."
               : "First-time subscribers get a 7-day free trial: 25 AI credits to try, nothing charged until day 7, cancel anytime. Your plan's full monthly credits arrive with your first payment."}
         </p>
-        <PricingPlans initialViewer={viewer} />
+        <PricingPlans initialViewer={viewer} surface="billing" />
       </section>
 
       {/* ---- Credits ---- */}
@@ -282,7 +282,7 @@ export default async function BillingPage() {
                 : ` Plus and Pro members pay ${PACK_SUBSCRIBER_DISCOUNT_PCT}% less.`}
             </p>
           </div>
-          <CreditPackGrid discounted={packDiscount} />
+          <CreditPackGrid discounted={packDiscount} surface="billing" />
         </SurfaceCard>
       </section>
 

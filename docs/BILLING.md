@@ -294,6 +294,42 @@ Owner decisions of 2026-09-24 (audit §6 recommendation 3, all three parts):
   promo-code box is off for that session); a missing coupon logs and sells
   at full price.
 
+## 10. Funnel instrumentation (2026-09-24)
+
+First-party, no vendor dependency, no cookie (owner decision 2026-09-24):
+
+- **`funnel_events`** (migration 0112): one row per step, `event` (validated
+  in `lib/analytics/funnel-events.ts` — adding a step is a code change), an
+  allow-listed scalar `props` object, `user_id` when signed in (anonymous
+  rows carry nothing), `source` server/client. Admins read it through
+  `admin_funnel_counts(p_since)`; the webhook and checkout action write it
+  through the service role; `/api/cron/prune-funnel-events` drops rows older
+  than 180 days weekly.
+- **Server steps** (exact, unblockable): `checkout_started` in
+  `createCheckoutSessionAction` (its row id is stamped into the session
+  metadata as `funnel_id` so completed/expired rows tie back to the click),
+  `checkout_completed` / `checkout_expired` / `pack_purchased` /
+  `payment_received` / `payment_failed` in the webhook, and from
+  `customer.subscription.*`: `trial_started` or `subscription_started` on
+  created, `trial_converted` (previous status trialing → active) and
+  `subscription_changed` (price changed, from/to tier) on updated,
+  `trial_lapsed` or `subscription_cancelled` (with Stripe's
+  `cancellation_details` reason + feedback) on deleted.
+- **Client steps** (`lib/analytics/funnel-client.ts` → POST `/api/events`,
+  same-site only, 2 KB cap, allow-listed names, always 204; mirrored to
+  Vercel Analytics `track()` and GA4 when mounted): `pricing_view` (once per
+  grid mount, `surface` pricing/billing), `cta_click` (every CheckoutButton
+  and the signup links, with `surface` pricing/billing/modal and what was
+  clicked), `upgrade_modal_open` (with the gate `reason` — the best signal of
+  which perk sells). Ad blockers drop some client rows; the panel pairs
+  client-with-client and server-with-server steps so the ratios stay honest.
+- **Admin Funnel panel** (`/admin/users`, `lib/admin/funnel-queries.ts`):
+  last 7 and 30 days, counts with distinct users, chained rates for
+  Storefront (views → clicks → checkouts → completed), Trials (started →
+  converted) and Out of credits (modal opens → packs), plus Money and Leaks
+  as counts. At this volume the counts matter more than the rates; trial
+  conversion should be read only on trials that have ended.
+
 ## Addendum — sandbox lifecycle run (2026-09-22, test clock `clock_1UIftGQFLEpCg9s2uoFgd7kf`)
 
 Two clock-bound sandbox customers, driven through the Stripe API:

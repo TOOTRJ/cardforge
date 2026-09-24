@@ -11,10 +11,12 @@ import {
   subscriptionHasPaymentMethod,
   syncSubscriptionForUser,
 } from "./subscription-sync";
+import { tierForPrice } from "./config";
 import { checkoutReminderEmail, trialEndingEmail, trialWinbackEmail } from "@/lib/email/messages";
 import { getRecipientFor } from "@/lib/email/preferences";
 import { isEmailConfigured, sendEmail } from "@/lib/email/send";
 import { formatMoney } from "@/lib/format/money";
+import { recordFunnelEvent } from "@/lib/analytics/funnel-server";
 import {
   CREDIT_PACKS,
   PLANS,
@@ -98,7 +100,12 @@ function invoiceSubscriptionId(invoice: Stripe.Invoice): string | null {
 async function handleSubscriptionEvent(
   sub: Stripe.Subscription,
   deps: { admin: AdminClient; stripe: Stripe },
-  opts: { deleted: boolean; isCreationEvent: boolean },
+  opts: {
+    deleted: boolean;
+    isCreationEvent: boolean;
+    /** `event.data.previous_attributes` on an updated event — what changed. */
+    previous?: Partial<Stripe.Subscription> | null;
+  },
 ): Promise<void> {
   const { admin, stripe } = deps;
   const userId = await resolveSubscriptionUserId(sub, admin);
@@ -109,14 +116,58 @@ async function handleSubscriptionEvent(
     eventDeleted: opts.deleted,
     customerId: customerIdOf(sub.customer),
   });
+  const price = sub.items?.data?.[0]?.price ?? null;
+  const interval = price?.recurring?.interval ?? null;
+  const tier = (await resolveSubscriptionTier(sub, stripe)) ?? undefined;
   if (opts.deleted) {
     // No credit grant on cancellation. A trial that ended without ever
     // paying — and left the customer with no other live plan — gets the
     // one win-back offer.
-    if (isUnconvertedTrial(sub) && result.tier === "free") {
+    const lapsedTrial = isUnconvertedTrial(sub);
+    if (lapsedTrial && result.tier === "free") {
       await handleTrialLapsed(sub, userId, deps);
     }
+    await recordFunnelEvent(admin, {
+      event: lapsedTrial ? "trial_lapsed" : "subscription_cancelled",
+      userId,
+      props: {
+        tier,
+        interval: interval ?? undefined,
+        subscriptionId: sub.id,
+        cancelReason: sub.cancellation_details?.reason ?? undefined,
+        cancelFeedback: sub.cancellation_details?.feedback ?? undefined,
+      },
+    });
     return;
+  }
+  if (opts.isCreationEvent) {
+    await recordFunnelEvent(admin, {
+      event: sub.status === "trialing" ? "trial_started" : "subscription_started",
+      userId,
+      props: { tier, interval: interval ?? undefined, subscriptionId: sub.id },
+    });
+  } else if (opts.previous) {
+    // What an updated event changed: a trial converting, or a plan switch.
+    if (opts.previous.status === "trialing" && sub.status === "active") {
+      await recordFunnelEvent(admin, {
+        event: "trial_converted",
+        userId,
+        props: { tier, interval: interval ?? undefined, subscriptionId: sub.id },
+      });
+    }
+    const previousPrice = opts.previous.items?.data?.[0]?.price ?? null;
+    if (previousPrice && price && previousPrice.id !== price.id) {
+      await recordFunnelEvent(admin, {
+        event: "subscription_changed",
+        userId,
+        props: {
+          fromTier: tierForPrice(previousPrice) ?? undefined,
+          toTier: tier,
+          interval: interval ?? undefined,
+          subscriptionId: sub.id,
+        },
+      });
+    }
   }
 
   // The one-grant-per-trial rule keys on the CREATED event of the synced
@@ -354,6 +405,16 @@ async function handleInvoicePaid(
   }
 
   if (amountCents <= 0) return;
+  await recordFunnelEvent(admin, {
+    event: "payment_received",
+    userId,
+    props: {
+      amountCents,
+      tier: tier ?? undefined,
+      interval: interval ?? undefined,
+      billingReason: invoice.billing_reason ?? undefined,
+    },
+  });
   const { data: existing } = await admin
     .from("notifications")
     .select("id")
@@ -553,6 +614,17 @@ async function handleCheckoutPaid(
   if (error) {
     throw new Error(`Pack grant failed for ${userId}: ${error.message}`);
   }
+  await recordFunnelEvent(admin, {
+    event: "pack_purchased",
+    userId,
+    props: {
+      pack: meta.pack,
+      credits,
+      discount: meta.discount,
+      amountCents: typeof session.amount_total === "number" ? session.amount_total : undefined,
+      sessionId: session.id,
+    },
+  });
 }
 
 export async function handleStripeEvent(
@@ -565,6 +637,18 @@ export async function handleStripeEvent(
       const session = event.data.object as Stripe.Checkout.Session;
       await handleCheckoutPaid(session, admin);
       await handleSupersededSubscription(session, stripe);
+      await recordFunnelEvent(admin, {
+        event: "checkout_completed",
+        userId: session.client_reference_id ?? session.metadata?.supabase_user_id ?? null,
+        props: {
+          kind: session.mode === "payment" ? "pack" : "subscription",
+          tier: session.metadata?.tier,
+          period: session.metadata?.period,
+          pack: session.metadata?.pack,
+          discount: session.metadata?.discount,
+          sessionId: session.id,
+        },
+      });
       break;
     }
     // Async/delayed payment methods settle AFTER `completed` (which arrives
@@ -583,6 +667,8 @@ export async function handleStripeEvent(
         {
           deleted: false,
           isCreationEvent: event.type === "customer.subscription.created",
+          previous: (event.data as { previous_attributes?: Partial<Stripe.Subscription> })
+            .previous_attributes ?? null,
         },
       );
       break;
@@ -596,9 +682,22 @@ export async function handleStripeEvent(
     case "customer.subscription.trial_will_end":
       await handleTrialWillEnd(event.data.object as Stripe.Subscription, deps);
       break;
-    case "checkout.session.expired":
-      await handleCheckoutExpired(event.data.object as Stripe.Checkout.Session, deps);
+    case "checkout.session.expired": {
+      const session = event.data.object as Stripe.Checkout.Session;
+      await handleCheckoutExpired(session, deps);
+      await recordFunnelEvent(admin, {
+        event: "checkout_expired",
+        userId: session.client_reference_id ?? session.metadata?.supabase_user_id ?? null,
+        props: {
+          kind: session.mode === "payment" ? "pack" : "subscription",
+          tier: session.metadata?.tier,
+          period: session.metadata?.period,
+          pack: session.metadata?.pack,
+          sessionId: session.id,
+        },
+      });
       break;
+    }
     case "invoice.paid":
       await handleInvoicePaid(event.data.object as Stripe.Invoice, deps);
       break;
@@ -606,6 +705,15 @@ export async function handleStripeEvent(
       const invoice = event.data.object as Stripe.Invoice;
       const customerId = customerIdOf(invoice.customer);
       if (!customerId) break;
+      await recordFunnelEvent(admin, {
+        event: "payment_failed",
+        userId: await findUserIdByCustomer(customerId, admin),
+        props: {
+          amountCents: typeof invoice.amount_due === "number" ? invoice.amount_due : undefined,
+          attempt: typeof invoice.attempt_count === "number" ? invoice.attempt_count : undefined,
+          billingReason: invoice.billing_reason ?? undefined,
+        },
+      });
       // Through the sync layer like every other subscription event: the
       // failed invoice may belong to a SECONDARY subscription (the lingering
       // no-card trial next to a paid plan), and writing past_due by customer

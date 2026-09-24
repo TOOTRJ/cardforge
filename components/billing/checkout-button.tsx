@@ -7,9 +7,12 @@ import { Button } from "@/components/ui/button";
 import { createCheckoutSessionAction, type CheckoutInput } from "@/lib/stripe/actions";
 import { cn } from "@/lib/utils";
 import { navigateTo } from "@/lib/routing/navigate";
+import { trackFunnelEvent } from "@/lib/analytics/funnel-client";
 
 type CheckoutButtonProps = {
   input: CheckoutInput;
+  /** Where the button sits (funnel `cta_click.surface`). */
+  surface?: "pricing" | "billing" | "modal" | "other";
   children: React.ReactNode;
   variant?: "primary" | "secondary" | "outline" | "accent";
   size?: "sm" | "md" | "lg";
@@ -21,6 +24,7 @@ type CheckoutButtonProps = {
 // resolves the price id from a stable key, so the client never handles one.
 export function CheckoutButton({
   input,
+  surface = "other",
   children,
   variant = "primary",
   size = "md",
@@ -29,6 +33,13 @@ export function CheckoutButton({
   const [pending, startTransition] = useTransition();
 
   function handleClick() {
+    trackFunnelEvent("cta_click", {
+      surface,
+      kind: input.kind,
+      ...(input.kind === "subscription"
+        ? { tier: input.tier, period: input.period ?? "monthly" }
+        : { pack: input.pack }),
+    });
     startTransition(async () => {
       const result = await createCheckoutSessionAction(input);
       if (result.ok) {

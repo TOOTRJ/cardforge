@@ -287,3 +287,37 @@ values
   ('in_dev_pro_0003', 'd0000000-0000-4000-a000-000000000002', 'cus_dev_pro', 'sub_dev_pro', 1500, 'usd',
    'subscription_cycle', 'pro', 'month', now() - interval '30 days', now(), now() - interval '30 days', 'DEV-0003', null)
 on conflict (invoice_id) do nothing;
+
+-- ---------------------------------------------------------------------------
+-- 8. Funnel events (0112). A week of plausible steps so the admin Funnel
+--    panel shows numbers on a fresh branch. Anonymous rows have no user id.
+-- ---------------------------------------------------------------------------
+
+insert into public.funnel_events (id, event, user_id, props, source, created_at)
+select
+  ('f2000000-0000-4000-a000-' || lpad(g::text, 12, '0'))::uuid,
+  case
+    when g <= 40 then 'pricing_view'
+    when g <= 52 then 'cta_click'
+    when g <= 58 then 'checkout_started'
+    when g <= 61 then 'checkout_completed'
+    when g <= 63 then 'checkout_expired'
+    when g <= 66 then 'trial_started'
+    when g <= 67 then 'trial_converted'
+    when g <= 68 then 'trial_lapsed'
+    when g <= 74 then 'upgrade_modal_open'
+    when g <= 76 then 'pack_purchased'
+    else 'payment_received'
+  end,
+  case when g % 3 = 0 then null else ('d0000000-0000-4000-a000-00000000000' || ((g % 5) + 1)::text)::uuid end,
+  case
+    when g <= 40 then jsonb_build_object('surface', 'pricing', 'signedIn', g % 3 <> 0)
+    when g <= 52 then jsonb_build_object('surface', 'pricing', 'kind', 'subscription', 'tier', case when g % 2 = 0 then 'plus' else 'pro' end, 'period', 'monthly')
+    when g <= 74 and g > 68 then jsonb_build_object('reason', case when g % 2 = 0 then 'credits' else 'hi_res_export' end)
+    else '{}'::jsonb
+  end,
+  case when g <= 52 or (g > 68 and g <= 74) then 'client' else 'server' end,
+  now() - (g % 7 || ' days')::interval - (g || ' minutes')::interval
+from generate_series(1, 78) as g
+on conflict (id) do nothing;
+

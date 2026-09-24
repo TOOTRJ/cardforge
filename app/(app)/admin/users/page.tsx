@@ -24,6 +24,8 @@ import {
 } from "@/components/admin/user-billing-controls";
 import { RevenuePanel } from "@/components/admin/revenue-panel";
 import { getRevenueSummary } from "@/lib/admin/revenue-queries";
+import { FunnelPanel } from "@/components/admin/funnel-panel";
+import { getFunnelSummary } from "@/lib/admin/funnel-queries";
 import { NewMessageDialog } from "@/components/admin/new-message-dialog";
 import { ThreadList } from "@/components/messages/thread-list";
 import { formatRelativeTime } from "@/components/messages/format";
@@ -89,7 +91,7 @@ export default async function AdminUsersPage({
     );
   }
 
-  const [page, revenue] = await Promise.all([listAdminUsers(params), getRevenueSummary()]);
+  const [page, revenue, funnel] = await Promise.all([listAdminUsers(params), getRevenueSummary(), getFunnelSummary()]);
   if (!page) notFound();
   const pages = totalPages(page.total, page.pageSize);
 
@@ -101,6 +103,12 @@ export default async function AdminUsersPage({
         description="Every account, with plan, credits, activity and support context. Open a user to grant credits, comp a plan, resync billing, or message them."
         actions={<Badge variant="primary">{page.total.toLocaleString()} total</Badge>}
       />
+
+      {funnel ? (
+        <div className="mt-6">
+          <FunnelPanel summary={funnel} />
+        </div>
+      ) : null}
 
       {revenue ? (
         <div className="mt-6">

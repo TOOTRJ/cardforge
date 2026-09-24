@@ -18,7 +18,13 @@ const s = vi.hoisted(() => ({
   portal: vi.fn(),
   navigateTo: vi.fn(),
   toastError: vi.fn(),
+  track: vi.fn(),
 }));
+
+// The funnel beacon posts to /api/events; in a test DOM that would try to
+// reach a server that isn't there, so the tracker is a spy here (and its
+// calls are what the wiring tests assert).
+vi.mock("@/lib/analytics/funnel-client", () => ({ trackFunnelEvent: s.track }));
 
 vi.mock("next/link", () => ({
   default: ({ href, children, ...rest }: { href: string; children: ReactNode }) => (
@@ -48,6 +54,7 @@ beforeEach(() => {
   s.portal.mockReset().mockResolvedValue({ ok: true, url: "https://portal.test/s" });
   s.navigateTo.mockReset();
   s.toastError.mockReset();
+  s.track.mockReset();
   vi.stubGlobal(
     "fetch",
     vi.fn(async () => new Response(JSON.stringify({ user: s.me }), { status: 200 })),
@@ -66,6 +73,24 @@ describe("PricingPlans", () => {
     expect(screen.getByRole("link", { name: /get started free/i })).toHaveProperty("href", expect.stringContaining("/signup"));
     expect(screen.getAllByRole("link", { name: /start free — 7-day trial/i })).toHaveLength(2);
     expect(fetch).not.toHaveBeenCalled();
+    // Funnel: one pricing_view per mount, tagged with the surface.
+    expect(s.track).toHaveBeenCalledTimes(1);
+    expect(s.track).toHaveBeenCalledWith("pricing_view", { surface: "pricing" });
+  });
+
+  it("funnel: a signup link click and a checkout click both record cta_click with the surface", async () => {
+    render(<PricingPlans surface="billing" />);
+    fireEvent.click(screen.getAllByRole("link", { name: /start free — 7-day trial/i })[0]);
+    expect(s.track).toHaveBeenCalledWith("cta_click", { surface: "billing", kind: "signup", tier: "plus" });
+
+    cleanup();
+    s.track.mockReset();
+    s.signedIn = true;
+    s.me = freeUser;
+    render(<PricingPlans />);
+    await waitFor(() => expect(button(/try pro free for 7 days/i)).toBeTruthy());
+    fireEvent.click(button(/try pro free for 7 days/i));
+    expect(s.track).toHaveBeenCalledWith("cta_click", { surface: "pricing", kind: "subscription", tier: "pro", period: "monthly" });
   });
 
   it("a server-provided viewer renders the signed-in buttons on the FIRST render, with no fetch and no anonymous flash", () => {
