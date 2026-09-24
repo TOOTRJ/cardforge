@@ -890,6 +890,10 @@ function makeChainAdmin(rows: Rows, opts: { insertError?: string; upsertError?: 
       const r = result();
       return { data: Array.isArray(r.data) ? (r.data[0] ?? null) : r.data, error: r.error };
     };
+    c.single = async () => {
+      const r = result();
+      return { data: Array.isArray(r.data) ? (r.data[0] ?? null) : (r.data ?? { id: "fe_1" }), error: r.error };
+    };
     c.then = (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) =>
       Promise.resolve(result()).then(resolve, reject);
     return c;
@@ -900,7 +904,10 @@ function makeChainAdmin(rows: Rows, opts: { insertError?: string; upsertError?: 
         select: () => chain(table, () => ({ data: rows[table] ?? [], error: null })),
         insert: (row: Record<string, unknown>) => {
           inserts.push({ table, row });
-          return chain(table, () => ({ data: null, error: opts.insertError ? { message: opts.insertError } : null }));
+          return chain(table, () => ({
+            data: table === "funnel_events" ? { id: "fe_1" } : null,
+            error: opts.insertError && table !== "funnel_events" ? { message: opts.insertError } : null,
+          }));
         },
         upsert: (row: Record<string, unknown>, o: unknown) => {
           upserts.push({ table, row, opts: o });
@@ -920,6 +927,12 @@ function makeChainAdmin(rows: Rows, opts: { insertError?: string; upsertError?: 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return { admin: admin as any, inserts, upserts, updates, rpcs };
 }
+
+/** Notification rows only — funnel_events rows are asserted separately. */
+const notes = (inserts: Array<{ table: string; row: Record<string, unknown> }>) =>
+  inserts.filter((i) => i.table === "notifications");
+const funnel = (inserts: Array<{ table: string; row: Record<string, unknown> }>) =>
+  inserts.filter((i) => i.table === "funnel_events").map((i) => i.row);
 
 describe("handleStripeEvent — invoice.paid", () => {
   const profile = { id: "user-1", subscription_tier: "pro", subscription_status: "active", stripe_subscription_id: "sub_1", stripe_customer_id: "cus_1" };
@@ -983,7 +996,10 @@ describe("handleStripeEvent — invoice.paid", () => {
     expect(retrieve).toHaveBeenCalledWith("sub_1");
     expect(updates.find((u) => u.table === "profiles")?.values).toMatchObject({ subscription_tier: "pro", subscription_status: "active" });
     expect(rpcs.find((r) => r.fn === "grant_credits")?.args).toMatchObject({ p_user_id: "user-1", p_amount: MONTHLY_CREDITS.pro });
-    expect(inserts).toEqual([
+    expect(funnel(inserts)).toEqual([
+      { event: "payment_received", user_id: "user-1", props: { amountCents: 1500, tier: "pro", interval: "month", billingReason: "subscription_cycle" }, source: "server" },
+    ]);
+    expect(notes(inserts)).toEqual([
       {
         table: "notifications",
         row: {
@@ -1008,12 +1024,12 @@ describe("handleStripeEvent — invoice.paid", () => {
     const zero = makeChainAdmin({ profiles: [profile], notifications: [], credit_ledger: [] });
     await handleStripeEvent(event(invoice({ amount_paid: 0, billing_reason: "subscription_create" })), { admin: zero.admin, stripe: invoiceStripe });
     expect(zero.upserts[0].row).toMatchObject({ amount_cents: 0 });
-    expect(zero.inserts).toEqual([]);
+    expect(zero.inserts).toEqual([]); // no notification AND no payment_received funnel row for $0
 
     const again = makeChainAdmin({ profiles: [profile], notifications: [{ id: "n_1" }], credit_ledger: [] });
     await handleStripeEvent(event(invoice()), { admin: again.admin, stripe: invoiceStripe });
     expect(again.upserts).toHaveLength(1);
-    expect(again.inserts).toEqual([]);
+    expect(notes(again.inserts)).toEqual([]);
   });
 
   it("falls back to the invoice's subscription metadata when the customer isn't linked, and backfills the link", async () => {
@@ -1064,7 +1080,10 @@ describe("handleStripeEvent — checkout.session.expired", () => {
   it("a never-subscribed user gets ONE reminder that still offers the trial, plus the email", async () => {
     const { admin, inserts } = makeChainAdmin({ profiles: [free], notifications: [], credit_ledger: [] });
     await handleStripeEvent(event(session()), { admin, stripe: noStripe });
-    expect(inserts).toEqual([
+    expect(funnel(inserts)).toEqual([
+      { event: "checkout_expired", user_id: "user-1", props: { kind: "subscription", tier: "pro", period: "monthly", sessionId: "cs_exp" }, source: "server" },
+    ]);
+    expect(notes(inserts)).toEqual([
       {
         table: "notifications",
         row: {
@@ -1085,7 +1104,7 @@ describe("handleStripeEvent — checkout.session.expired", () => {
   it("a lapsed subscriber is nudged without trial copy; an annual session quotes the annual price", async () => {
     const { admin, inserts } = makeChainAdmin({ profiles: [{ id: "user-1", subscription_status: "canceled" }], notifications: [], credit_ledger: [] });
     await handleStripeEvent(event(session({ metadata: { supabase_user_id: "user-1", purchase_kind: "subscription", tier: "plus", period: "annual" } })), { admin, stripe: noStripe });
-    expect(inserts[0].row.payload).toMatchObject({ tier: "plus", period: "annual", trialEligible: false });
+    expect(notes(inserts)[0].row.payload).toMatchObject({ tier: "plus", period: "annual", trialEligible: false });
     const [message] = email.send.mock.calls[0];
     expect(message.subject).toBe("Finish upgrading to PipGlyph Plus");
     expect(message.html).toContain("$60 / year");
@@ -1094,22 +1113,22 @@ describe("handleStripeEvent — checkout.session.expired", () => {
   it("stays quiet when the plan was bought after all, when a reminder went out in the last 30 days, or when there's no user", async () => {
     const live = makeChainAdmin({ profiles: [{ id: "user-1", subscription_status: "trialing" }], notifications: [], credit_ledger: [] });
     await handleStripeEvent(event(session()), { admin: live.admin, stripe: noStripe });
-    expect(live.inserts).toEqual([]);
+    expect(notes(live.inserts)).toEqual([]);
 
     const recent = makeChainAdmin({ profiles: [free], notifications: [{ id: "n_recent" }], credit_ledger: [] });
     await handleStripeEvent(event(session()), { admin: recent.admin, stripe: noStripe });
-    expect(recent.inserts).toEqual([]);
+    expect(notes(recent.inserts)).toEqual([]);
 
     const anon = makeChainAdmin({ profiles: [free], notifications: [], credit_ledger: [] });
     await handleStripeEvent(event(session({ client_reference_id: null, metadata: {} })), { admin: anon.admin, stripe: noStripe });
-    expect(anon.inserts).toEqual([]);
+    expect(notes(anon.inserts)).toEqual([]);
     expect(email.send).not.toHaveBeenCalled();
   });
 
   it("packs: reminded with the credit count and price, unless a pack was bought after the session opened", async () => {
     const { admin, inserts } = makeChainAdmin({ profiles: [free], notifications: [], credit_ledger: [] });
     await handleStripeEvent(event(packSession()), { admin, stripe: noStripe });
-    expect(inserts[0].row.payload).toMatchObject({ kind: "pack", packCredits: 30, trialEligible: false });
+    expect(notes(inserts)[0].row.payload).toMatchObject({ kind: "pack", packCredits: 30, trialEligible: false });
     const [message] = email.send.mock.calls[0];
     expect(message.subject).toBe("Your 30 PipGlyph credits are waiting");
     expect(message.html).toContain("($8)");
@@ -1117,7 +1136,7 @@ describe("handleStripeEvent — checkout.session.expired", () => {
     email.send.mockClear();
     const bought = makeChainAdmin({ profiles: [free], notifications: [], credit_ledger: [{ id: "l_1" }] });
     await handleStripeEvent(event(packSession()), { admin: bought.admin, stripe: noStripe });
-    expect(bought.inserts).toEqual([]);
+    expect(notes(bought.inserts)).toEqual([]);
     expect(email.send).not.toHaveBeenCalled();
   });
 
@@ -1129,7 +1148,7 @@ describe("handleStripeEvent — checkout.session.expired", () => {
     email.send.mockRejectedValue(new Error("resend down"));
     const { admin, inserts } = makeChainAdmin({ profiles: [free], notifications: [], credit_ledger: [] });
     await expect(handleStripeEvent(event(session()), { admin, stripe: noStripe })).resolves.toBeUndefined();
-    expect(inserts).toHaveLength(1);
+    expect(notes(inserts)).toHaveLength(1);
 
     email.configured = false;
     email.send.mockReset();
@@ -1163,14 +1182,17 @@ describe("handleStripeEvent — trial win-back", () => {
     const { admin, inserts, updates } = makeChainAdmin({ profiles: [profile], notifications: [] });
     await handleStripeEvent(event(deleted()), { admin, stripe: noApiStripe });
     expect(updates.find((u) => u.table === "profiles")?.values).toMatchObject({ subscription_tier: "free", subscription_status: "canceled" });
-    expect(inserts).toHaveLength(1);
-    expect(inserts[0].row).toMatchObject({
+    expect(funnel(inserts)).toEqual([
+      { event: "trial_lapsed", user_id: "user-1", props: { tier: "pro", interval: "month", subscriptionId: "sub_trial" }, source: "server" },
+    ]);
+    expect(notes(inserts)).toHaveLength(1);
+    expect(notes(inserts)[0].row).toMatchObject({
       recipient_id: "user-1",
       actor_id: null,
       type: "trial_lapsed",
       payload: { subscriptionId: "sub_trial", tier: "pro", discountPct: 20 },
     });
-    expect(typeof (inserts[0].row.payload as { expiresAt: unknown }).expiresAt).toBe("string");
+    expect(typeof (notes(inserts)[0].row.payload as { expiresAt: unknown }).expiresAt).toBe("string");
     expect(email.send).toHaveBeenCalledTimes(1);
     const [message, options] = email.send.mock.calls[0];
     expect(message.subject).toBe("20% off your first month of PipGlyph Pro");
@@ -1181,16 +1203,70 @@ describe("handleStripeEvent — trial win-back", () => {
 
   it("a paid subscription that ends (or a trial that converted first) gets no offer; a repeat delivery adds nothing", async () => {
     const paid = makeChainAdmin({ profiles: [profile], notifications: [] });
-    await handleStripeEvent(event(deleted({ trial_end: 1_790_735_200, ended_at: 1_793_400_000 })), { admin: paid.admin, stripe: noApiStripe });
-    expect(paid.inserts).toEqual([]);
+    await handleStripeEvent(event(deleted({ trial_end: 1_790_735_200, ended_at: 1_793_400_000, cancellation_details: { reason: "cancellation_requested", feedback: "too_expensive" } })), { admin: paid.admin, stripe: noApiStripe });
+    expect(notes(paid.inserts)).toEqual([]);
+    // …but a paid cancellation IS a funnel row, with Stripe's reason + feedback.
+    expect(funnel(paid.inserts)).toEqual([
+      { event: "subscription_cancelled", user_id: "user-1", props: { tier: "pro", interval: "month", subscriptionId: "sub_trial", cancelReason: "cancellation_requested", cancelFeedback: "too_expensive" }, source: "server" },
+    ]);
     const never = makeChainAdmin({ profiles: [profile], notifications: [] });
     await handleStripeEvent(event(deleted({ trial_end: null })), { admin: never.admin, stripe: noApiStripe });
-    expect(never.inserts).toEqual([]);
+    expect(notes(never.inserts)).toEqual([]);
     expect(email.send).not.toHaveBeenCalled();
 
     const again = makeChainAdmin({ profiles: [profile], notifications: [{ id: "n_1" }] });
     await handleStripeEvent(event(deleted()), { admin: again.admin, stripe: noApiStripe });
-    expect(again.inserts).toEqual([]);
+    expect(notes(again.inserts)).toEqual([]);
+  });
+});
+
+describe("handleStripeEvent — funnel rows for subscription lifecycle", () => {
+  const profile = { id: "user-1", subscription_tier: "free", subscription_status: null, stripe_subscription_id: null, stripe_customer_id: "cus_1" };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const noApiStripe = { subscriptions: { list: async () => { throw new Error("no api"); } } } as any;
+  const sub = (extra: Record<string, unknown> = {}) => ({
+    id: "sub_1",
+    customer: "cus_1",
+    status: "active",
+    cancel_at_period_end: false,
+    items: { data: [{ price: { id: "price_pro", recurring: { interval: "month" } }, current_period_end: 1893456000 }] },
+    ...extra,
+  });
+
+  it("created: trial_started for a trial, subscription_started for a paid plan", async () => {
+    const trial = makeChainAdmin({ profiles: [profile], credit_ledger: [] });
+    await handleStripeEvent({ id: "e1", type: "customer.subscription.created", data: { object: sub({ status: "trialing" }) } } as never, { admin: trial.admin, stripe: noApiStripe });
+    expect(funnel(trial.inserts)).toEqual([{ event: "trial_started", user_id: "user-1", props: { tier: "pro", interval: "month", subscriptionId: "sub_1" }, source: "server" }]);
+
+    const paid = makeChainAdmin({ profiles: [profile], credit_ledger: [] });
+    await handleStripeEvent({ id: "e2", type: "customer.subscription.created", data: { object: sub() } } as never, { admin: paid.admin, stripe: noApiStripe });
+    expect(funnel(paid.inserts).map((r) => r.event)).toEqual(["subscription_started"]);
+  });
+
+  it("updated: trial_converted when previous_attributes.status was trialing; subscription_changed when the price changed; nothing otherwise", async () => {
+    const converted = makeChainAdmin({ profiles: [profile], credit_ledger: [] });
+    await handleStripeEvent({ id: "e3", type: "customer.subscription.updated", data: { object: sub(), previous_attributes: { status: "trialing" } } } as never, { admin: converted.admin, stripe: noApiStripe });
+    expect(funnel(converted.inserts).map((r) => r.event)).toEqual(["trial_converted"]);
+
+    const changed = makeChainAdmin({ profiles: [profile], credit_ledger: [] });
+    await handleStripeEvent({ id: "e4", type: "customer.subscription.updated", data: { object: sub(), previous_attributes: { items: { data: [{ price: { id: "price_plus" } }] } } } } as never, { admin: changed.admin, stripe: noApiStripe });
+    expect(funnel(changed.inserts)).toEqual([{ event: "subscription_changed", user_id: "user-1", props: { fromTier: "plus", toTier: "pro", interval: "month", subscriptionId: "sub_1" }, source: "server" }]);
+
+    const quiet = makeChainAdmin({ profiles: [profile], credit_ledger: [] });
+    await handleStripeEvent({ id: "e5", type: "customer.subscription.updated", data: { object: sub(), previous_attributes: { cancel_at_period_end: true } } } as never, { admin: quiet.admin, stripe: noApiStripe });
+    expect(funnel(quiet.inserts)).toEqual([]);
+  });
+
+  it("checkout.session.completed records checkout_completed (and pack_purchased for a paid pack)", async () => {
+    const { admin, inserts } = makeChainAdmin({ profiles: [profile] });
+    await handleStripeEvent(
+      { id: "e6", type: "checkout.session.completed", data: { object: { id: "cs_1", mode: "payment", payment_status: "paid", amount_total: 320, client_reference_id: "user-1", metadata: { supabase_user_id: "user-1", purchase_kind: "pack", pack: "mini", pack_credits: "10", discount: "subscriber" } } } } as never,
+      { admin, stripe: noApiStripe },
+    );
+    expect(funnel(inserts).map((r) => [r.event, r.props])).toEqual([
+      ["pack_purchased", { pack: "mini", credits: 10, discount: "subscriber", amountCents: 320, sessionId: "cs_1" }],
+      ["checkout_completed", { kind: "pack", pack: "mini", discount: "subscriber", sessionId: "cs_1" }],
+    ]);
   });
 });
 

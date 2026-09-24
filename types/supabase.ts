@@ -190,6 +190,33 @@ export type Database = {
         };
         Relationships: [];
       };
+      funnel_events: {
+        Row: {
+          id: string;
+          event: string;
+          user_id: string | null;
+          props: Json;
+          source: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          event: string;
+          user_id?: string | null;
+          props?: Json;
+          source?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          event?: string;
+          user_id?: string | null;
+          props?: Json;
+          source?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       billing_payments: {
         Row: {
           invoice_id: string;
@@ -1697,6 +1724,11 @@ export type Database = {
           last_active_at: string | null;
           total_count: number;
         }[];
+      };
+      // Migration 0112 — funnel instrumentation.
+      admin_funnel_counts: {
+        Args: { p_since: string };
+        Returns: { event: string; n: number; users: number }[];
       };
       // Migrations 0094/0095 — usernames + email preferences.
       email_recipients: {

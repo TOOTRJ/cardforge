@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useState } from "react";
 import { UpgradeModal, type UpgradeReason } from "./upgrade-modal";
+import { trackFunnelEvent } from "@/lib/analytics/funnel-client";
 
 // App-wide upgrade modal. Any client component can call useUpgradeModal().open()
 // after hitting a 402/403 (out of credits, premium frame, capacity, …) to nudge
@@ -29,6 +30,9 @@ export function UpgradeModalProvider({
   const openModal = useCallback((nextReason: UpgradeReason = "generic") => {
     setReason(nextReason);
     setOpen(true);
+    // Funnel: which gate the user hit (out of credits, watermark, capacity…)
+    // — the single best signal of what actually sells a plan.
+    trackFunnelEvent("upgrade_modal_open", { reason: nextReason });
   }, []);
 
   return (

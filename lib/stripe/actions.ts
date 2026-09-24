@@ -2,6 +2,7 @@
 
 import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
+import { recordFunnelEvent } from "@/lib/analytics/funnel-server";
 import { getSiteBaseUrl } from "@/lib/site-url";
 import {
   CREDIT_PACKS,
@@ -376,6 +377,23 @@ export async function createCheckoutSessionAction(
         success_url: `${base}/dashboard?billing=success`,
         cancel_url: `${base}/pricing?billing=cancel`,
       };
+      // Funnel: the click that became a checkout. Its row id rides along in
+      // the session metadata so the webhook's completed/expired rows can be
+      // tied back to it (later subscription events don't carry the session).
+      const funnelId = isAdminConfigured()
+        ? await recordFunnelEvent(createAdminClient(), {
+            event: "checkout_started",
+            userId: customer.userId,
+            props: {
+              kind: "subscription",
+              tier: input.tier,
+              period: input.period ?? "monthly",
+              trial: withTrial,
+              discount: winback ? "trial_winback" : "none",
+            },
+          })
+        : null;
+      if (funnelId) sessionParams.metadata = { ...(sessionParams.metadata ?? {}), funnel_id: funnelId };
       let session: Stripe.Checkout.Session;
       try {
         session = await stripe.checkout.sessions.create(sessionParams);
@@ -428,6 +446,19 @@ export async function createCheckoutSessionAction(
       success_url: `${base}/dashboard/billing?billing=credits`,
       cancel_url: `${base}/pricing?billing=cancel`,
     };
+    const funnelId = isAdminConfigured()
+      ? await recordFunnelEvent(createAdminClient(), {
+          event: "checkout_started",
+          userId: customer.userId,
+          props: {
+            kind: "pack",
+            pack: input.pack,
+            credits,
+            discount: subscriberDiscount ? "subscriber" : "none",
+          },
+        })
+      : null;
+    if (funnelId) params.metadata = { ...(params.metadata ?? {}), funnel_id: funnelId };
     let session: Stripe.Checkout.Session;
     try {
       session = await stripe.checkout.sessions.create(

@@ -16,6 +16,10 @@
     {
       "path": "/api/cron/email-digest",
       "schedule": "0 15 * * 1"
+    },
+    {
+      "path": "/api/cron/prune-funnel-events",
+      "schedule": "15 7 * * 1"
     }
   ]
 }

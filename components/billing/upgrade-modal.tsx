@@ -140,6 +140,7 @@ function PlanCta({
       return (
         <CheckoutButton
           input={{ kind: "subscription", tier }}
+          surface="modal"
           variant={variant}
           size="sm"
           className="w-auto"
@@ -187,7 +188,7 @@ export function UpgradeModal({ open, reason, onOpenChange }: UpgradeModalProps) 
       <p className="text-[11px] font-semibold uppercase tracking-wider text-subtle">
         Credit packs{packDiscount ? ` · ${PACK_SUBSCRIBER_DISCOUNT_PCT}% subscriber price` : " · never expire"}
       </p>
-      <CreditPackGrid compact discounted={packDiscount} />
+      <CreditPackGrid compact discounted={packDiscount} surface="modal" />
     </section>
   ) : null;
 

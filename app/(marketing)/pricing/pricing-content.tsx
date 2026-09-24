@@ -62,7 +62,7 @@ export function PricingContent({ initialViewer }: { initialViewer?: BillingViewe
             credits never expire, and Plus and Pro members pay 20% less.
           </p>
         </div>
-        <CreditPackGrid />
+        <CreditPackGrid surface="pricing" />
       </div>
 
       {/* Disclaimer */}
