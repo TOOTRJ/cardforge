@@ -43,7 +43,7 @@ export function PricingContent({ initialViewer }: { initialViewer?: BillingViewe
           for MTG-style rendering.
         </p>
         <p className="text-sm font-medium text-gold-strong">
-          First time subscribing? Try any plan free for 7 days — no card required.
+          First time subscribing? Try any plan free for 7 days — 25 AI credits to play with, nothing charged until day 7, cancel anytime. Your plan&apos;s full monthly credits arrive with your first payment.
         </p>
       </div>
 

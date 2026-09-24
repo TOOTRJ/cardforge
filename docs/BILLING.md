@@ -11,7 +11,7 @@ how the integration compares with the standard Stripe SaaS pattern.
 | Stripe prices | **lookup keys** on the catalog (`plus_monthly`, `plus_annual`, `pro_monthly`, `pro_annual`, `pack_mini`, `pack_small`, `pack_large`; coupon `SUBSCRIBER_PACKS_20` for subscriber pack pricing) — `lib/stripe/prices.ts` resolves them at checkout; the `STRIPE_PRICE_*` env vars are an optional fallback | Since 2026-09-22 (PR #360): a stale env id had every live credit-pack checkout failing with `resource_missing` for weeks. `lib/stripe/config.ts` still maps a price back to a tier (env id → metadata → lookup key → product → amount) for the webhook. |
 | Storefront | `/pricing` (static, anonymous) + `/pricing-member` (dynamic, signed-in; `proxy.ts` rewrite) | Buttons come from `pricingCtaFor()` fed by a `BillingViewer` (`lib/billing/viewer.ts`). Paid accounts are redirected to the billing page. |
 | Billing page | `/dashboard/billing` | Plan, renewal/trial/cancel dates, plan changes (the same grid), credits + packs, card on file + invoices (`lib/billing/subscription-details.ts`), portal shortcuts. |
-| Checkout / portal | `lib/stripe/actions.ts` (server actions) | New subscription → Stripe Checkout (7-day no-card trial for first-timers). Live subscription: an **upgrade** goes through the Customer Portal **confirm-update** flow (in-place price switch, prorated, charged now); a **downgrade** (Pro → Plus, or annual → monthly) is **scheduled for the end of the paid period** with a subscription schedule (§6). Broken payment → portal. Packs → Checkout in `payment` mode. |
+| Checkout / portal | `lib/stripe/actions.ts` (server actions) | New subscription → Stripe Checkout (7-day trial for first-timers, **card required** since 2026-09-24, 25 trial credits, the full allotment on first payment; a lapsed trial gets 20% off its first month for 30 days). Live subscription: an **upgrade** goes through the Customer Portal **confirm-update** flow (in-place price switch, prorated, charged now); a **downgrade** (Pro → Plus, or annual → monthly) is **scheduled for the end of the paid period** with a subscription schedule (§6). Broken payment → portal. Packs → Checkout in `payment` mode. |
 | Webhook | `app/api/stripe/webhook/route.ts` → `lib/stripe/webhook-handlers.ts` → `lib/stripe/subscription-sync.ts` | Events: `checkout.session.{completed,async_payment_succeeded,expired}`, `customer.subscription.{created,updated,deleted,trial_will_end}`, `invoice.{paid,payment_failed}`. Idempotent (`stripe_events` claim table, migration 0099). Every endpoint (live + sandbox) must subscribe to all nine. |
 | Revenue log | `billing_payments` (migration 0110) ← `invoice.paid`; admin Revenue panel on `/admin/users` (`lib/admin/revenue-queries.ts`) | One row per paid invoice; admins read, the webhook writes. |
 | Entitlements | `lib/billing/entitlements.ts` | The ONE server-side truth: subscription active/trialing + admin comp → effective tier → perks. Never trust a client tier. |
@@ -220,7 +220,7 @@ email (`checkoutReminderEmail`), and only while it still matters:
   pack sessions when a `pack:` grant landed after the session opened;
 - at most one reminder per user per 30 days, whatever they abandoned;
 - the copy offers the trial only while the profile has never synced a
-  subscription ("your 7-day free trial is still waiting, no card needed"),
+  subscription ("your 7-day free trial is still waiting; nothing is charged until it ends"),
   otherwise "pick up where you left off"; packs count the credits and price;
 - the session's `metadata` (`purchase_kind`, `tier`, `period`, or
   `pack_credits`) says what was being bought — the session object carries no
@@ -260,6 +260,39 @@ Owner decisions of 2026-09-24 (audit §6 recommendations 1 and 2):
   falls back to full price (logged) if the coupon is ever missing. The
   client only displays the discounted number; the webhook grants by
   `pack_credits`, so the discount changes nothing but the price.
+
+## 9. Card-required trial, trial credits, win-back (2026-09-24)
+
+Owner decisions of 2026-09-24 (audit §6 recommendation 3, all three parts):
+
+- **Card required for the trial.** Checkout uses Stripe's default payment
+  collection (the `if_required` option is gone); the card is charged when the
+  7-day trial ends unless the user cancels, and `missing_payment_method:
+  cancel` stays as the safety net. Legacy no-card trials keep their own terms
+  (there were none live on 2026-09-24). Every "no card required" promise is
+  gone from the pricing page, its metadata, the billing page, the upgrade
+  modal, the checkout-reminder email and its notification copy. A
+  card-backed trial that switches plans now goes through the portal's
+  confirm-update flow (`trial_update_behavior: continue_trial` on both
+  portal configurations), like an active plan; only a legacy no-card trial
+  still takes the supersede-checkout path.
+- **Trial credits: 25, not the full allotment.** `grantCreditsForSync` grants
+  `TRIAL_CREDITS` (reason `trial_grant`) under the month's BASE refill key
+  when a trial is created and nothing more until it pays; the first payment's
+  grant tops the month up to the plan's allotment (same month: 25 + 75 for
+  Pro; a later month: the full 100 fresh). Copy on the pricing page, the
+  billing page and the modal says so.
+- **Win-back.** `customer.subscription.deleted` for a subscription whose
+  `ended_at` is at/before its `trial_end` (`isUnconvertedTrial`) and whose
+  customer has no other live plan → ONE `trial_lapsed` notification
+  (migration 0111; payload carries the offer's `expiresAt`) + ONE
+  `trialWinbackEmail`. Coupon `TRIAL_WINBACK_20` (same id on live and sandbox,
+  `percent_off 20`, `duration once`, restricted to the Plus/Pro products) is
+  applied by `createCheckoutSessionAction` when a `trial_lapsed` notification
+  exists within `TRIAL_WINBACK_WINDOW_DAYS` (30) — server-side, never a code
+  (Stripe won't combine `discounts` with `allow_promotion_codes`, so the
+  promo-code box is off for that session); a missing coupon logs and sells
+  at full price.
 
 ## Addendum — sandbox lifecycle run (2026-09-22, test clock `clock_1UIftGQFLEpCg9s2uoFgd7kf`)
 

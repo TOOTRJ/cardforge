@@ -253,7 +253,7 @@ export function checkoutReminderEmail(
   const paragraphs = [
     `You started upgrading to <strong>${plan}</strong>${price ? ` (${price})` : ""} but the checkout wasn't completed, so nothing was charged.`,
     input.trialEligible
-      ? `Your <strong>7-day free trial</strong> is still waiting — no card needed to start it, and if you don't add one it simply ends. ${plan} means more monthly AI credits, clean hi-res downloads and more room for your cards.`
+      ? `Your <strong>7-day free trial</strong> is still waiting — nothing is charged until it ends, and you can cancel in one click before then. ${plan} means more monthly AI credits, clean hi-res downloads and more room for your cards.`
       : `${plan} means more monthly AI credits, clean hi-res downloads and more room for your cards — and you can cancel any time.`,
     `Something go wrong at checkout? ${faq} covers plans and billing, and you can message us from your dashboard.`,
   ];
@@ -275,6 +275,69 @@ export function checkoutReminderEmail(
     }),
     text: renderEmailText({
       heading: input.trialEligible ? `Your ${input.plan} trial is waiting` : `Finish upgrading to ${input.plan}`,
+      lines: paragraphs.map((p) => p.replace(/<[^>]+>/g, "")),
+      cta,
+      footerNote: f.footerNote,
+      unsubscribeUrl: f.unsubscribeUrl,
+    }),
+  };
+}
+
+// --- Trial win-back (account list) -------------------------------------------------
+
+/** A trial ended without converting. One offer, once: a percentage off the
+ *  first month, applied automatically at checkout until `expiresAt`. */
+export function trialWinbackEmail(
+  recipient: Recipient,
+  input: {
+    /** "Plus" | "Pro" */
+    plan: string;
+    discountPct: number;
+    /** ISO timestamp the offer ends. */
+    expiresAt: string;
+    /** "$15 / month" — null when unknown. */
+    priceLabel: string | null;
+    /** "$12 for the first month" — null when unknown. */
+    discountedPriceLabel: string | null;
+  },
+): OutgoingEmail {
+  const site = getSiteBaseUrl();
+  const f = footer(
+    "account",
+    recipient,
+    "You're receiving this because your PipGlyph free trial ended.",
+  );
+  const date = new Date(input.expiresAt).toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+  const plan = escapeHtml(input.plan);
+  const cta = { label: `Come back to ${input.plan}`, url: `${site}/dashboard/billing#plans` };
+  const offer = input.discountedPriceLabel
+    ? `<strong>${input.discountPct}% off your first month</strong> — ${escapeHtml(input.discountedPriceLabel)}${input.priceLabel ? ` instead of ${escapeHtml(input.priceLabel)}` : ""}`
+    : `<strong>${input.discountPct}% off your first month</strong>`;
+  const paragraphs = [
+    `Your free ${plan} trial has ended and nothing was charged. Every card you made is still yours, and you're back on the free plan.`,
+    `If ${plan} wasn't quite right yet, here's ${offer}. It's applied automatically when you subscribe before <strong>${date}</strong> — no code to enter.`,
+    `${plan} means monthly AI credits, clean hi-res downloads and print-ready PDFs — and you can cancel any time.`,
+  ];
+  return {
+    to: recipient.email,
+    subject: `${input.discountPct}% off your first month of PipGlyph ${input.plan}`,
+    headers: f.headers,
+    html: renderEmailLayout({
+      siteUrl: site,
+      preheader: `Your trial ended — come back by ${date} for ${input.discountPct}% off.`,
+      heading: `Come back to ${plan} for ${input.discountPct}% off`,
+      paragraphs,
+      cta,
+      footerNote: f.footerNote,
+      unsubscribeUrl: f.unsubscribeUrl,
+      settingsUrl: f.settingsUrl,
+    }),
+    text: renderEmailText({
+      heading: `Come back to ${input.plan} for ${input.discountPct}% off`,
       lines: paragraphs.map((p) => p.replace(/<[^>]+>/g, "")),
       cta,
       footerNote: f.footerNote,

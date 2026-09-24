@@ -258,8 +258,16 @@ Rules and gotchas:
   them "Manage plan" opened a portal that doesn't exist (2026-09-22). One
   trial per account, Plus or Pro: `createCheckoutSessionAction` grants
   `trial_period_days` only when the profile has never synced a subscription
-  AND Stripe's history (status "all") is empty; a plan switch mid-trial
-  carries `trial_end` over (≥48 h left, Stripe's minimum). Active plans:
+  AND Stripe's history (status "all") is empty. The trial REQUIRES A CARD
+  (2026-09-24; never reintroduce `payment_method_collection: if_required`),
+  grants `TRIAL_CREDITS` (25, reason `trial_grant`, under the month's base
+  refill key) at creation and the full allotment on first payment; a
+  card-backed trial switches plans through the portal confirm flow, a legacy
+  no-card one is superseded by a checkout that carries `trial_end` over
+  (≥48 h left, Stripe's minimum). A trial that ends unconverted
+  (`isUnconvertedTrial`) gets ONE `trial_lapsed` notification + win-back
+  email (0111); checkout applies coupon `TRIAL_WINBACK_COUPON_ID` for 30
+  days from that row, never a client-supplied code. Active plans:
   an UPGRADE switches in place through the portal confirm flow (prorated,
   charged now); a DOWNGRADE (`isPlanDowngrade` in `lib/billing/plan-change.ts`: lower tier, or
   annual → monthly) is scheduled for the end of the paid period with a subscription

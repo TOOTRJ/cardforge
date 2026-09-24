@@ -20,6 +20,7 @@ import {
   PACK_SUBSCRIBER_DISCOUNT_PCT,
   PLANS,
   SIGNUP_CREDITS,
+  TRIAL_CREDITS,
   TRIAL_DAYS,
   type PaidTier,
 } from "@/lib/billing/plans";
@@ -239,8 +240,8 @@ export function UpgradeModal({ open, reason, onOpenChange }: UpgradeModalProps) 
               is promised the trial (checkout re-checks server-side). */}
           {!viewer.hasSubscribed ? (
             <p className="text-xs leading-5 text-gold-strong">
-              {TRIAL_DAYS}-day free trial for first-time subscribers — no card
-              required, cancel anytime.
+              {TRIAL_DAYS}-day free trial for first-time subscribers — {TRIAL_CREDITS} AI credits to try,
+              nothing charged until day {TRIAL_DAYS}, cancel anytime.
             </p>
           ) : null}
 

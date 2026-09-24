@@ -185,7 +185,7 @@ describe("describeNotification — deck generated", () => {
       describeNotification({ ...base, payload: { kind: "subscription", tier: "pro", trialEligible: true } }, { isAdmin: false }),
     ).toEqual({
       subject: "Your Pro checkout",
-      body: "wasn't finished — your 7-day free trial is still waiting, no card needed.",
+      body: "wasn't finished — your 7-day free trial is still waiting; nothing is charged until it ends, cancel anytime.",
       href: "/dashboard/billing#plans",
     });
     expect(
@@ -197,6 +197,18 @@ describe("describeNotification — deck generated", () => {
       subject: "Your credit top-up",
       body: "wasn't finished — 30 credits are one click away.",
       href: "/dashboard/billing#packs",
+    });
+  });
+
+  it("trial lapsed: the win-back offer with its deadline, linking to the plans", () => {
+    const d = describeNotification(
+      { actor: null, card: null, threadId: null, type: "trial_lapsed", payload: { subscriptionId: "sub_1", tier: "pro", discountPct: 20, expiresAt: "2026-10-24T12:00:00Z" } },
+      { isAdmin: false },
+    );
+    expect(d).toEqual({
+      subject: "Your Pro trial",
+      body: "ended — come back by Oct 24, 2026 for 20% off your first month; the discount is applied automatically at checkout.",
+      href: "/dashboard/billing#plans",
     });
   });
 });

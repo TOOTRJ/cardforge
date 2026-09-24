@@ -19,7 +19,7 @@ vi.mock("@/lib/email/preferences", () => ({
 }));
 
 import { handleStripeEvent } from "@/lib/stripe/webhook-handlers";
-import { MONTHLY_CREDITS, creditRefillKey, currentCreditPeriod } from "@/lib/billing/plans";
+import { MONTHLY_CREDITS, TRIAL_CREDITS, creditRefillKey, currentCreditPeriod } from "@/lib/billing/plans";
 
 // Minimal admin-client stand-in that records the writes the handlers make, so
 // we can assert dispatch behavior without a real Supabase client.
@@ -183,12 +183,14 @@ describe("handleStripeEvent", () => {
       stripe_subscription_id: "sub_2",
     });
 
-    // Trial still gets the first month's credits.
+    // A trial gets its tranche (not the full month) under the month's base key.
     const grant = rpcs.find((r) => r.fn === "grant_credits");
     expect(grant?.args).toMatchObject({
       p_user_id: "user-meta",
-      p_amount: MONTHLY_CREDITS.plus,
+      p_amount: TRIAL_CREDITS,
+      p_reason: "trial_grant",
     });
+    expect(String(grant?.args.p_idempotency_key)).toMatch(/^refill:user-meta:\d{4}-\d{2}$/);
   });
 
   it("on subscription.updated while trialing: NO grant (one trial grant, at creation)", async () => {
@@ -255,6 +257,31 @@ describe("handleStripeEvent", () => {
     expect(String(grant?.args.p_idempotency_key)).toMatch(
       /^refill:user-1:\d{4}-\d{2}$/,
     );
+  });
+
+  it("a trial converting in the SAME month it started tops the tranche up to the full allotment", async () => {
+    // The tranche (25) sits under the base key; the first payment's grant
+    // sees it and adds the shortfall under the tier's upgrade key.
+    const { admin, rpcs } = makeAdmin({ ledgerRow: { delta: TRIAL_CREDITS } });
+    await run(
+      {
+        id: "evt_trial_convert_same_month",
+        type: "customer.subscription.updated",
+        data: {
+          object: {
+            id: "sub_1",
+            customer: "cus_1",
+            status: "active",
+            cancel_at_period_end: false,
+            items: { data: [{ price: { id: "price_pro" }, current_period_end: 1893456000 }] },
+          },
+        },
+      },
+      admin,
+    );
+    const grant = rpcs.find((r) => r.fn === "grant_credits");
+    expect(grant?.args).toMatchObject({ p_amount: MONTHLY_CREDITS.pro - TRIAL_CREDITS });
+    expect(String(grant?.args.p_idempotency_key)).toMatch(/:upgrade:pro$/);
   });
 
   it("on subscription.updated (mid-month upgrade): tops up the tier delta", async () => {
@@ -1108,6 +1135,62 @@ describe("handleStripeEvent — checkout.session.expired", () => {
     email.send.mockReset();
     await handleStripeEvent(event(session()), { admin: makeChainAdmin({ profiles: [free], notifications: [], credit_ledger: [] }).admin, stripe: noStripe });
     expect(email.send).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// customer.subscription.deleted for a trial that never converted → ONE
+// trial_lapsed notification + ONE win-back email (20% off the first month),
+// and only when the customer has no other live plan.
+// ---------------------------------------------------------------------------
+describe("handleStripeEvent — trial win-back", () => {
+  const profile = { id: "user-1", subscription_tier: "pro", subscription_status: "trialing", stripe_subscription_id: "sub_trial", stripe_customer_id: "cus_1" };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const noApiStripe = { subscriptions: { list: async () => { throw new Error("no api"); } } } as any;
+  const deleted = (extra: Record<string, unknown> = {}) => ({
+    id: "sub_trial",
+    customer: "cus_1",
+    status: "canceled",
+    cancel_at_period_end: false,
+    trial_end: 1_790_735_200,
+    ended_at: 1_790_735_200,
+    items: { data: [{ price: { id: "price_pro", unit_amount: 1500, currency: "usd", recurring: { interval: "month" } } }] },
+    ...extra,
+  });
+  const event = (object: unknown) => ({ id: "evt_del", type: "customer.subscription.deleted", data: { object } }) as never;
+
+  it("an unconverted trial: profile → free, ONE trial_lapsed notification with the offer window, ONE win-back email", async () => {
+    const { admin, inserts, updates } = makeChainAdmin({ profiles: [profile], notifications: [] });
+    await handleStripeEvent(event(deleted()), { admin, stripe: noApiStripe });
+    expect(updates.find((u) => u.table === "profiles")?.values).toMatchObject({ subscription_tier: "free", subscription_status: "canceled" });
+    expect(inserts).toHaveLength(1);
+    expect(inserts[0].row).toMatchObject({
+      recipient_id: "user-1",
+      actor_id: null,
+      type: "trial_lapsed",
+      payload: { subscriptionId: "sub_trial", tier: "pro", discountPct: 20 },
+    });
+    expect(typeof (inserts[0].row.payload as { expiresAt: unknown }).expiresAt).toBe("string");
+    expect(email.send).toHaveBeenCalledTimes(1);
+    const [message, options] = email.send.mock.calls[0];
+    expect(message.subject).toBe("20% off your first month of PipGlyph Pro");
+    expect(message.html).toContain("$12 for the first month");
+    expect(message.html).toContain("instead of $15 / month");
+    expect(options).toEqual({ idempotencyKey: "trial-winback:sub_trial" });
+  });
+
+  it("a paid subscription that ends (or a trial that converted first) gets no offer; a repeat delivery adds nothing", async () => {
+    const paid = makeChainAdmin({ profiles: [profile], notifications: [] });
+    await handleStripeEvent(event(deleted({ trial_end: 1_790_735_200, ended_at: 1_793_400_000 })), { admin: paid.admin, stripe: noApiStripe });
+    expect(paid.inserts).toEqual([]);
+    const never = makeChainAdmin({ profiles: [profile], notifications: [] });
+    await handleStripeEvent(event(deleted({ trial_end: null })), { admin: never.admin, stripe: noApiStripe });
+    expect(never.inserts).toEqual([]);
+    expect(email.send).not.toHaveBeenCalled();
+
+    const again = makeChainAdmin({ profiles: [profile], notifications: [{ id: "n_1" }] });
+    await handleStripeEvent(event(deleted()), { admin: again.admin, stripe: noApiStripe });
+    expect(again.inserts).toEqual([]);
   });
 });
 

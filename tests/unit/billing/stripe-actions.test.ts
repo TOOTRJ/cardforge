@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { CREDIT_PACKS, PACK_SUBSCRIBER_COUPON_ID, TRIAL_DAYS } from "@/lib/billing/plans";
+import { CREDIT_PACKS, PACK_SUBSCRIBER_COUPON_ID, TRIAL_DAYS, TRIAL_WINBACK_COUPON_ID } from "@/lib/billing/plans";
 
 // ---------------------------------------------------------------------------
 // Checkout + portal actions. The rules that cost money when wrong:
@@ -23,12 +23,14 @@ const s = vi.hoisted(() => ({
   adminConfigured: true,
   stripeConfigured: true,
   linkedId: "cus_new",
+  lapsedTrial: false,
   live: null as null | {
     id: string;
     status: string;
     trial_end?: number | null;
     cancel_at_period_end?: boolean;
     schedule?: string | null;
+    default_payment_method?: string | null;
     items: {
       data: Array<{ id?: string; price: { id: string; recurring?: { interval: string } } }>;
     };
@@ -63,6 +65,16 @@ vi.mock("@/lib/supabase/admin", () => ({
           }),
         }),
       }),
+      // The win-back eligibility read (a recent trial_lapsed notification).
+      select: () => {
+        const chain = {
+          eq: () => chain,
+          gte: () => chain,
+          limit: () => chain,
+          maybeSingle: async () => ({ data: s.lapsedTrial ? { id: "n_lapsed" } : null, error: null }),
+        };
+        return chain;
+      },
     }),
   }),
 }));
@@ -99,6 +111,8 @@ vi.mock("@/lib/stripe/config", () => ({
 vi.mock("@/lib/stripe/subscription-sync", () => ({
   findLiveSubscription: async () => s.live,
   findDelinquentSubscription: async () => s.delinquent,
+  subscriptionHasPaymentMethod: async (sub: { default_payment_method?: string | null }) =>
+    Boolean(sub.default_payment_method),
   // The mocked catalog's ids spell their tier ("price_pro_annual").
   resolveSubscriptionTier: async (sub: { items: { data: Array<{ price: { id: string } }> } }) => {
     const id = sub.items.data[0]?.price.id ?? "";
@@ -128,6 +142,7 @@ beforeEach(() => {
   s.stripeConfigured = true;
   s.linkedId = "cus_new";
   s.live = null;
+  s.lapsedTrial = false;
   s.delinquent = null;
   s.history = [];
   s.historyThrows = false;
@@ -171,7 +186,7 @@ describe("createCheckoutSessionAction", () => {
     expect(s.checkoutCreate).not.toHaveBeenCalled();
   });
 
-  it("gives a first-time subscriber the card-optional trial", async () => {
+  it("gives a first-time subscriber the 7-day trial — card REQUIRED (Stripe's default collection), cancel-safe", async () => {
     const result = await createCheckoutSessionAction({ kind: "subscription", tier: "pro" });
     expect(result).toEqual({ ok: true, url: "https://checkout.test/session" });
     const params = checkoutParams();
@@ -182,7 +197,7 @@ describe("createCheckoutSessionAction", () => {
       line_items: [{ price: "price_pro_monthly", quantity: 1 }],
       // checkout.session.expired reads what was being bought from here.
       metadata: { supabase_user_id: USER, purchase_kind: "subscription", tier: "pro", period: "monthly" },
-      payment_method_collection: "if_required",
+      allow_promotion_codes: true,
       success_url: "https://test.local/dashboard?billing=success",
     });
     expect(params.subscription_data).toMatchObject({
@@ -192,6 +207,9 @@ describe("createCheckoutSessionAction", () => {
     });
     // Nothing superseded on a first subscription — only the purchase stamp.
     expect(params.metadata).not.toHaveProperty("supersedes_subscription_id");
+    // Card required: Checkout's default collection, never `if_required`.
+    expect(params).not.toHaveProperty("payment_method_collection");
+    expect(params.metadata).toMatchObject({ discount: "none" });
   });
 
   it("gives no second trial once Stripe has ANY subscription on record", async () => {
@@ -238,7 +256,7 @@ describe("createCheckoutSessionAction", () => {
     expect(s.subscriptionsList).not.toHaveBeenCalled();
   });
 
-  it("a plan switch DURING a trial keeps the trial's end date on the new plan, still without a card", async () => {
+  it("a LEGACY no-card trial switching plans is superseded by a checkout that keeps the trial's end date and collects the card", async () => {
     const fiveDaysOut = Math.floor(Date.now() / 1000) + 5 * 24 * 60 * 60;
     s.live = {
       id: "sub_trial",
@@ -253,6 +271,7 @@ describe("createCheckoutSessionAction", () => {
       purchase_kind: "subscription",
       tier: "pro",
       period: "monthly",
+      discount: "none",
       supersedes_subscription_id: "sub_trial",
     });
     expect(params.subscription_data).toMatchObject({
@@ -260,8 +279,60 @@ describe("createCheckoutSessionAction", () => {
       trial_settings: { end_behavior: { missing_payment_method: "cancel" } },
     });
     expect(params.subscription_data).not.toHaveProperty("trial_period_days");
-    expect(params.payment_method_collection).toBe("if_required");
+    expect(params).not.toHaveProperty("payment_method_collection");
     expect(s.portalCreate).not.toHaveBeenCalled();
+  });
+
+  it("a CARD-BACKED trial switches plans in place through the portal (continue_trial keeps the trial) — no second checkout", async () => {
+    s.live = {
+      id: "sub_trial",
+      status: "trialing",
+      trial_end: Math.floor(Date.now() / 1000) + 5 * 24 * 60 * 60,
+      default_payment_method: "pm_1",
+      items: { data: [{ id: "si_1", price: { id: "price_plus_monthly" } }] },
+    };
+    const result = await createCheckoutSessionAction({ kind: "subscription", tier: "pro" });
+    expect(result).toEqual({ ok: true, url: "https://portal.test/session" });
+    expect(s.portalCreate.mock.calls[0]?.[0]).toMatchObject({
+      flow_data: {
+        type: "subscription_update_confirm",
+        subscription_update_confirm: { subscription: "sub_trial", items: [{ id: "si_1", price: "price_pro_monthly", quantity: 1 }] },
+      },
+    });
+    expect(s.checkoutCreate).not.toHaveBeenCalled();
+  });
+
+  it("win-back: a trial that lapsed within 30 days buys its first month with the coupon applied server-side (no promo-code box)", async () => {
+    s.profile = { stripe_customer_id: "cus_1", subscription_status: "canceled" };
+    s.history = [{ id: "sub_old_trial", status: "canceled" }];
+    s.lapsedTrial = true;
+    await createCheckoutSessionAction({ kind: "subscription", tier: "pro" });
+    const params = checkoutParams();
+    expect(params.discounts).toEqual([{ coupon: TRIAL_WINBACK_COUPON_ID }]);
+    expect(params).not.toHaveProperty("allow_promotion_codes");
+    expect(params.metadata).toMatchObject({ discount: "trial_winback" });
+    expect(params.subscription_data).not.toHaveProperty("trial_period_days");
+
+    // No lapsed trial on record → full price, promo codes allowed.
+    s.checkoutCreate.mockClear();
+    s.lapsedTrial = false;
+    await createCheckoutSessionAction({ kind: "subscription", tier: "pro" });
+    expect(checkoutParams()).not.toHaveProperty("discounts");
+    expect(checkoutParams().allow_promotion_codes).toBe(true);
+  });
+
+  it("win-back: a missing coupon sells at full price instead of failing", async () => {
+    s.profile = { stripe_customer_id: "cus_1", subscription_status: "canceled" };
+    s.history = [{ id: "sub_old_trial", status: "canceled" }];
+    s.lapsedTrial = true;
+    s.checkoutCreate.mockReset().mockImplementationOnce(async () => {
+      throw new Error("No such coupon: 'TRIAL_WINBACK_20'");
+    }).mockResolvedValue({ url: "https://checkout.test/full" });
+    expect(await createCheckoutSessionAction({ kind: "subscription", tier: "plus" })).toEqual({ ok: true, url: "https://checkout.test/full" });
+    const retry = s.checkoutCreate.mock.calls[1][0];
+    expect(retry).not.toHaveProperty("discounts");
+    expect(retry.allow_promotion_codes).toBe(true);
+    expect(retry.metadata.discount).toBe("none");
   });
 
   it("with under 48 hours of trial left (Stripe's minimum) the switch simply starts paying", async () => {
@@ -440,6 +511,7 @@ describe("createCheckoutSessionAction", () => {
       purchase_kind: "subscription",
       tier: "pro",
       period: "monthly",
+      discount: "none",
       supersedes_subscription_id: "sub_trial",
     });
     expect(params.subscription_data).not.toHaveProperty("trial_period_days");

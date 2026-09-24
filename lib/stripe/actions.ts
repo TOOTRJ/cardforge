@@ -7,6 +7,8 @@ import {
   CREDIT_PACKS,
   PACK_SUBSCRIBER_COUPON_ID,
   TRIAL_DAYS,
+  TRIAL_WINBACK_COUPON_ID,
+  TRIAL_WINBACK_WINDOW_DAYS,
   type BillingPeriod,
   type PackKey,
   type PaidTier,
@@ -18,6 +20,7 @@ import {
   findDelinquentSubscription,
   findLiveSubscription,
   resolveSubscriptionTier,
+  subscriptionHasPaymentMethod,
 } from "./subscription-sync";
 import type Stripe from "stripe";
 
@@ -120,6 +123,26 @@ async function ensureStripeCustomer(): Promise<
 /** Stripe only accepts a Checkout `trial_end` at least 48 hours out; below
  *  that a mid-trial plan switch simply starts paying (the old behaviour). */
 const MIN_TRIAL_CARRY_SECONDS = 48 * 60 * 60 + 15 * 60;
+
+/**
+ * Win-back eligibility: a `trial_lapsed` notification (written by the
+ * webhook when a trial ended unconverted) within the offer window. The
+ * checkout action applies the coupon itself — the email never carries a
+ * code, so nothing can be shared or forged.
+ */
+async function hasRecentLapsedTrial(userId: string): Promise<boolean> {
+  if (!isAdminConfigured()) return false;
+  const since = new Date(Date.now() - TRIAL_WINBACK_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  const { data } = await createAdminClient()
+    .from("notifications")
+    .select("id")
+    .eq("recipient_id", userId)
+    .eq("type", "trial_lapsed")
+    .gte("created_at", since)
+    .limit(1)
+    .maybeSingle();
+  return Boolean(data);
+}
 
 /**
  * Switch an ACTIVE (paid) subscription to another price in place through the
@@ -257,13 +280,20 @@ export async function createCheckoutSessionAction(
       }
       let supersedes: string | null = null;
       // A plan switch DURING the trial keeps the rest of the trial on the
-      // new plan (same end date, still no card required) instead of forcing
-      // payment a few days early — the trial is the same one, just on a
-      // different tier, so the one-trial rule is untouched.
+      // new plan (same end date) instead of forcing payment a few days
+      // early — the trial is the same one, just on a different tier, so the
+      // one-trial rule is untouched. A card-backed trial (every trial since
+      // 2026-09-24) switches IN PLACE through the portal like an active plan
+      // (the portal's trial_update_behavior is continue_trial); a legacy
+      // no-card trial is superseded by a fresh checkout that carries the
+      // trial end over and collects the card.
       let carryTrialEnd: number | null = null;
       if (live) {
         if (live.items.data[0]?.price?.id === priceId) {
           return { ok: false, error: "You're already on that plan." };
+        }
+        if (live.status === "trialing" && (await subscriptionHasPaymentMethod(live, stripe))) {
+          return createPlanSwitchSession(stripe, customer.customerId, live, priceId, base);
         }
         if (live.status === "active") {
           const currentTier = await resolveSubscriptionTier(live, stripe);
@@ -288,23 +318,30 @@ export async function createCheckoutSessionAction(
         }
       }
 
-      // First subscription ever → 7-day free trial, card optional. Without a
-      // payment method by day 7 the subscription cancels itself (never
-      // silently pauses into limbo) and the webhook downgrades the profile.
-      // Two independent records must both say "never subscribed": the
-      // profile's webhook-written status and Stripe's subscription history.
+      // First subscription ever → 7-day free trial, CARD REQUIRED (owner
+      // decision 2026-09-24): Checkout collects the card, Stripe charges it
+      // when the trial ends unless the user cancels. `missing_payment_method:
+      // cancel` stays as the safety net (a detached card never leaves a
+      // subscription in limbo). Two independent records must both say
+      // "never subscribed": the profile's webhook-written status and
+      // Stripe's subscription history.
       const withTrial =
         !live &&
         !customer.hasSubscribedBefore &&
         (await isTrialEligible(stripe, customer.customerId));
-      const noCardTrial = withTrial || carryTrialEnd != null;
+      // Win-back: a trial that ended unconverted within the last 30 days
+      // buys its first month at a discount — applied here, never as a code.
+      const winback = !live && !withTrial && (await hasRecentLapsedTrial(customer.userId));
 
-      const session = await stripe.checkout.sessions.create({
+      const sessionParams: Stripe.Checkout.SessionCreateParams = {
         mode: "subscription",
         customer: customer.customerId,
         client_reference_id: customer.userId,
         line_items: [{ price: priceId, quantity: 1 }],
-        allow_promotion_codes: true,
+        // Stripe refuses promotion codes alongside a server-applied discount.
+        ...(winback
+          ? { discounts: [{ coupon: TRIAL_WINBACK_COUPON_ID }] }
+          : { allow_promotion_codes: true }),
         // What was being bought, for checkout.session.expired (the session
         // object carries no line items) — plus the trial it supersedes.
         metadata: {
@@ -312,6 +349,7 @@ export async function createCheckoutSessionAction(
           purchase_kind: "subscription",
           tier: input.tier,
           period: input.period ?? "monthly",
+          discount: winback ? "trial_winback" : "none",
           ...(supersedes ? { supersedes_subscription_id: supersedes } : {}),
         },
         subscription_data: {
@@ -332,15 +370,32 @@ export async function createCheckoutSessionAction(
                 }
               : {}),
         },
-        ...(noCardTrial
-          ? { payment_method_collection: "if_required" as const }
-          : {}),
         // Land new subscribers on the dashboard (the "go make something"
         // surface, with the credits card front and center) rather than
         // settings; BillingReturnToast is mounted there to greet them.
         success_url: `${base}/dashboard?billing=success`,
         cancel_url: `${base}/pricing?billing=cancel`,
-      });
+      };
+      let session: Stripe.Checkout.Session;
+      try {
+        session = await stripe.checkout.sessions.create(sessionParams);
+      } catch (error) {
+        // A missing win-back coupon must never block a subscription: log it
+        // and sell at full price (with promotion codes back on).
+        const message = error instanceof Error ? error.message : String(error);
+        if (!winback || !/coupon/i.test(message)) throw error;
+        console.error(
+          `[stripe] Win-back coupon ${TRIAL_WINBACK_COUPON_ID} unusable — selling at full price:`,
+          message,
+        );
+        const fullPrice: Stripe.Checkout.SessionCreateParams = {
+          ...sessionParams,
+          allow_promotion_codes: true,
+          metadata: { ...(sessionParams.metadata ?? {}), discount: "none" },
+        };
+        delete fullPrice.discounts;
+        session = await stripe.checkout.sessions.create(fullPrice);
+      }
       if (!session.url) return { ok: false, error: "Couldn't start checkout." };
       return { ok: true, url: session.url };
     }

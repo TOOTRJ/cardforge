@@ -28,11 +28,28 @@ export type PaidTier = "plus" | "pro";
 export type PackKey = "mini" | "small" | "large";
 export type BillingPeriod = "monthly" | "annual";
 
-// Free trial on paid subscriptions: full access for a week, no card required
-// (checkout collects payment `if_required`; a trial with no payment method
-// cancels at day 7). One trial per account — enforced at checkout by the
-// customer's Stripe subscription history.
+// Free trial on paid subscriptions: full access for a week. A CARD IS
+// REQUIRED at checkout (owner decision 2026-09-24, reversing the no-card
+// trial): Stripe charges the plan price when the trial ends unless the user
+// cancels first — the trial-ending reminder (3 days out) is the card
+// networks' notice. Card-required trials convert at 2–3× the no-card rate and
+// stop throwaway accounts burning AI credits. Legacy no-card trials that
+// still exist keep their own terms (cancel at day 7 without a card).
 export const TRIAL_DAYS = 7;
+
+/** Credits granted when a trial STARTS — a taste, not the full allotment.
+ *  The plan's full monthly credits land with the first payment (the
+ *  month-wide shortfall logic in credit-refill.ts tops this up). */
+export const TRIAL_CREDITS = 25;
+
+/** A trial that ends without converting gets one win-back offer: this much
+ *  off the first month, applied automatically by the checkout action within
+ *  the window (the `trial_lapsed` notification is the eligibility record).
+ *  Coupon `TRIAL_WINBACK_COUPON_ID` exists with the same id on live and
+ *  sandbox, `duration: once`, restricted to the Plus/Pro products. */
+export const TRIAL_WINBACK_DISCOUNT_PCT = 20;
+export const TRIAL_WINBACK_COUPON_ID = "TRIAL_WINBACK_20";
+export const TRIAL_WINBACK_WINDOW_DAYS = 30;
 
 // Monthly credit allotment per tier. Plus/Pro refill monthly (the daily cron
 // + the subscription webhook). FREE DOES NOT REFILL (owner decision

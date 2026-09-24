@@ -12,6 +12,7 @@ const LABELS: Record<string, string> = {
   admin_grant: "Credits added by the PipGlyph team",
   signup_grant: "Welcome credits",
   subscription_refill: "Monthly plan credits",
+  trial_grant: "Free-trial credits",
   pack_purchase: "Credit pack",
   refund: "Refund",
   // Spends — one per AiActionLabel
