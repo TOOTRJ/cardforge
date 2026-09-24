@@ -8,7 +8,7 @@ import {
   TIER_RANK,
   type PlanTier,
 } from "@/lib/billing/plans";
-import { grantMonthlyCreditsForPeriod } from "@/lib/billing/credit-refill";
+import { grantMonthlyCreditsForPeriod, grantTrialCreditsForPeriod } from "@/lib/billing/credit-refill";
 import { tierForPrice, tierForProduct, type PriceLike } from "./config";
 
 // ---------------------------------------------------------------------------
@@ -56,6 +56,8 @@ export type SubscriptionLike = {
   cancel_at_period_end?: boolean;
   metadata?: Record<string, string> | null;
   trial_end?: number | null;
+  /** Set once the subscription has ended (deleted events). */
+  ended_at?: number | null;
   default_payment_method?: string | { id: string } | null;
   default_source?: string | { id: string } | null;
   /** A subscription schedule attached to it (a pending plan change). */
@@ -320,8 +322,17 @@ export async function grantCreditsForSync(
   opts: { isCreationEvent: boolean },
 ): Promise<void> {
   if (!result.subscriptionId || !isLiveStatus(result.status)) return;
-  if (result.status === "trialing" && !opts.isCreationEvent) return;
   if (result.tier === "free") return;
+  // A trial gets ONE tranche (TRIAL_CREDITS) when it starts and nothing more
+  // until it pays — no updated event, no cron, no mid-trial plan switch
+  // changes that (owner decision 2026-09-24: the full allotment is what the
+  // first payment buys).
+  if (result.status === "trialing") {
+    if (!opts.isCreationEvent) return;
+    const trial = await grantTrialCreditsForPeriod(admin, result.userId, currentCreditPeriod());
+    if (!trial.ok) throw new Error(`Trial credit grant failed for ${result.userId}: ${trial.error}`);
+    return;
+  }
   const granted = await grantMonthlyCreditsForPeriod(
     admin,
     result.userId,
@@ -331,6 +342,32 @@ export async function grantCreditsForSync(
   if (!granted.ok) {
     throw new Error(`Credit grant failed for ${result.userId}: ${granted.error}`);
   }
+}
+
+/** Stripe checks the subscription's default payment method AND the
+ *  customer's when a trial ends — mirror that everywhere the app asks
+ *  "does this trial have a card?". */
+export async function subscriptionHasPaymentMethod(
+  sub: SubscriptionLike,
+  stripe: Stripe,
+): Promise<boolean> {
+  if (sub.default_payment_method || sub.default_source) return true;
+  const customerId = customerIdOf(sub.customer);
+  if (!customerId) return false;
+  try {
+    const customer = await stripe.customers.retrieve(customerId);
+    if ("deleted" in customer && customer.deleted) return false;
+    return Boolean(customer.invoice_settings?.default_payment_method || customer.default_source);
+  } catch {
+    return false;
+  }
+}
+
+/** A deleted subscription that never converted: it ended at (or before) its
+ *  trial end — cancelled during the trial, or the trial expired unpaid. */
+export function isUnconvertedTrial(sub: SubscriptionLike): boolean {
+  if (typeof sub.trial_end !== "number" || typeof sub.ended_at !== "number") return false;
+  return sub.ended_at <= sub.trial_end + 60;
 }
 
 /** The customer's newest subscription whose payment is broken (past_due,

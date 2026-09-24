@@ -6,6 +6,7 @@ import {
   newsletterEmail,
   teamMessageEmail,
   trialEndingEmail,
+  trialWinbackEmail,
   welcomeEmail,
 } from "@/lib/email/messages";
 import { isUnsubscribeToken, parseEmailList, unsubscribeLinks } from "@/lib/email/lists";
@@ -41,6 +42,7 @@ describe("email builders", () => {
       }),
       checkoutReminderEmail(recipient, { kind: "subscription", plan: "Pro", priceLabel: "$15 / month", trialEligible: true }),
       checkoutReminderEmail(recipient, { kind: "pack", credits: 30, priceLabel: "$8" }),
+      trialWinbackEmail(recipient, { plan: "Pro", discountPct: 20, expiresAt: "2026-10-24T12:00:00Z", priceLabel: "$15 / month", discountedPriceLabel: "$12 for the first month" }),
     ];
     for (const email of emails) {
       expect(email.headers?.["List-Unsubscribe-Post"]).toBe("List-Unsubscribe=One-Click");
@@ -130,6 +132,17 @@ describe("email builders", () => {
     expect(pack.subject).toBe("Your 30 PipGlyph credits are waiting");
     expect(pack.html).toContain("<strong>30 AI credits</strong> ($8)");
     expect(pack.html).toContain("/dashboard/billing#packs");
+  });
+
+  it("win-back email: nothing was charged, the offer, its deadline, and no code to type", () => {
+    const email = trialWinbackEmail(recipient, { plan: "Plus", discountPct: 20, expiresAt: "2026-10-24T12:00:00Z", priceLabel: "$6 / month", discountedPriceLabel: "$4.80 for the first month" });
+    expect(email.subject).toBe("20% off your first month of PipGlyph Plus");
+    expect(email.html).toContain("nothing was charged");
+    expect(email.html).toContain("$4.80 for the first month");
+    expect(email.html).toContain("October 24, 2026");
+    expect(email.html).toContain("no code to enter");
+    expect(email.html).toContain("/dashboard/billing#plans");
+    expect(email.text).not.toContain("<strong>");
   });
 
   it("newsletter uses the marketing sender's postal address when set", () => {

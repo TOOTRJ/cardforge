@@ -181,6 +181,16 @@ export function describeNotification(
         href: "/dashboard/billing",
       };
     }
+    case "trial_lapsed": {
+      const plan = TIER_LABEL[str(payload.tier) ?? ""] ?? "plan";
+      const pct = num(payload.discountPct) ?? 20;
+      const expires = str(payload.expiresAt);
+      return {
+        subject: `Your ${plan} trial`,
+        body: `ended — come back${expires ? ` by ${formatShortDate(expires)}` : " within 30 days"} for ${pct}% off your first month; the discount is applied automatically at checkout.`,
+        href: "/dashboard/billing#plans",
+      };
+    }
     case "checkout_reminder": {
       if (str(payload.kind) === "pack") {
         const credits = num(payload.packCredits);
@@ -194,7 +204,7 @@ export function describeNotification(
       return {
         subject: `Your ${plan} checkout`,
         body: payload.trialEligible === true
-          ? "wasn't finished — your 7-day free trial is still waiting, no card needed."
+          ? "wasn't finished — your 7-day free trial is still waiting; nothing is charged until it ends, cancel anytime."
           : "wasn't finished — pick up where you left off whenever you're ready.",
         href: "/dashboard/billing#plans",
       };

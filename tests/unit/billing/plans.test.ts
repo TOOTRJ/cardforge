@@ -5,6 +5,10 @@ import {
   PACK_ORDER,
   PACK_SUBSCRIBER_DISCOUNT_PCT,
   SIGNUP_CREDITS,
+  TRIAL_CREDITS,
+  TRIAL_WINBACK_COUPON_ID,
+  TRIAL_WINBACK_DISCOUNT_PCT,
+  TRIAL_WINBACK_WINDOW_DAYS,
   discountedPackPriceUsd,
   formatUsd,
   PLANS,
@@ -77,6 +81,14 @@ describe("credit refill keys", () => {
     expect(formatUsd(4)).toBe("$4");
     expect(formatUsd(6.4)).toBe("$6.40");
     expect(formatUsd(19.2)).toBe("$19.20");
+  });
+
+  it("the trial tranche is a taste below every paid allotment, and the win-back offer is defined", () => {
+    expect(TRIAL_CREDITS).toBe(25);
+    expect(TRIAL_CREDITS).toBeLessThan(MONTHLY_CREDITS.plus);
+    expect(TRIAL_WINBACK_DISCOUNT_PCT).toBe(20);
+    expect(TRIAL_WINBACK_COUPON_ID).toBe("TRIAL_WINBACK_20");
+    expect(TRIAL_WINBACK_WINDOW_DAYS).toBe(30);
   });
 });
 

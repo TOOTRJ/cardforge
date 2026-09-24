@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   REFILL_PAGE_SIZE,
   grantMonthlyCreditsForPeriod,
+  grantTrialCreditsForPeriod,
   refillActiveSubscribers,
   refillTierFor,
   type CreditGrantClient,
@@ -12,6 +13,7 @@ import {
   MONTHLY_CREDITS,
   creditRefillKey,
   creditUpgradeKey,
+  TRIAL_CREDITS,
 } from "@/lib/billing/plans";
 
 // ---------------------------------------------------------------------------
@@ -154,6 +156,21 @@ describe("grantMonthlyCreditsForPeriod", () => {
 
     expect(result).toEqual({ ok: true, granted: 0 });
     expect(grants).toHaveLength(0);
+  });
+
+  it("the trial tranche: TRIAL_CREDITS under the month's base key, tagged trial_grant", async () => {
+    const { admin, grants } = stubAdmin({ baseRow: null });
+    const result = await grantTrialCreditsForPeriod(admin, USER, PERIOD);
+    expect(result).toEqual({ ok: true, granted: TRIAL_CREDITS });
+    expect(grants[0]).toMatchObject({
+      p_amount: TRIAL_CREDITS,
+      p_reason: "trial_grant",
+      p_idempotency_key: creditRefillKey(USER, PERIOD),
+    });
+    // The first payment in the same month then tops it up to the allotment.
+    const converted = stubAdmin({ baseRow: { delta: TRIAL_CREDITS } });
+    const topUp = await grantMonthlyCreditsForPeriod(converted.admin, USER, "pro", PERIOD);
+    expect(topUp).toEqual({ ok: true, granted: MONTHLY_CREDITS.pro - TRIAL_CREDITS });
   });
 
   it("grants NOTHING to the free tier — Free doesn't refill (owner decision 2026-09-24; 5 credits once at signup)", async () => {

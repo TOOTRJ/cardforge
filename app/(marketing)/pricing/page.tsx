@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   title: "Pricing",
   alternates: { canonical: "/pricing" },
   description:
-    "Design custom MTG-style cards for free — every AI tool included, 5 AI credits to start. Upgrade for monthly credits, watermark-free hi-res downloads and deck-aware AI — first-time subscribers get a 7-day free trial, no card required. Monthly or annual.",
+    "Design custom MTG-style cards for free — every AI tool included, 5 AI credits to start. Upgrade for monthly credits, watermark-free hi-res downloads and deck-aware AI — first-time subscribers get a 7-day free trial, cancel anytime. Monthly or annual.",
 };
 
 // ISR: this is the ANONYMOUS storefront — identical for every signed-out

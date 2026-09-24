@@ -8,7 +8,7 @@ import {
   syncSubscriptionForUser,
   type SubscriptionLike,
 } from "@/lib/stripe/subscription-sync";
-import { MONTHLY_CREDITS } from "@/lib/billing/plans";
+import { MONTHLY_CREDITS, TRIAL_CREDITS } from "@/lib/billing/plans";
 
 // ---------------------------------------------------------------------------
 // Stubs. The admin stub records profile writes; the stripe stub serves a
@@ -268,6 +268,18 @@ describe("grantCreditsForSync", () => {
       { isCreationEvent: true },
     );
     expect(lapsed.rpcs).toHaveLength(0);
+  });
+
+  it("a trial being CREATED gets the trial tranche under the month's base key — not the full allotment", async () => {
+    const { admin, rpcs } = makeAdmin();
+    await grantCreditsForSync(
+      { userId: "user-1", subscriptionId: "sub_1", tier: "pro", status: "trialing", unresolvedPrice: false, source: "primary" },
+      admin,
+      { isCreationEvent: true },
+    );
+    expect(rpcs).toHaveLength(1);
+    expect(rpcs[0].args).toMatchObject({ p_amount: TRIAL_CREDITS, p_reason: "trial_grant" });
+    expect(String(rpcs[0].args.p_idempotency_key)).toMatch(/^refill:user-1:\d{4}-\d{2}$/);
   });
 });
 

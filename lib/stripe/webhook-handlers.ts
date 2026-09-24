@@ -6,14 +6,23 @@ import {
   customerIdOf,
   grantCreditsForSync,
   isLiveStatus,
+  isUnconvertedTrial,
   resolveSubscriptionTier,
+  subscriptionHasPaymentMethod,
   syncSubscriptionForUser,
 } from "./subscription-sync";
-import { checkoutReminderEmail, trialEndingEmail } from "@/lib/email/messages";
+import { checkoutReminderEmail, trialEndingEmail, trialWinbackEmail } from "@/lib/email/messages";
 import { getRecipientFor } from "@/lib/email/preferences";
 import { isEmailConfigured, sendEmail } from "@/lib/email/send";
 import { formatMoney } from "@/lib/format/money";
-import { CREDIT_PACKS, PLANS, type PackKey, type PlanTier } from "@/lib/billing/plans";
+import {
+  CREDIT_PACKS,
+  PLANS,
+  TRIAL_WINBACK_DISCOUNT_PCT,
+  TRIAL_WINBACK_WINDOW_DAYS,
+  type PackKey,
+  type PlanTier,
+} from "@/lib/billing/plans";
 
 // All entitlement/credit writes happen here, via the service-role admin client
 // (RLS would block writing these columns from a user client). Handlers are
@@ -100,7 +109,15 @@ async function handleSubscriptionEvent(
     eventDeleted: opts.deleted,
     customerId: customerIdOf(sub.customer),
   });
-  if (opts.deleted) return; // no credit grant on cancellation
+  if (opts.deleted) {
+    // No credit grant on cancellation. A trial that ended without ever
+    // paying — and left the customer with no other live plan — gets the
+    // one win-back offer.
+    if (isUnconvertedTrial(sub) && result.tier === "free") {
+      await handleTrialLapsed(sub, userId, deps);
+    }
+    return;
+  }
 
   // The one-grant-per-trial rule keys on the CREATED event of the synced
   // subscription — a created event for a secondary subscription must not
@@ -108,24 +125,6 @@ async function handleSubscriptionEvent(
   await grantCreditsForSync(result, admin, {
     isCreationEvent: opts.isCreationEvent && result.subscriptionId === sub.id,
   });
-}
-
-/** Stripe checks the subscription's default payment method AND the
- *  customer's when a trial ends — mirror that so the reminder is honest. */
-async function subscriptionHasPaymentMethod(
-  sub: Stripe.Subscription,
-  stripe: Stripe,
-): Promise<boolean> {
-  if (sub.default_payment_method || sub.default_source) return true;
-  const customerId = customerIdOf(sub.customer);
-  if (!customerId) return false;
-  try {
-    const customer = await stripe.customers.retrieve(customerId);
-    if ("deleted" in customer && customer.deleted) return false;
-    return Boolean(customer.invoice_settings?.default_payment_method || customer.default_source);
-  } catch {
-    return false;
-  }
 }
 
 const TIER_NAME: Record<string, string> = { plus: "Plus", pro: "Pro" };
@@ -201,6 +200,69 @@ async function handleTrialWillEnd(
   } catch (error) {
     console.warn(
       "[stripe] trial-ending email failed:",
+      error instanceof Error ? error.message : error,
+    );
+  }
+}
+
+// A trial ended without converting (customer.subscription.deleted with
+// ended_at at/before trial_end) and the customer holds no other live plan:
+// ONE trial_lapsed notification + ONE win-back email — 20% off the first
+// month, applied automatically by the checkout action for 30 days (it reads
+// this notification as the eligibility record). Once per subscription; the
+// insert is durable (throws → Stripe retries), the email best effort.
+async function handleTrialLapsed(
+  sub: Stripe.Subscription,
+  userId: string,
+  deps: { admin: AdminClient; stripe: Stripe },
+): Promise<void> {
+  const { admin, stripe } = deps;
+  const { data: existing } = await admin
+    .from("notifications")
+    .select("id")
+    .eq("type", "trial_lapsed")
+    .eq("payload->>subscriptionId", sub.id)
+    .limit(1)
+    .maybeSingle();
+  if (existing) return;
+  const tier = await resolveSubscriptionTier(sub, stripe);
+  const price = sub.items?.data?.[0]?.price ?? null;
+  const interval = price?.recurring?.interval ?? null;
+  const expiresAt = new Date(Date.now() + TRIAL_WINBACK_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  const { error } = await admin.from("notifications").insert({
+    recipient_id: userId,
+    actor_id: null,
+    type: "trial_lapsed",
+    payload: { subscriptionId: sub.id, tier, discountPct: TRIAL_WINBACK_DISCOUNT_PCT, expiresAt },
+  });
+  if (error) {
+    throw new Error(`trial_lapsed notification failed for ${userId}: ${error.message}`);
+  }
+
+  if (!isEmailConfigured()) return;
+  try {
+    const recipient = await getRecipientFor(admin, userId, "account");
+    if (!recipient) return;
+    const plan = PLANS.find((p) => p.tier === tier);
+    const fullUsd = plan && plan.tier !== "free"
+      ? interval === "year" ? plan.annualUsd ?? null : plan.priceUsd
+      : null;
+    await sendEmail(
+      trialWinbackEmail(recipient, {
+        plan: TIER_NAME[tier ?? ""] ?? "PipGlyph",
+        discountPct: TRIAL_WINBACK_DISCOUNT_PCT,
+        expiresAt,
+        priceLabel: fullUsd != null ? `$${fullUsd} / ${interval === "year" ? "year" : "month"}` : null,
+        discountedPriceLabel:
+          fullUsd != null
+            ? `$${(Math.round(fullUsd * (100 - TRIAL_WINBACK_DISCOUNT_PCT)) / 100).toFixed(2).replace(/\.00$/, "")} for the first ${interval === "year" ? "year" : "month"}`
+            : null,
+      }),
+      { idempotencyKey: `trial-winback:${sub.id}` },
+    );
+  } catch (error) {
+    console.warn(
+      "[stripe] trial win-back email failed:",
       error instanceof Error ? error.message : error,
     );
   }

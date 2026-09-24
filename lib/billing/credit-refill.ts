@@ -6,6 +6,7 @@ import {
   creditRefillKey,
   creditUpgradeKey,
   type PlanTier,
+  TRIAL_CREDITS,
 } from "@/lib/billing/plans";
 
 // ---------------------------------------------------------------------------
@@ -212,3 +213,27 @@ export async function grantMonthlyCreditsForPeriod(
   if (error) return { ok: false, error: error.message };
   return { ok: true, granted: amount };
 }
+
+/**
+ * The trial tranche (TRIAL_CREDITS) when a trial STARTS — under the month's
+ * BASE refill key, so the first payment's grant (grantMonthlyCreditsForPeriod)
+ * sees it and tops the month up to the plan's full allotment: a Pro trial
+ * that converts in the same month gets 25 + 75; one that converts next month
+ * gets its full 100 fresh. Idempotent on the key (a retried created event
+ * grants nothing twice).
+ */
+export async function grantTrialCreditsForPeriod(
+  admin: CreditGrantClient,
+  userId: string,
+  period: string,
+): Promise<MonthlyGrantResult> {
+  const { error } = await admin.rpc("grant_credits", {
+    p_user_id: userId,
+    p_amount: TRIAL_CREDITS,
+    p_reason: "trial_grant",
+    p_idempotency_key: creditRefillKey(userId, period),
+  });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, granted: TRIAL_CREDITS };
+}
+

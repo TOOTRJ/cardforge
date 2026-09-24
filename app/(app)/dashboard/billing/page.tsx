@@ -241,7 +241,7 @@ export default async function BillingPage() {
             ? "Upgrades apply right away — Stripe shows the prorated difference before you confirm, and the plan keeps its renewal date. Downgrades (Pro to Plus, or annual to monthly) take effect at the end of the period you've paid for, so nothing is lost. Downgrading to Free is a cancellation: you keep the plan until the period ends."
             : entitlements.isPaid
               ? "Your account is unlocked without a subscription. Starting a plan is optional."
-              : "First-time subscribers get a 7-day free trial, no card required. Cancel anytime."}
+              : "First-time subscribers get a 7-day free trial: 25 AI credits to try, nothing charged until day 7, cancel anytime. Your plan's full monthly credits arrive with your first payment."}
         </p>
         <PricingPlans initialViewer={viewer} />
       </section>
