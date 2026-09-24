@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { UsageBarChart } from "@/components/settings/usage-bar-chart";
 import { getAiUsageSnapshot, getCreditSnapshot } from "@/lib/ai/usage-queries";
 import { isBillingEnabled } from "@/lib/billing/flags";
-import { formatCredits, isLowCredits, planForTier } from "@/lib/billing/plans";
+import { SIGNUP_CREDITS, formatCredits, isLowCredits, planForTier } from "@/lib/billing/plans";
 import {
   getScryfallUsageSnapshot,
   type ScryfallAction,
@@ -102,11 +102,16 @@ export async function UsagePanel() {
           </div>
           <div className="flex flex-col gap-1 rounded-md border border-border/40 bg-background/40 px-3 py-2">
             <span className="text-[11px] uppercase tracking-wider text-subtle">
-              Monthly allotment
+              {credits.monthlyAllotment > 0 ? "Monthly allotment" : "Monthly refill"}
             </span>
             <span className="font-display text-xl font-semibold tracking-tight text-foreground">
-              {credits.monthlyAllotment}
+              {credits.monthlyAllotment > 0 ? credits.monthlyAllotment : "None"}
             </span>
+            {credits.monthlyAllotment > 0 ? null : (
+              <span className="text-xs text-muted">
+                {SIGNUP_CREDITS} credits at sign-up; packs and plans add more.
+              </span>
+            )}
           </div>
         </div>
 

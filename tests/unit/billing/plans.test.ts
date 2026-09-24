@@ -2,6 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   CREDIT_PACKS,
   MONTHLY_CREDITS,
+  PACK_ORDER,
+  PACK_SUBSCRIBER_DISCOUNT_PCT,
+  SIGNUP_CREDITS,
+  discountedPackPriceUsd,
+  formatUsd,
   PLANS,
   creditRefillKey,
   currentCreditPeriod,
@@ -54,4 +59,24 @@ describe("credit refill keys", () => {
   it("derives a stable per-user-per-month idempotency key", () => {
     expect(creditRefillKey("user-123", "2026-06")).toBe("refill:user-123:2026-06");
   });
+
+  it("Free doesn't refill: 5 credits once at signup (the profiles.credits default), 0 a month", () => {
+    expect(SIGNUP_CREDITS).toBe(5);
+    expect(MONTHLY_CREDITS.free).toBe(0);
+    expect(MONTHLY_CREDITS.plus).toBeGreaterThan(0);
+    expect(PLANS[0].features[0]).toMatch(/5 AI credits at sign-up/);
+  });
+
+  it("three packs, impulse → value, with the subscriber price cents-exact", () => {
+    expect(PACK_ORDER).toEqual(["mini", "small", "large"]);
+    expect(CREDIT_PACKS.mini).toEqual({ credits: 10, priceUsd: 4, label: "10 credits" });
+    expect(PACK_SUBSCRIBER_DISCOUNT_PCT).toBe(20);
+    expect(discountedPackPriceUsd("mini")).toBe(3.2);
+    expect(discountedPackPriceUsd("small")).toBe(6.4);
+    expect(discountedPackPriceUsd("large")).toBe(19.2);
+    expect(formatUsd(4)).toBe("$4");
+    expect(formatUsd(6.4)).toBe("$6.40");
+    expect(formatUsd(19.2)).toBe("$19.20");
+  });
 });
+

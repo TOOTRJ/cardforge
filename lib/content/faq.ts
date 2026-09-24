@@ -109,7 +109,7 @@ export const AI_GENERATOR_FAQ: FaqEntry[] = [
   },
   {
     q: "Is the AI random card generator free?",
-    a: "Yes. Every AI tool is available on the free plan — AI generation runs on credits, and a free account gets 5 credits every month (one credit designs and illustrates one card, or buys a batch of three text-only ideas). Plus and Pro refill with 30 and 100 credits a month, and anyone can buy a top-up pack that never expires. The only Pro-exclusive AI features are the deck-aware ones: designing a card for a specific deck and theming ideas to a deck.",
+    a: "Yes. Every AI tool is available on the free plan — AI generation runs on credits, and a free account starts with 5 credits (one credit designs and illustrates one card, or buys a batch of three text-only ideas) and doesn't refill. Plus and Pro refill with 30 and 100 credits a month, and anyone can buy a top-up pack that never expires — Plus and Pro members pay 20% less for packs. The only Pro-exclusive AI features are the deck-aware ones: designing a card for a specific deck and theming ideas to a deck.",
   },
   {
     q: "Will the AI design balanced cards?",
@@ -194,7 +194,7 @@ const CHALLENGES_FAQ: FaqEntry[] = [
 const ACCOUNTS_FAQ: FaqEntry[] = [
   {
     q: "Do I need an account to use PipGlyph?",
-    a: "Yes — a free one, which takes seconds. You can look around the creator at /create without signing in, but designing, saving and publishing need an account so your cards are always yours, on any device. The same free account unlocks the gallery, decks, custom mana pips, design challenges and 5 AI credits a month.",
+    a: "Yes — a free one, which takes seconds. You can look around the creator at /create without signing in, but designing, saving and publishing need an account so your cards are always yours, on any device. The same free account unlocks the gallery, decks, custom mana pips, design challenges and 5 AI credits to get started.",
   },
   {
     q: "Does the editor autosave my work?",
@@ -227,7 +227,7 @@ export const COMPARISON_FAQ: FaqEntry[] = [
   },
   {
     q: "Is PipGlyph free?",
-    a: "Yes. PipGlyph's card maker is free with a free account — every card type, every frame, the live preview, saving, publishing to the gallery, deck building and custom pip uploads, plus 5 AI credits a month. Plus and Pro add far more monthly credits, watermark-free hi-res downloads and print-ready PDFs, and Pro adds deck-aware AI design plus whole-deck export.",
+    a: "Yes. PipGlyph's card maker is free with a free account — every card type, every frame, the live preview, saving, publishing to the gallery, deck building and custom pip uploads, plus 5 AI credits to get started (Free doesn't refill). Plus and Pro add monthly credits, watermark-free hi-res downloads and print-ready PDFs, and Pro adds deck-aware AI design plus whole-deck export.",
   },
 ];
 

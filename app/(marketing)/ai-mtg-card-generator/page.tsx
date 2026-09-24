@@ -75,7 +75,7 @@ export default function AiMtgCardGeneratorPage() {
       />
       <div className="mb-14 flex flex-col gap-5">
         <span className="text-xs font-semibold uppercase tracking-[0.18em] text-primary-bright">
-          AI-powered · Free account · 5 credits a month
+          AI-powered · Free account · 5 credits to start
         </span>
         <h1 className="font-display text-4xl font-semibold leading-tight tracking-tight text-foreground sm:text-5xl">
           The AI MTG Card Generator
@@ -86,8 +86,8 @@ export default function AiMtgCardGeneratorPage() {
           with snow lands&rdquo; — and PipGlyph drafts a complete,
           original Magic: The Gathering card. AI writes the rules text, AI
           paints the art, you edit and publish — or tick just the fields
-          you want written and keep the rest. Every free account gets 5
-          credits a month.
+          you want written and keep the rest. Every free account starts with 5
+          credits — packs and plans add more.
         </p>
         <div className="flex flex-wrap gap-3">
           <Button asChild size="lg">

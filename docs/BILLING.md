@@ -8,7 +8,7 @@ how the integration compares with the standard Stripe SaaS pattern.
 | Piece | Where | Notes |
 |---|---|---|
 | Plan catalog (copy, prices, credits, caps) | `lib/billing/plans.ts` | Client-safe. Stripe price ids are NOT here. |
-| Stripe prices | **lookup keys** on the catalog (`plus_monthly`, `plus_annual`, `pro_monthly`, `pro_annual`, `pack_small`, `pack_large`) — `lib/stripe/prices.ts` resolves them at checkout; the `STRIPE_PRICE_*` env vars are an optional fallback | Since 2026-09-22 (PR #360): a stale env id had every live credit-pack checkout failing with `resource_missing` for weeks. `lib/stripe/config.ts` still maps a price back to a tier (env id → metadata → lookup key → product → amount) for the webhook. |
+| Stripe prices | **lookup keys** on the catalog (`plus_monthly`, `plus_annual`, `pro_monthly`, `pro_annual`, `pack_mini`, `pack_small`, `pack_large`; coupon `SUBSCRIBER_PACKS_20` for subscriber pack pricing) — `lib/stripe/prices.ts` resolves them at checkout; the `STRIPE_PRICE_*` env vars are an optional fallback | Since 2026-09-22 (PR #360): a stale env id had every live credit-pack checkout failing with `resource_missing` for weeks. `lib/stripe/config.ts` still maps a price back to a tier (env id → metadata → lookup key → product → amount) for the webhook. |
 | Storefront | `/pricing` (static, anonymous) + `/pricing-member` (dynamic, signed-in; `proxy.ts` rewrite) | Buttons come from `pricingCtaFor()` fed by a `BillingViewer` (`lib/billing/viewer.ts`). Paid accounts are redirected to the billing page. |
 | Billing page | `/dashboard/billing` | Plan, renewal/trial/cancel dates, plan changes (the same grid), credits + packs, card on file + invoices (`lib/billing/subscription-details.ts`), portal shortcuts. |
 | Checkout / portal | `lib/stripe/actions.ts` (server actions) | New subscription → Stripe Checkout (7-day no-card trial for first-timers). Live subscription: an **upgrade** goes through the Customer Portal **confirm-update** flow (in-place price switch, prorated, charged now); a **downgrade** (Pro → Plus, or annual → monthly) is **scheduled for the end of the paid period** with a subscription schedule (§6). Broken payment → portal. Packs → Checkout in `payment` mode. |
@@ -177,8 +177,12 @@ configuration `bpc_1UIhLYQFLEpCg9s2lOOGehBA` has
 `schedule_at_period_end` for same-product decreases (harmless, and it makes
 the portal agree with the app when a customer changes plan there). Live: the
 endpoint `we_1TrupnQFLEpCg9s2bSILz13V` got `trial_will_end` on 2026-09-23
-(owner-authorized); the live portal `bpc_1TruxhQFLEpCg9s22wWCrEgw` is
-unchanged.
+and the live portal `bpc_1TruxhQFLEpCg9s22wWCrEgw` got the same
+`schedule_at_period_end` conditions plus a `/dashboard/billing` default
+return URL on 2026-09-24 (both owner-authorized). Note for any later portal
+edit: Stripe requires resending `features.subscription_update.products`
+(the two products with their four prices) on every `subscription_update`
+change.
 
 ## 7. Revenue log, payment notifications, checkout recovery (2026-09-23)
 
@@ -224,9 +228,38 @@ email (`checkoutReminderEmail`), and only while it still matters:
 
 Both handlers: the notification insert is the durable part (a failure throws
 so Stripe retries); the email is best effort with a provider idempotency key
-(`checkout-reminder:<session>`). Both events must be subscribed on every
-endpoint: sandbox done 2026-09-23; live `we_1TrupnQFLEpCg9s2bSILz13V`
-needs `invoice.paid` + `checkout.session.expired` added (owner's OK).
+(`checkout-reminder:<session>`). Both events are subscribed on both
+endpoints (sandbox and live `we_1TrupnQFLEpCg9s2bSILz13V`, 2026-09-23 — the
+live endpoint now carries all nine events). Sandbox proof 2026-09-23: an
+expired dev_new session produced exactly one `checkout_reminder` (three later
+expiries produced none — the 30-day guard); a dev_pro Pro subscription
+produced the revenue row, the resync, one `payment_received` and exactly one
+refill ledger row across `subscription.created` + `invoice.paid`.
+
+## 8. Free credits once, packs where the need is felt (2026-09-24)
+
+Owner decisions of 2026-09-24 (audit §6 recommendations 1 and 2):
+
+- **Free does not refill.** A new account gets `SIGNUP_CREDITS` (5, the
+  `profiles.credits` default from migration 0027) once; `MONTHLY_CREDITS.free`
+  is 0 and `refillTierFor` answers null for plain free accounts, so the daily
+  sweep and the webhook grant nothing to them (an unexpired admin comp on a
+  free account is still owed its tier). Banked credits are never clawed
+  back. Every surface that said "5 a month" now says "5 to start" — pricing
+  page + metadata, the signed-in twin, billing page, dashboard credits card,
+  settings usage panel, homepage, AI-generator landing, About, three FAQ
+  answers, two guides, the upgrade modal, the checkout-reminder email.
+- **Three packs**, impulse → value: 10 for $4 (`pack_mini`, added 2026-09-24
+  on live `prod_VJyONxKM5CyH6t` / sandbox `prod_VJyNWwB8DcNxrT`), 30 for $8,
+  100 for $24. The out-of-credits modal lists them (free users: plans first,
+  then packs; subscribers: packs first).
+- **Subscriber pack price, 20% off.** Coupon `SUBSCRIBER_PACKS_20` (same id
+  on live and sandbox, `percent_off 20`, forever, restricted to the three pack
+  products). `createCheckoutSessionAction` applies it when the buyer's live
+  subscription is `active` — not a no-card trial, not a comp or admin — and
+  falls back to full price (logged) if the coupon is ever missing. The
+  client only displays the discounted number; the webhook grants by
+  `pack_credits`, so the discount changes nothing but the price.
 
 ## Addendum — sandbox lifecycle run (2026-09-22, test clock `clock_1UIftGQFLEpCg9s2uoFgd7kf`)
 

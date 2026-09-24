@@ -25,6 +25,7 @@ const TIER_PRICE_ENV: Record<PaidTier, Record<BillingPeriod, string>> = {
 };
 
 const PACK_PRICE_ENV: Record<PackKey, string> = {
+  mini: "STRIPE_PRICE_PACK_MINI",
   small: "STRIPE_PRICE_PACK_SMALL",
   large: "STRIPE_PRICE_PACK_LARGE",
 };

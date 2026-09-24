@@ -145,7 +145,9 @@ test.describe("billing page", () => {
     await expect(page).toHaveURL(/\/dashboard\/billing$/);
     await expect(page.getByRole("heading", { name: /billing & subscription/i })).toBeVisible();
     await expect(page.getByText("Free plan", { exact: true })).toBeVisible();
-    await expect(page.getByText("AI credits a month", { exact: true })).toBeVisible();
+    // Free doesn't refill (2026-09-24): the plan card states the one-time starter credits.
+    await expect(page.getByText("5 at sign-up", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: /buy 10 credits/i })).toBeVisible();
     await expect(page.getByRole("button", { name: /buy 30 credits/i })).toBeVisible();
     await expect(page.getByRole("button", { name: /try plus free for 7 days/i })).toBeVisible();
     // No billing account yet → nothing to open in the portal.

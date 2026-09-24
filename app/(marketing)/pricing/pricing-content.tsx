@@ -37,8 +37,8 @@ export function PricingContent({ initialViewer }: { initialViewer?: BillingViewe
         </h1>
         <p className="text-base leading-7 text-muted">
           The card maker is free forever — every frame, every finish, every
-          card type, and every AI tool, with 5 AI credits a month. Plans add
-          far more monthly credits, watermark-free hi-res downloads, and
+          card type, and every AI tool, with 5 AI credits to get you started
+          (Free doesn&apos;t refill). Plans add monthly credits, watermark-free hi-res downloads, and
           Pro&apos;s deck-aware AI. You only ever pay for our technology, never
           for MTG-style rendering.
         </p>
@@ -59,7 +59,7 @@ export function PricingContent({ initialViewer }: { initialViewer?: BillingViewe
           </h2>
           <p className="text-sm leading-6 text-muted">
             Buy AI credits any time — on any plan, including Free. Purchased
-            credits never expire.
+            credits never expire, and Plus and Pro members pay 20% less.
           </p>
         </div>
         <CreditPackGrid />

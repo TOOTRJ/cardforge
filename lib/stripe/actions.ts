@@ -5,6 +5,7 @@ import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { getSiteBaseUrl } from "@/lib/site-url";
 import {
   CREDIT_PACKS,
+  PACK_SUBSCRIBER_COUPON_ID,
   TRIAL_DAYS,
   type BillingPeriod,
   type PackKey,
@@ -349,7 +350,14 @@ export async function createCheckoutSessionAction(
     if (!priceId) return { ok: false, error: "That pack isn't available yet." };
     const credits = CREDIT_PACKS[input.pack].credits;
 
-    const session = await stripe.checkout.sessions.create({
+    // Subscribers pay less for packs (owner decision 2026-09-24): an ACTIVE
+    // Plus/Pro subscription — a no-card trial hasn't paid yet, comps and
+    // admins hold no subscription — gets the subscriber coupon applied HERE,
+    // never a code the client could supply. The webhook grants by
+    // pack_credits, so the discount changes the price and nothing else.
+    const live = await findLiveSubscription(stripe, customer.customerId);
+    const subscriberDiscount = live?.status === "active";
+    const params: Stripe.Checkout.SessionCreateParams = {
       mode: "payment",
       customer: customer.customerId,
       client_reference_id: customer.userId,
@@ -358,11 +366,31 @@ export async function createCheckoutSessionAction(
       metadata: {
         supabase_user_id: customer.userId,
         purchase_kind: "pack",
+        pack: input.pack,
         pack_credits: String(credits),
+        discount: subscriberDiscount ? "subscriber" : "none",
       },
       success_url: `${base}/dashboard/billing?billing=credits`,
       cancel_url: `${base}/pricing?billing=cancel`,
-    });
+    };
+    let session: Stripe.Checkout.Session;
+    try {
+      session = await stripe.checkout.sessions.create(
+        subscriberDiscount
+          ? { ...params, discounts: [{ coupon: PACK_SUBSCRIBER_COUPON_ID }] }
+          : params,
+      );
+    } catch (error) {
+      // A coupon missing from the catalog must never block a sale: log it
+      // loudly and sell at full price.
+      const message = error instanceof Error ? error.message : String(error);
+      if (!subscriberDiscount || !/coupon/i.test(message)) throw error;
+      console.error(
+        `[stripe] Subscriber pack coupon ${PACK_SUBSCRIBER_COUPON_ID} unusable — selling at full price:`,
+        message,
+      );
+      session = await stripe.checkout.sessions.create(params);
+    }
     if (!session.url) return { ok: false, error: "Couldn't start checkout." };
     return { ok: true, url: session.url };
   } catch (error) {

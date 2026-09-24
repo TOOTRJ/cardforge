@@ -5,7 +5,6 @@ import {
   MONTHLY_CREDITS,
   creditRefillKey,
   creditUpgradeKey,
-  currentCreditPeriod,
   type PlanTier,
 } from "@/lib/billing/plans";
 
@@ -31,12 +30,13 @@ import {
 // again and hand out 125 credits for a 100-credit plan (found 2026-09-22).
 // Downgrades grant nothing — credits already banked are never clawed back.
 //
-// Free tier (owner decision 2026-09-15, reversing 2026-07-28): Free refills
-// monthly too — 5 credits — so the pricing page's "every month" is true for
-// every tier. The daily sweep therefore walks EVERY profile, not just paid
-// subscribers; a profile's effective tier decides the amount. The signup
-// default (`profiles.credits default 5`, no ledger row) is that month's
-// allotment, so free profiles created in the current period are skipped.
+// Free tier (owner decision 2026-09-24, reversing 2026-09-15): Free does NOT
+// refill. A new account gets SIGNUP_CREDITS once (the `profiles.credits`
+// default) and after that only a pack or a plan adds credits — the
+// out-of-credits moment is where the upgrade modal and packs sell. The daily
+// sweep still walks every profile (an unexpired admin comp on a free account
+// is owed its tier), but `refillTierFor` answers null for plain free
+// accounts and MONTHLY_CREDITS.free is 0, so nothing is granted to them.
 // ---------------------------------------------------------------------------
 
 /** The service-role client (grant_credits is service-role only). Exported so
@@ -88,12 +88,12 @@ function activeCompTier(profile: RefillProfileRow, now: Date): PlanTier | null {
  *     spanning a month boundary bank a second allotment without paying;
  *   • active plus/pro → that tier; an unexpired admin comp counts the same
  *     way (higher of the two);
- *   • everyone else (free, lapsed, canceled) → free — except a free profile
- *     created THIS period, whose signup default already is the allotment.
+ *   • everyone else (free, lapsed, canceled) → null: Free doesn't refill
+ *     (SIGNUP_CREDITS once at signup, owner decision 2026-09-24).
  */
 export function refillTierFor(
   profile: RefillProfileRow,
-  period: string,
+  _period: string,
   now: Date = new Date(),
 ): PlanTier | null {
   if (profile.is_admin) return null;
@@ -106,11 +106,7 @@ export function refillTierFor(
   // An unexpired comp can only ADD: the higher of comp and live subscription.
   const owed =
     comp && (!subscribed || TIER_RANK[comp] > TIER_RANK[subscribed]) ? comp : subscribed;
-  if (owed) return owed;
-  if (profile.created_at && currentCreditPeriod(new Date(profile.created_at)) === period) {
-    return null;
-  }
-  return "free";
+  return owed ?? null;
 }
 
 /**
