@@ -100,14 +100,16 @@ describe("grantMonthlyCreditsForPeriod", () => {
   });
 
   it("measures the shortfall against EVERYTHING the month granted — Free → Plus → Pro is 100, not 125", async () => {
-    // Regression (2026-09-22): the free refill (5) held the base key, the
-    // Plus upgrade topped up 25, and the Pro upgrade then topped up 100 − 5
-    // again — 125 credits for a 100-credit plan.
+    // Regression (2026-09-22): the free refill (5, back when Free refilled)
+    // held the base key, the Plus upgrade topped up 25, and the Pro upgrade
+    // then topped up 100 − 5 again — 125 credits for a 100-credit plan. The
+    // legacy 5-credit base row still exists in older months' ledgers.
+    const legacyFreeRefill = 5;
     const afterPlus = stubAdmin({
       rows: [
-        { delta: MONTHLY_CREDITS.free, idempotency_key: creditRefillKey(USER, PERIOD) },
+        { delta: legacyFreeRefill, idempotency_key: creditRefillKey(USER, PERIOD) },
         {
-          delta: MONTHLY_CREDITS.plus - MONTHLY_CREDITS.free,
+          delta: MONTHLY_CREDITS.plus - legacyFreeRefill,
           idempotency_key: creditUpgradeKey(USER, PERIOD, "plus"),
         },
       ],
@@ -154,16 +156,13 @@ describe("grantMonthlyCreditsForPeriod", () => {
     expect(grants).toHaveLength(0);
   });
 
-  it("grants the free tier its monthly allotment (owner decision, 2026-09-15)", async () => {
+  it("grants NOTHING to the free tier — Free doesn't refill (owner decision 2026-09-24; 5 credits once at signup)", async () => {
     const { admin, grants } = stubAdmin({ baseRow: null });
     const result = await grantMonthlyCreditsForPeriod(admin, USER, "free", PERIOD);
 
-    expect(result).toEqual({ ok: true, granted: MONTHLY_CREDITS.free });
-    expect(grants).toHaveLength(1);
-    expect(grants[0]).toMatchObject({
-      p_amount: MONTHLY_CREDITS.free,
-      p_idempotency_key: creditRefillKey(USER, PERIOD),
-    });
+    expect(MONTHLY_CREDITS.free).toBe(0);
+    expect(result).toEqual({ ok: true, granted: 0 });
+    expect(grants).toHaveLength(0);
   });
 
   it("grants nothing to a lapsed trial in the month its 30-credit grant landed", async () => {
@@ -263,17 +262,17 @@ describe("refillTierFor", () => {
     created_at: "2026-01-10T00:00:00Z",
   };
 
-  it("owes free accounts the free allotment", () => {
-    expect(refillTierFor(base, PERIOD)).toBe("free");
+  it("owes free accounts nothing — Free doesn't refill", () => {
+    expect(refillTierFor(base, PERIOD)).toBeNull();
   });
 
-  it("treats a lapsed or canceled paid subscription as free", () => {
+  it("treats a lapsed or canceled paid subscription as free (nothing owed)", () => {
     expect(
       refillTierFor({ ...base, subscription_tier: "pro", subscription_status: "canceled" }, PERIOD),
-    ).toBe("free");
+    ).toBeNull();
     expect(
       refillTierFor({ ...base, subscription_tier: "plus", subscription_status: "past_due" }, PERIOD),
-    ).toBe("free");
+    ).toBeNull();
   });
 
   it("owes active paid subscribers their tier", () => {
@@ -302,20 +301,18 @@ describe("refillTierFor", () => {
         now,
       ),
     ).toBe("pro");
-    // An expired comp is no comp.
+    // An expired comp is no comp — and a free account is owed nothing.
     expect(
       refillTierFor({ ...base, comp_tier: "pro", comp_expires_at: "2026-07-01T00:00:00Z" }, PERIOD, now),
-    ).toBe("free");
+    ).toBeNull();
   });
 
-  it("skips trials (single grant at creation), admins, and free accounts created this month", () => {
+  it("skips trials (single grant at creation) and admins; a paid subscriber who signed up this month still gets their tier", () => {
     expect(
       refillTierFor({ ...base, subscription_tier: "pro", subscription_status: "trialing" }, PERIOD),
     ).toBeNull();
     expect(refillTierFor({ ...base, is_admin: true }, PERIOD)).toBeNull();
-    // The signup default (profiles.credits = 5) is this month's allotment.
     expect(refillTierFor({ ...base, created_at: "2026-07-20T12:00:00Z" }, PERIOD)).toBeNull();
-    // …but a paid subscriber who signed up this month still gets their tier.
     expect(
       refillTierFor(
         { ...base, subscription_tier: "plus", subscription_status: "active", created_at: "2026-07-20T12:00:00Z" },
@@ -362,7 +359,7 @@ describe("refillActiveSubscribers", () => {
     expect(pageReads).toEqual([[0, REFILL_PAGE_SIZE - 1]]);
   });
 
-  it("grants free accounts 5, skips this month's signups, trials and admins", async () => {
+  it("grants nothing to free, lapsed, trialing or admin accounts — only paid tiers refill", async () => {
     const subscribers = [
       { id: "free-old", subscription_tier: "free", subscription_status: null, is_admin: false, created_at: "2026-01-01T00:00:00Z" },
       { id: "free-new", subscription_tier: "free", subscription_status: null, is_admin: false, created_at: "2026-07-03T00:00:00Z" },
@@ -374,11 +371,8 @@ describe("refillActiveSubscribers", () => {
 
     const result = await refillActiveSubscribers(admin, PERIOD);
 
-    expect(result).toEqual({ ok: true, processed: 5, granted: 2, failed: 0 });
-    expect(grants.map((g) => [g.p_user_id, g.p_amount])).toEqual([
-      ["free-old", MONTHLY_CREDITS.free],
-      ["lapsed", MONTHLY_CREDITS.free],
-    ]);
+    expect(result).toEqual({ ok: true, processed: 5, granted: 0, failed: 0 });
+    expect(grants).toEqual([]);
   });
 
   it("aborts with the stats-so-far error when a page read fails", async () => {

@@ -276,7 +276,13 @@ Rules and gotchas:
   notification + email per user per 30 days, skipped once the plan/pack was
   bought — every Checkout session carries `purchase_kind`/`tier`/`period`
   metadata for it. Every event must be subscribed on every webhook
-  endpoint (live + sandbox). The month's
+  endpoint (live + sandbox). FREE DOES NOT REFILL (owner decision
+  2026-09-24): `SIGNUP_CREDITS` (5, the `profiles.credits` default) once,
+  `MONTHLY_CREDITS.free` = 0, `refillTierFor` → null for free — copy says
+  "5 to start", never "a month". Three packs (`PACK_ORDER` mini/small/large,
+  lookup keys `pack_<key>`), listed inside the out-of-credits modal;
+  ACTIVE subscribers get coupon `PACK_SUBSCRIBER_COUPON_ID` applied by the
+  checkout action (never client-supplied). The month's
   credit top-up is measured against EVERY refill row of the month
   (`refill:<user>:<period>%`), never the base row alone. The seeded e2e user
   is an ADMIN (unlocked) — billing specs sign in as the free `e2e_free` user

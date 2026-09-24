@@ -219,7 +219,7 @@ export function checkoutReminderEmail(
     const cta = { label: "Get the credits", url: `${site}/dashboard/billing#packs` };
     const paragraphs = [
       `You started buying <strong>${input.credits} AI credits</strong>${price ? ` (${price})` : ""} but the checkout wasn't completed, so nothing was charged.`,
-      "Purchased credits sit alongside your monthly refill and never expire — pick them up whenever you're ready.",
+      "Purchased credits never expire and stack with any plan credits — pick them up whenever you're ready.",
       `Something go wrong at checkout? ${faq} covers plans and billing, and you can message us from your dashboard.`,
     ];
     return {

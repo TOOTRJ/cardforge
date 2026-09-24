@@ -8,7 +8,7 @@ import { priceIdForPack, priceIdForTier } from "./config";
 // Which Stripe price a plan key sells — resolved from the catalog itself.
 //
 // Every price in the live account AND the sandbox carries a lookup key
-// (plus_monthly, plus_annual, pro_monthly, pro_annual, pack_small,
+// (plus_monthly, plus_annual, pro_monthly, pro_annual, pack_mini, pack_small,
 // pack_large). Resolving by lookup key at checkout time means the six
 // STRIPE_PRICE_* env vars can never break a purchase: on 2026-09-22 Stripe's
 // log showed 22 failed `checkout.sessions.create` calls in live mode
@@ -28,6 +28,7 @@ export type PriceLookupKey =
   | "plus_annual"
   | "pro_monthly"
   | "pro_annual"
+  | "pack_mini"
   | "pack_small"
   | "pack_large";
 
@@ -49,6 +50,8 @@ function envPriceId(key: PriceLookupKey): string | undefined {
       return priceIdForTier("pro", "monthly");
     case "pro_annual":
       return priceIdForTier("pro", "annual");
+    case "pack_mini":
+      return priceIdForPack("mini");
     case "pack_small":
       return priceIdForPack("small");
     case "pack_large":

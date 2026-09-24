@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { CREDIT_PACKS, TRIAL_DAYS } from "@/lib/billing/plans";
+import { CREDIT_PACKS, PACK_SUBSCRIBER_COUPON_ID, TRIAL_DAYS } from "@/lib/billing/plans";
 
 // ---------------------------------------------------------------------------
 // Checkout + portal actions. The rules that cost money when wrong:
@@ -471,7 +471,7 @@ describe("createCheckoutSessionAction", () => {
     });
   });
 
-  it("sells a credit pack as a one-time payment with server-set metadata", async () => {
+  it("sells a credit pack as a one-time payment with server-set metadata — full price without a subscription", async () => {
     await createCheckoutSessionAction({ kind: "pack", pack: "small" });
     expect(checkoutParams()).toMatchObject({
       mode: "payment",
@@ -480,10 +480,47 @@ describe("createCheckoutSessionAction", () => {
       metadata: {
         supabase_user_id: USER,
         purchase_kind: "pack",
+        pack: "small",
         pack_credits: String(CREDIT_PACKS.small.credits),
+        discount: "none",
       },
       success_url: "https://test.local/dashboard/billing?billing=credits",
     });
+    expect(checkoutParams()).not.toHaveProperty("discounts");
+  });
+
+  it("the 10-credit impulse pack resolves by its own lookup key", async () => {
+    await createCheckoutSessionAction({ kind: "pack", pack: "mini" });
+    expect(checkoutParams()).toMatchObject({
+      line_items: [{ price: "price_pack_mini", quantity: 1 }],
+      metadata: { pack: "mini", pack_credits: "10" },
+    });
+  });
+
+  it("an ACTIVE subscriber gets the subscriber coupon applied server-side; a trial does not", async () => {
+    s.live = { id: "sub_live", status: "active", items: { data: [{ id: "si_1", price: { id: "price_pro_monthly" } }] } };
+    await createCheckoutSessionAction({ kind: "pack", pack: "large" });
+    expect(checkoutParams()).toMatchObject({
+      discounts: [{ coupon: PACK_SUBSCRIBER_COUPON_ID }],
+      metadata: { discount: "subscriber", pack_credits: "100" },
+    });
+
+    s.checkoutCreate.mockClear();
+    s.live = { id: "sub_trial", status: "trialing", items: { data: [{ id: "si_1", price: { id: "price_plus_monthly" } }] } };
+    await createCheckoutSessionAction({ kind: "pack", pack: "large" });
+    expect(checkoutParams()).not.toHaveProperty("discounts");
+    expect(checkoutParams().metadata).toMatchObject({ discount: "none" });
+  });
+
+  it("a missing coupon never blocks a sale: the pack is sold at full price and the failure logged", async () => {
+    s.live = { id: "sub_live", status: "active", items: { data: [{ id: "si_1", price: { id: "price_pro_monthly" } }] } };
+    s.checkoutCreate.mockReset().mockImplementationOnce(async () => {
+      throw new Error("No such coupon: 'SUBSCRIBER_PACKS_20'");
+    }).mockResolvedValue({ url: "https://checkout.test/full-price" });
+    const result = await createCheckoutSessionAction({ kind: "pack", pack: "small" });
+    expect(result).toEqual({ ok: true, url: "https://checkout.test/full-price" });
+    expect(s.checkoutCreate).toHaveBeenCalledTimes(2);
+    expect(s.checkoutCreate.mock.calls[1][0]).not.toHaveProperty("discounts");
   });
 
   it("turns a Stripe failure into a friendly error", async () => {

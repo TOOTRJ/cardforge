@@ -25,7 +25,7 @@ export const CARD_CAPACITY: Record<PlanTier, number> = {
   pro: CARD_CAPACITY_UNLIMITED,
 };
 export type PaidTier = "plus" | "pro";
-export type PackKey = "small" | "large";
+export type PackKey = "mini" | "small" | "large";
 export type BillingPeriod = "monthly" | "annual";
 
 // Free trial on paid subscriptions: full access for a week, no card required
@@ -34,27 +34,65 @@ export type BillingPeriod = "monthly" | "annual";
 // customer's Stripe subscription history.
 export const TRIAL_DAYS = 7;
 
-// Monthly credit allotment per tier — EVERY tier refills monthly via the
-// daily cron (Free included, owner decision 2026-09-15; Plus/Pro also on
-// the subscription webhook). A new account starts with Free's allotment via
-// the profiles.credits default.
+// Monthly credit allotment per tier. Plus/Pro refill monthly (the daily cron
+// + the subscription webhook). FREE DOES NOT REFILL (owner decision
+// 2026-09-24, reversing 2026-09-15): a new account gets SIGNUP_CREDITS once,
+// via the profiles.credits default, and after that only a pack or a plan adds
+// credits — the out-of-credits moment is where the upgrade modal and packs
+// sell, and with a monthly free refill it almost never happened (one account
+// ever ran dry). Every surface that used to say "5 a month" now says "5 to
+// start"; keep them in step with this table.
 // Sized so even a max-usage subscriber keeps AI cost (~$0.11 per generation,
 // measured) under ~40% of net revenue. Tune in tandem with prices below.
 export const MONTHLY_CREDITS: Record<PlanTier, number> = {
-  free: 5,
+  free: 0,
   plus: 30,
   pro: 100,
 };
 
+/** Credits every new account starts with — the `profiles.credits` column
+ *  default (migration 0027; the signup trigger writes the matching ledger
+ *  row). Change the two together. */
+export const SIGNUP_CREDITS = 5;
+
 // Consumable top-up packs (one-time Stripe `payment` checkout). Purchased
-// credits never expire (unlike monthly allotment).
+// credits never expire (unlike a plan's monthly allotment). Keys double as
+// Stripe lookup keys (`pack_<key>`, lib/stripe/prices.ts) and product
+// metadata (`pack: <key>`) on BOTH the live and sandbox catalogs.
 export const CREDIT_PACKS: Record<
   PackKey,
   { credits: number; priceUsd: number; label: string }
 > = {
+  mini: { credits: 10, priceUsd: 4, label: "10 credits" },
   small: { credits: 30, priceUsd: 8, label: "30 credits" },
   large: { credits: 100, priceUsd: 24, label: "100 credits" },
 };
+
+/** Display order for pack grids: impulse → value. */
+export const PACK_ORDER: PackKey[] = ["mini", "small", "large"];
+
+/** Subscribers (an ACTIVE Plus/Pro subscription — not a no-card trial, not
+ *  a comp) pay this much less for packs. The checkout action applies the
+ *  Stripe coupon `PACK_SUBSCRIBER_COUPON_ID` (same id on live and sandbox,
+ *  restricted to the pack products) server-side; the client only ever
+ *  displays the discounted number. */
+export const PACK_SUBSCRIBER_DISCOUNT_PCT = 20;
+export const PACK_SUBSCRIBER_COUPON_ID = "SUBSCRIBER_PACKS_20";
+
+/** A pack's price after the subscriber discount, in dollars (cents-exact). */
+export function discountedPackPriceUsd(pack: PackKey): number {
+  return Math.round(CREDIT_PACKS[pack].priceUsd * (100 - PACK_SUBSCRIBER_DISCOUNT_PCT)) / 100;
+}
+
+/** "$4" / "$6.40" — dollars → display. */
+export function formatUsd(amount: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: Number.isInteger(amount) ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
 
 export type PlanDisplay = {
   tier: PlanTier;
@@ -101,7 +139,7 @@ export const PLANS: PlanDisplay[] = [
     priceUsd: 0,
     tagline: "Design and share custom cards, forever free.",
     features: [
-      "5 AI credits every month",
+      "5 AI credits at sign-up (no monthly refill — packs and plans add more)",
       "Every MTG-style frame currently available on PipGlyph",
       "Low-res PNG export (watermarked)",
       "Up to 50 saved cards",
@@ -153,8 +191,9 @@ export function planForTier(tier: PlanTier): PlanDisplay {
 /** True for the "unlimited" sentinel that admin/billing-off entitlements
  *  carry (Number.MAX_SAFE_INTEGER). */
 /** "Running low" = at or under a fifth of the plan's monthly allotment (min 1):
- *  Free 5 → ≤1, Plus 30 → ≤6, Pro 100 → ≤20. The old flat `≤ 5` equalled Free's
- *  whole monthly refill, so every free user saw the red warning permanently. */
+ *  Free (no refill) → ≤1, Plus 30 → ≤6, Pro 100 → ≤20. The old flat `≤ 5`
+ *  equalled Free's then-monthly refill, so every free user saw the red
+ *  warning permanently. */
 const LOW_CREDIT_FRACTION = 0.2;
 export function isLowCredits(balance: number, monthlyAllotment: number): boolean {
   if (isUnlimitedCredits(balance)) return false;

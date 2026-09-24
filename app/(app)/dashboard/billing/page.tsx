@@ -21,6 +21,8 @@ import { billingViewerFromProfile } from "@/lib/billing/viewer";
 import {
   CARD_CAPACITY_UNLIMITED,
   MONTHLY_CREDITS,
+  PACK_SUBSCRIBER_DISCOUNT_PCT,
+  SIGNUP_CREDITS,
   formatCredits,
   planForTier,
 } from "@/lib/billing/plans";
@@ -105,6 +107,10 @@ export default async function BillingPage() {
       ? ` (${formatMoney(pending.amountCents, pending.currency)} / ${pending.interval})`
       : "";
   const capacity = entitlements.cardCapacity;
+  const monthlyCredits = MONTHLY_CREDITS[entitlements.effectiveTier];
+  // Packs at the subscriber price for an ACTIVE subscription (a no-card trial
+  // hasn't paid yet) — the checkout action applies the same rule.
+  const packDiscount = live && status === "active";
 
   return (
     <DashboardShell>
@@ -175,14 +181,17 @@ export default async function BillingPage() {
                 ? `Courtesy of the PipGlyph team until ${formatCalendarDate(profile.comp_expires_at)}.`
                 : "Courtesy of the PipGlyph team — no renewal, no card needed."
             ) : status === "canceled" ? (
-              "Your previous plan has ended. You're on the free plan: every tool, 5 AI credits a month, up to 50 saved cards."
+              "Your previous plan has ended. You're on the free plan: every tool, up to 50 saved cards, and the credits you have left — Free doesn't refill; a pack tops you up any time and a plan refills every month."
             ) : (
-              "Every tool is yours for free: all frames, the gallery, decks, 5 AI credits a month and up to 50 saved cards. Plans add credits, clean hi-res downloads and more room."
+              `Every tool is yours for free: all frames, the gallery, decks, ${SIGNUP_CREDITS} AI credits to start and up to 50 saved cards. Free doesn't refill — a credit pack tops you up any time, and plans add monthly credits, clean hi-res downloads and more room.`
             )}
           </p>
 
           <dl className="grid gap-3 sm:grid-cols-3">
-            <Stat label="AI credits a month" value={String(MONTHLY_CREDITS[entitlements.effectiveTier])} />
+            <Stat
+              label={monthlyCredits > 0 ? "AI credits a month" : "AI credits"}
+              value={monthlyCredits > 0 ? String(monthlyCredits) : `${SIGNUP_CREDITS} at sign-up`}
+            />
             <Stat
               label="Saved cards"
               value={capacity === CARD_CAPACITY_UNLIMITED ? "Unlimited" : `Up to ${capacity}`}
@@ -261,16 +270,19 @@ export default async function BillingPage() {
           </div>
           <dl className="grid gap-3 sm:grid-cols-3">
             <Stat label="Used this month" value={String(creditsUsed)} />
-            <Stat label="Monthly refill" value={String(MONTHLY_CREDITS[entitlements.effectiveTier])} />
+            <Stat label="Monthly refill" value={monthlyCredits > 0 ? String(monthlyCredits) : "None"} />
             <Stat label="Purchased credits" value="never expire" />
           </dl>
           <div className="flex flex-col gap-2 border-t border-border/50 pt-4">
             <h3 className="font-display text-base font-semibold text-foreground">Need a top-up?</h3>
             <p className="text-sm leading-6 text-muted">
-              Buy credits any time — on any plan. Purchased credits sit alongside your monthly refill and never expire.
+              Buy credits any time — on any plan. Purchased credits never expire and stack with any plan credits.
+              {packDiscount
+                ? ` As a subscriber you pay ${PACK_SUBSCRIBER_DISCOUNT_PCT}% less — the discount is applied at checkout.`
+                : ` Plus and Pro members pay ${PACK_SUBSCRIBER_DISCOUNT_PCT}% less.`}
             </p>
           </div>
-          <CreditPackGrid />
+          <CreditPackGrid discounted={packDiscount} />
         </SurfaceCard>
       </section>
 

@@ -12,10 +12,17 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CheckoutButton } from "./checkout-button";
+import { CreditPackGrid } from "./credit-pack-grid";
 import { ManageBillingButton } from "./manage-billing-button";
 import { pricingCtaFor } from "./pricing-cta";
 import { useBillingViewer } from "./use-billing-viewer";
-import { PLANS, TRIAL_DAYS, type PaidTier } from "@/lib/billing/plans";
+import {
+  PACK_SUBSCRIBER_DISCOUNT_PCT,
+  PLANS,
+  SIGNUP_CREDITS,
+  TRIAL_DAYS,
+  type PaidTier,
+} from "@/lib/billing/plans";
 
 export type UpgradeReason =
   | "credits"
@@ -32,10 +39,11 @@ export type UpgradeReason =
 
 const REASON_COPY: Record<UpgradeReason, { title: string; description: string }> =
   {
+    // The credits copy is viewer-aware (see creditsDescription below); this is
+    // the free-account wording, also the fallback before the viewer loads.
     credits: {
       title: "You're out of AI credits",
-      description:
-        "Every plan refills monthly — 5 credits on Free, 30 on Plus, 100 on Pro — or grab a one-time pack that never expires. Credits power AI card, idea and art generation. Your card and everything you've made stay exactly as they are.",
+      description: `Free accounts get ${SIGNUP_CREDITS} credits to start and don't refill. A pack tops you up any time, or a plan refills every month. Credits power AI card, idea and art generation — everything you've made stays exactly as it is.`,
     },
     premium_frame: {
       title: "That's a premium frame",
@@ -149,12 +157,38 @@ type UpgradeModalProps = {
   onOpenChange: (open: boolean) => void;
 };
 
+/** Out of credits, for a subscriber: their plan refills — a pack is a top-up.
+ *  The discount is promised only when it will actually apply (ACTIVE plan);
+ *  a trial hears that it starts once the trial converts. */
+function creditsDescription(subscriber: boolean, packDiscount: boolean): string {
+  if (!subscriber) return REASON_COPY.credits.description;
+  const discount = packDiscount
+    ? `${PACK_SUBSCRIBER_DISCOUNT_PCT}% off for subscribers`
+    : `the ${PACK_SUBSCRIBER_DISCOUNT_PCT}% subscriber discount starts once your trial converts`;
+  return `Your plan refills every month — top up any time with a pack, ${discount}. Credits power AI card, idea and art generation — everything you've made stays exactly as it is.`;
+}
+
 export function UpgradeModal({ open, reason, onOpenChange }: UpgradeModalProps) {
   const copy = REASON_COPY[reason] ?? REASON_COPY.generic;
   // The same CTA table as /pricing, fetched only once the modal opens: a
   // lapsed subscriber sees "Choose Pro", a live one "Switch to Pro", a
   // broken card "Update payment" — never a trial the checkout won't grant.
   const viewer = useBillingViewer({ enabled: open });
+  const subscriber = viewer.hasLiveSubscription;
+  // Packs sell where the need is felt (owner decision 2026-09-24): the
+  // out-of-credits case lists them right here. Free users see the plans
+  // first (the trial is the bigger offer); subscribers see packs first, at
+  // the subscriber price once the plan is ACTIVE (a trial hasn't paid yet).
+  const showPacks = reason === "credits";
+  const packDiscount = subscriber && viewer.subscriptionStatus === "active";
+  const packs = showPacks ? (
+    <section className="flex flex-col gap-2" aria-label="Credit packs">
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-subtle">
+        Credit packs{packDiscount ? ` · ${PACK_SUBSCRIBER_DISCOUNT_PCT}% subscriber price` : " · never expire"}
+      </p>
+      <CreditPackGrid compact discounted={packDiscount} />
+    </section>
+  ) : null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -164,10 +198,16 @@ export function UpgradeModal({ open, reason, onOpenChange }: UpgradeModalProps) 
             <Crown className="h-4 w-4 text-primary-bright" aria-hidden />
             {copy.title}
           </DialogTitle>
-          <DialogDescription>{copy.description}</DialogDescription>
+          <DialogDescription>
+            {reason === "credits" ? creditsDescription(subscriber, packDiscount) : copy.description}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-3 px-5 py-5">
+          {subscriber ? packs : null}
+          {showPacks && !subscriber ? (
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-subtle">Plans</p>
+          ) : null}
           {PAID_PLANS.map((plan) => (
             <div
               key={plan.tier}
@@ -192,6 +232,8 @@ export function UpgradeModal({ open, reason, onOpenChange }: UpgradeModalProps) 
               />
             </div>
           ))}
+
+          {!subscriber ? packs : null}
 
           {/* Honest trial framing: only an account that has never subscribed
               is promised the trial (checkout re-checks server-side). */}

@@ -1,17 +1,56 @@
 import { Coins } from "lucide-react";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { CheckoutButton } from "./checkout-button";
-import { CREDIT_PACKS, type PackKey } from "@/lib/billing/plans";
+import {
+  CREDIT_PACKS,
+  PACK_ORDER,
+  discountedPackPriceUsd,
+  formatUsd,
+} from "@/lib/billing/plans";
+import { cn } from "@/lib/utils";
 
-const PACK_ORDER: PackKey[] = ["small", "large"];
+type CreditPackGridProps = {
+  /** Show the subscriber price (an ACTIVE Plus/Pro subscription — the
+   *  checkout action applies the coupon server-side; this is display only). */
+  discounted?: boolean;
+  /** Tight three-up rows for the upgrade modal. */
+  compact?: boolean;
+  className?: string;
+};
 
 // Consumable credit top-up packs (one-time purchase). Purchased credits never
-// expire, so this monetizes everyone — not just subscribers.
-export function CreditPackGrid() {
+// expire, so this monetizes everyone — Free accounts (5 credits at signup, no
+// refill) most of all. Server-safe: no hooks; callers pass `discounted`.
+export function CreditPackGrid({ discounted = false, compact = false, className }: CreditPackGridProps) {
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
+    <div className={cn("grid sm:grid-cols-3", compact ? "gap-2" : "gap-4", className)}>
       {PACK_ORDER.map((key) => {
         const pack = CREDIT_PACKS[key];
+        const price = discounted ? discountedPackPriceUsd(key) : pack.priceUsd;
+        const priceLine = discounted ? (
+          <>
+            <s className="text-subtle">{formatUsd(pack.priceUsd)}</s> {formatUsd(price)} for subscribers
+            {compact ? null : " · never expires"}
+          </>
+        ) : (
+          <>
+            {formatUsd(price)} one-time{compact ? "" : " · never expires"}
+          </>
+        );
+        if (compact) {
+          return (
+            <div
+              key={key}
+              className="flex flex-col gap-2 rounded-lg border border-border/60 bg-background/40 p-3"
+            >
+              <span className="font-display text-sm font-semibold text-foreground">{pack.credits} credits</span>
+              <span className="text-xs text-muted">{priceLine}</span>
+              <CheckoutButton input={{ kind: "pack", pack: key }} variant="outline" size="sm">
+                Buy {pack.credits} credits
+              </CheckoutButton>
+            </div>
+          );
+        }
         return (
           <SurfaceCard key={key} className="flex flex-col gap-4 p-6">
             <div className="flex items-center gap-3">
@@ -22,9 +61,7 @@ export function CreditPackGrid() {
                 <span className="font-display text-lg font-semibold text-foreground">
                   {pack.credits} credits
                 </span>
-                <span className="text-sm text-muted">
-                  ${pack.priceUsd} one-time · never expires
-                </span>
+                <span className="text-sm text-muted">{priceLine}</span>
               </div>
             </div>
             <CheckoutButton input={{ kind: "pack", pack: key }} variant="outline">
