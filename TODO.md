@@ -39,6 +39,71 @@
       Keep claims verifiable (no invented Card Conjurer bugs); date it and
       set `updated` when Card Conjurer's status changes.
 
+## Billing audit follow-ups (2026-09-24)
+
+What's left from the 2026-09-22 billing audit (docs/BILLING.md §5–§9 record
+what shipped: trial reminder, scheduled downgrades, revenue log, checkout
+recovery, free credits once, packs in the modal + $4 pack + subscriber pack
+price, card-required trial with 25 trial credits, win-back offer). Owner
+decides each item; every one is a summary-and-questions round first.
+
+### Pricing recommendations (audit §6, in order of expected impact)
+
+- [ ] **Funnel instrumentation** (recommendation 9 — do first). Pricing page
+      views, CTA clicks, checkout starts (`createCheckoutSessionAction`),
+      completions/expiries (webhook), trial starts and conversions
+      (`customer.subscription.*`, `invoice.paid`), pack purchases, modal
+      opens by reason, so every change below can be measured. Vercel
+      Analytics + GA4 are already mounted in `app/layout.tsx`; the money
+      steps happen server-side and are best recorded first-party.
+- [ ] **Wider annual discount** (recommendation 4). Plus $60 → $48/yr, Pro
+      $150 → $120/yr (33% instead of two months free). New annual prices on
+      BOTH Stripe catalogs (lookup keys `plus_annual`/`pro_annual` move to
+      the new prices; old ones archived — existing annual subscribers keep
+      their price), `PLANS[].annualUsd`, pricing copy, the
+      "annual = monthly × 10" unit test, `tierForAmount` in
+      `lib/stripe/config.ts`.
+- [ ] **Visible daily Plus perk** (recommendation 5). Strongest: a
+      "Download clean" button on every card page that opens the upgrade
+      modal for free viewers (`components/cards/download-modal.tsx`).
+      Cheapest: a Plus/Pro badge on profiles + custom banner link. Optional:
+      one free clean HD download per account as a taste.
+- [ ] **Reposition Pro as the deck tier** (recommendation 6). Bundle the
+      Pro-only features (whole-deck generation, deck guides, print sheets,
+      deck ZIP/PDF export) and make them tangible on `/pricing`; consider a
+      monthly "deck showcase" gallery slot; price: $12/mo, or keep $15 and
+      add bonus credits on annual. Copy in `lib/billing/plans.ts` +
+      `app/(marketing)/pricing/pricing-content.tsx`.
+- [ ] **Founding-member offer** (recommendation 7). First 100 subscribers
+      lock Plus at $4/mo for life: a dedicated Stripe price (both catalogs),
+      a counter (`site_settings` or a small table), a banner with the
+      remaining count, and a rule that the price never changes for those
+      accounts (the price id itself guarantees it).
+- [ ] **Ship the promised premium frame set** (recommendation 8) — the one
+      paid perk still listed as "coming soon" (`PAID_COMING_SOON` in
+      `lib/billing/plans.ts`); design work as much as code. Turn "Card
+      printing" from coming-soon into an affiliate link to a print-on-demand
+      card service so the coming-soon list stops being a liability.
+
+### Operational (from the audit's standards comparison)
+
+- [ ] **Stripe Tax** before meaningful EU/UK volume (`automatic_tax` is off
+      on every checkout; VAT thresholds there are low).
+- [ ] **Sandbox test clock**: advance "pipglyph lifecycle 2026-09-22"
+      (Dashboard → Customers → Test clocks) past the trial end and the
+      period end to watch a no-card trial cancel and a cancelled plan end;
+      the Stripe MCP can create clocks but not advance them.
+- [ ] **Vercel housekeeping** from the 2026-09-14 quota incident: prune old
+      deployments (`vercel rm cardforge --safe` keeps every aliased
+      deployment), confirm the plan (Pro unlocks automatic deployment
+      retention under Project → Settings → Security), and update the Vercel
+      CLI (`npm i -g vercel@latest`, several majors behind).
+- [ ] **docs/BILLING.md gap 7**: no automated hosted-checkout test — a
+      monthly manual run on the `dev` alias, or a Playwright job with the
+      Stripe test card against it.
+- [ ] **Stale `docs/BILLING.md` wording** is fixed as of #365; keep §5–§9
+      in step with future billing PRs.
+
 ## Audit follow-ups (2026-09-14)
 
 Open findings from the full-site audit (verified). Items already fixed in PRs
