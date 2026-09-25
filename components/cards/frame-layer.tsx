@@ -32,6 +32,30 @@ const COLOR_KEY_LETTER: Record<ColorIdentity, string> = {
   multicolor: "m",
 };
 
+/** Human word for a frame colour key — toast/error copy ("blue", "multicolor"). */
+export const COLOR_KEY_WORDS: Record<string, string> = {
+  w: "white",
+  u: "blue",
+  b: "black",
+  r: "red",
+  g: "green",
+  c: "colorless",
+  m: "multicolor",
+};
+
+export function colorWord(colorKey: string): string {
+  return COLOR_KEY_WORDS[colorKey] ?? colorKey;
+}
+
+/** The single-select identity a frame colour key stands for (the inverse of
+ *  pickFrameColorKey for one-colour identities; "m" → multicolor). */
+export function colorIdentityForKey(colorKey: string): ColorIdentity {
+  const found = (Object.entries(COLOR_KEY_LETTER) as [ColorIdentity, string][]).find(
+    ([, letter]) => letter === colorKey,
+  );
+  return found?.[0] ?? "colorless";
+}
+
 export function pickFrameColorKey(
   colors: ColorIdentity[] | undefined,
 ): string {

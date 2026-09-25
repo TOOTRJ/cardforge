@@ -3,8 +3,9 @@
 **Precision tools for legendary ideas.** PipGlyph ([www.pipglyph.com](https://www.pipglyph.com))
 is an MTG-style custom card creator: a kind-first, five-step editor
 (Card → Identity → Text & stats → Set icon → Publish) with precise mana pips
-(including per-user **custom pip icons**), frames spanning three decades of
-card design, an AI rules-text assistant and AI card/art generation, a
+(including per-user **custom pip icons**), scan-verified card frames (the
+M15 family today; more eras and treatments as they pass verification), an
+AI rules-text assistant and AI card/art generation, a
 community gallery with likes and remixing, decks with proxy printing, design
 challenges, and print-ready PNG/PDF export.
 The live preview and the exported image share one layout engine, so what you
