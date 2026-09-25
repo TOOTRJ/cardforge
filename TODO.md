@@ -160,6 +160,30 @@ Open decisions are marked **[decide]**; none blocks its phase.
       look does not get it in a download; a clean paid download has no stored
       source and stays live (say so in the download modal + docs). Route test
       for the stale-bake path. Land with 0.20.
+- [ ] **0.22 [P1] Aftermath bottom half rotates the wrong way** (Card Conjurer audit 2026-09-25) — `AFTERMATH.secondFace.rotation` is 270 (`lib/cards/template-layout.ts`:1066). CSS/Satori apply that as 90° COUNTER-clockwise (`components/cards/card-preview.tsx`:669,1427, `lib/render/card-image.tsx`:329,1667). MSE's `angle: 270` is counter-clockwise, while CC (`packAftermath.js`:39-42, rotation 90) and the printed Cut // Ribbons and Commit // Memory are 90° clockwise. So today the second title reads bottom→top with its cost at the top, and the second art is upside-down relative to the frame (whose bar layout already matches print).
+      - Set rotation to 90. Slots rotate about their own centres, so footprints stay put.
+      - Re-check the rotated rules box against CC (x 6.94–44.94 / y 57.0–90.57, 0.0507 W) so wide text can't reach the type bar.
+      - Parity test: the second title's first glyph sits above its cost.
+      - Compare-tool check against Cut // Ribbons with the 0.1/0.2 rotated render before 2.2 walks aftermath. It is unverified, so no user sees it yet.
+- [ ] **0.23 [P0] Rewrite the 'original frames / no copyrighted assets' claims before any CC frame ships** (Card Conjurer audit 2026-09-25) — About 13 public lines promise original, non-WotC frames/fonts/mana symbols:
+      - `components/marketing/marketing-hero.tsx`:108 ('Original frames — no copyrighted assets used.')
+      - `app/(marketing)/mtg-card-maker/page.tsx`:162
+      - `app/(marketing)/mana-pip-editor/page.tsx`:154
+      - `app/(marketing)/best-mtg-card-makers/page.tsx`:39,54,240-241,356 (+ the :16 comment)
+      - `lib/content/faq.ts`:54,214,218,226
+      - `content/articles/how-to-print-proxy-mtg-cards.mdx`:31
+      - `content/articles/mtg-card-frame-eras-explained.mdx`:13,68
+      - the `lib/billing/plans.ts`:6 comment
+
+      They are already inaccurate: the bake ships Beleren Bold + MPlantin (`lib/render/card-image.tsx`:1921-1931), and the frames are MSE replicas. They become flatly false with 4.4. Replace them with accurate fan-content wording: MTG-style frames recreated for fan use under the Fan Content Policy, unofficial, not affiliated, never sold, proxies for personal casual play. `/disclaimer` stays the one full statement. **[decide]** owner/legal wording.
+
+      Acceptance: a unit test greps `app/(marketing)`, `components/marketing`, `lib/content` and `content/` for the banned phrases. Land before 4.4 (extends 0.19).
+- [ ] **0.24 [P1] Correct the Card Conjurer comparison article** (Card Conjurer audit 2026-09-25) — `content/articles/card-conjurer-alternative.mdx` gets several facts wrong:
+      - :68 says CC has no Scryfall import. It imports by name, with all printings, in 12 languages (`creator/index.html`:638-662).
+      - :69 says CC offers a 'PNG per card'. It also has PDF print sheets (`/print`).
+      - :26 and :63 claim 'one renderer'. PipGlyph has a DOM preview plus a separate Satori bake, with open parity items 3.1–3.7.
+
+      Describe the preview as 'matches the export, checked by parity tests (3.11)'. Compare on the real differences: hosted with an account, AI, custom pips, decks, gallery, verified frames. When 6.14 ships, also update `lib/content/faq.ts`:221-222 and :74-76 of the article ('no CC import'). Extends 0.19's 'keep claims verifiable'.
 
 ### Phase 1 — Import uses the exact frame (2–3 weeks)
 
@@ -217,12 +241,23 @@ Open decisions are marked **[decide]**; none blocks its phase.
       `{P}`, `{L}`, `{D}` in the tokenizer and both renderers
       (`components/cards/mana-cost-glyphs.tsx`:66, `lib/pips`,
       `lib/render/card-image.tsx`:884).
+      **Card Conjurer audit 2026-09-25:** Take every new symbol (h/half, paw, 100, 1000000, c/p, loyalty-*, ci-*, chaos, planeswalker) from mana-font 1.18, not CC's img/manaSymbols. CC's set is narrower: half.svg is never loaded and there is no {C/P}. {E}, {TK}, {A}, {CHAOS}, {PW} and the inline loyalty icons render as bare glyphs in text ink, with no disc, in both renderers. Print (KLD Aether Hub) has no disc; today {E} sits on the grey colourless disc (`lib/cards/rules-text.ts`:253-257, mana.css `.ms-cost`). Parity test.
 - [ ] **1.12 [P3] Title schema to 150 chars; proxy edge cases** (`?id=&exact=`,
       Scryfall 400 vs ambiguous 404 messages).
 - [ ] **1.13 [P2] Refresh `ABILITY_WORDS`** (`lib/cards/rules-text.ts`:33) with
       the 2024–2026 words + a test against Scryfall's `catalog/ability-words`.
 - [ ] **1.14 [P2] Kindred stays a supertype word; delete the dead
       `tribal → "spell"` mapping** (`import-mapper.ts`).
+- [ ] **1.15 [P2] 'Use art from a real card' in the Art panel** (Card Conjurer audit 2026-09-25) — Today real-card art only arrives with a full Scryfall import that overwrites text, frame and colour (`components/creator/scryfall-import-dialog.tsx`:364-399,841). CC has a separate art-by-name lookup (`creator-23.js`:4138-4185).
+
+      Add a dialog in the Art panel:
+      1. Name typeahead.
+      2. Printings grid (1.5's list, with thumbnails + artist).
+      3. POST `/api/scryfall/import-art` {mode: art | art-back}. The route is already id-only and SSRF-safe.
+
+      It sets only `art_url`, a reset `art_position` and `artist_credit`, never text, frame or colour, and counts against the same Scryfall quota.
+
+      Optional follow-up: a server-side 'Paste an image URL', under the upload allowlist, size limit and moderation. Never a client CORS proxy, which is what CC uses. Depends on 3.14 for orientation.
 
 ### Phase 2 — Admin walk-through of the stepper (3–5 days)
 
@@ -262,8 +297,10 @@ Open decisions are marked **[decide]**; none blocks its phase.
       the defense badge (`card-preview.tsx`:1014, `card-image.tsx`:709).
 - [ ] **3.7 [P1] Saga chapters through `RulesBody`** with the fit ladder and
       pips (`card-preview.tsx`:1294, `card-image.tsx`:1536).
+      **Card Conjurer audit 2026-09-25:** Start chapter text at the 7.5 pt compact standard; today `SAGA.chapters.sizePct` 0.029 W = 5.2 pt (`lib/cards/template-layout.ts`:828-836) vs CC 0.0427 W. Put the chapter rail on the profile: badge at x 3.86 W, 7.87 W × 6.29 H straddling the left border; numeral 0.045 W; text 13.34–48.34 W; reminder block 8.67/11.29/40.4×17.72; rows 17.86 % H from 28.96, content-sized via 3.13's helper. Both renderers; verify on History of Benalia (DOM). Saga is verified, so this is a platform correction (0.20).
 - [ ] **3.8 [P2] Artist footer on the 13 footer-less templates** (flip, split,
       aftermath, battle, every showcase).
+      **Card Conjurer audit 2026-09-25:** Footers also honour `TextSlot.shadowCss` in both renderers. `lib/render/card-image.tsx`:618-660 and `components/cards/card-preview.tsx`:983-1007 ignore it, though FULLARTLAND sets it (`lib/cards/template-layout.ts`:1437-1442). Full-art, borderless and showcase footers get an outline by default before they publish (CC outlines its bottom info).
 - [ ] **3.9 [P2] Second faces + adventure page get set symbol, flavour text,
       watermark and rarity** (`card-preview.tsx`:1416, `card-image.tsx`:1648).
 - [ ] **3.10 [P2] Bake paints by position not z-index** (document), `Band`
@@ -275,8 +312,63 @@ Open decisions are marked **[decide]**; none blocks its phase.
       flavour, P/T, crown once it exists) through both renderers for every
       published template with an SSIM threshold (reuse `/api/dev/render` +
       `scripts/visual-audit.mjs`).
+      **Card Conjurer audit 2026-09-25:** Add matrix cases: a 1/1/5-line planeswalker (3.13), the aftermath second-face title-above-cost check (0.22), an orientation-6 JPEG (3.14), a 4-mode Command (3.16), `100/100` P/T (3.18), and reversed-hybrid plus unknown-code symbols (3.15).
 - [ ] **3.12 [P1] Layout-version bump + rebake sweep** after the fixes (owner
       badge flow; /news post) — bundle with 4.4/4.8/4.9 if timing allows.
+      **Card Conjurer audit 2026-09-25:** The bundled bump also carries 3.13–3.22 and 4.16–4.20. Geometry and parity corrections go out as a 0.20 sweep, not as owner 'newer look' badges.
+- [ ] **3.13 [P0] Planeswalker ability rows sized by content in both renderers** (Card Conjurer audit 2026-09-25) — Both renderers stack equal `flex: 1` loyalty rows (`lib/render/card-image.tsx`:1205-1212, `components/cards/card-preview.tsx`:1778-1786). The browser grows a long row (min-height:auto), Satori/Yoga does not. So a walker with a long ultimate looks right in the editor, while the stored PNG, gallery tile and OG image clip that ability under the loyalty plate. Reproduced by baking a 1/1/5-line m15pw. `fitRulesSizePct` only sees the whole box (`card-image.tsx`:213-231), so nothing shrinks. m15pw is verified for all 7 colours (`supabase/seed.sql`:40-51).
+
+      Fix:
+      - Compute per-row heights in the shared fit module: each ability's line count at the fitted size, a floor of one badge height, the remainder shared.
+      - Feed the same numbers to both renderers and keep each badge centred on its row.
+      - Add an optional per-row weight in `face_content` for manual tuning.
+      - Reuse the helper for saga chapters (3.7).
+
+      Acceptance: a parity test with a 1-line / 1-line / 5-line walker. Ship as a platform correction (0.20 sweep).
+- [ ] **3.14 [P0] Normalise EXIF orientation for every raster we bake** (Card Conjurer audit 2026-09-25) — `uploadCardArtServerAction` (`lib/cards/upload-art-server.ts`:111-140) stores the original bytes with their EXIF orientation tag, and `components/creator/art-uploader.tsx` does not re-encode on the client. The browser preview honours the tag; the Satori bake ignores it (reproduced: an orientation-6 JPEG bakes unrotated). `toSatoriDataUrl` (`lib/render/art-source.ts`:67-89) passes JPEG/PNG up to 3 MB straight through and resizes larger files without `.rotate()`. So a phone photo looks upright in the creator and sideways in the stored bake, the WebP thumb, the OG image and downloads.
+
+      Fix:
+      - Auto-orient with `sharp(buffer).rotate()` and re-encode when `metadata.orientation > 1` in the art, watermark, set-icon and pip upload actions.
+      - In `toSatoriDataUrl`, never pass through an oriented JPEG, and call `.rotate()` before `resize()` so existing uploads bake upright.
+      - Run a one-off re-bake of cards whose art has orientation > 1.
+
+      Acceptance: a unit test feeds an orientation-6 fixture through `resolveRenderableImage` and asserts upright pixels.
+- [ ] **3.15 [P2] One symbol resolver for both renderers** (Card Conjurer audit 2026-09-25) — Two inputs render differently in preview and bake:
+      - A reversed hybrid (`{U/W}`) is a blank grey disc in the preview (`components/cards/card-preview.tsx`:1690; mana-font has no `.ms-uw`) but a correct split disc in the bake (`lib/cards/rules-text.ts`:261-267).
+      - An unknown code (`{FOO}`) is a blank disc in the preview and disappears in the bake (`lib/render/card-image.tsx`:885, `components/cards/mana-cost-glyphs.tsx`:112).
+
+      Canonicalise hybrid order in rules text in the shared tokenizer, as `normalizeManaCost` already does for the cost (`lib/cards/actions.ts`:309; `lib/cards/pip-runs.ts`:19 accepts either order). Render unknown codes as literal text in both renderers. CC tries the code and its reverse (`creator-23.js`:3741-3747).
+
+      Acceptance: a unit test that every suffix the tokenizer can emit has a mana-font codepoint.
+- [ ] **3.16 [P2] Modal bullets: hanging indent, tight gap** (Card Conjurer audit 2026-09-25) — Printed modal spells hang-indent each '• ' mode's wrapped lines after the bullet, with no ability-sized gap between modes or after 'Choose … —' (DTK Kolaghan's Command). PipGlyph makes one paragraph per source line (`lib/cards/rules-text.ts`:174-233) and puts the 0.45 em gap between every one (`lib/cards/typography.ts`:66-72, `lib/render/card-image.tsx`:1052-1120).
+
+      Fix: the tokenizer marks paragraphs starting with `•` (and spree `+`) as `hanging`. Both renderers indent their wrapped lines by the bullet width and use a small gap between consecutive bullets. The fit estimate counts the indent. CC does this with {indent}/{lns} (`creator-23.js`:3546-3551,3677-3682).
+
+      Acceptance: a parity test with a 4-mode Command.
+- [ ] **3.17 [P2] Flat inline pips (shadow only in the cost band)** (Card Conjurer audit 2026-09-25) — Printed cards, and CC (`packM15RegularNew.js`:54 vs :57), shadow only the mana cost; inline rules symbols are flat (DOM Llanowar Elves). We shadow every rules, loyalty, saga and second-face pip: the preview uses `ms-shadow` (`components/cards/card-preview.tsx`:1690), the bake's ManaGem always sets `boxShadow` (`lib/render/card-image.tsx`:826,843,897), and override pips are shadowed too (:1008-1021).
+
+      Add a `shadow` flag on ManaGem and the rules pip items, on only in the cost band. Parity test; bundle with 3.12.
+- [ ] **3.18 [P2] Stat values shrink to fit their plate** (Card Conjurer audit 2026-09-25) — P/T, loyalty and defense render at a fixed `slot.sizePct` (StatBake in `lib/render/card-image.tsx` ~1422, `components/cards/card-preview.tsx` ~1112), while each side allows 16 characters (`lib/validation/card.ts`:121-126). `100/100` overflows the M15 plate; '15/15', '*/1+*' and 'X/X+1' fit.
+
+      Run stat values through `fitSingleLineSizePct` against the plate width (4.18's plateRect once it exists), capped at the profile size, in both renderers. CC's P/T is oneLine with shrink (`packM15RegularNew.js`:58).
+
+      Acceptance: tests with `100/100` and `*/1+*`.
+- [ ] **3.19 [P2] Card-relative flavour bar** (Card Conjurer audit 2026-09-25) — Both renderers draw the flavour divider as `borderTop: 1px` (`lib/render/card-image.tsx`:1151, `components/cards/card-preview.tsx`:1730). That is about 0.2% of card height in the preview but about 0.05% in the 1500×2100 bake, so it is too thin in the stored PNG and differs between the two. CC draws `bar.png` at 96% of the text width (`creator-23.js`:3552-3567).
+
+      Replace it with a bar about 0.2% of card height and about 96% of the text width, with faded ends (an SVG linear gradient in both renderers). Measure against three M15 scans (Serra Angel DOM). Bundle with 3.12.
+- [ ] **3.20 [P2] Metric-based text fitting** (Card Conjurer audit 2026-09-25) — Fitting uses fixed average advances: `CHAR_W` 0.5 em (MPlantin measures ≈0.43) and `DISPLAY_CHAR_W` 0.56 em (Beleren 0.41–0.61), with a 0.96 safety factor (`lib/cards/render-tiers.ts`:30-35,106). So rules text steps down half a point early, and all-caps titles run about 8% wider than estimated.
+
+      Fix:
+      - Generate `lib/cards/font-metrics.json` (advance widths + kerning for MPlantin, MPlantin Italic and Beleren) from the committed TTFs with a script. Regenerate it after 4.8's Beleren2016.
+      - Replace the constants with a deterministic word-wrap simulation in `fitRulesSizePct`/`fitSingleLineSizePct`, shared by preview and bake and reused by 3.10 (titles), 3.18 (stats) and 3.13 (rows).
+
+      Acceptance: unit tests against line counts measured on a few Scryfall scans. CC measures real glyphs (`creator-23.js`:3825-3833,3897-3903).
+- [ ] **3.21 [P3] Larger hybrid cost pips** (Card Conjurer audit 2026-09-25) — Printed hybrid and two-brid cost pips are about 1.2× a mono pip (UMA Murderous Redcap), and CC loads them at 1.2 (`creator-23.js`:326-328). We draw every cost pip at one size (`lib/render/card-image.tsx`:822-872, `components/cards/mana-cost-glyphs.tsx`:259).
+
+      Scale split discs ×1.2 in the cost band only, keeping the row's vertical centre. Check Phyrexian against a scan first. Parity test.
+- [ ] **3.22 [P2] m15land/m15snowland title band ends too early** (Card Conjurer audit 2026-09-25) — After 0.12 folded the name's left edge to 8.4% W, `widthPct` stayed at 77.5. The title band now ends at 85.9% W (m15snowland: 86.6%), so long land names shrink early on two verified templates. The comment still says '14 + 77.5 = 91.5' (`lib/cards/template-layout.ts`:343-376). CC's box ends at 91.28 (`packM15RegularNew.js`:55), and land frames have no cost.
+
+      Set `widthPct` to 83.8 / 83.1 and fix the comment. Ship as a platform correction (0.20).
 
 ### Phase 3b — Creator wizard bugs (1 week, parallel with Phases 1–3)
 
@@ -311,6 +403,17 @@ Open decisions are marked **[decide]**; none blocks its phase.
       (`panels/layout-panel.tsx`:68).
 - [ ] **3b.12 [P2] Copy pass** on every "Soon" / "awaiting verification" /
       substitution message so the creator never claims a frame it didn't apply.
+- [ ] **3b.13 [P1] Art positioner matches the card's art window** (Card Conjurer audit 2026-09-25) — The pan surface is a fixed `aspect-[5/4]` (`components/creator/art-uploader.tsx`:42), and drags divide by that box's overflow (:282-336), while the card crops to `layout.artSlot`. On M15 (1.37) this is mild. On saga (0.41) and full-art (0.71), a horizontal drag sweeps the whole focal range in about 38 px. On aftermath/split (2.7) vertical drag does nothing; only the arrow keys work.
+
+      Fix:
+      - Size the surface from `resolveFrameProfile(template).artSlot` (the second face uses `secondFace.artSlot`, landscape-aware). Better: add drag-to-pan and Shift-wheel zoom on the live preview's art slot, with the window outlined while dragging, as CC does (`creator-23.js`:4200-4256).
+      - Use one scale range everywhere. Today the uploader uses 0.5–3 (:39-40), the renderers 0.5–4 (`components/cards/card-preview.tsx`:573, `lib/render/card-image.tsx`:210) and zod 0.1–4 (`lib/validation/card.ts`:205).
+      - Make the size hint template-aware (:635-639), showing slot px at the HD and 800 ppi exports, with a warning under 300 ppi.
+
+      Acceptance: unit tests of the pan maths for the saga, aftermath and full-art slots.
+- [ ] **3b.14 [P3] Layout kinds keep a card-type choice** (Card Conjurer audit 2026-09-25) — The adventure kind hard-codes creature (`lib/creator/card-kinds.ts`:156-161,539-560), so the 23 non-creature adventures (e.g. WOE Virtue enchantments) can't be typed correctly and always show the P/T editor. In CC the P/T plate is an optional layer (`packAdventure.js`:13-21).
+
+      Adventure (and Prepare from 4.27, and flip) offer creature / enchantment / artifact / instant-sorcery on the Identity step. Stats and the P/T plate follow `card_type` (`lib/cards/card-display.ts`:142-156). Import keeps the front face's type for layout `adventure`.
 
 ### Phase 4 — The frame factory (6–10 weeks, incremental)
 
@@ -325,6 +428,13 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
       block, with a test that nothing is hand-kept (`types/card.ts`,
       `lib/creator/card-kinds.ts`, `lib/cards/template-layout.ts`,
       `lib/cards/frame-reference-registry.ts`, `supabase/seed.sql`).
+      **Card Conjurer audit 2026-09-25:** Per template AND per overlay, also record:
+      - `nativeSize`. The in-progress 4.2 `lib/frames/frame-manifest.json` already stores width/height per file; carry that into the template manifest.
+      - `ccGeneration` ('new' | 'regular'; their bands differ by 0.15–0.3 %).
+      - A per-colour source map with `substitute: true` and a reason. CC has no `c` master for m15pw, tokens, saga, adventure, split, aftermath or snow nonland. The colourless land is `m15/new/l.png`; only the orphan packM15LandsNew's `ll.png` 404s. ABU `m` comes from Legends.
+      - The source per family (CC / MSE / both).
+      - `symbolStyle` (4.24).
+      - The stamp, crown and plate overlays each treatment supports.
 - [x] (infrastructure done 2026-09-25 — feat/frame-storage: migration 0116 `frames` bucket, content-addressed objects + `lib/frames/frame-manifest.json`, `frameUrl()` in preview + bake, hash-checked LRU in the bake, `frames:publish` (dev) / owner `frames:promote` (prod) / CI `frames:check`, docs/FRAMES.md; pilot proved a bucket render pixel-identical to git. Left for later: moving the existing MSE masters out of git (optional), picker thumbs, history rewrite = not doing) **4.2 [P1] Storage move** — frame masters + WebP + small picker thumbs in
       a Supabase Storage (or Vercel Blob) bucket behind the CDN;
       `components/cards/frame-layer.tsx` and `lib/render/card-frames.ts` read a
@@ -338,11 +448,50 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
       into the profile, write manifest provenance. Also generalise MSE mask
       compositing for the mainframe styles (`scripts/build-artifact-blend.mjs`,
       `scripts/build-adventure-frame.mjs` are the seeds).
+      **Card Conjurer audit 2026-09-25:** Importer rules:
+      (a) Composite in CC's own layer order (`creator-23.js`:1038-1110) at 2010×2814, then ONE Lanczos downscale to 1500×2100. Lands, artifacts, vehicles and two-colour cards are 6–10 masked layers, never just the per-colour PNG.
+      (b) Rasterise SVG masks (`m15/new/vector masks`, token `frame.svg`/`pinline.svg`, `nyx/verticalMask.svg`) at the working size.
+      (c) Replace `maskRightHalf.png` (744×1039, not 5:7) with 4.6's procedural ramp.
+      (d) Fit plates and stamps to their declared bounds, not native pixels (`m15PTV` is 381×209 vs 377×206). Normalise the /2015 UB stamp bounds.
+      (e) CC text sizes are fractions of card HEIGHT: `sizePct = size × 2814/2010`. Convert CC's box top + 0.7 em baseline into our centred band rects. M15 seeds: title 0.0533, type 0.0454, rules 0.0507, P/T 0.0521 W.
+      (f) Import `artBounds` with their 1–4 px overshoot as `artSlot`, and assert each flattened frame is opaque outside it except the corners (7.6).
+      (g) Check every referenced CC path against the pinned tree and fail on a miss. Dead refs: `new/fullart/c.png`, `new/ub/c.png`, and packM15TransformBackNew's double slash.
+      (h) Keep as overlay assets: split/aftermath/adventure/flip half and page masks, holo stamps, colour-indicator pips, nickname plates, Nyx/companion inner crowns, miracle, and CC's margin-extension art (6.1a). Rotate CC's portrait split into landscape and measure the second art windows CC doesn't declare.
+      (i) Never copy CC `bottomInfo` text: 31 packs carry '™ & © Wizards of the Coast' and 30 'NOT FOR SALE'. Add a test that no manifest or render contains 'Wizards of the Coast'.
+      (j) One known-composite unit test per template (m15land/u vs Castle Vantress, m15artifact/u vs Phyrexian Metamorph).
+      **Card Conjurer audit 2026-09-25:** (critic) The no-WotC-text test also bans "CardConjurer.com" and "NOT FOR SALE": CC's `setBottomInfoStyle` (`creator-23.js`:144-152) hard-codes them.
 - [ ] **4.4 [P1] Re-source the M15 base family from CC** — m15, m15land,
       m15token, m15tokenartifact, m15artifact, m15snow, m15snowland,
       m15devoid, m15pw → measured profiles → auto-score → walk → verify → ONE
       layout-version bump + rebake sweep + /news post. Changes every existing
       card's look; do it once, deliberately.
+      **Card Conjurer audit 2026-09-25:** (1) m15token/m15tokenartifact come from CC token/m15/textless ('Textless (Bordered M15)'), NOT token/m15/regular as the scratchpad prototype has it. Its window (7.67–92.33 × 12.52–80.81) matches ours, so the art slot needs verifying, not re-measuring. Correct the verified token profile to match print (Soldier tdom):
+      - title gold #fde367, Beleren small caps (4.8), centred;
+      - type left-aligned from 8.54 W at 0.0454 W;
+      - symbol right-anchored at 92.13, centred 84.39;
+      - P/T on the M15 plate (4.18);
+      - art ≥7.67/12.48/84.76×68.43.
+      `c` keys: m15tokenartifact → a.png; m15token → l.png or keep MSE **[decide]**.
+      (2) M15-family `artSlot` = CC artBounds 7.67/11.29/84.76×44.29, which fixes today's hairlines on land, snow and artifact.
+      (3) m15artifact per 4.16 (not the MSE blend, not the prototype's pinline-only recipe); m15devoid gets its own profile per 4.17; m15/c per 4.17's [decide].
+      (4) m15pw, m15token and m15tokenartifact are 1500×2100 in CC too.
+      (5) Correct the 2026-09-24 evaluation notes: token profiles don't need re-measuring, and CC does have a colourless land (`m15/new/l.png`).
+      (6) 0.23, 4.16–4.20 and 7.6 land before, or in the SAME, layout bump.
+      **Swap blockers (Card Conjurer audit 2026-09-25) — all must be handled in or before this item:**
+      (Blockers 1, 2, 6 and the importer half of 7 are already done in the 4.3 importer, PR #378: CC's exact artifact recipe, the textless token pack, excluded see-through frames, native-size compositing. m15devoid is deferred to 4.17.)
+      1. Coloured artifacts (4.16): build m15artifact with CC's recipe: artifact Frame + Border, and the colour's pinline, title/type bars, text box and P/T plate. The live MSE blend is inverted, and the scratchpad prototype (silver base + colour through the pinline mask only) is wrong too. Score every colour against Esper Sentinel, Phyrexian Metamorph and Embercleave before sign-off.
+      2. Token source: m15token/m15tokenartifact must come from CC token/m15/textless ('Textless (Bordered M15)'), not token/m15/regular, which the prototype importer uses. The wrong pack shrinks every token's art window to 63.9 % and adds an empty text box to vanilla tokens.
+      3. Translucent CC frames: m15/new/c.png ('Eldrazi') and every devoid frame are see-through (α 26–212). Without art under the frame (4.17), m15/c and m15devoid bake a flat grey text box and black side bands. Either keep an opaque c or ship 4.17 first; m15devoid already shows this today.
+      4. Painted stat shields: CC's planeswalker (and battle) masters paint the loyalty/defense shield themselves. Drop our loyalty.png plate and the drawn defense badge for those masters, or two rims stack about 1.2 % apart. The badge rail and text x need 4.19's geometry in the same bump.
+      5. P/T plate: CC's m15PT*.png has a native 2.04 aspect. Dropped into today's 23×5.8 rect, it stretches about 60 % like ours does. StatSlot.plateRect (4.18) must land in the same bump.
+      6. Colour keys: CC has no `c` master for planeswalker, tokens, saga, adventure, split, aftermath or snow nonland. The colourless land is m15/new/l.png; only the orphan packM15LandsNew's ll.png 404s. new/fullart/c.png and new/ub/c.png are dead references. The manifest needs a substitution map with provenance and a per-colour auto-score, and the importer must fail on a missing path rather than write a blank.
+      7. Compositing: CC builds lands, artifacts, vehicles and two-colour frames from 6–10 masked layers. Flatten in CC's layer order at 2010×2814, downscale once, and rasterise the SVG masks. Don't use the 744×1039 non-5:7 half mask. Fit plates and stamps to their bounds, not native pixels.
+      8. Units: CC text sizes are fractions of card HEIGHT (multiply by 2814/2010 for our width-based sizePct), and CC places text on a 0.7 em baseline inside a box rather than centring it. A naive bounds import makes every text slot about 30 % small or offset.
+      9. Art window: import CC artBounds with their 1–4 px overshoot, and assert the frame is opaque outside the slot AFTER the 2010→1500 downscale, which anti-aliases the window edge. Run the 7.6 coverage test so no clipped art ever exposes the #101015 background.
+      10. Legal text: never copy CC bottomInfo strings ('™ & © Wizards of the Coast' in 31 packs, 'NOT FOR SALE' in 30) into manifests or renders; add a test for it. Rewrite the ~13 'original frames / no copyrighted assets' marketing and FAQ lines (0.23) before the first CC frame ships.
+      11. One bump: 4.16–4.20 (artifact recipe, art under the frame, P/T plate box, planeswalker rail, title/type sizes), the M15 artSlot = CC artBounds change and the token profile fixes all change published pixels. Ship them in 4.4's single platform-correction sweep (0.20), not as separate 'newer look' badges. Re-measure title/type after Beleren2016 if 4.8 rides along.
+      12. 800 ppi: only 6 of 4.4's 9 templates get 2010 px masters; m15pw and both token templates are 1500×2100 in CC too. Don't announce 6.1b as sharp for them; gate the option on manifest nativeSize, and on 6.10 for the art.
+      13. Storage: 4.2 is still in progress on feat/frame-storage (lib/frames/frame-manifest.json is empty; migration 0116 creates the bucket). CC masters must reach the production `frames` bucket through frames-promote before 4.4 merges, and must never be committed to the public repo.
 - [ ] **4.5 [P1] Treatment × kind overlay model** — per-kind overlays (P/T
       plate, vehicle plate, loyalty rail + shield, defense badge, chapter rail,
       class/leveler bars later) as separate assets composed at render time via
@@ -357,16 +506,47 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
       blend, hybrid + two-colour frames via masks (colour model gains a
       two-colour identity → blended frame; 3+ stays gold). **[decide]** expose
       two-colour identity as a picker choice or derive it from the cost.
+      **Card Conjurer audit 2026-09-25:** Resolve the [decide] with CC's `cardFrameProperties` (`creator-23.js`:577-755), ported as a pure, unit-tested function over the ten pairs × {gold, hybrid, land, artifact, vehicle}:
+      - Pair order WU WB UB UR BR BG RG RW GW GU via `lib/cards/mana-order.ts`.
+      - Hybrid = a `/` pip in the cost, with an override chip.
+      - 2-colour gold: m frame, border and bars, with the pinline and text box split.
+      - Hybrid: split frame, border and text box, grey (l) title/type bars, colourless P/T plate.
+      - 2-colour land: l frame and bars, with an lX|lY pinline and text box.
+      - 3+ colours: m / lm.
+      Generate the split mask procedurally at 1500×2100 (ramp ≈41→61 % of width, ≈1 % slope), never from the 744×1039 file.
+      **Card Conjurer audit 2026-09-25:** Also drive `modern`/`modernland` (and 1997 gold) with the same two-colour logic: CC's `auto8thEditionFrame` stacks pinlineRight/rulesRight/frameRight on pack8th, and the Ravnica, Shadowmoor and Alara hybrids and golds were printed on the 2003 frame (critic).
+
+      Crown = a family keyed by treatment:
+      - Standard: CC `crowns/new/{w,u,b,r,g,m,a,l,c}` at 2.19/1.88/95.62×17.52, plus a black border cover 0–4.87 % H clipped to our rounded corners.
+      - Floating + lower-cutout + outline for borderless, extended and showcase.
+      - UB crowns (4.25); transform/MDFC crowns (5.1); Nyx/companion inner crowns at 16.37/2.49/67.31×2.27.
+      - Colour follows the pinline letter, split for two colours; auto from Legendary, with an opt-out.
+
+      Vehicle is a full treatment, not just a P/T box: CC `v.png` as the Frame + Border layers (colour or artifact bars stay), the `m15PTV` plate fitted to 4.18's plate box, white P/T ink, auto from the Vehicle subtype. Reference: Smuggler's Copter (KLD).
+
+      Colour indicator: base at 7.67/57.48/4.67×3.34, the type slot indented when shown, 2–3 colours via CC's half/third masks, 4–5 colours drawn by us, the base redrawn as vector for 800 ppi.
+
+      'Coloured-artifact blend' is replaced by 4.16, because the current blend is inverted.
 - [ ] **4.7 [P1] M15-era variants from CC**, in request-log order — extended
       art + borderless (replace the contradicted profiles), textless, full-art
       lands (generic first, per-set later), Nyx (fix), class, prototype,
       mutate, leveler, spree/companion/miracle/lesson marks, tokens + emblems,
       4-ability + compleated planeswalkers. Each ships through 0.9 → 2.2 → 2.4.
+      **Card Conjurer audit 2026-09-25:** - **Borderless:** a 4.5 treatment in two text-box heights (CC FullArtNew 2010 px standard, IkoShort short, GenericShowcase fallback) with floating crowns, plus borderless pw/token. Signature: border_color=borderless without a showcase effect.
+      - **Extended art:** from CC `m15/new/extended` (2010 px, includes c and v; art 0/8.39/100×54.37).
+      - **Nyx (fix):** a new `m15nyx` skin of m15 from CC `m15/new/nyx` (normal cream text box, dark ink; c → a.png). Auto for Enchantment Creature/Artifact and for `frame_effects: enchantment` on non-showcase printings. Add a saga Nyx and a Nyx inner crown. KEEP the `nyx` template as the THB 'Constellation' showcase, which matches its references.
+      - **Tall walker:** `m15pwtall` from CC PlaneswalkerTall (type y 49.67, rows from 55.81 at 8.96 %, symbol y 52.34), auto at ≥4 loyalty rows; Compleated as a skin on it.
+      - **Case and Fuse (new):** Case (MKM) as the class column with `face_content.case = {text, toSolve, solved}`; Fuse (DGM) as a split skin with a full-width fuse bar. Class stores `face_content.class.levels`.
+      - **Leveler:** via a `tiers` capability (shared with Station, 4.27).
+      - **Saga creatures:** a P/T slot plus CC saga/pt plates (64 cards).
+      - **Seeds:** class art 7.53/11.24/42.47×72.53, rail x 50.93 w 40.4, header bars 4.81 % H; leveler bands 63.03/72.29/82.2 (lower two indented to 20.67), P/T 65.91/75.24/85.15; prototype band 8.6/63.57/69.4×9.19, mana 63.81, white pt2 69.35; mutate art to 75.63, rules 75.67–91.82; miracle overlay 4/2.86/92×53.24.
+      - 'Tokens' moves to 4.22 and 'emblems' to 6.4.
 - [ ] **4.8 [P1] Era typography** — Magic Medieval for 1993–2002 titles, Matrix
       Bold for 2003–2014, Beleren Small Caps for the artist, a Gotham-class
       font for the collector line; `font` on the profile; registered in the
       bake + `@font-face` in the browser (self-hosted, licence check like the
       current Beleren/MPlantin); parity tests.
+      **Card Conjurer audit 2026-09-25:** Swap `public/fonts/Beleren-Bold.ttf` (the 2013 DelveFonts build, which has no terminal alternates) for the Beleren2016 build, with the same licence check. Substitute word-final f/h/m/n/k → U+E006–E00A in a shared `displayText()` for title, type and second-face bands in both renderers; Satori doesn't run GSUB `fina`. Checked on DMR Shivan Dragon and FDN Vampire Nighthawk. Use Beleren Small Caps for P/T, loyalty and token names (4.4), not only the artist. Re-measure title/type fit after the swap, and regenerate 3.20's metrics.
 - [ ] **4.9 [P1] Collector info line + holofoil stamp** — card fields for set
       code, collector number, language (default EN), rarity letter derived;
       footer redesigned to the M15 layout (number, set • lang, artist brush
@@ -374,16 +554,55 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
       (oval; UB triangle on UB frames); Scryfall import fills set/number;
       editor fields on the Set icon step; both renderers; bump + rebake
       (bundle with 4.4).
+      **Card Conjurer audit 2026-09-25:** The © line is the creator's own ('© {year} {display name}') or the PipGlyph mark, never Wizards of the Coast. CC stores that line in 31 packs, and its converter stamps it.
+
+      CC seeds:
+      - rarity + number line at 6.47 W, 93.77–95.48 H;
+      - set • lang + brush + artist at 95.48–97.19 H, at 0.024 W;
+      - © right-aligned to 93.54 W, 1.72 % H lower when a P/T is present.
+
+      Stamps per family:
+      - M15 43.6/90.34/12.8×4.58 (oval 45.54/91.72/8.94×3.2);
+      - PW 43.94/90.15/12.14×5.1;
+      - saga 43.8/91.2/12.4×3.72;
+      - battle vertical 4.9/43.8/4.43×12.4.
+      The notch follows the frame letter. UB triangle bounds are over 2010 (CC divides by 2015). The stamp assets are 1500-scale, so redraw them as vectors for 800 ppi.
+
+      Also add: ★ (foil) vs •, zero-padded NNN/TTT, pre- and post-ONE layouts, and remember set/lang per user (4.14). P3 follow-up: an optional serial plate ('n / total', our own plate art) and a gold date-stamp line.
 - [ ] **4.10 [P1] Old borders** — check whether CC ships 1997/2003 frames at
       high resolution; if not keep MSE's 375 px for classic/retro/modern
       **[decide]**; complete their references (all seven colours, lands,
       tokens), apply 4.8 fonts, verify + publish. Future Sight stays "Soon".
+      **Card Conjurer audit 2026-09-25:** Resolve the [decide]; this revises the owner's MSE-for-old-borders choice, which 4.10 left conditional. CC ships Seventh (1997) and 8th (2003) at 1500×2100 with real extra detail over our 375 px MSE (detail metric 7.67 vs 1.81 and 4.67 vs 2.33).
+      - Source retro/retroland from CC Seventh and modern/modernland from CC 8th after an auto-score. CC's 1997 white frame is lighter than MSE's, so score it first.
+      - Take the coloured lands, The Dark land and 8th's multicolour land from the same packs.
+      - Keep MSE agclassic (CC ABU gains nothing), with CC Legends Multicolored for Alpha `m`.
+      - Add a white-border option (Fourth/Fifth/Seventh) as a border overlay.
+      - 1997 tokens come from CC `token/old` (has c).
+      Needs 4.23 (text treatment) and 4.24 (original pips).
+
+      P3: a 1997/2003 layout matrix — compare CC's community-made 1997 planeswalker/saga frames (`packPlaneswalkerSeventh`, `packOldSaga`; custom designs, not printings) with MSE's (critic correction): `magic-new-planeswalker(-4abil)`, `-split(-fuse)`, `-flip`, `-leveler`, `-doublefaced`, `-token`, `-emblem`, and `magic-old-split/-flip/-token`.
 - [ ] **4.11 [P1] Showcase families from MSE (744–750 px)**, in request-log
       order — re-measure the 12 contradicted profiles from scans (lotr,
       lotrscroll, avatar, bloomburrow, bloomanime, tarkir ×3, expeditionland,
       fullart, m15textless ×2), then per-set full-art basics and the
       most-requested families of the last three years (the pack holds 40+ at
       hi-res). Each family gets its own reference printings.
+      **Card Conjurer audit 2026-09-25:** Reword to 'Showcase families from the best source': CC ≥1500 px where it exists, else MSE 744–750 **[decide]**; this revises the owner's MSE-for-showcase choice.
+      - CC is sharper for lotr, lotrscroll (2010 px), the THB Nyx showcase, fullart (ZNR), extendedart, m15textless and expeditionland. The gain is large for ZNR, expedition and Nyx, small for lotr.
+      - MSE stays for everything after June 2024 (BLB, Avatar, Anime, TDM) and for families CC lacks.
+      - The backlog is the union of CC and MSE families, with the source tagged in 4.1. CC-only: Oil Slick, three Storybooks, Tarkir Sketch (MOM). In both: Ixalan coin, D&D.
+
+      Re-measure seeds:
+      - expeditionland: type 8.54/81.96/82.92×5.43, rules 9/59.96/82×20.72, symbol 92.14/84.39;
+      - fullart: type in the M15 row at 56.43 (white), rules in the M15 box, art 6.2/11.29/87.6×80.96;
+      - m15textless: type on the 81.96 row;
+      - lotr: art ≥9.8/11.2/80.8×44.5;
+      - lotrscroll: full-bleed.
+
+      Per-set full-art basics: CC for ZEN/THB/SNC/NEO/UB/2022/snow/UST/UNH, MSE for DFT/AFR/LCI/ONE/UNF, with one shared full-art land profile per layout family.
+
+      Masterpieces in request-log order, Mystical Archive first (CC 2010 px, plus JP); then Inventions, Invocations, nonland Expeditions, Praetors, Signature Spellbook and promo tall-art.
 - [ ] **4.12 [P1] Verification throughput** — auto-score every colour of a
       template in one job, batch by treatment (once the treatment PNG is
       aligned for one kind, kind overlays inherit the measured slots), sign-off
@@ -395,6 +614,135 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
       user).
 - [ ] **4.15 [P3] Future Sight era; Un-set/acorn treatments; oversized
       Planechase/Archenemy.**
+      **Card Conjurer audit 2026-09-25:** Add, in request-log order:
+      - Vanguard (hand/life modifier slots);
+      - Conspiracy (Draft Matters stamp as an m15 treatment);
+      - Attraction (light row);
+      - Scheme (MSE `magic-archenemy`);
+      - Planechase with CC's six text heights chosen by rules length;
+      - Dungeon (needs a room-graph editor) last.
+      Future Sight: CC's art is also 744 px, so take whichever of CC and MSE scores better.
+      **Card Conjurer audit 2026-09-25:** (critic, P3) Also: Playtest (Mystery Booster), Colorshifted / Planar Chaos, Full Text (no art), "The List" stamp, Nyx tokens, Jumpstart front cards. CC's Flesh and Blood and Pokémon groups are out of scope.
+- [ ] **4.16 [P0] Coloured artifacts: artifact outer frame, colour interior (CC's recipe)** (Card Conjurer audit 2026-09-25) — Every coloured `m15artifact` frame is inverted today (verified, all 7 colours in `supabase/seed.sql`). `scripts/build-artifact-blend.mjs` gives the colour's outer border with a silver title bar and text box: sampled `public/frames/m15artifact/r.png` has a red side (202,82,41) and a silver title (203,212,217). Real Embercleave (ELD) and Phyrexian Metamorph (2XM) scans have a silver artifact outer frame (side 209,226,246 / 167,173,195) with colour-tinted type bar and text box. Cursed Mirror and Esper Sentinel match. That is exactly CC's `cardFrameProperties` + `autoM15NewFrame` (`creator-23.js`:577-747,1038-1110).
+
+      Build m15artifact in the 4.3 importer:
+      - `new/a.png` through the Frame + Border masks.
+      - `new/{colour}.png` through the Pinline + Title + Type + Rules masks.
+      - The colour P/T plate.
+      - 2 colours per 4.6 (split pinline/rules, gold bars unless hybrid); 3+ colours → m.
+
+      Build m15tokenartifact the same way with the token masks. The scratchpad prototype importer (silver base + colour only through the pinline mask) is also wrong.
+
+      Fix the wrong description in the build-script header, `types/card.ts`:272-274 and the `m15artifact` note in `lib/cards/frame-references.json`.
+
+      Acceptance: re-score every colour against Esper Sentinel, Phyrexian Metamorph and Embercleave. Ships inside the 4.4 bump as a platform correction (0.20).
+- [ ] **4.17 [P1] Art under the frame for translucent frames (devoid, CC colourless)** (Card Conjurer audit 2026-09-25) — The m15devoid frames (verified, live) are translucent: type bar α≈204, text box α≈188, sides α≈34. But art is drawn only inside the inherited M15 `artSlot` over the #101015 ground (`lib/render/card-image.tsx`:285,291; `components/cards/card-preview.tsx`:627-631; `M15DEVOID = …M15`, `lib/cards/template-layout.ts`:554). So the text box renders flat grey and the side strips near-black, where print shows the art through them (Kozilek's Channeler, Introduction to Prophecy). CC's `m15/new/c.png` ('Eldrazi') is equally see-through (α 212/179/26).
+
+      Fix:
+      - Add a profile capability `artUnderFrame`: colours 'all' on m15devoid. For m15, use ['c'] only if the owner picks CC's translucent colourless **[decide]**; otherwise keep an opaque c. It draws the art over CC's devoid bounds (4 / 10.39 / 92 × 89.61, clipped to the card) beneath the frame in both renderers, with `artSlot` kept as the crop/focus hint.
+      - Give m15devoid its own profile and CC's devoid P/T plate (= m15PTC).
+      - Check rules/type legibility in the compare tool and re-verify all colours.
+
+      Ship before or with 4.4.
+- [ ] **4.18 [P1] Separate the P/T plate box from the value box; CC plate geometry for the M15 family** (Card Conjurer audit 2026-09-25) — The M15 plate (540×304, core aspect 2.03) is object-fill stretched into `pt.rect` 73/89.3/23×5.8 (`lib/cards/template-layout.ts`:330-340; `lib/render/card-image.tsx` ~1389, `components/cards/card-preview.tsx` ~1147). Its core lands at 75.0–95.8 W × 89.3–93.9 H (aspect ≈3.2). The printed plate sits at ≈77.9–94.2 × 89.1–94.6 (DOM Serra Angel). Every profile that spreads M15 inherits the stretch, and CC's plate can't be dropped in without the same distortion.
+
+      Fix:
+      - Add `StatSlot.plateRect`, also in the profile-override zod schema.
+      - M15 family: plate 75.73/88.48/18.8×7.33 (CC `packM15RegularNew.js`:3, m15PT*.png), value 79.28/90.2/13.67×3.72; retune `valueDyEm` on the Serra Angel scan.
+      - The same field serves the vehicle plate (4.6), the token plate (4.4) and saga-creature plates (4.7).
+
+      Ship as a platform correction bundled with 4.4 (0.20).
+- [ ] **4.19 [P1] Planeswalker anatomy on the profile (with 4.4)** (Card Conjurer audit 2026-09-25) — On m15pw (verified), the cost badges sit inside the rules rect at ≈10.3–20.5 W (`badgeW = 2.3×size`; `lib/render/card-image.tsx` ~1169, `components/cards/card-preview.tsx` ~1796), and every ability's text starts at ≈22.7 W. Print (Gideon BFZ) and CC straddle the frame edge (`versionPlaneswalker.js`:168-188, `packPlaneswalkerRegular.js`:37-41). `loyaltyRows` holds colours only (`lib/cards/template-layout.ts`:455-469).
+
+      Put the rail on the profile, with CC's values:
+      - Badges: x 2.8, width 14.14 W; heights + 7.24 / − 7.05 / 0 6.1 % H; numeral 0.04 W centred at 10.27.
+      - Ability text from 18.0 W (static abilities 13.6) to 92.67; rows from 62.39 H in 9.72 % steps (or CC's per-count centres), heights from 3.13.
+      - Stripes: neutral white α0.61 / #a4a4a4 α0.71 with soft 0.48 % H seams across 11.67–92.61 (today cream α0.78 with hard edges).
+      - Title/type 0.0533/0.0454 W in 8.67/3.72 and 8.67/56.25 (82.67×5.48); symbol right edge 92.27, centred 58.91; two-line footer (artist line ≈96.3 H).
+      - Loyalty value 80.6/90.2/14×3.72 at 0.052 W, white.
+
+      When the frame paints its own shield (CC planeswalker), drop `plateAssetPathTemplate` (:478-487), or two rims stack.
+
+      Acceptance: both renderers plus a parity test; verify on Gideon BFZ and Karn DOM.
+- [ ] **4.20 [P1] One M15-era title/type size across layout templates** (Card Conjurer audit 2026-09-25) — CC uses 0.0381/0.0324 of card height (= 0.0533/0.0454 W) on every M15-era frame. Our MSE-derived profiles print names 5–25% and type lines about 20% smaller than our own scan-measured m15 (0.05/0.0435 W):
+      - m15pw/saga/flip: 0.0427/0.0347 (`lib/cards/template-layout.ts`:442,450,807,815,912,919,943,950).
+      - aftermath: 0.04/0.0347; second face 0.038/0.028 (:1044-1057).
+      - split: 0.0287/0.02; battle: 0.034/0.025, both landscape (:984-996,763-777).
+      - adventure panel: 0.032/0.0255 (CC 0.0414 W).
+      - token type: 0.034.
+
+      Add shared `TITLE_SIZE`/`TYPE_SIZE` constants, with landscape profiles scaled to the same absolute size and the fit ladder shrinking long lines. Re-check after 4.8's Beleren2016. Bundle the bump with 4.4.
+- [ ] **4.21 [P1] Re-source the M15 layout templates (saga, battle, adventure, split, flip, aftermath) from CC** (Card Conjurer audit 2026-09-25) — All six are 241–375 px MSE sources (`scripts/build-split-frame.mjs`:28, `scripts/build-flip-frame.mjs`:18, `scripts/build-aftermath-frame.mjs`:20, `scripts/import-mse-profiles.mjs`:37-42). CC has all six at 1500×2100 (battle 2814×2010) with text bounds. The owner's 'CC for the whole M15 era' covers them, but 4.4 doesn't list them.
+
+      Run the 4.3 importer over CC Saga, Battle, Adventure, Split, Flip and Aftermath:
+      - Keep the split/aftermath half masks and adventure page masks as overlays (for 4.26).
+      - Rotate CC's portrait split 90° CW into our landscape profile and measure the second art windows CC never declares (`packSplit.js`:19).
+      - `c` has no CC master in Saga/Adventure/Split/Aftermath; substitute via the manifest.
+
+      Seeds (CC → our %):
+      - Saga: art 50.0/11.24/42.47×72.53, type 8.54/84.81/82.92×5.43, symbol right 92.27 / centre 87.39.
+      - Battle: art 7.95–97.14 × 4.0–95.4, title 18.43–92.1 × 5.4–13.0, type 12.76–92.14 × 58.2–65.8, rules 12.95–92.05 × 67.2–94.8, grey back-P/T line 12.24–91.62 × 81.27–84.13, defense value 91.43/88/4.1×8.2. CC paints the shield, so drop our drawn badge.
+      - Split: windows 10.24–48.95 / 55.9–94.57 × 15.93–53.0, rules 60.87–95.07.
+      - Flip: the lower half is ≈4 % H higher, so re-derive FLIP from `packFlip.js`:37-55 (symbol right 78.4 / centre 26.0).
+      - Adventure: name/type 0.0414 W at 63.91/68.39, both pages end at 88.58 H to clear the P/T.
+
+      Interim fixes while still on MSE:
+      - Battle's PNG has no border, so everything outside the art band shows #101015: make the artSlot full-bleed and move the title left edge to ≥17.4 %.
+      - Split art top 14.7 → 13.4 (1.2 % H gap).
+
+      Verification: saga is verified in production and must be re-verified. The other five get their first verification this way (0.9 → 2.2 → 2.4). Same bump as 4.4 if timing allows.
+- [ ] **4.22 [P1] Token text-length family (tokens with abilities)** (Card Conjurer audit 2026-09-25) — Our m15token/m15tokenartifact is CC's 'Textless (Bordered M15)', which CC files under 'Older Tokens' (`groupToken-2.js`:2-15). Token abilities are printed on a 50% black scrim over the art (`lib/cards/template-layout.ts`:518-528). No printed token looks like that, and 490 of 821 `t:token` cards have rules text (Treasure, Food, Clue, most UB tokens).
+
+      Add CC's current full-art token family as `m15token` variants: token/textless, short, regular and tall, each with w/u/b/r/g/m/a/l + frameC + snow.
+      - Pick the variant from rules length: none → textless, 1–2 lines → short, 3–4 → regular, more → tall. Manual override under Variations.
+      - Seeds: art 4/2.86/92×89.53; type y 81.96 / 67.8 / 65.0 / 56.64; rules 71.43–91.91 (regular) and 63.03–91.78 (tall); P/T 79.28/90.2.
+
+      Also add a bordered text-box variant from token/m15/regular, so today's arch look has an abilities version: art 12.48–63.91, type 65.0, rules 8.6/71.43/82.8×20.48, symbol centre 67.43.
+
+      Delete the scrim. Import picks the variant from the Oracle line count. References: Treasure (txln) and Treasure (tmsh). **[decide]** which family is the default token look.
+- [ ] **4.23 [P1] Era text treatment (1993/1997/2003)** (Card Conjurer audit 2026-09-25) — The 1993 and 1997 profiles print title, type, P/T and artist in dark ink (`lib/cards/template-layout.ts`:382-420 AGCLASSIC, 622-672 RETRO), and their comments claim printed P/T is dark, which is wrong. Real 1997 cards (LGN White Knight, SCG Enrage, TOR Shambling Swarm) print them white with a black drop shadow, even on white cards. Alpha prints them light grey with a shadow. The 1997 footer is a centred `Illus. <artist>` over the © line. The 2003 footer is white on black, land and colourless frames (CC `pack8th.js`:55-68), but ours is dark for every colour (:691-738).
+
+      Fix:
+      - Give `TextSlot`/`StatSlot` a `colorHexByKey` (per frame colour; `template-layout.ts`:60-110 has one colorHex) and a per-era shadow.
+      - Apply these with 4.8's era fonts.
+      - Check against the registry scans for agclassic, retro and modern.
+
+      This blocks a correct 4.10 publish. The only published old-border combo (modern/w) is already right.
+- [ ] **4.24 [P2] Per-frame pip style (`symbolStyle`)** (Card Conjurer audit 2026-09-25) — Add a profile/manifest field `symbolStyle` (`modern` | `original` | family-specific) that both renderers resolve for costs and rules text. No such field exists today (`lib/cards/template-layout.ts`:102-200; `lib/pips/override.ts` is owner overrides only).
+      - `original` applies to agclassic/alphaland/alphatoken only. CC uses old symbols only for ABU/Legends (`packABU.js`:44,47); 1997/2003 keep modern pips, as now. Use mana-font's `ms-w-original` plus the era tap glyphs (`ms-tap-3ed`/`-4ed`/`-alt`) with no disc shadow. mana-font has no u/b/r/g originals, so redraw them or import CC's `img/manaSymbols/old` after a licence check.
+      - Family styles (Future Sight, Oil Slick, Mystical Archive JP, outline) ship with their family in 4.11/4.15 as overlay pip sets.
+
+      Ship `original` with 4.10.
+- [ ] **4.25 [P2] Universes Beyond frame family from CC** (Card Conjurer audit 2026-09-25) — CC's Accurate UBNew (2010×2814) is the streaked UB frame printed 2020–2025 (e.g. the 40K Sister of Silence scan). It is a skin on m15/m15land geometry. CC also has UB full art, UB extended, UB saga, UB spree, UB crowns and floating crowns, and per-colour triangle stamps (`img/frames/m15/new/ub/stamp`). MSE has UB only at 375 px. No PipGlyph template exists (`types/card.ts`:296-337).
+
+      - Import as `TEMPLATE_SKIN_VARIANTS` of m15 and m15land through 4.3. Treatments come via 4.5, crowns via 4.6, and the triangle stamp via 4.9 (which also applies to lotr/lotrscroll, since LTR is UB).
+      - `new/ub/c.png` is referenced by CC but missing, so substitute it in the manifest.
+      - Import signature: `security_stamp: triangle` + the UB set list (1.4).
+      - From SPM (2025), UB prints on the default frame plus a copyright line (6.3).
+
+      Order by the 1.6 log.
+- [ ] **4.26 [P2] Per-part colour for split, aftermath, adventure and flip** (Card Conjurer audit 2026-09-25) — There is one colour key per card (`components/cards/frame-layer.tsx`:59,108; `scripts/build-split-frame.mjs`:6-9 calls it an 'accepted simplification'). So Fire // Ice and Cut // Ribbons print gold on both halves, and an adventure whose spell is another colour can't colour its page. CC colours each part through masks: split/aftermath Top/Bottom Half, adventure bookLeft/bookLeftMulticolor/bookRight, plus Left/Right Half and Middle Third (`packSplit.js`:2, `packAdventure.js`:2, `creator/index.html`:155-162).
+
+      A second-part colour (`back_face.color_identity`, `types/card.ts`:193-210) composites the second colour's frame through those masks. The masks are overlay assets from 4.3/4.21, never pre-flattened 7×7 PNG pairs. Default the second colour from the second part's cost, on import and in the editor.
+
+      References: Fire // Ice, Cut // Ribbons, Callous Sell-Sword // Burn Together. Needs 4.6's mask machinery.
+- [ ] **4.27 [P2] Post-2024 layouts: Prepare, Room, Omen, Station** (Card Conjurer audit 2026-09-25) — CC's fork ends June 2024, so none of these is in CC.
+
+      1. **Prepare** first: 70 cards, Secrets of Strixhaven 2026. It is in neither CC nor MSE, and the importer drops the spell half (`lib/scryfall/import-mapper.ts`:198). Build a `prepare` template like `adventure` (`scripts/build-adventure-frame.mjs`): the spell page is on the RIGHT with its own grey name/cost and type bars, and creature rules are on the left. Add new slot rects on the `adventure` capability (it already takes arbitrary rects) and a kind 'Prepare'. Reference: Abigale, Poet Laureate.
+      2. **Room** (30 cards; MSE `magic-m15-split-fusable` rooms/): landscape like split, but with ONE shared illustration and ONE shared 'Enchantment — Room' type line carrying the unlock reminder, plus two door panels each with name/cost and rules. `back_face` holds the second door (1.3 already stops mapping Rooms to Split).
+      3. **Omen** (MSE `magic-m15-adventure` omen pages) and **Station** (≈30 cards; MSE `magic-m15-altered`, using the tiers capability shared with levelers in 4.7) at P3.
+
+      Order by the 1.6 log, and log each as 'unsupported' until it ships.
+- [ ] **4.28 [P3] Foil-etched frame treatment** (Card Conjurer audit 2026-09-25) — Scryfall `frame:etched` returns 849 printings (CMR, MH2, commander decks and later). CC has Etched (29 frames incl. vehicle + holo stamp), Etched Nyx, Etched Snow and etched legend/inner crowns (`groupShowcase-5.js`:56-61, `packEtched.js`), with its own colour rule: two-colour lands use colour frames, 3+ colour artifacts use A (`creator-23.js`:606-608,671-677,705-714,1373). MSE has `magic-m15-showcase-etched-foil`. PipGlyph's 'etched' is only a disabled finish shader (`types/card.ts`:248-258).
+
+      Ship it as a treatment through 4.5, with crowns from 4.6. Import signature: `frame_effects` contains `etched`. Keep 6.5's shader decision separate.
+- [ ] **4.29 [P3] Public /frames catalogue (after 4.1)** (Card Conjurer audit 2026-09-25) — An ISR page generated from the frame manifest (4.1) and `frame_reviews`:
+      - Verified frames only, grouped by era and treatment.
+      - A sample render per frame, the supported kinds, and a 'Create with this frame' deep link (`/create?template=…`).
+      - Added to `app/sitemap.ts` and the generated llms.txt, and noindex while thin (SEO contract).
+
+      CC's `gallery/index.html` ('what they're called and where to find them') is the model. Today only the frame-eras article describes our frames, in prose.
+- [ ] **4.30 [P2] Border colour overlay (black / white / silver / gold)** (Card Conjurer audit 2026-09-25) — Every CC group offers White/Silver/Gold Border (`packM15Borders.js`, `pack8th.js`): a 1×1 fill drawn through the Border mask. PipGlyph has no border colour anywhere. Add a per-card border colour drawn through the template's border mask in both renderers; the import maps Scryfall `border_color` white/silver/gold to an exact match (8ED/9ED white-border printings, Un-set silver with 4.15).
 
 ### Phase 5 — Two-sided cards end to end (3–4 weeks; needs 4.3 and 4.5)
 
@@ -403,6 +751,16 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
       indicator, grey back P/T on the front, "transforms into" hint line); the
       back face carries its own frame/colour/rarity. **[decide]** retire or
       merge the `back_card_id` path.
+      **Card Conjurer audit 2026-09-25:** Name the pieces:
+      - CC Transform Front/Back(New) and MDFC front/back frames, including the land (L) variants.
+      - The 13 transform icons (`packM15TransformTypes.js`) as an icon field mapped to Scryfall's `*dfc` frame_effects.
+      - The front's grey reverse P/T at x 8.6, y 84.2, w 83.8, derived from the back.
+      - The MDFC flipside strip at x 6.8, y 89.2, w 36.4, auto-filled with the other face's type word plus its cost or first ability.
+      - White title/type/P/T ink on backs.
+      - Borderless/extended/short DFC variants through 4.5, and DFC crowns from 4.6.
+      - Planeswalker transform + MDFC from CC PlaneswalkerTransform*/PlaneswalkerMDFC.
+      - Transforming saga fronts (CC saga/dfc, title inset for the icon) in 5.5.
+      Keep both faces linked in ONE card; CC imports each face as a separate card.
 - [ ] **5.2 [P1] Editor** — second-face editor for DFC on the Identity step
       (own art, colour, frame variant, stats); remove the "Double-faced cards —
       coming soon" veil on Publish (`components/creator/coming-soon.tsx`,
@@ -412,11 +770,13 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
       stays front, share copy (`lib/cards/bake-core.ts`:89,
       `lib/render/card-image.tsx`:579, `lib/render/card-pdf.ts`,
       `components/cards/download-modal.tsx`).
+      **Card Conjurer audit 2026-09-25:** Also generate a DFC checklist/helper card (CC's helper layout: two title rows at 7.91/16.81 % H, rules 24.39–92 %), offered in downloads and deck proxy sheets beside the two faces.
 - [ ] **5.4 [P1] Import** — `transform`/`modal_dfc`/`battle`/`meld` printings
       seed the DFC kind; icons from the `*dfc` frame effects; back colour from
       the back face.
 - [ ] **5.5 [P2] DFC sagas + battle backs, double-sided tokens.**
 - [ ] **5.6 [P3] Meld.**
+      **Card Conjurer audit 2026-09-25:** Source from MSE `magic-m15-meld-3in1`; CC has no meld frame.
 
 ### Phase 6 — Creator polish and print (2–4 weeks, after Phase 4 basics)
 
@@ -427,23 +787,35 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
       2.75×3.75 in, i.e. 825×1125 @300 ppi, 1650×2250 @600 ppi. PNG + PDF
       (crop marks on the trim line). Bake path in `lib/render/card-image.tsx`
       + `lib/render/card-pdf.ts`; entitlement same as the clean download.
+      **Card Conjurer audit 2026-09-25:** Bleed is a per-treatment recipe declared per edge in the manifest (4.1), not a colour extension:
+      - `border`: extend the outer border colour/texture (black-border M15).
+      - `art`: paint the art with the transform computed for the TRIM slot, unclipped into the bleed. Mirror or clamp when the source runs out; never re-cover a bigger box. This applies to borderless, full-art and extended frames, and is already needed for bloomanime/fullartland today.
+      - `bar`: for borderless bottom bars.
+      Showcase frames get extension art (import CC's margin packs in 4.3). Corners are square whenever bleed is on. Fixtures: M15, fullartland, extendedart, one showcase. Needs 6.10 so the art has pixels to extend.
 - [ ] **6.1b [P1] Download option: 800 ppi export** (owner request
       2026-09-25) — an 800 ppi choice next to the current HD download:
       2000×2800 px at trim, 2200×3000 with the bleed option. Only sharp once
       the M15 family comes from Card Conjurer's 2010×2814 sources (4.4);
       until then it upsamples the 1500×2100 bake. Paid tier only **[decide]**;
       bake on demand (not stored), PNG only.
+      **Card Conjurer audit 2026-09-25:** 800 ppi is sharp only where the template's frame AND every overlay it uses are ≥2000 px native (manifest `nativeSize`, 4.1).
+      - Of 4.4's nine templates, that means m15, m15land, m15snow, m15snowland, m15devoid and m15artifact.
+      - These upsample: m15pw, m15token and m15tokenartifact (1500×2100 in CC too); saga, adventure, split, flip, aftermath and class; holo stamps (192×96); the colour-indicator base (70×70). Label them 'upscaled' or hide the option.
+      Prefer CC's Accurate/new packs wherever they exist (UB, extended, full art, snow, Nyx, spree, scroll, Mystical Archive). Needs 6.10 for the art.
 - [ ] **6.1 [P2] Print-ready export** — bleed option (2.75×3.75 in at 300/600
       → 825×1125 / 1650×2250), MPC preset (816×1110 at 300, 1632×2220 at
       600), PDF sheets with cut lines + bleed, card-back sheet; canonical
       render stays 1500×2100; an 800 ppi export later from the CC masters
       **[decide]** free vs paid.
+      **Card Conjurer audit 2026-09-25:** Card backs: an original PipGlyph back template plus a per-deck or per-user custom back (art + title), exported as its own PNG and as duplex-mirrored back sheets (with 6.1a bleed). Never the official Magic back. MPC 1632×2220 is the same geometry as CC's Margin pack (≈0.11 × 0.10 in), so offer true 1/8 in and MPC from the same code.
 - [ ] **6.2 [P2] CARDNAME / `~` substitution** and "this creature" helper in the
       rules editor; opt-in keyword reminder-text insert with a current CR list.
+      **Card Conjurer audit 2026-09-25:** Once 6.3's nickname exists, CARDNAME/~ substitutes the nickname, as CC's getInlineCardName does.
 - [ ] **6.3 [P2] Nickname / flavour-name field** (title bar + small Oracle
       name); UB © line when a UB frame is chosen.
 - [ ] **6.4 [P2] Tokens** — automatic "Token" prefix + reminder line, emblem
       kind, token generator from a card's rules text (P3).
+      **Card Conjurer audit 2026-09-25:** Emblem = CC `packEmblem`: one colourless 1500×2100 frame (art 14.2/4.96/71.6×85.48, type 68.0, rules 74.43–91.91), type line 'Emblem — <subtype>', no cost or P/T. Seed it from a walker's −N ability via a 'Create emblem from this ability' action in `components/creator/panels/loyalty-editor.tsx`. Monarch/Initiative/Day-Night markers become P3 presets. Token text-length layouts moved to 4.22.
 - [ ] **6.5 [P2] Foil/etched finishes: ship or remove** **[decide]**; if
       shipped, align preview and bake (`panels/effects-panel.tsx`:26).
 - [ ] **6.6 [P2] Language + set-code fields** feed the collector line (with 4.9).
@@ -452,6 +824,85 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
 - [ ] **6.8 [P3] Batch/CSV/MSE-set import**; community frame packs stay out of
       scope (frames remain admin-verified).
 - [ ] **6.9 [P3] Watermark preset library refresh + Keyrune update.**
+      **Card Conjurer audit 2026-09-25:** Watermark ink follows the frame:
+      - Tint preset and single-colour uploaded marks from a per-frame-colour table that includes gold and land (today `m` falls back to neutral, `lib/cards/watermark.ts`:21-33).
+      - A two-colour left/right split once 4.6 exists.
+      - Optional colour and position.
+      - Any Keyrune set glyph as a watermark source (reuse 6.13's search).
+      Pre-tint with sharp in `withRenderableImages` and use a CSS mask in the preview. Parity test. **[decide]** whether WotC lore marks (the guild/clan/school glyphs in mana-font) are allowed.
+- [ ] **6.10 [P1] Full-resolution art path for print exports (prerequisite for 6.1a/6.1b)** (Card Conjurer audit 2026-09-25) — `toSatoriDataUrl` fits to 1600 px any art over 3 MB, and any non-PNG/JPEG art such as WebP AI output (`lib/render/art-source.ts`:46-47,77-89). That already softens full-height slots (fullart, about 2100 px tall) and is a hard cap under 6.1b's 2000×2800, where the full-art slot is 2800 px.
+
+      Fix:
+      - Size the inline edge to the target slot (slot px × 1.1) per render preset (`lib/render/card-image.tsx`:94-97).
+      - For 800 ppi and bleed renders, composite art + frame (+ overlays) with sharp using the same focal/scale maths, so Satori draws only text and vector layers and resvg never sees a multi-MB data URL.
+      - Raise the 8 MB upload cap for PNG (`lib/cards/upload-art-server.ts`:33), or re-encode server-side.
+
+      Acceptance: a test that a 2000×2800 source renders the 800 ppi export without upsampling.
+- [ ] **6.11 [P1] Print typography on input** (Card Conjurer audit 2026-09-25) — Text is stored and rendered exactly as typed or imported, and Scryfall Oracle/flavour text uses straight quotes. So every "can't", possessive and quoted flavour line prints straight ticks where cards print ’ “ ”. A typed ' - ' instead of '—' also silently disables ability-word italics (`lib/cards/rules-text.ts`:183-192).
+
+      Fix:
+      - Add a shared `printTypography()`: curly quotes and apostrophes, ` - ` and `--` → ` — `, and a leading `*`/`-` → `•`.
+      - Apply it in the editor, on save and on Scryfall import, for title, type, rules and flavour.
+      - Add —, • and − buttons to `components/creator/rules-symbol-toolbar.tsx`:17-33.
+
+      MPlantin and Beleren already carry the glyphs. CC converts on every edit (`creator-23.js`:3334,3434-3435,4070-4072).
+
+      Acceptance: unit tests for '90s, a possessive after a pip, quote attributions and `X-1`.
+- [ ] **6.12 [P2] Minimal rules markup** (Card Conjurer audit 2026-09-25) — Emphasis is automatic only: reminder parens plus a fixed `ABILITY_WORDS` list (`lib/cards/rules-text.ts`:30-82). A designer's invented ability word can't be italicised, a word inside flavour can't be set roman, and nothing can be bold. There is no line break without the paragraph gap and no size nudge; FrameStyle holds only finish + template (`types/card.ts`:581-586).
+
+      Add:
+      - `*italic*` / `**bold**` (or `{i}`/`{b}`) and a soft break (a Shift+Enter marker) in the shared tokenizer and fit estimate.
+      - Italic/Bold buttons on the Text step.
+      - An optional per-card rules-size nudge (−2…+1 half-points on the fit ladder, stored on frame_style).
+
+      Both renderers, with parity tests. CC's code list is at `creator/index.html`:213-276.
+
+      P3 follow-up on the same bold: d20 roll tables (`1–9 | text` → bold range with alternating 25 % shade, as CC's `{roll}` does at `creator-23.js`:3710-3723,3839-3852).
+- [ ] **6.13 [P2] Set icon parity** (Card Conjurer audit 2026-09-25) — The Set icon step offers 12 hard-coded Keyrune codes (`components/creator/panels/set-icon-panel.tsx`:22-35), though keyrune 3.19 ships about 425 and both renderers and validation accept any code. Glyphs are flat rarity ink with no keyline (`components/cards/set-symbol.tsx`:130-145, `lib/render/card-image.tsx`:1302-1320, pinned by `tests/unit/render/render-parity.test.ts`:18-23). Import never sets the symbol, and every new card starts blank (`lib/creator/card-fields.ts`:151-152).
+
+      1. A searchable code field generated from keyrune.css, keeping the 12 as quick picks, validated server-side against the same map.
+      2. Render Keyrune as inline SVG from `keyrune/svg/<code>.svg` with a per-rarity linearGradient and a black keyline in both renderers. Satori already draws the default mark as inline SVG. Add special (purple) with 1.10. Layout bump only for cards with `set_icon_code`.
+      3. Scryfall import offers 'use this printing's set symbol'.
+      4. A per-user default icon via 4.14.
+
+      CC takes any set code and rarity from 1,835 files (`creator-23.js`:4302-4341,4992-4998).
+- [ ] **6.14 [P2] Import Card Conjurer saved files (.cardconjurer)** (Card Conjurer audit 2026-09-25) — CC's only export is a `.cardconjurer` JSON array [{key, data}] (`creator-23.js`:5017-5059,5148-5169). It holds text boxes with CC codes, frame layer srcs, data:-URL or URL art with artX/Y/zoom, the set symbol, the watermark and collector info. Our FAQ and CC article say there is no import (`lib/content/faq.ts`:221-222, `content/articles/card-conjurer-alternative.mdx`:74-76), yet CC users are exactly the audience of the CC-alternative pages.
+
+      Flow: upload the file, list its cards with checkboxes, and create private drafts.
+      - Map title/mana/type/rules (`{i}`, `{flavor}`, `{lns}` → rules + flavour)/pt/loyalty.
+      - Guess template and colour from the `frames[].src` pack paths via the 4.1 manifest; flag unmapped ones `nearest`, like 1.4.
+      - Upload data:-URL art through `uploadCardArtServerAction` (URL art only from allowlisted hosts; 3.14 orientation applies).
+      - Convert artX/Y/zoom to focal/scale using the image's natural size.
+      - Fill artist, set and number (4.9) and respect card capacity.
+
+      Update the FAQ and article when it ships. Optional: a per-card 'Download card file (.json)' / 'Open card file' that round-trips through the same importer.
+- [ ] **6.15 [P2] Print sheets from any selection** (Card Conjurer audit 2026-09-25) — The single-card sheet is 9 butted copies of one card with corner marks only (`lib/render/card-pdf.ts`:113-186). Mixed sheets exist only through the Pro deck export (`app/api/decks/[id]/download/route.ts`).
+
+      - Add a 'Print / download selected' bulk action in My Cards (`components/creator/dashboard-bulk-bar.tsx`) and on liked cards. It reuses `lib/decks/export-client.ts` / `buildDeckPdf` for an id list with per-card copies.
+      - Sheet options: Letter/A4, gap 0 or 1/16 in, full-length cut lines or corner marks, 63×88 mm or 2.5×3.5 in, and bleed/MPC once 6.1a lands.
+      - The same entitlement as deck export decides the tier. Remember the last settings.
+
+      CC's `/print` tool (`print/index.html`:6-40, `print/print.js`) is the model.
+- [ ] **6.16 [P2] Non-Latin card text (no render-time Google Fonts)** (Card Conjurer audit 2026-09-25) — MPlantin regular has no Cyrillic, and none of the card faces cover CJK. Russian rules text falls back to bold Beleren in the bake. CJK makes `@vercel/og` fetch Noto from fonts.googleapis.com AT RENDER TIME, the same failure class as the banned `next/font/google`, while the preview uses system fonts. Registered faces: `lib/render/card-image.tsx`:1925-1931, `lib/render/card-fonts.ts`.
+
+      Fix:
+      - Either restrict card text to covered scripts with a friendly validation error, or register self-hosted OFL fallbacks (a Cyrillic-capable body face and a Noto Serif CJK subset) in the bake and `@font-face`, with a `loadAdditionalAsset` that never calls Google.
+      - Then add a language choice to the Scryfall import dialog that maps `printed_name`/`printed_type_line`/`printed_text` and sets 6.6's language field. CC imports 11 languages plus Phyrexian (`creator-23.js`:5330-5355).
+
+      es/fr/de/it/pt already work.
+
+      Acceptance: a parity test with a Russian and a Japanese card.
+- [ ] **6.16a [P1] A bake never fetches third-party assets at render time** (Card Conjurer audit 2026-09-25) — `lib/render/card-image.tsx` uses next/og `ImageResponse` with 5 registered fonts and no `emoji` / `loadAdditionalAsset`, so by next/og defaults an emoji pulls Twemoji from jsDelivr and an uncovered script pulls Google Fonts on every bake (the 2026-09-22 font-fetch outage lesson). Add a local-only asset resolver, strip or bundle emoji, and have validation warn on characters the bake can't render. Extends 6.16.
+- [ ] **6.17 [P3] Hide reminder text toggle** (Card Conjurer audit 2026-09-25) — A per-card toggle, stored on frame_style, that drops `reminder` spans in the shared tokenizer and the fit estimate, in both renderers. The spans are already tokenized (`lib/cards/rules-text.ts`:205-214). Users delete reminder text by hand today to make text fit, especially after an import. CC has the option (`creator-23.js`:3390-3401).
+- [ ] **6.18 [P3] Download corners and format** (Card Conjurer audit 2026-09-25) — Downloads are always square. The M15 masters' transparent corners are filled with the bake background #101015 (`lib/render/card-image.tsx`:285), and other masters are opaque. CC defaults to transparent rounded corners with a square option, and also offers JPEG (`creator/index.html`:186-189, `creator-23.js`:4641-4676).
+
+      - Add a 'Rounded (transparent) / Square (print)' choice on the PNG download (`components/cards/download-modal.tsx`). Rounded applies a proportional sharp corner mask (≈2.9 % of width) to the live or stored PNG.
+      - Square fills the corners with the frame's border colour, not #101015.
+      - Print, PDF and bleed outputs always stay square. JPEG is optional.
+      - The modal says which option to use for printing and which for sharing.
+- [ ] **6.19 [P3] Art adjustments (grayscale)** (Card Conjurer audit 2026-09-25) — Add an optional `art_position.grayscale`, applied identically in the uploader, the preview (CSS filter) and the bake (a sharp pre-filter in `withRenderableImages`, so Satori sees the finished pixels). Add 90° rotate steps only if users ask; the legacy `rotation` key is accepted by zod but never drawn (`lib/validation/card.ts`:206-208). CC has art rotation and grayscale (`creator/index.html`:323-338). Parity test.
+- [ ] **6.20 [P3] Deck card with QR in the Pro deck export** (Card Conjurer audit 2026-09-25) — In the Pro deck export (ZIP + sheets), add a card-sized 'deck card' built from the deck cover, title, colour-identity pips, format/bracket and a server-rendered QR SVG pointing to `/deck/<user>/<slug>`. Place it on the first print sheet. CC's Deck Cover + QR template (`packCustomDeckCover.js`, `versionQRCode.js`) is the model. It is a cheap traffic loop from printed decks.
+- [ ] **6.21 [P3] Custom colour tint **[decide]**** (Card Conjurer audit 2026-09-25) — CC's per-layer HSL / colour overlay is a frequent ask (a 'sixth colour'). Offer an HSL tint on the colour layers only, labelled custom/unverified, never on a verified combo's defaults.
 
 ### Phase 7 — Ops and QA (continuous)
 
@@ -465,13 +916,25 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
       (replacing the stale headers in `template-layout.ts` and
       `types/card.ts`), verification SOP, provenance/legal notes; CLAUDE.md
       pointers.
+      **Card Conjurer audit 2026-09-25:** (critic) Record CC's free-form editor as a deliberate non-goal (verified geometry wins): per-layer x/y/size/opacity/erase/HSL, uploaded frames and masks, free text-box bounds, `{kerning}`/`{permashift}`-style codes, extra text boxes. 0.24 names them honestly as CC advantages.
 - [ ] **7.4 [P2] Admin dashboard tile** — verification progress, requests
       (1.6), scores, rebake state.
 - [ ] **7.5 [P2] Rebake operations** — sweep tooling for bundled bumps, /news
       post template, a "why does my card look different" FAQ entry.
+- [ ] **7.6 [P1] Art-window coverage test** (Card Conjurer audit 2026-09-25) — Add `tests/unit/render/art-window-coverage.test.ts`: for every template × colour master, flood-fill alpha<16 from each `artSlot`/`secondFace.artSlot` centre and assert the (rotated) slot covers the window with ≥0.05 % overscan. Run it in the 4.3 importer on the flattened CC masters, after the 2010→1500 downscale has anti-aliased the window edge, and in CI.
+
+      Today it would fail on:
+      - split (a 1.2 % H strip)
+      - lotr (ring 9.87–90.53 × 11.24–55.62 vs slot 14–86 × 13–58)
+      - flip and alphaland
+      - battle and lotrscroll (borderless PNGs)
+      - hairlines on m15token (0.24 % H), saga and the MSE land/snow/artifact windows
+
+      Fix those with 4.21 and the M15-family `artSlot` = CC artBounds (4.4). Translucent frames (4.17) are asserted differently.
 
 Sequencing at a glance (re-ordered 2026-09-25, owner decision: de-risk the
-Card Conjurer frame swap early): Phase 0 (0.20 + 0.21 before the swap) →
+Card Conjurer frame swap early): Phase 0 (0.20 + 0.21, and 0.23's legal wording, before the swap) →
+3.13 + 3.14 (P0 live bugs) → 4.16–4.20 bundled INTO 4.4's single sweep →
 **4.1–4.4 (manifest, storage
 move, CC importer, M15 re-source) with one bundled layout bump/rebake** →
 1.1–1.6 + 3b.1–3b.5 alongside Phase 2 → Phase 3 + rest of 3b → 4.5–4.9 and
