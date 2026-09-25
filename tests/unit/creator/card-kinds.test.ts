@@ -10,6 +10,7 @@ import {
   landIdentityHasBasicSeed,
   planKindChange,
   shouldClearBasicSeedForTitle,
+  templateSupportsKind,
   toBasicLandIdentity,
   toNonbasicLandIdentity,
   type CardKind,
@@ -333,5 +334,23 @@ describe("baseFrameFor", () => {
     expect(baseFrameFor("creature", "retro")).toBe("retro");
     expect(baseFrameFor("creature", "m15")).toBe("m15");
     expect(baseFrameFor("saga", "saga")).toBe("saga");
+  });
+});
+
+describe("templateSupportsKind", () => {
+  it("answers from the kind's full gallery, ignoring verification", () => {
+    expect(templateSupportsKind("saga", "saga")).toBe(true);
+    expect(templateSupportsKind("saga", "creature")).toBe(false);
+    expect(templateSupportsKind("m15pw", "planeswalker")).toBe(true);
+    expect(templateSupportsKind("m15", "planeswalker")).toBe(false);
+    expect(templateSupportsKind("m15artifact", "artifact")).toBe(true);
+    // Skins ride with their base kind; showcase dresses any standard kind.
+    expect(templateSupportsKind("m15snow", "creature")).toBe(true);
+    expect(templateSupportsKind("lotr", "instant")).toBe(true);
+    // Type-restricted showcase treatments stay restricted.
+    expect(templateSupportsKind("nyx", "creature")).toBe(false);
+    expect(templateSupportsKind("nyx", "enchantment")).toBe(true);
+    expect(templateSupportsKind("fullartland", "land")).toBe(true);
+    expect(templateSupportsKind("fullartland", "creature")).toBe(false);
   });
 });

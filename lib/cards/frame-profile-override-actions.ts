@@ -1,13 +1,13 @@
 "use server";
 
-import { revalidatePath, revalidateTag } from "next/cache";
-import { FRAME_PROFILE_OVERRIDES_TAG } from "@/lib/cards/frame-profile-overrides";
+import { revalidatePath, updateTag } from "next/cache";
 import { z } from "zod";
+import { FRAME_PROFILE_OVERRIDES_TAG } from "@/lib/cards/frame-profile-overrides";
+import { staleTemplateFilter } from "@/lib/cards/frame-override-stale";
 import { getCurrentProfile } from "@/lib/supabase/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { frameProfileOverrideSchema } from "@/lib/cards/profile-override";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
-import { DEFAULT_FRAME_TEMPLATE } from "@/types/card";
 
 // ---------------------------------------------------------------------------
 // Admin mutations for frame layout overrides (the visual editor's Save /
@@ -15,6 +15,17 @@ import { DEFAULT_FRAME_TEMPLATE } from "@/types/card";
 // via `layout_version = null` — the existing rebake sweep query already
 // treats NULL as stale, so no new machinery. The affected count is returned
 // so the admin sees the blast radius.
+//
+// Cache: the read side (lib/cards/frame-profile-overrides.ts) is an
+// unstable_cache entry tagged FRAME_PROFILE_OVERRIDES_TAG. A write must use
+// `updateTag` — `revalidateTag(tag, "max")` is stale-while-revalidate and
+// served the OLD map to the very next request (the editor's own
+// router.refresh), so the tool could not read its own save.
+//
+// Reset only touches renders when a row actually existed: a draft-only
+// "reset" used to null the layout_version of every baked card on the
+// template, firing "newer look" badges and render_update notifications for
+// a geometry that never changed.
 // ---------------------------------------------------------------------------
 
 const saveSchema = z.object({
@@ -27,7 +38,13 @@ const resetSchema = z.object({
 });
 
 export type FrameProfileOverrideResult =
-  | { ok: true; staleCount: number }
+  | {
+      ok: true;
+      /** Baked renders marked stale (0 when nothing changed). */
+      staleCount: number;
+      /** False when the request was a no-op (reset with no saved row). */
+      changed: boolean;
+    }
   | { ok: false; error: string };
 
 async function requireAdmin(): Promise<
@@ -47,20 +64,37 @@ async function markTemplateRendersStale(
   admin: ReturnType<typeof createAdminClient>,
   template: string,
 ): Promise<number> {
+  const filter = staleTemplateFilter(template);
   let query = admin
     .from("cards")
     .update({ layout_version: null })
     .in("visibility", ["public", "unlisted"])
     .not("rendered_image_url", "is", null);
-  // Cards with no explicit template render on the DEFAULT one — an override
-  // of that template changes their geometry too, but `->>template = 'm15'`
-  // never matched a NULL, so they were left "current" with a stale PNG.
   query =
-    template === DEFAULT_FRAME_TEMPLATE
-      ? query.or(`frame_style->>template.eq.${template},frame_style->>template.is.null`)
-      : query.filter("frame_style->>template", "eq", template);
+    filter.kind === "or"
+      ? query.or(filter.expression)
+      : query.filter("frame_style->>template", "eq", filter.template);
   const { data } = await query.select("id");
   return data?.length ?? 0;
+}
+
+/** Delete a template's override row; true when a row existed. */
+async function deleteOverrideRow(
+  admin: ReturnType<typeof createAdminClient>,
+  template: string,
+): Promise<{ ok: true; existed: boolean } | { ok: false; error: string }> {
+  const { data, error } = await admin
+    .from("frame_profile_overrides")
+    .delete()
+    .eq("template", template)
+    .select("template");
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, existed: (data?.length ?? 0) > 0 };
+}
+
+function publish(): void {
+  updateTag(FRAME_PROFILE_OVERRIDES_TAG);
+  revalidatePath("/admin/frame-compare");
 }
 
 export async function saveFrameProfileOverrideAction(
@@ -78,11 +112,12 @@ export async function saveFrameProfileOverrideAction(
 
   if (Object.keys(overrides).length === 0) {
     // An empty override is a reset.
-    const { error } = await admin
-      .from("frame_profile_overrides")
-      .delete()
-      .eq("template", template);
-    if (error) return { ok: false, error: error.message };
+    const deleted = await deleteOverrideRow(admin, template);
+    if (!deleted.ok) return deleted;
+    if (!deleted.existed) {
+      revalidatePath("/admin/frame-compare");
+      return { ok: true, staleCount: 0, changed: false };
+    }
   } else {
     const { error } = await admin.from("frame_profile_overrides").upsert(
       {
@@ -97,9 +132,8 @@ export async function saveFrameProfileOverrideAction(
   }
 
   const staleCount = await markTemplateRendersStale(admin, template);
-  revalidateTag(FRAME_PROFILE_OVERRIDES_TAG, "max");
-  revalidatePath("/admin/frame-compare");
-  return { ok: true, staleCount };
+  publish();
+  return { ok: true, staleCount, changed: true };
 }
 
 export async function resetFrameProfileOverrideAction(
@@ -111,14 +145,16 @@ export async function resetFrameProfileOverrideAction(
   if (!gate.ok) return gate;
 
   const admin = createAdminClient();
-  const { error } = await admin
-    .from("frame_profile_overrides")
-    .delete()
-    .eq("template", parsed.data.template);
-  if (error) return { ok: false, error: error.message };
+  const deleted = await deleteOverrideRow(admin, parsed.data.template);
+  if (!deleted.ok) return deleted;
+  if (!deleted.existed) {
+    // Nothing was saved for this template — the on-screen draft is the only
+    // thing to discard, and that's the caller's job. No renders changed.
+    revalidatePath("/admin/frame-compare");
+    return { ok: true, staleCount: 0, changed: false };
+  }
 
   const staleCount = await markTemplateRendersStale(admin, parsed.data.template);
-  revalidateTag(FRAME_PROFILE_OVERRIDES_TAG, "max");
-  revalidatePath("/admin/frame-compare");
-  return { ok: true, staleCount };
+  publish();
+  return { ok: true, staleCount, changed: true };
 }

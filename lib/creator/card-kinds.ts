@@ -31,6 +31,7 @@ import {
 import { normalizeFrameTemplate } from "@/lib/cards/card-display";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
+import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import {
   BASIC_LAND_NAME_BY_KEY,
   basicLandNameForColorKey,
@@ -334,6 +335,27 @@ export function baseFrameFor(
     return standardFrameFor("m15", KIND_DEFS[kind].cardType) ?? template;
   }
   return template;
+}
+
+// Every (template, colour) key — the "everything is published" set used to
+// ask which kinds a template can dress at all, independent of verification.
+const ALL_COMBO_KEYS: ReadonlySet<string> = new Set(
+  FRAME_TEMPLATE_VALUES.flatMap((t) =>
+    FRAME_COLOR_KEYS.map((k) => frameComboKey(t, k)),
+  ),
+);
+
+/** True when the template is in the kind's gallery at all (any era, skin
+ *  or showcase treatment), ignoring the verification gate. Used to refuse a
+ *  reference printing whose kind the frame can't render (a creature pinned
+ *  on the saga frame). */
+export function templateSupportsKind(
+  template: FrameTemplate,
+  kind: CardKind,
+): boolean {
+  return framesForKind(kind, ALL_COMBO_KEYS).some(
+    (choice) => choice.template === template,
+  );
 }
 
 /** True when the template has at least one PUBLISHED color. */

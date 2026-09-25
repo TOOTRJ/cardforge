@@ -331,7 +331,7 @@ export function EditorPanel({
       {selected ? (
         <div className="flex flex-col gap-2">
           <span className="text-[11px] uppercase tracking-wider text-subtle">
-            {slotLabel(selected)} — arrows nudge position (Shift ×5), [ ] width, {"{ }"} height
+            {slotLabel(selected)} — arrows nudge position (Alt / Option for 0.5%), [ ] width, {"{ }"} height
           </span>
           {fieldsForSlot(profile, selected).map((field) => {
             const value = readSlotField(profile, selected, field);

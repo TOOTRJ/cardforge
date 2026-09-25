@@ -272,11 +272,55 @@ const SAMPLE_COST: Record<FrameColorKey, string> = {
 // as broken. Multicolor land references are nonbasic (Command Tower), so
 // "m" keeps sample rules text.
 
+/** Placeholder second-face content for the frames that paint one inline —
+ *  without it the compare view shows an empty adventure page / bottom half,
+ *  which is exactly the geometry those frames exist to verify. */
+function sampleBackFace(template: FrameTemplate, colorKey: FrameColorKey) {
+  switch (template) {
+    case "adventure":
+      return {
+        title: "Sample Adventure",
+        cost: SAMPLE_COST[colorKey],
+        card_type: "instant",
+        subtypes: ["Adventure"],
+        rules_text: "Sample adventure text on the storybook page.",
+      };
+    case "flip":
+      return {
+        title: "Sample, Flipped",
+        card_type: "creature",
+        subtypes: ["Sample"],
+        rules_text: "Sample text for the flipped half.",
+        power: "4",
+        toughness: "4",
+      };
+    case "split":
+      return {
+        title: "Sample Half",
+        cost: SAMPLE_COST[colorKey],
+        card_type: "instant",
+        rules_text: "Sample text for the right half.",
+      };
+    case "aftermath":
+      return {
+        title: "Sample Half",
+        cost: SAMPLE_COST[colorKey],
+        card_type: "sorcery",
+        rules_text: "Sample text for the sideways half.",
+      };
+    default:
+      return null;
+  }
+}
+
 export function sampleFramePreview(template: FrameTemplate, colorKey: FrameColorKey) {
   const isLand = template.endsWith("land");
   const isToken = template.includes("token");
   const isPw = template === "m15pw";
   const isBattle = template === "battle";
+  // Split/aftermath halves are spells — a 3/3 creature front would hide the
+  // very geometry (no P/T, spell type line) the frame is verified for.
+  const isSpellHalf = template === "split" || template === "aftermath";
   const basicName = isLand ? basicLandNameForColorKey(colorKey) : null;
   if (isLand && basicName) {
     return {
@@ -309,21 +353,26 @@ export function sampleFramePreview(template: FrameTemplate, colorKey: FrameColor
           ? "planeswalker"
           : isBattle
             ? "battle"
-            : "creature",
+            : template === "aftermath"
+              ? "sorcery"
+              : isSpellHalf
+                ? "instant"
+                : "creature",
     supertype: null,
-    subtypes: isLand || isPw ? [] : ["Sample"],
+    subtypes: isLand || isPw || isSpellHalf ? [] : ["Sample"],
     rarity: "rare",
     colorIdentity: SAMPLE_COLOR_IDENTITY[colorKey],
     rulesText: isPw
       ? "+1: Draw a card.\n-2: Sample text for the middle row.\n-7: A longer emblem line to fill the last row."
       : "Sample ability text sized to fill the rules box.\nSecond line for spacing.",
     flavorText: isLand || isPw || isBattle ? null : "Placeholder flavor line.",
-    power: !isLand && !isPw && !isBattle ? "3" : null,
-    toughness: !isLand && !isPw && !isBattle ? "3" : null,
+    power: !isLand && !isPw && !isBattle && !isSpellHalf ? "3" : null,
+    toughness: !isLand && !isPw && !isBattle && !isSpellHalf ? "3" : null,
     loyalty: isPw ? "4" : null,
     defense: isBattle ? "5" : null,
     artistCredit: "Sample Artist",
     artUrl: null,
     frameStyle: { template },
+    backFace: sampleBackFace(template, colorKey),
   };
 }

@@ -18,6 +18,7 @@ import {
   slotRect,
   type SlotPath,
 } from "@/lib/cards/profile-override";
+import { scanGridFor } from "@/lib/frames/scan-geometry";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -26,12 +27,20 @@ import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 // Objective alignment signal for the frame-compare tool: renders the
 // combo's reference card through our pipeline (current DB overrides
 // applied), fetches the real scan, and computes a mean-abs-diff per
-// profile slot region (greyscale, both sides resized to 745×1040).
+// profile slot region (greyscale, both sides resized to the scan grid).
 //
-// The absolute number is NOISY — fonts and art legitimately differ — so
-// the UI presents it as a relative/regression signal: compare before vs
-// after a nudge, not against zero. artSlot is reported but labeled (art
-// always differs).
+// Landscape frames (battle, split): the scan is a portrait 745×1040 file
+// with the card content turned 90° counter-clockwise, while our render is
+// a true landscape image — the scan is rotated clockwise and the grid
+// swapped to 1040×745 (lib/frames/scan-geometry.ts) so the two line up and
+// the profile's landscape-percent rects address the right pixels. Both
+// images are flattened onto black first so the transparent rounded corners
+// compare like for like.
+//
+// The absolute number is NOISY — fonts and art legitimately differ — so the
+// UI presents it as a relative/regression signal: compare before vs after a
+// nudge, not against zero. artSlot is reported but labeled (art always
+// differs).
 //
 // Admin-clicked button → session is_admin gate (not CRON). The Scryfall
 // scan comes off the unlimited CDN; the card lookup is admin tooling and
@@ -41,9 +50,6 @@ import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
-
-const W = 745;
-const H = 1040;
 
 const bodySchema = z.object({
   template: z.enum(FRAME_TEMPLATE_VALUES),
@@ -90,6 +96,10 @@ export async function POST(request: Request) {
 
   const overrides = await getFrameProfileOverrides();
   const preview = { ...payload.preview, profileOverrides: overrides };
+  const resolved = resolveFrameProfile(template, overrides);
+  const grid = scanGridFor(resolved.orientation ?? "portrait");
+  const W = grid.width;
+  const H = grid.height;
 
   const [oursRaw, scanFetched] = await Promise.all([
     renderCardImage(preview, "default").then((r) => r.arrayBuffer()),
@@ -102,16 +112,15 @@ export async function POST(request: Request) {
     );
   }
 
-  const toGrey = (input: ArrayBuffer) =>
-    sharp(Buffer.from(input))
-      .resize(W, H, { fit: "fill" })
-      .greyscale()
-      .raw()
-      .toBuffer();
+  const toGrey = (input: ArrayBuffer, rotateDeg: 0 | 90) => {
+    let image = sharp(Buffer.from(input)).flatten({ background: "#000000" });
+    if (rotateDeg) image = image.rotate(rotateDeg);
+    return image.resize(W, H, { fit: "fill" }).greyscale().raw().toBuffer();
+  };
 
   const [ours, scan] = await Promise.all([
-    toGrey(oursRaw),
-    toGrey(await scanFetched.blob.arrayBuffer()),
+    toGrey(oursRaw, 0),
+    toGrey(await scanFetched.blob.arrayBuffer(), grid.rotateDeg),
   ]);
 
   const regionScore = (rect: {
@@ -136,7 +145,6 @@ export async function POST(request: Request) {
     return count === 0 ? 0 : Math.round((sum / count / 255) * 1000) / 10;
   };
 
-  const resolved = resolveFrameProfile(template, overrides);
   const perSlot: Partial<Record<SlotPath, number>> = {};
   for (const path of listSlotPaths(resolved)) {
     const rect = slotRect(resolved, path);
