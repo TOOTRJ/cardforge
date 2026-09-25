@@ -12,6 +12,16 @@
 // ---------------------------------------------------------------------------
 
 export const SERVER_FUNNEL_EVENTS = [
+  // Signup + activation (owner decision 2026-09-24): the first save, first
+  // AI generation and first download are recorded once per user and kept
+  // forever; the plain activity rows feed trial engagement and age out.
+  "signup",
+  "card_saved",
+  "ai_generation",
+  "download",
+  "first_card_saved",
+  "first_ai_generation",
+  "first_download",
   "checkout_started",
   "checkout_completed",
   "checkout_expired",
@@ -33,6 +43,23 @@ export const CLIENT_FUNNEL_EVENTS = [
 ] as const;
 
 export type ServerFunnelEvent = (typeof SERVER_FUNNEL_EVENTS)[number];
+
+/** Activity a user does with the product; each has a once-per-user "first". */
+export const ACTIVITY_KINDS = ["card_saved", "ai_generation", "download"] as const;
+export type ActivityKind = (typeof ACTIVITY_KINDS)[number];
+export const FIRST_EVENT: Record<ActivityKind, ServerFunnelEvent> = {
+  card_saved: "first_card_saved",
+  ai_generation: "first_ai_generation",
+  download: "first_download",
+};
+
+/** Per-user milestones the prune cron never deletes. */
+export const PERMANENT_FUNNEL_EVENTS = [
+  "signup",
+  "first_card_saved",
+  "first_ai_generation",
+  "first_download",
+] as const;
 export type ClientFunnelEvent = (typeof CLIENT_FUNNEL_EVENTS)[number];
 export type FunnelEvent = ServerFunnelEvent | ClientFunnelEvent;
 
@@ -43,6 +70,8 @@ const PROP_KEYS = new Set([
   "signedIn", "mode", "interval", "amountCents", "credits", "billingReason",
   "cancelReason", "cancelFeedback", "attempt", "fromTier", "toTier",
   "scheduled", "sessionId", "subscriptionId",
+  "referrer", "utmSource", "utmMedium", "utmCampaign",
+  "visibility", "format", "layout", "preset", "clean",
 ]);
 const MAX_PROPS = 10;
 const MAX_STRING = 48;

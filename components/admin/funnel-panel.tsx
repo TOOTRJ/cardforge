@@ -1,6 +1,15 @@
+import Link from "next/link";
 import { Filter } from "lucide-react";
 import { SurfaceCard } from "@/components/ui/surface-card";
+import { formatCalendarDate } from "@/lib/format/dates";
 import type { FunnelSummary } from "@/lib/admin/funnel-queries";
+
+const OUTCOME_LABEL: Record<string, string> = {
+  trial_converted: "Converted",
+  trial_lapsed: "Lapsed",
+  ongoing: "Ongoing",
+  unknown: "—",
+};
 
 // Funnel counts for the trailing 7 and 30 days, from funnel_events. Counts
 // sit beside every rate on purpose: at this volume a rate without its
@@ -55,6 +64,63 @@ export function FunnelPanel({ summary }: { summary: FunnelSummary }) {
             </table>
           </div>
         ))}
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="rounded-lg border border-border/60 bg-background/40 p-3">
+          <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-subtle">Signups by source · 30d</h3>
+          {summary.signupSources.length === 0 ? (
+            <p className="text-sm text-muted">No signups recorded yet.</p>
+          ) : (
+            <ul className="divide-y divide-border/40 text-sm">
+              {summary.signupSources.map((row) => (
+                <li key={row.source} className="flex items-center justify-between py-1">
+                  <span className="text-foreground">{row.source}</span>
+                  <span className="tabular-nums text-muted">{row.n}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+        <div className="rounded-lg border border-border/60 bg-background/40 p-3">
+          <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-subtle">
+            Trial engagement · trials started in the last 30d
+          </h3>
+          {summary.trials.length === 0 ? (
+            <p className="text-sm text-muted">No trials in the window.</p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-[11px] uppercase tracking-wider text-subtle">
+                  <th className="pb-1 text-left font-medium">User</th>
+                  <th className="pb-1 text-left font-medium">Started</th>
+                  <th className="pb-1 text-left font-medium">Outcome</th>
+                  <th className="pb-1 text-right font-medium">Days</th>
+                  <th className="pb-1 text-right font-medium">Saves</th>
+                  <th className="pb-1 text-right font-medium">Gens</th>
+                  <th className="pb-1 text-right font-medium">DLs</th>
+                </tr>
+              </thead>
+              <tbody>
+                {summary.trials.map((t) => (
+                  <tr key={`${t.userId}-${t.startedAt}`} className="border-t border-border/40">
+                    <td className="py-1 pr-2">
+                      <Link href={`/admin/users?u=${t.userId}`} className="font-medium text-primary-bright hover:underline">
+                        {t.username ? `@${t.username}` : t.userId.slice(0, 8)}
+                      </Link>
+                    </td>
+                    <td className="py-1 pr-2 text-muted">{formatCalendarDate(t.startedAt)}</td>
+                    <td className="py-1 pr-2 text-foreground">{OUTCOME_LABEL[t.outcome] ?? t.outcome}</td>
+                    <td className="py-1 text-right tabular-nums">{t.activeDays}</td>
+                    <td className="py-1 text-right tabular-nums">{t.saves}</td>
+                    <td className="py-1 text-right tabular-nums">{t.generations}</td>
+                    <td className="py-1 text-right tabular-nums">{t.downloads}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
       </div>
     </SurfaceCard>
   );

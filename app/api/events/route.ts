@@ -5,6 +5,7 @@ import { getCurrentUser } from "@/lib/supabase/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { isClientFunnelEvent, sanitizeFunnelProps } from "@/lib/analytics/funnel-events";
 import { recordFunnelEvent } from "@/lib/analytics/funnel-server";
+import { isbot } from "isbot";
 
 // ---------------------------------------------------------------------------
 // POST /api/events — the browser's funnel steps (pricing_view, cta_click,
@@ -24,6 +25,11 @@ const NO_STORE = { "cache-control": "private, no-store" };
 export async function POST(request: Request): Promise<Response> {
   const site = request.headers.get("sec-fetch-site");
   if (site && site !== "same-origin" && site !== "same-site") {
+    return new NextResponse(null, { status: 204, headers: NO_STORE });
+  }
+  // Known crawlers never count (the same policy Vercel Analytics applies, so
+  // the two dashboards agree).
+  if (isbot(request.headers.get("user-agent") ?? "")) {
     return new NextResponse(null, { status: 204, headers: NO_STORE });
   }
   if (!isAdminConfigured()) return new NextResponse(null, { status: 204, headers: NO_STORE });

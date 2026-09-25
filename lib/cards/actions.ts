@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { recordActivity } from "@/lib/analytics/funnel-server";
+import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { after } from "next/server";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -381,6 +383,15 @@ export async function createCardAction(
   revalidateCardPaths(row.slug, ownerUsername, { visibility: insert.visibility });
   if (data.parent_card_id) {
     await revalidateParentCardPaths(data.parent_card_id);
+  }
+  // Funnel: a saved card (and, once per user, first_card_saved — the
+  // activation milestone). Best effort; never touches the save.
+  if (isAdminConfigured()) {
+    await recordActivity(createAdminClient(), {
+      userId: user.id,
+      kind: "card_saved",
+      props: { visibility: insert.visibility, kind: data.parent_card_id ? "remix" : "new" },
+    });
   }
 
   // Bake the public PNG AFTER the response is sent (next/server `after`) so

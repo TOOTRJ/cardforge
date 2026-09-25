@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  ACTIVITY_KINDS,
   CLIENT_FUNNEL_EVENTS,
+  FIRST_EVENT,
+  PERMANENT_FUNNEL_EVENTS,
   SERVER_FUNNEL_EVENTS,
   isClientFunnelEvent,
   isFunnelEvent,
@@ -34,6 +37,14 @@ describe("funnel event vocabulary", () => {
     ).toEqual({ tier: "pro", period: "monthly", trial: true, amountCents: 1500, reason: "credits" });
     expect(sanitizeFunnelProps(null)).toEqual({});
     expect(sanitizeFunnelProps("string")).toEqual({});
+  });
+
+  it("every activity kind has a once-per-user milestone, and milestones + signup are permanent", () => {
+    for (const kind of ACTIVITY_KINDS) {
+      expect(FIRST_EVENT[kind]).toBe(`first_${kind}`);
+      expect((SERVER_FUNNEL_EVENTS as readonly string[]).includes(FIRST_EVENT[kind])).toBe(true);
+    }
+    expect([...PERMANENT_FUNNEL_EVENTS].sort()).toEqual(["first_ai_generation", "first_card_saved", "first_download", "signup"]);
   });
 
   it("caps the number of props", () => {

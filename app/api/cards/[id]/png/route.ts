@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
+import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
+import { recordActivity } from "@/lib/analytics/funnel-server";
 import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
@@ -172,6 +174,17 @@ export async function GET(
       { error: `Render failed: ${detail}` },
       { status: 500 },
     );
+  }
+
+  // Funnel: a download (and, once per user, first_download) — signed-in
+  // viewers only; anonymous downloads of public cards aren't attributed.
+  const viewer = await getCurrentUser();
+  if (viewer && isAdminConfigured()) {
+    await recordActivity(createAdminClient(), {
+      userId: viewer.id,
+      kind: "download",
+      props: { format: "png", preset, clean: !watermark },
+    });
   }
 
   return new NextResponse(Buffer.from(pngBytes), {

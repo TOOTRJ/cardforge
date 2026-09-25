@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/supabase/server";
+import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
+import { recordActivity } from "@/lib/analytics/funnel-server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { isDesignAiConfigured } from "@/lib/ai/provider";
 import {
@@ -193,6 +195,12 @@ export async function GET() {
   return NextResponse.json({ ok: true, job: payload }, { status: 200 });
 }
 
+/** Funnel: a generation job started (and, once per user, first_ai_generation). */
+async function recordGeneration(userId: string, kind: string): Promise<void> {
+  if (!isAdminConfigured()) return;
+  await recordActivity(createAdminClient(), { userId, kind: "ai_generation", props: { kind } });
+}
+
 export async function POST(request: Request) {
   if (!isSupabaseConfigured()) {
     return NextResponse.json(
@@ -370,6 +378,7 @@ export async function POST(request: Request) {
     if (!result.ok) {
       return NextResponse.json({ ok: false, error: result.error }, { status: 502 });
     }
+    await recordGeneration(user.id, parsed.data.kind);
     return NextResponse.json(
       { ok: true, job: result.job, cardLimit: limit, credits },
       { status: 200 },
@@ -407,6 +416,7 @@ export async function POST(request: Request) {
     if (!result.ok) {
       return NextResponse.json({ ok: false, error: result.error }, { status: 502 });
     }
+    await recordGeneration(user.id, parsed.data.kind);
     return NextResponse.json(
       { ok: true, job: result.job, cardLimit: limit, credits },
       { status: 200 },
@@ -432,6 +442,7 @@ export async function POST(request: Request) {
     if (!result.ok) {
       return NextResponse.json({ ok: false, error: result.error }, { status: 502 });
     }
+    await recordGeneration(user.id, parsed.data.kind);
     return NextResponse.json(
       { ok: true, job: result.job, deckSlug: result.deckSlug, cardLimit: limit, credits },
       { status: 200 },
@@ -447,6 +458,7 @@ export async function POST(request: Request) {
   if (!result.ok) {
     return NextResponse.json({ ok: false, error: result.error }, { status: 502 });
   }
+  await recordGeneration(user.id, parsed.data.kind);
   return NextResponse.json(
     { ok: true, job: result.job, deckSlug: result.deckSlug, cardLimit: limit, credits },
     { status: 200 },

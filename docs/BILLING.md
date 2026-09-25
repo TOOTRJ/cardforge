@@ -330,6 +330,27 @@ First-party, no vendor dependency, no cookie (owner decision 2026-09-24):
   as counts. At this volume the counts matter more than the rates; trial
   conversion should be read only on trials that have ended.
 
+### Activation, attribution, trial engagement, bots (2026-09-24, migration 0113)
+
+- **Activation** (`recordActivity`): `card_saved` (createCardAction),
+  `ai_generation` (the AI jobs POST, per kind) and `download` (PNG/PDF
+  routes, signed-in viewers only) each also write a once-per-user
+  `first_*` milestone. Milestones and `signup` rows are exempt from the
+  180-day prune. The panel's Activation section chains signup → first save
+  → first generation → first download.
+- **Signup attribution**: `AttributionCapture` (root layout) stores the
+  landing referrer host + `utm_source/medium/campaign` in per-tab
+  `sessionStorage` (first touch, no cookie); `AttributionFields` posts them
+  as hidden inputs; `signupAction` sanitizes them and records a `signup`
+  event — for REAL new users only (an already-registered address returns an
+  obfuscated user with no identities and records nothing). The panel groups
+  30-day signups by `utm_source`, else referrer host, else "direct".
+- **Trial engagement**: `admin_trial_engagement()` (0113) lists trials
+  started in the window with outcome (converted / lapsed / ongoing), distinct
+  active days and saves / generations / downloads inside the 7-day window.
+- **Bots**: `/api/events` drops requests whose User-Agent `isbot` recognises,
+  matching Vercel Analytics' policy.
+
 ## Addendum — sandbox lifecycle run (2026-09-22, test clock `clock_1UIftGQFLEpCg9s2uoFgd7kf`)
 
 Two clock-bound sandbox customers, driven through the Stripe API:

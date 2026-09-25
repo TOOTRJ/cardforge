@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/admin/users-queries", () => ({ requireAdminClient: async () => null }));
 
-import { buildFunnel } from "@/lib/admin/funnel-queries";
+import { buildFunnel, groupSignupSources } from "@/lib/admin/funnel-queries";
 
 describe("buildFunnel", () => {
   it("chains rates inside the storefront, trial and out-of-credits sections and leaves counts elsewhere", () => {
@@ -34,6 +34,34 @@ describe("buildFunnel", () => {
     // Money and Leaks are counts only.
     expect(w.sections.find((x) => x.title === "Money")!.steps.every((st) => st.rate === null)).toBe(true);
     expect(w.sections.find((x) => x.title === "Leaks")!.steps.every((st) => st.rate === null)).toBe(true);
+  });
+
+  it("activation chains signup → first save → first generation → first download", () => {
+    const w = buildFunnel({ signup: { n: 20, users: 20 }, first_card_saved: { n: 8, users: 8 }, first_ai_generation: { n: 4, users: 4 }, first_download: { n: 2, users: 2 } }, 30);
+    expect(w.sections[0].title).toBe("Activation");
+    expect(w.sections[0].steps.map((s) => [s.key, s.n, s.rate])).toEqual([
+      ["signup", 20, null],
+      ["first_card_saved", 8, 40],
+      ["first_ai_generation", 4, 50],
+      ["first_download", 2, 50],
+    ]);
+  });
+
+  it("groups signups by utm_source, then referrer, else direct — biggest first", () => {
+    expect(
+      groupSignupSources([
+        { props: { utmSource: "reddit", referrer: "reddit.com" } },
+        { props: { utmSource: "reddit" } },
+        { props: { referrer: "google.com" } },
+        { props: {} },
+        { props: null },
+        { props: { referrer: "<bad>" } },
+      ]),
+    ).toEqual([
+      { source: "direct", n: 3 },
+      { source: "reddit", n: 2 },
+      { source: "google.com", n: 1 },
+    ]);
   });
 
   it("an empty window renders zeros with no rates (no division by zero)", () => {
