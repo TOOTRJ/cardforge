@@ -161,6 +161,11 @@ export type FrameProfile = {
    *  disc size: the preview divides by mana-font's 1.3em disc ratio, the bake
    *  draws the disc at exactly this size. */
   costSizePct?: number;
+  /** Vertical nudge of the mana cost, as a fraction of card WIDTH (the unit
+   *  of costSizePct; negative = up). Moves the pips without moving the name
+   *  (inline or in costRect) and keeps the name's ellipsis against the pips.
+   *  Front face only. */
+  costDy?: number;
   /** When set, the rarity set-symbol renders absolutely inside THIS rect
    *  (right-aligned, vertically centered) instead of inline at the type
    *  band's right edge — lets the symbol move independently of the type
@@ -446,8 +451,8 @@ const AGCLASSIC: FrameProfile = {
 // M15 Planeswalker — title plate (3.5–8.5%), upper art window (10–55%), type
 // bar (56–61%), and a LOWER cut-out (63–91%) that is also transparent: the art
 // fills both windows and the abilities text floats over the art, so its rules
-// slot gets a translucent cream backdrop for legibility. Loyalty has no painted
-// shield, so it renders on a drawn dark badge.
+// slot gets a translucent cream backdrop for legibility. The loyalty shield is
+// the frame's own, redrawn above that backdrop (see `loyalty`).
 const M15PW: FrameProfile = {
   label: "M15 Planeswalker",
   // MSE m15-planeswalker spec: name 23–46px, image 52–479.5, type 296–316,
@@ -496,11 +501,18 @@ const M15PW: FrameProfile = {
     font: "display",
   },
   loyalty: {
-    // Card Conjurer's planeswalker masters paint the starting-loyalty shield
-    // into the frame (4.4/4.19), so there is no plate here any more — the
-    // value sits in CC's loyalty box (packPlaneswalkerRegular.js).
+    // Card Conjurer's loyalty box (packPlaneswalkerRegular.js: x .806,
+    // y .902, 14 × 3.72 %; digits 0.0372 of the card HEIGHT = 0.052 of the
+    // width). CC draws the ability stripes BEFORE the frame, so the shield
+    // painted into its masters sits on top of them; ours are an overlay
+    // above the frame and washed the shield out (owner review 2026-09-25).
+    // The importer cuts each master's shield out (SHIELD_BOX in
+    // scripts/lib/cc-frames.mjs — plateRect is that box in percent) and it
+    // is drawn again here, above the stripes, pixel-for-pixel on the frame's.
     rect: { topPct: 90.2, leftPct: 80.6, widthPct: 14, heightPct: 3.72 },
-    sizePct: 0.04,
+    plateRect: { topPct: 87.667, leftPct: 79.6, widthPct: 16, heightPct: 7.333 },
+    plateAssetPathTemplate: "/frames/m15pw/loyalty/{color}.png",
+    sizePct: 0.052,
     colorHex: "#ffffff",
     weight: 700,
     shadowCss: OUTLINE_SHADOW,
@@ -566,14 +578,23 @@ const M15TOKEN: FrameProfile = {
 // regions and the same painted P/T plate — so they're straight clones with a
 // different frame PNG. Their plates are light (silver/pale), so the dark M15
 // ink reads on them unchanged.
+//
+// Card Conjurer's M15 title bar (frames swap 4.4) ends higher, with a darker
+// bottom bevel, than the MSE bar the band was tuned on: pips centred in the
+// band (7.8 %H) sat 0.5–0.7 % of the card height below six real printings
+// (owner review 2026-09-25). Lift them 0.55 %H on the CC-framed profiles —
+// NOT on M15 itself, whose geometry the older MSE-framed families spread.
+const CC_M15_COST_DY = -0.0077;
 const M15ARTIFACT: FrameProfile = {
   ...M15,
   label: "M15 Artifact",
+  costDy: CC_M15_COST_DY,
   pt: { ...M15.pt!, plateAssetPathTemplate: "/frames/m15artifact/pt/{color}.png" },
 };
 const M15SNOW: FrameProfile = {
   ...M15,
   label: "M15 Snow",
+  costDy: CC_M15_COST_DY,
   pt: { ...M15.pt!, plateAssetPathTemplate: "/frames/m15snow/pt/{color}.png" },
 };
 
@@ -585,6 +606,7 @@ const UNDER_FRAME_RECT = { topPct: 4, leftPct: 4, widthPct: 92, heightPct: 92 };
 const M15DEVOID: FrameProfile = {
   ...M15,
   label: "M15 Devoid (Eldrazi)",
+  costDy: CC_M15_COST_DY,
   // Every devoid frame is see-through (CC text box alpha ~179): the art
   // runs under the whole frame like printed devoid cards (4.17).
   underFrameArt: { rect: UNDER_FRAME_RECT },
@@ -1497,7 +1519,7 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // Colourless M15 is CC's see-through "Eldrazi" frame: art under the frame
   // for "c" only (4.17). Set here, not on M15, so the many profiles that
   // spread M15 don't inherit it.
-  m15: { ...M15, underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] } },
+  m15: { ...M15, costDy: CC_M15_COST_DY, underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] } },
   m15land: M15LAND,
   m15snowland: M15SNOWLAND,
   // Colourless creature tokens print a see-through frame (BFZ, MH1, WAR).
@@ -1542,8 +1564,10 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
 export function getFrameProfile(
   template: FrameTemplate | string | undefined,
 ): FrameProfile {
-  if (!template) return M15;
-  return PROFILES[template as FrameTemplate] ?? M15;
+  // The registry's m15 entry, not the bare M15 base: legacy templates draw
+  // the m15 frame, so they need its CC cost lift and see-through colourless.
+  if (!template) return PROFILES.m15;
+  return PROFILES[template as FrameTemplate] ?? PROFILES.m15;
 }
 
 /** The under-frame art rect for a profile + frame colour key, or null. */

@@ -16,7 +16,8 @@
 // masks at the pack's NATIVE size in CC's draw order (2010×2814 for the
 // accurate M15 pack), downscales once with Lanczos to 1500×2100, rounds the
 // corners, and writes <out>/<template>/<colour>.png + .webp, plus
-// P/T plates at native size under pt/. Provenance (which source files made
+// P/T plates at native size under pt/, and a planeswalker's loyalty shield
+// cut out of each master under loyalty/. Provenance (which source files made
 // which frame, and every substitution) goes to lib/cards/frame-sources.json.
 //
 // Nothing here touches public/frames or any bucket. Next:
@@ -40,6 +41,7 @@ import {
   WEBP,
   builtColors,
   compositeLayers,
+  cutThroughMask,
   roundCornersRgba8,
   sourceFilesFor,
   toRgba8,
@@ -91,6 +93,13 @@ async function writeMaster(bytes, pngFile) {
   await image.clone().webp(WEBP).toFile(pngFile.replace(/\.png$/, ".webp"));
 }
 
+async function writeCutout(bytes, box, pngFile) {
+  fs.mkdirSync(path.dirname(pngFile), { recursive: true });
+  const image = sharp(bytes, { raw: { width: box.width, height: box.height, channels: 4 } });
+  await image.clone().png({ compressionLevel: 9 }).toFile(pngFile);
+  await image.clone().webp(WEBP).toFile(pngFile.replace(/\.png$/, ".webp"));
+}
+
 async function writePlate(src, pngFile) {
   fs.mkdirSync(path.dirname(pngFile), { recursive: true });
   // Plates keep their native size; the renderer scales them into the slot.
@@ -133,6 +142,12 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     roundCornersRgba8(master, OUT_W, OUT_H, CORNER_RADIUS);
     await writeMaster(master, out);
     console.log(`wrote ${path.relative(process.cwd(), out)} (+ .webp) from ${W}×${H}`);
+    if (def.shield) {
+      const mask = await rgba(await fetchCached(def.shield.mask), OUT_W, OUT_H);
+      const { box } = def.shield;
+      const shield = cutThroughMask(master, mask, OUT_W, box);
+      await writeCutout(shield, box, path.join(outDir, template, "loyalty", `${key}.png`));
+    }
   }
   for (const [key, why] of Object.entries(def.excluded ?? {})) {
     recipe[key] = [`NOT IMPORTED — ${why}`];
@@ -152,6 +167,7 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     colors: recipe,
     ...(def.excluded ? { excluded: def.excluded } : {}),
     ...(plates ? { plates } : {}),
+    ...(def.shield ? { shield: { mask: def.shield.mask, box: def.shield.box, output: "loyalty/<colour>.png" } } : {}),
     sourceFiles: sourceFilesFor(def),
     notes: def.notes,
   };

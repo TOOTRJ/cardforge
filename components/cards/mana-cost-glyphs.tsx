@@ -33,6 +33,9 @@ type ManaCostGlyphsProps = {
    *  entry render the uploaded image instead of the mana-font glyph; all
    *  other tokens (and all callers that omit this) keep the standard look. */
   overrides?: PipOverrides | null;
+  /** Vertical nudge of the whole cost (a CSS length, e.g. a `cqw` string;
+   *  negative = up) — a frame profile's `costDy` (CardPreview only). */
+  offsetY?: string;
   className?: string;
 };
 
@@ -208,6 +211,7 @@ export function ManaCostGlyphs({
   size = "md",
   fontSize,
   overrides,
+  offsetY,
   className,
 }: ManaCostGlyphsProps) {
   if (!cost || !cost.trim()) return null;
@@ -231,7 +235,10 @@ export function ManaCostGlyphs({
       // cost as one unit instead of glyph-by-glyph.
       role="img"
       aria-label={`Cost ${cost}`}
-      style={{ fontSize: resolvedFontSize }}
+      style={{
+        fontSize: resolvedFontSize,
+        ...(offsetY ? { transform: `translateY(${offsetY})` } : {}),
+      }}
     >
       {tokens.map((token, i) => {
         if (token.kind === "text") {

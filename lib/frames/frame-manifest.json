@@ -730,6 +730,104 @@
       "width": 1500,
       "height": 2100
     },
+    "m15pw/loyalty/b.png": {
+      "hash": "ca6ad18941f8",
+      "sha256": "ca6ad18941f893093e160c59e988b77b9defb7f14b68641883a3ef08a8042921",
+      "bytes": 15950,
+      "width": 240,
+      "height": 154
+    },
+    "m15pw/loyalty/b.webp": {
+      "hash": "c4b9382b132c",
+      "sha256": "c4b9382b132c73fcdbcef1ffe9582840ccfa75e27638c0160211c92b6cd1c354",
+      "bytes": 6552,
+      "width": 240,
+      "height": 154
+    },
+    "m15pw/loyalty/c.png": {
+      "hash": "117ad7df3f73",
+      "sha256": "117ad7df3f730191d273d3183a6d6c5cc3f49251675469f08e909029130029d2",
+      "bytes": 16160,
+      "width": 240,
+      "height": 154
+    },
+    "m15pw/loyalty/c.webp": {
+      "hash": "ea66f4b35fdc",
+      "sha256": "ea66f4b35fdce9c2eaf050a921433305b7f4252e7ac85676f78d38d699a8202d",
+      "bytes": 6584,
+      "width": 240,
+      "height": 154
+    },
+    "m15pw/loyalty/g.png": {
+      "hash": "20f3cac491c6",
+      "sha256": "20f3cac491c6c200a3815c0fe564ca914a58975059fe2bc35433e39b7929a125",
+      "bytes": 16068,
+      "width": 240,
+      "height": 154
+    },
+    "m15pw/loyalty/g.webp": {
+      "hash": "cf4b399d0cdb",
+      "sha256": "cf4b399d0cdb069cc2033ea7b774afe3a8ecb0de26280e3a536108db233f6768",
+      "bytes": 6694,
+      "width": 240,
+      "height": 154
+    },
+    "m15pw/loyalty/m.png": {
+      "hash": "3437adf23b51",
+      "sha256": "3437adf23b5110cd2737cd079b813aa4924e79cc0e5d2938a221fc931caf8992",
+      "bytes": 16042,
+      "width": 240,
+      "height": 154
+    },
+    "m15pw/loyalty/m.webp": {
+      "hash": "e7c0dcc21cb1",
+      "sha256": "e7c0dcc21cb155aa340064e103ffc566954fc46c70c0a6e7cccad0c3c36ad109",
+      "bytes": 6736,
+      "width": 240,
+      "height": 154
+    },
+    "m15pw/loyalty/r.png": {
+      "hash": "ba92609978fb",
+      "sha256": "ba92609978fb86053d7324f04f9557faf14c3cb6e784c909550e42f1a0c4e379",
+      "bytes": 15986,
+      "width": 240,
+      "height": 154
+    },
+    "m15pw/loyalty/r.webp": {
+      "hash": "859fcb31eaf7",
+      "sha256": "859fcb31eaf79e2f78f319483e817e22dd131b04b8f8fee73f4ad8c6668ecd55",
+      "bytes": 6772,
+      "width": 240,
+      "height": 154
+    },
+    "m15pw/loyalty/u.png": {
+      "hash": "60a78b2232c6",
+      "sha256": "60a78b2232c678724aff954a25e8d6532818b4499d02913d8a3161b8879ab415",
+      "bytes": 16037,
+      "width": 240,
+      "height": 154
+    },
+    "m15pw/loyalty/u.webp": {
+      "hash": "8c15b4097095",
+      "sha256": "8c15b4097095e7ea258453c4a83aeeb7d78aebb14b9e1a01ce98677ea18cc207",
+      "bytes": 6772,
+      "width": 240,
+      "height": 154
+    },
+    "m15pw/loyalty/w.png": {
+      "hash": "d69d28d0134d",
+      "sha256": "d69d28d0134dcb97e2cc16ce165bf094d07b5e83e01c2df34343ff31b3d71003",
+      "bytes": 16032,
+      "width": 240,
+      "height": 154
+    },
+    "m15pw/loyalty/w.webp": {
+      "hash": "f727682ff939",
+      "sha256": "f727682ff9396ac8815f17a45d9bfc5be93dbdfbda5aa7e855ab3edcdbc513cf",
+      "bytes": 6578,
+      "width": 240,
+      "height": 154
+    },
     "m15pw/m.png": {
       "hash": "85ed6758c0fc",
       "sha256": "85ed6758c0fce07c8edfd8fb94461152f09f4c4d302bf4d1556f43fb17d050a4",

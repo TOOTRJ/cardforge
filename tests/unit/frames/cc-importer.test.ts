@@ -7,8 +7,10 @@ import {
   CC_TEMPLATES,
   COLORS,
   CORNER_RADIUS,
+  SHIELD_BOX,
   builtColors,
   compositeLayers,
+  cutThroughMask,
   roundCorners,
   roundCornersRgba8,
   sourceFilesFor,
@@ -26,7 +28,13 @@ import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 // ---------------------------------------------------------------------------
 
 type Layer = { src: string; mask?: string };
-type Def = { colors: Record<string, Layer[]>; plates?: Record<string, string>; excluded?: Record<string, string>; notes: string[] };
+type Def = {
+  colors: Record<string, Layer[]>;
+  plates?: Record<string, string>;
+  shield?: { mask: string; box: typeof SHIELD_BOX };
+  excluded?: Record<string, string>;
+  notes: string[];
+};
 const templates = CC_TEMPLATES as Record<string, Def>;
 
 describe("Card Conjurer recipe", () => {
@@ -91,8 +99,18 @@ describe("Card Conjurer recipe", () => {
     for (const template of ["m15land", "m15snow", "m15pw", "m15token", "m15devoid"]) {
       expect(templates[template].notes.join(" "), template).toMatch(/colourless/);
     }
-    // The planeswalker's painted shield must travel with the frames until 4.4 drops our plate.
     expect(templates.m15pw.notes.join(" ")).toMatch(/loyalty shield/);
+  });
+
+  it("cuts the planeswalker shield out through CC's loyalty mask (owner review 2026-09-25)", () => {
+    expect(templates.m15pw.shield).toEqual({ mask: "img/frames/planeswalker/maskLoyalty.png", box: SHIELD_BOX });
+    expect(sourceFilesFor(templates.m15pw as never)).toContain("img/frames/planeswalker/maskLoyalty.png");
+    // CC's mask covers x 1197–1430, y 1844–1991 on the 1500×2100 master.
+    expect(SHIELD_BOX.x).toBeLessThanOrEqual(1197);
+    expect(SHIELD_BOX.y).toBeLessThanOrEqual(1844);
+    expect(SHIELD_BOX.x + SHIELD_BOX.width).toBeGreaterThan(1430);
+    expect(SHIELD_BOX.y + SHIELD_BOX.height).toBeGreaterThan(1991);
+    expect(Object.entries(templates).filter(([, d]) => d.shield).map(([t]) => t)).toEqual(["m15pw"]);
   });
 
   it("lists layers, masks and plates once each", () => {
@@ -140,6 +158,22 @@ describe("pixel operations", () => {
     expect(alpha(10, 10)).toBe(1);
     expect(alpha(0, 70)).toBe(1); // straight edge, not a corner
     expect(CORNER_RADIUS).toBe(39); // matches the existing masters (2.6 % of 1500)
+  });
+
+  it("crops a box and keeps only what the mask's alpha covers, colour untouched", () => {
+    // 3×2 image, every pixel opaque grey 100; the mask is opaque at (1,0),
+    // half at (2,1), clear elsewhere.
+    const buf = Buffer.alloc(3 * 2 * 4);
+    for (let i = 0; i < buf.length; i += 4) buf.set([100, 100, 100, 255], i);
+    const mask = Buffer.alloc(3 * 2 * 4);
+    mask[(0 * 3 + 1) * 4 + 3] = 255;
+    mask[(1 * 3 + 2) * 4 + 3] = 128;
+    const out = cutThroughMask(buf, mask, 3, { x: 1, y: 0, width: 2, height: 2 });
+    expect(out.length).toBe(2 * 2 * 4);
+    expect([...out.subarray(0, 4)]).toEqual([100, 100, 100, 255]); // (1,0)
+    expect(out[4 + 3]).toBe(0); // (2,0)
+    expect(out[8 + 3]).toBe(0); // (1,1)
+    expect([...out.subarray(12, 16)]).toEqual([100, 100, 100, 128]); // (2,1)
   });
 
   it("rounds corners on 8-bit RGBA after the final downscale", () => {

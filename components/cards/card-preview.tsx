@@ -736,6 +736,7 @@ function CardFace({
             cost={face.cost}
             fontSize={pipFont(layout.costSizePct ?? layout.title.sizePct)}
             overrides={pipOverrides}
+            offsetY={layout.costDy ? cqw(layout.costDy) : undefined}
           />
         ) : null}
       </BandSlot>
@@ -753,6 +754,7 @@ function CardFace({
             cost={face.cost}
             fontSize={pipFont(layout.costSizePct ?? layout.title.sizePct)}
             overrides={pipOverrides}
+            offsetY={layout.costDy ? cqw(layout.costDy) : undefined}
           />
         </div>
       ) : null}

@@ -393,6 +393,7 @@ function CardImage({
             cost={card.cost}
             fontSize={fpx(layout.costSizePct ?? layout.title.sizePct, width)}
             overrides={card.pipOverrides}
+            dy={layout.costDy ? fpx(layout.costDy, width) : 0}
           />
         ) : (
           <span style={{ display: "flex" }} />
@@ -413,6 +414,7 @@ function CardImage({
             cost={card.cost}
             fontSize={fpx(layout.costSizePct ?? layout.title.sizePct, width)}
             overrides={card.pipOverrides}
+            dy={layout.costDy ? fpx(layout.costDy, width) : 0}
           />
         </div>
       ) : null}
@@ -943,11 +945,14 @@ function CostGlyphs({
   cost,
   fontSize,
   overrides,
+  dy = 0,
 }: {
   cost: string;
   fontSize: number;
   /** Card owner's custom pip icons — see lib/pips/override.ts. */
   overrides?: PipOverrides | null;
+  /** Vertical nudge in px (profile.costDy) — the preview's translateY. */
+  dy?: number;
 }) {
   const tokens = tokenize(cost);
   if (tokens.length === 0) return <span style={{ display: "flex" }} />;
@@ -957,6 +962,7 @@ function CostGlyphs({
       style={{
         display: "flex",
         alignItems: "center",
+        ...(dy ? { transform: `translate(0px, ${dy}px)` } : {}),
         // Mirrors the preview's 0.12em pip gap (scales with the disc size
         // instead of a fixed 2px that vanished at HD resolution).
         gap: Math.max(1, Math.round(fontSize * 0.12)),

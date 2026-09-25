@@ -275,7 +275,18 @@
         "img/frames/planeswalker/regular/planeswalkerFrameM.png"
       ]
     },
+    "shield": {
+      "mask": "img/frames/planeswalker/maskLoyalty.png",
+      "box": {
+        "x": 1194,
+        "y": 1841,
+        "width": 240,
+        "height": 154
+      },
+      "output": "loyalty/<colour>.png"
+    },
     "sourceFiles": [
+      "img/frames/planeswalker/maskLoyalty.png",
       "img/frames/planeswalker/regular/planeswalkerFrameA.png",
       "img/frames/planeswalker/regular/planeswalkerFrameB.png",
       "img/frames/planeswalker/regular/planeswalkerFrameG.png",
@@ -286,7 +297,7 @@
     ],
     "notes": [
       "colourless planeswalker = CC's artifact planeswalker frame",
-      "CC's planeswalker masters paint the loyalty shield themselves: the M15PW profile must drop its loyalty.png plate in the same change (4.4/4.19)"
+      "the loyalty shield is the master's own pixels cut out through CC's maskLoyalty.png (loyalty/<colour>.png), drawn above the ability stripes"
     ]
   },
   "m15snow": {

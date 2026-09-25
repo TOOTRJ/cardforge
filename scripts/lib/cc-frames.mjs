@@ -39,6 +39,13 @@ const TOKEN = "img/frames/token/m15/textless";
  *  optionally at reduced opacity. */
 const layer = (src, mask, opacity) => ({ src, ...(mask ? { mask } : {}), ...(opacity !== undefined ? { opacity } : {}) });
 
+/** The planeswalker loyalty shield's box on the 1500×2100 master: CC's
+ *  maskLoyalty.png covers x 1197–1430, y 1844–1991 after the Lanczos
+ *  downscale; padded so no anti-aliased edge is clipped. The M15PW
+ *  profile's loyalty plateRect is this box in percent (a unit test keeps
+ *  them in step). */
+export const SHIELD_BOX = { x: 1194, y: 1841, width: 240, height: 154 };
+
 /** Regular M15 P/T plates (CC keeps one set for regular, snow and tokens). */
 const REG_PT = Object.fromEntries(COLORS.map((k) => [k, `${REG}/m15PT${k.toUpperCase()}.png`]));
 const ARTIFACT_PT = { ...REG_PT, c: `${REG}/m15PTA.png` };
@@ -67,7 +74,9 @@ const perColor = (fn, keys = COLORS) => Object.fromEntries(keys.map((k) => [k, f
 const WUBRGM = ["w", "u", "b", "r", "g", "m"];
 
 /**
- * template → { colors: colour → layers, plates?, excluded?, notes }.
+ * template → { colors: colour → layers, plates?, shield?, excluded?, notes }.
+ * `shield` cuts part of each built master out through a mask (its alpha)
+ * into <template>/loyalty/<colour>.png, cropped to `box`.
  * `excluded` colours are NOT built: the template keeps its current master
  * for them. `notes` records every substitution, so provenance says why a
  * colour is not a 1:1 Card Conjurer file.
@@ -115,9 +124,15 @@ export const CC_TEMPLATES = {
   },
   m15pw: {
     colors: perColor((k) => [layer(`${PW}/planeswalkerFrame${k === "c" ? "A" : k.toUpperCase()}.png`)]),
+    // CC draws the ability stripes BEFORE the frame, so the shield its
+    // masters paint sits on top of them. Ours are an overlay above the frame
+    // and washed the shield out (owner review 2026-09-25), so each master's
+    // shield is cut out through CC's loyalty mask and drawn again as the
+    // loyalty plate, above the stripes.
+    shield: { mask: "img/frames/planeswalker/maskLoyalty.png", box: SHIELD_BOX },
     notes: [
       "colourless planeswalker = CC's artifact planeswalker frame",
-      "CC's planeswalker masters paint the loyalty shield themselves: the M15PW profile must drop its loyalty.png plate in the same change (4.4/4.19)",
+      "the loyalty shield is the master's own pixels cut out through CC's maskLoyalty.png (loyalty/<colour>.png), drawn above the ability stripes",
     ],
   },
   m15token: {
@@ -223,6 +238,23 @@ export function roundCornersRgba8(buf, width, height, radius) {
   }
 }
 
+/** Crop `box` out of an 8-bit RGBA image, keeping only what the mask's
+ *  ALPHA covers (same size as the image; alpha multiplied, colour kept). */
+export function cutThroughMask(buf, mask, width, box) {
+  const out = Buffer.alloc(box.width * box.height * 4);
+  for (let y = 0; y < box.height; y += 1) {
+    for (let x = 0; x < box.width; x += 1) {
+      const src = ((box.y + y) * width + box.x + x) * 4;
+      const dst = (y * box.width + x) * 4;
+      out[dst] = buf[src];
+      out[dst + 1] = buf[src + 1];
+      out[dst + 2] = buf[src + 2];
+      out[dst + 3] = Math.round((buf[src + 3] * mask[src + 3]) / 255);
+    }
+  }
+  return out;
+}
+
 /** Float accumulator → 8-bit RGBA bytes. */
 export function toRgba8(acc) {
   const out = Buffer.alloc(acc.length);
@@ -250,5 +282,6 @@ export function sourceFilesFor(def) {
     }
   }
   for (const plate of Object.values(def.plates ?? {})) files.add(plate);
+  if (def.shield) files.add(def.shield.mask);
   return [...files].sort();
 }
