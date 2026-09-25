@@ -1337,6 +1337,15 @@ function LoyaltyRowsBake({
   const badgeH = Math.round(size * 1.5);
   const stripe = (i: number) => (i % 2 === 0 ? rows.stripeAHex : rows.stripeBHex);
   const stripeRects = foil ? loyaltyStripeRects(slot.rect, abilities.length) : null;
+  const radius = Math.round(cardWidth * 0.012);
+  // Satori clips an image (the sheen SVG) to its own shape and only to the
+  // bounding rectangle of the box's rounded overflow, so the outer rows'
+  // sheens round their own outer corners to the box's radius (the browser
+  // already clips the preview's).
+  const sheenCorners = (i: number) => ({
+    ...(i === 0 ? { borderTopLeftRadius: radius, borderTopRightRadius: radius } : {}),
+    ...(i === abilities.length - 1 ? { borderBottomLeftRadius: radius, borderBottomRightRadius: radius } : {}),
+  });
   return (
     <div
       style={{
@@ -1350,7 +1359,7 @@ function LoyaltyRowsBake({
         lineHeight: slot.lineHeight ?? RULES_TEXT.lineHeight,
         color: slot.colorHex,
         zIndex: 20,
-        borderRadius: Math.round(cardWidth * 0.012),
+        borderRadius: radius,
       }}
     >
       {abilities.map((ab, i) => (
@@ -1368,13 +1377,13 @@ function LoyaltyRowsBake({
               paints it over the stripe and under the badge + text. */}
           {foil && stripeRects ? (
             <FoilStripeSheen
-              id="foil-row"
+              id={`foil-row-${i}`}
               region={stripeRects[i]}
               fill={stripe(i)}
               landscape={foil.landscape}
               width={Math.round((stripeRects[i].widthPct / 100) * cardWidth)}
               height={Math.round((stripeRects[i].heightPct / 100) * foil.cardHeight)}
-              style={{ width: "100%", height: "100%" }}
+              style={{ width: "100%", height: "100%", ...sheenCorners(i) }}
             />
           ) : null}
           <div

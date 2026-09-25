@@ -219,7 +219,9 @@ describe("foil finish — real bakes", () => {
 // ---------------------------------------------------------------------------
 
 const PW_ORIGIN = "https://frames.test";
-const PW_RULES = "+1: Scry 1.\n−2: Draw a card.\n−7: You win.";
+// A static first row, like Coden's: every row gets the sheen, badged or not.
+const PW_RULES = "Static line.\n+1: Scry 1.\n−2: Draw a card.\n−7: You win.";
+const PW_ROWS = 4;
 
 async function syntheticPwBucket() {
   const { frameObjectKey } = await import("@/lib/frames/frame-url");
@@ -256,8 +258,8 @@ async function syntheticPwBucket() {
   return { manifest, byUrl };
 }
 
-/** Uniform mid-dark art: the card-wide sheen under the stripes is weak there,
- *  so what the stripes show is the stripe sheen's own. */
+/** Uniform art. Mid-dark (40): the card-wide sheen under the stripes is weak
+ *  there, so what the stripes show is the stripe sheen's own. */
 async function solidArt(v: number): Promise<string> {
   const png = await sharp({ create: { width: 1200, height: 800, channels: 3, background: { r: v, g: v, b: v } } }).png().toBuffer();
   return `data:image/png;base64,${png.toString("base64")}`;
@@ -315,7 +317,7 @@ describe("foil finish — planeswalker ability stripes (real bakes)", () => {
   /** The blank right-hand part of each ability row (no badge, no text, clear
    *  of the loyalty plate and of the row seams). */
   const stripeProbes = () =>
-    loyaltyStripeRects(getFrameProfile("m15pw").rules.rect, 3).map((r) => {
+    loyaltyStripeRects(getFrameProfile("m15pw").rules.rect, PW_ROWS).map((r) => {
       const b = box(r, 0);
       return { x0: Math.round(W * 0.52), x1: Math.round(W * 0.74), y0: b.y0 + 8, y1: b.y1 - 8 };
     });
@@ -348,7 +350,7 @@ describe("foil finish — planeswalker ability stripes (real bakes)", () => {
       }
     }
     expect(ink).toBeGreaterThan(300);
-    expect(moved / ink).toBeLessThan(0.02);
+    expect(moved).toBe(0);
   }, 60_000);
 
   it("is a luminance mask of the stripe itself: an opaque black stripe gets no sheen at all", async () => {
@@ -360,9 +362,80 @@ describe("foil finish — planeswalker ability stripes (real bakes)", () => {
       await bakeWith(mod, walker("regular", { profileOverrides: black })),
       await bakeWith(mod, walker("foil", { profileOverrides: black })),
     ];
-    const [a0, b1, a2] = stripeProbes().map((p) => meanDelta(regular, foil, p));
+    const [a0, b1, a2, b3] = stripeProbes().map((p) => meanDelta(regular, foil, p));
     expect(Math.min(a0, a2)).toBeGreaterThan(8);
     expect(b1).toBe(0);
+    expect(b3).toBe(0);
+  }, 60_000);
+
+  it("stays inside the ability box's rounded corners", async () => {
+    const mod = await renderer();
+    // Black art: the card-wide sheen is nil around the box, so any change
+    // there is the stripe sheen's. Satori clips the stripes to the box's
+    // rounded overflow but an image inside them only to its rectangle, so
+    // the outer rows' sheens round their own corners.
+    const black = await solidArt(0);
+    const [regular, foil] = [
+      await bakeWith(mod, walker("regular", { artUrl: black })),
+      await bakeWith(mod, walker("foil", { artUrl: black })),
+    ];
+    // The box as Satori lays it out, on whole pixels.
+    const rect = getFrameProfile("m15pw").rules.rect;
+    const [left, top] = [Math.round((rect.leftPct / 100) * W), Math.round((rect.topPct / 100) * H)];
+    const right = Math.round(((rect.leftPct + rect.widthPct) / 100) * W);
+    const bottom = Math.round(((rect.topPct + rect.heightPct) / 100) * H);
+    const radius = Math.round(W * 0.012);
+    // [arc centre x, y, outward x, y]: top-left, top-right, bottom-left (the
+    // bottom-right corner is under the loyalty plate).
+    const corners = [
+      [left + radius, top + radius, -1, -1],
+      [right - radius, top + radius, 1, -1],
+      [left + radius, bottom - radius, -1, 1],
+    ];
+    for (const [cx, cy, sx, sy] of corners) {
+      const outside: number[] = [];
+      const inside: number[] = [];
+      for (let y = top; y < bottom; y += 1) {
+        for (let x = left; x < right; x += 1) {
+          const [dx, dy] = [(x + 0.5 - cx) * sx, (y + 0.5 - cy) * sy];
+          if (dx <= 0 || dy <= 0) continue; // not this corner
+          const d = Math.hypot(dx, dy);
+          // Past the arc's anti-aliasing (Satori may round the last row a
+          // pixel past the box, shifting that arc by as much)…
+          if (d > radius + 1.5) outside.push(delta(regular, foil, x, y));
+          else if (d < radius - 2) inside.push(delta(regular, foil, x, y));
+        }
+      }
+      // …untouched; inside the arc the sheen reaches right into the corner.
+      expect(outside.length).toBeGreaterThanOrEqual(5);
+      expect(Math.max(...outside)).toBe(0);
+      expect(inside.reduce((sum, v) => sum + v, 0) / inside.length).toBeGreaterThan(4);
+    }
+  }, 60_000);
+
+  it("continues the card-wide rainbow: over an opaque white stripe it matches the card-wide sheen over white art", async () => {
+    const mod = await renderer();
+    const white = await solidArt(255);
+    const stripes = (hex: string) => ({ m15pw: { loyaltyRows: { stripeAHex: hex, stripeBHex: hex } } });
+    // Clear stripes show the card-wide sheen over the white art; opaque white
+    // ones hide it and show their own at full strength. Same rainbow in the
+    // same place — as long as each row's sheen keeps its card-space position.
+    const [opaque, clear] = [
+      await bakeWith(mod, walker("foil", { artUrl: white, profileOverrides: stripes("#ffffff") })),
+      await bakeWith(mod, walker("foil", { artUrl: white, profileOverrides: stripes("rgba(255,255,255,0)") })),
+    ];
+    for (const p of stripeProbes()) expect(meanDelta(opaque, clear, p)).toBeLessThan(1.5);
+    // No step where one row's sheen meets the next.
+    const { x0, x1 } = stripeProbes()[0];
+    for (const r of loyaltyStripeRects(getFrameProfile("m15pw").rules.rect, PW_ROWS).slice(1)) {
+      const seam = Math.round((r.topPct / 100) * H);
+      let step = 0;
+      for (let x = x0; x < x1; x += 1) {
+        const [above, below] = [((seam - 2) * W + x) * 3, ((seam + 1) * W + x) * 3];
+        for (let c = 0; c < 3; c += 1) step = Math.max(step, Math.abs(opaque.data[above + c] - opaque.data[below + c]));
+      }
+      expect(step).toBeLessThanOrEqual(3);
+    }
   }, 60_000);
 
   it("adds only that layer: regular planeswalkers and foil non-planeswalkers bake byte-identical without it", async () => {

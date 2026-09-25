@@ -382,10 +382,13 @@ export function FoilSheen({
 // ---------------------------------------------------------------------------
 
 /** The ability rows' boxes in card %: the rules rect cut into `count` equal
- *  rows. Both renderers lay the rows out as equal `flex: 1` shares of that
- *  rect (Satori always; a browser row only grows past its share when its
- *  text overflows, which the fit estimate avoids) — the sheen fills its row
- *  box either way, only its rainbow's card-space phase would drift. */
+ *  rows — exactly the bake's `flex: 1` rows (Yoga has no automatic minimum
+ *  size). A browser flex row is at least as tall as its content
+ *  (min-height: auto), so a row whose text needs more than its share grows
+ *  and the others shrink (a long 4-ability walker measured 139/139/158/158
+ *  card px against 148.6 each). The preview sheen still fills its row and the
+ *  viewBoxes stay contiguous, so the seams stay continuous; the rainbow is
+ *  only stretched within such a row. */
 export function loyaltyStripeRects(rect: Rect, count: number): Rect[] {
   const heightPct = rect.heightPct / Math.max(1, count);
   return Array.from({ length: count }, (_, i) => ({ ...rect, topPct: rect.topPct + i * heightPct, heightPct }));

@@ -214,7 +214,9 @@ describe("foil finish — one component, both renderers", () => {
 // ---------------------------------------------------------------------------
 
 const norm = (css: string | null | undefined) => (css ?? "").replace(/\s+/g, "");
-const PW_RULES = "+1: Scry 1.\n−2: Draw a card.\n−7: You win.";
+// A static first row, like Coden's: every row gets the sheen, badged or not.
+const PW_RULES = "Static line.\n+1: Scry 1.\n−2: Draw a card.\n−7: You win.";
+const PW_LINES = ["Static line.", "Scry 1.", "Draw a card.", "You win."];
 
 describe("loyaltyStripeRects", () => {
   it("cuts the rules rect into equal, contiguous rows — the renderers' flex: 1 rows", () => {
@@ -276,9 +278,9 @@ describe("foil finish — planeswalker ability stripes in the preview", () => {
       />,
     );
     const sheens = stripeSheens(container);
-    expect(sheens).toHaveLength(3);
+    expect(sheens).toHaveLength(PW_LINES.length);
     const p = getFrameProfile("m15pw");
-    const expected = loyaltyStripeRects(p.rules.rect, 3);
+    const expected = loyaltyStripeRects(p.rules.rect, PW_LINES.length);
     const ids = new Set<string>();
     sheens.forEach((svg, i) => {
       const row = svg.parentElement as HTMLElement;
@@ -290,11 +292,16 @@ describe("foil finish — planeswalker ability stripes in the preview", () => {
       // after it are positioned, so they paint over it (the bake's order).
       expect(row.style.position).toBe("relative");
       expect(row.firstElementChild).toBe(svg);
+      // It fills the whole row (padding included), stretched to it.
+      expect(svg.getAttribute("width")).toBe("100%");
+      expect(svg.getAttribute("height")).toBe("100%");
+      expect(svg.getAttribute("preserveAspectRatio")).toBe("none");
+      expect([svg.style.position, svg.style.top, svg.style.left]).toEqual(["absolute", "0px", "0px"]);
       const [, badge, text] = Array.from(row.children) as HTMLElement[];
       expect(badge.style.position).toBe("relative");
       expect(text.style.position).toBe("relative");
       // (RulesBody sets words as spans: compare without whitespace.)
-      expect(norm(text.textContent)).toContain(norm(["Scry 1.", "Draw a card.", "You win."][i]));
+      expect(norm(text.textContent)).toContain(norm(PW_LINES[i]));
       // The row's card-space box, so the rainbow runs on from the card's.
       const r = expected[i];
       const px = (v: number) => Math.round(v * 100) / 100;
@@ -305,7 +312,7 @@ describe("foil finish — planeswalker ability stripes in the preview", () => {
       expect(id).toMatch(/^foil-[A-Za-z0-9_-]+-rows-\d+-lum$/);
       ids.add(id);
     });
-    expect(ids.size).toBe(3);
+    expect(ids.size).toBe(PW_LINES.length);
   });
 
   it("gives the editor-only empty planeswalker's striped rows the same sheen", () => {
@@ -337,7 +344,7 @@ describe("foil finish — planeswalker ability stripes in the preview", () => {
         const rows = Array.from(container.querySelectorAll("div")).filter((d) =>
           [stripeA, stripeB].includes(norm(d.style.background)),
         );
-        expect(rows, finish).toHaveLength(3);
+        expect(rows, finish).toHaveLength(staticInEditor ? 3 : PW_LINES.length);
         for (const row of rows) expect(row.style.position, finish).toBe("");
         cleanup();
       }

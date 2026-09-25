@@ -788,6 +788,16 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
         open: a translucent rules BACKDROP (`rules.backdropHex` — m15pw's
         non-planeswalker box, token / full-art scrims) hides the foil the
         same way.
+      - **Planeswalker row parity (pre-existing, preview only):** browser
+        ability rows are content-sized (flex `min-height: auto`), Yoga's stay
+        equal, so a walker with long or two-line abilities gets different
+        stripe heights in the preview than in the bake (measured up to ~60 HD
+        px); the preview's badge box is also 1.6× the text size tall against
+        the bake's 1.5×. Aligning the preview to the bake (`minHeight: 0` on
+        its rows, a 1.5× badge) moves no bake; the foil stripe sheen already
+        follows either row height. In the bake, Satori rounds each row's top
+        and height separately, so with 4 rows a seam can gain a 1 px gap or
+        overlap and the last row can overhang the box by 1 px (clipped).
       - **Alpha colourless** uses a flat grey master; printed Alpha colourless
         cards are artifacts on a dark warm-brown border with a light crackle
         text box (Sol Ring, Juggernaut) — an asset re-source.
