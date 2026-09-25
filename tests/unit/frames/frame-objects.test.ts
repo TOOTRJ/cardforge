@@ -42,6 +42,25 @@ describe("objectExists", () => {
   });
 });
 
+describe("objectExists — hung requests", () => {
+  it("times out a request that never answers and retries it", async () => {
+    let calls = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((_url: string, init: RequestInit) => {
+        calls += 1;
+        if (calls === 1) {
+          // Never resolves on its own — only the abort signal ends it.
+          return new Promise((_, reject) => init.signal?.addEventListener("abort", () => reject(new Error("aborted"))));
+        }
+        return Promise.resolve(head(200, 10));
+      }),
+    );
+    expect(await objectExists("https://b/x", 10, { baseDelayMs: 0, timeoutMs: 20 })).toBe(true);
+    expect(calls).toBe(2);
+  });
+});
+
 describe("mapLimit", () => {
   it("never runs more than `limit` at once and keeps result order", async () => {
     let inFlight = 0;

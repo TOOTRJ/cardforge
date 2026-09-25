@@ -118,10 +118,13 @@ export function parseEnvFile(file) {
  * first 400 as "missing" failed the Frames published gate on 3 of 196 objects
  * that were there, 2026-09-25.)
  */
-export async function objectExists(url, expectedBytes, { tries = 4, baseDelayMs = 500 } = {}) {
+export async function objectExists(url, expectedBytes, { tries = 4, baseDelayMs = 500, timeoutMs = 10_000 } = {}) {
   for (let attempt = 1; attempt <= tries; attempt += 1) {
     try {
-      const res = await fetch(url, { method: "HEAD", cache: "no-store" });
+      // A request that never answers is an attempt that failed: without the
+      // timeout one hung HEAD stalled the Frames published job until CI
+      // cancelled it after 5 minutes (2026-09-25).
+      const res = await fetch(url, { method: "HEAD", cache: "no-store", signal: AbortSignal.timeout(timeoutMs) });
       if (res.status === 404) return false;
       if (res.ok) {
         const header = res.headers.get("content-length");
