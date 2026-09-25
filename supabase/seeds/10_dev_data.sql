@@ -321,3 +321,21 @@ select
 from generate_series(1, 78) as g
 on conflict (id) do nothing;
 
+-- Signups with attribution, activity + milestones, and one trial for the
+-- Activation / Signups-by-source / Trial-engagement sections (0112/0113).
+insert into public.funnel_events (id, event, user_id, props, source, created_at)
+values
+  ('f3000000-0000-4000-a000-000000000001', 'signup', 'd0000000-0000-4000-a000-000000000003', '{"utmSource": "reddit", "utmMedium": "social", "utmCampaign": "proxy-guide"}', 'server', now() - interval '28 days'),
+  ('f3000000-0000-4000-a000-000000000002', 'signup', 'd0000000-0000-4000-a000-000000000004', '{"referrer": "google.com"}', 'server', now() - interval '20 days'),
+  ('f3000000-0000-4000-a000-000000000003', 'signup', 'd0000000-0000-4000-a000-000000000005', '{}', 'server', now() - interval '1 hour'),
+  ('f3000000-0000-4000-a000-000000000004', 'first_card_saved', 'd0000000-0000-4000-a000-000000000003', '{"visibility": "public"}', 'server', now() - interval '29 days'),
+  ('f3000000-0000-4000-a000-000000000005', 'first_card_saved', 'd0000000-0000-4000-a000-000000000004', '{"visibility": "public"}', 'server', now() - interval '19 days'),
+  ('f3000000-0000-4000-a000-000000000006', 'first_ai_generation', 'd0000000-0000-4000-a000-000000000004', '{"kind": "card"}', 'server', now() - interval '19 days'),
+  ('f3000000-0000-4000-a000-000000000007', 'first_download', 'd0000000-0000-4000-a000-000000000004', '{"format": "png"}', 'server', now() - interval '18 days'),
+  ('f3000000-0000-4000-a000-000000000008', 'trial_started', 'd0000000-0000-4000-a000-000000000004', '{"tier": "pro", "interval": "month", "subscriptionId": "sub_dev_artist_trial"}', 'server', now() - interval '12 days'),
+  ('f3000000-0000-4000-a000-000000000009', 'card_saved', 'd0000000-0000-4000-a000-000000000004', '{"visibility": "public"}', 'server', now() - interval '11 days'),
+  ('f3000000-0000-4000-a000-00000000000a', 'ai_generation', 'd0000000-0000-4000-a000-000000000004', '{"kind": "card"}', 'server', now() - interval '11 days'),
+  ('f3000000-0000-4000-a000-00000000000b', 'download', 'd0000000-0000-4000-a000-000000000004', '{"format": "pdf"}', 'server', now() - interval '9 days'),
+  ('f3000000-0000-4000-a000-00000000000c', 'trial_lapsed', 'd0000000-0000-4000-a000-000000000004', '{"tier": "pro", "subscriptionId": "sub_dev_artist_trial"}', 'server', now() - interval '5 days')
+on conflict (id) do nothing;
+

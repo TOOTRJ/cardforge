@@ -19,6 +19,8 @@ type AuthField = {
 type AuthFormProps<T extends Record<string, unknown>> = {
   action: (prev: ActionState<T>, formData: FormData) => Promise<ActionState<T>>;
   fields: AuthField[];
+  /** Extra hidden inputs (signup attribution). */
+  extraFields?: React.ReactNode;
   submitLabel: string;
   pendingLabel?: string;
   redirectTo?: string;
@@ -29,6 +31,7 @@ const initialState: ActionState<Record<string, unknown>> = { status: "idle" };
 export function AuthForm<T extends Record<string, unknown>>({
   action,
   fields,
+  extraFields,
   submitLabel,
   pendingLabel = "Working…",
   redirectTo,
@@ -68,6 +71,7 @@ export function AuthForm<T extends Record<string, unknown>>({
   return (
     <form action={formAction} className="flex flex-col gap-4" noValidate>
       {redirectTo ? <input type="hidden" name="redirectTo" value={redirectTo} /> : null}
+      {extraFields}
 
       {state.formError ? (
         <div

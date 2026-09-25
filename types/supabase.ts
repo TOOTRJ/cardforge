@@ -1730,6 +1730,20 @@ export type Database = {
         Args: { p_since: string };
         Returns: { event: string; n: number; users: number }[];
       };
+      // Migration 0113 — trial engagement.
+      admin_trial_engagement: {
+        Args: { p_since: string };
+        Returns: {
+          user_id: string;
+          username: string | null;
+          started_at: string;
+          outcome: string;
+          active_days: number;
+          saves: number;
+          generations: number;
+          downloads: number;
+        }[];
+      };
       // Migrations 0094/0095 — usernames + email preferences.
       email_recipients: {
         Args: { p_list: string; p_user_ids?: string[] | null };

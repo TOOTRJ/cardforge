@@ -1,5 +1,9 @@
 "use server";
 
+import { recordFunnelEvent } from "@/lib/analytics/funnel-server";
+import { ATTRIBUTION_FIELDS, sanitizeAttribution } from "@/lib/analytics/attribution";
+import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -175,7 +179,7 @@ export async function signupAction(
   // crafted Host header on the signup request.
   const emailRedirectTo = `${getSiteBaseUrl()}/auth/callback`;
 
-  const { error } = await supabase.auth.signUp({
+  const { data: signUpData, error } = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
     options: {
@@ -209,6 +213,24 @@ export async function signupAction(
       formError: isRateLimited(error) ? RATE_LIMITED_ERROR : GENERIC_SIGNUP_ERROR,
       values: { email: parsed.data.email, username: parsed.data.username },
     };
+  }
+
+  // Funnel: the signup with its first-touch attribution (hidden fields the
+  // form read from sessionStorage — referrer host + UTM, no cookie). Only
+  // for a REAL new user: an already-registered address gets an obfuscated
+  // user with no identities, and that must record nothing.
+  const newUser = signUpData.user;
+  if (newUser?.id && (newUser.identities?.length ?? 0) > 0 && isAdminConfigured()) {
+    await recordFunnelEvent(createAdminClient(), {
+      event: "signup",
+      userId: newUser.id,
+      props: sanitizeAttribution({
+        referrer: formData.get(ATTRIBUTION_FIELDS.referrer),
+        utmSource: formData.get(ATTRIBUTION_FIELDS.utmSource),
+        utmMedium: formData.get(ATTRIBUTION_FIELDS.utmMedium),
+        utmCampaign: formData.get(ATTRIBUTION_FIELDS.utmCampaign),
+      }),
+    });
   }
 
   // If email confirmation is OFF, signUp also signs the user in.

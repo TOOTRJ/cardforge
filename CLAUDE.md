@@ -296,8 +296,12 @@ Rules and gotchas:
   POST `/api/events` (allow-listed names in `lib/analytics/funnel-events.ts`,
   allow-listed scalar props, anonymous rows carry NO identifier); a new CTA
   passes `surface`, a new gate opens the upgrade modal (that IS the
-  `upgrade_modal_open` event); the admin Funnel panel reads
-  `admin_funnel_counts()`. The month's
+  `upgrade_modal_open` event); product activity goes through
+  `recordActivity()` (card_saved / ai_generation / download + the
+  once-per-user `first_*` milestones the prune never deletes); signup
+  attribution is first-touch sessionStorage → hidden fields → a `signup`
+  row for real new users only, never a cookie; the admin Funnel panel reads
+  `admin_funnel_counts()` + `admin_trial_engagement()`. The month's
   credit top-up is measured against EVERY refill row of the month
   (`refill:<user>:<period>%`), never the base row alone. The seeded e2e user
   is an ADMIN (unlocked) — billing specs sign in as the free `e2e_free` user

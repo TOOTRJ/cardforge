@@ -1,7 +1,14 @@
 import "server-only";
 
 import type { createAdminClient } from "@/lib/supabase/admin";
-import { isFunnelEvent, sanitizeFunnelProps, type FunnelEvent, type FunnelProps } from "./funnel-events";
+import {
+  FIRST_EVENT,
+  isFunnelEvent,
+  sanitizeFunnelProps,
+  type ActivityKind,
+  type FunnelEvent,
+  type FunnelProps,
+} from "./funnel-events";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
@@ -42,3 +49,32 @@ export async function recordFunnelEvent(
     return null;
   }
 }
+
+/**
+ * An activity row (card_saved / ai_generation / download) plus, the first
+ * time this user does it, the matching once-per-user milestone
+ * (first_card_saved / …). The milestone is what the Activation section and
+ * time-to-value read; the activity rows feed trial engagement. Best effort,
+ * like every funnel write.
+ */
+export async function recordActivity(
+  admin: AdminClient,
+  input: { userId: string; kind: ActivityKind; props?: FunnelProps | Record<string, unknown> },
+): Promise<void> {
+  await recordFunnelEvent(admin, { event: input.kind, userId: input.userId, props: input.props });
+  const first = FIRST_EVENT[input.kind];
+  try {
+    const { data } = await admin
+      .from("funnel_events")
+      .select("id")
+      .eq("user_id", input.userId)
+      .eq("event", first)
+      .limit(1)
+      .maybeSingle();
+    if (data) return;
+  } catch {
+    return;
+  }
+  await recordFunnelEvent(admin, { event: first, userId: input.userId, props: input.props });
+}
+

@@ -63,6 +63,16 @@ describe("POST /api/events", () => {
     expect(s.inserts[0]).toMatchObject({ event: "cta_click", user_id: "user-1", props: { pack: "mini", signedIn: true } });
   });
 
+  it("ignores known crawlers (isbot) — still 204, nothing recorded", async () => {
+    const res = await post({ event: "pricing_view", props: { surface: "pricing" } }, {
+      "user-agent": "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+    });
+    expect(res.status).toBe(204);
+    expect(s.inserts).toEqual([]);
+    await post({ event: "pricing_view" }, { "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Safari/537.36" });
+    expect(s.inserts).toHaveLength(1);
+  });
+
   it("ignores unknown or server-only event names, cross-site callers, bad JSON and oversized bodies — still 204", async () => {
     expect((await post({ event: "checkout_completed" })).status).toBe(204);
     expect((await post({ event: "nope" })).status).toBe(204);

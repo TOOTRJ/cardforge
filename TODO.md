@@ -49,13 +49,11 @@ decides each item; every one is a summary-and-questions round first.
 
 ### Pricing recommendations (audit §6, in order of expected impact)
 
-- [ ] **Funnel instrumentation** (recommendation 9 — do first). Pricing page
-      views, CTA clicks, checkout starts (`createCheckoutSessionAction`),
-      completions/expiries (webhook), trial starts and conversions
-      (`customer.subscription.*`, `invoice.paid`), pack purchases, modal
-      opens by reason, so every change below can be measured. Vercel
-      Analytics + GA4 are already mounted in `app/layout.tsx`; the money
-      steps happen server-side and are best recorded first-party.
+- [x] **Funnel instrumentation** (recommendation 9) — shipped in #367
+      (`funnel_events` 0112, admin Funnel panel) and extended with activation
+      milestones, signup attribution, trial engagement and bot filtering
+      (0113). Remaining ideas: W1/W4 cohort retention rollup; refund and
+      dispute events (`charge.refunded`, `charge.dispute.created`).
 - [ ] **Wider annual discount** (recommendation 4). Plus $60 → $48/yr, Pro
       $150 → $120/yr (33% instead of two months free). New annual prices on
       BOTH Stripe catalogs (lookup keys `plus_annual`/`pro_annual` move to

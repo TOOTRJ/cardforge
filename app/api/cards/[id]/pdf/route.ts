@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
+import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
+import { recordActivity } from "@/lib/analytics/funnel-server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { renderCardImage } from "@/lib/render/card-image";
 import {
@@ -173,6 +175,17 @@ export async function GET(
 
   // PDFs are entitlement-scoped downloads — never shared-cache them.
   const cacheControl = "private, no-store";
+
+  // Funnel: a download (and, once per user, first_download) — signed-in
+  // viewers only; anonymous downloads of public cards aren't attributed.
+  const viewer = await getCurrentUser();
+  if (viewer && isAdminConfigured()) {
+    await recordActivity(createAdminClient(), {
+      userId: viewer.id,
+      kind: "download",
+      props: { format: "pdf", layout },
+    });
+  }
 
   return new NextResponse(Buffer.from(pdfBytes), {
     status: 200,
