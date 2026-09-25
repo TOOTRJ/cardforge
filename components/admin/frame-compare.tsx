@@ -19,6 +19,7 @@ import {
   defaultSymbolRect,
   mergeProfile,
   resolveFrameProfile,
+  slotRect,
   type FrameProfileOverride,
   type SlotPath,
 } from "@/lib/cards/profile-override";
@@ -26,6 +27,7 @@ import {
   resetFrameProfileOverrideAction,
   saveFrameProfileOverrideAction,
 } from "@/lib/cards/frame-profile-override-actions";
+import { scanPlacement, type CardOrientation } from "@/lib/frames/scan-geometry";
 
 // ---------------------------------------------------------------------------
 // FrameCompare — overlays a real Scryfall scan on our rendered frame so
@@ -39,8 +41,14 @@ import {
 // Workflow (difference mode is the sharp tool): open a combo → difference
 // → edit layout → nudge until aligned pixels go dark → Save → verify box.
 //
-// The scan comes as a 745×1040 PNG (5:7, same aspect as our card box), so
-// stretching it over the preview container lines the two up 1:1.
+// The scan is Scryfall's 745×1040 PNG. That is 0.3% off the 5:7 card box,
+// which the overlay stretches away; the objective score does the same.
+// Landscape frames (battle, split) get the scan turned 90° — the file is
+// portrait with the card content on its side (lib/frames/scan-geometry.ts).
+//
+// State survives a save: the page keys this component on template/colour
+// only, and the draft re-syncs from the saved override when THAT changes
+// (a verify click or a reference pin never touches an in-progress draft).
 // ---------------------------------------------------------------------------
 
 type Mode = "overlay" | "side-by-side" | "difference";
@@ -70,6 +78,56 @@ type FrameCompareProps = {
 const CARD_WIDTH_PX = 372.5; // half of 745 — fits two side by side on laptops
 const ZOOMED_WIDTH_PX = 745;
 
+/** Rect fields the keyboard nudges touch. */
+type RectField = "topPct" | "leftPct" | "widthPct" | "heightPct";
+
+/** The scan, placed over (or beside) a card box of the given orientation:
+ *  a portrait file for portrait cards, turned 90° clockwise and re-centred
+ *  for landscape ones. */
+function ScanImage({
+  src,
+  alt,
+  width,
+  orientation,
+  mode,
+  opacity,
+}: {
+  src: string;
+  alt: string;
+  width: number;
+  orientation: CardOrientation;
+  mode: Mode;
+  /** 0–100, overlay mode only. */
+  opacity: number;
+}) {
+  const place = scanPlacement(width, orientation);
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt={alt}
+      data-testid="scan-image"
+      data-rotate={place.rotateDeg}
+      // Keep the overlay UNDER the editor hit-test layer (z-20) but above
+      // the isolated card.
+      className="pointer-events-none absolute z-10 rounded-[4.5%]"
+      style={{
+        width: place.imgWidth,
+        height: place.imgHeight,
+        left: place.imgLeft,
+        top: place.imgTop,
+        transform: place.rotateDeg ? `rotate(${place.rotateDeg}deg)` : undefined,
+        transformOrigin: "50% 50%",
+        ...(mode === "difference"
+          ? { mixBlendMode: "difference" as const }
+          : mode === "overlay"
+            ? { opacity: opacity / 100 }
+            : {}),
+      }}
+    />
+  );
+}
+
 export function FrameCompare({
   preview,
   scanUrl,
@@ -94,7 +152,18 @@ export function FrameCompare({
     overall: number;
     perSlot: Partial<Record<SlotPath, number>>;
   } | null>(null);
+  const [scoreStale, setScoreStale] = useState(false);
   const [scoring, setScoring] = useState(false);
+
+  // Re-sync the draft when the SAVED override changes (our own Save/Reset
+  // landing, or another admin's) — derived during render, so an unrelated
+  // refresh (verify click, reference pin) leaves an in-progress draft alone.
+  const savedKey = JSON.stringify(savedOverride ?? {});
+  const [prevSavedKey, setPrevSavedKey] = useState(savedKey);
+  if (savedKey !== prevSavedKey) {
+    setPrevSavedKey(savedKey);
+    setDraft(savedOverride ?? {});
+  }
 
   const runScore = async () => {
     if (!template || !colorKey) return;
@@ -106,8 +175,10 @@ export function FrameCompare({
         body: JSON.stringify({ template, color: colorKey }),
       });
       const body = await response.json().catch(() => null);
-      if (body?.ok) setScore({ overall: body.overall, perSlot: body.perSlot });
-      else toast.error(body?.error ?? "Scoring failed.");
+      if (body?.ok) {
+        setScore({ overall: body.overall, perSlot: body.perSlot });
+        setScoreStale(false);
+      } else toast.error(body?.error ?? "Scoring failed.");
     } catch {
       toast.error("Scoring failed.");
     } finally {
@@ -116,8 +187,8 @@ export function FrameCompare({
   };
 
   const dirty = useMemo(
-    () => JSON.stringify(draft) !== JSON.stringify(savedOverride ?? {}),
-    [draft, savedOverride],
+    () => JSON.stringify(draft) !== savedKey,
+    [draft, savedKey],
   );
 
   // What's on screen: code profile + draft (draft starts as the saved
@@ -133,27 +204,42 @@ export function FrameCompare({
         : null,
     [template, draft],
   );
+  // Orientation is code-owned (never overridden), so the base profile is
+  // the right source even while editing.
+  const orientation: CardOrientation =
+    (template ? resolveFrameProfile(template, null).orientation : undefined) ??
+    "portrait";
 
   const width = zoomed ? ZOOMED_WIDTH_PX : CARD_WIDTH_PX;
 
-  const onField = (path: SlotPath, field: EditorField, value: number) =>
-    setDraft((d) => writeSlotField(d, path, field, value));
-
-  // Selecting the cost element for the first time detaches the pips from the
-  // title band: seed the draft with the region they currently occupy so the
-  // fields are editable and both renderers switch to the absolute cost box.
-  const selectSlot = (path: SlotPath) => {
-    if (path === "costRect" && resolvedProfile && !resolvedProfile.costRect) {
-      setDraft((d) => ({ ...d, costRect: defaultCostRect(resolvedProfile) }));
+  // The cost pips and set symbol have no rect of their own until the admin
+  // moves them — they sit inline in the title/type band. The FIRST EDIT
+  // seeds the draft with the region they currently occupy so the write
+  // lands on a complete rect (a bare `{ topPct }` would break the renderer)
+  // and both renderers switch to the absolute box. Merely selecting the
+  // slot leaves the draft untouched — nothing to save, nothing to score.
+  const seedDetachedSlot = (
+    current: FrameProfileOverride,
+    path: SlotPath,
+  ): FrameProfileOverride => {
+    if (!resolvedProfile) return current;
+    if (path === "costRect" && !current.costRect && !resolvedProfile.costRect) {
+      return { ...current, costRect: defaultCostRect(resolvedProfile) };
     }
-    if (path === "symbolRect" && resolvedProfile && !resolvedProfile.symbolRect) {
-      setDraft((d) => ({
-        ...d,
-        symbolRect: defaultSymbolRect(resolvedProfile),
-      }));
+    if (
+      path === "symbolRect" &&
+      !current.symbolRect &&
+      !resolvedProfile.symbolRect
+    ) {
+      return { ...current, symbolRect: defaultSymbolRect(resolvedProfile) };
     }
-    setSelected(path);
+    return current;
   };
+
+  const onField = (path: SlotPath, field: EditorField, value: number) =>
+    setDraft((d) => writeSlotField(seedDetachedSlot(d, path), path, field, value));
+
+  const selectSlot = (path: SlotPath) => setSelected(path);
 
   const onScalar = (
     name: (typeof SCALAR_FIELDS)[number],
@@ -161,36 +247,45 @@ export function FrameCompare({
   ) => setDraft((d) => ({ ...d, [name]: Math.round(value * 10000) / 10000 }));
 
   // Global keyboard nudges while editing — a window listener so arrows work
-  // no matter what was last clicked (typing in inputs is exempt).
+  // no matter what was last clicked (typing in inputs is exempt, and so are
+  // browser/OS shortcuts carrying Cmd/Ctrl — Cmd+[ is "back").
   useEffect(() => {
     if (!editing || !selected || !resolvedProfile) return;
     const handler = (event: KeyboardEvent) => {
       const tag = (event.target as HTMLElement | null)?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
-      // Alt = coarse. (Shift can't be the modifier: { and } already
-      // require it, which would lock height nudges to the coarse step.)
+      if (event.metaKey || event.ctrlKey) return;
+      // Alt / Option = coarse. Physical keys (event.code) so Option+[ on
+      // macOS — which types a curly quote — still resizes.
       const step = event.altKey ? 0.5 : 0.1;
-      const nudge = (field: string, delta: number) =>
+      const rect = slotRect(resolvedProfile, selected);
+      if (!rect) return;
+      const nudge = (field: RectField, delta: number) =>
         onField(
           selected,
           { field, kind: "rect", step: 0.1 },
-          (readRect(resolvedProfile, selected, field) ?? 0) + delta,
+          rect[field] + delta,
         );
-      switch (event.key) {
+      switch (event.code) {
         case "ArrowUp": nudge("topPct", -step); break;
         case "ArrowDown": nudge("topPct", step); break;
         case "ArrowLeft": nudge("leftPct", -step); break;
         case "ArrowRight": nudge("leftPct", step); break;
-        case "[": nudge("widthPct", -step); break;
-        case "]": nudge("widthPct", step); break;
-        case "{": nudge("heightPct", -step); break;
-        case "}": nudge("heightPct", step); break;
+        case "BracketLeft":
+          nudge(event.shiftKey ? "heightPct" : "widthPct", -step);
+          break;
+        case "BracketRight":
+          nudge(event.shiftKey ? "heightPct" : "widthPct", step);
+          break;
         default: return;
       }
       event.preventDefault();
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
+    // onField is recreated every render but only closes over setDraft +
+    // resolvedProfile, which are in the list.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editing, selected, resolvedProfile]);
 
   const save = () =>
@@ -204,8 +299,11 @@ export function FrameCompare({
         toast.error(result.error);
         return;
       }
+      setScoreStale(true);
       toast.success(
-        `Layout saved — live everywhere now. ${result.staleCount} baked card${result.staleCount === 1 ? "" : "s"} marked stale (run the rebake sweep).`,
+        result.changed
+          ? `Layout saved — live everywhere now. ${result.staleCount} baked card${result.staleCount === 1 ? "" : "s"} marked stale (run the rebake sweep).`
+          : "Nothing to save — this template already uses the code defaults.",
       );
       router.refresh();
     });
@@ -220,28 +318,38 @@ export function FrameCompare({
       }
       setDraft({});
       setSelected(null);
-      toast.success(
-        `Reset to code defaults. ${result.staleCount} baked card${result.staleCount === 1 ? "" : "s"} marked stale.`,
-      );
+      if (result.changed) {
+        setScoreStale(true);
+        toast.success(
+          `Reset to code defaults. ${result.staleCount} baked card${result.staleCount === 1 ? "" : "s"} marked stale.`,
+        );
+      } else {
+        toast.message("Draft discarded — no saved layout existed for this template.");
+      }
       router.refresh();
     });
 
   // `isolate` caps CardPreview's internal z-indexed layers inside their own
   // stacking context — without it the card's text layers paint ABOVE the
-  // scan overlay regardless of DOM order.
+  // scan overlay regardless of DOM order. The scan and the editor overlay
+  // are SIBLINGS of the isolated card (not children), so the selected-slot
+  // outline paints above the scan instead of being dimmed or inverted by it.
   const ourCard = (
     <div style={{ width }} className="isolate relative shrink-0">
       <CardPreview {...editedPreview} staticInEditor />
-      {editing && resolvedProfile ? (
-        <SlotOverlay
-          profile={resolvedProfile}
-          selected={selected}
-          showAll={false}
-          onSelect={selectSlot}
-        />
-      ) : null}
     </div>
   );
+  const editorOverlay =
+    editing && resolvedProfile ? (
+      <SlotOverlay
+        profile={resolvedProfile}
+        selected={selected}
+        showAll={false}
+        onSelect={selectSlot}
+      />
+    ) : null;
+
+  const scanBox = scanPlacement(width, orientation);
 
   return (
     <div className="flex flex-col gap-4">
@@ -351,11 +459,16 @@ export function FrameCompare({
             render.
           </span>
         ) : null}
+        {orientation === "landscape" && scanUrl ? (
+          <span className="text-xs text-subtle">
+            Landscape frame — the scan is shown turned 90° to match.
+          </span>
+        ) : null}
       </SurfaceCard>
 
       <p className="text-xs leading-5 text-subtle">
         {editing
-          ? "Editing: click an element on the card (or a chip in the panel) to select it, then nudge with the arrow keys — 0.1% per press, Alt for 0.5%, [ ] adjusts width, { } height. Or type exact values in the panel."
+          ? "Editing: click an element on the card (or a chip in the panel) to select it, then nudge with the arrow keys — 0.1% per press, Alt / Option for 0.5%, [ ] adjusts width, { } height. Or type exact values in the panel."
           : MODE_HINTS[mode]}
       </p>
 
@@ -385,8 +498,9 @@ export function FrameCompare({
               ))}
           </div>
           <p className="text-[10px] leading-4 text-subtle">
-            Relative/regression signal — fonts and art legitimately differ, so
-            compare before/after a nudge, not against 0.
+            {scoreStale
+              ? "Scored BEFORE your last save — run it again to see the after."
+              : "Relative/regression signal — fonts and art legitimately differ, so compare before/after a nudge, not against 0."}
           </p>
         </SurfaceCard>
       ) : null}
@@ -407,20 +521,29 @@ export function FrameCompare({
               <figcaption className="text-[11px] uppercase tracking-wider text-subtle">
                 Our render
               </figcaption>
-              {ourCard}
+              <div className="relative" style={{ width }}>
+                {ourCard}
+                {editorOverlay}
+              </div>
             </figure>
             {scanUrl ? (
               <figure className="flex flex-col gap-2">
                 <figcaption className="text-[11px] uppercase tracking-wider text-subtle">
                   Scryfall scan
                 </figcaption>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={scanUrl}
-                  alt={scanAlt}
-                  style={{ width }}
-                  className="shrink-0 rounded-[4.5%]"
-                />
+                <div
+                  className="relative shrink-0 overflow-hidden"
+                  style={{ width: scanBox.boxWidth, height: scanBox.boxHeight }}
+                >
+                  <ScanImage
+                    src={scanUrl}
+                    alt={scanAlt}
+                    width={width}
+                    orientation={orientation}
+                    mode="side-by-side"
+                    opacity={100}
+                  />
+                </div>
               </figure>
             ) : null}
           </>
@@ -439,21 +562,15 @@ export function FrameCompare({
               style={{ width, isolation: "isolate" }}
             >
               {ourCard}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={scanUrl ?? undefined}
+              <ScanImage
+                src={scanUrl}
                 alt={scanAlt}
-                className={cn(
-                  "pointer-events-none absolute inset-0 h-full w-full rounded-[4.5%]",
-                  // Keep the overlay UNDER the editor hit-test layer (z-20).
-                  "z-10",
-                )}
-                style={
-                  mode === "difference"
-                    ? { mixBlendMode: "difference" }
-                    : { opacity: opacity / 100 }
-                }
+                width={width}
+                orientation={orientation}
+                mode={mode}
+                opacity={opacity}
               />
+              {editorOverlay}
             </div>
           </figure>
         )}
@@ -483,23 +600,4 @@ export function FrameCompare({
       </div>
     </div>
   );
-}
-
-// Local rect reader (the panel has its own richer one) — used by the
-// keyboard nudges, which only touch rect position/size fields.
-function readRect(
-  profile: ReturnType<typeof resolveFrameProfile>,
-  path: SlotPath,
-  field: string,
-): number | null {
-  const parts = path.split(".");
-  let node: unknown = profile;
-  for (const part of parts) {
-    node = (node as Record<string, unknown> | undefined)?.[part];
-  }
-  if (!node || typeof node !== "object") return null;
-  const slot = node as { rect?: Record<string, unknown> } & Record<string, unknown>;
-  const holder = typeof slot.topPct === "number" ? slot : slot.rect;
-  const value = holder?.[field];
-  return typeof value === "number" ? value : null;
 }

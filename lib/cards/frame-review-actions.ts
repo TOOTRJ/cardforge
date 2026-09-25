@@ -5,7 +5,8 @@ import { z } from "zod";
 import { getCurrentProfile } from "@/lib/supabase/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { FRAME_COLOR_KEYS } from "@/lib/cards/frame-reference-registry";
-import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
+import { validateReferenceForCombo } from "@/lib/cards/frame-reference-validation";
+import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 
 // ---------------------------------------------------------------------------
 // Admin mutation for the frame verification checklist. Checking a combo
@@ -23,6 +24,16 @@ const inputSchema = z.object({
 export type SetFrameReviewResult =
   | { ok: true }
   | { ok: false; error: string };
+
+/** Every page that renders the frame picker from the verified set. `/create`
+ *  is dynamic and reads the table per request; the guest creator is ISR
+ *  (revalidate 3600) and would otherwise show or hide a frame up to an hour
+ *  late. */
+function revalidateFramePickers(): void {
+  revalidatePath("/admin/frame-compare");
+  revalidatePath("/create-guest");
+  revalidatePath("/create");
+}
 
 export async function setFrameReviewAction(
   payload: unknown,
@@ -60,15 +71,17 @@ export async function setFrameReviewAction(
     return { ok: false, error: error.message };
   }
 
-  revalidatePath("/admin/frame-compare");
+  revalidateFramePickers();
   return { ok: true };
 }
 
 // ---------------------------------------------------------------------------
 // Admin-chosen reference card per combo (frame-compare tool). The chosen
 // printing replaces the registry default everywhere the tool shows or
-// renders the reference; null reverts to the default. Non-blocking
-// warnings surface scan-quality and era mismatches.
+// renders the reference; null reverts to the default. A printing whose
+// colour or kind doesn't match the row is refused (the compare view would
+// render and score a different frame than the checkbox publishes); scan
+// quality and era mismatches are non-blocking warnings.
 // ---------------------------------------------------------------------------
 
 const referenceSchema = z.object({
@@ -132,29 +145,18 @@ export async function setFrameReferenceAction(
     return { ok: false, error: "Scryfall card not found." };
   }
 
-  const warnings: string[] = [];
+  const check = validateReferenceForCombo(card, template, colorKey);
+  if (check.errors.length > 0) {
+    return { ok: false, error: check.errors.join(" ") };
+  }
+
+  const warnings = [...check.warnings];
   const quality = assessPrintImageQuality(card);
   if (quality !== "ok") {
-    warnings.push(
+    warnings.unshift(
       quality === "lowres"
         ? "This printing only has a low-resolution scan."
         : "Scryfall only has a placeholder image for this printing.",
-    );
-  }
-  // Era sanity: compare the card's frame code against the template's era.
-  const cardFrame = (card as { frame?: string }).frame;
-  const eraFrames: Partial<Record<string, string>> = {
-    classic: "1993",
-    retro: "1997",
-    modern: "2003",
-    m15: "2015",
-    showcase: "2015",
-  };
-  const { eraForTemplate } = await import("@/lib/creator/frame-picker");
-  const expected = eraFrames[eraForTemplate(template as FrameTemplate)];
-  if (cardFrame && expected && cardFrame !== expected) {
-    warnings.push(
-      `This printing uses the ${cardFrame} frame; the ${template} template emulates the ${expected} era.`,
     );
   }
 

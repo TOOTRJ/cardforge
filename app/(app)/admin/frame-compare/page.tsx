@@ -145,7 +145,7 @@ export default async function AdminFrameComparePage({
         <div className="mt-6 flex flex-col gap-4">
           <FrameGuide />
           <FrameCompare
-            key={`${template}/${color}/${JSON.stringify(overrides[template] ?? null)}`}
+            key={`${template}/${color}`}
             preview={preview}
             scanUrl={payload?.scanUrl ?? null}
             scanAlt={`Official scan of ${reference?.name ?? "reference card"}`}

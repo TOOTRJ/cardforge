@@ -107,3 +107,25 @@ describe("frame availability", () => {
     ).toBe(true);
   });
 });
+
+describe("sample previews for multi-panel frames", () => {
+  it("carry a second face so the inline page/half is exercised", () => {
+    for (const template of ["adventure", "flip", "split", "aftermath"] as const) {
+      const sample = sampleFramePreview(template, "w") as { backFace?: { title?: string } | null };
+      expect(sample.backFace?.title, template).toBeTruthy();
+    }
+    const plain = sampleFramePreview("m15", "w") as { backFace?: unknown };
+    expect(plain.backFace).toBeNull();
+  });
+
+  it("render split/aftermath fronts as spells, not 3/3 creatures", () => {
+    const split = sampleFramePreview("split", "u");
+    expect(split.cardType).toBe("instant");
+    expect(split.power).toBeNull();
+    const aftermath = sampleFramePreview("aftermath", "b");
+    expect(aftermath.cardType).toBe("sorcery");
+    const flip = sampleFramePreview("flip", "r");
+    expect(flip.cardType).toBe("creature");
+    expect(flip.power).toBe("3");
+  });
+});
