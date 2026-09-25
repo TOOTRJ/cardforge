@@ -28,6 +28,7 @@ import {
   saveFrameProfileOverrideAction,
 } from "@/lib/cards/frame-profile-override-actions";
 import { scanPlacement, type CardOrientation } from "@/lib/frames/scan-geometry";
+import type { SlotScore } from "@/lib/frames/align";
 
 // ---------------------------------------------------------------------------
 // FrameCompare — overlays a real Scryfall scan on our rendered frame so
@@ -150,7 +151,8 @@ export function FrameCompare({
   const [saving, startSaving] = useTransition();
   const [score, setScore] = useState<{
     overall: number;
-    perSlot: Partial<Record<SlotPath, number>>;
+    global: { dxPct: number; dyPct: number; confidence: number };
+    slots: Partial<Record<SlotPath, SlotScore>>;
   } | null>(null);
   const [scoreStale, setScoreStale] = useState(false);
   const [scoring, setScoring] = useState(false);
@@ -176,7 +178,7 @@ export function FrameCompare({
       });
       const body = await response.json().catch(() => null);
       if (body?.ok) {
-        setScore({ overall: body.overall, perSlot: body.perSlot });
+        setScore({ overall: body.overall, global: body.global, slots: body.slots ?? {} });
         setScoreStale(false);
       } else toast.error(body?.error ?? "Scoring failed.");
     } catch {
@@ -240,6 +242,26 @@ export function FrameCompare({
     setDraft((d) => writeSlotField(seedDetachedSlot(d, path), path, field, value));
 
   const selectSlot = (path: SlotPath) => setSelected(path);
+
+  // The score's suggested nudge, applied to the slot rect (turns editing on
+  // so the change is visible and saveable).
+  const applyNudge = (path: SlotPath, nudge: SlotScore) => {
+    if (!resolvedProfile) return;
+    const rect = slotRect(resolvedProfile, path);
+    if (!rect) return;
+    setEditing(true);
+    setSelected(path);
+    setDraft((d) => {
+      let next = seedDetachedSlot(d, path);
+      if (nudge.dxPct !== 0) {
+        next = writeSlotField(next, path, { field: "leftPct", kind: "rect", step: 0.1 }, rect.leftPct + nudge.dxPct);
+      }
+      if (nudge.dyPct !== 0) {
+        next = writeSlotField(next, path, { field: "topPct", kind: "rect", step: 0.1 }, rect.topPct + nudge.dyPct);
+      }
+      return next;
+    });
+  };
 
   const onScalar = (
     name: (typeof SCALAR_FIELDS)[number],
@@ -439,7 +461,7 @@ export function FrameCompare({
             title={
               dirty
                 ? "Save your layout edits first — the score always measures the SAVED layout, not the on-screen draft."
-                : "Pixel-diff our render against the real scan, per element. Run before and after an edit — the number should drop. Fonts/art always differ, so never expect 0."
+                : "Lines the scan up with our render, masks the art and the text, then scores the frame and each element (edge difference, lower is better) and suggests a nudge per element. Fonts differ, so text never reaches 0."
             }
             disabled={scoring || dirty}
             className="inline-flex items-center gap-1.5 rounded-md border border-border/50 px-2.5 py-1.5 text-xs font-medium text-muted transition-colors hover:text-foreground disabled:opacity-40"
@@ -473,34 +495,64 @@ export function FrameCompare({
       </p>
 
       {score ? (
-        <SurfaceCard className="flex flex-col gap-2 p-4">
+        <SurfaceCard className="flex flex-col gap-2 p-4" data-testid="score-panel">
           <div className="flex flex-wrap items-center gap-2">
             <span
               className="rounded-full border border-border/60 bg-elevated px-2 py-0.5 text-xs font-semibold text-foreground"
-              title="Mean pixel difference over the whole card"
+              title="Edge difference over the frame after lining the scan up — art, text and stat interiors are masked. Lower is better."
             >
-              overall {score.overall}%
+              frame {score.overall}%
             </span>
-            {Object.entries(score.perSlot)
-              .sort(([, a], [, b]) => (b ?? 0) - (a ?? 0))
-              .map(([path, value]) => (
-                <span
-                  key={path}
-                  className={cn(
-                    "rounded-full border px-2 py-0.5 text-[11px] font-medium",
-                    path === "artSlot"
-                      ? "border-border/40 text-subtle"
-                      : "border-border/60 text-muted",
-                  )}
-                >
-                  {path} {value}%{path === "artSlot" ? " (art differs)" : ""}
-                </span>
-              ))}
+            <span
+              className="rounded-full border border-border/40 px-2 py-0.5 text-[11px] text-subtle"
+              title="How far the scan sat from our render before registration (already compensated in every number here). Confidence is the projection correlation, 1 = same structure."
+            >
+              scan offset {formatPct(score.global.dxPct)} / {formatPct(score.global.dyPct)} · confidence {score.global.confidence}
+            </span>
           </div>
+          <ul className="flex flex-col gap-1">
+            {Object.entries(score.slots)
+              .sort(([, a], [, b]) => (b?.score ?? 0) - (a?.score ?? 0))
+              .map(([path, slot]) => {
+                if (!slot) return null;
+                const isArt = path === "artSlot" || path.endsWith(".artSlot");
+                const hasNudge = !isArt && (slot.dxPct !== 0 || slot.dyPct !== 0) && slot.best < slot.score;
+                return (
+                  <li
+                    key={path}
+                    className={cn(
+                      "flex flex-wrap items-center gap-2 text-[11px]",
+                      isArt ? "text-subtle" : "text-muted",
+                    )}
+                  >
+                    <span className="w-36 truncate font-medium">{path}</span>
+                    <span className="tabular-nums">{slot.score}%</span>
+                    {isArt ? <span>(art differs)</span> : null}
+                    {hasNudge ? (
+                      <>
+                        <span className="tabular-nums text-subtle">
+                          → {formatPct(slot.dxPct)} / {formatPct(slot.dyPct)} would score {slot.best}%
+                        </span>
+                        {template ? (
+                          <button
+                            type="button"
+                            onClick={() => applyNudge(path as SlotPath, slot)}
+                            className="rounded-md border border-sky-400/50 px-1.5 py-0.5 text-[10px] font-medium text-sky-200 transition-colors hover:bg-sky-400/15"
+                            title="Move this element by the suggested amount (turns on Edit layout; Save to publish)."
+                          >
+                            Apply nudge
+                          </button>
+                        ) : null}
+                      </>
+                    ) : null}
+                  </li>
+                );
+              })}
+          </ul>
           <p className="text-[10px] leading-4 text-subtle">
             {scoreStale
               ? "Scored BEFORE your last save — run it again to see the after."
-              : "Relative/regression signal — fonts and art legitimately differ, so compare before/after a nudge, not against 0."}
+              : "Numbers are edge differences after the scan is lined up (lower is better). Text slots never reach 0 — fonts differ — so trust the nudge, not the absolute value."}
           </p>
         </SurfaceCard>
       ) : null}
@@ -600,4 +652,10 @@ export function FrameCompare({
       </div>
     </div>
   );
+}
+
+/** "+0.3%" / "−0.2%" / "0%" for offsets in card percent. */
+function formatPct(value: number): string {
+  if (value === 0) return "0%";
+  return `${value > 0 ? "+" : "−"}${Math.abs(value)}%`;
 }
