@@ -22,7 +22,7 @@ import { ROW_MAX } from "@/components/gallery/card-row";
 import { countPublicDecks } from "@/lib/decks/queries";
 import { listArticles } from "@/lib/content/articles";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { FRAME_TEMPLATE_VALUES } from "@/types/card";
+import { getVerifiedFrameKeysPublic } from "@/lib/cards/frame-reviews";
 
 // Self-canonical for the homepage. Other metadata (title, OG, etc.) is
 // inherited from the root layout; this just pins the canonical to "/" so it
@@ -279,10 +279,17 @@ function LatestGuides() {
 }
 
 async function HomeStats() {
-  const [cardCount, deckCount] = await Promise.all([
+  const [cardCount, deckCount, verifiedFrameKeys] = await Promise.all([
     countPublicCards(),
     countPublicDecks(),
+    getVerifiedFrameKeysPublic(),
   ]);
+  // Frames the creator actually offers today — the verified set, counted by
+  // template. (The catalogue on disk is bigger; only published frames are
+  // an honest number.)
+  const frameStyles = new Set(
+    verifiedFrameKeys.map((key) => key.split("/")[0]),
+  ).size;
   // Friendly rounding: 1,234 → "1.2K+". Below 100 the raw number reads
   // more honest than a padded "+".
   const cards =
@@ -297,11 +304,10 @@ async function HomeStats() {
       <StatBadge value={cards} label="Cards forged" />
       {showDecks ? (
         <StatBadge value={`${deckCount}`} label="Decks built" />
+      ) : frameStyles > 0 ? (
+        <StatBadge value={`${frameStyles}`} label="Frame styles" />
       ) : (
-        <StatBadge
-          value={`${FRAME_TEMPLATE_VALUES.length}+`}
-          label="Frame styles"
-        />
+        <StatBadge value="Free" label="Every frame" />
       )}
       <StatBadge value="6" label="Mana identities" />
       <StatBadge value="∞" label="Possibilities" />

@@ -114,7 +114,7 @@ Open decisions are marked **[decide]**; none blocks its phase.
       previews/local/e2e render like production (dev branch has 0 rows,
       `supabase/seed.sql` seeds `frame_reviews` only). **[decide]** fold vs
       seed — fold recommended since 0.9/4.x re-derive geometry.
-- [ ] **0.13 [P1] Server-side verification gate** — reject unverified
+- [x] (fixed 2026-09-25 — feat/frame-gate) **0.13 [P1] Server-side verification gate** — reject unverified
       (template, colour) in `createCardAction`/`updateCardAction`
       (`lib/cards/actions.ts`:193) + `superRefine` in
       `lib/validation/card.ts`:217; frame chips disable / auto-swap colour when
@@ -135,7 +135,7 @@ Open decisions are marked **[decide]**; none blocks its phase.
       marking incl. NULL-template rows, the score route,
       `buildFrameComparePayload` with a second face, per-kind sample content;
       e2e for verify toggle + pin.
-- [ ] **0.19 [P1] Honest marketing** — derive the homepage "frame styles" stat
+- [x] (fixed 2026-09-25 — feat/frame-gate) **0.19 [P1] Honest marketing** — derive the homepage "frame styles" stat
       from the verified set (`app/(marketing)/page.tsx`:302), fix `README.md`:6
       "three decades", fix the Card Conjurer comparison row claiming split/
       adventure (`content/articles/card-conjurer-alternative.mdx`:65).

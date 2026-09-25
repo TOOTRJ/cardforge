@@ -117,9 +117,13 @@ import {
   showsLoyalty,
   showsPowerToughness,
 } from "@/lib/cards/card-display";
-import { pickFrameColorKey } from "@/components/cards/frame-layer";
-import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
+import {
+  colorIdentityForKey,
+  colorWord,
+  pickFrameColorKey,
+} from "@/components/cards/frame-layer";
 import { eraForTemplate, standardFrameFor } from "@/lib/creator/frame-picker";
+import { describeFrame, resolvePublishedFrame } from "@/lib/creator/frame-resolve";
 import {
   loyaltyFromRulesText,
   sagaFromRulesText,
@@ -131,15 +135,14 @@ import { cardToPreviewData } from "@/lib/cards/preview-data";
 import type { FrameProfileOverridesMap } from "@/lib/cards/profile-override";
 import {
   basicLandSeedForColorKey,
-  firstAvailableFrame,
   isSeedableLandIdentity,
   kindFromCard,
   shouldClearBasicSeedForTitle,
   toBasicLandIdentity,
   toNonbasicLandIdentity,
   planKindChange,
-  templateHasAvailableColor,
   type CardKind,
+  type FrameColorKey,
   type KindChangePatch,
   type KindChangePlan,
 } from "@/lib/creator/card-kinds";
@@ -771,25 +774,42 @@ export function CardCreatorForm({
     // no published color, fall back to the kind's first published frame; if
     // the whole kind is unpublished (programmatic paths — the chips are
     // already disabled in the UI), set the type but keep the current frame.
-    const verified = new Set(verifiedFrameKeys);
-    let template = patch.template;
-    if (!templateHasAvailableColor(template, verified)) {
-      const alt = firstAvailableFrame(
-        kindFromCard(patch.card_type, patch.template),
-        verified,
-      );
-      if (alt) {
-        template = alt.template;
-      } else {
-        setValue("card_type", patch.card_type, { shouldDirty: true });
-        if (patch.has_back_face) {
-          setValue("has_back_face", true, { shouldDirty: true });
-        }
-        toast.info(
-          "That card type's frames aren't published yet — keeping the current frame.",
-        );
-        return;
+    // Resolve against the CURRENT colour (the user's pick is a fact): the
+    // planned template in this colour, else another published frame of the
+    // kind in this colour, else the planned template in a colour it has —
+    // and say which of those happened. Never an unpublished pair.
+    const currentColorKey = pickFrameColorKey(
+      getValues("color_identity"),
+    ) as FrameColorKey;
+    const resolution = resolvePublishedFrame({
+      kind: kindFromCard(patch.card_type, patch.template),
+      candidates: [patch.template],
+      colorKey: currentColorKey,
+      verifiedKeys: new Set(verifiedFrameKeys),
+      prefer: "frame",
+    });
+    if (resolution.status === "unavailable") {
+      setValue("card_type", patch.card_type, { shouldDirty: true });
+      if (patch.has_back_face) {
+        setValue("has_back_face", true, { shouldDirty: true });
       }
+      toast.info(
+        "That card type's frames aren't published yet — keeping the current frame.",
+      );
+      return;
+    }
+    const template = resolution.template;
+    if (resolution.status === "frame-switched") {
+      toast.info(
+        `${describeFrame(resolution.fromTemplate)} isn't available in ${colorWord(currentColorKey)} yet — using ${describeFrame(template)}.`,
+      );
+    } else if (resolution.status === "colour-switched") {
+      setValue("color_identity", [colorIdentityForKey(resolution.colorKey)], {
+        shouldDirty: true,
+      });
+      toast.info(
+        `${describeFrame(template)} isn't available in ${colorWord(resolution.fromColorKey)} yet — switched the colour to ${colorWord(resolution.colorKey)}.`,
+      );
     }
     // Snapshot BEFORE the writes — the land auto-identity below must judge
     // the state the user is leaving, not the one we're creating.
@@ -1042,29 +1062,60 @@ export function CardCreatorForm({
       applyKindProgrammatic(importedKind);
     }
 
-    // Adopt THIS PRINTING's border era (always — the import overrides the
-    // whole card, frame included; the dialog says so). Layout kinds carry no
-    // frame_template (their template is fixed by the kind above). When the
-    // suggested skin (snow/devoid) isn't published for the imported color,
-    // fall back to the era's standard frame, which is always available.
-    if (patch.frame_template) {
+    // Adopt THIS PRINTING's frame (the mapper's era/skin template; layout
+    // kinds already landed on their template above) — resolved against the
+    // IMPORTED colour, which is a fact about the card and never changes:
+    // the printing's frame, else its era's standard, else the M15 standard,
+    // else any published frame of the kind in that colour. A substitution is
+    // announced, never silent. (Phase 1 replaces the toast with the
+    // exact/nearest chooser.)
+    {
       const importedColors = patch.color_identity
         ? (Array.from(patch.color_identity) as ColorIdentity[])
         : getValues("color_identity");
-      const colorKey = pickFrameColorKey(importedColors);
-      const verified = new Set(verifiedFrameKeys);
-      const template = isFrameComboAvailable(
-        patch.frame_template,
+      const colorKey = pickFrameColorKey(importedColors) as FrameColorKey;
+      const cardType =
+        (patch.card_type as CardType) || getValues("card_type") || "creature";
+      const wanted =
+        patch.frame_template ??
+        ((getValues("frame_style.template") as FrameTemplate | undefined) ??
+          DEFAULT_FRAME_TEMPLATE);
+      const candidates = Array.from(
+        new Set(
+          [
+            wanted,
+            standardFrameFor(eraForTemplate(wanted), cardType),
+            standardFrameFor("m15", cardType),
+          ].filter((t): t is FrameTemplate => Boolean(t)),
+        ),
+      );
+      const resolution = resolvePublishedFrame({
+        kind: importedKind ?? kindFromCard(cardType, undefined),
+        candidates,
         colorKey,
-        verified,
-      )
-        ? patch.frame_template
-        : standardFrameFor(
-            eraForTemplate(patch.frame_template),
-            (patch.card_type as CardType) || getValues("card_type") || "creature",
+        verifiedKeys: new Set(verifiedFrameKeys),
+        prefer: "frame",
+      });
+      if (
+        resolution.status === "exact" ||
+        resolution.status === "frame-switched"
+      ) {
+        if (getValues("frame_style.template") !== resolution.template) {
+          setValue("frame_style.template", resolution.template, {
+            shouldDirty: true,
+          });
+        }
+        if (resolution.status === "frame-switched") {
+          toast.info(
+            `This printing's ${describeFrame(resolution.fromTemplate)} frame isn't available in ${colorWord(colorKey)} yet — using ${describeFrame(resolution.template)}.`,
           );
-      if (template) {
-        setValue("frame_style.template", template, { shouldDirty: true });
+        }
+      } else {
+        // Never recolour an imported card; keep whatever frame the kind
+        // change landed on and say why.
+        toast.info(
+          `${describeFrame(wanted)} isn't available in ${colorWord(colorKey)} yet — kept the current frame.`,
+        );
       }
     }
 
@@ -1319,9 +1370,29 @@ export function CardCreatorForm({
     if (fill.card_type && !isRevise) {
       applyKindProgrammatic(kindFromCard(fill.card_type, undefined));
       if (fill.frame_template) {
-        setValue("frame_style.template", fill.frame_template as FrameTemplate, {
-          shouldDirty: true,
+        const colorKey = pickFrameColorKey(
+          getValues("color_identity"),
+        ) as FrameColorKey;
+        const resolution = resolvePublishedFrame({
+          kind: kindFromCard(fill.card_type, undefined),
+          candidates: [fill.frame_template as FrameTemplate],
+          colorKey,
+          verifiedKeys: new Set(verifiedFrameKeys),
+          prefer: "frame",
         });
+        if (
+          resolution.status === "exact" ||
+          resolution.status === "frame-switched"
+        ) {
+          setValue("frame_style.template", resolution.template, {
+            shouldDirty: true,
+          });
+          if (resolution.status === "frame-switched") {
+            toast.info(
+              `${describeFrame(resolution.fromTemplate)} isn't available in ${colorWord(colorKey)} yet — using ${describeFrame(resolution.template)}.`,
+            );
+          }
+        }
       }
       setValue("supertype", fill.supertype ?? "", { shouldDirty: true });
       setValue("subtypes_text", (fill.subtypes ?? []).join(", "), {

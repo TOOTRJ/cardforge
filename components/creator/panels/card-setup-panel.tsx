@@ -16,13 +16,19 @@
 import { useMemo, useState } from "react";
 import { Controller, useFormContext } from "react-hook-form";
 import { ChevronDown } from "lucide-react";
+import { toast } from "sonner";
 import { ChipGroup, type ChipOption } from "@/components/ui/chip-group";
 import {
   LandModeChips,
   landModeLabel,
   type LandMode,
 } from "@/components/creator/panels/land-mode-panel";
-import { pickFrameColorKey } from "@/components/cards/frame-layer";
+import {
+  colorIdentityForKey,
+  colorWord,
+  pickFrameColorKey,
+} from "@/components/cards/frame-layer";
+import { describeFrame, resolvePublishedFrame } from "@/lib/creator/frame-resolve";
 import {
   FrameThumb,
   SoonBadge,
@@ -35,6 +41,7 @@ import {
   kindHasAvailableFrame,
   type CardKind,
   type FrameChoice,
+  type FrameColorKey,
 } from "@/lib/creator/card-kinds";
 import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
 import {
@@ -160,7 +167,7 @@ export function CardSetupPanel({
   landBasicDisabledReason = null,
   onLandModeChange,
 }: CardSetupPanelProps) {
-  const { control } = useFormContext<FormValues>();
+  const { control, setValue } = useFormContext<FormValues>();
   const verifiedKeys = useMemo(
     () => new Set(verifiedFrameKeys),
     [verifiedFrameKeys],
@@ -276,6 +283,35 @@ export function CardSetupPanel({
           // silently swapping it out from under the card.
           const isLegacyPin = !choices.some((c) => c.template === normalized);
 
+          // Picking a tile: the FRAME is what the user meant, so when it
+          // isn't published in the current colour the colour follows the
+          // frame (to its first published colour) and a toast says so. The
+          // form never holds an unpublished (frame, colour) pair — the
+          // server refuses to save one.
+          const pickFrame = (next: FrameTemplate) => {
+            const resolution = resolvePublishedFrame({
+              kind,
+              candidates: [next],
+              colorKey: colorKey as FrameColorKey,
+              verifiedKeys,
+              prefer: "colour",
+            });
+            if (resolution.status === "unavailable") return;
+            field.onChange(resolution.template);
+            if (resolution.status === "colour-switched") {
+              const identity = colorIdentityForKey(resolution.colorKey);
+              setValue("color_identity", [identity], { shouldDirty: true });
+              onColorIdentityChange?.([identity]);
+              toast.info(
+                `${describeFrame(next)} isn't verified in ${colorWord(resolution.fromColorKey)} yet — switched the colour to ${colorWord(resolution.colorKey)}.`,
+              );
+            } else if (resolution.status === "frame-switched") {
+              toast.info(
+                `${describeFrame(next)} isn't verified yet — using ${describeFrame(resolution.template)}.`,
+              );
+            }
+          };
+
           const toOption = (
             choice: FrameChoice,
           ): ChipOption<FrameTemplate> => {
@@ -299,7 +335,7 @@ export function CardSetupPanel({
               description: !available
                 ? "Awaiting verification"
                 : !colorAvailable
-                  ? "Not verified in this color yet — pick another color below"
+                  ? `Not verified in ${colorWord(colorKey)} yet — picking it switches to ${colorWord(choice.availableColorKeys[0])}`
                   : choice.group === "skin"
                     ? "Same layout, different dress"
                     : undefined,
@@ -363,7 +399,7 @@ export function CardSetupPanel({
                         layout="grid-2"
                         size="md"
                         value={base}
-                        onChange={field.onChange}
+                        onChange={pickFrame}
                         options={byEra.get(era)!.map(toOption)}
                       />
                     </div>
@@ -411,7 +447,7 @@ export function CardSetupPanel({
                           layout="grid-2"
                           size="md"
                           value={normalized}
-                          onChange={field.onChange}
+                          onChange={pickFrame}
                           options={[
                             standardOption,
                             ...variationChoices.map(toOption),

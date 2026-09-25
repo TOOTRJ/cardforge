@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { frameGateError } from "@/lib/cards/frame-availability";
+import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
 import { recordActivity } from "@/lib/analytics/funnel-server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { after } from "next/server";
@@ -210,6 +212,21 @@ export async function createCardAction(
   const supabase = await createClient();
 
   const data = parsed.data;
+
+  // Verification gate — the server twin of the picker's: a (template,
+  // colour) pair saves only when the admin has published it in
+  // /admin/frame-compare. The client hides unpublished chips, but a stale
+  // page or a crafted payload must not get past.
+  {
+    const gateError = frameGateError(
+      data.frame_style?.template,
+      data.color_identity,
+      new Set(await getVerifiedFrameKeys()),
+    );
+    if (gateError) {
+      return { ok: false, fieldErrors: { frame_style: gateError } };
+    }
+  }
 
   // Entitlement gates. Premium frame/finish (our own tech only — never WotC
   // trade dress) requires a paid plan; saved-card capacity is tier-based.
@@ -470,6 +487,31 @@ export async function updateCardAction(
         ok: false,
         fieldErrors: { back_card_id: "That back-face card couldn't be found." },
       };
+    }
+  }
+
+  // Verification gate, only when the patch CHANGES the frame or the colour:
+  // a card saved on a since-withdrawn frame (the picker's "legacy pin")
+  // must stay editable as long as its frame/colour are left alone.
+  {
+    const existingTemplate =
+      (existing.frame_style as { template?: string } | null)?.template;
+    const nextTemplate = data.frame_style?.template;
+    const templateChanged =
+      nextTemplate !== undefined && nextTemplate !== existingTemplate;
+    const colorChanged =
+      data.color_identity !== undefined &&
+      JSON.stringify([...data.color_identity].sort()) !==
+        JSON.stringify([...(existing.color_identity ?? [])].sort());
+    if (templateChanged || colorChanged) {
+      const gateError = frameGateError(
+        nextTemplate ?? existingTemplate,
+        data.color_identity ?? existing.color_identity,
+        new Set(await getVerifiedFrameKeys()),
+      );
+      if (gateError) {
+        return { ok: false, fieldErrors: { frame_style: gateError } };
+      }
     }
   }
 
