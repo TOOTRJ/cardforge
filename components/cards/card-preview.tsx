@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type CSSProperties, type ReactNode } from "react";
+import { frameUrl } from "@/lib/frames/frame-url";
 import { RotateCw } from "lucide-react";
 import { cn, clamp } from "@/lib/utils";
 import { isBillingEnabled } from "@/lib/billing/flags";
@@ -1149,13 +1150,13 @@ function StatOverlay({
         // same template to the PNG master (lib/render/card-frames.ts).
         <picture>
           <source
-            srcSet={webpVariant(
-              resolveColorAsset(slot.plateAssetPathTemplate, colorKey),
+            srcSet={frameUrl(
+              webpVariant(resolveColorAsset(slot.plateAssetPathTemplate, colorKey)),
             )}
             type="image/webp"
           />
           <img
-            src={resolveColorAsset(slot.plateAssetPathTemplate, colorKey)}
+            src={frameUrl(resolveColorAsset(slot.plateAssetPathTemplate, colorKey))}
             alt=""
             aria-hidden
             className="absolute inset-0 h-full w-full object-fill"
@@ -1804,11 +1805,11 @@ function LoyaltyRows({
               // fallback (the bake reads the PNG master directly).
               <picture>
                 <source
-                  srcSet={webpVariant(loyaltyBadgeAssetFor(ab.cost))}
+                  srcSet={frameUrl(webpVariant(loyaltyBadgeAssetFor(ab.cost)))}
                   type="image/webp"
                 />
                 <img
-                  src={loyaltyBadgeAssetFor(ab.cost)}
+                  src={frameUrl(loyaltyBadgeAssetFor(ab.cost))}
                   alt=""
                   aria-hidden
                   style={{

@@ -2,9 +2,11 @@ import "server-only";
 import { DEFAULT_FRAME_TEMPLATE } from "@/types/card";
 import { FRAME_COLOR_KEYS } from "@/lib/cards/frame-reference-registry";
 
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { getSiteBaseUrl } from "@/lib/site-url";
+import { frameManifestEntry, frameUrl } from "@/lib/frames/frame-url";
 
 // ---------------------------------------------------------------------------
 // Server-side loader for the frame PNGs in public/frames/<template>/<color>.png,
@@ -46,6 +48,23 @@ import { getSiteBaseUrl } from "@/lib/site-url";
 // Bypass for Automation) so a preview can fetch its OWN frames — without
 // it a preview falls through to production's copy, which only matters for
 // a PR that adds or changes a frame PNG.
+//
+// THIRD SOURCE — the `frames` storage bucket (frames plan 4.2). A path
+// listed in lib/frames/frame-manifest.json is not in git at all: it is
+// fetched from its content-addressed bucket URL (lib/frames/frame-url.ts),
+// checked against the manifest's sha256 prefix, and cached under that URL.
+// A replaced frame is a new URL, so a long-lived instance never keeps
+// serving the old master (the old Map keyed on the path did, until a
+// restart). The cache is an LRU bounded by size: Card Conjurer masters are
+// ~2 MB each (~2.7 MB as data URLs), and an unbounded Map of every frame an
+// instance ever rendered would eventually hold hundreds of MB.
+//
+// A bucket frame that can't be loaded is a FAULT, never an "absent optional
+// asset" (CI's frames check guarantees production has every manifest
+// object): the failure is logged, NOT cached (the next render retries), and
+// the render throws FrameAssetUnavailableError instead of baking a frameless
+// card or another template's frame — a bake/sweep then records a failure
+// rather than storing a wrong image stamped current.
 // ---------------------------------------------------------------------------
 
 
@@ -53,9 +72,61 @@ const FETCH_TIMEOUT_MS = 10_000;
 /** A frame master is ~1–3 MB; refuse anything absurd from a misconfigured origin. */
 const MAX_ASSET_BYTES = 16 * 1024 * 1024;
 
-/** public-relative path ("frames/m15/w.png") → data URL, or null when the
- *  asset does not exist at any source. */
-const CACHE = new Map<string, string | null>();
+/** Cache budget in data-URL characters (≈ bytes) — ~70 Card Conjurer
+ *  masters, or every MSE frame a typical instance touches. */
+const MAX_CACHE_CHARS = 192 * 1024 * 1024;
+
+/**
+ * cache key → data URL, or null when the asset does not exist at any
+ * source. The key is the public-relative path ("frames/m15/w.png") for a
+ * file still in git, or the content-addressed bucket URL for a manifest
+ * entry. LRU: a read refreshes recency; an insert evicts the least recent
+ * entries once the budget is exceeded (misses cost nothing and are kept).
+ */
+class AssetCache {
+  private map = new Map<string, string | null>();
+  private chars = 0;
+  constructor(private readonly budget: number) {}
+  get(key: string): string | null | undefined {
+    if (!this.map.has(key)) return undefined;
+    const value = this.map.get(key) as string | null;
+    this.map.delete(key);
+    this.map.set(key, value);
+    return value;
+  }
+  set(key: string, value: string | null): void {
+    const previous = this.map.get(key);
+    if (typeof previous === "string") this.chars -= previous.length;
+    this.map.delete(key);
+    this.map.set(key, value);
+    if (typeof value === "string") this.chars += value.length;
+    for (const [oldKey, oldValue] of this.map) {
+      if (this.chars <= this.budget || oldKey === key) break;
+      this.map.delete(oldKey);
+      if (typeof oldValue === "string") this.chars -= oldValue.length;
+    }
+  }
+  clear(): void {
+    this.map.clear();
+    this.chars = 0;
+  }
+  get size(): number {
+    return this.map.size;
+  }
+  get usedChars(): number {
+    return this.chars;
+  }
+}
+
+const CACHE = new AssetCache(MAX_CACHE_CHARS);
+
+/** A frame asset listed in the manifest could not be loaded (see header). */
+export class FrameAssetUnavailableError extends Error {
+  constructor(readonly paths: string[]) {
+    super(`Frame asset(s) unavailable from the frames bucket: ${paths.join(", ")}`);
+    this.name = "FrameAssetUnavailableError";
+  }
+}
 
 export const TRANSPARENT_PIXEL =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M8AAAMBAQDJ/pLvAAAAAElFTkSuQmCC";
@@ -140,6 +211,33 @@ async function fetchFromOrigin(origin: string, rel: string): Promise<Buffer | nu
   }
 }
 
+/** Fetch a manifest asset from its bucket URL and check the bytes against
+ *  the manifest's full sha256 — the bake must draw exactly what was
+ *  published. Every failure is logged with its reason. */
+async function fetchFromBucket(url: string, expectedSha256: string): Promise<string | null> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  const fail = (reason: string) => {
+    console.error(`[card-frames] bucket frame ${url} unavailable: ${reason}`);
+    return null;
+  };
+  try {
+    const response = await fetch(url, { signal: controller.signal, cache: "no-store" });
+    if (!response.ok) return fail(`HTTP ${response.status}`);
+    const type = response.headers.get("content-type") ?? "";
+    if (!type.startsWith("image/")) return fail(`content-type ${type || "missing"}`);
+    const bytes = Buffer.from(await response.arrayBuffer());
+    if (bytes.byteLength === 0 || bytes.byteLength > MAX_ASSET_BYTES) return fail(`${bytes.byteLength} bytes`);
+    const actual = createHash("sha256").update(bytes).digest("hex");
+    if (actual !== expectedSha256) return fail(`sha256 ${actual.slice(0, 12)}… ≠ manifest ${expectedSha256.slice(0, 12)}…`);
+    return toDataUrl(bytes);
+  } catch (err) {
+    return fail(controller.signal.aborted ? `timed out after ${FETCH_TIMEOUT_MS} ms` : err instanceof Error ? err.message : "fetch failed");
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function fetchRemote(rel: string): Promise<string | null> {
   for (const origin of assetOrigins()) {
     const bytes = await fetchFromOrigin(origin, rel);
@@ -152,14 +250,27 @@ async function fetchRemote(rel: string): Promise<string | null> {
 // Cache access
 // ---------------------------------------------------------------------------
 
-/** Async load: cache → disk → CDN. Memoizes the outcome (including a miss,
- *  so an absent optional asset isn't re-fetched on every render). */
+/** Async load: cache → (bucket for a manifest entry | disk → CDN).
+ *  A git/CDN outcome is memoized, including a miss (an absent optional
+ *  asset isn't re-fetched on every render); a bucket FAILURE is not (see
+ *  the header — it is a fault and the next render retries). */
 async function loadAsync(rel: string): Promise<string | null> {
-  const cached = CACHE.get(rel);
+  const entry = frameManifestEntry(rel);
+  const key = entry ? frameUrl(rel) : rel;
+  const cached = CACHE.get(key);
   if (cached !== undefined) return cached;
+  if (entry) {
+    if (!key.startsWith("http")) {
+      console.error(`[card-frames] ${rel} is a bucket frame but no frame origin is configured (NEXT_PUBLIC_FRAME_ORIGIN / NEXT_PUBLIC_SUPABASE_URL).`);
+      return null;
+    }
+    const value = await fetchFromBucket(key, entry.sha256);
+    if (value !== null) CACHE.set(key, value);
+    return value;
+  }
   const local = readLocal(rel);
   const value = local !== undefined ? local : await fetchRemote(rel);
-  CACHE.set(rel, value);
+  CACHE.set(key, value);
   return value;
 }
 
@@ -167,8 +278,16 @@ async function loadAsync(rel: string): Promise<string | null> {
  *  asset was neither preloaded nor on disk — log it (it's a bug in the
  *  preload path list, or a misconfigured asset origin) and return null. */
 function loadSync(rel: string): string | null {
-  const cached = CACHE.get(rel);
+  const entry = frameManifestEntry(rel);
+  const key = entry ? frameUrl(rel) : rel;
+  const cached = CACHE.get(key);
   if (cached !== undefined) return cached;
+  if (entry) {
+    console.warn(
+      `[card-frames] ${rel} (bucket object) was not preloaded — rendering it as a transparent pixel.`,
+    );
+    return null;
+  }
   const local = readLocal(rel);
   if (local !== undefined) {
     CACHE.set(rel, local);
@@ -186,7 +305,9 @@ function loadSync(rel: string): string | null {
  */
 export async function preloadFrameAssets(publicPaths: Iterable<string>): Promise<void> {
   const unique = Array.from(new Set(Array.from(publicPaths, relPath)));
-  await Promise.all(unique.map((rel) => loadAsync(rel)));
+  const values = await Promise.all(unique.map((rel) => loadAsync(rel)));
+  const missing = unique.filter((rel, i) => values[i] === null && frameManifestEntry(rel));
+  if (missing.length) throw new FrameAssetUnavailableError(missing);
 }
 
 /**
@@ -196,9 +317,17 @@ export async function preloadFrameAssets(publicPaths: Iterable<string>): Promise
  */
 export async function preloadFrame(template: string, colorKey: string): Promise<void> {
   const key = normalizeColor(colorKey);
-  const primary = await loadAsync(relPath(frameAssetPath(template, key)));
-  if (primary === null && template !== DEFAULT_FRAME_TEMPLATE) {
-    await loadAsync(relPath(frameAssetPath(DEFAULT_FRAME_TEMPLATE, key)));
+  const primaryRel = relPath(frameAssetPath(template, key));
+  const primary = await loadAsync(primaryRel);
+  if (primary !== null) return;
+  // A published bucket master that failed must not quietly become another
+  // template's frame (the preview would still show the real one).
+  if (frameManifestEntry(primaryRel)) throw new FrameAssetUnavailableError([primaryRel]);
+  if (template !== DEFAULT_FRAME_TEMPLATE) {
+    const fallbackRel = relPath(frameAssetPath(DEFAULT_FRAME_TEMPLATE, key));
+    if ((await loadAsync(fallbackRel)) === null && frameManifestEntry(fallbackRel)) {
+      throw new FrameAssetUnavailableError([fallbackRel]);
+    }
   }
 }
 
@@ -235,6 +364,14 @@ function watermarkAssetPath(key: string): string {
  *  transparent pixel, so an unknown/legacy template never throws mid-render. */
 export function getFrameDataUrl(template: string, colorKey: string): string {
   const key = normalizeColor(colorKey);
+  const primaryRel = relPath(frameAssetPath(template, key));
+  if (frameManifestEntry(primaryRel)) {
+    // Bucket masters are only ever read after preloadFrame, which throws on
+    // a failure; never substitute another template's frame here.
+    const loaded = loadSync(primaryRel);
+    if (loaded === null) throw new FrameAssetUnavailableError([primaryRel]);
+    return loaded;
+  }
   return (
     loadSync(relPath(frameAssetPath(template, key))) ??
     loadSync(relPath(frameAssetPath(DEFAULT_FRAME_TEMPLATE, key))) ??
@@ -262,4 +399,9 @@ export function getWatermarkDataUrl(key: string): string {
 /** Test hook — the cache is module-global. */
 export function resetFrameAssetCacheForTests(): void {
   CACHE.clear();
+}
+
+/** Test hook — cache occupancy. */
+export function frameAssetCacheStatsForTests(): { entries: number; chars: number } {
+  return { entries: CACHE.size, chars: CACHE.usedChars };
 }

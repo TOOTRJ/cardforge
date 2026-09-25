@@ -3,6 +3,10 @@
 #   checks  typecheck + lint + unit tests with coverage floors + `next build`
 #           (~5 min). The build is the only thing that catches a cookie read
 #           on a `dynamic = "error"` page or an undefined Satori style value.
+#   frames  every object in lib/frames/frame-manifest.json is readable from
+#           PRODUCTION's frames bucket (frames plan 4.2, docs/FRAMES.md) — a
+#           PR that adds frames stays red until the owner runs
+#           `npm run frames:promote`. Public reads only; no secrets.
 #   e2e     the full Playwright suite against a LOCAL Supabase stack booted
 #           inside the runner (never the dev branch, never production). This is
 #           the job that would have caught the 12 specs that drifted — and the
@@ -52,6 +56,17 @@ jobs:
         env:
           NEXT_PUBLIC_SITE_URL: https://www.pipglyph.com
 
+  frames:
+    name: Frames published
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: node scripts/frames-check.mjs
+
   e2e:
     name: E2E (local Supabase)
     runs-on: ubuntu-latest
@@ -84,6 +99,10 @@ jobs:
             # The paid layer stays visible so the pricing specs run (no Stripe
             # keys needed to render the storefront).
             echo "NEXT_PUBLIC_BILLING_ENABLED=true"
+            # The local stack's frames bucket is empty; frames that left git
+            # (lib/frames/frame-manifest.json) load from the dev project's
+            # public bucket, like every Vercel preview (docs/FRAMES.md).
+            echo "NEXT_PUBLIC_FRAME_ORIGIN=https://znipzaxgpaiandwiqabn.supabase.co/storage/v1/object/public/frames"
             echo "SUPABASE_E2E_USER_EMAIL=e2e@pipglyph.test"
             echo "SUPABASE_E2E_USER_PASSWORD=ci-$(openssl rand -hex 12)"
           } > .env.e2e

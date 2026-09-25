@@ -325,7 +325,7 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
       block, with a test that nothing is hand-kept (`types/card.ts`,
       `lib/creator/card-kinds.ts`, `lib/cards/template-layout.ts`,
       `lib/cards/frame-reference-registry.ts`, `supabase/seed.sql`).
-- [ ] **4.2 [P1] Storage move** — frame masters + WebP + small picker thumbs in
+- [x] (infrastructure done 2026-09-25 — feat/frame-storage: migration 0116 `frames` bucket, content-addressed objects + `lib/frames/frame-manifest.json`, `frameUrl()` in preview + bake, hash-checked LRU in the bake, `frames:publish` (dev) / owner `frames:promote` (prod) / CI `frames:check`, docs/FRAMES.md; pilot proved a bucket render pixel-identical to git. Left for later: moving the existing MSE masters out of git (optional), picker thumbs, history rewrite = not doing) **4.2 [P1] Storage move** — frame masters + WebP + small picker thumbs in
       a Supabase Storage (or Vercel Blob) bucket behind the CDN;
       `components/cards/frame-layer.tsx` and `lib/render/card-frames.ts` read a
       configurable frame origin; bounded LRU for the bake's in-memory frame
