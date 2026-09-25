@@ -14,10 +14,12 @@ import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 
 // ---------------------------------------------------------------------------
 // Admin mutations for frame layout overrides (the visual editor's Save /
-// Reset). Saving marks that template's baked public/unlisted renders stale
-// via `layout_version = null` — the existing rebake sweep query already
-// treats NULL as stale, so no new machinery. The affected count is returned
-// so the admin sees the blast radius.
+// Reset). Saving marks that template's baked public/unlisted renders with
+// `layout_version = null` — "a platform re-bake is owed". That is NOT an
+// owner badge (hasNewerLook ignores null stamps, TODO 0.20): the editor
+// starts the "marked" re-bake right away (lib/cards/rebake-actions.ts) and
+// the compare page shows what is left. The affected count is returned so
+// the admin sees the blast radius.
 //
 // Cache: the read side (lib/cards/frame-profile-overrides.ts) is an
 // unstable_cache entry tagged FRAME_PROFILE_OVERRIDES_TAG. A write must use
@@ -61,8 +63,9 @@ async function requireAdmin(): Promise<
   return { ok: true, adminId: profile.id };
 }
 
-/** Mark baked renders of a template stale so the rebake sweep refreshes
- *  them with the new geometry. Best-effort; returns the affected count. */
+/** Mark baked renders of a template as owed a re-bake (null stamp) so the
+ *  compare page's re-bake — or the sweep — refreshes them with the new
+ *  geometry. Best-effort; returns the affected count. */
 async function markTemplateRendersStale(
   admin: ReturnType<typeof createAdminClient>,
   template: string,

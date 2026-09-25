@@ -44,18 +44,86 @@ describe("isRenderStale — which stored renders a version bump invalidates", ()
   });
 });
 
-describe("hasNewerLook", () => {
-  it("only flags a published card that HAS a render baked by an older layout", async () => {
+describe("hasNewerLook — only an owner opt-in bump is the owner's call (TODO 0.20)", () => {
+  const base = {
+    visibility: "public",
+    rendered_image_url: "https://x/y.png",
+    frame_style: { template: "m15" },
+    rarity: "uncommon",
+    set_icon_url: null,
+    set_icon_code: null,
+  };
+
+  it("flags a published, baked card with a pending OPT-IN bump (v22 typography)", async () => {
+    const { hasNewerLook } = await import("@/lib/cards/layout-version");
+    expect(hasNewerLook({ ...base, layout_version: 21 })).toBe(true);
+    // Private cards never carry a render; unbaked cards are "not baked".
+    expect(hasNewerLook({ ...base, layout_version: 21, visibility: "private" })).toBe(false);
+    expect(hasNewerLook({ ...base, layout_version: 21, rendered_image_url: null })).toBe(false);
+  });
+
+  it("never flags a SWEEP-only pending bump — the platform re-bakes those", async () => {
     const { hasNewerLook, CARD_LAYOUT_VERSION } = await import("@/lib/cards/layout-version");
-    const base = { visibility: "public", layout_version: CARD_LAYOUT_VERSION - 1, rendered_image_url: "https://x/y.png", frame_style: { template: "m15" }, rarity: "common", set_icon_url: null, set_icon_code: null };
-    expect(hasNewerLook(base)).toBe(true);
-    // Current render → nothing newer.
+    // v22 → v23 is the sweep-policy set-mark fix for commons.
+    expect(hasNewerLook({ ...base, layout_version: 22, rarity: "common" })).toBe(false);
     expect(hasNewerLook({ ...base, layout_version: CARD_LAYOUT_VERSION })).toBe(false);
-    // Private cards never carry a render.
-    expect(hasNewerLook({ ...base, visibility: "private" })).toBe(false);
-    // Not baked yet (an AI card between publish and bake, or a failed bake)
-    // is "not baked", not "newer look" — no update prompt.
-    expect(hasNewerLook({ ...base, rendered_image_url: null, layout_version: null })).toBe(false);
+    // A made-up future: v24 sweep only.
+    expect(
+      hasNewerLook(
+        { ...base, layout_version: 23 },
+        { current: 24, rollout: { 22: "opt-in", 23: "sweep", 24: "sweep" } },
+      ),
+    ).toBe(false);
+    expect(
+      hasNewerLook(
+        { ...base, layout_version: 23 },
+        { current: 24, rollout: { 22: "opt-in", 23: "sweep", 24: "opt-in" } },
+      ),
+    ).toBe(true);
+  });
+
+  it("never flags a null stamp — a frame-geometry change marked it for a platform re-bake", async () => {
+    const { hasNewerLook } = await import("@/lib/cards/layout-version");
+    // 2026-09-25: one override save badged 176 of the dev DB's 189 cards.
+    expect(hasNewerLook({ ...base, layout_version: null })).toBe(false);
+  });
+});
+
+describe("latestOptInVersion — what owner notifications are keyed on", () => {
+  it("is the newest opt-in version at or below current, or null", async () => {
+    const { latestOptInVersion } = await import("@/lib/cards/layout-version");
+    expect(latestOptInVersion()).toBe(22);
+    expect(latestOptInVersion({ 22: "opt-in", 30: "opt-in" }, 29)).toBe(22);
+    expect(latestOptInVersion({ 22: "opt-in", 30: "opt-in" }, 30)).toBe(30);
+    expect(latestOptInVersion({ 20: "sweep" }, 25)).toBeNull();
+  });
+});
+
+describe("hasPendingCorrection — when the platform still owes a card a re-bake", () => {
+  it("is true for a null stamp or a pending SWEEP bump, false for opt-in-only", async () => {
+    const { hasPendingCorrection, CARD_LAYOUT_VERSION } = await import("@/lib/cards/layout-version");
+    const card = { frame_style: { template: "m15" }, rarity: "uncommon", set_icon_url: null, set_icon_code: null };
+    expect(hasPendingCorrection({ ...card, layout_version: null })).toBe(true);
+    // v22 common → v23 set-mark sweep pending.
+    expect(hasPendingCorrection({ ...card, layout_version: 22, rarity: "common" })).toBe(true);
+    // v22 uncommon → v23 didn't change it → nothing owed.
+    expect(hasPendingCorrection({ ...card, layout_version: 22 })).toBe(false);
+    // v21 uncommon → only the v22 opt-in is pending: the owner's call, not a correction.
+    expect(hasPendingCorrection({ ...card, layout_version: 21 })).toBe(false);
+    expect(hasPendingCorrection({ ...card, layout_version: CARD_LAYOUT_VERSION })).toBe(false);
+    // Very old bakes owe the v20/v21 watermark sweeps.
+    expect(hasPendingCorrection({ ...card, layout_version: 19 })).toBe(true);
+  });
+});
+
+describe("storedLookIsOlder — the download modal's clean-download note", () => {
+  it("is true whenever a stored image predates the current renderer", async () => {
+    const { storedLookIsOlder, CARD_LAYOUT_VERSION } = await import("@/lib/cards/layout-version");
+    const card = { rendered_image_url: "https://x/y.png", frame_style: { template: "m15" }, rarity: "uncommon" };
+    expect(storedLookIsOlder({ ...card, layout_version: 21 })).toBe(true);
+    expect(storedLookIsOlder({ ...card, layout_version: null })).toBe(true);
+    expect(storedLookIsOlder({ ...card, layout_version: CARD_LAYOUT_VERSION })).toBe(false);
+    expect(storedLookIsOlder({ ...card, layout_version: 21, rendered_image_url: null })).toBe(false);
   });
 });
 

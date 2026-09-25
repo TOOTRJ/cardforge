@@ -4,7 +4,7 @@ import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
 import {
   fetchStoredRender,
   fitStoredRender,
-  hasCurrentStoredRender,
+  hasServableStoredRender,
 } from "@/lib/render/stored-render";
 
 const STORAGE_URL =
@@ -16,16 +16,22 @@ describe("stored-render — when the baked PNG can stand in for a live render", 
     vi.unstubAllEnvs();
   });
 
-  it("is current only with a URL at the renderer's layout version", () => {
+  it("is servable with a URL and no pending platform correction", () => {
+    const m15 = { frame_style: { template: "m15" }, rarity: "uncommon" };
     expect(
-      hasCurrentStoredRender({ rendered_image_url: STORAGE_URL, layout_version: CARD_LAYOUT_VERSION }),
+      hasServableStoredRender({ ...m15, rendered_image_url: STORAGE_URL, layout_version: CARD_LAYOUT_VERSION }),
     ).toBe(true);
+    // TODO 0.21: an owner who hasn't accepted the v22 (opt-in) look keeps it —
+    // the download serves the bake and matches the gallery tile.
+    expect(hasServableStoredRender({ ...m15, rendered_image_url: STORAGE_URL, layout_version: 21 })).toBe(true);
+    // A pending SWEEP correction (v23 set mark on a common) renders live.
     expect(
-      hasCurrentStoredRender({ rendered_image_url: STORAGE_URL, layout_version: CARD_LAYOUT_VERSION - 1 }),
+      hasServableStoredRender({ ...m15, rarity: "common", rendered_image_url: STORAGE_URL, layout_version: 22 }),
     ).toBe(false);
-    expect(hasCurrentStoredRender({ rendered_image_url: STORAGE_URL, layout_version: null })).toBe(false);
-    expect(hasCurrentStoredRender({ rendered_image_url: null, layout_version: CARD_LAYOUT_VERSION })).toBe(false);
-    expect(hasCurrentStoredRender({ rendered_image_url: "", layout_version: CARD_LAYOUT_VERSION })).toBe(false);
+    // A frame-geometry change (null stamp) renders live until the re-bake.
+    expect(hasServableStoredRender({ ...m15, rendered_image_url: STORAGE_URL, layout_version: null })).toBe(false);
+    expect(hasServableStoredRender({ ...m15, rendered_image_url: null, layout_version: CARD_LAYOUT_VERSION })).toBe(false);
+    expect(hasServableStoredRender({ ...m15, rendered_image_url: "", layout_version: CARD_LAYOUT_VERSION })).toBe(false);
   });
 
   it("never fetches a stale row or a foreign host", async () => {
@@ -64,7 +70,7 @@ describe("stored-render — when the baked PNG can stand in for a live render", 
     expect(bytes!.equals(png)).toBe(true);
   });
 
-  it("serves a stale bake for display surfaces when allowStale is set", async () => {
+  it("serves any bake for display surfaces with accept: any", async () => {
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://zkwkisxoqdhdchqyjwdc.supabase.co");
     const png = await sharp({
       create: { width: 2, height: 2, channels: 4, background: { r: 9, g: 9, b: 9, alpha: 1 } },
@@ -75,13 +81,15 @@ describe("stored-render — when the baked PNG can stand in for a live render", 
       new Response(new Uint8Array(png), { status: 200, headers: { "content-type": "image/png" } }),
     );
     vi.stubGlobal("fetch", fetchSpy);
-    const stale = { rendered_image_url: STORAGE_URL, layout_version: CARD_LAYOUT_VERSION - 1 };
+    // Marked by a geometry change: not servable for a download…
+    const stale = { rendered_image_url: STORAGE_URL, layout_version: null };
     expect(await fetchStoredRender(stale)).toBeNull();
-    const bytes = await fetchStoredRender(stale, { allowStale: true });
+    // …but the share image shows it, like the gallery tile does.
+    const bytes = await fetchStoredRender(stale, { accept: "any" });
     expect(bytes?.equals(png)).toBe(true);
     // Still nothing without a bake at all, stale or not.
     expect(
-      await fetchStoredRender({ rendered_image_url: null, layout_version: null }, { allowStale: true }),
+      await fetchStoredRender({ rendered_image_url: null, layout_version: null }, { accept: "any" }),
     ).toBeNull();
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });

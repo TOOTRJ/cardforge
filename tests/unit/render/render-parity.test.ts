@@ -60,7 +60,11 @@ describe("landscape renders", () => {
 describe("art guard", () => {
   it("is shared by the save-time bake and the admin sweep", () => {
     expect(read("lib/cards/bake-render.ts")).toContain("export async function resolveBakeArt(");
-    expect(read("app/api/admin/rebake/route.ts")).toContain("await resolveBakeArt(row.art_url)");
+    // The sweep batch moved out of the route (shared with the compare page's
+    // "Re-bake now", TODO 0.20) — the guard must stay in it.
+    expect(read("lib/cards/rebake-batch.ts")).toContain("await resolveBakeArt(row.art_url)");
+    expect(read("app/api/admin/rebake/route.ts")).toContain("runRebakeBatch(");
+    expect(read("lib/cards/rebake-actions.ts")).toContain("runRebakeBatch(");
   });
 
   it("refuses a missing, refused or unfetchable art and passes a resolved data URL through", async () => {

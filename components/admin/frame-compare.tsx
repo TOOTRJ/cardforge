@@ -29,6 +29,7 @@ import {
 } from "@/lib/cards/frame-profile-override-actions";
 import { scanPlacement, type CardOrientation } from "@/lib/frames/scan-geometry";
 import type { SlotScore } from "@/lib/frames/align";
+import { startMarkedRebake } from "@/components/admin/rebake-marked-store";
 
 // ---------------------------------------------------------------------------
 // FrameCompare — overlays a real Scryfall scan on our rendered frame so
@@ -36,8 +37,9 @@ import type { SlotScore } from "@/lib/frames/align";
 // mode: click an element, nudge with arrow keys or key exact numbers, and
 // the draft merges into the live preview (overlay/difference keep working
 // while editing). Save persists to frame_profile_overrides — instantly
-// live for every render path, marking baked cards stale for the rebake
-// sweep.
+// live for every render path — and re-bakes the template's published cards
+// straight away (MarkedRendersPanel shows the progress; owners never get a
+// "newer look" badge for a geometry change, TODO 0.20).
 //
 // Workflow (difference mode is the sharp tool): open a combo → difference
 // → edit layout → nudge until aligned pixels go dark → Save → verify box.
@@ -328,10 +330,13 @@ export function FrameCompare({
       setScoreStale(true);
       toast.success(
         result.changed
-          ? `Layout saved — live everywhere now. ${result.staleCount} baked card${result.staleCount === 1 ? "" : "s"} marked stale (run the rebake sweep).`
+          ? result.staleCount > 0
+            ? `Layout saved — live everywhere now. Re-baking ${result.staleCount} published card${result.staleCount === 1 ? "" : "s"}…`
+            : "Layout saved — live everywhere now."
           : "Nothing to save — this template already uses the code defaults.",
       );
       router.refresh();
+      if (result.changed && result.staleCount > 0) void startMarkedRebake();
     });
 
   const reset = () =>
@@ -347,12 +352,15 @@ export function FrameCompare({
       if (result.changed) {
         setScoreStale(true);
         toast.success(
-          `Reset to code defaults. ${result.staleCount} baked card${result.staleCount === 1 ? "" : "s"} marked stale.`,
+          result.staleCount > 0
+            ? `Reset to code defaults. Re-baking ${result.staleCount} published card${result.staleCount === 1 ? "" : "s"}…`
+            : "Reset to code defaults.",
         );
       } else {
         toast.message("Draft discarded — no saved layout existed for this template.");
       }
       router.refresh();
+      if (result.changed && result.staleCount > 0) void startMarkedRebake();
     });
 
   // `isolate` caps CardPreview's internal z-indexed layers inside their own

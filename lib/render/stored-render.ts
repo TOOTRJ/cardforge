@@ -1,7 +1,7 @@
 import "server-only";
 
 import sharp from "sharp";
-import { isRenderStale, templateOfFrameStyle } from "@/lib/cards/layout-version";
+import { hasPendingCorrection } from "@/lib/cards/layout-version";
 import { isAllowedServerImageFetchUrl } from "@/lib/validation/card";
 import { RENDER_PRESETS, type RenderPreset } from "@/lib/render/card-image";
 
@@ -16,12 +16,16 @@ import { RENDER_PRESETS, type RenderPreset } from "@/lib/render/card-image";
 // and would carry the same stamp the request needs, serving (or downscaling)
 // those bytes is a ~10 ms sharp call instead of a ~1 s render.
 //
-// "Current" = the row carries a render URL AND no bump since its
-// layout_version touched its frame template (lib/cards/layout-version.ts
-// isRenderStale — a template-scoped bump leaves other templates current). A
-// save whose bake failed clears the URL (bake-render.ts), so a present URL
-// that isn't stale is the bake of the row as saved. Anything else falls back
-// to a live render, exactly as before.
+// "Servable" = the row carries a render URL AND the platform owes it no
+// correction (lib/cards/layout-version.ts hasPendingCorrection: the stamp is
+// set and no SWEEP-policy bump since it changed this card). An OPT-IN bump
+// the owner hasn't accepted does not disqualify the bake: the stored image
+// IS the card's look until the owner updates it, so a watermarked download
+// serves it and matches the gallery tile (TODO 0.21, owner-reported
+// 2026-09-25 — downloads used to jump to the newer look the owner had not
+// accepted). A save whose bake failed clears the URL (bake-render.ts), so a
+// present URL is the bake of the row as saved. Anything else falls back to
+// a live render.
 //
 // This is NOT the preview↔bake invariant: a downscale of the HD bake differs
 // from a native 750 px render by resampling only, which is fine for a share
@@ -46,38 +50,43 @@ export type StoredRenderRow = {
   set_icon_code?: string | null;
 };
 
-/** True when the row's baked PNG reflects the current renderer and row. */
-export function hasCurrentStoredRender(row: StoredRenderRow): boolean {
+/** True when the row's baked PNG may stand in for a live render: a URL
+ *  and no pending platform correction (see the header). */
+export function hasServableStoredRender(row: StoredRenderRow): boolean {
   return (
     typeof row.rendered_image_url === "string" &&
     row.rendered_image_url.length > 0 &&
-    !isRenderStale(
-      row.layout_version,
-      templateOfFrameStyle(row.frame_style),
-      undefined,
-      undefined,
-      row,
-    )
+    !hasPendingCorrection({
+      layout_version: row.layout_version,
+      frame_style: row.frame_style,
+      rarity: row.rarity,
+      set_icon_url: row.set_icon_url,
+      set_icon_code: row.set_icon_code,
+    })
   );
 }
 
 /**
- * Fetch the stored render's bytes, or null when there is none, it is stale,
- * its host is not ours, or the fetch fails (callers render live).
+ * Fetch the stored render's bytes, or null when there is none, it is not
+ * acceptable, its host is not ours, or the fetch fails (callers render live).
  *
- * `allowStale` serves the stored bake even when a newer renderer exists —
- * for DISPLAY surfaces like the share image, where the owner-driven update
- * flow (lib/cards/layout-version.ts) means a card may legitimately keep its
- * older look for a long time and the gallery tile already shows exactly
- * that image. Downloads keep the default: a stale bake renders live.
+ *   accept "servable" (default) — downloads: the bake unless a platform
+ *     correction is pending (a geometry change or a sweep bump the admin
+ *     re-bake hasn't reached yet — rendering live then shows the corrected
+ *     card rather than a bake the platform already deems wrong).
+ *   accept "any" — DISPLAY surfaces like the share image: whatever bake
+ *     exists, because the gallery tile shows exactly that image and the
+ *     owner-driven update flow means a card may keep an older look for a
+ *     long time.
  */
 export async function fetchStoredRender(
   row: StoredRenderRow,
-  opts: { allowStale?: boolean } = {},
+  opts: { accept?: "servable" | "any" } = {},
 ): Promise<Buffer | null> {
-  const usable = opts.allowStale
-    ? typeof row.rendered_image_url === "string" && row.rendered_image_url.length > 0
-    : hasCurrentStoredRender(row);
+  const usable =
+    opts.accept === "any"
+      ? typeof row.rendered_image_url === "string" && row.rendered_image_url.length > 0
+      : hasServableStoredRender(row);
   if (!usable) return null;
   const url = row.rendered_image_url as string;
   // rendered_image_url is written by the bake, but it is still a row column —

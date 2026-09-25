@@ -72,9 +72,10 @@ export function FrameGuide({ defaultOpen = false }: { defaultOpen?: boolean }) {
           What saving a layout affects:
         </span>{" "}
         live previews, card detail pages, downloads (PNG/PDF), social images,
-        and every NEW save are updated <em>instantly</em>. Gallery thumbnails
-        of already-created cards keep their old baked image until the rebake
-        sweep runs (saving tells you how many were marked stale). Card content
+        and every NEW save are updated <em>instantly</em>. Already-published
+        cards are re-baked right after the save (keep the tab open until the
+        progress note says it&apos;s done); owners never see a &ldquo;newer
+        look&rdquo; badge for a layout fix. Card content
         — text, art, stats — is never touched; only where the frame draws it.
         Layout edits apply per frame template, to everyone&apos;s cards using
         that frame.
