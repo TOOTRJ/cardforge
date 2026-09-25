@@ -347,10 +347,11 @@ const M15: FrameProfile = {
 //     ANY card type on this frame (matches ALPHALAND; lands have no cost anyway).
 //     Without this, a non-land card placed on the land frame would still paint a
 //     cost into dead space.
-//   • title inset — the land frame paints a large color-indicator orb at the
-//     left of the title bar (≈0–13% of the card width). M15's title starts at
-//     8.5%, which renders the name ON TOP of the orb. Start the name at 14% so
-//     it sits in the cream plate to the orb's right; keep the right edge aligned
+//   • title inset — the MSE land frame once painted a color-indicator orb at
+//     the left of the title bar, which pushed the name to 14%. The orb was
+//     removed from the PNGs (f15273e) and the name moved back to 8.4% — a DB
+//     override on production since 2026-07-08, folded into code 2026-09-25
+//     (migration 0114). The band keeps its 77.5% width; keep the right edge
 //     with M15 (14 + 77.5 = 91.5 ≈ 8.5 + 83).
 const M15LAND: FrameProfile = {
   ...M15,
@@ -358,7 +359,19 @@ const M15LAND: FrameProfile = {
   hideCost: true,
   title: {
     ...M15.title,
-    rect: { ...M15.title.rect, leftPct: 14, widthPct: 77.5 },
+    rect: { ...M15.title.rect, leftPct: 8.4, widthPct: 77.5 },
+  },
+};
+
+// Snow land — the frosted land skin. Its title bar starts a touch further
+// right than the plain land's (measured in the compare tool; production
+// override since 2026-07-08, folded 2026-09-25).
+const M15SNOWLAND: FrameProfile = {
+  ...M15LAND,
+  label: "M15 Snow Land",
+  title: {
+    ...M15LAND.title,
+    rect: { ...M15LAND.title.rect, leftPct: 9.1 },
   },
 };
 
@@ -420,8 +433,12 @@ const M15PW: FrameProfile = {
   // MSE m15-planeswalker spec: name 23–46px, image 52–479.5, type 296–316,
   // text 330–478 (indented past the loyalty badge rail), loyalty 462+.
   artSlot: { topPct: 9.9, leftPct: 6.7, widthPct: 86.4, heightPct: 81.7 },
+  // Title/type tops, the detached cost box and the set-symbol box were tuned
+  // in the compare tool (production override 2026-07-09, folded 2026-09-25).
+  costRect: { topPct: 3.8, leftPct: 51.2, widthPct: 40, heightPct: 4.4 },
+  symbolRect: { topPct: 56.9, leftPct: 79, widthPct: 12, heightPct: 3.8 },
   title: {
-    rect: { topPct: 4.4, leftPct: 8.5, widthPct: 80, heightPct: 4.4 },
+    rect: { topPct: 3.8, leftPct: 8.5, widthPct: 80, heightPct: 4.4 },
     sizePct: 0.0427,
     colorHex: INK_DARK,
     weight: 600,
@@ -429,7 +446,7 @@ const M15PW: FrameProfile = {
     letterSpacingEm: 0.01,
   },
   type: {
-    rect: { topPct: 56.6, leftPct: 8.8, widthPct: 79, heightPct: 3.8 },
+    rect: { topPct: 56.8, leftPct: 8.8, widthPct: 79, heightPct: 3.8 },
     sizePct: 0.0347,
     colorHex: INK_DARK_SOFT,
     weight: 600,
@@ -531,7 +548,15 @@ const M15TOKEN: FrameProfile = {
 // ink reads on them unchanged.
 const M15ARTIFACT: FrameProfile = { ...M15, label: "M15 Artifact" };
 const M15SNOW: FrameProfile = { ...M15, label: "M15 Snow" };
-const M15DEVOID: FrameProfile = { ...M15, label: "M15 Devoid (Eldrazi)" };
+// Devoid re-dresses the M15 frame; the Eldrazi type bar sits 0.1% higher
+// than the plain frame's and the set symbol lives in its own box
+// (production override 2026-07-14, folded 2026-09-25).
+const M15DEVOID: FrameProfile = {
+  ...M15,
+  label: "M15 Devoid (Eldrazi)",
+  type: { ...M15.type, rect: { ...M15.type.rect, topPct: 56.4 } },
+  symbolRect: { topPct: 56.2, leftPct: 80.2, widthPct: 12, heightPct: 5.2 },
+};
 
 // Alpha Land — the 1993 frame's land variant ({color}lcard from
 // magic-agclassic.mse-style): identical geometry to agclassic, just a land
@@ -667,9 +692,14 @@ const MODERN: FrameProfile = {
   flavorDivider: false,
   label: "Modern border (2003)",
   costSizePct: 0.04,
+  // Title, footer and P/T positions plus the detached cost / set-symbol
+  // boxes were tuned in the compare tool against the M12 Serra Angel scan
+  // (production override 2026-07-27, folded 2026-09-25).
+  costRect: { topPct: 5.6, leftPct: 52.3, widthPct: 39, heightPct: 4.4 },
+  symbolRect: { topPct: 56.95, leftPct: 78.2, widthPct: 12, heightPct: 3.9 },
   artSlot: { topPct: 11.6, leftPct: 8.3, widthPct: 83.2, heightPct: 43.8 },
   title: {
-    rect: { topPct: 5.5, leftPct: 8.8, widthPct: 78, heightPct: 4.4 },
+    rect: { topPct: 6, leftPct: 8.9, widthPct: 78, heightPct: 4.4 },
     sizePct: 0.044,
     colorHex: INK_DARK,
     weight: 600,
@@ -692,7 +722,7 @@ const MODERN: FrameProfile = {
     font: "body",
   },
   footer: {
-    rect: { topPct: 91.4, leftPct: 14, widthPct: 58, heightPct: 2.6 },
+    rect: { topPct: 92.2, leftPct: 15.5, widthPct: 58, heightPct: 2.6 },
     sizePct: 0.015,
     colorHex: INK_DARK,
     uppercase: true,
@@ -702,7 +732,7 @@ const MODERN: FrameProfile = {
   // The 2003 P/T box is a separate beveled plate (magic-new {color}pt.jpg),
   // upscaled to /frames/modern/pt/{color}.png. Drawn behind the dark value.
   pt: {
-    rect: { topPct: 87.3, leftPct: 73.3, widthPct: 21, heightPct: 6.8 },
+    rect: { topPct: 88.4, leftPct: 73.3, widthPct: 21, heightPct: 6.8 },
     sizePct: 0.044,
     colorHex: INK_DARK,
     weight: 700,
@@ -780,7 +810,8 @@ const SAGA: FrameProfile = {
     font: "display",
   },
   type: {
-    rect: { topPct: 84.9, leftPct: 8.8, widthPct: 82, heightPct: 3.9 },
+    // 85.1, not the MSE 84.9: production override 2026-07-08, folded 2026-09-25.
+    rect: { topPct: 85.1, leftPct: 8.8, widthPct: 82, heightPct: 3.9 },
     sizePct: 0.0347,
     colorHex: INK_DARK,
     weight: 600,
@@ -1430,7 +1461,7 @@ const M15TEXTLESSLAND: FrameProfile = {
 const PROFILES: Record<FrameTemplate, FrameProfile> = {
   m15: M15,
   m15land: M15LAND,
-  m15snowland: { ...M15LAND, label: "M15 Snow Land" },
+  m15snowland: M15SNOWLAND,
   m15token: M15TOKEN,
   m15tokenartifact: { ...M15TOKEN, label: "M15 Artifact Token" },
   m15artifact: M15ARTIFACT,

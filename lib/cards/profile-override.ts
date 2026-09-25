@@ -19,8 +19,14 @@ import {
 // CardPreview resolves the map it was handed.
 // ---------------------------------------------------------------------------
 
+// NonNullable so OPTIONAL slots (pt, footer, loyalty, …) are deep-partial
+// too — `T[K]` of an optional key is `Slot | undefined`, which never
+// `extends object`, so without it a partial rect on those slots failed to
+// type although the zod schema (and the editor) accept it.
 export type DeepPartial<T> = {
-  [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K];
+  [K in keyof T]?: NonNullable<T[K]> extends object
+    ? DeepPartial<NonNullable<T[K]>>
+    : T[K];
 };
 
 export type FrameProfileOverride = DeepPartial<FrameProfile>;

@@ -109,7 +109,7 @@ Open decisions are marked **[decide]**; none blocks its phase.
       template, via a script that runs Scryfall searches and writes
       `FRAME_REFERENCES`; kind-aware sample content for the combos with no real
       printing — `lib/cards/frame-reference-registry.ts`:301.
-- [ ] **0.12 [P1] Fold the six production overrides into code** (m15devoid,
+- [x] (fixed 2026-09-25 — fix/fold-frame-overrides: folded into code, rows deleted by migration 0114; [decide] resolved: fold) **0.12 [P1] Fold the six production overrides into code** (m15devoid,
       m15land, m15pw, m15snowland, modern, saga) and delete the rows so
       previews/local/e2e render like production (dev branch has 0 rows,
       `supabase/seed.sql` seeds `frame_reviews` only). **[decide]** fold vs
