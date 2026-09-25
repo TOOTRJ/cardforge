@@ -40,7 +40,7 @@ const FINISH_OPTIONS: ChipOption<CardFinish>[] = [
   {
     value: "etched",
     label: "Etched",
-    description: "Gold-leaf inner border with a subtle texture.",
+    description: "Fine etched texture on the frame, like foil-etched printings.",
     disabled: true,
     badge: <SoonBadge />,
   },

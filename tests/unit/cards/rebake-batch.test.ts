@@ -43,7 +43,7 @@ const row = (id: string, patch: Partial<RebakeRow> = {}): RebakeRow =>
     id,
     owner_id: "owner-1",
     art_url: null,
-    frame_style: { template: "retro" },
+    frame_style: { template: "saga" },
     visibility: "public",
     updated_at: "2026-09-20T00:00:00Z",
     layout_version: null,
@@ -228,7 +228,7 @@ describe("runRebakeBatch", () => {
 
   it("a layout save during the batch supersedes the render (the card stays marked)", async () => {
     const stub = db([row("c1")], {
-      overridesAtStart: [{ template: "retro", updated_at: "2026-09-25T10:00:00Z" }],
+      overridesAtStart: [{ template: "saga", updated_at: "2026-09-25T10:00:00Z" }],
       overrideNow: { updated_at: "2026-09-25T10:00:09Z" },
       markedCount: 1,
     });
@@ -242,7 +242,7 @@ describe("runRebakeBatch", () => {
   it("a layout save during the UPLOAD re-marks the card instead of leaving it 'current'", async () => {
     // Guard read sees the batch-start stamp; the post-write read sees a newer save.
     const stub = db([row("c1")], {
-      overridesAtStart: [{ template: "retro", updated_at: "T1" }],
+      overridesAtStart: [{ template: "saga", updated_at: "T1" }],
       overrideSequence: [{ updated_at: "T1" }, { updated_at: "T2" }],
       markedCount: 1,
     });

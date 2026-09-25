@@ -743,6 +743,39 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
 
       CC's `gallery/index.html` ('what they're called and where to find them') is the model. Today only the frame-eras article describes our frames, in prose.
 - [ ] **4.30 [P2] Border colour overlay (black / white / silver / gold)** (Card Conjurer audit 2026-09-25) — Every CC group offers White/Silver/Gold Border (`packM15Borders.js`, `pack8th.js`): a 1×1 fill drawn through the Border mask. PipGlyph has no border colour anywhere. Add a per-card border colour drawn through the template's border mask in both renderers; the import maps Scryfall `border_color` white/silver/gold to an exact match (8ED/9ED white-border printings, Un-set silver with 4.15).
+- [ ] **4.31 [P2] Frame-review follow-ups still open** (owner review of every
+      production card, 2026-09-25; the fixed half shipped as layout v25/v26 in
+      fix/frame-review-followups):
+      - **[decide] Dragon Wing two-colour cards.** The frame is the Multiverse
+        Legends (MOM 2023) Tarkir frame; its only two-colour print (MUL #60
+        Taigam, W/U) splits the wings — first colour left, second right — with
+        a gold P/T plate. MSE does the same (`special_blend_card.png`, a hard
+        vertical split). A prototype (`twoColorSplit` profile field, a clipped
+        second frame layer in both renderers, both keys preloaded) was built
+        and measured during the review; today a two-colour card gets the gold
+        'm' wings on silver.
+      - **[decide] Dragon Wing sits under the era "Tarkir: Dragonstorm"**
+        (`types/card.ts`) but is the 2023 MUL frame — rename or re-home it. The
+        gold TDM dragon frame people expect is `tarkirdraconic`, whose P/T is
+        white on light parchment (invisible) and needs the same plate treatment.
+      - **[decide] Ghostfire (tarkirghostfire)** keeps only MSE's outline
+        (`card.png`, mean α 26); MSE also draws namebox/typebox/textbox at 60 %
+        and a pt.png ribbon, all ink white. Our type line sits on the band's
+        lower rim (band interior 51.4–56.8 %H, our rect 56–60.5). One production
+        card (Veil of Echoes), which the owner marked OK.
+      - **Alpha (agclassic) frame proportions.** Real LEA cards end the tan
+        frame at ≈95.2 %H (≈100 px of black at HD); our master ends it at
+        97.1 %H (60 px). v25 centred the P/T and brand mark in OUR strip and
+        border; a re-cut frame would move both again.
+      - **Alpha ink on dark frames.** P/T and the artist line are INK_DARK on
+        every colour — near-invisible on black (strip luminance ≈33), weak on
+        gold/green. Printed Alpha uses a light silver emboss on non-white
+        frames: needs per-colour ink on StatSlot + footer in both renderers.
+      - **Alpha colourless** uses a flat grey master; printed Alpha colourless
+        cards are artifacts on a dark warm-brown border with a light crackle
+        text box (Sol Ring, Juggernaut) — an asset re-source.
+      - **Display-font word spacing:** "Jester's Mask" renders a 42 px word gap
+        (17–25 px elsewhere) on every template — CardDisplay font metrics.
 
 ### Phase 5 — Two-sided cards end to end (3–4 weeks; needs 4.3 and 4.5)
 
@@ -818,6 +851,18 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
       **Card Conjurer audit 2026-09-25:** Emblem = CC `packEmblem`: one colourless 1500×2100 frame (art 14.2/4.96/71.6×85.48, type 68.0, rules 74.43–91.91), type line 'Emblem — <subtype>', no cost or P/T. Seed it from a walker's −N ability via a 'Create emblem from this ability' action in `components/creator/panels/loyalty-editor.tsx`. Monarch/Initiative/Day-Night markers become P3 presets. Token text-length layouts moved to 4.22.
 - [ ] **6.5 [P2] Foil/etched finishes: ship or remove** **[decide]**; if
       shipped, align preview and bake (`panels/effects-panel.tsx`:26).
+      (progress 2026-09-25 — fix/frame-review-followups, layout v26: ETCHED
+      preview and bake now draw one shared frame-masked cross-hatch + sheen,
+      `lib/cards/etched-finish.tsx`. The bake had wrapped its layer in a
+      Fragment, which Satori lays out as a zero-width item, so the inset gold
+      border collapsed into an 18 px strip down the left edge and the hatch
+      never painted. Real etched printings use a random stipple, silvered white
+      frames and inverted bars — that is 4.28.) **FOIL is still broken:** the
+      bake's sheen uses `inset: 0` (Satori ignores it) and `mixBlendMode`
+      (resvg ignores it), so a foil bake is byte-identical to regular while the
+      preview shows a shimmer — a live parity break on 10 production foil
+      cards. Needs a Satori-safe design (no blend modes) + a finish-scoped
+      sweep, like v26.
 - [ ] **6.6 [P2] Language + set-code fields** feed the collector line (with 4.9).
 - [ ] **6.7 [P2] Accessibility** — text alternatives for rules-text pips, chip
       keyboard navigation (3b.10), announced substitution notices.

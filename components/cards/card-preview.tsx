@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type CSSProperties, type ReactNode } from "react";
+import { useId, useState, type CSSProperties, type ReactNode } from "react";
 import { frameUrl } from "@/lib/frames/frame-url";
 import { RotateCw } from "lucide-react";
 import { cn, clamp } from "@/lib/utils";
@@ -17,9 +17,11 @@ import {
 import { SetSymbol } from "@/components/cards/set-symbol";
 import {
   FrameLayer,
+  frameImageUrl,
   pickFrameColorKey,
   webpVariant,
 } from "@/components/cards/frame-layer";
+import { EtchedSheen } from "@/lib/cards/etched-finish";
 import { fitRulesSizePct, fitSingleLineSizePct } from "@/lib/cards/render-tiers";
 import {
   PLACEHOLDER_FLAVOR_TEXT,
@@ -46,6 +48,7 @@ import {
 } from "@/lib/cards/face-content";
 import {
   SAGA_MARKER_POINTS,
+  brandMarkLayout,
   loyaltyBadgeAssetFor,
   loyaltyBadgeShapeFor,
   resolveColorAsset,
@@ -550,6 +553,7 @@ function CardFace({
 }) {
   const colorKey = pickFrameColorKey(colorIdentity);
   const safeTitle = face.title?.trim() || "Untitled Card";
+  const markLayout = brandMarkLayout(layout);
   const showCost =
     !layout.hideCost && face.cardType !== "land" && Boolean(face.cost?.trim());
 
@@ -569,6 +573,10 @@ function CardFace({
   const isFoil = finish === "foil";
   const isEtched = finish === "etched";
   const isShowcase = finish === "showcase";
+  // SVG ids are document-global: one per rendered face (a page can show
+  // several previews, and a DFC renders two faces). useId's punctuation is
+  // stripped so it is safe inside url(#…).
+  const etchedId = `etched-${useId().replace(/[^A-Za-z0-9_-]/g, "")}`;
 
   const focalX = clamp(face.artPosition?.focalX ?? 0.5, 0, 1);
   const focalY = clamp(face.artPosition?.focalY ?? 0.5, 0, 1);
@@ -699,6 +707,21 @@ function CardFace({
 
       {/* Frame PNG — above the art so its painted slot border is on top. */}
       <FrameLayer template={template} colorIdentity={colorIdentity} zIndex={5} />
+
+      {/* Premium finish: etched — fine cross-hatch + sheen on the FRAME only
+          (masked by the frame's own luminance), just above the frame and
+          below every text/stat layer. The SAME SVG the bake draws right
+          after its frame <img> (lib/cards/etched-finish.tsx). */}
+      {isEtched ? (
+        <EtchedSheen
+          id={etchedId}
+          frameHref={frameImageUrl(template, colorKey)}
+          landscape={layout.orientation === "landscape"}
+          width="100%"
+          height="100%"
+          style={{ zIndex: 6, pointerEvents: "none" }}
+        />
+      ) : null}
 
       {/* Stat overlays — P/T, loyalty, defense. */}
       {showPT && layout.pt ? (
@@ -1027,19 +1050,25 @@ function CardFace({
       ) : null}
 
       {/* Brand mark — pipglyph.com, bottom-right, mirroring the bake's
-          overlay (lib/render/card-image.tsx: right 3.5%, bottom 1.8%, 2.6%
-          of the width, display font). Display surfaces always show it
-          (layout v20); only a paid download renders without it. */}
+          overlay (lib/render/card-image.tsx): placement + short-side scale
+          from brandMarkLayout(layout), 2.6% of a portrait card's width,
+          display font. Display surfaces always show it (layout v20); only a
+          paid download renders without it. */}
       {brandMark ? (
         <div
           aria-hidden
           className="pointer-events-none absolute z-40 flex items-center"
           style={{
-            right: "3.5%",
-            bottom: "1.8%",
+            right: `${markLayout.rightPct}%`,
+            bottom: `${markLayout.bottomPct}%`,
+            // Satori's line box is the font's hhea "normal" (1.2056em for
+            // Beleren); without this the mark inherits the page's 1.5 and
+            // sits ~0.3% of the card height (6 px at 1500 wide) above the
+            // bake. With it the two agree within ~1 px at 1500 wide.
+            lineHeight: "normal",
             fontFamily: DISPLAY_FONT,
             // cqw() takes a FRACTION of the card width (0.026 = 2.6%).
-            fontSize: cqw(0.026),
+            fontSize: cqw(0.026 * markLayout.scale),
             fontWeight: 600,
             letterSpacing: "0.02em",
             color: "rgba(255,255,255,0.82)",
@@ -1048,7 +1077,11 @@ function CardFace({
         >
           <svg
             viewBox="0 0 32 32"
-            style={{ width: cqw(0.03), height: cqw(0.03), marginRight: cqw(0.008) }}
+            style={{
+              width: cqw(0.03 * markLayout.scale),
+              height: cqw(0.03 * markLayout.scale),
+              marginRight: cqw(0.008 * markLayout.scale),
+            }}
           >
             <path d={ROSE_STAR_PATH} fill="rgba(255,255,255,0.82)" />
           </svg>
@@ -1069,29 +1102,6 @@ function CardFace({
               "conic-gradient(from 0deg, transparent, rgba(255,200,120,0.55), transparent 30%, rgba(255,255,255,0.45) 50%, transparent 70%, rgba(190,170,255,0.5) 85%, transparent 100%)",
           }}
         />
-      ) : null}
-
-      {/* Premium finish: etched gold inner border + faint cross-hatch. */}
-      {isEtched ? (
-        <>
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-[3%] z-30 rounded-[3cqw] border-2"
-            style={{
-              borderImage:
-                "linear-gradient(135deg, #f3d57c 0%, #d4a64a 50%, #f3d57c 100%) 1",
-              borderImageSlice: 1,
-            }}
-          />
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0 z-30 mix-blend-overlay opacity-20"
-            style={{
-              backgroundImage:
-                "repeating-linear-gradient(45deg, rgba(255,255,255,0.18) 0 1px, transparent 1px 6px), repeating-linear-gradient(-45deg, rgba(255,255,255,0.12) 0 1px, transparent 1px 6px)",
-            }}
-          />
-        </>
       ) : null}
     </div>
   );

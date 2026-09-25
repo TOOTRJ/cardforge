@@ -74,7 +74,12 @@ export function verificationState(
     snapshot.verifiedLayoutVersion == null && snapshot.verifiedOverrideHash == null;
   if (
     snapshot.verifiedLayoutVersion != null &&
-    isRenderStale(snapshot.verifiedLayoutVersion, template, undefined, currentVersion)
+    // A tick verifies the REGULAR frame: a finish-scoped bump (v26 etched)
+    // must not stale every combo. Rarity stays unknown → rarity-scoped
+    // bumps (v23) remain conservative, as before.
+    isRenderStale(snapshot.verifiedLayoutVersion, template, undefined, currentVersion, {
+      frame_style: { template, finish: "regular" },
+    })
   ) {
     reasons.push(
       `the renderer changed since layout v${snapshot.verifiedLayoutVersion} (now v${currentVersion})`,

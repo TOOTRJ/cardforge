@@ -9,7 +9,13 @@
 // per frame (rectangular art-forward, or LOTR's circle), but the flood fill
 // handles any shape from a seed.
 //
-//   node scripts/build-showcase-frames.mjs
+//   node scripts/build-showcase-frames.mjs               # every family
+//   node scripts/build-showcase-frames.mjs tarkirdragon  # one family
+//
+// A family with `plate` also gets its P/T plates: MSE paints each on a full
+// card canvas, so it is upscaled like the frame and cropped to its alpha
+// bounding box into public/frames/<name>/pt/<c>.png — the profile's
+// pt.plateRect is that box in percent.
 // ---------------------------------------------------------------------------
 import sharp from "sharp";
 import path from "node:path";
@@ -28,7 +34,7 @@ const FRAMES = [
   { name: "bloomanime", style: "bloomburrow-borderless-anime", pat: "card.png", seeds: [[0.5, 0.3]] },
   { name: "lotr", style: "lotr", pat: "card/{c}card.png", seeds: [[0.5, 0.36]] },
   { name: "lotrscroll", style: "lotr-scroll", pat: "card/{c}card.png", seeds: [[0.5, 0.3]] },
-  { name: "tarkirdragon", style: "tarkir-dragon-wing", pat: "card/{c}card.png", seeds: [[0.5, 0.28]] },
+  { name: "tarkirdragon", style: "tarkir-dragon-wing", pat: "card/{c}card.png", seeds: [[0.5, 0.28]], plate: "pt/{c}pt.png" },
   { name: "tarkirdraconic", style: "tarkir-draconic", pat: "card/{c}card.png", seeds: [[0.5, 0.28]] },
   { name: "tarkirghostfire", style: "tarkir-ghostfire", pat: "card.png", seeds: [[0.5, 0.28]] },
 ];
@@ -94,9 +100,50 @@ async function convert(frame, color) {
   return cut;
 }
 
-for (const frame of FRAMES) {
+async function convertPlate(frame, color) {
+  const src = path.join(PACK, `magic-m15-showcase-${frame.style}.mse-style`, frame.plate.replace("{c}", color));
+  const { data, info } = await sharp(src)
+    .resize(W, H, { fit: "fill" })
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const ch = info.channels;
+  let x0 = W;
+  let y0 = H;
+  let x1 = -1;
+  let y1 = -1;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      if (data[(y * W + x) * ch + 3] > 8) {
+        if (x < x0) x0 = x;
+        if (x > x1) x1 = x;
+        if (y < y0) y0 = y;
+        if (y > y1) y1 = y;
+      }
+    }
+  }
+  const out = path.join("public/frames", frame.name, "pt");
+  fs.mkdirSync(out, { recursive: true });
+  await sharp(data, { raw: { width: W, height: H, channels: ch } })
+    .extract({ left: x0, top: y0, width: x1 - x0 + 1, height: y1 - y0 + 1 })
+    .png({ compressionLevel: 9, effort: 10 })
+    .toFile(path.join(out, `${color}.png`));
+  return `${x0},${y0} ${x1 - x0 + 1}x${y1 - y0 + 1}`;
+}
+
+const only = process.argv[2];
+if (only && !FRAMES.some((f) => f.name === only)) {
+  console.error(`Unknown family ${only}. Known: ${FRAMES.map((f) => f.name).join(", ")}`);
+  process.exit(1);
+}
+for (const frame of FRAMES.filter((f) => !only || f.name === only)) {
   let total = 0;
   for (const c of COLORS) total += await convert(frame, c);
+  if (frame.plate) {
+    const boxes = new Set();
+    for (const c of COLORS) boxes.add(await convertPlate(frame, c));
+    console.log(`${frame.name}: P/T plates cropped at ${[...boxes].join(" | ")}`);
+  }
   console.log(
     `${frame.name}: cut ~${((total / 7 / (W * H)) * 100).toFixed(1)}% avg ← ${frame.style}`,
   );

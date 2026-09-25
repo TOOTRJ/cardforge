@@ -85,3 +85,9 @@ instead. Each bullet: what the header says, and what is true now.
   sweep is not an edit, so `updated_at`, the sitemap's lastmod and the card
   page's `dateModified` stay honest. The share-image cache-buster keys on
   `max(updated_at, rendered_at)` (`lib/cards/render-version.ts`).
+- **0014 (`"etched"` = "gold-leaf inner border + faint cross-hatch
+  overlay")** — since layout v26 the etched finish is a fine cross-hatch and
+  sheen masked to the frame's own pixels (`lib/cards/etched-finish.tsx`, the
+  same SVG in the preview and the bake): the black border and the art stay
+  untouched and there is no gold inner border. The old border never baked as
+  described — Satori collapsed it into a strip down the card's left edge.

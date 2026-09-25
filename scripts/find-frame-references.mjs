@@ -195,9 +195,10 @@ const TEMPLATES = {
     confirm: "See bloomburrow — confirm the thumbnail is the anime frame.",
     q: (k) => `set:blb is:showcase border:borderless cn>=316 cn<=336 ${spellColor(k)}`,
   },
+  // Dragon Wing is the Multiverse Legends (MOM 2023) Tarkir frame: MUL #1
+  // (W) and #60 (W/U) are its only printings.
   tarkirdragon: {
-    confirm: "TDM borderless showcase run (#327+) — confirm the thumbnail shows the dragon-wing treatment.",
-    q: (k) => `set:tdm is:showcase border:borderless -border:white ${spellColor(k)}`,
+    q: (k) => `set:mul (cn:1 or cn:60) ${spellColor(k)}`,
   },
   tarkirdraconic: {
     confirm: "TDM black-border showcase run (#292–326) — confirm the thumbnail shows the draconic clan treatment.",

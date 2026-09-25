@@ -30,8 +30,16 @@ describe("isRenderStale — which stored renders a version bump invalidates", ()
     // Baked at 20: only bump 21 applies.
     expect(isRenderStale(20, "m15", scoped, 21)).toBe(false);
     expect(isRenderStale(20, "battle", scoped, 21)).toBe(true);
-    // An unknown template is treated as touched.
+    // No template and no card to read it from = can't tell → touched
+    // (lib/render/stored-render.ts: "without it every bump counts").
     expect(isRenderStale(19, null, scoped, 21)).toBe(true);
+    expect(isRenderStale(20, null, scoped, 21)).toBe(true);
+    // A frame_style that WAS read ({} or a retired value) draws the default
+    // (m15): bump 20 touched it, 21 didn't.
+    expect(isRenderStale(20, null, scoped, 21, { frame_style: {} })).toBe(false);
+    expect(isRenderStale(19, null, scoped, 21, { frame_style: {} })).toBe(true);
+    expect(isRenderStale(20, "regular", scoped, 21)).toBe(false);
+    expect(isRenderStale(20, "regular", scoped, 21, { frame_style: { template: "regular" } })).toBe(false);
     // One unscoped bump in the range touches everything.
     expect(isRenderStale(19, "saga", { 20: ["m15"] }, 21)).toBe(true);
   });
@@ -48,7 +56,7 @@ describe("hasNewerLook — only an owner opt-in bump is the owner's call (TODO 0
   const base = {
     visibility: "public",
     rendered_image_url: "https://x/y.png",
-    frame_style: { template: "retro" },
+    frame_style: { template: "saga" },
     rarity: "uncommon",
     set_icon_url: null,
     set_icon_code: null,
@@ -108,7 +116,7 @@ describe("latestOptInVersion — what owner notifications are keyed on", () => {
 describe("hasPendingCorrection — when the platform still owes a card a re-bake", () => {
   it("is true for a null stamp or a pending SWEEP bump, false for opt-in-only", async () => {
     const { hasPendingCorrection, CARD_LAYOUT_VERSION } = await import("@/lib/cards/layout-version");
-    const card = { frame_style: { template: "retro" }, rarity: "uncommon", set_icon_url: null, set_icon_code: null };
+    const card = { frame_style: { template: "saga" }, rarity: "uncommon", set_icon_url: null, set_icon_code: null };
     expect(hasPendingCorrection({ ...card, layout_version: null })).toBe(true);
     // v22 common → v23 set-mark sweep pending.
     expect(hasPendingCorrection({ ...card, layout_version: 22, rarity: "common" })).toBe(true);
@@ -127,7 +135,7 @@ describe("hasPendingCorrection — when the platform still owes a card a re-bake
 describe("downloadDiffersFromGallery — the download modal's note, per viewer", () => {
   it("paid: whenever the stored look is older; free: only while a correction is pending", async () => {
     const { downloadDiffersFromGallery, CARD_LAYOUT_VERSION } = await import("@/lib/cards/layout-version");
-    const card = { rendered_image_url: "https://x/y.png", frame_style: { template: "retro" }, rarity: "uncommon" };
+    const card = { rendered_image_url: "https://x/y.png", frame_style: { template: "saga" }, rarity: "uncommon" };
     // Opt-in pending (v21 uncommon): paid renders live → differs; free serves the bake → same.
     expect(downloadDiffersFromGallery({ ...card, layout_version: 21 }, true)).toBe(true);
     expect(downloadDiffersFromGallery({ ...card, layout_version: 21 }, false)).toBe(false);
@@ -141,7 +149,7 @@ describe("downloadDiffersFromGallery — the download modal's note, per viewer",
 describe("storedLookIsOlder — the download modal's clean-download note", () => {
   it("is true whenever a stored image predates the current renderer", async () => {
     const { storedLookIsOlder, CARD_LAYOUT_VERSION } = await import("@/lib/cards/layout-version");
-    const card = { rendered_image_url: "https://x/y.png", frame_style: { template: "retro" }, rarity: "uncommon" };
+    const card = { rendered_image_url: "https://x/y.png", frame_style: { template: "saga" }, rarity: "uncommon" };
     expect(storedLookIsOlder({ ...card, layout_version: 21 })).toBe(true);
     expect(storedLookIsOlder({ ...card, layout_version: null })).toBe(true);
     expect(storedLookIsOlder({ ...card, layout_version: CARD_LAYOUT_VERSION })).toBe(false);
@@ -184,7 +192,7 @@ describe("rollout policy + sweep classification", () => {
     const scopes = { 23: (c: { rarity?: string | null; set_icon_url?: string | null; set_icon_code?: string | null }) => !c.set_icon_url && !c.set_icon_code && c.rarity === "common" };
     const opts = { rollout, scopes, scoped: {}, current: 23 };
     const png = "https://x/y.png";
-    const row = (over: Record<string, unknown>) => ({ layout_version: 22, rendered_image_url: png, frame_style: { template: "retro" }, rarity: "uncommon", set_icon_url: null, set_icon_code: null, ...over });
+    const row = (over: Record<string, unknown>) => ({ layout_version: 22, rendered_image_url: png, frame_style: { template: "saga" }, rarity: "uncommon", set_icon_url: null, set_icon_code: null, ...over });
 
     // v22 → v23: an uncommon's bake didn't change → stamp, no render.
     expect(classifyForSweep(row({}), undefined, opts)).toBe("stamp");
@@ -200,5 +208,69 @@ describe("rollout policy + sweep classification", () => {
     // Never baked → rebake; already current → current.
     expect(classifyForSweep(row({ rendered_image_url: null }), 23, opts)).toBe("rebake");
     expect(classifyForSweep(row({ layout_version: 23 }), 23, opts)).toBe("current");
+  });
+});
+
+describe("v25 / v26 — the frame-review follow-ups (2026-09-25)", () => {
+  const png = "https://x/y.png";
+  const row = (template: string | undefined, over: Record<string, unknown> = {}) => ({
+    layout_version: 24,
+    rendered_image_url: png,
+    frame_style: template === undefined ? {} : { template, finish: "regular" },
+    rarity: "uncommon",
+    set_icon_url: null,
+    set_icon_code: null,
+    ...over,
+  });
+
+  it("v25 re-bakes only the follow-up templates; v26 only etched cards, on any template", async () => {
+    const { classifyForSweep } = await import("@/lib/cards/layout-version");
+    for (const t of [
+      "agclassic", "alphaland", "alphatoken", "retro", "retroland", "modern", "modernland", "extendedart",
+      "battle", "split", "tarkirdragon",
+    ]) {
+      expect(classifyForSweep(row(t)), t).toBe("rebake");
+    }
+    for (const t of ["m15", "m15land", "m15pw", "saga", "lotr", "avatar", "tarkirghostfire", "tarkirdraconic"]) {
+      expect(classifyForSweep(row(t)), t).toBe("stamp");
+    }
+    // Etched: any template, and only etched.
+    expect(classifyForSweep(row(undefined, { frame_style: { template: "m15", finish: "etched" } }))).toBe("rebake");
+    expect(classifyForSweep(row(undefined, { frame_style: { template: "saga", finish: "etched" } }))).toBe("rebake");
+    expect(classifyForSweep(row(undefined, { frame_style: { template: "m15", finish: "foil" } }))).toBe("stamp");
+    // Targeted: v25 leaves an etched m15 card alone, v26 takes it.
+    const etchedM15 = row(undefined, { frame_style: { template: "m15", finish: "etched" } });
+    expect(classifyForSweep(etchedM15, 25)).toBe("opt-in");
+    expect(classifyForSweep(etchedM15, 26)).toBe("rebake");
+  });
+
+  it("a card with NO template is judged as the default (m15) frame it renders on", async () => {
+    const { classifyForSweep, isRenderStale } = await import("@/lib/cards/layout-version");
+    // 272 production cards carry frame_style = {} — v25 doesn't touch m15.
+    expect(classifyForSweep(row(undefined))).toBe("stamp");
+    expect(classifyForSweep(row(undefined, { frame_style: { template: "regular" } }))).toBe("stamp");
+    // …but v24 (the M15 swap) does.
+    expect(classifyForSweep(row(undefined, { layout_version: 23 }))).toBe("rebake");
+    expect(isRenderStale(20, null, { 20: ["m15"], 21: ["battle"] }, 21, { frame_style: {} })).toBe(false);
+    expect(isRenderStale(20, null, { 20: ["m15"], 21: ["m15"] }, 21, { frame_style: {} })).toBe(true);
+    // Retired template strings draw m15 too (the v24 gap this closes).
+    expect(isRenderStale(20, "regular", { 21: ["m15"] }, 21, { frame_style: { template: "regular" } })).toBe(true);
+  });
+
+  it("a row without frame_style can't be judged by the etched scope → conservative", async () => {
+    const { isRenderStale, VERSION_SCOPES } = await import("@/lib/cards/layout-version");
+    const scopes = { 26: VERSION_SCOPES[26] };
+    expect(isRenderStale(25, "m15", {}, 26, { rarity: "rare" }, scopes)).toBe(true);
+    expect(isRenderStale(25, "m15", {}, 26, { rarity: "rare", frame_style: {} }, scopes)).toBe(false);
+    expect(isRenderStale(25, "m15", {}, 26, { rarity: "rare", frame_style: null }, scopes)).toBe(false);
+    expect(isRenderStale(25, "m15", {}, 26, { frame_style: { finish: "etched" } }, scopes)).toBe(true);
+  });
+
+  it("both are sweeps: never an owner badge", async () => {
+    const { rolloutPolicy, hasNewerLook, latestOptInVersion } = await import("@/lib/cards/layout-version");
+    expect(rolloutPolicy(25)).toBe("sweep");
+    expect(rolloutPolicy(26)).toBe("sweep");
+    expect(latestOptInVersion()).toBe(22);
+    expect(hasNewerLook({ ...row("modern"), visibility: "public" })).toBe(false);
   });
 });

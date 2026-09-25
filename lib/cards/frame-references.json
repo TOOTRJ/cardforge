@@ -3035,84 +3035,26 @@
     }
   },
   "tarkirdragon": {
-    "note": "Dragon-wing = TDM borderless showcase run (#327–376) — confirm the thumbnail; Scryfall holds low-res scans of this run.",
-    "confirm": true,
+    "note": "Dragon Wing = the Multiverse Legends (MOM 2023) Tarkir frame, not a Tarkir: Dragonstorm frame. Only MUL #1 Anafenza (W) and #60 Taigam (W/U) were printed; 'm' is Taigam, whose two colours split the wings (white left, blue right) with a gold P/T plate, so it tests the two-colour look — the 3+ colour gold-wing look was never printed. Both are legendary and show MSE's legend crown, which PipGlyph does not draw.",
     "colors": {
       "w": [
         {
-          "name": "United Battlefront",
-          "set": "tdm",
-          "scryfallId": "3c6d8e5c-4b3d-4c5c-89c5-a2746cd4b578"
-        }
-      ],
-      "u": [
-        {
-          "name": "Stillness in Motion",
-          "set": "tdm",
-          "scryfallId": "70ae35fd-5fb6-440a-9e82-13998b928ee3",
-          "tier": 1
-        },
-        {
-          "name": "Taigam, Master Opportunist",
-          "set": "tdm",
-          "scryfallId": "0ea8c278-781d-4c9c-9f1c-99d799384a29",
+          "name": "Anafenza, Kin-Tree Spirit",
+          "set": "mul",
+          "scryfallId": "278d7781-ddfe-4bcb-94bd-3c155030dfdc",
           "tier": 1
         }
       ],
-      "b": [
-        {
-          "name": "Sinkhole Surveyor",
-          "set": "tdm",
-          "scryfallId": "74b155cd-c3a0-4f27-8d3c-7778354abbd4",
-          "tier": 1
-        },
-        {
-          "name": "Avenger of the Fallen",
-          "set": "tdm",
-          "scryfallId": "bae9ca3b-cc32-410f-82e9-85cb9c4fa447",
-          "tier": 1
-        }
-      ],
-      "r": [
-        {
-          "name": "Tersa Lightshatter",
-          "set": "tdm",
-          "scryfallId": "7a1689bb-f7a4-4b53-8473-75b7ce7b496d",
-          "tier": 1
-        },
-        {
-          "name": "Cori-Steel Cutter",
-          "set": "tdm",
-          "scryfallId": "470dd3c8-07c9-42ef-aa9e-3c73b23607ff",
-          "tier": 1
-        }
-      ],
-      "g": [
-        {
-          "name": "Craterhoof Behemoth",
-          "set": "tdm",
-          "scryfallId": "c966c8a0-e73d-4484-9307-a793a65222ea",
-          "tier": 1
-        },
-        {
-          "name": "Nature's Rhythm",
-          "set": "tdm",
-          "scryfallId": "ce0ee309-b6c4-455d-8af6-48d8ac1426cb",
-          "tier": 1
-        }
-      ],
+      "u": null,
+      "b": null,
+      "r": null,
+      "g": null,
       "c": null,
       "m": [
         {
-          "name": "Death Begets Life",
-          "set": "tdm",
-          "scryfallId": "e8e94b23-955b-45c0-9cef-713a0a6c38ac",
-          "tier": 1
-        },
-        {
-          "name": "Songcrafter Mage",
-          "set": "tdm",
-          "scryfallId": "584eb844-91e2-47fb-b4e0-f5def65b824a",
+          "name": "Taigam, Ojutai Master",
+          "set": "mul",
+          "scryfallId": "eb90aae8-34c7-484c-80da-626393917720",
           "tier": 1
         }
       ]
