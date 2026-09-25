@@ -73,7 +73,7 @@ import { listCommentsForCard } from "@/lib/cards/comments-queries";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { storedLookIsOlder } from "@/lib/cards/layout-version";
+import { downloadDiffersFromGallery } from "@/lib/cards/layout-version";
 import { getSiteBaseUrl } from "@/lib/site-url";
 import { breadcrumbJsonLd, JsonLd, serializeJsonLd } from "@/components/seo/json-ld";
 import type { CardBackFace } from "@/types/card";
@@ -379,7 +379,7 @@ export async function CardDetailContent({
               cardSlug={card.slug}
               isPaid={entitlements.isPaid}
               canBatch={entitlements.allowBatchExport}
-              galleryImageIsOlder={storedLookIsOlder(card)}
+              downloadDiffersFromGallery={downloadDiffersFromGallery(card, entitlements.isPaid)}
             />
             <ShareTargets
               title={card.title}

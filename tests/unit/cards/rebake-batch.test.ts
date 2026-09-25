@@ -63,8 +63,16 @@ type DbOptions = {
   casLost?: boolean;
   /** visibility after a lost write. */
   nowVisibility?: string;
-  /** Exact marked count after the batch. */
+  /** Exact marked count after the batch, and among the ids asked about. */
   markedCount?: number;
+  markedAmongIds?: number;
+  /** Override stamp answered on the Nth pre-/post-upload re-read. */
+  overrideSequence?: Array<{ updated_at: string } | null>;
+  /** layout_version the pre-upload re-read sees (default null). */
+  freshStamp?: number | null;
+  /** The conditional stamp write matches no row. */
+  stampLost?: boolean;
+  countError?: boolean;
 };
 
 function db(rows: RebakeRow[], opts: DbOptions = {}) {
@@ -74,18 +82,34 @@ function db(rows: RebakeRow[], opts: DbOptions = {}) {
       const r = rows.find((x) => x.id === id);
       return r ? { updated_at: r.updated_at, visibility: r.visibility } : null;
     });
+  let overrideReads = 0;
   return chainClient((table, calls: ChainCall[]): ChainAnswer => {
     if (table === "frame_profile_overrides") {
-      if (called(calls, "maybeSingle")) return { data: opts.overrideNow ?? null };
+      if (called(calls, "maybeSingle")) {
+        const seq = opts.overrideSequence;
+        const answer = seq ? seq[Math.min(overrideReads, seq.length - 1)] : (opts.overrideNow ?? null);
+        overrideReads += 1;
+        return { data: answer };
+      }
       return { data: opts.overridesAtStart ?? [] };
     }
     if (table !== "cards") return {};
-    if (called(calls, "update")) return { data: opts.casLost ? [] : [{ id: "written" }] };
+    if (called(calls, "update")) {
+      const payload = payloadOf(calls, "update") as { layout_version?: number | null; rendered_image_url?: string };
+      if (payload.rendered_image_url === undefined && payload.layout_version === CARD_LAYOUT_VERSION) {
+        return { data: opts.stampLost ? [] : [{ id: "stamped" }] };
+      }
+      return { data: opts.casLost ? [] : [{ id: "written" }] };
+    }
     const select = calls.find((c) => c.method === "select");
-    if ((select?.args[1] as { head?: boolean } | undefined)?.head) return { count: opts.markedCount ?? 0 };
-    if (select?.args[0] === "updated_at, visibility") {
+    if ((select?.args[1] as { head?: boolean } | undefined)?.head) {
+      if (opts.countError) return { error: { message: "count failed" } };
+      return { count: called(calls, "in", "id") ? (opts.markedAmongIds ?? 0) : (opts.markedCount ?? 0) };
+    }
+    if (select?.args[0] === "updated_at, visibility, layout_version") {
       const id = calls.find((c) => c.method === "eq")?.args[1] as string;
-      return { data: fresh(id) };
+      const f = fresh(id);
+      return { data: f ? { ...f, layout_version: opts.freshStamp ?? null } : null };
     }
     if (select?.args[0] === "visibility") return { data: { visibility: opts.nowVisibility ?? "public" } };
     return { data: rows };
@@ -161,7 +185,7 @@ describe("runRebakeBatch", () => {
   });
 
   it("never picks a skipped id, sizes the page to limit + skips, counts remaining exactly", async () => {
-    const stub = db([row("c1"), row("c2"), row("c3")], { markedCount: 2 });
+    const stub = db([row("c1"), row("c2"), row("c3")], { markedCount: 2, markedAmongIds: 1 });
     const result = await run(stub, { limit: 1, skipIds: ["c1"] });
     if (!result.ok) throw new Error(result.error);
     expect(result.processed.map((p) => p.id)).toEqual(["c2"]);
@@ -173,7 +197,7 @@ describe("runRebakeBatch", () => {
 
   it("reports a failed render without counting it as remaining work", async () => {
     mocks.art.mockResolvedValueOnce({ ok: false, error: "art host refused" } as never);
-    const stub = db([row("bad"), row("good")], { markedCount: 1 });
+    const stub = db([row("bad"), row("good")], { markedCount: 1, markedAmongIds: 1 });
     const result = await run(stub);
     if (!result.ok) throw new Error(result.error);
     expect(result.failed).toEqual([{ id: "bad", error: "art host refused" }]);
@@ -213,6 +237,49 @@ describe("runRebakeBatch", () => {
     expect(result.superseded).toEqual(["c1"]);
     expect(result.remaining).toBe(1);
     expect(mocks.upload).not.toHaveBeenCalled();
+  });
+
+  it("a layout save during the UPLOAD re-marks the card instead of leaving it 'current'", async () => {
+    // Guard read sees the batch-start stamp; the post-write read sees a newer save.
+    const stub = db([row("c1")], {
+      overridesAtStart: [{ template: "m15", updated_at: "T1" }],
+      overrideSequence: [{ updated_at: "T1" }, { updated_at: "T2" }],
+      markedCount: 1,
+    });
+    const result = await run(stub);
+    if (!result.ok) throw new Error(result.error);
+    expect(result.superseded).toEqual(["c1"]);
+    expect(result.processed).toEqual([]);
+    const updates = stub.forTable("cards").filter((e) => called(e.calls, "update"));
+    const remark = updates[updates.length - 1];
+    expect(payloadOf(remark.calls, "update")).toEqual({ layout_version: null });
+    // Only if the row still holds the render this batch wrote.
+    expect(called(remark.calls, "eq", "rendered_at")).toBe(true);
+  });
+
+  it("skips a marked card another run already re-baked", async () => {
+    const stub = db([row("c1")], { freshStamp: CARD_LAYOUT_VERSION });
+    const result = await run(stub);
+    if (!result.ok) throw new Error(result.error);
+    expect(result.superseded).toEqual(["c1"]);
+    expect(mocks.upload).not.toHaveBeenCalled();
+  });
+
+  it("stamps conditionally: a layout save that nulled the card since the scan wins", async () => {
+    // v22 uncommon m15: v23 didn't change it → the sweep only stamps it.
+    const stub = db([row("c1", { layout_version: 22 })], { stampLost: true });
+    const result = await run(stub, { scope: { kind: "sweep" } });
+    if (!result.ok) throw new Error(result.error);
+    expect(result.superseded).toEqual(["c1"]);
+    const stamp = stub.forTable("cards").find((e) => called(e.calls, "update"));
+    expect(called(stamp!.calls, "eq", "layout_version")).toBe(true);
+    expect(mocks.render).not.toHaveBeenCalled();
+  });
+
+  it("fails the call when the remaining count can't be read (never 'nothing left')", async () => {
+    const stub = db([row("c1")], { countError: true });
+    const result = await run(stub);
+    expect(result.ok).toBe(false);
   });
 
   it("a lost compare-and-set on a card that just went private removes the uploaded objects", async () => {
@@ -259,6 +326,16 @@ describe("runRebakeBatch", () => {
 });
 
 describe("countMarkedRenders", () => {
+  it("throws on a query error and counts among ids in chunks", async () => {
+    const failing = chainClient(() => ({ error: { message: "boom" } }));
+    await expect(countMarkedRenders(failing.client as never)).rejects.toThrow(/boom/);
+    const stub = chainClient(() => ({ count: 3 }));
+    const ids = Array.from({ length: 450 }, (_, i) => `id-${i}`);
+    expect(await countMarkedRenders(stub.client as never, ids)).toBe(9);
+    expect(stub.forTable("cards")).toHaveLength(3);
+    expect(await countMarkedRenders(stub.client as never, [])).toBe(0);
+  });
+
   it("counts published, baked null-stamp cards", async () => {
     const stub = chainClient(() => ({ count: 7 }));
     expect(await countMarkedRenders(stub.client as never)).toBe(7);

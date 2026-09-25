@@ -29,7 +29,7 @@ import {
 } from "@/lib/cards/frame-profile-override-actions";
 import { scanPlacement, type CardOrientation } from "@/lib/frames/scan-geometry";
 import type { SlotScore } from "@/lib/frames/align";
-import { startMarkedRebake } from "@/components/admin/rebake-marked-store";
+import { shouldRebakeAfterLayoutChange, startMarkedRebake } from "@/components/admin/rebake-marked-store";
 
 /** Cards left alone because their owner hasn't accepted a pending opt-in
  *  look (lib/cards/frame-profile-override-actions.ts) — say so. */
@@ -344,7 +344,7 @@ export function FrameCompare({
           : "Nothing to save — this template already uses the code defaults.",
       );
       router.refresh();
-      if (result.changed && result.staleCount > 0) void startMarkedRebake();
+      if (shouldRebakeAfterLayoutChange(result)) void startMarkedRebake();
     });
 
   const reset = () =>
@@ -368,7 +368,7 @@ export function FrameCompare({
         toast.message("Draft discarded — no saved layout existed for this template.");
       }
       router.refresh();
-      if (result.changed && result.staleCount > 0) void startMarkedRebake();
+      if (shouldRebakeAfterLayoutChange(result)) void startMarkedRebake();
     });
 
   // `isolate` caps CardPreview's internal z-indexed layers inside their own

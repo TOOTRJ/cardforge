@@ -64,7 +64,7 @@ export function MarkedRendersPanel({ initialCount }: { initialCount: number }) {
                   .join("; ")}) — they keep their old image and are retried next time.`
               : run.remaining && run.remaining > 0
                 ? `${run.remaining} still owed a re-bake.`
-                : "Every published card matches the current layout."}
+                : "Every marked card was re-baked."}
           </>
         ) : run.status === "error" ? (
           <>

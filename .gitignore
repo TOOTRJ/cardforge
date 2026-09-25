@@ -55,3 +55,7 @@ test-results/
 supabase/.branches
 supabase/.temp
 .artifact-blend-tmp/
+
+# Frame build output (Card Conjurer / MSE conversions) — published to the
+# frames bucket, never committed (frames plan 4.2, docs/FRAMES.md).
+/.frames-build/

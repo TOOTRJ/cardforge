@@ -369,7 +369,9 @@ export function hasPendingCorrection(
  * And only an OPT-IN bump is the owner's call (TODO 0.20, 2026-09-25): a
  * sweep bump or a frame-geometry change (null stamp) is a correction the
  * platform re-bakes itself — one override save used to badge 176 of the
- * dev database's 189 cards.
+ * dev database's 189 cards. A card that ALSO owes a correction gets no
+ * badge either: the sweep re-renders it with the current renderer, opt-in
+ * look included, so the badge would offer a choice the owner doesn't have.
  */
 export function hasNewerLook(
   card: {
@@ -384,8 +386,10 @@ export function hasNewerLook(
   if (!card.rendered_image_url) return false;
   if (card.layout_version == null || !Number.isFinite(card.layout_version)) return false;
   const rollout = opts.rollout ?? VERSION_ROLLOUT;
-  return pendingVersions(card.layout_version, templateOfFrameStyle(card.frame_style), card, opts).some(
-    (version) => rolloutPolicy(version, rollout) === "opt-in",
+  const pending = pendingVersions(card.layout_version, templateOfFrameStyle(card.frame_style), card, opts);
+  return (
+    pending.some((version) => rolloutPolicy(version, rollout) === "opt-in") &&
+    !pending.some((version) => rolloutPolicy(version, rollout) === "sweep")
   );
 }
 
@@ -411,4 +415,23 @@ export function storedLookIsOlder(
     CARD_LAYOUT_VERSION,
     card,
   );
+}
+
+/**
+ * Whether THIS viewer's download differs from the card's stored (gallery)
+ * image. A paid viewer's clean download always renders live, so it differs
+ * whenever the stored look is older; a free viewer's watermarked download
+ * serves the stored bake unless a platform correction is pending
+ * (lib/render/stored-render.ts), when it renders live too.
+ */
+export function downloadDiffersFromGallery(
+  card: {
+    rendered_image_url: string | null | undefined;
+    layout_version: number | null | undefined;
+    frame_style: unknown;
+  } & ScopeCard,
+  viewerIsPaid: boolean,
+): boolean {
+  if (!card.rendered_image_url) return false;
+  return viewerIsPaid ? storedLookIsOlder(card) : hasPendingCorrection(card);
 }

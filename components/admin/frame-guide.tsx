@@ -75,7 +75,10 @@ export function FrameGuide({ defaultOpen = false }: { defaultOpen?: boolean }) {
         and every NEW save are updated <em>instantly</em>. Already-published
         cards are re-baked right after the save (keep the tab open until the
         progress note says it&apos;s done); owners never see a &ldquo;newer
-        look&rdquo; badge for a layout fix. Card content
+        look&rdquo; badge for a layout fix. Exception: a card whose owner
+        hasn&apos;t accepted a pending &ldquo;newer look&rdquo; keeps its
+        stored image (and its watermarked download) until the owner updates
+        it — the save toast counts them. Card content
         — text, art, stats — is never touched; only where the frame draws it.
         Layout edits apply per frame template, to everyone&apos;s cards using
         that frame.

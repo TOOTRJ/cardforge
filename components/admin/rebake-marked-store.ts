@@ -108,6 +108,15 @@ export async function startMarkedRebake(): Promise<MarkedRebakeState> {
   return state;
 }
 
+/** Whether a layout Save/Reset result should start the re-bake loop. */
+export function shouldRebakeAfterLayoutChange(result: {
+  ok: boolean;
+  changed?: boolean;
+  staleCount?: number;
+}): boolean {
+  return result.ok && result.changed === true && (result.staleCount ?? 0) > 0;
+}
+
 /** Test hook — the store is module-global. */
 export function __resetMarkedRebakeForTests() {
   state = INITIAL;

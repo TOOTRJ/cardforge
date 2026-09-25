@@ -49,12 +49,17 @@ import {
 //
 // Overlap guards (mirroring lib/cards/bake-render.ts): rendering takes
 // seconds, so right before uploading the batch re-reads the card and the
-// card's frame override. If the owner saved or unpublished the card, or an
-// admin saved that template's layout again, the render is SUPERSEDED: it is
-// not uploaded and the row keeps its state (a marked card stays marked, so
-// a running loop picks it up again). The row write is a compare-and-set on
-// updated_at + visibility; a lost race on a card that just went private
-// removes the objects it uploaded.
+// card's frame override. If the owner saved or unpublished the card, an
+// admin saved that template's layout again, or another run already
+// re-baked it, the render is SUPERSEDED: it is not uploaded and the row
+// keeps its state (a marked card stays marked, so a running loop picks it
+// up again). The row write is a compare-and-set on updated_at + visibility
+// (+ the stamp it read); a lost race on a card that just went private
+// removes the objects it uploaded. A layout save cannot move updated_at
+// (0108 excludes layout_version), so after a successful write the override
+// is read AGAIN: if it moved during the upload, the card is re-marked
+// (conditional on the render we just wrote) instead of staying "current"
+// with the previous geometry.
 //
 // Environment gate (callers enforce it before calling): a bake carries the
 // pipglyph.com mark only when isBillingEnabled() — a server without
@@ -217,12 +222,14 @@ export async function runRebakeBatch(
     const path = cardRenderPath(row.owner_id, row.id);
     try {
       if (verdict === "stamp") {
-        const { error: stampErr } = await supabase
-          .from("cards")
-          .update({ layout_version: CARD_LAYOUT_VERSION })
-          .eq("id", row.id);
+        // Conditional on the stamp we classified: a layout save that nulled
+        // it since the scan must win (it owes the card a re-bake).
+        let stamp = supabase.from("cards").update({ layout_version: CARD_LAYOUT_VERSION }).eq("id", row.id);
+        stamp = row.layout_version == null ? stamp.is("layout_version", null) : stamp.eq("layout_version", row.layout_version);
+        const { data: stamped, error: stampErr } = await stamp.select("id");
         if (stampErr) throw new Error(`Row update failed: ${stampErr.message}`);
-        processed.push({ id: row.id, verdict });
+        if (!stamped || stamped.length === 0) superseded.push(row.id);
+        else processed.push({ id: row.id, verdict });
         continue;
       }
 
@@ -246,13 +253,14 @@ export async function runRebakeBatch(
       // rendered? A residual race remains until the write; part 2 catches it.
       const template = normalizeFrameTemplate(templateOfFrameStyle(row.frame_style));
       const [{ data: fresh }, layoutNow] = await Promise.all([
-        supabase.from("cards").select("updated_at, visibility").eq("id", row.id).maybeSingle(),
+        supabase.from("cards").select("updated_at, visibility, layout_version").eq("id", row.id).maybeSingle(),
         readOverrideStamp(supabase, template),
       ]);
       if (
         !fresh ||
         fresh.updated_at !== row.updated_at ||
         !["public", "unlisted"].includes(fresh.visibility as string) ||
+        (scope.kind === "marked" && fresh.layout_version != null) ||
         layoutNow !== (overrideStamps.get(template) ?? null)
       ) {
         superseded.push(row.id);
@@ -263,12 +271,13 @@ export async function runRebakeBatch(
       if (!uploaded.ok) throw new Error(uploaded.error);
       const { renderedImageUrl } = uploaded;
       // Part 2 (compare-and-set): only the row as rendered may take the URL.
+      const renderedAt = new Date().toISOString();
       const { data: written, error: updateErr } = await supabase
         .from("cards")
         .update({
           rendered_image_url: renderedImageUrl,
           rendered_thumb_url: uploaded.renderedThumbUrl,
-          rendered_at: new Date().toISOString(),
+          rendered_at: renderedAt,
           layout_version: CARD_LAYOUT_VERSION,
         })
         .eq("id", row.id)
@@ -284,19 +293,42 @@ export async function runRebakeBatch(
         superseded.push(row.id);
         continue;
       }
+      // Part 3: a layout save during the upload can't be seen by the write
+      // (it doesn't move updated_at). If the override moved, re-mark the
+      // card — only if the row still holds OUR render.
+      if ((await readOverrideStamp(supabase, template)) !== (overrideStamps.get(template) ?? null)) {
+        await supabase
+          .from("cards")
+          .update({ layout_version: null })
+          .eq("id", row.id)
+          .eq("rendered_at", renderedAt);
+        superseded.push(row.id);
+        continue;
+      }
       processed.push({ id: row.id, verdict, renderedImageUrl });
     } catch (err) {
       failed.push({ id: row.id, error: err instanceof Error ? err.message : "Unknown error" });
     }
   }
 
-  // Work left for the driver, not counting the rows that just failed (a
-  // caller that skips them next time won't see them again). The marked
-  // scope counts exactly; the others only know the pages they scanned.
-  const remaining =
-    scope.kind === "marked"
-      ? Math.max(0, (await countMarkedRenders(supabase)) - skip.size - failed.length)
-      : Math.max(0, plan.rebake + plan.stamp - processed.length - failed.length);
+  // Work left for the driver. The marked scope counts exactly, leaving out
+  // the cards this caller will skip (earlier failures + this call's) that
+  // are still marked. The other scopes only know the pages they scanned and
+  // their driver (scripts/rebake-renders.mjs) retries failed rows, so those
+  // stay in the lower bound.
+  let remaining: number;
+  try {
+    remaining =
+      scope.kind === "marked"
+        ? Math.max(
+            0,
+            (await countMarkedRenders(supabase)) -
+              (await countMarkedRenders(supabase, [...skip, ...failed.map((f) => f.id)])),
+          )
+        : Math.max(0, plan.rebake + plan.stamp - processed.length);
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Could not count the remaining cards." };
+  }
   return { ...base, dry: false, processed, failed, superseded, remaining };
 }
 
@@ -316,13 +348,30 @@ async function readOverrideStamp(supabase: Admin, template: string): Promise<str
 }
 
 /** Published, baked cards a platform re-bake is owed to (null stamp) — the
- *  count the compare page shows. Caller must be admin-gated. */
-export async function countMarkedRenders(supabase: Admin): Promise<number> {
-  const { count } = await supabase
-    .from("cards")
-    .select("id", { count: "exact", head: true })
-    .in("visibility", ["public", "unlisted"])
-    .is("layout_version", null)
-    .not("rendered_image_url", "is", null);
-  return count ?? 0;
+ *  count the compare page shows — optionally only among `ids`. Throws on a
+ *  query error: a failed count must never read as "nothing left". Caller
+ *  must be admin-gated. */
+export async function countMarkedRenders(supabase: Admin, ids?: readonly string[]): Promise<number> {
+  if (ids && ids.length === 0) return 0;
+  const chunks = ids ? chunk(ids, 200) : [null];
+  let total = 0;
+  for (const part of chunks) {
+    let query = supabase
+      .from("cards")
+      .select("id", { count: "exact", head: true })
+      .in("visibility", ["public", "unlisted"])
+      .is("layout_version", null)
+      .not("rendered_image_url", "is", null);
+    if (part) query = query.in("id", part);
+    const { count, error } = await query;
+    if (error) throw new Error(`Counting marked cards failed: ${error.message}`);
+    total += count ?? 0;
+  }
+  return total;
+}
+
+function chunk<T>(items: readonly T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+  return out;
 }

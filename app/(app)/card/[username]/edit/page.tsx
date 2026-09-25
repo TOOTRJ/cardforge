@@ -8,7 +8,7 @@ import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { DownloadModal } from "@/components/cards/download-modal";
 import { RenderUpdateNotice } from "@/components/cards/render-update";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
-import { hasNewerLook, storedLookIsOlder } from "@/lib/cards/layout-version";
+import { downloadDiffersFromGallery, hasNewerLook } from "@/lib/cards/layout-version";
 import { PageHeader } from "@/components/layout/page-header";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { Button } from "@/components/ui/button";
@@ -120,7 +120,7 @@ export default async function EditCardPage({ params }: EditCardPageProps) {
               cardSlug={card.slug}
               isPaid={entitlements.isPaid}
               canBatch={entitlements.allowBatchExport}
-              galleryImageIsOlder={storedLookIsOlder(card)}
+              downloadDiffersFromGallery={downloadDiffersFromGallery(card, entitlements.isPaid)}
             />
             <Button asChild variant="ghost">
               <Link href={publicPath}>

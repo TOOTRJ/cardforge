@@ -16,15 +16,17 @@ describe("staleCountsByOwner — who gets a render_update notification", () => {
       { owner_id: "a", layout_version: CARD_LAYOUT_VERSION, rendered_image_url: png, frame_style: { template: "m15" } },
       // A frame-geometry change (null stamp) is a platform re-bake, never a badge.
       { owner_id: "d", layout_version: null, rendered_image_url: png, frame_style: { template: "m15" } },
+      // v3 also owes the v20/v21/v23 sweeps: the sweep re-bakes it (opt-in
+      // look included), so the badge would offer a choice that doesn't exist.
       { owner_id: "b", layout_version: 3, rendered_image_url: png, frame_style: {} },
       // A bake that failed after publish stays quiet too.
       { owner_id: "c", layout_version: 3, rendered_image_url: null, frame_style: {} },
     ]);
     expect(counts.get("a")).toBe(1);
-    expect(counts.get("b")).toBe(1);
+    expect(counts.has("b")).toBe(false);
     expect(counts.has("c")).toBe(false);
     expect(counts.has("d")).toBe(false);
-    expect(counts.size).toBe(2);
+    expect(counts.size).toBe(1);
   });
 
   it("is empty when nothing is stale", () => {

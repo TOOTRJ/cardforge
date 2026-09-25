@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentProfile } from "@/lib/supabase/server";
@@ -80,6 +81,10 @@ export async function POST(request: Request) {
     skipIds: parsed.data.skipIds,
   });
   if (!result.ok) return json({ ok: false, error: result.error }, 500);
+  // Gallery landings, hubs and card pages are ISR and point at the old
+  // ?v= render URLs (cached immutably by /render-cdn). Refresh them once,
+  // when the run finishes, not after every batch.
+  if (result.remaining === 0 && result.processed.length > 0) revalidatePath("/", "layout");
   return json({
     ok: true,
     rebaked: result.processed.length,

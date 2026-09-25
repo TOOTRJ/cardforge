@@ -20,6 +20,8 @@ vi.mock("@/lib/supabase/admin", () => ({
 }));
 vi.mock("@/lib/billing/flags", () => ({ isBillingEnabled: () => state.billing }));
 vi.mock("@/lib/cards/rebake-batch", () => ({ runRebakeBatch: state.batch }));
+const revalidatePath = vi.hoisted(() => vi.fn());
+vi.mock("next/cache", () => ({ revalidatePath }));
 
 import { POST } from "@/app/api/admin/rebake-marked/route";
 
@@ -86,6 +88,19 @@ describe("POST /api/admin/rebake-marked", () => {
       superseded: 1,
       remaining: 5,
     });
+  });
+
+  it("refreshes the ISR pages once, when a run finishes having re-baked something", async () => {
+    revalidatePath.mockClear();
+    await post({});
+    expect(revalidatePath).not.toHaveBeenCalled(); // remaining 5
+    state.batch.mockResolvedValue({ ok: true, processed: [{ id: "a", verdict: "rebake" }], failed: [], superseded: [], remaining: 0 });
+    await post({});
+    expect(revalidatePath).toHaveBeenCalledWith("/", "layout");
+    revalidatePath.mockClear();
+    state.batch.mockResolvedValue({ ok: true, processed: [], failed: [], superseded: [], remaining: 0 });
+    await post({});
+    expect(revalidatePath).not.toHaveBeenCalled();
   });
 
   it("passes a batch error through as a 500", async () => {

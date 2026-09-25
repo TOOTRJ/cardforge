@@ -25,6 +25,7 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 
 import {
   __resetMarkedRebakeForTests,
+  shouldRebakeAfterLayoutChange,
   startMarkedRebake,
 } from "@/components/admin/rebake-marked-store";
 import { MarkedRendersPanel } from "@/components/admin/marked-renders-panel";
@@ -87,6 +88,15 @@ describe("startMarkedRebake", () => {
     release({ ok: true, rebaked: 1, failed: [], superseded: 0, remaining: 0 });
     await first;
     expect(action).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("shouldRebakeAfterLayoutChange — the editor's Save/Reset wiring", () => {
+  it("starts the loop only when the save changed something and marked cards", () => {
+    expect(shouldRebakeAfterLayoutChange({ ok: true, changed: true, staleCount: 3 })).toBe(true);
+    expect(shouldRebakeAfterLayoutChange({ ok: true, changed: false, staleCount: 3 })).toBe(false);
+    expect(shouldRebakeAfterLayoutChange({ ok: true, changed: true, staleCount: 0 })).toBe(false);
+    expect(shouldRebakeAfterLayoutChange({ ok: false })).toBe(false);
   });
 });
 

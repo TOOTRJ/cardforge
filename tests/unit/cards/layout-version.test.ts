@@ -62,6 +62,12 @@ describe("hasNewerLook — only an owner opt-in bump is the owner's call (TODO 0
     expect(hasNewerLook({ ...base, layout_version: 21, rendered_image_url: null })).toBe(false);
   });
 
+  it("never flags a card that also owes a correction — the sweep will override the choice", async () => {
+    const { hasNewerLook } = await import("@/lib/cards/layout-version");
+    // v21 COMMON: v22 (opt-in) and the v23 set-mark sweep are both pending.
+    expect(hasNewerLook({ ...base, rarity: "common", layout_version: 21 })).toBe(false);
+  });
+
   it("never flags a SWEEP-only pending bump — the platform re-bakes those", async () => {
     const { hasNewerLook, CARD_LAYOUT_VERSION } = await import("@/lib/cards/layout-version");
     // v22 → v23 is the sweep-policy set-mark fix for commons.
@@ -115,6 +121,20 @@ describe("hasPendingCorrection — when the platform still owes a card a re-bake
     expect(hasPendingCorrection({ ...card, layout_version: 19 })).toBe(true);
     // v20 bakes may be clean — v21's sweep is still owed.
     expect(hasPendingCorrection({ ...card, layout_version: 20 })).toBe(true);
+  });
+});
+
+describe("downloadDiffersFromGallery — the download modal's note, per viewer", () => {
+  it("paid: whenever the stored look is older; free: only while a correction is pending", async () => {
+    const { downloadDiffersFromGallery, CARD_LAYOUT_VERSION } = await import("@/lib/cards/layout-version");
+    const card = { rendered_image_url: "https://x/y.png", frame_style: { template: "m15" }, rarity: "uncommon" };
+    // Opt-in pending (v21 uncommon): paid renders live → differs; free serves the bake → same.
+    expect(downloadDiffersFromGallery({ ...card, layout_version: 21 }, true)).toBe(true);
+    expect(downloadDiffersFromGallery({ ...card, layout_version: 21 }, false)).toBe(false);
+    // Marked by a layout change: both render live.
+    expect(downloadDiffersFromGallery({ ...card, layout_version: null }, false)).toBe(true);
+    expect(downloadDiffersFromGallery({ ...card, layout_version: CARD_LAYOUT_VERSION }, true)).toBe(false);
+    expect(downloadDiffersFromGallery({ ...card, rendered_image_url: null, layout_version: null }, false)).toBe(false);
   });
 });
 

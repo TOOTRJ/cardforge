@@ -123,6 +123,10 @@ describe("card PNG download", () => {
     const after = (await download()).headers.get("etag");
     expect(before).toBeTruthy();
     expect(after).not.toBe(before);
+    // Marking the card (a layout save) moves only layout_version.
+    const marked = card({ layout_version: null, rendered_at: "2026-09-25T00:00:00Z" });
+    state.card = marked;
+    expect((await download()).headers.get("etag")).not.toBe(after);
     // A same-version re-bake (legacy-art) only moves rendered_at.
     state.card = card({ layout_version: 23, rendered_at: "2026-09-26T00:00:00Z" });
     expect((await download()).headers.get("etag")).not.toBe(after);
