@@ -40,6 +40,33 @@ environment's own Supabase project, taken from `NEXT_PUBLIC_SUPABASE_URL`.
 | CI e2e (local Docker stack) | the dev bucket | `.env.e2e` in `.github/workflows/ci.yml` |
 | Local e2e / local Docker stack | the dev bucket | `NEXT_PUBLIC_FRAME_ORIGIN` in `.env.e2e` (see `.env.e2e.example`); the local bucket is empty |
 
+## Card Conjurer frames (4.3)
+
+`scripts/import-cc-frames.mjs` builds the nine M15-era templates from Card
+Conjurer's packs into `.frames-build/`: m15, m15artifact, m15land, m15snow,
+m15snowland, m15devoid, m15pw, m15token and m15tokenartifact.
+
+```bash
+node scripts/import-cc-frames.mjs --only m15,m15land
+```
+
+- **Source.** The Investigamer/cardconjurer fork at a pinned commit, cached
+  under `~/.cache/pipglyph-cc/<commit>`, or set `CC_CACHE`. It takes about
+  4 minutes for all nine templates.
+- **Recipe.** It is in `scripts/lib/cc-frames.mjs`. Coloured artifacts are
+  blended through CC's pinline mask. Every colourless substitution is noted
+  in the recipe.
+- **Output.** 1500×2100 PNGs with rounded transparent corners, WebP
+  siblings, and P/T plates at native size.
+- **Provenance.** Which pack files made each frame is written to
+  `lib/cards/frame-sources.json`.
+- **Never committed.** Card Conjurer's site was shut down after a Wizards of
+  the Coast cease-and-desist, and the fork has no licence file. The converted
+  frames only ever go to the bucket.
+
+Shipping them is 4.4: publish, delete the git copies, fix the profiles, bump
+the layout version once and sweep.
+
 ## Shipping a frame change
 
 1. Build the files into `.frames-build/<template>/…`, which is gitignored.

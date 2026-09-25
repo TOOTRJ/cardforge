@@ -1,0 +1,449 @@
+{
+  "m15": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 39px, webp q90",
+    "colors": {
+      "w": [
+        "img/frames/m15/new/w.png"
+      ],
+      "u": [
+        "img/frames/m15/new/u.png"
+      ],
+      "b": [
+        "img/frames/m15/new/b.png"
+      ],
+      "r": [
+        "img/frames/m15/new/r.png"
+      ],
+      "g": [
+        "img/frames/m15/new/g.png"
+      ],
+      "c": [
+        "img/frames/m15/new/c.png"
+      ],
+      "m": [
+        "img/frames/m15/new/m.png"
+      ]
+    },
+    "plates": {
+      "w": "img/frames/m15/regular/m15PTW.png",
+      "u": "img/frames/m15/regular/m15PTU.png",
+      "b": "img/frames/m15/regular/m15PTB.png",
+      "r": "img/frames/m15/regular/m15PTR.png",
+      "g": "img/frames/m15/regular/m15PTG.png",
+      "c": "img/frames/m15/regular/m15PTC.png",
+      "m": "img/frames/m15/regular/m15PTM.png"
+    },
+    "sourceFiles": [
+      "img/frames/m15/new/b.png",
+      "img/frames/m15/new/c.png",
+      "img/frames/m15/new/g.png",
+      "img/frames/m15/new/m.png",
+      "img/frames/m15/new/r.png",
+      "img/frames/m15/new/u.png",
+      "img/frames/m15/new/w.png",
+      "img/frames/m15/regular/m15PTB.png",
+      "img/frames/m15/regular/m15PTC.png",
+      "img/frames/m15/regular/m15PTG.png",
+      "img/frames/m15/regular/m15PTM.png",
+      "img/frames/m15/regular/m15PTR.png",
+      "img/frames/m15/regular/m15PTU.png",
+      "img/frames/m15/regular/m15PTW.png"
+    ],
+    "notes": []
+  },
+  "m15artifact": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 39px, webp q90",
+    "colors": {
+      "w": [
+        "img/frames/m15/new/a.png",
+        "img/frames/m15/new/w.png through img/frames/m15/new/pinline.png"
+      ],
+      "u": [
+        "img/frames/m15/new/a.png",
+        "img/frames/m15/new/u.png through img/frames/m15/new/pinline.png"
+      ],
+      "b": [
+        "img/frames/m15/new/a.png",
+        "img/frames/m15/new/b.png through img/frames/m15/new/pinline.png"
+      ],
+      "r": [
+        "img/frames/m15/new/a.png",
+        "img/frames/m15/new/r.png through img/frames/m15/new/pinline.png"
+      ],
+      "g": [
+        "img/frames/m15/new/a.png",
+        "img/frames/m15/new/g.png through img/frames/m15/new/pinline.png"
+      ],
+      "c": [
+        "img/frames/m15/new/a.png"
+      ],
+      "m": [
+        "img/frames/m15/new/a.png",
+        "img/frames/m15/new/m.png through img/frames/m15/new/pinline.png"
+      ]
+    },
+    "plates": {
+      "w": "img/frames/m15/regular/m15PTW.png",
+      "u": "img/frames/m15/regular/m15PTU.png",
+      "b": "img/frames/m15/regular/m15PTB.png",
+      "r": "img/frames/m15/regular/m15PTR.png",
+      "g": "img/frames/m15/regular/m15PTG.png",
+      "c": "img/frames/m15/regular/m15PTA.png",
+      "m": "img/frames/m15/regular/m15PTM.png"
+    },
+    "sourceFiles": [
+      "img/frames/m15/new/a.png",
+      "img/frames/m15/new/b.png",
+      "img/frames/m15/new/g.png",
+      "img/frames/m15/new/m.png",
+      "img/frames/m15/new/pinline.png",
+      "img/frames/m15/new/r.png",
+      "img/frames/m15/new/u.png",
+      "img/frames/m15/new/w.png",
+      "img/frames/m15/regular/m15PTA.png",
+      "img/frames/m15/regular/m15PTB.png",
+      "img/frames/m15/regular/m15PTG.png",
+      "img/frames/m15/regular/m15PTM.png",
+      "img/frames/m15/regular/m15PTR.png",
+      "img/frames/m15/regular/m15PTU.png",
+      "img/frames/m15/regular/m15PTW.png"
+    ],
+    "notes": [
+      "coloured artifacts = silver artifact frame + the colour frame through CC's pinline mask"
+    ]
+  },
+  "m15devoid": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 39px, webp q90",
+    "colors": {
+      "w": [
+        "img/frames/m15/devoid/m15DevoidFrameW.png"
+      ],
+      "u": [
+        "img/frames/m15/devoid/m15DevoidFrameU.png"
+      ],
+      "b": [
+        "img/frames/m15/devoid/m15DevoidFrameB.png"
+      ],
+      "r": [
+        "img/frames/m15/devoid/m15DevoidFrameR.png"
+      ],
+      "g": [
+        "img/frames/m15/devoid/m15DevoidFrameG.png"
+      ],
+      "c": [
+        "img/frames/m15/new/c.png"
+      ],
+      "m": [
+        "img/frames/m15/devoid/m15DevoidFrameM.png"
+      ]
+    },
+    "plates": {
+      "w": "img/frames/m15/devoid/m15DevoidPT.png",
+      "u": "img/frames/m15/devoid/m15DevoidPT.png",
+      "b": "img/frames/m15/devoid/m15DevoidPT.png",
+      "r": "img/frames/m15/devoid/m15DevoidPT.png",
+      "g": "img/frames/m15/devoid/m15DevoidPT.png",
+      "c": "img/frames/m15/devoid/m15DevoidPT.png",
+      "m": "img/frames/m15/devoid/m15DevoidPT.png"
+    },
+    "sourceFiles": [
+      "img/frames/m15/devoid/m15DevoidFrameB.png",
+      "img/frames/m15/devoid/m15DevoidFrameG.png",
+      "img/frames/m15/devoid/m15DevoidFrameM.png",
+      "img/frames/m15/devoid/m15DevoidFrameR.png",
+      "img/frames/m15/devoid/m15DevoidFrameU.png",
+      "img/frames/m15/devoid/m15DevoidFrameW.png",
+      "img/frames/m15/devoid/m15DevoidPT.png",
+      "img/frames/m15/new/c.png"
+    ],
+    "notes": [
+      "true colourless = the plain colourless (Eldrazi) frame; devoid colours keep their pinline"
+    ]
+  },
+  "m15land": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 39px, webp q90",
+    "colors": {
+      "w": [
+        "img/frames/m15/new/lw.png"
+      ],
+      "u": [
+        "img/frames/m15/new/lu.png"
+      ],
+      "b": [
+        "img/frames/m15/new/lb.png"
+      ],
+      "r": [
+        "img/frames/m15/new/lr.png"
+      ],
+      "g": [
+        "img/frames/m15/new/lg.png"
+      ],
+      "c": [
+        "img/frames/m15/new/l.png"
+      ],
+      "m": [
+        "img/frames/m15/new/lm.png"
+      ]
+    },
+    "sourceFiles": [
+      "img/frames/m15/new/l.png",
+      "img/frames/m15/new/lb.png",
+      "img/frames/m15/new/lg.png",
+      "img/frames/m15/new/lm.png",
+      "img/frames/m15/new/lr.png",
+      "img/frames/m15/new/lu.png",
+      "img/frames/m15/new/lw.png"
+    ],
+    "notes": [
+      "colourless land = CC's generic land frame (the pack has no ll.png)"
+    ]
+  },
+  "m15pw": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 39px, webp q90",
+    "colors": {
+      "w": [
+        "img/frames/planeswalker/regular/planeswalkerFrameW.png"
+      ],
+      "u": [
+        "img/frames/planeswalker/regular/planeswalkerFrameU.png"
+      ],
+      "b": [
+        "img/frames/planeswalker/regular/planeswalkerFrameB.png"
+      ],
+      "r": [
+        "img/frames/planeswalker/regular/planeswalkerFrameR.png"
+      ],
+      "g": [
+        "img/frames/planeswalker/regular/planeswalkerFrameG.png"
+      ],
+      "c": [
+        "img/frames/planeswalker/regular/planeswalkerFrameA.png"
+      ],
+      "m": [
+        "img/frames/planeswalker/regular/planeswalkerFrameM.png"
+      ]
+    },
+    "sourceFiles": [
+      "img/frames/planeswalker/regular/planeswalkerFrameA.png",
+      "img/frames/planeswalker/regular/planeswalkerFrameB.png",
+      "img/frames/planeswalker/regular/planeswalkerFrameG.png",
+      "img/frames/planeswalker/regular/planeswalkerFrameM.png",
+      "img/frames/planeswalker/regular/planeswalkerFrameR.png",
+      "img/frames/planeswalker/regular/planeswalkerFrameU.png",
+      "img/frames/planeswalker/regular/planeswalkerFrameW.png"
+    ],
+    "notes": [
+      "colourless planeswalker = CC's artifact planeswalker frame; the loyalty shield stays PipGlyph's"
+    ]
+  },
+  "m15snow": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 39px, webp q90",
+    "colors": {
+      "w": [
+        "img/frames/m15/new/snow/w.png"
+      ],
+      "u": [
+        "img/frames/m15/new/snow/u.png"
+      ],
+      "b": [
+        "img/frames/m15/new/snow/b.png"
+      ],
+      "r": [
+        "img/frames/m15/new/snow/r.png"
+      ],
+      "g": [
+        "img/frames/m15/new/snow/g.png"
+      ],
+      "c": [
+        "img/frames/m15/new/snow/a.png"
+      ],
+      "m": [
+        "img/frames/m15/new/snow/m.png"
+      ]
+    },
+    "plates": {
+      "w": "img/frames/m15/regular/m15PTW.png",
+      "u": "img/frames/m15/regular/m15PTU.png",
+      "b": "img/frames/m15/regular/m15PTB.png",
+      "r": "img/frames/m15/regular/m15PTR.png",
+      "g": "img/frames/m15/regular/m15PTG.png",
+      "c": "img/frames/m15/regular/m15PTA.png",
+      "m": "img/frames/m15/regular/m15PTM.png"
+    },
+    "sourceFiles": [
+      "img/frames/m15/new/snow/a.png",
+      "img/frames/m15/new/snow/b.png",
+      "img/frames/m15/new/snow/g.png",
+      "img/frames/m15/new/snow/m.png",
+      "img/frames/m15/new/snow/r.png",
+      "img/frames/m15/new/snow/u.png",
+      "img/frames/m15/new/snow/w.png",
+      "img/frames/m15/regular/m15PTA.png",
+      "img/frames/m15/regular/m15PTB.png",
+      "img/frames/m15/regular/m15PTG.png",
+      "img/frames/m15/regular/m15PTM.png",
+      "img/frames/m15/regular/m15PTR.png",
+      "img/frames/m15/regular/m15PTU.png",
+      "img/frames/m15/regular/m15PTW.png"
+    ],
+    "notes": [
+      "colourless snow = CC's snow artifact frame"
+    ]
+  },
+  "m15snowland": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 39px, webp q90",
+    "colors": {
+      "w": [
+        "img/frames/m15/new/snow/lw.png"
+      ],
+      "u": [
+        "img/frames/m15/new/snow/lu.png"
+      ],
+      "b": [
+        "img/frames/m15/new/snow/lb.png"
+      ],
+      "r": [
+        "img/frames/m15/new/snow/lr.png"
+      ],
+      "g": [
+        "img/frames/m15/new/snow/lg.png"
+      ],
+      "c": [
+        "img/frames/m15/new/snow/l.png"
+      ],
+      "m": [
+        "img/frames/m15/new/snow/lm.png"
+      ]
+    },
+    "sourceFiles": [
+      "img/frames/m15/new/snow/l.png",
+      "img/frames/m15/new/snow/lb.png",
+      "img/frames/m15/new/snow/lg.png",
+      "img/frames/m15/new/snow/lm.png",
+      "img/frames/m15/new/snow/lr.png",
+      "img/frames/m15/new/snow/lu.png",
+      "img/frames/m15/new/snow/lw.png"
+    ],
+    "notes": []
+  },
+  "m15token": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 39px, webp q90",
+    "colors": {
+      "w": [
+        "img/frames/token/m15/regular/w.png"
+      ],
+      "u": [
+        "img/frames/token/m15/regular/u.png"
+      ],
+      "b": [
+        "img/frames/token/m15/regular/b.png"
+      ],
+      "r": [
+        "img/frames/token/m15/regular/r.png"
+      ],
+      "g": [
+        "img/frames/token/m15/regular/g.png"
+      ],
+      "c": [
+        "img/frames/token/m15/regular/a.png"
+      ],
+      "m": [
+        "img/frames/token/m15/regular/m.png"
+      ]
+    },
+    "sourceFiles": [
+      "img/frames/token/m15/regular/a.png",
+      "img/frames/token/m15/regular/b.png",
+      "img/frames/token/m15/regular/g.png",
+      "img/frames/token/m15/regular/m.png",
+      "img/frames/token/m15/regular/r.png",
+      "img/frames/token/m15/regular/u.png",
+      "img/frames/token/m15/regular/w.png"
+    ],
+    "notes": [
+      "colourless token = the silver artifact token frame (real colourless tokens are artifacts)",
+      "CC's token frame has a type bar + rules box: the M15TOKEN profile must be re-measured before it ships (4.4)"
+    ]
+  },
+  "m15tokenartifact": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 39px, webp q90",
+    "colors": {
+      "w": [
+        "img/frames/token/m15/regular/a.png",
+        "img/frames/token/m15/regular/w.png through img/frames/token/m15/regular/pinline.svg"
+      ],
+      "u": [
+        "img/frames/token/m15/regular/a.png",
+        "img/frames/token/m15/regular/u.png through img/frames/token/m15/regular/pinline.svg"
+      ],
+      "b": [
+        "img/frames/token/m15/regular/a.png",
+        "img/frames/token/m15/regular/b.png through img/frames/token/m15/regular/pinline.svg"
+      ],
+      "r": [
+        "img/frames/token/m15/regular/a.png",
+        "img/frames/token/m15/regular/r.png through img/frames/token/m15/regular/pinline.svg"
+      ],
+      "g": [
+        "img/frames/token/m15/regular/a.png",
+        "img/frames/token/m15/regular/g.png through img/frames/token/m15/regular/pinline.svg"
+      ],
+      "c": [
+        "img/frames/token/m15/regular/a.png"
+      ],
+      "m": [
+        "img/frames/token/m15/regular/a.png",
+        "img/frames/token/m15/regular/m.png through img/frames/token/m15/regular/pinline.svg"
+      ]
+    },
+    "sourceFiles": [
+      "img/frames/token/m15/regular/a.png",
+      "img/frames/token/m15/regular/b.png",
+      "img/frames/token/m15/regular/g.png",
+      "img/frames/token/m15/regular/m.png",
+      "img/frames/token/m15/regular/pinline.svg",
+      "img/frames/token/m15/regular/r.png",
+      "img/frames/token/m15/regular/u.png",
+      "img/frames/token/m15/regular/w.png"
+    ],
+    "notes": [
+      "coloured artifact tokens = silver token frame + colour through CC's pinline mask"
+    ]
+  }
+}

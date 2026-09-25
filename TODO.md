@@ -331,7 +331,7 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
       configurable frame origin; bounded LRU for the bake's in-memory frame
       cache; stop committing masters to git. **[decide]** history rewrite.
       Land before the first CC frame ships.
-- [ ] **4.3 [P1] CC importer** (`scripts/import-cc-pack.mjs`) — clone the fork
+- [ ] (progress 2026-09-25 — feat/cc-importer: `scripts/import-cc-frames.mjs` + `scripts/lib/cc-frames.mjs` build the 9 M15-era templates × 7 colours + plates into `.frames-build/` with provenance in `lib/cards/frame-sources.json`; still open: crowns / colour-indicator pips / DFC icons as overlay assets, bounds import into profiles (4.4), MSE mask generalisation) **4.3 [P1] CC importer** (`scripts/import-cc-pack.mjs`) — clone the fork
       locally, flatten each pack's layers + masks per colour into exact-5:7
       1500×2100 PNGs with the art window at alpha 0, keep P/T plates, crowns,
       colour-indicator pips and DFC icons as overlay assets, import the bounds
