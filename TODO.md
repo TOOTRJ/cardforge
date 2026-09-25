@@ -774,6 +774,13 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
         print) — owner's call whether to compress them too.
       - [x] **Alpha light lettering** on non-white frames: per-colour ink on
         StatSlot + footer in both renderers, with a lower-right emboss.
+      - **Aftermath's rotated second art (pre-existing, bake only):** the
+        sideways window leaves an art-free strip in the Satori bake — the
+        parent's rotate(270deg) combines badly with the child <img>'s scale()
+        and percentage transformOrigin — and the foil sheen now paints over
+        that strip. Fix: apply the scale in a non-rotated inner wrapper, or
+        compute the cover + scale box in px as coverPlacement does. Found by
+        the integration review 2026-09-25; 0 production aftermath cards.
       - **Foil on planeswalkers:** the ability stripes / rules backdrop sit
         above the full-card foil and hide ~80 % of it in the text box (one
         production card, Coden). Fix = a region sheen between the stripe fills

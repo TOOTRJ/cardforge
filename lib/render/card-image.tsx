@@ -513,6 +513,9 @@ function CardImage({
         <FoilSheen
           id="foil"
           frameHref={frameDataUrl}
+          // Split frames: the right half masks with the right colour's master
+          // (already drawn by its FrameSlice), like the etched sheen.
+          split={frameSplit && splitDataUrl ? { href: splitDataUrl, atPct: frameSplit.atPct } : null}
           art={foilArtLayers({
             layout,
             colorKey,

@@ -186,6 +186,11 @@ const GLINT: ReadonlyArray<readonly [offset: number, opacity: number]> = [
   [1, 0],
 ];
 
+/** A split frame's left half runs this far past the seam, under the right
+ *  half (viewBox units) — the etched sheen's SPLIT_OVERLAP, so a fractional
+ *  seam never dips the mask. */
+const SPLIT_OVERLAP = 2;
+
 export function FoilSheen({
   id,
   frameHref,
@@ -195,6 +200,7 @@ export function FoilSheen({
   width,
   height,
   style,
+  split = null,
 }: {
   /** Unique per rendered instance (SVG ids are document-global). */
   id: string;
@@ -213,9 +219,16 @@ export function FoilSheen({
   width: number | string;
   height: number | string;
   style?: CSSProperties;
+  /** A two-colour split frame (frameSplitFor): the right colour's image and
+   *  the seam. The mask then holds `frameHref` (the LEFT colour's image) left
+   *  of the seam and this one right of it — the frame the face painted, so
+   *  each wing's sheen follows its own colour (as EtchedSheen does). Never
+   *  with `region`: plates stay on the gold "m" key. */
+  split?: { href: string; atPct: number } | null;
 }) {
   const vw = landscape ? 2100 : 1500;
   const vh = landscape ? 1500 : 2100;
+  const seamX = split && !region ? (vw * split.atPct) / 100 : null;
   const pct = (rect: Rect) => ({
     x: (rect.leftPct / 100) * vw,
     y: (rect.topPct / 100) * vh,
@@ -254,6 +267,16 @@ export function FoilSheen({
             <stop key={offset} offset={offset} stopColor="#ffffff" stopOpacity={opacity} />
           ))}
         </linearGradient>
+        {seamX !== null ? (
+          <clipPath id={`${id}-left`} clipPathUnits="userSpaceOnUse">
+            <rect x="0" y="0" width={r2(seamX + SPLIT_OVERLAP)} height={vh} />
+          </clipPath>
+        ) : null}
+        {seamX !== null ? (
+          <clipPath id={`${id}-right`} clipPathUnits="userSpaceOnUse">
+            <rect x={r2(seamX)} y="0" width={r2(vw - seamX)} height={vh} />
+          </clipPath>
+        ) : null}
         <mask id={`${id}-lum`} maskUnits="userSpaceOnUse" x={view.x} y={view.y} width={view.width} height={view.height}>
           {art.map((layer, i) => {
             const box = pct(layer.rect);
@@ -288,14 +311,25 @@ export function FoilSheen({
               </g>
             );
           })}
-          <image
-            href={frameHref}
-            x={view.x}
-            y={view.y}
-            width={view.width}
-            height={view.height}
-            preserveAspectRatio="none"
-          />
+          {seamX !== null && split ? (
+            <g clipPath={`url(#${id}-left)`}>
+              <image href={frameHref} x={view.x} y={view.y} width={view.width} height={view.height} preserveAspectRatio="none" />
+            </g>
+          ) : (
+            <image
+              href={frameHref}
+              x={view.x}
+              y={view.y}
+              width={view.width}
+              height={view.height}
+              preserveAspectRatio="none"
+            />
+          )}
+          {seamX !== null && split ? (
+            <g clipPath={`url(#${id}-right)`}>
+              <image href={split.href} x={view.x} y={view.y} width={view.width} height={view.height} preserveAspectRatio="none" />
+            </g>
+          ) : null}
         </mask>
       </defs>
       <g mask={`url(#${id}-lum)`}>

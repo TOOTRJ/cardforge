@@ -14,7 +14,7 @@ import type { ColorIdentity, FrameTemplate } from "@/types/card";
 
 afterEach(() => cleanup());
 
-function preview(template: FrameTemplate, colorIdentity: ColorIdentity[], finish: "regular" | "etched" = "regular") {
+function preview(template: FrameTemplate, colorIdentity: ColorIdentity[], finish: "regular" | "etched" | "foil" = "regular") {
   return render(
     <CardPreview
       title="Split Test"
@@ -64,6 +64,14 @@ describe("FrameLayer — two-colour split", () => {
     // Seam at 750 of the 1500-wide viewBox; the left half runs 2 units past it.
     expect(container.querySelector(`[id="${leftClip}"] rect`)?.getAttribute("width")).toBe("752");
     expect(container.querySelector(`[id="${rightClip}"] rect`)?.getAttribute("x")).toBe("750");
+  });
+
+  it("foil: the sheen's mask holds both halves, never the gold frame", () => {
+    const container = preview("tarkirdragon", ["black", "white"], "foil");
+    const hrefs = Array.from(container.querySelectorAll("mask image")).map((i) => i.getAttribute("href") ?? "");
+    expect(hrefs.some((h) => h.includes("/frames/tarkirdragon/w.webp"))).toBe(true);
+    expect(hrefs.some((h) => h.includes("/frames/tarkirdragon/b.webp"))).toBe(true);
+    expect(hrefs.some((h) => h.includes("/frames/tarkirdragon/m.webp"))).toBe(false);
   });
 
   it("etched on a mono card keeps the single unclipped mask image", () => {

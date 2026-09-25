@@ -157,6 +157,23 @@ describe("Dragon Wing two-colour split — bake", () => {
     expect(leftOf(split, plain)).toBeGreaterThan(1000);
     expect(rightOf(split, plain)).toBeGreaterThan(1000);
   }, 120_000);
+
+  it("foil: the sheen's mask follows each half's own frame too", async () => {
+    // Integration review 2026-09-25: the foil mask used ONE master (the left
+    // colour's in the bake, gold "m" in the preview), so the right wing got
+    // the white wing's sheen strength.
+    const foil = { frameStyle: { template: "tarkirdragon" as const, finish: "foil" as const } };
+    const [split, a, b, plain] = [
+      await bake(card(["black", "white"], foil)),
+      await bake(card(["white"], foil)),
+      await bake(card(["black"], foil)),
+      await bake(card(["black", "white"])),
+    ];
+    expect(leftOf(split, a, 1)).toBe(0);
+    expect(rightOf(split, b, 1)).toBe(0);
+    expect(leftOf(split, plain)).toBeGreaterThan(1000);
+    expect(rightOf(split, plain)).toBeGreaterThan(1000);
+  }, 120_000);
 });
 
 describe("Dragon Wing two-colour split — preload", () => {

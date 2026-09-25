@@ -784,7 +784,14 @@ function CardFace({
       {isFoil ? (
         <FoilSheen
           id={foilId}
-          frameHref={frameImageUrl(template, colorKey)}
+          // Split frames mask with the two halves the face paints (like the
+          // etched sheen); plates below keep the gold "m" key.
+          frameHref={frameImageUrl(template, frameSplit?.leftKey ?? colorKey)}
+          split={
+            frameSplit
+              ? { href: frameImageUrl(template, frameSplit.rightKey), atPct: frameSplit.atPct }
+              : null
+          }
           art={foilArtLayers({
             layout,
             colorKey,
