@@ -11,7 +11,7 @@
 // Public reads only — no key.
 // ---------------------------------------------------------------------------
 import { PRODUCTION_SUPABASE_REF } from "./lib/prod-guard.mjs";
-import { frameObjectKey, objectExists, publicBaseFor, readManifest } from "./lib/frame-objects.mjs";
+import { frameObjectKey, mapLimit, objectExists, publicBaseFor, readManifest } from "./lib/frame-objects.mjs";
 
 if (process.argv.includes("--if-production") && process.env.VERCEL_ENV !== "production") process.exit(0);
 const at = process.argv.indexOf("--origin");
@@ -23,12 +23,12 @@ if (entries.length === 0) {
   process.exit(0);
 }
 const missing = [];
-await Promise.all(
-  entries.map(async ([key, entry]) => {
-    const objectKey = frameObjectKey(key, entry.hash);
-    if (!(await objectExists(`${origin}/${objectKey}`, entry.bytes))) missing.push(objectKey);
-  }),
-);
+// At most 8 lookups in flight: this runs against PRODUCTION storage on every
+// PR and in the production build.
+await mapLimit(entries, 8, async ([key, entry]) => {
+  const objectKey = frameObjectKey(key, entry.hash);
+  if (!(await objectExists(`${origin}/${objectKey}`, entry.bytes))) missing.push(objectKey);
+});
 if (missing.length) {
   console.error(`✗ ${missing.length}/${entries.length} manifest objects are missing from ${origin}:`);
   for (const key of missing.sort()) console.error(`  ${key}`);

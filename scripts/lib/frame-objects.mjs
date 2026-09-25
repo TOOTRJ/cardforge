@@ -109,12 +109,20 @@ export function parseEnvFile(file) {
   return out;
 }
 
-/** HEAD a public object (3 tries); true when it exists at the expected size. */
-export async function objectExists(url, expectedBytes) {
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
+/**
+ * HEAD a public object; true when it exists at the expected size. A 404 is
+ * final. Supabase answers a MISSING public object with 400 — but it also
+ * answers transient overload ("Too many connections issued to the database")
+ * with 400, and a HEAD has no body to tell them apart, so a 400 is retried
+ * like any other failure: a real miss stays 400 on every try. (Treating the
+ * first 400 as "missing" failed the Frames published gate on 3 of 196 objects
+ * that were there, 2026-09-25.)
+ */
+export async function objectExists(url, expectedBytes, { tries = 4, baseDelayMs = 500 } = {}) {
+  for (let attempt = 1; attempt <= tries; attempt += 1) {
     try {
       const res = await fetch(url, { method: "HEAD", cache: "no-store" });
-      if (res.status === 404 || res.status === 400) return false;
+      if (res.status === 404) return false;
       if (res.ok) {
         const header = res.headers.get("content-length");
         return !header || !expectedBytes || Number(header) === expectedBytes;
@@ -122,7 +130,24 @@ export async function objectExists(url, expectedBytes) {
     } catch {
       // retry
     }
-    await new Promise((r) => setTimeout(r, 400 * attempt));
+    if (attempt < tries) await new Promise((r) => setTimeout(r, baseDelayMs * attempt));
   }
   return false;
+}
+
+/** Map over `items` with at most `limit` calls in flight, results in order.
+ *  Storage lookups go through production's small connection pool: firing
+ *  the whole manifest at once starved a concurrent promote upload. */
+export async function mapLimit(items, limit, fn) {
+  const results = new Array(items.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < items.length) {
+      const i = next;
+      next += 1;
+      results[i] = await fn(items[i], i);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return results;
 }
