@@ -59,7 +59,9 @@ jobs:
   frames:
     name: Frames published
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # frames-check re-checks apparent misses one at a time with backoff
+    # (transient storage errors are common when several PRs run at once).
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
