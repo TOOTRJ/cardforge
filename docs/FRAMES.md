@@ -21,8 +21,11 @@ render drift apart.
 `lib/frames/frame-url.ts` `frameUrl(path)` decides where a frame lives. The
 preview's frame, P/T plates and loyalty badges go through it
 (`components/cards/frame-layer.tsx`, `card-preview.tsx`), and so does the bake
-(`lib/render/card-frames.ts`). The bake also checks every bucket download
-against the manifest hash and keeps a size-bounded LRU cache.
+(`lib/render/card-frames.ts`). The bake checks every bucket download
+against the manifest's full sha256 and keeps a size-bounded LRU cache. A
+bucket frame that fails to load is logged and not cached, and the render
+throws. A bake or sweep then records a failure. It never stores a frameless
+card or another template's frame.
 
 ### Which bucket an environment reads
 
@@ -35,6 +38,7 @@ environment's own Supabase project, taken from `NEXT_PUBLIC_SUPABASE_URL`.
 | Local `npm run dev`, Vercel previews on the dev DB | the dev bucket | derived |
 | Vercel previews with a per-PR Supabase branch | the dev bucket | **Preview-scoped `NEXT_PUBLIC_FRAME_ORIGIN`** (owner step below); a branch's own bucket is empty |
 | CI e2e (local Docker stack) | the dev bucket | `.env.e2e` in `.github/workflows/ci.yml` |
+| Local e2e / local Docker stack | the dev bucket | `NEXT_PUBLIC_FRAME_ORIGIN` in `.env.e2e` (see `.env.e2e.example`); the local bucket is empty |
 
 ## Shipping a frame change
 
@@ -52,22 +56,32 @@ environment's own Supabase project, taken from `NEXT_PUBLIC_SUPABASE_URL`.
    while a frame exists in both places.
 3. Open the PR. Its preview draws the new frames from the dev bucket. Verify
    the frames there.
-4. **Owner:** copy the objects to production before merging. It is a plan
-   first, then the copy:
+4. **Owner:** copy the objects to production before merging. Run it from an
+   up-to-date `main` checkout, and give it the PR's manifest as data. Never
+   run a PR branch's scripts with the production key.
 
    ```bash
-   FRAMES_PROD_SECRET_KEY=sb_secret_… npm run frames:promote
+   git fetch origin && git show origin/<pr-branch>:lib/frames/frame-manifest.json > /tmp/frames.json
    ```
 
    ```bash
-   FRAMES_PROD_SECRET_KEY=sb_secret_… CONFIRM=yes npm run frames:promote
+   node scripts/frames-promote.mjs --manifest /tmp/frames.json
    ```
 
-   The key is production's secret key from the Supabase dashboard. It is
-   typed in the shell and never saved to `.env.local`. Every object is
-   re-hashed against the manifest before upload.
+   That prints the plan and needs no key. To copy:
+
+   ```bash
+   CONFIRM=yes node scripts/frames-promote.mjs --manifest /tmp/frames.json
+   ```
+
+   It asks for production's secret key from the Supabase dashboard without
+   echoing it, so the key never lands in shell history or `.env.local`.
+   Every object is checked against the manifest's full sha256 before upload.
 5. CI's **Frames published** check (`npm run frames:check`) turns green once
-   production serves every manifest object. Then merge.
+   production serves every manifest object. Then merge. The production build
+   runs the same check (`npm run build` with `--if-production`), so an
+   unpromoted manifest fails the Vercel production deploy and the previous
+   deployment keeps serving.
 
 A frame swap that changes baked output still needs its `CARD_LAYOUT_VERSION`
 bump with a `"sweep"` rollout, so owners are never badged. After the deploy,
@@ -81,4 +95,20 @@ run the sweep.
   scoped to **Preview** only. This is needed before the first manifest entry
   merges. Without it, previews of PRs that touch `supabase/` draw no frame
   for bucket-hosted templates.
-- Optional: make **Frames published** a required status check on `main`.
+- **Required:** add **Frames published** to the `main` ruleset's required
+  status checks before the first manifest entry merges. Without that, the
+  check is advisory, and only the production build gate stands between a
+  merge and missing frames.
+
+## If the dev branch is reset
+
+A reset drops the dev branch's storage objects. Previews, local dev and CI
+e2e would then draw no bucket frames. Refill them from production's public
+copies:
+
+```bash
+npm run frames:restore-dev -- --write
+```
+
+Frames published to dev but not yet promoted aren't on production. Re-run
+`npm run frames:publish` for those.

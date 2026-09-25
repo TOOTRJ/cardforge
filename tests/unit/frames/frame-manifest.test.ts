@@ -14,7 +14,7 @@ import { readFileSync } from "node:fs";
 // is in the scripts' canonical serialization (sorted, stable diffs).
 // ---------------------------------------------------------------------------
 
-type Entry = { hash: string; bytes: number; width: number; height: number };
+type Entry = { hash: string; sha256: string; bytes: number; width: number; height: number };
 const files = (manifest as { files: Record<string, Entry> }).files;
 
 describe("frame manifest", () => {
@@ -23,6 +23,8 @@ describe("frame manifest", () => {
     for (const [key, entry] of Object.entries(files)) {
       expect(key, key).toMatch(/^[a-z0-9-]+(\/[a-z0-9-]+)*\.(png|webp)$/);
       expect(entry.hash, key).toMatch(/^[0-9a-f]{12}$/);
+      expect(entry.sha256, key).toMatch(/^[0-9a-f]{64}$/);
+      expect(entry.sha256.startsWith(entry.hash), key).toBe(true);
       expect(entry.bytes, key).toBeGreaterThan(0);
       expect(entry.width, key).toBeGreaterThan(0);
       expect(entry.height, key).toBeGreaterThan(0);

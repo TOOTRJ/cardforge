@@ -26,6 +26,9 @@ import manifestJson from "@/lib/frames/frame-manifest.json";
 export type FrameManifestEntry = {
   /** First 12 hex chars of the file's sha256 — part of the object key. */
   hash: string;
+  /** The full sha256 — what the bake and the promote step verify (a 48-bit
+   *  prefix alone is forgeable). */
+  sha256: string;
   bytes: number;
   width: number;
   height: number;

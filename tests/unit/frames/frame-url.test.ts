@@ -8,7 +8,9 @@ import {
   setFrameStorageForTests,
   type FrameManifest,
 } from "@/lib/frames/frame-url";
-import { frameObjectKey as scriptObjectKey } from "@/scripts/lib/frame-objects.mjs";
+import { BUCKET, frameObjectKey as scriptObjectKey, publicBaseFor } from "@/scripts/lib/frame-objects.mjs";
+import manifestJson from "@/lib/frames/frame-manifest.json";
+import { frameBackgroundImage } from "@/components/cards/frame-layer";
 
 // ---------------------------------------------------------------------------
 // lib/frames/frame-url.ts — where the preview and the bake load a frame from
@@ -22,9 +24,9 @@ const MANIFEST: FrameManifest = {
   version: 1,
   bucket: "frames",
   files: {
-    "m15/w.png": { hash: "3fa9c2d1e0ab", bytes: 10, width: 1500, height: 2100 },
-    "m15/w.webp": { hash: "0123456789ab", bytes: 5, width: 1500, height: 2100 },
-    "m15/pt/w.png": { hash: "aaaaaaaaaaaa", bytes: 3, width: 377, height: 206 },
+    "m15/w.png": { hash: "3fa9c2d1e0ab", sha256: "3fa9c2d1e0ab".padEnd(64, "0"), bytes: 10, width: 1500, height: 2100 },
+    "m15/w.webp": { hash: "0123456789ab", sha256: "0123456789ab".padEnd(64, "0"), bytes: 5, width: 1500, height: 2100 },
+    "m15/pt/w.png": { hash: "aaaaaaaaaaaa", sha256: "a".repeat(64), bytes: 3, width: 377, height: 206 },
   },
 };
 
@@ -68,6 +70,17 @@ describe("frameUrl", () => {
     restore = setFrameStorageForTests({ manifest: MANIFEST });
     expect(frameManifestEntry("/frames/m15/w.png")?.hash).toBe("3fa9c2d1e0ab");
     expect(frameManifestEntry("/frames/m15/u.png")).toBeNull();
+  });
+
+  it("points the scripts and the app at the same bucket URL", () => {
+    expect(resolveFrameOrigin(undefined, "https://x.supabase.co/")).toBe(publicBaseFor("https://x.supabase.co/"));
+    expect((manifestJson as { bucket: string }).bucket).toBe(BUCKET);
+  });
+
+  it("gives the browser the WebP object and the bake the PNG object (separate hashes)", () => {
+    restore = setFrameStorageForTests({ manifest: MANIFEST, origin: "https://b.example/frames" });
+    expect(frameBackgroundImage("m15", "w")).toBe('url("https://b.example/frames/m15/w.0123456789ab.webp")');
+    expect(frameBackgroundImage("saga", "w")).toBe('url("/frames/saga/w.webp")');
   });
 
   it("names objects exactly like the publish/promote/check scripts", () => {

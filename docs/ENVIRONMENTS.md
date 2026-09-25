@@ -121,6 +121,7 @@ npm run seed:dev        # passwords; add `-- --copy-cards-from <username>` to
 seeding on for it (persistent branches don't seed unless told to) and sets its
 auth Site URL + redirect allow-list. To wipe dev completely: Supabase dashboard
 → Branches → `dev` → Reset (re-runs migrations + seeds), then `npm run seed:dev`.
+  After a reset, refill the frames bucket: `npm run frames:restore-dev -- --write` (docs/FRAMES.md).
 
 ## 3. Vercel wiring
 

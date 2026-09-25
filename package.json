@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "node scripts/check-dev-env.mjs && next dev",
     "dev:prod": "ALLOW_PROD_DB=1 node --env-file=.env.prod-peek scripts/check-dev-env.mjs && ALLOW_PROD_DB=1 node --env-file=.env.prod-peek node_modules/next/dist/bin/next dev",
-    "build": "next build",
+    "build": "node scripts/frames-check.mjs --if-production && next build",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
@@ -25,7 +25,8 @@
     "email:push-auth-templates": "node scripts/push-auth-email-templates.mjs",
     "frames:publish": "node scripts/frames-publish.mjs",
     "frames:promote": "node scripts/frames-promote.mjs",
-    "frames:check": "node scripts/frames-check.mjs"
+    "frames:check": "node scripts/frames-check.mjs",
+    "frames:restore-dev": "node scripts/frames-restore-dev.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

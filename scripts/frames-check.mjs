@@ -3,13 +3,17 @@
 // frames-check.mjs — CI's "Frames published" gate (frames plan 4.2): every
 // object in lib/frames/frame-manifest.json must be readable, at its manifest
 // size, from PRODUCTION's frames bucket (or --origin). A PR that adds frames
-// stays red here until the owner runs `npm run frames:promote`, so a merge
-// can never ship a manifest that points production at missing frames.
+// stays red here until the owner promotes them. This only BLOCKS a merge
+// when "Frames published" is a required check on main (owner step in
+// docs/FRAMES.md). Second line of defence: the production build runs this
+// with --if-production (package.json "build"), so an unpromoted manifest
+// fails the Vercel production deploy and the previous one keeps serving.
 // Public reads only — no key.
 // ---------------------------------------------------------------------------
 import { PRODUCTION_SUPABASE_REF } from "./lib/prod-guard.mjs";
 import { frameObjectKey, objectExists, publicBaseFor, readManifest } from "./lib/frame-objects.mjs";
 
+if (process.argv.includes("--if-production") && process.env.VERCEL_ENV !== "production") process.exit(0);
 const at = process.argv.indexOf("--origin");
 const origin = at >= 0 ? process.argv[at + 1] : publicBaseFor(`https://${PRODUCTION_SUPABASE_REF}.supabase.co`);
 const manifest = readManifest();
