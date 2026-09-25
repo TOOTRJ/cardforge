@@ -153,7 +153,7 @@ const REFS = [
   { frame: "avatar", url: search("e:tla frame:showcase t:creature -is:digital") },
   { frame: "bloomburrow", url: search("e:blb frame:showcase t:creature -is:digital") },
   { frame: "bloomanime", url: search("e:blb is:borderless t:creature -is:digital") },
-  { frame: "tarkirdragon", url: search("e:tdm frame:showcase t:creature -is:digital") },
+  { frame: "tarkirdragon", url: search("set:mul (cn:1 or cn:60)") },
   { frame: "tarkirdraconic", url: search("e:tdm frame:showcase t:dragon -is:digital") },
   { frame: "tarkirghostfire", url: named("Craterhoof Behemoth", "tdm") },
 ];

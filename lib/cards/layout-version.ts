@@ -1,3 +1,5 @@
+import { normalizeFrameTemplate } from "@/lib/cards/card-display";
+
 // ---------------------------------------------------------------------------
 // CARD_LAYOUT_VERSION — stamped onto `cards.layout_version` every time a card
 // render is baked (lib/cards/bake-render.ts, app/api/admin/rebake).
@@ -39,7 +41,12 @@
 // TEMPLATE_SCOPED_VERSIONS below: cards on other templates are not marked
 // stale by it (and the sweep / "update all" fast-forward their stamp
 // without a render, because their stored PNG is already what the renderer
-// would produce). A bump missing from the map touches every card.
+// would produce). A bump missing from the map touches every card. A card
+// with no (or a retired) template is judged as the default template it is
+// drawn on (normalizeFrameTemplate) — so changing DEFAULT_FRAME_TEMPLATE is
+// itself an unscoped bump. If a bump only touches cards with some property
+// (a rarity, a finish), add a VERSION_SCOPES predicate instead of — or as
+// well as — a template list: the two compose (AND).
 //
 // DB-driven geometry (frame_profile_overrides, edited in /admin/frame-
 // compare) does NOT bump this constant — the save action marks affected
@@ -145,23 +152,47 @@
 //            box (4.18) — which also moves P/T on every template that uses the
 //            M15 plate; CC's painted planeswalker shield (no plate). Template-
 //            scoped, "sweep": a platform correction, never an owner badge.
+//   25     — frame-review follow-ups (owner review of every production card,
+//            2026-09-25): Alpha P/T moved off the text box's bevel into the
+//            printed strip, artist line on the same line (agclassic, and
+//            alphaland which clones it); the pipglyph.com brand mark moved
+//            into the black border on every frame whose coloured edge it
+//            straddled or touched (agclassic, alphaland, alphatoken, retro,
+//            retroland, modern, modernland, extendedart, battle, split —
+//            landscape marks now sized off the short side); Dragon Wing
+//            (tarkirdragon) re-measured: black title ink, sizes, pips, art
+//            window, MSE P/T plate. List derived from HD render diffs of a
+//            probe card on all 37 templates. Template-scoped, "sweep".
+//   26     — the etched finish: the bake wrapped its overlay in a Fragment,
+//            which Satori lays out as a zero-width item, so the 3 % inset
+//            border collapsed into an 18 px gold strip down the card's left
+//            edge and the cross-hatch never painted. Both renderers now draw
+//            one shared frame-masked texture (lib/cards/etched-finish.tsx).
+//            Card-scoped to finish "etched" on any template (VERSION_SCOPES),
+//            "sweep".
 // ---------------------------------------------------------------------------
 
-export const CARD_LAYOUT_VERSION = 24;
+export const CARD_LAYOUT_VERSION = 26;
 
 /**
  * Bumps that changed the output of only some frame templates, keyed by the
- * version they introduced. Every bump through 19 touched every card (fonts,
- * brand mark, set emblem, footer), so the map starts empty; add an entry
- * with the next template-scoped change, e.g. `20: ["m15", "m15land"]`.
- * Template keys match `frame_style.template` (types/card.ts
- * FRAME_TEMPLATE_VALUES).
+ * version they introduced (v24 and v25 so far; every earlier bump touched
+ * every card). List EVERY template whose output changed — including the ones
+ * that inherit a changed profile by spread (alphaland ← agclassic,
+ * modernland ← modern). Template keys match `frame_style.template`
+ * (types/card.ts FRAME_TEMPLATE_VALUES).
  */
 const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // v24: the Card Conjurer M15 swap + everything that draws the M15 P/T plate.
   24: [
     "m15", "m15artifact", "m15land", "m15snow", "m15snowland", "m15devoid", "m15pw", "m15token", "m15tokenartifact",
     "adventure", "extendedart", "fullart", "fullartland", "m15textless", "m15textlessland", "expeditionland", "nyx",
+  ],
+  // v25: frame-review follow-ups — Alpha P/T, the brand mark into the black
+  // border where it straddled the frame edge, Dragon Wing re-measured.
+  25: [
+    "agclassic", "alphaland", "alphatoken", "retro", "retroland", "modern", "modernland", "extendedart",
+    "battle", "split", "tarkirdragon",
   ],
 };
 
@@ -172,6 +203,9 @@ export type ScopeCard = {
   rarity?: string | null;
   set_icon_url?: string | null;
   set_icon_code?: string | null;
+  /** The raw `frame_style` jsonb — finish-scoped bumps read `.finish`.
+   *  `undefined` = not selected (can't tell); null/{} = a regular card. */
+  frame_style?: unknown;
 };
 
 /**
@@ -189,7 +223,17 @@ export const VERSION_SCOPES: Readonly<Record<number, (card: ScopeCard) => boolea
   23: (card) =>
     card.rarity === undefined ||
     (!card.set_icon_url && !card.set_icon_code && card.rarity === "common"),
+  // v26 — only the ETCHED finish's overlay changed, on any template. A row
+  // that doesn't carry frame_style can't be judged → conservative.
+  26: (card) => card.frame_style === undefined || finishOfFrameStyle(card.frame_style) === "etched",
 };
+
+/** `frame_style.finish` from the jsonb column, or null when absent (= regular). */
+export function finishOfFrameStyle(frameStyle: unknown): string | null {
+  if (!frameStyle || typeof frameStyle !== "object") return null;
+  const finish = (frameStyle as { finish?: unknown }).finish;
+  return typeof finish === "string" && finish ? finish : null;
+}
 
 /** `frame_style.template` from the jsonb column, or null when absent. */
 export function templateOfFrameStyle(frameStyle: unknown): string | null {
@@ -237,11 +281,20 @@ function pendingVersions(
   const scoped = opts.scoped ?? TEMPLATE_SCOPED_VERSIONS;
   const scopes = opts.scopes ?? VERSION_SCOPES;
   const current = opts.current ?? CARD_LAYOUT_VERSION;
+  // Judge by the template the card is DRAWN on when we can tell: a known
+  // template, or a frame_style that was read ({} or a retired value draws
+  // DEFAULT_FRAME_TEMPLATE — the rule lib/cards/frame-override-stale.ts
+  // uses; 272 production cards carry frame_style = {}). A caller that didn't
+  // supply frame_style can't tell → conservative (touched), as
+  // lib/render/stored-render.ts documents.
+  const drawn =
+    template != null || (card !== undefined && card.frame_style !== undefined)
+      ? normalizeFrameTemplate(template)
+      : null;
   const pending: number[] = [];
   for (let version = layoutVersion + 1; version <= current; version += 1) {
     const templates = scoped[version];
-    // Unknown template is treated as touched — conservative.
-    const templateHit = !templates || !template || templates.includes(template);
+    const templateHit = !templates || drawn === null || templates.includes(drawn);
     const predicate = scopes[version];
     // No card to judge by → conservative (affected).
     const cardHit = !predicate || !card || predicate(card);
@@ -275,6 +328,8 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   22: "opt-in", // rules-text typography standard — owner's call
   23: "sweep", // default set mark for commons — one emblem across a set
   24: "sweep", // Card Conjurer M15 swap — a platform correction, owner-approved
+  25: "sweep", // frame-review follow-ups (Alpha P/T, brand mark, Dragon Wing)
+  26: "sweep", // etched finish — the baked left-edge strip was a bug, not a look
 };
 
 export function rolloutPolicy(version: number, rollout = VERSION_ROLLOUT): RolloutPolicy {

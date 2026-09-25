@@ -244,7 +244,35 @@ export type FrameProfile = {
     /** A second art window (split); omit when the face shares the front art. */
     artSlot?: Rect;
   };
+  /** Where the pipglyph.com brand mark sits, for frames whose bottom black
+   *  border is thinner than M15's (Alpha, 1997, 2003, extended art, battle,
+   *  split) — the default straddles their coloured frame edge. Values centre
+   *  the mark's ink in the frame's own border. Omit for the default
+   *  (BRAND_MARK_PLACEMENT). Code-owned: not part of the override schema. */
+  brandMark?: BrandMarkPlacement;
 };
+
+/** The brand mark's box offsets from the card's right and bottom edges, as %
+ *  of the card's width and height (the same CSS `right` / `bottom` both
+ *  renderers set). */
+export type BrandMarkPlacement = { rightPct: number; bottomPct: number };
+
+/** Default placement: inside the M15 black border (≈73 px of black above the
+ *  ink on a 1500×2100 card, 34 px below). */
+export const BRAND_MARK_PLACEMENT: BrandMarkPlacement = { rightPct: 3.5, bottomPct: 1.8 };
+
+/** Brand-mark placement + size scale for a profile. The mark is sized off
+ *  the card's SHORT side — 2.6% of a portrait card's width — so a landscape
+ *  card (battle, split) prints it at the same physical size instead of 1.4×
+ *  larger. Both renderers read this, so preview and bake can't drift. */
+export function brandMarkLayout(
+  profile: FrameProfile,
+): BrandMarkPlacement & { scale: number } {
+  return {
+    ...(profile.brandMark ?? BRAND_MARK_PLACEMENT),
+    scale: profile.orientation === "landscape" ? 5 / 7 : 1,
+  };
+}
 
 /** Resolve a per-color asset path from a template like "/frames/m15/pt/{color}.png". */
 export function resolveColorAsset(pathTemplate: string, colorKey: string): string {
@@ -407,6 +435,9 @@ const M15SNOWLAND: FrameProfile = {
 const AGCLASSIC: FrameProfile = {
   flavorDivider: false,
   label: "Alpha (1993)",
+  // Thin bottom border (frame edge at 97.14%H): the default mark straddled
+  // the tan frame; 0.55 centres its ink in the black (brand-mark survey).
+  brandMark: { rightPct: 3.5, bottomPct: 0.55 },
   costSizePct: 0.042,
   artSlot: { topPct: 9.5, leftPct: 10.6, widthPct: 78.8, heightPct: 44.8 },
   title: {
@@ -430,18 +461,26 @@ const AGCLASSIC: FrameProfile = {
     vAlign: "start",
     font: "body",
   },
+  // Artist line and P/T share one line, centred in the border strip under
+  // the text box — like the printed "Illus. ©" line (owner review 2026-09-25).
   footer: {
-    rect: { topPct: 91.0, leftPct: 12, widthPct: 52, heightPct: 3.0 },
+    rect: { topPct: 91.8, leftPct: 12, widthPct: 52, heightPct: 3.0 },
     sizePct: 0.016,
     colorHex: INK_DARK,
     uppercase: true,
     letterSpacingEm: 0.05,
     font: "display",
   },
-  // Official 1993 cards print P/T in dark ink on the tan frame strip — not
-  // the white-with-outline treatment modern over-art stats use.
+  // Official 1993 cards print P/T in dark ink on the frame strip BELOW the
+  // text box — not the white-with-outline treatment modern over-art stats
+  // use. The rect is that strip on our masters (text-box bevel ends at
+  // 90.62 %H, bottom bevel starts at 96.14 %H): printed Alpha/Beta digits
+  // sit centred in it (0.49 of the strip on 6 lea scans), centred at
+  // ~88.3 %W under the text box's right corner. It used to be 88.4–94.2 %H,
+  // which put the digits on the text box's bottom bevel (owner review
+  // 2026-09-25: "needs to be lowered").
   pt: {
-    rect: { topPct: 88.4, leftPct: 74, widthPct: 19, heightPct: 5.8 },
+    rect: { topPct: 90.6, leftPct: 79, widthPct: 19, heightPct: 5.6 },
     sizePct: 0.04,
     colorHex: INK_DARK,
     weight: 700,
@@ -632,6 +671,7 @@ const ALPHALAND: FrameProfile = {
 const ALPHATOKEN: FrameProfile = {
   flavorDivider: false,
   label: "Alpha Token",
+  brandMark: { rightPct: 3.5, bottomPct: 0.55 },
   hideCost: true,
   artSlot: { topPct: 9.0, leftPct: 10, widthPct: 80, heightPct: 52.5 },
   title: {
@@ -688,6 +728,8 @@ const ALPHATOKEN: FrameProfile = {
 const RETRO: FrameProfile = {
   flavorDivider: false,
   label: "Retro (1997)",
+  // Frame edge at 96.38%H: the default mark touched it.
+  brandMark: { rightPct: 3.5, bottomPct: 0.95 },
   costSizePct: 0.04,
   artSlot: { topPct: 9.6, leftPct: 11.7, widthPct: 76.6, heightPct: 44.8 },
   title: {
@@ -748,6 +790,9 @@ const RETROLAND: FrameProfile = {
 const MODERN: FrameProfile = {
   flavorDivider: false,
   label: "Modern border (2003)",
+  // Frame edge at 96.71%H (10E / RAV scans: 96.6%): the default mark
+  // straddled it; 0.8 centres the ink in the black border (owner review).
+  brandMark: { rightPct: 3.5, bottomPct: 0.8 },
   costSizePct: 0.04,
   // Title, footer and P/T positions plus the detached cost / set-symbol
   // boxes were tuned in the compare tool against the M12 Serra Angel scan
@@ -813,6 +858,9 @@ const MODERNLAND: FrameProfile = {
 // carries the back. Source: magic-modules.mse-include/cards/375 m15 battle.
 const BATTLE: FrameProfile = {
   label: "Battle (Siege)",
+  // Text box edge at 96.07%H; right 11% clears the defense badge
+  // (89.9–97.9%W), which the default mark was drawn over.
+  brandMark: { rightPct: 11, bottomPct: 0.8 },
   orientation: "landscape",
   // Measured: title pill 5.0–12.0, art window 13.6–57.2, type bar 58.2–65.0,
   // text box 67.2–96.2; MSE text 252→356 at left 63/523, defense at 480,336.
@@ -1035,6 +1083,8 @@ const FLIP: FrameProfile = {
 const SPLIT: FrameProfile = {
   label: "Split",
   orientation: "landscape",
+  // Text boxes end at 96.0%H: the default mark straddled them.
+  brandMark: { rightPct: 3.5, bottomPct: 0.8 },
   artSlot: { topPct: 14.7, leftPct: 4.8, widthPct: 41.9, heightPct: 40.8 },
   // MSE planeshifted-split: cost symbols 18/523 — larger than the name.
   costSizePct: 0.0344,
@@ -1207,10 +1257,9 @@ const AVATAR = artForwardShowcase("Avatar", INK_LIGHT);
 const BLOOMBURROW = artForwardShowcase("Bloomburrow", INK_LIGHT);
 
 // Tarkir card showcases — m15-style (name top, art, type, textbox). Each slot
-// gets its own ink because the two frames invert per band: Dragon Wing's title
-// bar + textbox are dark gothic (light ink) but its TYPE bar is light silver
-// (dark ink); Draconic's title sits over dark art (light ink + shadow) while
-// its type + parchment textbox take dark ink.
+// gets its own ink because the frames invert per band: Draconic's title sits
+// over dark art (light ink + shadow) while its type + parchment textbox take
+// dark ink. Dragon Wing overrides the geometry below.
 function tarkirCard(
   label: string,
   inks: { title: string; type: string; rules: string },
@@ -1254,11 +1303,58 @@ function tarkirCard(
     },
   };
 }
-const TARKIRDRAGON = tarkirCard("Dragon Wing", {
-  title: INK_LIGHT,
-  type: INK_DARK,
-  rules: INK_LIGHT,
-});
+// Dragon Wing is the Multiverse Legends (MOM, 2023) Tarkir frame — printed on
+// MUL #1 Anafenza (W) and #60 Taigam (W/U) only; it is not a Tarkir:
+// Dragonstorm frame (those are Draconic, Ghostfire and the borderless clan
+// frame). It is SILVER with colour-keyed dragon wings; there is no gold
+// version anywhere (MSE and Card Conjurer ship the same art), so a gold card
+// shows gold wings on silver. Its name and type bars are LIGHT silver
+// (median 200,200,200) and take black ink — MSE's own swap_fonts: name, type
+// and P/T black, rules white on the dark text box. Measured on the two MUL
+// scans and this PNG's window (owner review 2026-09-25: the old light title
+// read at 1.46:1, the art stopped 19 px short of the window, no P/T plate).
+const TARKIRDRAGON: FrameProfile = {
+  ...tarkirCard("Dragon Wing", { title: INK_DARK, type: INK_DARK, rules: INK_LIGHT }),
+  // Pips: Ø 67 px and right edge 92.3 %W on the scans.
+  costSizePct: 0.0445,
+  // The PNG's transparent window is 8.8–91.1 %W × 11.1–55.3 %H.
+  artSlot: { topPct: 10.9, leftPct: 8.6, widthPct: 82.8, heightPct: 44.5 },
+  title: {
+    rect: { topPct: 4.55, leftPct: 8.3, widthPct: 84, heightPct: 6.0 },
+    sizePct: 0.053,
+    colorHex: INK_DARK,
+    weight: 600,
+    font: "display",
+  },
+  type: {
+    rect: { topPct: 56.3, leftPct: 8.55, widthPct: 83.7, heightPct: 5.0 },
+    sizePct: 0.045,
+    colorHex: INK_DARK,
+    weight: 600,
+    font: "display",
+  },
+  // MSE's text box (52,566)–(594,823) on 646×902 less its padding, centred
+  // like MSE; 9 pt, the platform rules base.
+  rules: {
+    rect: { topPct: 62.75, leftPct: 8.7, widthPct: 82.6, heightPct: 28.5 },
+    sizePct: ptToPct(9),
+    colorHex: INK_LIGHT,
+    vAlign: "center",
+    font: "body",
+  },
+  // MSE's pt field (516,810 80×36 on 646×902) and its plate — MSE pt/<c>pt.png
+  // cropped by scripts/build-showcase-frames.mjs to 1156,1850 271×149 on the
+  // 1500×2100 card. Written out, not spread from M15.pt: that one follows the
+  // Card Conjurer M15 plate and its own layout versions.
+  pt: {
+    rect: { topPct: 89.8, leftPct: 79.88, widthPct: 12.38, heightPct: 3.99 },
+    plateRect: { topPct: 88.095, leftPct: 77.067, widthPct: 18.067, heightPct: 7.095 },
+    plateAssetPathTemplate: "/frames/tarkirdragon/pt/{color}.png",
+    sizePct: 0.05,
+    colorHex: INK_DARK,
+    weight: 700,
+  },
+};
 const TARKIRDRACONIC = tarkirCard("Draconic", {
   title: INK_DARK,
   type: INK_DARK,
@@ -1394,6 +1490,8 @@ const TARKIRGHOSTFIRE = borderlessShowcase("Ghostfire", {
 const EXTENDEDART: FrameProfile = {
   ...M15,
   label: "Extended Art",
+  // Frame edge at 96.76%H (lower than M15's 92.86%).
+  brandMark: { rightPct: 3.5, bottomPct: 0.8 },
   artSlot: { topPct: 11.9, leftPct: 4, widthPct: 92, heightPct: 48.4 },
   rules: {
     ...M15.rules,

@@ -247,7 +247,7 @@ export type CardWatermark =
 
 // Card finish — premium treatments layered on top of the base frame.
 // Default is "regular"; "foil" adds an animated holographic sheen,
-// "etched" adds a gold-leaf inner border + faint texture, "borderless"
+// "etched" adds a fine etched texture to the frame only, "borderless"
 // lets the art bleed under the section panels, and "showcase" swaps the
 // title to an italic display treatment with an ornate underline.
 export const CARD_FINISH_VALUES = [

@@ -60,7 +60,7 @@ const DOCUMENTED_NULLS = new Set([
   "nyx/c",
   "lotr/c",
   "bloomburrow/c",
-  "tarkirdragon/c",
+  "tarkirdragon/u", "tarkirdragon/b", "tarkirdragon/r", "tarkirdragon/g", "tarkirdragon/c",
   "tarkirghostfire/u", "tarkirghostfire/b",
 ]);
 

@@ -30,6 +30,18 @@ describe("watermark", () => {
   });
 });
 
+describe("Satori layout traps", () => {
+  it("never wraps bake layers in a Fragment", () => {
+    // Satori lays a Fragment out as a zero-width flex item, so %-positioned
+    // children collapse to x = 0 — the etched finish drew an 18 px gold strip
+    // down the card's left edge that way (owner review 2026-09-25). (Satori
+    // also ignores `inset`: the foil sheen still uses it and has never baked
+    // — TODO 6.5.)
+    const code = BAKE.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+    expect(code).not.toMatch(/<>|<\/>|<(React\.)?Fragment\b/);
+  });
+});
+
 describe("title band", () => {
   it("keeps the same name/cost gap and never truncates the title in the bake only", () => {
     expect(PREVIEW).toContain('gap: "2cqw"');

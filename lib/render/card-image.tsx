@@ -72,6 +72,7 @@ import {
   preloadFrameAssets,
 } from "@/lib/render/card-frames";
 import {
+  brandMarkLayout,
   loyaltyBadgeAssetFor,
   SAGA_MARKER_POINTS,
   loyaltyBadgeShapeFor,
@@ -83,6 +84,7 @@ import {
   type TextSlot,
 } from "@/lib/cards/template-layout";
 import { resolveFrameProfile } from "@/lib/cards/profile-override";
+import { EtchedSheen } from "@/lib/cards/etched-finish";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import type { CardBackFace, ColorIdentity, Rarity } from "@/types/card";
 import { clamp } from "@/lib/utils";
@@ -174,6 +176,7 @@ function CardImage({
 }) {
   const template = normalizeFrameTemplate(card.frameStyle?.template);
   const layout = resolveFrameProfile(template, card.profileOverrides);
+  const markLayout = brandMarkLayout(layout);
   const finish = card.frameStyle?.finish ?? "regular";
   const isFoil = finish === "foil";
   const isEtched = finish === "etched";
@@ -384,6 +387,24 @@ function CardImage({
           zIndex: 5,
         }}
       />
+
+      {/* Premium finish: etched — a fine cross-hatch + sheen on the FRAME
+          only (masked by the frame's own luminance), directly above the
+          frame so every text/stat layer stays crisp on top of it. The SAME
+          SVG the preview draws (lib/cards/etched-finish.tsx, preview z-6).
+          Never wrap bake overlays in a Fragment: Satori lays a Fragment
+          out as a zero-width flex item, so %-positioned children collapse
+          to x=0 (the old gold "inset border" baked as an 18 px strip down
+          the card's left edge). */}
+      {isEtched ? (
+        <EtchedSheen
+          id="etched"
+          frameHref={frameDataUrl}
+          landscape={layout.orientation === "landscape"}
+          width={width}
+          height={height}
+        />
+      ) : null}
 
       {/* Title band — name + mana cost. */}
       <Band slot={layout.title} cardWidth={width} italic={isShowcase}>
@@ -696,33 +717,6 @@ function CardImage({
         />
       ) : null}
 
-      {/* Premium finish: etched gold inner border + cross-hatch. */}
-      {isEtched ? (
-        <>
-          <div
-            style={{
-              position: "absolute",
-              top: "3%",
-              left: "3%",
-              right: "3%",
-              bottom: "3%",
-              zIndex: 30,
-              border: `${Math.round(width * 0.006)}px solid #d4a64a`,
-              borderRadius: Math.round(width * 0.03),
-            }}
-          />
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              zIndex: 30,
-              backgroundImage:
-                "repeating-linear-gradient(45deg, rgba(255,255,255,0.10) 0 1px, transparent 1px 7px), repeating-linear-gradient(-45deg, rgba(255,255,255,0.08) 0 1px, transparent 1px 7px)",
-            }}
-          />
-        </>
-      ) : null}
-
       {/* Showcase tints the title italic via the Band `italic` prop above. */}
       {isShowcase ? null : null}
 
@@ -733,13 +727,15 @@ function CardImage({
         <div
           style={{
             position: "absolute",
-            right: "3.5%",
-            bottom: "1.8%",
+            // Per-frame placement (thin-border frames centre it in their own
+            // border); sized off the short side — preview mirrors both.
+            right: `${markLayout.rightPct}%`,
+            bottom: `${markLayout.bottomPct}%`,
             zIndex: 40,
             display: "flex",
             alignItems: "center",
             fontFamily: DISPLAY_FONT,
-            fontSize: fpx(0.026, width),
+            fontSize: fpx(0.026 * markLayout.scale, width),
             fontWeight: 600,
             letterSpacing: "0.02em",
             color: "rgba(255,255,255,0.82)",
@@ -747,10 +743,10 @@ function CardImage({
           }}
         >
           <svg
-            width={Math.round(fpx(0.03, width))}
-            height={Math.round(fpx(0.03, width))}
+            width={Math.round(fpx(0.03 * markLayout.scale, width))}
+            height={Math.round(fpx(0.03 * markLayout.scale, width))}
             viewBox="0 0 32 32"
-            style={{ marginRight: Math.round(fpx(0.008, width)) }}
+            style={{ marginRight: Math.round(fpx(0.008 * markLayout.scale, width)) }}
           >
             <path d={ROSE_STAR_PATH} fill="rgba(255,255,255,0.82)" />
           </svg>

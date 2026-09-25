@@ -17,26 +17,36 @@ describe("stored-render — when the baked PNG can stand in for a live render", 
   });
 
   it("is servable with a URL and no pending platform correction", () => {
-    // "retro" is outside the v24 (M15 swap) scope, so only the v22 opt-in and
-    // the v23 commons sweep apply — the scenarios these cases pin.
-    const m15 = { frame_style: { template: "retro" }, rarity: "uncommon" };
+    // "saga" (regular finish) is outside the v24/v25 template scopes and the
+    // v26 etched scope, so only the v22 opt-in and the v23 commons sweep
+    // apply — the scenarios these cases pin.
+    const untouched = { frame_style: { template: "saga" }, rarity: "uncommon" };
     expect(
-      hasServableStoredRender({ ...m15, rendered_image_url: STORAGE_URL, layout_version: CARD_LAYOUT_VERSION }),
+      hasServableStoredRender({ ...untouched, rendered_image_url: STORAGE_URL, layout_version: CARD_LAYOUT_VERSION }),
     ).toBe(true);
     // TODO 0.21: an owner who hasn't accepted the v22 (opt-in) look keeps it —
     // the download serves the bake and matches the gallery tile.
-    expect(hasServableStoredRender({ ...m15, rendered_image_url: STORAGE_URL, layout_version: 21 })).toBe(true);
+    expect(hasServableStoredRender({ ...untouched, rendered_image_url: STORAGE_URL, layout_version: 21 })).toBe(true);
     // A pending SWEEP correction (v23 set mark on a common) renders live.
     expect(
-      hasServableStoredRender({ ...m15, rarity: "common", rendered_image_url: STORAGE_URL, layout_version: 22 }),
+      hasServableStoredRender({ ...untouched, rarity: "common", rendered_image_url: STORAGE_URL, layout_version: 22 }),
     ).toBe(false);
     // v20 bakes may be CLEAN (the 2026-09-16 sweep ran with billing off; v21
     // re-swept them): the pending v21 sweep keeps them from free downloads.
-    expect(hasServableStoredRender({ ...m15, rendered_image_url: STORAGE_URL, layout_version: 20 })).toBe(false);
+    expect(hasServableStoredRender({ ...untouched, rendered_image_url: STORAGE_URL, layout_version: 20 })).toBe(false);
     // A frame-geometry change (null stamp) renders live until the re-bake.
-    expect(hasServableStoredRender({ ...m15, rendered_image_url: STORAGE_URL, layout_version: null })).toBe(false);
-    expect(hasServableStoredRender({ ...m15, rendered_image_url: null, layout_version: CARD_LAYOUT_VERSION })).toBe(false);
-    expect(hasServableStoredRender({ ...m15, rendered_image_url: "", layout_version: CARD_LAYOUT_VERSION })).toBe(false);
+    expect(hasServableStoredRender({ ...untouched, rendered_image_url: STORAGE_URL, layout_version: null })).toBe(false);
+    expect(hasServableStoredRender({ ...untouched, rendered_image_url: null, layout_version: CARD_LAYOUT_VERSION })).toBe(false);
+    expect(hasServableStoredRender({ ...untouched, rendered_image_url: "", layout_version: CARD_LAYOUT_VERSION })).toBe(false);
+    // A row that doesn't carry frame_style can't be judged by the template or
+    // finish scopes: every bump counts, so a pre-v26 bake renders live.
+    expect(
+      hasServableStoredRender({ rarity: "uncommon", rendered_image_url: STORAGE_URL, layout_version: CARD_LAYOUT_VERSION - 1 }),
+    ).toBe(false);
+    // An etched card at v25 still owes the v26 re-bake; a regular one doesn't.
+    const etched = { frame_style: { template: "saga", finish: "etched" }, rarity: "uncommon" };
+    expect(hasServableStoredRender({ ...etched, rendered_image_url: STORAGE_URL, layout_version: 25 })).toBe(false);
+    expect(hasServableStoredRender({ ...untouched, rendered_image_url: STORAGE_URL, layout_version: 25 })).toBe(true);
   });
 
   it("never fetches a stale row or a foreign host", async () => {

@@ -94,4 +94,13 @@ describe("verificationState", () => {
     );
     expect(both.reasons).toHaveLength(2);
   });
+
+  it("a finish-scoped bump (v26 etched) doesn't stale a tick; a template-scoped one only its templates", () => {
+    const tick = (v: number) => ({ verified: true, verifiedLayoutVersion: v, verifiedOverrideHash: "h" });
+    expect(verificationState(tick(25), "m15", "h", 26).stale).toBe(false);
+    expect(verificationState(tick(25), "saga", "h", 26).stale).toBe(false);
+    expect(verificationState(tick(24), "saga", "h", 26).stale).toBe(false);
+    expect(verificationState(tick(24), "modern", "h", 26).stale).toBe(true);
+    expect(verificationState(tick(24), "tarkirdragon", "h", 26).stale).toBe(true);
+  });
 });

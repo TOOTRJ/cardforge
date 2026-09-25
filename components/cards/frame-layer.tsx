@@ -89,9 +89,17 @@ export function frameBackgroundImage(
   template: FrameTemplate,
   colorKey: string,
 ): string {
+  return `url("${frameImageUrl(template, colorKey)}")`;
+}
+
+/** The browser URL of a frame's WebP variant — what FrameLayer paints and
+ *  what the etched finish masks with (same URL → one cached download).
+ *  BROWSER ONLY, like frameBackgroundImage. */
+export function frameImageUrl(template: FrameTemplate, colorKey: string): string {
   // frameUrl: a frame listed in lib/frames/frame-manifest.json lives in the
-  // frames bucket (content-addressed); anything else is still /frames/…
-  return `url("${frameUrl(webpVariant(frameAssetPath(template, colorKey)))}")`;
+  // frames bucket (content-addressed; it sends ACAO *); anything else is
+  // still /frames/…
+  return frameUrl(webpVariant(frameAssetPath(template, colorKey)));
 }
 
 export function FrameLayer({
