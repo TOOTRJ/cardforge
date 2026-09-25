@@ -3,13 +3,14 @@ import { describe, expect, it } from "vitest";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import type { FrameTemplate } from "@/types/card";
 import { footerInk, getFrameProfile, slotInk } from "@/lib/cards/template-layout";
-import { renderCardImage, RENDER_PRESETS } from "@/lib/render/card-image";
+import { renderCardImage, RENDER_PRESETS, type RenderPreset } from "@/lib/render/card-image";
 
 // ---------------------------------------------------------------------------
 // Frame-review follow-ups (layout v25/v26, owner review 2026-09-25), pinned on
 // REAL bakes rather than source greps: every template here draws a git frame
 // from public/frames (read from disk), so the renders are deterministic and
-// offline. Rendered at the "default" preset (750 × 1050).
+// offline. Rendered at the "default" preset (750 × 1050) unless a block
+// says otherwise.
 // ---------------------------------------------------------------------------
 
 const W = RENDER_PRESETS.default.width;
@@ -44,8 +45,8 @@ function card(template: FrameTemplate, over: Partial<CardPreviewData> = {}): Car
 }
 
 type Raw = { data: Buffer; width: number; height: number };
-async function bake(data: CardPreviewData, brandMark = false): Promise<Raw> {
-  const res = await renderCardImage(data, "default", { brandMark, watermarkText: null });
+async function bake(data: CardPreviewData, brandMark = false, preset: RenderPreset = "default"): Promise<Raw> {
+  const res = await renderCardImage(data, preset, { brandMark, watermarkText: null });
   const { data: px, info } = await sharp(Buffer.from(await res.arrayBuffer()))
     .removeAlpha()
     .raw()
@@ -271,10 +272,12 @@ describe("Alpha ink: silver P/T and artist line on every frame but white", () =>
 });
 
 describe("Alpha name, pips and type line (owner review round 4)", () => {
-  // HD px = default px × 2. The art box's outer edge is ~159 px; round 3 put
-  // the name at ~114 px with 48 px caps and 63 px pip discs.
-  const HD = 1500 / W;
-  /** diffBox limited to rows y0–y1 (default px). */
+  // Baked at the "hd" preset (1500 × 2100) so every number is an HD px and a
+  // 1–2 px move is visible (the default preset halves it). The art box's
+  // outer edge is ~159 px; round 3 put the name at ~114 px and the type line
+  // at ~157, with 48 px caps and 63 px pip discs centred ~5 px above the caps.
+  const hd = (data: CardPreviewData) => bake(data, false, "hd");
+  /** diffBox limited to rows y0–y1. */
   function bandBox(a: Raw, b: Raw, y0: number, y1: number) {
     const crop = (r: Raw): Raw => ({
       data: r.data.subarray(y0 * r.width * 3, y1 * r.width * 3),
@@ -284,8 +287,12 @@ describe("Alpha name, pips and type line (owner review round 4)", () => {
     const box = diffBox(crop(a), crop(b));
     return box && { ...box, y0: box.y0 + y0, y1: box.y1 + y0 };
   }
-  const TITLE_ROWS: [number, number] = [Math.round((80 / 2100) * H), Math.round((215 / 2100) * H)];
-  const TYPE_ROWS: [number, number] = [Math.round((1150 / 2100) * H), Math.round((1262 / 2100) * H)];
+  const differs = (a: Raw, b: Raw, x: number, y: number) => {
+    const i = (y * a.width + x) * 3;
+    return Math.abs(a.data[i] - b.data[i]) > 24 || Math.abs(a.data[i + 1] - b.data[i + 1]) > 24 || Math.abs(a.data[i + 2] - b.data[i + 2]) > 24;
+  };
+  const TITLE_ROWS: [number, number] = [80, 215];
+  const TYPE_ROWS: [number, number] = [1150, 1262];
 
   it.each<FrameTemplate>(["agclassic", "alphaland"])("%s: name and type line start on one left margin, the art box's edge", async (template) => {
     const land = template === "alphaland";
@@ -298,43 +305,55 @@ describe("Alpha name, pips and type line (owner review round 4)", () => {
       power: null,
       toughness: null,
     } as Partial<CardPreviewData>;
-    const full = await bake(card(template, base));
-    const noName = await bake(card(template, { ...base, title: " " }));
-    const noType = await bake(card(template, { ...base, cardType: null, supertype: null, subtypes: [" "] }));
+    const full = await hd(card(template, base));
+    // A blank title bakes as "Untitled Card", so the name box is the union of
+    // both names' ink: one left margin, caps + the d/l/t ascenders, no
+    // descenders.
+    const noName = await hd(card(template, { ...base, title: " " }));
+    const noType = await hd(card(template, { ...base, cardType: null, supertype: null, subtypes: [" "] }));
     const name = bandBox(full, noName, ...TITLE_ROWS)!;
     const type = bandBox(full, noType, ...TYPE_ROWS)!;
     expect(name).not.toBeNull();
     expect(type).not.toBeNull();
-    // Both start at the art box's outer edge (~159 px HD), not the old 114.
+    // Both start at the art box's outer edge (~159–161 px) — round 3 had the
+    // name at ~114 and the type line at 156–158.
     for (const [what, box] of [["name", name], ["type", type]] as const) {
-      expect(box.x0 * HD, what).toBeGreaterThanOrEqual(156);
-      expect(box.x0 * HD, what).toBeLessThanOrEqual(166);
+      expect(box.x0, what).toBeGreaterThanOrEqual(159);
+      expect(box.x0, what).toBeLessThanOrEqual(165);
     }
-    expect(Math.abs(name.x0 - type.x0)).toBeLessThanOrEqual(2);
-    // "Dawn Treader" has no descenders: its ink is the caps (+ the d's
-    // ascender), centred at ~141 px. 41 px caps measure 46 here with the
-    // anti-aliasing (round 3's 48 px caps measured 54).
-    const capH = (name.y1 - name.y0 + 1) * HD;
-    expect(capH).toBeGreaterThan(40);
-    expect(capH).toBeLessThan(50);
-    expect(Math.abs(((name.y0 + name.y1 + 1) / 2) * HD - 141)).toBeLessThan(4);
+    expect(Math.abs(name.x0 - type.x0)).toBeLessThanOrEqual(3);
+    // 41 px caps: the two names' ink measures ~45 px with the ascenders and
+    // anti-aliasing (round 3's 48 px caps: ~54), centred at ~141 px.
+    const inkH = name.y1 - name.y0 + 1;
+    expect(inkH).toBeGreaterThan(40);
+    expect(inkH).toBeLessThan(50);
+    expect(Math.abs((name.y0 + name.y1 + 1) / 2 - 141)).toBeLessThan(4);
   }, 60_000);
 
   it("agclassic: smaller pips, still ending at ~1362 px and centred on the name's caps", async () => {
     const base = { title: "Dawn Treader", cost: "{6}", power: null, toughness: null } as Partial<CardPreviewData>;
-    const full = await bake(card("agclassic", base));
-    const pipsOnly = await bake(card("agclassic", { ...base, title: " " }));
-    const blank = await bake(card("agclassic", { ...base, title: " ", cost: null }));
+    const full = await hd(card("agclassic", base));
+    const pipsOnly = await hd(card("agclassic", { ...base, title: " " }));
+    const blank = await hd(card("agclassic", { ...base, title: " ", cost: null }));
     const name = bandBox(full, pipsOnly, ...TITLE_ROWS)!;
     const pip = bandBox(pipsOnly, blank, ...TITLE_ROWS)!;
-    // The disc's right and top edges are clean (its hard shadow falls
-    // down-left). Round 3: 63 px discs centred 5.5 px above the caps.
-    const d = getFrameProfile("agclassic").costSizePct! * 1500;
-    expect(d).toBeLessThan(56);
-    expect(Math.abs((pip.x1 + 1) * HD - 1362)).toBeLessThanOrEqual(4);
-    const pipMid = pip.y0 * HD + d / 2;
-    const capMid = ((name.y0 + name.y1 + 1) / 2) * HD;
-    expect(Math.abs(pipMid - capMid)).toBeLessThanOrEqual(3);
+    expect(Math.abs(pip.x1 + 1 - 1362)).toBeLessThanOrEqual(4);
+    // The RENDERED disc, not the profile's number: its hard shadow falls
+    // down-left, so the top and right edges are clean. The rows whose ink
+    // reaches one px in from the right edge straddle the disc's centre, and
+    // top → centre is the radius.
+    const rows: number[] = [];
+    for (let y = pip.y0; y <= pip.y1; y += 1) if (differs(pipsOnly, blank, pip.x1 - 1, y)) rows.push(y);
+    expect(rows.length).toBeGreaterThan(2);
+    const pipMid = (rows[0] + rows[rows.length - 1] + 1) / 2;
+    const d = 2 * (pipMid - pip.y0);
+    // 54 px discs (round 3: 63).
+    expect(d).toBeGreaterThan(50);
+    expect(d).toBeLessThan(58);
+    // Centred on the name's caps: round 3's lift (costDy −0.004) would sit
+    // today's discs ~4 px high.
+    const capMid = (name.y0 + name.y1 + 1) / 2;
+    expect(Math.abs(pipMid - capMid)).toBeLessThanOrEqual(2);
   }, 60_000);
 });
 
