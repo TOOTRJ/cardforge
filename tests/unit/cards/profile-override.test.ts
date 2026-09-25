@@ -111,15 +111,23 @@ describe("listSlotPaths / slotRect", () => {
 
 describe("costRect (independent pip box)", () => {
   it("is offered for cost-bearing frames and synthesizes a default region", () => {
-    const modern = getFrameProfile("modern");
-    expect(listSlotPaths(modern)).toContain("costRect");
-    const rect = slotRect(modern, "costRect");
+    // Retro has no explicit costRect (modern and m15pw gained one when the
+    // production overrides were folded into code, migration 0114).
+    const retro = getFrameProfile("retro");
+    expect(retro.costRect).toBeUndefined();
+    expect(listSlotPaths(retro)).toContain("costRect");
+    const rect = slotRect(retro, "costRect");
     // Right half of the title band until an explicit costRect exists.
-    expect(rect?.topPct).toBe(modern.title.rect.topPct);
+    expect(rect?.topPct).toBe(retro.title.rect.topPct);
     expect(rect ? rect.leftPct + rect.widthPct : 0).toBeCloseTo(
-      modern.title.rect.leftPct + modern.title.rect.widthPct,
+      retro.title.rect.leftPct + retro.title.rect.widthPct,
       1,
     );
+  });
+
+  it("returns the explicit box once a frame carries one", () => {
+    const modern = getFrameProfile("modern");
+    expect(slotRect(modern, "costRect")).toEqual(modern.costRect);
   });
 
   it("is not offered on hideCost frames and accepts overrides", () => {
@@ -138,14 +146,18 @@ describe("costRect (independent pip box)", () => {
 
 describe("symbolRect (independent set-symbol box)", () => {
   it("is offered on every frame and synthesizes a default at the type band's right end", () => {
-    const modern = getFrameProfile("modern");
-    expect(listSlotPaths(modern)).toContain("symbolRect");
-    const rect = slotRect(modern, "symbolRect");
-    expect(rect?.topPct).toBe(modern.type.rect.topPct);
+    const retro = getFrameProfile("retro");
+    expect(retro.symbolRect).toBeUndefined();
+    expect(listSlotPaths(retro)).toContain("symbolRect");
+    const rect = slotRect(retro, "symbolRect");
+    expect(rect?.topPct).toBe(retro.type.rect.topPct);
     expect(rect ? rect.leftPct + rect.widthPct : 0).toBeCloseTo(
-      modern.type.rect.leftPct + modern.type.rect.widthPct,
+      retro.type.rect.leftPct + retro.type.rect.widthPct,
       1,
     );
+    // A frame with an explicit box reports that box.
+    const modern = getFrameProfile("modern");
+    expect(slotRect(modern, "symbolRect")).toEqual(modern.symbolRect);
   });
 
   it("accepts overrides and merges", () => {
