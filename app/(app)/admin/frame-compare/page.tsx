@@ -27,7 +27,13 @@ import {
   type FrameColorKey,
   type FrameReference,
 } from "@/lib/cards/frame-reference-registry";
-import { getFrameReviews } from "@/lib/cards/frame-reviews";
+import { getFrameReviews, type FrameReview } from "@/lib/cards/frame-reviews";
+import { listFrameReviewEvents } from "@/lib/cards/frame-review-events";
+import {
+  overrideHash,
+  verificationState,
+} from "@/lib/cards/frame-verification-state";
+import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
 import { eraForTemplate } from "@/lib/creator/frame-picker";
 import { buildFrameComparePayload } from "@/lib/scryfall/reference-preview";
 import { getCurrentProfile } from "@/lib/supabase/server";
@@ -163,6 +169,18 @@ export default async function AdminFrameComparePage({
 
     const verified = review?.verified ?? false;
     const overrides = await getFrameProfileOverrides();
+    const currentHash = overrideHash(overrides[template] ?? null);
+    const state = verificationState(
+      {
+        verified,
+        verifiedLayoutVersion: review?.verifiedLayoutVersion ?? null,
+        verifiedOverrideHash: review?.verifiedOverrideHash ?? null,
+      },
+      template,
+      currentHash,
+    );
+    const history = await listFrameReviewEvents(template, color);
+    const recordedScore = (review?.scoreJson as { overall?: number } | null)?.overall;
 
     // Fall back to sample content when there's no reference (or the lookup
     // failed) — the frame can still be eyeballed. Saved layout overrides are
@@ -205,11 +223,59 @@ export default async function AdminFrameComparePage({
                 template={template}
                 colorKey={color}
                 verified={verified}
+                referenceId={reference?.scryfallId ?? null}
                 withLabel
               />
             </span>
           }
         />
+        {verified ? (
+          <div
+            className={cn(
+              "mt-3 rounded-md border px-3 py-2 text-xs leading-5",
+              state.stale
+                ? "border-gold/50 bg-gold/5 text-foreground"
+                : "border-border/50 text-muted",
+            )}
+            data-testid="verification-record"
+          >
+            {state.stale ? (
+              <strong className="mr-1">Needs re-verification:</strong>
+            ) : state.legacy ? (
+              <strong className="mr-1">Verified (no record):</strong>
+            ) : (
+              <strong className="mr-1">Verified:</strong>
+            )}
+            {state.stale
+              ? `${state.reasons.join("; ")}. Tick the box again once it looks right.`
+              : state.legacy
+                ? "ticked before layout versions were recorded — tick it again to record the current layout, override and score."
+                : `layout v${review?.verifiedLayoutVersion} · override ${review?.verifiedOverrideHash}${
+                    typeof recordedScore === "number" ? ` · frame score ${recordedScore}%` : ""
+                  } — current layout v${CARD_LAYOUT_VERSION} · override ${currentHash}.`}
+          </div>
+        ) : null}
+        {history.length > 0 ? (
+          <details className="mt-3 rounded-md border border-border/40 px-3 py-2 text-xs text-muted">
+            <summary className="cursor-pointer text-[11px] uppercase tracking-wider text-subtle">
+              History ({history.length})
+            </summary>
+            <ul className="mt-2 flex flex-col gap-1">
+              {history.map((event) => (
+                <li key={event.id} className="flex flex-wrap gap-2 tabular-nums">
+                  <span className="text-subtle">{event.createdAt.slice(0, 16).replace("T", " ")}</span>
+                  <span className="font-medium text-foreground">{event.action}</span>
+                  {event.colorKey === "*" ? <span>(whole template)</span> : null}
+                  {event.layoutVersion != null ? <span>layout v{event.layoutVersion}</span> : null}
+                  {event.overrideHash ? <span>override {event.overrideHash}</span> : null}
+                  {typeof (event.scoreJson as { overall?: number } | null)?.overall === "number" ? (
+                    <span>frame {(event.scoreJson as { overall: number }).overall}%</span>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </details>
+        ) : null}
         <div className="mt-4 flex flex-col gap-3">
           <ReferenceSwitcher
             template={template}
@@ -260,6 +326,16 @@ export default async function AdminFrameComparePage({
   }
 
   const checklistOverrides = await getFrameProfileOverrides();
+  const stateOf = (review: FrameReview | undefined, t: FrameTemplate) =>
+    verificationState(
+      {
+        verified: review?.verified ?? false,
+        verifiedLayoutVersion: review?.verifiedLayoutVersion ?? null,
+        verifiedOverrideHash: review?.verifiedOverrideHash ?? null,
+      },
+      t,
+      overrideHash(checklistOverrides[t] ?? null),
+    );
   const eras: ChecklistEra[] = FRAME_ERA_VALUES.filter((era) =>
     templatesByEra.has(era),
   ).map((era) => ({
@@ -285,11 +361,16 @@ export default async function AdminFrameComparePage({
               : null;
           const reference = custom ?? FRAME_REFERENCES[t][colorKey];
           const alternates = Math.max(0, frameReferenceOptions(t, colorKey).length - 1);
+          const state = stateOf(review, t);
           return {
             colorKey,
             colorLabel: colorKey.toUpperCase(),
             verified: review?.verified ?? false,
             isCustomReference: Boolean(custom),
+            referenceId: reference?.scryfallId ?? null,
+            stale: state.stale,
+            staleReasons: state.reasons,
+            legacy: state.legacy,
             alternates,
             tier: referenceTierLabel(custom ? null : FRAME_REFERENCES[t][colorKey]),
             reference: reference
@@ -307,6 +388,7 @@ export default async function AdminFrameComparePage({
 
   const allCombos = eras.flatMap((e) => e.templates).flatMap((t) => t.combos);
   const verifiedCount = allCombos.filter((c) => c.verified).length;
+  const staleCount = allCombos.filter((c) => c.verified && c.stale).length;
   const withReference = allCombos.filter((c) => c.reference).length;
 
   return (
@@ -320,6 +402,9 @@ export default async function AdminFrameComparePage({
             <Badge variant="default">
               {withReference}/{allCombos.length} with a reference
             </Badge>
+            {staleCount > 0 ? (
+              <Badge variant="default">{staleCount} need re-verification</Badge>
+            ) : null}
             <Badge variant="primary">
               {verifiedCount}/{allCombos.length} verified
             </Badge>

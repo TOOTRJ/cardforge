@@ -18,7 +18,16 @@ export type FrameReview = {
   referenceScryfallId: string | null;
   referenceName: string | null;
   referenceSet: string | null;
+  /** What the tick measured (migration 0115); null on rows ticked before. */
+  verifiedLayoutVersion: number | null;
+  verifiedOverrideHash: string | null;
+  verifiedReferenceId: string | null;
+  scoreJson: unknown | null;
 };
+
+// select("*"), not a column list: between a deploy and the migration that
+// adds a column, an explicit list would 400 and the picker would show NO
+// frames. Missing columns simply read as undefined → null.
 
 /** Every review row, keyed for the admin checklist. Empty map on any error —
  *  absent rows read as "not yet reviewed". */
@@ -27,11 +36,7 @@ export async function getFrameReviews(): Promise<Map<string, FrameReview>> {
   if (!isSupabaseConfigured()) return reviews;
   try {
     const supabase = await createClient();
-    const { data } = await supabase
-      .from("frame_reviews")
-      .select(
-        "template, color_key, verified, verified_at, reference_scryfall_id, reference_name, reference_set",
-      );
+    const { data } = await supabase.from("frame_reviews").select("*");
     for (const row of data ?? []) {
       reviews.set(`${row.template}/${row.color_key}`, {
         template: row.template,
@@ -41,6 +46,10 @@ export async function getFrameReviews(): Promise<Map<string, FrameReview>> {
         referenceScryfallId: row.reference_scryfall_id,
         referenceName: row.reference_name,
         referenceSet: row.reference_set,
+        verifiedLayoutVersion: row.verified_layout_version ?? null,
+        verifiedOverrideHash: row.verified_override_hash ?? null,
+        verifiedReferenceId: row.verified_reference_id ?? null,
+        scoreJson: row.score_json ?? null,
       });
     }
   } catch {

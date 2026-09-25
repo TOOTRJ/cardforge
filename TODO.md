@@ -99,7 +99,7 @@ Open decisions are marked **[decide]**; none blocks its phase.
       the scan, score SSIM/edge-IoU per slot, report the best per-slot dx/dy
       as the suggested nudge; drop the "the number should drop" copy
       (`components/admin/frame-guide.tsx`:28). New `lib/frames/align.ts`.
-- [ ] **0.10 [P1] Verification metadata + history** — migration adding
+- [x] (done 2026-09-25 — feat/verification-metadata, migration 0115: version + override hash + reference + score stamped per tick, frame_review_events history, "re-verify" state; per-TEMPLATE sign-off deferred to 2.4 with the auto-score job) **0.10 [P1] Verification metadata + history** — migration adding
       `verified_layout_version`, `verified_override_hash`, `score_json` and a
       history table; flip to "needs re-verification" when the override or the
       frame PNG hash changes; sign-off becomes per TEMPLATE with per-colour
@@ -399,6 +399,19 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
 
 ### Phase 6 — Creator polish and print (2–4 weeks, after Phase 4 basics)
 
+- [ ] **6.1a [P1] Download option: 1/8 in bleed margin** (owner request
+      2026-09-25) — a checkbox on the download modal that renders the card
+      with a 1/8 in (3.175 mm) bleed on every side, extending the frame's
+      outer border colour/texture (never scaling the card): trim 2.5×3.5 in →
+      2.75×3.75 in, i.e. 825×1125 @300 ppi, 1650×2250 @600 ppi. PNG + PDF
+      (crop marks on the trim line). Bake path in `lib/render/card-image.tsx`
+      + `lib/render/card-pdf.ts`; entitlement same as the clean download.
+- [ ] **6.1b [P1] Download option: 800 ppi export** (owner request
+      2026-09-25) — an 800 ppi choice next to the current HD download:
+      2000×2800 px at trim, 2200×3000 with the bleed option. Only sharp once
+      the M15 family comes from Card Conjurer's 2010×2814 sources (4.4);
+      until then it upsamples the 1500×2100 bake. Paid tier only **[decide]**;
+      bake on demand (not stored), PNG only.
 - [ ] **6.1 [P2] Print-ready export** — bleed option (2.75×3.75 in at 300/600
       → 825×1125 / 1650×2250), MPC preset (816×1110 at 300, 1632×2220 at
       600), PDF sheets with cut lines + bleed, card-back sheet; canonical
@@ -436,10 +449,12 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
 - [ ] **7.5 [P2] Rebake operations** — sweep tooling for bundled bumps, /news
       post template, a "why does my card look different" FAQ entry.
 
-Sequencing at a glance: Phase 0 (all) → 1.1–1.6 + 3b.1–3b.5 alongside Phase 2
-→ Phase 3 + rest of 3b (hold the layout bump) → 4.1–4.4 + 4.8 + 4.9 with one
-bundled bump/rebake → 4.5–4.7 and 4.11 in request-log order (4.10 when
-references exist) → Phase 5 → Phase 6; Phase 7 throughout.
+Sequencing at a glance (re-ordered 2026-09-25, owner decision: de-risk the
+Card Conjurer frame swap early): Phase 0 → **4.1–4.4 (manifest, storage
+move, CC importer, M15 re-source) with one bundled layout bump/rebake** →
+1.1–1.6 + 3b.1–3b.5 alongside Phase 2 → Phase 3 + rest of 3b → 4.5–4.9 and
+4.11 in request-log order (4.10 when references exist) → Phase 5 → Phase 6
+(6.1a/6.1b as soon as 4.4 lands); Phase 7 throughout.
 
 ## Billing audit follow-ups (2026-09-24)
 

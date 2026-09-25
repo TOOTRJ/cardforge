@@ -7,6 +7,9 @@ import { staleTemplateFilter } from "@/lib/cards/frame-override-stale";
 import { getCurrentProfile } from "@/lib/supabase/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { frameProfileOverrideSchema } from "@/lib/cards/profile-override";
+import { overrideHash } from "@/lib/cards/frame-verification-state";
+import { recordFrameReviewEvent } from "@/lib/cards/frame-review-events";
+import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -132,6 +135,16 @@ export async function saveFrameProfileOverrideAction(
   }
 
   const staleCount = await markTemplateRendersStale(admin, template);
+  // Template-wide history row ("*"): every colour's verification now
+  // measures against a different layout — the checklist flags them.
+  await recordFrameReviewEvent(admin, {
+    template,
+    colorKey: "*",
+    action: Object.keys(overrides).length === 0 ? "override_reset" : "override_saved",
+    actor: gate.adminId,
+    layoutVersion: CARD_LAYOUT_VERSION,
+    overrideHash: overrideHash(Object.keys(overrides).length === 0 ? null : overrides),
+  });
   publish();
   return { ok: true, staleCount, changed: true };
 }
@@ -155,6 +168,14 @@ export async function resetFrameProfileOverrideAction(
   }
 
   const staleCount = await markTemplateRendersStale(admin, parsed.data.template);
+  await recordFrameReviewEvent(admin, {
+    template: parsed.data.template,
+    colorKey: "*",
+    action: "override_reset",
+    actor: gate.adminId,
+    layoutVersion: CARD_LAYOUT_VERSION,
+    overrideHash: "none",
+  });
   publish();
   return { ok: true, staleCount, changed: true };
 }

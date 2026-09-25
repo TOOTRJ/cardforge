@@ -9,13 +9,18 @@ import { cn } from "@/lib/utils";
 // ---------------------------------------------------------------------------
 // The verification checkbox — shared by the checklist rows and the compare
 // view header. Checking publishes the (template, color) combo to the frame
-// picker for all users; unchecking withdraws it.
+// picker for all users and records what was measured (layout version,
+// override hash, the reference on screen, the alignment score);
+// unchecking withdraws it.
 // ---------------------------------------------------------------------------
 
 type FrameVerifyCheckboxProps = {
   template: string;
   colorKey: string;
   verified: boolean;
+  /** The reference printing shown next to this checkbox — recorded with
+   *  the tick and scored. */
+  referenceId?: string | null;
   /** Larger hit target + label for the compare-view header. */
   withLabel?: boolean;
   className?: string;
@@ -25,6 +30,7 @@ export function FrameVerifyCheckbox({
   template,
   colorKey,
   verified: initialVerified,
+  referenceId = null,
   withLabel = false,
   className,
 }: FrameVerifyCheckboxProps) {
@@ -39,6 +45,7 @@ export function FrameVerifyCheckbox({
         template,
         colorKey,
         verified: next,
+        referenceId,
       });
       if (!result.ok) {
         setVerified(!next);
@@ -47,7 +54,7 @@ export function FrameVerifyCheckbox({
       }
       toast.success(
         next
-          ? `${template}/${colorKey} verified — now available to all users.`
+          ? `${template}/${colorKey} verified — now available to all users.${result.scored ? "" : " (Alignment score unavailable for the record.)"}`
           : `${template}/${colorKey} withdrawn from the picker.`,
       );
     });

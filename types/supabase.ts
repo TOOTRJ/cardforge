@@ -980,6 +980,10 @@ export type Database = {
           reference_scryfall_id: string | null;
           reference_name: string | null;
           reference_set: string | null;
+          verified_layout_version: number | null;
+          verified_override_hash: string | null;
+          verified_reference_id: string | null;
+          score_json: Json | null;
         };
         Insert: {
           template: string;
@@ -990,6 +994,10 @@ export type Database = {
           reference_scryfall_id?: string | null;
           reference_name?: string | null;
           reference_set?: string | null;
+          verified_layout_version?: number | null;
+          verified_override_hash?: string | null;
+          verified_reference_id?: string | null;
+          score_json?: Json | null;
         };
         Update: {
           template?: string;
@@ -1000,6 +1008,49 @@ export type Database = {
           reference_scryfall_id?: string | null;
           reference_name?: string | null;
           reference_set?: string | null;
+          verified_layout_version?: number | null;
+          verified_override_hash?: string | null;
+          verified_reference_id?: string | null;
+          score_json?: Json | null;
+        };
+        Relationships: [];
+      };
+      frame_review_events: {
+        Row: {
+          id: string;
+          template: string;
+          color_key: string;
+          action: string;
+          actor: string | null;
+          layout_version: number | null;
+          override_hash: string | null;
+          reference_scryfall_id: string | null;
+          score_json: Json | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          template: string;
+          color_key: string;
+          action: string;
+          actor?: string | null;
+          layout_version?: number | null;
+          override_hash?: string | null;
+          reference_scryfall_id?: string | null;
+          score_json?: Json | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          template?: string;
+          color_key?: string;
+          action?: string;
+          actor?: string | null;
+          layout_version?: number | null;
+          override_hash?: string | null;
+          reference_scryfall_id?: string | null;
+          score_json?: Json | null;
+          created_at?: string;
         };
         Relationships: [];
       };
