@@ -130,7 +130,7 @@ export async function GET(
   // stale card on each crawler hit cost ~3 s of CPU per share. Only a card
   // with no bake at all renders live. Viewer-independent by construction,
   // which keeps the route CDN-cacheable.
-  const stored = await fetchStoredRender(card, { allowStale: true });
+  const stored = await fetchStoredRender(card, { accept: "any" });
   let portraitBytes: Buffer;
   if (stored) {
     portraitBytes = await fitStoredRender(stored, preset, isLandscapeRender(previewData));

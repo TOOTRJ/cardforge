@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
+import { CARD_LAYOUT_VERSION, latestOptInVersion } from "@/lib/cards/layout-version";
 import { notifyOwnersOfRenderUpdates } from "@/lib/cards/render-update-notify";
 import { cronRouteGuard } from "@/lib/api/cron-auth";
 
 // ---------------------------------------------------------------------------
 // /api/cron/notify-render-updates — tell owners their cards have a newer
-// look. Daily (vercel.json); idempotent per owner per CARD_LAYOUT_VERSION,
+// look. Daily (vercel.json); idempotent per owner per newest OPT-IN version
+// (latestOptInVersion — a sweep bump is platform work and never notifies),
 // so it is safe to run any number of times and can be triggered by hand
-// right after a deploy that bumps the version:
+// right after a deploy that adds an opt-in bump:
 //
 //   curl -X GET https://www.pipglyph.com/api/cron/notify-render-updates \
 //        -H "Authorization: Bearer $CRON_SECRET"
@@ -26,7 +27,12 @@ export async function GET(request: Request) {
   if (denied) return denied;
   try {
     const result = await notifyOwnersOfRenderUpdates(createAdminClient());
-    return NextResponse.json({ ok: true, layoutVersion: CARD_LAYOUT_VERSION, ...result });
+    return NextResponse.json({
+      ok: true,
+      layoutVersion: CARD_LAYOUT_VERSION,
+      notifiedVersion: latestOptInVersion(),
+      ...result,
+    });
   } catch (err) {
     return NextResponse.json(
       { ok: false, error: err instanceof Error ? err.message : "Unknown error" },

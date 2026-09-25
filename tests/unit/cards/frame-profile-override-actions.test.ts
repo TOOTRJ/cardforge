@@ -46,7 +46,15 @@ import {
 import { FRAME_PROFILE_OVERRIDES_TAG } from "@/lib/cards/frame-profile-overrides";
 import { staleTemplateFilter } from "@/lib/cards/frame-override-stale";
 
-function db(opts: { existingRow?: boolean; staleIds?: string[] } = {}) {
+type Candidate = { id: string; layout_version: number | null; rarity?: string };
+
+/** Baked, published cards on the template (what the mark scan reads). By
+ *  default every `staleIds` card is current (v23) and so gets marked. */
+function candidatesFor(opts: { staleIds?: string[]; candidates?: Candidate[] }): Candidate[] {
+  return opts.candidates ?? (opts.staleIds ?? ["c1", "c2"]).map((id) => ({ id, layout_version: 23 }));
+}
+
+function db(opts: { existingRow?: boolean; staleIds?: string[]; candidates?: Candidate[] } = {}) {
   const stub = chainClient((table, calls): ChainAnswer => {
     if (table === "frame_profile_overrides" && called(calls, "delete")) {
       return { data: opts.existingRow ? [{ template: "saga" }] : [] };
@@ -55,7 +63,21 @@ function db(opts: { existingRow?: boolean; staleIds?: string[] } = {}) {
       return { error: null };
     }
     if (table === "cards" && called(calls, "update")) {
-      return { data: (opts.staleIds ?? ["c1", "c2"]).map((id) => ({ id })) };
+      const ids = (calls.find((c) => c.method === "in" && c.args[0] === "id")?.args[1] ?? []) as string[];
+      return { data: ids.map((id) => ({ id })) };
+    }
+    if (table === "cards" && called(calls, "select")) {
+      return {
+        data: candidatesFor(opts).map((c) => ({
+          visibility: "public",
+          rendered_image_url: "https://cdn/r.png",
+          frame_style: { template: "saga" },
+          rarity: "uncommon",
+          set_icon_url: null,
+          set_icon_code: null,
+          ...c,
+        })),
+      };
     }
     return {};
   });
@@ -98,7 +120,7 @@ describe("saveFrameProfileOverrideAction", () => {
       template: "saga",
       overrides: { title: { rect: { topPct: 5 } } },
     });
-    expect(result).toEqual({ ok: true, staleCount: 3, changed: true });
+    expect(result).toEqual({ ok: true, staleCount: 3, keptForOwner: 0, changed: true });
 
     const upsert = stub.forTable("frame_profile_overrides")[0];
     expect(payloadOf(upsert.calls, "upsert")).toMatchObject({
@@ -107,9 +129,10 @@ describe("saveFrameProfileOverrideAction", () => {
       updated_by: ADMIN,
     });
 
-    const stale = stub.forTable("cards")[0];
+    const [scan, stale] = stub.forTable("cards");
+    expect(called(scan.calls, "filter", "frame_style->>template")).toBe(true);
     expect(payloadOf(stale.calls, "update")).toEqual({ layout_version: null });
-    expect(called(stale.calls, "filter", "frame_style->>template")).toBe(true);
+    expect(stale.calls.find((c) => c.method === "in" && c.args[0] === "id")?.args[1]).toEqual(["a", "b", "c"]);
     expect(cache.updateTag).toHaveBeenCalledWith(FRAME_PROFILE_OVERRIDES_TAG);
     expect(cache.revalidateTag).not.toHaveBeenCalled();
   });
@@ -120,7 +143,7 @@ describe("saveFrameProfileOverrideAction", () => {
       template: "saga",
       overrides: {},
     });
-    expect(result).toEqual({ ok: true, staleCount: 0, changed: false });
+    expect(result).toEqual({ ok: true, staleCount: 0, keptForOwner: 0, changed: false });
     expect(stub.forTable("cards")).toHaveLength(0);
     expect(cache.updateTag).not.toHaveBeenCalled();
   });
@@ -130,22 +153,41 @@ describe("resetFrameProfileOverrideAction", () => {
   it("deletes the row, marks renders stale and refreshes the cache when a row existed", async () => {
     const stub = db({ existingRow: true, staleIds: ["x"] });
     const result = await resetFrameProfileOverrideAction({ template: "saga" });
-    expect(result).toEqual({ ok: true, staleCount: 1, changed: true });
+    expect(result).toEqual({ ok: true, staleCount: 1, keptForOwner: 0, changed: true });
     const del = stub.forTable("frame_profile_overrides")[0];
     expect(called(del.calls, "delete")).toBe(true);
     expect(called(del.calls, "select", "template")).toBe(true);
-    expect(stub.forTable("cards")).toHaveLength(1);
+    // One scan of the template's baked cards, one update of the ids to mark.
+    expect(stub.forTable("cards")).toHaveLength(2);
     expect(cache.updateTag).toHaveBeenCalledWith(FRAME_PROFILE_OVERRIDES_TAG);
   });
 
   it("does NOT mark renders stale when there was nothing to reset", async () => {
     const stub = db({ existingRow: false });
     const result = await resetFrameProfileOverrideAction({ template: "saga" });
-    expect(result).toEqual({ ok: true, staleCount: 0, changed: false });
+    expect(result).toEqual({ ok: true, staleCount: 0, keptForOwner: 0, changed: false });
     expect(stub.forTable("cards")).toHaveLength(0);
     expect(cache.updateTag).not.toHaveBeenCalled();
     // The checklist still re-renders so the "override active" badge is right.
     expect(cache.revalidatePath).toHaveBeenCalledWith("/admin/frame-compare");
+  });
+
+  it("leaves cards with a pending opt-in look alone and counts the already-marked", async () => {
+    const stub = db({
+      existingRow: true,
+      candidates: [
+        { id: "current", layout_version: 23 },
+        // v21: the owner hasn't accepted the v22 (opt-in) typography — a
+        // re-bake would force it on them and drop their badge.
+        { id: "owner-choice", layout_version: 21 },
+        // Marked by an earlier save: owed already, nothing to update.
+        { id: "marked", layout_version: null },
+      ],
+    });
+    const result = await resetFrameProfileOverrideAction({ template: "saga" });
+    expect(result).toEqual({ ok: true, staleCount: 2, keptForOwner: 1, changed: true });
+    const update = stub.forTable("cards").find((e) => called(e.calls, "update"));
+    expect(update?.calls.find((c) => c.method === "in" && c.args[0] === "id")?.args[1]).toEqual(["current"]);
   });
 
   it("uses the default-template filter (NULL + legacy values) for m15", async () => {

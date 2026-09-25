@@ -8,20 +8,28 @@
 //     (rules-text tokenizer, fit sizing, fonts)
 //   * frame PNG asset replacements
 //
-// What happens to existing cards after a bump (2026-09 onward):
-//   * The OWNER sees a "newer look available" badge on each affected card
+// What happens to existing cards after a bump depends on its rollout policy
+// (VERSION_ROLLOUT below — "sweep" for corrections, "opt-in" for taste):
+//   * SWEEP bumps (and frame-geometry changes) are platform work. Owners
+//     never see a badge or a notification for them (TODO 0.20, owner
+//     decision 2026-09-25); the admin sweep re-bakes the affected cards and
+//     downloads keep serving the stored bake until then only when no
+//     correction is pending (lib/render/stored-render.ts).
+//   * OPT-IN bumps: the OWNER sees a "newer look available" badge on each affected card
 //     (dashboard tile + edit page), can compare the stored image with the
 //     live preview, and re-bakes it — one card at a time in the dashboard
 //     walkthrough or all of them, each behind a "this is permanent"
 //     confirmation (lib/cards/render-actions.ts,
 //     components/cards/render-update.tsx).
 //   * The daily cron /api/cron/notify-render-updates tells each affected
-//     owner ONCE per version (a `render_update` notification whose link
-//     opens the walkthrough). Trigger it by hand right after the deploy:
+//     owner ONCE per opt-in version (a `render_update` notification whose
+//     link opens the walkthrough; keyed on latestOptInVersion). Trigger it
+//     by hand right after a deploy that adds an opt-in bump:
 //     curl -H "Authorization: Bearer $CRON_SECRET" .../api/cron/notify-render-updates
-//   * Stale cards render live for OG images and downloads anyway
-//     (lib/render/stored-render.ts), so nothing is wrong meanwhile — only
-//     the gallery tile shows the older image.
+//   * Meanwhile the owner's older look is the card's look everywhere: the
+//     gallery tile, the share image and a free (watermarked) download all
+//     serve the stored bake (lib/render/stored-render.ts, TODO 0.21). Only a
+//     paid clean download renders live, and the download modal says so.
 //   * `node scripts/rebake-renders.mjs` (admin sweep) still exists for
 //     corrections every card should get without asking (text clipping, the
 //     2026-09 land fix) — reserve owner-driven updates for changes a user
@@ -35,8 +43,9 @@
 //
 // DB-driven geometry (frame_profile_overrides, edited in /admin/frame-
 // compare) does NOT bump this constant — the save action marks affected
-// cards stale directly via `layout_version = null`, which every stale
-// check below treats as "needs a render".
+// cards with `layout_version = null` ("a platform re-bake is owed"), and
+// the compare page re-bakes them straight away through the "marked" scope
+// of lib/cards/rebake-batch.ts. A null stamp is never an owner badge.
 //
 // History:
 //   (null) — renders baked before versioning existed (pre 2026-06-09)
@@ -308,6 +317,46 @@ export function classifyForSweep(
   return sweepPending.length > 0 ? "rebake" : "opt-in";
 }
 
+/** The newest owner opt-in version at or below `current` — the version an
+ *  owner's "newer look" notification is keyed on — or null when there is
+ *  none. A sweep bump never re-notifies owners. */
+export function latestOptInVersion(
+  rollout: Readonly<Record<number, RolloutPolicy>> = VERSION_ROLLOUT,
+  current: number = CARD_LAYOUT_VERSION,
+): number | null {
+  let latest: number | null = null;
+  for (let version = 1; version <= current; version += 1) {
+    if (rolloutPolicy(version, rollout) === "opt-in") latest = version;
+  }
+  return latest;
+}
+
+type PolicyOptions = {
+  rollout?: Readonly<Record<number, RolloutPolicy>>;
+  current?: number;
+  scoped?: Readonly<Record<number, readonly string[]>>;
+  scopes?: Readonly<Record<number, (card: ScopeCard) => boolean>>;
+};
+
+/**
+ * True when the platform still owes this card a re-bake: the stamp is null
+ * (a frame-geometry change marked it, or it predates versioning) or a
+ * SWEEP-policy bump since its stamp changed its output. Such a bake is not
+ * what the renderer means the card to look like, so downloads render live
+ * instead of serving it (lib/render/stored-render.ts); the sweep and the
+ * compare page's re-bake clear it.
+ */
+export function hasPendingCorrection(
+  card: { layout_version: number | null | undefined; frame_style: unknown } & ScopeCard,
+  opts: PolicyOptions = {},
+): boolean {
+  if (card.layout_version == null || !Number.isFinite(card.layout_version)) return true;
+  const rollout = opts.rollout ?? VERSION_ROLLOUT;
+  return pendingVersions(card.layout_version, templateOfFrameStyle(card.frame_style), card, opts).some(
+    (version) => rolloutPolicy(version, rollout) === "sweep",
+  );
+}
+
 /**
  * Owner-facing "a newer look is available" — the badge, the dashboard
  * count, the update walkthrough and the daily notification. Only a
@@ -316,6 +365,13 @@ export function classifyForSweep(
  * yet (an AI card between publish and bake) or failed is "not baked", not
  * "out of date" — flagging it sent freshly generated cards straight into
  * the update prompt (2026-09-16).
+ *
+ * And only an OPT-IN bump is the owner's call (TODO 0.20, 2026-09-25): a
+ * sweep bump or a frame-geometry change (null stamp) is a correction the
+ * platform re-bakes itself — one override save used to badge 176 of the
+ * dev database's 189 cards. A card that ALSO owes a correction gets no
+ * badge either: the sweep re-renders it with the current renderer, opt-in
+ * look included, so the badge would offer a choice the owner doesn't have.
  */
 export function hasNewerLook(
   card: {
@@ -324,8 +380,33 @@ export function hasNewerLook(
     rendered_image_url: string | null | undefined;
     frame_style: unknown;
   } & ScopeCard,
+  opts: PolicyOptions = {},
 ): boolean {
   if (card.visibility === "private") return false;
+  if (!card.rendered_image_url) return false;
+  if (card.layout_version == null || !Number.isFinite(card.layout_version)) return false;
+  const rollout = opts.rollout ?? VERSION_ROLLOUT;
+  const pending = pendingVersions(card.layout_version, templateOfFrameStyle(card.frame_style), card, opts);
+  return (
+    pending.some((version) => rolloutPolicy(version, rollout) === "opt-in") &&
+    !pending.some((version) => rolloutPolicy(version, rollout) === "sweep")
+  );
+}
+
+/**
+ * True when a card's stored image predates what the current renderer draws
+ * for it (any pending bump, or a null stamp). A live render — a paid
+ * viewer's clean PNG or PDF, which cannot come from the watermarked bake —
+ * then looks different from the gallery image, and the download modal says
+ * so (TODO 0.21).
+ */
+export function storedLookIsOlder(
+  card: {
+    rendered_image_url: string | null | undefined;
+    layout_version: number | null | undefined;
+    frame_style: unknown;
+  } & ScopeCard,
+): boolean {
   if (!card.rendered_image_url) return false;
   return isRenderStale(
     card.layout_version,
@@ -334,4 +415,23 @@ export function hasNewerLook(
     CARD_LAYOUT_VERSION,
     card,
   );
+}
+
+/**
+ * Whether THIS viewer's download differs from the card's stored (gallery)
+ * image. A paid viewer's clean download always renders live, so it differs
+ * whenever the stored look is older; a free viewer's watermarked download
+ * serves the stored bake unless a platform correction is pending
+ * (lib/render/stored-render.ts), when it renders live too.
+ */
+export function downloadDiffersFromGallery(
+  card: {
+    rendered_image_url: string | null | undefined;
+    layout_version: number | null | undefined;
+    frame_style: unknown;
+  } & ScopeCard,
+  viewerIsPaid: boolean,
+): boolean {
+  if (!card.rendered_image_url) return false;
+  return viewerIsPaid ? storedLookIsOlder(card) : hasPendingCorrection(card);
 }

@@ -139,7 +139,7 @@ Open decisions are marked **[decide]**; none blocks its phase.
       from the verified set (`app/(marketing)/page.tsx`:302), fix `README.md`:6
       "three decades", fix the Card Conjurer comparison row claiming split/
       adventure (`content/articles/card-conjurer-alternative.mdx`:65).
-- [ ] **0.20 [P1] Frame-geometry changes are platform corrections, never owner
+- [x] (fixed 2026-09-25 — fix/render-updates-sweep-not-badge: `hasNewerLook` counts only opt-in bumps, null stamps = platform re-bake, compare page re-bakes via the `marked` scope + admin action, notifications keyed on the newest opt-in version; no migration needed) **0.20 [P1] Frame-geometry changes are platform corrections, never owner
       badges** (owner-reported 2026-09-25: one layout-override save on the
       compare page put "A newer look is available" on 176 of the dev
       database's 189 baked cards, and the same would hit every M15 card in
@@ -153,7 +153,7 @@ Open decisions are marked **[decide]**; none blocks its phase.
       `notify-render-updates` cron skipping sweep-pending cards. Correction
       bumps keep `VERSION_ROLLOUT: "sweep"`; the badge is for taste changes
       only. Land before 4.4.
-- [ ] **0.21 [P1] A card downloads the way it looks** (owner-reported
+- [x] (fixed 2026-09-25 — same PR: watermarked PNG serves the bake unless a platform correction is pending (`hasServableStoredRender`), ETag follows the bake stamps, paid clean PNG/PDF stay live with a modal note; the PDF is paid-only so it never had a stored source) **0.21 [P1] A card downloads the way it looks** (owner-reported
       2026-09-25) — the watermarked PNG download and the PDF serve the stored
       bake whenever one exists (`fetchStoredRender(card, { allowStale: true })`,
       as the OG image already does), so an owner who has not accepted a newer

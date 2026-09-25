@@ -60,6 +60,11 @@ type DownloadModalProps = {
    *  the free experience. */
   isPaid?: boolean;
   canBatch?: boolean;
+  /** This viewer's download will not be the stored (gallery) image — a
+   *  paid clean download whose stored look is older, or a free download of
+   *  a card still owed a platform correction (both render live). Computed
+   *  on the server with downloadDiffersFromGallery (lib/cards/layout-version.ts). */
+  downloadDiffersFromGallery?: boolean;
 };
 
 type DownloadTab = "png" | "single" | "letter" | "a4";
@@ -71,6 +76,7 @@ export function DownloadModal({
   defaultTab = "single",
   isPaid = false,
   canBatch = false,
+  downloadDiffersFromGallery = false,
 }: DownloadModalProps) {
   const upgrade = useUpgradeModal();
   const base = `/api/cards/${cardId}`;
@@ -143,6 +149,15 @@ export function DownloadModal({
                 3×3 A4
               </TabsTrigger>
             </TabsList>
+            {downloadDiffersFromGallery ? (
+              <p
+                className="mt-2 text-[11px] leading-4 text-subtle"
+                data-testid="download-layout-note"
+              >
+                Downloads are drawn with the current card layout, so they can
+                look slightly different from this card&apos;s gallery image.
+              </p>
+            ) : null}
             {!isPaid ? (
               <p className="mt-2 text-[11px] leading-4 text-subtle">
                 PDF is a Plus feature; 3×3 sheets are Pro.

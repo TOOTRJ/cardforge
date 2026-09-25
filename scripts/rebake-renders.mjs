@@ -93,11 +93,19 @@ for (let round = 1; ; round++) {
   totalStamped += stamped.length;
   totalFailed += body.failed.length;
   for (const p of rebaked) if (sampleUrls.length < 5 && p.renderedImageUrl) sampleUrls.push(p.renderedImageUrl);
-  console.log(`round ${round}: re-baked ${rebaked.length}, stamped ${stamped.length}, failed ${body.failed.length}, remaining ${body.remaining}`);
+  const superseded = body.superseded?.length ?? 0;
+  console.log(`round ${round}: re-baked ${rebaked.length}, stamped ${stamped.length}, failed ${body.failed.length}${superseded ? `, superseded ${superseded} (retried)` : ""}, remaining ${body.remaining}`);
   for (const f of body.failed) console.error(`  ✗ ${f.id}: ${f.error}`);
   if (body.remaining === 0) break;
-  if (body.processed.length === 0) {
+  if (body.processed.length === 0 && body.failed.length > 0) {
     console.error("✗ A full batch failed — stopping. Fix the errors above and rerun.");
+    process.exit(1);
+  }
+  // Only superseded rows (a card or its layout changed mid-render): they are
+  // still in scope and the next round retries them.
+  if (body.processed.length === 0 && superseded === 0) break;
+  if (round > 2000) {
+    console.error("✗ Stopping after 2000 rounds.");
     process.exit(1);
   }
 }

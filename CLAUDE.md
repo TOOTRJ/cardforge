@@ -139,11 +139,14 @@ Rules and gotchas:
   (`lib/render/card-frames.ts`); any new `public/frames` asset the renderer
   reads synchronously must be added to `frameAssetPathsFor()` in
   `lib/render/card-image.tsx` or it renders as a transparent pixel on
-  Vercel. PNG/PDF serve the stored bake when it is current
-  (`lib/render/stored-render.ts`); the OG share image serves it even when
-  stale (`allowStale`) because the gallery tile shows that same image. A
-  renderer change still needs the `CARD_LAYOUT_VERSION` bump (owners then
-  update via the badge; a sweep is optional). Every bake also writes a
+  Vercel. A free (watermarked) PNG download serves the stored bake unless a
+  platform correction is pending (`hasServableStoredRender`, 0.21: a card
+  downloads the way it looks); paid clean PNG/PDF render live; the OG share
+  image serves any bake (`accept: "any"`). A renderer change still needs
+  the `CARD_LAYOUT_VERSION` bump + a `VERSION_ROLLOUT` policy: only
+  "opt-in" bumps badge owners (`hasNewerLook`); "sweep" bumps and
+  frame-override saves (null stamp) are re-baked by the platform — the
+  compare page does it right after a save (`/api/admin/rebake-marked`). Every bake also writes a
   600 px WebP thumbnail beside the HD PNG (`cards.rendered_thumb_url`,
   `lib/cards/render-thumb.ts`) — gallery-style tiles MUST use
   `BakedCardThumbnail` with `renderedThumbUrl`, never the 3 MB PNG;

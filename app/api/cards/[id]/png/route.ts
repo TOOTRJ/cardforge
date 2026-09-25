@@ -123,6 +123,11 @@ export async function GET(
       [
         card.id,
         card.updated_at,
+        // A watermarked download serves the stored bake, which a re-bake
+        // replaces without touching updated_at (0108) — fold its stamps in
+        // so a re-baked card never answers 304 with the old bytes.
+        card.rendered_at ?? "",
+        card.layout_version ?? "",
         preset,
         watermark ? "wm" : "clean",
         // The owner's custom footer mark prints into the render — fold it in
@@ -153,9 +158,12 @@ export async function GET(
   try {
     // The stored bake is always watermarked with no footer text (layout
     // v20) — exactly what a FREE viewer downloads, so serve it (2×
-    // downscaled) instead of re-rendering — lib/render/stored-render.ts. A
-    // paid viewer's clean download, and any card without a current bake,
-    // render live.
+    // downscaled) instead of re-rendering — lib/render/stored-render.ts.
+    // It is served even when the owner hasn't accepted a newer (opt-in)
+    // look, so the download matches the gallery image (TODO 0.21); only a
+    // pending platform correction renders live. A paid viewer's clean
+    // download has no stored source and always renders live with the
+    // current layout (the download modal says so).
     const stored = watermark ? await fetchStoredRender(card) : null;
     if (stored) {
       pngBytes = new Uint8Array(

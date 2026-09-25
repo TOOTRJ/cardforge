@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { createAdminClient } from "@/lib/supabase/admin";
-import { CARD_LAYOUT_VERSION, hasNewerLook } from "@/lib/cards/layout-version";
+import { CARD_LAYOUT_VERSION, hasNewerLook, latestOptInVersion } from "@/lib/cards/layout-version";
 
 // ---------------------------------------------------------------------------
 // "Your cards have a newer look" notifications.
@@ -13,6 +13,11 @@ import { CARD_LAYOUT_VERSION, hasNewerLook } from "@/lib/cards/layout-version";
 // `render_update` notification per owner per version (payload
 // { version, count }). Realtime (0075) delivers it as a toast to any open
 // tab; clicking it opens the dashboard's update walkthrough.
+//
+// Only OPT-IN bumps are the owner's decision (hasNewerLook, TODO 0.20):
+// the notification is keyed on the newest opt-in version, so a later
+// SWEEP bump (a correction the platform re-bakes itself) never notifies
+// anyone again, and a deploy with no opt-in version notifies nobody.
 // ---------------------------------------------------------------------------
 
 export type StaleCardRow = {
@@ -53,7 +58,8 @@ export function staleCountsByOwner(rows: Iterable<StaleCardRow>): Map<string, nu
 type Admin = ReturnType<typeof createAdminClient>;
 
 /**
- * Insert the owner's notification for the CURRENT version unless one exists.
+ * Insert the owner's notification for `version` (the newest opt-in bump)
+ * unless one exists.
  * Returns true when a row was inserted.
  */
 async function ensureRenderUpdateNotification(
@@ -94,14 +100,18 @@ const MAX_ROWS = 50_000;
 export async function notifyOwnersOfRenderUpdates(
   admin: Admin,
 ): Promise<{ owners: number; notified: number; scanned: number }> {
-  const staleOr = `rendered_image_url.is.null,layout_version.is.null,layout_version.lt.${CARD_LAYOUT_VERSION}`;
+  const version = latestOptInVersion();
+  if (version == null) return { owners: 0, notified: 0, scanned: 0 };
   const rows: StaleCardRow[] = [];
   for (let from = 0; from < MAX_ROWS; from += PAGE) {
     const { data, error } = await admin
       .from("cards")
       .select("owner_id, layout_version, frame_style, rendered_image_url, visibility, rarity, set_icon_url, set_icon_code")
       .in("visibility", ["public", "unlisted"])
-      .or(staleOr)
+      // Coarse SQL filter; hasNewerLook decides. Null stamps and missing
+      // renders are never a newer look, so they aren't scanned at all.
+      .not("rendered_image_url", "is", null)
+      .lt("layout_version", CARD_LAYOUT_VERSION)
       .order("id", { ascending: true })
       .range(from, from + PAGE - 1);
     if (error) throw new Error(error.message);
@@ -113,7 +123,7 @@ export async function notifyOwnersOfRenderUpdates(
   const counts = staleCountsByOwner(rows);
   let notified = 0;
   for (const [ownerId, count] of counts) {
-    if (await ensureRenderUpdateNotification(admin, ownerId, count)) notified += 1;
+    if (await ensureRenderUpdateNotification(admin, ownerId, count, version)) notified += 1;
   }
   return { owners: counts.size, notified, scanned: rows.length };
 }

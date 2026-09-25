@@ -13,6 +13,9 @@ import {
 import { FrameVerifyCheckbox } from "@/components/admin/frame-verify-checkbox";
 import { FrameReferencePicker } from "@/components/admin/frame-reference-picker";
 import { FrameGuide } from "@/components/admin/frame-guide";
+import { MarkedRendersPanel } from "@/components/admin/marked-renders-panel";
+import { countMarkedRenders } from "@/lib/cards/rebake-batch";
+import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import {
   FRAME_COLOR_KEYS,
@@ -133,6 +136,16 @@ function ReferenceSwitcher({
   );
 }
 
+/** Cards a frame-geometry change marked (null stamp) — never fatal. */
+async function markedRenderCount(): Promise<number> {
+  if (!isAdminConfigured()) return 0;
+  try {
+    return await countMarkedRenders(createAdminClient());
+  } catch {
+    return 0;
+  }
+}
+
 export default async function AdminFrameComparePage({
   searchParams,
 }: {
@@ -143,7 +156,7 @@ export default async function AdminFrameComparePage({
   if (!profile?.is_admin) notFound();
 
   const { template, color, ref } = await searchParams;
-  const reviews = await getFrameReviews();
+  const [reviews, markedCount] = await Promise.all([getFrameReviews(), markedRenderCount()]);
 
   // ----- Compare mode -----
   if (isTemplate(template) && isColorKey(color)) {
@@ -229,6 +242,7 @@ export default async function AdminFrameComparePage({
             </span>
           }
         />
+        <MarkedRendersPanel initialCount={markedCount} />
         {verified ? (
           <div
             className={cn(
@@ -411,6 +425,7 @@ export default async function AdminFrameComparePage({
           </span>
         }
       />
+      <MarkedRendersPanel initialCount={markedCount} />
       <div className="mt-6 flex flex-col gap-4">
         <FrameGuide defaultOpen />
         <FrameReviewChecklist eras={eras} />
