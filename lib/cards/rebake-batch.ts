@@ -31,9 +31,12 @@ import {
 //   version N    re-bake only cards whose output bump N changed (N must be a
 //                "sweep"-policy version — lib/cards/layout-version.ts)
 //   sweep        re-bake cards with ANY pending sweep-policy bump
-//   marked       re-bake cards whose stamp is null: a frame-geometry change
-//                (frame_profile_overrides save/reset) marked them, or their
-//                bake failed. What the compare page runs after a save.
+//   marked       re-bake baked cards whose stamp is null: a frame-geometry
+//                change (frame_profile_overrides save/reset) marked them.
+//                What the compare page runs after a save. A card whose bake
+//                FAILED (no render — usually art that can't be fetched) is
+//                not "marked": a layout change never touches it and a retry
+//                fails the same way (the sweep scope still covers it).
 //   legacy-art   re-bake cards whose art lives on a legacy storage host and
 //                whose render predates `before`
 //
@@ -143,7 +146,10 @@ export async function runRebakeBatch(
         .lt("rendered_at", scope.before)
         .order("rendered_at", { ascending: true });
     } else if (scope.kind === "marked") {
-      q = q.is("layout_version", null).order("updated_at", { ascending: true });
+      q = q
+        .is("layout_version", null)
+        .not("rendered_image_url", "is", null)
+        .order("updated_at", { ascending: true });
     } else {
       q = q
         .or(`rendered_image_url.is.null,layout_version.is.null,layout_version.lt.${CARD_LAYOUT_VERSION}`)
@@ -235,13 +241,14 @@ export async function runRebakeBatch(
   return { ...base, dry: false, processed, failed, remaining };
 }
 
-/** Published cards a platform re-bake is owed to (null stamp) — the count
- *  the compare page shows. Caller must be admin-gated. */
+/** Published, baked cards a platform re-bake is owed to (null stamp) — the
+ *  count the compare page shows. Caller must be admin-gated. */
 export async function countMarkedRenders(supabase: Admin): Promise<number> {
   const { count } = await supabase
     .from("cards")
     .select("id", { count: "exact", head: true })
     .in("visibility", ["public", "unlisted"])
-    .is("layout_version", null);
+    .is("layout_version", null)
+    .not("rendered_image_url", "is", null);
   return count ?? 0;
 }

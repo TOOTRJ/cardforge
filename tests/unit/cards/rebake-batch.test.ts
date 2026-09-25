@@ -106,6 +106,10 @@ describe("runRebakeBatch", () => {
     expect(result.remaining).toBe(0);
     const scan = stub.forTable("cards")[0].calls;
     expect(called(scan, "is", "layout_version")).toBe(true);
+    // A failed bake (no render) is not "marked" — a layout change never
+    // touches it and a retry fails the same way (found on the dev DB: 19
+    // art-less cards retried and reported on every run).
+    expect(called(scan, "not", "rendered_image_url")).toBe(true);
     const updates = stub.forTable("cards").filter((e) => called(e.calls, "update"));
     expect(updates).toHaveLength(2);
     expect(payloadOf(updates[0].calls, "update")).toMatchObject({
@@ -178,6 +182,7 @@ describe("countMarkedRenders", () => {
     expect(await countMarkedRenders(stub.client as never)).toBe(7);
     const calls = stub.forTable("cards")[0].calls;
     expect(called(calls, "is", "layout_version")).toBe(true);
+    expect(called(calls, "not", "rendered_image_url")).toBe(true);
     expect(called(calls, "in", "visibility")).toBe(true);
   });
 });
