@@ -273,9 +273,10 @@ describe("Alpha ink: silver P/T and artist line on every frame but white", () =>
 
 describe("Alpha name, pips and type line (owner review round 4)", () => {
   // Baked at the "hd" preset (1500 × 2100) so every number is an HD px and a
-  // 1–2 px move is visible (the default preset halves it). The art box's
-  // outer edge is ~159 px; round 3 put the name at ~114 px and the type line
-  // at ~157, with 48 px caps and 63 px pip discs centred ~5 px above the caps.
+  // 1–2 px move is visible (the default preset halves it). The art window's
+  // edge is ~178 px (the owner's pick, "B2"); round 3 put the name at ~114 px
+  // and the type line at ~157, with 48 px caps and 63 px pip discs centred
+  // ~5 px above the caps.
   const hd = (data: CardPreviewData) => bake(data, false, "hd");
   /** diffBox limited to rows y0–y1. */
   function bandBox(a: Raw, b: Raw, y0: number, y1: number) {
@@ -294,7 +295,7 @@ describe("Alpha name, pips and type line (owner review round 4)", () => {
   const TITLE_ROWS: [number, number] = [80, 215];
   const TYPE_ROWS: [number, number] = [1150, 1262];
 
-  it.each<FrameTemplate>(["agclassic", "alphaland"])("%s: name and type line start on one left margin, the art box's edge", async (template) => {
+  it.each<FrameTemplate>(["agclassic", "alphaland"])("%s: name and type line start on one left margin, the art window's edge", async (template) => {
     const land = template === "alphaland";
     const base = {
       title: "Dawn Treader",
@@ -315,11 +316,11 @@ describe("Alpha name, pips and type line (owner review round 4)", () => {
     const type = bandBox(full, noType, ...TYPE_ROWS)!;
     expect(name).not.toBeNull();
     expect(type).not.toBeNull();
-    // Both start at the art box's outer edge (~159–161 px) — round 3 had the
+    // Both start at the art window's edge (~178–181 px) — round 3 had the
     // name at ~114 and the type line at 156–158.
     for (const [what, box] of [["name", name], ["type", type]] as const) {
-      expect(box.x0, what).toBeGreaterThanOrEqual(159);
-      expect(box.x0, what).toBeLessThanOrEqual(165);
+      expect(box.x0, what).toBeGreaterThanOrEqual(176);
+      expect(box.x0, what).toBeLessThanOrEqual(184);
     }
     expect(Math.abs(name.x0 - type.x0)).toBeLessThanOrEqual(3);
     // 41 px caps: the two names' ink measures ~45 px with the ascenders and

@@ -530,24 +530,25 @@ const AGCLASSIC: FrameProfile = {
   costDy: -0.0013,
   // Covers the 178–1319 × 219–1138 opening with ~6 px under the bevel.
   artSlot: { topPct: 10.15, leftPct: 11.45, widthPct: 76.9, heightPct: 44.3 },
-  // Round 4: the name starts on the type line's left margin, the art box's
-  // outer edge (~159 px; it started at ~114), with Beleren caps ~41 px (were
-  // 48; the print's lighter face has ~57 px caps but a ~34 px x-height, ours
-  // ~30). Caps centred at ~141 px. The rect still ends where the cost pips
-  // end (~1362 px, 90.8 %W), so a long name ellipsises before them.
+  // Round 4 (owner's pick "B2"): the name starts on the type line's left
+  // margin, the art window's edge (~178 px; it started at ~114), with Beleren
+  // caps ~41 px (were 48; the print's lighter face has ~57 px caps but a
+  // ~34 px x-height, ours ~30). Caps centred at ~141 px. The rect still ends
+  // where the cost pips end (~1362 px, 90.8 %W), so a long name ellipsises
+  // before them.
   title: {
-    rect: { topPct: 4.36, leftPct: 10.6, widthPct: 80.2, heightPct: 4.8 },
+    rect: { topPct: 4.36, leftPct: 11.87, widthPct: 78.93, heightPct: 4.8 },
     sizePct: 0.0391,
     colorHex: INK_DARK,
     weight: 600,
     font: "display",
   },
-  // Starts on the name's left margin (~159 px, the art box's outer edge;
-  // printed type lines start at ~157) with caps centred at ~1198 px (the
-  // type band's middle); the set symbol ends ~4 px inside the text box's
-  // outline (1314 vs 1318).
+  // Starts on the name's left margin (~178 px, the art window's edge — the
+  // owner moved it in from the print's ~157) with caps centred at ~1198 px
+  // (the type band's middle); the set symbol ends ~4 px inside the text
+  // box's outline (1314 vs 1318).
   type: {
-    rect: { topPct: 55.1, leftPct: 10.6, widthPct: 77.0, heightPct: 4.0 },
+    rect: { topPct: 55.1, leftPct: 11.87, widthPct: 75.73, heightPct: 4.0 },
     sizePct: 0.03,
     colorHex: INK_DARK,
     weight: 600,
