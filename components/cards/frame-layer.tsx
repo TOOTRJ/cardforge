@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { frameUrl } from "@/lib/frames/frame-url";
 import { DEFAULT_FRAME_TEMPLATE } from "@/types/card";
 import type { ColorIdentity, FrameTemplate } from "@/types/card";
 
@@ -88,7 +89,9 @@ export function frameBackgroundImage(
   template: FrameTemplate,
   colorKey: string,
 ): string {
-  return `url("${webpVariant(frameAssetPath(template, colorKey))}")`;
+  // frameUrl: a frame listed in lib/frames/frame-manifest.json lives in the
+  // frames bucket (content-addressed); anything else is still /frames/…
+  return `url("${frameUrl(webpVariant(frameAssetPath(template, colorKey)))}")`;
 }
 
 export function FrameLayer({

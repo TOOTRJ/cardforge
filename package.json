@@ -22,7 +22,10 @@
     "seed:dev": "node scripts/seed-dev.mjs",
     "db:push:prod": "node scripts/db-push.mjs prod",
     "email:build-auth-templates": "node scripts/build-auth-email-templates.mjs",
-    "email:push-auth-templates": "node scripts/push-auth-email-templates.mjs"
+    "email:push-auth-templates": "node scripts/push-auth-email-templates.mjs",
+    "frames:publish": "node scripts/frames-publish.mjs",
+    "frames:promote": "node scripts/frames-promote.mjs",
+    "frames:check": "node scripts/frames-check.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

@@ -134,6 +134,10 @@ Rules and gotchas:
 - Card preview and the server Satori bake must stay pixel-identical: the
   `.ttf`/PNG masters in `public/` feed the bake — browser-side asset
   optimizations must not touch what the bake reads.
+  Frames listed in `lib/frames/frame-manifest.json` live in the `frames`
+  storage bucket, not git (content-addressed; `frameUrl()` resolves every
+  preview + bake path; publish → preview → owner `frames:promote` → merge,
+  `docs/FRAMES.md`) — Card Conjurer-derived frames NEVER enter the repo.
   `public/frames` is excluded from function tracing (`next.config.ts`) —
   the bake fetches frames from the deployment's own CDN and memoizes them
   (`lib/render/card-frames.ts`); any new `public/frames` asset the renderer
