@@ -39,6 +39,408 @@
       Keep claims verifiable (no invented Card Conjurer bugs); date it and
       set `updated` when Card Conjurer's status changes.
 
+## Frames & card creation plan (2026-09-24)
+
+From the 2026-09-24 card-creation/frame audit (report delivered in chat, not
+in the repo). Ordered for execution: each phase unblocks the next. Priorities:
+**[P0]** blocks the goal or users get a wrong card today · **[P1]** needed for
+"complete frames / great creator" · **[P2]** quality · **[P3]** later. Line
+numbers refer to commit `6077252`.
+
+Owner decisions this plan is built on (2026-09-24): first target the ~35
+high-value frames, then expand by the import request log · Card Conjurer (CC)
+art + measured bounds for the whole M15 era, MSE (744–750 px sources) for
+showcase families and the 1993/1997/2003 borders · frame masters move out of
+git into a storage bucket behind the CDN · the stepper stays the primary
+creator (the canvas lab stays an experiment) · frames publish by auto-score +
+owner sign-off per template · canonical render stays 1500×2100.
+
+Cautions: CC's frames were the subject of Wizards' 2022 cease-and-desist and
+the fork declares no licence, so land the storage move (4.2) before the first
+CC frame ships and record provenance per template (4.1). The M15 re-source
+(4.4) changes every existing card's look — bundle it with the other
+layout-version bumps (3.12, 4.8, 4.9) so users see ONE "newer look" prompt.
+
+Open decisions are marked **[decide]**; none blocks its phase.
+
+### Phase 0 — Unblock verification (1–2 weeks)
+
+- [ ] **0.1 [P0] Rotate landscape scans in the compare tool + score route.**
+      Scryfall's battle/split PNGs are portrait with the content rotated 90°;
+      ours are landscape. Rotate 90° CW in a swapped box (CSS) and
+      `sharp().rotate(90)` with `W=1040,H=745` when the profile is landscape —
+      `components/admin/frame-compare.tsx`:443,
+      `app/api/admin/frame-align-score/route.ts`:95.
+- [ ] **0.2 [P0] Map the second face into the reference render** — adventure/
+      flip/split/aftermath compare against an empty half because
+      `lib/scryfall/reference-preview.ts`:32 drops `patch.back_face`. Map it to
+      `backFace` (split `subtypes_text` like the front).
+- [ ] **0.3 [P0] Read-your-own-write after saving an override** — replace
+      `revalidateTag(TAG, "max")` with `updateTag()` in
+      `lib/cards/frame-profile-override-actions.ts`:100,121 and
+      `lib/creator/lab-actions.ts`:31 (Save re-reads the OLD map today).
+- [ ] **0.4 [P1] Conditional Reset** — `.delete().select()` and mark renders
+      stale only when a row existed; clear draft-only state client-side —
+      `frame-profile-override-actions.ts`:114, `frame-profile-editor.tsx`:302.
+- [ ] **0.5 [P1] Slot outline above the scan** — render `SlotOverlay` after the
+      `<img>` as a sibling (`frame-compare.tsx`:233,443).
+- [ ] **0.6 [P1] Key `FrameCompare` on template/colour only** and sync `draft`
+      from `savedOverride` in an effect so a save no longer resets
+      mode/zoom/score — `app/(app)/admin/frame-compare/page.tsx`:148.
+- [ ] **0.7 [P1] Selecting `costRect`/`symbolRect` must not dirty the draft** or
+      persist a detached box the admin never edited (`frame-compare.tsx`:145).
+- [ ] **0.8 [P1] Reference pinning validates colour and kind** — refuse when
+      `pickFrameColorKey(parseColorIdentity(card)) !== colorKey` or the kind
+      differs — `lib/cards/frame-review-actions.ts`:144.
+- [ ] **0.9 [P1] Registered, masked scoring (the "auto-score" foundation)** —
+      align scan→render on the frame's pinlines (phase correlation or
+      projection-profile edge fit), correct the 745×1040 ≠ 5:7 and MSE 0.4 %
+      stretches, mask the art window + text runs, `brandMark: false`, flatten
+      the scan, score SSIM/edge-IoU per slot, report the best per-slot dx/dy
+      as the suggested nudge; drop the "the number should drop" copy
+      (`components/admin/frame-guide.tsx`:28). New `lib/frames/align.ts`.
+- [ ] **0.10 [P1] Verification metadata + history** — migration adding
+      `verified_layout_version`, `verified_override_hash`, `score_json` and a
+      history table; flip to "needs re-verification" when the override or the
+      frame PNG hash changes; sign-off becomes per TEMPLATE with per-colour
+      auto-status (colours still individually withdrawable).
+- [ ] **0.11 [P1] Complete the reference registry** — two `highres_scan`,
+      non-foil, non-promo printings per combo (short + long text) for every
+      template, via a script that runs Scryfall searches and writes
+      `FRAME_REFERENCES`; kind-aware sample content for the combos with no real
+      printing — `lib/cards/frame-reference-registry.ts`:301.
+- [ ] **0.12 [P1] Fold the six production overrides into code** (m15devoid,
+      m15land, m15pw, m15snowland, modern, saga) and delete the rows so
+      previews/local/e2e render like production (dev branch has 0 rows,
+      `supabase/seed.sql` seeds `frame_reviews` only). **[decide]** fold vs
+      seed — fold recommended since 0.9/4.x re-derive geometry.
+- [ ] **0.13 [P1] Server-side verification gate** — reject unverified
+      (template, colour) in `createCardAction`/`updateCardAction`
+      (`lib/cards/actions.ts`:193) + `superRefine` in
+      `lib/validation/card.ts`:217; frame chips disable / auto-swap colour when
+      the current colour is unverified (`card-setup-panel.tsx`:291); check the
+      kind-change, import and AI-fill fallbacks
+      (`card-creator-form.tsx`:776,1056,1319) and toast on every substitution.
+- [ ] **0.14 [P2] Verify click revalidates the ISR guest creator** —
+      `frame-review-actions.ts`:63, `app/(marketing)/create-guest/page.tsx`:28.
+- [ ] **0.15 [P2] Keyboard nudges** — ignore Cmd/Ctrl combos, fix Alt/Option on
+      macOS, unify the "Alt for 0.5 %" copy (`frame-compare.tsx`:172,
+      `frame-profile-editor.tsx`:334).
+- [ ] **0.16 [P2] Stale-marking covers legacy template values**
+      (`normalizeFrameTemplate` targets; `frame-profile-override-actions.ts`:55).
+- [ ] **0.17 [P2] Admin reference-picker lookups don't burn the admin's
+      per-user Scryfall quota** (`app/api/scryfall/search/route.ts`:94).
+- [ ] **0.18 [P2] Tests** — `setFrameReviewAction` (reference-column
+      preservation), `setFrameReferenceAction`, override save/reset stale
+      marking incl. NULL-template rows, the score route,
+      `buildFrameComparePayload` with a second face, per-kind sample content;
+      e2e for verify toggle + pin.
+- [ ] **0.19 [P1] Honest marketing** — derive the homepage "frame styles" stat
+      from the verified set (`app/(marketing)/page.tsx`:302), fix `README.md`:6
+      "three decades", fix the Card Conjurer comparison row claiming split/
+      adventure (`content/articles/card-conjurer-alternative.mdx`:65).
+
+### Phase 1 — Import uses the exact frame (2–3 weeks)
+
+- [ ] **1.1 [P0] Parse the full frame vocabulary** in `lib/scryfall/client.ts`:
+      typed `border_color`, `full_art`, `textless`, `promo_types`, `set_type`,
+      `security_stamp`, `color_indicator`, `produced_mana`, `watermark`,
+      `finishes`, `flavor_name`, `lang`, `collector_number`; face-level
+      `artist`, `colors`, `color_indicator`, `watermark`, `layout` (the strict
+      face schema strips them today).
+- [ ] **1.2 [P0] Colour from the front face** — `colors`/`color_indicator`
+      first; `color_identity`/`produced_mana` only for lands and devoid
+      (`lib/scryfall/import-mapper.ts`:271). Fixes DFC fronts importing gold
+      and Westvale Abbey importing as a black land.
+- [ ] **1.3 [P0] Type-line + layout precedence** — land > creature > rest for
+      `card_type`; template from the whole word set (Artifact ⇒ `m15artifact`,
+      Token+Artifact ⇒ `m15tokenartifact`, Artifact Land stays a land);
+      Saga/Room/Class/Case/Omen from the front-face subtype (transforming
+      Sagas, Rooms no longer Split) — `import-mapper.ts`:172-210.
+- [ ] **1.4 [P0] Frame signature registry + resolver** in the mapper — every
+      template declares the Scryfall signature it reproduces;
+      `frame_match: { status: exact | nearest | unsupported, template,
+      exactLabel, reason }` on the patch; `exact` requires the combo to be
+      verified. Fixtures from live data: BLB anime (no effect, borderless,
+      collector range), ZNR full-art Island, THS Nyx (`enchantment` on a 2003
+      frame), LTR ring/scroll, TDM ×3, Expeditions (`set_type: masterpiece`),
+      extended art, legendary crown, `*dfc` effects, `future`.
+- [ ] **1.5 [P0] Import dialog UX** — per-printing status (✓ Exact · ≈ Nearest
+      · ✕ Not available); full printings list with a treatment filter instead
+      of newest/oldest 30 (`app/api/scryfall/printings/route.ts`:108,
+      `client.ts`:304); on a non-exact apply, an inline "PipGlyph doesn't have
+      the *X* frame yet — pick one of these" chooser (kind's published frames
+      for the imported colour, nearest preselected, "keep my current frame");
+      a "Frame substituted (imported …)" chip on the Card step; rewrite the
+      "matched to this printing's border era" copy
+      (`components/creator/scryfall-import-dialog.tsx`).
+- [ ] **1.6 [P1] `frame_requests` table + admin panel** — written on every
+      nearest/unsupported outcome (signature label, set, count, last seen);
+      "most-requested missing frames" decides the order of 4.7/4.11.
+- [ ] **1.7 [P1] Artifact creatures** — offer `m15artifact` under kind Creature
+      as a variation with P/T and route "Artifact Creature" imports to it
+      (`lib/creator/card-kinds.ts` `framesForKind`,
+      `lib/cards/card-display.ts`:32).
+- [ ] **1.8 [P1] Back-face art only when the face has `image_uris`** (expose
+      `has_back_image` on `/named`), log the quota after URL resolution,
+      import the per-face artist — `app/api/scryfall/import-art/route.ts`:134,
+      `import-mapper.ts`:346,391.
+- [ ] **1.9 [P2] Dialog state** — stale abort must not render "Search failed"
+      (check `signal.aborted`); a printing click keeps the list selection and
+      scroll; block Cancel/Escape during commit.
+- [ ] **1.10 [P2] Flavour `*…*` markers → italic toggles; rarity `special`/
+      `bonus` → the purple special symbol; `frame: "future"` labelled and
+      reported as unsupported** (`import-mapper.ts`:80,226,339).
+- [ ] **1.11 [P2] Mana-symbol vocabulary** — `{G/U/P}`-style Phyrexian
+      hybrids, `{C/W}`, `{HW}`, `{½}`, `{∞}`, `{CHAOS}`, `{TK}`, `{A}`, `{PW}`,
+      `{P}`, `{L}`, `{D}` in the tokenizer and both renderers
+      (`components/cards/mana-cost-glyphs.tsx`:66, `lib/pips`,
+      `lib/render/card-image.tsx`:884).
+- [ ] **1.12 [P3] Title schema to 150 chars; proxy edge cases** (`?id=&exact=`,
+      Scryfall 400 vs ambiguous 404 messages).
+- [ ] **1.13 [P2] Refresh `ABILITY_WORDS`** (`lib/cards/rules-text.ts`:33) with
+      the 2024–2026 words + a test against Scryfall's `catalog/ability-words`.
+- [ ] **1.14 [P2] Kindred stays a supertype word; delete the dead
+      `tribal → "spell"` mapping** (`import-mapper.ts`).
+
+### Phase 2 — Admin walk-through of the stepper (3–5 days)
+
+- [ ] **2.1 [P1] `?previewFrames=all|<list>` for admins** on the create and
+      edit pages: union the keys, persistent banner; never on the guest ISR
+      page; AI jobs keep their own set (`app/(app)/create/page.tsx`:234,
+      `app/(app)/card/[username]/edit/page.tsx`:165).
+- [ ] **2.2 [P1] "Walk the stepper" link per template row** in the checklist →
+      `/create?previewFrames=all&kind=…&template=…&color=…&seed=reference`,
+      prefilled from `buildFrameComparePayload()` (with the second face from
+      0.2) so battle/adventure/saga/split/flip/aftermath (later DFC) flow
+      through Card → Identity → Text & stats → Publish exactly as for a user.
+- [ ] **2.3 [P1] Preview saves** — allowed for admins on unverified combos but
+      forced private and flagged `frame_preview` (migration); excluded from
+      gallery/sitemap/hubs/trending/feeds; listed under the template in the
+      checklist with delete / re-verify.
+- [ ] **2.4 [P1] Sign-off flow** — per-template verify button showing the
+      auto-score per colour (0.9), the walked preview cards (2.3) and the
+      metadata (0.10); publishing = all colours scored + the owner's tick.
+- [ ] **2.5 [P3] Optional Playwright-generated snapshot strip** of each step per
+      kind in the compare view.
+
+### Phase 3 — Parity on frames people already use (1 week)
+
+- [ ] **3.1 [P1] Snow/untap/Phyrexian pips in the bake match the mana font**
+      (`lib/render/card-image.tsx`:884, `lib/cards/rules-text.ts`:253).
+- [ ] **3.2 [P1] Rules-paragraph run margins identical in both renderers**;
+      cancel the last line's margin (`card-image.tsx`:1092,
+      `components/cards/card-preview.tsx`:1625).
+- [ ] **3.3 [P1] One loyalty-badge height constant** (1.6 vs 1.5 —
+      `card-preview.tsx`:1797, `card-image.tsx`:1186).
+- [ ] **3.4 [P2] Shared disc-relative constants** for cost gaps, inline
+      hairlines and disc shadows.
+- [ ] **3.5 [P2] Shadows/outlines as width fractions** materialised per renderer
+      (`OUTLINE_SHADOW`, `ADV_SHADOW`, `SHOWCASE_SHADOW`, brand mark).
+- [ ] **3.6 [P2] Brand mark on landscape** — size by height, anchor away from
+      the defense badge (`card-preview.tsx`:1014, `card-image.tsx`:709).
+- [ ] **3.7 [P1] Saga chapters through `RulesBody`** with the fit ladder and
+      pips (`card-preview.tsx`:1294, `card-image.tsx`:1536).
+- [ ] **3.8 [P2] Artist footer on the 13 footer-less templates** (flip, split,
+      aftermath, battle, every showcase).
+- [ ] **3.9 [P2] Second faces + adventure page get set symbol, flavour text,
+      watermark and rarity** (`card-preview.tsx`:1416, `card-image.tsx`:1648).
+- [ ] **3.10 [P2] Bake paints by position not z-index** (document), `Band`
+      honours `slot.font`, U+2212 mapped in the preview, titles shrink instead
+      of ellipsizing (`card-image.tsx`:149,369,781, `card-preview.tsx`:714).
+- [ ] **3.11 [P1] Parity tests for 3.1–3.7** in
+      `tests/unit/render/render-parity.test.ts` + a CI visual-regression
+      harness: a fixed card matrix (short/long name, long type, 1/8-line rules,
+      flavour, P/T, crown once it exists) through both renderers for every
+      published template with an SSIM threshold (reuse `/api/dev/render` +
+      `scripts/visual-audit.mjs`).
+- [ ] **3.12 [P1] Layout-version bump + rebake sweep** after the fixes (owner
+      badge flow; /news post) — bundle with 4.4/4.8/4.9 if timing allows.
+
+### Phase 3b — Creator wizard bugs (1 week, parallel with Phases 1–3)
+
+- [ ] **3b.1 [P1] Wrap the save actions in try/catch** — a failed request must
+      not unmount the editor (`components/creator/card-creator-form.tsx`:1726).
+- [ ] **3b.2 [P1] Ideas dialog routes `card_type` through
+      `applyKindProgrammatic`** (`card-creator-form.tsx`:981,
+      `lib/ai/card-ideas-select.ts`:122).
+- [ ] **3b.3 [P1] Clear `loyalty_abilities`/`saga_chapters` after folding** into
+      `rules_text`; fold before the early return
+      (`card-creator-form.tsx`:783,809,887,1606).
+- [ ] **3b.4 [P1] Dual lands** — the basic-land fallback applies only to exactly
+      one basic subtype (`lib/cards/watermark.ts`:201,
+      `lib/creator/card-kinds.ts`:447).
+- [ ] **3b.5 [P1] Inline-frame second-face name** — add to `saveMissing`, open
+      the collapsed details on error, clear the leave-guard pending state only
+      after a successful save (`card-creator-form.tsx`:584,949,2360,
+      `lib/creator/form-schema.ts`:132, `panels/layout-panel.tsx`:109).
+      **[decide]** allow a draft without it.
+- [ ] **3b.6 [P2] Edit save resets only when `!isDirty`** so keystrokes during
+      the refresh survive (`card-creator-form.tsx`:538,1885).
+- [ ] **3b.7 [P2] Remove the history sentinel after a save**
+      (`components/creator/unsaved-changes-guard.tsx`:88).
+- [ ] **3b.8 [P2] Split/aftermath second half defaults its type from the
+      kind**, not "creature" (`lib/creator/form-types.ts`:128).
+- [ ] **3b.9 [P2] Mount one preview** (media-query hook) and memoise preview
+      props (`card-creator-form.tsx`:549,1940,2643,2665).
+- [ ] **3b.10 [P2] ChipGroup accessibility** — disabled chips reachable with
+      their reason announced, roving tabindex + arrow keys
+      (`components/ui/chip-group.tsx`:117).
+- [ ] **3b.11 [P3] Remove `LayoutPanel`'s unreachable empty state**
+      (`panels/layout-panel.tsx`:68).
+- [ ] **3b.12 [P2] Copy pass** on every "Soon" / "awaiting verification" /
+      substitution message so the creator never claims a frame it didn't apply.
+
+### Phase 4 — The frame factory (6–10 weeks, incremental)
+
+4.1–4.3 are the machine, 4.4 the first product, 4.5–4.9 the capabilities the
+rest of the catalogue needs, 4.10–4.11 the catalogue itself.
+
+- [ ] **4.1 [P1] Frame manifest** (`frames/<template>/frame.json`): source
+      (pack/repo + commit + files), native resolution, conversion recipe,
+      supported kinds + slots, Scryfall signature (1.4), reference printings
+      (0.11), profile. Codegen for `FRAME_TEMPLATE_VALUES`/labels/sets/
+      `ERA_TYPE_FRAME`/`TEMPLATE_SKIN_VARIANTS`/`FRAME_REFERENCES`/the seed
+      block, with a test that nothing is hand-kept (`types/card.ts`,
+      `lib/creator/card-kinds.ts`, `lib/cards/template-layout.ts`,
+      `lib/cards/frame-reference-registry.ts`, `supabase/seed.sql`).
+- [ ] **4.2 [P1] Storage move** — frame masters + WebP + small picker thumbs in
+      a Supabase Storage (or Vercel Blob) bucket behind the CDN;
+      `components/cards/frame-layer.tsx` and `lib/render/card-frames.ts` read a
+      configurable frame origin; bounded LRU for the bake's in-memory frame
+      cache; stop committing masters to git. **[decide]** history rewrite.
+      Land before the first CC frame ships.
+- [ ] **4.3 [P1] CC importer** (`scripts/import-cc-pack.mjs`) — clone the fork
+      locally, flatten each pack's layers + masks per colour into exact-5:7
+      1500×2100 PNGs with the art window at alpha 0, keep P/T plates, crowns,
+      colour-indicator pips and DFC icons as overlay assets, import the bounds
+      into the profile, write manifest provenance. Also generalise MSE mask
+      compositing for the mainframe styles (`scripts/build-artifact-blend.mjs`,
+      `scripts/build-adventure-frame.mjs` are the seeds).
+- [ ] **4.4 [P1] Re-source the M15 base family from CC** — m15, m15land,
+      m15token, m15tokenartifact, m15artifact, m15snow, m15snowland,
+      m15devoid, m15pw → measured profiles → auto-score → walk → verify → ONE
+      layout-version bump + rebake sweep + /news post. Changes every existing
+      card's look; do it once, deliberately.
+- [ ] **4.5 [P1] Treatment × kind overlay model** — per-kind overlays (P/T
+      plate, vehicle plate, loyalty rail + shield, defense badge, chapter rail,
+      class/leveler bars later) as separate assets composed at render time via
+      a new profile capability, so borderless/extended/textless/full-art/
+      showcase treatments work for every kind; restrict every frame to the
+      kinds whose overlays exist (replace `SHOWCASE_KIND_RESTRICTION`,
+      `card-kinds.ts`:227). Fixes planeswalkers/battles in showcase frames
+      printing no stat.
+- [ ] **4.6 [P1] Missing anatomy, M15 era** — legendary crown overlay (auto
+      from the Legendary supertype, opt-out), colour-indicator pips (auto when
+      a coloured nonland has no cost), vehicle P/T box, coloured-artifact
+      blend, hybrid + two-colour frames via masks (colour model gains a
+      two-colour identity → blended frame; 3+ stays gold). **[decide]** expose
+      two-colour identity as a picker choice or derive it from the cost.
+- [ ] **4.7 [P1] M15-era variants from CC**, in request-log order — extended
+      art + borderless (replace the contradicted profiles), textless, full-art
+      lands (generic first, per-set later), Nyx (fix), class, prototype,
+      mutate, leveler, spree/companion/miracle/lesson marks, tokens + emblems,
+      4-ability + compleated planeswalkers. Each ships through 0.9 → 2.2 → 2.4.
+- [ ] **4.8 [P1] Era typography** — Magic Medieval for 1993–2002 titles, Matrix
+      Bold for 2003–2014, Beleren Small Caps for the artist, a Gotham-class
+      font for the collector line; `font` on the profile; registered in the
+      bake + `@font-face` in the browser (self-hosted, licence check like the
+      current Beleren/MPlantin); parity tests.
+- [ ] **4.9 [P1] Collector info line + holofoil stamp** — card fields for set
+      code, collector number, language (default EN), rarity letter derived;
+      footer redesigned to the M15 layout (number, set • lang, artist brush
+      glyph, © line) with the brand mark relocated; stamp overlay by rarity
+      (oval; UB triangle on UB frames); Scryfall import fills set/number;
+      editor fields on the Set icon step; both renderers; bump + rebake
+      (bundle with 4.4).
+- [ ] **4.10 [P1] Old borders** — check whether CC ships 1997/2003 frames at
+      high resolution; if not keep MSE's 375 px for classic/retro/modern
+      **[decide]**; complete their references (all seven colours, lands,
+      tokens), apply 4.8 fonts, verify + publish. Future Sight stays "Soon".
+- [ ] **4.11 [P1] Showcase families from MSE (744–750 px)**, in request-log
+      order — re-measure the 12 contradicted profiles from scans (lotr,
+      lotrscroll, avatar, bloomburrow, bloomanime, tarkir ×3, expeditionland,
+      fullart, m15textless ×2), then per-set full-art basics and the
+      most-requested families of the last three years (the pack holds 40+ at
+      hi-res). Each family gets its own reference printings.
+- [ ] **4.12 [P1] Verification throughput** — auto-score every colour of a
+      template in one job, batch by treatment (once the treatment PNG is
+      aligned for one kind, kind overlays inherit the measured slots), sign-off
+      per template.
+- [ ] **4.13 [P2] Frame picker redesign for 35+ frames** — grouped by era/
+      treatment, search, "recently used", "matches your import", thumbnails at
+      the card's colour (small thumb variants from 4.2).
+- [ ] **4.14 [P2] Frame + treatment presets** ("save this setup", last used per
+      user).
+- [ ] **4.15 [P3] Future Sight era; Un-set/acorn treatments; oversized
+      Planechase/Archenemy.**
+
+### Phase 5 — Two-sided cards end to end (3–4 weeks; needs 4.3 and 4.5)
+
+- [ ] **5.1 [P1] Transform + MDFC kinds with real back-face frames from CC**
+      (front/back, icon families by set era, dark back treatment, colour
+      indicator, grey back P/T on the front, "transforms into" hint line); the
+      back face carries its own frame/colour/rarity. **[decide]** retire or
+      merge the `back_card_id` path.
+- [ ] **5.2 [P1] Editor** — second-face editor for DFC on the Identity step
+      (own art, colour, frame variant, stats); remove the "Double-faced cards —
+      coming soon" veil on Publish (`components/creator/coming-soon.tsx`,
+      `panels/publish-panel.tsx`:252).
+- [ ] **5.3 [P1] Bake both faces** (two PNGs + thumbs), gallery tile flip, card
+      page flip (exists), downloads (both faces PNG, two-page PDF, ZIP), OG
+      stays front, share copy (`lib/cards/bake-core.ts`:89,
+      `lib/render/card-image.tsx`:579, `lib/render/card-pdf.ts`,
+      `components/cards/download-modal.tsx`).
+- [ ] **5.4 [P1] Import** — `transform`/`modal_dfc`/`battle`/`meld` printings
+      seed the DFC kind; icons from the `*dfc` frame effects; back colour from
+      the back face.
+- [ ] **5.5 [P2] DFC sagas + battle backs, double-sided tokens.**
+- [ ] **5.6 [P3] Meld.**
+
+### Phase 6 — Creator polish and print (2–4 weeks, after Phase 4 basics)
+
+- [ ] **6.1 [P2] Print-ready export** — bleed option (2.75×3.75 in at 300/600
+      → 825×1125 / 1650×2250), MPC preset (816×1110 at 300, 1632×2220 at
+      600), PDF sheets with cut lines + bleed, card-back sheet; canonical
+      render stays 1500×2100; an 800 ppi export later from the CC masters
+      **[decide]** free vs paid.
+- [ ] **6.2 [P2] CARDNAME / `~` substitution** and "this creature" helper in the
+      rules editor; opt-in keyword reminder-text insert with a current CR list.
+- [ ] **6.3 [P2] Nickname / flavour-name field** (title bar + small Oracle
+      name); UB © line when a UB frame is chosen.
+- [ ] **6.4 [P2] Tokens** — automatic "Token" prefix + reminder line, emblem
+      kind, token generator from a card's rules text (P3).
+- [ ] **6.5 [P2] Foil/etched finishes: ship or remove** **[decide]**; if
+      shipped, align preview and bake (`panels/effects-panel.tsx`:26).
+- [ ] **6.6 [P2] Language + set-code fields** feed the collector line (with 4.9).
+- [ ] **6.7 [P2] Accessibility** — text alternatives for rules-text pips, chip
+      keyboard navigation (3b.10), announced substitution notices.
+- [ ] **6.8 [P3] Batch/CSV/MSE-set import**; community frame packs stay out of
+      scope (frames remain admin-verified).
+- [ ] **6.9 [P3] Watermark preset library refresh + Keyrune update.**
+
+### Phase 7 — Ops and QA (continuous)
+
+- [ ] **7.1 [P1] Visual-regression suite in CI** (from 3.11) extended to every
+      newly published template; layout-version bump enforced when published
+      pixels change.
+- [ ] **7.2 [P1] Preview parity** — previews/local render exactly like
+      production (0.12, plus the storage origin from 4.2 available to
+      previews).
+- [ ] **7.3 [P2] `docs/FRAMES.md`** — pipeline, manifest, "how to add a frame"
+      (replacing the stale headers in `template-layout.ts` and
+      `types/card.ts`), verification SOP, provenance/legal notes; CLAUDE.md
+      pointers.
+- [ ] **7.4 [P2] Admin dashboard tile** — verification progress, requests
+      (1.6), scores, rebake state.
+- [ ] **7.5 [P2] Rebake operations** — sweep tooling for bundled bumps, /news
+      post template, a "why does my card look different" FAQ entry.
+
+Sequencing at a glance: Phase 0 (all) → 1.1–1.6 + 3b.1–3b.5 alongside Phase 2
+→ Phase 3 + rest of 3b (hold the layout bump) → 4.1–4.4 + 4.8 + 4.9 with one
+bundled bump/rebake → 4.5–4.7 and 4.11 in request-log order (4.10 when
+references exist) → Phase 5 → Phase 6; Phase 7 throughout.
+
 ## Billing audit follow-ups (2026-09-24)
 
 What's left from the 2026-09-22 billing audit (docs/BILLING.md §5–§9 record
