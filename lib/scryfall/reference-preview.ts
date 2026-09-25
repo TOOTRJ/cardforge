@@ -1,7 +1,10 @@
 import "server-only";
 
 import { getCardById, pickPrintImageUrl } from "@/lib/scryfall/client";
-import { mapScryfallToFormPatch } from "@/lib/scryfall/import-mapper";
+import {
+  mapScryfallToFormPatch,
+  referenceColorIdentity,
+} from "@/lib/scryfall/import-mapper";
 import { previewFromImportPatch } from "@/lib/scryfall/preview-from-patch";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import type { FrameTemplate } from "@/types/card";
@@ -32,7 +35,11 @@ export async function buildFrameComparePayload(
   const patch = mapScryfallToFormPatch(card, { artPreviewUrl: null });
 
   return {
-    preview: previewFromImportPatch(patch, card.name, template),
+    preview: {
+      ...previewFromImportPatch(patch, card.name, template),
+      // Two colours stay two here, so a split frame draws the scan's split.
+      colorIdentity: referenceColorIdentity(card),
+    },
     scanUrl: pickPrintImageUrl(card),
     cardName: card.name,
   };

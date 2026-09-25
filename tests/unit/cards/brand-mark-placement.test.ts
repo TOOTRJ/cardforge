@@ -12,8 +12,10 @@ import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 // frame edge on these). Everything else keeps the M15 default, so their
 // stored bakes stay byte-identical.
 const THIN_BORDER: Record<string, { rightPct: number; bottomPct: number }> = {
-  agclassic: { rightPct: 3.5, bottomPct: 0.55 },
-  alphaland: { rightPct: 3.5, bottomPct: 0.55 },
+  // The Alpha masters re-cut to the print (100 px of black below the frame,
+  // not 60): the mark's ink centred in that band.
+  agclassic: { rightPct: 3.5, bottomPct: 1.5 },
+  alphaland: { rightPct: 3.5, bottomPct: 1.5 },
   alphatoken: { rightPct: 3.5, bottomPct: 0.55 },
   retro: { rightPct: 3.5, bottomPct: 0.95 },
   retroland: { rightPct: 3.5, bottomPct: 0.95 },

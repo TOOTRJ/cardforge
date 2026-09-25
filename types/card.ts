@@ -246,7 +246,7 @@ export type CardWatermark =
   | { kind: "custom"; url: string; opacity?: number; size?: "normal" | "large" };
 
 // Card finish — premium treatments layered on top of the base frame.
-// Default is "regular"; "foil" adds an animated holographic sheen,
+// Default is "regular"; "foil" adds a static holographic sheen,
 // "etched" adds a fine etched texture to the frame only, "borderless"
 // lets the art bleed under the section panels, and "showcase" swaps the
 // title to an italic display treatment with an ornate underline.
@@ -318,9 +318,12 @@ export const FRAME_TEMPLATE_VALUES = [
   "avatar",
   "bloomburrow",
   "bloomanime",
-  "tarkirdragon",
   "tarkirdraconic",
   "tarkirghostfire",
+  // Multiverse Legends (MOM 2023) Tarkir frame. The key keeps its historical
+  // "tarkir" prefix because it is stored in cards.frame_style, frame_reviews
+  // and the frames bucket. Its set is "multiverselegends", not "tarkir".
+  "tarkirdragon",
   // Variation treatments (2026-07): extended/full art, premium lands, Nyx.
   "extendedart",
   "fullart",
@@ -368,7 +371,10 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   avatar: "Elemental",
   bloomburrow: "Woodland",
   bloomanime: "Anime",
-  tarkirdragon: "Dragon Wing",
+  // Owner decision 2026-09-25: this label names its set. Set-qualified copy
+  // (describeFrame, setQualifiedFrameLabel) shows it as-is rather than
+  // adding the set name again.
+  tarkirdragon: "Dragon Wing (Multiverse Legends)",
   tarkirdraconic: "Draconic",
   tarkirghostfire: "Ghostfire",
   extendedart: "Extended Art",
@@ -397,6 +403,7 @@ export const FRAME_SET_VALUES = [
   "avatar",
   "bloomburrow",
   "tarkir",
+  "multiverselegends",
   "extended",
   "fullartset",
   "expeditions",
@@ -413,6 +420,7 @@ export const FRAME_SET_LABELS: Record<FrameSet, string> = {
   avatar: "Avatar: The Last Airbender",
   bloomburrow: "Bloomburrow",
   tarkir: "Tarkir: Dragonstorm",
+  multiverselegends: "Multiverse Legends",
   extended: "Extended Art",
   fullartset: "Full Art",
   expeditions: "Expeditions",
@@ -442,9 +450,9 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   avatar: "avatar",
   bloomburrow: "bloomburrow",
   bloomanime: "bloomburrow",
-  tarkirdragon: "tarkir",
   tarkirdraconic: "tarkir",
   tarkirghostfire: "tarkir",
+  tarkirdragon: "multiverselegends",
   extendedart: "extended",
   fullart: "fullartset",
   fullartland: "fullartset",
@@ -470,8 +478,9 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
 // lib/creator/card-kinds.ts, plus skins and showcase treatments) → pick the
 // frame's color.
 //
-// Eras group the existing FrameSets: alpha→classic, m15→m15, and the four
-// Universes Beyond / showcase IP sets (lotr/avatar/bloomburrow/tarkir)→showcase.
+// Eras group the existing FrameSets: alpha→classic, m15→m15, and the
+// Universes Beyond / showcase IP sets (lotr/avatar/bloomburrow/tarkir/
+// multiverselegends) plus the treatment sets→showcase.
 // ---------------------------------------------------------------------------
 export const FRAME_ERA_VALUES = ["classic", "retro", "modern", "m15", "showcase"] as const;
 export type FrameEra = (typeof FRAME_ERA_VALUES)[number];
@@ -504,6 +513,7 @@ export const FRAME_SET_ERA: Record<FrameSet, FrameEra> = {
   avatar: "showcase",
   bloomburrow: "showcase",
   tarkir: "showcase",
+  multiverselegends: "showcase",
   extended: "showcase",
   fullartset: "showcase",
   expeditions: "showcase",

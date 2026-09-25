@@ -283,6 +283,23 @@ export function parseColorIdentity(
 }
 
 /**
+ * The identity /admin/frame-compare renders a REAL printing with: like
+ * parseColorIdentity, except a two-colour printing keeps both colours, so a
+ * split-frame template (Dragon Wing, FrameProfile.twoColorSplit) draws the
+ * split wings the scan shows — MUL #60 Taigam is W/U — instead of the
+ * creator's single "multicolor" dress. Every other frame resolves a
+ * two-colour identity to the same "m" frame, so nothing else changes.
+ */
+export function referenceColorIdentity(card: ScryfallCard): ColorIdentity[] {
+  const collapsed = parseColorIdentity(card);
+  if (collapsed[0] !== "multicolor") return collapsed;
+  const colors = [...new Set(card.color_identity ?? card.colors ?? [])]
+    .map((code) => SCRYFALL_COLOR_TO_IDENTITY[code])
+    .filter(Boolean);
+  return colors.length === 2 ? colors : collapsed;
+}
+
+/**
  * Convert a Scryfall card into a patch the form can merge in. Falls back
  * to undefined fields when the Scryfall data is missing — we never invent
  * values just to fill a slot.

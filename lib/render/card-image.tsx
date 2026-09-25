@@ -14,7 +14,7 @@
 // declares `display: flex`.
 
 import { ImageResponse } from "next/og";
-import { resolveRenderableImage } from "@/lib/render/art-source";
+import { foilMaskSource, resolveRenderableImage } from "@/lib/render/art-source";
 import { fitRulesSizePct, fitSingleLineSizePct } from "@/lib/cards/render-tiers";
 import { RULES_TEXT } from "@/lib/cards/typography";
 import { tokenize, tokenSuffix } from "@/components/cards/mana-cost-glyphs";
@@ -32,7 +32,12 @@ import {
   inlineManaTintKey,
   type RulesItem,
 } from "@/lib/cards/rules-text";
-import { pickFrameColorKey } from "@/components/cards/frame-layer";
+import {
+  FRAME_SPLIT_OVERLAP_PX,
+  frameColorKeysFor,
+  frameSplitFor,
+  pickFrameColorKey,
+} from "@/components/cards/frame-layer";
 import {
   buildTypeLine,
   normalizeFrameTemplate,
@@ -73,9 +78,11 @@ import {
 } from "@/lib/render/card-frames";
 import {
   brandMarkLayout,
+  footerInk,
   loyaltyBadgeAssetFor,
   SAGA_MARKER_POINTS,
   loyaltyBadgeShapeFor,
+  slotInk,
   type FrameProfile,
   type Rect,
   type SlotAlign,
@@ -85,6 +92,7 @@ import {
 } from "@/lib/cards/template-layout";
 import { resolveFrameProfile } from "@/lib/cards/profile-override";
 import { EtchedSheen } from "@/lib/cards/etched-finish";
+import { FoilSheen, foilArtLayers, type FoilArtSource } from "@/lib/cards/foil-finish";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import type { CardBackFace, ColorIdentity, Rarity } from "@/types/card";
 import { clamp } from "@/lib/utils";
@@ -153,6 +161,52 @@ function bakeText(text: string): string {
   return text.replace(/−/g, "-");
 }
 
+/** One half of a two-colour split frame: the full-card PNG shifted inside an
+ *  overflow:hidden box spanning columns [x0, x1). Whole-pixel box edges, so
+ *  Satori cuts the seam hard — the bake's form of FrameLayer's clip-path. */
+function FrameSlice({
+  src,
+  x0,
+  x1,
+  width,
+  height,
+}: {
+  src: string;
+  x0: number;
+  x1: number;
+  width: number;
+  height: number;
+}) {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        top: 0,
+        left: x0,
+        width: x1 - x0,
+        height,
+        overflow: "hidden",
+        display: "flex",
+        zIndex: 5,
+      }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt=""
+        style={{
+          position: "absolute",
+          top: 0,
+          left: -x0,
+          width,
+          height,
+          objectFit: "fill",
+        }}
+      />
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Card JSX
 // ---------------------------------------------------------------------------
@@ -163,6 +217,7 @@ function CardImage({
   height,
   brandMark,
   watermarkText,
+  foilArt,
 }: {
   card: CardPreviewData;
   width: number;
@@ -173,6 +228,11 @@ function CardImage({
   /** The owner's custom footer mark (paid perk). Prints in the footer-right
    *  slot where the hardcoded "PipGlyph" used to sit; null = blank. */
   watermarkText: string | null;
+  /** Foil only: the art copies the foil's luminance mask redraws (see
+   *  foilMaskSource) — resolved up front because they need sharp (async). */
+  foilArt?: { art: FoilArtSource | null; secondArt: FoilArtSource | null };
+  /** NEVER rendered — Satori's image preload list (see renderCardImage). */
+  children?: React.ReactNode;
 }) {
   const template = normalizeFrameTemplate(card.frameStyle?.template);
   const layout = resolveFrameProfile(template, card.profileOverrides);
@@ -185,7 +245,18 @@ function CardImage({
   const colorKey = pickFrameColorKey(
     card.colorIdentity as ColorIdentity[] | undefined,
   );
-  const frameDataUrl = getFrameDataUrl(template, colorKey);
+  // A two-colour Dragon Wing card draws BOTH colours' frames split down the
+  // seam (FrameProfile.twoColorSplit); the plates keep colorKey ("m").
+  const frameSplit = frameSplitFor(
+    layout,
+    card.colorIdentity as ColorIdentity[] | undefined,
+  );
+  const frameDataUrl = getFrameDataUrl(template, frameSplit?.leftKey ?? colorKey);
+  const splitDataUrl = frameSplit ? getFrameDataUrl(template, frameSplit.rightKey) : null;
+  // Whole pixels: the seam is a hard edge in both renderers.
+  const splitX = frameSplit ? Math.round((width * frameSplit.atPct) / 100) : 0;
+  // Per-frame-colour footer ink — the same footerInk() the preview resolves.
+  const footerInkResolved = layout.footer ? footerInk(layout.footer, colorKey) : null;
 
   // No bake-only truncation: titles up to the validated 120 chars ellipsize
   // in the band exactly as the preview does.
@@ -276,6 +347,9 @@ function CardImage({
     focalY?: number;
     scale?: number;
   };
+  // Foil plates (P/T, loyalty, defense) carry the card's sheen too.
+  const plateFoil = isFoil ? { cardHeight: height, landscape: layout.orientation === "landscape" } : null;
+
   const focalX2 = clamp(secondArtPos.focalX ?? 0.5, 0, 1) * 100;
   const focalY2 = clamp(secondArtPos.focalY ?? 0.5, 0, 1) * 100;
   const scale2 = clamp(secondArtPos.scale ?? 1, 0.5, 4);
@@ -372,21 +446,37 @@ function CardImage({
         </div>
       ) : null}
 
-      {/* Frame PNG — above the art. */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={frameDataUrl}
-        alt=""
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          width: "100%",
-          height: "100%",
-          objectFit: "fill",
-          zIndex: 5,
-        }}
-      />
+      {/* Frame PNG — above the art. A two-colour split frame draws its two
+          halves as FrameSlice boxes instead (the preview's FrameLayer clips
+          the same two images with clip-path) — plain sibling divs, never a
+          Fragment. */}
+      {splitDataUrl ? (
+        <FrameSlice
+          src={frameDataUrl}
+          x0={0}
+          x1={splitX + FRAME_SPLIT_OVERLAP_PX}
+          width={width}
+          height={height}
+        />
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={frameDataUrl}
+          alt=""
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "fill",
+            zIndex: 5,
+          }}
+        />
+      )}
+      {splitDataUrl ? (
+        <FrameSlice src={splitDataUrl} x0={splitX} x1={width} width={width} height={height} />
+      ) : null}
 
       {/* Premium finish: etched — a fine cross-hatch + sheen on the FRAME
           only (masked by the frame's own luminance), directly above the
@@ -400,6 +490,37 @@ function CardImage({
         <EtchedSheen
           id="etched"
           frameHref={frameDataUrl}
+          split={
+            frameSplit && splitDataUrl
+              ? { href: splitDataUrl, atPct: frameSplit.atPct }
+              : null
+          }
+          landscape={layout.orientation === "landscape"}
+          width={width}
+          height={height}
+        />
+      ) : null}
+
+      {/* Premium finish: foil — a holographic rainbow + glint painted through
+          a luminance mask of what the card shows under its text (art layers,
+          then the frame), so it is strongest on light areas and absent on
+          black. The SAME SVG the preview draws at z-6
+          (lib/cards/foil-finish.tsx): above art + frame, below every
+          text/stat layer — on a real foil the ink sits on top of the foil.
+          (The old overlay here was `inset: 0` + mixBlendMode; Satori drew
+          neither, so a foil bake was byte-identical to a regular one.) */}
+      {isFoil ? (
+        <FoilSheen
+          id="foil"
+          frameHref={frameDataUrl}
+          art={foilArtLayers({
+            layout,
+            colorKey,
+            art: card.artUrl ? (foilArt?.art ?? null) : null,
+            artPosition: card.artPosition,
+            secondArt: secondArtSlot && secondArtUrl ? (foilArt?.secondArt ?? null) : null,
+            secondArtPosition: secondArtPos,
+          })}
           landscape={layout.orientation === "landscape"}
           width={width}
           height={height}
@@ -650,6 +771,7 @@ function CardImage({
             value: `${card.power ?? "—"}/${card.toughness ?? "—"}`,
             colorKey,
             cardWidth: width,
+            foil: plateFoil,
           })
         : null}
       {showLoyalty && layout.loyalty
@@ -658,6 +780,7 @@ function CardImage({
             value: String(card.loyalty ?? "—"),
             colorKey,
             cardWidth: width,
+            foil: plateFoil,
           })
         : null}
       {showDefense && layout.defense
@@ -666,11 +789,12 @@ function CardImage({
             value: String(card.defense ?? "—"),
             colorKey,
             cardWidth: width,
+            foil: plateFoil,
           })
         : null}
 
       {/* Footer — artist + brand. */}
-      {layout.footer ? (
+      {layout.footer && footerInkResolved ? (
         <div
           style={{
             ...slotBox(layout.footer.rect),
@@ -679,7 +803,10 @@ function CardImage({
             justifyContent: "space-between",
             fontFamily: fontFamilyFor(layout.footer.font),
             fontSize: fpx(layout.footer.sizePct, width),
-            color: layout.footer.colorHex,
+            color: footerInkResolved.colorHex,
+            ...(footerInkResolved.shadowCss
+              ? { textShadow: footerInkResolved.shadowCss }
+              : {}),
             letterSpacing: layout.footer.letterSpacingEm
               ? `${layout.footer.letterSpacingEm}em`
               : 0,
@@ -701,20 +828,6 @@ function CardImage({
             </span>
           ) : null}
         </div>
-      ) : null}
-
-      {/* Premium finish: foil specular sheen (static — Satori has no anim). */}
-      {isFoil ? (
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            zIndex: 30,
-            background:
-              "linear-gradient(115deg, rgba(255,200,120,0.35) 0%, rgba(255,255,255,0.4) 35%, rgba(190,170,255,0.4) 55%, rgba(120,210,255,0.35) 75%, rgba(255,255,255,0.3) 100%)",
-            mixBlendMode: "overlay",
-          }}
-        />
       ) : null}
 
       {/* Showcase tints the title italic via the Band `italic` prop above. */}
@@ -1388,15 +1501,33 @@ function StatBake({
   value,
   colorKey,
   cardWidth,
+  foil = null,
 }: {
   slot: StatSlot;
   value: string;
   colorKey: string;
   cardWidth: number;
+  /** Foil finish: the plate is part of the printed sheet, so it gets the
+   *  card's sheen too (the full-card layer sits below the plates). */
+  foil?: { cardHeight: number; landscape: boolean } | null;
 }) {
   const plateUrl = slot.plateAssetPathTemplate
     ? getPlateDataUrlForPath(slot.plateAssetPathTemplate, colorKey)
     : null;
+  // The plate's own foil — the SAME SVG as the preview's StatOverlay draws,
+  // on the plate's box, between the plate and its digits.
+  const plateFoil = (rect: Rect, style: React.CSSProperties) =>
+    foil && plateUrl ? (
+      <FoilSheen
+        id="foil-plate"
+        frameHref={plateUrl}
+        region={rect}
+        landscape={foil.landscape}
+        width={Math.round((rect.widthPct / 100) * cardWidth)}
+        height={Math.round((rect.heightPct / 100) * foil.cardHeight)}
+        style={style}
+      />
+    ) : null;
   // A separate plate box (TODO 4.18): plate in plateRect, digits centred in
   // rect — the same split as the preview's StatOverlay.
   if (slot.plateRect && plateUrl) {
@@ -1404,6 +1535,7 @@ function StatBake({
       <div style={{ position: "absolute", left: 0, top: 0, width: "100%", height: "100%", display: "flex", zIndex: 22 }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={plateUrl} alt="" style={{ ...slotBox(slot.plateRect), objectFit: "fill" }} />
+        {plateFoil(slot.plateRect, slotBox(slot.plateRect))}
         {StatBake({
           slot: { ...slot, plateAssetPathTemplate: undefined, plateRect: undefined },
           value,
@@ -1413,6 +1545,9 @@ function StatBake({
       </div>
     );
   }
+  // Per-frame-colour ink (Alpha: silver on every frame but white) — the
+  // same slotInk() the preview's StatOverlay resolves.
+  const ink = slotInk(slot, colorKey);
   return (
     <div
       style={{
@@ -1452,11 +1587,12 @@ function StatBake({
           }}
         />
       ) : null}
+      {plateFoil(slot.rect, { top: 0, left: 0, width: "100%", height: "100%" })}
       <span
         style={{
           position: "relative",
           fontFamily: DISPLAY_FONT,
-          color: slot.colorHex,
+          color: ink.colorHex,
           fontWeight: slot.weight ?? 700,
           fontSize: fpx(slot.sizePct, cardWidth),
           // Same nudge as the preview's translate(${valueDxEm}em, ${valueDyEm}em);
@@ -1470,7 +1606,7 @@ function StatBake({
                 )}px)`,
               }
             : {}),
-          ...(slot.shadowCss ? { textShadow: slot.shadowCss } : {}),
+          ...(ink.shadowCss ? { textShadow: ink.shadowCss } : {}),
         }}
       >
         {value}
@@ -1896,8 +2032,9 @@ export function naturalRenderSize(landscape: boolean): { width: number; height: 
 }
 
 /**
- * Every public/frames asset (frame master aside — preloadFrame handles that
- * one and its template fallback) a render of `card` asks for synchronously:
+ * Every public/frames asset (frame masters aside — preloadFrame handles them,
+ * both halves of a two-colour split included, via frameColorKeysFor, and
+ * their template fallback) a render of `card` asks for synchronously:
  * the color-keyed stat plates the frame profile defines and the loyalty
  * badges of a planeswalker's ability rows. On Vercel these are fetched, not
  * bundled (lib/render/card-frames.ts), so they must be warmed before the JSX
@@ -1930,15 +2067,22 @@ export async function renderCardImage(
   opts: { brandMark?: boolean; watermarkText?: string | null } = {},
 ): Promise<ImageResponse> {
   const card = await withRenderableImages(source);
+  const isFoil = card.frameStyle?.finish === "foil";
   // Frame PNGs are not in the function bundle on Vercel — warm the loader's
   // cache with exactly what this card needs so the sync getters inside the
   // JSX below hit the cache (a miss renders a transparent pixel, logged).
-  await Promise.all([
-    preloadFrame(
-      normalizeFrameTemplate(card.frameStyle?.template),
-      pickFrameColorKey(card.colorIdentity as ColorIdentity[] | undefined),
-    ),
+  // A two-colour split frame paints two masters — warm both. A foil card
+  // also needs its art's mask copies (foilMaskSource, sharp).
+  const frameTemplate = normalizeFrameTemplate(card.frameStyle?.template);
+  const frameLayout = resolveFrameProfile(frameTemplate, card.profileOverrides);
+  const frameKeys = frameColorKeysFor(frameLayout, card.colorIdentity as ColorIdentity[] | undefined);
+  const [, , foilArt, foilSecondArt] = await Promise.all([
+    Promise.all(frameKeys.map((key) => preloadFrame(frameTemplate, key))),
     preloadFrameAssets(frameAssetPathsFor(card)),
+    isFoil ? foilMaskSource(card.artUrl) : null,
+    // Only a layout with a second art window (split) draws the back face's
+    // art; DFC/adventure backs share the front art, so skip the decode.
+    isFoil && frameLayout.secondFace?.artSlot ? foilMaskSource(card.backFace?.art_url) : null,
   ]);
   const base = RENDER_PRESETS[preset];
   // Landscape (Battle) frames swap the canvas to 7:5 so the bake matches the
@@ -1954,7 +2098,18 @@ export async function renderCardImage(
       height={height}
       brandMark={opts.brandMark ?? true}
       watermarkText={opts.watermarkText?.trim() || null}
-    />,
+      foilArt={isFoil ? { art: foilArt, secondArt: foilSecondArt } : undefined}
+    >
+      {/* Satori serialises an inline SVG's <image href> from its image
+          cache, which it fills by pre-walking the ROOT element's children
+          (never a component's output) or when an <img> with that URL was
+          laid out earlier. The foil mask's small art copies are drawn by
+          nothing else, so they are listed here — CardImage never renders
+          its children. Empty for every other finish. */}
+      {[foilArt, foilSecondArt].map((source, i) =>
+        isFoil && source ? <image key={i} href={source.href} /> : null,
+      )}
+    </CardImage>,
     {
       width,
       height,

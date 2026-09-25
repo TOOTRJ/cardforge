@@ -16,6 +16,12 @@
 // card canvas, so it is upscaled like the frame and cropped to its alpha
 // bounding box into public/frames/<name>/pt/<c>.png — the profile's
 // pt.plateRect is that box in percent.
+//
+// A family with `underlays` bakes MSE's translucent box layers into the
+// frame: each file is a full-card canvas that MSE draws UNDER card.png
+// (lower z index) at `alpha` of its own opacity — Ghostfire's namebox /
+// typebox / textbox at `set_alpha(…, 60%)`, the style's default opacity.
+// Without them the frame is only card.png's outline (mean alpha ≈ 22).
 // ---------------------------------------------------------------------------
 import sharp from "sharp";
 import path from "node:path";
@@ -36,7 +42,17 @@ const FRAMES = [
   { name: "lotrscroll", style: "lotr-scroll", pat: "card/{c}card.png", seeds: [[0.5, 0.3]] },
   { name: "tarkirdragon", style: "tarkir-dragon-wing", pat: "card/{c}card.png", seeds: [[0.5, 0.28]], plate: "pt/{c}pt.png" },
   { name: "tarkirdraconic", style: "tarkir-draconic", pat: "card/{c}card.png", seeds: [[0.5, 0.28]] },
-  { name: "tarkirghostfire", style: "tarkir-ghostfire", pat: "card.png", seeds: [[0.5, 0.28]] },
+  {
+    name: "tarkirghostfire",
+    style: "tarkir-ghostfire",
+    pat: "card.png",
+    seeds: [[0.5, 0.28]],
+    // magic-m15-showcase-tarkir-ghostfire `style`: namebox/typebox/textbox at
+    // z 220 with set_alpha(get_alpha_percentage(…, default: 60)), card.png at
+    // z 230, pt.png (one plate for every colour) at z 840.
+    underlays: { files: ["namebox.png", "typebox.png", "textbox.png"], alpha: 0.6 },
+    plate: "pt.png",
+  },
 ];
 
 function srcFile(frame, color) {
@@ -45,12 +61,33 @@ function srcFile(frame, color) {
   return path.join(base, frame.pat.replace("{c}", color));
 }
 
-async function convert(frame, color) {
-  const { data, info } = await sharp(srcFile(frame, color))
+/** A full-card MSE layer upscaled to W×H as raw RGBA, alpha scaled by `alpha`. */
+async function layer(file, alpha = 1) {
+  const { data } = await sharp(file)
     .resize(W, H, { fit: "fill" })
     .ensureAlpha()
     .raw()
     .toBuffer({ resolveWithObject: true });
+  if (alpha !== 1) for (let i = 3; i < data.length; i += 4) data[i] = Math.round(data[i] * alpha);
+  return data;
+}
+
+/** The frame as raw RGBA: card art alone, or card art OVER its underlays. */
+async function frameLayers(frame, color) {
+  const card = await layer(srcFile(frame, color));
+  if (!frame.underlays) return { data: card, info: { channels: 4 } };
+  const base = path.join(PACK, `magic-m15-showcase-${frame.style}.mse-style`);
+  const raw = { width: W, height: H, channels: 4 };
+  const under = [];
+  for (const f of frame.underlays.files) under.push(await layer(path.join(base, f), frame.underlays.alpha));
+  return sharp({ create: { ...raw, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
+    .composite([...under, card].map((input) => ({ input, raw })))
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+}
+
+async function convert(frame, color) {
+  const { data, info } = await frameLayers(frame, color);
   const ch = info.channels;
   const idx = (x, y) => (y * W + x) * ch;
   const isTarget = (i) =>

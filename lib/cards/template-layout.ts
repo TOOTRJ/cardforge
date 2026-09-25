@@ -43,6 +43,7 @@
 // original MSE baselines for comparison.
 // ---------------------------------------------------------------------------
 
+import type { FrameColorKey } from "@/lib/cards/frame-reference-registry";
 import type { FrameTemplate } from "@/types/card";
 import { ptToPct } from "@/lib/cards/typography";
 
@@ -78,6 +79,9 @@ export type TextSlot = {
   /** CSS text-shadow for text sitting directly on the frame (e.g. agclassic
    *  P/T, planeswalker loyalty). */
   shadowCss?: string;
+  /** Per-frame-colour ink — see SlotInk. Honoured on the footer (footerInk)
+   *  and the stat slots (slotInk), identically in both renderers. */
+  inkByColorKey?: InkByColorKey;
   /** Translucent fill drawn behind the text — used when a frame's text region
    *  is a transparent cut-out over the art (M15 planeswalker abilities) so the
    *  words stay legible regardless of the artwork underneath. */
@@ -98,6 +102,8 @@ export type StatSlot = {
    *  Battle frame's defense disc). */
   badgeColorHex?: string;
   shadowCss?: string;
+  /** Per-frame-colour ink — see SlotInk (resolved by slotInk). */
+  inkByColorKey?: InkByColorKey;
   /** Vertical nudge of the value text within the plate, in em (negative = up).
    *  Corrects the display font's baseline asymmetry — digits sit low in their
    *  line box, so a geometrically-centered value reads too close to the bottom.
@@ -113,6 +119,38 @@ export type StatSlot = {
   plateRect?: Rect;
 };
 
+/** A frame colour key — the {color} of every frame asset
+ *  (pickFrameColorKey: one colour → its letter, none → "c", several → "m"). */
+export type { FrameColorKey };
+
+/** The ink of text printed straight onto the frame. */
+export type SlotInk = { colorHex: string; shadowCss?: string };
+
+/** Ink per frame colour, for a slot whose frame colours differ in tone:
+ *  printed Alpha cards letter the P/T and the "Illus." line in dark ink on
+ *  the white frame but in embossed silver on every other colour. A key that
+ *  is missing keeps the slot's own colorHex (and, on stat slots, shadowCss);
+ *  an entry replaces both. */
+export type InkByColorKey = Partial<Record<FrameColorKey, SlotInk>>;
+
+/** The ink a stat slot (P/T, loyalty, defense) prints in on `colorKey`. */
+export function slotInk(
+  slot: { colorHex: string; shadowCss?: string; inkByColorKey?: InkByColorKey },
+  colorKey: string,
+): SlotInk {
+  const entry = slot.inkByColorKey?.[colorKey as FrameColorKey];
+  return entry
+    ? { colorHex: entry.colorHex, shadowCss: entry.shadowCss }
+    : { colorHex: slot.colorHex, shadowCss: slot.shadowCss };
+}
+
+/** The footer's ink on `colorKey`. Like slotInk, except that the footer has
+ *  never drawn its own `shadowCss` (FULLARTLAND declares one; drawing it now
+ *  would change those bakes) — only an inkByColorKey entry brings a shadow. */
+export function footerInk(footer: TextSlot, colorKey: string): SlotInk {
+  return slotInk({ colorHex: footer.colorHex, inkByColorKey: footer.inkByColorKey }, colorKey);
+}
+
 /** Art drawn UNDER the whole frame for see-through frames (TODO 4.17): CC's
  *  colourless "Eldrazi" frame, every devoid frame and the colourless token
  *  let the art show through their bars, borders and text box, like the
@@ -125,8 +163,26 @@ export type UnderFrameArt = {
   colors?: readonly string[];
 };
 
+/** A frame drawn in two halves for a two-colour card — see
+ *  FrameProfile.twoColorSplit. */
+export type TwoColorSplit = {
+  /** The seam, as % of the card's width: the first colour's frame is drawn
+   *  left of it, the second colour's right of it. */
+  atPct: number;
+};
+
 export type FrameProfile = {
   label: string;
+  /** Two-colour cards draw the frame SPLIT down a hard vertical seam — the
+   *  first colour's PNG left of `atPct`, the second's right of it, in printed
+   *  pair order (twoColorFrameKeys: WU WB UB UR BR BG RG RW GW GU) — instead
+   *  of the gold "m" PNG. Mono, colourless, 3+ colour and "multicolor"
+   *  identities are unaffected, and stat plates keep the "m" key. Code-owned:
+   *  not part of the override schema. Both renderers draw it
+   *  (FrameLayer's two clip-path halves; the bake's two overflow:hidden
+   *  FrameSlice boxes), and the etched sheen
+   *  masks with both halves. */
+  twoColorSplit?: TwoColorSplit;
   /** Transparent art cut-out — the user's art renders here, below the frame. */
   artSlot: Rect;
   /** Art under the whole frame for see-through frames — see UnderFrameArt. */
@@ -315,6 +371,29 @@ const INK_LIGHT = "#f4eee2";
 const OUTLINE_SHADOW =
   "1px 1px 0 #000, -1px 1px 0 #000, 1px -1px 0 #000, -1px -1px 0 #000";
 
+// Printed Alpha/Beta lettering on the frame — the P/T and the "Illus." line:
+// dark ink on the white frame, an embossed silver-grey on every other colour
+// (a dark lower-right edge, no highlight). Measured on 19 LEA/LEB scans (the
+// brightest 0.7 % of the stroke cores after a 1 px blur; shadow = darkest):
+//   u #b4c2c2 · b #969c9f–#a6aeae · r #939792–#9c9e98 · g #7a8585–#99a09f ·
+//   artifact #76807f–#7e8c8e · shadow ≈ black at 75 % over the frame.
+// Alpha printed no gold cards, so m takes the colours' median. Our colourless
+// frame is a mid-grey (strip ≈ 113) where the printed artifact frame is dark
+// brown (≈ 79), so c keeps the print's CONTRAST (≈ 2.3 : 1) rather than its
+// grey, which would all but vanish. The shadow is in em, so the preview and
+// the bake draw it at the same size at every scale.
+const ALPHA_EMBOSS = "0.035em 0.035em 0 rgba(0,0,0,0.75)";
+/** Silver for a mid-tone frame (our grey colourless, the brown land). */
+const ALPHA_SILVER_MID = "#b0b4b4";
+const ALPHA_INK: InkByColorKey = {
+  u: { colorHex: "#b4c0c2", shadowCss: ALPHA_EMBOSS },
+  b: { colorHex: "#9da4a6", shadowCss: ALPHA_EMBOSS },
+  r: { colorHex: "#989b96", shadowCss: ALPHA_EMBOSS },
+  g: { colorHex: "#858c8c", shadowCss: ALPHA_EMBOSS },
+  c: { colorHex: ALPHA_SILVER_MID, shadowCss: ALPHA_EMBOSS },
+  m: { colorHex: "#989c9a", shadowCss: ALPHA_EMBOSS },
+};
+
 // ---------------------------------------------------------------------------
 // Profiles. Coordinates measured from the 1500×2100 white frame PNGs by
 // scanning the center column for transparent (art) and painted (plate) runs;
@@ -428,62 +507,70 @@ const M15SNOWLAND: FrameProfile = {
   },
 };
 
-// AgClassic — the 1993 Alpha/Beta frame. Thin tan top border for the name
-// (4–8%), art window (9.5–54%), tan divider for the type (56–60%), cream text
-// box (61–89%), bottom tan border. No painted P/T plate, so P/T is white text
-// with a black outline in the bottom-right.
+// AgClassic — the 1993 Alpha/Beta frame. MSE's magic-agclassic art, re-cut
+// to the printed card's proportions (scripts/build-alpha-frames.mjs; HD px
+// on 1500 × 2100, measured on 19 LEA/LEB scans): black border 80 px at the
+// sides, 89 above and 100 below the frame; title band 89–197; art opening
+// 178–1319 × 219–1138; type band 1159–1252; text box 185–1314 × 1252–1853
+// (textured area 204–1293 × 1273–1832); P/T strip 1853–2000. Name, type and
+// rules are dark ink; the "Illus." line and the P/T share one line in the
+// strip, silver on every frame colour but white (ALPHA_INK).
 const AGCLASSIC: FrameProfile = {
   flavorDivider: false,
   label: "Alpha (1993)",
-  // Thin bottom border (frame edge at 97.14%H): the default mark straddled
-  // the tan frame; 0.55 centres its ink in the black (brand-mark survey).
-  brandMark: { rightPct: 3.5, bottomPct: 0.55 },
+  // The mark's ink centred in the 100 px black band below the frame.
+  brandMark: { rightPct: 3.5, bottomPct: 1.5 },
   costSizePct: 0.042,
-  artSlot: { topPct: 9.5, leftPct: 10.6, widthPct: 78.8, heightPct: 44.8 },
+  // Pips centred on the printed ones (~138 px), 6 px above the band's middle.
+  costDy: -0.004,
+  // Covers the 178–1319 × 219–1138 opening with ~6 px under the bevel.
+  artSlot: { topPct: 10.15, leftPct: 11.45, widthPct: 76.9, heightPct: 44.3 },
+  // Printed names start ~10 px inside the frame's edge line; the cost pips
+  // end at ~1362 px (90.8 %W); caps and pips centred at ~139 px.
   title: {
-    rect: { topPct: 3.6, leftPct: 12, widthPct: 76, heightPct: 4.8 },
+    rect: { topPct: 4.36, leftPct: 7.6, widthPct: 83.2, heightPct: 4.8 },
     sizePct: 0.046,
     colorHex: INK_DARK,
     weight: 600,
     font: "display",
   },
+  // Printed type lines start at ~157 px with caps centred at ~1199 px (the
+  // type band's middle); the set symbol ends at the text box's right edge.
   type: {
-    rect: { topPct: 55.8, leftPct: 12, widthPct: 76, heightPct: 4.4 },
+    rect: { topPct: 55.1, leftPct: 10.4, widthPct: 77.2, heightPct: 4.0 },
     sizePct: 0.03,
     colorHex: INK_DARK,
     weight: 600,
     font: "display",
   },
+  // Inside the textured area with the old ~26 px side / ~12 px top padding.
   rules: {
-    rect: { topPct: 61.6, leftPct: 12.5, widthPct: 75, heightPct: 26.5 },
+    rect: { topPct: 61.2, leftPct: 15.4, widthPct: 69.2, heightPct: 25.6 },
     sizePct: ptToPct(9),
     colorHex: INK_DARK,
     vAlign: "start",
     font: "body",
   },
-  // Artist line and P/T share one line, centred in the border strip under
-  // the text box — like the printed "Illus. ©" line (owner review 2026-09-25).
+  // Artist line and P/T share one line in the strip under the text box, like
+  // the printed "Illus. ©" line: caps centred at ~1920 px, starting ~157 px.
   footer: {
-    rect: { topPct: 91.8, leftPct: 12, widthPct: 52, heightPct: 3.0 },
+    rect: { topPct: 89.9, leftPct: 10.4, widthPct: 52, heightPct: 3.0 },
     sizePct: 0.016,
     colorHex: INK_DARK,
     uppercase: true,
     letterSpacingEm: 0.05,
     font: "display",
+    inkByColorKey: ALPHA_INK,
   },
-  // Official 1993 cards print P/T in dark ink on the frame strip BELOW the
-  // text box — not the white-with-outline treatment modern over-art stats
-  // use. The rect is that strip on our masters (text-box bevel ends at
-  // 90.62 %H, bottom bevel starts at 96.14 %H): printed Alpha/Beta digits
-  // sit centred in it (0.49 of the strip on 6 lea scans), centred at
-  // ~88.3 %W under the text box's right corner. It used to be 88.4–94.2 %H,
-  // which put the digits on the text box's bottom bevel (owner review
-  // 2026-09-25: "needs to be lowered").
+  // Official 1993 cards print P/T on the frame strip BELOW the text box, not
+  // on a plate: digits centred at ~1921 px (0.46 of the 1853–2000 strip) and
+  // ~88 %W, under the text box's right corner.
   pt: {
-    rect: { topPct: 90.6, leftPct: 79, widthPct: 19, heightPct: 5.6 },
+    rect: { topPct: 88.74, leftPct: 80.5, widthPct: 15, heightPct: 5.6 },
     sizePct: 0.04,
     colorHex: INK_DARK,
     weight: 700,
+    inkByColorKey: ALPHA_INK,
   },
 };
 
@@ -655,12 +742,23 @@ const M15DEVOID: FrameProfile = {
 };
 
 // Alpha Land — the 1993 frame's land variant ({color}lcard from
-// magic-agclassic.mse-style): identical geometry to agclassic, just a land
-// treatment and no cost. Straight clone + hideCost.
+// magic-agclassic.mse-style, re-cut by the same build-alpha-frames.mjs):
+// identical geometry to agclassic, a land treatment and no cost. Its frame
+// is the same brown land texture on every colour key (strip ≈ #7e6657; only
+// the text box takes the colour), so the "Illus." line and a P/T print in
+// the one silver on all seven.
+const ALPHA_LAND_INK: InkByColorKey = Object.fromEntries(
+  (["w", "u", "b", "r", "g", "c", "m"] as const).map((k) => [
+    k,
+    { colorHex: ALPHA_SILVER_MID, shadowCss: ALPHA_EMBOSS },
+  ]),
+);
 const ALPHALAND: FrameProfile = {
   ...AGCLASSIC,
   label: "Alpha Land",
   hideCost: true,
+  footer: { ...AGCLASSIC.footer!, inkByColorKey: ALPHA_LAND_INK },
+  pt: { ...AGCLASSIC.pt!, inkByColorKey: ALPHA_LAND_INK },
 };
 
 // Alpha Token — the 1993 token frame (magic-agclassic-token.mse-style). Silver
@@ -1307,14 +1405,27 @@ function tarkirCard(
 // MUL #1 Anafenza (W) and #60 Taigam (W/U) only; it is not a Tarkir:
 // Dragonstorm frame (those are Draconic, Ghostfire and the borderless clan
 // frame). It is SILVER with colour-keyed dragon wings; there is no gold
-// version anywhere (MSE and Card Conjurer ship the same art), so a gold card
-// shows gold wings on silver. Its name and type bars are LIGHT silver
+// version anywhere (MSE and Card Conjurer ship the same art), so a gold (3+
+// colour) card shows gold wings on silver and a two-colour card splits its
+// wings (twoColorSplit below). Its name and type bars are LIGHT silver
 // (median 200,200,200) and take black ink — MSE's own swap_fonts: name, type
 // and P/T black, rules white on the dark text box. Measured on the two MUL
 // scans and this PNG's window (owner review 2026-09-25: the old light title
 // read at 1.46:1, the art stopped 19 px short of the window, no P/T plate).
 const TARKIRDRAGON: FrameProfile = {
   ...tarkirCard("Dragon Wing", { title: INK_DARK, type: INK_DARK, rules: INK_LIGHT }),
+  // Two-colour cards split the wings like the one printed two-colour card,
+  // MUL #60 Taigam (W/U): white wings left, blue right, gold P/T plate (owner
+  // decision 2026-09-25). It is MSE's own recipe for this style —
+  // `masked_blend(mask: "special_blend_card.png", dark: template(colors.0),
+  // light: template(colors.1))`, and that mask is a HARD vertical split. The
+  // w/u/b/r/g PNGs differ in the 35–65 %W band only by texture noise (at
+  // most ~18/255, none above 24/255), and the seam step at 50 % is at most
+  // 11/255, within the frame's own column-to-column variation (up to 17), so
+  // a hard seam at 50 % reads the same as MSE's mask, which flips at
+  // x=378/646 (58.5 %). 3+ colours
+  // keep the gold "m" wings — a look that was never printed.
+  twoColorSplit: { atPct: 50 },
   // Pips: Ø 67 px and right edge 92.3 %W on the scans.
   costSizePct: 0.0445,
   // The PNG's transparent window is 8.8–91.1 %W × 11.1–55.3 %H.
@@ -1473,11 +1584,69 @@ function borderlessShowcase(
   };
 }
 const BLOOMANIME = borderlessShowcase("Anime");
-// Ghostfire's type band + P/T plate are pale ice — dark ink reads on them.
-const TARKIRGHOSTFIRE = borderlessShowcase("Ghostfire", {
-  typeInk: INK_DARK,
-  ptInk: INK_DARK,
-});
+
+// Ghostfire — the Tarkir: Dragonstorm borderless ghostfire showcase (TDM
+// #399–418). MSE's style (magic-m15-showcase-tarkir-ghostfire) draws its
+// namebox / typebox / textbox in teal (#03586b) at 60 % opacity UNDER the
+// pale-cyan outline, puts a teal ribbon under the P/T, and sets every font
+// white. scripts/build-showcase-frames.mjs bakes the three boxes into the
+// PNGs and crops the ribbon to pt/<c>.png, so the bars are dark translucent
+// teal and take white ink (owner review 2026-09-25: the old outline-only
+// PNG left "Enchantment" in dark ink on the type band's lower rim, over the
+// art). Geometry measured on the new c.png's bands (name 5.05–10.43 %H,
+// type 51.38–56.86, text box 57.3–87.4) and on the real TDM #400 scan.
+// MSE's swap_fonts are all "white" and the scan's ink is (255,255,255) —
+// pure white, not the house cream (INK_LIGHT).
+const GHOSTFIRE_INK = "#ffffff";
+const TARKIRGHOSTFIRE: FrameProfile = {
+  label: "Ghostfire",
+  artSlot: { topPct: 2.5, leftPct: 3.5, widthPct: 93, heightPct: 92 },
+  // Pips: Ø 70 px, 82.5–92.4 %W, centred at 7.52 %H on the scan. The pips
+  // centre in the title rect, which sits 0.09 %H above the name band's
+  // centre so name and pips each land within 2 px of the scan (no costDy:
+  // that nudge is kept for the Card Conjurer frames).
+  costSizePct: 0.0465,
+  // Title and type sizes land the scan's ink widths ("Clarion Conqueror"
+  // 659 px, "Creature — Dragon" 561 px at 1500 wide).
+  title: {
+    rect: { topPct: 4.96, leftPct: 8.55, widthPct: 83.85, heightPct: 5.38 },
+    sizePct: 0.0535,
+    colorHex: GHOSTFIRE_INK,
+    weight: 600,
+    font: "display",
+    shadowCss: OUTLINE_SHADOW,
+  },
+  type: {
+    rect: { topPct: 51.38, leftPct: 8.5, widthPct: 83.5, heightPct: 5.48 },
+    sizePct: 0.0445,
+    colorHex: GHOSTFIRE_INK,
+    weight: 600,
+    font: "display",
+    shadowCss: OUTLINE_SHADOW,
+  },
+  // MSE's text field (66,610)–(678,905) on 744 × 1039, widened so the ink
+  // starts at the scan's 9.0 %W past our box padding. 9 pt, the platform
+  // rules base (the scan's short text prints larger). No scrim: the baked
+  // textbox is the backdrop now.
+  rules: {
+    rect: { topPct: 58.71, leftPct: 8.3, widthPct: 83.4, heightPct: 28.39 },
+    sizePct: ptToPct(9),
+    colorHex: GHOSTFIRE_INK,
+    vAlign: "center",
+    font: "body",
+  },
+  // MSE's pt field (590,917 99 × 46 on 744 × 1039) on the ribbon, which the
+  // build crops at 1093,1768 385 × 208 on the 1500 × 2100 card.
+  pt: {
+    rect: { topPct: 88.26, leftPct: 79.3, widthPct: 13.31, heightPct: 4.43 },
+    plateRect: { topPct: 84.1905, leftPct: 72.8667, widthPct: 25.6667, heightPct: 9.9048 },
+    plateAssetPathTemplate: "/frames/tarkirghostfire/pt/{color}.png",
+    sizePct: 0.05,
+    colorHex: "#ffffff",
+    weight: 700,
+    shadowCss: OUTLINE_SHADOW,
+  },
+};
 
 // ---------------------------------------------------------------------------
 // 2026-07 variation frames (scripts/build-variation-frames.mjs). Geometry

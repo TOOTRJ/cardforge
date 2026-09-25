@@ -28,7 +28,11 @@ import {
   colorWord,
   pickFrameColorKey,
 } from "@/components/cards/frame-layer";
-import { describeFrame, resolvePublishedFrame } from "@/lib/creator/frame-resolve";
+import {
+  describeFrame,
+  resolvePublishedFrame,
+  setQualifiedFrameLabel,
+} from "@/lib/creator/frame-resolve";
 import {
   FrameThumb,
   SoonBadge,
@@ -53,8 +57,6 @@ import {
   FRAME_ERA_LABELS,
   FRAME_ERA_VALUES,
   FRAME_TEMPLATE_LABELS,
-  FRAME_SET_LABELS,
-  FRAME_TEMPLATE_SET,
   type ColorIdentity,
   type FrameEra,
   type FrameTemplate,
@@ -191,6 +193,7 @@ export function CardSetupPanel({
         <FrameThumb
           template={KIND_DEFS[k].previewTemplate}
           colorKey={colorKey}
+          colorIdentity={colorIdentity}
         />
       ),
       disabled: !available,
@@ -258,7 +261,7 @@ export function CardSetupPanel({
             normalized === base
               ? "Standard"
               : eraForTemplate(normalized) === "showcase"
-                ? `${FRAME_SET_LABELS[FRAME_TEMPLATE_SET[normalized]]} — ${FRAME_TEMPLATE_LABELS[normalized]}`
+                ? setQualifiedFrameLabel(normalized)
                 : FRAME_TEMPLATE_LABELS[normalized];
           // Lands lead their Variations with Basic vs Nonbasic — the choice
           // that decides whether the card prints a big symbol or rules text.
@@ -317,13 +320,9 @@ export function CardSetupPanel({
           ): ChipOption<FrameTemplate> => {
             const available = choice.availableColorKeys.length > 0;
             const isShowcase = choice.group === "showcase";
-            const setLabel = FRAME_SET_LABELS[FRAME_TEMPLATE_SET[choice.template]];
-            const tplLabel = FRAME_TEMPLATE_LABELS[choice.template];
             const label = isShowcase
-              ? setLabel === tplLabel
-                ? tplLabel
-                : `${setLabel} — ${tplLabel}`
-              : tplLabel;
+              ? setQualifiedFrameLabel(choice.template)
+              : FRAME_TEMPLATE_LABELS[choice.template];
             const colorAvailable = isFrameComboAvailable(
               choice.template,
               colorKey,
@@ -347,6 +346,7 @@ export function CardSetupPanel({
                       ? colorKey
                       : choice.availableColorKeys[0] ?? colorKey
                   }
+                  colorIdentity={colorIdentity}
                 />
               ),
               disabled: !available,
@@ -359,7 +359,13 @@ export function CardSetupPanel({
             value: base,
             label: "Standard",
             description: `The plain ${FRAME_TEMPLATE_LABELS[base]} frame`,
-            leading: <FrameThumb template={base} colorKey={colorKey} />,
+            leading: (
+              <FrameThumb
+                template={base}
+                colorKey={colorKey}
+                colorIdentity={colorIdentity}
+              />
+            ),
           };
 
           return (
@@ -382,6 +388,7 @@ export function CardSetupPanel({
                           <FrameThumb
                             template={normalized}
                             colorKey={colorKey}
+                            colorIdentity={colorIdentity}
                           />
                         ),
                       },
@@ -506,8 +513,12 @@ function ColorSection({
 
   // SINGLE-select: a card wears exactly one frame dress, so the picker is
   // one chip per dress — a gold card is the "Multicolor" chip, not a stack
-  // of color toggles. (Legacy multi-value identities display as Multicolor,
-  // which IS the frame they render with.)
+  // of color toggles. (Legacy multi-value identities select the Multicolor
+  // chip. Most frames render them with the gold "m" dress, but a split-frame
+  // template such as Dragon Wing (FrameProfile.twoColorSplit) renders a
+  // two-colour identity as split wings, and only FrameThumb tiles that show
+  // the card's own colour reflect that. Picking the Multicolor chip gives the
+  // gold dress.)
   const selected: ColorIdentity =
     selection.length > 1 ? "multicolor" : selection[0] ?? "colorless";
 

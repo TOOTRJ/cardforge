@@ -130,14 +130,21 @@ export function resolvePublishedFrame(input: ResolveFrameInput): FrameResolution
   return { status: "unavailable" };
 }
 
+/** A frame's label with its frame set in front: "Tarkir: Dragonstorm —
+ *  Draconic". Template labels are usually set-relative, so the set is
+ *  prepended. A label that already names its set, such as "Dragon Wing
+ *  (Multiverse Legends)", is returned unchanged so the set isn't printed
+ *  twice. Used by the showcase chips and the Variations summary. */
+export function setQualifiedFrameLabel(template: FrameTemplate, separator = " — "): string {
+  const setLabel = FRAME_SET_LABELS[FRAME_TEMPLATE_SET[template]];
+  const label = FRAME_TEMPLATE_LABELS[template];
+  return label.includes(setLabel) ? label : `${setLabel}${separator}${label}`;
+}
+
 /** Toast/error copy for a frame: "M15 (2015) Snow", "The Lord of the Rings
  *  Ring". Template labels are set-relative, so the era/set is prepended. */
 export function describeFrame(template: FrameTemplate): string {
   const set = FRAME_TEMPLATE_SET[template];
-  const label = FRAME_TEMPLATE_LABELS[template];
-  if (FRAME_SET_ERA[set] === "showcase") {
-    const setLabel = FRAME_SET_LABELS[set];
-    return setLabel === label ? label : `${setLabel} ${label}`;
-  }
-  return `${FRAME_ERA_LABELS[FRAME_SET_ERA[set]]} ${label}`;
+  if (FRAME_SET_ERA[set] === "showcase") return setQualifiedFrameLabel(template, " ");
+  return `${FRAME_ERA_LABELS[FRAME_SET_ERA[set]]} ${FRAME_TEMPLATE_LABELS[template]}`;
 }

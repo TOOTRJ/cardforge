@@ -231,13 +231,15 @@ describe("v25 / v26 — the frame-review follow-ups (2026-09-25)", () => {
     ]) {
       expect(classifyForSweep(row(t)), t).toBe("rebake");
     }
-    for (const t of ["m15", "m15land", "m15pw", "saga", "lotr", "avatar", "tarkirghostfire", "tarkirdraconic"]) {
+    // (tarkirghostfire moved to v27 — see the v27 / v28 block.)
+    for (const t of ["m15", "m15land", "m15pw", "saga", "lotr", "avatar", "tarkirdraconic"]) {
       expect(classifyForSweep(row(t)), t).toBe("stamp");
     }
     // Etched: any template, and only etched.
     expect(classifyForSweep(row(undefined, { frame_style: { template: "m15", finish: "etched" } }))).toBe("rebake");
     expect(classifyForSweep(row(undefined, { frame_style: { template: "saga", finish: "etched" } }))).toBe("rebake");
-    expect(classifyForSweep(row(undefined, { frame_style: { template: "m15", finish: "foil" } }))).toBe("stamp");
+    // A foil card isn't owed anything by v25/v26 (its own sweep is v28).
+    expect(classifyForSweep(row(undefined, { frame_style: { template: "m15", finish: "foil" } }), 26)).toBe("opt-in");
     // Targeted: v25 leaves an etched m15 card alone, v26 takes it.
     const etchedM15 = row(undefined, { frame_style: { template: "m15", finish: "etched" } });
     expect(classifyForSweep(etchedM15, 25)).toBe("opt-in");
@@ -272,5 +274,50 @@ describe("v25 / v26 — the frame-review follow-ups (2026-09-25)", () => {
     expect(rolloutPolicy(26)).toBe("sweep");
     expect(latestOptInVersion()).toBe(22);
     expect(hasNewerLook({ ...row("modern"), visibility: "public" })).toBe(false);
+  });
+});
+
+describe("v27 / v28 — the owner's follow-up decisions (2026-09-25)", () => {
+  const png = "https://x/y.png";
+  const row = (frameStyle: Record<string, unknown>, over: Record<string, unknown> = {}) => ({
+    layout_version: 26,
+    rendered_image_url: png,
+    frame_style: frameStyle,
+    rarity: "uncommon",
+    set_icon_url: null,
+    set_icon_code: null,
+    ...over,
+  });
+
+  it("v27 re-bakes only Alpha, Dragon Wing and Ghostfire; v28 only foil cards, on any template", async () => {
+    const { classifyForSweep } = await import("@/lib/cards/layout-version");
+    for (const t of ["agclassic", "alphaland", "tarkirdragon", "tarkirghostfire"]) {
+      expect(classifyForSweep(row({ template: t, finish: "regular" })), t).toBe("rebake");
+    }
+    for (const t of ["alphatoken", "m15", "modern", "retro", "saga", "tarkirdraconic", "bloomanime"]) {
+      expect(classifyForSweep(row({ template: t, finish: "regular" })), t).toBe("stamp");
+    }
+    expect(classifyForSweep(row({ template: "m15", finish: "foil" }))).toBe("rebake");
+    expect(classifyForSweep(row({ template: "m15pw", finish: "foil" }))).toBe("rebake");
+    expect(classifyForSweep(row({ template: "m15", finish: "etched" }))).toBe("stamp");
+    // Targeted: v27 leaves a foil m15 card alone, v28 takes it.
+    expect(classifyForSweep(row({ template: "m15", finish: "foil" }), 27)).toBe("opt-in");
+    expect(classifyForSweep(row({ template: "m15", finish: "foil" }), 28)).toBe("rebake");
+  });
+
+  it("a row without frame_style can't be judged by the foil scope → conservative", async () => {
+    const { isRenderStale, VERSION_SCOPES } = await import("@/lib/cards/layout-version");
+    const scopes = { 28: VERSION_SCOPES[28] };
+    expect(isRenderStale(27, "m15", {}, 28, { rarity: "rare" }, scopes)).toBe(true);
+    expect(isRenderStale(27, "m15", {}, 28, { frame_style: { finish: "regular" } }, scopes)).toBe(false);
+    expect(isRenderStale(27, "m15", {}, 28, { frame_style: { finish: "foil" } }, scopes)).toBe(true);
+  });
+
+  it("both are sweeps: never an owner badge", async () => {
+    const { rolloutPolicy, hasNewerLook, latestOptInVersion } = await import("@/lib/cards/layout-version");
+    expect(rolloutPolicy(27)).toBe("sweep");
+    expect(rolloutPolicy(28)).toBe("sweep");
+    expect(latestOptInVersion()).toBe(22);
+    expect(hasNewerLook({ ...row({ template: "agclassic", finish: "foil" }), visibility: "public" })).toBe(false);
   });
 });
