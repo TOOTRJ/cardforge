@@ -49,8 +49,12 @@
 -- Grants: none. This migration only changes data. It creates no table or
 -- function, so there is nothing for an API role to be granted.
 --
--- After it merges, run the platform re-bake sweep (the layout v24–v26 sweep
--- covers it) or "Re-bake now" on /admin/frame-compare.
+-- After it merges, CHECK THAT IT APPLIED (the card's frame_style.template is
+-- m15snow) and only then run the post-merge v27/v28 platform sweep
+-- (SCOPE=sweep), which re-bakes the card through its null stamp. A sweep that
+-- runs before this migration stamps the card current as m15snowland without a
+-- render; the null stamp then needs a second sweep or "Re-bake now" on
+-- /admin/frame-compare (marked scope).
 --
 -- Ships through a PR; never applied ad-hoc.
 
