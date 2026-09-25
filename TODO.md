@@ -65,31 +65,31 @@ Open decisions are marked **[decide]**; none blocks its phase.
 
 ### Phase 0 — Unblock verification (1–2 weeks)
 
-- [ ] **0.1 [P0] Rotate landscape scans in the compare tool + score route.**
+- [x] (fixed 2026-09-25 — fix/frame-compare-correctness) **0.1 [P0] Rotate landscape scans in the compare tool + score route.**
       Scryfall's battle/split PNGs are portrait with the content rotated 90°;
       ours are landscape. Rotate 90° CW in a swapped box (CSS) and
       `sharp().rotate(90)` with `W=1040,H=745` when the profile is landscape —
       `components/admin/frame-compare.tsx`:443,
       `app/api/admin/frame-align-score/route.ts`:95.
-- [ ] **0.2 [P0] Map the second face into the reference render** — adventure/
+- [x] (fixed 2026-09-25 — fix/frame-compare-correctness) **0.2 [P0] Map the second face into the reference render** — adventure/
       flip/split/aftermath compare against an empty half because
       `lib/scryfall/reference-preview.ts`:32 drops `patch.back_face`. Map it to
       `backFace` (split `subtypes_text` like the front).
-- [ ] **0.3 [P0] Read-your-own-write after saving an override** — replace
+- [x] (fixed 2026-09-25 — fix/frame-compare-correctness) **0.3 [P0] Read-your-own-write after saving an override** — replace
       `revalidateTag(TAG, "max")` with `updateTag()` in
       `lib/cards/frame-profile-override-actions.ts`:100,121 and
       `lib/creator/lab-actions.ts`:31 (Save re-reads the OLD map today).
-- [ ] **0.4 [P1] Conditional Reset** — `.delete().select()` and mark renders
+- [x] (fixed 2026-09-25 — fix/frame-compare-correctness) **0.4 [P1] Conditional Reset** — `.delete().select()` and mark renders
       stale only when a row existed; clear draft-only state client-side —
       `frame-profile-override-actions.ts`:114, `frame-profile-editor.tsx`:302.
-- [ ] **0.5 [P1] Slot outline above the scan** — render `SlotOverlay` after the
+- [x] (fixed 2026-09-25 — fix/frame-compare-correctness) **0.5 [P1] Slot outline above the scan** — render `SlotOverlay` after the
       `<img>` as a sibling (`frame-compare.tsx`:233,443).
-- [ ] **0.6 [P1] Key `FrameCompare` on template/colour only** and sync `draft`
+- [x] (fixed 2026-09-25 — fix/frame-compare-correctness) **0.6 [P1] Key `FrameCompare` on template/colour only** and sync `draft`
       from `savedOverride` in an effect so a save no longer resets
       mode/zoom/score — `app/(app)/admin/frame-compare/page.tsx`:148.
-- [ ] **0.7 [P1] Selecting `costRect`/`symbolRect` must not dirty the draft** or
+- [x] (fixed 2026-09-25 — fix/frame-compare-correctness) **0.7 [P1] Selecting `costRect`/`symbolRect` must not dirty the draft** or
       persist a detached box the admin never edited (`frame-compare.tsx`:145).
-- [ ] **0.8 [P1] Reference pinning validates colour and kind** — refuse when
+- [x] (fixed 2026-09-25 — fix/frame-compare-correctness) **0.8 [P1] Reference pinning validates colour and kind** — refuse when
       `pickFrameColorKey(parseColorIdentity(card)) !== colorKey` or the kind
       differs — `lib/cards/frame-review-actions.ts`:144.
 - [ ] **0.9 [P1] Registered, masked scoring (the "auto-score" foundation)** —
@@ -121,16 +121,16 @@ Open decisions are marked **[decide]**; none blocks its phase.
       the current colour is unverified (`card-setup-panel.tsx`:291); check the
       kind-change, import and AI-fill fallbacks
       (`card-creator-form.tsx`:776,1056,1319) and toast on every substitution.
-- [ ] **0.14 [P2] Verify click revalidates the ISR guest creator** —
+- [x] (fixed 2026-09-25 — fix/frame-compare-correctness) **0.14 [P2] Verify click revalidates the ISR guest creator** —
       `frame-review-actions.ts`:63, `app/(marketing)/create-guest/page.tsx`:28.
-- [ ] **0.15 [P2] Keyboard nudges** — ignore Cmd/Ctrl combos, fix Alt/Option on
+- [x] (fixed 2026-09-25 — fix/frame-compare-correctness) **0.15 [P2] Keyboard nudges** — ignore Cmd/Ctrl combos, fix Alt/Option on
       macOS, unify the "Alt for 0.5 %" copy (`frame-compare.tsx`:172,
       `frame-profile-editor.tsx`:334).
-- [ ] **0.16 [P2] Stale-marking covers legacy template values**
+- [x] (fixed 2026-09-25 — fix/frame-compare-correctness) **0.16 [P2] Stale-marking covers legacy template values**
       (`normalizeFrameTemplate` targets; `frame-profile-override-actions.ts`:55).
 - [ ] **0.17 [P2] Admin reference-picker lookups don't burn the admin's
       per-user Scryfall quota** (`app/api/scryfall/search/route.ts`:94).
-- [ ] **0.18 [P2] Tests** — `setFrameReviewAction` (reference-column
+- [ ] **0.18 [P2] Tests** (partly done 2026-09-25: reference validation, override save/reset stale marking, second-face preview, scan geometry, templateSupportsKind — still open: score route, verify toggle + pin e2e) — `setFrameReviewAction` (reference-column
       preservation), `setFrameReferenceAction`, override save/reset stale
       marking incl. NULL-template rows, the score route,
       `buildFrameComparePayload` with a second face, per-kind sample content;
