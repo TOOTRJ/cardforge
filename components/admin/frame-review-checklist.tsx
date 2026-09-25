@@ -23,6 +23,10 @@ type ChecklistCombo = {
   verified: boolean;
   /** True when the reference is admin-pinned rather than the registry default. */
   isCustomReference?: boolean;
+  /** Further registry printings the compare view can switch to. */
+  alternates?: number;
+  /** Scan-quality caveat of the default printing (null = ideal). */
+  tier?: string | null;
   reference: { name: string; set: string; thumbUrl: string } | null;
 };
 
@@ -31,6 +35,10 @@ type ChecklistTemplate = {
   label: string;
   /** True when a frame_profile_overrides row is active for this template. */
   hasOverride?: boolean;
+  /** Curator note from the registry (shown on hover) and whether the
+   *  family needs a human eye on the thumbnail before trusting it. */
+  note?: string | null;
+  confirm?: boolean;
   combos: ChecklistCombo[];
 };
 
@@ -110,6 +118,21 @@ export function FrameReviewChecklist({ eras }: { eras: ChecklistEra[] }) {
                         override active
                       </span>
                     ) : null}
+                    {tpl.confirm ? (
+                      <span
+                        className="mr-2 rounded-full border border-gold/50 bg-gold/10 px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-gold-strong"
+                        title={tpl.note ?? "Confirm the thumbnail before trusting these references."}
+                      >
+                        confirm refs
+                      </span>
+                    ) : tpl.note ? (
+                      <span
+                        className="mr-2 cursor-help text-[10px] text-subtle"
+                        title={tpl.note}
+                      >
+                        note
+                      </span>
+                    ) : null}
                     <span className="text-[10px] uppercase tracking-wider text-gold-strong">
                       publishes on verify
                     </span>
@@ -141,9 +164,14 @@ export function FrameReviewChecklist({ eras }: { eras: ChecklistEra[] }) {
                               <span className="truncate text-xs text-foreground">
                                 {combo.reference.name}
                               </span>
-                              <span className="text-[10px] uppercase tracking-wider text-subtle">
+                              <span
+                                className="text-[10px] uppercase tracking-wider text-subtle"
+                                title={combo.tier ?? undefined}
+                              >
                                 {combo.reference.set}
                                 {combo.isCustomReference ? " · custom" : ""}
+                                {combo.alternates ? ` · +${combo.alternates}` : ""}
+                                {combo.tier ? " · ⚠" : ""}
                               </span>
                             </span>
                           </>
