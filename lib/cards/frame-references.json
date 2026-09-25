@@ -3041,8 +3041,7 @@
         {
           "name": "Anafenza, Kin-Tree Spirit",
           "set": "mul",
-          "scryfallId": "278d7781-ddfe-4bcb-94bd-3c155030dfdc",
-          "tier": 1
+          "scryfallId": "278d7781-ddfe-4bcb-94bd-3c155030dfdc"
         }
       ],
       "u": null,
@@ -3054,8 +3053,7 @@
         {
           "name": "Taigam, Ojutai Master",
           "set": "mul",
-          "scryfallId": "eb90aae8-34c7-484c-80da-626393917720",
-          "tier": 1
+          "scryfallId": "eb90aae8-34c7-484c-80da-626393917720"
         }
       ]
     }

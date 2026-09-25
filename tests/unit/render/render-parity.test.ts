@@ -37,7 +37,8 @@ describe("Satori layout traps", () => {
     // down the card's left edge that way (owner review 2026-09-25). (Satori
     // also ignores `inset`: the foil sheen still uses it and has never baked
     // — TODO 6.5.)
-    expect(BAKE).not.toMatch(/\(\s*<>/);
+    const code = BAKE.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+    expect(code).not.toMatch(/<>|<\/>|<(React\.)?Fragment\b/);
   });
 });
 

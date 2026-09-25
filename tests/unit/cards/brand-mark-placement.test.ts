@@ -37,11 +37,25 @@ describe("brand-mark placement", () => {
     expect(brandMarkLayout(getFrameProfile("split")).scale).toBeCloseTo(5 / 7);
   });
 
-  it("both renderers place the mark through brandMarkLayout", () => {
-    for (const file of ["lib/render/card-image.tsx", "components/cards/card-preview.tsx"]) {
-      const src = readFileSync(file, "utf8");
-      expect(src).toContain("brandMarkLayout(layout)");
+  it("both renderers wire every field of brandMarkLayout to the same CSS property", () => {
+    const bake = readFileSync("lib/render/card-image.tsx", "utf8");
+    const preview = readFileSync("components/cards/card-preview.tsx", "utf8");
+    for (const src of [bake, preview]) {
+      expect(src).toContain("const markLayout = brandMarkLayout(layout);");
+      expect(src).toContain("right: `${markLayout.rightPct}%`,");
+      expect(src).toContain("bottom: `${markLayout.bottomPct}%`,");
       expect(src).not.toMatch(/bottom: "1\.8%"/);
     }
+    // Size: font, star and gap all scale off the short side in both.
+    expect(bake).toContain("fontSize: fpx(0.026 * markLayout.scale, width)");
+    expect(bake).toContain("width={Math.round(fpx(0.03 * markLayout.scale, width))}");
+    expect(bake).toContain("height={Math.round(fpx(0.03 * markLayout.scale, width))}");
+    expect(bake).toContain("marginRight: Math.round(fpx(0.008 * markLayout.scale, width))");
+    expect(preview).toContain("fontSize: cqw(0.026 * markLayout.scale)");
+    expect(preview).toContain("width: cqw(0.03 * markLayout.scale)");
+    expect(preview).toContain("height: cqw(0.03 * markLayout.scale)");
+    expect(preview).toContain("marginRight: cqw(0.008 * markLayout.scale)");
+    // The preview pins Satori's line box (Beleren hhea "normal").
+    expect(preview).toContain('lineHeight: "normal"');
   });
 });
