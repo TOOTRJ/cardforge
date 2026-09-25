@@ -27,6 +27,22 @@ describe("Card Conjurer frame profiles", () => {
     );
   });
 
+  it("drops the planeswalker's detached cost to 48 % of CC's taller title plate, right end unchanged", () => {
+    // Owner review, round 3: "pips look a little high". CC's pw title plate
+    // spans 77–192 px at HD (1500 × 2100); eight printed M15 planeswalkers
+    // centre their pips 47.3–48.8 % of the way down theirs. The box stays
+    // where the compare tool tuned it; costDy (a fraction of the WIDTH)
+    // moves the pips 6 px down, from 126 px to 132 px.
+    const pw = getFrameProfile("m15pw");
+    expect(pw.costRect).toEqual({ topPct: 3.8, leftPct: 51.2, widthPct: 40, heightPct: 4.4 });
+    expect(pw.costDy).toBe(0.004);
+    const centrePx = ((pw.costRect!.topPct + pw.costRect!.heightPct / 2) / 100) * 2100 + pw.costDy! * 1500;
+    expect(centrePx).toBeCloseTo(132, 6);
+    expect((centrePx - 77) / (192 - 77)).toBeCloseTo(0.48, 2);
+    // The name does not move with it.
+    expect(pw.title.rect.topPct).toBe(3.8);
+  });
+
   it("leaves the MSE-framed templates' cost where it was", () => {
     // The re-cut Alpha masters carry their own, smaller lift — measured on
     // printed LEA/LEB pips (~138 px), not the CC title bar's.

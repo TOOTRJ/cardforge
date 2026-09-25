@@ -178,7 +178,9 @@ import { normalizeFrameTemplate } from "@/lib/cards/card-display";
 //            lettering on non-white frames (agclassic, alphaland); two-colour
 //            Dragon Wing cards split their wings (tarkirdragon); Ghostfire
 //            rebuilt with MSE's translucent boxes + P/T ribbon, white ink
-//            (tarkirghostfire).
+//            (tarkirghostfire); round 4: planeswalker mana cost 6 px lower
+//            at HD, centred in Card Conjurer's taller title bar the way
+//            printed planeswalkers are (m15pw, every finish).
 //            List derived from HD render diffs on all 37 templates.
 //            Template-scoped, "sweep".
 //   28     — the foil finish: its bake overlay used `inset: 0` + blend modes,
@@ -212,8 +214,8 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
     "battle", "split", "tarkirdragon",
   ],
   // v27: owner decisions — Alpha re-cut + light ink, Dragon Wing split,
-  // Ghostfire rebuilt.
-  27: ["agclassic", "alphaland", "tarkirdragon", "tarkirghostfire"],
+  // Ghostfire rebuilt, planeswalker pips lowered.
+  27: ["agclassic", "alphaland", "tarkirdragon", "tarkirghostfire", "m15pw"],
 };
 
 /** The card fields a scoped bump can look at. Optional so partial rows
@@ -352,7 +354,7 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   24: "sweep", // Card Conjurer M15 swap — a platform correction, owner-approved
   25: "sweep", // frame-review follow-ups (Alpha P/T, brand mark, Dragon Wing)
   26: "sweep", // etched finish — the baked left-edge strip was a bug, not a look
-  27: "sweep", // owner decisions: Alpha re-cut + ink, Dragon Wing split, Ghostfire
+  27: "sweep", // owner decisions: Alpha re-cut + ink, Dragon Wing split, Ghostfire, pw pips
   28: "sweep", // foil finish — it never reached a saved image
 };
 

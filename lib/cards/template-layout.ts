@@ -590,6 +590,14 @@ const M15PW: FrameProfile = {
   // Title/type tops, the detached cost box and the set-symbol box were tuned
   // in the compare tool (production override 2026-07-09, folded 2026-09-25).
   costRect: { topPct: 3.8, leftPct: 51.2, widthPct: 40, heightPct: 4.4 },
+  // That box was tuned on the MSE frame. Card Conjurer's planeswalker title
+  // bar (frames swap 4.4) runs ~9 px lower at HD (plate 77–192 px vs
+  // 73–183 on eight printed M15 planeswalkers, 1500 × 2100), so the pips —
+  // centred at 126 px — sat high in it (owner review, round 3). Printed pips
+  // centre 48.0 % of the way down the plate (47.3–48.8 %); 6 px down puts
+  // ours there (132 px). The name stays: its caps centre is within 2 px of
+  // the print's.
+  costDy: 0.004,
   symbolRect: { topPct: 56.9, leftPct: 79, widthPct: 12, heightPct: 3.8 },
   title: {
     rect: { topPct: 3.8, leftPct: 8.5, widthPct: 80, heightPct: 4.4 },

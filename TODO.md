@@ -800,6 +800,15 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
         open: a translucent rules BACKDROP (`rules.backdropHex` — m15pw's
         non-planeswalker box, token / full-art scrims) hides the foil the
         same way.
+      - [x] **Planeswalker pips lowered** (owner note, round-3 review: "pips
+        look a little high"): CC's pw title plate runs ~9 px lower at HD than
+        the printed one (77–192 vs 73–183 on eight M15 walkers), and the
+        MSE-tuned cost box left the pips 43 % of the way down it; printed pips
+        sit at 47–49 %. `costDy: 0.004` (6 px) on M15PW, inside v27 (m15pw
+        added to its template list; 6 public production cards). Still open:
+        a long name runs under the detached cost (Miner the Miner — the name's
+        ellipsis ignores `costRect`), and the printed name's caps are ~15 %
+        taller than ours.
       - **Planeswalker row parity (pre-existing, preview only):** browser
         ability rows are content-sized (flex `min-height: auto`), Yoga's stay
         equal, so a walker with long or two-line abilities gets different
