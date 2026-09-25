@@ -139,6 +139,27 @@ Open decisions are marked **[decide]**; none blocks its phase.
       from the verified set (`app/(marketing)/page.tsx`:302), fix `README.md`:6
       "three decades", fix the Card Conjurer comparison row claiming split/
       adventure (`content/articles/card-conjurer-alternative.mdx`:65).
+- [ ] **0.20 [P1] Frame-geometry changes are platform corrections, never owner
+      badges** (owner-reported 2026-09-25: one layout-override save on the
+      compare page put "A newer look is available" on 176 of the dev
+      database's 189 baked cards, and the same would hit every M15 card in
+      production on the Card Conjurer swap). Saving/resetting an override
+      (`lib/cards/frame-profile-override-actions.ts`) and any frame-PNG
+      replacement (4.4) must queue an admin re-bake of the affected cards
+      instead of marking them opt-in stale: a sweep-pending marker that
+      `hasNewerLook` does NOT read as a badge (today it nulls
+      `layout_version`, which is the badge), a "Re-bake N cards" control on
+      the compare page driving `/api/admin/rebake` in batches, and the daily
+      `notify-render-updates` cron skipping sweep-pending cards. Correction
+      bumps keep `VERSION_ROLLOUT: "sweep"`; the badge is for taste changes
+      only. Land before 4.4.
+- [ ] **0.21 [P1] A card downloads the way it looks** (owner-reported
+      2026-09-25) — the watermarked PNG download and the PDF serve the stored
+      bake whenever one exists (`fetchStoredRender(card, { allowStale: true })`,
+      as the OG image already does), so an owner who has not accepted a newer
+      look does not get it in a download; a clean paid download has no stored
+      source and stays live (say so in the download modal + docs). Route test
+      for the stale-bake path. Land with 0.20.
 
 ### Phase 1 — Import uses the exact frame (2–3 weeks)
 
@@ -450,7 +471,8 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
       post template, a "why does my card look different" FAQ entry.
 
 Sequencing at a glance (re-ordered 2026-09-25, owner decision: de-risk the
-Card Conjurer frame swap early): Phase 0 → **4.1–4.4 (manifest, storage
+Card Conjurer frame swap early): Phase 0 (0.20 + 0.21 before the swap) →
+**4.1–4.4 (manifest, storage
 move, CC importer, M15 re-source) with one bundled layout bump/rebake** →
 1.1–1.6 + 3b.1–3b.5 alongside Phase 2 → Phase 3 + rest of 3b → 4.5–4.9 and
 4.11 in request-log order (4.10 when references exist) → Phase 5 → Phase 6
