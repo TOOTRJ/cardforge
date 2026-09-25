@@ -42,9 +42,9 @@ environment's own Supabase project, taken from `NEXT_PUBLIC_SUPABASE_URL`.
 
 ## Card Conjurer frames (4.3)
 
-`scripts/import-cc-frames.mjs` builds the nine M15-era templates from Card
+`scripts/import-cc-frames.mjs` builds eight M15-era templates from Card
 Conjurer's packs into `.frames-build/`: m15, m15artifact, m15land, m15snow,
-m15snowland, m15devoid, m15pw, m15token and m15tokenartifact.
+m15snowland, m15pw, m15token and m15tokenartifact.
 
 ```bash
 node scripts/import-cc-frames.mjs --only m15,m15land
@@ -53,9 +53,15 @@ node scripts/import-cc-frames.mjs --only m15,m15land
 - **Source.** The Investigamer/cardconjurer fork at a pinned commit, cached
   under `~/.cache/pipglyph-cc/<commit>`, or set `CC_CACHE`. It takes about
   4 minutes for all nine templates.
-- **Recipe.** It is in `scripts/lib/cc-frames.mjs`. Coloured artifacts are
-  blended through CC's pinline mask. Every colourless substitution is noted
-  in the recipe.
+- **Recipe.** It is in `scripts/lib/cc-frames.mjs`. Layers are composited
+  exactly as Card Conjurer draws them: only each mask's alpha counts, in
+  CC's draw order, at the pack's native size, then downscaled once. A
+  coloured artifact is the artifact frame and border with the colour's
+  pinline, title bar, type bar and text box. Tokens come from CC's textless
+  bordered pack. Every colourless substitution is noted in the recipe.
+- **Not imported yet.** CC's colourless M15 frame and every devoid frame
+  are see-through. They stay on the current masters until art can be drawn
+  under the frame (TODO 4.17).
 - **Output.** 1500×2100 PNGs with rounded transparent corners, WebP
   siblings, and P/T plates at native size.
 - **Provenance.** Which pack files made each frame is written to

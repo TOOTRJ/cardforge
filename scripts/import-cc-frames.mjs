@@ -12,9 +12,10 @@
 //   --out <dir>     (default .frames-build — gitignored)
 //
 // For each template × colour it downloads the pack files from the PINNED
-// commit (cached outside the repo), composites layers through their masks
-// where a real frame is a blend, resizes 2010×2814 → 1500×2100 with Lanczos,
-// rounds the corners, and writes <out>/<template>/<colour>.png + .webp, plus
+// commit (cached outside the repo), composites the layers through their
+// masks at the pack's NATIVE size in CC's draw order (2010×2814 for the
+// accurate M15 pack), downscales once with Lanczos to 1500×2100, rounds the
+// corners, and writes <out>/<template>/<colour>.png + .webp, plus
 // P/T plates at native size under pt/. Provenance (which source files made
 // which frame, and every substitution) goes to lib/cards/frame-sources.json.
 //
@@ -37,8 +38,9 @@ import {
   OUT_H,
   OUT_W,
   WEBP,
+  builtColors,
   compositeLayers,
-  roundCorners,
+  roundCornersRgba8,
   sourceFilesFor,
   toRgba8,
 } from "./lib/cc-frames.mjs";
@@ -72,10 +74,10 @@ async function fetchCached(rel) {
   return file;
 }
 
-/** Raw RGBA of an image resized to the output grid (SVG masks rasterise). */
-async function rgba(file) {
+/** Raw RGBA of an image at the working size (SVG masks rasterise sharp). */
+async function rgba(file, width, height) {
   const { data } = await sharp(file, { density: 300 })
-    .resize(OUT_W, OUT_H, { fit: "fill", kernel: "lanczos3" })
+    .resize(width, height, { fit: "fill", kernel: "lanczos3" })
     .ensureAlpha()
     .raw()
     .toBuffer({ resolveWithObject: true });
@@ -98,27 +100,40 @@ async function writePlate(src, pngFile) {
 }
 
 const provenance = fs.existsSync(PROVENANCE) ? JSON.parse(fs.readFileSync(PROVENANCE, "utf8")) : {};
+// Drop templates the recipe no longer builds (e.g. deferred ones).
+for (const template of Object.keys(provenance)) if (!CC_TEMPLATES[template]) delete provenance[template];
 for (const [template, def] of Object.entries(CC_TEMPLATES)) {
   if (only && !only.includes(template)) continue;
   const recipe = {};
-  for (const key of COLORS) {
+  for (const key of builtColors(def)) {
     recipe[key] = def.colors[key].map((l) => (l.mask ? `${l.src} through ${l.mask}` : l.src));
     const out = path.join(outDir, template, `${key}.png`);
     if (dryRun) {
       console.log(`${path.relative(process.cwd(), out)} ← ${recipe[key].join(" + ")}`);
       continue;
     }
+    // Work at the base layer's native size; downscale once at the end.
+    const baseFile = await fetchCached(def.colors[key][0].src);
+    const { width: W, height: H } = await sharp(baseFile).metadata();
     const images = [];
     for (const l of def.colors[key]) {
       images.push({
-        data: await rgba(await fetchCached(l.src)),
-        mask: l.mask ? await rgba(await fetchCached(l.mask)) : undefined,
+        data: await rgba(await fetchCached(l.src), W, H),
+        mask: l.mask ? await rgba(await fetchCached(l.mask), W, H) : undefined,
       });
     }
-    const acc = compositeLayers(images, OUT_W, OUT_H);
-    roundCorners(acc, OUT_W, OUT_H, CORNER_RADIUS);
-    await writeMaster(toRgba8(acc), out);
-    console.log(`wrote ${path.relative(process.cwd(), out)} (+ .webp)`);
+    const native = toRgba8(compositeLayers(images, W, H));
+    const master = await sharp(native, { raw: { width: W, height: H, channels: 4 } })
+      .resize(OUT_W, OUT_H, { fit: "fill", kernel: "lanczos3" })
+      .raw()
+      .toBuffer();
+    roundCornersRgba8(master, OUT_W, OUT_H, CORNER_RADIUS);
+    await writeMaster(master, out);
+    console.log(`wrote ${path.relative(process.cwd(), out)} (+ .webp) from ${W}×${H}`);
+  }
+  for (const [key, why] of Object.entries(def.excluded ?? {})) {
+    recipe[key] = [`NOT IMPORTED — ${why}`];
+    if (dryRun) console.log(`${template}/${key}: skipped — ${why}`);
   }
   const plates = def.plates ? { ...def.plates } : undefined;
   if (plates && !dryRun) {
@@ -132,6 +147,7 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     converter: "scripts/import-cc-frames.mjs",
     output: `${OUT_W}x${OUT_H}, corners rounded to ${CORNER_RADIUS}px, webp q${WEBP.quality}`,
     colors: recipe,
+    ...(def.excluded ? { excluded: def.excluded } : {}),
     ...(plates ? { plates } : {}),
     sourceFiles: sourceFilesFor(def),
     notes: def.notes,
