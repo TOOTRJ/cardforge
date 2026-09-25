@@ -9,7 +9,7 @@ import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { frameProfileOverrideSchema } from "@/lib/cards/profile-override";
 import { overrideHash } from "@/lib/cards/frame-verification-state";
 import { recordFrameReviewEvent } from "@/lib/cards/frame-review-events";
-import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
+import { CARD_LAYOUT_VERSION, hasNewerLook } from "@/lib/cards/layout-version";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -17,9 +17,15 @@ import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 // Reset). Saving marks that template's baked public/unlisted renders with
 // `layout_version = null` — "a platform re-bake is owed". That is NOT an
 // owner badge (hasNewerLook ignores null stamps, TODO 0.20): the editor
-// starts the "marked" re-bake right away (lib/cards/rebake-actions.ts) and
+// starts the "marked" re-bake right away (/api/admin/rebake-marked) and
 // the compare page shows what is left. The affected count is returned so
 // the admin sees the blast radius.
+//
+// A card whose owner has NOT accepted a pending opt-in look (hasNewerLook)
+// is left alone: re-baking it would force that look on them and silently
+// drop their badge (review of TODO 0.20). It keeps its stamp and badge;
+// accepting the update brings the geometry fix along. The count of those
+// cards is returned too, so the save toast can say so.
 //
 // Cache: the read side (lib/cards/frame-profile-overrides.ts) is an
 // unstable_cache entry tagged FRAME_PROFILE_OVERRIDES_TAG. A write must use
@@ -45,8 +51,11 @@ const resetSchema = z.object({
 export type FrameProfileOverrideResult =
   | {
       ok: true;
-      /** Baked renders marked stale (0 when nothing changed). */
+      /** Baked renders now owed a re-bake (0 when nothing changed). */
       staleCount: number;
+      /** Baked renders left alone because their owner hasn't accepted a
+       *  pending opt-in look — they get the fix when the owner updates. */
+      keptForOwner: number;
       /** False when the request was a no-op (reset with no saved row). */
       changed: boolean;
     }
@@ -63,25 +72,51 @@ async function requireAdmin(): Promise<
   return { ok: true, adminId: profile.id };
 }
 
+/** Rows scanned per page / ids updated per request. */
+const MARK_PAGE = 1000;
+const MARK_CHUNK = 200;
+
 /** Mark baked renders of a template as owed a re-bake (null stamp) so the
  *  compare page's re-bake — or the sweep — refreshes them with the new
- *  geometry. Best-effort; returns the affected count. */
+ *  geometry, except cards whose owner has a pending opt-in look (see the
+ *  header). Best-effort; returns the counts. */
 async function markTemplateRendersStale(
   admin: ReturnType<typeof createAdminClient>,
   template: string,
-): Promise<number> {
+): Promise<{ marked: number; keptForOwner: number }> {
   const filter = staleTemplateFilter(template);
-  let query = admin
-    .from("cards")
-    .update({ layout_version: null })
-    .in("visibility", ["public", "unlisted"])
-    .not("rendered_image_url", "is", null);
-  query =
-    filter.kind === "or"
-      ? query.or(filter.expression)
-      : query.filter("frame_style->>template", "eq", filter.template);
-  const { data } = await query.select("id");
-  return data?.length ?? 0;
+  const toMark: string[] = [];
+  let alreadyMarked = 0;
+  let keptForOwner = 0;
+  for (let from = 0; from < 50 * MARK_PAGE; from += MARK_PAGE) {
+    let query = admin
+      .from("cards")
+      .select("id, visibility, layout_version, rendered_image_url, frame_style, rarity, set_icon_url, set_icon_code")
+      .in("visibility", ["public", "unlisted"])
+      .not("rendered_image_url", "is", null);
+    query =
+      filter.kind === "or"
+        ? query.or(filter.expression)
+        : query.filter("frame_style->>template", "eq", filter.template);
+    const { data, error } = await query.order("id", { ascending: true }).range(from, from + MARK_PAGE - 1);
+    if (error || !data) break;
+    for (const card of data) {
+      if (card.layout_version == null) alreadyMarked += 1;
+      else if (hasNewerLook(card)) keptForOwner += 1;
+      else toMark.push(card.id);
+    }
+    if (data.length < MARK_PAGE) break;
+  }
+  let marked = alreadyMarked;
+  for (let i = 0; i < toMark.length; i += MARK_CHUNK) {
+    const { data } = await admin
+      .from("cards")
+      .update({ layout_version: null })
+      .in("id", toMark.slice(i, i + MARK_CHUNK))
+      .select("id");
+    marked += data?.length ?? 0;
+  }
+  return { marked, keptForOwner };
 }
 
 /** Delete a template's override row; true when a row existed. */
@@ -122,7 +157,7 @@ export async function saveFrameProfileOverrideAction(
     if (!deleted.ok) return deleted;
     if (!deleted.existed) {
       revalidatePath("/admin/frame-compare");
-      return { ok: true, staleCount: 0, changed: false };
+      return { ok: true, staleCount: 0, keptForOwner: 0, changed: false };
     }
   } else {
     const { error } = await admin.from("frame_profile_overrides").upsert(
@@ -137,7 +172,7 @@ export async function saveFrameProfileOverrideAction(
     if (error) return { ok: false, error: error.message };
   }
 
-  const staleCount = await markTemplateRendersStale(admin, template);
+  const { marked: staleCount, keptForOwner } = await markTemplateRendersStale(admin, template);
   // Template-wide history row ("*"): every colour's verification now
   // measures against a different layout — the checklist flags them.
   await recordFrameReviewEvent(admin, {
@@ -149,7 +184,7 @@ export async function saveFrameProfileOverrideAction(
     overrideHash: overrideHash(Object.keys(overrides).length === 0 ? null : overrides),
   });
   publish();
-  return { ok: true, staleCount, changed: true };
+  return { ok: true, staleCount, keptForOwner, changed: true };
 }
 
 export async function resetFrameProfileOverrideAction(
@@ -167,10 +202,10 @@ export async function resetFrameProfileOverrideAction(
     // Nothing was saved for this template — the on-screen draft is the only
     // thing to discard, and that's the caller's job. No renders changed.
     revalidatePath("/admin/frame-compare");
-    return { ok: true, staleCount: 0, changed: false };
+    return { ok: true, staleCount: 0, keptForOwner: 0, changed: false };
   }
 
-  const staleCount = await markTemplateRendersStale(admin, parsed.data.template);
+  const { marked: staleCount, keptForOwner } = await markTemplateRendersStale(admin, parsed.data.template);
   await recordFrameReviewEvent(admin, {
     template: parsed.data.template,
     colorKey: "*",
@@ -180,5 +215,5 @@ export async function resetFrameProfileOverrideAction(
     overrideHash: "none",
   });
   publish();
-  return { ok: true, staleCount, changed: true };
+  return { ok: true, staleCount, keptForOwner, changed: true };
 }

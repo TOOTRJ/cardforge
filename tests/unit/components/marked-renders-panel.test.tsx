@@ -10,8 +10,16 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 // progress, and refreshes the page once a run settles.
 // ---------------------------------------------------------------------------
 
+// The loop POSTs /api/admin/rebake-marked; `action` answers each call with
+// the route's JSON body and records the skipIds it was sent.
 const action = vi.hoisted(() => vi.fn());
-vi.mock("@/lib/cards/rebake-actions", () => ({ rebakeMarkedRendersAction: action }));
+vi.stubGlobal(
+  "fetch",
+  vi.fn(async (_url: string, init: { body: string }) => {
+    const body = await action(JSON.parse(init.body));
+    return new Response(JSON.stringify(body), { status: body.ok ? 200 : 412 });
+  }),
+);
 const refresh = vi.hoisted(() => vi.fn());
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 
@@ -33,8 +41,8 @@ afterEach(cleanup);
 describe("startMarkedRebake", () => {
   it("loops until nothing remains, forwarding failed ids as skipIds", async () => {
     action
-      .mockResolvedValueOnce({ ok: true, rebaked: 3, failed: [{ id: A, error: "art" }], remaining: 4 })
-      .mockResolvedValueOnce({ ok: true, rebaked: 4, failed: [], remaining: 0 });
+      .mockResolvedValueOnce({ ok: true, rebaked: 3, failed: [{ id: A, error: "art" }], superseded: 0, remaining: 4 })
+      .mockResolvedValueOnce({ ok: true, rebaked: 4, failed: [], superseded: 0, remaining: 0 });
     const final = await startMarkedRebake();
     expect(action).toHaveBeenNthCalledWith(1, { skipIds: [] });
     expect(action).toHaveBeenNthCalledWith(2, { skipIds: [A] });
@@ -48,10 +56,26 @@ describe("startMarkedRebake", () => {
 
     __resetMarkedRebakeForTests();
     action.mockReset();
-    action.mockResolvedValue({ ok: true, rebaked: 0, failed: [], remaining: 9 });
+    action.mockResolvedValue({ ok: true, rebaked: 0, failed: [], superseded: 0, remaining: 9 });
     const final = await startMarkedRebake();
     expect(action).toHaveBeenCalledTimes(1);
     expect(final.status).toBe("done");
+  });
+
+  it("keeps going while a mid-batch save supersedes rows, and stops on repeated all-failed rounds", async () => {
+    action
+      .mockResolvedValueOnce({ ok: true, rebaked: 0, failed: [], superseded: 2, remaining: 2 })
+      .mockResolvedValueOnce({ ok: true, rebaked: 2, failed: [], superseded: 0, remaining: 0 });
+    expect(await startMarkedRebake()).toMatchObject({ status: "done", rebaked: 2 });
+    expect(action).toHaveBeenCalledTimes(2);
+
+    __resetMarkedRebakeForTests();
+    action.mockReset();
+    action.mockResolvedValue({ ok: true, rebaked: 0, failed: [{ id: A, error: "storage quota exceeded" }], superseded: 0, remaining: 50 });
+    const final = await startMarkedRebake();
+    expect(action).toHaveBeenCalledTimes(2);
+    expect(final).toMatchObject({ status: "error" });
+    expect(final.error).toContain("storage quota exceeded");
   });
 
   it("does not start a second loop while one runs", async () => {
@@ -60,7 +84,7 @@ describe("startMarkedRebake", () => {
     const first = startMarkedRebake();
     const second = await startMarkedRebake();
     expect(second.status).toBe("running");
-    release({ ok: true, rebaked: 1, failed: [], remaining: 0 });
+    release({ ok: true, rebaked: 1, failed: [], superseded: 0, remaining: 0 });
     await first;
     expect(action).toHaveBeenCalledTimes(1);
   });
@@ -73,7 +97,7 @@ describe("MarkedRendersPanel", () => {
   });
 
   it("offers Re-bake now, shows the result and refreshes once", async () => {
-    action.mockResolvedValueOnce({ ok: true, rebaked: 12, failed: [], remaining: 0 });
+    action.mockResolvedValueOnce({ ok: true, rebaked: 12, failed: [], superseded: 0, remaining: 0 });
     render(<MarkedRendersPanel initialCount={12} />);
     expect(screen.getByTestId("marked-renders-panel").textContent).toContain("12 published cards are owed a re-bake");
     await act(async () => {
@@ -82,6 +106,16 @@ describe("MarkedRendersPanel", () => {
     expect(screen.getByTestId("marked-renders-panel").textContent).toContain("Re-baked 12 cards.");
     expect(refresh).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("keeps Try again after a run that left failed cards", async () => {
+    action.mockResolvedValueOnce({ ok: true, rebaked: 1, failed: [{ id: A, error: "Art unavailable" }], superseded: 0, remaining: 0 });
+    render(<MarkedRendersPanel initialCount={2} />);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /re-bake now/i }));
+    });
+    expect(screen.getByTestId("marked-renders-panel").textContent).toContain("1 could not be re-baked");
+    expect(screen.getByRole("button", { name: /try again/i })).toBeTruthy();
   });
 
   it("explains a stop and offers Try again", async () => {

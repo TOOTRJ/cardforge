@@ -14,8 +14,8 @@ import {
 // Driven by scripts/rebake-renders.mjs; secured like the cron routes
 // (`Authorization: Bearer ${CRON_SECRET}`, or ALLOW_UNAUTHENTICATED_REBAKE
 // on a non-production dev server that talks to the same Supabase project).
-// The admin compare page drives the same batch through a server action
-// (lib/cards/rebake-actions.ts) with the admin's session instead.
+// The admin compare page drives the same batch through
+// /api/admin/rebake-marked with the admin's session instead.
 //
 // ?scope=version&version=N | sweep | marked | legacy-art&before=<iso> — see
 // lib/cards/rebake-batch.ts. ?dry=1 plans without writing: bucket counts

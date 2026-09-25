@@ -64,7 +64,7 @@ describe("art guard", () => {
     // "Re-bake now", TODO 0.20) — the guard must stay in it.
     expect(read("lib/cards/rebake-batch.ts")).toContain("await resolveBakeArt(row.art_url)");
     expect(read("app/api/admin/rebake/route.ts")).toContain("runRebakeBatch(");
-    expect(read("lib/cards/rebake-actions.ts")).toContain("runRebakeBatch(");
+    expect(read("app/api/admin/rebake-marked/route.ts")).toContain("runRebakeBatch(");
   });
 
   it("refuses a missing, refused or unfetchable art and passes a resolved data URL through", async () => {

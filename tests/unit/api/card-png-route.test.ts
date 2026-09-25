@@ -103,6 +103,8 @@ describe("card PNG download", () => {
     const res = await download();
     expect(res.status).toBe(200);
     expect(state.render).toHaveBeenCalledTimes(1);
+    // Watermark policy: a free viewer's live render carries the mark.
+    expect(state.render).toHaveBeenCalledWith(expect.anything(), "default", { brandMark: true, watermarkText: null });
     expect(await topLeftRed(res)).toBe(0xff);
   });
 
@@ -121,6 +123,10 @@ describe("card PNG download", () => {
     const after = (await download()).headers.get("etag");
     expect(before).toBeTruthy();
     expect(after).not.toBe(before);
+    // A same-version re-bake (legacy-art) only moves rendered_at.
+    state.card = card({ layout_version: 23, rendered_at: "2026-09-26T00:00:00Z" });
+    expect((await download()).headers.get("etag")).not.toBe(after);
+    state.card = card({ layout_version: 23, rendered_at: "2026-09-25T00:00:00Z" });
     // …and the unchanged card still short-circuits to 304.
     expect((await download("default", { "if-none-match": after! })).status).toBe(304);
   });

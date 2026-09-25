@@ -31,7 +31,10 @@ export function MarkedRendersPanel({ initialCount }: { initialCount: number }) {
 
   if (run.status === "idle" && initialCount === 0) return null;
 
-  const left = run.remaining ?? initialCount;
+  // Before a run the server count leads; after one, the run's exact count
+  // does (the refresh can lag). Cards that failed stay owed and keep the
+  // retry button (they are excluded from `remaining`).
+  const left = run.status === "idle" ? initialCount : (run.remaining ?? initialCount);
   const warn = run.status === "error" || (run.status === "done" && run.failed.length > 0);
 
   return (
@@ -59,8 +62,8 @@ export function MarkedRendersPanel({ initialCount }: { initialCount: number }) {
                   .slice(0, 3)
                   .map((f) => f.error)
                   .join("; ")}) — they keep their old image and are retried next time.`
-              : left > 0
-                ? `${left} still owed a re-bake.`
+              : run.remaining && run.remaining > 0
+                ? `${run.remaining} still owed a re-bake.`
                 : "Every published card matches the current layout."}
           </>
         ) : run.status === "error" ? (
@@ -81,7 +84,7 @@ export function MarkedRendersPanel({ initialCount }: { initialCount: number }) {
       </p>
       {run.status === "running" ? (
         <Loader2 className="h-4 w-4 animate-spin text-muted" aria-hidden />
-      ) : left > 0 || run.status === "error" ? (
+      ) : left > 0 || run.failed.length > 0 || run.status === "error" ? (
         <Button size="sm" variant="outline" onClick={() => void startMarkedRebake()}>
           <RefreshCw className="h-3.5 w-3.5" aria-hidden />
           {run.status === "idle" ? "Re-bake now" : "Try again"}

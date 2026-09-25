@@ -136,11 +136,6 @@ function ReferenceSwitcher({
   );
 }
 
-// The "Re-bake now" server action (lib/cards/rebake-actions.ts) runs under
-// this page's segment config: a batch of 4 renders needs more than the
-// default budget on a cold instance.
-export const maxDuration = 300;
-
 /** Cards a frame-geometry change marked (null stamp) — never fatal. */
 async function markedRenderCount(): Promise<number> {
   if (!isAdminConfigured()) return 0;

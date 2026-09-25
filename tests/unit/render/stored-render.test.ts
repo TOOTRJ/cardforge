@@ -28,6 +28,9 @@ describe("stored-render — when the baked PNG can stand in for a live render", 
     expect(
       hasServableStoredRender({ ...m15, rarity: "common", rendered_image_url: STORAGE_URL, layout_version: 22 }),
     ).toBe(false);
+    // v20 bakes may be CLEAN (the 2026-09-16 sweep ran with billing off; v21
+    // re-swept them): the pending v21 sweep keeps them from free downloads.
+    expect(hasServableStoredRender({ ...m15, rendered_image_url: STORAGE_URL, layout_version: 20 })).toBe(false);
     // A frame-geometry change (null stamp) renders live until the re-bake.
     expect(hasServableStoredRender({ ...m15, rendered_image_url: STORAGE_URL, layout_version: null })).toBe(false);
     expect(hasServableStoredRender({ ...m15, rendered_image_url: null, layout_version: CARD_LAYOUT_VERSION })).toBe(false);

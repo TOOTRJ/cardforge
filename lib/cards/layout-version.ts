@@ -22,12 +22,14 @@
 //     confirmation (lib/cards/render-actions.ts,
 //     components/cards/render-update.tsx).
 //   * The daily cron /api/cron/notify-render-updates tells each affected
-//     owner ONCE per version (a `render_update` notification whose link
-//     opens the walkthrough). Trigger it by hand right after the deploy:
+//     owner ONCE per opt-in version (a `render_update` notification whose
+//     link opens the walkthrough; keyed on latestOptInVersion). Trigger it
+//     by hand right after a deploy that adds an opt-in bump:
 //     curl -H "Authorization: Bearer $CRON_SECRET" .../api/cron/notify-render-updates
-//   * Stale cards render live for OG images and downloads anyway
-//     (lib/render/stored-render.ts), so nothing is wrong meanwhile — only
-//     the gallery tile shows the older image.
+//   * Meanwhile the owner's older look is the card's look everywhere: the
+//     gallery tile, the share image and a free (watermarked) download all
+//     serve the stored bake (lib/render/stored-render.ts, TODO 0.21). Only a
+//     paid clean download renders live, and the download modal says so.
 //   * `node scripts/rebake-renders.mjs` (admin sweep) still exists for
 //     corrections every card should get without asking (text clipping, the
 //     2026-09 land fix) — reserve owner-driven updates for changes a user

@@ -7,23 +7,26 @@ import { renderCardImage } from "@/lib/render/card-image";
 import { cardRenderPath } from "@/lib/cards/storage-paths";
 import {
   BAKE_SELECT_COLUMNS,
+  removeRenderObject,
   rowToPreviewData,
   type CardRowForBake,
   uploadRenderObjects,
 } from "@/lib/cards/bake-core";
+import { normalizeFrameTemplate } from "@/lib/cards/card-display";
 import { getPipOverrides } from "@/lib/pips/queries";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import {
   CARD_LAYOUT_VERSION,
   classifyForSweep,
   rolloutPolicy,
+  templateOfFrameStyle,
   type SweepVerdict,
 } from "@/lib/cards/layout-version";
 
 // ---------------------------------------------------------------------------
 // One batch of a stored-render re-bake — the work behind POST
 // /api/admin/rebake (cron secret / scripts/rebake-renders.mjs) and the
-// compare page's "Re-bake now" (admin session, lib/cards/rebake-actions.ts).
+// compare page's "Re-bake now" (admin session, /api/admin/rebake-marked).
 //
 // SCOPES (required — there is no "everything below current" default; that
 // is how the opt-in v22 typography update got swept along with v23 on
@@ -43,6 +46,15 @@ import {
 // Every scope: cards with nothing pending are STAMPED current (no render);
 // cards whose only pending bumps are opt-in are LEFT ALONE, badge intact.
 // A dry run plans without writing: bucket counts {rebake, stamp, optIn}.
+//
+// Overlap guards (mirroring lib/cards/bake-render.ts): rendering takes
+// seconds, so right before uploading the batch re-reads the card and the
+// card's frame override. If the owner saved or unpublished the card, or an
+// admin saved that template's layout again, the render is SUPERSEDED: it is
+// not uploaded and the row keeps its state (a marked card stays marked, so
+// a running loop picks it up again). The row write is a compare-and-set on
+// updated_at + visibility; a lost race on a card that just went private
+// removes the objects it uploaded.
 //
 // Environment gate (callers enforce it before calling): a bake carries the
 // pipglyph.com mark only when isBillingEnabled() — a server without
@@ -65,6 +77,7 @@ export type RebakeScope =
 
 export type RebakeRow = CardRowForBake & {
   visibility: string;
+  updated_at: string;
   layout_version: number | null;
   rendered_image_url: string | null;
   rendered_at: string | null;
@@ -111,7 +124,11 @@ export type RebakeBatchResult = {
   plan: { rebake: number; stamp: number; optIn: number };
   processed: Array<{ id: string; verdict: SweepVerdict; renderedImageUrl?: string }>;
   failed: Array<{ id: string; error: string }>;
-  /** Work left in scope after this call (excluding `skipIds`). */
+  /** Rendered but not written: the card or its template's layout changed
+   *  while it rendered (still in scope; the next call retries it). */
+  superseded: string[];
+  /** Work left in scope after this call (excluding `skipIds`). Exact for the
+   *  marked scope (a count query); a lower bound for the others. */
   remaining: number;
 };
 
@@ -137,6 +154,10 @@ export async function runRebakeBatch(
   // Scan candidates in pages, classify, and stop once we have a batch (or,
   // for a dry run, once every candidate is counted).
   const select = `${BAKE_SELECT_COLUMNS}, layout_version, rendered_image_url, rendered_at`;
+  // Every marked row is a candidate, so a marked call reads only what it
+  // can use (plus the rows it must skip) instead of a full page.
+  const pageSize =
+    scope.kind === "marked" && !dry ? Math.min(SCAN_PAGE, limit + skip.size) : SCAN_PAGE;
   const candidates = (from: number) => {
     let q = supabase.from("cards").select(select).in("visibility", ["public", "unlisted"]);
     if (scope.kind === "legacy-art") {
@@ -156,12 +177,12 @@ export async function runRebakeBatch(
         .order("updated_at", { ascending: true });
     }
     // Stable tiebreak so paging never skips or repeats a row.
-    return q.order("id", { ascending: true }).range(from, from + SCAN_PAGE - 1);
+    return q.order("id", { ascending: true }).range(from, from + pageSize - 1);
   };
 
   const plan = { rebake: 0, stamp: 0, optIn: 0 };
   const batch: Array<{ row: RebakeRow; verdict: SweepVerdict }> = [];
-  for (let from = 0; from < SCAN_MAX; from += SCAN_PAGE) {
+  for (let from = 0; from < SCAN_MAX; from += pageSize) {
     const { data, error } = await candidates(from);
     if (error) return { ok: false, error: error.message };
     const rows = (data ?? []) as unknown as RebakeRow[];
@@ -175,16 +196,22 @@ export async function runRebakeBatch(
         batch.push({ row, verdict });
       }
     }
-    if (rows.length < SCAN_PAGE) break;
+    if (rows.length < pageSize) break;
     if (!dry && batch.length >= limit) break;
   }
 
   const base = { ok: true as const, scope, layoutVersion: CARD_LAYOUT_VERSION, billingEnabled, plan };
-  if (dry) return { ...base, dry: true, processed: [], failed: [], remaining: plan.rebake + plan.stamp };
+  if (dry) {
+    return { ...base, dry: true, processed: [], failed: [], superseded: [], remaining: plan.rebake + plan.stamp };
+  }
 
   const processed: RebakeBatchResult["processed"] = [];
   const failed: RebakeBatchResult["failed"] = [];
+  const superseded: string[] = [];
   let profileOverrides: Awaited<ReturnType<typeof getFrameProfileOverrides>> | null = null;
+  // The layout each render used, per template (uncached): a save during the
+  // batch changes it, and the render must not be stamped current.
+  const overrideStamps = await readOverrideStamps(supabase);
 
   for (const { row, verdict } of batch) {
     const path = cardRenderPath(row.owner_id, row.id);
@@ -215,10 +242,28 @@ export async function runRebakeBatch(
       });
       const pngBytes = await response.arrayBuffer();
 
+      // Overlap guard, part 1: is the card (and its layout) still what we
+      // rendered? A residual race remains until the write; part 2 catches it.
+      const template = normalizeFrameTemplate(templateOfFrameStyle(row.frame_style));
+      const [{ data: fresh }, layoutNow] = await Promise.all([
+        supabase.from("cards").select("updated_at, visibility").eq("id", row.id).maybeSingle(),
+        readOverrideStamp(supabase, template),
+      ]);
+      if (
+        !fresh ||
+        fresh.updated_at !== row.updated_at ||
+        !["public", "unlisted"].includes(fresh.visibility as string) ||
+        layoutNow !== (overrideStamps.get(template) ?? null)
+      ) {
+        superseded.push(row.id);
+        continue;
+      }
+
       const uploaded = await uploadRenderObjects(supabase, path, pngBytes, row.id);
       if (!uploaded.ok) throw new Error(uploaded.error);
       const { renderedImageUrl } = uploaded;
-      const { error: updateErr } = await supabase
+      // Part 2 (compare-and-set): only the row as rendered may take the URL.
+      const { data: written, error: updateErr } = await supabase
         .from("cards")
         .update({
           rendered_image_url: renderedImageUrl,
@@ -226,19 +271,48 @@ export async function runRebakeBatch(
           rendered_at: new Date().toISOString(),
           layout_version: CARD_LAYOUT_VERSION,
         })
-        .eq("id", row.id);
+        .eq("id", row.id)
+        .eq("updated_at", row.updated_at)
+        .in("visibility", ["public", "unlisted"])
+        .select("id");
       if (updateErr) throw new Error(`Row update failed: ${updateErr.message}`);
+      if (!written || written.length === 0) {
+        // Lost the race. If the card went private meanwhile, the objects we
+        // just uploaded must not stay public (the unpublish deleted its own).
+        const { data: now } = await supabase.from("cards").select("visibility").eq("id", row.id).maybeSingle();
+        if (!now || now.visibility === "private") await removeRenderObject(supabase, path);
+        superseded.push(row.id);
+        continue;
+      }
       processed.push({ id: row.id, verdict, renderedImageUrl });
     } catch (err) {
       failed.push({ id: row.id, error: err instanceof Error ? err.message : "Unknown error" });
     }
   }
 
-  // Work left for the driver: what this call's plan counted minus what it
-  // did, not counting the rows that just failed (a caller that skips them
-  // next time won't see them again).
-  const remaining = Math.max(0, plan.rebake + plan.stamp - processed.length - failed.length);
-  return { ...base, dry: false, processed, failed, remaining };
+  // Work left for the driver, not counting the rows that just failed (a
+  // caller that skips them next time won't see them again). The marked
+  // scope counts exactly; the others only know the pages they scanned.
+  const remaining =
+    scope.kind === "marked"
+      ? Math.max(0, (await countMarkedRenders(supabase)) - skip.size - failed.length)
+      : Math.max(0, plan.rebake + plan.stamp - processed.length - failed.length);
+  return { ...base, dry: false, processed, failed, superseded, remaining };
+}
+
+/** template → the override row's updated_at (uncached), for the overlap guard. */
+async function readOverrideStamps(supabase: Admin): Promise<Map<string, string>> {
+  const { data } = await supabase.from("frame_profile_overrides").select("template, updated_at");
+  return new Map((data ?? []).map((r) => [r.template as string, r.updated_at as string]));
+}
+
+async function readOverrideStamp(supabase: Admin, template: string): Promise<string | null> {
+  const { data } = await supabase
+    .from("frame_profile_overrides")
+    .select("updated_at")
+    .eq("template", template)
+    .maybeSingle();
+  return (data?.updated_at as string | undefined) ?? null;
 }
 
 /** Published, baked cards a platform re-bake is owed to (null stamp) — the

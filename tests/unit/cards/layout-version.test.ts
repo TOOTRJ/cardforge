@@ -113,6 +113,8 @@ describe("hasPendingCorrection — when the platform still owes a card a re-bake
     expect(hasPendingCorrection({ ...card, layout_version: CARD_LAYOUT_VERSION })).toBe(false);
     // Very old bakes owe the v20/v21 watermark sweeps.
     expect(hasPendingCorrection({ ...card, layout_version: 19 })).toBe(true);
+    // v20 bakes may be clean — v21's sweep is still owed.
+    expect(hasPendingCorrection({ ...card, layout_version: 20 })).toBe(true);
   });
 });
 
@@ -124,6 +126,10 @@ describe("storedLookIsOlder — the download modal's clean-download note", () =>
     expect(storedLookIsOlder({ ...card, layout_version: null })).toBe(true);
     expect(storedLookIsOlder({ ...card, layout_version: CARD_LAYOUT_VERSION })).toBe(false);
     expect(storedLookIsOlder({ ...card, layout_version: 21, rendered_image_url: null })).toBe(false);
+    // v23 is card-scoped: an uncommon's v22 bake is what the renderer draws;
+    // a common's is not.
+    expect(storedLookIsOlder({ ...card, layout_version: 22 })).toBe(false);
+    expect(storedLookIsOlder({ ...card, rarity: "common", layout_version: 22 })).toBe(true);
   });
 });
 

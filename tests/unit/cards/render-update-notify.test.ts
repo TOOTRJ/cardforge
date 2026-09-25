@@ -64,3 +64,25 @@ describe("notifyOwnersOfRenderUpdates — keyed on the newest OPT-IN version", (
     });
   });
 });
+
+describe("notifyOwnersOfRenderUpdates — once per owner per opt-in version", () => {
+  it("skips an owner who already has the v22 notification, looked up by that key", async () => {
+    const stub = chainClient((table, calls) => {
+      if (table === "cards") {
+        return {
+          data: [
+            { owner_id: "a", layout_version: 21, rendered_image_url: "https://x/c.png", frame_style: { template: "m15" }, visibility: "public", rarity: "uncommon" },
+          ],
+        };
+      }
+      if (table === "notifications" && called(calls, "select")) return { data: [{ id: "n1" }] };
+      return { error: null };
+    });
+    const result = await notifyOwnersOfRenderUpdates(stub.client as never);
+    expect(result).toMatchObject({ owners: 1, notified: 0 });
+    const lookups = stub.forTable("notifications");
+    expect(lookups.some((e) => called(e.calls, "insert"))).toBe(false);
+    const contains = lookups[0].calls.find((c) => c.method === "contains");
+    expect(contains?.args).toEqual(["payload", { version: 22 }]);
+  });
+});

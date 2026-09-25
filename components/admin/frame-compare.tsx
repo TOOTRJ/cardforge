@@ -31,6 +31,14 @@ import { scanPlacement, type CardOrientation } from "@/lib/frames/scan-geometry"
 import type { SlotScore } from "@/lib/frames/align";
 import { startMarkedRebake } from "@/components/admin/rebake-marked-store";
 
+/** Cards left alone because their owner hasn't accepted a pending opt-in
+ *  look (lib/cards/frame-profile-override-actions.ts) — say so. */
+function keptNote(kept: number): string {
+  return kept > 0
+    ? ` ${kept} card${kept === 1 ? " keeps its" : "s keep their"} owner's older look until the owner updates.`
+    : "";
+}
+
 // ---------------------------------------------------------------------------
 // FrameCompare — overlays a real Scryfall scan on our rendered frame so
 // alignment/typography drift is visible at a glance, with an "Edit layout"
@@ -330,9 +338,9 @@ export function FrameCompare({
       setScoreStale(true);
       toast.success(
         result.changed
-          ? result.staleCount > 0
-            ? `Layout saved — live everywhere now. Re-baking ${result.staleCount} published card${result.staleCount === 1 ? "" : "s"}…`
-            : "Layout saved — live everywhere now."
+          ? `${result.staleCount > 0
+              ? `Layout saved — live everywhere now. Re-baking ${result.staleCount} published card${result.staleCount === 1 ? "" : "s"}…`
+              : "Layout saved — live everywhere now."}${keptNote(result.keptForOwner)}`
           : "Nothing to save — this template already uses the code defaults.",
       );
       router.refresh();
@@ -352,9 +360,9 @@ export function FrameCompare({
       if (result.changed) {
         setScoreStale(true);
         toast.success(
-          result.staleCount > 0
+          `${result.staleCount > 0
             ? `Reset to code defaults. Re-baking ${result.staleCount} published card${result.staleCount === 1 ? "" : "s"}…`
-            : "Reset to code defaults.",
+            : "Reset to code defaults."}${keptNote(result.keptForOwner)}`,
         );
       } else {
         toast.message("Draft discarded — no saved layout existed for this template.");

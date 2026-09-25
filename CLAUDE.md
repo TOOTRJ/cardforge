@@ -146,7 +146,7 @@ Rules and gotchas:
   the `CARD_LAYOUT_VERSION` bump + a `VERSION_ROLLOUT` policy: only
   "opt-in" bumps badge owners (`hasNewerLook`); "sweep" bumps and
   frame-override saves (null stamp) are re-baked by the platform — the
-  compare page does it right after a save (`lib/cards/rebake-actions.ts`). Every bake also writes a
+  compare page does it right after a save (`/api/admin/rebake-marked`). Every bake also writes a
   600 px WebP thumbnail beside the HD PNG (`cards.rendered_thumb_url`,
   `lib/cards/render-thumb.ts`) — gallery-style tiles MUST use
   `BakedCardThumbnail` with `renderedThumbUrl`, never the 3 MB PNG;
