@@ -6,6 +6,11 @@ import { getCurrentProfile } from "@/lib/supabase/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { FRAME_COLOR_KEYS } from "@/lib/cards/frame-reference-registry";
 import { validateReferenceForCombo } from "@/lib/cards/frame-reference-validation";
+import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
+import { overrideHash } from "@/lib/cards/frame-verification-state";
+import { recordFrameReviewEvent } from "@/lib/cards/frame-review-events";
+import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
+import { scoreFrameCombo } from "@/lib/frames/score-combo";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -13,16 +18,27 @@ import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 // publishes it to the frame picker (see lib/cards/frame-availability.ts);
 // unchecking withdraws it. Existing cards always keep rendering — gating
 // only affects NEW frame selection in the picker.
+//
+// A tick RECORDS what it measured (migration 0115): the renderer layout
+// version, the hash of the template's layout override, the reference
+// printing that was on screen and the alignment score at that moment —
+// so the checklist can say "needs re-verification" when the renderer or
+// the override moves on. Every change appends to frame_review_events.
 // ---------------------------------------------------------------------------
+
+const SCRYFALL_ID = /^[0-9a-f-]{8,}$/i;
 
 const inputSchema = z.object({
   template: z.enum(FRAME_TEMPLATE_VALUES),
   colorKey: z.enum(FRAME_COLOR_KEYS),
   verified: z.boolean(),
+  /** The reference printing the admin was looking at when ticking
+   *  (registry pick, pinned or default) — recorded, and scored. */
+  referenceId: z.string().regex(SCRYFALL_ID).nullable().optional(),
 });
 
 export type SetFrameReviewResult =
-  | { ok: true }
+  | { ok: true; scored: boolean }
   | { ok: false; error: string };
 
 /** Every page that renders the frame picker from the verified set. `/create`
@@ -52,8 +68,49 @@ export async function setFrameReviewAction(
   }
 
   const { template, colorKey, verified } = parsed.data;
-
+  const referenceId = parsed.data.referenceId ?? null;
   const admin = createAdminClient();
+
+  if (!verified) {
+    // Withdraw: the stamped columns stay as the record of the last tick.
+    const { error } = await admin.from("frame_reviews").upsert(
+      {
+        template,
+        color_key: colorKey,
+        verified: false,
+        verified_at: null,
+        verified_by: null,
+      },
+      { onConflict: "template,color_key" },
+    );
+    if (error) return { ok: false, error: error.message };
+    await recordFrameReviewEvent(admin, {
+      template,
+      colorKey,
+      action: "withdraw",
+      actor: profile.id,
+      layoutVersion: CARD_LAYOUT_VERSION,
+    });
+    revalidateFramePickers();
+    return { ok: true, scored: false };
+  }
+
+  // What this tick measures against. The score is best-effort: a Scryfall
+  // hiccup must not block publishing a frame the admin has eyeballed.
+  const overrides = await getFrameProfileOverrides();
+  const hash = overrideHash(overrides[template] ?? null);
+  let score: unknown = null;
+  let scoredReferenceId = referenceId;
+  try {
+    const result = await scoreFrameCombo({ template, color: colorKey, ref: referenceId });
+    if (result.ok) {
+      score = { overall: result.overall, global: result.global, slots: result.slots };
+      scoredReferenceId = result.referenceId;
+    }
+  } catch (error) {
+    console.warn(`[frame-review] score failed for ${template}/${colorKey}:`, error);
+  }
+
   // NOTE: deliberately does NOT touch the reference_* columns — those belong
   // to setFrameReferenceAction (admin-pinned reference). Writing them here
   // used to make every verified combo look "admin-pinned".
@@ -61,9 +118,13 @@ export async function setFrameReviewAction(
     {
       template,
       color_key: colorKey,
-      verified,
-      verified_at: verified ? new Date().toISOString() : null,
-      verified_by: verified ? profile.id : null,
+      verified: true,
+      verified_at: new Date().toISOString(),
+      verified_by: profile.id,
+      verified_layout_version: CARD_LAYOUT_VERSION,
+      verified_override_hash: hash,
+      verified_reference_id: scoredReferenceId,
+      score_json: score as never,
     },
     { onConflict: "template,color_key" },
   );
@@ -71,8 +132,19 @@ export async function setFrameReviewAction(
     return { ok: false, error: error.message };
   }
 
+  await recordFrameReviewEvent(admin, {
+    template,
+    colorKey,
+    action: "verify",
+    actor: profile.id,
+    layoutVersion: CARD_LAYOUT_VERSION,
+    overrideHash: hash,
+    referenceScryfallId: scoredReferenceId,
+    scoreJson: score,
+  });
+
   revalidateFramePickers();
-  return { ok: true };
+  return { ok: true, scored: score !== null };
 }
 
 // ---------------------------------------------------------------------------
@@ -89,10 +161,7 @@ const referenceSchema = z.object({
   colorKey: z.enum(FRAME_COLOR_KEYS),
   /** Scryfall id of the printing to pin, or null to revert to the
    *  registry default. */
-  scryfallId: z
-    .string()
-    .regex(/^[0-9a-f-]{8,}$/i, "Invalid Scryfall id.")
-    .nullable(),
+  scryfallId: z.string().regex(SCRYFALL_ID, "Invalid Scryfall id.").nullable(),
 });
 
 export type SetFrameReferenceResult =
@@ -132,6 +201,12 @@ export async function setFrameReferenceAction(
       { onConflict: "template,color_key" },
     );
     if (error) return { ok: false, error: error.message };
+    await recordFrameReviewEvent(admin, {
+      template,
+      colorKey,
+      action: "unpin",
+      actor: profile.id,
+    });
     revalidatePath("/admin/frame-compare");
     return { ok: true, warning: null, name: null };
   }
@@ -171,6 +246,14 @@ export async function setFrameReferenceAction(
     { onConflict: "template,color_key" },
   );
   if (error) return { ok: false, error: error.message };
+
+  await recordFrameReviewEvent(admin, {
+    template,
+    colorKey,
+    action: "pin",
+    actor: profile.id,
+    referenceScryfallId: card.id,
+  });
 
   revalidatePath("/admin/frame-compare");
   return {

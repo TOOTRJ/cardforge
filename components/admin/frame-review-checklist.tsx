@@ -27,6 +27,13 @@ type ChecklistCombo = {
   alternates?: number;
   /** Scan-quality caveat of the default printing (null = ideal). */
   tier?: string | null;
+  /** The reference id the checkbox records with a tick. */
+  referenceId?: string | null;
+  /** Verified, but the renderer or the override changed since (reasons). */
+  stale?: boolean;
+  staleReasons?: string[];
+  /** Verified before ticks recorded what they measured. */
+  legacy?: boolean;
   reference: { name: string; set: string; thumbUrl: string } | null;
 };
 
@@ -75,6 +82,7 @@ export function FrameReviewChecklist({ eras }: { eras: ChecklistEra[] }) {
       {eras.map((era) => {
         const combos = era.templates.flatMap((t) => t.combos);
         const done = combos.filter((c) => c.verified).length;
+        const stale = combos.filter((c) => c.verified && c.stale).length;
         return (
           <details
             key={era.era}
@@ -94,7 +102,10 @@ export function FrameReviewChecklist({ eras }: { eras: ChecklistEra[] }) {
               <span className="text-xs text-subtle">
                 {era.templates.length} frame{era.templates.length === 1 ? "" : "s"}
               </span>
-              <span className="ml-auto">
+              <span className="ml-auto flex items-center gap-2">
+                {stale > 0 ? (
+                  <Badge variant="default">{stale} need re-verification</Badge>
+                ) : null}
                 <Badge variant={done === combos.length ? "primary" : "default"}>
                   {done}/{combos.length} verified
                 </Badge>
@@ -148,6 +159,7 @@ export function FrameReviewChecklist({ eras }: { eras: ChecklistEra[] }) {
                             template={tpl.template}
                             colorKey={combo.colorKey}
                             verified={combo.verified}
+                            referenceId={combo.referenceId ?? null}
                           />
                         </span>
                         <ColorDot colorKey={combo.colorKey} />
@@ -180,6 +192,21 @@ export function FrameReviewChecklist({ eras }: { eras: ChecklistEra[] }) {
                             No real printing — sample render only
                           </span>
                         )}
+                        {combo.verified && combo.stale ? (
+                          <span
+                            className="shrink-0 rounded-full border border-gold/50 bg-gold/10 px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-gold-strong"
+                            title={(combo.staleReasons ?? []).join(" ")}
+                          >
+                            re-verify
+                          </span>
+                        ) : combo.verified && combo.legacy ? (
+                          <span
+                            className="shrink-0 text-[9px] uppercase tracking-wide text-subtle"
+                            title="Verified before ticks recorded the layout version and override — tick again to record it."
+                          >
+                            no record
+                          </span>
+                        ) : null}
                         {combo.verified ? (
                           <CheckCircle2
                             className="h-4 w-4 shrink-0 text-primary-bright"
