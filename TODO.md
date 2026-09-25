@@ -104,7 +104,7 @@ Open decisions are marked **[decide]**; none blocks its phase.
       history table; flip to "needs re-verification" when the override or the
       frame PNG hash changes; sign-off becomes per TEMPLATE with per-colour
       auto-status (colours still individually withdrawable).
-- [ ] **0.11 [P1] Complete the reference registry** — two `highres_scan`,
+- [x] (done 2026-09-25 — feat/frame-reference-registry: 225/259 combos have references (34 documented nulls), most with a second printing; bloomburrow/bloomanime/tarkir/fullart flagged "confirm" for a human look) **0.11 [P1] Complete the reference registry** — two `highres_scan`,
       non-foil, non-promo printings per combo (short + long text) for every
       template, via a script that runs Scryfall searches and writes
       `FRAME_REFERENCES`; kind-aware sample content for the combos with no real

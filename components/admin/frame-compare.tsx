@@ -72,6 +72,9 @@ type FrameCompareProps = {
   template?: string | null;
   /** The color key under test — enables the alignment score. */
   colorKey?: string | null;
+  /** A registry printing chosen via ?ref= (null = pinned/default) — the
+   *  score must measure the same printing the page shows. */
+  referenceId?: string | null;
   /** The saved DB override for this template (null when none). */
   savedOverride?: FrameProfileOverride | null;
 };
@@ -135,6 +138,7 @@ export function FrameCompare({
   scanAlt,
   template,
   colorKey,
+  referenceId = null,
   savedOverride,
 }: FrameCompareProps) {
   const router = useRouter();
@@ -174,7 +178,7 @@ export function FrameCompare({
       const response = await fetch("/api/admin/frame-align-score", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ template, color: colorKey }),
+        body: JSON.stringify({ template, color: colorKey, ref: referenceId ?? undefined }),
       });
       const body = await response.json().catch(() => null);
       if (body?.ok) {

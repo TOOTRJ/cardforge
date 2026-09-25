@@ -1,0 +1,3281 @@
+{
+  "m15": {
+    "note": "Plain M15 spell frame. c is a TRUE colorless (non-artifact) reference; artifacts live on m15artifact.",
+    "colors": {
+      "w": [
+        {
+          "name": "Serra Angel",
+          "set": "dom",
+          "scryfallId": "b56b9131-4f7e-4912-ba47-63ed82f21d1b",
+          "curated": true
+        },
+        {
+          "name": "Dwarven Castle Guard",
+          "set": "fin",
+          "scryfallId": "e17c0d27-e88d-4ba9-acbb-3f916cee3d7e"
+        },
+        {
+          "name": "Rayblade Trooper",
+          "set": "eoe",
+          "scryfallId": "c08c7bf9-a2ed-45c6-8b48-15122d9d9e37"
+        }
+      ],
+      "u": [
+        {
+          "name": "Frost Lynx",
+          "set": "iko",
+          "scryfallId": "dfcaeccc-fc8c-4a9e-80d5-b48da71d7ff1",
+          "curated": true
+        },
+        {
+          "name": "Sokka's Haiku",
+          "set": "tla",
+          "scryfallId": "004be4bc-ac3c-4026-8d36-f4687ab18c70"
+        },
+        {
+          "name": "Spirit Water Revival",
+          "set": "tla",
+          "scryfallId": "0c019e76-c88e-4d1b-a546-0f4e462ef44a"
+        }
+      ],
+      "b": [
+        {
+          "name": "Murder",
+          "set": "m20",
+          "scryfallId": "6a2b22bc-e81b-4f27-a52b-9f3edad25439",
+          "curated": true
+        },
+        {
+          "name": "Scorpion's Sting",
+          "set": "spm",
+          "scryfallId": "0fb03437-32cf-4c97-bf91-ea8b2ad3f964"
+        },
+        {
+          "name": "Obsessive Pursuit",
+          "set": "tla",
+          "scryfallId": "e837e29c-d241-43c8-8f45-05056e082b60"
+        }
+      ],
+      "r": [
+        {
+          "name": "Shock",
+          "set": "m21",
+          "scryfallId": "59fa8e8d-bcb8-47bf-b71a-df11c8d0f2c9",
+          "curated": true
+        },
+        {
+          "name": "Shock",
+          "set": "spm",
+          "scryfallId": "760b41a1-c087-4b11-b8a0-fb01d8a4c0c6"
+        },
+        {
+          "name": "Kindle the Inner Flame",
+          "set": "ecl",
+          "scryfallId": "9a2adcea-f6b1-4611-b8b8-f19fdee2c571"
+        }
+      ],
+      "g": [
+        {
+          "name": "Llanowar Elves",
+          "set": "dom",
+          "scryfallId": "581b7327-3215-4a4f-b4ae-d9d4002ba882",
+          "curated": true
+        },
+        {
+          "name": "Supportive Parents",
+          "set": "spm",
+          "scryfallId": "d3fe8a5b-4166-46cc-b910-71cd1a19ae1b"
+        },
+        {
+          "name": "Celestial Reunion",
+          "set": "ecl",
+          "scryfallId": "583b2863-aca1-4dab-9196-ea453b5d9454"
+        }
+      ],
+      "c": [
+        {
+          "name": "Ulamog, the Ceaseless Hunger",
+          "set": "bfz",
+          "scryfallId": "1192f7a9-102e-4b3a-b154-18c8eb332217",
+          "curated": true
+        },
+        {
+          "name": "Introduction to Prophecy",
+          "set": "stx",
+          "scryfallId": "7820923e-bad2-4d6a-92b3-97b9737d2ca9"
+        },
+        {
+          "name": "Anticausal Vestige",
+          "set": "eoe",
+          "scryfallId": "35372b69-6086-44e0-9f7c-681e362e5142"
+        }
+      ],
+      "m": [
+        {
+          "name": "Siege Rhino",
+          "set": "ktk",
+          "scryfallId": "9011126a-20bd-4c86-a63b-1691f79ac247",
+          "curated": true
+        },
+        {
+          "name": "Space-Time Anomaly",
+          "set": "eoe",
+          "scryfallId": "edb8dc2a-ddce-48fa-b57e-0e57c87c6671"
+        },
+        {
+          "name": "Dai Li Agents",
+          "set": "tla",
+          "scryfallId": "9ddb8715-341b-400a-b6eb-f3f90518157c"
+        }
+      ]
+    }
+  },
+  "m15artifact": {
+    "note": "Non-legendary prints only — legendary artifacts carry the crown flourish our frame doesn't draw. Coloured artifacts verify the colour border blend + silver interior.",
+    "colors": {
+      "w": [
+        {
+          "name": "Esper Sentinel",
+          "set": "mh2",
+          "scryfallId": "f3537373-ef54-4578-9d05-6216420ee349",
+          "curated": true
+        },
+        {
+          "name": "Guidelight Synergist",
+          "set": "dft",
+          "scryfallId": "fdaeea2c-d8aa-416f-95d6-6af888591fdf"
+        },
+        {
+          "name": "Perilous Snare",
+          "set": "dft",
+          "scryfallId": "47f7e468-2196-4960-a612-37ab326e2a17"
+        }
+      ],
+      "u": [
+        {
+          "name": "Phyrexian Metamorph",
+          "set": "2xm",
+          "scryfallId": "d6afeb07-ed44-4e15-99b6-436f8365326f",
+          "curated": true
+        },
+        {
+          "name": "Moonfolk Puzzlemaker",
+          "set": "neo",
+          "scryfallId": "c9fa6d4c-78dc-4b40-9ce8-a0e593d4001f"
+        },
+        {
+          "name": "Mechanozoa",
+          "set": "eoe",
+          "scryfallId": "0cb8d8ce-329a-4a97-b3d8-796703ebcb37"
+        }
+      ],
+      "b": [
+        {
+          "name": "Wishclaw Talisman",
+          "set": "eld",
+          "scryfallId": "07c17b01-ee5d-491a-8403-b3f819b778c4",
+          "curated": true
+        },
+        {
+          "name": "Etched Familiar",
+          "set": "mom",
+          "scryfallId": "4616a548-269b-4530-97e8-c690ccc138f3"
+        },
+        {
+          "name": "Polygraph Orb",
+          "set": "mkm",
+          "scryfallId": "a6cc4c6f-4a84-4d42-89fa-7405f7ad6ba0"
+        }
+      ],
+      "r": [
+        {
+          "name": "Cursed Mirror",
+          "set": "mh3",
+          "scryfallId": "6768daa5-41b0-49e1-b71a-63f733b4dc3d",
+          "curated": true
+        },
+        {
+          "name": "Unstoppable Ogre",
+          "set": "neo",
+          "scryfallId": "719f20d9-2baa-49b3-8c6a-89f21a07d538"
+        },
+        {
+          "name": "Orb of Dragonkind",
+          "set": "afr",
+          "scryfallId": "9a1c2cdd-353c-4747-bf0e-b995dd37ffca"
+        }
+      ],
+      "g": [
+        {
+          "name": "Conduit of Worlds",
+          "set": "one",
+          "scryfallId": "635146da-d415-4107-a7f9-2c46189e5c52",
+          "curated": true
+        },
+        {
+          "name": "Verdurous Gearhulk",
+          "set": "kld",
+          "scryfallId": "0130b99e-5b2f-4482-b141-752e59b72c31"
+        },
+        {
+          "name": "Pictures of Spider-Man",
+          "set": "spm",
+          "scryfallId": "e1ec41d4-0180-42f7-9c54-f3c39b4ffb8d"
+        }
+      ],
+      "c": [
+        {
+          "name": "Solemn Simulacrum",
+          "set": "m21",
+          "scryfallId": "7bbd2cab-538e-4932-a828-150e3e9d52ad",
+          "curated": true
+        },
+        {
+          "name": "Heraldic Banner",
+          "set": "fdn",
+          "scryfallId": "743ea709-dbb3-4db8-a2ce-544f47eb6339"
+        },
+        {
+          "name": "Digsite Conservator",
+          "set": "lci",
+          "scryfallId": "dfa3cd5e-b727-479d-9a77-9f320b92f3f2"
+        }
+      ],
+      "m": [
+        {
+          "name": "Baleful Strix",
+          "set": "2xm",
+          "scryfallId": "a1b799b2-bb4e-482f-9afd-5aab90090710",
+          "curated": true
+        },
+        {
+          "name": "Debris Beetle",
+          "set": "dft",
+          "scryfallId": "405e7900-f6df-4033-b70b-b1d2a8b6d7c8"
+        },
+        {
+          "name": "Dune Drifter",
+          "set": "dft",
+          "scryfallId": "36185de4-55c2-4e5d-9bcc-ea12b7052728"
+        }
+      ]
+    }
+  },
+  "m15land": {
+    "note": "Basics for w/u/b/r/g, Wastes for c. m is a five-colour gold-plate nonbasic (Command Tower); true dual lands blend two colours, which our single m frame can't express.",
+    "colors": {
+      "w": [
+        {
+          "name": "Plains",
+          "set": "dom",
+          "scryfallId": "023d333b-14f2-40ad-bb76-8b9e38040f89",
+          "curated": true
+        },
+        {
+          "name": "Plains",
+          "set": "trk",
+          "scryfallId": "09b3c8bb-10ca-4b9f-8507-db6e8c52a918"
+        },
+        {
+          "name": "Plains",
+          "set": "afr",
+          "scryfallId": "879f7f54-25a3-440b-848d-0e780277a681"
+        }
+      ],
+      "u": [
+        {
+          "name": "Island",
+          "set": "dom",
+          "scryfallId": "0ce67a27-aa80-46ac-955a-8fea336995d9",
+          "curated": true
+        },
+        {
+          "name": "Island",
+          "set": "trk",
+          "scryfallId": "a44efa5f-8fbb-43e0-adc4-d05f4be6b9a6"
+        },
+        {
+          "name": "Island",
+          "set": "afr",
+          "scryfallId": "29d575fc-037b-421a-a205-12d492e9361e"
+        }
+      ],
+      "b": [
+        {
+          "name": "Swamp",
+          "set": "dom",
+          "scryfallId": "09eeb6aa-45ac-4a0e-bab2-1a004aac841f",
+          "curated": true
+        },
+        {
+          "name": "Swamp",
+          "set": "trk",
+          "scryfallId": "214a9e76-b7fd-4cc9-89e7-104a71919a84"
+        },
+        {
+          "name": "Swamp",
+          "set": "hob",
+          "scryfallId": "4031e5e4-e573-4130-8d20-4a606edef0a0"
+        }
+      ],
+      "r": [
+        {
+          "name": "Mountain",
+          "set": "dom",
+          "scryfallId": "621aa8e1-aebf-4eea-beb5-7fb47700a87a",
+          "curated": true
+        },
+        {
+          "name": "Mountain",
+          "set": "trk",
+          "scryfallId": "e5927fd9-dfaf-462e-9128-44b806e45178"
+        },
+        {
+          "name": "Mountain",
+          "set": "hob",
+          "scryfallId": "c49d378e-9549-4320-b3c6-1aeb216d1e98"
+        }
+      ],
+      "g": [
+        {
+          "name": "Forest",
+          "set": "dom",
+          "scryfallId": "ae21165c-cc6d-45cc-b5c1-97b73e85dddd",
+          "curated": true
+        },
+        {
+          "name": "Forest",
+          "set": "trk",
+          "scryfallId": "4fae200d-5757-4924-8cf4-ab2a5ef2ccc0"
+        },
+        {
+          "name": "Forest",
+          "set": "hob",
+          "scryfallId": "c3e84b42-5423-4d4d-b8fc-cfbb2c53a4ca"
+        }
+      ],
+      "c": [
+        {
+          "name": "Wastes",
+          "set": "ogw",
+          "scryfallId": "9cc070d3-4b83-4684-9caf-063e5c473a77",
+          "curated": true
+        },
+        {
+          "name": "Wastes",
+          "set": "ogw",
+          "scryfallId": "60682c00-c661-4a9d-8326-f3f014a04e3e"
+        }
+      ],
+      "m": [
+        {
+          "name": "Command Tower",
+          "set": "msc",
+          "scryfallId": "0548fb60-c843-4f8f-a029-6f10efc63a41",
+          "curated": true
+        },
+        {
+          "name": "Crystal Quarry",
+          "set": "dmc",
+          "scryfallId": "55999d8e-50f8-4c8b-a0c3-f3256af62491"
+        },
+        {
+          "name": "The World Tree",
+          "set": "khm",
+          "scryfallId": "a70cb6d9-3955-4064-917b-11dec26440c5"
+        }
+      ]
+    }
+  },
+  "m15snowland": {
+    "colors": {
+      "w": [
+        {
+          "name": "Snow-Covered Plains",
+          "set": "khm",
+          "scryfallId": "afd2730f-878e-47ee-ad2a-73f8fa4e0794",
+          "curated": true
+        },
+        {
+          "name": "Snow-Covered Plains",
+          "set": "khm",
+          "scryfallId": "6fb78693-354a-49d0-a493-430a89c6e6f6"
+        }
+      ],
+      "u": [
+        {
+          "name": "Snow-Covered Island",
+          "set": "khm",
+          "scryfallId": "3bfa5ebc-5623-4eec-89ea-dc187489ee4a",
+          "curated": true
+        },
+        {
+          "name": "Snow-Covered Island",
+          "set": "j22",
+          "scryfallId": "fe6b4706-5452-4c50-872d-2d04f96407a8"
+        }
+      ],
+      "b": [
+        {
+          "name": "Snow-Covered Swamp",
+          "set": "khm",
+          "scryfallId": "6aa85af8-15f5-4620-8aea-0b45c28372ed",
+          "curated": true
+        },
+        {
+          "name": "Snow-Covered Swamp",
+          "set": "khm",
+          "scryfallId": "9160baf7-5796-4815-8e9d-e804af70cb74"
+        }
+      ],
+      "r": [
+        {
+          "name": "Snow-Covered Mountain",
+          "set": "khm",
+          "scryfallId": "5474e67c-628f-41b0-aa31-3d85a267265a",
+          "curated": true
+        },
+        {
+          "name": "Snow-Covered Mountain",
+          "set": "khm",
+          "scryfallId": "f54aa46b-4b7c-4846-bf19-a289ed36c172"
+        }
+      ],
+      "g": [
+        {
+          "name": "Snow-Covered Forest",
+          "set": "khm",
+          "scryfallId": "ca17acea-f079-4e53-8176-a2f5c5c408a1",
+          "curated": true
+        },
+        {
+          "name": "Snow-Covered Forest",
+          "set": "khm",
+          "scryfallId": "fe241460-f7c1-4ba8-a156-6720b494ac97"
+        }
+      ],
+      "c": [
+        {
+          "name": "Snow-Covered Wastes",
+          "set": "mh3",
+          "scryfallId": "87870792-e429-4eba-8193-cdce5c7b6c55",
+          "curated": true
+        }
+      ],
+      "m": [
+        {
+          "name": "Arctic Treeline",
+          "set": "khm",
+          "scryfallId": "b20e3117-f1e4-4449-ae9d-0b66abfc717d",
+          "curated": true
+        },
+        {
+          "name": "Woodland Chasm",
+          "set": "khm",
+          "scryfallId": "b2dd0b71-5a60-418c-82fc-f13d1b5075d0"
+        },
+        {
+          "name": "Alpine Meadow",
+          "set": "khm",
+          "scryfallId": "8702d6b9-bb01-4841-a76d-4a576066c772"
+        }
+      ]
+    }
+  },
+  "m15token": {
+    "colors": {
+      "w": [
+        {
+          "name": "Soldier",
+          "set": "tdom",
+          "scryfallId": "f9b56129-17a2-4512-a4d6-34779224473f",
+          "curated": true
+        },
+        {
+          "name": "Warrior",
+          "set": "tfrc",
+          "scryfallId": "2dde64e7-dff3-4495-9649-d4b1e91f1cf3"
+        },
+        {
+          "name": "Warren Warleader",
+          "set": "tblb",
+          "scryfallId": "5cc9b628-0a3a-4d09-ae4a-57c7f6f9ac36"
+        }
+      ],
+      "u": [
+        {
+          "name": "Drake",
+          "set": "tfdn",
+          "scryfallId": "f4a73034-e20f-4e7e-ac15-3460b1e9c69b",
+          "curated": true
+        },
+        {
+          "name": "Illusion",
+          "set": "tfra",
+          "scryfallId": "7bda0b63-fd0f-495d-9eb0-20057571c0ee"
+        },
+        {
+          "name": "Thundertrap Trainer",
+          "set": "tblb",
+          "scryfallId": "80bcbe35-7764-4c75-b954-cbba11372dec"
+        }
+      ],
+      "b": [
+        {
+          "name": "Zombie",
+          "set": "tsoc",
+          "scryfallId": "b0d6fd21-48f0-4151-9671-762c25d95592",
+          "curated": true
+        },
+        {
+          "name": "Zombie Army",
+          "set": "tfrc",
+          "scryfallId": "14474e29-27a4-475a-9d2c-eb1d6c146421"
+        },
+        {
+          "name": "Darkstar Augur",
+          "set": "tblb",
+          "scryfallId": "01b55966-0910-484d-9b2b-0a59233c44c4"
+        }
+      ],
+      "r": [
+        {
+          "name": "Goblin",
+          "set": "tdom",
+          "scryfallId": "bd79264f-0734-48b7-8333-4035e518d46c",
+          "curated": true
+        },
+        {
+          "name": "Kobolds of Kher Keep",
+          "set": "tfrc",
+          "scryfallId": "d0d630b2-1e42-4cf7-bfa1-36d5c135877b"
+        },
+        {
+          "name": "Elemental",
+          "set": "tncc",
+          "scryfallId": "512fedf8-f50d-4e81-9856-e051850dc05f"
+        }
+      ],
+      "g": [
+        {
+          "name": "Saproling",
+          "set": "tdom",
+          "scryfallId": "5371de1b-db33-4db4-a518-e35c71aa72b7",
+          "curated": true
+        },
+        {
+          "name": "Mowu",
+          "set": "tfra",
+          "scryfallId": "5868190d-18f6-43b6-af83-9e0ef585687d"
+        },
+        {
+          "name": "Pawpatch Recruit",
+          "set": "tblb",
+          "scryfallId": "7cdd8679-93a7-4e58-a6f3-b48897697e89"
+        }
+      ],
+      "c": [
+        {
+          "name": "Treasure",
+          "set": "txln",
+          "scryfallId": "720f3e68-84c0-462e-a0d1-90236ccc494a",
+          "curated": true
+        },
+        {
+          "name": "Cadet",
+          "set": "tfra",
+          "scryfallId": "8f4534d8-2783-484f-8ebf-a47b1cc4c6df"
+        },
+        {
+          "name": "Council of Reeds",
+          "set": "tmsc",
+          "scryfallId": "b1776802-c1d7-4d4d-926f-ab3748942b62"
+        }
+      ],
+      "m": [
+        {
+          "name": "Citizen",
+          "set": "tfrc",
+          "scryfallId": "b7171de9-476d-4bfa-8cc0-b4fbc168cf4d"
+        },
+        {
+          "name": "Human Soldier",
+          "set": "tvow",
+          "scryfallId": "5f3c4810-7359-42b7-905f-4845f6d1daf6"
+        }
+      ]
+    }
+  },
+  "m15tokenartifact": {
+    "note": "Printed artifact tokens are colourless (Treasure/Clue/Food…); coloured artifact tokens are rare finds from Universes Beyond token sets.",
+    "colors": {
+      "w": [
+        {
+          "name": "Toy",
+          "set": "tdsk",
+          "scryfallId": "5e6d479d-c30d-4048-b250-5233358a174c"
+        },
+        {
+          "name": "Icingdeath, Frost Tongue",
+          "set": "tafr",
+          "scryfallId": "a9c981c9-3376-4f6e-b30d-859e5fc7347e"
+        }
+      ],
+      "u": [
+        {
+          "name": "Phyrexian Myr",
+          "set": "tsoc",
+          "scryfallId": "ca7e566f-5eb4-4f0f-bf87-5788c57ba1e4"
+        },
+        {
+          "name": "Sicarian Infiltrator",
+          "set": "t40k",
+          "scryfallId": "58784a4f-8190-4751-b42c-fff188ad3ce5"
+        }
+      ],
+      "b": [
+        {
+          "name": "Necron Warrior",
+          "set": "t40k",
+          "scryfallId": "542b3490-1247-4f47-98b6-c67cabae53cb"
+        },
+        {
+          "name": "Alien Angel",
+          "set": "twho",
+          "scryfallId": "b65e872a-ba16-4df2-9214-60019fd6456a"
+        }
+      ],
+      "r": [
+        {
+          "name": "Gremlin",
+          "set": "tmoc",
+          "scryfallId": "23854999-2691-491c-aa7d-81f269e23b4e"
+        },
+        {
+          "name": "Feather",
+          "set": "tiko",
+          "scryfallId": "a9cc7c63-5d13-4fd6-af9d-4a26c2bab8e6"
+        }
+      ],
+      "g": null,
+      "c": [
+        {
+          "name": "Treasure",
+          "set": "tmsh",
+          "scryfallId": "cec5cc8b-bc15-415a-bde6-6c783f8d0b0b",
+          "curated": true
+        },
+        {
+          "name": "Myr",
+          "set": "tfrc",
+          "scryfallId": "e41f83c6-c20f-455a-b630-5fad99fa54ad"
+        },
+        {
+          "name": "Map",
+          "set": "tlci",
+          "scryfallId": "64839118-09d2-4645-9d3c-f80755ac781f"
+        }
+      ],
+      "m": [
+        {
+          "name": "Golem",
+          "set": "tlci",
+          "scryfallId": "33a88096-dcfd-4acb-a092-b51507edd13e"
+        },
+        {
+          "name": "Mechtitan",
+          "set": "tneo",
+          "scryfallId": "0281825d-9d38-4b56-b522-a8d3cf8c77c9"
+        }
+      ]
+    }
+  },
+  "m15snow": {
+    "note": "Gold snow spells only exist as legendaries (crown) — the m reference is accepted with that caveat.",
+    "colors": {
+      "w": [
+        {
+          "name": "Axgard Braggart",
+          "set": "khm",
+          "scryfallId": "4de5ff64-6fe7-4fc5-be27-cdbaa14545ab",
+          "curated": true
+        },
+        {
+          "name": "Search for Glory",
+          "set": "khm",
+          "scryfallId": "b65c215d-562d-4c7c-bc9f-b1d741050158"
+        }
+      ],
+      "u": [
+        {
+          "name": "Berg Strider",
+          "set": "khm",
+          "scryfallId": "f3567bdc-450e-4481-9349-a80fe52fe431",
+          "curated": true
+        },
+        {
+          "name": "Winter's Rest",
+          "set": "j22",
+          "scryfallId": "1c4a71ea-ac26-4f61-96fc-bb7152cb5341"
+        },
+        {
+          "name": "Ascendant Spirit",
+          "set": "khm",
+          "scryfallId": "ea56de43-c0fd-4627-846d-41a962b95f17"
+        }
+      ],
+      "b": [
+        {
+          "name": "Deathknell Berserker",
+          "set": "khm",
+          "scryfallId": "f9f2029f-ffda-4374-9a78-79866ac23fca",
+          "curated": true
+        },
+        {
+          "name": "Priest of the Haunted Edge",
+          "set": "khm",
+          "scryfallId": "0cde0f4d-5acc-4a25-a3d6-c6b9b734360c"
+        },
+        {
+          "name": "Draugr Necromancer",
+          "set": "khm",
+          "scryfallId": "76d8e0ff-e720-41ca-af69-35585a2d7ae2"
+        }
+      ],
+      "r": [
+        {
+          "name": "Frost Bite",
+          "set": "khm",
+          "scryfallId": "9423318a-c5a8-48d2-92f5-280d15a050a6",
+          "curated": true
+        },
+        {
+          "name": "Tundra Fumarole",
+          "set": "khm",
+          "scryfallId": "b251aa7c-d011-4b52-ab92-415d536c0182"
+        }
+      ],
+      "g": [
+        {
+          "name": "Sarulf's Packmate",
+          "set": "khm",
+          "scryfallId": "6061113e-7dd8-4739-b4dd-55bb7f9e39a2",
+          "curated": true
+        },
+        {
+          "name": "Sculptor of Winter",
+          "set": "khm",
+          "scryfallId": "9dab2ca2-0039-4eac-a7dc-68756362737d"
+        },
+        {
+          "name": "Blizzard Brawl",
+          "set": "khm",
+          "scryfallId": "6318918f-34e4-4bbf-9816-8e88f21ae324"
+        }
+      ],
+      "c": [
+        {
+          "name": "Replicating Ring",
+          "set": "khm",
+          "scryfallId": "b079e285-8431-46aa-bb04-70cac586ed0b",
+          "curated": true
+        },
+        {
+          "name": "Coldsteel Heart",
+          "set": "j22",
+          "scryfallId": "2599b027-1ff8-48b8-8a90-8ac1fac7ed63"
+        }
+      ],
+      "m": [
+        {
+          "name": "Narfi, Betrayer King",
+          "set": "khm",
+          "scryfallId": "421376e4-a4ad-427c-bc9c-d315308dcf68",
+          "curated": true
+        }
+      ]
+    }
+  },
+  "m15devoid": {
+    "note": "Devoid cards are colourless by rule; the frame colour follows the identity. c is a true-colorless Eldrazi (no devoid colourless print exists).",
+    "colors": {
+      "w": [
+        {
+          "name": "Eldrazi Displacer",
+          "set": "ogw",
+          "scryfallId": "f0bb1a5c-0f59-4951-827f-fe9df968232d",
+          "curated": true
+        },
+        {
+          "name": "Eldrazi Displacer",
+          "set": "m3c",
+          "scryfallId": "0d87a0d9-13d5-46f2-b32a-acc080d8f480"
+        },
+        {
+          "name": "Angelic Aberration",
+          "set": "m3c",
+          "scryfallId": "c79a5bbe-7b70-4b05-a336-9b2bcb2f2b8f"
+        }
+      ],
+      "u": [
+        {
+          "name": "Drowner of Hope",
+          "set": "bfz",
+          "scryfallId": "0fd5b48c-6850-47d4-8106-297be6c8f708",
+          "curated": true
+        },
+        {
+          "name": "Prophet of Distortion",
+          "set": "ogw",
+          "scryfallId": "03ee2d7e-50ee-4f5a-b787-cf9669a892f3"
+        },
+        {
+          "name": "Benthic Anomaly",
+          "set": "m3c",
+          "scryfallId": "08ff764d-2c0d-4599-a22a-6a64766dad3a"
+        }
+      ],
+      "b": [
+        {
+          "name": "Bearer of Silence",
+          "set": "ogw",
+          "scryfallId": "50460cce-ee1c-4384-bb0c-d90616e0d2e9",
+          "curated": true
+        },
+        {
+          "name": "Smothering Abomination",
+          "set": "soc",
+          "scryfallId": "aac33238-e4bd-4c72-aecc-9905232c3ab4"
+        },
+        {
+          "name": "Mutated Cultist",
+          "set": "m3c",
+          "scryfallId": "cc4bb871-cde9-43a9-8089-5987fa0dd4ef"
+        }
+      ],
+      "r": [
+        {
+          "name": "Reality Hemorrhage",
+          "set": "ogw",
+          "scryfallId": "c044168d-cb08-493d-98c1-b66b6149fe5a",
+          "curated": true
+        },
+        {
+          "name": "Nettle Drone",
+          "set": "bfz",
+          "scryfallId": "e633833a-cc4b-4c8c-a0d3-cd263e09df81"
+        },
+        {
+          "name": "Hideous Taskmaster",
+          "set": "m3c",
+          "scryfallId": "ba7191d0-d567-4814-8a92-52e96aa7660f"
+        }
+      ],
+      "g": [
+        {
+          "name": "Void Attendant",
+          "set": "bfz",
+          "scryfallId": "1f66eb97-b151-48b1-aff0-f1280af66291",
+          "curated": true
+        },
+        {
+          "name": "Scion Summoner",
+          "set": "j22",
+          "scryfallId": "e709bf1f-9bbb-4da7-a1ea-7deb94858b8c"
+        },
+        {
+          "name": "Propagator Drone",
+          "set": "mh3",
+          "scryfallId": "4f5b2d89-d641-4815-8e6c-5dba0d31419e"
+        }
+      ],
+      "c": [
+        {
+          "name": "Kozilek's Channeler",
+          "set": "bfz",
+          "scryfallId": "c550d179-32ec-4ad8-91c2-d79320a21cba",
+          "curated": true
+        }
+      ],
+      "m": [
+        {
+          "name": "Void Grafter",
+          "set": "ogw",
+          "scryfallId": "6c2e37e2-a4bd-4f90-9191-3125784a3369",
+          "curated": true
+        },
+        {
+          "name": "Flayer Drone",
+          "set": "ogw",
+          "scryfallId": "3931db42-3773-4aae-b6eb-2209e7312f8c"
+        },
+        {
+          "name": "Abstruse Appropriation",
+          "set": "mh3",
+          "scryfallId": "d7149359-bb3f-413c-b21d-e4cd88618e56"
+        }
+      ]
+    }
+  },
+  "m15pw": {
+    "colors": {
+      "w": [
+        {
+          "name": "Gideon, Ally of Zendikar",
+          "set": "bfz",
+          "scryfallId": "187e887c-c39d-4d25-a506-cdc95fc70316",
+          "curated": true
+        },
+        {
+          "name": "The Wanderer",
+          "set": "war",
+          "scryfallId": "d0f0e463-9eed-4348-af7c-fde5f0d8188c"
+        },
+        {
+          "name": "Elspeth Resplendent",
+          "set": "snc",
+          "scryfallId": "7c606af0-f3d1-44a4-b24e-ee1263569b1f"
+        }
+      ],
+      "u": [
+        {
+          "name": "Jace, Unraveler of Secrets",
+          "set": "soi",
+          "scryfallId": "20d5521d-e9f1-49e0-aa13-8e6de794cb12",
+          "curated": true
+        },
+        {
+          "name": "Kasmina, Enigmatic Mentor",
+          "set": "war",
+          "scryfallId": "c77d9454-a78c-4063-ad66-46b2f5a030aa"
+        },
+        {
+          "name": "Tezzeret, Betrayer of Flesh",
+          "set": "neo",
+          "scryfallId": "2174d16e-4a78-4d27-b220-1086c40db83e"
+        }
+      ],
+      "b": [
+        {
+          "name": "Liliana, Death's Majesty",
+          "set": "akh",
+          "scryfallId": "40d8f490-f04d-4d59-9ab0-a977527fd529",
+          "curated": true
+        },
+        {
+          "name": "Ob Nixilis, the Hate-Twisted",
+          "set": "war",
+          "scryfallId": "14916e2d-73af-4747-a927-d2d4cb3e32db"
+        },
+        {
+          "name": "Ashiok, Wicked Manipulator",
+          "set": "woe",
+          "scryfallId": "6c4d0db1-74a5-42c0-ac95-e696585d8022"
+        }
+      ],
+      "r": [
+        {
+          "name": "Chandra, Torch of Defiance",
+          "set": "kld",
+          "scryfallId": "ff8086cd-b868-4f4e-823e-2635ad7ebc07",
+          "curated": true
+        },
+        {
+          "name": "Chandra, Novice Pyromancer",
+          "set": "m20",
+          "scryfallId": "d678cf4c-60e3-40a1-a9cc-b0bd157bcf36"
+        },
+        {
+          "name": "Lukka, Coppercoat Outcast",
+          "set": "iko",
+          "scryfallId": "5798fdf0-d178-43d9-b821-8f3f654654b4"
+        }
+      ],
+      "g": [
+        {
+          "name": "Nissa, Vital Force",
+          "set": "kld",
+          "scryfallId": "bbaaa98a-ec40-4ff1-8762-a719cf1c475d",
+          "curated": true
+        },
+        {
+          "name": "Jiang Yanggu, Wildcrafter",
+          "set": "war",
+          "scryfallId": "10e0d47d-b13c-4d48-881f-8aaa347ef209"
+        },
+        {
+          "name": "Wrenn and Seven",
+          "set": "mid",
+          "scryfallId": "a7757e99-8d51-4b92-b346-6961845def24"
+        }
+      ],
+      "c": [
+        {
+          "name": "Karn, Scion of Urza",
+          "set": "dom",
+          "scryfallId": "07a3d9e8-8597-498b-869c-cff79e0df516",
+          "curated": true
+        },
+        {
+          "name": "Ugin, the Spirit Dragon",
+          "set": "m21",
+          "scryfallId": "9c017fa9-7021-417a-9c2e-3df409644fcf"
+        },
+        {
+          "name": "Tezzeret, Cruel Captain",
+          "set": "eoe",
+          "scryfallId": "02e8e540-8aa3-4e6a-9a11-c3949cab5f0f"
+        }
+      ],
+      "m": [
+        {
+          "name": "Sarkhan Unbroken",
+          "set": "dtk",
+          "scryfallId": "192452f8-93c2-4a20-a52b-0093741a9e45",
+          "curated": true
+        },
+        {
+          "name": "Ajani, the Greathearted",
+          "set": "war",
+          "scryfallId": "6cc78151-8cb0-4521-9674-fb0c67e24a17"
+        },
+        {
+          "name": "Teferi, Who Slows the Sunset",
+          "set": "mid",
+          "scryfallId": "ad2e18d4-986c-4a44-8f26-1b8689339cfb"
+        }
+      ]
+    }
+  },
+  "battle": {
+    "note": "Every printed battle is a transform DFC; the front face is the landscape siege.",
+    "colors": {
+      "w": [
+        {
+          "name": "Invasion of Gobakhan // Lightshield Array",
+          "set": "mom",
+          "scryfallId": "11798730-6788-4e0b-a828-b46cab1a4fa7",
+          "curated": true
+        },
+        {
+          "name": "Invasion of Dominaria // Serra Faithkeeper",
+          "set": "mom",
+          "scryfallId": "7e784d3d-0c6d-4ce5-beb5-edd2adb32385"
+        }
+      ],
+      "u": [
+        {
+          "name": "Invasion of Segovia // Caetus, Sea Tyrant of Segovia",
+          "set": "mom",
+          "scryfallId": "9df3e743-7bb8-482a-afd1-4d51119d416c",
+          "curated": true
+        },
+        {
+          "name": "Invasion of Vryn // Overloaded Mage-Ring",
+          "set": "mom",
+          "scryfallId": "c0ef6737-8e85-42ca-8ee6-6a34f9462de3"
+        },
+        {
+          "name": "Invasion of Arcavios // Invocation of the Founders",
+          "set": "mom",
+          "scryfallId": "1c3f661d-b9f7-48e7-afe3-3eaea1022bc1"
+        }
+      ],
+      "b": [
+        {
+          "name": "Invasion of Innistrad // Deluge of the Dead",
+          "set": "mom",
+          "scryfallId": "77720d2e-2b7b-492b-852c-eea5061eb31b",
+          "curated": true
+        },
+        {
+          "name": "Invasion of Eldraine // Prickle Faeries",
+          "set": "mom",
+          "scryfallId": "92f5b177-b0c6-4573-b860-f75dad1941bd"
+        },
+        {
+          "name": "Invasion of Fiora // Marchesa, Resolute Monarch",
+          "set": "mom",
+          "scryfallId": "b3af679b-6ee6-4a1d-8ec3-b659bdd90b4a"
+        }
+      ],
+      "r": [
+        {
+          "name": "Invasion of Mercadia // Kyren Flamewright",
+          "set": "mom",
+          "scryfallId": "407d6723-bf58-403e-b2ac-ba52c51d356f",
+          "curated": true
+        },
+        {
+          "name": "Invasion of Tarkir // Defiant Thundermaw",
+          "set": "mom",
+          "scryfallId": "a98f71a0-7c99-4cee-8f70-877e698cca84"
+        }
+      ],
+      "g": [
+        {
+          "name": "Invasion of Ikoria // Zilortha, Apex of Ikoria",
+          "set": "mom",
+          "scryfallId": "5d59c8f2-f6af-40a6-8dfe-8cc45bf231ce",
+          "curated": true
+        },
+        {
+          "name": "Invasion of Shandalar // Leyline Surge",
+          "set": "mom",
+          "scryfallId": "5f80764e-8fa2-44e2-84c6-3b55f1c40ee7"
+        },
+        {
+          "name": "Invasion of Ixalan // Belligerent Regisaur",
+          "set": "mom",
+          "scryfallId": "fa20fc16-e106-4953-ace4-5ac9c7fec97b"
+        }
+      ],
+      "c": [
+        {
+          "name": "Invasion of Ravnica // Guildpact Paragon",
+          "set": "mom",
+          "scryfallId": "73f8fc4f-2f36-4932-8d04-3c2651c116dc",
+          "curated": true
+        }
+      ],
+      "m": [
+        {
+          "name": "Invasion of Alara // Awaken the Maelstrom",
+          "set": "mom",
+          "scryfallId": "318c363b-61cc-4e2f-8f86-a4287539ea07",
+          "curated": true
+        },
+        {
+          "name": "Invasion of Moag // Bloomwielder Dryads",
+          "set": "mom",
+          "scryfallId": "e454bf31-5aa0-4109-a3f5-c3f9cc838682"
+        },
+        {
+          "name": "Invasion of Amonkhet // Lazotep Convert",
+          "set": "mom",
+          "scryfallId": "981f091a-17f8-412e-9752-69070ebed4ea"
+        }
+      ]
+    }
+  },
+  "saga": {
+    "colors": {
+      "w": [
+        {
+          "name": "History of Benalia",
+          "set": "dom",
+          "scryfallId": "d134385d-b01c-41c7-bb2d-30722b44dc5a",
+          "curated": true
+        },
+        {
+          "name": "Summon: Choco/Mog",
+          "set": "fin",
+          "scryfallId": "00546117-018a-4286-bc20-b5446c5be56f"
+        },
+        {
+          "name": "Urza Assembles the Titans",
+          "set": "dmu",
+          "scryfallId": "10a544d7-ead7-42fd-a35a-c1b672771d5b"
+        }
+      ],
+      "u": [
+        {
+          "name": "The Antiquities War",
+          "set": "dom",
+          "scryfallId": "bbda670a-00a7-419c-b4b5-bfdb323f006d",
+          "curated": true
+        },
+        {
+          "name": "Medomai's Prophecy",
+          "set": "thb",
+          "scryfallId": "3d2bd7b4-28de-4d9e-86c5-a46bd608cb02"
+        },
+        {
+          "name": "Gadwick's First Duel",
+          "set": "woe",
+          "scryfallId": "af07c47f-8b4e-43cb-b469-2efb82aa5590"
+        }
+      ],
+      "b": [
+        {
+          "name": "The Eldest Reborn",
+          "set": "dom",
+          "scryfallId": "c8318f40-ecd5-429e-8fe2-febf31f64841",
+          "curated": true
+        },
+        {
+          "name": "Summon: Anima",
+          "set": "fin",
+          "scryfallId": "aa4f6703-21f8-4c29-ad5a-5afb54188ade"
+        },
+        {
+          "name": "The Cruelty of Gix",
+          "set": "dmu",
+          "scryfallId": "3d6e5eb3-25ab-4e9e-96e8-655e0ce74675"
+        }
+      ],
+      "r": [
+        {
+          "name": "The First Eruption",
+          "set": "dom",
+          "scryfallId": "0efc241f-64b5-4e28-b14a-b3f19ca6e7b5",
+          "curated": true
+        },
+        {
+          "name": "Summon: G.F. Ifrit",
+          "set": "fin",
+          "scryfallId": "c6c73092-5195-4bdc-b039-a699f6e297b2"
+        },
+        {
+          "name": "Yotia Declares War",
+          "set": "dmu",
+          "scryfallId": "3bd9e99a-ae8c-4323-aa86-b19288c877d4"
+        }
+      ],
+      "g": [
+        {
+          "name": "The Mending of Dominaria",
+          "set": "dom",
+          "scryfallId": "0d5e4d9a-34e1-46eb-814b-8e3bd4475b8a",
+          "curated": true
+        },
+        {
+          "name": "Welcome to Sweettooth",
+          "set": "woe",
+          "scryfallId": "8e629a31-2e06-4f95-9628-34670dcf68b9"
+        },
+        {
+          "name": "Summon: Fenrir",
+          "set": "fin",
+          "scryfallId": "93feb9d5-d004-4598-a448-b3488c869c05"
+        }
+      ],
+      "c": [
+        {
+          "name": "Urza's Saga",
+          "set": "mh2",
+          "scryfallId": "c1e0f201-42cb-46a1-901a-65bb4fc18f6c",
+          "curated": true
+        },
+        {
+          "name": "Summon: Bahamut",
+          "set": "fin",
+          "scryfallId": "95318d85-4a08-47ac-a43d-ea83c0bea81c"
+        }
+      ],
+      "m": [
+        {
+          "name": "The Kami War // O-Kagachi Made Manifest",
+          "set": "neo",
+          "scryfallId": "36052532-5028-43a8-9fc4-56221ec867fd",
+          "curated": true
+        },
+        {
+          "name": "Fall of the Impostor",
+          "set": "khm",
+          "scryfallId": "d7de696a-49c2-421d-a86c-bcffd68870c6"
+        },
+        {
+          "name": "Ascent of the Worthy",
+          "set": "khm",
+          "scryfallId": "0bf01666-0fbf-4b15-a33d-964165bbfafb"
+        }
+      ]
+    }
+  },
+  "adventure": {
+    "colors": {
+      "w": [
+        {
+          "name": "Faerie Guidemother // Gift of the Fae",
+          "set": "eld",
+          "scryfallId": "e8bbece8-9620-44d9-b991-350fe952538a",
+          "curated": true
+        },
+        {
+          "name": "Realm-Cloaked Giant // Cast Off",
+          "set": "eld",
+          "scryfallId": "9e5c8cf1-1d7c-49e5-bfad-7e13c418118f"
+        },
+        {
+          "name": "Kellan, Daring Traveler // Journey On",
+          "set": "lci",
+          "scryfallId": "01739030-c280-492b-a5c9-b3e9f6debc6d"
+        }
+      ],
+      "u": [
+        {
+          "name": "Brazen Borrower // Petty Theft",
+          "set": "eld",
+          "scryfallId": "c2089ec9-0665-448f-bfe9-d181de127814",
+          "curated": true
+        },
+        {
+          "name": "Hypnotic Sprite // Mesmeric Glare",
+          "set": "eld",
+          "scryfallId": "7acbd812-b994-4e68-8f95-04222796e994"
+        },
+        {
+          "name": "Elusive Otter // Grove's Bounty",
+          "set": "woe",
+          "scryfallId": "bc9bdf96-3e3b-4dca-aae2-e81d4cbeafe8"
+        }
+      ],
+      "b": [
+        {
+          "name": "Foulmire Knight // Profane Insight",
+          "set": "eld",
+          "scryfallId": "c5f6c745-e46a-42eb-8eca-b7b74ab1245e",
+          "curated": true
+        },
+        {
+          "name": "Gumdrop Poisoner // Tempt with Treats",
+          "set": "woe",
+          "scryfallId": "5cb01d4d-91c2-41c6-981e-b4135a1e1e36"
+        }
+      ],
+      "r": [
+        {
+          "name": "Bonecrusher Giant // Stomp",
+          "set": "eld",
+          "scryfallId": "09fd2d9c-1793-4beb-a3fb-7a869f660cd4",
+          "curated": true
+        },
+        {
+          "name": "Rimrock Knight // Boulder Rush",
+          "set": "eld",
+          "scryfallId": "a3d13d84-01e4-4429-93db-e5afff811527"
+        },
+        {
+          "name": "Virtue of Courage // Embereth Blaze",
+          "set": "woe",
+          "scryfallId": "8b0e6daf-0dec-4718-af79-b7ce137c3135"
+        }
+      ],
+      "g": [
+        {
+          "name": "Lovestruck Beast // Heart's Desire",
+          "set": "eld",
+          "scryfallId": "4ccdef9c-1e85-4358-8059-8972479f7556",
+          "curated": true
+        },
+        {
+          "name": "Curious Pair // Treats to Share",
+          "set": "eld",
+          "scryfallId": "7f78a570-d776-42f2-a609-6da0156c8de7"
+        },
+        {
+          "name": "Flaxen Intruder // Welcome Home",
+          "set": "eld",
+          "scryfallId": "06bd1ad2-fb5d-4aef-87d1-13a341c686fa"
+        }
+      ],
+      "c": null,
+      "m": [
+        {
+          "name": "Beluna Grandsquall // Seek Thrills",
+          "set": "woe",
+          "scryfallId": "3f5acc0d-33a6-476f-95ca-a1ad788334dd",
+          "curated": true
+        },
+        {
+          "name": "Kellan, Inquisitive Prodigy // Tail the Suspect",
+          "set": "mkm",
+          "scryfallId": "c49690c7-c282-4eb4-8da3-5e0c46a80fc4"
+        }
+      ]
+    }
+  },
+  "split": {
+    "note": "Mono-colour split cards were never printed in the M15 frame.",
+    "colors": {
+      "w": null,
+      "u": null,
+      "b": null,
+      "r": null,
+      "g": null,
+      "c": null,
+      "m": [
+        {
+          "name": "Expansion // Explosion",
+          "set": "grn",
+          "scryfallId": "e0644c92-4d67-475e-8c8e-0e2c493682fb",
+          "curated": true
+        },
+        {
+          "name": "Pain // Suffering",
+          "set": "dmr",
+          "scryfallId": "3d11164c-f27b-4cad-8620-d97ed384f0e6"
+        },
+        {
+          "name": "Roaring Furnace // Steaming Sauna",
+          "set": "dsk",
+          "scryfallId": "94352ffb-d716-484d-b018-4e1c033ef2f3"
+        }
+      ]
+    }
+  },
+  "aftermath": {
+    "colors": {
+      "w": [
+        {
+          "name": "Dusk // Dawn",
+          "set": "akh",
+          "scryfallId": "937dbc51-b589-4237-9fce-ea5c757f7c48",
+          "curated": true
+        },
+        {
+          "name": "Dusk // Dawn",
+          "set": "drc",
+          "scryfallId": "b75c309f-b48f-46c6-aef7-7e7ca64da262"
+        }
+      ],
+      "u": [
+        {
+          "name": "Commit // Memory",
+          "set": "akh",
+          "scryfallId": "06c9e2e8-2b4c-4087-9141-6aa25a506626",
+          "curated": true
+        },
+        {
+          "name": "Commit // Memory",
+          "set": "lcc",
+          "scryfallId": "855af9a8-31fc-4290-8204-04ee026f8853"
+        }
+      ],
+      "b": [
+        {
+          "name": "Never // Return",
+          "set": "akh",
+          "scryfallId": "a4b32135-7061-4278-a01a-4fcbaadc9706",
+          "curated": true
+        },
+        {
+          "name": "Never // Return",
+          "set": "drc",
+          "scryfallId": "f6bb09b1-d28a-48c1-9d97-11bec84afb5e"
+        }
+      ],
+      "r": [
+        {
+          "name": "Insult // Injury",
+          "set": "akh",
+          "scryfallId": "eeac671f-2606-43ed-ad60-a69df5c150f6",
+          "curated": true
+        },
+        {
+          "name": "Indulge // Excess",
+          "set": "ncc",
+          "scryfallId": "d653b755-1e09-45c4-8d44-8a950151ca51"
+        }
+      ],
+      "g": [
+        {
+          "name": "Mouth // Feed",
+          "set": "akh",
+          "scryfallId": "a47070a0-fd05-4ed9-a175-847a864478da",
+          "curated": true
+        }
+      ],
+      "c": null,
+      "m": [
+        {
+          "name": "Driven // Despair",
+          "set": "hou",
+          "scryfallId": "7713ba59-dd4c-4b49-93a7-292728df86b8",
+          "curated": true
+        },
+        {
+          "name": "Reason // Believe",
+          "set": "hou",
+          "scryfallId": "1ca644e3-4fb3-4d38-b714-e3d7459bd8b9"
+        }
+      ]
+    }
+  },
+  "flip": {
+    "note": "Printed flip cards are 2003-frame Kamigawa cards; our frame is the MSE modernisation — expect the era warning.",
+    "colors": {
+      "w": [
+        {
+          "name": "Bushi Tenderfoot // Kenzo the Hardhearted",
+          "set": "chk",
+          "scryfallId": "864ad989-19a6-4930-8efc-bbc077a18c32",
+          "curated": true
+        },
+        {
+          "name": "Rune-Tail, Kitsune Ascendant // Rune-Tail's Essence",
+          "set": "sok",
+          "scryfallId": "42ba0e13-d20f-47f9-9c86-2b0b13c39ada"
+        },
+        {
+          "name": "Faithful Squire // Kaiso, Memory of Loyalty",
+          "set": "bok",
+          "scryfallId": "758abd53-6ad2-406e-8615-8e48678405b4"
+        }
+      ],
+      "u": [
+        {
+          "name": "Student of Elements // Tobita, Master of Winds",
+          "set": "chk",
+          "scryfallId": "9de1eebf-5725-438c-bcf0-f3a4d8a89fb0",
+          "curated": true
+        },
+        {
+          "name": "Callow Jushi // Jaraku the Interloper",
+          "set": "bok",
+          "scryfallId": "ca03131a-9bd4-4fba-b95c-90f1831e86e7"
+        }
+      ],
+      "b": [
+        {
+          "name": "Nezumi Graverobber // Nighteyes the Desecrator",
+          "set": "chk",
+          "scryfallId": "77ffd913-8efa-48e5-a5cf-293d3068dbbf",
+          "curated": true
+        },
+        {
+          "name": "Kuon, Ogre Ascendant // Kuon's Essence",
+          "set": "sok",
+          "scryfallId": "41004bdf-8e09-4b2c-9e9c-26c25eac9854"
+        },
+        {
+          "name": "Hired Muscle // Scarmaker",
+          "set": "bok",
+          "scryfallId": "28f72260-c8f9-4c44-92b5-23cef6690fdd"
+        }
+      ],
+      "r": [
+        {
+          "name": "Akki Lavarunner // Tok-Tok, Volcano Born",
+          "set": "chk",
+          "scryfallId": "6ee6cd34-c117-4d7e-97d1-8f8464bfaac8",
+          "curated": true
+        },
+        {
+          "name": "Cunning Bandit // Azamuki, Treachery Incarnate",
+          "set": "bok",
+          "scryfallId": "1fe2b76f-ddb7-49d5-933b-ccb06be5d46f"
+        }
+      ],
+      "g": [
+        {
+          "name": "Budoka Gardener // Dokai, Weaver of Life",
+          "set": "chk",
+          "scryfallId": "49999b95-5e62-414c-b975-4191b9c1ab39",
+          "curated": true
+        },
+        {
+          "name": "Sasaya, Orochi Ascendant // Sasaya's Essence",
+          "set": "sok",
+          "scryfallId": "d224c50f-8146-4c91-9401-04e5bd306d02"
+        },
+        {
+          "name": "Budoka Pupil // Ichiga, Who Topples Oaks",
+          "set": "bok",
+          "scryfallId": "73636ca0-2309-4bb3-9300-8bd0c0bb5b31"
+        }
+      ],
+      "c": null,
+      "m": null
+    }
+  },
+  "agclassic": {
+    "colors": {
+      "w": [
+        {
+          "name": "Serra Angel",
+          "set": "lea",
+          "scryfallId": "f8ac5006-91bd-4803-93da-f87cf196dd2f",
+          "curated": true
+        },
+        {
+          "name": "Order of the Sacred Torch",
+          "set": "ice",
+          "scryfallId": "ccc5cb36-c43d-4c71-8019-9b683e160a0a"
+        },
+        {
+          "name": "Formation",
+          "set": "ice",
+          "scryfallId": "78446ead-61b0-485f-a5a9-b3e72d8075a7"
+        }
+      ],
+      "u": [
+        {
+          "name": "Unsummon",
+          "set": "itp",
+          "scryfallId": "550313e1-f8aa-4c31-a78c-3da2d8aada6f"
+        },
+        {
+          "name": "Illusionary Presence",
+          "set": "ice",
+          "scryfallId": "aa31efed-4a11-4f59-a623-bac45d20091d"
+        }
+      ],
+      "b": [
+        {
+          "name": "Dark Ritual",
+          "set": "itp",
+          "scryfallId": "36f1a097-eddc-4c4b-9b10-710a5a44a66f"
+        },
+        {
+          "name": "Dance of the Dead",
+          "set": "ice",
+          "scryfallId": "e7c53ba4-9956-4cd6-85ca-2d6b61a5127c"
+        }
+      ],
+      "r": [
+        {
+          "name": "Stone Rain",
+          "set": "4ed",
+          "scryfallId": "b9029bfb-fcff-4f80-a423-c2cfdc881c61"
+        },
+        {
+          "name": "Varchild's War-Riders",
+          "set": "all",
+          "scryfallId": "ee1d41da-aa72-434b-811f-95d4bae4ba5c"
+        }
+      ],
+      "g": [
+        {
+          "name": "Tsunami",
+          "set": "4ed",
+          "scryfallId": "227c2abc-d484-4198-863c-3266a83249c6"
+        },
+        {
+          "name": "Dire Wolves",
+          "set": "ice",
+          "scryfallId": "a602c93d-e00f-4b4f-a7ff-95316b7e7641"
+        }
+      ],
+      "c": [
+        {
+          "name": "Jayemdae Tome",
+          "set": "itp",
+          "scryfallId": "8362d7e3-64f1-48a7-b354-9729fc314a28"
+        },
+        {
+          "name": "Battering Ram",
+          "set": "rqs",
+          "scryfallId": "353b0834-1c08-478f-a3a9-1f17b51494de"
+        }
+      ],
+      "m": [
+        {
+          "name": "Princess Lucrezia",
+          "set": "leg",
+          "scryfallId": "a1dcf48c-2700-4024-807e-9244e4c649ac"
+        },
+        {
+          "name": "Nature's Blessing",
+          "set": "all",
+          "scryfallId": "5ba0e677-361d-4e03-9c2c-018d1c383456"
+        }
+      ]
+    }
+  },
+  "alphaland": {
+    "colors": {
+      "w": [
+        {
+          "name": "Serra Angel",
+          "set": "dmr",
+          "scryfallId": "e430b8c9-9439-4256-9066-e9b57f257fe7",
+          "curated": true
+        },
+        {
+          "name": "Plains",
+          "set": "itp",
+          "scryfallId": "9919afe3-b65e-4ec6-8a4f-9adbe5682ac7"
+        },
+        {
+          "name": "Plains",
+          "set": "lea",
+          "scryfallId": "b1623d57-4729-4796-b3f7-f1837a05c6ed"
+        }
+      ],
+      "u": [
+        {
+          "name": "Island",
+          "set": "itp",
+          "scryfallId": "1b42446b-379e-4952-ab41-8fffeff7d14b"
+        },
+        {
+          "name": "Island",
+          "set": "lea",
+          "scryfallId": "90a57c0e-fa61-45ef-955d-d296403967d5"
+        }
+      ],
+      "b": [
+        {
+          "name": "Swamp",
+          "set": "itp",
+          "scryfallId": "026cdd68-9a0e-4261-9390-e8abbcd378ba"
+        },
+        {
+          "name": "Swamp",
+          "set": "lea",
+          "scryfallId": "6176936d-72e2-4205-8871-4c5a4f1cb2d8"
+        }
+      ],
+      "r": [
+        {
+          "name": "Mountain",
+          "set": "itp",
+          "scryfallId": "f7a2af07-ef48-4492-bd2e-53320a26a89a"
+        },
+        {
+          "name": "Mountain",
+          "set": "lea",
+          "scryfallId": "eace2c85-976c-425e-9800-5a6ccbd91b56"
+        }
+      ],
+      "g": [
+        {
+          "name": "Forest",
+          "set": "itp",
+          "scryfallId": "f9f4448e-076b-4add-828f-6f218bef8a93"
+        },
+        {
+          "name": "Forest",
+          "set": "lea",
+          "scryfallId": "6f1c8cb0-38eb-408b-94e8-16db83999b3b"
+        }
+      ],
+      "c": [
+        {
+          "name": "Elephant Graveyard",
+          "set": "arn",
+          "scryfallId": "18348df2-9037-4db4-bddb-76dc933229bf"
+        },
+        {
+          "name": "Adventurers' Guildhouse",
+          "set": "leg",
+          "scryfallId": "32865e68-5842-4f17-b2ea-4ffa743b511f"
+        }
+      ],
+      "m": [
+        {
+          "name": "Volcanic Island",
+          "set": "sum",
+          "scryfallId": "f73ea932-5aba-4847-bb13-4cc0eb5dc726"
+        },
+        {
+          "name": "Land Cap",
+          "set": "ice",
+          "scryfallId": "c4806c02-7a4d-42e3-affd-0338084bd3ab"
+        }
+      ]
+    }
+  },
+  "alphatoken": {
+    "note": "No 1993-frame tokens were printed; sample content only.",
+    "colors": {
+      "w": null,
+      "u": null,
+      "b": null,
+      "r": null,
+      "g": null,
+      "c": null,
+      "m": null
+    }
+  },
+  "retro": {
+    "colors": {
+      "w": [
+        {
+          "name": "Disenchant",
+          "set": "tsb",
+          "scryfallId": "b7be41f0-7391-49dd-b63c-2e8db9430f07"
+        },
+        {
+          "name": "White Knight",
+          "set": "lgn",
+          "scryfallId": "cb9cb8ed-7abb-4e71-b42f-5041dd0c0394"
+        }
+      ],
+      "u": [
+        {
+          "name": "Merfolk Assassin",
+          "set": "tsb",
+          "scryfallId": "6a906b9b-5e7c-4300-98e4-5eec242c1306"
+        },
+        {
+          "name": "Giant Oyster",
+          "set": "tsb",
+          "scryfallId": "2dab7498-c574-4ea6-8dee-e3e0991af018"
+        }
+      ],
+      "b": [
+        {
+          "name": "Bad Moon",
+          "set": "tsb",
+          "scryfallId": "58fbbc7f-1d6e-4a6c-b5df-33bc275ee514"
+        },
+        {
+          "name": "Shambling Swarm",
+          "set": "tor",
+          "scryfallId": "b5b93715-985f-4719-a3c3-044c2a150e96"
+        }
+      ],
+      "r": [
+        {
+          "name": "Enrage",
+          "set": "scg",
+          "scryfallId": "d6ed7866-9eef-49c3-9b9e-4247b6e71a6c"
+        },
+        {
+          "name": "Lightning Surge",
+          "set": "jud",
+          "scryfallId": "0452d78d-eafc-4ccb-a478-d1f46bcefffe"
+        }
+      ],
+      "g": [
+        {
+          "name": "Avoid Fate",
+          "set": "tsb",
+          "scryfallId": "04c9f48d-2213-4f95-8eac-b23bd2d95e34"
+        },
+        {
+          "name": "Gaea's Liege",
+          "set": "tsb",
+          "scryfallId": "3ade8d4a-6a47-4a01-9a0f-ff866055fd49"
+        }
+      ],
+      "c": [
+        {
+          "name": "Sky Diamond",
+          "set": "7ed",
+          "scryfallId": "b426b86d-b1d9-4aee-ac17-4eae7a3b69a3"
+        },
+        {
+          "name": "Tangle Wire",
+          "set": "nem",
+          "scryfallId": "ad62f313-8a8a-4ffa-ada2-b12b76288729"
+        }
+      ],
+      "m": [
+        {
+          "name": "Lightning Angel",
+          "set": "tsb",
+          "scryfallId": "322d5ba3-41cc-4e60-9d0a-074f48a71ea3"
+        },
+        {
+          "name": "Cauldron Dance",
+          "set": "inv",
+          "scryfallId": "8dadcae0-f2b2-487c-bb93-0a2c073044c0"
+        }
+      ]
+    }
+  },
+  "retroland": {
+    "colors": {
+      "w": [
+        {
+          "name": "Serra Angel",
+          "set": "m12",
+          "scryfallId": "3c31fb9d-ec0d-4555-814d-62642d52c710",
+          "curated": true
+        },
+        {
+          "name": "Plains",
+          "set": "inr",
+          "scryfallId": "c574549f-da6c-4080-8748-6ef146a7ae48"
+        },
+        {
+          "name": "Plains",
+          "set": "mir",
+          "scryfallId": "888f32ad-3bdd-4c46-b3f0-522ac9763591"
+        }
+      ],
+      "u": [
+        {
+          "name": "Island",
+          "set": "inr",
+          "scryfallId": "4f8d16ec-cba6-43b7-be97-5ab184941e29"
+        },
+        {
+          "name": "Island",
+          "set": "mir",
+          "scryfallId": "df84bf1b-8698-4c3e-baa9-926f0efc6a12"
+        }
+      ],
+      "b": [
+        {
+          "name": "Swamp",
+          "set": "inr",
+          "scryfallId": "4bc918af-527c-46d7-861d-32e9150ed3df"
+        },
+        {
+          "name": "Swamp",
+          "set": "mir",
+          "scryfallId": "f2d28477-8be1-4caf-8185-64f47905ccb1"
+        }
+      ],
+      "r": [
+        {
+          "name": "Mountain",
+          "set": "inr",
+          "scryfallId": "787da7ce-527d-4abf-9e92-5de9db2250cd"
+        },
+        {
+          "name": "Mountain",
+          "set": "mir",
+          "scryfallId": "97004cdc-0baf-415d-8e87-7f36667c4628"
+        }
+      ],
+      "g": [
+        {
+          "name": "Forest",
+          "set": "inr",
+          "scryfallId": "7afdc917-ec37-4e03-853f-36cfe90053d9"
+        },
+        {
+          "name": "Forest",
+          "set": "mir",
+          "scryfallId": "a0ae7a81-9a61-4112-af22-369c525b2eb1"
+        }
+      ],
+      "c": [
+        {
+          "name": "Crystal Vein",
+          "set": "6ed",
+          "scryfallId": "2a807243-fdcd-4dfb-b9d1-a15859a15c51"
+        },
+        {
+          "name": "Path of Ancestry",
+          "set": "brc",
+          "scryfallId": "95c1557e-68dd-46be-9b1e-0a65e04fe739"
+        }
+      ],
+      "m": [
+        {
+          "name": "Seaside Haven",
+          "set": "ons",
+          "scryfallId": "9c940a6b-3c5e-4ce2-92b6-63e2cb575c15"
+        },
+        {
+          "name": "Hinterland Harbor",
+          "set": "dmr",
+          "scryfallId": "0678705f-708e-44ab-9e85-76df13bea694"
+        }
+      ]
+    }
+  },
+  "modern": {
+    "colors": {
+      "w": [
+        {
+          "name": "Planar Cleansing",
+          "set": "m14",
+          "scryfallId": "99873316-4872-4500-a225-cf483e1ebaa9"
+        },
+        {
+          "name": "Great Hart",
+          "set": "bng",
+          "scryfallId": "70cd7d2b-e9c4-4900-89a0-f6eb0c6cb22b"
+        }
+      ],
+      "u": [
+        {
+          "name": "Cancel",
+          "set": "m14",
+          "scryfallId": "954eec32-7e40-452d-94c2-f704b819f338"
+        },
+        {
+          "name": "Trait Doctoring",
+          "set": "dgm",
+          "scryfallId": "e21a7981-5940-4b75-907f-7600a742f946"
+        }
+      ],
+      "b": [
+        {
+          "name": "Doom Blade",
+          "set": "m14",
+          "scryfallId": "75d96a37-bdbe-46ae-926f-8742699a0b20"
+        },
+        {
+          "name": "Mogis's Marauder",
+          "set": "ths",
+          "scryfallId": "9dfd36c5-a484-4973-873c-b6a433da8e7a"
+        }
+      ],
+      "r": [
+        {
+          "name": "Shock",
+          "set": "m14",
+          "scryfallId": "2fbec2ea-7b60-4c51-9782-52ccdd96c4b7"
+        },
+        {
+          "name": "Possibility Storm",
+          "set": "dgm",
+          "scryfallId": "858aa831-b491-4f1e-bb56-33eeca14771d"
+        }
+      ],
+      "g": [
+        {
+          "name": "Giant Growth",
+          "set": "m14",
+          "scryfallId": "e6b32578-a074-4a46-b742-84b974748903"
+        },
+        {
+          "name": "Experiment One",
+          "set": "gtc",
+          "scryfallId": "2cc1d8d0-bb43-4962-ad29-bb6478aa986b"
+        }
+      ],
+      "c": [
+        {
+          "name": "Gold-Forged Sentinel",
+          "set": "jou",
+          "scryfallId": "4e154012-5922-45d1-8e20-d2a2b1de0785"
+        },
+        {
+          "name": "Ring of Xathrid",
+          "set": "m13",
+          "scryfallId": "47e2aa59-63dc-4e28-8cdc-2ca868ff8f59"
+        }
+      ],
+      "m": [
+        {
+          "name": "Horizon Chimera",
+          "set": "ths",
+          "scryfallId": "73b0e296-d556-4e76-bb2e-5a640e070bb5"
+        },
+        {
+          "name": "Whispering Madness",
+          "set": "gtc",
+          "scryfallId": "64e4b0cc-e611-4a4b-8392-b37bfc3a77e1"
+        }
+      ]
+    }
+  },
+  "modernland": {
+    "colors": {
+      "w": [
+        {
+          "name": "Plains",
+          "set": "md1",
+          "scryfallId": "19d1d724-731a-4125-99d1-25a81e8ff08c"
+        },
+        {
+          "name": "Plains",
+          "set": "8ed",
+          "scryfallId": "a37c667a-f035-49b2-9f34-9831e186ae82"
+        }
+      ],
+      "u": [
+        {
+          "name": "Island",
+          "set": "ddm",
+          "scryfallId": "2e9d8487-5e73-4d14-bea7-8c7eee6acc80"
+        },
+        {
+          "name": "Island",
+          "set": "8ed",
+          "scryfallId": "4146a316-c409-4121-931f-1d3b5ae63675"
+        }
+      ],
+      "b": [
+        {
+          "name": "Swamp",
+          "set": "md1",
+          "scryfallId": "e2029951-b0cb-4c09-8dc1-ec177e278877"
+        },
+        {
+          "name": "Swamp",
+          "set": "9ed",
+          "scryfallId": "4fc9d935-2a33-4928-b4b2-25c48544bf24"
+        }
+      ],
+      "r": [
+        {
+          "name": "Mountain",
+          "set": "c13",
+          "scryfallId": "66377ecf-30f2-44a4-a10e-1a6b7cf6e541"
+        },
+        {
+          "name": "Mountain",
+          "set": "8ed",
+          "scryfallId": "f243292a-e8a6-43c2-805c-15715fcebd67"
+        }
+      ],
+      "g": [
+        {
+          "name": "Forest",
+          "set": "ddm",
+          "scryfallId": "543aeea7-23c1-4c7c-a377-f39c94846b5e"
+        },
+        {
+          "name": "Forest",
+          "set": "8ed",
+          "scryfallId": "ac82d07b-f8f2-4cdd-b799-98d4dc228e5c"
+        }
+      ],
+      "c": [
+        {
+          "name": "Urza's Power Plant",
+          "set": "9ed",
+          "scryfallId": "3115c04a-ac26-4361-aecd-c6fb5f03a96f"
+        },
+        {
+          "name": "Swarmyard",
+          "set": "tsp",
+          "scryfallId": "25bfe849-a508-4fa8-8999-909fe8ec34fa"
+        }
+      ],
+      "m": [
+        {
+          "name": "Caves of Koilos",
+          "set": "md1",
+          "scryfallId": "68ed4c64-8998-4686-b5d4-e9735e0c1a76"
+        },
+        {
+          "name": "Seaside Citadel",
+          "set": "c13",
+          "scryfallId": "d3bc73ed-812f-4cf1-b32e-38cc06a55ae5"
+        }
+      ]
+    }
+  },
+  "extendedart": {
+    "colors": {
+      "w": [
+        {
+          "name": "A Tale for the Ages",
+          "set": "woe",
+          "scryfallId": "4fc7d7d8-0965-4097-98ee-e89cfa05fd05"
+        },
+        {
+          "name": "Unstable Glyphbridge // Sandswirl Wanderglyph",
+          "set": "lci",
+          "scryfallId": "a8a23e3f-57c8-4cbb-bb6c-d5fdf49a2d9c"
+        }
+      ],
+      "u": [
+        {
+          "name": "Invoke the Winds",
+          "set": "neo",
+          "scryfallId": "7e8832ae-0f84-48f0-a8f2-0bf37c3a6551"
+        },
+        {
+          "name": "Spirit Water Revival",
+          "set": "tla",
+          "scryfallId": "eadded94-3c18-43a9-bde9-f7ec86a98cce"
+        }
+      ],
+      "b": [
+        {
+          "name": "Phyrexian Arena",
+          "set": "one",
+          "scryfallId": "fb0ecf3a-ac0e-45a6-98ae-8c043c636252"
+        },
+        {
+          "name": "Rhovanion Rampager",
+          "set": "hob",
+          "scryfallId": "df7bdf15-9448-4cb0-a809-c5ac128e6b02"
+        }
+      ],
+      "r": [
+        {
+          "name": "Wish",
+          "set": "afr",
+          "scryfallId": "29c2d90f-bd33-402d-b5fd-ee1ae62b59cf"
+        },
+        {
+          "name": "Jaxis, the Troublemaker",
+          "set": "snc",
+          "scryfallId": "a3fa6dc3-3f4d-4501-8647-07b0252b6d93"
+        }
+      ],
+      "g": [
+        {
+          "name": "Regal Imperiosaur",
+          "set": "dft",
+          "scryfallId": "3a198715-4f82-409d-add0-e0200a88d708"
+        },
+        {
+          "name": "Earth's Mightiest Heroes",
+          "set": "msh",
+          "scryfallId": "b3534144-0738-4bbc-8d77-c78e28ce42eb"
+        }
+      ],
+      "c": [
+        {
+          "name": "The Stasis Coffin",
+          "set": "bro",
+          "scryfallId": "a41793ef-73a3-41fc-8efc-df0d72ede984"
+        },
+        {
+          "name": "Mechtitan Core",
+          "set": "neo",
+          "scryfallId": "9430b849-cee9-4fda-84c1-0777db82fe58"
+        }
+      ],
+      "m": [
+        {
+          "name": "Danitha, New Benalia's Light",
+          "set": "mat",
+          "scryfallId": "5e94685e-e8a0-46a5-83cf-41ccebed62cc"
+        },
+        {
+          "name": "Infinite Guideline Station",
+          "set": "eoe",
+          "scryfallId": "334654be-c433-43b6-bf33-8ba040c3c3a8"
+        }
+      ]
+    }
+  },
+  "fullart": {
+    "note": "ZNR showcase (hedron) frame — confirm the thumbnail shows the hedron treatment.",
+    "confirm": true,
+    "colors": {
+      "w": [
+        {
+          "name": "Makindi Ox",
+          "set": "znr",
+          "scryfallId": "be97b691-f9f5-4fb4-8e44-8ffe32d13d03"
+        },
+        {
+          "name": "Felidar Retreat",
+          "set": "znr",
+          "scryfallId": "d442c32d-457d-4fef-bba2-33a07bf23125"
+        }
+      ],
+      "u": [
+        {
+          "name": "Skyclave Squid",
+          "set": "znr",
+          "scryfallId": "04833fcc-cef7-4152-8191-c552288c83e4"
+        },
+        {
+          "name": "Ruin Crab",
+          "set": "znr",
+          "scryfallId": "efc72e9f-2cda-47b9-84fd-4eed88312404"
+        }
+      ],
+      "b": [
+        {
+          "name": "Dreadwurm",
+          "set": "znr",
+          "scryfallId": "d60c9b15-c824-4203-bdda-ff9c041f9e2f"
+        },
+        {
+          "name": "Skyclave Shade",
+          "set": "znr",
+          "scryfallId": "05347539-de61-4a37-929f-c909e65033f5"
+        }
+      ],
+      "r": [
+        {
+          "name": "Akoum Hellhound",
+          "set": "znr",
+          "scryfallId": "b5757230-08b8-4808-af61-d343f9748fb1"
+        },
+        {
+          "name": "Valakut Exploration",
+          "set": "znr",
+          "scryfallId": "6954cc66-ab80-4457-b0da-61d80e80e25e"
+        }
+      ],
+      "g": [
+        {
+          "name": "Kazandu Nectarpot",
+          "set": "znr",
+          "scryfallId": "796b5899-97e5-4682-aac8-51378f0c904e"
+        },
+        {
+          "name": "Skyclave Pick-Axe",
+          "set": "znr",
+          "scryfallId": "03d6d8a4-c51d-4b4a-86e7-df9e9c7a171d"
+        }
+      ],
+      "c": null,
+      "m": [
+        {
+          "name": "Brushfire Elemental",
+          "set": "znr",
+          "scryfallId": "0d0954df-07f0-430d-90ee-d1fe40af546f"
+        },
+        {
+          "name": "Omnath, Locus of Creation",
+          "set": "znr",
+          "scryfallId": "9b5bc5d7-c0f8-4632-adb7-dd3b75a3d87d"
+        }
+      ]
+    }
+  },
+  "fullartland": {
+    "colors": {
+      "w": [
+        {
+          "name": "Plains",
+          "set": "hob",
+          "scryfallId": "15dd9a36-55df-4942-a7eb-1c49a7999e68"
+        },
+        {
+          "name": "Plains",
+          "set": "bfz",
+          "scryfallId": "58a735c9-08a1-4950-bf8c-ed1cfba76765"
+        }
+      ],
+      "u": [
+        {
+          "name": "Island",
+          "set": "hob",
+          "scryfallId": "739aaaac-c424-4ea7-a084-62a6fc0438b0"
+        },
+        {
+          "name": "Island",
+          "set": "bfz",
+          "scryfallId": "8490261d-4246-4232-b7fc-23204c14a7b5"
+        }
+      ],
+      "b": [
+        {
+          "name": "Swamp",
+          "set": "hob",
+          "scryfallId": "c5f590a3-9993-4ac4-a93c-1beb44eda17b"
+        },
+        {
+          "name": "Swamp",
+          "set": "bfz",
+          "scryfallId": "132155ae-f7a4-4957-91cb-e51ff52716f9"
+        }
+      ],
+      "r": [
+        {
+          "name": "Mountain",
+          "set": "hob",
+          "scryfallId": "51acfb01-4b0b-48fc-9704-a9b4a1e43a23"
+        },
+        {
+          "name": "Mountain",
+          "set": "bfz",
+          "scryfallId": "0c9cbae1-6b04-4408-82fe-3fcf61dffbe2"
+        }
+      ],
+      "g": [
+        {
+          "name": "Forest",
+          "set": "hob",
+          "scryfallId": "5f533364-0f91-4e49-aaeb-83c4c1f6d316"
+        },
+        {
+          "name": "Forest",
+          "set": "bfz",
+          "scryfallId": "642102a2-abde-4e76-a6d6-08f7befe1196"
+        }
+      ],
+      "c": [
+        {
+          "name": "Wastes",
+          "set": "fin",
+          "scryfallId": "c61feafd-ef09-437c-a12c-fd7d6cb8c15a"
+        },
+        {
+          "name": "Wastes",
+          "set": "ogw",
+          "scryfallId": "7019912c-bd9b-4b96-9388-400794909aa1"
+        }
+      ],
+      "m": null
+    }
+  },
+  "m15textless": {
+    "note": "Textless M15 spells exist only as foil-only/promo prints (Secret Lair, Marvel, Avatar) — treat as approximate.",
+    "colors": {
+      "w": [
+        {
+          "name": "The Mind Stone",
+          "set": "msh",
+          "scryfallId": "c023ab8d-7f9e-427f-9dcf-699bb65aba5c",
+          "tier": 2
+        }
+      ],
+      "u": null,
+      "b": [
+        {
+          "name": "Bloodline Recollector // Ancestral Craving",
+          "set": "fra",
+          "scryfallId": "9a5db4d2-035f-4f48-8752-75487267c222",
+          "tier": 2
+        },
+        {
+          "name": "Sothera, the Supervoid",
+          "set": "eoe",
+          "scryfallId": "07b10f1b-b03b-4f19-bc7e-69d5eaa5ff07",
+          "tier": 2
+        }
+      ],
+      "r": [
+        {
+          "name": "Captain James T. Kirk",
+          "set": "trk",
+          "scryfallId": "b1cfb3f1-f1ad-47aa-a7f0-ff3ebd2ffa5e"
+        }
+      ],
+      "g": [
+        {
+          "name": "Captain Kathryn Janeway",
+          "set": "trk",
+          "scryfallId": "e40fe4b6-81c0-4822-9668-2dac7820dcb9"
+        }
+      ],
+      "c": [
+        {
+          "name": "Aang, Swift Savior // Aang and La, Ocean's Fury",
+          "set": "tla",
+          "scryfallId": "372afa84-9ca9-46e6-8643-e16249505c59",
+          "tier": 2
+        }
+      ],
+      "m": [
+        {
+          "name": "Katara, the Fearless",
+          "set": "tla",
+          "scryfallId": "15260c74-6400-46bd-a144-9d9e107eab8a",
+          "tier": 2
+        },
+        {
+          "name": "Toph, the First Metalbender",
+          "set": "tla",
+          "scryfallId": "1381ec47-55fd-47d9-aded-d21776bc06b9",
+          "tier": 2
+        }
+      ]
+    }
+  },
+  "m15textlessland": {
+    "colors": {
+      "w": [
+        {
+          "name": "Plains",
+          "set": "eoe",
+          "scryfallId": "089ae01b-e042-4255-b0ee-17d8f416a8d9"
+        }
+      ],
+      "u": [
+        {
+          "name": "Island",
+          "set": "eoe",
+          "scryfallId": "76313c69-8ec7-49e3-a34e-ade26097284c"
+        }
+      ],
+      "b": [
+        {
+          "name": "Swamp",
+          "set": "eoe",
+          "scryfallId": "3e724e54-a622-4c77-8183-5a397a7c14a9"
+        }
+      ],
+      "r": [
+        {
+          "name": "Mountain",
+          "set": "eoe",
+          "scryfallId": "3204f401-1bcb-4d97-b15d-113a5d3c3e9f"
+        }
+      ],
+      "g": [
+        {
+          "name": "Forest",
+          "set": "eoe",
+          "scryfallId": "8335b9f1-e726-423b-8ba7-6151448ab3fd"
+        }
+      ],
+      "c": null,
+      "m": null
+    }
+  },
+  "expeditionland": {
+    "note": "Expeditions are nonbasic lands: fetches are colourless identity (c), duals multicolour (m); no mono-colour printing exists.",
+    "colors": {
+      "w": null,
+      "u": null,
+      "b": null,
+      "r": null,
+      "g": null,
+      "c": [
+        {
+          "name": "Ancient Tomb",
+          "set": "zne",
+          "scryfallId": "880ffa23-ed71-4f39-aa66-0953a1f20fe9"
+        },
+        {
+          "name": "Cavern of Souls",
+          "set": "zne",
+          "scryfallId": "5261e0f6-55bf-4d45-92ea-7acbab41162c"
+        }
+      ],
+      "m": [
+        {
+          "name": "Grove of the Burnwillows",
+          "set": "zne",
+          "scryfallId": "82fb5274-c11a-465b-b14f-8f35495482e4"
+        },
+        {
+          "name": "Creeping Tar Pit",
+          "set": "zne",
+          "scryfallId": "3272a554-8509-40b2-ac39-c906b1366275"
+        }
+      ]
+    }
+  },
+  "nyx": {
+    "colors": {
+      "w": [
+        {
+          "name": "Daxos, Blessed by the Sun",
+          "set": "thb",
+          "scryfallId": "f5770e8a-045d-42bc-b6aa-17b89488c9d4"
+        },
+        {
+          "name": "Heliod, Sun-Crowned",
+          "set": "thb",
+          "scryfallId": "e11cf760-da35-41f2-8cf5-a5141103eeb3"
+        }
+      ],
+      "u": [
+        {
+          "name": "Callaphe, Beloved of the Sea",
+          "set": "thb",
+          "scryfallId": "69641e64-d4f5-4654-8da8-9eb9a71e51c8"
+        },
+        {
+          "name": "Thassa, Deep-Dwelling",
+          "set": "thb",
+          "scryfallId": "27b52628-de05-4ec1-9978-e998cf17bb26"
+        }
+      ],
+      "b": [
+        {
+          "name": "Tymaret, Chosen from Death",
+          "set": "thb",
+          "scryfallId": "1bcb02d3-dcf4-41a6-8b9a-f8ad477faea0"
+        },
+        {
+          "name": "Erebos, Bleak-Hearted",
+          "set": "thb",
+          "scryfallId": "68f3c60d-2fcb-476f-bcc6-eec5879b08ee"
+        }
+      ],
+      "r": [
+        {
+          "name": "Purphoros, Bronze-Blooded",
+          "set": "thb",
+          "scryfallId": "176596fd-fc6d-46ae-a64d-d9147430fe0f"
+        },
+        {
+          "name": "Anax, Hardened in the Forge",
+          "set": "thb",
+          "scryfallId": "badac9b4-bfaf-4b02-a48a-ec141393566c"
+        }
+      ],
+      "g": [
+        {
+          "name": "Renata, Called to the Hunt",
+          "set": "thb",
+          "scryfallId": "97ce113d-6757-45ac-8517-5fd531079ff9"
+        },
+        {
+          "name": "Nylea, Keen-Eyed",
+          "set": "thb",
+          "scryfallId": "2a022e36-5074-4875-ac30-aaa09b7ef421"
+        }
+      ],
+      "c": null,
+      "m": [
+        {
+          "name": "Klothys, God of Destiny",
+          "set": "thb",
+          "scryfallId": "4d747889-04db-4e7a-ad4c-7549514b5112"
+        }
+      ]
+    }
+  },
+  "lotr": {
+    "note": "Ring frame = LTR showcase + borderless (#302–331). Scryfall only holds low-res scans of this run.",
+    "colors": {
+      "w": [
+        {
+          "name": "Samwise the Stouthearted",
+          "set": "ltr",
+          "scryfallId": "44c6a273-9307-432a-96f5-3e536da70f95",
+          "tier": 1
+        },
+        {
+          "name": "Frodo, Sauron's Bane",
+          "set": "ltr",
+          "scryfallId": "6d08e637-c2b3-4b38-9b07-5bba1f13efc3",
+          "tier": 1
+        }
+      ],
+      "u": [
+        {
+          "name": "Elrond, Lord of Rivendell",
+          "set": "ltr",
+          "scryfallId": "308465a9-2143-49f2-b9d0-a09272dd1b62",
+          "tier": 1
+        },
+        {
+          "name": "Gandalf, Friend of the Shire",
+          "set": "ltr",
+          "scryfallId": "eae80537-f355-4aa3-8952-b08f3d1a1e41",
+          "tier": 1
+        }
+      ],
+      "b": [
+        {
+          "name": "Gollum, Patient Plotter",
+          "set": "ltr",
+          "scryfallId": "a881aa61-fc7c-4ffb-a129-f75be8b2e498",
+          "tier": 1
+        },
+        {
+          "name": "Sauron, the Necromancer",
+          "set": "ltr",
+          "scryfallId": "24521350-ffa6-46d9-95ed-6573c681e095",
+          "tier": 1
+        }
+      ],
+      "r": [
+        {
+          "name": "Gimli, Counter of Kills",
+          "set": "ltr",
+          "scryfallId": "b72c5bd1-cca1-4735-b4fc-7a5182fb8cd6",
+          "tier": 1
+        }
+      ],
+      "g": [
+        {
+          "name": "Meriadoc Brandybuck",
+          "set": "ltr",
+          "scryfallId": "ff7cea33-4d46-450a-a54e-b8d70910eee8",
+          "tier": 1
+        },
+        {
+          "name": "Peregrin Took",
+          "set": "ltr",
+          "scryfallId": "fbbdd288-83ec-4be9-b55f-17771fd5ecc4",
+          "tier": 1
+        }
+      ],
+      "c": null,
+      "m": [
+        {
+          "name": "Merry, Esquire of Rohan",
+          "set": "ltr",
+          "scryfallId": "d9d21bce-a381-4c5d-9e0f-b2cdc96a20b6",
+          "tier": 1
+        },
+        {
+          "name": "Tom Bombadil",
+          "set": "ltr",
+          "scryfallId": "3c7ce623-bcf8-4d42-8a88-450bea7d7529",
+          "tier": 1
+        }
+      ]
+    }
+  },
+  "lotrscroll": {
+    "note": "Scroll frame = LTR showcase + black border (#452+). Low-res scans only.",
+    "colors": {
+      "w": [
+        {
+          "name": "Slip On the Ring",
+          "set": "ltr",
+          "scryfallId": "0db59075-1ab4-4616-b969-36c52810d291",
+          "tier": 1
+        },
+        {
+          "name": "Frodo, Sauron's Bane",
+          "set": "ltr",
+          "scryfallId": "b7f03c1d-3e37-45af-ae72-ef228faba2e9",
+          "tier": 1
+        }
+      ],
+      "u": [
+        {
+          "name": "Hithlain Knots",
+          "set": "ltr",
+          "scryfallId": "7d2c2527-5968-46f3-b8a0-f818b68c7095",
+          "tier": 1
+        },
+        {
+          "name": "The Watcher in the Water",
+          "set": "ltr",
+          "scryfallId": "ce755131-7476-4c0a-83b9-4377d43f6a4c",
+          "tier": 1
+        }
+      ],
+      "b": [
+        {
+          "name": "Mirkwood Bats",
+          "set": "ltr",
+          "scryfallId": "afc16f8d-8bd6-441b-86d6-b23d699dd1ce",
+          "tier": 1
+        },
+        {
+          "name": "Isildur's Fateful Strike",
+          "set": "ltr",
+          "scryfallId": "d3b2782f-9bbf-4cfc-86a1-468994b2dfef",
+          "tier": 1
+        }
+      ],
+      "r": [
+        {
+          "name": "Relentless Rohirrim",
+          "set": "ltr",
+          "scryfallId": "f8fd28f0-071f-4c38-9147-d9e4204ed5bd",
+          "tier": 1
+        },
+        {
+          "name": "There and Back Again",
+          "set": "ltr",
+          "scryfallId": "f7596fb2-2f2b-4fde-8b8b-e041e16de4e9",
+          "tier": 1
+        }
+      ],
+      "g": [
+        {
+          "name": "Galadhrim Guide",
+          "set": "ltr",
+          "scryfallId": "d766c2f2-b3ce-4a4a-92d3-db7e05b44273",
+          "tier": 1
+        },
+        {
+          "name": "Radagast the Brown",
+          "set": "ltr",
+          "scryfallId": "0527d8ea-4420-445d-9300-1efde3829732",
+          "tier": 1
+        }
+      ],
+      "c": [
+        {
+          "name": "Shire Scarecrow",
+          "set": "ltr",
+          "scryfallId": "fbcf06c6-dd2e-4998-9c9d-6e1493e0e791",
+          "tier": 1
+        },
+        {
+          "name": "Horn of the Mark",
+          "set": "ltr",
+          "scryfallId": "1d921e07-8c42-4b9c-9939-781020c1b571",
+          "tier": 1
+        }
+      ],
+      "m": [
+        {
+          "name": "Denethor, Ruling Steward",
+          "set": "ltr",
+          "scryfallId": "6839fd15-5656-4006-a11b-d0e1cbea05b3"
+        }
+      ]
+    }
+  },
+  "avatar": {
+    "colors": {
+      "w": [
+        {
+          "name": "Aang's Iceberg",
+          "set": "tla",
+          "scryfallId": "6cd25a10-1e4e-4f47-8a67-221df4907b26"
+        }
+      ],
+      "u": [
+        {
+          "name": "Yue, the Moon Spirit",
+          "set": "tla",
+          "scryfallId": "b50e8e26-0f3c-4478-8827-dc3245f31d8a"
+        },
+        {
+          "name": "Secret of Bloodbending",
+          "set": "tla",
+          "scryfallId": "682fabaf-bfb0-4ee8-b297-f7436c7a68f2"
+        }
+      ],
+      "b": [
+        {
+          "name": "Foggy Swamp Visions",
+          "set": "tla",
+          "scryfallId": "f8f56648-85be-417a-814b-c356df390ba0"
+        },
+        {
+          "name": "Obsessive Pursuit",
+          "set": "tla",
+          "scryfallId": "2ff0a75c-b679-436f-8150-faaec3ea1df6"
+        }
+      ],
+      "r": [
+        {
+          "name": "Redirect Lightning",
+          "set": "tla",
+          "scryfallId": "2c1c0fb2-cb74-46a1-9ce4-5274feab1146"
+        },
+        {
+          "name": "Fated Firepower",
+          "set": "tla",
+          "scryfallId": "13688c4d-d63f-4cef-8aae-16aec7b9effc"
+        }
+      ],
+      "g": [
+        {
+          "name": "Great Divide Guide",
+          "set": "tla",
+          "scryfallId": "7a89533f-1236-49bf-9a25-1b7f7789eb2a"
+        },
+        {
+          "name": "The Earth King",
+          "set": "tla",
+          "scryfallId": "3687f487-eec1-4979-8008-5c907adafe9d"
+        }
+      ],
+      "c": [
+        {
+          "name": "Aang, Swift Savior // Aang and La, Ocean's Fury",
+          "set": "tla",
+          "scryfallId": "077a1ad2-6317-4271-b86c-cc999776251d"
+        },
+        {
+          "name": "Aang, at the Crossroads // Aang, Destined Savior",
+          "set": "tla",
+          "scryfallId": "d7f35cd9-71ac-4191-8604-1a653b56c42d"
+        }
+      ],
+      "m": [
+        {
+          "name": "Katara, the Fearless",
+          "set": "tla",
+          "scryfallId": "50f388bf-868c-466b-9a47-2f437336bba4"
+        },
+        {
+          "name": "Toph, the First Metalbender",
+          "set": "tla",
+          "scryfallId": "aaa3e063-472e-445a-8440-dc1910899d81"
+        }
+      ]
+    }
+  },
+  "bloomburrow": {
+    "note": "BLB woodland and anime showcase cards share every Scryfall flag (#295–336); the picks below are from that run — CONFIRM the thumbnail shows the woodland frame, and pin another printing if not.",
+    "confirm": true,
+    "colors": {
+      "w": [
+        {
+          "name": "Jackdaw Savior",
+          "set": "blb",
+          "scryfallId": "4411204e-8387-4f1c-bfb3-1e3092d07937"
+        },
+        {
+          "name": "Whiskervale Forerunner",
+          "set": "blb",
+          "scryfallId": "7ea69966-8961-4447-bd39-70d3d8d48ede"
+        }
+      ],
+      "u": [
+        {
+          "name": "Valley Floodcaller",
+          "set": "blb",
+          "scryfallId": "1c744764-3b54-49a0-aa68-1fb22d8162a9"
+        },
+        {
+          "name": "Thundertrap Trainer",
+          "set": "blb",
+          "scryfallId": "54ec3510-c168-4acc-aee8-65529d0f5ad7"
+        }
+      ],
+      "b": [
+        {
+          "name": "Valley Rotcaller",
+          "set": "blb",
+          "scryfallId": "4278a127-5f3c-4948-88bd-2af4f6834a03"
+        },
+        {
+          "name": "Osteomancer Adept",
+          "set": "blb",
+          "scryfallId": "6ef4532d-63ea-4a70-86b3-58327b7e9706"
+        }
+      ],
+      "r": [
+        {
+          "name": "Emberheart Challenger",
+          "set": "blb",
+          "scryfallId": "8fde5980-ad2c-4ddf-8244-f9688a6225f2"
+        }
+      ],
+      "g": [
+        {
+          "name": "Valley Mightcaller",
+          "set": "blb",
+          "scryfallId": "31330554-1824-436b-aee5-931a7b652ddf"
+        },
+        {
+          "name": "Scrapshooter",
+          "set": "blb",
+          "scryfallId": "9afd22ab-64e7-4b85-804d-faccd4452487"
+        }
+      ],
+      "c": null,
+      "m": [
+        {
+          "name": "Glarb, Calamity's Augur",
+          "set": "blb",
+          "scryfallId": "b6fab12e-0f81-4728-9a35-4dc896ba3744"
+        },
+        {
+          "name": "Helga, Skittish Seer",
+          "set": "blb",
+          "scryfallId": "768ef947-85fc-4fb2-bda9-e0e446cd8886"
+        }
+      ]
+    }
+  },
+  "bloomanime": {
+    "note": "Anime frame: the raised-foil anime run (#343–355) is unambiguous but foil-only; confirm the thumbnail.",
+    "confirm": true,
+    "colors": {
+      "w": [
+        {
+          "name": "Hop to It",
+          "set": "blb",
+          "scryfallId": "684614e3-5454-4e68-87da-a2027b6af6d7",
+          "tier": 2
+        },
+        {
+          "name": "Whiskervale Forerunner",
+          "set": "blb",
+          "scryfallId": "7ea69966-8961-4447-bd39-70d3d8d48ede",
+          "tier": 2
+        }
+      ],
+      "u": [
+        {
+          "name": "Mind Spring",
+          "set": "blb",
+          "scryfallId": "e7e7d174-eb7c-41ad-a241-cfbfdc71e3a7",
+          "tier": 2
+        },
+        {
+          "name": "Eluge, the Shoreless Sea",
+          "set": "blb",
+          "scryfallId": "df9da428-3af7-4027-b3f0-9138d953c37b",
+          "tier": 2
+        }
+      ],
+      "b": [
+        {
+          "name": "Fell",
+          "set": "blb",
+          "scryfallId": "7a4bb137-2639-4158-a24b-93c8e4f4cc21",
+          "tier": 2
+        },
+        {
+          "name": "Rottenmouth Viper",
+          "set": "blb",
+          "scryfallId": "7bad7555-3e5d-4096-a671-184630d38113",
+          "tier": 2
+        }
+      ],
+      "r": [
+        {
+          "name": "Flame Lash",
+          "set": "blb",
+          "scryfallId": "c6440439-7178-4a97-9e18-7fdef4b02678",
+          "tier": 2
+        },
+        {
+          "name": "Season of the Bold",
+          "set": "blb",
+          "scryfallId": "e9d88763-35bd-472a-810e-02c795d0c873",
+          "tier": 2
+        }
+      ],
+      "g": [
+        {
+          "name": "Giant Growth",
+          "set": "blb",
+          "scryfallId": "e70722d6-b4d5-45c2-9488-9a5eb0bdb9bd",
+          "tier": 2
+        },
+        {
+          "name": "Season of Gathering",
+          "set": "blb",
+          "scryfallId": "6e99fa55-2594-434b-9396-95b8f661bd0d",
+          "tier": 2
+        }
+      ],
+      "c": [
+        {
+          "name": "Forest",
+          "set": "blb",
+          "scryfallId": "bddc66f7-4e94-4857-ba7d-6b0083d0bfa0",
+          "tier": 2
+        },
+        {
+          "name": "Starforged Sword",
+          "set": "blb",
+          "scryfallId": "c23d8e96-b972-4c6c-b0c4-b6627621f048",
+          "tier": 2
+        }
+      ],
+      "m": [
+        {
+          "name": "Pond Prophet",
+          "set": "blb",
+          "scryfallId": "fb959e74-61ea-453d-bb9f-ad0183c0e1b1",
+          "tier": 2
+        },
+        {
+          "name": "Ral, Crackling Wit",
+          "set": "blb",
+          "scryfallId": "acfde780-899a-4c5b-a39b-f4a3ff129103",
+          "tier": 2
+        }
+      ]
+    }
+  },
+  "tarkirdragon": {
+    "note": "Dragon-wing = TDM borderless showcase run (#327–376) — confirm the thumbnail; Scryfall holds low-res scans of this run.",
+    "confirm": true,
+    "colors": {
+      "w": [
+        {
+          "name": "United Battlefront",
+          "set": "tdm",
+          "scryfallId": "3c6d8e5c-4b3d-4c5c-89c5-a2746cd4b578"
+        }
+      ],
+      "u": [
+        {
+          "name": "Stillness in Motion",
+          "set": "tdm",
+          "scryfallId": "70ae35fd-5fb6-440a-9e82-13998b928ee3",
+          "tier": 1
+        },
+        {
+          "name": "Taigam, Master Opportunist",
+          "set": "tdm",
+          "scryfallId": "0ea8c278-781d-4c9c-9f1c-99d799384a29",
+          "tier": 1
+        }
+      ],
+      "b": [
+        {
+          "name": "Sinkhole Surveyor",
+          "set": "tdm",
+          "scryfallId": "74b155cd-c3a0-4f27-8d3c-7778354abbd4",
+          "tier": 1
+        },
+        {
+          "name": "Avenger of the Fallen",
+          "set": "tdm",
+          "scryfallId": "bae9ca3b-cc32-410f-82e9-85cb9c4fa447",
+          "tier": 1
+        }
+      ],
+      "r": [
+        {
+          "name": "Tersa Lightshatter",
+          "set": "tdm",
+          "scryfallId": "7a1689bb-f7a4-4b53-8473-75b7ce7b496d",
+          "tier": 1
+        },
+        {
+          "name": "Cori-Steel Cutter",
+          "set": "tdm",
+          "scryfallId": "470dd3c8-07c9-42ef-aa9e-3c73b23607ff",
+          "tier": 1
+        }
+      ],
+      "g": [
+        {
+          "name": "Craterhoof Behemoth",
+          "set": "tdm",
+          "scryfallId": "c966c8a0-e73d-4484-9307-a793a65222ea",
+          "tier": 1
+        },
+        {
+          "name": "Nature's Rhythm",
+          "set": "tdm",
+          "scryfallId": "ce0ee309-b6c4-455d-8af6-48d8ac1426cb",
+          "tier": 1
+        }
+      ],
+      "c": null,
+      "m": [
+        {
+          "name": "Death Begets Life",
+          "set": "tdm",
+          "scryfallId": "e8e94b23-955b-45c0-9cef-713a0a6c38ac",
+          "tier": 1
+        },
+        {
+          "name": "Songcrafter Mage",
+          "set": "tdm",
+          "scryfallId": "584eb844-91e2-47fb-b4e0-f5def65b824a",
+          "tier": 1
+        }
+      ]
+    }
+  },
+  "tarkirdraconic": {
+    "note": "Draconic = TDM black-border showcase run (#292–326) — confirm the thumbnail; low-res scans.",
+    "confirm": true,
+    "colors": {
+      "w": [
+        {
+          "name": "Twinmaw Stormbrood // Charring Bite",
+          "set": "tdm",
+          "scryfallId": "ef466256-7d9c-46d0-a860-a0db6930db61",
+          "tier": 1
+        },
+        {
+          "name": "Teeming Dragonstorm",
+          "set": "tdm",
+          "scryfallId": "f717301c-1ae8-44b4-b6e5-d3bdf052f5da",
+          "tier": 1
+        }
+      ],
+      "u": [
+        {
+          "name": "Whirlwing Stormbrood // Dynamic Soar",
+          "set": "tdm",
+          "scryfallId": "a621ea7f-f6d5-4663-897a-bbdc2556d665",
+          "tier": 1
+        },
+        {
+          "name": "Dragonologist",
+          "set": "tdm",
+          "scryfallId": "97e8d7d3-7e80-4742-9951-eb6679a0aa66",
+          "tier": 1
+        }
+      ],
+      "b": [
+        {
+          "name": "Feral Deathgorger // Dusk Sight",
+          "set": "tdm",
+          "scryfallId": "58c446e6-8ffb-45ed-aca2-95161ac88d5c",
+          "tier": 1
+        },
+        {
+          "name": "Corroding Dragonstorm",
+          "set": "tdm",
+          "scryfallId": "a8f19964-b37b-4877-bdd5-c5c3022439ef",
+          "tier": 1
+        }
+      ],
+      "r": [
+        {
+          "name": "Stormscale Scion",
+          "set": "tdm",
+          "scryfallId": "c250cbd2-2b78-4721-9977-02de20c3d7d1"
+        },
+        {
+          "name": "Sarkhan, Dragon Ascendant",
+          "set": "tdm",
+          "scryfallId": "57c03255-e3dc-44c2-982b-7efa188280df"
+        }
+      ],
+      "g": [
+        {
+          "name": "Sagu Wildling // Roost Seek",
+          "set": "tdm",
+          "scryfallId": "b72ee8f9-5e79-4f77-ae7e-e4c274f78187",
+          "tier": 1
+        },
+        {
+          "name": "Encroaching Dragonstorm",
+          "set": "tdm",
+          "scryfallId": "8d1e6797-f938-4161-a231-dac2da23b573",
+          "tier": 1
+        }
+      ],
+      "c": [
+        {
+          "name": "Mox Jasper",
+          "set": "tdm",
+          "scryfallId": "2c0372d8-362d-486e-96c0-5738427a1087"
+        }
+      ],
+      "m": [
+        {
+          "name": "Teval, Arbiter of Virtue",
+          "set": "tdm",
+          "scryfallId": "4d3e165a-60e2-4e50-a0de-1cf7c46cb406",
+          "tier": 1
+        },
+        {
+          "name": "Betor, Kin to All",
+          "set": "tdm",
+          "scryfallId": "f1969dec-4d6b-493a-8233-76faf8fa3cea",
+          "tier": 1
+        }
+      ]
+    }
+  },
+  "tarkirghostfire": {
+    "note": "Ghostfire = TDM white-border halofoil run (#409–418), foil-only prints.",
+    "colors": {
+      "w": [
+        {
+          "name": "Clarion Conqueror",
+          "set": "tdm",
+          "scryfallId": "d5eada03-eaca-4091-8fa0-f8e996a402ad",
+          "tier": 2
+        },
+        {
+          "name": "Elspeth, Storm Slayer",
+          "set": "tdm",
+          "scryfallId": "89b98fd0-e2e5-4533-af2b-5230af2c88bd",
+          "tier": 2
+        }
+      ],
+      "u": null,
+      "b": null,
+      "r": [
+        {
+          "name": "Dracogenesis",
+          "set": "tdm",
+          "scryfallId": "38b6d099-e31f-45b5-b78a-72a4b38d60f0",
+          "tier": 2
+        },
+        {
+          "name": "Sarkhan, Dragon Ascendant",
+          "set": "tdm",
+          "scryfallId": "a267ced0-34af-483c-ba42-517f3f7e22dc",
+          "tier": 2
+        }
+      ],
+      "g": [
+        {
+          "name": "Craterhoof Behemoth",
+          "set": "tdm",
+          "scryfallId": "c13f37b1-48ff-45b5-8625-d089073ca90b",
+          "tier": 2
+        }
+      ],
+      "c": [
+        {
+          "name": "Ugin, Eye of the Storms",
+          "set": "tdm",
+          "scryfallId": "2e7cb37b-3ab5-42d0-860a-0c0760924850",
+          "tier": 2
+        }
+      ],
+      "m": [
+        {
+          "name": "Skirmish Rhino",
+          "set": "tdm",
+          "scryfallId": "5346269a-aa11-4a93-9fbc-109421afe579",
+          "tier": 2
+        },
+        {
+          "name": "All-Out Assault",
+          "set": "tdm",
+          "scryfallId": "37821af8-a873-497a-82cc-51095f1eed37",
+          "tier": 2
+        }
+      ]
+    }
+  }
+}

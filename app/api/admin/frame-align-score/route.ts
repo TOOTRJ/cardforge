@@ -10,6 +10,7 @@ import { getFrameReviews } from "@/lib/cards/frame-reviews";
 import {
   FRAME_COLOR_KEYS,
   FRAME_REFERENCES,
+  findFrameReference,
   frameComboKey,
 } from "@/lib/cards/frame-reference-registry";
 import {
@@ -61,6 +62,9 @@ export const maxDuration = 60;
 const bodySchema = z.object({
   template: z.enum(FRAME_TEMPLATE_VALUES),
   color: z.enum(FRAME_COLOR_KEYS),
+  /** A registry printing picked on the compare page (?ref=); validated
+   *  against the registry, so only listed printings are ever rendered. */
+  ref: z.string().regex(/^[0-9a-f-]{8,}$/i).optional(),
 });
 
 export type FrameAlignScore = {
@@ -81,12 +85,14 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json({ ok: false, error: "Invalid payload." }, { status: 400 });
   }
-  const { template, color } = parsed.data;
+  const { template, color, ref } = parsed.data;
 
-  // Same reference resolution as the compare page: admin-pinned wins.
+  // Same reference resolution as the compare page: an explicit registry
+  // pick, else the admin-pinned printing, else the registry default.
   const reviews = await getFrameReviews();
   const review = reviews.get(frameComboKey(template, color));
   const scryfallId =
+    findFrameReference(template, color, ref)?.scryfallId ??
     (review?.referenceName ? review.referenceScryfallId : null) ??
     FRAME_REFERENCES[template][color]?.scryfallId;
   if (!scryfallId) {
