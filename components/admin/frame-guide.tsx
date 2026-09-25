@@ -25,7 +25,7 @@ const STEPS: Array<{ title: string; body: string }> = [
   },
   {
     title: "Save & check",
-    body: "Save makes the layout live everywhere immediately (no deploy). \"Score alignment\" gives a number per element — run it before and after your edit; the number should drop. Fonts and art always differ, so compare scores against each other, never against zero.",
+    body: "Save makes the layout live everywhere immediately (no deploy). \"Score alignment\" first lines the scan up with our render (a scan crop offset never counts), masks the art and the text, then scores the frame and each element — edge differences, lower is better — and suggests a nudge per element. \"Apply nudge\" moves the element there; Save publishes it. Text never reaches 0 because fonts differ, so trust the nudge, not the absolute number.",
   },
   {
     title: "Publish the frame",

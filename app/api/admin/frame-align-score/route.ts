@@ -19,6 +19,12 @@ import {
   type SlotPath,
 } from "@/lib/cards/profile-override";
 import { scanGridFor } from "@/lib/frames/scan-geometry";
+import {
+  alignAndScore,
+  slotKindFor,
+  type AlignSlot,
+  type SlotScore,
+} from "@/lib/frames/align";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -26,21 +32,22 @@ import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 //
 // Objective alignment signal for the frame-compare tool: renders the
 // combo's reference card through our pipeline (current DB overrides
-// applied), fetches the real scan, and computes a mean-abs-diff per
-// profile slot region (greyscale, both sides resized to the scan grid).
+// applied, no brand mark), fetches the real scan, and hands both to
+// lib/frames/align.ts, which
+//   • registers the scan to our render (so a scan crop offset never counts),
+//   • scores the FRAME with the art window, text and stat interiors masked,
+//   • scores each slot and searches for the shift that best matches the
+//     printed element — reported as the suggested nudge in card percent.
 //
 // Landscape frames (battle, split): the scan is a portrait 745×1040 file
 // with the card content turned 90° counter-clockwise, while our render is
 // a true landscape image — the scan is rotated clockwise and the grid
-// swapped to 1040×745 (lib/frames/scan-geometry.ts) so the two line up and
-// the profile's landscape-percent rects address the right pixels. Both
-// images are flattened onto black first so the transparent rounded corners
-// compare like for like.
+// swapped to 1040×745 (lib/frames/scan-geometry.ts). Both images are
+// flattened onto black so the transparent rounded corners compare alike.
 //
-// The absolute number is NOISY — fonts and art legitimately differ — so the
-// UI presents it as a relative/regression signal: compare before vs after a
-// nudge, not against zero. artSlot is reported but labeled (art always
-// differs).
+// The numbers are edge differences after registration (lower is better);
+// fonts differ, so text slots never reach 0 — the per-slot NUDGE is the
+// actionable part.
 //
 // Admin-clicked button → session is_admin gate (not CRON). The Scryfall
 // scan comes off the unlimited CDN; the card lookup is admin tooling and
@@ -58,7 +65,10 @@ const bodySchema = z.object({
 
 export type FrameAlignScore = {
   overall: number;
+  /** Per-slot edge diff after registration (compat with the first UI). */
   perSlot: Partial<Record<SlotPath, number>>;
+  global: { dxPct: number; dyPct: number; confidence: number };
+  slots: Partial<Record<SlotPath, SlotScore>>;
 };
 
 export async function POST(request: Request) {
@@ -102,7 +112,11 @@ export async function POST(request: Request) {
   const H = grid.height;
 
   const [oursRaw, scanFetched] = await Promise.all([
-    renderCardImage(preview, "default").then((r) => r.arrayBuffer()),
+    // No brand mark: it has no counterpart on the printed card and would
+    // score as drift in the footer corner.
+    renderCardImage(preview, "default", { brandMark: false }).then((r) =>
+      r.arrayBuffer(),
+    ),
     fetchScryfallImage(payload.scanUrl),
   ]);
   if (!scanFetched) {
@@ -112,10 +126,11 @@ export async function POST(request: Request) {
     );
   }
 
-  const toGrey = (input: ArrayBuffer, rotateDeg: 0 | 90) => {
+  const toGrey = async (input: ArrayBuffer, rotateDeg: 0 | 90) => {
     let image = sharp(Buffer.from(input)).flatten({ background: "#000000" });
     if (rotateDeg) image = image.rotate(rotateDeg);
-    return image.resize(W, H, { fit: "fill" }).greyscale().raw().toBuffer();
+    const data = await image.resize(W, H, { fit: "fill" }).greyscale().raw().toBuffer();
+    return { width: W, height: H, data: new Uint8Array(data) };
   };
 
   const [ours, scan] = await Promise.all([
@@ -123,34 +138,31 @@ export async function POST(request: Request) {
     toGrey(await scanFetched.blob.arrayBuffer(), grid.rotateDeg),
   ]);
 
-  const regionScore = (rect: {
-    topPct: number;
-    leftPct: number;
-    widthPct: number;
-    heightPct: number;
-  }): number => {
-    const x0 = Math.max(0, Math.round((rect.leftPct / 100) * W));
-    const x1 = Math.min(W, Math.round(((rect.leftPct + rect.widthPct) / 100) * W));
-    const y0 = Math.max(0, Math.round((rect.topPct / 100) * H));
-    const y1 = Math.min(H, Math.round(((rect.topPct + rect.heightPct) / 100) * H));
-    let sum = 0;
-    let count = 0;
-    for (let y = y0; y < y1; y += 1) {
-      for (let x = x0; x < x1; x += 1) {
-        const i = y * W + x;
-        sum += Math.abs(ours[i] - scan[i]);
-        count += 1;
-      }
-    }
-    return count === 0 ? 0 : Math.round((sum / count / 255) * 1000) / 10;
-  };
-
-  const perSlot: Partial<Record<SlotPath, number>> = {};
+  const slots: AlignSlot[] = [];
   for (const path of listSlotPaths(resolved)) {
     const rect = slotRect(resolved, path);
-    if (rect) perSlot[path] = regionScore(rect);
+    if (rect) slots.push({ path, rect, kind: slotKindFor(path) });
   }
-  const overall = regionScore({ topPct: 0, leftPct: 0, widthPct: 100, heightPct: 100 });
 
-  return NextResponse.json({ ok: true, overall, perSlot });
+  const result = alignAndScore({ ours, scan, slots });
+
+  const perSlot: Partial<Record<SlotPath, number>> = {};
+  const slotScores: Partial<Record<SlotPath, SlotScore>> = {};
+  for (const [path, score] of Object.entries(result.perSlot)) {
+    perSlot[path as SlotPath] = score.score;
+    slotScores[path as SlotPath] = score;
+  }
+
+  const body: { ok: true } & FrameAlignScore = {
+    ok: true,
+    overall: result.overall,
+    perSlot,
+    global: {
+      dxPct: result.global.dxPct,
+      dyPct: result.global.dyPct,
+      confidence: result.global.confidence,
+    },
+    slots: slotScores,
+  };
+  return NextResponse.json(body);
 }

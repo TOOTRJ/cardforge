@@ -92,7 +92,7 @@ Open decisions are marked **[decide]**; none blocks its phase.
 - [x] (fixed 2026-09-25 — fix/frame-compare-correctness) **0.8 [P1] Reference pinning validates colour and kind** — refuse when
       `pickFrameColorKey(parseColorIdentity(card)) !== colorKey` or the kind
       differs — `lib/cards/frame-review-actions.ts`:144.
-- [ ] **0.9 [P1] Registered, masked scoring (the "auto-score" foundation)** —
+- [x] (fixed 2026-09-25 — feat/registered-frame-score) **0.9 [P1] Registered, masked scoring (the "auto-score" foundation)** —
       align scan→render on the frame's pinlines (phase correlation or
       projection-profile edge fit), correct the 745×1040 ≠ 5:7 and MSE 0.4 %
       stretches, mask the art window + text runs, `brandMark: false`, flatten
