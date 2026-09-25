@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { CardPreview } from "@/components/cards/card-preview";
-import { FoilSheen, coverPlacement, foilArtLayers } from "@/lib/cards/foil-finish";
+import { FoilSheen, FoilStripeSheen, coverPlacement, foilArtLayers, loyaltyStripeRects } from "@/lib/cards/foil-finish";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { setFrameStorageForTests, type FrameManifest } from "@/lib/frames/frame-url";
 
@@ -203,5 +203,180 @@ describe("foil finish — one component, both renderers", () => {
     expect(preview.match(/<FoilSheen/g)?.length).toBe(2);
     expect(preview).toContain("foilArtLayers({");
     expect(preview).not.toMatch(/mix-blend-overlay|card-shimmer/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Planeswalker ability stripes: the rows' translucent stripes sit above the
+// full-card sheen, so each stripe carries its own (FoilStripeSheen), drawn
+// over the stripe and under the badge + text. Real-pixel checks live in
+// foil-bake.test.tsx.
+// ---------------------------------------------------------------------------
+
+const norm = (css: string | null | undefined) => (css ?? "").replace(/\s+/g, "");
+const PW_RULES = "+1: Scry 1.\n−2: Draw a card.\n−7: You win.";
+
+describe("loyaltyStripeRects", () => {
+  it("cuts the rules rect into equal, contiguous rows — the renderers' flex: 1 rows", () => {
+    const rect = { topPct: 60, leftPct: 8, widthPct: 84, heightPct: 30 };
+    const rows = loyaltyStripeRects(rect, 3);
+    expect(rows).toHaveLength(3);
+    rows.forEach((r, i) => {
+      expect(r.leftPct).toBe(8);
+      expect(r.widthPct).toBe(84);
+      expect(r.heightPct).toBeCloseTo(10);
+      expect(r.topPct).toBeCloseTo(60 + 10 * i);
+    });
+    expect(loyaltyStripeRects(rect, 1)).toEqual([rect]);
+  });
+});
+
+describe("FoilStripeSheen markup", () => {
+  const region = { topPct: 70, leftPct: 10, widthPct: 80, heightPct: 10 };
+  it("masks the card-space rainbow with the stripe's own colour, over just the row", () => {
+    const html = renderToStaticMarkup(
+      FoilStripeSheen({ id: "s", region, fill: "rgba(244,238,226,0.78)", width: 600, height: 105 }),
+    );
+    expect(html).not.toContain("undefined");
+    expect(html).not.toMatch(/mix-blend|inset/);
+    // The SVG shows the row's box of the HD card…
+    expect(html).toContain('viewBox="150 1470 1200 210"');
+    // …while the gradients span the whole card, like the card-wide sheen's.
+    expect(html.match(/<linearGradient[^>]*x2="1500" y2="2100"/g)).toHaveLength(2);
+    const mask = html.slice(html.indexOf("<mask"), html.indexOf("</mask>"));
+    expect(mask).toContain('id="s-lum"');
+    expect(mask.match(/<rect /g)).toHaveLength(1);
+    expect(mask).toContain('fill="rgba(244,238,226,0.78)"');
+    expect(mask).not.toContain("<image");
+    expect(html).toContain('mask="url(#s-lum)"');
+  });
+
+  it("uses the landscape card space for a landscape frame", () => {
+    const html = renderToStaticMarkup(
+      FoilStripeSheen({ id: "s", region, fill: "#fff", landscape: true, width: 600, height: 75 }),
+    );
+    expect(html).toContain('viewBox="210 1050 1680 150"');
+    expect(html.match(/<linearGradient[^>]*x2="2100" y2="1500"/g)).toHaveLength(2);
+  });
+});
+
+describe("foil finish — planeswalker ability stripes in the preview", () => {
+  const stripeSheens = (root: HTMLElement) =>
+    Array.from(root.querySelectorAll("svg")).filter((svg) => /-rows-\d+-lum$/.test(svg.querySelector("mask")?.id ?? ""));
+
+  it("draws a sheen in every row, over its stripe and under its badge + text", () => {
+    const { container } = render(
+      <CardPreview
+        title="Probe, the Walker"
+        cardType="planeswalker"
+        colorIdentity={["white"]}
+        rulesText={PW_RULES}
+        loyalty="4"
+        frameStyle={{ template: "m15pw", finish: "foil" }}
+      />,
+    );
+    const sheens = stripeSheens(container);
+    expect(sheens).toHaveLength(3);
+    const p = getFrameProfile("m15pw");
+    const expected = loyaltyStripeRects(p.rules.rect, 3);
+    const ids = new Set<string>();
+    sheens.forEach((svg, i) => {
+      const row = svg.parentElement as HTMLElement;
+      // Mask = the stripe the row paints (A/B alternate).
+      const fill = svg.querySelector("mask rect")?.getAttribute("fill");
+      expect(norm(fill)).toBe(norm(i % 2 === 0 ? p.loyaltyRows!.stripeAHex : p.loyaltyRows!.stripeBHex));
+      expect(norm(row.style.background)).toBe(norm(fill));
+      // Stacking: the sheen is the row's first child; the badge and the text
+      // after it are positioned, so they paint over it (the bake's order).
+      expect(row.style.position).toBe("relative");
+      expect(row.firstElementChild).toBe(svg);
+      const [, badge, text] = Array.from(row.children) as HTMLElement[];
+      expect(badge.style.position).toBe("relative");
+      expect(text.style.position).toBe("relative");
+      // (RulesBody sets words as spans: compare without whitespace.)
+      expect(norm(text.textContent)).toContain(norm(["Scry 1.", "Draw a card.", "You win."][i]));
+      // The row's card-space box, so the rainbow runs on from the card's.
+      const r = expected[i];
+      const px = (v: number) => Math.round(v * 100) / 100;
+      expect(svg.getAttribute("viewBox")).toBe(
+        [(r.leftPct / 100) * 1500, (r.topPct / 100) * 2100, (r.widthPct / 100) * 1500, (r.heightPct / 100) * 2100].map(px).join(" "),
+      );
+      const id = svg.querySelector("mask")!.id;
+      expect(id).toMatch(/^foil-[A-Za-z0-9_-]+-rows-\d+-lum$/);
+      ids.add(id);
+    });
+    expect(ids.size).toBe(3);
+  });
+
+  it("gives the editor-only empty planeswalker's striped rows the same sheen", () => {
+    const { container } = render(
+      <CardPreview title="New Walker" cardType="planeswalker" colorIdentity={["blue"]} frameStyle={{ template: "m15pw", finish: "foil" }} staticInEditor />,
+    );
+    const sheens = stripeSheens(container);
+    expect(sheens).toHaveLength(3);
+    expect(norm(sheens[0].parentElement!.textContent)).toContain(norm("Loyalty abilities appear here"));
+  });
+
+  it("leaves every other finish's rows exactly as they were", () => {
+    const { stripeAHex, stripeBHex } = getFrameProfile("m15pw").loyaltyRows!;
+    const [stripeA, stripeB] = [norm(stripeAHex), norm(stripeBHex)];
+    for (const finish of ["regular", "etched", "showcase"] as const) {
+      for (const staticInEditor of [false, true]) {
+        const { container } = render(
+          <CardPreview
+            title="Probe"
+            cardType="planeswalker"
+            colorIdentity={["white"]}
+            rulesText={staticInEditor ? null : PW_RULES}
+            loyalty="4"
+            frameStyle={{ template: "m15pw", finish }}
+            staticInEditor={staticInEditor}
+          />,
+        );
+        expect(stripeSheens(container), finish).toHaveLength(0);
+        const rows = Array.from(container.querySelectorAll("div")).filter((d) =>
+          [stripeA, stripeB].includes(norm(d.style.background)),
+        );
+        expect(rows, finish).toHaveLength(3);
+        for (const row of rows) expect(row.style.position, finish).toBe("");
+        cleanup();
+      }
+    }
+  });
+});
+
+describe("foil stripes — one component, both renderers", () => {
+  /** The ability-row map of a renderer's rows component. */
+  const rowsSource = (src: string, fn: string) => {
+    const start = src.indexOf(`function ${fn}(`);
+    return src.slice(start, src.indexOf("\n}\n", start));
+  };
+
+  it("each renderer draws FoilStripeSheen as the row's first child, masked by the stripe it paints", () => {
+    for (const [file, fn] of [
+      ["lib/render/card-image.tsx", "LoyaltyRowsBake"],
+      ["components/cards/card-preview.tsx", "LoyaltyRows"],
+    ] as const) {
+      const src = read(file);
+      expect(src, file).toMatch(/import \{[^}]*FoilStripeSheen[^}]*loyaltyStripeRects[^}]*\} from "@\/lib\/cards\/foil-finish"/);
+      const rows = rowsSource(src, fn);
+      expect(rows, file).toContain("loyaltyStripeRects(slot.rect, abilities.length)");
+      expect(rows, file).toContain("background: stripe(i),");
+      expect(rows, file).toContain("fill={stripe(i)}");
+      const sheen = rows.indexOf("<FoilStripeSheen");
+      expect(sheen, file).toBeGreaterThan(rows.indexOf("background: stripe(i),"));
+      expect(sheen, file).toBeLessThan(rows.indexOf("loyaltyBadgeAssetFor(ab.cost)"));
+    }
+  });
+
+  it("both of the preview's ability-row states get the foil (real rows and the editor-only empty state)", () => {
+    const preview = read("components/cards/card-preview.tsx");
+    const uses = preview.match(/<LoyaltyRows\b[\s\S]*?\/>/g) ?? [];
+    expect(uses).toHaveLength(2);
+    for (const use of uses) expect(use).toContain("foil={plateFoil && { ...plateFoil, id: `${foilId}-rows` }}");
+    const bake = read("lib/render/card-image.tsx");
+    const at = bake.indexOf("? LoyaltyRowsBake({");
+    expect(at).toBeGreaterThan(0);
+    expect(bake.slice(at, bake.indexOf("})", at))).toContain("foil: plateFoil,");
   });
 });

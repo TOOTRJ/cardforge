@@ -92,7 +92,13 @@ import {
 } from "@/lib/cards/template-layout";
 import { resolveFrameProfile } from "@/lib/cards/profile-override";
 import { EtchedSheen } from "@/lib/cards/etched-finish";
-import { FoilSheen, foilArtLayers, type FoilArtSource } from "@/lib/cards/foil-finish";
+import {
+  FoilSheen,
+  FoilStripeSheen,
+  foilArtLayers,
+  loyaltyStripeRects,
+  type FoilArtSource,
+} from "@/lib/cards/foil-finish";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import type { CardBackFace, ColorIdentity, Rarity } from "@/types/card";
 import { clamp } from "@/lib/utils";
@@ -347,7 +353,8 @@ function CardImage({
     focalY?: number;
     scale?: number;
   };
-  // Foil plates (P/T, loyalty, defense) carry the card's sheen too.
+  // Foil plates (P/T, loyalty, defense) and planeswalker ability stripes —
+  // printed layers drawn above the full-card sheen — carry their own.
   const plateFoil = isFoil ? { cardHeight: height, landscape: layout.orientation === "landscape" } : null;
 
   const focalX2 = clamp(secondArtPos.focalX ?? 0.5, 0, 1) * 100;
@@ -702,6 +709,7 @@ function CardImage({
               sizePct: rulesSizePct,
               pipOverrides: card.pipOverrides,
               cardWidth: width,
+              foil: plateFoil,
             })
           : isBasicLand
             ? null
@@ -1312,6 +1320,7 @@ function LoyaltyRowsBake({
   sizePct,
   cardWidth,
   pipOverrides,
+  foil = null,
 }: {
   slot: TextSlot;
   rows: NonNullable<FrameProfile["loyaltyRows"]>;
@@ -1319,10 +1328,15 @@ function LoyaltyRowsBake({
   sizePct: number;
   cardWidth: number;
   pipOverrides?: PipOverrides | null;
+  /** Foil finish: each stripe gets its own sheen (FoilStripeSheen) — the
+   *  translucent stripes sit above the full-card layer. */
+  foil?: { cardHeight: number; landscape: boolean } | null;
 }) {
   const size = fpx(sizePct, cardWidth);
   const badgeW = Math.round(size * 2.3);
   const badgeH = Math.round(size * 1.5);
+  const stripe = (i: number) => (i % 2 === 0 ? rows.stripeAHex : rows.stripeBHex);
+  const stripeRects = foil ? loyaltyStripeRects(slot.rect, abilities.length) : null;
   return (
     <div
       style={{
@@ -1346,10 +1360,23 @@ function LoyaltyRowsBake({
             display: "flex",
             flex: 1,
             alignItems: "center",
-            background: i % 2 === 0 ? rows.stripeAHex : rows.stripeBHex,
+            background: stripe(i),
             padding: `${Math.round(size * 0.22)}px ${Math.round(size * 0.4)}px`,
           }}
         >
+          {/* Foil: the stripe's sheen — the row's first child, so Satori
+              paints it over the stripe and under the badge + text. */}
+          {foil && stripeRects ? (
+            <FoilStripeSheen
+              id="foil-row"
+              region={stripeRects[i]}
+              fill={stripe(i)}
+              landscape={foil.landscape}
+              width={Math.round((stripeRects[i].widthPct / 100) * cardWidth)}
+              height={Math.round((stripeRects[i].heightPct / 100) * foil.cardHeight)}
+              style={{ width: "100%", height: "100%" }}
+            />
+          ) : null}
           <div
             style={{
               position: "relative",

@@ -181,8 +181,9 @@ import { normalizeFrameTemplate } from "@/lib/cards/card-display";
 //   28     — the foil finish: its bake overlay used `inset: 0` + blend modes,
 //            which Satori ignores, so foil never reached a saved image. Both
 //            renderers now draw one shared luminance-masked holographic sheen
-//            (lib/cards/foil-finish.tsx). Card-scoped to finish "foil" on any
-//            template (VERSION_SCOPES), "sweep".
+//            (lib/cards/foil-finish.tsx), planeswalker ability stripes
+//            included (owner decision, round-2 review). Card-scoped to finish
+//            "foil" on any template (VERSION_SCOPES), "sweep".
 // ---------------------------------------------------------------------------
 
 export const CARD_LAYOUT_VERSION = 28;

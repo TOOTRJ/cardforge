@@ -23,7 +23,13 @@ import {
   webpVariant,
 } from "@/components/cards/frame-layer";
 import { EtchedSheen } from "@/lib/cards/etched-finish";
-import { FoilSheen, foilArtLayers, type FoilArtSource } from "@/lib/cards/foil-finish";
+import {
+  FoilSheen,
+  FoilStripeSheen,
+  foilArtLayers,
+  loyaltyStripeRects,
+  type FoilArtSource,
+} from "@/lib/cards/foil-finish";
 import { fitRulesSizePct, fitSingleLineSizePct } from "@/lib/cards/render-tiers";
 import {
   PLACEHOLDER_FLAVOR_TEXT,
@@ -616,6 +622,8 @@ function CardFace({
   const foilSecondArt = useNaturalSize(
     isFoil && layout.secondFace?.artSlot ? secondFace?.artUrl : null,
   );
+  // Printed layers drawn above the full-card sheen — the stat plates and the
+  // planeswalker ability stripes — carry their own (the bake's twins).
   const plateFoil = isFoil ? { landscape: layout.orientation === "landscape" } : null;
 
   const focalX = clamp(face.artPosition?.focalX ?? 0.5, 0, 1);
@@ -1022,6 +1030,7 @@ function CardFace({
           rows={layout.loyaltyRows}
           abilities={loyaltyAbilities}
           sizePct={rulesSizePct}
+          foil={plateFoil && { ...plateFoil, id: `${foilId}-rows` }}
         />
       ) : layout.loyaltyRows && usesLoyaltyRows && staticInEditor ? (
         // Editor-only: an empty planeswalker still shows the striped ability
@@ -1041,6 +1050,7 @@ function CardFace({
           ]}
           sizePct={rulesSizePct}
           placeholder
+          foil={plateFoil && { ...plateFoil, id: `${foilId}-rows` }}
         />
       ) : isBasicLand ? null : (
       <div
@@ -1897,6 +1907,7 @@ function LoyaltyRows({
   sizePct,
   pipOverrides = null,
   placeholder = false,
+  foil = null,
 }: {
   slot: TextSlot;
   rows: NonNullable<FrameProfile["loyaltyRows"]>;
@@ -1905,7 +1916,16 @@ function LoyaltyRows({
   pipOverrides?: PipOverrides | null;
   /** Editor-only empty state — mutes the row text into a hint. */
   placeholder?: boolean;
+  /** Foil finish: each stripe gets its own sheen (FoilStripeSheen) — the
+   *  translucent stripes sit above the full-card layer. The bake's
+   *  LoyaltyRowsBake twin. */
+  foil?: { id: string; landscape: boolean } | null;
 }) {
+  const stripe = (i: number) => (i % 2 === 0 ? rows.stripeAHex : rows.stripeBHex);
+  const stripeRects = foil ? loyaltyStripeRects(slot.rect, abilities.length) : null;
+  // Foil: rows contain their sheen, and the badge + text after it are
+  // positioned so they paint on top (the bake's document order).
+  const onTop = foil ? { position: "relative" as const } : {};
   return (
     <div
       style={{
@@ -1929,10 +1949,23 @@ function LoyaltyRows({
             display: "flex",
             flex: 1,
             alignItems: "center",
-            background: i % 2 === 0 ? rows.stripeAHex : rows.stripeBHex,
+            background: stripe(i),
             padding: `${cqw(sizePct * 0.22)} ${cqw(sizePct * 0.4)}`,
+            ...onTop,
           }}
         >
+          {/* Foil: the stripe's sheen — the row's first child. */}
+          {foil && stripeRects ? (
+            <FoilStripeSheen
+              id={`${foil.id}-${i}`}
+              region={stripeRects[i]}
+              fill={stripe(i)}
+              landscape={foil.landscape}
+              width="100%"
+              height="100%"
+              style={{ pointerEvents: "none" }}
+            />
+          ) : null}
           <div
             style={{
               position: "relative",
@@ -1992,6 +2025,7 @@ function LoyaltyRows({
             style={{
               flex: 1,
               minWidth: 0,
+              ...onTop,
               ...(placeholder ? { fontStyle: "italic", opacity: 0.55 } : {}),
             }}
           >

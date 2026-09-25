@@ -27,7 +27,9 @@ import { underFrameArtRect } from "@/lib/cards/template-layout";
 // Stacking: directly above the frame (preview z-6, bake right after the
 // frame <img>), below every text/pip/stat layer — on a real foil the ink
 // sits on top of the foil, so the text stays exactly as crisp and dark as on
-// a regular card.
+// a regular card. Layers painted above it that are part of the printed sheet
+// carry their own copy: the stat plates (`region`) and the planeswalker
+// ability stripes (FoilStripeSheen, below).
 //
 // SVG <mask> is luminance by default in Chromium, librsvg (what next/og
 // rasterises with when sharp is installed — the Node bake) and resvg (its
@@ -191,6 +193,49 @@ const GLINT: ReadonlyArray<readonly [offset: number, opacity: number]> = [
  *  seam never dips the mask. */
 const SPLIT_OVERLAP = 2;
 
+type View = { x: number; y: number; width: number; height: number };
+
+/** The HD card's pixel space (see the header). */
+const cardSpace = (landscape: boolean) => (landscape ? { vw: 2100, vh: 1500 } : { vw: 1500, vh: 2100 });
+
+/** A card-% rect in card pixels. */
+const rectBox = (rect: Rect, vw: number, vh: number): View => ({
+  x: (rect.leftPct / 100) * vw,
+  y: (rect.topPct / 100) * vh,
+  width: (rect.widthPct / 100) * vw,
+  height: (rect.heightPct / 100) * vh,
+});
+
+/** The rainbow + glint gradients, in CARD space (userSpaceOnUse over the
+ *  whole card, whatever part of it an SVG shows), so every foil layer's
+ *  rainbow lines up with the card-wide one. An array of plain elements:
+ *  Satori serialises an inline SVG's children itself and takes neither
+ *  components nor Fragments there. */
+function sheenGradients(id: string, vw: number, vh: number) {
+  return [
+    <linearGradient key="holo" id={`${id}-holo`} gradientUnits="userSpaceOnUse" x1="0" y1="0" x2={vw} y2={vh}>
+      {RAINBOW.map(([offset, color, opacity]) => (
+        <stop key={offset} offset={offset} stopColor={color} stopOpacity={opacity} />
+      ))}
+    </linearGradient>,
+    <linearGradient key="glint" id={`${id}-glint`} gradientUnits="userSpaceOnUse" x1="0" y1="0" x2={vw} y2={vh}>
+      {GLINT.map(([offset, opacity]) => (
+        <stop key={offset} offset={offset} stopColor="#ffffff" stopOpacity={opacity} />
+      ))}
+    </linearGradient>,
+  ];
+}
+
+/** The rainbow + glint over `view`, painted through the `${id}-lum` mask. */
+function sheenPaint(id: string, view: View) {
+  return (
+    <g mask={`url(#${id}-lum)`}>
+      <rect x={view.x} y={view.y} width={view.width} height={view.height} fill={`url(#${id}-holo)`} />
+      <rect x={view.x} y={view.y} width={view.width} height={view.height} fill={`url(#${id}-glint)`} />
+    </g>
+  );
+}
+
 export function FoilSheen({
   id,
   frameHref,
@@ -226,15 +271,9 @@ export function FoilSheen({
    *  with `region`: plates stay on the gold "m" key. */
   split?: { href: string; atPct: number } | null;
 }) {
-  const vw = landscape ? 2100 : 1500;
-  const vh = landscape ? 1500 : 2100;
+  const { vw, vh } = cardSpace(landscape);
   const seamX = split && !region ? (vw * split.atPct) / 100 : null;
-  const pct = (rect: Rect) => ({
-    x: (rect.leftPct / 100) * vw,
-    y: (rect.topPct / 100) * vh,
-    width: (rect.widthPct / 100) * vw,
-    height: (rect.heightPct / 100) * vh,
-  });
+  const pct = (rect: Rect) => rectBox(rect, vw, vh);
   const box = region ? pct(region) : null;
   const view = box
     ? { x: r2(box.x), y: r2(box.y), width: r2(box.width), height: r2(box.height) }
@@ -257,16 +296,7 @@ export function FoilSheen({
             </clipPath>
           );
         })}
-        <linearGradient id={`${id}-holo`} gradientUnits="userSpaceOnUse" x1="0" y1="0" x2={vw} y2={vh}>
-          {RAINBOW.map(([offset, color, opacity]) => (
-            <stop key={offset} offset={offset} stopColor={color} stopOpacity={opacity} />
-          ))}
-        </linearGradient>
-        <linearGradient id={`${id}-glint`} gradientUnits="userSpaceOnUse" x1="0" y1="0" x2={vw} y2={vh}>
-          {GLINT.map(([offset, opacity]) => (
-            <stop key={offset} offset={offset} stopColor="#ffffff" stopOpacity={opacity} />
-          ))}
-        </linearGradient>
+        {sheenGradients(id, vw, vh)}
         {seamX !== null ? (
           <clipPath id={`${id}-left`} clipPathUnits="userSpaceOnUse">
             <rect x="0" y="0" width={r2(seamX + SPLIT_OVERLAP)} height={vh} />
@@ -332,10 +362,75 @@ export function FoilSheen({
           ) : null}
         </mask>
       </defs>
-      <g mask={`url(#${id}-lum)`}>
-        <rect x={view.x} y={view.y} width={view.width} height={view.height} fill={`url(#${id}-holo)`} />
-        <rect x={view.x} y={view.y} width={view.width} height={view.height} fill={`url(#${id}-glint)`} />
-      </g>
+      {sheenPaint(id, view)}
+    </svg>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Planeswalker ability stripes (owner decision, 2026-09-25 round-2 review).
+// The rows paint translucent pale stripes (m15pw: 78 % cream) OVER the
+// card-wide sheen, so the ability box kept only a faint trace of the foil.
+// On a foil card every row draws FoilStripeSheen between its stripe and its
+// badge + text: the same card-space rainbow + glint, masked by the stripe
+// itself — a rect in the row's stripe colour, alpha included. With the
+// card-wide sheen still showing through the stripe's remaining (1 − alpha),
+// that adds up to the luminance mask of what the row shows (stripe over
+// art): the rule the rest of the card follows, strongest on pale stripes.
+// The badges and ability text are drawn after it, so the ink stays on top
+// and the badges keep exactly the foil they had.
+// ---------------------------------------------------------------------------
+
+/** The ability rows' boxes in card %: the rules rect cut into `count` equal
+ *  rows. Both renderers lay the rows out as equal `flex: 1` shares of that
+ *  rect (Satori always; a browser row only grows past its share when its
+ *  text overflows, which the fit estimate avoids) — the sheen fills its row
+ *  box either way, only its rainbow's card-space phase would drift. */
+export function loyaltyStripeRects(rect: Rect, count: number): Rect[] {
+  const heightPct = rect.heightPct / Math.max(1, count);
+  return Array.from({ length: count }, (_, i) => ({ ...rect, topPct: rect.topPct + i * heightPct, heightPct }));
+}
+
+export function FoilStripeSheen({
+  id,
+  region,
+  fill,
+  landscape = false,
+  width,
+  height,
+  style,
+}: {
+  /** Unique per rendered instance (SVG ids are document-global). */
+  id: string;
+  /** The row's box (loyaltyStripeRects): the SVG covers it and the rainbow
+   *  keeps its card-space position, like FoilSheen's `region`. */
+  region: Rect;
+  /** The row's stripe colour, exactly as the row paints it — the mask. */
+  fill: string;
+  landscape?: boolean;
+  width: number | string;
+  height: number | string;
+  style?: CSSProperties;
+}) {
+  const { vw, vh } = cardSpace(landscape);
+  const box = rectBox(region, vw, vh);
+  const view = { x: r2(box.x), y: r2(box.y), width: r2(box.width), height: r2(box.height) };
+  return (
+    <svg
+      viewBox={`${view.x} ${view.y} ${view.width} ${view.height}`}
+      width={width}
+      height={height}
+      preserveAspectRatio="none"
+      aria-hidden
+      style={{ position: "absolute", top: 0, left: 0, ...style }}
+    >
+      <defs>
+        {sheenGradients(id, vw, vh)}
+        <mask id={`${id}-lum`} maskUnits="userSpaceOnUse" x={view.x} y={view.y} width={view.width} height={view.height}>
+          <rect x={view.x} y={view.y} width={view.width} height={view.height} fill={fill} />
+        </mask>
+      </defs>
+      {sheenPaint(id, view)}
     </svg>
   );
 }

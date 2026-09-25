@@ -781,10 +781,13 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
         that strip. Fix: apply the scale in a non-rotated inner wrapper, or
         compute the cover + scale box in px as coverPlacement does. Found by
         the integration review 2026-09-25; 0 production aftermath cards.
-      - **Foil on planeswalkers:** the ability stripes / rules backdrop sit
-        above the full-card foil and hide ~80 % of it in the text box (one
-        production card, Coden). Fix = a region sheen between the stripe fills
-        and the text in both renderers, if the owner wants it.
+      - [x] **Foil on planeswalkers** (owner decision, round-2 review): each
+        ability stripe carries its own sheen (`FoilStripeSheen`, masked by the
+        stripe colour) between the stripe and the badge + text, in both
+        renderers — inside v28 (foil only; one production card, Coden). Still
+        open: a translucent rules BACKDROP (`rules.backdropHex` — m15pw's
+        non-planeswalker box, token / full-art scrims) hides the foil the
+        same way.
       - **Alpha colourless** uses a flat grey master; printed Alpha colourless
         cards are artifacts on a dark warm-brown border with a light crackle
         text box (Sol Ring, Juggernaut) — an asset re-source.
@@ -876,7 +879,8 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
       `inset: 0` (Satori ignores it) and `mixBlendMode` (ignored), so foil
       never reached a saved image. Both renderers now draw one shared
       luminance-masked holographic sheen (`lib/cards/foil-finish.tsx`) under
-      the ink; finish-scoped sweep. Open: the planeswalker text box (4.31).
+      the ink; finish-scoped sweep. Planeswalker ability stripes carry their
+      own sheen too; open: translucent rules backdrops (4.31).
 - [ ] **6.6 [P2] Language + set-code fields** feed the collector line (with 4.9).
 - [ ] **6.7 [P2] Accessibility** — text alternatives for rules-text pips, chip
       keyboard navigation (3b.10), announced substitution notices.
