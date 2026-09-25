@@ -36,10 +36,12 @@ describe("card-frames — frame assets resolve from disk or the deployment CDN",
   it("reads real masters from disk without any fetch (local dev / tests)", async () => {
     const fetchSpy = vi.fn();
     vi.stubGlobal("fetch", fetchSpy);
-    await preloadFrame("m15", "w");
-    await preloadFrameAssets(["/frames/m15/pt/w.png"]);
-    expect(getFrameDataUrl("m15", "w").startsWith("data:image/png;base64,")).toBe(true);
-    expect(getPlateDataUrlForPath("/frames/m15/pt/{color}.png", "w")).toMatch(/^data:image\/png;base64,/);
+    // (The M15 family left git for the frames bucket in v24 — these are
+    // masters that are still committed.)
+    await preloadFrame("retro", "w");
+    await preloadFrameAssets(["/frames/modern/pt/w.png"]);
+    expect(getFrameDataUrl("retro", "w").startsWith("data:image/png;base64,")).toBe(true);
+    expect(getPlateDataUrlForPath("/frames/modern/pt/{color}.png", "w")).toMatch(/^data:image\/png;base64,/);
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
@@ -119,6 +121,8 @@ describe("card-frames — frame assets resolve from disk or the deployment CDN",
     expect(paths).toContain("/frames/m15pw/loyaltyup.png");
     expect(paths).toContain("/frames/m15pw/loyaltydown.png");
     expect(paths).toContain("/frames/m15pw/loyaltynaught.png");
-    expect(paths).toContain("/frames/m15pw/loyalty.png");
+    // Card Conjurer's planeswalker masters paint the starting-loyalty
+    // shield themselves (frames swap 4.4) — no separate plate is fetched.
+    expect(paths).not.toContain("/frames/m15pw/loyalty.png");
   });
 });

@@ -106,12 +106,31 @@ export type StatSlot = {
   /** Horizontal nudge of the value text within the plate, in em (positive =
    *  right). Text-only, like valueDyEm. */
   valueDxEm?: number;
+  /** The plate's own box when it differs from the value's (TODO 4.18): Card
+   *  Conjurer measures the M15 P/T plate {75.73, 88.48, 18.8 × 7.33} and the
+   *  digits' box separately {79.28, 90.2, 13.67 × 3.72}. Without it the plate
+   *  fills `rect`. */
+  plateRect?: Rect;
+};
+
+/** Art drawn UNDER the whole frame for see-through frames (TODO 4.17): CC's
+ *  colourless "Eldrazi" frame, every devoid frame and the colourless token
+ *  let the art show through their bars, borders and text box, like the
+ *  printed cards. The art window keeps its exact crop (artSlot); this second
+ *  layer covers `rect` with the same art (object-fit cover at the card's
+ *  focal point) beneath it, and the frame's opaque window border hides the
+ *  seam. `colors` limits it to some frame colour keys (M15's "c" only). */
+export type UnderFrameArt = {
+  rect: Rect;
+  colors?: readonly string[];
 };
 
 export type FrameProfile = {
   label: string;
   /** Transparent art cut-out — the user's art renders here, below the frame. */
   artSlot: Rect;
+  /** Art under the whole frame for see-through frames — see UnderFrameArt. */
+  underFrameArt?: UnderFrameArt;
   /** Title band. Name renders left-aligned; mana cost right-aligned in the
    *  same band. */
   title: TextSlot;
@@ -328,16 +347,17 @@ const M15: FrameProfile = {
     font: "display",
   },
   pt: {
-    // The real M15 plate is a slim wide lozenge: outline spans ~89.7–94.7%
-    // of card height (ours was 85.6–94 — far too tall) and the printed
-    // digits center at ~(86.3%W, 91.9%H) with a 28px cap on the 745px scan.
-    rect: { topPct: 89.3, leftPct: 73.0, widthPct: 23.0, heightPct: 5.8 },
+    // Card Conjurer's measured M15 geometry (TODO 4.18, frames swap 4.4):
+    // the plate is its own box at its native 2.04 aspect — the old single
+    // rect (23 × 5.8 %) stretched it ~40 % too wide — and the digits centre
+    // in CC's text box, which lands them on the printed (86.1 %W, 91.9 %H).
+    rect: { topPct: 90.2, leftPct: 79.28, widthPct: 13.67, heightPct: 3.72 },
+    plateRect: { topPct: 88.48, leftPct: 75.73, widthPct: 18.8, heightPct: 7.33 },
     sizePct: 0.05,
     colorHex: INK_DARK,
     weight: 700,
     plateAssetPathTemplate: "/frames/m15/pt/{color}.png",
-    valueDyEm: -0.08,
-    valueDxEm: 0.3,
+    valueDyEm: -0.04,
   },
 };
 
@@ -476,13 +496,13 @@ const M15PW: FrameProfile = {
     font: "display",
   },
   loyalty: {
-    rect: { topPct: 88.2, leftPct: 81.5, widthPct: 14.5, heightPct: 7.2 },
+    // Card Conjurer's planeswalker masters paint the starting-loyalty shield
+    // into the frame (4.4/4.19), so there is no plate here any more — the
+    // value sits in CC's loyalty box (packPlaneswalkerRegular.js).
+    rect: { topPct: 90.2, leftPct: 80.6, widthPct: 14, heightPct: 3.72 },
     sizePct: 0.04,
     colorHex: "#ffffff",
     weight: 700,
-    // The printed starting-loyalty shield (MSE mainframe-planeswalker
-    // loyalty.png) — a drawn polygon reads as invisible on the black border.
-    plateAssetPathTemplate: "/frames/m15pw/loyalty.png",
     shadowCss: OUTLINE_SHADOW,
   },
 };
@@ -546,14 +566,29 @@ const M15TOKEN: FrameProfile = {
 // regions and the same painted P/T plate — so they're straight clones with a
 // different frame PNG. Their plates are light (silver/pale), so the dark M15
 // ink reads on them unchanged.
-const M15ARTIFACT: FrameProfile = { ...M15, label: "M15 Artifact" };
-const M15SNOW: FrameProfile = { ...M15, label: "M15 Snow" };
+const M15ARTIFACT: FrameProfile = {
+  ...M15,
+  label: "M15 Artifact",
+  pt: { ...M15.pt!, plateAssetPathTemplate: "/frames/m15artifact/pt/{color}.png" },
+};
+const M15SNOW: FrameProfile = {
+  ...M15,
+  label: "M15 Snow",
+  pt: { ...M15.pt!, plateAssetPathTemplate: "/frames/m15snow/pt/{color}.png" },
+};
+
+/** Inside the black border — where the art runs under see-through frames. */
+const UNDER_FRAME_RECT = { topPct: 4, leftPct: 4, widthPct: 92, heightPct: 92 };
 // Devoid re-dresses the M15 frame; the Eldrazi type bar sits 0.1% higher
 // than the plain frame's and the set symbol lives in its own box
 // (production override 2026-07-14, folded 2026-09-25).
 const M15DEVOID: FrameProfile = {
   ...M15,
   label: "M15 Devoid (Eldrazi)",
+  // Every devoid frame is see-through (CC text box alpha ~179): the art
+  // runs under the whole frame like printed devoid cards (4.17).
+  underFrameArt: { rect: UNDER_FRAME_RECT },
+  pt: { ...M15.pt!, plateAssetPathTemplate: "/frames/m15devoid/pt/{color}.png" },
   type: { ...M15.type, rect: { ...M15.type.rect, topPct: 56.4 } },
   symbolRect: { topPct: 56.2, leftPct: 80.2, widthPct: 12, heightPct: 5.2 },
 };
@@ -1459,10 +1494,14 @@ const M15TEXTLESSLAND: FrameProfile = {
 };
 
 const PROFILES: Record<FrameTemplate, FrameProfile> = {
-  m15: M15,
+  // Colourless M15 is CC's see-through "Eldrazi" frame: art under the frame
+  // for "c" only (4.17). Set here, not on M15, so the many profiles that
+  // spread M15 don't inherit it.
+  m15: { ...M15, underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] } },
   m15land: M15LAND,
   m15snowland: M15SNOWLAND,
-  m15token: M15TOKEN,
+  // Colourless creature tokens print a see-through frame (BFZ, MH1, WAR).
+  m15token: { ...M15TOKEN, underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] } },
   m15tokenartifact: { ...M15TOKEN, label: "M15 Artifact Token" },
   m15artifact: M15ARTIFACT,
   m15snow: M15SNOW,
@@ -1505,4 +1544,12 @@ export function getFrameProfile(
 ): FrameProfile {
   if (!template) return M15;
   return PROFILES[template as FrameTemplate] ?? M15;
+}
+
+/** The under-frame art rect for a profile + frame colour key, or null. */
+export function underFrameArtRect(profile: FrameProfile, colorKey: string): Rect | null {
+  const u = profile.underFrameArt;
+  if (!u) return null;
+  if (u.colors && !u.colors.includes(colorKey)) return null;
+  return u.rect;
 }

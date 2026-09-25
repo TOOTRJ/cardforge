@@ -32,7 +32,7 @@ const templates = CC_TEMPLATES as Record<string, Def>;
 describe("Card Conjurer recipe", () => {
   it("covers the M15-era templates — every colour built or excluded with a reason — with pack paths", () => {
     expect(Object.keys(templates).sort()).toEqual(
-      ["m15", "m15artifact", "m15land", "m15pw", "m15snow", "m15snowland", "m15token", "m15tokenartifact"],
+      ["m15", "m15artifact", "m15devoid", "m15land", "m15pw", "m15snow", "m15snowland", "m15token", "m15tokenartifact"],
     );
     for (const [template, def] of Object.entries(templates)) {
       expect(FRAME_TEMPLATE_VALUES as readonly string[]).toContain(template);
@@ -71,14 +71,24 @@ describe("Card Conjurer recipe", () => {
     for (const layer of templates.m15token.colors.w) expect(layer.src).toMatch(/^img\/frames\/token\/m15\/textless\//);
   });
 
-  it("defers see-through frames until art can run under the frame (4.17)", () => {
-    expect(templates.m15.excluded?.c).toMatch(/see-through/);
-    expect(builtColors(templates.m15 as never)).not.toContain("c");
-    expect((CC_DEFERRED as Record<string, string>).m15devoid).toMatch(/see-through/);
+  it("imports the see-through frames now that art runs under the frame (4.17, owner decision)", () => {
+    expect(builtColors(templates.m15 as never)).toContain("c");
+    expect(templates.m15.colors.c[0].src).toBe("img/frames/m15/new/c.png");
+    expect(templates.m15devoid.colors.u[0].src).toMatch(/m15DevoidFrameU\.png$/);
+    expect(Object.keys(CC_DEFERRED as Record<string, string>)).toEqual([]);
+  });
+
+  it("builds the colourless creature token as a see-through composite of CC's silver token frame", () => {
+    const layers = (templates.m15token.colors.c as Array<{ src: string; mask?: string; opacity?: number }>);
+    expect(layers.every((l) => l.src.endsWith("token/m15/textless/a.png"))).toBe(true);
+    // Frame and type bar translucent (art shows through); border, title and window pinline opaque.
+    expect(layers.find((l) => l.mask?.endsWith("frame.svg"))?.opacity).toBeLessThan(0.5);
+    expect(layers.find((l) => l.mask?.endsWith("m15MaskTitle.png"))?.opacity).toBeUndefined();
+    expect(layers.find((l) => l.mask?.endsWith("pinline.svg"))?.opacity).toBeUndefined();
   });
 
   it("writes down every colourless substitution", () => {
-    for (const template of ["m15land", "m15snow", "m15pw", "m15token"]) {
+    for (const template of ["m15land", "m15snow", "m15pw", "m15token", "m15devoid"]) {
       expect(templates[template].notes.join(" "), template).toMatch(/colourless/);
     }
     // The planeswalker's painted shield must travel with the frames until 4.4 drops our plate.
@@ -152,7 +162,7 @@ describe("provenance and hygiene", () => {
       expect(provenance[template].commit).toBe(CC_COMMIT);
       expect(Object.keys(provenance[template].colors).sort()).toEqual([...COLORS].sort());
     }
-    expect(provenance.m15.excluded.c).toMatch(/see-through/);
+    expect(provenance.m15devoid.source).toBe("cardconjurer");
   });
 
   it("never commits the build folder", () => {

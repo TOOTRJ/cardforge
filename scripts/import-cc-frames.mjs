@@ -106,7 +106,9 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
   if (only && !only.includes(template)) continue;
   const recipe = {};
   for (const key of builtColors(def)) {
-    recipe[key] = def.colors[key].map((l) => (l.mask ? `${l.src} through ${l.mask}` : l.src));
+    recipe[key] = def.colors[key].map(
+      (l) => `${l.src}${l.mask ? ` through ${l.mask}` : ""}${l.opacity !== undefined ? ` at ${Math.round(l.opacity * 100)}%` : ""}`,
+    );
     const out = path.join(outDir, template, `${key}.png`);
     if (dryRun) {
       console.log(`${path.relative(process.cwd(), out)} ← ${recipe[key].join(" + ")}`);
@@ -120,6 +122,7 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
       images.push({
         data: await rgba(await fetchCached(l.src), W, H),
         mask: l.mask ? await rgba(await fetchCached(l.mask), W, H) : undefined,
+        opacity: l.opacity,
       });
     }
     const native = toRgba8(compositeLayers(images, W, H));

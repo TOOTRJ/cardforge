@@ -31,11 +31,13 @@ export const COLORS = ["w", "u", "b", "r", "g", "c", "m"];
 const NEW = "img/frames/m15/new";
 const REG = "img/frames/m15/regular";
 const SNOW = "img/frames/m15/new/snow";
+const DEVOID = "img/frames/m15/devoid";
 const PW = "img/frames/planeswalker/regular";
 const TOKEN = "img/frames/token/m15/textless";
 
-/** A layer: a frame image, optionally shown only through a greyscale mask. */
-const layer = (src, mask) => (mask ? { src, mask } : { src });
+/** A layer: a frame image, optionally shown only through a mask (its alpha),
+ *  optionally at reduced opacity. */
+const layer = (src, mask, opacity) => ({ src, ...(mask ? { mask } : {}), ...(opacity !== undefined ? { opacity } : {}) });
 
 /** Regular M15 P/T plates (CC keeps one set for regular, snow and tokens). */
 const REG_PT = Object.fromEntries(COLORS.map((k) => [k, `${REG}/m15PT${k.toUpperCase()}.png`]));
@@ -72,12 +74,11 @@ const WUBRGM = ["w", "u", "b", "r", "g", "m"];
  */
 export const CC_TEMPLATES = {
   m15: {
-    colors: perColor((k) => [layer(`${NEW}/${k}.png`)], WUBRGM),
-    excluded: {
-      c: "CC's colourless 'Eldrazi' frame (new/c.png) is see-through; it needs art drawn under the frame (TODO 4.17) — keep the current master",
-    },
+    colors: perColor((k) => [layer(`${NEW}/${k}.png`)]),
     plates: REG_PT,
-    notes: [],
+    notes: [
+      "colourless = CC's see-through 'Eldrazi' frame (new/c.png): the M15 profile draws the art under the frame for 'c' (underFrameArt, TODO 4.17), like printed colourless Eldrazi (owner decision 2026-09-25)",
+    ],
   },
   m15artifact: {
     colors: {
@@ -100,6 +101,18 @@ export const CC_TEMPLATES = {
     colors: perColor((k) => [layer(k === "c" ? `${SNOW}/l.png` : `${SNOW}/l${k}.png`)]),
     notes: [],
   },
+  m15devoid: {
+    // Every CC devoid frame is see-through (text box alpha ~179): the
+    // M15DEVOID profile draws the art under the whole frame (4.17).
+    colors: perColor((k) => [
+      layer(k === "c" ? `${NEW}/c.png` : `${DEVOID}/m15DevoidFrame${k.toUpperCase()}.png`),
+    ]),
+    plates: perColor(() => `${DEVOID}/m15DevoidPT.png`),
+    notes: [
+      "see-through frames: the art runs under the whole frame (underFrameArt)",
+      "true colourless = the colourless 'Eldrazi' frame; devoid colours keep their pinline",
+    ],
+  },
   m15pw: {
     colors: perColor((k) => [layer(`${PW}/planeswalkerFrame${k === "c" ? "A" : k.toUpperCase()}.png`)]),
     notes: [
@@ -108,10 +121,24 @@ export const CC_TEMPLATES = {
     ],
   },
   m15token: {
-    colors: perColor((k) => [layer(k === "c" ? `${TOKEN}/a.png` : `${TOKEN}/${k}.png`)]),
+    colors: {
+      ...perColor((k) => [layer(`${TOKEN}/${k}.png`)], WUBRGM),
+      // Printed colourless creature tokens (BFZ Eldrazi Scion, MH1
+      // Shapeshifter, WAR Spirit) have a SEE-THROUGH grey frame with the art
+      // running under it. CC's bordered token pack has no such frame, so it
+      // is a PipGlyph composite of CC's silver token frame: opaque border,
+      // black title bar and window pinline, translucent frame + type bar.
+      c: [
+        layer(`${TOKEN}/a.png`, `${REG}/m15MaskBorder.png`),
+        layer(`${TOKEN}/a.png`, `${TOKEN}/frame.svg`, 0.35),
+        layer(`${TOKEN}/a.png`, "img/frames/token/tokenMaskTextlessType.png", 0.8),
+        layer(`${TOKEN}/a.png`, `${REG}/m15MaskTitle.png`),
+        layer(`${TOKEN}/a.png`, `${TOKEN}/pinline.svg`),
+      ],
+    },
     notes: [
       "source: CC 'Textless (Bordered M15)' — its geometry matches the M15TOKEN profile (art 12.5–81.3 %, type bar ~82 %)",
-      "colourless token = the silver artifact token frame [decide: CC's land token frame for colourless creature tokens like Eldrazi Scions]",
+      "colourless creature token = PipGlyph composite: CC's silver token frame at 35 % (frame) / 80 % (type bar) opacity over the art, like printed BFZ/MH1/WAR colourless tokens (owner decision 2026-09-25)",
     ],
   },
   m15tokenartifact: {
@@ -124,10 +151,7 @@ export const CC_TEMPLATES = {
 };
 
 /** Templates deliberately NOT imported yet, and why. */
-export const CC_DEFERRED = {
-  m15devoid:
-    "every CC devoid frame is see-through (text box alpha ~179, side strips 0): it needs full-bleed art under the frame (TODO 4.17) before it can ship",
-};
+export const CC_DEFERRED = {};
 
 /**
  * Composite RGBA layers (each `{ data, mask? }`, raw 8-bit RGBA of the same
@@ -146,6 +170,7 @@ export function compositeLayers(images, width, height) {
       const o = p * 4;
       let a = img.data[o + 3] / 255;
       if (img.mask) a *= img.mask[o + 3] / 255;
+      if (img.opacity !== undefined) a *= img.opacity;
       if (i === 0) {
         acc[o] = img.data[o];
         acc[o + 1] = img.data[o + 1];

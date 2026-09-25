@@ -135,9 +135,19 @@
 //            and read as a different, thinner symbol beside an uncommon's.
 //            Only COMMON cards on the default mark changed (VERSION_SCOPES);
 //            every other bake is stamped current without a re-render.
+//   24     — the M15 family re-sourced from Card Conjurer (frames plan 4.4,
+//            owner-approved side-by-side before release): 2010×2814 masters
+//            for m15 / m15artifact / m15land / m15snow / m15snowland /
+//            m15devoid, CC's planeswalker and bordered-token masters; coloured
+//            artifacts with CC's recipe (artifact frame, colour interior —
+//            4.16); colourless M15, devoid and the colourless token see-through
+//            with the art under the frame (4.17); the P/T plate at CC's own
+//            box (4.18) — which also moves P/T on every template that uses the
+//            M15 plate; CC's painted planeswalker shield (no plate). Template-
+//            scoped, "sweep": a platform correction, never an owner badge.
 // ---------------------------------------------------------------------------
 
-export const CARD_LAYOUT_VERSION = 23;
+export const CARD_LAYOUT_VERSION = 24;
 
 /**
  * Bumps that changed the output of only some frame templates, keyed by the
@@ -147,7 +157,13 @@ export const CARD_LAYOUT_VERSION = 23;
  * Template keys match `frame_style.template` (types/card.ts
  * FRAME_TEMPLATE_VALUES).
  */
-const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {};
+const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
+  // v24: the Card Conjurer M15 swap + everything that draws the M15 P/T plate.
+  24: [
+    "m15", "m15artifact", "m15land", "m15snow", "m15snowland", "m15devoid", "m15pw", "m15token", "m15tokenartifact",
+    "adventure", "extendedart", "fullart", "fullartland", "m15textless", "m15textlessland", "expeditionland", "nyx",
+  ],
+};
 
 /** The card fields a scoped bump can look at. Optional so partial rows
  *  work — a predicate treats a missing `rarity` as "can't tell" and answers
@@ -258,6 +274,7 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   21: "sweep", // re-do of the v20 sweep with the billing flag set
   22: "opt-in", // rules-text typography standard — owner's call
   23: "sweep", // default set mark for commons — one emblem across a set
+  24: "sweep", // Card Conjurer M15 swap — a platform correction, owner-approved
 };
 
 export function rolloutPolicy(version: number, rollout = VERSION_ROLLOUT): RolloutPolicy {

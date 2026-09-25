@@ -53,6 +53,7 @@ import {
   type Rect,
   type SlotAlign,
   type StatSlot,
+  underFrameArtRect,
   type TextSlot,
 } from "@/lib/cards/template-layout";
 import {
@@ -623,8 +624,23 @@ function CardFace({
     !isBasicLand &&
     Boolean(face.rulesText?.trim() || face.flavorText?.trim());
 
+  // See-through frames (colourless Eldrazi, devoid, colourless token): the
+  // art also runs under the whole frame (TODO 4.17). Same object-fit cover
+  // at the card's focal point in both renderers; the window keeps its crop.
+  const underArtRect = underFrameArtRect(layout, colorKey);
+
   return (
     <div className="absolute inset-0">
+      {underArtRect && face.artUrl ? (
+        <div
+          aria-hidden
+          className="absolute overflow-hidden"
+          style={{ ...rectStyle(underArtRect), zIndex: 0 }}
+          data-testid="under-frame-art"
+        >
+          <ArtImage src={face.artUrl} focalX={focalX} focalY={focalY} scale={1} alt="" />
+        </div>
+      ) : null}
       {/* Art — below the frame, in the transparent cut-out. */}
       <div
         aria-hidden
@@ -1138,6 +1154,26 @@ function StatOverlay({
   value: string;
   colorKey: string;
 }) {
+  // A separate plate box (TODO 4.18): the plate draws in plateRect, the
+  // digits centre in rect — same split in the bake (StatBake).
+  if (slot.plateRect && slot.plateAssetPathTemplate) {
+    const plateSrc = resolveColorAsset(slot.plateAssetPathTemplate, colorKey);
+    return (
+      <>
+        <picture>
+          <source srcSet={frameUrl(webpVariant(plateSrc))} type="image/webp" />
+          <img
+            src={frameUrl(plateSrc)}
+            alt=""
+            aria-hidden
+            className="pointer-events-none absolute object-fill"
+            style={{ ...rectStyle(slot.plateRect), zIndex: 22 }}
+          />
+        </picture>
+        <StatOverlay slot={{ ...slot, plateAssetPathTemplate: undefined, plateRect: undefined }} value={value} colorKey={colorKey} />
+      </>
+    );
+  }
   return (
     <div
       className="pointer-events-none absolute flex items-center justify-center"

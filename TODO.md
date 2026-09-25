@@ -165,7 +165,7 @@ Open decisions are marked **[decide]**; none blocks its phase.
       - Re-check the rotated rules box against CC (x 6.94–44.94 / y 57.0–90.57, 0.0507 W) so wide text can't reach the type bar.
       - Parity test: the second title's first glyph sits above its cost.
       - Compare-tool check against Cut // Ribbons with the 0.1/0.2 rotated render before 2.2 walks aftermath. It is unverified, so no user sees it yet.
-- [ ] **0.23 [P0] Rewrite the 'original frames / no copyrighted assets' claims before any CC frame ships** (Card Conjurer audit 2026-09-25) — About 13 public lines promise original, non-WotC frames/fonts/mana symbols:
+- [x] (won't do — owner decision 2026-09-25: "when the cards are created they become original, so the wording is correct") **0.23 [P0] Rewrite the 'original frames / no copyrighted assets' claims before any CC frame ships** (Card Conjurer audit 2026-09-25) — About 13 public lines promise original, non-WotC frames/fonts/mana symbols:
       - `components/marketing/marketing-hero.tsx`:108 ('Original frames — no copyrighted assets used.')
       - `app/(marketing)/mtg-card-maker/page.tsx`:162
       - `app/(marketing)/mana-pip-editor/page.tsx`:154
@@ -636,7 +636,7 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
       Fix the wrong description in the build-script header, `types/card.ts`:272-274 and the `m15artifact` note in `lib/cards/frame-references.json`.
 
       Acceptance: re-score every colour against Esper Sentinel, Phyrexian Metamorph and Embercleave. Ships inside the 4.4 bump as a platform correction (0.20).
-- [ ] **4.17 [P1] Art under the frame for translucent frames (devoid, CC colourless)** (Card Conjurer audit 2026-09-25) — The m15devoid frames (verified, live) are translucent: type bar α≈204, text box α≈188, sides α≈34. But art is drawn only inside the inherited M15 `artSlot` over the #101015 ground (`lib/render/card-image.tsx`:285,291; `components/cards/card-preview.tsx`:627-631; `M15DEVOID = …M15`, `lib/cards/template-layout.ts`:554). So the text box renders flat grey and the side strips near-black, where print shows the art through them (Kozilek's Channeler, Introduction to Prophecy). CC's `m15/new/c.png` ('Eldrazi') is equally see-through (α 212/179/26).
+- [ ] (in progress 2026-09-25 — feat/cc-m15-swap: `underFrameArt` profile field, both renderers; owner decision: colourless + devoid show art like real cards) **4.17 [P1] Art under the frame for translucent frames (devoid, CC colourless)** (Card Conjurer audit 2026-09-25) — The m15devoid frames (verified, live) are translucent: type bar α≈204, text box α≈188, sides α≈34. But art is drawn only inside the inherited M15 `artSlot` over the #101015 ground (`lib/render/card-image.tsx`:285,291; `components/cards/card-preview.tsx`:627-631; `M15DEVOID = …M15`, `lib/cards/template-layout.ts`:554). So the text box renders flat grey and the side strips near-black, where print shows the art through them (Kozilek's Channeler, Introduction to Prophecy). CC's `m15/new/c.png` ('Eldrazi') is equally see-through (α 212/179/26).
 
       Fix:
       - Add a profile capability `artUnderFrame`: colours 'all' on m15devoid. For m15, use ['c'] only if the owner picks CC's translucent colourless **[decide]**; otherwise keep an opaque c. It draws the art over CC's devoid bounds (4 / 10.39 / 92 × 89.61, clipped to the card) beneath the frame in both renderers, with `artSlot` kept as the crop/focus hint.

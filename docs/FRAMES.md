@@ -59,9 +59,12 @@ node scripts/import-cc-frames.mjs --only m15,m15land
   coloured artifact is the artifact frame and border with the colour's
   pinline, title bar, type bar and text box. Tokens come from CC's textless
   bordered pack. Every colourless substitution is noted in the recipe.
-- **Not imported yet.** CC's colourless M15 frame and every devoid frame
-  are see-through. They stay on the current masters until art can be drawn
-  under the frame (TODO 4.17).
+- **See-through frames.** CC's colourless M15 frame, every devoid frame and
+  the colourless creature token are see-through, like the printed cards. The
+  profile's `underFrameArt` draws the art under the whole frame (TODO 4.17);
+  the window keeps its exact crop. The colourless token is a PipGlyph
+  composite of CC's silver token frame at reduced opacity, because CC's
+  bordered token pack has no colourless frame.
 - **Output.** 1500×2100 PNGs with rounded transparent corners, WebP
   siblings, and P/T plates at native size.
 - **Provenance.** Which pack files made each frame is written to

@@ -58,7 +58,7 @@ function card(patch: Record<string, unknown>) {
     updated_at: "2026-09-20T00:00:00Z",
     rendered_at: "2026-09-21T00:00:00Z",
     rendered_image_url: STORAGE,
-    frame_style: { template: "m15" },
+    frame_style: { template: "retro" },
     rarity: "uncommon",
     set_icon_url: null,
     set_icon_code: null,

@@ -79,6 +79,7 @@ import {
   type Rect,
   type SlotAlign,
   type StatSlot,
+  underFrameArtRect,
   type TextSlot,
 } from "@/lib/cards/template-layout";
 import { resolveFrameProfile } from "@/lib/cards/profile-override";
@@ -260,6 +261,7 @@ function CardImage({
     !isBasicLand &&
     Boolean(card.rulesText?.trim() || card.flavorText?.trim());
 
+  const underArtRect = underFrameArtRect(layout, colorKey);
   const artW = Math.round((layout.artSlot.widthPct / 100) * width);
   const artH = Math.round((layout.artSlot.heightPct / 100) * height);
 
@@ -287,6 +289,25 @@ function CardImage({
         color: layout.title.colorHex,
       }}
     >
+      {/* See-through frames: the art also runs under the whole frame
+          (TODO 4.17) — same cover fit at the focal point as the preview. */}
+      {underArtRect && card.artUrl ? (
+        <div style={{ ...slotBox(underArtRect), display: "flex", overflow: "hidden" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={card.artUrl}
+            width={Math.round((underArtRect.widthPct / 100) * width)}
+            height={Math.round((underArtRect.heightPct / 100) * height)}
+            alt=""
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              objectPosition: `${focalX}% ${focalY}%`,
+            }}
+          />
+        </div>
+      ) : null}
       {/* Art — below the frame, in the transparent cut-out. */}
       <div style={{ ...slotBox(layout.artSlot), display: "flex", overflow: "hidden" }}>
         {card.artUrl ? (
@@ -1374,6 +1395,22 @@ function StatBake({
   const plateUrl = slot.plateAssetPathTemplate
     ? getPlateDataUrlForPath(slot.plateAssetPathTemplate, colorKey)
     : null;
+  // A separate plate box (TODO 4.18): plate in plateRect, digits centred in
+  // rect — the same split as the preview's StatOverlay.
+  if (slot.plateRect && plateUrl) {
+    return (
+      <div style={{ position: "absolute", left: 0, top: 0, width: "100%", height: "100%", display: "flex", zIndex: 22 }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={plateUrl} alt="" style={{ ...slotBox(slot.plateRect), objectFit: "fill" }} />
+        {StatBake({
+          slot: { ...slot, plateAssetPathTemplate: undefined, plateRect: undefined },
+          value,
+          colorKey,
+          cardWidth,
+        })}
+      </div>
+    );
+  }
   return (
     <div
       style={{
