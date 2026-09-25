@@ -21,15 +21,12 @@
       "g": [
         "img/frames/m15/new/g.png"
       ],
+      "c": [
+        "img/frames/m15/new/c.png"
+      ],
       "m": [
         "img/frames/m15/new/m.png"
-      ],
-      "c": [
-        "NOT IMPORTED — CC's colourless 'Eldrazi' frame (new/c.png) is see-through; it needs art drawn under the frame (TODO 4.17) — keep the current master"
       ]
-    },
-    "excluded": {
-      "c": "CC's colourless 'Eldrazi' frame (new/c.png) is see-through; it needs art drawn under the frame (TODO 4.17) — keep the current master"
     },
     "plates": {
       "w": "img/frames/m15/regular/m15PTW.png",
@@ -42,6 +39,7 @@
     },
     "sourceFiles": [
       "img/frames/m15/new/b.png",
+      "img/frames/m15/new/c.png",
       "img/frames/m15/new/g.png",
       "img/frames/m15/new/m.png",
       "img/frames/m15/new/r.png",
@@ -55,7 +53,9 @@
       "img/frames/m15/regular/m15PTU.png",
       "img/frames/m15/regular/m15PTW.png"
     ],
-    "notes": []
+    "notes": [
+      "colourless = CC's see-through 'Eldrazi' frame (new/c.png): the M15 profile draws the art under the frame for 'c' (underFrameArt, TODO 4.17), like printed colourless Eldrazi (owner decision 2026-09-25)"
+    ]
   },
   "m15artifact": {
     "source": "cardconjurer",
@@ -151,6 +151,59 @@
       "coloured artifacts = artifact frame + border, colour pinline/title/type/text box through CC's masks"
     ]
   },
+  "m15devoid": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 39px, webp q90",
+    "colors": {
+      "w": [
+        "img/frames/m15/devoid/m15DevoidFrameW.png"
+      ],
+      "u": [
+        "img/frames/m15/devoid/m15DevoidFrameU.png"
+      ],
+      "b": [
+        "img/frames/m15/devoid/m15DevoidFrameB.png"
+      ],
+      "r": [
+        "img/frames/m15/devoid/m15DevoidFrameR.png"
+      ],
+      "g": [
+        "img/frames/m15/devoid/m15DevoidFrameG.png"
+      ],
+      "c": [
+        "img/frames/m15/new/c.png"
+      ],
+      "m": [
+        "img/frames/m15/devoid/m15DevoidFrameM.png"
+      ]
+    },
+    "plates": {
+      "w": "img/frames/m15/devoid/m15DevoidPT.png",
+      "u": "img/frames/m15/devoid/m15DevoidPT.png",
+      "b": "img/frames/m15/devoid/m15DevoidPT.png",
+      "r": "img/frames/m15/devoid/m15DevoidPT.png",
+      "g": "img/frames/m15/devoid/m15DevoidPT.png",
+      "c": "img/frames/m15/devoid/m15DevoidPT.png",
+      "m": "img/frames/m15/devoid/m15DevoidPT.png"
+    },
+    "sourceFiles": [
+      "img/frames/m15/devoid/m15DevoidFrameB.png",
+      "img/frames/m15/devoid/m15DevoidFrameG.png",
+      "img/frames/m15/devoid/m15DevoidFrameM.png",
+      "img/frames/m15/devoid/m15DevoidFrameR.png",
+      "img/frames/m15/devoid/m15DevoidFrameU.png",
+      "img/frames/m15/devoid/m15DevoidFrameW.png",
+      "img/frames/m15/devoid/m15DevoidPT.png",
+      "img/frames/m15/new/c.png"
+    ],
+    "notes": [
+      "see-through frames: the art runs under the whole frame (underFrameArt)",
+      "true colourless = the colourless 'Eldrazi' frame; devoid colours keep their pinline"
+    ]
+  },
   "m15land": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",
@@ -222,7 +275,18 @@
         "img/frames/planeswalker/regular/planeswalkerFrameM.png"
       ]
     },
+    "shield": {
+      "mask": "img/frames/planeswalker/maskLoyalty.png",
+      "box": {
+        "x": 1194,
+        "y": 1841,
+        "width": 240,
+        "height": 154
+      },
+      "output": "loyalty/<colour>.png"
+    },
     "sourceFiles": [
+      "img/frames/planeswalker/maskLoyalty.png",
       "img/frames/planeswalker/regular/planeswalkerFrameA.png",
       "img/frames/planeswalker/regular/planeswalkerFrameB.png",
       "img/frames/planeswalker/regular/planeswalkerFrameG.png",
@@ -233,7 +297,7 @@
     ],
     "notes": [
       "colourless planeswalker = CC's artifact planeswalker frame",
-      "CC's planeswalker masters paint the loyalty shield themselves: the M15PW profile must drop its loyalty.png plate in the same change (4.4/4.19)"
+      "the loyalty shield is the master's own pixels cut out through CC's maskLoyalty.png (loyalty/<colour>.png), drawn above the ability stripes"
     ]
   },
   "m15snow": {
@@ -357,24 +421,33 @@
         "img/frames/token/m15/textless/g.png"
       ],
       "c": [
-        "img/frames/token/m15/textless/a.png"
+        "img/frames/token/m15/textless/a.png through img/frames/m15/regular/m15MaskBorder.png",
+        "img/frames/token/m15/textless/a.png through img/frames/token/m15/textless/frame.svg at 35%",
+        "img/frames/token/m15/textless/a.png through img/frames/token/tokenMaskTextlessType.png at 80%",
+        "img/frames/token/m15/textless/a.png through img/frames/m15/regular/m15MaskTitle.png",
+        "img/frames/token/m15/textless/a.png through img/frames/token/m15/textless/pinline.svg"
       ],
       "m": [
         "img/frames/token/m15/textless/m.png"
       ]
     },
     "sourceFiles": [
+      "img/frames/m15/regular/m15MaskBorder.png",
+      "img/frames/m15/regular/m15MaskTitle.png",
       "img/frames/token/m15/textless/a.png",
       "img/frames/token/m15/textless/b.png",
+      "img/frames/token/m15/textless/frame.svg",
       "img/frames/token/m15/textless/g.png",
       "img/frames/token/m15/textless/m.png",
+      "img/frames/token/m15/textless/pinline.svg",
       "img/frames/token/m15/textless/r.png",
       "img/frames/token/m15/textless/u.png",
-      "img/frames/token/m15/textless/w.png"
+      "img/frames/token/m15/textless/w.png",
+      "img/frames/token/tokenMaskTextlessType.png"
     ],
     "notes": [
       "source: CC 'Textless (Bordered M15)' — its geometry matches the M15TOKEN profile (art 12.5–81.3 %, type bar ~82 %)",
-      "colourless token = the silver artifact token frame [decide: CC's land token frame for colourless creature tokens like Eldrazi Scions]"
+      "colourless creature token = PipGlyph composite: CC's silver token frame at 35 % (frame) / 80 % (type bar) opacity over the art, like printed BFZ/MH1/WAR colourless tokens (owner decision 2026-09-25)"
     ]
   },
   "m15tokenartifact": {

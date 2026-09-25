@@ -8,14 +8,14 @@ describe("staleCountsByOwner — who gets a render_update notification", () => {
     const png = "https://x/card.png";
     const counts = staleCountsByOwner([
       // Not baked yet (an AI card between publish and bake) — no newer look.
-      { owner_id: "a", layout_version: null, rendered_image_url: null, frame_style: { template: "m15" } },
+      { owner_id: "a", layout_version: null, rendered_image_url: null, frame_style: { template: "retro" } },
       // v21 → the v22 typography update (opt-in) is pending: counted.
-      { owner_id: "a", layout_version: 21, rendered_image_url: png, frame_style: { template: "m15" }, rarity: "uncommon" },
+      { owner_id: "a", layout_version: 21, rendered_image_url: png, frame_style: { template: "retro" }, rarity: "uncommon" },
       // v22 common → only the v23 set-mark SWEEP is pending: the platform's job, not counted.
-      { owner_id: "a", layout_version: 22, rendered_image_url: png, frame_style: { template: "m15" }, rarity: "common" },
-      { owner_id: "a", layout_version: CARD_LAYOUT_VERSION, rendered_image_url: png, frame_style: { template: "m15" } },
+      { owner_id: "a", layout_version: 22, rendered_image_url: png, frame_style: { template: "retro" }, rarity: "common" },
+      { owner_id: "a", layout_version: CARD_LAYOUT_VERSION, rendered_image_url: png, frame_style: { template: "retro" } },
       // A frame-geometry change (null stamp) is a platform re-bake, never a badge.
-      { owner_id: "d", layout_version: null, rendered_image_url: png, frame_style: { template: "m15" } },
+      { owner_id: "d", layout_version: null, rendered_image_url: png, frame_style: { template: "retro" } },
       // v3 also owes the v20/v21/v23 sweeps: the sweep re-bakes it (opt-in
       // look included), so the badge would offer a choice that doesn't exist.
       { owner_id: "b", layout_version: 3, rendered_image_url: png, frame_style: {} },
@@ -32,7 +32,7 @@ describe("staleCountsByOwner — who gets a render_update notification", () => {
   it("is empty when nothing is stale", () => {
     expect(
       staleCountsByOwner([
-        { owner_id: "a", layout_version: CARD_LAYOUT_VERSION, frame_style: { template: "m15" } },
+        { owner_id: "a", layout_version: CARD_LAYOUT_VERSION, frame_style: { template: "retro" } },
       ]).size,
     ).toBe(0);
   });
@@ -45,8 +45,8 @@ describe("notifyOwnersOfRenderUpdates — keyed on the newest OPT-IN version", (
       if (table === "cards") {
         return {
           data: [
-            { owner_id: "a", layout_version: 21, rendered_image_url: png, frame_style: { template: "m15" }, visibility: "public", rarity: "uncommon" },
-            { owner_id: "b", layout_version: 22, rendered_image_url: png, frame_style: { template: "m15" }, visibility: "public", rarity: "common" },
+            { owner_id: "a", layout_version: 21, rendered_image_url: png, frame_style: { template: "retro" }, visibility: "public", rarity: "uncommon" },
+            { owner_id: "b", layout_version: 22, rendered_image_url: png, frame_style: { template: "retro" }, visibility: "public", rarity: "common" },
           ],
         };
       }
@@ -73,7 +73,7 @@ describe("notifyOwnersOfRenderUpdates — once per owner per opt-in version", ()
       if (table === "cards") {
         return {
           data: [
-            { owner_id: "a", layout_version: 21, rendered_image_url: "https://x/c.png", frame_style: { template: "m15" }, visibility: "public", rarity: "uncommon" },
+            { owner_id: "a", layout_version: 21, rendered_image_url: "https://x/c.png", frame_style: { template: "retro" }, visibility: "public", rarity: "uncommon" },
           ],
         };
       }

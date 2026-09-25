@@ -11,7 +11,7 @@
 // Public reads only — no key.
 // ---------------------------------------------------------------------------
 import { PRODUCTION_SUPABASE_REF } from "./lib/prod-guard.mjs";
-import { frameObjectKey, objectExists, publicBaseFor, readManifest } from "./lib/frame-objects.mjs";
+import { findMissing, frameObjectKey, objectStatus, publicBaseFor, readManifest } from "./lib/frame-objects.mjs";
 
 if (process.argv.includes("--if-production") && process.env.VERCEL_ENV !== "production") process.exit(0);
 const at = process.argv.indexOf("--origin");
@@ -22,16 +22,17 @@ if (entries.length === 0) {
   console.log("Frame manifest is empty — every frame is still served from public/frames.");
   process.exit(0);
 }
-const missing = [];
-await Promise.all(
-  entries.map(async ([key, entry]) => {
-    const objectKey = frameObjectKey(key, entry.hash);
-    if (!(await objectExists(`${origin}/${objectKey}`, entry.bytes))) missing.push(objectKey);
-  }),
+// At most 4 lookups in flight, and every apparent miss is re-checked on its
+// own before it counts: this runs against PRODUCTION storage (a small
+// connection pool) on every PR — often several at once — and in the
+// production build, so a transient error must never fail it.
+const missing = await findMissing(entries, ([key, entry], thorough) =>
+  objectStatus(`${origin}/${frameObjectKey(key, entry.hash)}`, entry.bytes, thorough ? { tries: 5 } : { tries: 2 }),
 );
 if (missing.length) {
   console.error(`✗ ${missing.length}/${entries.length} manifest objects are missing from ${origin}:`);
-  for (const key of missing.sort()) console.error(`  ${key}`);
+  const rows = missing.map(({ item: [key, entry], status }) => `  ${frameObjectKey(key, entry.hash)}  (last answer: ${status})`);
+  for (const row of rows.sort()) console.error(row);
   console.error("The owner runs `npm run frames:promote` (docs/FRAMES.md) before this merges.");
   process.exit(1);
 }

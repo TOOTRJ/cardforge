@@ -17,7 +17,9 @@ describe("stored-render — when the baked PNG can stand in for a live render", 
   });
 
   it("is servable with a URL and no pending platform correction", () => {
-    const m15 = { frame_style: { template: "m15" }, rarity: "uncommon" };
+    // "retro" is outside the v24 (M15 swap) scope, so only the v22 opt-in and
+    // the v23 commons sweep apply — the scenarios these cases pin.
+    const m15 = { frame_style: { template: "retro" }, rarity: "uncommon" };
     expect(
       hasServableStoredRender({ ...m15, rendered_image_url: STORAGE_URL, layout_version: CARD_LAYOUT_VERSION }),
     ).toBe(true);

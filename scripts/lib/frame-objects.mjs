@@ -109,20 +109,94 @@ export function parseEnvFile(file) {
   return out;
 }
 
-/** HEAD a public object (3 tries); true when it exists at the expected size. */
-export async function objectExists(url, expectedBytes) {
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
+/**
+ * Ask for a public object's FIRST BYTE and say what happened:
+ * { ok, status }. `ok` is true when it exists at the expected size (the
+ * total in `content-range`). Why a ranged GET and not a HEAD: a HEAD always
+ * reaches Supabase's storage API, which is rate-limited (429) and shares a
+ * small DB connection pool ("Too many connections" → 400), while a GET of a
+ * public object is cached by the CDN (max-age 1 year; the frames are
+ * content-addressed and immutable) — after the first request every check is
+ * a CDN HIT that never touches Supabase. A missing object answers 400 with
+ * cf-cache-status BYPASS, so a miss is never cached and a check right after
+ * a promote sees the new object. A 404 is final; a 400 or 429 is retried
+ * (a real miss stays 400 every time), with exponential backoff
+ * (0.5, 1, 2, 4 s) and a timeout per attempt. `status` is the last HTTP
+ * status, "timeout"/"network", or "size <n>" — frames-check prints it.
+ * (2026-09-25: first-400-is-missing, a hung HEAD, and 429s from several CI
+ * runs at once each failed the gate on objects that were there.)
+ */
+export async function objectStatus(url, expectedBytes, { tries = 5, baseDelayMs = 500, timeoutMs = 10_000 } = {}) {
+  let status = "network";
+  for (let attempt = 1; attempt <= tries; attempt += 1) {
     try {
-      const res = await fetch(url, { method: "HEAD", cache: "no-store" });
-      if (res.status === 404 || res.status === 400) return false;
+      const res = await fetch(url, {
+        headers: { Range: "bytes=0-0" },
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+      // Never download the body (a server that ignores Range sends it all).
+      await res.body?.cancel().catch(() => {});
+      status = String(res.status);
+      if (res.status === 404) return { ok: false, status };
       if (res.ok) {
-        const header = res.headers.get("content-length");
-        return !header || !expectedBytes || Number(header) === expectedBytes;
+        // 206: "bytes 0-0/<total>"; 200 (Range ignored): content-length.
+        const range = res.headers.get("content-range")?.match(/\/(\d+)$/)?.[1];
+        const size = range ?? res.headers.get("content-length");
+        if (!size || !expectedBytes || Number(size) === expectedBytes) return { ok: true, status };
+        return { ok: false, status: `size ${size}` };
       }
-    } catch {
-      // retry
+    } catch (err) {
+      status = err?.name === "TimeoutError" || err?.name === "AbortError" ? "timeout" : "network";
     }
-    await new Promise((r) => setTimeout(r, 400 * attempt));
+    if (attempt < tries) await new Promise((r) => setTimeout(r, baseDelayMs * 2 ** (attempt - 1)));
   }
-  return false;
+  return { ok: false, status };
+}
+
+/** True when a public object exists at the expected size — objectStatus().ok
+ *  with a SHORT budget (3 tries, 0.3 s → 0.6 s): publish / promote /
+ *  restore-dev check objects that are usually missing, and they re-verify
+ *  their own uploads. The gate (frames-check) uses findMissing instead. */
+export async function objectExists(url, expectedBytes, opts) {
+  return (await objectStatus(url, expectedBytes, { tries: 3, baseDelayMs: 300, ...opts })).ok;
+}
+
+/**
+ * Which of `items` are missing. `check(item, thorough)` returns
+ * { ok, status }. A quick first pass runs `limit` at a time; then — after
+ * `confirmDelayMs` — every apparent miss is checked again THOROUGHLY, one at
+ * a time, so a burst of transient storage errors can't fail a gate on its
+ * own. More than `maxConfirm` misses is not a blip (a manifest nobody
+ * promoted): those are reported without the slow confirm pass. Returns
+ * [{ item, status }] for the misses.
+ */
+export async function findMissing(items, check, { limit = 4, confirmDelayMs = 3000, maxConfirm = 25 } = {}) {
+  const first = await mapLimit(items, limit, async (item) => ({ item, result: await check(item, false) }));
+  const suspects = first.filter((r) => !r.result.ok);
+  if (suspects.length === 0) return [];
+  if (suspects.length > maxConfirm) return suspects.map(({ item, result }) => ({ item, status: result.status }));
+  await new Promise((r) => setTimeout(r, confirmDelayMs));
+  const missing = [];
+  for (const { item } of suspects) {
+    const result = await check(item, true);
+    if (!result.ok) missing.push({ item, status: result.status });
+  }
+  return missing;
+}
+
+/** Map over `items` with at most `limit` calls in flight, results in order.
+ *  Storage lookups go through production's small connection pool: firing
+ *  the whole manifest at once starved a concurrent promote upload. */
+export async function mapLimit(items, limit, fn) {
+  const results = new Array(items.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < items.length) {
+      const i = next;
+      next += 1;
+      results[i] = await fn(items[i], i);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return results;
 }

@@ -7,8 +7,10 @@ import {
   CC_TEMPLATES,
   COLORS,
   CORNER_RADIUS,
+  SHIELD_BOX,
   builtColors,
   compositeLayers,
+  cutThroughMask,
   roundCorners,
   roundCornersRgba8,
   sourceFilesFor,
@@ -26,13 +28,19 @@ import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 // ---------------------------------------------------------------------------
 
 type Layer = { src: string; mask?: string };
-type Def = { colors: Record<string, Layer[]>; plates?: Record<string, string>; excluded?: Record<string, string>; notes: string[] };
+type Def = {
+  colors: Record<string, Layer[]>;
+  plates?: Record<string, string>;
+  shield?: { mask: string; box: typeof SHIELD_BOX };
+  excluded?: Record<string, string>;
+  notes: string[];
+};
 const templates = CC_TEMPLATES as Record<string, Def>;
 
 describe("Card Conjurer recipe", () => {
   it("covers the M15-era templates — every colour built or excluded with a reason — with pack paths", () => {
     expect(Object.keys(templates).sort()).toEqual(
-      ["m15", "m15artifact", "m15land", "m15pw", "m15snow", "m15snowland", "m15token", "m15tokenartifact"],
+      ["m15", "m15artifact", "m15devoid", "m15land", "m15pw", "m15snow", "m15snowland", "m15token", "m15tokenartifact"],
     );
     for (const [template, def] of Object.entries(templates)) {
       expect(FRAME_TEMPLATE_VALUES as readonly string[]).toContain(template);
@@ -71,18 +79,38 @@ describe("Card Conjurer recipe", () => {
     for (const layer of templates.m15token.colors.w) expect(layer.src).toMatch(/^img\/frames\/token\/m15\/textless\//);
   });
 
-  it("defers see-through frames until art can run under the frame (4.17)", () => {
-    expect(templates.m15.excluded?.c).toMatch(/see-through/);
-    expect(builtColors(templates.m15 as never)).not.toContain("c");
-    expect((CC_DEFERRED as Record<string, string>).m15devoid).toMatch(/see-through/);
+  it("imports the see-through frames now that art runs under the frame (4.17, owner decision)", () => {
+    expect(builtColors(templates.m15 as never)).toContain("c");
+    expect(templates.m15.colors.c[0].src).toBe("img/frames/m15/new/c.png");
+    expect(templates.m15devoid.colors.u[0].src).toMatch(/m15DevoidFrameU\.png$/);
+    expect(Object.keys(CC_DEFERRED as Record<string, string>)).toEqual([]);
+  });
+
+  it("builds the colourless creature token as a see-through composite of CC's silver token frame", () => {
+    const layers = (templates.m15token.colors.c as Array<{ src: string; mask?: string; opacity?: number }>);
+    expect(layers.every((l) => l.src.endsWith("token/m15/textless/a.png"))).toBe(true);
+    // Frame and type bar translucent (art shows through); border, title and window pinline opaque.
+    expect(layers.find((l) => l.mask?.endsWith("frame.svg"))?.opacity).toBeLessThan(0.5);
+    expect(layers.find((l) => l.mask?.endsWith("m15MaskTitle.png"))?.opacity).toBeUndefined();
+    expect(layers.find((l) => l.mask?.endsWith("pinline.svg"))?.opacity).toBeUndefined();
   });
 
   it("writes down every colourless substitution", () => {
-    for (const template of ["m15land", "m15snow", "m15pw", "m15token"]) {
+    for (const template of ["m15land", "m15snow", "m15pw", "m15token", "m15devoid"]) {
       expect(templates[template].notes.join(" "), template).toMatch(/colourless/);
     }
-    // The planeswalker's painted shield must travel with the frames until 4.4 drops our plate.
     expect(templates.m15pw.notes.join(" ")).toMatch(/loyalty shield/);
+  });
+
+  it("cuts the planeswalker shield out through CC's loyalty mask (owner review 2026-09-25)", () => {
+    expect(templates.m15pw.shield).toEqual({ mask: "img/frames/planeswalker/maskLoyalty.png", box: SHIELD_BOX });
+    expect(sourceFilesFor(templates.m15pw as never)).toContain("img/frames/planeswalker/maskLoyalty.png");
+    // CC's mask covers x 1197–1430, y 1844–1991 on the 1500×2100 master.
+    expect(SHIELD_BOX.x).toBeLessThanOrEqual(1197);
+    expect(SHIELD_BOX.y).toBeLessThanOrEqual(1844);
+    expect(SHIELD_BOX.x + SHIELD_BOX.width).toBeGreaterThan(1430);
+    expect(SHIELD_BOX.y + SHIELD_BOX.height).toBeGreaterThan(1991);
+    expect(Object.entries(templates).filter(([, d]) => d.shield).map(([t]) => t)).toEqual(["m15pw"]);
   });
 
   it("lists layers, masks and plates once each", () => {
@@ -132,6 +160,22 @@ describe("pixel operations", () => {
     expect(CORNER_RADIUS).toBe(39); // matches the existing masters (2.6 % of 1500)
   });
 
+  it("crops a box and keeps only what the mask's alpha covers, colour untouched", () => {
+    // 3×2 image, every pixel opaque grey 100; the mask is opaque at (1,0),
+    // half at (2,1), clear elsewhere.
+    const buf = Buffer.alloc(3 * 2 * 4);
+    for (let i = 0; i < buf.length; i += 4) buf.set([100, 100, 100, 255], i);
+    const mask = Buffer.alloc(3 * 2 * 4);
+    mask[(0 * 3 + 1) * 4 + 3] = 255;
+    mask[(1 * 3 + 2) * 4 + 3] = 128;
+    const out = cutThroughMask(buf, mask, 3, { x: 1, y: 0, width: 2, height: 2 });
+    expect(out.length).toBe(2 * 2 * 4);
+    expect([...out.subarray(0, 4)]).toEqual([100, 100, 100, 255]); // (1,0)
+    expect(out[4 + 3]).toBe(0); // (2,0)
+    expect(out[8 + 3]).toBe(0); // (1,1)
+    expect([...out.subarray(12, 16)]).toEqual([100, 100, 100, 128]); // (2,1)
+  });
+
   it("rounds corners on 8-bit RGBA after the final downscale", () => {
     const w = 60;
     const h = 84;
@@ -152,7 +196,7 @@ describe("provenance and hygiene", () => {
       expect(provenance[template].commit).toBe(CC_COMMIT);
       expect(Object.keys(provenance[template].colors).sort()).toEqual([...COLORS].sort());
     }
-    expect(provenance.m15.excluded.c).toMatch(/see-through/);
+    expect(provenance.m15devoid.source).toBe("cardconjurer");
   });
 
   it("never commits the build folder", () => {
