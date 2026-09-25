@@ -270,6 +270,74 @@ describe("Alpha ink: silver P/T and artist line on every frame but white", () =>
   }, 60_000);
 });
 
+describe("Alpha name, pips and type line (owner review round 4)", () => {
+  // HD px = default px × 2. The art box's outer edge is ~159 px; round 3 put
+  // the name at ~114 px with 48 px caps and 63 px pip discs.
+  const HD = 1500 / W;
+  /** diffBox limited to rows y0–y1 (default px). */
+  function bandBox(a: Raw, b: Raw, y0: number, y1: number) {
+    const crop = (r: Raw): Raw => ({
+      data: r.data.subarray(y0 * r.width * 3, y1 * r.width * 3),
+      width: r.width,
+      height: y1 - y0,
+    });
+    const box = diffBox(crop(a), crop(b));
+    return box && { ...box, y0: box.y0 + y0, y1: box.y1 + y0 };
+  }
+  const TITLE_ROWS: [number, number] = [Math.round((80 / 2100) * H), Math.round((215 / 2100) * H)];
+  const TYPE_ROWS: [number, number] = [Math.round((1150 / 2100) * H), Math.round((1262 / 2100) * H)];
+
+  it.each<FrameTemplate>(["agclassic", "alphaland"])("%s: name and type line start on one left margin, the art box's edge", async (template) => {
+    const land = template === "alphaland";
+    const base = {
+      title: "Dawn Treader",
+      cost: land ? null : "{6}",
+      cardType: land ? "land" : "creature",
+      supertype: "Legendary",
+      subtypes: land ? ["Island"] : ["Horror"],
+      power: null,
+      toughness: null,
+    } as Partial<CardPreviewData>;
+    const full = await bake(card(template, base));
+    const noName = await bake(card(template, { ...base, title: " " }));
+    const noType = await bake(card(template, { ...base, cardType: null, supertype: null, subtypes: [" "] }));
+    const name = bandBox(full, noName, ...TITLE_ROWS)!;
+    const type = bandBox(full, noType, ...TYPE_ROWS)!;
+    expect(name).not.toBeNull();
+    expect(type).not.toBeNull();
+    // Both start at the art box's outer edge (~159 px HD), not the old 114.
+    for (const [what, box] of [["name", name], ["type", type]] as const) {
+      expect(box.x0 * HD, what).toBeGreaterThanOrEqual(156);
+      expect(box.x0 * HD, what).toBeLessThanOrEqual(166);
+    }
+    expect(Math.abs(name.x0 - type.x0)).toBeLessThanOrEqual(2);
+    // "Dawn Treader" has no descenders: its ink is the caps (+ the d's
+    // ascender), centred at ~141 px. 41 px caps measure 46 here with the
+    // anti-aliasing (round 3's 48 px caps measured 54).
+    const capH = (name.y1 - name.y0 + 1) * HD;
+    expect(capH).toBeGreaterThan(40);
+    expect(capH).toBeLessThan(50);
+    expect(Math.abs(((name.y0 + name.y1 + 1) / 2) * HD - 141)).toBeLessThan(4);
+  }, 60_000);
+
+  it("agclassic: smaller pips, still ending at ~1362 px and centred on the name's caps", async () => {
+    const base = { title: "Dawn Treader", cost: "{6}", power: null, toughness: null } as Partial<CardPreviewData>;
+    const full = await bake(card("agclassic", base));
+    const pipsOnly = await bake(card("agclassic", { ...base, title: " " }));
+    const blank = await bake(card("agclassic", { ...base, title: " ", cost: null }));
+    const name = bandBox(full, pipsOnly, ...TITLE_ROWS)!;
+    const pip = bandBox(pipsOnly, blank, ...TITLE_ROWS)!;
+    // The disc's right and top edges are clean (its hard shadow falls
+    // down-left). Round 3: 63 px discs centred 5.5 px above the caps.
+    const d = getFrameProfile("agclassic").costSizePct! * 1500;
+    expect(d).toBeLessThan(56);
+    expect(Math.abs((pip.x1 + 1) * HD - 1362)).toBeLessThanOrEqual(4);
+    const pipMid = pip.y0 * HD + d / 2;
+    const capMid = ((name.y0 + name.y1 + 1) / 2) * HD;
+    expect(Math.abs(pipMid - capMid)).toBeLessThanOrEqual(3);
+  }, 60_000);
+});
+
 describe("Alpha masters are re-cut to the printed proportions", () => {
   // scripts/build-alpha-frames.mjs: frame 80–1421 × 89–2000, art opening
   // 178–1319 × 219–1138, text box 186–1318 × 1247–1855 (HD px).

@@ -522,25 +522,32 @@ const AGCLASSIC: FrameProfile = {
   label: "Alpha (1993)",
   // The mark's ink centred in the 100 px black band below the frame.
   brandMark: { rightPct: 3.5, bottomPct: 1.5 },
-  costSizePct: 0.042,
-  // Pips centred on the printed ones (~138 px), 6 px above the band's middle.
-  costDy: -0.004,
+  // Owner review, round 4: name and pips 15 % smaller than round 3 (54 px
+  // discs, were 63; the print's are ~69 px but pale and thin-lined).
+  costSizePct: 0.0357,
+  // Pip discs centred on the name's caps (~140 px; 2 px above the rect's
+  // middle at HD).
+  costDy: -0.0013,
   // Covers the 178–1319 × 219–1138 opening with ~6 px under the bevel.
   artSlot: { topPct: 10.15, leftPct: 11.45, widthPct: 76.9, heightPct: 44.3 },
-  // Printed names start ~10 px inside the frame's edge line; the cost pips
-  // end at ~1362 px (90.8 %W); caps and pips centred at ~139 px.
+  // Round 4: the name starts on the type line's left margin, the art box's
+  // outer edge (~159 px; it started at ~114), with Beleren caps ~41 px (were
+  // 48; the print's lighter face has ~57 px caps but a ~34 px x-height, ours
+  // ~30). Caps centred at ~141 px. The rect still ends where the cost pips
+  // end (~1362 px, 90.8 %W), so a long name ellipsises before them.
   title: {
-    rect: { topPct: 4.36, leftPct: 7.6, widthPct: 83.2, heightPct: 4.8 },
-    sizePct: 0.046,
+    rect: { topPct: 4.36, leftPct: 10.6, widthPct: 80.2, heightPct: 4.8 },
+    sizePct: 0.0391,
     colorHex: INK_DARK,
     weight: 600,
     font: "display",
   },
-  // Printed type lines start at ~157 px with caps centred at ~1199 px (the
+  // Starts on the name's left margin (~159 px, the art box's outer edge;
+  // printed type lines start at ~157) with caps centred at ~1198 px (the
   // type band's middle); the set symbol ends ~4 px inside the text box's
   // outline (1314 vs 1318).
   type: {
-    rect: { topPct: 55.1, leftPct: 10.4, widthPct: 77.2, heightPct: 4.0 },
+    rect: { topPct: 55.1, leftPct: 10.6, widthPct: 77.0, heightPct: 4.0 },
     sizePct: 0.03,
     colorHex: INK_DARK,
     weight: 600,

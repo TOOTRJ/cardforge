@@ -175,12 +175,14 @@ import { normalizeFrameTemplate } from "@/lib/cards/card-display";
 //            source, its lines redrawn the print's way (round 2: one thin
 //            dark line on the non-land frame, the land print's coloured
 //            lines on alphaland), with light embossed P/T + artist
-//            lettering on non-white frames (agclassic, alphaland); two-colour
-//            Dragon Wing cards split their wings (tarkirdragon); Ghostfire
-//            rebuilt with MSE's translucent boxes + P/T ribbon, white ink
-//            (tarkirghostfire); round 4: planeswalker mana cost 6 px and
-//            name 8 px lower at HD, placed in Card Conjurer's taller title
-//            bar the way printed planeswalkers are (m15pw, every finish).
+//            lettering on non-white frames and (round 4) a smaller name +
+//            pips, name and type line on one left margin (agclassic,
+//            alphaland); two-colour Dragon Wing cards split their wings
+//            (tarkirdragon); Ghostfire rebuilt with MSE's translucent boxes
+//            + P/T ribbon, white ink (tarkirghostfire); round 4: planeswalker
+//            mana cost 6 px and name 8 px lower at HD, placed in Card
+//            Conjurer's taller title bar the way printed planeswalkers are
+//            (m15pw, every finish).
 //            List derived from HD render diffs on all 37 templates.
 //            Template-scoped, "sweep".
 //   28     — the foil finish: its bake overlay used `inset: 0` + blend modes,
