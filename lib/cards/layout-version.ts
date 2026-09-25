@@ -172,8 +172,9 @@ import { normalizeFrameTemplate } from "@/lib/cards/card-display";
 //            "sweep".
 //   27     — owner decisions from the follow-up review (2026-09-25): the
 //            Alpha frame re-cut to the printed proportions from its MSE
-//            source, with light embossed P/T + artist lettering on non-white
-//            frames (agclassic, alphaland); two-colour Dragon Wing cards
+//            source, its lines thinned to the print's (round 2), with light
+//            embossed P/T + artist lettering on non-white frames
+//            (agclassic, alphaland); two-colour Dragon Wing cards
 //            split their wings (tarkirdragon); Ghostfire rebuilt with MSE's
 //            translucent boxes + P/T ribbon, white ink (tarkirghostfire).
 //            List derived from HD render diffs on all 37 templates.

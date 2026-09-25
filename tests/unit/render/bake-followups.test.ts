@@ -154,21 +154,21 @@ describe("Alpha brand mark is centred in the re-cut black band", () => {
 });
 
 describe("Alpha P/T sits in the strip below the text box (v25, re-cut)", () => {
-  it("centres the digits where the print does (strip 1853–2000 px = 88.24–95.24 %H)", async () => {
+  it("centres the digits where the print does (strip 1855–2000 px = 88.33–95.24 %H)", async () => {
     const [none, pt] = [await bake(card("agclassic", { power: null, toughness: null })), await bake(card("agclassic"))];
     const box = diffBox(none, pt)!;
     const cy = ((box.y0 + box.y1 + 1) / 2 / H) * 100;
     const cx = ((box.x0 + box.x1 + 1) / 2 / W) * 100;
-    const at = (cy - 88.24) / (95.24 - 88.24);
+    const at = (cy - 88.33) / (95.24 - 88.33);
     // Printed Alpha/Beta digits: centred at 1920–1925 px (0.45–0.49 of the
     // strip), ~88 %W under the text box's right corner (19 LEA/LEB scans).
     expect(at).toBeGreaterThan(0.4);
     expect(at).toBeLessThan(0.52);
     expect(cx).toBeGreaterThan(86.5);
     expect(cx).toBeLessThan(89.5);
-    // …and entirely inside the strip, clear of the text box and the black.
-    expect(box.y0 / H).toBeGreaterThan(1853 / 2100);
-    expect((box.y1 + 1) / H).toBeLessThan(1978 / 2100);
+    // …and entirely inside the strip, clear of the text box and the pinstripe.
+    expect(box.y0 / H).toBeGreaterThan(1855 / 2100);
+    expect((box.y1 + 1) / H).toBeLessThan(1990 / 2100);
   }, 60_000);
 });
 
@@ -272,7 +272,7 @@ describe("Alpha ink: silver P/T and artist line on every frame but white", () =>
 
 describe("Alpha masters are re-cut to the printed proportions", () => {
   // scripts/build-alpha-frames.mjs: frame 80–1421 × 89–2000, art opening
-  // 178–1319 × 219–1138, text box 185–1314 × 1252–1853 (HD px).
+  // 178–1319 × 219–1138, text box 186–1318 × 1247–1855 (HD px).
   async function master(template: string, key: string) {
     const { data, info } = await sharp(`public/frames/${template}/${key}.png`)
       .ensureAlpha()
@@ -295,7 +295,21 @@ describe("Alpha masters are re-cut to the printed proportions", () => {
       }
       return { l, a };
     };
-    return { info, at, box };
+    /** Mean luminance (over black) across `span` — x when `axis` is "x",
+     *  else y — averaged along `along`, indexed by absolute pixel. */
+    const profile = (axis: "x" | "y", along: [number, number], span: [number, number]) => {
+      const p = new Float64Array(axis === "x" ? info.width : info.height);
+      for (let t = span[0]; t < span[1]; t += 1) {
+        let sum = 0;
+        for (let s = along[0]; s < along[1]; s += 1) {
+          const q = axis === "x" ? at(t, s) : at(s, t);
+          sum += (q.l * q.a) / 255;
+        }
+        p[t] = sum / (along[1] - along[0]);
+      }
+      return p;
+    };
+    return { info, at, box, profile };
   }
 
   it.each(["agclassic", "alphaland"])("%s: black border, art opening and strip where the print has them", async (template) => {
@@ -327,6 +341,7 @@ describe("Alpha masters are re-cut to the printed proportions", () => {
   });
 
   it("the art slot covers the opening and stays under the art box's bevel", () => {
+    // The art box outline: 156–159 / 1344–1347 × 198–201 / 1161–1164.
     for (const template of ["agclassic", "alphaland"] as const) {
       const a = getFrameProfile(template).artSlot;
       const x0 = (a.leftPct / 100) * 1500;
@@ -336,11 +351,106 @@ describe("Alpha masters are re-cut to the printed proportions", () => {
       expect(x0).toBeLessThanOrEqual(178);
       expect(x0).toBeGreaterThan(159);
       expect(x1).toBeGreaterThanOrEqual(1319);
-      expect(x1).toBeLessThan(1347);
+      expect(x1).toBeLessThan(1344);
       expect(y0).toBeLessThanOrEqual(219);
-      expect(y0).toBeGreaterThan(197);
+      expect(y0).toBeGreaterThan(201);
       expect(y1).toBeGreaterThanOrEqual(1138);
-      expect(y1).toBeLessThan(1159);
+      expect(y1).toBeLessThan(1161);
+    }
+  });
+
+  // Owner decision (2026-09-25): thin the frame lines to the print's. Each
+  // dark line group is measured at half maximum on a luminance profile taken
+  // across it and averaged along it — the same measurement as on 19 LEA/LEB
+  // scans, whose medians are the targets below. The first re-cut drew the
+  // pinstripe 21–23 px, the art box outline ~7 and the text box's outline +
+  // face ring + inner line 13–15 (its outline 4–5 px off on two sides).
+  const median = (p: Float64Array, a: number, b: number) => [...p.subarray(a, b)].sort((u, v) => u - v)[(b - a) >> 1];
+  /** Sub-pixel position (pixel-edge coordinates) where p crosses `level` between i and i + 1. */
+  const cross = (p: Float64Array, i: number, level: number) =>
+    i + 0.5 + (p[i] === p[i + 1] ? 0.5 : (level - p[i]) / (p[i + 1] - p[i]));
+  /** The black → frame edge: half way between the border and the frame. */
+  function edge(p: Float64Array, win: [number, number], black: [number, number], frame: [number, number], blackFirst: boolean) {
+    const level = (median(p, ...black) + median(p, ...frame)) / 2;
+    if (blackFirst) {
+      for (let i = win[0]; i < win[1] - 1; i += 1) if (p[i] < level && p[i + 1] >= level) return cross(p, i, level);
+    } else {
+      for (let i = win[1] - 2; i >= win[0]; i -= 1) if (p[i] >= level && p[i + 1] < level) return cross(p, i, level);
+    }
+    return NaN;
+  }
+  /** A dark line group in `win`: its first and last half-maximum crossings
+   *  (half way between its darkest pixel and the median of `bg`). */
+  function group(p: Float64Array, win: [number, number], bg: [number, number]) {
+    let min = Infinity;
+    for (let i = win[0]; i < win[1]; i += 1) min = Math.min(min, p[i]);
+    const level = (min + median(p, ...bg)) / 2;
+    let first = NaN;
+    let last = NaN;
+    for (let i = win[0]; i < win[1] - 1; i += 1) {
+      if (Number.isNaN(first) && p[i] >= level && p[i + 1] < level) first = cross(p, i, level);
+      if (p[i] < level && p[i + 1] >= level) last = cross(p, i, level);
+    }
+    return { first, last, width: last - first, centre: (first + last) / 2 };
+  }
+
+  it.each(["agclassic", "alphaland"])("%s: pinstripe, art box and text box lines at the print's width and place", async (template) => {
+    for (const key of ["w", "u", "b", "r", "g", "c", "m"]) {
+      const { profile } = await master(template, key);
+      const near = (got: number, want: number, tol: number, what: string) =>
+        expect(Math.abs(got - want), `${template}/${key} ${what}: ${got.toFixed(1)} vs print ${want}`).toBeLessThanOrEqual(tol);
+      const narrow = (got: number, lo: number, hi: number, what: string) => {
+        expect(got, `${template}/${key} ${what} width`).toBeGreaterThanOrEqual(lo);
+        expect(got, `${template}/${key} ${what} width`).toBeLessThanOrEqual(hi);
+      };
+      // Outer pinstripe: frame edge → where the texture starts (print 9–11).
+      const artRows = profile("x", [400, 1000], [40, 1460]);
+      const left = edge(artRows, [66, 100], [45, 66], [120, 145], true);
+      const leftEnd = group(artRows, [Math.floor(left) + 2, Math.floor(left) + 32], [115, 145]).last;
+      near(left, 81.2, 2, "left frame edge");
+      near(leftEnd, 90.2, 2, "left pinstripe end");
+      narrow(leftEnd - left, 7, 13, "left pinstripe");
+      const right = edge(artRows, [1400, 1436], [1436, 1455], [1355, 1380], false);
+      const rightEnd = group(artRows, [Math.floor(right) - 32, Math.floor(right) - 1], [1355, 1385]).first;
+      near(right, 1422.3, 2, "right frame edge");
+      near(rightEnd, 1411.1, 2, "right pinstripe end");
+      narrow(right - rightEnd, 7, 13, "right pinstripe");
+      const titleCols = profile("y", [1000, 1300], [40, 260]);
+      const top = edge(titleCols, [75, 110], [50, 72], [125, 150], true);
+      const topEnd = group(titleCols, [Math.floor(top) + 2, Math.floor(top) + 32], [125, 150]).last;
+      near(top, 88.6, 2, "top frame edge");
+      near(topEnd, 99.6, 2, "top pinstripe end");
+      narrow(topEnd - top, 7, 13, "top pinstripe");
+      const stripCols = profile("y", [950, 1150], [1780, 2060]);
+      const bottom = edge(stripCols, [1985, 2020], [2020, 2045], [1900, 1935], false);
+      const bottomEnd = group(stripCols, [Math.floor(bottom) - 32, Math.floor(bottom) - 1], [1900, 1940]).first;
+      near(bottom, 1999.5, 2, "bottom frame edge");
+      near(bottomEnd, 1990.7, 2, "bottom pinstripe end");
+      narrow(bottom - bottomEnd, 7, 13, "bottom pinstripe");
+      // Art box outline (print 156.0–158.8 left, 1160.5–1163.4 below).
+      const artLeft = group(artRows, [145, 172], [115, 145]);
+      near(artLeft.centre, 157.4, 2, "art box outline (left)");
+      narrow(artLeft.width, 1, 5, "art box outline (left)");
+      const bandCols = profile("y", [400, 1100], [1100, 1300]);
+      const artBottom = group(bandCols, [1146, 1172], [1175, 1200]);
+      near(artBottom.centre, 1162, 2.5, "art box outline (bottom)");
+      narrow(artBottom.width, 1, 5, "art box outline (bottom)");
+      // Text box: its outline where the print's is (L 186.0, R 1318.4,
+      // T 1247.0, B 1855.2 — outer edges), and outline + MSE's face ring +
+      // inner line together no wider than 10 px.
+      const textRows = profile("x", [1350, 1750], [40, 1460]);
+      const textLeft = group(textRows, [174, 202], [120, 170]);
+      near(textLeft.first, 186, 2, "text box outline (left)");
+      narrow(textLeft.width, 1.5, 10, "text box lines (left)");
+      const textRight = group(textRows, [1296, 1325], [1330, 1380]);
+      near(textRight.last, 1318.4, 2, "text box outline (right)");
+      narrow(textRight.width, 1.5, 10, "text box lines (right)");
+      const textTop = group(bandCols, [1240, 1268], [1200, 1235]);
+      near(textTop.first, 1247, 2, "text box outline (top)");
+      narrow(textTop.width, 1.5, 10, "text box lines (top)");
+      const textBottom = group(profile("y", [400, 1100], [1780, 2060]), [1835, 1865], [1870, 1900]);
+      near(textBottom.last, 1855.2, 2, "text box outline (bottom)");
+      narrow(textBottom.width, 1.5, 10, "text box lines (bottom)");
     }
   });
 });

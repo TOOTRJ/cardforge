@@ -508,13 +508,14 @@ const M15SNOWLAND: FrameProfile = {
 };
 
 // AgClassic — the 1993 Alpha/Beta frame. MSE's magic-agclassic art, re-cut
-// to the printed card's proportions (scripts/build-alpha-frames.mjs; HD px
-// on 1500 × 2100, measured on 19 LEA/LEB scans): black border 80 px at the
-// sides, 89 above and 100 below the frame; title band 89–197; art opening
-// 178–1319 × 219–1138; type band 1159–1252; text box 185–1314 × 1252–1853
-// (textured area 204–1293 × 1273–1832); P/T strip 1853–2000. Name, type and
-// rules are dark ink; the "Illus." line and the P/T share one line in the
-// strip, silver on every frame colour but white (ALPHA_INK).
+// to the printed card's proportions and line widths
+// (scripts/build-alpha-frames.mjs; HD px on 1500 × 2100, measured on 19
+// LEA/LEB scans): black border 80 px at the sides, 89 above and 100 below
+// the frame (its pinstripe = the outer ~10 px); title band 100–198; art
+// opening 178–1319 × 219–1138; type band 1164–1247; text box 186–1318 ×
+// 1247–1855 (textured area 198–1306 × 1259–1843); P/T strip 1855–1990. Name,
+// type and rules are dark ink; the "Illus." line and the P/T share one line
+// in the strip, silver on every frame colour but white (ALPHA_INK).
 const AGCLASSIC: FrameProfile = {
   flavorDivider: false,
   label: "Alpha (1993)",
@@ -543,7 +544,7 @@ const AGCLASSIC: FrameProfile = {
     weight: 600,
     font: "display",
   },
-  // Inside the textured area with the old ~26 px side / ~12 px top padding.
+  // Inside the textured area with ~33 px at the sides and ~26 px above.
   rules: {
     rect: { topPct: 61.2, leftPct: 15.4, widthPct: 69.2, heightPct: 25.6 },
     sizePct: ptToPct(9),
@@ -563,7 +564,7 @@ const AGCLASSIC: FrameProfile = {
     inkByColorKey: ALPHA_INK,
   },
   // Official 1993 cards print P/T on the frame strip BELOW the text box, not
-  // on a plate: digits centred at ~1921 px (0.46 of the 1853–2000 strip) and
+  // on a plate: digits centred at ~1921 px (0.45 of the 1855–2000 strip) and
   // ~88 %W, under the text box's right corner.
   pt: {
     rect: { topPct: 88.74, leftPct: 80.5, widthPct: 15, heightPct: 5.6 },
