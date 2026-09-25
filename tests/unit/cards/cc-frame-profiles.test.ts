@@ -27,20 +27,28 @@ describe("Card Conjurer frame profiles", () => {
     );
   });
 
-  it("drops the planeswalker's detached cost to 48 % of CC's taller title plate, right end unchanged", () => {
+  it("lowers the planeswalker's cost and name into CC's taller title plate, the print's way", () => {
     // Owner review, round 3: "pips look a little high". CC's pw title plate
-    // spans 77–192 px at HD (1500 × 2100); eight printed M15 planeswalkers
-    // centre their pips 47.3–48.8 % of the way down theirs. The box stays
-    // where the compare tool tuned it; costDy (a fraction of the WIDTH)
-    // moves the pips 6 px down, from 126 px to 132 px.
+    // spans 77–192 px at HD (1500 × 2100). Printed M15 planeswalkers centre
+    // their pips 47–49 % of the way down theirs and the name's capitals
+    // 49–51 %, the pips ~2 px above the name. The cost box stays where the
+    // compare tool tuned it (right end unchanged); costDy (a fraction of the
+    // WIDTH) moves the pips 6 px down, 126 → 132 px. The name was level with
+    // the old pips, so it moves too: title top 3.8 → 4.18 (8 px).
     const pw = getFrameProfile("m15pw");
     expect(pw.costRect).toEqual({ topPct: 3.8, leftPct: 51.2, widthPct: 40, heightPct: 4.4 });
     expect(pw.costDy).toBe(0.004);
-    const centrePx = ((pw.costRect!.topPct + pw.costRect!.heightPct / 2) / 100) * 2100 + pw.costDy! * 1500;
-    expect(centrePx).toBeCloseTo(132, 6);
-    expect((centrePx - 77) / (192 - 77)).toBeCloseTo(0.48, 2);
-    // The name does not move with it.
-    expect(pw.title.rect.topPct).toBe(3.8);
+    const pipPx = ((pw.costRect!.topPct + pw.costRect!.heightPct / 2) / 100) * 2100 + pw.costDy! * 1500;
+    expect(pipPx).toBeCloseTo(132, 6);
+    expect((pipPx - 77) / (192 - 77)).toBeCloseTo(0.48, 2);
+
+    // The name is centred in its rect in both renderers (flex centre).
+    expect(pw.title.rect).toEqual({ topPct: 4.18, leftPct: 8.5, widthPct: 80, heightPct: 4.4 });
+    const nameShiftPx = ((pw.title.rect.topPct - 3.8) / 100) * 2100;
+    expect(nameShiftPx).toBeCloseTo(8, 1);
+    const titleCentrePx = ((pw.title.rect.topPct + pw.title.rect.heightPct / 2) / 100) * 2100;
+    // Name ~2 px below the pips, as printed (was level with them).
+    expect(titleCentrePx - pipPx).toBeCloseTo(2, 0);
   });
 
   it("leaves the MSE-framed templates' cost where it was", () => {

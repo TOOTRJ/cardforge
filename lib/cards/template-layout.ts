@@ -595,12 +595,16 @@ const M15PW: FrameProfile = {
   // 73–183 on eight printed M15 planeswalkers, 1500 × 2100), so the pips —
   // centred at 126 px — sat high in it (owner review, round 3). Printed pips
   // centre 48.0 % of the way down the plate (47.3–48.8 %); 6 px down puts
-  // ours there (132 px). The name stays: its caps centre is within 2 px of
-  // the print's.
+  // ours there (132 px).
   costDy: 0.004,
   symbolRect: { topPct: 56.9, leftPct: 79, widthPct: 12, heightPct: 3.8 },
   title: {
-    rect: { topPct: 3.8, leftPct: 8.5, widthPct: 80, heightPct: 4.4 },
+    // The name sat just as high: caps centre 125.5 px = 42 % of the plate,
+    // level with the old pips. Printed names centre 49–51 % down (126.8–129.2
+    // px on eleven M15 walkers), about 2 px below their pips. 3.8 → 4.18
+    // (8 px lower at HD) puts ours at 133.5 px = 49 %, 2 px below the pips,
+    // the print's relation.
+    rect: { topPct: 4.18, leftPct: 8.5, widthPct: 80, heightPct: 4.4 },
     sizePct: 0.0427,
     colorHex: INK_DARK,
     weight: 600,
