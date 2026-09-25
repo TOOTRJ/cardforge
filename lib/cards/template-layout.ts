@@ -508,14 +508,15 @@ const M15SNOWLAND: FrameProfile = {
 };
 
 // AgClassic — the 1993 Alpha/Beta frame. MSE's magic-agclassic art, re-cut
-// to the printed card's proportions and line widths
-// (scripts/build-alpha-frames.mjs; HD px on 1500 × 2100, measured on 19
-// LEA/LEB scans): black border 80 px at the sides, 89 above and 100 below
-// the frame (its pinstripe = the outer ~10 px); title band 100–198; art
-// opening 178–1319 × 219–1138; type band 1164–1247; text box 186–1318 ×
-// 1247–1855 (textured area 198–1306 × 1259–1843); P/T strip 1855–1990. Name,
-// type and rules are dark ink; the "Illus." line and the P/T share one line
-// in the strip, silver on every frame colour but white (ALPHA_INK).
+// to the printed card's proportions and lines (scripts/build-alpha-frames.mjs;
+// HD px on 1500 × 2100, measured on 19 LEA/LEB scans): black border 80 px at
+// the sides, 89 above and 100 below the frame (its pinstripe = the outer
+// ~10 px, one dark line); title band 100–198; art opening 178–1319 ×
+// 219–1138; type band 1164–1247; text box 186–1318 × 1247–1855 (one outline,
+// then a bevel to the textured area 201–1300 × 1265–1835); P/T strip
+// 1855–1991. Name, type and rules are dark ink; the "Illus." line and the P/T
+// share one line in the strip, silver on every frame colour but white
+// (ALPHA_INK).
 const AGCLASSIC: FrameProfile = {
   flavorDivider: false,
   label: "Alpha (1993)",
@@ -536,7 +537,8 @@ const AGCLASSIC: FrameProfile = {
     font: "display",
   },
   // Printed type lines start at ~157 px with caps centred at ~1199 px (the
-  // type band's middle); the set symbol ends at the text box's right edge.
+  // type band's middle); the set symbol ends ~4 px inside the text box's
+  // outline (1314 vs 1318).
   type: {
     rect: { topPct: 55.1, leftPct: 10.4, widthPct: 77.2, heightPct: 4.0 },
     sizePct: 0.03,
@@ -544,7 +546,7 @@ const AGCLASSIC: FrameProfile = {
     weight: 600,
     font: "display",
   },
-  // Inside the textured area with ~33 px at the sides and ~26 px above.
+  // Inside the textured area with ~30 px at the sides, ~20 above, ~12 below.
   rules: {
     rect: { topPct: 61.2, leftPct: 15.4, widthPct: 69.2, heightPct: 25.6 },
     sizePct: ptToPct(9),
@@ -564,8 +566,8 @@ const AGCLASSIC: FrameProfile = {
     inkByColorKey: ALPHA_INK,
   },
   // Official 1993 cards print P/T on the frame strip BELOW the text box, not
-  // on a plate: digits centred at ~1921 px (0.45 of the 1855–2000 strip) and
-  // ~88 %W, under the text box's right corner.
+  // on a plate: digits centred at ~1921 px (0.45 of the 1855–2000 strip,
+  // pinstripe included) and ~88 %W, under the text box's right corner.
   pt: {
     rect: { topPct: 88.74, leftPct: 80.5, widthPct: 15, heightPct: 5.6 },
     sizePct: 0.04,
@@ -744,10 +746,14 @@ const M15DEVOID: FrameProfile = {
 
 // Alpha Land — the 1993 frame's land variant ({color}lcard from
 // magic-agclassic.mse-style, re-cut by the same build-alpha-frames.mjs):
-// identical geometry to agclassic, a land treatment and no cost. Its frame
-// is the same brown land texture on every colour key (strip ≈ #7e6657; only
-// the text box takes the colour), so the "Illus." line and a P/T print in
-// the one silver on all seven.
+// agclassic's opening and text layout, a land treatment and no cost. Its
+// lines follow the land print (7 LEA/LEB basics): pinstripe, art-box border
+// and text-box ring are dark · colour · dark in the land's colour, the art
+// border OUTSIDE the non-land outline (art box 145–1356.5 × 189.5–1172; type
+// band 1172–1249; text box 187–1318 × 1249–1854.5, ring 12–17 px; strip
+// 1854.5–1984.5). Its frame is the same brown land texture on every colour
+// key (strip ≈ #7e6657), so the "Illus." line and a P/T print in the one
+// silver on all seven.
 const ALPHA_LAND_INK: InkByColorKey = Object.fromEntries(
   (["w", "u", "b", "r", "g", "c", "m"] as const).map((k) => [
     k,
@@ -758,6 +764,9 @@ const ALPHALAND: FrameProfile = {
   ...AGCLASSIC,
   label: "Alpha Land",
   hideCost: true,
+  // 5 px lower than agclassic's, clear of the wider art border (caps centred
+  // at ~1204 px, as "Land" prints on the basics).
+  type: { ...AGCLASSIC.type, rect: { ...AGCLASSIC.type.rect, topPct: 55.35 } },
   footer: { ...AGCLASSIC.footer!, inkByColorKey: ALPHA_LAND_INK },
   pt: { ...AGCLASSIC.pt!, inkByColorKey: ALPHA_LAND_INK },
 };

@@ -280,7 +280,11 @@ describe("Alpha masters are re-cut to the printed proportions", () => {
       .toBuffer({ resolveWithObject: true });
     const at = (x: number, y: number) => {
       const i = (y * info.width + x) * 4;
-      return { l: 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2], a: data[i + 3] };
+      return {
+        l: 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2],
+        s: Math.max(data[i], data[i + 1], data[i + 2]) - Math.min(data[i], data[i + 1], data[i + 2]),
+        a: data[i + 3],
+      };
     };
     /** Mean luminance and min alpha of the 9 × 9 box around (x, y). */
     const box = (x: number, y: number) => {
@@ -295,15 +299,16 @@ describe("Alpha masters are re-cut to the printed proportions", () => {
       }
       return { l, a };
     };
-    /** Mean luminance (over black) across `span` — x when `axis` is "x",
-     *  else y — averaged along `along`, indexed by absolute pixel. */
-    const profile = (axis: "x" | "y", along: [number, number], span: [number, number]) => {
+    /** Mean luminance (over black) — or saturation, with `sat` — across
+     *  `span` (x when `axis` is "x", else y), averaged along `along`,
+     *  indexed by absolute pixel. */
+    const profile = (axis: "x" | "y", along: [number, number], span: [number, number], sat = false) => {
       const p = new Float64Array(axis === "x" ? info.width : info.height);
       for (let t = span[0]; t < span[1]; t += 1) {
         let sum = 0;
         for (let s = along[0]; s < along[1]; s += 1) {
           const q = axis === "x" ? at(t, s) : at(s, t);
-          sum += (q.l * q.a) / 255;
+          sum += ((sat ? q.s : q.l) * q.a) / 255;
         }
         p[t] = sum / (along[1] - along[0]);
       }
@@ -341,7 +346,8 @@ describe("Alpha masters are re-cut to the printed proportions", () => {
   });
 
   it("the art slot covers the opening and stays under the art box's bevel", () => {
-    // The art box outline: 156–159 / 1344–1347 × 198–201 / 1161–1164.
+    // The art box outline (agclassic) and the land border's inner dark line
+    // (alphaland) both end at ~159 / 1344 × 201 / 1160.
     for (const template of ["agclassic", "alphaland"] as const) {
       const a = getFrameProfile(template).artSlot;
       const x0 = (a.leftPct / 100) * 1500;
@@ -355,16 +361,17 @@ describe("Alpha masters are re-cut to the printed proportions", () => {
       expect(y0).toBeLessThanOrEqual(219);
       expect(y0).toBeGreaterThan(201);
       expect(y1).toBeGreaterThanOrEqual(1138);
-      expect(y1).toBeLessThan(1161);
+      expect(y1).toBeLessThan(1160);
     }
   });
 
-  // Owner decision (2026-09-25): thin the frame lines to the print's. Each
-  // dark line group is measured at half maximum on a luminance profile taken
-  // across it and averaged along it — the same measurement as on 19 LEA/LEB
-  // scans, whose medians are the targets below. The first re-cut drew the
-  // pinstripe 21–23 px, the art box outline ~7 and the text box's outline +
-  // face ring + inner line 13–15 (its outline 4–5 px off on two sides).
+  // Owner decision (2026-09-25, round 2): the lines drawn the print's way.
+  // Every line group is read off a luminance (for the land's coloured lines,
+  // saturation) profile taken across it and averaged along it — the same
+  // measurement as on the scans, whose medians are the targets: 19 LEA/LEB
+  // non-land scans for agclassic, 7 basic lands for alphaland. The first
+  // re-cut drew MSE's dark · light · dark lines ~2× the print's; a thinner
+  // copy of that structure still read as double lines.
   const median = (p: Float64Array, a: number, b: number) => [...p.subarray(a, b)].sort((u, v) => u - v)[(b - a) >> 1];
   /** Sub-pixel position (pixel-edge coordinates) where p crosses `level` between i and i + 1. */
   const cross = (p: Float64Array, i: number, level: number) =>
@@ -379,78 +386,217 @@ describe("Alpha masters are re-cut to the printed proportions", () => {
     }
     return NaN;
   }
-  /** A dark line group in `win`: its first and last half-maximum crossings
-   *  (half way between its darkest pixel and the median of `bg`). */
-  function group(p: Float64Array, win: [number, number], bg: [number, number]) {
-    let min = Infinity;
-    for (let i = win[0]; i < win[1]; i += 1) min = Math.min(min, p[i]);
-    const level = (min + median(p, ...bg)) / 2;
-    let first = NaN;
-    let last = NaN;
-    for (let i = win[0]; i < win[1] - 1; i += 1) {
-      if (Number.isNaN(first) && p[i] >= level && p[i + 1] < level) first = cross(p, i, level);
-      if (p[i] < level && p[i + 1] >= level) last = cross(p, i, level);
+  /** Prominent dark lines in `win`: local minima at least 12 below the
+   *  brightest point within 4 px on BOTH sides (pixel-centre positions). */
+  function darkLines(p: Float64Array, win: [number, number]) {
+    const out: number[] = [];
+    for (let i = win[0]; i < win[1]; i += 1) {
+      if (!(p[i] <= p[i - 1] && p[i] < p[i + 1])) continue;
+      const left = Math.max(...p.subarray(i - 4, i));
+      const right = Math.max(...p.subarray(i + 1, i + 5));
+      if (Math.min(left, right) - p[i] > 12) out.push(i + 0.5);
     }
+    return out;
+  }
+  /** The darkest line in `win`, measured at half depth against each flank. */
+  function line(p: Float64Array, win: [number, number], flankA: [number, number], flankB: [number, number]) {
+    let m = win[0];
+    for (let i = win[0]; i < win[1]; i += 1) if (p[i] < p[m]) m = i;
+    const [a, b] = [(p[m] + median(p, ...flankA)) / 2, (p[m] + median(p, ...flankB)) / 2];
+    let i = m;
+    while (i > win[0] && p[i - 1] < a) i -= 1;
+    let j = m;
+    while (j < win[1] && p[j + 1] < b) j += 1;
+    const first = cross(p, i - 1, a);
+    const last = cross(p, j, b);
     return { first, last, width: last - first, centre: (first + last) / 2 };
   }
+  /** A coloured line: where saturation rises above half its peak over the
+   *  window's median. [first, last) in pixel edges, or null. */
+  function colourBand(s: Float64Array, win: [number, number]) {
+    const base = median(s, ...win);
+    let peak = 0;
+    for (let i = win[0]; i < win[1]; i += 1) peak = Math.max(peak, s[i] - base);
+    if (peak < 25) return null;
+    let first = -1;
+    let last = -1;
+    for (let i = win[0]; i < win[1]; i += 1) {
+      if (s[i] - base > peak / 2) {
+        if (first < 0) first = i;
+        last = i + 1;
+      }
+    }
+    return [first, last] as const;
+  }
+  type Group = { axis: "x" | "y"; along: [number, number]; win: [number, number] };
+  // Where each line group is read (the masters carry no text).
+  const G: Record<string, Group> = {
+    pinL: { axis: "x", along: [400, 1000], win: [78, 100] },
+    pinR: { axis: "x", along: [400, 1000], win: [1400, 1421] },
+    pinT: { axis: "y", along: [400, 1100], win: [88, 108] },
+    pinB: { axis: "y", along: [750, 1150], win: [1980, 2000] },
+    artL: { axis: "x", along: [400, 1000], win: [140, 170] },
+    artR: { axis: "x", along: [400, 1000], win: [1336, 1362] },
+    artT: { axis: "y", along: [400, 1100], win: [184, 210] },
+    artB: { axis: "y", along: [400, 1100], win: [1154, 1176] },
+    txtL: { axis: "x", along: [1350, 1750], win: [180, 210] },
+    txtR: { axis: "x", along: [1350, 1750], win: [1290, 1322] },
+    txtT: { axis: "y", along: [500, 1000], win: [1242, 1274] },
+    txtB: { axis: "y", along: [500, 1000], win: [1828, 1860] },
+  };
+  const read = (m: Awaited<ReturnType<typeof master>>, g: Group, sat = false) =>
+    m.profile(g.axis, g.along, [g.win[0] - 8, g.win[1] + 8], sat);
+  /** The frame's black edges, the same on both templates (print 81.2 ·
+   *  1422.3 · 88.6 · 1999.5; the masters keep 80 · 1421 · 89 · 2000). */
+  function frameEdges(m: Awaited<ReturnType<typeof master>>, tag: string) {
+    const near = (got: number, want: number, what: string) =>
+      expect(Math.abs(got - want), `${tag} ${what}: ${got.toFixed(1)} vs ${want}`).toBeLessThanOrEqual(2);
+    const rows = m.profile("x", [400, 1000], [40, 1460]);
+    near(edge(rows, [66, 100], [45, 66], [120, 145], true), 81.2, "left frame edge");
+    near(edge(rows, [1400, 1436], [1436, 1455], [1355, 1380], false), 1422.3, "right frame edge");
+    near(edge(m.profile("y", [1000, 1300], [40, 260]), [75, 110], [50, 72], [125, 150], true), 88.6, "top frame edge");
+    near(edge(m.profile("y", [950, 1150], [1780, 2060]), [1985, 2020], [2020, 2045], [1900, 1935], false), 1999.5, "bottom frame edge");
+  }
 
-  it.each(["agclassic", "alphaland"])("%s: pinstripe, art box and text box lines at the print's width and place", async (template) => {
-    for (const key of ["w", "u", "b", "r", "g", "c", "m"]) {
-      const { profile } = await master(template, key);
-      const near = (got: number, want: number, tol: number, what: string) =>
-        expect(Math.abs(got - want), `${template}/${key} ${what}: ${got.toFixed(1)} vs print ${want}`).toBeLessThanOrEqual(tol);
-      const narrow = (got: number, lo: number, hi: number, what: string) => {
-        expect(got, `${template}/${key} ${what} width`).toBeGreaterThanOrEqual(lo);
-        expect(got, `${template}/${key} ${what} width`).toBeLessThanOrEqual(hi);
-      };
-      // Outer pinstripe: frame edge → where the texture starts (print 9–11).
-      const artRows = profile("x", [400, 1000], [40, 1460]);
-      const left = edge(artRows, [66, 100], [45, 66], [120, 145], true);
-      const leftEnd = group(artRows, [Math.floor(left) + 2, Math.floor(left) + 32], [115, 145]).last;
-      near(left, 81.2, 2, "left frame edge");
-      near(leftEnd, 90.2, 2, "left pinstripe end");
-      narrow(leftEnd - left, 7, 13, "left pinstripe");
-      const right = edge(artRows, [1400, 1436], [1436, 1455], [1355, 1380], false);
-      const rightEnd = group(artRows, [Math.floor(right) - 32, Math.floor(right) - 1], [1355, 1385]).first;
-      near(right, 1422.3, 2, "right frame edge");
-      near(rightEnd, 1411.1, 2, "right pinstripe end");
-      narrow(right - rightEnd, 7, 13, "right pinstripe");
-      const titleCols = profile("y", [1000, 1300], [40, 260]);
-      const top = edge(titleCols, [75, 110], [50, 72], [125, 150], true);
-      const topEnd = group(titleCols, [Math.floor(top) + 2, Math.floor(top) + 32], [125, 150]).last;
-      near(top, 88.6, 2, "top frame edge");
-      near(topEnd, 99.6, 2, "top pinstripe end");
-      narrow(topEnd - top, 7, 13, "top pinstripe");
-      const stripCols = profile("y", [950, 1150], [1780, 2060]);
-      const bottom = edge(stripCols, [1985, 2020], [2020, 2045], [1900, 1935], false);
-      const bottomEnd = group(stripCols, [Math.floor(bottom) - 32, Math.floor(bottom) - 1], [1900, 1940]).first;
-      near(bottom, 1999.5, 2, "bottom frame edge");
-      near(bottomEnd, 1990.7, 2, "bottom pinstripe end");
-      narrow(bottom - bottomEnd, 7, 13, "bottom pinstripe");
-      // Art box outline (print 156.0–158.8 left, 1160.5–1163.4 below).
-      const artLeft = group(artRows, [145, 172], [115, 145]);
-      near(artLeft.centre, 157.4, 2, "art box outline (left)");
-      narrow(artLeft.width, 1, 5, "art box outline (left)");
-      const bandCols = profile("y", [400, 1100], [1100, 1300]);
-      const artBottom = group(bandCols, [1146, 1172], [1175, 1200]);
-      near(artBottom.centre, 1162, 2.5, "art box outline (bottom)");
-      narrow(artBottom.width, 1, 5, "art box outline (bottom)");
-      // Text box: its outline where the print's is (L 186.0, R 1318.4,
-      // T 1247.0, B 1855.2 — outer edges), and outline + MSE's face ring +
-      // inner line together no wider than 10 px.
-      const textRows = profile("x", [1350, 1750], [40, 1460]);
-      const textLeft = group(textRows, [174, 202], [120, 170]);
-      near(textLeft.first, 186, 2, "text box outline (left)");
-      narrow(textLeft.width, 1.5, 10, "text box lines (left)");
-      const textRight = group(textRows, [1296, 1325], [1330, 1380]);
-      near(textRight.last, 1318.4, 2, "text box outline (right)");
-      narrow(textRight.width, 1.5, 10, "text box lines (right)");
-      const textTop = group(bandCols, [1240, 1268], [1200, 1235]);
-      near(textTop.first, 1247, 2, "text box outline (top)");
-      narrow(textTop.width, 1.5, 10, "text box lines (top)");
-      const textBottom = group(profile("y", [400, 1100], [1780, 2060]), [1835, 1865], [1870, 1900]);
-      near(textBottom.last, 1855.2, 2, "text box outline (bottom)");
-      narrow(textBottom.width, 1.5, 10, "text box lines (bottom)");
+  it.each(["w", "u", "b", "r", "g", "c", "m"])("agclassic %s: ONE thin dark line per group, where the print has it", async (key) => {
+    const m = await master("agclassic", key);
+    const tag = `agclassic/${key}`;
+    frameEdges(m, tag);
+    // Print medians of the lines' darkest point (19 scans). The pinstripe is
+    // a light band then this one line; the art box one outline, then its
+    // bevel face; the text box one outline, then a shaded bevel.
+    const PRINT: Record<string, number> = {
+      pinL: 87.5, pinR: 1412.5, pinT: 98, pinB: 1992.5,
+      artL: 157.5, artR: 1345.5, artT: 199.5, artB: 1161.5,
+      txtL: 187.5, txtR: 1316.5, txtT: 1248.5, txtB: 1853.5,
+    };
+    for (const [name, want] of Object.entries(PRINT)) {
+      const lines = darkLines(read(m, G[name]), G[name].win);
+      // The black frame's art box outline barely shows against its bevel.
+      if (key === "b" && lines.length === 0) continue;
+      expect(lines, `${tag} ${name}: dark lines ${lines.join(", ")}`).toHaveLength(1);
+      expect(Math.abs(lines[0] - want), `${tag} ${name}: ${lines[0]} vs print ${want}`).toBeLessThanOrEqual(2);
+    }
+    // Outline widths at half depth, all four sides (print 2.4–4.2 px).
+    const rows = m.profile("x", [400, 1000], [100, 1400]);
+    const cols = m.profile("y", [400, 1100], [150, 1250]);
+    const textRows = m.profile("x", [1350, 1750], [150, 1350]);
+    const textCols = m.profile("y", [500, 1000], [1200, 1880]);
+    const outlines: [string, ReturnType<typeof line>, number][] = [
+      ["art box (left)", line(rows, [150, 166], [120, 145], [165, 172]), 157.4],
+      ["art box (right)", line(rows, [1336, 1352], [1325, 1340], [1352, 1380]), 1345.2],
+      ["art box (top)", line(cols, [192, 208], [160, 190], [204, 212]), 199.9],
+      ["art box (bottom)", line(cols, [1154, 1170], [1143, 1156], [1170, 1200]), 1162],
+      ["text box (left)", line(textRows, [180, 196], [150, 180], [192, 198]), 187.3],
+      ["text box (right)", line(textRows, [1308, 1324], [1302, 1312], [1324, 1345]), 1317],
+      ["text box (top)", line(textCols, [1240, 1256], [1215, 1240], [1253, 1260]), 1248.3],
+      ["text box (bottom)", line(textCols, [1844, 1860], [1838, 1848], [1860, 1880]), 1853.8],
+    ];
+    for (const [what, got, want] of outlines) {
+      if (key === "b" && what.startsWith("art box") && got.width > 8) continue; // (see above)
+      expect(Math.abs(got.centre - want), `${tag} ${what} outline at ${got.centre.toFixed(1)} vs print ${want}`).toBeLessThanOrEqual(2);
+      expect(got.width, `${tag} ${what} outline ${got.width.toFixed(1)} px`).toBeGreaterThanOrEqual(1.5);
+      expect(got.width, `${tag} ${what} outline ${got.width.toFixed(1)} px`).toBeLessThanOrEqual(5);
+    }
+    // The text box's bevel ends where the print's does (textured area
+    // L 201 · R 1299.5 · T 1265 · B 1835): half way between the bevel's
+    // level and the textured area's, scanning outward from the text.
+    const smooth = (p: Float64Array) => p.map((_, i) => (p[i - 1] + p[i] + p[i + 1]) / 3);
+    const bevels: [string, Float64Array, [number, number], [number, number], number, number][] = [
+      ["left", smooth(textRows), [215, 235], [190, 196], -1, 201],
+      ["right", smooth(textRows), [1265, 1285], [1303, 1310], 1, 1299.5],
+      ["top", smooth(textCols), [1285, 1300], [1252, 1258], -1, 1265],
+      ["bottom", smooth(textCols), [1800, 1815], [1840, 1848], 1, 1835],
+    ];
+    for (const [side, p, inner, bevel, dir, want] of bevels) {
+      const [a, b] = [median(p, ...inner), median(p, ...bevel)];
+      if (Math.abs(a - b) < 12) continue; // no visible bevel on this colour
+      const level = (a + b) / 2;
+      let at = NaN;
+      for (let i = dir > 0 ? inner[1] : inner[0]; dir > 0 ? i < bevel[1] : i > bevel[0]; i += dir) {
+        if ((p[i] - level) * (p[i + dir] - level) <= 0) {
+          at = i + 0.5 + dir * 0.5;
+          break;
+        }
+      }
+      expect(Math.abs(at - want), `${tag} text box bevel (${side}) ends at ${at} vs print ${want}`).toBeLessThanOrEqual(6);
+    }
+  });
+
+  it.each(["w", "u", "b", "r", "g", "c", "m"])("alphaland %s: the land print's dark · colour · dark lines", async (key) => {
+    const m = await master("alphaland", key);
+    const tag = `alphaland/${key}`;
+    frameEdges(m, tag);
+    // Land prints (7 basics): the pinstripe and the art box border are
+    // dark · colour · dark (the border OUTSIDE the non-land outline), the
+    // text box an outline, a 12–15 px coloured ring and an inner line.
+    // [outer dark line, inner dark line, coloured band [first, last)].
+    const PRINT: Record<string, [number, number, [number, number]]> = {
+      pinL: [86.5, 93.5, [88, 91]],
+      pinR: [1413, 1406.5, [1408, 1412]],
+      pinT: [99.5, 105.5, [100, 104.5]],
+      pinB: [1992.5, 1985.5, [1987, 1990]],
+      artL: [145.5, 157.5, [148, 154]],
+      artR: [1355.5, 1345.5, [1349, 1353]],
+      artT: [190.5, 201.5, [192, 198]],
+      artB: [1171.5, 1162.5, [1163, 1169]],
+      txtL: [188.5, 202.5, [191.5, 201.5]],
+      txtR: [1317.5, 1296.5, [1298, 1313]],
+      txtT: [1250.5, 1268.5, [1253, 1267]],
+      txtB: [1853.5, 1836.5, [1838, 1850.5]],
+    };
+    for (const [name, [outer, inner, band]] of Object.entries(PRINT)) {
+      const lines = darkLines(read(m, G[name]), G[name].win);
+      const hit = (want: number) => lines.some((l) => Math.abs(l - want) <= 2.5);
+      const found = `${tag} ${name}: dark lines ${lines.join(", ")} vs print ${outer} / ${inner}`;
+      // The black land's colour is dark itself, so one of its lines may merge.
+      if (key === "b") expect(hit(outer) || hit(inner), found).toBe(true);
+      else expect(hit(outer) && hit(inner), found).toBe(true);
+      // The coloured band, where the land colour stands out: not on the
+      // white or black land, nor round green's (itself green) text box.
+      if ("wb".includes(key) || (key === "g" && name.startsWith("txt"))) continue;
+      const got = colourBand(read(m, G[name], true), G[name].win);
+      expect(got, `${tag} ${name}: no coloured band`).not.toBeNull();
+      expect(Math.abs(got![0] - band[0]), `${tag} ${name}: band ${got} vs print ${band}`).toBeLessThanOrEqual(2.5);
+      expect(Math.abs(got![1] - band[1]), `${tag} ${name}: band ${got} vs print ${band}`).toBeLessThanOrEqual(2.5);
+    }
+  });
+
+  it("the text rects sit inside the re-cut bands", () => {
+    // HD px, from scripts/build-alpha-frames.mjs (checked on the masters above).
+    const BANDS = {
+      agclassic: { title: [90, 100, 1411, 198], type: [90, 1164, 1411, 1247], text: [201, 1265, 1299.5, 1835], strip: [90, 1855, 1411, 1991] },
+      alphaland: { title: [94, 106, 1405, 189.5], type: [94, 1172, 1405, 1249], text: [207, 1272, 1292.5, 1832], strip: [94, 1854.5, 1405, 1984.5] },
+    } as const;
+    const hd = (r: { topPct: number; leftPct: number; widthPct: number; heightPct: number }) => ({
+      x0: (r.leftPct / 100) * 1500,
+      y0: (r.topPct / 100) * 2100,
+      x1: ((r.leftPct + r.widthPct) / 100) * 1500,
+      y1: ((r.topPct + r.heightPct) / 100) * 2100,
+    });
+    for (const template of ["agclassic", "alphaland"] as const) {
+      const layout = getFrameProfile(template);
+      const b = BANDS[template];
+      const inside = (what: string, v: number, lo: number, hi: number) =>
+        expect(v >= lo && v <= hi, `${template} ${what}: ${v.toFixed(1)} not in ${lo}–${hi}`).toBe(true);
+      // Rules: inside the textured area with ≥ 8 px to spare on every side.
+      const rules = hd(layout.rules.rect);
+      inside("rules left", rules.x0, b.text[0] + 8, b.text[2]);
+      inside("rules right", rules.x1, b.text[0], b.text[2] - 8);
+      inside("rules top", rules.y0, b.text[1] + 8, b.text[3]);
+      inside("rules bottom", rules.y1, b.text[1], b.text[3] - 8);
+      // Name and type line: inside the pinstripe, centred in their bands.
+      for (const [what, rect, band] of [["title", hd(layout.title.rect), b.title], ["type", hd(layout.type.rect), b.type]] as const) {
+        inside(`${what} left`, rect.x0, band[0], band[2]);
+        inside(`${what} right`, rect.x1, band[0], band[2]);
+        const quarter = (band[3] - band[1]) / 4;
+        inside(`${what} centre`, (rect.y0 + rect.y1) / 2, band[1] + quarter, band[3] - quarter);
+      }
+      // Artist line and P/T: within the strip, above its pinstripe.
+      for (const [what, rect] of [["footer", hd(layout.footer!.rect)], ["pt", hd(layout.pt!.rect)]] as const) {
+        inside(`${what} top`, rect.y0, b.strip[1], b.strip[3]);
+        inside(`${what} bottom`, rect.y1, b.strip[1], b.strip[3]);
+      }
     }
   });
 });

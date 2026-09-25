@@ -770,8 +770,20 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
         line inside its band.
       - [x] **Alpha frame re-cut** to the printed proportions from its MSE
         source (scripts/build-alpha-frames.mjs); P/T, artist line and mark
-        re-fitted. Still MSE's thicker pinstripe / text-box bevel (~2× the
-        print) — owner's call whether to compress them too.
+        re-fitted. Round 2 (owner: "thin"): the lines redrawn the print's
+        way — one thin dark line per pinstripe / art-box / text-box edge on
+        agclassic (MSE's light centre and coloured text-box ring cut, its
+        bevel widened to the print's), the land print's dark · colour · dark
+        lines on alphaland.
+      - **Alpha long P/T (pre-existing):** a P/T like `*+1/*+1` runs out of
+        the strip across the pinstripe into the black border — the P/T rect
+        spans 1207–1432 px and neither StatBake nor StatOverlay fits the
+        digits (`10/10` fits). Fix: shrink-to-fit in both renderers and end
+        AGCLASSIC.pt.rect inside the pinstripe (~1404 px).
+      - **Alpha bevel lighting:** MSE lights every colour's text-box bevel
+        the same way (lit top + right); the print does that on white and
+        artifact cards but lights blue and red ones from the left + bottom.
+        Matching it means re-sourcing per colour — owner's call.
       - [x] **Alpha light lettering** on non-white frames: per-colour ink on
         StatSlot + footer in both renderers, with a lower-right emboss.
       - **Aftermath's rotated second art (pre-existing, bake only):** the
