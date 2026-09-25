@@ -81,6 +81,10 @@ const OUT_H = 2100;
 const KEYS = ["w", "u", "b", "r", "g", "c", "m"];
 // ALPHA_OUT_ROOT writes somewhere else (a scratch folder) for a dry run.
 const OUT_ROOT = process.env.ALPHA_OUT_ROOT ?? "public/frames";
+// ALPHA_FULL_COLOUR=1 skips the palette (dry runs only): the exact values
+// the committed palette masters approximate, which
+// tests/unit/frames/alpha-master-specks.test.ts probes at the ring corners.
+const FULL_COLOUR = process.env.ALPHA_FULL_COLOUR === "1";
 
 // ── Knots: [print HD px, MSE source px] (pixel-EDGE coordinates) ───────────
 // MSE source (374 × 522), identical in all 14 files:
@@ -355,7 +359,8 @@ function compile(map) {
 }
 
 // Catmull-Rom cubic — sharper than bilinear, less ringing than Lanczos on
-// the 1 px lines (every output scale here is a 1.5–8× upscale).
+// the 1 px lines (every output scale here is a 1.5–8× upscale). What little
+// it still rings is clamped away in build() (see "Anti-ringing").
 function cubic(t) {
   const a = Math.abs(t);
   if (a < 1) return 1.5 * a * a * a - 2.5 * a * a + 1;
@@ -462,23 +467,53 @@ async function build(srcFile, outFile, maps) {
       let r = 0;
       let g = 0;
       let b = 0;
+      // Each channel's range over the 16 taps (see "Anti-ringing" below).
+      let rLo = 255;
+      let rHi = 0;
+      let gLo = 255;
+      let gHi = 0;
+      let bLo = 255;
+      let bHi = 0;
       for (let j = 0; j < 4; j += 1) {
         const rowOff = ty.idx[j] * SW;
         for (let i = 0; i < 4; i += 1) {
           const k = ty.w[j] * tx.w[i];
           const s = (rowOff + tx.idx[i]) * SC;
-          r += src[s] * k;
-          g += src[s + 1] * k;
-          b += src[s + 2] * k;
+          const sr = src[s];
+          const sg = src[s + 1];
+          const sb = src[s + 2];
+          r += sr * k;
+          g += sg * k;
+          b += sb * k;
+          if (sr < rLo) rLo = sr;
+          if (sr > rHi) rHi = sr;
+          if (sg < gLo) gLo = sg;
+          if (sg > gHi) gHi = sg;
+          if (sb < bLo) bLo = sb;
+          if (sb > bHi) bHi = sb;
         }
       }
-      out[o] = Math.max(0, Math.min(255, Math.round(r)));
-      out[o + 1] = Math.max(0, Math.min(255, Math.round(g)));
-      out[o + 2] = Math.max(0, Math.min(255, Math.round(b)));
+      // Anti-ringing: Catmull-Rom's negative lobes overshoot a hard edge —
+      // by up to ~20 levels where two of MSE's lines meet at a ring corner
+      // (30 at worst), a colour none of the 16 taps has. That alone is
+      // invisible, but the palette encode below then snaps those few rare
+      // colours to whatever palette entry is nearest, which can be a
+      // different hue: unclamped, alphaland/u's ring corners came out as
+      // 159,177,189 specks in a 78,123,170 ring and w's as cream dots.
+      // Clamping each channel to its taps' range removes the overshoot and
+      // with it every ring-corner speck; the lines stay as sharp (the clamp
+      // only acts beyond the taps' own extremes).
+      out[o] = Math.round(Math.max(rLo, Math.min(rHi, r)));
+      out[o + 1] = Math.round(Math.max(gLo, Math.min(gHi, g)));
+      out[o + 2] = Math.round(Math.max(bLo, Math.min(bHi, b)));
     }
   }
+  // `effort: 10` turns on sharp's palette mode (≤ 256 colours, dithered).
+  // Kept on purpose: a full-colour master is ~4× the bytes (~3 MB vs
+  // ~0.7 MB), and with the clamp above the ring corners hold no colour the
+  // palette maps to a speck.
   await sharp(out, { raw: { width: OUT_W, height: OUT_H, channels: 4 } })
-    .png({ compressionLevel: 9, effort: 10 })
+    .png(FULL_COLOUR ? { compressionLevel: 9, palette: false } : { compressionLevel: 9, effort: 10 })
     .toFile(outFile);
 }
 

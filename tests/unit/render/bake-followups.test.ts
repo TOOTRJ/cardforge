@@ -498,10 +498,15 @@ describe("Alpha masters are re-cut to the printed proportions", () => {
     const last = cross(p, j, b);
     return { first, last, width: last - first, centre: (first + last) / 2 };
   }
+  /** Profiles are read this far beyond each group's window, on both sides. */
+  const READ_PAD = 8;
   /** A coloured line: where saturation rises above half its peak over the
-   *  window's median. [first, last) in pixel edges, or null. */
+   *  median of the whole profile read (the window ± READ_PAD — the text
+   *  box's right ring alone fills half its window, so the window's own
+   *  median sat on the ring's edge pixel and moved with that one column's
+   *  palette colour). [first, last) in pixel edges, or null. */
   function colourBand(s: Float64Array, win: [number, number]) {
-    const base = median(s, ...win);
+    const base = median(s, win[0] - READ_PAD, win[1] + READ_PAD);
     let peak = 0;
     for (let i = win[0]; i < win[1]; i += 1) peak = Math.max(peak, s[i] - base);
     if (peak < 25) return null;
@@ -532,7 +537,7 @@ describe("Alpha masters are re-cut to the printed proportions", () => {
     txtB: { axis: "y", along: [500, 1000], win: [1828, 1860] },
   };
   const read = (m: Awaited<ReturnType<typeof master>>, g: Group, sat = false) =>
-    m.profile(g.axis, g.along, [g.win[0] - 8, g.win[1] + 8], sat);
+    m.profile(g.axis, g.along, [g.win[0] - READ_PAD, g.win[1] + READ_PAD], sat);
   /** The frame's black edges, the same on both templates (print 81.2 ·
    *  1422.3 · 88.6 · 1999.5; the masters keep 80 · 1421 · 89 · 2000). */
   function frameEdges(m: Awaited<ReturnType<typeof master>>, tag: string) {
