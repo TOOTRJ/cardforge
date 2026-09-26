@@ -1022,7 +1022,10 @@ function CardDetails({
     ["Type", typeLine],
     ["Mana cost", card.cost ? `${card.cost} (${costWords})` : "None"],
     ["Rarity", card.rarity ? RARITY_LABELS[card.rarity as Rarity] ?? card.rarity : "—"],
-    ["Color identity", colors || "Colorless"],
+    // The card's colour as the creator models it — its frame colour, which
+    // is not MTG's Commander colour identity (an imported Ajani, Nacatl
+    // Pariah is White, its identity R/W; TODO 1.2), so the row says "Color".
+    ["Color", colors || "Colorless"],
   ];
   if (stats) rows.push(["Stats", stats]);
   if (card.layout && card.layout !== "normal") rows.push(["Layout", card.layout]);
