@@ -367,6 +367,25 @@ export function isBorrowedVariation(
   );
 }
 
+/** A creature's supertype once it takes the artifact frame it borrows: the
+ *  word "Artifact" after its other words ("Legendary" → "Legendary
+ *  Artifact"), so the type line reads "Legendary Artifact Creature". A
+ *  supertype that already says Artifact is returned unchanged. */
+export function withArtifactWord(supertype: string | null | undefined): string {
+  const words = (supertype ?? "").split(/\s+/).filter(Boolean);
+  if (words.some((word) => word.toLowerCase() === "artifact")) return words.join(" ");
+  return [...words, "Artifact"].join(" ");
+}
+
+/** The supertype without the word "Artifact" (every other word kept, in
+ *  order) — undoes withArtifactWord. */
+export function withoutArtifactWord(supertype: string | null | undefined): string {
+  return (supertype ?? "")
+    .split(/\s+/)
+    .filter((word) => word && word.toLowerCase() !== "artifact")
+    .join(" ");
+}
+
 /** All frames offered for a kind, across every era, in gallery display
  *  order: border-era standards (+ their skin variants) oldest→newest, then
  *  layout templates, then showcase treatments. There is deliberately NO

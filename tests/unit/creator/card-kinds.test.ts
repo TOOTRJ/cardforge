@@ -17,6 +17,8 @@ import {
   templateSupportsKind,
   toBasicLandIdentity,
   toNonbasicLandIdentity,
+  withArtifactWord,
+  withoutArtifactWord,
   type CardKind,
 } from "@/lib/creator/card-kinds";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
@@ -458,5 +460,26 @@ describe("basic-only frames", () => {
     expect(isSingleBasicLand(land("Basic", ["Plains", "Island"], "Plains"))).toBe(false);
     expect(isSingleBasicLand(land("", [], "Command Tower", "{T}: Add one mana."))).toBe(false);
     expect(isSingleBasicLand({ ...land("Basic", ["Plains"], "Plains"), cardType: "creature" })).toBe(false);
+  });
+});
+
+// TODO 1.7: picking the Artifact variation on a creature makes it an
+// Artifact Creature (the Card step writes the word), and leaving it undoes it.
+describe("withArtifactWord / withoutArtifactWord", () => {
+  it("adds Artifact after the other supertype words, once", () => {
+    expect(withArtifactWord("")).toBe("Artifact");
+    expect(withArtifactWord(undefined)).toBe("Artifact");
+    expect(withArtifactWord("Legendary")).toBe("Legendary Artifact");
+    expect(withArtifactWord("Legendary  Snow")).toBe("Legendary Snow Artifact");
+    expect(withArtifactWord("Legendary Artifact")).toBe("Legendary Artifact");
+    expect(withArtifactWord("artifact")).toBe("artifact");
+  });
+
+  it("takes out only the Artifact word", () => {
+    expect(withoutArtifactWord("Legendary Artifact")).toBe("Legendary");
+    expect(withoutArtifactWord("Artifact")).toBe("");
+    expect(withoutArtifactWord("Snow Artifact")).toBe("Snow");
+    expect(withoutArtifactWord("Legendary")).toBe("Legendary");
+    expect(withoutArtifactWord(null)).toBe("");
   });
 });

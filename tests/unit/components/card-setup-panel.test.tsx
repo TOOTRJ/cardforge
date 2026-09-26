@@ -47,6 +47,7 @@ function Harness({
   // rules like the real form does.
   const color = useWatch({ control: methods.control, name: "color_identity" }) as ColorIdentity[];
   const template = useWatch({ control: methods.control, name: "frame_style.template" }) as string;
+  const supertypeNow = useWatch({ control: methods.control, name: "supertype" }) as string;
   return (
     <FormProvider {...methods}>
       <CardSetupPanel
@@ -58,6 +59,7 @@ function Harness({
       />
       <output data-testid="template">{template}</output>
       <output data-testid="color">{color.join(",")}</output>
+      <output data-testid="supertype">{supertypeNow}</output>
     </FormProvider>
   );
 }
@@ -353,6 +355,39 @@ describe("CardSetupPanel — the artifact frame is a creature variation (TODO 1.
     // The base is still M15's Standard — not a "Current frame" legacy pin.
     expect(screen.queryByRole("radiogroup", { name: "Current frame" })).toBeNull();
     expect(m15Standard().getAttribute("aria-checked")).toBe("true");
+  });
+
+  it("picking it makes a plain creature an Artifact Creature, and leaving it undoes that", () => {
+    render(
+      <Harness
+        verified={verified}
+        onColor={vi.fn()}
+        initialColor="colorless"
+        supertype="Legendary"
+      />,
+    );
+    fireEvent.click(within(variations()).getByRole("radio", { name: /Artifact/ }));
+    expect(screen.getByTestId("template").textContent).toBe("m15artifact");
+    expect(screen.getByTestId("supertype").textContent).toBe("Legendary Artifact");
+    // Back to Standard: the word the chip added comes out again.
+    fireEvent.click(within(variations()).getByRole("radio", { name: /Standard/ }));
+    expect(screen.getByTestId("template").textContent).toBe("m15");
+    expect(screen.getByTestId("supertype").textContent).toBe("Legendary");
+  });
+
+  it("never touches an Artifact word the card already had", () => {
+    render(
+      <Harness
+        verified={verified}
+        onColor={vi.fn()}
+        initialColor="colorless"
+        supertype="Artifact"
+      />,
+    );
+    fireEvent.click(within(variations()).getByRole("radio", { name: /Artifact/ }));
+    expect(screen.getByTestId("supertype").textContent).toBe("Artifact");
+    fireEvent.click(within(variations()).getByRole("radio", { name: /Standard/ }));
+    expect(screen.getByTestId("supertype").textContent).toBe("Artifact");
   });
 
   it("an imported Artifact Creature on m15artifact opens on that variation", () => {

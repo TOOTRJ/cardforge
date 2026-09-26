@@ -13,7 +13,7 @@
 // never move an element. And there's no fallback logic anywhere here —
 // framesForKind() simply doesn't include an era that can't frame the kind.
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Controller, useFormContext, useFormState, useWatch } from "react-hook-form";
 import { ChevronDown } from "lucide-react";
 import { toast } from "sonner";
@@ -26,6 +26,7 @@ import {
 import {
   colorIdentityForKey,
   colorWord,
+  isArtifactFrameType,
   pickFrameColorKey,
   type FrameTypeInfo,
 } from "@/components/cards/frame-layer";
@@ -49,6 +50,8 @@ import {
   kindHasAvailableFrame,
   skinVariantsFor,
   templateIsBasicOnly,
+  withArtifactWord,
+  withoutArtifactWord,
   type CardKind,
   type FrameChoice,
   type FrameColorKey,
@@ -175,7 +178,8 @@ export function CardSetupPanel({
   landBasicDisabledReason = null,
   onLandModeChange,
 }: CardSetupPanelProps) {
-  const { control, setValue, clearErrors } = useFormContext<FormValues>();
+  const { control, setValue, getValues, clearErrors } =
+    useFormContext<FormValues>();
   // A server refusal of the frame (verification gate 0.13, kind gate 0.26)
   // lands on frame_style and the wizard jumps here — show it, or the step
   // just turns red with no reason. Any type, frame or colour pick clears it
@@ -209,6 +213,26 @@ export function CardSetupPanel({
   // The card's type, for the tiles of a frame that dresses a colour by type
   // (Alpha's colourless artifact paints the brown artifact card).
   const frameType: FrameTypeInfo = { cardType, supertype };
+
+  // The Artifact variation a creature borrows dresses an Artifact Creature
+  // (TODO 1.7): picking it for a creature whose type line doesn't say
+  // Artifact puts the word into the supertype, and once the card leaves that
+  // frame — Standard, another variation, another kind — the word it put
+  // there comes out again. A word the user typed is never touched: the ref
+  // remembers only this visit's seed.
+  const seededArtifactWord = useRef(false);
+  const watchedTemplate = useWatch({ control, name: "frame_style.template" });
+  useEffect(() => {
+    if (!seededArtifactWord.current) return;
+    const current = normalizeFrameTemplate(
+      (watchedTemplate ?? DEFAULT_FRAME_TEMPLATE) as FrameTemplate,
+    );
+    if (isBorrowedVariation(kind, current)) return;
+    seededArtifactWord.current = false;
+    const words = getValues("supertype") ?? "";
+    const next = withoutArtifactWord(words);
+    if (next !== words) setValue("supertype", next, { shouldDirty: true });
+  }, [kind, watchedTemplate, getValues, setValue]);
 
   const kindOptions: ChipOption<CardKind>[] = CARD_KIND_VALUES.map((k) => {
     // A kind is pickable only when at least one of its frames has a
@@ -345,6 +369,18 @@ export function CardSetupPanel({
             if (resolution.status === "unavailable") return;
             field.onChange(resolution.template);
             clearErrors("frame_style");
+            if (
+              isBorrowedVariation(kind, resolution.template) &&
+              !isArtifactFrameType({
+                cardType: getValues("card_type"),
+                supertype: getValues("supertype"),
+              })
+            ) {
+              setValue("supertype", withArtifactWord(getValues("supertype")), {
+                shouldDirty: true,
+              });
+              seededArtifactWord.current = true;
+            }
             if (resolution.status === "colour-switched") {
               const identity = colorIdentityForKey(resolution.colorKey);
               setValue("color_identity", [identity], { shouldDirty: true });

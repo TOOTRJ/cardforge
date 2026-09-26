@@ -168,6 +168,27 @@ describe("validateReferenceForCombo", () => {
     expect(validateReferenceForCombo(strix, "m15artifact", "m").errors).toEqual([]);
   });
 
+  // …but a plain creature is no reference for it: the creature kind only
+  // borrows the artifact frame for Artifact Creatures.
+  it("refuses a non-artifact creature on the artifact frame (Llanowar Elves DOM #168)", () => {
+    const elves = scryfallCardSchema.parse(printings["dom-168"]);
+    expect(validateReferenceForCombo(elves, "m15artifact", "g").errors).toEqual([
+      "Llanowar Elves isn't an Artifact Creature; the Artifact frame dresses a creature only when it is an artifact.",
+    ]);
+    // Its own frame is fine.
+    expect(validateReferenceForCombo(elves, "m15", "g").errors).toEqual([]);
+  });
+
+  // TODO 1.2 review: a land's frame follows the mana it produces — the
+  // curated land references keep passing, and a utility land whose coloured
+  // symbols are activation costs is a colourless reference.
+  it("reads a land's colour from the mana it produces (Kessig Wolf Run, Vivid Crag)", () => {
+    const wolfRun = scryfallCardSchema.parse(printings["isd-243"]);
+    expect(validateReferenceForCombo(wolfRun, "m15land", "c").errors).toEqual([]);
+    const crag = scryfallCardSchema.parse(printings["c17-289"]);
+    expect(validateReferenceForCombo(crag, "m15land", "r").errors).toEqual([]);
+  });
+
   // TODO 1.2: the colour check reads the printing's front face, like the
   // compare render. Command Tower MSC #233, the curated m15land/m default,
   // prints gold but has an empty identity, so it used to be refused as a

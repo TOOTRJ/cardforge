@@ -38,7 +38,8 @@ export function frameChoicesForType(
  *
  *   - specific template → kept when it dresses the type AND its color for
  *     this card is published (and, for a basic-only frame, the card is one
- *     basic land); otherwise falls back like "random".
+ *     basic land; for the artifact frame a creature borrows, the card is an
+ *     Artifact Creature); otherwise falls back like "random".
  *   - "random" → a uniformly random published frame whose available colors
  *     include the generated card's color key.
  *   - undefined → null (caller keeps the creator's era default).
@@ -64,10 +65,16 @@ export function resolveGeneratedFrame(input: {
   const colorKey = pickFrameColorKey(colorIdentity);
   const choices = frameChoicesForType(cardType, verifiedKeys);
   const basicLand = face !== undefined && isSingleBasicLand(face);
+  // A frame never dresses a card as a type it isn't: the artifact frame a
+  // creature borrows (TODO 1.7) is for an Artifact Creature only — asked for
+  // by name or picked at random.
+  const kind = kindFromCard(cardType, undefined);
+  const artifact = isArtifactFrameType({ cardType, supertype: face?.supertype });
   const pool = choices.filter(
     (choice) =>
       choice.availableColorKeys.includes(colorKey as never) &&
-      (basicLand || !templateIsBasicOnly(choice.template)),
+      (basicLand || !templateIsBasicOnly(choice.template)) &&
+      (artifact || !isBorrowedVariation(kind, choice.template)),
   );
 
   if (requested !== "random") {
@@ -77,19 +84,9 @@ export function resolveGeneratedFrame(input: {
     // that color isn't published) — degrade to a random valid one.
   }
 
-  // A random pick never dresses a card as a type it isn't: the artifact
-  // frame a creature borrows (TODO 1.7) is for an Artifact Creature only.
-  // Asked for by name, it is honoured above.
-  const kind = kindFromCard(cardType, undefined);
-  const randomPool = pool.filter(
-    (choice) =>
-      !isBorrowedVariation(kind, choice.template) ||
-      isArtifactFrameType({ cardType, supertype: face?.supertype }),
-  );
-  if (randomPool.length === 0) return null;
+  if (pool.length === 0) return null;
   const rng = input.random ?? Math.random;
-  return randomPool[Math.floor(rng() * randomPool.length) % randomPool.length]
-    .template;
+  return pool[Math.floor(rng() * pool.length) % pool.length].template;
 }
 
 /** Color words a specific frame can render, for steering generation toward
