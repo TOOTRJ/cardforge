@@ -8,9 +8,11 @@
 import { type ColorIdentity, type FrameTemplate } from "@/types/card";
 import {
   frameBackgroundImage,
+  frameMasterKeyForColor,
   frameSplitClipPaths,
   frameSplitFor,
   pickFrameColorKey,
+  type FrameTypeInfo,
 } from "@/components/cards/frame-layer";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { cn } from "@/lib/utils";
@@ -29,6 +31,7 @@ export function FrameThumb({
   template,
   colorKey = "u",
   colorIdentity,
+  type = null,
 }: {
   template: FrameTemplate;
   /** Frame color variant to preview — callers pass the card's live color so
@@ -40,6 +43,11 @@ export function FrameThumb({
    *  colour picker is single-select; two-colour identities come from older
    *  cards and AI generation.) */
   colorIdentity?: readonly ColorIdentity[];
+  /** The card's type (card type + supertype): a frame that dresses a colour
+   *  by type shows the master the card would paint in it — Alpha's
+   *  colourless tile is the brown artifact card for an artifact
+   *  (frameMasterKeyForColor, the renderers' rule). */
+  type?: FrameTypeInfo | null;
 }) {
   const profile = getFrameProfile(template);
   const landscape = profile.orientation === "landscape";
@@ -48,6 +56,7 @@ export function FrameThumb({
       ? frameSplitFor(profile, colorIdentity)
       : null;
   const clips = split ? frameSplitClipPaths(split) : null;
+  const masterKey = frameMasterKeyForColor(profile, colorKey, type);
   return (
     <span
       aria-hidden
@@ -55,8 +64,9 @@ export function FrameThumb({
         "relative block shrink-0 overflow-hidden rounded-[3px] border border-border/60 bg-[#101015] bg-cover bg-center",
         landscape ? "h-7 w-10" : "h-10 w-[29px]",
       )}
+      data-frame-key={split ? undefined : masterKey}
       style={
-        split ? undefined : { backgroundImage: frameBackgroundImage(template, colorKey) }
+        split ? undefined : { backgroundImage: frameBackgroundImage(template, masterKey) }
       }
     >
       {split && clips ? (

@@ -1,8 +1,13 @@
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import sharp from "sharp";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import type { FrameTemplate } from "@/types/card";
-import { footerInk, getFrameProfile, slotInk } from "@/lib/cards/template-layout";
+import { bandTextStyle, footerInk, getFrameProfile, slotInk } from "@/lib/cards/template-layout";
+import { setFrameStorageForTests, type FrameManifest } from "@/lib/frames/frame-url";
+import { resetFrameAssetCacheForTests } from "@/lib/render/card-frames";
 import { renderCardImage, RENDER_PRESETS, type RenderPreset } from "@/lib/render/card-image";
 
 // ---------------------------------------------------------------------------
@@ -173,7 +178,7 @@ describe("Alpha P/T sits in the strip below the text box (v25, re-cut)", () => {
   }, 60_000);
 });
 
-describe("Alpha ink: silver P/T and artist line on every frame but white", () => {
+describe("Alpha ink: silver lettering on every frame but white", () => {
   const COLOR: Record<string, CardPreviewData["colorIdentity"]> = {
     w: ["white"],
     u: ["blue"],
@@ -181,8 +186,15 @@ describe("Alpha ink: silver P/T and artist line on every frame but white", () =>
     r: ["red"],
     g: ["green"],
     c: ["colorless"],
+    a: ["colorless"],
     m: ["white", "blue"],
   };
+  /** Frame master → the card fields that paint it: "a", the Alpha artifact
+   *  card, is a colourless Artifact Creature (Juggernaut) — P/T and all. */
+  const MASTER = (key: string): Partial<CardPreviewData> => ({
+    colorIdentity: COLOR[key],
+    ...(key === "a" ? { supertype: "Artifact" } : {}),
+  });
   const hex = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
   const lumOf = ([r, g, b]: number[]) => 0.299 * r + 0.587 * g + 0.114 * b;
 
@@ -207,12 +219,12 @@ describe("Alpha ink: silver P/T and artist line on every frame but white", () =>
     return out;
   }
 
-  it.each(["w", "u", "b", "r", "g", "c", "m"])("agclassic %s: the bake prints the P/T in slotInk's colour", async (key) => {
+  it.each(["w", "u", "b", "r", "g", "c", "a", "m"])("agclassic %s: the bake prints the P/T in slotInk's colour", async (key) => {
     const layout = getFrameProfile("agclassic");
     const ink = slotInk(layout.pt!, key);
     const [none, pt] = [
-      await bake(card("agclassic", { colorIdentity: COLOR[key], power: null, toughness: null })),
-      await bake(card("agclassic", { colorIdentity: COLOR[key] })),
+      await bake(card("agclassic", { ...MASTER(key), power: null, toughness: null })),
+      await bake(card("agclassic", MASTER(key))),
     ];
     const b = diffBox(none, pt)!;
     const pixels: number[] = [];
@@ -230,13 +242,15 @@ describe("Alpha ink: silver P/T and artist line on every frame but white", () =>
     ["agclassic", "b"],
     ["agclassic", "r"],
     ["agclassic", "w"],
+    ["agclassic", "c"],
+    ["agclassic", "a"],
     ["alphaland", "w"],
   ])("%s %s: the bake prints the artist line in footerInk's colour", async (template, key) => {
     const layout = getFrameProfile(template as FrameTemplate);
     const ink = footerInk(layout.footer!, key);
     const land = template === "alphaland";
     const r = await bake(card(template as FrameTemplate, {
-      colorIdentity: COLOR[key],
+      ...MASTER(key),
       artistCredit: "Douglas Schuler",
       ...(land ? { cardType: "land", cost: null, power: null, toughness: null } : {}),
     }));
@@ -269,6 +283,86 @@ describe("Alpha ink: silver P/T and artist line on every frame but white", () =>
       }
     }
   }, 60_000);
+
+  // The name and type line (TODO 4.31): silver on the black frame and the
+  // artifact card only, dark on every other frame and on every land (owner
+  // decision 2026-09-25) — the same bandTextStyle() the preview applies
+  // (pinned in alpha-ink.test.tsx). "a" is a plain Artifact here (Jester's
+  // Mask), where the P/T test above bakes an Artifact Creature.
+  it.each([
+    ...["w", "u", "b", "r", "g", "c", "a", "m"].map((k) => ["agclassic", k]),
+    ["alphaland", "w"],
+    ["alphaland", "b"],
+    ["alphaland", "m"],
+  ])("%s %s: the bake prints the name and type line in bandTextStyle's colour", async (template, key) => {
+    const land = template === "alphaland";
+    const artifact = key === "a";
+    const layout = getFrameProfile(template as FrameTemplate);
+    const base = { colorIdentity: COLOR[key], cost: null, power: null, toughness: null, rarity: null };
+    const named = await bake(card(template as FrameTemplate, {
+      ...base,
+      title: "Sengir Vampire",
+      cardType: land ? "land" : artifact ? "artifact" : "creature",
+      subtypes: [land ? "Swamp" : artifact ? "Equipment" : "Vampire"],
+    }));
+    // A one-dot name and a blank type line: whatever else moved is lettering.
+    // (The artifact keeps its "Artifact" — the type is what paints its
+    // master — so only "— Equipment" moves on its type line.)
+    const blank = await bake(card(template as FrameTemplate, artifact
+      ? { ...base, title: ".", cardType: "artifact", supertype: null, subtypes: [] }
+      : ({ ...base, title: ".", cardType: null, supertype: null, subtypes: [" "] } as unknown as Partial<CardPreviewData>)));
+    const { data: frame } = await sharp(`public/frames/${template}/${key}.png`)
+      .flatten({ background: "#000" })
+      .resize(W, H, { fit: "fill" })
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    const bare: Raw = { data: frame, width: W, height: H };
+    const lumAt = (raw: Raw, o: number) => lumOf([...raw.data.subarray(o, o + 3)]);
+    for (const [what, slot] of [["name", layout.title], ["type line", layout.type]] as const) {
+      const want = bandTextStyle(slot, key);
+      const light = Boolean(want.color);
+      expect(light, `${key} ${what}`).toBe(!land && (key === "b" || key === "a"));
+      const moved = rectPixels(named, slot.rect).filter((o) =>
+        [0, 1, 2].some((c) => Math.abs(named.data[o + c] - blank.data[o + c]) > 24),
+      );
+      expect(moved.length, `${key} ${what}`).toBeGreaterThan(200);
+      const got = extreme(named, moved, light);
+      hex(want.color ?? slot.colorHex).forEach((c, i) => expect(Math.abs(got[i] - c), `${key} ${what} channel ${i}`).toBeLessThan(18));
+      // The emboss: silver lettering darkens the frame down and right of
+      // each stroke (not on the near-black frame, where there's nothing to
+      // darken — as on the print).
+      const bandLum = moved.reduce((sum, o) => sum + lumAt(bare, o), 0) / moved.length;
+      if (light && bandLum > 60) {
+        expect(moved.filter((o) => lumAt(named, o) < lumAt(bare, o) - 20).length, `${key} ${what} emboss`).toBeGreaterThan(20);
+      }
+    }
+  }, 60_000);
+
+  it("the pips print the same on every Alpha colour: the emboss stays on the name", async () => {
+    // Baked at HD with a one-dot name: a band-level text-shadow (inherited
+    // by the pip glyphs) would draw a dark offset copy of each symbol inside
+    // its disc on the silver colours only.
+    const pipsOn = (key: string, cost: string | null) =>
+      bake(card("agclassic", { ...MASTER(key), title: ".", cost, power: null, toughness: null }), false, "hd");
+    // Where the 54 px disc sits, read off the white frame (its hard shadow
+    // falls down-left, so the box's top and right edges are the disc's).
+    const crop = (r: Raw): Raw => ({ data: r.data.subarray(80 * r.width * 3, 215 * r.width * 3), width: r.width, height: 135 });
+    const box = diffBox(crop(await pipsOn("w", "{6}")), crop(await pipsOn("w", null)))!;
+    const [cx, cy] = [box.x1 - 27, box.y0 + 80 + 27];
+    /** The disc's interior, RGB. */
+    const disc = async (key: string) => {
+      const pips = await pipsOn(key, "{6}");
+      const out: number[] = [];
+      for (let y = cy - 14; y <= cy + 14; y += 1) for (let x = cx - 14; x <= cx + 14; x += 1) out.push(...pips.data.subarray((y * pips.width + x) * 3, (y * pips.width + x) * 3 + 3));
+      return out;
+    };
+    const white = await disc("w");
+    for (const key of ["b", "r", "c", "a"]) {
+      const got = await disc(key);
+      const worst = Math.max(...got.map((v, i) => Math.abs(v - white[i])));
+      expect(worst, key).toBeLessThanOrEqual(2);
+    }
+  }, 120_000);
 });
 
 describe("Alpha name, pips and type line (owner review round 4)", () => {
@@ -432,6 +526,74 @@ describe("Alpha masters are re-cut to the printed proportions", () => {
       expect(at(1499, 2099).a).toBe(0);
     }
   });
+
+  it("agclassic a is the artifact card (a dark warm-brown frame round a light text box); c stays the flat grey (TODO 4.31)", async () => {
+    // Printed colourless Alpha cards are artifacts (Sol Ring, Juggernaut —
+    // frame ≈ #645a53, crackle box ≈ #c8c4bc on the scans): a.png, from
+    // MSE's acard.jpg. A colourless NON-artifact (Alpha printed none) keeps
+    // c.png from ccard.jpg, a flat mid-grey (title band ≈ #767676, box ≈
+    // #989898) — owner decision 2026-09-25.
+    const meanOf = async (key: string) => {
+      const { data, info } = await sharp(`public/frames/agclassic/${key}.png`).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+      /** Mean RGB over an HD px rect [x0, y0, x1, y1). */
+      return ([x0, y0, x1, y1]: readonly number[]) => {
+        const sum = [0, 0, 0];
+        for (let y = y0; y < y1; y += 1) for (let x = x0; x < x1; x += 1) for (let c = 0; c < 3; c += 1) sum[c] += data[(y * info.width + x) * 3 + c];
+        return sum.map((v) => v / ((x1 - x0) * (y1 - y0)));
+      };
+    };
+    const lumOf = ([r, g, b]: number[]) => 0.299 * r + 0.587 * g + 0.114 * b;
+    const [artifact, grey] = [await meanOf("a"), await meanOf("c")];
+    for (const [what, rect] of [["title band", [200, 110, 1300, 190]], ["type band", [200, 1172, 1300, 1240]], ["strip", [200, 1870, 1300, 1975]]] as const) {
+      const [r, , b] = artifact(rect);
+      expect(lumOf(artifact(rect)), `a ${what}`).toBeLessThan(70);
+      expect(r - b, `a ${what}: warm`).toBeGreaterThan(15);
+      const g = grey(rect);
+      expect(lumOf(g), `c ${what}`).toBeGreaterThan(100);
+      expect(Math.max(...g) - Math.min(...g), `c ${what}: neutral grey`).toBeLessThan(4);
+    }
+    expect(lumOf(artifact([260, 1300, 1240, 1800])), "a text box").toBeGreaterThan(180);
+    const box = grey([260, 1300, 1240, 1800]);
+    expect(lumOf(box), "c text box").toBeLessThan(170);
+    expect(Math.max(...box) - Math.min(...box), "c text box: neutral grey").toBeLessThan(4);
+  });
+
+  it("the bake paints a for a colourless artifact only, and c for every other colourless card", async () => {
+    // Beside the art box, well clear of any lettering: pure frame marble.
+    const x0 = Math.round((85 / 1500) * W);
+    const x1 = Math.round((150 / 1500) * W);
+    const y0 = Math.round((300 / 2100) * H);
+    const y1 = Math.round((1100 / 2100) * H);
+    const meanRect = (data: Buffer, channels: number) => {
+      const sum = [0, 0, 0];
+      for (let y = y0; y < y1; y += 1) for (let x = x0; x < x1; x += 1) for (let c = 0; c < 3; c += 1) sum[c] += data[(y * W + x) * channels + c];
+      return sum.map((v) => v / ((x1 - x0) * (y1 - y0)));
+    };
+    const masterMean = async (template: string, key: string) => {
+      const { data } = await sharp(`public/frames/${template}/${key}.png`).flatten({ background: "#000" }).resize(W, H, { fit: "fill" }).raw().toBuffer({ resolveWithObject: true });
+      return meanRect(data, 3);
+    };
+    const far = (a: number[], b: number[]) => Math.max(...a.map((v, i) => Math.abs(v - b[i])));
+    const [brown, grey] = [await masterMean("agclassic", "a"), await masterMean("agclassic", "c")];
+    expect(far(brown, grey)).toBeGreaterThan(30);
+    const base = { cost: null, power: null, toughness: null, title: "Probe", subtypes: [] };
+    const cases: Array<[string, FrameTemplate, Partial<CardPreviewData>, string]> = [
+      ["Jester's Mask: a colourless artifact", "agclassic", { colorIdentity: ["colorless"], cardType: "artifact" }, "agclassic/a"],
+      ["an Artifact Creature, empty identity", "agclassic", { colorIdentity: [], cardType: "creature", supertype: "Artifact" }, "agclassic/a"],
+      ["Dawn Treader: a colourless legendary creature", "agclassic", { colorIdentity: [], cardType: "creature", supertype: "Legendary" }, "agclassic/c"],
+      ["a colourless land", "agclassic", { colorIdentity: ["colorless"], cardType: "land" }, "agclassic/c"],
+      ["a black artifact keeps its colour", "agclassic", { colorIdentity: ["black"], cardType: "artifact" }, "agclassic/b"],
+      ["alphaland: one land frame per colour", "alphaland", { colorIdentity: ["colorless"], cardType: "land", supertype: "Artifact" }, "alphaland/c"],
+    ];
+    for (const [label, template, over, want] of cases) {
+      const got = meanRect((await bake(card(template, { ...base, ...over }))).data, 3);
+      const [t, k] = want.split("/");
+      expect(far(got, await masterMean(t, k)), label).toBeLessThan(6);
+      if (template === "agclassic" && (k === "a" || k === "c")) {
+        expect(far(got, k === "a" ? grey : brown), `${label}: not the other master`).toBeGreaterThan(24);
+      }
+    }
+  }, 60_000);
 
   it("the art slot covers the opening and stays under the art box's bevel", () => {
     // The art box outline (agclassic) and the land border's inner dark line
@@ -692,6 +854,76 @@ describe("Alpha masters are re-cut to the printed proportions", () => {
       }
     }
   });
+});
+
+describe("Alpha artifact master — the bake preloads it", () => {
+  // On Vercel public/frames is not on disk: the bake paints only the masters
+  // renderCardImage PRELOADED (frameColorKeysFor, which must be given the
+  // card's type), and a master it missed draws as a transparent pixel — the
+  // gallery tile, OG image and downloads of a colourless artifact would lose
+  // their frame while the preview still looked right. Pretend both of
+  // agclassic's colourless masters are bucket objects: getFrameDataUrl then
+  // throws for a master that was not preloaded, and the fetches say which one
+  // was (bake-dragon-split.test.ts's pattern).
+  const ORIGIN = "https://bucket.example/frames";
+  const bytes = (k: string) => readFileSync(join(process.cwd(), `public/frames/agclassic/${k}.png`));
+  const sha = (b: Buffer) => createHash("sha256").update(b).digest("hex");
+  const files = { a: bytes("a"), c: bytes("c") };
+  const urlOf = (k: keyof typeof files) => `${ORIGIN}/agclassic/${k}.${sha(files[k]).slice(0, 12)}.png`;
+  let restore: () => void = () => {};
+  const realFetch = globalThis.fetch;
+  const fetchSpy = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+    const url = String(input instanceof Request ? input.url : input);
+    // Satori's first render in the file loads its wasm from a data: URL.
+    if (!url.startsWith(ORIGIN)) return realFetch(input, init);
+    const k = (["a", "c"] as const).find((key) => urlOf(key) === url);
+    return k
+      ? new Response(new Uint8Array(files[k]), { status: 200, headers: { "content-type": "image/png" } })
+      : new Response(null, { status: 404 });
+  });
+  /** The bucket frames the render fetched. */
+  const bucketFetches = () =>
+    fetchSpy.mock.calls.map(([input]) => String(input)).filter((url) => url.startsWith(ORIGIN));
+
+  beforeEach(() => {
+    resetFrameAssetCacheForTests();
+    const manifest: FrameManifest = {
+      version: 1,
+      bucket: "frames",
+      files: Object.fromEntries(
+        Object.entries(files).map(([k, b]) => [
+          `agclassic/${k}.png`,
+          { hash: sha(b).slice(0, 12), sha256: sha(b), bytes: b.length, width: 1500, height: 2100 },
+        ]),
+      ),
+    };
+    restore = setFrameStorageForTests({ manifest, origin: ORIGIN });
+    fetchSpy.mockClear();
+    vi.stubGlobal("fetch", fetchSpy);
+  });
+  afterEach(() => {
+    restore();
+    vi.unstubAllGlobals();
+    resetFrameAssetCacheForTests();
+  });
+
+  it.each<[string, Partial<CardPreviewData>, "a" | "c"]>([
+    ["Jester's Mask (a colourless artifact) → a.png", { colorIdentity: ["colorless"], cardType: "artifact", power: null, toughness: null }, "a"],
+    ["Juggernaut (a colourless Artifact Creature) → a.png", { colorIdentity: [], cardType: "creature", supertype: "Artifact" }, "a"],
+    [
+      "Dawn Treader (a colourless legendary creature, foil) → c.png",
+      { colorIdentity: [], cardType: "creature", supertype: "Legendary", frameStyle: { template: "agclassic", finish: "foil" } },
+      "c",
+    ],
+  ])("%s: the bake preloads that master, and only it", async (_label, over, want) => {
+    const res = await renderCardImage(
+      card("agclassic", { cost: "{4}", subtypes: [], ...over }),
+      "default",
+      { brandMark: false, watermarkText: null },
+    );
+    expect((await res.arrayBuffer()).byteLength).toBeGreaterThan(0);
+    expect(bucketFetches()).toEqual([urlOf(want)]);
+  }, 60_000);
 });
 
 describe("Dragon Wing P/T plates (v25)", () => {

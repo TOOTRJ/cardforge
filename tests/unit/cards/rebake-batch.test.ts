@@ -37,6 +37,7 @@ import {
   type RebakeRow,
 } from "@/lib/cards/rebake-batch";
 import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
+import { UNTOUCHED_SINCE_V22 } from "@/tests/stubs/layout-scope-cards";
 
 const row = (id: string, patch: Partial<RebakeRow> = {}): RebakeRow =>
   ({
@@ -153,8 +154,10 @@ describe("parseRebakeScope", () => {
 
 describe("rebakeVerdictFor", () => {
   it("always re-bakes a marked row; the sweep leaves opt-in-only rows alone", () => {
-    expect(rebakeVerdictFor(row("a", { layout_version: 21 }), { kind: "marked" })).toBe("rebake");
-    expect(rebakeVerdictFor(row("a", { layout_version: 21 }), { kind: "sweep" })).toBe("opt-in");
+    // v21, and no sweep since changed the card: only the v22 opt-in is pending.
+    const optInOnly = row("a", { ...UNTOUCHED_SINCE_V22, layout_version: 21 } as Partial<RebakeRow>);
+    expect(rebakeVerdictFor(optInOnly, { kind: "marked" })).toBe("rebake");
+    expect(rebakeVerdictFor(optInOnly, { kind: "sweep" })).toBe("opt-in");
     expect(rebakeVerdictFor(row("a", { layout_version: null }), { kind: "sweep" })).toBe("rebake");
   });
 });
@@ -266,8 +269,10 @@ describe("runRebakeBatch", () => {
   });
 
   it("stamps conditionally: a layout save that nulled the card since the scan wins", async () => {
-    // v22 uncommon m15: v23 didn't change it → the sweep only stamps it.
-    const stub = db([row("c1", { layout_version: 22 })], { stampLost: true });
+    // A v22 card no later bump changed → the sweep only stamps it.
+    const stub = db([row("c1", { ...UNTOUCHED_SINCE_V22, layout_version: 22 } as Partial<RebakeRow>)], {
+      stampLost: true,
+    });
     const result = await run(stub, { scope: { kind: "sweep" } });
     if (!result.ok) throw new Error(result.error);
     expect(result.superseded).toEqual(["c1"]);
@@ -300,7 +305,7 @@ describe("runRebakeBatch", () => {
   });
 
   it("a dry run plans without rendering or writing", async () => {
-    const stub = db([row("c1"), row("c2", { layout_version: 21 })]);
+    const stub = db([row("c1"), row("c2", { ...UNTOUCHED_SINCE_V22, layout_version: 21 } as Partial<RebakeRow>)]);
     const result = await runRebakeBatch(stub.client as never, {
       scope: { kind: "sweep" },
       limit: 8,

@@ -43,7 +43,7 @@
 // original MSE baselines for comparison.
 // ---------------------------------------------------------------------------
 
-import type { FrameColorKey } from "@/lib/cards/frame-reference-registry";
+import type { FrameColorKey, FrameMasterKey } from "@/lib/cards/frame-reference-registry";
 import type { FrameTemplate } from "@/types/card";
 import { ptToPct } from "@/lib/cards/typography";
 
@@ -79,8 +79,9 @@ export type TextSlot = {
   /** CSS text-shadow for text sitting directly on the frame (e.g. agclassic
    *  P/T, planeswalker loyalty). */
   shadowCss?: string;
-  /** Per-frame-colour ink — see SlotInk. Honoured on the footer (footerInk)
-   *  and the stat slots (slotInk), identically in both renderers. */
+  /** Per-frame-master ink — see InkByColorKey. Honoured on the footer
+   *  (footerInk), the stat slots (slotInk) and the title and type bands
+   *  (bandTextStyle), identically in both renderers. */
   inkByColorKey?: InkByColorKey;
   /** Translucent fill drawn behind the text — used when a frame's text region
    *  is a transparent cut-out over the art (M15 planeswalker abilities) so the
@@ -102,7 +103,7 @@ export type StatSlot = {
    *  Battle frame's defense disc). */
   badgeColorHex?: string;
   shadowCss?: string;
-  /** Per-frame-colour ink — see SlotInk (resolved by slotInk). */
+  /** Per-frame-master ink — see InkByColorKey (resolved by slotInk). */
   inkByColorKey?: InkByColorKey;
   /** Vertical nudge of the value text within the plate, in em (negative = up).
    *  Corrects the display font's baseline asymmetry — digits sit low in their
@@ -117,38 +118,75 @@ export type StatSlot = {
    *  digits' box separately {79.28, 90.2, 13.67 × 3.72}. Without it the plate
    *  fills `rect`. */
   plateRect?: Rect;
+  /** The x-range (card %) the value's INK may cover — the face the frame
+   *  draws for it, measured on the digits' rows: a plate's light interior up
+   *  to its bevel, a strip up to its pinstripe. It may be wider or narrower
+   *  than `rect` (the value stays centred in `rect` and never wraps), and
+   *  lopsided about the value's centre. A value whose ink would run past it
+   *  shrinks (lib/cards/stat-fit.ts). Without it the ink may fill `rect`
+   *  (or a drawn badge). */
+  inkSpanPct?: { leftPct: number; rightPct: number };
 };
 
 /** A frame colour key — the {color} of every frame asset
  *  (pickFrameColorKey: one colour → its letter, none → "c", several → "m"). */
 export type { FrameColorKey };
 
+/** A frame MASTER key — the file a render paints, public/frames/{template}/
+ *  {key}.png (FRAME_MASTER_KEYS). Every colour key is one; "a" is the Alpha
+ *  frame's colourless ARTIFACT card, which a profile paints instead of "c"
+ *  for an artifact (FrameProfile.artifactMasterKeys, resolved by
+ *  frameMasterKey in components/cards/frame-layer.tsx). Not a colour: the
+ *  colour picker, the frame_reviews gate and the stat plates stay on the
+ *  colour key. */
+export type { FrameMasterKey };
+
 /** The ink of text printed straight onto the frame. */
 export type SlotInk = { colorHex: string; shadowCss?: string };
 
-/** Ink per frame colour, for a slot whose frame colours differ in tone:
- *  printed Alpha cards letter the P/T and the "Illus." line in dark ink on
- *  the white frame but in embossed silver on every other colour. A key that
- *  is missing keeps the slot's own colorHex (and, on stat slots, shadowCss);
- *  an entry replaces both. */
-export type InkByColorKey = Partial<Record<FrameColorKey, SlotInk>>;
+/** Ink per frame master, for a slot whose masters differ in tone: printed
+ *  Alpha cards letter the P/T and "Illus." line in dark ink on the white
+ *  frame but in embossed silver on every other colour. A key that is missing
+ *  keeps the slot's own colorHex (and, on stat slots, shadowCss); an entry
+ *  replaces both — except on the title and type bands, where an entry
+ *  without a shadowCss keeps the band's own shadowCss (the text span
+ *  inherits it; see bandTextStyle). Keyed by the MASTER the text sits on
+ *  (frameMasterKey), so the Alpha artifact card ("a") and the grey
+ *  colourless card ("c") can differ. */
+export type InkByColorKey = Partial<Record<FrameMasterKey, SlotInk>>;
 
-/** The ink a stat slot (P/T, loyalty, defense) prints in on `colorKey`. */
+/** The ink a stat slot (P/T, loyalty, defense) prints in on master `masterKey`. */
 export function slotInk(
   slot: { colorHex: string; shadowCss?: string; inkByColorKey?: InkByColorKey },
-  colorKey: string,
+  masterKey: string,
 ): SlotInk {
-  const entry = slot.inkByColorKey?.[colorKey as FrameColorKey];
+  const entry = slot.inkByColorKey?.[masterKey as FrameMasterKey];
   return entry
     ? { colorHex: entry.colorHex, shadowCss: entry.shadowCss }
     : { colorHex: slot.colorHex, shadowCss: slot.shadowCss };
 }
 
-/** The footer's ink on `colorKey`. Like slotInk, except that the footer has
- *  never drawn its own `shadowCss` (FULLARTLAND declares one; drawing it now
- *  would change those bakes) — only an inkByColorKey entry brings a shadow. */
-export function footerInk(footer: TextSlot, colorKey: string): SlotInk {
-  return slotInk({ colorHex: footer.colorHex, inkByColorKey: footer.inkByColorKey }, colorKey);
+/** The footer's ink on master `masterKey`. Like slotInk, except that the
+ *  footer has never drawn its own `shadowCss` (FULLARTLAND declares one;
+ *  drawing it now would change those bakes) — only an inkByColorKey entry
+ *  brings a shadow. */
+export function footerInk(footer: TextSlot, masterKey: string): SlotInk {
+  return slotInk({ colorHex: footer.colorHex, inkByColorKey: footer.inkByColorKey }, masterKey);
+}
+
+/** The style a title or type band's TEXT (the name, the type line) adds on
+ *  master `masterKey`: an inkByColorKey entry's colour and shadow, or
+ *  nothing — the band keeps its own colorHex / shadowCss, as on every frame
+ *  without an entry. An entry without a shadowCss sets only the colour, so
+ *  the text keeps the band's own shadowCss (inherited from the band) rather
+ *  than dropping it as slotInk would. Only the text span takes it: the mana
+ *  pips and set symbol beside it keep their own discs and ink, and a
+ *  band-level text-shadow would emboss the pip glyphs too (the browser and
+ *  Satori both inherit it). */
+export function bandTextStyle(slot: TextSlot, masterKey: string): { color?: string; textShadow?: string } {
+  const entry = slot.inkByColorKey?.[masterKey as FrameMasterKey];
+  if (!entry) return {};
+  return entry.shadowCss ? { color: entry.colorHex, textShadow: entry.shadowCss } : { color: entry.colorHex };
 }
 
 /** Art drawn UNDER the whole frame for see-through frames (TODO 4.17): CC's
@@ -157,7 +195,10 @@ export function footerInk(footer: TextSlot, colorKey: string): SlotInk {
  *  printed cards. The art window keeps its exact crop (artSlot); this second
  *  layer covers `rect` with the same art (object-fit cover at the card's
  *  focal point) beneath it, and the frame's opaque window border hides the
- *  seam. `colors` limits it to some frame colour keys (M15's "c" only). */
+ *  seam. `colors` limits it to some frame MASTER keys (M15's "c" only) —
+ *  underFrameArtRect is given the master the card paints (frameMasterKey), so
+ *  a profile that also dresses a colour by type (artifactMasterKeys) lists
+ *  the dressed master too if that one is see-through as well. */
 export type UnderFrameArt = {
   rect: Rect;
   colors?: readonly string[];
@@ -183,6 +224,19 @@ export type FrameProfile = {
    *  FrameSlice boxes), and the etched sheen
    *  masks with both halves. */
   twoColorSplit?: TwoColorSplit;
+  /** Masters dressed by the card's TYPE as well as its colour: colour key →
+   *  the master an ARTIFACT of that colour paints instead (isArtifactFrameType:
+   *  the Artifact card type, or "Artifact" in the supertype). Alpha:
+   *  { c: "a" } — a colourless artifact prints on the brown artifact card
+   *  (agclassic/a.png), any other colourless card on the grey one (c.png).
+   *  frameMasterKey (components/cards/frame-layer.tsx) resolves it for both
+   *  renderers, the foil/etched masks, the bake's preload and the creator's
+   *  frame tiles; the ink maps are keyed by the master. The colour key stays
+   *  the card's colour everywhere else: the frame_reviews gate (verifying
+   *  agclassic/c publishes both of its masters), the stat plates and the
+   *  watermark tint. Code-owned: not part of the override schema. A profile
+   *  that spreads one carrying this must decide whether it keeps it. */
+  artifactMasterKeys?: Partial<Record<FrameColorKey, FrameMasterKey>>;
   /** Transparent art cut-out — the user's art renders here, below the frame. */
   artSlot: Rect;
   /** Art under the whole frame for see-through frames — see UnderFrameArt. */
@@ -299,6 +353,11 @@ export type FrameProfile = {
     pt?: StatSlot;
     /** A second art window (split); omit when the face shares the front art. */
     artSlot?: Rect;
+    /** The name bar (name + cost, shrinking as one) and the type line fit
+     *  their bars on one line, measured in Beleren's widths
+     *  (secondFaceLineSizes), instead of ellipsizing at the profile's sizes
+     *  — aftermath's sideways bars are short. Code-owned. */
+    fitLines?: boolean;
   };
   /** Where the pipglyph.com brand mark sits, for frames whose bottom black
    *  border is thinner than M15's (Alpha, 1997, 2003, extended art, battle,
@@ -377,11 +436,14 @@ const OUTLINE_SHADOW =
 // brightest 0.7 % of the stroke cores after a 1 px blur; shadow = darkest):
 //   u #b4c2c2 · b #969c9f–#a6aeae · r #939792–#9c9e98 · g #7a8585–#99a09f ·
 //   artifact #76807f–#7e8c8e · shadow ≈ black at 75 % over the frame.
-// Alpha printed no gold cards, so m takes the colours' median. Our colourless
-// frame is a mid-grey (strip ≈ 113) where the printed artifact frame is dark
-// brown (≈ 79), so c keeps the print's CONTRAST (≈ 2.3 : 1) rather than its
-// grey, which would all but vanish. The shadow is in em, so the preview and
-// the bake draw it at the same size at every scale.
+// Alpha printed no gold cards, so m takes the colours' median. The artifact
+// master ("a", MSE's artifact card: dark warm brown like the print,
+// scripts/build-alpha-frames.mjs) takes the print's artifact grey. Our grey
+// colourless master ("c", a colourless NON-artifact, which Alpha never
+// printed) is a mid-grey (strip ≈ 113) where the printed artifact frame is
+// dark brown (≈ 79), so c keeps the print's CONTRAST (≈ 2.3 : 1) rather than
+// its grey, which would all but vanish. The shadow is in em, so the preview
+// and the bake draw it at the same size at every scale.
 const ALPHA_EMBOSS = "0.035em 0.035em 0 rgba(0,0,0,0.75)";
 /** Silver for a mid-tone frame (our grey colourless, the brown land). */
 const ALPHA_SILVER_MID = "#b0b4b4";
@@ -391,7 +453,20 @@ const ALPHA_INK: InkByColorKey = {
   r: { colorHex: "#989b96", shadowCss: ALPHA_EMBOSS },
   g: { colorHex: "#858c8c", shadowCss: ALPHA_EMBOSS },
   c: { colorHex: ALPHA_SILVER_MID, shadowCss: ALPHA_EMBOSS },
+  a: { colorHex: "#7e888c", shadowCss: ALPHA_EMBOSS },
   m: { colorHex: "#989c9a", shadowCss: ALPHA_EMBOSS },
+};
+// The name and type line (bandTextStyle) print in the same silver only where
+// the dark ink all but vanishes: the black frame's marble (title band: dark
+// 1.15 : 1, silver 6.4 : 1) and the brown artifact card's (dark 1.44 : 1,
+// silver 3.57 : 1). The print letters them silver on every colour, but on
+// our blue the silver reads worse than the dark ink (2.4 : 1 against 4.1),
+// and on red and green it changes little (2.4 vs 2.8, 2.3 vs 2.4), so those,
+// white, gold and the grey colourless card keep the dark name and type line
+// (owner decision 2026-09-25).
+const ALPHA_BAND_INK: InkByColorKey = {
+  b: ALPHA_INK.b,
+  a: ALPHA_INK.a,
 };
 
 // ---------------------------------------------------------------------------
@@ -465,6 +540,11 @@ const M15: FrameProfile = {
     // in CC's text box, which lands them on the printed (86.1 %W, 91.9 %H).
     rect: { topPct: 90.2, leftPct: 79.28, widthPct: 13.67, heightPct: 3.72 },
     plateRect: { topPct: 88.48, leftPct: 75.73, widthPct: 18.8, heightPct: 7.33 },
+    // The plate's face on the digits' rows: from 1185 px (past the lit
+    // bevel) to the shaded bevel, whose half-way line bows from 1392.5 to
+    // 1396.4 px and averages 1395.4 — the same on every colour and on the
+    // artifact / snow / devoid plates.
+    inkSpanPct: { leftPct: 79, rightPct: 93.027 },
     sizePct: 0.05,
     colorHex: INK_DARK,
     weight: 700,
@@ -514,12 +594,17 @@ const M15SNOWLAND: FrameProfile = {
 // ~10 px, one dark line); title band 100–198; art opening 178–1319 ×
 // 219–1138; type band 1164–1247; text box 186–1318 × 1247–1855 (one outline,
 // then a bevel to the textured area 201–1300 × 1265–1835); P/T strip
-// 1855–1991. Name, type and rules are dark ink; the "Illus." line and the P/T
-// share one line in the strip, silver on every frame colour but white
-// (ALPHA_INK).
+// 1855–1991. Rules are dark ink; the "Illus." line and the P/T share one line
+// in the strip, silver on every frame colour but white (ALPHA_INK); the name
+// and type line are dark but on the black frame and the artifact card
+// (ALPHA_BAND_INK). A colourless ARTIFACT paints the brown artifact card
+// (a.png, from MSE's acard.jpg) — every colourless card Alpha printed is one
+// (Sol Ring, Juggernaut) — and any other colourless card the grey c.png
+// (ccard.jpg).
 const AGCLASSIC: FrameProfile = {
   flavorDivider: false,
   label: "Alpha (1993)",
+  artifactMasterKeys: { c: "a" },
   // The mark's ink centred in the 100 px black band below the frame.
   brandMark: { rightPct: 3.5, bottomPct: 1.5 },
   // Owner review, round 4: name and pips 15 % smaller than round 3 (54 px
@@ -542,6 +627,9 @@ const AGCLASSIC: FrameProfile = {
     colorHex: INK_DARK,
     weight: 600,
     font: "display",
+    // Embossed silver where the dark ink all but vanishes (the black frame,
+    // the artifact card).
+    inkByColorKey: ALPHA_BAND_INK,
   },
   // Starts on the name's left margin (~178 px, the art window's edge — the
   // owner moved it in from the print's ~157) with caps centred at ~1198 px
@@ -553,6 +641,7 @@ const AGCLASSIC: FrameProfile = {
     colorHex: INK_DARK,
     weight: 600,
     font: "display",
+    inkByColorKey: ALPHA_BAND_INK,
   },
   // Inside the textured area with ~30 px at the sides, ~20 above, ~12 below.
   rules: {
@@ -576,8 +665,12 @@ const AGCLASSIC: FrameProfile = {
   // Official 1993 cards print P/T on the frame strip BELOW the text box, not
   // on a plate: digits centred at ~1921 px (0.45 of the 1855–2000 strip,
   // pinstripe included) and ~88 %W, under the text box's right corner.
+  // The rect runs on to 1432 px, past the pinstripe's dark line (~1405 on
+  // alphaland, ~1410 here), so a long value (`*+1/*+1`) shrinks to the
+  // 1236–1404 px it can use centred on 1320 (TODO 4.31); `90/90` fits.
   pt: {
     rect: { topPct: 88.74, leftPct: 80.5, widthPct: 15, heightPct: 5.6 },
+    inkSpanPct: { leftPct: 82.4, rightPct: 93.6 },
     sizePct: 0.04,
     colorHex: INK_DARK,
     weight: 700,
@@ -659,6 +752,10 @@ const M15PW: FrameProfile = {
     // scripts/lib/cc-frames.mjs — plateRect is that box in percent) and it
     // is drawn again here, above the stripes, pixel-for-pixel on the frame's.
     rect: { topPct: 90.2, leftPct: 80.6, widthPct: 14, heightPct: 3.72 },
+    // The shield's dark face is 1233–1395 px wide on the digits' upper rows
+    // and tapers to its point below them, so the ink keeps to 1239–1389 px
+    // (three digits fit) instead of printing over the silver rim.
+    inkSpanPct: { leftPct: 82.6, rightPct: 92.6 },
     plateRect: { topPct: 87.667, leftPct: 79.6, widthPct: 16, heightPct: 7.333 },
     plateAssetPathTemplate: "/frames/m15pw/loyalty/{color}.png",
     sizePct: 0.052,
@@ -773,7 +870,11 @@ const M15DEVOID: FrameProfile = {
 // band 1172–1249; text box 187–1318 × 1249–1854.5, ring 12–17 px; strip
 // 1854.5–1984.5). Its frame is the same brown land texture on every colour
 // key (strip ≈ #7e6657), so the "Illus." line and a P/T print in the one
-// silver on all seven.
+// silver on all seven. The name and "Land" keep the dark ink: the land print
+// letters them silver too, but on our brown the silver reads no better
+// (≈ 2.8 : 1 against the dark ink's 3.1), so like red and green they stay
+// dark (owner decision 2026-09-25: silver name and type line on the black
+// frame only).
 const ALPHA_LAND_INK: InkByColorKey = Object.fromEntries(
   (["w", "u", "b", "r", "g", "c", "m"] as const).map((k) => [
     k,
@@ -784,9 +885,18 @@ const ALPHALAND: FrameProfile = {
   ...AGCLASSIC,
   label: "Alpha Land",
   hideCost: true,
+  // One brown land frame for every colour: no artifact card (Alpha printed
+  // no artifact land, and MSE has no artifact land card).
+  artifactMasterKeys: undefined,
+  // The land's brown is neither the black frame nor the artifact card.
+  title: { ...AGCLASSIC.title, inkByColorKey: undefined },
   // 5 px lower than agclassic's, clear of the wider art border (caps centred
   // at ~1204 px, as "Land" prints on the basics).
-  type: { ...AGCLASSIC.type, rect: { ...AGCLASSIC.type.rect, topPct: 55.35 } },
+  type: {
+    ...AGCLASSIC.type,
+    rect: { ...AGCLASSIC.type.rect, topPct: 55.35 },
+    inkByColorKey: undefined,
+  },
   footer: { ...AGCLASSIC.footer!, inkByColorKey: ALPHA_LAND_INK },
   pt: { ...AGCLASSIC.pt!, inkByColorKey: ALPHA_LAND_INK },
 };
@@ -891,8 +1001,11 @@ const RETRO: FrameProfile = {
   },
   // Real Mirage-era cards print P/T in dark ink on the tan strip (the MSE
   // "white" note is its own outline treatment) — match the printed card.
+  // The strip is free on both sides of the value up to the frame's bevel
+  // shading at ~1410 px, so the ink may run 1125–1410 px (`100/100` fits).
   pt: {
     rect: { topPct: 89.5, leftPct: 77.5, widthPct: 14, heightPct: 5.6 },
+    inkSpanPct: { leftPct: 75, rightPct: 94 },
     sizePct: 0.042,
     colorHex: INK_DARK,
     weight: 700,
@@ -961,8 +1074,12 @@ const MODERN: FrameProfile = {
   },
   // The 2003 P/T box is a separate beveled plate (magic-new {color}pt.jpg),
   // upscaled to /frames/modern/pt/{color}.png. Drawn behind the dark value.
+  // The plate fills the rect, but its light face on the digits' rows is
+  // 1143–1373 px on every colour: a longer value shrinks to that rather than
+  // print over the bevel.
   pt: {
     rect: { topPct: 88.4, leftPct: 73.3, widthPct: 21, heightPct: 6.8 },
+    inkSpanPct: { leftPct: 76.2, rightPct: 91.53 },
     sizePct: 0.044,
     colorHex: INK_DARK,
     weight: 700,
@@ -1161,8 +1278,11 @@ const FLIP: FrameProfile = {
     vAlign: "center",
     font: "body",
   },
+  // The cream band ends in a rounded cap at ~1403 px on the value's rows
+  // (the type line owns its left part): the ink keeps to 1235–1403 px.
   pt: {
     rect: { topPct: 24.5, leftPct: 82.1, widthPct: 11.7, heightPct: 5.4 },
+    inkSpanPct: { leftPct: 82.36, rightPct: 93.5333 },
     sizePct: 0.0347,
     colorHex: INK_DARK,
     weight: 700,
@@ -1192,8 +1312,10 @@ const FLIP: FrameProfile = {
       vAlign: "center",
       font: "body",
     },
+    // Upside down, the band's cap is on the left at ~104 px: 104–257 px.
     pt: {
       rect: { topPct: 68.2, leftPct: 6.2, widthPct: 11.7, heightPct: 5.4 },
+      inkSpanPct: { leftPct: 6.9333, rightPct: 17.1667 },
       sizePct: 0.0347,
       colorHex: INK_DARK,
       weight: 700,
@@ -1268,61 +1390,95 @@ const SPLIT: FrameProfile = {
 // Aftermath — the M15 Aftermath frame. A normal TOP half (cast from hand) over a
 // BOTTOM half rotated 90° (cast from the graveyard). The top half is a standard
 // spell layout (name/cost → small art → type → rules); the bottom half is the
-// back-face content rendered ROTATED 270° (read by turning the card). The
-// bottom slots are WIDE boxes centered on the rotated bars — rotate(270°) around
-// each center lands it on the vertical bar (the box may extend off-card before
-// rotation, which is fine). Frame stacked by scripts/build-aftermath-frame.mjs.
+// back-face content rendered ROTATED 90° CLOCKWISE (read by turning the card
+// anticlockwise), like the printed Cut // Ribbons and Card Conjurer: the name
+// reads top → bottom with its cost at the bottom. (MSE measures its
+// `angle: 270` anticlockwise — the same quarter turn — but CSS rotate() turns
+// clockwise, so copying it as rotate(270°) turned the half the wrong way,
+// TODO 0.22.) The bottom slots are WIDE boxes centered on the rotated bars —
+// rotate(90°) around each center lands it on the vertical bar (the box may
+// extend off-card before rotation, which is fine). Frame stacked by
+// scripts/build-aftermath-frame.mjs.
+//
+// Both halves print their text at ONE set of sizes (AFTERMATH_TEXT), like the
+// printed cards and Card Conjurer (title/title2, type/type2, rules/rules2 and
+// mana/mana2 each share a size). Measured on the 745 px Cut // Ribbons and
+// Commit // Memory scans (word widths fitted in our Beleren, cross-checked on
+// glyph heights): the name is 0.049–0.053 of the card's width on EITHER half,
+// the type line 0.043–0.045, the cost discs ≈ 35 px on both — a regular M15
+// card's sizes (DOM Serra Angel measures 0.0525 / 0.0443 the same way), so
+// both halves take M15's scan-calibrated title / type / cost sizes. The old
+// top half (0.04 / 0.0347 / 0.04) printed a fifth under the card. Rules start
+// at the 9 pt standard on both halves and shrink on the ladder. The sideways
+// bars are a third of the card long, so a name + cost too long for them at
+// these sizes shrinks as one (pips with the name), and a long type line
+// shrinks alone (fitLines); the printed cards keep the full sizes.
+const AFTERMATH_TEXT = {
+  titleSizePct: 0.05,
+  typeSizePct: 0.0435,
+  costSizePct: 0.0485,
+  rulesSizePct: ptToPct(9),
+} as const;
+
 const AFTERMATH: FrameProfile = {
   label: "Aftermath",
   artSlot: { topPct: 11.3, leftPct: 7.7, widthPct: 84.5, heightPct: 22.4 },
-  costSizePct: 0.04,
+  costSizePct: AFTERMATH_TEXT.costSizePct,
   title: {
     rect: { topPct: 5.7, leftPct: 8.5, widthPct: 82, heightPct: 4.4 },
-    sizePct: 0.04,
+    sizePct: AFTERMATH_TEXT.titleSizePct,
     colorHex: INK_DARK,
     weight: 600,
     font: "display",
   },
   type: {
     rect: { topPct: 35.4, leftPct: 8, widthPct: 82.7, heightPct: 3.8 },
-    sizePct: 0.0347,
+    sizePct: AFTERMATH_TEXT.typeSizePct,
     colorHex: INK_DARK_SOFT,
     weight: 600,
     font: "display",
   },
   rules: {
     rect: { topPct: 40.9, leftPct: 7.5, widthPct: 84.5, heightPct: 13.0 },
-    sizePct: ptToPct(9),
+    sizePct: AFTERMATH_TEXT.rulesSizePct,
     colorHex: INK_DARK,
     vAlign: "start",
     font: "body",
   },
   secondFace: {
-    rotation: 270,
-    costSizePct: 0.034,
+    rotation: 90,
+    costSizePct: AFTERMATH_TEXT.costSizePct,
+    fitLines: true,
     // The bottom half's art window (MSE image 2): x 54.9–83.7%, y 56.4–91.4%
     // in card space. Like the text slots this is the PRE-rotation wide box
-    // centered on the window — rotate(270°) in place lands exactly on it and
+    // centered on the window — rotate(90°) in place lands exactly on it and
     // the art reads upright when the card is turned.
     artSlot: { topPct: 63.6, leftPct: 44.8, widthPct: 49.0, heightPct: 20.6 },
-    // Wide boxes centered on each rotated bar (rotate 270° → vertical bar).
+    // Wide boxes centered on each rotated bar (rotate 90° → vertical bar).
+    // Turned, the name and the type line both start at y 56.5% and the cost
+    // ends at 90.8% (Card Conjurer's title2, and the print); the type box is
+    // centred on its bar (x 46.4–54.8%).
     title: {
-      rect: { topPct: 72, leftPct: 69, widthPct: 39, heightPct: 7 },
-      sizePct: 0.038,
+      rect: { topPct: 70.125, leftPct: 64.5, widthPct: 48, heightPct: 7 },
+      sizePct: AFTERMATH_TEXT.titleSizePct,
       colorHex: INK_DARK,
       weight: 600,
       font: "display",
     },
     type: {
-      rect: { topPct: 72, leftPct: 29, widthPct: 39, heightPct: 7 },
-      sizePct: 0.028,
+      rect: { topPct: 70.125, leftPct: 26.6, widthPct: 48, heightPct: 7 },
+      sizePct: AFTERMATH_TEXT.typeSizePct,
       colorHex: INK_DARK_SOFT,
       weight: 600,
       font: "display",
     },
+    // Card Conjurer's rotated rules box: x 6.94–44.94%, y 57.0–90.57% once
+    // turned. Its long side is the line length (47% W = 705 px), its short
+    // side the stack of lines (27.15% H = 570 px), so wide text stays inside
+    // the white box instead of running into the type bar and off the card.
     rules: {
-      rect: { topPct: 56.5, leftPct: 4.5, widthPct: 39, heightPct: 38 },
-      sizePct: ptToPct(7.5),
+      rect: { topPct: 60.21, leftPct: 2.44, widthPct: 47, heightPct: 27.15 },
+      sizePct: AFTERMATH_TEXT.rulesSizePct,
       colorHex: INK_DARK,
       vAlign: "center",
       font: "body",
@@ -1487,8 +1643,12 @@ const TARKIRDRAGON: FrameProfile = {
   // cropped by scripts/build-showcase-frames.mjs to 1156,1850 271×149 on the
   // 1500×2100 card. Written out, not spread from M15.pt: that one follows the
   // Card Conjurer M15 plate and its own layout versions.
+  // The plate's light face runs 1193–1388 px on the digits' rows, inside
+  // its black outline — wider than MSE's field, so 10/10–18/18 print at
+  // full size on it and 20/20, which reaches the outline, shrinks.
   pt: {
     rect: { topPct: 89.8, leftPct: 79.88, widthPct: 12.38, heightPct: 3.99 },
+    inkSpanPct: { leftPct: 79.5333, rightPct: 92.5333 },
     plateRect: { topPct: 88.095, leftPct: 77.067, widthPct: 18.067, heightPct: 7.095 },
     plateAssetPathTemplate: "/frames/tarkirdragon/pt/{color}.png",
     sizePct: 0.05,
@@ -1496,11 +1656,28 @@ const TARKIRDRAGON: FrameProfile = {
     weight: 700,
   },
 };
-const TARKIRDRACONIC = tarkirCard("Draconic", {
-  title: INK_DARK,
-  type: INK_DARK,
-  rules: INK_DARK,
-});
+// Draconic is the gold Tarkir: Dragonstorm dragon frame (TDM #292–323). Its
+// P/T prints in black on a light box ringed by serpents (TDM #321 Ureni
+// "10/10", #301 Magmatic Hellkite): MSE's pt/<c>pt.png, cropped by
+// scripts/build-showcase-frames.mjs to 1132,1813 368×188 on the 1500×2100
+// card (it runs to the card's right edge). Without it the P/T was white on
+// the light parchment and could not be read (owner review 2026-09-25).
+const TARKIRDRACONIC: FrameProfile = {
+  ...tarkirCard("Draconic", { title: INK_DARK, type: INK_DARK, rules: INK_DARK }),
+  // MSE's pt field (516,811 82×34 on 646×902) centres the value at
+  // 1293 × 1928 px, where both scans print it (86.0 %W, 91.7 %H); the ink
+  // may use the box's light face inside the serpents, 1187–1398 px, so
+  // `10/10` and `20/20` print at full size like Ureni's.
+  pt: {
+    rect: { topPct: 89.911, leftPct: 79.876, widthPct: 12.693, heightPct: 3.769 },
+    inkSpanPct: { leftPct: 79.1333, rightPct: 93.2 },
+    plateRect: { topPct: 86.3333, leftPct: 75.4667, widthPct: 24.5333, heightPct: 8.9524 },
+    plateAssetPathTemplate: "/frames/tarkirdraconic/pt/{color}.png",
+    sizePct: 0.05,
+    colorHex: INK_DARK,
+    weight: 700,
+  },
+};
 
 // LOTR — title bar (top), CIRCULAR art window (the One Ring), type bar, textbox.
 // The artSlot is the circle's bounding box; the frame's opaque corners hide the
@@ -1666,9 +1843,12 @@ const TARKIRGHOSTFIRE: FrameProfile = {
     font: "body",
   },
   // MSE's pt field (590,917 99 × 46 on 744 × 1039) on the ribbon, which the
-  // build crops at 1093,1768 385 × 208 on the 1500 × 2100 card.
+  // build crops at 1093,1768 385 × 208 on the 1500 × 2100 card. The white
+  // ink may use the ribbon from its pale left flare (1153 px) to its cyan rim
+  // (1404 px, where it curves in lowest on the digits' rows).
   pt: {
     rect: { topPct: 88.26, leftPct: 79.3, widthPct: 13.31, heightPct: 4.43 },
+    inkSpanPct: { leftPct: 76.8667, rightPct: 93.6 },
     plateRect: { topPct: 84.1905, leftPct: 72.8667, widthPct: 25.6667, heightPct: 9.9048 },
     plateAssetPathTemplate: "/frames/tarkirghostfire/pt/{color}.png",
     sizePct: 0.05,

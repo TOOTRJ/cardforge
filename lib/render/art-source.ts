@@ -160,6 +160,26 @@ export async function resolveRenderableImage(
   }
 }
 
+/**
+ * The pixel size of an inlined (data: URL) image — sharp reads the header,
+ * nothing is decoded — or null for anything else. The bake places a rotated
+ * art window from it (lib/render/card-image.tsx RotatedArtBake), which
+ * object-fit can't do for it there.
+ */
+export async function imageNaturalSize(
+  dataUrl: string | null | undefined,
+): Promise<{ width: number; height: number } | null> {
+  if (!dataUrl?.startsWith("data:")) return null;
+  const comma = dataUrl.indexOf(",");
+  if (comma < 0 || !dataUrl.slice(0, comma).includes("base64")) return null;
+  try {
+    const meta = await sharp(Buffer.from(dataUrl.slice(comma + 1), "base64"), { animated: false }).metadata();
+    return meta.width && meta.height ? { width: meta.width, height: meta.height } : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Longest edge of the art copy the foil finish's luminance mask draws. The
  *  mask only needs the art's LIGHTNESS (the foil shows through light areas),
  *  so ~half the HD art slot is plenty — and a second full-size copy of the

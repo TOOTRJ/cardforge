@@ -41,7 +41,7 @@ const FRAMES = [
   { name: "lotr", style: "lotr", pat: "card/{c}card.png", seeds: [[0.5, 0.36]] },
   { name: "lotrscroll", style: "lotr-scroll", pat: "card/{c}card.png", seeds: [[0.5, 0.3]] },
   { name: "tarkirdragon", style: "tarkir-dragon-wing", pat: "card/{c}card.png", seeds: [[0.5, 0.28]], plate: "pt/{c}pt.png" },
-  { name: "tarkirdraconic", style: "tarkir-draconic", pat: "card/{c}card.png", seeds: [[0.5, 0.28]] },
+  { name: "tarkirdraconic", style: "tarkir-draconic", pat: "card/{c}card.png", seeds: [[0.5, 0.28]], plate: "pt/{c}pt.png" },
   {
     name: "tarkirghostfire",
     style: "tarkir-ghostfire",

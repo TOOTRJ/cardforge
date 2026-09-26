@@ -45,8 +45,9 @@ import {
 } from "@/lib/cards/frame-profile-override-actions";
 import { FRAME_PROFILE_OVERRIDES_TAG } from "@/lib/cards/frame-profile-overrides";
 import { staleTemplateFilter } from "@/lib/cards/frame-override-stale";
+import { UNTOUCHED_SINCE_V22 } from "@/tests/stubs/layout-scope-cards";
 
-type Candidate = { id: string; layout_version: number | null; rarity?: string };
+type Candidate = { id: string; layout_version: number | null } & Record<string, unknown>;
 
 /** Baked, published cards on the template (what the mark scan reads). By
  *  default every `staleIds` card is current (v23) and so gets marked. */
@@ -173,21 +174,29 @@ describe("resetFrameProfileOverrideAction", () => {
   });
 
   it("leaves cards with a pending opt-in look alone and counts the already-marked", async () => {
+    // Cards no sweep since v22 changed (UNTOUCHED_SINCE_V22, on lotr), so the
+    // v22 opt-in is the only look pending on the v21 one.
     const stub = db({
       existingRow: true,
       candidates: [
-        { id: "current", layout_version: 23 },
+        { ...UNTOUCHED_SINCE_V22, id: "current", layout_version: 23 },
         // v21: the owner hasn't accepted the v22 (opt-in) typography — a
         // re-bake would force it on them and drop their badge.
-        { id: "owner-choice", layout_version: 21 },
+        { ...UNTOUCHED_SINCE_V22, id: "owner-choice", layout_version: 21 },
+        // A v21 card that ALSO owes a sweep (a two-word name: layout v29's
+        // word spacing) has no choice to keep — the sweep re-bakes it anyway.
+        { ...UNTOUCHED_SINCE_V22, id: "owes-a-sweep", layout_version: 21, title: "Red Worm" },
         // Marked by an earlier save: owed already, nothing to update.
-        { id: "marked", layout_version: null },
+        { ...UNTOUCHED_SINCE_V22, id: "marked", layout_version: null },
       ],
     });
-    const result = await resetFrameProfileOverrideAction({ template: "saga" });
-    expect(result).toEqual({ ok: true, staleCount: 2, keptForOwner: 1, changed: true });
+    const result = await resetFrameProfileOverrideAction({ template: "lotr" });
+    expect(result).toEqual({ ok: true, staleCount: 3, keptForOwner: 1, changed: true });
     const update = stub.forTable("cards").find((e) => called(e.calls, "update"));
-    expect(update?.calls.find((c) => c.method === "in" && c.args[0] === "id")?.args[1]).toEqual(["current"]);
+    expect(update?.calls.find((c) => c.method === "in" && c.args[0] === "id")?.args[1]).toEqual([
+      "current",
+      "owes-a-sweep",
+    ]);
   });
 
   it("uses the default-template filter (NULL + legacy values) for m15", async () => {

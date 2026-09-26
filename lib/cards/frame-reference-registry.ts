@@ -40,6 +40,15 @@ export const FRAME_COLOR_KEYS = ["w", "u", "b", "r", "g", "c", "m"] as const;
 
 export type FrameColorKey = (typeof FRAME_COLOR_KEYS)[number];
 
+/** Every frame MASTER key (the file a render paints): the colour keys plus
+ *  "a", the Alpha frame's colourless ARTIFACT card, which a profile paints
+ *  instead of "c" for an artifact (FrameProfile.artifactMasterKeys). Not a
+ *  colour: combos, references and the frame_reviews gate stay on
+ *  FRAME_COLOR_KEYS. */
+export const FRAME_MASTER_KEYS = [...FRAME_COLOR_KEYS, "a"] as const;
+
+export type FrameMasterKey = (typeof FRAME_MASTER_KEYS)[number];
+
 type ReferenceRow = Record<FrameColorKey, FrameReference | null>;
 
 type TemplateReferences = {

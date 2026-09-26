@@ -177,11 +177,12 @@ Open decisions are marked **[decide]**; none blocks its phase.
       look does not get it in a download; a clean paid download has no stored
       source and stays live (say so in the download modal + docs). Route test
       for the stale-bake path. Land with 0.20.
-- [ ] **0.22 [P1] Aftermath bottom half rotates the wrong way** (Card Conjurer audit 2026-09-25) — `AFTERMATH.secondFace.rotation` is 270 (`lib/cards/template-layout.ts`:1066). CSS/Satori apply that as 90° COUNTER-clockwise (`components/cards/card-preview.tsx`:669,1427, `lib/render/card-image.tsx`:329,1667). MSE's `angle: 270` is counter-clockwise, while CC (`packAftermath.js`:39-42, rotation 90) and the printed Cut // Ribbons and Commit // Memory are 90° clockwise. So today the second title reads bottom→top with its cost at the top, and the second art is upside-down relative to the frame (whose bar layout already matches print).
-      - Set rotation to 90. Slots rotate about their own centres, so footprints stay put.
-      - Re-check the rotated rules box against CC (x 6.94–44.94 / y 57.0–90.57, 0.0507 W) so wide text can't reach the type bar.
-      - Parity test: the second title's first glyph sits above its cost.
-      - Compare-tool check against Cut // Ribbons with the 0.1/0.2 rotated render before 2.2 walks aftermath. It is unverified, so no user sees it yet.
+- [x] (fixed 2026-09-25, layout v29 — the compare-tool check in the last bullet is the owner's step, and aftermath stays unverified until it is done) **0.22 [P1] Aftermath bottom half rotates the wrong way** (Card Conjurer audit 2026-09-25) — `AFTERMATH.secondFace.rotation` is 270 (`lib/cards/template-layout.ts`:1066). CSS/Satori apply that as 90° COUNTER-clockwise (`components/cards/card-preview.tsx`:669,1427, `lib/render/card-image.tsx`:329,1667). MSE's `angle: 270` is counter-clockwise, while CC (`packAftermath.js`:39-42, rotation 90) and the printed Cut // Ribbons and Commit // Memory are 90° clockwise. So today the second title reads bottom→top with its cost at the top, and the second art is upside-down relative to the frame (whose bar layout already matches print).
+      - [x] Set rotation to 90. Slots rotate about their own centres, so footprints stay put.
+      - [x] Re-check the rotated rules box against CC (x 6.94–44.94 / y 57.0–90.57, 0.0507 W) so wide text can't reach the type bar. Re-cut to CC's turned bounds; title + type boxes start where the print's do (y 56.5 %), the type box centred on its bar.
+      - [x] Parity test: the second title's first glyph sits above its cost (tests/unit/render/aftermath-bake.test.ts, tests/unit/components/aftermath-preview.test.tsx).
+      - [x] Also in v29 (owner answer): both halves print at one set of sizes, M15's scan-calibrated title 0.05 / type 0.0435 / cost 0.0485 W, rules from the 9 pt standard (`AFTERMATH_TEXT`), like the print and CC; the sideways bottom name bar (name, gap, cost) shrinks AS ONE only as far as it must, measured in Beleren's own metrics (`secondFaceLineSizes`, `lib/cards/display-metrics.ts`), so a long cost stays on the bar. And the bake's sideways art window paints its art as a px-placed background (`RotatedArtBake`), with no art-free strip (4.31).
+      - [ ] Compare-tool check against Cut // Ribbons with the 0.1/0.2 rotated render before 2.2 walks aftermath. It is unverified, so no user sees it yet. (Owner's step.)
 - [x] (won't do — owner decision 2026-09-25: "when the cards are created they become original, so the wording is correct") **0.23 [P0] Rewrite the 'original frames / no copyrighted assets' claims before any CC frame ships** (Card Conjurer audit 2026-09-25) — About 13 public lines promise original, non-WotC frames/fonts/mana symbols:
       - `components/marketing/marketing-hero.tsx`:108 ('Original frames — no copyrighted assets used.')
       - `app/(marketing)/mtg-card-maker/page.tsx`:162
@@ -285,7 +286,12 @@ Open decisions are marked **[decide]**; none blocks its phase.
 - [ ] **1.7 [P1] Artifact creatures** — offer `m15artifact` under kind Creature
       as a variation with P/T and route "Artifact Creature" imports to it
       (`lib/creator/card-kinds.ts` `framesForKind`,
-      `lib/cards/card-display.ts`:32).
+      `lib/cards/card-display.ts`:32). The import must keep the Artifact
+      word too (`parseTypeLine` keeps one type word, so "Artifact Creature"
+      lands as a plain creature): the Alpha frame paints its brown artifact
+      card for "Artifact" in the supertype (4.31, `isArtifactFrameType`), and
+      today an imported Juggernaut — or the frame-compare view of Battering
+      Ram — gets the grey colourless card.
 - [ ] **1.8 [P1] Back-face art only when the face has `image_uris`** (expose
       `has_back_image` on `/named`), log the quota after URL resolution,
       import the per-face artist — `app/api/scryfall/import-art/route.ts`:134,
@@ -477,7 +483,7 @@ Open decisions are marked **[decide]**; none blocks its phase.
 - [ ] **3.2 [P1] Rules-paragraph run margins identical in both renderers**;
       cancel the last line's margin (`card-image.tsx`:1092,
       `components/cards/card-preview.tsx`:1625).
-- [ ] **3.3 [P1] One loyalty-badge height constant** (1.6 vs 1.5 —
+- [x] (fixed 2026-09-25, layout v29 with 3.13: `LOYALTY_ROW` in `lib/cards/loyalty-rows.ts` holds the row anatomy both renderers draw — one 1.5 em badge height, its width, padding, gap, numeral size and nudge; a parity test forbids the old literals) **3.3 [P1] One loyalty-badge height constant** (1.6 vs 1.5 —
       `card-preview.tsx`:1797, `card-image.tsx`:1186).
 - [ ] **3.4 [P2] Shared disc-relative constants** for cost gaps, inline
       hairlines and disc shadows.
@@ -487,14 +493,14 @@ Open decisions are marked **[decide]**; none blocks its phase.
       the defense badge (`card-preview.tsx`:1014, `card-image.tsx`:709).
 - [ ] **3.7 [P1] Saga chapters through `RulesBody`** with the fit ladder and
       pips (`card-preview.tsx`:1294, `card-image.tsx`:1536).
-      **Card Conjurer audit 2026-09-25:** Start chapter text at the 7.5 pt compact standard; today `SAGA.chapters.sizePct` 0.029 W = 5.2 pt (`lib/cards/template-layout.ts`:828-836) vs CC 0.0427 W. Put the chapter rail on the profile: badge at x 3.86 W, 7.87 W × 6.29 H straddling the left border; numeral 0.045 W; text 13.34–48.34 W; reminder block 8.67/11.29/40.4×17.72; rows 17.86 % H from 28.96, content-sized via 3.13's helper. Both renderers; verify on History of Benalia (DOM). Saga is verified, so this is a platform correction (0.20).
+      **Card Conjurer audit 2026-09-25:** Start chapter text at the 7.5 pt compact standard; today `SAGA.chapters.sizePct` 0.029 W = 5.2 pt (`lib/cards/template-layout.ts`:828-836) vs CC 0.0427 W. Put the chapter rail on the profile: badge at x 3.86 W, 7.87 W × 6.29 H straddling the left border; numeral 0.045 W; text 13.34–48.34 W; reminder block 8.67/11.29/40.4×17.72; rows 17.86 % H from 28.96, content-sized via 3.13's helper (`layoutLoyaltyRows`, `lib/cards/loyalty-rows.ts`, shipped in v29). Both renderers; verify on History of Benalia (DOM). Saga is verified, so this is a platform correction (0.20).
 - [ ] **3.8 [P2] Artist footer on the 12 footer-less templates** (flip, split,
       aftermath, battle, lotr, lotrscroll, avatar, bloomburrow, bloomanime and
       the three tarkir frames — counted from the profiles; the plan said 13).
       **Card Conjurer audit 2026-09-25:** Footers also honour `TextSlot.shadowCss` in both renderers. `lib/render/card-image.tsx`:618-660 and `components/cards/card-preview.tsx`:983-1007 ignore it, though FULLARTLAND sets it (`lib/cards/template-layout.ts`:1437-1442). Full-art, borderless and showcase footers get an outline by default before they publish (CC outlines its bottom info).
 - [ ] **3.9 [P2] Second faces + adventure page get set symbol, flavour text,
       watermark and rarity** (`card-preview.tsx`:1416, `card-image.tsx`:1648).
-- [ ] **3.10 [P2] Bake paints by position not z-index** (document), `Band`
+- [ ] (partly 2026-09-25, layout v29: "titles shrink instead of ellipsizing" is done for the frames with a DETACHED cost — m15pw and modern: `fitDetachedCostTitle` (`lib/cards/title-band.ts`) ends the name one band gap before the pips it draws and shrinks it, in Beleren's measured advances + 2 % headroom, down to the 5 pt floor, where it is cut with a whole "…" (never on a one- or two-letter stub); aftermath's sideways bottom bar shrinks too (0.22). Every other frame still ellipsizes, and the rest of the item is open) **3.10 [P2] Bake paints by position not z-index** (document), `Band`
       honours `slot.font`, U+2212 mapped in the preview, titles shrink instead
       of ellipsizing (`card-image.tsx`:149,369,781, `card-preview.tsx`:714).
 - [ ] **3.11 [P1] Parity tests for 3.1–3.7** in
@@ -509,7 +515,9 @@ Open decisions are marked **[decide]**; none blocks its phase.
       badge flow; /news post) — bundle with 4.4/4.8/4.9 if timing allows.
       **Card Conjurer audit 2026-09-25:** The bundled bump also carries 3.13–3.22 and 4.16–4.20. Geometry and parity corrections go out as a 0.20 sweep, not as owner 'newer look' badges.
       **Status 2026-09-25:** stale as written — 4.4 did NOT wait: it shipped as v24 (sweep, #380) with 4.16–4.18 inside it, and v25–v28 followed as separate sweeps (#381/#382). None of 3.1–3.22 was in them (3.6 rode v25). This item is now "one sweep bump for the 3.x parity fixes when they land", no owner badge.
-- [ ] **3.13 [P0] Planeswalker ability rows sized by content in both renderers** (Card Conjurer audit 2026-09-25) — Both renderers stack equal `flex: 1` loyalty rows (`lib/render/card-image.tsx`:1205-1212, `components/cards/card-preview.tsx`:1778-1786). The browser grows a long row (min-height:auto), Satori/Yoga does not. So a walker with a long ultimate looks right in the editor, while the stored PNG, gallery tile and OG image clip that ability under the loyalty plate. Reproduced by baking a 1/1/5-line m15pw. `fitRulesSizePct` only sees the whole box (`card-image.tsx`:213-231), so nothing shrinks. m15pw is verified for all 7 colours (`supabase/seed.sql`:40-51).
+      **Status 2026-09-25 (round 5):** layout v29 (sweep, `VERSION_SCOPES[29]`) carries 3.3, 3.13, 3.18, part of 3.10 and part of 4.19, with 0.22 and the 4.31 leftovers. The other open 3.x fixes still need a later sweep when they land.
+      **Owner step after the v29 merge deploys — run the sweep right away:** `SCOPE=version VERSION=29 node scripts/rebake-renders.mjs` (the plan), then again with `CONFIRM=yes` (or `SCOPE=sweep`). On production's 731 public cards (every one at v28, anonymous read 2026-09-26) it re-bakes the 729 whose bake v29 changes and stamps the 2 it doesn't (Bar e002bc65 and Worm f107e1f3, tarkirdragon), plus any unlisted cards in scope, which an anonymous read can't see. That is about 729 HD Satori bakes on Vercel. Until it runs, each in-scope card's free watermarked PNG download renders live (`hasServableStoredRender`: a platform correction is pending), and its download modal says the download looks different from the gallery image. That is correct, but it is the per-request Satori load behind the 2026-09-14 quota incident. OG images keep serving the stored bake. Also expected after deploy: /admin/frame-compare marks every verified combo "stale" (`frame-verification-state.ts` asks `isRenderStale` about a regular card with no name or stats). That is accurate for the 25 display-footer templates and aftermath, where every card changed. On the other 11 templates only cards with a two-word name or type line changed, which is nearly every reference card. Re-verify rather than trust the old ticks.
+- [x] (fixed 2026-09-25, layout v29 — `layoutLoyaltyRows` / `layoutProfileLoyaltyRows` in `lib/cards/loyalty-rows.ts`: each row needs its estimated text height (the rules-fit wrap model, capitals counted at MPlantin's 0.74 em) or one badge height, plus padding; the text size is the largest ladder step at which every row fits; the slack is shared equally. The bake draws whole-pixel rows from shared edges (no seam gaps), the preview the same fractions, and each foil stripe follows its row. Not done: the optional per-row weight in `face_content`; saga chapters reuse it under 3.7. Walkers whose abilities don't fit even at 5 pt still lose text — an editor warning is a follow-up) **3.13 [P0] Planeswalker ability rows sized by content in both renderers** (Card Conjurer audit 2026-09-25) — Both renderers stack equal `flex: 1` loyalty rows (`lib/render/card-image.tsx`:1205-1212, `components/cards/card-preview.tsx`:1778-1786). The browser grows a long row (min-height:auto), Satori/Yoga does not. So a walker with a long ultimate looks right in the editor, while the stored PNG, gallery tile and OG image clip that ability under the loyalty plate. Reproduced by baking a 1/1/5-line m15pw. `fitRulesSizePct` only sees the whole box (`card-image.tsx`:213-231), so nothing shrinks. m15pw is verified for all 7 colours (`supabase/seed.sql`:40-51).
 
       Fix:
       - Compute per-row heights in the shared fit module: each ability's line count at the fitted size, a floor of one badge height, the remainder shared.
@@ -550,7 +558,9 @@ Open decisions are marked **[decide]**; none blocks its phase.
 - [ ] **3.17 [P2] Flat inline pips (shadow only in the cost band)** (Card Conjurer audit 2026-09-25) — Printed cards, and CC (`packM15RegularNew.js`:54 vs :57), shadow only the mana cost; inline rules symbols are flat (DOM Llanowar Elves). We shadow every rules, loyalty, saga and second-face pip: the preview uses `ms-shadow` (`components/cards/card-preview.tsx`:1690), the bake's ManaGem always sets `boxShadow` (`lib/render/card-image.tsx`:826,843,897), and override pips are shadowed too (:1008-1021).
 
       Add a `shadow` flag on ManaGem and the rules pip items, on only in the cost band. Parity test; bundle with 3.12.
-- [ ] **3.18 [P2] Stat values shrink to fit their plate** (Card Conjurer audit 2026-09-25) — P/T, loyalty and defense render at a fixed `slot.sizePct` (StatBake in `lib/render/card-image.tsx` ~1422, `components/cards/card-preview.tsx` ~1112), while each side allows 16 characters (`lib/validation/card.ts`:121-126). `100/100` overflows the M15 plate; '15/15', '*/1+*' and 'X/X+1' fit.
+- [x] **3.18 [P2] Stat values shrink to fit their plate** (Card Conjurer audit 2026-09-25) — P/T, loyalty and defense render at a fixed `slot.sizePct` (StatBake in `lib/render/card-image.tsx` ~1422, `components/cards/card-preview.tsx` ~1112), while each side allows 16 characters (`lib/validation/card.ts`:121-126). `100/100` overflows the M15 plate; '15/15', '*/1+*' and 'X/X+1' fit.
+
+      Done (wf/r5-stats-final): `lib/cards/stat-fit.ts` models where each renderer inks a value from Beleren Bold's metrics (advances, side bearings, the GPOS kerning between stat characters — Satori centres the unkerned advance box and draws the kerned run from its left edge; the browser centres the kerned run) and both renderers print it at `fitStatSizePct()`: the profile size, unchanged, while its ink stays on the face the frame draws for it (`StatSlot.inkSpanPct`, measured on the digits' rows: M15 plate 1185–1395.4 px, Alpha strip 1236–1404, planeswalker shield 1239–1389, Retro strip 1125–1410, Modern plate 1143–1373, flip band 1235–1403 / 104–257.5, Dragon Wing 1193–1388, Draconic 1187–1398, Ghostfire ribbon 1153–1404; else the rect or the drawn badge); smaller when not; flip second faces too (mirrored, upside down). A value is always one line and centred (`white-space: nowrap`; `flexShrink: 0` on the bake's span): Satori used to squeeze a value wider than its rect to the rect, so `X/X+1` and `+4/+4` wrapped after the slash and `40/40` ran off to the right. `statLayoutChanged(row)` is the layout-bump scope (0 of 724 public production cards).
 
       Run stat values through `fitSingleLineSizePct` against the plate width (4.18's plateRect once it exists), capped at the profile size, in both renderers. CC's P/T is oneLine with shrink (`packM15RegularNew.js`:58).
 
@@ -565,6 +575,7 @@ Open decisions are marked **[decide]**; none blocks its phase.
       - Replace the constants with a deterministic word-wrap simulation in `fitRulesSizePct`/`fitSingleLineSizePct`, shared by preview and bake and reused by 3.10 (titles), 3.18 (stats) and 3.13 (rows).
 
       Acceptance: unit tests against line counts measured on a few Scryfall scans. CC measures real glyphs (`creator-23.js`:3825-3833,3897-3903).
+      **Status 2026-09-25 (layout v29):** a first table exists — `lib/cards/display-metrics.ts` holds Beleren Bold's advances (font units) and the kerning pairs it sets APART, held to the TTF by a test; the detached-cost name fit (3.10) and aftermath's bars (0.22) measure with it, and `lib/cards/stat-fit.ts` has its own per-glyph ink model for stats (3.18). The rules estimate still counts average widths (capitals at 0.74 em for planeswalker rows only). **2026-09-26:** `lib/cards/rules-metrics.ts` holds MPlantin's regular + italic advances (held to both TTFs by a test; neither master kerns) and `wrapRulesText`, the greedy wrap both renderers run over the same runs (the bake's gap after every run, and a hair wider for its whole-pixel type). Only the planeswalker last-row shield check (4.19) uses it; the size fits still count averages.
 - [ ] **3.21 [P3] Larger hybrid cost pips** (Card Conjurer audit 2026-09-25) — Printed hybrid and two-brid cost pips are about 1.2× a mono pip (UMA Murderous Redcap), and CC loads them at 1.2 (`creator-23.js`:326-328). We draw every cost pip at one size (`lib/render/card-image.tsx`:822-872, `components/cards/mana-cost-glyphs.tsx`:259).
 
       Scale split discs ×1.2 in the cost band only, keeping the row's vertical centre. Check Phyrexian against a scan first. Parity test.
@@ -841,7 +852,7 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
       Needs 4.23 (text treatment) and 4.24 (original pips).
 
       P3: a 1997/2003 layout matrix — compare CC's community-made 1997 planeswalker/saga frames (`packPlaneswalkerSeventh`, `packOldSaga`; custom designs, not printings) with MSE's (critic correction): `magic-new-planeswalker(-4abil)`, `-split(-fuse)`, `-flip`, `-leveler`, `-doublefaced`, `-token`, `-emblem`, and `magic-old-split/-flip/-token`.
-- [ ] (partly 2026-09-25: of the 12 contradicted profiles, tarkirdragon was re-measured on MUL #1/#60 with its own P/T plate (#381) and tarkirghostfire rebuilt with translucent boxes + P/T ribbon (#382); tarkirdraconic's white-on-parchment P/T is still unreadable (4.31). The other 9 profiles, per-set basics and new families are open) **4.11 [P1] Showcase families from MSE (744–750 px)**, in request-log
+- [ ] (partly 2026-09-25: of the 12 contradicted profiles, tarkirdragon was re-measured on MUL #1/#60 with its own P/T plate (#381) and tarkirghostfire rebuilt with translucent boxes + P/T ribbon (#382); tarkirdraconic's white-on-parchment P/T now sits on MSE's serpent-ringed plates in black ink (4.31, wf/r5-stats). The other 9 profiles, per-set basics and new families are open) **4.11 [P1] Showcase families from MSE (744–750 px)**, in request-log
       order — re-measure the 12 contradicted profiles from scans (lotr,
       lotrscroll, avatar, bloomburrow, bloomanime, tarkir ×3, expeditionland,
       fullart, m15textless ×2), then per-set full-art basics and the
@@ -939,7 +950,7 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
       - The same field serves the vehicle plate (4.6), the token plate (4.4) and saga-creature plates (4.7).
 
       Ship as a platform correction bundled with 4.4 (0.20).
-- [ ] (partly 2026-09-25: #380 draws CC's own shield cut from each master (`plateRect` 79.6/87.667/16×7.333, above the stripes, so no double rim) with the loyalty value in CC's box 80.6/90.2/14×3.72 at 0.052 W, white; #382 lowered the name (top 4.18) and pips (`costDy` 0.004) into CC's taller title bar and gave each stripe its own foil sheen. Still open: the badge rail (x 2.8, w 14.14, per-shape heights), ability text from 18.0 / 13.6 W, row starts + heights (3.13, in progress), neutral stripes with soft seams, title/type sizes (4.20), symbol, two-line footer, and the Gideon BFZ / Karn DOM parity check) **4.19 [P1] Planeswalker anatomy on the profile (with 4.4)** (Card Conjurer audit 2026-09-25) — On m15pw (verified), the cost badges sit inside the rules rect at ≈10.3–20.5 W (`badgeW = 2.3×size`; `lib/render/card-image.tsx` ~1169, `components/cards/card-preview.tsx` ~1796), and every ability's text starts at ≈22.7 W. Print (Gideon BFZ) and CC straddle the frame edge (`versionPlaneswalker.js`:168-188, `packPlaneswalkerRegular.js`:37-41). `loyaltyRows` holds colours only (`lib/cards/template-layout.ts`:455-469).
+- [ ] (partly 2026-09-25: #380 draws CC's own shield cut from each master (`plateRect` 79.6/87.667/16×7.333, above the stripes, so no double rim) with the loyalty value in CC's box 80.6/90.2/14×3.72 at 0.052 W, white; #382 lowered the name (top 4.18) and pips (`costDy` 0.004) into CC's taller title bar and gave each stripe its own foil sheen. Layout v29: rows sized by their text (3.13) and the LAST ability wraps short of the starting-loyalty shield when its text, at the row's full width, would reach it (`loyaltyShieldRect`: the loyalty plateRect, else its rect; `lastRowInsetPct`, both renderers; the stripes and foil keep the full row). Otherwise the last row keeps the full width and wraps as before (owner decision 2026-09-26: Coden's −2 and Miner's −11 keep their lines, no word left alone). "Would reach" is read from where the lines really break — MPlantin's advances in the preview's and the bake's wraps (`lib/cards/rules-metrics.ts`, 3.20) — since the rows' height estimate puts every last row's text below the shield's top. Nothing sits under the shield on the 84 walkers checked (HD and 750 bakes, the Chromium preview); 31 of them narrow, and all 7 public walkers keep the full width. Still open: the badge rail (x 2.8, w 14.14, per-shape heights), ability text from 18.0 / 13.6 W, CC's row starts, neutral stripes with soft seams, title/type sizes (4.20), symbol, two-line footer, and the Gideon BFZ / Karn DOM parity check) **4.19 [P1] Planeswalker anatomy on the profile (with 4.4)** (Card Conjurer audit 2026-09-25) — On m15pw (verified), the cost badges sit inside the rules rect at ≈10.3–20.5 W (`badgeW = 2.3×size`; `lib/render/card-image.tsx` ~1169, `components/cards/card-preview.tsx` ~1796), and every ability's text starts at ≈22.7 W. Print (Gideon BFZ) and CC straddle the frame edge (`versionPlaneswalker.js`:168-188, `packPlaneswalkerRegular.js`:37-41). `loyaltyRows` holds colours only (`lib/cards/template-layout.ts`:455-469).
 
       Put the rail on the profile, with CC's values:
       - Badges: x 2.8, width 14.14 W; heights + 7.24 / − 7.05 / 0 6.1 % H; numeral 0.04 W centred at 10.27.
@@ -989,12 +1000,12 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
 
       Delete the scrim. Import picks the variant from the Oracle line count. References: Treasure (txln) and Treasure (tmsh). **[decide]** which family is the default token look.
       **Full-art research 2026-09-26:** the 171 M15 full-art tokens (T2XM #4, TM20 #2) already resolve `exact` on `m15token` (CC 'Textless (Bordered M15)'), so there is nothing to build for them. The 80 2003-era full-art tokens are 4.43.
-- [ ] (partly 2026-09-25: the mechanism shipped in #382 (layout v27) as `inkByColorKey` on TextSlot/StatSlot (`slotInk()` / `footerInk()`, both renderers; per-colour ink + shadow, emboss in em), used for Alpha: agclassic's P/T and "Illus." line are dark on white and embossed silver on every other colour, alphaland silver on all seven, both sharing one line in the strip (#381). Still open: 1997 retro/retroland white P/T + artist with a black drop shadow and the centred `Illus.` footer, the 2003 footer ink per colour (white on black, land and colourless), and title/type ink, since `inkByColorKey` is honoured only on the footer and stat slots) **4.23 [P1] Era text treatment (1993/1997/2003)** (Card Conjurer audit 2026-09-25) — The 1993 and 1997 profiles print title, type, P/T and artist in dark ink (`lib/cards/template-layout.ts`:382-420 AGCLASSIC, 622-672 RETRO), and their comments claim printed P/T is dark, which is wrong. Real 1997 cards (LGN White Knight, SCG Enrage, TOR Shambling Swarm) print them white with a black drop shadow, even on white cards. Alpha prints them light grey with a shadow. The 1997 footer is a centred `Illus. <artist>` over the © line. The 2003 footer is white on black, land and colourless frames (CC `pack8th.js`:55-68), but ours is dark for every colour (:691-738).
+- [ ] (partly 2026-09-25: the mechanism shipped in #382 (layout v27) as `inkByColorKey` on TextSlot/StatSlot (`slotInk()` / `footerInk()`, both renderers; per-colour ink + shadow, emboss in em) and 4.31 extended it to the title and type line (`bandTextStyle()`); the 1993 half is done (below). Still open: 1997 retro/retroland white title, type line, P/T + artist with a black drop shadow and the centred `Illus.` footer, and the 2003 footer ink per colour (white on black, land and colourless)) **4.23 [P1] Era text treatment (1993/1997/2003)** (Card Conjurer audit 2026-09-25) — 1993 (Alpha) is done (v25/v27 and 4.31): agclassic letters the P/T and artist line in embossed silver on every frame colour but white, and the name and type line too on the black frame and the colourless artifact card (owner decision 2026-09-25; dark elsewhere, where the silver read no better), alphaland its P/T and artist line on every key (`ALPHA_INK` / `ALPHA_BAND_INK` / `ALPHA_LAND_INK` in `lib/cards/template-layout.ts`); alphatoken is ours (Alpha printed no tokens) and keeps its own light-on-dark name. The 1997 profile (RETRO) still prints title, type, P/T and artist in dark ink, and its comments claim printed P/T is dark, which is wrong. Real 1997 cards (LGN White Knight, SCG Enrage, TOR Shambling Swarm) print them white with a black drop shadow, even on white cards. The 1997 footer is a centred `Illus. <artist>` over the © line. The 2003 footer is white on black, land and colourless frames (CC `pack8th.js`:55-68), but ours (MODERN) is dark for every colour.
 
       Fix:
-      - Give `TextSlot`/`StatSlot` a `colorHexByKey` (per frame colour; `template-layout.ts`:60-110 has one colorHex) and a per-era shadow.
+      - Use the per-frame-colour `inkByColorKey` Alpha already uses (a colour + shadow per key, honoured by `slotInk` on stat slots, `footerInk` on the footer and `bandTextStyle` on the title and type line, identically in both renderers) for the 1997 and 2003 profiles.
       - Apply these with 4.8's era fonts.
-      - Check against the registry scans for agclassic, retro and modern.
+      - Check against the registry scans for retro and modern (agclassic is done).
 
       This blocks a correct 4.10 publish. The only published old-border combo (modern/w) is already right.
 - [ ] **4.24 [P2] Per-frame pip style (`symbolStyle`)** (Card Conjurer audit 2026-09-25) — Add a profile/manifest field `symbolStyle` (`modern` | `original` | family-specific) that both renderers resolve for costs and rules text. No such field exists today (`lib/cards/template-layout.ts`:102-200; `lib/pips/override.ts` is owner overrides only).
@@ -1042,7 +1053,11 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
       fix/frame-review-followups (#381); the owner's decisions as v27/v28 +
       migration 0117 in feat/frame-review-decisions (#382); both merged
       2026-09-25. Status at `267f46c`: 7 of 14 sub-items done, three with an
-      open tail; every open one below is still open in code):
+      open tail. Round 5 (layout v29, one sweep) closed the Draconic and Alpha
+      long P/T, foil through rules backdrops, the Alpha artifacts + lettering,
+      display-font word spacing, aftermath's rotated art, planeswalker row
+      parity and the long planeswalker name; every open one below is still
+      open in code):
       - [x] **Dragon Wing two-colour cards split their wings** (owner decision):
         `FrameProfile.twoColorSplit`, both renderers, both keys preloaded,
         plates stay 'm'. Still open: frame_reviews gates a two-colour card as
@@ -1058,9 +1073,13 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
         `frame_reviews` and the frames bucket. Picker chips and toasts print
         the label once (`setQualifiedFrameLabel`), not "Tarkir: Dragonstorm —
         …".
-      - **Draconic P/T.** The gold TDM dragon frame people expect is
+      - [x] **Draconic P/T.** The gold TDM dragon frame people expect is
         `tarkirdraconic`. Its P/T is white on light parchment, so it can't be
-        read, and it needs the same plate treatment Dragon Wing got.
+        read, and it needs the same plate treatment Dragon Wing got. Done
+        (wf/r5-stats-final): MSE's serpent-ringed pt/<c>pt.png plates
+        (build-showcase-frames.mjs `plate`), black ink at MSE's pt field,
+        matching TDM #321 Ureni and #301 Magmatic Hellkite; the ink may use
+        the box's face inside the serpents (1187–1398 px).
       - [x] **Ghostfire rebuilt** (owner decision): MSE's translucent boxes at
         60 % + P/T ribbon (scripts/build-showcase-frames.mjs), white ink, type
         line inside its band.
@@ -1071,31 +1090,54 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
         agclassic (MSE's light centre and coloured text-box ring cut, its
         bevel widened to the print's), the land print's dark · colour · dark
         lines on alphaland.
-      - **Alpha long P/T (pre-existing):** a P/T like `*+1/*+1` runs out of
+      - [x] **Alpha long P/T (pre-existing):** a P/T like `*+1/*+1` runs out of
         the strip across the pinstripe into the black border — the P/T rect
         spans 1207–1432 px and neither StatBake nor StatOverlay fits the
         digits (`10/10` fits). Fix: shrink-to-fit in both renderers and end
-        AGCLASSIC.pt.rect inside the pinstripe (~1404 px).
+        AGCLASSIC.pt.rect inside the pinstripe (~1404 px). Done
+        (wf/r5-stats-final) with 3.18: the rect keeps its centre (1320 px) and
+        `inkSpanPct` keeps the ink to 1236–1404 px, so every value that fits
+        stays byte-identical (moving the rect's edges would re-round its
+        centring).
       - **Alpha bevel lighting:** MSE lights every colour's text-box bevel
         the same way (lit top + right); the print does that on white and
         artifact cards but lights blue and red ones from the left + bottom.
         Matching it means re-sourcing per colour — owner's call.
       - [x] **Alpha light lettering** on non-white frames: per-colour ink on
         StatSlot + footer in both renderers, with a lower-right emboss.
-      - **Aftermath's rotated second art (pre-existing, bake only):** the
+      - [x] **Aftermath's rotated second art (pre-existing, bake only):** the
         sideways window leaves an art-free strip in the Satori bake — the
         parent's rotate(270deg) combines badly with the child <img>'s scale()
         and percentage transformOrigin — and the foil sheen now paints over
         that strip. Fix: apply the scale in a non-rotated inner wrapper, or
         compute the cover + scale box in px as coverPlacement does. Found by
         the integration review 2026-09-25; 0 production aftermath cards.
+        Fixed in v29 with 0.22: `RotatedArtBake` rotates an UNCLIPPED box
+        about its centre and paints the art as a px-placed background
+        (`artWindowPlacement`, from the art's size via `imageNaturalSize`),
+        whole-px so a zoomed-out picture shows no line of its far edge; the
+        foil sheen's rotated layer uses the same boxes. Split (rotation 0)
+        keeps the object-fit path, byte for byte.
+      - **Token P/T on the border (pre-existing):** since the Card Conjurer
+        token master (v24) the m15token / m15tokenartifact P/T rect (MSE's
+        88.6–94.8 %H) sits half on the black border below the cream band
+        (production token 1e951489; 8 public tokens print a P/T). The
+        alphatoken P/T prints white on the cream text box. Neither has an
+        `inkSpanPct` yet — measure one when the rects are fixed (found with
+        3.18, 2026-09-25).
       - [x] **Foil on planeswalkers** (owner decision, round-2 review): each
         ability stripe carries its own sheen (`FoilStripeSheen`, masked by the
         stripe colour) between the stripe and the badge + text, in both
-        renderers — inside v28 (foil only; one production card, Coden). Still
-        open: a translucent rules BACKDROP (`rules.backdropHex` — m15pw's
-        non-planeswalker box, token / full-art scrims) hides the foil the
-        same way.
+        renderers — inside v28 (foil only; one production card, Coden).
+      - [x] **Foil through rules backdrops** (v29, not v28): the translucent
+        rules BACKDROP (`rules.backdropHex` — m15pw's non-planeswalker box,
+        the token / Alpha token / Anime / Expedition scrims) hid the foil the
+        way the stripes did; it now carries its own sheen
+        (`FoilBackdropSheen`, masked by the backdrop colour, clipped to its
+        rounded corners, under the watermark + text), both renderers. Foil
+        only, on those six templates: a clear rainbow on m15pw's pale box, a
+        level or two on the dark scrims (dark ink swallows the foil). 0 public
+        production cards change (Coden's ability rows replace the box).
       - [x] **Planeswalker pips + name lowered** (owner note, round-3 review:
         "pips look a little high"): CC's pw title plate runs ~9 px lower at HD
         than the printed one (77–192 vs 73–183 on M15 walkers), and the
@@ -1103,11 +1145,15 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
         way down it; printed pips sit at 47–49 %, names at 49–51 %, the pips
         ~2 px above the name. `costDy: 0.004` (6 px) and title top 3.8 → 4.18
         (8 px) on M15PW, inside v27 (m15pw added to its template list; 6
-        public production cards). Still open: a long name runs under the
-        detached cost (Miner the Miner — the name's ellipsis ignores
-        `costRect`), and the printed name's caps are ~20–25 % taller than
+        public production cards). The long name that ran under the
+        detached cost (Miner the Miner) is fixed in v29: it shrinks to fit
+        before the pips (3.10, `fitDetachedCostTitle`; Miner 7.69 → 7.29 pt,
+        whole). Still open: the printed name's caps are ~20–25 % taller than
         ours (≈56 vs ≈45–47 px at HD).
-      - **Planeswalker row parity (pre-existing, preview only):** browser
+      - [x] (fixed in v29 with 3.13 and 3.3: one shared row layout, whole-px
+        shared edges in the bake, one 1.5 em badge; the editor's stripes land
+        within 0.8 HD px of the saved image's) **Planeswalker row parity
+        (pre-existing, preview only):** browser
         ability rows are content-sized (flex `min-height: auto`), Yoga's stay
         equal, so a walker with long or two-line abilities gets different
         stripe heights in the preview than in the bake (measured up to ~60 HD
@@ -1117,11 +1163,76 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
         follows either row height. In the bake, Satori rounds each row's top
         and height separately, so with 4 rows a seam can gain a 1 px gap or
         overlap and the last row can overhang the box by 1 px (clipped).
-      - **Alpha colourless** uses a flat grey master; printed Alpha colourless
-        cards are artifacts on a dark warm-brown border with a light crackle
-        text box (Sol Ring, Juggernaut) — an asset re-source.
-      - **Display-font word spacing:** "Jester's Mask" renders a 42 px word gap
-        (17–25 px elsewhere) on every template — CardDisplay font metrics.
+      - [x] **Alpha colourless ARTIFACTS** re-sourced (owner decision
+        2026-09-25: the brown frame for colourless artifacts only): agclassic
+        has an eighth master, `a.png`, MSE's artifact card (acard.jpg — dark
+        warm-brown border, light crackle text box, like Sol Ring / Juggernaut)
+        through the same re-cut, with the print's artifact-grey ink. A
+        colourless card whose card type is Artifact or whose supertype says
+        Artifact paints it (`FrameProfile.artifactMasterKeys`, resolved by
+        `frameMasterKey` for the preview, the bake, the foil/etched masks, the
+        preload and the creator's tiles); every other colourless card (Dawn
+        Treader) keeps the grey `c.png` (ccard.jpg). The frame_reviews gate
+        stays per colour — verifying agclassic/c publishes both masters.
+        alphaland keeps one land frame per colour (Alpha printed no artifact
+        land). An imported Artifact Creature still loses its Artifact word
+        (1.7), so it paints the grey card until the user types the supertype.
+      - [x] **Alpha name + type line lettering:** silver with the lower-right
+        emboss on the black frame (its dark name all but vanished: 1.15 : 1)
+        and on the artifact card (1.44 : 1) only (owner decision 2026-09-25);
+        dark on every other colour — the print is silver, but on our blue the
+        silver read worse (2.4 against 4.1 : 1) and on red, green and the
+        brown land frame it changed little. The ink rides on the text span
+        only (`bandTextStyle`), so pips and set symbols inherit no shadow.
+      - [x] **Display-font word spacing:** "Jester's Mask" rendered a 42 px
+        word gap (17–25 px elsewhere) on every template. Not the font: Satori
+        places each word after a space at the preceding characters' UNKERNED
+        advances but draws each word kerned, so every gap grew by the kerning
+        inside the words before it (Beleren kerns hard; ' + s is −224/2048 em)
+        — names, type lines and the "ART:" line alike; the browser preview
+        never had it. `displayLine()` (lib/cards/card-display.ts) joins each
+        single-line display text with no-break spaces in both renderers, so
+        the bake draws one kerned run; both now omit Beleren's space-pair
+        kerns (space + T, comma + space…), which the bake never applied.
+        Satori still SIZES the run unkerned, so the centred token title and
+        type line (m15token, m15tokenartifact, alphatoken) take a negative
+        margin of the run's kerning (`alignedText` in card-image.tsx, metrics
+        in lib/render/satori-text.ts) and drop the filler span + gap the
+        preview never had: production bakes token names 13–27 px left of the
+        preview at HD. Still open, pre-existing: an overflowing line
+        ellipsizes a character earlier in the bake (Satori fits unkerned
+        widths); centred stat values keep the same half-kerning offset (P/T
+        "4/4" kerns −271/2048 em: ~4 px left at HD); Satori never forms
+        Beleren's ffi ligature the browser draws ("Office").
+      - **Round-5 open tail (pre-existing, found by the v29 tracks; none is
+        a v29 regression):** a walker whose abilities don't fit even at 5 pt
+        still overprints or clips (warn in the editor);
+        the rules estimate reads ALL-CAPS text as lowercase outside
+        planeswalker rows; the preview draws cost pips at 0.95× the bake's
+        disc with a narrower gap (3.4); flip / split bakes have no name–cost
+        gap on the second face (aftermath has it); the bake ignores a
+        transform-origin component of exactly 0 (focal point 0 with zoom ≠ 1,
+        1 public card, c3379789); the foil mask over-draws the empty margin
+        of zoomed-out art on normal windows; bloomanime's four-way white
+        outline bakes as one shadow (its white name nearly vanishes over light
+        art); a non-planeswalker on m15pw shows the shield notch; Chromium
+        rejects `mplantin.woff2` (OTS cmap) and falls back to the .woff;
+        rules text can wrap a word differently in the editor and the
+        saved image at any size, not only at 5 pt. MPlantin has no kerning;
+        the cause is that the bake gives every word run its gap as a right
+        margin (a line must also hold its last word's gap) and sets its type
+        at a whole-pixel size. So Cut // Ribbons' top half "Cut deals 4
+        damage to target creature." is 1 line in the editor and 2 in the
+        bake, and 0.22's compare-tool check will show that. Likewise the
+        1 / 1 / 5 test walker's −8 is 4 lines against 5.
+        (`lib/cards/rules-metrics.ts` `wrapRulesText` models both wraps; the
+        fix is one gap rule in both renderers, which would re-wrap every
+        card, so it needs its own sweep.)
+        At aftermath's 5 pt floor each renderer places its own "…" in the
+        sideways bottom name bar: "Memory of the Overgr…" in the editor and
+        "Memory of the Over…" in the bake, whose pips sit wider (3.4).
+        Cut the name in shared code, as `fitDetachedCostTitle` does for the
+        planeswalker and Modern names (0 aftermath cards in production).
 - [ ] **4.32 [P1] Standard borderless frame for regular cards (`m15borderless`) from CC 'Borderless (Alt)'** (borderless research 2026-09-25) — This is the 2019+ look: art to the edges, dark translucent bars and text box with white ink, and a black bottom bar holding the collector line. It covers 3,425 printings (2,177 without a crown), about 54 % of all borderless paper printings. Nothing ships today: the "borderless showcases" are MSE scrims with an inset art slot (4.35), and 4.7 named the wrong CC pack (its Borderless bullet now points here).
       - **Source.** CC `packBorderless.js` @2fcddba (`groupShowcase-5.js`:49), `img/frames/m15/borderless/m15GenericShowcaseFrame{W,U,B,R,G,M,A,L,C}.png`. All are 1500×2100 native: sides α0, box RGBA 0,0,0,128, opaque bottom bar from 92.24 % H with small fins up the side edges. There are 8 P/T plates, `m15/borderless/pt/*.png` (274×140, at 76.4/88.62/18.27×6.67). On FDN #311 the bars and pinlines line up within a few px. The frames are already flat per colour; the 4.3 importer copies them, cuts the corners to the 3.23 radius, and records provenance in `lib/cards/frame-sources.json` (bucket only, never git). Its mask list (Pinline/Title/Type/Rules/Border) is also what 4.34 and coloured artifacts need.
       - **Profile.** `{...M15, artSlot 0/0/100/92.24, ink #ffffff}`, spreading the M15 profile as 4.4 shipped it (v24, #380). CC's text bounds equal its regular M15 bounds (title y 5.22, type y 56.64, rules 63.03 h 28.75; `packBorderless.js`), so our measured M15 carries over (and 4.20's sizes when they land). Symbol right edge 92.13 / centre y 59.10. P/T value 79.28/90.2/13.67×3.72; the plate goes in 4.18's `plateRect` (shipped in #380) at the plate bounds 76.4/88.62/18.27×6.67, which keeps its native 1.96 aspect. Brand mark in the bar.
@@ -1400,7 +1511,7 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
       never reached a saved image. Both renderers now draw one shared
       luminance-masked holographic sheen (`lib/cards/foil-finish.tsx`) under
       the ink; finish-scoped sweep. Planeswalker ability stripes carry their
-      own sheen too; open: translucent rules backdrops (4.31).
+      own sheen too, and translucent rules backdrops from v29 (4.31).
       (Status at `267f46c`: preview and bake are aligned for both (#381 v26,
       #382 v28), so only the **[decide]** is left. The Foil, Etched and
       Showcase chips in `components/creator/panels/effects-panel.tsx` are

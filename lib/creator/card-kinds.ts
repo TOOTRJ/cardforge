@@ -223,7 +223,9 @@ export function kindFromCard(
 // ---------------------------------------------------------------------------
 
 /** The 7-color PNG contract every template ships (frame-layer.tsx maps a
- *  ColorIdentity[] onto one of these via pickFrameColorKey). */
+ *  ColorIdentity[] onto one of these via pickFrameColorKey). A template may
+ *  ship an extra type-dressed master too — agclassic's colourless artifact
+ *  card "a" (frameMasterKey) — which is not a colour and has no chip. */
 export const FRAME_COLOR_KEYS = ["w", "u", "b", "r", "g", "c", "m"] as const;
 export type FrameColorKey = (typeof FRAME_COLOR_KEYS)[number];
 

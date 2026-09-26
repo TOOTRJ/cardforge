@@ -1,7 +1,12 @@
 import "server-only";
 
 import type { createAdminClient } from "@/lib/supabase/admin";
-import { CARD_LAYOUT_VERSION, hasNewerLook, latestOptInVersion } from "@/lib/cards/layout-version";
+import {
+  CARD_LAYOUT_VERSION,
+  hasNewerLook,
+  latestOptInVersion,
+  type ScopeCard,
+} from "@/lib/cards/layout-version";
 
 // ---------------------------------------------------------------------------
 // "Your cards have a newer look" notifications.
@@ -20,15 +25,15 @@ import { CARD_LAYOUT_VERSION, hasNewerLook, latestOptInVersion } from "@/lib/car
 // anyone again, and a deploy with no opt-in version notifies nobody.
 // ---------------------------------------------------------------------------
 
-export type StaleCardRow = {
+/** A scanned card: its stamp, render and visibility, plus the columns the
+ *  card-scoped bumps read (ScopeCard — rarity, set icon, and since v29 the
+ *  type line, title and stats; one it lacks counts as "can't tell"). */
+export type StaleCardRow = ScopeCard & {
   owner_id: string;
   layout_version: number | null;
   frame_style: unknown;
   rendered_image_url?: string | null;
   visibility?: string | null;
-  rarity?: string | null;
-  set_icon_url?: string | null;
-  set_icon_code?: string | null;
 };
 
 /** Template-aware stale count per owner. Pure — unit-tested. */
@@ -39,13 +44,9 @@ export function staleCountsByOwner(rows: Iterable<StaleCardRow>): Map<string, nu
     // yet", not a newer look (lib/cards/layout-version.ts hasNewerLook).
     if (
       !hasNewerLook({
+        ...row,
         visibility: row.visibility ?? "public",
-        layout_version: row.layout_version,
         rendered_image_url: row.rendered_image_url ?? null,
-        frame_style: row.frame_style,
-        rarity: row.rarity,
-        set_icon_url: row.set_icon_url,
-        set_icon_code: row.set_icon_code,
       })
     ) {
       continue;
@@ -106,7 +107,9 @@ export async function notifyOwnersOfRenderUpdates(
   for (let from = 0; from < MAX_ROWS; from += PAGE) {
     const { data, error } = await admin
       .from("cards")
-      .select("owner_id, layout_version, frame_style, rendered_image_url, visibility, rarity, set_icon_url, set_icon_code")
+      .select(
+        "owner_id, layout_version, frame_style, rendered_image_url, visibility, rarity, set_icon_url, set_icon_code, title, supertype, card_type, subtypes, power, toughness, loyalty, defense, back_face",
+      )
       .in("visibility", ["public", "unlisted"])
       // Coarse SQL filter; hasNewerLook decides. Null stamps and missing
       // renders are never a newer look, so they aren't scanned at all.

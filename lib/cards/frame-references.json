@@ -1581,6 +1581,7 @@
     }
   },
   "agclassic": {
+    "note": "c paints two masters: a colourless ARTIFACT (card type Artifact, or Artifact in the supertype) the brown artifact card (a.png), any other colourless card the grey one (c.png). Verifying c publishes both. Jayemdae Tome (Artifact) renders on the brown card; Battering Ram (Artifact Creature) imports without its Artifact word until TODO 1.7, so it renders on the grey one. Alpha printed no colourless non-artifact: eyeball the grey card on a colourless creature in the creator.",
     "colors": {
       "w": [
         {

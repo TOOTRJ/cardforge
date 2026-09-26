@@ -18,6 +18,11 @@ import { normalizeFrameTemplate } from "@/lib/cards/card-display";
 // payload or a stale client can't save a combination the admin hasn't
 // published.
 //
+// The gate is per COLOUR (pickFrameColorKey), never per master: a colour a
+// profile dresses by type (FrameProfile.artifactMasterKeys — Alpha's
+// colourless artifact paints the brown artifact card "a") is published with
+// its colour, so verifying agclassic/c publishes both of its masters.
+//
 // Pure + client-safe: the picker runs it client-side against the verified
 // keys the page fetched server-side.
 // ---------------------------------------------------------------------------

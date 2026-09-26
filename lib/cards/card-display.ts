@@ -156,6 +156,29 @@ export function buildTypeLine({
   return left || right || "Type";
 }
 
+// A single-line display-font (Beleren) text — title, type line, the display
+// footer — with every inner run of spaces joined into ONE no-break space.
+// Satori places each word after a space at the sum of the preceding
+// characters' UNKERNED advances but draws each word kerned, so every word
+// started late by the kerning inside the words before it: "Jester's Mask"
+// baked a word gap nearly twice the browser's (Beleren kerns ' + s alone by
+// −224/2048 em). A no-break space keeps the line one run that Satori
+// draws kerned from its first glyph. Both renderers print the same string,
+// so both also drop Beleren's space-pair kerns (space + A, comma + space…),
+// which the bake never applied. MPlantin has no kerning; body text keeps
+// its spaces (it wraps). Satori still SIZES the run unkerned, which only
+// shows where the line isn't at its band's start — the bake's centred bands
+// correct for it (alignedText, lib/render/card-image.tsx).
+export function displayLine(text: string): string {
+  return text.replace(/(\S)[ \t\n]+(?=\S)/g, "$1\u00a0");
+}
+
+/** displayLine for a slot set in either face (TextSlot.font: the footer is
+ *  body text unless its profile says "display"). */
+export function slotLine(font: "display" | "body" | undefined, text: string): string {
+  return font === "display" ? displayLine(text) : text;
+}
+
 // ---------------------------------------------------------------------------
 // Mana cost as words — the plain-text twin of the pips a crawler can't read
 // from the rendered card. "{2}{U}{U}" → "2 generic, 2 blue"; hybrid,

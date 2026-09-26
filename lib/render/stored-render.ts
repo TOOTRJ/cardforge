@@ -1,7 +1,7 @@
 import "server-only";
 
 import sharp from "sharp";
-import { hasPendingCorrection } from "@/lib/cards/layout-version";
+import { hasPendingCorrection, type ScopeCard } from "@/lib/cards/layout-version";
 import { isAllowedServerImageFetchUrl } from "@/lib/validation/card";
 import { RENDER_PRESETS, type RenderPreset } from "@/lib/render/card-image";
 
@@ -37,17 +37,15 @@ const FETCH_TIMEOUT_MS = 10_000;
 /** An HD render is ~1 MB; a stored object far larger than that isn't ours. */
 const MAX_RENDER_BYTES = 25 * 1024 * 1024;
 
-export type StoredRenderRow = {
+/** The row as the routes read it (`select("*")`). `frame_style` lets a
+ *  template-scoped bump leave other templates' renders current, and the
+ *  other ScopeCard columns feed the card-scoped bumps
+ *  (lib/cards/layout-version.ts VERSION_SCOPES). All optional: a column the
+ *  row lacks counts as "can't tell", so every bump that could reach it
+ *  counts. */
+export type StoredRenderRow = ScopeCard & {
   rendered_image_url: string | null;
   layout_version: number | null;
-  /** `cards.frame_style` jsonb — lets a template-scoped bump leave other
-   *  templates' renders current. Optional: without it every bump counts. */
-  frame_style?: unknown;
-  /** Card-scoped bumps (lib/cards/layout-version.ts VERSION_SCOPES) look at
-   *  these; optional for the same reason. */
-  rarity?: string | null;
-  set_icon_url?: string | null;
-  set_icon_code?: string | null;
 };
 
 /** True when the row's baked PNG may stand in for a live render: a URL
@@ -56,13 +54,8 @@ export function hasServableStoredRender(row: StoredRenderRow): boolean {
   return (
     typeof row.rendered_image_url === "string" &&
     row.rendered_image_url.length > 0 &&
-    !hasPendingCorrection({
-      layout_version: row.layout_version,
-      frame_style: row.frame_style,
-      rarity: row.rarity,
-      set_icon_url: row.set_icon_url,
-      set_icon_code: row.set_icon_code,
-    })
+    // The whole row: v29 also reads the type line, title and stat columns.
+    !hasPendingCorrection({ ...row, frame_style: row.frame_style })
   );
 }
 
