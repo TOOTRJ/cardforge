@@ -676,7 +676,7 @@ Open decisions are marked **[decide]**; none blocks its phase.
       after a successful save (`card-creator-form.tsx`:584,949,2360,
       `lib/creator/form-schema.ts`:132, `panels/layout-panel.tsx`:109).
       **[decide]** allow a draft without it.
-      **[decide] recorded:** draft may save without the second-face name; publishing requires it (Claude's recommendation, owner to confirm in the PR).
+      **Decided 2026-09-26 (owner: "go with your recommendation"):** a draft may save without the second-face name; publishing requires it (`DRAFTS_MAY_OMIT_SECOND_FACE_NAME`).
       Shipped: one switch, `DRAFTS_MAY_OMIT_SECOND_FACE_NAME` in `lib/cards/second-face-name.ts` (its header names the 6 tests a flip rewrites), drives the form schema, the Save hint, the helper copy and the server gates (create, update as the patch over the stored row, bulk publish — all-or-nothing, naming up to 3 cards; bulk "make private" is never gated). `MoreOptions` opens on an error inside (`openWhen`, scrolls) and, without scrolling, while the Save hint asks for the missing name (`expandWhen`); the leave dialog stays open ("Saving…") until the save succeeds and shows why one failed.
 - [x] (shipped in feat/creator-reliability) **3b.6 [P2] Edit save resets only when `!isDirty`** so keystrokes during
       the refresh survive (`card-creator-form.tsx`:538,1885).
