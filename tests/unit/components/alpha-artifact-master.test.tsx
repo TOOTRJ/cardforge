@@ -92,6 +92,21 @@ describe("frameMasterKey — the one master rule", () => {
     }
   });
 
+  it("a see-through colour keeps its see-through art on its type-dressed master", () => {
+    // underFrameArtRect is keyed by the master painted: a profile that
+    // limits the under-frame art to a colour it also dresses by type must
+    // list the dressed master too, or its artifacts would lose the art. No
+    // profile does both today (m15's see-through "c" is not type-dressed).
+    for (const t of FRAME_TEMPLATE_VALUES) {
+      const profile = getFrameProfile(t);
+      const colors = profile.underFrameArt?.colors;
+      if (!colors) continue;
+      for (const [colorKey, master] of Object.entries(profile.artifactMasterKeys ?? {})) {
+        if (colors.includes(colorKey)) expect(colors, `${t}: ${colorKey} → ${master}`).toContain(master);
+      }
+    }
+  });
+
   it("frameColorKeysFor (the bake's preload) carries the artifact master", () => {
     expect(frameColorKeysFor(agclassic, ["colorless"], { cardType: "artifact" })).toEqual(["a"]);
     expect(frameColorKeysFor(agclassic, [], { cardType: "creature" })).toEqual(["c"]);

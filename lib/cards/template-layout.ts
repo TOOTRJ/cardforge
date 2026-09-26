@@ -195,7 +195,10 @@ export function bandTextStyle(slot: TextSlot, masterKey: string): { color?: stri
  *  printed cards. The art window keeps its exact crop (artSlot); this second
  *  layer covers `rect` with the same art (object-fit cover at the card's
  *  focal point) beneath it, and the frame's opaque window border hides the
- *  seam. `colors` limits it to some frame colour keys (M15's "c" only). */
+ *  seam. `colors` limits it to some frame MASTER keys (M15's "c" only) —
+ *  underFrameArtRect is given the master the card paints (frameMasterKey), so
+ *  a profile that also dresses a colour by type (artifactMasterKeys) lists
+ *  the dressed master too if that one is see-through as well. */
 export type UnderFrameArt = {
   rect: Rect;
   colors?: readonly string[];

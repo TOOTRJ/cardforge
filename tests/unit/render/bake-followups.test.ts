@@ -1,8 +1,13 @@
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import sharp from "sharp";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import type { FrameTemplate } from "@/types/card";
 import { bandTextStyle, footerInk, getFrameProfile, slotInk } from "@/lib/cards/template-layout";
+import { setFrameStorageForTests, type FrameManifest } from "@/lib/frames/frame-url";
+import { resetFrameAssetCacheForTests } from "@/lib/render/card-frames";
 import { renderCardImage, RENDER_PRESETS, type RenderPreset } from "@/lib/render/card-image";
 
 // ---------------------------------------------------------------------------
@@ -849,6 +854,76 @@ describe("Alpha masters are re-cut to the printed proportions", () => {
       }
     }
   });
+});
+
+describe("Alpha artifact master — the bake preloads it", () => {
+  // On Vercel public/frames is not on disk: the bake paints only the masters
+  // renderCardImage PRELOADED (frameColorKeysFor, which must be given the
+  // card's type), and a master it missed draws as a transparent pixel — the
+  // gallery tile, OG image and downloads of a colourless artifact would lose
+  // their frame while the preview still looked right. Pretend both of
+  // agclassic's colourless masters are bucket objects: getFrameDataUrl then
+  // throws for a master that was not preloaded, and the fetches say which one
+  // was (bake-dragon-split.test.ts's pattern).
+  const ORIGIN = "https://bucket.example/frames";
+  const bytes = (k: string) => readFileSync(join(process.cwd(), `public/frames/agclassic/${k}.png`));
+  const sha = (b: Buffer) => createHash("sha256").update(b).digest("hex");
+  const files = { a: bytes("a"), c: bytes("c") };
+  const urlOf = (k: keyof typeof files) => `${ORIGIN}/agclassic/${k}.${sha(files[k]).slice(0, 12)}.png`;
+  let restore: () => void = () => {};
+  const realFetch = globalThis.fetch;
+  const fetchSpy = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+    const url = String(input instanceof Request ? input.url : input);
+    // Satori's first render in the file loads its wasm from a data: URL.
+    if (!url.startsWith(ORIGIN)) return realFetch(input, init);
+    const k = (["a", "c"] as const).find((key) => urlOf(key) === url);
+    return k
+      ? new Response(new Uint8Array(files[k]), { status: 200, headers: { "content-type": "image/png" } })
+      : new Response(null, { status: 404 });
+  });
+  /** The bucket frames the render fetched. */
+  const bucketFetches = () =>
+    fetchSpy.mock.calls.map(([input]) => String(input)).filter((url) => url.startsWith(ORIGIN));
+
+  beforeEach(() => {
+    resetFrameAssetCacheForTests();
+    const manifest: FrameManifest = {
+      version: 1,
+      bucket: "frames",
+      files: Object.fromEntries(
+        Object.entries(files).map(([k, b]) => [
+          `agclassic/${k}.png`,
+          { hash: sha(b).slice(0, 12), sha256: sha(b), bytes: b.length, width: 1500, height: 2100 },
+        ]),
+      ),
+    };
+    restore = setFrameStorageForTests({ manifest, origin: ORIGIN });
+    fetchSpy.mockClear();
+    vi.stubGlobal("fetch", fetchSpy);
+  });
+  afterEach(() => {
+    restore();
+    vi.unstubAllGlobals();
+    resetFrameAssetCacheForTests();
+  });
+
+  it.each<[string, Partial<CardPreviewData>, "a" | "c"]>([
+    ["Jester's Mask (a colourless artifact) → a.png", { colorIdentity: ["colorless"], cardType: "artifact", power: null, toughness: null }, "a"],
+    ["Juggernaut (a colourless Artifact Creature) → a.png", { colorIdentity: [], cardType: "creature", supertype: "Artifact" }, "a"],
+    [
+      "Dawn Treader (a colourless legendary creature, foil) → c.png",
+      { colorIdentity: [], cardType: "creature", supertype: "Legendary", frameStyle: { template: "agclassic", finish: "foil" } },
+      "c",
+    ],
+  ])("%s: the bake preloads that master, and only it", async (_label, over, want) => {
+    const res = await renderCardImage(
+      card("agclassic", { cost: "{4}", subtypes: [], ...over }),
+      "default",
+      { brandMark: false, watermarkText: null },
+    );
+    expect((await res.arrayBuffer()).byteLength).toBeGreaterThan(0);
+    expect(bucketFetches()).toEqual([urlOf(want)]);
+  }, 60_000);
 });
 
 describe("Dragon Wing P/T plates (v25)", () => {
