@@ -564,3 +564,134 @@ describe("3b.4 dual lands are nonbasic", () => {
     expect(screen.getByText("Land icon")).toBeTruthy();
   });
 });
+
+// ---------------------------------------------------------------------------
+// 3b.5 — the inline frames' second-face name (Adventure spell, split /
+// aftermath / flip half) was silently required for ANY save: Save stayed
+// enabled, the save failed on a field folded away in the Identity step's
+// "More options", and the leave dialog's "Save as draft" closed before the
+// failed submit. [decide] implemented as the recommendation: a draft may be
+// saved without it; publishing needs it.
+// ---------------------------------------------------------------------------
+
+const saveHint = () =>
+  screen.queryByText(/to enable Save\.$/, { selector: "p" })?.textContent ?? null;
+
+async function goToLastStep() {
+  while (screen.queryByRole("button", { name: /^Next/ })) {
+    await clickNext();
+  }
+}
+
+const SPLIT_CARD = {
+  title: "Fire",
+  card_type: "instant",
+  subtypes: [],
+  power: null,
+  toughness: null,
+  rules_text: "Fire deals 2 damage divided as you choose among one or two targets.",
+  frame_style: { finish: "regular", template: "split" },
+  back_face: { title: "Ice", card_type: "instant", rules_text: "Tap target permanent." },
+};
+
+describe("3b.5 the second face's name", () => {
+  it("publishing a split card lists the missing name; a draft saves without it", async () => {
+    actions.createCardAction.mockResolvedValue({
+      ok: true,
+      cardId: "44444444-4444-4444-8444-444444444444",
+      slug: "fire",
+    });
+    renderForm({ mode: "create" });
+    await pickKind(/^Split/);
+    await clickNext(); // Identity
+    await typeTitle("Fire");
+    expect(saveHint()).toBe("Add artwork and the second face's name to enable Save.");
+    expect(saveButton().disabled).toBe(true);
+
+    await goToLastStep();
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("save-as-draft"));
+    });
+    expect(saveHint()).toBeNull();
+    expect(saveButton().disabled).toBe(false);
+    await clickSave();
+
+    await waitFor(() => expect(actions.createCardAction).toHaveBeenCalledTimes(1));
+    const payload = actions.createCardAction.mock.calls[0][0];
+    expect(payload.visibility).toBe("private");
+    expect(payload.back_face.title).toBe("");
+    expect(payload.back_face.card_type).toBeTruthy();
+  });
+
+  it("an Adventure names what's missing as the adventure", async () => {
+    renderForm({ mode: "create" });
+    await pickKind(/^Adventure/);
+    await clickNext();
+    await typeTitle("Bonecrusher Giant");
+    expect(saveHint()).toBe("Add artwork and the adventure's name to enable Save.");
+  });
+
+  it("edit: clearing a public card's second-face name disables Save and says why", async () => {
+    renderForm({ mode: "edit", card: savedCard({ ...SPLIT_CARD, visibility: "public" }) });
+    // Identity step → More options → the second face's name field.
+    const nameInput = screen.getByPlaceholderText("Insectile Aberration") as HTMLInputElement;
+    expect(nameInput.value).toBe("Ice");
+    await act(async () => {
+      fireEvent.change(nameInput, { target: { value: "" } });
+    });
+    expect(saveHint()).toBe("Add the second face's name to enable Save.");
+    expect(saveButton().disabled).toBe(true);
+  });
+
+  it("a second-face error opens the folded More options that holds the field", async () => {
+    actions.updateCardAction.mockResolvedValue({
+      ok: false,
+      fieldErrors: { "back_face.title": "That name is taken by the front face." },
+    });
+    renderForm({ mode: "edit", card: savedCard({ ...SPLIT_CARD, visibility: "private" }) });
+    const details = screen.getByText(/More options — artist credit & second face/).closest(
+      "details",
+    ) as HTMLDetailsElement;
+    expect(details.open).toBe(false);
+    await typeTitle("Fire, Again");
+    await clickSave();
+
+    await waitFor(() => expect(details.open).toBe(true));
+    expect(screen.getByText("That name is taken by the front face.")).toBeTruthy();
+  });
+
+  it("the leave dialog stays open through a failed save, says why, and continues only after a successful one", async () => {
+    actions.updateCardAction
+      .mockResolvedValueOnce({ ok: false, formError: "The server said no." })
+      .mockResolvedValueOnce({ ok: true, slug: "emberbound-wyrm" });
+    renderForm({ mode: "edit", card: savedCard() });
+    await typeTitle("Emberbound Wyrm, Reborn");
+    // An in-app link while dirty → the guard asks.
+    await act(async () => {
+      fireEvent.click(screen.getByRole("link", { name: "Cancel" }));
+    });
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog.textContent).toMatch(/Leave without saving\?/);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /Save changes/ }));
+    });
+    await waitFor(() => expect(actions.updateCardAction).toHaveBeenCalledTimes(1));
+    // Still open, with the reason; nothing navigated.
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    await waitFor(() =>
+      expect(
+        Array.from(screen.getByRole("dialog").querySelectorAll("[role='alert']")).map(
+          (el) => el.textContent,
+        ),
+      ).toContain("The server said no."),
+    );
+    expect(router.push).not.toHaveBeenCalled();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /Save changes/ }));
+    });
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith(`/go/card/${CARD_ID}`));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+});

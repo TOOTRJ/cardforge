@@ -5,6 +5,7 @@
 // the shared input/textarea class builders, and form-wide option constants
 // used by more than one step. Extracted from card-creator-form.tsx.
 
+import { useEffect, useRef } from "react";
 import {
   Box,
   Coins,
@@ -41,12 +42,24 @@ export const CARD_TYPE_OPTIONS: ChipOption<CardType>[] = [
 export function MoreOptions({
   summary,
   children,
+  openWhen = false,
 }: {
   summary: string;
   children: React.ReactNode;
+  /** True while a field inside has an error: the section opens (and never
+   *  snaps shut as the user fixes it) — a folded-away error is an invisible
+   *  one (TODO 3b.5). */
+  openWhen?: boolean;
 }) {
+  const ref = useRef<HTMLDetailsElement>(null);
+  useEffect(() => {
+    const details = ref.current;
+    if (!openWhen || !details || details.open) return;
+    details.open = true;
+    details.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
+  }, [openWhen]);
   return (
-    <details className="rounded-lg border border-border/60 bg-elevated/30">
+    <details ref={ref} className="rounded-lg border border-border/60 bg-elevated/30">
       <summary className="cursor-pointer list-none px-4 py-2 text-xs font-semibold uppercase tracking-wider text-subtle transition-colors hover:text-muted [&::-webkit-details-marker]:hidden">
         {summary}
       </summary>

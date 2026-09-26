@@ -125,8 +125,13 @@ describe("frameStyleSchema", () => {
 });
 
 describe("backFaceSchema (chunk 10)", () => {
-  it("requires a title", () => {
+  it("requires a title field", () => {
     expect(() => backFaceSchema.parse({})).toThrow();
+  });
+
+  it("3b.5: the title may be empty — the card actions decide by visibility", () => {
+    expect(backFaceSchema.parse({ title: "   " }).title).toBe("");
+    expect(() => backFaceSchema.parse({ title: "x".repeat(121) })).toThrow();
   });
 
   it("accepts a minimal back face", () => {

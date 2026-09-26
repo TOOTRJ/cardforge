@@ -8,6 +8,10 @@ import {
   frameKindUpdateGateError,
 } from "@/lib/cards/frame-kind-gate";
 import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
+import {
+  missingSecondFaceName,
+  SECOND_FACE_NAME_ERROR,
+} from "@/lib/cards/second-face-name";
 import { recordActivity } from "@/lib/analytics/funnel-server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { after } from "next/server";
@@ -244,6 +248,21 @@ export async function createCardAction(
     if (kindError) {
       return { ok: false, fieldErrors: { frame_style: kindError } };
     }
+  }
+
+  // A second face may stay unnamed on a private draft only (TODO 3b.5,
+  // lib/cards/second-face-name.ts) — judged at the visibility the row will
+  // be stored with (an artless "public" card lands private, see the insert).
+  if (
+    missingSecondFaceName(
+      data.back_face,
+      data.visibility === "public" && !data.art_url ? "private" : data.visibility,
+    )
+  ) {
+    return {
+      ok: false,
+      fieldErrors: { "back_face.title": SECOND_FACE_NAME_ERROR },
+    };
   }
 
   // Entitlement gates. Premium frame/finish (our own tech only — never WotC
@@ -610,6 +629,23 @@ export async function updateCardAction(
       update.visibility = "private";
     }
   }
+  // An unnamed second face is a draft's privilege (TODO 3b.5): judged on the
+  // card as it will be stored — the patched back face over the stored one,
+  // at the visibility the rule above settled on — so both "publish a draft
+  // with an unnamed half" and "clear the name of a public card" refuse.
+  if (
+    missingSecondFaceName(
+      data.back_face !== undefined
+        ? data.back_face
+        : (existing.back_face as { title?: string | null } | null),
+      update.visibility ?? existing.visibility,
+    )
+  ) {
+    return {
+      ok: false,
+      fieldErrors: { "back_face.title": SECOND_FACE_NAME_ERROR },
+    };
+  }
   if (data.parent_card_id !== undefined) {
     // Same pre-flight createCardAction runs: the parent must exist and a
     // card can't be its own remix (a dangling id used to be stored as-is).
@@ -820,7 +856,7 @@ export async function updateCardsVisibilityAction(
   // Pre-flight ownership: every id must exist AND be owned by the caller.
   const { data: existing, error: existingError } = await supabase
     .from("cards")
-    .select("id, owner_id, rendered_image_url")
+    .select("id, owner_id, title, back_face, rendered_image_url")
     .in("id", ids);
   if (existingError) {
     return { ok: false, error: existingError.message };
@@ -835,6 +871,24 @@ export async function updateCardsVisibilityAction(
     return {
       ok: false,
       error: "Some cards aren't yours to edit.",
+    };
+  }
+  // Publishing needs every second face named (TODO 3b.5): a draft saved
+  // with an unnamed Adventure / split half can't go out from here either.
+  const unnamed = existing.filter((c) =>
+    missingSecondFaceName(
+      c.back_face as { title?: string | null } | null,
+      parsed.data.visibility,
+    ),
+  );
+  if (unnamed.length > 0) {
+    const names = unnamed
+      .slice(0, 3)
+      .map((c) => `“${c.title}”`)
+      .join(", ");
+    return {
+      ok: false,
+      error: `Name the second face of ${names}${unnamed.length > 3 ? ` and ${unnamed.length - 3} more` : ""} in the editor before publishing — nothing was changed.`,
     };
   }
 

@@ -143,6 +143,7 @@ import {
   serializeSaga,
 } from "@/lib/cards/face-content";
 import { basicLandManaKey } from "@/lib/cards/watermark";
+import { missingSecondFaceName } from "@/lib/cards/second-face-name";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
 import type { FrameProfileOverridesMap } from "@/lib/cards/profile-override";
 import {
@@ -315,6 +316,28 @@ const STEP_RAIL_ICONS: Record<string, React.ReactNode> = {
 const SAVE_REQUEST_FAILED =
   "Couldn't reach PipGlyph to save. Your card is still here — check your connection and click Save again.";
 
+/** "a, b and c" — the Save hint's list of what's missing. */
+function listPhrase(parts: readonly string[]): string {
+  return parts.length <= 1
+    ? parts.join("")
+    : `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
+}
+
+/** The first message in a (nested) react-hook-form errors object, or in a
+ *  server action's flat `fieldErrors` map. */
+function firstErrorMessage(errors: unknown): string | null {
+  if (typeof errors === "string") return errors || null;
+  if (!errors || typeof errors !== "object") return null;
+  const message = (errors as { message?: unknown }).message;
+  if (typeof message === "string" && message) return message;
+  for (const [key, value] of Object.entries(errors)) {
+    if (["ref", "message", "type", "types"].includes(key)) continue;
+    const nested = firstErrorMessage(value);
+    if (nested) return nested;
+  }
+  return null;
+}
+
 /** A basic-only frame (the full-art basic land, TODO 0.26) can't draw a
  *  nonbasic land's rules. When the card stops being a basic land (Land type
  *  → Nonbasic, or a rename that clears the basic seed), move it to the land
@@ -372,6 +395,9 @@ export function CardCreatorForm({
   const confirmSpend = useCreditConfirm();
   const [isSubmitting, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
+  // Why the unsaved-changes dialog's save didn't happen (shown in the
+  // dialog, which stays open — TODO 3b.5).
+  const [leaveSaveError, setLeaveSaveError] = useState<string | null>(null);
   // Unsaved-changes guard. Armed from the form's dirty state below (a
   // mirrored ref-free flag, since useForm is created after this hook), and
   // whenever an AI request is spending a credit (owner decision 2026-09-17:
@@ -625,10 +651,23 @@ export function CardCreatorForm({
   // title) — names EVERY missing requirement so the user isn't peeled one
   // gap at a time.
   // A draft (Publish step checkbox → private) needs only a title; anything
-  // that can be seen by others needs artwork too.
+  // that can be seen by others needs artwork too — and a name for its second
+  // face (the Adventure spell, a split / aftermath / flip half; TODO 3b.5,
+  // lib/cards/second-face-name.ts). That name used to be required silently:
+  // Save stayed enabled, the save failed on a field folded away inside the
+  // Identity step's "More options".
   const saveMissing = [
     !watched.title.trim() ? "a title" : null,
     !watched.save_as_draft && !watched.art_url.trim() ? "artwork" : null,
+    watched.has_back_face &&
+    missingSecondFaceName(
+      watched.back_face,
+      watched.save_as_draft ? "private" : watched.visibility,
+    )
+      ? isAdventureFrame
+        ? "the adventure's name"
+        : "the second face's name"
+      : null,
   ].filter((part): part is string => part !== null);
   // Edit / remix: at least one field must change (owner decision
   // 2026-09-16). For a remix the visibility choice alone doesn't count — the
@@ -640,7 +679,7 @@ export function CardCreatorForm({
       : false;
   const saveDisabledReason =
     saveMissing.length > 0
-      ? `Add ${saveMissing.join(" and ")} to enable Save.`
+      ? `Add ${listPhrase(saveMissing)} to enable Save.`
       : deckRemix && remixSource && !isDirty
         ? "Change something to make it your own custom proxy — an exact copy can't be saved."
         : reviseUnchanged
@@ -1723,11 +1762,15 @@ export function CardCreatorForm({
   //   • "back"  → same, then jump to a fresh creator (/create?backFor=…) to
   //               build this card's back face.
   // `afterSave` (the unsaved-changes dialog) replaces the default post-save
-  // destination with the navigation the user was attempting.
+  // destination with the navigation the user was attempting; `onFailure`
+  // hears why a save didn't happen, so that dialog can say so.
   const runSubmit = (
     values: FormValues,
     intent: "save" | "back",
-    options: { afterSave?: () => void } = {},
+    options: {
+      afterSave?: () => void;
+      onFailure?: (message: string) => void;
+    } = {},
   ) => {
     setServerError(null);
     const createBackAfter = intent === "back";
@@ -1936,6 +1979,7 @@ export function CardCreatorForm({
               ? "premium_frame"
               : "capacity",
           );
+          options.onFailure?.("This save needs an upgrade — it wasn't saved.");
           return;
         }
         const message = failure.formError ?? unrendered;
@@ -1943,6 +1987,11 @@ export function CardCreatorForm({
           setServerError(message);
           toast.error(message);
         }
+        options.onFailure?.(
+          message ??
+            firstErrorMessage(failure.fieldErrors) ??
+            "The card couldn't be saved.",
+        );
       };
 
       // A save REQUEST that throws (offline, a 5xx, a stale action id after a
@@ -1953,6 +2002,7 @@ export function CardCreatorForm({
         console.error("[creator] save request failed", error);
         setServerError(SAVE_REQUEST_FAILED);
         toast.error(SAVE_REQUEST_FAILED);
+        options.onFailure?.(SAVE_REQUEST_FAILED);
       };
 
       if (mode === "create" || isRemix) {
@@ -2071,6 +2121,7 @@ export function CardCreatorForm({
       // edit
       if (!card?.id) {
         setServerError("Cannot find this card to update.");
+        options.onFailure?.("Cannot find this card to update.");
         return;
       }
       // An edit only ever carries the revisable fields — the locked
@@ -2557,9 +2608,14 @@ export function CardCreatorForm({
                     : null
             }
             saving={isSubmitting}
-            onStay={guard.clearPending}
+            saveError={leaveSaveError}
+            onStay={() => {
+              setLeaveSaveError(null);
+              guard.clearPending();
+            }}
             onLeave={() => {
               const pending = guard.pending;
+              setLeaveSaveError(null);
               guard.clearPending();
               guard.disarm();
               pending?.proceed();
@@ -2567,18 +2623,32 @@ export function CardCreatorForm({
             onSave={() => {
               const pending = guard.pending;
               if (!pending) return;
-              guard.clearPending();
+              setLeaveSaveError(null);
               if (!isEdit) {
                 // "Save as draft": force private for this save only.
                 setValue("save_as_draft", true, { shouldDirty: true });
                 setValue("visibility", "private", { shouldDirty: true });
               }
+              // The dialog stays up ("Saving…") until the save lands: only
+              // a SUCCESSFUL save clears the pending leave and continues it
+              // (TODO 3b.5). Clearing it first closed the dialog before a
+              // failed save, which then jumped to a field the user couldn't
+              // see — nothing saved, nothing said.
               void handleSubmit(
                 (values) =>
-                  runSubmit(values, "save", { afterSave: pending.proceed }),
+                  runSubmit(values, "save", {
+                    afterSave: () => {
+                      guard.clearPending();
+                      pending.proceed();
+                    },
+                    onFailure: setLeaveSaveError,
+                  }),
                 (formErrors) => {
                   const first = Object.keys(formErrors)[0];
                   if (first) goToIndex(stepIndexForField(first, steps));
+                  setLeaveSaveError(
+                    `Not saved: ${firstErrorMessage(formErrors) ?? "fix the highlighted field first."}`,
+                  );
                 },
               )();
             }}

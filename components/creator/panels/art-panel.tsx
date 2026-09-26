@@ -68,6 +68,7 @@ export function ArtPanel({ userId, backFaceSlot, aiSlot }: ArtPanelProps) {
             ? "More options — artist credit & second face"
             : "More options — artist credit"
         }
+        openWhen={Boolean(errors.artist_credit || (backFaceSlot && errors.back_face))}
       >
         <FieldGroup
           label="Artist credit"

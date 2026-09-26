@@ -130,6 +130,9 @@ type UnsavedChangesDialogProps = {
    *  save option and explains. */
   saveBlockedReason: string | null;
   saving: boolean;
+  /** Why the last save from this dialog didn't happen. The dialog stays
+   *  open through a save and only the caller closes it, on success. */
+  saveError?: string | null;
   onSave: () => void;
   onLeave: () => void;
   onStay: () => void;
@@ -141,6 +144,7 @@ export function UnsavedChangesDialog({
   saveKind,
   saveBlockedReason,
   saving,
+  saveError = null,
   onSave,
   onLeave,
   onStay,
@@ -174,7 +178,12 @@ export function UnsavedChangesDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(next) => (next ? undefined : onStay())}>
+    <Dialog
+      open={open}
+      // Not dismissable mid-save: the save's success is what continues
+      // the navigation.
+      onOpenChange={(next) => (next || saving ? undefined : onStay())}
+    >
       <DialogContent size="sm">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -189,6 +198,11 @@ export function UnsavedChangesDialog({
         </DialogHeader>
         {saveBlockedReason ? (
           <p className="px-5 text-xs leading-5 text-gold">{saveBlockedReason}</p>
+        ) : null}
+        {saveError && !saving ? (
+          <p role="alert" className="px-5 text-xs leading-5 text-danger">
+            {saveError}
+          </p>
         ) : null}
         <DialogFooter className="flex-wrap px-5 pb-5 pt-2">
           <Button type="button" variant="ghost" onClick={onStay} disabled={saving}>
