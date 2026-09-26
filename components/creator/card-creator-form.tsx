@@ -153,6 +153,7 @@ import {
   toBasicLandIdentity,
   toNonbasicLandIdentity,
   planKindChange,
+  KIND_DEFS,
   type CardKind,
   type FrameColorKey,
   type KindChangePatch,
@@ -1044,19 +1045,8 @@ export function CardCreatorForm({
       setValue(key, value as never, { shouldDirty: true });
     };
 
-    setIfPresent("title", patch.title);
-    setIfPresent("cost", patch.cost);
-    setIfPresent("card_type", patch.card_type);
-    setIfPresent("supertype", patch.supertype);
-    setIfPresent("subtypes_text", patch.subtypes_text);
-    setIfPresent("rarity", patch.rarity);
-    setIfPresent("rules_text", patch.rules_text);
-    setIfPresent("flavor_text", patch.flavor_text);
-    setIfPresent("power", patch.power);
-    setIfPresent("toughness", patch.toughness);
-    setIfPresent("loyalty", patch.loyalty);
-    setIfPresent("defense", patch.defense);
-
+    // Colour first, so a kind change below resolves its frame against the
+    // idea's colour (the order the Scryfall import uses).
     if (patch.color_identity) {
       setValue(
         "color_identity",
@@ -1068,11 +1058,44 @@ export function CardCreatorForm({
       );
     }
 
+    // The idea's type is a KIND change, never a bare card_type write (TODO
+    // 3b.2): a "Legendary Planeswalker" idea used to land card_type
+    // planeswalker on the plain m15 frame — no loyalty box, rows printed as
+    // text. applyKindProgrammatic moves the frame, the watermark default,
+    // the land seed and the loyalty/saga rows with it. An idea whose type
+    // the current kind already prints (a creature on Adventure, an
+    // enchantment on Saga, a creature on a snow frame) keeps the kind and
+    // its frame. The type line is locked while revising.
+    if (patch.card_type && !isRevise) {
+      const ideaType = patch.card_type as CardType;
+      const currentKind = kindFromCard(
+        getValues("card_type"),
+        getValues("frame_style.template"),
+      );
+      if (KIND_DEFS[currentKind].cardType !== ideaType) {
+        applyKindProgrammatic(kindFromCard(ideaType, undefined));
+      } else if (getValues("card_type") !== ideaType) {
+        setValue("card_type", ideaType, { shouldDirty: true });
+      }
+    }
+
+    setIfPresent("title", patch.title);
+    setIfPresent("cost", patch.cost);
+    setIfPresent("supertype", patch.supertype);
+    setIfPresent("subtypes_text", patch.subtypes_text);
+    setIfPresent("rarity", patch.rarity);
+    setIfPresent("rules_text", patch.rules_text);
+    setIfPresent("flavor_text", patch.flavor_text);
+    setIfPresent("power", patch.power);
+    setIfPresent("toughness", patch.toughness);
+    setIfPresent("loyalty", patch.loyalty);
+    setIfPresent("defense", patch.defense);
+
     // The AI writes rules_text — mirror it into the row editors when the
     // card is a walker/saga so the Text step reflects the patch.
     if (patch.rules_text !== undefined) {
       const patchedKind = kindFromCard(
-        (patch.card_type as CardType) || getValues("card_type"),
+        getValues("card_type"),
         getValues("frame_style.template"),
       );
       if (patchedKind === "planeswalker" || patchedKind === "saga") {

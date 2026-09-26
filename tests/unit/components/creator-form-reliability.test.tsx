@@ -87,9 +87,27 @@ vi.mock("@/components/creator/card-ideas-dialog", () => ({
     </button>
   ),
 }));
-// The live preview is covered by its own tests; here it only has to exist.
+// The live preview is covered by its own tests; here it reports the watched
+// form values it was handed, which is what the assertions read.
 vi.mock("@/components/cards/card-preview", () => ({
-  CardPreview: () => <div data-testid="card-preview" />,
+  CardPreview: (props: {
+    title?: string;
+    cardType?: string | null;
+    rulesText?: string;
+    frameStyle?: { template?: string };
+    faceContent?: unknown;
+    backFace?: { title?: string; card_type?: string } | null;
+  }) => (
+    <div
+      data-testid="card-preview"
+      data-title={props.title ?? ""}
+      data-card-type={props.cardType ?? ""}
+      data-template={props.frameStyle?.template ?? ""}
+      data-rules={props.rulesText ?? ""}
+      data-face-content={JSON.stringify(props.faceContent ?? null)}
+      data-back-face={JSON.stringify(props.backFace ?? null)}
+    />
+  ),
 }));
 
 import { CardCreatorForm } from "@/components/creator/card-creator-form";
@@ -228,6 +246,53 @@ async function clickSave() {
   });
 }
 
+/** What the live preview was last handed (desktop and mobile get the same). */
+function preview() {
+  const el = screen.getAllByTestId("card-preview")[0];
+  return {
+    title: el.dataset.title,
+    cardType: el.dataset.cardType,
+    template: el.dataset.template,
+    rules: el.dataset.rules,
+    faceContent: JSON.parse(el.dataset.faceContent ?? "null"),
+    backFace: JSON.parse(el.dataset.backFace ?? "null"),
+  };
+}
+
+async function pickKind(label: RegExp) {
+  const group = screen.getByRole("radiogroup", { name: "Card type" });
+  const chip = Array.from(group.querySelectorAll("[role='radio']")).find((el) =>
+    label.test(el.textContent ?? ""),
+  );
+  if (!chip) throw new Error(`no kind chip ${label}`);
+  await act(async () => {
+    fireEvent.click(chip);
+  });
+}
+
+async function applyIdea(patch: Record<string, unknown>) {
+  ideas.patch = patch;
+  await act(async () => {
+    fireEvent.click(screen.getByRole("button", { name: "test: apply idea" }));
+  });
+}
+
+const WALKER_IDEA = {
+  title: "Tamsin, Tide-Reader",
+  card_type: "planeswalker",
+  supertype: "Legendary",
+  subtypes_text: "Tamsin",
+  cost: "{2}{U}{U}",
+  color_identity: ["blue"],
+  rarity: "mythic",
+  rules_text: "+1: Draw a card.\n−2: Tap target creature.\n−7: You get an emblem.",
+  flavor_text: "",
+  power: "",
+  toughness: "",
+  loyalty: "4",
+  defense: "",
+};
+
 // ---------------------------------------------------------------------------
 // 3b.1 — a save request that THROWS (offline, a 5xx, a stale action id after
 // a deploy) used to escape the transition and reach the error boundary,
@@ -289,5 +354,68 @@ describe("3b.1 a failed save request keeps the editor", () => {
     expect(router.replace).toHaveBeenCalledWith("/card/tester/front-card/edit?step=publish");
     expect(toast.error).toHaveBeenCalledWith("Saved, but couldn't link it as the back face.");
     expect(screen.queryByTestId("error-boundary")).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 3b.2 — the Ideas dialog wrote card_type straight into the form, bypassing
+// the kind-change path (the only writer of the frame): a planeswalker idea
+// on the default frame saved as card_type planeswalker on plain m15.
+// ---------------------------------------------------------------------------
+
+describe("3b.2 an idea's card type goes through the kind change", () => {
+  it("a planeswalker idea on the default creature frame moves to the planeswalker frame", async () => {
+    renderForm({ mode: "create" });
+    expect(preview().template).toBe("m15");
+    await applyIdea(WALKER_IDEA);
+
+    expect(preview().cardType).toBe("planeswalker");
+    expect(preview().template).toBe("m15pw");
+    expect(preview().title).toBe("Tamsin, Tide-Reader");
+    // The ability rows are seeded from the idea's rules, so the preview
+    // prints loyalty rows.
+    expect(preview().faceContent?.loyalty?.abilities).toHaveLength(3);
+    expect(preview().faceContent.loyalty.abilities[0]).toEqual({
+      cost: "+1",
+      text: "Draw a card.",
+    });
+  });
+
+  it("an idea the current kind already prints keeps the kind and its frame", async () => {
+    renderForm({ mode: "create" });
+    await pickKind(/^Saga/);
+    expect(preview().template).toBe("saga");
+    await applyIdea({
+      ...WALKER_IDEA,
+      title: "The Drowned Archive",
+      card_type: "enchantment",
+      supertype: "",
+      subtypes_text: "Saga",
+      rules_text:
+        "I — Draw a card.\nII — Scry 2.\nIII — Return target creature to its owner's hand.",
+      loyalty: "",
+    });
+    expect(preview().template).toBe("saga");
+    expect(preview().cardType).toBe("enchantment");
+    expect(preview().faceContent?.saga?.chapters).toHaveLength(3);
+  });
+
+  it("an idea of another type leaves a layout kind the way a kind chip would", async () => {
+    renderForm({ mode: "create" });
+    await pickKind(/^Split/);
+    expect(preview().template).toBe("split");
+    await applyIdea({
+      ...WALKER_IDEA,
+      card_type: "creature",
+      supertype: "",
+      subtypes_text: "Merfolk",
+      loyalty: "",
+      power: "2",
+      toughness: "2",
+    });
+    expect(preview().cardType).toBe("creature");
+    expect(preview().template).toBe("m15");
+    // Leaving the split frame drops its intrinsic second half.
+    expect(preview().backFace).toBeNull();
   });
 });
