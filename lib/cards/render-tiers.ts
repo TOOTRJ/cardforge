@@ -24,10 +24,15 @@ import {
   ptToPct,
 } from "@/lib/cards/typography";
 
-// Average MPlantin advance width as a fraction of the font size. Measured
-// loosely (lowercase latin ≈ 0.46em, capitals ≈ 0.62em); 0.5 errs wide so the
-// estimate over-counts lines rather than under-counting them.
+// Average MPlantin advance width as a fraction of the font size
+// (public/fonts/mplantin.ttf: lowercase latin ≈ 0.49em, the space 0.28em,
+// capitals ≈ 0.74em); 0.5 errs wide for mixed-case text so the estimate
+// over-counts lines rather than under-counting them.
 const CHAR_W = 0.5;
+// A capital's advance, for the estimates that must not under-count ALL-CAPS
+// text (estimateRulesHeightW): 0.5 per capital left an all-caps ability two
+// lines short of what it drew.
+const CAPS_CHAR_W = 0.74;
 // An inline mana pip occupies the disc + its word gap ≈ 1.1em ≈ 2.2 CHAR_W.
 const MANA_CHARS = (RULES_TEXT.pipDiscEm + RULES_TEXT.wordGapEm) / CHAR_W;
 // Headroom for estimate error: accept a size only if the estimated height
@@ -53,13 +58,17 @@ export type RulesFitInput = {
 };
 
 /** Effective character count of one source line: each `{...}` mana token
- *  counts as a pip, words contribute their length plus a separating space. */
-function lineCharCount(line: string): number {
+ *  counts as a pip, words contribute their length plus a separating space.
+ *  `wideCaps` counts every capital at its own (wider) advance. */
+function lineCharCount(line: string, wideCaps = false): number {
   const manaTokens = line.match(/\{[^}]+\}/g)?.length ?? 0;
   const stripped = line.replace(/\{[^}]+\}/g, " ");
   const words = stripped.split(/\s+/).filter(Boolean);
   const wordChars = words.reduce((sum, w) => sum + w.length + 1, 0);
-  return wordChars + manaTokens * MANA_CHARS;
+  const capsExtra = wideCaps
+    ? (stripped.match(/\p{Lu}/gu)?.length ?? 0) * (CAPS_CHAR_W / CHAR_W - 1)
+    : 0;
+  return wordChars + capsExtra + manaTokens * MANA_CHARS;
 }
 
 function estimateHeight(
@@ -68,6 +77,7 @@ function estimateHeight(
   sizePct: number,
   lineHeight: number,
   boxWidthW: number,
+  wideCaps = false,
 ): number {
   // Characters that fit on one wrapped line at this size.
   const lineCapacity = Math.max(4, boxWidthW / (sizePct * CHAR_W));
@@ -76,7 +86,7 @@ function estimateHeight(
   let paragraphs = 0;
   let blanks = 0;
   for (const line of rulesLines) {
-    const chars = lineCharCount(line);
+    const chars = lineCharCount(line, wideCaps);
     if (chars === 0) {
       blanks += 1; // blank source line → paragraph spacer
       continue;
@@ -106,6 +116,12 @@ function estimateHeight(
  * `boxWidthW` wide, in card-width units — the wrap model fitRulesSizePct
  * uses, for layouts that fit several blocks side by side in one box (the
  * planeswalker ability rows, lib/cards/loyalty-rows.ts). Empty text → 0.
+ *
+ * Capitals count at their own width here. Each block gets a box of exactly
+ * its estimate plus a share of the slack, so an under-count spills into the
+ * next block; fitRulesSizePct keeps the plain count (one box, one estimate —
+ * changing it would move the fitted size of text that fits today on every
+ * frame).
  */
 export function estimateRulesHeightW(
   text: string,
@@ -115,7 +131,7 @@ export function estimateRulesHeightW(
 ): number {
   const rules = text.trim();
   if (!rules) return 0;
-  return estimateHeight(rules.split(/\n/), [], sizePct, lineHeight, boxWidthW);
+  return estimateHeight(rules.split(/\n/), [], sizePct, lineHeight, boxWidthW, true);
 }
 
 // Display-font (CardDisplay) average advance width as a fraction of the font

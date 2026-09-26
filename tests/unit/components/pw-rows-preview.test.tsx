@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render } from "@testing-library/react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { CardPreview } from "@/components/cards/card-preview";
 import { parseLoyaltyAbilities } from "@/lib/cards/card-display";
 import { LOYALTY_ROW, layoutLoyaltyRows } from "@/lib/cards/loyalty-rows";
@@ -61,10 +62,42 @@ describe("CardPreview — m15pw ability rows", () => {
       // The badge stays centred on its own row.
       expect(row.style.alignItems).toBe("center");
     });
-    // (happy-dom drops `cqw` lengths, so the badge's 1.5 em box — the
-    // LOYALTY_ROW constant both renderers read — is pinned on the source in
-    // tests/unit/render/render-parity.test.ts.)
+    // (happy-dom drops `cqw` lengths: the text size and the badge's 1.5 em
+    // box — the LOYALTY_ROW constant both renderers read — are pinned on the
+    // server markup below.)
     expect(LOYALTY_ROW.badgeHeightEm).toBe(1.5);
+  });
+
+  it("sets the rows' text at the layout's size, with the 1.5 em badge box (server markup keeps cqw)", () => {
+    const html = renderToStaticMarkup(
+      <CardPreview
+        title="Probe"
+        cost="{B}"
+        cardType="planeswalker"
+        colorIdentity={["black"]}
+        rulesText={WALKER_115}
+        loyalty="4"
+        frameStyle={{ template: "m15pw" }}
+      />,
+    );
+    const { sizePct } = layoutLoyaltyRows({
+      abilities: parseLoyaltyAbilities(WALKER_115),
+      rect: P.rules.rect,
+      baseSizePct: P.rules.sizePct,
+      aspect: 7 / 5,
+    });
+    // The opening tags up to the first stripe row: …, the rows' box, the row.
+    const firstRow = html.indexOf(`background:${P.loyaltyRows!.stripeAHex}`);
+    expect(firstRow).toBeGreaterThan(0);
+    const tags = html.slice(0, firstRow).match(/<div style="[^"]*/g)!;
+    const box = tags.at(-2)!;
+    expect(box).toContain("flex-direction:column");
+    expect(box).toContain(`font-size:${cqw(sizePct)}`);
+    // The row's badge box: the first div inside the row.
+    const rowTag = html.indexOf("<div", firstRow);
+    const badge = html.slice(rowTag, html.indexOf(">", rowTag));
+    expect(badge).toContain(`width:${cqw(sizePct * LOYALTY_ROW.badgeWidthEm)}`);
+    expect(badge).toContain(`height:${cqw(sizePct * LOYALTY_ROW.badgeHeightEm)}`);
   });
 
   it("lays out the editor-only hint rows the same way", () => {

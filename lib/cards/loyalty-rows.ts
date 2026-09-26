@@ -13,8 +13,9 @@
 // fractions of the rules box:
 //
 //   * each row needs its estimated text height (the rules-fit wrap model,
-//     lib/cards/render-tiers.ts) or one badge height, whichever is taller,
-//     plus its padding;
+//     lib/cards/render-tiers.ts estimateRulesHeightW, capitals counted at
+//     their own width) or one badge height, whichever is taller, plus its
+//     padding;
 //   * the text size is the largest step on the rules ladder at which all
 //     rows together fit the box (the whole box still shrinks its text when
 //     they don't);

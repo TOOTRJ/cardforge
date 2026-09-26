@@ -226,12 +226,16 @@ const PW_ORIGIN = "https://frames.test";
 // A static first row, like Coden's: every row gets the sheen, badged or not.
 const PW_RULES = "Static line.\n+1: Scry 1.\n−2: Draw a card.\n−7: You win.";
 
-/** The walker's ability rows as both renderers draw them (four one-line
- *  abilities: four equal rows). */
-function pwRowRects() {
+// 1 / 1 / 5 lines: content-sized rows, the last one about three times as tall.
+const PW_RULES_115 =
+  "+1: Scry 1.\n−2: Draw a card.\n−8: You get an emblem with \"At the beginning of your upkeep, exile the top three cards of your library. Until end of turn, you may play those cards, and you may spend mana as though it were mana of any color to cast them.\"";
+
+/** The walker's ability rows as both renderers draw them (PW_RULES: four
+ *  one-line abilities, four equal rows). */
+function pwRowRects(rulesText = PW_RULES) {
   const { rules } = getFrameProfile("m15pw");
   const { rowFractions } = layoutLoyaltyRows({
-    abilities: parseLoyaltyAbilities(PW_RULES),
+    abilities: parseLoyaltyAbilities(rulesText),
     rect: rules.rect,
     baseSizePct: rules.sizePct,
     aspect: H / W,
@@ -330,10 +334,11 @@ describe("foil finish — m15pw stand-in (real bakes)", () => {
       ...over,
     } as Partial<CardPreviewData>);
 
-  /** The blank right-hand part of each ability row (no badge, no text, clear
-   *  of the loyalty plate and of the row seams). */
-  const stripeProbes = () =>
-    pwRowRects().map((r) => {
+  /** The right-hand part of each ability row, clear of the badge, the loyalty
+   *  plate and the row seams — blank for PW_RULES (a long ability's text runs
+   *  through it; the ink is the same in every bake compared). */
+  const stripeProbes = (rulesText = PW_RULES) =>
+    pwRowRects(rulesText).map((r) => {
       const b = box(r, 0);
       return { x0: Math.round(W * 0.52), x1: Math.round(W * 0.74), y0: b.y0 + 8, y1: b.y1 - 8 };
     });
@@ -429,21 +434,29 @@ describe("foil finish — m15pw stand-in (real bakes)", () => {
     }
   }, 60_000);
 
-  it("continues the card-wide rainbow: over an opaque white stripe it matches the card-wide sheen over white art", async () => {
+  it.each([
+    ["four equal rows", PW_RULES],
+    // Each stripe's sheen follows its own content-sized row (TODO 3.13).
+    ["content-sized rows (1 / 1 / 5 lines)", PW_RULES_115],
+  ])("continues the card-wide rainbow over %s: an opaque white stripe matches the card-wide sheen over white art", async (_, rulesText) => {
     const mod = await renderer();
     const white = await solidArt(255);
     const stripes = (hex: string) => ({ m15pw: { loyaltyRows: { stripeAHex: hex, stripeBHex: hex } } });
+    if (rulesText === PW_RULES_115) {
+      const [a, , c] = pwRowRects(rulesText);
+      expect(c.heightPct).toBeGreaterThan(2.5 * a.heightPct);
+    }
     // Clear stripes show the card-wide sheen over the white art; opaque white
     // ones hide it and show their own at full strength. Same rainbow in the
     // same place — as long as each row's sheen keeps its card-space position.
     const [opaque, clear] = [
-      await bakeWith(mod, walker("foil", { artUrl: white, profileOverrides: stripes("#ffffff") })),
-      await bakeWith(mod, walker("foil", { artUrl: white, profileOverrides: stripes("rgba(255,255,255,0)") })),
+      await bakeWith(mod, walker("foil", { rulesText, artUrl: white, profileOverrides: stripes("#ffffff") })),
+      await bakeWith(mod, walker("foil", { rulesText, artUrl: white, profileOverrides: stripes("rgba(255,255,255,0)") })),
     ];
-    for (const p of stripeProbes()) expect(meanDelta(opaque, clear, p)).toBeLessThan(1.5);
+    for (const p of stripeProbes(rulesText)) expect(meanDelta(opaque, clear, p)).toBeLessThan(1.5);
     // No step where one row's sheen meets the next.
-    const { x0, x1 } = stripeProbes()[0];
-    for (const r of pwRowRects().slice(1)) {
+    const { x0, x1 } = stripeProbes(rulesText)[0];
+    for (const r of pwRowRects(rulesText).slice(1)) {
       const seam = Math.round((r.topPct / 100) * H);
       let step = 0;
       for (let x = x0; x < x1; x += 1) {

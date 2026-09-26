@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { parseLoyaltyAbilities } from "@/lib/cards/card-display";
 import { LOYALTY_ROW, layoutLoyaltyRows, loyaltyRowEdgesPx } from "@/lib/cards/loyalty-rows";
-import { estimateRulesHeightW, rulesSizeLadder } from "@/lib/cards/render-tiers";
+import { estimateRulesHeightW, fitRulesSizePct, rulesSizeLadder } from "@/lib/cards/render-tiers";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { detachedCostTitleWidthPct, manaCostWidthPct, TITLE_COST_GAP_PCT } from "@/lib/cards/title-band";
 import { RULES_TEXT, pctToPt } from "@/lib/cards/typography";
@@ -76,6 +76,30 @@ describe("layoutLoyaltyRows", () => {
     expect(pctToPt(sizePct)).toBeCloseTo(RULES_TEXT.hardFloorPt, 6);
     expect(sum(rowFractions)).toBeCloseTo(1, 10);
     for (const f of rowFractions) expect(f).toBeCloseTo(1 / 6, 10);
+  });
+
+  it("counts capitals at their own width, so an ALL-CAPS ability gets the rows it draws", () => {
+    // MPlantin capitals are ≈0.74 em against the 0.5 em a mixed-case letter
+    // is counted at: counted alike, an all-caps −3 got a 3-line row and drew
+    // 5 lines, over the next stripe and under the loyalty shield.
+    const caps =
+      "+1: CREATURES YOU CONTROL GET +2/+2 AND GAIN TRAMPLE UNTIL END OF TURN.\n−3: DESTROY TARGET CREATURE OR PLANESWALKER WITH MANA VALUE 4 OR GREATER. ITS CONTROLLER CREATES A TREASURE TOKEN AND A CLUE TOKEN.\n−8: YOU GET AN EMBLEM WITH \"WHENEVER A CREATURE YOU CONTROL ATTACKS, DRAW A CARD.\"";
+    const lower = caps.toLowerCase();
+    const size = M15PW.rules.sizePct;
+    const text = parseLoyaltyAbilities(caps)[1].text;
+    const columnW = 0.5;
+    expect(estimateRulesHeightW(text, size, RULES_TEXT.lineHeight, columnW)).toBeGreaterThan(
+      1.3 * estimateRulesHeightW(text.toLowerCase(), size, RULES_TEXT.lineHeight, columnW),
+    );
+    // So the caps walker fits at a smaller size than the same words in lower
+    // case.
+    const [c, l] = [layout(caps), layout(lower)];
+    expect(c.sizePct).toBeLessThan(l.sizePct);
+    // The whole-box fit (every other frame's rules box) keeps the plain
+    // count: capitals never move a fitted size there.
+    const fit = (rulesText: string) =>
+      fitRulesSizePct({ rulesText, flavorText: null, rect: M15PW.rules.rect, baseSizePct: size, aspect: ASPECT });
+    expect(fit(caps)).toBe(fit(lower));
   });
 
   it("gives a static (unbadged) ability and an empty hint row the badge-height floor", () => {

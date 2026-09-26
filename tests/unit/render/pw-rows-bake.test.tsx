@@ -15,8 +15,9 @@ import { RENDER_PRESETS } from "@/lib/render/card-image";
 // static ability lost its first lines in the saved image while the browser
 // grew that row in the editor. The rows are now sized from their text by
 // layoutLoyaltyRows (lib/cards/loyalty-rows.ts) and both renderers draw the
-// same boxes. Also here: a long name stops before the detached cost box
-// (4.31). The m15pw masters live in the frames bucket (never in git), so
+// same boxes, at the layout's text size — an ALL-CAPS walker included (its
+// capitals are counted at their own width). Also here: a long name stops
+// before the detached cost box (4.31). The m15pw masters live in the frames bucket (never in git), so
 // these bakes get a synthetic stand-in through a stubbed bucket — a white
 // card with a transparent art window — while the rows, badges, stripes and
 // geometry are the real M15PW profile's. Rendered at the "default" preset
@@ -136,24 +137,40 @@ describe("m15pw ability rows + title — real bakes", () => {
   }
   const lum = ([r, g, b]: readonly [number, number, number]) => 0.299 * r + 0.587 * g + 0.114 * b;
 
-  it("draws the rows layoutLoyaltyRows sized, each ability inside its own stripe (1 / 1 / 5 lines)", async () => {
-    const px = await bake({});
+  /** The rows as both renderers draw them, in this bake's pixels. */
+  function rowGeometry(rules: string) {
     const rect = P.rules.rect;
     const { sizePct, rowFractions } = layoutLoyaltyRows({
-      abilities: parseLoyaltyAbilities(WALKER_115),
+      abilities: parseLoyaltyAbilities(rules),
       rect,
       baseSizePct: P.rules.sizePct,
       aspect: H / W,
     });
     const top = Math.round((rect.topPct / 100) * H);
-    const edges = loyaltyRowEdgesPx(rowFractions, (rect.heightPct / 100) * H).map((e) => top + e);
+    const size = Math.round(sizePct * W); // the bake's fpx
     const left = Math.round((rect.leftPct / 100) * W);
-    const right = Math.round(((rect.leftPct + rect.widthPct) / 100) * W);
+    const padX = Math.round(size * LOYALTY_ROW.padXEm);
+    return {
+      size,
+      edges: loyaltyRowEdgesPx(rowFractions, (rect.heightPct / 100) * H).map((e) => top + e),
+      left,
+      right: Math.round(((rect.leftPct + rect.widthPct) / 100) * W),
+      bottom: Math.round(((rect.topPct + rect.heightPct) / 100) * H),
+      padX,
+      // Where the ability text starts: the row padding, the badge box and its
+      // gap, each rounded like LoyaltyRowsBake rounds them.
+      textLeft:
+        left + padX + Math.round(size * LOYALTY_ROW.badgeWidthEm) + Math.round(size * LOYALTY_ROW.badgeGapEm),
+    };
+  }
 
+  /** Stripe seams where the rows put them, and every ability's text inside
+   *  its own stripe (clear of both of its seams and the box's edges). */
+  function expectRowsHoldTheirText(px: Awaited<ReturnType<typeof bake>>, rules: string) {
+    const { size, edges, left, right, padX, textLeft } = rowGeometry(rules);
+    const count = edges.length - 1;
     // Stripe A (pale cream) and B (darker tan) alternate over the dark art:
     // walk down the rows' left padding and find where they change.
-    const size = Math.round(sizePct * W);
-    const padX = Math.round(size * LOYALTY_ROW.padXEm);
     expect(padX).toBeGreaterThan(5);
     const x = left + 4;
     const kind = (y: number) => (px(x, y)[2] > 176 ? "A" : "B");
@@ -161,16 +178,9 @@ describe("m15pw ability rows + title — real bakes", () => {
     for (let y = edges[0] + 12; y < edges.at(-1)! - 12; y += 1) {
       if (kind(y) !== kind(y - 1)) seams.push(y);
     }
-    expect(seams).toHaveLength(2);
+    expect(seams).toHaveLength(count - 1);
     seams.forEach((s, i) => expect(Math.abs(s - edges[i + 1])).toBeLessThanOrEqual(1));
-    // The long row really is the tall one, the short ones share the rest.
-    const heights = edges.slice(1).map((e, i) => e - edges[i]);
-    expect(Math.abs(heights[0] - heights[1])).toBeLessThanOrEqual(1);
-    expect(heights[2]).toBeGreaterThan(2.5 * heights[0]);
 
-    // Every ability's text stays inside its own stripe — before, the long
-    // ability ran over the seam above it and out of the box (clipped).
-    const textLeft = left + padX + Math.round(size * (LOYALTY_ROW.badgeWidthEm + LOYALTY_ROW.badgeGapEm));
     const textRight = Math.min(right - padX, Math.round((P.loyalty!.plateRect!.leftPct / 100) * W) - 4);
     const inkRows = new Set<number>();
     for (let y = edges[0]; y < edges.at(-1)!; y += 1) {
@@ -178,13 +188,65 @@ describe("m15pw ability rows + title — real bakes", () => {
         if (lum(px(xx, y)) < 70) inkRows.add(y);
       }
     }
-    for (let r = 0; r < 3; r += 1) {
+    for (let r = 0; r < count; r += 1) {
       const inRow = [...inkRows].filter((y) => y >= edges[r] && y < edges[r + 1]);
       expect(inRow.length, `row ${r} has text`).toBeGreaterThan(size / 2);
-      // Clear of both of its seams (and the box's own edges).
       expect(Math.min(...inRow) - edges[r], `row ${r} top`).toBeGreaterThanOrEqual(2);
       expect(edges[r + 1] - 1 - Math.max(...inRow), `row ${r} bottom`).toBeGreaterThanOrEqual(2);
     }
+  }
+
+  it("draws the rows layoutLoyaltyRows sized, each ability inside its own stripe (1 / 1 / 5 lines)", async () => {
+    const px = await bake({});
+    // Before, the long ability ran over the seam above it and out of the box
+    // (clipped).
+    expectRowsHoldTheirText(px, WALKER_115);
+    // The long row really is the tall one, the short ones share the rest.
+    const { edges, textLeft } = rowGeometry(WALKER_115);
+    const heights = edges.slice(1).map((e, i) => e - edges[i]);
+    expect(Math.abs(heights[0] - heights[1])).toBeLessThanOrEqual(1);
+    expect(heights[2]).toBeGreaterThan(2.5 * heights[0]);
+
+    // At the layout's text size: each row's text starts where the badge rail
+    // at that size ends (the rail is 3.2 em, so half a point off moves it
+    // ~7 px here).
+    for (let r = 0; r < 3; r += 1) {
+      const [y0, y1] = [edges[r] + 2, edges[r + 1] - 2];
+      let start = -1;
+      for (let x = textLeft - 6; x < textLeft + 40 && start < 0; x += 1) {
+        for (let y = y0; y < y1; y += 1) {
+          if (lum(px(x, y)) < 70) {
+            start = x;
+            break;
+          }
+        }
+      }
+      expect(start - textLeft, `row ${r} text start`).toBeGreaterThanOrEqual(-1);
+      expect(start - textLeft, `row ${r} text start`).toBeLessThanOrEqual(3);
+    }
+  }, 60_000);
+
+  it("gives ALL-CAPS abilities the rows they draw: nothing over a seam, nothing under the loyalty shield", async () => {
+    // Capitals are ≈1.5× a lower-case letter's width; counted alike, the −3
+    // got a 3-line row and drew 5 lines — over the next stripe, with the last
+    // ability's end hidden under the starting-loyalty shield.
+    const caps =
+      "+1: CREATURES YOU CONTROL GET +2/+2 AND GAIN TRAMPLE UNTIL END OF TURN.\n−3: DESTROY TARGET CREATURE OR PLANESWALKER WITH MANA VALUE 4 OR GREATER. ITS CONTROLLER CREATES A TREASURE TOKEN AND A CLUE TOKEN.\n−8: YOU GET AN EMBLEM WITH \"WHENEVER A CREATURE YOU CONTROL ATTACKS, DRAW A CARD.\"";
+    expectRowsHoldTheirText(await bake({ rulesText: caps }), caps);
+
+    // The shield hides whatever is under it, so bake the walker without one
+    // and look where it would sit (inside the box, clear of its rounded
+    // corner): no ability text there.
+    const px = await bake({ rulesText: caps, loyalty: null });
+    const { right, bottom, padX } = rowGeometry(caps);
+    const plate = P.loyalty!.plateRect!;
+    let hidden = 0;
+    for (let y = Math.round((plate.topPct / 100) * H); y < bottom - 2; y += 1) {
+      for (let x = Math.round((plate.leftPct / 100) * W); x < right - padX; x += 1) {
+        if (lum(px(x, y)) < 70) hidden += 1;
+      }
+    }
+    expect(hidden).toBe(0);
   }, 60_000);
 
   it("ends a long name one band gap before the detached cost's pips", async () => {
