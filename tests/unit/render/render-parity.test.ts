@@ -21,6 +21,16 @@ describe("set symbol", () => {
     expect(SET_SYMBOL).toContain("RARITY_INK");
     expect(SET_SYMBOL).not.toContain("ss-grad");
   });
+
+  it("hands the profile's keyline to every set symbol in both renderers; the bake draws it as copies", () => {
+    // Both call sites (inline in the type band, and symbolRect's box).
+    expect(PREVIEW.match(/keyline=\{layout\.setSymbolKeyline\}/g)).toHaveLength(2);
+    expect(BAKE.match(/keyline=\{layout\.setSymbolKeyline\}/g)).toHaveLength(2);
+    expect(SET_SYMBOL).toContain("textShadow: keyline");
+    // A multi-layer keyline never reaches Satori as a text-shadow (librsvg
+    // keeps one layer): offset copies under the glyph.
+    expect(BAKE).toContain("const copies = textShadowCopies(keyline, fontSize);");
+  });
 });
 
 describe("watermark", () => {

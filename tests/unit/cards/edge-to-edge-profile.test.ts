@@ -4,6 +4,7 @@ import {
   BRAND_MARK_ON_ART,
   BRAND_MARK_PLACEMENT,
   ON_ART_OUTLINE,
+  SET_SYMBOL_KEYLINE,
   brandMarkLayout,
   footerInk,
   textShadowCopies,
@@ -17,8 +18,9 @@ import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 // only the full-art basics of 4.39 set one, so every other card bakes as
 // before (proven on real bakes of production's public cards; see the PR).
 // fullartland's re-source is its own v30 sweep; m15fullartland is new. The
-// borderless M15 frame (4.32) needs none: its bottom bar carries the brand
-// mark and the footer.
+// borderless M15 frame (4.32) needs none of those (its bottom bar carries the
+// brand mark and the footer); it opts into the set symbol's white keyline on
+// its dark type bar (setSymbolKeyline), which nothing else sets.
 // ---------------------------------------------------------------------------
 
 describe("opt-in profile fields", () => {
@@ -138,6 +140,33 @@ describe("footerInk on the art (TODO 3.8 / 3.23)", () => {
     expect(footerInk(alpha, "u", { footerOnArt: true })).toEqual({ colorHex: "#b4c0c2", shadowCss: "0.035em 0.035em 0 #000" });
     // ON_ART_OUTLINE is in em: the same outline at every render size.
     expect(ON_ART_OUTLINE).not.toMatch(/px/);
+  });
+});
+
+describe("the set symbol's keyline on a dark type bar (4.32, owner evidence 2026-09-26)", () => {
+  const BORDERLESS = ["m15borderless", "m15borderlessartifact"];
+
+  it("is set by the borderless M15 pair only — every other profile draws the glyph as before", () => {
+    for (const template of FRAME_TEMPLATE_VALUES) {
+      const p = getFrameProfile(template);
+      if (BORDERLESS.includes(template)) expect(p.setSymbolKeyline, template).toBe(SET_SYMBOL_KEYLINE);
+      else expect(p.setSymbolKeyline, template).toBeUndefined();
+    }
+  });
+
+  it("is eight white zero-blur layers 0.05 em out, in em (the same at every render size)", () => {
+    expect(SET_SYMBOL_KEYLINE).not.toMatch(/px/);
+    const copies = textShadowCopies(SET_SYMBOL_KEYLINE, 40)!;
+    expect(copies).toHaveLength(8);
+    for (const c of copies) {
+      expect(c.color).toBe("#ffffff");
+      // On a 40 px glyph: 2 px out along the axes and the diagonals (±0.1 px).
+      expect(Math.hypot(c.dx, c.dy)).toBeGreaterThan(1.9);
+      expect(Math.hypot(c.dx, c.dy)).toBeLessThan(2.05);
+    }
+    // Every direction once: right, left, down, up and the four diagonals.
+    const dirs = copies.map((c) => `${Math.sign(Math.round(c.dx))},${Math.sign(Math.round(c.dy))}`).sort();
+    expect(dirs).toEqual(["-1,-1", "-1,0", "-1,1", "0,-1", "0,1", "1,-1", "1,0", "1,1"]);
   });
 });
 

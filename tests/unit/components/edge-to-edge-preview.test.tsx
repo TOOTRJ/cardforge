@@ -16,11 +16,13 @@ import {
   BRAND_MARK_ON_ART,
   BRAND_MARK_PILL,
   ON_ART_OUTLINE,
+  SET_SYMBOL_KEYLINE,
   getFrameProfile,
   type Rect,
 } from "@/lib/cards/template-layout";
 import type { FrameProfileOverride } from "@/lib/cards/profile-override";
 import { frameUrl } from "@/lib/frames/frame-url";
+import { RARITY_INK } from "@/lib/brand/constants";
 import type { FrameTemplate } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -351,5 +353,49 @@ describe("CardPreview — the borderless M15 frame (4.32)", () => {
     expectRect(plate, profile.pt!.plateRect!);
     // The art runs to the top and side edges, over the bottom bar.
     expect(profile.artSlot).toEqual({ topPct: 0, leftPct: 0, widthPct: 100, heightPct: 92.24 });
+  });
+
+  // Owner evidence 2026-09-26: a common's #0f0f12 glyph vanished on the dark
+  // type bar. The preview draws the keyline as the glyph's text-shadow (the
+  // bake as offset copies — edge-to-edge-bake.test.tsx measures them).
+  const growthUi = (template: FrameTemplate, extra: Partial<CardPreviewData> = {}) => (
+    <CardPreview
+      title="Giant Growth"
+      cost="{G}"
+      cardType="instant"
+      colorIdentity={["green"]}
+      rulesText="Target creature gets +3/+3 until end of turn."
+      rarity="common"
+      setIconCode="dom"
+      frameStyle={{ template }}
+      {...extra}
+    />
+  );
+
+  it("rings a preset set symbol in white on its dark type bar, every rarity, in its rarity ink", () => {
+    for (const template of ["m15borderless", "m15borderlessartifact"] as const) {
+      for (const [rarity, ink] of Object.entries(RARITY_INK)) {
+        const ui = growthUi(template, { rarity: rarity as CardPreviewData["rarity"] });
+        const glyph = markup(ui).querySelector("i.ss.ss-dom") as HTMLElement;
+        expect(decl(glyph, "text-shadow"), `${template} ${rarity}`).toBe(SET_SYMBOL_KEYLINE);
+        expect(decl(glyph, "color"), `${template} ${rarity}`).toBe(ink);
+        const { container } = render(ui);
+        expect((container.querySelector("i.ss.ss-dom") as HTMLElement).style.textShadow).toBe(SET_SYMBOL_KEYLINE);
+        cleanup();
+      }
+    }
+  });
+
+  it("draws the glyph bare on a profile without the opt-in, and never rings an uploaded icon or the default mark", () => {
+    for (const template of ["m15", "m15artifact", "fullartland", "extendedart"] as const) {
+      const glyph = markup(growthUi(template)).querySelector("i.ss.ss-dom") as HTMLElement;
+      expect(decl(glyph, "text-shadow"), template).toBeNull();
+      expect(decl(glyph, "color"), template).toBe(RARITY_INK.common);
+    }
+    const icon = markup(growthUi("m15borderless", { setIconCode: null, setIconUrl: "https://example.test/icon.png" }));
+    expect(icon.querySelector('img[alt="Set icon"]')!.getAttribute("style")).not.toMatch(/text-shadow/);
+    const mark = markup(growthUi("m15borderless", { setIconCode: null }));
+    expect(mark.querySelector('svg[aria-label="PipGlyph set"]')).toBeTruthy();
+    expect(mark.innerHTML).not.toContain(SET_SYMBOL_KEYLINE);
   });
 });

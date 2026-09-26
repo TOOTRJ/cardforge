@@ -8,12 +8,14 @@ import {
   BASIC_SYMBOL_MSE_SOCKET,
   BRAND_MARK_ON_ART,
   BRAND_MARK_PILL,
+  SET_SYMBOL_KEYLINE,
   getFrameProfile,
   type FrameProfile,
   type Rect,
 } from "@/lib/cards/template-layout";
 import type { FrameProfileOverride } from "@/lib/cards/profile-override";
 import { RENDER_PRESETS } from "@/lib/render/card-image";
+import { RARITY_INK } from "@/lib/brand/constants";
 
 // ---------------------------------------------------------------------------
 // Edge-to-edge and full-art renderer pieces on REAL bakes (TODO 3.23 / 3.24):
@@ -606,5 +608,106 @@ describe("the profiles that ship the pieces (4.39 full-art basics, 4.32 borderle
     // Art in the top corners: the frame is borderless.
     expect(isArt(bear.px(1, 1))).toBe(true);
     expect(isArt(bear.px(W - 2, 2))).toBe(true);
+  });
+});
+
+// 4.32's dark type bar (owner evidence 2026-09-26): a Keyrune set symbol
+// prints in flat rarity ink with no outline, so a common (#0f0f12) all but
+// vanishes there; prints ring it in white. setSymbolKeyline draws
+// SET_SYMBOL_KEYLINE — in the bake as offset copies under the glyph, since
+// librsvg keeps only one layer of a multi-layer text-shadow (the footer's
+// finding). Opted into on the host first (a clear stand-in master over a
+// DARK flat art, the bar's stand-in), then baked as m15borderless ships it.
+describe("the set symbol's white keyline on a dark type bar (4.32)", () => {
+  const DARK = [40, 44, 52] as const;
+  let darkUrl = "";
+  beforeAll(async () => {
+    darkUrl = `data:image/png;base64,${(await solid(600, 840, DARK)).toString("base64")}`;
+  });
+  // An instant: no P/T plate (on the host it would cover the type band).
+  const growth = (extra: Record<string, unknown> = {}) => ({
+    title: "Giant Growth",
+    cost: "{G}",
+    cardType: "instant",
+    colorIdentity: ["green"],
+    rulesText: "Target creature gets +3/+3 until end of turn.",
+    artUrl: darkUrl,
+    setIconCode: "dom",
+    ...extra,
+  });
+  const onHost = (keyline: boolean, extra: Record<string, unknown> = {}) =>
+    growth({ ...fullart(keyline ? { setSymbolKeyline: SET_SYMBOL_KEYLINE } : {}), ...extra });
+  // The host's type band (HOST_GEOMETRY.type, 85.4–89.6 %H): the symbol
+  // sits at its right end (84 %W), well clear of "Instant"; the box runs a
+  // little past the band for the keyline.
+  const HOST_SYMBOL: Rect = { topPct: 84.4, leftPct: 76, widthPct: 9.5, heightPct: 6.2 };
+  const white = (p: [number, number, number]) => lum(p) > 200;
+  const ink = (p: [number, number, number]) => lum(p) < 25; // #0f0f12 on the dark art
+
+  it("rings a common in white where it all but vanished, and keeps its ink on top", async () => {
+    const plain = await bake(onHost(false));
+    const ringed = await bake(onHost(true));
+    // Before: nothing light at all — the #0f0f12 glyph on the dark bar.
+    expect(count(plain, HOST_SYMBOL, white)).toBe(0);
+    expect(count(plain, HOST_SYMBOL, ink)).toBeGreaterThan(150);
+    // After: a white keyline around it…
+    expect(count(ringed, HOST_SYMBOL, white)).toBeGreaterThan(250);
+    // …drawn UNDER the glyph (a text-shadow): the dark ink survives.
+    expect(count(ringed, HOST_SYMBOL, ink)).toBeGreaterThan(0.8 * count(plain, HOST_SYMBOL, ink));
+    // The glyph itself doesn't move: its ink box is the plain bake's (±1 px:
+    // the white under its anti-aliased edge lightens the outermost pixels).
+    const a = inkBox(plain, HOST_SYMBOL, ink);
+    const b = inkBox(ringed, HOST_SYMBOL, ink);
+    for (const k of ["minX", "maxX", "minY", "maxY"] as const) expect(Math.abs(b[k] - a[k]), k).toBeLessThanOrEqual(1);
+  });
+
+  it("rings every side by 0.05 em, as the browser draws the eight-layer text-shadow", async () => {
+    // Satori merges a multi-layer text-shadow into one filter and librsvg
+    // keeps only the last layer (up-left here): offset copies ring all four
+    // sides. HD: the glyph is 0.04785 W = 71.8 px, the keyline 3.6 px.
+    const b = await bake(onHost(true), false, "hd");
+    const glyph = inkBox(b, HOST_SYMBOL, ink);
+    const ring = inkBox(b, HOST_SYMBOL, white);
+    expect(glyph.n).toBeGreaterThan(600);
+    const em = getFrameProfile(HOST).type.sizePct * 1.1 * b.w;
+    const out = {
+      left: glyph.minX - ring.minX,
+      right: ring.maxX - glyph.maxX,
+      top: glyph.minY - ring.minY,
+      bottom: ring.maxY - glyph.maxY,
+    };
+    // Measured 4 / 4 / 4 / 5 px (the ink box stops inside the glyph's
+    // anti-aliased edge, the bottom at its pointed tip): even all round. The
+    // one-sided shadow would leave right and bottom at ≤ 0.
+    for (const [side, px] of Object.entries(out)) {
+      expect(px, side).toBeGreaterThan(0.05 * em - 1);
+      expect(px, side).toBeLessThan(0.05 * em + 2);
+    }
+    expect(Math.max(...Object.values(out)) - Math.min(...Object.values(out))).toBeLessThanOrEqual(1);
+  });
+
+  it("leaves an uploaded icon and the default PipGlyph mark exactly as they were", async () => {
+    const icon = `data:image/png;base64,${(await solid(64, 64, SYMBOL_RGB)).toString("base64")}`;
+    const plainIcon = await bake(onHost(false, { setIconCode: null, setIconUrl: icon }));
+    const ringedIcon = await bake(onHost(true, { setIconCode: null, setIconUrl: icon }));
+    expect(Buffer.compare(ringedIcon.data, plainIcon.data)).toBe(0);
+    const plainMark = await bake(onHost(false, { setIconCode: null }));
+    const ringedMark = await bake(onHost(true, { setIconCode: null }));
+    expect(Buffer.compare(ringedMark.data, plainMark.data)).toBe(0);
+  });
+
+  it("m15borderless: every rarity wears it, the glyph in its rarity ink", async () => {
+    const p = getFrameProfile("m15borderless");
+    expect(p.setSymbolKeyline).toBe(SET_SYMBOL_KEYLINE);
+    // M15's inline symbol: the right end of the type band (right edge 92.2 %W).
+    const r = p.type.rect;
+    const symbol: Rect = { topPct: r.topPct, leftPct: 83, widthPct: 10, heightPct: r.heightPct };
+    for (const rarity of ["common", "uncommon", "rare", "mythic"] as const) {
+      const b = await bake(growth({ rarity, frameStyle: { template: "m15borderless" } }));
+      expect(count(b, symbol, white), rarity).toBeGreaterThan(250);
+      const rgb = RARITY_INK[rarity].match(/[0-9a-f]{2}/g)!.map((h) => parseInt(h, 16));
+      const inRarityInk = (px: [number, number, number]) => px.every((c, i) => Math.abs(c - rgb[i]) <= 4);
+      expect(count(b, symbol, inRarityInk), rarity).toBeGreaterThan(100);
+    }
   });
 });

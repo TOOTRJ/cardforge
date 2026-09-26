@@ -1027,6 +1027,7 @@ function CardFace({
             iconUrl={setIconUrl}
             setCode={setIconCode}
             size={cqw(layout.symbolSizePct ?? layout.type.sizePct * 1.1)}
+            keyline={layout.setSymbolKeyline}
           />
         ) : null}
       </BandSlot>
@@ -1046,6 +1047,7 @@ function CardFace({
             iconUrl={setIconUrl}
             setCode={setIconCode}
             size={cqw(layout.symbolSizePct ?? layout.type.sizePct * 1.1)}
+            keyline={layout.setSymbolKeyline}
           />
         </div>
       ) : null}

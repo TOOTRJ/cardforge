@@ -38,8 +38,10 @@ const TOKEN = "img/frames/token/m15/textless";
 /** A layer: a frame image, optionally shown only through a mask (its alpha),
  *  optionally at reduced opacity. */
 const layer = (src, mask, opacity) => ({ src, ...(mask ? { mask } : {}), ...(opacity !== undefined ? { opacity } : {}) });
-/** A layer shown everywhere EXCEPT through a mask (alpha × (1 − mask
- *  alpha)) — how a borderless key drops a pack's Border mask (4.39). */
+/** A layer shown everywhere EXCEPT through a mask — how a borderless key
+ *  drops a pack's Border mask (4.39). The mask is a region the frame image
+ *  itself paints (its black ring), so the mask's COVERAGE is subtracted
+ *  (alpha − mask alpha), not multiplied out: see compositeLayers. */
 const outside = (src, mask) => ({ src, mask, invert: true });
 
 /** The planeswalker loyalty shield's box on the 1500×2100 master: CC's
@@ -244,7 +246,7 @@ export const CC_TEMPLATES = {
     colors: perColor((k) => [outside(basics2022Frame(k), BASICS_2022_BORDER_MASK)]),
     symbols: BASICS_2022_SYMBOLS,
     pack: "packTextlessBasics2022.js 'Fullart Basics (2022)' (groupTextless-4.js:5)",
-    transforms: "native 1500x2100, no resample; the frame image with its Border mask's region erased (alpha x (1 - mask alpha)), corners rounded to the importer radius; symbol discs native 168x168",
+    transforms: "native 1500x2100, no resample; the frame image with its Border mask's coverage erased (alpha - mask alpha, floored at 0: the ring's anti-aliased inner edge leaves no residue), corners rounded to the importer radius; symbol discs native 168x168",
     notes: [
       "re-sourced from CC (4.39): replaces the 744 px MSE magic-m15-full-art-basic-land-symbol composite that scripts/build-variation-frames.mjs upscaled",
       "borderless = m15fullartland without the Border mask (owner decision 4.35(a)); the bars keep their bevels and drop shadows",
@@ -265,8 +267,16 @@ export const CC_DEFERRED = {};
  * drawFrames (a black canvas, the masks drawn 'source-in', the image drawn
  * 'source-in', the result 'source-over'). CC's masks are solid colours
  * (title red, rules green, border black): only their alpha means anything.
- * `invert` keeps the layer everywhere EXCEPT the mask (alpha × (1 − mask
- * alpha)). Returns a Float32Array RGBA with alpha in 0..1.
+ * `invert` keeps the layer everywhere EXCEPT the mask by SUBTRACTING the
+ * mask's coverage: alpha − mask alpha (floored at 0). The one inverted mask
+ * (4.39's Border) outlines a region the frame image paints itself, and on
+ * its anti-aliased inner edge the frame's alpha IS the ring's coverage (the
+ * art window is clear): subtraction leaves 0 there. alpha × (1 − mask
+ * alpha) left alpha × (1 − alpha) — a 1 px line of α 10–14 at the ring's
+ * straight inner edges, up to 64 at its rounded corners — a faint rounded
+ * rectangle over the art (owner evidence 2026-09-26). The two agree wherever
+ * the mask is 0 or 255 or the frame is opaque (the bars that reach into the
+ * ring). Returns a Float32Array RGBA with alpha in 0..1.
  */
 export function compositeLayers(images, width, height) {
   const n = width * height;
@@ -275,7 +285,10 @@ export function compositeLayers(images, width, height) {
     for (let p = 0; p < n; p += 1) {
       const o = p * 4;
       let a = img.data[o + 3] / 255;
-      if (img.mask) a *= img.invert ? 1 - img.mask[o + 3] / 255 : img.mask[o + 3] / 255;
+      if (img.mask) {
+        const m = img.mask[o + 3] / 255;
+        a = img.invert ? Math.max(0, a - m) : a * m;
+      }
       if (img.opacity !== undefined) a *= img.opacity;
       if (i === 0) {
         acc[o] = img.data[o];

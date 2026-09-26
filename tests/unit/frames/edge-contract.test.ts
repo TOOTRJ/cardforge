@@ -208,3 +208,39 @@ describe("the full-art basics keep their two bars (7.7 fixture)", () => {
     });
   }
 });
+
+// The owner's evidence (2026-09-26): erasing the Border mask as alpha × (1 −
+// mask alpha) left the ring's anti-aliased inner edge behind — α 10–14 on
+// x 59, x 1439, y 60 and y 1933 (up to 64 in the rounded corners), a faint
+// rounded rectangle over the art that the 2 % edge bands and the 5 %-step
+// fixture above both miss. Every pixel outside the two bars is now clear.
+describe("fullartland keeps nothing of the erased Border ring", () => {
+  const masters = mastersOf("fullartland");
+  if (masters.length === 0) {
+    it.skip("fullartland: masters not available here (frames bucket; set FRAMES_BUILD_DIR)", () => {});
+  } else {
+    it("is α 0 on every row outside the title bar (77–245) and the type bar with its disc (1724–1935)", async () => {
+      expect(masters).toHaveLength(7);
+      for (const m of masters) {
+        const { data, width, height } = await rgbaOf(m.file);
+        expect([width, height]).toEqual([1500, 2100]);
+        const alpha = (x: number, y: number) => data[(y * width + x) * 4 + 3];
+        const lit: string[] = [];
+        for (let y = 0; y < height; y += 1) {
+          if ((y >= 77 && y <= 245) || (y >= 1724 && y <= 1935)) continue;
+          for (let x = 0; x < width; x += 1) if (alpha(x, y) > 0) lit.push(`${x},${y}=${alpha(x, y)}`);
+        }
+        // The first cut lit 4,390 here: 1,478 on each of x 59 and x 1439,
+        // 1,338 on y 60 and 96 in the rounded corners.
+        expect(lit.slice(0, 8), `${m.key}: ${lit.length} lit pixels`).toEqual([]);
+        // y 1933 crosses the type bar's rows: only the symbol disc's
+        // shadow (x 121–170) hangs there, never the ring's bottom edge (829
+        // lit pixels in the first cut).
+        for (let x = 260; x < 1440; x += 1) expect(alpha(x, 1933), `${m.key} y 1933, x ${x}`).toBe(0);
+        // The bars are still there: opaque mid-bar on the centre column.
+        expect(alpha(750, 160), `${m.key} title bar`).toBe(255);
+        expect(alpha(750, 1835), `${m.key} type bar`).toBe(255);
+      }
+    });
+  }
+});

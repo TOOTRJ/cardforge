@@ -768,6 +768,7 @@ function CardImage({
             iconUrl={card.setIconUrl}
             setCode={card.setIconCode}
             fontSize={fpx(layout.symbolSizePct ?? layout.type.sizePct * 1.1, width)}
+            keyline={layout.setSymbolKeyline}
           />
         ) : isAligned(typeSlot) ? null : (
           <span style={{ display: "flex" }} />
@@ -788,6 +789,7 @@ function CardImage({
             iconUrl={card.setIconUrl}
             setCode={card.setIconCode}
             fontSize={fpx(layout.symbolSizePct ?? layout.type.sizePct * 1.1, width)}
+            keyline={layout.setSymbolKeyline}
           />
         </div>
       ) : null}
@@ -1379,6 +1381,41 @@ function BasicSymbolBake({
   );
 }
 
+/** A Keyrune set glyph with its profile's keyline (FrameProfile
+ *  .setSymbolKeyline; the preview's twin is the glyph's CSS text-shadow). A
+ *  multi-layer zero-blur keyline is drawn as one copy of the glyph per
+ *  layer, in the layer's colour and offset, UNDER the glyph (paint order =
+ *  DOM order) — Satori merges a multi-layer text-shadow into one filter and
+ *  librsvg keeps only the last layer (FooterBake, TODO 3.25). The copies are
+ *  absolute, so the glyph's box — and the type band's layout and the width
+ *  setSymbolWidth measures — is the plain glyph's. Any other shadow stays
+ *  CSS. */
+function KeylinedKeyruneGlyph({
+  glyph,
+  fontSize,
+  color,
+  keyline,
+}: {
+  glyph: string;
+  fontSize: number;
+  color: string;
+  keyline: string;
+}) {
+  const style = { display: "flex", fontFamily: '"Keyrune"', fontSize, lineHeight: 1, color };
+  const copies = textShadowCopies(keyline, fontSize);
+  if (!copies) return <span style={{ ...style, textShadow: keyline }}>{glyph}</span>;
+  return (
+    <span style={{ ...style, position: "relative" }}>
+      {copies.map((copy, i) => (
+        <span key={i} style={{ display: "flex", position: "absolute", left: copy.dx, top: copy.dy, color: copy.color }}>
+          {glyph}
+        </span>
+      ))}
+      <span style={{ display: "flex" }}>{glyph}</span>
+    </span>
+  );
+}
+
 /** SetSymbolGlyph's laid-out width at `fontSize` (its three branches). */
 function setSymbolWidth({
   iconUrl,
@@ -1924,11 +1961,14 @@ function SetSymbolGlyph({
   fontSize,
   iconUrl,
   setCode,
+  keyline,
 }: {
   rarity: Rarity;
   fontSize: number;
   iconUrl?: string | null;
   setCode?: string | null;
+  /** FrameProfile.setSymbolKeyline — the preview's text-shadow on the glyph. */
+  keyline?: string;
 }) {
   const color = RARITY_SET_SYMBOL_COLOR[rarity];
 
@@ -1952,6 +1992,17 @@ function SetSymbolGlyph({
   //    preview's `ss ss-{code}` class shows (codepoint parsed from
   //    keyrune.css), falling back to the generic Keyrune mark for unknown
   //    codes.
+  //    A profile's keyline (dark type bars) rings it: KeylinedKeyruneGlyph.
+  if (setCode && keyline) {
+    return (
+      <KeylinedKeyruneGlyph
+        glyph={getKeyruneCodepoint(setCode) ?? KEYRUNE_DEFAULT_GLYPH}
+        fontSize={fontSize}
+        color={color}
+        keyline={keyline}
+      />
+    );
+  }
   if (setCode) {
     return (
       <span

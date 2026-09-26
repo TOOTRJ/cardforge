@@ -6,7 +6,7 @@
     "pack": "packTextlessBasics2022.js 'Fullart Basics (2022)' (groupTextless-4.js:5)",
     "converter": "scripts/import-cc-frames.mjs",
     "output": "1500x2100, corners rounded to 39px, webp q90",
-    "transforms": "native 1500x2100, no resample; the frame image with its Border mask's region erased (alpha x (1 - mask alpha)), corners rounded to the importer radius; symbol discs native 168x168",
+    "transforms": "native 1500x2100, no resample; the frame image with its Border mask's coverage erased (alpha - mask alpha, floored at 0: the ring's anti-aliased inner edge leaves no residue), corners rounded to the importer radius; symbol discs native 168x168",
     "colors": {
       "w": [
         "img/frames/textless/2022/w.png outside img/frames/textless/2022/maskBorder.png"

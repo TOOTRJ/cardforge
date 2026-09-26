@@ -67,7 +67,11 @@ node scripts/import-cc-frames.mjs --only m15,m15land
   CC's draw order, at the pack's native size, then downscaled once. A
   coloured artifact is the artifact frame and border with the colour's
   pinline, title bar, type bar and text box. Tokens come from CC's textless
-  bordered pack. Every colourless substitution is noted in the recipe.
+  bordered pack. Every colourless substitution is noted in the recipe. A
+  borderless key drops a region the frame paints itself (fullartland's
+  Border mask) by subtracting the mask's coverage (alpha − mask alpha), so
+  the ring's anti-aliased inner edge leaves nothing behind; multiplying by
+  (1 − mask alpha) left a faint 1 px rounded rectangle over the art.
 - **See-through frames.** CC's colourless M15 frame, every devoid frame and
   the colourless creature token are see-through, like the printed cards. The
   profile's `underFrameArt` draws the art under the whole frame (TODO 4.17);

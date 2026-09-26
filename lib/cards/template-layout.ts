@@ -406,6 +406,17 @@ export type FrameProfile = {
    *  Without it a footer's `shadowCss` is not drawn (FULLARTLAND declares
    *  one that has never printed). Code-owned, opt-in. */
   footerOnArt?: boolean;
+  /** A keyline around a preset Keyrune set symbol — a zero-blur multi-layer
+   *  text shadow, SET_SYMBOL_KEYLINE (white) — for a profile whose type bar
+   *  is dark (4.32's borderless bars). Keyrune glyphs print in flat rarity
+   *  ink with no outline (RARITY_INK; common #0f0f12), so on a dark bar a
+   *  common all but disappears; prints outline the symbol in white. The
+   *  preview draws it as a CSS text-shadow, the bake as offset copies under
+   *  the glyph (textShadowCopies: librsvg keeps only one layer of a
+   *  multi-layer shadow, TODO 3.25). An uploaded icon (the owner's art) and
+   *  the default PipGlyph mark (its own keyline) are drawn as before.
+   *  Code-owned, opt-in: a profile without it bakes as before. */
+  setSymbolKeyline?: string;
   /** A BASIC land's mana symbol in its own slot (TODO 3.24) instead of the
    *  automatic big watermark in the rules box — see BasicSymbolSlot.
    *  Profiles without it (m15land, modernland, alphaland …) are unchanged.
@@ -579,6 +590,17 @@ const OUTLINE_SHADOW =
  *  bottom info the same way. */
 export const ON_ART_OUTLINE =
   "0.06em 0.06em 0 #000, -0.06em 0.06em 0 #000, 0.06em -0.06em 0 #000, -0.06em -0.06em 0 #000";
+
+/** The white keyline a printed set symbol wears on a dark type bar
+ *  (FrameProfile.setSymbolKeyline, 4.32): eight zero-blur copies 0.05 em out
+ *  — the width of Keyrune's own `.ss-border` outline (a 0.1 em stroke
+ *  painted under the fill) — axis and diagonal, so the ring is even on
+ *  every edge. In em, like ON_ART_OUTLINE: the same keyline at every render
+ *  size in the preview (a CSS text-shadow) and the bake (offset copies,
+ *  textShadowCopies). */
+export const SET_SYMBOL_KEYLINE =
+  "0.05em 0 0 #ffffff, -0.05em 0 0 #ffffff, 0 0.05em 0 #ffffff, 0 -0.05em 0 #ffffff, " +
+  "0.035em 0.035em 0 #ffffff, -0.035em 0.035em 0 #ffffff, 0.035em -0.035em 0 #ffffff, -0.035em -0.035em 0 #ffffff";
 
 /** One layer of a multi-layer text shadow, in px at the text's font size. */
 export type TextShadowCopy = { dx: number; dy: number; color: string };
@@ -1080,12 +1102,16 @@ const M15DEVOID: FrameProfile = {
 // the plate's face from 1188 px (past the lit bevel) to 1394 px (the shaded
 // bevel), measured on the digits' rows of the plates. Colourless is CC's
 // see-through C frame: the art is under it already, so no underFrameArt.
-// The cost gets the Card Conjurer lift (CC mana y 0.0613, as on M15).
+// The cost gets the Card Conjurer lift (CC mana y 0.0613, as on M15). The
+// set symbol wears the prints' white keyline (SET_SYMBOL_KEYLINE): a
+// common's #0f0f12 ink vanished on the dark type bar (owner evidence
+// 2026-09-26).
 const BORDERLESS_INK = "#ffffff";
 const M15BORDERLESS: FrameProfile = {
   ...M15,
   label: "M15 Borderless",
   costDy: CC_M15_COST_DY,
+  setSymbolKeyline: SET_SYMBOL_KEYLINE,
   artSlot: { topPct: 0, leftPct: 0, widthPct: 100, heightPct: 92.24 },
   title: { ...M15.title, colorHex: BORDERLESS_INK },
   type: { ...M15.type, colorHex: BORDERLESS_INK },

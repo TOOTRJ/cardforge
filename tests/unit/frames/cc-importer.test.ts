@@ -226,8 +226,31 @@ describe("pixel operations", () => {
     };
     const out = toRgba8(compositeLayers([frame], 3, 1));
     expect(out[3]).toBe(0); // inside the mask: erased
-    expect(out[7]).toBe(153); // 255 × (1 − 102/255)
+    expect(out[7]).toBe(153); // 255 − 102 (an opaque frame: the same as 255 × (1 − 102/255))
     expect([...out.subarray(8, 12)]).toEqual([90, 90, 90, 255]); // outside: untouched
+  });
+
+  it("erases the Border's anti-aliased inner edge completely — no hairline over the art (2026-09-26)", () => {
+    // A row across the ring's inner edge as Card Conjurer's 2022 basics draw
+    // it: the frame's alpha on the edge IS the ring's coverage (the mask's
+    // alpha; the art window beyond is clear), then a bar that reaches into
+    // the ring, and one of its rim pixels half over the ring's edge.
+    //   x   0 ring · 1–2 ring edge (242, 13 — x 59 / 1439 on the masters) ·
+    //       3 clear art · 4 bar across the edge · 5 bar rim over the edge
+    const frameA = [255, 242, 13, 0, 255, 220];
+    const maskA = [255, 242, 13, 0, 102, 19];
+    const frame = {
+      data: new Uint8Array(frameA.flatMap((a, x) => (x === 5 ? px(228, 230, 230, a) : px(0, 0, 0, a)))),
+      mask: new Uint8Array(maskA.flatMap((a) => px(0, 0, 0, a))),
+      invert: true,
+    };
+    const out = toRgba8(compositeLayers([frame], 6, 1));
+    const alpha = (x: number) => out[x * 4 + 3];
+    // alpha × (1 − mask alpha) left 12 and 12 here: a 1 px line of ≈5 % black.
+    expect([alpha(0), alpha(1), alpha(2), alpha(3)]).toEqual([0, 0, 0, 0]);
+    // The bar keeps what the ring doesn't cover, colour untouched.
+    expect(alpha(4)).toBe(153);
+    expect([...out.subarray(20, 24)]).toEqual([228, 230, 230, 201]);
   });
 
   it("blends a half-visible layer and rounds (not truncates) to 8 bits", () => {

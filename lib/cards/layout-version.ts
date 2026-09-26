@@ -248,10 +248,15 @@ import type { CardType } from "@/types/card";
 //            brand mark on its dark pill and the artist line in
 //            ON_ART_OUTLINE (both on the art; the bake draws that outline
 //            as offset copies — librsvg keeps only the last layer of a
-//            multi-layer text-shadow). The new
+//            multi-layer text-shadow). The masters erase the Card
+//            Conjurer ring by subtracting its coverage, so no hairline of
+//            its inner edge lies over the art (owner evidence 2026-09-26,
+//            same bump). The new
 //            templates of 4.32 / 4.39 (m15borderless,
 //            m15borderlessartifact, m15fullartland) have no card baked
-//            before v30, so they need no scope. Template-scoped to
+//            before v30, so they need no scope (the borderless pair's
+//            white set-symbol keyline, setSymbolKeyline, is part of
+//            them). Template-scoped to
 //            fullartland, "sweep": 0 public production cards (anonymous
 //            read, 2026-09-26); private rows need the owner's admin count
 //            before the sweep.
