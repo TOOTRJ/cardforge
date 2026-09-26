@@ -31,7 +31,7 @@ const features: Feature[] = [
     tone: "purple",
     title: "Beautiful frames",
     description:
-      "Three decades of card design in one picker: 1993 classic, 1997 retro, 2003 modern, M15, and showcase styles. Frames tint to your color identity automatically, and the live preview matches the export pixel for pixel.",
+      "Three decades of card design in one picker: 1993 classic, 1997 retro, 2003 modern, M15, and showcase styles. Frames tint to your color identity automatically, and parity tests keep the live preview in step with the export.",
   },
   {
     icon: Type,

@@ -23,7 +23,12 @@ vi.mock("@/lib/scryfall/rate-limit", () => ({
 
 beforeEach(() => {
   vi.useFakeTimers();
-  state.check.mockReset().mockResolvedValue({ ok: true });
+  state.check.mockReset().mockResolvedValue({
+    ok: false,
+    reason: "per_day",
+    retryAfterSeconds: 3600,
+    message: "Daily quota reached (2000 search/day).",
+  });
   state.log.mockReset().mockResolvedValue(undefined);
 });
 
@@ -61,8 +66,8 @@ describe("GET /api/scryfall/search — admin searches keep the global throttle",
     expect(dispatched).toHaveLength(2);
     expect(dispatched.every((d) => d.url.startsWith("https://api.scryfall.com/cards/search?"))).toBe(true);
     expect(dispatched[1].at - dispatched[0].at).toBeGreaterThanOrEqual(500);
-    // …while the per-user quota stays out of it.
-    expect(state.check).not.toHaveBeenCalled();
+    // …while the per-user quota stays out of it: a spent quota doesn't
+    // refuse the admin, and nothing is logged against it.
     expect(state.log).not.toHaveBeenCalled();
   });
 });

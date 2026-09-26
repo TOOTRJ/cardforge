@@ -32,7 +32,7 @@ It is worth saying plainly, because the people searching for an alternative love
 - **Frame fidelity.** Card Conjurer reproduced the look of official printings closely, across a long list of frame variants, and that authenticity was the whole point for many users.
 - **Free and open source.** No account, no plan, and the code was public, which is why forks exist at all.
 - **Ran locally.** Everything happened in your browser tab, and a self-hosted copy could run offline.
-- **Control over every layer.** A card is a stack of frame layers you can move, resize, fade, erase or recolor, text boxes can be dragged anywhere, and inline codes adjust size, color, kerning and position. Patient users could get a card exactly the way they wanted it.
+- **Control over every layer.** A card is a stack of frame layers you can move, resize, fade, erase or recolor, text boxes can be moved and resized to any bounds, and inline codes adjust size, color, kerning and position. Patient users could get a card exactly the way they wanted it.
 - **Real-card import.** Type a card's name and it loads from Scryfall, with every printing to choose from and 12 import languages.
 - **Print sheets.** A separate print page tiles up to nine card images on a Letter or A4 sheet and downloads it as a PNG or a PDF, with optional cutting aids.
 
@@ -53,7 +53,7 @@ A comparison you can trust has to include this section.
 - **Exact replicas of official frames.** If what you want is a card that is indistinguishable from a real printing, Card Conjurer's frames were closer to the originals than any tool that avoids Wizards' trade dress can be. PipGlyph's frames are original by design. They read as real Magic cards at the table, but they are not copies.
 - **Fully offline.** A self-hosted fork works with no internet connection and no account. PipGlyph is an online app.
 - **Sheer number of frame variants.** Card Conjurer accumulated years of community-made frame packs; the maintained fork ships about 260. PipGlyph covers the major eras and layouts, verified one combination at a time, and the catalog is still growing.
-- **A free-form editor.** In Card Conjurer you can upload your own frames and masks, move and resize any layer, add extra text boxes and nudge text with codes like `{kerning}` and `{permashift}`. PipGlyph keeps its text boxes where the printed card puts them, and you can't drag them.
+- **A free-form editor.** In Card Conjurer you can upload your own frames and masks, move and resize any layer, add extra text boxes and nudge text with codes like `{kerning}` and `{permashift}`. PipGlyph keeps its text boxes where the printed card puts them, and you can't move them.
 - **Import languages.** Card Conjurer imports a real card in 12 languages. PipGlyph's Scryfall import fills in the English Oracle wording.
 
 If any of those is your deciding factor, a self-hosted fork may still be the right call for you, and this page is not going to pretend otherwise.
@@ -67,11 +67,11 @@ If any of those is your deciding factor, a self-hosted fork may still be the rig
 | Preview and exported image | The browser preview matches the saved image, which a separate server renderer draws; parity tests check the two agree | The canvas you edit is the image you download |
 | Card frames | MTG-style frames measured against real scans, published one at a time as they pass verification | Replicas of official frames, in about 260 frame packs |
 | Card types and layouts | Creatures, spells, artifacts, enchantments, lands, planeswalkers, sagas and tokens today; split, adventure, flip, aftermath and battle frames are built and in verification | Yes, including split, adventure, flip, aftermath, battle and transform faces |
-| Free-form layout (move or recolor layers, upload frames and masks, drag text boxes) | No: verified geometry instead | Yes |
+| Free-form layout (move or recolor layers, upload frames and masks, reposition text boxes) | No: verified geometry instead | Yes |
 | Custom mana pips | Yes, design and upload your own | Standard symbols; some frame packs bring their own style |
 | Foil and etched finishes | Either one on any verified frame, free | Etched frame packs; a foil layer in some packs |
 | AI rules, flavor and art assistant | Yes | No |
-| Scryfall import to prefill a real card | Yes: search by name, pick any printing, optionally bring its art | Yes: by name, every printing, 12 languages |
+| Scryfall import to prefill a real card | Yes: search by name, pick a printing, optionally bring its art | Yes: by name, every printing, 12 languages |
 | Deck building with decklist import | Yes | No |
 | Proxy print sheets | 3 × 3 PDF sheets on Letter or A4 with crop marks, for one card or a deck's custom cards (Pro) | Up to nine card images on a Letter or A4 sheet, PNG or PDF, optional cutting aids |
 | Public gallery, sharing, remixing | Yes | No |
@@ -82,7 +82,7 @@ If any of those is your deciding factor, a self-hosted fork may still be the rig
 
 Not directly. Card Conjurer keeps saved cards in your browser's local storage and can export them as a `.cardconjurer` file, and PipGlyph has no importer for that file or for the PNGs Card Conjurer downloads. In practice this matters less than it sounds, because a card has only a handful of fields and most of them can be prefilled.
 
-If your card was a variant of a real Magic card, a remixed version, a new art treatment, a rebalanced cost, use the Scryfall import in the creator: search the real card by name, pick the printing, and its mana cost, type line, rules text and flavor text land in the form at once, with the option to bring that printing's art along. If it was an original design, you retype the name, cost, type line and rules text, which is a minute of work for most cards. Either way you upload your own art again, and the art is usually the part you kept.
+If your card was a variant of a real Magic card, a remixed version, a new art treatment, a rebalanced cost, use the Scryfall import in the creator: search the real card by name, pick a printing, and its mana cost, type line, rules text and flavor text land in the form at once, with the option to bring that printing's art along. If it was an original design, you retype the name, cost, type line and rules text, which is a minute of work for most cards. Either way you upload your own art again, and the art is usually the part you kept.
 
 ## How to rebuild a Card Conjurer card in three minutes
 

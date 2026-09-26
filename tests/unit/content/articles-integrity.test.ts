@@ -68,8 +68,11 @@ const BANNED = [
   /\(\/preview\)/,
   /sets index/i,
   // The editor preview and the saved image come from two renderers kept in
-  // step by parity tests (TODO 0.24) — never "one renderer".
+  // step by parity tests (TODO 0.24) — never "one renderer", "the same
+  // layout engine" or "pixel for pixel".
   /\bone renderer\b/i,
+  /pixel[- ]for[- ]pixel/i,
+  /same (layout engine|renderer)/i,
 ];
 
 describe("guides", () => {
@@ -134,12 +137,15 @@ describe("retired product claims", () => {
     ...readdirSync(articlesDir).map((f) => join(articlesDir, f)),
     join(root, "lib/content/faq.ts"),
     join(root, "lib/billing/plans.ts"),
+    ...readdirSync(join(root, "components/marketing"))
+      .filter((f) => f.endsWith(".tsx"))
+      .map((f) => join(root, "components/marketing", f)),
     ...["about", "press", "faq", "mtg-card-maker", "ai-mtg-card-generator", "best-mtg-card-makers", "privacy", "terms"].map(
       (page) => join(root, `app/(marketing)/${page}/page.tsx`),
     ),
   ].filter((p) => existsSync(p));
 
-  it("appear nowhere in the guides, the FAQ copy or the landing pages", () => {
+  it("appear nowhere in the guides, the FAQ copy, the landing pages or the marketing components", () => {
     for (const file of sources) {
       const text = readFileSync(file, "utf8");
       for (const pattern of BANNED) {

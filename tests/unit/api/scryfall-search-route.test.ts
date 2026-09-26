@@ -4,7 +4,7 @@ import { NextRequest } from "next/server";
 // ---------------------------------------------------------------------------
 // GET /api/scryfall/search — the per-user quota (TODO 0.17). A normal
 // account is checked before the upstream call and logged after it; an admin
-// (the frame-compare reference picker) is neither checked nor logged, so a
+// (the frame-compare reference picker) is never refused and never logged, so a
 // verification session never spends the admin's "search" bucket, which the
 // printings strip shares. is_admin comes from the session's profile only.
 // The upstream call still goes through searchCards, whose module-level
@@ -78,9 +78,10 @@ describe("GET /api/scryfall/search — per-user quota", () => {
     expect(state.log).not.toHaveBeenCalled();
   });
 
-  it("lets an admin search without checking or spending the quota", async () => {
+  it("lets an admin search without being stopped by, or spending, the quota", async () => {
     signIn({ id: "admin-1", is_admin: true });
-    // Even a quota the admin has already run through doesn't stop them.
+    // Even a quota the admin has already run through doesn't stop them: the
+    // check runs beside the profile read, and its answer is ignored.
     state.check.mockResolvedValue({
       ok: false,
       reason: "per_day",
@@ -89,7 +90,6 @@ describe("GET /api/scryfall/search — per-user quota", () => {
     });
     const res = await get("q=makindi%20ox&limit=8");
     expect(res.status).toBe(200);
-    expect(state.check).not.toHaveBeenCalled();
     expect(state.log).not.toHaveBeenCalled();
     // Still an upstream call through the throttled client.
     expect(state.search).toHaveBeenCalledWith({ query: "makindi ox", limit: 8 });

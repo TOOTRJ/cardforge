@@ -49,6 +49,11 @@ describe("card-conjurer-alternative guide", () => {
     expect(row("Proxy print sheets")).toMatch(/Letter or A4 sheet, PNG or PDF/);
     // Its saves live in localStorage plus an exported .cardconjurer file.
     expect(row("Where your cards are saved")).toMatch(/local storage/);
+    // Its text boxes take numeric bounds (the Textbox Editor's "Edit
+    // Bounds"); only the art is dragged on the canvas.
+    expect(body).not.toMatch(/drag(ged)? (text boxes|anywhere)/i);
+    // PipGlyph's printings strip shows up to 30 representative printings.
+    expect(body).not.toMatch(/pick any printing/i);
   });
   it("never claims one renderer: a browser preview and a separate bake, kept in step by parity tests", () => {
     const body = article!.content;

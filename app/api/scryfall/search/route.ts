@@ -26,8 +26,8 @@ import { rateLimitedResponse } from "@/lib/api/responses";
 // picker (components/admin/frame-reference-picker.tsx) searches through this
 // route, and a verification session would otherwise spend the admin's own
 // "search" bucket, which the creator's printings strip (/api/scryfall/
-// printings) also draws from. So an admin's search is neither checked nor
-// logged, and it doesn't show in the /admin/scryfall counts. is_admin comes
+// printings) also draws from. So an admin's search is never refused by the
+// quota and never logged, and it doesn't show in the /admin/scryfall counts. is_admin comes
 // from the session's own profile (getCurrentProfile), never from the request.
 // The global throttle in lib/scryfall/client.ts still spaces every upstream
 // call, admin or not.
@@ -101,13 +101,17 @@ export async function GET(request: NextRequest) {
     ? Math.min(50, Math.max(1, Math.round(limitRaw)))
     : 12;
 
-  // A failed profile read comes back null, so the exemption fails closed.
-  const quotaExempt = (await getCurrentProfile())?.is_admin === true;
-  if (!quotaExempt) {
-    const limit_check = await checkScryfallRateLimit(user.id, "search");
-    if (!limit_check.ok) {
-      return rateLimitedResponse(limit_check);
-    }
+  // The profile read and the (read-only) quota check run side by side — the
+  // typeahead shouldn't pay them one after the other. A failed profile read
+  // comes back null, so the exemption fails closed; an admin's check result
+  // is simply ignored.
+  const [profile, limitCheck] = await Promise.all([
+    getCurrentProfile(),
+    checkScryfallRateLimit(user.id, "search"),
+  ]);
+  const quotaExempt = profile?.is_admin === true;
+  if (!quotaExempt && !limitCheck.ok) {
+    return rateLimitedResponse(limitCheck);
   }
 
   // Log only after the upstream call resolves, so a network error (which
