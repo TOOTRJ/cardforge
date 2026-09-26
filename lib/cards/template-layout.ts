@@ -580,6 +580,59 @@ const OUTLINE_SHADOW =
 export const ON_ART_OUTLINE =
   "0.06em 0.06em 0 #000, -0.06em 0.06em 0 #000, 0.06em -0.06em 0 #000, -0.06em -0.06em 0 #000";
 
+/** One layer of a multi-layer text shadow, in px at the text's font size. */
+export type TextShadowCopy = { dx: number; dy: number; color: string };
+
+const SHADOW_LENGTH = /^(-?(?:\d+\.?\d*|\.\d+))(px|em)?$/;
+
+/**
+ * A text shadow of TWO OR MORE zero-blur layers (ON_ART_OUTLINE,
+ * OUTLINE_SHADOW) as px offsets at `fontPx`, or null. The bake draws these
+ * as offset copies of the text under it instead of a CSS text-shadow:
+ * Satori writes one feDropShadow per layer and merges them, and the bake's
+ * rasteriser (sharp → librsvg) keeps only the last layer, so a four-way
+ * outline baked as a one-sided up-left shadow while the browser drew all
+ * four (new-frames review 2026-09-26). A single layer rasterises correctly,
+ * and a blurred one can't be drawn as a copy: both stay CSS (null).
+ */
+export function textShadowCopies(shadowCss: string, fontPx: number): TextShadowCopy[] | null {
+  const layers: string[] = [];
+  let depth = 0;
+  let start = 0;
+  for (let i = 0; i < shadowCss.length; i += 1) {
+    const ch = shadowCss[i];
+    if (ch === "(") depth += 1;
+    else if (ch === ")") depth -= 1;
+    else if (ch === "," && depth === 0) {
+      layers.push(shadowCss.slice(start, i));
+      start = i + 1;
+    }
+  }
+  layers.push(shadowCss.slice(start));
+  if (layers.length < 2) return null;
+  const copies: TextShadowCopy[] = [];
+  for (const layer of layers) {
+    const tokens = layer.trim().match(/[a-z]+\([^)]*\)|[^\s]+/gi) ?? [];
+    const lengths: number[] = [];
+    let color: string | null = null;
+    for (const token of tokens) {
+      const m = SHADOW_LENGTH.exec(token);
+      if (m) {
+        if (m[2] === undefined && Number(m[1]) !== 0) return null;
+        lengths.push(m[2] === "em" ? Number(m[1]) * fontPx : Number(m[1]));
+      } else if (color === null) {
+        color = token;
+      } else {
+        return null;
+      }
+    }
+    // Offsets, then an optional blur that must be zero.
+    if (lengths.length < 2 || lengths.length > 3 || (lengths[2] ?? 0) !== 0 || !color) return null;
+    copies.push({ dx: lengths[0], dy: lengths[1], color });
+  }
+  return copies;
+}
+
 // Printed Alpha/Beta lettering on the frame — the P/T and the "Illus." line:
 // dark ink on the white frame, an embossed silver-grey on every other colour
 // (a dark lower-right edge, no highlight). Measured on 19 LEA/LEB scans (the
@@ -2146,9 +2199,15 @@ const FULLART: FrameProfile = {
 // title bar, then a "Basic Land — Plains" bar with the mana symbol's disc
 // at its left end, as printed since P23 (ONE, MOM, LTR … FDN, HOB). The bars
 // measure 4.24–11.10 and 83.95–90.81 % H on the masters (CC title y 5.22,
-// type x 18.87 / y 84.81); the slots below were tuned on the old MSE
-// master's bars (4.9–10.7, 84.5–90.3) and sit within 1 % of CC's, so they
-// stay. Dark ink on the light bars (M15's). Basic lands only (0.26's
+// type x 18.87 / y 84.81). The text slots are Card Conjurer's (title x
+// 0.0854, size 0.0381 H = 80 px at HD; type x 283/1500, size 0.0324 H = 68
+// px), measured against 17 prints (FDN #282–290, TDM/DSK/DFT #272–276, FRA
+// #382–394, FIN #309; new-frames print review 2026-09-26): the name's ink
+// then starts within 1 px of the print at its width (M15's slots, kept from
+// the old MSE master, set it 7–9 px right and ~6 % small, the type line
+// 10–12 px left, 6 px low and 5 % small). The set symbol prints at the
+// print's size (78–91 px of ink; type.sizePct × 1.1 gave 57–60). Dark ink
+// on the light bars (M15's). Basic lands only (0.26's
 // BASIC_ONLY_TEMPLATES, lib/creator/card-kinds.ts): no cost, and a basic
 // prints no rules — its symbol goes in the frame's own disc (3.24's
 // basicSymbol, "glyph": CC paints the disc, its 168 px s?.png symbol is
@@ -2161,13 +2220,16 @@ const FULL_ART_BASIC: FrameProfile = {
   hideCost: true,
   title: {
     ...M15.title,
-    rect: { topPct: 5.6, leftPct: 9, widthPct: 80, heightPct: 4.6 },
+    rect: { topPct: 5.4, leftPct: 8.54, widthPct: 80.46, heightPct: 4.6 },
+    sizePct: 0.0533,
   },
   type: {
     ...M15.type,
-    rect: { topPct: 85.4, leftPct: 18, widthPct: 66, heightPct: 4.2 },
+    rect: { topPct: 85.1, leftPct: 18.87, widthPct: 65.13, heightPct: 4.2 },
+    sizePct: 0.0453,
   },
   symbolRect: { topPct: 85.34, leftPct: 80.13, widthPct: 12, heightPct: 4.1 },
+  symbolSizePct: 0.065,
   rules: {
     rect: { topPct: 16, leftPct: 15, widthPct: 70, heightPct: 62 },
     sizePct: ptToPct(9),

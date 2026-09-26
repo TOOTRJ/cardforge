@@ -56,10 +56,14 @@ describe("display-font lines", () => {
     // a single-line Beleren text must reach either renderer as one run.
     for (const src of [BAKE, PREVIEW]) {
       expect(src).not.toMatch(/>\s*\{(title|safeTitle|name|typeLine)\}\s*<\/span>/);
-      expect(src).toMatch(/\{slotLine\(\s*layout\.footer\.font,\s*\w+\.artistCredit/);
     }
-    expect(BAKE).toContain("{slotLine(layout.footer.font, watermarkText)}");
+    expect(PREVIEW).toMatch(/\{slotLine\(\s*layout\.footer\.font,\s*\w+\.artistCredit/);
     expect(PREVIEW).toContain("{slotLine(layout.footer.font, footerWatermark)}");
+    // The bake's footer (FooterBake, which also draws the outline copies)
+    // takes the same artist line and custom mark through slotLine.
+    expect(BAKE).toMatch(/artist: card\.artistCredit\?\.trim\(\) \? `Art: \$\{card\.artistCredit\}` : "Art: Unknown"/);
+    expect(BAKE).toContain("const line = slotLine(slot.font, artist);");
+    expect(BAKE).toContain("const mark = watermarkText ? slotLine(slot.font, watermarkText) : null;");
     // The name: whole, or as fitted before a detached cost (m15pw, modern).
     expect(BAKE).toContain("{displayLine(titleFit ? titleFit.text : title)}");
     expect(PREVIEW).toContain("{displayLine(titleFit ? titleFit.text : safeTitle)}");

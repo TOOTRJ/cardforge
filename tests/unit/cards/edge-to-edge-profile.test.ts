@@ -6,6 +6,7 @@ import {
   ON_ART_OUTLINE,
   brandMarkLayout,
   footerInk,
+  textShadowCopies,
   getFrameProfile,
   type TextSlot,
 } from "@/lib/cards/template-layout";
@@ -72,7 +73,18 @@ describe("opt-in profile fields", () => {
       expect(Math.abs(centre(p.type.rect) - (84.81 + 5.43 / 2))).toBeLessThan(0.5);
       expect(p.type.rect.leftPct).toBeGreaterThan(BASIC_SYMBOL_CC_2022.rect.leftPct + BASIC_SYMBOL_CC_2022.rect.widthPct);
       expect(p.type.rect.leftPct + p.type.rect.widthPct).toBeLessThanOrEqual(s.leftPct + s.widthPct);
+      // Card Conjurer's text boxes and sizes, measured against 17 prints
+      // (print review 2026-09-26: name ink within 1 px of the print at its
+      // width; type line within 2 px), and the set symbol at the print's
+      // size. Literal numbers: a nudge must fail here, not pass silently.
+      expect(p.title.rect).toEqual({ topPct: 5.4, leftPct: 8.54, widthPct: 80.46, heightPct: 4.6 });
+      expect(p.title.sizePct).toBe(0.0533);
+      expect(p.type.rect).toEqual({ topPct: 85.1, leftPct: 18.87, widthPct: 65.13, heightPct: 4.2 });
+      expect(p.type.sizePct).toBe(0.0453);
+      expect(p.symbolSizePct).toBe(0.065);
     }
+    // CC's 168 px disc box (62/1752 px on 1500 × 2100).
+    expect(BASIC_SYMBOL_CC_2022.rect).toEqual({ topPct: 83.43, leftPct: 4.13, widthPct: 11.2, heightPct: 8.0 });
   });
 
   it("put the borderless M15 frame on Card Conjurer's bounds (4.32)", () => {
@@ -126,6 +138,31 @@ describe("footerInk on the art (TODO 3.8 / 3.23)", () => {
     expect(footerInk(alpha, "u", { footerOnArt: true })).toEqual({ colorHex: "#b4c0c2", shadowCss: "0.035em 0.035em 0 #000" });
     // ON_ART_OUTLINE is in em: the same outline at every render size.
     expect(ON_ART_OUTLINE).not.toMatch(/px/);
+  });
+});
+
+describe("textShadowCopies — the bake's multi-layer outline (new-frames review 2026-09-26)", () => {
+  it("turns ON_ART_OUTLINE into four black copies, in px at the font size", () => {
+    expect(textShadowCopies(ON_ART_OUTLINE, 29)).toEqual([
+      { dx: 0.06 * 29, dy: 0.06 * 29, color: "#000" },
+      { dx: -0.06 * 29, dy: 0.06 * 29, color: "#000" },
+      { dx: 0.06 * 29, dy: -0.06 * 29, color: "#000" },
+      { dx: -0.06 * 29, dy: -0.06 * 29, color: "#000" },
+    ]);
+    // px layers and colour functions with commas inside them.
+    expect(
+      textShadowCopies("1px 1px 0 #000, -1px -1px rgba(0, 0, 0, 0.5)", 20),
+    ).toEqual([
+      { dx: 1, dy: 1, color: "#000" },
+      { dx: -1, dy: -1, color: "rgba(0, 0, 0, 0.5)" },
+    ]);
+  });
+
+  it("leaves a single layer or a blurred one to CSS (they rasterise correctly)", () => {
+    expect(textShadowCopies("0.035em 0.035em 0 rgba(0,0,0,0.75)", 20)).toBeNull();
+    expect(textShadowCopies("0 1px 3px rgba(0,0,0,0.8), 1px 1px 0 #000", 20)).toBeNull();
+    expect(textShadowCopies("1px 1px 0 #000, 2px", 20)).toBeNull();
+    expect(textShadowCopies("1px 1px 0 #000, 2 2 0 #000", 20)).toBeNull();
   });
 });
 

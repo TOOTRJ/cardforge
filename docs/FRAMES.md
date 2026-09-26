@@ -99,6 +99,10 @@ new templates need no sweep (no card sits on them), and fullartland's
 re-source is its own template-scoped v30 sweep. A new template stays out of
 the picker until the owner verifies each colour in `/admin/frame-compare`;
 an import never lands on one (the creator only offers it, once verified).
+The compare page's alignment score leaves out printed details a master
+doesn't draw (`scoreExclusionsFor` in `lib/frames/align.ts`: on the
+borderless templates, the arch the rules-box pinline makes around a rare's
+holo stamp, until 4.9 draws it).
 
 ## Shipping a frame change
 

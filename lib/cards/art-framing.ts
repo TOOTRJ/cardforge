@@ -14,6 +14,16 @@
 // zoom. A centred position (0.5, 0.5) carries to itself on every window, and
 // windows of the same aspect never change the numbers. It is pure maths;
 // the creator applies it when the user changes the frame.
+//
+// "Same zoom" has one consequence by design (new-frames review 2026-09-26):
+// where the covered picture exactly spans the new window on an axis at that
+// zoom (a wide picture at zoom 1 moving onto a wider window — m15borderless →
+// m15 for a 1.37 picture), no focal pans it on that axis, so the carried
+// point can't be centred there and the focal resets to 0.5: the picture is
+// shown whole across that axis, the subject still in view. Real bakes land
+// the framed point within 1.6 px on every switch that can pan. Nudging the
+// zoom to keep the point centred is possible but would change what the user
+// chose; the owner can ask for it.
 // ---------------------------------------------------------------------------
 
 import { artReachesCardEdge, type FrameProfile, type Rect } from "@/lib/cards/template-layout";

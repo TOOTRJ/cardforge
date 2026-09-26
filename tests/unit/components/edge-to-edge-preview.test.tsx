@@ -121,6 +121,9 @@ describe("CardPreview — the basic-land symbol slot (TODO 3.24)", () => {
     const mana = plains({ watermark: { kind: "mana", key: "b", size: "large" } }, onArt);
     expect(mana.container.querySelector('[data-testid="basic-symbol"] i.ms-b')).not.toBeNull();
     expect(mana.container.querySelectorAll("i.ms")).toHaveLength(1);
+    // The disc keeps the card's frame colour (a white Plains), as the bake does.
+    const disc = mana.container.querySelector('[data-testid="basic-symbol-disc"]') as HTMLElement;
+    expect(disc.style.background).toBe(BASIC_SYMBOL_DISC_FILL.w);
     cleanup();
     const preset = plains({ watermark: { kind: "preset", key: "order-sun", size: "normal" } }, onArt);
     const img = preset.container.querySelector('[data-testid="basic-symbol"] img') as HTMLImageElement;

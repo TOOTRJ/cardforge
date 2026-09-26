@@ -91,10 +91,14 @@ const TEMPLATES = {
   m15pw: {
     q: (k) => `t:planeswalker frame:2015 (st:expansion or st:core) is:booster -is:showcase -is:borderless -is:extended -is:dfc ${spellColor(k)}`,
   },
-  // The 2019+ borderless frame (4.32). No crown until 4.6.
+  // The 2019+ borderless frame (4.32). No crown until 4.6. m = three
+  // colours: two-colour prints split the pinline (4.6), our master's is gold.
+  // Curate by eye (print review 2026-09-26): drop Godzilla-series, Lesson
+  // and devoid printings, and prefer commons/uncommons — rares and mythics
+  // print the holo stamp in an arch of the rules-box pinline (4.9).
   m15borderless: {
     q: (k) =>
-      `border:borderless frame:2015 -is:showcase -frame:legendary -is:dfc -is:textless (t:creature or t:instant or t:sorcery or t:enchantment) -t:artifact -t:land -t:token -t:planeswalker ${spellColor(k)}`,
+      `border:borderless frame:2015 -is:showcase -frame:legendary -is:dfc -is:textless (t:creature or t:instant or t:sorcery or t:enchantment) -t:artifact -t:land -t:token -t:planeswalker ${k === "m" ? "c>=3 -is:hybrid" : spellColor(k)}`,
   },
   m15borderlessartifact: {
     confirm: "Coloured borderless artifacts print the colour's bars (FDN, FRA) or silver artifact bars (SNC, SLC) — confirm the thumbnail.",
@@ -167,13 +171,15 @@ const TEMPLATES = {
     q: (k) => `set:znr is:showcase -t:land ${spellColor(k)}`,
   },
   // Full-art basics with the title bar + left-disc type bar (4.39). Pinned by
-  // set list, never by date: SPM and SOS (2025–26) print the plain bar.
+  // set list, never by date: SPM and SOS (2025–26) print the plain bar. The
+  // references are the 2024–25 printings the master matches within 2 px
+  // (print review 2026-09-26); ONE / MOM (2023) print an older bar geometry.
+  // c: FIN #309, the one printed left-disc Wastes.
   m15fullartland: {
-    confirm: "Left-disc full-art basics — confirm the thumbnail has the disc at the type bar's left end (MOM by the survey's grouping).",
     q: (k) =>
-      k === "m" || k === "c"
+      k === "m"
         ? null
-        : `t:basic is:fullart border:black frame:2015 -is:textless (set:one or set:mom or set:ltr or set:woe or set:mkm or set:otj or set:mh3 or set:blb or set:dsk or set:fdn or set:dft or set:tdm or set:fin or set:tla or set:ecl or set:msh or set:hob) ${identityColor(k)}`,
+        : `t:basic is:fullart border:black frame:2015 -is:textless (set:fdn or set:dsk or set:dft or set:tdm or set:fin or set:hob) ${identityColor(k)}`,
   },
   // Owner decision 4.35 (2026-09-26): FRA #382–396, the only borderless run
   // with these bars (dark ones — geometry only, `nearest`).

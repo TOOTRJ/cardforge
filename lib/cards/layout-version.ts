@@ -243,8 +243,12 @@ import type { CardType } from "@/types/card";
 //            3.23 / 3.24's pieces in the same bump: a basic's symbol in
 //            that disc (Card Conjurer's s?.png, no big watermark across the
 //            art), the set symbol right-anchored on the type bar (92.13 %W,
-//            centred 87.39 %H), the brand mark on its dark pill and the
-//            artist line in ON_ART_OUTLINE (both on the art). The new
+//            centred 87.39 %H) at the print's size, Card Conjurer's title
+//            and type-line boxes and sizes (measured on 17 prints), the
+//            brand mark on its dark pill and the artist line in
+//            ON_ART_OUTLINE (both on the art; the bake draws that outline
+//            as offset copies — librsvg keeps only the last layer of a
+//            multi-layer text-shadow). The new
 //            templates of 4.32 / 4.39 (m15borderless,
 //            m15borderlessartifact, m15fullartland) have no card baked
 //            before v30, so they need no scope. Template-scoped to

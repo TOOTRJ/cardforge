@@ -106,10 +106,15 @@ afterAll(() => {
   vi.unstubAllGlobals();
 });
 
-type Bake = { px: (x: number, y: number) => [number, number, number]; data: Buffer };
+type Bake = { px: (x: number, y: number) => [number, number, number]; data: Buffer; w: number; h: number };
 
-async function bake(card: Record<string, unknown>, brandMark = false): Promise<Bake> {
+async function bake(
+  card: Record<string, unknown>,
+  brandMark = false,
+  preset: "default" | "hd" = "default",
+): Promise<Bake> {
   const { renderCardImage } = await import("@/lib/render/card-image");
+  const w = RENDER_PRESETS[preset].width;
   const res = await renderCardImage(
     {
       rarity: "common",
@@ -123,14 +128,16 @@ async function bake(card: Record<string, unknown>, brandMark = false): Promise<B
       watermark: null,
       ...card,
     } as unknown as CardPreviewData,
-    "default",
+    preset,
     { brandMark, watermarkText: null },
   );
   const data = await sharp(Buffer.from(await res.arrayBuffer())).removeAlpha().raw().toBuffer();
   return {
     data,
+    w,
+    h: RENDER_PRESETS[preset].height,
     px: (x, y) => {
-      const i = (Math.round(y) * W + Math.round(x)) * 3;
+      const i = (Math.round(y) * w + Math.round(x)) * 3;
       return [data[i], data[i + 1], data[i + 2]];
     },
   };
@@ -143,11 +150,46 @@ const lum = ([r, g, b]: [number, number, number]) => 0.299 * r + 0.587 * g + 0.1
 /** Pixels in a card-percent rect matching `pred`. */
 function count(b: Bake, rect: Rect, pred: (p: [number, number, number]) => boolean): number {
   let n = 0;
-  const x0 = Math.ceil((rect.leftPct / 100) * W);
-  const x1 = Math.floor(((rect.leftPct + rect.widthPct) / 100) * W);
-  const y0 = Math.ceil((rect.topPct / 100) * H);
-  const y1 = Math.floor(((rect.topPct + rect.heightPct) / 100) * H);
+  const x0 = Math.ceil((rect.leftPct / 100) * b.w);
+  const x1 = Math.floor(((rect.leftPct + rect.widthPct) / 100) * b.w);
+  const y0 = Math.ceil((rect.topPct / 100) * b.h);
+  const y1 = Math.floor(((rect.topPct + rect.heightPct) / 100) * b.h);
   for (let y = y0; y < y1; y += 1) for (let x = x0; x < x1; x += 1) if (pred(b.px(x, y))) n += 1;
+  return n;
+}
+
+/** The px bounding box of the pixels in a card-percent rect matching `pred`. */
+function inkBox(b: Bake, rect: Rect, pred: (p: [number, number, number]) => boolean) {
+  let [minX, maxX, minY, maxY, n] = [b.w, -1, b.h, -1, 0];
+  const x0 = Math.ceil((rect.leftPct / 100) * b.w);
+  const x1 = Math.floor(((rect.leftPct + rect.widthPct) / 100) * b.w);
+  const y0 = Math.ceil((rect.topPct / 100) * b.h);
+  const y1 = Math.floor(((rect.topPct + rect.heightPct) / 100) * b.h);
+  for (let y = y0; y < y1; y += 1) {
+    for (let x = x0; x < x1; x += 1) {
+      if (!pred(b.px(x, y))) continue;
+      n += 1;
+      minX = Math.min(minX, x);
+      maxX = Math.max(maxX, x);
+      minY = Math.min(minY, y);
+      maxY = Math.max(maxY, y);
+    }
+  }
+  return { minX, maxX, minY, maxY, n };
+}
+
+/** Pixels matching `pred` inside the circle inscribed in a card-percent
+ *  square box, shrunk to `inner` of its radius. */
+function countInDisc(b: Bake, box: Rect, inner: number, pred: (p: [number, number, number]) => boolean): number {
+  const cx = ((box.leftPct + box.widthPct / 2) / 100) * b.w;
+  const cy = ((box.topPct + box.heightPct / 2) / 100) * b.h;
+  const r = ((box.widthPct / 100) * b.w * inner) / 2;
+  let n = 0;
+  for (let y = Math.floor(cy - r); y <= Math.ceil(cy + r); y += 1) {
+    for (let x = Math.floor(cx - r); x <= Math.ceil(cx + r); x += 1) {
+      if (Math.hypot(x + 0.5 - cx, y + 0.5 - cy) <= r && pred(b.px(x, y))) n += 1;
+    }
+  }
   return n;
 }
 
@@ -199,9 +241,14 @@ describe("a full-art Plains with a basic-symbol slot (TODO 3.24)", () => {
     const cy = ((box.topPct + box.heightPct / 2) / 100) * H;
     expect(Math.abs((minX + maxX) / 2 - cx)).toBeLessThanOrEqual(2);
     expect(Math.abs((minY + maxY) / 2 - cy)).toBeLessThanOrEqual(2);
+    // The glyph's halo (BASIC_SYMBOL_HALO): the white sun on the pale disc
+    // is edged darker than the disc; without it every pixel inside the disc
+    // is the fill or lighter.
+    const shaded = (p: [number, number, number]) => !isArt(p) && lum(p) < lum(fill as [number, number, number]) - 12;
+    expect(countInDisc(slotted, box, 0.85, shaded)).toBeGreaterThan(40);
   });
 
-  it("swaps an explicit mana watermark into the slot", async () => {
+  it("swaps an explicit mana watermark into the slot, on the frame colour's disc", async () => {
     const swamp = await bake({
       ...plains,
       ...fullart(onArt()),
@@ -212,6 +259,23 @@ describe("a full-art Plains with a basic-symbol slot (TODO 3.24)", () => {
     expect(count(swamp, box, (p) => lum(p) < 45)).toBeGreaterThan(800);
     expect(count(swamp, box, (p) => lum(p) > 245)).toBeLessThan(50);
     expect(count(swamp, HOST_GEOMETRY.rules.rect, (p) => !isArt(p))).toBe(0);
+    // The disc keeps the card's (white) frame fill, not the watermark's.
+    const fill = BASIC_SYMBOL_DISC_FILL.w.match(/[0-9a-f]{2}/g)!.map((h) => parseInt(h, 16));
+    const isFill = ([r, g, b]: [number, number, number]) =>
+      Math.abs(r - fill[0]) <= 3 && Math.abs(g - fill[1]) <= 3 && Math.abs(b - fill[2]) <= 3;
+    expect(count(swamp, box, isFill)).toBeGreaterThan(1500);
+  });
+
+  it("draws an explicit watermark at its own opacity in the slot", async () => {
+    const faint = await bake({
+      ...plains,
+      ...fullart(onArt()),
+      watermark: { kind: "mana", key: "b", size: "large", opacity: 0.3 },
+    });
+    const box = basicSymbolBox(BASIC_SYMBOL_MSE_SOCKET.rect, 7 / 5);
+    // 0.3 × the skull's ink over 0.7 × the pale disc: mid-grey, never black.
+    expect(countInDisc(faint, box, 0.85, (p) => lum(p) < 100)).toBe(0);
+    expect(countInDisc(faint, box, 0.85, (p) => lum(p) < 175)).toBeGreaterThan(300);
   });
 
   it("draws the slot's symbol image when it has one (preloaded like any frame asset)", async () => {
@@ -262,6 +326,19 @@ describe("the brand mark and the footer on the art (TODO 3.23)", () => {
     // the middle of its left end is the pill.
     expect(isArt(pill.px(got.minX, got.minY))).toBe(true);
     expect(isPill(pill.px(got.minX + 1, Math.round((got.minY + got.maxY) / 2)))).toBe(true);
+    // …and the end is a half circle of the pill's height: on the top rows
+    // the first full pill pixel sits on that circle, a little inside it for
+    // the anti-aliased edge (measured +0.4…+1.5 px; a radius without the
+    // padding — 3 px smaller — lands −0.4…−1.5 px, outside it).
+    const r = height / 2;
+    const offsets = [1, 2, 3, 4].map((k) => {
+      let first = got.minX;
+      while (first < got.maxX && !isPill(pill.px(first, got.minY + k))) first += 1;
+      return first - got.minX - (r - Math.sqrt(r * r - (r - k - 0.5) ** 2));
+    });
+    const mean = offsets.reduce((a, b) => a + b, 0) / offsets.length;
+    expect(mean).toBeGreaterThan(0);
+    expect(mean).toBeLessThan(2);
     // Without the pill, none of it.
     expect(box(bare).n).toBe(0);
   });
@@ -275,6 +352,44 @@ describe("the brand mark and the footer on the art (TODO 3.23)", () => {
     // every letter in black.
     expect(count(plain, footer, dark)).toBeLessThan(20);
     expect(count(outlined, footer, dark)).toBeGreaterThan(150);
+  });
+
+  it("rings the letters on all four sides, as the browser draws ON_ART_OUTLINE", async () => {
+    // Satori merges the four text-shadow layers into one SVG filter and the
+    // rasteriser (librsvg) kept only the last (up-left), so the bake used to
+    // draw a one-sided shadow here; the bake now draws offset copies. At HD
+    // the 0.06 em outline is ~1.7 px: count the light glyph pixels whose
+    // neighbour 2 px away on each side is outline-dark.
+    const b = await bake({ ...plains, ...fullart(onArt()) }, false, "hd");
+    const f = HOST_GEOMETRY.footer.rect;
+    const [x0, x1] = [Math.ceil((f.leftPct / 100) * b.w), Math.floor(((f.leftPct + 40) / 100) * b.w)];
+    const [y0, y1] = [Math.ceil((f.topPct / 100) * b.h), Math.floor(((f.topPct + f.heightPct) / 100) * b.h)];
+    const sides = { above: [0, -2], below: [0, 2], left: [-2, 0], right: [2, 0] } as const;
+    const hits = { above: 0, below: 0, left: 0, right: 0 };
+    let glyph = 0;
+    for (let y = y0 + 2; y < y1 - 2; y += 1) {
+      for (let x = x0 + 2; x < x1 - 2; x += 1) {
+        if (lum(b.px(x, y)) < 225) continue;
+        glyph += 1;
+        for (const [side, [dx, dy]] of Object.entries(sides) as [keyof typeof hits, readonly [number, number]][]) {
+          if (lum(b.px(x + dx, y + dy)) < 45) hits[side] += 1;
+        }
+      }
+    }
+    expect(glyph).toBeGreaterThan(1000);
+    // Every side is ringed, and no side carries more than twice another
+    // (the one-sided shadow measured ~6:1 above:below).
+    const counts = Object.values(hits);
+    expect(Math.min(...counts)).toBeGreaterThan(0.15 * glyph);
+    expect(Math.max(...counts) / Math.min(...counts)).toBeLessThan(2);
+    // The copies are drawn UNDER the light line (as a text-shadow is): its
+    // letters keep their light cores…
+    const plain = await bake({ ...plains, ...fullart(onArt({ footerOnArt: false })) }, false, "hd");
+    const light = (x: Bake) => count(x, { ...f, widthPct: 40 }, (p) => lum(p) >= 225);
+    expect(light(b)).toBeGreaterThan(0.8 * light(plain));
+    // …and, as the browser clips a text-shadow to the ellipsizing span's
+    // box, no outline lands left of the artist line's box.
+    expect(count(b, { ...f, leftPct: f.leftPct - 0.4, widthPct: 0.4 }, (p) => lum(p) < 45)).toBe(0);
   });
 
   it("shows the art in the card's corner on a full-bleed frame, the border on a bordered one", async () => {
@@ -365,6 +480,14 @@ describe("a split type line (TODO 3.24)", () => {
     const ink = (p: [number, number, number]) => lum(p) < 90;
     expect(count(forest, split.leftRect, ink)).toBeGreaterThan(150);
     expect(count(forest, split.rightRect, ink)).toBeGreaterThan(100);
+    // "Basic Land" starts at the left box's edge; "Forest" is centred in the
+    // right box (its default align) — and each box prints its own half.
+    const left = inkBox(forest, split.leftRect, ink);
+    const right = inkBox(forest, split.rightRect, ink);
+    const rightCentre = ((split.rightRect.leftPct + split.rightRect.widthPct / 2) / 100) * forest.w;
+    expect(Math.abs((right.minX + right.maxX) / 2 - rightCentre)).toBeLessThanOrEqual(2);
+    expect(left.minX - (split.leftRect.leftPct / 100) * forest.w).toBeLessThan(4);
+    expect(left.maxX - left.minX).toBeGreaterThan(1.3 * (right.maxX - right.minX));
     // The gap and the band's right end (where the inline set symbol was).
     expect(count(forest, { topPct: 85.4, leftPct: 47, widthPct: 10, heightPct: 4.2 }, ink)).toBe(0);
     expect(count(forest, { topPct: 85.4, leftPct: 85, widthPct: 5, heightPct: 4.2 }, ink)).toBe(0);

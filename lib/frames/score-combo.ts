@@ -21,6 +21,7 @@ import {
 import { scanGridFor } from "@/lib/frames/scan-geometry";
 import {
   alignAndScore,
+  scoreExclusionsFor,
   slotKindFor,
   type AlignSlot,
   type SlotScore,
@@ -128,7 +129,9 @@ export async function scoreFrameCombo(input: {
     if (rect) slots.push({ path, rect, kind: slotKindFor(path) });
   }
 
-  const result = alignAndScore({ ours, scan, slots });
+  // Printed details the master doesn't draw (the borderless holo-stamp
+  // arch, 4.9) stay out of the score.
+  const result = alignAndScore({ ours, scan, slots, exclude: scoreExclusionsFor(template) });
 
   const perSlot: Partial<Record<SlotPath, number>> = {};
   const slotScores: Partial<Record<SlotPath, SlotScore>> = {};

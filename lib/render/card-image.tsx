@@ -108,6 +108,7 @@ import {
   bandTextStyle,
   brandMarkLayout,
   footerInk,
+  textShadowCopies,
   loyaltyBadgeAssetFor,
   SAGA_MARKER_POINTS,
   loyaltyBadgeShapeFor,
@@ -1017,43 +1018,18 @@ function CardImage({
           })
         : null}
 
-      {/* Footer — artist + brand. */}
-      {layout.footer && footerInkResolved ? (
-        <div
-          style={{
-            ...slotBox(layout.footer.rect),
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            fontFamily: fontFamilyFor(layout.footer.font),
-            fontSize: fpx(layout.footer.sizePct, width),
-            color: footerInkResolved.colorHex,
-            ...(footerInkResolved.shadowCss
-              ? { textShadow: footerInkResolved.shadowCss }
-              : {}),
-            letterSpacing: layout.footer.letterSpacingEm
-              ? `${layout.footer.letterSpacingEm}em`
-              : 0,
-            textTransform: layout.footer.uppercase ? "uppercase" : "none",
-            zIndex: 20,
-          }}
-        >
-          <span style={ELLIPSIS}>
-            {slotLine(
-              layout.footer.font,
-              card.artistCredit?.trim() ? `Art: ${card.artistCredit}` : "Art: Unknown",
-            )}
-          </span>
-          {/* Footer-right: the owner's custom mark, or nothing. (The old
-              hardcoded "PipGlyph" doubled up with the brand-mark overlay —
-              layout v19 removed it.) */}
-          {watermarkText ? (
-            <span style={{ display: "flex", flexShrink: 0 }}>
-              {slotLine(layout.footer.font, watermarkText)}
-            </span>
-          ) : null}
-        </div>
-      ) : null}
+      {/* Footer — artist + brand. A multi-layer outline (ON_ART_OUTLINE on
+          a footer printed on the art) is drawn as offset copies under it:
+          see FooterBake. */}
+      {layout.footer && footerInkResolved
+        ? FooterBake({
+            slot: layout.footer,
+            ink: footerInkResolved,
+            artist: card.artistCredit?.trim() ? `Art: ${card.artistCredit}` : "Art: Unknown",
+            watermarkText,
+            cardWidth: width,
+          })
+        : null}
 
       {/* Showcase tints the title italic via the Band `italic` prop above. */}
       {isShowcase ? null : null}
@@ -1187,6 +1163,78 @@ function alignedText(
     (slot.letterSpacingEm ?? 0) * fontPx,
   );
   return ink > roomPx || box === ink ? ELLIPSIS : { ...ELLIPSIS, marginRight: ink - box };
+}
+
+/** The footer — artist line + the owner's custom mark (the preview's footer
+ *  div twin). Its ink's text shadow is CSS, except a multi-layer zero-blur
+ *  outline (ON_ART_OUTLINE on a footer printed on the art, footerOnArt):
+ *  Satori merges one feDropShadow per layer and the rasteriser (librsvg)
+ *  keeps only the last, so the bake drew a one-sided shadow where the
+ *  browser draws a ring (new-frames review 2026-09-26). That outline is
+ *  drawn as one copy of the footer per layer, in the shadow's colour and
+ *  offset by the layer, UNDER the footer (paint order = DOM order). Each
+ *  copy clips its artist line to the unshifted line box, as the browser
+ *  clips a text-shadow to the ellipsizing span's box. */
+function FooterBake({
+  slot,
+  ink,
+  artist,
+  watermarkText,
+  cardWidth,
+}: {
+  slot: TextSlot;
+  ink: { colorHex: string; shadowCss?: string };
+  artist: string;
+  watermarkText: string | null | undefined;
+  cardWidth: number;
+}) {
+  const fontPx = fpx(slot.sizePct, cardWidth);
+  const copies = ink.shadowCss ? textShadowCopies(ink.shadowCss, fontPx) : null;
+  const line = slotLine(slot.font, artist);
+  const mark = watermarkText ? slotLine(slot.font, watermarkText) : null;
+  const box = (color: string, textShadow?: string) => ({
+    ...slotBox(slot.rect),
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    fontFamily: fontFamilyFor(slot.font),
+    fontSize: fontPx,
+    color,
+    ...(textShadow ? { textShadow } : {}),
+    letterSpacing: slot.letterSpacingEm ? `${slot.letterSpacingEm}em` : 0,
+    textTransform: slot.uppercase ? ("uppercase" as const) : ("none" as const),
+    zIndex: 20,
+  });
+  const footer = (
+    <div style={box(ink.colorHex, copies ? undefined : ink.shadowCss)}>
+      <span style={ELLIPSIS}>{line}</span>
+      {/* Footer-right: the owner's custom mark, or nothing. (The old
+          hardcoded "PipGlyph" doubled up with the brand-mark overlay —
+          layout v19 removed it.) */}
+      {mark ? <span style={{ display: "flex", flexShrink: 0 }}>{mark}</span> : null}
+    </div>
+  );
+  if (!copies) return footer;
+  // One wrapper (never a Fragment: Satori lays one out as a zero-width flex
+  // item) the size of the card, so the copies and the footer keep their
+  // card-percent boxes.
+  return (
+    <div style={{ position: "absolute", left: 0, top: 0, width: "100%", height: "100%", display: "flex", zIndex: 20 }}>
+      {copies.map((copy, i) => (
+        <div key={i} style={box(copy.color)}>
+          <span style={ELLIPSIS}>
+            <span style={{ ...ELLIPSIS, position: "relative", left: copy.dx, top: copy.dy }}>{line}</span>
+          </span>
+          {mark ? (
+            <span style={{ display: "flex", flexShrink: 0, position: "relative", left: copy.dx, top: copy.dy }}>
+              {mark}
+            </span>
+          ) : null}
+        </div>
+      ))}
+      {footer}
+    </div>
+  );
 }
 
 /** The brand mark's pill on the art (BRAND_MARK_PILL, TODO 3.23) in px —
