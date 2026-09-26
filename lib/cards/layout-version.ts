@@ -233,9 +233,19 @@ import type { CardType } from "@/types/card";
 //              at M15's sizes and the bottom name bar shrinks as one so a
 //              long cost stays on it. Template aftermath, every card; 0 in
 //              production.
+//   30     — the full-art basic land frame re-sourced (frames plan 4.39):
+//            `fullartland`'s masters are Card Conjurer's 'Fullart Basics
+//            (2022)' frames without their Border mask (borderless, light
+//            bars — owner decisions 4.35(a) and 2026-09-26), in the frames
+//            bucket, replacing the 744 px MSE composite upscaled 2× that
+//            lived in public/frames/fullartland. The bars move by < 1 % H
+//            and the mana-symbol socket is painted (the symbol slot is
+//            3.24's). Template-scoped to fullartland, "sweep": 0 public
+//            production cards (anonymous read, 2026-09-26); private rows
+//            need the owner's admin count before the sweep.
 // ---------------------------------------------------------------------------
 
-export const CARD_LAYOUT_VERSION = 29;
+export const CARD_LAYOUT_VERSION = 30;
 
 /**
  * Bumps that changed the output of only some frame templates, keyed by the
@@ -261,6 +271,8 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // Ghostfire rebuilt, planeswalker mana cost and name lowered.
   27: ["agclassic", "alphaland", "tarkirdragon", "tarkirghostfire", "m15pw"],
   // (v29 is card-scoped only: see VERSION_SCOPES[29].)
+  // v30: fullartland's masters re-sourced from Card Conjurer (4.39).
+  30: ["fullartland"],
 };
 
 /** The card fields a scoped bump can look at — `cards` columns, as stored.
@@ -488,6 +500,7 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   27: "sweep", // owner decisions: Alpha re-cut + ink, Dragon Wing split, Ghostfire, pw title bar
   28: "sweep", // foil finish — it never reached a saved image
   29: "sweep", // round-5 leftovers: word spacing, pw rows, Alpha ink, stats, foil backdrops, aftermath
+  30: "sweep", // fullartland re-sourced from Card Conjurer (4.39) — a frame swap, never an owner badge
 };
 
 export function rolloutPolicy(version: number, rollout = VERSION_ROLLOUT): RolloutPolicy {

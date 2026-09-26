@@ -3,7 +3,9 @@
 // import-cc-frames.mjs — build the M15-era frame masters from Card Conjurer's
 // frame packs into .frames-build/ (frames plan 4.3; owner decision
 // 2026-09-25: Card Conjurer art for the M15 era, MSE for showcase families
-// and the old borders).
+// and the old borders). Later runs of the same importer: 4.32's borderless
+// frame (m15borderless, m15borderlessartifact) and 4.39's full-art basics
+// (m15fullartland, fullartland).
 //
 //   node scripts/import-cc-frames.mjs                 # every template
 //   node scripts/import-cc-frames.mjs --only m15,m15land
@@ -16,9 +18,10 @@
 // masks at the pack's NATIVE size in CC's draw order (2010×2814 for the
 // accurate M15 pack), downscales once with Lanczos to 1500×2100, rounds the
 // corners, and writes <out>/<template>/<colour>.png + .webp, plus
-// P/T plates at native size under pt/, and a planeswalker's loyalty shield
-// cut out of each master under loyalty/. Provenance (which source files made
-// which frame, and every substitution) goes to lib/cards/frame-sources.json.
+// P/T plates at native size under pt/, a basic land's mana-symbol discs at
+// native size under symbol/, and a planeswalker's loyalty shield cut out of
+// each master under loyalty/. Provenance (which source files made which
+// frame, and every substitution) goes to lib/cards/frame-sources.json.
 //
 // Nothing here touches public/frames or any bucket. Next:
 //   npm run frames:publish -- --source .frames-build [--only …] --write
@@ -42,6 +45,7 @@ import {
   builtColors,
   compositeLayers,
   cutThroughMask,
+  describeLayer,
   roundCornersRgba8,
   sourceFilesFor,
   toRgba8,
@@ -119,9 +123,7 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
   if (only && !only.includes(template)) continue;
   const recipe = {};
   for (const key of builtColors(def)) {
-    recipe[key] = def.colors[key].map(
-      (l) => `${l.src}${l.mask ? ` through ${l.mask}` : ""}${l.opacity !== undefined ? ` at ${Math.round(l.opacity * 100)}%` : ""}`,
-    );
+    recipe[key] = def.colors[key].map(describeLayer);
     const out = path.join(outDir, template, `${key}.png`);
     if (dryRun) {
       console.log(`${path.relative(process.cwd(), out)} ← ${recipe[key].join(" + ")}`);
@@ -135,6 +137,7 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
       images.push({
         data: await rgba(await fetchCached(l.src), W, H),
         mask: l.mask ? await rgba(await fetchCached(l.mask), W, H) : undefined,
+        invert: l.invert,
         opacity: l.opacity,
       });
     }
@@ -168,15 +171,25 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     for (const key of COLORS) await writePlate(plates[key], path.join(outDir, template, "pt", `${key}.png`));
     console.log(`wrote ${template} plates`);
   }
+  const symbols = def.symbols ? { ...def.symbols } : undefined;
+  if (symbols && !dryRun) {
+    for (const [key, src] of Object.entries(symbols)) {
+      await writePlate(src, path.join(outDir, template, "symbol", `${key}.png`));
+    }
+    console.log(`wrote ${template} symbol discs (${Object.keys(symbols).join(", ")})`);
+  }
   provenance[template] = {
     source: "cardconjurer",
     repo: CC_REPO,
     commit: CC_COMMIT,
+    ...(def.pack ? { pack: def.pack } : {}),
     converter: "scripts/import-cc-frames.mjs",
     output: `${OUT_W}x${OUT_H}, corners rounded to ${CORNER_RADIUS}px, webp q${WEBP.quality}`,
+    ...(def.transforms ? { transforms: def.transforms } : {}),
     colors: recipe,
     ...(def.excluded ? { excluded: def.excluded } : {}),
     ...(plates ? { plates } : {}),
+    ...(symbols ? { symbols: { ...symbols, output: "symbol/<colour>.png, native size" } } : {}),
     ...(def.shield ? { shield: { mask: def.shield.mask, box: def.shield.box, output: "loyalty/<colour>.png" } } : {}),
     sourceFiles: sourceFilesFor(def),
     notes: def.notes,

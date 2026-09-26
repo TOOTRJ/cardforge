@@ -38,6 +38,9 @@ const TOKEN = "img/frames/token/m15/textless";
 /** A layer: a frame image, optionally shown only through a mask (its alpha),
  *  optionally at reduced opacity. */
 const layer = (src, mask, opacity) => ({ src, ...(mask ? { mask } : {}), ...(opacity !== undefined ? { opacity } : {}) });
+/** A layer shown everywhere EXCEPT through a mask (alpha × (1 − mask
+ *  alpha)) — how a borderless key drops a pack's Border mask (4.39). */
+const outside = (src, mask) => ({ src, mask, invert: true });
 
 /** The planeswalker loyalty shield's box on the 1500×2100 master: CC's
  *  maskLoyalty.png covers x 1197–1430, y 1844–1991 after the Lanczos
@@ -73,13 +76,46 @@ const TOKEN_INTERIOR_MASKS = [`${REG}/m15MaskTitle.png`, "img/frames/token/token
 const perColor = (fn, keys = COLORS) => Object.fromEntries(keys.map((k) => [k, fn(k)]));
 const WUBRGM = ["w", "u", "b", "r", "g", "m"];
 
+// --- 4.32 'Borderless (Alt)' — CC packBorderless.js (groupShowcase-5.js:49).
+// 1500×2100 native (no resample): sides α0 down to the fins, the α128 black
+// box and the translucent bars baked in, an opaque bottom bar from 92.24 % H
+// with fins up the side edges from 78.67 % H. The P/T plate sits at
+// 1146/1861 px, 274×140 (76.4/88.62/18.27×6.67 %). The pack's masks
+// (genericShowcase/m15GenericShowcaseMaskPinline.png + the regular M15
+// Title/Type/Rules/Border) are 4.34's land recipe; nothing here needs them.
+const BORDERLESS = "img/frames/m15/borderless";
+const borderlessFrame = (k) => `${BORDERLESS}/m15GenericShowcaseFrame${k.toUpperCase()}.png`;
+/** The pack's P/T plates: one per colour, "Artifact" (a) and "Colorless" (l).
+ *  (pt/c.png sits in the folder too, but the pack never lists it.) */
+const BORDERLESS_PT = { ...perColor((k) => `${BORDERLESS}/pt/${k}.png`, WUBRGM), c: `${BORDERLESS}/pt/l.png` };
+
+// --- 4.39 'Fullart Basics (2022)' — CC packTextlessBasics2022.js
+// (groupTextless-4.js:5). 1500×2100 native, opaque black ring; a title bar
+// and a type bar with the mana-symbol socket at its left end. The pack's
+// masks are maskPinline, the regular M15 Title, maskType and maskBorder; the
+// borderless key needs only the last.
+const BASICS_2022 = "img/frames/textless/2022";
+const BASICS_2022_BORDER_MASK = `${BASICS_2022}/maskBorder.png`;
+/** Frame per colour key: CC has no colourless basic, so `c` (Wastes) wears
+ *  the pack's "Colorless Frame" l.png. */
+const basics2022Frame = (k) => `${BASICS_2022}/${k === "c" ? "l" : k}.png`;
+/** The 168×168 mana-symbol discs (bounds 62/1752 px = 4.13/83.43/11.2×8.0 %),
+ *  drawn by the profile's basic-land symbol slot (TODO 3.24). No `m`: there
+ *  is no multicolour basic land. */
+const BASICS_2022_SYMBOLS = Object.fromEntries(["w", "u", "b", "r", "g", "c"].map((k) => [k, `${BASICS_2022}/s${k}.png`]));
+
 /**
- * template → { colors: colour → layers, plates?, shield?, excluded?, notes }.
+ * template → { colors: colour → layers, plates?, symbols?, shield?,
+ * excluded?, pack?, transforms?, notes }.
+ * `plates` are written at native size to <template>/pt/<colour>.png;
+ * `symbols` (a basic land's mana-symbol disc, TODO 3.24) the same way to
+ * <template>/symbol/<colour>.png, for the colours listed only.
  * `shield` cuts part of each built master out through a mask (its alpha)
  * into <template>/loyalty/<colour>.png, cropped to `box`.
  * `excluded` colours are NOT built: the template keeps its current master
- * for them. `notes` records every substitution, so provenance says why a
- * colour is not a 1:1 Card Conjurer file.
+ * for them. `pack` / `transforms` name the CC pack and what was done to its
+ * pixels (recorded in provenance). `notes` records every substitution, so
+ * provenance says why a colour is not a 1:1 Card Conjurer file.
  */
 export const CC_TEMPLATES = {
   m15: {
@@ -163,19 +199,74 @@ export const CC_TEMPLATES = {
     },
     notes: ["coloured artifact tokens = artifact token frame, colour pinline/title/type through CC's token masks"],
   },
+  // 4.32 — the standard borderless frame (2019+): art to the card edge.
+  m15borderless: {
+    colors: perColor((k) => [layer(borderlessFrame(k))]),
+    plates: BORDERLESS_PT,
+    pack: "packBorderless.js 'Borderless (Alt)' (groupShowcase-5.js:49)",
+    transforms: "native 1500x2100, pixels copied 1:1 (no resample), corners rounded to the importer radius",
+    notes: [
+      "colourless = CC's see-through colourless frame (m15GenericShowcaseFrameC.png): the art runs under the frame, as on m15 'c' (4.17)",
+      "colourless P/T plate = the pack's 'Colorless Power/Toughness' pt/l.png (the unlisted pt/c.png is not used)",
+      "CC's 'Land Frame' (m15GenericShowcaseFrameL.png) is not imported here: it is 4.34's m15borderlessland",
+    ],
+  },
+  // 4.32 — its artifact skin, mirroring m15artifact.
+  m15borderlessartifact: {
+    colors: {
+      c: [layer(borderlessFrame("a"))],
+      // A coloured artifact wears the colour frame (see notes).
+      ...perColor((k) => [layer(borderlessFrame(k))], WUBRGM),
+    },
+    plates: { ...BORDERLESS_PT, c: `${BORDERLESS}/pt/a.png` },
+    pack: "packBorderless.js 'Borderless (Alt)' (groupShowcase-5.js:49)",
+    transforms: "native 1500x2100, pixels copied 1:1 (no resample), corners rounded to the importer radius",
+    notes: [
+      "colourless artifact = CC's 'Artifact Frame' (m15GenericShowcaseFrameA.png) with the 'Artifact Power/Toughness' plate pt/a.png",
+      "coloured artifacts = the colour frame, whole (same bytes as m15borderless). 4.16's recipe (artifact frame + border, colour interior) keeps the ARTIFACT frame only where the colour doesn't draw: the frame body and the border. A full-bleed frame has no frame body, and the Border region (bottom bar + fins) of the Artifact frame matches every colour's (premultiplied; measured 2026-09-26). Drawn through the pack's masks it would only add damage: a partial-alpha seam row at 92.76-92.81 % H between the Pinline and Border masks, and the bars' outer bevel (0.13 % of the frame's alpha lies outside the five masks)",
+    ],
+  },
+  // 4.39 — the black-bordered full-art basic (P23+ left-medallion design).
+  m15fullartland: {
+    colors: perColor((k) => [layer(basics2022Frame(k))]),
+    symbols: BASICS_2022_SYMBOLS,
+    pack: "packTextlessBasics2022.js 'Fullart Basics (2022)' (groupTextless-4.js:5)",
+    transforms: "native 1500x2100, the full frame image copied 1:1 (no resample), corners rounded to the importer radius; symbol discs native 168x168",
+    notes: [
+      "the full composite: the pack's frame image with its black ring (Pinline, Title, Type and Border all drawn)",
+      "colourless (Wastes) = the pack's 'Colorless Frame' l.png + the colourless disc sc.png: no left-medallion Wastes was ever printed (owner visual sign-off before it is verified)",
+      "m = the pack's 'Multicolored Frame' m.png, built so the key has a master; no multicolour basic exists, so no symbol disc and never offered",
+    ],
+  },
+  // 4.39 — the borderless full-art basic: the same composite minus the ring
+  // (owner decision 4.35(a): fullartland stays borderless; light bars).
+  fullartland: {
+    colors: perColor((k) => [outside(basics2022Frame(k), BASICS_2022_BORDER_MASK)]),
+    symbols: BASICS_2022_SYMBOLS,
+    pack: "packTextlessBasics2022.js 'Fullart Basics (2022)' (groupTextless-4.js:5)",
+    transforms: "native 1500x2100, no resample; the frame image with its Border mask's region erased (alpha x (1 - mask alpha)), corners rounded to the importer radius; symbol discs native 168x168",
+    notes: [
+      "re-sourced from CC (4.39): replaces the 744 px MSE magic-m15-full-art-basic-land-symbol composite that scripts/build-variation-frames.mjs upscaled",
+      "borderless = m15fullartland without the Border mask (owner decision 4.35(a)); the bars keep their bevels and drop shadows",
+      "light bars, as on the 263 bordered printings (owner decision 2026-09-26): FRA #382–396 print dark bars and resolve nearest",
+      "colourless (Wastes) = the pack's 'Colorless Frame' l.png + the colourless disc sc.png (owner visual sign-off before it is verified)",
+      "m = the pack's 'Multicolored Frame' m.png, built so the key keeps a master (the MSE build dressed m as colourless); no multicolour basic exists, so no symbol disc and never offered",
+    ],
+  },
 };
 
 /** Templates deliberately NOT imported yet, and why. */
 export const CC_DEFERRED = {};
 
 /**
- * Composite RGBA layers (each `{ data, mask? }`, raw 8-bit RGBA of the same
- * size) in order: a layer's alpha is multiplied by its mask's ALPHA, then
- * drawn source-over onto the accumulator — exactly CC's drawFrames (a black
- * canvas, the masks drawn 'source-in', the image drawn 'source-in', the
- * result 'source-over'). CC's masks are solid colours (title red, rules
- * green, border black): only their alpha means anything. Returns a
- * Float32Array RGBA with alpha in 0..1.
+ * Composite RGBA layers (each `{ data, mask?, invert?, opacity? }`, raw 8-bit
+ * RGBA of the same size) in order: a layer's alpha is multiplied by its
+ * mask's ALPHA, then drawn source-over onto the accumulator — exactly CC's
+ * drawFrames (a black canvas, the masks drawn 'source-in', the image drawn
+ * 'source-in', the result 'source-over'). CC's masks are solid colours
+ * (title red, rules green, border black): only their alpha means anything.
+ * `invert` keeps the layer everywhere EXCEPT the mask (alpha × (1 − mask
+ * alpha)). Returns a Float32Array RGBA with alpha in 0..1.
  */
 export function compositeLayers(images, width, height) {
   const n = width * height;
@@ -184,7 +275,7 @@ export function compositeLayers(images, width, height) {
     for (let p = 0; p < n; p += 1) {
       const o = p * 4;
       let a = img.data[o + 3] / 255;
-      if (img.mask) a *= img.mask[o + 3] / 255;
+      if (img.mask) a *= img.invert ? 1 - img.mask[o + 3] / 255 : img.mask[o + 3] / 255;
       if (img.opacity !== undefined) a *= img.opacity;
       if (i === 0) {
         acc[o] = img.data[o];
@@ -267,12 +358,20 @@ export function toRgba8(acc) {
   return out;
 }
 
+/** One layer as provenance prints it: "src", "src through mask",
+ *  "src outside mask", "… at 35%". */
+export function describeLayer(l) {
+  const mask = l.mask ? ` ${l.invert ? "outside" : "through"} ${l.mask}` : "";
+  return `${l.src}${mask}${l.opacity !== undefined ? ` at ${Math.round(l.opacity * 100)}%` : ""}`;
+}
+
 /** The colours a template builds (all seven minus `excluded`). */
 export function builtColors(def) {
   return COLORS.filter((k) => def.colors[k] && !def.excluded?.[k]);
 }
 
-/** Every Card Conjurer file a template needs (layers, masks, plates). */
+/** Every Card Conjurer file a template needs (layers, masks, plates,
+ *  symbol discs). */
 export function sourceFilesFor(def) {
   const files = new Set();
   for (const layers of Object.values(def.colors)) {
@@ -282,6 +381,7 @@ export function sourceFilesFor(def) {
     }
   }
   for (const plate of Object.values(def.plates ?? {})) files.add(plate);
+  for (const symbol of Object.values(def.symbols ?? {})) files.add(symbol);
   if (def.shield) files.add(def.shield.mask);
   return [...files].sort();
 }
