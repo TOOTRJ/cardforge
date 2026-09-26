@@ -1406,11 +1406,6 @@
           "name": "Pain // Suffering",
           "set": "dmr",
           "scryfallId": "3d11164c-f27b-4cad-8620-d97ed384f0e6"
-        },
-        {
-          "name": "Roaring Furnace // Steaming Sauna",
-          "set": "dsk",
-          "scryfallId": "94352ffb-d716-484d-b018-4e1c033ef2f3"
         }
       ]
     }
@@ -2501,11 +2496,6 @@
           "name": "Ancient Tomb",
           "set": "zne",
           "scryfallId": "880ffa23-ed71-4f39-aa66-0953a1f20fe9"
-        },
-        {
-          "name": "Cavern of Souls",
-          "set": "zne",
-          "scryfallId": "5261e0f6-55bf-4d45-92ea-7acbab41162c"
         }
       ],
       "m": [
@@ -2518,6 +2508,11 @@
           "name": "Creeping Tar Pit",
           "set": "zne",
           "scryfallId": "3272a554-8509-40b2-ac39-c906b1366275"
+        },
+        {
+          "name": "Cavern of Souls",
+          "set": "zne",
+          "scryfallId": "5261e0f6-55bf-4d45-92ea-7acbab41162c"
         }
       ]
     }
