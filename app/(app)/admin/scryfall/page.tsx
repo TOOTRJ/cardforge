@@ -252,7 +252,10 @@ export default async function AdminScryfallPage() {
                 Per-user quotas (table above) sum across users, so many heavy
                 users could on paper exceed the global 120/min search budget.
                 Watch the &ldquo;last minute&rdquo; counter here — sustained
-                triple-digit numbers mean it&rsquo;s time to revisit.
+                triple-digit numbers mean it&rsquo;s time to revisit. Admin
+                card searches (the frame-compare reference picker) skip the
+                quota and aren&rsquo;t logged, so they don&rsquo;t appear in
+                these counts.
               </p>
             </SurfaceCard>
             <SurfaceCard className="flex flex-col gap-3 p-5 text-sm leading-6 text-muted">
