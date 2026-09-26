@@ -2052,7 +2052,10 @@ export function CardCreatorForm({
               ? `Saved “${payload.title}” as a draft`
               : `Saved “${payload.title}”`,
         );
-        guard.disarm();
+        // Every create leaves this page: stop guarding and take the Back
+        // sentinel off first, so Back from the saved card doesn't land on a
+        // blank /create (TODO 3b.7).
+        await guard.release();
         if (options.afterSave) {
           options.afterSave();
           return;
@@ -2173,7 +2176,14 @@ export function CardCreatorForm({
       // the keyed reset keeps them (TODO 3b.6).
       const typedDuringSave = !sameFormState(getValues(), values);
       reset(values, { keepValues: true, keepDirty: typedDuringSave });
-      if (!typedDuringSave) guard.disarm();
+      // Stop guarding and take the Back sentinel off (TODO 3b.7: Back had
+      // to be pressed twice after a save) — unless we stay in the editor
+      // with unsent keystrokes, which keep their guard.
+      const staysInEditor =
+        !options.afterSave &&
+        !(intent === "save" && finalVisibility === "public") &&
+        !createBackAfter;
+      if (!(typedDuringSave && staysInEditor)) await guard.release();
       if (options.afterSave) {
         options.afterSave();
         return;
@@ -2649,8 +2659,7 @@ export function CardCreatorForm({
               const pending = guard.pending;
               setLeaveSaveError(null);
               guard.clearPending();
-              guard.disarm();
-              pending?.proceed();
+              void guard.release().then(() => pending?.proceed());
             }}
             onSave={() => {
               const pending = guard.pending;

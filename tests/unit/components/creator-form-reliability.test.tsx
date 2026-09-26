@@ -792,3 +792,78 @@ describe("3b.6 an edit save keeps keystrokes typed before the refresh lands", ()
     expect(statusBadge()).toBe("Up to date");
   });
 });
+
+// ---------------------------------------------------------------------------
+// 3b.7 — the guard's Back sentinel (pushed while dirty) outlived the save:
+// Back had to be pressed twice after an edit save, and a create's redirect
+// left Back pointing at a blank /create. The save now pops it first.
+// ---------------------------------------------------------------------------
+
+describe("3b.7 a save takes the Back sentinel off before navigating", () => {
+  const isSentinel = (call: unknown[]) =>
+    (call[0] as { pipglyphUnsavedGuard?: boolean } | null)?.pipglyphUnsavedGuard === true;
+
+  function spyHistory() {
+    const pushState = vi.spyOn(window.history, "pushState");
+    const back = vi.spyOn(window.history, "back").mockImplementation(() => {
+      setTimeout(() => window.dispatchEvent(new PopStateEvent("popstate", { state: null })), 0);
+    });
+    return { pushState, back };
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("edit: the sentinel is popped once, before the refresh", async () => {
+    const { pushState, back } = spyHistory();
+    actions.updateCardAction.mockResolvedValue({ ok: true, slug: "emberbound-wyrm" });
+    renderForm({ mode: "edit", card: savedCard() });
+    await typeTitle("Emberbound Wyrm II");
+    expect(pushState.mock.calls.filter(isSentinel)).toHaveLength(1);
+    await clickSave();
+    await waitFor(() => expect(router.refresh).toHaveBeenCalled());
+    expect(back).toHaveBeenCalledTimes(1);
+    expect(back.mock.invocationCallOrder[0]).toBeLessThan(
+      router.refresh.mock.invocationCallOrder[0],
+    );
+  });
+
+  it("create path: popped before the redirect", async () => {
+    const { back } = spyHistory();
+    actions.createCardAction.mockResolvedValue({
+      ok: true,
+      cardId: "44444444-4444-4444-8444-444444444444",
+      slug: "wyrm-of-the-second-dawn",
+    });
+    actions.updateCardAction.mockResolvedValue({ ok: true, slug: "front-card" });
+    renderForm({
+      mode: "remix",
+      card: savedCard({ visibility: "public" }),
+      backForCardId: "55555555-5555-4555-8555-555555555555",
+      backForSlug: "tester/front-card",
+    });
+    await typeTitle("Wyrm of the Second Dawn");
+    await clickSave();
+    await waitFor(() => expect(router.replace).toHaveBeenCalled());
+    expect(back).toHaveBeenCalledTimes(1);
+    expect(back.mock.invocationCallOrder[0]).toBeLessThan(
+      router.replace.mock.invocationCallOrder[0],
+    );
+  });
+
+  it("keystrokes typed during the save keep their guard (and its sentinel)", async () => {
+    const { back } = spyHistory();
+    const pending = deferred<unknown>();
+    actions.updateCardAction.mockReturnValue(pending.promise);
+    renderForm({ mode: "edit", card: savedCard() });
+    await typeTitle("Emberbound Wyrm II");
+    await clickSave();
+    await typeTitle("Emberbound Wyrm III");
+    await act(async () => {
+      pending.resolve({ ok: true, slug: "emberbound-wyrm" });
+    });
+    await waitFor(() => expect(router.refresh).toHaveBeenCalled());
+    expect(back).not.toHaveBeenCalled();
+  });
+});

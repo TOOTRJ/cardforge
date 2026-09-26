@@ -8,7 +8,8 @@
 //   • in-app link clicks (header, dashboard, "Cancel", …) — capture-phase
 //     click listener, so the intent is caught before Next's <Link> routes;
 //   • the browser Back button — a sentinel history entry is pushed while
-//     dirty; popping it shows the dialog and "leave" walks past it;
+//     dirty; popping it shows the dialog and "leave" walks past it; a save
+//     (or "leave") takes it off again (release);
 //   • closing / reloading the tab — only the browser's own "Leave site?"
 //     prompt is possible there (beforeunload), without our draft option.
 
@@ -84,6 +85,8 @@ export function useUnsavedChangesGuard({ enabled }: UseUnsavedChangesGuardOption
   }, [router]);
 
   // Browser Back: keep a sentinel entry on top of the real one while dirty.
+  // `sentinelArmedRef` is true exactly while that entry is the one we are
+  // standing on.
   const sentinelArmedRef = useRef(false);
   useEffect(() => {
     if (enabled && !sentinelArmedRef.current) {
@@ -93,14 +96,23 @@ export function useUnsavedChangesGuard({ enabled }: UseUnsavedChangesGuardOption
   }, [enabled]);
   useEffect(() => {
     const handler = () => {
-      if (!enabledRef.current || !sentinelArmedRef.current) return;
+      if (!sentinelArmedRef.current) return;
+      if (!enabledRef.current) {
+        // Back with nothing to lose walked off the sentinel: it's gone, so
+        // the next dirty spell pushes a fresh one (a stale "armed" flag
+        // used to leave the editor unguarded from then on).
+        sentinelArmedRef.current = false;
+        return;
+      }
       // The sentinel was popped: put it back and ask. "Leave" then goes
-      // back TWO entries (past the real one we are standing on).
+      // back past the real entry we are standing on — two entries, or one
+      // once release() has already taken the sentinel off.
       window.history.pushState({ pipglyphUnsavedGuard: true }, "", window.location.href);
       setPending({
         proceed: () => {
+          const onSentinel = sentinelArmedRef.current;
           sentinelArmedRef.current = false;
-          window.history.go(-2);
+          window.history.go(onSentinel ? -2 : -1);
         },
       });
     };
@@ -111,12 +123,32 @@ export function useUnsavedChangesGuard({ enabled }: UseUnsavedChangesGuardOption
   return {
     pending,
     clearPending: () => setPending(null),
-    /** Run after a save so the next navigation isn't intercepted. */
-    disarm: () => {
+    /** Stop guarding — after a save, or on "Leave without saving" — and
+     *  take the Back sentinel off the history (TODO 3b.7). Left in place it
+     *  cost an extra Back press after every save and, after a create's
+     *  redirect, sent Back to a blank /create. Resolves once the browser
+     *  has popped it, so the caller's own navigation can't race the pop. */
+    release: (): Promise<void> => {
       enabledRef.current = false;
+      if (!sentinelArmedRef.current) return Promise.resolve();
+      sentinelArmedRef.current = false;
+      return new Promise<void>((resolve) => {
+        const done = () => {
+          window.removeEventListener("popstate", done);
+          window.clearTimeout(timer);
+          resolve();
+        };
+        // A pop that never reports (it always does in browsers) must not
+        // strand the save flow.
+        const timer = window.setTimeout(done, SENTINEL_POP_TIMEOUT_MS);
+        window.addEventListener("popstate", done);
+        window.history.back();
+      });
     },
   };
 }
+
+const SENTINEL_POP_TIMEOUT_MS = 1000;
 
 type UnsavedChangesDialogProps = {
   open: boolean;
