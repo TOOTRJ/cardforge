@@ -12,7 +12,6 @@ describe("premium finish gating", () => {
     expect(isPremiumFinish("etched")).toBe(false);
     expect(isPremiumFinish("showcase")).toBe(false);
     expect(isPremiumFinish("regular")).toBe(false);
-    expect(isPremiumFinish("borderless")).toBe(false);
     expect(isPremiumFinish(null)).toBe(false);
     expect(isPremiumFinish(undefined)).toBe(false);
   });
@@ -37,6 +36,10 @@ describe("premium frame gating (IP-safe)", () => {
 describe("frameStyleRequiresPremium", () => {
   it("is false for every finish and empty/null styles (no premium content ships yet)", () => {
     expect(frameStyleRequiresPremium({ finish: "foil" })).toBe(false);
+    // The two finishes the creator offers since TODO 6.5 (2026-09-26), on a
+    // real frame: a free account saves them.
+    expect(frameStyleRequiresPremium({ finish: "foil", template: "m15" })).toBe(false);
+    expect(frameStyleRequiresPremium({ finish: "etched", template: "m15" })).toBe(false);
     expect(frameStyleRequiresPremium({ finish: "showcase", template: "m15" })).toBe(
       false,
     );

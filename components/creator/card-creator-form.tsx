@@ -10,7 +10,12 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { FormProvider, useForm, useWatch } from "react-hook-form";
+import {
+  FormProvider,
+  useForm,
+  useWatch,
+  type UseFormReturn,
+} from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   ArrowLeft,
@@ -99,7 +104,10 @@ import {
 } from "@/lib/cards/actions";
 import { linkDeckCardAction } from "@/lib/decks/card-actions";
 import type { DeckRemixContext } from "@/types/deck";
-import type { ScryfallImportPatch } from "@/lib/scryfall/import-mapper";
+import {
+  printingTreatmentNotice,
+  type ScryfallImportPatch,
+} from "@/lib/scryfall/import-mapper";
 import {
   type Card,
   type CardType,
@@ -123,7 +131,11 @@ import {
   pickFrameColorKey,
 } from "@/components/cards/frame-layer";
 import { eraForTemplate, standardFrameFor } from "@/lib/creator/frame-picker";
-import { describeFrame, resolvePublishedFrame } from "@/lib/creator/frame-resolve";
+import {
+  basicOnlyFrameFallback,
+  describeFrame,
+  resolvePublishedFrame,
+} from "@/lib/creator/frame-resolve";
 import {
   loyaltyFromRulesText,
   sagaFromRulesText,
@@ -296,6 +308,29 @@ const STEP_RAIL_ICONS: Record<string, React.ReactNode> = {
   subscriber: <Crown aria-hidden />,
   publish: <Send aria-hidden />,
 };
+
+/** A basic-only frame (the full-art basic land, TODO 0.26) can't draw a
+ *  nonbasic land's rules. When the card stops being a basic land (Land type
+ *  → Nonbasic, or a rename that clears the basic seed), move it to the land
+ *  frame that frame is a variation of and say so, instead of leaving a
+ *  disabled chip selected and a Save the server refuses. */
+function leaveBasicOnlyFrame(
+  form: Pick<UseFormReturn<FormValues>, "getValues" | "setValue" | "clearErrors">,
+  verifiedFrameKeys: readonly string[],
+) {
+  const current = normalizeFrameTemplate(form.getValues("frame_style.template"));
+  const fallback = basicOnlyFrameFallback(
+    current,
+    pickFrameColorKey(form.getValues("color_identity")) as FrameColorKey,
+    new Set(verifiedFrameKeys),
+  );
+  if (!fallback) return;
+  form.setValue("frame_style.template", fallback, { shouldDirty: true });
+  form.clearErrors("frame_style");
+  toast.info(
+    `The ${describeFrame(current)} frame is for basic lands — switched to ${describeFrame(fallback)}.`,
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Component
@@ -504,6 +539,7 @@ export function CardCreatorForm({
     handleSubmit,
     setValue,
     setError,
+    clearErrors,
     getValues,
     control,
     reset,
@@ -641,6 +677,9 @@ export function CardCreatorForm({
     if (!patch) return;
     setValue("supertype", patch.supertype, { shouldDirty: true });
     setValue("subtypes_text", patch.subtypes_text, { shouldDirty: true });
+    if (next === "nonbasic") {
+      leaveBasicOnlyFrame({ getValues, setValue, clearErrors }, verifiedFrameKeys);
+    }
   };
   // A land the user RENAMES away from its seeded basic name becomes a
   // nonbasic: the seed's "Basic" + subtype are dropped so the rules text box
@@ -662,6 +701,7 @@ export function CardCreatorForm({
     const next = toNonbasicLandIdentity(identity);
     setValue("supertype", next.supertype, { shouldDirty: true });
     setValue("subtypes_text", next.subtypes_text, { shouldDirty: true });
+    leaveBasicOnlyFrame({ getValues, setValue, clearErrors }, verifiedFrameKeys);
   }, [
     watched.title,
     watched.card_type,
@@ -669,7 +709,10 @@ export function CardCreatorForm({
     watched.subtypes_text,
     isDirty,
     isRevise,
+    getValues,
     setValue,
+    clearErrors,
+    verifiedFrameKeys,
   ]);
 
   const goToIndex = (i: number) => {
@@ -1038,11 +1081,14 @@ export function CardCreatorForm({
   // The `importedArtUrl` (set when the user opted to also import artwork)
   // is written to art_url and resets the focal point so the new image
   // shows centered.
+  /** Applies the import and returns the printing-treatment notice (or null)
+   *  for the CALLER to toast after its own success toast, so the notice
+   *  stacks on top of it (Sonner shows the newest in front). */
   const handleScryfallImport = ({
     patch,
     importedArtUrl,
     source,
-  }: ScryfallImportPayload) => {
+  }: ScryfallImportPayload): string | null => {
     const setIfPresent = (key: keyof FormValues, value: string | undefined) => {
       if (value === undefined) return;
       setValue(key, value as never, { shouldDirty: true });
@@ -1118,6 +1164,19 @@ export function CardCreatorForm({
         );
       }
     }
+    // A borderless / showcase / extended-art / full-art / textless printing
+    // lands on the plain frame above, which "exact" alone would pass off as
+    // a match — name the treatment and the frame it actually got (TODO 1.16
+    // stopgap until the 1.4 resolver). Returned, not toasted: both callers
+    // toast their own "Imported …" / "Pre-filled …" first and this notice
+    // right after it, so it sits in front.
+    const treatmentNotice = patch.printing_treatment
+      ? printingTreatmentNotice(
+          patch.printing_treatment,
+          (getValues("frame_style.template") as FrameTemplate | undefined) ??
+            DEFAULT_FRAME_TEMPLATE,
+        )
+      : null;
 
     setIfPresent("title", patch.title);
     setIfPresent("cost", patch.cost);
@@ -1213,6 +1272,7 @@ export function CardCreatorForm({
     setRemixSource({ name: source.name, scryfallUri: source.scryfallUri });
     // Pop the user back to Identity so they can see the seeded fields.
     goToStepKey("identity");
+    return treatmentNotice;
   };
 
   // Deck remix deep-link (/create?deckCard=…): pre-fill the form from the
@@ -1279,7 +1339,7 @@ export function CardCreatorForm({
           // soft-fail — the user can import art from the dialog later
         }
 
-        handleScryfallImport({
+        const treatmentNotice = handleScryfallImport({
           patch: body.patch,
           importedArtUrl,
           source: {
@@ -1294,6 +1354,7 @@ export function CardCreatorForm({
         toast.success(
           `Pre-filled from ${body.card.name} — change something to make it your custom proxy, then save to link it into “${deckRemix.deckTitle}”.`,
         );
+        if (treatmentNotice) toast.info(treatmentNotice, { duration: 8000 });
       } catch {
         toast.error(
           `Couldn't load “${deckRemix.entryName}” — starting from a blank card.`,

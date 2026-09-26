@@ -9,8 +9,11 @@
 // on rarity instead of card type).
 
 import {
+  CARD_FINISH_VALUES,
   DEFAULT_FRAME_TEMPLATE,
   FRAME_TEMPLATE_VALUES,
+  RETIRED_CARD_FINISHES,
+  type CardFinish,
   type CardType,
   type FrameTemplate,
 } from "@/types/card";
@@ -24,6 +27,18 @@ export function normalizeFrameTemplate(
   return (FRAME_TEMPLATE_VALUES as readonly string[]).includes(template ?? "")
     ? (template as FrameTemplate)
     : DEFAULT_FRAME_TEMPLATE;
+}
+
+// Coerce a persisted finish to a current one: a retired value maps to the
+// finish that draws the same pixels (RETIRED_CARD_FINISHES in types/card.ts),
+// and a missing or unknown value is "regular", so the creator never shows or
+// re-submits a finish the validator would refuse.
+export function normalizeCardFinish(finish: unknown): CardFinish {
+  if (typeof finish !== "string") return "regular";
+  if ((CARD_FINISH_VALUES as readonly string[]).includes(finish)) {
+    return finish as CardFinish;
+  }
+  return RETIRED_CARD_FINISHES.get(finish) ?? "regular";
 }
 
 // Subtypes that print P/T without being creatures — Vehicles show their

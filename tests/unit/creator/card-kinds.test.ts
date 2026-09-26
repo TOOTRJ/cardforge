@@ -1,15 +1,19 @@
 import { describe, expect, it } from "vitest";
 import {
+  BASIC_ONLY_FRAME_REASON,
   CARD_KIND_VALUES,
   KIND_DEFS,
   framesForKind,
   baseFrameFor,
   basicLandSeedForColorKey,
   isSeedableLandIdentity,
+  isSingleBasicLand,
   kindFromCard,
   landIdentityHasBasicSeed,
   planKindChange,
   shouldClearBasicSeedForTitle,
+  templateIsBasicOnly,
+  templateRefusesKind,
   templateSupportsKind,
   toBasicLandIdentity,
   toNonbasicLandIdentity,
@@ -352,5 +356,88 @@ describe("templateSupportsKind", () => {
     expect(templateSupportsKind("nyx", "enchantment")).toBe(true);
     expect(templateSupportsKind("fullartland", "land")).toBe(true);
     expect(templateSupportsKind("fullartland", "creature")).toBe(false);
+  });
+
+  // TODO 0.26: these three profiles have no loyalty slot, no loyaltyRows and
+  // no defense shield, so a planeswalker or a battle on them prints no stat.
+  it("keeps planeswalkers and battles off the frames with no stat overlay", () => {
+    expect(templateSupportsKind("fullart", "planeswalker")).toBe(false);
+    expect(templateSupportsKind("m15textless", "battle")).toBe(false);
+    for (const template of ["fullart", "m15textless", "extendedart"] as const) {
+      expect(templateSupportsKind(template, "planeswalker")).toBe(false);
+      expect(templateSupportsKind(template, "battle")).toBe(false);
+      // Every other standard kind still gets them.
+      for (const kind of ["creature", "instant", "sorcery", "artifact", "enchantment", "land", "token"] as const) {
+        expect(templateSupportsKind(template, kind)).toBe(true);
+      }
+    }
+    // The planeswalker/battle galleries lose exactly those three.
+    const pw = framesForKind("planeswalker", NO_VERIFIED).map((f) => f.template);
+    expect(pw).toContain("m15pw");
+    expect(pw).not.toContain("fullart");
+    expect(pw).not.toContain("m15textless");
+    expect(pw).not.toContain("extendedart");
+  });
+});
+
+describe("templateRefusesKind", () => {
+  it("refuses only what a showcase restriction leaves out", () => {
+    expect(templateRefusesKind("fullart", "planeswalker")).toBe(true);
+    expect(templateRefusesKind("extendedart", "battle")).toBe(true);
+    expect(templateRefusesKind("nyx", "creature")).toBe(true);
+    expect(templateRefusesKind("fullartland", "creature")).toBe(true);
+    expect(templateRefusesKind("fullart", "creature")).toBe(false);
+    expect(templateRefusesKind("lotr", "planeswalker")).toBe(false);
+  });
+
+  it("never refuses a border-era frame an off-kind legacy card sits on", () => {
+    // templateSupportsKind says no (the gallery offers m15artifact/m15token)…
+    expect(templateSupportsKind("m15", "artifact")).toBe(false);
+    expect(templateSupportsKind("m15", "token")).toBe(false);
+    // …but the server gate must keep those saved cards savable.
+    expect(templateRefusesKind("m15", "artifact")).toBe(false);
+    expect(templateRefusesKind("m15", "token")).toBe(false);
+    expect(templateRefusesKind("saga", "creature")).toBe(false);
+  });
+});
+
+describe("basic-only frames", () => {
+  const land = (supertype: string, subtypes: string[], title: string, rulesText = "") => ({
+    cardType: "land",
+    supertype,
+    subtypes,
+    title,
+    rulesText,
+  });
+
+  it("flags only the full-art basic land frame", () => {
+    expect(templateIsBasicOnly("fullartland")).toBe(true);
+    for (const template of ["m15land", "m15textlessland", "expeditionland", "fullart", "m15"] as const) {
+      expect(templateIsBasicOnly(template)).toBe(false);
+    }
+    expect(BASIC_ONLY_FRAME_REASON).toBe("Full-art basic frames are for basic lands");
+  });
+
+  it("recognises one basic land, Wastes and snow basics included", () => {
+    expect(isSingleBasicLand(land("Basic", ["Plains"], "Plains"))).toBe(true);
+    expect(isSingleBasicLand(land("Basic Snow", ["Island"], "Snow-Covered Island"))).toBe(true);
+    expect(isSingleBasicLand(land("Basic", [], "Wastes"))).toBe(true);
+    // Legacy/AI shape the renderers already print as a basic.
+    expect(isSingleBasicLand(land("", ["Forest"], "Forest"))).toBe(true);
+  });
+
+  it("keeps nonbasics and dual-typed lands out", () => {
+    // Hallowed Fountain — the shockland from the full-art research bake C.
+    expect(
+      isSingleBasicLand(
+        land("", ["Plains", "Island"], "Hallowed Fountain", "({T}: Add {W} or {U}.)"),
+      ),
+    ).toBe(false);
+    // A dual with no rules text still isn't one basic (3b.4)…
+    expect(isSingleBasicLand(land("", ["Plains", "Island"], "Tundra"))).toBe(false);
+    // …nor is a Basic supertype carrying two basic types.
+    expect(isSingleBasicLand(land("Basic", ["Plains", "Island"], "Plains"))).toBe(false);
+    expect(isSingleBasicLand(land("", [], "Command Tower", "{T}: Add one mana."))).toBe(false);
+    expect(isSingleBasicLand({ ...land("Basic", ["Plains"], "Plains"), cardType: "creature" })).toBe(false);
   });
 });

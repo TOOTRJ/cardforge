@@ -34,10 +34,12 @@ import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import {
   BASIC_LAND_NAME_BY_KEY,
+  basicLandManaKey,
   basicLandNameForColorKey,
   basicSubtypeManaKey,
   hasBasicSupertype,
   isBasicLandTitle,
+  type BasicLandFace,
 } from "@/lib/cards/watermark";
 import { eraForTemplate, standardFrameFor } from "@/lib/creator/frame-picker";
 
@@ -244,15 +246,83 @@ const SHOWCASE_TEMPLATES: readonly FrameTemplate[] =
     (t) => FRAME_SET_ERA[FRAME_TEMPLATE_SET[t]] === "showcase",
   );
 
+// Kinds a frame can only draw through a stat overlay its profile must carry:
+// a planeswalker needs the loyalty shield and the ability rows
+// (`loyaltyRows`), a battle its defense shield. Of the frames that dress
+// every kind, only m15pw and battle have them; 4.5's overlay model brings
+// them to the showcase frames.
+const STAT_OVERLAY_KINDS: readonly CardKind[] = ["planeswalker", "battle"];
+const KINDS_WITHOUT_STAT_OVERLAY: readonly CardKind[] = CARD_KIND_VALUES.filter(
+  (kind) =>
+    RAW_KIND_DEFS[kind].layoutTemplates === null &&
+    !STAT_OVERLAY_KINDS.includes(kind),
+);
+
 // Type-specific showcase treatments: real expeditions / full-art basics are
-// land trade dress, Nyx constellation is enchantment dress. Absent = any
-// standard kind (stats still gate on type).
-const SHOWCASE_KIND_RESTRICTION: Partial<Record<FrameTemplate, CardKind[]>> = {
+// land trade dress, Nyx constellation is enchantment dress. The Zendikar
+// Rising hedron (`fullart`), textless and extended-art frames have no
+// loyalty or defense slot, so a planeswalker would print no loyalty and
+// plain ability lines, and a battle no defense (full-art research
+// 2026-09-26, TODO 0.26) — they take every kind but those two until 4.5.
+// Absent = any standard kind (stats still gate on type).
+const SHOWCASE_KIND_RESTRICTION: Partial<
+  Record<FrameTemplate, readonly CardKind[]>
+> = {
   expeditionland: ["land"],
   fullartland: ["land"],
   m15textlessland: ["land"],
   nyx: ["enchantment"],
+  fullart: KINDS_WITHOUT_STAT_OVERLAY,
+  m15textless: KINDS_WITHOUT_STAT_OVERLAY,
+  extendedart: KINDS_WITHOUT_STAT_OVERLAY,
 };
+
+/** True when a showcase treatment's kind restriction leaves this kind out
+ *  (a planeswalker on the Zendikar Rising hedron frame, a creature on Nyx).
+ *  Unlike `!templateSupportsKind`, it never refuses a border-era or layout
+ *  frame, so an off-kind legacy card (an artifact on the plain m15 frame)
+ *  isn't caught. The server's frame gate uses this. */
+export function templateRefusesKind(
+  template: FrameTemplate,
+  kind: CardKind,
+): boolean {
+  const allowed = SHOWCASE_KIND_RESTRICTION[template];
+  return allowed !== undefined && !allowed.includes(kind);
+}
+
+// ---------------------------------------------------------------------------
+// Basic-only frames (TODO 0.26). `fullartland` paints a name bar and a type
+// bar over edge-to-edge art and nothing else: on a nonbasic land (a
+// shockland) the rules print in cream straight on the art with no backdrop.
+// The kind restriction above can't catch that, because the Land kind covers
+// basics and nonbasics alike, so these frames carry a per-template flag.
+// Nonbasic edge-to-edge lands are 4.34's; the full-art basics of 4.39–4.41
+// join this set.
+// ---------------------------------------------------------------------------
+
+const BASIC_ONLY_TEMPLATES: ReadonlySet<FrameTemplate> = new Set<FrameTemplate>([
+  "fullartland",
+]);
+
+/** Why a basic-only frame's chip is disabled on any other card. */
+export const BASIC_ONLY_FRAME_REASON = "Full-art basic frames are for basic lands";
+
+/** True when the template dresses basic lands only. */
+export function templateIsBasicOnly(template: FrameTemplate): boolean {
+  return BASIC_ONLY_TEMPLATES.has(template);
+}
+
+/** True when the face is ONE basic land: the renderers' basic-land rule
+ *  (`basicLandManaKey` — the big symbol, no rules text) with at most one
+ *  basic land type, so a dual typed "Plains Island" stays out (3b.4).
+ *  Wastes has none. */
+export function isSingleBasicLand(face: BasicLandFace): boolean {
+  if (basicLandManaKey(face) === null) return false;
+  const basicTypes = (face.subtypes ?? []).filter(
+    (subtype) => basicSubtypeManaKey([subtype]) !== null,
+  );
+  return basicTypes.length <= 1;
+}
 
 /** All frames offered for a kind, across every era, in gallery display
  *  order: border-era standards (+ their skin variants) oldest→newest, then

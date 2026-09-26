@@ -4,7 +4,10 @@
 // read component state.
 
 import { tokenize } from "@/components/cards/mana-cost-glyphs";
-import { normalizeFrameTemplate } from "@/lib/cards/card-display";
+import {
+  normalizeCardFinish,
+  normalizeFrameTemplate,
+} from "@/lib/cards/card-display";
 import {
   DEFAULT_FRAME_TEMPLATE,
   type ArtPosition,
@@ -160,11 +163,12 @@ export function defaultValuesFor(
     (card.back_face as CardBackFace | null | undefined) ?? null;
 
   // Coerce the persisted frame style, mapping any legacy/retired template
-  // (e.g. the old "regular" placeholder) onto a current one so the picker
-  // shows a valid selection and the save passes validation.
+  // (e.g. the old "regular" placeholder) or finish (RETIRED_CARD_FINISHES)
+  // onto a current one so the picker and the edit/remix summary show a valid
+  // selection and the save passes validation.
   const persistedFrame = (card.frame_style as FrameStyle | null) ?? {};
   const normalizedFrameStyle: FrameStyle = {
-    finish: persistedFrame.finish ?? "regular",
+    finish: normalizeCardFinish(persistedFrame.finish),
     template: normalizeFrameTemplate(persistedFrame.template),
   };
 

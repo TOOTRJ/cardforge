@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { FieldGroup, inputClass } from "@/components/creator/field-group";
 import { frameChoicesForType } from "@/lib/creator/frame-random";
+import { templateIsBasicOnly } from "@/lib/creator/card-kinds";
 import {
   CARD_FILL_FIELDS,
   CREATE_ONLY_FILL_FIELDS,
@@ -160,8 +161,13 @@ function AiFillDialogBody({
   const frameOptions = useMemo(() => {
     if (cardType === "random") return [];
     const verified = new Set(verifiedFrameKeys);
+    // Basic-only frames (the full-art basic land) are left out: the designer
+    // rarely writes exactly one basic land, and the job would quietly swap
+    // the request for a random frame (resolveGeneratedFrame, TODO 0.26).
     return frameChoicesForType(cardType, verified).filter(
-      (choice) => choice.availableColorKeys.length > 0,
+      (choice) =>
+        choice.availableColorKeys.length > 0 &&
+        !templateIsBasicOnly(choice.template),
     );
   }, [cardType, verifiedFrameKeys]);
 

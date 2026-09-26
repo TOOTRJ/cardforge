@@ -1,7 +1,7 @@
 "use client";
 
-// Effects panel — the finish picker (premium treatments layered on top of the
-// base frame). Regrouped from the old publish step; it edits
+// Effects panel — the finish picker (treatments layered on top of the base
+// frame). Regrouped from the old publish step; it edits
 // frame_style.finish, whose error routing stays owned by the Frame panel.
 
 import { Controller, useFormContext } from "react-hook-form";
@@ -22,9 +22,15 @@ function SoonBadge() {
   );
 }
 
-// Finish presets — premium treatments layered on top of the base frame. Only
-// "Regular" is shippable for now; the rest are disabled with a "Soon" badge.
-const FINISH_OPTIONS: ChipOption<CardFinish>[] = [
+// Finish presets. Foil and Etched shipped with TODO 6.5 (owner decision
+// 2026-09-26): the live preview and the saved image draw the same shared SVG
+// (lib/cards/foil-finish.tsx since layout v28, lib/cards/etched-finish.tsx
+// since v26), so what the editor shows is what the card saves as. Every
+// finish is free (PREMIUM_FINISHES in types/card.ts is empty). Showcase stays
+// "Soon": only the preview slants its title (the browser fakes an italic
+// Beleren; the bake has no italic face and prints it upright), and the ornate
+// hairline its description promises is drawn by neither renderer.
+export const FINISH_OPTIONS: ChipOption<CardFinish>[] = [
   {
     value: "regular",
     label: "Regular",
@@ -34,15 +40,11 @@ const FINISH_OPTIONS: ChipOption<CardFinish>[] = [
     value: "foil",
     label: "Foil",
     description: "Holographic rainbow sheen across the card, strongest on light areas.",
-    disabled: true,
-    badge: <SoonBadge />,
   },
   {
     value: "etched",
     label: "Etched",
     description: "Fine etched texture on the frame, like foil-etched printings.",
-    disabled: true,
-    badge: <SoonBadge />,
   },
   {
     value: "showcase",
@@ -59,7 +61,7 @@ export function EffectsPanel() {
   return (
     <FieldGroup
       label="Finish"
-      helper="Premium treatment layered on top of the frame."
+      helper="A treatment layered on top of the frame. Free on every plan."
     >
       <Controller
         control={control}

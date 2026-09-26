@@ -143,6 +143,154 @@ describe("CardSetupPanel variation chips — Dragon Wing's own frame set", () =>
   });
 });
 
+// TODO 0.26: the full-art basic frame draws a name bar, a type bar and the
+// big symbol over the art — nothing else. A nonbasic land's rules would
+// print straight on the art, so its chip is disabled with the reason, and
+// the Zendikar Rising hedron frame reads as its set, not "Full Art".
+function LandHarness({
+  verified,
+  identity,
+}: {
+  verified: string[];
+  identity: { title: string; supertype: string; subtypes_text: string; rules_text: string };
+}) {
+  const methods = useForm({
+    defaultValues: {
+      card_type: "land",
+      frame_style: { template: "m15land" },
+      color_identity: ["white"] as ColorIdentity[],
+      ...identity,
+    },
+  });
+  const color = useWatch({ control: methods.control, name: "color_identity" }) as ColorIdentity[];
+  const template = useWatch({ control: methods.control, name: "frame_style.template" }) as string;
+  return (
+    <FormProvider {...methods}>
+      <CardSetupPanel
+        kind="land"
+        colorIdentity={color}
+        verifiedFrameKeys={verified}
+        onKindSelect={() => {}}
+      />
+      <output data-testid="template">{template}</output>
+    </FormProvider>
+  );
+}
+
+const landVerified = [frameComboKey("m15land", "w"), frameComboKey("fullartland", "w")];
+const fullArtBasicChip = () =>
+  within(screen.getByRole("radiogroup", { name: /Frame variations/ })).getByRole("radio", {
+    name: /Full Art — Basic Land/,
+  }) as HTMLButtonElement;
+
+describe("CardSetupPanel variation chips — full-art basic lands only", () => {
+  it("disables the full-art basic frame for a nonbasic land, with the reason", () => {
+    render(
+      <LandHarness
+        verified={landVerified}
+        identity={{
+          title: "Hallowed Fountain",
+          supertype: "",
+          subtypes_text: "Plains, Island",
+          rules_text: "({T}: Add {W} or {U}.)",
+        }}
+      />,
+    );
+    const chip = fullArtBasicChip();
+    expect(chip.disabled).toBe(true);
+    expect(chip.textContent).toContain("Full-art basic frames are for basic lands");
+    fireEvent.click(chip);
+    expect(screen.getByTestId("template").textContent).toBe("m15land");
+  });
+
+  it("offers it to a basic land", () => {
+    render(
+      <LandHarness
+        verified={landVerified}
+        identity={{ title: "Plains", supertype: "Basic", subtypes_text: "Plains", rules_text: "" }}
+      />,
+    );
+    const chip = fullArtBasicChip();
+    expect(chip.disabled).toBe(false);
+    expect(chip.textContent).not.toContain("for basic lands");
+    fireEvent.click(chip);
+    expect(screen.getByTestId("template").textContent).toBe("fullartland");
+  });
+});
+
+describe("CardSetupPanel variation chips — Zendikar Rising hedron", () => {
+  it("labels the fullart template as Zendikar Rising — Hedron, never Full Art", () => {
+    render(
+      <Harness
+        verified={[frameComboKey("m15", "u"), frameComboKey("fullart", "u")]}
+        onColor={vi.fn()}
+      />,
+    );
+    const group = screen.getByRole("radiogroup", { name: /Frame variations/ });
+    const chip = within(group).getByRole("radio", { name: /Hedron/ });
+    expect(chip.textContent).toContain("Zendikar Rising — Hedron");
+    expect(chip.textContent).not.toMatch(/Full Art/);
+  });
+});
+
+// A server refusal of the frame (the 0.13 verification gate, the 0.26 kind
+// gate) lands on frame_style and the wizard jumps to this step. It used to
+// render nowhere: the step turned red with no reason.
+function RefusedHarness() {
+  const methods = useForm({
+    defaultValues: {
+      card_type: "land",
+      frame_style: { template: "fullartland" },
+      color_identity: ["white"] as ColorIdentity[],
+      title: "Hallowed Fountain",
+      supertype: "",
+      subtypes_text: "Plains, Island",
+      rules_text: "({T}: Add {W} or {U}.)",
+    },
+  });
+  const color = useWatch({ control: methods.control, name: "color_identity" }) as ColorIdentity[];
+  const template = useWatch({ control: methods.control, name: "frame_style.template" }) as string;
+  return (
+    <FormProvider {...methods}>
+      <button
+        type="button"
+        onClick={() =>
+          methods.setError("frame_style", {
+            message: "Full-art basic frames are for basic lands — pick another frame.",
+          })
+        }
+      >
+        server refusal
+      </button>
+      <CardSetupPanel
+        kind="land"
+        colorIdentity={color}
+        verifiedFrameKeys={landVerified}
+        onKindSelect={() => {}}
+      />
+      <output data-testid="template">{template}</output>
+    </FormProvider>
+  );
+}
+
+describe("CardSetupPanel — a refused frame says why", () => {
+  it("shows the server's frame_style error and clears it when a frame is picked", () => {
+    render(<RefusedHarness />);
+    expect(screen.queryByRole("alert")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "server refusal" }));
+    expect(screen.getByRole("alert").textContent).toBe(
+      "Full-art basic frames are for basic lands — pick another frame.",
+    );
+    fireEvent.click(
+      within(screen.getByRole("radiogroup", { name: /Frame variations/ })).getByRole("radio", {
+        name: /Standard/,
+      }),
+    );
+    expect(screen.getByTestId("template").textContent).toBe("m15land");
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+});
+
 describe("CardSetupPanel — Alpha's colourless tiles follow the card type (TODO 4.31)", () => {
   // A colourless ARTIFACT paints the brown artifact card (agclassic/a), any
   // other colourless card the grey one (agclassic/c) — the renderers' rule

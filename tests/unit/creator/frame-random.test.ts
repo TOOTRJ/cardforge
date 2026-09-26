@@ -80,6 +80,52 @@ describe("resolveGeneratedFrame", () => {
   });
 });
 
+// TODO 0.26: the full-art basic land frame can't draw a nonbasic's rules, so
+// an AI-generated land only lands on it when the design is one basic land.
+describe("resolveGeneratedFrame — basic-only frames", () => {
+  const verified = keys(["fullartland", "w"]);
+  const plains = { cardType: "land", supertype: "Basic", subtypes: ["Plains"], title: "Plains", rulesText: "" };
+  const fountain = {
+    cardType: "land",
+    supertype: null,
+    subtypes: ["Plains", "Island"],
+    title: "Hallowed Fountain",
+    rulesText: "({T}: Add {W} or {U}.)",
+  };
+
+  it("gives a generated basic land the full-art basic frame", () => {
+    for (const requested of ["fullartland", "random"] as const) {
+      expect(
+        resolveGeneratedFrame({
+          cardType: "land",
+          requested,
+          colorIdentity: ["white"],
+          verifiedKeys: verified,
+          face: plains,
+          random: () => 0,
+        }),
+      ).toBe("fullartland");
+    }
+  });
+
+  it("never gives it to a nonbasic land, nor to a card whose identity is unknown", () => {
+    for (const face of [fountain, undefined]) {
+      for (const requested of ["fullartland", "random"] as const) {
+        expect(
+          resolveGeneratedFrame({
+            cardType: "land",
+            requested,
+            colorIdentity: ["white"],
+            verifiedKeys: keys(["fullartland", "w"], ["m15land", "w"]),
+            face,
+            random: () => 0,
+          }),
+        ).toBe("m15land");
+      }
+    }
+  });
+});
+
 describe("colorHintsForFrame", () => {
   it("maps a frame's published color keys to identity words", () => {
     const hints = colorHintsForFrame(

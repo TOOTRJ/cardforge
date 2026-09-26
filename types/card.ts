@@ -245,19 +245,34 @@ export type CardWatermark =
   | { kind: "preset"; key: string; opacity?: number; size?: "normal" | "large" }
   | { kind: "custom"; url: string; opacity?: number; size?: "normal" | "large" };
 
-// Card finish — premium treatments layered on top of the base frame.
-// Default is "regular"; "foil" adds a static holographic sheen,
-// "etched" adds a fine etched texture to the frame only, "borderless"
-// lets the art bleed under the section panels, and "showcase" swaps the
-// title to an italic display treatment with an ornate underline.
+// Card finish — a treatment layered on top of the base frame (every finish is
+// free: PREMIUM_FINISHES below is empty). Default is "regular"; "foil" adds a
+// holographic sheen, strongest on light areas (lib/cards/foil-finish.tsx),
+// and "etched" a frame-masked cross-hatch + sheen
+// (lib/cards/etched-finish.tsx), both drawn identically by the live preview
+// and the bake. "showcase" italicises the title in the live preview only —
+// the bake has no italic Beleren face and draws it upright, and neither
+// renderer draws an ornament — so its chip stays "Soon" (TODO 6.5).
+// Borderless is a frame treatment (its own templates), never a finish —
+// Scryfall's finishes are nonfoil/foil/etched, and borderless printings come
+// in all three.
 export const CARD_FINISH_VALUES = [
   "regular",
   "foil",
   "etched",
-  "borderless",
   "showcase",
 ] as const;
 export type CardFinish = (typeof CARD_FINISH_VALUES)[number];
+
+// Retired finish values → the finish that draws the same pixels. The old
+// "borderless" finish drew nothing after the MSE-schema rebuild (2026-06-01)
+// and migration 0119 reset every stored row to "regular"; an old payload
+// (a stale tab, a remix of an unmigrated row) still reads as "regular"
+// instead of failing validation (lib/validation/card.ts,
+// normalizeCardFinish in lib/cards/card-display.ts).
+export const RETIRED_CARD_FINISHES: ReadonlyMap<string, CardFinish> = new Map([
+  ["borderless", "regular"],
+]);
 
 // Frame templates correspond to PNG assets in public/frames/{template}/{color}.png
 // plus a layout profile in lib/cards/template-layout.ts. Every template is an
@@ -324,9 +339,13 @@ export const FRAME_TEMPLATE_VALUES = [
   // "tarkir" prefix because it is stored in cards.frame_style, frame_reviews
   // and the frames bucket. Its set is "multiverselegends", not "tarkir".
   "tarkirdragon",
+  // Zendikar Rising (ZNR 2020) showcase — the hedron frame. It is not full
+  // art (Scryfall flags none of those printings full_art), but the key keeps
+  // its historical name because it is stored in cards.frame_style,
+  // frame_reviews and the frames bucket. Its set is "zendikarrising".
+  "fullart",
   // Variation treatments (2026-07): extended/full art, premium lands, Nyx.
   "extendedart",
-  "fullart",
   "fullartland",
   "m15textless",
   "m15textlessland",
@@ -378,6 +397,8 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   tarkirdraconic: "Draconic",
   tarkirghostfire: "Ghostfire",
   extendedart: "Extended Art",
+  // Set-relative like the other showcase labels: the picker prints
+  // "Zendikar Rising — Hedron" (setQualifiedFrameLabel).
   fullart: "Hedron",
   fullartland: "Basic Land",
   m15textless: "Textless",
@@ -404,6 +425,7 @@ export const FRAME_SET_VALUES = [
   "bloomburrow",
   "tarkir",
   "multiverselegends",
+  "zendikarrising",
   "extended",
   "fullartset",
   "expeditions",
@@ -421,6 +443,7 @@ export const FRAME_SET_LABELS: Record<FrameSet, string> = {
   bloomburrow: "Bloomburrow",
   tarkir: "Tarkir: Dragonstorm",
   multiverselegends: "Multiverse Legends",
+  zendikarrising: "Zendikar Rising",
   extended: "Extended Art",
   fullartset: "Full Art",
   expeditions: "Expeditions",
@@ -454,7 +477,7 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   tarkirghostfire: "tarkir",
   tarkirdragon: "multiverselegends",
   extendedart: "extended",
-  fullart: "fullartset",
+  fullart: "zendikarrising",
   fullartland: "fullartset",
   m15textless: "fullartset",
   m15textlessland: "fullartset",
@@ -480,7 +503,7 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
 //
 // Eras group the existing FrameSets: alpha→classic, m15→m15, and the
 // Universes Beyond / showcase IP sets (lotr/avatar/bloomburrow/tarkir/
-// multiverselegends) plus the treatment sets→showcase.
+// multiverselegends/zendikarrising) plus the treatment sets→showcase.
 // ---------------------------------------------------------------------------
 export const FRAME_ERA_VALUES = ["classic", "retro", "modern", "m15", "showcase"] as const;
 export type FrameEra = (typeof FRAME_ERA_VALUES)[number];
@@ -514,6 +537,7 @@ export const FRAME_SET_ERA: Record<FrameSet, FrameEra> = {
   bloomburrow: "showcase",
   tarkir: "showcase",
   multiverselegends: "showcase",
+  zendikarrising: "showcase",
   extended: "showcase",
   fullartset: "showcase",
   expeditions: "showcase",
@@ -604,12 +628,12 @@ export type FrameStyle = {
 // tarkir) is NEVER paywalled — it stays free for everyone.
 // ---------------------------------------------------------------------------
 
-// Finishes that require a paid plan. NONE today — and none is selectable yet
-// either: the creator's effects panel keeps foil/etched/showcase disabled
-// ("Soon") until they ship, at which point the owner decides free vs paid
-// (2026-07-10 leaning: free; the paid tease is "premium custom frames",
-// tracked in PREMIUM_FRAME_TEMPLATES below). The gating plumbing stays wired
-// so adding an entry here re-paywalls instantly.
+// Finishes that require a paid plan. NONE: every finish is free (owner
+// decision 2026-07-10; the paid tease is "premium custom frames", tracked in
+// PREMIUM_FRAME_TEMPLATES below). Foil and etched are selectable in the
+// creator since TODO 6.5 shipped (2026-09-26); showcase is still a disabled
+// "Soon" chip (components/creator/panels/effects-panel.tsx). The gating
+// plumbing stays wired so adding an entry here re-paywalls instantly.
 export const PREMIUM_FINISHES: ReadonlySet<CardFinish> = new Set<CardFinish>();
 
 // Original premium frame templates (none yet). Add ONLY original PipGlyph

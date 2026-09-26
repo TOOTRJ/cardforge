@@ -8,6 +8,7 @@ import {
   slugify,
   updateCardSchema,
 } from "@/lib/validation/card";
+import { CARD_FINISH_VALUES } from "@/types/card";
 
 // ---------------------------------------------------------------------------
 // Tests for lib/validation/card.ts.
@@ -88,14 +89,34 @@ describe("frameStyleSchema", () => {
     expect(frameStyleSchema.parse(undefined)).toEqual({});
   });
 
-  it("accepts all four finish values from chunk 03", () => {
-    for (const finish of ["regular", "foil", "etched", "borderless", "showcase"] as const) {
+  it("accepts the four current finish values", () => {
+    for (const finish of ["regular", "foil", "etched", "showcase"] as const) {
       expect(frameStyleSchema.parse({ finish })).toEqual({ finish });
     }
+    expect(CARD_FINISH_VALUES).toEqual(["regular", "foil", "etched", "showcase"]);
+  });
+
+  // TODO 0.25 / migration 0119: "borderless" is no longer a finish (it drew
+  // nothing since 2026-06-01; borderless is a frame treatment). An old draft
+  // or remix that still carries it parses as "regular" instead of failing.
+  it("reads the retired 'borderless' finish as 'regular'", () => {
+    expect(frameStyleSchema.parse({ finish: "borderless" })).toEqual({ finish: "regular" });
+    expect(
+      frameStyleSchema.parse({ finish: "borderless", template: "tarkirdragon" }),
+    ).toEqual({ finish: "regular", template: "tarkirdragon" });
+    expect(
+      updateCardSchema.parse({ frame_style: { finish: "borderless", template: "m15" } }).frame_style,
+    ).toEqual({ finish: "regular", template: "m15" });
+    // An absent finish stays absent (the renderers default it to regular).
+    expect(frameStyleSchema.parse({ template: "m15" })).toEqual({ template: "m15" });
   });
 
   it("rejects unknown finish values", () => {
     expect(() => frameStyleSchema.parse({ finish: "rainbow" })).toThrow();
+    // Only the retired value is mapped — not a lookalike or a non-string.
+    expect(() => frameStyleSchema.parse({ finish: "Borderless" })).toThrow();
+    expect(() => frameStyleSchema.parse({ finish: "constructor" })).toThrow();
+    expect(() => frameStyleSchema.parse({ finish: 1 })).toThrow();
   });
 
   it("rejects unknown keys (strict)", () => {

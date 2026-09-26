@@ -6,6 +6,7 @@ import {
   COLOR_IDENTITY_VALUES,
   FRAME_TEMPLATE_VALUES,
   RARITY_VALUES,
+  RETIRED_CARD_FINISHES,
   VISIBILITY_VALUES,
 } from "@/types/card";
 
@@ -211,9 +212,18 @@ const artPositionBaseSchema = z
 
 const artPositionSchema = artPositionBaseSchema.default({});
 
+// A retired finish (RETIRED_CARD_FINISHES, migration 0119) reads as the
+// finish that draws the same pixels, so an old draft or remix never fails to
+// parse; anything else unknown is still refused.
+const cardFinishSchema = z.preprocess(
+  (value) =>
+    typeof value === "string" ? (RETIRED_CARD_FINISHES.get(value) ?? value) : value,
+  z.enum(CARD_FINISH_VALUES),
+);
+
 const frameStyleBaseSchema = z
   .object({
-    finish: z.enum(CARD_FINISH_VALUES).optional(),
+    finish: cardFinishSchema.optional(),
     template: z.enum(FRAME_TEMPLATE_VALUES).optional(),
   })
   .strict();

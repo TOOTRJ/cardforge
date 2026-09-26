@@ -67,8 +67,8 @@ export function LockedSummary({ mode }: { mode: "edit" | "remix" }) {
       </dl>
       <p className="text-[11px] leading-5 text-muted">
         {mode === "remix"
-          ? "A remix keeps the original's type, frame and colour. Want a different one? Forge a new card instead."
-          : "The type, frame and colour are set when a card is created. To change them, remix this card into a new one."}
+          ? "A remix keeps the original's type, frame, colour and finish. Want a different one? Forge a new card instead."
+          : "The type, frame, colour and finish are set when a card is created. To change them, forge a new card."}
       </p>
     </div>
   );

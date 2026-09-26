@@ -14,7 +14,7 @@
 // framesForKind() simply doesn't include an era that can't frame the kind.
 
 import { useMemo, useState } from "react";
-import { Controller, useFormContext, useWatch } from "react-hook-form";
+import { Controller, useFormContext, useFormState, useWatch } from "react-hook-form";
 import { ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { ChipGroup, type ChipOption } from "@/components/ui/chip-group";
@@ -39,11 +39,14 @@ import {
   SoonBadge,
 } from "@/components/creator/frame-pickers";
 import {
+  BASIC_ONLY_FRAME_REASON,
   CARD_KIND_VALUES,
   KIND_DEFS,
   baseFrameFor,
   framesForKind,
+  isSingleBasicLand,
   kindHasAvailableFrame,
+  templateIsBasicOnly,
   type CardKind,
   type FrameChoice,
   type FrameColorKey,
@@ -64,6 +67,7 @@ import {
 } from "@/types/card";
 import { eraForTemplate } from "@/lib/creator/frame-picker";
 import { normalizeFrameTemplate } from "@/lib/cards/card-display";
+import { parseSubtypes } from "@/lib/creator/card-fields";
 import type { FormValues } from "@/lib/creator/form-types";
 
 // Single-color key each identity chip contributes (frame-layer's palette).
@@ -170,7 +174,14 @@ export function CardSetupPanel({
   landBasicDisabledReason = null,
   onLandModeChange,
 }: CardSetupPanelProps) {
-  const { control, setValue } = useFormContext<FormValues>();
+  const { control, setValue, clearErrors } = useFormContext<FormValues>();
+  // A server refusal of the frame (verification gate 0.13, kind gate 0.26)
+  // lands on frame_style and the wizard jumps here — show it, or the step
+  // just turns red with no reason. Any type, frame or colour pick clears it
+  // (the server checks again on the next Save).
+  const { errors } = useFormState({ control, name: "frame_style" });
+  const frameError =
+    errors.frame_style?.message ?? errors.frame_style?.template?.message;
   const verifiedKeys = useMemo(
     () => new Set(verifiedFrameKeys),
     [verifiedFrameKeys],
@@ -180,10 +191,22 @@ export function CardSetupPanel({
     [kind, verifiedKeys],
   );
   const colorKey = pickFrameColorKey(colorIdentity);
+  // Basic-only frames (the full-art basic land) can't draw a nonbasic's
+  // rules, so their chips are disabled unless the card IS one basic land —
+  // the same rule the renderers and the server gate read.
+  const [cardType, title, supertype, subtypesText, rulesText] = useWatch({
+    control,
+    name: ["card_type", "title", "supertype", "subtypes_text", "rules_text"],
+  });
+  const isBasicLand = isSingleBasicLand({
+    cardType,
+    supertype,
+    subtypes: parseSubtypes(subtypesText ?? ""),
+    title,
+    rulesText,
+  });
   // The card's type, for the tiles of a frame that dresses a colour by type
   // (Alpha's colourless artifact paints the brown artifact card).
-  const cardType = useWatch({ control, name: "card_type" });
-  const supertype = useWatch({ control, name: "supertype" });
   const frameType: FrameTypeInfo = { cardType, supertype };
 
   const kindOptions: ChipOption<CardKind>[] = CARD_KIND_VALUES.map((k) => {
@@ -218,6 +241,15 @@ export function CardSetupPanel({
 
   return (
     <div className="flex flex-col gap-3">
+      {frameError ? (
+        <p
+          role="alert"
+          className="rounded-md border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-foreground"
+          data-testid="frame-error"
+        >
+          {frameError}
+        </p>
+      ) : null}
       {/* 1 · Card type — one combined list; layouts are just more types. */}
       <SetupSection title="Card type" value={KIND_DEFS[kind].label}>
         <ChipGroup
@@ -225,7 +257,10 @@ export function CardSetupPanel({
           layout="grid-2"
           size="md"
           value={kind}
-          onChange={onKindSelect}
+          onChange={(next) => {
+            clearErrors("frame_style");
+            onKindSelect(next);
+          }}
           options={kindOptions}
         />
       </SetupSection>
@@ -308,6 +343,7 @@ export function CardSetupPanel({
             });
             if (resolution.status === "unavailable") return;
             field.onChange(resolution.template);
+            clearErrors("frame_style");
             if (resolution.status === "colour-switched") {
               const identity = colorIdentityForKey(resolution.colorKey);
               setValue("color_identity", [identity], { shouldDirty: true });
@@ -335,16 +371,20 @@ export function CardSetupPanel({
               colorKey,
               verifiedKeys,
             );
+            const basicOnlyRefused =
+              templateIsBasicOnly(choice.template) && !isBasicLand;
             return {
               value: choice.template,
               label,
-              description: !available
-                ? "Awaiting verification"
-                : !colorAvailable
-                  ? `Not verified in ${colorWord(colorKey)} yet — picking it switches to ${colorWord(choice.availableColorKeys[0])}`
-                  : choice.group === "skin"
-                    ? "Same layout, different dress"
-                    : undefined,
+              description: basicOnlyRefused
+                ? BASIC_ONLY_FRAME_REASON
+                : !available
+                  ? "Awaiting verification"
+                  : !colorAvailable
+                    ? `Not verified in ${colorWord(colorKey)} yet — picking it switches to ${colorWord(choice.availableColorKeys[0])}`
+                    : choice.group === "skin"
+                      ? "Same layout, different dress"
+                      : undefined,
               leading: (
                 <FrameThumb
                   template={choice.template}
@@ -357,7 +397,7 @@ export function CardSetupPanel({
                   type={frameType}
                 />
               ),
-              disabled: !available,
+              disabled: !available || basicOnlyRefused,
               badge: available ? undefined : <SoonBadge />,
             };
           };
@@ -490,6 +530,7 @@ export function CardSetupPanel({
             selection={(field.value ?? []) as ColorIdentity[]}
             onChange={(next) => {
               field.onChange(next);
+              clearErrors("frame_style");
               onColorIdentityChange?.(next);
             }}
             verifiedKeys={verifiedKeys}

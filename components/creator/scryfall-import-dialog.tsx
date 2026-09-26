@@ -31,7 +31,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { ManaCostGlyphs } from "@/components/cards/mana-cost-glyphs";
-import type { ScryfallImportPatch } from "@/lib/scryfall/import-mapper";
+import {
+  printingTreatmentHint,
+  type ScryfallImportPatch,
+} from "@/lib/scryfall/import-mapper";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -136,8 +139,11 @@ type ScryfallImportDialogProps = {
   /** Whether the user is signed in. Disables the trigger if not. */
   signedIn: boolean;
   /** Called when the user commits to a starting-point. Parent merges the
-   *  patch into the form state and optionally consumes `importedArtUrl`. */
-  onImport: (payload: ScryfallImportPayload) => void;
+   *  patch into the form state and optionally consumes `importedArtUrl`.
+   *  It may return a notice (the printing's treatment the chosen frame
+   *  drops, TODO 1.16), which the dialog toasts after its own success toast
+   *  so the notice sits in front. */
+  onImport: (payload: ScryfallImportPayload) => string | null | void;
   /** Label override for the trigger button. */
   triggerLabel?: string;
   triggerVariant?: "primary" | "secondary" | "outline" | "ghost";
@@ -207,7 +213,7 @@ function ScryfallImportContent({
   onImport,
 }: {
   onClose: () => void;
-  onImport: (payload: ScryfallImportPayload) => void;
+  onImport: (payload: ScryfallImportPayload) => string | null | void;
 }) {
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -422,7 +428,7 @@ function ScryfallImportContent({
             }
           : patch;
 
-      onImport({
+      const notice = onImport({
         patch: finalPatch,
         importedArtUrl,
         source: {
@@ -436,6 +442,7 @@ function ScryfallImportContent({
           ? `Imported ${card.name} with artwork.`
           : `Seeded form with ${card.name}.`,
       );
+      if (notice) toast.info(notice, { duration: 8000 });
       onClose();
     });
   };
@@ -841,6 +848,11 @@ function Detail({
               Importing <strong>overwrites the card you&apos;re currently
               editing</strong> — name, text, type, colors, and the frame
               (matched to this printing&apos;s border era) are all replaced.
+              {patch.printing_treatment ? (
+                <span className="mt-1 block text-foreground">
+                  {printingTreatmentHint(patch.printing_treatment)}
+                </span>
+              ) : null}
             </span>
           </p>
         </div>
