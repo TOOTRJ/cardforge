@@ -516,6 +516,7 @@ Open decisions are marked **[decide]**; none blocks its phase.
       **Card Conjurer audit 2026-09-25:** The bundled bump also carries 3.13–3.22 and 4.16–4.20. Geometry and parity corrections go out as a 0.20 sweep, not as owner 'newer look' badges.
       **Status 2026-09-25:** stale as written — 4.4 did NOT wait: it shipped as v24 (sweep, #380) with 4.16–4.18 inside it, and v25–v28 followed as separate sweeps (#381/#382). None of 3.1–3.22 was in them (3.6 rode v25). This item is now "one sweep bump for the 3.x parity fixes when they land", no owner badge.
       **Status 2026-09-25 (round 5):** layout v29 (sweep, `VERSION_SCOPES[29]`) carries 3.3, 3.13, 3.18, part of 3.10 and part of 4.19, with 0.22 and the 4.31 leftovers. The other open 3.x fixes still need a later sweep when they land.
+      **Owner step after the v29 merge deploys — run the sweep right away:** `SCOPE=version VERSION=29 node scripts/rebake-renders.mjs` (the plan), then again with `CONFIRM=yes` (or `SCOPE=sweep`). On production's 731 public cards (every one at v28, anonymous read 2026-09-26) it re-bakes the 729 whose bake v29 changes and stamps the 2 it doesn't (Bar e002bc65 and Worm f107e1f3, tarkirdragon), plus any unlisted cards in scope, which an anonymous read can't see. That is about 729 HD Satori bakes on Vercel. Until it runs, each in-scope card's free watermarked PNG download renders live (`hasServableStoredRender`: a platform correction is pending), and its download modal says the download looks different from the gallery image. That is correct, but it is the per-request Satori load behind the 2026-09-14 quota incident. OG images keep serving the stored bake. Also expected after deploy: /admin/frame-compare marks every verified combo "stale" (`frame-verification-state.ts` asks `isRenderStale` about a regular card with no name or stats). That is accurate for the 25 display-footer templates and aftermath, where every card changed. On the other 11 templates only cards with a two-word name or type line changed, which is nearly every reference card. Re-verify rather than trust the old ticks.
 - [x] (fixed 2026-09-25, layout v29 — `layoutLoyaltyRows` / `layoutProfileLoyaltyRows` in `lib/cards/loyalty-rows.ts`: each row needs its estimated text height (the rules-fit wrap model, capitals counted at MPlantin's 0.74 em) or one badge height, plus padding; the text size is the largest ladder step at which every row fits; the slack is shared equally. The bake draws whole-pixel rows from shared edges (no seam gaps), the preview the same fractions, and each foil stripe follows its row. Not done: the optional per-row weight in `face_content`; saga chapters reuse it under 3.7. Walkers whose abilities don't fit even at 5 pt still lose text — an editor warning is a follow-up) **3.13 [P0] Planeswalker ability rows sized by content in both renderers** (Card Conjurer audit 2026-09-25) — Both renderers stack equal `flex: 1` loyalty rows (`lib/render/card-image.tsx`:1205-1212, `components/cards/card-preview.tsx`:1778-1786). The browser grows a long row (min-height:auto), Satori/Yoga does not. So a walker with a long ultimate looks right in the editor, while the stored PNG, gallery tile and OG image clip that ability under the loyalty plate. Reproduced by baking a 1/1/5-line m15pw. `fitRulesSizePct` only sees the whole box (`card-image.tsx`:213-231), so nothing shrinks. m15pw is verified for all 7 colours (`supabase/seed.sql`:40-51).
 
       Fix:
@@ -1205,8 +1206,7 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
         Beleren's ffi ligature the browser draws ("Office").
       - **Round-5 open tail (pre-existing, found by the v29 tracks; none is
         a v29 regression):** a walker whose abilities don't fit even at 5 pt
-        still overprints or clips (warn in the editor); at 5 pt the editor
-        (kerned) can fit a word more per line than the bake (Coden's −2);
+        still overprints or clips (warn in the editor);
         the rules estimate reads ALL-CAPS text as lowercase outside
         planeswalker rows; the preview draws cost pips at 0.95× the bake's
         disc with a narrower gap (3.4); flip / split bakes have no name–cost
@@ -1216,7 +1216,23 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
         of zoomed-out art on normal windows; bloomanime's four-way white
         outline bakes as one shadow (its white name nearly vanishes over light
         art); a non-planeswalker on m15pw shows the shield notch; Chromium
-        rejects `mplantin.woff2` (OTS cmap) and falls back to the .woff.
+        rejects `mplantin.woff2` (OTS cmap) and falls back to the .woff;
+        rules text can wrap a word differently in the editor and the
+        saved image at any size, not only at 5 pt. MPlantin has no kerning;
+        the cause is that the bake gives every word run its gap as a right
+        margin (a line must also hold its last word's gap) and sets its type
+        at a whole-pixel size. So Cut // Ribbons' top half "Cut deals 4
+        damage to target creature." is 1 line in the editor and 2 in the
+        bake, and 0.22's compare-tool check will show that. Likewise the
+        1 / 1 / 5 test walker's −8 is 4 lines against 5.
+        (`lib/cards/rules-metrics.ts` `wrapRulesText` models both wraps; the
+        fix is one gap rule in both renderers, which would re-wrap every
+        card, so it needs its own sweep.)
+        At aftermath's 5 pt floor each renderer places its own "…" in the
+        sideways bottom name bar: "Memory of the Overgr…" in the editor and
+        "Memory of the Over…" in the bake, whose pips sit wider (3.4).
+        Cut the name in shared code, as `fitDetachedCostTitle` does for the
+        planeswalker and Modern names (0 aftermath cards in production).
 - [ ] **4.32 [P1] Standard borderless frame for regular cards (`m15borderless`) from CC 'Borderless (Alt)'** (borderless research 2026-09-25) — This is the 2019+ look: art to the edges, dark translucent bars and text box with white ink, and a black bottom bar holding the collector line. It covers 3,425 printings (2,177 without a crown), about 54 % of all borderless paper printings. Nothing ships today: the "borderless showcases" are MSE scrims with an inset art slot (4.35), and 4.7 named the wrong CC pack (its Borderless bullet now points here).
       - **Source.** CC `packBorderless.js` @2fcddba (`groupShowcase-5.js`:49), `img/frames/m15/borderless/m15GenericShowcaseFrame{W,U,B,R,G,M,A,L,C}.png`. All are 1500×2100 native: sides α0, box RGBA 0,0,0,128, opaque bottom bar from 92.24 % H with small fins up the side edges. There are 8 P/T plates, `m15/borderless/pt/*.png` (274×140, at 76.4/88.62/18.27×6.67). On FDN #311 the bars and pinlines line up within a few px. The frames are already flat per colour; the 4.3 importer copies them, cuts the corners to the 3.23 radius, and records provenance in `lib/cards/frame-sources.json` (bucket only, never git). Its mask list (Pinline/Title/Type/Rules/Border) is also what 4.34 and coloured artifacts need.
       - **Profile.** `{...M15, artSlot 0/0/100/92.24, ink #ffffff}`, spreading the M15 profile as 4.4 shipped it (v24, #380). CC's text bounds equal its regular M15 bounds (title y 5.22, type y 56.64, rules 63.03 h 28.75; `packBorderless.js`), so our measured M15 carries over (and 4.20's sizes when they land). Symbol right edge 92.13 / centre y 59.10. P/T value 79.28/90.2/13.67×3.72; the plate goes in 4.18's `plateRect` (shipped in #380) at the plate bounds 76.4/88.62/18.27×6.67, which keeps its native 1.96 aspect. Brand mark in the bar.
