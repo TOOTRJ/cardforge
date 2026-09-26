@@ -24,6 +24,7 @@ import {
 } from "@/components/cards/frame-layer";
 import { EtchedSheen } from "@/lib/cards/etched-finish";
 import {
+  FoilBackdropSheen,
   FoilSheen,
   FoilStripeSheen,
   foilArtLayers,
@@ -625,8 +626,9 @@ function CardFace({
   const foilSecondArt = useNaturalSize(
     isFoil && layout.secondFace?.artSlot ? secondFace?.artUrl : null,
   );
-  // Printed layers drawn above the full-card sheen — the stat plates and the
-  // planeswalker ability stripes — carry their own (the bake's twins).
+  // Printed layers drawn above the full-card sheen — the stat plates, the
+  // planeswalker ability stripes and the rules backdrop — carry their own
+  // (the bake's twins).
   const plateFoil = isFoil ? { landscape: layout.orientation === "landscape" } : null;
 
   const focalX = clamp(face.artPosition?.focalX ?? 0.5, 0, 1);
@@ -958,8 +960,24 @@ function CardFace({
             zIndex: 9,
             background: layout.rules.backdropHex,
             borderRadius: "1.5cqw",
+            // Foil: clip the sheen to the rounded corners.
+            ...(plateFoil ? { overflow: "hidden" } : {}),
           }}
-        />
+        >
+          {/* Foil: the backdrop's own sheen, masked by its colour, over the
+              backdrop and under the watermark + text (the bake's twin). */}
+          {plateFoil ? (
+            <FoilBackdropSheen
+              id={`${foilId}-backdrop`}
+              region={layout.rules.rect}
+              fill={layout.rules.backdropHex}
+              landscape={plateFoil.landscape}
+              width="100%"
+              height="100%"
+              style={{ pointerEvents: "none" }}
+            />
+          ) : null}
+        </div>
       ) : null}
 
       {/* Design watermark — faint mark centered in the rules box, above the

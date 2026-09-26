@@ -94,6 +94,7 @@ import {
 import { resolveFrameProfile } from "@/lib/cards/profile-override";
 import { EtchedSheen } from "@/lib/cards/etched-finish";
 import {
+  FoilBackdropSheen,
   FoilSheen,
   FoilStripeSheen,
   foilArtLayers,
@@ -369,9 +370,12 @@ function CardImage({
     focalY?: number;
     scale?: number;
   };
-  // Foil plates (P/T, loyalty, defense) and planeswalker ability stripes —
-  // printed layers drawn above the full-card sheen — carry their own.
+  // Foil plates (P/T, loyalty, defense), planeswalker ability stripes and the
+  // rules backdrop — printed layers drawn above the full-card sheen — carry
+  // their own.
   const plateFoil = isFoil ? { cardHeight: height, landscape: layout.orientation === "landscape" } : null;
+  // The rules backdrop's corner radius — its foil sheen rounds the same.
+  const backdropRadius = Math.round(width * 0.015);
 
   const focalX2 = clamp(secondArtPos.focalX ?? 0.5, 0, 1) * 100;
   const focalY2 = clamp(secondArtPos.focalY ?? 0.5, 0, 1) * 100;
@@ -644,11 +648,29 @@ function CardImage({
         <div
           style={{
             ...slotBox(layout.rules.rect),
+            // Satori refuses a div with an element child unless it's flex.
+            display: "flex",
             zIndex: 9,
             background: layout.rules.backdropHex,
-            borderRadius: Math.round(width * 0.015),
+            borderRadius: backdropRadius,
           }}
-        />
+        >
+          {/* Foil: the backdrop's own sheen, masked by its colour — its only
+              child, so Satori paints it over the backdrop and under the
+              watermark + text. Satori clips an image to its own shape, not
+              to its parent's rounded corners, so it rounds its own. */}
+          {plateFoil ? (
+            <FoilBackdropSheen
+              id="foil-backdrop"
+              region={layout.rules.rect}
+              fill={layout.rules.backdropHex}
+              landscape={plateFoil.landscape}
+              width={Math.round((layout.rules.rect.widthPct / 100) * width)}
+              height={Math.round((layout.rules.rect.heightPct / 100) * height)}
+              style={{ width: "100%", height: "100%", borderRadius: backdropRadius }}
+            />
+          ) : null}
+        </div>
       ) : null}
 
       {/* Design watermark — mirrors the preview layer exactly: centered in

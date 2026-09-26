@@ -1109,10 +1109,15 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
       - [x] **Foil on planeswalkers** (owner decision, round-2 review): each
         ability stripe carries its own sheen (`FoilStripeSheen`, masked by the
         stripe colour) between the stripe and the badge + text, in both
-        renderers — inside v28 (foil only; one production card, Coden). Still
-        open: a translucent rules BACKDROP (`rules.backdropHex` — m15pw's
-        non-planeswalker box, token / full-art scrims) hides the foil the
-        same way.
+        renderers — inside v28 (foil only; one production card, Coden). The
+        translucent rules BACKDROP (`rules.backdropHex` — m15pw's
+        non-planeswalker box, the token / Alpha token / Anime / Expedition
+        scrims) hid the foil the same way; it now carries its own too
+        (`FoilBackdropSheen`, masked by the backdrop colour, clipped to its
+        rounded corners, under the watermark + text), both renderers. Foil
+        only, on those six templates: a clear rainbow on m15pw's pale box, a
+        level or two on the dark scrims (dark ink swallows the foil). 0 public
+        production cards change (Coden's ability rows replace the box).
       - [x] **Planeswalker pips + name lowered** (owner note, round-3 review:
         "pips look a little high"): CC's pw title plate runs ~9 px lower at HD
         than the printed one (77–192 vs 73–183 on M15 walkers), and the
@@ -1416,8 +1421,8 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
       `inset: 0` (Satori ignores it) and `mixBlendMode` (ignored), so foil
       never reached a saved image. Both renderers now draw one shared
       luminance-masked holographic sheen (`lib/cards/foil-finish.tsx`) under
-      the ink; finish-scoped sweep. Planeswalker ability stripes carry their
-      own sheen too; open: translucent rules backdrops (4.31).
+      the ink; finish-scoped sweep. Planeswalker ability stripes and
+      translucent rules backdrops carry their own sheen too (4.31).
       (Status at `267f46c`: preview and bake are aligned for both (#381 v26,
       #382 v28), so only the **[decide]** is left. The Foil, Etched and
       Showcase chips in `components/creator/panels/effects-panel.tsx` are

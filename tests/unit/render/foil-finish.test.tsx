@@ -5,8 +5,16 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { CardPreview } from "@/components/cards/card-preview";
-import { FoilSheen, FoilStripeSheen, coverPlacement, foilArtLayers, loyaltyStripeRects } from "@/lib/cards/foil-finish";
+import {
+  FoilBackdropSheen,
+  FoilSheen,
+  FoilStripeSheen,
+  coverPlacement,
+  foilArtLayers,
+  loyaltyStripeRects,
+} from "@/lib/cards/foil-finish";
 import { getFrameProfile } from "@/lib/cards/template-layout";
+import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 import { setFrameStorageForTests, type FrameManifest } from "@/lib/frames/frame-url";
 
 // ---------------------------------------------------------------------------
@@ -385,5 +393,150 @@ describe("foil stripes — one component, both renderers", () => {
     const at = bake.indexOf("? LoyaltyRowsBake({");
     expect(at).toBeGreaterThan(0);
     expect(bake.slice(at, bake.indexOf("})", at))).toContain("foil: plateFoil,");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Translucent rules backdrops (TODO 4.31): `rules.backdropHex` paints over the
+// full-card sheen the way the ability stripes do, so on a foil card it carries
+// its own (FoilBackdropSheen) — inside the backdrop, masked by its colour,
+// under the watermark + text. Real-pixel checks live in foil-bake.test.tsx.
+// ---------------------------------------------------------------------------
+
+const cardSpaceBox = (r: { topPct: number; leftPct: number; widthPct: number; heightPct: number }) =>
+  [(r.leftPct / 100) * 1500, (r.topPct / 100) * 2100, (r.widthPct / 100) * 1500, (r.heightPct / 100) * 2100]
+    .map((v) => Math.round(v * 100) / 100)
+    .join(" ");
+
+describe("foil backdrops — which frames have one", () => {
+  it("is exactly the six templates whose foil bakes FoilBackdropSheen changes", () => {
+    // A frame that gains a rules backdrop changes its foil bakes, so it
+    // needs a layout-version bump scoped to it.
+    const withBackdrop = FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).rules.backdropHex);
+    expect(withBackdrop).toEqual(["m15token", "m15pw", "m15tokenartifact", "alphatoken", "bloomanime", "expeditionland"]);
+    // The renderers read only the rules slot's.
+    for (const t of FRAME_TEMPLATE_VALUES) {
+      const p = getFrameProfile(t);
+      for (const slot of [p.title, p.type, p.footer, p.adventure?.rules, p.secondFace?.rules]) {
+        expect(slot?.backdropHex, t).toBeUndefined();
+      }
+    }
+  });
+});
+
+describe("FoilBackdropSheen markup", () => {
+  it("masks the card-space rainbow with the backdrop's own colour, over just the rules box", () => {
+    const rect = getFrameProfile("m15pw").rules.rect;
+    const html = renderToStaticMarkup(
+      FoilBackdropSheen({ id: "b", region: rect, fill: "rgba(244,238,226,0.72)", width: 1253, height: 594 }),
+    );
+    expect(html).not.toContain("undefined");
+    expect(html).not.toMatch(/mix-blend|inset/);
+    expect(html).toContain(`viewBox="${cardSpaceBox(rect)}"`);
+    expect(html.match(/<linearGradient[^>]*x2="1500" y2="2100"/g)).toHaveLength(2);
+    const mask = html.slice(html.indexOf("<mask"), html.indexOf("</mask>"));
+    expect(mask).toContain('id="b-lum"');
+    expect(mask.match(/<rect /g)).toHaveLength(1);
+    expect(mask).toContain('fill="rgba(244,238,226,0.72)"');
+    expect(html).toContain('mask="url(#b-lum)"');
+  });
+});
+
+describe("foil finish — rules backdrops in the preview", () => {
+  const backdropsOf = (root: HTMLElement, hex: string) =>
+    Array.from(root.querySelectorAll("div")).filter((d) => norm(d.style.background) === norm(hex));
+
+  it("puts a sheen masked by the backdrop inside it, clipped to its corners, under the watermark + text", () => {
+    for (const [template, cardType] of [
+      ["m15pw", "creature"],
+      ["m15token", "token"],
+      ["m15tokenartifact", "token"],
+      ["alphatoken", "token"],
+      ["bloomanime", "creature"],
+      ["expeditionland", "land"],
+    ] as const) {
+      const p = getFrameProfile(template);
+      const hex = p.rules.backdropHex!;
+      const { container } = render(
+        <CardPreview
+          title="Probe"
+          cardType={cardType}
+          colorIdentity={["white"]}
+          rulesText="Vigilance"
+          watermark={{ kind: "mana", key: "w" }}
+          frameStyle={{ template, finish: "foil" }}
+        />,
+      );
+      const backdrops = backdropsOf(container, hex);
+      expect(backdrops, template).toHaveLength(1);
+      const [backdrop] = backdrops;
+      expect(backdrop.style.zIndex).toBe("9");
+      expect(backdrop.style.overflow, template).toBe("hidden");
+      expect(backdrop.children, template).toHaveLength(1);
+      const svg = backdrop.firstElementChild as SVGSVGElement;
+      expect(svg.tagName.toLowerCase()).toBe("svg");
+      expect(norm(svg.querySelector("mask rect")?.getAttribute("fill"))).toBe(norm(hex));
+      expect(svg.querySelector("mask")!.id).toMatch(/^foil-[A-Za-z0-9_-]+-backdrop-lum$/);
+      expect([svg.getAttribute("width"), svg.getAttribute("height")]).toEqual(["100%", "100%"]);
+      expect([svg.style.position, svg.style.top, svg.style.left]).toEqual(["absolute", "0px", "0px"]);
+      // The rules box in card space, so the rainbow runs on from the card's.
+      expect(svg.getAttribute("viewBox")).toBe(cardSpaceBox(p.rules.rect));
+      // The watermark (z10) and the text (z20) are layers above it.
+      const watermark = container.querySelector("i.ms-w")?.parentElement as HTMLElement;
+      expect(watermark.style.zIndex, template).toBe("10");
+      cleanup();
+    }
+  });
+
+  it("leaves the backdrop of every other finish exactly as it was", () => {
+    const hex = getFrameProfile("m15pw").rules.backdropHex!;
+    for (const finish of ["regular", "etched", "showcase"] as const) {
+      const { container } = render(
+        <CardPreview title="Probe" cardType="creature" colorIdentity={["white"]} rulesText="Vigilance" frameStyle={{ template: "m15pw", finish }} />,
+      );
+      const backdrops = backdropsOf(container, hex);
+      expect(backdrops, finish).toHaveLength(1);
+      expect(backdrops[0].children, finish).toHaveLength(0);
+      expect(backdrops[0].style.overflow, finish).toBe("");
+      expect(container.querySelector('[id$="-backdrop-lum"]'), finish).toBeNull();
+      cleanup();
+    }
+  });
+
+  it("draws nothing where no backdrop is drawn (a planeswalker's ability rows, an empty box)", () => {
+    for (const rulesText of [PW_RULES, null]) {
+      const { container } = render(
+        <CardPreview
+          title="Probe, the Walker"
+          cardType="planeswalker"
+          colorIdentity={["white"]}
+          rulesText={rulesText}
+          loyalty="4"
+          frameStyle={{ template: "m15pw", finish: "foil" }}
+        />,
+      );
+      expect(backdropsOf(container, getFrameProfile("m15pw").rules.backdropHex!)).toHaveLength(0);
+      expect(container.querySelector('[id$="-backdrop-lum"]')).toBeNull();
+      cleanup();
+    }
+  });
+});
+
+describe("foil backdrops — one component, both renderers", () => {
+  it("each renderer draws FoilBackdropSheen inside the backdrop, masked by the colour it paints", () => {
+    for (const file of ["lib/render/card-image.tsx", "components/cards/card-preview.tsx"]) {
+      const src = read(file);
+      expect(src, file).toMatch(/import \{[^}]*FoilBackdropSheen[^}]*\} from "@\/lib\/cards\/foil-finish"/);
+      const start = src.indexOf("background: layout.rules.backdropHex,");
+      const sheen = src.indexOf("<FoilBackdropSheen", start);
+      expect(start, file).toBeGreaterThan(0);
+      // After the backdrop's own paint, before the watermark layer.
+      expect(sheen, file).toBeGreaterThan(start);
+      expect(sheen, file).toBeLessThan(src.indexOf("watermarkOpacity(effectiveWatermark)", start));
+      const block = src.slice(sheen, src.indexOf("/>", sheen));
+      expect(block, file).toContain("region={layout.rules.rect}");
+      expect(block, file).toContain("fill={layout.rules.backdropHex}");
+      expect(src.slice(start, sheen), file).toContain("{plateFoil ? (");
+    }
   });
 });
