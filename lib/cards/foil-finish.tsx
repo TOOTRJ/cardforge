@@ -384,17 +384,17 @@ export function FoilSheen({
 // and the badges keep exactly the foil they had.
 // ---------------------------------------------------------------------------
 
-/** The ability rows' boxes in card %: the rules rect cut into `count` equal
- *  rows — exactly the bake's `flex: 1` rows (Yoga has no automatic minimum
- *  size). A browser flex row is at least as tall as its content
- *  (min-height: auto), so a row whose text needs more than its share grows
- *  and the others shrink (a long 4-ability walker measured 139/139/158/158
- *  card px against 148.6 each). The preview sheen still fills its row and the
- *  viewBoxes stay contiguous, so the seams stay continuous; the rainbow is
- *  only stretched within such a row. */
-export function loyaltyStripeRects(rect: Rect, count: number): Rect[] {
-  const heightPct = rect.heightPct / Math.max(1, count);
-  return Array.from({ length: count }, (_, i) => ({ ...rect, topPct: rect.topPct + i * heightPct, heightPct }));
+/** The ability rows' boxes in card %: the rules rect cut into the rows both
+ *  renderers draw — `rowFractions` from layoutLoyaltyRows
+ *  (lib/cards/loyalty-rows.ts), each row's share of the box height. The
+ *  rows are contiguous, so the sheens' seams stay continuous. */
+export function loyaltyStripeRects(rect: Rect, rowFractions: readonly number[]): Rect[] {
+  let topPct = rect.topPct;
+  return rowFractions.map((f) => {
+    const row = { ...rect, topPct, heightPct: rect.heightPct * f };
+    topPct += row.heightPct;
+    return row;
+  });
 }
 
 type FillSheenProps = {

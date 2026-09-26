@@ -32,7 +32,8 @@ const CHAR_W = 0.5;
 const MANA_CHARS = (RULES_TEXT.pipDiscEm + RULES_TEXT.wordGapEm) / CHAR_W;
 // Headroom for estimate error: accept a size only if the estimated height
 // stays under this fraction of the box.
-const SAFETY = 0.96;
+export const RULES_FIT_SAFETY = 0.96;
+const SAFETY = RULES_FIT_SAFETY;
 
 export type RulesFitInput = {
   rulesText: string | null | undefined;
@@ -98,6 +99,23 @@ function estimateHeight(
       flavorLineCount * pitch * sizePct;
   }
   return height;
+}
+
+/**
+ * Estimated height of one rules block (no flavor) at `sizePct` in a column
+ * `boxWidthW` wide, in card-width units — the wrap model fitRulesSizePct
+ * uses, for layouts that fit several blocks side by side in one box (the
+ * planeswalker ability rows, lib/cards/loyalty-rows.ts). Empty text → 0.
+ */
+export function estimateRulesHeightW(
+  text: string,
+  sizePct: number,
+  lineHeight: number,
+  boxWidthW: number,
+): number {
+  const rules = text.trim();
+  if (!rules) return 0;
+  return estimateHeight(rules.split(/\n/), [], sizePct, lineHeight, boxWidthW);
 }
 
 // Display-font (CardDisplay) average advance width as a fraction of the font

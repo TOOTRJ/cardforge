@@ -32,8 +32,14 @@ import {
   loyaltyStripeRects,
   type FoilArtSource,
 } from "@/lib/cards/foil-finish";
+import {
+  LOYALTY_ROW,
+  layoutLoyaltyRows,
+  type LoyaltyRowsLayout,
+} from "@/lib/cards/loyalty-rows";
 import { fitRulesSizePct, fitSingleLineSizePct } from "@/lib/cards/render-tiers";
 import { fitStatSizePct, ptValue, STAT_BADGE_INSET } from "@/lib/cards/stat-fit";
+import { detachedCostTitleWidthPct } from "@/lib/cards/title-band";
 import {
   PLACEHOLDER_FLAVOR_TEXT,
   PLACEHOLDER_RULES_TEXT,
@@ -651,7 +657,9 @@ function CardFace({
   const aspect = layout.orientation === "landscape" ? 5 / 7 : 7 / 5;
   // Planeswalker ability rows spend ~20% of the box on the badge rail plus
   // per-row padding; narrow the rect handed to the fit estimate accordingly
-  // (the same correction in both renderers keeps preview == bake).
+  // (the same correction in both renderers keeps preview == bake). The rows
+  // themselves are fitted by layoutLoyaltyRows below; this size is left for
+  // a walker with no abilities (the plain box).
   const usesLoyaltyRows =
     Boolean(layout.loyaltyRows) && showsLoyalty(face.cardType);
   const fitRect = usesLoyaltyRows
@@ -675,10 +683,23 @@ function CardFace({
   const loyaltyAbilities = usesLoyaltyRows
     ? resolveLoyaltyRows(face.faceContent, face.rulesText)
     : [];
+  // Their text size and content-sized row heights — the bake's twin
+  // (lib/cards/loyalty-rows.ts). The editor-only empty walker lays out its
+  // hint rows the same way.
+  const loyaltyRowsFor = (abilities: LoyaltyAbility[]) =>
+    layoutLoyaltyRows({
+      abilities,
+      rect: layout.rules.rect,
+      baseSizePct: layout.rules.sizePct,
+      lineHeight: layout.rules.lineHeight ?? RULES_TEXT.lineHeight,
+      aspect,
+    });
   // Saga chapter rail content — same structured-first resolution.
   const sagaContent = layout.chapters
     ? resolveSagaChapters(face.faceContent, face.rulesText)
     : null;
+  // A detached cost box (costRect): the name stops before the pips.
+  const titleMaxWidthPct = showCost ? detachedCostTitleWidthPct(layout, face.cost) : null;
   // Explicit watermark wins; basic lands (Plains/Island/…) automatically get
   // the authentic large mana symbol in the text box.
   const basicLandFace = {
@@ -870,7 +891,14 @@ function CardFace({
           positioned box (right-aligned, vertically centered) so name and
           cost can be aligned independently in the layout editor. */}
       <BandSlot slot={layout.title} italic={isShowcase}>
-        <span style={{ ...ELLIPSIS, ...titleInk }} title={safeTitle}>
+        <span
+          style={
+            titleMaxWidthPct === null
+              ? { ...ELLIPSIS, ...titleInk }
+              : { ...ELLIPSIS, ...titleInk, maxWidth: cqw(titleMaxWidthPct) }
+          }
+          title={safeTitle}
+        >
           {displayLine(safeTitle)}
         </span>
         {showCost && !layout.costRect ? (
@@ -1071,7 +1099,7 @@ function CardFace({
           slot={layout.rules}
           rows={layout.loyaltyRows}
           abilities={loyaltyAbilities}
-          sizePct={rulesSizePct}
+          rowsLayout={loyaltyRowsFor(loyaltyAbilities)}
           foil={plateFoil && { ...plateFoil, id: `${foilId}-rows` }}
         />
       ) : layout.loyaltyRows && usesLoyaltyRows && staticInEditor ? (
@@ -1082,15 +1110,8 @@ function CardFace({
           pipOverrides={pipOverrides}
           slot={layout.rules}
           rows={layout.loyaltyRows}
-          abilities={[
-            {
-              cost: null,
-              text: "Loyalty abilities appear here — add them on the Text & stats step.",
-            },
-            { cost: null, text: "" },
-            { cost: null, text: "" },
-          ]}
-          sizePct={rulesSizePct}
+          abilities={EDITOR_LOYALTY_HINT}
+          rowsLayout={loyaltyRowsFor(EDITOR_LOYALTY_HINT)}
           placeholder
           foil={plateFoil && { ...plateFoil, id: `${foilId}-rows` }}
         />
@@ -1975,14 +1996,22 @@ function FlavorBlock({
   );
 }
 
+// The editor-only empty walker's hint rows.
+const EDITOR_LOYALTY_HINT: LoyaltyAbility[] = [
+  { cost: null, text: "Loyalty abilities appear here — add them on the Text & stats step." },
+  { cost: null, text: "" },
+  { cost: null, text: "" },
+];
+
 // LoyaltyRows — printed-planeswalker ability rows: a loyalty-cost badge in the
 // left rail + the ability text, alternating translucent row shading. Static
-// abilities (no leading cost) render unbadged. Mirrors LoyaltyRowsBake.
+// abilities (no leading cost) render unbadged. Mirrors LoyaltyRowsBake; both
+// draw the rows layoutLoyaltyRows sized from their text.
 function LoyaltyRows({
   slot,
   rows,
   abilities,
-  sizePct,
+  rowsLayout,
   pipOverrides = null,
   placeholder = false,
   foil = null,
@@ -1990,7 +2019,7 @@ function LoyaltyRows({
   slot: TextSlot;
   rows: NonNullable<FrameProfile["loyaltyRows"]>;
   abilities: LoyaltyAbility[];
-  sizePct: number;
+  rowsLayout: LoyaltyRowsLayout;
   pipOverrides?: PipOverrides | null;
   /** Editor-only empty state — mutes the row text into a hint. */
   placeholder?: boolean;
@@ -1999,8 +2028,9 @@ function LoyaltyRows({
    *  LoyaltyRowsBake twin. */
   foil?: { id: string; landscape: boolean } | null;
 }) {
+  const { sizePct, rowFractions } = rowsLayout;
   const stripe = (i: number) => (i % 2 === 0 ? rows.stripeAHex : rows.stripeBHex);
-  const stripeRects = foil ? loyaltyStripeRects(slot.rect, abilities.length) : null;
+  const stripeRects = foil ? loyaltyStripeRects(slot.rect, rowsLayout.rowFractions) : null;
   // Foil: rows contain their sheen, and the badge + text after it are
   // positioned so they paint on top (the bake's document order).
   const onTop = foil ? { position: "relative" as const } : {};
@@ -2011,7 +2041,6 @@ function LoyaltyRows({
         zIndex: 20,
         display: "flex",
         flexDirection: "column",
-        justifyContent: "center",
         overflow: "hidden",
         fontFamily: CARD_FONT,
         fontSize: cqw(sizePct),
@@ -2025,10 +2054,14 @@ function LoyaltyRows({
           key={i}
           style={{
             display: "flex",
-            flex: 1,
+            // The shared row height, never content-grown (min-height: auto
+            // is what let the browser's rows drift from the bake's).
+            flex: "none",
+            height: `${rowFractions[i] * 100}%`,
+            minHeight: 0,
             alignItems: "center",
             background: stripe(i),
-            padding: `${cqw(sizePct * 0.22)} ${cqw(sizePct * 0.4)}`,
+            padding: `${cqw(sizePct * LOYALTY_ROW.padYEm)} ${cqw(sizePct * LOYALTY_ROW.padXEm)}`,
             ...onTop,
           }}
         >
@@ -2051,9 +2084,9 @@ function LoyaltyRows({
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              width: cqw(sizePct * 2.3),
-              height: cqw(sizePct * 1.6),
-              marginRight: cqw(sizePct * 0.5),
+              width: cqw(sizePct * LOYALTY_ROW.badgeWidthEm),
+              height: cqw(sizePct * LOYALTY_ROW.badgeHeightEm),
+              marginRight: cqw(sizePct * LOYALTY_ROW.badgeGapEm),
             }}
           >
             {ab.cost ? (
@@ -2084,14 +2117,14 @@ function LoyaltyRows({
                 position: "relative",
                 color: rows.badgeTextHex,
                 fontFamily: DISPLAY_FONT,
-                fontSize: cqw(sizePct * 0.88),
+                fontSize: cqw(sizePct * LOYALTY_ROW.badgeTextEm),
                 fontWeight: 700,
                 // Optically center inside the shield's flat region.
                 ...(ab.cost
                   ? loyaltyBadgeShapeFor(ab.cost) === "up"
-                    ? { paddingTop: cqw(sizePct * 0.18) }
+                    ? { paddingTop: cqw(sizePct * LOYALTY_ROW.badgeNudgeEm) }
                     : loyaltyBadgeShapeFor(ab.cost) === "down"
-                      ? { paddingBottom: cqw(sizePct * 0.18) }
+                      ? { paddingBottom: cqw(sizePct * LOYALTY_ROW.badgeNudgeEm) }
                       : {}
                   : {}),
               }}

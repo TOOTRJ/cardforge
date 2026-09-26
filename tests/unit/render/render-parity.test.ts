@@ -83,6 +83,30 @@ describe("display-font lines", () => {
   });
 });
 
+describe("planeswalker ability rows", () => {
+  /** A renderer's rows component, up to its closing brace. */
+  const fn = (src: string, name: string) => {
+    const start = src.indexOf(`function ${name}(`);
+    return src.slice(start, src.indexOf("\n}\n", start));
+  };
+  const BAKE_ROWS = fn(BAKE, "LoyaltyRowsBake");
+  const PREVIEW_ROWS = fn(PREVIEW, "LoyaltyRows");
+
+  it("draw one row layout and one badge box from lib/cards/loyalty-rows in both renderers", () => {
+    // Content-sized rows (TODO 3.13): the shared layout, never equal flex rows.
+    for (const src of [BAKE, PREVIEW]) expect(src).toContain("layoutLoyaltyRows({");
+    expect(BAKE_ROWS).toContain("loyaltyRowEdgesPx(rowsLayout.rowFractions");
+    expect(PREVIEW_ROWS).toContain("height: `${rowFractions[i] * 100}%`");
+    // One badge height (TODO 3.3: the preview's was 1.6 em, the bake's 1.5).
+    for (const rows of [BAKE_ROWS, PREVIEW_ROWS]) {
+      expect(rows).toContain("LOYALTY_ROW.badgeHeightEm");
+      expect(rows).toContain("LOYALTY_ROW.badgeWidthEm");
+      expect(rows).toContain("LOYALTY_ROW.padYEm");
+      expect(rows).not.toMatch(/\* (1\.6|1\.5|2\.3|0\.22)\b/);
+    }
+  });
+});
+
 describe("landscape renders", () => {
   it("report the rotated display size and draw the composite card 7:5", async () => {
     // card-image.tsx pulls fonts/frames lazily, but its module graph is

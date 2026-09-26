@@ -5,6 +5,8 @@ import type { CardPreviewData } from "@/components/cards/card-preview";
 import type { FrameTemplate } from "@/types/card";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { loyaltyStripeRects } from "@/lib/cards/foil-finish";
+import { parseLoyaltyAbilities } from "@/lib/cards/card-display";
+import { layoutLoyaltyRows } from "@/lib/cards/loyalty-rows";
 import { RENDER_PRESETS } from "@/lib/render/card-image";
 import { FOIL_MASK_EDGE, foilMaskSource } from "@/lib/render/art-source";
 
@@ -223,7 +225,19 @@ describe("foil finish — real bakes", () => {
 const PW_ORIGIN = "https://frames.test";
 // A static first row, like Coden's: every row gets the sheen, badged or not.
 const PW_RULES = "Static line.\n+1: Scry 1.\n−2: Draw a card.\n−7: You win.";
-const PW_ROWS = 4;
+
+/** The walker's ability rows as both renderers draw them (four one-line
+ *  abilities: four equal rows). */
+function pwRowRects() {
+  const { rules } = getFrameProfile("m15pw");
+  const { rowFractions } = layoutLoyaltyRows({
+    abilities: parseLoyaltyAbilities(PW_RULES),
+    rect: rules.rect,
+    baseSizePct: rules.sizePct,
+    aspect: H / W,
+  });
+  return loyaltyStripeRects(rules.rect, rowFractions);
+}
 
 async function syntheticPwBucket() {
   const { frameObjectKey } = await import("@/lib/frames/frame-url");
@@ -319,7 +333,7 @@ describe("foil finish — m15pw stand-in (real bakes)", () => {
   /** The blank right-hand part of each ability row (no badge, no text, clear
    *  of the loyalty plate and of the row seams). */
   const stripeProbes = () =>
-    loyaltyStripeRects(getFrameProfile("m15pw").rules.rect, PW_ROWS).map((r) => {
+    pwRowRects().map((r) => {
       const b = box(r, 0);
       return { x0: Math.round(W * 0.52), x1: Math.round(W * 0.74), y0: b.y0 + 8, y1: b.y1 - 8 };
     });
@@ -429,7 +443,7 @@ describe("foil finish — m15pw stand-in (real bakes)", () => {
     for (const p of stripeProbes()) expect(meanDelta(opaque, clear, p)).toBeLessThan(1.5);
     // No step where one row's sheen meets the next.
     const { x0, x1 } = stripeProbes()[0];
-    for (const r of loyaltyStripeRects(getFrameProfile("m15pw").rules.rect, PW_ROWS).slice(1)) {
+    for (const r of pwRowRects().slice(1)) {
       const seam = Math.round((r.topPct / 100) * H);
       let step = 0;
       for (let x = x0; x < x1; x += 1) {

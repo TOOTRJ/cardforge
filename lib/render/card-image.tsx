@@ -106,6 +106,13 @@ import {
   loyaltyStripeRects,
   type FoilArtSource,
 } from "@/lib/cards/foil-finish";
+import {
+  LOYALTY_ROW,
+  layoutLoyaltyRows,
+  loyaltyRowEdgesPx,
+  type LoyaltyRowsLayout,
+} from "@/lib/cards/loyalty-rows";
+import { detachedCostTitleWidthPct } from "@/lib/cards/title-band";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import type { CardBackFace, ColorIdentity, Rarity } from "@/types/card";
 import { clamp } from "@/lib/utils";
@@ -355,7 +362,9 @@ function CardImage({
   const aspect = layout.orientation === "landscape" ? 5 / 7 : 7 / 5;
   // Planeswalker ability rows spend ~20% of the box on the badge rail plus
   // per-row padding; narrow the rect handed to the fit estimate accordingly
-  // (the same correction in both renderers keeps preview == bake).
+  // (the same correction in both renderers keeps preview == bake). The rows
+  // themselves are fitted by layoutLoyaltyRows below; this size is left for
+  // a walker with no abilities (the plain box).
   const usesLoyaltyRows =
     Boolean(layout.loyaltyRows) && showsLoyalty(card.cardType);
   const fitRect = usesLoyaltyRows
@@ -380,10 +389,21 @@ function CardImage({
   const loyaltyAbilities = usesLoyaltyRows
     ? resolveLoyaltyRows(card.faceContent, card.rulesText)
     : [];
+  // Their text size and content-sized row heights — the preview's twin
+  // (lib/cards/loyalty-rows.ts).
+  const loyaltyLayout = layoutLoyaltyRows({
+    abilities: loyaltyAbilities,
+    rect: layout.rules.rect,
+    baseSizePct: layout.rules.sizePct,
+    lineHeight: layout.rules.lineHeight ?? RULES_TEXT.lineHeight,
+    aspect,
+  });
   // Saga chapter rail content — same structured-first resolution.
   const sagaContent = layout.chapters
     ? resolveSagaChapters(card.faceContent, card.rulesText)
     : null;
+  // A detached cost box (costRect): the name stops before the pips.
+  const titleMaxWidthPct = showCost ? detachedCostTitleWidthPct(layout, card.cost) : null;
   // Explicit watermark wins; basic lands automatically get the large mana
   // symbol — identical resolution to the live preview.
   const basicLandFace = {
@@ -610,6 +630,7 @@ function CardImage({
           style={{
             ...alignedText(layout.title, displayLine(title), fpx(layout.title.sizePct, width), titleRoom),
             ...titleInk,
+            ...(titleMaxWidthPct === null ? {} : { maxWidth: Math.round(titleMaxWidthPct * width) }),
           }}
         >
           {displayLine(title)}
@@ -792,9 +813,10 @@ function CardImage({
               slot: layout.rules,
               rows: layout.loyaltyRows,
               abilities: loyaltyAbilities,
-              sizePct: rulesSizePct,
+              rowsLayout: loyaltyLayout,
               pipOverrides: card.pipOverrides,
               cardWidth: width,
+              cardHeight: height,
               foil: plateFoil,
             })
           : isBasicLand
@@ -1454,31 +1476,40 @@ function FlavorBake({
 // LoyaltyRowsBake — printed-planeswalker ability rows: a loyalty-cost badge in
 // the left rail + the ability text, with alternating translucent row shading.
 // Static abilities (no leading cost) render unbadged. Mirrors LoyaltyRows in
-// the preview.
+// the preview; both draw the rows layoutLoyaltyRows sized from their text.
 function LoyaltyRowsBake({
   slot,
   rows,
   abilities,
-  sizePct,
+  rowsLayout,
   cardWidth,
+  cardHeight,
   pipOverrides,
   foil = null,
 }: {
   slot: TextSlot;
   rows: NonNullable<FrameProfile["loyaltyRows"]>;
   abilities: LoyaltyAbility[];
-  sizePct: number;
+  rowsLayout: LoyaltyRowsLayout;
   cardWidth: number;
+  cardHeight: number;
   pipOverrides?: PipOverrides | null;
   /** Foil finish: each stripe gets its own sheen (FoilStripeSheen) — the
    *  translucent stripes sit above the full-card layer. */
   foil?: { cardHeight: number; landscape: boolean } | null;
 }) {
-  const size = fpx(sizePct, cardWidth);
-  const badgeW = Math.round(size * 2.3);
-  const badgeH = Math.round(size * 1.5);
+  const size = fpx(rowsLayout.sizePct, cardWidth);
+  const badgeW = Math.round(size * LOYALTY_ROW.badgeWidthEm);
+  const badgeH = Math.round(size * LOYALTY_ROW.badgeHeightEm);
+  // Whole-pixel row heights from shared edges: Yoga rounds each row's top and
+  // height separately, so flex-sized rows could open a 1 px seam. The last
+  // row takes whatever the box has left (flex: 1), so the stripes always
+  // reach its bottom edge.
+  const edges = loyaltyRowEdgesPx(rowsLayout.rowFractions, (slot.rect.heightPct / 100) * cardHeight);
+  const rowHeight = (i: number) => edges[i + 1] - edges[i];
+  const last = abilities.length - 1;
   const stripe = (i: number) => (i % 2 === 0 ? rows.stripeAHex : rows.stripeBHex);
-  const stripeRects = foil ? loyaltyStripeRects(slot.rect, abilities.length) : null;
+  const stripeRects = foil ? loyaltyStripeRects(slot.rect, rowsLayout.rowFractions) : null;
   const radius = Math.round(cardWidth * 0.012);
   // Satori clips an image (the sheen SVG) to its own shape and only to the
   // bounding rectangle of the box's rounded overflow, so the outer rows'
@@ -1486,7 +1517,7 @@ function LoyaltyRowsBake({
   // already clips the preview's).
   const sheenCorners = (i: number) => ({
     ...(i === 0 ? { borderTopLeftRadius: radius, borderTopRightRadius: radius } : {}),
-    ...(i === abilities.length - 1 ? { borderBottomLeftRadius: radius, borderBottomRightRadius: radius } : {}),
+    ...(i === last ? { borderBottomLeftRadius: radius, borderBottomRightRadius: radius } : {}),
   });
   return (
     <div
@@ -1494,7 +1525,6 @@ function LoyaltyRowsBake({
         ...slotBox(slot.rect),
         display: "flex",
         flexDirection: "column",
-        justifyContent: "center",
         overflow: "hidden",
         fontFamily: fontFamilyFor(slot.font),
         fontSize: size,
@@ -1509,10 +1539,10 @@ function LoyaltyRowsBake({
           key={i}
           style={{
             display: "flex",
-            flex: 1,
+            ...(i === last ? { flex: 1 } : { height: rowHeight(i), flexShrink: 0 }),
             alignItems: "center",
             background: stripe(i),
-            padding: `${Math.round(size * 0.22)}px ${Math.round(size * 0.4)}px`,
+            padding: `${Math.round(size * LOYALTY_ROW.padYEm)}px ${Math.round(size * LOYALTY_ROW.padXEm)}px`,
           }}
         >
           {/* Foil: the stripe's sheen — the row's first child, so Satori
@@ -1524,7 +1554,7 @@ function LoyaltyRowsBake({
               fill={stripe(i)}
               landscape={foil.landscape}
               width={Math.round((stripeRects[i].widthPct / 100) * cardWidth)}
-              height={Math.round((stripeRects[i].heightPct / 100) * foil.cardHeight)}
+              height={rowHeight(i)}
               style={{ width: "100%", height: "100%", ...sheenCorners(i) }}
             />
           ) : null}
@@ -1537,7 +1567,7 @@ function LoyaltyRowsBake({
               justifyContent: "center",
               width: badgeW,
               height: badgeH,
-              marginRight: Math.round(size * 0.5),
+              marginRight: Math.round(size * LOYALTY_ROW.badgeGapEm),
             }}
           >
             {ab.cost ? (
@@ -1564,13 +1594,13 @@ function LoyaltyRowsBake({
                 display: "flex",
                 color: rows.badgeTextHex,
                 fontFamily: DISPLAY_FONT,
-                fontSize: Math.round(size * 0.88),
+                fontSize: Math.round(size * LOYALTY_ROW.badgeTextEm),
                 fontWeight: 700,
                 ...(ab.cost
                   ? loyaltyBadgeShapeFor(ab.cost) === "up"
-                    ? { paddingTop: Math.round(size * 0.18) }
+                    ? { paddingTop: Math.round(size * LOYALTY_ROW.badgeNudgeEm) }
                     : loyaltyBadgeShapeFor(ab.cost) === "down"
-                      ? { paddingBottom: Math.round(size * 0.18) }
+                      ? { paddingBottom: Math.round(size * LOYALTY_ROW.badgeNudgeEm) }
                       : {}
                   : {}),
               }}

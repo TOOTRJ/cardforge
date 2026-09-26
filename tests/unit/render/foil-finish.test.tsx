@@ -13,6 +13,8 @@ import {
   foilArtLayers,
   loyaltyStripeRects,
 } from "@/lib/cards/foil-finish";
+import { parseLoyaltyAbilities } from "@/lib/cards/card-display";
+import { layoutLoyaltyRows } from "@/lib/cards/loyalty-rows";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 import { setFrameStorageForTests, type FrameManifest } from "@/lib/frames/frame-url";
@@ -227,9 +229,9 @@ const PW_RULES = "Static line.\n+1: Scry 1.\n−2: Draw a card.\n−7: You win."
 const PW_LINES = ["Static line.", "Scry 1.", "Draw a card.", "You win."];
 
 describe("loyaltyStripeRects", () => {
-  it("cuts the rules rect into equal, contiguous rows — the renderers' flex: 1 rows", () => {
+  it("cuts the rules rect into the renderers' rows — contiguous, each its share of the box", () => {
     const rect = { topPct: 60, leftPct: 8, widthPct: 84, heightPct: 30 };
-    const rows = loyaltyStripeRects(rect, 3);
+    const rows = loyaltyStripeRects(rect, [1 / 3, 1 / 3, 1 / 3]);
     expect(rows).toHaveLength(3);
     rows.forEach((r, i) => {
       expect(r.leftPct).toBe(8);
@@ -237,7 +239,12 @@ describe("loyaltyStripeRects", () => {
       expect(r.heightPct).toBeCloseTo(10);
       expect(r.topPct).toBeCloseTo(60 + 10 * i);
     });
-    expect(loyaltyStripeRects(rect, 1)).toEqual([rect]);
+    expect(loyaltyStripeRects(rect, [1])).toEqual([rect]);
+    // Content-sized rows (layoutLoyaltyRows): a tall last row.
+    const [a, b, c] = loyaltyStripeRects(rect, [0.2, 0.2, 0.6]);
+    expect([a.heightPct, b.heightPct, c.heightPct].map((h) => +h.toFixed(6))).toEqual([6, 6, 18]);
+    expect(b.topPct).toBeCloseTo(a.topPct + a.heightPct);
+    expect(c.topPct + c.heightPct).toBeCloseTo(90);
   });
 });
 
@@ -288,7 +295,11 @@ describe("foil finish — planeswalker ability stripes in the preview", () => {
     const sheens = stripeSheens(container);
     expect(sheens).toHaveLength(PW_LINES.length);
     const p = getFrameProfile("m15pw");
-    const expected = loyaltyStripeRects(p.rules.rect, PW_LINES.length);
+    const expected = loyaltyStripeRects(
+      p.rules.rect,
+      layoutLoyaltyRows({ abilities: parseLoyaltyAbilities(PW_RULES), rect: p.rules.rect, baseSizePct: p.rules.sizePct, aspect: 7 / 5 })
+        .rowFractions,
+    );
     const ids = new Set<string>();
     sheens.forEach((svg, i) => {
       const row = svg.parentElement as HTMLElement;
@@ -375,7 +386,7 @@ describe("foil stripes — one component, both renderers", () => {
       const src = read(file);
       expect(src, file).toMatch(/import \{[^}]*FoilStripeSheen[^}]*loyaltyStripeRects[^}]*\} from "@\/lib\/cards\/foil-finish"/);
       const rows = rowsSource(src, fn);
-      expect(rows, file).toContain("loyaltyStripeRects(slot.rect, abilities.length)");
+      expect(rows, file).toContain("loyaltyStripeRects(slot.rect, rowsLayout.rowFractions)");
       expect(rows, file).toContain("background: stripe(i),");
       expect(rows, file).toContain("fill={stripe(i)}");
       const sheen = rows.indexOf("<FoilStripeSheen");
