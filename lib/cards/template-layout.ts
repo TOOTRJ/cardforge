@@ -1385,10 +1385,15 @@ const SPLIT: FrameProfile = {
 // Aftermath — the M15 Aftermath frame. A normal TOP half (cast from hand) over a
 // BOTTOM half rotated 90° (cast from the graveyard). The top half is a standard
 // spell layout (name/cost → small art → type → rules); the bottom half is the
-// back-face content rendered ROTATED 270° (read by turning the card). The
-// bottom slots are WIDE boxes centered on the rotated bars — rotate(270°) around
-// each center lands it on the vertical bar (the box may extend off-card before
-// rotation, which is fine). Frame stacked by scripts/build-aftermath-frame.mjs.
+// back-face content rendered ROTATED 90° CLOCKWISE (read by turning the card
+// anticlockwise), like the printed Cut // Ribbons and Card Conjurer: the name
+// reads top → bottom with its cost at the bottom. (MSE measures its
+// `angle: 270` anticlockwise — the same quarter turn — but CSS rotate() turns
+// clockwise, so copying it as rotate(270°) turned the half the wrong way,
+// TODO 0.22.) The bottom slots are WIDE boxes centered on the rotated bars —
+// rotate(90°) around each center lands it on the vertical bar (the box may
+// extend off-card before rotation, which is fine). Frame stacked by
+// scripts/build-aftermath-frame.mjs.
 const AFTERMATH: FrameProfile = {
   label: "Aftermath",
   artSlot: { topPct: 11.3, leftPct: 7.7, widthPct: 84.5, heightPct: 22.4 },
@@ -1415,30 +1420,37 @@ const AFTERMATH: FrameProfile = {
     font: "body",
   },
   secondFace: {
-    rotation: 270,
+    rotation: 90,
     costSizePct: 0.034,
     // The bottom half's art window (MSE image 2): x 54.9–83.7%, y 56.4–91.4%
     // in card space. Like the text slots this is the PRE-rotation wide box
-    // centered on the window — rotate(270°) in place lands exactly on it and
+    // centered on the window — rotate(90°) in place lands exactly on it and
     // the art reads upright when the card is turned.
     artSlot: { topPct: 63.6, leftPct: 44.8, widthPct: 49.0, heightPct: 20.6 },
-    // Wide boxes centered on each rotated bar (rotate 270° → vertical bar).
+    // Wide boxes centered on each rotated bar (rotate 90° → vertical bar).
+    // Turned, the name and the type line both start at y 56.5% and the cost
+    // ends at 90.8% (Card Conjurer's title2, and the print); the type box is
+    // centred on its bar (x 46.4–54.8%).
     title: {
-      rect: { topPct: 72, leftPct: 69, widthPct: 39, heightPct: 7 },
+      rect: { topPct: 70.125, leftPct: 64.5, widthPct: 48, heightPct: 7 },
       sizePct: 0.038,
       colorHex: INK_DARK,
       weight: 600,
       font: "display",
     },
     type: {
-      rect: { topPct: 72, leftPct: 29, widthPct: 39, heightPct: 7 },
+      rect: { topPct: 70.125, leftPct: 26.6, widthPct: 48, heightPct: 7 },
       sizePct: 0.028,
       colorHex: INK_DARK_SOFT,
       weight: 600,
       font: "display",
     },
+    // Card Conjurer's rotated rules box: x 6.94–44.94%, y 57.0–90.57% once
+    // turned. Its long side is the line length (47% W = 705 px), its short
+    // side the stack of lines (27.15% H = 570 px), so wide text stays inside
+    // the white box instead of running into the type bar and off the card.
     rules: {
-      rect: { topPct: 56.5, leftPct: 4.5, widthPct: 39, heightPct: 38 },
+      rect: { topPct: 60.21, leftPct: 2.44, widthPct: 47, heightPct: 27.15 },
       sizePct: ptToPct(7.5),
       colorHex: INK_DARK,
       vAlign: "center",

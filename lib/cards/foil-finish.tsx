@@ -62,7 +62,7 @@ export type FoilArtLayer = FoilArtSource & {
   focalY: number;
   /** CSS transform scale around the focal point. */
   scale: number;
-  /** Degrees, around the rect's centre (a split's second window). */
+  /** Degrees, around the rect's centre (aftermath's sideways second window). */
   rotation: number;
 };
 
@@ -74,9 +74,10 @@ const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v
  * The art layers a face draws UNDER its frame, in paint order, exactly as
  * both renderers place them: see-through frames' under-frame art (cover at
  * the focal point, scale 1), the art window (cover + focal + scale), and a
- * split's second window (rotated with its face). A missing source (art not
- * loaded yet in the preview, an unresolvable URL in the bake) just drops its
- * layer — the foil then follows the frame alone there.
+ * second face's own window (split's, or aftermath's rotated with its face).
+ * A missing source (art not loaded yet in the preview, an unresolvable URL
+ * in the bake) just drops its layer — the foil then follows the frame alone
+ * there.
  */
 export function foilArtLayers({
   layout,
@@ -154,6 +155,54 @@ export function coverPlacement(
     height,
     /** scale(s) about (ox, oy) — identity when s = 1. */
     transform: scale === 1 ? undefined : `matrix(${scale} 0 0 ${scale} ${r2(ox * (1 - scale))} ${r2(oy * (1 - scale))})`,
+  };
+}
+
+/**
+ * The same CSS as plain boxes, with no transform left to apply: object-fit
+ * crops the cover to the <img> box, then scale(s) about the focal point
+ * grows or shrinks that crop. So `box` shows the cover of the SCALED box
+ * (`box` scaled by s about the focal point), cut to where the two overlap.
+ * `image` is where the whole picture lands, `visible` the part of `box` it
+ * paints — all of `box` for s ≥ 1 (coverPlacement's picture, pre-scaled),
+ * only the scaled box for s < 1. A ROTATED window (aftermath's sideways
+ * second art) is drawn from these numbers in the bake — Satori loses the art
+ * of a rotated overflow box (lib/render/card-image.tsx RotatedArtBake) — and
+ * in the foil mask, so the two agree.
+ */
+export function artWindowPlacement(
+  box: { x: number; y: number; width: number; height: number },
+  natural: { width: number; height: number },
+  focalX: number,
+  focalY: number,
+  scale: number,
+) {
+  const ox = box.x + focalX * box.width;
+  const oy = box.y + focalY * box.height;
+  const scaled = {
+    x: ox + (box.x - ox) * scale,
+    y: oy + (box.y - oy) * scale,
+    width: box.width * scale,
+    height: box.height * scale,
+  };
+  const s0 = Math.max(scaled.width / natural.width, scaled.height / natural.height);
+  const width = natural.width * s0;
+  const height = natural.height * s0;
+  const x0 = Math.max(box.x, scaled.x);
+  const y0 = Math.max(box.y, scaled.y);
+  return {
+    image: {
+      x: scaled.x + focalX * (scaled.width - width),
+      y: scaled.y + focalY * (scaled.height - height),
+      width,
+      height,
+    },
+    visible: {
+      x: x0,
+      y: y0,
+      width: Math.min(box.x + box.width, scaled.x + scaled.width) - x0,
+      height: Math.min(box.y + box.height, scaled.y + scaled.height) - y0,
+    },
   };
 }
 
@@ -281,6 +330,19 @@ export function FoilSheen({
   const view = box
     ? { x: r2(box.x), y: r2(box.y), width: r2(box.width), height: r2(box.height) }
     : { x: 0, y: 0, width: vw, height: vh };
+  // Each art layer's window, clip and picture box. A rotated window takes
+  // the numbers the bake paints it with (artWindowPlacement), so its mask
+  // sits on the drawn art.
+  const artBoxes = art.map((layer) => {
+    const slot = pct(layer.rect);
+    const natural = { width: layer.naturalWidth, height: layer.naturalHeight };
+    if (!layer.rotation) {
+      const place = coverPlacement(slot, natural, layer.focalX, layer.focalY, layer.scale);
+      return { slot, clip: slot, place };
+    }
+    const { image, visible } = artWindowPlacement(slot, natural, layer.focalX, layer.focalY, layer.scale);
+    return { slot, clip: visible, place: { ...image, transform: undefined } };
+  });
   return (
     <svg
       viewBox={`${view.x} ${view.y} ${view.width} ${view.height}`}
@@ -291,14 +353,11 @@ export function FoilSheen({
       style={{ position: "absolute", top: 0, left: 0, ...style }}
     >
       <defs>
-        {art.map((layer, i) => {
-          const box = pct(layer.rect);
-          return (
-            <clipPath key={i} id={`${id}-clip${i}`} clipPathUnits="userSpaceOnUse">
-              <rect x={r2(box.x)} y={r2(box.y)} width={r2(box.width)} height={r2(box.height)} />
-            </clipPath>
-          );
-        })}
+        {artBoxes.map(({ clip }, i) => (
+          <clipPath key={i} id={`${id}-clip${i}`} clipPathUnits="userSpaceOnUse">
+            <rect x={r2(clip.x)} y={r2(clip.y)} width={r2(clip.width)} height={r2(clip.height)} />
+          </clipPath>
+        ))}
         {sheenGradients(id, vw, vh)}
         {seamX !== null ? (
           <clipPath id={`${id}-left`} clipPathUnits="userSpaceOnUse">
@@ -312,14 +371,7 @@ export function FoilSheen({
         ) : null}
         <mask id={`${id}-lum`} maskUnits="userSpaceOnUse" x={view.x} y={view.y} width={view.width} height={view.height}>
           {art.map((layer, i) => {
-            const box = pct(layer.rect);
-            const place = coverPlacement(
-              box,
-              { width: layer.naturalWidth, height: layer.naturalHeight },
-              layer.focalX,
-              layer.focalY,
-              layer.scale,
-            );
+            const { slot: box, place } = artBoxes[i];
             return (
               // Satori serialises every prop it is given (an undefined one
               // becomes transform="undefined"), so optional attributes are

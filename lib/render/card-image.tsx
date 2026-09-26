@@ -14,7 +14,7 @@
 // declares `display: flex`.
 
 import { ImageResponse } from "next/og";
-import { foilMaskSource, resolveRenderableImage } from "@/lib/render/art-source";
+import { foilMaskSource, imageNaturalSize, resolveRenderableImage } from "@/lib/render/art-source";
 import { fitRulesSizePct, fitSingleLineSizePct } from "@/lib/cards/render-tiers";
 import { fitStatSizePct, ptValue, STAT_BADGE_INSET } from "@/lib/cards/stat-fit";
 import { RULES_TEXT, orientationFromAspect, type CardOrientation } from "@/lib/cards/typography";
@@ -102,6 +102,7 @@ import {
   FoilBackdropSheen,
   FoilSheen,
   FoilStripeSheen,
+  artWindowPlacement,
   foilArtLayers,
   loyaltyStripeRects,
   type FoilArtSource,
@@ -253,6 +254,7 @@ function CardImage({
   brandMark,
   watermarkText,
   foilArt,
+  secondArtSize,
 }: {
   card: CardPreviewData;
   width: number;
@@ -266,6 +268,9 @@ function CardImage({
   /** Foil only: the art copies the foil's luminance mask redraws (see
    *  foilMaskSource) — resolved up front because they need sharp (async). */
   foilArt?: { art: FoilArtSource | null; secondArt: FoilArtSource | null };
+  /** A rotated second art window's picture size (imageNaturalSize) — the
+   *  bake places that art in px (RotatedArtBake). */
+  secondArtSize?: { width: number; height: number } | null;
   /** NEVER rendered — Satori's image preload list (see renderCardImage). */
   children?: React.ReactNode;
 }) {
@@ -510,8 +515,22 @@ function CardImage({
       </div>
 
       {/* Second art — the second face's own window (split's right half,
-          aftermath's sideways bottom window). Rotates in place with the face. */}
-      {secondArtSlot && secondArtUrl ? (
+          aftermath's sideways bottom window). Rotates in place with the face;
+          a rotated one is placed in px (RotatedArtBake) — the object-fit box
+          below is kept for split, and for art whose size couldn't be read. */}
+      {secondArtSlot && secondArtUrl && layout.secondFace!.rotation && secondArtSize ? (
+        <RotatedArtBake
+          slot={secondArtSlot}
+          rotation={layout.secondFace!.rotation}
+          src={secondArtUrl}
+          natural={secondArtSize}
+          focalX={clamp(secondArtPos.focalX ?? 0.5, 0, 1)}
+          focalY={clamp(secondArtPos.focalY ?? 0.5, 0, 1)}
+          scale={scale2}
+          cardWidth={width}
+          cardHeight={height}
+        />
+      ) : secondArtSlot && secondArtUrl ? (
         <div
           style={{
             ...slotBox(secondArtSlot),
@@ -2054,6 +2073,73 @@ function AdventureBake({
   );
 }
 
+// RotatedArtBake — a ROTATED art window (aftermath's sideways second art),
+// the preview's rotate(N) box around an object-fit: cover + scale(s) <img>.
+// Satori loses that art: the rotated box's overflow mask reaches its <img>
+// as a bounding-box mask whose region comes out of the img's UNROTATED box,
+// which cut an art-free strip across the sideways window (and the foil
+// sheen painted over it) — a scale in a non-rotated inner wrapper hits the
+// same mask. So nothing here clips: the window box rotates about its centre
+// as in the preview, and a child at the visible rect paints the art as a
+// background placed in px (artWindowPlacement — the foil mask draws this
+// layer from the same numbers). The default repeat keeps each pattern tile
+// the picture's own size (no-repeat makes it the canvas's, which cuts a
+// zoomed picture wider than the card); the visible rect lies inside the
+// picture, so no second copy ever shows.
+function RotatedArtBake({
+  slot,
+  rotation,
+  src,
+  natural,
+  focalX,
+  focalY,
+  scale,
+  cardWidth,
+  cardHeight,
+}: {
+  slot: Rect;
+  rotation: number;
+  src: string;
+  natural: { width: number; height: number };
+  focalX: number;
+  focalY: number;
+  scale: number;
+  cardWidth: number;
+  cardHeight: number;
+}) {
+  const box = {
+    x: 0,
+    y: 0,
+    width: (slot.widthPct / 100) * cardWidth,
+    height: (slot.heightPct / 100) * cardHeight,
+  };
+  const { image, visible } = artWindowPlacement(box, natural, focalX, focalY, scale);
+  return (
+    <div
+      style={{
+        ...slotBox(slot),
+        display: "flex",
+        transform: `rotate(${rotation}deg)`,
+        transformOrigin: "center",
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          left: visible.x,
+          top: visible.y,
+          width: visible.width,
+          height: visible.height,
+          display: "flex",
+          backgroundImage: `url(${src})`,
+          backgroundSize: `${image.width}px ${image.height}px`,
+          backgroundPosition: `${image.x - visible.x}px ${image.y - visible.y}px`,
+        }}
+      />
+    </div>
+  );
+}
+
 // SecondFaceBake — Satori-side rotated second face (mirrors SecondFacePanel).
 // Each slot is positioned in card coords then rotated in place; Satori honors
 // transform + transformOrigin, so flip/aftermath bake identically to preview.
@@ -2324,13 +2410,18 @@ export async function renderCardImage(
   const frameTemplate = normalizeFrameTemplate(card.frameStyle?.template);
   const frameLayout = resolveFrameProfile(frameTemplate, card.profileOverrides);
   const frameKeys = frameColorKeysFor(frameLayout, card.colorIdentity as ColorIdentity[] | undefined, card);
-  const [, , foilArt, foilSecondArt] = await Promise.all([
+  const [, , foilArt, foilSecondArt, secondArtSize] = await Promise.all([
     Promise.all(frameKeys.map((key) => preloadFrame(frameTemplate, key))),
     preloadFrameAssets(frameAssetPathsFor(card)),
     isFoil ? foilMaskSource(card.artUrl) : null,
-    // Only a layout with a second art window (split) draws the back face's
-    // art; DFC/adventure backs share the front art, so skip the decode.
+    // Only a layout with a second art window (split, aftermath) draws the
+    // back face's art; DFC/adventure backs share the front art, so skip the
+    // decode.
     isFoil && frameLayout.secondFace?.artSlot ? foilMaskSource(card.backFace?.art_url) : null,
+    // A ROTATED second window (aftermath) is placed in px from the art's size.
+    frameLayout.secondFace?.artSlot && frameLayout.secondFace.rotation
+      ? imageNaturalSize(card.backFace?.art_url)
+      : null,
   ]);
   const base = RENDER_PRESETS[preset];
   // Landscape (Battle) frames swap the canvas to 7:5 so the bake matches the
@@ -2347,6 +2438,7 @@ export async function renderCardImage(
       brandMark={opts.brandMark ?? true}
       watermarkText={opts.watermarkText?.trim() || null}
       foilArt={isFoil ? { art: foilArt, secondArt: foilSecondArt } : undefined}
+      secondArtSize={secondArtSize}
     >
       {/* Satori serialises an inline SVG's <image href> from its image
           cache, which it fills by pre-walking the ROOT element's children

@@ -8,7 +8,8 @@
 // stacks them into the 1500×2100 card and flood-fills BOTH art windows (white
 // boxes, like the Alpha frames) to alpha: the top half's, and the bottom
 // half's sideways window (MSE "image 2" at 314,295 183×108 angle 270 → card
-// space x 54.9–83.7%, y 56.4–91.4%). The bottom text renders rotated 270°.
+// space x 54.9–83.7%, y 56.4–91.4%). The bottom text and art render rotated
+// 90° clockwise, like the print (MSE measures its angle 270 anticlockwise).
 //
 //   node scripts/build-aftermath-frame.mjs
 // ---------------------------------------------------------------------------

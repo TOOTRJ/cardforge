@@ -9,6 +9,7 @@ import {
   FoilBackdropSheen,
   FoilSheen,
   FoilStripeSheen,
+  artWindowPlacement,
   coverPlacement,
   foilArtLayers,
   loyaltyStripeRects,
@@ -67,6 +68,36 @@ describe("coverPlacement — the CSS/Satori object-fit: cover math", () => {
   });
 });
 
+describe("artWindowPlacement — the same CSS as transform-free boxes", () => {
+  const slot = { x: 100, y: 50, width: 600, height: 400 };
+  const natural = { width: 1200, height: 600 };
+
+  it("is coverPlacement's picture with the zoom applied, filling the whole window, for s ≥ 1", () => {
+    for (const [fx, fy, s] of [
+      [0.25, 0.5, 1],
+      [0.3, 0.8, 1.5],
+      [0, 1, 2],
+    ]) {
+      const { image, visible } = artWindowPlacement(slot, natural, fx, fy, s);
+      const cover = coverPlacement(slot, natural, fx, fy, 1);
+      const [ox, oy] = [slot.x + fx * slot.width, slot.y + fy * slot.height];
+      expect(image.x).toBeCloseTo(ox + (cover.x - ox) * s);
+      expect(image.y).toBeCloseTo(oy + (cover.y - oy) * s);
+      expect(image.width).toBeCloseTo(cover.width * s);
+      expect(image.height).toBeCloseTo(cover.height * s);
+      expect(visible).toEqual(slot);
+    }
+  });
+
+  it("stops at the window shrunk about the focal point for s < 1 (object-fit crops before the scale)", () => {
+    // 600×400 window at s = 0.5 about (100 + 0, 50 + 400): a 300×200 box in
+    // the bottom-left corner, which the cover (400×200) overflows sideways.
+    const { image, visible } = artWindowPlacement(slot, natural, 0, 1, 0.5);
+    expect(visible).toEqual({ x: 100, y: 250, width: 300, height: 200 });
+    expect(image).toEqual({ x: 100, y: 250, width: 400, height: 200 });
+  });
+});
+
 describe("foilArtLayers", () => {
   const art = { href: "a.png", naturalWidth: 1000, naturalHeight: 800 };
   it("redraws the window art, plus the under-frame art on see-through frames", () => {
@@ -85,6 +116,13 @@ describe("foilArtLayers", () => {
     expect(layers).toHaveLength(2);
     expect(layers[1].rect).toEqual(split.secondFace!.artSlot);
     expect(layers[1].rotation).toBe(split.secondFace!.rotation);
+  });
+
+  it("turns aftermath's sideways window clockwise, like the print", () => {
+    const aftermath = getFrameProfile("aftermath");
+    const layers = foilArtLayers({ layout: aftermath, colorKey: "w", art, artPosition: {}, secondArt: art, secondArtPosition: {} });
+    expect(layers[1].rect).toEqual(aftermath.secondFace!.artSlot);
+    expect(layers[1].rotation).toBe(90);
   });
 });
 
@@ -109,6 +147,42 @@ describe("FoilSheen markup", () => {
     // Luminance mask: art layers first, the frame on top.
     const mask = html.slice(html.indexOf("<mask"), html.indexOf("</mask>"));
     expect(mask.lastIndexOf('href="a.png"')).toBeLessThan(mask.indexOf('href="frame.png"'));
+  });
+
+  it("draws a rotated window's layer from the bake's transform-free boxes", () => {
+    const layout = getFrameProfile("aftermath");
+    const second = { href: "b.png", naturalWidth: 1200, naturalHeight: 800 };
+    const html = renderToStaticMarkup(
+      FoilSheen({
+        id: "f",
+        frameHref: "frame.png",
+        art: foilArtLayers({
+          layout,
+          colorKey: "w",
+          art: null,
+          artPosition: {},
+          secondArt: second,
+          secondArtPosition: { focalX: 0, focalY: 1, scale: 0.5 },
+        }),
+        width: 750,
+        height: 1050,
+      }),
+    );
+    expect(html).not.toContain("undefined");
+    // Card space is 1500 × 2100; the window's px box, its placement, and the
+    // quarter turn about the window's centre.
+    const r = layout.secondFace!.artSlot!;
+    const slot = { x: (r.leftPct / 100) * 1500, y: (r.topPct / 100) * 2100, width: (r.widthPct / 100) * 1500, height: (r.heightPct / 100) * 2100 };
+    const { image, visible } = artWindowPlacement(slot, { width: 1200, height: 800 }, 0, 1, 0.5);
+    const r2 = (v: number) => Math.round(v * 100) / 100;
+    expect(html).toContain(
+      `<rect x="${r2(visible.x)}" y="${r2(visible.y)}" width="${r2(visible.width)}" height="${r2(visible.height)}"></rect>`,
+    );
+    expect(html).toContain(`transform="rotate(90 ${r2(slot.x + slot.width / 2)} ${r2(slot.y + slot.height / 2)})"`);
+    const img = html.slice(html.indexOf('<image href="b.png"'));
+    expect(img.slice(0, img.indexOf(">"))).toBe(
+      `<image href="b.png" x="${r2(image.x)}" y="${r2(image.y)}" width="${r2(image.width)}" height="${r2(image.height)}" preserveAspectRatio="none"`,
+    );
   });
 });
 
