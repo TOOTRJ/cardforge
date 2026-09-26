@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { scanImageUrl } from "@/lib/moderation/image-scan";
+import { normalizeUploadOrientation } from "@/lib/media/orientation";
 import {
   isDefaultProfileMedia,
   type ProfileMediaKind,
@@ -122,6 +123,16 @@ export async function uploadProfileMediaServerAction(
     };
   }
 
+  // Upright pixels, no EXIF orientation tag (lib/media/orientation.ts): the
+  // settings page shows a phone-photo avatar upright, and so must the
+  // profile OG image, which is drawn by Satori (TODO 3.14).
+  let stored: Buffer;
+  try {
+    stored = (await normalizeUploadOrientation(buffer, metadata, { maxBytes: MAX_BYTES })).buffer;
+  } catch {
+    return { ok: false, error: "That doesn't look like a valid image." };
+  }
+
   const ext = EXTENSION_BY_FORMAT[format] ?? "bin";
   // Random filename per upload so we never hit ON-CONFLICT-UPDATE on
   // storage.objects — Postgres applies the UPDATE policy in that path on
@@ -151,7 +162,7 @@ export async function uploadProfileMediaServerAction(
 
   const { error: uploadErr } = await supabase.storage
     .from("profile-media")
-    .upload(path, buffer, {
+    .upload(path, stored, {
       cacheControl: "3600",
       contentType: CONTENT_TYPE_BY_FORMAT[format] ?? "application/octet-stream",
       upsert: false,

@@ -6,6 +6,7 @@ import sharp from "sharp";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { scanImageUrl } from "@/lib/moderation/image-scan";
+import { normalizeUploadOrientation } from "@/lib/media/orientation";
 import { randomId } from "@/lib/ids";
 
 // ---------------------------------------------------------------------------
@@ -20,7 +21,10 @@ import { randomId } from "@/lib/ids";
 //   3. Sharp decodes the first bytes — throws on non-images.
 //   4. Format whitelist: png / jpeg / webp / gif. Anything else (incl.
 //      svg, avif, heif, tiff) is rejected.
-//   5. Storage upload via the user's Supabase session — RLS still binds
+//   5. EXIF orientation normalized (lib/media/orientation.ts): a phone
+//      photo tagged "turn me" is stored as upright pixels with no tag, so
+//      the bake draws what the creator showed (TODO 3.14).
+//   6. Storage upload via the user's Supabase session — RLS still binds
 //      the destination to `card-art/{userId}/...`.
 //
 // Why this matters: the bucket policy validates the DECLARED Content-Type
@@ -123,6 +127,15 @@ export async function uploadCardArtServerAction(
     };
   }
 
+  // Store upright pixels: same format, the orientation tag applied and
+  // dropped (untouched bytes when there is nothing to turn).
+  let stored: Buffer;
+  try {
+    stored = (await normalizeUploadOrientation(buffer, metadata, { maxBytes: MAX_BYTES })).buffer;
+  } catch {
+    return { ok: false, error: "That doesn't look like a valid image." };
+  }
+
   // Storage upload. The same `card-art/{userId}/{uuid}.{ext}` layout as
   // the client-side path, so the bucket's RLS write policy
   // (`auth.uid()::text = (storage.foldername(name))[1]`) continues to
@@ -134,7 +147,7 @@ export async function uploadCardArtServerAction(
   const supabase = await createClient();
   const { error } = await supabase.storage
     .from("card-art")
-    .upload(path, buffer, {
+    .upload(path, stored, {
       cacheControl: "3600",
       // Use Sharp's detected MIME, not the client-declared one, so the
       // stored object's Content-Type reflects reality.

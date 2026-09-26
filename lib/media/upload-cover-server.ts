@@ -6,6 +6,7 @@ import sharp from "sharp";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { scanImageUrl } from "@/lib/moderation/image-scan";
+import { normalizeUploadOrientation } from "@/lib/media/orientation";
 
 // ---------------------------------------------------------------------------
 // Moderated upload for the `set-covers` bucket — deck covers and custom card
@@ -52,19 +53,30 @@ export async function uploadCoverServerAction(
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
-  let format: string | undefined;
+  let metadata: sharp.Metadata;
   try {
-    format = (await sharp(buffer).metadata()).format;
+    metadata = await sharp(buffer).metadata();
   } catch {
     return { ok: false, error: "That doesn't look like an image." };
   }
+  const format = metadata.format;
   if (!format || !ALLOWED_FORMATS.has(format)) {
     return { ok: false, error: "Only PNG, JPEG, WebP, and GIF images are allowed." };
   }
 
+  // Upright pixels, no EXIF orientation tag (lib/media/orientation.ts): the
+  // deck page shows a phone-photo cover upright, and so must its OG image
+  // and a set icon's bake (TODO 3.14).
+  let stored: Buffer;
+  try {
+    stored = (await normalizeUploadOrientation(buffer, metadata, { maxBytes: MAX_BYTES })).buffer;
+  } catch {
+    return { ok: false, error: "That doesn't look like an image." };
+  }
+
   const path = `${user.id}/${crypto.randomUUID()}.${EXTENSION_BY_FORMAT[format]}`;
   const supabase = await createClient();
-  const { error } = await supabase.storage.from("set-covers").upload(path, buffer, {
+  const { error } = await supabase.storage.from("set-covers").upload(path, stored, {
     cacheControl: "3600",
     contentType: CONTENT_TYPE_BY_FORMAT[format],
     upsert: false,

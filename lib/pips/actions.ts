@@ -81,11 +81,14 @@ export async function saveCustomPipAction(
   const buffer = Buffer.from(await file.arrayBuffer());
 
   // Byte sniff + normalize in one pass. Sharp throws on anything that isn't
-  // a recognized raster image (SVG rejected by default). Cover-crop to a
-  // square so off-square uploads still fill the pip circle.
+  // a recognized raster image (SVG rejected by default). Auto-orient first
+  // (EXIF, TODO 3.14): the PNG we write carries no tag, so a phone photo
+  // would otherwise be stored sideways for good. Cover-crop to a square so
+  // off-square uploads still fill the pip circle.
   let pngBytes: Buffer;
   try {
     pngBytes = await sharp(buffer)
+      .autoOrient()
       .resize(PIP_SIZE, PIP_SIZE, { fit: "cover" })
       .png()
       .toBuffer();
