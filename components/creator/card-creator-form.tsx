@@ -817,6 +817,53 @@ export function CardCreatorForm({
     }
   };
 
+  /** Carry the loyalty / saga row editors across a kind change (TODO 3b.3).
+   *  Leaving a rows-driven kind folds the rows into rules_text, so the work
+   *  survives as plain text (the rows only serialize at submit, and only for
+   *  their own kind), and then EMPTIES them: rows left behind skipped the
+   *  re-seed on the way back, so planeswalker → creature → edit the text →
+   *  planeswalker resubmitted the stale abilities. Entering a rows-driven
+   *  kind with an empty editor seeds it from the rules text. */
+  const carryStructuredRows = (prevKind: CardKind, nextKind: CardKind) => {
+    if (prevKind === nextKind) return;
+    if (prevKind === "planeswalker") {
+      const rows = getValues("loyalty_abilities")
+        .map((r) => ({
+          cost: r.cost.trim() ? r.cost.trim() : null,
+          text: r.text.trim(),
+        }))
+        .filter((r) => r.text.length > 0);
+      if (rows.length > 0) {
+        setValue("rules_text", serializeLoyalty(rows), { shouldDirty: true });
+      }
+      setValue("loyalty_abilities", [], { shouldDirty: true });
+    } else if (prevKind === "saga") {
+      const chapters = getValues("saga_chapters")
+        .map((r) => ({
+          numerals: [...r.numerals].sort((a, b) => a - b),
+          text: r.text.trim(),
+        }))
+        .filter((r) => r.text.length > 0 && r.numerals.length > 0);
+      const intro = getValues("saga_intro").trim();
+      if (chapters.length > 0 || intro) {
+        setValue("rules_text", serializeSaga(intro || null, chapters), {
+          shouldDirty: true,
+        });
+      }
+      setValue("saga_chapters", [], { shouldDirty: true });
+      setValue("saga_intro", "", { shouldDirty: true });
+    }
+    if (
+      nextKind === "planeswalker" &&
+      getValues("loyalty_abilities").length === 0
+    ) {
+      seedStructuredRows(nextKind, getValues("rules_text"));
+    }
+    if (nextKind === "saga" && getValues("saga_chapters").length === 0) {
+      seedStructuredRows(nextKind, getValues("rules_text"));
+    }
+  };
+
   const applyKindPatch = (patch: KindChangePatch) => {
     // The verification gate applies to KIND changes too — a card type pick
     // must never land on an unpublished frame. When the planned template has
@@ -837,7 +884,16 @@ export function CardCreatorForm({
       verifiedKeys: new Set(verifiedFrameKeys),
       prefer: "frame",
     });
+    // Snapshot BEFORE the writes — the row fold and the land auto-identity
+    // below must judge the state the user is leaving, not the one we're
+    // creating.
+    const prevCardType = getValues("card_type");
+    const prevTemplate = getValues("frame_style.template");
+    const prevKind = kindFromCard(prevCardType, prevTemplate);
     if (resolution.status === "unavailable") {
+      // The type still changes, so the rows fold first: a row-built walker
+      // turned into an unpublished battle used to save with empty rules.
+      carryStructuredRows(prevKind, kindFromCard(patch.card_type, prevTemplate));
       setValue("card_type", patch.card_type, { shouldDirty: true });
       if (patch.has_back_face) {
         setValue("has_back_face", true, { shouldDirty: true });
@@ -860,46 +916,15 @@ export function CardCreatorForm({
         `${describeFrame(template)} isn't available in ${colorWord(resolution.fromColorKey)} yet — switched the colour to ${colorWord(resolution.colorKey)}.`,
       );
     }
-    // Snapshot BEFORE the writes — the land auto-identity below must judge
-    // the state the user is leaving, not the one we're creating.
-    const prevCardType = getValues("card_type");
-    const prevTemplate = getValues("frame_style.template");
-    const prevKind = kindFromCard(prevCardType, prevTemplate);
     const nextKind = kindFromCard(patch.card_type, template);
     const identitySnapshot = {
       title: getValues("title") ?? "",
       supertype: getValues("supertype") ?? "",
       subtypes_text: getValues("subtypes_text") ?? "",
     };
-    // Leaving a rows-driven kind: fold the structured rows into rules_text
-    // so the work survives as plain text (the rows only ever serialized at
-    // submit, and only for the matching kind — switching kind used to drop
-    // every chapter/ability on the floor).
-    if (prevKind === "planeswalker" && nextKind !== "planeswalker") {
-      const rows = getValues("loyalty_abilities")
-        .map((r) => ({
-          cost: r.cost.trim() ? r.cost.trim() : null,
-          text: r.text.trim(),
-        }))
-        .filter((r) => r.text.length > 0);
-      if (rows.length > 0) {
-        setValue("rules_text", serializeLoyalty(rows), { shouldDirty: true });
-      }
-    } else if (prevKind === "saga" && nextKind !== "saga") {
-      const chapters = getValues("saga_chapters")
-        .map((r) => ({
-          numerals: [...r.numerals].sort((a, b) => a - b),
-          text: r.text.trim(),
-        }))
-        .filter((r) => r.text.length > 0 && r.numerals.length > 0);
-      if (chapters.length > 0) {
-        setValue(
-          "rules_text",
-          serializeSaga(getValues("saga_intro").trim() || null, chapters),
-          { shouldDirty: true },
-        );
-      }
-    }
+    // Rows fold into rules_text on the way out and seed from it on the way
+    // in — before anything else touches the text.
+    carryStructuredRows(prevKind, nextKind);
     // Leaving a frame with an intrinsic second face (Adventure/split/flip):
     // that face was forced on for the frame, so drop it with the frame —
     // otherwise an invisible, unfixable back_face.title error followed the
@@ -950,17 +975,6 @@ export function CardCreatorForm({
         setValue("supertype", "", { shouldDirty: true });
         setValue("subtypes_text", "", { shouldDirty: true });
       }
-    }
-    // Switching INTO a rows-driven kind with an empty editor: seed the rows
-    // from whatever rules text exists, so prior work stays visible.
-    if (
-      nextKind === "planeswalker" &&
-      getValues("loyalty_abilities").length === 0
-    ) {
-      seedStructuredRows(nextKind, getValues("rules_text"));
-    }
-    if (nextKind === "saga" && getValues("saga_chapters").length === 0) {
-      seedStructuredRows(nextKind, getValues("rules_text"));
     }
   };
   const handleKindSelect = (next: CardKind) => {

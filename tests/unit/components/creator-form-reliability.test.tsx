@@ -419,3 +419,90 @@ describe("3b.2 an idea's card type goes through the kind change", () => {
     expect(preview().backFace).toBeNull();
   });
 });
+
+// ---------------------------------------------------------------------------
+// 3b.3 — the loyalty / saga rows outlived their kind: they folded into
+// rules_text on the way out but stayed in the form, so a return trip skipped
+// the re-seed and resubmitted the stale rows; and the "frames unpublished"
+// early return changed the type without folding at all.
+// ---------------------------------------------------------------------------
+
+async function clickNext(times = 1) {
+  for (let i = 0; i < times; i += 1) {
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /^Next/ }));
+    });
+  }
+}
+
+describe("3b.3 structured rows fold, empty, and re-seed across kind changes", () => {
+  it("planeswalker → creature → new text → planeswalker re-seeds from the new text", async () => {
+    renderForm({ mode: "create" });
+    await applyIdea(WALKER_IDEA);
+    expect(preview().faceContent.loyalty.abilities).toHaveLength(3);
+
+    await pickKind(/^Creature/);
+    expect(preview().template).toBe("m15");
+    expect(preview().faceContent).toBeNull();
+    expect(preview().rules).toMatch(/^\+1: Draw a card\./);
+
+    // New creature text (an idea of the same type changes no kind).
+    await applyIdea({ card_type: "creature", rules_text: "Flying." });
+    expect(preview().rules).toBe("Flying.");
+
+    await pickKind(/^Planeswalker/);
+    expect(preview().template).toBe("m15pw");
+    // Before the fix the three stale abilities came back here.
+    expect(preview().faceContent.loyalty.abilities).toEqual([
+      { cost: null, text: "Flying." },
+    ]);
+  });
+
+  it("a saga's intro and chapters fold into the rules and leave the editor empty", async () => {
+    renderForm({ mode: "create" });
+    await pickKind(/^Saga/);
+    await applyIdea({
+      card_type: "enchantment",
+      rules_text: "(As this Saga enters, add a lore counter.)\nI — Draw a card.\nII — Scry 2.",
+    });
+    expect(preview().faceContent.saga.chapters).toHaveLength(2);
+
+    await pickKind(/^Enchantment/);
+    expect(preview().faceContent).toBeNull();
+    expect(preview().rules).toBe(
+      "(As this Saga enters, add a lore counter.)\nI — Draw a card.\nII — Scry 2.",
+    );
+
+    await applyIdea({ card_type: "enchantment", rules_text: "Creatures you control get +1/+1." });
+    await pickKind(/^Saga/);
+    expect(preview().faceContent?.saga?.chapters ?? []).toHaveLength(0);
+    expect(preview().rules).toBe("Creatures you control get +1/+1.");
+  });
+
+  it("a type change whose frames are unpublished still folds the rows first", async () => {
+    renderForm({
+      mode: "create",
+      verifiedFrameKeys: VERIFIED.filter((key) => !key.startsWith("battle")),
+    });
+    await applyIdea(WALKER_IDEA);
+    // Edit the first ability's cost so the rows differ from the rules text.
+    await clickNext(2); // Card → Identity → Text
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText("Ability 1 loyalty cost"), {
+        target: { value: "+2" },
+      });
+    });
+    expect(preview().faceContent.loyalty.abilities[0].cost).toBe("+2");
+
+    // No battle frame is published: the type changes, the frame stays.
+    await applyIdea({ card_type: "battle", defense: "5" });
+    expect(toast.info).toHaveBeenCalledWith(
+      "That card type's frames aren't published yet — keeping the current frame.",
+    );
+    expect(preview().cardType).toBe("battle");
+    expect(preview().template).toBe("m15pw");
+    expect(preview().faceContent).toBeNull();
+    // The edited rows survive as the rules text (they used to be dropped).
+    expect(preview().rules).toMatch(/^\+2: Draw a card\./);
+  });
+});
