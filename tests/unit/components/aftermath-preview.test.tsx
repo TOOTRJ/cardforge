@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { CardPreview } from "@/components/cards/card-preview";
+import { displayLine } from "@/lib/cards/card-display";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { secondFaceLineSizes } from "@/lib/cards/render-tiers";
 import { RULES_TEXT, ptToPct } from "@/lib/cards/typography";
@@ -139,7 +140,8 @@ describe("CardPreview — aftermath's second half", () => {
     );
     const spans = [...body.querySelectorAll("span")];
     const name = spans.find((el) => el.getAttribute("title") === back.title)!.parentElement!;
-    const type = spans.find((el) => el.textContent === typeLine)!.parentElement!;
+    // A display line is drawn as one run with no-break spaces (displayLine).
+    const type = spans.find((el) => el.textContent === displayLine(typeLine))!.parentElement!;
     expect(turned(name) && turned(type)).toBe(true);
     const want = secondFaceLineSizes({ slot: second, name: back.title, typeLine, cost: back.cost });
     expect(want.titleSizePct).toBeLessThan(second.title.sizePct);
