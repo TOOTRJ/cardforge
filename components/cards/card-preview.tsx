@@ -18,6 +18,7 @@ import { SetSymbol } from "@/components/cards/set-symbol";
 import {
   FrameLayer,
   frameImageUrl,
+  frameMasterKey,
   frameSplitFor,
   pickFrameColorKey,
   webpVariant,
@@ -591,19 +592,24 @@ function CardFace({
   /** pipglyph.com overlay bottom-right — the bake's brand mark. */
   brandMark?: boolean;
 }) {
+  // The card's colour (plates, watermark tint) and the frame master it
+  // paints — the same, but where the profile dresses a colour by type:
+  // Alpha's colourless artifact paints the artifact card "a" (frameMasterKey,
+  // the bake's twin).
   const colorKey = pickFrameColorKey(colorIdentity);
+  const masterKey = frameMasterKey(layout, colorIdentity, face);
   // A two-colour Dragon Wing card draws BOTH colours' frames split down the
   // seam (FrameProfile.twoColorSplit); the plates keep colorKey ("m").
   const frameSplit = frameSplitFor(layout, colorIdentity);
   const safeTitle = face.title?.trim() || "Untitled Card";
   const markLayout = brandMarkLayout(layout);
-  // Per-frame-colour footer ink (Alpha: silver on every frame but white) —
+  // Per-frame-master footer ink (Alpha: silver on every frame but white) —
   // the same footerInk() the bake resolves.
-  const footerInkResolved = layout.footer ? footerInk(layout.footer, colorKey) : null;
+  const footerInkResolved = layout.footer ? footerInk(layout.footer, masterKey) : null;
   // …and the name's and type line's (the text spans only, not the pips or
   // the set symbol) — the bake's bandTextStyle() twins.
-  const titleInk = bandTextStyle(layout.title, colorKey);
-  const typeInk = bandTextStyle(layout.type, colorKey);
+  const titleInk = bandTextStyle(layout.title, masterKey);
+  const typeInk = bandTextStyle(layout.type, masterKey);
   const showCost =
     !layout.hideCost && face.cardType !== "land" && Boolean(face.cost?.trim());
 
@@ -695,7 +701,7 @@ function CardFace({
   // See-through frames (colourless Eldrazi, devoid, colourless token): the
   // art also runs under the whole frame (TODO 4.17). Same object-fit cover
   // at the card's focal point in both renderers; the window keeps its crop.
-  const underArtRect = underFrameArtRect(layout, colorKey);
+  const underArtRect = underFrameArtRect(layout, masterKey);
 
   return (
     <div className="absolute inset-0">
@@ -768,7 +774,7 @@ function CardFace({
       {/* Frame PNG — above the art so its painted slot border is on top. */}
       <FrameLayer
         template={template}
-        colorIdentity={colorIdentity}
+        masterKey={masterKey}
         zIndex={5}
         split={frameSplit}
       />
@@ -780,7 +786,7 @@ function CardFace({
       {isEtched ? (
         <EtchedSheen
           id={etchedId}
-          frameHref={frameImageUrl(template, frameSplit?.leftKey ?? colorKey)}
+          frameHref={frameImageUrl(template, frameSplit?.leftKey ?? masterKey)}
           split={
             frameSplit
               ? {
@@ -806,7 +812,7 @@ function CardFace({
           id={foilId}
           // Split frames mask with the two halves the face paints (like the
           // etched sheen); plates below keep the gold "m" key.
-          frameHref={frameImageUrl(template, frameSplit?.leftKey ?? colorKey)}
+          frameHref={frameImageUrl(template, frameSplit?.leftKey ?? masterKey)}
           split={
             frameSplit
               ? { href: frameImageUrl(template, frameSplit.rightKey), atPct: frameSplit.atPct }
@@ -814,7 +820,7 @@ function CardFace({
           }
           art={foilArtLayers({
             layout,
-            colorKey,
+            colorKey: masterKey,
             art: foilArt,
             artPosition: face.artPosition,
             secondArt: foilSecondArt,
@@ -833,6 +839,7 @@ function CardFace({
           slot={layout.pt}
           value={ptValue(face.power, face.toughness)}
           colorKey={colorKey}
+          masterKey={masterKey}
           orientation={orientationFromAspect(aspect)}
           foil={plateFoil && { ...plateFoil, id: `${foilId}-pt` }}
         />
@@ -842,6 +849,7 @@ function CardFace({
           slot={layout.loyalty}
           value={String(face.loyalty ?? "")}
           colorKey={colorKey}
+          masterKey={masterKey}
           orientation={orientationFromAspect(aspect)}
           foil={plateFoil && { ...plateFoil, id: `${foilId}-loyalty` }}
         />
@@ -851,6 +859,7 @@ function CardFace({
           slot={layout.defense}
           value={String(face.defense)}
           colorKey={colorKey}
+          masterKey={masterKey}
           orientation={orientationFromAspect(aspect)}
           foil={plateFoil && { ...plateFoil, id: `${foilId}-defense` }}
         />
@@ -1284,12 +1293,16 @@ function StatOverlay({
   slot,
   value,
   colorKey,
+  masterKey,
   orientation,
   foil = null,
 }: {
   slot: StatSlot;
   value: string;
+  /** The card's colour key — picks the plate. */
   colorKey: string;
+  /** The frame master the value prints on (frameMasterKey) — picks the ink. */
+  masterKey: string;
   /** The card's orientation — the shrink-to-fit floor is a point size. */
   orientation: CardOrientation;
   /** Foil finish: the plate gets the card's sheen too (the full-card foil
@@ -1331,14 +1344,15 @@ function StatOverlay({
           slot={{ ...slot, plateAssetPathTemplate: undefined, plateRect: undefined }}
           value={value}
           colorKey={colorKey}
+          masterKey={masterKey}
           orientation={orientation}
         />
       </>
     );
   }
-  // Per-frame-colour ink (Alpha: silver on every frame but white) — the
+  // Per-frame-master ink (Alpha: silver on every frame but white) — the
   // same slotInk() the bake's StatBake resolves.
-  const ink = slotInk(slot, colorKey);
+  const ink = slotInk(slot, masterKey);
   // A value whose ink would run off its face shrinks to fit (TODO 3.18);
   // one that fits keeps the profile size — the same fitStatSizePct() as the
   // bake.

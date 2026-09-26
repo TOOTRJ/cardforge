@@ -17,7 +17,8 @@ import { describe, expect, it } from "vitest";
 // This pins the committed masters to that clamped build. Each PROBE is the
 // 3 × 3 block where the UNCLAMPED cubic overshot most (summed over the 7
 // colours) inside a 26 px window on one of the 12 ring corners (art box, text
-// box, pinstripe × 4) — for alphaland, exactly where the specks were. There
+// box, pinstripe × 4) — for alphaland, exactly where the specks were; agclassic
+// has an eighth master, the colourless artifact card "a". There
 // every master must sit within PNG_TOLERANCE of the clamped FULL-COLOUR build
 // (REF): palette dithering stays under ~10 levels, an unclamped rebuild or a
 // speck does not. The .webp twin (lossy — what the browser shows) gets a
@@ -33,6 +34,12 @@ import { describe, expect, it } from "vitest";
 type Template = "agclassic" | "alphaland";
 const TEMPLATES: Template[] = ["agclassic", "alphaland"];
 const KEYS = ["w", "u", "b", "r", "g", "c", "m"] as const;
+/** Every master a template ships: the seven colours, plus agclassic's
+ *  colourless artifact card (FrameProfile.artifactMasterKeys). */
+const MASTERS: Record<Template, readonly string[]> = {
+  agclassic: [...KEYS, "a"],
+  alphaland: KEYS,
+};
 const PNG_TOLERANCE = 16;
 const WEBP_TOLERANCE = 40;
 const REF_DIR = process.env.ALPHA_REF_DIR;
@@ -59,7 +66,8 @@ const REF: Record<string, string> = {
   "agclassic/b": "W1pfWVpdUlZXW1pfW1pfVllaW1pfW1pfWFpaFRUXFRUXFRUXFhcYFhYYFRUXFhgYFhcYFRYXWVldWVldWVldWVldWVldWVldWVldWVldWVldISIgISIeICAcICEfICEdHx8bHx4fHh4eHR0c7NPB7NPB7NPB7NPB7NPB7NPB7NPB7NPB7NPB9trO9trO9trO9trO9trO9trO9trO9trO9trOqohxqohxqohxqohxqohxqohxqohxqohxqohx8da/8da/8da/8da/8da/8da/8da/8da/8da/XFxhXFxhXFxhXFxhXFxhXFxhXFxhXFxhXFxhXV9iXF9fXmBiXl9iXl9iXmBiXF9hXV9fXmBiIR8nISAnISEmISAoISEnISMmHyAnICEmICIlXV5iXV5iXV5iXV5iXV5iXV5iXV5iXV5iXV5i",
   "agclassic/r": "rHhqrHhprHhjrHhqrHhqrHhmrHhqrHhqrHhmWS0fWS0gWS0gWy0gWy0gWy0gWy0fWy0fWy0fq3Zoq3Zoq3Zoq3Zoq3Zoq3Zoq3Zoq3Zoq3ZogkA1hEE1g0E1gUA1g0E1g0E1gEA1gkA1gUA10K2m0K2m0K2m0K2m0K2m0K2m0Kql0K2m0K2m3bmt3bmt3bmt3bmt3bmt3bmt3bmt3bmt3bmthFVLhFVLhFVLhFVLhFVLhFVLhFVLhFVLhFVLxqSbxqSfxqSfxqScxqSfxqSfxqSdxqSfxqSfs3lps3lps3lps3lps3lps3lps3lps3lps3lpt31ut31ut3ttt31ut31ut3ttt31ut31ut3tth0cyh0cyh0cyh0cyh0cyh0cyh0cyh0cyh0cywIJxxoJxxoJxxIJxxoJxxoJxxoJxxoJxxoJx",
   "agclassic/g": "boB7bYB7aH57cIB7b4B7a4B7cIB7boB7an94Pkw+Pkw+Pkw+Pko+Pko+Pko+Pko+Pko+Pko+gpB+gpB+gpB+gpB+gpB+gpB+gpB+gpB+gpB+QVU+QVU+QVQ9QVU+QVU+QVQ+QFU+QFU+PlQ+1rmj1rmj1rmj1rmj1rmj1rmj1rmj1rmj1rmj1r+31r+31r+31r+31r+31r+31r+31r+31r+3lnJelnJflnJclnJflnJflnJelnJflnJflnJd2Lyo2Lyo2Lyo2Lyo2Lyo2Lyo2Lyo2Lyo2LyocHx2cXl2cXl2cHx2cXl2cXl2cHx2cXl2cXl2j5yNj5yNjpyJj5yNj5yNjpyJj5yNj5yNjpyJS15HTV5IT15ISV5ITF5JTl5KRV1GSF5HSl5Ib35sb35sb35sb35sb35sb35sa3tpbX5sbX5s",
-  "agclassic/c": "hXNcg3FafWpVh3NehnJegGxah3JghXBggGtdJR0ZJx0ZJx0ZJx0ZKB0ZKB0ZJh0ZJx0ZJx0ZbWVnb2Vnb2Vnb2Vnb2Vnb2Vnb2Vnb2Vnb2VnRTcrQzQqPjApRTgrQzUrPjAqRTorQzYsQDAs6efe6efe6efe6efe6efe6efe6efe6efe6efe8u/g8u/g8u/g8u/g8u/g8u/g8u/g8u/g8u/grqORrqORrqORrqORrqORrqORrqORrqORrqOR7u/h7u/h7u/h7u/h7u/h7u/h7u/h7u/h7u/hdWhhdWdhdmhggG9hf25hgW5ihHBchG9chW9dhHVrhHVrgXVrhHVrhHVrgXVrg3Vrf3VqgXVrSDQjSDQkRzQkSDQiSDQjSDQjSDMgSDQhRTMheGpfeGtheGtheGtheGtheGthcmVedmVecmVe",
+  "agclassic/c": "l5eXl5eXl5eXl5eXl5eXl5eXl5eXl5eXl5eXSUlJSUlJSUlJS0tLS0tLS0tLS0tLS0tLS0tLl5eXl5eXlpaWl5eXl5eXl5eXl5eXl5eXl5eXampqa2tra2traWlpa2trampqZ2dnaWlpaGhoy8vLy8vLy8vLy8vLy8vLy8vLy8vLy8vLy8vL1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbWd3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3vb29wMDAwMDAvr6+wMDAwMDAv7+/wMDAwMDAnp6enp6enp6enp6enp6enp6enp6enp6enp6eoaGhoaGhoKCgoaGhoaGhoKCgoaGhoaGhoKCgbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1trKyssrKysrKyr6+vsrKysrKysrKysrKysrKy",
+  "agclassic/a": "hXNcg3FafWpVh3NehnJegGxah3JghXBggGtdJR0ZJx0ZJx0ZJx0ZKB0ZKB0ZJh0ZJx0ZJx0ZbWVnb2Vnb2Vnb2Vnb2Vnb2Vnb2Vnb2Vnb2VnRTcrQzQqPjApRTgrQzUrPjAqRTorQzYsQDAs6efe6efe6efe6efe6efe6efe6efe6efe6efe8u/g8u/g8u/g8u/g8u/g8u/g8u/g8u/g8u/grqORrqORrqORrqORrqORrqORrqORrqORrqOR7u/h7u/h7u/h7u/h7u/h7u/h7u/h7u/h7u/hdWhhdWdhdmhggG9hf25hgW5ihHBchG9chW9dhHVrhHVrgXVrhHVrhHVrgXVrg3Vrf3VqgXVrSDQjSDQkRzQkSDQiSDQjSDQjSDMgSDQhRTMheGpfeGtheGtheGtheGtheGthcmVedmVecmVe",
   "agclassic/m": "fnVefXRdd25YgXhggXhgfXRcgnlhgnlhf3deMSoYMSoYMCoWNS0aNC0ZMisXNS4aNS0ZMywYjoNljoNlioNljoNljoNliYJli4NliYJlhX1krqhdrqleq6ZcrKRcrKVcqaNbqaBbqaBbp55Z3tPX3tPX3tPX3tPX3tPX3tPX3tPX3tPX3tPX49na49na49na49na49na49na49na49na49namo6Smo6Smo6Smo6Smo6Smo6Smo6Smo6Smo6S4NbX4NbX4NbX4NbX4NbX4NbX4NbX4NbX4NbXmpNxmpNxmpNxmpNxmpNxmpNxmpNxmpNxmpNxqJ96qJ96qJt6qJ96qJ96qJt6qJ96qJ96qJt6Z18uZ18uZ18uZ18uZ18uZ18uZ18uZ18uZ18uqqN1qqh1qqZ1qqV1qqh1qqh1qqh1qqh1qqh1",
   "alphaland/w": "3dPJ3dPJ3dPJ3dPJ3dPJ3dPJ3dPJ3dPJ3dPJ3dPK3dPK3dPK3dPK3dPK3dPK3dPK3dPK3dPK3NLI3NLI2tLI3NLI3NLI3NLI3NLI3NLI3NLI1s7G3NLI3NLI3NLI3NLI3NLI3NLI3NLI3NLI3NLI3NLI3NLI3NLI3NLI3NLI2tDG3NLI1crA29HI29HI29HI29HI29HI29HI29HI29HI1cvC2tDH2tDH2M7F2tDH2tDH2tDH2tDH2tDH2tDH29DK29DK28/I29DK29DK29DK29DK29DK29DK18rC39PJ39PJ39PJ39PJ39PJ39PJ39PJwrito46Do46Do46Do46Do46Do46Do46Do46Do46D39LJ39LJxbyx39LJ39LJ39LJ3NLI39LJ39LJmYh+mYh+mYh+mYh+mYh+mYh+mYh+mYh+mYh+",
   "alphaland/u": "T3ytUHytUHytUHytUHytT3ytUHytT3ytTHytTnyrTnyrTnyrTXyrTnyrT3yrSnyrTnyrT3yrTXusSnusRnaqTnusTXusS3usTnusTnusT3usRHSoSXutTHytS3ytTXytTnytT3+tTn+tTn2tTHupTHupTHupTHupTHupTHupTHqpTHupTHelTnqpT3qpTnqpTXqpTnqpTXqpTHqpTHqpS3ekS3qnTHqnS3imTnqnTnqnTXqnT3qnT3qnTXqnTnuqT3uqTXqoT3uqT3uqUHuqT3uqT3uqUHuqT3ilUnytUXytUnytVHytUHytU3ytUnytSm2Uo46Do46Do46Do46Do46Do46Do46Do46Do46DU3ysU3ysTXKZVHysVnysU3ysUHyrUHysUHysmYh+mYh+mYh+mYh+mYh+mYh+mYh+mYh+mYh+",
@@ -100,7 +108,7 @@ function worst(template: Template, key: string, pixels: Probe[]) {
   return found;
 }
 
-const CASES = TEMPLATES.flatMap((t) => KEYS.map((k) => [t, k] as const));
+const CASES = TEMPLATES.flatMap((t) => MASTERS[t].map((k) => [t, k] as const));
 
 describe.skipIf(REF_DIR)("Alpha masters: no palette specks at the ring corners", () => {
   it.each(CASES)("%s/%s.png is the clamped build at every ring corner", async (template, key) => {

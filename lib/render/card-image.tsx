@@ -36,6 +36,7 @@ import {
 import {
   FRAME_SPLIT_OVERLAP_PX,
   frameColorKeysFor,
+  frameMasterKey,
   frameSplitFor,
   pickFrameColorKey,
 } from "@/components/cards/frame-layer";
@@ -269,8 +270,17 @@ function CardImage({
   const isEtched = finish === "etched";
   const isShowcase = finish === "showcase";
 
+  // The card's colour (plates, watermark tint) and the frame master it
+  // paints — the same, but where the profile dresses a colour by type:
+  // Alpha's colourless artifact paints the artifact card "a" (frameMasterKey,
+  // the preview's twin).
   const colorKey = pickFrameColorKey(
     card.colorIdentity as ColorIdentity[] | undefined,
+  );
+  const masterKey = frameMasterKey(
+    layout,
+    card.colorIdentity as ColorIdentity[] | undefined,
+    card,
   );
   // A two-colour Dragon Wing card draws BOTH colours' frames split down the
   // seam (FrameProfile.twoColorSplit); the plates keep colorKey ("m").
@@ -278,16 +288,16 @@ function CardImage({
     layout,
     card.colorIdentity as ColorIdentity[] | undefined,
   );
-  const frameDataUrl = getFrameDataUrl(template, frameSplit?.leftKey ?? colorKey);
+  const frameDataUrl = getFrameDataUrl(template, frameSplit?.leftKey ?? masterKey);
   const splitDataUrl = frameSplit ? getFrameDataUrl(template, frameSplit.rightKey) : null;
   // Whole pixels: the seam is a hard edge in both renderers.
   const splitX = frameSplit ? Math.round((width * frameSplit.atPct) / 100) : 0;
-  // Per-frame-colour footer ink — the same footerInk() the preview resolves.
-  const footerInkResolved = layout.footer ? footerInk(layout.footer, colorKey) : null;
+  // Per-frame-master footer ink — the same footerInk() the preview resolves.
+  const footerInkResolved = layout.footer ? footerInk(layout.footer, masterKey) : null;
   // …and the name's and type line's (the text spans only, not the pips or
   // the set symbol) — the preview's bandTextStyle() twins.
-  const titleInk = bandTextStyle(layout.title, colorKey);
-  const typeInk = bandTextStyle(layout.type, colorKey);
+  const titleInk = bandTextStyle(layout.title, masterKey);
+  const typeInk = bandTextStyle(layout.type, masterKey);
 
   // No bake-only truncation: titles up to the validated 120 chars ellipsize
   // in the band exactly as the preview does.
@@ -393,7 +403,7 @@ function CardImage({
     !isBasicLand &&
     Boolean(card.rulesText?.trim() || card.flavorText?.trim());
 
-  const underArtRect = underFrameArtRect(layout, colorKey);
+  const underArtRect = underFrameArtRect(layout, masterKey);
   const artW = Math.round((layout.artSlot.widthPct / 100) * width);
   const artH = Math.round((layout.artSlot.heightPct / 100) * height);
 
@@ -580,7 +590,7 @@ function CardImage({
           split={frameSplit && splitDataUrl ? { href: splitDataUrl, atPct: frameSplit.atPct } : null}
           art={foilArtLayers({
             layout,
-            colorKey,
+            colorKey: masterKey,
             art: card.artUrl ? (foilArt?.art ?? null) : null,
             artPosition: card.artPosition,
             secondArt: secondArtSlot && secondArtUrl ? (foilArt?.secondArt ?? null) : null,
@@ -857,6 +867,7 @@ function CardImage({
             slot: layout.pt,
             value: ptValue(card.power, card.toughness),
             colorKey,
+            masterKey,
             cardWidth: width,
             orientation: orientationFromAspect(aspect),
             foil: plateFoil,
@@ -867,6 +878,7 @@ function CardImage({
             slot: layout.loyalty,
             value: String(card.loyalty ?? "—"),
             colorKey,
+            masterKey,
             cardWidth: width,
             orientation: orientationFromAspect(aspect),
             foil: plateFoil,
@@ -877,6 +889,7 @@ function CardImage({
             slot: layout.defense,
             value: String(card.defense ?? "—"),
             colorKey,
+            masterKey,
             cardWidth: width,
             orientation: orientationFromAspect(aspect),
             foil: plateFoil,
@@ -1668,13 +1681,17 @@ function StatBake({
   slot,
   value,
   colorKey,
+  masterKey,
   cardWidth,
   orientation,
   foil = null,
 }: {
   slot: StatSlot;
   value: string;
+  /** The card's colour key — picks the plate. */
   colorKey: string;
+  /** The frame master the value prints on (frameMasterKey) — picks the ink. */
+  masterKey: string;
   cardWidth: number;
   /** The card's orientation — the shrink-to-fit floor is a point size. */
   orientation: CardOrientation;
@@ -1711,15 +1728,16 @@ function StatBake({
           slot: { ...slot, plateAssetPathTemplate: undefined, plateRect: undefined },
           value,
           colorKey,
+          masterKey,
           cardWidth,
           orientation,
         })}
       </div>
     );
   }
-  // Per-frame-colour ink (Alpha: silver on every frame but white) — the
+  // Per-frame-master ink (Alpha: silver on every frame but white) — the
   // same slotInk() the preview's StatOverlay resolves.
-  const ink = slotInk(slot, colorKey);
+  const ink = slotInk(slot, masterKey);
   const size = statPx(slot, value, orientation, cardWidth);
   return (
     <div
@@ -2222,7 +2240,8 @@ export function naturalRenderSize(landscape: boolean): { width: number; height: 
 
 /**
  * Every public/frames asset (frame masters aside — preloadFrame handles them,
- * both halves of a two-colour split included, via frameColorKeysFor, and
+ * both halves of a two-colour split and a type-dressed master (Alpha's
+ * colourless artifact, "a") included, via frameColorKeysFor, and
  * their template fallback) a render of `card` asks for synchronously:
  * the color-keyed stat plates the frame profile defines and the loyalty
  * badges of a planeswalker's ability rows. On Vercel these are fetched, not
@@ -2264,7 +2283,7 @@ export async function renderCardImage(
   // also needs its art's mask copies (foilMaskSource, sharp).
   const frameTemplate = normalizeFrameTemplate(card.frameStyle?.template);
   const frameLayout = resolveFrameProfile(frameTemplate, card.profileOverrides);
-  const frameKeys = frameColorKeysFor(frameLayout, card.colorIdentity as ColorIdentity[] | undefined);
+  const frameKeys = frameColorKeysFor(frameLayout, card.colorIdentity as ColorIdentity[] | undefined, card);
   const [, , foilArt, foilSecondArt] = await Promise.all([
     Promise.all(frameKeys.map((key) => preloadFrame(frameTemplate, key))),
     preloadFrameAssets(frameAssetPathsFor(card)),

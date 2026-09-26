@@ -285,7 +285,12 @@ Open decisions are marked **[decide]**; none blocks its phase.
 - [ ] **1.7 [P1] Artifact creatures** — offer `m15artifact` under kind Creature
       as a variation with P/T and route "Artifact Creature" imports to it
       (`lib/creator/card-kinds.ts` `framesForKind`,
-      `lib/cards/card-display.ts`:32).
+      `lib/cards/card-display.ts`:32). The import must keep the Artifact
+      word too (`parseTypeLine` keeps one type word, so "Artifact Creature"
+      lands as a plain creature): the Alpha frame paints its brown artifact
+      card for "Artifact" in the supertype (4.31, `isArtifactFrameType`), and
+      today an imported Juggernaut — or the frame-compare view of Battering
+      Ram — gets the grey colourless card.
 - [ ] **1.8 [P1] Back-face art only when the face has `image_uris`** (expose
       `has_back_image` on `/named`), log the quota after URL resolution,
       import the per-face artist — `app/api/scryfall/import-art/route.ts`:134,
@@ -991,7 +996,7 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
 
       Delete the scrim. Import picks the variant from the Oracle line count. References: Treasure (txln) and Treasure (tmsh). **[decide]** which family is the default token look.
       **Full-art research 2026-09-26:** the 171 M15 full-art tokens (T2XM #4, TM20 #2) already resolve `exact` on `m15token` (CC 'Textless (Bordered M15)'), so there is nothing to build for them. The 80 2003-era full-art tokens are 4.43.
-- [ ] (partly 2026-09-25: the mechanism shipped in #382 (layout v27) as `inkByColorKey` on TextSlot/StatSlot (`slotInk()` / `footerInk()`, both renderers; per-colour ink + shadow, emboss in em) and 4.31 extended it to the title and type line (`bandTextStyle()`); the 1993 half is done (below). Still open: 1997 retro/retroland white title, type line, P/T + artist with a black drop shadow and the centred `Illus.` footer, and the 2003 footer ink per colour (white on black, land and colourless)) **4.23 [P1] Era text treatment (1993/1997/2003)** (Card Conjurer audit 2026-09-25) — 1993 (Alpha) is done (v25/v27 and 4.31): agclassic letters the name, type line, P/T and artist line in embossed silver on every frame colour but white (our gold keeps a dark name and type line), alphaland on every key, as the land prints do (`ALPHA_INK` / `ALPHA_BAND_INK` / `ALPHA_LAND_INK` in `lib/cards/template-layout.ts`); alphatoken is ours (Alpha printed no tokens) and keeps its own light-on-dark name. The 1997 profile (RETRO) still prints title, type, P/T and artist in dark ink, and its comments claim printed P/T is dark, which is wrong. Real 1997 cards (LGN White Knight, SCG Enrage, TOR Shambling Swarm) print them white with a black drop shadow, even on white cards. The 1997 footer is a centred `Illus. <artist>` over the © line. The 2003 footer is white on black, land and colourless frames (CC `pack8th.js`:55-68), but ours (MODERN) is dark for every colour.
+- [ ] (partly 2026-09-25: the mechanism shipped in #382 (layout v27) as `inkByColorKey` on TextSlot/StatSlot (`slotInk()` / `footerInk()`, both renderers; per-colour ink + shadow, emboss in em) and 4.31 extended it to the title and type line (`bandTextStyle()`); the 1993 half is done (below). Still open: 1997 retro/retroland white title, type line, P/T + artist with a black drop shadow and the centred `Illus.` footer, and the 2003 footer ink per colour (white on black, land and colourless)) **4.23 [P1] Era text treatment (1993/1997/2003)** (Card Conjurer audit 2026-09-25) — 1993 (Alpha) is done (v25/v27 and 4.31): agclassic letters the P/T and artist line in embossed silver on every frame colour but white, and the name and type line too on the black frame and the colourless artifact card (owner decision 2026-09-25; dark elsewhere, where the silver read no better), alphaland its P/T and artist line on every key (`ALPHA_INK` / `ALPHA_BAND_INK` / `ALPHA_LAND_INK` in `lib/cards/template-layout.ts`); alphatoken is ours (Alpha printed no tokens) and keeps its own light-on-dark name. The 1997 profile (RETRO) still prints title, type, P/T and artist in dark ink, and its comments claim printed P/T is dark, which is wrong. Real 1997 cards (LGN White Knight, SCG Enrage, TOR Shambling Swarm) print them white with a black drop shadow, even on white cards. The 1997 footer is a centred `Illus. <artist>` over the © line. The 2003 footer is white on black, land and colourless frames (CC `pack8th.js`:55-68), but ours (MODERN) is dark for every colour.
 
       Fix:
       - Use the per-frame-colour `inkByColorKey` Alpha already uses (a colour + shadow per key, honoured by `slotInk` on stat slots, `footerInk` on the footer and `bandTextStyle` on the title and type line, identically in both renderers) for the 1997 and 2003 profiles.
@@ -1140,17 +1145,27 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
         follows either row height. In the bake, Satori rounds each row's top
         and height separately, so with 4 rows a seam can gain a 1 px gap or
         overlap and the last row can overhang the box by 1 px (clipped).
-      - [x] **Alpha colourless** re-sourced: agclassic's c master is MSE's
-        artifact card (acard.jpg — dark warm-brown border, light crackle text
-        box, like Sol Ring / Juggernaut) through the same re-cut; alphaland's
-        c stays clcard.jpg (Alpha printed no colourless land; later ones use
-        the brown land frame). Its ink is the print's artifact grey.
+      - [x] **Alpha colourless ARTIFACTS** re-sourced (owner decision
+        2026-09-25: the brown frame for colourless artifacts only): agclassic
+        has an eighth master, `a.png`, MSE's artifact card (acard.jpg — dark
+        warm-brown border, light crackle text box, like Sol Ring / Juggernaut)
+        through the same re-cut, with the print's artifact-grey ink. A
+        colourless card whose card type is Artifact or whose supertype says
+        Artifact paints it (`FrameProfile.artifactMasterKeys`, resolved by
+        `frameMasterKey` for the preview, the bake, the foil/etched masks, the
+        preload and the creator's tiles); every other colourless card (Dawn
+        Treader) keeps the grey `c.png` (ccard.jpg). The frame_reviews gate
+        stays per colour — verifying agclassic/c publishes both masters.
+        alphaland keeps one land frame per colour (Alpha printed no artifact
+        land). An imported Artifact Creature still loses its Artifact word
+        (1.7), so it paints the grey card until the user types the supertype.
       - [x] **Alpha name + type line lettering:** silver with the lower-right
-        emboss on every colour Alpha printed (u b r g + artifact; the black
-        frame's dark name all but vanished), dark on white and on our gold;
-        silver on every alphaland key (the land print). The ink rides on the
-        text span only (`bandTextStyle`), so pips and set symbols inherit no
-        shadow.
+        emboss on the black frame (its dark name all but vanished: 1.15 : 1)
+        and on the artifact card (1.44 : 1) only (owner decision 2026-09-25);
+        dark on every other colour — the print is silver, but on our blue the
+        silver read worse (2.4 against 4.1 : 1) and on red, green and the
+        brown land frame it changed little. The ink rides on the text span
+        only (`bandTextStyle`), so pips and set symbols inherit no shadow.
       - [x] **Display-font word spacing:** "Jester's Mask" rendered a 42 px
         word gap (17–25 px elsewhere) on every template. Not the font: Satori
         places each word after a space at the preceding characters' UNKERNED

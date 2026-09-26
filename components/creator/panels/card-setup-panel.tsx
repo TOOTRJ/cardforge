@@ -14,7 +14,7 @@
 // framesForKind() simply doesn't include an era that can't frame the kind.
 
 import { useMemo, useState } from "react";
-import { Controller, useFormContext } from "react-hook-form";
+import { Controller, useFormContext, useWatch } from "react-hook-form";
 import { ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { ChipGroup, type ChipOption } from "@/components/ui/chip-group";
@@ -27,6 +27,7 @@ import {
   colorIdentityForKey,
   colorWord,
   pickFrameColorKey,
+  type FrameTypeInfo,
 } from "@/components/cards/frame-layer";
 import {
   describeFrame,
@@ -179,6 +180,11 @@ export function CardSetupPanel({
     [kind, verifiedKeys],
   );
   const colorKey = pickFrameColorKey(colorIdentity);
+  // The card's type, for the tiles of a frame that dresses a colour by type
+  // (Alpha's colourless artifact paints the brown artifact card).
+  const cardType = useWatch({ control, name: "card_type" });
+  const supertype = useWatch({ control, name: "supertype" });
+  const frameType: FrameTypeInfo = { cardType, supertype };
 
   const kindOptions: ChipOption<CardKind>[] = CARD_KIND_VALUES.map((k) => {
     // A kind is pickable only when at least one of its frames has a
@@ -194,6 +200,7 @@ export function CardSetupPanel({
           template={KIND_DEFS[k].previewTemplate}
           colorKey={colorKey}
           colorIdentity={colorIdentity}
+          type={{ cardType: KIND_DEFS[k].cardType }}
         />
       ),
       disabled: !available,
@@ -347,6 +354,7 @@ export function CardSetupPanel({
                       : choice.availableColorKeys[0] ?? colorKey
                   }
                   colorIdentity={colorIdentity}
+                  type={frameType}
                 />
               ),
               disabled: !available,
@@ -364,6 +372,7 @@ export function CardSetupPanel({
                 template={base}
                 colorKey={colorKey}
                 colorIdentity={colorIdentity}
+                type={frameType}
               />
             ),
           };
@@ -389,6 +398,7 @@ export function CardSetupPanel({
                             template={normalized}
                             colorKey={colorKey}
                             colorIdentity={colorIdentity}
+                            type={frameType}
                           />
                         ),
                       },
@@ -483,6 +493,7 @@ export function CardSetupPanel({
               onColorIdentityChange?.(next);
             }}
             verifiedKeys={verifiedKeys}
+            frameType={frameType}
           />
         )}
       />
@@ -495,11 +506,16 @@ function ColorSection({
   selection,
   onChange,
   verifiedKeys,
+  frameType,
 }: {
   summary: string;
   selection: ColorIdentity[];
   onChange: (next: ColorIdentity[]) => void;
   verifiedKeys: ReadonlySet<string>;
+  /** The card's type: each colour tile shows the master the card would
+   *  paint in that colour (Alpha's colourless tile: the artifact card for an
+   *  artifact, the grey card otherwise). */
+  frameType: FrameTypeInfo;
 }) {
   // Live template so chip availability + thumbnails track frame changes.
   const { watch } = useFormContext<FormValues>();
@@ -533,7 +549,7 @@ function ColorSection({
         value: color,
         label: color,
         leading: (
-          <FrameThumb template={template} colorKey={IDENTITY_COLOR_KEY[color]} />
+          <FrameThumb template={template} colorKey={IDENTITY_COLOR_KEY[color]} type={frameType} />
         ),
         disabled: !reachable,
         badge: reachable ? undefined : <SoonBadge />,

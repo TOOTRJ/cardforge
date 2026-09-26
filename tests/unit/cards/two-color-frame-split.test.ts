@@ -58,23 +58,23 @@ describe("frameSplitFor / frameColorKeysFor", () => {
 
   it("splits Dragon Wing at 50 % — Bar (black + white) draws white left, black right", () => {
     expect(frameSplitFor(dragon, ["black", "white"])).toEqual({ leftKey: "w", rightKey: "b", atPct: 50 });
-    expect(frameColorKeysFor(dragon, ["black", "white"])).toEqual(["w", "b"]);
+    expect(frameColorKeysFor(dragon, ["black", "white"], null)).toEqual(["w", "b"]);
   });
 
   it("keeps one key for everything that is not exactly two colours", () => {
     expect(frameSplitFor(dragon, ["white"])).toBeNull();
     expect(frameSplitFor(dragon, ["multicolor"])).toBeNull();
     expect(frameSplitFor(dragon, ["white", "blue", "black"])).toBeNull();
-    expect(frameColorKeysFor(dragon, ["white", "blue", "black"])).toEqual(["m"]);
-    expect(frameColorKeysFor(dragon, ["multicolor"])).toEqual(["m"]);
-    expect(frameColorKeysFor(dragon, [])).toEqual(["c"]);
-    expect(frameColorKeysFor(dragon, ["black"])).toEqual(["b"]);
+    expect(frameColorKeysFor(dragon, ["white", "blue", "black"], null)).toEqual(["m"]);
+    expect(frameColorKeysFor(dragon, ["multicolor"], null)).toEqual(["m"]);
+    expect(frameColorKeysFor(dragon, [], null)).toEqual(["c"]);
+    expect(frameColorKeysFor(dragon, ["black"], null)).toEqual(["b"]);
   });
 
   it("never splits a profile without twoColorSplit", () => {
     const m15 = getFrameProfile("m15");
     expect(frameSplitFor(m15, ["black", "white"])).toBeNull();
-    expect(frameColorKeysFor(m15, ["black", "white"])).toEqual(["m"]);
+    expect(frameColorKeysFor(m15, ["black", "white"], null)).toEqual(["m"]);
   });
 
   it("is set on Dragon Wing only", () => {

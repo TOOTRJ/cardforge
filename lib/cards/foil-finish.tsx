@@ -87,6 +87,8 @@ export function foilArtLayers({
   secondArtPosition,
 }: {
   layout: FrameProfile;
+  /** The frame master painted (frameMasterKey) — see-through frames are
+   *  keyed by it (underFrameArtRect). */
   colorKey: string;
   art: FoilArtSource | null;
   artPosition: ArtPosition;

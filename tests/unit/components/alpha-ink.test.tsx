@@ -14,25 +14,30 @@ import {
 } from "@/lib/cards/template-layout";
 
 // ---------------------------------------------------------------------------
-// Printed Alpha cards letter the name, type line, P/T and "Illus." line in
-// dark ink on the white frame and in embossed silver on every other colour
-// (owner decision 2026-09-25 for the P/T + "Illus." line; the name and type
-// line followed with the colourless re-source, TODO 4.31). The ink is a
-// per-frame-colour map on the slot, resolved by slotInk() / footerInk() /
-// bandTextStyle() — the preview half is pinned here, the bake half on real
-// bakes in tests/unit/render/bake-followups.test.ts.
+// Printed Alpha cards letter the P/T and "Illus." line in dark ink on the
+// white frame and in embossed silver on every other colour (owner decision
+// 2026-09-25). The name and type line take that silver only where the dark
+// ink all but vanishes — the black frame and the brown colourless ARTIFACT
+// card ("a") — and stay dark on every other frame, the land frame included
+// (owner decision 2026-09-25, TODO 4.31). The ink is a per-frame-master map
+// on the slot, resolved by slotInk() / footerInk() / bandTextStyle() on
+// frameMasterKey's master — the preview half is pinned here, the bake half
+// on real bakes in tests/unit/render/bake-followups.test.ts.
 // ---------------------------------------------------------------------------
 
 afterEach(cleanup);
 
-const COLOR: Record<string, ColorIdentity[]> = {
-  w: ["white"],
-  u: ["blue"],
-  b: ["black"],
-  r: ["red"],
-  g: ["green"],
-  c: ["colorless"],
-  m: ["white", "blue"],
+/** Frame master → a card that paints it. "a" (the Alpha artifact card) is a
+ *  colourless Artifact Creature, so it keeps a P/T like the others. */
+const MASTER_CARD: Record<string, { colorIdentity: ColorIdentity[]; supertype?: string }> = {
+  w: { colorIdentity: ["white"] },
+  u: { colorIdentity: ["blue"] },
+  b: { colorIdentity: ["black"] },
+  r: { colorIdentity: ["red"] },
+  g: { colorIdentity: ["green"] },
+  c: { colorIdentity: ["colorless"] },
+  a: { colorIdentity: ["colorless"], supertype: "Artifact" },
+  m: { colorIdentity: ["white", "blue"] },
 };
 
 /** "#rrggbb" or "rgb(r, g, b)" → [r, g, b]. */
@@ -48,8 +53,9 @@ function renderAlpha(template: "agclassic" | "alphaland", key: string) {
       title="Ink Probe"
       cost="{3}{B}"
       cardType="creature"
+      supertype={MASTER_CARD[key].supertype ?? null}
       subtypes={["Vampire"]}
-      colorIdentity={COLOR[key]}
+      colorIdentity={MASTER_CARD[key].colorIdentity}
       power="4"
       toughness="4"
       artistCredit="Douglas Schuler"
@@ -59,12 +65,13 @@ function renderAlpha(template: "agclassic" | "alphaland", key: string) {
   const spans = [...container.querySelectorAll("span")];
   const pt = spans.find((s) => s.textContent === "4/4") as HTMLElement;
   // The display lines' words are joined by no-break spaces (displayLine).
-  const byText = (text: string) => spans.find((s) => s.textContent?.replace(/\s+/g, " ") === text);
-  const footer = byText("Art: Douglas Schuler")?.parentElement as HTMLElement;
-  const name = byText("Ink Probe") as HTMLElement;
-  const type = byText("Creature — Vampire") as HTMLElement;
+  const text = (s: Element) => s.textContent?.replace(/\s+/g, " ") ?? "";
+  const footer = spans.find((s) => text(s) === "Art: Douglas Schuler")?.parentElement as HTMLElement;
+  const name = spans.find((s) => text(s) === "Ink Probe") as HTMLElement;
+  const type = spans.find((s) => text(s).endsWith("Creature — Vampire")) as HTMLElement;
   const cost = container.querySelector('[aria-label="Cost {3}{B}"]') as HTMLElement | null;
-  return { pt, footer, name, type, cost };
+  const frame = container.querySelector<HTMLElement>("[data-frame-key]");
+  return { pt, footer, name, type, cost, frame };
 }
 
 describe("slotInk / footerInk", () => {
@@ -128,26 +135,40 @@ describe("slotInk / footerInk", () => {
     }
   });
 
-  it("agclassic: the name and type line take the P/T's ink on every printed colour; gold keeps dark", () => {
+  it("agclassic: the name and type line take the P/T's silver on the black frame and the artifact card only", () => {
     const layout = getFrameProfile("agclassic");
-    for (const k of ["u", "b", "r", "g", "c"]) {
+    for (const k of ["b", "a"]) {
       const ink = slotInk(layout.pt!, k);
       expect(bandTextStyle(layout.title, k), k).toEqual({ color: ink.colorHex, textShadow: ink.shadowCss });
       expect(bandTextStyle(layout.type, k), k).toEqual({ color: ink.colorHex, textShadow: ink.shadowCss });
     }
-    // White prints dark; gold (never printed) keeps the dark ink on its
-    // lighter title and type bands.
-    for (const k of ["w", "m"]) {
+    // White prints dark; on our blue the silver read worse than the dark ink
+    // and on red and green it changed little; gold and the grey colourless
+    // card were never printed. All keep the band's dark ink.
+    for (const k of ["w", "u", "r", "g", "c", "m"]) {
       expect(bandTextStyle(layout.title, k), k).toEqual({});
       expect(bandTextStyle(layout.type, k), k).toEqual({});
     }
   });
+
+  it("agclassic: the P/T and artist line keep their silver; the artifact card takes the print's artifact grey", () => {
+    const layout = getFrameProfile("agclassic");
+    // The grey colourless card keeps the mid-tone silver it had (contrast
+    // on the grey), the artifact card the print's darker artifact grey.
+    expect(slotInk(layout.pt!, "c").colorHex).toBe("#b0b4b4");
+    expect(slotInk(layout.pt!, "a").colorHex).toBe("#7e888c");
+    expect(footerInk(layout.footer!, "a")).toEqual(slotInk(layout.pt!, "a"));
+    expect(slotInk(layout.pt!, "a").shadowCss).toContain("0.035em");
+  });
 });
 
 describe("CardPreview — Alpha ink (the same slotInk/footerInk/bandTextStyle as the bake)", () => {
-  it.each(["w", "u", "b", "r", "g", "c", "m"])("agclassic %s", (key) => {
+  it.each(["w", "u", "b", "r", "g", "c", "a", "m"])("agclassic %s", (key) => {
     const layout = getFrameProfile("agclassic");
-    const { pt, footer, name, type, cost } = renderAlpha("agclassic", key);
+    const { pt, footer, name, type, cost, frame } = renderAlpha("agclassic", key);
+    // The master painted: the colour's own, the artifact card for "a".
+    expect(frame?.dataset.frameKey).toBe(key);
+    expect(frame?.style.backgroundImage).toContain(`/frames/agclassic/${key}.webp`);
     const ptInk = slotInk(layout.pt!, key);
     const footInk = footerInk(layout.footer!, key);
     expect(rgb(pt.style.color)).toEqual(rgb(ptInk.colorHex));
@@ -163,8 +184,9 @@ describe("CardPreview — Alpha ink (the same slotInk/footerInk/bandTextStyle as
       expect(footer.style.textShadow).toBe("");
       expect(ptInk.colorHex).toBe(layout.pt!.colorHex);
     }
-    // Name and type line: the span carries bandTextStyle's ink; without an
-    // entry (w, m) the span adds nothing and the band's dark ink stands.
+    // Name and type line: the span carries bandTextStyle's ink (b, a);
+    // without an entry the span adds nothing and the band's dark ink stands.
+    expect(Boolean(bandTextStyle(layout.title, key).color)).toBe(key === "b" || key === "a");
     for (const [span, slot] of [[name, layout.title], [type, layout.type]] as const) {
       const band = span.parentElement as HTMLElement;
       const want = bandTextStyle(slot, key);
@@ -185,19 +207,25 @@ describe("CardPreview — Alpha ink (the same slotInk/footerInk/bandTextStyle as
     expect(cost!.style.textShadow).toBe("");
   });
 
-  it("alphaland's brown land frame takes the same silver on every key, white included", () => {
+  it("alphaland's brown land frame takes the same silver P/T and artist line on every key, white included", () => {
     const layout = getFrameProfile("alphaland");
     const inks = new Set<string>();
-    for (const key of ["w", "u", "b", "r", "g", "c", "m"]) {
-      const { pt, footer, name, type } = renderAlpha("alphaland", key);
-      expect(rgb(pt.style.color)).toEqual(rgb(slotInk(layout.pt!, key).colorHex));
-      expect(rgb(footer.style.color)).toEqual(rgb(footerInk(layout.footer!, key).colorHex));
-      // The land print letters its name and "Land" in the same silver.
+    for (const key of ["w", "u", "b", "r", "g", "c", "a", "m"]) {
+      const { pt, footer, name, type, frame } = renderAlpha("alphaland", key);
+      // One land frame per colour: an artifact paints the colour's own.
+      const colourKey = key === "a" ? "c" : key;
+      expect(frame?.dataset.frameKey).toBe(colourKey);
+      expect(rgb(pt.style.color)).toEqual(rgb(slotInk(layout.pt!, colourKey).colorHex));
+      expect(rgb(footer.style.color)).toEqual(rgb(footerInk(layout.footer!, colourKey).colorHex));
+      // The name and "Land" stay dark: the silver read no better on our
+      // brown (owner decision 2026-09-25, silver name on the black frame
+      // only) — the span adds nothing to the band's dark ink.
       for (const span of [name, type]) {
-        expect(rgb(span.style.color)).toEqual(rgb(slotInk(layout.pt!, key).colorHex));
-        expect(span.style.textShadow).toContain("0.035em");
+        expect(span.style.color).toBe("");
+        expect(span.style.textShadow).toBe("");
+        expect(rgb((span.parentElement as HTMLElement).style.color)).toEqual(rgb(layout.title.colorHex));
       }
-      inks.add(slotInk(layout.pt!, key).colorHex);
+      inks.add(slotInk(layout.pt!, colourKey).colorHex);
       cleanup();
     }
     expect(inks.size).toBe(1);

@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import { frameUrl } from "@/lib/frames/frame-url";
 import { canonicalColorSequence } from "@/lib/cards/mana-order";
-import type { TwoColorSplit } from "@/lib/cards/template-layout";
+import type { FrameMasterKey, TwoColorSplit } from "@/lib/cards/template-layout";
 import { DEFAULT_FRAME_TEMPLATE } from "@/types/card";
 import type { ColorIdentity, FrameTemplate } from "@/types/card";
 
@@ -18,6 +18,8 @@ import type { ColorIdentity, FrameTemplate } from "@/types/card";
 //   - 2+       → multicolor "m"
 //   - exactly 2 on a profile with `twoColorSplit` (Dragon Wing) → BOTH
 //     colours' frames, split down a vertical seam (frameSplitFor)
+//   - a colour the profile dresses by TYPE (`artifactMasterKeys`: Alpha's
+//     colourless artifact) → that master, "a" (frameMasterKey)
 //
 // The PNGs are MSE-derived frames converted by scripts/convert-mse-frame.mjs
 // and its siblings (build-era-frames / build-variation-frames); see the
@@ -124,16 +126,70 @@ export function frameSplitFor(
     : null;
 }
 
-/** Every frame master a render of this identity paints: both halves of a
- *  split, else pickFrameColorKey's one key. What the bake preloads. Stat
- *  plates are NOT frame masters — they keep pickFrameColorKey ("m" for a
- *  split card, like the printed gold plate). */
-export function frameColorKeysFor(
-  profile: { twoColorSplit?: TwoColorSplit },
+/** What a card's type line tells its frame: the card type and the
+ *  supertype words (CardPreviewData, a preview face and the creator form all
+ *  carry both). */
+export type FrameTypeInfo = {
+  cardType?: string | null;
+  supertype?: string | null;
+};
+
+/** An artifact, as far as the frame goes: the Artifact card type, or
+ *  "Artifact" among the supertype words (an "Artifact Creature — Juggernaut"
+ *  is the creature type with the Artifact supertype). */
+export function isArtifactFrameType(type: FrameTypeInfo | null | undefined): boolean {
+  if (!type) return false;
+  if (type.cardType === "artifact") return true;
+  return (type.supertype ?? "")
+    .split(/\s+/)
+    .some((word) => word.toLowerCase() === "artifact");
+}
+
+/** A profile's type-dressed masters (FrameProfile.artifactMasterKeys). */
+type MasterDress = { artifactMasterKeys?: Partial<Record<string, FrameMasterKey>> };
+
+/** The frame master (public/frames/{template}/{key}.png) a card of frame
+ *  colour `colorKey` paints on `profile`: the colour key itself, unless the
+ *  profile dresses that colour differently for an artifact — agclassic's
+ *  colourless ARTIFACT paints the brown artifact card "a", any other
+ *  colourless card the grey "c". For the creator's frame tiles, which show a
+ *  colour the card may not have yet. */
+export function frameMasterKeyForColor(
+  profile: MasterDress,
+  colorKey: string,
+  type: FrameTypeInfo | null | undefined,
+): string {
+  const dressed = profile.artifactMasterKeys?.[colorKey];
+  return dressed && isArtifactFrameType(type) ? dressed : colorKey;
+}
+
+/** The frame master a single-master card paints (a two-colour split paints
+ *  frameSplitFor's two halves instead) — the ONE rule the preview
+ *  (FrameLayer), the bake, the foil and etched masks, the bake's frame
+ *  preload (frameColorKeysFor) and the ink maps (inkByColorKey) share.
+ *  pickFrameColorKey's key, dressed by the card's type (frameMasterKeyForColor).
+ *  The colour key itself still decides everything that is about the card's
+ *  COLOUR rather than the file painted: the frame_reviews gate, the stat
+ *  plates and the watermark tint. */
+export function frameMasterKey(
+  profile: MasterDress,
   colors: readonly ColorIdentity[] | null | undefined,
+  type: FrameTypeInfo | null | undefined,
+): string {
+  return frameMasterKeyForColor(profile, pickFrameColorKey(colors), type);
+}
+
+/** Every frame master a render of this card paints: both halves of a split,
+ *  else frameMasterKey's one master. What the bake preloads. Stat plates are
+ *  NOT frame masters — they keep pickFrameColorKey ("m" for a split card,
+ *  like the printed gold plate). */
+export function frameColorKeysFor(
+  profile: { twoColorSplit?: TwoColorSplit } & MasterDress,
+  colors: readonly ColorIdentity[] | null | undefined,
+  type: FrameTypeInfo | null | undefined,
 ): string[] {
   const split = frameSplitFor(profile, colors);
-  return split ? [split.leftKey, split.rightKey] : [pickFrameColorKey(colors)];
+  return split ? [split.leftKey, split.rightKey] : [frameMasterKey(profile, colors, type)];
 }
 
 export function frameAssetPath(
@@ -175,13 +231,14 @@ export function frameImageUrl(template: FrameTemplate, colorKey: string): string
 
 export function FrameLayer({
   template = DEFAULT_FRAME_TEMPLATE,
-  colorIdentity,
+  masterKey,
   className,
   zIndex,
   split = null,
 }: {
   template?: FrameTemplate;
-  colorIdentity: ColorIdentity[] | undefined;
+  /** frameMasterKey(layout, colorIdentity, face): the master to paint. */
+  masterKey: string;
   className?: string;
   /** Optional inline z-index override. Templates that render a separate
    *  art layer beneath the frame (cut-out slot) pass a positive value so
@@ -225,9 +282,10 @@ export function FrameLayer({
   return (
     <div
       aria-hidden
+      data-frame-key={masterKey}
       className={layerClass}
       style={{
-        backgroundImage: frameBackgroundImage(template, pickFrameColorKey(colorIdentity)),
+        backgroundImage: frameBackgroundImage(template, masterKey),
         backgroundSize: "100% 100%",
         backgroundRepeat: "no-repeat",
         ...zStyle,
