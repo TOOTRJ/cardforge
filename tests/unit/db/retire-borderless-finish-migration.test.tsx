@@ -134,9 +134,9 @@ function card(template: FrameTemplate, finish: string): CardPreviewData {
 }
 
 async function bakeHash(data: CardPreviewData): Promise<string> {
-  // The stored bake's options (lib/cards/bake-render.ts): the display copy
-  // carries the brand mark and no footer text.
-  const res = await renderCardImage(data, "default", { brandMark: true, watermarkText: null });
+  // The stored bake's options (lib/cards/bake-render.ts): the "hd" preset,
+  // and the display copy carries the brand mark and no footer text.
+  const res = await renderCardImage(data, "hd", { brandMark: true, watermarkText: null });
   return createHash("sha256").update(Buffer.from(await res.arrayBuffer())).digest("hex");
 }
 

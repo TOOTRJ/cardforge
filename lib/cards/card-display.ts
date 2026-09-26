@@ -30,8 +30,8 @@ export function normalizeFrameTemplate(
 }
 
 // Coerce a persisted finish to a current one: a retired value maps to the
-// finish that draws the same pixels (the old "borderless" → "regular"), and a
-// missing or unknown value is "regular", so the creator never shows or
+// finish that draws the same pixels (RETIRED_CARD_FINISHES in types/card.ts),
+// and a missing or unknown value is "regular", so the creator never shows or
 // re-submits a finish the validator would refuse.
 export function normalizeCardFinish(finish: unknown): CardFinish {
   if (typeof finish !== "string") return "regular";

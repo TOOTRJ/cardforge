@@ -212,9 +212,9 @@ const artPositionBaseSchema = z
 
 const artPositionSchema = artPositionBaseSchema.default({});
 
-// A retired finish (the old "borderless", migration 0119) reads as the finish
-// that draws the same pixels, so an old draft or remix never fails to parse;
-// anything else unknown is still refused.
+// A retired finish (RETIRED_CARD_FINISHES, migration 0119) reads as the
+// finish that draws the same pixels, so an old draft or remix never fails to
+// parse; anything else unknown is still refused.
 const cardFinishSchema = z.preprocess(
   (value) =>
     typeof value === "string" ? (RETIRED_CARD_FINISHES.get(value) ?? value) : value,

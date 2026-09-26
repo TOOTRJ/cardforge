@@ -163,7 +163,7 @@ export function defaultValuesFor(
     (card.back_face as CardBackFace | null | undefined) ?? null;
 
   // Coerce the persisted frame style, mapping any legacy/retired template
-  // (e.g. the old "regular" placeholder) or finish (the old "borderless")
+  // (e.g. the old "regular" placeholder) or finish (RETIRED_CARD_FINISHES)
   // onto a current one so the picker and the edit/remix summary show a valid
   // selection and the save passes validation.
   const persistedFrame = (card.frame_style as FrameStyle | null) ?? {};

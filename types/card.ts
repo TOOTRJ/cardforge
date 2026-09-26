@@ -245,10 +245,14 @@ export type CardWatermark =
   | { kind: "preset"; key: string; opacity?: number; size?: "normal" | "large" }
   | { kind: "custom"; url: string; opacity?: number; size?: "normal" | "large" };
 
-// Card finish — premium treatments layered on top of the base frame.
-// Default is "regular"; "foil" adds a static holographic sheen,
-// "etched" adds a fine etched texture to the frame only, and "showcase"
-// swaps the title to an italic display treatment with an ornate underline.
+// Card finish — a treatment layered on top of the base frame (every finish is
+// free: PREMIUM_FINISHES below is empty). Default is "regular"; "foil" adds a
+// holographic sheen, strongest on light areas (lib/cards/foil-finish.tsx),
+// and "etched" a frame-masked cross-hatch + sheen
+// (lib/cards/etched-finish.tsx), both drawn identically by the live preview
+// and the bake. "showcase" italicises the title in the live preview only —
+// the bake has no italic Beleren face and draws it upright, and neither
+// renderer draws an ornament — so its chip stays "Soon" (TODO 6.5).
 // Borderless is a frame treatment (its own templates), never a finish —
 // Scryfall's finishes are nonfoil/foil/etched, and borderless printings come
 // in all three.
