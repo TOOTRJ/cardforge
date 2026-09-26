@@ -140,8 +140,28 @@ describe("card-frames — frame assets resolve from disk or the deployment CDN",
       style: "glyph" as const,
       assetPathTemplate: "/frames/fullartland/symbol/{symbol}.png",
     };
-    // No slot today: only the P/T plate the profile always lists.
-    expect(frameAssetPathsFor(plains)).toEqual(["/frames/m15/pt/w.png"]);
+    // Without a slot only the P/T plate the profile always lists (the
+    // pre-4.39 fullartland; m15textlessland today).
+    expect(frameAssetPathsFor({ ...plains, frameStyle: { template: "m15textlessland" } })).toEqual([
+      "/frames/m15/pt/w.png",
+    ]);
+    // The full-art basics (4.39) preload their own symbol image.
+    expect(frameAssetPathsFor(plains)).toEqual(["/frames/m15/pt/w.png", "/frames/fullartland/symbol/w.png"]);
+    expect(frameAssetPathsFor({ ...plains, frameStyle: { template: "m15fullartland" } })).toEqual([
+      "/frames/m15/pt/w.png",
+      "/frames/m15fullartland/symbol/w.png",
+    ]);
+    // …and the borderless M15 frame (4.32) its own P/T plate.
+    expect(
+      frameAssetPathsFor({
+        title: "Bear",
+        cardType: "creature",
+        colorIdentity: ["green"],
+        power: "2",
+        toughness: "2",
+        frameStyle: { template: "m15borderless" },
+      } as unknown as CardPreviewData),
+    ).toEqual(["/frames/m15borderless/pt/g.png"]);
     expect(frameAssetPathsFor({ ...plains, profileOverrides: { fullartland: { basicSymbol: slot } } })).toEqual([
       "/frames/m15/pt/w.png",
       "/frames/fullartland/symbol/w.png",

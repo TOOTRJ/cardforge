@@ -11,9 +11,13 @@ import {
 } from "@/types/card";
 import {
   KIND_DEFS,
+  isSingleBasicLand,
   kindFromCard,
+  templateRefusesKind,
   type CardKind,
 } from "@/lib/creator/card-kinds";
+import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
+import { isArtifactFrameType, pickFrameColorKey } from "@/components/cards/frame-layer";
 import { standardFrameFor } from "@/lib/creator/frame-picker";
 import { describeFrame } from "@/lib/creator/frame-resolve";
 
@@ -444,11 +448,89 @@ export function printingTreatmentNotice(
  * The import dialog's heads-up before the user commits, while they can
  * still pick another printing. The final frame isn't known yet (it is
  * resolved against the published frames in the form), so it isn't named.
+ * `offer` is the verified PipGlyph frame for the treatment, when there is
+ * one (printingTreatmentOffer): the import still lands on the plain frame,
+ * and the creator's toast offers this one.
  */
-export function printingTreatmentHint(treatment: PrintingTreatment): string {
-  return `This printing ${PRINTING_TREATMENT_PHRASES[treatment]}, which PipGlyph doesn't offer yet — the import uses ${
-    treatment === "borderless" ? "a bordered" : "the regular"
-  } frame instead.`;
+export function printingTreatmentHint(
+  treatment: PrintingTreatment,
+  offer?: PrintingTreatmentOffer | null,
+): string {
+  const plain = treatment === "borderless" ? "a bordered" : "the regular";
+  if (offer) {
+    return `This printing ${PRINTING_TREATMENT_PHRASES[treatment]} — the import uses ${plain} frame, then offers PipGlyph's ${offer.frameLabel} frame.`;
+  }
+  return `This printing ${PRINTING_TREATMENT_PHRASES[treatment]}, which PipGlyph doesn't offer yet — the import uses ${plain} frame instead.`;
+}
+
+/** A PipGlyph frame the creator can OFFER for an imported printing's
+ *  treatment — see printingTreatmentOffer. */
+export type PrintingTreatmentOffer = {
+  template: FrameTemplate;
+  /** The frame's name in copy ("Borderless", "Full-Art Basic"). */
+  frameLabel: string;
+  /** The toast action ("Use Borderless"). */
+  actionLabel: string;
+};
+
+/**
+ * The PipGlyph frame that dresses an imported printing's treatment, when one
+ * exists AND is published in the card's colour (frames plan 4.32 / 4.39;
+ * TODO 1.16's "Use Borderless" / "Use Full-Art Basic"). It is OFFERED,
+ * never picked: the import still lands on the plain frame (the frame the
+ * printing's era gives, resolved against the published frames), so an
+ * unverified frame is never selected and nothing changes until the owner
+ * verifies it. The nearest look, not an exact match — 1.17 / 1.19's
+ * signature registry decides exact:
+ *   • borderless → the borderless M15 frame for a creature, instant, sorcery
+ *     or enchantment, and its artifact dress for an artifact or an Artifact
+ *     Creature. Nothing for lands, planeswalkers, tokens, battles or layout
+ *     cards (4.33–4.38), nor a borderless basic (its textless printings
+ *     outnumber the FRA run with bars — 1.17).
+ *   • full art → the black-bordered full-art basic, for one basic land.
+ * Null otherwise (showcase, extended art, textless …).
+ */
+export function printingTreatmentOffer(
+  patch: Pick<
+    ScryfallImportPatch,
+    "printing_treatment" | "kind" | "card_type" | "supertype" | "subtypes_text" | "title" | "rules_text" | "color_identity"
+  >,
+  verifiedKeys: ReadonlySet<string>,
+): PrintingTreatmentOffer | null {
+  const treatment = patch.printing_treatment;
+  if (!treatment) return null;
+  const kind = patch.kind ?? (patch.card_type ? kindFromCard(patch.card_type, undefined) : null);
+  if (!kind) return null;
+  const offer = (() => {
+    if (treatment === "borderless") {
+      const artifact = isArtifactFrameType({ cardType: patch.card_type, supertype: patch.supertype });
+      if (kind === "artifact" || (kind === "creature" && artifact)) {
+        return { template: "m15borderlessartifact" as const, frameLabel: "Borderless Artifact" };
+      }
+      if (!templateRefusesKind("m15borderless", kind)) {
+        return { template: "m15borderless" as const, frameLabel: "Borderless" };
+      }
+      return null;
+    }
+    if (treatment === "fullart" && kind === "land") {
+      const face = {
+        cardType: patch.card_type,
+        supertype: patch.supertype,
+        subtypes: (patch.subtypes_text ?? "")
+          .split(/[,\n]/)
+          .map((part) => part.trim())
+          .filter(Boolean),
+        title: patch.title,
+        rulesText: patch.rules_text,
+      };
+      if (isSingleBasicLand(face)) return { template: "m15fullartland" as const, frameLabel: "Full-Art Basic" };
+    }
+    return null;
+  })();
+  if (!offer) return null;
+  const colorKey = pickFrameColorKey(patch.color_identity ? [...patch.color_identity] : undefined);
+  if (!isFrameComboAvailable(offer.template, colorKey, verifiedKeys)) return null;
+  return { ...offer, actionLabel: `Use ${offer.frameLabel}` };
 }
 
 // A basic land type's intrinsic mana ability (rule 305.6): a face typed

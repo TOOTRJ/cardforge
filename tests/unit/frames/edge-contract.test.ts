@@ -62,10 +62,15 @@ describe("the edge-contract table", () => {
     expect(missing).toEqual([]);
   });
 
-  it("is ready for 4.32 / 4.39's new templates", () => {
-    expect(EDGE_CONTRACTS.m15borderless.bottom).toEqual({ kind: "bar", depthPct: 7.76 });
-    expect(EDGE_CONTRACTS.m15borderless.top.kind).toBe("art");
-    expect(EDGE_CONTRACTS.m15fullartland.left.kind).toBe("border");
+  it("declares 4.32 / 4.39's templates (7.7's fixtures)", () => {
+    for (const template of ["m15borderless", "m15borderlessartifact"]) {
+      expect(EDGE_CONTRACTS[template].bottom, template).toEqual({ kind: "bar", depthPct: 7.76 });
+      expect(EDGE_CONTRACTS[template].top.kind, template).toBe("art");
+      expect(EDGE_CONTRACTS[template].left, template).toEqual({ kind: "art", except: [[78, 100]] });
+    }
+    // m15fullartland: a border on all four edges; fullartland: art on all
+    // four, its two bars floating inside the card (checked below).
+    expect(Object.values(EDGE_CONTRACTS.m15fullartland).every((e) => e.kind === "border")).toBe(true);
     expect(Object.values(EDGE_CONTRACTS.fullartland).every((e) => e.kind === "art")).toBe(true);
   });
 
@@ -174,5 +179,32 @@ describe("every frame master honours its template's edge contract", () => {
         expect(edgeContractViolations(contract, data, width, height, getFrameProfile(template).artSlot)).toEqual([]);
       });
     }
+  }
+});
+
+// 7.7's full-art fixtures: "fullartland has art on all four edges plus its
+// two bars" — the edges are checked above; here the bars: opaque across the
+// title bar and the type bar on the card's centre column, see-through
+// between them (the Border mask erased, nothing else). m15fullartland keeps
+// the same bars inside its ring. Run where the masters are available.
+describe("the full-art basics keep their two bars (7.7 fixture)", () => {
+  for (const template of ["fullartland", "m15fullartland"]) {
+    const masters = mastersOf(template);
+    if (masters.length === 0) {
+      it.skip(`${template}: masters not available here (frames bucket; set FRAMES_BUILD_DIR)`, () => {});
+      continue;
+    }
+    it(`${template}: title bar 5–10.5 % H and type bar 84.5–90.3 % H, clear between`, async () => {
+      for (const m of masters) {
+        const { data, width, height } = await rgbaOf(m.file);
+        const alpha = (xPct: number, yPct: number) =>
+          data[(Math.round((yPct / 100) * (height - 1)) * width + Math.round((xPct / 100) * (width - 1))) * 4 + 3] / 255;
+        for (const x of [30, 50, 70]) {
+          for (let y = 5; y <= 10.5; y += 0.5) expect(alpha(x, y), `${m.key} title ${x},${y}`).toBeGreaterThanOrEqual(0.99);
+          for (let y = 84.5; y <= 90.3; y += 0.5) expect(alpha(x, y), `${m.key} type ${x},${y}`).toBeGreaterThanOrEqual(0.99);
+          for (let y = 15; y <= 80; y += 5) expect(alpha(x, y), `${m.key} art ${x},${y}`).toBeLessThanOrEqual(0.05);
+        }
+      }
+    });
   }
 });

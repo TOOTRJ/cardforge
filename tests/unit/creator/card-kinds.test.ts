@@ -21,7 +21,14 @@ import {
   withoutArtifactWord,
   type CardKind,
 } from "@/lib/creator/card-kinds";
-import { frameComboKey } from "@/lib/cards/frame-reference-registry";
+import { FRAME_COLOR_KEYS, frameComboKey } from "@/lib/cards/frame-reference-registry";
+import {
+  FRAME_SET_ERA,
+  FRAME_SET_LABELS,
+  FRAME_TEMPLATE_SET,
+  FRAME_TEMPLATE_VALUES,
+  isPremiumFrameTemplate,
+} from "@/types/card";
 import { normalizeColorSelection } from "@/lib/creator/card-fields";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { showsPowerToughness } from "@/lib/cards/card-display";
@@ -106,12 +113,23 @@ describe("framesForKind", () => {
       framesForKind(kind, NO_VERIFIED)
         .filter((f) => f.group === "skin")
         .map((f) => f.template);
-    // A creature also borrows the M15 artifact frame (TODO 1.7).
-    expect(skinsFor("creature")).toEqual(["m15snow", "m15devoid", "m15artifact"]);
+    // A creature also borrows the M15 artifact frame (TODO 1.7) and its
+    // borderless dress (4.32).
+    expect(skinsFor("creature")).toEqual([
+      "m15snow",
+      "m15devoid",
+      "m15borderless",
+      "m15artifact",
+      "m15borderlessartifact",
+    ]);
+    for (const kind of ["instant", "sorcery", "enchantment"] as CardKind[]) {
+      expect(skinsFor(kind)).toEqual(["m15snow", "m15devoid", "m15borderless"]);
+    }
+    expect(skinsFor("artifact")).toEqual(["m15borderlessartifact"]);
     expect(skinsFor("land")).toEqual(["m15snowland"]);
     expect(skinsFor("token")).toEqual(["m15tokenartifact"]);
     // Standards with their own geometry and no skin set stay bare.
-    for (const kind of ["planeswalker", "battle", "artifact"] as CardKind[]) {
+    for (const kind of ["planeswalker", "battle"] as CardKind[]) {
       expect(skinsFor(kind)).toEqual([]);
     }
   });
@@ -431,8 +449,9 @@ describe("basic-only frames", () => {
     rulesText,
   });
 
-  it("flags only the full-art basic land frame", () => {
+  it("flags only the full-art basic land frames", () => {
     expect(templateIsBasicOnly("fullartland")).toBe(true);
+    expect(templateIsBasicOnly("m15fullartland")).toBe(true);
     for (const template of ["m15land", "m15textlessland", "expeditionland", "fullart", "m15"] as const) {
       expect(templateIsBasicOnly(template)).toBe(false);
     }
@@ -481,5 +500,82 @@ describe("withArtifactWord / withoutArtifactWord", () => {
     expect(withoutArtifactWord("Snow Artifact")).toBe("Snow");
     expect(withoutArtifactWord("Legendary")).toBe("Legendary");
     expect(withoutArtifactWord(null)).toBe("");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Frames plan 4.32 (the borderless M15 frame) and 4.39 (full-art basics).
+// ---------------------------------------------------------------------------
+
+describe("the borderless M15 frame (4.32)", () => {
+  const all = new Set(FRAME_TEMPLATE_VALUES.flatMap((t) => FRAME_COLOR_KEYS.map((k) => frameComboKey(t, k))));
+
+  it("is a skin of the M15 standard (and of the M15 artifact frame), in its own M15-era Borderless set", () => {
+    expect(FRAME_TEMPLATE_SET.m15borderless).toBe("borderless");
+    expect(FRAME_TEMPLATE_SET.m15borderlessartifact).toBe("borderless");
+    expect(FRAME_SET_LABELS.borderless).toBe("Borderless");
+    expect(FRAME_SET_ERA.borderless).toBe("m15");
+    expect(baseFrameFor("creature", "m15borderless")).toBe("m15");
+    expect(baseFrameFor("instant", "m15borderless")).toBe("m15");
+    expect(baseFrameFor("artifact", "m15borderlessartifact")).toBe("m15artifact");
+    // An Artifact Creature borrows the artifact dress under its own M15
+    // standard, like m15artifact (1.7).
+    expect(baseFrameFor("creature", "m15borderlessartifact")).toBe("m15");
+    const creature = framesForKind("creature", all).filter((f) => f.group === "skin").map((f) => f.template);
+    expect(creature).toContain("m15borderless");
+    // Offered once, never also as a showcase treatment.
+    for (const kind of CARD_KIND_VALUES) {
+      const templates = framesForKind(kind, all).map((f) => f.template);
+      expect(new Set(templates).size, kind).toBe(templates.length);
+    }
+  });
+
+  it("dresses creature, instant, sorcery, enchantment and artifact only", () => {
+    const allowed: CardKind[] = ["creature", "instant", "sorcery", "enchantment"];
+    for (const kind of CARD_KIND_VALUES) {
+      expect(templateSupportsKind("m15borderless", kind), kind).toBe(allowed.includes(kind));
+    }
+    expect(templateSupportsKind("m15borderlessartifact", "artifact")).toBe(true);
+    expect(templateSupportsKind("m15borderlessartifact", "creature")).toBe(true);
+    // The server refuses every other kind (CC's pack has no planeswalker,
+    // land, token or battle frame — 4.33 / 4.34 / 4.37) and lets a
+    // coloured artifact keep the colour frame.
+    for (const kind of ["planeswalker", "land", "token", "battle", "saga", "adventure"] as CardKind[]) {
+      expect(templateRefusesKind("m15borderless", kind), kind).toBe(true);
+      expect(templateRefusesKind("m15borderlessartifact", kind), kind).toBe(true);
+    }
+    for (const kind of [...allowed, "artifact"] as CardKind[]) {
+      expect(templateRefusesKind("m15borderless", kind), kind).toBe(false);
+    }
+    expect(templateRefusesKind("m15borderlessartifact", "instant")).toBe(true);
+    // …but an Artifact Creature keeps the artifact dress it borrows.
+    expect(templateRefusesKind("m15borderlessartifact", "creature")).toBe(false);
+    expect(templateRefusesKind("m15borderlessartifact", "artifact")).toBe(false);
+  });
+
+  it("a kind change keeps the M15 era (no prompt), landing on the kind's M15 standard", () => {
+    expect(planKindChange("instant", { cardType: "creature", template: "m15borderless" })).toEqual({
+      action: "apply",
+      patch: { card_type: "instant", template: "m15" },
+    });
+  });
+
+  it("is never premium: Wizards trade dress stays free", () => {
+    for (const template of ["m15borderless", "m15borderlessartifact", "m15fullartland", "fullartland"] as const) {
+      expect(isPremiumFrameTemplate(template), template).toBe(false);
+    }
+  });
+});
+
+describe("the full-art basics (4.39)", () => {
+  it("are showcase treatments of the land kind in the Full Art set, basic lands only", () => {
+    for (const template of ["m15fullartland", "fullartland"] as const) {
+      expect(FRAME_TEMPLATE_SET[template]).toBe("fullartset");
+      expect(baseFrameFor("land", template)).toBe("m15land");
+      expect(templateIsBasicOnly(template)).toBe(true);
+      for (const kind of CARD_KIND_VALUES) {
+        expect(templateSupportsKind(template, kind), `${template} ${kind}`).toBe(kind === "land");
+      }
+    }
   });
 });

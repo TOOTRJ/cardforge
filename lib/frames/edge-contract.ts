@@ -48,6 +48,15 @@ const ALL_ART: EdgeContract = {
   bottom: { kind: "art" },
   left: { kind: "art" },
 };
+/** CC `m15/borderless` (measured on all nine masters): top and sides α 0,
+ *  an opaque bottom bar 163 px (7.76 % H) deep, and its fins up the side
+ *  edges from 78.67 % H. */
+const BORDERLESS_M15: EdgeContract = {
+  top: { kind: "art" },
+  right: { kind: "art", except: [[78, 100]] },
+  bottom: { kind: "bar", depthPct: 7.76 },
+  left: { kind: "art", except: [[78, 100]] },
+};
 
 /**
  * The declared edges of every frame template (FRAME_TEMPLATE_VALUES —
@@ -110,19 +119,14 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   lotrscroll: ALL_BORDER,
   avatar: ALL_BORDER,
   bloomburrow: ALL_BORDER,
-  // Declared ahead of their templates (4.32 / 4.39) — ready for the new
-  // frames; the test checks them once their template key exists.
-  m15borderless: {
-    // CC `m15/borderless` (measured on all nine masters): top and sides α 0,
-    // an opaque bottom bar 163 px (7.76 % H) deep, and its fins up the side
-    // edges from 78.67 % H.
-    top: { kind: "art" },
-    right: { kind: "art", except: [[78, 100]] },
-    bottom: { kind: "bar", depthPct: 7.76 },
-    left: { kind: "art", except: [[78, 100]] },
-  },
+  // 4.32 / 4.39 (Card Conjurer, frames bucket).
+  m15borderless: BORDERLESS_M15,
+  // The artifact dress: CC's A frame (c) and the colour frames — the same
+  // pack, the same edges.
+  m15borderlessartifact: BORDERLESS_M15,
   // CC `textless/2022` composites keep their black ring (α 1.00 on all
-  // seven masters); the re-sourced `fullartland` drops it (ALL_ART above).
+  // seven masters); the re-sourced `fullartland` drops it (ALL_ART above;
+  // its two bars float inside the card, clear of every edge band).
   m15fullartland: ALL_BORDER,
 };
 

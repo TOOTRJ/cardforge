@@ -339,6 +339,10 @@ describe("v27 / v28 — the owner's follow-up decisions (2026-09-25)", () => {
   });
 });
 
+/** Templates added after v29 (frames plan 4.32 / 4.39): no card was ever
+ *  baked on them before v30, so v29's frozen lists never name them. */
+const POST_V29_TEMPLATES: readonly string[] = ["m15borderless", "m15borderlessartifact", "m15fullartland"];
+
 describe("v29 — the round-5 leftovers, one sweep (2026-09-25)", () => {
   const png = "https://x/y.png";
   /** A v28 bake. Its columns default to a card v29 left alone
@@ -368,7 +372,9 @@ describe("v29 — the round-5 leftovers, one sweep (2026-09-25)", () => {
 
   it("word spacing: every card on the 25 display-footer templates", async () => {
     const classifyForSweep = await sweepAt(29);
-    const displayFooter = FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).footer?.font === "display");
+    const displayFooter = FRAME_TEMPLATE_VALUES.filter(
+      (t) => getFrameProfile(t).footer?.font === "display" && !POST_V29_TEMPLATES.includes(t),
+    );
     // The frozen v29 list is these 25 (their footer prints "ART: …").
     expect(displayFooter).toHaveLength(25);
     for (const t of displayFooter) {
@@ -389,7 +395,9 @@ describe("v29 — the round-5 leftovers, one sweep (2026-09-25)", () => {
 
   it("word spacing on the other 12 templates: only a name or type line with a space in it", async () => {
     const classifyForSweep = await sweepAt(29);
-    const others = FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).footer?.font !== "display");
+    const others = FRAME_TEMPLATE_VALUES.filter(
+      (t) => getFrameProfile(t).footer?.font !== "display" && !POST_V29_TEMPLATES.includes(t),
+    );
     expect([...others].sort()).toEqual(
       ["aftermath", "avatar", "battle", "bloomanime", "bloomburrow", "flip", "lotr", "lotrscroll", "split",
         "tarkirdraconic", "tarkirdragon", "tarkirghostfire"].sort(),

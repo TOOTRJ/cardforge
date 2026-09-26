@@ -61,6 +61,31 @@ describe("frameKindGateError", () => {
     expect(frameKindGateError("fullartland", creature)).toMatch(/doesn't dress Creature cards/);
   });
 
+  it("keeps the borderless M15 frame (4.32) to the kinds its pack draws", () => {
+    expect(frameKindGateError("m15borderless", creature)).toBeNull();
+    expect(frameKindGateError("m15borderless", cardFieldsFace({ card_type: "instant" }))).toBeNull();
+    expect(frameKindGateError("m15borderless", walker)).toBe(
+      "The M15 (2015) Borderless frame doesn't dress Planeswalker cards — pick another frame.",
+    );
+    expect(frameKindGateError("m15borderless", plains)).toMatch(/doesn't dress Land cards/);
+    expect(frameKindGateError("m15borderlessartifact", cardFieldsFace({ card_type: "artifact" }))).toBeNull();
+    // An Artifact Creature borrows the artifact dress (like m15artifact, 1.7).
+    expect(
+      frameKindGateError("m15borderlessartifact", cardFieldsFace({ card_type: "creature", supertype: "Artifact" })),
+    ).toBeNull();
+    expect(frameKindGateError("m15borderlessartifact", cardFieldsFace({ card_type: "sorcery" }))).toMatch(
+      /Borderless Artifact frame doesn't dress Sorcery cards/,
+    );
+  });
+
+  it("keeps the black-bordered full-art basic (4.39) to one basic land", () => {
+    expect(frameKindGateError("m15fullartland", plains)).toBeNull();
+    expect(frameKindGateError("m15fullartland", hallowedFountain)).toBe(
+      "Full-art basic frames are for basic lands — pick another frame.",
+    );
+    expect(frameKindGateError("m15fullartland", creature)).toMatch(/doesn't dress Creature cards/);
+  });
+
   it("never refuses a border-era frame an off-kind legacy card sits on", () => {
     expect(frameKindGateError("m15", cardFieldsFace({ card_type: "artifact" }))).toBeNull();
     expect(frameKindGateError("m15", cardFieldsFace({ card_type: "token" }))).toBeNull();

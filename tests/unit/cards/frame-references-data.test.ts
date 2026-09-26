@@ -53,7 +53,10 @@ const DOCUMENTED_NULLS = new Set([
   "flip/c", "flip/m",
   "alphatoken/w", "alphatoken/u", "alphatoken/b", "alphatoken/r", "alphatoken/g", "alphatoken/c", "alphatoken/m",
   "fullart/c",
-  "fullartland/m",
+  // Full-art basics (4.39): no multicolour basic, and no Wastes was ever
+  // printed with the left-disc type bar (owner visual sign-off instead).
+  "m15fullartland/c", "m15fullartland/m",
+  "fullartland/c", "fullartland/m",
   "m15textless/u",
   "m15textlessland/c", "m15textlessland/m",
   "expeditionland/w", "expeditionland/u", "expeditionland/b", "expeditionland/r", "expeditionland/g",
@@ -132,3 +135,46 @@ describe("registry helpers", () => {
     expect(referenceTierLabel({ name: "x", set: "y", scryfallId: "z", tier: 2 })).toMatch(/foil/);
   });
 });
+
+// Frames plan 4.32 / 4.39: the references the items list, two per colour
+// (short text first), looked up on Scryfall by set + collector number.
+describe("4.32 / 4.39 references", () => {
+  const ids = (template: string, key: string) =>
+    frameReferenceOptions(template, key).map((r) => `${r.set} ${r.name}`);
+
+  it("m15borderless: the borderless printings of TODO 4.32, per colour", () => {
+    expect(ids("m15borderless", "w")).toEqual(["inr Thraben Inspector", "hob The Eagles Are Coming!"]);
+    expect(ids("m15borderless", "u")).toEqual(["mh3 Flare of Denial", "fdn An Offer You Can't Refuse"]);
+    expect(ids("m15borderless", "b")).toEqual(["fdn Vengeful Bloodwitch", "m21 Grim Tutor"]);
+    expect(ids("m15borderless", "r")).toEqual(["cmm Balefire Dragon", "sos Improvisation Capstone"]);
+    expect(ids("m15borderless", "g")).toEqual(["iko Titanoth Rex", "msh Earth's Mightiest Heroes"]);
+    expect(ids("m15borderless", "m")).toEqual(["fra Frostbite Pyromental", "tla Dai Li Agents"]);
+    expect(ids("m15borderless", "c")).toEqual(["fdn Sire of Seven Deaths", "mh3 Ugin's Binding"]);
+    // 1.17's fixtures FDN #311 and M21 #315 are registered.
+    expect(findFrameReference("m15borderless", "u", "6f6aaee9-8c44-4e23-8167-ead64e599711")?.name).toBe(
+      "An Offer You Can't Refuse",
+    );
+    expect(findFrameReference("m15borderless", "b", "fbf0dded-552a-4ad2-bb62-f1bfabad9bac")?.name).toBe("Grim Tutor");
+    // FRA #461 is foil-only.
+    expect(frameReferenceOptions("m15borderless", "m")[0].tier).toBe(2);
+  });
+
+  it("m15borderlessartifact: CC's artifact frame for colourless (TODO 4.32's A pair)", () => {
+    expect(ids("m15borderlessartifact", "c")).toEqual(["cmm Jeweled Lotus", "mh2 Sword of Hearth and Home"]);
+    expect(frameReferenceNote("m15borderlessartifact").confirm).toBe(true);
+  });
+
+  it("m15fullartland: ONE + MOM per colour; fullartland: FRA #382–396 only (owner decision 4.35)", () => {
+    for (const [key, name] of [["w", "Plains"], ["u", "Island"], ["b", "Swamp"], ["r", "Mountain"], ["g", "Forest"]]) {
+      expect(ids("m15fullartland", key)).toEqual([`one ${name}`, `mom ${name}`]);
+      expect(ids("fullartland", key)).toEqual([`fra ${name}`, `fra ${name}`]);
+    }
+    // UNF / EOE textless basics and the old HOB / BFZ picks are gone.
+    for (const key of FRAME_COLOR_KEYS) {
+      for (const ref of frameReferenceOptions("fullartland", key)) expect(ref.set).toBe("fra");
+    }
+    expect(FRAME_REFERENCES.fullartland.c).toBeNull();
+    expect(FRAME_REFERENCES.m15fullartland.m).toBeNull();
+    expect(frameReferenceNote("fullartland").note).toMatch(/nearest/);
+  });
+})

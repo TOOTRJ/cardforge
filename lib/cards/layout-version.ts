@@ -239,10 +239,18 @@ import type { CardType } from "@/types/card";
 //            bars — owner decisions 4.35(a) and 2026-09-26), in the frames
 //            bucket, replacing the 744 px MSE composite upscaled 2× that
 //            lived in public/frames/fullartland. The bars move by < 1 % H
-//            and the mana-symbol socket is painted (the symbol slot is
-//            3.24's). Template-scoped to fullartland, "sweep": 0 public
-//            production cards (anonymous read, 2026-09-26); private rows
-//            need the owner's admin count before the sweep.
+//            and the mana-symbol disc is painted. Its profile opts into
+//            3.23 / 3.24's pieces in the same bump: a basic's symbol in
+//            that disc (Card Conjurer's s?.png, no big watermark across the
+//            art), the set symbol right-anchored on the type bar (92.13 %W,
+//            centred 87.39 %H), the brand mark on its dark pill and the
+//            artist line in ON_ART_OUTLINE (both on the art). The new
+//            templates of 4.32 / 4.39 (m15borderless,
+//            m15borderlessartifact, m15fullartland) have no card baked
+//            before v30, so they need no scope. Template-scoped to
+//            fullartland, "sweep": 0 public production cards (anonymous
+//            read, 2026-09-26); private rows need the owner's admin count
+//            before the sweep.
 // ---------------------------------------------------------------------------
 
 export const CARD_LAYOUT_VERSION = 30;
@@ -271,7 +279,8 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // Ghostfire rebuilt, planeswalker mana cost and name lowered.
   27: ["agclassic", "alphaland", "tarkirdragon", "tarkirghostfire", "m15pw"],
   // (v29 is card-scoped only: see VERSION_SCOPES[29].)
-  // v30: fullartland's masters re-sourced from Card Conjurer (4.39).
+  // v30: fullartland re-sourced from Card Conjurer, with its symbol slot,
+  // pill and outlined footer (4.39).
   30: ["fullartland"],
 };
 

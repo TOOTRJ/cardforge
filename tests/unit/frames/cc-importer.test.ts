@@ -44,11 +44,6 @@ type Def = {
 };
 const templates = CC_TEMPLATES as Record<string, Def>;
 
-/** New templates whose masters ship before their frame profile (4.32 / 4.39
- *  are split into an asset PR and a profile PR). Remove each one when its
- *  profile adds it to FRAME_TEMPLATE_VALUES — the test fails until then. */
-const AWAITING_PROFILE = ["m15borderless", "m15borderlessartifact", "m15fullartland"];
-
 describe("Card Conjurer recipe", () => {
   it("covers the M15-era, borderless and full-art-basic templates — every colour built or excluded with a reason — with pack paths", () => {
     expect(Object.keys(templates).sort()).toEqual([
@@ -67,14 +62,7 @@ describe("Card Conjurer recipe", () => {
       "m15tokenartifact",
     ]);
     for (const [template, def] of Object.entries(templates)) {
-      if (AWAITING_PROFILE.includes(template)) {
-        expect(
-          FRAME_TEMPLATE_VALUES as readonly string[],
-          `${template} has a profile now: drop it from AWAITING_PROFILE`,
-        ).not.toContain(template);
-      } else {
-        expect(FRAME_TEMPLATE_VALUES as readonly string[]).toContain(template);
-      }
+      expect(FRAME_TEMPLATE_VALUES as readonly string[]).toContain(template);
       const covered = [...builtColors(def as never), ...Object.keys(def.excluded ?? {})].sort();
       expect(covered, template).toEqual([...COLORS].sort());
       for (const file of sourceFilesFor(def as never)) {

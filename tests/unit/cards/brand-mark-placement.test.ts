@@ -24,6 +24,9 @@ const THIN_BORDER: Record<string, { rightPct: number; bottomPct: number }> = {
   extendedart: { rightPct: 3.5, bottomPct: 0.8 },
   battle: { rightPct: 11, bottomPct: 0.8 },
   split: { rightPct: 3.5, bottomPct: 0.8 },
+  // No border at all (4.39, borderless full-art basic): the mark sits on the
+  // art, on its pill (BRAND_MARK_ON_ART, 3.23).
+  fullartland: { rightPct: 3.5, bottomPct: 1.6 },
 };
 
 describe("brand-mark placement", () => {

@@ -1011,6 +1011,50 @@ const M15DEVOID: FrameProfile = {
   symbolRect: { topPct: 56.2, leftPct: 80.2, widthPct: 12, heightPct: 5.2 },
 };
 
+// M15 Borderless — the 2019+ borderless frame (frames plan 4.32; Card
+// Conjurer 'Borderless (Alt)', packBorderless.js @2fcddba, frames bucket
+// only). The art runs to the card's top and side edges (CC artBounds 0/0/100
+// × 92.24) under dark translucent bars and text box (the box is RGBA
+// 0,0,0,128, baked into the master), above an opaque black bottom bar that
+// carries the artist line and the brand mark (the default placement lands
+// in it). CC's text bounds are its regular M15 bounds (title y 5.22, type y
+// 56.64, rules 63.03 h 28.75), so the measured M15 slots carry over, with
+// CC's white ink on the title, type line, rules and P/T. The set symbol
+// keeps M15's inline place: right edge 92.2, centred 59.1 (CC 92.13 /
+// 59.10). The P/T plate is the pack's own 274 × 140 (CC bounds 1146/1861 on
+// 1500 × 2100 = 76.4/88.62/18.27 × 6.67, its native 1.96 aspect); the
+// digits keep M15's box (CC's pt box 79.28/90.2/13.67 × 3.72) and may use
+// the plate's face from 1188 px (past the lit bevel) to 1394 px (the shaded
+// bevel), measured on the digits' rows of the plates. Colourless is CC's
+// see-through C frame: the art is under it already, so no underFrameArt.
+// The cost gets the Card Conjurer lift (CC mana y 0.0613, as on M15).
+const BORDERLESS_INK = "#ffffff";
+const M15BORDERLESS: FrameProfile = {
+  ...M15,
+  label: "M15 Borderless",
+  costDy: CC_M15_COST_DY,
+  artSlot: { topPct: 0, leftPct: 0, widthPct: 100, heightPct: 92.24 },
+  title: { ...M15.title, colorHex: BORDERLESS_INK },
+  type: { ...M15.type, colorHex: BORDERLESS_INK },
+  rules: { ...M15.rules, colorHex: BORDERLESS_INK },
+  pt: {
+    ...M15.pt!,
+    plateRect: { topPct: 88.62, leftPct: 76.4, widthPct: 18.27, heightPct: 6.67 },
+    inkSpanPct: { leftPct: 79.2, rightPct: 92.93 },
+    colorHex: BORDERLESS_INK,
+    plateAssetPathTemplate: "/frames/m15borderless/pt/{color}.png",
+  },
+};
+// …and its artifact dress: CC's A frame for a colourless artifact (with
+// the pack's artifact plate), the colour frames for a coloured one — a
+// borderless frame has no body for 4.16's artifact interior, and the prints
+// (FDN #295, FRA #327) wear the colour's bars. Same geometry.
+const M15BORDERLESSARTIFACT: FrameProfile = {
+  ...M15BORDERLESS,
+  label: "M15 Borderless Artifact",
+  pt: { ...M15BORDERLESS.pt!, plateAssetPathTemplate: "/frames/m15borderlessartifact/pt/{color}.png" },
+};
+
 // Alpha Land — the 1993 frame's land variant ({color}lcard from
 // magic-agclassic.mse-style, re-cut by the same build-alpha-frames.mjs):
 // agclassic's opening and text layout, a land treatment and no cost. Its
@@ -2097,14 +2141,24 @@ const FULLART: FrameProfile = {
   footer: { ...M15.footer!, colorHex: INK_LIGHT },
 };
 
-// Full-art basic land — floating name + type bars over edge-to-edge art; the
-// big mana symbol comes from the basic-land watermark (deliberately not
-// baked into the frame, so it stays tintable and overridable).
-const FULLARTLAND: FrameProfile = {
+// Full-art basic lands — Card Conjurer 'Fullart Basics (2022)' (frames plan
+// 4.39; packTextlessBasics2022.js @2fcddba, frames bucket only): a light
+// title bar, then a "Basic Land — Plains" bar with the mana symbol's disc
+// at its left end, as printed since P23 (ONE, MOM, LTR … FDN, HOB). The bars
+// measure 4.24–11.10 and 83.95–90.81 % H on the masters (CC title y 5.22,
+// type x 18.87 / y 84.81); the slots below were tuned on the old MSE
+// master's bars (4.9–10.7, 84.5–90.3) and sit within 1 % of CC's, so they
+// stay. Dark ink on the light bars (M15's). Basic lands only (0.26's
+// BASIC_ONLY_TEMPLATES, lib/creator/card-kinds.ts): no cost, and a basic
+// prints no rules — its symbol goes in the frame's own disc (3.24's
+// basicSymbol, "glyph": CC paints the disc, its 168 px s?.png symbol is
+// drawn on it; frames bucket), never across the art. The set symbol is
+// right-anchored at 92.13 %W and centred on 87.39 %H (CC setSymbolBounds).
+// `rules` only places a non-basic's text and watermark, which the basic-only
+// gate keeps off these frames.
+const FULL_ART_BASIC: FrameProfile = {
   ...M15,
-  label: "Full-Art Basic Land",
   hideCost: true,
-  artSlot: { topPct: 0, leftPct: 0, widthPct: 100, heightPct: 100 },
   title: {
     ...M15.title,
     rect: { topPct: 5.6, leftPct: 9, widthPct: 80, heightPct: 4.6 },
@@ -2113,17 +2167,50 @@ const FULLARTLAND: FrameProfile = {
     ...M15.type,
     rect: { topPct: 85.4, leftPct: 18, widthPct: 66, heightPct: 4.2 },
   },
+  symbolRect: { topPct: 85.34, leftPct: 80.13, widthPct: 12, heightPct: 4.1 },
   rules: {
     rect: { topPct: 16, leftPct: 15, widthPct: 70, heightPct: 62 },
     sizePct: ptToPct(9),
     colorHex: INK_LIGHT,
     font: "body",
   },
+};
+
+/** The basic-symbol slot of a Fullart Basics (2022) template: CC's disc box,
+ *  with the template's own copy of CC's symbols (bucket objects
+ *  `<template>/symbol/{w,u,b,r,g,c}.png`, 168 × 168 — the box's exact size). */
+function fullArtBasicSymbol(template: "m15fullartland" | "fullartland"): BasicSymbolSlot {
+  return { ...BASIC_SYMBOL_CC_2022, assetPathTemplate: `/frames/${template}/symbol/{symbol}.png` };
+}
+
+// …black-bordered (NEW, 4.39): the pack's full composite. The art sits
+// inside the black ring (CC artBounds 3.94/2.81/92.14 × 89.29; the ring
+// measures 3.93 % at the sides, 2.86 % on top, from 92.10 % H below), and
+// the artist line and brand mark print in the bottom border, as on M15.
+const M15FULLARTLAND: FrameProfile = {
+  ...FULL_ART_BASIC,
+  label: "Full-Art Basic Land",
+  artSlot: { topPct: 2.81, leftPct: 3.94, widthPct: 92.14, heightPct: 89.29 },
+  basicSymbol: fullArtBasicSymbol("m15fullartland"),
+};
+
+// …borderless (re-sourced by 4.39; owner decision 4.35(a): it stays
+// borderless, with light bars): the same composite without the pack's Border
+// mask, so the art runs to every edge (FRA #382–396 print this layout with
+// dark bars — a colour treatment built only when the 1.6 log asks). The
+// artist line and the brand mark print on the art (3.23): the footer in
+// ON_ART_OUTLINE, the mark on its dark pill.
+const FULLARTLAND: FrameProfile = {
+  ...FULL_ART_BASIC,
+  label: "Borderless Full-Art Basic Land",
+  artSlot: { topPct: 0, leftPct: 0, widthPct: 100, heightPct: 100 },
+  basicSymbol: fullArtBasicSymbol("fullartland"),
+  brandMark: BRAND_MARK_ON_ART,
+  footerOnArt: true,
   footer: {
     ...M15.footer!,
     rect: { topPct: 93.2, leftPct: 6.5, widthPct: 87, heightPct: 3 },
     colorHex: INK_LIGHT,
-    shadowCss: OUTLINE_SHADOW,
   },
 };
 
@@ -2155,6 +2242,8 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   m15token: { ...M15TOKEN, underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] } },
   m15tokenartifact: { ...M15TOKEN, label: "M15 Artifact Token" },
   m15artifact: M15ARTIFACT,
+  m15borderless: M15BORDERLESS,
+  m15borderlessartifact: M15BORDERLESSARTIFACT,
   m15snow: M15SNOW,
   m15devoid: M15DEVOID,
   m15pw: M15PW,
@@ -2177,6 +2266,7 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   tarkirghostfire: TARKIRGHOSTFIRE,
   extendedart: EXTENDEDART,
   fullart: FULLART,
+  m15fullartland: M15FULLARTLAND,
   fullartland: FULLARTLAND,
   m15textless: M15TEXTLESS,
   m15textlessland: M15TEXTLESSLAND,

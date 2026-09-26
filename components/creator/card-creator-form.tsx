@@ -74,6 +74,8 @@ import type { CardFieldPatch } from "@/lib/ai/card-ideas-select";
 import { CardIdeasDialog } from "@/components/creator/card-ideas-dialog";
 import {
   ScryfallImportDialog,
+  toastImportNotice,
+  type ImportNotice,
   type ScryfallImportPayload,
 } from "@/components/creator/scryfall-import-dialog";
 import {
@@ -110,6 +112,7 @@ import { linkDeckCardAction } from "@/lib/decks/card-actions";
 import type { DeckRemixContext } from "@/types/deck";
 import {
   printingTreatmentNotice,
+  printingTreatmentOffer,
   type ScryfallImportPatch,
 } from "@/lib/scryfall/import-mapper";
 import {
@@ -1230,7 +1233,7 @@ export function CardCreatorForm({
     patch,
     importedArtUrl,
     source,
-  }: ScryfallImportPayload): string | null => {
+  }: ScryfallImportPayload): ImportNotice | null => {
     const setIfPresent = (key: keyof FormValues, value: string | undefined) => {
       if (value === undefined) return;
       setValue(key, value as never, { shouldDirty: true });
@@ -1298,13 +1301,31 @@ export function CardCreatorForm({
     // stopgap until the 1.4 resolver). Returned, not toasted: both callers
     // toast their own "Imported …" / "Pre-filled …" first and this notice
     // right after it, so it sits in front.
-    const treatmentNotice = patch.printing_treatment
-      ? printingTreatmentNotice(
-          patch.printing_treatment,
-          (getValues("frame_style.template") as FrameTemplate | undefined) ??
-            DEFAULT_FRAME_TEMPLATE,
-        )
+    const landedTemplate =
+      (getValues("frame_style.template") as FrameTemplate | undefined) ??
+      DEFAULT_FRAME_TEMPLATE;
+    const treatmentMessage = patch.printing_treatment
+      ? printingTreatmentNotice(patch.printing_treatment, landedTemplate)
       : null;
+    // PipGlyph's own frame for the treatment (the borderless M15 frame, the
+    // full-art basic — frames plan 4.32 / 4.39) is OFFERED once it is
+    // verified in this colour, never picked for the user (1.16).
+    const treatmentOffer = treatmentMessage
+      ? printingTreatmentOffer(patch, new Set(verifiedFrameKeys))
+      : null;
+    const treatmentNotice: ImportNotice | null =
+      treatmentMessage && treatmentOffer && treatmentOffer.template !== landedTemplate
+        ? {
+            message: treatmentMessage,
+            action: {
+              label: treatmentOffer.actionLabel,
+              onClick: () =>
+                setValue("frame_style.template", treatmentOffer.template, {
+                  shouldDirty: true,
+                }),
+            },
+          }
+        : treatmentMessage;
 
     setIfPresent("title", patch.title);
     setIfPresent("cost", patch.cost);
@@ -1482,7 +1503,7 @@ export function CardCreatorForm({
         toast.success(
           `Pre-filled from ${body.card.name} — change something to make it your custom proxy, then save to link it into “${deckRemix.deckTitle}”.`,
         );
-        if (treatmentNotice) toast.info(treatmentNotice, { duration: 8000 });
+        toastImportNotice(treatmentNotice);
       } catch {
         toast.error(
           `Couldn't load “${deckRemix.entryName}” — starting from a blank card.`,
@@ -2615,6 +2636,7 @@ export function CardCreatorForm({
           <ScryfallImportDialog
             signedIn={Boolean(userId)}
             onImport={handleScryfallImport}
+            verifiedFrameKeys={verifiedFrameKeys}
             open={scryfallOpen}
             onOpenChange={setScryfallOpen}
           />

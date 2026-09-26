@@ -11,6 +11,7 @@ import {
   basicSymbolGlyphSizePct,
 } from "@/lib/cards/basic-symbol";
 import {
+  BASIC_SYMBOL_CC_2022,
   BASIC_SYMBOL_MSE_SOCKET,
   BRAND_MARK_ON_ART,
   BRAND_MARK_PILL,
@@ -20,6 +21,7 @@ import {
 } from "@/lib/cards/template-layout";
 import type { FrameProfileOverride } from "@/lib/cards/profile-override";
 import { frameUrl } from "@/lib/frames/frame-url";
+import type { FrameTemplate } from "@/types/card";
 
 // ---------------------------------------------------------------------------
 // The live-preview half of the edge-to-edge / full-art renderer pieces (TODO
@@ -53,6 +55,17 @@ const onArt: FrameProfileOverride = {
   footerOnArt: true,
 };
 
+/** The host for the opt-in cases: a template that opts into none of the
+ *  pieces (extendedart spreads M15), given the pre-4.39 fullartland's
+ *  full-bleed geometry, so each case opts in through profileOverrides alone.
+ *  The full-art basics opt in by themselves since 4.39 (checked below). */
+const HOST = "extendedart";
+const HOST_GEOMETRY = {
+  artSlot: { topPct: 0, leftPct: 0, widthPct: 100, heightPct: 100 },
+  rules: { rect: { topPct: 16, leftPct: 15, widthPct: 70, heightPct: 62 } },
+  footer: { rect: { topPct: 93.2, leftPct: 6.5, widthPct: 87, heightPct: 3 } },
+} satisfies FrameProfileOverride;
+
 function plains(extra: Partial<CardPreviewData> = {}, override?: FrameProfileOverride) {
   return render(plainsUi(extra, override));
 }
@@ -66,9 +79,9 @@ function plainsUi(extra: Partial<CardPreviewData> = {}, override?: FrameProfileO
       subtypes={["Plains"]}
       colorIdentity={["white"]}
       artistCredit="Test Artist"
-      frameStyle={{ template: "fullartland" }}
+      frameStyle={{ template: HOST }}
       brandMark
-      {...(override ? { profileOverrides: { fullartland: override } } : {})}
+      profileOverrides={{ [HOST]: { ...HOST_GEOMETRY, ...override } }}
       {...extra}
     />
   );
@@ -101,7 +114,7 @@ describe("CardPreview — the basic-land symbol slot (TODO 3.24)", () => {
     expect(container.querySelector('[data-testid="basic-symbol-disc"]')).toBeNull();
     const glyph = container.querySelector("i.ms.ms-w") as HTMLElement;
     const holder = glyph.parentElement as HTMLElement;
-    expectRect(holder, getFrameProfile("fullartland").rules.rect);
+    expectRect(holder, HOST_GEOMETRY.rules.rect);
   });
 
   it("swaps an explicit watermark into the slot", () => {
@@ -157,11 +170,15 @@ describe("CardPreview — the brand mark and the footer on the art (TODO 3.23)",
       Array.from(c.querySelectorAll("span")).find((s) => /Test.Artist/.test(s.textContent ?? ""))!
         .parentElement as HTMLElement;
     const on = plains({}, onArt);
-    // fullartland declares its own outline — drawn now.
-    expect(footerOf(on.container).style.textShadow).toBe(getFrameProfile("fullartland").footer!.shadowCss);
+    // The host's footer declares no outline of its own: ON_ART_OUTLINE.
+    expect(footerOf(on.container).style.textShadow).toBe(ON_ART_OUTLINE);
     cleanup();
     const off = plains();
     expect(footerOf(off.container).style.textShadow).toBe("");
+    cleanup();
+    // A footer that declares one draws it on the art.
+    const own = plains({}, { ...onArt, footer: { shadowCss: "1px 1px 0 #000" } });
+    expect(footerOf(own.container).style.textShadow).toBe("1px 1px 0 #000");
     cleanup();
     // A footer that declares none takes ON_ART_OUTLINE.
     const textless = render(
@@ -248,5 +265,88 @@ describe("CardPreview — a textless frame (TODO 3.24)", () => {
     expect(text).toContain("Giant");
     expect(text).toContain("Trample");
     expect(text).toContain("Big.");
+  });
+});
+
+describe("CardPreview — the full-art basics of 4.39 (their own profiles)", () => {
+  const basic = (template: FrameTemplate, extra: Partial<CardPreviewData> = {}) =>
+    render(
+      <CardPreview
+        title="Plains"
+        cardType="land"
+        supertype="Basic"
+        subtypes={["Plains"]}
+        colorIdentity={["white"]}
+        artistCredit="Test Artist"
+        frameStyle={{ template }}
+        brandMark
+        {...extra}
+      />,
+    );
+  const markOf = (c: HTMLElement) =>
+    Array.from(c.querySelectorAll("div")).find((d) => d.textContent === "pipglyph.com") as HTMLElement;
+  const footerOf = (c: HTMLElement) =>
+    Array.from(c.querySelectorAll("span")).find((s) => /Test.Artist/.test(s.textContent ?? ""))!
+      .parentElement as HTMLElement;
+
+  it("fullartland: Card Conjurer's symbol in the frame's disc, the pill and the outlined artist line, nothing over the art", () => {
+    const { container } = basic("fullartland");
+    const box = basicSymbolBox(BASIC_SYMBOL_CC_2022.rect, 7 / 5);
+    // CC paints the disc: none drawn, the symbol image on top at the full box.
+    expect(container.querySelector('[data-testid="basic-symbol-disc"]')).toBeNull();
+    const symbol = container.querySelector('[data-testid="basic-symbol"]') as HTMLElement;
+    expectRect(symbol, box);
+    const img = symbol.querySelector("img") as HTMLImageElement;
+    expect(img.getAttribute("src")).toBe(frameUrl("/frames/fullartland/symbol/w.webp"));
+    expect(img.style.width).toBe("100%");
+    // No big mana-font watermark across the art.
+    expect(container.querySelectorAll("i.ms")).toHaveLength(0);
+    const mark = markOf(container);
+    expect(mark.style.bottom).toBe(`${BRAND_MARK_ON_ART.bottomPct}%`);
+    expect(mark.style.background).toBe(rgba(BRAND_MARK_PILL.fill));
+    expect(footerOf(container).style.textShadow).toBe(ON_ART_OUTLINE);
+  });
+
+  it("m15fullartland: the same slot from its own image; mark and artist line stay in the black border", () => {
+    const { container } = basic("m15fullartland");
+    const img = container.querySelector('[data-testid="basic-symbol"] img') as HTMLImageElement;
+    expect(img.getAttribute("src")).toBe(frameUrl("/frames/m15fullartland/symbol/w.webp"));
+    const mark = markOf(container);
+    expect(mark.style.background).toBe("");
+    expect(footerOf(container).style.textShadow).toBe("");
+    expect(container.querySelectorAll("i.ms")).toHaveLength(0);
+  });
+
+  it("an explicit mana watermark swaps the symbol image", () => {
+    const { container } = basic("m15fullartland", { watermark: { kind: "mana", key: "g", size: "large" } });
+    const img = container.querySelector('[data-testid="basic-symbol"] img') as HTMLImageElement;
+    expect(img.getAttribute("src")).toBe(frameUrl("/frames/m15fullartland/symbol/g.webp"));
+  });
+});
+
+describe("CardPreview — the borderless M15 frame (4.32)", () => {
+  it("prints white ink and draws the pack's P/T plate in its own box", () => {
+    const { container } = render(
+      <CardPreview
+        title="Grizzly Bears"
+        cost="{1}{G}"
+        cardType="creature"
+        subtypes={["Bear"]}
+        colorIdentity={["green"]}
+        rulesText="Vigilance"
+        power="2"
+        toughness="2"
+        frameStyle={{ template: "m15borderless" }}
+      />,
+    );
+    const profile = getFrameProfile("m15borderless");
+    expect(profile.title.colorHex).toBe("#ffffff");
+    const plate = Array.from(container.querySelectorAll("img")).find(
+      (i) => i.getAttribute("src") === frameUrl("/frames/m15borderless/pt/g.png"),
+    ) as HTMLImageElement;
+    expect(plate).toBeTruthy();
+    expectRect(plate, profile.pt!.plateRect!);
+    // The art runs to the top and side edges, over the bottom bar.
+    expect(profile.artSlot).toEqual({ topPct: 0, leftPct: 0, widthPct: 100, heightPct: 92.24 });
   });
 });

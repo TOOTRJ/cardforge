@@ -78,7 +78,7 @@ describe("the hedron frame lives in its own Zendikar Rising set", () => {
 
   it("leaves the Full Art set with the full-art basic and textless frames only", () => {
     const fullArt = FRAME_TEMPLATE_VALUES.filter((t) => FRAME_TEMPLATE_SET[t] === "fullartset");
-    expect(fullArt).toEqual(["fullartland", "m15textless", "m15textlessland"]);
+    expect(fullArt).toEqual(["m15fullartland", "fullartland", "m15textless", "m15textlessland"]);
   });
 
   it("is offered with the showcase set frames, before the treatments", () => {
@@ -96,7 +96,9 @@ describe("the hedron frame lives in its own Zendikar Rising set", () => {
 describe("eraGroupFrameLabel", () => {
   it("names the set of a showcase frame and nothing else", () => {
     expect(eraGroupFrameLabel("lotr")).toBe("The Lord of the Rings — Ring");
-    expect(eraGroupFrameLabel("fullartland")).toBe("Full Art — Basic Land");
+    expect(eraGroupFrameLabel("m15fullartland")).toBe("Full Art — Basic Land");
+    expect(eraGroupFrameLabel("fullartland")).toBe("Full Art — Borderless Basic Land");
+    expect(eraGroupFrameLabel("m15borderless")).toBe("Borderless");
     expect(eraGroupFrameLabel("tarkirdragon")).toBe("Dragon Wing (Multiverse Legends)");
     expect(eraGroupFrameLabel("m15snow")).toBe("Snow");
     expect(eraGroupFrameLabel("retroland")).toBe("Land");

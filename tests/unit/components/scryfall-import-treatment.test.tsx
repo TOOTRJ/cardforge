@@ -93,7 +93,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-async function pickPrinting(key: Key, onImport = vi.fn()) {
+async function pickPrinting(key: Key, onImport = vi.fn(), verifiedFrameKeys?: string[]) {
   current = key;
   render(
     <ScryfallImportDialog
@@ -101,6 +101,7 @@ async function pickPrinting(key: Key, onImport = vi.fn()) {
       open
       onOpenChange={() => {}}
       onImport={onImport}
+      verifiedFrameKeys={verifiedFrameKeys}
     />,
   );
   fireEvent.change(screen.getByLabelText("Search Scryfall"), {
@@ -158,5 +159,40 @@ describe("ScryfallImportDialog — printing treatment heads-up", () => {
   it("plain M15 printing (DMU #107): no heads-up", async () => {
     await pickPrinting("dmu-107");
     expect(screen.queryByText(/which PipGlyph doesn't offer yet/)).toBeNull();
+  });
+});
+
+// Frames plan 4.32 / 4.39: once PipGlyph's frame for the treatment is
+// verified in the card's colour, the heads-up says the creator offers it and
+// the notice carries the action — the import itself still lands on the
+// plain frame (never an unverified or unasked-for frame).
+describe("ScryfallImportDialog — PipGlyph's frame for the treatment, once verified", () => {
+  it("names the offered frame for borderless Sheoldred when m15borderless is verified in black", async () => {
+    const onImport = await pickPrinting("dmu-435", vi.fn(), ["m15/b", "m15borderless/b"]);
+    expect(
+      screen.getByText(
+        "This printing is borderless — the import uses a bordered frame, then offers PipGlyph's Borderless frame.",
+      ),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("button", { name: /use as starting point/i }));
+    await waitFor(() => expect(onImport).toHaveBeenCalledTimes(1));
+    expect(onImport.mock.calls[0]![0].patch.frame_template).toBe("m15");
+  });
+
+  it("keeps today's heads-up when the frame is verified in another colour only", async () => {
+    await pickPrinting("dmu-435", vi.fn(), ["m15borderless/w"]);
+    expect(screen.getByText(/This printing is borderless, which PipGlyph doesn't offer yet/)).toBeTruthy();
+  });
+
+  it("toasts a notice's action with it", async () => {
+    const action = { label: "Use Borderless", onClick: vi.fn() };
+    const message = "This printing is borderless — PipGlyph used the bordered M15 (2015) Standard frame.";
+    const onImport = await pickPrinting("dmu-435", vi.fn(() => ({ message, action })));
+    vi.mocked(toast.info).mockClear();
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("button", { name: /use as starting point/i }));
+    await waitFor(() => expect(onImport).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(toast.info).toHaveBeenCalledWith(message, { duration: 12000, action }));
   });
 });

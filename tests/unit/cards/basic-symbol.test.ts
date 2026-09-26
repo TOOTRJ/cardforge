@@ -24,10 +24,36 @@ const plains = { cardType: "land", supertype: "Basic", subtypes: ["Plains"], tit
 const withSlot = { basicSymbol: BASIC_SYMBOL_MSE_SOCKET };
 
 describe("basicSymbolFor", () => {
-  it("is null on a profile without a slot — every profile today", () => {
+  it("is null on a profile without a slot — every profile but the full-art basics", () => {
     for (const template of FRAME_TEMPLATE_VALUES) {
+      if (template === "m15fullartland" || template === "fullartland") continue;
       expect(basicSymbolFor(getFrameProfile(template), plains, null), template).toBeNull();
     }
+  });
+
+  it("puts a full-art basic's symbol in Card Conjurer's disc, from the template's own image (4.39)", () => {
+    for (const template of ["m15fullartland", "fullartland"] as const) {
+      const plan = basicSymbolFor(getFrameProfile(template), plains, null)!;
+      expect(plan.slot.rect, template).toEqual(BASIC_SYMBOL_CC_2022.rect);
+      expect(plan.slot.style, template).toBe("glyph");
+      expect(basicSymbolAssetPaths(plan), template).toEqual([`/frames/${template}/symbol/w.png`]);
+    }
+    // CC's disc box is square on the card (168 × 168 px), so the image fills it.
+    expect(basicSymbolBox(BASIC_SYMBOL_CC_2022.rect, 7 / 5)).toEqual(BASIC_SYMBOL_CC_2022.rect);
+    // A nonbasic on the frame (the basic-only gate refuses it) keeps no plan.
+    expect(
+      basicSymbolFor(
+        getFrameProfile("fullartland"),
+        {
+          cardType: "land",
+          supertype: null,
+          subtypes: ["Plains", "Island"],
+          title: "Hallowed Fountain",
+          rulesText: "({T}: Add {W} or {U}.)",
+        },
+        null,
+      ),
+    ).toBeNull();
   });
 
   it("prints a basic's own mana symbol, fully opaque", () => {

@@ -42,9 +42,18 @@ environment's own Supabase project, taken from `NEXT_PUBLIC_SUPABASE_URL`.
 
 ## Card Conjurer frames (4.3)
 
-`scripts/import-cc-frames.mjs` builds eight M15-era templates from Card
-Conjurer's packs into `.frames-build/`: m15, m15artifact, m15land, m15snow,
-m15snowland, m15pw, m15token and m15tokenartifact.
+`scripts/import-cc-frames.mjs` builds the Card Conjurer templates into
+`.frames-build/`:
+
+- the M15 family: m15, m15artifact, m15land, m15snow, m15snowland, m15pw,
+  m15token and m15tokenartifact (4.3 / 4.4);
+- the borderless M15 frame from 'Borderless (Alt)' (4.32): m15borderless and
+  its artifact dress m15borderlessartifact, each with the pack's own P/T
+  plates;
+- the full-art basics from 'Fullart Basics (2022)' (4.39): the
+  black-bordered m15fullartland and the borderless fullartland (the same
+  frame with its Border mask erased), each with CC's mana symbols at
+  `<template>/symbol/{w,u,b,r,g,c}.png` for the profile's basic-symbol slot.
 
 ```bash
 node scripts/import-cc-frames.mjs --only m15,m15land
@@ -52,7 +61,7 @@ node scripts/import-cc-frames.mjs --only m15,m15land
 
 - **Source.** The Investigamer/cardconjurer fork at a pinned commit, cached
   under `~/.cache/pipglyph-cc/<commit>`, or set `CC_CACHE`. It takes about
-  4 minutes for all nine templates.
+  4 minutes for the M15 family; `--only` builds a subset.
 - **Recipe.** It is in `scripts/lib/cc-frames.mjs`. Layers are composited
   exactly as Card Conjurer draws them: only each mask's alpha counts, in
   CC's draw order, at the pack's native size, then downscaled once. A
@@ -66,7 +75,9 @@ node scripts/import-cc-frames.mjs --only m15,m15land
   composite of CC's silver token frame at reduced opacity, because CC's
   bordered token pack has no colourless frame.
 - **Output.** 1500×2100 PNGs with rounded transparent corners, WebP
-  siblings, and P/T plates at native size.
+  siblings, P/T plates at native size, and (full-art basics) the 168 px
+  mana symbols. The borderless and full-art masters are native 1500×2100
+  and copied 1:1 (no resample).
 - **Provenance.** Which pack files made each frame is written to
   `lib/cards/frame-sources.json`.
 - **Edge contract (TODO 7.7).** Every master is checked against its
@@ -83,7 +94,11 @@ node scripts/import-cc-frames.mjs --only m15,m15land
   frames only ever go to the bucket.
 
 Shipping them is 4.4: publish, delete the git copies, fix the profiles, bump
-the layout version once and sweep.
+the layout version once and sweep. 4.32 / 4.39 followed the same path: the
+new templates need no sweep (no card sits on them), and fullartland's
+re-source is its own template-scoped v30 sweep. A new template stays out of
+the picker until the owner verifies each colour in `/admin/frame-compare`;
+an import never lands on one (the creator only offers it, once verified).
 
 ## Shipping a frame change
 

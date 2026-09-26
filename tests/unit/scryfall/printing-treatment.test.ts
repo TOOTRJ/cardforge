@@ -7,8 +7,10 @@ import {
   printingTreatmentFromScryfall,
   printingTreatmentHint,
   printingTreatmentNotice,
+  printingTreatmentOffer,
   type PrintingTreatment,
 } from "@/lib/scryfall/import-mapper";
+import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import type { FrameTemplate } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -160,6 +162,88 @@ describe("printingTreatmentHint — the import dialog, before committing", () =>
     );
     expect(printingTreatmentHint("textless")).toBe(
       "This printing is textless, which PipGlyph doesn't offer yet — the import uses the regular frame instead.",
+    );
+  });
+});
+
+// Frames plan 4.32 / 4.39: the borderless M15 frame and the full-art basic
+// exist now, but the import never picks them — it lands on the plain frame
+// (the frame choice above is unchanged) and the creator OFFERS PipGlyph's
+// frame, only once the owner has verified it in the card's colour.
+describe("printingTreatmentOffer — PipGlyph's frame for the treatment, once verified", () => {
+  const patchOf = (key: PrintingKey) => mapScryfallToFormPatch(printing(key));
+  const verified = (...keys: [string, string][]) => new Set(keys.map(([t, k]) => frameComboKey(t, k)));
+
+  it("offers nothing while the frame is unverified (today), so the import stays on the plain frame", () => {
+    for (const key of Object.keys(printings) as PrintingKey[]) {
+      expect(printingTreatmentOffer(patchOf(key), new Set()), key).toBeNull();
+    }
+    expect(patchOf("dmu-435").frame_template).toBe("m15");
+    expect(patchOf("one-262").frame_template).toBe("m15land");
+  });
+
+  it("offers Borderless for a borderless creature or enchantment once verified in its colour", () => {
+    // Sheoldred DMU #435 (black) — the crown is 4.6's, so this is `nearest`.
+    expect(printingTreatmentOffer(patchOf("dmu-435"), verified(["m15borderless", "b"]))).toEqual({
+      template: "m15borderless",
+      frameLabel: "Borderless",
+      actionLabel: "Use Borderless",
+    });
+    // Verified in another colour only: nothing.
+    expect(printingTreatmentOffer(patchOf("dmu-435"), verified(["m15borderless", "w"]))).toBeNull();
+    // BLB #316 (a borderless red showcase enchantment): the nearest look.
+    expect(printingTreatmentOffer(patchOf("blb-316"), verified(["m15borderless", "r"]))?.template).toBe(
+      "m15borderless",
+    );
+    // A black-bordered showcase or extended-art printing has no offer.
+    expect(printingTreatmentOffer(patchOf("tdm-400"), verified(["m15borderless", "w"]))).toBeNull();
+    expect(printingTreatmentOffer(patchOf("dmu-384"), verified(["m15borderless", "w"]))).toBeNull();
+  });
+
+  it("offers the artifact dress for an artifact or an Artifact Creature, and nothing for kinds the pack can't draw", () => {
+    const base = { printing_treatment: "borderless" as const, color_identity: ["colorless" as const] };
+    const keys = verified(["m15borderless", "c"], ["m15borderlessartifact", "c"]);
+    expect(printingTreatmentOffer({ ...base, kind: "artifact", card_type: "artifact" }, keys)?.template).toBe(
+      "m15borderlessartifact",
+    );
+    expect(
+      printingTreatmentOffer({ ...base, kind: "creature", card_type: "creature", supertype: "Artifact" }, keys)
+        ?.template,
+    ).toBe("m15borderlessartifact");
+    expect(printingTreatmentOffer({ ...base, kind: "creature", card_type: "creature" }, keys)?.template).toBe(
+      "m15borderless",
+    );
+    for (const kind of ["planeswalker", "land", "token", "saga", "battle"] as const) {
+      expect(printingTreatmentOffer({ ...base, kind }, keys), kind).toBeNull();
+    }
+  });
+
+  it("offers the black-bordered full-art basic for a full-art basic land, never for a borderless basic", () => {
+    // ONE #262 (the 2022 design, exact) and BFZ #250 (Zendikar's split bar,
+    // 4.40 — the nearest until then). The mapper colours a Plains white.
+    const keys = verified(["m15fullartland", "w"]);
+    for (const key of ["one-262", "bfz-250"] as const) {
+      expect(patchOf(key).color_identity, key).toEqual(["white"]);
+      expect(printingTreatmentOffer(patchOf(key), keys), key).toEqual({
+        template: "m15fullartland",
+        frameLabel: "Full-Art Basic",
+        actionLabel: "Use Full-Art Basic",
+      });
+    }
+    // A borderless basic (FRA #382, or UNF's textless run) gets no offer:
+    // its textless printings outnumber the barred ones (1.17).
+    const borderless = { ...patchOf("one-262"), printing_treatment: "borderless" as const };
+    expect(printingTreatmentOffer(borderless, verified(["fullartland", "w"], ["m15borderless", "w"]))).toBeNull();
+    // A full-art token or a full-art creature: nothing.
+    expect(printingTreatmentOffer(patchOf("sch-3"), verified(["m15fullartland", "b"]))).toBeNull();
+  });
+
+  it("the dialog's heads-up names the offered frame, or keeps today's copy", () => {
+    expect(
+      printingTreatmentHint("borderless", { template: "m15borderless", frameLabel: "Borderless", actionLabel: "Use Borderless" }),
+    ).toBe("This printing is borderless — the import uses a bordered frame, then offers PipGlyph's Borderless frame.");
+    expect(printingTreatmentHint("borderless", null)).toBe(
+      "This printing is borderless, which PipGlyph doesn't offer yet — the import uses a bordered frame instead.",
     );
   });
 });

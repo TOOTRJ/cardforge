@@ -4,6 +4,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import { basicSymbolBox, BASIC_SYMBOL_DISC_FILL } from "@/lib/cards/basic-symbol";
 import {
+  BASIC_SYMBOL_CC_2022,
   BASIC_SYMBOL_MSE_SOCKET,
   BRAND_MARK_ON_ART,
   BRAND_MARK_PILL,
@@ -17,16 +18,21 @@ import { RENDER_PRESETS } from "@/lib/render/card-image";
 // ---------------------------------------------------------------------------
 // Edge-to-edge and full-art renderer pieces on REAL bakes (TODO 3.23 / 3.24):
 // the basic-land symbol slot, the brand mark's pill and the outlined footer
-// on the art, a split type line and a textless frame. No profile opts in
-// today, so each case opts a real template in through profileOverrides (the
-// renderers merge them over the code profile, resolveFrameProfile); the
-// frames are the git masters (fullartland, m15textless). The preview's twin
-// is tests/unit/components/edge-to-edge-preview.test.tsx.
+// on the art, a split type line and a textless frame. The mechanics are
+// opted into on a HOST that opts into none of them (extendedart, given the
+// pre-4.39 fullartland's full-bleed geometry) through profileOverrides (the
+// renderers merge them over the code profile, resolveFrameProfile), with a
+// see-through stand-in master, so every pixel that isn't art is the
+// renderer's. The profiles that opt in by themselves — 4.39's full-art
+// basics and 4.32's borderless M15 frame — are baked as they ship at the
+// end, on stand-in masters too (theirs are frames-bucket objects). The
+// textless case uses m15textless's git master. The preview's twin is
+// tests/unit/components/edge-to-edge-preview.test.tsx.
 //
 // The art is one flat colour, so anything that isn't that colour where the
 // art shows is something the renderer drew. Rendered at the default preset
-// (750 × 1050). Bucket assets (the M15 P/T plate a textless creature draws,
-// a symbol image) come from a stubbed bucket, like pw-cost-bake.test.tsx.
+// (750 × 1050). Bucket assets (the stand-in masters, P/T plates, symbol
+// images) come from a stubbed bucket, like pw-cost-bake.test.tsx.
 // ---------------------------------------------------------------------------
 
 const W = RENDER_PRESETS.default.width;
@@ -39,18 +45,37 @@ const SYMBOL_RGB = [255, 0, 255] as const;
 let artUrl = "";
 let restore: () => void = () => {};
 
-async function solid(w: number, h: number, rgb: readonly number[]) {
-  return sharp({ create: { width: w, height: h, channels: 4, background: { r: rgb[0], g: rgb[1], b: rgb[2], alpha: 1 } } })
+async function solid(w: number, h: number, rgb: readonly number[], alpha = 1) {
+  return sharp({ create: { width: w, height: h, channels: 4, background: { r: rgb[0], g: rgb[1], b: rgb[2], alpha } } })
     .png()
     .toBuffer();
 }
 
+/** The opt-in cases' host (see the header): no piece of its own, and the
+ *  pre-4.39 fullartland's full-bleed geometry. */
+const HOST = "extendedart";
+const HOST_GEOMETRY = {
+  artSlot: { topPct: 0, leftPct: 0, widthPct: 100, heightPct: 100 },
+  type: { rect: { topPct: 85.4, leftPct: 18, widthPct: 66, heightPct: 4.2 } },
+  rules: { rect: { topPct: 16, leftPct: 15, widthPct: 70, heightPct: 62 } },
+  footer: { rect: { topPct: 93.2, leftPct: 6.5, widthPct: 87, heightPct: 3 } },
+} satisfies FrameProfileOverride;
+
 beforeAll(async () => {
   artUrl = `data:image/png;base64,${(await solid(600, 840, ART_RGB)).toString("base64")}`;
   const { frameObjectKey, setFrameStorageForTests } = await import("@/lib/frames/frame-url");
+  const clear = await solid(150, 210, [0, 0, 0], 0);
   const files: Record<string, Buffer> = {
     "m15/pt/g.png": await solid(240, 154, PLATE_RGB),
     "fullartland/symbol/w.png": await solid(168, 168, SYMBOL_RGB),
+    // See-through stand-in masters (the host's, and the new frames').
+    [`${HOST}/w.png`]: clear,
+    [`${HOST}/g.png`]: clear,
+    "fullartland/w.png": clear,
+    "m15fullartland/w.png": clear,
+    "m15fullartland/symbol/w.png": await solid(168, 168, SYMBOL_RGB),
+    "m15borderless/g.png": clear,
+    "m15borderless/pt/g.png": await solid(274, 140, PLATE_RGB),
   };
   const manifest = {
     version: 1 as const,
@@ -133,14 +158,19 @@ const onArt = (extra: FrameProfileOverride = {}): FrameProfileOverride => ({
   footerOnArt: true,
   ...extra,
 });
-const fullart = (override?: FrameProfileOverride) =>
-  ({ frameStyle: { template: "fullartland" }, ...(override ? { profileOverrides: { fullartland: override } } : {}) }) as const;
+const fullart = (override: FrameProfileOverride = {}) =>
+  ({
+    frameStyle: { template: HOST },
+    profileOverrides: {
+      [HOST]: { ...HOST_GEOMETRY, ...override, type: { ...HOST_GEOMETRY.type, ...override.type } },
+    },
+  }) as const;
 
 describe("a full-art Plains with a basic-symbol slot (TODO 3.24)", () => {
   it("draws the symbol in the socket and nothing over the art", async () => {
     const today = await bake({ ...plains, ...fullart() });
     const slotted = await bake({ ...plains, ...fullart(onArt()) });
-    const rules = getFrameProfile("fullartland").rules.rect;
+    const rules = HOST_GEOMETRY.rules.rect;
     // Today the automatic big watermark covers the middle of the art…
     expect(count(today, rules, (p) => !isArt(p))).toBeGreaterThan(20_000);
     // …with the slot, the art there is untouched.
@@ -181,7 +211,7 @@ describe("a full-art Plains with a basic-symbol slot (TODO 3.24)", () => {
     // The black skull, not the white sun, and still nothing over the art.
     expect(count(swamp, box, (p) => lum(p) < 45)).toBeGreaterThan(800);
     expect(count(swamp, box, (p) => lum(p) > 245)).toBeLessThan(50);
-    expect(count(swamp, getFrameProfile("fullartland").rules.rect, (p) => !isArt(p))).toBe(0);
+    expect(count(swamp, HOST_GEOMETRY.rules.rect, (p) => !isArt(p))).toBe(0);
   });
 
   it("draws the slot's symbol image when it has one (preloaded like any frame asset)", async () => {
@@ -237,7 +267,7 @@ describe("the brand mark and the footer on the art (TODO 3.23)", () => {
   });
 
   it("outlines the artist line when the profile prints it on the art", async () => {
-    const footer = getFrameProfile("fullartland").footer!.rect;
+    const footer = HOST_GEOMETRY.footer.rect;
     const outlined = await bake({ ...plains, ...fullart(onArt()) });
     const plain = await bake({ ...plains, ...fullart(onArt({ footerOnArt: false })) });
     const dark = (p: [number, number, number]) => lum(p) < 40;
@@ -316,8 +346,9 @@ describe("art framing across a treatment switch (TODO 3.23)", () => {
 });
 
 describe("a split type line (TODO 3.24)", () => {
-  // Boxes on fullartland's own type bar (84.5–90.3 % H), either side of a
-  // gap — CC's ZEN boxes (TYPE_SPLIT_ZEN) sit on the ZEN frame's bar.
+  // Boxes on the pre-4.39 fullartland's type bar (84.5–90.3 % H), either
+  // side of a gap — CC's ZEN boxes (TYPE_SPLIT_ZEN) sit on the ZEN frame's
+  // bar.
   const split = {
     leftRect: { topPct: 85.4, leftPct: 18, widthPct: 28, heightPct: 4.2 },
     rightRect: { topPct: 85.4, leftPct: 58, widthPct: 26, heightPct: 4.2 },
@@ -388,5 +419,69 @@ describe("a textless frame (TODO 3.24)", () => {
     const gray = ([r, g, b]: [number, number, number]) => Math.abs(r - 128) <= 3 && Math.abs(g - 128) <= 3 && Math.abs(b - 128) <= 3;
     expect(count(textless, plate, gray)).toBeGreaterThan(500);
     expect(count(textless, p.pt!.rect, (px) => lum(px) < 60)).toBeGreaterThan(50);
+  });
+});
+
+describe("the profiles that ship the pieces (4.39 full-art basics, 4.32 borderless)", () => {
+  const magenta = ([r, g, b]: [number, number, number]) => r > 250 && g < 5 && b > 250;
+  const ccBox = basicSymbolBox(BASIC_SYMBOL_CC_2022.rect, 7 / 5);
+  const boxArea = ((ccBox.widthPct / 100) * W) * ((ccBox.heightPct / 100) * H);
+
+  it("fullartland: the symbol in CC's disc, the pill and the outlined artist line, nothing over the art", async () => {
+    const plainsCard = { ...plains, frameStyle: { template: "fullartland" } };
+    const b = await bake(plainsCard, true);
+    // The stand-in symbol image fills Card Conjurer's 168 px box.
+    expect(count(b, ccBox, magenta)).toBeGreaterThan(0.9 * boxArea);
+    // Nothing across the art where the big watermark used to print.
+    expect(count(b, HOST_GEOMETRY.rules.rect, (p) => !isArt(p))).toBe(0);
+    // The art reaches every corner.
+    expect(isArt(b.px(1, 1))).toBe(true);
+    expect(isArt(b.px(W - 2, 2))).toBe(true);
+    expect(isArt(b.px(1, H - 2))).toBe(true);
+    // The pill behind the mark, bottom right, on the art.
+    const expected = ART_RGB.map((c, i) => 0.62 * [12, 12, 16][i] + 0.38 * c);
+    const isPill = (p: [number, number, number]) => p.every((c, i) => Math.abs(c - expected[i]) <= 4);
+    expect(count(b, { topPct: 94, leftPct: 70, widthPct: 30, heightPct: 6 }, isPill)).toBeGreaterThan(1000);
+    // The artist line outlined in black on the art.
+    const footer = getFrameProfile("fullartland").footer!.rect;
+    expect(count(b, footer, (p) => lum(p) < 40)).toBeGreaterThan(150);
+  });
+
+  it("m15fullartland: the same slot from its own image; the mark is not on a pill", async () => {
+    const b = await bake({ ...plains, frameStyle: { template: "m15fullartland" } }, true);
+    expect(count(b, ccBox, magenta)).toBeGreaterThan(0.9 * boxArea);
+    expect(count(b, HOST_GEOMETRY.rules.rect, (p) => !isArt(p))).toBe(0);
+    const expected = ART_RGB.map((c, i) => 0.62 * [12, 12, 16][i] + 0.38 * c);
+    const isPill = (p: [number, number, number]) => p.every((c, i) => Math.abs(c - expected[i]) <= 4);
+    expect(count(b, { topPct: 94, leftPct: 70, widthPct: 30, heightPct: 6 }, isPill)).toBe(0);
+  });
+
+  it("m15borderless: white ink, and the pack's plate in its own box with the white P/T on it", async () => {
+    const p = getFrameProfile("m15borderless");
+    const bear = await bake({
+      title: "Grizzly Bears",
+      cost: "{1}{G}",
+      cardType: "creature",
+      subtypes: ["Bear"],
+      colorIdentity: ["green"],
+      rulesText: "Vigilance",
+      power: "2",
+      toughness: "2",
+      frameStyle: { template: "m15borderless" },
+    });
+    const white = (px: [number, number, number]) => lum(px) > 235;
+    const gray = ([r, g, b]: [number, number, number]) =>
+      Math.abs(r - 128) <= 3 && Math.abs(g - 128) <= 3 && Math.abs(b - 128) <= 3;
+    expect(count(bear, p.title.rect, white)).toBeGreaterThan(300);
+    expect(count(bear, p.type.rect, white)).toBeGreaterThan(200);
+    expect(count(bear, p.rules.rect, white)).toBeGreaterThan(100);
+    // The plate fills plateRect (its native 1.96 aspect), not the value box.
+    const plate = p.pt!.plateRect!;
+    expect(count(bear, plate, gray)).toBeGreaterThan(0.6 * ((plate.widthPct / 100) * W) * ((plate.heightPct / 100) * H));
+    expect(count(bear, { ...plate, topPct: plate.topPct - 1, heightPct: 0.8 }, gray)).toBe(0);
+    expect(count(bear, p.pt!.rect, white)).toBeGreaterThan(50);
+    // Art in the top corners: the frame is borderless.
+    expect(isArt(bear.px(1, 1))).toBe(true);
+    expect(isArt(bear.px(W - 2, 2))).toBe(true);
   });
 });
