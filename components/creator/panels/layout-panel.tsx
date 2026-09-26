@@ -26,8 +26,10 @@ import {
 } from "@/components/creator/field-group";
 import {
   EMPTY_BACK_FACE,
+  type BackFaceFormValues,
   type FormValues,
 } from "@/lib/creator/form-types";
+import { SECOND_FACE_NAME_HINT } from "@/lib/cards/second-face-name";
 
 type LayoutPanelProps = {
   userId: string | null;
@@ -42,6 +44,9 @@ type LayoutPanelProps = {
   onInsertSymbol: (token: string) => void;
   /** Called after the user enables a back face — lets the preview flip to it. */
   onBackFaceAdded?: () => void;
+  /** What "Clear" leaves behind: a blank face typed for the card's kind
+   *  (a split half is an instant, not a creature — TODO 3b.8). */
+  blankSecondFace?: BackFaceFormValues;
 };
 
 export function LayoutPanel({
@@ -51,6 +56,7 @@ export function LayoutPanel({
   backRulesTextRef,
   onInsertSymbol,
   onBackFaceAdded,
+  blankSecondFace = EMPTY_BACK_FACE,
 }: LayoutPanelProps) {
   const {
     register,
@@ -103,13 +109,14 @@ export function LayoutPanel({
             label={isAdventureFrame ? "Adventure name" : "Title"}
             helper={
               isAdventureFrame
-                ? "The adventure spell's name (shown on the left page)."
-                : "The back-face title. Required when a back face is enabled."
+                ? `The adventure spell's name (shown on the left page). ${SECOND_FACE_NAME_HINT}`
+                : `The second face's name. ${SECOND_FACE_NAME_HINT}`
             }
             error={errors.back_face?.title?.message}
           >
             {/* Required-ness is enforced by the form resolver
-                (lib/creator/form-schema.ts, gated on has_back_face) —
+                (lib/creator/form-schema.ts, gated on has_back_face and the
+                draft policy in lib/cards/second-face-name.ts) —
                 register-level rules are ignored once a resolver is set. */}
             <input
               {...register("back_face.title")}
@@ -290,7 +297,7 @@ export function LayoutPanel({
                 // is "clear the content", not "remove the face". Disabling
                 // has_back_face here just produced cards with a blank
                 // painted half (the orchestrator now force-enables it).
-                setValue("back_face", EMPTY_BACK_FACE, {
+                setValue("back_face", blankSecondFace, {
                   shouldDirty: true,
                 });
               }}

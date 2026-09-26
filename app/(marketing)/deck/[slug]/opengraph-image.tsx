@@ -1,4 +1,4 @@
-import { ImageResponse } from "next/og";
+import { ogImageResponse } from "@/lib/og/image-response";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createPublicClient } from "@/lib/supabase/public";
 import { lookupUsername } from "@/lib/profile/username";
@@ -59,7 +59,7 @@ export default async function Image({
   const result = await getDeck(slug);
 
   if (!result) {
-    return new ImageResponse(
+    return ogImageResponse(
       (
         <OgShell>
           <OgEyebrow>Community decks</OgEyebrow>
@@ -81,7 +81,7 @@ export default async function Image({
     : "Deck";
 
   if (cover) {
-    return new ImageResponse(
+    return ogImageResponse(
       (
         <OgCoverHero
           cover={cover}
@@ -94,7 +94,7 @@ export default async function Image({
     );
   }
 
-  return new ImageResponse(
+  return ogImageResponse(
     (
       <OgShell>
         <OgEyebrow>{`${formatLabel} deck`}</OgEyebrow>

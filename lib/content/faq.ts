@@ -47,7 +47,7 @@ export const CARD_MAKER_FAQ: FaqEntry[] = [
   },
   {
     q: "What is the difference between PipGlyph and MTG Cardsmith or Card Conjurer?",
-    a: "PipGlyph, MTG Cardsmith, and Card Conjurer are all free browser-based MTG card makers. PipGlyph differentiates itself with a modern UI, a built-in AI assistant for oracle text and flavor text, deck building with decklist import and proxy printing, and a structured data model that keeps every card editable as JSON — not just a flat image.",
+    a: "PipGlyph, MTG Cardsmith, and Card Conjurer all make custom MTG cards in a web browser, although the original Card Conjurer is gone: cardconjurer.com is now a stripped-down template tool, and the full editor survives as open-source forks you host yourself. PipGlyph differentiates itself with a modern UI, a built-in AI assistant for oracle text, flavor text and art, and deck building with decklist import and proxy sheets of a deck's custom cards. Unlike a Card Conjurer fork, it keeps your cards in an account, editable from any device, rather than in one browser's storage.",
   },
   {
     q: "Is it legal to make custom MTG cards?",
@@ -76,7 +76,7 @@ export const MANA_PIP_FAQ: FaqEntry[] = [
   },
   {
     q: "Do custom pips show up on exported cards?",
-    a: "Yes. PipGlyph renders exports server-side with the same layout engine as the live preview, so your custom pips appear in downloaded PNGs, print-ready PDFs, and the social-share images — pixel-aligned with standard symbols at any resolution.",
+    a: "Yes. The server renderer that draws exports reads the same pip geometry as the live preview, so your custom pips appear in downloaded PNGs, print-ready PDFs, and the social-share images — pixel-aligned with standard symbols at any resolution.",
   },
   {
     q: "How do hybrid and phyrexian pips work?",
@@ -147,7 +147,7 @@ const SHARING_FAQ: FaqEntry[] = [
 const EXPORTS_FAQ: FaqEntry[] = [
   {
     q: "What export formats does PipGlyph support?",
-    a: "Cards export as PNG at two sizes — a share-friendly 750×1050 and a print-oriented 1500×2100 — and as a print-ready PDF sized for standard card dimensions (2.5 × 3.5 inches). Every account gets the 750×1050 PNG with the PipGlyph mark; the 1500×2100 PNG and the PDF are watermark-free on Plus and Pro, and Pro also exports a whole deck as 3 × 3 proxy sheets. Your account data (profile, cards, decks, comments) downloads as JSON from Settings.",
+    a: "Cards export as PNG at two sizes — a share-friendly 750×1050 and a print-oriented 1500×2100 — and as a print-ready PDF sized for standard card dimensions (2.5 × 3.5 inches). Every account gets the 750×1050 PNG with the PipGlyph mark; the 1500×2100 PNG and the PDF are watermark-free on Plus and Pro, and Pro also exports a deck's custom cards as 3 × 3 proxy sheets. Your account data (profile, cards, decks, comments) downloads as JSON from Settings.",
   },
   {
     q: "How do I print a custom card at real card size?",
@@ -155,7 +155,7 @@ const EXPORTS_FAQ: FaqEntry[] = [
   },
   {
     q: "Do exported cards look exactly like the editor preview?",
-    a: "Yes. Exports are rendered server-side by the same layout engine that draws the live preview — identical fonts, frames, pips, and spacing — so what you see while designing is pixel-for-pixel what you download. Custom mana pips are included in exports too.",
+    a: "They're built to. The live preview is drawn in your browser and the export by a separate server renderer that reads the same frames, fonts, pips and text geometry, and parity tests check the two agree. If a character can't be drawn on the card image (an emoji, for example), the creator says so before you save. Custom mana pips are included in exports too.",
   },
 ];
 

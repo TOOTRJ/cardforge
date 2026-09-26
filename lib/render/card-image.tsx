@@ -1,5 +1,6 @@
-// Server-side card renderer. Uses Next.js `ImageResponse` (Satori +
-// resvg-wasm under the hood) so the same card produces a PNG you can:
+// Server-side card renderer. Satori + sharp through lib/render/satori-png.ts
+// (next/og's ImageResponse pipeline without its render-time Google Fonts /
+// Twemoji fetches) so the same card produces a PNG you can:
 //   * serve as <meta og:image="..."> on public card pages, and
 //   * upload to the card-renders bucket on save / download.
 //
@@ -13,7 +14,7 @@
 // animations. Every style is inline + hex-coded, every multi-child element
 // declares `display: flex`.
 
-import { ImageResponse } from "next/og";
+import { pngImageResponse } from "@/lib/render/satori-png";
 import { foilMaskSource, imageNaturalSize, resolveRenderableImage } from "@/lib/render/art-source";
 import {
   COST_PIP_GAP,
@@ -2426,7 +2427,7 @@ export async function renderCardImage(
   source: CardPreviewData,
   preset: RenderPreset = "default",
   opts: { brandMark?: boolean; watermarkText?: string | null } = {},
-): Promise<ImageResponse> {
+): Promise<Response> {
   const card = await withRenderableImages(source);
   const isFoil = card.frameStyle?.finish === "foil";
   // Frame PNGs are not in the function bundle on Vercel — warm the loader's
@@ -2457,7 +2458,7 @@ export async function renderCardImage(
   const landscape = isLandscapeRender(card);
   const width = landscape ? base.height : base.width;
   const height = landscape ? base.width : base.height;
-  return new ImageResponse(
+  return pngImageResponse(
     <CardImage
       card={card}
       width={width}
@@ -2483,6 +2484,9 @@ export async function renderCardImage(
       // MPlantin is the real MTG body font (ships with mana-font); Mana +
       // Keyrune supply the cost pips and set symbol. Satori has no auto-
       // fallback once explicit fonts are provided, so all three are registered.
+      // A character none of these has goes to lib/render/fallback-assets.ts
+      // (bundled Noto Sans for extra Latin/Greek/Cyrillic, emoji stripped,
+      // other scripts drawn as missing glyphs) — never to the network.
       fonts: [
         { name: "MPlantin", data: MPLANTIN_FONT_BYTES, weight: 400, style: "normal" },
         { name: "MPlantin", data: MPLANTIN_ITALIC_FONT_BYTES, weight: 400, style: "italic" },

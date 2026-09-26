@@ -102,9 +102,11 @@ export function isWatermarkPresetKey(key: string): boolean {
 // card renamed to Command Tower (or a Scryfall import that carried no
 // supertype/subtypes of its own) kept the seed's "Plains"/"Wastes" subtype
 // and lost its text box. One legacy fallback remains for rows written
-// before the seed existed and for AI output: a land with a basic subtype,
-// NO supertype and NO rules text has nothing else to print, so it stays a
-// basic.
+// before the seed existed and for AI output: a land with exactly ONE basic
+// land type, NO supertype and NO rules text has nothing else to print, so
+// it stays a basic. A dual ("Land — Plains Island", Tundra) has no single
+// symbol to print: taking its first type trapped duals in the icon step,
+// with no rules box and a Nonbasic chip that did nothing (TODO 3b.4).
 // ---------------------------------------------------------------------------
 
 // Basic land types → the mana symbol their text box prints. Real basics
@@ -198,11 +200,29 @@ export function basicLandManaKey(
     // Wastes: "Basic Land" with no land type — the name identifies it.
     return subtypeKey ?? (normalizeLandTitle(face.title) === "wastes" ? "c" : null);
   }
-  // Legacy/AI shape: basic subtype, no supertype, nothing else to print.
-  if (subtypeKey && !face.supertype?.trim() && !face.rulesText?.trim()) {
+  // Legacy/AI shape: one basic land type, no supertype, nothing else to
+  // print. Two or more basic types is a dual — never a basic (3b.4).
+  if (
+    subtypeKey &&
+    !face.supertype?.trim() &&
+    !face.rulesText?.trim() &&
+    basicLandTypeCount(face.subtypes) === 1
+  ) {
     return subtypeKey;
   }
   return null;
+}
+
+/** How many DIFFERENT basic land types the subtypes name ("Plains Island"
+ *  → 2, "Forest" → 1, "Gate" → 0). */
+function basicLandTypeCount(
+  subtypes: readonly string[] | null | undefined,
+): number {
+  return new Set(
+    (subtypes ?? [])
+      .map((s) => BASIC_LAND_KEYS[s.trim().toLowerCase()])
+      .filter(Boolean),
+  ).size;
 }
 
 /** The watermark a face should actually render: an explicit pick wins;

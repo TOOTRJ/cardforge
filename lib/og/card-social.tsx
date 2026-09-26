@@ -1,5 +1,5 @@
-import { ImageResponse } from "next/og";
 import { BRAND, OG_SIZE } from "@/lib/brand/constants";
+import { ogImageResponse } from "@/lib/og/image-response";
 import {
   BrandLockup,
   OG_BACKGROUND,
@@ -43,12 +43,12 @@ export function socialCardBox(landscape: boolean): { width: number; height: numb
 
 
 
-/** PNG ImageResponse of the composite — kept here so the (JSX-free)
- *  route handler at app/api/cards/[id]/og/route.ts can stay a .ts file. */
+/** PNG response of the composite — kept here so the (JSX-free) route
+ *  handler at app/api/cards/[id]/og/route.ts can stay a .ts file. */
 export function renderCardSocialImage(
   props: Parameters<typeof CardSocialImage>[0],
-): ImageResponse {
-  return new ImageResponse(<CardSocialImage {...props} />, OG_SIZE);
+): Response {
+  return ogImageResponse(<CardSocialImage {...props} />, OG_SIZE);
 }
 
 function CardSocialImage({

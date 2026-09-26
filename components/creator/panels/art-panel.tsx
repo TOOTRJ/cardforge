@@ -20,9 +20,18 @@ type ArtPanelProps = {
   backFaceSlot?: React.ReactNode;
   /** The "Generate AI artwork and title" button, beside Choose file. */
   aiSlot?: React.ReactNode;
+  /** True while the save needs the second face's name and it is empty (the
+   *  Save hint asks for it): "More options" opens so the field is visible
+   *  (TODO 3b.5). */
+  secondFaceNameMissing?: boolean;
 };
 
-export function ArtPanel({ userId, backFaceSlot, aiSlot }: ArtPanelProps) {
+export function ArtPanel({
+  userId,
+  backFaceSlot,
+  aiSlot,
+  secondFaceNameMissing = false,
+}: ArtPanelProps) {
   const {
     register,
     control,
@@ -68,6 +77,8 @@ export function ArtPanel({ userId, backFaceSlot, aiSlot }: ArtPanelProps) {
             ? "More options — artist credit & second face"
             : "More options — artist credit"
         }
+        openWhen={Boolean(errors.artist_credit || (backFaceSlot && errors.back_face))}
+        expandWhen={Boolean(backFaceSlot && secondFaceNameMissing)}
       >
         <FieldGroup
           label="Artist credit"

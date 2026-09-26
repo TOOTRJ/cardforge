@@ -239,13 +239,21 @@ const uuidSchema = z.string().uuid("Must be a valid UUID.");
 // (rarity, color_identity, frame_style, visibility, slug, owner, etc.) —
 // those live on the front-card row and apply to both faces.
 //
-// Title is required so we never store an "empty" back face. Everything
-// else is optional and follows the same length/format rules as the front.
+// The title may be empty HERE: a private draft may keep an unnamed second
+// face, and whether a save needs the name depends on the card's visibility
+// (lib/cards/second-face-name.ts — TODO 3b.5), which the card actions gate
+// on the row as it will be stored. Everything else is optional and follows
+// the same length/format rules as the front.
 // ---------------------------------------------------------------------------
+
+const backFaceTitleSchema = z
+  .string()
+  .trim()
+  .max(120, "Title must be 120 characters or fewer.");
 
 export const backFaceSchema = z
   .object({
-    title: cardTitleSchema,
+    title: backFaceTitleSchema,
     cost: cardCostSchema,
     card_type: cardTypeSchema,
     supertype: cardSupertypeSchema,

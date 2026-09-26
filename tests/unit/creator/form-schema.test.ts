@@ -6,6 +6,7 @@ import {
   type FormValues,
 } from "@/lib/creator/form-types";
 import { DEFAULT_FRAME_TEMPLATE } from "@/types/card";
+import { SECOND_FACE_NAME_ERROR } from "@/lib/cards/second-face-name";
 
 // ---------------------------------------------------------------------------
 // Tests for lib/creator/form-schema.ts — the client-side mirror of the
@@ -181,19 +182,62 @@ describe("cardFormSchema", () => {
       expect(cardFormSchema.safeParse(values).success).toBe(true);
     });
 
-    it("requires a back-face title when the toggle is on", () => {
-      const values = baseValues({
-        has_back_face: true,
-        back_face: { ...EMPTY_BACK_FACE, title: "" },
-      });
+    const backTitleIssue = (values: FormValues) => {
       const result = cardFormSchema.safeParse(values);
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        const issue = result.error.issues.find(
+      if (result.success) return null;
+      return (
+        result.error.issues.find(
           (i) => i.path[0] === "back_face" && i.path[1] === "title",
+        ) ?? null
+      );
+    };
+
+    it("requires a back-face title to publish (public or unlisted)", () => {
+      for (const visibility of ["public", "unlisted"] as const) {
+        const issue = backTitleIssue(
+          baseValues({
+            visibility,
+            has_back_face: true,
+            back_face: { ...EMPTY_BACK_FACE, title: "  " },
+          }),
         );
-        expect(issue?.message).toBe("Title is required.");
+        expect(issue?.message).toBe(SECOND_FACE_NAME_ERROR);
       }
+    });
+
+    it("3b.5: a draft may leave the second face unnamed", () => {
+      expect(
+        backTitleIssue(
+          baseValues({
+            save_as_draft: true,
+            visibility: "private",
+            has_back_face: true,
+            back_face: { ...EMPTY_BACK_FACE, title: "", rules_text: "Draw a card." },
+          }),
+        ),
+      ).toBeNull();
+      // An artless public save lands private (server rule) — no name needed.
+      expect(
+        backTitleIssue(
+          baseValues({
+            art_url: "",
+            has_back_face: true,
+            back_face: { ...EMPTY_BACK_FACE, title: "" },
+          }),
+        ),
+      ).toBeNull();
+    });
+
+    it("still length-checks a draft's second-face name", () => {
+      const issue = backTitleIssue(
+        baseValues({
+          save_as_draft: true,
+          visibility: "private",
+          has_back_face: true,
+          back_face: { ...EMPTY_BACK_FACE, title: "x".repeat(121) },
+        }),
+      );
+      expect(issue?.message).toBe("Title must be 120 characters or fewer.");
     });
   });
 

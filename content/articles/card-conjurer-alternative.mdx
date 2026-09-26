@@ -3,7 +3,7 @@ title: "The Best Card Conjurer Alternative in 2026 (Free MTG Card Maker)"
 description: "Looking for a Card Conjurer alternative? PipGlyph is a free, browser-based MTG card maker with a live preview, custom pips, AI help and proxy printing."
 date: "2026-09-22"
 tags: ["card makers", "card design"]
-updated: "2026-09-22"
+updated: "2026-09-26"
 faq:
   - q: "Is Card Conjurer still available?"
     a: "The original Card Conjurer was taken down in November 2022 after its creator received a cease-and-desist from Wizards of the Coast. cardconjurer.com later came back as a stripped-down template tool without the official frames that made it popular, and community forks of the old open-source code still have to be self-hosted. The version people remember no longer exists."
@@ -12,7 +12,7 @@ faq:
   - q: "Does PipGlyph use the official Magic card frames?"
     a: "No. PipGlyph's frames are original designs whose geometry is measured against scans of real printings, so a card looks right in your hand without reproducing Wizards of the Coast's trade dress. That is the difference that keeps the tool online."
   - q: "Can I print proxies from PipGlyph?"
-    a: "Yes. Every card downloads as a PNG (watermark-free at print resolution on a paid plan), and Pro exports whole decks as print-ready 3 × 3 proxy sheets at true card size. Proxies are for your own playgroup, never for sale."
+    a: "Yes. Every card downloads as a PNG (watermark-free at print resolution on a paid plan), and Pro prints a card, or all the custom cards in a deck, on 3 × 3 proxy sheets at true card size with crop marks. Proxies are for your own playgroup, never for sale."
   - q: "Do I need to install anything?"
     a: "No. PipGlyph runs in the browser on desktop and mobile with nothing to download, and your cards are saved to your account, so a lost laptop or a cleared cache never takes your designs with it."
 ---
@@ -23,7 +23,7 @@ If your Card Conjurer workflow broke, you are not alone. The site that thousands
 
 Yes. [PipGlyph](/mtg-card-maker) is a free, browser-based MTG card maker. You open [the creator](/create), pick a card kind and frame, type the name, cost, type line and rules text, drop in art, and watch the card render live as you go. There is nothing to download, the creator opens signed out so you can see the steps and the live preview before you commit, and a free account takes seconds to make when you want to build.
 
-The important difference from Card Conjurer is not the feature list, it is what you are looking at while you work. Card Conjurer showed you a canvas that you exported when you were done. PipGlyph's live preview is produced by the same renderer that bakes the final image, so the card on screen is the card you get, pixel for pixel, in the gallery, in the share preview and on the printed sheet.
+The important difference from Card Conjurer is less the editor than everything around it. Card Conjurer is a canvas tool: the card you edit is the image you download, and your saved cards live in that browser's local storage (about 5 MB) or in a file you export. PipGlyph is a hosted app. Your cards are saved to an account you can open on any device, a published card gets its own page in a public gallery, and decks, AI help and custom mana pips sit in the same place. The editor preview is drawn in your browser and the saved image by a separate renderer on the server. Both read the same frame geometry and text-fitting rules, and parity tests check that they agree, so the preview matches what the gallery, the share image and your download show.
 
 ## What Card Conjurer did well
 
@@ -32,17 +32,19 @@ It is worth saying plainly, because the people searching for an alternative love
 - **Frame fidelity.** Card Conjurer reproduced the look of official printings closely, across a long list of frame variants, and that authenticity was the whole point for many users.
 - **Free and open source.** No account, no plan, and the code was public, which is why forks exist at all.
 - **Ran locally.** Everything happened in your browser tab, and a self-hosted copy could run offline.
-- **Text control.** Fine adjustments to text size and position let patient users get a card exactly the way they wanted it.
+- **Control over every layer.** A card is a stack of frame layers you can move, resize, fade, erase or recolor, text boxes can be moved and resized to any bounds, and inline codes adjust size, color, kerning and position. Patient users could get a card exactly the way they wanted it.
+- **Real-card import.** Type a card's name and it loads from Scryfall, with every printing to choose from and 12 import languages.
+- **Print sheets.** A separate print page tiles up to nine card images on a Letter or A4 sheet and downloads it as a PNG or a PDF, with optional cutting aids.
 
 ## What PipGlyph does better
 
-- **The preview is the output.** One renderer drives the editor preview, the stored image and every export, so there is no "it looked different in the app" moment.
+- **Hosted, with an account.** Your cards are saved to your account rather than to one browser's storage, so they open on any device and survive a cleared cache. There is nothing to install or host.
 - **Frame geometry verified against real scans.** Every frame and color combination in the creator is measured against scans of printed cards and checked before it is offered, so text boxes, pip positions and type lines land where they do on a real card. The frames themselves are original designs, not copies of Wizards' art. See [MTG card frame eras explained](/articles/mtg-card-frame-eras-explained) for what each frame family is.
 - **Custom mana pips.** Beyond the full standard symbol vocabulary, you can design and upload your own pips and use them in costs and rules text. The [mana pip editor](/mana-pip-editor) is a tool on its own.
 - **AI help for the blank-page problem.** The AI assistant can draft rules text, flavor text and names, generate art in a chosen style, or fill in the fields you leave empty, all inside the same editor.
-- **Deck proxy printing.** Build a deck, remix real cards into custom versions, and export the whole thing as print-ready proxy sheets (Pro). The walkthrough is in [how to print proxy MTG cards](/articles/how-to-print-proxy-mtg-cards).
+- **Decks.** Build a deck or import a decklist, remix real cards into custom versions, and print the deck's custom cards as proxy sheets (Pro). The walkthrough is in [how to print proxy MTG cards](/articles/how-to-print-proxy-mtg-cards).
 - **A gallery and sharing.** Publish a card and it has a page, a social preview image, a like button and a remix button. Card Conjurer produced a file; PipGlyph produces a card other people can find.
-- **Nothing to install, nothing to lose.** Your cards live in your account, on any device.
+- **Foil and etched on any frame.** A foil sheen or an etched texture is one switch on any verified frame, free on every plan, and the saved image carries it too. Card Conjurer offers etched frames and a foil layer only in some of its frame packs.
 
 ## Where Card Conjurer still wins
 
@@ -50,9 +52,11 @@ A comparison you can trust has to include this section.
 
 - **Exact replicas of official frames.** If what you want is a card that is indistinguishable from a real printing, Card Conjurer's frames were closer to the originals than any tool that avoids Wizards' trade dress can be. PipGlyph's frames are original by design. They read as real Magic cards at the table, but they are not copies.
 - **Fully offline.** A self-hosted fork works with no internet connection and no account. PipGlyph is an online app.
-- **Sheer number of frame variants.** Card Conjurer accumulated years of community-made frame packs. PipGlyph covers the major eras and layouts, verified one combination at a time, and the catalog is still growing.
+- **Sheer number of frame variants.** Card Conjurer accumulated years of community-made frame packs; the maintained fork ships about 260. PipGlyph covers the major eras and layouts, verified one combination at a time, and the catalog is still growing.
+- **A free-form editor.** In Card Conjurer you can upload your own frames and masks, move and resize any layer, add extra text boxes and nudge text with codes like `{kerning}` and `{permashift}`. PipGlyph keeps its text boxes where the printed card puts them, and you can't move them.
+- **Import languages.** Card Conjurer imports a real card in 12 languages. PipGlyph's Scryfall import fills in the English Oracle wording.
 
-If any of those three is your deciding factor, a self-hosted fork may still be the right call for you, and this page is not going to pretend otherwise.
+If any of those is your deciding factor, a self-hosted fork may still be the right call for you, and this page is not going to pretend otherwise.
 
 ## Card Conjurer vs PipGlyph: feature comparison
 
@@ -60,31 +64,34 @@ If any of those three is your deciding factor, a self-hosted fork may still be t
 | --- | --- | --- |
 | Works in the browser today | Yes | Original site offline; forks need self-hosting |
 | Install or hosting required | No | Forks: yes |
-| Live preview equals the exported image | Yes, one renderer | Canvas preview, exported on demand |
-| Card frames | MTG-style frames measured against real scans, published one at a time as they pass verification | Replicas of official frames |
-| Card types and layouts | Creatures, spells, artifacts, enchantments, lands, planeswalkers, sagas and tokens today; split, adventure, flip, aftermath and battle frames are built and in verification | Yes |
-| Custom mana pips | Yes, design and upload your own | Standard symbols |
+| Preview and exported image | The browser preview matches the saved image, which a separate server renderer draws; parity tests check the two agree | The canvas you edit is the image you download |
+| Card frames | MTG-style frames measured against real scans, published one at a time as they pass verification | Replicas of official frames, in about 260 frame packs |
+| Card types and layouts | Creatures, spells, artifacts, enchantments, lands, planeswalkers, sagas and tokens today; split, adventure, flip, aftermath and battle frames are built and in verification | Yes, including split, adventure, flip, aftermath, battle and transform faces |
+| Free-form layout (move or recolor layers, upload frames and masks, reposition text boxes) | No: verified geometry instead | Yes |
+| Custom mana pips | Yes, design and upload your own | Standard symbols; some frame packs bring their own style |
+| Foil and etched finishes | Either one on any verified frame, free | Etched frame packs; a foil layer in some packs |
 | AI rules, flavor and art assistant | Yes | No |
-| Scryfall import to prefill a real card | Yes | No |
-| Deck building and proxy PDF sheets | Yes, with crop marks | PNG per card |
+| Scryfall import to prefill a real card | Yes: search by name, pick a printing, optionally bring its art | Yes: by name, every printing, 12 languages |
+| Deck building with decklist import | Yes | No |
+| Proxy print sheets | 3 × 3 PDF sheets on Letter or A4 with crop marks, for one card or a deck's custom cards (Pro) | Up to nine card images on a Letter or A4 sheet, PNG or PDF, optional cutting aids |
 | Public gallery, sharing, remixing | Yes | No |
-| Cards saved to an account | Yes | Local only |
+| Where your cards are saved | Your account, on any device | Browser local storage (about 5 MB), plus a save file you can export |
 | Price | Free account; paid plans for clean exports and more capacity | Free |
 
 ## Can I import my Card Conjurer cards?
 
-Not directly. Card Conjurer saved cards as its own JSON and rendered PNGs, and there is no file import for either. In practice this matters less than it sounds, because a card has only a handful of fields, and two of them can be prefilled for you.
+Not directly. Card Conjurer keeps saved cards in your browser's local storage and can export them as a `.cardconjurer` file, and PipGlyph has no importer for that file or for the PNGs Card Conjurer downloads. In practice this matters less than it sounds, because a card has only a handful of fields and most of them can be prefilled.
 
-If your card was a variant of a real Magic card, a remixed version, a new art treatment, a rebalanced cost, use the Scryfall import in the creator: search the real card by name and the mana cost, type line, rules text and flavor text land in the form at once. If it was an original design, you retype the name, cost, type line and rules text, which is a minute of work for most cards. Either way you upload the art again, and the art is usually the part you kept.
+If your card was a variant of a real Magic card, a remixed version, a new art treatment, a rebalanced cost, use the Scryfall import in the creator: search the real card by name, pick a printing, and its mana cost, type line, rules text and flavor text land in the form at once, with the option to bring that printing's art along. If it was an original design, you retype the name, cost, type line and rules text, which is a minute of work for most cards. Either way you upload your own art again, and the art is usually the part you kept.
 
 ## How to rebuild a Card Conjurer card in three minutes
 
 1. **Open the creator.** Go to [/create](/create). Signed out, the editor is a read-only tour of the steps; make a free account (seconds) and it unlocks.
 2. **Pick the kind and frame.** Choose creature, instant, planeswalker, land and so on, then the frame era and color. The preview updates immediately.
 3. **Prefill from Scryfall or type the fields.** For a real-card variant, use the import and search the card's name. For an original, fill in name, mana cost, type line, rules text and flavor text. Costs are entered with the pip builder, so <Mana cost="{1}{W}{U}" /> is three clicks.
-4. **Add the art.** Upload your image and drag it into position inside the art box. The live preview shows exactly how it crops.
-5. **Check the printed look.** Rarity sets the set-symbol tint, the set icon step lets you pick a symbol, and the card at the top of the page is the final render.
-6. **Save and export.** Sign in, save, then download a PNG or a PDF at true card size. A whole deck exports as sheets with crop marks.
+4. **Add the art.** Upload your image and drag it into position inside the art box. The live preview shows exactly how it crops, and a phone photo comes out the right way up in the saved card too.
+5. **Check the printed look.** Rarity sets the set-symbol tint, the set icon step lets you pick a symbol, and the live preview shows the card as it will save.
+6. **Save and export.** Save the card, then download it: a watermarked PNG on the free plan, or a clean print-resolution PNG or a PDF at true card size on a paid plan. On Pro, a card or a deck's custom cards print as 3 × 3 sheets with crop marks.
 
 <Callout tone="tip" title="See the editor before you sign up">
 The creator at [/create](/create) opens signed out, so you can walk through the steps and the live preview before making a free account; building and saving need the account. The small PipGlyph mark on the preview is the one free downloads carry; paid plans export without it.
@@ -112,7 +119,7 @@ No. PipGlyph's frames are original designs whose geometry is measured against sc
 
 ### Can I print proxies from PipGlyph?
 
-Yes. Every card downloads as a PNG (watermark-free at print resolution on a paid plan), and Pro exports whole decks as print-ready 3 × 3 proxy sheets at true card size. Proxies are for your own playgroup, never for sale.
+Yes. Every card downloads as a PNG (watermark-free at print resolution on a paid plan), and Pro prints a card, or all the custom cards in a deck, on 3 × 3 proxy sheets at true card size with crop marks. Proxies are for your own playgroup, never for sale.
 
 ### Do I need to install anything?
 

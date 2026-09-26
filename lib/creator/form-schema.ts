@@ -29,6 +29,10 @@ import {
   loyaltyCostSchema,
 } from "@/lib/validation/card";
 import { kindFromCard } from "@/lib/creator/card-kinds";
+import {
+  missingSecondFaceName,
+  SECOND_FACE_NAME_ERROR,
+} from "@/lib/cards/second-face-name";
 import type { FormValues } from "@/lib/creator/form-types";
 
 // ---------------------------------------------------------------------------
@@ -131,7 +135,24 @@ export const cardFormSchema: z.ZodType<FormValues, FormValues> = z
     // sends null when the toggle is off, which the server always accepts).
     if (values.has_back_face) {
       const back = values.back_face;
-      check(ctx, ["back_face", "title"], cardTitleSchema, back.title);
+      // The name is a publishing requirement, not a draft one (TODO 3b.5,
+      // lib/cards/second-face-name.ts), judged at the visibility runSubmit
+      // sends: "Save as a draft" is private, and so is an artless public
+      // save (the server stores it private).
+      const sentVisibility = values.save_as_draft
+        ? "private"
+        : values.visibility === "public" && !values.art_url.trim()
+          ? "private"
+          : values.visibility;
+      if (back.title.trim()) {
+        check(ctx, ["back_face", "title"], cardTitleSchema, back.title);
+      } else if (missingSecondFaceName(back, sentVisibility)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["back_face", "title"],
+          message: SECOND_FACE_NAME_ERROR,
+        });
+      }
       check(ctx, ["back_face", "cost"], cardCostSchema, back.cost.trim());
       check(
         ctx,

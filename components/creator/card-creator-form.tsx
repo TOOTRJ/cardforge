@@ -143,6 +143,7 @@ import {
   serializeSaga,
 } from "@/lib/cards/face-content";
 import { basicLandManaKey } from "@/lib/cards/watermark";
+import { missingSecondFaceName } from "@/lib/cards/second-face-name";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
 import type { FrameProfileOverridesMap } from "@/lib/cards/profile-override";
 import {
@@ -153,13 +154,16 @@ import {
   toBasicLandIdentity,
   toNonbasicLandIdentity,
   planKindChange,
+  KIND_DEFS,
   type CardKind,
   type FrameColorKey,
   type KindChangePatch,
   type KindChangePlan,
 } from "@/lib/creator/card-kinds";
 import {
+  blankSecondFaceFor,
   defaultValuesFor,
+  isBlankBackFace,
   mergeTag,
   normalizeColorSelection,
   parseSubtypes,
@@ -191,6 +195,7 @@ import {
 } from "@/lib/creator/steps";
 import { buildCardPath } from "@/lib/cards/utils";
 import { CapacityNotice } from "@/components/billing/capacity-notice";
+import { GlyphCoverageNotice } from "@/components/creator/glyph-coverage-notice";
 import type { CardCapacity } from "@/lib/billing/capacity-copy";
 
 // ---------------------------------------------------------------------------
@@ -309,6 +314,51 @@ const STEP_RAIL_ICONS: Record<string, React.ReactNode> = {
   publish: <Send aria-hidden />,
 };
 
+/** Shown when a save request throws instead of answering: the editor stays
+ *  mounted with the card exactly as the user left it (TODO 3b.1). Neutral on
+ *  purpose — the cause may be the connection, a server error or a stale
+ *  action id after a deploy, where only a reload helps. */
+const SAVE_REQUEST_FAILED =
+  "The save didn't go through. Your card is still here — try Save again; if it keeps failing, copy your text and reload the page.";
+
+/** Structural equality of two form-value snapshots (plain JSON-like data:
+ *  strings, numbers, booleans, arrays, objects). */
+function sameFormState(a: unknown, b: unknown): boolean {
+  if (Object.is(a, b)) return true;
+  if (!a || !b || typeof a !== "object" || typeof b !== "object") return false;
+  if (Array.isArray(a) !== Array.isArray(b)) return false;
+  const keysA = Object.keys(a);
+  if (keysA.length !== Object.keys(b).length) return false;
+  return keysA.every((key) =>
+    sameFormState(
+      (a as Record<string, unknown>)[key],
+      (b as Record<string, unknown>)[key],
+    ),
+  );
+}
+
+/** "a, b and c" — the Save hint's list of what's missing. */
+function listPhrase(parts: readonly string[]): string {
+  return parts.length <= 1
+    ? parts.join("")
+    : `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
+}
+
+/** The first message in a (nested) react-hook-form errors object, or in a
+ *  server action's flat `fieldErrors` map. */
+function firstErrorMessage(errors: unknown): string | null {
+  if (typeof errors === "string") return errors || null;
+  if (!errors || typeof errors !== "object") return null;
+  const message = (errors as { message?: unknown }).message;
+  if (typeof message === "string" && message) return message;
+  for (const [key, value] of Object.entries(errors)) {
+    if (["ref", "message", "type", "types"].includes(key)) continue;
+    const nested = firstErrorMessage(value);
+    if (nested) return nested;
+  }
+  return null;
+}
+
 /** A basic-only frame (the full-art basic land, TODO 0.26) can't draw a
  *  nonbasic land's rules. When the card stops being a basic land (Land type
  *  → Nonbasic, or a rename that clears the basic seed), move it to the land
@@ -366,6 +416,9 @@ export function CardCreatorForm({
   const confirmSpend = useCreditConfirm();
   const [isSubmitting, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
+  // Why the unsaved-changes dialog's save didn't happen (shown in the
+  // dialog, which stays open — TODO 3b.5).
+  const [leaveSaveError, setLeaveSaveError] = useState<string | null>(null);
   // Unsaved-changes guard. Armed from the form's dirty state below (a
   // mirrored ref-free flag, since useForm is created after this hook), and
   // whenever an AI request is spending a credit (owner decision 2026-09-17:
@@ -574,13 +627,25 @@ export function CardCreatorForm({
   // identity churn. router.refresh() re-renders the page with brand-new
   // card/gameSystems objects every time; resetting on those wiped
   // live edits "randomly" while users were typing.
+  //
+  // Fresh truth for the SAME card while the user has unsaved edits (they
+  // typed on while our own save's refresh was landing) rebases the form
+  // instead: server values become the baseline, the on-screen values and
+  // their dirty state stay (TODO 3b.6 — a blind reset wiped every
+  // keystroke typed in that window). Another card always resets.
   const resetKey = card ? `${card.id}:${card.updated_at}` : "new";
-  const lastResetKey = useRef(resetKey);
+  const resetCardId = card?.id ?? null;
+  const lastReset = useRef({ key: resetKey, cardId: resetCardId });
   useEffect(() => {
-    if (lastResetKey.current === resetKey) return;
-    lastResetKey.current = resetKey;
+    if (lastReset.current.key === resetKey) return;
+    const sameCard = lastReset.current.cardId === resetCardId;
+    lastReset.current = { key: resetKey, cardId: resetCardId };
+    if (sameCard && isDirty) {
+      reset(defaults, { keepValues: true, keepDirty: true });
+      return;
+    }
     reset(defaults);
-  }, [resetKey, defaults, reset]);
+  }, [resetKey, resetCardId, defaults, reset, isDirty]);
 
   // useWatch is the React Compiler-friendly subscription variant of watch().
   // We feed it the same defaults useForm has, so RHF always populates every
@@ -619,10 +684,25 @@ export function CardCreatorForm({
   // title) — names EVERY missing requirement so the user isn't peeled one
   // gap at a time.
   // A draft (Publish step checkbox → private) needs only a title; anything
-  // that can be seen by others needs artwork too.
+  // that can be seen by others needs artwork too — and a name for its second
+  // face (the Adventure spell, a split / aftermath / flip half; TODO 3b.5,
+  // lib/cards/second-face-name.ts). That name used to be required silently:
+  // Save stayed enabled, the save failed on a field folded away inside the
+  // Identity step's "More options".
+  const secondFaceNameMissing =
+    watched.has_back_face &&
+    missingSecondFaceName(
+      watched.back_face,
+      watched.save_as_draft ? "private" : watched.visibility,
+    );
   const saveMissing = [
     !watched.title.trim() ? "a title" : null,
     !watched.save_as_draft && !watched.art_url.trim() ? "artwork" : null,
+    secondFaceNameMissing
+      ? isAdventureFrame
+        ? "the adventure's name"
+        : "the second face's name"
+      : null,
   ].filter((part): part is string => part !== null);
   // Edit / remix: at least one field must change (owner decision
   // 2026-09-16). For a remix the visibility choice alone doesn't count — the
@@ -634,7 +714,7 @@ export function CardCreatorForm({
       : false;
   const saveDisabledReason =
     saveMissing.length > 0
-      ? `Add ${saveMissing.join(" and ")} to enable Save.`
+      ? `Add ${listPhrase(saveMissing)} to enable Save.`
       : deckRemix && remixSource && !isDirty
         ? "Change something to make it your own custom proxy — an exact copy can't be saved."
         : reviseUnchanged
@@ -811,6 +891,53 @@ export function CardCreatorForm({
     }
   };
 
+  /** Carry the loyalty / saga row editors across a kind change (TODO 3b.3).
+   *  Leaving a rows-driven kind folds the rows into rules_text, so the work
+   *  survives as plain text (the rows only serialize at submit, and only for
+   *  their own kind), and then EMPTIES them: rows left behind skipped the
+   *  re-seed on the way back, so planeswalker → creature → edit the text →
+   *  planeswalker resubmitted the stale abilities. Entering a rows-driven
+   *  kind with an empty editor seeds it from the rules text. */
+  const carryStructuredRows = (prevKind: CardKind, nextKind: CardKind) => {
+    if (prevKind === nextKind) return;
+    if (prevKind === "planeswalker") {
+      const rows = getValues("loyalty_abilities")
+        .map((r) => ({
+          cost: r.cost.trim() ? r.cost.trim() : null,
+          text: r.text.trim(),
+        }))
+        .filter((r) => r.text.length > 0);
+      if (rows.length > 0) {
+        setValue("rules_text", serializeLoyalty(rows), { shouldDirty: true });
+      }
+      setValue("loyalty_abilities", [], { shouldDirty: true });
+    } else if (prevKind === "saga") {
+      const chapters = getValues("saga_chapters")
+        .map((r) => ({
+          numerals: [...r.numerals].sort((a, b) => a - b),
+          text: r.text.trim(),
+        }))
+        .filter((r) => r.text.length > 0 && r.numerals.length > 0);
+      const intro = getValues("saga_intro").trim();
+      if (chapters.length > 0 || intro) {
+        setValue("rules_text", serializeSaga(intro || null, chapters), {
+          shouldDirty: true,
+        });
+      }
+      setValue("saga_chapters", [], { shouldDirty: true });
+      setValue("saga_intro", "", { shouldDirty: true });
+    }
+    if (
+      nextKind === "planeswalker" &&
+      getValues("loyalty_abilities").length === 0
+    ) {
+      seedStructuredRows(nextKind, getValues("rules_text"));
+    }
+    if (nextKind === "saga" && getValues("saga_chapters").length === 0) {
+      seedStructuredRows(nextKind, getValues("rules_text"));
+    }
+  };
+
   const applyKindPatch = (patch: KindChangePatch) => {
     // The verification gate applies to KIND changes too — a card type pick
     // must never land on an unpublished frame. When the planned template has
@@ -831,7 +958,16 @@ export function CardCreatorForm({
       verifiedKeys: new Set(verifiedFrameKeys),
       prefer: "frame",
     });
+    // Snapshot BEFORE the writes — the row fold and the land auto-identity
+    // below must judge the state the user is leaving, not the one we're
+    // creating.
+    const prevCardType = getValues("card_type");
+    const prevTemplate = getValues("frame_style.template");
+    const prevKind = kindFromCard(prevCardType, prevTemplate);
     if (resolution.status === "unavailable") {
+      // The type still changes, so the rows fold first: a row-built walker
+      // turned into an unpublished battle used to save with empty rules.
+      carryStructuredRows(prevKind, kindFromCard(patch.card_type, prevTemplate));
       setValue("card_type", patch.card_type, { shouldDirty: true });
       if (patch.has_back_face) {
         setValue("has_back_face", true, { shouldDirty: true });
@@ -854,46 +990,15 @@ export function CardCreatorForm({
         `${describeFrame(template)} isn't available in ${colorWord(resolution.fromColorKey)} yet — switched the colour to ${colorWord(resolution.colorKey)}.`,
       );
     }
-    // Snapshot BEFORE the writes — the land auto-identity below must judge
-    // the state the user is leaving, not the one we're creating.
-    const prevCardType = getValues("card_type");
-    const prevTemplate = getValues("frame_style.template");
-    const prevKind = kindFromCard(prevCardType, prevTemplate);
     const nextKind = kindFromCard(patch.card_type, template);
     const identitySnapshot = {
       title: getValues("title") ?? "",
       supertype: getValues("supertype") ?? "",
       subtypes_text: getValues("subtypes_text") ?? "",
     };
-    // Leaving a rows-driven kind: fold the structured rows into rules_text
-    // so the work survives as plain text (the rows only ever serialized at
-    // submit, and only for the matching kind — switching kind used to drop
-    // every chapter/ability on the floor).
-    if (prevKind === "planeswalker" && nextKind !== "planeswalker") {
-      const rows = getValues("loyalty_abilities")
-        .map((r) => ({
-          cost: r.cost.trim() ? r.cost.trim() : null,
-          text: r.text.trim(),
-        }))
-        .filter((r) => r.text.length > 0);
-      if (rows.length > 0) {
-        setValue("rules_text", serializeLoyalty(rows), { shouldDirty: true });
-      }
-    } else if (prevKind === "saga" && nextKind !== "saga") {
-      const chapters = getValues("saga_chapters")
-        .map((r) => ({
-          numerals: [...r.numerals].sort((a, b) => a - b),
-          text: r.text.trim(),
-        }))
-        .filter((r) => r.text.length > 0 && r.numerals.length > 0);
-      if (chapters.length > 0) {
-        setValue(
-          "rules_text",
-          serializeSaga(getValues("saga_intro").trim() || null, chapters),
-          { shouldDirty: true },
-        );
-      }
-    }
+    // Rows fold into rules_text on the way out and seed from it on the way
+    // in — before anything else touches the text.
+    carryStructuredRows(prevKind, nextKind);
     // Leaving a frame with an intrinsic second face (Adventure/split/flip):
     // that face was forced on for the frame, so drop it with the frame —
     // otherwise an invisible, unfixable back_face.title error followed the
@@ -901,6 +1006,14 @@ export function CardCreatorForm({
     if (hasInlineBackFace(prevTemplate) && !hasInlineBackFace(template)) {
       setValue("has_back_face", false, { shouldDirty: true });
       setValue("back_face", EMPTY_BACK_FACE, { shouldDirty: true });
+    } else if (
+      hasInlineBackFace(template) &&
+      isBlankBackFace(getValues("back_face"))
+    ) {
+      // Entering (or moving between) frames that paint a second face: an
+      // untouched one takes the new kind's type — a split's second half
+      // used to start, and save, as a Creature (TODO 3b.8).
+      setValue("back_face", blankSecondFaceFor(nextKind), { shouldDirty: true });
     }
     setValue("card_type", patch.card_type, { shouldDirty: true });
     setValue("frame_style.template", template, { shouldDirty: true });
@@ -944,17 +1057,6 @@ export function CardCreatorForm({
         setValue("supertype", "", { shouldDirty: true });
         setValue("subtypes_text", "", { shouldDirty: true });
       }
-    }
-    // Switching INTO a rows-driven kind with an empty editor: seed the rows
-    // from whatever rules text exists, so prior work stays visible.
-    if (
-      nextKind === "planeswalker" &&
-      getValues("loyalty_abilities").length === 0
-    ) {
-      seedStructuredRows(nextKind, getValues("rules_text"));
-    }
-    if (nextKind === "saga" && getValues("saga_chapters").length === 0) {
-      seedStructuredRows(nextKind, getValues("rules_text"));
     }
   };
   const handleKindSelect = (next: CardKind) => {
@@ -1039,19 +1141,8 @@ export function CardCreatorForm({
       setValue(key, value as never, { shouldDirty: true });
     };
 
-    setIfPresent("title", patch.title);
-    setIfPresent("cost", patch.cost);
-    setIfPresent("card_type", patch.card_type);
-    setIfPresent("supertype", patch.supertype);
-    setIfPresent("subtypes_text", patch.subtypes_text);
-    setIfPresent("rarity", patch.rarity);
-    setIfPresent("rules_text", patch.rules_text);
-    setIfPresent("flavor_text", patch.flavor_text);
-    setIfPresent("power", patch.power);
-    setIfPresent("toughness", patch.toughness);
-    setIfPresent("loyalty", patch.loyalty);
-    setIfPresent("defense", patch.defense);
-
+    // Colour first, so a kind change below resolves its frame against the
+    // idea's colour (the order the Scryfall import uses).
     if (patch.color_identity) {
       setValue(
         "color_identity",
@@ -1063,11 +1154,44 @@ export function CardCreatorForm({
       );
     }
 
+    // The idea's type is a KIND change, never a bare card_type write (TODO
+    // 3b.2): a "Legendary Planeswalker" idea used to land card_type
+    // planeswalker on the plain m15 frame — no loyalty box, rows printed as
+    // text. applyKindProgrammatic moves the frame, the watermark default,
+    // the land seed and the loyalty/saga rows with it. An idea whose type
+    // the current kind already prints (a creature on Adventure, an
+    // enchantment on Saga, a creature on a snow frame) keeps the kind and
+    // its frame. The type line is locked while revising.
+    if (patch.card_type && !isRevise) {
+      const ideaType = patch.card_type as CardType;
+      const currentKind = kindFromCard(
+        getValues("card_type"),
+        getValues("frame_style.template"),
+      );
+      if (KIND_DEFS[currentKind].cardType !== ideaType) {
+        applyKindProgrammatic(kindFromCard(ideaType, undefined));
+      } else if (getValues("card_type") !== ideaType) {
+        setValue("card_type", ideaType, { shouldDirty: true });
+      }
+    }
+
+    setIfPresent("title", patch.title);
+    setIfPresent("cost", patch.cost);
+    setIfPresent("supertype", patch.supertype);
+    setIfPresent("subtypes_text", patch.subtypes_text);
+    setIfPresent("rarity", patch.rarity);
+    setIfPresent("rules_text", patch.rules_text);
+    setIfPresent("flavor_text", patch.flavor_text);
+    setIfPresent("power", patch.power);
+    setIfPresent("toughness", patch.toughness);
+    setIfPresent("loyalty", patch.loyalty);
+    setIfPresent("defense", patch.defense);
+
     // The AI writes rules_text — mirror it into the row editors when the
     // card is a walker/saga so the Text step reflects the patch.
     if (patch.rules_text !== undefined) {
       const patchedKind = kindFromCard(
-        (patch.card_type as CardType) || getValues("card_type"),
+        getValues("card_type"),
         getValues("frame_style.template"),
       );
       if (patchedKind === "planeswalker" || patchedKind === "saga") {
@@ -1667,11 +1791,15 @@ export function CardCreatorForm({
   //   • "back"  → same, then jump to a fresh creator (/create?backFor=…) to
   //               build this card's back face.
   // `afterSave` (the unsaved-changes dialog) replaces the default post-save
-  // destination with the navigation the user was attempting.
+  // destination with the navigation the user was attempting; `onFailure`
+  // hears why a save didn't happen, so that dialog can say so.
   const runSubmit = (
     values: FormValues,
     intent: "save" | "back",
-    options: { afterSave?: () => void } = {},
+    options: {
+      afterSave?: () => void;
+      onFailure?: (message: string) => void;
+    } = {},
   ) => {
     setServerError(null);
     const createBackAfter = intent === "back";
@@ -1880,6 +2008,7 @@ export function CardCreatorForm({
               ? "premium_frame"
               : "capacity",
           );
+          options.onFailure?.("This save needs an upgrade — it wasn't saved.");
           return;
         }
         const message = failure.formError ?? unrendered;
@@ -1887,10 +2016,32 @@ export function CardCreatorForm({
           setServerError(message);
           toast.error(message);
         }
+        options.onFailure?.(
+          message ??
+            firstErrorMessage(failure.fieldErrors) ??
+            "The card couldn't be saved.",
+        );
+      };
+
+      // A save REQUEST that throws (offline, a 5xx, a stale action id after a
+      // deploy) must never escape this transition: React hands it to the
+      // error boundary, which unmounts the editor and the unsaved card with
+      // it — there is no local draft to come back to (TODO 3b.1).
+      const failRequest = (error: unknown) => {
+        console.error("[creator] save request failed", error);
+        setServerError(SAVE_REQUEST_FAILED);
+        toast.error(SAVE_REQUEST_FAILED);
+        options.onFailure?.(SAVE_REQUEST_FAILED);
       };
 
       if (mode === "create" || isRemix) {
-        const result = await createCardAction(payload);
+        let result: Awaited<ReturnType<typeof createCardAction>>;
+        try {
+          result = await createCardAction(payload);
+        } catch (error) {
+          failRequest(error);
+          return;
+        }
         if (!result.ok) {
           handleUpgradeOrError(result);
           return;
@@ -1902,50 +2053,67 @@ export function CardCreatorForm({
               ? `Saved “${payload.title}” as a draft`
               : `Saved “${payload.title}”`,
         );
-        guard.disarm();
-        if (options.afterSave) {
-          options.afterSave();
-          return;
-        }
+        // Every create leaves this page: stop guarding and take the Back
+        // sentinel off first, so Back from the saved card doesn't land on a
+        // blank /create (TODO 3b.7).
+        await guard.release();
 
-        // This card was forged as a deck entry's proxy — link it back and
-        // return to the deck dashboard so the progress ring ticks up.
+        // A deck entry's proxy (/create?deckCard=) or another card's back
+        // face (/create?backFor=) is linked on EVERY save — the leave
+        // dialog's "Save as draft" included, which used to skip the link —
+        // and only then does the flow continue. The card IS saved at this
+        // point: a failed link request says so and still moves on.
+        let linkedHome: string | null = null;
         if (deckRemix) {
-          const linkResult = await linkDeckCardAction(
-            deckRemix.deckCardId,
-            result.cardId,
-          );
-          if (!linkResult.ok) {
+          // Back to the deck dashboard so the progress ring ticks up.
+          let linkResult: Awaited<ReturnType<typeof linkDeckCardAction>> | null =
+            null;
+          try {
+            linkResult = await linkDeckCardAction(
+              deckRemix.deckCardId,
+              result.cardId,
+            );
+          } catch (error) {
+            console.error("[creator] deck link request failed", error);
+          }
+          if (!linkResult?.ok) {
             toast.error(
-              linkResult.error ?? "Saved, but couldn't link it into the deck.",
+              linkResult?.error ?? "Saved, but couldn't link it into the deck.",
             );
           } else {
             toast.success(`Linked into “${deckRemix.deckTitle}”.`);
           }
-          router.replace(`/deck/${deckRemix.deckSlug}`);
-          router.refresh();
-          return;
-        }
-
-        // This new card was created to be another card's back face — link it
-        // to the front and return to that card's editor.
-        if (backForCardId) {
-          const linkResult = await updateCardAction(backForCardId, {
-            back_card_id: result.cardId,
-          });
-          if (!linkResult.ok) {
+          linkedHome = `/deck/${deckRemix.deckSlug}`;
+        } else if (backForCardId) {
+          // Back to the front card's editor.
+          let linkResult: Awaited<ReturnType<typeof updateCardAction>> | null =
+            null;
+          try {
+            linkResult = await updateCardAction(backForCardId, {
+              back_card_id: result.cardId,
+            });
+          } catch (error) {
+            console.error("[creator] back-face link request failed", error);
+          }
+          if (!linkResult?.ok) {
             toast.error(
-              linkResult.formError ??
+              linkResult?.formError ??
                 "Saved, but couldn't link it as the back face.",
             );
           } else {
             toast.success("Linked as the back face.");
           }
-          router.replace(
-            backForSlug
-              ? `/card/${backForSlug}/edit?step=publish`
-              : "/dashboard",
-          );
+          linkedHome = backForSlug
+            ? `/card/${backForSlug}/edit?step=publish`
+            : "/dashboard";
+        }
+
+        if (options.afterSave) {
+          options.afterSave();
+          return;
+        }
+        if (linkedHome) {
+          router.replace(linkedHome);
           router.refresh();
           return;
         }
@@ -1985,23 +2153,38 @@ export function CardCreatorForm({
       // edit
       if (!card?.id) {
         setServerError("Cannot find this card to update.");
+        options.onFailure?.("Cannot find this card to update.");
         return;
       }
       // An edit only ever carries the revisable fields — the locked
       // structure never leaves the client (lib/creator/revise.ts).
-      const result = await updateCardAction(
-        card.id,
-        pickRevisablePayload(payload),
-      );
+      let result: Awaited<ReturnType<typeof updateCardAction>>;
+      try {
+        result = await updateCardAction(card.id, pickRevisablePayload(payload));
+      } catch (error) {
+        failRequest(error);
+        return;
+      }
       if (!result.ok) {
         handleUpgradeOrError(result);
         return;
       }
       toast.success("Changes saved.");
-      // Mark clean right away (keeping the on-screen values); the keyed reset
-      // swaps in server truth when the refresh lands.
-      reset(undefined, { keepValues: true });
-      guard.disarm();
+      // The saved values become the baseline, keeping the on-screen values;
+      // the keyed reset swaps in server truth when the refresh lands. Mark
+      // clean only if nothing was typed while the request was in flight —
+      // those keystrokes weren't sent, so they stay dirty and guarded, and
+      // the keyed reset keeps them (TODO 3b.6).
+      const typedDuringSave = !sameFormState(getValues(), values);
+      reset(values, { keepValues: true, keepDirty: typedDuringSave });
+      // Stop guarding and take the Back sentinel off (TODO 3b.7: Back had
+      // to be pressed twice after a save) — unless we stay in the editor
+      // with unsent keystrokes, which keep their guard.
+      const staysInEditor =
+        !options.afterSave &&
+        !(intent === "save" && finalVisibility === "public") &&
+        !createBackAfter;
+      if (!(typedDuringSave && staysInEditor)) await guard.release();
       if (options.afterSave) {
         options.afterSave();
         return;
@@ -2247,6 +2430,7 @@ export function CardCreatorForm({
       {mode !== "edit" && !readOnly ? (
         <CapacityNotice capacity={capacity} adding={1} className="mb-6" />
       ) : null}
+      {!readOnly ? <GlyphCoverageNotice values={watched} className="mb-6" /> : null}
       <div
         className={readOnly ? "flex flex-col gap-6 select-none opacity-60" : "flex flex-col gap-6"}
         inert={readOnly || undefined}
@@ -2284,6 +2468,7 @@ export function CardCreatorForm({
                 <IdentityPanel revise={isRevise} />
                 <ArtPanel
                   userId={userId}
+                  secondFaceNameMissing={secondFaceNameMissing}
                   aiSlot={
                     <AiFillButton
                       label="Generate AI artwork and title"
@@ -2302,6 +2487,7 @@ export function CardCreatorForm({
                           insertSymbol(backRulesTextRef, token)
                         }
                         onBackFaceAdded={() => setPreviewFace("back")}
+                        blankSecondFace={blankSecondFaceFor(kind)}
                       />
                     ) : undefined
                   }
@@ -2468,28 +2654,46 @@ export function CardCreatorForm({
                     : null
             }
             saving={isSubmitting}
-            onStay={guard.clearPending}
+            saveError={leaveSaveError}
+            onStay={() => {
+              setLeaveSaveError(null);
+              guard.clearPending();
+            }}
             onLeave={() => {
               const pending = guard.pending;
+              setLeaveSaveError(null);
               guard.clearPending();
-              guard.disarm();
-              pending?.proceed();
+              void guard.release().then(() => pending?.proceed());
             }}
             onSave={() => {
               const pending = guard.pending;
               if (!pending) return;
-              guard.clearPending();
+              setLeaveSaveError(null);
               if (!isEdit) {
                 // "Save as draft": force private for this save only.
                 setValue("save_as_draft", true, { shouldDirty: true });
                 setValue("visibility", "private", { shouldDirty: true });
               }
+              // The dialog stays up ("Saving…") until the save lands: only
+              // a SUCCESSFUL save clears the pending leave and continues it
+              // (TODO 3b.5). Clearing it first closed the dialog before a
+              // failed save, which then jumped to a field the user couldn't
+              // see — nothing saved, nothing said.
               void handleSubmit(
                 (values) =>
-                  runSubmit(values, "save", { afterSave: pending.proceed }),
+                  runSubmit(values, "save", {
+                    afterSave: () => {
+                      guard.clearPending();
+                      pending.proceed();
+                    },
+                    onFailure: setLeaveSaveError,
+                  }),
                 (formErrors) => {
                   const first = Object.keys(formErrors)[0];
                   if (first) goToIndex(stepIndexForField(first, steps));
+                  setLeaveSaveError(
+                    `Not saved: ${firstErrorMessage(formErrors) ?? "fix the highlighted field first."}`,
+                  );
                 },
               )();
             }}

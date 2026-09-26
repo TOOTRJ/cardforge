@@ -38,4 +38,30 @@ describe("card-conjurer-alternative guide", () => {
       expect(article!.content).toContain(`](${href})`);
     }
   });
+  it("states Card Conjurer's features as the fork ships them (TODO 0.24)", () => {
+    const body = article!.content;
+    const row = (feature: string) => body.split("\n").find((line) => line.startsWith(`| ${feature} |`));
+    // Card Conjurer imports from Scryfall by name, every printing, 12 languages
+    // (creator/index.html's Import tab) — never "No".
+    expect(row("Scryfall import to prefill a real card")).toMatch(/\| Yes: by name, every printing, 12 languages \|$/);
+    // Its /print page tiles up to nine cards and downloads a PNG or a PDF.
+    expect(body).not.toMatch(/PNG per card/);
+    expect(row("Proxy print sheets")).toMatch(/Letter or A4 sheet, PNG or PDF/);
+    // Its saves live in localStorage plus an exported .cardconjurer file.
+    expect(row("Where your cards are saved")).toMatch(/local storage/);
+    // Its text boxes take numeric bounds (the Textbox Editor's "Edit
+    // Bounds"); only the art is dragged on the canvas.
+    expect(body).not.toMatch(/drag(ged)? (text boxes|anywhere)/i);
+    // PipGlyph's printings strip shows up to 30 representative printings.
+    expect(body).not.toMatch(/pick any printing/i);
+  });
+  it("never claims one renderer: a browser preview and a separate bake, kept in step by parity tests", () => {
+    const body = article!.content;
+    expect(body).not.toMatch(/\bone renderer\b|same renderer|pixel for pixel/i);
+    expect(body).toMatch(/separate renderer on the server/);
+    expect(body).toMatch(/parity tests/);
+  });
+  it("carries a revision date no older than the 0.24 corrections", () => {
+    expect((article!.meta.updated ?? "") >= "2026-09-26").toBe(true);
+  });
 });

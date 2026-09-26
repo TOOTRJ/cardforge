@@ -53,6 +53,25 @@ describe("basicLandManaKey — the one basic-land rule", () => {
   it("legacy/AI shape: a basic subtype with no supertype and no text stays a basic", () => {
     expect(basicLandManaKey({ cardType: "land", supertype: null, subtypes: ["Mountain"], title: "Mountain", rulesText: "" })).toBe("r");
     expect(basicLandManaKey({ cardType: "land", supertype: undefined, subtypes: ["Swamp"], title: "Gloom Marsh", rulesText: null })).toBe("b");
+    // One basic type among other subtypes is still one basic type.
+    expect(basicLandManaKey({ cardType: "land", supertype: "", subtypes: ["Forest", "Lair"], title: "Grove", rulesText: "" })).toBe("g");
+  });
+
+  it("3b.4: a dual with no rules text yet is NOT a basic — it gets a rules box", () => {
+    // Tundra typed from scratch, or a Nonbasic pick on a seeded land that
+    // then gained a second type: the fallback used to take the first type
+    // and print a big {W} with no rules box.
+    expect(
+      basicLandManaKey({ cardType: "land", supertype: "", subtypes: ["Plains", "Island"], title: "Tundra", rulesText: "" }),
+    ).toBeNull();
+    expect(
+      basicLandManaKey({ cardType: "land", supertype: null, subtypes: ["Mountain", "Forest", "Plains"], title: "Jetmir's Garden", rulesText: null }),
+    ).toBeNull();
+    expect(resolveWatermark(null, { cardType: "land", supertype: "", subtypes: ["Plains", "Island"], rulesText: "" })).toBeNull();
+    // An explicit Basic supertype is still the user's call.
+    expect(
+      basicLandManaKey({ cardType: "land", supertype: "Basic", subtypes: ["Plains", "Island"], title: "Plains" }),
+    ).toBe("w");
   });
 
   it("only lands qualify, and a Basic supertype without any land type (not Wastes) is not a basic", () => {

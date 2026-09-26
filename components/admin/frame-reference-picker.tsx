@@ -10,8 +10,9 @@ import { cn } from "@/lib/utils";
 // ---------------------------------------------------------------------------
 // FrameReferencePicker — lets the admin search Scryfall and pin the exact
 // printing a (template, color) combo recreates in the compare tool. Reuses
-// the existing /api/scryfall/search proxy (session auth + per-user quotas)
-// with the import dialog's debounce pattern. Null pin = registry default.
+// the existing /api/scryfall/search proxy (session auth; an admin skips the
+// per-user quota there, the global throttle still applies) with the import
+// dialog's debounce pattern. Null pin = registry default.
 // ---------------------------------------------------------------------------
 
 const DEBOUNCE_MS = 300;
