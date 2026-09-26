@@ -1,6 +1,7 @@
 import "server-only";
 
 import sharp from "sharp";
+import { needsAutoOrient, orientedSize } from "@/lib/media/orientation";
 import { isAllowedServerImageFetchUrl } from "@/lib/validation/card";
 
 // ---------------------------------------------------------------------------
@@ -26,6 +27,14 @@ import { isAllowedServerImageFetchUrl } from "@/lib/validation/card";
 // point at from inside the function. Only the app's own storage host and
 // Scryfall (lib/validation/card.ts isAllowedServerImageFetchUrl) are fetched;
 // anything else renders as a transparent pixel — never as a request.
+//
+// And it is where the bake obeys EXIF orientation (TODO 3.14). The browser
+// shows a phone photo upright (it reads the Orientation tag); Satori and
+// resvg draw the stored pixels as they lie. Any raster whose tag says "turn
+// me" (2–8) is re-encoded upright here — never passed through — so the bake,
+// its thumb, the OG image and downloads match the creator, focal point and
+// zoom included (lib/media/orientation.ts). Files stored before uploads were
+// normalized still carry the tag, which is why this runs at render time too.
 // ---------------------------------------------------------------------------
 
 /** Formats Satori decodes natively — passed through untouched. */
@@ -59,23 +68,26 @@ const MIME_BY_FORMAT: Record<string, string> = {
 };
 
 /**
- * Bytes → a data: URL Satori can consume. PNG/JPEG are wrapped as-is;
- * everything else (WebP, GIF, TIFF, HEIF, AVIF…) is transcoded to PNG —
- * animated inputs collapse to their first frame. Throws on undecodable
- * input (the caller falls back to the URL).
+ * Bytes → a data: URL Satori can consume. Untagged PNG/JPEG are wrapped
+ * as-is; everything else (WebP, GIF, TIFF, HEIF, AVIF…, and any image whose
+ * EXIF orientation is 2–8) is re-encoded upright — animated inputs collapse
+ * to their first frame. Throws on undecodable input (the caller falls back
+ * to the URL).
  */
 export async function toSatoriDataUrl(bytes: Buffer): Promise<string> {
   const meta = await sharp(bytes, { animated: false }).metadata();
   const native = Boolean(meta.format) && !needsSatoriTranscode(meta.format);
-  if (native && bytes.byteLength <= MAX_INLINE_BYTES) {
+  if (native && !needsAutoOrient(meta.orientation) && bytes.byteLength <= MAX_INLINE_BYTES) {
     return `data:${MIME_BY_FORMAT[meta.format as string] ?? "image/png"};base64,${bytes.toString("base64")}`;
   }
-  // Re-encode for inlining: fit the bake's largest art slot and pick JPEG
-  // for opaque images (a lossless PNG of a 1600×1920 photo is ~7 MB, base64
-  // ~10 MB — past resvg's XML buffer limit, which is how one card's re-bake
-  // died with "Buffer size limit exceeded" on 2026-09-16); PNG only when
-  // there is alpha to keep.
-  const fitted = sharp(bytes, { animated: false }).resize({
+  // Re-encode for inlining: turn the pixels the way the browser shows them
+  // (autoOrient — a no-op for orientation 1), fit the bake's largest art
+  // slot and pick JPEG for opaque images (a lossless PNG of a 1600×1920
+  // photo is ~7 MB, base64 ~10 MB — past resvg's XML buffer limit, which is
+  // how one card's re-bake died with "Buffer size limit exceeded" on
+  // 2026-09-16); PNG only when there is alpha to keep. sharp writes no EXIF,
+  // so the output carries no tag for anything downstream to re-apply.
+  const fitted = sharp(bytes, { animated: false }).autoOrient().resize({
     width: MAX_INLINE_EDGE,
     height: MAX_INLINE_EDGE,
     fit: "inside",
@@ -104,8 +116,13 @@ export async function resolveRenderableImage(
       const header = url.slice(5, comma);
       if (comma < 0 || !header.includes("base64")) return url;
       const mime = header.split(";")[0];
-      if (mime === "image/png" || mime === "image/jpeg") return url;
-      return await toSatoriDataUrl(Buffer.from(url.slice(comma + 1), "base64"));
+      const bytes = Buffer.from(url.slice(comma + 1), "base64");
+      // A native data: URL passes through unless its EXIF says to turn it.
+      if (mime === "image/png" || mime === "image/jpeg") {
+        const { orientation } = await sharp(bytes, { animated: false }).metadata();
+        if (!needsAutoOrient(orientation)) return url;
+      }
+      return await toSatoriDataUrl(bytes);
     }
     if (!/^https?:\/\//i.test(url)) return url;
     if (!isAllowedServerImageFetchUrl(url)) {
@@ -145,9 +162,12 @@ export const FOIL_MASK_EDGE = 640;
  * The foil mask's copy of an art data URL (lib/cards/foil-finish.tsx): a
  * small JPEG (PNG when the art has alpha) plus the ORIGINAL image's pixel
  * size, which the mask's object-fit: cover geometry is computed from — the
- * same size Satori reads when it draws the art itself. Null for anything
- * that is not an inlined, decodable image (the foil then follows the frame
- * alone there).
+ * same size Satori reads when it draws the art itself. Both are UPRIGHT
+ * (EXIF-oriented, like the browser's naturalWidth/naturalHeight): the art
+ * reaching here has normally been turned already by toSatoriDataUrl, and
+ * this repeats the rule so a tagged data: URL can never pair an upright art
+ * with a sideways mask. Null for anything that is not an inlined, decodable
+ * image (the foil then follows the frame alone there).
  */
 export async function foilMaskSource(
   dataUrl: string | null | undefined,
@@ -158,8 +178,9 @@ export async function foilMaskSource(
   try {
     const bytes = Buffer.from(dataUrl.slice(comma + 1), "base64");
     const meta = await sharp(bytes, { animated: false }).metadata();
-    if (!meta.width || !meta.height) return null;
-    const fitted = sharp(bytes, { animated: false }).resize({
+    const size = orientedSize(meta);
+    if (!size) return null;
+    const fitted = sharp(bytes, { animated: false }).autoOrient().resize({
       width: FOIL_MASK_EDGE,
       height: FOIL_MASK_EDGE,
       fit: "inside",
@@ -168,7 +189,7 @@ export async function foilMaskSource(
     const small = meta.hasAlpha
       ? `data:image/png;base64,${(await fitted.png().toBuffer()).toString("base64")}`
       : `data:image/jpeg;base64,${(await fitted.jpeg({ quality: 85 }).toBuffer()).toString("base64")}`;
-    return { href: small, naturalWidth: meta.width, naturalHeight: meta.height };
+    return { href: small, naturalWidth: size.width, naturalHeight: size.height };
   } catch {
     return null;
   }

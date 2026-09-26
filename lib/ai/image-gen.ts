@@ -3,6 +3,7 @@ import { isSafetyBlockError, shouldRewordAfter } from "@/lib/ai/art-prompt-safet
 
 import { experimental_generateImage as generateImage, generateText } from "ai";
 import { isGatewayConfigured } from "@/lib/ai/provider";
+import { autoOrientBytes } from "@/lib/media/orientation";
 
 // ---------------------------------------------------------------------------
 // Image generation + image-to-image restyle. ALL image generation goes through
@@ -118,9 +119,13 @@ export async function restyleImage(input: {
   if (!isGatewayConfigured()) {
     return { ok: false, error: "AI Gateway isn't configured." };
   }
+  // The model gets the art as the owner sees it: art stored before uploads
+  // were normalized may still carry an EXIF "turn me" tag (TODO 3.14), and
+  // nothing promises the model reads it.
+  const source = await autoOrientBytes(input.source, input.sourceContentType);
   return restyleViaGateway(
-    input.source,
-    input.sourceContentType,
+    source.bytes,
+    source.contentType,
     prompt,
     input.timeoutMs,
   );

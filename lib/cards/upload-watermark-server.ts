@@ -7,6 +7,7 @@ import sharp from "sharp";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { scanImageUrl } from "@/lib/moderation/image-scan";
+import { normalizeUploadOrientation } from "@/lib/media/orientation";
 
 // ---------------------------------------------------------------------------
 // Custom design-watermark upload — a near-copy of upload-art-server.ts with
@@ -56,17 +57,27 @@ export async function uploadWatermarkServerAction(
   // Byte sniff — Sharp throws on anything that isn't a real raster image
   // (SVG rejected by default), and the format whitelist rejects opaque-only
   // containers regardless of the declared Content-Type.
-  let format: string | undefined;
+  let metadata: sharp.Metadata;
   try {
-    format = (await sharp(buffer).metadata()).format;
+    metadata = await sharp(buffer).metadata();
   } catch {
     return { ok: false, error: "That doesn't look like a valid image." };
   }
+  const format = metadata.format;
   if (!format || !ALLOWED_FORMATS.has(format)) {
     return {
       ok: false,
       error: "Watermarks must be PNG or WebP (transparency required).",
     };
+  }
+
+  // Upright pixels, no EXIF orientation tag (lib/media/orientation.ts) —
+  // the browser obeys the tag, the bake used not to (TODO 3.14).
+  let stored: Buffer;
+  try {
+    stored = (await normalizeUploadOrientation(buffer, metadata, { maxBytes: MAX_BYTES })).buffer;
+  } catch {
+    return { ok: false, error: "That doesn't look like a valid image." };
   }
 
   const ext = format === "webp" ? "webp" : "png";
@@ -75,7 +86,7 @@ export async function uploadWatermarkServerAction(
 
   const { error: uploadError } = await supabase.storage
     .from("card-art")
-    .upload(objectPath, buffer, {
+    .upload(objectPath, stored, {
       cacheControl: "31536000",
       contentType: `image/${ext}`,
       upsert: false,

@@ -325,7 +325,7 @@ Open decisions are marked **[decide]**; none blocks its phase.
       - Reuse the helper for saga chapters (3.7).
 
       Acceptance: a parity test with a 1-line / 1-line / 5-line walker. Ship as a platform correction (0.20 sweep).
-- [ ] **3.14 [P0] Normalise EXIF orientation for every raster we bake** (Card Conjurer audit 2026-09-25) — `uploadCardArtServerAction` (`lib/cards/upload-art-server.ts`:111-140) stores the original bytes with their EXIF orientation tag, and `components/creator/art-uploader.tsx` does not re-encode on the client. The browser preview honours the tag; the Satori bake ignores it (reproduced: an orientation-6 JPEG bakes unrotated). `toSatoriDataUrl` (`lib/render/art-source.ts`:67-89) passes JPEG/PNG up to 3 MB straight through and resizes larger files without `.rotate()`. So a phone photo looks upright in the creator and sideways in the stored bake, the WebP thumb, the OG image and downloads.
+- [x] (fixed 2026-09-25 — fix/exif-orientation) **3.14 [P0] Normalise EXIF orientation for every raster we bake** (Card Conjurer audit 2026-09-25) — `uploadCardArtServerAction` (`lib/cards/upload-art-server.ts`:111-140) stores the original bytes with their EXIF orientation tag, and `components/creator/art-uploader.tsx` does not re-encode on the client. The browser preview honours the tag; the Satori bake ignores it (reproduced: an orientation-6 JPEG bakes unrotated). `toSatoriDataUrl` (`lib/render/art-source.ts`:67-89) passes JPEG/PNG up to 3 MB straight through and resizes larger files without `.rotate()`. So a phone photo looks upright in the creator and sideways in the stored bake, the WebP thumb, the OG image and downloads.
 
       Fix:
       - Auto-orient with `sharp(buffer).rotate()` and re-encode when `metadata.orientation > 1` in the art, watermark, set-icon and pip upload actions.
@@ -333,6 +333,8 @@ Open decisions are marked **[decide]**; none blocks its phase.
       - Run a one-off re-bake of cards whose art has orientation > 1.
 
       Acceptance: a unit test feeds an orientation-6 fixture through `resolveRenderableImage` and asserts upright pixels.
+
+      Shipped: `lib/media/orientation.ts` is the one rule. Art, watermark, cover/set-icon and avatar/banner uploads store upright pixels with no tag (same format; untagged files are stored byte-for-byte); the pip normaliser auto-orients before its crop; the AI remix sends the model the upright art. At render time `toSatoriDataUrl` / `resolveRenderableImage` / `foilMaskSource` auto-orient every tagged raster (bake, OG, profile/deck OG) and the foil mask uses the upright natural size. A read-only production scan found 2 affected cards (orientation 6) — migration 0118 nulls their stamp. **Owner step after merge + deploy:** "Re-bake now" on /admin/frame-compare (marked scope) or the next SCOPE=sweep. Not fixable: a custom pip uploaded from a tagged photo before this fix was stored as a sideways PNG with the tag already gone — the owner re-uploads it.
 - [ ] **3.15 [P2] One symbol resolver for both renderers** (Card Conjurer audit 2026-09-25) — Two inputs render differently in preview and bake:
       - A reversed hybrid (`{U/W}`) is a blank grey disc in the preview (`components/cards/card-preview.tsx`:1690; mana-font has no `.ms-uw`) but a correct split disc in the bake (`lib/cards/rules-text.ts`:261-267).
       - An unknown code (`{FOO}`) is a blank disc in the preview and disappears in the bake (`lib/render/card-image.tsx`:885, `components/cards/mana-cost-glyphs.tsx`:112).
