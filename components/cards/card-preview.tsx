@@ -37,7 +37,7 @@ import {
   layoutProfileLoyaltyRows,
   type LoyaltyRowsLayout,
 } from "@/lib/cards/loyalty-rows";
-import { fitRulesSizePct, fitSingleLineSizePct } from "@/lib/cards/render-tiers";
+import { fitRulesSizePct, fitSingleLineSizePct, secondFaceLineSizes } from "@/lib/cards/render-tiers";
 import { fitStatSizePct, ptValue, STAT_BADGE_INSET } from "@/lib/cards/stat-fit";
 import { fitDetachedCostTitle } from "@/lib/cards/title-band";
 import {
@@ -1678,6 +1678,13 @@ function SecondFacePanel({
   });
   const showCost = Boolean(slot.costSizePct) && Boolean(data.cost?.trim());
   const showPT = Boolean(slot.pt) && Boolean(data.power || data.toughness);
+  // Same math as SecondFaceBake: aftermath's name + type shrink to fit.
+  const lineSizes = secondFaceLineSizes({
+    slot,
+    name,
+    typeLine,
+    cost: showCost ? data.cost : null,
+  });
   const rulesSizePct = fitRulesSizePct({
     rulesText: data.rulesText,
     flavorText: null,
@@ -1699,7 +1706,7 @@ function SecondFacePanel({
           justifyContent: showCost ? "space-between" : "flex-start",
           gap: "2cqw",
           fontFamily: DISPLAY_FONT,
-          fontSize: cqw(slot.title.sizePct),
+          fontSize: cqw(lineSizes.titleSizePct),
           fontWeight: slot.title.weight ?? 600,
           color: slot.title.colorHex,
         }}
@@ -1724,7 +1731,7 @@ function SecondFacePanel({
           display: "flex",
           alignItems: "center",
           fontFamily: DISPLAY_FONT,
-          fontSize: cqw(slot.type.sizePct),
+          fontSize: cqw(lineSizes.typeSizePct),
           fontWeight: slot.type.weight ?? 600,
           color: slot.type.colorHex,
         }}

@@ -15,7 +15,7 @@
 
 import { ImageResponse } from "next/og";
 import { foilMaskSource, imageNaturalSize, resolveRenderableImage } from "@/lib/render/art-source";
-import { fitRulesSizePct, fitSingleLineSizePct } from "@/lib/cards/render-tiers";
+import { fitRulesSizePct, fitSingleLineSizePct, secondFaceLineSizes } from "@/lib/cards/render-tiers";
 import { fitStatSizePct, ptValue, STAT_BADGE_INSET } from "@/lib/cards/stat-fit";
 import { RULES_TEXT, orientationFromAspect, type CardOrientation } from "@/lib/cards/typography";
 import { tokenize, tokenSuffix } from "@/components/cards/mana-cost-glyphs";
@@ -2172,6 +2172,13 @@ function SecondFaceBake({
   const rot = `rotate(${slot.rotation}deg)`;
   const showCost = Boolean(slot.costSizePct) && Boolean(back.cost?.trim());
   const showPT = Boolean(slot.pt) && Boolean(back.power || back.toughness);
+  // Same math as SecondFacePanel: aftermath's name + type shrink to fit.
+  const lineSizes = secondFaceLineSizes({
+    slot,
+    name,
+    typeLine,
+    cost: showCost ? back.cost : null,
+  });
   const rulesSize = fitRulesSizePct({
     rulesText: back.rules_text,
     flavorText: null,
@@ -2201,7 +2208,7 @@ function SecondFaceBake({
           transform: rot,
           transformOrigin: "50% 50%",
           fontFamily: DISPLAY_FONT,
-          fontSize: fpx(slot.title.sizePct, cardWidth),
+          fontSize: fpx(lineSizes.titleSizePct, cardWidth),
           fontWeight: slot.title.weight ?? 600,
           color: slot.title.colorHex,
           zIndex: 20,
@@ -2226,7 +2233,7 @@ function SecondFaceBake({
           transform: rot,
           transformOrigin: "50% 50%",
           fontFamily: DISPLAY_FONT,
-          fontSize: fpx(slot.type.sizePct, cardWidth),
+          fontSize: fpx(lineSizes.typeSizePct, cardWidth),
           fontWeight: slot.type.weight ?? 600,
           color: slot.type.colorHex,
           zIndex: 20,

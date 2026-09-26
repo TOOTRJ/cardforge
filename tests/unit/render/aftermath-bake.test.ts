@@ -96,7 +96,52 @@ function footprint(rect: Rect) {
   return { x0: cx - halfW, x1: cx + halfW, y0: cy - halfH, y1: cy + halfH };
 }
 
-const second = getFrameProfile("aftermath").secondFace!;
+const layout = getFrameProfile("aftermath");
+const second = layout.secondFace!;
+
+/** An unrotated slot's box on the card, in px. */
+function box(rect: Rect) {
+  return {
+    x0: (rect.leftPct / 100) * W,
+    x1: ((rect.leftPct + rect.widthPct) / 100) * W,
+    y0: (rect.topPct / 100) * H,
+    y1: ((rect.topPct + rect.heightPct) / 100) * H,
+  };
+}
+
+const lum = (c: number[]) => 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2];
+
+/** Bounding box of the dark ink (luminance < 70) inside a px region. */
+function inkBox(r: Raw, x0: number, y0: number, x1: number, y1: number) {
+  const out = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
+  for (let y = Math.ceil(y0); y < Math.floor(y1); y += 1) {
+    for (let x = Math.ceil(x0); x < Math.floor(x1); x += 1) {
+      if (lum(px(r, x, y)) >= 70) continue;
+      out.x0 = Math.min(out.x0, x);
+      out.x1 = Math.max(out.x1, x + 1);
+      out.y0 = Math.min(out.y0, y);
+      out.y1 = Math.max(out.y1, y + 1);
+    }
+  }
+  return { ...out, w: out.x1 - out.x0, h: out.y1 - out.y0 };
+}
+
+/** Thickness of the first run of inked rows (top half, reading down) or
+ *  inked columns (turned bottom half, reading from the right edge in). */
+function firstLine(r: Raw, reg: { x0: number; x1: number; y0: number; y1: number }, turned: boolean) {
+  const [a0, a1] = turned ? [Math.floor(reg.x1) - 1, Math.ceil(reg.x0)] : [Math.ceil(reg.y0), Math.floor(reg.y1) - 1];
+  const step = turned ? -1 : 1;
+  const inked = (i: number) => {
+    const [b0, b1] = turned ? [Math.ceil(reg.y0), Math.floor(reg.y1)] : [Math.ceil(reg.x0), Math.floor(reg.x1)];
+    for (let j = b0; j < b1; j += 1) if (lum(turned ? px(r, i, j) : px(r, j, i)) < 70) return true;
+    return false;
+  };
+  let i = a0;
+  while (i !== a1 && !inked(i)) i += step;
+  const start = i;
+  while (i !== a1 && inked(i)) i += step;
+  return Math.abs(i - start);
+}
 
 describe("aftermath — the bottom half turns clockwise, like the print", () => {
   it("prints the second name ABOVE its cost (read top → bottom)", async () => {
@@ -283,5 +328,100 @@ describe("aftermath — the bottom half turns clockwise, like the print", () => 
       expect(sum.art[1]).toBeGreaterThan(10_000);
       expect(sum.art[0] / sum.art[1]).toBeGreaterThan(6);
     }
+  }, 60_000);
+});
+
+// The owner's answer (2026-09-25): the bottom half prints at the top half's
+// text sizes, like the printed Cut // Ribbons and Card Conjurer. The same
+// words on both halves must bake to the same ink, turned a quarter.
+describe("aftermath — both halves print at one set of text sizes", () => {
+  const RULES = "Draw two cards, then discard a card.";
+  const twin = card(
+    { title: "Memory", cost: "{4}{U}{U}", card_type: "sorcery", rules_text: RULES },
+    { title: "Memory", cost: "{4}{U}{U}", cardType: "sorcery", colorIdentity: ["blue"], rulesText: RULES },
+  );
+  /** The first / last `frac` of a band along its reading direction. */
+  const topPart = (b: ReturnType<typeof box>, from: number, to: number) => ({
+    ...b,
+    x0: b.x0 + (b.x1 - b.x0) * from,
+    x1: b.x0 + (b.x1 - b.x0) * to,
+  });
+  // A turned slot's footprint is wider than its bar (7% of the card's height
+  // vs a ~57 px bar): 12 px in from each side keeps the bar's dark edges out.
+  const turnedPart = (b: ReturnType<typeof footprint>, from: number, to: number) => ({
+    x0: b.x0 + 12,
+    x1: b.x1 - 12,
+    y0: b.y0 + (b.y1 - b.y0) * from,
+    y1: b.y0 + (b.y1 - b.y0) * to,
+  });
+
+  it("the name, type line and cost bake the same size on both halves", async () => {
+    const r = await bake(twin);
+    const ink = (reg: { x0: number; x1: number; y0: number; y1: number }) => inkBox(r, reg.x0, reg.y0, reg.x1, reg.y1);
+    // Name: the first half of each band (the cost sits at the far end).
+    const topName = ink(topPart(box(layout.title.rect), 0, 0.45));
+    const botName = ink(turnedPart(footprint(second.title.rect), 0, 0.45));
+    // Type line: likewise (the top half's set symbol sits at the far end).
+    const topType = ink(topPart(box(layout.type.rect), 0, 0.4));
+    const botType = ink(turnedPart(footprint(second.type.rect), 0, 0.4));
+    // Cost: the far end of each band.
+    const topCost = ink(topPart(box(layout.title.rect), 0.55, 1));
+    const botCost = ink(turnedPart(footprint(second.title.rect), 0.5, 1));
+    for (const [top, bot] of [
+      [topName, botName],
+      [topType, botType],
+      [topCost, botCost],
+    ]) {
+      expect(top.w).toBeGreaterThan(20);
+      // Turned clockwise: the top half's length runs down the bottom half's
+      // bar, its height across it.
+      expect(Math.abs(top.w - bot.h)).toBeLessThanOrEqual(2);
+      expect(Math.abs(top.h - bot.w)).toBeLessThanOrEqual(2);
+    }
+  }, 60_000);
+
+  it("the rules start at the same 9 pt on both halves", async () => {
+    const r = await bake(twin);
+    const top = firstLine(r, box(layout.rules.rect), false);
+    const bottom = firstLine(r, footprint(second.rules.rect), true);
+    expect(top).toBeGreaterThan(20);
+    expect(Math.abs(top - bottom)).toBeLessThanOrEqual(1);
+  }, 60_000);
+
+  it("a long bottom name and type line shrink to fit their bars", async () => {
+    const long = card({
+      title: "Glorious Retribution of the Scorched Sky",
+      cost: "{3}{R}{R}",
+      card_type: "sorcery",
+      supertype: "Legendary",
+      subtypes: ["Arcane", "Lesson"],
+      rules_text: "",
+    });
+    const short = card({ title: "Ribbons", cost: "{3}{R}{R}", card_type: "sorcery", rules_text: "" });
+    const [a, b] = [await bake(long), await bake(short)];
+    const across = (r: Raw, rect: Rect, to: number) => {
+      const reg = turnedPart(footprint(rect), 0, to);
+      return inkBox(r, reg.x0, reg.y0, reg.x1, reg.y1);
+    };
+    // Smaller type across the bar than a printed-length name / type line
+    // (which keep the top half's sizes), and running down most of the bar.
+    const [longName, shortName] = [across(a, second.title.rect, 0.45), across(b, second.title.rect, 0.45)];
+    const [longType, shortType] = [across(a, second.type.rect, 1), across(b, second.type.rect, 1)];
+    expect(longName.w).toBeLessThan(shortName.w * 0.8);
+    expect(longType.w).toBeLessThan(shortType.w * 0.8);
+    expect(longType.h).toBeGreaterThan(shortType.h * 2);
+    // …and every mark stays inside the bars' footprints (the right part of
+    // the bottom half, where the two bars and the art window lie).
+    const bars = [footprint(second.title.rect), footprint(second.type.rect)];
+    const blank = await bake(card({ title: "", cost: "", card_type: undefined, rules_text: "" }));
+    let outside = 0;
+    for (let y = Math.floor(H * 0.55); y < H; y += 1) {
+      for (let x = Math.floor(W * 0.45); x < W; x += 1) {
+        const [p, q] = [px(a, x, y), px(blank, x, y)];
+        if (Math.abs(p[0] - q[0]) + Math.abs(p[1] - q[1]) + Math.abs(p[2] - q[2]) <= 60) continue;
+        if (!bars.some((f) => x >= f.x0 - 1 && x <= f.x1 + 1 && y >= f.y0 - 1 && y <= f.y1 + 1)) outside += 1;
+      }
+    }
+    expect(outside).toBe(0);
   }, 60_000);
 });

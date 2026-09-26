@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { fitRulesSizePct, fitSingleLineSizePct, rulesSizeLadder } from "@/lib/cards/render-tiers";
+import {
+  fitRulesSizePct,
+  fitSingleLineSizePct,
+  rulesSizeLadder,
+  secondFaceLineSizes,
+} from "@/lib/cards/render-tiers";
+import { getFrameProfile } from "@/lib/cards/template-layout";
 import { RULES_TEXT, pctToPt, ptToPct } from "@/lib/cards/typography";
 
 // The m15 rules slot — the most common case.
@@ -122,5 +128,48 @@ describe("fitSingleLineSizePct", () => {
     expect(
       fitSingleLineSizePct({ text: null, rect: M15_TYPE_RECT, baseSizePct: 0.03 }),
     ).toBe(0.03);
+  });
+});
+
+describe("secondFaceLineSizes", () => {
+  const aftermath = getFrameProfile("aftermath").secondFace!;
+  const LONG_NAME = "Glorious Retribution of the Scorched Sky";
+  const LONG_TYPE = "Legendary Sorcery — Arcane Lesson";
+  const sizes = (slot: typeof aftermath, name: string, typeLine: string, cost: string | null) =>
+    secondFaceLineSizes({ slot, name, typeLine, cost });
+
+  it("keeps the profile's sizes for a face that doesn't opt in (flip, split)", () => {
+    for (const template of ["flip", "split"] as const) {
+      const slot = getFrameProfile(template).secondFace!;
+      expect(slot.fitLines).toBeFalsy();
+      expect(sizes(slot, LONG_NAME, LONG_TYPE, "{3}{R}{R}")).toEqual({
+        titleSizePct: slot.title.sizePct,
+        typeSizePct: slot.type.sizePct,
+      });
+    }
+  });
+
+  it("aftermath: a printed-length name and type line keep the top half's sizes", () => {
+    expect(aftermath.fitLines).toBe(true);
+    expect(sizes(aftermath, "Ribbons", "Sorcery", "{X}{B}{B}")).toEqual({
+      titleSizePct: aftermath.title.sizePct,
+      typeSizePct: aftermath.type.sizePct,
+    });
+  });
+
+  it("aftermath: a long name and type line shrink to fit their bars (floor: 5 pt)", () => {
+    const { titleSizePct, typeSizePct } = sizes(aftermath, LONG_NAME, LONG_TYPE, "{3}{R}{R}");
+    expect(titleSizePct).toBeLessThan(aftermath.title.sizePct);
+    expect(typeSizePct).toBeLessThan(aftermath.type.sizePct);
+    expect(Math.min(titleSizePct, typeSizePct)).toBeGreaterThanOrEqual(ptToPct(RULES_TEXT.hardFloorPt));
+  });
+
+  it("aftermath: the name leaves room for its cost pips", () => {
+    // Fits the bar alone at the base size, but not next to five pips.
+    const name = "Second Half";
+    expect(sizes(aftermath, name, "Sorcery", null).titleSizePct).toBe(aftermath.title.sizePct);
+    const withCost = sizes(aftermath, name, "Sorcery", "{X}{X}{2}{B}{B}").titleSizePct;
+    expect(withCost).toBeLessThan(aftermath.title.sizePct);
+    expect(sizes(aftermath, name, "Sorcery", "{B}").titleSizePct).toBeGreaterThan(withCost);
   });
 });

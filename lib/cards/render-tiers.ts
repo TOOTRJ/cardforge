@@ -176,6 +176,54 @@ export function fitSingleLineSizePct({
   return Math.max(ptToPct(RULES_TEXT.hardFloorPt), Math.min(baseSizePct, fitted));
 }
 
+// A cost pip's share of a band: the disc plus the ≈0.12em gap both renderers
+// put between pips, rounded up.
+const PIP_ADVANCE = 1.15;
+// The gap between a band's name and its cost (the preview's 2cqw).
+const NAME_COST_GAP = 0.02;
+
+/**
+ * A second face's name + type-line sizes (flip / split / aftermath), shared by
+ * SecondFacePanel (preview) and SecondFaceBake. The profile's sizes as they
+ * are — unless the face opts in with `fitLines` (aftermath: the top half's
+ * sizes on bars a third of the card long), when each line shrinks to fit its
+ * bar like the front's type line (fitSingleLineSizePct), the name leaving room
+ * for its cost pips.
+ */
+export function secondFaceLineSizes({
+  slot,
+  name,
+  typeLine,
+  cost,
+}: {
+  slot: {
+    title: { rect: Rect; sizePct: number };
+    type: { rect: Rect; sizePct: number };
+    costSizePct?: number;
+    fitLines?: boolean;
+  };
+  name: string;
+  typeLine: string;
+  /** The face's cost (e.g. "{X}{B}{B}"); null/empty when it has none. */
+  cost: string | null | undefined;
+}): { titleSizePct: number; typeSizePct: number } {
+  if (!slot.fitLines) return { titleSizePct: slot.title.sizePct, typeSizePct: slot.type.sizePct };
+  const pips = slot.costSizePct ? (cost?.match(/\{[^}]+\}/g)?.length ?? 0) : 0;
+  return {
+    titleSizePct: fitSingleLineSizePct({
+      text: name,
+      rect: slot.title.rect,
+      baseSizePct: slot.title.sizePct,
+      reservedPct: pips ? pips * (slot.costSizePct ?? 0) * PIP_ADVANCE + NAME_COST_GAP : 0,
+    }),
+    typeSizePct: fitSingleLineSizePct({
+      text: typeLine,
+      rect: slot.type.rect,
+      baseSizePct: slot.type.sizePct,
+    }),
+  };
+}
+
 /**
  * The shrink ladder for a base size: the base, then every half-point step
  * below it down to the hard floor — with the printed floor (7.5 pt) as a

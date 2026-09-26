@@ -353,6 +353,10 @@ export type FrameProfile = {
     pt?: StatSlot;
     /** A second art window (split); omit when the face shares the front art. */
     artSlot?: Rect;
+    /** The name and the type line shrink to fit their bars on one line
+     *  (secondFaceLineSizes), the name leaving room for its cost, instead of
+     *  ellipsizing — aftermath's sideways bars are short. Code-owned. */
+    fitLines?: boolean;
   };
   /** Where the pipglyph.com brand mark sits, for frames whose bottom black
    *  border is thinner than M15's (Alpha, 1997, 2003, extended art, battle,
@@ -1394,34 +1398,54 @@ const SPLIT: FrameProfile = {
 // rotate(90°) around each center lands it on the vertical bar (the box may
 // extend off-card before rotation, which is fine). Frame stacked by
 // scripts/build-aftermath-frame.mjs.
+//
+// Both halves print their text at ONE set of sizes (AFTERMATH_TEXT), like the
+// printed cards and Card Conjurer (title/title2, type/type2, rules/rules2 and
+// mana/mana2 each share a size). Measured on the 745 px Cut // Ribbons and
+// Commit // Memory scans (word widths fitted in our Beleren, cross-checked on
+// glyph heights): the name is 0.049–0.053 of the card's width on EITHER half,
+// the type line 0.043–0.045, the cost discs ≈ 35 px on both — a regular M15
+// card's sizes (DOM Serra Angel measures 0.0525 / 0.0443 the same way), so
+// both halves take M15's scan-calibrated title / type / cost sizes. The old
+// top half (0.04 / 0.0347 / 0.04) printed a fifth under the card. Rules start
+// at the 9 pt standard on both halves and shrink on the ladder; the sideways
+// name and type line also shrink to fit their shorter bars (fitLines).
+const AFTERMATH_TEXT = {
+  titleSizePct: 0.05,
+  typeSizePct: 0.0435,
+  costSizePct: 0.0485,
+  rulesSizePct: ptToPct(9),
+} as const;
+
 const AFTERMATH: FrameProfile = {
   label: "Aftermath",
   artSlot: { topPct: 11.3, leftPct: 7.7, widthPct: 84.5, heightPct: 22.4 },
-  costSizePct: 0.04,
+  costSizePct: AFTERMATH_TEXT.costSizePct,
   title: {
     rect: { topPct: 5.7, leftPct: 8.5, widthPct: 82, heightPct: 4.4 },
-    sizePct: 0.04,
+    sizePct: AFTERMATH_TEXT.titleSizePct,
     colorHex: INK_DARK,
     weight: 600,
     font: "display",
   },
   type: {
     rect: { topPct: 35.4, leftPct: 8, widthPct: 82.7, heightPct: 3.8 },
-    sizePct: 0.0347,
+    sizePct: AFTERMATH_TEXT.typeSizePct,
     colorHex: INK_DARK_SOFT,
     weight: 600,
     font: "display",
   },
   rules: {
     rect: { topPct: 40.9, leftPct: 7.5, widthPct: 84.5, heightPct: 13.0 },
-    sizePct: ptToPct(9),
+    sizePct: AFTERMATH_TEXT.rulesSizePct,
     colorHex: INK_DARK,
     vAlign: "start",
     font: "body",
   },
   secondFace: {
     rotation: 90,
-    costSizePct: 0.034,
+    costSizePct: AFTERMATH_TEXT.costSizePct,
+    fitLines: true,
     // The bottom half's art window (MSE image 2): x 54.9–83.7%, y 56.4–91.4%
     // in card space. Like the text slots this is the PRE-rotation wide box
     // centered on the window — rotate(90°) in place lands exactly on it and
@@ -1433,14 +1457,14 @@ const AFTERMATH: FrameProfile = {
     // centred on its bar (x 46.4–54.8%).
     title: {
       rect: { topPct: 70.125, leftPct: 64.5, widthPct: 48, heightPct: 7 },
-      sizePct: 0.038,
+      sizePct: AFTERMATH_TEXT.titleSizePct,
       colorHex: INK_DARK,
       weight: 600,
       font: "display",
     },
     type: {
       rect: { topPct: 70.125, leftPct: 26.6, widthPct: 48, heightPct: 7 },
-      sizePct: 0.028,
+      sizePct: AFTERMATH_TEXT.typeSizePct,
       colorHex: INK_DARK_SOFT,
       weight: 600,
       font: "display",
@@ -1451,7 +1475,7 @@ const AFTERMATH: FrameProfile = {
     // the white box instead of running into the type bar and off the card.
     rules: {
       rect: { topPct: 60.21, leftPct: 2.44, widthPct: 47, heightPct: 27.15 },
-      sizePct: ptToPct(7.5),
+      sizePct: AFTERMATH_TEXT.rulesSizePct,
       colorHex: INK_DARK,
       vAlign: "center",
       font: "body",
