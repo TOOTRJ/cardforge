@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useId, useState, type CSSProperties, type ReactNode } from "react";
 import { frameUrl } from "@/lib/frames/frame-url";
 import { RotateCw } from "lucide-react";
 import { cn, clamp } from "@/lib/utils";
@@ -18,10 +18,18 @@ import { SetSymbol } from "@/components/cards/set-symbol";
 import {
   FrameLayer,
   frameImageUrl,
+  frameSplitFor,
   pickFrameColorKey,
   webpVariant,
 } from "@/components/cards/frame-layer";
 import { EtchedSheen } from "@/lib/cards/etched-finish";
+import {
+  FoilSheen,
+  FoilStripeSheen,
+  foilArtLayers,
+  loyaltyStripeRects,
+  type FoilArtSource,
+} from "@/lib/cards/foil-finish";
 import { fitRulesSizePct, fitSingleLineSizePct } from "@/lib/cards/render-tiers";
 import {
   PLACEHOLDER_FLAVOR_TEXT,
@@ -49,9 +57,11 @@ import {
 import {
   SAGA_MARKER_POINTS,
   brandMarkLayout,
+  footerInk,
   loyaltyBadgeAssetFor,
   loyaltyBadgeShapeFor,
   resolveColorAsset,
+  slotInk,
   type FrameProfile,
   type Rect,
   type SlotAlign,
@@ -502,13 +512,36 @@ export function CardPreview({
           <RotateCw className="h-4 w-4" aria-hidden />
         </button>
       ) : null}
-
-      <style>{shimmerKeyframes}</style>
     </div>
   );
 }
 
-const shimmerKeyframes = `@keyframes card-shimmer { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`;
+/**
+ * The intrinsic pixel size of an image URL, once it has loaded (null before,
+ * and for a null URL). The foil finish needs it: its luminance mask redraws
+ * the art with the same object-fit: cover geometry the art <img> gets, and
+ * SVG can't express cover at an arbitrary focal point without the size.
+ * The URL is the one the art <img> already loads, so this is a cache hit.
+ */
+function useNaturalSize(src: string | null | undefined): FoilArtSource | null {
+  const [loaded, setLoaded] = useState<FoilArtSource | null>(null);
+  useEffect(() => {
+    if (!src) return;
+    let live = true;
+    const img = new Image();
+    img.onload = () => {
+      if (live && img.naturalWidth > 0 && img.naturalHeight > 0) {
+        setLoaded({ href: src, naturalWidth: img.naturalWidth, naturalHeight: img.naturalHeight });
+      }
+    };
+    img.src = src;
+    return () => {
+      live = false;
+    };
+  }, [src]);
+  // A stale size (the art was just swapped) is never used for the new URL.
+  return src && loaded?.href === src ? loaded : null;
+}
 
 // ---------------------------------------------------------------------------
 // CardFace — one complete face: art (under frame), the frame PNG, the painted-
@@ -552,8 +585,14 @@ function CardFace({
   brandMark?: boolean;
 }) {
   const colorKey = pickFrameColorKey(colorIdentity);
+  // A two-colour Dragon Wing card draws BOTH colours' frames split down the
+  // seam (FrameProfile.twoColorSplit); the plates keep colorKey ("m").
+  const frameSplit = frameSplitFor(layout, colorIdentity);
   const safeTitle = face.title?.trim() || "Untitled Card";
   const markLayout = brandMarkLayout(layout);
+  // Per-frame-colour footer ink (Alpha: silver on every frame but white) —
+  // the same footerInk() the bake resolves.
+  const footerInkResolved = layout.footer ? footerInk(layout.footer, colorKey) : null;
   const showCost =
     !layout.hideCost && face.cardType !== "land" && Boolean(face.cost?.trim());
 
@@ -577,6 +616,15 @@ function CardFace({
   // several previews, and a DFC renders two faces). useId's punctuation is
   // stripped so it is safe inside url(#…).
   const etchedId = `etched-${useId().replace(/[^A-Za-z0-9_-]/g, "")}`;
+  const foilId = `foil-${useId().replace(/[^A-Za-z0-9_-]/g, "")}`;
+  // Foil only: the art's intrinsic size for the foil mask's cover geometry.
+  const foilArt = useNaturalSize(isFoil ? face.artUrl : null);
+  const foilSecondArt = useNaturalSize(
+    isFoil && layout.secondFace?.artSlot ? secondFace?.artUrl : null,
+  );
+  // Printed layers drawn above the full-card sheen — the stat plates and the
+  // planeswalker ability stripes — carry their own (the bake's twins).
+  const plateFoil = isFoil ? { landscape: layout.orientation === "landscape" } : null;
 
   const focalX = clamp(face.artPosition?.focalX ?? 0.5, 0, 1);
   const focalY = clamp(face.artPosition?.focalY ?? 0.5, 0, 1);
@@ -706,7 +754,12 @@ function CardFace({
       ) : null}
 
       {/* Frame PNG — above the art so its painted slot border is on top. */}
-      <FrameLayer template={template} colorIdentity={colorIdentity} zIndex={5} />
+      <FrameLayer
+        template={template}
+        colorIdentity={colorIdentity}
+        zIndex={5}
+        split={frameSplit}
+      />
 
       {/* Premium finish: etched — fine cross-hatch + sheen on the FRAME only
           (masked by the frame's own luminance), just above the frame and
@@ -715,7 +768,46 @@ function CardFace({
       {isEtched ? (
         <EtchedSheen
           id={etchedId}
-          frameHref={frameImageUrl(template, colorKey)}
+          frameHref={frameImageUrl(template, frameSplit?.leftKey ?? colorKey)}
+          split={
+            frameSplit
+              ? {
+                  href: frameImageUrl(template, frameSplit.rightKey),
+                  atPct: frameSplit.atPct,
+                }
+              : null
+          }
+          landscape={layout.orientation === "landscape"}
+          width="100%"
+          height="100%"
+          style={{ zIndex: 6, pointerEvents: "none" }}
+        />
+      ) : null}
+
+      {/* Premium finish: foil — holographic rainbow + glint through a
+          luminance mask of the art layers + frame: strongest on light areas,
+          none on black, under every text/stat layer (the ink sits on the
+          foil). The SAME SVG the bake draws right after its frame <img>
+          (lib/cards/foil-finish.tsx). Static, like the bake. */}
+      {isFoil ? (
+        <FoilSheen
+          id={foilId}
+          // Split frames mask with the two halves the face paints (like the
+          // etched sheen); plates below keep the gold "m" key.
+          frameHref={frameImageUrl(template, frameSplit?.leftKey ?? colorKey)}
+          split={
+            frameSplit
+              ? { href: frameImageUrl(template, frameSplit.rightKey), atPct: frameSplit.atPct }
+              : null
+          }
+          art={foilArtLayers({
+            layout,
+            colorKey,
+            art: foilArt,
+            artPosition: face.artPosition,
+            secondArt: foilSecondArt,
+            secondArtPosition: secondFace?.artPosition,
+          })}
           landscape={layout.orientation === "landscape"}
           width="100%"
           height="100%"
@@ -729,6 +821,7 @@ function CardFace({
           slot={layout.pt}
           value={`${face.power ?? "—"}/${face.toughness ?? "—"}`}
           colorKey={colorKey}
+          foil={plateFoil && { ...plateFoil, id: `${foilId}-pt` }}
         />
       ) : null}
       {showLoyalty && layout.loyalty ? (
@@ -736,6 +829,7 @@ function CardFace({
           slot={layout.loyalty}
           value={String(face.loyalty ?? "")}
           colorKey={colorKey}
+          foil={plateFoil && { ...plateFoil, id: `${foilId}-loyalty` }}
         />
       ) : null}
       {showDefense && layout.defense ? (
@@ -743,6 +837,7 @@ function CardFace({
           slot={layout.defense}
           value={String(face.defense)}
           colorKey={colorKey}
+          foil={plateFoil && { ...plateFoil, id: `${foilId}-defense` }}
         />
       ) : null}
 
@@ -935,6 +1030,7 @@ function CardFace({
           rows={layout.loyaltyRows}
           abilities={loyaltyAbilities}
           sizePct={rulesSizePct}
+          foil={plateFoil && { ...plateFoil, id: `${foilId}-rows` }}
         />
       ) : layout.loyaltyRows && usesLoyaltyRows && staticInEditor ? (
         // Editor-only: an empty planeswalker still shows the striped ability
@@ -954,6 +1050,7 @@ function CardFace({
           ]}
           sizePct={rulesSizePct}
           placeholder
+          foil={plateFoil && { ...plateFoil, id: `${foilId}-rows` }}
         />
       ) : isBasicLand ? null : (
       <div
@@ -1022,7 +1119,7 @@ function CardFace({
       ) : null}
 
       {/* Footer — artist credit + brand. */}
-      {layout.footer ? (
+      {layout.footer && footerInkResolved ? (
         <div
           style={{
             ...rectStyle(layout.footer.rect),
@@ -1033,7 +1130,10 @@ function CardFace({
             gap: "2cqw",
             fontFamily: fontFor(layout.footer.font),
             fontSize: cqw(layout.footer.sizePct),
-            color: layout.footer.colorHex,
+            color: footerInkResolved.colorHex,
+            ...(footerInkResolved.shadowCss
+              ? { textShadow: footerInkResolved.shadowCss }
+              : {}),
             letterSpacing: `${layout.footer.letterSpacingEm ?? 0}em`,
             textTransform: layout.footer.uppercase ? "uppercase" : "none",
           }}
@@ -1087,21 +1187,6 @@ function CardFace({
           </svg>
           pipglyph.com
         </div>
-      ) : null}
-
-      {/* Premium finish: foil shimmer. */}
-      {isFoil ? (
-        <div
-          aria-hidden
-          className={cn(
-            "pointer-events-none absolute inset-0 z-30 mix-blend-overlay opacity-35",
-            staticInEditor ? "" : "animate-[card-shimmer_6s_linear_infinite]",
-          )}
-          style={{
-            background:
-              "conic-gradient(from 0deg, transparent, rgba(255,200,120,0.55), transparent 30%, rgba(255,255,255,0.45) 50%, transparent 70%, rgba(190,170,255,0.5) 85%, transparent 100%)",
-          }}
-        />
       ) : null}
     </div>
   );
@@ -1161,11 +1246,29 @@ function StatOverlay({
   slot,
   value,
   colorKey,
+  foil = null,
 }: {
   slot: StatSlot;
   value: string;
   colorKey: string;
+  /** Foil finish: the plate gets the card's sheen too (the full-card foil
+   *  layer sits below the plates) — the bake's StatBake twin. */
+  foil?: { id: string; landscape: boolean } | null;
 }) {
+  // The plate's own foil: the SAME SVG the bake draws between the plate and
+  // its digits, masked by the plate image the browser shows (its WebP).
+  const plateFoil = (rect: Rect, style: CSSProperties) =>
+    foil && slot.plateAssetPathTemplate ? (
+      <FoilSheen
+        id={foil.id}
+        frameHref={frameUrl(webpVariant(resolveColorAsset(slot.plateAssetPathTemplate, colorKey)))}
+        region={rect}
+        landscape={foil.landscape}
+        width="100%"
+        height="100%"
+        style={{ ...style, pointerEvents: "none" }}
+      />
+    ) : null;
   // A separate plate box (TODO 4.18): the plate draws in plateRect, the
   // digits centre in rect — same split in the bake (StatBake).
   if (slot.plateRect && slot.plateAssetPathTemplate) {
@@ -1182,10 +1285,14 @@ function StatOverlay({
             style={{ ...rectStyle(slot.plateRect), zIndex: 22 }}
           />
         </picture>
+        {plateFoil(slot.plateRect, { ...rectStyle(slot.plateRect), zIndex: 22 })}
         <StatOverlay slot={{ ...slot, plateAssetPathTemplate: undefined, plateRect: undefined }} value={value} colorKey={colorKey} />
       </>
     );
   }
+  // Per-frame-colour ink (Alpha: silver on every frame but white) — the
+  // same slotInk() the bake's StatBake resolves.
+  const ink = slotInk(slot, colorKey);
   return (
     <div
       className="pointer-events-none absolute flex items-center justify-center"
@@ -1222,19 +1329,20 @@ function StatOverlay({
           }}
         />
       ) : null}
+      {plateFoil(slot.rect, { top: 0, left: 0, width: "100%", height: "100%" })}
       <span
         className="relative"
         style={{
           fontFamily: DISPLAY_FONT,
           fontSize: cqw(slot.sizePct),
           fontWeight: slot.weight ?? 700,
-          color: slot.colorHex,
+          color: ink.colorHex,
           ...(slot.valueDxEm || slot.valueDyEm
             ? {
                 transform: `translate(${slot.valueDxEm ?? 0}em, ${slot.valueDyEm ?? 0}em)`,
               }
             : {}),
-          ...(slot.shadowCss ? { textShadow: slot.shadowCss } : {}),
+          ...(ink.shadowCss ? { textShadow: ink.shadowCss } : {}),
         }}
       >
         {value}
@@ -1799,6 +1907,7 @@ function LoyaltyRows({
   sizePct,
   pipOverrides = null,
   placeholder = false,
+  foil = null,
 }: {
   slot: TextSlot;
   rows: NonNullable<FrameProfile["loyaltyRows"]>;
@@ -1807,7 +1916,16 @@ function LoyaltyRows({
   pipOverrides?: PipOverrides | null;
   /** Editor-only empty state — mutes the row text into a hint. */
   placeholder?: boolean;
+  /** Foil finish: each stripe gets its own sheen (FoilStripeSheen) — the
+   *  translucent stripes sit above the full-card layer. The bake's
+   *  LoyaltyRowsBake twin. */
+  foil?: { id: string; landscape: boolean } | null;
 }) {
+  const stripe = (i: number) => (i % 2 === 0 ? rows.stripeAHex : rows.stripeBHex);
+  const stripeRects = foil ? loyaltyStripeRects(slot.rect, abilities.length) : null;
+  // Foil: rows contain their sheen, and the badge + text after it are
+  // positioned so they paint on top (the bake's document order).
+  const onTop = foil ? { position: "relative" as const } : {};
   return (
     <div
       style={{
@@ -1831,10 +1949,23 @@ function LoyaltyRows({
             display: "flex",
             flex: 1,
             alignItems: "center",
-            background: i % 2 === 0 ? rows.stripeAHex : rows.stripeBHex,
+            background: stripe(i),
             padding: `${cqw(sizePct * 0.22)} ${cqw(sizePct * 0.4)}`,
+            ...onTop,
           }}
         >
+          {/* Foil: the stripe's sheen — the row's first child. */}
+          {foil && stripeRects ? (
+            <FoilStripeSheen
+              id={`${foil.id}-${i}`}
+              region={stripeRects[i]}
+              fill={stripe(i)}
+              landscape={foil.landscape}
+              width="100%"
+              height="100%"
+              style={{ pointerEvents: "none" }}
+            />
+          ) : null}
           <div
             style={{
               position: "relative",
@@ -1894,6 +2025,7 @@ function LoyaltyRows({
             style={{
               flex: 1,
               minWidth: 0,
+              ...onTop,
               ...(placeholder ? { fontStyle: "italic", opacity: 0.55 } : {}),
             }}
           >

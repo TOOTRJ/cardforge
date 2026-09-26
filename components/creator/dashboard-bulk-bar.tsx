@@ -86,7 +86,7 @@ export function DashboardBulkBar({
   return (
     <>
       {/* Sticky at the bottom of the viewport. z-40 keeps it above the
-          card grid + the foil shimmer overlay but below modals (z-50). */}
+          card grid but below modals (z-50). */}
       <div
         role="region"
         aria-label={`${count} cards selected`}

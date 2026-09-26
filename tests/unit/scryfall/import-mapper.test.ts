@@ -5,6 +5,7 @@ import {
   mapScryfallToFormPatch,
   parseColorIdentity,
   parseTypeLine,
+  referenceColorIdentity,
 } from "@/lib/scryfall/import-mapper";
 import {
   normalizeScryfallImageUrl,
@@ -131,6 +132,20 @@ describe("parseColorIdentity", () => {
   it("ignores unknown color codes", () => {
     const card = fixture({ color_identity: ["W", "Q"] });
     expect(parseColorIdentity(card)).toEqual(["white"]);
+  });
+});
+
+describe("referenceColorIdentity (frame-compare's render of a real printing)", () => {
+  it("keeps a two-colour printing's two colours, so Dragon Wing draws its split", () => {
+    // MUL #60 Taigam — Scryfall lists U before W.
+    expect(referenceColorIdentity(fixture({ color_identity: ["U", "W"] }))).toEqual(["blue", "white"]);
+  });
+
+  it("matches parseColorIdentity for everything else", () => {
+    for (const color_identity of [[], ["R"], ["W", "U", "B"], ["W", "U", "B", "R", "G"]]) {
+      const card = fixture({ color_identity });
+      expect(referenceColorIdentity(card)).toEqual(parseColorIdentity(card));
+    }
   });
 });
 

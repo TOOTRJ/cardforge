@@ -743,34 +743,84 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
 
       CC's `gallery/index.html` ('what they're called and where to find them') is the model. Today only the frame-eras article describes our frames, in prose.
 - [ ] **4.30 [P2] Border colour overlay (black / white / silver / gold)** (Card Conjurer audit 2026-09-25) — Every CC group offers White/Silver/Gold Border (`packM15Borders.js`, `pack8th.js`): a 1×1 fill drawn through the Border mask. PipGlyph has no border colour anywhere. Add a per-card border colour drawn through the template's border mask in both renderers; the import maps Scryfall `border_color` white/silver/gold to an exact match (8ED/9ED white-border printings, Un-set silver with 4.15).
-- [ ] **4.31 [P2] Frame-review follow-ups still open** (owner review of every
-      production card, 2026-09-25; the fixed half shipped as layout v25/v26 in
-      fix/frame-review-followups):
-      - **[decide] Dragon Wing two-colour cards.** The frame is the Multiverse
-        Legends (MOM 2023) Tarkir frame; its only two-colour print (MUL #60
-        Taigam, W/U) splits the wings — first colour left, second right — with
-        a gold P/T plate. MSE does the same (`special_blend_card.png`, a hard
-        vertical split). A prototype (`twoColorSplit` profile field, a clipped
-        second frame layer in both renderers, both keys preloaded) was built
-        and measured during the review; today a two-colour card gets the gold
-        'm' wings on silver.
-      - **[decide] Dragon Wing sits under the era "Tarkir: Dragonstorm"**
-        (`types/card.ts`) but is the 2023 MUL frame — rename or re-home it. The
-        gold TDM dragon frame people expect is `tarkirdraconic`, whose P/T is
-        white on light parchment (invisible) and needs the same plate treatment.
-      - **[decide] Ghostfire (tarkirghostfire)** keeps only MSE's outline
-        (`card.png`, mean α 26); MSE also draws namebox/typebox/textbox at 60 %
-        and a pt.png ribbon, all ink white. Our type line sits on the band's
-        lower rim (band interior 51.4–56.8 %H, our rect 56–60.5). One production
-        card (Veil of Echoes), which the owner marked OK.
-      - **Alpha (agclassic) frame proportions.** Real LEA cards end the tan
-        frame at ≈95.2 %H (≈100 px of black at HD); our master ends it at
-        97.1 %H (60 px). v25 centred the P/T and brand mark in OUR strip and
-        border; a re-cut frame would move both again.
-      - **Alpha ink on dark frames.** P/T and the artist line are INK_DARK on
-        every colour — near-invisible on black (strip luminance ≈33), weak on
-        gold/green. Printed Alpha uses a light silver emboss on non-white
-        frames: needs per-colour ink on StatSlot + footer in both renderers.
+- [ ] **4.31 [P2] Frame-review follow-ups** (owner review of every production
+      card, 2026-09-25; the fixed half shipped as layout v25/v26 in
+      fix/frame-review-followups; the owner's decisions as v27/v28 +
+      migration 0117 in feat/frame-review-decisions):
+      - [x] **Dragon Wing two-colour cards split their wings** (owner decision):
+        `FrameProfile.twoColorSplit`, both renderers, both keys preloaded,
+        plates stay 'm'. Still open: frame_reviews gates a two-colour card as
+        (tarkirdragon, 'm') — decide whether ticking 'm' certifies the split
+        (the compare page now shows it for Taigam) or the gold 3+ colour look;
+        the pips panel's cost-colour sync and AI fill collapse two colours to
+        ['multicolor'], so a NEW card can't reach the split from the creator.
+      - [x] **Dragon Wing sat under the set "Tarkir: Dragonstorm"** but is the
+        2023 MUL frame. Owner decision (2026-09-25): it is renamed "Dragon Wing
+        (Multiverse Legends)" and moved to its own `multiverselegends` frame
+        set, still in the showcase era (`types/card.ts`). The template key
+        stays `tarkirdragon` because it is stored in `frame_style`,
+        `frame_reviews` and the frames bucket. Picker chips and toasts print
+        the label once (`setQualifiedFrameLabel`), not "Tarkir: Dragonstorm —
+        …".
+      - **Draconic P/T.** The gold TDM dragon frame people expect is
+        `tarkirdraconic`. Its P/T is white on light parchment, so it can't be
+        read, and it needs the same plate treatment Dragon Wing got.
+      - [x] **Ghostfire rebuilt** (owner decision): MSE's translucent boxes at
+        60 % + P/T ribbon (scripts/build-showcase-frames.mjs), white ink, type
+        line inside its band.
+      - [x] **Alpha frame re-cut** to the printed proportions from its MSE
+        source (scripts/build-alpha-frames.mjs); P/T, artist line and mark
+        re-fitted. Round 2 (owner: "thin"): the lines redrawn the print's
+        way — one thin dark line per pinstripe / art-box / text-box edge on
+        agclassic (MSE's light centre and coloured text-box ring cut, its
+        bevel widened to the print's), the land print's dark · colour · dark
+        lines on alphaland.
+      - **Alpha long P/T (pre-existing):** a P/T like `*+1/*+1` runs out of
+        the strip across the pinstripe into the black border — the P/T rect
+        spans 1207–1432 px and neither StatBake nor StatOverlay fits the
+        digits (`10/10` fits). Fix: shrink-to-fit in both renderers and end
+        AGCLASSIC.pt.rect inside the pinstripe (~1404 px).
+      - **Alpha bevel lighting:** MSE lights every colour's text-box bevel
+        the same way (lit top + right); the print does that on white and
+        artifact cards but lights blue and red ones from the left + bottom.
+        Matching it means re-sourcing per colour — owner's call.
+      - [x] **Alpha light lettering** on non-white frames: per-colour ink on
+        StatSlot + footer in both renderers, with a lower-right emboss.
+      - **Aftermath's rotated second art (pre-existing, bake only):** the
+        sideways window leaves an art-free strip in the Satori bake — the
+        parent's rotate(270deg) combines badly with the child <img>'s scale()
+        and percentage transformOrigin — and the foil sheen now paints over
+        that strip. Fix: apply the scale in a non-rotated inner wrapper, or
+        compute the cover + scale box in px as coverPlacement does. Found by
+        the integration review 2026-09-25; 0 production aftermath cards.
+      - [x] **Foil on planeswalkers** (owner decision, round-2 review): each
+        ability stripe carries its own sheen (`FoilStripeSheen`, masked by the
+        stripe colour) between the stripe and the badge + text, in both
+        renderers — inside v28 (foil only; one production card, Coden). Still
+        open: a translucent rules BACKDROP (`rules.backdropHex` — m15pw's
+        non-planeswalker box, token / full-art scrims) hides the foil the
+        same way.
+      - [x] **Planeswalker pips + name lowered** (owner note, round-3 review:
+        "pips look a little high"): CC's pw title plate runs ~9 px lower at HD
+        than the printed one (77–192 vs 73–183 on M15 walkers), and the
+        MSE-tuned cost box and title rect left pips and name 42–43 % of the
+        way down it; printed pips sit at 47–49 %, names at 49–51 %, the pips
+        ~2 px above the name. `costDy: 0.004` (6 px) and title top 3.8 → 4.18
+        (8 px) on M15PW, inside v27 (m15pw added to its template list; 6
+        public production cards). Still open: a long name runs under the
+        detached cost (Miner the Miner — the name's ellipsis ignores
+        `costRect`), and the printed name's caps are ~20–25 % taller than
+        ours (≈56 vs ≈45–47 px at HD).
+      - **Planeswalker row parity (pre-existing, preview only):** browser
+        ability rows are content-sized (flex `min-height: auto`), Yoga's stay
+        equal, so a walker with long or two-line abilities gets different
+        stripe heights in the preview than in the bake (measured up to ~60 HD
+        px); the preview's badge box is also 1.6× the text size tall against
+        the bake's 1.5×. Aligning the preview to the bake (`minHeight: 0` on
+        its rows, a 1.5× badge) moves no bake; the foil stripe sheen already
+        follows either row height. In the bake, Satori rounds each row's top
+        and height separately, so with 4 rows a seam can gain a 1 px gap or
+        overlap and the last row can overhang the box by 1 px (clipped).
       - **Alpha colourless** uses a flat grey master; printed Alpha colourless
         cards are artifacts on a dark warm-brown border with a light crackle
         text box (Sol Ring, Juggernaut) — an asset re-source.
@@ -857,12 +907,13 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
       Fragment, which Satori lays out as a zero-width item, so the inset gold
       border collapsed into an 18 px strip down the left edge and the hatch
       never painted. Real etched printings use a random stipple, silvered white
-      frames and inverted bars — that is 4.28.) **FOIL is still broken:** the
-      bake's sheen uses `inset: 0` (Satori ignores it) and `mixBlendMode`
-      (resvg ignores it), so a foil bake is byte-identical to regular while the
-      preview shows a shimmer — a live parity break on 10 production foil
-      cards. Needs a Satori-safe design (no blend modes) + a finish-scoped
-      sweep, like v26.
+      frames and inverted bars — that is 4.28.) FOIL fixed in layout v28
+      (feat/frame-review-decisions, owner decision): the bake's sheen used
+      `inset: 0` (Satori ignores it) and `mixBlendMode` (ignored), so foil
+      never reached a saved image. Both renderers now draw one shared
+      luminance-masked holographic sheen (`lib/cards/foil-finish.tsx`) under
+      the ink; finish-scoped sweep. Planeswalker ability stripes carry their
+      own sheen too; open: translucent rules backdrops (4.31).
 - [ ] **6.6 [P2] Language + set-code fields** feed the collector line (with 4.9).
 - [ ] **6.7 [P2] Accessibility** — text alternatives for rules-text pips, chip
       keyboard navigation (3b.10), announced substitution notices.

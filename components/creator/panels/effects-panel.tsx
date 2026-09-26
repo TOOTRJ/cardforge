@@ -33,7 +33,7 @@ const FINISH_OPTIONS: ChipOption<CardFinish>[] = [
   {
     value: "foil",
     label: "Foil",
-    description: "Animated holographic sheen for showpieces.",
+    description: "Holographic rainbow sheen across the card, strongest on light areas.",
     disabled: true,
     badge: <SoonBadge />,
   },

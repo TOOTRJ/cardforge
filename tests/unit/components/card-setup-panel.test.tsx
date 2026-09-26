@@ -113,3 +113,26 @@ describe("CardSetupPanel frame tiles", () => {
     expect(screen.getByTestId("template").textContent).toBe("m15");
   });
 });
+
+describe("CardSetupPanel variation chips — Dragon Wing's own frame set", () => {
+  it("labels Dragon Wing as Multiverse Legends, never under Tarkir: Dragonstorm", () => {
+    render(
+      <Harness
+        verified={[
+          frameComboKey("m15", "u"),
+          frameComboKey("tarkirdragon", "u"),
+          frameComboKey("tarkirdraconic", "u"),
+        ]}
+        onColor={vi.fn()}
+      />,
+    );
+    const group = screen.getByRole("radiogroup", { name: /Frame variations/ });
+    const chip = within(group).getByRole("radio", { name: /Dragon Wing/ });
+    expect(chip.textContent).toContain("Dragon Wing (Multiverse Legends)");
+    expect(chip.textContent).not.toMatch(/Tarkir|Multiverse Legends —/);
+    // Draconic stays a Tarkir: Dragonstorm frame.
+    expect(within(group).getByRole("radio", { name: /Draconic/ }).textContent).toContain("Tarkir: Dragonstorm — Draconic");
+    fireEvent.click(chip);
+    expect(document.body.textContent).not.toMatch(/Tarkir: Dragonstorm — Dragon Wing|Multiverse Legends — Dragon Wing/);
+  });
+});

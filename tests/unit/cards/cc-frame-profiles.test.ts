@@ -27,10 +27,38 @@ describe("Card Conjurer frame profiles", () => {
     );
   });
 
+  it("lowers the planeswalker's cost and name into CC's taller title plate, the print's way", () => {
+    // Owner review, round 3: "pips look a little high". CC's pw title plate
+    // spans 77–192 px at HD (1500 × 2100). Printed M15 planeswalkers centre
+    // their pips 47–49 % of the way down theirs and the name's capitals
+    // 49–51 %, the pips ~2 px above the name. The cost box stays where the
+    // compare tool tuned it (right end unchanged); costDy (a fraction of the
+    // WIDTH) moves the pips 6 px down, 126 → 132 px. The name was level with
+    // the old pips, so it moves too: title top 3.8 → 4.18 (8 px).
+    const pw = getFrameProfile("m15pw");
+    expect(pw.costRect).toEqual({ topPct: 3.8, leftPct: 51.2, widthPct: 40, heightPct: 4.4 });
+    expect(pw.costDy).toBe(0.004);
+    const pipPx = ((pw.costRect!.topPct + pw.costRect!.heightPct / 2) / 100) * 2100 + pw.costDy! * 1500;
+    expect(pipPx).toBeCloseTo(132, 6);
+    expect((pipPx - 77) / (192 - 77)).toBeCloseTo(0.48, 2);
+
+    // The name is centred in its rect in both renderers (flex centre).
+    expect(pw.title.rect).toEqual({ topPct: 4.18, leftPct: 8.5, widthPct: 80, heightPct: 4.4 });
+    const nameShiftPx = ((pw.title.rect.topPct - 3.8) / 100) * 2100;
+    expect(nameShiftPx).toBeCloseTo(8, 1);
+    const titleCentrePx = ((pw.title.rect.topPct + pw.title.rect.heightPct / 2) / 100) * 2100;
+    // Name ~2 px below the pips, as printed (was level with them).
+    expect(titleCentrePx - pipPx).toBeCloseTo(2, 0);
+  });
+
   it("leaves the MSE-framed templates' cost where it was", () => {
+    // The re-cut Alpha masters carry their own, smaller lift — the pip discs
+    // centred on the name's caps (~140 px, owner review round 4), not the CC
+    // title bar's.
+    const OWN_LIFT: Record<string, number> = { agclassic: -0.0013, alphaland: -0.0013 };
     for (const template of FRAME_TEMPLATE_VALUES) {
       if (ccTemplates.has(template)) continue;
-      expect(getFrameProfile(template).costDy, template).toBeUndefined();
+      expect(getFrameProfile(template).costDy, template).toBe(OWN_LIFT[template]);
     }
   });
 

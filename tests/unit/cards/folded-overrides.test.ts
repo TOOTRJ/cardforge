@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getFrameProfile } from "@/lib/cards/template-layout";
+import { getFrameProfile, type FrameProfile } from "@/lib/cards/template-layout";
 import {
   mergeProfile,
   type FrameProfileOverridesMap,
@@ -40,13 +40,29 @@ const PRODUCTION_OVERRIDES_2026_09_24: FrameProfileOverridesMap = {
   saga: { type: { rect: { topPct: 85.1 } } },
 };
 
+// Values deliberately moved in code AFTER the fold (the override rows are
+// gone, so nothing re-applies the old ones). The old override would put each
+// back; every other field of the snapshot must still be a no-op.
+const MOVED_AFTER_FOLD: Record<string, (p: FrameProfile) => FrameProfile> = {
+  // Frame review round 4: the planeswalker name lowered 8 px into CC's taller
+  // title plate (3.8 → 4.18), with the pips (costDy, not in the snapshot).
+  m15pw: (p) => ({ ...p, title: { ...p.title, rect: { ...p.title.rect, topPct: 3.8 } } }),
+};
+
 describe("folded production overrides (migration 0114)", () => {
   for (const [template, override] of Object.entries(PRODUCTION_OVERRIDES_2026_09_24)) {
     it(`${template}: the old override is a no-op over the folded code profile`, () => {
       const code = getFrameProfile(template);
-      expect(mergeProfile(code, override)).toEqual(code);
+      const undo = MOVED_AFTER_FOLD[template];
+      expect(mergeProfile(code, override)).toEqual(undo ? undo(code) : code);
     });
   }
+
+  it("m15pw: only the name's top moved after the fold", () => {
+    const code = getFrameProfile("m15pw");
+    expect(code.title.rect.topPct).toBe(4.18);
+    expect(mergeProfile(code, PRODUCTION_OVERRIDES_2026_09_24.m15pw).title.rect.topPct).toBe(3.8);
+  });
 
   it("the snow land keeps its own title inset, distinct from the plain land", () => {
     expect(getFrameProfile("m15snowland").title.rect.leftPct).toBe(9.1);

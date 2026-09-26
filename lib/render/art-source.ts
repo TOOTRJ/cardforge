@@ -133,3 +133,43 @@ export async function resolveRenderableImage(
     return url;
   }
 }
+
+/** Longest edge of the art copy the foil finish's luminance mask draws. The
+ *  mask only needs the art's LIGHTNESS (the foil shows through light areas),
+ *  so ~half the HD art slot is plenty — and a second full-size copy of the
+ *  art inside the foil SVG would push that SVG (base64'd again by Satori
+ *  into ONE attribute) towards librsvg's 10 MB attribute limit. */
+export const FOIL_MASK_EDGE = 640;
+
+/**
+ * The foil mask's copy of an art data URL (lib/cards/foil-finish.tsx): a
+ * small JPEG (PNG when the art has alpha) plus the ORIGINAL image's pixel
+ * size, which the mask's object-fit: cover geometry is computed from — the
+ * same size Satori reads when it draws the art itself. Null for anything
+ * that is not an inlined, decodable image (the foil then follows the frame
+ * alone there).
+ */
+export async function foilMaskSource(
+  dataUrl: string | null | undefined,
+): Promise<{ href: string; naturalWidth: number; naturalHeight: number } | null> {
+  if (!dataUrl?.startsWith("data:")) return null;
+  const comma = dataUrl.indexOf(",");
+  if (comma < 0 || !dataUrl.slice(0, comma).includes("base64")) return null;
+  try {
+    const bytes = Buffer.from(dataUrl.slice(comma + 1), "base64");
+    const meta = await sharp(bytes, { animated: false }).metadata();
+    if (!meta.width || !meta.height) return null;
+    const fitted = sharp(bytes, { animated: false }).resize({
+      width: FOIL_MASK_EDGE,
+      height: FOIL_MASK_EDGE,
+      fit: "inside",
+      withoutEnlargement: true,
+    });
+    const small = meta.hasAlpha
+      ? `data:image/png;base64,${(await fitted.png().toBuffer()).toString("base64")}`
+      : `data:image/jpeg;base64,${(await fitted.jpeg({ quality: 85 }).toBuffer()).toString("base64")}`;
+    return { href: small, naturalWidth: meta.width, naturalHeight: meta.height };
+  } catch {
+    return null;
+  }
+}

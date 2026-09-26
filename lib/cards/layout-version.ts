@@ -170,9 +170,30 @@ import { normalizeFrameTemplate } from "@/lib/cards/card-display";
 //            one shared frame-masked texture (lib/cards/etched-finish.tsx).
 //            Card-scoped to finish "etched" on any template (VERSION_SCOPES),
 //            "sweep".
+//   27     — owner decisions from the follow-up review (2026-09-25): the
+//            Alpha frame re-cut to the printed proportions from its MSE
+//            source, its lines redrawn the print's way (round 2: one thin
+//            dark line on the non-land frame, the land print's coloured
+//            lines on alphaland), with light embossed P/T + artist
+//            lettering on non-white frames and (round 4) a smaller name +
+//            pips, name and type line on one left margin (agclassic,
+//            alphaland); two-colour Dragon Wing cards split their wings
+//            (tarkirdragon); Ghostfire rebuilt with MSE's translucent boxes
+//            + P/T ribbon, white ink (tarkirghostfire); round 4: planeswalker
+//            mana cost 6 px and name 8 px lower at HD, placed in Card
+//            Conjurer's taller title bar the way printed planeswalkers are
+//            (m15pw, every finish).
+//            List derived from HD render diffs on all 37 templates.
+//            Template-scoped, "sweep".
+//   28     — the foil finish: its bake overlay used `inset: 0` + blend modes,
+//            which Satori ignores, so foil never reached a saved image. Both
+//            renderers now draw one shared luminance-masked holographic sheen
+//            (lib/cards/foil-finish.tsx), planeswalker ability stripes
+//            included (owner decision, round-2 review). Card-scoped to finish
+//            "foil" on any template (VERSION_SCOPES), "sweep".
 // ---------------------------------------------------------------------------
 
-export const CARD_LAYOUT_VERSION = 26;
+export const CARD_LAYOUT_VERSION = 28;
 
 /**
  * Bumps that changed the output of only some frame templates, keyed by the
@@ -194,6 +215,9 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
     "agclassic", "alphaland", "alphatoken", "retro", "retroland", "modern", "modernland", "extendedart",
     "battle", "split", "tarkirdragon",
   ],
+  // v27: owner decisions — Alpha re-cut + light ink, Dragon Wing split,
+  // Ghostfire rebuilt, planeswalker mana cost and name lowered.
+  27: ["agclassic", "alphaland", "tarkirdragon", "tarkirghostfire", "m15pw"],
 };
 
 /** The card fields a scoped bump can look at. Optional so partial rows
@@ -226,6 +250,8 @@ export const VERSION_SCOPES: Readonly<Record<number, (card: ScopeCard) => boolea
   // v26 — only the ETCHED finish's overlay changed, on any template. A row
   // that doesn't carry frame_style can't be judged → conservative.
   26: (card) => card.frame_style === undefined || finishOfFrameStyle(card.frame_style) === "etched",
+  // v28 — only the FOIL finish's overlay changed, on any template.
+  28: (card) => card.frame_style === undefined || finishOfFrameStyle(card.frame_style) === "foil",
 };
 
 /** `frame_style.finish` from the jsonb column, or null when absent (= regular). */
@@ -330,6 +356,8 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   24: "sweep", // Card Conjurer M15 swap — a platform correction, owner-approved
   25: "sweep", // frame-review follow-ups (Alpha P/T, brand mark, Dragon Wing)
   26: "sweep", // etched finish — the baked left-edge strip was a bug, not a look
+  27: "sweep", // owner decisions: Alpha re-cut + ink, Dragon Wing split, Ghostfire, pw title bar
+  28: "sweep", // foil finish — it never reached a saved image
 };
 
 export function rolloutPolicy(version: number, rollout = VERSION_ROLLOUT): RolloutPolicy {
