@@ -37,7 +37,12 @@ import {
   layoutProfileLoyaltyRows,
   type LoyaltyRowsLayout,
 } from "@/lib/cards/loyalty-rows";
-import { fitRulesSizePct, fitSingleLineSizePct, secondFaceLineSizes } from "@/lib/cards/render-tiers";
+import {
+  NAME_COST_GAP_PCT,
+  fitRulesSizePct,
+  fitSingleLineSizePct,
+  secondFaceLineSizes,
+} from "@/lib/cards/render-tiers";
 import { fitStatSizePct, ptValue, STAT_BADGE_INSET } from "@/lib/cards/stat-fit";
 import { fitDetachedCostTitle } from "@/lib/cards/title-band";
 import {
@@ -1678,7 +1683,8 @@ function SecondFacePanel({
   });
   const showCost = Boolean(slot.costSizePct) && Boolean(data.cost?.trim());
   const showPT = Boolean(slot.pt) && Boolean(data.power || data.toughness);
-  // Same math as SecondFaceBake: aftermath's name + type shrink to fit.
+  // Same math as SecondFaceBake: aftermath's name bar (name + cost) and type
+  // line shrink to fit their short sideways bars.
   const lineSizes = secondFaceLineSizes({
     slot,
     name,
@@ -1704,7 +1710,7 @@ function SecondFacePanel({
           display: "flex",
           alignItems: "center",
           justifyContent: showCost ? "space-between" : "flex-start",
-          gap: "2cqw",
+          gap: cqw(NAME_COST_GAP_PCT),
           fontFamily: DISPLAY_FONT,
           fontSize: cqw(lineSizes.titleSizePct),
           fontWeight: slot.title.weight ?? 600,
@@ -1717,7 +1723,7 @@ function SecondFacePanel({
         {showCost ? (
           <ManaCostGlyphs
             cost={data.cost}
-            fontSize={pipFont(slot.costSizePct ?? slot.title.sizePct)}
+            fontSize={pipFont(lineSizes.costSizePct)}
             overrides={pipOverrides}
           />
         ) : null}

@@ -15,7 +15,13 @@
 
 import { ImageResponse } from "next/og";
 import { foilMaskSource, imageNaturalSize, resolveRenderableImage } from "@/lib/render/art-source";
-import { fitRulesSizePct, fitSingleLineSizePct, secondFaceLineSizes } from "@/lib/cards/render-tiers";
+import {
+  COST_PIP_GAP,
+  NAME_COST_GAP_PCT,
+  fitRulesSizePct,
+  fitSingleLineSizePct,
+  secondFaceLineSizes,
+} from "@/lib/cards/render-tiers";
 import { fitStatSizePct, ptValue, STAT_BADGE_INSET } from "@/lib/cards/stat-fit";
 import { RULES_TEXT, orientationFromAspect, type CardOrientation } from "@/lib/cards/typography";
 import { tokenize, tokenSuffix } from "@/components/cards/mana-cost-glyphs";
@@ -1269,8 +1275,9 @@ function CostGlyphs({
         alignItems: "center",
         ...(dy ? { transform: `translate(0px, ${dy}px)` } : {}),
         // Mirrors the preview's 0.12em pip gap (scales with the disc size
-        // instead of a fixed 2px that vanished at HD resolution).
-        gap: Math.max(1, Math.round(fontSize * 0.12)),
+        // instead of a fixed 2px that vanished at HD resolution); a fitted
+        // bar measures a cost with the same gap (costRowWidthPct).
+        gap: Math.max(1, Math.round(fontSize * COST_PIP_GAP)),
       }}
     >
       {tokens.map((token, i) => {
@@ -2172,7 +2179,8 @@ function SecondFaceBake({
   const rot = `rotate(${slot.rotation}deg)`;
   const showCost = Boolean(slot.costSizePct) && Boolean(back.cost?.trim());
   const showPT = Boolean(slot.pt) && Boolean(back.power || back.toughness);
-  // Same math as SecondFacePanel: aftermath's name + type shrink to fit.
+  // Same math as SecondFacePanel: aftermath's name bar (name + cost) and type
+  // line shrink to fit their short sideways bars.
   const lineSizes = secondFaceLineSizes({
     slot,
     name,
@@ -2205,6 +2213,9 @@ function SecondFaceBake({
           display: "flex",
           alignItems: "center",
           justifyContent: showCost ? "space-between" : "flex-start",
+          // The preview's name–cost gap, which secondFaceLineSizes measures
+          // the bar with. Flip / split keep their gap-less band for now.
+          ...(slot.fitLines ? { gap: fpx(NAME_COST_GAP_PCT, cardWidth) } : {}),
           transform: rot,
           transformOrigin: "50% 50%",
           fontFamily: DISPLAY_FONT,
@@ -2218,7 +2229,7 @@ function SecondFaceBake({
         {showCost && back.cost ? (
           <CostGlyphs
             cost={back.cost}
-            fontSize={fpx(slot.costSizePct ?? slot.title.sizePct, cardWidth)}
+            fontSize={fpx(lineSizes.costSizePct, cardWidth)}
             overrides={pipOverrides}
           />
         ) : (

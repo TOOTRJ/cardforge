@@ -147,4 +147,30 @@ describe("CardPreview — aftermath's second half", () => {
     expect(fontSize(name)).toBe(`${(want.titleSizePct * 100).toFixed(3)}cqw`);
     expect(fontSize(type)).toBe(`${(want.typeSizePct * 100).toFixed(3)}cqw`);
   });
+
+  it("shrinks a long cost's pips with the name, to the bake's sizes", () => {
+    const second = getFrameProfile("aftermath").secondFace!;
+    const cost = "{R}".repeat(10);
+    const body = markup(
+      <CardPreview
+        title="Probe"
+        cost="{R}"
+        cardType="instant"
+        colorIdentity={["red"]}
+        frameStyle={{ template: "aftermath" }}
+        backFace={{ title: "Many", cost, card_type: "sorcery", rules_text: "Draw a card." }}
+      />,
+    );
+    const want = secondFaceLineSizes({ slot: second, name: "Many", typeLine: "Sorcery", cost });
+    // Ten pips at full size would run off the bar: the bar shrinks as one.
+    expect(want.costSizePct).toBeLessThan(second.costSizePct!);
+    expect(want.costSizePct / want.titleSizePct).toBeCloseTo(second.costSizePct! / second.title.sizePct, 10);
+    const pips = body.querySelector(`[aria-label="Cost ${cost}"]`)!;
+    expect(turned(pips)).toBe(true);
+    // mana-font draws a 1.3em disc, so the font size is the disc ÷ 1.3.
+    expect(fontSize(pips)).toBe(`${((want.costSizePct / 1.3) * 100).toFixed(3)}cqw`);
+    const band = pips.parentElement!;
+    expect(fontSize(band)).toBe(`${(want.titleSizePct * 100).toFixed(3)}cqw`);
+    expect(band.getAttribute("style")).toMatch(/gap:2\.000cqw/);
+  });
 });

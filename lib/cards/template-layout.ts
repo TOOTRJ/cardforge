@@ -353,9 +353,10 @@ export type FrameProfile = {
     pt?: StatSlot;
     /** A second art window (split); omit when the face shares the front art. */
     artSlot?: Rect;
-    /** The name and the type line shrink to fit their bars on one line
-     *  (secondFaceLineSizes), the name leaving room for its cost, instead of
-     *  ellipsizing — aftermath's sideways bars are short. Code-owned. */
+    /** The name bar (name + cost, shrinking as one) and the type line fit
+     *  their bars on one line, measured in Beleren's widths
+     *  (secondFaceLineSizes), instead of ellipsizing at the profile's sizes
+     *  — aftermath's sideways bars are short. Code-owned. */
     fitLines?: boolean;
   };
   /** Where the pipglyph.com brand mark sits, for frames whose bottom black
@@ -1408,8 +1409,10 @@ const SPLIT: FrameProfile = {
 // card's sizes (DOM Serra Angel measures 0.0525 / 0.0443 the same way), so
 // both halves take M15's scan-calibrated title / type / cost sizes. The old
 // top half (0.04 / 0.0347 / 0.04) printed a fifth under the card. Rules start
-// at the 9 pt standard on both halves and shrink on the ladder; the sideways
-// name and type line also shrink to fit their shorter bars (fitLines).
+// at the 9 pt standard on both halves and shrink on the ladder. The sideways
+// bars are a third of the card long, so a name + cost too long for them at
+// these sizes shrinks as one (pips with the name), and a long type line
+// shrinks alone (fitLines); the printed cards keep the full sizes.
 const AFTERMATH_TEXT = {
   titleSizePct: 0.05,
   typeSizePct: 0.0435,

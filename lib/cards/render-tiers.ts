@@ -16,6 +16,8 @@
 // `overflow: hidden` as a backstop — and fully deterministic, so preview and
 // bake always agree.
 
+import { tokenize } from "@/components/cards/mana-cost-glyphs";
+import { displayTextEm } from "@/lib/cards/display-metrics";
 import type { Rect } from "@/lib/cards/template-layout";
 import {
   RULES_LINE_PITCH_EM,
@@ -176,19 +178,78 @@ export function fitSingleLineSizePct({
   return Math.max(ptToPct(RULES_TEXT.hardFloorPt), Math.min(baseSizePct, fitted));
 }
 
-// A cost pip's share of a band: the disc plus the ≈0.12em gap both renderers
-// put between pips, rounded up.
-const PIP_ADVANCE = 1.15;
-// The gap between a band's name and its cost (the preview's 2cqw).
-const NAME_COST_GAP = 0.02;
+/** The gap between cost pips, as a fraction of the disc: the bake's
+ *  CostGlyphs draws exactly this; the preview's 0.12em of disc ÷ 1.3 is
+ *  narrower, so a row measured with it fits both. */
+export const COST_PIP_GAP = 0.12;
+/** The gap between a second face's name and its cost, as a fraction of the
+ *  card's width (the preview's 2cqw; the bake draws it for `fitLines` faces). */
+export const NAME_COST_GAP_PCT = 0.02;
+// Headroom on a measured line (displayTextEm already counts the kerning that
+// widens it): the bake rounding a font size to whole pixels (+0.5 px of a
+// 21 px 5 pt name at 750) and the browser's sub-pixel text layout.
+const LINE_FIT_SAFETY = 1.05;
+// Half a pixel of the smaller bake (750 px wide), as a fraction of the card's
+// width: the bake rounds each disc and each gap to whole pixels.
+const HALF_PX_PCT = 0.5 / 750;
+// The discs' hard shadow reaches ≈ 0.07 disc past either end of the row.
+const COST_SHADOW_DISCS = 0.1;
+// Past the floor a long name ellipsizes, but the cost still leaves it at
+// least this much of the bar (≈ 4 letters), or all of it if it is shorter.
+const MIN_NAME_EM = 2;
+
+/** A cost row's length as a line `perDisc × disc + fixedPct` (fractions of
+ *  the card's width), as the bake draws it. */
+function costRowTerms(cost: string | null | undefined): { perDisc: number; fixedPct: number } {
+  const tokens = tokenize((cost ?? "").trim());
+  if (tokens.length === 0) return { perDisc: 0, fixedPct: 0 };
+  let perDisc = (tokens.length - 1) * COST_PIP_GAP + COST_SHADOW_DISCS;
+  let fixedPct = (2 * tokens.length - 1) * HALF_PX_PCT;
+  for (const token of tokens) {
+    if (token.kind === "text") {
+      // A cost typed without braces ("2BB"): the bake's 0.6 × disc caps,
+      // 1 px of tracking and half a pixel of font rounding per letter.
+      perDisc += displayTextEm(token.value.toUpperCase()) * 0.6;
+      fixedPct += token.value.length * 3 * HALF_PX_PCT;
+    } else {
+      perDisc += 1;
+    }
+  }
+  return { perDisc, fixedPct };
+}
 
 /**
- * A second face's name + type-line sizes (flip / split / aftermath), shared by
- * SecondFacePanel (preview) and SecondFaceBake. The profile's sizes as they
- * are — unless the face opts in with `fitLines` (aftermath: the top half's
- * sizes on bars a third of the card long), when each line shrinks to fit its
- * bar like the front's type line (fitSingleLineSizePct), the name leaving room
- * for its cost pips.
+ * The length a cost takes on its bar at a given disc size (both fractions of
+ * the card's width), as the bake draws it — one disc per pip, COST_PIP_GAP
+ * between tokens, the hard shadow and pixel rounding included — so the room
+ * it leaves is room the preview's narrower row leaves too. 0 when empty.
+ */
+export function costRowWidthPct(cost: string | null | undefined, discPct: number): number {
+  const { perDisc, fixedPct } = costRowTerms(cost);
+  return perDisc * discPct + fixedPct;
+}
+
+export type SecondFaceLineSizes = {
+  titleSizePct: number;
+  typeSizePct: number;
+  /** The cost's disc diameter (fraction of card width). */
+  costSizePct: number;
+};
+
+/**
+ * A second face's name, type-line and cost sizes (flip / split / aftermath),
+ * shared by SecondFacePanel (preview) and SecondFaceBake so both draw the same
+ * bar. The profile's sizes as they are — unless the face opts in with
+ * `fitLines` (aftermath: the top half's sizes on bars a third of the card
+ * long). Then, measured in Beleren's own widths (displayTextEm):
+ *
+ * - the name bar — name, gap, cost — keeps the top half's sizes while it
+ *   fits, and otherwise shrinks AS ONE, name and pips together, like a
+ *   smaller copy of the top half's bar, only as far as the words need. Below
+ *   the 5 pt floor the name stops shrinking and ellipsizes, and the pips are
+ *   capped so they always stay on the bar with a few letters of name beside
+ *   them (up to the 64-character cost cap);
+ * - the type line shrinks alone to fit its bar, down to the same floor.
  */
 export function secondFaceLineSizes({
   slot,
@@ -206,21 +267,29 @@ export function secondFaceLineSizes({
   typeLine: string;
   /** The face's cost (e.g. "{X}{B}{B}"); null/empty when it has none. */
   cost: string | null | undefined;
-}): { titleSizePct: number; typeSizePct: number } {
-  if (!slot.fitLines) return { titleSizePct: slot.title.sizePct, typeSizePct: slot.type.sizePct };
-  const pips = slot.costSizePct ? (cost?.match(/\{[^}]+\}/g)?.length ?? 0) : 0;
+}): SecondFaceLineSizes {
+  const baseCost = slot.costSizePct ?? slot.title.sizePct;
+  if (!slot.fitLines) {
+    return { titleSizePct: slot.title.sizePct, typeSizePct: slot.type.sizePct, costSizePct: baseCost };
+  }
+  const floor = ptToPct(RULES_TEXT.hardFloorPt);
+  const nameEm = displayTextEm(name) * LINE_FIT_SAFETY;
+  const row = slot.costSizePct ? costRowTerms(cost) : { perDisc: 0, fixedPct: 0 };
+  // The bar's length left for the name and the discs' scalable part.
+  const room = slot.title.rect.widthPct / 100 - (row.perDisc ? NAME_COST_GAP_PCT + row.fixedPct : 0);
+  // Disc per unit of name size, as on the top half's bar.
+  const ratio = baseCost / slot.title.sizePct;
+  const scale = Math.min(slot.title.sizePct, room / (nameEm + row.perDisc * ratio));
+  const titleSizePct = Math.max(floor, scale);
+  const costSizePct = row.perDisc
+    ? Math.min(ratio * titleSizePct, (room - Math.min(nameEm, MIN_NAME_EM) * titleSizePct) / row.perDisc)
+    : baseCost;
+  const typeEm = displayTextEm(typeLine) * LINE_FIT_SAFETY;
+  const typeFit = typeEm > 0 ? slot.type.rect.widthPct / 100 / typeEm : slot.type.sizePct;
   return {
-    titleSizePct: fitSingleLineSizePct({
-      text: name,
-      rect: slot.title.rect,
-      baseSizePct: slot.title.sizePct,
-      reservedPct: pips ? pips * (slot.costSizePct ?? 0) * PIP_ADVANCE + NAME_COST_GAP : 0,
-    }),
-    typeSizePct: fitSingleLineSizePct({
-      text: typeLine,
-      rect: slot.type.rect,
-      baseSizePct: slot.type.sizePct,
-    }),
+    titleSizePct,
+    typeSizePct: Math.max(floor, Math.min(slot.type.sizePct, typeFit)),
+    costSizePct,
   };
 }
 

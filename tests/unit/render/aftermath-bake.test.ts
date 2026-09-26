@@ -3,6 +3,9 @@ import { describe, expect, it } from "vitest";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import type { CardBackFace } from "@/types/card";
 import { getFrameProfile, type Rect } from "@/lib/cards/template-layout";
+import { displayTextEm } from "@/lib/cards/display-metrics";
+import { NAME_COST_GAP_PCT, costRowWidthPct, secondFaceLineSizes } from "@/lib/cards/render-tiers";
+import { RULES_TEXT, ptToPct } from "@/lib/cards/typography";
 import { renderCardImage, RENDER_PRESETS } from "@/lib/render/card-image";
 
 // ---------------------------------------------------------------------------
@@ -423,5 +426,99 @@ describe("aftermath — both halves print at one set of text sizes", () => {
       }
     }
     expect(outside).toBe(0);
+  }, 60_000);
+});
+
+// The bottom name bar is a third of the card long. A name and cost that
+// don't fit it at the top half's sizes shrink as ONE bar (secondFaceLineSizes),
+// measured in the widths the renderers actually draw — so a long cost stays on
+// the bar with its name beside it (at the top half's size, 10 pips ran off the
+// bar onto the black border and cut an 8-pip "Ox" to "O…").
+describe("aftermath — a long cost stays on the bottom name bar", () => {
+  const bar = footprint(second.title.rect);
+  const reading = {
+    x0: bar.x0 + 12,
+    x1: bar.x1 - 12,
+    y0: bar.y0,
+    y1: bar.y1,
+  };
+  /** Rows (reading down the turned bar) holding a red pip's disc. */
+  function redRows(r: Raw) {
+    let y0 = Infinity;
+    let y1 = -Infinity;
+    for (let y = Math.ceil(reading.y0); y < Math.floor(reading.y1); y += 1) {
+      for (let x = Math.ceil(reading.x0); x < Math.floor(reading.x1); x += 1) {
+        const [cr, cg, cb] = px(r, x, y);
+        if (cr > cg + 60 && cr > cb + 80) {
+          y0 = Math.min(y0, y);
+          y1 = Math.max(y1, y + 1);
+        }
+      }
+    }
+    return { y0, y1 };
+  }
+
+  it("draws no more cost or name than the fit measures", async () => {
+    for (const [name, pips] of [
+      ["Ox", 3],
+      ["Ox", 8],
+      ["Many", 10],
+      ["Many", 21],
+    ] as const) {
+      const cost = "{R}".repeat(pips);
+      const sizes = secondFaceLineSizes({ slot: second, name, typeLine: "Sorcery", cost });
+      const r = await bake(card({ title: name, cost, card_type: "sorcery", rules_text: "" }));
+      const red = redRows(r);
+      // The pips as drawn vs the row the fit reserved (costRowWidthPct):
+      // never longer, and not grossly shorter (it is the bake's own row).
+      const reserved = costRowWidthPct(cost, sizes.costSizePct) * W;
+      expect(red.y1 - red.y0, `${pips} pips`).toBeLessThanOrEqual(reserved);
+      expect(red.y1 - red.y0, `${pips} pips`).toBeGreaterThan(reserved * 0.85);
+      // The name as drawn vs its Beleren width at the size the fit chose.
+      const disc = Math.round(sizes.costSizePct * W);
+      const nameInk = inkBox(r, reading.x0, reading.y0, reading.x1, red.y0 - 0.15 * disc);
+      expect(nameInk.h, name).toBeGreaterThan(5);
+      expect(nameInk.h, name).toBeLessThanOrEqual(displayTextEm(name) * Math.round(sizes.titleSizePct * W));
+      // Name first, then the pips, all on the bar.
+      expect(nameInk.y1).toBeLessThan(red.y0);
+      expect(red.y1).toBeLessThanOrEqual(bar.y1);
+    }
+  }, 120_000);
+
+  it("keeps the preview's gap between a name cut at the 5 pt floor and its cost", async () => {
+    const name = "Glorious Retribution of the Scorched Sky";
+    const cost = "{R}{R}{R}";
+    const sizes = secondFaceLineSizes({ slot: second, name, typeLine: "Sorcery", cost });
+    expect(sizes.titleSizePct).toBe(ptToPct(RULES_TEXT.hardFloorPt));
+    const r = await bake(card({ title: name, cost, card_type: "sorcery", rules_text: "" }));
+    const red = redRows(r);
+    const disc = Math.round(sizes.costSizePct * W);
+    const nameInk = inkBox(r, reading.x0, reading.y0, reading.x1, red.y0 - 0.15 * disc);
+    // The name fills its room (it is cut to "…"), then the 2%-of-the-card
+    // gap the preview draws, then the pips (their shadow reaches ≈ 0.07 disc
+    // into the gap).
+    expect(nameInk.h).toBeGreaterThan(0.6 * (bar.y1 - bar.y0));
+    expect(red.y0 - nameInk.y1).toBeGreaterThanOrEqual(NAME_COST_GAP_PCT * W - 0.1 * disc);
+    expect(red.y1).toBeLessThanOrEqual(bar.y1);
+  }, 60_000);
+
+  it("keeps every mark of a 10- and a 21-symbol cost on the bar", async () => {
+    const blank = await bake(card({ title: "", cost: "", card_type: undefined, rules_text: "" }));
+    const bars = [footprint(second.title.rect), footprint(second.type.rect)];
+    for (const cost of ["{X}{X}{10}{W/U}{2/B}{B/P}{R}{G}{C}{S}", "{R}".repeat(21)]) {
+      const r = await bake(card({ title: "Many", cost, card_type: "sorcery", rules_text: "" }));
+      let outside = 0;
+      let onBar = 0;
+      for (let y = Math.floor(H * 0.55); y < H; y += 1) {
+        for (let x = Math.floor(W * 0.45); x < W; x += 1) {
+          const [p, q] = [px(r, x, y), px(blank, x, y)];
+          if (Math.abs(p[0] - q[0]) + Math.abs(p[1] - q[1]) + Math.abs(p[2] - q[2]) <= 60) continue;
+          if (bars.some((f) => x >= f.x0 - 1 && x <= f.x1 + 1 && y >= f.y0 - 1 && y <= f.y1 + 1)) onBar += 1;
+          else outside += 1;
+        }
+      }
+      expect(onBar, cost).toBeGreaterThan(2000);
+      expect(outside, cost).toBe(0);
+    }
   }, 60_000);
 });
