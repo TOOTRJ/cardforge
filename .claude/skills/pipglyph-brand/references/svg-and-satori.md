@@ -14,6 +14,12 @@ Satori is not a browser. Inside any OG route or `app/icon.tsx`-style file:
 - Gradient-text headlines work only as `backgroundImage` +
   `backgroundClip: "text"` on spans inside an explicit column-flex `<h1>`.
 - Edge runtime: no node built-ins; `lib/brand/*` is safe (dependency-free).
+- Node OG routes return `ogImageResponse(element, size)` (`lib/og/image-response.ts`),
+  never `new ImageResponse` — next/og fetches Google Fonts / Twemoji at render
+  time for any character Geist lacks (user titles!). Only the edge brand images
+  (`app/icon.tsx`, `apple-icon`, `opengraph-image`, `twitter-image`) keep
+  next/og, and they must stick to characters Geist covers
+  (`tests/unit/og/image-response.test.tsx` checks the site card).
 - Use `AstralRose` / `BrandMarkTile` from `lib/brand/glyph` — never inline the
   mark by hand.
 

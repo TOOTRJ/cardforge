@@ -1,4 +1,4 @@
-import { ImageResponse } from "next/og";
+import { ogImageResponse } from "@/lib/og/image-response";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createPublicClient } from "@/lib/supabase/public";
 import {
@@ -47,7 +47,7 @@ export default async function Image({
   const challenge = await getChallenge(slug);
 
   if (!challenge) {
-    return new ImageResponse(
+    return ogImageResponse(
       (
         <OgShell>
           <OgEyebrow>Community</OgEyebrow>
@@ -64,7 +64,7 @@ export default async function Image({
   const active = isActive(challenge);
   const days = daysLeft(challenge);
 
-  return new ImageResponse(
+  return ogImageResponse(
     (
       <OgShell>
         <OgEyebrow>Design challenge</OgEyebrow>

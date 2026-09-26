@@ -240,7 +240,15 @@ Rules and gotchas:
   `public/`. Never import `next/font/google` — it
   fetches fonts.googleapis.com at BUILD time and the 2026-09-22 production
   deploy of a green merge failed inside that loader
-  (`tests/unit/content/fonts-self-hosted.test.ts` guards it).
+  (`tests/unit/content/fonts-self-hosted.test.ts` guards it). Same rule at
+  RENDER time: Node Satori renders (the bake, node OG images) go through
+  `lib/render/satori-png.ts` / `lib/og/image-response.ts`, never next/og's
+  `ImageResponse` (it fetches Google Fonts + Twemoji for any character the
+  registered fonts lack) — only the edge brand images keep next/og. Missing
+  characters resolve in `lib/render/fallback-assets.ts` (bundled Noto Sans
+  subset; emoji stripped; other scripts draw boxes) and the creator warns
+  (`lib/validation/card-glyphs.ts`); `satori` is pinned to next/og's bundled
+  version (`tests/unit/render/satori-pipeline.test.ts`).
 - Billing storefront: `/pricing` and the upgrade modal pick every button from
   `pricingCtaFor()` (`components/billing/pricing-cta.ts`) fed by a
   `BillingViewer` (`lib/billing/viewer.ts`: `hasBillingAccount`,

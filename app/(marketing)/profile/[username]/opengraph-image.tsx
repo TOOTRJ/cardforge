@@ -1,4 +1,4 @@
-import { ImageResponse } from "next/og";
+import { ogImageResponse } from "@/lib/og/image-response";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createPublicClient } from "@/lib/supabase/public";
 import {
@@ -48,7 +48,7 @@ export default async function Image({
   const profile = await getProfile(username);
 
   if (!profile) {
-    return new ImageResponse(
+    return ogImageResponse(
       (
         <OgShell>
           <OgEyebrow>Community</OgEyebrow>
@@ -68,7 +68,7 @@ export default async function Image({
     ? await fetchImageAsDataUri(profile.avatar_url)
     : null;
 
-  return new ImageResponse(
+  return ogImageResponse(
     (
       <OgShell>
         <div

@@ -195,6 +195,7 @@ import {
 } from "@/lib/creator/steps";
 import { buildCardPath } from "@/lib/cards/utils";
 import { CapacityNotice } from "@/components/billing/capacity-notice";
+import { GlyphCoverageNotice } from "@/components/creator/glyph-coverage-notice";
 import type { CardCapacity } from "@/lib/billing/capacity-copy";
 
 // ---------------------------------------------------------------------------
@@ -2443,6 +2444,7 @@ export function CardCreatorForm({
       {mode !== "edit" && !readOnly ? (
         <CapacityNotice capacity={capacity} adding={1} className="mb-6" />
       ) : null}
+      {!readOnly ? <GlyphCoverageNotice values={watched} className="mb-6" /> : null}
       <div
         className={readOnly ? "flex flex-col gap-6 select-none opacity-60" : "flex flex-col gap-6"}
         inert={readOnly || undefined}

@@ -1,4 +1,4 @@
-import { ImageResponse } from "next/og";
+import { ogImageResponse } from "@/lib/og/image-response";
 import { getArticle, listArticles } from "@/lib/content/articles";
 import {
   OG_SIZE,
@@ -31,7 +31,7 @@ export default async function Image({
   const article = getArticle(slug);
 
   if (!article) {
-    return new ImageResponse(
+    return ogImageResponse(
       (
         <OgShell>
           <OgEyebrow>Guide</OgEyebrow>
@@ -47,7 +47,7 @@ export default async function Image({
 
   const { meta } = article;
 
-  return new ImageResponse(
+  return ogImageResponse(
     (
       <OgShell>
         <OgEyebrow>Guide</OgEyebrow>
