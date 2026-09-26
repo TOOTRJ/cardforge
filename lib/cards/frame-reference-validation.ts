@@ -1,12 +1,16 @@
 import type { ScryfallCard } from "@/lib/scryfall/client";
 import {
+  frameColorsFromScryfall,
   kindFromScryfall,
-  parseColorIdentity,
   parseTypeLine,
 } from "@/lib/scryfall/import-mapper";
-import { pickFrameColorKey } from "@/components/cards/frame-layer";
+import {
+  isArtifactFrameType,
+  pickFrameColorKey,
+} from "@/components/cards/frame-layer";
 import {
   KIND_DEFS,
+  isBorrowedVariation,
   isSingleBasicLand,
   templateIsBasicOnly,
   templateSupportsKind,
@@ -49,12 +53,10 @@ const ERA_FRAME: Partial<Record<string, string>> = {
   showcase: "2015",
 };
 
-/** The kind the compare view will render this printing as. Transforming
- *  Sagas are `layout: "transform"` on Scryfall, so the mapper's layout
- *  check misses them — the front face's type line is the reliable signal. */
+/** The kind the compare view will render this printing as — the importer's
+ *  kind, which reads a transforming Saga (`layout: "transform"`) from its
+ *  front face's Saga subtype (TODO 1.3). */
 export function referenceKindFor(card: ScryfallCard): CardKind | undefined {
-  const typeLine = card.card_faces?.[0]?.type_line ?? card.type_line ?? "";
-  if (/\bSaga\b/.test(typeLine)) return "saga";
   return kindFromScryfall(card);
 }
 
@@ -74,6 +76,15 @@ function referenceIsSingleBasicLand(card: ScryfallCard): boolean {
   });
 }
 
+/** True when the printing's front face says Artifact (an Artifact Creature,
+ *  an artifact token) — the cards a borrowed artifact frame dresses. */
+function referenceIsArtifact(card: ScryfallCard): boolean {
+  const { supertype, card_type } = parseTypeLine(
+    card.card_faces?.[0]?.type_line ?? card.type_line,
+  );
+  return isArtifactFrameType({ cardType: card_type, supertype });
+}
+
 export function validateReferenceForCombo(
   card: ScryfallCard,
   template: FrameTemplate,
@@ -85,7 +96,7 @@ export function validateReferenceForCombo(
   // admin checklist and the compare page title do.
   const label = FRAME_TEMPLATE_LABELS[template] ? eraGroupFrameLabel(template) : template;
 
-  const cardColor = pickFrameColorKey(parseColorIdentity(card));
+  const cardColor = pickFrameColorKey(frameColorsFromScryfall(card));
   if (cardColor !== colorKey) {
     errors.push(
       `${card.name} is a ${COLOR_WORD[cardColor] ?? cardColor} card; this row verifies the ${COLOR_WORD[colorKey] ?? colorKey} ${label} frame.`,
@@ -104,6 +115,14 @@ export function validateReferenceForCombo(
   } else if (templateIsBasicOnly(template) && !referenceIsSingleBasicLand(card)) {
     errors.push(
       `${card.name} isn't a basic land; the ${label} frame dresses basic lands only.`,
+    );
+  } else if (isBorrowedVariation(kind, template) && !referenceIsArtifact(card)) {
+    // A creature may borrow the artifact frame (TODO 1.7), but only an
+    // Artifact Creature is a reference for it — Llanowar Elves on
+    // m15artifact/g would verify the frame against a card that never prints
+    // on it.
+    errors.push(
+      `${card.name} isn't an Artifact ${KIND_DEFS[kind].label}; the ${label} frame dresses a ${KIND_DEFS[kind].label.toLowerCase()} only when it is an artifact.`,
     );
   }
 

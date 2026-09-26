@@ -17,10 +17,14 @@ import {
   templateSupportsKind,
   toBasicLandIdentity,
   toNonbasicLandIdentity,
+  withArtifactWord,
+  withoutArtifactWord,
   type CardKind,
 } from "@/lib/creator/card-kinds";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import { normalizeColorSelection } from "@/lib/creator/card-fields";
+import { getFrameProfile } from "@/lib/cards/template-layout";
+import { showsPowerToughness } from "@/lib/cards/card-display";
 
 const NO_VERIFIED: ReadonlySet<string> = new Set();
 
@@ -102,7 +106,8 @@ describe("framesForKind", () => {
       framesForKind(kind, NO_VERIFIED)
         .filter((f) => f.group === "skin")
         .map((f) => f.template);
-    expect(skinsFor("creature")).toEqual(["m15snow", "m15devoid"]);
+    // A creature also borrows the M15 artifact frame (TODO 1.7).
+    expect(skinsFor("creature")).toEqual(["m15snow", "m15devoid", "m15artifact"]);
     expect(skinsFor("land")).toEqual(["m15snowland"]);
     expect(skinsFor("token")).toEqual(["m15tokenartifact"]);
     // Standards with their own geometry and no skin set stay bare.
@@ -338,6 +343,10 @@ describe("baseFrameFor", () => {
     expect(baseFrameFor("creature", "retro")).toBe("retro");
     expect(baseFrameFor("creature", "m15")).toBe("m15");
     expect(baseFrameFor("saga", "saga")).toBe("saga");
+    // TODO 1.7: the artifact frame is a creature's variation of m15, but an
+    // artifact's own standard.
+    expect(baseFrameFor("creature", "m15artifact")).toBe("m15");
+    expect(baseFrameFor("artifact", "m15artifact")).toBe("m15artifact");
   });
 });
 
@@ -348,6 +357,18 @@ describe("templateSupportsKind", () => {
     expect(templateSupportsKind("m15pw", "planeswalker")).toBe(true);
     expect(templateSupportsKind("m15", "planeswalker")).toBe(false);
     expect(templateSupportsKind("m15artifact", "artifact")).toBe(true);
+    // An Artifact Creature is a creature on the artifact frame (TODO 1.7);
+    // no other kind borrows it.
+    expect(templateSupportsKind("m15artifact", "creature")).toBe(true);
+    // …with its P/T box: the artifact frame is M15's geometry with its own
+    // P/T plates, and the renderers show P/T for the creature card type.
+    expect(getFrameProfile("m15artifact").pt?.plateAssetPathTemplate).toBe(
+      "/frames/m15artifact/pt/{color}.png",
+    );
+    expect(showsPowerToughness("creature")).toBe(true);
+    for (const kind of ["instant", "sorcery", "enchantment", "land", "token", "planeswalker"] as const) {
+      expect(templateSupportsKind("m15artifact", kind)).toBe(false);
+    }
     // Skins ride with their base kind; showcase dresses any standard kind.
     expect(templateSupportsKind("m15snow", "creature")).toBe(true);
     expect(templateSupportsKind("lotr", "instant")).toBe(true);
@@ -439,5 +460,26 @@ describe("basic-only frames", () => {
     expect(isSingleBasicLand(land("Basic", ["Plains", "Island"], "Plains"))).toBe(false);
     expect(isSingleBasicLand(land("", [], "Command Tower", "{T}: Add one mana."))).toBe(false);
     expect(isSingleBasicLand({ ...land("Basic", ["Plains"], "Plains"), cardType: "creature" })).toBe(false);
+  });
+});
+
+// TODO 1.7: picking the Artifact variation on a creature makes it an
+// Artifact Creature (the Card step writes the word), and leaving it undoes it.
+describe("withArtifactWord / withoutArtifactWord", () => {
+  it("adds Artifact after the other supertype words, once", () => {
+    expect(withArtifactWord("")).toBe("Artifact");
+    expect(withArtifactWord(undefined)).toBe("Artifact");
+    expect(withArtifactWord("Legendary")).toBe("Legendary Artifact");
+    expect(withArtifactWord("Legendary  Snow")).toBe("Legendary Snow Artifact");
+    expect(withArtifactWord("Legendary Artifact")).toBe("Legendary Artifact");
+    expect(withArtifactWord("artifact")).toBe("artifact");
+  });
+
+  it("takes out only the Artifact word", () => {
+    expect(withoutArtifactWord("Legendary Artifact")).toBe("Legendary");
+    expect(withoutArtifactWord("Artifact")).toBe("");
+    expect(withoutArtifactWord("Snow Artifact")).toBe("Snow");
+    expect(withoutArtifactWord("Legendary")).toBe("Legendary");
+    expect(withoutArtifactWord(null)).toBe("");
   });
 });

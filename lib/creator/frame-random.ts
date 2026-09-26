@@ -11,12 +11,16 @@
 import type { CardType, ColorIdentity, FrameTemplate } from "@/types/card";
 import {
   framesForKind,
+  isBorrowedVariation,
   isSingleBasicLand,
   kindFromCard,
   templateIsBasicOnly,
   type FrameChoice,
 } from "@/lib/creator/card-kinds";
-import { pickFrameColorKey } from "@/components/cards/frame-layer";
+import {
+  isArtifactFrameType,
+  pickFrameColorKey,
+} from "@/components/cards/frame-layer";
 import type { BasicLandFace } from "@/lib/cards/watermark";
 
 export type FrameRequest = FrameTemplate | "random" | undefined;
@@ -34,7 +38,8 @@ export function frameChoicesForType(
  *
  *   - specific template → kept when it dresses the type AND its color for
  *     this card is published (and, for a basic-only frame, the card is one
- *     basic land); otherwise falls back like "random".
+ *     basic land; for the artifact frame a creature borrows, the card is an
+ *     Artifact Creature); otherwise falls back like "random".
  *   - "random" → a uniformly random published frame whose available colors
  *     include the generated card's color key.
  *   - undefined → null (caller keeps the creator's era default).
@@ -60,10 +65,16 @@ export function resolveGeneratedFrame(input: {
   const colorKey = pickFrameColorKey(colorIdentity);
   const choices = frameChoicesForType(cardType, verifiedKeys);
   const basicLand = face !== undefined && isSingleBasicLand(face);
+  // A frame never dresses a card as a type it isn't: the artifact frame a
+  // creature borrows (TODO 1.7) is for an Artifact Creature only — asked for
+  // by name or picked at random.
+  const kind = kindFromCard(cardType, undefined);
+  const artifact = isArtifactFrameType({ cardType, supertype: face?.supertype });
   const pool = choices.filter(
     (choice) =>
       choice.availableColorKeys.includes(colorKey as never) &&
-      (basicLand || !templateIsBasicOnly(choice.template)),
+      (basicLand || !templateIsBasicOnly(choice.template)) &&
+      (artifact || !isBorrowedVariation(kind, choice.template)),
   );
 
   if (requested !== "random") {

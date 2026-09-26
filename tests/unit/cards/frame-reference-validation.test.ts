@@ -3,7 +3,8 @@ import {
   referenceKindFor,
   validateReferenceForCombo,
 } from "@/lib/cards/frame-reference-validation";
-import type { ScryfallCard } from "@/lib/scryfall/client";
+import { scryfallCardSchema, type ScryfallCard } from "@/lib/scryfall/client";
+import printings from "../scryfall/fixtures/import-printings.json";
 
 // A pinned reference is rendered with the printing's OWN colour and kind but
 // the verify checkbox publishes the row's colour — so a mismatch means the
@@ -154,5 +155,49 @@ describe("validateReferenceForCombo", () => {
     );
     expect(result.errors).toEqual([]);
     expect(result.warnings.some((w) => /kind of card/.test(w))).toBe(true);
+  });
+
+  // TODO 1.7: the curated m15artifact/c reference IS an Artifact Creature
+  // (lib/cards/frame-references.json), and pinning it used to be refused as
+  // "a creature; the Artifact frame doesn't dress that kind".
+  it("accepts an Artifact Creature on the artifact frame (Solemn Simulacrum M21 #239)", () => {
+    const solemn = scryfallCardSchema.parse(printings["m21-239"]);
+    expect(validateReferenceForCombo(solemn, "m15artifact", "c")).toEqual({ errors: [], warnings: [] });
+    // Baleful Strix 2XM #191, the m15artifact/m reference.
+    const strix = scryfallCardSchema.parse(printings["2xm-191"]);
+    expect(validateReferenceForCombo(strix, "m15artifact", "m").errors).toEqual([]);
+  });
+
+  // …but a plain creature is no reference for it: the creature kind only
+  // borrows the artifact frame for Artifact Creatures.
+  it("refuses a non-artifact creature on the artifact frame (Llanowar Elves DOM #168)", () => {
+    const elves = scryfallCardSchema.parse(printings["dom-168"]);
+    expect(validateReferenceForCombo(elves, "m15artifact", "g").errors).toEqual([
+      "Llanowar Elves isn't an Artifact Creature; the Artifact frame dresses a creature only when it is an artifact.",
+    ]);
+    // Its own frame is fine.
+    expect(validateReferenceForCombo(elves, "m15", "g").errors).toEqual([]);
+  });
+
+  // TODO 1.2 review: a land's frame follows the mana it produces — the
+  // curated land references keep passing, and a utility land whose coloured
+  // symbols are activation costs is a colourless reference.
+  it("reads a land's colour from the mana it produces (Kessig Wolf Run, Vivid Crag)", () => {
+    const wolfRun = scryfallCardSchema.parse(printings["isd-243"]);
+    expect(validateReferenceForCombo(wolfRun, "m15land", "c").errors).toEqual([]);
+    const crag = scryfallCardSchema.parse(printings["c17-289"]);
+    expect(validateReferenceForCombo(crag, "m15land", "r").errors).toEqual([]);
+  });
+
+  // TODO 1.2: the colour check reads the printing's front face, like the
+  // compare render. Command Tower MSC #233, the curated m15land/m default,
+  // prints gold but has an empty identity, so it used to be refused as a
+  // colourless card; Westvale Abbey's black identity is its back face's.
+  it("checks the front face's colour (Command Tower, Westvale Abbey)", () => {
+    const tower = scryfallCardSchema.parse(printings["msc-233"]);
+    expect(validateReferenceForCombo(tower, "m15land", "m").errors).toEqual([]);
+    const westvale = scryfallCardSchema.parse(printings["soi-281"]);
+    expect(validateReferenceForCombo(westvale, "m15land", "c").errors).toEqual([]);
+    expect(validateReferenceForCombo(westvale, "m15land", "b").errors[0]).toMatch(/is a colorless card/);
   });
 });
