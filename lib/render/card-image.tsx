@@ -401,7 +401,8 @@ function CardImage({
     ? resolveLoyaltyRows(card.faceContent, card.rulesText)
     : [];
   // Their text size and content-sized row heights, the last row's text short
-  // of the loyalty shield — the preview's twin (lib/cards/loyalty-rows.ts).
+  // of the loyalty shield when it would reach it — the preview's twin
+  // (lib/cards/loyalty-rows.ts).
   const loyaltyLayout = layoutProfileLoyaltyRows(layout, loyaltyAbilities, aspect);
   // Saga chapter rail content — same structured-first resolution.
   const sagaContent = layout.chapters
@@ -1641,7 +1642,8 @@ function LoyaltyRowsBake({
             style={{
               display: "flex",
               flex: 1,
-              // The last ability wraps before the loyalty shield.
+              // The last ability wraps before the loyalty shield (when its
+              // text would reach it; lastRowInsetPct is 0 otherwise).
               ...(i === last && lastInset > 0 ? { marginRight: lastInset } : {}),
             }}
           >

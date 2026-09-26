@@ -689,8 +689,9 @@ function CardFace({
     ? resolveLoyaltyRows(face.faceContent, face.rulesText)
     : [];
   // Their text size and content-sized row heights, the last row's text short
-  // of the loyalty shield — the bake's twin (lib/cards/loyalty-rows.ts). The
-  // editor-only empty walker lays out its hint rows the same way.
+  // of the loyalty shield when it would reach it — the bake's twin
+  // (lib/cards/loyalty-rows.ts). The editor-only empty walker lays out its
+  // hint rows the same way.
   const loyaltyRowsFor = (abilities: LoyaltyAbility[]) =>
     layoutProfileLoyaltyRows(layout, abilities, aspect);
   // Saga chapter rail content — same structured-first resolution.
@@ -2148,7 +2149,8 @@ function LoyaltyRows({
             style={{
               flex: 1,
               minWidth: 0,
-              // The last ability wraps before the loyalty shield.
+              // The last ability wraps before the loyalty shield (when its
+              // text would reach it; lastRowInsetPct is 0 otherwise).
               ...(i === last && lastRowInsetPct > 0 ? { marginRight: cqw(lastRowInsetPct) } : {}),
               ...onTop,
               ...(placeholder ? { fontStyle: "italic", opacity: 0.55 } : {}),

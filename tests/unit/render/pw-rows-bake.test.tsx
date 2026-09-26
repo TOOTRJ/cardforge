@@ -16,7 +16,9 @@ import { RENDER_PRESETS } from "@/lib/render/card-image";
 // grew that row in the editor. The rows are now sized from their text by
 // layoutLoyaltyRows (lib/cards/loyalty-rows.ts) and both renderers draw the
 // same boxes, at the layout's text size — an ALL-CAPS walker included (its
-// capitals are counted at their own width). Also here: a long name stops
+// capitals are counted at their own width). The last ability wraps short of
+// the loyalty shield only when its text would reach it; otherwise it keeps
+// the row's full width (TODO 4.19). Also here: a long name stops
 // before the detached cost box (4.31). The m15pw masters live in the frames bucket (never in git), so
 // these bakes get a synthetic stand-in through a stubbed bucket — a white
 // card with a transparent art window — while the rows, badges, stripes and
@@ -257,22 +259,53 @@ describe("m15pw ability rows + title — real bakes", () => {
     expectNothingUnderTheShield(await bake({ rulesText: caps, loyalty: null }), caps);
   }, 60_000);
 
-  it("wraps a long last ability before the loyalty shield, its row sized for the narrower column", async () => {
-    // Test walkers whose last ability reached under the shield on the
-    // reviewed branch: a mixed-case one (its closing quote) and four ALL-CAPS
-    // abilities (the last word). Printed walkers wrap the last ability short
-    // of the loyalty box; both renderers now do (TODO 4.19).
-    const longLast =
-      "+1: Create a 1/1 white Soldier creature token.\n−4: Exile target nonland permanent. Its controller creates a 2/2 colorless Robot artifact creature token.\n−8: You get an emblem with \"Whenever you cast a spell, exile the top card of your library. You may play it this turn. At the beginning of your end step, return all creature cards exiled with Probe to the battlefield.\"";
+  it("wraps a last ability that would reach the loyalty shield before it, its row sized for the narrower column", async () => {
+    // Test walkers whose last ability, at the full width, runs on beside the
+    // shield: a mixed-case one (its second-to-last line), one only Satori
+    // breaks that way (the bake sets its type a hair wider than the
+    // advances), and ALL-CAPS ones (their last words hid under the shield on
+    // the reviewed branch). Printed walkers wrap the last ability short of
+    // the loyalty box; both renderers do (TODO 4.19).
+    const reaches =
+      "+1: Look at the top three cards of your library. Put one of them into your hand and the rest on the bottom of your library in any order.\n−3: Return target creature card from your graveyard to your hand.\n−7: Search your library for any number of creature cards, reveal them, put them into your hand, then shuffle. You gain 1 life for each card.";
+    const bakeBreaks =
+      "Spells your opponents cast that target Probe cost {2} more to cast.\n+1: Draw a card, then discard a card.\n−3: Return target creature card with mana value 3 or less from your graveyard to the battlefield. It gains haste until end of turn.\n−9: You get an emblem with \"At the beginning of your end step, create three 2/2 black Zombie creature tokens.\"";
     const caps4 =
       "CREATURES YOU CONTROL GET +1/+0 AS LONG AS IT'S YOUR TURN.\n+1: CREATE A 1/1 WHITE SOLDIER CREATURE TOKEN.\n−2: PUT A +1/+1 COUNTER ON EACH CREATURE YOU CONTROL. THEY GAIN VIGILANCE UNTIL END OF TURN.\n−6: YOU GET AN EMBLEM WITH \"CREATURES YOU CONTROL HAVE DOUBLE STRIKE.\"";
     // And a tall ALL-CAPS ultimate, whose row only holds its text when the
     // narrower column is estimated for the LAST row (not the first).
     const capsUlt = WALKER_115.toUpperCase();
-    for (const rules of [longLast, caps4, capsUlt]) {
+    for (const rules of [reaches, bakeBreaks, caps4, capsUlt]) {
+      expect(layoutProfileLoyaltyRows(P, parseLoyaltyAbilities(rules), H / W).lastRowInsetPct, rules).toBeGreaterThan(0.1);
       expectRowsHoldTheirText(await bake({ rulesText: rules }), rules);
       expectNothingUnderTheShield(await bake({ rulesText: rules, loyalty: null }), rules);
     }
+  }, 90_000);
+
+  it("keeps the full width for a last ability that stays clear of the shield — and still nothing under it", async () => {
+    // Owner decision 2026-09-26: only a text that would reach the shield is
+    // narrowed. This ultimate's long lines sit above the shield and the line
+    // beside it is short, so its column keeps the row's width: its first
+    // line runs on past where a narrowed column would end.
+    const clears =
+      "+1: Draw a card.\n−3: Destroy target creature. Its controller loses 2 life.\n−8: You get an emblem with \"Creatures you control get +2/+2 and have flying, vigilance and first strike.\"";
+    // And one that clears the shield only half a point below the size its
+    // full-width rows first fit at: it steps down instead of narrowing.
+    const stepsDown =
+      "+1: Create a 1/1 white Soldier creature token.\n−4: Exile target nonland permanent. Its controller creates a 2/2 colorless Robot artifact creature token.\n−8: You get an emblem with \"Whenever you cast a spell, exile the top card of your library. You may play it this turn. At the beginning of your end step, return all creature cards exiled with Probe to the battlefield.\"";
+    for (const rules of [clears, stepsDown, WALKER_115]) {
+      expect(layoutProfileLoyaltyRows(P, parseLoyaltyAbilities(rules), H / W).lastRowInsetPct, rules).toBe(0);
+      expectNothingUnderTheShield(await bake({ rulesText: rules, loyalty: null }), rules);
+    }
+    const px = await bake({ rulesText: clears });
+    expectRowsHoldTheirText(px, clears);
+    const { edges, right, padX, plateTop } = rowGeometry(clears);
+    const narrowedRight = right - padX - Math.round(0.124 * W);
+    let reach = 0;
+    for (let y = edges[2]; y < Math.min(plateTop, edges[3]); y += 1) {
+      for (let x = narrowedRight + 2; x < right - padX; x += 1) if (lum(px(x, y)) < 70) reach = Math.max(reach, x);
+    }
+    expect(reach - narrowedRight, "the last ability's first line, past a narrowed column's end").toBeGreaterThan(10);
   }, 60_000);
 
   /** The title band's ink: where the name starts and ends, where the pips

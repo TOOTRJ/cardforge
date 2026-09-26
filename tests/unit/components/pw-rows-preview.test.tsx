@@ -91,26 +91,38 @@ describe("CardPreview — m15pw ability rows", () => {
     expect(badge).toContain(`height:${cqw(sizePct * LOYALTY_ROW.badgeHeightEm)}`);
   });
 
-  it("wraps only the last ability short of the loyalty shield (server markup keeps cqw)", () => {
-    const html = renderToStaticMarkup(
-      <CardPreview
-        title="Probe"
-        cost="{B}"
-        cardType="planeswalker"
-        colorIdentity={["black"]}
-        rulesText={WALKER_115}
-        loyalty="4"
-        frameStyle={{ template: "m15pw" }}
-      />,
-    );
-    const { lastRowInsetPct } = layoutProfileLoyaltyRows(P, parseLoyaltyAbilities(WALKER_115), 7 / 5);
+  it("wraps only a last ability that would reach the loyalty shield short of it (server markup keeps cqw)", () => {
+    // Its ultimate's second-to-last line runs on beside the shield at the
+    // full width: the last column ends short of the shield.
+    const reaches =
+      "+1: Look at the top three cards of your library. Put one of them into your hand and the rest on the bottom of your library in any order.\n−3: Return target creature card from your graveyard to your hand.\n−7: Search your library for any number of creature cards, reveal them, put them into your hand, then shuffle. You gain 1 life for each card.";
+    const columnsOf = (rulesText: string) =>
+      renderToStaticMarkup(
+        <CardPreview
+          title="Probe"
+          cost="{B}"
+          cardType="planeswalker"
+          colorIdentity={["black"]}
+          rulesText={rulesText}
+          loyalty="4"
+          frameStyle={{ template: "m15pw" }}
+        />,
+      ).match(/<div style="flex:1;min-width:0[^"]*"/g)!;
+    const { lastRowInsetPct } = layoutProfileLoyaltyRows(P, parseLoyaltyAbilities(reaches), 7 / 5);
     expect(lastRowInsetPct).toBeGreaterThan(0.1);
     // Each row's text column: the div after the badge box, flex: 1.
-    const columns = html.match(/<div style="flex:1;min-width:0[^"]*"/g)!;
+    const columns = columnsOf(reaches);
     expect(columns).toHaveLength(3);
     expect(columns[0]).not.toContain("margin-right");
     expect(columns[1]).not.toContain("margin-right");
     expect(columns[2]).toContain(`margin-right:${cqw(lastRowInsetPct)}`);
+    // The 1 / 1 / 5 walker's ultimate stays clear of the shield at the full
+    // width (its long lines sit above it): every column keeps the row's
+    // width (owner decision 2026-09-26).
+    expect(layoutProfileLoyaltyRows(P, parseLoyaltyAbilities(WALKER_115), 7 / 5).lastRowInsetPct).toBe(0);
+    const clear = columnsOf(WALKER_115);
+    expect(clear).toHaveLength(3);
+    for (const column of clear) expect(column).not.toContain("margin-right");
   });
 
   it("lays out the editor-only hint rows the same way", () => {

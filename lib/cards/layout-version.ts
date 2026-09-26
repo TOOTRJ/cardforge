@@ -210,7 +210,8 @@ import type { CardType } from "@/types/card";
 //              / split back face's. 724 of 726 public production cards.
 //            * planeswalker rows (3.13, 3.3): ability rows sized by their
 //              text in one shared layout, one badge height, the last ability
-//              wrapping short of the loyalty shield (4.19, that part); a long
+//              wrapping short of the loyalty shield when its text would reach
+//              it at the full width (4.19, that part); a long
 //              name beside a detached cost shrinks to fit before the pips
 //              (3.10 for these frames). m15pw (every card) and modern (long
 //              names) — both inside the display-footer templates.

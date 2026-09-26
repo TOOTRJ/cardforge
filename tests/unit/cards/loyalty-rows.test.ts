@@ -9,6 +9,7 @@ import {
   loyaltyShieldRect,
 } from "@/lib/cards/loyalty-rows";
 import { estimateRulesHeightW, fitRulesSizePct, rulesSizeLadder } from "@/lib/cards/render-tiers";
+import { BAKE_WRAP, BAKE_WRAP_WIDE, PREVIEW_WRAP, wrapRulesText } from "@/lib/cards/rules-metrics";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import {
   detachedCostTitleWidthPct,
@@ -21,7 +22,8 @@ import { RULES_TEXT, pctToPt, ptToPct } from "@/lib/cards/typography";
 
 // ---------------------------------------------------------------------------
 // Planeswalker ability rows sized by their text (TODO 3.13), the last one
-// wrapping before the loyalty shield (4.19), and the name that stops before
+// wrapping before the loyalty shield when its text would reach it (4.19),
+// and the name that stops before
 // a detached cost (4.31), shrinking to fit there (3.10 for these frames).
 // All pure, shared by the preview and the bake; real-pixel checks live in
 // tests/unit/render/pw-rows-bake.test.tsx.
@@ -139,14 +141,25 @@ describe("layoutLoyaltyRows", () => {
   });
 });
 
-describe("the last ability wraps before the loyalty shield (TODO 4.19)", () => {
+describe("the last ability wraps before the loyalty shield when its text would reach it (TODO 4.19)", () => {
   const rulesRight = (M15PW.rules.rect.leftPct + M15PW.rules.rect.widthPct) / 100;
   const plate = M15PW.loyalty!.plateRect!;
   const withShield = (rules: string) => layoutProfileLoyaltyRows(M15PW, parseLoyaltyAbilities(rules), ASPECT);
-  // A 3-ability walker whose ultimate is long (a test walker; its closing
-  // quote reached under the shield on the reviewed branch).
-  const LONG_LAST =
-    "+1: Create a 1/1 white Soldier creature token.\n−4: Exile target nonland permanent. Its controller creates a 2/2 colorless Robot artifact creature token.\n−8: You get an emblem with \"Whenever you cast a spell, exile the top card of your library. You may play it this turn. At the beginning of your end step, return all creature cards exiled with Probe to the battlefield.\"";
+  const columnAt = (sizePct: number) =>
+    M15PW.rules.rect.widthPct / 100 -
+    sizePct * (2 * LOYALTY_ROW.padXEm + LOYALTY_ROW.badgeWidthEm + LOYALTY_ROW.badgeGapEm);
+  // Test walkers whose last ability, at the full width, reaches the shield:
+  // a mixed-case one (the second-to-last line of its long ultimate runs on
+  // beside the shield) and an ALL-CAPS one (its last words hid under it on
+  // the reviewed branch).
+  const REACHES =
+    "+1: Look at the top three cards of your library. Put one of them into your hand and the rest on the bottom of your library in any order.\n−3: Return target creature card from your graveyard to your hand.\n−7: Search your library for any number of creature cards, reveal them, put them into your hand, then shuffle. You gain 1 life for each card.";
+  const CAPS =
+    "+1: CREATURES YOU CONTROL GET +2/+2 AND GAIN TRAMPLE UNTIL END OF TURN.\n−3: DESTROY TARGET CREATURE OR PLANESWALKER WITH MANA VALUE 4 OR GREATER. ITS CONTROLLER CREATES A TREASURE TOKEN AND A CLUE TOKEN.\n−8: YOU GET AN EMBLEM WITH \"WHENEVER A CREATURE YOU CONTROL ATTACKS, DRAW A CARD.\"";
+  // Test walkers whose last ability stays clear of it: its full lines sit
+  // above the shield and the line beside it is short.
+  const CLEARS =
+    "+1: Draw a card.\n−3: Destroy target creature. Its controller loses 2 life.\n−8: You get an emblem with \"Creatures you control get +2/+2 and have flying, vigilance and first strike.\"";
 
   it("takes the shield from the loyalty plate's box, else the value's", () => {
     expect(loyaltyShieldRect(M15PW)).toEqual(plate);
@@ -154,14 +167,16 @@ describe("the last ability wraps before the loyalty shield (TODO 4.19)", () => {
     expect(loyaltyShieldRect(getFrameProfile("m15"))).toBeNull();
   });
 
-  it("ends the last row's text column where the shield's box begins (m15pw: 12.4 % of the width)", () => {
-    const { lastRowInsetPct } = withShield(WALKER_115);
-    expect(lastRowInsetPct).toBeCloseTo(rulesRight - plate.leftPct / 100, 12);
-    expect(lastRowInsetPct).toBeCloseTo(0.124, 6);
+  it("ends a reaching last row's text column where the shield's box begins (m15pw: 12.4 % of the width)", () => {
+    for (const rules of [REACHES, CAPS]) {
+      const { lastRowInsetPct } = withShield(rules);
+      expect(lastRowInsetPct).toBeCloseTo(rulesRight - plate.leftPct / 100, 12);
+      expect(lastRowInsetPct).toBeCloseTo(0.124, 6);
+    }
     // The same call both renderers make.
-    expect(withShield(WALKER_115)).toEqual(
+    expect(withShield(REACHES)).toEqual(
       layoutLoyaltyRows({
-        abilities: parseLoyaltyAbilities(WALKER_115),
+        abilities: parseLoyaltyAbilities(REACHES),
         rect: M15PW.rules.rect,
         baseSizePct: M15PW.rules.sizePct,
         aspect: ASPECT,
@@ -170,34 +185,55 @@ describe("the last ability wraps before the loyalty shield (TODO 4.19)", () => {
     );
   });
 
-  it("sizes the last row for its narrower column, so its text still fits its row", () => {
-    const abilities = parseLoyaltyAbilities(LONG_LAST);
-    const before = layout(LONG_LAST); // the whole width, as on the reviewed branch
-    const after = withShield(LONG_LAST);
+  it("keeps the full width — the rows it had before the shield — when the last ability stays clear of it", () => {
+    // Owner decision 2026-09-26: a last ability that never came near the
+    // shield wraps exactly as before, instead of leaving a word on a line of
+    // its own. Its column's right edge is the row's (no inset), and the
+    // whole layout is the one without a shield at all.
+    for (const rules of [CLEARS, WALKER_115, "+2: Scry 2.\n−3: Draw a card.\n−7: You win."]) {
+      const clear = withShield(rules);
+      expect(clear.lastRowInsetPct, rules).toBe(0);
+      expect(clear).toEqual(layout(rules));
+    }
+    // It isn't a narrow text: its first line runs past where the narrower
+    // column would end — narrowing would have re-wrapped it.
+    const { sizePct } = withShield(CLEARS);
+    const last = parseLoyaltyAbilities(CLEARS)[2].text;
+    const narrowEm = (columnAt(sizePct) - (rulesRight - plate.leftPct / 100)) / sizePct;
+    for (const rule of [PREVIEW_WRAP, BAKE_WRAP, BAKE_WRAP_WIDE]) {
+      const [lines] = wrapRulesText(last, columnAt(sizePct) / sizePct, rule);
+      expect(lines.length).toBeGreaterThan(1);
+      expect(lines[0]).toBeGreaterThan(narrowEm);
+      expect(lines.at(-1)!).toBeLessThan(narrowEm);
+    }
+  });
+
+  it("decides from where the lines break: the height estimate puts every last row's text beside the shield", () => {
+    // The rows' estimate centres CLEARS's ultimate so its text ends below the
+    // shield's top — as it does for every walker measured in round 5 — so a
+    // height rule would narrow them all. The lines themselves stop short.
+    const { sizePct, rowFractions } = withShield(CLEARS);
+    const last = parseLoyaltyAbilities(CLEARS)[2].text;
+    const textH = estimateRulesHeightW(last, sizePct, RULES_TEXT.lineHeight, columnAt(sizePct));
+    const lastTop = sum(rowFractions.slice(0, -1)) * boxH;
+    const textBottom = lastTop + (rowFractions[2] * boxH + textH) / 2;
+    const shieldTop = ((plate.topPct - M15PW.rules.rect.topPct) / 100) * ASPECT;
+    expect(textBottom).toBeGreaterThan(shieldTop);
+    expect(withShield(CLEARS).lastRowInsetPct).toBe(0);
+  });
+
+  it("sizes a narrowed last row for its narrower column, so its text still fits its row", () => {
+    const abilities = parseLoyaltyAbilities(REACHES);
+    const before = layout(REACHES); // the whole width, as without a shield
+    const after = withShield(REACHES);
     // The ultimate needs more lines in the narrower column: its row grows
     // (or the whole box steps its text down).
     expect(after.rowFractions[2] > before.rowFractions[2] || after.sizePct < before.sizePct).toBe(true);
     expect(sum(after.rowFractions)).toBeCloseTo(1, 10);
     // The estimate in the narrow column, plus padding, fits the last row.
     const { sizePct, rowFractions, lastRowInsetPct } = after;
-    const columnW =
-      M15PW.rules.rect.widthPct / 100 -
-      sizePct * (2 * LOYALTY_ROW.padXEm + LOYALTY_ROW.badgeWidthEm + LOYALTY_ROW.badgeGapEm) -
-      lastRowInsetPct;
-    const textH = estimateRulesHeightW(abilities[2].text, sizePct, RULES_TEXT.lineHeight, columnW);
+    const textH = estimateRulesHeightW(abilities[2].text, sizePct, RULES_TEXT.lineHeight, columnAt(sizePct) - lastRowInsetPct);
     expect(rowFractions[2] * boxH).toBeGreaterThanOrEqual(textH + 2 * LOYALTY_ROW.padYEm * sizePct - 1e-12);
-    // (At the full-width layout's size, the narrow column takes more lines
-    // than the full one — why this walker's rows changed at all.)
-    const at = (w: number) =>
-      estimateRulesHeightW(
-        abilities[2].text,
-        before.sizePct,
-        RULES_TEXT.lineHeight,
-        M15PW.rules.rect.widthPct / 100 -
-          before.sizePct * (2 * LOYALTY_ROW.padXEm + LOYALTY_ROW.badgeWidthEm + LOYALTY_ROW.badgeGapEm) -
-          w,
-      );
-    expect(at(lastRowInsetPct)).toBeGreaterThan(at(0));
   });
 
   it("estimates only the LAST row in the narrower column; the others keep the full width", () => {
@@ -207,23 +243,28 @@ describe("the last ability wraps before the loyalty shield (TODO 4.19)", () => {
     // estimate. (Narrowing the first row's estimate instead passed every
     // other test here, yet in real bakes put text across a seam, off the box
     // bottom and back under the shield.)
-    const ability = "Destroy target creature. Its controller loses 2 life.";
+    const ability = "Draw two cards. Destroy target creature. Its controller loses 2 life.";
     const { sizePct, rowFractions, lastRowInsetPct } = withShield(`+1: ${ability}\n−2: Draw a card.\n−8: ${ability}`);
-    const full =
-      M15PW.rules.rect.widthPct / 100 -
-      sizePct * (2 * LOYALTY_ROW.padXEm + LOYALTY_ROW.badgeWidthEm + LOYALTY_ROW.badgeGapEm);
+    expect(lastRowInsetPct).toBeGreaterThan(0); // it reaches the shield
     const est = (w: number) => estimateRulesHeightW(ability, sizePct, RULES_TEXT.lineHeight, w);
+    const full = columnAt(sizePct);
     expect(est(full - lastRowInsetPct)).toBeGreaterThan(est(full)); // one more line in the narrow column
-    expect(pctToPt(sizePct)).toBeGreaterThan(RULES_TEXT.hardFloorPt); // a ladder step fits: equal slack
+    expect(pctToPt(sizePct)).toBeGreaterThan(RULES_TEXT.hardFloorPt + 1); // a ladder step fits: equal slack
     expect((rowFractions[2] - rowFractions[0]) * boxH).toBeCloseTo(est(full - lastRowInsetPct) - est(full), 12);
   });
 
-  it("only narrows the last row, and leaves equal short abilities equal", () => {
-    // Three one-liners: every row still fits a badge and a line, so the
-    // stripes stay equal; only the last text column is narrower.
-    const short = withShield("+2: Scry 2.\n−3: Draw a card.\n−7: You win.");
-    for (const f of short.rowFractions) expect(f).toBeCloseTo(1 / 3, 10);
-    expect(short.lastRowInsetPct).toBeGreaterThan(0);
+  it("checks each step of the size ladder at the full width first: a smaller size that alone clears the shield keeps it", () => {
+    // This ultimate reaches the shield at the full-width rows' size (5.5 pt)
+    // and its narrowed rows don't fit there; half a point down its text
+    // clears the shield at the full width — so it keeps the full width, at
+    // the size the always-narrowed layout would have used anyway.
+    const rules =
+      "+1: Create a 1/1 white Soldier creature token.\n−4: Exile target nonland permanent. Its controller creates a 2/2 colorless Robot artifact creature token.\n−8: You get an emblem with \"Whenever you cast a spell, exile the top card of your library. You may play it this turn. At the beginning of your end step, return all creature cards exiled with Probe to the battlefield.\"";
+    const noShield = layout(rules);
+    const lay = withShield(rules);
+    expect(pctToPt(noShield.sizePct)).toBeCloseTo(5.5, 9);
+    expect(pctToPt(lay.sizePct)).toBeCloseTo(5, 9);
+    expect(lay.lastRowInsetPct).toBe(0);
   });
 
   it("ignores a shield that misses the box, and never takes more than half its width", () => {
@@ -233,7 +274,9 @@ describe("the last ability wraps before the loyalty shield (TODO 4.19)", () => {
     expect(lay(null).lastRowInsetPct).toBe(0);
     expect(lay({ ...plate, topPct: rect.topPct + rect.heightPct + 1 }).lastRowInsetPct).toBe(0); // below the box
     expect(lay({ ...plate, leftPct: rect.leftPct + rect.widthPct + 1 }).lastRowInsetPct).toBe(0); // right of it
-    expect(lay({ ...plate, leftPct: 0 }).lastRowInsetPct).toBeCloseTo(rect.widthPct / 200, 12);
+    // A shield over the whole box: every full line reaches it, and the
+    // column still keeps half the box.
+    expect(lay({ ...plate, leftPct: 0, topPct: rect.topPct }).lastRowInsetPct).toBeCloseTo(rect.widthPct / 200, 12);
   });
 });
 
