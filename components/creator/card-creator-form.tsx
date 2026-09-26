@@ -316,6 +316,22 @@ const STEP_RAIL_ICONS: Record<string, React.ReactNode> = {
 const SAVE_REQUEST_FAILED =
   "Couldn't reach PipGlyph to save. Your card is still here — check your connection and click Save again.";
 
+/** Structural equality of two form-value snapshots (plain JSON-like data:
+ *  strings, numbers, booleans, arrays, objects). */
+function sameFormState(a: unknown, b: unknown): boolean {
+  if (Object.is(a, b)) return true;
+  if (!a || !b || typeof a !== "object" || typeof b !== "object") return false;
+  if (Array.isArray(a) !== Array.isArray(b)) return false;
+  const keysA = Object.keys(a);
+  if (keysA.length !== Object.keys(b).length) return false;
+  return keysA.every((key) =>
+    sameFormState(
+      (a as Record<string, unknown>)[key],
+      (b as Record<string, unknown>)[key],
+    ),
+  );
+}
+
 /** "a, b and c" — the Save hint's list of what's missing. */
 function listPhrase(parts: readonly string[]): string {
   return parts.length <= 1
@@ -606,13 +622,25 @@ export function CardCreatorForm({
   // identity churn. router.refresh() re-renders the page with brand-new
   // card/gameSystems objects every time; resetting on those wiped
   // live edits "randomly" while users were typing.
+  //
+  // Fresh truth for the SAME card while the user has unsaved edits (they
+  // typed on while our own save's refresh was landing) rebases the form
+  // instead: server values become the baseline, the on-screen values and
+  // their dirty state stay (TODO 3b.6 — a blind reset wiped every
+  // keystroke typed in that window). Another card always resets.
   const resetKey = card ? `${card.id}:${card.updated_at}` : "new";
-  const lastResetKey = useRef(resetKey);
+  const resetCardId = card?.id ?? null;
+  const lastReset = useRef({ key: resetKey, cardId: resetCardId });
   useEffect(() => {
-    if (lastResetKey.current === resetKey) return;
-    lastResetKey.current = resetKey;
+    if (lastReset.current.key === resetKey) return;
+    const sameCard = lastReset.current.cardId === resetCardId;
+    lastReset.current = { key: resetKey, cardId: resetCardId };
+    if (sameCard && isDirty) {
+      reset(defaults, { keepValues: true, keepDirty: true });
+      return;
+    }
     reset(defaults);
-  }, [resetKey, defaults, reset]);
+  }, [resetKey, resetCardId, defaults, reset, isDirty]);
 
   // useWatch is the React Compiler-friendly subscription variant of watch().
   // We feed it the same defaults useForm has, so RHF always populates every
@@ -2138,10 +2166,14 @@ export function CardCreatorForm({
         return;
       }
       toast.success("Changes saved.");
-      // Mark clean right away (keeping the on-screen values); the keyed reset
-      // swaps in server truth when the refresh lands.
-      reset(undefined, { keepValues: true });
-      guard.disarm();
+      // The saved values become the baseline, keeping the on-screen values;
+      // the keyed reset swaps in server truth when the refresh lands. Mark
+      // clean only if nothing was typed while the request was in flight —
+      // those keystrokes weren't sent, so they stay dirty and guarded, and
+      // the keyed reset keeps them (TODO 3b.6).
+      const typedDuringSave = !sameFormState(getValues(), values);
+      reset(values, { keepValues: true, keepDirty: typedDuringSave });
+      if (!typedDuringSave) guard.disarm();
       if (options.afterSave) {
         options.afterSave();
         return;

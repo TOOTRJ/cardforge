@@ -695,3 +695,100 @@ describe("3b.5 the second face's name", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 });
+
+// ---------------------------------------------------------------------------
+// 3b.6 — an edit save marked the form clean, then router.refresh() brought a
+// new updated_at and the keyed reset called reset(defaults): anything typed
+// between the click and the refresh vanished.
+// ---------------------------------------------------------------------------
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((r) => {
+    resolve = r;
+  });
+  return { promise, resolve };
+}
+
+const statusBadge = () =>
+  screen.queryByText("Unsaved changes") ? "Unsaved changes" : screen.queryByText("Up to date") ? "Up to date" : null;
+
+describe("3b.6 an edit save keeps keystrokes typed before the refresh lands", () => {
+  const LATER = "2026-09-26T10:05:00.000Z";
+
+  it("typed while the request was in flight: kept and still unsaved after the refresh", async () => {
+    const pending = deferred<unknown>();
+    actions.updateCardAction.mockReturnValue(pending.promise);
+    const view = renderForm({ mode: "edit", card: savedCard() });
+    await typeTitle("Emberbound Wyrm II");
+    await clickSave();
+    await typeTitle("Emberbound Wyrm III"); // mid-request
+    await act(async () => {
+      pending.resolve({ ok: true, slug: "emberbound-wyrm" });
+    });
+    await waitFor(() => expect(router.refresh).toHaveBeenCalled());
+    expect(statusBadge()).toBe("Unsaved changes");
+
+    // The refresh lands: the server has what was SENT.
+    await act(async () => {
+      view.rerenderWith({
+        card: savedCard({ title: "Emberbound Wyrm II", updated_at: LATER }),
+      });
+    });
+    expect(titleInput().value).toBe("Emberbound Wyrm III");
+    expect(statusBadge()).toBe("Unsaved changes");
+    expect(saveButton().disabled).toBe(false);
+  });
+
+  it("typed after the save, before the refresh: kept", async () => {
+    actions.updateCardAction.mockResolvedValue({ ok: true, slug: "emberbound-wyrm" });
+    const view = renderForm({ mode: "edit", card: savedCard() });
+    await typeTitle("Emberbound Wyrm II");
+    await clickSave();
+    await waitFor(() => expect(router.refresh).toHaveBeenCalled());
+    expect(statusBadge()).toBe("Up to date");
+    await typeTitle("Emberbound Wyrm II, typed on");
+
+    await act(async () => {
+      view.rerenderWith({
+        card: savedCard({ title: "Emberbound Wyrm II", updated_at: LATER }),
+      });
+    });
+    expect(titleInput().value).toBe("Emberbound Wyrm II, typed on");
+    expect(statusBadge()).toBe("Unsaved changes");
+    // Typing back to the saved value is clean again (the baseline moved).
+    await typeTitle("Emberbound Wyrm II");
+    expect(statusBadge()).toBe("Up to date");
+  });
+
+  it("nothing typed: the refresh swaps in server truth", async () => {
+    actions.updateCardAction.mockResolvedValue({ ok: true, slug: "emberbound-wyrm" });
+    const view = renderForm({ mode: "edit", card: savedCard() });
+    await typeTitle("Emberbound Wyrm II ");
+    await clickSave();
+    await waitFor(() => expect(router.refresh).toHaveBeenCalled());
+    await act(async () => {
+      view.rerenderWith({
+        card: savedCard({ title: "Emberbound Wyrm II", updated_at: LATER }),
+      });
+    });
+    expect(titleInput().value).toBe("Emberbound Wyrm II");
+    expect(statusBadge()).toBe("Up to date");
+  });
+
+  it("another card always resets, even with unsaved edits", async () => {
+    const view = renderForm({ mode: "edit", card: savedCard() });
+    await typeTitle("Half-finished edit");
+    await act(async () => {
+      view.rerenderWith({
+        card: savedCard({
+          id: "66666666-6666-4666-8666-666666666666",
+          title: "Grizzly Bears",
+          slug: "grizzly-bears",
+        }),
+      });
+    });
+    expect(titleInput().value).toBe("Grizzly Bears");
+    expect(statusBadge()).toBe("Up to date");
+  });
+});
