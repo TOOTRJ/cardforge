@@ -1,7 +1,7 @@
 import "server-only";
 
 import sharp from "sharp";
-import { needsAutoOrient, orientedSize } from "@/lib/media/orientation";
+import { browserAppliesOrientation, orientedSize } from "@/lib/media/orientation";
 import { isAllowedServerImageFetchUrl } from "@/lib/validation/card";
 
 // ---------------------------------------------------------------------------
@@ -28,13 +28,15 @@ import { isAllowedServerImageFetchUrl } from "@/lib/validation/card";
 // Scryfall (lib/validation/card.ts isAllowedServerImageFetchUrl) are fetched;
 // anything else renders as a transparent pixel — never as a request.
 //
-// And it is where the bake obeys EXIF orientation (TODO 3.14). The browser
-// shows a phone photo upright (it reads the Orientation tag); Satori and
-// resvg draw the stored pixels as they lie. Any raster whose tag says "turn
-// me" (2–8) is re-encoded upright here — never passed through — so the bake,
+// And it is where the bake follows EXIF orientation the way the creator
+// shows it (TODO 3.14, lib/media/orientation.ts). Chrome turns a JPEG or PNG
+// whose Orientation tag says "turn me" (2–8), so a phone photo is upright in
+// the creator; Satori and resvg draw the stored pixels as they lie. Such a
+// JPEG/PNG is re-encoded upright here — never passed through — so the bake,
 // its thumb, the OG image and downloads match the creator, focal point and
-// zoom included (lib/media/orientation.ts). Files stored before uploads were
-// normalized still carry the tag, which is why this runs at render time too.
+// zoom included. Chrome ignores the tag on a WebP, so a tagged WebP is drawn
+// as stored, as before. Files stored before uploads were normalized still
+// carry the tag, which is why this runs at render time too.
 // ---------------------------------------------------------------------------
 
 /** Formats Satori decodes natively — passed through untouched. */
@@ -68,26 +70,30 @@ const MIME_BY_FORMAT: Record<string, string> = {
 };
 
 /**
- * Bytes → a data: URL Satori can consume. Untagged PNG/JPEG are wrapped
- * as-is; everything else (WebP, GIF, TIFF, HEIF, AVIF…, and any image whose
- * EXIF orientation is 2–8) is re-encoded upright — animated inputs collapse
- * to their first frame. Throws on undecodable input (the caller falls back
- * to the URL).
+ * Bytes → a data: URL Satori can consume. PNG/JPEG that the browser shows
+ * as stored are wrapped as-is; everything else (WebP, GIF, TIFF, HEIF,
+ * AVIF…, and a JPEG/PNG whose EXIF orientation is 2–8) is re-encoded the
+ * way the creator shows it — animated inputs collapse to their first frame.
+ * Throws on undecodable input (the caller falls back to the URL).
  */
 export async function toSatoriDataUrl(bytes: Buffer): Promise<string> {
   const meta = await sharp(bytes, { animated: false }).metadata();
   const native = Boolean(meta.format) && !needsSatoriTranscode(meta.format);
-  if (native && !needsAutoOrient(meta.orientation) && bytes.byteLength <= MAX_INLINE_BYTES) {
+  const turn = browserAppliesOrientation(meta);
+  if (native && !turn && bytes.byteLength <= MAX_INLINE_BYTES) {
     return `data:${MIME_BY_FORMAT[meta.format as string] ?? "image/png"};base64,${bytes.toString("base64")}`;
   }
-  // Re-encode for inlining: turn the pixels the way the browser shows them
-  // (autoOrient — a no-op for orientation 1), fit the bake's largest art
-  // slot and pick JPEG for opaque images (a lossless PNG of a 1600×1920
-  // photo is ~7 MB, base64 ~10 MB — past resvg's XML buffer limit, which is
-  // how one card's re-bake died with "Buffer size limit exceeded" on
-  // 2026-09-16); PNG only when there is alpha to keep. sharp writes no EXIF,
-  // so the output carries no tag for anything downstream to re-apply.
-  const fitted = sharp(bytes, { animated: false }).autoOrient().resize({
+  // Re-encode for inlining: turn the pixels when the browser shows them
+  // turned (a tagged JPEG/PNG; never a WebP, which Chrome draws as stored),
+  // fit the bake's largest art slot and pick JPEG for opaque images (a
+  // lossless PNG of a 1600×1920 photo is ~7 MB, base64 ~10 MB — past resvg's
+  // XML buffer limit, which is how one card's re-bake died with "Buffer size
+  // limit exceeded" on 2026-09-16); PNG only when there is alpha to keep.
+  // sharp writes no EXIF, so the output carries no tag for anything
+  // downstream to (re-)apply — which is also what keeps an untouched tagged
+  // WebP drawn as stored.
+  const decoded = sharp(bytes, { animated: false });
+  const fitted = (turn ? decoded.autoOrient() : decoded).resize({
     width: MAX_INLINE_EDGE,
     height: MAX_INLINE_EDGE,
     fit: "inside",
@@ -103,8 +109,11 @@ export async function toSatoriDataUrl(bytes: Buffer): Promise<string> {
 
 /**
  * Resolve an image URL (http(s) or data:) to something Satori can render.
- * data: URLs are transcoded too when they carry a non-native format; on any
- * fetch/decode problem the ORIGINAL url is returned unchanged.
+ * data: URLs are transcoded too when they carry a non-native format or an
+ * orientation the browser applies; on any fetch/decode problem the ORIGINAL
+ * url is returned unchanged. (Satori then fetches it itself and draws it
+ * tag-blind — a stored bake never takes that path: resolveBakeArt in
+ * lib/cards/bake-render.ts refuses an unresolved art URL.)
  */
 export async function resolveRenderableImage(
   url: string | null | undefined,
@@ -117,10 +126,10 @@ export async function resolveRenderableImage(
       if (comma < 0 || !header.includes("base64")) return url;
       const mime = header.split(";")[0];
       const bytes = Buffer.from(url.slice(comma + 1), "base64");
-      // A native data: URL passes through unless its EXIF says to turn it.
+      // A native data: URL passes through unless the browser shows it
+      // turned (its EXIF orientation is 2–8).
       if (mime === "image/png" || mime === "image/jpeg") {
-        const { orientation } = await sharp(bytes, { animated: false }).metadata();
-        if (!needsAutoOrient(orientation)) return url;
+        if (!browserAppliesOrientation(await sharp(bytes, { animated: false }).metadata())) return url;
       }
       return await toSatoriDataUrl(bytes);
     }
@@ -162,12 +171,13 @@ export const FOIL_MASK_EDGE = 640;
  * The foil mask's copy of an art data URL (lib/cards/foil-finish.tsx): a
  * small JPEG (PNG when the art has alpha) plus the ORIGINAL image's pixel
  * size, which the mask's object-fit: cover geometry is computed from — the
- * same size Satori reads when it draws the art itself. Both are UPRIGHT
- * (EXIF-oriented, like the browser's naturalWidth/naturalHeight): the art
- * reaching here has normally been turned already by toSatoriDataUrl, and
- * this repeats the rule so a tagged data: URL can never pair an upright art
- * with a sideways mask. Null for anything that is not an inlined, decodable
- * image (the foil then follows the frame alone there).
+ * same size Satori reads when it draws the art itself. Both follow the
+ * orientation the browser applies (browserAppliesOrientation — the
+ * browser's naturalWidth/naturalHeight): the art reaching here has normally
+ * been turned already by toSatoriDataUrl, and this repeats the rule so a
+ * tagged data: URL can never pair a turned art with an unturned mask. Null
+ * for anything that is not an inlined, decodable image (the foil then
+ * follows the frame alone there).
  */
 export async function foilMaskSource(
   dataUrl: string | null | undefined,
@@ -180,7 +190,8 @@ export async function foilMaskSource(
     const meta = await sharp(bytes, { animated: false }).metadata();
     const size = orientedSize(meta);
     if (!size) return null;
-    const fitted = sharp(bytes, { animated: false }).autoOrient().resize({
+    const decoded = sharp(bytes, { animated: false });
+    const fitted = (browserAppliesOrientation(meta) ? decoded.autoOrient() : decoded).resize({
       width: FOIL_MASK_EDGE,
       height: FOIL_MASK_EDGE,
       fit: "inside",

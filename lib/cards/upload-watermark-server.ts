@@ -72,7 +72,8 @@ export async function uploadWatermarkServerAction(
   }
 
   // Upright pixels, no EXIF orientation tag (lib/media/orientation.ts) —
-  // the browser obeys the tag, the bake used not to (TODO 3.14).
+  // Chrome obeys a PNG's tag and ignores a WebP's, the bake used to ignore
+  // both; with the tag gone every viewer and the bake agree (TODO 3.14).
   let stored: Buffer;
   try {
     stored = (await normalizeUploadOrientation(buffer, metadata, { maxBytes: MAX_BYTES })).buffer;

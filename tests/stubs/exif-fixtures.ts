@@ -9,10 +9,12 @@ import sharp from "sharp";
 // can't pass for the right one.
 //
 // `storedAs(o)` is what a camera writes for that picture with EXIF
-// Orientation `o`: the pixels laid out so that obeying the tag (what every
-// browser does) shows `upright()`. The mapping below is the EXIF definition
-// written out by hand (where stored row 0 / column 0 end up on screen), and
-// the fixture tests cross-check it against sharp's own autoOrient().
+// Orientation `o`: the pixels laid out so that obeying the tag shows
+// `upright()` (what Chrome does for a JPEG or PNG; it ignores the tag on a
+// WebP and shows `asStored(o)` instead). The mapping below is the EXIF
+// definition written out by hand (where stored row 0 / column 0 end up on
+// screen), and the fixture tests cross-check it against sharp's own
+// autoOrient().
 // ---------------------------------------------------------------------------
 
 export type Rgb = readonly [number, number, number];
@@ -77,7 +79,7 @@ export function storedPixels(
 export type FixtureFormat = "jpeg" | "png" | "webp";
 
 /** An encoded file whose stored pixels are laid out for orientation `o` and
- *  whose EXIF says `o` — i.e. a browser shows `upright()`. */
+ *  whose EXIF says `o` — i.e. obeying the tag shows `upright()`. */
 export async function storedAs(
   o: number,
   format: FixtureFormat = "jpeg",
@@ -98,6 +100,14 @@ export async function upright(format: FixtureFormat = "jpeg", dw = UPRIGHT_W, dh
   if (format === "png") return img.png().toBuffer();
   if (format === "webp") return img.webp({ quality: 100 }).toBuffer();
   return img.jpeg({ quality: 100, chromaSubsampling: "4:4:4" }).toBuffer();
+}
+
+/** The same stored pixels as `storedAs(o)` with NO tag, as PNG — what a
+ *  reader that ignores the tag shows (Chrome for a WebP, the pre-3.14 bake
+ *  for everything). */
+export async function asStored(o: number, dw = UPRIGHT_W, dh = UPRIGHT_H): Promise<Buffer> {
+  const { data, width, height } = storedPixels(o, dw, dh);
+  return sharp(data, { raw: { width, height, channels: 3 } }).png().toBuffer();
 }
 
 export const dataUrl = (bytes: Buffer, mime: string) => `data:${mime};base64,${bytes.toString("base64")}`;
@@ -144,5 +154,14 @@ export async function looksUpright(bytes: Buffer, tolerance = 12): Promise<boole
   const q = await quadrantColours(bytes);
   return (Object.keys(QUADRANTS) as (keyof typeof QUADRANTS)[]).every(
     (k) => colourDistance(q[k], QUADRANTS[k]) <= tolerance,
+  );
+}
+
+/** True when two images, both decoded tag-blind, have the same quadrant
+ *  colours (and so the same layout on screen). */
+export async function sameQuadrants(a: Buffer, b: Buffer, tolerance = 12): Promise<boolean> {
+  const [qa, qb] = [await quadrantColours(a), await quadrantColours(b)];
+  return (Object.keys(QUADRANTS) as (keyof typeof QUADRANTS)[]).every(
+    (k) => colourDistance(qa[k], qb[k]) <= tolerance,
   );
 }

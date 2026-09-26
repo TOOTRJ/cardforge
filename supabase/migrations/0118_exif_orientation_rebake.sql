@@ -2,13 +2,14 @@
 -- stored sideways (EXIF orientation, TODO 3.14).
 --
 -- A phone camera stores its pixels in the sensor's orientation and writes an
--- EXIF Orientation tag saying how to turn them. Browsers obey the tag, so the
--- creator and the live preview showed these photos upright. The bake (sharp +
--- Satori + resvg) ignored the tag, so the stored render, the gallery thumb, the
--- OG image and the watermarked download all show the art on its side, with
--- the saved crop landing on the wrong part of the photo. The same PR fixes the
--- code: uploads are stored upright, and the bake turns any tagged file it
--- reads (lib/media/orientation.ts, lib/render/art-source.ts).
+-- EXIF Orientation tag saying how to turn them. Browsers obey that tag on a
+-- JPEG (Chrome also on a PNG, but not on a WebP), so the creator and the live
+-- preview showed these two JPEGs upright. The bake (sharp + Satori + resvg)
+-- ignored the tag, so the stored render, the gallery thumb, the OG image and
+-- the watermarked download all show the art on its side, with the saved crop
+-- landing on the wrong part of the photo. The same PR fixes the code: uploads
+-- are stored upright, and the bake turns a tagged file the way the browser
+-- shows it (lib/media/orientation.ts, lib/render/art-source.ts).
 --
 -- A read-only scan of production on 2026-09-25 (publishable key and public
 -- storage URLs only, HTTP Range requests for the first 128 KB of each file)
@@ -23,6 +24,11 @@
 --   * Javi, el más duro a20cb8ea-4b38-420a-b9fa-05c126f818e8 (public, m15)
 -- Private cards can't be read with the publishable key. They have no stored
 -- render to fix: they render live, and live renders use the fixed code.
+-- A second read-only pass the same day covered the other Satori-drawn
+-- uploads: every uploaded avatar/banner and every deck cover the publishable
+-- key can read, on our storage (30 files: 6 profile files, 24 covers).
+-- None carries an orientation tag, so no profile or deck OG image was drawn
+-- sideways and nothing else needs a correction.
 --
 -- The statement sets layout_version = NULL. A null stamp tells the platform to
 -- re-bake the card and never shows the owner a badge

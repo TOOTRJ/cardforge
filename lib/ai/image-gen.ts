@@ -119,9 +119,10 @@ export async function restyleImage(input: {
   if (!isGatewayConfigured()) {
     return { ok: false, error: "AI Gateway isn't configured." };
   }
-  // The model gets the art as the owner sees it: art stored before uploads
-  // were normalized may still carry an EXIF "turn me" tag (TODO 3.14), and
-  // nothing promises the model reads it.
+  // The model gets the art as the owner sees it in the creator: a JPEG/PNG
+  // stored before uploads were normalized may still carry an EXIF "turn me"
+  // tag that the browser applies (TODO 3.14), and nothing promises the model
+  // reads it. Same rule as the bake (lib/media/orientation.ts).
   const source = await autoOrientBytes(input.source, input.sourceContentType);
   return restyleViaGateway(
     source.bytes,

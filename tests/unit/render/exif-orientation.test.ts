@@ -14,8 +14,10 @@ import {
   QUADRANTS,
   UPRIGHT_H,
   UPRIGHT_W,
+  asStored,
   dataUrl,
   looksUpright,
+  sameQuadrants,
   storedAs,
   upright,
 } from "@/tests/stubs/exif-fixtures";
@@ -23,21 +25,25 @@ import {
 // ---------------------------------------------------------------------------
 // TODO 3.14 — EXIF orientation in the bake.
 //
-// A phone photo is stored sideways with an EXIF Orientation tag; the browser
-// obeys the tag, so the creator, the art positioner and the live preview show
-// it upright (and the saved focal point / zoom are measured on the upright
-// image). Satori/resvg ignore the tag: before the fix, the stored render, the
-// WebP thumb, the OG image and every download drew the photo sideways.
+// A phone photo is stored sideways with an EXIF Orientation tag; Chrome obeys
+// the tag on a JPEG or PNG, so the creator, the art positioner and the live
+// preview show it upright (and the saved focal point / zoom are measured on
+// the upright image). Satori/resvg ignore the tag: before the fix, the stored
+// render, the WebP thumb, the OG image and every download drew the photo
+// sideways. Chrome IGNORES the tag on a WebP (measured in Chromium 148 and
+// Chrome 153), so a tagged WebP is shown — and must bake — as stored.
 //
-// Contract pinned here: every raster the bake inlines is auto-oriented, so an
-// orientation-3/6/8 photo bakes EXACTLY like the same picture saved upright
-// (the "pre-rotated" control), focal point and zoom included — and the foil
-// mask measures the art at its upright size, like the browser does.
+// Contract pinned here: every raster the bake inlines follows the browser
+// (lib/media/orientation.ts browserAppliesOrientation), so an orientation
+// 3/6/8 JPEG bakes EXACTLY like the same picture saved upright (the
+// "pre-rotated" control), focal point and zoom included, the foil mask
+// measures the art at the browser's natural size, and a tagged WebP bakes
+// exactly like its stored pixels.
 // ---------------------------------------------------------------------------
 
 const decode = (url: string) => Buffer.from(url.slice(url.indexOf(",") + 1), "base64");
 
-describe("art-source — auto-orients every inlined raster", () => {
+describe("art-source — inlines every raster the way the browser shows it", () => {
   it("fixture sanity: sharp's autoOrient turns every stored layout back into the upright picture", async () => {
     for (const o of [1, 2, 3, 4, 5, 6, 7, 8]) {
       const stored = await storedAs(o);
@@ -52,15 +58,30 @@ describe("art-source — auto-orients every inlined raster", () => {
   });
 
   it.each([2, 3, 4, 5, 6, 7, 8])(
-    "toSatoriDataUrl: orientation %i comes out upright, untagged, at the displayed size",
+    "toSatoriDataUrl: a JPEG/PNG with orientation %i comes out upright, untagged, at the displayed size",
     async (o) => {
-      for (const format of ["jpeg", "png", "webp"] as const) {
+      for (const format of ["jpeg", "png"] as const) {
         const out = decode(await toSatoriDataUrl(await storedAs(o, format)));
         const meta = await sharp(out).metadata();
         expect(meta.orientation ?? 1).toBe(1);
         expect([meta.width, meta.height]).toEqual([UPRIGHT_W, UPRIGHT_H]);
         expect(await looksUpright(out)).toBe(true);
       }
+    },
+  );
+
+  it.each([2, 3, 4, 5, 6, 7, 8])(
+    "toSatoriDataUrl: a WebP with orientation %i comes out AS STORED, untagged (Chrome ignores a WebP's tag)",
+    async (o) => {
+      const out = decode(await toSatoriDataUrl(await storedAs(o, "webp")));
+      const meta = await sharp(out).metadata();
+      // No tag left for anything downstream to apply…
+      expect(meta.orientation ?? 1).toBe(1);
+      // …and the stored layout and size — Chrome's naturalWidth ×
+      // naturalHeight (400 × 300 for the quarter turns).
+      expect([meta.width, meta.height]).toEqual(o >= 5 ? [UPRIGHT_H, UPRIGHT_W] : [UPRIGHT_W, UPRIGHT_H]);
+      expect(await sameQuadrants(out, await asStored(o))).toBe(true);
+      expect(await looksUpright(out)).toBe(false);
     },
   );
 
@@ -83,6 +104,9 @@ describe("art-source — auto-orients every inlined raster", () => {
     }
     const plain = dataUrl(await upright("png"), "image/png");
     expect(await resolveRenderableImage(plain)).toBe(plain);
+    // A tagged WebP data: URL is transcoded for Satori, drawn as stored.
+    const webp = await resolveRenderableImage(dataUrl(await storedAs(6, "webp"), "image/webp"));
+    expect(await sameQuadrants(decode(webp as string), await asStored(6))).toBe(true);
   });
 
   it("resolveRenderableImage: a stored file fetched over HTTP (the real bake path) comes back upright", async () => {
@@ -107,12 +131,19 @@ describe("art-source — auto-orients every inlined raster", () => {
     }
   });
 
-  it.each([3, 6, 8])("foilMaskSource: orientation %i reports the UPRIGHT natural size and an upright mask", async (o) => {
+  it.each([3, 6, 8])("foilMaskSource: a JPEG with orientation %i reports the UPRIGHT natural size and an upright mask", async (o) => {
     const mask = await foilMaskSource(dataUrl(await storedAs(o), "image/jpeg"));
     expect(mask).not.toBeNull();
     // The browser's naturalWidth/naturalHeight: 300 × 400, never 400 × 300.
     expect([mask!.naturalWidth, mask!.naturalHeight]).toEqual([UPRIGHT_W, UPRIGHT_H]);
     expect(await looksUpright(decode(mask!.href))).toBe(true);
+  });
+
+  it("foilMaskSource: a tagged WebP keeps its stored size and layout, like Chrome's naturalWidth/naturalHeight", async () => {
+    const mask = await foilMaskSource(dataUrl(await storedAs(6, "webp"), "image/webp"));
+    expect(mask).not.toBeNull();
+    expect([mask!.naturalWidth, mask!.naturalHeight]).toEqual([UPRIGHT_H, UPRIGHT_W]);
+    expect(await sameQuadrants(decode(mask!.href), await asStored(6))).toBe(true);
   });
 });
 
@@ -180,7 +211,7 @@ function artWindowDelta(a: Buffer, b: Buffer): number {
   return sum / n;
 }
 
-describe("the bake draws an EXIF-rotated photo the way the browser shows it", () => {
+describe("the bake draws an EXIF-tagged photo the way the browser shows it", () => {
   it("orientations 3, 6 and 8 bake identically to the pre-rotated picture (focal point + zoom included)", async () => {
     const control = await bakeRaw(card(dataUrl(await upright(), "image/jpeg")));
     // The upright art itself: light-years from the sideways draw below.
@@ -193,6 +224,15 @@ describe("the bake draws an EXIF-rotated photo the way the browser shows it", ()
     const sideways = await sharp(await storedAs(6)).jpeg({ quality: 100 }).toBuffer();
     expect((await sharp(sideways).metadata()).orientation).toBeUndefined();
     expect(artWindowDelta(await bakeRaw(card(dataUrl(sideways, "image/jpeg"))), control)).toBeGreaterThan(20);
+  }, 60_000);
+
+  it("a tagged WebP bakes exactly like its stored pixels (Chrome's view), not like the upright picture", async () => {
+    const asChromeShowsIt = await bakeRaw(card(dataUrl(await asStored(6), "image/png")));
+    const baked = await bakeRaw(card(dataUrl(await storedAs(6, "webp"), "image/webp")));
+    // WebP q100 vs a lossless PNG of the same pixels: noise only.
+    expect(artWindowDelta(baked, asChromeShowsIt)).toBeLessThan(1.5);
+    const uprightBake = await bakeRaw(card(dataUrl(await upright("png"), "image/png")));
+    expect(artWindowDelta(baked, uprightBake)).toBeGreaterThan(20);
   }, 60_000);
 
   it("a foil bake follows the upright art too (the mask geometry uses the upright size)", async () => {

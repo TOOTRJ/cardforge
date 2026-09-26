@@ -4,7 +4,9 @@ import { chainClient } from "@/tests/stubs/supabase-chain";
 import {
   UPRIGHT_H,
   UPRIGHT_W,
+  asStored,
   looksUpright,
+  sameQuadrants,
   storedAs,
   upright,
   type FixtureFormat,
@@ -12,9 +14,12 @@ import {
 
 // ---------------------------------------------------------------------------
 // TODO 3.14 — EXIF orientation at UPLOAD. Every human upload path stores
-// upright pixels with no orientation tag (same format, so extension and
-// Content-Type stay right), and an untagged upload is stored byte-for-byte.
-// The render-time half (lib/render/art-source.ts) is pinned in
+// the pixels turned the way the tag says, with no orientation tag (same
+// format, so extension and Content-Type stay right), and an untagged upload
+// is stored byte-for-byte. That includes WebP, whose tag Chrome ignores:
+// once the tag is gone every browser and the bake draw the file the same.
+// The render-time half (lib/render/art-source.ts — which follows Chrome, so
+// a legacy tagged WebP is drawn as stored) is pinned in
 // tests/unit/render/exif-orientation.test.ts.
 // ---------------------------------------------------------------------------
 
@@ -66,6 +71,7 @@ vi.mock("ai", () => ({
 
 import {
   autoOrientBytes,
+  browserAppliesOrientation,
   needsAutoOrient,
   normalizeUploadOrientation,
   orientedSize,
@@ -112,19 +118,35 @@ describe("orientation helpers", () => {
     expect([1, 2, 3, 4, 5, 6, 7, 8].map((o) => swapsAxes(o))).toEqual([false, false, false, false, true, true, true, true]);
   });
 
+  it("browserAppliesOrientation: Chrome turns a tagged JPEG or PNG, never a WebP", () => {
+    for (const format of ["jpeg", "png"]) {
+      expect([2, 3, 4, 5, 6, 7, 8].every((o) => browserAppliesOrientation({ format, orientation: o }))).toBe(true);
+      expect([undefined, 0, 1, 9].some((o) => browserAppliesOrientation({ format, orientation: o }))).toBe(false);
+    }
+    // Measured in Chromium 148 / Chrome 153: a WebP tagged 2–8 is drawn as
+    // stored (naturalWidth/naturalHeight unswapped).
+    expect([2, 3, 4, 5, 6, 7, 8].some((o) => browserAppliesOrientation({ format: "webp", orientation: o }))).toBe(false);
+    expect(browserAppliesOrientation({ format: "gif", orientation: 6 })).toBe(false);
+    expect(browserAppliesOrientation({ format: undefined, orientation: 6 })).toBe(false);
+  });
+
   it("orientedSize is the size the browser reports (naturalWidth/naturalHeight)", () => {
-    expect(orientedSize({ width: 400, height: 300, orientation: 6 })).toEqual({ width: 300, height: 400 });
-    expect(orientedSize({ width: 400, height: 300, orientation: 8 })).toEqual({ width: 300, height: 400 });
-    expect(orientedSize({ width: 400, height: 300, orientation: 5 })).toEqual({ width: 300, height: 400 });
-    expect(orientedSize({ width: 400, height: 300, orientation: 7 })).toEqual({ width: 300, height: 400 });
-    expect(orientedSize({ width: 400, height: 300, orientation: 3 })).toEqual({ width: 400, height: 300 });
-    expect(orientedSize({ width: 400, height: 300, orientation: undefined })).toEqual({ width: 400, height: 300 });
+    const jpeg = (orientation: number | undefined) => ({ width: 400, height: 300, orientation, format: "jpeg" as const });
+    expect(orientedSize(jpeg(6))).toEqual({ width: 300, height: 400 });
+    expect(orientedSize(jpeg(8))).toEqual({ width: 300, height: 400 });
+    expect(orientedSize(jpeg(5))).toEqual({ width: 300, height: 400 });
+    expect(orientedSize(jpeg(7))).toEqual({ width: 300, height: 400 });
+    expect(orientedSize(jpeg(3))).toEqual({ width: 400, height: 300 });
+    expect(orientedSize(jpeg(undefined))).toEqual({ width: 400, height: 300 });
+    expect(orientedSize({ width: 400, height: 300, orientation: 6, format: "png" })).toEqual({ width: 300, height: 400 });
+    // Chrome ignores a WebP's tag: the stored size.
+    expect(orientedSize({ width: 400, height: 300, orientation: 6, format: "webp" })).toEqual({ width: 400, height: 300 });
     expect(orientedSize({ width: undefined as unknown as number, height: 300 })).toBeNull();
   });
 });
 
 describe("normalizeUploadOrientation", () => {
-  it.each([2, 3, 4, 5, 6, 7, 8])("orientation %i → upright pixels, no tag, same format (jpeg/png/webp)", async (o) => {
+  it.each([2, 3, 4, 5, 6, 7, 8])("orientation %i → turned as the tag says, no tag, same format (jpeg/png, and webp although Chrome ignores its tag)", async (o) => {
     for (const format of ["jpeg", "png", "webp"] as const) {
       const original = await storedAs(o, format);
       const meta = await sharp(original).metadata();
@@ -133,7 +155,8 @@ describe("normalizeUploadOrientation", () => {
       const out = await sharp(buffer).metadata();
       expect(out.format).toBe(format);
       expect(out.orientation ?? 1).toBe(1);
-      // Swapped for 5–8: the stored file is now the size the browser showed.
+      // Swapped for 5–8: the stored file is now the size the tag meant (what
+      // Chrome showed for a JPEG/PNG; for a WebP, what Safari/the OS showed).
       expect([out.width, out.height]).toEqual([UPRIGHT_W, UPRIGHT_H]);
       expect(await looksUpright(buffer)).toBe(true);
     }
@@ -154,7 +177,7 @@ describe("normalizeUploadOrientation", () => {
     expect(buffer).toBe(bytes);
   });
 
-  it("leaves animated images alone (the bake still turns their first frame)", async () => {
+  it("leaves animated images alone", async () => {
     const bytes = await storedAs(6, "webp");
     const meta = { ...(await sharp(bytes).metadata()), pages: 3 };
     expect((await normalizeUploadOrientation(bytes, meta)).buffer).toBe(bytes);
@@ -187,7 +210,7 @@ describe("every upload path stores upright pixels", () => {
     await expectUprightUntagged(lastUpload("set-covers").body, "jpeg");
   });
 
-  it("profile avatar (WebP, orientation 6)", async () => {
+  it("profile avatar (WebP, orientation 6) — stored as the tag means, so every browser shows it the same", async () => {
     expect((await uploadProfileMediaServerAction("avatar", form(await storedAs(6, "webp"), "webp"))).ok).toBe(true);
     await expectUprightUntagged(lastUpload("profile-media").body, "webp");
   });
@@ -217,6 +240,14 @@ describe("AI remix hands the model the art as the owner sees it", () => {
     const second = imagePart(state.generateTextCalls[1]);
     expect(second.image).toBe(plain);
     expect(second.mediaType).toBe("image/jpeg");
+  });
+
+  it("autoOrientBytes follows the creator's view: a tagged WebP (drawn as stored by Chrome) is sent untouched", async () => {
+    const webp = new Uint8Array(await storedAs(6, "webp"));
+    const out = await autoOrientBytes(webp, "image/webp");
+    expect(out.bytes).toBe(webp);
+    expect(out.contentType).toBe("image/webp");
+    expect(await sameQuadrants(Buffer.from(out.bytes), await asStored(6))).toBe(true);
   });
 
   it("autoOrientBytes: undecodable input comes back unchanged", async () => {
