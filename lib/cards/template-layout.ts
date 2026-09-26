@@ -139,7 +139,9 @@ export type SlotInk = { colorHex: string; shadowCss?: string };
  *  printed Alpha cards letter the name, type line, P/T and "Illus." line in
  *  dark ink on the white frame but in embossed silver on every other
  *  colour. A key that is missing keeps the slot's own colorHex (and, on stat
- *  slots, shadowCss); an entry replaces both. */
+ *  slots, shadowCss); an entry replaces both — except on the title and type
+ *  bands, where an entry without a shadowCss keeps the band's own shadowCss
+ *  (the text span inherits it; see bandTextStyle). */
 export type InkByColorKey = Partial<Record<FrameColorKey, SlotInk>>;
 
 /** The ink a stat slot (P/T, loyalty, defense) prints in on `colorKey`. */
@@ -163,9 +165,12 @@ export function footerInk(footer: TextSlot, colorKey: string): SlotInk {
 /** The style a title or type band's TEXT (the name, the type line) adds on
  *  `colorKey`: an inkByColorKey entry's colour and shadow, or nothing — the
  *  band keeps its own colorHex / shadowCss, as on every frame without an
- *  entry. Only the text span takes it: the mana pips and set symbol beside
- *  it keep their own discs and ink, and a band-level text-shadow would
- *  emboss the pip glyphs too (the browser and Satori both inherit it). */
+ *  entry. An entry without a shadowCss sets only the colour, so the text
+ *  keeps the band's own shadowCss (inherited from the band) rather than
+ *  dropping it as slotInk would. Only the text span takes it: the mana pips
+ *  and set symbol beside it keep their own discs and ink, and a band-level
+ *  text-shadow would emboss the pip glyphs too (the browser and Satori both
+ *  inherit it). */
 export function bandTextStyle(slot: TextSlot, colorKey: string): { color?: string; textShadow?: string } {
   const entry = slot.inkByColorKey?.[colorKey as FrameColorKey];
   if (!entry) return {};

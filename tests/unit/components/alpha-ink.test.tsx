@@ -100,6 +100,8 @@ describe("slotInk / footerInk", () => {
       inkByColorKey: { b: { colorHex: "#cccccc", shadowCss: "0.1em 0.1em 0 #000" }, r: { colorHex: "#dddddd" } },
     };
     expect(bandTextStyle(band, "b")).toEqual({ color: "#cccccc", textShadow: "0.1em 0.1em 0 #000" });
+    // An entry without a shadow sets the colour only: the text keeps the
+    // band's own shadowCss (inherited from the band), unlike slotInk.
     expect(bandTextStyle(band, "r")).toEqual({ color: "#dddddd" });
     // A missing key adds nothing: the band's own colorHex + shadowCss stand.
     expect(bandTextStyle(band, "w")).toEqual({});
