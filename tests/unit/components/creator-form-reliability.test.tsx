@@ -259,16 +259,23 @@ function preview() {
   };
 }
 
-async function pickKind(label: RegExp) {
-  const group = screen.getByRole("radiogroup", { name: "Card type" });
-  const chip = Array.from(group.querySelectorAll("[role='radio']")).find((el) =>
-    label.test(el.textContent ?? ""),
-  );
-  if (!chip) throw new Error(`no kind chip ${label}`);
+function chipIn(group: string, label: RegExp) {
+  const radiogroup = screen.getByRole("radiogroup", { name: group });
+  const chip = Array.from(radiogroup.querySelectorAll("[role='radio']")).find(
+    (el) => label.test(el.textContent ?? ""),
+  ) as HTMLButtonElement | undefined;
+  if (!chip) throw new Error(`no ${group} chip ${label}`);
+  return chip;
+}
+
+async function clickChip(group: string, label: RegExp) {
+  const chip = chipIn(group, label);
   await act(async () => {
     fireEvent.click(chip);
   });
 }
+
+const pickKind = (label: RegExp) => clickChip("Card type", label);
 
 async function applyIdea(patch: Record<string, unknown>) {
   ideas.patch = patch;
@@ -504,5 +511,56 @@ describe("3b.3 structured rows fold, empty, and re-seed across kind changes", ()
     expect(preview().faceContent).toBeNull();
     // The edited rows survive as the rules text (they used to be dropped).
     expect(preview().rules).toMatch(/^\+2: Draw a card\./);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 3b.4 — a dual land with no rules text yet was read as a basic of its first
+// type: the Text step became the land-icon step (no rules box to type in)
+// and the Nonbasic chip snapped back to Basic.
+// ---------------------------------------------------------------------------
+
+describe("3b.4 dual lands are nonbasic", () => {
+  it("Tundra — Plains Island gets a rules box and stays Nonbasic", async () => {
+    renderForm({ mode: "create" });
+    await clickChip("Color identity", /^white/i);
+    await pickKind(/^Land/);
+    expect(chipIn("Land type", /^Basic/).getAttribute("aria-checked")).toBe("true");
+    await clickChip("Land type", /^Nonbasic/);
+    expect(chipIn("Land type", /^Nonbasic/).getAttribute("aria-checked")).toBe("true");
+
+    await clickNext(); // Card → Identity
+    await typeTitle("Tundra");
+    await act(async () => {
+      fireEvent.change(screen.getByPlaceholderText("Dragon, Elder"), {
+        target: { value: "Plains, Island" },
+      });
+    });
+    await clickNext(); // Identity → Text
+    expect(screen.getByLabelText("Rules text")).toBeTruthy();
+    expect(screen.queryByText("Land icon")).toBeNull();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /^Back/ }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /^Back/ }));
+    });
+    expect(chipIn("Land type", /^Nonbasic/).getAttribute("aria-checked")).toBe("true");
+  });
+
+  it("a single basic type with no supertype is still the basic-land icon step", async () => {
+    renderForm({ mode: "create" });
+    await clickChip("Color identity", /^green/i);
+    await pickKind(/^Land/);
+    await clickChip("Land type", /^Nonbasic/);
+    await clickNext();
+    await act(async () => {
+      fireEvent.change(screen.getByPlaceholderText("Dragon, Elder"), {
+        target: { value: "Forest" },
+      });
+    });
+    await clickNext();
+    expect(screen.getByText("Land icon")).toBeTruthy();
   });
 });
