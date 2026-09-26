@@ -12,7 +12,6 @@ describe("premium finish gating", () => {
     expect(isPremiumFinish("etched")).toBe(false);
     expect(isPremiumFinish("showcase")).toBe(false);
     expect(isPremiumFinish("regular")).toBe(false);
-    expect(isPremiumFinish("borderless")).toBe(false);
     expect(isPremiumFinish(null)).toBe(false);
     expect(isPremiumFinish(undefined)).toBe(false);
   });

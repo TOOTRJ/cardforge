@@ -91,3 +91,13 @@ instead. Each bullet: what the header says, and what is true now.
   same SVG in the preview and the bake): the black border and the art stay
   untouched and there is no gold inner border. The old border never baked as
   described — Satori collapsed it into a strip down the card's left edge.
+- **0014 (`"borderless"` = "art well bleeds behind the section panels")** —
+  retired. No renderer has drawn it since the MSE-schema rebuild
+  (2026-06-01), so a borderless-finish card baked exactly like a regular one,
+  and the creator stopped offering it. 0119 reset every stored `borderless`
+  finish to `regular` without touching `updated_at` or the render columns
+  (no pixel moved, so no re-bake), and `CARD_FINISH_VALUES`
+  (`types/card.ts`) no longer lists it; the validator reads a legacy
+  `borderless` as `regular`. The finishes are `regular`, `foil`, `etched` and
+  `showcase`. Borderless is a frame treatment (its own templates), never a
+  finish.

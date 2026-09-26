@@ -247,17 +247,28 @@ export type CardWatermark =
 
 // Card finish — premium treatments layered on top of the base frame.
 // Default is "regular"; "foil" adds a static holographic sheen,
-// "etched" adds a fine etched texture to the frame only, "borderless"
-// lets the art bleed under the section panels, and "showcase" swaps the
-// title to an italic display treatment with an ornate underline.
+// "etched" adds a fine etched texture to the frame only, and "showcase"
+// swaps the title to an italic display treatment with an ornate underline.
+// Borderless is a frame treatment (its own templates), never a finish —
+// Scryfall's finishes are nonfoil/foil/etched, and borderless printings come
+// in all three.
 export const CARD_FINISH_VALUES = [
   "regular",
   "foil",
   "etched",
-  "borderless",
   "showcase",
 ] as const;
 export type CardFinish = (typeof CARD_FINISH_VALUES)[number];
+
+// Retired finish values → the finish that draws the same pixels. The old
+// "borderless" finish drew nothing after the MSE-schema rebuild (2026-06-01)
+// and migration 0119 reset every stored row to "regular"; an old payload
+// (a stale tab, a remix of an unmigrated row) still reads as "regular"
+// instead of failing validation (lib/validation/card.ts,
+// normalizeCardFinish in lib/cards/card-display.ts).
+export const RETIRED_CARD_FINISHES: ReadonlyMap<string, CardFinish> = new Map([
+  ["borderless", "regular"],
+]);
 
 // Frame templates correspond to PNG assets in public/frames/{template}/{color}.png
 // plus a layout profile in lib/cards/template-layout.ts. Every template is an
