@@ -204,9 +204,7 @@ Open decisions are marked **[decide]**; none blocks its phase.
       - Drop `"borderless"` from `CARD_FINISH_VALUES`. Keep a zod `preprocess` that reads a legacy `borderless` as `regular`, so an old draft or remix never fails to parse. Update both tests and the finish comment. Correct 0014's header through the errata in `supabase/migrations/README.md`, never by editing the migration.
       - Borderless becomes a frame treatment (templates 4.32–4.38, import signature 1.17), never a finish. Only foil and etched stay finishes, which matches Scryfall's `finishes`: nonfoil/foil/etched, and borderless printings come in all three.
       - Copy: `content/articles/mtg-card-anatomy-explained.mdx`:34 says edge-to-edge art "depends on the frame era you choose", but no edge-to-edge template is published (0 of 71 verified combos). Reword it until 4.32 publishes (extends 0.19).
-      - **[decide]** Choose one:
-        - (a) reset silently (recommended; the cards look the same);
-        - (b) also send those owners a one-time "Borderless is here" notification when 4.32 ships, with a link to switch.
+      - **Decided 2026-09-26 (owner: "go with your recommendation")**: (a) reset silently — the cards already look the same. (The alternative was a one-time "Borderless is here" notification when 4.32 ships.)
 
       Acceptance: the migration is idempotent; the zod test shows `borderless` parses to `regular`; `grep -rn borderless types lib components` finds only frame/treatment code.
 
@@ -346,10 +344,7 @@ Open decisions are marked **[decide]**; none blocks its phase.
 - [ ] **1.18 [P1] Borderless imports and their art** (borderless research 2026-09-25) — The art import takes Scryfall `art_crop` (`app/api/scryfall/import-art/route.ts`:155). For borderless printings that crop is still cut to the M15 window: 626×457, aspect 1.37 (checked on DMU #435 and FDN #311). Only `full_art` printings get a taller crop (UNF #235: 745×767). Covering 4.32's art area (1500×1937 above the bottom bar) scales the crop 4.24× and keeps 56 % of its width. Scryfall's full-card `png` has the frame printed on it, so it is never usable as art.
       - When an import lands on a borderless treatment, show an inline note on the Art step: "Scryfall only has this art cropped to the classic window — upload the full illustration for a sharp borderless card". Log `art: window-cropped` on the 1.6 request row.
       - The art positioner re-frames the crop against the full-bleed slot (3b.13).
-      - **[decide]** Which frame a borderless import lands on:
-        - (a) Borderless with the window-cropped art and the note;
-        - (b) the bordered M15 frame (the art fits exactly), with Borderless offered in the 1.5 chooser.
-        Recommended: (b) while 6.10's full-resolution path is missing, (a) once the user uploads art.
+      - **Decided 2026-09-26 (owner: "go with your recommendation")**: a borderless import lands on the bordered M15 frame (the art fits exactly), with Borderless offered in the 1.5 chooser, while 6.10's full-resolution path is missing; it may land on Borderless once the user uploads their own art. (The alternative was Borderless with the window-cropped art and a note.)
 
 ### Phase 2 — Admin walk-through of the stepper (3–5 days)
 
@@ -975,7 +970,7 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
 - [ ] **4.33 [P1] Borderless planeswalkers** (borderless research 2026-09-25) — 245 non-showcase printings: 199 light box and dark ink (ELD #271 Oko, BRO #294), 46 dark (`inverted`: WOE #297 Ashiok, ECL #284).
       - **Source.** CC `PlaneswalkerBorderless` (3 rows, `groupPlaneswalker.js`:3; 8 colours with no C (survey, not re-verified), art to 91.53 % H, bottom bar from 91.52 % H) and `PlaneswalkerTallBorderless` (4 rows, `groupPlaneswalker.js`:6, 9 colours, type y 49.67). Both are 1500×2100.
       - **Profile.** m15pw's rail and rows (4.19, 3.13) with full-bleed art. CC paints the loyalty shield on its planeswalker masters, so drop `plateAssetPathTemplate` (4.19). The tall variant auto-selects at 4 or more abilities, like 4.7's `m15pwtall`.
-      - **Colours.** `c` is substituted in the manifest. The dark look is derived (CC has none): the CC `m15/borderless` box treatment through the planeswalker masks. It needs owner visual sign-off and stays `nearest` until then. **[decide]** build the dark variant, or map `inverted` walkers to light as `nearest`.
+      - **Colours.** `c` is substituted in the manifest. The dark look is derived (CC has none): the CC `m15/borderless` box treatment through the planeswalker masks. It needs owner visual sign-off and stays `nearest` until then. **Decided 2026-09-26 (owner: "go with your recommendation")**: map `inverted` walkers to the light look as `nearest` for now (46 dark vs 199 light printings); build the dark variant only if the 1.6 request log asks for it.
       - **Depends on:** 4.32, 4.19, 3.13, 4.3.
 
       References: Oko ELD #271 · Saheeli, Filigree Master BRO #294 (light); Ashiok WOE #297 · Ajani, Outland Chaperone ECL #284 (dark); Ajani, Sleeper Agent DMU #375 (long text, tall check).
@@ -989,13 +984,8 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
       - **bloomanime.** `borderlessShowcase()` insets the art 2.5/3.5/93×92 (`lib/cards/template-layout.ts`:1571-1616). MSE's source runs the image 0/0/100×91.6, or 94.8 with a P/T (`magic-m15-showcase-bloomburrow-borderless-anime.mse-style/style`:401-407). Match MSE. The registry references Hop to It BLB #381 and Fell BLB #383, which are black-border promo-pack printings, not the anime run. Replace them with BLB #316–336 and #343–355. 0 production cards.
       - **tarkirghostfire.** The comment calls it "borderless" (`template-layout.ts`:1618). Scryfall: #399–408 are black-bordered, #409–418 white. The registry references #410, which is white. Paint a real black ring for the black run, register #399–408 references (e.g. Clarion Conqueror TDM #400), and leave the white run to 4.30. 1 production card, so ship it as a 0.20 platform correction.
       - **tarkirdragon.** The ring bakes #101015 (16,16,21), but the MUL references are black-bordered. Make it opaque black. 4 production cards; 0.20 sweep.
-      - **fullartland.** The only true edge-to-edge master, but its references are HOB/BFZ black-bordered full-art basics. **[decide]** Choose one:
-        - (a) keep it borderless and re-reference it to UNF #235 / EOE #262;
-        - (b) add a black border to match its current references.
-        0 production cards.
-      - **m15textless / m15textlessland.** Black-ring masters, but their references are borderless (MSH/TRK/TLA/FRA; EOE basics). **[decide]** Choose one:
-        - (a) re-source them from CC `TextlessGenericShowcase` (4.37);
-        - (b) re-reference them to black-bordered textless printings.
+      - **fullartland.** The only true edge-to-edge master, but its references are HOB/BFZ black-bordered full-art basics. **Decided 2026-09-26 (owner: "go with your recommendation")**: keep it borderless and re-reference it to UNF #235 / EOE #262 (the alternative was adding a black border to match the current references). 0 production cards.
+      - **m15textless / m15textlessland.** Black-ring masters, but their references are borderless (MSH/TRK/TLA/FRA; EOE basics). **Decided 2026-09-26 (owner: "go with your recommendation")**: re-source them borderless from CC `TextlessGenericShowcase` (4.37), matching their references (the alternative was re-referencing them to black-bordered textless printings).
       - **lotrscroll and battle** are the same ring problem, already in 7.6/4.21. Cross-reference; don't duplicate.
 
       Acceptance: 7.7 passes for every template listed here.
@@ -1007,7 +997,7 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
       References: Winds of Change MAR #30 · Volcanic Torrent TLE #37 (source material); Anafenza TDM #327 · Taigam TDM #335 (clan).
 - [ ] **4.37 [P3] Borderless variants: light box, short box, textless, tokens** (borderless research 2026-09-25) — In request-log order:
       - **Light box, dark ink** (CC `GenericShowcase`, 'Borderless', `groupShowcase-5.js`:48; box α191–230; 8 colours, no C). 519 non-PW non-land printings, but only 12 in expansion/core/masters sets; most are specials. Example: The Soul Stone SPM #242.
-      - **Short and mid boxes** (CC `IkoShort` type 70.2 % H and `PromoRegular-1` type 65 %, `groupPromo-2.js`:3-4). **[decide]** auto-pick by rules length, or a manual variation only.
+      - **Short and mid boxes** (CC `IkoShort` type 70.2 % H and `PromoRegular-1` type 65 %, `groupPromo-2.js`:3-4). **Decided 2026-09-26 (owner: "go with your recommendation")**: a manual variation only — the import picks the variation the printing uses (1.17), and the creator never switches box size on its own as the text changes.
       - **Textless** (CC `TextlessGenericShowcase`, 8 colours). Also resolves 4.35's m15textless choice (a).
       - **Tokens** (CC `TokenTextlessBorderless`, 10 frames incl. C and snow, no bottom bar, art 0/0/100/100). Only 19 paper borderless tokens exist (WONE/WMOM JP promos, SLD); the real token work is 4.22.
 - [ ] **4.38 [P3] Borderless layout cards (saga, adventure, room/class/case, mutate)** (borderless research 2026-09-25) — Paper counts: 71 sagas, 36 adventures, 11 class/case/room, 19 mutate. Examples: TDM #383 Awaken the Honored Dead, WOE #298 Kellan, DSK #334. Neither CC nor MSE has a borderless frame for these, and MSE's module masks `borders/744x1039/m15/{saga,walker}/borderless.png` are unused shape references only. Derive each from the CC layout frames (4.21) plus a 1500 px borderless border mask, with owner visual sign-off. Log each as `unsupported` (1.6) until it ships, and order by the log. Borderless battles: never; 0 have been printed.
