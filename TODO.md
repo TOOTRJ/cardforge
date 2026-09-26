@@ -231,17 +231,17 @@ Open decisions are marked **[decide]**; none blocks its phase.
 
 ### Phase 1 — Import uses the exact frame (2–3 weeks)
 
-- [ ] **1.1 [P0] Parse the full frame vocabulary** in `lib/scryfall/client.ts`:
+- [x] (done 2026-09-26 — feat/import-correctness: the eight printing-level fields typed beside #385's four, and the face schema keeps `colors`, `color_indicator`, `artist`, `watermark` and `layout`; 36 real printings in `tests/unit/scryfall/fixtures/import-printings.json` back the Phase 1 tests) **1.1 [P0] Parse the full frame vocabulary** in `lib/scryfall/client.ts`:
       typed `border_color`, `full_art`, `textless`, `promo_types`, `set_type`,
       `security_stamp`, `color_indicator`, `produced_mana`, `watermark`,
       `finishes`, `flavor_name`, `lang`, `collector_number`; face-level
       `artist`, `colors`, `color_indicator`, `watermark`, `layout` (the strict
       face schema strips them today).
-- [ ] **1.2 [P0] Colour from the front face** — `colors`/`color_indicator`
+- [x] (done 2026-09-26 — feat/import-correctness: `frontFaceColors` / `frameColorsFromScryfall` (was `parseColorIdentity`). Per-face colours on transform/MDFC/battle faces; the card's colours for split, flip and adventure cards (Scryfall gives an adventurer its creature's colour); a Room's first door from its cost. A colourless front stays colourless unless it is a land or devoid: single-faced → identity, plus `produced_mana` for lands on the 2003 frame and later (any-colour lands print gold there — Command Tower, the curated m15land/m default, was refused as colourless; checked on scans: the 1993/1997 frames print them on the plain land frame); multi-faced → the front face's own symbols and basic land types. Design check: `cards.color_identity` is the frame colour (single-select, two colours collapse to multicolor) and never held Commander identity; deck entries keep Scryfall's identity via `lib/decks/import-resolution.ts`, pinned by a test. The frame-compare render and the pin check read the same rule: over all 482 registry printings, 18 references the pin check refused are now accepted, none newly refused after moving two misfiled alternates (Cavern of Souls ZNE → expeditionland/m, the DSK Room out of split/m)) **1.2 [P0] Colour from the front face** — `colors`/`color_indicator`
       first; `color_identity`/`produced_mana` only for lands and devoid
       (`lib/scryfall/import-mapper.ts`:271). Fixes DFC fronts importing gold
       and Westvale Abbey importing as a black land.
-- [ ] **1.3 [P0] Type-line + layout precedence** — land > creature > rest for
+- [x] (done 2026-09-26 — feat/import-correctness: precedence token > land > creature > planeswalker > battle > artifact > enchantment > instant > sorcery, and the other type words stay in `supertype` in printed order (a layout kind's card type is preferred when the line carries it — Urza's Saga). Template: Artifact Creature → m15artifact (1.7), artifact token → m15tokenartifact, snow/devoid still win. Kinds: a transforming Saga is a saga, a Room is its first door as an enchantment with the second as `back_face`, Class/Case their front face's kind, an Omen (Scryfall layout `adventure`) the adventure layout. Left for the renderer (not changed here — no bump): `buildTypeLine` prints the card type last, so Dryad Arbor reads "Creature Land" and a token "Creature Token", and `showsPowerToughness` hides a land creature's P/T; a sorcery split card still takes the split kind's "instant", as before) **1.3 [P0] Type-line + layout precedence** — land > creature > rest for
       `card_type`; template from the whole word set (Artifact ⇒ `m15artifact`,
       Token+Artifact ⇒ `m15tokenartifact`, Artifact Land stays a land);
       Saga/Room/Class/Case/Omen from the front-face subtype (transforming
@@ -284,7 +284,7 @@ Open decisions are marked **[decide]**; none blocks its phase.
 - [ ] **1.6 [P1] `frame_requests` table + admin panel** — written on every
       nearest/unsupported outcome (signature label, set, count, last seen);
       "most-requested missing frames" decides the order of 4.7/4.11.
-- [ ] **1.7 [P1] Artifact creatures** — offer `m15artifact` under kind Creature
+- [x] (done 2026-09-26 — feat/import-correctness: `BORROWED_VARIATIONS` in `lib/creator/card-kinds.ts` offers m15artifact under a creature's M15 standard ("For Artifact Creatures"); it stays the Artifact kind's own standard. AI "random" frames and `resolvePublishedFrame`'s any-frame fallback skip it unless the card says Artifact. The import keeps "Artifact" in the supertype and asks for m15artifact before m15 (`importFrameCandidates`), so an Alpha Juggernaut lands on it when agclassic isn't published, and on agclassic paints the brown card. Pinning the curated m15artifact references (Solemn Simulacrum, Esper Sentinel, Phyrexian Metamorph, Baleful Strix, …) is no longer refused as the wrong kind) **1.7 [P1] Artifact creatures** — offer `m15artifact` under kind Creature
       as a variation with P/T and route "Artifact Creature" imports to it
       (`lib/creator/card-kinds.ts` `framesForKind`,
       `lib/cards/card-display.ts`:32). The import must keep the Artifact
@@ -313,7 +313,7 @@ Open decisions are marked **[decide]**; none blocks its phase.
       Scryfall 400 vs ambiguous 404 messages).
 - [ ] **1.13 [P2] Refresh `ABILITY_WORDS`** (`lib/cards/rules-text.ts`:33) with
       the 2024–2026 words + a test against Scryfall's `catalog/ability-words`.
-- [ ] **1.14 [P2] Kindred stays a supertype word; delete the dead
+- [x] (done 2026-09-26 — feat/import-correctness: the mapping is gone; Bitterblossom, Crib Swap and Kindred Discovery pin it, and no fixture imports the legacy "spell") **1.14 [P2] Kindred stays a supertype word; delete the dead
       `tribal → "spell"` mapping** (`import-mapper.ts`).
 - [ ] **1.15 [P2] 'Use art from a real card' in the Art panel** (Card Conjurer audit 2026-09-25) — Today real-card art only arrives with a full Scryfall import that overwrites text, frame and colour (`components/creator/scryfall-import-dialog.tsx`:364-399,841). CC has a separate art-by-name lookup (`creator-23.js`:4138-4185).
 
@@ -1179,6 +1179,7 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
         alphaland keeps one land frame per colour (Alpha printed no artifact
         land). An imported Artifact Creature still loses its Artifact word
         (1.7), so it paints the grey card until the user types the supertype.
+        (Fixed by 1.7 on 2026-09-26: the import keeps the word.)
       - [x] **Alpha name + type line lettering:** silver with the lower-right
         emboss on the black frame (its dark name all but vanished: 1.15 : 1)
         and on the artifact card (1.44 : 1) only (owner decision 2026-09-25);
