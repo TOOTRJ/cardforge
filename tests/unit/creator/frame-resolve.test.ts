@@ -174,6 +174,30 @@ describe("basic-only frames", () => {
     ).toBe("m15snowland");
   });
 
+  it("the artifact frame a creature borrows is never the fallback either (TODO 1.7)", () => {
+    // Only m15artifact is published in blue: a plain creature must not be
+    // dressed as an artifact behind the user's back…
+    expect(
+      resolvePublishedFrame({
+        kind: "creature",
+        candidates: ["m15snow", "m15"],
+        colorKey: "u",
+        verifiedKeys: verified(k("m15artifact", "u")),
+        prefer: "frame",
+      }),
+    ).toEqual({ status: "unavailable" });
+    // …while an Artifact Creature import asks for it by name and gets it.
+    expect(
+      resolvePublishedFrame({
+        kind: "creature",
+        candidates: ["m15artifact", "m15"],
+        colorKey: "u",
+        verifiedKeys: verified(k("m15artifact", "u")),
+        prefer: "frame",
+      }),
+    ).toEqual({ status: "exact", template: "m15artifact", colorKey: "u" });
+  });
+
   it("basicOnlyFrameFallback: never recolours, and ignores frames that aren't basic-only", () => {
     expect(
       basicOnlyFrameFallback("fullartland", "w", verified(k("fullartland", "w"), k("m15land", "u"))),

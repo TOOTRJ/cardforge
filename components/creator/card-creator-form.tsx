@@ -130,10 +130,10 @@ import {
   colorWord,
   pickFrameColorKey,
 } from "@/components/cards/frame-layer";
-import { eraForTemplate, standardFrameFor } from "@/lib/creator/frame-picker";
 import {
   basicOnlyFrameFallback,
   describeFrame,
+  resolveImportFrame,
   resolvePublishedFrame,
 } from "@/lib/creator/frame-resolve";
 import {
@@ -1116,31 +1116,17 @@ export function CardCreatorForm({
     // announced, never silent. (Phase 1 replaces the toast with the
     // exact/nearest chooser.)
     {
-      const importedColors = patch.color_identity
-        ? (Array.from(patch.color_identity) as ColorIdentity[])
-        : getValues("color_identity");
-      const colorKey = pickFrameColorKey(importedColors) as FrameColorKey;
-      const cardType =
-        (patch.card_type as CardType) || getValues("card_type") || "creature";
-      const wanted =
-        patch.frame_template ??
-        ((getValues("frame_style.template") as FrameTemplate | undefined) ??
-          DEFAULT_FRAME_TEMPLATE);
-      const candidates = Array.from(
-        new Set(
-          [
-            wanted,
-            standardFrameFor(eraForTemplate(wanted), cardType),
-            standardFrameFor("m15", cardType),
-          ].filter((t): t is FrameTemplate => Boolean(t)),
-        ),
-      );
-      const resolution = resolvePublishedFrame({
-        kind: importedKind ?? kindFromCard(cardType, undefined),
-        candidates,
-        colorKey,
+      const { wanted, colorKey, resolution } = resolveImportFrame({
+        patch,
+        kind: importedKind,
+        current: {
+          template: getValues("frame_style.template") as
+            | FrameTemplate
+            | undefined,
+          cardType: getValues("card_type") || null,
+          colors: getValues("color_identity"),
+        },
         verifiedKeys: new Set(verifiedFrameKeys),
-        prefer: "frame",
       });
       if (
         resolution.status === "exact" ||

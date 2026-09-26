@@ -4,12 +4,22 @@ import {
   FRAME_SET_LABELS,
   FRAME_TEMPLATE_LABELS,
   FRAME_TEMPLATE_SET,
+  DEFAULT_FRAME_TEMPLATE,
+  type CardType,
+  type ColorIdentity,
   type FrameTemplate,
 } from "@/types/card";
 import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
 import {
+  isArtifactFrameType,
+  pickFrameColorKey,
+} from "@/components/cards/frame-layer";
+import { eraForTemplate, standardFrameFor } from "@/lib/creator/frame-picker";
+import {
   baseFrameFor,
   framesForKind,
+  isBorrowedVariation,
+  kindFromCard,
   templateIsBasicOnly,
   type CardKind,
   type FrameColorKey,
@@ -91,10 +101,13 @@ export function resolvePublishedFrame(input: ResolveFrameInput): FrameResolution
     }
     // A basic-only frame (the full-art basic land) is never a stand-in: it
     // can't draw most cards of its kind, so it is reachable only as an
-    // explicit candidate (TODO 0.26).
+    // explicit candidate (TODO 0.26). Nor is a frame the kind borrows from
+    // another type (the artifact frame on a creature, TODO 1.7): it would
+    // dress a plain creature as an artifact.
     const any = gallery.find(
       (choice) =>
         !templateIsBasicOnly(choice.template) &&
+        !isBorrowedVariation(kind, choice.template) &&
         choice.availableColorKeys.includes(colorKey),
     );
     return any
@@ -135,6 +148,77 @@ export function resolvePublishedFrame(input: ResolveFrameInput): FrameResolution
     if (result) return result;
   }
   return { status: "unavailable" };
+}
+
+/** The frames a Scryfall import asks resolvePublishedFrame for, most wanted
+ *  first: the printing's own frame, its era's standard for the card type,
+ *  then the M15 standard. An Artifact Creature asks for M15's artifact frame
+ *  before the plain one (TODO 1.7), so a Juggernaut whose Alpha frame isn't
+ *  published falls forward to the artifact card it is, not a grey spell. */
+export function importFrameCandidates(input: {
+  wanted: FrameTemplate;
+  cardType: CardType;
+  supertype?: string | null;
+}): FrameTemplate[] {
+  const { wanted, cardType, supertype } = input;
+  const artifactCreature =
+    cardType === "creature" && isArtifactFrameType({ cardType, supertype });
+  return Array.from(
+    new Set(
+      [
+        wanted,
+        standardFrameFor(eraForTemplate(wanted), cardType),
+        artifactCreature ? ("m15artifact" as const) : null,
+        standardFrameFor("m15", cardType),
+      ].filter((t): t is FrameTemplate => Boolean(t)),
+    ),
+  );
+}
+
+/**
+ * Where a Scryfall import lands (the creator's handleScryfallImport, after
+ * the imported kind is applied): the printing's frame, resolved with the
+ * "frame" policy for the IMPORTED colour, which is a fact about the card and
+ * never changes — the printing's frame, else its era's standard, else (for
+ * an Artifact Creature) the M15 artifact frame, else the M15 standard, else
+ * any published frame of the kind in that colour (importFrameCandidates).
+ * `current` is the form after the kind change, for what an older cached
+ * patch doesn't carry. Pure, so the form's wiring is the tested path.
+ */
+export function resolveImportFrame(input: {
+  patch: {
+    frame_template?: FrameTemplate;
+    card_type?: CardType;
+    supertype?: string;
+    color_identity?: readonly ColorIdentity[];
+  };
+  /** The imported kind (patch.kind, else the card type's). */
+  kind: CardKind | null;
+  current: {
+    template?: FrameTemplate | null;
+    cardType?: CardType | null;
+    colors: readonly ColorIdentity[];
+  };
+  verifiedKeys: ReadonlySet<string>;
+}): { wanted: FrameTemplate; colorKey: FrameColorKey; resolution: FrameResolution } {
+  const { patch, current } = input;
+  const colorKey = pickFrameColorKey(
+    patch.color_identity ?? current.colors,
+  ) as FrameColorKey;
+  const cardType = patch.card_type || current.cardType || "creature";
+  const wanted = patch.frame_template ?? current.template ?? DEFAULT_FRAME_TEMPLATE;
+  const resolution = resolvePublishedFrame({
+    kind: input.kind ?? kindFromCard(cardType, undefined),
+    candidates: importFrameCandidates({
+      wanted,
+      cardType,
+      supertype: patch.supertype,
+    }),
+    colorKey,
+    verifiedKeys: input.verifiedKeys,
+    prefer: "frame",
+  });
+  return { wanted, colorKey, resolution };
 }
 
 /** Where a card on a basic-only frame (the full-art basic land) goes when it

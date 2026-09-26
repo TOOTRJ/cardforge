@@ -3,7 +3,7 @@ import {
   frameTemplateFromScryfall,
   kindFromScryfall,
   mapScryfallToFormPatch,
-  parseColorIdentity,
+  frameColorsFromScryfall,
   parseTypeLine,
   referenceColorIdentity,
 } from "@/lib/scryfall/import-mapper";
@@ -68,14 +68,16 @@ describe("parseTypeLine", () => {
 
   it("lets creature win over other type words (artifact/enchantment creatures)", () => {
     // Real MTG renders these with a P/T box, and the form gates the P/T
-    // inputs on card_type === creature — so creature must win.
+    // inputs on card_type === creature — so creature must win. The other
+    // type words stay in front, in printed order (TODO 1.7: the Alpha frame
+    // paints its artifact card for "Artifact" in the supertype).
     expect(parseTypeLine("Artifact Creature — Construct")).toEqual({
-      supertype: undefined,
+      supertype: "Artifact",
       card_type: "creature",
       subtypes_text: "Construct",
     });
     expect(parseTypeLine("Legendary Enchantment Creature — God")).toEqual({
-      supertype: "Legendary",
+      supertype: "Legendary Enchantment",
       card_type: "creature",
       subtypes_text: "God",
     });
@@ -88,8 +90,9 @@ describe("parseTypeLine", () => {
   it("keeps token precedence over creature", () => {
     // Token type lines ("Token Creature — Goblin") stay tokens: token is
     // a distinct kind with its own frames, and those render P/T anyway.
+    // "Creature" stays a word in front of it (TODO 1.3).
     expect(parseTypeLine("Token Creature — Goblin")).toEqual({
-      supertype: undefined,
+      supertype: "Creature",
       card_type: "token",
       subtypes_text: "Goblin",
     });
@@ -111,27 +114,31 @@ describe("parseTypeLine", () => {
   });
 });
 
-describe("parseColorIdentity", () => {
+// The real-printing rules (front face, lands, devoid) are pinned in
+// import-correctness.test.ts; these are the enum mapping and the legacy
+// shapes with no `colors` field.
+describe("frameColorsFromScryfall", () => {
   it("maps W/U/B/R/G to the readable enum", () => {
     // 2+ colors collapse to multicolor — the creator's color model is
     // single-select (one frame dress per card).
     const card = fixture({ color_identity: ["W", "U"] });
-    expect(parseColorIdentity(card)).toEqual(["multicolor"]);
+    expect(frameColorsFromScryfall(card)).toEqual(["multicolor"]);
   });
 
-  it("falls back to `colors` when color_identity is missing", () => {
+  it("reads `colors` when there is no color_identity", () => {
     const card = fixture({ colors: ["R"] });
-    expect(parseColorIdentity(card)).toEqual(["red"]);
+    expect(frameColorsFromScryfall(card)).toEqual(["red"]);
   });
 
   it("surfaces 'colorless' for an empty identity", () => {
     const card = fixture({ color_identity: [] });
-    expect(parseColorIdentity(card)).toEqual(["colorless"]);
+    expect(frameColorsFromScryfall(card)).toEqual(["colorless"]);
   });
 
   it("ignores unknown color codes", () => {
     const card = fixture({ color_identity: ["W", "Q"] });
-    expect(parseColorIdentity(card)).toEqual(["white"]);
+    expect(frameColorsFromScryfall(card)).toEqual(["white"]);
+    expect(frameColorsFromScryfall(fixture({ colors: ["C", "G"] }))).toEqual(["green"]);
   });
 });
 
@@ -141,10 +148,10 @@ describe("referenceColorIdentity (frame-compare's render of a real printing)", (
     expect(referenceColorIdentity(fixture({ color_identity: ["U", "W"] }))).toEqual(["blue", "white"]);
   });
 
-  it("matches parseColorIdentity for everything else", () => {
+  it("matches frameColorsFromScryfall for everything else", () => {
     for (const color_identity of [[], ["R"], ["W", "U", "B"], ["W", "U", "B", "R", "G"]]) {
       const card = fixture({ color_identity });
-      expect(referenceColorIdentity(card)).toEqual(parseColorIdentity(card));
+      expect(referenceColorIdentity(card)).toEqual(frameColorsFromScryfall(card));
     }
   });
 });
@@ -434,8 +441,8 @@ describe("frameTemplateFromScryfall", () => {
         }),
       ),
     ).toBe("m15devoid");
-    // Skins only re-dress the plain m15 spell frame — a snow LAND keeps its
-    // land frame.
+    // A snow LAND gets the snow land frame (m15snowland, added after this
+    // test was first written — KHM's snow lands print it)…
     expect(
       frameTemplateFromScryfall(
         fixture({
@@ -443,6 +450,13 @@ describe("frameTemplateFromScryfall", () => {
           frame_effects: ["snow"],
           type_line: "Basic Snow Land — Island",
         }),
+      ),
+    ).toBe("m15snowland");
+    // …and a snow land printed without the snow frame effect (MH1's
+    // Snow-Covered basics) keeps the plain land frame.
+    expect(
+      frameTemplateFromScryfall(
+        fixture({ frame: "2015", type_line: "Basic Snow Land — Island" }),
       ),
     ).toBe("m15land");
   });

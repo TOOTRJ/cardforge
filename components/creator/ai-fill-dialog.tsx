@@ -18,7 +18,11 @@ import {
 } from "@/components/ui/dialog";
 import { FieldGroup, inputClass } from "@/components/creator/field-group";
 import { frameChoicesForType } from "@/lib/creator/frame-random";
-import { templateIsBasicOnly } from "@/lib/creator/card-kinds";
+import {
+  isBorrowedVariation,
+  kindFromCard,
+  templateIsBasicOnly,
+} from "@/lib/creator/card-kinds";
 import {
   CARD_FILL_FIELDS,
   CREATE_ONLY_FILL_FIELDS,
@@ -163,11 +167,15 @@ function AiFillDialogBody({
     const verified = new Set(verifiedFrameKeys);
     // Basic-only frames (the full-art basic land) are left out: the designer
     // rarely writes exactly one basic land, and the job would quietly swap
-    // the request for a random frame (resolveGeneratedFrame, TODO 0.26).
+    // the request for a random frame (resolveGeneratedFrame, TODO 0.26). So
+    // is the artifact frame a creature borrows (TODO 1.7): the job honours
+    // it only for an Artifact Creature, which this dialog can't ask for.
+    const kind = kindFromCard(cardType, undefined);
     return frameChoicesForType(cardType, verified).filter(
       (choice) =>
         choice.availableColorKeys.length > 0 &&
-        !templateIsBasicOnly(choice.template),
+        !templateIsBasicOnly(choice.template) &&
+        !isBorrowedVariation(kind, choice.template),
     );
   }, [cardType, verifiedFrameKeys]);
 
