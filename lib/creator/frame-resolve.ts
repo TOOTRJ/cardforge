@@ -8,7 +8,9 @@ import {
 } from "@/types/card";
 import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
 import {
+  baseFrameFor,
   framesForKind,
+  templateIsBasicOnly,
   type CardKind,
   type FrameColorKey,
 } from "@/lib/creator/card-kinds";
@@ -87,8 +89,13 @@ export function resolvePublishedFrame(input: ResolveFrameInput): FrameResolution
         };
       }
     }
-    const any = gallery.find((choice) =>
-      choice.availableColorKeys.includes(colorKey),
+    // A basic-only frame (the full-art basic land) is never a stand-in: it
+    // can't draw most cards of its kind, so it is reachable only as an
+    // explicit candidate (TODO 0.26).
+    const any = gallery.find(
+      (choice) =>
+        !templateIsBasicOnly(choice.template) &&
+        choice.availableColorKeys.includes(colorKey),
     );
     return any
       ? {
@@ -128,6 +135,33 @@ export function resolvePublishedFrame(input: ResolveFrameInput): FrameResolution
     if (result) return result;
   }
   return { status: "unavailable" };
+}
+
+/** Where a card on a basic-only frame (the full-art basic land) goes when it
+ *  stops being one basic land — Land type → Nonbasic, or a rename that
+ *  clears the basic seed: the land frame that frame is a variation of, in
+ *  the card's colour (else any other published land frame in that colour).
+ *  Null when the template isn't basic-only, or nothing is published in that
+ *  colour — the chip's disabled reason and the server's refusal then say
+ *  why. The caller announces the switch (TODO 0.26: no silent swaps). */
+export function basicOnlyFrameFallback(
+  template: FrameTemplate,
+  colorKey: FrameColorKey,
+  verifiedKeys: ReadonlySet<string>,
+): FrameTemplate | null {
+  if (!templateIsBasicOnly(template)) return null;
+  const resolution = resolvePublishedFrame({
+    kind: "land",
+    candidates: [baseFrameFor("land", template)],
+    colorKey,
+    verifiedKeys,
+    prefer: "frame",
+  });
+  // Never recolour the card for this: a colour switch or nothing published
+  // leaves the frame where it is.
+  return resolution.status === "exact" || resolution.status === "frame-switched"
+    ? resolution.template
+    : null;
 }
 
 /** A frame's label with its frame set in front: "Tarkir: Dragonstorm —

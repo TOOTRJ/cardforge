@@ -63,7 +63,7 @@ vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
 import { createCardAction, updateCardAction } from "@/lib/cards/actions";
 
 const publishedEverywhere = ["fullart", "fullartland", "m15pw", "m15land"].flatMap((t) =>
-  ["w", "u", "m"].map((k) => frameComboKey(t as never, k)),
+  ["w", "u", "m", "c"].map((k) => frameComboKey(t as never, k)),
 );
 
 function payload(overrides: Record<string, unknown>) {
@@ -126,6 +126,23 @@ describe("createCardAction kind gate", () => {
       ),
     ).rejects.toThrow(PAST_GATES);
     await expect(createCardAction(payload({}))).rejects.toThrow(PAST_GATES);
+  });
+
+  it("reads the title: Wastes is a basic land with no land type", async () => {
+    const wastes = (title: string) =>
+      payload({
+        title,
+        card_type: "land",
+        supertype: "Basic",
+        subtypes: [],
+        color_identity: ["colorless"],
+        frame_style: { template: "fullartland" },
+      });
+    await expect(createCardAction(wastes("Wastes"))).rejects.toThrow(PAST_GATES);
+    expect(await createCardAction(wastes("Barren Plain"))).toEqual({
+      ok: false,
+      fieldErrors: { frame_style: "Full-art basic frames are for basic lands — pick another frame." },
+    });
   });
 });
 

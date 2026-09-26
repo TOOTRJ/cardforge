@@ -226,3 +226,61 @@ describe("CardSetupPanel variation chips — Zendikar Rising hedron", () => {
     expect(chip.textContent).not.toMatch(/Full Art/);
   });
 });
+
+// A server refusal of the frame (the 0.13 verification gate, the 0.26 kind
+// gate) lands on frame_style and the wizard jumps to this step. It used to
+// render nowhere: the step turned red with no reason.
+function RefusedHarness() {
+  const methods = useForm({
+    defaultValues: {
+      card_type: "land",
+      frame_style: { template: "fullartland" },
+      color_identity: ["white"] as ColorIdentity[],
+      title: "Hallowed Fountain",
+      supertype: "",
+      subtypes_text: "Plains, Island",
+      rules_text: "({T}: Add {W} or {U}.)",
+    },
+  });
+  const color = useWatch({ control: methods.control, name: "color_identity" }) as ColorIdentity[];
+  const template = useWatch({ control: methods.control, name: "frame_style.template" }) as string;
+  return (
+    <FormProvider {...methods}>
+      <button
+        type="button"
+        onClick={() =>
+          methods.setError("frame_style", {
+            message: "Full-art basic frames are for basic lands — pick another frame.",
+          })
+        }
+      >
+        server refusal
+      </button>
+      <CardSetupPanel
+        kind="land"
+        colorIdentity={color}
+        verifiedFrameKeys={landVerified}
+        onKindSelect={() => {}}
+      />
+      <output data-testid="template">{template}</output>
+    </FormProvider>
+  );
+}
+
+describe("CardSetupPanel — a refused frame says why", () => {
+  it("shows the server's frame_style error and clears it when a frame is picked", () => {
+    render(<RefusedHarness />);
+    expect(screen.queryByRole("alert")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "server refusal" }));
+    expect(screen.getByRole("alert").textContent).toBe(
+      "Full-art basic frames are for basic lands — pick another frame.",
+    );
+    fireEvent.click(
+      within(screen.getByRole("radiogroup", { name: /Frame variations/ })).getByRole("radio", {
+        name: /Standard/,
+      }),
+    );
+    expect(screen.getByTestId("template").textContent).toBe("m15land");
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+});

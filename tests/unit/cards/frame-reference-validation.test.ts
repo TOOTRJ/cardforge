@@ -95,7 +95,8 @@ describe("validateReferenceForCombo", () => {
     });
     const result = validateReferenceForCombo(walker, "fullart", "m");
     expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toMatch(/is a planeswalker; the Hedron frame/);
+    // Showcase frames are named with their set, as on the admin checklist.
+    expect(result.errors[0]).toMatch(/is a planeswalker; the Zendikar Rising — Hedron frame/);
   });
 
   it("verifies the full-art basic frame against basic lands only (TODO 0.26)", () => {
@@ -113,10 +114,29 @@ describe("validateReferenceForCombo", () => {
     });
     const result = validateReferenceForCombo(fountain, "fullartland", "m");
     expect(result.errors).toEqual([
-      "Hallowed Fountain isn't a basic land; the Basic Land frame dresses basic lands only.",
+      "Hallowed Fountain isn't a basic land; the Full Art — Basic Land frame dresses basic lands only.",
     ]);
     // Any other land frame still takes it.
     expect(validateReferenceForCombo(fountain, "m15land", "m").errors).toEqual([]);
+  });
+
+  it("judges a two-faced printing's basic-ness by its FRONT face", () => {
+    const faces = (front: Record<string, unknown>, back: Record<string, unknown>) =>
+      card({
+        name: `${front.name} // ${back.name}`,
+        layout: "modal_dfc",
+        type_line: `${front.type_line} // ${back.type_line}`,
+        color_identity: ["W"],
+        colors: [],
+        card_faces: [front, back],
+      });
+    const plains = { name: "Plains", type_line: "Basic Land — Plains" };
+    const bear = { name: "Bear", type_line: "Creature — Bear", oracle_text: "Vigilance" };
+    expect(validateReferenceForCombo(faces(plains, bear), "fullartland", "w").errors).toEqual([]);
+    const tower = { name: "Watchtower", type_line: "Land", oracle_text: "{T}: Add {W}." };
+    expect(validateReferenceForCombo(faces(tower, plains), "fullartland", "w").errors).toEqual([
+      "Watchtower // Plains isn't a basic land; the Full Art — Basic Land frame dresses basic lands only.",
+    ]);
   });
 
   it("warns (does not refuse) on an era mismatch", () => {

@@ -13,6 +13,7 @@ import {
   type CardKind,
 } from "@/lib/creator/card-kinds";
 import { eraForTemplate } from "@/lib/creator/frame-picker";
+import { eraGroupFrameLabel } from "@/lib/creator/frame-resolve";
 import { FRAME_TEMPLATE_LABELS, type FrameTemplate } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -80,7 +81,9 @@ export function validateReferenceForCombo(
 ): ReferenceValidation {
   const errors: string[] = [];
   const warnings: string[] = [];
-  const label = FRAME_TEMPLATE_LABELS[template] ?? template;
+  // Showcase frames name their set ("Zendikar Rising — Hedron"), as the
+  // admin checklist and the compare page title do.
+  const label = FRAME_TEMPLATE_LABELS[template] ? eraGroupFrameLabel(template) : template;
 
   const cardColor = pickFrameColorKey(parseColorIdentity(card));
   if (cardColor !== colorKey) {

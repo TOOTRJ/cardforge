@@ -10,7 +10,12 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { FormProvider, useForm, useWatch } from "react-hook-form";
+import {
+  FormProvider,
+  useForm,
+  useWatch,
+  type UseFormReturn,
+} from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   ArrowLeft,
@@ -123,7 +128,11 @@ import {
   pickFrameColorKey,
 } from "@/components/cards/frame-layer";
 import { eraForTemplate, standardFrameFor } from "@/lib/creator/frame-picker";
-import { describeFrame, resolvePublishedFrame } from "@/lib/creator/frame-resolve";
+import {
+  basicOnlyFrameFallback,
+  describeFrame,
+  resolvePublishedFrame,
+} from "@/lib/creator/frame-resolve";
 import {
   loyaltyFromRulesText,
   sagaFromRulesText,
@@ -296,6 +305,29 @@ const STEP_RAIL_ICONS: Record<string, React.ReactNode> = {
   subscriber: <Crown aria-hidden />,
   publish: <Send aria-hidden />,
 };
+
+/** A basic-only frame (the full-art basic land, TODO 0.26) can't draw a
+ *  nonbasic land's rules. When the card stops being a basic land (Land type
+ *  → Nonbasic, or a rename that clears the basic seed), move it to the land
+ *  frame that frame is a variation of and say so, instead of leaving a
+ *  disabled chip selected and a Save the server refuses. */
+function leaveBasicOnlyFrame(
+  form: Pick<UseFormReturn<FormValues>, "getValues" | "setValue" | "clearErrors">,
+  verifiedFrameKeys: readonly string[],
+) {
+  const current = normalizeFrameTemplate(form.getValues("frame_style.template"));
+  const fallback = basicOnlyFrameFallback(
+    current,
+    pickFrameColorKey(form.getValues("color_identity")) as FrameColorKey,
+    new Set(verifiedFrameKeys),
+  );
+  if (!fallback) return;
+  form.setValue("frame_style.template", fallback, { shouldDirty: true });
+  form.clearErrors("frame_style");
+  toast.info(
+    `The ${describeFrame(current)} frame is for basic lands — switched to ${describeFrame(fallback)}.`,
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Component
@@ -504,6 +536,7 @@ export function CardCreatorForm({
     handleSubmit,
     setValue,
     setError,
+    clearErrors,
     getValues,
     control,
     reset,
@@ -641,6 +674,9 @@ export function CardCreatorForm({
     if (!patch) return;
     setValue("supertype", patch.supertype, { shouldDirty: true });
     setValue("subtypes_text", patch.subtypes_text, { shouldDirty: true });
+    if (next === "nonbasic") {
+      leaveBasicOnlyFrame({ getValues, setValue, clearErrors }, verifiedFrameKeys);
+    }
   };
   // A land the user RENAMES away from its seeded basic name becomes a
   // nonbasic: the seed's "Basic" + subtype are dropped so the rules text box
@@ -662,6 +698,7 @@ export function CardCreatorForm({
     const next = toNonbasicLandIdentity(identity);
     setValue("supertype", next.supertype, { shouldDirty: true });
     setValue("subtypes_text", next.subtypes_text, { shouldDirty: true });
+    leaveBasicOnlyFrame({ getValues, setValue, clearErrors }, verifiedFrameKeys);
   }, [
     watched.title,
     watched.card_type,
@@ -669,7 +706,10 @@ export function CardCreatorForm({
     watched.subtypes_text,
     isDirty,
     isRevise,
+    getValues,
     setValue,
+    clearErrors,
+    verifiedFrameKeys,
   ]);
 
   const goToIndex = (i: number) => {

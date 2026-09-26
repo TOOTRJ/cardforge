@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolvePublishedFrame } from "@/lib/creator/frame-resolve";
+import { basicOnlyFrameFallback, resolvePublishedFrame } from "@/lib/creator/frame-resolve";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 
 // The one resolver behind every programmatic frame write. It must never
@@ -133,5 +133,52 @@ describe("resolvePublishedFrame", () => {
         prefer: "colour",
       }),
     ).toEqual({ status: "unavailable" });
+  });
+});
+
+// TODO 0.26: the full-art basic land frame dresses basic lands only, so it is
+// never a stand-in for another land frame, and a card that stops being a
+// basic land leaves it for the land frame it is a variation of.
+describe("basic-only frames", () => {
+  it("are never the 'any frame in this colour' fallback", () => {
+    // Only the full-art basic frame is published in white: an import or a
+    // kind change must not land a (possibly nonbasic) land on it.
+    const result = resolvePublishedFrame({
+      kind: "land",
+      candidates: ["m15snowland"],
+      colorKey: "w",
+      verifiedKeys: verified(k("fullartland", "w"), k("m15land", "u")),
+      prefer: "frame",
+    });
+    expect(result).toEqual({ status: "unavailable" });
+  });
+
+  it("stay reachable as an explicit candidate", () => {
+    expect(
+      resolvePublishedFrame({
+        kind: "land",
+        candidates: ["fullartland"],
+        colorKey: "w",
+        verifiedKeys: verified(k("fullartland", "w")),
+        prefer: "frame",
+      }),
+    ).toEqual({ status: "exact", template: "fullartland", colorKey: "w" });
+  });
+
+  it("basicOnlyFrameFallback: the full-art basic land falls back to M15 Land in the same colour", () => {
+    const keys = verified(k("fullartland", "w"), k("m15land", "w"));
+    expect(basicOnlyFrameFallback("fullartland", "w", keys)).toBe("m15land");
+    // Another published land frame in that colour when M15 Land isn't.
+    expect(
+      basicOnlyFrameFallback("fullartland", "w", verified(k("fullartland", "w"), k("m15snowland", "w"))),
+    ).toBe("m15snowland");
+  });
+
+  it("basicOnlyFrameFallback: never recolours, and ignores frames that aren't basic-only", () => {
+    expect(
+      basicOnlyFrameFallback("fullartland", "w", verified(k("fullartland", "w"), k("m15land", "u"))),
+    ).toBeNull();
+    expect(basicOnlyFrameFallback("m15land", "w", verified(k("m15land", "w")))).toBeNull();
+    expect(basicOnlyFrameFallback("fullart", "w", verified(k("m15", "w")))).toBeNull();
   });
 });
