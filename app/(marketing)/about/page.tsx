@@ -63,8 +63,8 @@ export default function AboutPage() {
           A step-by-step card creator with a live preview — every card type
           including sagas, adventures, split, aftermath and flip cards and
           double-faced backs; frames from three decades of card design; the
-          full mana-symbol vocabulary plus your own uploaded pip icons; and a
-          printed set symbol of your choosing
+          full mana-symbol vocabulary plus your own uploaded pip icons; a
+          printed set symbol of your choosing; and a foil or etched finish
         </li>
         <li>
           AI on demand: generate any single field, get three costed ideas for a
@@ -94,8 +94,8 @@ export default function AboutPage() {
 
       <h2>What&apos;s next</h2>
       <p>
-        Premium custom frames and finishes, card printing, and richer deck
-        tools are in development. Releases are announced on the{" "}
+        Premium custom frames, card printing, and richer deck tools are in
+        development. Releases are announced on the{" "}
         <Link href="/news">news page</Link>, and the{" "}
         <Link href="/articles">guides</Link> grow alongside the product.
       </p>

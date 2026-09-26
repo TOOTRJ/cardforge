@@ -646,8 +646,8 @@ Open decisions are marked **[decide]**; none blocks its phase.
       (partly done in #371: every programmatic substitution — kind change,
       import, AI fill — now toasts the frame and colour it used, and frame
       tiles say "Not verified in <colour> yet — picking it switches to …".
-      Still open: the rest of the "Soon" copy, e.g. the Foil/Etched finish
-      chips (6.5), and the import dialog's "matched to this printing's border
+      Still open: the rest of the "Soon" copy, e.g. the Showcase finish chip
+      (Foil/Etched shipped with 6.5), and the import dialog's "matched to this printing's border
       era" line (`scryfall-import-dialog.tsx`:843, rewritten by 1.5).)
 - [ ] **3b.13 [P1] Art positioner matches the card's art window** (Card Conjurer audit 2026-09-25) — The pan surface is a fixed `aspect-[5/4]` (`components/creator/art-uploader.tsx`:42), and drags divide by that box's overflow (:282-336), while the card crops to `layout.artSlot`. On M15 (1.37) this is mild. On saga (0.41) and full-art (0.71), a horizontal drag sweeps the whole focal range in about 38 px. On aftermath/split (2.7) vertical drag does nothing; only the arrow keys work.
 
@@ -1387,7 +1387,7 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
 - [ ] **6.4 [P2] Tokens** — automatic "Token" prefix + reminder line, emblem
       kind, token generator from a card's rules text (P3).
       **Card Conjurer audit 2026-09-25:** Emblem = CC `packEmblem`: one colourless 1500×2100 frame (art 14.2/4.96/71.6×85.48, type 68.0, rules 74.43–91.91), type line 'Emblem — <subtype>', no cost or P/T. Seed it from a walker's −N ability via a 'Create emblem from this ability' action in `components/creator/panels/loyalty-editor.tsx`. Monarch/Initiative/Day-Night markers become P3 presets. Token text-length layouts moved to 4.22.
-- [ ] **6.5 [P2] Foil/etched finishes: ship or remove** **[decide]**; if
+- [x] (shipped 2026-09-26 on wf/qw-finishes-on — **Decided 2026-09-26 (owner): ship.** Foil and Etched are selectable in the creator's Finish picker (Publish → Advanced) and free on every plan (`PREMIUM_FINISHES` stays empty); the frame gate stays per template + colour, so a verified combo saves in any finish. No migration and no layout bump: a new foil/etched card bakes at the current version, so no badge and no sweep. The finish stays locked on edit/remix (the locked summary now says so). Showcase stays "Soon": its bake is byte-identical to a regular one, and only the preview slants the title (a faux italic; Satori has no italic Beleren), so ship it with a real treatment or remove it. Still open: translucent rules backdrops hide the foil (4.31); etched nearly vanishes on see-through frames (3.23).) **6.5 [P2] Foil/etched finishes: ship or remove** **[decide]**; if
       shipped, align preview and bake (`panels/effects-panel.tsx`:26).
       (progress 2026-09-25 — fix/frame-review-followups, layout v26: ETCHED
       preview and bake now draw one shared frame-masked cross-hatch + sheen,

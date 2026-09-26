@@ -57,6 +57,41 @@ test.describe("create a card (text fields only)", () => {
     await page.waitForURL(/\/card\/.+\/edit/);
   });
 
+  test("a free account saves a Foil card and the finish sticks", async ({
+    page,
+  }) => {
+    // TODO 6.5 (owner decision 2026-09-26): Foil and Etched ship, free on
+    // every plan — so the FREE account picks one. Showcase stays "Soon".
+    await signIn(page, { as: "free" });
+    const rail = await openCreatorWithTitle(page, `Foil Card ${Date.now()}`);
+
+    // The finish picker lives under the Publish step's Advanced section.
+    await rail.getByRole("button", { name: /^publish$/i }).click();
+    await page.getByText(/^advanced$/i).click();
+    const finish = page.getByRole("radiogroup", { name: /^finish$/i });
+    await expect(finish.getByRole("radio", { name: /showcase/i })).toBeDisabled();
+    const foil = finish.getByRole("radio", { name: /^foil/i });
+    await expect(foil).toBeEnabled();
+    await foil.click();
+    await expect(foil).toHaveAttribute("aria-checked", "true");
+
+    // Art-less → save as a draft (see the first test).
+    await page.getByTestId("save-as-draft").check();
+    const saveButton = page.getByRole("button", { name: /^save$/i });
+    await expect(saveButton).toBeEnabled();
+    await saveButton.dispatchEvent("click");
+    // A draft save stays in the editor, on the same (Publish) step.
+    await page.waitForURL(/\/card\/.+\/edit/);
+
+    // The edit page pins the saved structure — finish included — on
+    // Identity, and no longer offers the picker (the finish is locked).
+    await expect(finish).toHaveCount(0);
+    await rail.getByRole("button", { name: /^identity$/i }).click();
+    await expect(page.getByTestId("locked-summary")).toContainText(
+      /finish\s*foil/i,
+    );
+  });
+
   test("mana pips auto-sort into canonical printed order", async ({
     page,
   }) => {

@@ -628,12 +628,12 @@ export type FrameStyle = {
 // tarkir) is NEVER paywalled — it stays free for everyone.
 // ---------------------------------------------------------------------------
 
-// Finishes that require a paid plan. NONE today — and none is selectable yet
-// either: the creator's effects panel keeps foil/etched/showcase disabled
-// ("Soon") until they ship, at which point the owner decides free vs paid
-// (2026-07-10 leaning: free; the paid tease is "premium custom frames",
-// tracked in PREMIUM_FRAME_TEMPLATES below). The gating plumbing stays wired
-// so adding an entry here re-paywalls instantly.
+// Finishes that require a paid plan. NONE: every finish is free (owner
+// decision 2026-07-10; the paid tease is "premium custom frames", tracked in
+// PREMIUM_FRAME_TEMPLATES below). Foil and etched are selectable in the
+// creator since TODO 6.5 shipped (2026-09-26); showcase is still a disabled
+// "Soon" chip (components/creator/panels/effects-panel.tsx). The gating
+// plumbing stays wired so adding an entry here re-paywalls instantly.
 export const PREMIUM_FINISHES: ReadonlySet<CardFinish> = new Set<CardFinish>();
 
 // Original premium frame templates (none yet). Add ONLY original PipGlyph
