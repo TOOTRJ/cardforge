@@ -161,6 +161,17 @@ export const scryfallCardSchema = z
     // Frame treatments (snow, devoid, showcase, legendary, …) — snow/devoid
     // map onto our skin templates.
     frame_effects: z.array(z.string()).optional().nullable(),
+    // Printing treatment flags. The import names the treatment it can't
+    // reproduce yet (printingTreatmentFromScryfall, TODO 1.16); the
+    // signature registry (1.4/1.17/1.19) will turn them into frames.
+    // border_color is "black" | "white" | "borderless" | "yellow" |
+    // "silver" | "gold", kept a plain string so a new value never fails
+    // the parse. promo_types (boosterfun, poster, japanshowcase, …) is
+    // typed for that registry; the stopgap doesn't key on it.
+    border_color: z.string().optional().nullable(),
+    full_art: z.boolean().optional().nullable(),
+    textless: z.boolean().optional().nullable(),
+    promo_types: z.array(z.string()).optional().nullable(),
     mana_cost: z.string().optional().nullable(),
     // Converted mana cost / mana value — denormalized onto deck entries.
     cmc: z.number().optional().nullable(),

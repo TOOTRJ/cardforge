@@ -1,0 +1,357 @@
+{
+  "dmu-107": {
+    "id": "d67be074-cdd4-41d9-ac89-0a0456c4e4b2",
+    "oracle_id": "34f34409-326d-4994-a0ea-1a69aa278f03",
+    "name": "Sheoldred, the Apocalypse",
+    "released_at": "2022-09-09",
+    "layout": "normal",
+    "set": "dmu",
+    "set_name": "Dominaria United",
+    "collector_number": "107",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "type_line": "Legendary Creature — Phyrexian Praetor",
+    "mana_cost": "{2}{B}{B}",
+    "power": "4",
+    "toughness": "5",
+    "colors": [
+      "B"
+    ],
+    "color_identity": [
+      "B"
+    ],
+    "rarity": "mythic",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ]
+  },
+  "dmu-435": {
+    "id": "8df6603a-38c1-4d18-8b84-6211e9a7cc09",
+    "oracle_id": "34f34409-326d-4994-a0ea-1a69aa278f03",
+    "name": "Sheoldred, the Apocalypse",
+    "released_at": "2023-02-03",
+    "layout": "normal",
+    "set": "dmu",
+    "set_name": "Dominaria United",
+    "collector_number": "435",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary",
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "concept",
+      "boosterfun",
+      "setextension"
+    ],
+    "type_line": "Legendary Creature — Phyrexian Praetor",
+    "mana_cost": "{2}{B}{B}",
+    "power": "4",
+    "toughness": "5",
+    "colors": [
+      "B"
+    ],
+    "color_identity": [
+      "B"
+    ],
+    "rarity": "mythic",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ]
+  },
+  "tdm-400": {
+    "id": "5aa73d25-c887-487a-ba77-0d4ca992f106",
+    "oracle_id": "f1266a1b-bae6-4ded-b4d5-7586a5b6c5d0",
+    "name": "Clarion Conqueror",
+    "released_at": "2025-04-11",
+    "layout": "normal",
+    "set": "tdm",
+    "set_name": "Tarkir: Dragonstorm",
+    "collector_number": "400",
+    "frame": "2015",
+    "frame_effects": [
+      "showcase",
+      "inverted"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "type_line": "Creature — Dragon",
+    "mana_cost": "{2}{W}",
+    "power": "3",
+    "toughness": "3",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "rarity": "mythic",
+    "finishes": [
+      "foil"
+    ]
+  },
+  "blb-316": {
+    "id": "02134775-9c86-4f1a-af2e-5c1f531038fe",
+    "oracle_id": "2de138b0-3159-4a0c-a474-a4e5600b2e51",
+    "name": "Festival of Embers",
+    "released_at": "2024-08-02",
+    "layout": "normal",
+    "set": "blb",
+    "set_name": "Bloomburrow",
+    "collector_number": "316",
+    "frame": "2015",
+    "frame_effects": [
+      "showcase",
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "type_line": "Enchantment",
+    "mana_cost": "{4}{R}",
+    "colors": [
+      "R"
+    ],
+    "color_identity": [
+      "R"
+    ],
+    "rarity": "rare",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ]
+  },
+  "dmu-384": {
+    "id": "caf9e837-a1eb-48d9-a8bd-94dd54ad97d1",
+    "oracle_id": "022e97af-2a3a-4e13-9b6b-d34fcc8cf168",
+    "name": "Archangel of Wrath",
+    "released_at": "2022-09-09",
+    "layout": "normal",
+    "set": "dmu",
+    "set_name": "Dominaria United",
+    "collector_number": "384",
+    "frame": "2015",
+    "frame_effects": [
+      "extendedart"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "type_line": "Creature — Angel",
+    "mana_cost": "{2}{W}{W}",
+    "power": "3",
+    "toughness": "4",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "B",
+      "R",
+      "W"
+    ],
+    "rarity": "rare",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ]
+  },
+  "dsk-389": {
+    "id": "3194a6f4-f994-494c-aa29-1de8af48a3f1",
+    "oracle_id": "31196f0b-33ee-4981-ac97-24226e8b405f",
+    "name": "Overlord of the Floodpits",
+    "released_at": "2024-09-27",
+    "layout": "normal",
+    "set": "dsk",
+    "set_name": "Duskmourn: House of Horror",
+    "collector_number": "389",
+    "frame": "2015",
+    "frame_effects": [
+      "showcase"
+    ],
+    "border_color": "black",
+    "full_art": true,
+    "textless": false,
+    "promo_types": [
+      "japanshowcase",
+      "boosterfun"
+    ],
+    "type_line": "Enchantment Creature — Avatar Horror",
+    "mana_cost": "{3}{U}{U}",
+    "power": "5",
+    "toughness": "3",
+    "colors": [
+      "U"
+    ],
+    "color_identity": [
+      "U"
+    ],
+    "rarity": "mythic",
+    "finishes": [
+      "foil"
+    ]
+  },
+  "one-262": {
+    "id": "50958c6e-9555-42ad-9bb3-2da9faa5cb52",
+    "oracle_id": "bc71ebf6-2056-41f7-be35-b2e5c34afa99",
+    "name": "Plains",
+    "released_at": "2023-02-10",
+    "layout": "normal",
+    "set": "one",
+    "set_name": "Phyrexia: All Will Be One",
+    "collector_number": "262",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": true,
+    "textless": false,
+    "type_line": "Basic Land — Plains",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "W"
+    ],
+    "rarity": "common",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ]
+  },
+  "bfz-250": {
+    "id": "58a735c9-08a1-4950-bf8c-ed1cfba76765",
+    "oracle_id": "bc71ebf6-2056-41f7-be35-b2e5c34afa99",
+    "name": "Plains",
+    "released_at": "2015-10-02",
+    "layout": "normal",
+    "set": "bfz",
+    "set_name": "Battle for Zendikar",
+    "collector_number": "250",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": true,
+    "textless": false,
+    "type_line": "Basic Land — Plains",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "W"
+    ],
+    "rarity": "common",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ]
+  },
+  "sch-3": {
+    "id": "dd3b4ad5-6687-400e-b5c1-a04f577a2415",
+    "oracle_id": "2068185c-1b50-47d0-aa3f-bf505d199428",
+    "name": "Dark Confidant",
+    "released_at": "2022-07-09",
+    "layout": "normal",
+    "set": "sch",
+    "set_name": "Store Championships",
+    "collector_number": "3",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "black",
+    "full_art": true,
+    "textless": true,
+    "promo_types": [
+      "storechampionship"
+    ],
+    "type_line": "Creature — Human Wizard",
+    "mana_cost": "{1}{B}",
+    "power": "2",
+    "toughness": "1",
+    "colors": [
+      "B"
+    ],
+    "color_identity": [
+      "B"
+    ],
+    "rarity": "rare",
+    "finishes": [
+      "foil"
+    ]
+  },
+  "t2xm-4": {
+    "id": "f859b55c-0b49-4190-b1fa-94f97a59b57c",
+    "oracle_id": "6788478d-e157-4483-be09-9edb3f841431",
+    "name": "Cat",
+    "released_at": "2020-08-07",
+    "layout": "token",
+    "set": "t2xm",
+    "set_name": "Double Masters Tokens",
+    "collector_number": "4",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": true,
+    "textless": false,
+    "type_line": "Token Creature — Cat",
+    "mana_cost": "",
+    "power": "2",
+    "toughness": "2",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "rarity": "common",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ]
+  },
+  "tlrw-3": {
+    "id": "ad29eb21-7ee3-4a67-9601-a62ea0cbe4c0",
+    "oracle_id": "caf4a0d2-64de-42df-a88e-bb0d3f34e207",
+    "name": "Kithkin Soldier",
+    "released_at": "2007-10-12",
+    "layout": "token",
+    "set": "tlrw",
+    "set_name": "Lorwyn Tokens",
+    "collector_number": "3",
+    "frame": "2003",
+    "border_color": "black",
+    "full_art": true,
+    "textless": false,
+    "promo_types": [
+      "setpromo"
+    ],
+    "type_line": "Token Creature — Kithkin Soldier",
+    "mana_cost": "",
+    "power": "1",
+    "toughness": "1",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "rarity": "common",
+    "finishes": [
+      "nonfoil"
+    ]
+  }
+}

@@ -319,7 +319,7 @@ Open decisions are marked **[decide]**; none blocks its phase.
       It sets only `art_url`, a reset `art_position` and `artist_credit`, never text, frame or colour, and counts against the same Scryfall quota.
 
       Optional follow-up: a server-side 'Paste an image URL', under the upload allowlist, size limit and moderation. Never a client CORS proxy, which is what CC uses. Depends on 3.14 for orientation.
-- [ ] **1.16 [P0] Stopgap: say so when a borderless or showcase printing imports as the plain frame** (borderless research 2026-09-25; ships before 1.4) — The importer drops every treatment, so all 6,327 paper borderless printings land silently on the bordered standard:
+- [x] (shipped 2026-09-26 — wf/qw-import-notice: `printingTreatmentFromScryfall` + the creator toast and an import-dialog heads-up, frame choice unchanged; still open: the "Use Borderless" / "Use Full-Art Basic" toast actions, once 4.32 / 4.39 are verified) **1.16 [P0] Stopgap: say so when a borderless or showcase printing imports as the plain frame** (borderless research 2026-09-25; ships before 1.4) — The importer drops every treatment, so all 6,327 paper borderless printings land silently on the bordered standard:
       - `frameTemplateFromScryfall` (`lib/scryfall/import-mapper.ts`:239-259) maps only `frame`→era plus snow/devoid.
       - `border_color`, `full_art` and `promo_types` pass through untyped (`lib/scryfall/client.ts`:143-210, `.passthrough()`).
       - m15 is verified, so `resolvePublishedFrame` returns `exact` and the creator shows nothing (`components/creator/card-creator-form.tsx`:1092-1118).

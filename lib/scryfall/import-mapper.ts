@@ -15,6 +15,7 @@ import {
   type CardKind,
 } from "@/lib/creator/card-kinds";
 import { standardFrameFor } from "@/lib/creator/frame-picker";
+import { describeFrame } from "@/lib/creator/frame-resolve";
 
 // ---------------------------------------------------------------------------
 // Map a Scryfall card into the shape the CardCreatorForm expects.
@@ -108,6 +109,11 @@ export type ScryfallImportPatch = {
   loyalty?: string;
   defense?: string;
   artist_credit?: string;
+  /** Display-only: the printing's treatment that `frame_template` does NOT
+   *  reproduce (borderless / showcase / extended art / full art /
+   *  textless). The form names it in a toast after the frame lands, so the
+   *  import never passes for an exact match (TODO 1.16 stopgap). */
+  printing_treatment?: PrintingTreatment;
   /** The Scryfall card id — kept on the patch so the form can request an
    *  art import for the same card via /api/scryfall/import-art. */
   source_scryfall_id?: string;
@@ -260,6 +266,83 @@ export function frameTemplateFromScryfall(
 }
 
 /**
+ * A printing treatment the importer can't reproduce yet. The frame the
+ * import lands on is still the era/skin template above — this only names
+ * what the printing had, so the creator can say so (TODO 1.16) instead of
+ * reporting a silent exact match. The signature registry (1.4/1.17/1.19)
+ * replaces it by resolving these printings to real templates.
+ */
+export type PrintingTreatment =
+  | "borderless"
+  | "showcase"
+  | "extendedart"
+  | "fullart"
+  | "textless";
+
+/**
+ * The treatment of THIS PRINTING that its imported frame drops, or
+ * undefined when the plain frame is the printing's own look. One label per
+ * printing, most visible first: a border change beats a frame change beats
+ * an art change (BLB #316 is borderless AND showcase → borderless; DSK #389,
+ * a Japan showcase, is showcase AND full art → showcase). Full-art and
+ * textless tokens on the 2015 frame are skipped: they land on `m15token`,
+ * which is that family's own frame (T2XM #4).
+ */
+export function printingTreatmentFromScryfall(
+  card: ScryfallCard,
+): PrintingTreatment | undefined {
+  if ((card.border_color ?? "").toLowerCase() === "borderless") {
+    return "borderless";
+  }
+  const effects = (card.frame_effects ?? []).map((e) => e.toLowerCase());
+  if (effects.includes("showcase")) return "showcase";
+  if (effects.includes("extendedart")) return "extendedart";
+  const textless = card.textless === true;
+  if (!textless && card.full_art !== true && !effects.includes("fullart")) {
+    return undefined;
+  }
+  if ((card.frame ?? "").trim() === "2015" && kindFromScryfall(card) === "token") {
+    return undefined;
+  }
+  return textless ? "textless" : "fullart";
+}
+
+const PRINTING_TREATMENT_PHRASES: Record<PrintingTreatment, string> = {
+  borderless: "is borderless",
+  showcase: "has a showcase frame",
+  extendedart: "has extended art",
+  fullart: "is full art",
+  textless: "is textless",
+};
+
+/**
+ * The creator's toast once an import has landed: "This printing is
+ * borderless — PipGlyph used the bordered M15 (2015) Standard frame."
+ * `landed` is the template the card actually got (after the published-frame
+ * resolution), so the copy never names a frame the card isn't on.
+ */
+export function printingTreatmentNotice(
+  treatment: PrintingTreatment,
+  landed: FrameTemplate,
+): string {
+  const frame = describeFrame(landed);
+  return `This printing ${PRINTING_TREATMENT_PHRASES[treatment]} — PipGlyph used the ${
+    treatment === "borderless" ? `bordered ${frame}` : frame
+  } frame.`;
+}
+
+/**
+ * The import dialog's heads-up before the user commits, while they can
+ * still pick another printing. The final frame isn't known yet (it is
+ * resolved against the published frames in the form), so it isn't named.
+ */
+export function printingTreatmentHint(treatment: PrintingTreatment): string {
+  return `This printing ${PRINTING_TREATMENT_PHRASES[treatment]}, which PipGlyph doesn't offer yet — the import uses ${
+    treatment === "borderless" ? "a bordered" : "the regular"
+  } frame instead.`;
+}
+
+/**
  * Best-effort: pull a normalized color identity from either Scryfall's
  * `color_identity` (preferred — accounts for lands and hybrid mana) or
  * `colors` as a fallback. Two or more colors collapse to ["multicolor"] —
@@ -347,6 +430,7 @@ export function mapScryfallToFormPatch(
     cost: pick(front?.mana_cost, card.mana_cost),
     kind: kindFromScryfall(card),
     frame_template: frameTemplateFromScryfall(card),
+    printing_treatment: printingTreatmentFromScryfall(card),
     card_type: cardType,
     supertype: typeParts.supertype,
     subtypes_text: typeParts.subtypes_text,

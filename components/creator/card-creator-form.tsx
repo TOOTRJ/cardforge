@@ -104,7 +104,10 @@ import {
 } from "@/lib/cards/actions";
 import { linkDeckCardAction } from "@/lib/decks/card-actions";
 import type { DeckRemixContext } from "@/types/deck";
-import type { ScryfallImportPatch } from "@/lib/scryfall/import-mapper";
+import {
+  printingTreatmentNotice,
+  type ScryfallImportPatch,
+} from "@/lib/scryfall/import-mapper";
 import {
   type Card,
   type CardType,
@@ -1157,6 +1160,21 @@ export function CardCreatorForm({
           `${describeFrame(wanted)} isn't available in ${colorWord(colorKey)} yet — kept the current frame.`,
         );
       }
+    }
+    // A borderless / showcase / extended-art / full-art / textless printing
+    // lands on the plain frame above, which "exact" alone would pass off as
+    // a match — name the treatment and the frame it actually got (TODO 1.16
+    // stopgap until the 1.4 resolver). Both callers toast their own
+    // "Imported …" right after this handler returns, and Sonner stacks the
+    // newest on top, so the notice waits a microtask: it lands on top of
+    // that toast instead of collapsing underneath it.
+    if (patch.printing_treatment) {
+      const notice = printingTreatmentNotice(
+        patch.printing_treatment,
+        (getValues("frame_style.template") as FrameTemplate | undefined) ??
+          DEFAULT_FRAME_TEMPLATE,
+      );
+      queueMicrotask(() => toast.info(notice, { duration: 8000 }));
     }
 
     setIfPresent("title", patch.title);

@@ -31,7 +31,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { ManaCostGlyphs } from "@/components/cards/mana-cost-glyphs";
-import type { ScryfallImportPatch } from "@/lib/scryfall/import-mapper";
+import {
+  printingTreatmentHint,
+  type ScryfallImportPatch,
+} from "@/lib/scryfall/import-mapper";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -841,6 +844,11 @@ function Detail({
               Importing <strong>overwrites the card you&apos;re currently
               editing</strong> — name, text, type, colors, and the frame
               (matched to this printing&apos;s border era) are all replaced.
+              {patch.printing_treatment ? (
+                <span className="mt-1 block text-foreground">
+                  {printingTreatmentHint(patch.printing_treatment)}
+                </span>
+              ) : null}
             </span>
           </p>
         </div>
