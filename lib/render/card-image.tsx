@@ -72,6 +72,7 @@ import {
   getKeyruneCodepoint,
   getManaCodepoint,
 } from "@/lib/render/card-fonts";
+import { displayRunPx, keyruneAdvancePx } from "@/lib/render/satori-text";
 import {
   getFrameDataUrl,
   getPlateDataUrlForPath,
@@ -289,6 +290,33 @@ function CardImage({
   const showCost =
     !layout.hideCost && card.cardType !== "land" && Boolean(card.cost?.trim());
   const typeLine = buildTypeLine(card);
+  const typeSlot: TextSlot = {
+    ...layout.type,
+    sizePct: fitSingleLineSizePct({
+      text: typeLine,
+      rect: layout.type.rect,
+      baseSizePct: layout.type.sizePct,
+      reservedPct: layout.symbolRect
+        ? 0
+        : (layout.symbolSizePct ?? layout.type.sizePct * 1.1) * 1.3,
+    }),
+  };
+  // Room a centred title / type line may fill before it ellipsizes: the band
+  // less the set symbol + gap beside it (see alignedText; a cost in the
+  // title band is never centred, so 0 = don't judge).
+  const titleRoom =
+    showCost && card.cost && !layout.costRect ? 0 : bandWidth(layout.title, width);
+  const typeRoom = !isAligned(typeSlot)
+    ? 0
+    : bandWidth(typeSlot, width) -
+      (layout.symbolRect
+        ? 0
+        : fpx(0.02, width) +
+          setSymbolWidth({
+            iconUrl: card.setIconUrl,
+            setCode: card.setIconCode,
+            fontSize: fpx(layout.symbolSizePct ?? layout.type.sizePct * 1.1, width),
+          }));
 
   // Same gating as the preview (shared helpers) — and only when the frame
   // actually defines a slot for that stat.
@@ -559,9 +587,15 @@ function CardImage({
         />
       ) : null}
 
-      {/* Title band — name + mana cost. */}
+      {/* Title band — name + mana cost. A centred title (tokens) has no
+          cost beside it: no filler span either, or the band's gap pushed
+          the name half a gap left of the preview's. */}
       <Band slot={layout.title} cardWidth={width} italic={isShowcase}>
-        <span style={ELLIPSIS}>{displayLine(title)}</span>
+        <span
+          style={alignedText(layout.title, displayLine(title), fpx(layout.title.sizePct, width), titleRoom)}
+        >
+          {displayLine(title)}
+        </span>
         {showCost && card.cost && !layout.costRect ? (
           <CostGlyphs
             cost={card.cost}
@@ -569,7 +603,7 @@ function CardImage({
             overrides={card.pipOverrides}
             dy={layout.costDy ? fpx(layout.costDy, width) : 0}
           />
-        ) : (
+        ) : isAligned(layout.title) ? null : (
           <span style={{ display: "flex" }} />
         )}
       </Band>
@@ -597,21 +631,10 @@ function CardImage({
           to fit on one line, same math as the live preview. With a
           symbolRect the symbol gets its own absolute box (mirrors the
           preview) so it can be aligned independently of the type line. */}
-      <Band
-        slot={{
-          ...layout.type,
-          sizePct: fitSingleLineSizePct({
-            text: typeLine,
-            rect: layout.type.rect,
-            baseSizePct: layout.type.sizePct,
-            reservedPct: layout.symbolRect
-              ? 0
-              : (layout.symbolSizePct ?? layout.type.sizePct * 1.1) * 1.3,
-          }),
-        }}
-        cardWidth={width}
-      >
-        <span style={ELLIPSIS}>{displayLine(typeLine)}</span>
+      <Band slot={typeSlot} cardWidth={width}>
+        <span style={alignedText(typeSlot, displayLine(typeLine), fpx(typeSlot.sizePct, width), typeRoom)}>
+          {displayLine(typeLine)}
+        </span>
         {!layout.symbolRect ? (
           <SetSymbolGlyph
             rarity={(card.rarity as Rarity | null) ?? "common"}
@@ -619,7 +642,7 @@ function CardImage({
             setCode={card.setIconCode}
             fontSize={fpx(layout.symbolSizePct ?? layout.type.sizePct * 1.1, width)}
           />
-        ) : (
+        ) : isAligned(typeSlot) ? null : (
           <span style={{ display: "flex" }} />
         )}
       </Band>
@@ -979,6 +1002,55 @@ function Band({
       {children}
     </div>
   );
+}
+
+/** A band that centres (or end-aligns) its content — the token title and
+ *  type line — rather than spreading it from the start. */
+function isAligned(slot: TextSlot): boolean {
+  return slot.align === "center" || slot.align === "end";
+}
+
+function bandWidth(slot: TextSlot, cardWidth: number): number {
+  return (slot.rect.widthPct / 100) * cardWidth;
+}
+
+// The ELLIPSIS style for a Band's display line. In a centred (or end-aligned)
+// band it also carries a negative right margin: Satori sizes the text node
+// from each glyph's own advance but draws the displayLine run kerned
+// (lib/render/satori-text.ts), so it centred a box wider than the ink and
+// set the line left of the preview by half the run's kerning (20 px on an
+// HD "Astronomy Tower" token). The margin makes the flex item the drawn
+// width, which is what the browser centres. Only while the kerned line fits
+// `roomPx` (the band less whatever shares it; 0 = don't judge): past that
+// the node shrinks and ellipsizes, and the margin would let it run over the
+// band. Start-aligned lines keep the plain style.
+function alignedText(
+  slot: TextSlot,
+  line: string,
+  fontPx: number,
+  roomPx: number,
+): typeof ELLIPSIS & { marginRight?: number } {
+  if (!isAligned(slot)) return ELLIPSIS;
+  const { box, ink } = displayRunPx(
+    slot.uppercase ? line.toUpperCase() : line,
+    fontPx,
+    (slot.letterSpacingEm ?? 0) * fontPx,
+  );
+  return ink > roomPx || box === ink ? ELLIPSIS : { ...ELLIPSIS, marginRight: ink - box };
+}
+
+/** SetSymbolGlyph's laid-out width at `fontSize` (its three branches). */
+function setSymbolWidth({
+  iconUrl,
+  setCode,
+  fontSize,
+}: {
+  iconUrl?: string | null;
+  setCode?: string | null;
+  fontSize: number;
+}): number {
+  if (iconUrl || !setCode) return Math.round(fontSize);
+  return keyruneAdvancePx(getKeyruneCodepoint(setCode) ?? KEYRUNE_DEFAULT_GLYPH, fontSize);
 }
 
 // Mana-pip gem disc colors — the mana-font `.ms-cost` background-colors from

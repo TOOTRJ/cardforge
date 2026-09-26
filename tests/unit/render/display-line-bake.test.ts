@@ -4,7 +4,9 @@ import fontkit from "@pdf-lib/fontkit";
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
 import type { CardPreviewData } from "@/components/cards/card-preview";
-import { getFrameProfile } from "@/lib/cards/template-layout";
+import { displayLine } from "@/lib/cards/card-display";
+import { fitSingleLineSizePct } from "@/lib/cards/render-tiers";
+import { getFrameProfile, type Rect } from "@/lib/cards/template-layout";
 import { renderCardImage, RENDER_PRESETS } from "@/lib/render/card-image";
 
 // ---------------------------------------------------------------------------
@@ -31,13 +33,16 @@ const kerned = (text: string) => px(beleren.layout(text).advanceWidth);
 const unkerned = (text: string) =>
   px(beleren.glyphsForString(text).reduce((sum, g) => sum + g.advanceWidth, 0));
 
-function card(title: string): CardPreviewData {
+function card(
+  title: string,
+  template = "retro",
+  type: Pick<CardPreviewData, "supertype" | "subtypes"> = { supertype: null, subtypes: ["Dragon"] },
+): CardPreviewData {
   return {
     title,
     cost: "{3}{R}{R}",
     cardType: "creature",
-    supertype: null,
-    subtypes: ["Dragon"],
+    ...type,
     rarity: "rare",
     colorIdentity: ["red"],
     rulesText: "Flying",
@@ -49,7 +54,7 @@ function card(title: string): CardPreviewData {
     artistCredit: "Probe",
     artUrl: null,
     artPosition: {},
-    frameStyle: { template: "retro", finish: "regular" },
+    frameStyle: { template, finish: "regular" },
     setIconUrl: null,
     setIconCode: null,
     backFace: null,
@@ -59,20 +64,22 @@ function card(title: string): CardPreviewData {
 }
 
 type Raw = { data: Buffer; width: number; height: number };
-async function bake(title: string): Promise<Raw> {
-  const res = await renderCardImage(card(title), "hd", { brandMark: false, watermarkText: null });
-  const { data, info } = await sharp(Buffer.from(await res.arrayBuffer()))
+async function bake(title: string | CardPreviewData): Promise<Raw> {
+  const data = typeof title === "string" ? card(title) : title;
+  const res = await renderCardImage(data, "hd", { brandMark: false, watermarkText: null });
+  const { data: px, info } = await sharp(Buffer.from(await res.arrayBuffer()))
     .removeAlpha()
     .raw()
     .toBuffer({ resolveWithObject: true });
-  return { data, width: info.width, height: info.height };
+  return { data: px, width: info.width, height: info.height };
 }
 
-/** First pixel column, inside the title band, where two bakes differ by more
- *  than 24 on any channel — the left ink edge of the word only one has. */
-function firstDiffX(a: Raw, b: Raw): number {
-  const y0 = Math.floor((TITLE.rect.topPct / 100) * a.height);
-  const y1 = Math.ceil(((TITLE.rect.topPct + TITLE.rect.heightPct) / 100) * a.height);
+/** Pixel columns, inside `rect`'s rows, where two bakes differ by more than 24
+ *  on any channel — the ink only one of them has. */
+function diffColumns(a: Raw, b: Raw, rect: Rect = TITLE.rect): number[] {
+  const y0 = Math.floor((rect.topPct / 100) * a.height);
+  const y1 = Math.ceil(((rect.topPct + rect.heightPct) / 100) * a.height);
+  const columns: number[] = [];
   for (let x = 0; x < a.width; x += 1) {
     for (let y = y0; y < y1; y += 1) {
       const i = (y * a.width + x) * 3;
@@ -81,11 +88,17 @@ function firstDiffX(a: Raw, b: Raw): number {
         Math.abs(a.data[i + 1] - b.data[i + 1]) > 24 ||
         Math.abs(a.data[i + 2] - b.data[i + 2]) > 24
       ) {
-        return x;
+        columns.push(x);
+        break;
       }
     }
   }
-  return -1;
+  return columns;
+}
+
+/** The left ink edge of the word only one of two bakes has. */
+function firstDiffX(a: Raw, b: Raw): number {
+  return diffColumns(a, b)[0] ?? -1;
 }
 
 describe("display-font word spacing (bake)", () => {
@@ -111,5 +124,84 @@ describe("display-font word spacing (bake)", () => {
     ]);
     const shift = firstDiffX(a, a0) - firstDiffX(b, b0);
     expect(Math.abs(shift - (kerned("Jester's") - kerned("Jesters")))).toBeLessThanOrEqual(1.5);
+  }, 60_000);
+});
+
+// ---------------------------------------------------------------------------
+// Centred lines — the token title and type line, on the git "alphatoken"
+// frame. Satori sizes the text node from each glyph's own advance but draws
+// the run kerned, so a centred band centred a box wider than the ink and the
+// line sat half its kerning (plus half the band's gap, from a filler span the
+// preview never had) left of the browser's. The browser centres the KERNED
+// advance box: the ink spans lsb(first glyph) … advance − rsb(last glyph).
+// ---------------------------------------------------------------------------
+
+const TOKEN = getFrameProfile("alphatoken");
+const scaled = (units: number, fontPx: number) => (units * fontPx) / beleren.unitsPerEm;
+const centre = (rect: Rect) => ((rect.leftPct + rect.widthPct / 2) / 100) * W;
+
+/** The ink of `text` (as drawn: displayLine) in a group `extraPx` wider than
+ *  its kerned advance, centred on the band: [left, right] in px. */
+function centredInk(text: string, fontPx: number, rect: Rect, extraPx = 0): [number, number] {
+  const line = displayLine(text);
+  const glyphs = beleren.glyphsForString(line);
+  const first = glyphs[0];
+  const last = glyphs[glyphs.length - 1];
+  const advance = scaled(beleren.layout(line, { liga: false }).advanceWidth, fontPx);
+  const left = centre(rect) - (advance + extraPx) / 2;
+  return [
+    left + scaled(first.bbox.minX, fontPx),
+    left + advance - scaled(last.advanceWidth - last.bbox.maxX, fontPx),
+  ];
+}
+
+describe("centred display lines (bake)", () => {
+  const titlePx = Math.round(TOKEN.title.sizePct * W);
+
+  it("centres a token title where the browser does, kerned or not", async () => {
+    // A lone "I" as the reference: its ink sits inside every probe's.
+    const reference = await bake(card("I", "alphatoken"));
+    for (const title of [
+      "Voldemort’s Vengeful Spirit",
+      "Bogardan",
+      // Fits the band kerned but not at Satori's unkerned width: shown whole.
+      "Jester's Tower of the Yawning Wayfarer's",
+    ]) {
+      const columns = diffColumns(await bake(card(title, "alphatoken")), reference, TOKEN.title.rect);
+      const [left, right] = centredInk(title, titlePx, TOKEN.title.rect);
+      // The title's outline shadow widens both edges alike; the centre holds.
+      const inkCentre = (columns[0] + columns[columns.length - 1]) / 2;
+      expect(Math.abs(inkCentre - (left + right) / 2), title).toBeLessThanOrEqual(1.5);
+      expect(Math.abs(columns[columns.length - 1] - columns[0] - (right - left)), title).toBeLessThanOrEqual(6);
+    }
+  }, 60_000);
+
+  it("still ellipsizes a centred title that overflows, inside the band", async () => {
+    const [long, reference] = await Promise.all([
+      bake(card("Tobias Featherwhistle the Unconquerable, Keeper of the Western Watchtowers", "alphatoken")),
+      bake(card("I", "alphatoken")),
+    ]);
+    const columns = diffColumns(long, reference, TOKEN.title.rect);
+    const left = (TOKEN.title.rect.leftPct / 100) * W;
+    const right = ((TOKEN.title.rect.leftPct + TOKEN.title.rect.widthPct) / 100) * W;
+    expect(columns[0]).toBeGreaterThanOrEqual(left - 2);
+    expect(columns[columns.length - 1]).toBeLessThanOrEqual(right + 2);
+  }, 60_000);
+
+  it("centres a token type line and its set symbol as one group", async () => {
+    const text = "Creature — Avatar Warrior";
+    const [line, short] = await Promise.all([
+      bake(card("Bogardan", "alphatoken", { supertype: null, subtypes: ["Avatar", "Warrior"] })),
+      bake(card("Bogardan", "alphatoken", { supertype: null, subtypes: [] })),
+    ]);
+    const slot = TOKEN.type;
+    const symbolPct = TOKEN.symbolSizePct ?? slot.sizePct * 1.1;
+    const fontPx = Math.round(
+      fitSingleLineSizePct({ text, rect: slot.rect, baseSizePct: slot.sizePct, reservedPct: symbolPct * 1.3 }) * W,
+    );
+    // The wider group starts further left, so the first differing column is
+    // this line's first ink.
+    const [left] = centredInk(text, fontPx, slot.rect, Math.round(0.02 * W) + Math.round(symbolPct * W));
+    expect(Math.abs(diffColumns(line, short, slot.rect)[0] - left)).toBeLessThanOrEqual(1.5);
   }, 60_000);
 });

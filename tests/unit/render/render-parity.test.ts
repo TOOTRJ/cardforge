@@ -55,9 +55,11 @@ describe("display-font lines", () => {
     // Satori places a word after a space at unkerned advances (TODO 4.31):
     // a single-line Beleren text must reach either renderer as one run.
     for (const src of [BAKE, PREVIEW]) {
-      expect(src).not.toMatch(/<span style=\{ELLIPSIS\}[^>]*>\s*\{(title|safeTitle|name|typeLine)\}\s*<\/span>/);
+      expect(src).not.toMatch(/>\s*\{(title|safeTitle|name|typeLine)\}\s*<\/span>/);
       expect(src).toMatch(/\{slotLine\(\s*layout\.footer\.font,\s*\w+\.artistCredit/);
     }
+    expect(BAKE).toContain("{slotLine(layout.footer.font, watermarkText)}");
+    expect(PREVIEW).toContain("{slotLine(layout.footer.font, footerWatermark)}");
     expect(BAKE).toContain("{displayLine(title)}");
     expect(PREVIEW).toContain("{displayLine(safeTitle)}");
     expect(BAKE.match(/\{displayLine\(typeLine\)\}/g)).toHaveLength(3);
@@ -65,6 +67,15 @@ describe("display-font lines", () => {
     expect(PREVIEW).toMatch(/\{displayLine\(\s*buildTypeLine\(/);
     expect(BAKE.match(/\{displayLine\(name\)\}/g)).toHaveLength(2);
     expect(PREVIEW.match(/\{displayLine\(name\)\}/g)).toHaveLength(2);
+  });
+
+  it("centre the bake's token title and type line on their kerned width, with no filler span", () => {
+    // Satori sizes a text node unkerned and draws it kerned: a centred band
+    // must hand its line to alignedText (display-line-bake.test.ts measures
+    // it), and must not add the empty span + gap the preview never renders.
+    expect(BAKE.match(/style=\{alignedText\(/g)).toHaveLength(2);
+    expect(BAKE).toContain("isAligned(layout.title) ? null : (");
+    expect(BAKE).toContain("isAligned(typeSlot) ? null : (");
   });
 });
 

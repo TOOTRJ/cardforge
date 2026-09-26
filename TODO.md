@@ -1153,6 +1153,16 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
         single-line display text with no-break spaces in both renderers, so
         the bake draws one kerned run; both now omit Beleren's space-pair
         kerns (space + T, comma + space…), which the bake never applied.
+        Satori still SIZES the run unkerned, so the centred token title and
+        type line (m15token, m15tokenartifact, alphatoken) take a negative
+        margin of the run's kerning (`alignedText` in card-image.tsx, metrics
+        in lib/render/satori-text.ts) and drop the filler span + gap the
+        preview never had: production bakes token names 13–27 px left of the
+        preview at HD. Still open, pre-existing: an overflowing line
+        ellipsizes a character earlier in the bake (Satori fits unkerned
+        widths); centred stat values keep the same half-kerning offset (P/T
+        "4/4" kerns −271/2048 em: ~4 px left at HD); Satori never forms
+        Beleren's ffi ligature the browser draws ("Office").
 - [ ] **4.32 [P1] Standard borderless frame for regular cards (`m15borderless`) from CC 'Borderless (Alt)'** (borderless research 2026-09-25) — This is the 2019+ look: art to the edges, dark translucent bars and text box with white ink, and a black bottom bar holding the collector line. It covers 3,425 printings (2,177 without a crown), about 54 % of all borderless paper printings. Nothing ships today: the "borderless showcases" are MSE scrims with an inset art slot (4.35), and 4.7 named the wrong CC pack (its Borderless bullet now points here).
       - **Source.** CC `packBorderless.js` @2fcddba (`groupShowcase-5.js`:49), `img/frames/m15/borderless/m15GenericShowcaseFrame{W,U,B,R,G,M,A,L,C}.png`. All are 1500×2100 native: sides α0, box RGBA 0,0,0,128, opaque bottom bar from 92.24 % H with small fins up the side edges. There are 8 P/T plates, `m15/borderless/pt/*.png` (274×140, at 76.4/88.62/18.27×6.67). On FDN #311 the bars and pinlines line up within a few px. The frames are already flat per colour; the 4.3 importer copies them, cuts the corners to the 3.23 radius, and records provenance in `lib/cards/frame-sources.json` (bucket only, never git). Its mask list (Pinline/Title/Type/Rules/Border) is also what 4.34 and coloured artifacts need.
       - **Profile.** `{...M15, artSlot 0/0/100/92.24, ink #ffffff}`, spreading the M15 profile as 4.4 shipped it (v24, #380). CC's text bounds equal its regular M15 bounds (title y 5.22, type y 56.64, rules 63.03 h 28.75; `packBorderless.js`), so our measured M15 carries over (and 4.20's sizes when they land). Symbol right edge 92.13 / centre y 59.10. P/T value 79.28/90.2/13.67×3.72; the plate goes in 4.18's `plateRect` (shipped in #380) at the plate bounds 76.4/88.62/18.27×6.67, which keeps its native 1.96 aspect. Brand mark in the bar.

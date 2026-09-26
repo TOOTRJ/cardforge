@@ -166,7 +166,9 @@ export function buildTypeLine({
 // draws kerned from its first glyph. Both renderers print the same string,
 // so both also drop Beleren's space-pair kerns (space + A, comma + space…),
 // which the bake never applied. MPlantin has no kerning; body text keeps
-// its spaces (it wraps).
+// its spaces (it wraps). Satori still SIZES the run unkerned, which only
+// shows where the line isn't at its band's start — the bake's centred bands
+// correct for it (alignedText, lib/render/card-image.tsx).
 export function displayLine(text: string): string {
   return text.replace(/(\S)[ \t\n]+(?=\S)/g, "$1\u00a0");
 }
