@@ -61,6 +61,11 @@ export const TITLE_FIT_HEADROOM = 1.02;
 
 const ELLIPSIS = "\u2026";
 
+/** A word cut by the "…" keeps at least this many characters; a shorter
+ *  fragment ("Skeptic — K…") goes, back to the last whole word
+ *  ("Skeptic…"). */
+const MIN_CUT_FRAGMENT = 3;
+
 export type DetachedCostTitle = {
   /** The name as drawn: the whole name, or — only when it is too long even
    *  at the size floor — as much of it as fits, then "…". */
@@ -78,8 +83,9 @@ type Metrics = Parameters<typeof displayTextWidthEm>[1];
 
 /** `name` cut to at most `maxEm` including its "…", at a character
  *  boundary, with trailing spaces and separators (, ; : and dashes) dropped
- *  before the "…" ("Skeptic…", not "Skeptic,…"). The whole name when it
- *  fits. */
+ *  before the "…" ("Skeptic…", not "Skeptic,…"). A word cut to fewer than
+ *  MIN_CUT_FRAGMENT characters is dropped when a whole word comes before it.
+ *  The whole name when it fits. */
 function truncateToEm(name: string, maxEm: number, metrics: Metrics): string {
   // (A name fitted exactly measures maxEm give or take rounding error.)
   if (displayTextWidthEm(name, metrics) <= maxEm * (1 + 1e-9)) return name;
@@ -93,7 +99,15 @@ function truncateToEm(name: string, maxEm: number, metrics: Metrics): string {
     width += w;
     kept += 1;
   }
-  const cut = chars.slice(0, kept).join("").replace(/[\s,;:\-\u2013\u2014]+$/u, "");
+  let head = chars.slice(0, kept).join("");
+  if (kept < chars.length && !/\s/u.test(chars[kept])) {
+    // Cut inside a word.
+    const fragment = /\S*$/u.exec(head)?.[0] ?? "";
+    if (Array.from(fragment).length < MIN_CUT_FRAGMENT && fragment.length < head.length) {
+      head = head.slice(0, head.length - fragment.length);
+    }
+  }
+  const cut = head.replace(/[\s,;:\-\u2013\u2014]+$/u, "");
   return (cut || chars[0]) + ELLIPSIS;
 }
 

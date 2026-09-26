@@ -266,7 +266,10 @@ describe("m15pw ability rows + title — real bakes", () => {
       "+1: Create a 1/1 white Soldier creature token.\n−4: Exile target nonland permanent. Its controller creates a 2/2 colorless Robot artifact creature token.\n−8: You get an emblem with \"Whenever you cast a spell, exile the top card of your library. You may play it this turn. At the beginning of your end step, return all creature cards exiled with Probe to the battlefield.\"";
     const caps4 =
       "CREATURES YOU CONTROL GET +1/+0 AS LONG AS IT'S YOUR TURN.\n+1: CREATE A 1/1 WHITE SOLDIER CREATURE TOKEN.\n−2: PUT A +1/+1 COUNTER ON EACH CREATURE YOU CONTROL. THEY GAIN VIGILANCE UNTIL END OF TURN.\n−6: YOU GET AN EMBLEM WITH \"CREATURES YOU CONTROL HAVE DOUBLE STRIKE.\"";
-    for (const rules of [longLast, caps4]) {
+    // And a tall ALL-CAPS ultimate, whose row only holds its text when the
+    // narrower column is estimated for the LAST row (not the first).
+    const capsUlt = WALKER_115.toUpperCase();
+    for (const rules of [longLast, caps4, capsUlt]) {
       expectRowsHoldTheirText(await bake({ rulesText: rules }), rules);
       expectNothingUnderTheShield(await bake({ rulesText: rules, loyalty: null }), rules);
     }

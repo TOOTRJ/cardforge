@@ -200,6 +200,24 @@ describe("the last ability wraps before the loyalty shield (TODO 4.19)", () => {
     expect(at(lastRowInsetPct)).toBeGreaterThan(at(0));
   });
 
+  it("estimates only the LAST row in the narrower column; the others keep the full width", () => {
+    // The same ability first and last, and room to spare: every row gets
+    // its estimate plus the same share of the slack, so the last row is
+    // taller than the first by exactly what the narrower column adds to the
+    // estimate. (Narrowing the first row's estimate instead passed every
+    // other test here, yet in real bakes put text across a seam, off the box
+    // bottom and back under the shield.)
+    const ability = "Destroy target creature. Its controller loses 2 life.";
+    const { sizePct, rowFractions, lastRowInsetPct } = withShield(`+1: ${ability}\n−2: Draw a card.\n−8: ${ability}`);
+    const full =
+      M15PW.rules.rect.widthPct / 100 -
+      sizePct * (2 * LOYALTY_ROW.padXEm + LOYALTY_ROW.badgeWidthEm + LOYALTY_ROW.badgeGapEm);
+    const est = (w: number) => estimateRulesHeightW(ability, sizePct, RULES_TEXT.lineHeight, w);
+    expect(est(full - lastRowInsetPct)).toBeGreaterThan(est(full)); // one more line in the narrow column
+    expect(pctToPt(sizePct)).toBeGreaterThan(RULES_TEXT.hardFloorPt); // a ladder step fits: equal slack
+    expect((rowFractions[2] - rowFractions[0]) * boxH).toBeCloseTo(est(full - lastRowInsetPct) - est(full), 12);
+  });
+
   it("only narrows the last row, and leaves equal short abilities equal", () => {
     // Three one-liners: every row still fits a badge and a line, so the
     // stripes stay equal; only the last text column is narrower.
@@ -322,6 +340,43 @@ describe("a long name shrinks to fit before a detached cost (owner decision, TOD
     // The cut drops a trailing separator before the "…".
     const cut = fitDetachedCostTitle(M15PW, "Skeptic, the Endlessly Wandering Walker of Worlds", cost)!.text;
     expect(cut).not.toMatch(/[\s,;:]…$/u);
+  });
+
+  it("never leaves a word cut to one or two letters: it goes back to the last whole word", () => {
+    const name = "Skeptic — Walker, Tester; Doubter";
+    // The cut used to keep a stub of the next word ("Skeptic — W…").
+    expect(fitDetachedCostTitle(M15PW, name, "{W}".repeat(13))!.text).toBe("Skeptic…");
+    expect(fitDetachedCostTitle(M15PW, name, "{W}".repeat(11))!.text).toBe("Skeptic — Walker…");
+    // Three letters or more of a cut word stay, and so does a cut first word.
+    const long = "Skeptic, the Endlessly Wandering Walker of Worlds";
+    expect(fitDetachedCostTitle(M15PW, long, "{W}".repeat(12))!.text).toBe("Skeptic, the End…");
+    expect(fitDetachedCostTitle(M15PW, long, "{W}".repeat(15))!.text).toBe("Skep…");
+    // Every cut, on both frames: the text before the "…" is the name's
+    // start, ending on a whole word or on at least three letters of one.
+    const names = [
+      long,
+      name,
+      "SKEPTIC, THE ENDLESSLY WANDERING WALKER",
+      "Illili Ilitil Iliil, the Lilt of Fill and Jilt",
+      "Ælfwine Guðmundsson, Ørsted",
+    ];
+    let cuts = 0;
+    for (const p of [M15PW, MODERN]) {
+      for (let pips = 6; pips <= 16; pips += 1) {
+        for (const title of names) {
+          const { text } = fitDetachedCostTitle(p, title, "{W}".repeat(pips))!;
+          if (text === title) continue;
+          cuts += 1;
+          const head = text.slice(0, -1);
+          expect(title.startsWith(head), text).toBe(true);
+          const next = title.charAt(head.length);
+          const wholeWord = /[\s,;:—]/u.test(next);
+          const lastWord = /\S*$/u.exec(head)![0];
+          expect(wholeWord || lastWord === head || Array.from(lastWord).length >= 3, text).toBe(true);
+        }
+      }
+    }
+    expect(cuts).toBeGreaterThan(40);
   });
 
   it("never grows a name, and leaves an inline cost's name alone", () => {
