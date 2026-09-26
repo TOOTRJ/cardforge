@@ -72,6 +72,20 @@ async function twoToneArt(top: number[], bottom: number[]): Promise<string> {
   return `data:image/png;base64,${png.toString("base64")}`;
 }
 
+/** A `w` × `h` PNG, `fill` all over with a `band`-row `top` / `bottom` edge. */
+async function bandArt(w: number, h: number, fill: number[], band = 0, top = fill, bottom = fill): Promise<string> {
+  const buf = Buffer.alloc(w * h * 3);
+  for (let y = 0; y < h; y += 1) {
+    const c = y < band ? top : y >= h - band ? bottom : fill;
+    for (let x = 0; x < w; x += 1) buf.set(c, (y * w + x) * 3);
+  }
+  const png = await sharp(buf, { raw: { width: w, height: h, channels: 3 } }).png().toBuffer();
+  return `data:image/png;base64,${png.toString("base64")}`;
+}
+
+const near = (c: number[], ref: number[], tol: number) =>
+  Math.abs(c[0] - ref[0]) + Math.abs(c[1] - ref[1]) + Math.abs(c[2] - ref[2]) < tol;
+
 /** A rotated slot's footprint on the card, in px: the pre-rotation box
  *  turned 90° about its centre (width and height swap). */
 function footprint(rect: Rect) {
@@ -136,6 +150,34 @@ describe("aftermath — the bottom half turns clockwise, like the print", () => 
     expect(left[0]).toBeLessThan(90);
   }, 120_000);
 
+  it("draws a zoomed-out sideways art with no line of its opposite edge", async () => {
+    // A 3000 × 400 panorama, yellow along its top edge and cyan along its
+    // bottom: turned clockwise, yellow belongs on the RIGHT of the shrunk
+    // picture and cyan on its left. Here Yoga rounded the art box 1 px past
+    // the picture's bottom edge, and the background's repeat painted a
+    // yellow column down the picture's LEFT edge.
+    const [yellow, cyan] = [
+      [240, 220, 0],
+      [0, 220, 230],
+    ];
+    const art = await bandArt(3000, 400, [150, 110, 160], 40, yellow, cyan);
+    const r = await bake(card({ art_url: art, art_position: { focalX: 0.3, focalY: 0.9, scale: 0.75 } }));
+    const win = footprint(second.artSlot!);
+    const midX = (win.x0 + win.x1) / 2;
+    const count = (ref: number[], leftHalf: boolean) => {
+      let n = 0;
+      for (let y = Math.ceil(win.y0); y < Math.floor(win.y1); y += 1) {
+        for (let x = Math.ceil(win.x0); x < Math.floor(win.x1); x += 1) {
+          if (x < midX === leftHalf && near(px(r, x, y), ref, 50)) n += 1;
+        }
+      }
+      return n;
+    };
+    expect(count(cyan, true)).toBeGreaterThan(1000);
+    expect(count(yellow, false)).toBeGreaterThan(1000);
+    expect(count(yellow, true)).toBe(0);
+  }, 60_000);
+
   it("keeps a wall of rules text inside the white box (Card Conjurer's x 6.94–44.94%, y 57.0–90.57%)", async () => {
     // Card Conjurer's rotated rules box, in px: the rules slot turns onto it.
     const cc = { x0: 0.0694 * W, x1: 0.4494 * W, y0: 0.57 * H, y1: 0.9057 * H };
@@ -195,5 +237,51 @@ describe("aftermath — the bottom half turns clockwise, like the print", () => 
     expect(Math.abs(sheenEdge - artEdge)).toBeLessThanOrEqual(3);
     expect(colDelta(artEdge - 12)).toBeLessThan(1.5);
     expect(colDelta(artEdge + 12)).toBeGreaterThan(6);
+  }, 60_000);
+
+  it("foil: the sheen covers the light art and none of the bare window", async () => {
+    // A light picture all over, so the foil shows wherever the mask draws
+    // it. Zoomed out (0.75) the art is cut to the window shrunk about its
+    // focal point, so the mask must be too, not spill the scaled cover into
+    // the bare margin; zoomed in (1.3) a bare strip in the bake (the old
+    // art-free one) must stay bare in the foil.
+    const art = await bandArt(3000, 400, [235, 235, 235]);
+    const win = footprint(second.artSlot!);
+    for (const [art_position, minBare] of [
+      [{ focalX: 0.5, focalY: 0.5, scale: 0.75 }, 5000],
+      [{ focalX: 0.3, focalY: 0.6, scale: 1.3 }, 0],
+    ] as const) {
+      const back = { art_url: art, art_position };
+      const regular = await bake(card(back));
+      const foil = await bake(card(back, { frameStyle: { template: "aftermath", finish: "foil" } }));
+      const [x0, x1, y0, y1] = [Math.ceil(win.x0) + 3, Math.floor(win.x1) - 3, Math.ceil(win.y0) + 3, Math.floor(win.y1) - 3];
+      // Each window pixel's kind in the regular bake: bare, light art, or
+      // an edge between them (skipped, with a 3 px margin).
+      const kind = (x: number, y: number) => {
+        const c = px(regular, x, y);
+        return near(c, BG, 12) ? "bare" : Math.min(...c) > 200 ? "art" : "edge";
+      };
+      const kinds = new Map<number, string>();
+      for (let y = y0 - 3; y < y1 + 3; y += 1) for (let x = x0 - 3; x < x1 + 3; x += 1) kinds.set(y * W + x, kind(x, y));
+      const sum = { bare: [0, 0], art: [0, 0] } as Record<string, number[]>;
+      for (let y = y0; y < y1; y += 1) {
+        for (let x = x0; x < x1; x += 1) {
+          const k = kinds.get(y * W + x)!;
+          if (k === "edge") continue;
+          let solid = true;
+          for (let dy = -3; dy <= 3 && solid; dy += 1) {
+            for (let dx = -3; dx <= 3 && solid; dx += 1) solid = kinds.get((y + dy) * W + x + dx) === k;
+          }
+          if (!solid) continue;
+          const [a, b] = [px(regular, x, y), px(foil, x, y)];
+          sum[k][0] += (Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2])) / 3;
+          sum[k][1] += 1;
+        }
+      }
+      expect(sum.bare[1]).toBeGreaterThanOrEqual(minBare);
+      if (sum.bare[1]) expect(sum.bare[0] / sum.bare[1]).toBeLessThan(0.5);
+      expect(sum.art[1]).toBeGreaterThan(10_000);
+      expect(sum.art[0] / sum.art[1]).toBeGreaterThan(6);
+    }
   }, 60_000);
 });

@@ -2085,7 +2085,11 @@ function AdventureBake({
 // layer from the same numbers). The default repeat keeps each pattern tile
 // the picture's own size (no-repeat makes it the canvas's, which cuts a
 // zoomed picture wider than the card); the visible rect lies inside the
-// picture, so no second copy ever shows.
+// picture, so no second copy ever shows. Yoga rounds a box's two edges to
+// whole px, so a fractional size can land up to 1 px past a picture edge
+// that the visible rect shares (a zoomed-out picture's), where the repeat
+// paints the picture's OPPOSITE edge: the child takes a whole-px size that
+// never reaches past the picture (a whole-px box keeps its exact size).
 function RotatedArtBake({
   slot,
   rotation,
@@ -2114,6 +2118,9 @@ function RotatedArtBake({
     height: (slot.heightPct / 100) * cardHeight,
   };
   const { image, visible } = artWindowPlacement(box, natural, focalX, focalY, scale);
+  // Nearest whole px, but never past the picture's far edge (`room`; the
+  // epsilon absorbs float error on an edge the two share).
+  const whole = (size: number, room: number) => Math.max(0, Math.min(Math.round(size), Math.floor(room + 1e-6)));
   return (
     <div
       style={{
@@ -2128,8 +2135,8 @@ function RotatedArtBake({
           position: "absolute",
           left: visible.x,
           top: visible.y,
-          width: visible.width,
-          height: visible.height,
+          width: whole(visible.width, image.x + image.width - visible.x),
+          height: whole(visible.height, image.y + image.height - visible.y),
           display: "flex",
           backgroundImage: `url(${src})`,
           backgroundSize: `${image.width}px ${image.height}px`,
