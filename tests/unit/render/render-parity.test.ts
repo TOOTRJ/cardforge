@@ -73,7 +73,11 @@ describe("display-font lines", () => {
     // Satori sizes a text node unkerned and draws it kerned: a centred band
     // must hand its line to alignedText (display-line-bake.test.ts measures
     // it), and must not add the empty span + gap the preview never renders.
-    expect(BAKE.match(/style=\{alignedText\(/g)).toHaveLength(2);
+    // The band's per-colour ink (bandTextStyle, TODO 4.31) is spread after
+    // it: colour + shadow only, so the kerned-width margin stands.
+    expect(BAKE.match(/style=\{\{\s*\.\.\.alignedText\(/g)).toHaveLength(2);
+    expect(BAKE).toMatch(/\.\.\.alignedText\(layout\.title, displayLine\(title\),[^\n]*\n\s*\.\.\.titleInk,\n/);
+    expect(BAKE).toMatch(/\.\.\.alignedText\(typeSlot, displayLine\(typeLine\),[^\n]*\n\s*\.\.\.typeInk,\n/);
     expect(BAKE).toContain("isAligned(layout.title) ? null : (");
     expect(BAKE).toContain("isAligned(typeSlot) ? null : (");
   });
