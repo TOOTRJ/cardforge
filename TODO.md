@@ -383,7 +383,7 @@ Open decisions are marked **[decide]**; none blocks its phase.
       - Textless borderless basics (50: SLD 15, UNF 15, EOE 10, UST 5, ONE #365–369 5) → per-set (4.11), `nearest` `m15textlessland`. After 4.35(a) that frame is borderless and name-only, and its registry already lists EOE.
       - Other borderless basics → `nearest` `fullartland`.
 
-      The fixture UNF #235 now resolves `nearest` `m15textlessland`. Add FRA #382 (`fullartland`). This assumes 4.35's reference **[decide]** goes to (b); under the recorded decision UNF #235 is `fullartland`'s reference printing.
+      The fixture UNF #235 now resolves `nearest` `m15textlessland`. Add FRA #382 (`fullartland`). (4.35's reference decision went to FRA, 2026-09-26.)
 - [ ] **1.18 [P1] Borderless imports and their art** (borderless research 2026-09-25) — The art import takes Scryfall `art_crop` (`app/api/scryfall/import-art/route.ts`:155). For borderless printings that crop is still cut to the M15 window: 626×457, aspect 1.37 (checked on DMU #435 and FDN #311). Only `full_art` printings get a taller crop (UNF #235: 745×767). Covering 4.32's art area (1500×1937 above the bottom bar) scales the crop 4.24× and keeps 56 % of its width. Scryfall's full-card `png` has the frame printed on it, so it is never usable as art.
       - When an import lands on a borderless treatment, show an inline note on the Art step: "Scryfall only has this art cropped to the classic window — upload the full illustration for a sharp borderless card". Log `art: window-cropped` on the 1.6 request row.
       - The art positioner re-frames the crop against the full-bleed slot (3b.13).
@@ -397,10 +397,7 @@ Open decisions are marked **[decide]**; none blocks its phase.
       - **The effect.** A full-art import on the M15 window prints a second type line inside the art (bake I, Llanowar Elves).
       - **Window-shaped crops.** Other full-art printings still get the 626×457 window (SCH #3, MID #268, DSK #389, SLZ #46). Covering a 1500×2100 slot scales the tall crops about 2.6–3.2× and the window crops about 4.6×.
       - **What to do.** Show the Art-step note with "…and includes parts of the printed frame", and log `art: frame-in-crop` on the 1.6 row.
-      - **[decide]** Choose one:
-        - (a) warn only;
-        - (b) auto-trim by a per-family inset table.
-        Recommended: (a). Trimming is heuristic and wrong on one-offs.
+      - **Decided 2026-09-26 (owner approved the full-art recommendations)**: warn only (the alternative was auto-trimming by a per-family inset table, which is heuristic and wrong on one-offs).
 - [ ] **1.19 [P0] Full-art and textless families in the signature registry (feeds 1.4; runs after 1.17)** (full-art research 2026-09-26) — 1.17 resolves `border_color: borderless`. This item is the same resolver for every other printing Scryfall flags `full_art` or `textless`.
 
       **Scale.** 1,449 paper full-art printings are not borderless. 1,302 of them would still import as the bordered standard with a false "exact" after 1.16 as written (survey `stopgap.txt`; the 1.16 amendment above closes this). Run through the real mapper (`lib/scryfall/import-mapper.ts`:237-259; `today/resolve-results.txt`, `survey/mapper/mapper-results.txt`), today:
@@ -1167,7 +1164,7 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
       - **bloomanime.** `borderlessShowcase()` insets the art 2.5/3.5/93×92 (`lib/cards/template-layout.ts`:1571-1616). MSE's source runs the image 0/0/100×91.6, or 94.8 with a P/T (`magic-m15-showcase-bloomburrow-borderless-anime.mse-style/style`:401-407). Match MSE. The registry references Hop to It BLB #381 and Fell BLB #383, which are black-border promo-pack printings, not the anime run. Replace them with BLB #316–336 and #343–355. 0 production cards.
       - **tarkirghostfire.** The comment calls it "borderless" (`template-layout.ts`:1618). Scryfall: #399–408 are black-bordered, #409–418 white. The registry references #410, which is white. Paint a real black ring for the black run, register #399–408 references (e.g. Clarion Conqueror TDM #400), and leave the white run to 4.30. 1 production card, so ship it as a 0.20 platform correction.
       - **tarkirdragon.** The ring bakes #101015 (16,16,21), but the MUL references are black-bordered. Make it opaque black. 4 production cards; 0.20 sweep.
-      - **fullartland.** The only true edge-to-edge master, but its references are HOB/BFZ black-bordered full-art basics. **Decided 2026-09-26 (owner: "go with your recommendation")**: keep it borderless and re-reference it to UNF #235 / EOE #262 (the alternative was adding a black border to match the current references). 0 production cards. (Full-art research 2026-09-26 questions these references; see the **[decide]** at the end of this item.)
+      - **fullartland.** The only true edge-to-edge master, but its references are HOB/BFZ black-bordered full-art basics. **Decided 2026-09-26 (owner: "go with your recommendation")**: keep it borderless (the alternative was adding a black border to match the current references). References revised the same day after the full-art research: FRA #382–396, not UNF #235 / EOE #262 (see the end of this item). 0 production cards.
       - **m15textless / m15textlessland.** Black-ring masters, but their references are borderless (MSH/TRK/TLA/FRA; EOE basics). **Decided 2026-09-26 (owner: "go with your recommendation")**: re-source them borderless from CC `TextlessGenericShowcase` (4.37), matching their references (the alternative was re-referencing them to black-bordered textless printings).
       - **lotrscroll and battle** are the same ring problem, already in 7.6/4.21. Cross-reference; don't duplicate.
 
@@ -1177,10 +1174,7 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
         - UNF #235 has a name bar and a floating orbital symbol, and no type bar;
         - EOE #262 has one bottom bar with the name centred, and no title bar.
 
-        **[decide]** The recorded decision re-references `fullartland` to UNF #235 / EOE #262, and it stands until the owner answers. Choose one:
-        - (a) keep UNF #235 / EOE #262 as decided, and accept that the bar check fails against them;
-        - (b) register FRA #382–396 instead. They are the only borderless printings with its title bar + medallion type bar, and they print dark `inverted` bars (see 4.39's [decide]). UNF #235–239 and EOE #262–266 are textless basics: they go to `m15textlessland`'s registry, which already lists EOE, and to 4.11's per-set line; UNF #235 and EOE #262 stay on as 7.7 edge fixtures only.
-        Recommended: (b).
+        **Decided 2026-09-26 (owner approved the full-art recommendations)**: (b) register FRA #382–396 instead of UNF #235 / EOE #262 (the alternative (a) kept them and accepted that the bar check fails against them). They are the only borderless printings with its title bar + medallion type bar, and they print dark `inverted` bars (see 4.39's [decide]). UNF #235–239 and EOE #262–266 are textless basics: they go to `m15textlessland`'s registry, which already lists EOE, and to 4.11's per-set line; UNF #235 and EOE #262 stay on as 7.7 edge fixtures only.
 
         4.39 re-sources the master from CC 2022 without the Border mask.
       - **(2) `m15textless` / `m15textlessland`: the decision (a) stands, but the re-source must ship with 3.24's `textless` flag.** Otherwise the profile keeps printing the type line at 73.6 % and cream rules at 78.6–92.1 % H on the art (M15TEXTLESS spreads FULLART, `template-layout.ts`:1803-1813). The black-bordered textless promos this leaves without a frame are 4.42.
@@ -1237,10 +1231,7 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
         - `c` (Wastes) from CC `l` + `sc`, with owner visual sign-off: no left-medallion Wastes was ever printed.
         - No `m`: there is no multicolour basic, and `basicLandSeedForColorKey` returns null for it.
         - Snow-covered from `/snow/*`, as a skin when the 1.6 log asks.
-      - **[decide]** The borderless `fullartland` bars. Choose one:
-        - (a) light bars, as today and as on the 263 bordered printings; FRA #382–396 then resolve `nearest`;
-        - (b) also a dark-bar colour treatment through the Title/Type masks, so FRA resolves `exact`.
-        Recommended: (a) now, (b) when the 1.6 log asks.
+      - **Decided 2026-09-26 (owner approved the full-art recommendations)**: the borderless `fullartland` keeps light bars, as today and as on the 263 bordered printings, so FRA #382–396 resolve `nearest`; a dark-bar colour treatment through the Title/Type masks (FRA `exact`) is built only when the 1.6 log asks.
       - **Depends on:**
         - 3.24 (symbol slot), 0.26 (basics gate);
         - 3.23 + 7.7 (the borderless key);
@@ -1250,7 +1241,7 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
         One new template plus one replaced master with 0 production cards, so no badge. See 3.24's rollout note for private rows.
       - **References (0.11), 2 per colour:**
         - `m15fullartland`: W ONE #262 · MOM #282; U ONE #263 · MOM #284; B ONE #264 · MOM #286; R ONE #265 · MOM #288; G ONE #266 · MOM #290. MOM is in this family by the survey's grouping; confirm it by eye.
-        - `fullartland`: W FRA #382 · #383; U FRA #385 · #386; B FRA #388 · #389; R FRA #391 · #392; G FRA #394 · #395. Under (a) these check geometry only (their bars are dark). They would replace the decided UNF #235 / EOE #262 if the owner picks (b) in 4.35's reference **[decide]**.
+        - `fullartland`: W FRA #382 · #383; U FRA #385 · #386; B FRA #388 · #389; R FRA #391 · #392; G FRA #394 · #395. Under (a) these check geometry only (their bars are dark). They replace UNF #235 / EOE #262 (owner decision 2026-09-26, 4.35).
       - **Verification.** 0.9's auto-score registers on the two bars with the art masked; the 2.2 walk uses one basic per colour; 2.4 signs off each key.
 
       Acceptance: 7.7 passes (`m15fullartland` has a border on all four edges; `fullartland` has art on all four edges plus its two bars). 3.24's parity cases pass. 1.19's fixtures ONE #262 and HOB #194 resolve `exact` on `m15fullartland`.
@@ -1282,7 +1273,7 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
       References: W THB #250 · 2XM #373; U THB #251 · 2XM #375; B THB #252 · DMU #279; R THB #253 · DMU #280; G THB #254 · DMU #281.
 
       Acceptance: 1.19's THB #250 and SPM #189 resolve `exact`; 7.7 passes.
-- [ ] **4.42 [P2] Black-bordered textless promos (`m15textlesspromo`) from CC 'Magic Fest Promos'** (full-art research 2026-09-26) — 4.35's decision (a) re-sources `m15textless`/`m15textlessland` as borderless (CC `TextlessGenericShowcase`, 4.37). That leaves the black-bordered M15 textless promos with no frame.
+- [ ] **4.42 [P2] Black-bordered textless promos (`m15textlesspromo`) from CC 'Magic Fest Promos'** (full-art research 2026-09-26) — 4.35's decision (a) re-sources `m15textless`/`m15textlessland` as borderless (CC `TextlessGenericShowcase`, 4.37). That leaves the black-bordered M15 textless promos with no frame. Owner approved building it (2026-09-26).
       - **Count.** `is:textless -t:basic border:black frame:2015` returns 59 (live, 2026-09-25). Take out TRK's 20 LCARS lands (1.19), the HOB #249 poster and the FRA #402 headliner, and 37 remain: SCH store championships, MagicFest PF19–PF27, SLD Command Towers, PL22, PLG24, PSPL, PW25, SLP #52 and FDN #718.
       - **Look.** A title bar with the cost, art down to the bottom ring, no type line and no text box, and a P/T plate on creatures (SCH #3 Dark Confidant, PF19 #1 Lightning Bolt).
       - **Source.** CC `packMagicFest.js` (`groupTextless-4.js`:14).
@@ -1314,10 +1305,7 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
 
       No printed family matches them. The bordered, non-textless, non-land full-art printings are SLZ, SLD one-offs and the Japan showcase. So this frame would have no reference printing: it would be signed off visually, labelled "Clear Text Box", and never be an import `exact`. `new/fullart/c.png` is a dead CC reference, so `c` needs a substitute.
 
-      **[decide]** Choose one:
-      - (a) build it after 4.39, as the one black-bordered "any card, full art, with rules" frame;
-      - (b) send those users to Borderless (4.32) and text-on-art (4.36).
-      Recommended: (b) now; revisit when the 1.6 log or feedback asks for it.
+      **Decided 2026-09-26 (owner approved the full-art recommendations)**: send those users to Borderless (4.32) and text-on-art (4.36) now; revisit building it (as the one black-bordered "any card, full art, with rules" frame, after 4.39) when the 1.6 log or feedback asks.
 
 ### Phase 5 — Two-sided cards end to end (3–4 weeks; needs 4.3 and 4.5)
 
