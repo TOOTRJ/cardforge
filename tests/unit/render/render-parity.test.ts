@@ -60,8 +60,9 @@ describe("display-font lines", () => {
     }
     expect(BAKE).toContain("{slotLine(layout.footer.font, watermarkText)}");
     expect(PREVIEW).toContain("{slotLine(layout.footer.font, footerWatermark)}");
-    expect(BAKE).toContain("{displayLine(title)}");
-    expect(PREVIEW).toContain("{displayLine(safeTitle)}");
+    // The name: whole, or as fitted before a detached cost (m15pw, modern).
+    expect(BAKE).toContain("{displayLine(titleFit ? titleFit.text : title)}");
+    expect(PREVIEW).toContain("{displayLine(titleFit ? titleFit.text : safeTitle)}");
     expect(BAKE.match(/\{displayLine\(typeLine\)\}/g)).toHaveLength(3);
     expect(PREVIEW.match(/\{displayLine\(typeLine\)\}/g)).toHaveLength(2);
     expect(PREVIEW).toMatch(/\{displayLine\(\s*buildTypeLine\(/);
@@ -116,8 +117,9 @@ describe("title next to a detached cost", () => {
   it("takes its text, size and width from fitDetachedCostTitle in both renderers", () => {
     expect(PREVIEW).toContain("fitDetachedCostTitle(layout, safeTitle, face.cost)");
     expect(BAKE).toContain("fitDetachedCostTitle(layout, title, card.cost)");
-    expect(PREVIEW).toContain("{titleFit ? titleFit.text : safeTitle}");
-    expect(BAKE).toContain("{titleFit ? titleFit.text : title}");
+    // ...joined for one kerned run like every display line (displayLine).
+    expect(PREVIEW).toContain("{displayLine(titleFit ? titleFit.text : safeTitle)}");
+    expect(BAKE).toContain("{displayLine(titleFit ? titleFit.text : title)}");
     expect(PREVIEW).toContain("sizePct: titleFit.sizePct");
     // The bake sets a shrunk name at the whole pixel below its fitted size.
     expect(BAKE).toContain("Math.floor(titleFit.sizePct * width) / width");

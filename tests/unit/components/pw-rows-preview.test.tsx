@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { CardPreview } from "@/components/cards/card-preview";
-import { parseLoyaltyAbilities } from "@/lib/cards/card-display";
+import { displayLine, parseLoyaltyAbilities } from "@/lib/cards/card-display";
 import { LOYALTY_ROW, layoutProfileLoyaltyRows } from "@/lib/cards/loyalty-rows";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import type { FrameTemplate } from "@/types/card";
@@ -156,7 +156,8 @@ describe("CardPreview — the name before a detached cost", () => {
     expect(fit.sizePct).toBeLessThan(P.title.sizePct);
     const { bandTag, span } = titleBand(title, cost);
     expect(bandTag).toContain(`font-size:${cqw(fit.sizePct)}`);
-    expect(span.endsWith(`>${title}`)).toBe(true);
+    // Drawn as one run with no-break spaces, like every display line.
+    expect(span.endsWith(`>${displayLine(title)}`)).toBe(true);
   });
 
   it("past the 5 pt floor draws the cut name with its own '…' (a 14-symbol cost, both frames)", () => {
@@ -168,14 +169,14 @@ describe("CardPreview — the name before a detached cost", () => {
       const { bandTag, span } = titleBand(title, cost, template);
       expect(bandTag).toContain(`font-size:${cqw(fit.sizePct)}`);
       // The drawn text is the cut one; the tooltip keeps the whole name.
-      expect(span.endsWith(`>${fit.text}`)).toBe(true);
+      expect(span.endsWith(`>${displayLine(fit.text)}`)).toBe(true);
     }
   });
 
   it("keeps a name that fits at the slot's size", () => {
     const { bandTag, span } = titleBand("Kikyo Zoldyck", "{1}{R}{W}{B}");
     expect(bandTag).toContain(`font-size:${cqw(P.title.sizePct)}`);
-    expect(span.endsWith(">Kikyo Zoldyck")).toBe(true);
+    expect(span.endsWith(`>${displayLine("Kikyo Zoldyck")}`)).toBe(true);
   });
 
   it("leaves an inline cost's name (and a cost-less name) uncapped", () => {
