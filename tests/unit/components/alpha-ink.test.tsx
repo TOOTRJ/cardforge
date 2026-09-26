@@ -53,7 +53,9 @@ function renderAlpha(template: "agclassic" | "alphaland", key: string) {
   );
   const spans = [...container.querySelectorAll("span")];
   const pt = spans.find((s) => s.textContent === "4/4") as HTMLElement;
-  const footer = spans.find((s) => s.textContent === "Art: Douglas Schuler")?.parentElement as HTMLElement;
+  // The display footer's words are joined by no-break spaces (displayLine).
+  const footer = spans.find((s) => s.textContent?.replace(/\s+/g, " ") === "Art: Douglas Schuler")
+    ?.parentElement as HTMLElement;
   return { pt, footer };
 }
 

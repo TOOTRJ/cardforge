@@ -41,10 +41,12 @@ import {
 } from "@/components/cards/frame-layer";
 import {
   buildTypeLine,
+  displayLine,
   normalizeFrameTemplate,
   showsDefense,
   showsLoyalty,
   showsPowerToughness,
+  slotLine,
   type LoyaltyAbility,
   type SagaChapter,
 } from "@/lib/cards/card-display";
@@ -559,7 +561,7 @@ function CardImage({
 
       {/* Title band — name + mana cost. */}
       <Band slot={layout.title} cardWidth={width} italic={isShowcase}>
-        <span style={ELLIPSIS}>{title}</span>
+        <span style={ELLIPSIS}>{displayLine(title)}</span>
         {showCost && card.cost && !layout.costRect ? (
           <CostGlyphs
             cost={card.cost}
@@ -609,7 +611,7 @@ function CardImage({
         }}
         cardWidth={width}
       >
-        <span style={ELLIPSIS}>{typeLine}</span>
+        <span style={ELLIPSIS}>{displayLine(typeLine)}</span>
         {!layout.symbolRect ? (
           <SetSymbolGlyph
             rarity={(card.rarity as Rarity | null) ?? "common"}
@@ -867,16 +869,17 @@ function CardImage({
           }}
         >
           <span style={ELLIPSIS}>
-            {card.artistCredit?.trim()
-              ? `Art: ${card.artistCredit}`
-              : "Art: Unknown"}
+            {slotLine(
+              layout.footer.font,
+              card.artistCredit?.trim() ? `Art: ${card.artistCredit}` : "Art: Unknown",
+            )}
           </span>
           {/* Footer-right: the owner's custom mark, or nothing. (The old
               hardcoded "PipGlyph" doubled up with the brand-mark overlay —
               layout v19 removed it.) */}
           {watermarkText ? (
             <span style={{ display: "flex", flexShrink: 0 }}>
-              {watermarkText}
+              {slotLine(layout.footer.font, watermarkText)}
             </span>
           ) : null}
         </div>
@@ -1864,7 +1867,7 @@ function AdventureBake({
       }}
     >
       <Band slot={slot.title} cardWidth={cardWidth}>
-        <span style={ELLIPSIS}>{name}</span>
+        <span style={ELLIPSIS}>{displayLine(name)}</span>
         {showCost && back.cost ? (
           <CostGlyphs
             cost={back.cost}
@@ -1876,7 +1879,7 @@ function AdventureBake({
         )}
       </Band>
       <Band slot={slot.type} cardWidth={cardWidth}>
-        <span style={ELLIPSIS}>{typeLine}</span>
+        <span style={ELLIPSIS}>{displayLine(typeLine)}</span>
         <span style={{ display: "flex" }} />
       </Band>
       <div
@@ -1968,7 +1971,7 @@ function SecondFaceBake({
           zIndex: 20,
         }}
       >
-        <span style={ELLIPSIS}>{name}</span>
+        <span style={ELLIPSIS}>{displayLine(name)}</span>
         {showCost && back.cost ? (
           <CostGlyphs
             cost={back.cost}
@@ -1993,7 +1996,7 @@ function SecondFaceBake({
           zIndex: 20,
         }}
       >
-        <span style={ELLIPSIS}>{typeLine}</span>
+        <span style={ELLIPSIS}>{displayLine(typeLine)}</span>
       </div>
       <div
         style={{

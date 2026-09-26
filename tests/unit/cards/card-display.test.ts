@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildTypeLine,
+  displayLine,
   parseChapters,
   showsPowerToughness,
+  slotLine,
 } from "@/lib/cards/card-display";
 
 describe("parseChapters", () => {
@@ -70,5 +73,29 @@ describe("showsPowerToughness", () => {
     expect(showsPowerToughness("artifact")).toBe(false);
     expect(showsPowerToughness("artifact", ["Equipment"])).toBe(false);
     expect(showsPowerToughness("enchantment", [])).toBe(false);
+  });
+});
+
+describe("displayLine", () => {
+  const NBSP = "\u00a0";
+
+  it("joins every inner space run into one no-break space", () => {
+    expect(displayLine("Jester's Mask")).toBe(`Jester's${NBSP}Mask`);
+    expect(displayLine("Jace,  the\tMind-Sculptor")).toBe(`Jace,${NBSP}the${NBSP}Mind-Sculptor`);
+    expect(displayLine(buildTypeLine({ supertype: "Legendary", cardType: "creature", subtypes: ["Human", "Knight"] }))).toBe(
+      `Legendary${NBSP}Creature${NBSP}—${NBSP}Human${NBSP}Knight`,
+    );
+  });
+
+  it("returns a line without inner spaces unchanged", () => {
+    for (const text of ["Bogardan", "Instant", "Mind-Sculptor", "", " Lead ", "Trail "]) {
+      expect(displayLine(text)).toBe(text);
+    }
+  });
+
+  it("only rewrites display-font slots", () => {
+    expect(slotLine("display", "Art: Nene Thomas")).toBe(`Art:${NBSP}Nene${NBSP}Thomas`);
+    expect(slotLine("body", "Art: Nene Thomas")).toBe("Art: Nene Thomas");
+    expect(slotLine(undefined, "Art: Nene Thomas")).toBe("Art: Nene Thomas");
   });
 });

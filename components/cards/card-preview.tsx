@@ -47,10 +47,12 @@ import {
 } from "@/lib/cards/rules-text";
 import {
   buildTypeLine,
+  displayLine,
   normalizeFrameTemplate,
   showsDefense,
   showsLoyalty,
   showsPowerToughness,
+  slotLine,
   type LoyaltyAbility,
   type SagaChapter,
 } from "@/lib/cards/card-display";
@@ -855,7 +857,7 @@ function CardFace({
           cost can be aligned independently in the layout editor. */}
       <BandSlot slot={layout.title} italic={isShowcase}>
         <span style={ELLIPSIS} title={safeTitle}>
-          {safeTitle}
+          {displayLine(safeTitle)}
         </span>
         {showCost && !layout.costRect ? (
           <ManaCostGlyphs
@@ -908,11 +910,13 @@ function CardFace({
         }}
       >
         <span style={ELLIPSIS}>
-          {buildTypeLine({
-            supertype: face.supertype,
-            cardType: face.cardType,
-            subtypes: face.subtypes,
-          })}
+          {displayLine(
+            buildTypeLine({
+              supertype: face.supertype,
+              cardType: face.cardType,
+              subtypes: face.subtypes,
+            }),
+          )}
         </span>
         {!layout.symbolRect ? (
           <SetSymbol
@@ -1163,12 +1167,17 @@ function CardFace({
           }}
         >
           <span style={ELLIPSIS}>
-            {face.artistCredit?.trim() ? `Art: ${face.artistCredit}` : "Art: Unknown"}
+            {slotLine(
+              layout.footer.font,
+              face.artistCredit?.trim() ? `Art: ${face.artistCredit}` : "Art: Unknown",
+            )}
           </span>
           {/* Footer-right: the owner's custom mark, or nothing — mirrors the
               bake (lib/render/card-image.tsx, layout v19). */}
           {footerWatermark ? (
-            <span style={{ flexShrink: 0 }}>{footerWatermark}</span>
+            <span style={{ flexShrink: 0 }}>
+              {slotLine(layout.footer.font, footerWatermark)}
+            </span>
           ) : null}
         </div>
       ) : null}
@@ -1554,7 +1563,7 @@ function AdventurePanel({
     <>
       <BandSlot slot={slot.title}>
         <span style={ELLIPSIS} title={name}>
-          {name}
+          {displayLine(name)}
         </span>
         {showCost ? (
           <ManaCostGlyphs
@@ -1565,7 +1574,7 @@ function AdventurePanel({
         ) : null}
       </BandSlot>
       <BandSlot slot={slot.type}>
-        <span style={ELLIPSIS}>{typeLine}</span>
+        <span style={ELLIPSIS}>{displayLine(typeLine)}</span>
       </BandSlot>
       <div
         style={{
@@ -1658,7 +1667,7 @@ function SecondFacePanel({
         }}
       >
         <span style={ELLIPSIS} title={name}>
-          {name}
+          {displayLine(name)}
         </span>
         {showCost ? (
           <ManaCostGlyphs
@@ -1682,7 +1691,7 @@ function SecondFacePanel({
           color: slot.type.colorHex,
         }}
       >
-        <span style={ELLIPSIS}>{typeLine}</span>
+        <span style={ELLIPSIS}>{displayLine(typeLine)}</span>
       </div>
       <div
         style={{

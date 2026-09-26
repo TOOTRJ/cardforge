@@ -50,6 +50,24 @@ describe("title band", () => {
   });
 });
 
+describe("display-font lines", () => {
+  it("hand every title, type line and display footer to displayLine in both renderers", () => {
+    // Satori places a word after a space at unkerned advances (TODO 4.31):
+    // a single-line Beleren text must reach either renderer as one run.
+    for (const src of [BAKE, PREVIEW]) {
+      expect(src).not.toMatch(/<span style=\{ELLIPSIS\}[^>]*>\s*\{(title|safeTitle|name|typeLine)\}\s*<\/span>/);
+      expect(src).toMatch(/\{slotLine\(\s*layout\.footer\.font,\s*\w+\.artistCredit/);
+    }
+    expect(BAKE).toContain("{displayLine(title)}");
+    expect(PREVIEW).toContain("{displayLine(safeTitle)}");
+    expect(BAKE.match(/\{displayLine\(typeLine\)\}/g)).toHaveLength(3);
+    expect(PREVIEW.match(/\{displayLine\(typeLine\)\}/g)).toHaveLength(2);
+    expect(PREVIEW).toMatch(/\{displayLine\(\s*buildTypeLine\(/);
+    expect(BAKE.match(/\{displayLine\(name\)\}/g)).toHaveLength(2);
+    expect(PREVIEW.match(/\{displayLine\(name\)\}/g)).toHaveLength(2);
+  });
+});
+
 describe("landscape renders", () => {
   it("report the rotated display size and draw the composite card 7:5", async () => {
     // card-image.tsx pulls fonts/frames lazily, but its module graph is
