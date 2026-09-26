@@ -454,11 +454,15 @@ const BASIC_LAND_TYPE_COLOR: Record<string, string> = {
   Forest: "G",
 };
 
+const WUBRG_LETTERS: ReadonlySet<string> = new Set(
+  Object.keys(SCRYFALL_COLOR_TO_IDENTITY),
+);
+
 /** The WUBRG letters of a list, in order, once each (drops C and junk). */
 function wubrgLetters(codes: readonly (string | null | undefined)[]): string[] {
   const out: string[] = [];
   for (const code of codes) {
-    if (code && code in SCRYFALL_COLOR_TO_IDENTITY && !out.includes(code)) {
+    if (code && WUBRG_LETTERS.has(code) && !out.includes(code)) {
       out.push(code);
     }
   }
