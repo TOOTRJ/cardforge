@@ -50,7 +50,10 @@ export function IdentityPanel({ revise = false }: IdentityPanelProps) {
       {/* Quick path stops here: a title makes a real card. Everything below
           is detail control. */}
       {revise ? null : (
-      <MoreOptions summary="More options — supertype, subtypes">
+      <MoreOptions
+        summary="More options — supertype, subtypes"
+        openWhen={Boolean(errors.supertype || errors.subtypes_text)}
+      >
         <div className="grid gap-4 sm:grid-cols-2">
           <FieldGroup
             label="Supertype"

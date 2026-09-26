@@ -643,6 +643,38 @@ describe("3b.5 the second face's name", () => {
     expect(saveButton().disabled).toBe(true);
   });
 
+  it("a subtypes error opens the Identity step's folded More options too", async () => {
+    renderForm({ mode: "create" });
+    await clickNext(); // Identity
+    await typeTitle("Too Many Types");
+    const details = screen
+      .getByText("More options — supertype, subtypes")
+      .closest("details") as HTMLDetailsElement;
+    expect(details.open).toBe(false);
+    await act(async () => {
+      fireEvent.change(screen.getByPlaceholderText("Dragon, Elder"), {
+        target: { value: "A, B, C, D, E, F, G, H, I, J, K" },
+      });
+    });
+    await goToLastStep();
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("save-as-draft"));
+    });
+    await clickSave();
+    // Client validation jumps back to Identity and unfolds the field.
+    await waitFor(() =>
+      expect(
+        (
+          screen
+            .getByText("More options — supertype, subtypes")
+            .closest("details") as HTMLDetailsElement
+        ).open,
+      ).toBe(true),
+    );
+    expect(screen.getByText("A card can have up to 10 subtypes.")).toBeTruthy();
+    expect(actions.createCardAction).not.toHaveBeenCalled();
+  });
+
   it("a second-face error opens the folded More options that holds the field", async () => {
     actions.updateCardAction.mockResolvedValue({
       ok: false,
