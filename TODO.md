@@ -1109,10 +1109,11 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
       - [x] **Foil on planeswalkers** (owner decision, round-2 review): each
         ability stripe carries its own sheen (`FoilStripeSheen`, masked by the
         stripe colour) between the stripe and the badge + text, in both
-        renderers — inside v28 (foil only; one production card, Coden). The
-        translucent rules BACKDROP (`rules.backdropHex` — m15pw's
-        non-planeswalker box, the token / Alpha token / Anime / Expedition
-        scrims) hid the foil the same way; it now carries its own too
+        renderers — inside v28 (foil only; one production card, Coden).
+      - [x] **Foil through rules backdrops** (v29, not v28): the translucent
+        rules BACKDROP (`rules.backdropHex` — m15pw's non-planeswalker box,
+        the token / Alpha token / Anime / Expedition scrims) hid the foil the
+        way the stripes did; it now carries its own sheen
         (`FoilBackdropSheen`, masked by the backdrop colour, clipped to its
         rounded corners, under the watermark + text), both renderers. Foil
         only, on those six templates: a clear rainbow on m15pw's pale box, a
@@ -1421,8 +1422,8 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
       `inset: 0` (Satori ignores it) and `mixBlendMode` (ignored), so foil
       never reached a saved image. Both renderers now draw one shared
       luminance-masked holographic sheen (`lib/cards/foil-finish.tsx`) under
-      the ink; finish-scoped sweep. Planeswalker ability stripes and
-      translucent rules backdrops carry their own sheen too (4.31).
+      the ink; finish-scoped sweep. Planeswalker ability stripes carry their
+      own sheen too, and translucent rules backdrops from v29 (4.31).
       (Status at `267f46c`: preview and bake are aligned for both (#381 v26,
       #382 v28), so only the **[decide]** is left. The Foil, Etched and
       Showcase chips in `components/creator/panels/effects-panel.tsx` are

@@ -211,11 +211,13 @@ describe("foil finish — real bakes", () => {
 // Planeswalker ability stripes. The rows paint translucent pale stripes OVER
 // the full-card sheen, so a foil planeswalker's ability box only kept a
 // faint trace of it; each stripe now carries its own sheen (FoilStripeSheen)
-// between the stripe and the badge + text. The m15pw masters live in the
-// frames bucket (never in git), so these bakes are served a synthetic
-// stand-in through a stubbed bucket — near-black card with a transparent art
-// window, grey loyalty plate — while the stripes, rows and badges (git) are
-// the real M15PW profile's. Offline and deterministic.
+// between the stripe and the badge + text. The same frame's rules backdrop
+// (its own block below) had the same trap and shares this stand-in. The
+// m15pw masters live in the frames bucket (never in git), so these bakes are
+// served a synthetic stand-in through a stubbed bucket — near-black card
+// with a transparent art window, grey loyalty plate — while the stripes,
+// rows and badges (git) are the real M15PW profile's. Offline and
+// deterministic.
 // ---------------------------------------------------------------------------
 
 const PW_ORIGIN = "https://frames.test";
@@ -265,7 +267,7 @@ async function solidArt(v: number): Promise<string> {
   return `data:image/png;base64,${png.toString("base64")}`;
 }
 
-describe("foil finish — planeswalker ability stripes (real bakes)", () => {
+describe("foil finish — m15pw stand-in (real bakes)", () => {
   let bucket: Awaited<ReturnType<typeof syntheticPwBucket>>;
   let art: string;
   let restoreStorage: () => void = () => {};
@@ -479,106 +481,108 @@ describe("foil finish — planeswalker ability stripes (real bakes)", () => {
   // stripes, and now the same fix (FoilBackdropSheen, masked by the backdrop).
   // -------------------------------------------------------------------------
 
-  const boxed = (finish: string, over: Partial<CardPreviewData> = {}) =>
-    card("m15pw", finish, { rulesText: "Vigilance", power: null, toughness: null, artUrl: art, ...over });
+  describe("translucent rules backdrop", () => {
+    const boxed = (finish: string, over: Partial<CardPreviewData> = {}) =>
+      card("m15pw", finish, { rulesText: "Vigilance", power: null, toughness: null, artUrl: art, ...over });
 
-  /** The backdrop's blank lower part: below "Vigilance", clear of the rails. */
-  const backdropProbe = () => {
-    const b = box(getFrameProfile("m15pw").rules.rect, 0);
-    return { x0: Math.round(W * 0.3), x1: Math.round(W * 0.85), y0: Math.round(H * 0.72), y1: b.y1 - 8 };
-  };
+    /** The backdrop's blank lower part: below "Vigilance", clear of the rails. */
+    const backdropProbe = () => {
+      const b = box(getFrameProfile("m15pw").rules.rect, 0);
+      return { x0: Math.round(W * 0.3), x1: Math.round(W * 0.85), y0: Math.round(H * 0.72), y1: b.y1 - 8 };
+    };
 
-  it("sheens a translucent rules backdrop in its own colour, keeping the ink on top", async () => {
-    const mod = await renderer();
-    const [regular, foil] = [await bakeWith(mod, boxed("regular")), await bakeWith(mod, boxed("foil"))];
-    // Before the fix only the card-wide sheen reached it, through the
-    // backdrop's 28 % and over dark art.
-    expect(meanDelta(regular, foil, backdropProbe())).toBeGreaterThan(8);
-    const rules = box(getFrameProfile("m15pw").rules.rect, 0);
-    let ink = 0;
-    let moved = 0;
-    for (let y = rules.y0; y < rules.y1; y += 1) {
-      for (let x = rules.x0; x < rules.x1; x += 1) {
-        if (lum(regular, x, y) < 40) {
-          ink += 1;
-          if (delta(regular, foil, x, y) > 24) moved += 1;
+    it("sheens a translucent rules backdrop in its own colour, keeping the ink on top", async () => {
+      const mod = await renderer();
+      const [regular, foil] = [await bakeWith(mod, boxed("regular")), await bakeWith(mod, boxed("foil"))];
+      // Before the fix only the card-wide sheen reached it, through the
+      // backdrop's 28 % and over dark art.
+      expect(meanDelta(regular, foil, backdropProbe())).toBeGreaterThan(8);
+      const rules = box(getFrameProfile("m15pw").rules.rect, 0);
+      let ink = 0;
+      let moved = 0;
+      for (let y = rules.y0; y < rules.y1; y += 1) {
+        for (let x = rules.x0; x < rules.x1; x += 1) {
+          if (lum(regular, x, y) < 40) {
+            ink += 1;
+            if (delta(regular, foil, x, y) > 24) moved += 1;
+          }
         }
       }
-    }
-    expect(ink).toBeGreaterThan(100);
-    expect(moved).toBe(0);
-  }, 60_000);
+      expect(ink).toBeGreaterThan(100);
+      expect(moved).toBe(0);
+    }, 60_000);
 
-  it("stays inside the backdrop's rounded corners", async () => {
-    const mod = await renderer();
-    // Black art: the card-wide sheen is nil around the box, so any change
-    // there is the backdrop sheen's (Satori clips it only to its own shape).
-    const black = await solidArt(0);
-    const [regular, foil] = [
-      await bakeWith(mod, boxed("regular", { artUrl: black })),
-      await bakeWith(mod, boxed("foil", { artUrl: black })),
-    ];
-    const rect = getFrameProfile("m15pw").rules.rect;
-    const [left, top] = [Math.round((rect.leftPct / 100) * W), Math.round((rect.topPct / 100) * H)];
-    const right = Math.round(((rect.leftPct + rect.widthPct) / 100) * W);
-    const bottom = Math.round(((rect.topPct + rect.heightPct) / 100) * H);
-    const radius = Math.round(W * 0.015);
-    const corners = [
-      [left + radius, top + radius, -1, -1],
-      [right - radius, top + radius, 1, -1],
-      [left + radius, bottom - radius, -1, 1],
-      [right - radius, bottom - radius, 1, 1],
-    ];
-    for (const [cx, cy, sx, sy] of corners) {
-      const outside: number[] = [];
-      const inside: number[] = [];
-      for (let y = top - 2; y < bottom + 2; y += 1) {
-        for (let x = left - 2; x < right + 2; x += 1) {
-          const [dx, dy] = [(x + 0.5 - cx) * sx, (y + 0.5 - cy) * sy];
-          if (dx <= 0 || dy <= 0) continue; // not this corner
-          const d = Math.hypot(dx, dy);
-          if (d > radius + 1.5) outside.push(delta(regular, foil, x, y));
-          else if (d < radius - 2) inside.push(delta(regular, foil, x, y));
+    it("stays inside the backdrop's rounded corners", async () => {
+      const mod = await renderer();
+      // Black art: the card-wide sheen is nil around the box, so any change
+      // there is the backdrop sheen's (Satori clips it only to its own shape).
+      const black = await solidArt(0);
+      const [regular, foil] = [
+        await bakeWith(mod, boxed("regular", { artUrl: black })),
+        await bakeWith(mod, boxed("foil", { artUrl: black })),
+      ];
+      const rect = getFrameProfile("m15pw").rules.rect;
+      const [left, top] = [Math.round((rect.leftPct / 100) * W), Math.round((rect.topPct / 100) * H)];
+      const right = Math.round(((rect.leftPct + rect.widthPct) / 100) * W);
+      const bottom = Math.round(((rect.topPct + rect.heightPct) / 100) * H);
+      const radius = Math.round(W * 0.015);
+      const corners = [
+        [left + radius, top + radius, -1, -1],
+        [right - radius, top + radius, 1, -1],
+        [left + radius, bottom - radius, -1, 1],
+        [right - radius, bottom - radius, 1, 1],
+      ];
+      for (const [cx, cy, sx, sy] of corners) {
+        const outside: number[] = [];
+        const inside: number[] = [];
+        for (let y = top - 2; y < bottom + 2; y += 1) {
+          for (let x = left - 2; x < right + 2; x += 1) {
+            const [dx, dy] = [(x + 0.5 - cx) * sx, (y + 0.5 - cy) * sy];
+            if (dx <= 0 || dy <= 0) continue; // not this corner
+            const d = Math.hypot(dx, dy);
+            if (d > radius + 1.5) outside.push(delta(regular, foil, x, y));
+            else if (d < radius - 2) inside.push(delta(regular, foil, x, y));
+          }
         }
+        expect(outside.length).toBeGreaterThanOrEqual(5);
+        expect(Math.max(...outside)).toBe(0);
+        expect(inside.reduce((sum, v) => sum + v, 0) / inside.length).toBeGreaterThan(4);
       }
-      expect(outside.length).toBeGreaterThanOrEqual(5);
-      expect(Math.max(...outside)).toBe(0);
-      expect(inside.reduce((sum, v) => sum + v, 0) / inside.length).toBeGreaterThan(4);
-    }
-  }, 60_000);
+    }, 60_000);
 
-  it("adds only that layer: every other finish, and foil cards without a backdrop, bake byte-identical without it", async () => {
-    const bakes = async (mod: Awaited<ReturnType<typeof renderer>>) => ({
-      regular: await bakeWith(mod, boxed("regular")),
-      etched: await bakeWith(mod, boxed("etched")),
-      showcase: await bakeWith(mod, boxed("showcase")),
-      foil: await bakeWith(mod, boxed("foil")),
-      // Ability rows replace the backdrop; an empty box draws none.
-      foilWalker: await bakeWith(mod, walker("foil")),
-      foilEmpty: await bakeWith(mod, boxed("foil", { rulesText: null })),
-    });
-    const real = await bakes(await renderer());
+    it("adds only that layer: every other finish, and foil cards without a backdrop, bake byte-identical without it", async () => {
+      const bakes = async (mod: Awaited<ReturnType<typeof renderer>>) => ({
+        regular: await bakeWith(mod, boxed("regular")),
+        etched: await bakeWith(mod, boxed("etched")),
+        showcase: await bakeWith(mod, boxed("showcase")),
+        foil: await bakeWith(mod, boxed("foil")),
+        // Ability rows replace the backdrop; an empty box draws none.
+        foilWalker: await bakeWith(mod, walker("foil")),
+        foilEmpty: await bakeWith(mod, boxed("foil", { rulesText: null })),
+      });
+      const real = await bakes(await renderer());
 
-    vi.resetModules();
-    vi.doMock("@/lib/cards/foil-finish", async (importOriginal) => ({
-      ...(await importOriginal<typeof import("@/lib/cards/foil-finish")>()),
-      FoilBackdropSheen: () => null,
-    }));
-    try {
-      const stubbed = await bakes(await renderer());
-      for (const k of ["regular", "etched", "showcase", "foilWalker", "foilEmpty"] as const) {
-        expect(stubbed[k].png.equals(real[k].png), k).toBe(true);
-      }
-      // Without it, the foil backdrop kept only a faint trace of the sheen.
-      expect(stubbed.foil.png.equals(real.foil.png)).toBe(false);
-      const trace = meanDelta(stubbed.regular, stubbed.foil, backdropProbe());
-      expect(trace).toBeLessThan(2);
-      expect(meanDelta(real.regular, real.foil, backdropProbe())).toBeGreaterThan(4 * trace);
-    } finally {
-      vi.doUnmock("@/lib/cards/foil-finish");
       vi.resetModules();
-    }
-  }, 120_000);
+      vi.doMock("@/lib/cards/foil-finish", async (importOriginal) => ({
+        ...(await importOriginal<typeof import("@/lib/cards/foil-finish")>()),
+        FoilBackdropSheen: () => null,
+      }));
+      try {
+        const stubbed = await bakes(await renderer());
+        for (const k of ["regular", "etched", "showcase", "foilWalker", "foilEmpty"] as const) {
+          expect(stubbed[k].png.equals(real[k].png), k).toBe(true);
+        }
+        // Without it, the foil backdrop kept only a faint trace of the sheen.
+        expect(stubbed.foil.png.equals(real.foil.png)).toBe(false);
+        const trace = meanDelta(stubbed.regular, stubbed.foil, backdropProbe());
+        expect(trace).toBeLessThan(2);
+        expect(meanDelta(real.regular, real.foil, backdropProbe())).toBeGreaterThan(4 * trace);
+      } finally {
+        vi.doUnmock("@/lib/cards/foil-finish");
+        vi.resetModules();
+      }
+    }, 120_000);
+  });
 });
 
 // ---------------------------------------------------------------------------
