@@ -117,6 +117,13 @@ export type StatSlot = {
    *  digits' box separately {79.28, 90.2, 13.67 × 3.72}. Without it the plate
    *  fills `rect`. */
   plateRect?: Rect;
+  /** How wide (card %) the value may print, centred in `rect`, when the frame
+   *  leaves it less room than `rect` is wide (the Alpha strip ends at its
+   *  pinstripe, the Modern plate's face inside its bevel): a wider value
+   *  shrinks to this (lib/cards/stat-fit.ts). Without it the value may fill
+   *  `rect`. Never wider than `rect` — a value wider than its flex box wraps
+   *  after a slash in both renderers. */
+  fitWidthPct?: number;
 };
 
 /** A frame colour key — the {color} of every frame asset
@@ -576,8 +583,12 @@ const AGCLASSIC: FrameProfile = {
   // Official 1993 cards print P/T on the frame strip BELOW the text box, not
   // on a plate: digits centred at ~1921 px (0.45 of the 1855–2000 strip,
   // pinstripe included) and ~88 %W, under the text box's right corner.
+  // The rect runs on to 1432 px, past the pinstripe's dark line (~1405 on
+  // alphaland, ~1410 here), so a long value (`*+1/*+1`) shrinks to the
+  // 1236–1404 px it can use centred on 1320 (TODO 4.31); `20/20` fits.
   pt: {
     rect: { topPct: 88.74, leftPct: 80.5, widthPct: 15, heightPct: 5.6 },
+    fitWidthPct: 11.2,
     sizePct: 0.04,
     colorHex: INK_DARK,
     weight: 700,
@@ -659,6 +670,10 @@ const M15PW: FrameProfile = {
     // scripts/lib/cc-frames.mjs — plateRect is that box in percent) and it
     // is drawn again here, above the stripes, pixel-for-pixel on the frame's.
     rect: { topPct: 90.2, leftPct: 80.6, widthPct: 14, heightPct: 3.72 },
+    // The shield's dark face is 1233–1395 px wide on the digits' row and
+    // tapers below it, so a value wider than 150 px (past three digits)
+    // shrinks instead of printing over the silver rim.
+    fitWidthPct: 10,
     plateRect: { topPct: 87.667, leftPct: 79.6, widthPct: 16, heightPct: 7.333 },
     plateAssetPathTemplate: "/frames/m15pw/loyalty/{color}.png",
     sizePct: 0.052,
@@ -961,8 +976,12 @@ const MODERN: FrameProfile = {
   },
   // The 2003 P/T box is a separate beveled plate (magic-new {color}pt.jpg),
   // upscaled to /frames/modern/pt/{color}.png. Drawn behind the dark value.
+  // The plate fills the rect, but its light face is 1138–1376 px wide (234 px
+  // on the narrowest colour, centred on the value): a longer value shrinks
+  // to that rather than print over the bevel.
   pt: {
     rect: { topPct: 88.4, leftPct: 73.3, widthPct: 21, heightPct: 6.8 },
+    fitWidthPct: 15.6,
     sizePct: 0.044,
     colorHex: INK_DARK,
     weight: 700,
@@ -1496,11 +1515,27 @@ const TARKIRDRAGON: FrameProfile = {
     weight: 700,
   },
 };
-const TARKIRDRACONIC = tarkirCard("Draconic", {
-  title: INK_DARK,
-  type: INK_DARK,
-  rules: INK_DARK,
-});
+// Draconic is the gold Tarkir: Dragonstorm dragon frame (TDM #292–323). Its
+// P/T prints in black on a light box ringed by serpents (TDM #321 Ureni
+// "10/10", #301 Magmatic Hellkite): MSE's pt/<c>pt.png, cropped by
+// scripts/build-showcase-frames.mjs to 1132,1813 368×188 on the 1500×2100
+// card (it runs to the card's right edge). Without it the P/T was white on
+// the light parchment and could not be read (owner review 2026-09-25).
+const TARKIRDRACONIC: FrameProfile = {
+  ...tarkirCard("Draconic", { title: INK_DARK, type: INK_DARK, rules: INK_DARK }),
+  // MSE's pt field (516,811 82×34 on 646×902) centres the value at
+  // 1293 × 1928 px, where both scans print it (86.0 %W, 91.7 %H); the rect
+  // is widened about that centre to the plate's light face (~1188–1400 px)
+  // so `10/10` prints at full size like Ureni's.
+  pt: {
+    rect: { topPct: 89.911, leftPct: 79.62, widthPct: 13.2, heightPct: 3.769 },
+    plateRect: { topPct: 86.3333, leftPct: 75.4667, widthPct: 24.5333, heightPct: 8.9524 },
+    plateAssetPathTemplate: "/frames/tarkirdraconic/pt/{color}.png",
+    sizePct: 0.05,
+    colorHex: INK_DARK,
+    weight: 700,
+  },
+};
 
 // LOTR — title bar (top), CIRCULAR art window (the One Ring), type bar, textbox.
 // The artSlot is the circle's bounding box; the frame's opaque corners hide the

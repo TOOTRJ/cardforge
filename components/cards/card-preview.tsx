@@ -31,10 +31,13 @@ import {
   type FoilArtSource,
 } from "@/lib/cards/foil-finish";
 import { fitRulesSizePct, fitSingleLineSizePct } from "@/lib/cards/render-tiers";
+import { fitStatSizePct, ptValue, STAT_BADGE_INSET } from "@/lib/cards/stat-fit";
 import {
   PLACEHOLDER_FLAVOR_TEXT,
   PLACEHOLDER_RULES_TEXT,
   RULES_TEXT,
+  orientationFromAspect,
+  type CardOrientation,
 } from "@/lib/cards/typography";
 import {
   tokenizeRulesText,
@@ -819,8 +822,9 @@ function CardFace({
       {showPT && layout.pt ? (
         <StatOverlay
           slot={layout.pt}
-          value={`${face.power ?? "—"}/${face.toughness ?? "—"}`}
+          value={ptValue(face.power, face.toughness)}
           colorKey={colorKey}
+          orientation={orientationFromAspect(aspect)}
           foil={plateFoil && { ...plateFoil, id: `${foilId}-pt` }}
         />
       ) : null}
@@ -829,6 +833,7 @@ function CardFace({
           slot={layout.loyalty}
           value={String(face.loyalty ?? "")}
           colorKey={colorKey}
+          orientation={orientationFromAspect(aspect)}
           foil={plateFoil && { ...plateFoil, id: `${foilId}-loyalty` }}
         />
       ) : null}
@@ -837,6 +842,7 @@ function CardFace({
           slot={layout.defense}
           value={String(face.defense)}
           colorKey={colorKey}
+          orientation={orientationFromAspect(aspect)}
           foil={plateFoil && { ...plateFoil, id: `${foilId}-defense` }}
         />
       ) : null}
@@ -1246,11 +1252,14 @@ function StatOverlay({
   slot,
   value,
   colorKey,
+  orientation,
   foil = null,
 }: {
   slot: StatSlot;
   value: string;
   colorKey: string;
+  /** The card's orientation — the shrink-to-fit floor is a point size. */
+  orientation: CardOrientation;
   /** Foil finish: the plate gets the card's sheen too (the full-card foil
    *  layer sits below the plates) — the bake's StatBake twin. */
   foil?: { id: string; landscape: boolean } | null;
@@ -1286,13 +1295,21 @@ function StatOverlay({
           />
         </picture>
         {plateFoil(slot.plateRect, { ...rectStyle(slot.plateRect), zIndex: 22 })}
-        <StatOverlay slot={{ ...slot, plateAssetPathTemplate: undefined, plateRect: undefined }} value={value} colorKey={colorKey} />
+        <StatOverlay
+          slot={{ ...slot, plateAssetPathTemplate: undefined, plateRect: undefined }}
+          value={value}
+          colorKey={colorKey}
+          orientation={orientation}
+        />
       </>
     );
   }
   // Per-frame-colour ink (Alpha: silver on every frame but white) — the
   // same slotInk() the bake's StatBake resolves.
   const ink = slotInk(slot, colorKey);
+  // A value wider than its box shrinks to fit (TODO 3.18); one that fits
+  // keeps the profile size — the same fitStatSizePct() as the bake.
+  const sizePct = fitStatSizePct(slot, value, orientation);
   return (
     <div
       className="pointer-events-none absolute flex items-center justify-center"
@@ -1322,7 +1339,7 @@ function StatOverlay({
           aria-hidden
           className="absolute"
           style={{
-            inset: "8% 12%",
+            inset: `${STAT_BADGE_INSET.yPct}% ${STAT_BADGE_INSET.xPct}%`,
             background: slot.badgeColorHex,
             borderRadius: "42%",
             boxShadow: "0 0.4cqw 1cqw rgba(0,0,0,0.45)",
@@ -1334,7 +1351,7 @@ function StatOverlay({
         className="relative"
         style={{
           fontFamily: DISPLAY_FONT,
-          fontSize: cqw(slot.sizePct),
+          fontSize: cqw(sizePct),
           fontWeight: slot.weight ?? 700,
           color: ink.colorHex,
           ...(slot.valueDxEm || slot.valueDyEm
@@ -1676,13 +1693,16 @@ function SecondFacePanel({
             alignItems: "center",
             justifyContent: "center",
             fontFamily: DISPLAY_FONT,
-            fontSize: cqw(slot.pt.sizePct),
+            // Shrinks to fit like the front's StatOverlay (TODO 3.18).
+            fontSize: cqw(
+              fitStatSizePct(slot.pt, ptValue(data.power, data.toughness), orientationFromAspect(aspect)),
+            ),
             fontWeight: slot.pt.weight ?? 700,
             color: slot.pt.colorHex,
             ...(slot.pt.shadowCss ? { textShadow: slot.pt.shadowCss } : {}),
           }}
         >
-          {`${data.power ?? "—"}/${data.toughness ?? "—"}`}
+          {ptValue(data.power, data.toughness)}
         </div>
       ) : null}
     </>

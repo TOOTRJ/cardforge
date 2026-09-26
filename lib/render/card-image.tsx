@@ -16,7 +16,8 @@
 import { ImageResponse } from "next/og";
 import { foilMaskSource, resolveRenderableImage } from "@/lib/render/art-source";
 import { fitRulesSizePct, fitSingleLineSizePct } from "@/lib/cards/render-tiers";
-import { RULES_TEXT } from "@/lib/cards/typography";
+import { fitStatSizePct, ptValue, STAT_BADGE_INSET } from "@/lib/cards/stat-fit";
+import { RULES_TEXT, orientationFromAspect, type CardOrientation } from "@/lib/cards/typography";
 import { tokenize, tokenSuffix } from "@/components/cards/mana-cost-glyphs";
 import { ROSE_STAR_PATH, SET_MARK_GEM_PATH, SET_MARK_RING, SET_MARK_STAR_PATH } from "@/lib/brand/geometry";
 import { RARITY_INK, RARITY_SET_MARK } from "@/lib/brand/constants";
@@ -148,6 +149,15 @@ function slotBox(rect: Rect) {
 
 function fpx(sizePct: number, cardWidth: number): number {
   return Math.round(sizePct * cardWidth);
+}
+
+/** A stat value's font size in px (TODO 3.18): the profile size, rounded as
+ *  every slot is, when the value fits its box; otherwise the preview's
+ *  fitStatSizePct() rounded DOWN — rounding up could push it past the box
+ *  again, and Satori wraps `X/X+1` after its slash when it doesn't fit. */
+function statPx(slot: StatSlot, value: string, orientation: CardOrientation, cardWidth: number): number {
+  const fitted = fitStatSizePct(slot, value, orientation);
+  return fitted < slot.sizePct ? Math.floor(fitted * cardWidth) : fpx(slot.sizePct, cardWidth);
 }
 
 function vJustify(align: SlotAlign | undefined): string {
@@ -779,9 +789,10 @@ function CardImage({
       {showPT && layout.pt
         ? StatBake({
             slot: layout.pt,
-            value: `${card.power ?? "—"}/${card.toughness ?? "—"}`,
+            value: ptValue(card.power, card.toughness),
             colorKey,
             cardWidth: width,
+            orientation: orientationFromAspect(aspect),
             foil: plateFoil,
           })
         : null}
@@ -791,6 +802,7 @@ function CardImage({
             value: String(card.loyalty ?? "—"),
             colorKey,
             cardWidth: width,
+            orientation: orientationFromAspect(aspect),
             foil: plateFoil,
           })
         : null}
@@ -800,6 +812,7 @@ function CardImage({
             value: String(card.defense ?? "—"),
             colorKey,
             cardWidth: width,
+            orientation: orientationFromAspect(aspect),
             foil: plateFoil,
           })
         : null}
@@ -1540,12 +1553,15 @@ function StatBake({
   value,
   colorKey,
   cardWidth,
+  orientation,
   foil = null,
 }: {
   slot: StatSlot;
   value: string;
   colorKey: string;
   cardWidth: number;
+  /** The card's orientation — the shrink-to-fit floor is a point size. */
+  orientation: CardOrientation;
   /** Foil finish: the plate is part of the printed sheet, so it gets the
    *  card's sheen too (the full-card layer sits below the plates). */
   foil?: { cardHeight: number; landscape: boolean } | null;
@@ -1580,6 +1596,7 @@ function StatBake({
           value,
           colorKey,
           cardWidth,
+          orientation,
         })}
       </div>
     );
@@ -1587,6 +1604,7 @@ function StatBake({
   // Per-frame-colour ink (Alpha: silver on every frame but white) — the
   // same slotInk() the preview's StatOverlay resolves.
   const ink = slotInk(slot, colorKey);
+  const size = statPx(slot, value, orientation, cardWidth);
   return (
     <div
       style={{
@@ -1617,10 +1635,10 @@ function StatBake({
         <div
           style={{
             position: "absolute",
-            top: "8%",
-            left: "12%",
-            right: "12%",
-            bottom: "8%",
+            top: `${STAT_BADGE_INSET.yPct}%`,
+            left: `${STAT_BADGE_INSET.xPct}%`,
+            right: `${STAT_BADGE_INSET.xPct}%`,
+            bottom: `${STAT_BADGE_INSET.yPct}%`,
             background: slot.badgeColorHex,
             borderRadius: "42%",
           }}
@@ -1633,15 +1651,15 @@ function StatBake({
           fontFamily: DISPLAY_FONT,
           color: ink.colorHex,
           fontWeight: slot.weight ?? 700,
-          fontSize: fpx(slot.sizePct, cardWidth),
+          fontSize: size,
           // Same nudge as the preview's translate(${valueDxEm}em, ${valueDyEm}em);
           // computed in px here since Satori doesn't resolve em in transforms.
           ...(slot.valueDxEm || slot.valueDyEm
             ? {
                 transform: `translate(${Math.round(
-                  (slot.valueDxEm ?? 0) * fpx(slot.sizePct, cardWidth),
+                  (slot.valueDxEm ?? 0) * size,
                 )}px, ${Math.round(
-                  (slot.valueDyEm ?? 0) * fpx(slot.sizePct, cardWidth),
+                  (slot.valueDyEm ?? 0) * size,
                 )}px)`,
               }
             : {}),
@@ -1980,14 +1998,15 @@ function SecondFaceBake({
             transform: rot,
             transformOrigin: "50% 50%",
             fontFamily: DISPLAY_FONT,
-            fontSize: fpx(slot.pt.sizePct, cardWidth),
+            // Shrinks to fit like the front's StatBake (TODO 3.18).
+            fontSize: statPx(slot.pt, ptValue(back.power, back.toughness), orientationFromAspect(aspect), cardWidth),
             fontWeight: slot.pt.weight ?? 700,
             color: slot.pt.colorHex,
             ...(slot.pt.shadowCss ? { textShadow: slot.pt.shadowCss } : {}),
             zIndex: 20,
           }}
         >
-          {`${back.power ?? "—"}/${back.toughness ?? "—"}`}
+          {ptValue(back.power, back.toughness)}
         </div>
       ) : null}
     </div>

@@ -550,7 +550,9 @@ Open decisions are marked **[decide]**; none blocks its phase.
 - [ ] **3.17 [P2] Flat inline pips (shadow only in the cost band)** (Card Conjurer audit 2026-09-25) — Printed cards, and CC (`packM15RegularNew.js`:54 vs :57), shadow only the mana cost; inline rules symbols are flat (DOM Llanowar Elves). We shadow every rules, loyalty, saga and second-face pip: the preview uses `ms-shadow` (`components/cards/card-preview.tsx`:1690), the bake's ManaGem always sets `boxShadow` (`lib/render/card-image.tsx`:826,843,897), and override pips are shadowed too (:1008-1021).
 
       Add a `shadow` flag on ManaGem and the rules pip items, on only in the cost band. Parity test; bundle with 3.12.
-- [ ] **3.18 [P2] Stat values shrink to fit their plate** (Card Conjurer audit 2026-09-25) — P/T, loyalty and defense render at a fixed `slot.sizePct` (StatBake in `lib/render/card-image.tsx` ~1422, `components/cards/card-preview.tsx` ~1112), while each side allows 16 characters (`lib/validation/card.ts`:121-126). `100/100` overflows the M15 plate; '15/15', '*/1+*' and 'X/X+1' fit.
+- [x] **3.18 [P2] Stat values shrink to fit their plate** (Card Conjurer audit 2026-09-25) — P/T, loyalty and defense render at a fixed `slot.sizePct` (StatBake in `lib/render/card-image.tsx` ~1422, `components/cards/card-preview.tsx` ~1112), while each side allows 16 characters (`lib/validation/card.ts`:121-126). `100/100` overflows the M15 plate; '15/15', '*/1+*' and 'X/X+1' fit.
+
+      Done (wf/r5-stats): `lib/cards/stat-fit.ts` measures a value with Beleren Bold's real advance widths (an average would have shrunk `10/10`) and both renderers print it at `fitStatSizePct()` — the profile size, unchanged, when it fits its box (the rect, a drawn badge, or the profile's narrower `fitWidthPct`: Alpha strip, Modern plate face, planeswalker shield); smaller when not; flip second faces too. `X/X+1` did NOT fit on M15: it was 3 px wider than the plate's box and both renderers wrapped it after the slash. `statsShrink(row)` is the card predicate for the layout bump (0 of 724 public production cards).
 
       Run stat values through `fitSingleLineSizePct` against the plate width (4.18's plateRect once it exists), capped at the profile size, in both renderers. CC's P/T is oneLine with shrink (`packM15RegularNew.js`:58).
 
@@ -841,7 +843,7 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
       Needs 4.23 (text treatment) and 4.24 (original pips).
 
       P3: a 1997/2003 layout matrix — compare CC's community-made 1997 planeswalker/saga frames (`packPlaneswalkerSeventh`, `packOldSaga`; custom designs, not printings) with MSE's (critic correction): `magic-new-planeswalker(-4abil)`, `-split(-fuse)`, `-flip`, `-leveler`, `-doublefaced`, `-token`, `-emblem`, and `magic-old-split/-flip/-token`.
-- [ ] (partly 2026-09-25: of the 12 contradicted profiles, tarkirdragon was re-measured on MUL #1/#60 with its own P/T plate (#381) and tarkirghostfire rebuilt with translucent boxes + P/T ribbon (#382); tarkirdraconic's white-on-parchment P/T is still unreadable (4.31). The other 9 profiles, per-set basics and new families are open) **4.11 [P1] Showcase families from MSE (744–750 px)**, in request-log
+- [ ] (partly 2026-09-25: of the 12 contradicted profiles, tarkirdragon was re-measured on MUL #1/#60 with its own P/T plate (#381) and tarkirghostfire rebuilt with translucent boxes + P/T ribbon (#382); tarkirdraconic's white-on-parchment P/T now sits on MSE's serpent-ringed plates in black ink (4.31, wf/r5-stats). The other 9 profiles, per-set basics and new families are open) **4.11 [P1] Showcase families from MSE (744–750 px)**, in request-log
       order — re-measure the 12 contradicted profiles from scans (lotr,
       lotrscroll, avatar, bloomburrow, bloomanime, tarkir ×3, expeditionland,
       fullart, m15textless ×2), then per-set full-art basics and the
@@ -1058,9 +1060,12 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
         `frame_reviews` and the frames bucket. Picker chips and toasts print
         the label once (`setQualifiedFrameLabel`), not "Tarkir: Dragonstorm —
         …".
-      - **Draconic P/T.** The gold TDM dragon frame people expect is
+      - [x] **Draconic P/T.** The gold TDM dragon frame people expect is
         `tarkirdraconic`. Its P/T is white on light parchment, so it can't be
-        read, and it needs the same plate treatment Dragon Wing got.
+        read, and it needs the same plate treatment Dragon Wing got. Done
+        (wf/r5-stats): MSE's serpent-ringed pt/<c>pt.png plates
+        (build-showcase-frames.mjs `plate`), black ink at MSE's pt field,
+        matching TDM #321 Ureni and #301 Magmatic Hellkite.
       - [x] **Ghostfire rebuilt** (owner decision): MSE's translucent boxes at
         60 % + P/T ribbon (scripts/build-showcase-frames.mjs), white ink, type
         line inside its band.
@@ -1071,11 +1076,14 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
         agclassic (MSE's light centre and coloured text-box ring cut, its
         bevel widened to the print's), the land print's dark · colour · dark
         lines on alphaland.
-      - **Alpha long P/T (pre-existing):** a P/T like `*+1/*+1` runs out of
+      - [x] **Alpha long P/T (pre-existing):** a P/T like `*+1/*+1` runs out of
         the strip across the pinstripe into the black border — the P/T rect
         spans 1207–1432 px and neither StatBake nor StatOverlay fits the
         digits (`10/10` fits). Fix: shrink-to-fit in both renderers and end
-        AGCLASSIC.pt.rect inside the pinstripe (~1404 px).
+        AGCLASSIC.pt.rect inside the pinstripe (~1404 px). Done (wf/r5-stats)
+        with 3.18: the rect keeps its centre (1320 px) and `fitWidthPct: 11.2`
+        caps the value at 1236–1404 px, so every value that fits stays
+        byte-identical (moving the rect's edges would re-round its centring).
       - **Alpha bevel lighting:** MSE lights every colour's text-box bevel
         the same way (lit top + right); the print does that on white and
         artifact cards but lights blue and red ones from the left + bottom.
