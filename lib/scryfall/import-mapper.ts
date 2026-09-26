@@ -127,6 +127,17 @@ export type ScryfallImportPatch = {
   supertype?: string;
   subtypes_text?: string;
   rarity?: Rarity;
+  /** The card's COLOUR as the creator models it — the one frame dress the
+   *  card wears (single-select: two or more colours → ["multicolor"]). It is
+   *  the printed FRONT FACE's colour (frameColorsFromScryfall, TODO 1.2),
+   *  never Scryfall's Commander `color_identity`: a DFC whose back is
+   *  another colour (Ajani, Nacatl Pariah) imports as its white front, and
+   *  Westvale Abbey as the colourless land it is. The field never held
+   *  Commander identity — it collapses two colours to "multicolor" — and
+   *  nothing reads it as such: a deck entry's identity is
+   *  deck_cards.color_identity, which the deck importer copies from
+   *  Scryfall directly (lib/decks/import-resolution.ts), not through this
+   *  mapper. */
   color_identity?: ColorIdentity[];
   rules_text?: string;
   flavor_text?: string;
@@ -433,44 +444,142 @@ export function printingTreatmentHint(treatment: PrintingTreatment): string {
   } frame instead.`;
 }
 
-/**
- * Best-effort: pull a normalized color identity from either Scryfall's
- * `color_identity` (preferred — accounts for lands and hybrid mana) or
- * `colors` as a fallback. Two or more colors collapse to ["multicolor"] —
- * the creator's color model is single-select (one frame dress per card).
- */
-export function parseColorIdentity(
-  card: ScryfallCard,
-): ColorIdentity[] {
-  const raw = card.color_identity ?? card.colors ?? [];
-  const out: ColorIdentity[] = [];
-  for (const code of raw) {
-    const mapped = SCRYFALL_COLOR_TO_IDENTITY[code];
-    if (mapped && !out.includes(mapped)) out.push(mapped);
+// A basic land type's intrinsic mana ability (rule 305.6): a face typed
+// Plains taps for {W} with no text saying so.
+const BASIC_LAND_TYPE_COLOR: Record<string, string> = {
+  Plains: "W",
+  Island: "U",
+  Swamp: "B",
+  Mountain: "R",
+  Forest: "G",
+};
+
+/** The WUBRG letters of a list, in order, once each (drops C and junk). */
+function wubrgLetters(codes: readonly (string | null | undefined)[]): string[] {
+  const out: string[] = [];
+  for (const code of codes) {
+    if (code && code in SCRYFALL_COLOR_TO_IDENTITY && !out.includes(code)) {
+      out.push(code);
+    }
   }
-  if (out.length > 1) return ["multicolor"];
-  // Empty identity means "colorless" — surface that so the form picks it up.
-  if (out.length === 0) out.push("colorless");
-  return out.filter((v) =>
+  return out;
+}
+
+/** The colours of every mana symbol in the text: {W}, {W/U}, {2/W},
+ *  {W/P}, {G/U/P}. */
+function manaSymbolColors(text: string | null | undefined): string[] {
+  const letters: string[] = [];
+  for (const [, symbol] of (text ?? "").matchAll(/\{([^}]+)\}/g)) {
+    letters.push(...symbol.toUpperCase().split("/"));
+  }
+  return wubrgLetters(letters);
+}
+
+/**
+ * The colours the printing's FRONT FACE is dressed in, as WUBRG letters
+ * (TODO 1.2) — the frame colour, never Scryfall's Commander colour identity:
+ *   1. The face's printed colours (`colors` + `color_indicator`). Transform,
+ *      modal DFC and battle faces carry their own: Ajani, Nacatl Pariah MH3
+ *      #237 is its white front, although its identity is R/W. Faces that
+ *      share one card (split, flip, adventure) use the card's `colors` —
+ *      Scryfall gives an adventurer its creature's colours (Callous
+ *      Sell-Sword WOE #221 is black), and a split card both halves' (one
+ *      frame paints both until 4.26). A Room's doors carry no colours of
+ *      their own and the card's are both doors', so its first door is read
+ *      from its mana cost.
+ *   2. A colourless front stays colourless (Thought-Knot Seer, Solemn
+ *      Simulacrum, a Talisman whose rules mention coloured mana) — except
+ *      a LAND or a DEVOID card, which is dressed by its mana:
+ *        • single-faced: `color_identity` (its cost and rules text) plus,
+ *          for a land on the 2003 frame or later, `produced_mana` — Command
+ *          Tower (MSC #233, the curated m15land/m reference) taps for any
+ *          colour and prints gold (LANDS_UNDRESSED_BY_PRODUCED_MANA); Kessig
+ *          Wolf Run's R/G ability prints an R/G land;
+ *        • multi-faced: the front face's own symbols, because identity and
+ *          produced_mana cover both faces — Westvale Abbey SOI #281 is a
+ *          colourless land whose identity is its back face's black.
+ * An older cached shape with no `colors` anywhere falls back to the
+ * identity, as the importer always did.
+ */
+export function frontFaceColors(card: ScryfallCard): string[] {
+  const faces = card.card_faces ?? [];
+  const front = faces.length >= 2 ? faces[0] : undefined;
+  let printed: (string | null | undefined)[] | undefined;
+  if (front?.colors) {
+    printed = [...front.colors, ...(front.color_indicator ?? [])];
+  } else if (front && isRoomCard(card)) {
+    printed = [...manaSymbolColors(front.mana_cost), ...(front.color_indicator ?? [])];
+  } else if (card.colors) {
+    printed = [...card.colors, ...(card.color_indicator ?? [])];
+  }
+  if (printed === undefined) return wubrgLetters(card.color_identity ?? []);
+
+  const colors = wubrgLetters(printed);
+  if (colors.length > 0) return colors;
+
+  const frontType = typeLineWords(frontTypeLine(card));
+  const isLand = frontType.words.some((w) => w.cardType === "land");
+  const isDevoid =
+    (card.frame_effects ?? []).some((e) => e.toLowerCase() === "devoid") ||
+    (card.keywords ?? []).some((k) => k.toLowerCase() === "devoid");
+  if (!isLand && !isDevoid) return [];
+  if (front) {
+    return wubrgLetters([
+      ...manaSymbolColors(front.mana_cost),
+      ...manaSymbolColors(front.oracle_text),
+      ...frontType.subtypes.map((subtype) => BASIC_LAND_TYPE_COLOR[subtype]),
+    ]);
+  }
+  const producedDresses =
+    isLand && !LANDS_UNDRESSED_BY_PRODUCED_MANA.has((card.frame ?? "").trim());
+  return wubrgLetters([
+    ...(card.color_identity ?? []),
+    ...(producedDresses ? card.produced_mana ?? [] : []),
+  ]);
+}
+
+// Border eras whose lands are NOT dressed by the mana they produce. From
+// the 2003 frame on, a land that taps for any colour prints the gold land
+// frame (checked by eye on Scryfall's scans: Command Tower C13/MSC, City of
+// Brass MMA/2X2, Mana Confluence JOU, Glimmervoid MMA, Exotic Orchard
+// PC2/CN2, Path of Ancestry C17, Cavern of Souls MM3 and ZNE). The 1993 and
+// 1997 frames print those lands on the plain land frame (City of Brass ARN
+// and 7ED, Rainbow Vale FEM, Path of Ancestry and Command Tower BRC), so
+// there only the identity dresses a land.
+const LANDS_UNDRESSED_BY_PRODUCED_MANA: ReadonlySet<string> = new Set([
+  "1993",
+  "1997",
+]);
+
+/**
+ * The imported card's colour in the creator's single-select model (one
+ * frame dress per card): the front face's colours (frontFaceColors), with
+ * none → ["colorless"] and two or more → ["multicolor"]. This is what the
+ * import writes into the card's `color_identity` field — the frame colour,
+ * not Commander identity (see ScryfallImportPatch.color_identity).
+ */
+export function frameColorsFromScryfall(card: ScryfallCard): ColorIdentity[] {
+  const colors = frontFaceColors(card).map((code) => SCRYFALL_COLOR_TO_IDENTITY[code]);
+  if (colors.length > 1) return ["multicolor"];
+  if (colors.length === 0) return ["colorless"];
+  return colors.filter((v) =>
     (COLOR_IDENTITY_VALUES as readonly string[]).includes(v),
   );
 }
 
 /**
- * The identity /admin/frame-compare renders a REAL printing with: like
- * parseColorIdentity, except a two-colour printing keeps both colours, so a
- * split-frame template (Dragon Wing, FrameProfile.twoColorSplit) draws the
- * split wings the scan shows — MUL #60 Taigam is W/U — instead of the
+ * The colours /admin/frame-compare renders a REAL printing with: like
+ * frameColorsFromScryfall, except a two-colour printing keeps both colours,
+ * so a split-frame template (Dragon Wing, FrameProfile.twoColorSplit) draws
+ * the split wings the scan shows — MUL #60 Taigam is W/U — instead of the
  * creator's single "multicolor" dress. Every other frame resolves a
  * two-colour identity to the same "m" frame, so nothing else changes.
  */
 export function referenceColorIdentity(card: ScryfallCard): ColorIdentity[] {
-  const collapsed = parseColorIdentity(card);
-  if (collapsed[0] !== "multicolor") return collapsed;
-  const colors = [...new Set(card.color_identity ?? card.colors ?? [])]
-    .map((code) => SCRYFALL_COLOR_TO_IDENTITY[code])
-    .filter(Boolean);
-  return colors.length === 2 ? colors : collapsed;
+  const colors = frontFaceColors(card);
+  return colors.length === 2
+    ? colors.map((code) => SCRYFALL_COLOR_TO_IDENTITY[code])
+    : frameColorsFromScryfall(card);
 }
 
 /**
@@ -502,7 +611,7 @@ export function mapScryfallToFormPatch(
   const typeParts = parseTypeLine(pick(front?.type_line, card.type_line), {
     cardType: kind ? KIND_DEFS[kind].cardType : undefined,
   });
-  const colorIdentity = parseColorIdentity(card);
+  const colorIdentity = frameColorsFromScryfall(card);
   const rarity =
     card.rarity && SCRYFALL_RARITY[card.rarity]
       ? SCRYFALL_RARITY[card.rarity]

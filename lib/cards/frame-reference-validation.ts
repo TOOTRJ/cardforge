@@ -1,7 +1,7 @@
 import type { ScryfallCard } from "@/lib/scryfall/client";
 import {
+  frameColorsFromScryfall,
   kindFromScryfall,
-  parseColorIdentity,
   parseTypeLine,
 } from "@/lib/scryfall/import-mapper";
 import { pickFrameColorKey } from "@/components/cards/frame-layer";
@@ -83,7 +83,7 @@ export function validateReferenceForCombo(
   // admin checklist and the compare page title do.
   const label = FRAME_TEMPLATE_LABELS[template] ? eraGroupFrameLabel(template) : template;
 
-  const cardColor = pickFrameColorKey(parseColorIdentity(card));
+  const cardColor = pickFrameColorKey(frameColorsFromScryfall(card));
   if (cardColor !== colorKey) {
     errors.push(
       `${card.name} is a ${COLOR_WORD[cardColor] ?? cardColor} card; this row verifies the ${COLOR_WORD[colorKey] ?? colorKey} ${label} frame.`,

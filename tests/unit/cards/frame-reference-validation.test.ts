@@ -167,4 +167,16 @@ describe("validateReferenceForCombo", () => {
     const strix = scryfallCardSchema.parse(printings["2xm-191"]);
     expect(validateReferenceForCombo(strix, "m15artifact", "m").errors).toEqual([]);
   });
+
+  // TODO 1.2: the colour check reads the printing's front face, like the
+  // compare render. Command Tower MSC #233, the curated m15land/m default,
+  // prints gold but has an empty identity, so it used to be refused as a
+  // colourless card; Westvale Abbey's black identity is its back face's.
+  it("checks the front face's colour (Command Tower, Westvale Abbey)", () => {
+    const tower = scryfallCardSchema.parse(printings["msc-233"]);
+    expect(validateReferenceForCombo(tower, "m15land", "m").errors).toEqual([]);
+    const westvale = scryfallCardSchema.parse(printings["soi-281"]);
+    expect(validateReferenceForCombo(westvale, "m15land", "c").errors).toEqual([]);
+    expect(validateReferenceForCombo(westvale, "m15land", "b").errors[0]).toMatch(/is a colorless card/);
+  });
 });

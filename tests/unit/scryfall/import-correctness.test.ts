@@ -4,12 +4,16 @@ import { describe, expect, it } from "vitest";
 import printings from "./fixtures/import-printings.json";
 import { scryfallCardSchema, type ScryfallCard } from "@/lib/scryfall/client";
 import {
+  frameColorsFromScryfall,
   frameTemplateFromScryfall,
+  frontFaceColors,
   kindFromScryfall,
   mapScryfallToFormPatch,
   parseTypeLine,
+  referenceColorIdentity,
   type ScryfallImportPatch,
 } from "@/lib/scryfall/import-mapper";
+import { toResolvedCardData } from "@/lib/decks/import-resolution";
 import { KIND_DEFS, type FrameColorKey } from "@/lib/creator/card-kinds";
 import {
   importFrameCandidates,
@@ -367,5 +371,138 @@ describe("where an import lands in the creator (production's verified frames)", 
     expect(landing(mapScryfallToFormPatch(printing("neo-141"))).template).toBe("saga");
     // A Room is no longer a split card.
     expect(landing(mapScryfallToFormPatch(printing("dsk-43"))).template).toBe("m15");
+  });
+});
+
+describe("colour from the front face (TODO 1.2)", () => {
+  // [fixture, front-face letters, frame colour key, Scryfall's Commander
+  // identity (for contrast: the old import read it first)]
+  const cases: Array<[PrintingKey, string[], string, string[]]> = [
+    // Controls: mono and gold single-faced cards are unchanged.
+    ["dom-168", ["G"], "g", ["G"]],
+    ["iko-211", ["R", "U"], "m", ["R", "U"]],
+    ["2xm-191", ["B", "U"], "m", ["B", "U"]],
+    // Transform DFCs: the front's colours. Ajani's R/W identity comes from
+    // its back face; the front is white.
+    ["isd-51", ["U"], "u", ["U"]],
+    ["ori-23", ["W"], "w", ["W"]],
+    ["mh3-237", ["W"], "w", ["R", "W"]],
+    ["neo-141", ["R"], "r", ["R"]],
+    // Modal DFCs: Valki is black (Tibalt is the red half); Brightclimb
+    // Pathway's front taps for {W} only.
+    ["khm-114", ["B"], "b", ["B", "R"]],
+    ["znr-259", ["W"], "w", ["B", "W"]],
+    // Westvale Abbey: a colourless land. Its black identity is Ormendahl's.
+    ["soi-281", [], "c", ["B"]],
+    // Colourless cards stay colourless, artifacts and tokens included — a
+    // Treasure produces every colour but isn't a land.
+    ["ogw-9", [], "c", []],
+    ["lea-255", [], "c", []],
+    ["m21-239", [], "c", []],
+    ["tmsh-27", [], "c", []],
+    ["tkld-7", [], "c", []],
+    // Devoid: dressed by its mana (Eldrazi Displacer {2}{W}).
+    ["ogw-13", ["W"], "w", ["W"]],
+    // Lands: a colour indicator (Dryad Arbor), identity + produced mana.
+    ["dsc-273", ["G"], "g", ["G"]],
+    ["mrd-283", ["U"], "u", ["U"]],
+    ["eoc-176", ["U"], "u", ["U"]],
+    ["isd-243", ["G", "R"], "m", ["G", "R"]],
+    // Command Tower MSC #233 (the curated m15land/m reference) taps for any
+    // colour: gold, although its identity is empty. So does every such land
+    // from the 2003 frame on (Command Tower C13 #281, the Cavern of Souls
+    // Expedition ZNE #22) — but not on the 1997 frame, where Path of
+    // Ancestry BRC #192 prints the plain land frame (checked on the scans).
+    ["msc-233", ["B", "G", "R", "U", "W"], "m", []],
+    ["c13-281", ["B", "G", "R", "U", "W"], "m", []],
+    ["zne-22", ["B", "G", "R", "U", "W"], "m", []],
+    ["brc-192", [], "c", []],
+    // An adventurer is its creature's colour (Burn Together is red).
+    ["woe-221", ["B"], "b", ["B", "R"]],
+    ["eld-115", ["R"], "r", ["R"]],
+    ["tdm-40", ["U"], "u", ["U"]],
+    // A split card is both halves' (one frame paints both until 4.26).
+    ["dmr-215", ["R", "U"], "m", ["R", "U"]],
+    ["chk-202", ["G"], "g", ["G"]],
+    // A Room imports its first door: Restricted Office is white.
+    ["dsk-227", ["W"], "w", ["U", "W"]],
+    ["dsk-43", ["U"], "u", ["U"]],
+    ["afr-180", ["G"], "g", ["G"]],
+    ["mkm-155", ["G"], "g", ["G"]],
+    ["mor-58", ["B"], "b", ["B"]],
+    ["lrw-11", ["W"], "w", ["W"]],
+    ["c17-11", ["U"], "u", ["U"]],
+  ];
+
+  it("covers every fixture", () => {
+    expect(cases.map(([key]) => key).sort()).toEqual(Object.keys(printings).sort());
+  });
+
+  it.each(cases)("%s → %j (frame %s; identity %j)", (key, letters, colorKey, identity) => {
+    const card = printing(key);
+    expect(frontFaceColors(card)).toEqual(letters);
+    const patch = mapScryfallToFormPatch(card);
+    expect(pickFrameColorKey(patch.color_identity)).toBe(colorKey);
+    expect(frameColorsFromScryfall(card)).toEqual(patch.color_identity);
+    // Scryfall's identity is untouched on the card itself.
+    expect(card.color_identity).toEqual(identity);
+  });
+
+  it("frame-compare keeps a two-colour front's two colours", () => {
+    expect(referenceColorIdentity(printing("iko-211"))).toEqual(["red", "blue"]);
+    // A gold identity behind a mono front is the front's one colour.
+    expect(referenceColorIdentity(printing("khm-114"))).toEqual(["black"]);
+    expect(referenceColorIdentity(printing("msc-233"))).toEqual(["multicolor"]);
+  });
+
+  it("lands on the front face's frame colour in the creator", () => {
+    expect(landing(mapScryfallToFormPatch(printing("mh3-237")))).toEqual({ template: "m15", colorKey: "w" });
+    expect(landing(mapScryfallToFormPatch(printing("khm-114")))).toEqual({ template: "m15", colorKey: "b" });
+    expect(landing(mapScryfallToFormPatch(printing("soi-281")))).toEqual({ template: "m15land", colorKey: "c" });
+    expect(landing(mapScryfallToFormPatch(printing("msc-233")))).toEqual({ template: "m15land", colorKey: "m" });
+    expect(landing(mapScryfallToFormPatch(printing("ogw-13")))).toEqual({ template: "m15devoid", colorKey: "w" });
+  });
+
+  it("reads a multi-face land front's own mana, including a basic land type's", () => {
+    const faces = (front: Record<string, unknown>) =>
+      scryfallCardSchema.parse({
+        id: "x",
+        name: "Front // Back",
+        layout: "modal_dfc",
+        color_identity: ["B", "G"],
+        card_faces: [
+          { name: "Front", colors: [], ...front },
+          { name: "Back", colors: ["B"], type_line: "Creature — Horror", mana_cost: "{B}" },
+        ],
+      });
+    // A Forest face taps for {G} with no rules text (rule 305.6).
+    expect(frontFaceColors(faces({ type_line: "Land — Forest" }))).toEqual(["G"]);
+    // Hybrid and Phyrexian symbols count their colours; {C} doesn't.
+    expect(frontFaceColors(faces({ type_line: "Land", oracle_text: "{T}: Add {C}.\n{G/P}, {T}: Draw a card." }))).toEqual(["G"]);
+    // A colourless non-land front stays colourless whatever the back is.
+    expect(frontFaceColors(faces({ type_line: "Artifact", mana_cost: "{2}" }))).toEqual([]);
+  });
+
+  it("keeps Scryfall's identity where Commander identity lives (the deck importer)", () => {
+    // The design check: the card's `color_identity` field is its frame
+    // colour, never Commander identity. Deck entries keep the real identity
+    // from Scryfall directly, so neither meaning is corrupted.
+    for (const key of ["mh3-237", "soi-281", "khm-114", "msc-233"] as const) {
+      expect(toResolvedCardData(printing(key)).color_identity).toEqual(
+        [...printing(key).color_identity!].filter((c) => "WUBRG".includes(c)),
+      );
+    }
+    expect(toResolvedCardData(printing("mh3-237")).color_identity).toEqual(["R", "W"]);
+    expect(mapScryfallToFormPatch(printing("mh3-237")).color_identity).toEqual(["white"]);
+  });
+
+  it("an older cached shape without colours still imports its identity", () => {
+    const legacy = scryfallCardSchema.parse({
+      id: "x",
+      name: "Old",
+      type_line: "Creature — Bear",
+      color_identity: ["G"],
+    });
+    expect(frameColorsFromScryfall(legacy)).toEqual(["green"]);
   });
 });

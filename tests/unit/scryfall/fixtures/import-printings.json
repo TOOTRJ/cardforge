@@ -1398,5 +1398,109 @@
         "artist": "Daniel Ljunggren"
       }
     ]
+  },
+  "c13-281": {
+    "id": "7b2de1d7-0b13-423b-b0ca-31eb38b5b81f",
+    "oracle_id": "0895c9b7-ae7d-4bb3-af17-3b75deb50a25",
+    "name": "Command Tower",
+    "released_at": "2013-11-01",
+    "layout": "normal",
+    "set": "c13",
+    "set_name": "Commander 2013",
+    "set_type": "commander",
+    "collector_number": "281",
+    "lang": "en",
+    "frame": "2003",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [],
+    "produced_mana": [
+      "B",
+      "G",
+      "R",
+      "U",
+      "W"
+    ],
+    "rarity": "common",
+    "artist": "Ryan Yee",
+    "finishes": [
+      "nonfoil"
+    ]
+  },
+  "brc-192": {
+    "id": "95c1557e-68dd-46be-9b1e-0a65e04fe739",
+    "oracle_id": "b473e293-59e3-4e04-acf2-622604aeb25f",
+    "name": "Path of Ancestry",
+    "released_at": "2022-11-18",
+    "layout": "normal",
+    "set": "brc",
+    "set_name": "The Brothers' War Commander",
+    "set_type": "commander",
+    "collector_number": "192",
+    "lang": "en",
+    "frame": "1997",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Scry"
+    ],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [],
+    "produced_mana": [
+      "B",
+      "G",
+      "R",
+      "U",
+      "W"
+    ],
+    "rarity": "common",
+    "artist": "Alayna Danner",
+    "finishes": [
+      "nonfoil"
+    ]
+  },
+  "zne-22": {
+    "id": "5261e0f6-55bf-4d45-92ea-7acbab41162c",
+    "oracle_id": "89ca686a-7c72-4d8f-9290-e89635624a83",
+    "name": "Cavern of Souls",
+    "released_at": "2020-09-25",
+    "layout": "normal",
+    "set": "zne",
+    "set_name": "Zendikar Rising Expeditions",
+    "set_type": "masterpiece",
+    "collector_number": "22",
+    "lang": "en",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "security_stamp": "oval",
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [],
+    "produced_mana": [
+      "B",
+      "C",
+      "G",
+      "R",
+      "U",
+      "W"
+    ],
+    "rarity": "mythic",
+    "artist": "Sam Burley",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ]
   }
 }

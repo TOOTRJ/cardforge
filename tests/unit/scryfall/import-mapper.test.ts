@@ -3,7 +3,7 @@ import {
   frameTemplateFromScryfall,
   kindFromScryfall,
   mapScryfallToFormPatch,
-  parseColorIdentity,
+  frameColorsFromScryfall,
   parseTypeLine,
   referenceColorIdentity,
 } from "@/lib/scryfall/import-mapper";
@@ -114,27 +114,31 @@ describe("parseTypeLine", () => {
   });
 });
 
-describe("parseColorIdentity", () => {
+// The real-printing rules (front face, lands, devoid) are pinned in
+// import-correctness.test.ts; these are the enum mapping and the legacy
+// shapes with no `colors` field.
+describe("frameColorsFromScryfall", () => {
   it("maps W/U/B/R/G to the readable enum", () => {
     // 2+ colors collapse to multicolor — the creator's color model is
     // single-select (one frame dress per card).
     const card = fixture({ color_identity: ["W", "U"] });
-    expect(parseColorIdentity(card)).toEqual(["multicolor"]);
+    expect(frameColorsFromScryfall(card)).toEqual(["multicolor"]);
   });
 
-  it("falls back to `colors` when color_identity is missing", () => {
+  it("reads `colors` when there is no color_identity", () => {
     const card = fixture({ colors: ["R"] });
-    expect(parseColorIdentity(card)).toEqual(["red"]);
+    expect(frameColorsFromScryfall(card)).toEqual(["red"]);
   });
 
   it("surfaces 'colorless' for an empty identity", () => {
     const card = fixture({ color_identity: [] });
-    expect(parseColorIdentity(card)).toEqual(["colorless"]);
+    expect(frameColorsFromScryfall(card)).toEqual(["colorless"]);
   });
 
   it("ignores unknown color codes", () => {
     const card = fixture({ color_identity: ["W", "Q"] });
-    expect(parseColorIdentity(card)).toEqual(["white"]);
+    expect(frameColorsFromScryfall(card)).toEqual(["white"]);
+    expect(frameColorsFromScryfall(fixture({ colors: ["C", "G"] }))).toEqual(["green"]);
   });
 });
 
@@ -144,10 +148,10 @@ describe("referenceColorIdentity (frame-compare's render of a real printing)", (
     expect(referenceColorIdentity(fixture({ color_identity: ["U", "W"] }))).toEqual(["blue", "white"]);
   });
 
-  it("matches parseColorIdentity for everything else", () => {
+  it("matches frameColorsFromScryfall for everything else", () => {
     for (const color_identity of [[], ["R"], ["W", "U", "B"], ["W", "U", "B", "R", "G"]]) {
       const card = fixture({ color_identity });
-      expect(referenceColorIdentity(card)).toEqual(parseColorIdentity(card));
+      expect(referenceColorIdentity(card)).toEqual(frameColorsFromScryfall(card));
     }
   });
 });
