@@ -34,12 +34,12 @@ import {
 } from "@/lib/cards/foil-finish";
 import {
   LOYALTY_ROW,
-  layoutLoyaltyRows,
+  layoutProfileLoyaltyRows,
   type LoyaltyRowsLayout,
 } from "@/lib/cards/loyalty-rows";
 import { fitRulesSizePct, fitSingleLineSizePct } from "@/lib/cards/render-tiers";
 import { fitStatSizePct, ptValue, STAT_BADGE_INSET } from "@/lib/cards/stat-fit";
-import { detachedCostTitleWidthPct } from "@/lib/cards/title-band";
+import { fitDetachedCostTitle } from "@/lib/cards/title-band";
 import {
   PLACEHOLDER_FLAVOR_TEXT,
   PLACEHOLDER_RULES_TEXT,
@@ -683,23 +683,18 @@ function CardFace({
   const loyaltyAbilities = usesLoyaltyRows
     ? resolveLoyaltyRows(face.faceContent, face.rulesText)
     : [];
-  // Their text size and content-sized row heights — the bake's twin
-  // (lib/cards/loyalty-rows.ts). The editor-only empty walker lays out its
-  // hint rows the same way.
+  // Their text size and content-sized row heights, the last row's text short
+  // of the loyalty shield — the bake's twin (lib/cards/loyalty-rows.ts). The
+  // editor-only empty walker lays out its hint rows the same way.
   const loyaltyRowsFor = (abilities: LoyaltyAbility[]) =>
-    layoutLoyaltyRows({
-      abilities,
-      rect: layout.rules.rect,
-      baseSizePct: layout.rules.sizePct,
-      lineHeight: layout.rules.lineHeight ?? RULES_TEXT.lineHeight,
-      aspect,
-    });
+    layoutProfileLoyaltyRows(layout, abilities, aspect);
   // Saga chapter rail content — same structured-first resolution.
   const sagaContent = layout.chapters
     ? resolveSagaChapters(face.faceContent, face.rulesText)
     : null;
-  // A detached cost box (costRect): the name stops before the pips.
-  const titleMaxWidthPct = showCost ? detachedCostTitleWidthPct(layout, face.cost) : null;
+  // A detached cost box (costRect): the name stops before the pips, shrinking
+  // to fit there when it is long (the bake's twin, lib/cards/title-band.ts).
+  const titleFit = showCost ? fitDetachedCostTitle(layout, safeTitle, face.cost) : null;
   // Explicit watermark wins; basic lands (Plains/Island/…) automatically get
   // the authentic large mana symbol in the text box.
   const basicLandFace = {
@@ -890,16 +885,19 @@ function CardFace({
           defines a costRect, the pips render in their OWN absolutely
           positioned box (right-aligned, vertically centered) so name and
           cost can be aligned independently in the layout editor. */}
-      <BandSlot slot={layout.title} italic={isShowcase}>
+      <BandSlot
+        slot={titleFit ? { ...layout.title, sizePct: titleFit.sizePct } : layout.title}
+        italic={isShowcase}
+      >
         <span
           style={
-            titleMaxWidthPct === null
-              ? { ...ELLIPSIS, ...titleInk }
-              : { ...ELLIPSIS, ...titleInk, maxWidth: cqw(titleMaxWidthPct) }
+            titleFit
+              ? { ...ELLIPSIS, ...titleInk, maxWidth: cqw(titleFit.widthPct) }
+              : { ...ELLIPSIS, ...titleInk }
           }
           title={safeTitle}
         >
-          {displayLine(safeTitle)}
+          {displayLine(titleFit ? titleFit.text : safeTitle)}
         </span>
         {showCost && !layout.costRect ? (
           <ManaCostGlyphs
@@ -2028,7 +2026,8 @@ function LoyaltyRows({
    *  LoyaltyRowsBake twin. */
   foil?: { id: string; landscape: boolean } | null;
 }) {
-  const { sizePct, rowFractions } = rowsLayout;
+  const { sizePct, rowFractions, lastRowInsetPct } = rowsLayout;
+  const last = abilities.length - 1;
   const stripe = (i: number) => (i % 2 === 0 ? rows.stripeAHex : rows.stripeBHex);
   const stripeRects = foil ? loyaltyStripeRects(slot.rect, rowsLayout.rowFractions) : null;
   // Foil: rows contain their sheen, and the badge + text after it are
@@ -2136,6 +2135,8 @@ function LoyaltyRows({
             style={{
               flex: 1,
               minWidth: 0,
+              // The last ability wraps before the loyalty shield.
+              ...(i === last && lastRowInsetPct > 0 ? { marginRight: cqw(lastRowInsetPct) } : {}),
               ...onTop,
               ...(placeholder ? { fontStyle: "italic", opacity: 0.55 } : {}),
             }}

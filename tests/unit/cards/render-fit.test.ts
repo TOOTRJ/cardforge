@@ -106,6 +106,17 @@ describe("fitSingleLineSizePct", () => {
     );
   });
 
+  it("takes a measured width in place of the average-advance estimate", () => {
+    const rect = { ...M15_TYPE_RECT, widthPct: 60 };
+    const text = "Miner the Miner, Damned Delver"; // 30 characters
+    // Measured narrower than 30 × 0.56 em: it shrinks less (0.6 / 15 em).
+    expect(fitSingleLineSizePct({ text, rect, baseSizePct: 0.05, textWidthEm: 15 })).toBeCloseTo(0.04, 12);
+    expect(fitSingleLineSizePct({ text, rect, baseSizePct: 0.05 })).toBeCloseTo(0.6 / (30 * 0.56), 12);
+    // Still never above the base, never below the floor.
+    expect(fitSingleLineSizePct({ text, rect, baseSizePct: 0.05, textWidthEm: 5 })).toBe(0.05);
+    expect(fitSingleLineSizePct({ text, rect, baseSizePct: 0.05, textWidthEm: 500 })).toBe(ptToPct(RULES_TEXT.hardFloorPt));
+  });
+
   it("passes empty text through at base size", () => {
     expect(fitLine("")).toBe(0.0435);
     expect(

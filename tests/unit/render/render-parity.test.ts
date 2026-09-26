@@ -93,8 +93,9 @@ describe("planeswalker ability rows", () => {
   const PREVIEW_ROWS = fn(PREVIEW, "LoyaltyRows");
 
   it("draw one row layout and one badge box from lib/cards/loyalty-rows in both renderers", () => {
-    // Content-sized rows (TODO 3.13): the shared layout, never equal flex rows.
-    for (const src of [BAKE, PREVIEW]) expect(src).toContain("layoutLoyaltyRows({");
+    // Content-sized rows (TODO 3.13): the shared layout, never equal flex rows,
+    // from the one profile call (rules box, size, leading, loyalty shield).
+    for (const src of [BAKE, PREVIEW]) expect(src).toContain("layoutProfileLoyaltyRows(layout, ");
     expect(BAKE_ROWS).toContain("loyaltyRowEdgesPx(rowsLayout.rowFractions");
     expect(PREVIEW_ROWS).toContain("height: `${rowFractions[i] * 100}%`");
     // One badge height (TODO 3.3: the preview's was 1.6 em, the bake's 1.5).
@@ -103,7 +104,23 @@ describe("planeswalker ability rows", () => {
       expect(rows).toContain("LOYALTY_ROW.badgeWidthEm");
       expect(rows).toContain("LOYALTY_ROW.padYEm");
       expect(rows).not.toMatch(/\* (1\.6|1\.5|2\.3|0\.22)\b/);
+      // The last ability wraps short of the loyalty shield (TODO 4.19).
+      expect(rows).toMatch(/i === last && [A-Za-z]+ > 0 \? \{ marginRight: /);
     }
+    expect(BAKE_ROWS).toContain("Math.round(rowsLayout.lastRowInsetPct * cardWidth)");
+    expect(PREVIEW_ROWS).toContain("cqw(lastRowInsetPct)");
+  });
+});
+
+describe("title next to a detached cost", () => {
+  it("takes its text, size and width from fitDetachedCostTitle in both renderers", () => {
+    expect(PREVIEW).toContain("fitDetachedCostTitle(layout, safeTitle, face.cost)");
+    expect(BAKE).toContain("fitDetachedCostTitle(layout, title, card.cost)");
+    expect(PREVIEW).toContain("{titleFit ? titleFit.text : safeTitle}");
+    expect(BAKE).toContain("{titleFit ? titleFit.text : title}");
+    expect(PREVIEW).toContain("sizePct: titleFit.sizePct");
+    // The bake sets a shrunk name at the whole pixel below its fitted size.
+    expect(BAKE).toContain("Math.floor(titleFit.sizePct * width) / width");
   });
 });
 

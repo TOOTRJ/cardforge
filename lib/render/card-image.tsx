@@ -108,11 +108,11 @@ import {
 } from "@/lib/cards/foil-finish";
 import {
   LOYALTY_ROW,
-  layoutLoyaltyRows,
+  layoutProfileLoyaltyRows,
   loyaltyRowEdgesPx,
   type LoyaltyRowsLayout,
 } from "@/lib/cards/loyalty-rows";
-import { detachedCostTitleWidthPct } from "@/lib/cards/title-band";
+import { fitDetachedCostTitle } from "@/lib/cards/title-band";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import type { CardBackFace, ColorIdentity, Rarity } from "@/types/card";
 import { clamp } from "@/lib/utils";
@@ -389,21 +389,22 @@ function CardImage({
   const loyaltyAbilities = usesLoyaltyRows
     ? resolveLoyaltyRows(card.faceContent, card.rulesText)
     : [];
-  // Their text size and content-sized row heights — the preview's twin
-  // (lib/cards/loyalty-rows.ts).
-  const loyaltyLayout = layoutLoyaltyRows({
-    abilities: loyaltyAbilities,
-    rect: layout.rules.rect,
-    baseSizePct: layout.rules.sizePct,
-    lineHeight: layout.rules.lineHeight ?? RULES_TEXT.lineHeight,
-    aspect,
-  });
+  // Their text size and content-sized row heights, the last row's text short
+  // of the loyalty shield — the preview's twin (lib/cards/loyalty-rows.ts).
+  const loyaltyLayout = layoutProfileLoyaltyRows(layout, loyaltyAbilities, aspect);
   // Saga chapter rail content — same structured-first resolution.
   const sagaContent = layout.chapters
     ? resolveSagaChapters(card.faceContent, card.rulesText)
     : null;
-  // A detached cost box (costRect): the name stops before the pips.
-  const titleMaxWidthPct = showCost ? detachedCostTitleWidthPct(layout, card.cost) : null;
+  // A detached cost box (costRect): the name stops before the pips, shrinking
+  // to fit there when it is long (the preview's twin, lib/cards/title-band.ts).
+  // A shrunk name is set at the whole pixel BELOW its fitted size: rounding
+  // up could push a name that fits back into its ellipsis.
+  const titleFit = showCost ? fitDetachedCostTitle(layout, title, card.cost) : null;
+  const titleSlot =
+    titleFit && titleFit.sizePct < layout.title.sizePct
+      ? { ...layout.title, sizePct: Math.floor(titleFit.sizePct * width) / width }
+      : layout.title;
   // Explicit watermark wins; basic lands automatically get the large mana
   // symbol — identical resolution to the live preview.
   const basicLandFace = {
@@ -624,16 +625,17 @@ function CardImage({
 
       {/* Title band — name + mana cost. A centred title (tokens) has no
           cost beside it: no filler span either, or the band's gap pushed
-          the name half a gap left of the preview's. */}
-      <Band slot={layout.title} cardWidth={width} italic={isShowcase}>
+          the name half a gap left of the preview's. (Nor a detached cost:
+          titleFit is only ever set on a left-aligned band.) */}
+      <Band slot={titleSlot} cardWidth={width} italic={isShowcase}>
         <span
           style={{
             ...alignedText(layout.title, displayLine(title), fpx(layout.title.sizePct, width), titleRoom),
             ...titleInk,
-            ...(titleMaxWidthPct === null ? {} : { maxWidth: Math.round(titleMaxWidthPct * width) }),
+            ...(titleFit ? { maxWidth: Math.round(titleFit.widthPct * width) } : {}),
           }}
         >
-          {displayLine(title)}
+          {displayLine(titleFit ? titleFit.text : title)}
         </span>
         {showCost && card.cost && !layout.costRect ? (
           <CostGlyphs
@@ -1508,6 +1510,7 @@ function LoyaltyRowsBake({
   const edges = loyaltyRowEdgesPx(rowsLayout.rowFractions, (slot.rect.heightPct / 100) * cardHeight);
   const rowHeight = (i: number) => edges[i + 1] - edges[i];
   const last = abilities.length - 1;
+  const lastInset = Math.round(rowsLayout.lastRowInsetPct * cardWidth);
   const stripe = (i: number) => (i % 2 === 0 ? rows.stripeAHex : rows.stripeBHex);
   const stripeRects = foil ? loyaltyStripeRects(slot.rect, rowsLayout.rowFractions) : null;
   const radius = Math.round(cardWidth * 0.012);
@@ -1608,7 +1611,14 @@ function LoyaltyRowsBake({
               {ab.cost ? bakeText(ab.cost) : ""}
             </span>
           </div>
-          <div style={{ display: "flex", flex: 1 }}>
+          <div
+            style={{
+              display: "flex",
+              flex: 1,
+              // The last ability wraps before the loyalty shield.
+              ...(i === last && lastInset > 0 ? { marginRight: lastInset } : {}),
+            }}
+          >
             <RulesBodyBake text={ab.text} size={size} overrides={pipOverrides} />
           </div>
         </div>

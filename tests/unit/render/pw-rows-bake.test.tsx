@@ -3,9 +3,9 @@ import sharp from "sharp";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import { parseLoyaltyAbilities } from "@/lib/cards/card-display";
-import { LOYALTY_ROW, layoutLoyaltyRows, loyaltyRowEdgesPx } from "@/lib/cards/loyalty-rows";
+import { LOYALTY_ROW, layoutProfileLoyaltyRows, loyaltyRowEdgesPx } from "@/lib/cards/loyalty-rows";
 import { getFrameProfile } from "@/lib/cards/template-layout";
-import { detachedCostTitleWidthPct } from "@/lib/cards/title-band";
+import { detachedCostTitleWidthPct, fitDetachedCostTitle } from "@/lib/cards/title-band";
 import { RENDER_PRESETS } from "@/lib/render/card-image";
 
 // ---------------------------------------------------------------------------
@@ -140,34 +140,34 @@ describe("m15pw ability rows + title — real bakes", () => {
   /** The rows as both renderers draw them, in this bake's pixels. */
   function rowGeometry(rules: string) {
     const rect = P.rules.rect;
-    const { sizePct, rowFractions } = layoutLoyaltyRows({
-      abilities: parseLoyaltyAbilities(rules),
-      rect,
-      baseSizePct: P.rules.sizePct,
-      aspect: H / W,
-    });
+    const { sizePct, rowFractions, lastRowInsetPct } = layoutProfileLoyaltyRows(P, parseLoyaltyAbilities(rules), H / W);
     const top = Math.round((rect.topPct / 100) * H);
     const size = Math.round(sizePct * W); // the bake's fpx
     const left = Math.round((rect.leftPct / 100) * W);
+    const right = Math.round(((rect.leftPct + rect.widthPct) / 100) * W);
     const padX = Math.round(size * LOYALTY_ROW.padXEm);
     return {
       size,
       edges: loyaltyRowEdgesPx(rowFractions, (rect.heightPct / 100) * H).map((e) => top + e),
       left,
-      right: Math.round(((rect.leftPct + rect.widthPct) / 100) * W),
+      right,
       bottom: Math.round(((rect.topPct + rect.heightPct) / 100) * H),
       padX,
       // Where the ability text starts: the row padding, the badge box and its
       // gap, each rounded like LoyaltyRowsBake rounds them.
       textLeft:
         left + padX + Math.round(size * LOYALTY_ROW.badgeWidthEm) + Math.round(size * LOYALTY_ROW.badgeGapEm),
+      // Where the LAST ability's text column ends: short of the shield.
+      lastTextRight: right - padX - Math.round(lastRowInsetPct * W),
+      plateLeft: Math.round((P.loyalty!.plateRect!.leftPct / 100) * W),
+      plateTop: Math.round((P.loyalty!.plateRect!.topPct / 100) * H),
     };
   }
 
   /** Stripe seams where the rows put them, and every ability's text inside
    *  its own stripe (clear of both of its seams and the box's edges). */
   function expectRowsHoldTheirText(px: Awaited<ReturnType<typeof bake>>, rules: string) {
-    const { size, edges, left, right, padX, textLeft } = rowGeometry(rules);
+    const { size, edges, left, right, padX, textLeft, lastTextRight, plateLeft, plateTop } = rowGeometry(rules);
     const count = edges.length - 1;
     // Stripe A (pale cream) and B (darker tan) alternate over the dark art:
     // walk down the rows' left padding and find where they change.
@@ -181,7 +181,7 @@ describe("m15pw ability rows + title — real bakes", () => {
     expect(seams).toHaveLength(count - 1);
     seams.forEach((s, i) => expect(Math.abs(s - edges[i + 1])).toBeLessThanOrEqual(1));
 
-    const textRight = Math.min(right - padX, Math.round((P.loyalty!.plateRect!.leftPct / 100) * W) - 4);
+    const textRight = Math.min(right - padX, plateLeft - 4);
     const inkRows = new Set<number>();
     for (let y = edges[0]; y < edges.at(-1)!; y += 1) {
       for (let xx = textLeft; xx < textRight; xx += 1) {
@@ -194,6 +194,24 @@ describe("m15pw ability rows + title — real bakes", () => {
       expect(Math.min(...inRow) - edges[r], `row ${r} top`).toBeGreaterThanOrEqual(2);
       expect(edges[r + 1] - 1 - Math.max(...inRow), `row ${r} bottom`).toBeGreaterThanOrEqual(2);
     }
+    // The last ability wraps short of the shield: nothing right of its
+    // narrowed column, above where the shield begins (TODO 4.19).
+    let stray = 0;
+    for (let y = edges[count - 1]; y < Math.min(plateTop, edges[count]); y += 1) {
+      for (let xx = lastTextRight + 2; xx < right - padX; xx += 1) if (lum(px(xx, y)) < 70) stray += 1;
+    }
+    expect(stray, "last ability past its column").toBe(0);
+  }
+
+  /** No ability text where the shield sits — baked WITHOUT the shield so
+   *  anything under it shows (inside the box, clear of its rounded corner). */
+  function expectNothingUnderTheShield(px: Awaited<ReturnType<typeof bake>>, rules: string) {
+    const { right, bottom, padX, plateLeft, plateTop } = rowGeometry(rules);
+    let hidden = 0;
+    for (let y = plateTop; y < bottom - 2; y += 1) {
+      for (let x = plateLeft; x < right - padX; x += 1) if (lum(px(x, y)) < 70) hidden += 1;
+    }
+    expect(hidden, "text under the shield").toBe(0);
   }
 
   it("draws the rows layoutLoyaltyRows sized, each ability inside its own stripe (1 / 1 / 5 lines)", async () => {
@@ -235,24 +253,28 @@ describe("m15pw ability rows + title — real bakes", () => {
     expectRowsHoldTheirText(await bake({ rulesText: caps }), caps);
 
     // The shield hides whatever is under it, so bake the walker without one
-    // and look where it would sit (inside the box, clear of its rounded
-    // corner): no ability text there.
-    const px = await bake({ rulesText: caps, loyalty: null });
-    const { right, bottom, padX } = rowGeometry(caps);
-    const plate = P.loyalty!.plateRect!;
-    let hidden = 0;
-    for (let y = Math.round((plate.topPct / 100) * H); y < bottom - 2; y += 1) {
-      for (let x = Math.round((plate.leftPct / 100) * W); x < right - padX; x += 1) {
-        if (lum(px(x, y)) < 70) hidden += 1;
-      }
-    }
-    expect(hidden).toBe(0);
+    // and look where it would sit: no ability text there.
+    expectNothingUnderTheShield(await bake({ rulesText: caps, loyalty: null }), caps);
   }, 60_000);
 
-  it("ends a long name one band gap before the detached cost's pips", async () => {
-    const cost = "{1}{R}{W}{B}";
-    const title = "Miner the Miner, Damned Delver of the Deep";
-    const px = await bake({ title, cost });
+  it("wraps a long last ability before the loyalty shield, its row sized for the narrower column", async () => {
+    // Test walkers whose last ability reached under the shield on the
+    // reviewed branch: a mixed-case one (its closing quote) and four ALL-CAPS
+    // abilities (the last word). Printed walkers wrap the last ability short
+    // of the loyalty box; both renderers now do (TODO 4.19).
+    const longLast =
+      "+1: Create a 1/1 white Soldier creature token.\n−4: Exile target nonland permanent. Its controller creates a 2/2 colorless Robot artifact creature token.\n−8: You get an emblem with \"Whenever you cast a spell, exile the top card of your library. You may play it this turn. At the beginning of your end step, return all creature cards exiled with Probe to the battlefield.\"";
+    const caps4 =
+      "CREATURES YOU CONTROL GET +1/+0 AS LONG AS IT'S YOUR TURN.\n+1: CREATE A 1/1 WHITE SOLDIER CREATURE TOKEN.\n−2: PUT A +1/+1 COUNTER ON EACH CREATURE YOU CONTROL. THEY GAIN VIGILANCE UNTIL END OF TURN.\n−6: YOU GET AN EMBLEM WITH \"CREATURES YOU CONTROL HAVE DOUBLE STRIKE.\"";
+    for (const rules of [longLast, caps4]) {
+      expectRowsHoldTheirText(await bake({ rulesText: rules }), rules);
+      expectNothingUnderTheShield(await bake({ rulesText: rules, loyalty: null }), rules);
+    }
+  }, 60_000);
+
+  /** The title band's ink: where the name starts and ends, where the pips
+   *  begin, the name's cap edge, and the height of its first glyph. */
+  function titleInk(px: Awaited<ReturnType<typeof bake>>, cost: string) {
     const band = P.title.rect;
     const [y0, y1] = [Math.round((band.topPct / 100) * H) + 2, Math.round(((band.topPct + band.heightPct) / 100) * H) - 2];
     const x0 = Math.round((band.leftPct / 100) * W);
@@ -275,14 +297,71 @@ describe("m15pw ability rows + title — real bakes", () => {
     }
     let gapStart = x;
     while (gapStart > x0 && !marked(gapStart - 1)) gapStart -= 1;
-    // The name (its ellipsis) runs up to its cap, less than a glyph short,
-    // and never past it; the pips start one band gap (2 % of the width, less
-    // their hard shadow) after the cap. Before, the name ran on under the
-    // pips: no gap at all.
-    const cap = x0 + Math.round(detachedCostTitleWidthPct(P, cost)! * W);
-    expect(gapStart).toBeLessThanOrEqual(cap + 1);
-    expect(gapStart).toBeGreaterThanOrEqual(cap - 20);
+    // The name's ink columns (dark), as runs; the first run is its first glyph.
+    const ink = (xx: number) => {
+      for (let y = y0; y < y1; y += 1) if (lum(px(xx, y)) < 70) return true;
+      return false;
+    };
+    const runs: Array<[number, number]> = [];
+    for (let xx = x0; xx < gapStart; xx += 1) {
+      if (!ink(xx)) continue;
+      if (runs.length && runs.at(-1)![1] === xx - 1) runs.at(-1)![1] = xx;
+      else runs.push([xx, xx]);
+    }
+    let [top, bottom] = [Infinity, -Infinity];
+    for (let xx = runs[0][0]; xx <= runs[0][1]; xx += 1) {
+      for (let y = y0; y < y1; y += 1) {
+        if (lum(px(xx, y)) < 70) [top, bottom] = [Math.min(top, y), Math.max(bottom, y)];
+      }
+    }
+    return { runs, gapStart, gapEnd, cap: x0 + Math.round(detachedCostTitleWidthPct(P, cost)! * W), glyphH: bottom - top + 1 };
+  }
+
+  /** The bake's title font size in px: the slot's (rounded), or the fitted
+   *  size floored to a whole pixel. */
+  const basePx = Math.round(P.title.sizePct * W);
+  const fittedPx = (title: string, cost: string) => Math.floor(fitDetachedCostTitle(P, title, cost)!.sizePct * W);
+
+  it("shrinks a long name to fit before the detached cost's pips, whole", async () => {
+    const cost = "{1}{R}{W}{B}";
+    const title = "Miner the Miner, Damned Delver of the Deep";
+    expect(fitDetachedCostTitle(P, title, cost)!.text).toBe(title);
+    const { gapStart, gapEnd, cap, glyphH } = titleInk(await bake({ title, cost }), cost);
+    // The name ends before its cap (it fits: no ellipsis) and fills most of
+    // it; the pips start one band gap (2 % of the width, less their hard
+    // shadow) after the cap. Before, the name ran on under the pips, then
+    // was cut with a "…" at the cap.
+    expect(gapStart).toBeLessThanOrEqual(cap);
+    expect(gapStart).toBeGreaterThanOrEqual(cap - 0.1 * (cap - Math.round((P.title.rect.leftPct / 100) * W)));
     expect(gapEnd - cap).toBeGreaterThanOrEqual(Math.round(0.02 * W) - 4);
     expect(gapEnd - cap).toBeLessThanOrEqual(Math.round(0.02 * W) + 2);
+    // Set smaller: its first letter (M) is the fitted size's height, not the
+    // slot's (the same M, baked at the slot's size).
+    const px = fittedPx(title, cost);
+    expect(px).toBeLessThan(basePx - 6);
+    const base = titleInk(await bake({ title: "Miner", cost }), cost).glyphH;
+    expect(Math.abs(glyphH - (base * px) / basePx)).toBeLessThanOrEqual(1.5);
+  }, 60_000);
+
+  it("past the 5 pt floor cuts the name with a whole '…' before the pips (a 14-symbol cost)", async () => {
+    const cost = "{W}".repeat(14);
+    const title = "Skeptic, the Endlessly Wandering Walker of Worlds";
+    const fit = fitDetachedCostTitle(P, title, cost)!;
+    expect(fit.text.endsWith("\u2026")).toBe(true);
+    const { runs, gapStart, cap, glyphH } = titleInk(await bake({ title, cost }), cost);
+    // Nothing clipped at the name's edge (Satori's own ellipsis could lose
+    // its last dot there), and the name ends in three dots: small runs,
+    // evenly spaced, after the last letter.
+    expect(gapStart).toBeLessThanOrEqual(cap - 1);
+    const dots = runs.slice(-3);
+    const em = Math.floor(fit.sizePct * W);
+    for (const [a, b] of dots) expect(b - a + 1).toBeLessThanOrEqual(Math.ceil(0.2 * em));
+    const gaps = [dots[1][0] - dots[0][1], dots[2][0] - dots[1][1]];
+    expect(Math.abs(gaps[0] - gaps[1])).toBeLessThanOrEqual(1);
+    // At the floor size, legibly: the S at 5 pt against the S at the slot's
+    // 7.7 pt.
+    const base = titleInk(await bake({ title: "Skeptic", cost: "{W}" }), "{W}").glyphH;
+    expect(Math.abs(glyphH - (base * em) / basePx)).toBeLessThanOrEqual(1.5);
+    expect(glyphH).toBeGreaterThanOrEqual(12);
   }, 60_000);
 });

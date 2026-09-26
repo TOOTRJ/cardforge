@@ -1,12 +1,16 @@
 // The card name next to a DETACHED mana cost (FrameProfile.costRect — m15pw
 // and modern). Both renderers draw those pips in their own right-aligned box,
 // so the name's span used to run the whole title band and a long name slid
-// under the pips ("Miner the Miner, Damned Delver"): its ellipsis never knew
-// where the cost began. The width here ends the name one band gap before the
-// cost's left edge, measured from the cost it actually draws, and both
-// renderers cap the name with it so they ellipsize at the same point.
+// under the pips ("Miner the Miner, Damned Delver"). The name now ends one
+// band gap before the cost's left edge, measured from the cost it actually
+// draws, and a name too long for that width shrinks to fit it, the way a
+// printed name is set (owner decision 2026-09-25, TODO 3.10 for these
+// frames). Only past the fit's 5 pt floor is it cut, with a "…". Both
+// renderers take the name's text, width and size from fitDetachedCostTitle.
 
 import { tokenize } from "@/components/cards/mana-cost-glyphs";
+import { displayTextWidthEm } from "@/lib/cards/display-metrics";
+import { fitSingleLineSizePct } from "@/lib/cards/render-tiers";
 import type { FrameProfile } from "@/lib/cards/template-layout";
 
 /** The title band's name ↔ cost gap, as a fraction of card width (preview
@@ -48,4 +52,78 @@ export function detachedCostTitleWidthPct(
   const pipsLeft = (layout.costRect.leftPct + layout.costRect.widthPct) / 100 - manaCostWidthPct(cost, disc);
   const band = layout.title.rect;
   return Math.max(0, Math.min(band.widthPct / 100, pipsLeft - band.leftPct / 100) - TITLE_COST_GAP_PCT);
+}
+
+/** Headroom the fitted name keeps inside its width: Beleren's kerning can
+ *  widen a name past its advance sum (by 1.2 % at the worst public title,
+ *  "Belfry Spirit"), and the bake sets its type in whole pixels. */
+export const TITLE_FIT_HEADROOM = 1.02;
+
+const ELLIPSIS = "\u2026";
+
+export type DetachedCostTitle = {
+  /** The name as drawn: the whole name, or — only when it is too long even
+   *  at the size floor — as much of it as fits, then "…". */
+  text: string;
+  /** The width the name may take (fraction of card width) — its span's
+   *  max-width. */
+  widthPct: number;
+  /** The name's font size (fraction of card width): the title slot's own
+   *  size, shrunk only as far as the name needs to fit `widthPct`, never
+   *  below the single-line fit's 5 pt floor. */
+  sizePct: number;
+};
+
+type Metrics = Parameters<typeof displayTextWidthEm>[1];
+
+/** `name` cut to at most `maxEm` including its "…", at a character
+ *  boundary, with trailing spaces and separators (, ; : and dashes) dropped
+ *  before the "…" ("Skeptic…", not "Skeptic,…"). The whole name when it
+ *  fits. */
+function truncateToEm(name: string, maxEm: number, metrics: Metrics): string {
+  // (A name fitted exactly measures maxEm give or take rounding error.)
+  if (displayTextWidthEm(name, metrics) <= maxEm * (1 + 1e-9)) return name;
+  const room = maxEm - displayTextWidthEm(ELLIPSIS, metrics);
+  const chars = Array.from(name);
+  let kept = 0;
+  let width = 0;
+  for (const ch of chars) {
+    const w = displayTextWidthEm(ch, metrics);
+    if (width + w > room) break;
+    width += w;
+    kept += 1;
+  }
+  const cut = chars.slice(0, kept).join("").replace(/[\s,;:\-\u2013\u2014]+$/u, "");
+  return (cut || chars[0]) + ELLIPSIS;
+}
+
+/**
+ * The name's text, width and size next to a detached cost, for both
+ * renderers. null when the frame draws the cost inline in the band, or there
+ * is none (the name keeps the slot's size and the band's width).
+ *
+ * Past the floor the "…" is placed HERE, from the same measurements, not
+ * left to each renderer's text-overflow: when the cut fell in the word after
+ * the last whole one, Satori set its ellipsis a word space too far right and
+ * the span clipped it to two dots (the 2003 Modern frame). The CSS ellipsis
+ * stays as a backstop.
+ */
+export function fitDetachedCostTitle(
+  layout: Pick<FrameProfile, "title" | "costRect" | "costSizePct">,
+  title: string,
+  cost: string | null | undefined,
+): DetachedCostTitle | null {
+  const widthPct = detachedCostTitleWidthPct(layout, cost);
+  if (widthPct === null) return null;
+  const slot = layout.title;
+  const name = title.trim();
+  const metrics: Metrics = { letterSpacingEm: slot.letterSpacingEm, uppercase: slot.uppercase };
+  const sizePct = fitSingleLineSizePct({
+    text: name,
+    rect: { ...slot.rect, widthPct: widthPct * 100 },
+    baseSizePct: slot.sizePct,
+    textWidthEm: displayTextWidthEm(name, metrics) * TITLE_FIT_HEADROOM,
+  });
+  const text = truncateToEm(name, widthPct / (sizePct * TITLE_FIT_HEADROOM), metrics);
+  return { text, widthPct, sizePct };
 }

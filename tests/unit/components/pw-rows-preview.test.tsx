@@ -4,9 +4,10 @@ import { cleanup, render } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { CardPreview } from "@/components/cards/card-preview";
 import { parseLoyaltyAbilities } from "@/lib/cards/card-display";
-import { LOYALTY_ROW, layoutLoyaltyRows } from "@/lib/cards/loyalty-rows";
+import { LOYALTY_ROW, layoutProfileLoyaltyRows } from "@/lib/cards/loyalty-rows";
 import { getFrameProfile } from "@/lib/cards/template-layout";
-import { detachedCostTitleWidthPct } from "@/lib/cards/title-band";
+import type { FrameTemplate } from "@/types/card";
+import { detachedCostTitleWidthPct, fitDetachedCostTitle } from "@/lib/cards/title-band";
 
 // ---------------------------------------------------------------------------
 // The live-preview half of the planeswalker rows fix (TODO 3.13 / 3.3): the
@@ -46,12 +47,7 @@ describe("CardPreview — m15pw ability rows", () => {
         frameStyle={{ template: "m15pw" }}
       />,
     );
-    const { rowFractions } = layoutLoyaltyRows({
-      abilities: parseLoyaltyAbilities(WALKER_115),
-      rect: P.rules.rect,
-      baseSizePct: P.rules.sizePct,
-      aspect: 7 / 5,
-    });
+    const { rowFractions } = layoutProfileLoyaltyRows(P, parseLoyaltyAbilities(WALKER_115), 7 / 5);
     const rows = rowsOf(container);
     expect(rows).toHaveLength(3);
     expect(rowFractions[2]).toBeGreaterThan(2.5 * rowFractions[0]);
@@ -80,12 +76,7 @@ describe("CardPreview — m15pw ability rows", () => {
         frameStyle={{ template: "m15pw" }}
       />,
     );
-    const { sizePct } = layoutLoyaltyRows({
-      abilities: parseLoyaltyAbilities(WALKER_115),
-      rect: P.rules.rect,
-      baseSizePct: P.rules.sizePct,
-      aspect: 7 / 5,
-    });
+    const { sizePct } = layoutProfileLoyaltyRows(P, parseLoyaltyAbilities(WALKER_115), 7 / 5);
     // The opening tags up to the first stripe row: …, the rows' box, the row.
     const firstRow = html.indexOf(`background:${P.loyaltyRows!.stripeAHex}`);
     expect(firstRow).toBeGreaterThan(0);
@@ -100,6 +91,28 @@ describe("CardPreview — m15pw ability rows", () => {
     expect(badge).toContain(`height:${cqw(sizePct * LOYALTY_ROW.badgeHeightEm)}`);
   });
 
+  it("wraps only the last ability short of the loyalty shield (server markup keeps cqw)", () => {
+    const html = renderToStaticMarkup(
+      <CardPreview
+        title="Probe"
+        cost="{B}"
+        cardType="planeswalker"
+        colorIdentity={["black"]}
+        rulesText={WALKER_115}
+        loyalty="4"
+        frameStyle={{ template: "m15pw" }}
+      />,
+    );
+    const { lastRowInsetPct } = layoutProfileLoyaltyRows(P, parseLoyaltyAbilities(WALKER_115), 7 / 5);
+    expect(lastRowInsetPct).toBeGreaterThan(0.1);
+    // Each row's text column: the div after the badge box, flex: 1.
+    const columns = html.match(/<div style="flex:1;min-width:0[^"]*"/g)!;
+    expect(columns).toHaveLength(3);
+    expect(columns[0]).not.toContain("margin-right");
+    expect(columns[1]).not.toContain("margin-right");
+    expect(columns[2]).toContain(`margin-right:${cqw(lastRowInsetPct)}`);
+  });
+
   it("lays out the editor-only hint rows the same way", () => {
     const { container } = render(
       <CardPreview title="New Walker" cardType="planeswalker" colorIdentity={["blue"]} frameStyle={{ template: "m15pw" }} staticInEditor />,
@@ -112,6 +125,19 @@ describe("CardPreview — m15pw ability rows", () => {
 });
 
 describe("CardPreview — the name before a detached cost", () => {
+  /** The title band's opening tag and the name span, from server markup
+   *  (happy-dom drops cqw lengths). */
+  function titleBand(title: string, cost: string, template: FrameTemplate = "m15pw") {
+    const html = renderToStaticMarkup(
+      <CardPreview title={title} cost={cost} cardType="planeswalker" colorIdentity={["red", "white", "black"]} loyalty="5" frameStyle={{ template }} />,
+    );
+    const at = html.lastIndexOf("<span", html.indexOf(` title="${title}"`));
+    expect(at).toBeGreaterThan(0);
+    const bandTag = html.slice(html.lastIndexOf("<div", at), html.indexOf(">", html.lastIndexOf("<div", at)));
+    const span = html.slice(at, html.indexOf("</span>", at));
+    return { bandTag, span };
+  }
+
   it("caps the name where the bake does: one band gap before the pips", () => {
     const cost = "{1}{R}{W}{B}";
     const title = "Miner the Miner, Damned Delver";
@@ -121,6 +147,35 @@ describe("CardPreview — the name before a detached cost", () => {
     const name = container.querySelector(`span[title="${title}"]`) as HTMLElement;
     expect(name.style.maxWidth).toBe(cqw(detachedCostTitleWidthPct(P, cost)!));
     expect(name.style.textOverflow).toBe("ellipsis");
+  });
+
+  it("sets a long name at its fitted size, whole (Miner the Miner, Damned Delver)", () => {
+    const cost = "{1}{R}{W}{B}";
+    const title = "Miner the Miner, Damned Delver";
+    const fit = fitDetachedCostTitle(P, title, cost)!;
+    expect(fit.sizePct).toBeLessThan(P.title.sizePct);
+    const { bandTag, span } = titleBand(title, cost);
+    expect(bandTag).toContain(`font-size:${cqw(fit.sizePct)}`);
+    expect(span.endsWith(`>${title}`)).toBe(true);
+  });
+
+  it("past the 5 pt floor draws the cut name with its own '…' (a 14-symbol cost, both frames)", () => {
+    const cost = "{W}".repeat(14);
+    const title = "Skeptic, the Endlessly Wandering Walker of Worlds";
+    for (const template of ["m15pw", "modern"] as const) {
+      const fit = fitDetachedCostTitle(getFrameProfile(template), title, cost)!;
+      expect(fit.text.endsWith("…")).toBe(true);
+      const { bandTag, span } = titleBand(title, cost, template);
+      expect(bandTag).toContain(`font-size:${cqw(fit.sizePct)}`);
+      // The drawn text is the cut one; the tooltip keeps the whole name.
+      expect(span.endsWith(`>${fit.text}`)).toBe(true);
+    }
+  });
+
+  it("keeps a name that fits at the slot's size", () => {
+    const { bandTag, span } = titleBand("Kikyo Zoldyck", "{1}{R}{W}{B}");
+    expect(bandTag).toContain(`font-size:${cqw(P.title.sizePct)}`);
+    expect(span.endsWith(">Kikyo Zoldyck")).toBe(true);
   });
 
   it("leaves an inline cost's name (and a cost-less name) uncapped", () => {

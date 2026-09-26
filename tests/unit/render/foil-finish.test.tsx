@@ -14,7 +14,7 @@ import {
   loyaltyStripeRects,
 } from "@/lib/cards/foil-finish";
 import { parseLoyaltyAbilities } from "@/lib/cards/card-display";
-import { layoutLoyaltyRows } from "@/lib/cards/loyalty-rows";
+import { layoutProfileLoyaltyRows } from "@/lib/cards/loyalty-rows";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 import { setFrameStorageForTests, type FrameManifest } from "@/lib/frames/frame-url";
@@ -297,8 +297,7 @@ describe("foil finish — planeswalker ability stripes in the preview", () => {
     const p = getFrameProfile("m15pw");
     const expected = loyaltyStripeRects(
       p.rules.rect,
-      layoutLoyaltyRows({ abilities: parseLoyaltyAbilities(PW_RULES), rect: p.rules.rect, baseSizePct: p.rules.sizePct, aspect: 7 / 5 })
-        .rowFractions,
+      layoutProfileLoyaltyRows(p, parseLoyaltyAbilities(PW_RULES), 7 / 5).rowFractions,
     );
     const ids = new Set<string>();
     sheens.forEach((svg, i) => {

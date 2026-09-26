@@ -6,7 +6,7 @@ import type { FrameTemplate } from "@/types/card";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { loyaltyStripeRects } from "@/lib/cards/foil-finish";
 import { parseLoyaltyAbilities } from "@/lib/cards/card-display";
-import { layoutLoyaltyRows } from "@/lib/cards/loyalty-rows";
+import { layoutProfileLoyaltyRows } from "@/lib/cards/loyalty-rows";
 import { RENDER_PRESETS } from "@/lib/render/card-image";
 import { FOIL_MASK_EDGE, foilMaskSource } from "@/lib/render/art-source";
 
@@ -233,14 +233,9 @@ const PW_RULES_115 =
 /** The walker's ability rows as both renderers draw them (PW_RULES: four
  *  one-line abilities, four equal rows). */
 function pwRowRects(rulesText = PW_RULES) {
-  const { rules } = getFrameProfile("m15pw");
-  const { rowFractions } = layoutLoyaltyRows({
-    abilities: parseLoyaltyAbilities(rulesText),
-    rect: rules.rect,
-    baseSizePct: rules.sizePct,
-    aspect: H / W,
-  });
-  return loyaltyStripeRects(rules.rect, rowFractions);
+  const profile = getFrameProfile("m15pw");
+  const { rowFractions } = layoutProfileLoyaltyRows(profile, parseLoyaltyAbilities(rulesText), H / W);
+  return loyaltyStripeRects(profile.rules.rect, rowFractions);
 }
 
 async function syntheticPwBucket() {

@@ -22,6 +22,13 @@
 //   * whatever height is left over is shared equally, so walkers whose
 //     abilities are all the same length keep equal stripes.
 //
+// The starting-loyalty shield covers the box's bottom-right corner, and the
+// last row always reaches the box's bottom. Its text stops short of the
+// shield (lastRowInsetPct), the way a printed walker's last ability wraps
+// before the loyalty box, and its height is estimated in that narrower
+// column (TODO 4.19; owner decision 2026-09-25). Before, a long last ability
+// could run on under the shield in both renderers.
+//
 // Each badge stays vertically centred on its own row (both renderers use
 // `align-items: center`).
 
@@ -31,7 +38,7 @@ import {
   estimateRulesHeightW,
   rulesSizeLadder,
 } from "@/lib/cards/render-tiers";
-import type { Rect } from "@/lib/cards/template-layout";
+import type { FrameProfile, Rect } from "@/lib/cards/template-layout";
 import { RULES_TEXT } from "@/lib/cards/typography";
 
 /** Row anatomy, in em of the ability text size — the single copy both
@@ -58,6 +65,10 @@ export type LoyaltyRowsLayout = {
   sizePct: number;
   /** Each row's share of the rules box height, top to bottom; sums to 1. */
   rowFractions: number[];
+  /** How much narrower the LAST row's text column is (fraction of card
+   *  width, off its right side) so its lines wrap before the loyalty shield.
+   *  0 without a shield in the box. */
+  lastRowInsetPct: number;
 };
 
 export type LoyaltyRowsInput = {
@@ -69,7 +80,29 @@ export type LoyaltyRowsInput = {
   lineHeight?: number;
   /** Card height ÷ card width (7/5 portrait, 5/7 landscape). */
   aspect: number;
+  /** The starting-loyalty shield's box (loyaltyShieldRect) — the last row's
+   *  text wraps before it. */
+  shield?: Rect | null;
 };
+
+/** The box the frame's starting-loyalty shield is drawn in: its plate's
+ *  (plateRect), else the value's own rect. null for a frame without one. */
+export function loyaltyShieldRect(layout: Pick<FrameProfile, "loyalty">): Rect | null {
+  return layout.loyalty ? (layout.loyalty.plateRect ?? layout.loyalty.rect) : null;
+}
+
+/** How far a shield reaches into the rules box from its right edge, as a
+ *  fraction of card width. The last row's text column ends there, less the
+ *  row's own right padding, so the text keeps the same room from the shield
+ *  as from the stripe's edge. 0 when the shield misses the box; never more
+ *  than half the box. */
+function shieldInsetPct(rect: Rect, shield: Rect | null | undefined): number {
+  if (!shield) return 0;
+  const overlapsBox =
+    shield.topPct < rect.topPct + rect.heightPct && shield.topPct + shield.heightPct > rect.topPct;
+  const inset = (rect.leftPct + rect.widthPct - shield.leftPct) / 100;
+  return overlapsBox && inset > 0 ? Math.min(inset, rect.widthPct / 200) : 0;
+}
 
 /** Width of a row's text column at `sizePct`, in card-width units. */
 function textColumnW(boxWidthW: number, sizePct: number): number {
@@ -77,18 +110,24 @@ function textColumnW(boxWidthW: number, sizePct: number): number {
   return boxWidthW - sizePct * (2 * r.padXEm + r.badgeWidthEm + r.badgeGapEm);
 }
 
-/** Each row's minimum height at `sizePct`, in card-width units. */
+/** Each row's minimum height at `sizePct`, in card-width units — the last
+ *  row's text in its column less `lastInsetW`. */
 function naturalRowHeights(
   abilities: readonly LoyaltyAbility[],
   sizePct: number,
   lineHeight: number,
   boxWidthW: number,
+  lastInsetW: number,
 ): number[] {
   const r = LOYALTY_ROW;
   const columnW = textColumnW(boxWidthW, sizePct);
+  const last = abilities.length - 1;
   return abilities.map(
-    (ab) =>
-      Math.max(estimateRulesHeightW(ab.text, sizePct, lineHeight, columnW), r.badgeHeightEm * sizePct) +
+    (ab, i) =>
+      Math.max(
+        estimateRulesHeightW(ab.text, sizePct, lineHeight, i === last ? columnW - lastInsetW : columnW),
+        r.badgeHeightEm * sizePct,
+      ) +
       2 * r.padYEm * sizePct,
   );
 }
@@ -103,17 +142,19 @@ export function layoutLoyaltyRows({
   baseSizePct,
   lineHeight = RULES_TEXT.lineHeight,
   aspect,
+  shield = null,
 }: LoyaltyRowsInput): LoyaltyRowsLayout {
   const count = abilities.length;
-  if (count === 0) return { sizePct: baseSizePct, rowFractions: [] };
+  const lastRowInsetPct = shieldInsetPct(rect, shield);
+  if (count === 0) return { sizePct: baseSizePct, rowFractions: [], lastRowInsetPct };
   const boxWidthW = rect.widthPct / 100;
   const boxHeightW = (rect.heightPct / 100) * aspect;
 
   const ladder = rulesSizeLadder(baseSizePct, aspect);
   let sizePct = ladder[ladder.length - 1];
-  let heights = naturalRowHeights(abilities, sizePct, lineHeight, boxWidthW);
+  let heights = naturalRowHeights(abilities, sizePct, lineHeight, boxWidthW, lastRowInsetPct);
   for (const size of ladder) {
-    const natural = naturalRowHeights(abilities, size, lineHeight, boxWidthW);
+    const natural = naturalRowHeights(abilities, size, lineHeight, boxWidthW, lastRowInsetPct);
     if (natural.reduce((a, b) => a + b, 0) <= boxHeightW * RULES_FIT_SAFETY) {
       sizePct = size;
       heights = natural;
@@ -128,7 +169,27 @@ export function layoutLoyaltyRows({
     total <= boxHeightW
       ? heights.map((h) => h + (boxHeightW - total) / count)
       : heights.map((h) => (h * boxHeightW) / total);
-  return { sizePct, rowFractions: rows.map((h) => h / boxHeightW) };
+  return { sizePct, rowFractions: rows.map((h) => h / boxHeightW), lastRowInsetPct };
+}
+
+/**
+ * layoutLoyaltyRows for a frame profile: its rules box, base size, leading
+ * and loyalty shield. The one call both renderers make (and the tests that
+ * check what they draw).
+ */
+export function layoutProfileLoyaltyRows(
+  layout: Pick<FrameProfile, "rules" | "loyalty">,
+  abilities: readonly LoyaltyAbility[],
+  aspect: number,
+): LoyaltyRowsLayout {
+  return layoutLoyaltyRows({
+    abilities,
+    rect: layout.rules.rect,
+    baseSizePct: layout.rules.sizePct,
+    lineHeight: layout.rules.lineHeight ?? RULES_TEXT.lineHeight,
+    aspect,
+    shield: loyaltyShieldRect(layout),
+  });
 }
 
 /**

@@ -1,15 +1,29 @@
 import { describe, expect, it } from "vitest";
 import { parseLoyaltyAbilities } from "@/lib/cards/card-display";
-import { LOYALTY_ROW, layoutLoyaltyRows, loyaltyRowEdgesPx } from "@/lib/cards/loyalty-rows";
+import { displayTextWidthEm } from "@/lib/cards/display-metrics";
+import {
+  LOYALTY_ROW,
+  layoutLoyaltyRows,
+  layoutProfileLoyaltyRows,
+  loyaltyRowEdgesPx,
+  loyaltyShieldRect,
+} from "@/lib/cards/loyalty-rows";
 import { estimateRulesHeightW, fitRulesSizePct, rulesSizeLadder } from "@/lib/cards/render-tiers";
 import { getFrameProfile } from "@/lib/cards/template-layout";
-import { detachedCostTitleWidthPct, manaCostWidthPct, TITLE_COST_GAP_PCT } from "@/lib/cards/title-band";
-import { RULES_TEXT, pctToPt } from "@/lib/cards/typography";
+import {
+  detachedCostTitleWidthPct,
+  fitDetachedCostTitle,
+  manaCostWidthPct,
+  TITLE_COST_GAP_PCT,
+  TITLE_FIT_HEADROOM,
+} from "@/lib/cards/title-band";
+import { RULES_TEXT, pctToPt, ptToPct } from "@/lib/cards/typography";
 
 // ---------------------------------------------------------------------------
-// Planeswalker ability rows sized by their text (TODO 3.13) and the name
-// that stops before a detached cost (4.31). Both are pure, shared by the
-// preview and the bake; real-pixel checks live in
+// Planeswalker ability rows sized by their text (TODO 3.13), the last one
+// wrapping before the loyalty shield (4.19), and the name that stops before
+// a detached cost (4.31), shrinking to fit there (3.10 for these frames).
+// All pure, shared by the preview and the bake; real-pixel checks live in
 // tests/unit/render/pw-rows-bake.test.tsx.
 // ---------------------------------------------------------------------------
 
@@ -120,7 +134,88 @@ describe("layoutLoyaltyRows", () => {
     expect(layoutLoyaltyRows({ abilities: [], rect: M15PW.rules.rect, baseSizePct: 0.04, aspect: ASPECT })).toEqual({
       sizePct: 0.04,
       rowFractions: [],
+      lastRowInsetPct: 0,
     });
+  });
+});
+
+describe("the last ability wraps before the loyalty shield (TODO 4.19)", () => {
+  const rulesRight = (M15PW.rules.rect.leftPct + M15PW.rules.rect.widthPct) / 100;
+  const plate = M15PW.loyalty!.plateRect!;
+  const withShield = (rules: string) => layoutProfileLoyaltyRows(M15PW, parseLoyaltyAbilities(rules), ASPECT);
+  // A 3-ability walker whose ultimate is long (a test walker; its closing
+  // quote reached under the shield on the reviewed branch).
+  const LONG_LAST =
+    "+1: Create a 1/1 white Soldier creature token.\n−4: Exile target nonland permanent. Its controller creates a 2/2 colorless Robot artifact creature token.\n−8: You get an emblem with \"Whenever you cast a spell, exile the top card of your library. You may play it this turn. At the beginning of your end step, return all creature cards exiled with Probe to the battlefield.\"";
+
+  it("takes the shield from the loyalty plate's box, else the value's", () => {
+    expect(loyaltyShieldRect(M15PW)).toEqual(plate);
+    expect(loyaltyShieldRect({ loyalty: { ...M15PW.loyalty!, plateRect: undefined } })).toEqual(M15PW.loyalty!.rect);
+    expect(loyaltyShieldRect(getFrameProfile("m15"))).toBeNull();
+  });
+
+  it("ends the last row's text column where the shield's box begins (m15pw: 12.4 % of the width)", () => {
+    const { lastRowInsetPct } = withShield(WALKER_115);
+    expect(lastRowInsetPct).toBeCloseTo(rulesRight - plate.leftPct / 100, 12);
+    expect(lastRowInsetPct).toBeCloseTo(0.124, 6);
+    // The same call both renderers make.
+    expect(withShield(WALKER_115)).toEqual(
+      layoutLoyaltyRows({
+        abilities: parseLoyaltyAbilities(WALKER_115),
+        rect: M15PW.rules.rect,
+        baseSizePct: M15PW.rules.sizePct,
+        aspect: ASPECT,
+        shield: plate,
+      }),
+    );
+  });
+
+  it("sizes the last row for its narrower column, so its text still fits its row", () => {
+    const abilities = parseLoyaltyAbilities(LONG_LAST);
+    const before = layout(LONG_LAST); // the whole width, as on the reviewed branch
+    const after = withShield(LONG_LAST);
+    // The ultimate needs more lines in the narrower column: its row grows
+    // (or the whole box steps its text down).
+    expect(after.rowFractions[2] > before.rowFractions[2] || after.sizePct < before.sizePct).toBe(true);
+    expect(sum(after.rowFractions)).toBeCloseTo(1, 10);
+    // The estimate in the narrow column, plus padding, fits the last row.
+    const { sizePct, rowFractions, lastRowInsetPct } = after;
+    const columnW =
+      M15PW.rules.rect.widthPct / 100 -
+      sizePct * (2 * LOYALTY_ROW.padXEm + LOYALTY_ROW.badgeWidthEm + LOYALTY_ROW.badgeGapEm) -
+      lastRowInsetPct;
+    const textH = estimateRulesHeightW(abilities[2].text, sizePct, RULES_TEXT.lineHeight, columnW);
+    expect(rowFractions[2] * boxH).toBeGreaterThanOrEqual(textH + 2 * LOYALTY_ROW.padYEm * sizePct - 1e-12);
+    // (At the full-width layout's size, the narrow column takes more lines
+    // than the full one — why this walker's rows changed at all.)
+    const at = (w: number) =>
+      estimateRulesHeightW(
+        abilities[2].text,
+        before.sizePct,
+        RULES_TEXT.lineHeight,
+        M15PW.rules.rect.widthPct / 100 -
+          before.sizePct * (2 * LOYALTY_ROW.padXEm + LOYALTY_ROW.badgeWidthEm + LOYALTY_ROW.badgeGapEm) -
+          w,
+      );
+    expect(at(lastRowInsetPct)).toBeGreaterThan(at(0));
+  });
+
+  it("only narrows the last row, and leaves equal short abilities equal", () => {
+    // Three one-liners: every row still fits a badge and a line, so the
+    // stripes stay equal; only the last text column is narrower.
+    const short = withShield("+2: Scry 2.\n−3: Draw a card.\n−7: You win.");
+    for (const f of short.rowFractions) expect(f).toBeCloseTo(1 / 3, 10);
+    expect(short.lastRowInsetPct).toBeGreaterThan(0);
+  });
+
+  it("ignores a shield that misses the box, and never takes more than half its width", () => {
+    const rect = M15PW.rules.rect;
+    const lay = (shield: typeof plate | null) =>
+      layoutLoyaltyRows({ abilities: parseLoyaltyAbilities(WALKER_115), rect, baseSizePct: M15PW.rules.sizePct, aspect: ASPECT, shield });
+    expect(lay(null).lastRowInsetPct).toBe(0);
+    expect(lay({ ...plate, topPct: rect.topPct + rect.heightPct + 1 }).lastRowInsetPct).toBe(0); // below the box
+    expect(lay({ ...plate, leftPct: rect.leftPct + rect.widthPct + 1 }).lastRowInsetPct).toBe(0); // right of it
+    expect(lay({ ...plate, leftPct: 0 }).lastRowInsetPct).toBeCloseTo(rect.widthPct / 200, 12);
   });
 });
 
@@ -165,5 +260,73 @@ describe("the name next to a detached cost (costRect)", () => {
     expect(detachedCostTitleWidthPct(M15PW, "  ")).toBeNull();
     expect(detachedCostTitleWidthPct(getFrameProfile("m15"), "{1}{R}")).toBeNull();
     expect(detachedCostTitleWidthPct(getFrameProfile("modern"), "{1}{R}")).not.toBeNull();
+  });
+});
+
+describe("a long name shrinks to fit before a detached cost (owner decision, TODO 3.10)", () => {
+  const MODERN = getFrameProfile("modern");
+  const FLOOR = ptToPct(RULES_TEXT.hardFloorPt);
+  /** The name's drawn width at `size` with the fit's headroom, card-width. */
+  const drawn = (p: typeof M15PW, text: string, size: number) =>
+    displayTextWidthEm(text, { letterSpacingEm: p.title.letterSpacingEm }) * size * TITLE_FIT_HEADROOM;
+
+  it("keeps a name that fits at the slot's own size, whole", () => {
+    for (const [p, title, cost] of [
+      [M15PW, "Kikyo Zoldyck", "{1}{R}{W}{B}"],
+      [M15PW, "Coden, the Great Creator", "{4}"],
+      [MODERN, "Durgan Rompehechizos", "{2}{U}{R}{W}"],
+      [MODERN, "The Death Star", "{3}{B}{B}{B}{B}{B}{B}"],
+    ] as const) {
+      expect(fitDetachedCostTitle(p, title, cost)).toEqual({
+        text: title,
+        widthPct: detachedCostTitleWidthPct(p, cost),
+        sizePct: p.title.sizePct,
+      });
+    }
+  });
+
+  it("shrinks Miner the Miner, Damned Delver just enough to end before its pips (was cut to 'Del…')", () => {
+    const title = "Miner the Miner, Damned Delver";
+    const fit = fitDetachedCostTitle(M15PW, title, "{1}{R}{W}{B}")!;
+    expect(fit.text).toBe(title);
+    expect(fit.sizePct).toBeLessThan(M15PW.title.sizePct);
+    // The largest size that fits: the name, with its headroom, fills the
+    // width exactly (about 5 % smaller than the slot's 7.7 pt).
+    expect(drawn(M15PW, title, fit.sizePct)).toBeCloseTo(fit.widthPct, 12);
+    expect(pctToPt(fit.sizePct)).toBeGreaterThan(7.2);
+  });
+
+  it("does the same on the 2003 Modern frame (was cut with a clipped two-dot ellipsis)", () => {
+    const title = "Skeptic, the Endlessly Wandering Knight";
+    const fit = fitDetachedCostTitle(MODERN, title, "{2}{W}{U}{B}")!;
+    expect(fit.text).toBe(title);
+    expect(fit.sizePct).toBeLessThan(MODERN.title.sizePct);
+    expect(fit.sizePct).toBeGreaterThan(FLOOR);
+    expect(drawn(MODERN, title, fit.sizePct)).toBeCloseTo(fit.widthPct, 12);
+  });
+
+  it("stops at the 5 pt floor; past it the name is cut, with a whole '…' that fits (14-symbol cost)", () => {
+    const cost = "{W}".repeat(14);
+    for (const p of [M15PW, MODERN]) {
+      const fit = fitDetachedCostTitle(p, "Skeptic, the Endlessly Wandering Walker of Worlds", cost)!;
+      expect(fit.sizePct).toBe(FLOOR);
+      expect(fit.text.endsWith("…")).toBe(true);
+      expect(fit.text).toMatch(/^Skeptic\S*…$|^Skeptic, the…$/u);
+      // It fits its width, and one more character would not have.
+      expect(drawn(p, fit.text, FLOOR)).toBeLessThanOrEqual(fit.widthPct + 1e-12);
+      // A short name still fits whole at the floor or above.
+      const short = fitDetachedCostTitle(p, "Skeptic", cost)!;
+      expect(short.text).toBe("Skeptic");
+      expect(short.sizePct).toBeGreaterThanOrEqual(FLOOR);
+    }
+    // The cut drops a trailing separator before the "…".
+    const cut = fitDetachedCostTitle(M15PW, "Skeptic, the Endlessly Wandering Walker of Worlds", cost)!.text;
+    expect(cut).not.toMatch(/[\s,;:]…$/u);
+  });
+
+  it("never grows a name, and leaves an inline cost's name alone", () => {
+    expect(fitDetachedCostTitle(M15PW, "Wing", "{W}")!.sizePct).toBe(M15PW.title.sizePct);
+    expect(fitDetachedCostTitle(getFrameProfile("m15"), "Miner the Miner, Damned Delver", "{1}{R}{W}{B}")).toBeNull();
+    expect(fitDetachedCostTitle(M15PW, "Miner the Miner, Damned Delver", null)).toBeNull();
   });
 });

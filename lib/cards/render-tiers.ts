@@ -148,24 +148,31 @@ export type LineFitInput = {
   /** Width reserved for trailing slot content (set symbol / cost pips), as a
    *  fraction of card width. */
   reservedPct?: number;
+  /** The text's measured width at a 1 em font size, when the caller has one
+   *  (lib/cards/display-metrics.ts) — it replaces the average-advance
+   *  estimate. */
+  textWidthEm?: number;
 };
 
 /**
  * Single-line fit for title/type bands: the profile's base size, shrunk only
  * as far as needed for the text to fit the slot on one line (real cards do
  * the same for long type lines). Deterministic and shared by preview + bake,
- * mirroring fitRulesSizePct. `overflow: hidden` + ellipsis stay as backstop.
+ * mirroring fitRulesSizePct. Never below the hard floor (5 pt, the smallest
+ * rules text a card prints); past it `overflow: hidden` + ellipsis are the
+ * backstop.
  */
 export function fitSingleLineSizePct({
   text,
   rect,
   baseSizePct,
   reservedPct = 0,
+  textWidthEm,
 }: LineFitInput): number {
   const chars = (text ?? "").trim().length;
   if (chars === 0) return baseSizePct;
   const availableW = Math.max(0.05, rect.widthPct / 100 - reservedPct);
-  const fitted = availableW / (chars * DISPLAY_CHAR_W);
+  const fitted = availableW / (textWidthEm ?? chars * DISPLAY_CHAR_W);
   return Math.max(ptToPct(RULES_TEXT.hardFloorPt), Math.min(baseSizePct, fitted));
 }
 
