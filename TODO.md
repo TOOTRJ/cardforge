@@ -319,7 +319,7 @@ Open decisions are marked **[decide]**; none blocks its phase.
       It sets only `art_url`, a reset `art_position` and `artist_credit`, never text, frame or colour, and counts against the same Scryfall quota.
 
       Optional follow-up: a server-side 'Paste an image URL', under the upload allowlist, size limit and moderation. Never a client CORS proxy, which is what CC uses. Depends on 3.14 for orientation.
-- [x] (shipped 2026-09-26 — wf/qw-import-notice: `printingTreatmentFromScryfall` + the creator toast and an import-dialog heads-up, frame choice unchanged; still open: the "Use Borderless" / "Use Full-Art Basic" toast actions, once 4.32 / 4.39 are verified) **1.16 [P0] Stopgap: say so when a borderless or showcase printing imports as the plain frame** (borderless research 2026-09-25; ships before 1.4) — The importer drops every treatment, so all 6,327 paper borderless printings land silently on the bordered standard:
+- [x] (done 2026-09-26 — feat/quick-wins: `printingTreatmentFromScryfall` names a borderless / showcase / extended-art / full-art / textless printing (full-art and textless 2015 tokens skipped), the import dialog says so before the import and the creator toasts the frame the card actually landed on, in front of the "Seeded form…" / "Pre-filled…" toast; the frame choice is unchanged. The "Use Borderless" / "Use Full-Art Basic" toast actions moved to 4.32 / 4.39's acceptance. Still silent, for later items: foil-etched frame printings (`frame_effects ∋ etched`, 4.28), white/silver/gold borders (4.30), `frame: future`, Expeditions) **1.16 [P0] Stopgap: say so when a borderless or showcase printing imports as the plain frame** (borderless research 2026-09-25; ships before 1.4) — The importer drops every treatment, so all 6,327 paper borderless printings land silently on the bordered standard:
       - `frameTemplateFromScryfall` (`lib/scryfall/import-mapper.ts`:239-259) maps only `frame`→era plus snow/devoid.
       - `border_color`, `full_art` and `promo_types` pass through untyped (`lib/scryfall/client.ts`:143-210, `.passthrough()`).
       - m15 is verified, so `resolvePublishedFrame` returns `exact` and the creator shows nothing (`components/creator/card-creator-form.tsx`:1092-1118).
@@ -1147,7 +1147,7 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
         - Crown pair for 4.6: Arahbo FDN #294 · Sheoldred DMU #435
       - **Verification.** 0.9's auto-score must register on the name/type bars and the bottom bar, since the card edge has no pinlines. Use CC's Title/Type/Rules/Pinline masks as the scoring mask, then the 2.2 walk and 2.4 sign-off.
 
-      Acceptance: 7.7 passes; a parity case in 3.11; the 1.17 fixtures resolve `exact` for FDN #311 and M21 #315.
+      Acceptance: 7.7 passes; a parity case in 3.11; the 1.17 fixtures resolve `exact` for FDN #311 and M21 #315. Once verified for a colour and kind, 1.16's import toast for a borderless printing gets a "Use Borderless" action.
 - [ ] **4.33 [P1] Borderless planeswalkers** (borderless research 2026-09-25) — 245 non-showcase printings: 199 light box and dark ink (ELD #271 Oko, BRO #294), 46 dark (`inverted`: WOE #297 Ashiok, ECL #284).
       - **Source.** CC `PlaneswalkerBorderless` (3 rows, `groupPlaneswalker.js`:3; 8 colours with no C (survey, not re-verified), art to 91.53 % H, bottom bar from 91.52 % H) and `PlaneswalkerTallBorderless` (4 rows, `groupPlaneswalker.js`:6, 9 colours, type y 49.67). Both are 1500×2100.
       - **Profile.** m15pw's rail and rows (4.19, 3.13) with full-bleed art. CC paints the loyalty shield on its planeswalker masters, so drop `plateAssetPathTemplate` (4.19). The tall variant auto-selects at 4 or more abilities, like 4.7's `m15pwtall`.
@@ -1245,7 +1245,7 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
         - `fullartland`: W FRA #382 · #383; U FRA #385 · #386; B FRA #388 · #389; R FRA #391 · #392; G FRA #394 · #395. Under (a) these check geometry only (their bars are dark). They replace UNF #235 / EOE #262 (owner decision 2026-09-26, 4.35).
       - **Verification.** 0.9's auto-score registers on the two bars with the art masked; the 2.2 walk uses one basic per colour; 2.4 signs off each key.
 
-      Acceptance: 7.7 passes (`m15fullartland` has a border on all four edges; `fullartland` has art on all four edges plus its two bars). 3.24's parity cases pass. 1.19's fixtures ONE #262 and HOB #194 resolve `exact` on `m15fullartland`.
+      Acceptance: 7.7 passes (`m15fullartland` has a border on all four edges; `fullartland` has art on all four edges plus its two bars). 3.24's parity cases pass. 1.19's fixtures ONE #262 and HOB #194 resolve `exact` on `m15fullartland`. Once verified for a colour, 1.16's import toast for a full-art basic gets a "Use Full-Art Basic" action.
 - [ ] **4.40 [P2] Zendikar-style full-art basics (split type bar, centred medallion)** (full-art research 2026-09-26) — 127 black-bordered printings. The bottom bar reads "Basic Land" on the left and the subtype on the right, with a large medallion between them. Four looks:
       - **Stone ring** on the M15 frame: BFZ 25, OGW 2 (Wastes), AKH 5, HOU 5, MH1 5 (snow, "Basic Snow Land"), ZNR 15.
       - **Plain black ring:** SNC 10, BRO 10.

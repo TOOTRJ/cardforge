@@ -24,6 +24,7 @@ vi.mock("sonner", () => ({
   toast: { error: vi.fn(), success: vi.fn(), message: vi.fn(), info: vi.fn() },
 }));
 
+import { toast } from "sonner";
 import { ScryfallImportDialog } from "@/components/creator/scryfall-import-dialog";
 
 type Key = keyof typeof printings;
@@ -130,6 +131,23 @@ describe("ScryfallImportDialog — printing treatment heads-up", () => {
     expect(payload.patch.printing_treatment).toBe("borderless");
     // The stopgap never changes the frame the import picks.
     expect(payload.patch.frame_template).toBe("m15");
+  });
+
+  it("toasts the form's notice AFTER its own success toast, so the notice sits in front", async () => {
+    const notice =
+      "This printing is borderless — PipGlyph used the bordered M15 (2015) Standard frame.";
+    const onImport = await pickPrinting("dmu-435", vi.fn(() => notice));
+    vi.mocked(toast.success).mockClear();
+    vi.mocked(toast.info).mockClear();
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("button", { name: /use as starting point/i }));
+    await waitFor(() => expect(onImport).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(toast.info).toHaveBeenCalledWith(notice, { duration: 8000 }));
+    expect(toast.success).toHaveBeenCalledWith("Seeded form with Sheoldred, the Apocalypse.");
+    // Sonner shows the newest toast in front.
+    expect(vi.mocked(toast.success).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(toast.info).mock.invocationCallOrder[0]!,
+    );
   });
 
   it("full-art basic (ONE #262): names full art", async () => {

@@ -1081,11 +1081,14 @@ export function CardCreatorForm({
   // The `importedArtUrl` (set when the user opted to also import artwork)
   // is written to art_url and resets the focal point so the new image
   // shows centered.
+  /** Applies the import and returns the printing-treatment notice (or null)
+   *  for the CALLER to toast after its own success toast, so the notice
+   *  stacks on top of it (Sonner shows the newest in front). */
   const handleScryfallImport = ({
     patch,
     importedArtUrl,
     source,
-  }: ScryfallImportPayload) => {
+  }: ScryfallImportPayload): string | null => {
     const setIfPresent = (key: keyof FormValues, value: string | undefined) => {
       if (value === undefined) return;
       setValue(key, value as never, { shouldDirty: true });
@@ -1164,18 +1167,16 @@ export function CardCreatorForm({
     // A borderless / showcase / extended-art / full-art / textless printing
     // lands on the plain frame above, which "exact" alone would pass off as
     // a match — name the treatment and the frame it actually got (TODO 1.16
-    // stopgap until the 1.4 resolver). Both callers toast their own
-    // "Imported …" right after this handler returns, and Sonner stacks the
-    // newest on top, so the notice waits a microtask: it lands on top of
-    // that toast instead of collapsing underneath it.
-    if (patch.printing_treatment) {
-      const notice = printingTreatmentNotice(
-        patch.printing_treatment,
-        (getValues("frame_style.template") as FrameTemplate | undefined) ??
-          DEFAULT_FRAME_TEMPLATE,
-      );
-      queueMicrotask(() => toast.info(notice, { duration: 8000 }));
-    }
+    // stopgap until the 1.4 resolver). Returned, not toasted: both callers
+    // toast their own "Imported …" / "Pre-filled …" first and this notice
+    // right after it, so it sits in front.
+    const treatmentNotice = patch.printing_treatment
+      ? printingTreatmentNotice(
+          patch.printing_treatment,
+          (getValues("frame_style.template") as FrameTemplate | undefined) ??
+            DEFAULT_FRAME_TEMPLATE,
+        )
+      : null;
 
     setIfPresent("title", patch.title);
     setIfPresent("cost", patch.cost);
@@ -1271,6 +1272,7 @@ export function CardCreatorForm({
     setRemixSource({ name: source.name, scryfallUri: source.scryfallUri });
     // Pop the user back to Identity so they can see the seeded fields.
     goToStepKey("identity");
+    return treatmentNotice;
   };
 
   // Deck remix deep-link (/create?deckCard=…): pre-fill the form from the
@@ -1337,7 +1339,7 @@ export function CardCreatorForm({
           // soft-fail — the user can import art from the dialog later
         }
 
-        handleScryfallImport({
+        const treatmentNotice = handleScryfallImport({
           patch: body.patch,
           importedArtUrl,
           source: {
@@ -1352,6 +1354,7 @@ export function CardCreatorForm({
         toast.success(
           `Pre-filled from ${body.card.name} — change something to make it your custom proxy, then save to link it into “${deckRemix.deckTitle}”.`,
         );
+        if (treatmentNotice) toast.info(treatmentNotice, { duration: 8000 });
       } catch {
         toast.error(
           `Couldn't load “${deckRemix.entryName}” — starting from a blank card.`,
