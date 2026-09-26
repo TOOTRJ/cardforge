@@ -27,9 +27,10 @@ import { describeFrame } from "@/lib/creator/frame-resolve";
 // own art instead.
 // ---------------------------------------------------------------------------
 
-// Known supertypes from Magic's type system. Anything else we encounter on
-// the left side of "—" gets folded into card_type or supertype based on
-// the type-line-position heuristic below.
+// Words left of the "—" that the creator keeps as SUPERTYPE words, never as
+// the card type (card-type words other than the chosen card_type ride along
+// with them — parseTypeLine). Unknown words (Emblem, Scheme, Conspiracy, …)
+// are dropped.
 //
 // Kindred (Scryfall renamed Tribal → Kindred in 2024; both spellings appear
 // in type lines) is a card type in the Comprehensive Rules, but PipGlyph has
@@ -61,6 +62,31 @@ const TYPE_WORD_TO_CARD_TYPE: Record<string, CardType> = {
   planeswalker: "planeswalker",
   battle: "battle",
 };
+
+// Which card-type word becomes `card_type` when a type line carries several
+// (TODO 1.3). The card type picks the kind and so the frame, so the order is
+// the order of frames that can draw the card:
+//   • token first — a "Token Artifact Creature — Thopter" is a token (the
+//     token frames print P/T);
+//   • land beats creature — Dryad Arbor ("Land Creature — Forest Dryad") is
+//     dressed as a land, and an "Artifact Land" stays a land;
+//   • creature beats the rest — an Artifact or Enchantment Creature needs
+//     the P/T box, which the form gates on card_type;
+//   • artifact beats enchantment — a "Legendary Enchantment Artifact"
+//     (Bident of Thassa) prints on the artifact frame.
+// The other words are NOT lost: they ride in `supertype`, in printed order,
+// so the type line still reads "Artifact Creature — Golem".
+const CARD_TYPE_PRECEDENCE: readonly CardType[] = [
+  "token",
+  "land",
+  "creature",
+  "planeswalker",
+  "battle",
+  "artifact",
+  "enchantment",
+  "instant",
+  "sorcery",
+];
 
 const SCRYFALL_COLOR_TO_IDENTITY: Record<string, ColorIdentity> = {
   W: "white",
@@ -147,51 +173,95 @@ type ScryfallImportBackFacePatch = {
   imported_art_url?: string | null;
 };
 
+/** One word left of a type line's dash that the importer keeps. */
+type TypeWord = { word: string; cardType?: CardType };
+
 /**
- * Parse Scryfall's type_line ("Legendary Creature — Dragon, Elder") into
- * supertype / card_type / subtypes. Double-faced cards use "//"; we read
- * only the front face when present.
+ * Split the FRONT face of a type line into the words left of the dash that
+ * the importer keeps (supertype words and card-type words, printed order)
+ * and the subtypes. Double-faced type lines use "//"; only the part before
+ * it is read.
  */
-export function parseTypeLine(typeLine: string | null | undefined): {
+export function typeLineWords(typeLine: string | null | undefined): {
+  words: TypeWord[];
+  subtypes: string[];
+} {
+  if (!typeLine) return { words: [], subtypes: [] };
+  const front = typeLine.split("//")[0]?.trim() ?? typeLine.trim();
+  // The em-dash "—" (U+2014) separates type from subtypes. Some Scryfall
+  // payloads use a plain hyphen; tolerate both.
+  const [leftRaw, rightRaw] = front.split(/\s+[—-]\s+/);
+  const words: TypeWord[] = [];
+  for (const word of (leftRaw ?? "").split(/\s+/).filter(Boolean)) {
+    if (KNOWN_SUPERTYPES.has(word)) {
+      words.push({ word });
+      continue;
+    }
+    const cardType = TYPE_WORD_TO_CARD_TYPE[word.toLowerCase()];
+    if (cardType) words.push({ word, cardType });
+  }
+  return { words, subtypes: (rightRaw ?? "").split(/\s+/).filter(Boolean) };
+}
+
+/**
+ * Parse Scryfall's type_line ("Legendary Artifact Creature — Golem") into
+ * supertype / card_type / subtypes. `card_type` is the highest card-type
+ * word by CARD_TYPE_PRECEDENCE (TODO 1.3) — or `options.cardType` when the
+ * caller already knows the card type (a layout kind: Urza's Saga is an
+ * "Enchantment Land" on the saga frame) and the line carries that word.
+ * Every other kept word — the supertypes and the remaining card-type words —
+ * stays in `supertype` in printed order, so "Artifact Creature" imports as
+ * the creature card type with "Artifact" in front (TODO 1.7) instead of
+ * losing the word.
+ */
+export function parseTypeLine(
+  typeLine: string | null | undefined,
+  options: { cardType?: CardType } = {},
+): {
   supertype?: string;
   card_type?: CardType;
   subtypes_text?: string;
 } {
   if (!typeLine) return {};
-  // For DFCs, take the front face's type line.
-  const front = typeLine.split("//")[0]?.trim() ?? typeLine.trim();
-  // The em-dash "—" (U+2014) separates type from subtypes. Some Scryfall
-  // payloads use a plain hyphen; tolerate both.
-  const [leftRaw, rightRaw] = front.split(/\s+[—-]\s+/);
-  const leftWords = (leftRaw ?? "").split(/\s+/).filter(Boolean);
-  const subtypes = (rightRaw ?? "").split(/\s+/).filter(Boolean);
+  const { words, subtypes } = typeLineWords(typeLine);
+  const present = new Set(
+    words.flatMap((w) => (w.cardType ? [w.cardType] : [])),
+  );
+  const cardType =
+    options.cardType && present.has(options.cardType)
+      ? options.cardType
+      : CARD_TYPE_PRECEDENCE.find((t) => present.has(t));
 
-  // Walk the left words: known supertypes go into `supertype`, the
-  // remainder picks the card_type. "Creature" outranks the other type
-  // words — an Artifact Creature or Enchantment Creature renders with a
-  // P/T box, and the form gates the P/T inputs on card_type — except
-  // "token", which keeps precedence so "Token Creature — Goblin" stays a
-  // token (token frames render P/T too). Otherwise the first recognized
-  // word wins.
-  const supers: string[] = [];
-  let cardType: CardType | undefined;
-  for (const word of leftWords) {
-    if (KNOWN_SUPERTYPES.has(word)) {
-      supers.push(word);
-      continue;
-    }
-    const mapped = TYPE_WORD_TO_CARD_TYPE[word.toLowerCase()];
-    if (!mapped) continue;
-    if (!cardType || (mapped === "creature" && cardType !== "token")) {
-      cardType = mapped;
-    }
-  }
+  // Drop the ONE word that became card_type; keep the rest in order.
+  let taken = false;
+  const supers = words
+    .filter((w) => {
+      if (!taken && w.cardType !== undefined && w.cardType === cardType) {
+        taken = true;
+        return false;
+      }
+      return true;
+    })
+    .map((w) => w.word);
 
   return {
     supertype: supers.length > 0 ? supers.join(" ") : undefined,
     card_type: cardType,
     subtypes_text: subtypes.length > 0 ? subtypes.join(", ") : undefined,
   };
+}
+
+/** The front face's type line: the first face of a multi-face card, else
+ *  the card's own. */
+function frontTypeLine(card: ScryfallCard): string | null | undefined {
+  return card.card_faces?.[0]?.type_line ?? card.type_line;
+}
+
+/** True when the card is a Room (Duskmourn): Scryfall files Rooms under
+ *  layout "split", but a Room is ONE enchantment with two doors, not a
+ *  split card. */
+function isRoomCard(card: ScryfallCard): boolean {
+  return typeLineWords(frontTypeLine(card)).subtypes.includes("Room");
 }
 
 /**
@@ -201,24 +271,32 @@ export function parseTypeLine(typeLine: string | null | undefined): {
  *   • every printed battle is layout "transform" (layout "battle" matches
  *     zero cards); the Battle type lives on the front face's type_line
  *   • aftermath is layout "split" + keywords ["Aftermath"]
- * Unmodeled layouts (class, case, leveler, prototype, prepare, meld, …)
- * deliberately fall through to the type-line mapping so an exotic import
- * degrades to a standard kind instead of failing.
+ *   • a transforming Saga (Fable of the Mirror-Breaker) is layout
+ *     "transform": the front face's Saga subtype makes it a saga (TODO 1.3)
+ *   • Rooms are layout "split" but are not split cards: the first door
+ *     imports as the standard kind of its type line (an enchantment) and the
+ *     second door rides along as the back face, until 4.27's Room template
+ *   • Omens (Tarkir: Dragonstorm) are layout "adventure" on Scryfall: the
+ *     omen spell is the storybook page, the nearest frame until 4.27's Omen
+ *     template. A future "omen" layout value lands there too.
+ * Class, Case and the other unmodeled layouts (leveler, prototype, prepare,
+ * meld, …) take the standard kind of the front face's type line, so an
+ * exotic import degrades to a standard kind instead of failing.
  */
 export function kindFromScryfall(card: ScryfallCard): CardKind | undefined {
   const layout = (card.layout ?? "").toLowerCase();
-  if (layout === "split") {
+  if (layout === "saga" || typeLineWords(frontTypeLine(card)).subtypes.includes("Saga")) {
+    return "saga";
+  }
+  if (layout === "split" && !isRoomCard(card)) {
     const keywords = (card.keywords ?? []).map((k) => k.toLowerCase());
     return keywords.includes("aftermath") ? "aftermath" : "split";
   }
   if (layout === "flip") return "flip";
-  if (layout === "adventure") return "adventure";
-  if (layout === "saga") return "saga";
+  if (layout === "adventure" || layout === "omen") return "adventure";
 
-  const front = card.card_faces?.[0];
-  const { card_type } = parseTypeLine(front?.type_line ?? card.type_line);
+  const { card_type } = parseTypeLine(frontTypeLine(card));
   if (!card_type) return undefined;
-  // kindFromCard folds legacy "spell" to sorcery and maps 1:1 otherwise.
   return kindFromCard(card_type, undefined);
 }
 
@@ -234,11 +312,21 @@ const SCRYFALL_FRAME_TO_ERA: Record<string, FrameEra> = {
 
 /**
  * The frame template matching THIS PRINTING: its border era's standard for
- * the derived kind, upgraded to the snow/devoid skin when the printing
- * carries that treatment. Returns undefined for layout kinds (their
- * template is fixed by the kind — saga is saga in every era) and for
- * unmappable cards. Falls forward to the M15 standard when the printing's
- * era can't frame the type (e.g. 2003-frame Lorwyn planeswalkers).
+ * the derived kind, dressed by the rest of the front face's type line
+ * (TODO 1.3) and the printing's snow/devoid treatment. Returns undefined for
+ * layout kinds (their template is fixed by the kind — saga is saga in every
+ * era) and for unmappable cards. Falls forward to the M15 standard when the
+ * printing's era can't frame the type (e.g. 2003-frame Lorwyn
+ * planeswalkers).
+ *
+ * On the M15 era:
+ *   • snow/devoid printings re-dress the plain spell frame (a frame effect
+ *     is a fact about the printing, so it wins over the type words);
+ *   • an Artifact Creature is a creature on the artifact frame (TODO 1.7 —
+ *     Solemn Simulacrum M21 #239 is the curated m15artifact/c reference);
+ *   • an artifact token is the artifact token frame (Treasure).
+ * An Artifact Land is a land (land outranks artifact), and every other
+ * artifact is the Artifact kind, whose standard is already m15artifact.
  */
 export function frameTemplateFromScryfall(
   card: ScryfallCard,
@@ -255,13 +343,16 @@ export function frameTemplateFromScryfall(
     standardFrameFor("m15", def.cardType) ??
     undefined;
 
-  // Snow/devoid printings re-dress the plain m15 spell frame — only
-  // meaningful where that IS the era standard for the kind.
+  const artifact = typeLineWords(frontTypeLine(card)).words.some(
+    (w) => w.cardType === "artifact",
+  );
   if (base === "m15") {
     const effects = (card.frame_effects ?? []).map((e) => e.toLowerCase());
     if (effects.includes("snow")) return "m15snow";
     if (effects.includes("devoid")) return "m15devoid";
+    if (artifact && kind === "creature") return "m15artifact";
   }
+  if (base === "m15token" && artifact) return "m15tokenartifact";
   return base;
 }
 
@@ -403,7 +494,14 @@ export function mapScryfallToFormPatch(
   ): string | undefined =>
     (isMultiFace ? faceVal ?? cardVal : cardVal ?? faceVal) ?? undefined;
 
-  const typeParts = parseTypeLine(pick(front?.type_line, card.type_line));
+  // A layout kind fixes the card type the form writes (a Saga is an
+  // enchantment): read the type line against it, so Urza's Saga ("Enchantment
+  // Land") keeps "Land" in front instead of printing "Enchantment
+  // Enchantment".
+  const kind = kindFromScryfall(card);
+  const typeParts = parseTypeLine(pick(front?.type_line, card.type_line), {
+    cardType: kind ? KIND_DEFS[kind].cardType : undefined,
+  });
   const colorIdentity = parseColorIdentity(card);
   const rarity =
     card.rarity && SCRYFALL_RARITY[card.rarity]
@@ -428,7 +526,7 @@ export function mapScryfallToFormPatch(
     // Ice") is the right seed for the front we're populating.
     title: (isMultiFace && front?.name) || card.name,
     cost: pick(front?.mana_cost, card.mana_cost),
-    kind: kindFromScryfall(card),
+    kind,
     frame_template: frameTemplateFromScryfall(card),
     printing_treatment: printingTreatmentFromScryfall(card),
     card_type: cardType,

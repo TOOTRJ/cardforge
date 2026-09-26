@@ -68,14 +68,16 @@ describe("parseTypeLine", () => {
 
   it("lets creature win over other type words (artifact/enchantment creatures)", () => {
     // Real MTG renders these with a P/T box, and the form gates the P/T
-    // inputs on card_type === creature — so creature must win.
+    // inputs on card_type === creature — so creature must win. The other
+    // type words stay in front, in printed order (TODO 1.7: the Alpha frame
+    // paints its artifact card for "Artifact" in the supertype).
     expect(parseTypeLine("Artifact Creature — Construct")).toEqual({
-      supertype: undefined,
+      supertype: "Artifact",
       card_type: "creature",
       subtypes_text: "Construct",
     });
     expect(parseTypeLine("Legendary Enchantment Creature — God")).toEqual({
-      supertype: "Legendary",
+      supertype: "Legendary Enchantment",
       card_type: "creature",
       subtypes_text: "God",
     });
@@ -88,8 +90,9 @@ describe("parseTypeLine", () => {
   it("keeps token precedence over creature", () => {
     // Token type lines ("Token Creature — Goblin") stay tokens: token is
     // a distinct kind with its own frames, and those render P/T anyway.
+    // "Creature" stays a word in front of it (TODO 1.3).
     expect(parseTypeLine("Token Creature — Goblin")).toEqual({
-      supertype: undefined,
+      supertype: "Creature",
       card_type: "token",
       subtypes_text: "Goblin",
     });

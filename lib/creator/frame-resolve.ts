@@ -4,9 +4,12 @@ import {
   FRAME_SET_LABELS,
   FRAME_TEMPLATE_LABELS,
   FRAME_TEMPLATE_SET,
+  type CardType,
   type FrameTemplate,
 } from "@/types/card";
 import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
+import { isArtifactFrameType } from "@/components/cards/frame-layer";
+import { eraForTemplate, standardFrameFor } from "@/lib/creator/frame-picker";
 import {
   baseFrameFor,
   framesForKind,
@@ -139,6 +142,31 @@ export function resolvePublishedFrame(input: ResolveFrameInput): FrameResolution
     if (result) return result;
   }
   return { status: "unavailable" };
+}
+
+/** The frames a Scryfall import asks resolvePublishedFrame for, most wanted
+ *  first: the printing's own frame, its era's standard for the card type,
+ *  then the M15 standard. An Artifact Creature asks for M15's artifact frame
+ *  before the plain one (TODO 1.7), so a Juggernaut whose Alpha frame isn't
+ *  published falls forward to the artifact card it is, not a grey spell. */
+export function importFrameCandidates(input: {
+  wanted: FrameTemplate;
+  cardType: CardType;
+  supertype?: string | null;
+}): FrameTemplate[] {
+  const { wanted, cardType, supertype } = input;
+  const artifactCreature =
+    cardType === "creature" && isArtifactFrameType({ cardType, supertype });
+  return Array.from(
+    new Set(
+      [
+        wanted,
+        standardFrameFor(eraForTemplate(wanted), cardType),
+        artifactCreature ? ("m15artifact" as const) : null,
+        standardFrameFor("m15", cardType),
+      ].filter((t): t is FrameTemplate => Boolean(t)),
+    ),
+  );
 }
 
 /** Where a card on a basic-only frame (the full-art basic land) goes when it

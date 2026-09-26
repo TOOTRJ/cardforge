@@ -49,12 +49,10 @@ const ERA_FRAME: Partial<Record<string, string>> = {
   showcase: "2015",
 };
 
-/** The kind the compare view will render this printing as. Transforming
- *  Sagas are `layout: "transform"` on Scryfall, so the mapper's layout
- *  check misses them — the front face's type line is the reliable signal. */
+/** The kind the compare view will render this printing as — the importer's
+ *  kind, which reads a transforming Saga (`layout: "transform"`) from its
+ *  front face's Saga subtype (TODO 1.3). */
 export function referenceKindFor(card: ScryfallCard): CardKind | undefined {
-  const typeLine = card.card_faces?.[0]?.type_line ?? card.type_line ?? "";
-  if (/\bSaga\b/.test(typeLine)) return "saga";
   return kindFromScryfall(card);
 }
 

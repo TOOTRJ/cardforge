@@ -130,10 +130,10 @@ import {
   colorWord,
   pickFrameColorKey,
 } from "@/components/cards/frame-layer";
-import { eraForTemplate, standardFrameFor } from "@/lib/creator/frame-picker";
 import {
   basicOnlyFrameFallback,
   describeFrame,
+  importFrameCandidates,
   resolvePublishedFrame,
 } from "@/lib/creator/frame-resolve";
 import {
@@ -1126,15 +1126,11 @@ export function CardCreatorForm({
         patch.frame_template ??
         ((getValues("frame_style.template") as FrameTemplate | undefined) ??
           DEFAULT_FRAME_TEMPLATE);
-      const candidates = Array.from(
-        new Set(
-          [
-            wanted,
-            standardFrameFor(eraForTemplate(wanted), cardType),
-            standardFrameFor("m15", cardType),
-          ].filter((t): t is FrameTemplate => Boolean(t)),
-        ),
-      );
+      const candidates = importFrameCandidates({
+        wanted,
+        cardType,
+        supertype: patch.supertype,
+      });
       const resolution = resolvePublishedFrame({
         kind: importedKind ?? kindFromCard(cardType, undefined),
         candidates,
