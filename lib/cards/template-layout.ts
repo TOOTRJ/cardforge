@@ -1738,11 +1738,12 @@ const NYX: FrameProfile = {
   footer: { ...M15.footer!, colorHex: INK_LIGHT },
 };
 
-// Full art (Zendikar hedron) — edge-to-edge art, floating title bar, and a
+// Zendikar Rising showcase (the hedron frame; key `fullart` for history, not
+// full art) — a tall art window inside the border, floating title bar, and a
 // baked-in translucent text box in the bottom quarter.
 const FULLART: FrameProfile = {
   ...M15,
-  label: "Full Art",
+  label: "Zendikar Rising Hedron",
   artSlot: { topPct: 2.9, leftPct: 4, widthPct: 92, heightPct: 88.3 },
   title: {
     ...M15.title,
@@ -1796,10 +1797,11 @@ const FULLARTLAND: FrameProfile = {
   },
 };
 
-// M15 Textless — the plain M15 border with an edge-to-edge art window (no type
-// plate, no text box painted). Shares FULLART's over-art ink treatment (light
-// type + scrim-backed rules so any text the user adds stays legible), but the
-// art window is inset to the M15 border rather than bleeding to the card edge.
+// M15 Textless — the plain M15 border around a tall art window (no type
+// plate, no text box painted). Shares FULLART's over-art ink treatment: light
+// type and light rules straight on the art. FULLART has no `backdropHex`, so
+// no scrim backs the rules yet. The art window is inset to the M15 border
+// rather than bleeding to the card edge.
 const M15TEXTLESS: FrameProfile = {
   ...FULLART,
   label: "M15 Textless",

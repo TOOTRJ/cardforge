@@ -2,6 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { frameGateError } from "@/lib/cards/frame-availability";
+import {
+  cardFieldsFace,
+  frameKindGateError,
+  frameKindUpdateGateError,
+} from "@/lib/cards/frame-kind-gate";
 import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
 import { recordActivity } from "@/lib/analytics/funnel-server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
@@ -225,6 +230,19 @@ export async function createCardAction(
     );
     if (gateError) {
       return { ok: false, fieldErrors: { frame_style: gateError } };
+    }
+  }
+
+  // Kind gate: a published frame can still be the wrong one for this card
+  // (a planeswalker on a frame with no loyalty slot, a nonbasic land on the
+  // full-art basic frame). The picker never offers those; refuse them here.
+  {
+    const kindError = frameKindGateError(
+      data.frame_style?.template,
+      cardFieldsFace(data),
+    );
+    if (kindError) {
+      return { ok: false, fieldErrors: { frame_style: kindError } };
     }
   }
 
@@ -512,6 +530,24 @@ export async function updateCardAction(
       if (gateError) {
         return { ok: false, fieldErrors: { frame_style: gateError } };
       }
+    }
+
+    // Kind gate on the card as it will be saved (the patch over the stored
+    // row); a card that already broke it and keeps its frame stays editable.
+    const kindError = frameKindUpdateGateError({
+      existingTemplate,
+      nextTemplate,
+      existing: cardFieldsFace(existing),
+      next: cardFieldsFace({
+        card_type: data.card_type !== undefined ? data.card_type : existing.card_type,
+        supertype: data.supertype !== undefined ? data.supertype : existing.supertype,
+        subtypes: data.subtypes !== undefined ? data.subtypes : existing.subtypes,
+        title: data.title !== undefined ? data.title : existing.title,
+        rules_text: data.rules_text !== undefined ? data.rules_text : existing.rules_text,
+      }),
+    });
+    if (kindError) {
+      return { ok: false, fieldErrors: { frame_style: kindError } };
     }
   }
 

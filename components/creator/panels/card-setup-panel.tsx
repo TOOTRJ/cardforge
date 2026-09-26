@@ -14,7 +14,7 @@
 // framesForKind() simply doesn't include an era that can't frame the kind.
 
 import { useMemo, useState } from "react";
-import { Controller, useFormContext } from "react-hook-form";
+import { Controller, useFormContext, useWatch } from "react-hook-form";
 import { ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { ChipGroup, type ChipOption } from "@/components/ui/chip-group";
@@ -38,11 +38,14 @@ import {
   SoonBadge,
 } from "@/components/creator/frame-pickers";
 import {
+  BASIC_ONLY_FRAME_REASON,
   CARD_KIND_VALUES,
   KIND_DEFS,
   baseFrameFor,
   framesForKind,
+  isSingleBasicLand,
   kindHasAvailableFrame,
+  templateIsBasicOnly,
   type CardKind,
   type FrameChoice,
   type FrameColorKey,
@@ -63,6 +66,7 @@ import {
 } from "@/types/card";
 import { eraForTemplate } from "@/lib/creator/frame-picker";
 import { normalizeFrameTemplate } from "@/lib/cards/card-display";
+import { parseSubtypes } from "@/lib/creator/card-fields";
 import type { FormValues } from "@/lib/creator/form-types";
 
 // Single-color key each identity chip contributes (frame-layer's palette).
@@ -179,6 +183,20 @@ export function CardSetupPanel({
     [kind, verifiedKeys],
   );
   const colorKey = pickFrameColorKey(colorIdentity);
+  // Basic-only frames (the full-art basic land) can't draw a nonbasic's
+  // rules, so their chips are disabled unless the card IS one basic land —
+  // the same rule the renderers and the server gate read.
+  const [cardType, title, supertype, subtypesText, rulesText] = useWatch({
+    control,
+    name: ["card_type", "title", "supertype", "subtypes_text", "rules_text"],
+  });
+  const isBasicLand = isSingleBasicLand({
+    cardType,
+    supertype,
+    subtypes: parseSubtypes(subtypesText ?? ""),
+    title,
+    rulesText,
+  });
 
   const kindOptions: ChipOption<CardKind>[] = CARD_KIND_VALUES.map((k) => {
     // A kind is pickable only when at least one of its frames has a
@@ -328,16 +346,20 @@ export function CardSetupPanel({
               colorKey,
               verifiedKeys,
             );
+            const basicOnlyRefused =
+              templateIsBasicOnly(choice.template) && !isBasicLand;
             return {
               value: choice.template,
               label,
-              description: !available
-                ? "Awaiting verification"
-                : !colorAvailable
-                  ? `Not verified in ${colorWord(colorKey)} yet — picking it switches to ${colorWord(choice.availableColorKeys[0])}`
-                  : choice.group === "skin"
-                    ? "Same layout, different dress"
-                    : undefined,
+              description: basicOnlyRefused
+                ? BASIC_ONLY_FRAME_REASON
+                : !available
+                  ? "Awaiting verification"
+                  : !colorAvailable
+                    ? `Not verified in ${colorWord(colorKey)} yet — picking it switches to ${colorWord(choice.availableColorKeys[0])}`
+                    : choice.group === "skin"
+                      ? "Same layout, different dress"
+                      : undefined,
               leading: (
                 <FrameThumb
                   template={choice.template}
@@ -349,7 +371,7 @@ export function CardSetupPanel({
                   colorIdentity={colorIdentity}
                 />
               ),
-              disabled: !available,
+              disabled: !available || basicOnlyRefused,
               badge: available ? undefined : <SoonBadge />,
             };
           };

@@ -141,6 +141,16 @@ export function setQualifiedFrameLabel(template: FrameTemplate, separator = " â€
   return label.includes(setLabel) ? label : `${setLabel}${separator}${label}`;
 }
 
+/** A frame's label inside its era group (the admin frame checklist): a
+ *  showcase frame names its set ("Zendikar Rising â€” Hedron"), since the
+ *  showcase era mixes many sets; a border-era frame keeps its set-relative
+ *  label ("Snow"). */
+export function eraGroupFrameLabel(template: FrameTemplate): string {
+  return FRAME_SET_ERA[FRAME_TEMPLATE_SET[template]] === "showcase"
+    ? setQualifiedFrameLabel(template)
+    : FRAME_TEMPLATE_LABELS[template];
+}
+
 /** Toast/error copy for a frame: "M15 (2015) Snow", "The Lord of the Rings
  *  Ring". Template labels are set-relative, so the era/set is prepended. */
 export function describeFrame(template: FrameTemplate): string {

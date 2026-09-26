@@ -136,3 +136,93 @@ describe("CardSetupPanel variation chips — Dragon Wing's own frame set", () =>
     expect(document.body.textContent).not.toMatch(/Tarkir: Dragonstorm — Dragon Wing|Multiverse Legends — Dragon Wing/);
   });
 });
+
+// TODO 0.26: the full-art basic frame draws a name bar, a type bar and the
+// big symbol over the art — nothing else. A nonbasic land's rules would
+// print straight on the art, so its chip is disabled with the reason, and
+// the Zendikar Rising hedron frame reads as its set, not "Full Art".
+function LandHarness({
+  verified,
+  identity,
+}: {
+  verified: string[];
+  identity: { title: string; supertype: string; subtypes_text: string; rules_text: string };
+}) {
+  const methods = useForm({
+    defaultValues: {
+      card_type: "land",
+      frame_style: { template: "m15land" },
+      color_identity: ["white"] as ColorIdentity[],
+      ...identity,
+    },
+  });
+  const color = useWatch({ control: methods.control, name: "color_identity" }) as ColorIdentity[];
+  const template = useWatch({ control: methods.control, name: "frame_style.template" }) as string;
+  return (
+    <FormProvider {...methods}>
+      <CardSetupPanel
+        kind="land"
+        colorIdentity={color}
+        verifiedFrameKeys={verified}
+        onKindSelect={() => {}}
+      />
+      <output data-testid="template">{template}</output>
+    </FormProvider>
+  );
+}
+
+const landVerified = [frameComboKey("m15land", "w"), frameComboKey("fullartland", "w")];
+const fullArtBasicChip = () =>
+  within(screen.getByRole("radiogroup", { name: /Frame variations/ })).getByRole("radio", {
+    name: /Full Art — Basic Land/,
+  }) as HTMLButtonElement;
+
+describe("CardSetupPanel variation chips — full-art basic lands only", () => {
+  it("disables the full-art basic frame for a nonbasic land, with the reason", () => {
+    render(
+      <LandHarness
+        verified={landVerified}
+        identity={{
+          title: "Hallowed Fountain",
+          supertype: "",
+          subtypes_text: "Plains, Island",
+          rules_text: "({T}: Add {W} or {U}.)",
+        }}
+      />,
+    );
+    const chip = fullArtBasicChip();
+    expect(chip.disabled).toBe(true);
+    expect(chip.textContent).toContain("Full-art basic frames are for basic lands");
+    fireEvent.click(chip);
+    expect(screen.getByTestId("template").textContent).toBe("m15land");
+  });
+
+  it("offers it to a basic land", () => {
+    render(
+      <LandHarness
+        verified={landVerified}
+        identity={{ title: "Plains", supertype: "Basic", subtypes_text: "Plains", rules_text: "" }}
+      />,
+    );
+    const chip = fullArtBasicChip();
+    expect(chip.disabled).toBe(false);
+    expect(chip.textContent).not.toContain("for basic lands");
+    fireEvent.click(chip);
+    expect(screen.getByTestId("template").textContent).toBe("fullartland");
+  });
+});
+
+describe("CardSetupPanel variation chips — Zendikar Rising hedron", () => {
+  it("labels the fullart template as Zendikar Rising — Hedron, never Full Art", () => {
+    render(
+      <Harness
+        verified={[frameComboKey("m15", "u"), frameComboKey("fullart", "u")]}
+        onColor={vi.fn()}
+      />,
+    );
+    const group = screen.getByRole("radiogroup", { name: /Frame variations/ });
+    const chip = within(group).getByRole("radio", { name: /Hedron/ });
+    expect(chip.textContent).toContain("Zendikar Rising — Hedron");
+    expect(chip.textContent).not.toMatch(/Full Art/);
+  });
+});

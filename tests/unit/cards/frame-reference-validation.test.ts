@@ -86,6 +86,39 @@ describe("validateReferenceForCombo", () => {
     expect(validateReferenceForCombo(walker, "m15", "u").errors).toHaveLength(1);
   });
 
+  it("keeps planeswalkers off the frames with no loyalty slot (TODO 0.26)", () => {
+    const walker = card({
+      name: "Nahiri, Heir of the Ancients",
+      type_line: "Legendary Planeswalker — Nahiri",
+      color_identity: ["R", "W"],
+      colors: ["R", "W"],
+    });
+    const result = validateReferenceForCombo(walker, "fullart", "m");
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]).toMatch(/is a planeswalker; the Hedron frame/);
+  });
+
+  it("verifies the full-art basic frame against basic lands only (TODO 0.26)", () => {
+    const plains = card({ name: "Plains", type_line: "Basic Land — Plains", color_identity: ["W"], colors: [] });
+    expect(validateReferenceForCombo(plains, "fullartland", "w").errors).toEqual([]);
+    const wastes = card({ name: "Wastes", type_line: "Basic Land", color_identity: [], colors: [] });
+    expect(validateReferenceForCombo(wastes, "fullartland", "c").errors).toEqual([]);
+
+    const fountain = card({
+      name: "Hallowed Fountain",
+      type_line: "Land — Plains Island",
+      oracle_text: "({T}: Add {W} or {U}.)",
+      color_identity: ["W", "U"],
+      colors: [],
+    });
+    const result = validateReferenceForCombo(fountain, "fullartland", "m");
+    expect(result.errors).toEqual([
+      "Hallowed Fountain isn't a basic land; the Basic Land frame dresses basic lands only.",
+    ]);
+    // Any other land frame still takes it.
+    expect(validateReferenceForCombo(fountain, "m15land", "m").errors).toEqual([]);
+  });
+
   it("warns (does not refuse) on an era mismatch", () => {
     const result = validateReferenceForCombo(card({ frame: "2003" }), "m15", "w");
     expect(result.errors).toEqual([]);

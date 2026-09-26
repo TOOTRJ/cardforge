@@ -38,6 +38,7 @@ import {
 } from "@/lib/cards/frame-verification-state";
 import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
 import { eraForTemplate } from "@/lib/creator/frame-picker";
+import { eraGroupFrameLabel } from "@/lib/creator/frame-resolve";
 import { buildFrameComparePayload } from "@/lib/scryfall/reference-preview";
 import { getCurrentProfile } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
@@ -45,7 +46,6 @@ import type { CardPreviewData } from "@/components/cards/card-preview";
 import {
   FRAME_ERA_LABELS,
   FRAME_ERA_VALUES,
-  FRAME_TEMPLATE_LABELS,
   FRAME_TEMPLATE_VALUES,
   type FrameEra,
   type FrameTemplate,
@@ -223,7 +223,7 @@ export default async function AdminFrameComparePage({
         </Link>
         <PageHeader
           eyebrow="Admin · Frame compare"
-          title={`${FRAME_TEMPLATE_LABELS[template]} · ${color.toUpperCase()}`}
+          title={`${eraGroupFrameLabel(template)} · ${color.toUpperCase()}`}
           description={referenceLine}
           actions={
             <span className="flex flex-wrap items-center gap-4">
@@ -359,7 +359,7 @@ export default async function AdminFrameComparePage({
       const { note, confirm } = frameReferenceNote(t);
       return {
         template: t,
-        label: FRAME_TEMPLATE_LABELS[t],
+        label: eraGroupFrameLabel(t),
         hasOverride: Boolean(checklistOverrides[t]),
         note,
         confirm,

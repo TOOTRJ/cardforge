@@ -665,6 +665,13 @@ export async function createCardGenerationJob(
     requested: input.frame,
     colorIdentity: card.color_identity,
     verifiedKeys,
+    face: {
+      cardType: card.card_type,
+      supertype: card.supertype,
+      subtypes: card.subtypes,
+      title: card.title,
+      rulesText: card.rules_text,
+    },
   });
 
   const plan: CardJobPlan = {
@@ -785,6 +792,16 @@ export async function createCardFillJob(
             input.locked.color_identity ??
             [],
           verifiedKeys,
+          face: {
+            cardType: designed.fields.card_type,
+            supertype:
+              designed.fields.supertype !== undefined
+                ? designed.fields.supertype
+                : input.locked.supertype,
+            subtypes: designed.fields.subtypes ?? input.locked.subtypes,
+            title: designed.fields.title ?? input.locked.title,
+            rulesText: designed.fields.rules_text ?? input.locked.rules_text,
+          },
         })
       : null;
 

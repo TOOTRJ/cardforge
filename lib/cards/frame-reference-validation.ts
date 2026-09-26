@@ -1,7 +1,17 @@
 import type { ScryfallCard } from "@/lib/scryfall/client";
-import { kindFromScryfall, parseColorIdentity } from "@/lib/scryfall/import-mapper";
+import {
+  kindFromScryfall,
+  parseColorIdentity,
+  parseTypeLine,
+} from "@/lib/scryfall/import-mapper";
 import { pickFrameColorKey } from "@/components/cards/frame-layer";
-import { KIND_DEFS, templateSupportsKind, type CardKind } from "@/lib/creator/card-kinds";
+import {
+  KIND_DEFS,
+  isSingleBasicLand,
+  templateIsBasicOnly,
+  templateSupportsKind,
+  type CardKind,
+} from "@/lib/creator/card-kinds";
 import { eraForTemplate } from "@/lib/creator/frame-picker";
 import { FRAME_TEMPLATE_LABELS, type FrameTemplate } from "@/types/card";
 
@@ -47,6 +57,22 @@ export function referenceKindFor(card: ScryfallCard): CardKind | undefined {
   return kindFromScryfall(card);
 }
 
+/** True when the printing's front face is one basic land — the only thing a
+ *  basic-only frame (the full-art basic land) can be verified against. */
+function referenceIsSingleBasicLand(card: ScryfallCard): boolean {
+  const front = card.card_faces?.[0];
+  const { supertype, card_type, subtypes_text } = parseTypeLine(
+    front?.type_line ?? card.type_line,
+  );
+  return isSingleBasicLand({
+    cardType: card_type,
+    supertype,
+    subtypes: subtypes_text ? subtypes_text.split(", ") : [],
+    title: front?.name ?? card.name,
+    rulesText: front?.oracle_text ?? card.oracle_text,
+  });
+}
+
 export function validateReferenceForCombo(
   card: ScryfallCard,
   template: FrameTemplate,
@@ -71,6 +97,10 @@ export function validateReferenceForCombo(
   } else if (!templateSupportsKind(template, kind)) {
     errors.push(
       `${card.name} is a ${KIND_DEFS[kind].label.toLowerCase()}; the ${label} frame doesn't dress that kind.`,
+    );
+  } else if (templateIsBasicOnly(template) && !referenceIsSingleBasicLand(card)) {
+    errors.push(
+      `${card.name} isn't a basic land; the ${label} frame dresses basic lands only.`,
     );
   }
 

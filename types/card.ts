@@ -339,9 +339,13 @@ export const FRAME_TEMPLATE_VALUES = [
   // "tarkir" prefix because it is stored in cards.frame_style, frame_reviews
   // and the frames bucket. Its set is "multiverselegends", not "tarkir".
   "tarkirdragon",
+  // Zendikar Rising (ZNR 2020) showcase — the hedron frame. It is not full
+  // art (Scryfall flags none of those printings full_art), but the key keeps
+  // its historical name because it is stored in cards.frame_style,
+  // frame_reviews and the frames bucket. Its set is "zendikarrising".
+  "fullart",
   // Variation treatments (2026-07): extended/full art, premium lands, Nyx.
   "extendedart",
-  "fullart",
   "fullartland",
   "m15textless",
   "m15textlessland",
@@ -393,6 +397,8 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   tarkirdraconic: "Draconic",
   tarkirghostfire: "Ghostfire",
   extendedart: "Extended Art",
+  // Set-relative like the other showcase labels: the picker prints
+  // "Zendikar Rising — Hedron" (setQualifiedFrameLabel).
   fullart: "Hedron",
   fullartland: "Basic Land",
   m15textless: "Textless",
@@ -419,6 +425,7 @@ export const FRAME_SET_VALUES = [
   "bloomburrow",
   "tarkir",
   "multiverselegends",
+  "zendikarrising",
   "extended",
   "fullartset",
   "expeditions",
@@ -436,6 +443,7 @@ export const FRAME_SET_LABELS: Record<FrameSet, string> = {
   bloomburrow: "Bloomburrow",
   tarkir: "Tarkir: Dragonstorm",
   multiverselegends: "Multiverse Legends",
+  zendikarrising: "Zendikar Rising",
   extended: "Extended Art",
   fullartset: "Full Art",
   expeditions: "Expeditions",
@@ -469,7 +477,7 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   tarkirghostfire: "tarkir",
   tarkirdragon: "multiverselegends",
   extendedart: "extended",
-  fullart: "fullartset",
+  fullart: "zendikarrising",
   fullartland: "fullartset",
   m15textless: "fullartset",
   m15textlessland: "fullartset",
@@ -495,7 +503,7 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
 //
 // Eras group the existing FrameSets: alpha→classic, m15→m15, and the
 // Universes Beyond / showcase IP sets (lotr/avatar/bloomburrow/tarkir/
-// multiverselegends) plus the treatment sets→showcase.
+// multiverselegends/zendikarrising) plus the treatment sets→showcase.
 // ---------------------------------------------------------------------------
 export const FRAME_ERA_VALUES = ["classic", "retro", "modern", "m15", "showcase"] as const;
 export type FrameEra = (typeof FRAME_ERA_VALUES)[number];
@@ -529,6 +537,7 @@ export const FRAME_SET_ERA: Record<FrameSet, FrameEra> = {
   bloomburrow: "showcase",
   tarkir: "showcase",
   multiverselegends: "showcase",
+  zendikarrising: "showcase",
   extended: "showcase",
   fullartset: "showcase",
   expeditions: "showcase",

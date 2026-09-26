@@ -9,8 +9,15 @@
 // generated card will actually render with.
 
 import type { CardType, ColorIdentity, FrameTemplate } from "@/types/card";
-import { framesForKind, kindFromCard, type FrameChoice } from "@/lib/creator/card-kinds";
+import {
+  framesForKind,
+  isSingleBasicLand,
+  kindFromCard,
+  templateIsBasicOnly,
+  type FrameChoice,
+} from "@/lib/creator/card-kinds";
 import { pickFrameColorKey } from "@/components/cards/frame-layer";
+import type { BasicLandFace } from "@/lib/cards/watermark";
 
 export type FrameRequest = FrameTemplate | "random" | undefined;
 
@@ -26,7 +33,8 @@ export function frameChoicesForType(
  * Resolve the frame an AI-generated card should save with.
  *
  *   - specific template → kept when it dresses the type AND its color for
- *     this card is published; otherwise falls back like "random".
+ *     this card is published (and, for a basic-only frame, the card is one
+ *     basic land); otherwise falls back like "random".
  *   - "random" → a uniformly random published frame whose available colors
  *     include the generated card's color key.
  *   - undefined → null (caller keeps the creator's era default).
@@ -39,16 +47,23 @@ export function resolveGeneratedFrame(input: {
   requested: FrameRequest;
   colorIdentity: ColorIdentity[];
   verifiedKeys: ReadonlySet<string>;
+  /** The generated card's identity. A basic-only frame (the full-art basic
+   *  land) is a candidate only when this is one basic land; without it,
+   *  those frames are left out. */
+  face?: BasicLandFace;
   /** Injectable RNG for tests. Defaults to Math.random. */
   random?: () => number;
 }): FrameTemplate | null {
-  const { cardType, requested, colorIdentity, verifiedKeys } = input;
+  const { cardType, requested, colorIdentity, verifiedKeys, face } = input;
   if (!requested) return null;
 
   const colorKey = pickFrameColorKey(colorIdentity);
   const choices = frameChoicesForType(cardType, verifiedKeys);
-  const pool = choices.filter((choice) =>
-    choice.availableColorKeys.includes(colorKey as never),
+  const basicLand = face !== undefined && isSingleBasicLand(face);
+  const pool = choices.filter(
+    (choice) =>
+      choice.availableColorKeys.includes(colorKey as never) &&
+      (basicLand || !templateIsBasicOnly(choice.template)),
   );
 
   if (requested !== "random") {
