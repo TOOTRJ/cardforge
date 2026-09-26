@@ -81,21 +81,49 @@ const lum = (r: Raw, x: number, y: number) => {
 
 describe("long stats shrink to fit", () => {
   it("Alpha: *+1/*+1 ends inside the pinstripe, centred where 10/10 is", async () => {
-    const colorIdentity: CardPreviewData["colorIdentity"] = ["blue"];
+    const colorIdentity: CardPreviewData["colorIdentity"] = ["white"];
     const none = await bake(card("agclassic", { colorIdentity, power: null, toughness: null }));
     const long = diffBox(none, await bake(card("agclassic", { colorIdentity, power: "*+1", toughness: "*+1" })))!;
     const short = diffBox(none, await bake(card("agclassic", { colorIdentity, power: "10", toughness: "10" })))!;
-    // The strip's pinstripe is a dark line from ~1410 px (1405 on alphaland);
-    // the value used to run to ~1440, into the black border.
-    expect(long.x1).toBeLessThanOrEqual(1406);
+    // The strip's pinstripe is a dark line from ~1405 px (alphaland) / ~1410
+    // (agclassic); the value used to run to ~1430, into the black border.
+    expect(long.x1).toBeLessThanOrEqual(1404);
+    expect(long.x0).toBeGreaterThanOrEqual(1236);
     expect(Math.abs((long.x0 + long.x1) / 2 - (short.x0 + short.x1) / 2)).toBeLessThan(4);
   }, 60_000);
 
-  it("Modern: 100/100 stays on the plate's light face (1138–1376 px), off the bevel", async () => {
+  it("Modern: 100/100 stays on the plate's light face (1143–1373 px), off the bevel", async () => {
     const small = await bake(card("modern", { power: "1", toughness: "1" }));
     const box = diffBox(small, await bake(card("modern", { power: "100", toughness: "100" })))!;
-    expect(box.x0).toBeGreaterThanOrEqual(1138);
-    expect(box.x1).toBeLessThanOrEqual(1376);
+    expect(box.x0).toBeGreaterThanOrEqual(1143);
+    expect(box.x1).toBeLessThanOrEqual(1373);
+  }, 60_000);
+
+  it("Retro: *+1/*+1 fits the strip at full size — on ONE line, centred, though wider than its rect", async () => {
+    const none = await bake(card("retro", { power: null, toughness: null }));
+    const long = diffBox(none, await bake(card("retro", { power: "*+1", toughness: "*+1" })))!;
+    const short = diffBox(none, await bake(card("retro", { power: "4", toughness: "4" })))!;
+    const rect = getFrameProfile("retro").pt!.rect;
+    // Wider than the 210 px rect (it used to wrap after the slash, two lines).
+    expect(long.x1 - long.x0).toBeGreaterThan((rect.widthPct / 100) * 1500);
+    expect(long.y1 - long.y0).toBeLessThan((short.y1 - short.y0) * 1.3);
+    // Centred like the preview's span, not run off the rect's right edge.
+    expect(Math.abs((long.x0 + long.x1) / 2 - (short.x0 + short.x1) / 2)).toBeLessThan(4);
+    expect(long.x0).toBeGreaterThanOrEqual(1125);
+    expect(long.x1).toBeLessThanOrEqual(1410);
+  }, 60_000);
+
+  it("Flip: the upside-down second face shrinks 100/100 into the band (104–258 px)", async () => {
+    const flip = (power: string, toughness: string) =>
+      card("flip", {
+        power: "2",
+        toughness: "2",
+        backFace: { title: "Probe Reborn", card_type: "creature", subtypes: ["Spirit"], rules_text: "Flying", power, toughness },
+      } as Partial<CardPreviewData>);
+    const box = diffBox(await bake(flip("1", "1")), await bake(flip("100", "100")))!;
+    // At full size it ran 82–279 px, over the band's rounded end.
+    expect(box.x0).toBeGreaterThanOrEqual(104);
+    expect(box.x1).toBeLessThanOrEqual(258);
   }, 60_000);
 
   it("Battle: a four-digit defense fits the drawn badge", async () => {
@@ -106,8 +134,11 @@ describe("long stats shrink to fit", () => {
     const badgeL = ((rect.leftPct + rect.widthPct * 0.12) / 100) * 2100;
     const badgeR = ((rect.leftPct + rect.widthPct * 0.88) / 100) * 2100;
     const box = diffBox(await bake(battle("1")), await bake(battle("1000")))!;
-    expect(box.x0).toBeGreaterThanOrEqual(Math.floor(badgeL));
-    expect(box.x1).toBeLessThanOrEqual(Math.ceil(badgeR));
+    // The ink may reach the badge's edge (one antialiased pixel either way).
+    expect(box.x0).toBeGreaterThanOrEqual(Math.floor(badgeL) - 1);
+    expect(box.x1).toBeLessThanOrEqual(Math.ceil(badgeR) + 1);
+    // …and shrinks no further than it must: it still spans the badge.
+    expect(badgeR - badgeL).toBeLessThan(box.x1 - box.x0 + 12);
   }, 60_000);
 });
 

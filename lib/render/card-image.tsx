@@ -152,11 +152,17 @@ function fpx(sizePct: number, cardWidth: number): number {
 }
 
 /** A stat value's font size in px (TODO 3.18): the profile size, rounded as
- *  every slot is, when the value fits its box; otherwise the preview's
- *  fitStatSizePct() rounded DOWN — rounding up could push it past the box
- *  again, and Satori wraps `X/X+1` after its slash when it doesn't fit. */
-function statPx(slot: StatSlot, value: string, orientation: CardOrientation, cardWidth: number): number {
-  const fitted = fitStatSizePct(slot, value, orientation);
+ *  every slot is, when the value fits its face; otherwise the preview's
+ *  fitStatSizePct() rounded DOWN — rounding up could push its ink past the
+ *  face again. */
+function statPx(
+  slot: StatSlot,
+  value: string,
+  orientation: CardOrientation,
+  cardWidth: number,
+  upsideDown = false,
+): number {
+  const fitted = fitStatSizePct(slot, value, orientation, upsideDown);
   return fitted < slot.sizePct ? Math.floor(fitted * cardWidth) : fpx(slot.sizePct, cardWidth);
 }
 
@@ -1652,6 +1658,12 @@ function StatBake({
           color: ink.colorHex,
           fontWeight: slot.weight ?? 700,
           fontSize: size,
+          // One line, centred, always — like the preview's span: a value wider
+          // than its rect (its face may be wider) overflows it evenly. Satori
+          // shrank the span to the rect instead, so such a value wrapped after
+          // its slash (`X/X+1`) or ran off to the right only (`40/40`).
+          whiteSpace: "nowrap",
+          flexShrink: 0,
           // Same nudge as the preview's translate(${valueDxEm}em, ${valueDyEm}em);
           // computed in px here since Satori doesn't resolve em in transforms.
           ...(slot.valueDxEm || slot.valueDyEm
@@ -1998,8 +2010,17 @@ function SecondFaceBake({
             transform: rot,
             transformOrigin: "50% 50%",
             fontFamily: DISPLAY_FONT,
-            // Shrinks to fit like the front's StatBake (TODO 3.18).
-            fontSize: statPx(slot.pt, ptValue(back.power, back.toughness), orientationFromAspect(aspect), cardWidth),
+            // Shrinks to fit, on one line, like the front's StatBake (TODO 3.18).
+            // Its ink span lies inside the rect, so a fitted value never
+            // overflows the rect (the case StatBake's flexShrink: 0 centres).
+            fontSize: statPx(
+              slot.pt,
+              ptValue(back.power, back.toughness),
+              orientationFromAspect(aspect),
+              cardWidth,
+              slot.rotation === 180,
+            ),
+            whiteSpace: "nowrap",
             fontWeight: slot.pt.weight ?? 700,
             color: slot.pt.colorHex,
             ...(slot.pt.shadowCss ? { textShadow: slot.pt.shadowCss } : {}),

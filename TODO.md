@@ -552,7 +552,7 @@ Open decisions are marked **[decide]**; none blocks its phase.
       Add a `shadow` flag on ManaGem and the rules pip items, on only in the cost band. Parity test; bundle with 3.12.
 - [x] **3.18 [P2] Stat values shrink to fit their plate** (Card Conjurer audit 2026-09-25) — P/T, loyalty and defense render at a fixed `slot.sizePct` (StatBake in `lib/render/card-image.tsx` ~1422, `components/cards/card-preview.tsx` ~1112), while each side allows 16 characters (`lib/validation/card.ts`:121-126). `100/100` overflows the M15 plate; '15/15', '*/1+*' and 'X/X+1' fit.
 
-      Done (wf/r5-stats): `lib/cards/stat-fit.ts` measures a value with Beleren Bold's real advance widths (an average would have shrunk `10/10`) and both renderers print it at `fitStatSizePct()` — the profile size, unchanged, when it fits its box (the rect, a drawn badge, or the profile's narrower `fitWidthPct`: Alpha strip, Modern plate face, planeswalker shield); smaller when not; flip second faces too. `X/X+1` did NOT fit on M15: it was 3 px wider than the plate's box and both renderers wrapped it after the slash. `statsShrink(row)` is the card predicate for the layout bump (0 of 724 public production cards).
+      Done (wf/r5-stats-final): `lib/cards/stat-fit.ts` models where each renderer inks a value from Beleren Bold's metrics (advances, side bearings, the GPOS kerning between stat characters — Satori centres the unkerned advance box and draws the kerned run from its left edge; the browser centres the kerned run) and both renderers print it at `fitStatSizePct()`: the profile size, unchanged, while its ink stays on the face the frame draws for it (`StatSlot.inkSpanPct`, measured on the digits' rows: M15 plate 1185–1395.4 px, Alpha strip 1236–1404, planeswalker shield 1239–1389, Retro strip 1125–1410, Modern plate 1143–1373, flip band 1235–1403 / 104–257.5, Dragon Wing 1193–1388, Draconic 1187–1398, Ghostfire ribbon 1153–1404; else the rect or the drawn badge); smaller when not; flip second faces too (mirrored, upside down). A value is always one line and centred (`white-space: nowrap`; `flexShrink: 0` on the bake's span): Satori used to squeeze a value wider than its rect to the rect, so `X/X+1` and `+4/+4` wrapped after the slash and `40/40` ran off to the right. `statLayoutChanged(row)` is the layout-bump scope (0 of 724 public production cards).
 
       Run stat values through `fitSingleLineSizePct` against the plate width (4.18's plateRect once it exists), capped at the profile size, in both renderers. CC's P/T is oneLine with shrink (`packM15RegularNew.js`:58).
 
@@ -1063,9 +1063,10 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
       - [x] **Draconic P/T.** The gold TDM dragon frame people expect is
         `tarkirdraconic`. Its P/T is white on light parchment, so it can't be
         read, and it needs the same plate treatment Dragon Wing got. Done
-        (wf/r5-stats): MSE's serpent-ringed pt/<c>pt.png plates
+        (wf/r5-stats-final): MSE's serpent-ringed pt/<c>pt.png plates
         (build-showcase-frames.mjs `plate`), black ink at MSE's pt field,
-        matching TDM #321 Ureni and #301 Magmatic Hellkite.
+        matching TDM #321 Ureni and #301 Magmatic Hellkite; the ink may use
+        the box's face inside the serpents (1187–1398 px).
       - [x] **Ghostfire rebuilt** (owner decision): MSE's translucent boxes at
         60 % + P/T ribbon (scripts/build-showcase-frames.mjs), white ink, type
         line inside its band.
@@ -1080,10 +1081,11 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
         the strip across the pinstripe into the black border — the P/T rect
         spans 1207–1432 px and neither StatBake nor StatOverlay fits the
         digits (`10/10` fits). Fix: shrink-to-fit in both renderers and end
-        AGCLASSIC.pt.rect inside the pinstripe (~1404 px). Done (wf/r5-stats)
-        with 3.18: the rect keeps its centre (1320 px) and `fitWidthPct: 11.2`
-        caps the value at 1236–1404 px, so every value that fits stays
-        byte-identical (moving the rect's edges would re-round its centring).
+        AGCLASSIC.pt.rect inside the pinstripe (~1404 px). Done
+        (wf/r5-stats-final) with 3.18: the rect keeps its centre (1320 px) and
+        `inkSpanPct` keeps the ink to 1236–1404 px, so every value that fits
+        stays byte-identical (moving the rect's edges would re-round its
+        centring).
       - **Alpha bevel lighting:** MSE lights every colour's text-box bevel
         the same way (lit top + right); the print does that on white and
         artifact cards but lights blue and red ones from the left + bottom.
@@ -1097,6 +1099,13 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
         that strip. Fix: apply the scale in a non-rotated inner wrapper, or
         compute the cover + scale box in px as coverPlacement does. Found by
         the integration review 2026-09-25; 0 production aftermath cards.
+      - **Token P/T on the border (pre-existing):** since the Card Conjurer
+        token master (v24) the m15token / m15tokenartifact P/T rect (MSE's
+        88.6–94.8 %H) sits half on the black border below the cream band
+        (production token 1e951489; 8 public tokens print a P/T). The
+        alphatoken P/T prints white on the cream text box. Neither has an
+        `inkSpanPct` yet — measure one when the rects are fixed (found with
+        3.18, 2026-09-25).
       - [x] **Foil on planeswalkers** (owner decision, round-2 review): each
         ability stripe carries its own sheen (`FoilStripeSheen`, masked by the
         stripe colour) between the stripe and the badge + text, in both

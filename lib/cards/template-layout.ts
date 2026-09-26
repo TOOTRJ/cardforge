@@ -117,13 +117,14 @@ export type StatSlot = {
    *  digits' box separately {79.28, 90.2, 13.67 × 3.72}. Without it the plate
    *  fills `rect`. */
   plateRect?: Rect;
-  /** How wide (card %) the value may print, centred in `rect`, when the frame
-   *  leaves it less room than `rect` is wide (the Alpha strip ends at its
-   *  pinstripe, the Modern plate's face inside its bevel): a wider value
-   *  shrinks to this (lib/cards/stat-fit.ts). Without it the value may fill
-   *  `rect`. Never wider than `rect` — a value wider than its flex box wraps
-   *  after a slash in both renderers. */
-  fitWidthPct?: number;
+  /** The x-range (card %) the value's INK may cover — the face the frame
+   *  draws for it, measured on the digits' rows: a plate's light interior up
+   *  to its bevel, a strip up to its pinstripe. It may be wider or narrower
+   *  than `rect` (the value stays centred in `rect` and never wraps), and
+   *  lopsided about the value's centre. A value whose ink would run past it
+   *  shrinks (lib/cards/stat-fit.ts). Without it the ink may fill `rect`
+   *  (or a drawn badge). */
+  inkSpanPct?: { leftPct: number; rightPct: number };
 };
 
 /** A frame colour key — the {color} of every frame asset
@@ -472,6 +473,11 @@ const M15: FrameProfile = {
     // in CC's text box, which lands them on the printed (86.1 %W, 91.9 %H).
     rect: { topPct: 90.2, leftPct: 79.28, widthPct: 13.67, heightPct: 3.72 },
     plateRect: { topPct: 88.48, leftPct: 75.73, widthPct: 18.8, heightPct: 7.33 },
+    // The plate's face on the digits' rows: from 1185 px (past the lit
+    // bevel) to the shaded bevel, whose half-way line bows from 1392.5 to
+    // 1396.4 px and averages 1395.4 — the same on every colour and on the
+    // artifact / snow / devoid plates.
+    inkSpanPct: { leftPct: 79, rightPct: 93.027 },
     sizePct: 0.05,
     colorHex: INK_DARK,
     weight: 700,
@@ -585,10 +591,10 @@ const AGCLASSIC: FrameProfile = {
   // pinstripe included) and ~88 %W, under the text box's right corner.
   // The rect runs on to 1432 px, past the pinstripe's dark line (~1405 on
   // alphaland, ~1410 here), so a long value (`*+1/*+1`) shrinks to the
-  // 1236–1404 px it can use centred on 1320 (TODO 4.31); `20/20` fits.
+  // 1236–1404 px it can use centred on 1320 (TODO 4.31); `90/90` fits.
   pt: {
     rect: { topPct: 88.74, leftPct: 80.5, widthPct: 15, heightPct: 5.6 },
-    fitWidthPct: 11.2,
+    inkSpanPct: { leftPct: 82.4, rightPct: 93.6 },
     sizePct: 0.04,
     colorHex: INK_DARK,
     weight: 700,
@@ -670,10 +676,10 @@ const M15PW: FrameProfile = {
     // scripts/lib/cc-frames.mjs — plateRect is that box in percent) and it
     // is drawn again here, above the stripes, pixel-for-pixel on the frame's.
     rect: { topPct: 90.2, leftPct: 80.6, widthPct: 14, heightPct: 3.72 },
-    // The shield's dark face is 1233–1395 px wide on the digits' row and
-    // tapers below it, so a value wider than 150 px (past three digits)
-    // shrinks instead of printing over the silver rim.
-    fitWidthPct: 10,
+    // The shield's dark face is 1233–1395 px wide on the digits' upper rows
+    // and tapers to its point below them, so the ink keeps to 1239–1389 px
+    // (three digits fit) instead of printing over the silver rim.
+    inkSpanPct: { leftPct: 82.6, rightPct: 92.6 },
     plateRect: { topPct: 87.667, leftPct: 79.6, widthPct: 16, heightPct: 7.333 },
     plateAssetPathTemplate: "/frames/m15pw/loyalty/{color}.png",
     sizePct: 0.052,
@@ -906,8 +912,11 @@ const RETRO: FrameProfile = {
   },
   // Real Mirage-era cards print P/T in dark ink on the tan strip (the MSE
   // "white" note is its own outline treatment) — match the printed card.
+  // The strip is free on both sides of the value up to the frame's bevel
+  // shading at ~1410 px, so the ink may run 1125–1410 px (`100/100` fits).
   pt: {
     rect: { topPct: 89.5, leftPct: 77.5, widthPct: 14, heightPct: 5.6 },
+    inkSpanPct: { leftPct: 75, rightPct: 94 },
     sizePct: 0.042,
     colorHex: INK_DARK,
     weight: 700,
@@ -976,12 +985,12 @@ const MODERN: FrameProfile = {
   },
   // The 2003 P/T box is a separate beveled plate (magic-new {color}pt.jpg),
   // upscaled to /frames/modern/pt/{color}.png. Drawn behind the dark value.
-  // The plate fills the rect, but its light face is 1138–1376 px wide (234 px
-  // on the narrowest colour, centred on the value): a longer value shrinks
-  // to that rather than print over the bevel.
+  // The plate fills the rect, but its light face on the digits' rows is
+  // 1143–1373 px on every colour: a longer value shrinks to that rather than
+  // print over the bevel.
   pt: {
     rect: { topPct: 88.4, leftPct: 73.3, widthPct: 21, heightPct: 6.8 },
-    fitWidthPct: 15.6,
+    inkSpanPct: { leftPct: 76.2, rightPct: 91.53 },
     sizePct: 0.044,
     colorHex: INK_DARK,
     weight: 700,
@@ -1180,8 +1189,11 @@ const FLIP: FrameProfile = {
     vAlign: "center",
     font: "body",
   },
+  // The cream band ends in a rounded cap at ~1403 px on the value's rows
+  // (the type line owns its left part): the ink keeps to 1235–1403 px.
   pt: {
     rect: { topPct: 24.5, leftPct: 82.1, widthPct: 11.7, heightPct: 5.4 },
+    inkSpanPct: { leftPct: 82.36, rightPct: 93.5333 },
     sizePct: 0.0347,
     colorHex: INK_DARK,
     weight: 700,
@@ -1211,8 +1223,10 @@ const FLIP: FrameProfile = {
       vAlign: "center",
       font: "body",
     },
+    // Upside down, the band's cap is on the left at ~104 px: 104–257 px.
     pt: {
       rect: { topPct: 68.2, leftPct: 6.2, widthPct: 11.7, heightPct: 5.4 },
+      inkSpanPct: { leftPct: 6.9333, rightPct: 17.1667 },
       sizePct: 0.0347,
       colorHex: INK_DARK,
       weight: 700,
@@ -1506,8 +1520,12 @@ const TARKIRDRAGON: FrameProfile = {
   // cropped by scripts/build-showcase-frames.mjs to 1156,1850 271×149 on the
   // 1500×2100 card. Written out, not spread from M15.pt: that one follows the
   // Card Conjurer M15 plate and its own layout versions.
+  // The plate's light face runs 1193–1388 px on the digits' rows, inside
+  // its black outline — wider than MSE's field, so 10/10–18/18 print at
+  // full size on it and 20/20, which reaches the outline, shrinks.
   pt: {
     rect: { topPct: 89.8, leftPct: 79.88, widthPct: 12.38, heightPct: 3.99 },
+    inkSpanPct: { leftPct: 79.5333, rightPct: 92.5333 },
     plateRect: { topPct: 88.095, leftPct: 77.067, widthPct: 18.067, heightPct: 7.095 },
     plateAssetPathTemplate: "/frames/tarkirdragon/pt/{color}.png",
     sizePct: 0.05,
@@ -1524,11 +1542,12 @@ const TARKIRDRAGON: FrameProfile = {
 const TARKIRDRACONIC: FrameProfile = {
   ...tarkirCard("Draconic", { title: INK_DARK, type: INK_DARK, rules: INK_DARK }),
   // MSE's pt field (516,811 82×34 on 646×902) centres the value at
-  // 1293 × 1928 px, where both scans print it (86.0 %W, 91.7 %H); the rect
-  // is widened about that centre to the plate's light face (~1188–1400 px)
-  // so `10/10` prints at full size like Ureni's.
+  // 1293 × 1928 px, where both scans print it (86.0 %W, 91.7 %H); the ink
+  // may use the box's light face inside the serpents, 1187–1398 px, so
+  // `10/10` and `20/20` print at full size like Ureni's.
   pt: {
-    rect: { topPct: 89.911, leftPct: 79.62, widthPct: 13.2, heightPct: 3.769 },
+    rect: { topPct: 89.911, leftPct: 79.876, widthPct: 12.693, heightPct: 3.769 },
+    inkSpanPct: { leftPct: 79.1333, rightPct: 93.2 },
     plateRect: { topPct: 86.3333, leftPct: 75.4667, widthPct: 24.5333, heightPct: 8.9524 },
     plateAssetPathTemplate: "/frames/tarkirdraconic/pt/{color}.png",
     sizePct: 0.05,
@@ -1701,9 +1720,12 @@ const TARKIRGHOSTFIRE: FrameProfile = {
     font: "body",
   },
   // MSE's pt field (590,917 99 × 46 on 744 × 1039) on the ribbon, which the
-  // build crops at 1093,1768 385 × 208 on the 1500 × 2100 card.
+  // build crops at 1093,1768 385 × 208 on the 1500 × 2100 card. The white
+  // ink may use the ribbon from its pale left flare (1153 px) to its cyan rim
+  // (1404 px, where it curves in lowest on the digits' rows).
   pt: {
     rect: { topPct: 88.26, leftPct: 79.3, widthPct: 13.31, heightPct: 4.43 },
+    inkSpanPct: { leftPct: 76.8667, rightPct: 93.6 },
     plateRect: { topPct: 84.1905, leftPct: 72.8667, widthPct: 25.6667, heightPct: 9.9048 },
     plateAssetPathTemplate: "/frames/tarkirghostfire/pt/{color}.png",
     sizePct: 0.05,

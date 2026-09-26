@@ -1307,8 +1307,9 @@ function StatOverlay({
   // Per-frame-colour ink (Alpha: silver on every frame but white) — the
   // same slotInk() the bake's StatBake resolves.
   const ink = slotInk(slot, colorKey);
-  // A value wider than its box shrinks to fit (TODO 3.18); one that fits
-  // keeps the profile size — the same fitStatSizePct() as the bake.
+  // A value whose ink would run off its face shrinks to fit (TODO 3.18);
+  // one that fits keeps the profile size — the same fitStatSizePct() as the
+  // bake.
   const sizePct = fitStatSizePct(slot, value, orientation);
   return (
     <div
@@ -1352,6 +1353,11 @@ function StatOverlay({
         style={{
           fontFamily: DISPLAY_FONT,
           fontSize: cqw(sizePct),
+          // One line, centred, always — the bake's StatBake twin: a value
+          // wider than its rect (its face may be wider) overflows it evenly
+          // instead of wrapping after a slash.
+          whiteSpace: "nowrap",
+          flexShrink: 0,
           fontWeight: slot.weight ?? 700,
           color: ink.colorHex,
           ...(slot.valueDxEm || slot.valueDyEm
@@ -1693,10 +1699,16 @@ function SecondFacePanel({
             alignItems: "center",
             justifyContent: "center",
             fontFamily: DISPLAY_FONT,
-            // Shrinks to fit like the front's StatOverlay (TODO 3.18).
+            // Shrinks to fit, on one line, like the front's StatOverlay (TODO 3.18).
             fontSize: cqw(
-              fitStatSizePct(slot.pt, ptValue(data.power, data.toughness), orientationFromAspect(aspect)),
+              fitStatSizePct(
+                slot.pt,
+                ptValue(data.power, data.toughness),
+                orientationFromAspect(aspect),
+                slot.rotation === 180,
+              ),
             ),
+            whiteSpace: "nowrap",
             fontWeight: slot.pt.weight ?? 700,
             color: slot.pt.colorHex,
             ...(slot.pt.shadowCss ? { textShadow: slot.pt.shadowCss } : {}),
