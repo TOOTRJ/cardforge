@@ -80,6 +80,64 @@ describe("resolveGeneratedFrame", () => {
   });
 });
 
+// TODO 1.7: a creature borrows the M15 artifact frame as a variation. A
+// random pick must not dress a plain creature as an artifact; an Artifact
+// Creature, or an explicit request, gets it.
+describe("resolveGeneratedFrame — the artifact frame on a creature", () => {
+  const verified = keys(["m15artifact", "c"]);
+  const face = (supertype: string | null) => ({
+    cardType: "creature",
+    supertype,
+    subtypes: ["Golem"],
+    title: "Test Golem",
+    rulesText: "",
+  });
+
+  it("offers it among a creature's frames", () => {
+    expect(frameChoicesForType("creature", verified).map((c) => c.template)).toContain("m15artifact");
+  });
+
+  it("never picks it at random for a plain creature", () => {
+    for (const f of [face(null), face("Legendary"), undefined]) {
+      expect(
+        resolveGeneratedFrame({
+          cardType: "creature",
+          requested: "random",
+          colorIdentity: ["colorless"],
+          verifiedKeys: verified,
+          face: f,
+          random: () => 0,
+        }),
+      ).toBeNull();
+    }
+  });
+
+  it("picks it at random for an Artifact Creature", () => {
+    expect(
+      resolveGeneratedFrame({
+        cardType: "creature",
+        requested: "random",
+        colorIdentity: ["colorless"],
+        verifiedKeys: verified,
+        face: face("Legendary Artifact"),
+        random: () => 0,
+      }),
+    ).toBe("m15artifact");
+  });
+
+  it("honours an explicit request", () => {
+    expect(
+      resolveGeneratedFrame({
+        cardType: "creature",
+        requested: "m15artifact",
+        colorIdentity: ["colorless"],
+        verifiedKeys: verified,
+        face: face(null),
+      }),
+    ).toBe("m15artifact");
+  });
+});
+
 // TODO 0.26: the full-art basic land frame can't draw a nonbasic's rules, so
 // an AI-generated land only lands on it when the design is one basic land.
 describe("resolveGeneratedFrame — basic-only frames", () => {

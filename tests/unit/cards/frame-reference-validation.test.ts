@@ -3,7 +3,8 @@ import {
   referenceKindFor,
   validateReferenceForCombo,
 } from "@/lib/cards/frame-reference-validation";
-import type { ScryfallCard } from "@/lib/scryfall/client";
+import { scryfallCardSchema, type ScryfallCard } from "@/lib/scryfall/client";
+import printings from "../scryfall/fixtures/import-printings.json";
 
 // A pinned reference is rendered with the printing's OWN colour and kind but
 // the verify checkbox publishes the row's colour — so a mismatch means the
@@ -154,5 +155,16 @@ describe("validateReferenceForCombo", () => {
     );
     expect(result.errors).toEqual([]);
     expect(result.warnings.some((w) => /kind of card/.test(w))).toBe(true);
+  });
+
+  // TODO 1.7: the curated m15artifact/c reference IS an Artifact Creature
+  // (lib/cards/frame-references.json), and pinning it used to be refused as
+  // "a creature; the Artifact frame doesn't dress that kind".
+  it("accepts an Artifact Creature on the artifact frame (Solemn Simulacrum M21 #239)", () => {
+    const solemn = scryfallCardSchema.parse(printings["m21-239"]);
+    expect(validateReferenceForCombo(solemn, "m15artifact", "c")).toEqual({ errors: [], warnings: [] });
+    // Baleful Strix 2XM #191, the m15artifact/m reference.
+    const strix = scryfallCardSchema.parse(printings["2xm-191"]);
+    expect(validateReferenceForCombo(strix, "m15artifact", "m").errors).toEqual([]);
   });
 });

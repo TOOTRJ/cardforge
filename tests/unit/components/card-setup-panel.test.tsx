@@ -327,3 +327,64 @@ describe("CardSetupPanel — Alpha's colourless tiles follow the card type (TODO
     expect(colourBg).toContain(`/frames/agclassic/${want}.webp`);
   });
 });
+
+describe("CardSetupPanel — the artifact frame is a creature variation (TODO 1.7)", () => {
+  const verified = [frameComboKey("m15", "c"), frameComboKey("m15artifact", "c")];
+  const variations = () => screen.getByRole("radiogroup", { name: /Frame variations/ });
+  const m15Standard = () =>
+    within(screen.getByRole("radiogroup", { name: /M15 \(2015\) frames/ })).getByRole("radio", {
+      name: /Standard/,
+    });
+
+  it("offers Artifact under a creature's M15 frame, and the Frame section stays on M15", () => {
+    render(
+      <Harness
+        verified={verified}
+        onColor={vi.fn()}
+        initialColor="colorless"
+        supertype="Artifact"
+      />,
+    );
+    const chip = within(variations()).getByRole("radio", { name: /Artifact/ });
+    expect(chip.textContent).toContain("For Artifact Creatures");
+    fireEvent.click(chip);
+    expect(screen.getByTestId("template").textContent).toBe("m15artifact");
+    expect(chip.getAttribute("aria-checked")).toBe("true");
+    // The base is still M15's Standard — not a "Current frame" legacy pin.
+    expect(screen.queryByRole("radiogroup", { name: "Current frame" })).toBeNull();
+    expect(m15Standard().getAttribute("aria-checked")).toBe("true");
+  });
+
+  it("an imported Artifact Creature on m15artifact opens on that variation", () => {
+    render(
+      <Harness
+        verified={verified}
+        onColor={vi.fn()}
+        initialColor="colorless"
+        supertype="Artifact"
+        initialTemplate="m15artifact"
+      />,
+    );
+    expect(screen.queryByRole("radiogroup", { name: "Current frame" })).toBeNull();
+    expect(
+      within(variations()).getByRole("radio", { name: /Artifact/ }).getAttribute("aria-checked"),
+    ).toBe("true");
+  });
+
+  it("an Artifact card has no borrowed chip: m15artifact is its own standard", () => {
+    render(
+      <Harness
+        verified={verified}
+        onColor={vi.fn()}
+        initialColor="colorless"
+        cardType="artifact"
+        initialTemplate="m15artifact"
+      />,
+    );
+    expect(document.body.textContent).not.toContain("For Artifact Creatures");
+    const artifactStandard = within(
+      screen.getByRole("radiogroup", { name: /M15 \(2015\) frames/ }),
+    ).getByRole("radio", { name: /Artifact/ });
+    expect(artifactStandard.getAttribute("aria-checked")).toBe("true");
+  });
+});

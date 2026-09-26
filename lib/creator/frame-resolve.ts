@@ -10,6 +10,7 @@ import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
 import {
   baseFrameFor,
   framesForKind,
+  isBorrowedVariation,
   templateIsBasicOnly,
   type CardKind,
   type FrameColorKey,
@@ -91,10 +92,13 @@ export function resolvePublishedFrame(input: ResolveFrameInput): FrameResolution
     }
     // A basic-only frame (the full-art basic land) is never a stand-in: it
     // can't draw most cards of its kind, so it is reachable only as an
-    // explicit candidate (TODO 0.26).
+    // explicit candidate (TODO 0.26). Nor is a frame the kind borrows from
+    // another type (the artifact frame on a creature, TODO 1.7): it would
+    // dress a plain creature as an artifact.
     const any = gallery.find(
       (choice) =>
         !templateIsBasicOnly(choice.template) &&
+        !isBorrowedVariation(kind, choice.template) &&
         choice.availableColorKeys.includes(colorKey),
     );
     return any

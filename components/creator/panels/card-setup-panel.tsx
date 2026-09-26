@@ -45,7 +45,9 @@ import {
   baseFrameFor,
   framesForKind,
   isSingleBasicLand,
+  isBorrowedVariation,
   kindHasAvailableFrame,
+  skinVariantsFor,
   templateIsBasicOnly,
   type CardKind,
   type FrameChoice,
@@ -55,7 +57,6 @@ import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
 import {
   COLOR_IDENTITY_VALUES,
   COMING_SOON_ERAS,
-  TEMPLATE_SKIN_VARIANTS,
   DEFAULT_FRAME_TEMPLATE,
   FRAME_ERA_HINTS,
   FRAME_ERA_LABELS,
@@ -288,7 +289,7 @@ export function CardSetupPanel({
           const skinChoices = choices.filter(
             (c) =>
               c.group === "skin" &&
-              (TEMPLATE_SKIN_VARIANTS[base] ?? []).includes(c.template),
+              skinVariantsFor(kind, base).includes(c.template),
           );
           const showcaseChoices = choices.filter(
             (c) => c.group === "showcase",
@@ -382,9 +383,11 @@ export function CardSetupPanel({
                   ? "Awaiting verification"
                   : !colorAvailable
                     ? `Not verified in ${colorWord(colorKey)} yet — picking it switches to ${colorWord(choice.availableColorKeys[0])}`
-                    : choice.group === "skin"
-                      ? "Same layout, different dress"
-                      : undefined,
+                    : isBorrowedVariation(kind, choice.template)
+                      ? "For Artifact Creatures"
+                      : choice.group === "skin"
+                        ? "Same layout, different dress"
+                        : undefined,
               leading: (
                 <FrameThumb
                   template={choice.template}

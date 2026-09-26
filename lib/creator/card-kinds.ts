@@ -324,6 +324,49 @@ export function isSingleBasicLand(face: BasicLandFace): boolean {
   return basicTypes.length <= 1;
 }
 
+// ---------------------------------------------------------------------------
+// Borrowed variations (TODO 1.7). A frame that is one kind's standard can
+// also dress another kind as a variation of that kind's standard, when both
+// share the geometry. The M15 artifact frame is the Artifact kind's
+// standard; an Artifact Creature is a CREATURE (the P/T box and inputs are
+// gated on card_type) printed on the artifact frame — Solemn Simulacrum M21
+// #239 is the curated m15artifact/c reference. m15artifact is the M15
+// profile with its own P/T plates, so it dresses a creature as a skin of
+// m15. Keyed by kind, then by the base frame the variation re-dresses.
+// ---------------------------------------------------------------------------
+
+const BORROWED_VARIATIONS: Partial<
+  Record<CardKind, Partial<Record<FrameTemplate, readonly FrameTemplate[]>>>
+> = {
+  creature: { m15: ["m15artifact"] },
+};
+
+/** The variations the Variations section offers under `base` for this
+ *  kind: the base's skins (TEMPLATE_SKIN_VARIANTS) plus the frames the kind
+ *  borrows for it (the artifact frame under a creature's M15 standard). */
+export function skinVariantsFor(
+  kind: CardKind,
+  base: FrameTemplate,
+): FrameTemplate[] {
+  return [
+    ...(TEMPLATE_SKIN_VARIANTS[base] ?? []),
+    ...(BORROWED_VARIATIONS[kind]?.[base] ?? []),
+  ];
+}
+
+/** True when the template is a frame this kind borrows from another kind
+ *  (the artifact frame on a creature). It dresses the card as that other
+ *  type too, so a RANDOM frame pick skips it unless the card says so
+ *  (resolveGeneratedFrame). */
+export function isBorrowedVariation(
+  kind: CardKind,
+  template: FrameTemplate,
+): boolean {
+  return Object.values(BORROWED_VARIATIONS[kind] ?? {}).some((list) =>
+    (list ?? []).includes(template),
+  );
+}
+
 /** All frames offered for a kind, across every era, in gallery display
  *  order: border-era standards (+ their skin variants) oldest→newest, then
  *  layout templates, then showcase treatments. There is deliberately NO
@@ -360,8 +403,9 @@ export function framesForKind(
     });
     // Skins re-dress a specific BASE frame with identical geometry
     // (m15snow → m15, m15snowland → m15land, m15tokenartifact → m15token),
-    // so each era standard brings exactly its own variants.
-    for (const skin of TEMPLATE_SKIN_VARIANTS[standard] ?? []) {
+    // so each era standard brings exactly its own variants — plus the
+    // frames this kind borrows for it (m15artifact under a creature's m15).
+    for (const skin of skinVariantsFor(kind, standard)) {
       out.push({
         template: skin,
         era,
@@ -394,15 +438,20 @@ const SKIN_BASE: ReadonlyMap<FrameTemplate, FrameTemplate> = new Map(
 );
 
 /** The FRAME-section template a stored template maps to: a skin resolves to
- *  its base, a showcase treatment to the kind's M15 standard (showcase is
- *  M15-era trade dress), everything else to itself. The Variations section
- *  owns the difference between this and the actual template. */
+ *  its base, a frame the kind borrows to the standard it re-dresses (the
+ *  artifact frame on a creature → m15; on an artifact it IS the standard), a
+ *  showcase treatment to the kind's M15 standard (showcase is M15-era trade
+ *  dress), everything else to itself. The Variations section owns the
+ *  difference between this and the actual template. */
 export function baseFrameFor(
   kind: CardKind,
   template: FrameTemplate,
 ): FrameTemplate {
   const skinBase = SKIN_BASE.get(template);
   if (skinBase) return skinBase;
+  for (const [base, borrowed] of Object.entries(BORROWED_VARIATIONS[kind] ?? {})) {
+    if ((borrowed ?? []).includes(template)) return base as FrameTemplate;
+  }
   if (FRAME_SET_ERA[FRAME_TEMPLATE_SET[template]] === "showcase") {
     return standardFrameFor("m15", KIND_DEFS[kind].cardType) ?? template;
   }

@@ -21,6 +21,8 @@ import {
 } from "@/lib/creator/card-kinds";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import { normalizeColorSelection } from "@/lib/creator/card-fields";
+import { getFrameProfile } from "@/lib/cards/template-layout";
+import { showsPowerToughness } from "@/lib/cards/card-display";
 
 const NO_VERIFIED: ReadonlySet<string> = new Set();
 
@@ -102,7 +104,8 @@ describe("framesForKind", () => {
       framesForKind(kind, NO_VERIFIED)
         .filter((f) => f.group === "skin")
         .map((f) => f.template);
-    expect(skinsFor("creature")).toEqual(["m15snow", "m15devoid"]);
+    // A creature also borrows the M15 artifact frame (TODO 1.7).
+    expect(skinsFor("creature")).toEqual(["m15snow", "m15devoid", "m15artifact"]);
     expect(skinsFor("land")).toEqual(["m15snowland"]);
     expect(skinsFor("token")).toEqual(["m15tokenartifact"]);
     // Standards with their own geometry and no skin set stay bare.
@@ -338,6 +341,10 @@ describe("baseFrameFor", () => {
     expect(baseFrameFor("creature", "retro")).toBe("retro");
     expect(baseFrameFor("creature", "m15")).toBe("m15");
     expect(baseFrameFor("saga", "saga")).toBe("saga");
+    // TODO 1.7: the artifact frame is a creature's variation of m15, but an
+    // artifact's own standard.
+    expect(baseFrameFor("creature", "m15artifact")).toBe("m15");
+    expect(baseFrameFor("artifact", "m15artifact")).toBe("m15artifact");
   });
 });
 
@@ -348,6 +355,18 @@ describe("templateSupportsKind", () => {
     expect(templateSupportsKind("m15pw", "planeswalker")).toBe(true);
     expect(templateSupportsKind("m15", "planeswalker")).toBe(false);
     expect(templateSupportsKind("m15artifact", "artifact")).toBe(true);
+    // An Artifact Creature is a creature on the artifact frame (TODO 1.7);
+    // no other kind borrows it.
+    expect(templateSupportsKind("m15artifact", "creature")).toBe(true);
+    // …with its P/T box: the artifact frame is M15's geometry with its own
+    // P/T plates, and the renderers show P/T for the creature card type.
+    expect(getFrameProfile("m15artifact").pt?.plateAssetPathTemplate).toBe(
+      "/frames/m15artifact/pt/{color}.png",
+    );
+    expect(showsPowerToughness("creature")).toBe(true);
+    for (const kind of ["instant", "sorcery", "enchantment", "land", "token", "planeswalker"] as const) {
+      expect(templateSupportsKind("m15artifact", kind)).toBe(false);
+    }
     // Skins ride with their base kind; showcase dresses any standard kind.
     expect(templateSupportsKind("m15snow", "creature")).toBe(true);
     expect(templateSupportsKind("lotr", "instant")).toBe(true);

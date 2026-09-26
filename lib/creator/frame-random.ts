@@ -11,12 +11,16 @@
 import type { CardType, ColorIdentity, FrameTemplate } from "@/types/card";
 import {
   framesForKind,
+  isBorrowedVariation,
   isSingleBasicLand,
   kindFromCard,
   templateIsBasicOnly,
   type FrameChoice,
 } from "@/lib/creator/card-kinds";
-import { pickFrameColorKey } from "@/components/cards/frame-layer";
+import {
+  isArtifactFrameType,
+  pickFrameColorKey,
+} from "@/components/cards/frame-layer";
 import type { BasicLandFace } from "@/lib/cards/watermark";
 
 export type FrameRequest = FrameTemplate | "random" | undefined;
@@ -73,9 +77,19 @@ export function resolveGeneratedFrame(input: {
     // that color isn't published) — degrade to a random valid one.
   }
 
-  if (pool.length === 0) return null;
+  // A random pick never dresses a card as a type it isn't: the artifact
+  // frame a creature borrows (TODO 1.7) is for an Artifact Creature only.
+  // Asked for by name, it is honoured above.
+  const kind = kindFromCard(cardType, undefined);
+  const randomPool = pool.filter(
+    (choice) =>
+      !isBorrowedVariation(kind, choice.template) ||
+      isArtifactFrameType({ cardType, supertype: face?.supertype }),
+  );
+  if (randomPool.length === 0) return null;
   const rng = input.random ?? Math.random;
-  return pool[Math.floor(rng() * pool.length) % pool.length].template;
+  return randomPool[Math.floor(rng() * randomPool.length) % randomPool.length]
+    .template;
 }
 
 /** Color words a specific frame can render, for steering generation toward
