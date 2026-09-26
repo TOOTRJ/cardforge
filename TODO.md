@@ -623,28 +623,36 @@ Open decisions are marked **[decide]**; none blocks its phase.
 
 ### Phase 3b — Creator wizard bugs (1 week, parallel with Phases 1–3)
 
-- [ ] **3b.1 [P1] Wrap the save actions in try/catch** — a failed request must
+- [x] (fixed 2026-09-26 — wf/cr-creator) **3b.1 [P1] Wrap the save actions in try/catch** — a failed request must
       not unmount the editor (`components/creator/card-creator-form.tsx`:1726).
-- [ ] **3b.2 [P1] Ideas dialog routes `card_type` through
+      Shipped: the create/update calls catch, set the inline error + toast and keep the form; a deck / back-face link that throws after a successful save says "Saved, but couldn't link…" and still moves on.
+- [x] (fixed 2026-09-26 — wf/cr-creator) **3b.2 [P1] Ideas dialog routes `card_type` through
       `applyKindProgrammatic`** (`card-creator-form.tsx`:981,
       `lib/ai/card-ideas-select.ts`:122).
-- [ ] **3b.3 [P1] Clear `loyalty_abilities`/`saga_chapters` after folding** into
+      Shipped: colour first, then the kind change, unless the current kind already prints the idea's type (a creature on Adventure, an enchantment on Saga, a creature on a snow frame keeps its frame). Locked while revising, as in the AI fill.
+- [x] (fixed 2026-09-26 — wf/cr-creator) **3b.3 [P1] Clear `loyalty_abilities`/`saga_chapters` after folding** into
       `rules_text`; fold before the early return
       (`card-creator-form.tsx`:783,809,887,1606).
-- [ ] **3b.4 [P1] Dual lands** — the basic-land fallback applies only to exactly
+      Shipped: `carryStructuredRows` folds (a saga's intro too), empties and re-seeds on both paths of `applyKindPatch`.
+- [x] (fixed 2026-09-26 — wf/cr-creator) **3b.4 [P1] Dual lands** — the basic-land fallback applies only to exactly
       one basic subtype (`lib/cards/watermark.ts`:201,
       `lib/creator/card-kinds.ts`:447).
-- [ ] **3b.5 [P1] Inline-frame second-face name** — add to `saveMissing`, open
+      Shipped: `basicLandManaKey`'s no-supertype/no-text fallback needs exactly one distinct basic type; card-kinds' seed helpers already dropped only a lone seed subtype. Renderer-shared, but it only changes a land with no supertype, no rules text and 2+ basic types: 0 of the 736 public production faces (all 6 public duals carry text), bakes of all 731 public cards byte-identical. Private rows can't be counted anonymously.
+- [x] (fixed 2026-09-26 — wf/cr-creator) **3b.5 [P1] Inline-frame second-face name** — add to `saveMissing`, open
       the collapsed details on error, clear the leave-guard pending state only
       after a successful save (`card-creator-form.tsx`:584,949,2360,
       `lib/creator/form-schema.ts`:132, `panels/layout-panel.tsx`:109).
       **[decide]** allow a draft without it.
-- [ ] **3b.6 [P2] Edit save resets only when `!isDirty`** so keystrokes during
+      Shipped: the [decide] as recommended — a private draft may leave the second face unnamed, public/unlisted needs it. One switch, `DRAFTS_MAY_OMIT_SECOND_FACE_NAME` in `lib/cards/second-face-name.ts`, drives the form schema, the Save hint, the helper copy and the server gates (create, update as the patch over the stored row, bulk publish). `MoreOptions` opens on an error inside; the leave dialog stays open ("Saving…") until the save succeeds and shows why one failed.
+- [x] (fixed 2026-09-26 — wf/cr-creator) **3b.6 [P2] Edit save resets only when `!isDirty`** so keystrokes during
       the refresh survive (`card-creator-form.tsx`:538,1885).
-- [ ] **3b.7 [P2] Remove the history sentinel after a save**
+      Shipped: the save baselines the sent values and marks clean only if nothing was typed in flight; the keyed reset rebases (server defaults, on-screen values and dirty state kept) for the same card while dirty. Another card always resets.
+- [x] (fixed 2026-09-26 — wf/cr-creator) **3b.7 [P2] Remove the history sentinel after a save**
       (`components/creator/unsaved-changes-guard.tsx`:88).
-- [ ] **3b.8 [P2] Split/aftermath second half defaults its type from the
+      Shipped: `release()` replaces `disarm()` — stops guarding and pops the sentinel, resolving on the popstate so the post-save navigation can't race it; also on "Leave without saving". A Back press while clean now re-arms a fresh sentinel for the next dirty spell.
+- [x] (fixed 2026-09-26 — wf/cr-creator) **3b.8 [P2] Split/aftermath second half defaults its type from the
       kind**, not "creature" (`lib/creator/form-types.ts`:128).
+      Shipped: `blankSecondFaceFor(kind)` (`lib/creator/card-fields.ts`): split → instant, aftermath → sorcery, flip → creature; Adventure stays creature until 3b.14. Used on a kind change onto a blank second face, by "Clear second face", and when a stored inline-frame card has none.
 - [ ] **3b.9 [P2] Mount one preview** (media-query hook) and memoise preview
       props (`card-creator-form.tsx`:549,1940,2643,2665).
 - [ ] **3b.10 [P2] ChipGroup accessibility** — disabled chips reachable with
