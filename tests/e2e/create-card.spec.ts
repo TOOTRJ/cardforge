@@ -84,8 +84,15 @@ test.describe("create a card (text fields only)", () => {
     await page.waitForURL(/\/card\/.+\/edit/);
 
     // The edit page pins the saved structure — finish included — on
-    // Identity, and no longer offers the picker (the finish is locked).
-    await expect(finish).toHaveCount(0);
+    // Identity, and no longer offers the picker (the finish is locked). The
+    // edit page remounts with Advanced closed, and a closed <details> hides
+    // its content from getByRole — so open it and count hidden nodes too,
+    // or a rendered picker would still count 0.
+    await page.getByText(/^advanced$/i).click();
+    await expect(page.getByTestId("save-as-draft")).toBeVisible();
+    await expect(
+      page.getByRole("radiogroup", { name: /^finish$/i, includeHidden: true }),
+    ).toHaveCount(0);
     await rail.getByRole("button", { name: /^identity$/i }).click();
     await expect(page.getByTestId("locked-summary")).toContainText(
       /finish\s*foil/i,
