@@ -309,6 +309,11 @@ const STEP_RAIL_ICONS: Record<string, React.ReactNode> = {
   publish: <Send aria-hidden />,
 };
 
+/** Shown when a save request throws instead of answering: the editor stays
+ *  mounted with the card exactly as the user left it (TODO 3b.1). */
+const SAVE_REQUEST_FAILED =
+  "Couldn't reach PipGlyph to save. Your card is still here — check your connection and click Save again.";
+
 /** A basic-only frame (the full-art basic land, TODO 0.26) can't draw a
  *  nonbasic land's rules. When the card stops being a basic land (Land type
  *  → Nonbasic, or a rename that clears the basic seed), move it to the land
@@ -1903,8 +1908,24 @@ export function CardCreatorForm({
         }
       };
 
+      // A save REQUEST that throws (offline, a 5xx, a stale action id after a
+      // deploy) must never escape this transition: React hands it to the
+      // error boundary, which unmounts the editor and the unsaved card with
+      // it — there is no local draft to come back to (TODO 3b.1).
+      const failRequest = (error: unknown) => {
+        console.error("[creator] save request failed", error);
+        setServerError(SAVE_REQUEST_FAILED);
+        toast.error(SAVE_REQUEST_FAILED);
+      };
+
       if (mode === "create" || isRemix) {
-        const result = await createCardAction(payload);
+        let result: Awaited<ReturnType<typeof createCardAction>>;
+        try {
+          result = await createCardAction(payload);
+        } catch (error) {
+          failRequest(error);
+          return;
+        }
         if (!result.ok) {
           handleUpgradeOrError(result);
           return;
@@ -1925,13 +1946,21 @@ export function CardCreatorForm({
         // This card was forged as a deck entry's proxy — link it back and
         // return to the deck dashboard so the progress ring ticks up.
         if (deckRemix) {
-          const linkResult = await linkDeckCardAction(
-            deckRemix.deckCardId,
-            result.cardId,
-          );
-          if (!linkResult.ok) {
+          // The card IS saved at this point — a failed link request says
+          // so and still goes back to the deck.
+          let linkResult: Awaited<ReturnType<typeof linkDeckCardAction>> | null =
+            null;
+          try {
+            linkResult = await linkDeckCardAction(
+              deckRemix.deckCardId,
+              result.cardId,
+            );
+          } catch (error) {
+            console.error("[creator] deck link request failed", error);
+          }
+          if (!linkResult?.ok) {
             toast.error(
-              linkResult.error ?? "Saved, but couldn't link it into the deck.",
+              linkResult?.error ?? "Saved, but couldn't link it into the deck.",
             );
           } else {
             toast.success(`Linked into “${deckRemix.deckTitle}”.`);
@@ -1944,12 +1973,18 @@ export function CardCreatorForm({
         // This new card was created to be another card's back face — link it
         // to the front and return to that card's editor.
         if (backForCardId) {
-          const linkResult = await updateCardAction(backForCardId, {
-            back_card_id: result.cardId,
-          });
-          if (!linkResult.ok) {
+          let linkResult: Awaited<ReturnType<typeof updateCardAction>> | null =
+            null;
+          try {
+            linkResult = await updateCardAction(backForCardId, {
+              back_card_id: result.cardId,
+            });
+          } catch (error) {
+            console.error("[creator] back-face link request failed", error);
+          }
+          if (!linkResult?.ok) {
             toast.error(
-              linkResult.formError ??
+              linkResult?.formError ??
                 "Saved, but couldn't link it as the back face.",
             );
           } else {
@@ -2003,10 +2038,13 @@ export function CardCreatorForm({
       }
       // An edit only ever carries the revisable fields — the locked
       // structure never leaves the client (lib/creator/revise.ts).
-      const result = await updateCardAction(
-        card.id,
-        pickRevisablePayload(payload),
-      );
+      let result: Awaited<ReturnType<typeof updateCardAction>>;
+      try {
+        result = await updateCardAction(card.id, pickRevisablePayload(payload));
+      } catch (error) {
+        failRequest(error);
+        return;
+      }
       if (!result.ok) {
         handleUpgradeOrError(result);
         return;
