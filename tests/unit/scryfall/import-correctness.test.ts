@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import printings from "./fixtures/import-printings.json";
 import { scryfallCardSchema, type ScryfallCard } from "@/lib/scryfall/client";
+import {
+  mapScryfallToFormPatch,
+  parseTypeLine,
+} from "@/lib/scryfall/import-mapper";
 
 // ---------------------------------------------------------------------------
 // Import correctness (TODO 1.1, 1.2, 1.3, 1.7, 1.14): what a NEW import of a
@@ -89,5 +93,47 @@ describe("scryfallCardSchema — the full frame vocabulary (TODO 1.1)", () => {
       lang: "qya",
     });
     expect(parsed.set_type).toBe("some_new_type");
+  });
+});
+
+describe("Kindred stays a supertype word (TODO 1.14)", () => {
+  // [fixture, supertype, card_type, subtypes, frame]
+  const cases: Array<[PrintingKey, string | undefined, string, string | undefined, string]> = [
+    // Bitterblossom MOR #58 — "Kindred Enchantment — Faerie" (2003 frame).
+    ["mor-58", "Kindred", "enchantment", "Faerie", "modern"],
+    // Crib Swap LRW #11 — "Kindred Instant — Shapeshifter".
+    ["lrw-11", "Kindred", "instant", "Shapeshifter", "modern"],
+    // Kindred Discovery C17 #11 — only the NAME says Kindred: a plain
+    // Enchantment.
+    ["c17-11", undefined, "enchantment", undefined, "m15"],
+  ];
+
+  it.each(cases)("%s imports as %s %s", (key, supertype, cardType, subtypes, frame) => {
+    const patch = mapScryfallToFormPatch(printing(key));
+    expect(patch.supertype).toBe(supertype);
+    expect(patch.card_type).toBe(cardType);
+    expect(patch.kind).toBe(cardType);
+    expect(patch.subtypes_text).toBe(subtypes);
+    expect(patch.frame_template).toBe(frame);
+  });
+
+  it("reads the old Tribal spelling the same way", () => {
+    expect(parseTypeLine("Tribal Sorcery — Goblin")).toEqual({
+      supertype: "Tribal",
+      card_type: "sorcery",
+      subtypes_text: "Goblin",
+    });
+  });
+
+  it("never produces the legacy 'spell' card type", () => {
+    // A bare Kindred/Tribal word is a supertype with no card type — never
+    // the legacy "spell" the dead tribal mapping pointed at.
+    expect(parseTypeLine("Tribal")).toEqual({ supertype: "Tribal" });
+    expect(parseTypeLine("Kindred — Elf")).toEqual({ supertype: "Kindred", subtypes_text: "Elf" });
+    for (const key of Object.keys(printings) as PrintingKey[]) {
+      const patch = mapScryfallToFormPatch(printing(key));
+      expect(patch.card_type).not.toBe("spell");
+      expect(patch.back_face?.card_type).not.toBe("spell");
+    }
   });
 });

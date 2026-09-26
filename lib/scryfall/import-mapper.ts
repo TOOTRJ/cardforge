@@ -30,6 +30,11 @@ import { describeFrame } from "@/lib/creator/frame-resolve";
 // Known supertypes from Magic's type system. Anything else we encounter on
 // the left side of "—" gets folded into card_type or supertype based on
 // the type-line-position heuristic below.
+//
+// Kindred (Scryfall renamed Tribal → Kindred in 2024; both spellings appear
+// in type lines) is a card type in the Comprehensive Rules, but PipGlyph has
+// no Kindred CardType: a "Kindred Instant — Elf" is an instant with the word
+// Kindred in front, so it stays a supertype word (TODO 1.14).
 const KNOWN_SUPERTYPES = new Set([
   "Legendary",
   "Basic",
@@ -37,18 +42,14 @@ const KNOWN_SUPERTYPES = new Set([
   "World",
   "Ongoing",
   "Tribal",
-  // Scryfall renamed Tribal → Kindred (2024); both spellings appear in type lines.
   "Kindred",
   "Host",
   "Elite",
 ]);
 
-// Scryfall's type words → our CardType enum. The data model now supports
-// every canonical MTG type directly (creature / instant / sorcery / artifact
-// / enchantment / land / planeswalker / battle / token), so imports preserve
-// the source type instead of collapsing it. "Tribal" isn't a separate
-// CardType in our schema — it folds back to the legacy "spell" so we still
-// import the card without losing it.
+// Scryfall's type words → our CardType enum. Every canonical MTG card type
+// PipGlyph models maps 1:1; the legacy "spell" CardType is never produced by
+// an import.
 const TYPE_WORD_TO_CARD_TYPE: Record<string, CardType> = {
   creature: "creature",
   instant: "instant",
@@ -59,7 +60,6 @@ const TYPE_WORD_TO_CARD_TYPE: Record<string, CardType> = {
   token: "token",
   planeswalker: "planeswalker",
   battle: "battle",
-  tribal: "spell",
 };
 
 const SCRYFALL_COLOR_TO_IDENTITY: Record<string, ColorIdentity> = {
