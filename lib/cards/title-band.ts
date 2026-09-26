@@ -10,17 +10,18 @@
 
 import { tokenize } from "@/components/cards/mana-cost-glyphs";
 import { displayTextWidthEm } from "@/lib/cards/display-metrics";
-import { fitSingleLineSizePct } from "@/lib/cards/render-tiers";
+import { COST_PIP_GAP, NAME_COST_GAP_PCT, fitSingleLineSizePct } from "@/lib/cards/render-tiers";
 import type { FrameProfile } from "@/lib/cards/template-layout";
 
 /** The title band's name ↔ cost gap, as a fraction of card width (preview
- *  `gap: 2cqw`, bake `gap: fpx(0.02)`). */
-export const TITLE_COST_GAP_PCT = 0.02;
+ *  `gap: 2cqw`, bake `gap: fpx(0.02)`) — the same gap aftermath's second
+ *  face measures (render-tiers NAME_COST_GAP_PCT). */
+export const TITLE_COST_GAP_PCT = NAME_COST_GAP_PCT;
 
 /** Space between two cost pips as a fraction of the disc — the bake's
  *  CostGlyphs gap, the wider of the two renderers' (the preview's
  *  0.12 em is of the disc ÷ 1.3), so the estimate never runs short. */
-const PIP_GAP_DISC = 0.12;
+const PIP_GAP_DISC = COST_PIP_GAP;
 /** A text token in a cost ("or") draws at 0.6 × the disc in caps; ≈0.7 em
  *  per character errs wide. */
 const TEXT_TOKEN_CHAR_DISC = 0.6 * 0.7;
