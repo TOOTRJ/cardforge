@@ -81,6 +81,7 @@ import {
   preloadFrameAssets,
 } from "@/lib/render/card-frames";
 import {
+  bandTextStyle,
   brandMarkLayout,
   footerInk,
   loyaltyBadgeAssetFor,
@@ -283,6 +284,10 @@ function CardImage({
   const splitX = frameSplit ? Math.round((width * frameSplit.atPct) / 100) : 0;
   // Per-frame-colour footer ink — the same footerInk() the preview resolves.
   const footerInkResolved = layout.footer ? footerInk(layout.footer, colorKey) : null;
+  // …and the name's and type line's (the text spans only, not the pips or
+  // the set symbol) — the preview's bandTextStyle() twins.
+  const titleInk = bandTextStyle(layout.title, colorKey);
+  const typeInk = bandTextStyle(layout.type, colorKey);
 
   // No bake-only truncation: titles up to the validated 120 chars ellipsize
   // in the band exactly as the preview does.
@@ -592,7 +597,10 @@ function CardImage({
           the name half a gap left of the preview's. */}
       <Band slot={layout.title} cardWidth={width} italic={isShowcase}>
         <span
-          style={alignedText(layout.title, displayLine(title), fpx(layout.title.sizePct, width), titleRoom)}
+          style={{
+            ...alignedText(layout.title, displayLine(title), fpx(layout.title.sizePct, width), titleRoom),
+            ...titleInk,
+          }}
         >
           {displayLine(title)}
         </span>
@@ -632,7 +640,12 @@ function CardImage({
           symbolRect the symbol gets its own absolute box (mirrors the
           preview) so it can be aligned independently of the type line. */}
       <Band slot={typeSlot} cardWidth={width}>
-        <span style={alignedText(typeSlot, displayLine(typeLine), fpx(typeSlot.sizePct, width), typeRoom)}>
+        <span
+          style={{
+            ...alignedText(typeSlot, displayLine(typeLine), fpx(typeSlot.sizePct, width), typeRoom),
+            ...typeInk,
+          }}
+        >
           {displayLine(typeLine)}
         </span>
         {!layout.symbolRect ? (

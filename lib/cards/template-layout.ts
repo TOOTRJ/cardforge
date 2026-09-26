@@ -79,8 +79,9 @@ export type TextSlot = {
   /** CSS text-shadow for text sitting directly on the frame (e.g. agclassic
    *  P/T, planeswalker loyalty). */
   shadowCss?: string;
-  /** Per-frame-colour ink — see SlotInk. Honoured on the footer (footerInk)
-   *  and the stat slots (slotInk), identically in both renderers. */
+  /** Per-frame-colour ink — see SlotInk. Honoured on the footer (footerInk),
+   *  the stat slots (slotInk) and the title and type bands (bandTextStyle),
+   *  identically in both renderers. */
   inkByColorKey?: InkByColorKey;
   /** Translucent fill drawn behind the text — used when a frame's text region
    *  is a transparent cut-out over the art (M15 planeswalker abilities) so the
@@ -135,10 +136,10 @@ export type { FrameColorKey };
 export type SlotInk = { colorHex: string; shadowCss?: string };
 
 /** Ink per frame colour, for a slot whose frame colours differ in tone:
- *  printed Alpha cards letter the P/T and the "Illus." line in dark ink on
- *  the white frame but in embossed silver on every other colour. A key that
- *  is missing keeps the slot's own colorHex (and, on stat slots, shadowCss);
- *  an entry replaces both. */
+ *  printed Alpha cards letter the name, type line, P/T and "Illus." line in
+ *  dark ink on the white frame but in embossed silver on every other
+ *  colour. A key that is missing keeps the slot's own colorHex (and, on stat
+ *  slots, shadowCss); an entry replaces both. */
 export type InkByColorKey = Partial<Record<FrameColorKey, SlotInk>>;
 
 /** The ink a stat slot (P/T, loyalty, defense) prints in on `colorKey`. */
@@ -157,6 +158,18 @@ export function slotInk(
  *  would change those bakes) — only an inkByColorKey entry brings a shadow. */
 export function footerInk(footer: TextSlot, colorKey: string): SlotInk {
   return slotInk({ colorHex: footer.colorHex, inkByColorKey: footer.inkByColorKey }, colorKey);
+}
+
+/** The style a title or type band's TEXT (the name, the type line) adds on
+ *  `colorKey`: an inkByColorKey entry's colour and shadow, or nothing — the
+ *  band keeps its own colorHex / shadowCss, as on every frame without an
+ *  entry. Only the text span takes it: the mana pips and set symbol beside
+ *  it keep their own discs and ink, and a band-level text-shadow would
+ *  emboss the pip glyphs too (the browser and Satori both inherit it). */
+export function bandTextStyle(slot: TextSlot, colorKey: string): { color?: string; textShadow?: string } {
+  const entry = slot.inkByColorKey?.[colorKey as FrameColorKey];
+  if (!entry) return {};
+  return entry.shadowCss ? { color: entry.colorHex, textShadow: entry.shadowCss } : { color: entry.colorHex };
 }
 
 /** Art drawn UNDER the whole frame for see-through frames (TODO 4.17): CC's
@@ -379,27 +392,42 @@ const INK_LIGHT = "#f4eee2";
 const OUTLINE_SHADOW =
   "1px 1px 0 #000, -1px 1px 0 #000, 1px -1px 0 #000, -1px -1px 0 #000";
 
-// Printed Alpha/Beta lettering on the frame — the P/T and the "Illus." line:
-// dark ink on the white frame, an embossed silver-grey on every other colour
-// (a dark lower-right edge, no highlight). Measured on 19 LEA/LEB scans (the
-// brightest 0.7 % of the stroke cores after a 1 px blur; shadow = darkest):
+// Printed Alpha/Beta lettering on the frame — the name, the type line, the
+// P/T and the "Illus." line: dark ink on the white frame, an embossed
+// silver-grey on every other colour (a dark lower-right edge, no highlight).
+// Measured on 19 LEA/LEB scans (the brightest 0.7 % of the stroke cores after
+// a 1 px blur; shadow = darkest), P/T and "Illus.":
 //   u #b4c2c2 · b #969c9f–#a6aeae · r #939792–#9c9e98 · g #7a8585–#99a09f ·
 //   artifact #76807f–#7e8c8e · shadow ≈ black at 75 % over the frame.
-// Alpha printed no gold cards, so m takes the colours' median. Our colourless
-// frame is a mid-grey (strip ≈ 113) where the printed artifact frame is dark
-// brown (≈ 79), so c keeps the print's CONTRAST (≈ 2.3 : 1) rather than its
-// grey, which would all but vanish. The shadow is in em, so the preview and
-// the bake draw it at the same size at every scale.
+// The name and type line are the same ink (16 of the scans: u #b4bdc0–#bac3c6
+// · b #878c8a–#9ca1a3 · r #908e8f–#a39e9c · g #7d8689–#969ea1 · artifact
+// #788186–#84959a). Alpha printed no gold cards, so m takes the colours'
+// median. The colourless master is MSE's artifact card, dark warm brown like
+// the print (scripts/build-alpha-frames.mjs), so c takes the print's
+// artifact grey. The shadow is in em, so the preview and the bake draw it at
+// the same size at every scale.
 const ALPHA_EMBOSS = "0.035em 0.035em 0 rgba(0,0,0,0.75)";
-/** Silver for a mid-tone frame (our grey colourless, the brown land). */
+/** Silver for a mid-tone frame (the brown land). */
 const ALPHA_SILVER_MID = "#b0b4b4";
 const ALPHA_INK: InkByColorKey = {
   u: { colorHex: "#b4c0c2", shadowCss: ALPHA_EMBOSS },
   b: { colorHex: "#9da4a6", shadowCss: ALPHA_EMBOSS },
   r: { colorHex: "#989b96", shadowCss: ALPHA_EMBOSS },
   g: { colorHex: "#858c8c", shadowCss: ALPHA_EMBOSS },
-  c: { colorHex: ALPHA_SILVER_MID, shadowCss: ALPHA_EMBOSS },
+  c: { colorHex: "#7e888c", shadowCss: ALPHA_EMBOSS },
   m: { colorHex: "#989c9a", shadowCss: ALPHA_EMBOSS },
+};
+// The name and type line (bandTextStyle) take the same ink on every colour
+// Alpha printed. Gold is ours alone, and its master's title and type bands
+// are a lighter gold than its strip: there the silver would read at ~1.9 : 1
+// (type band 2.3) against the dark ink's ~3.6 : 1 (2.9), so m keeps a dark
+// name and type line.
+const ALPHA_BAND_INK: InkByColorKey = {
+  u: ALPHA_INK.u,
+  b: ALPHA_INK.b,
+  r: ALPHA_INK.r,
+  g: ALPHA_INK.g,
+  c: ALPHA_INK.c,
 };
 
 // ---------------------------------------------------------------------------
@@ -527,9 +555,9 @@ const M15SNOWLAND: FrameProfile = {
 // ~10 px, one dark line); title band 100–198; art opening 178–1319 ×
 // 219–1138; type band 1164–1247; text box 186–1318 × 1247–1855 (one outline,
 // then a bevel to the textured area 201–1300 × 1265–1835); P/T strip
-// 1855–1991. Name, type and rules are dark ink; the "Illus." line and the P/T
-// share one line in the strip, silver on every frame colour but white
-// (ALPHA_INK).
+// 1855–1991. Rules are dark ink; the "Illus." line and the P/T share one line
+// in the strip, silver on every frame colour but white (ALPHA_INK), and so
+// are the name and type line, gold excepted (ALPHA_BAND_INK).
 const AGCLASSIC: FrameProfile = {
   flavorDivider: false,
   label: "Alpha (1993)",
@@ -555,6 +583,9 @@ const AGCLASSIC: FrameProfile = {
     colorHex: INK_DARK,
     weight: 600,
     font: "display",
+    // Embossed silver on the printed colours (the black frame's dark ink all
+    // but vanished on its marble).
+    inkByColorKey: ALPHA_BAND_INK,
   },
   // Starts on the name's left margin (~178 px, the art window's edge — the
   // owner moved it in from the print's ~157) with caps centred at ~1198 px
@@ -566,6 +597,7 @@ const AGCLASSIC: FrameProfile = {
     colorHex: INK_DARK,
     weight: 600,
     font: "display",
+    inkByColorKey: ALPHA_BAND_INK,
   },
   // Inside the textured area with ~30 px at the sides, ~20 above, ~12 below.
   rules: {
@@ -793,8 +825,9 @@ const M15DEVOID: FrameProfile = {
 // border OUTSIDE the non-land outline (art box 145–1356.5 × 189.5–1172; type
 // band 1172–1249; text box 187–1318 × 1249–1854.5, ring 12–17 px; strip
 // 1854.5–1984.5). Its frame is the same brown land texture on every colour
-// key (strip ≈ #7e6657), so the "Illus." line and a P/T print in the one
-// silver on all seven.
+// key (strip ≈ #7e6657), so the name, the type line, the "Illus." line and a
+// P/T print in the one silver on all seven, as on the basics and duals
+// (6 LEA land scans: name and "Land" #978c89–#a6aeac over #6c6663–#7f7473).
 const ALPHA_LAND_INK: InkByColorKey = Object.fromEntries(
   (["w", "u", "b", "r", "g", "c", "m"] as const).map((k) => [
     k,
@@ -805,9 +838,14 @@ const ALPHALAND: FrameProfile = {
   ...AGCLASSIC,
   label: "Alpha Land",
   hideCost: true,
+  title: { ...AGCLASSIC.title, inkByColorKey: ALPHA_LAND_INK },
   // 5 px lower than agclassic's, clear of the wider art border (caps centred
   // at ~1204 px, as "Land" prints on the basics).
-  type: { ...AGCLASSIC.type, rect: { ...AGCLASSIC.type.rect, topPct: 55.35 } },
+  type: {
+    ...AGCLASSIC.type,
+    rect: { ...AGCLASSIC.type.rect, topPct: 55.35 },
+    inkByColorKey: ALPHA_LAND_INK,
+  },
   footer: { ...AGCLASSIC.footer!, inkByColorKey: ALPHA_LAND_INK },
   pt: { ...AGCLASSIC.pt!, inkByColorKey: ALPHA_LAND_INK },
 };

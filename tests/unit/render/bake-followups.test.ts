@@ -2,7 +2,7 @@ import sharp from "sharp";
 import { describe, expect, it } from "vitest";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import type { FrameTemplate } from "@/types/card";
-import { footerInk, getFrameProfile, slotInk } from "@/lib/cards/template-layout";
+import { bandTextStyle, footerInk, getFrameProfile, slotInk } from "@/lib/cards/template-layout";
 import { renderCardImage, RENDER_PRESETS, type RenderPreset } from "@/lib/render/card-image";
 
 // ---------------------------------------------------------------------------
@@ -173,7 +173,7 @@ describe("Alpha P/T sits in the strip below the text box (v25, re-cut)", () => {
   }, 60_000);
 });
 
-describe("Alpha ink: silver P/T and artist line on every frame but white", () => {
+describe("Alpha ink: silver lettering on every frame but white", () => {
   const COLOR: Record<string, CardPreviewData["colorIdentity"]> = {
     w: ["white"],
     u: ["blue"],
@@ -269,6 +269,78 @@ describe("Alpha ink: silver P/T and artist line on every frame but white", () =>
       }
     }
   }, 60_000);
+
+  // The name and type line (TODO 4.31): silver on every colour Alpha printed,
+  // dark on white and on our gold, silver on every land — the same
+  // bandTextStyle() the preview applies (pinned in alpha-ink.test.tsx).
+  it.each([
+    ...["w", "u", "b", "r", "g", "c", "m"].map((k) => ["agclassic", k]),
+    ["alphaland", "w"],
+    ["alphaland", "m"],
+  ])("%s %s: the bake prints the name and type line in bandTextStyle's colour", async (template, key) => {
+    const land = template === "alphaland";
+    const layout = getFrameProfile(template as FrameTemplate);
+    const base = { colorIdentity: COLOR[key], cost: null, power: null, toughness: null, rarity: null };
+    const named = await bake(card(template as FrameTemplate, {
+      ...base,
+      title: "Sengir Vampire",
+      cardType: land ? "land" : "creature",
+      subtypes: [land ? "Swamp" : "Vampire"],
+    }));
+    // A one-dot name and a blank type line: whatever else moved is lettering.
+    const blank = await bake(card(template as FrameTemplate, { ...base, title: ".", cardType: null, supertype: null, subtypes: [" "] } as unknown as Partial<CardPreviewData>));
+    const { data: frame } = await sharp(`public/frames/${template}/${key}.png`)
+      .flatten({ background: "#000" })
+      .resize(W, H, { fit: "fill" })
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    const bare: Raw = { data: frame, width: W, height: H };
+    const lumAt = (raw: Raw, o: number) => lumOf([...raw.data.subarray(o, o + 3)]);
+    for (const [what, slot] of [["name", layout.title], ["type line", layout.type]] as const) {
+      const want = bandTextStyle(slot, key);
+      const light = Boolean(want.color);
+      expect(light, `${key} ${what}`).toBe(land || !"wm".includes(key));
+      const moved = rectPixels(named, slot.rect).filter((o) =>
+        [0, 1, 2].some((c) => Math.abs(named.data[o + c] - blank.data[o + c]) > 24),
+      );
+      expect(moved.length, `${key} ${what}`).toBeGreaterThan(200);
+      const got = extreme(named, moved, light);
+      hex(want.color ?? slot.colorHex).forEach((c, i) => expect(Math.abs(got[i] - c), `${key} ${what} channel ${i}`).toBeLessThan(18));
+      // The emboss: silver lettering darkens the frame down and right of
+      // each stroke (not on the near-black frame, where there's nothing to
+      // darken — as on the print).
+      const bandLum = moved.reduce((sum, o) => sum + lumAt(bare, o), 0) / moved.length;
+      if (light && bandLum > 60) {
+        expect(moved.filter((o) => lumAt(named, o) < lumAt(bare, o) - 20).length, `${key} ${what} emboss`).toBeGreaterThan(20);
+      }
+    }
+  }, 60_000);
+
+  it("the pips print the same on every Alpha colour: the emboss stays on the name", async () => {
+    // Baked at HD with a one-dot name: a band-level text-shadow (inherited
+    // by the pip glyphs) would draw a dark offset copy of each symbol inside
+    // its disc on the silver colours only.
+    const pipsOn = (key: string, cost: string | null) =>
+      bake(card("agclassic", { colorIdentity: COLOR[key], title: ".", cost, power: null, toughness: null }), false, "hd");
+    // Where the 54 px disc sits, read off the white frame (its hard shadow
+    // falls down-left, so the box's top and right edges are the disc's).
+    const crop = (r: Raw): Raw => ({ data: r.data.subarray(80 * r.width * 3, 215 * r.width * 3), width: r.width, height: 135 });
+    const box = diffBox(crop(await pipsOn("w", "{6}")), crop(await pipsOn("w", null)))!;
+    const [cx, cy] = [box.x1 - 27, box.y0 + 80 + 27];
+    /** The disc's interior, RGB. */
+    const disc = async (key: string) => {
+      const pips = await pipsOn(key, "{6}");
+      const out: number[] = [];
+      for (let y = cy - 14; y <= cy + 14; y += 1) for (let x = cx - 14; x <= cx + 14; x += 1) out.push(...pips.data.subarray((y * pips.width + x) * 3, (y * pips.width + x) * 3 + 3));
+      return out;
+    };
+    const white = await disc("w");
+    for (const key of ["b", "r", "c"]) {
+      const got = await disc(key);
+      const worst = Math.max(...got.map((v, i) => Math.abs(v - white[i])));
+      expect(worst, key).toBeLessThanOrEqual(2);
+    }
+  }, 120_000);
 });
 
 describe("Alpha name, pips and type line (owner review round 4)", () => {
@@ -431,6 +503,26 @@ describe("Alpha masters are re-cut to the printed proportions", () => {
       expect(at(0, 0).a).toBe(0);
       expect(at(1499, 2099).a).toBe(0);
     }
+  });
+
+  it("agclassic c is the artifact card: a dark warm-brown frame round a light text box (TODO 4.31)", async () => {
+    // Printed colourless Alpha cards are artifacts (Sol Ring, Juggernaut —
+    // frame ≈ #645a53, crackle box ≈ #c8c4bc on the scans); MSE's ccard.jpg
+    // was a flat mid-grey (title band ≈ #767676, box ≈ #989898).
+    const { data, info } = await sharp("public/frames/agclassic/c.png").removeAlpha().raw().toBuffer({ resolveWithObject: true });
+    /** Mean RGB over an HD px rect [x0, y0, x1, y1). */
+    const mean = ([x0, y0, x1, y1]: number[]) => {
+      const sum = [0, 0, 0];
+      for (let y = y0; y < y1; y += 1) for (let x = x0; x < x1; x += 1) for (let c = 0; c < 3; c += 1) sum[c] += data[(y * info.width + x) * 3 + c];
+      return sum.map((v) => v / ((x1 - x0) * (y1 - y0)));
+    };
+    for (const [what, rect] of [["title band", [200, 110, 1300, 190]], ["type band", [200, 1172, 1300, 1240]], ["strip", [200, 1870, 1300, 1975]]] as const) {
+      const [r, g, b] = mean([...rect]);
+      expect(0.299 * r + 0.587 * g + 0.114 * b, what).toBeLessThan(70);
+      expect(r - b, `${what}: warm`).toBeGreaterThan(15);
+    }
+    const [r, g, b] = mean([260, 1300, 1240, 1800]);
+    expect(0.299 * r + 0.587 * g + 0.114 * b, "text box").toBeGreaterThan(180);
   });
 
   it("the art slot covers the opening and stays under the art box's bevel", () => {

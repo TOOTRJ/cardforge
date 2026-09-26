@@ -1140,9 +1140,17 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
         follows either row height. In the bake, Satori rounds each row's top
         and height separately, so with 4 rows a seam can gain a 1 px gap or
         overlap and the last row can overhang the box by 1 px (clipped).
-      - **Alpha colourless** uses a flat grey master; printed Alpha colourless
-        cards are artifacts on a dark warm-brown border with a light crackle
-        text box (Sol Ring, Juggernaut) — an asset re-source.
+      - [x] **Alpha colourless** re-sourced: agclassic's c master is MSE's
+        artifact card (acard.jpg — dark warm-brown border, light crackle text
+        box, like Sol Ring / Juggernaut) through the same re-cut; alphaland's
+        c stays clcard.jpg (Alpha printed no colourless land; later ones use
+        the brown land frame). Its ink is the print's artifact grey.
+      - [x] **Alpha name + type line lettering:** silver with the lower-right
+        emboss on every colour Alpha printed (u b r g + artifact; the black
+        frame's dark name all but vanished), dark on white and on our gold;
+        silver on every alphaland key (the land print). The ink rides on the
+        text span only (`bandTextStyle`), so pips and set symbols inherit no
+        shadow.
       - [x] **Display-font word spacing:** "Jester's Mask" rendered a 42 px
         word gap (17–25 px elsewhere) on every template. Not the font: Satori
         places each word after a space at the preceding characters' UNKERNED

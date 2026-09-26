@@ -62,6 +62,7 @@ import {
 } from "@/lib/cards/face-content";
 import {
   SAGA_MARKER_POINTS,
+  bandTextStyle,
   brandMarkLayout,
   footerInk,
   loyaltyBadgeAssetFor,
@@ -599,6 +600,10 @@ function CardFace({
   // Per-frame-colour footer ink (Alpha: silver on every frame but white) —
   // the same footerInk() the bake resolves.
   const footerInkResolved = layout.footer ? footerInk(layout.footer, colorKey) : null;
+  // …and the name's and type line's (the text spans only, not the pips or
+  // the set symbol) — the bake's bandTextStyle() twins.
+  const titleInk = bandTextStyle(layout.title, colorKey);
+  const typeInk = bandTextStyle(layout.type, colorKey);
   const showCost =
     !layout.hideCost && face.cardType !== "land" && Boolean(face.cost?.trim());
 
@@ -856,7 +861,7 @@ function CardFace({
           positioned box (right-aligned, vertically centered) so name and
           cost can be aligned independently in the layout editor. */}
       <BandSlot slot={layout.title} italic={isShowcase}>
-        <span style={ELLIPSIS} title={safeTitle}>
+        <span style={{ ...ELLIPSIS, ...titleInk }} title={safeTitle}>
           {displayLine(safeTitle)}
         </span>
         {showCost && !layout.costRect ? (
@@ -909,7 +914,7 @@ function CardFace({
           }),
         }}
       >
-        <span style={ELLIPSIS}>
+        <span style={{ ...ELLIPSIS, ...typeInk }}>
           {displayLine(
             buildTypeLine({
               supertype: face.supertype,
