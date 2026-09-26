@@ -31,7 +31,15 @@
 //   3. Add one entry to PROFILES below. Measure the bands by eye or with a
 //      column scan (transparent run = art window; cream/painted runs = the
 //      title / type / text bands). Tune in the live preview.
-// No renderer code changes — both consume this profile generically.
+//   4. Declare its edges (border / art / bar) in lib/frames/edge-contract.ts
+//      — tests/unit/frames/edge-contract.test.ts checks every master.
+// No renderer code changes — both consume this profile generically. An
+// edge-to-edge or full-art frame opts into the pieces it needs (TODO 3.23 /
+// 3.24): `brandMark: BRAND_MARK_ON_ART` and `footerOnArt` where the bottom
+// corner is art, `basicSymbol` for a basic land's symbol socket,
+// `type.split` for a two-box type line, `textless` for a frame with no text
+// box. Etched is hidden on any frame whose art window reaches the card edge
+// (artReachesCardEdge) until 4.28.
 //
 // TUNING happens in the admin visual editor (/admin/frame-compare → Edit
 // layout): adjustments save to the frame_profile_overrides table and merge
@@ -87,6 +95,23 @@ export type TextSlot = {
    *  is a transparent cut-out over the art (M15 planeswalker abilities) so the
    *  words stay legible regardless of the artwork underneath. */
   backdropHex?: string;
+  /** TYPE LINE ONLY — print it in two boxes split at the em dash (TODO
+   *  3.24): "Basic Land" in `leftRect`, "Forest" in `rightRect`, the way
+   *  Zendikar-style basics print either side of their medallion. Both parts
+   *  share one size (the smaller of their single-line fits), and the set
+   *  symbol draws only in the profile's `symbolRect`. Code-owned: not part of
+   *  the override schema. */
+  split?: TypeLineSplit;
+};
+
+/** A type line printed in two boxes — see TextSlot.split. */
+export type TypeLineSplit = {
+  leftRect: Rect;
+  rightRect: Rect;
+  /** Default "start" (Card Conjurer's left type box). */
+  leftAlign?: SlotAlign;
+  /** Default "center" (Card Conjurer's right type box, packZendikarBasic-1.js). */
+  rightAlign?: SlotAlign;
 };
 
 /** A stat value (P/T, loyalty, defense) drawn onto the frame, optionally with a
@@ -167,11 +192,19 @@ export function slotInk(
 }
 
 /** The footer's ink on master `masterKey`. Like slotInk, except that the
- *  footer has never drawn its own `shadowCss` (FULLARTLAND declares one;
- *  drawing it now would change those bakes) — only an inkByColorKey entry
- *  brings a shadow. */
-export function footerInk(footer: TextSlot, masterKey: string): SlotInk {
-  return slotInk({ colorHex: footer.colorHex, inkByColorKey: footer.inkByColorKey }, masterKey);
+ *  footer draws its own `shadowCss` only on a profile that prints it on the
+ *  art (FrameProfile.footerOnArt, TODO 3.8 / 3.23) — ON_ART_OUTLINE when it
+ *  declares none. Elsewhere only an inkByColorKey entry brings a shadow
+ *  (FULLARTLAND declares one that has never printed; drawing it without the
+ *  opt-in would change those bakes). */
+export function footerInk(
+  footer: TextSlot,
+  masterKey: string,
+  profile?: Pick<FrameProfile, "footerOnArt">,
+): SlotInk {
+  const ink = slotInk({ colorHex: footer.colorHex, inkByColorKey: footer.inkByColorKey }, masterKey);
+  if (!profile?.footerOnArt || ink.shadowCss) return ink;
+  return { colorHex: ink.colorHex, shadowCss: footer.shadowCss ?? ON_ART_OUTLINE };
 }
 
 /** The style a title or type band's TEXT (the name, the type line) adds on
@@ -362,19 +395,118 @@ export type FrameProfile = {
   /** Where the pipglyph.com brand mark sits, for frames whose bottom black
    *  border is thinner than M15's (Alpha, 1997, 2003, extended art, battle,
    *  split) — the default straddles their coloured frame edge. Values centre
-   *  the mark's ink in the frame's own border. Omit for the default
-   *  (BRAND_MARK_PLACEMENT). Code-owned: not part of the override schema. */
+   *  the mark's ink in the frame's own border. On a bar-less edge-to-edge
+   *  treatment the mark lands on the art: set `pill` (BRAND_MARK_ON_ART).
+   *  Omit for the default (BRAND_MARK_PLACEMENT). Code-owned: not part of the
+   *  override schema. */
   brandMark?: BrandMarkPlacement;
+  /** The artist line prints straight on the art (a bar-less edge-to-edge
+   *  treatment, TODO 3.23 / 3.8): the footer draws its own `shadowCss` —
+   *  ON_ART_OUTLINE when it declares none — in both renderers (footerInk).
+   *  Without it a footer's `shadowCss` is not drawn (FULLARTLAND declares
+   *  one that has never printed). Code-owned, opt-in. */
+  footerOnArt?: boolean;
+  /** A BASIC land's mana symbol in its own slot (TODO 3.24) instead of the
+   *  automatic big watermark in the rules box — see BasicSymbolSlot.
+   *  Profiles without it (m15land, modernland, alphaland …) are unchanged.
+   *  Code-owned, opt-in. */
+  basicSymbol?: BasicSymbolSlot;
+  /** The frame prints no text box (TODO 3.24; real textless printings: SCH
+   *  #3, P07 #1, PF19 #1): both renderers hide the type line, the rules and
+   *  flavour text (and the rules box's backdrop, watermark, planeswalker rows
+   *  and saga rail), and the set symbol unless `symbolRect` places it; they
+   *  keep the title, cost, P/T, loyalty, footer, brand mark and basic-land
+   *  symbol; the rules fit estimate is skipped. The card keeps its text (the
+   *  Text step says so) and prints it on any other frame. Code-owned, opt-in. */
+  textless?: boolean;
+};
+
+/** Where a basic land's symbol prints — FrameProfile.basicSymbol (TODO
+ *  3.24). When a profile sets it, a BASIC land (basicLandManaKey ≠ null)
+ *  draws its symbol here and the rules-box watermark is skipped; nothing is
+ *  drawn centred on the art. An explicit watermark swaps into the slot: a
+ *  mana watermark swaps the symbol, a preset or custom image is contained in
+ *  it. Every other card on the profile keeps the rules-box watermark.
+ *    • "disc"  — a filled disc in `rect` (under the frame, so a see-through
+ *                socket's painted ring overlaps its edge — today's MSE
+ *                fullartland master) with the symbol on it.
+ *    • "glyph" — the symbol alone, above the frame: the frame paints its own
+ *                disc or medallion (Card Conjurer's Fullart Basics 2022 disc
+ *                at 4.13/83.43/11.2×8.0 %, the ZEN medallion).
+ *    • "none"  — nothing: the frame master prints the symbol itself. */
+export type BasicSymbolSlot = {
+  rect: Rect;
+  style: "disc" | "glyph" | "none";
+  /** The symbol image per mana key, `{symbol}` → w/u/b/r/g/c (Card
+   *  Conjurer's `textless/2022/s{w,u,b,r,g,c}.png`), contained in `rect`
+   *  instead of the Mana-font glyph. A public/frames or frames-bucket path:
+   *  frameAssetPathsFor lists it, so the bake preloads it on Vercel. */
+  assetPathTemplate?: string;
+};
+
+/** Card Conjurer's Fullart Basics (2022) symbol box (`packTextlessBasics2022
+ *  .js`: 62/1752 px, 168 × 168 on 1500 × 2100): the frame paints the disc,
+ *  the symbol goes on top. For 4.39's `m15fullartland` / re-sourced
+ *  `fullartland`; add `assetPathTemplate` once the `s?.png` symbols are
+ *  published (frames bucket only — Card Conjurer art never enters git). */
+export const BASIC_SYMBOL_CC_2022: BasicSymbolSlot = {
+  rect: { topPct: 83.43, leftPct: 4.13, widthPct: 11.2, heightPct: 8.0 },
+  style: "glyph",
+};
+
+/** Today's `fullartland` master (MSE `magic-m15-full-art-basic-land-symbol`)
+ *  has a see-through socket at the left end of its type bar: clear from
+ *  54–251 px × 1743–1929 px on 1500 × 2100, inside a dark painted ring. The
+ *  disc runs 2 px under the ring all round. */
+export const BASIC_SYMBOL_MSE_SOCKET: BasicSymbolSlot = {
+  rect: { topPct: 82.62, leftPct: 3.47, widthPct: 13.47, heightPct: 9.62 },
+  style: "disc",
+};
+
+/** Card Conjurer's Zendikar basic (`packZendikarBasic-1.js`): the medallion
+ *  between the two halves of the type line (4.40). */
+export const BASIC_SYMBOL_ZEN_MEDALLION: BasicSymbolSlot = {
+  rect: { topPct: 78.67, leftPct: 42, widthPct: 16, heightPct: 11.43 },
+  style: "glyph",
+};
+
+/** …and its type line: "Basic Land" left of the medallion, the subtype
+ *  centred right of it (CC's `type` and `typeright` boxes, y 81.96 %). */
+export const TYPE_SPLIT_ZEN: TypeLineSplit = {
+  leftRect: { topPct: 81.96, leftPct: 8.54, widthPct: 33.47, heightPct: 5.43 },
+  rightRect: { topPct: 81.96, leftPct: 58, widthPct: 28, heightPct: 5.43 },
 };
 
 /** The brand mark's box offsets from the card's right and bottom edges, as %
  *  of the card's width and height (the same CSS `right` / `bottom` both
- *  renderers set). */
-export type BrandMarkPlacement = { rightPct: number; bottomPct: number };
+ *  renderers set). `pill` backs the mark with a dark rounded pill
+ *  (BRAND_MARK_PILL) for a mark that sits on the art; the offsets then place
+ *  the pill's box. */
+export type BrandMarkPlacement = { rightPct: number; bottomPct: number; pill?: boolean };
 
 /** Default placement: inside the M15 black border (≈73 px of black above the
  *  ink on a 1500×2100 card, 34 px below). */
 export const BRAND_MARK_PLACEMENT: BrandMarkPlacement = { rightPct: 3.5, bottomPct: 1.8 };
+
+/** The dark pill behind a brand mark on the art (TODO 3.23). Padding is a
+ *  fraction of the card's width at portrait scale (brandMarkLayout's `scale`
+ *  applies), so the preview (cqw) and the bake (px) draw the same pill. The
+ *  watermark policy keeps the mark on every display surface; on bright art
+ *  the plain 82 % white mark with its 1 px shadow all but vanishes. */
+export const BRAND_MARK_PILL = {
+  padXPct: 0.009,
+  padYPct: 0.0035,
+  /** Corner radius = this many em of the mark's font + the vertical padding:
+   *  half the pill's height (the display face's line box is ≈1.2 em), so the
+   *  ends are round in both renderers without relying on radius clamping. */
+  radiusEm: 0.6,
+  fill: "rgba(12,12,16,0.62)",
+} as const;
+
+/** Placement for a bar-less edge-to-edge treatment whose bottom-right corner
+ *  is art (fullartland, 4.36 text-on-art, 4.37 tokens): the pill, inside the
+ *  printed safe margin. Opt in with `brandMark: BRAND_MARK_ON_ART`. */
+export const BRAND_MARK_ON_ART: BrandMarkPlacement = { rightPct: 3.5, bottomPct: 1.6, pill: true };
 
 /** Brand-mark placement + size scale for a profile. The mark is sized off
  *  the card's SHORT side — 2.6% of a portrait card's width — so a landscape
@@ -387,6 +519,17 @@ export function brandMarkLayout(
     ...(profile.brandMark ?? BRAND_MARK_PLACEMENT),
     scale: profile.orientation === "landscape" ? 5 / 7 : 1,
   };
+}
+
+/** True when the art window reaches a card edge (TODO 3.23) — an
+ *  edge-to-edge treatment (borderless, full-art without a border). The same
+ *  test 7.7's edge contract makes of an `art` edge. The etched finish masks
+ *  by the frame's luminance, so on a mostly see-through frame it all but
+ *  vanishes: the creator hides it on these frames until the etched frame
+ *  treatment (4.28). */
+export function artReachesCardEdge(profile: Pick<FrameProfile, "artSlot">): boolean {
+  const a = profile.artSlot;
+  return a.topPct <= 0 || a.leftPct <= 0 || a.leftPct + a.widthPct >= 100 || a.topPct + a.heightPct >= 100;
 }
 
 /** Resolve a per-color asset path from a template like "/frames/m15/pt/{color}.png". */
@@ -429,6 +572,66 @@ const INK_DARK_SOFT = "#2a2118";
 const INK_LIGHT = "#f4eee2";
 const OUTLINE_SHADOW =
   "1px 1px 0 #000, -1px 1px 0 #000, 1px -1px 0 #000, -1px -1px 0 #000";
+/** Outline for small text set straight on the art (the footer of a bar-less
+ *  treatment, TODO 3.8): in em, like ALPHA_EMBOSS, so the preview and the
+ *  bake draw it at the same size at every scale (OUTLINE_SHADOW's 1 px is a
+ *  hairline at HD and a smear on a 250 px tile). Card Conjurer outlines its
+ *  bottom info the same way. */
+export const ON_ART_OUTLINE =
+  "0.06em 0.06em 0 #000, -0.06em 0.06em 0 #000, 0.06em -0.06em 0 #000, -0.06em -0.06em 0 #000";
+
+/** One layer of a multi-layer text shadow, in px at the text's font size. */
+export type TextShadowCopy = { dx: number; dy: number; color: string };
+
+const SHADOW_LENGTH = /^(-?(?:\d+\.?\d*|\.\d+))(px|em)?$/;
+
+/**
+ * A text shadow of TWO OR MORE zero-blur layers (ON_ART_OUTLINE,
+ * OUTLINE_SHADOW) as px offsets at `fontPx`, or null. The bake draws these
+ * as offset copies of the text under it instead of a CSS text-shadow:
+ * Satori writes one feDropShadow per layer and merges them, and the bake's
+ * rasteriser (sharp → librsvg) keeps only the last layer, so a four-way
+ * outline baked as a one-sided up-left shadow while the browser drew all
+ * four (new-frames review 2026-09-26). A single layer rasterises correctly,
+ * and a blurred one can't be drawn as a copy: both stay CSS (null).
+ */
+export function textShadowCopies(shadowCss: string, fontPx: number): TextShadowCopy[] | null {
+  const layers: string[] = [];
+  let depth = 0;
+  let start = 0;
+  for (let i = 0; i < shadowCss.length; i += 1) {
+    const ch = shadowCss[i];
+    if (ch === "(") depth += 1;
+    else if (ch === ")") depth -= 1;
+    else if (ch === "," && depth === 0) {
+      layers.push(shadowCss.slice(start, i));
+      start = i + 1;
+    }
+  }
+  layers.push(shadowCss.slice(start));
+  if (layers.length < 2) return null;
+  const copies: TextShadowCopy[] = [];
+  for (const layer of layers) {
+    const tokens = layer.trim().match(/[a-z]+\([^)]*\)|[^\s]+/gi) ?? [];
+    const lengths: number[] = [];
+    let color: string | null = null;
+    for (const token of tokens) {
+      const m = SHADOW_LENGTH.exec(token);
+      if (m) {
+        if (m[2] === undefined && Number(m[1]) !== 0) return null;
+        lengths.push(m[2] === "em" ? Number(m[1]) * fontPx : Number(m[1]));
+      } else if (color === null) {
+        color = token;
+      } else {
+        return null;
+      }
+    }
+    // Offsets, then an optional blur that must be zero.
+    if (lengths.length < 2 || lengths.length > 3 || (lengths[2] ?? 0) !== 0 || !color) return null;
+    copies.push({ dx: lengths[0], dy: lengths[1], color });
+  }
+  return copies;
+}
 
 // Printed Alpha/Beta lettering on the frame — the P/T and the "Illus." line:
 // dark ink on the white frame, an embossed silver-grey on every other colour
@@ -859,6 +1062,50 @@ const M15DEVOID: FrameProfile = {
   pt: { ...M15.pt!, plateAssetPathTemplate: "/frames/m15devoid/pt/{color}.png" },
   type: { ...M15.type, rect: { ...M15.type.rect, topPct: 56.4 } },
   symbolRect: { topPct: 56.2, leftPct: 80.2, widthPct: 12, heightPct: 5.2 },
+};
+
+// M15 Borderless — the 2019+ borderless frame (frames plan 4.32; Card
+// Conjurer 'Borderless (Alt)', packBorderless.js @2fcddba, frames bucket
+// only). The art runs to the card's top and side edges (CC artBounds 0/0/100
+// × 92.24) under dark translucent bars and text box (the box is RGBA
+// 0,0,0,128, baked into the master), above an opaque black bottom bar that
+// carries the artist line and the brand mark (the default placement lands
+// in it). CC's text bounds are its regular M15 bounds (title y 5.22, type y
+// 56.64, rules 63.03 h 28.75), so the measured M15 slots carry over, with
+// CC's white ink on the title, type line, rules and P/T. The set symbol
+// keeps M15's inline place: right edge 92.2, centred 59.1 (CC 92.13 /
+// 59.10). The P/T plate is the pack's own 274 × 140 (CC bounds 1146/1861 on
+// 1500 × 2100 = 76.4/88.62/18.27 × 6.67, its native 1.96 aspect); the
+// digits keep M15's box (CC's pt box 79.28/90.2/13.67 × 3.72) and may use
+// the plate's face from 1188 px (past the lit bevel) to 1394 px (the shaded
+// bevel), measured on the digits' rows of the plates. Colourless is CC's
+// see-through C frame: the art is under it already, so no underFrameArt.
+// The cost gets the Card Conjurer lift (CC mana y 0.0613, as on M15).
+const BORDERLESS_INK = "#ffffff";
+const M15BORDERLESS: FrameProfile = {
+  ...M15,
+  label: "M15 Borderless",
+  costDy: CC_M15_COST_DY,
+  artSlot: { topPct: 0, leftPct: 0, widthPct: 100, heightPct: 92.24 },
+  title: { ...M15.title, colorHex: BORDERLESS_INK },
+  type: { ...M15.type, colorHex: BORDERLESS_INK },
+  rules: { ...M15.rules, colorHex: BORDERLESS_INK },
+  pt: {
+    ...M15.pt!,
+    plateRect: { topPct: 88.62, leftPct: 76.4, widthPct: 18.27, heightPct: 6.67 },
+    inkSpanPct: { leftPct: 79.2, rightPct: 92.93 },
+    colorHex: BORDERLESS_INK,
+    plateAssetPathTemplate: "/frames/m15borderless/pt/{color}.png",
+  },
+};
+// …and its artifact dress: CC's A frame for a colourless artifact (with
+// the pack's artifact plate), the colour frames for a coloured one — a
+// borderless frame has no body for 4.16's artifact interior, and the prints
+// (FDN #295, FRA #327) wear the colour's bars. Same geometry.
+const M15BORDERLESSARTIFACT: FrameProfile = {
+  ...M15BORDERLESS,
+  label: "M15 Borderless Artifact",
+  pt: { ...M15BORDERLESS.pt!, plateAssetPathTemplate: "/frames/m15borderlessartifact/pt/{color}.png" },
 };
 
 // Alpha Land — the 1993 frame's land variant ({color}lcard from
@@ -1947,33 +2194,85 @@ const FULLART: FrameProfile = {
   footer: { ...M15.footer!, colorHex: INK_LIGHT },
 };
 
-// Full-art basic land — floating name + type bars over edge-to-edge art; the
-// big mana symbol comes from the basic-land watermark (deliberately not
-// baked into the frame, so it stays tintable and overridable).
-const FULLARTLAND: FrameProfile = {
+// Full-art basic lands — Card Conjurer 'Fullart Basics (2022)' (frames plan
+// 4.39; packTextlessBasics2022.js @2fcddba, frames bucket only): a light
+// title bar, then a "Basic Land — Plains" bar with the mana symbol's disc
+// at its left end, as printed since P23 (ONE, MOM, LTR … FDN, HOB). The bars
+// measure 4.24–11.10 and 83.95–90.81 % H on the masters (CC title y 5.22,
+// type x 18.87 / y 84.81). The text slots are Card Conjurer's (title x
+// 0.0854, size 0.0381 H = 80 px at HD; type x 283/1500, size 0.0324 H = 68
+// px), measured against 17 prints (FDN #282–290, TDM/DSK/DFT #272–276, FRA
+// #382–394, FIN #309; new-frames print review 2026-09-26): the name's ink
+// then starts within 1 px of the print at its width (M15's slots, kept from
+// the old MSE master, set it 7–9 px right and ~6 % small, the type line
+// 10–12 px left, 6 px low and 5 % small). The set symbol prints at the
+// print's size (78–91 px of ink; type.sizePct × 1.1 gave 57–60). Dark ink
+// on the light bars (M15's). Basic lands only (0.26's
+// BASIC_ONLY_TEMPLATES, lib/creator/card-kinds.ts): no cost, and a basic
+// prints no rules — its symbol goes in the frame's own disc (3.24's
+// basicSymbol, "glyph": CC paints the disc, its 168 px s?.png symbol is
+// drawn on it; frames bucket), never across the art. The set symbol is
+// right-anchored at 92.13 %W and centred on 87.39 %H (CC setSymbolBounds).
+// `rules` only places a non-basic's text and watermark, which the basic-only
+// gate keeps off these frames.
+const FULL_ART_BASIC: FrameProfile = {
   ...M15,
-  label: "Full-Art Basic Land",
   hideCost: true,
-  artSlot: { topPct: 0, leftPct: 0, widthPct: 100, heightPct: 100 },
   title: {
     ...M15.title,
-    rect: { topPct: 5.6, leftPct: 9, widthPct: 80, heightPct: 4.6 },
+    rect: { topPct: 5.4, leftPct: 8.54, widthPct: 80.46, heightPct: 4.6 },
+    sizePct: 0.0533,
   },
   type: {
     ...M15.type,
-    rect: { topPct: 85.4, leftPct: 18, widthPct: 66, heightPct: 4.2 },
+    rect: { topPct: 85.1, leftPct: 18.87, widthPct: 65.13, heightPct: 4.2 },
+    sizePct: 0.0453,
   },
+  symbolRect: { topPct: 85.34, leftPct: 80.13, widthPct: 12, heightPct: 4.1 },
+  symbolSizePct: 0.065,
   rules: {
     rect: { topPct: 16, leftPct: 15, widthPct: 70, heightPct: 62 },
     sizePct: ptToPct(9),
     colorHex: INK_LIGHT,
     font: "body",
   },
+};
+
+/** The basic-symbol slot of a Fullart Basics (2022) template: CC's disc box,
+ *  with the template's own copy of CC's symbols (bucket objects
+ *  `<template>/symbol/{w,u,b,r,g,c}.png`, 168 × 168 — the box's exact size). */
+function fullArtBasicSymbol(template: "m15fullartland" | "fullartland"): BasicSymbolSlot {
+  return { ...BASIC_SYMBOL_CC_2022, assetPathTemplate: `/frames/${template}/symbol/{symbol}.png` };
+}
+
+// …black-bordered (NEW, 4.39): the pack's full composite. The art sits
+// inside the black ring (CC artBounds 3.94/2.81/92.14 × 89.29; the ring
+// measures 3.93 % at the sides, 2.86 % on top, from 92.10 % H below), and
+// the artist line and brand mark print in the bottom border, as on M15.
+const M15FULLARTLAND: FrameProfile = {
+  ...FULL_ART_BASIC,
+  label: "Full-Art Basic Land",
+  artSlot: { topPct: 2.81, leftPct: 3.94, widthPct: 92.14, heightPct: 89.29 },
+  basicSymbol: fullArtBasicSymbol("m15fullartland"),
+};
+
+// …borderless (re-sourced by 4.39; owner decision 4.35(a): it stays
+// borderless, with light bars): the same composite without the pack's Border
+// mask, so the art runs to every edge (FRA #382–396 print this layout with
+// dark bars — a colour treatment built only when the 1.6 log asks). The
+// artist line and the brand mark print on the art (3.23): the footer in
+// ON_ART_OUTLINE, the mark on its dark pill.
+const FULLARTLAND: FrameProfile = {
+  ...FULL_ART_BASIC,
+  label: "Borderless Full-Art Basic Land",
+  artSlot: { topPct: 0, leftPct: 0, widthPct: 100, heightPct: 100 },
+  basicSymbol: fullArtBasicSymbol("fullartland"),
+  brandMark: BRAND_MARK_ON_ART,
+  footerOnArt: true,
   footer: {
     ...M15.footer!,
     rect: { topPct: 93.2, leftPct: 6.5, widthPct: 87, heightPct: 3 },
     colorHex: INK_LIGHT,
-    shadowCss: OUTLINE_SHADOW,
   },
 };
 
@@ -2005,6 +2304,8 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   m15token: { ...M15TOKEN, underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] } },
   m15tokenartifact: { ...M15TOKEN, label: "M15 Artifact Token" },
   m15artifact: M15ARTIFACT,
+  m15borderless: M15BORDERLESS,
+  m15borderlessartifact: M15BORDERLESSARTIFACT,
   m15snow: M15SNOW,
   m15devoid: M15DEVOID,
   m15pw: M15PW,
@@ -2027,6 +2328,7 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   tarkirghostfire: TARKIRGHOSTFIRE,
   extendedart: EXTENDEDART,
   fullart: FULLART,
+  m15fullartland: M15FULLARTLAND,
   fullartland: FULLARTLAND,
   m15textless: M15TEXTLESS,
   m15textlessland: M15TEXTLESSLAND,

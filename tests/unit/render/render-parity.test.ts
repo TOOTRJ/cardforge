@@ -56,10 +56,14 @@ describe("display-font lines", () => {
     // a single-line Beleren text must reach either renderer as one run.
     for (const src of [BAKE, PREVIEW]) {
       expect(src).not.toMatch(/>\s*\{(title|safeTitle|name|typeLine)\}\s*<\/span>/);
-      expect(src).toMatch(/\{slotLine\(\s*layout\.footer\.font,\s*\w+\.artistCredit/);
     }
-    expect(BAKE).toContain("{slotLine(layout.footer.font, watermarkText)}");
+    expect(PREVIEW).toMatch(/\{slotLine\(\s*layout\.footer\.font,\s*\w+\.artistCredit/);
     expect(PREVIEW).toContain("{slotLine(layout.footer.font, footerWatermark)}");
+    // The bake's footer (FooterBake, which also draws the outline copies)
+    // takes the same artist line and custom mark through slotLine.
+    expect(BAKE).toMatch(/artist: card\.artistCredit\?\.trim\(\) \? `Art: \$\{card\.artistCredit\}` : "Art: Unknown"/);
+    expect(BAKE).toContain("const line = slotLine(slot.font, artist);");
+    expect(BAKE).toContain("const mark = watermarkText ? slotLine(slot.font, watermarkText) : null;");
     // The name: whole, or as fitted before a detached cost (m15pw, modern).
     expect(BAKE).toContain("{displayLine(titleFit ? titleFit.text : title)}");
     expect(PREVIEW).toContain("{displayLine(titleFit ? titleFit.text : safeTitle)}");
@@ -76,7 +80,12 @@ describe("display-font lines", () => {
     // it), and must not add the empty span + gap the preview never renders.
     // The band's per-colour ink (bandTextStyle, TODO 4.31) is spread after
     // it: colour + shadow only, so the kerned-width margin stands.
-    expect(BAKE.match(/style=\{\{\s*\.\.\.alignedText\(/g)).toHaveLength(2);
+    // The title, the type line and each half of a split type line (TODO
+    // 3.24; its right half centres).
+    expect(BAKE.match(/style=\{\{\s*\.\.\.alignedText\(/g)).toHaveLength(3);
+    expect(BAKE).toContain(
+      "<span style={{ ...alignedText(band, line, fpx(slot.sizePct, cardWidth), bandWidth(band, cardWidth)), ...ink }}>",
+    );
     expect(BAKE).toMatch(/\.\.\.alignedText\(layout\.title, displayLine\(title\),[^\n]*\n\s*\.\.\.titleInk,\n/);
     expect(BAKE).toMatch(/\.\.\.alignedText\(typeSlot, displayLine\(typeLine\),[^\n]*\n\s*\.\.\.typeInk,\n/);
     expect(BAKE).toContain("isAligned(layout.title) ? null : (");
@@ -142,6 +151,40 @@ describe("landscape renders", () => {
     expect(social).toContain("width={box.width}");
     expect(read("app/api/cards/[id]/og/route.ts")).toContain("landscape: isLandscapeRender(previewData)");
     expect(read("app/api/oembed/route.ts")).toContain("naturalRenderSize(isLandscapeTemplate(card.frame_style))");
+  });
+});
+
+describe("edge-to-edge and full-art pieces (TODO 3.23 / 3.24)", () => {
+  it("resolve from the same shared helpers in both renderers", () => {
+    // The basic-land symbol slot, the footer on the art and the split type
+    // line all come from lib/ — the renderers only draw them.
+    expect(BAKE).toContain("basicSymbolFor(layout, basicLandFace, card.watermark)");
+    expect(PREVIEW).toContain("basicSymbolFor(layout, basicLandFace, face.watermark)");
+    expect(BAKE).toContain("footerInk(layout.footer, masterKey, layout)");
+    expect(PREVIEW).toContain("footerInk(layout.footer, masterKey, layout)");
+    for (const src of [BAKE, PREVIEW]) {
+      expect(src).toContain("layout.type.split ? splitTypeLine(typeLine) : null");
+      expect(src).toContain("fitSplitTypeSizePct({");
+      expect(src).toContain("basicSymbolBox(plan.slot.rect");
+      expect(src).toContain("BRAND_MARK_PILL.padXPct * scale");
+      // A slot or a textless frame suppresses the rules-box watermark; a
+      // textless frame skips the rules fit and every rules layer.
+      expect(src).toMatch(/effectiveWatermark &&\s*!textless &&\s*!basicSymbolPlan &&/);
+      expect(src).toMatch(/const rulesSizePct = textless\s*\?\s*layout\.rules\.sizePct/);
+      expect(src).toMatch(/\{textless \? null : layout\.type\.split && typeSplit \?/);
+    }
+  });
+
+  it("paint the disc under the frame and the symbol above it (the bake paints in DOM order)", () => {
+    const disc = BAKE.indexOf("BasicSymbolDiscBake({ plan: basicSymbolPlan");
+    const frame = BAKE.indexOf("src={frameDataUrl}");
+    const symbol = BAKE.indexOf("BasicSymbolBake({\n            plan: basicSymbolPlan");
+    expect(disc).toBeGreaterThan(0);
+    expect(disc).toBeLessThan(frame);
+    expect(symbol).toBeGreaterThan(frame);
+    // The preview's z-order: art 0 < disc 1 < frame 5 < symbol 10.
+    expect(PREVIEW).toMatch(/data-testid="basic-symbol-disc"[\s\S]{0,200}zIndex: 1,/);
+    expect(PREVIEW).toMatch(/data-testid="basic-symbol"\n[\s\S]{0,200}zIndex: 10,/);
   });
 });
 

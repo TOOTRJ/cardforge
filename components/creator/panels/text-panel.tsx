@@ -8,7 +8,7 @@
 // so the toolbar (here and on the Layout panel's back face) can insert at the
 // caret.
 
-import { useController, useFormContext } from "react-hook-form";
+import { useController, useFormContext, useWatch } from "react-hook-form";
 import { RulesSymbolToolbar } from "@/components/creator/rules-symbol-toolbar";
 import {
   PipTextEditor,
@@ -19,6 +19,13 @@ import {
   textareaClass,
 } from "@/components/creator/field-group";
 import type { FormValues } from "@/lib/creator/form-types";
+import { normalizeFrameTemplate } from "@/lib/cards/card-display";
+import { getFrameProfile } from "@/lib/cards/template-layout";
+
+/** Said on the Text step when the frame is textless (FrameProfile.textless,
+ *  TODO 3.24): the card keeps its text and prints it on any other frame. */
+export const TEXTLESS_FRAME_NOTE =
+  "This frame prints no rules text — it's kept and shows on other frames.";
 
 type TextPanelProps = {
   rulesTextRef: React.MutableRefObject<PipTextEditorHandle | null>;
@@ -33,9 +40,21 @@ export function TextPanel({ rulesTextRef, onInsertSymbol }: TextPanelProps) {
     formState: { errors },
   } = useFormContext<FormValues>();
   const { field, fieldState } = useController({ control, name: "rules_text" });
+  const template = useWatch({ control, name: "frame_style.template" });
+  // Code-owned, never overridden by the admin layout editor.
+  const textless = Boolean(getFrameProfile(normalizeFrameTemplate(template)).textless);
 
   return (
     <>
+      {textless ? (
+        <p
+          role="status"
+          data-testid="textless-frame-note"
+          className="rounded-lg border border-primary/40 bg-primary/5 px-4 py-3 text-sm text-foreground"
+        >
+          {TEXTLESS_FRAME_NOTE}
+        </p>
+      ) : null}
       <FieldGroup
         label="Rules text"
         error={fieldState.error?.message}

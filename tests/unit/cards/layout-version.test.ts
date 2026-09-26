@@ -339,6 +339,10 @@ describe("v27 / v28 — the owner's follow-up decisions (2026-09-25)", () => {
   });
 });
 
+/** Templates added after v29 (frames plan 4.32 / 4.39): no card was ever
+ *  baked on them before v30, so v29's frozen lists never name them. */
+const POST_V29_TEMPLATES: readonly string[] = ["m15borderless", "m15borderlessartifact", "m15fullartland"];
+
 describe("v29 — the round-5 leftovers, one sweep (2026-09-25)", () => {
   const png = "https://x/y.png";
   /** A v28 bake. Its columns default to a card v29 left alone
@@ -356,7 +360,7 @@ describe("v29 — the round-5 leftovers, one sweep (2026-09-25)", () => {
     const { CARD_LAYOUT_VERSION, VERSION_SCOPES, rolloutPolicy, latestOptInVersion, isRenderStale } = await import(
       "@/lib/cards/layout-version"
     );
-    expect(CARD_LAYOUT_VERSION).toBe(29);
+    expect(CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(29);
     expect(rolloutPolicy(29)).toBe("sweep");
     expect(latestOptInVersion()).toBe(22);
     expect(typeof VERSION_SCOPES[29]).toBe("function");
@@ -368,7 +372,9 @@ describe("v29 — the round-5 leftovers, one sweep (2026-09-25)", () => {
 
   it("word spacing: every card on the 25 display-footer templates", async () => {
     const classifyForSweep = await sweepAt(29);
-    const displayFooter = FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).footer?.font === "display");
+    const displayFooter = FRAME_TEMPLATE_VALUES.filter(
+      (t) => getFrameProfile(t).footer?.font === "display" && !POST_V29_TEMPLATES.includes(t),
+    );
     // The frozen v29 list is these 25 (their footer prints "ART: …").
     expect(displayFooter).toHaveLength(25);
     for (const t of displayFooter) {
@@ -389,7 +395,9 @@ describe("v29 — the round-5 leftovers, one sweep (2026-09-25)", () => {
 
   it("word spacing on the other 12 templates: only a name or type line with a space in it", async () => {
     const classifyForSweep = await sweepAt(29);
-    const others = FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).footer?.font !== "display");
+    const others = FRAME_TEMPLATE_VALUES.filter(
+      (t) => getFrameProfile(t).footer?.font !== "display" && !POST_V29_TEMPLATES.includes(t),
+    );
     expect([...others].sort()).toEqual(
       ["aftermath", "avatar", "battle", "bloomanime", "bloomburrow", "flip", "lotr", "lotrscroll", "split",
         "tarkirdraconic", "tarkirdragon", "tarkirghostfire"].sort(),
@@ -514,5 +522,41 @@ describe("v29 — the round-5 leftovers, one sweep (2026-09-25)", () => {
     expect(classifyForSweep(at("m15", { layout_version: 27, frame_style: { template: "m15", finish: "foil" } }), 28)).toBe(
       "rebake",
     );
+  });
+});
+
+describe("v30 — fullartland re-sourced from Card Conjurer (frames plan 4.39)", () => {
+  const png = "https://x/y.png";
+  /** A v29 bake (every production card is stamped 29). */
+  const at = (template: string, over: Record<string, unknown> = {}) => ({
+    ...UNTOUCHED_SINCE_V22,
+    layout_version: 29,
+    rendered_image_url: png,
+    frame_style: { template, finish: "regular" },
+    ...over,
+  });
+
+  it("is a template-scoped sweep: only fullartland is stale, and never an owner badge", async () => {
+    const { rolloutPolicy, latestOptInVersion, hasNewerLook, hasPendingCorrection } = await import(
+      "@/lib/cards/layout-version"
+    );
+    const classifyForSweep = await sweepAt(30);
+    expect(CARD_LAYOUT_VERSION).toBe(30);
+    expect(rolloutPolicy(30)).toBe("sweep");
+    expect(latestOptInVersion()).toBe(22);
+    expect(classifyForSweep(at("fullartland"))).toBe("rebake");
+    expect(classifyForSweep(at("fullartland", { frame_style: { template: "fullartland", finish: "foil" } }))).toBe(
+      "rebake",
+    );
+    expect(hasNewerLook({ ...at("fullartland"), visibility: "public" })).toBe(false);
+    expect(hasPendingCorrection(at("fullartland"))).toBe(true);
+    // Every other template — including the full-art frames that share its
+    // profile family and the default m15 a {} frame_style draws — keeps its
+    // v29 bake: the sweep stamps it without a render.
+    for (const t of FRAME_TEMPLATE_VALUES.filter((v) => v !== "fullartland")) {
+      expect(isRenderStale(29, t), t).toBe(false);
+      expect(classifyForSweep(at(t)), t).toBe("stamp");
+    }
+    expect(classifyForSweep({ ...at("m15"), frame_style: {} })).toBe("stamp");
   });
 });

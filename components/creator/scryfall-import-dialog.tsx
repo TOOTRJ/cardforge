@@ -33,6 +33,7 @@ import {
 import { ManaCostGlyphs } from "@/components/cards/mana-cost-glyphs";
 import {
   printingTreatmentHint,
+  printingTreatmentOffer,
   type ScryfallImportPatch,
 } from "@/lib/scryfall/import-mapper";
 import { cn } from "@/lib/utils";
@@ -122,6 +123,24 @@ type ImportArtResponse =
     }
   | { ok: false; error: string };
 
+/** What an import hands back for the dialog to toast after its own success
+ *  toast (TODO 1.16): the printing's treatment the landed frame drops, and —
+ *  once PipGlyph's frame for that treatment is verified in the card's colour
+ *  (frames plan 4.32 / 4.39) — an action that moves the card onto it. */
+export type ImportNotice =
+  | string
+  | { message: string; action: { label: string; onClick: () => void } };
+
+/** Toast an import's notice (the dialog and the deck-remix pre-fill). */
+export function toastImportNotice(notice: ImportNotice | null | void): void {
+  if (!notice) return;
+  if (typeof notice === "string") {
+    toast.info(notice, { duration: 8000 });
+    return;
+  }
+  toast.info(notice.message, { duration: 12000, action: notice.action });
+}
+
 export type ScryfallImportPayload = {
   patch: ScryfallImportPatch;
   /** When set, the form should write this URL into `art_url` (the user
@@ -143,7 +162,10 @@ type ScryfallImportDialogProps = {
    *  It may return a notice (the printing's treatment the chosen frame
    *  drops, TODO 1.16), which the dialog toasts after its own success toast
    *  so the notice sits in front. */
-  onImport: (payload: ScryfallImportPayload) => string | null | void;
+  onImport: (payload: ScryfallImportPayload) => ImportNotice | null | void;
+  /** The published (template/colour) combos — the heads-up names PipGlyph's
+   *  own frame for a printing's treatment only once it is verified. */
+  verifiedFrameKeys?: readonly string[];
   /** Label override for the trigger button. */
   triggerLabel?: string;
   triggerVariant?: "primary" | "secondary" | "outline" | "ghost";
@@ -161,6 +183,7 @@ type ScryfallImportDialogProps = {
 export function ScryfallImportDialog({
   signedIn,
   onImport,
+  verifiedFrameKeys,
   triggerLabel = "Search a real card",
   triggerVariant = "outline",
   open: controlledOpen,
@@ -197,6 +220,7 @@ export function ScryfallImportDialog({
         <ScryfallImportContent
           onClose={() => setOpen(false)}
           onImport={onImport}
+          verifiedFrameKeys={verifiedFrameKeys}
         />
       </DialogContent>
     </Dialog>
@@ -211,9 +235,11 @@ export function ScryfallImportDialog({
 function ScryfallImportContent({
   onClose,
   onImport,
+  verifiedFrameKeys,
 }: {
   onClose: () => void;
-  onImport: (payload: ScryfallImportPayload) => string | null | void;
+  onImport: (payload: ScryfallImportPayload) => ImportNotice | null | void;
+  verifiedFrameKeys?: readonly string[];
 }) {
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -442,7 +468,7 @@ function ScryfallImportContent({
           ? `Imported ${card.name} with artwork.`
           : `Seeded form with ${card.name}.`,
       );
-      if (notice) toast.info(notice, { duration: 8000 });
+      toastImportNotice(notice);
       onClose();
     });
   };
@@ -595,6 +621,7 @@ function ScryfallImportContent({
               }
               loadingPrintings={loadingPrintings}
               onSelectPrinting={handleSelect}
+              verifiedFrameKeys={verifiedFrameKeys}
             />
           ) : null}
         </div>
@@ -709,6 +736,7 @@ function Detail({
   printings,
   loadingPrintings,
   onSelectPrinting,
+  verifiedFrameKeys,
 }: {
   data: NamedResponse;
   importArt: boolean;
@@ -716,6 +744,7 @@ function Detail({
   printings: PrintingSummary[] | null;
   loadingPrintings: boolean;
   onSelectPrinting: (id: string) => void;
+  verifiedFrameKeys?: readonly string[];
 }) {
   const { card, patch } = data;
   return (
@@ -850,7 +879,10 @@ function Detail({
               (matched to this printing&apos;s border era) are all replaced.
               {patch.printing_treatment ? (
                 <span className="mt-1 block text-foreground">
-                  {printingTreatmentHint(patch.printing_treatment)}
+                  {printingTreatmentHint(
+                    patch.printing_treatment,
+                    printingTreatmentOffer(patch, new Set(verifiedFrameKeys ?? [])),
+                  )}
                 </span>
               ) : null}
             </span>

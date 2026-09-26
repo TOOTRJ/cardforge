@@ -11,9 +11,13 @@ import {
 } from "@/types/card";
 import {
   KIND_DEFS,
+  isSingleBasicLand,
   kindFromCard,
+  templateRefusesKind,
   type CardKind,
 } from "@/lib/creator/card-kinds";
+import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
+import { isArtifactFrameType, pickFrameColorKey } from "@/components/cards/frame-layer";
 import { standardFrameFor } from "@/lib/creator/frame-picker";
 import { describeFrame } from "@/lib/creator/frame-resolve";
 
@@ -155,6 +159,12 @@ export type ScryfallImportPatch = {
    *  textless). The form names it in a toast after the frame lands, so the
    *  import never passes for an exact match (TODO 1.16 stopgap). */
   printing_treatment?: PrintingTreatment;
+  /** Display-only, beside printing_treatment: the facts about THIS printing
+   *  that name the nearest PipGlyph frame for it (printingTreatmentOffer) —
+   *  a borderless basic with bars (FRA #382) and a textless one (UNF #235)
+   *  share one treatment, and so do the 2022 full-art basic design and
+   *  Zendikar's split bar. */
+  printing_detail?: PrintingDetail;
   /** The Scryfall card id — kept on the patch so the form can request an
    *  art import for the same card via /api/scryfall/import-art. */
   source_scryfall_id?: string;
@@ -416,6 +426,40 @@ export function printingTreatmentFromScryfall(
   return textless ? "textless" : "fullart";
 }
 
+/** What printingTreatmentOffer reads of a printing besides its treatment. */
+export type PrintingDetail = {
+  /** Scryfall set code, lower case ("fdn"). */
+  set: string | null;
+  /** `full_art`, or the `fullart` frame effect. */
+  fullArt: boolean;
+  textless: boolean;
+};
+
+/** The printing facts for printing_detail, or undefined for a printing the
+ *  import reproduces (no treatment, nothing to offer). */
+export function printingDetailFromScryfall(card: ScryfallCard): PrintingDetail | undefined {
+  if (!printingTreatmentFromScryfall(card)) return undefined;
+  const effects = (card.frame_effects ?? []).map((e) => e.toLowerCase());
+  return {
+    set: card.set ? card.set.toLowerCase() : null,
+    fullArt: card.full_art === true || effects.includes("fullart"),
+    textless: card.textless === true,
+  };
+}
+
+/** Sets whose black-bordered full-art basics print the 2022 design — a
+ *  title bar, then "Basic Land — Plains" with the symbol in a disc at its
+ *  left end (frames plan 4.39's list, checked by eye; pinned by set, never
+ *  by date: SPM and SOS (2025–26) print the plain bar, 4.41). Every other
+ *  full-art basic is another design (Zendikar's split bar 4.40, the plain
+ *  bar 4.41, per-set 4.11) and gets no "Use Full-Art Basic" offer until the
+ *  1.19 signature registry names its own frame. */
+export const FULL_ART_BASIC_2022_SETS: ReadonlySet<string> = new Set([
+  "one", "mom", "ltr", "woe", "mkm", "otj", "mh3", "acr", "pip", "blb", "dsk",
+  "fdn", "dft", "tdm", "fin", "fic", "tla", "ecl", "tmt", "msh", "hob", "p23",
+  "pl24", "pl25", "pl26", "pss4", "slp",
+]);
+
 const PRINTING_TREATMENT_PHRASES: Record<PrintingTreatment, string> = {
   borderless: "is borderless",
   showcase: "has a showcase frame",
@@ -444,11 +488,116 @@ export function printingTreatmentNotice(
  * The import dialog's heads-up before the user commits, while they can
  * still pick another printing. The final frame isn't known yet (it is
  * resolved against the published frames in the form), so it isn't named.
+ * `offer` is the verified PipGlyph frame for the treatment, when there is
+ * one (printingTreatmentOffer): the import still lands on the plain frame,
+ * and the creator's toast offers this one.
  */
-export function printingTreatmentHint(treatment: PrintingTreatment): string {
-  return `This printing ${PRINTING_TREATMENT_PHRASES[treatment]}, which PipGlyph doesn't offer yet — the import uses ${
-    treatment === "borderless" ? "a bordered" : "the regular"
-  } frame instead.`;
+export function printingTreatmentHint(
+  treatment: PrintingTreatment,
+  offer?: PrintingTreatmentOffer | null,
+): string {
+  const plain = treatment === "borderless" ? "a bordered" : "the regular";
+  if (offer) {
+    return `This printing ${PRINTING_TREATMENT_PHRASES[treatment]} — the import uses ${plain} frame, then offers PipGlyph's ${offer.frameLabel} frame.`;
+  }
+  return `This printing ${PRINTING_TREATMENT_PHRASES[treatment]}, which PipGlyph doesn't offer yet — the import uses ${plain} frame instead.`;
+}
+
+/** A PipGlyph frame the creator can OFFER for an imported printing's
+ *  treatment — see printingTreatmentOffer. */
+export type PrintingTreatmentOffer = {
+  template: FrameTemplate;
+  /** The frame's name in copy ("Borderless", "Full-Art Basic"). */
+  frameLabel: string;
+  /** The toast action ("Use Borderless"). */
+  actionLabel: string;
+};
+
+/**
+ * The PipGlyph frame that dresses an imported printing's treatment, when one
+ * exists AND is published in the card's colour (frames plan 4.32 / 4.39;
+ * TODO 1.16's "Use Borderless" / "Use Full-Art Basic"). It is OFFERED,
+ * never picked: the import still lands on the plain frame (the frame the
+ * printing's era gives, resolved against the published frames), so an
+ * unverified frame is never selected and nothing changes until the owner
+ * verifies it. The nearest look, not an exact match — 1.17 / 1.19's
+ * signature registry decides exact:
+ *   • borderless → the borderless M15 frame for a creature, instant, sorcery
+ *     or enchantment, and its artifact dress for an artifact or an Artifact
+ *     Creature. Nothing for other lands, planeswalkers, tokens, battles or
+ *     layout cards (4.33–4.38).
+ *   • a borderless full-art basic that prints text → the borderless full-art
+ *     basic (`fullartland`): FRA #382–396 print its bars (dark ones, so the
+ *     nearest look), and 1.17 sends every other such basic to it as the
+ *     nearest. A TEXTLESS borderless basic (UNF, EOE, UST, SLD, ONE
+ *     #365–369) belongs to `m15textlessland` (4.35) and gets no offer.
+ *   • full art (black border) → the black-bordered full-art basic, for one
+ *     basic land of the 2022 design (FULL_ART_BASIC_2022_SETS).
+ * Null otherwise (showcase, extended art, textless …). A patch without
+ * printing_detail (an older payload) gets no full-art offer.
+ */
+export function printingTreatmentOffer(
+  patch: Pick<
+    ScryfallImportPatch,
+    | "printing_treatment"
+    | "printing_detail"
+    | "kind"
+    | "card_type"
+    | "supertype"
+    | "subtypes_text"
+    | "title"
+    | "rules_text"
+    | "color_identity"
+  >,
+  verifiedKeys: ReadonlySet<string>,
+): PrintingTreatmentOffer | null {
+  const treatment = patch.printing_treatment;
+  if (!treatment) return null;
+  const kind = patch.kind ?? (patch.card_type ? kindFromCard(patch.card_type, undefined) : null);
+  if (!kind) return null;
+  const detail = patch.printing_detail;
+  const singleBasic = () =>
+    isSingleBasicLand({
+      cardType: patch.card_type,
+      supertype: patch.supertype,
+      subtypes: (patch.subtypes_text ?? "")
+        .split(/[,\n]/)
+        .map((part) => part.trim())
+        .filter(Boolean),
+      title: patch.title,
+      rulesText: patch.rules_text,
+    });
+  const offer = (() => {
+    if (treatment === "borderless") {
+      if (kind === "land") {
+        return detail?.fullArt && !detail.textless && singleBasic()
+          ? { template: "fullartland" as const, frameLabel: "Borderless Full-Art Basic" }
+          : null;
+      }
+      const artifact = isArtifactFrameType({ cardType: patch.card_type, supertype: patch.supertype });
+      if (kind === "artifact" || (kind === "creature" && artifact)) {
+        return { template: "m15borderlessartifact" as const, frameLabel: "Borderless Artifact" };
+      }
+      if (!templateRefusesKind("m15borderless", kind)) {
+        return { template: "m15borderless" as const, frameLabel: "Borderless" };
+      }
+      return null;
+    }
+    if (
+      treatment === "fullart" &&
+      kind === "land" &&
+      detail?.set &&
+      FULL_ART_BASIC_2022_SETS.has(detail.set) &&
+      singleBasic()
+    ) {
+      return { template: "m15fullartland" as const, frameLabel: "Full-Art Basic" };
+    }
+    return null;
+  })();
+  if (!offer) return null;
+  const colorKey = pickFrameColorKey(patch.color_identity ? [...patch.color_identity] : undefined);
+  if (!isFrameComboAvailable(offer.template, colorKey, verifiedKeys)) return null;
+  return { ...offer, actionLabel: `Use ${offer.frameLabel}` };
 }
 
 // A basic land type's intrinsic mana ability (rule 305.6): a face typed
@@ -692,6 +841,7 @@ export function mapScryfallToFormPatch(
     kind,
     frame_template: frameTemplateFromScryfall(card),
     printing_treatment: printingTreatmentFromScryfall(card),
+    printing_detail: printingDetailFromScryfall(card),
     card_type: cardType,
     supertype: typeParts.supertype,
     subtypes_text: typeParts.subtypes_text,

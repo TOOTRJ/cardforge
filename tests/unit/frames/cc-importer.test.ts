@@ -11,37 +11,56 @@ import {
   builtColors,
   compositeLayers,
   cutThroughMask,
+  describeLayer,
   roundCorners,
   roundCornersRgba8,
   sourceFilesFor,
   toRgba8,
 } from "@/scripts/lib/cc-frames.mjs";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
+import manifestJson from "@/lib/frames/frame-manifest.json";
+import { frameUrl, setFrameStorageForTests, type FrameManifest } from "@/lib/frames/frame-url";
 
 // ---------------------------------------------------------------------------
 // The Card Conjurer importer's pure half (scripts/lib/cc-frames.mjs, frames
-// plan 4.3). Contract: the recipe covers the nine M15-era templates × seven
-// colours with real pack paths; blended frames go through CC's pinline mask
-// and every substitution is written down; the pixel ops (mask compositing,
-// rounded transparent corners, 8-bit rounding) behave; provenance matches
-// the pinned commit; the build folder is never committed.
+// plan 4.3). Contract: the recipe covers the nine M15-era templates, 4.32's
+// borderless pair and 4.39's full-art basics × seven colours with real pack
+// paths; blended frames go through CC's pinline mask and every substitution
+// is written down; the pixel ops (mask compositing, inverted masks, rounded
+// transparent corners, 8-bit rounding) behave; provenance matches the
+// pinned commit; the build folder is never committed.
 // ---------------------------------------------------------------------------
 
-type Layer = { src: string; mask?: string };
+type Layer = { src: string; mask?: string; invert?: boolean; opacity?: number };
 type Def = {
   colors: Record<string, Layer[]>;
   plates?: Record<string, string>;
+  symbols?: Record<string, string>;
   shield?: { mask: string; box: typeof SHIELD_BOX };
   excluded?: Record<string, string>;
+  pack?: string;
+  transforms?: string;
   notes: string[];
 };
 const templates = CC_TEMPLATES as Record<string, Def>;
 
 describe("Card Conjurer recipe", () => {
-  it("covers the M15-era templates — every colour built or excluded with a reason — with pack paths", () => {
-    expect(Object.keys(templates).sort()).toEqual(
-      ["m15", "m15artifact", "m15devoid", "m15land", "m15pw", "m15snow", "m15snowland", "m15token", "m15tokenartifact"],
-    );
+  it("covers the M15-era, borderless and full-art-basic templates — every colour built or excluded with a reason — with pack paths", () => {
+    expect(Object.keys(templates).sort()).toEqual([
+      "fullartland",
+      "m15",
+      "m15artifact",
+      "m15borderless",
+      "m15borderlessartifact",
+      "m15devoid",
+      "m15fullartland",
+      "m15land",
+      "m15pw",
+      "m15snow",
+      "m15snowland",
+      "m15token",
+      "m15tokenartifact",
+    ]);
     for (const [template, def] of Object.entries(templates)) {
       expect(FRAME_TEMPLATE_VALUES as readonly string[]).toContain(template);
       const covered = [...builtColors(def as never), ...Object.keys(def.excluded ?? {})].sort();
@@ -96,7 +115,10 @@ describe("Card Conjurer recipe", () => {
   });
 
   it("writes down every colourless substitution", () => {
-    for (const template of ["m15land", "m15snow", "m15pw", "m15token", "m15devoid"]) {
+    for (const template of [
+      "m15land", "m15snow", "m15pw", "m15token", "m15devoid",
+      "m15borderless", "m15borderlessartifact", "m15fullartland", "fullartland",
+    ]) {
       expect(templates[template].notes.join(" "), template).toMatch(/colourless/);
     }
     expect(templates.m15pw.notes.join(" ")).toMatch(/loyalty shield/);
@@ -111,6 +133,64 @@ describe("Card Conjurer recipe", () => {
     expect(SHIELD_BOX.x + SHIELD_BOX.width).toBeGreaterThan(1430);
     expect(SHIELD_BOX.y + SHIELD_BOX.height).toBeGreaterThan(1991);
     expect(Object.entries(templates).filter(([, d]) => d.shield).map(([t]) => t)).toEqual(["m15pw"]);
+  });
+
+  it("imports 'Borderless (Alt)' 1:1 per colour, colourless from C, artifacts from A, the pack's plates (4.32)", () => {
+    const frame = (k: string) => `img/frames/m15/borderless/m15GenericShowcaseFrame${k}.png`;
+    const plain = templates.m15borderless;
+    for (const k of ["w", "u", "b", "r", "g", "m"]) expect(plain.colors[k]).toEqual([{ src: frame(k.toUpperCase()) }]);
+    expect(plain.colors.c).toEqual([{ src: frame("C") }]);
+    // CC's L is 4.34's land frame, never a colour of this template.
+    expect(sourceFilesFor(plain as never).some((f) => f.endsWith("FrameL.png"))).toBe(false);
+    // The pack's own "Colorless Power/Toughness" plate is pt/l.png.
+    expect(plain.plates?.c).toBe("img/frames/m15/borderless/pt/l.png");
+    expect(plain.plates?.w).toBe("img/frames/m15/borderless/pt/w.png");
+    const artifact = templates.m15borderlessartifact;
+    expect(artifact.colors.c).toEqual([{ src: frame("A") }]);
+    expect(artifact.plates?.c).toBe("img/frames/m15/borderless/pt/a.png");
+    // A coloured borderless artifact wears the colour frame (no frame body
+    // to keep from the artifact frame; its Border matches every colour's).
+    for (const k of ["w", "u", "b", "r", "g", "m"]) {
+      expect(artifact.colors[k]).toEqual(plain.colors[k]);
+      expect(artifact.plates?.[k]).toBe(plain.plates?.[k]);
+    }
+    for (const def of [plain, artifact]) expect(def.pack).toMatch(/^packBorderless[.]js/);
+  });
+
+  it("builds both full-art basics from 'Fullart Basics (2022)': bordered whole, borderless without the Border mask (4.39)", () => {
+    const bordered = templates.m15fullartland;
+    const borderless = templates.fullartland;
+    const border = "img/frames/textless/2022/maskBorder.png";
+    for (const k of ["w", "u", "b", "r", "g", "m"]) {
+      expect(bordered.colors[k]).toEqual([{ src: `img/frames/textless/2022/${k}.png` }]);
+      // The same composite with the ring erased (owner decision 4.35(a)).
+      expect(borderless.colors[k]).toEqual([{ src: `img/frames/textless/2022/${k}.png`, mask: border, invert: true }]);
+    }
+    // Wastes wears CC's "Colorless Frame".
+    expect(bordered.colors.c[0].src).toBe("img/frames/textless/2022/l.png");
+    expect(borderless.colors.c[0].src).toBe("img/frames/textless/2022/l.png");
+    // The 168 px symbol discs, one per basic colour — no multicolour basic.
+    for (const def of [bordered, borderless]) {
+      expect(def.symbols).toEqual({
+        w: "img/frames/textless/2022/sw.png",
+        u: "img/frames/textless/2022/su.png",
+        b: "img/frames/textless/2022/sb.png",
+        r: "img/frames/textless/2022/sr.png",
+        g: "img/frames/textless/2022/sg.png",
+        c: "img/frames/textless/2022/sc.png",
+      });
+      expect(def.plates).toBeUndefined();
+      expect(def.pack).toMatch(/^packTextlessBasics2022[.]js/);
+      expect(sourceFilesFor(def as never)).toContain("img/frames/textless/2022/sc.png");
+    }
+    expect(describeLayer(borderless.colors.w[0])).toBe(`img/frames/textless/2022/w.png outside ${border}`);
+  });
+
+  it("describes layers the way provenance prints them", () => {
+    expect(describeLayer({ src: "a.png" })).toBe("a.png");
+    expect(describeLayer({ src: "a.png", mask: "m.png" })).toBe("a.png through m.png");
+    expect(describeLayer({ src: "a.png", mask: "m.png", opacity: 0.35 })).toBe("a.png through m.png at 35%");
+    expect(describeLayer({ src: "a.png", mask: "m.png", invert: true })).toBe("a.png outside m.png");
   });
 
   it("lists layers, masks and plates once each", () => {
@@ -135,6 +215,19 @@ describe("pixel operations", () => {
     const out = toRgba8(compositeLayers([base, blue], 2, 1));
     expect([...out.subarray(0, 4)]).toEqual([0, 0, 255, 255]);
     expect([...out.subarray(4, 8)]).toEqual([255, 0, 0, 255]);
+  });
+
+  it("an inverted mask keeps the layer everywhere EXCEPT the mask (a borderless key drops the Border)", () => {
+    // 3×1 opaque grey frame; the mask is opaque at x=0, 40 % at x=1, clear at x=2.
+    const frame = {
+      data: new Uint8Array([...px(90, 90, 90, 255), ...px(90, 90, 90, 255), ...px(90, 90, 90, 255)]),
+      mask: new Uint8Array([...px(0, 0, 0, 255), ...px(0, 0, 0, 102), ...px(0, 0, 0, 0)]),
+      invert: true,
+    };
+    const out = toRgba8(compositeLayers([frame], 3, 1));
+    expect(out[3]).toBe(0); // inside the mask: erased
+    expect(out[7]).toBe(153); // 255 × (1 − 102/255)
+    expect([...out.subarray(8, 12)]).toEqual([90, 90, 90, 255]); // outside: untouched
   });
 
   it("blends a half-visible layer and rounds (not truncates) to 8 bits", () => {
@@ -187,6 +280,53 @@ describe("pixel operations", () => {
   });
 });
 
+describe("published to the frames bucket", () => {
+  const manifest = manifestJson as FrameManifest;
+  /** Every file a template's recipe writes, with its expected size. */
+  const outputsOf = (template: string, def: Def): Array<[string, number, number]> => {
+    const out: Array<[string, number, number]> = builtColors(def as never).map((k) => [`${template}/${k}.png`, 1500, 2100]);
+    const plateSize: [number, number] = template.startsWith("m15borderless") ? [274, 140] : [0, 0];
+    for (const k of Object.keys(def.plates ?? {})) out.push([`${template}/pt/${k}.png`, ...plateSize]);
+    for (const k of Object.keys(def.symbols ?? {})) out.push([`${template}/symbol/${k}.png`, 168, 168]);
+    if (def.shield) for (const k of builtColors(def as never)) out.push([`${template}/loyalty/${k}.png`, def.shield.box.width, def.shield.box.height]);
+    return out;
+  };
+
+  it("lists every master, plate, symbol disc and shield the recipe writes — PNG and WebP, at the right size", () => {
+    for (const [template, def] of Object.entries(templates)) {
+      for (const [key, width, height] of outputsOf(template, def)) {
+        for (const variant of [key, key.replace(/\.png$/, ".webp")]) {
+          const entry = manifest.files[variant];
+          expect(entry, `${variant} is not in the manifest`).toBeDefined();
+          if (width) expect([entry.width, entry.height], variant).toEqual([width, height]);
+        }
+      }
+    }
+  });
+
+  it("resolves the 4.32 / 4.39 frames to content-addressed bucket objects, never /frames (git)", () => {
+    const restore = setFrameStorageForTests({ origin: "https://bucket.example/frames" });
+    try {
+      for (const template of ["m15borderless", "m15borderlessartifact", "m15fullartland", "fullartland"]) {
+        for (const [key] of outputsOf(template, templates[template])) {
+          for (const variant of [key, key.replace(/\.png$/, ".webp")]) {
+            const { hash } = manifest.files[variant];
+            const dot = variant.lastIndexOf(".");
+            expect(frameUrl(`/frames/${variant}`)).toBe(
+              `https://bucket.example/frames/${variant.slice(0, dot)}.${hash}${variant.slice(dot)}`,
+            );
+          }
+        }
+      }
+      // A basic land has no multicolour disc: nothing is published for it.
+      expect(manifest.files["fullartland/symbol/m.png"]).toBeUndefined();
+      expect(frameUrl("/frames/fullartland/symbol/m.png")).toBe("/frames/fullartland/symbol/m.png");
+    } finally {
+      restore();
+    }
+  });
+});
+
 describe("provenance and hygiene", () => {
   it("records the pinned commit and the recipe for every imported template", () => {
     const provenance = JSON.parse(readFileSync("lib/cards/frame-sources.json", "utf8"));
@@ -197,6 +337,16 @@ describe("provenance and hygiene", () => {
       expect(Object.keys(provenance[template].colors).sort()).toEqual([...COLORS].sort());
     }
     expect(provenance.m15devoid.source).toBe("cardconjurer");
+    // The later runs name their pack and what was done to its pixels.
+    for (const template of ["m15borderless", "m15borderlessartifact", "m15fullartland", "fullartland"]) {
+      expect(provenance[template].pack, template).toBe(templates[template].pack);
+      expect(provenance[template].transforms, template).toMatch(/no resample/);
+      expect(provenance[template].sourceFiles, template).toEqual(sourceFilesFor(templates[template] as never));
+    }
+    expect(Object.keys(provenance.fullartland.symbols).sort()).toEqual(["b", "c", "g", "output", "r", "u", "w"]);
+    expect(provenance.fullartland.colors.w).toEqual([
+      "img/frames/textless/2022/w.png outside img/frames/textless/2022/maskBorder.png",
+    ]);
   });
 
   it("never commits the build folder", () => {

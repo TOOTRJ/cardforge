@@ -1047,6 +1047,171 @@
       ]
     }
   },
+  "m15borderless": {
+    "note": "The 2019+ borderless frame (Card Conjurer 'Borderless (Alt)', frames plan 4.32): art to the edges, dark translucent bars and box, white ink, a black bottom bar. Short then long text per colour (TODO 4.32's list, revised by the 2026-09-26 print review: IKO #377 (Godzilla-series layout), CMM #697 (a different treatment), SOS #294 (a Lesson emblem moves the name), MH3 #328 (a blue devoid card, not c), FRA #461 and TLA #306 (two-colour pinlines) were replaced). m = three-colour prints, the uniform gold pinline our master draws: two-colour prints split the pinline between their colours (4.6). No crowned (legendary) printing until 4.6's floating crown. Rares and mythics print the holo stamp in an ARCH of the rules-box pinline (4.9); our master's pinline is straight, so the score masks the arch (lib/frames/score-combo.ts). The card edge has no pinlines: score on the bars and the bottom bar.",
+    "colors": {
+      "w": [
+        {
+          "name": "Thraben Inspector",
+          "set": "inr",
+          "scryfallId": "4b03e3d4-aa62-428b-9f99-3ed93506defa"
+        },
+        {
+          "name": "The Eagles Are Coming!",
+          "set": "hob",
+          "scryfallId": "62a7ff97-b940-4745-9e2e-3258fb51b846"
+        }
+      ],
+      "u": [
+        {
+          "name": "Flare of Denial",
+          "set": "mh3",
+          "scryfallId": "746533fe-7fe2-4985-8655-9aca4b08b419"
+        },
+        {
+          "name": "An Offer You Can't Refuse",
+          "set": "fdn",
+          "scryfallId": "6f6aaee9-8c44-4e23-8167-ead64e599711"
+        }
+      ],
+      "b": [
+        {
+          "name": "Vengeful Bloodwitch",
+          "set": "fdn",
+          "scryfallId": "c944c5dc-9cb6-4dfd-aa90-5e180ffaa0fe"
+        },
+        {
+          "name": "Grim Tutor",
+          "set": "m21",
+          "scryfallId": "fbf0dded-552a-4ad2-bb62-f1bfabad9bac"
+        }
+      ],
+      "r": [
+        {
+          "name": "Essence Burn",
+          "set": "fra",
+          "scryfallId": "3802a45a-0a6f-4a1b-85b5-276bbfd67d75"
+        },
+        {
+          "name": "Stingcaster Mage",
+          "set": "fra",
+          "scryfallId": "3d580fa2-954d-4de6-a64c-369c5ab8e03f",
+          "tier": 2
+        }
+      ],
+      "g": [
+        {
+          "name": "Tarmogoyf",
+          "set": "fra",
+          "scryfallId": "1b09f45d-5224-4b2b-83ce-4f1de6357fd8"
+        },
+        {
+          "name": "Earth's Mightiest Heroes",
+          "set": "msh",
+          "scryfallId": "d8eebea7-a210-41c2-b505-3b9a4cdd5339"
+        }
+      ],
+      "c": [
+        {
+          "name": "Sire of Seven Deaths",
+          "set": "fdn",
+          "scryfallId": "1b486b75-4680-4a94-af8c-c1c335c9782b"
+        },
+        {
+          "name": "Troop of Ponies",
+          "set": "hob",
+          "scryfallId": "6cbcd606-b864-4b81-9596-e7788befdd1f"
+        }
+      ],
+      "m": [
+        {
+          "name": "Titanic Ultimatum",
+          "set": "sld",
+          "scryfallId": "3846e3ed-dfbe-4c7f-b9c8-303fc09796e1"
+        },
+        {
+          "name": "Ruinous Ultimatum",
+          "set": "sld",
+          "scryfallId": "bda08b23-4cfa-4e34-a74e-c7353e557d41"
+        }
+      ]
+    }
+  },
+  "m15borderlessartifact": {
+    "note": "c = Card Conjurer's artifact (A) frame; w/u/b/r/g/m = the colour frames, as FDN #295/#296, FRA #327 and 2XM #341 print them. Some coloured borderless artifacts print silver artifact bars instead (SNC #285/#288, SLC #2011): confirm the thumbnail. DFT #318 is a Vehicle (its P/T plate is 4.6's). The m references are TWO-colour prints with a split pinline (no three-colour borderless artifact was found): leave m unverified until 4.6 builds the two-colour pinline. The holo-stamp arch is masked from the score, as on m15borderless.",
+    "confirm": true,
+    "colors": {
+      "w": [
+        {
+          "name": "Celestial Armor",
+          "set": "fdn",
+          "scryfallId": "0302a684-563c-49b2-9029-7f079ac58fd2"
+        },
+        {
+          "name": "Crystal Barricade",
+          "set": "fdn",
+          "scryfallId": "e3c62996-3dc9-4f1a-8979-790b9b6b134e"
+        }
+      ],
+      "u": [
+        {
+          "name": "Phyrexian Metamorph",
+          "set": "2xm",
+          "scryfallId": "cacaf5ec-6745-4584-9175-36c98742958f"
+        }
+      ],
+      "b": [
+        {
+          "name": "Lich's Relic",
+          "set": "fra",
+          "scryfallId": "b66b0007-e973-4854-ac84-b1017b14186c"
+        }
+      ],
+      "r": [
+        {
+          "name": "Craterclaw Colossus",
+          "set": "fra",
+          "scryfallId": "8733a9a4-c184-46d9-afca-bf9048e2f25c"
+        },
+        {
+          "name": "Fire Nation Turret",
+          "set": "tle",
+          "scryfallId": "f25cc190-05e2-4aba-b214-46f687c07a10"
+        }
+      ],
+      "g": [
+        {
+          "name": "Veloheart Bike",
+          "set": "dft",
+          "scryfallId": "cfdffb27-5035-49c2-b214-abe46a17433d"
+        }
+      ],
+      "c": [
+        {
+          "name": "Jeweled Lotus",
+          "set": "cmm",
+          "scryfallId": "6e934462-bf6c-48ff-92a4-1df476c420b7"
+        },
+        {
+          "name": "Sword of Hearth and Home",
+          "set": "mh2",
+          "scryfallId": "b27d2f06-42ed-42fd-874c-8c278cdb66dc"
+        }
+      ],
+      "m": [
+        {
+          "name": "Baleful Strix",
+          "set": "blc",
+          "scryfallId": "7204e5b5-fdd1-4831-8dfa-d4d02ccaaf4d"
+        },
+        {
+          "name": "Shardless Agent",
+          "set": "mh2",
+          "scryfallId": "7db7fa4d-5190-4f2b-a8ae-933bdab3bfc5"
+        }
+      ]
+    }
+  },
   "battle": {
     "note": "Every printed battle is a transform DFC; the front face is the landscape siege.",
     "colors": {
@@ -2301,66 +2466,69 @@
       ]
     }
   },
-  "fullartland": {
+  "m15fullartland": {
+    "note": "Black-bordered full-art basics with the title bar and the left-disc type bar (Card Conjurer 'Fullart Basics (2022)', frames plan 4.39; printed since P23). References are the 2024–25 printings (FDN, TDM, DSK, DFT), which match the master within 2 px (print review 2026-09-26); the 2023 ONE #262–266 and MOM #282–290 print an older bar geometry (bars 6–13 px off, colours up to 43 levels) and are the `nearest` look only. c: FIN #309 is the one printed left-disc Wastes (its bars are darker than the master's: owner sign-off on the tone). UB printings (FIN) add a triangle stamp (4.9). m: no basic is multicolour.",
     "colors": {
       "w": [
         {
           "name": "Plains",
-          "set": "hob",
-          "scryfallId": "15dd9a36-55df-4942-a7eb-1c49a7999e68"
+          "set": "fdn",
+          "scryfallId": "6e6f19b3-4c76-4078-8ed2-b2832a33d066"
         },
         {
           "name": "Plains",
-          "set": "bfz",
-          "scryfallId": "58a735c9-08a1-4950-bf8c-ed1cfba76765"
+          "set": "tdm",
+          "scryfallId": "0d0f1dd6-9564-4adc-af7d-f83252e8581a",
+          "tier": 1
         }
       ],
       "u": [
         {
           "name": "Island",
-          "set": "hob",
-          "scryfallId": "739aaaac-c424-4ea7-a084-62a6fc0438b0"
+          "set": "fdn",
+          "scryfallId": "886eae6e-ced2-4d94-96fa-9bb5385b06f4"
         },
         {
           "name": "Island",
-          "set": "bfz",
-          "scryfallId": "8490261d-4246-4232-b7fc-23204c14a7b5"
+          "set": "dsk",
+          "scryfallId": "40e3bf00-84cc-498c-b214-1052b4904d92"
         }
       ],
       "b": [
         {
           "name": "Swamp",
-          "set": "hob",
-          "scryfallId": "c5f590a3-9993-4ac4-a93c-1beb44eda17b"
+          "set": "fdn",
+          "scryfallId": "6f23a73a-522b-40cf-a14b-ffdf47a24c01"
         },
         {
           "name": "Swamp",
-          "set": "bfz",
-          "scryfallId": "132155ae-f7a4-4957-91cb-e51ff52716f9"
+          "set": "dft",
+          "scryfallId": "e969e168-e74c-4608-9fa0-a5660bf7fa02"
         }
       ],
       "r": [
         {
           "name": "Mountain",
-          "set": "hob",
-          "scryfallId": "51acfb01-4b0b-48fc-9704-a9b4a1e43a23"
+          "set": "fdn",
+          "scryfallId": "3a3afd00-da06-4a9f-8cd1-7133728e0fdd"
         },
         {
           "name": "Mountain",
-          "set": "bfz",
-          "scryfallId": "0c9cbae1-6b04-4408-82fe-3fcf61dffbe2"
+          "set": "tdm",
+          "scryfallId": "fe0865ba-47c0-40bc-b0c6-e1ea5ae08a98",
+          "tier": 1
         }
       ],
       "g": [
         {
           "name": "Forest",
-          "set": "hob",
-          "scryfallId": "5f533364-0f91-4e49-aaeb-83c4c1f6d316"
+          "set": "fdn",
+          "scryfallId": "bbbeb57d-5fa0-4ff7-b5e8-caafc139669b"
         },
         {
           "name": "Forest",
-          "set": "bfz",
-          "scryfallId": "642102a2-abde-4e76-a6d6-08f7befe1196"
+          "set": "dsk",
+          "scryfallId": "ba2a4cbb-f325-4178-80db-7090f5672414"
         }
       ],
       "c": [
@@ -2368,13 +2536,75 @@
           "name": "Wastes",
           "set": "fin",
           "scryfallId": "c61feafd-ef09-437c-a12c-fd7d6cb8c15a"
-        },
-        {
-          "name": "Wastes",
-          "set": "ogw",
-          "scryfallId": "7019912c-bd9b-4b96-9388-400794909aa1"
         }
       ],
+      "m": null
+    }
+  },
+  "fullartland": {
+    "note": "Borderless full-art basics (owner decision 4.35(a), references revised 2026-09-26): FRA #382–396 are the only borderless printings with this title bar + left-disc type bar. They print DARK (inverted) bars and this frame keeps light ones (owner decision), so they check geometry only and resolve `nearest`. c: the one left-disc Wastes (FIN #309) is black-bordered, so m15fullartland's; no borderless one (owner visual sign-off); m: no basic is multicolour.",
+    "colors": {
+      "w": [
+        {
+          "name": "Plains",
+          "set": "fra",
+          "scryfallId": "796b72af-5078-427d-b566-9bccad17090f"
+        },
+        {
+          "name": "Plains",
+          "set": "fra",
+          "scryfallId": "57999b70-74c6-415a-aef8-3afc546e7557"
+        }
+      ],
+      "u": [
+        {
+          "name": "Island",
+          "set": "fra",
+          "scryfallId": "bc4cd881-9c34-4cf9-8afe-050e803f34a6"
+        },
+        {
+          "name": "Island",
+          "set": "fra",
+          "scryfallId": "6ff3f00e-4ec2-41ef-bd19-fa830480245d"
+        }
+      ],
+      "b": [
+        {
+          "name": "Swamp",
+          "set": "fra",
+          "scryfallId": "e8418418-10bb-48e1-83ed-0081390384b4"
+        },
+        {
+          "name": "Swamp",
+          "set": "fra",
+          "scryfallId": "140ba675-3922-48cf-b6ec-8639267dcab8"
+        }
+      ],
+      "r": [
+        {
+          "name": "Mountain",
+          "set": "fra",
+          "scryfallId": "ec2ceca8-2d90-4d8f-ac47-cd8134e8d859"
+        },
+        {
+          "name": "Mountain",
+          "set": "fra",
+          "scryfallId": "ddc91faf-dd36-4c26-b3b4-0a6a624b5663"
+        }
+      ],
+      "g": [
+        {
+          "name": "Forest",
+          "set": "fra",
+          "scryfallId": "790dcf48-ab51-4b10-9933-6b7e3baf0f52"
+        },
+        {
+          "name": "Forest",
+          "set": "fra",
+          "scryfallId": "1c2ac08e-3810-46f4-94ab-8b32986f9185"
+        }
+      ],
+      "c": null,
       "m": null
     }
   },

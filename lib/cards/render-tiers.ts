@@ -178,6 +178,31 @@ export function fitSingleLineSizePct({
   return Math.max(ptToPct(RULES_TEXT.hardFloorPt), Math.min(baseSizePct, fitted));
 }
 
+/**
+ * One size for both halves of a split type line (TextSlot.split, TODO 3.24):
+ * each half's single-line fit in its own box, and the smaller of the two, so
+ * "Basic Snow Land" and "Forest" print at one size like the printed card.
+ * Shared by preview + bake.
+ */
+export function fitSplitTypeSizePct({
+  left,
+  right,
+  leftRect,
+  rightRect,
+  baseSizePct,
+}: {
+  left: string;
+  right: string;
+  leftRect: Rect;
+  rightRect: Rect;
+  baseSizePct: number;
+}): number {
+  return Math.min(
+    fitSingleLineSizePct({ text: left, rect: leftRect, baseSizePct }),
+    fitSingleLineSizePct({ text: right, rect: rightRect, baseSizePct }),
+  );
+}
+
 /** The gap between cost pips, as a fraction of the disc: the bake's
  *  CostGlyphs draws exactly this; the preview's 0.12em of disc ÷ 1.3 is
  *  narrower, so a row measured with it fits both. */

@@ -210,6 +210,9 @@ describe("measured ink spans (HD px, on the digits' rows)", () => {
   // or outline, a strip up to its pinstripe / bevel shading.
   it.each<[FrameTemplate, "pt" | "loyalty" | "secondFace", number, number]>([
     ["m15", "pt", 1185, 1395.4],
+    // Card Conjurer's borderless plate (4.32), 274 × 140 at 1146/1861 px.
+    ["m15borderless", "pt", 1188, 1394],
+    ["m15borderlessartifact", "pt", 1188, 1394],
     ["agclassic", "pt", 1236, 1404],
     ["alphaland", "pt", 1236, 1404],
     ["m15pw", "loyalty", 1239, 1389],
@@ -244,7 +247,8 @@ describe("measured ink spans (HD px, on the digits' rows)", () => {
   it("every template on the M15 plate shares its span", () => {
     for (const template of FRAME_TEMPLATE_VALUES) {
       const slot = getFrameProfile(template).pt;
-      if (!slot?.plateAssetPathTemplate?.match(/^\/frames\/m15[a-z]*\/pt\//)) continue;
+      // The borderless pack's plates are their own shape (checked above).
+      if (!slot?.plateAssetPathTemplate?.match(/^\/frames\/m15(?!borderless)[a-z]*\/pt\//)) continue;
       expect(slot.inkSpanPct, template).toEqual(m15.inkSpanPct);
     }
   });

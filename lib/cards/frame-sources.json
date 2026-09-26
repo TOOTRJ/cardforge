@@ -1,4 +1,68 @@
 {
+  "fullartland": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packTextlessBasics2022.js 'Fullart Basics (2022)' (groupTextless-4.js:5)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 39px, webp q90",
+    "transforms": "native 1500x2100, no resample; the frame image with its Border mask's region erased (alpha x (1 - mask alpha)), corners rounded to the importer radius; symbol discs native 168x168",
+    "colors": {
+      "w": [
+        "img/frames/textless/2022/w.png outside img/frames/textless/2022/maskBorder.png"
+      ],
+      "u": [
+        "img/frames/textless/2022/u.png outside img/frames/textless/2022/maskBorder.png"
+      ],
+      "b": [
+        "img/frames/textless/2022/b.png outside img/frames/textless/2022/maskBorder.png"
+      ],
+      "r": [
+        "img/frames/textless/2022/r.png outside img/frames/textless/2022/maskBorder.png"
+      ],
+      "g": [
+        "img/frames/textless/2022/g.png outside img/frames/textless/2022/maskBorder.png"
+      ],
+      "c": [
+        "img/frames/textless/2022/l.png outside img/frames/textless/2022/maskBorder.png"
+      ],
+      "m": [
+        "img/frames/textless/2022/m.png outside img/frames/textless/2022/maskBorder.png"
+      ]
+    },
+    "symbols": {
+      "w": "img/frames/textless/2022/sw.png",
+      "u": "img/frames/textless/2022/su.png",
+      "b": "img/frames/textless/2022/sb.png",
+      "r": "img/frames/textless/2022/sr.png",
+      "g": "img/frames/textless/2022/sg.png",
+      "c": "img/frames/textless/2022/sc.png",
+      "output": "symbol/<colour>.png, native size"
+    },
+    "sourceFiles": [
+      "img/frames/textless/2022/b.png",
+      "img/frames/textless/2022/g.png",
+      "img/frames/textless/2022/l.png",
+      "img/frames/textless/2022/m.png",
+      "img/frames/textless/2022/maskBorder.png",
+      "img/frames/textless/2022/r.png",
+      "img/frames/textless/2022/sb.png",
+      "img/frames/textless/2022/sc.png",
+      "img/frames/textless/2022/sg.png",
+      "img/frames/textless/2022/sr.png",
+      "img/frames/textless/2022/su.png",
+      "img/frames/textless/2022/sw.png",
+      "img/frames/textless/2022/u.png",
+      "img/frames/textless/2022/w.png"
+    ],
+    "notes": [
+      "re-sourced from CC (4.39): replaces the 744 px MSE magic-m15-full-art-basic-land-symbol composite that scripts/build-variation-frames.mjs upscaled",
+      "borderless = m15fullartland without the Border mask (owner decision 4.35(a)); the bars keep their bevels and drop shadows",
+      "light bars, as on the 263 bordered printings (owner decision 2026-09-26): FRA #382–396 print dark bars and resolve nearest",
+      "colourless (Wastes) = the pack's 'Colorless Frame' l.png + the colourless disc sc.png (owner visual sign-off before it is verified)",
+      "m = the pack's 'Multicolored Frame' m.png, built so the key keeps a master (the MSE build dressed m as colourless); no multicolour basic exists, so no symbol disc and never offered"
+    ]
+  },
   "m15": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",
@@ -151,6 +215,129 @@
       "coloured artifacts = artifact frame + border, colour pinline/title/type/text box through CC's masks"
     ]
   },
+  "m15borderless": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packBorderless.js 'Borderless (Alt)' (groupShowcase-5.js:49)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 39px, webp q90",
+    "transforms": "native 1500x2100, pixels copied 1:1 (no resample), corners rounded to the importer radius",
+    "colors": {
+      "w": [
+        "img/frames/m15/borderless/m15GenericShowcaseFrameW.png"
+      ],
+      "u": [
+        "img/frames/m15/borderless/m15GenericShowcaseFrameU.png"
+      ],
+      "b": [
+        "img/frames/m15/borderless/m15GenericShowcaseFrameB.png"
+      ],
+      "r": [
+        "img/frames/m15/borderless/m15GenericShowcaseFrameR.png"
+      ],
+      "g": [
+        "img/frames/m15/borderless/m15GenericShowcaseFrameG.png"
+      ],
+      "c": [
+        "img/frames/m15/borderless/m15GenericShowcaseFrameC.png"
+      ],
+      "m": [
+        "img/frames/m15/borderless/m15GenericShowcaseFrameM.png"
+      ]
+    },
+    "plates": {
+      "w": "img/frames/m15/borderless/pt/w.png",
+      "u": "img/frames/m15/borderless/pt/u.png",
+      "b": "img/frames/m15/borderless/pt/b.png",
+      "r": "img/frames/m15/borderless/pt/r.png",
+      "g": "img/frames/m15/borderless/pt/g.png",
+      "m": "img/frames/m15/borderless/pt/m.png",
+      "c": "img/frames/m15/borderless/pt/l.png"
+    },
+    "sourceFiles": [
+      "img/frames/m15/borderless/m15GenericShowcaseFrameB.png",
+      "img/frames/m15/borderless/m15GenericShowcaseFrameC.png",
+      "img/frames/m15/borderless/m15GenericShowcaseFrameG.png",
+      "img/frames/m15/borderless/m15GenericShowcaseFrameM.png",
+      "img/frames/m15/borderless/m15GenericShowcaseFrameR.png",
+      "img/frames/m15/borderless/m15GenericShowcaseFrameU.png",
+      "img/frames/m15/borderless/m15GenericShowcaseFrameW.png",
+      "img/frames/m15/borderless/pt/b.png",
+      "img/frames/m15/borderless/pt/g.png",
+      "img/frames/m15/borderless/pt/l.png",
+      "img/frames/m15/borderless/pt/m.png",
+      "img/frames/m15/borderless/pt/r.png",
+      "img/frames/m15/borderless/pt/u.png",
+      "img/frames/m15/borderless/pt/w.png"
+    ],
+    "notes": [
+      "colourless = CC's see-through colourless frame (m15GenericShowcaseFrameC.png): the art runs under the frame, as on m15 'c' (4.17)",
+      "colourless P/T plate = the pack's 'Colorless Power/Toughness' pt/l.png (the unlisted pt/c.png is not used)",
+      "CC's 'Land Frame' (m15GenericShowcaseFrameL.png) is not imported here: it is 4.34's m15borderlessland"
+    ]
+  },
+  "m15borderlessartifact": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packBorderless.js 'Borderless (Alt)' (groupShowcase-5.js:49)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 39px, webp q90",
+    "transforms": "native 1500x2100, pixels copied 1:1 (no resample), corners rounded to the importer radius",
+    "colors": {
+      "w": [
+        "img/frames/m15/borderless/m15GenericShowcaseFrameW.png"
+      ],
+      "u": [
+        "img/frames/m15/borderless/m15GenericShowcaseFrameU.png"
+      ],
+      "b": [
+        "img/frames/m15/borderless/m15GenericShowcaseFrameB.png"
+      ],
+      "r": [
+        "img/frames/m15/borderless/m15GenericShowcaseFrameR.png"
+      ],
+      "g": [
+        "img/frames/m15/borderless/m15GenericShowcaseFrameG.png"
+      ],
+      "c": [
+        "img/frames/m15/borderless/m15GenericShowcaseFrameA.png"
+      ],
+      "m": [
+        "img/frames/m15/borderless/m15GenericShowcaseFrameM.png"
+      ]
+    },
+    "plates": {
+      "w": "img/frames/m15/borderless/pt/w.png",
+      "u": "img/frames/m15/borderless/pt/u.png",
+      "b": "img/frames/m15/borderless/pt/b.png",
+      "r": "img/frames/m15/borderless/pt/r.png",
+      "g": "img/frames/m15/borderless/pt/g.png",
+      "m": "img/frames/m15/borderless/pt/m.png",
+      "c": "img/frames/m15/borderless/pt/a.png"
+    },
+    "sourceFiles": [
+      "img/frames/m15/borderless/m15GenericShowcaseFrameA.png",
+      "img/frames/m15/borderless/m15GenericShowcaseFrameB.png",
+      "img/frames/m15/borderless/m15GenericShowcaseFrameG.png",
+      "img/frames/m15/borderless/m15GenericShowcaseFrameM.png",
+      "img/frames/m15/borderless/m15GenericShowcaseFrameR.png",
+      "img/frames/m15/borderless/m15GenericShowcaseFrameU.png",
+      "img/frames/m15/borderless/m15GenericShowcaseFrameW.png",
+      "img/frames/m15/borderless/pt/a.png",
+      "img/frames/m15/borderless/pt/b.png",
+      "img/frames/m15/borderless/pt/g.png",
+      "img/frames/m15/borderless/pt/m.png",
+      "img/frames/m15/borderless/pt/r.png",
+      "img/frames/m15/borderless/pt/u.png",
+      "img/frames/m15/borderless/pt/w.png"
+    ],
+    "notes": [
+      "colourless artifact = CC's 'Artifact Frame' (m15GenericShowcaseFrameA.png) with the 'Artifact Power/Toughness' plate pt/a.png",
+      "coloured artifacts = the colour frame, whole (same bytes as m15borderless). 4.16's recipe (artifact frame + border, colour interior) keeps the ARTIFACT frame only where the colour doesn't draw: the frame body and the border. A full-bleed frame has no frame body, and the Border region (bottom bar + fins) of the Artifact frame matches every colour's (premultiplied; measured 2026-09-26). Drawn through the pack's masks it would only add damage: a partial-alpha seam row at 92.76-92.81 % H between the Pinline and Border masks, and the bars' outer bevel (0.13 % of the frame's alpha lies outside the five masks)"
+    ]
+  },
   "m15devoid": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",
@@ -202,6 +389,67 @@
     "notes": [
       "see-through frames: the art runs under the whole frame (underFrameArt)",
       "true colourless = the colourless 'Eldrazi' frame; devoid colours keep their pinline"
+    ]
+  },
+  "m15fullartland": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packTextlessBasics2022.js 'Fullart Basics (2022)' (groupTextless-4.js:5)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 39px, webp q90",
+    "transforms": "native 1500x2100, the full frame image copied 1:1 (no resample), corners rounded to the importer radius; symbol discs native 168x168",
+    "colors": {
+      "w": [
+        "img/frames/textless/2022/w.png"
+      ],
+      "u": [
+        "img/frames/textless/2022/u.png"
+      ],
+      "b": [
+        "img/frames/textless/2022/b.png"
+      ],
+      "r": [
+        "img/frames/textless/2022/r.png"
+      ],
+      "g": [
+        "img/frames/textless/2022/g.png"
+      ],
+      "c": [
+        "img/frames/textless/2022/l.png"
+      ],
+      "m": [
+        "img/frames/textless/2022/m.png"
+      ]
+    },
+    "symbols": {
+      "w": "img/frames/textless/2022/sw.png",
+      "u": "img/frames/textless/2022/su.png",
+      "b": "img/frames/textless/2022/sb.png",
+      "r": "img/frames/textless/2022/sr.png",
+      "g": "img/frames/textless/2022/sg.png",
+      "c": "img/frames/textless/2022/sc.png",
+      "output": "symbol/<colour>.png, native size"
+    },
+    "sourceFiles": [
+      "img/frames/textless/2022/b.png",
+      "img/frames/textless/2022/g.png",
+      "img/frames/textless/2022/l.png",
+      "img/frames/textless/2022/m.png",
+      "img/frames/textless/2022/r.png",
+      "img/frames/textless/2022/sb.png",
+      "img/frames/textless/2022/sc.png",
+      "img/frames/textless/2022/sg.png",
+      "img/frames/textless/2022/sr.png",
+      "img/frames/textless/2022/su.png",
+      "img/frames/textless/2022/sw.png",
+      "img/frames/textless/2022/u.png",
+      "img/frames/textless/2022/w.png"
+    ],
+    "notes": [
+      "the full composite: the pack's frame image with its black ring (Pinline, Title, Type and Border all drawn)",
+      "colourless (Wastes) = the pack's 'Colorless Frame' l.png + the colourless disc sc.png: no left-medallion Wastes was ever printed (owner visual sign-off before it is verified)",
+      "m = the pack's 'Multicolored Frame' m.png, built so the key has a master; no multicolour basic exists, so no symbol disc and never offered"
     ]
   },
   "m15land": {

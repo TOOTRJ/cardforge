@@ -100,9 +100,10 @@ describe("validateReferenceForCombo", () => {
     expect(result.errors[0]).toMatch(/is a planeswalker; the Zendikar Rising — Hedron frame/);
   });
 
-  it("verifies the full-art basic frame against basic lands only (TODO 0.26)", () => {
+  it("verifies the full-art basic frames against basic lands only (TODO 0.26, 4.39)", () => {
     const plains = card({ name: "Plains", type_line: "Basic Land — Plains", color_identity: ["W"], colors: [] });
     expect(validateReferenceForCombo(plains, "fullartland", "w").errors).toEqual([]);
+    expect(validateReferenceForCombo(plains, "m15fullartland", "w").errors).toEqual([]);
     const wastes = card({ name: "Wastes", type_line: "Basic Land", color_identity: [], colors: [] });
     expect(validateReferenceForCombo(wastes, "fullartland", "c").errors).toEqual([]);
 
@@ -115,6 +116,9 @@ describe("validateReferenceForCombo", () => {
     });
     const result = validateReferenceForCombo(fountain, "fullartland", "m");
     expect(result.errors).toEqual([
+      "Hallowed Fountain isn't a basic land; the Full Art — Borderless Basic Land frame dresses basic lands only.",
+    ]);
+    expect(validateReferenceForCombo(fountain, "m15fullartland", "m").errors).toEqual([
       "Hallowed Fountain isn't a basic land; the Full Art — Basic Land frame dresses basic lands only.",
     ]);
     // Any other land frame still takes it.
@@ -136,7 +140,7 @@ describe("validateReferenceForCombo", () => {
     expect(validateReferenceForCombo(faces(plains, bear), "fullartland", "w").errors).toEqual([]);
     const tower = { name: "Watchtower", type_line: "Land", oracle_text: "{T}: Add {W}." };
     expect(validateReferenceForCombo(faces(tower, plains), "fullartland", "w").errors).toEqual([
-      "Watchtower // Plains isn't a basic land; the Full Art — Basic Land frame dresses basic lands only.",
+      "Watchtower // Plains isn't a basic land; the Full Art — Borderless Basic Land frame dresses basic lands only.",
     ]);
   });
 
