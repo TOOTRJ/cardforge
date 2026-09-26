@@ -21,6 +21,7 @@ import {
   NAME_COST_GAP_PCT,
   fitRulesSizePct,
   fitSingleLineSizePct,
+  fitSplitTypeSizePct,
   secondFaceLineSizes,
 } from "@/lib/cards/render-tiers";
 import { fitStatSizePct, ptValue, STAT_BADGE_INSET } from "@/lib/cards/stat-fit";
@@ -55,6 +56,7 @@ import {
   showsLoyalty,
   showsPowerToughness,
   slotLine,
+  splitTypeLine,
   type LoyaltyAbility,
   type SagaChapter,
 } from "@/lib/cards/card-display";
@@ -71,6 +73,18 @@ import {
 } from "@/lib/cards/watermark";
 import { getWatermarkDataUrl } from "@/lib/render/card-frames";
 import {
+  BASIC_SYMBOL_DISC_FILL,
+  BASIC_SYMBOL_GLYPH_SCALE,
+  BASIC_SYMBOL_HALO,
+  BASIC_SYMBOL_INK,
+  basicSymbolAssetPath,
+  basicSymbolAssetPaths,
+  basicSymbolBox,
+  basicSymbolFor,
+  basicSymbolGlyphSizePct,
+  type BasicSymbolPlan,
+} from "@/lib/cards/basic-symbol";
+import {
   DISPLAY_FONT_BYTES,
   KEYRUNE_DEFAULT_GLYPH,
   KEYRUNE_FONT_BYTES,
@@ -82,6 +96,7 @@ import {
 } from "@/lib/render/card-fonts";
 import { displayRunPx, keyruneAdvancePx } from "@/lib/render/satori-text";
 import {
+  getFrameAssetDataUrl,
   getFrameDataUrl,
   getPlateDataUrlForPath,
   plateAssetPath,
@@ -89,6 +104,7 @@ import {
   preloadFrameAssets,
 } from "@/lib/render/card-frames";
 import {
+  BRAND_MARK_PILL,
   bandTextStyle,
   brandMarkLayout,
   footerInk,
@@ -102,6 +118,7 @@ import {
   type StatSlot,
   underFrameArtRect,
   type TextSlot,
+  type TypeLineSplit,
 } from "@/lib/cards/template-layout";
 import { resolveFrameProfile } from "@/lib/cards/profile-override";
 import { EtchedSheen } from "@/lib/cards/etched-finish";
@@ -284,6 +301,8 @@ function CardImage({
   const template = normalizeFrameTemplate(card.frameStyle?.template);
   const layout = resolveFrameProfile(template, card.profileOverrides);
   const markLayout = brandMarkLayout(layout);
+  // A textless frame (TODO 3.24) prints no type line and no text box.
+  const textless = Boolean(layout.textless);
   const finish = card.frameStyle?.finish ?? "regular";
   const isFoil = finish === "foil";
   const isEtched = finish === "etched";
@@ -311,8 +330,9 @@ function CardImage({
   const splitDataUrl = frameSplit ? getFrameDataUrl(template, frameSplit.rightKey) : null;
   // Whole pixels: the seam is a hard edge in both renderers.
   const splitX = frameSplit ? Math.round((width * frameSplit.atPct) / 100) : 0;
-  // Per-frame-master footer ink — the same footerInk() the preview resolves.
-  const footerInkResolved = layout.footer ? footerInk(layout.footer, masterKey) : null;
+  // Per-frame-master footer ink — the same footerInk() the preview resolves
+  // (outlined when the profile prints it on the art, footerOnArt).
+  const footerInkResolved = layout.footer ? footerInk(layout.footer, masterKey, layout) : null;
   // …and the name's and type line's (the text spans only, not the pips or
   // the set symbol) — the preview's bandTextStyle() twins.
   const titleInk = bandTextStyle(layout.title, masterKey);
@@ -324,16 +344,28 @@ function CardImage({
   const showCost =
     !layout.hideCost && card.cardType !== "land" && Boolean(card.cost?.trim());
   const typeLine = buildTypeLine(card);
+  // A two-box type line (TextSlot.split, TODO 3.24): split at the em dash,
+  // one size for both halves — the preview's twin.
+  const typeSplit = layout.type.split ? splitTypeLine(typeLine) : null;
   const typeSlot: TextSlot = {
     ...layout.type,
-    sizePct: fitSingleLineSizePct({
-      text: typeLine,
-      rect: layout.type.rect,
-      baseSizePct: layout.type.sizePct,
-      reservedPct: layout.symbolRect
-        ? 0
-        : (layout.symbolSizePct ?? layout.type.sizePct * 1.1) * 1.3,
-    }),
+    sizePct:
+      layout.type.split && typeSplit
+        ? fitSplitTypeSizePct({
+            left: typeSplit[0],
+            right: typeSplit[1],
+            leftRect: layout.type.split.leftRect,
+            rightRect: layout.type.split.rightRect,
+            baseSizePct: layout.type.sizePct,
+          })
+        : fitSingleLineSizePct({
+            text: typeLine,
+            rect: layout.type.rect,
+            baseSizePct: layout.type.sizePct,
+            reservedPct: layout.symbolRect
+              ? 0
+              : (layout.symbolSizePct ?? layout.type.sizePct * 1.1) * 1.3,
+          }),
   };
   // Room a centred title / type line may fill before it ellipsizes: the band
   // less the set symbol + gap beside it (see alignedText; a cost in the
@@ -378,7 +410,7 @@ function CardImage({
   // themselves are fitted by layoutLoyaltyRows below; this size is left for
   // a walker with no abilities (the plain box).
   const usesLoyaltyRows =
-    Boolean(layout.loyaltyRows) && showsLoyalty(card.cardType);
+    Boolean(layout.loyaltyRows) && showsLoyalty(card.cardType) && !textless;
   const fitRect = usesLoyaltyRows
     ? {
         ...layout.rules.rect,
@@ -386,14 +418,17 @@ function CardImage({
         heightPct: layout.rules.rect.heightPct * 0.88,
       }
     : layout.rules.rect;
-  const rulesSizePct = fitRulesSizePct({
-    rulesText: card.rulesText,
-    flavorText: card.flavorText,
-    rect: fitRect,
-    baseSizePct: layout.rules.sizePct,
-    lineHeight: layout.rules.lineHeight ?? RULES_TEXT.lineHeight,
-    aspect,
-  });
+  // A textless frame prints no rules: the fit estimate is skipped.
+  const rulesSizePct = textless
+    ? layout.rules.sizePct
+    : fitRulesSizePct({
+        rulesText: card.rulesText,
+        flavorText: card.flavorText,
+        rect: fitRect,
+        baseSizePct: layout.rules.sizePct,
+        lineHeight: layout.rules.lineHeight ?? RULES_TEXT.lineHeight,
+        aspect,
+      });
   // Planeswalker ability rows (badged loyalty costs, striped rows) when the
   // frame defines them and the card actually is a planeswalker. Structured
   // rows first, rules_text parsing as the legacy fallback — identical
@@ -428,6 +463,10 @@ function CardImage({
     rulesText: card.rulesText,
   };
   const effectiveWatermark = resolveWatermark(card.watermark, basicLandFace);
+  // A profile with a basic-land symbol slot (TODO 3.24) prints a basic's
+  // symbol there instead of the rules-box watermark — the preview's twin
+  // (lib/cards/basic-symbol.ts).
+  const basicSymbolPlan = basicSymbolFor(layout, basicLandFace, card.watermark);
   // BASIC lands (Basic supertype — see lib/cards/watermark.ts) print NO
   // rules text, just the big symbol. Keyed on the card's identity, not the
   // watermark, so an explicit override icon suppresses the text too
@@ -435,6 +474,7 @@ function CardImage({
   const isBasicLand = basicLandManaKey(basicLandFace) !== null;
   const hasRulesContent =
     !isBasicLand &&
+    !textless &&
     Boolean(card.rulesText?.trim() || card.flavorText?.trim());
 
   const underArtRect = underFrameArtRect(layout, masterKey);
@@ -565,6 +605,13 @@ function CardImage({
           />
         </div>
       ) : null}
+
+      {/* A basic land's symbol disc (FrameProfile.basicSymbol "disc", TODO
+          3.24): after the art, before the frame, so a see-through socket's
+          painted ring overlaps its edge (the preview's z-1 twin). */}
+      {basicSymbolPlan && basicSymbolPlan.slot.style === "disc"
+        ? BasicSymbolDiscBake({ plan: basicSymbolPlan, colorKey, cardWidth: width, cardHeight: height })
+        : null}
 
       {/* Frame PNG — above the art. A two-colour split frame draws its two
           halves as FrameSlice boxes instead (the preview's FrameLayer clips
@@ -699,6 +746,12 @@ function CardImage({
           to fit on one line, same math as the live preview. With a
           symbolRect the symbol gets its own absolute box (mirrors the
           preview) so it can be aligned independently of the type line. */}
+      {/* A textless frame (TODO 3.24) prints no type line — nor the set
+          symbol beside it (a symbolRect box still prints, below). A split
+          type line (TODO 3.24) prints its two halves in their own boxes. */}
+      {textless ? null : layout.type.split && typeSplit ? (
+        SplitTypeBake({ slot: typeSlot, split: layout.type.split, parts: typeSplit, ink: typeInk, cardWidth: width })
+      ) : (
       <Band slot={typeSlot} cardWidth={width}>
         <span
           style={{
@@ -719,6 +772,7 @@ function CardImage({
           <span style={{ display: "flex" }} />
         )}
       </Band>
+      )}
       {layout.symbolRect ? (
         <div
           style={{
@@ -775,7 +829,11 @@ function CardImage({
           the rules rect, z above the frame / below text, suppressed where a
           rail replaces the box. Satori-safe: flat img / font glyph +
           opacity only. */}
-      {effectiveWatermark && !layout.chapters && !(layout.loyaltyRows && loyaltyAbilities.length > 0) ? (
+      {effectiveWatermark &&
+      !textless &&
+      !basicSymbolPlan &&
+      !layout.chapters &&
+      !(layout.loyaltyRows && loyaltyAbilities.length > 0) ? (
         <div
           style={{
             ...slotBox(layout.rules.rect),
@@ -828,9 +886,21 @@ function CardImage({
         </div>
       ) : null}
 
+      {/* A basic land's symbol in its slot (FrameProfile.basicSymbol, TODO
+          3.24) — above the frame, in place of the rules-box watermark. */}
+      {basicSymbolPlan && basicSymbolPlan.slot.style !== "none"
+        ? BasicSymbolBake({
+            plan: basicSymbolPlan,
+            cardWidth: width,
+            cardHeight: height,
+          })
+        : null}
+
       {/* Rules — Saga chapter rail or planeswalker ability rows, otherwise the
-          normal rules + flavor box. */}
-      {layout.chapters
+          normal rules + flavor box. A textless frame prints none of them. */}
+      {textless
+        ? null
+        : layout.chapters
         ? ChapterBake({
             slot: layout.chapters,
             intro: sagaContent?.intro ?? null,
@@ -1008,6 +1078,9 @@ function CardImage({
             letterSpacing: "0.02em",
             color: "rgba(255,255,255,0.82)",
             textShadow: "0 1px 3px rgba(0,0,0,0.8)",
+            // On the art (BRAND_MARK_ON_ART): a dark pill behind it — the
+            // preview's twin (brandMarkPillStyle).
+            ...(markLayout.pill ? brandMarkPillBake(markLayout.scale, width) : {}),
           }}
         >
           <svg
@@ -1114,6 +1187,148 @@ function alignedText(
     (slot.letterSpacingEm ?? 0) * fontPx,
   );
   return ink > roomPx || box === ink ? ELLIPSIS : { ...ELLIPSIS, marginRight: ink - box };
+}
+
+/** The brand mark's pill on the art (BRAND_MARK_PILL, TODO 3.23) in px —
+ *  the preview sets the same fractions in cqw / em. */
+function brandMarkPillBake(scale: number, width: number) {
+  const fontPx = fpx(0.026 * scale, width);
+  const padX = Math.round(BRAND_MARK_PILL.padXPct * scale * width);
+  const padY = Math.round(BRAND_MARK_PILL.padYPct * scale * width);
+  return {
+    background: BRAND_MARK_PILL.fill,
+    padding: `${padY}px ${padX}px`,
+    borderRadius: Math.round(fontPx * BRAND_MARK_PILL.radiusEm) + padY,
+  };
+}
+
+/** A split type line (TextSlot.split, TODO 3.24): the two halves in their
+ *  own bands at one size — the preview's SplitTypeLine twin. A centred half
+ *  centres on its kerned width (alignedText). One wrapper div, never a
+ *  Fragment (Satori lays a Fragment out as a zero-width flex item). */
+function SplitTypeBake({
+  slot,
+  split,
+  parts,
+  ink,
+  cardWidth,
+}: {
+  slot: TextSlot;
+  split: TypeLineSplit;
+  parts: [string, string];
+  ink: { color?: string; textShadow?: string };
+  cardWidth: number;
+}) {
+  const half = (rect: Rect, align: SlotAlign, text: string) => {
+    const band: TextSlot = { ...slot, rect, align };
+    const line = displayLine(text);
+    return (
+      <Band slot={band} cardWidth={cardWidth}>
+        <span style={{ ...alignedText(band, line, fpx(slot.sizePct, cardWidth), bandWidth(band, cardWidth)), ...ink }}>
+          {line}
+        </span>
+      </Band>
+    );
+  };
+  return (
+    <div style={{ position: "absolute", left: 0, top: 0, width: "100%", height: "100%", display: "flex", zIndex: 20 }}>
+      {half(split.leftRect, split.leftAlign ?? "start", parts[0])}
+      {parts[1] ? half(split.rightRect, split.rightAlign ?? "center", parts[1]) : null}
+    </div>
+  );
+}
+
+/** The drawn disc of a "disc" basic-symbol slot, in the frame colour's
+ *  fill — drawn before the frame so a see-through socket's ring overlaps its
+ *  edge (the preview's BasicSymbolDisc twin). */
+function BasicSymbolDiscBake({
+  plan,
+  colorKey,
+  cardWidth,
+  cardHeight,
+}: {
+  plan: BasicSymbolPlan;
+  colorKey: string;
+  cardWidth: number;
+  cardHeight: number;
+}) {
+  const box = basicSymbolBox(plan.slot.rect, cardHeight / cardWidth);
+  const d = Math.round((box.widthPct / 100) * cardWidth);
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: Math.round((box.leftPct / 100) * cardWidth),
+        top: Math.round((box.topPct / 100) * cardHeight),
+        width: d,
+        height: d,
+        borderRadius: d / 2,
+        background: BASIC_SYMBOL_DISC_FILL[colorKey] ?? BASIC_SYMBOL_DISC_FILL.c,
+      }}
+    />
+  );
+}
+
+/** A basic land's symbol in its slot (TODO 3.24): the mana glyph in the
+ *  printed ink with its halo, the slot's symbol image for that key, or an
+ *  explicit preset / custom watermark contained in the box — the preview's
+ *  BasicSymbol twin. */
+function BasicSymbolBake({
+  plan,
+  cardWidth,
+  cardHeight,
+}: {
+  plan: BasicSymbolPlan;
+  cardWidth: number;
+  cardHeight: number;
+}) {
+  const box = basicSymbolBox(plan.slot.rect, cardHeight / cardWidth);
+  const d = Math.round((box.widthPct / 100) * cardWidth);
+  const inner = Math.round(d * BASIC_SYMBOL_GLYPH_SCALE);
+  const { mark } = plan;
+  const assetPath = mark.kind === "mana" ? basicSymbolAssetPath(plan.slot, mark.key) : null;
+  const assetUrl = assetPath ? getFrameAssetDataUrl(assetPath) : null;
+  const imageSrc =
+    mark.kind === "custom" ? mark.url : mark.kind === "preset" ? getWatermarkDataUrl(mark.key) : assetUrl;
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: Math.round((box.leftPct / 100) * cardWidth),
+        top: Math.round((box.topPct / 100) * cardHeight),
+        width: d,
+        height: d,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        opacity: plan.opacity,
+        zIndex: 10,
+      }}
+    >
+      {imageSrc ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={imageSrc}
+          alt=""
+          width={assetUrl ? d : inner}
+          height={assetUrl ? d : inner}
+          style={{ objectFit: "contain" }}
+        />
+      ) : mark.kind === "mana" ? (
+        <span
+          style={{
+            fontFamily: '"Mana"',
+            fontSize: Math.round(basicSymbolGlyphSizePct(plan.slot.rect, cardHeight / cardWidth) * cardWidth),
+            lineHeight: 1,
+            color: BASIC_SYMBOL_INK[mark.key] ?? BASIC_SYMBOL_INK.c,
+            textShadow: BASIC_SYMBOL_HALO,
+          }}
+        >
+          {getManaCodepoint(mark.key) ?? ""}
+        </span>
+      ) : null}
+    </div>
+  );
 }
 
 /** SetSymbolGlyph's laid-out width at `fontSize` (its three branches). */
@@ -2415,11 +2630,28 @@ export function frameAssetPathsFor(card: CardPreviewData): string[] {
       paths.push(plateAssetPath(slot.plateAssetPathTemplate, colorKey));
     }
   }
-  if (layout.loyaltyRows && showsLoyalty(card.cardType)) {
+  if (layout.loyaltyRows && showsLoyalty(card.cardType) && !layout.textless) {
     for (const ability of resolveLoyaltyRows(card.faceContent, card.rulesText)) {
       if (ability.cost) paths.push(loyaltyBadgeAssetFor(ability.cost));
     }
   }
+  // A basic land's symbol image in its slot (FrameProfile.basicSymbol with
+  // an assetPathTemplate, TODO 3.24) — BasicSymbolBake reads it synchronously.
+  paths.push(
+    ...basicSymbolAssetPaths(
+      basicSymbolFor(
+        layout,
+        {
+          cardType: card.cardType,
+          supertype: card.supertype,
+          subtypes: card.subtypes,
+          title: card.title,
+          rulesText: card.rulesText,
+        },
+        card.watermark,
+      ),
+    ),
+  );
   return Array.from(new Set(paths));
 }
 

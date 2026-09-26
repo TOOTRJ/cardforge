@@ -41,6 +41,7 @@ import {
   NAME_COST_GAP_PCT,
   fitRulesSizePct,
   fitSingleLineSizePct,
+  fitSplitTypeSizePct,
   secondFaceLineSizes,
 } from "@/lib/cards/render-tiers";
 import { fitStatSizePct, ptValue, STAT_BADGE_INSET } from "@/lib/cards/stat-fit";
@@ -65,6 +66,7 @@ import {
   showsLoyalty,
   showsPowerToughness,
   slotLine,
+  splitTypeLine,
   type LoyaltyAbility,
   type SagaChapter,
 } from "@/lib/cards/card-display";
@@ -73,6 +75,7 @@ import {
   resolveSagaChapters,
 } from "@/lib/cards/face-content";
 import {
+  BRAND_MARK_PILL,
   SAGA_MARKER_POINTS,
   bandTextStyle,
   brandMarkLayout,
@@ -87,6 +90,7 @@ import {
   type StatSlot,
   underFrameArtRect,
   type TextSlot,
+  type TypeLineSplit,
 } from "@/lib/cards/template-layout";
 import {
   resolveFrameProfile,
@@ -111,6 +115,17 @@ import {
   watermarkInk,
   watermarkOpacity,
 } from "@/lib/cards/watermark";
+import {
+  BASIC_SYMBOL_DISC_FILL,
+  BASIC_SYMBOL_GLYPH_SCALE,
+  BASIC_SYMBOL_HALO,
+  BASIC_SYMBOL_INK,
+  basicSymbolAssetPath,
+  basicSymbolBox,
+  basicSymbolFor,
+  basicSymbolGlyphSizePct,
+  type BasicSymbolPlan,
+} from "@/lib/cards/basic-symbol";
 
 // ---------------------------------------------------------------------------
 // CardPreview — the canonical card visual, shared by the creator + gallery.
@@ -614,9 +629,12 @@ function CardFace({
   const frameSplit = frameSplitFor(layout, colorIdentity);
   const safeTitle = face.title?.trim() || "Untitled Card";
   const markLayout = brandMarkLayout(layout);
+  // A textless frame (TODO 3.24) prints no type line and no text box.
+  const textless = Boolean(layout.textless);
   // Per-frame-master footer ink (Alpha: silver on every frame but white) —
-  // the same footerInk() the bake resolves.
-  const footerInkResolved = layout.footer ? footerInk(layout.footer, masterKey) : null;
+  // the same footerInk() the bake resolves (outlined when the profile prints
+  // it on the art, footerOnArt).
+  const footerInkResolved = layout.footer ? footerInk(layout.footer, masterKey, layout) : null;
   // …and the name's and type line's (the text spans only, not the pips or
   // the set symbol) — the bake's bandTextStyle() twins.
   const titleInk = bandTextStyle(layout.title, masterKey);
@@ -666,7 +684,7 @@ function CardFace({
   // themselves are fitted by layoutLoyaltyRows below; this size is left for
   // a walker with no abilities (the plain box).
   const usesLoyaltyRows =
-    Boolean(layout.loyaltyRows) && showsLoyalty(face.cardType);
+    Boolean(layout.loyaltyRows) && showsLoyalty(face.cardType) && !textless;
   const fitRect = usesLoyaltyRows
     ? {
         ...layout.rules.rect,
@@ -674,14 +692,17 @@ function CardFace({
         heightPct: layout.rules.rect.heightPct * 0.88,
       }
     : layout.rules.rect;
-  const rulesSizePct = fitRulesSizePct({
-    rulesText: face.rulesText,
-    flavorText: face.flavorText,
-    rect: fitRect,
-    baseSizePct: layout.rules.sizePct,
-    lineHeight: layout.rules.lineHeight ?? RULES_TEXT.lineHeight,
-    aspect,
-  });
+  // A textless frame prints no rules: the fit estimate is skipped.
+  const rulesSizePct = textless
+    ? layout.rules.sizePct
+    : fitRulesSizePct({
+        rulesText: face.rulesText,
+        flavorText: face.flavorText,
+        rect: fitRect,
+        baseSizePct: layout.rules.sizePct,
+        lineHeight: layout.rules.lineHeight ?? RULES_TEXT.lineHeight,
+        aspect,
+      });
   // Planeswalker ability rows (badged loyalty costs, striped rows) when the
   // frame defines them and the card actually is a planeswalker. Structured
   // rows first, rules_text parsing as the legacy fallback.
@@ -711,6 +732,10 @@ function CardFace({
     rulesText: face.rulesText,
   };
   const effectiveWatermark = resolveWatermark(face.watermark, basicLandFace);
+  // A profile with a basic-land symbol slot (TODO 3.24) prints a basic's
+  // symbol there instead of the rules-box watermark — the bake's twin
+  // (lib/cards/basic-symbol.ts).
+  const basicSymbolPlan = basicSymbolFor(layout, basicLandFace, face.watermark);
   // BASIC lands (Basic supertype — see lib/cards/watermark.ts) print NO
   // rules text, just the big symbol. Keyed on the card's identity, not the
   // watermark, so an explicit override icon suppresses the text the same
@@ -718,7 +743,16 @@ function CardFace({
   const isBasicLand = basicLandManaKey(basicLandFace) !== null;
   const hasRulesContent =
     !isBasicLand &&
+    !textless &&
     Boolean(face.rulesText?.trim() || face.flavorText?.trim());
+  // The type line, and its two halves on a split type line (TextSlot.split,
+  // TODO 3.24) — one size for both, the bake's twin.
+  const typeLine = buildTypeLine({
+    supertype: face.supertype,
+    cardType: face.cardType,
+    subtypes: face.subtypes,
+  });
+  const typeSplit = layout.type.split ? splitTypeLine(typeLine) : null;
 
   // See-through frames (colourless Eldrazi, devoid, colourless token): the
   // art also runs under the whole frame (TODO 4.17). Same object-fit cover
@@ -791,6 +825,13 @@ function CardFace({
             alt=""
           />
         </div>
+      ) : null}
+
+      {/* A basic land's symbol disc (FrameProfile.basicSymbol "disc", TODO
+          3.24): above the art, under the frame, so a see-through socket's
+          painted ring overlaps its edge (the bake's twin). */}
+      {basicSymbolPlan && basicSymbolPlan.slot.style === "disc" ? (
+        <BasicSymbolDisc plan={basicSymbolPlan} colorKey={colorKey} aspect={aspect} />
       ) : null}
 
       {/* Frame PNG — above the art so its painted slot border is on top. */}
@@ -938,15 +979,31 @@ function CardFace({
           real cards condense e.g. "Legendary Artifact Creature — …". When the
           profile defines a symbolRect, the symbol renders in its OWN
           absolutely positioned box so it can be aligned independently. */}
+      {/* A textless frame (TODO 3.24) prints no type line — nor the set
+          symbol beside it (a symbolRect box still prints, below). A split
+          type line prints its two halves in their own boxes. */}
+      {textless ? null : layout.type.split && typeSplit ? (
+        <SplitTypeLine
+          slot={{
+            ...layout.type,
+            sizePct: fitSplitTypeSizePct({
+              left: typeSplit[0],
+              right: typeSplit[1],
+              leftRect: layout.type.split.leftRect,
+              rightRect: layout.type.split.rightRect,
+              baseSizePct: layout.type.sizePct,
+            }),
+          }}
+          split={layout.type.split}
+          parts={typeSplit}
+          ink={typeInk}
+        />
+      ) : (
       <BandSlot
         slot={{
           ...layout.type,
           sizePct: fitSingleLineSizePct({
-            text: buildTypeLine({
-              supertype: face.supertype,
-              cardType: face.cardType,
-              subtypes: face.subtypes,
-            }),
+            text: typeLine,
             rect: layout.type.rect,
             baseSizePct: layout.type.sizePct,
             reservedPct: layout.symbolRect
@@ -973,6 +1030,7 @@ function CardFace({
           />
         ) : null}
       </BandSlot>
+      )}
       {layout.symbolRect ? (
         <div
           style={{
@@ -1039,6 +1097,8 @@ function CardFace({
           there's at least one parsed loyalty ability — not merely because the
           frame supports them. */}
       {effectiveWatermark &&
+      !textless &&
+      !basicSymbolPlan &&
       !layout.chapters &&
       !(layout.loyaltyRows && loyaltyAbilities.length > 0) ? (
         <div
@@ -1091,7 +1151,15 @@ function CardFace({
         </div>
       ) : null}
 
-      {layout.chapters ? (
+      {/* A basic land's symbol in its slot (FrameProfile.basicSymbol, TODO
+          3.24) — above the frame, in place of the rules-box watermark. */}
+      {basicSymbolPlan && basicSymbolPlan.slot.style !== "none" ? (
+        <BasicSymbol plan={basicSymbolPlan} aspect={aspect} />
+      ) : null}
+
+      {/* A textless frame (TODO 3.24) prints no rules, flavour, rows or
+          rail — nor the editor's sample text. */}
+      {textless ? null : layout.chapters ? (
         <ChapterRail
           slot={layout.chapters}
           intro={sagaContent?.intro ?? null}
@@ -1245,6 +1313,9 @@ function CardFace({
             letterSpacing: "0.02em",
             color: "rgba(255,255,255,0.82)",
             textShadow: "0 1px 3px rgba(0,0,0,0.8)",
+            // On the art (BRAND_MARK_ON_ART): a dark pill behind it — the
+            // bake's twin (brandMarkPillBake).
+            ...(markLayout.pill ? brandMarkPillStyle(markLayout.scale) : {}),
           }}
         >
           <svg
@@ -1305,6 +1376,136 @@ function BandSlot({
       }}
     >
       {children}
+    </div>
+  );
+}
+
+/** The brand mark's pill on the art (BRAND_MARK_PILL, TODO 3.23) — the same
+ *  fractions the bake sets in px (brandMarkPillBake). */
+function brandMarkPillStyle(scale: number): CSSProperties {
+  const padY = cqw(BRAND_MARK_PILL.padYPct * scale);
+  return {
+    background: BRAND_MARK_PILL.fill,
+    padding: `${padY} ${cqw(BRAND_MARK_PILL.padXPct * scale)}`,
+    borderRadius: `calc(${BRAND_MARK_PILL.radiusEm}em + ${padY})`,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// SplitTypeLine — a type line printed in two boxes, split at the em dash
+// (TextSlot.split, TODO 3.24): "Basic Land" left, the subtype right, at one
+// size. The bake's SplitTypeBake twin; the set symbol prints only in the
+// profile's symbolRect.
+// ---------------------------------------------------------------------------
+
+function SplitTypeLine({
+  slot,
+  split,
+  parts,
+  ink,
+}: {
+  slot: TextSlot;
+  split: TypeLineSplit;
+  parts: [string, string];
+  ink: CSSProperties;
+}) {
+  return (
+    <>
+      <BandSlot slot={{ ...slot, rect: split.leftRect, align: split.leftAlign ?? "start" }}>
+        <span style={{ ...ELLIPSIS, ...ink }} data-type-half="left">
+          {displayLine(parts[0])}
+        </span>
+      </BandSlot>
+      {parts[1] ? (
+        <BandSlot slot={{ ...slot, rect: split.rightRect, align: split.rightAlign ?? "center" }}>
+          <span style={{ ...ELLIPSIS, ...ink }} data-type-half="right">
+            {displayLine(parts[1])}
+          </span>
+        </BandSlot>
+      ) : null}
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// BasicSymbolDisc / BasicSymbol — a basic land's symbol in the profile's
+// slot (FrameProfile.basicSymbol, TODO 3.24; lib/cards/basic-symbol.ts). The
+// disc sits under the frame (z-1) so a see-through socket's ring overlaps
+// its edge; the symbol sits above the frame (z-10, where the rules-box
+// watermark would be). The bake's BasicSymbolDiscBake / BasicSymbolBake.
+// ---------------------------------------------------------------------------
+
+function BasicSymbolDisc({
+  plan,
+  colorKey,
+  aspect,
+}: {
+  plan: BasicSymbolPlan;
+  colorKey: string;
+  aspect: number;
+}) {
+  return (
+    <div
+      aria-hidden
+      data-testid="basic-symbol-disc"
+      style={{
+        ...rectStyle(basicSymbolBox(plan.slot.rect, aspect)),
+        zIndex: 1,
+        borderRadius: "50%",
+        background: BASIC_SYMBOL_DISC_FILL[colorKey] ?? BASIC_SYMBOL_DISC_FILL.c,
+      }}
+    />
+  );
+}
+
+function BasicSymbol({ plan, aspect }: { plan: BasicSymbolPlan; aspect: number }) {
+  const { mark } = plan;
+  const assetPath = mark.kind === "mana" ? basicSymbolAssetPath(plan.slot, mark.key) : null;
+  const imageSrc =
+    mark.kind === "custom"
+      ? mark.url
+      : mark.kind === "preset"
+        ? `/watermarks/${mark.key}.png`
+        : assetPath
+          ? frameUrl(webpVariant(assetPath))
+          : null;
+  const innerPct = `${BASIC_SYMBOL_GLYPH_SCALE * 100}%`;
+  return (
+    <div
+      aria-hidden
+      data-testid="basic-symbol"
+      style={{
+        ...rectStyle(basicSymbolBox(plan.slot.rect, aspect)),
+        zIndex: 10,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        pointerEvents: "none",
+        opacity: plan.opacity,
+      }}
+    >
+      {imageSrc ? (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img
+          src={imageSrc}
+          alt=""
+          style={{
+            width: assetPath ? "100%" : innerPct,
+            height: assetPath ? "100%" : innerPct,
+            objectFit: "contain",
+          }}
+        />
+      ) : mark.kind === "mana" ? (
+        <i
+          className={`ms ms-${mark.key}`}
+          style={{
+            fontSize: cqw(basicSymbolGlyphSizePct(plan.slot.rect, aspect)),
+            lineHeight: 1,
+            color: BASIC_SYMBOL_INK[mark.key] ?? BASIC_SYMBOL_INK.c,
+            textShadow: BASIC_SYMBOL_HALO,
+          }}
+        />
+      ) : null}
     </div>
   );
 }

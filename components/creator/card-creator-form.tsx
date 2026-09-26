@@ -89,6 +89,10 @@ import { CardSetupPanel } from "@/components/creator/panels/card-setup-panel";
 import { KindChangeDialog } from "@/components/creator/kind-change-dialog";
 import { ArtPanel } from "@/components/creator/panels/art-panel";
 import { TextPanel } from "@/components/creator/panels/text-panel";
+import {
+  useImageNaturalSize,
+  useTreatmentSwitch,
+} from "@/components/creator/use-treatment-switch";
 import type { PipTextEditorHandle } from "@/components/creator/pip-text-editor";
 import { LandIconPanel } from "@/components/creator/panels/land-icon-panel";
 import { SetIconPanel } from "@/components/creator/panels/set-icon-panel";
@@ -794,6 +798,20 @@ export function CardCreatorForm({
     clearErrors,
     verifiedFrameKeys,
   ]);
+
+  // A frame switch the user makes keeps the art's framing (the visible
+  // centre carries to the new art window) and drops Etched on an
+  // edge-to-edge frame (TODO 3.23; components/creator/use-treatment-switch.ts).
+  const artNaturalSize = useImageNaturalSize(watched.art_url);
+  useTreatmentSwitch({
+    template: watched.frame_style?.template,
+    artUrl: watched.art_url,
+    natural: artNaturalSize,
+    isDirty,
+    getValues,
+    setValue,
+    profileOverrides,
+  });
 
   const goToIndex = (i: number) => {
     setCurrent(Math.max(0, Math.min(i, steps.length - 1)));

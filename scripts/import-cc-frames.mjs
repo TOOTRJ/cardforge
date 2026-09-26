@@ -46,6 +46,9 @@ import {
   sourceFilesFor,
   toRgba8,
 } from "./lib/cc-frames.mjs";
+// The edge contract (TODO 7.7) — the same check CI runs on every master
+// (tests/unit/frames/edge-contract.test.ts), here after the downscale.
+import { EDGE_CONTRACTS, edgeContractViolations, isKnownEdgeFailure } from "../lib/frames/edge-contract.ts";
 
 const args = process.argv.slice(2);
 const flag = (name) => {
@@ -109,6 +112,7 @@ async function writePlate(src, pngFile) {
 }
 
 const provenance = fs.existsSync(PROVENANCE) ? JSON.parse(fs.readFileSync(PROVENANCE, "utf8")) : {};
+const edgeFailures = [];
 // Drop templates the recipe no longer builds (e.g. deferred ones).
 for (const template of Object.keys(provenance)) if (!CC_TEMPLATES[template]) delete provenance[template];
 for (const [template, def] of Object.entries(CC_TEMPLATES)) {
@@ -140,6 +144,12 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
       .raw()
       .toBuffer();
     roundCornersRgba8(master, OUT_W, OUT_H, CORNER_RADIUS);
+    const contract = EDGE_CONTRACTS[template];
+    if (!contract) {
+      edgeFailures.push(`${template}/${key}: no edge contract declared (lib/frames/edge-contract.ts)`);
+    } else if (!isKnownEdgeFailure(template, key)) {
+      for (const v of edgeContractViolations(contract, master, OUT_W, OUT_H)) edgeFailures.push(`${template}/${key} ${v}`);
+    }
     await writeMaster(master, out);
     console.log(`wrote ${path.relative(process.cwd(), out)} (+ .webp) from ${W}×${H}`);
     if (def.shield) {
@@ -176,4 +186,11 @@ if (!dryRun) {
   const sorted = Object.fromEntries(Object.keys(provenance).sort().map((k) => [k, provenance[k]]));
   fs.writeFileSync(PROVENANCE, `${JSON.stringify(sorted, null, 2)}\n`);
   console.log(`provenance → ${PROVENANCE}`);
+}
+if (edgeFailures.length) {
+  console.error(`✗ ${edgeFailures.length} master(s) break their edge contract (TODO 7.7) — fix before publishing:`);
+  for (const f of edgeFailures) console.error(`  ${f}`);
+  process.exitCode = 1;
+} else if (!dryRun) {
+  console.log("edge contracts: every master honours its template's (TODO 7.7)");
 }

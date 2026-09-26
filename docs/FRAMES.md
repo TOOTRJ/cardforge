@@ -69,6 +69,15 @@ node scripts/import-cc-frames.mjs --only m15,m15land
   siblings, and P/T plates at native size.
 - **Provenance.** Which pack files made each frame is written to
   `lib/cards/frame-sources.json`.
+- **Edge contract (TODO 7.7).** Every master is checked against its
+  template's declared edges in `lib/frames/edge-contract.ts` (`border`,
+  `art` or `bar` per edge) right after the downscale; a violation, or a
+  template with no declaration, makes the importer exit non-zero. CI runs
+  the same check on every git master
+  (`tests/unit/frames/edge-contract.test.ts`), and on the bucket masters
+  when a local build is present (`FRAMES_BUILD_DIR`, else `.frames-build`,
+  checked against the manifest's sha256). A new template declares its edges
+  there first; today's known failures are listed as expected failures.
 - **Never committed.** Card Conjurer's site was shut down after a Wizards of
   the Coast cease-and-desist, and the fork has no licence file. The converted
   frames only ever go to the bucket.
