@@ -28,8 +28,9 @@ import { underFrameArtRect } from "@/lib/cards/template-layout";
 // frame <img>), below every text/pip/stat layer — on a real foil the ink
 // sits on top of the foil, so the text stays exactly as crisp and dark as on
 // a regular card. Layers painted above it that are part of the printed sheet
-// carry their own copy: the stat plates (`region`) and the planeswalker
-// ability stripes (FoilStripeSheen, below).
+// carry their own copy: the stat plates (`region`), the planeswalker
+// ability stripes (FoilStripeSheen) and the translucent rules backdrops
+// (FoilBackdropSheen, below).
 //
 // SVG <mask> is luminance by default in Chromium, librsvg (what next/og
 // rasterises with when sharp is installed — the Node bake) and resvg (its
@@ -61,7 +62,7 @@ export type FoilArtLayer = FoilArtSource & {
   focalY: number;
   /** CSS transform scale around the focal point. */
   scale: number;
-  /** Degrees, around the rect's centre (a split's second window). */
+  /** Degrees, around the rect's centre (aftermath's sideways second window). */
   rotation: number;
 };
 
@@ -73,9 +74,10 @@ const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v
  * The art layers a face draws UNDER its frame, in paint order, exactly as
  * both renderers place them: see-through frames' under-frame art (cover at
  * the focal point, scale 1), the art window (cover + focal + scale), and a
- * split's second window (rotated with its face). A missing source (art not
- * loaded yet in the preview, an unresolvable URL in the bake) just drops its
- * layer — the foil then follows the frame alone there.
+ * second face's own window (split's, or aftermath's rotated with its face).
+ * A missing source (art not loaded yet in the preview, an unresolvable URL
+ * in the bake) just drops its layer — the foil then follows the frame alone
+ * there.
  */
 export function foilArtLayers({
   layout,
@@ -86,6 +88,8 @@ export function foilArtLayers({
   secondArtPosition,
 }: {
   layout: FrameProfile;
+  /** The frame master painted (frameMasterKey) — see-through frames are
+   *  keyed by it (underFrameArtRect). */
   colorKey: string;
   art: FoilArtSource | null;
   artPosition: ArtPosition;
@@ -151,6 +155,54 @@ export function coverPlacement(
     height,
     /** scale(s) about (ox, oy) — identity when s = 1. */
     transform: scale === 1 ? undefined : `matrix(${scale} 0 0 ${scale} ${r2(ox * (1 - scale))} ${r2(oy * (1 - scale))})`,
+  };
+}
+
+/**
+ * The same CSS as plain boxes, with no transform left to apply: object-fit
+ * crops the cover to the <img> box, then scale(s) about the focal point
+ * grows or shrinks that crop. So `box` shows the cover of the SCALED box
+ * (`box` scaled by s about the focal point), cut to where the two overlap.
+ * `image` is where the whole picture lands, `visible` the part of `box` it
+ * paints — all of `box` for s ≥ 1 (coverPlacement's picture, pre-scaled),
+ * only the scaled box for s < 1. A ROTATED window (aftermath's sideways
+ * second art) is drawn from these numbers in the bake — Satori loses the art
+ * of a rotated overflow box (lib/render/card-image.tsx RotatedArtBake) — and
+ * in the foil mask, so the two agree.
+ */
+export function artWindowPlacement(
+  box: { x: number; y: number; width: number; height: number },
+  natural: { width: number; height: number },
+  focalX: number,
+  focalY: number,
+  scale: number,
+) {
+  const ox = box.x + focalX * box.width;
+  const oy = box.y + focalY * box.height;
+  const scaled = {
+    x: ox + (box.x - ox) * scale,
+    y: oy + (box.y - oy) * scale,
+    width: box.width * scale,
+    height: box.height * scale,
+  };
+  const s0 = Math.max(scaled.width / natural.width, scaled.height / natural.height);
+  const width = natural.width * s0;
+  const height = natural.height * s0;
+  const x0 = Math.max(box.x, scaled.x);
+  const y0 = Math.max(box.y, scaled.y);
+  return {
+    image: {
+      x: scaled.x + focalX * (scaled.width - width),
+      y: scaled.y + focalY * (scaled.height - height),
+      width,
+      height,
+    },
+    visible: {
+      x: x0,
+      y: y0,
+      width: Math.min(box.x + box.width, scaled.x + scaled.width) - x0,
+      height: Math.min(box.y + box.height, scaled.y + scaled.height) - y0,
+    },
   };
 }
 
@@ -278,6 +330,19 @@ export function FoilSheen({
   const view = box
     ? { x: r2(box.x), y: r2(box.y), width: r2(box.width), height: r2(box.height) }
     : { x: 0, y: 0, width: vw, height: vh };
+  // Each art layer's window, clip and picture box. A rotated window takes
+  // the numbers the bake paints it with (artWindowPlacement), so its mask
+  // sits on the drawn art.
+  const artBoxes = art.map((layer) => {
+    const slot = pct(layer.rect);
+    const natural = { width: layer.naturalWidth, height: layer.naturalHeight };
+    if (!layer.rotation) {
+      const place = coverPlacement(slot, natural, layer.focalX, layer.focalY, layer.scale);
+      return { slot, clip: slot, place };
+    }
+    const { image, visible } = artWindowPlacement(slot, natural, layer.focalX, layer.focalY, layer.scale);
+    return { slot, clip: visible, place: { ...image, transform: undefined } };
+  });
   return (
     <svg
       viewBox={`${view.x} ${view.y} ${view.width} ${view.height}`}
@@ -288,14 +353,11 @@ export function FoilSheen({
       style={{ position: "absolute", top: 0, left: 0, ...style }}
     >
       <defs>
-        {art.map((layer, i) => {
-          const box = pct(layer.rect);
-          return (
-            <clipPath key={i} id={`${id}-clip${i}`} clipPathUnits="userSpaceOnUse">
-              <rect x={r2(box.x)} y={r2(box.y)} width={r2(box.width)} height={r2(box.height)} />
-            </clipPath>
-          );
-        })}
+        {artBoxes.map(({ clip }, i) => (
+          <clipPath key={i} id={`${id}-clip${i}`} clipPathUnits="userSpaceOnUse">
+            <rect x={r2(clip.x)} y={r2(clip.y)} width={r2(clip.width)} height={r2(clip.height)} />
+          </clipPath>
+        ))}
         {sheenGradients(id, vw, vh)}
         {seamX !== null ? (
           <clipPath id={`${id}-left`} clipPathUnits="userSpaceOnUse">
@@ -309,14 +371,7 @@ export function FoilSheen({
         ) : null}
         <mask id={`${id}-lum`} maskUnits="userSpaceOnUse" x={view.x} y={view.y} width={view.width} height={view.height}>
           {art.map((layer, i) => {
-            const box = pct(layer.rect);
-            const place = coverPlacement(
-              box,
-              { width: layer.naturalWidth, height: layer.naturalHeight },
-              layer.focalX,
-              layer.focalY,
-              layer.scale,
-            );
+            const { slot: box, place } = artBoxes[i];
             return (
               // Satori serialises every prop it is given (an undefined one
               // becomes transform="undefined"), so optional attributes are
@@ -381,40 +436,61 @@ export function FoilSheen({
 // and the badges keep exactly the foil they had.
 // ---------------------------------------------------------------------------
 
-/** The ability rows' boxes in card %: the rules rect cut into `count` equal
- *  rows — exactly the bake's `flex: 1` rows (Yoga has no automatic minimum
- *  size). A browser flex row is at least as tall as its content
- *  (min-height: auto), so a row whose text needs more than its share grows
- *  and the others shrink (a long 4-ability walker measured 139/139/158/158
- *  card px against 148.6 each). The preview sheen still fills its row and the
- *  viewBoxes stay contiguous, so the seams stay continuous; the rainbow is
- *  only stretched within such a row. */
-export function loyaltyStripeRects(rect: Rect, count: number): Rect[] {
-  const heightPct = rect.heightPct / Math.max(1, count);
-  return Array.from({ length: count }, (_, i) => ({ ...rect, topPct: rect.topPct + i * heightPct, heightPct }));
+/** The ability rows' boxes in card %: the rules rect cut into the rows both
+ *  renderers draw — `rowFractions` from layoutLoyaltyRows
+ *  (lib/cards/loyalty-rows.ts), each row's share of the box height. The
+ *  rows are contiguous, so the sheens' seams stay continuous. */
+export function loyaltyStripeRects(rect: Rect, rowFractions: readonly number[]): Rect[] {
+  let topPct = rect.topPct;
+  return rowFractions.map((f) => {
+    const row = { ...rect, topPct, heightPct: rect.heightPct * f };
+    topPct += row.heightPct;
+    return row;
+  });
 }
 
-export function FoilStripeSheen({
-  id,
-  region,
-  fill,
-  landscape = false,
-  width,
-  height,
-  style,
-}: {
+type FillSheenProps = {
   /** Unique per rendered instance (SVG ids are document-global). */
   id: string;
-  /** The row's box (loyaltyStripeRects): the SVG covers it and the rainbow
-   *  keeps its card-space position, like FoilSheen's `region`. */
+  /** The layer's box — a row (loyaltyStripeRects) or the rules rect: the SVG
+   *  covers it and the rainbow keeps its card-space position, like
+   *  FoilSheen's `region`. */
   region: Rect;
-  /** The row's stripe colour, exactly as the row paints it — the mask. */
+  /** The layer's colour, exactly as it is painted (alpha included) — the
+   *  mask. */
   fill: string;
   landscape?: boolean;
   width: number | string;
   height: number | string;
   style?: CSSProperties;
-}) {
+};
+
+export function FoilStripeSheen(props: FillSheenProps) {
+  return fillSheen(props);
+}
+
+// ---------------------------------------------------------------------------
+// Translucent rules backdrops (TODO 4.31). A frame whose rules box is a
+// cut-out over the art paints a translucent backdrop behind the text
+// (`rules.backdropHex`: m15pw's box for a card that isn't a planeswalker with
+// ability rows, the token / Alpha token / Anime / Expedition scrims) — above
+// the card-wide sheen, which then only showed through the backdrop's
+// (1 − alpha), exactly as the ability stripes did. A foil card draws
+// FoilBackdropSheen inside the backdrop, under the watermark and the text:
+// the stripes' sheen, masked by the backdrop colour. On m15pw's 72 % cream
+// box that is the clear pastel rainbow a pale text box shows elsewhere; on
+// the dark scrims (luminance ≈ 0.03 at 50–72 %) the mask is nearly black —
+// dark ink swallows the foil — so they gain at most a level or two.
+// ---------------------------------------------------------------------------
+
+export function FoilBackdropSheen(props: FillSheenProps) {
+  return fillSheen(props);
+}
+
+/** The card-space rainbow + glint over one translucent layer, masked by the
+ *  layer's own colour. Two exported names so each layer can be isolated in
+ *  tests; one body. */
+function fillSheen({ id, region, fill, landscape = false, width, height, style }: FillSheenProps) {
   const { vw, vh } = cardSpace(landscape);
   const box = rectBox(region, vw, vh);
   const view = { x: r2(box.x), y: r2(box.y), width: r2(box.width), height: r2(box.height) };

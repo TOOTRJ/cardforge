@@ -7,7 +7,18 @@
 //
 // SOURCE: MSE's Full-Magic-Pack `magic-agclassic.mse-style` — {k}card.jpg for
 // agclassic, {k}lcard.jpg for alphaland (374 × 522, identical geometry in all
-// 14 files). MSE drew that art on a SYMMETRIC 15 px black border (60 px at
+// 15 files). agclassic has an eighth master, a.png from acard.jpg, MSE's
+// ARTIFACT card (TODO 4.31): every colourless Alpha card is an artifact,
+// printed on a dark warm-brown border with a light crackle text box (Sol
+// Ring, Juggernaut, Clockwork Beast, Rod of Ruin, Jayemdae Tome, Obsianus
+// Golem), and a colourless artifact paints it (FrameProfile.artifactMasterKeys
+// in lib/cards/template-layout.ts); c.png from ccard.jpg, MSE's flat grey,
+// stays the master of a colourless NON-artifact, which Alpha never printed
+// (owner decision 2026-09-25). alphaland has the seven: Alpha printed no
+// colourless land, the old-border colourless lands (Library of Alexandria,
+// Urza's lands, Mishra's Factory) print on the same brown land frame as the
+// basics, and MSE has no artifact land card. MSE drew that art on a SYMMETRIC
+// 15 px black border (60 px at
 // 1500 × 2100) with its own box proportions, so a plain 4× upscale (what
 // scripts/convert-mse-frame.mjs did in 2026-06) is not the printed card:
 //
@@ -87,7 +98,7 @@ const OUT_ROOT = process.env.ALPHA_OUT_ROOT ?? "public/frames";
 const FULL_COLOUR = process.env.ALPHA_FULL_COLOUR === "1";
 
 // ── Knots: [print HD px, MSE source px] (pixel-EDGE coordinates) ───────────
-// MSE source (374 × 522), identical in all 14 files:
+// MSE source (374 × 522), identical in all 15 files:
 //   pinstripe   x 15–19 / 354–358, y 15–19 / 502–506: two mid-tone px on the
 //               black side, then dark · light · dark (black outside 15 / 359)
 //   art box     outline dark · light · dark at x 32–34 / 339–341, y 40–42 /
@@ -273,8 +284,9 @@ const ALPHALAND = {
   text: [187, 1249, 1318, 1854.5],
 };
 const SETS = [
-  { out: path.join(OUT_ROOT, "agclassic"), file: (k) => `${k}card.jpg`, maps: AGCLASSIC },
-  { out: path.join(OUT_ROOT, "alphaland"), file: (k) => `${k}lcard.jpg`, maps: ALPHALAND },
+  // + a ← acard.jpg: the colourless ARTIFACT card (see SOURCE).
+  { out: path.join(OUT_ROOT, "agclassic"), keys: [...KEYS, "a"], file: (k) => `${k}card.jpg`, maps: AGCLASSIC },
+  { out: path.join(OUT_ROOT, "alphaland"), keys: KEYS, file: (k) => `${k}lcard.jpg`, maps: ALPHALAND },
 ];
 /** The transparent art opening, HD px [x0, y0, x1, y1). */
 export const ART_OPENING = [178, 219, 1319, 1138];
@@ -521,7 +533,7 @@ async function build(srcFile, outFile, maps) {
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(new URL(import.meta.url).pathname)) {
   for (const set of SETS) {
     fs.mkdirSync(set.out, { recursive: true });
-    for (const k of KEYS) {
+    for (const k of set.keys) {
       const src = path.join(PACK, set.file(k));
       const dst = path.join(set.out, `${k}.png`);
       await build(src, dst, set.maps);

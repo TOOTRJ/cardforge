@@ -16,6 +16,8 @@
 // `overflow: hidden` as a backstop — and fully deterministic, so preview and
 // bake always agree.
 
+import { tokenize } from "@/components/cards/mana-cost-glyphs";
+import { displayTextEm } from "@/lib/cards/display-metrics";
 import type { Rect } from "@/lib/cards/template-layout";
 import {
   RULES_LINE_PITCH_EM,
@@ -24,15 +26,21 @@ import {
   ptToPct,
 } from "@/lib/cards/typography";
 
-// Average MPlantin advance width as a fraction of the font size. Measured
-// loosely (lowercase latin ≈ 0.46em, capitals ≈ 0.62em); 0.5 errs wide so the
-// estimate over-counts lines rather than under-counting them.
+// Average MPlantin advance width as a fraction of the font size
+// (public/fonts/mplantin.ttf: lowercase latin ≈ 0.49em, the space 0.28em,
+// capitals ≈ 0.74em); 0.5 errs wide for mixed-case text so the estimate
+// over-counts lines rather than under-counting them.
 const CHAR_W = 0.5;
+// A capital's advance, for the estimates that must not under-count ALL-CAPS
+// text (estimateRulesHeightW): 0.5 per capital left an all-caps ability two
+// lines short of what it drew.
+const CAPS_CHAR_W = 0.74;
 // An inline mana pip occupies the disc + its word gap ≈ 1.1em ≈ 2.2 CHAR_W.
 const MANA_CHARS = (RULES_TEXT.pipDiscEm + RULES_TEXT.wordGapEm) / CHAR_W;
 // Headroom for estimate error: accept a size only if the estimated height
 // stays under this fraction of the box.
-const SAFETY = 0.96;
+export const RULES_FIT_SAFETY = 0.96;
+const SAFETY = RULES_FIT_SAFETY;
 
 export type RulesFitInput = {
   rulesText: string | null | undefined;
@@ -52,13 +60,17 @@ export type RulesFitInput = {
 };
 
 /** Effective character count of one source line: each `{...}` mana token
- *  counts as a pip, words contribute their length plus a separating space. */
-function lineCharCount(line: string): number {
+ *  counts as a pip, words contribute their length plus a separating space.
+ *  `wideCaps` counts every capital at its own (wider) advance. */
+function lineCharCount(line: string, wideCaps = false): number {
   const manaTokens = line.match(/\{[^}]+\}/g)?.length ?? 0;
   const stripped = line.replace(/\{[^}]+\}/g, " ");
   const words = stripped.split(/\s+/).filter(Boolean);
   const wordChars = words.reduce((sum, w) => sum + w.length + 1, 0);
-  return wordChars + manaTokens * MANA_CHARS;
+  const capsExtra = wideCaps
+    ? (stripped.match(/\p{Lu}/gu)?.length ?? 0) * (CAPS_CHAR_W / CHAR_W - 1)
+    : 0;
+  return wordChars + capsExtra + manaTokens * MANA_CHARS;
 }
 
 function estimateHeight(
@@ -67,6 +79,7 @@ function estimateHeight(
   sizePct: number,
   lineHeight: number,
   boxWidthW: number,
+  wideCaps = false,
 ): number {
   // Characters that fit on one wrapped line at this size.
   const lineCapacity = Math.max(4, boxWidthW / (sizePct * CHAR_W));
@@ -75,7 +88,7 @@ function estimateHeight(
   let paragraphs = 0;
   let blanks = 0;
   for (const line of rulesLines) {
-    const chars = lineCharCount(line);
+    const chars = lineCharCount(line, wideCaps);
     if (chars === 0) {
       blanks += 1; // blank source line → paragraph spacer
       continue;
@@ -100,6 +113,29 @@ function estimateHeight(
   return height;
 }
 
+/**
+ * Estimated height of one rules block (no flavor) at `sizePct` in a column
+ * `boxWidthW` wide, in card-width units — the wrap model fitRulesSizePct
+ * uses, for layouts that fit several blocks side by side in one box (the
+ * planeswalker ability rows, lib/cards/loyalty-rows.ts). Empty text → 0.
+ *
+ * Capitals count at their own width here. Each block gets a box of exactly
+ * its estimate plus a share of the slack, so an under-count spills into the
+ * next block; fitRulesSizePct keeps the plain count (one box, one estimate —
+ * changing it would move the fitted size of text that fits today on every
+ * frame).
+ */
+export function estimateRulesHeightW(
+  text: string,
+  sizePct: number,
+  lineHeight: number,
+  boxWidthW: number,
+): number {
+  const rules = text.trim();
+  if (!rules) return 0;
+  return estimateHeight(rules.split(/\n/), [], sizePct, lineHeight, boxWidthW, true);
+}
+
 // Display-font (CardDisplay) average advance width as a fraction of the font
 // size. Caps ≈ 0.62em, lowercase ≈ 0.5em; 0.56 errs wide so a fitted line
 // shrinks slightly early rather than ellipsizing.
@@ -114,25 +150,147 @@ export type LineFitInput = {
   /** Width reserved for trailing slot content (set symbol / cost pips), as a
    *  fraction of card width. */
   reservedPct?: number;
+  /** The text's measured width at a 1 em font size, when the caller has one
+   *  (lib/cards/display-metrics.ts) — it replaces the average-advance
+   *  estimate. */
+  textWidthEm?: number;
 };
 
 /**
  * Single-line fit for title/type bands: the profile's base size, shrunk only
  * as far as needed for the text to fit the slot on one line (real cards do
  * the same for long type lines). Deterministic and shared by preview + bake,
- * mirroring fitRulesSizePct. `overflow: hidden` + ellipsis stay as backstop.
+ * mirroring fitRulesSizePct. Never below the hard floor (5 pt, the smallest
+ * rules text a card prints); past it `overflow: hidden` + ellipsis are the
+ * backstop.
  */
 export function fitSingleLineSizePct({
   text,
   rect,
   baseSizePct,
   reservedPct = 0,
+  textWidthEm,
 }: LineFitInput): number {
   const chars = (text ?? "").trim().length;
   if (chars === 0) return baseSizePct;
   const availableW = Math.max(0.05, rect.widthPct / 100 - reservedPct);
-  const fitted = availableW / (chars * DISPLAY_CHAR_W);
+  const fitted = availableW / (textWidthEm ?? chars * DISPLAY_CHAR_W);
   return Math.max(ptToPct(RULES_TEXT.hardFloorPt), Math.min(baseSizePct, fitted));
+}
+
+/** The gap between cost pips, as a fraction of the disc: the bake's
+ *  CostGlyphs draws exactly this; the preview's 0.12em of disc ÷ 1.3 is
+ *  narrower, so a row measured with it fits both. */
+export const COST_PIP_GAP = 0.12;
+/** The gap between a second face's name and its cost, as a fraction of the
+ *  card's width (the preview's 2cqw; the bake draws it for `fitLines` faces). */
+export const NAME_COST_GAP_PCT = 0.02;
+// Headroom on a measured line (displayTextEm already counts the kerning that
+// widens it): the bake rounding a font size to whole pixels (+0.5 px of a
+// 21 px 5 pt name at 750) and the browser's sub-pixel text layout.
+const LINE_FIT_SAFETY = 1.05;
+// Half a pixel of the smaller bake (750 px wide), as a fraction of the card's
+// width: the bake rounds each disc and each gap to whole pixels.
+const HALF_PX_PCT = 0.5 / 750;
+// The discs' hard shadow reaches ≈ 0.07 disc past either end of the row.
+const COST_SHADOW_DISCS = 0.1;
+// Past the floor a long name ellipsizes, but the cost still leaves it at
+// least this much of the bar (≈ 4 letters), or all of it if it is shorter.
+const MIN_NAME_EM = 2;
+
+/** A cost row's length as a line `perDisc × disc + fixedPct` (fractions of
+ *  the card's width), as the bake draws it. */
+function costRowTerms(cost: string | null | undefined): { perDisc: number; fixedPct: number } {
+  const tokens = tokenize((cost ?? "").trim());
+  if (tokens.length === 0) return { perDisc: 0, fixedPct: 0 };
+  let perDisc = (tokens.length - 1) * COST_PIP_GAP + COST_SHADOW_DISCS;
+  let fixedPct = (2 * tokens.length - 1) * HALF_PX_PCT;
+  for (const token of tokens) {
+    if (token.kind === "text") {
+      // A cost typed without braces ("2BB"): the bake's 0.6 × disc caps,
+      // 1 px of tracking and half a pixel of font rounding per letter.
+      perDisc += displayTextEm(token.value.toUpperCase()) * 0.6;
+      fixedPct += token.value.length * 3 * HALF_PX_PCT;
+    } else {
+      perDisc += 1;
+    }
+  }
+  return { perDisc, fixedPct };
+}
+
+/**
+ * The length a cost takes on its bar at a given disc size (both fractions of
+ * the card's width), as the bake draws it — one disc per pip, COST_PIP_GAP
+ * between tokens, the hard shadow and pixel rounding included — so the room
+ * it leaves is room the preview's narrower row leaves too. 0 when empty.
+ */
+export function costRowWidthPct(cost: string | null | undefined, discPct: number): number {
+  const { perDisc, fixedPct } = costRowTerms(cost);
+  return perDisc * discPct + fixedPct;
+}
+
+export type SecondFaceLineSizes = {
+  titleSizePct: number;
+  typeSizePct: number;
+  /** The cost's disc diameter (fraction of card width). */
+  costSizePct: number;
+};
+
+/**
+ * A second face's name, type-line and cost sizes (flip / split / aftermath),
+ * shared by SecondFacePanel (preview) and SecondFaceBake so both draw the same
+ * bar. The profile's sizes as they are — unless the face opts in with
+ * `fitLines` (aftermath: the top half's sizes on bars a third of the card
+ * long). Then, measured in Beleren's own widths (displayTextEm):
+ *
+ * - the name bar — name, gap, cost — keeps the top half's sizes while it
+ *   fits, and otherwise shrinks AS ONE, name and pips together, like a
+ *   smaller copy of the top half's bar, only as far as the words need. Below
+ *   the 5 pt floor the name stops shrinking and ellipsizes, and the pips are
+ *   capped so they always stay on the bar with a few letters of name beside
+ *   them (up to the 64-character cost cap);
+ * - the type line shrinks alone to fit its bar, down to the same floor.
+ */
+export function secondFaceLineSizes({
+  slot,
+  name,
+  typeLine,
+  cost,
+}: {
+  slot: {
+    title: { rect: Rect; sizePct: number };
+    type: { rect: Rect; sizePct: number };
+    costSizePct?: number;
+    fitLines?: boolean;
+  };
+  name: string;
+  typeLine: string;
+  /** The face's cost (e.g. "{X}{B}{B}"); null/empty when it has none. */
+  cost: string | null | undefined;
+}): SecondFaceLineSizes {
+  const baseCost = slot.costSizePct ?? slot.title.sizePct;
+  if (!slot.fitLines) {
+    return { titleSizePct: slot.title.sizePct, typeSizePct: slot.type.sizePct, costSizePct: baseCost };
+  }
+  const floor = ptToPct(RULES_TEXT.hardFloorPt);
+  const nameEm = displayTextEm(name) * LINE_FIT_SAFETY;
+  const row = slot.costSizePct ? costRowTerms(cost) : { perDisc: 0, fixedPct: 0 };
+  // The bar's length left for the name and the discs' scalable part.
+  const room = slot.title.rect.widthPct / 100 - (row.perDisc ? NAME_COST_GAP_PCT + row.fixedPct : 0);
+  // Disc per unit of name size, as on the top half's bar.
+  const ratio = baseCost / slot.title.sizePct;
+  const scale = Math.min(slot.title.sizePct, room / (nameEm + row.perDisc * ratio));
+  const titleSizePct = Math.max(floor, scale);
+  const costSizePct = row.perDisc
+    ? Math.min(ratio * titleSizePct, (room - Math.min(nameEm, MIN_NAME_EM) * titleSizePct) / row.perDisc)
+    : baseCost;
+  const typeEm = displayTextEm(typeLine) * LINE_FIT_SAFETY;
+  const typeFit = typeEm > 0 ? slot.type.rect.widthPct / 100 / typeEm : slot.type.sizePct;
+  return {
+    titleSizePct,
+    typeSizePct: Math.max(floor, Math.min(slot.type.sizePct, typeFit)),
+    costSizePct,
+  };
 }
 
 /**

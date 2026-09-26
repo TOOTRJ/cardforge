@@ -45,10 +45,13 @@ vi.mock("@/lib/render/card-image", async (orig) => ({
 
 import { GET } from "@/app/api/cards/[id]/png/route";
 import { NextRequest } from "next/server";
+import { UNTOUCHED_SINCE_V22 } from "@/tests/stubs/layout-scope-cards";
 
 let storedPng: Buffer;
 let livePng: Buffer;
 
+// A card whose only look pending below v22 is the v22 opt-in (no sweep since
+// changed it), read with `select("*")` as the route does.
 function card(patch: Record<string, unknown>) {
   return {
     id: ID,
@@ -58,10 +61,7 @@ function card(patch: Record<string, unknown>) {
     updated_at: "2026-09-20T00:00:00Z",
     rendered_at: "2026-09-21T00:00:00Z",
     rendered_image_url: STORAGE,
-    frame_style: { template: "saga" },
-    rarity: "uncommon",
-    set_icon_url: null,
-    set_icon_code: null,
+    ...UNTOUCHED_SINCE_V22,
     ...patch,
   };
 }

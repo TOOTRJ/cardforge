@@ -22,18 +22,24 @@ function Harness({
   verified,
   onColor,
   initialColor = "blue",
+  cardType = "creature",
+  supertype = "",
+  initialTemplate = "m15",
 }: {
   verified: string[];
   onColor: (next: ColorIdentity[]) => void;
   initialColor?: ColorIdentity;
+  cardType?: "creature" | "artifact";
+  supertype?: string;
+  initialTemplate?: string;
 }) {
   const methods = useForm({
     defaultValues: {
-      card_type: "creature",
-      frame_style: { template: "m15" },
+      card_type: cardType,
+      frame_style: { template: initialTemplate },
       color_identity: [initialColor] as ColorIdentity[],
       title: "",
-      supertype: "",
+      supertype,
       subtypes_text: "",
     },
   });
@@ -44,7 +50,7 @@ function Harness({
   return (
     <FormProvider {...methods}>
       <CardSetupPanel
-        kind="creature"
+        kind={cardType}
         colorIdentity={color}
         verifiedFrameKeys={verified}
         onKindSelect={() => {}}
@@ -282,5 +288,42 @@ describe("CardSetupPanel — a refused frame says why", () => {
     );
     expect(screen.getByTestId("template").textContent).toBe("m15land");
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+});
+
+describe("CardSetupPanel — Alpha's colourless tiles follow the card type (TODO 4.31)", () => {
+  // A colourless ARTIFACT paints the brown artifact card (agclassic/a), any
+  // other colourless card the grey one (agclassic/c) — the renderers' rule
+  // (frameMasterKey), so the tiles show what the card will get. The
+  // frame_reviews gate stays per colour: agclassic/c publishes both.
+  const tiles = () => {
+    const colour = within(screen.getByRole("radiogroup", { name: "Color identity" }))
+      .getByRole("radio", { name: /colorless/i })
+      .querySelector<HTMLElement>("[data-frame-key]");
+    const frame = within(screen.getByRole("radiogroup", { name: /Classic \(1993\) frames/ }))
+      .getByRole("radio", { name: /Standard/ })
+      .querySelector<HTMLElement>("[data-frame-key]");
+    return { colour: colour?.dataset.frameKey, frame: frame?.dataset.frameKey, colourBg: colour?.style.backgroundImage };
+  };
+
+  it.each<[string, "creature" | "artifact", string, string]>([
+    ["an artifact", "artifact", "", "a"],
+    ["an Artifact Creature", "creature", "Artifact", "a"],
+    ["a creature", "creature", "", "c"],
+  ])("%s on agclassic: the colourless tile and the frame tile show master %s", (_label, cardType, supertype, want) => {
+    render(
+      <Harness
+        verified={[frameComboKey("agclassic", "c")]}
+        onColor={vi.fn()}
+        initialColor="colorless"
+        cardType={cardType}
+        supertype={supertype}
+        initialTemplate="agclassic"
+      />,
+    );
+    const { colour, frame, colourBg } = tiles();
+    expect(colour).toBe(want);
+    expect(frame).toBe(want);
+    expect(colourBg).toContain(`/frames/agclassic/${want}.webp`);
   });
 });

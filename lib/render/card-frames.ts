@@ -1,6 +1,6 @@
 import "server-only";
 import { DEFAULT_FRAME_TEMPLATE } from "@/types/card";
-import { FRAME_COLOR_KEYS } from "@/lib/cards/frame-reference-registry";
+import { FRAME_MASTER_KEYS } from "@/lib/cards/frame-reference-registry";
 
 import { createHash } from "node:crypto";
 import fs from "node:fs";
@@ -335,8 +335,10 @@ export async function preloadFrame(template: string, colorKey: string): Promise<
 // Paths
 // ---------------------------------------------------------------------------
 
+/** A frame master key (FRAME_MASTER_KEYS: the colour keys plus Alpha's
+ *  artifact card "a", frameMasterKey); anything else → "c". */
 function normalizeColor(colorKey: string): string {
-  return (FRAME_COLOR_KEYS as readonly string[]).includes(colorKey)
+  return (FRAME_MASTER_KEYS as readonly string[]).includes(colorKey)
     ? colorKey
     : "c";
 }

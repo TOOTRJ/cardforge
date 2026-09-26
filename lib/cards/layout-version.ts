@@ -1,4 +1,6 @@
-import { normalizeFrameTemplate } from "@/lib/cards/card-display";
+import { buildTypeLine, displayLine, normalizeFrameTemplate } from "@/lib/cards/card-display";
+import { statLayoutChanged } from "@/lib/cards/stat-fit";
+import type { CardType } from "@/types/card";
 
 // ---------------------------------------------------------------------------
 // CARD_LAYOUT_VERSION — stamped onto `cards.layout_version` every time a card
@@ -191,9 +193,49 @@ import { normalizeFrameTemplate } from "@/lib/cards/card-display";
 //            (lib/cards/foil-finish.tsx), planeswalker ability stripes
 //            included (owner decision, round-2 review). Card-scoped to finish
 //            "foil" on any template (VERSION_SCOPES), "sweep".
+//   29     — the round-5 leftovers of the owner's frame review (2026-09-25),
+//            ONE platform correction. Card-scoped (VERSION_SCOPES[29] is the
+//            OR of every track's scope below — no template list, since the
+//            two compose with AND), "sweep". Each track was proven on real
+//            HD bakes against v28 (0 changed renders outside its scope):
+//            * display-font word spacing (4.31): Satori placed each word
+//              after a space at the unkerned advances but drew it kerned, so
+//              every gap grew by the kerning before it ("Jester's Mask").
+//              Names, type lines and the "ART:" footer are one no-break run
+//              in both renderers (displayLine), without Beleren's
+//              space-pair kerns; token names and type lines centre on their
+//              kerned width. EVERY card on the 25 templates whose footer is
+//              set in the display face (V29_DISPLAY_FOOTER_TEMPLATES);
+//              elsewhere a name or type line with a space in it, and a flip
+//              / split back face's. 724 of 726 public production cards.
+//            * planeswalker rows (3.13, 3.3): ability rows sized by their
+//              text in one shared layout, one badge height, the last ability
+//              wrapping short of the loyalty shield when its text would reach
+//              it at the full width (4.19, that part); a long
+//              name beside a detached cost shrinks to fit before the pips
+//              (3.10 for these frames). m15pw (every card) and modern (long
+//              names) — both inside the display-footer templates.
+//            * Alpha print fidelity (4.31): embossed silver name + type line
+//              on the black frame; a colourless ARTIFACT paints MSE's brown
+//              artifact card (a.png) in the print's artifact grey. agclassic
+//              key b, or key c and an artifact — inside the display-footer
+//              templates.
+//            * stat values (3.18): P/T, loyalty and defense shrink to keep
+//              their ink on the plate and print on one centred line;
+//              Draconic's P/T on MSE's plate. statLayoutChanged()
+//              (lib/cards/stat-fit.ts), any template; 0 public cards.
+//            * foil through translucent rules backdrops (4.31): foil cards
+//              on m15pw, m15token, m15tokenartifact, alphatoken, bloomanime
+//              and expeditionland (only bloomanime is outside the
+//              display-footer templates); 0 public cards change.
+//            * aftermath (0.22): the second half turns clockwise, its
+//              sideways art fills its window in the bake, both halves print
+//              at M15's sizes and the bottom name bar shrinks as one so a
+//              long cost stays on it. Template aftermath, every card; 0 in
+//              production.
 // ---------------------------------------------------------------------------
 
-export const CARD_LAYOUT_VERSION = 28;
+export const CARD_LAYOUT_VERSION = 29;
 
 /**
  * Bumps that changed the output of only some frame templates, keyed by the
@@ -218,11 +260,14 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // v27: owner decisions — Alpha re-cut + light ink, Dragon Wing split,
   // Ghostfire rebuilt, planeswalker mana cost and name lowered.
   27: ["agclassic", "alphaland", "tarkirdragon", "tarkirghostfire", "m15pw"],
+  // (v29 is card-scoped only: see VERSION_SCOPES[29].)
 };
 
-/** The card fields a scoped bump can look at. Optional so partial rows
- *  work — a predicate treats a missing `rarity` as "can't tell" and answers
- *  conservatively (affected), the same as passing no card at all. */
+/** The card fields a scoped bump can look at — `cards` columns, as stored.
+ *  Optional so partial rows work — a predicate treats a missing column as
+ *  "can't tell" and answers conservatively (affected), the same as passing
+ *  no card at all. A caller that builds one from a row should select them
+ *  all (lib/cards/bake-core.ts BAKE_SELECT_COLUMNS has them). */
 export type ScopeCard = {
   rarity?: string | null;
   set_icon_url?: string | null;
@@ -230,7 +275,89 @@ export type ScopeCard = {
   /** The raw `frame_style` jsonb — finish-scoped bumps read `.finish`.
    *  `undefined` = not selected (can't tell); null/{} = a regular card. */
   frame_style?: unknown;
+  // v29: the display lines (word spacing) and the printed stats (3.18).
+  title?: string | null;
+  supertype?: string | null;
+  card_type?: string | null;
+  subtypes?: readonly string[] | null;
+  power?: string | null;
+  toughness?: string | null;
+  loyalty?: string | null;
+  defense?: string | null;
+  /** The raw `back_face` jsonb (a flip card's P/T; a flip / split back
+   *  face's name and type line). */
+  back_face?: unknown;
 };
+
+// v29 — the templates on which EVERY card's bake changed: their footer is
+// set in the display face and prints "ART: …", whose T + colon the kerned
+// display lines re-space (the word-spacing track; each template's
+// `footer.font` was "display" at v29). Frozen: v29 is history, a later
+// footer change is its own bump.
+const V29_DISPLAY_FOOTER_TEMPLATES: readonly string[] = [
+  "m15", "m15land", "m15token", "m15artifact", "m15snow", "m15snowland", "m15devoid", "m15pw", "m15tokenartifact",
+  "agclassic", "alphaland", "alphatoken", "saga", "adventure", "extendedart", "fullart", "fullartland",
+  "m15textless", "m15textlessland", "expeditionland", "nyx", "retro", "retroland", "modern", "modernland",
+];
+// v29 — the templates whose rules backdrop now carries the foil sheen.
+const V29_FOIL_BACKDROP_TEMPLATES: readonly string[] = [
+  "m15pw", "m15token", "m15tokenartifact", "alphatoken", "bloomanime", "expeditionland",
+];
+// v29 — the templates that draw a rotated second face (FrameProfile
+// .secondFace), whose back-face name and type line are display lines too.
+const V29_SECOND_FACE_TEMPLATES: readonly string[] = ["flip", "split", "aftermath"];
+
+/** A single-line display text the v29 renderer re-spaces: one with a space
+ *  between two words (displayLine joins them into one no-break run). */
+function v29Respaced(text: string): boolean {
+  return displayLine(text) !== text;
+}
+
+/** buildTypeLine from a card row or a back_face jsonb, as the bake builds it. */
+function v29TypeLine(face: { supertype?: unknown; card_type?: unknown; subtypes?: unknown }): string {
+  return buildTypeLine({
+    supertype: typeof face.supertype === "string" ? face.supertype : null,
+    cardType: (typeof face.card_type === "string" ? face.card_type : null) as CardType | null,
+    subtypes: Array.isArray(face.subtypes) ? face.subtypes.filter((s): s is string => typeof s === "string") : undefined,
+  });
+}
+
+/**
+ * Whether layout v29 changed a card's bake: the OR of the six round-5
+ * tracks' scopes (see the history above). Templates are judged as DRAWN
+ * (normalizeFrameTemplate: {} / null / a retired value is m15). Any column a
+ * term needs that the row doesn't carry → affected.
+ */
+function v29Changed(card: ScopeCard): boolean {
+  if (card.frame_style === undefined) return true;
+  const template = normalizeFrameTemplate(templateOfFrameStyle(card.frame_style));
+  // Word spacing on every display-face footer. This also holds the
+  // planeswalker rows + names (m15pw, modern), Alpha's ink and artifact card
+  // (agclassic) and five of the six foil-backdrop templates.
+  if (V29_DISPLAY_FOOTER_TEMPLATES.includes(template)) return true;
+  // Aftermath's turned second half + print sizes: every card.
+  if (template === "aftermath") return true;
+  // Foil through translucent rules backdrops.
+  if (finishOfFrameStyle(card.frame_style) === "foil" && V29_FOIL_BACKDROP_TEMPLATES.includes(template)) {
+    return true;
+  }
+  // Stat values that shrink, or print on one centred line now; Draconic P/T.
+  // (Conservative on its own for a row missing any stat column.)
+  if (statLayoutChanged(card)) return true;
+  // Word spacing on the footer-less templates: a name or type line with a
+  // space in it — the front face's, and a flip / split back face's.
+  if ([card.title, card.supertype, card.card_type, card.subtypes, card.back_face].some((v) => v === undefined)) {
+    return true;
+  }
+  if (v29Respaced(card.title?.trim() || "Untitled Card") || v29Respaced(v29TypeLine(card))) return true;
+  const back = card.back_face;
+  if (!V29_SECOND_FACE_TEMPLATES.includes(template) || !back || typeof back !== "object") return false;
+  const backTitle = (back as { title?: unknown }).title;
+  return (
+    v29Respaced((typeof backTitle === "string" ? backTitle.trim() : "") || "Untitled") ||
+    v29Respaced(v29TypeLine(back as { supertype?: unknown; card_type?: unknown; subtypes?: unknown }))
+  );
+}
 
 /**
  * Bumps that changed the output of only SOME cards regardless of template,
@@ -252,6 +379,8 @@ export const VERSION_SCOPES: Readonly<Record<number, (card: ScopeCard) => boolea
   26: (card) => card.frame_style === undefined || finishOfFrameStyle(card.frame_style) === "etched",
   // v28 — only the FOIL finish's overlay changed, on any template.
   28: (card) => card.frame_style === undefined || finishOfFrameStyle(card.frame_style) === "foil",
+  // v29 — the round-5 leftovers: every track's scope, OR'd (v29Changed).
+  29: v29Changed,
 };
 
 /** `frame_style.finish` from the jsonb column, or null when absent (= regular). */
@@ -358,6 +487,7 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   26: "sweep", // etched finish — the baked left-edge strip was a bug, not a look
   27: "sweep", // owner decisions: Alpha re-cut + ink, Dragon Wing split, Ghostfire, pw title bar
   28: "sweep", // foil finish — it never reached a saved image
+  29: "sweep", // round-5 leftovers: word spacing, pw rows, Alpha ink, stats, foil backdrops, aftermath
 };
 
 export function rolloutPolicy(version: number, rollout = VERSION_ROLLOUT): RolloutPolicy {

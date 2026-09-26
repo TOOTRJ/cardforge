@@ -5,8 +5,19 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { CardPreview } from "@/components/cards/card-preview";
-import { FoilSheen, FoilStripeSheen, coverPlacement, foilArtLayers, loyaltyStripeRects } from "@/lib/cards/foil-finish";
+import {
+  FoilBackdropSheen,
+  FoilSheen,
+  FoilStripeSheen,
+  artWindowPlacement,
+  coverPlacement,
+  foilArtLayers,
+  loyaltyStripeRects,
+} from "@/lib/cards/foil-finish";
+import { parseLoyaltyAbilities } from "@/lib/cards/card-display";
+import { layoutProfileLoyaltyRows } from "@/lib/cards/loyalty-rows";
 import { getFrameProfile } from "@/lib/cards/template-layout";
+import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 import { setFrameStorageForTests, type FrameManifest } from "@/lib/frames/frame-url";
 
 // ---------------------------------------------------------------------------
@@ -57,6 +68,36 @@ describe("coverPlacement — the CSS/Satori object-fit: cover math", () => {
   });
 });
 
+describe("artWindowPlacement — the same CSS as transform-free boxes", () => {
+  const slot = { x: 100, y: 50, width: 600, height: 400 };
+  const natural = { width: 1200, height: 600 };
+
+  it("is coverPlacement's picture with the zoom applied, filling the whole window, for s ≥ 1", () => {
+    for (const [fx, fy, s] of [
+      [0.25, 0.5, 1],
+      [0.3, 0.8, 1.5],
+      [0, 1, 2],
+    ]) {
+      const { image, visible } = artWindowPlacement(slot, natural, fx, fy, s);
+      const cover = coverPlacement(slot, natural, fx, fy, 1);
+      const [ox, oy] = [slot.x + fx * slot.width, slot.y + fy * slot.height];
+      expect(image.x).toBeCloseTo(ox + (cover.x - ox) * s);
+      expect(image.y).toBeCloseTo(oy + (cover.y - oy) * s);
+      expect(image.width).toBeCloseTo(cover.width * s);
+      expect(image.height).toBeCloseTo(cover.height * s);
+      expect(visible).toEqual(slot);
+    }
+  });
+
+  it("stops at the window shrunk about the focal point for s < 1 (object-fit crops before the scale)", () => {
+    // 600×400 window at s = 0.5 about (100 + 0, 50 + 400): a 300×200 box in
+    // the bottom-left corner, which the cover (400×200) overflows sideways.
+    const { image, visible } = artWindowPlacement(slot, natural, 0, 1, 0.5);
+    expect(visible).toEqual({ x: 100, y: 250, width: 300, height: 200 });
+    expect(image).toEqual({ x: 100, y: 250, width: 400, height: 200 });
+  });
+});
+
 describe("foilArtLayers", () => {
   const art = { href: "a.png", naturalWidth: 1000, naturalHeight: 800 };
   it("redraws the window art, plus the under-frame art on see-through frames", () => {
@@ -75,6 +116,13 @@ describe("foilArtLayers", () => {
     expect(layers).toHaveLength(2);
     expect(layers[1].rect).toEqual(split.secondFace!.artSlot);
     expect(layers[1].rotation).toBe(split.secondFace!.rotation);
+  });
+
+  it("turns aftermath's sideways window clockwise, like the print", () => {
+    const aftermath = getFrameProfile("aftermath");
+    const layers = foilArtLayers({ layout: aftermath, colorKey: "w", art, artPosition: {}, secondArt: art, secondArtPosition: {} });
+    expect(layers[1].rect).toEqual(aftermath.secondFace!.artSlot);
+    expect(layers[1].rotation).toBe(90);
   });
 });
 
@@ -99,6 +147,42 @@ describe("FoilSheen markup", () => {
     // Luminance mask: art layers first, the frame on top.
     const mask = html.slice(html.indexOf("<mask"), html.indexOf("</mask>"));
     expect(mask.lastIndexOf('href="a.png"')).toBeLessThan(mask.indexOf('href="frame.png"'));
+  });
+
+  it("draws a rotated window's layer from the bake's transform-free boxes", () => {
+    const layout = getFrameProfile("aftermath");
+    const second = { href: "b.png", naturalWidth: 1200, naturalHeight: 800 };
+    const html = renderToStaticMarkup(
+      FoilSheen({
+        id: "f",
+        frameHref: "frame.png",
+        art: foilArtLayers({
+          layout,
+          colorKey: "w",
+          art: null,
+          artPosition: {},
+          secondArt: second,
+          secondArtPosition: { focalX: 0, focalY: 1, scale: 0.5 },
+        }),
+        width: 750,
+        height: 1050,
+      }),
+    );
+    expect(html).not.toContain("undefined");
+    // Card space is 1500 × 2100; the window's px box, its placement, and the
+    // quarter turn about the window's centre.
+    const r = layout.secondFace!.artSlot!;
+    const slot = { x: (r.leftPct / 100) * 1500, y: (r.topPct / 100) * 2100, width: (r.widthPct / 100) * 1500, height: (r.heightPct / 100) * 2100 };
+    const { image, visible } = artWindowPlacement(slot, { width: 1200, height: 800 }, 0, 1, 0.5);
+    const r2 = (v: number) => Math.round(v * 100) / 100;
+    expect(html).toContain(
+      `<rect x="${r2(visible.x)}" y="${r2(visible.y)}" width="${r2(visible.width)}" height="${r2(visible.height)}"></rect>`,
+    );
+    expect(html).toContain(`transform="rotate(90 ${r2(slot.x + slot.width / 2)} ${r2(slot.y + slot.height / 2)})"`);
+    const img = html.slice(html.indexOf('<image href="b.png"'));
+    expect(img.slice(0, img.indexOf(">"))).toBe(
+      `<image href="b.png" x="${r2(image.x)}" y="${r2(image.y)}" width="${r2(image.width)}" height="${r2(image.height)}" preserveAspectRatio="none"`,
+    );
   });
 });
 
@@ -219,9 +303,9 @@ const PW_RULES = "Static line.\n+1: Scry 1.\n−2: Draw a card.\n−7: You win."
 const PW_LINES = ["Static line.", "Scry 1.", "Draw a card.", "You win."];
 
 describe("loyaltyStripeRects", () => {
-  it("cuts the rules rect into equal, contiguous rows — the renderers' flex: 1 rows", () => {
+  it("cuts the rules rect into the renderers' rows — contiguous, each its share of the box", () => {
     const rect = { topPct: 60, leftPct: 8, widthPct: 84, heightPct: 30 };
-    const rows = loyaltyStripeRects(rect, 3);
+    const rows = loyaltyStripeRects(rect, [1 / 3, 1 / 3, 1 / 3]);
     expect(rows).toHaveLength(3);
     rows.forEach((r, i) => {
       expect(r.leftPct).toBe(8);
@@ -229,7 +313,12 @@ describe("loyaltyStripeRects", () => {
       expect(r.heightPct).toBeCloseTo(10);
       expect(r.topPct).toBeCloseTo(60 + 10 * i);
     });
-    expect(loyaltyStripeRects(rect, 1)).toEqual([rect]);
+    expect(loyaltyStripeRects(rect, [1])).toEqual([rect]);
+    // Content-sized rows (layoutLoyaltyRows): a tall last row.
+    const [a, b, c] = loyaltyStripeRects(rect, [0.2, 0.2, 0.6]);
+    expect([a.heightPct, b.heightPct, c.heightPct].map((h) => +h.toFixed(6))).toEqual([6, 6, 18]);
+    expect(b.topPct).toBeCloseTo(a.topPct + a.heightPct);
+    expect(c.topPct + c.heightPct).toBeCloseTo(90);
   });
 });
 
@@ -280,7 +369,10 @@ describe("foil finish — planeswalker ability stripes in the preview", () => {
     const sheens = stripeSheens(container);
     expect(sheens).toHaveLength(PW_LINES.length);
     const p = getFrameProfile("m15pw");
-    const expected = loyaltyStripeRects(p.rules.rect, PW_LINES.length);
+    const expected = loyaltyStripeRects(
+      p.rules.rect,
+      layoutProfileLoyaltyRows(p, parseLoyaltyAbilities(PW_RULES), 7 / 5).rowFractions,
+    );
     const ids = new Set<string>();
     sheens.forEach((svg, i) => {
       const row = svg.parentElement as HTMLElement;
@@ -367,7 +459,7 @@ describe("foil stripes — one component, both renderers", () => {
       const src = read(file);
       expect(src, file).toMatch(/import \{[^}]*FoilStripeSheen[^}]*loyaltyStripeRects[^}]*\} from "@\/lib\/cards\/foil-finish"/);
       const rows = rowsSource(src, fn);
-      expect(rows, file).toContain("loyaltyStripeRects(slot.rect, abilities.length)");
+      expect(rows, file).toContain("loyaltyStripeRects(slot.rect, rowsLayout.rowFractions)");
       expect(rows, file).toContain("background: stripe(i),");
       expect(rows, file).toContain("fill={stripe(i)}");
       const sheen = rows.indexOf("<FoilStripeSheen");
@@ -385,5 +477,150 @@ describe("foil stripes — one component, both renderers", () => {
     const at = bake.indexOf("? LoyaltyRowsBake({");
     expect(at).toBeGreaterThan(0);
     expect(bake.slice(at, bake.indexOf("})", at))).toContain("foil: plateFoil,");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Translucent rules backdrops (TODO 4.31): `rules.backdropHex` paints over the
+// full-card sheen the way the ability stripes do, so on a foil card it carries
+// its own (FoilBackdropSheen) — inside the backdrop, masked by its colour,
+// under the watermark + text. Real-pixel checks live in foil-bake.test.tsx.
+// ---------------------------------------------------------------------------
+
+const cardSpaceBox = (r: { topPct: number; leftPct: number; widthPct: number; heightPct: number }) =>
+  [(r.leftPct / 100) * 1500, (r.topPct / 100) * 2100, (r.widthPct / 100) * 1500, (r.heightPct / 100) * 2100]
+    .map((v) => Math.round(v * 100) / 100)
+    .join(" ");
+
+describe("foil backdrops — which frames have one", () => {
+  it("is exactly the six templates whose foil bakes FoilBackdropSheen changes", () => {
+    // A frame that gains a rules backdrop changes its foil bakes, so it
+    // needs a layout-version bump scoped to it.
+    const withBackdrop = FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).rules.backdropHex);
+    expect(withBackdrop).toEqual(["m15token", "m15pw", "m15tokenartifact", "alphatoken", "bloomanime", "expeditionland"]);
+    // The renderers read only the rules slot's.
+    for (const t of FRAME_TEMPLATE_VALUES) {
+      const p = getFrameProfile(t);
+      for (const slot of [p.title, p.type, p.footer, p.adventure?.rules, p.secondFace?.rules]) {
+        expect(slot?.backdropHex, t).toBeUndefined();
+      }
+    }
+  });
+});
+
+describe("FoilBackdropSheen markup", () => {
+  it("masks the card-space rainbow with the backdrop's own colour, over just the rules box", () => {
+    const rect = getFrameProfile("m15pw").rules.rect;
+    const html = renderToStaticMarkup(
+      FoilBackdropSheen({ id: "b", region: rect, fill: "rgba(244,238,226,0.72)", width: 1253, height: 594 }),
+    );
+    expect(html).not.toContain("undefined");
+    expect(html).not.toMatch(/mix-blend|inset/);
+    expect(html).toContain(`viewBox="${cardSpaceBox(rect)}"`);
+    expect(html.match(/<linearGradient[^>]*x2="1500" y2="2100"/g)).toHaveLength(2);
+    const mask = html.slice(html.indexOf("<mask"), html.indexOf("</mask>"));
+    expect(mask).toContain('id="b-lum"');
+    expect(mask.match(/<rect /g)).toHaveLength(1);
+    expect(mask).toContain('fill="rgba(244,238,226,0.72)"');
+    expect(html).toContain('mask="url(#b-lum)"');
+  });
+});
+
+describe("foil finish — rules backdrops in the preview", () => {
+  const backdropsOf = (root: HTMLElement, hex: string) =>
+    Array.from(root.querySelectorAll("div")).filter((d) => norm(d.style.background) === norm(hex));
+
+  it("puts a sheen masked by the backdrop inside it, clipped to its corners, under the watermark + text", () => {
+    for (const [template, cardType] of [
+      ["m15pw", "creature"],
+      ["m15token", "token"],
+      ["m15tokenartifact", "token"],
+      ["alphatoken", "token"],
+      ["bloomanime", "creature"],
+      ["expeditionland", "land"],
+    ] as const) {
+      const p = getFrameProfile(template);
+      const hex = p.rules.backdropHex!;
+      const { container } = render(
+        <CardPreview
+          title="Probe"
+          cardType={cardType}
+          colorIdentity={["white"]}
+          rulesText="Vigilance"
+          watermark={{ kind: "mana", key: "w" }}
+          frameStyle={{ template, finish: "foil" }}
+        />,
+      );
+      const backdrops = backdropsOf(container, hex);
+      expect(backdrops, template).toHaveLength(1);
+      const [backdrop] = backdrops;
+      expect(backdrop.style.zIndex).toBe("9");
+      expect(backdrop.style.overflow, template).toBe("hidden");
+      expect(backdrop.children, template).toHaveLength(1);
+      const svg = backdrop.firstElementChild as SVGSVGElement;
+      expect(svg.tagName.toLowerCase()).toBe("svg");
+      expect(norm(svg.querySelector("mask rect")?.getAttribute("fill"))).toBe(norm(hex));
+      expect(svg.querySelector("mask")!.id).toMatch(/^foil-[A-Za-z0-9_-]+-backdrop-lum$/);
+      expect([svg.getAttribute("width"), svg.getAttribute("height")]).toEqual(["100%", "100%"]);
+      expect([svg.style.position, svg.style.top, svg.style.left]).toEqual(["absolute", "0px", "0px"]);
+      // The rules box in card space, so the rainbow runs on from the card's.
+      expect(svg.getAttribute("viewBox")).toBe(cardSpaceBox(p.rules.rect));
+      // The watermark (z10) and the text (z20) are layers above it.
+      const watermark = container.querySelector("i.ms-w")?.parentElement as HTMLElement;
+      expect(watermark.style.zIndex, template).toBe("10");
+      cleanup();
+    }
+  });
+
+  it("leaves the backdrop of every other finish exactly as it was", () => {
+    const hex = getFrameProfile("m15pw").rules.backdropHex!;
+    for (const finish of ["regular", "etched", "showcase"] as const) {
+      const { container } = render(
+        <CardPreview title="Probe" cardType="creature" colorIdentity={["white"]} rulesText="Vigilance" frameStyle={{ template: "m15pw", finish }} />,
+      );
+      const backdrops = backdropsOf(container, hex);
+      expect(backdrops, finish).toHaveLength(1);
+      expect(backdrops[0].children, finish).toHaveLength(0);
+      expect(backdrops[0].style.overflow, finish).toBe("");
+      expect(container.querySelector('[id$="-backdrop-lum"]'), finish).toBeNull();
+      cleanup();
+    }
+  });
+
+  it("draws nothing where no backdrop is drawn (a planeswalker's ability rows, an empty box)", () => {
+    for (const rulesText of [PW_RULES, null]) {
+      const { container } = render(
+        <CardPreview
+          title="Probe, the Walker"
+          cardType="planeswalker"
+          colorIdentity={["white"]}
+          rulesText={rulesText}
+          loyalty="4"
+          frameStyle={{ template: "m15pw", finish: "foil" }}
+        />,
+      );
+      expect(backdropsOf(container, getFrameProfile("m15pw").rules.backdropHex!)).toHaveLength(0);
+      expect(container.querySelector('[id$="-backdrop-lum"]')).toBeNull();
+      cleanup();
+    }
+  });
+});
+
+describe("foil backdrops — one component, both renderers", () => {
+  it("each renderer draws FoilBackdropSheen inside the backdrop, masked by the colour it paints", () => {
+    for (const file of ["lib/render/card-image.tsx", "components/cards/card-preview.tsx"]) {
+      const src = read(file);
+      expect(src, file).toMatch(/import \{[^}]*FoilBackdropSheen[^}]*\} from "@\/lib\/cards\/foil-finish"/);
+      const start = src.indexOf("background: layout.rules.backdropHex,");
+      const sheen = src.indexOf("<FoilBackdropSheen", start);
+      expect(start, file).toBeGreaterThan(0);
+      // After the backdrop's own paint, before the watermark layer.
+      expect(sheen, file).toBeGreaterThan(start);
+      expect(sheen, file).toBeLessThan(src.indexOf("watermarkOpacity(effectiveWatermark)", start));
+      const block = src.slice(sheen, src.indexOf("/>", sheen));
+      expect(block, file).toContain("region={layout.rules.rect}");
+      expect(block, file).toContain("fill={layout.rules.backdropHex}");
+      expect(src.slice(start, sheen), file).toContain("{plateFoil ? (");
+    }
   });
 });

@@ -58,14 +58,16 @@ test.describe("seeded dev data renders", () => {
     await expect(
       page.getByRole("heading", { name: "Veyra, Stormbound", exact: true }),
     ).toBeVisible();
-    await expect(page.getByText(/legendary planeswalker — veyra/i).first()).toBeVisible();
+    // \s+: the preview joins its type line with no-break spaces (displayLine),
+    // and a regex matches the raw text.
+    await expect(page.getByText(/legendary\s+planeswalker\s+—\s+veyra/i).first()).toBeVisible();
     await expect(page.getByText(/the -2 feels right at four loyalty/i)).toBeVisible();
 
     await page.goto("/card/dev_artist/the-sundering-of-aldmoor");
     await expect(
       page.getByRole("heading", { name: "The Sundering of Aldmoor", exact: true }),
     ).toBeVisible();
-    await expect(page.getByText(/enchantment — saga/i).first()).toBeVisible();
+    await expect(page.getByText(/enchantment\s+—\s+saga/i).first()).toBeVisible();
   });
 
   test("the seeded public deck and challenges are browsable", async ({ page }) => {

@@ -50,6 +50,82 @@ describe("title band", () => {
   });
 });
 
+describe("display-font lines", () => {
+  it("hand every title, type line and display footer to displayLine in both renderers", () => {
+    // Satori places a word after a space at unkerned advances (TODO 4.31):
+    // a single-line Beleren text must reach either renderer as one run.
+    for (const src of [BAKE, PREVIEW]) {
+      expect(src).not.toMatch(/>\s*\{(title|safeTitle|name|typeLine)\}\s*<\/span>/);
+      expect(src).toMatch(/\{slotLine\(\s*layout\.footer\.font,\s*\w+\.artistCredit/);
+    }
+    expect(BAKE).toContain("{slotLine(layout.footer.font, watermarkText)}");
+    expect(PREVIEW).toContain("{slotLine(layout.footer.font, footerWatermark)}");
+    // The name: whole, or as fitted before a detached cost (m15pw, modern).
+    expect(BAKE).toContain("{displayLine(titleFit ? titleFit.text : title)}");
+    expect(PREVIEW).toContain("{displayLine(titleFit ? titleFit.text : safeTitle)}");
+    expect(BAKE.match(/\{displayLine\(typeLine\)\}/g)).toHaveLength(3);
+    expect(PREVIEW.match(/\{displayLine\(typeLine\)\}/g)).toHaveLength(2);
+    expect(PREVIEW).toMatch(/\{displayLine\(\s*buildTypeLine\(/);
+    expect(BAKE.match(/\{displayLine\(name\)\}/g)).toHaveLength(2);
+    expect(PREVIEW.match(/\{displayLine\(name\)\}/g)).toHaveLength(2);
+  });
+
+  it("centre the bake's token title and type line on their kerned width, with no filler span", () => {
+    // Satori sizes a text node unkerned and draws it kerned: a centred band
+    // must hand its line to alignedText (display-line-bake.test.ts measures
+    // it), and must not add the empty span + gap the preview never renders.
+    // The band's per-colour ink (bandTextStyle, TODO 4.31) is spread after
+    // it: colour + shadow only, so the kerned-width margin stands.
+    expect(BAKE.match(/style=\{\{\s*\.\.\.alignedText\(/g)).toHaveLength(2);
+    expect(BAKE).toMatch(/\.\.\.alignedText\(layout\.title, displayLine\(title\),[^\n]*\n\s*\.\.\.titleInk,\n/);
+    expect(BAKE).toMatch(/\.\.\.alignedText\(typeSlot, displayLine\(typeLine\),[^\n]*\n\s*\.\.\.typeInk,\n/);
+    expect(BAKE).toContain("isAligned(layout.title) ? null : (");
+    expect(BAKE).toContain("isAligned(typeSlot) ? null : (");
+  });
+});
+
+describe("planeswalker ability rows", () => {
+  /** A renderer's rows component, up to its closing brace. */
+  const fn = (src: string, name: string) => {
+    const start = src.indexOf(`function ${name}(`);
+    return src.slice(start, src.indexOf("\n}\n", start));
+  };
+  const BAKE_ROWS = fn(BAKE, "LoyaltyRowsBake");
+  const PREVIEW_ROWS = fn(PREVIEW, "LoyaltyRows");
+
+  it("draw one row layout and one badge box from lib/cards/loyalty-rows in both renderers", () => {
+    // Content-sized rows (TODO 3.13): the shared layout, never equal flex rows,
+    // from the one profile call (rules box, size, leading, loyalty shield).
+    for (const src of [BAKE, PREVIEW]) expect(src).toContain("layoutProfileLoyaltyRows(layout, ");
+    expect(BAKE_ROWS).toContain("loyaltyRowEdgesPx(rowsLayout.rowFractions");
+    expect(PREVIEW_ROWS).toContain("height: `${rowFractions[i] * 100}%`");
+    // One badge height (TODO 3.3: the preview's was 1.6 em, the bake's 1.5).
+    for (const rows of [BAKE_ROWS, PREVIEW_ROWS]) {
+      expect(rows).toContain("LOYALTY_ROW.badgeHeightEm");
+      expect(rows).toContain("LOYALTY_ROW.badgeWidthEm");
+      expect(rows).toContain("LOYALTY_ROW.padYEm");
+      expect(rows).not.toMatch(/\* (1\.6|1\.5|2\.3|0\.22)\b/);
+      // The last ability wraps short of the loyalty shield (TODO 4.19).
+      expect(rows).toMatch(/i === last && [A-Za-z]+ > 0 \? \{ marginRight: /);
+    }
+    expect(BAKE_ROWS).toContain("Math.round(rowsLayout.lastRowInsetPct * cardWidth)");
+    expect(PREVIEW_ROWS).toContain("cqw(lastRowInsetPct)");
+  });
+});
+
+describe("title next to a detached cost", () => {
+  it("takes its text, size and width from fitDetachedCostTitle in both renderers", () => {
+    expect(PREVIEW).toContain("fitDetachedCostTitle(layout, safeTitle, face.cost)");
+    expect(BAKE).toContain("fitDetachedCostTitle(layout, title, card.cost)");
+    // ...joined for one kerned run like every display line (displayLine).
+    expect(PREVIEW).toContain("{displayLine(titleFit ? titleFit.text : safeTitle)}");
+    expect(BAKE).toContain("{displayLine(titleFit ? titleFit.text : title)}");
+    expect(PREVIEW).toContain("sizePct: titleFit.sizePct");
+    // The bake sets a shrunk name at the whole pixel below its fitted size.
+    expect(BAKE).toContain("Math.floor(titleFit.sizePct * width) / width");
+  });
+});
+
 describe("landscape renders", () => {
   it("report the rotated display size and draw the composite card 7:5", async () => {
     // card-image.tsx pulls fonts/frames lazily, but its module graph is

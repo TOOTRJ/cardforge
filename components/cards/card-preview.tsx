@@ -18,23 +18,39 @@ import { SetSymbol } from "@/components/cards/set-symbol";
 import {
   FrameLayer,
   frameImageUrl,
+  frameMasterKey,
   frameSplitFor,
   pickFrameColorKey,
   webpVariant,
 } from "@/components/cards/frame-layer";
 import { EtchedSheen } from "@/lib/cards/etched-finish";
 import {
+  FoilBackdropSheen,
   FoilSheen,
   FoilStripeSheen,
   foilArtLayers,
   loyaltyStripeRects,
   type FoilArtSource,
 } from "@/lib/cards/foil-finish";
-import { fitRulesSizePct, fitSingleLineSizePct } from "@/lib/cards/render-tiers";
+import {
+  LOYALTY_ROW,
+  layoutProfileLoyaltyRows,
+  type LoyaltyRowsLayout,
+} from "@/lib/cards/loyalty-rows";
+import {
+  NAME_COST_GAP_PCT,
+  fitRulesSizePct,
+  fitSingleLineSizePct,
+  secondFaceLineSizes,
+} from "@/lib/cards/render-tiers";
+import { fitStatSizePct, ptValue, STAT_BADGE_INSET } from "@/lib/cards/stat-fit";
+import { fitDetachedCostTitle } from "@/lib/cards/title-band";
 import {
   PLACEHOLDER_FLAVOR_TEXT,
   PLACEHOLDER_RULES_TEXT,
   RULES_TEXT,
+  orientationFromAspect,
+  type CardOrientation,
 } from "@/lib/cards/typography";
 import {
   tokenizeRulesText,
@@ -43,10 +59,12 @@ import {
 } from "@/lib/cards/rules-text";
 import {
   buildTypeLine,
+  displayLine,
   normalizeFrameTemplate,
   showsDefense,
   showsLoyalty,
   showsPowerToughness,
+  slotLine,
   type LoyaltyAbility,
   type SagaChapter,
 } from "@/lib/cards/card-display";
@@ -56,6 +74,7 @@ import {
 } from "@/lib/cards/face-content";
 import {
   SAGA_MARKER_POINTS,
+  bandTextStyle,
   brandMarkLayout,
   footerInk,
   loyaltyBadgeAssetFor,
@@ -584,15 +603,24 @@ function CardFace({
   /** pipglyph.com overlay bottom-right — the bake's brand mark. */
   brandMark?: boolean;
 }) {
+  // The card's colour (plates, watermark tint) and the frame master it
+  // paints — the same, but where the profile dresses a colour by type:
+  // Alpha's colourless artifact paints the artifact card "a" (frameMasterKey,
+  // the bake's twin).
   const colorKey = pickFrameColorKey(colorIdentity);
+  const masterKey = frameMasterKey(layout, colorIdentity, face);
   // A two-colour Dragon Wing card draws BOTH colours' frames split down the
   // seam (FrameProfile.twoColorSplit); the plates keep colorKey ("m").
   const frameSplit = frameSplitFor(layout, colorIdentity);
   const safeTitle = face.title?.trim() || "Untitled Card";
   const markLayout = brandMarkLayout(layout);
-  // Per-frame-colour footer ink (Alpha: silver on every frame but white) —
+  // Per-frame-master footer ink (Alpha: silver on every frame but white) —
   // the same footerInk() the bake resolves.
-  const footerInkResolved = layout.footer ? footerInk(layout.footer, colorKey) : null;
+  const footerInkResolved = layout.footer ? footerInk(layout.footer, masterKey) : null;
+  // …and the name's and type line's (the text spans only, not the pips or
+  // the set symbol) — the bake's bandTextStyle() twins.
+  const titleInk = bandTextStyle(layout.title, masterKey);
+  const typeInk = bandTextStyle(layout.type, masterKey);
   const showCost =
     !layout.hideCost && face.cardType !== "land" && Boolean(face.cost?.trim());
 
@@ -622,8 +650,9 @@ function CardFace({
   const foilSecondArt = useNaturalSize(
     isFoil && layout.secondFace?.artSlot ? secondFace?.artUrl : null,
   );
-  // Printed layers drawn above the full-card sheen — the stat plates and the
-  // planeswalker ability stripes — carry their own (the bake's twins).
+  // Printed layers drawn above the full-card sheen — the stat plates, the
+  // planeswalker ability stripes and the rules backdrop — carry their own
+  // (the bake's twins).
   const plateFoil = isFoil ? { landscape: layout.orientation === "landscape" } : null;
 
   const focalX = clamp(face.artPosition?.focalX ?? 0.5, 0, 1);
@@ -633,7 +662,9 @@ function CardFace({
   const aspect = layout.orientation === "landscape" ? 5 / 7 : 7 / 5;
   // Planeswalker ability rows spend ~20% of the box on the badge rail plus
   // per-row padding; narrow the rect handed to the fit estimate accordingly
-  // (the same correction in both renderers keeps preview == bake).
+  // (the same correction in both renderers keeps preview == bake). The rows
+  // themselves are fitted by layoutLoyaltyRows below; this size is left for
+  // a walker with no abilities (the plain box).
   const usesLoyaltyRows =
     Boolean(layout.loyaltyRows) && showsLoyalty(face.cardType);
   const fitRect = usesLoyaltyRows
@@ -657,10 +688,19 @@ function CardFace({
   const loyaltyAbilities = usesLoyaltyRows
     ? resolveLoyaltyRows(face.faceContent, face.rulesText)
     : [];
+  // Their text size and content-sized row heights, the last row's text short
+  // of the loyalty shield when it would reach it — the bake's twin
+  // (lib/cards/loyalty-rows.ts). The editor-only empty walker lays out its
+  // hint rows the same way.
+  const loyaltyRowsFor = (abilities: LoyaltyAbility[]) =>
+    layoutProfileLoyaltyRows(layout, abilities, aspect);
   // Saga chapter rail content — same structured-first resolution.
   const sagaContent = layout.chapters
     ? resolveSagaChapters(face.faceContent, face.rulesText)
     : null;
+  // A detached cost box (costRect): the name stops before the pips, shrinking
+  // to fit there when it is long (the bake's twin, lib/cards/title-band.ts).
+  const titleFit = showCost ? fitDetachedCostTitle(layout, safeTitle, face.cost) : null;
   // Explicit watermark wins; basic lands (Plains/Island/…) automatically get
   // the authentic large mana symbol in the text box.
   const basicLandFace = {
@@ -683,7 +723,7 @@ function CardFace({
   // See-through frames (colourless Eldrazi, devoid, colourless token): the
   // art also runs under the whole frame (TODO 4.17). Same object-fit cover
   // at the card's focal point in both renderers; the window keeps its crop.
-  const underArtRect = underFrameArtRect(layout, colorKey);
+  const underArtRect = underFrameArtRect(layout, masterKey);
 
   return (
     <div className="absolute inset-0">
@@ -756,7 +796,7 @@ function CardFace({
       {/* Frame PNG — above the art so its painted slot border is on top. */}
       <FrameLayer
         template={template}
-        colorIdentity={colorIdentity}
+        masterKey={masterKey}
         zIndex={5}
         split={frameSplit}
       />
@@ -768,7 +808,7 @@ function CardFace({
       {isEtched ? (
         <EtchedSheen
           id={etchedId}
-          frameHref={frameImageUrl(template, frameSplit?.leftKey ?? colorKey)}
+          frameHref={frameImageUrl(template, frameSplit?.leftKey ?? masterKey)}
           split={
             frameSplit
               ? {
@@ -794,7 +834,7 @@ function CardFace({
           id={foilId}
           // Split frames mask with the two halves the face paints (like the
           // etched sheen); plates below keep the gold "m" key.
-          frameHref={frameImageUrl(template, frameSplit?.leftKey ?? colorKey)}
+          frameHref={frameImageUrl(template, frameSplit?.leftKey ?? masterKey)}
           split={
             frameSplit
               ? { href: frameImageUrl(template, frameSplit.rightKey), atPct: frameSplit.atPct }
@@ -802,7 +842,7 @@ function CardFace({
           }
           art={foilArtLayers({
             layout,
-            colorKey,
+            colorKey: masterKey,
             art: foilArt,
             artPosition: face.artPosition,
             secondArt: foilSecondArt,
@@ -819,8 +859,10 @@ function CardFace({
       {showPT && layout.pt ? (
         <StatOverlay
           slot={layout.pt}
-          value={`${face.power ?? "—"}/${face.toughness ?? "—"}`}
+          value={ptValue(face.power, face.toughness)}
           colorKey={colorKey}
+          masterKey={masterKey}
+          orientation={orientationFromAspect(aspect)}
           foil={plateFoil && { ...plateFoil, id: `${foilId}-pt` }}
         />
       ) : null}
@@ -829,6 +871,8 @@ function CardFace({
           slot={layout.loyalty}
           value={String(face.loyalty ?? "")}
           colorKey={colorKey}
+          masterKey={masterKey}
+          orientation={orientationFromAspect(aspect)}
           foil={plateFoil && { ...plateFoil, id: `${foilId}-loyalty` }}
         />
       ) : null}
@@ -837,6 +881,8 @@ function CardFace({
           slot={layout.defense}
           value={String(face.defense)}
           colorKey={colorKey}
+          masterKey={masterKey}
+          orientation={orientationFromAspect(aspect)}
           foil={plateFoil && { ...plateFoil, id: `${foilId}-defense` }}
         />
       ) : null}
@@ -845,9 +891,19 @@ function CardFace({
           defines a costRect, the pips render in their OWN absolutely
           positioned box (right-aligned, vertically centered) so name and
           cost can be aligned independently in the layout editor. */}
-      <BandSlot slot={layout.title} italic={isShowcase}>
-        <span style={ELLIPSIS} title={safeTitle}>
-          {safeTitle}
+      <BandSlot
+        slot={titleFit ? { ...layout.title, sizePct: titleFit.sizePct } : layout.title}
+        italic={isShowcase}
+      >
+        <span
+          style={
+            titleFit
+              ? { ...ELLIPSIS, ...titleInk, maxWidth: cqw(titleFit.widthPct) }
+              : { ...ELLIPSIS, ...titleInk }
+          }
+          title={safeTitle}
+        >
+          {displayLine(titleFit ? titleFit.text : safeTitle)}
         </span>
         {showCost && !layout.costRect ? (
           <ManaCostGlyphs
@@ -899,12 +955,14 @@ function CardFace({
           }),
         }}
       >
-        <span style={ELLIPSIS}>
-          {buildTypeLine({
-            supertype: face.supertype,
-            cardType: face.cardType,
-            subtypes: face.subtypes,
-          })}
+        <span style={{ ...ELLIPSIS, ...typeInk }}>
+          {displayLine(
+            buildTypeLine({
+              supertype: face.supertype,
+              cardType: face.cardType,
+              subtypes: face.subtypes,
+            }),
+          )}
         </span>
         {!layout.symbolRect ? (
           <SetSymbol
@@ -952,8 +1010,24 @@ function CardFace({
             zIndex: 9,
             background: layout.rules.backdropHex,
             borderRadius: "1.5cqw",
+            // Foil: clip the sheen to the rounded corners.
+            ...(plateFoil ? { overflow: "hidden" } : {}),
           }}
-        />
+        >
+          {/* Foil: the backdrop's own sheen, masked by its colour, over the
+              backdrop and under the watermark + text (the bake's twin). */}
+          {plateFoil ? (
+            <FoilBackdropSheen
+              id={`${foilId}-backdrop`}
+              region={layout.rules.rect}
+              fill={layout.rules.backdropHex}
+              landscape={plateFoil.landscape}
+              width="100%"
+              height="100%"
+              style={{ pointerEvents: "none" }}
+            />
+          ) : null}
+        </div>
       ) : null}
 
       {/* Design watermark — faint mark centered in the rules box, above the
@@ -1029,7 +1103,7 @@ function CardFace({
           slot={layout.rules}
           rows={layout.loyaltyRows}
           abilities={loyaltyAbilities}
-          sizePct={rulesSizePct}
+          rowsLayout={loyaltyRowsFor(loyaltyAbilities)}
           foil={plateFoil && { ...plateFoil, id: `${foilId}-rows` }}
         />
       ) : layout.loyaltyRows && usesLoyaltyRows && staticInEditor ? (
@@ -1040,15 +1114,8 @@ function CardFace({
           pipOverrides={pipOverrides}
           slot={layout.rules}
           rows={layout.loyaltyRows}
-          abilities={[
-            {
-              cost: null,
-              text: "Loyalty abilities appear here — add them on the Text & stats step.",
-            },
-            { cost: null, text: "" },
-            { cost: null, text: "" },
-          ]}
-          sizePct={rulesSizePct}
+          abilities={EDITOR_LOYALTY_HINT}
+          rowsLayout={loyaltyRowsFor(EDITOR_LOYALTY_HINT)}
           placeholder
           foil={plateFoil && { ...plateFoil, id: `${foilId}-rows` }}
         />
@@ -1139,12 +1206,17 @@ function CardFace({
           }}
         >
           <span style={ELLIPSIS}>
-            {face.artistCredit?.trim() ? `Art: ${face.artistCredit}` : "Art: Unknown"}
+            {slotLine(
+              layout.footer.font,
+              face.artistCredit?.trim() ? `Art: ${face.artistCredit}` : "Art: Unknown",
+            )}
           </span>
           {/* Footer-right: the owner's custom mark, or nothing — mirrors the
               bake (lib/render/card-image.tsx, layout v19). */}
           {footerWatermark ? (
-            <span style={{ flexShrink: 0 }}>{footerWatermark}</span>
+            <span style={{ flexShrink: 0 }}>
+              {slotLine(layout.footer.font, footerWatermark)}
+            </span>
           ) : null}
         </div>
       ) : null}
@@ -1246,11 +1318,18 @@ function StatOverlay({
   slot,
   value,
   colorKey,
+  masterKey,
+  orientation,
   foil = null,
 }: {
   slot: StatSlot;
   value: string;
+  /** The card's colour key — picks the plate. */
   colorKey: string;
+  /** The frame master the value prints on (frameMasterKey) — picks the ink. */
+  masterKey: string;
+  /** The card's orientation — the shrink-to-fit floor is a point size. */
+  orientation: CardOrientation;
   /** Foil finish: the plate gets the card's sheen too (the full-card foil
    *  layer sits below the plates) — the bake's StatBake twin. */
   foil?: { id: string; landscape: boolean } | null;
@@ -1286,13 +1365,23 @@ function StatOverlay({
           />
         </picture>
         {plateFoil(slot.plateRect, { ...rectStyle(slot.plateRect), zIndex: 22 })}
-        <StatOverlay slot={{ ...slot, plateAssetPathTemplate: undefined, plateRect: undefined }} value={value} colorKey={colorKey} />
+        <StatOverlay
+          slot={{ ...slot, plateAssetPathTemplate: undefined, plateRect: undefined }}
+          value={value}
+          colorKey={colorKey}
+          masterKey={masterKey}
+          orientation={orientation}
+        />
       </>
     );
   }
-  // Per-frame-colour ink (Alpha: silver on every frame but white) — the
+  // Per-frame-master ink (Alpha: silver on every frame but white) — the
   // same slotInk() the bake's StatBake resolves.
-  const ink = slotInk(slot, colorKey);
+  const ink = slotInk(slot, masterKey);
+  // A value whose ink would run off its face shrinks to fit (TODO 3.18);
+  // one that fits keeps the profile size — the same fitStatSizePct() as the
+  // bake.
+  const sizePct = fitStatSizePct(slot, value, orientation);
   return (
     <div
       className="pointer-events-none absolute flex items-center justify-center"
@@ -1322,7 +1411,7 @@ function StatOverlay({
           aria-hidden
           className="absolute"
           style={{
-            inset: "8% 12%",
+            inset: `${STAT_BADGE_INSET.yPct}% ${STAT_BADGE_INSET.xPct}%`,
             background: slot.badgeColorHex,
             borderRadius: "42%",
             boxShadow: "0 0.4cqw 1cqw rgba(0,0,0,0.45)",
@@ -1334,7 +1423,12 @@ function StatOverlay({
         className="relative"
         style={{
           fontFamily: DISPLAY_FONT,
-          fontSize: cqw(slot.sizePct),
+          fontSize: cqw(sizePct),
+          // One line, centred, always — the bake's StatBake twin: a value
+          // wider than its rect (its face may be wider) overflows it evenly
+          // instead of wrapping after a slash.
+          whiteSpace: "nowrap",
+          flexShrink: 0,
           fontWeight: slot.weight ?? 700,
           color: ink.colorHex,
           ...(slot.valueDxEm || slot.valueDyEm
@@ -1513,7 +1607,7 @@ function AdventurePanel({
     <>
       <BandSlot slot={slot.title}>
         <span style={ELLIPSIS} title={name}>
-          {name}
+          {displayLine(name)}
         </span>
         {showCost ? (
           <ManaCostGlyphs
@@ -1524,7 +1618,7 @@ function AdventurePanel({
         ) : null}
       </BandSlot>
       <BandSlot slot={slot.type}>
-        <span style={ELLIPSIS}>{typeLine}</span>
+        <span style={ELLIPSIS}>{displayLine(typeLine)}</span>
       </BandSlot>
       <div
         style={{
@@ -1590,6 +1684,14 @@ function SecondFacePanel({
   });
   const showCost = Boolean(slot.costSizePct) && Boolean(data.cost?.trim());
   const showPT = Boolean(slot.pt) && Boolean(data.power || data.toughness);
+  // Same math as SecondFaceBake: aftermath's name bar (name + cost) and type
+  // line shrink to fit their short sideways bars.
+  const lineSizes = secondFaceLineSizes({
+    slot,
+    name,
+    typeLine,
+    cost: showCost ? data.cost : null,
+  });
   const rulesSizePct = fitRulesSizePct({
     rulesText: data.rulesText,
     flavorText: null,
@@ -1609,20 +1711,20 @@ function SecondFacePanel({
           display: "flex",
           alignItems: "center",
           justifyContent: showCost ? "space-between" : "flex-start",
-          gap: "2cqw",
+          gap: cqw(NAME_COST_GAP_PCT),
           fontFamily: DISPLAY_FONT,
-          fontSize: cqw(slot.title.sizePct),
+          fontSize: cqw(lineSizes.titleSizePct),
           fontWeight: slot.title.weight ?? 600,
           color: slot.title.colorHex,
         }}
       >
         <span style={ELLIPSIS} title={name}>
-          {name}
+          {displayLine(name)}
         </span>
         {showCost ? (
           <ManaCostGlyphs
             cost={data.cost}
-            fontSize={pipFont(slot.costSizePct ?? slot.title.sizePct)}
+            fontSize={pipFont(lineSizes.costSizePct)}
             overrides={pipOverrides}
           />
         ) : null}
@@ -1636,12 +1738,12 @@ function SecondFacePanel({
           display: "flex",
           alignItems: "center",
           fontFamily: DISPLAY_FONT,
-          fontSize: cqw(slot.type.sizePct),
+          fontSize: cqw(lineSizes.typeSizePct),
           fontWeight: slot.type.weight ?? 600,
           color: slot.type.colorHex,
         }}
       >
-        <span style={ELLIPSIS}>{typeLine}</span>
+        <span style={ELLIPSIS}>{displayLine(typeLine)}</span>
       </div>
       <div
         style={{
@@ -1676,13 +1778,22 @@ function SecondFacePanel({
             alignItems: "center",
             justifyContent: "center",
             fontFamily: DISPLAY_FONT,
-            fontSize: cqw(slot.pt.sizePct),
+            // Shrinks to fit, on one line, like the front's StatOverlay (TODO 3.18).
+            fontSize: cqw(
+              fitStatSizePct(
+                slot.pt,
+                ptValue(data.power, data.toughness),
+                orientationFromAspect(aspect),
+                slot.rotation === 180,
+              ),
+            ),
+            whiteSpace: "nowrap",
             fontWeight: slot.pt.weight ?? 700,
             color: slot.pt.colorHex,
             ...(slot.pt.shadowCss ? { textShadow: slot.pt.shadowCss } : {}),
           }}
         >
-          {`${data.power ?? "—"}/${data.toughness ?? "—"}`}
+          {ptValue(data.power, data.toughness)}
         </div>
       ) : null}
     </>
@@ -1897,14 +2008,22 @@ function FlavorBlock({
   );
 }
 
+// The editor-only empty walker's hint rows.
+const EDITOR_LOYALTY_HINT: LoyaltyAbility[] = [
+  { cost: null, text: "Loyalty abilities appear here — add them on the Text & stats step." },
+  { cost: null, text: "" },
+  { cost: null, text: "" },
+];
+
 // LoyaltyRows — printed-planeswalker ability rows: a loyalty-cost badge in the
 // left rail + the ability text, alternating translucent row shading. Static
-// abilities (no leading cost) render unbadged. Mirrors LoyaltyRowsBake.
+// abilities (no leading cost) render unbadged. Mirrors LoyaltyRowsBake; both
+// draw the rows layoutLoyaltyRows sized from their text.
 function LoyaltyRows({
   slot,
   rows,
   abilities,
-  sizePct,
+  rowsLayout,
   pipOverrides = null,
   placeholder = false,
   foil = null,
@@ -1912,7 +2031,7 @@ function LoyaltyRows({
   slot: TextSlot;
   rows: NonNullable<FrameProfile["loyaltyRows"]>;
   abilities: LoyaltyAbility[];
-  sizePct: number;
+  rowsLayout: LoyaltyRowsLayout;
   pipOverrides?: PipOverrides | null;
   /** Editor-only empty state — mutes the row text into a hint. */
   placeholder?: boolean;
@@ -1921,8 +2040,10 @@ function LoyaltyRows({
    *  LoyaltyRowsBake twin. */
   foil?: { id: string; landscape: boolean } | null;
 }) {
+  const { sizePct, rowFractions, lastRowInsetPct } = rowsLayout;
+  const last = abilities.length - 1;
   const stripe = (i: number) => (i % 2 === 0 ? rows.stripeAHex : rows.stripeBHex);
-  const stripeRects = foil ? loyaltyStripeRects(slot.rect, abilities.length) : null;
+  const stripeRects = foil ? loyaltyStripeRects(slot.rect, rowsLayout.rowFractions) : null;
   // Foil: rows contain their sheen, and the badge + text after it are
   // positioned so they paint on top (the bake's document order).
   const onTop = foil ? { position: "relative" as const } : {};
@@ -1933,7 +2054,6 @@ function LoyaltyRows({
         zIndex: 20,
         display: "flex",
         flexDirection: "column",
-        justifyContent: "center",
         overflow: "hidden",
         fontFamily: CARD_FONT,
         fontSize: cqw(sizePct),
@@ -1947,10 +2067,14 @@ function LoyaltyRows({
           key={i}
           style={{
             display: "flex",
-            flex: 1,
+            // The shared row height, never content-grown (min-height: auto
+            // is what let the browser's rows drift from the bake's).
+            flex: "none",
+            height: `${rowFractions[i] * 100}%`,
+            minHeight: 0,
             alignItems: "center",
             background: stripe(i),
-            padding: `${cqw(sizePct * 0.22)} ${cqw(sizePct * 0.4)}`,
+            padding: `${cqw(sizePct * LOYALTY_ROW.padYEm)} ${cqw(sizePct * LOYALTY_ROW.padXEm)}`,
             ...onTop,
           }}
         >
@@ -1973,9 +2097,9 @@ function LoyaltyRows({
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              width: cqw(sizePct * 2.3),
-              height: cqw(sizePct * 1.6),
-              marginRight: cqw(sizePct * 0.5),
+              width: cqw(sizePct * LOYALTY_ROW.badgeWidthEm),
+              height: cqw(sizePct * LOYALTY_ROW.badgeHeightEm),
+              marginRight: cqw(sizePct * LOYALTY_ROW.badgeGapEm),
             }}
           >
             {ab.cost ? (
@@ -2006,14 +2130,14 @@ function LoyaltyRows({
                 position: "relative",
                 color: rows.badgeTextHex,
                 fontFamily: DISPLAY_FONT,
-                fontSize: cqw(sizePct * 0.88),
+                fontSize: cqw(sizePct * LOYALTY_ROW.badgeTextEm),
                 fontWeight: 700,
                 // Optically center inside the shield's flat region.
                 ...(ab.cost
                   ? loyaltyBadgeShapeFor(ab.cost) === "up"
-                    ? { paddingTop: cqw(sizePct * 0.18) }
+                    ? { paddingTop: cqw(sizePct * LOYALTY_ROW.badgeNudgeEm) }
                     : loyaltyBadgeShapeFor(ab.cost) === "down"
-                      ? { paddingBottom: cqw(sizePct * 0.18) }
+                      ? { paddingBottom: cqw(sizePct * LOYALTY_ROW.badgeNudgeEm) }
                       : {}
                   : {}),
               }}
@@ -2025,6 +2149,9 @@ function LoyaltyRows({
             style={{
               flex: 1,
               minWidth: 0,
+              // The last ability wraps before the loyalty shield (when its
+              // text would reach it; lastRowInsetPct is 0 otherwise).
+              ...(i === last && lastRowInsetPct > 0 ? { marginRight: cqw(lastRowInsetPct) } : {}),
               ...onTop,
               ...(placeholder ? { fontStyle: "italic", opacity: 0.55 } : {}),
             }}

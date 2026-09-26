@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import sharp from "sharp";
 import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
+import { UNTOUCHED_SINCE_V22 } from "@/tests/stubs/layout-scope-cards";
 import {
   fetchStoredRender,
   fitStoredRender,
@@ -17,10 +18,11 @@ describe("stored-render — when the baked PNG can stand in for a live render", 
   });
 
   it("is servable with a URL and no pending platform correction", () => {
-    // "saga" (regular finish) is outside the v24/v25 template scopes and the
-    // v26 etched scope, so only the v22 opt-in and the v23 commons sweep
-    // apply — the scenarios these cases pin.
-    const untouched = { frame_style: { template: "saga" }, rarity: "uncommon" };
+    // A single-word lotr sorcery (regular finish) is outside every scope
+    // after v23 (the v24/v25/v27 template lists, the v26/v28 finishes and
+    // v29's display lines and stats), so only the v22 opt-in and the v23
+    // commons sweep apply — the scenarios these cases pin.
+    const untouched = UNTOUCHED_SINCE_V22;
     expect(
       hasServableStoredRender({ ...untouched, rendered_image_url: STORAGE_URL, layout_version: CARD_LAYOUT_VERSION }),
     ).toBe(true);
@@ -44,9 +46,36 @@ describe("stored-render — when the baked PNG can stand in for a live render", 
       hasServableStoredRender({ rarity: "uncommon", rendered_image_url: STORAGE_URL, layout_version: CARD_LAYOUT_VERSION - 1 }),
     ).toBe(false);
     // An etched card at v25 still owes the v26 re-bake; a regular one doesn't.
-    const etched = { frame_style: { template: "saga", finish: "etched" }, rarity: "uncommon" };
+    const etched = { ...untouched, frame_style: { template: "lotr", finish: "etched" } };
     expect(hasServableStoredRender({ ...etched, rendered_image_url: STORAGE_URL, layout_version: 25 })).toBe(false);
     expect(hasServableStoredRender({ ...untouched, rendered_image_url: STORAGE_URL, layout_version: 25 })).toBe(true);
+  });
+
+  it("judges the whole row: layout v29 reads the name, type line and stat columns", () => {
+    const at28 = { ...UNTOUCHED_SINCE_V22, rendered_image_url: STORAGE_URL, layout_version: 28 };
+    // v29 left this card alone: its v28 bake still serves.
+    expect(hasServableStoredRender(at28)).toBe(true);
+    // v29's word spacing re-spaced a two-word name: live until the sweep.
+    expect(hasServableStoredRender({ ...at28, title: "Red Worm" })).toBe(false);
+    // A Draconic P/T got its new plate.
+    expect(
+      hasServableStoredRender({
+        ...at28,
+        frame_style: { template: "tarkirdraconic" },
+        card_type: "creature",
+        power: "3",
+        toughness: "3",
+      }),
+    ).toBe(false);
+    // A row read without those columns can't be judged: live (conservative).
+    expect(
+      hasServableStoredRender({
+        frame_style: { template: "lotr" },
+        rarity: "uncommon",
+        rendered_image_url: STORAGE_URL,
+        layout_version: 28,
+      }),
+    ).toBe(false);
   });
 
   it("never fetches a stale row or a foreign host", async () => {
