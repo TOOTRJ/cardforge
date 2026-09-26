@@ -4,6 +4,18 @@ import {
   isRenderStale,
   templateOfFrameStyle,
 } from "@/lib/cards/layout-version";
+import { getFrameProfile } from "@/lib/cards/template-layout";
+import { FRAME_TEMPLATE_VALUES } from "@/types/card";
+import { UNTOUCHED_SINCE_V22 } from "@/tests/stubs/layout-scope-cards";
+
+/** classifyForSweep as it answered at layout v`current` — the v25–v28 blocks
+ *  pin what those bumps did; v29 (its own block) re-bakes most of their
+ *  probe cards again. */
+async function sweepAt(current: number) {
+  const { classifyForSweep } = await import("@/lib/cards/layout-version");
+  return (row: Parameters<typeof classifyForSweep>[0], target?: number) =>
+    classifyForSweep(row, target, { current });
+}
 
 describe("isRenderStale — which stored renders a version bump invalidates", () => {
   it("treats unversioned or override-cleared renders as stale", () => {
@@ -53,13 +65,12 @@ describe("isRenderStale — which stored renders a version bump invalidates", ()
 });
 
 describe("hasNewerLook — only an owner opt-in bump is the owner's call (TODO 0.20)", () => {
+  // A card no sweep since v22 changed (UNTOUCHED_SINCE_V22): a v21 bake of
+  // it has only the v22 opt-in pending.
   const base = {
+    ...UNTOUCHED_SINCE_V22,
     visibility: "public",
     rendered_image_url: "https://x/y.png",
-    frame_style: { template: "saga" },
-    rarity: "uncommon",
-    set_icon_url: null,
-    set_icon_code: null,
   };
 
   it("flags a published, baked card with a pending OPT-IN bump (v22 typography)", async () => {
@@ -116,7 +127,7 @@ describe("latestOptInVersion — what owner notifications are keyed on", () => {
 describe("hasPendingCorrection — when the platform still owes a card a re-bake", () => {
   it("is true for a null stamp or a pending SWEEP bump, false for opt-in-only", async () => {
     const { hasPendingCorrection, CARD_LAYOUT_VERSION } = await import("@/lib/cards/layout-version");
-    const card = { frame_style: { template: "saga" }, rarity: "uncommon", set_icon_url: null, set_icon_code: null };
+    const card = UNTOUCHED_SINCE_V22;
     expect(hasPendingCorrection({ ...card, layout_version: null })).toBe(true);
     // v22 common → v23 set-mark sweep pending.
     expect(hasPendingCorrection({ ...card, layout_version: 22, rarity: "common" })).toBe(true);
@@ -135,7 +146,7 @@ describe("hasPendingCorrection — when the platform still owes a card a re-bake
 describe("downloadDiffersFromGallery — the download modal's note, per viewer", () => {
   it("paid: whenever the stored look is older; free: only while a correction is pending", async () => {
     const { downloadDiffersFromGallery, CARD_LAYOUT_VERSION } = await import("@/lib/cards/layout-version");
-    const card = { rendered_image_url: "https://x/y.png", frame_style: { template: "saga" }, rarity: "uncommon" };
+    const card = { ...UNTOUCHED_SINCE_V22, rendered_image_url: "https://x/y.png" };
     // Opt-in pending (v21 uncommon): paid renders live → differs; free serves the bake → same.
     expect(downloadDiffersFromGallery({ ...card, layout_version: 21 }, true)).toBe(true);
     expect(downloadDiffersFromGallery({ ...card, layout_version: 21 }, false)).toBe(false);
@@ -149,7 +160,7 @@ describe("downloadDiffersFromGallery — the download modal's note, per viewer",
 describe("storedLookIsOlder — the download modal's clean-download note", () => {
   it("is true whenever a stored image predates the current renderer", async () => {
     const { storedLookIsOlder, CARD_LAYOUT_VERSION } = await import("@/lib/cards/layout-version");
-    const card = { rendered_image_url: "https://x/y.png", frame_style: { template: "saga" }, rarity: "uncommon" };
+    const card = { ...UNTOUCHED_SINCE_V22, rendered_image_url: "https://x/y.png" };
     expect(storedLookIsOlder({ ...card, layout_version: 21 })).toBe(true);
     expect(storedLookIsOlder({ ...card, layout_version: null })).toBe(true);
     expect(storedLookIsOlder({ ...card, layout_version: CARD_LAYOUT_VERSION })).toBe(false);
@@ -224,7 +235,7 @@ describe("v25 / v26 — the frame-review follow-ups (2026-09-25)", () => {
   });
 
   it("v25 re-bakes only the follow-up templates; v26 only etched cards, on any template", async () => {
-    const { classifyForSweep } = await import("@/lib/cards/layout-version");
+    const classifyForSweep = await sweepAt(28);
     for (const t of [
       "agclassic", "alphaland", "alphatoken", "retro", "retroland", "modern", "modernland", "extendedart",
       "battle", "split", "tarkirdragon",
@@ -249,7 +260,8 @@ describe("v25 / v26 — the frame-review follow-ups (2026-09-25)", () => {
   });
 
   it("a card with NO template is judged as the default (m15) frame it renders on", async () => {
-    const { classifyForSweep, isRenderStale } = await import("@/lib/cards/layout-version");
+    const { isRenderStale } = await import("@/lib/cards/layout-version");
+    const classifyForSweep = await sweepAt(28);
     // 272 production cards carry frame_style = {} — v25 doesn't touch m15.
     expect(classifyForSweep(row(undefined))).toBe("stamp");
     expect(classifyForSweep(row(undefined, { frame_style: { template: "regular" } }))).toBe("stamp");
@@ -292,7 +304,7 @@ describe("v27 / v28 — the owner's follow-up decisions (2026-09-25)", () => {
   });
 
   it("v27 re-bakes only Alpha, Dragon Wing, Ghostfire and planeswalkers; v28 only foil cards, on any template", async () => {
-    const { classifyForSweep } = await import("@/lib/cards/layout-version");
+    const classifyForSweep = await sweepAt(28);
     for (const t of ["agclassic", "alphaland", "tarkirdragon", "tarkirghostfire", "m15pw"]) {
       expect(classifyForSweep(row({ template: t, finish: "regular" })), t).toBe("rebake");
     }
@@ -324,5 +336,183 @@ describe("v27 / v28 — the owner's follow-up decisions (2026-09-25)", () => {
     expect(rolloutPolicy(28)).toBe("sweep");
     expect(latestOptInVersion()).toBe(22);
     expect(hasNewerLook({ ...row({ template: "agclassic", finish: "foil" }), visibility: "public" })).toBe(false);
+  });
+});
+
+describe("v29 — the round-5 leftovers, one sweep (2026-09-25)", () => {
+  const png = "https://x/y.png";
+  /** A v28 bake. Its columns default to a card v29 left alone
+   *  (UNTOUCHED_SINCE_V22: a single-word lotr sorcery). */
+  const at = (template: string, over: Record<string, unknown> = {}) => ({
+    ...UNTOUCHED_SINCE_V22,
+    layout_version: 28,
+    rendered_image_url: png,
+    frame_style: { template, finish: "regular" },
+    ...over,
+  });
+  const creature = (power: string, toughness: string) => ({ card_type: "creature", power, toughness });
+
+  it("is a sweep keyed on one card predicate, with no template list to AND it with", async () => {
+    const { CARD_LAYOUT_VERSION, VERSION_SCOPES, rolloutPolicy, latestOptInVersion, isRenderStale } = await import(
+      "@/lib/cards/layout-version"
+    );
+    expect(CARD_LAYOUT_VERSION).toBe(29);
+    expect(rolloutPolicy(29)).toBe("sweep");
+    expect(latestOptInVersion()).toBe(22);
+    expect(typeof VERSION_SCOPES[29]).toBe("function");
+    // The default maps: a flip card (a template no bump before v29 listed)
+    // is stale exactly when the predicate says so — no template list gates it.
+    expect(isRenderStale(28, "flip", undefined, 29, at("flip", { title: "Two Words" }))).toBe(true);
+    expect(isRenderStale(28, "flip", undefined, 29, at("flip"))).toBe(false);
+  });
+
+  it("word spacing: every card on the 25 display-footer templates", async () => {
+    const classifyForSweep = await sweepAt(29);
+    const displayFooter = FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).footer?.font === "display");
+    // The frozen v29 list is these 25 (their footer prints "ART: …").
+    expect(displayFooter).toHaveLength(25);
+    for (const t of displayFooter) {
+      // Even a one-word name and type line: the footer's T + colon kerns.
+      expect(classifyForSweep(at(t)), t).toBe("rebake");
+    }
+    // A plain M15 creature, and a card with no template (it draws m15).
+    expect(classifyForSweep(at("m15", { title: "Grizzly Bears", subtypes: ["Bear"], ...creature("2", "2") }))).toBe(
+      "rebake",
+    );
+    expect(classifyForSweep(at("m15", { frame_style: {} }))).toBe("rebake");
+    // modernland (hideCost: the pw-rows track leaves it byte-identical) is a
+    // display-footer template, so word spacing still re-bakes it.
+    expect(classifyForSweep(at("modernland", { title: "Island", card_type: "land", supertype: "Basic" }))).toBe(
+      "rebake",
+    );
+  });
+
+  it("word spacing on the other 12 templates: only a name or type line with a space in it", async () => {
+    const classifyForSweep = await sweepAt(29);
+    const others = FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).footer?.font !== "display");
+    expect([...others].sort()).toEqual(
+      ["aftermath", "avatar", "battle", "bloomanime", "bloomburrow", "flip", "lotr", "lotrscroll", "split",
+        "tarkirdraconic", "tarkirdragon", "tarkirghostfire"].sort(),
+    );
+    for (const t of others.filter((x) => x !== "aftermath")) {
+      expect(classifyForSweep(at(t)), t).toBe("stamp");
+      expect(classifyForSweep(at(t, { title: "Red Worm" })), t).toBe("rebake");
+    }
+    // The type line as the bake builds it: supertype, type, " — " subtypes.
+    expect(classifyForSweep(at("lotr", { supertype: "Legendary" }))).toBe("rebake");
+    expect(classifyForSweep(at("lotr", { card_type: "creature", subtypes: ["Wurm"] }))).toBe("rebake");
+    // An empty name prints the two-word placeholder "Untitled Card".
+    expect(classifyForSweep(at("lotr", { title: "  " }))).toBe("rebake");
+    // Production's two one-word Dragon Wing cards (Bar, Worm) bake byte-identical.
+    expect(classifyForSweep(at("tarkirdragon", { title: "Worm", ...creature("1", "1") }))).toBe("stamp");
+    // A flip / split BACK face's name and type line are display lines too…
+    const back = { title: "Side", card_type: "sorcery" };
+    for (const t of ["flip", "split"]) {
+      expect(classifyForSweep(at(t, { back_face: back })), t).toBe("stamp");
+      expect(classifyForSweep(at(t, { back_face: { ...back, title: "Other Side" } })), t).toBe("rebake");
+      expect(classifyForSweep(at(t, { back_face: { ...back, supertype: "Legendary" } })), t).toBe("rebake");
+    }
+    // …but a template without a second face never draws one.
+    expect(classifyForSweep(at("lotr", { back_face: { ...back, title: "Other Side" } }))).toBe("stamp");
+  });
+
+  it("planeswalker rows + names, Alpha ink: inside the display-footer templates, every card", async () => {
+    const classifyForSweep = await sweepAt(29);
+    const walker = { card_type: "planeswalker", loyalty: "4", title: "Kikyo Zoldyck" };
+    expect(classifyForSweep(at("m15pw", walker))).toBe("rebake");
+    expect(classifyForSweep(at("m15pw", { ...walker, frame_style: { template: "m15pw", finish: "etched" } }))).toBe(
+      "rebake",
+    );
+    expect(classifyForSweep(at("modern", { title: "Miner the Miner, Damned Delver" }))).toBe("rebake");
+    // agclassic: the Alpha track's own scope is the black frame (key b) and
+    // colourless ARTIFACTS; word spacing takes every other agclassic card.
+    const agclassic = (over: Record<string, unknown>) => at("agclassic", over);
+    expect(classifyForSweep(agclassic({ color_identity: ["black"], title: "Sengir Vampire" }))).toBe("rebake");
+    expect(classifyForSweep(agclassic({ color_identity: [], card_type: "artifact", title: "Jester's Mask" }))).toBe(
+      "rebake",
+    );
+    // A white creature and a colourless creature (Dawn Treader): not the
+    // Alpha track's, still word spacing's.
+    expect(classifyForSweep(agclassic({ color_identity: ["white"], ...creature("2", "2") }))).toBe("rebake");
+    expect(classifyForSweep(agclassic({ color_identity: [], title: "Dawn Treader", ...creature("3", "3") }))).toBe(
+      "rebake",
+    );
+  });
+
+  it("stat values: statLayoutChanged on any template (a Draconic P/T, a value that no longer fits)", async () => {
+    const classifyForSweep = await sweepAt(29);
+    // Draconic's new plate: any card that prints a P/T.
+    expect(classifyForSweep(at("tarkirdraconic", creature("3", "3")))).toBe("rebake");
+    expect(classifyForSweep(at("tarkirdraconic"))).toBe("stamp");
+    // Dragon Wing: 20/20 reaches the plate's outline and shrinks; 1/1 fits.
+    expect(classifyForSweep(at("tarkirdragon", creature("20", "20")))).toBe("rebake");
+    expect(classifyForSweep(at("tarkirdragon", creature("1", "1")))).toBe("stamp");
+    // A battle's defense, and a flip card's back-face P/T (drawn upside down).
+    expect(classifyForSweep(at("battle", { card_type: "battle", defense: "1000" }))).toBe("rebake");
+    expect(classifyForSweep(at("battle", { card_type: "battle", defense: "5" }))).toBe("stamp");
+    const back = { title: "Side", card_type: "creature" };
+    expect(classifyForSweep(at("flip", { back_face: { ...back, power: "100", toughness: "100" } }))).toBe("rebake");
+    expect(classifyForSweep(at("flip", { back_face: { ...back, power: "2", toughness: "2" } }))).toBe("stamp");
+  });
+
+  it("foil through rules backdrops: foil cards on the six backdrop templates", async () => {
+    const classifyForSweep = await sweepAt(29);
+    const foil = (t: string) => at(t, { frame_style: { template: t, finish: "foil" } });
+    // bloomanime is the one backdrop template outside the display-footer list.
+    expect(classifyForSweep(foil("bloomanime"))).toBe("rebake");
+    expect(classifyForSweep(at("bloomanime"))).toBe("stamp");
+    for (const t of ["m15pw", "m15token", "m15tokenartifact", "alphatoken", "expeditionland"]) {
+      expect(classifyForSweep(foil(t)), t).toBe("rebake");
+    }
+    // A foil card on a template with no backdrop change.
+    expect(classifyForSweep(foil("avatar"))).toBe("stamp");
+  });
+
+  it("aftermath: every card on the template", async () => {
+    const classifyForSweep = await sweepAt(29);
+    expect(classifyForSweep(at("aftermath"))).toBe("rebake");
+    expect(classifyForSweep(at("aftermath", { back_face: { title: "Ribbons", card_type: "sorcery" } }))).toBe("rebake");
+    expect(classifyForSweep(at("aftermath", { frame_style: { template: "aftermath", finish: "foil" } }))).toBe(
+      "rebake",
+    );
+  });
+
+  it("a row missing a column the predicate needs is judged affected", async () => {
+    const { isRenderStale, VERSION_SCOPES } = await import("@/lib/cards/layout-version");
+    const scopes = { 29: VERSION_SCOPES[29] };
+    const lotr = at("lotr");
+    expect(isRenderStale(28, "lotr", {}, 29, lotr, scopes)).toBe(false);
+    // No frame_style, no card at all, or a missing stat / type-line column.
+    const noFrameStyle: Record<string, unknown> = { ...lotr };
+    delete noFrameStyle.frame_style;
+    expect(isRenderStale(28, "lotr", {}, 29, noFrameStyle, scopes)).toBe(true);
+    expect(isRenderStale(28, "lotr", {}, 29, undefined, scopes)).toBe(true);
+    for (const column of ["title", "supertype", "card_type", "subtypes", "power", "toughness", "loyalty", "defense", "back_face"]) {
+      const partial: Record<string, unknown> = { ...lotr };
+      delete partial[column];
+      expect(isRenderStale(28, "lotr", {}, 29, partial, scopes), column).toBe(true);
+    }
+    // frame-verification-state passes only the combo's frame_style: stale
+    // (conservative) on every template.
+    expect(isRenderStale(28, "lotr", undefined, 29, { frame_style: { template: "lotr", finish: "regular" } })).toBe(true);
+  });
+
+  it("owners: never a badge — and a card that owes it keeps no pending opt-in badge either", async () => {
+    const { hasNewerLook, hasPendingCorrection } = await import("@/lib/cards/layout-version");
+    const classifyForSweep = await sweepAt(29);
+    expect(hasNewerLook({ ...at("m15pw"), visibility: "public" })).toBe(false);
+    expect(hasPendingCorrection(at("m15pw"))).toBe(true);
+    expect(hasPendingCorrection(at("lotr"))).toBe(false);
+    // A v21 card v29 left alone keeps its v22 opt-in badge; one v29 changed
+    // gets the sweep's re-bake (opt-in look included) instead.
+    expect(hasNewerLook({ ...at("lotr"), layout_version: 21, visibility: "public" })).toBe(true);
+    expect(hasNewerLook({ ...at("lotr", { title: "Red Worm" }), layout_version: 21, visibility: "public" })).toBe(false);
+    // Targeting v29 alone: in scope → re-bake, out of scope → stamped.
+    expect(classifyForSweep(at("saga"), 29)).toBe("rebake");
+    expect(classifyForSweep(at("lotr"), 29)).toBe("stamp");
+    // A v27 foil m15 card owes v28 and v29; a v28-only sweep still takes it.
+    expect(classifyForSweep(at("m15", { layout_version: 27, frame_style: { template: "m15", finish: "foil" } }), 28)).toBe(
+      "rebake",
+    );
   });
 });

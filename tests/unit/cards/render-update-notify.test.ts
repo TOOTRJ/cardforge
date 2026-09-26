@@ -2,6 +2,11 @@ import { describe, expect, it } from "vitest";
 import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
 import { notifyOwnersOfRenderUpdates, staleCountsByOwner } from "@/lib/cards/render-update-notify";
 import { chainClient, called, payloadOf } from "@/tests/stubs/supabase-chain";
+import { UNTOUCHED_SINCE_V22 } from "@/tests/stubs/layout-scope-cards";
+
+// Cards no sweep since v22 changed (lotr, single-word): a v21 bake of one
+// has only the v22 OPT-IN pending.
+const lotr = UNTOUCHED_SINCE_V22;
 
 describe("staleCountsByOwner — who gets a render_update notification", () => {
   it("counts only published, baked rows with a pending OPT-IN bump, per owner", () => {
@@ -10,9 +15,15 @@ describe("staleCountsByOwner — who gets a render_update notification", () => {
       // Not baked yet (an AI card between publish and bake) — no newer look.
       { owner_id: "a", layout_version: null, rendered_image_url: null, frame_style: { template: "saga" } },
       // v21 → the v22 typography update (opt-in) is pending: counted.
-      { owner_id: "a", layout_version: 21, rendered_image_url: png, frame_style: { template: "saga" }, rarity: "uncommon" },
+      { ...lotr, owner_id: "a", layout_version: 21, rendered_image_url: png },
       // v22 common → only the v23 set-mark SWEEP is pending: the platform's job, not counted.
-      { owner_id: "a", layout_version: 22, rendered_image_url: png, frame_style: { template: "saga" }, rarity: "common" },
+      { ...lotr, owner_id: "a", layout_version: 22, rendered_image_url: png, rarity: "common" },
+      // v21 with a two-word name → the v29 word-spacing SWEEP is pending too:
+      // the sweep re-bakes it, opt-in look included — not counted.
+      { ...lotr, owner_id: "a", layout_version: 21, rendered_image_url: png, title: "Red Worm" },
+      // A row that doesn't carry the v29 columns can't be judged → owes the
+      // sweep (conservative) → not counted.
+      { owner_id: "a", layout_version: 21, rendered_image_url: png, frame_style: { template: "lotr" }, rarity: "uncommon" },
       { owner_id: "a", layout_version: CARD_LAYOUT_VERSION, rendered_image_url: png, frame_style: { template: "saga" } },
       // A frame-geometry change (null stamp) is a platform re-bake, never a badge.
       { owner_id: "d", layout_version: null, rendered_image_url: png, frame_style: { template: "saga" } },
@@ -45,8 +56,8 @@ describe("notifyOwnersOfRenderUpdates — keyed on the newest OPT-IN version", (
       if (table === "cards") {
         return {
           data: [
-            { owner_id: "a", layout_version: 21, rendered_image_url: png, frame_style: { template: "saga" }, visibility: "public", rarity: "uncommon" },
-            { owner_id: "b", layout_version: 22, rendered_image_url: png, frame_style: { template: "saga" }, visibility: "public", rarity: "common" },
+            { ...lotr, owner_id: "a", layout_version: 21, rendered_image_url: png, visibility: "public" },
+            { ...lotr, owner_id: "b", layout_version: 22, rendered_image_url: png, visibility: "public", rarity: "common" },
           ],
         };
       }
@@ -73,7 +84,7 @@ describe("notifyOwnersOfRenderUpdates — once per owner per opt-in version", ()
       if (table === "cards") {
         return {
           data: [
-            { owner_id: "a", layout_version: 21, rendered_image_url: "https://x/c.png", frame_style: { template: "saga" }, visibility: "public", rarity: "uncommon" },
+            { ...lotr, owner_id: "a", layout_version: 21, rendered_image_url: "https://x/c.png", visibility: "public" },
           ],
         };
       }
