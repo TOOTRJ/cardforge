@@ -30,7 +30,7 @@ import {
   loyaltyFromRulesText,
   sagaFromRulesText,
 } from "@/lib/cards/face-content";
-import { kindFromCard } from "@/lib/creator/card-kinds";
+import { KIND_DEFS, kindFromCard, type CardKind } from "@/lib/creator/card-kinds";
 import { remixTitleFor } from "@/lib/creator/revise";
 import { defaultWatermarkFor } from "@/lib/cards/watermark";
 
@@ -71,10 +71,45 @@ function structuredRowsFrom(card: Card): {
   return { loyalty_abilities: [], saga_intro: "", saga_chapters: [] };
 }
 
+/** A blank second face for a card of `kind` (TODO 3b.8). A frame that
+ *  paints one types it like the kind's own card — a split's halves are
+ *  instants, an aftermath's sorceries, a flip's creatures (and an
+ *  Adventure's spell, as before, until 3b.14 gives it a type choice); the
+ *  blank used to be a Creature everywhere. Every other kind keeps the plain
+ *  blank. */
+export function blankSecondFaceFor(kind: CardKind): BackFaceFormValues {
+  const def = KIND_DEFS[kind];
+  return def.inlineSecondFace
+    ? { ...EMPTY_BACK_FACE, card_type: def.cardType }
+    : EMPTY_BACK_FACE;
+}
+
+const BACK_FACE_CONTENT_FIELDS = [
+  "title",
+  "cost",
+  "supertype",
+  "subtypes_text",
+  "rules_text",
+  "flavor_text",
+  "power",
+  "toughness",
+  "loyalty",
+  "defense",
+  "artist_credit",
+  "art_url",
+] as const;
+
+/** True when the second face holds nothing the user wrote (its type and
+ *  art position aside) — safe to re-type for a new kind. */
+export function isBlankBackFace(face: BackFaceFormValues): boolean {
+  return BACK_FACE_CONTENT_FIELDS.every((field) => !face[field].trim());
+}
+
 function backFaceFormValuesFrom(
   source: CardBackFace | null | undefined,
+  kind: CardKind,
 ): BackFaceFormValues {
-  if (!source) return EMPTY_BACK_FACE;
+  if (!source) return blankSecondFaceFor(kind);
   return {
     title: source.title ?? "",
     cost: source.cost ?? "",
@@ -203,7 +238,10 @@ export function defaultValuesFor(
     // unticking it is how the card gets published.
     save_as_draft: card.visibility === "private",
     has_back_face: persistedBackFace !== null,
-    back_face: backFaceFormValuesFrom(persistedBackFace),
+    back_face: backFaceFormValuesFrom(
+      persistedBackFace,
+      kindFromCard(card.card_type, normalizedFrameStyle.template),
+    ),
     back_card_id: card.back_card_id ?? "",
     source_scryfall_id: card.source_scryfall_id ?? "",
     // Denormalized icon columns — the Set icon step edits them directly.

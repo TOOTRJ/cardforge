@@ -161,7 +161,9 @@ import {
   type KindChangePlan,
 } from "@/lib/creator/card-kinds";
 import {
+  blankSecondFaceFor,
   defaultValuesFor,
+  isBlankBackFace,
   mergeTag,
   normalizeColorSelection,
   parseSubtypes,
@@ -999,6 +1001,14 @@ export function CardCreatorForm({
     if (hasInlineBackFace(prevTemplate) && !hasInlineBackFace(template)) {
       setValue("has_back_face", false, { shouldDirty: true });
       setValue("back_face", EMPTY_BACK_FACE, { shouldDirty: true });
+    } else if (
+      hasInlineBackFace(template) &&
+      isBlankBackFace(getValues("back_face"))
+    ) {
+      // Entering (or moving between) frames that paint a second face: an
+      // untouched one takes the new kind's type — a split's second half
+      // used to start, and save, as a Creature (TODO 3b.8).
+      setValue("back_face", blankSecondFaceFor(nextKind), { shouldDirty: true });
     }
     setValue("card_type", patch.card_type, { shouldDirty: true });
     setValue("frame_style.template", template, { shouldDirty: true });
@@ -2484,6 +2494,7 @@ export function CardCreatorForm({
                           insertSymbol(backRulesTextRef, token)
                         }
                         onBackFaceAdded={() => setPreviewFace("back")}
+                        blankSecondFace={blankSecondFaceFor(kind)}
                       />
                     ) : undefined
                   }

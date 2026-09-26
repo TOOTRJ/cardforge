@@ -867,3 +867,65 @@ describe("3b.7 a save takes the Back sentinel off before navigating", () => {
     expect(back).not.toHaveBeenCalled();
   });
 });
+
+// ---------------------------------------------------------------------------
+// 3b.8 — a split / aftermath card's second half defaulted to "Creature"
+// (EMPTY_BACK_FACE) and was saved that way.
+// ---------------------------------------------------------------------------
+
+describe("3b.8 the second half is typed from the kind", () => {
+  it("split → instant, aftermath → sorcery, and a Clear keeps the kind's type", async () => {
+    renderForm({ mode: "create" });
+    await pickKind(/^Split/);
+    expect(preview().backFace?.card_type).toBe("instant");
+    await pickKind(/^Aftermath/);
+    expect(preview().backFace?.card_type).toBe("sorcery");
+
+    // Give the half some content, then clear it.
+    await clickNext();
+    const nameInput = screen.getByPlaceholderText("Insectile Aberration");
+    await act(async () => {
+      fireEvent.change(nameInput, { target: { value: "Dawn" } });
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Clear second face" }));
+    });
+    expect(preview().backFace?.title).toBe("");
+    expect(preview().backFace?.card_type).toBe("sorcery");
+  });
+
+  it("a second half the user already wrote keeps its own type across a kind change", async () => {
+    renderForm({ mode: "create" });
+    await pickKind(/^Split/);
+    await clickNext();
+    await act(async () => {
+      fireEvent.change(screen.getByPlaceholderText("Insectile Aberration"), {
+        target: { value: "Ice" },
+      });
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /^Back/ }));
+    });
+    await pickKind(/^Aftermath/);
+    expect(preview().backFace).toMatchObject({ title: "Ice", card_type: "instant" });
+  });
+
+  it("a split card saves its untouched second half as an instant", async () => {
+    actions.createCardAction.mockResolvedValue({
+      ok: true,
+      cardId: "44444444-4444-4444-8444-444444444444",
+      slug: "fire",
+    });
+    renderForm({ mode: "create" });
+    await pickKind(/^Split/);
+    await clickNext();
+    await typeTitle("Fire");
+    await goToLastStep();
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("save-as-draft"));
+    });
+    await clickSave();
+    await waitFor(() => expect(actions.createCardAction).toHaveBeenCalledTimes(1));
+    expect(actions.createCardAction.mock.calls[0][0].back_face.card_type).toBe("instant");
+  });
+});
