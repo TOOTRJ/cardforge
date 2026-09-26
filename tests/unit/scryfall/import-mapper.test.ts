@@ -441,8 +441,8 @@ describe("frameTemplateFromScryfall", () => {
         }),
       ),
     ).toBe("m15devoid");
-    // Skins only re-dress the plain m15 spell frame — a snow LAND keeps its
-    // land frame.
+    // A snow LAND gets the snow land frame (m15snowland, added after this
+    // test was first written — KHM's snow lands print it)…
     expect(
       frameTemplateFromScryfall(
         fixture({
@@ -450,6 +450,13 @@ describe("frameTemplateFromScryfall", () => {
           frame_effects: ["snow"],
           type_line: "Basic Snow Land — Island",
         }),
+      ),
+    ).toBe("m15snowland");
+    // …and a snow land printed without the snow frame effect (MH1's
+    // Snow-Covered basics) keeps the plain land frame.
+    expect(
+      frameTemplateFromScryfall(
+        fixture({ frame: "2015", type_line: "Basic Snow Land — Island" }),
       ),
     ).toBe("m15land");
   });

@@ -14,11 +14,8 @@ import {
   type ScryfallImportPatch,
 } from "@/lib/scryfall/import-mapper";
 import { toResolvedCardData } from "@/lib/decks/import-resolution";
-import { KIND_DEFS, type FrameColorKey } from "@/lib/creator/card-kinds";
-import {
-  importFrameCandidates,
-  resolvePublishedFrame,
-} from "@/lib/creator/frame-resolve";
+import { KIND_DEFS } from "@/lib/creator/card-kinds";
+import { resolveImportFrame } from "@/lib/creator/frame-resolve";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import {
@@ -160,11 +157,11 @@ describe("Kindred stays a supertype word (TODO 1.14)", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Where an import LANDS in the creator: the form applies the kind, then asks
-// resolvePublishedFrame for importFrameCandidates(…) in the imported colour
-// (components/creator/card-creator-form.tsx, handleScryfallImport). Run
-// against the frames production has verified — supabase/seed.sql mirrors
-// them — so these say what a user gets today.
+// Where an import LANDS in the creator: the form applies the kind, then calls
+// resolveImportFrame — the same helper this runs — with the patch and the
+// form after the kind change (components/creator/card-creator-form.tsx,
+// handleScryfallImport). Run against the frames production has verified —
+// supabase/seed.sql mirrors them — so these say what a user gets today.
 // ---------------------------------------------------------------------------
 
 function productionVerifiedKeys(): Set<string> {
@@ -187,24 +184,28 @@ function productionVerifiedKeys(): Set<string> {
 }
 const PROD_VERIFIED = productionVerifiedKeys();
 
-function landing(patch: ScryfallImportPatch): { template: FrameTemplate; colorKey: string } {
+function landing(
+  patch: ScryfallImportPatch,
+  verifiedKeys: ReadonlySet<string> = PROD_VERIFIED,
+): { template: FrameTemplate; colorKey: string; status: string } {
   const kind = patch.kind!;
   const def = KIND_DEFS[kind];
-  // applyKindProgrammatic lands a layout kind on its template first.
-  const wanted = patch.frame_template ?? def.layoutTemplates?.[0] ?? DEFAULT_FRAME_TEMPLATE;
-  const cardType = (patch.card_type ?? def.cardType) as CardType;
-  const colorKey = pickFrameColorKey(patch.color_identity);
-  const resolution = resolvePublishedFrame({
+  const { colorKey, resolution } = resolveImportFrame({
+    patch,
     kind,
-    candidates: importFrameCandidates({ wanted, cardType, supertype: patch.supertype }),
-    colorKey: colorKey as FrameColorKey,
-    verifiedKeys: PROD_VERIFIED,
-    prefer: "frame",
+    // applyKindProgrammatic lands a layout kind on its template first and
+    // writes the kind's card type.
+    current: {
+      template: def.layoutTemplates?.[0] ?? DEFAULT_FRAME_TEMPLATE,
+      cardType: def.cardType,
+      colors: [],
+    },
+    verifiedKeys,
   });
   if (resolution.status === "unavailable" || resolution.status === "colour-switched") {
     throw new Error(`${patch.title}: ${resolution.status}`);
   }
-  return { template: resolution.template, colorKey };
+  return { template: resolution.template, colorKey, status: resolution.status };
 }
 
 describe("type-line + layout precedence (TODO 1.3)", () => {
@@ -254,6 +255,20 @@ describe("type-line + layout precedence (TODO 1.3)", () => {
     // Devoid re-dresses; a colourless Eldrazi without devoid doesn't.
     ["ogw-13", "creature", "creature", undefined, "Eldrazi", "m15devoid"],
     ["ogw-9", "creature", "creature", undefined, "Eldrazi", "m15"],
+    // Snow lands print the snow LAND frame (KHM, frame_effects ∋ snow).
+    ["khm-278", "land", "land", "Basic Snow", "Island", "m15snowland"],
+    ["khm-249", "land", "land", "Snow", "Forest, Plains", "m15snowland"],
+    // Enchantment beats artifact: Bident of Thassa THS #42 prints the Nyx
+    // ENCHANTMENT frame (the Nyx dress itself is 1.4's) and keeps "Artifact"
+    // as a word in front. A 2003-frame printing asks for its era's standard.
+    ["ths-42", "enchantment", "enchantment", "Legendary Artifact", undefined, "modern"],
+    // Layout kinds read the type line against their own card type: Urza's
+    // Saga keeps "Land", a FIN Summon keeps "Creature" (the renderers print
+    // them BEFORE the card type — a TODO 1.3 renderer leftover).
+    ["mh2-259", "saga", "enchantment", "Land", "Urza's, Saga", undefined],
+    ["fin-1", "saga", "enchantment", "Creature", "Saga, Dragon", undefined],
+    // A reversible card is its front: one land.
+    ["sld-2794", "land", "land", undefined, undefined, "m15land"],
   ];
 
   it.each(cases)("%s → %s (%s, supertype %s, subtypes %s) on %s", (key, kind, cardType, supertype, subtypes, frame) => {
@@ -291,19 +306,12 @@ describe("type-line + layout precedence (TODO 1.3)", () => {
   });
 
   it("reads the type line against a layout kind's card type (Urza's Saga)", () => {
-    // Urza's Saga is layout "saga" and an "Enchantment Land": it lands on
-    // the saga frame as an enchantment with "Land" in front — never
-    // "Enchantment Enchantment".
-    const urza = scryfallCardSchema.parse({
-      id: "x",
-      name: "Urza's Saga",
-      layout: "saga",
-      frame: "2015",
-      type_line: "Enchantment Land — Urza's Saga",
-      colors: [],
-      color_identity: [],
-    });
-    const patch = mapScryfallToFormPatch(urza);
+    // Urza's Saga MH2 #259 is layout "saga" and an "Enchantment Land": it
+    // lands on the saga frame as an enchantment that keeps "Land" — never
+    // "Enchantment Enchantment", never losing the word. (The renderers print
+    // it "Land Enchantment — Urza's Saga", supertype first: a renderer
+    // leftover, TODO 1.3.)
+    const patch = mapScryfallToFormPatch(printing("mh2-259"));
     expect(patch.kind).toBe("saga");
     expect(patch.card_type).toBe("enchantment");
     expect(patch.supertype).toBe("Land");
@@ -314,11 +322,13 @@ describe("type-line + layout precedence (TODO 1.3)", () => {
     expect(parseTypeLine("Sorcery", { cardType: "instant" }).card_type).toBe("sorcery");
   });
 
-  it("artifact outranks enchantment, keeping the printed order in front", () => {
+  it("enchantment outranks artifact, keeping the other words in front", () => {
+    // Bident of Thassa THS #42 prints the (Nyx) enchantment frame.
     expect(parseTypeLine("Legendary Enchantment Artifact")).toEqual({
-      supertype: "Legendary Enchantment",
-      card_type: "artifact",
+      supertype: "Legendary Artifact",
+      card_type: "enchantment",
     });
+    expect(parseTypeLine("Artifact Enchantment — Saga").card_type).toBe("enchantment");
     expect(parseTypeLine("Legendary Artifact Creature — Golem")).toEqual({
       supertype: "Legendary Artifact",
       card_type: "creature",
@@ -347,10 +357,23 @@ describe("type-line + layout precedence (TODO 1.3)", () => {
 describe("where an import lands in the creator (production's verified frames)", () => {
   it("an Artifact Creature lands on the M15 artifact frame, even from Alpha", () => {
     // M21 Solemn: the printing's own frame.
-    expect(landing(mapScryfallToFormPatch(printing("m21-239")))).toEqual({ template: "m15artifact", colorKey: "c" });
+    expect(landing(mapScryfallToFormPatch(printing("m21-239")))).toEqual({ template: "m15artifact", colorKey: "c", status: "exact" });
     // LEA Juggernaut: agclassic isn't published, so it falls forward to the
-    // artifact frame it is — never the grey M15 spell frame.
-    expect(landing(mapScryfallToFormPatch(printing("lea-255")))).toEqual({ template: "m15artifact", colorKey: "c" });
+    // artifact frame it is — never the grey M15 spell frame (the form toasts
+    // the switch).
+    expect(landing(mapScryfallToFormPatch(printing("lea-255")))).toEqual({ template: "m15artifact", colorKey: "c", status: "frame-switched" });
+    // Where agclassic IS verified (the local e2e seed adds it), the same
+    // import lands on the Alpha frame itself.
+    expect(
+      landing(mapScryfallToFormPatch(printing("lea-255")), new Set([...PROD_VERIFIED, frameComboKey("agclassic", "c")])),
+    ).toEqual({ template: "agclassic", colorKey: "c", status: "exact" });
+  });
+
+  it("an Artifact Creature keeps its Artifact word into the frame choice", () => {
+    // Without the supertype the same import would fall to the grey spell
+    // frame: the helper the form calls must read it.
+    const patch = mapScryfallToFormPatch(printing("lea-255"));
+    expect(landing({ ...patch, supertype: undefined }).template).toBe("m15");
   });
 
   it("on the Alpha frame an imported Artifact Creature paints the brown artifact card (4.31)", () => {
@@ -371,6 +394,12 @@ describe("where an import lands in the creator (production's verified frames)", 
     expect(landing(mapScryfallToFormPatch(printing("neo-141"))).template).toBe("saga");
     // A Room is no longer a split card.
     expect(landing(mapScryfallToFormPatch(printing("dsk-43"))).template).toBe("m15");
+    // KHM snow lands land on the verified snow land frame.
+    expect(landing(mapScryfallToFormPatch(printing("khm-278")))).toEqual({ template: "m15snowland", colorKey: "u", status: "exact" });
+    expect(landing(mapScryfallToFormPatch(printing("khm-249")))).toEqual({ template: "m15snowland", colorKey: "m", status: "exact" });
+    // Bident of Thassa is an enchantment: its 2003 frame isn't verified in
+    // blue, so it falls forward to M15 — never the artifact frame.
+    expect(landing(mapScryfallToFormPatch(printing("ths-42")))).toEqual({ template: "m15", colorKey: "u", status: "frame-switched" });
   });
 });
 
@@ -403,20 +432,57 @@ describe("colour from the front face (TODO 1.2)", () => {
     ["tkld-7", [], "c", []],
     // Devoid: dressed by its mana (Eldrazi Displacer {2}{W}).
     ["ogw-13", ["W"], "w", ["W"]],
-    // Lands: a colour indicator (Dryad Arbor), identity + produced mana.
+    // Lands (every verdict below checked on the printing's Scryfall scan).
+    // A colour indicator wins (Dryad Arbor); otherwise the land frame follows
+    // the mana the land PRODUCES.
     ["dsc-273", ["G"], "g", ["G"]],
     ["mrd-283", ["U"], "u", ["U"]],
     ["eoc-176", ["U"], "u", ["U"]],
-    ["isd-243", ["G", "R"], "m", ["G", "R"]],
+    ["m10-227", ["G", "R"], "m", ["G", "R"]],
+    ["shm-275", ["W"], "w", ["W"]],
+    // A utility land that taps for {C} prints colourless, although its
+    // activation costs are coloured: Kessig Wolf Run ISD #243, Gavony
+    // Township ISD #239, Hanweir Battlements EMN #204.
+    ["isd-243", [], "c", ["G", "R"]],
+    ["isd-239", [], "c", ["G", "W"]],
+    ["emn-204", [], "c", ["R"]],
     // Command Tower MSC #233 (the curated m15land/m reference) taps for any
     // colour: gold, although its identity is empty. So does every such land
     // from the 2003 frame on (Command Tower C13 #281, the Cavern of Souls
-    // Expedition ZNE #22) — but not on the 1997 frame, where Path of
-    // Ancestry BRC #192 prints the plain land frame (checked on the scans).
+    // Expedition ZNE #22, Nykthos THS #223; the reversible Command Tower
+    // SLD #2794 too) — but not on the 1997 frame, where Path of Ancestry
+    // BRC #192 prints the plain land frame.
     ["msc-233", ["B", "G", "R", "U", "W"], "m", []],
     ["c13-281", ["B", "G", "R", "U", "W"], "m", []],
     ["zne-22", ["B", "G", "R", "U", "W"], "m", []],
+    ["ths-223", ["B", "G", "R", "U", "W"], "m", []],
+    ["sld-2794", ["B", "G", "R", "U", "W"], "m", []],
     ["brc-192", [], "c", []],
+    // A mono land that also taps for the chosen colour prints gold (Thriving
+    // Bluff JMP #33, Cliffgate CLB #350)…
+    ["jmp-33", ["B", "G", "R", "U", "W"], "m", ["R"]],
+    ["clb-350", ["B", "G", "R", "U", "W"], "m", ["R"]],
+    // …but the Vivid lands print their own colour (LAND_FRAME_OVERRIDES).
+    ["lrw-275", ["R"], "r", ["R"]],
+    ["c17-289", ["R"], "r", ["R"]],
+    ["ncc-446", ["W"], "w", ["W"]],
+    // Grey although produced_mana lists colours (LAND_FRAME_OVERRIDES): a
+    // one-shot or conditional any-colour ability beside a {C} tap, and
+    // Urborg's Swamp-granting text. Yavimaya, its Forest twin, prints green.
+    ["ogw-170", [], "c", []],
+    ["tsp-274", [], "c", []],
+    ["one-254", [], "c", []],
+    ["c13-326", [], "c", []],
+    ["uma-254", [], "c", []],
+    ["mh2-261", ["G"], "g", []],
+    // Snow lands are dressed like any other land.
+    ["khm-278", ["U"], "u", ["U"]],
+    ["khm-249", ["G", "W"], "m", ["G", "W"]],
+    // Urza's Saga taps for {C}: colourless. Bident and a colourless FIN
+    // Summon are their printed colours.
+    ["mh2-259", [], "c", []],
+    ["ths-42", ["U"], "u", ["U"]],
+    ["fin-1", [], "c", []],
     // An adventurer is its creature's colour (Burn Together is red).
     ["woe-221", ["B"], "b", ["B", "R"]],
     ["eld-115", ["R"], "r", ["R"]],
@@ -456,11 +522,35 @@ describe("colour from the front face (TODO 1.2)", () => {
   });
 
   it("lands on the front face's frame colour in the creator", () => {
-    expect(landing(mapScryfallToFormPatch(printing("mh3-237")))).toEqual({ template: "m15", colorKey: "w" });
-    expect(landing(mapScryfallToFormPatch(printing("khm-114")))).toEqual({ template: "m15", colorKey: "b" });
-    expect(landing(mapScryfallToFormPatch(printing("soi-281")))).toEqual({ template: "m15land", colorKey: "c" });
-    expect(landing(mapScryfallToFormPatch(printing("msc-233")))).toEqual({ template: "m15land", colorKey: "m" });
-    expect(landing(mapScryfallToFormPatch(printing("ogw-13")))).toEqual({ template: "m15devoid", colorKey: "w" });
+    const lands = (key: PrintingKey) => {
+      const { template, colorKey } = landing(mapScryfallToFormPatch(printing(key)));
+      return { template, colorKey };
+    };
+    expect(lands("mh3-237")).toEqual({ template: "m15", colorKey: "w" });
+    expect(lands("khm-114")).toEqual({ template: "m15", colorKey: "b" });
+    expect(lands("soi-281")).toEqual({ template: "m15land", colorKey: "c" });
+    expect(lands("msc-233")).toEqual({ template: "m15land", colorKey: "m" });
+    expect(lands("ogw-13")).toEqual({ template: "m15devoid", colorKey: "w" });
+    expect(lands("isd-243")).toEqual({ template: "m15land", colorKey: "c" });
+    expect(lands("c17-289")).toEqual({ template: "m15land", colorKey: "r" });
+    expect(lands("jmp-33")).toEqual({ template: "m15land", colorKey: "m" });
+    expect(lands("ogw-170")).toEqual({ template: "m15land", colorKey: "c" });
+    expect(lands("sld-2794")).toEqual({ template: "m15land", colorKey: "m" });
+  });
+
+  it("reads the land override table for colourless single-faced lands only", () => {
+    // A card with printed colours never reaches the land rule, whatever its
+    // name.
+    const fake = scryfallCardSchema.parse({
+      id: "x",
+      name: "Mirrex",
+      layout: "normal",
+      frame: "2015",
+      type_line: "Artifact",
+      colors: ["U"],
+      color_identity: ["U"],
+    });
+    expect(frontFaceColors(fake)).toEqual(["U"]);
   });
 
   it("reads a multi-face land front's own mana, including a basic land type's", () => {

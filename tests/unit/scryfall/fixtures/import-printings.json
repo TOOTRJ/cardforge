@@ -1502,5 +1502,791 @@
       "nonfoil",
       "foil"
     ]
+  },
+  "lrw-275": {
+    "id": "539001dc-69f0-42c0-b5c3-37d7b12eb79e",
+    "oracle_id": "d8e2efe0-33a4-4303-9e83-ac42ea5df8cb",
+    "name": "Vivid Crag",
+    "released_at": "2007-10-12",
+    "layout": "normal",
+    "set": "lrw",
+    "set_name": "Lorwyn",
+    "set_type": "expansion",
+    "collector_number": "275",
+    "lang": "en",
+    "frame": "2003",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "R"
+    ],
+    "produced_mana": [
+      "B",
+      "G",
+      "R",
+      "U",
+      "W"
+    ],
+    "rarity": "uncommon",
+    "artist": "Martina Pilcerova",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ]
+  },
+  "c17-289": {
+    "id": "71a2c58e-eb1f-4a8b-b040-419c9d5ccf65",
+    "oracle_id": "d8e2efe0-33a4-4303-9e83-ac42ea5df8cb",
+    "name": "Vivid Crag",
+    "released_at": "2017-08-25",
+    "layout": "normal",
+    "set": "c17",
+    "set_name": "Commander 2017",
+    "set_type": "commander",
+    "collector_number": "289",
+    "lang": "en",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "R"
+    ],
+    "produced_mana": [
+      "B",
+      "G",
+      "R",
+      "U",
+      "W"
+    ],
+    "rarity": "uncommon",
+    "artist": "Martina Pilcerova",
+    "finishes": [
+      "nonfoil"
+    ]
+  },
+  "ncc-446": {
+    "id": "625a42b4-d88c-48e0-96b1-77388ca48810",
+    "oracle_id": "dee99df5-628f-4a4e-a203-4dfddc927373",
+    "name": "Vivid Meadow",
+    "released_at": "2022-04-29",
+    "layout": "normal",
+    "set": "ncc",
+    "set_name": "New Capenna Commander",
+    "set_type": "commander",
+    "collector_number": "446",
+    "lang": "en",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "W"
+    ],
+    "produced_mana": [
+      "B",
+      "G",
+      "R",
+      "U",
+      "W"
+    ],
+    "rarity": "uncommon",
+    "artist": "Rob Alexander",
+    "finishes": [
+      "nonfoil"
+    ]
+  },
+  "uma-254": {
+    "id": "02e17705-739e-409f-a6fd-7bab22120b22",
+    "oracle_id": "db6174d7-211d-4817-b8e4-8384594c83f9",
+    "name": "Urborg, Tomb of Yawgmoth",
+    "released_at": "2018-12-07",
+    "layout": "normal",
+    "set": "uma",
+    "set_name": "Ultimate Masters",
+    "set_type": "masters",
+    "collector_number": "254",
+    "lang": "en",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "security_stamp": "oval",
+    "keywords": [],
+    "type_line": "Legendary Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [],
+    "produced_mana": [
+      "B"
+    ],
+    "rarity": "rare",
+    "artist": "Jung Park",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ]
+  },
+  "mh2-261": {
+    "id": "4e4b6e22-93b2-4896-bba5-0ceaa5d8ea3c",
+    "oracle_id": "8dd5f5af-d2d8-4356-8617-8381081b930c",
+    "name": "Yavimaya, Cradle of Growth",
+    "released_at": "2021-06-18",
+    "layout": "normal",
+    "set": "mh2",
+    "set_name": "Modern Horizons 2",
+    "set_type": "draft_innovation",
+    "collector_number": "261",
+    "lang": "en",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "security_stamp": "oval",
+    "keywords": [],
+    "type_line": "Legendary Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [],
+    "produced_mana": [
+      "G"
+    ],
+    "rarity": "rare",
+    "artist": "Sarah Finnigan",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ]
+  },
+  "ogw-170": {
+    "id": "d491c13c-43e3-4ca3-b888-4edd34dfe14a",
+    "oracle_id": "3c1fe86a-3696-4634-bc26-cd45846529ec",
+    "name": "Crumbling Vestige",
+    "released_at": "2016-01-22",
+    "layout": "normal",
+    "set": "ogw",
+    "set_name": "Oath of the Gatewatch",
+    "set_type": "expansion",
+    "collector_number": "170",
+    "lang": "en",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [],
+    "produced_mana": [
+      "B",
+      "C",
+      "G",
+      "R",
+      "U",
+      "W"
+    ],
+    "rarity": "common",
+    "artist": "Zack Stella",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ]
+  },
+  "tsp-274": {
+    "id": "94d74254-4750-4fb3-9e53-473a5f98b315",
+    "oracle_id": "c0adbddc-b070-4c5f-afe0-0474c72a9251",
+    "name": "Gemstone Caverns",
+    "released_at": "2006-10-06",
+    "layout": "normal",
+    "set": "tsp",
+    "set_name": "Time Spiral",
+    "set_type": "expansion",
+    "collector_number": "274",
+    "lang": "en",
+    "frame": "2003",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Legendary Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [],
+    "produced_mana": [
+      "B",
+      "C",
+      "G",
+      "R",
+      "U",
+      "W"
+    ],
+    "rarity": "rare",
+    "artist": "Martina Pilcerova",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ]
+  },
+  "one-254": {
+    "id": "54a702cd-ca49-4570-b47e-8b090452a3c3",
+    "oracle_id": "5502741a-e3b9-454e-8121-4360a6db6750",
+    "name": "Mirrex",
+    "released_at": "2023-02-10",
+    "layout": "normal",
+    "set": "one",
+    "set_name": "Phyrexia: All Will Be One",
+    "set_type": "expansion",
+    "collector_number": "254",
+    "lang": "en",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "security_stamp": "oval",
+    "keywords": [],
+    "type_line": "Land — Sphere",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [],
+    "produced_mana": [
+      "B",
+      "C",
+      "G",
+      "R",
+      "U",
+      "W"
+    ],
+    "rarity": "rare",
+    "artist": "Adam Burn",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ]
+  },
+  "c13-326": {
+    "id": "035438b1-f794-41e5-9e2b-bc5136766cd5",
+    "oracle_id": "9eaadbbc-818b-4c21-9d4b-1bba48504d38",
+    "name": "Springjack Pasture",
+    "released_at": "2013-11-01",
+    "layout": "normal",
+    "set": "c13",
+    "set_name": "Commander 2013",
+    "set_type": "commander",
+    "collector_number": "326",
+    "lang": "en",
+    "frame": "2003",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [],
+    "produced_mana": [
+      "B",
+      "C",
+      "G",
+      "R",
+      "U",
+      "W"
+    ],
+    "rarity": "rare",
+    "artist": "Terese Nielsen",
+    "finishes": [
+      "nonfoil"
+    ]
+  },
+  "isd-239": {
+    "id": "b5f73443-2fe8-424f-8e71-fc7ce1f3a3eb",
+    "oracle_id": "8a44e4e7-dfa2-427b-bbff-11c398fa60bb",
+    "name": "Gavony Township",
+    "released_at": "2011-09-30",
+    "layout": "normal",
+    "set": "isd",
+    "set_name": "Innistrad",
+    "set_type": "expansion",
+    "collector_number": "239",
+    "lang": "en",
+    "frame": "2003",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "G",
+      "W"
+    ],
+    "produced_mana": [
+      "C"
+    ],
+    "rarity": "rare",
+    "artist": "Peter Mohrbacher",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ]
+  },
+  "emn-204": {
+    "id": "1d743ad6-6ca2-409a-9773-581cc195dbf2",
+    "oracle_id": "0e735ba6-7fd1-4d12-b20c-21525dc1e2b5",
+    "name": "Hanweir Battlements",
+    "released_at": "2016-07-22",
+    "layout": "meld",
+    "set": "emn",
+    "set_name": "Eldritch Moon",
+    "set_type": "expansion",
+    "collector_number": "204",
+    "lang": "en",
+    "frame": "2015",
+    "frame_effects": [
+      "mooneldrazidfc"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "security_stamp": "oval",
+    "keywords": [
+      "Meld"
+    ],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "R"
+    ],
+    "produced_mana": [
+      "C"
+    ],
+    "rarity": "rare",
+    "artist": "Vincent Proce",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ]
+  },
+  "m10-227": {
+    "id": "5433b11b-efe9-4d94-8f71-6bf7c403494d",
+    "oracle_id": "9516c4c1-d72d-434f-97e1-6a862434a169",
+    "name": "Rootbound Crag",
+    "released_at": "2009-07-17",
+    "layout": "normal",
+    "set": "m10",
+    "set_name": "Magic 2010",
+    "set_type": "core",
+    "collector_number": "227",
+    "lang": "en",
+    "frame": "2003",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "G",
+      "R"
+    ],
+    "produced_mana": [
+      "G",
+      "R"
+    ],
+    "rarity": "rare",
+    "artist": "Matt Stewart",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ]
+  },
+  "shm-275": {
+    "id": "af06f923-0c89-42ae-a4a8-618be7f39cce",
+    "oracle_id": "bb5c1817-ac22-4779-9005-251bc354f181",
+    "name": "Mistveil Plains",
+    "released_at": "2008-05-02",
+    "layout": "normal",
+    "set": "shm",
+    "set_name": "Shadowmoor",
+    "set_type": "expansion",
+    "collector_number": "275",
+    "lang": "en",
+    "frame": "2003",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Land — Plains",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "W"
+    ],
+    "produced_mana": [
+      "W"
+    ],
+    "rarity": "uncommon",
+    "artist": "Rob Alexander",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ]
+  },
+  "jmp-33": {
+    "id": "15481459-3703-4185-ad27-105d95691e9d",
+    "oracle_id": "91fceb34-0f2d-4392-be27-00dcd765637f",
+    "name": "Thriving Bluff",
+    "released_at": "2020-07-17",
+    "layout": "normal",
+    "set": "jmp",
+    "set_name": "Jumpstart",
+    "set_type": "draft_innovation",
+    "collector_number": "33",
+    "lang": "en",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "R"
+    ],
+    "produced_mana": [
+      "B",
+      "G",
+      "R",
+      "U",
+      "W"
+    ],
+    "rarity": "common",
+    "artist": "Johannes Voss",
+    "finishes": [
+      "nonfoil"
+    ]
+  },
+  "clb-350": {
+    "id": "557470dc-c594-4b26-81b9-356bedb0c215",
+    "oracle_id": "1999b5ac-21fb-4d99-ad72-58bf507f9a59",
+    "name": "Cliffgate",
+    "released_at": "2022-06-10",
+    "layout": "normal",
+    "set": "clb",
+    "set_name": "Commander Legends: Battle for Baldur's Gate",
+    "set_type": "draft_innovation",
+    "collector_number": "350",
+    "lang": "en",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Land — Gate",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "R"
+    ],
+    "produced_mana": [
+      "B",
+      "G",
+      "R",
+      "U",
+      "W"
+    ],
+    "rarity": "common",
+    "artist": "Emmanuel Shiu",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ]
+  },
+  "ths-223": {
+    "id": "834b27a0-dfd7-4f96-8cde-cacac4b24acc",
+    "oracle_id": "84dc18f0-8225-4b40-a165-b10321e41769",
+    "name": "Nykthos, Shrine to Nyx",
+    "released_at": "2013-09-27",
+    "layout": "normal",
+    "set": "ths",
+    "set_name": "Theros",
+    "set_type": "expansion",
+    "collector_number": "223",
+    "lang": "en",
+    "frame": "2003",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Legendary Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [],
+    "produced_mana": [
+      "B",
+      "C",
+      "G",
+      "R",
+      "U",
+      "W"
+    ],
+    "rarity": "rare",
+    "artist": "Jung Park",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ]
+  },
+  "sld-2794": {
+    "id": "af609bad-083f-42e4-a102-7a0da8e7a85f",
+    "name": "Command Tower // Command Tower",
+    "released_at": "2026-09-14",
+    "layout": "reversible_card",
+    "set": "sld",
+    "set_name": "Secret Lair Drop",
+    "set_type": "box",
+    "collector_number": "2794",
+    "lang": "en",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "black",
+    "full_art": true,
+    "textless": true,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "keywords": [],
+    "color_identity": [],
+    "produced_mana": [
+      "B",
+      "G",
+      "R",
+      "U",
+      "W"
+    ],
+    "rarity": "rare",
+    "artist": "Skinnyelbows & James Bousema",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "card_faces": [
+      {
+        "name": "Command Tower",
+        "mana_cost": "",
+        "type_line": "Land",
+        "colors": [],
+        "artist": "Skinnyelbows",
+        "oracle_text": "{T}: Add one mana of any color in your commander's color identity."
+      },
+      {
+        "name": "Command Tower",
+        "mana_cost": "",
+        "type_line": "Land",
+        "colors": [],
+        "artist": "James Bousema"
+      }
+    ]
+  },
+  "khm-278": {
+    "id": "3bfa5ebc-5623-4eec-89ea-dc187489ee4a",
+    "oracle_id": "5b2460a5-6ae5-4cad-ba94-1a9e98e6e4c0",
+    "name": "Snow-Covered Island",
+    "released_at": "2021-02-05",
+    "layout": "normal",
+    "set": "khm",
+    "set_name": "Kaldheim",
+    "set_type": "expansion",
+    "collector_number": "278",
+    "lang": "en",
+    "frame": "2015",
+    "frame_effects": [
+      "snow"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Basic Snow Land — Island",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "U"
+    ],
+    "produced_mana": [
+      "U"
+    ],
+    "rarity": "common",
+    "artist": "Piotr Dura",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ]
+  },
+  "khm-249": {
+    "id": "b20e3117-f1e4-4449-ae9d-0b66abfc717d",
+    "oracle_id": "32fb0096-546c-4633-b6e3-ba3f2d9fa49c",
+    "name": "Arctic Treeline",
+    "released_at": "2021-02-05",
+    "layout": "normal",
+    "set": "khm",
+    "set_name": "Kaldheim",
+    "set_type": "expansion",
+    "collector_number": "249",
+    "lang": "en",
+    "frame": "2015",
+    "frame_effects": [
+      "snow"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Snow Land — Forest Plains",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "G",
+      "W"
+    ],
+    "produced_mana": [
+      "G",
+      "W"
+    ],
+    "rarity": "common",
+    "artist": "Alayna Danner",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ]
+  },
+  "ths-42": {
+    "id": "85e45d14-a501-40b9-af0a-720ecd20dad7",
+    "oracle_id": "e1afaef7-9fa3-4662-a95f-adfb0da9fd11",
+    "name": "Bident of Thassa",
+    "released_at": "2013-09-27",
+    "layout": "normal",
+    "set": "ths",
+    "set_name": "Theros",
+    "set_type": "expansion",
+    "collector_number": "42",
+    "lang": "en",
+    "frame": "2003",
+    "frame_effects": [
+      "enchantment"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Legendary Enchantment Artifact",
+    "mana_cost": "{2}{U}{U}",
+    "colors": [
+      "U"
+    ],
+    "color_identity": [
+      "U"
+    ],
+    "rarity": "rare",
+    "artist": "Yeong-Hao Han",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ]
+  },
+  "mh2-259": {
+    "id": "c1e0f201-42cb-46a1-901a-65bb4fc18f6c",
+    "oracle_id": "4c6a0c30-b547-4eff-8ff4-0ca25803c076",
+    "name": "Urza's Saga",
+    "released_at": "2021-06-18",
+    "layout": "saga",
+    "set": "mh2",
+    "set_name": "Modern Horizons 2",
+    "set_type": "draft_innovation",
+    "collector_number": "259",
+    "lang": "en",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "security_stamp": "oval",
+    "keywords": [],
+    "type_line": "Enchantment Land — Urza's Saga",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [],
+    "produced_mana": [
+      "C"
+    ],
+    "rarity": "rare",
+    "artist": "Titus Lunter",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ]
+  },
+  "fin-1": {
+    "id": "95318d85-4a08-47ac-a43d-ea83c0bea81c",
+    "oracle_id": "fe9f6825-597b-4d80-ab7c-f4ee4e824b6f",
+    "name": "Summon: Bahamut",
+    "released_at": "2025-06-13",
+    "layout": "saga",
+    "set": "fin",
+    "set_name": "Final Fantasy",
+    "set_type": "expansion",
+    "collector_number": "1",
+    "lang": "en",
+    "frame": "2015",
+    "frame_effects": [
+      "enchantment"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "ffx",
+      "universesbeyond"
+    ],
+    "security_stamp": "triangle",
+    "keywords": [
+      "Flying"
+    ],
+    "type_line": "Enchantment Creature — Saga Dragon",
+    "mana_cost": "{9}",
+    "power": "9",
+    "toughness": "9",
+    "colors": [],
+    "color_identity": [],
+    "rarity": "mythic",
+    "artist": "Arif Wijaya",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ]
   }
 }

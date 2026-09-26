@@ -72,18 +72,22 @@ const TYPE_WORD_TO_CARD_TYPE: Record<string, CardType> = {
 //     dressed as a land, and an "Artifact Land" stays a land;
 //   • creature beats the rest — an Artifact or Enchantment Creature needs
 //     the P/T box, which the form gates on card_type;
-//   • artifact beats enchantment — a "Legendary Enchantment Artifact"
-//     (Bident of Thassa) prints on the artifact frame.
+//   • enchantment beats artifact — a "Legendary Enchantment Artifact"
+//     (Bident of Thassa THS #42, the Theros god weapons) prints on the
+//     enchantment frame (Nyx), never the artifact frame.
 // The other words are NOT lost: they ride in `supertype`, in printed order,
-// so the type line still reads "Artifact Creature — Golem".
+// so "Artifact Creature — Golem" keeps its "Artifact". (The renderers print
+// the supertype BEFORE the card type, so a line whose card type isn't its
+// last word — "Token Creature", "Land Creature", "Enchantment Land" under a
+// layout kind — reads the words in another order: a renderer item, TODO 1.3.)
 const CARD_TYPE_PRECEDENCE: readonly CardType[] = [
   "token",
   "land",
   "creature",
   "planeswalker",
   "battle",
-  "artifact",
   "enchantment",
+  "artifact",
   "instant",
   "sorcery",
 ];
@@ -332,7 +336,9 @@ const SCRYFALL_FRAME_TO_ERA: Record<string, FrameEra> = {
  *
  * On the M15 era:
  *   • snow/devoid printings re-dress the plain spell frame (a frame effect
- *     is a fact about the printing, so it wins over the type words);
+ *     is a fact about the printing, so it wins over the type words), and a
+ *     snow land the land frame (Snow-Covered Island KHM #278, Arctic
+ *     Treeline KHM #249 print the snow land frame);
  *   • an Artifact Creature is a creature on the artifact frame (TODO 1.7 —
  *     Solemn Simulacrum M21 #239 is the curated m15artifact/c reference);
  *   • an artifact token is the artifact token frame (Treasure).
@@ -357,12 +363,13 @@ export function frameTemplateFromScryfall(
   const artifact = typeLineWords(frontTypeLine(card)).words.some(
     (w) => w.cardType === "artifact",
   );
+  const effects = (card.frame_effects ?? []).map((e) => e.toLowerCase());
   if (base === "m15") {
-    const effects = (card.frame_effects ?? []).map((e) => e.toLowerCase());
     if (effects.includes("snow")) return "m15snow";
     if (effects.includes("devoid")) return "m15devoid";
     if (artifact && kind === "creature") return "m15artifact";
   }
+  if (base === "m15land" && effects.includes("snow")) return "m15snowland";
   if (base === "m15token" && artifact) return "m15tokenartifact";
   return base;
 }
@@ -494,14 +501,13 @@ function manaSymbolColors(text: string | null | undefined): string[] {
  *   2. A colourless front stays colourless (Thought-Knot Seer, Solemn
  *      Simulacrum, a Talisman whose rules mention coloured mana) — except
  *      a LAND or a DEVOID card, which is dressed by its mana:
- *        • single-faced: `color_identity` (its cost and rules text) plus,
- *          for a land on the 2003 frame or later, `produced_mana` — Command
- *          Tower (MSC #233, the curated m15land/m reference) taps for any
- *          colour and prints gold (LANDS_UNDRESSED_BY_PRODUCED_MANA); Kessig
- *          Wolf Run's R/G ability prints an R/G land;
- *        • multi-faced: the front face's own symbols, because identity and
- *          produced_mana cover both faces — Westvale Abbey SOI #281 is a
- *          colourless land whose identity is its back face's black.
+ *        • a devoid card: its `color_identity` (Eldrazi Displacer is white);
+ *        • a single-faced land: the mana it PRODUCES (landFrameColors);
+ *        • a multi-faced land front: the front face's own symbols and basic
+ *          land types, because identity and produced_mana cover both faces
+ *          — Westvale Abbey SOI #281 is a colourless land whose identity is
+ *          its back face's black. A reversible card is the same card on
+ *          both sides, so it reads as single-faced (Command Tower SLD #2794).
  * An older cached shape with no `colors` anywhere falls back to the
  * identity, as the importer always did.
  */
@@ -527,32 +533,76 @@ export function frontFaceColors(card: ScryfallCard): string[] {
     (card.frame_effects ?? []).some((e) => e.toLowerCase() === "devoid") ||
     (card.keywords ?? []).some((k) => k.toLowerCase() === "devoid");
   if (!isLand && !isDevoid) return [];
-  if (front) {
+  const reversible = (card.layout ?? "").toLowerCase() === "reversible_card";
+  if (front && !reversible) {
     return wubrgLetters([
       ...manaSymbolColors(front.mana_cost),
       ...manaSymbolColors(front.oracle_text),
       ...frontType.subtypes.map((subtype) => BASIC_LAND_TYPE_COLOR[subtype]),
     ]);
   }
-  const producedDresses =
-    isLand && !LANDS_UNDRESSED_BY_PRODUCED_MANA.has((card.frame ?? "").trim());
-  return wubrgLetters([
-    ...(card.color_identity ?? []),
-    ...(producedDresses ? card.produced_mana ?? [] : []),
-  ]);
+  if (!isLand) return wubrgLetters(card.color_identity ?? []);
+  return landFrameColors(card);
 }
 
-// Border eras whose lands are NOT dressed by the mana they produce. From
-// the 2003 frame on, a land that taps for any colour prints the gold land
-// frame (checked by eye on Scryfall's scans: Command Tower C13/MSC, City of
-// Brass MMA/2X2, Mana Confluence JOU, Glimmervoid MMA, Exotic Orchard
-// PC2/CN2, Path of Ancestry C17, Cavern of Souls MM3 and ZNE). The 1993 and
-// 1997 frames print those lands on the plain land frame (City of Brass ARN
-// and 7ED, Rainbow Vale FEM, Path of Ancestry and Command Tower BRC), so
-// there only the identity dresses a land.
-const LANDS_UNDRESSED_BY_PRODUCED_MANA: ReadonlySet<string> = new Set([
-  "1993",
-  "1997",
+/**
+ * A single-faced land's frame colour (TODO 1.2). Scryfall has no field for
+ * it, so this is a heuristic checked on Scryfall's scans — the land frame
+ * follows the mana the land PRODUCES, not every symbol on it:
+ *   • 2003 frame and later: `produced_mana`'s colours. Rootbound Crag M10
+ *     #227 taps for {R}/{G} and prints R/G; a land that taps for any colour
+ *     prints gold (Command Tower MSC #233, the curated m15land/m reference;
+ *     Thriving Bluff JMP #33, Cliffgate CLB #350, Nykthos THS #223); a
+ *     utility land that taps for {C} prints colourless although its
+ *     activation costs are coloured (Kessig Wolf Run ISD #243, Gavony
+ *     Township ISD #239, Hanweir Battlements EMN #204). A land Scryfall
+ *     lists no produced mana for (a fetch land) falls back to its identity.
+ *   • 1993 and 1997 frames: the identity only — those frames print an
+ *     any-colour land on the plain land frame (City of Brass ARN / 7ED,
+ *     Rainbow Vale FEM, Path of Ancestry and Command Tower BRC).
+ *   • LAND_FRAME_OVERRIDES: the lands the data can't predict.
+ * The signature registry (1.4) supersedes this with per-printing rules.
+ */
+function landFrameColors(card: ScryfallCard): string[] {
+  const override = LAND_FRAME_OVERRIDES.get(card.name);
+  if (override === "colorless") return [];
+  if (
+    override === "identity" ||
+    IDENTITY_DRESSED_LAND_ERAS.has((card.frame ?? "").trim()) ||
+    card.produced_mana == null
+  ) {
+    return wubrgLetters(card.color_identity ?? []);
+  }
+  return wubrgLetters(card.produced_mana);
+}
+
+// Border eras whose lands are dressed by their identity, never by the mana
+// they produce (landFrameColors).
+const IDENTITY_DRESSED_LAND_ERAS: ReadonlySet<string> = new Set(["1993", "1997"]);
+
+// Lands whose printed frame the produced-mana rule gets wrong, by Oracle name
+// (Scryfall's `name`, English on every printing), each checked on its scans:
+//   • "identity" — the Vivid lands tap for their colour plus, with a charge
+//     counter, any colour, and print their own colour (Vivid Crag LRW #275
+//     and C17 #289 red, Vivid Meadow NCC #446 white), unlike the Thriving
+//     lands and the CLB Gates, which print gold for the same mana;
+//   • "colorless" — produced_mana lists colours these print grey for: a
+//     one-shot or conditional any-colour ability beside a {C} tap (Crumbling
+//     Vestige OGW #170, Gemstone Caverns TSP #274, Mirrex ONE #254,
+//     Springjack Pasture C13 #326), and Urborg UMA #254, whose Swamp-granting
+//     text Scryfall counts as {B} (Yavimaya MH2 #261, its Forest twin, does
+//     print green).
+const LAND_FRAME_OVERRIDES: ReadonlyMap<string, "identity" | "colorless"> = new Map([
+  ["Vivid Crag", "identity"],
+  ["Vivid Creek", "identity"],
+  ["Vivid Grove", "identity"],
+  ["Vivid Marsh", "identity"],
+  ["Vivid Meadow", "identity"],
+  ["Crumbling Vestige", "colorless"],
+  ["Gemstone Caverns", "colorless"],
+  ["Mirrex", "colorless"],
+  ["Springjack Pasture", "colorless"],
+  ["Urborg, Tomb of Yawgmoth", "colorless"],
 ]);
 
 /**

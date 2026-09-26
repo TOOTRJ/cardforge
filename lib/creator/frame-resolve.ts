@@ -4,16 +4,22 @@ import {
   FRAME_SET_LABELS,
   FRAME_TEMPLATE_LABELS,
   FRAME_TEMPLATE_SET,
+  DEFAULT_FRAME_TEMPLATE,
   type CardType,
+  type ColorIdentity,
   type FrameTemplate,
 } from "@/types/card";
 import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
-import { isArtifactFrameType } from "@/components/cards/frame-layer";
+import {
+  isArtifactFrameType,
+  pickFrameColorKey,
+} from "@/components/cards/frame-layer";
 import { eraForTemplate, standardFrameFor } from "@/lib/creator/frame-picker";
 import {
   baseFrameFor,
   framesForKind,
   isBorrowedVariation,
+  kindFromCard,
   templateIsBasicOnly,
   type CardKind,
   type FrameColorKey,
@@ -167,6 +173,52 @@ export function importFrameCandidates(input: {
       ].filter((t): t is FrameTemplate => Boolean(t)),
     ),
   );
+}
+
+/**
+ * Where a Scryfall import lands (the creator's handleScryfallImport, after
+ * the imported kind is applied): the printing's frame, resolved with the
+ * "frame" policy for the IMPORTED colour, which is a fact about the card and
+ * never changes — the printing's frame, else its era's standard, else (for
+ * an Artifact Creature) the M15 artifact frame, else the M15 standard, else
+ * any published frame of the kind in that colour (importFrameCandidates).
+ * `current` is the form after the kind change, for what an older cached
+ * patch doesn't carry. Pure, so the form's wiring is the tested path.
+ */
+export function resolveImportFrame(input: {
+  patch: {
+    frame_template?: FrameTemplate;
+    card_type?: CardType;
+    supertype?: string;
+    color_identity?: readonly ColorIdentity[];
+  };
+  /** The imported kind (patch.kind, else the card type's). */
+  kind: CardKind | null;
+  current: {
+    template?: FrameTemplate | null;
+    cardType?: CardType | null;
+    colors: readonly ColorIdentity[];
+  };
+  verifiedKeys: ReadonlySet<string>;
+}): { wanted: FrameTemplate; colorKey: FrameColorKey; resolution: FrameResolution } {
+  const { patch, current } = input;
+  const colorKey = pickFrameColorKey(
+    patch.color_identity ?? current.colors,
+  ) as FrameColorKey;
+  const cardType = patch.card_type || current.cardType || "creature";
+  const wanted = patch.frame_template ?? current.template ?? DEFAULT_FRAME_TEMPLATE;
+  const resolution = resolvePublishedFrame({
+    kind: input.kind ?? kindFromCard(cardType, undefined),
+    candidates: importFrameCandidates({
+      wanted,
+      cardType,
+      supertype: patch.supertype,
+    }),
+    colorKey,
+    verifiedKeys: input.verifiedKeys,
+    prefer: "frame",
+  });
+  return { wanted, colorKey, resolution };
 }
 
 /** Where a card on a basic-only frame (the full-art basic land) goes when it
