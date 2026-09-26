@@ -10,7 +10,18 @@
 // DRAFTS_MAY_OMIT_SECOND_FACE_NAME is the ONE switch. Flip it to false and
 // the name is required on every save again, everywhere at once: the
 // creator's form schema, its Save hint and helper copy, and the server's
-// create / update / bulk-publish gates all read the functions below.
+// create / update / bulk-publish gates all read the functions below. (The
+// bulk action never gates "make private": hiding a card needs no name.)
+// A flip also means rewriting the tests that encode the recommendation:
+//   tests/unit/cards/second-face-name-gate.test.ts — "drafts may omit the
+//     name; anything visible needs it", "lets a private draft through with
+//     it unnamed", "lets the draft be edited, and published once the patch
+//     names it";
+//   tests/unit/components/creator-form-reliability.test.tsx — "publishing a
+//     split card lists the missing name; a draft saves without it", "a split
+//     card saves its untouched second half as an instant";
+//   tests/unit/creator/form-schema.test.ts — "3b.5: a draft may leave the
+//     second face unnamed".
 //
 // Shared by client and server; no imports beyond types.
 

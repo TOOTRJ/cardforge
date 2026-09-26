@@ -246,7 +246,7 @@ const uuidSchema = z.string().uuid("Must be a valid UUID.");
 // the same length/format rules as the front.
 // ---------------------------------------------------------------------------
 
-export const backFaceTitleSchema = z
+const backFaceTitleSchema = z
   .string()
   .trim()
   .max(120, "Title must be 120 characters or fewer.");

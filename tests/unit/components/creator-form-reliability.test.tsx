@@ -315,7 +315,7 @@ describe("3b.1 a failed save request keeps the editor", () => {
 
     await waitFor(() => expect(actions.updateCardAction).toHaveBeenCalledTimes(1));
     await waitFor(() =>
-      expect(screen.getByRole("alert").textContent).toMatch(/Couldn't reach PipGlyph to save/),
+      expect(screen.getByRole("alert").textContent).toMatch(/The save didn.t go through/),
     );
     expect(screen.queryByTestId("error-boundary")).toBeNull();
     expect(titleInput().value).toBe("Emberbound Wyrm, Reborn");
@@ -333,7 +333,7 @@ describe("3b.1 a failed save request keeps the editor", () => {
 
     await waitFor(() => expect(actions.createCardAction).toHaveBeenCalledTimes(1));
     await waitFor(() =>
-      expect(screen.getByRole("alert").textContent).toMatch(/Couldn't reach PipGlyph to save/),
+      expect(screen.getByRole("alert").textContent).toMatch(/The save didn.t go through/),
     );
     expect(screen.queryByTestId("error-boundary")).toBeNull();
     expect(titleInput().value).toBe("Wyrm of the Second Dawn");
@@ -623,6 +623,26 @@ describe("3b.5 the second face's name", () => {
     expect(payload.back_face.card_type).toBeTruthy();
   });
 
+  it("the section holding a missing second-face name opens without an error", async () => {
+    renderForm({ mode: "create" });
+    await pickKind(/^Split/);
+    await clickNext(); // Identity
+    // The Save hint asks for the name, so its folded section is open.
+    const details = screen
+      .getByText(/More options — artist credit & second face/)
+      .closest("details") as HTMLDetailsElement;
+    expect(saveHint()).toMatch(/the second face's name/);
+    expect(details.open).toBe(true);
+  });
+
+  it("a named second face leaves the section folded", async () => {
+    renderForm({ mode: "edit", card: savedCard({ ...SPLIT_CARD, visibility: "public" }) });
+    const details = screen
+      .getByText(/More options — artist credit & second face/)
+      .closest("details") as HTMLDetailsElement;
+    expect(details.open).toBe(false);
+  });
+
   it("an Adventure names what's missing as the adventure", async () => {
     renderForm({ mode: "create" });
     await pickKind(/^Adventure/);
@@ -884,6 +904,25 @@ describe("3b.7 a save takes the Back sentinel off before navigating", () => {
     );
   });
 
+  it("a link's \"Leave without saving\" pops the sentinel once, before navigating", async () => {
+    const { back } = spyHistory();
+    renderForm({ mode: "edit", card: savedCard() });
+    await typeTitle("Emberbound Wyrm II");
+    await act(async () => {
+      fireEvent.click(screen.getByRole("link", { name: "Cancel" }));
+    });
+    await screen.findByRole("dialog");
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Leave without saving" }));
+    });
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith(`/go/card/${CARD_ID}`));
+    expect(back).toHaveBeenCalledTimes(1);
+    expect(back.mock.invocationCallOrder[0]).toBeLessThan(
+      router.push.mock.invocationCallOrder[0],
+    );
+    expect(actions.updateCardAction).not.toHaveBeenCalled();
+  });
+
   it("keystrokes typed during the save keep their guard (and its sentinel)", async () => {
     const { back } = spyHistory();
     const pending = deferred<unknown>();
@@ -959,5 +998,81 @@ describe("3b.8 the second half is typed from the kind", () => {
     await clickSave();
     await waitFor(() => expect(actions.createCardAction).toHaveBeenCalledTimes(1));
     expect(actions.createCardAction.mock.calls[0][0].back_face.card_type).toBe("instant");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The leave dialog's "Save as draft" on /create?deckCard= or ?backFor= used
+// to return before the link step: the card saved, but never landed in the
+// deck (or on the front card). The link now runs first, then the navigation
+// the user was attempting.
+// ---------------------------------------------------------------------------
+
+describe("a save from the leave dialog still links the new card", () => {
+  const NEW_CARD = "44444444-4444-4444-8444-444444444444";
+  const FRONT_CARD = "55555555-5555-4555-8555-555555555555";
+
+  async function leaveViaLinkAndSaveDraft() {
+    const anchor = document.createElement("a");
+    anchor.href = "/dashboard";
+    anchor.textContent = "Dashboard";
+    document.body.appendChild(anchor);
+    try {
+      await act(async () => {
+        fireEvent.click(anchor);
+      });
+      await screen.findByRole("dialog");
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: /Save as draft/ }));
+      });
+      await waitFor(() => expect(router.push).toHaveBeenCalledWith("/dashboard"));
+    } finally {
+      anchor.remove();
+    }
+  }
+
+  it("a back face is linked to its front, then the leave continues", async () => {
+    actions.createCardAction.mockResolvedValue({ ok: true, cardId: NEW_CARD, slug: "the-back" });
+    actions.updateCardAction.mockResolvedValue({ ok: true, slug: "front-card" });
+    renderForm({ mode: "create", backForCardId: FRONT_CARD, backForSlug: "tester/front-card" });
+    await clickNext(); // Identity
+    await typeTitle("The Back");
+    await leaveViaLinkAndSaveDraft();
+
+    expect(actions.createCardAction).toHaveBeenCalledTimes(1);
+    expect(actions.updateCardAction).toHaveBeenCalledWith(FRONT_CARD, { back_card_id: NEW_CARD });
+    expect(actions.updateCardAction.mock.invocationCallOrder[0]).toBeLessThan(
+      router.push.mock.invocationCallOrder[0],
+    );
+    // The dialog's destination wins over the flow's own "back to the front".
+    expect(router.replace).not.toHaveBeenCalled();
+  });
+
+  it("a deck proxy is linked into its deck, then the leave continues", async () => {
+    actions.createCardAction.mockResolvedValue({ ok: true, cardId: NEW_CARD, slug: "my-bolt" });
+    actions.linkDeckCardAction.mockResolvedValue({ ok: true });
+    renderForm({
+      mode: "create",
+      deckRemix: {
+        deckCardId: "66666666-6666-4666-8666-666666666666",
+        scryfallId: null,
+        deckSlug: "tester/burn",
+        deckTitle: "Burn",
+        entryName: "Lightning Bolt",
+      },
+    });
+    await clickNext(); // Identity
+    await typeTitle("My Bolt");
+    await leaveViaLinkAndSaveDraft();
+
+    expect(actions.linkDeckCardAction).toHaveBeenCalledWith(
+      "66666666-6666-4666-8666-666666666666",
+      NEW_CARD,
+    );
+    expect(actions.linkDeckCardAction.mock.invocationCallOrder[0]).toBeLessThan(
+      router.push.mock.invocationCallOrder[0],
+    );
+    expect(toast.success).toHaveBeenCalledWith("Linked into “Burn”.");
+    expect(router.replace).not.toHaveBeenCalled();
   });
 });

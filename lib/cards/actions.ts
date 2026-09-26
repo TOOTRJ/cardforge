@@ -875,12 +875,16 @@ export async function updateCardsVisibilityAction(
   }
   // Publishing needs every second face named (TODO 3b.5): a draft saved
   // with an unnamed Adventure / split half can't go out from here either.
-  const unnamed = existing.filter((c) =>
-    missingSecondFaceName(
-      c.back_face as { title?: string | null } | null,
-      parsed.data.visibility,
-    ),
-  );
+  // Hiding a card never needs a name — whatever the draft policy says.
+  const unnamed =
+    parsed.data.visibility === "private"
+      ? []
+      : existing.filter((c) =>
+          missingSecondFaceName(
+            c.back_face as { title?: string | null } | null,
+            parsed.data.visibility,
+          ),
+        );
   if (unnamed.length > 0) {
     const names = unnamed
       .slice(0, 3)

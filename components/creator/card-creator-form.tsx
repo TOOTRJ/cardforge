@@ -314,9 +314,11 @@ const STEP_RAIL_ICONS: Record<string, React.ReactNode> = {
 };
 
 /** Shown when a save request throws instead of answering: the editor stays
- *  mounted with the card exactly as the user left it (TODO 3b.1). */
+ *  mounted with the card exactly as the user left it (TODO 3b.1). Neutral on
+ *  purpose — the cause may be the connection, a server error or a stale
+ *  action id after a deploy, where only a reload helps. */
 const SAVE_REQUEST_FAILED =
-  "Couldn't reach PipGlyph to save. Your card is still here — check your connection and click Save again.";
+  "The save didn't go through. Your card is still here — try Save again; if it keeps failing, copy your text and reload the page.";
 
 /** Structural equality of two form-value snapshots (plain JSON-like data:
  *  strings, numbers, booleans, arrays, objects). */
@@ -686,14 +688,16 @@ export function CardCreatorForm({
   // lib/cards/second-face-name.ts). That name used to be required silently:
   // Save stayed enabled, the save failed on a field folded away inside the
   // Identity step's "More options".
-  const saveMissing = [
-    !watched.title.trim() ? "a title" : null,
-    !watched.save_as_draft && !watched.art_url.trim() ? "artwork" : null,
+  const secondFaceNameMissing =
     watched.has_back_face &&
     missingSecondFaceName(
       watched.back_face,
       watched.save_as_draft ? "private" : watched.visibility,
-    )
+    );
+  const saveMissing = [
+    !watched.title.trim() ? "a title" : null,
+    !watched.save_as_draft && !watched.art_url.trim() ? "artwork" : null,
+    secondFaceNameMissing
       ? isAdventureFrame
         ? "the adventure's name"
         : "the second face's name"
@@ -2066,16 +2070,15 @@ export function CardCreatorForm({
         // sentinel off first, so Back from the saved card doesn't land on a
         // blank /create (TODO 3b.7).
         await guard.release();
-        if (options.afterSave) {
-          options.afterSave();
-          return;
-        }
 
-        // This card was forged as a deck entry's proxy — link it back and
-        // return to the deck dashboard so the progress ring ticks up.
+        // A deck entry's proxy (/create?deckCard=) or another card's back
+        // face (/create?backFor=) is linked on EVERY save — the leave
+        // dialog's "Save as draft" included, which used to skip the link —
+        // and only then does the flow continue. The card IS saved at this
+        // point: a failed link request says so and still moves on.
+        let linkedHome: string | null = null;
         if (deckRemix) {
-          // The card IS saved at this point — a failed link request says
-          // so and still goes back to the deck.
+          // Back to the deck dashboard so the progress ring ticks up.
           let linkResult: Awaited<ReturnType<typeof linkDeckCardAction>> | null =
             null;
           try {
@@ -2093,14 +2096,9 @@ export function CardCreatorForm({
           } else {
             toast.success(`Linked into “${deckRemix.deckTitle}”.`);
           }
-          router.replace(`/deck/${deckRemix.deckSlug}`);
-          router.refresh();
-          return;
-        }
-
-        // This new card was created to be another card's back face — link it
-        // to the front and return to that card's editor.
-        if (backForCardId) {
+          linkedHome = `/deck/${deckRemix.deckSlug}`;
+        } else if (backForCardId) {
+          // Back to the front card's editor.
           let linkResult: Awaited<ReturnType<typeof updateCardAction>> | null =
             null;
           try {
@@ -2118,11 +2116,17 @@ export function CardCreatorForm({
           } else {
             toast.success("Linked as the back face.");
           }
-          router.replace(
-            backForSlug
-              ? `/card/${backForSlug}/edit?step=publish`
-              : "/dashboard",
-          );
+          linkedHome = backForSlug
+            ? `/card/${backForSlug}/edit?step=publish`
+            : "/dashboard";
+        }
+
+        if (options.afterSave) {
+          options.afterSave();
+          return;
+        }
+        if (linkedHome) {
+          router.replace(linkedHome);
           router.refresh();
           return;
         }
@@ -2476,6 +2480,7 @@ export function CardCreatorForm({
                 <IdentityPanel revise={isRevise} />
                 <ArtPanel
                   userId={userId}
+                  secondFaceNameMissing={secondFaceNameMissing}
                   aiSlot={
                     <AiFillButton
                       label="Generate AI artwork and title"

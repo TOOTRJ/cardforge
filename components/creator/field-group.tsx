@@ -43,6 +43,7 @@ export function MoreOptions({
   summary,
   children,
   openWhen = false,
+  expandWhen = false,
 }: {
   summary: string;
   children: React.ReactNode;
@@ -50,6 +51,9 @@ export function MoreOptions({
    *  snaps shut as the user fixes it) — a folded-away error is an invisible
    *  one (TODO 3b.5). */
   openWhen?: boolean;
+  /** True while a field inside is required but still empty (the Save hint
+   *  names it): the section opens in place, without scrolling to it. */
+  expandWhen?: boolean;
 }) {
   const ref = useRef<HTMLDetailsElement>(null);
   useEffect(() => {
@@ -58,6 +62,10 @@ export function MoreOptions({
     details.open = true;
     details.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
   }, [openWhen]);
+  useEffect(() => {
+    const details = ref.current;
+    if (expandWhen && details && !details.open) details.open = true;
+  }, [expandWhen]);
   return (
     <details ref={ref} className="rounded-lg border border-border/60 bg-elevated/30">
       <summary className="cursor-pointer list-none px-4 py-2 text-xs font-semibold uppercase tracking-wider text-subtle transition-colors hover:text-muted [&::-webkit-details-marker]:hidden">
