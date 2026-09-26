@@ -172,6 +172,29 @@ export const scryfallCardSchema = z
     full_art: z.boolean().optional().nullable(),
     textless: z.boolean().optional().nullable(),
     promo_types: z.array(z.string()).optional().nullable(),
+    // The rest of the frame vocabulary (TODO 1.1), typed for the signature
+    // registry (1.4/1.17/1.19) and the colour rule below. All plain strings
+    // for the same reason as border_color: a new Scryfall value must never
+    // fail the parse.
+    // set_type: "expansion" | "core" | "masterpiece" (Expeditions) | "token"
+    // | "funny" | … — the Expeditions signature keys on "masterpiece".
+    set_type: z.string().optional().nullable(),
+    // "oval" | "triangle" (Universes Beyond) | "acorn" | "arena" | "circle"
+    // | "heart".
+    security_stamp: z.string().optional().nullable(),
+    // Colours printed as an indicator dot (Dryad Arbor, DFC back faces).
+    color_indicator: z.array(z.string()).optional().nullable(),
+    // Mana this card can produce ("W" … "G", "C"). Card-level: on a
+    // multi-face card it covers every face.
+    produced_mana: z.array(z.string()).optional().nullable(),
+    // The printed watermark's name ("orzhov", "phyrexian", "set", …).
+    watermark: z.string().optional().nullable(),
+    // "nonfoil" | "foil" | "etched".
+    finishes: z.array(z.string()).optional().nullable(),
+    // The printed nickname above the Oracle name (Godzilla series, …).
+    flavor_name: z.string().optional().nullable(),
+    // Printing language ("en", "ja", "ph", …).
+    lang: z.string().optional().nullable(),
     mana_cost: z.string().optional().nullable(),
     // Converted mana cost / mana value — denormalized onto deck entries.
     cmc: z.number().optional().nullable(),
@@ -196,6 +219,8 @@ export const scryfallCardSchema = z
     image_uris: scryfallImageUrisSchema.optional().nullable(),
     // Some cards (double-faced, split) carry image_uris under card_faces[0]
     // instead of the top level. We pull a best-effort image out of either.
+    // The face schema strips unknown keys, so every face field the importer
+    // reads must be listed here.
     card_faces: z
       .array(
         z.object({
@@ -211,6 +236,16 @@ export const scryfallCardSchema = z
           loyalty: z.string().optional().nullable(),
           defense: z.string().optional().nullable(),
           flavor_text: z.string().optional().nullable(),
+          // Per-face colours (TODO 1.1/1.2). Transform, modal DFC, battle
+          // and reversible faces carry their own `colors`, and Scryfall
+          // leaves the card-level `colors` off; split, flip, adventure and
+          // Room faces don't, and share the card-level colours instead.
+          colors: z.array(z.string()).optional().nullable(),
+          color_indicator: z.array(z.string()).optional().nullable(),
+          artist: z.string().optional().nullable(),
+          watermark: z.string().optional().nullable(),
+          // Reversible cards give each face its own layout.
+          layout: z.string().optional().nullable(),
           image_uris: scryfallImageUrisSchema.optional().nullable(),
         }),
       )
