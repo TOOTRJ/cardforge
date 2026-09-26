@@ -6,7 +6,7 @@ import { NOTO_SANS_GOOGLE_RANGES } from "@/lib/render/noto-fallback-ranges";
 
 // lib/render/glyph-coverage.ts is generated from the committed font files
 // (scripts/build-glyph-coverage.mjs). If a bake font or the Noto fallback
-// changes, the creator's "won't show on the card image" warnings must change
+// changes, the creator's "may not show on the card image" warnings must change
 // with it — regenerate when this fails.
 
 const ROOT = path.resolve(__dirname, "../../..");

@@ -52,7 +52,7 @@ describe("GlyphCoverageNotice", () => {
     );
     const notice = screen.getByTestId("glyph-coverage-notice");
     expect(notice.getAttribute("role")).toBe("status");
-    expect(notice.textContent).toContain("won't show on the card image");
+    expect(notice.textContent).toContain("may not show on the card image");
     expect(notice.textContent).toContain("Name:");
     expect(notice.textContent).toContain("🔥");
     expect(notice.textContent).toContain("Flavor text:");

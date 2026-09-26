@@ -246,8 +246,9 @@ Rules and gotchas:
   `ImageResponse` (it fetches Google Fonts + Twemoji for any character the
   registered fonts lack) — only the edge brand images keep next/og. Missing
   characters resolve in `lib/render/fallback-assets.ts` (bundled Noto Sans
-  subset; emoji stripped; other scripts draw boxes) and the creator warns
-  (`lib/validation/card-glyphs.ts`); `satori` is pinned to next/og's bundled
+  subset; emoji stripped; other scripts draw blank or boxes) and the creator
+  warns (`lib/validation/card-glyphs.ts`, per-face tables with an ink check —
+  MPlantin maps Č/°/×/→ to EMPTY glyphs); `satori` is pinned to next/og's bundled
   version (`tests/unit/render/satori-pipeline.test.ts`).
 - Billing storefront: `/pricing` and the upgrade modal pick every button from
   `pricingCtaFor()` (`components/billing/pricing-cta.ts`) fed by a

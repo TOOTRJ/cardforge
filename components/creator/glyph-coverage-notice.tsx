@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
 // GlyphCoverageNotice — tells the author, before they save, which characters
-// the card IMAGE (downloads, shares, gallery) can't draw: emoji, scripts and
+// the card IMAGE (downloads, shares, gallery) may not draw: emoji, scripts and
 // symbols outside the card's printed fonts. Warn-only — nothing is blocked
 // or changed; the live preview uses system fonts and still shows them.
 // The check itself lives in lib/validation/card-glyphs.ts.
@@ -40,7 +40,7 @@ export function GlyphCoverageNotice({
     >
       <Info className="mt-1 h-4 w-4 shrink-0" aria-hidden />
       <div className="min-w-0 flex-1 leading-6">
-        <p className="font-semibold">Some characters won&apos;t show on the card image</p>
+        <p className="font-semibold">Some characters may not show on the card image</p>
         <ul className="mt-1 space-y-0.5">
           {fields.map((field) => {
             const shown = field.characters.slice(0, MAX_CHARACTERS_PER_FIELD).map(displayCharacter);

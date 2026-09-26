@@ -13,7 +13,7 @@ import { loadLocalAdditionalAsset } from "@/lib/render/fallback-assets";
 // next/og hard-wires `loadAdditionalAsset` to Twemoji on jsDelivr and Noto on
 // fonts.googleapis.com, and there is no option to replace it. So we call the
 // same satori (pinned to the version next/og bundles — see
-// tests/unit/render/satori-version.test.ts) and the same rasterizer call
+// tests/unit/render/satori-pipeline.test.ts) and the same rasterizer call
 // (next/og uses sharp when it is installed, which it is here), and hand
 // Satori lib/render/fallback-assets.ts instead. Same inputs → the same PNG
 // bytes next/og produced (proven on every public production card when this

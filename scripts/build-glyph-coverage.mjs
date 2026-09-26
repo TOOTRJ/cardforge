@@ -17,5 +17,5 @@ const out = path.resolve("lib/render/glyph-coverage.ts");
 const coverage = computeCoverage(process.cwd(), NOTO_SANS_GOOGLE_RANGES);
 writeFileSync(out, renderCoverageModule(coverage));
 console.log(
-  `${path.relative(process.cwd(), out)}: display ${coverage.display.length} ranges, body ${coverage.body.length} ranges`,
+  `${path.relative(process.cwd(), out)}: display ${coverage.display.length} ranges, rules ${coverage.rules.length}, italic ${coverage.italic.length}`,
 );

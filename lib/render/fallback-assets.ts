@@ -25,12 +25,16 @@ import { NOTO_SANS_GOOGLE_RANGES } from "@/lib/render/noto-fallback-ranges";
 //     pieces and the precomposed letters those pieces spell, plus U+0020 and
 //     U+FE00. Outlines, advances and metrics are Google's, so a card that
 //     used to pull Noto from Google bakes the same pixels.
+//   * decomposed Latin/Greek/Cyrillic ("u" + U+0308) that satori files under
+//     th-TH / he-IL / ja-JP → the same Noto Sans answer, under a family
+//     name per class (isDecomposedLetterSegment below).
 //   * "emoji" → a transparent square: emoji are stripped from the image
 //     (Twemoji is 3,689 SVGs / 8.6 MB — not worth tracing into every render
 //     function). lib/validation/card-glyphs.ts warns the author.
 //   * everything else (symbols/math outside the card fonts, CJK, Thai,
-//     Arabic, Hebrew, Indic scripts) → nothing: those characters draw as the
-//     font's missing-glyph box, and the author is warned the same way.
+//     Arabic, Hebrew, Indic scripts) → nothing: those characters draw blank
+//     or as a missing-glyph box (symbols drew blank on main too, Google
+//     reachable), and the author is warned the same way.
 //
 // Used by lib/render/satori-png.ts for the card bake AND the node OG images.
 // ---------------------------------------------------------------------------
@@ -125,6 +129,19 @@ export const STRIPPED_EMOJI_IMAGE = `data:image/svg+xml;base64,${Buffer.from(
  *  it is only ever reached through Satori's per-character fallback. */
 export const NOTO_FALLBACK_FAMILY = "PipGlyph Noto Sans fallback";
 
+/** A grapheme of Latin / Greek / Cyrillic letters carrying combining marks —
+ *  decomposed (NFD) text, e.g. "u" + U+0308, as pasted from a macOS file
+ *  name. Satori files some of those marks under th-TH / he-IL / ja-JP (their
+ *  script extensions), and next/og answered them from Noto Sans Thai /
+ *  Hebrew / JP; they are Noto Sans characters, so they get the "unknown"
+ *  answer rather than vanishing (a gap after the base letter). */
+const DECOMPOSED_LETTERS =
+  /^(?=[\s\S]*\p{M})[\p{sc=Latin}\p{sc=Greek}\p{sc=Cyrillic}\p{sc=Common}\p{sc=Inherited}]+$/u;
+
+export function isDecomposedLetterSegment(segment: string): boolean {
+  return DECOMPOSED_LETTERS.test(segment);
+}
+
 /**
  * Satori `loadAdditionalAsset` that never touches the network: see the file
  * header for what each character class resolves to.
@@ -134,7 +151,13 @@ export async function loadLocalAdditionalAsset(
   segment: string,
 ): Promise<string | Font[]> {
   if (languageCode === "emoji") return STRIPPED_EMOJI_IMAGE;
-  if (languageCode !== "unknown") return [];
+  if (languageCode !== "unknown" && !isDecomposedLetterSegment(segment)) return [];
   const data = notoFontForText(segment);
-  return data ? [{ name: NOTO_FALLBACK_FAMILY, data, weight: 400, style: "normal" }] : [];
+  // One family per class: satori consults only the first font registered
+  // under a family name, so the th-TH and he-IL answers of one render (each
+  // cut to its own request) must not share the "unknown" answer's name —
+  // just as next/og's fonts were named per request.
+  const name =
+    languageCode === "unknown" ? NOTO_FALLBACK_FAMILY : `${NOTO_FALLBACK_FAMILY} ${languageCode}`;
+  return data ? [{ name, data, weight: 400, style: "normal" }] : [];
 }

@@ -64,6 +64,23 @@ describe("loadLocalAdditionalAsset — never the network", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
+  it("answers decomposed (NFD) Latin that satori files under another script from Noto Sans", async () => {
+    // "u" + U+0308 is classed he-IL, "n" + U+0303 th-TH: next/og fetched Noto
+    // Sans Hebrew / Thai and drew the marks; without an answer they left a gap.
+    const hebrew = await loadLocalAdditionalAsset("he-IL", "üöä");
+    const thai = await loadLocalAdditionalAsset("th-TH", "ñ");
+    expect(hebrew).toMatchObject([{ name: `${NOTO_FALLBACK_FAMILY} he-IL`, weight: 400, style: "normal" }]);
+    expect(thai).toMatchObject([{ name: `${NOTO_FALLBACK_FAMILY} th-TH` }]);
+    const cmapOf = (fonts: Awaited<ReturnType<typeof loadLocalAdditionalAsset>>) =>
+      readCmap(Buffer.from((fonts as Array<{ data: Buffer }>)[0].data));
+    expect(cmapOf(hebrew).has(0x308)).toBe(true);
+    expect(cmapOf(thai).has(0x303)).toBe(true);
+    // Real Hebrew / Thai / CJK text still gets nothing.
+    expect(await loadLocalAdditionalAsset("he-IL", "שלום")).toEqual([]);
+    expect(await loadLocalAdditionalAsset("th-TH", "ภาษา")).toEqual([]);
+    expect(await loadLocalAdditionalAsset("ja-JP", "ẹ日")).toEqual([]);
+  });
+
   it("strips emoji to an invisible SVG", () => {
     const svg = Buffer.from(STRIPPED_EMOJI_IMAGE.split(",")[1], "base64").toString();
     expect(STRIPPED_EMOJI_IMAGE.startsWith("data:image/svg+xml;base64,")).toBe(true);
