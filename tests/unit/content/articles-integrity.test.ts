@@ -67,6 +67,9 @@ const BANNED = [
   /Discontinued \(2023\)/,
   /\(\/preview\)/,
   /sets index/i,
+  // The editor preview and the saved image come from two renderers kept in
+  // step by parity tests (TODO 0.24) — never "one renderer".
+  /\bone renderer\b/i,
 ];
 
 describe("guides", () => {

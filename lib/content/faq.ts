@@ -47,7 +47,7 @@ export const CARD_MAKER_FAQ: FaqEntry[] = [
   },
   {
     q: "What is the difference between PipGlyph and MTG Cardsmith or Card Conjurer?",
-    a: "PipGlyph, MTG Cardsmith, and Card Conjurer are all free browser-based MTG card makers. PipGlyph differentiates itself with a modern UI, a built-in AI assistant for oracle text and flavor text, deck building with decklist import and proxy printing, and a structured data model that keeps every card editable as JSON — not just a flat image.",
+    a: "PipGlyph, MTG Cardsmith, and Card Conjurer all make custom MTG cards in a web browser, although Card Conjurer now lives on only as open-source forks you host yourself. PipGlyph differentiates itself with a modern UI, a built-in AI assistant for oracle text, flavor text and art, and deck building with decklist import and deck-wide proxy sheets. Unlike a Card Conjurer fork, it keeps your cards in an account, editable from any device, rather than in one browser's storage.",
   },
   {
     q: "Is it legal to make custom MTG cards?",
