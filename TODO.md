@@ -653,6 +653,7 @@ Open decisions are marked **[decide]**; none blocks its phase.
       - a Zendikar-style Forest: split type line plus centred medallion;
       - a textless creature with 4 lines of rules: only title, cost and P/T print;
       - an `m15land` Plains that bakes identical to today.
+- [x] (fixed 2026-09-27 — fix/mplantin-woff2: `public/fonts/mplantin.woff2` is now the `.woff`'s own sfnt re-encoded, `python3 -m fontTools.ttLib.woff2 compress -o public/fonts/mplantin.woff2 public/fonts/mplantin.woff` (fontTools 4.60.2, brotli 1.2.0; deterministic, 39,808 bytes). The old file was a WOFF2 of `mplantin.ttf`, whose cmap subtables say language 1: Chromium 148's sanitiser logged "OTS parsing error: cmap: Languages should be 0 (1)", so every page that drew rules text fetched the 25 KB woff2, dropped it and fetched the 49.7 KB `.woff` (75 KB, now 40 KB). Every table is byte-identical to the `.woff`'s (CFF outlines, cmap, hmtx, OS/2, name…) except the two `head` fields a WOFF2 encoder rewrites (checkSumAdjustment and flags bit 11); every character keeps the bake master's advance; Chromium draws it pixel-identical to the `.woff` it used before (0 differing pixels in a specimen line, loaded alone and through the real `@font-face` rule). `mplantin.ttf` is untouched and is still mana-font's file, the one the bake reads. OTS rejects it as well (the same cmap, plus a bad table-directory rangeShift), but it is the rule's third source and is never reached. Guards, both red on the old file: `tests/unit/content/mplantin-web-font.test.ts` (WOFF/WOFF2 decoded with node's zlib; table for table against the `.woff`, language 0 in every web font's cmap, advances against the master, master and `.woff` = mana-font's) and `tests/e2e/web-fonts.spec.ts` (each `@font-face` rule's first source loads in Chromium; MPlantin fetches its woff2 and nothing else). No card changes, no layout bump.) **3.27 [P2] Rebuild `public/fonts/mplantin.woff2` from the working `.woff`** (owner approved 2026-09-27, round 6) — Chromium rejects the woff2 (OTS cmap, 4.31) and silently falls back to the `.woff`, which renders correctly. Re-encode the woff2 from the `.woff`'s font data only (same glyphs, metrics and cmap), check Chromium loads it without an OTS error, and leave `MPlantin.ttf` (the bake's master) untouched. No card changes.
 
 ### Phase 3b — Creator wizard bugs (1 week, parallel with Phases 1–3)
 
@@ -1261,7 +1262,8 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
         of zoomed-out art on normal windows; bloomanime's four-way white
         outline bakes as one shadow (its white name nearly vanishes over light
         art); a non-planeswalker on m15pw shows the shield notch; Chromium
-        rejects `mplantin.woff2` (OTS cmap) and falls back to the .woff;
+        rejected `mplantin.woff2` (OTS cmap) and fell back to the .woff
+        (fixed 2026-09-27, 3.27);
         rules text can wrap a word differently in the editor and the
         saved image at any size, not only at 5 pt. MPlantin has no kerning;
         the cause is that the bake gives every word run its gap as a right

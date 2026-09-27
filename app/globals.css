@@ -28,7 +28,11 @@
    Loaded as a web font so the live card preview uses the exact same typeface
    the Satori bake (lib/render/card-image.tsx) renders with, making the editor
    preview and the exported PNG pixel-identical. Copied to /public/fonts so the
-   browser can fetch it (node_modules isn't web-served). */
+   browser can fetch it (node_modules isn't web-served). The .woff2 is the
+   .woff re-encoded table for table (`python3 -m fontTools.ttLib.woff2
+   compress -o public/fonts/mplantin.woff2 public/fonts/mplantin.woff`), never
+   the .ttf: the .ttf's cmap says language 1, which Chromium's font sanitiser
+   rejects (TODO 3.27; tests/unit/content/mplantin-web-font.test.ts). */
 @font-face {
   font-family: "MPlantin";
   src:
