@@ -430,6 +430,20 @@ export type FrameProfile = {
    *  symbol; the rules fit estimate is skipped. The card keeps its text (the
    *  Text step says so) and prints it on any other frame. Code-owned, opt-in. */
   textless?: boolean;
+  /** The creator's frame tile (FrameThumb) draws its sample art in this
+   *  profile's art slot under the master, as it does for every art-first
+   *  frame (artFillsCard) — TODO 4.45, owner decision 2026-09-27. For a tall
+   *  window whose master is see-through there, so the bare master read as a
+   *  near-black tile on the tile's dark ground, although the art does not
+   *  fill the card: Anime, Ghostfire, the ZNR hedron (`fullart`), both M15
+   *  textless frames and Nyx. A hand-picked list, not a rule — M15
+   *  planeswalker, the tokens and Expedition Land sit between these on both
+   *  window size and tile brightness and keep their tiles. Picker-only:
+   *  FrameThumb is its one reader; no card, preview, bake or finish reads
+   *  it, so it never needs a layout bump. Code-owned, opt-in, and set on the
+   *  PROFILES entry itself, never on a base another profile spreads (FULLART
+   *  → M15TEXTLESS → M15TEXTLESSLAND), so no new profile inherits it. */
+  pickerSampleArt?: boolean;
 };
 
 /** Where a basic land's symbol prints — FrameProfile.basicSymbol (TODO
@@ -541,6 +555,31 @@ export function brandMarkLayout(
 export function artReachesCardEdge(profile: Pick<FrameProfile, "artSlot">): boolean {
   const a = profile.artSlot;
   return a.topPct <= 0 || a.leftPct <= 0 || a.leftPct + a.widthPct >= 100 || a.topPct + a.heightPct >= 100;
+}
+
+/** A full-art basic's window spans at least this much of the card on both
+ *  axes: all of it inside the ring (m15fullartland: 92.14 × 89.29 %). */
+const FULL_ART_WINDOW_MIN_PCT = 85;
+
+/** True when the art is (nearly) the whole card, so the frame master is
+ *  see-through almost everywhere and a thumbnail of the bare master reads as
+ *  a black tile (TODO 4.45): an edge-to-edge treatment (artReachesCardEdge —
+ *  the borderless M15 skins, the borderless full-art basic) or a full-art
+ *  basic inside its ring (a basic land's symbol slot, `basicSymbol`, on a
+ *  window of FULL_ART_WINDOW_MIN_PCT or more each way — m15fullartland).
+ *  The creator's frame tiles draw a sample art under these masters
+ *  (FrameThumb); cards, previews and bakes never read it. Six other
+ *  tall-window frames whose tiles read as near-black (Anime, Ghostfire, the
+ *  ZNR hedron, the two textless frames, Nyx) are not art-first: their tiles
+ *  opt in by name (FrameProfile.pickerSampleArt, owner 2026-09-27). */
+export function artFillsCard(profile: Pick<FrameProfile, "artSlot" | "basicSymbol">): boolean {
+  if (artReachesCardEdge(profile)) return true;
+  const a = profile.artSlot;
+  return (
+    profile.basicSymbol !== undefined &&
+    a.widthPct >= FULL_ART_WINDOW_MIN_PCT &&
+    a.heightPct >= FULL_ART_WINDOW_MIN_PCT
+  );
 }
 
 /** Resolve a per-color asset path from a template like "/frames/m15/pt/{color}.png". */
@@ -2346,20 +2385,24 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   aftermath: AFTERMATH,
   avatar: AVATAR,
   bloomburrow: BLOOMBURROW,
-  bloomanime: BLOOMANIME,
+  // The six near-black picker tiles that are not art-first get the tile's
+  // sample art (pickerSampleArt, 4.45) on their entries here, not on their
+  // bases: M15TEXTLESS spreads FULLART and M15TEXTLESSLAND spreads
+  // M15TEXTLESS, so a flag on a base would reach whatever spreads it next.
+  bloomanime: { ...BLOOMANIME, pickerSampleArt: true },
   lotr: LOTR,
   lotrscroll: LOTRSCROLL,
   tarkirdragon: TARKIRDRAGON,
   tarkirdraconic: TARKIRDRACONIC,
-  tarkirghostfire: TARKIRGHOSTFIRE,
+  tarkirghostfire: { ...TARKIRGHOSTFIRE, pickerSampleArt: true },
   extendedart: EXTENDEDART,
-  fullart: FULLART,
+  fullart: { ...FULLART, pickerSampleArt: true },
   m15fullartland: M15FULLARTLAND,
   fullartland: FULLARTLAND,
-  m15textless: M15TEXTLESS,
-  m15textlessland: M15TEXTLESSLAND,
+  m15textless: { ...M15TEXTLESS, pickerSampleArt: true },
+  m15textlessland: { ...M15TEXTLESSLAND, pickerSampleArt: true },
   expeditionland: EXPEDITIONLAND,
-  nyx: NYX,
+  nyx: { ...NYX, pickerSampleArt: true },
   retro: RETRO,
   retroland: RETROLAND,
   modern: MODERN,
