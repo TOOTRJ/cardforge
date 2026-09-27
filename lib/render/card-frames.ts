@@ -390,6 +390,14 @@ export function getPlateDataUrlForPath(
   return loadSync(relPath(plateAssetPath(pathTemplate, colorKey)));
 }
 
+/** Any other public/frames or frames-bucket asset a profile names (the
+ *  basic-land symbol images, TODO 3.24) as a data URL, or null when absent.
+ *  Sync, like every getter here: renderCardImage preloads it through
+ *  frameAssetPathsFor first. */
+export function getFrameAssetDataUrl(publicPath: string): string | null {
+  return loadSync(relPath(publicPath));
+}
+
 /** Watermark preset PNG as a data URL (public/watermarks/{key}.png) — the
  *  watermarks folder stays on disk (it's ~240 KB), so this is a plain
  *  filesystem read; a transparent pixel fallback means an unknown key never

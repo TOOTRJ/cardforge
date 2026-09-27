@@ -318,6 +318,14 @@ export const FRAME_TEMPLATE_VALUES = [
   "m15devoid",
   "m15pw",
   "m15tokenartifact",
+  // The 2019+ borderless frame (frames plan 4.32, Card Conjurer 'Borderless
+  // (Alt)'): art to the card edge, dark translucent bars and box, white ink.
+  // Skins of the M15 standard and the M15 artifact frame, in the Borderless
+  // set. The artifact skin paints Card Conjurer's A frame for colourless
+  // artifacts; its coloured keys are the colour frames (a borderless frame
+  // has no body for 4.16's artifact interior).
+  "m15borderless",
+  "m15borderlessartifact",
   "agclassic",
   "alphaland",
   "alphatoken",
@@ -346,6 +354,11 @@ export const FRAME_TEMPLATE_VALUES = [
   "fullart",
   // Variation treatments (2026-07): extended/full art, premium lands, Nyx.
   "extendedart",
+  // Full-art basic lands, Card Conjurer 'Fullart Basics (2022)' (frames plan
+  // 4.39): the black-bordered frame of ONE / MOM / … (2023+) and the same
+  // frame without its border (fullartland, borderless — owner decision
+  // 4.35(a)). Basic lands only.
+  "m15fullartland",
   "fullartland",
   "m15textless",
   "m15textlessland",
@@ -375,6 +388,8 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   m15snowland: "Snow Land",
   m15devoid: "Devoid",
   m15tokenartifact: "Artifact Token",
+  m15borderless: "Borderless",
+  m15borderlessartifact: "Borderless Artifact",
   m15pw: "Planeswalker",
   agclassic: "Standard",
   alphaland: "Land",
@@ -400,7 +415,10 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   // Set-relative like the other showcase labels: the picker prints
   // "Zendikar Rising — Hedron" (setQualifiedFrameLabel).
   fullart: "Hedron",
-  fullartland: "Basic Land",
+  // Two full-art basics in the Full Art set: the black-bordered print (the
+  // common one, 263 printings) and the borderless one (FRA #382–396).
+  m15fullartland: "Basic Land",
+  fullartland: "Borderless Basic Land",
   m15textless: "Textless",
   m15textlessland: "Textless Land",
   expeditionland: "Land",
@@ -419,6 +437,7 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
 // ---------------------------------------------------------------------------
 export const FRAME_SET_VALUES = [
   "m15",
+  "borderless",
   "alpha",
   "lotr",
   "avatar",
@@ -437,6 +456,7 @@ export type FrameSet = (typeof FRAME_SET_VALUES)[number];
 
 export const FRAME_SET_LABELS: Record<FrameSet, string> = {
   m15: "Magic 2015 (modern)",
+  borderless: "Borderless",
   alpha: "Alpha (1993)",
   lotr: "The Lord of the Rings",
   avatar: "Avatar: The Last Airbender",
@@ -462,6 +482,8 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   m15devoid: "m15",
   m15pw: "m15",
   m15tokenartifact: "m15",
+  m15borderless: "borderless",
+  m15borderlessartifact: "borderless",
   battle: "m15",
   saga: "m15",
   adventure: "m15",
@@ -478,6 +500,7 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   tarkirdragon: "multiverselegends",
   extendedart: "extended",
   fullart: "zendikarrising",
+  m15fullartland: "fullartset",
   fullartland: "fullartset",
   m15textless: "fullartset",
   m15textlessland: "fullartset",
@@ -532,6 +555,10 @@ export const FRAME_SET_ERA: Record<FrameSet, FrameEra> = {
   retro: "retro",
   modern: "modern",
   m15: "m15",
+  // The borderless M15 frame is M15-era trade dress offered as a skin of
+  // the M15 standard (TEMPLATE_SKIN_VARIANTS), not a showcase treatment:
+  // a kind change keeps the M15 era (frames plan 4.32).
+  borderless: "m15",
   lotr: "showcase",
   avatar: "showcase",
   bloomburrow: "showcase",
@@ -606,7 +633,9 @@ export const ERA_TYPE_FRAME: Partial<
 export const TEMPLATE_SKIN_VARIANTS: Partial<
   Record<FrameTemplate, FrameTemplate[]>
 > = {
-  m15: ["m15snow", "m15devoid"],
+  m15: ["m15snow", "m15devoid", "m15borderless"],
+  // The artifact kind's own borderless dress (frames plan 4.32).
+  m15artifact: ["m15borderlessartifact"],
   m15land: ["m15snowland"],
   m15token: ["m15tokenartifact"],
 };

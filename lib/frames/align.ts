@@ -299,13 +299,14 @@ export function bestShift2D(
   b: Gray,
   box: RectPx,
   maxShift: number,
+  mask?: Uint8Array,
 ): { dx: number; dy: number; diff: number } {
-  let best = { dx: 0, dy: 0, diff: regionDiff(a, b, box, undefined, 0, 0) };
+  let best = { dx: 0, dy: 0, diff: regionDiff(a, b, box, mask, 0, 0) };
   const coarse = Math.max(1, Math.round(maxShift / 5));
   for (let dy = -maxShift; dy <= maxShift; dy += coarse) {
     for (let dx = -maxShift; dx <= maxShift; dx += coarse) {
       if (dx === 0 && dy === 0) continue;
-      const diff = regionDiff(a, b, box, undefined, dx, dy);
+      const diff = regionDiff(a, b, box, mask, dx, dy);
       if (diff < best.diff) best = { dx, dy, diff };
     }
   }
@@ -314,7 +315,7 @@ export function bestShift2D(
     for (let dx = cx - coarse; dx <= cx + coarse; dx += 1) {
       if (Math.abs(dx) > maxShift || Math.abs(dy) > maxShift) continue;
       if (dx === cx && dy === cy) continue;
-      const diff = regionDiff(a, b, box, undefined, dx, dy);
+      const diff = regionDiff(a, b, box, mask, dx, dy);
       if (diff < best.diff) best = { dx, dy, diff };
     }
   }
@@ -331,6 +332,11 @@ export function alignAndScore(input: {
   slots: AlignSlot[];
   /** Search window for the global and per-slot shifts, % of card width. */
   searchPct?: number;
+  /** Printed details our master doesn't draw (the holo stamp's pinline arch
+   *  on a borderless rare, 4.9 — scoreExclusionsFor), left out of the
+   *  registration, the frame score and every slot score (grown by the
+   *  search window, like the art). */
+  exclude?: Rect[];
 }): AlignResult {
   const { ours, scan, slots } = input;
   const { width, height } = ours;
@@ -345,10 +351,14 @@ export function alignAndScore(input: {
 
   // Global registration on the frame structure: art masked, text kept (the
   // bars around it dominate the projections).
+  const excludeBoxes = (input.exclude ?? []).map((rect) =>
+    dilatePx(rectToPx(rect, width, height), maxShift, width, height),
+  );
+  const excludeMask = excludeBoxes.length > 0 ? maskExcluding(width, height, excludeBoxes) : undefined;
   const artBoxes = slots
     .filter((s) => s.kind === "art")
     .map((s) => dilatePx(rectToPx(s.rect, width, height), maxShift, width, height));
-  const artMask = maskExcluding(width, height, artBoxes);
+  const artMask = maskExcluding(width, height, [...artBoxes, ...excludeBoxes]);
   const gx = bestShift1D(
     projection(edgesOurs, "x", artMask),
     projection(edgesScan, "x", artMask),
@@ -365,7 +375,7 @@ export function alignAndScore(input: {
   const frameMask = maskExcluding(
     width,
     height,
-    contentBoxes(slots, width, height, maxShift),
+    [...contentBoxes(slots, width, height, maxShift), ...excludeBoxes],
   );
   const overall = regionDiff(
     edgesOurs,
@@ -378,12 +388,12 @@ export function alignAndScore(input: {
   for (const slot of slots) {
     const box = rectToPx(slot.rect, width, height);
     if (box.x1 - box.x0 < 2 || box.y1 - box.y0 < 2) continue;
-    const score = regionDiff(edgesOurs, aligned, box);
+    const score = regionDiff(edgesOurs, aligned, box, excludeMask);
     if (slot.kind === "art") {
       perSlot[slot.path] = { score, best: score, dxPct: 0, dyPct: 0 };
       continue;
     }
-    const local = bestShift2D(edgesOurs, aligned, box, maxShift);
+    const local = bestShift2D(edgesOurs, aligned, box, maxShift, excludeMask);
     perSlot[slot.path] = {
       score,
       best: local.diff,
@@ -419,4 +429,18 @@ export function slotKindFor(path: string): SlotKind {
   }
   if (path === "costRect" || path === "symbolRect") return "box";
   return "text";
+}
+
+/** Where Scryfall's holo-stamp prints on a borderless rare or mythic (4.32):
+ *  the oval sits in an ARCH of the rules-box pinline (x ≈ 656–850 px on 1500,
+ *  top ≈ 1905 px against the straight pinline at ≈ 1945; FRA #447, FDN #292;
+ *  print review 2026-09-26), with the stamp below it in the bottom bar. Our
+ *  Card Conjurer master's pinline is straight — 4.9's stamp overlay must draw
+ *  the arch — so until then the score leaves this box out. */
+export const HOLO_STAMP_ARCH: Rect = { topPct: 90, leftPct: 42.67, widthPct: 14.67, heightPct: 5.24 };
+
+/** The printed details a template's master doesn't draw, left out of its
+ *  alignment score (alignAndScore's `exclude`). */
+export function scoreExclusionsFor(template: string): Rect[] {
+  return template === "m15borderless" || template === "m15borderlessartifact" ? [HOLO_STAMP_ARCH] : [];
 }

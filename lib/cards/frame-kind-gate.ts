@@ -22,7 +22,9 @@ import { describeFrame } from "@/lib/creator/frame-resolve";
 //
 // Border-era and layout frames are not checked here: legacy cards (an
 // artifact on the plain m15 frame, a token on m15) predate the kind-first
-// picker and must stay savable.
+// picker and must stay savable. The borderless M15 skins (4.32) are the one
+// border-era exception: they are new, so no legacy card sits on them, and
+// they carry a kind restriction like a showcase treatment.
 // ---------------------------------------------------------------------------
 
 /** The card fields the kind gate reads, in the snake_case a payload or a

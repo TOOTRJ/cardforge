@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// build-variation-frames.mjs — convert the five 2026-07 variation frames from
+// build-variation-frames.mjs — convert the 2026-07 variation frames from
 // Full-Magic-Pack MSE sources into app frames (public/frames/<name>/{7}.png,
 // 1500×2100):
 //
@@ -7,15 +7,18 @@
 //   expeditionland   magic-m15-expedition          *lcard.jpg, BLACK art window
 //   nyx          …showcase-theros-constellation card/*.png, already alpha-cut
 //   fullart      …showcase-zendikar            *card.png,  already alpha-cut
-//   fullartland  …full-art-basic-land-symbol   composite: shadow + pinline +
-//                name + basictype pieces (the big mana symbol is deliberately
-//                NOT baked in — the app's basic-land watermark renders it, so
-//                it stays tint- and override-able)
 //
 //   node scripts/build-variation-frames.mjs
 //
-// All five start UNVERIFIED — they surface to users only after the owner
+// All of them start UNVERIFIED — they surface to users only after the owner
 // checks them in /admin/frame-compare.
+//
+// `fullartland` used to be built here too (a composite of MSE's 744 px
+// magic-m15-full-art-basic-land-symbol pieces, upscaled 2×). Frames plan 4.39
+// re-sourced it from Card Conjurer's 'Fullart Basics (2022)' pack through
+// scripts/import-cc-frames.mjs; it lives in the frames bucket now
+// (lib/frames/frame-manifest.json) and must never come back to public/frames
+// (tests/unit/frames/frame-manifest.test.ts fails on a frame in both places).
 // ---------------------------------------------------------------------------
 import sharp from "sharp";
 import path from "node:path";
@@ -141,32 +144,6 @@ for (const set of PNG_SETS) {
   for (const key of COLORS) {
     await writeOut(set.out, key, fs.readFileSync(path.join(set.pack, set.file(key))));
     console.log(`${path.basename(set.out)}/${key}.png ← ${set.file(key)}`);
-  }
-}
-
-// 5. Full-art basic land — composite the floating pieces ---------------------
-{
-  const pack = `${DATA}/magic-m15-full-art-basic-land-symbol.mse-style`;
-  const out = "public/frames/fullartland";
-  const shadow = path.join(pack, "shadow_card_basic_pinline.png");
-  for (const key of COLORS) {
-    // No multicolor basic exists — the m key wears the colorless dress.
-    // NOTE: the pinline/ pieces are opaque full-card color underlays (MSE
-    // masks them elsewhere) — compositing one would fill the whole card, so
-    // only the floating bars + their shadows go in.
-    const pieceKey = (dir, k) =>
-      fs.existsSync(path.join(pack, dir, `${k}${dir}.png`)) ? k : "c";
-    const pieces = [
-      path.join(pack, "name", `${pieceKey("name", key)}name.png`),
-      path.join(pack, "basictype", `${pieceKey("basictype", key)}basictype.png`),
-    ];
-    const base = await sharp(shadow).ensureAlpha().toBuffer();
-    const composed = await sharp(base)
-      .composite(pieces.map((p) => ({ input: p, left: 0, top: 0 })))
-      .png()
-      .toBuffer();
-    await writeOut(out, key, composed);
-    console.log(`fullartland/${key}.png ← shadow + pinline + name + basictype`);
   }
 }
 

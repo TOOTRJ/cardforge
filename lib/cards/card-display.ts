@@ -171,6 +171,16 @@ export function buildTypeLine({
   return left || right || "Type";
 }
 
+/** A type line split at its em dash, for a frame that prints it in two boxes
+ *  (TextSlot.split, TODO 3.24): "Basic Land — Forest" → ["Basic Land",
+ *  "Forest"]. A line with no dash ("Basic Land" on Wastes) prints whole in
+ *  the left box. */
+export function splitTypeLine(typeLine: string): [string, string] {
+  const at = typeLine.indexOf("\u2014");
+  if (at < 0) return [typeLine.trim(), ""];
+  return [typeLine.slice(0, at).trim(), typeLine.slice(at + 1).trim()];
+}
+
 // A single-line display-font (Beleren) text — title, type line, the display
 // footer — with every inner run of spaces joined into ONE no-break space.
 // Satori places each word after a space at the sum of the preceding

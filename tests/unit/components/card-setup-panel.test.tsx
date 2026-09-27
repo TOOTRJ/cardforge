@@ -182,7 +182,7 @@ function LandHarness({
 const landVerified = [frameComboKey("m15land", "w"), frameComboKey("fullartland", "w")];
 const fullArtBasicChip = () =>
   within(screen.getByRole("radiogroup", { name: /Frame variations/ })).getByRole("radio", {
-    name: /Full Art — Basic Land/,
+    name: /Full Art — Borderless Basic Land/,
   }) as HTMLButtonElement;
 
 describe("CardSetupPanel variation chips — full-art basic lands only", () => {
@@ -347,7 +347,7 @@ describe("CardSetupPanel — the artifact frame is a creature variation (TODO 1.
         supertype="Artifact"
       />,
     );
-    const chip = within(variations()).getByRole("radio", { name: /Artifact/ });
+    const chip = within(variations()).getByRole("radio", { name: /^Artifact/ });
     expect(chip.textContent).toContain("For Artifact Creatures");
     fireEvent.click(chip);
     expect(screen.getByTestId("template").textContent).toBe("m15artifact");
@@ -366,7 +366,7 @@ describe("CardSetupPanel — the artifact frame is a creature variation (TODO 1.
         supertype="Legendary"
       />,
     );
-    fireEvent.click(within(variations()).getByRole("radio", { name: /Artifact/ }));
+    fireEvent.click(within(variations()).getByRole("radio", { name: /^Artifact/ }));
     expect(screen.getByTestId("template").textContent).toBe("m15artifact");
     expect(screen.getByTestId("supertype").textContent).toBe("Legendary Artifact");
     // Back to Standard: the word the chip added comes out again.
@@ -384,7 +384,7 @@ describe("CardSetupPanel — the artifact frame is a creature variation (TODO 1.
         supertype="Artifact"
       />,
     );
-    fireEvent.click(within(variations()).getByRole("radio", { name: /Artifact/ }));
+    fireEvent.click(within(variations()).getByRole("radio", { name: /^Artifact/ }));
     expect(screen.getByTestId("supertype").textContent).toBe("Artifact");
     fireEvent.click(within(variations()).getByRole("radio", { name: /Standard/ }));
     expect(screen.getByTestId("supertype").textContent).toBe("Artifact");
@@ -402,7 +402,7 @@ describe("CardSetupPanel — the artifact frame is a creature variation (TODO 1.
     );
     expect(screen.queryByRole("radiogroup", { name: "Current frame" })).toBeNull();
     expect(
-      within(variations()).getByRole("radio", { name: /Artifact/ }).getAttribute("aria-checked"),
+      within(variations()).getByRole("radio", { name: /^Artifact/ }).getAttribute("aria-checked"),
     ).toBe("true");
   });
 
@@ -421,5 +421,56 @@ describe("CardSetupPanel — the artifact frame is a creature variation (TODO 1.
       screen.getByRole("radiogroup", { name: /M15 \(2015\) frames/ }),
     ).getByRole("radio", { name: /Artifact/ });
     expect(artifactStandard.getAttribute("aria-checked")).toBe("true");
+  });
+});
+
+// Frames plan 4.32 / 4.39: the new frames sit in the Variations of the frame
+// they re-dress, gated on verification like every frame — nothing is
+// offered until the owner ticks it in /admin/frame-compare.
+describe("CardSetupPanel — the borderless M15 frame and the black-bordered full-art basic", () => {
+  const variations = () => screen.getByRole("radiogroup", { name: /Frame variations/ });
+
+  it("offers Borderless under a creature's M15 frame, awaiting verification until verified", () => {
+    render(<Harness verified={[frameComboKey("m15", "u")]} onColor={vi.fn()} />);
+    const chip = within(variations()).getByRole("radio", { name: /^Borderless(?! Artifact)/ }) as HTMLButtonElement;
+    expect(chip.disabled).toBe(true);
+    expect(chip.textContent).toContain("Awaiting verification");
+    cleanup();
+    render(
+      <Harness verified={[frameComboKey("m15", "u"), frameComboKey("m15borderless", "u")]} onColor={vi.fn()} />,
+    );
+    const live = within(variations()).getByRole("radio", { name: /^Borderless(?! Artifact)/ }) as HTMLButtonElement;
+    expect(live.disabled).toBe(false);
+    fireEvent.click(live);
+    expect(screen.getByTestId("template").textContent).toBe("m15borderless");
+  });
+
+  it("offers the black-bordered full-art basic to a basic land and refuses it on a nonbasic", () => {
+    const verified = [frameComboKey("m15land", "w"), frameComboKey("m15fullartland", "w")];
+    const chip = () =>
+      within(variations()).getByRole("radio", { name: /^Full Art — Basic Land/ }) as HTMLButtonElement;
+    render(
+      <LandHarness
+        verified={verified}
+        identity={{ title: "Plains", supertype: "Basic", subtypes_text: "Plains", rules_text: "" }}
+      />,
+    );
+    expect(chip().disabled).toBe(false);
+    fireEvent.click(chip());
+    expect(screen.getByTestId("template").textContent).toBe("m15fullartland");
+    cleanup();
+    render(
+      <LandHarness
+        verified={verified}
+        identity={{
+          title: "Hallowed Fountain",
+          supertype: "",
+          subtypes_text: "Plains, Island",
+          rules_text: "({T}: Add {W} or {U}.)",
+        }}
+      />,
+    );
+    expect(chip().disabled).toBe(true);
+    expect(chip().textContent).toContain("Full-art basic frames are for basic lands");
   });
 });

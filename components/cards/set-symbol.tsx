@@ -34,6 +34,11 @@ type SetSymbolProps = {
   /** Glyph size — a number (px) or any CSS length. Pass a container-relative
    *  value (e.g. a `cqw` string) so the symbol scales with the card. */
   size?: number | string;
+  /** A keyline around a preset Keyrune glyph (FrameProfile.setSymbolKeyline:
+   *  a zero-blur multi-layer text shadow, e.g. SET_SYMBOL_KEYLINE), drawn as
+   *  its CSS text-shadow; the bake draws the same layers as offset copies.
+   *  Ignored for an uploaded icon and the default mark. */
+  keyline?: string;
   className?: string;
 };
 
@@ -112,6 +117,7 @@ export function SetSymbol({
   iconUrl,
   setCode,
   size = 14,
+  keyline,
   className,
 }: SetSymbolProps) {
   const color = setSymbolColor(rarity);
@@ -132,13 +138,14 @@ export function SetSymbol({
   // 2. Preset Keyrune glyph — flat rarity ink, exactly as the stored render
   //    draws it (lib/render/card-image.tsx). Keyrune's metallic `text gradient`
   //    text gradient can't be reproduced by Satori, so the preview must not
-  //    show what the bake can't: preview and bake stay pixel-identical.
+  //    show what the bake can't: preview and bake stay pixel-identical. A
+  //    profile's keyline (dark type bars) is the glyph's text-shadow.
   if (setCode) {
     return (
       <i
         aria-label={rarity ? `${rarity} rarity` : "Set symbol"}
         className={cn("ss", `ss-${setCode.toLowerCase()}`, className)}
-        style={{ fontSize: size, color }}
+        style={keyline ? { fontSize: size, color, textShadow: keyline } : { fontSize: size, color }}
       />
     );
   }
