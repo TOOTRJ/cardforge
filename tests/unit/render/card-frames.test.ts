@@ -125,4 +125,67 @@ describe("card-frames — frame assets resolve from disk or the deployment CDN",
     // shield themselves (frames swap 4.4) — no separate plate is fetched.
     expect(paths).not.toContain("/frames/m15pw/loyalty.png");
   });
+
+  it("lists a basic land's symbol image from the profile's slot (TODO 3.23 / 3.24)", () => {
+    const plains = {
+      title: "Plains",
+      cardType: "land",
+      supertype: "Basic",
+      subtypes: ["Plains"],
+      colorIdentity: ["white"],
+      frameStyle: { template: "fullartland" },
+    } as unknown as CardPreviewData;
+    const slot = {
+      rect: { topPct: 83.43, leftPct: 4.13, widthPct: 11.2, heightPct: 8 },
+      style: "glyph" as const,
+      assetPathTemplate: "/frames/fullartland/symbol/{symbol}.png",
+    };
+    // Without a slot only the P/T plate the profile always lists (the
+    // pre-4.39 fullartland; m15textlessland today).
+    expect(frameAssetPathsFor({ ...plains, frameStyle: { template: "m15textlessland" } })).toEqual([
+      "/frames/m15/pt/w.png",
+    ]);
+    // The full-art basics (4.39) preload their own symbol image.
+    expect(frameAssetPathsFor(plains)).toEqual(["/frames/m15/pt/w.png", "/frames/fullartland/symbol/w.png"]);
+    expect(frameAssetPathsFor({ ...plains, frameStyle: { template: "m15fullartland" } })).toEqual([
+      "/frames/m15/pt/w.png",
+      "/frames/m15fullartland/symbol/w.png",
+    ]);
+    // …and the borderless M15 frame (4.32) its own P/T plate.
+    expect(
+      frameAssetPathsFor({
+        title: "Bear",
+        cardType: "creature",
+        colorIdentity: ["green"],
+        power: "2",
+        toughness: "2",
+        frameStyle: { template: "m15borderless" },
+      } as unknown as CardPreviewData),
+    ).toEqual(["/frames/m15borderless/pt/g.png"]);
+    expect(frameAssetPathsFor({ ...plains, profileOverrides: { fullartland: { basicSymbol: slot } } })).toEqual([
+      "/frames/m15/pt/w.png",
+      "/frames/fullartland/symbol/w.png",
+    ]);
+    // An explicit mana watermark swaps the symbol it preloads.
+    expect(
+      frameAssetPathsFor({
+        ...plains,
+        watermark: { kind: "mana", key: "g", size: "large" },
+        profileOverrides: { fullartland: { basicSymbol: slot } },
+      }),
+    ).toEqual(["/frames/m15/pt/w.png", "/frames/fullartland/symbol/g.png"]);
+    // A textless planeswalker draws no ability rows: no badges.
+    const walker = {
+      title: "W",
+      cardType: "planeswalker",
+      colorIdentity: ["blue"],
+      loyalty: "3",
+      rulesText: "+1: Draw a card.",
+      frameStyle: { template: "m15pw" },
+    } as unknown as CardPreviewData;
+    expect(frameAssetPathsFor(walker)).toContain("/frames/m15pw/loyaltyup.png");
+    expect(frameAssetPathsFor({ ...walker, profileOverrides: { m15pw: { textless: true } } })).not.toContain(
+      "/frames/m15pw/loyaltyup.png",
+    );
+  });
 });

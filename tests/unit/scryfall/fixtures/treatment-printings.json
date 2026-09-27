@@ -353,5 +353,175 @@
     "finishes": [
       "nonfoil"
     ]
+  },
+  "fra-382": {
+    "id": "796b72af-5078-427d-b566-9bccad17090f",
+    "oracle_id": "bc71ebf6-2056-41f7-be35-b2e5c34afa99",
+    "name": "Plains",
+    "released_at": "2026-10-02",
+    "layout": "normal",
+    "set": "fra",
+    "set_name": "Reality Fracture",
+    "collector_number": "382",
+    "frame": "2015",
+    "border_color": "borderless",
+    "full_art": true,
+    "textless": false,
+    "type_line": "Basic Land — Plains",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "W"
+    ],
+    "rarity": "common",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "frame_effects": [
+      "inverted"
+    ]
+  },
+  "unf-235": {
+    "id": "c453d1ea-9a42-4ccb-9391-eec122025647",
+    "oracle_id": "bc71ebf6-2056-41f7-be35-b2e5c34afa99",
+    "name": "Plains",
+    "released_at": "2022-10-07",
+    "layout": "normal",
+    "set": "unf",
+    "set_name": "Unfinity",
+    "collector_number": "235",
+    "frame": "2015",
+    "border_color": "borderless",
+    "full_art": true,
+    "textless": true,
+    "type_line": "Basic Land — Plains",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "W"
+    ],
+    "rarity": "common",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "frame_effects": [
+      "inverted"
+    ]
+  },
+  "fdn-282": {
+    "id": "6e6f19b3-4c76-4078-8ed2-b2832a33d066",
+    "oracle_id": "bc71ebf6-2056-41f7-be35-b2e5c34afa99",
+    "name": "Plains",
+    "released_at": "2024-11-15",
+    "layout": "normal",
+    "set": "fdn",
+    "set_name": "Foundations",
+    "collector_number": "282",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": true,
+    "textless": false,
+    "type_line": "Basic Land — Plains",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "W"
+    ],
+    "rarity": "common",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "promo_types": [
+      "startercollection"
+    ]
+  },
+  "fin-309": {
+    "id": "c61feafd-ef09-437c-a12c-fd7d6cb8c15a",
+    "oracle_id": "05d24b0c-904a-46b6-b42a-96a4d91a0dd4",
+    "name": "Wastes",
+    "released_at": "2025-06-13",
+    "layout": "normal",
+    "set": "fin",
+    "set_name": "Final Fantasy",
+    "collector_number": "309",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": true,
+    "textless": false,
+    "type_line": "Basic Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [],
+    "rarity": "common",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "promo_types": [
+      "ffxvi",
+      "universesbeyond"
+    ]
+  },
+  "znr-266": {
+    "id": "9591fd15-78d9-4089-a075-031ab2affd2d",
+    "oracle_id": "bc71ebf6-2056-41f7-be35-b2e5c34afa99",
+    "name": "Plains",
+    "released_at": "2020-09-25",
+    "layout": "normal",
+    "set": "znr",
+    "set_name": "Zendikar Rising",
+    "collector_number": "266",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": true,
+    "textless": false,
+    "type_line": "Basic Land — Plains",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "W"
+    ],
+    "rarity": "common",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "frame_effects": [
+      "fullart"
+    ]
+  },
+  "spm-189": {
+    "id": "1164f7ec-7b2f-4cc9-90bb-7eaaa331b4cd",
+    "oracle_id": "bc71ebf6-2056-41f7-be35-b2e5c34afa99",
+    "name": "Plains",
+    "released_at": "2025-09-26",
+    "layout": "normal",
+    "set": "spm",
+    "set_name": "Marvel's Spider-Man",
+    "collector_number": "189",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": true,
+    "textless": false,
+    "type_line": "Basic Land — Plains",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "W"
+    ],
+    "rarity": "common",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "frame_effects": [
+      "fullart"
+    ],
+    "promo_types": [
+      "universesbeyond"
+    ]
   }
 }

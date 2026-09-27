@@ -53,7 +53,8 @@ describe("frame reference registry", () => {
     const m15Templates = FRAME_TEMPLATE_VALUES.filter(
       (t) => eraForTemplate(t) === "m15",
     );
-    expect(m15Templates.length).toBe(15);
+    // + the borderless skins of 4.32 (their set, Borderless, is M15-era).
+    expect(m15Templates.length).toBe(17);
     for (const template of m15Templates) {
       for (const colorKey of FRAME_COLOR_KEYS) {
         const key = frameComboKey(template, colorKey);

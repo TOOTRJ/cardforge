@@ -90,12 +90,14 @@ describe("slotInk / footerInk", () => {
     expect(slotInk({ ...stat, inkByColorKey: undefined }, "b")).toEqual({ colorHex: "#111111", shadowCss: "1px 1px 0 #000" });
   });
 
-  it("the footer never draws its own shadowCss (FULLARTLAND declares one it has never shown)", () => {
+  it("the footer never draws its own shadowCss without the on-art opt-in", () => {
     const footer: TextSlot = { ...stat, inkByColorKey: undefined } as TextSlot;
+    expect(footer.shadowCss).toBeTruthy();
     expect(footerInk(footer, "b")).toEqual({ colorHex: "#111111", shadowCss: undefined });
-    const fullartland = getFrameProfile("fullartland").footer!;
-    expect(fullartland.shadowCss).toBeTruthy();
-    expect(footerInk(fullartland, "r").shadowCss).toBeUndefined();
+    expect(footerInk(footer, "b", getFrameProfile("m15"))).toEqual({ colorHex: "#111111", shadowCss: undefined });
+    // The borderless full-art basic prints it on the art (4.39): outlined.
+    const fullartland = getFrameProfile("fullartland");
+    expect(footerInk(fullartland.footer!, "r", fullartland).shadowCss).toBeTruthy();
   });
 
   it("bandTextStyle: an entry's colour and shadow for the text span, nothing without one", () => {

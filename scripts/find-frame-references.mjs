@@ -91,6 +91,20 @@ const TEMPLATES = {
   m15pw: {
     q: (k) => `t:planeswalker frame:2015 (st:expansion or st:core) is:booster -is:showcase -is:borderless -is:extended -is:dfc ${spellColor(k)}`,
   },
+  // The 2019+ borderless frame (4.32). No crown until 4.6. m = three
+  // colours: two-colour prints split the pinline (4.6), our master's is gold.
+  // Curate by eye (print review 2026-09-26): drop Godzilla-series, Lesson
+  // and devoid printings, and prefer commons/uncommons — rares and mythics
+  // print the holo stamp in an arch of the rules-box pinline (4.9).
+  m15borderless: {
+    q: (k) =>
+      `border:borderless frame:2015 -is:showcase -frame:legendary -is:dfc -is:textless (t:creature or t:instant or t:sorcery or t:enchantment) -t:artifact -t:land -t:token -t:planeswalker ${k === "m" ? "c>=3 -is:hybrid" : spellColor(k)}`,
+  },
+  m15borderlessartifact: {
+    confirm: "Coloured borderless artifacts print the colour's bars (FDN, FRA) or silver artifact bars (SNC, SLC) — confirm the thumbnail.",
+    q: (k) =>
+      `border:borderless frame:2015 -is:showcase -frame:legendary -is:dfc -is:textless t:artifact -t:land -t:token -t:vehicle ${spellColor(k)}`,
+  },
   battle: {
     note: "Every printed battle is a transform DFC; the front face is the landscape siege.",
     q: (k) => `t:battle ${spellColor(k)}`,
@@ -156,8 +170,21 @@ const TEMPLATES = {
     confirm: "ZNR showcase (hedron) frame — check the thumbnail is the hedron treatment, not a full-art land.",
     q: (k) => `set:znr is:showcase -t:land ${spellColor(k)}`,
   },
+  // Full-art basics with the title bar + left-disc type bar (4.39). Pinned by
+  // set list, never by date: SPM and SOS (2025–26) print the plain bar. The
+  // references are the 2024–25 printings the master matches within 2 px
+  // (print review 2026-09-26); ONE / MOM (2023) print an older bar geometry.
+  // c: FIN #309, the one printed left-disc Wastes.
+  m15fullartland: {
+    q: (k) =>
+      k === "m"
+        ? null
+        : `t:basic is:fullart border:black frame:2015 -is:textless (set:fdn or set:dsk or set:dft or set:tdm or set:fin or set:hob) ${identityColor(k)}`,
+  },
+  // Owner decision 4.35 (2026-09-26): FRA #382–396, the only borderless run
+  // with these bars (dark ones — geometry only, `nearest`).
   fullartland: {
-    q: (k) => (k === "m" ? null : `t:basic is:fullart frame:2015 -is:showcase -is:textless ${identityColor(k)}`),
+    q: (k) => (k === "m" || k === "c" ? null : `set:fra t:basic is:fullart border:borderless ${identityColor(k)}`),
   },
   m15textless: {
     q: (k) => `is:textless frame:2015 -t:land -t:token ${spellColor(k)}`,

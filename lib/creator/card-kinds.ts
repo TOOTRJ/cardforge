@@ -265,12 +265,22 @@ const KINDS_WITHOUT_STAT_OVERLAY: readonly CardKind[] = CARD_KIND_VALUES.filter(
 // plain ability lines, and a battle no defense (full-art research
 // 2026-09-26, TODO 0.26) — they take every kind but those two until 4.5.
 // Absent = any standard kind (stats still gate on type).
+//
+// The borderless M15 frame (4.32) is a SKIN of the M15 standard and of the
+// M15 artifact frame, so the gallery only offers it where those are — but
+// it is new (no legacy card sits on it), so it carries a restriction too and
+// the server refuses it on any other kind: CC's pack has no planeswalker,
+// land, token or battle frame (those are 4.33 / 4.34 / 4.37). The artifact
+// dress also serves an Artifact Creature, borrowed like m15artifact (1.7).
 const SHOWCASE_KIND_RESTRICTION: Partial<
   Record<FrameTemplate, readonly CardKind[]>
 > = {
   expeditionland: ["land"],
+  m15fullartland: ["land"],
   fullartland: ["land"],
   m15textlessland: ["land"],
+  m15borderless: ["creature", "instant", "sorcery", "enchantment", "artifact"],
+  m15borderlessartifact: ["artifact", "creature"],
   nyx: ["enchantment"],
   fullart: KINDS_WITHOUT_STAT_OVERLAY,
   m15textless: KINDS_WITHOUT_STAT_OVERLAY,
@@ -278,10 +288,11 @@ const SHOWCASE_KIND_RESTRICTION: Partial<
 };
 
 /** True when a showcase treatment's kind restriction leaves this kind out
- *  (a planeswalker on the Zendikar Rising hedron frame, a creature on Nyx).
- *  Unlike `!templateSupportsKind`, it never refuses a border-era or layout
- *  frame, so an off-kind legacy card (an artifact on the plain m15 frame)
- *  isn't caught. The server's frame gate uses this. */
+ *  (a planeswalker on the Zendikar Rising hedron frame, a creature on Nyx,
+ *  a land on the borderless M15 frame). Unlike `!templateSupportsKind`, it
+ *  never refuses a border-era standard or a layout frame, so an off-kind
+ *  legacy card (an artifact on the plain m15 frame) isn't caught. The
+ *  server's frame gate uses this. */
 export function templateRefusesKind(
   template: FrameTemplate,
   kind: CardKind,
@@ -297,10 +308,11 @@ export function templateRefusesKind(
 // The kind restriction above can't catch that, because the Land kind covers
 // basics and nonbasics alike, so these frames carry a per-template flag.
 // Nonbasic edge-to-edge lands are 4.34's; the full-art basics of 4.39–4.41
-// join this set.
+// join this set (4.39's black-bordered m15fullartland is the first).
 // ---------------------------------------------------------------------------
 
 const BASIC_ONLY_TEMPLATES: ReadonlySet<FrameTemplate> = new Set<FrameTemplate>([
+  "m15fullartland",
   "fullartland",
 ]);
 
@@ -338,7 +350,9 @@ export function isSingleBasicLand(face: BasicLandFace): boolean {
 const BORROWED_VARIATIONS: Partial<
   Record<CardKind, Partial<Record<FrameTemplate, readonly FrameTemplate[]>>>
 > = {
-  creature: { m15: ["m15artifact"] },
+  // …and the borderless artifact dress (4.32), a skin of m15artifact that
+  // an Artifact Creature borrows the same way.
+  creature: { m15: ["m15artifact", "m15borderlessartifact"] },
 };
 
 /** The variations the Variations section offers under `base` for this
@@ -466,11 +480,14 @@ export function baseFrameFor(
   kind: CardKind,
   template: FrameTemplate,
 ): FrameTemplate {
-  const skinBase = SKIN_BASE.get(template);
-  if (skinBase) return skinBase;
+  // A frame the kind borrows maps to the standard it re-dresses FIRST: the
+  // borderless artifact dress is m15artifact's skin, but a creature borrows
+  // it under its own M15 standard.
   for (const [base, borrowed] of Object.entries(BORROWED_VARIATIONS[kind] ?? {})) {
     if ((borrowed ?? []).includes(template)) return base as FrameTemplate;
   }
+  const skinBase = SKIN_BASE.get(template);
+  if (skinBase) return skinBase;
   if (FRAME_SET_ERA[FRAME_TEMPLATE_SET[template]] === "showcase") {
     return standardFrameFor("m15", KIND_DEFS[kind].cardType) ?? template;
   }

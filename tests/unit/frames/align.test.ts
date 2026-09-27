@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   alignAndScore,
+  HOLO_STAMP_ARCH,
+  scoreExclusionsFor,
   bestShift1D,
   bestShift2D,
   edgeMagnitude,
@@ -193,6 +195,41 @@ describe("alignAndScore", () => {
     // Other slots are untouched.
     expect(result.perSlot.type.dxPct).toBe(0);
     expect(result.perSlot.pt.score).toBe(0);
+  });
+
+  it("leaves an excluded box (the holo-stamp arch) out of the registration and every score", () => {
+    // The scan prints an arch in the rules box's bottom edge and a stamp
+    // under it that our master doesn't draw (a borderless rare, 4.9).
+    const ours = drawCard({ artSeed: 1 });
+    const scan = drawCard({ artSeed: 1 });
+    outline(scan, 86, 236, 114, 252, 255);
+    fillRect(scan, 90, 254, 110, 262, 180);
+    const arch = { topPct: 83, leftPct: 42, widthPct: 16, heightPct: 12 };
+    const without = alignAndScore({ ours, scan, slots: SLOTS });
+    expect(without.overall).toBeGreaterThan(0);
+    expect(without.perSlot.rules.score).toBeGreaterThan(0);
+    const masked = alignAndScore({ ours, scan, slots: SLOTS, exclude: [arch] });
+    expect(masked.overall).toBe(0);
+    expect(masked.perSlot.rules.score).toBe(0);
+    expect(masked.perSlot.rules.dxPct).toBe(0);
+    expect(masked.global).toMatchObject({ dxPx: 0, dyPx: 0, confidence: 1 });
+    expect(without.global.confidence).toBeLessThan(1);
+    // No exclusion: the same result as before the option existed.
+    expect(alignAndScore({ ours, scan, slots: SLOTS, exclude: [] })).toEqual(without);
+  });
+
+  it("excludes the arch only for the borderless M15 frames", () => {
+    expect(scoreExclusionsFor("m15borderless")).toEqual([HOLO_STAMP_ARCH]);
+    expect(scoreExclusionsFor("m15borderlessartifact")).toEqual([HOLO_STAMP_ARCH]);
+    for (const template of ["m15", "m15fullartland", "fullartland"]) {
+      expect(scoreExclusionsFor(template), template).toEqual([]);
+    }
+    // x 640–860, y 1890–2000 on 1500 × 2100: the arch (656–850, from 1905)
+    // and the stamp under it.
+    expect(Math.round((HOLO_STAMP_ARCH.leftPct / 100) * 1500)).toBe(640);
+    expect(Math.round(((HOLO_STAMP_ARCH.leftPct + HOLO_STAMP_ARCH.widthPct) / 100) * 1500)).toBe(860);
+    expect(Math.round((HOLO_STAMP_ARCH.topPct / 100) * 2100)).toBe(1890);
+    expect(Math.round(((HOLO_STAMP_ARCH.topPct + HOLO_STAMP_ARCH.heightPct) / 100) * 2100)).toBe(2000);
   });
 
   it("refuses mismatched grids", () => {

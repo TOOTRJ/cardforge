@@ -4,12 +4,15 @@
 // frame). Regrouped from the old publish step; it edits
 // frame_style.finish, whose error routing stays owned by the Frame panel.
 
-import { Controller, useFormContext } from "react-hook-form";
+import { Controller, useFormContext, useWatch } from "react-hook-form";
 import {
   ChipGroup,
   type ChipOption,
 } from "@/components/ui/chip-group";
 import { FieldGroup } from "@/components/creator/field-group";
+import { finishAvailableOn } from "@/lib/cards/art-framing";
+import { normalizeFrameTemplate } from "@/lib/cards/card-display";
+import { getFrameProfile, type FrameProfile } from "@/lib/cards/template-layout";
 import type { CardFinish } from "@/types/card";
 import type { FormValues } from "@/lib/creator/form-types";
 
@@ -55,8 +58,28 @@ export const FINISH_OPTIONS: ChipOption<CardFinish>[] = [
   },
 ];
 
+/** The finish chips for a frame: Etched is hidden (shown disabled, with
+ *  why) on an edge-to-edge treatment (TODO 3.23) — it masks by the frame's
+ *  luminance and all but vanishes on a see-through frame, until the etched
+ *  frame treatment (4.28). */
+export function finishOptionsFor(profile: Pick<FrameProfile, "artSlot">): ChipOption<CardFinish>[] {
+  return FINISH_OPTIONS.map((option) =>
+    option.value !== "etched" || finishAvailableOn(profile, option.value)
+      ? option
+      : {
+          ...option,
+          disabled: true,
+          description: "Not on borderless frames yet — pick a bordered frame to etch it.",
+        },
+  );
+}
+
 export function EffectsPanel() {
   const { control } = useFormContext<FormValues>();
+  const template = useWatch({ control, name: "frame_style.template" });
+  // The finish gate reads the code profile's art window only — the admin
+  // overrides never move a window onto the card's edge.
+  const options = finishOptionsFor(getFrameProfile(normalizeFrameTemplate(template)));
 
   return (
     <FieldGroup
@@ -73,7 +96,7 @@ export function EffectsPanel() {
             size="md"
             value={field.value ?? "regular"}
             onChange={(next) => field.onChange(next)}
-            options={FINISH_OPTIONS}
+            options={options}
           />
         )}
       />
