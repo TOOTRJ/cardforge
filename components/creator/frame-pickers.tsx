@@ -14,8 +14,21 @@ import {
   pickFrameColorKey,
   type FrameTypeInfo,
 } from "@/components/cards/frame-layer";
-import { getFrameProfile } from "@/lib/cards/template-layout";
+import { artFillsCard, getFrameProfile, type Rect } from "@/lib/cards/template-layout";
 import { cn } from "@/lib/utils";
+
+/** The sample art drawn under an art-first frame's tile (TODO 4.45): one of
+ *  the app's own built-in profile banners (lib/profile/default-media.ts,
+ *  painted by scripts/generate-default-profile-media.mjs — no WotC art, and
+ *  already served, so no new asset). A misty valley: the centre slice a tile
+ *  shows is a bright, low-chroma landscape that reads in both themes and
+ *  leaves the colour to the frame's own bars. Only an art-first tile loads
+ *  it; cards, previews and bakes never draw it. */
+export const FRAME_THUMB_SAMPLE_ART = "/defaults/banners/banner-05.webp";
+
+function rectStyle(r: Rect) {
+  return { top: `${r.topPct}%`, left: `${r.leftPct}%`, width: `${r.widthPct}%`, height: `${r.heightPct}%` };
+}
 
 // Small "Soon" pill for frames/layouts whose (template, color) combo hasn't
 // been verified/published yet (/admin/frame-compare).
@@ -57,6 +70,12 @@ export function FrameThumb({
       : null;
   const clips = split ? frameSplitClipPaths(split) : null;
   const masterKey = frameMasterKeyForColor(profile, colorKey, type);
+  // An art-first master (artFillsCard: borderless, full-art basics) is
+  // see-through almost everywhere, so on the tile's dark ground it read as
+  // a black tile (4.45): the sample art goes in the profile's art slot and
+  // the frame on a layer above it. Every other tile paints its frame as the
+  // tile's own background, as before.
+  const sampleArt = artFillsCard(profile);
   return (
     <span
       aria-hidden
@@ -66,9 +85,25 @@ export function FrameThumb({
       )}
       data-frame-key={split ? undefined : masterKey}
       style={
-        split ? undefined : { backgroundImage: frameBackgroundImage(template, masterKey) }
+        split || sampleArt
+          ? undefined
+          : { backgroundImage: frameBackgroundImage(template, masterKey) }
       }
     >
+      {sampleArt ? (
+        <span
+          data-frame-sample-art
+          className="absolute bg-cover bg-center"
+          style={{ ...rectStyle(profile.artSlot), backgroundImage: `url("${FRAME_THUMB_SAMPLE_ART}")` }}
+        />
+      ) : null}
+      {sampleArt && !split ? (
+        <span
+          data-frame-layer
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: frameBackgroundImage(template, masterKey) }}
+        />
+      ) : null}
       {split && clips ? (
         <>
           <span

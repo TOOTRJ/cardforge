@@ -543,6 +543,30 @@ export function artReachesCardEdge(profile: Pick<FrameProfile, "artSlot">): bool
   return a.topPct <= 0 || a.leftPct <= 0 || a.leftPct + a.widthPct >= 100 || a.topPct + a.heightPct >= 100;
 }
 
+/** A full-art basic's window spans at least this much of the card on both
+ *  axes: all of it inside the ring (m15fullartland: 92.14 × 89.29 %). */
+const FULL_ART_WINDOW_MIN_PCT = 85;
+
+/** True when the art is (nearly) the whole card, so the frame master is
+ *  see-through almost everywhere and a thumbnail of the bare master reads as
+ *  a black tile (TODO 4.45): an edge-to-edge treatment (artReachesCardEdge —
+ *  the borderless M15 skins, the borderless full-art basic) or a full-art
+ *  basic inside its ring (a basic land's symbol slot, `basicSymbol`, on a
+ *  window of FULL_ART_WINDOW_MIN_PCT or more each way — m15fullartland).
+ *  The creator's frame tiles draw a sample art under these masters
+ *  (FrameThumb); cards, previews and bakes never read it. Other tall-window
+ *  frames (Anime, Nyx, the textless frames, Ghostfire, the ZNR hedron) are
+ *  outside 4.45 and keep their tiles as they were. */
+export function artFillsCard(profile: Pick<FrameProfile, "artSlot" | "basicSymbol">): boolean {
+  if (artReachesCardEdge(profile)) return true;
+  const a = profile.artSlot;
+  return (
+    profile.basicSymbol !== undefined &&
+    a.widthPct >= FULL_ART_WINDOW_MIN_PCT &&
+    a.heightPct >= FULL_ART_WINDOW_MIN_PCT
+  );
+}
+
 /** Resolve a per-color asset path from a template like "/frames/m15/pt/{color}.png". */
 export function resolveColorAsset(pathTemplate: string, colorKey: string): string {
   return pathTemplate.replace("{color}", colorKey);
