@@ -44,6 +44,15 @@ describe("artFillsCard — which frames are art-first", () => {
     // …and a basic's symbol slot on a framed window (an M15 land's) are not.
     expect(artFillsCard({ artSlot: getFrameProfile("m15land").artSlot, basicSymbol: p.basicSymbol })).toBe(false);
   });
+
+  it("a basic's inset window qualifies at 85 % or more on BOTH axes", () => {
+    const { basicSymbol } = getFrameProfile("m15fullartland");
+    // Inset 5 % from the top-left, so no window here reaches a card edge.
+    const win = (widthPct: number, heightPct: number) => ({ topPct: 5, leftPct: 5, widthPct, heightPct });
+    expect(artFillsCard({ artSlot: win(85, 85), basicSymbol })).toBe(true);
+    expect(artFillsCard({ artSlot: win(84.9, 90), basicSymbol })).toBe(false);
+    expect(artFillsCard({ artSlot: win(90, 84.9), basicSymbol })).toBe(false);
+  });
 });
 
 describe("FrameThumb — art-first tiles draw a sample art under the master", () => {
@@ -66,7 +75,12 @@ describe("FrameThumb — art-first tiles draw a sample art under the master", ()
           `${slot.widthPct}%`,
           `${slot.heightPct}%`,
         ]);
-        // Later in the DOM = painted above the art.
+        // Later in the DOM = painted above the art, as long as neither layer
+        // lifts itself with a z-index.
+        for (const layer of [art, frame]) {
+          expect(layer.style.zIndex).toBe("");
+          expect(layer.className).not.toMatch(/(^|\s)-?z-/);
+        }
         expect(frame.hasAttribute("data-frame-layer")).toBe(true);
         expect(frame.style.backgroundImage).toBe(frameBackgroundImage(template, masterKey));
         cleanup();
