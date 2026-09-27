@@ -22,8 +22,9 @@ import { cn } from "@/lib/utils";
  *  painted by scripts/generate-default-profile-media.mjs — no WotC art, and
  *  already served, so no new asset). A misty valley: the centre slice a tile
  *  shows is a bright, low-chroma landscape that reads in both themes and
- *  leaves the colour to the frame's own bars. Only an art-first tile loads
- *  it; cards, previews and bakes never draw it. */
+ *  leaves the colour to the frame's own bars. Only a tile that draws it (an
+ *  art-first frame, or a profile with pickerSampleArt) loads it; cards,
+ *  previews and bakes never draw it. */
 export const FRAME_THUMB_SAMPLE_ART = "/defaults/banners/banner-05.webp";
 
 function rectStyle(r: Rect) {
@@ -73,9 +74,12 @@ export function FrameThumb({
   // An art-first master (artFillsCard: borderless, full-art basics) is
   // see-through almost everywhere, so on the tile's dark ground it read as
   // a black tile (4.45): the sample art goes in the profile's art slot and
-  // the frame on a layer above it. Every other tile paints its frame as the
-  // tile's own background, as before.
-  const sampleArt = artFillsCard(profile);
+  // the frame on a layer above it. Six tall-window frames that read nearly
+  // as dark opt in by name (pickerSampleArt: Anime, Ghostfire, the ZNR
+  // hedron, both textless frames, Nyx — this tile is its only reader).
+  // Every other tile paints its frame as the tile's own background, as
+  // before.
+  const sampleArt = artFillsCard(profile) || profile.pickerSampleArt === true;
   return (
     <span
       aria-hidden
