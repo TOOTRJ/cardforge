@@ -2,11 +2,23 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import sharp from "sharp";
 import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
 import { UNTOUCHED_SINCE_V22 } from "@/tests/stubs/layout-scope-cards";
+import { applyCardCornerMask } from "@/lib/cards/card-corner";
 import {
   fetchStoredRender,
   fitStoredRender,
+  flattenStoredCorners,
   hasServableStoredRender,
 } from "@/lib/render/stored-render";
+
+// Pinned at layout v30: v31 (the one corner radius) is an UNSCOPED sweep, so
+// at v31 every older bake owes a correction and none is servable — the
+// scope cases below need a version where some are
+// (tests/unit/cards/layout-version.test.ts pins v31 itself;
+// tests/stubs/layout-version-at.ts explains).
+vi.mock("@/lib/cards/layout-version", async (importOriginal) => {
+  const { layoutVersionAt } = await import("@/tests/stubs/layout-version-at");
+  return layoutVersionAt(await importOriginal(), 30);
+});
 
 const STORAGE_URL =
   "https://zkwkisxoqdhdchqyjwdc.supabase.co/storage/v1/object/public/card-renders/o/c.png?v=1";
@@ -169,5 +181,62 @@ describe("stored-render — when the baked PNG can stand in for a live render", 
       .toBuffer();
     const landscape = await sharp(await fitStoredRender(landscapeHd, "default", true)).metadata();
     expect([landscape.width, landscape.height]).toEqual([1050, 750]);
+  });
+
+  describe("a round stored bake (TODO 3.26)", () => {
+    /** An HD bake of flat #c83c1e with the card's corner cut transparent. */
+    async function roundHd(w = 1500, h = 2100) {
+      const data = Buffer.alloc(w * h * 4);
+      for (let i = 0; i < data.length; i += 4) data.set([200, 60, 30, 255], i);
+      applyCardCornerMask(data, w, h);
+      return sharp(data, { raw: { width: w, height: h, channels: 4 } }).png().toBuffer();
+    }
+    async function rgba(buf: Buffer) {
+      const { data, info } = await sharp(buf).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+      return (x: number, y: number) => {
+        const o = (y * info.width + x) * 4;
+        return [data[o], data[o + 1], data[o + 2], data[o + 3]];
+      };
+    }
+
+    it("downscales to 750 with the corner still transparent and no fringe", async () => {
+      const at = await rgba(await fitStoredRender(await roundHd(), "default", false));
+      expect(at(0, 0)[3]).toBe(0);
+      expect(at(749, 1049)[3]).toBe(0);
+      // Premultiplied resampling: an edge pixel keeps the card's colour
+      // (within rounding), it is only more transparent — no dark halo.
+      expect(at(30, 0)[3]).toBeGreaterThan(0);
+      at(30, 0)
+        .slice(0, 3)
+        .forEach((c, i) => expect(Math.abs(c - [200, 60, 30][i])).toBeLessThanOrEqual(2));
+      expect(at(375, 525)).toEqual([200, 60, 30, 255]);
+    });
+
+    it("squares it for a Square download: opaque, the fill's corners, the card untouched", async () => {
+      const BLACK = [0, 0, 0] as const;
+      const fills = [BLACK, BLACK, BLACK, BLACK] as const;
+      const flat = await flattenStoredCorners(await fitStoredRender(await roundHd(), "default", false), fills);
+      const meta = await sharp(flat).metadata();
+      expect(meta.hasAlpha).toBe(false);
+      const at = await rgba(flat);
+      expect(at(0, 0)).toEqual([0, 0, 0, 255]);
+      expect(at(749, 0)).toEqual([0, 0, 0, 255]);
+      expect(at(375, 525)).toEqual([200, 60, 30, 255]);
+      // HD straight through, landscape too.
+      const hd = await rgba(await flattenStoredCorners(await roundHd(2100, 1500), fills));
+      expect(hd(2099, 1499)).toEqual([0, 0, 0, 255]);
+      expect(hd(1050, 750)).toEqual([200, 60, 30, 255]);
+      // Each corner takes its own fill: a ring's root #101015.
+      const ROOT = [16, 16, 21] as const;
+      const mixed = await rgba(await flattenStoredCorners(await roundHd(), [ROOT, BLACK, BLACK, ROOT]));
+      expect(mixed(0, 0)).toEqual([16, 16, 21, 255]);
+      expect(mixed(1499, 0)).toEqual([0, 0, 0, 255]);
+      expect(mixed(1499, 2099)).toEqual([16, 16, 21, 255]);
+    });
+
+    it("refuses a corner that keeps its drawn pixels — the downscaled bake no longer has them", async () => {
+      const BLACK = [0, 0, 0] as const;
+      await expect(flattenStoredCorners(await roundHd(), [null, null, BLACK, BLACK])).rejects.toThrow(/can't be squared/);
+    });
   });
 });

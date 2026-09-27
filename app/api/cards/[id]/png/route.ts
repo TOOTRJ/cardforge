@@ -8,9 +8,15 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
   isLandscapeRender,
   renderCardImage,
+  squareCornerFillsOf,
   type RenderPreset,
 } from "@/lib/render/card-image";
-import { fetchStoredRender, fitStoredRender } from "@/lib/render/stored-render";
+import {
+  fetchStoredRender,
+  fitStoredRender,
+  flattenStoredCorners,
+} from "@/lib/render/stored-render";
+import { parseCornersParam } from "@/lib/cards/output-corners";
 import {
   downloadBrandMark,
   getEntitlements,
@@ -35,6 +41,21 @@ import { isUuid } from "@/lib/ids";
 //   ?preset=hd       → 1500×2100 (default; honored only when the viewer's
 //                      plan allows HD — free viewers are clamped to default)
 //   ?preset=default  → 750×1050 (smaller, for sharing)
+//   ?corners=round   → the card's rounded corner, transparent outside the arc
+//                      (TODO 3.26) — what the download modal asks for first
+//   ?corners=square  → the full rectangle, opaque, the corner in the border
+//                      black — for printing. ALSO THE DEFAULT when the
+//                      request names none (lib/cards/output-corners.ts): a
+//                      deck-export tab or link from before 3.26 keeps getting
+//                      the square bytes it always got.
+//
+// Every viewer may pick either corner. A FREE viewer's square PNG is the
+// stored round bake squared with the corner fills a live square render
+// uses (squareCornerFillsOf — the border black, or #101015 on a ring; a few
+// ms of sharp), except where art or frame design runs into a corner (an
+// art-to-edge frame; Bloomburrow, LOTR, Tarkir draconic): the downscaled
+// bake no longer carries those pixels, so that renders live. A paid
+// viewer's is a live square render. The file is <slug>-square.png.
 // ---------------------------------------------------------------------------
 
 type RouteParams = { id: string };
@@ -59,6 +80,7 @@ export async function GET(
   const presetParam = request.nextUrl.searchParams.get("preset");
   const requestedPreset: RenderPreset =
     presetParam === "default" ? "default" : "hd";
+  const corners = parseCornersParam(request.nextUrl.searchParams.get("corners"));
 
   let card: Awaited<ReturnType<typeof fetchCard>>;
   try {
@@ -114,9 +136,9 @@ export async function GET(
   const cacheControl = "private, max-age=0, must-revalidate";
 
   // The render is fully determined by the card row (updated_at), the
-  // owner's pip overrides, the renderer version, and the viewer's
-  // preset/watermark pair — fold them all into a weak ETag so a repeat
-  // download of an unchanged card short-circuits to a 304 BEFORE the
+  // owner's pip overrides, the renderer version, the requested corner and
+  // the viewer's preset/watermark pair — fold them all into a weak ETag so a
+  // repeat download of an unchanged card short-circuits to a 304 BEFORE the
   // expensive Satori render.
   const etag = `W/"${createHash("sha1")
     .update(
@@ -129,6 +151,8 @@ export async function GET(
         card.rendered_at ?? "",
         card.layout_version ?? "",
         preset,
+        // Round and square are different bytes of the same card.
+        corners,
         watermark ? "wm" : "clean",
         // The owner's custom footer mark prints into the render — fold it in
         // so a changed mark busts the 304 path.
@@ -164,15 +188,22 @@ export async function GET(
     // pending platform correction renders live. A paid viewer's clean
     // download has no stored source and always renders live with the
     // current layout (the download modal says so).
-    const stored = watermark ? await fetchStoredRender(card) : null;
+    //
+    // The stored bake is ROUND (layout v31). A free square download
+    // squares it with the live render's corner fills — unless a corner
+    // keeps what was drawn there (art or frame design: a null fill), which
+    // the downscaled bake no longer carries: that renders live.
+    const squareFills = corners === "square" ? squareCornerFillsOf(previewData) : null;
+    const storedServes = watermark && !squareFills?.includes(null);
+    const stored = storedServes ? await fetchStoredRender(card) : null;
     if (stored) {
-      pngBytes = new Uint8Array(
-        await fitStoredRender(stored, preset, isLandscapeRender(previewData)),
-      );
+      const fitted = await fitStoredRender(stored, preset, isLandscapeRender(previewData));
+      pngBytes = new Uint8Array(squareFills ? await flattenStoredCorners(fitted, squareFills) : fitted);
     } else {
       const imgResponse = await renderCardImage(previewData, preset, {
         brandMark: watermark,
         watermarkText: footerText,
+        corners,
       });
       pngBytes = new Uint8Array(await imgResponse.arrayBuffer());
     }
@@ -191,7 +222,7 @@ export async function GET(
     await recordActivity(createAdminClient(), {
       userId: viewer.id,
       kind: "download",
-      props: { format: "png", preset, clean: !watermark },
+      props: { format: "png", preset, clean: !watermark, corners },
     });
   }
 
@@ -199,7 +230,9 @@ export async function GET(
     status: 200,
     headers: {
       "Content-Type": "image/png",
-      "Content-Disposition": `attachment; filename="${card.slug}.png"`,
+      // The header wins over the modal's download="" attribute, so the
+      // Square file is named here: both corners can sit side by side.
+      "Content-Disposition": `attachment; filename="${card.slug}${corners === "square" ? "-square" : ""}.png"`,
       "Content-Length": String(pngBytes.byteLength),
       "Cache-Control": cacheControl,
       ETag: etag,

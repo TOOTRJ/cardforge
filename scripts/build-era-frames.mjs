@@ -19,6 +19,9 @@
 import sharp from "sharp";
 import path from "node:path";
 import fs from "node:fs";
+// Phase B (TODO 3.26): normalise the card corners before the write, so a
+// rebuild can't bring the white paper back (retro/modern are allow-listed).
+import { normaliseMasterCorners } from "./lib/frame-corners.mjs";
 
 const PACK_ROOT = "/Users/redjester/Projects/other/Full-Magic-Pack/data";
 const OUT_W = 1500;
@@ -176,6 +179,7 @@ async function convert(out, pack, colorKey, srcFile, fill, seeds) {
     }
   }
 
+  normaliseMasterCorners(path.basename(out), colorKey, data, W, H);
   await sharp(data, { raw: { width: W, height: H, channels: ch } })
     .png({ compressionLevel: 9, effort: 10 })
     .toFile(path.join(out, `${colorKey}.png`));

@@ -5,7 +5,7 @@
     "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
     "pack": "packTextlessBasics2022.js 'Fullart Basics (2022)' (groupTextless-4.js:5)",
     "converter": "scripts/import-cc-frames.mjs",
-    "output": "1500x2100, corners rounded to 39px, webp q90",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
     "transforms": "native 1500x2100, no resample; the frame image with its Border mask's coverage erased (alpha - mask alpha, floored at 0: the ring's anti-aliased inner edge leaves no residue), corners rounded to the importer radius; symbol discs native 168x168",
     "colors": {
       "w": [
@@ -68,7 +68,7 @@
     "repo": "Investigamer/cardconjurer",
     "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
     "converter": "scripts/import-cc-frames.mjs",
-    "output": "1500x2100, corners rounded to 39px, webp q90",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
     "colors": {
       "w": [
         "img/frames/m15/new/w.png"
@@ -126,7 +126,7 @@
     "repo": "Investigamer/cardconjurer",
     "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
     "converter": "scripts/import-cc-frames.mjs",
-    "output": "1500x2100, corners rounded to 39px, webp q90",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
     "colors": {
       "w": [
         "img/frames/m15/new/a.png through img/frames/m15/new/border.png",
@@ -221,7 +221,7 @@
     "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
     "pack": "packBorderless.js 'Borderless (Alt)' (groupShowcase-5.js:49)",
     "converter": "scripts/import-cc-frames.mjs",
-    "output": "1500x2100, corners rounded to 39px, webp q90",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
     "transforms": "native 1500x2100, pixels copied 1:1 (no resample), corners rounded to the importer radius",
     "colors": {
       "w": [
@@ -283,7 +283,7 @@
     "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
     "pack": "packBorderless.js 'Borderless (Alt)' (groupShowcase-5.js:49)",
     "converter": "scripts/import-cc-frames.mjs",
-    "output": "1500x2100, corners rounded to 39px, webp q90",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
     "transforms": "native 1500x2100, pixels copied 1:1 (no resample), corners rounded to the importer radius",
     "colors": {
       "w": [
@@ -343,7 +343,7 @@
     "repo": "Investigamer/cardconjurer",
     "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
     "converter": "scripts/import-cc-frames.mjs",
-    "output": "1500x2100, corners rounded to 39px, webp q90",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
     "colors": {
       "w": [
         "img/frames/m15/devoid/m15DevoidFrameW.png"
@@ -397,7 +397,7 @@
     "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
     "pack": "packTextlessBasics2022.js 'Fullart Basics (2022)' (groupTextless-4.js:5)",
     "converter": "scripts/import-cc-frames.mjs",
-    "output": "1500x2100, corners rounded to 39px, webp q90",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
     "transforms": "native 1500x2100, the full frame image copied 1:1 (no resample), corners rounded to the importer radius; symbol discs native 168x168",
     "colors": {
       "w": [
@@ -457,7 +457,7 @@
     "repo": "Investigamer/cardconjurer",
     "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
     "converter": "scripts/import-cc-frames.mjs",
-    "output": "1500x2100, corners rounded to 39px, webp q90",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
     "colors": {
       "w": [
         "img/frames/m15/new/lw.png"
@@ -499,7 +499,7 @@
     "repo": "Investigamer/cardconjurer",
     "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
     "converter": "scripts/import-cc-frames.mjs",
-    "output": "1500x2100, corners rounded to 39px, webp q90",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
     "colors": {
       "w": [
         "img/frames/planeswalker/regular/planeswalkerFrameW.png"
@@ -553,7 +553,7 @@
     "repo": "Investigamer/cardconjurer",
     "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
     "converter": "scripts/import-cc-frames.mjs",
-    "output": "1500x2100, corners rounded to 39px, webp q90",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
     "colors": {
       "w": [
         "img/frames/m15/new/snow/w.png"
@@ -611,7 +611,7 @@
     "repo": "Investigamer/cardconjurer",
     "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
     "converter": "scripts/import-cc-frames.mjs",
-    "output": "1500x2100, corners rounded to 39px, webp q90",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
     "colors": {
       "w": [
         "img/frames/m15/new/snow/lw.png"
@@ -651,7 +651,7 @@
     "repo": "Investigamer/cardconjurer",
     "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
     "converter": "scripts/import-cc-frames.mjs",
-    "output": "1500x2100, corners rounded to 39px, webp q90",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
     "colors": {
       "w": [
         "img/frames/token/m15/textless/w.png"
@@ -703,7 +703,7 @@
     "repo": "Investigamer/cardconjurer",
     "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
     "converter": "scripts/import-cc-frames.mjs",
-    "output": "1500x2100, corners rounded to 39px, webp q90",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
     "colors": {
       "w": [
         "img/frames/token/m15/textless/a.png through img/frames/m15/regular/m15MaskBorder.png",

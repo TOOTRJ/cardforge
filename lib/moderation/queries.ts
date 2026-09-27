@@ -2,6 +2,7 @@ import "server-only";
 
 import { getCurrentProfile } from "@/lib/supabase/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
+import { isLandscapeFrame } from "@/lib/cards/card-orientation";
 
 type ModerationReport = {
   id: string;
@@ -17,6 +18,8 @@ export type ModerationCard = {
   ownerId: string;
   artUrl: string | null;
   renderedImageUrl: string | null;
+  /** The render is 7:5 (Battle, Split): shown whole in a landscape box. */
+  landscape: boolean;
   reports: ModerationReport[];
 };
 
@@ -39,7 +42,7 @@ export async function getModerationQueue(): Promise<ModerationCard[] | null> {
   const { data, error } = await admin
     .from("card_reports")
     .select(
-      "id, reason, details, created_at, card_id, cards(id, title, slug, owner_id, art_url, rendered_image_url)",
+      "id, reason, details, created_at, card_id, cards(id, title, slug, owner_id, art_url, rendered_image_url, frame_style)",
     )
     .eq("status", "pending")
     .order("created_at", { ascending: false })
@@ -59,6 +62,7 @@ export async function getModerationQueue(): Promise<ModerationCard[] | null> {
       owner_id: string;
       art_url: string | null;
       rendered_image_url: string | null;
+      frame_style: unknown;
     } | null;
   };
 
@@ -75,6 +79,7 @@ export async function getModerationQueue(): Promise<ModerationCard[] | null> {
         ownerId: card.owner_id,
         artUrl: card.art_url,
         renderedImageUrl: card.rendered_image_url,
+        landscape: isLandscapeFrame(card.frame_style),
         reports: [],
       };
       byCard.set(card.id, entry);

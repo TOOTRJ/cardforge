@@ -16,7 +16,9 @@ const mocks = vi.hoisted(() => ({
   upload: vi.fn(async () => ({ ok: true as const, renderedImageUrl: "https://cdn/r.png?v=2", renderedThumbUrl: "https://cdn/r.webp?v=2" })),
   remove: vi.fn(async () => {}),
   art: vi.fn(async () => ({ ok: true as const, artUrl: null as string | null })),
+  purge: vi.fn(async (ids: readonly string[]) => void ids),
 }));
+vi.mock("@/lib/cards/cache-purge", () => ({ purgeCardCdnCache: mocks.purge }));
 vi.mock("@/lib/render/card-image", () => ({ renderCardImage: mocks.render }));
 vi.mock("@/lib/cards/bake-render", () => ({ resolveBakeArt: mocks.art }));
 vi.mock("@/lib/cards/bake-core", () => ({
@@ -28,6 +30,13 @@ vi.mock("@/lib/cards/bake-core", () => ({
 vi.mock("@/lib/pips/queries", () => ({ getPipOverrides: async () => null }));
 vi.mock("@/lib/cards/frame-profile-overrides", () => ({ getFrameProfileOverrides: async () => ({}) }));
 vi.mock("@/lib/cards/storage-paths", () => ({ cardRenderPath: (o: string, c: string) => `${o}/${c}.png` }));
+// Pinned at layout v30: v31 (the one corner radius) is an UNSCOPED sweep, so
+// at v31 no older bake is opt-in-only or stamp-only — cases below need both.
+// tests/stubs/layout-version-at.ts explains.
+vi.mock("@/lib/cards/layout-version", async (importOriginal) => {
+  const { layoutVersionAt } = await import("@/tests/stubs/layout-version-at");
+  return layoutVersionAt(await importOriginal(), 30);
+});
 
 import {
   countMarkedRenders,
@@ -132,6 +141,7 @@ beforeEach(() => {
   mocks.remove.mockClear();
   mocks.art.mockClear();
   mocks.art.mockResolvedValue({ ok: true, artUrl: null });
+  mocks.purge.mockClear();
 });
 
 describe("parseRebakeScope", () => {
@@ -183,8 +193,15 @@ describe("runRebakeBatch", () => {
     });
     expect(called(updates[0].calls, "eq", "updated_at")).toBe(true);
     expect(called(updates[0].calls, "in", "visibility")).toBe(true);
-    // Watermarked bake when billing is on.
-    expect(mocks.render).toHaveBeenCalledWith(expect.anything(), "hd", { brandMark: true, watermarkText: null });
+    // Watermarked bake when billing is on, with the card's rounded corner
+    // (layout v31) — the save-time bake's contract.
+    expect(mocks.render).toHaveBeenCalledWith(expect.anything(), "hd", {
+      brandMark: true,
+      watermarkText: null,
+      corners: "round",
+    });
+    // The share images' CDN copies go with the old bake (3.26 review).
+    expect(mocks.purge).toHaveBeenCalledWith(["c1", "c2"]);
   });
 
   it("never picks a skipped id, sizes the page to limit + skips, counts remaining exactly", async () => {

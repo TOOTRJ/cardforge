@@ -1,8 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
 import { notifyOwnersOfRenderUpdates, staleCountsByOwner } from "@/lib/cards/render-update-notify";
 import { chainClient, called, payloadOf } from "@/tests/stubs/supabase-chain";
 import { UNTOUCHED_SINCE_V22 } from "@/tests/stubs/layout-scope-cards";
+
+// Pinned at layout v30: v31 (the one corner radius) is an UNSCOPED sweep, so
+// at v31 no older bake has only the v22 opt-in pending — nobody is notified
+// until a later opt-in bump. tests/stubs/layout-version-at.ts explains.
+vi.mock("@/lib/cards/layout-version", async (importOriginal) => {
+  const { layoutVersionAt } = await import("@/tests/stubs/layout-version-at");
+  return layoutVersionAt(await importOriginal(), 30);
+});
 
 // Cards no sweep since v22 changed (lotr, single-word): a v21 bake of one
 // has only the v22 OPT-IN pending.

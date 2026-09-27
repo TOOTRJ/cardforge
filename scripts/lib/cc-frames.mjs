@@ -13,6 +13,10 @@
 // records exactly which source files made each one.
 // ---------------------------------------------------------------------------
 
+// The one card corner (TODO 3.26). Import-free .ts, loaded through Node's
+// type stripping like import-cc-frames.mjs's edge-contract import.
+import { applyCardCornerMask, cardCornerRadiusPx } from "../../lib/cards/card-corner.ts";
+
 export const CC_REPO = "Investigamer/cardconjurer";
 /** Pinned so a rerun reproduces the same pixels; bump deliberately. */
 export const CC_COMMIT = "2fcddba8966156d484cedf54d8214996748dd5e1";
@@ -20,9 +24,12 @@ export const CC_RAW = `https://raw.githubusercontent.com/${CC_REPO}/${CC_COMMIT}
 
 export const OUT_W = 1500;
 export const OUT_H = 2100;
-/** The existing masters' corner radius (2.6 % of the width). CC's frames
- *  have opaque black corners; ours are transparent. */
-export const CORNER_RADIUS = Math.round(OUT_W * 0.026);
+/** The masters' corner radius: the one card corner (TODO 3.26), 4.3 % of
+ *  the short side = 64.5 px, never rounded (it was Math.round(1500 × 0.026)
+ *  = 39 before). CC's frames have opaque black corners; ours are
+ *  transparent. The bake cuts the same corner, so a master and a bake agree
+ *  pixel for pixel. */
+export const CORNER_RADIUS = cardCornerRadiusPx(OUT_W, OUT_H);
 /** Same encode as scripts/generate-frame-webp.mjs. */
 export const WEBP = { quality: 90, effort: 6 };
 
@@ -325,21 +332,11 @@ export function roundCorners(acc, width, height, radius) {
   }
 }
 
-/** Same as roundCorners, on 8-bit RGBA (after the final downscale). */
+/** Same as roundCorners, on 8-bit RGBA (after the final downscale): the
+ *  card corner mask the bake applies too (lib/cards/card-corner.ts, TODO
+ *  3.26), so a master and a bake cut at one radius agree pixel for pixel. */
 export function roundCornersRgba8(buf, width, height, radius) {
-  const r = radius;
-  for (let y = 0; y < height; y += 1) {
-    for (let x = 0; x < width; x += 1) {
-      const cx = x < r ? r - x - 0.5 : x >= width - r ? x - (width - r) + 0.5 : 0;
-      const cy = y < r ? r - y - 0.5 : y >= height - r ? y - (height - r) + 0.5 : 0;
-      if (cx === 0 || cy === 0) continue;
-      const d = Math.sqrt(cx * cx + cy * cy) - r;
-      if (d <= -0.5) continue;
-      const k = d >= 0.5 ? 0 : 0.5 - d;
-      const o = (y * width + x) * 4 + 3;
-      buf[o] = Math.round(buf[o] * k);
-    }
-  }
+  applyCardCornerMask(buf, width, height, radius);
 }
 
 /** Crop `box` out of an 8-bit RGBA image, keeping only what the mask's

@@ -16,6 +16,9 @@
 import sharp from "sharp";
 import path from "node:path";
 import fs from "node:fs";
+// Phase B (TODO 3.26): normalise the card corners before the write, so a
+// rebuild can't bring the white paper back.
+import { normaliseMasterCorners } from "./lib/frame-corners.mjs";
 
 const PACK =
   "/Users/redjester/Projects/other/Full-Magic-Pack/data/magic-m15-aftermath.mse-style";
@@ -105,6 +108,7 @@ async function build(colorKey, stem) {
     }
   }
 
+  normaliseMasterCorners(path.basename(OUT), colorKey, data, W, H);
   await sharp(data, { raw: { width: W, height: H, channels: ch } })
     .png({ compressionLevel: 9, effort: 10 })
     .toFile(path.join(OUT, `${colorKey}.png`));

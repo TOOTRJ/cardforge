@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { CompassStar } from "@/components/ui/compass-star";
 import { StarfieldBackdrop } from "@/components/ui/starfield-backdrop";
 import { CardPreviewPlaceholder } from "@/components/cards/card-preview-placeholder";
+import { cardCornersClass } from "@/lib/cards/card-orientation";
 
 // WUBRG pips rendered with the Mana font — the same glyphs the card pips use,
 // so the strip shows real MTG mana symbols rather than plain colored dots.
@@ -27,6 +28,8 @@ export type HeroFeaturedCard = {
   slug: string;
   title: string;
   imageUrl: string;
+  /** A 7:5 (Battle/Split) render: sized and cornered as a landscape card. */
+  landscape?: boolean;
   owner: { username: string; displayName: string | null };
 };
 
@@ -140,15 +143,18 @@ export function MarketingHero({
                       {/* The homepage LCP element: next/image gives AVIF/WebP
                           + responsive sizing, and priority skips lazy-load so
                           the largest paint isn't queued behind the viewport
-                          observer. Dimensions are the 5:7 card ratio. */}
+                          observer. Dimensions are the card's 5:7 (or 7:5)
+                          ratio, and the <img> box IS the card, so it takes
+                          the card corner for its orientation over the card's
+                          #101015 behind a rounded bake. */}
                       <Image
                         src={card.imageUrl}
                         alt={card.title}
-                        width={420}
-                        height={588}
+                        width={card.landscape ? 588 : 420}
+                        height={card.landscape ? 420 : 588}
                         priority
                         sizes="(max-width: 640px) 45vw, 280px"
-                        className="h-auto w-full rounded-xl border border-gold/30 shadow-xl transition-transform group-hover:-translate-y-1"
+                        className={`h-auto w-full ${cardCornersClass(card.landscape ?? false)} border border-gold/30 bg-[#101015] bg-clip-padding shadow-xl transition-transform group-hover:-translate-y-1`}
                       />
                     </Link>
                     <p className="mt-2 text-center text-xs text-muted">

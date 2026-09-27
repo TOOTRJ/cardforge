@@ -78,16 +78,17 @@ node scripts/import-cc-frames.mjs --only m15,m15land
   the window keeps its exact crop. The colourless token is a PipGlyph
   composite of CC's silver token frame at reduced opacity, because CC's
   bordered token pack has no colourless frame.
-- **Output.** 1500×2100 PNGs with rounded transparent corners, WebP
-  siblings, P/T plates at native size, and (full-art basics) the 168 px
-  mana symbols. The borderless and full-art masters are native 1500×2100
+- **Output.** 1500×2100 PNGs with transparent corners cut at the one card
+  corner (64.5 px, see "The card corner" below), WebP siblings, P/T plates
+  at native size, and (full-art basics) the 168 px mana symbols. The borderless and full-art masters are native 1500×2100
   and copied 1:1 (no resample).
 - **Provenance.** Which pack files made each frame is written to
   `lib/cards/frame-sources.json`.
 - **Edge contract (TODO 7.7).** Every master is checked against its
   template's declared edges in `lib/frames/edge-contract.ts` (`border`,
-  `art` or `bar` per edge) right after the downscale; a violation, or a
-  template with no declaration, makes the importer exit non-zero. CI runs
+  `art` or `bar` per edge), and by the corner check (3.26), right after the
+  downscale and the corner cut; a violation, or a template with no
+  declaration, makes the importer exit non-zero. CI runs
   the same check on every git master
   (`tests/unit/frames/edge-contract.test.ts`), and on the bucket masters
   when a local build is present (`FRAMES_BUILD_DIR`, else `.frames-build`,
@@ -107,6 +108,91 @@ The compare page's alignment score leaves out printed details a master
 doesn't draw (`scoreExclusionsFor` in `lib/frames/align.ts`: on the
 borderless templates, the arch the rules-box pinline makes around a rare's
 holo stamp, until 4.9 draws it).
+
+## The card corner (TODO 3.26)
+
+One radius for every card corner: `lib/cards/card-corner.ts`,
+`cardCornerRadiusPx(w, h)` = 4.3 % of the card's SHORT side, never rounded
+(64.5 px at 1500×2100 and at 2100×1500; Scryfall cuts 4.32–4.34 %). The
+display CSS, the bake's transparent corner mask and the frame masters all
+read it.
+
+- **Card Conjurer masters.** The importer cuts them at the constant
+  (`CORNER_RADIUS` in `scripts/lib/cc-frames.mjs`, the same
+  `applyCardCornerMask` the bake uses). The 3.26 re-import changed only
+  alpha inside the four corner squares (2,576 values a master, 1,288 on the
+  borderless pair whose top corners were already clear); a re-cut of the
+  old objects was pixel-identical to it. fullartland, the P/T plates, the
+  symbol discs and the loyalty shields did not change.
+- **The corner check.** `cornerViolations` (`lib/frames/edge-contract.ts`)
+  runs beside the edge contract in the importer, in Phase B's gate and in
+  CI: on a `border` or `bar` edge, every pixel the cut keeps whole within
+  8 px of the arc (0.5 ≤ −d ≤ 8) must be opaque (α ≥ 0.99) and dark
+  (luma ≤ 48). It catches a paper crescent, a grey paper rim right at the
+  arc (a light ring on a round bake) and a transparent ring, none of which
+  the edge check (which skips each corner by `Math.ceil(radius) + 2` = 67 px
+  on the short side) can see. An `art` edge's half of the arc is skipped.
+  It fails only on the edge contract's known failures: the rings, the
+  showcase corners that are design, adventure (a 1–2 px grey rim, luma
+  ≤ 97 — not on Phase B's allow-list, owner call) and two α 0.97 specks on
+  alphaland/b.
+- **Git MSE masters (Phase B).** Most Full-Magic-Pack frames paint their own
+  rounded corner (r ≈ 57–76 px) and fill the rest with card-stock paper, so
+  a light crescent showed inside the 64.5 px cut. `node
+  scripts/round-frame-corners.mjs` repaints that paper, its grey
+  anti-aliased fringe and the fringe's dark tail, then cuts the corner —
+  only on the allow-list in `scripts/lib/frame-corners.mjs` (retro,
+  retroland, modern, modernland, saga, aftermath, extendedart, fullart,
+  m15textless, m15textlessland, flip, alphatoken, and expeditionland
+  w/u/r/c/m, whose paper reached 1–2 px inside the cut), never on a
+  showcase family. The paint is the border AS IT RUNS BESIDE THE CORNER:
+  the edge band's colour at the same depth inside the card's outline,
+  sampled along each edge just past the paper (retro's scanned border reads
+  16/16/16/13/8/3 on its outer rows; a flat black paint left a 0 → 34 luma
+  step where the old corner ended). The tail follows the paper edge's
+  gradient downhill until it meets the border at its depth, never deeper
+  than 10 px inside the outline.
+  - **Its gate** (`normalisedMasterFailures`, shared by the runner and the
+    builders' hook): every change inside the four 96 × 96 px corner boxes;
+    no corner skipped (a flood that reaches the 96 px guard arc, or no dark
+    border to paint with); the LIGHT it repaints ≤ the light the cut showed
+    before (the challenge's P8 count) and none left; the WHOLE repaint —
+    light paper, grey fringe and dark tail, every pixel the cut keeps whose
+    colour changed — within 10 px of the outline and only ever darker; and
+    the edge contract and corner check on the result. The fringe and tail
+    are necessarily more pixels than the light (about 1.4–3 ×; leaving them
+    is a grey hairline where the old corner was). It is idempotent.
+  - **Its box is 96 px, not the bake's 68.** On retro, retroland, modern,
+    modernland and extendedart the paper's anti-aliased edge runs along the
+    card edge to ~77 px from the corner (≤ 9 px from the edge), so a repaint
+    confined to ceil(r) + 3 = 68 px would leave a grey run on the straight
+    edge. A bake-level scope proof compares against 96 px boxes for these
+    templates.
+  - The MSE builders (`convert-mse-frame.mjs`, `build-era-frames.mjs`,
+    `build-variation-frames.mjs`, `build-aftermath-frame.mjs`,
+    `build-flip-frame.mjs`) run the same pass AND gate before they write
+    (`normaliseMasterCorners` throws and restores the master on any
+    failure), so a rebuild can't bring the white back. Then `npm run
+    assets:frame-webp`. The normalised masters are truecolour PNGs: a
+    lossless palette is impossible (the base palettes were already full at
+    255–256 colours and the cut's alpha ramp adds 35–58), and a quantised
+    one would move the mask's alpha.
+- **Square outputs.** Print (the PDF card and sheets, the Pro deck PDF +
+  ZIP) and the Square PNG are the round render squared again
+  (`squareCardCorners`): outside the arc each corner is the card's border
+  colour — the border black by default, the root's #101015 where a master's
+  edge band is see-through (the rings; bloomburrow / lotr / tarkirdraconic
+  bottoms; expeditionland b/g) — or, where art or frame design runs into
+  the corner (an art-to-edge frame; the tops of bloomburrow, lotr and
+  tarkirdraconic), what was drawn. The table is `lib/frames/square-corners.ts`;
+  `tests/unit/frames/square-corners.test.ts` holds it to every master, so a
+  new or rebuilt frame whose corner changes turns CI red.
+- **Left alone.** The Alpha masters (agclassic, alphaland) keep their clean
+  60 px cut, inside the 64.5 px one (square outputs paint the annulus
+  between the two cuts in the border black). adventure keeps its paper
+  stair-step outside the cut (never printed: square outputs replace it) and
+  its 1–2 px rim (a known failure above). expeditionland b/g keep their
+  paper: a see-through band leaves no border to paint with (7.7).
 
 ## Shipping a frame change
 

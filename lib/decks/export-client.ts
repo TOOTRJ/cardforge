@@ -1,5 +1,6 @@
 import JSZip from "jszip";
 import { buildDeckPdf, type DeckPdfLayout } from "@/lib/render/card-pdf";
+import { cardPngHref } from "@/lib/cards/output-corners";
 
 // ---------------------------------------------------------------------------
 // Client-side deck export pipeline — runs in the browser (no server-only
@@ -7,8 +8,12 @@ import { buildDeckPdf, type DeckPdfLayout } from "@/lib/render/card-pdf";
 // with live progress while they keep using the site:
 //
 //   1. manifest   GET /api/decks/[id]/download?part=manifest
-//   2. cards      GET /api/cards/[id]/png?preset=…  (clean for a paid viewer;
-//                 a few in flight at once, each ~1–3 s of live rendering)
+//   2. cards      GET /api/cards/[id]/png?preset=…&corners=square  (clean for
+//                 a paid viewer; a few in flight at once, each ~1–3 s of live
+//                 rendering). SQUARE (TODO 3.26): the same bytes feed the
+//                 deck PDF's pages and 3×3 sheets AND the ZIP, and both are
+//                 print input — cut along the rectangle, corners in the
+//                 border's colour, never transparent.
 //   3. package    ZIP → cover + deck.pdf report + decklist.txt + PNGs
 //                 PDF → pdf-lib pages / 3×3 sheets + checklist page
 //
@@ -124,7 +129,10 @@ async function fetchCardPngs(
       if (signal?.aborted) return;
       const card = cards[cursor++];
       try {
-        const response = await fetchImpl(`/api/cards/${card.id}/png?preset=${quality}`, { signal });
+        const response = await fetchImpl(
+          cardPngHref(card.id, { preset: quality, corners: "square" }),
+          { signal },
+        );
         if (!response.ok) {
           onOne(card.title, false);
           continue;

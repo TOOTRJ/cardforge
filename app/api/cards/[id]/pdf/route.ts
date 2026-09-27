@@ -141,9 +141,14 @@ export async function GET(
   const brandMark = downloadBrandMark(entitlements);
   let pngBytes: Uint8Array;
   try {
+    // Print is always SQUARE (TODO 3.26): the card page and the 3×3 sheets
+    // are cut along the rectangle and its crop marks, and the corner outside
+    // the arc prints in the card's border colour (the border black, #101015
+    // on a ring — lib/frames/square-corners.ts), never transparent.
     const imgResponse = await renderCardImage(previewData, "hd", {
       brandMark,
       watermarkText: footerText,
+      corners: "square",
     });
     pngBytes = new Uint8Array(await imgResponse.arrayBuffer());
   } catch (err) {

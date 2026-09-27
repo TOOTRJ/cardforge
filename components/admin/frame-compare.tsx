@@ -123,8 +123,12 @@ function ScanImage({
       data-testid="scan-image"
       data-rotate={place.rotateDeg}
       // Keep the overlay UNDER the editor hit-test layer (z-20) but above
-      // the isolated card.
-      className="pointer-events-none absolute z-10 rounded-[4.5%]"
+      // the isolated card. The <img> box is always the PORTRAIT 5:7 scan
+      // (a landscape card's scan is turned after layout), so `.card-corners`
+      // is its circular 4.3 % corner — Scryfall's own cut and our preview's,
+      // so difference mode leaves no corner residue (the old 4.5 % / 4.5 %
+      // radius was an ellipse, 6.3 % of the width deep).
+      className="pointer-events-none absolute z-10 card-corners"
       style={{
         width: place.imgWidth,
         height: place.imgHeight,

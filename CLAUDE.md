@@ -155,6 +155,24 @@ Rules and gotchas:
   `lib/cards/render-thumb.ts`) — gallery-style tiles MUST use
   `BakedCardThumbnail` with `renderedThumbUrl`, never the 3 MB PNG;
   `scripts/backfill-render-thumbs.mjs` fills thumbs for older bakes.
+- ONE card corner (layout v31, TODO 3.26): `lib/cards/card-corner.ts`
+  (`CARD_CORNER_OF_SHORT_SIDE` 0.043 of the SHORT side — 64.5 px at HD in
+  both orientations, never `Math.round`ed; no imports). The bake cuts it
+  into the PNG's alpha (`applyCardCornerMask` via `renderPng`'s
+  `cornerRadiusPx`), so every stored bake, thumb and OG image is ROUND;
+  display boxes use `.card-corners` / `.card-corners-landscape`
+  (`cardCornersClass()`, only on an exact 5:7 / 7:5 box) — never a fixed px
+  or `rounded-*` radius on a card image. Print always passes
+  `corners: "square"` (PDF card + sheets, the Pro deck export's
+  `corners=square`): the round render squared again, each corner in the
+  border's colour from `lib/frames/square-corners.ts` (#000, #101015 on a
+  ring, or the art/design) — a test holds that table to every master.
+  `/api/cards/[id]/png` defaults to SQUARE (old links, stale export tabs);
+  the download modal asks `corners=round` or `square` by name, a free
+  Square is the stored round bake squared with the same fills, and
+  `corners` is in the ETag. The CC importer cuts masters at the constant;
+  the allow-listed MSE masters are normalised by Phase B
+  (`scripts/lib/frame-corners.mjs`, run by the builders too) — `docs/FRAMES.md`.
 - Notifications are push, not pull: `notifications` is on the
   `supabase_realtime` publication (migration 0075) and
   `components/notifications/realtime-alerts.tsx` subscribes to the signed-in

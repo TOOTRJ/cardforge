@@ -38,6 +38,13 @@ vi.mock("@/lib/supabase/admin", () => ({
   isAdminConfigured: () => state.configured,
 }));
 vi.mock("next/cache", () => cache);
+// Pinned at layout v30: v31 (the one corner radius) is an UNSCOPED sweep, so
+// at v31 no older bake has only the v22 opt-in pending (the "kept for the
+// owner" case). tests/stubs/layout-version-at.ts explains.
+vi.mock("@/lib/cards/layout-version", async (importOriginal) => {
+  const { layoutVersionAt } = await import("@/tests/stubs/layout-version-at");
+  return layoutVersionAt(await importOriginal(), 30);
+});
 
 import {
   resetFrameProfileOverrideAction,

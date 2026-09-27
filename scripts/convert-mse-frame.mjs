@@ -14,6 +14,8 @@
 //   3. If the frame's art window isn't near (50%,33%), adjust SEEDS. For frames
 //      with two cut-outs (planeswalker), add a second seed point.
 //   4. node scripts/convert-mse-frame.mjs
+//      Templates on the Phase B allow-list (scripts/lib/frame-corners.mjs)
+//      get their card corners normalised before the write (TODO 3.26).
 //   5. Register it in types/card.ts (FRAME_TEMPLATE_VALUES, FRAME_TEMPLATE_LABELS,
 //      FRAME_TEMPLATE_SET — the last two are exhaustive) and wire it into the
 //      picker via ERA_TYPE_FRAME / TEMPLATE_SKIN_VARIANTS / a showcase set, or
@@ -27,6 +29,9 @@
 import sharp from "sharp";
 import path from "node:path";
 import fs from "node:fs";
+// Phase B (TODO 3.26): the card corners of an allow-listed template are
+// normalised before the write, so a rebuild can't bring the white paper back.
+import { normaliseMasterCorners } from "./lib/frame-corners.mjs";
 
 // ── Config: edit these for each frame set ──────────────────────────────────
 // ARTIFACT TOKENS — the token style's silver acard (Treasure/Clue/Food
@@ -113,6 +118,7 @@ async function convert(colorKey, srcFile) {
     }
   }
 
+  normaliseMasterCorners(path.basename(OUT), colorKey, data, W, H);
   await sharp(data, { raw: { width: W, height: H, channels: ch } })
     .png({ compressionLevel: 9, effort: 10 })
     .toFile(path.join(OUT, `${colorKey}.png`));

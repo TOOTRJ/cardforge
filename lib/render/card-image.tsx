@@ -15,6 +15,9 @@
 // declares `display: flex`.
 
 import { pngImageResponse } from "@/lib/render/satori-png";
+import { cardCornerRadiusPx, type CardCornerFills } from "@/lib/cards/card-corner";
+import { squareCornerFills } from "@/lib/frames/square-corners";
+import type { CardCorners } from "@/lib/cards/output-corners";
 import { foilMaskSource, imageNaturalSize, resolveRenderableImage } from "@/lib/render/art-source";
 import {
   COST_PIP_GAP,
@@ -154,6 +157,28 @@ export const RENDER_PRESETS = {
 } as const;
 
 export type RenderPreset = keyof typeof RENDER_PRESETS;
+
+/**
+ * The output's corner (TODO 3.26, one radius — lib/cards/card-corner.ts;
+ * the choice — lib/cards/output-corners.ts):
+ *
+ *   "round"  — renderCardImage's default, and every DISPLAY bake: the card's
+ *              rounded corner is cut into the PNG's alpha at
+ *              cardCornerRadiusPx (64.5 px at HD in both orientations), RGB
+ *              kept — the shape the CSS clip draws, so the stored PNG is the
+ *              card wherever it is shown unclipped (raw OG, oEmbed, Google
+ *              Images, the download).
+ *   "square" — print (the PDF card and sheets, the deck export) and the
+ *              square PNG: the full rectangle, opaque. The same render, cut
+ *              round and then squared again (lib/cards/card-corner.ts
+ *              squareCardCorners): outside the arc each corner shows its
+ *              border colour — the border black (#000, owner decision
+ *              2026-09-27), or the root's #101015 where the master's edge
+ *              band is see-through (the rings) — or, where art or frame
+ *              design runs into the corner, what was drawn there
+ *              (squareCornerFillsOf, lib/frames/square-corners.ts).
+ */
+export type { CardCorners };
 
 // Real-card rarity inks for the set symbol — the SAME table the preview's
 // components/cards/set-symbol.tsx reads (lib/brand/constants RARITY_INK), so
@@ -2675,6 +2700,26 @@ async function withRenderableImages(
   };
 }
 
+/** A square output's four corner fills for this card (TODO 3.26,
+ *  lib/frames/square-corners.ts): the border black, the root's #101015, or
+ *  null where the art (an art-to-edge frame) or the frame's own design runs
+ *  into the corner — keep what was drawn. The keys are the masters painted
+ *  on the card's left and right halves (a two-colour split paints two). The
+ *  png route squares a free Square from the stored round bake with these
+ *  unless one is null (it renders those live: the downscaled bake no longer
+ *  carries the pixels outside the arc). */
+export function squareCornerFillsOf(card: CardPreviewData): CardCornerFills {
+  const template = normalizeFrameTemplate(card.frameStyle?.template);
+  const layout = resolveFrameProfile(template, card.profileOverrides);
+  const colors = card.colorIdentity as ColorIdentity[] | undefined;
+  const split = frameSplitFor(layout, colors);
+  const key = frameMasterKey(layout, colors, card);
+  return squareCornerFills(template, layout.artSlot, {
+    left: split?.leftKey ?? key,
+    right: split?.rightKey ?? key,
+  });
+}
+
 /** True for frames (Battle) whose canvas is 7:5 instead of 5:7. */
 export function isLandscapeRender(card: CardPreviewData): boolean {
   return isLandscapeTemplate(card.frameStyle, card.profileOverrides);
@@ -2757,8 +2802,15 @@ export function frameAssetPathsFor(card: CardPreviewData): string[] {
 export async function renderCardImage(
   source: CardPreviewData,
   preset: RenderPreset = "default",
-  opts: { brandMark?: boolean; watermarkText?: string | null } = {},
+  opts: {
+    brandMark?: boolean;
+    watermarkText?: string | null;
+    /** The output's corner — "round" (default) or "square" for print; see
+     *  CardCorners. */
+    corners?: CardCorners;
+  } = {},
 ): Promise<Response> {
+  const corners: CardCorners = opts.corners ?? "round";
   const card = await withRenderableImages(source);
   const isFoil = card.frameStyle?.finish === "foil";
   // Frame PNGs are not in the function bundle on Vercel — warm the loader's
@@ -2812,6 +2864,12 @@ export async function renderCardImage(
     {
       width,
       height,
+      // The rounded corner, cut after rasterizing (lib/render/satori-png.ts):
+      // 4.3 % of the SHORT side — circular in both orientations, fractional
+      // (64.5 px at HD, 32.25 at 750). A square output is the same raster
+      // squared again with each corner's fill (squareCornerFillsOf).
+      cornerRadiusPx: cardCornerRadiusPx(width, height),
+      squareCornerFills: corners === "square" ? squareCornerFillsOf(source) : undefined,
       // MPlantin is the real MTG body font (ships with mana-font); Mana +
       // Keyrune supply the cost pips and set symbol. Satori has no auto-
       // fallback once explicit fonts are provided, so all three are registered.

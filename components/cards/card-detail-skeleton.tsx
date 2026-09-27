@@ -14,7 +14,7 @@ export function CardDetailSkeleton() {
     >
       <div className="grid gap-10 lg:grid-cols-[minmax(0,360px)_1fr]">
         <div className="mx-auto w-full max-w-sm">
-          <div className="skeleton aspect-[5/7] w-full rounded-frame" />
+          <div className="skeleton aspect-[5/7] w-full card-corners" />
         </div>
 
         <div className="flex flex-col gap-6">

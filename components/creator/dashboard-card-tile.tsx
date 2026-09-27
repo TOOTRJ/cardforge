@@ -104,8 +104,10 @@ export function DashboardCardTile({
         className={cn(
           // The selection ring sits on the outer rectangle so the
           // CardHoverEffect tilt still works without distorting it. The
-          // ring transitions in/out on selection-state changes.
-          "relative rounded-frame transition-[box-shadow] duration-150",
+          // ring transitions in/out on selection-state changes. This box,
+          // the focus target and the scrim below are all exactly the 5:7
+          // tile, so they take the card's own corner and stay concentric.
+          "relative card-corners transition-[box-shadow] duration-150",
           isSelected
             ? "ring-2 ring-primary-bright ring-offset-2 ring-offset-background"
             : "",
@@ -128,7 +130,7 @@ export function DashboardCardTile({
               handleBodyClick(event);
             }
           }}
-          className="group block cursor-pointer rounded-frame focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          className="group block cursor-pointer card-corners focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           style={
             enableViewTransition
               ? { viewTransitionName: `card-${card.id}` }
@@ -158,7 +160,7 @@ export function DashboardCardTile({
               // scrim fades the card so the actions stand out; only the
               // buttons themselves become clickable, and only once
               // revealed (invisible links must not swallow clicks).
-              "pointer-events-none absolute inset-0 z-30 flex items-center justify-center gap-2 rounded-frame",
+              "pointer-events-none absolute inset-0 z-30 flex items-center justify-center gap-2 card-corners",
               compact && "flex-col",
               "bg-background/55",
               "opacity-0 transition-opacity duration-150",

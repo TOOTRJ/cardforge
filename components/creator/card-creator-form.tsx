@@ -132,6 +132,7 @@ import {
   showsLoyalty,
   showsPowerToughness,
 } from "@/lib/cards/card-display";
+import { cardCornersClass, isLandscapeFrame } from "@/lib/cards/card-orientation";
 import {
   colorIdentityForKey,
   colorWord,
@@ -2426,15 +2427,19 @@ export function CardCreatorForm({
       {serverError}
     </div>
   ) : null;
+  // The overlays cover the live preview's card box exactly, so they take its
+  // corner (5:7 or 7:5 — a percentage radius on the wrong box is an ellipse).
+  const previewLandscape = isLandscapeFrame(watched.frame_style);
   const previewOverlays = (
     <>
       {fillPhase ? (
         <CardGeneratingOverlay
           label={fillPhase === "painting" ? "Painting art…" : "Designing…"}
+          landscape={previewLandscape}
         />
       ) : null}
       {deckRemixImporting ? (
-        <CardGeneratingOverlay label="Importing card…" />
+        <CardGeneratingOverlay label="Importing card…" landscape={previewLandscape} />
       ) : null}
     </>
   );
@@ -3105,11 +3110,20 @@ function AiFillButton({
 }
 
 // Spinner overlay shown on the live preview while an AI fill is running, so
-// it's clear the card is being (re)built.
-function CardGeneratingOverlay({ label = "Forging…" }: { label?: string }) {
+// it's clear the card is being (re)built. It covers the preview's card box
+// exactly, clipped at the same card corner (it used to be an elliptical 5 %
+// that left the corners undimmed).
+function CardGeneratingOverlay({
+  label = "Forging…",
+  landscape = false,
+}: {
+  label?: string;
+  /** The preview is a 7:5 (Battle/Split) card. */
+  landscape?: boolean;
+}) {
   return (
     <div
-      className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-[5%] bg-background/70 backdrop-blur-sm"
+      className={`absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 ${cardCornersClass(landscape)} bg-background/70 backdrop-blur-sm`}
       role="status"
       aria-live="polite"
     >

@@ -6,12 +6,22 @@ import {
   SOCIAL_PLATFORMS,
   type SocialPlatformKey,
 } from "@/lib/auth/schemas";
+import { isLandscapeFrame } from "@/lib/cards/card-orientation";
 
 // ---------------------------------------------------------------------------
 // Featured creators — admin-curated via profiles.featured_at (0052). Reads
 // are viewer-independent (public client, no cookies) so the gallery and
 // challenges pages keep their static/ISR rendering.
 // ---------------------------------------------------------------------------
+
+/** A showcase card's baked image. `landscape` (a 7:5 Battle/Split render)
+ *  picks the card corner class — a 5:7 radius on a 7:5 image is an ellipse. */
+export type FeaturedCardImage = {
+  slug: string;
+  title: string;
+  imageUrl: string;
+  landscape: boolean;
+};
 
 export type FeaturedCreator = {
   username: string;
@@ -22,7 +32,7 @@ export type FeaturedCreator = {
   bio: string | null;
   /** The creator's filled-in social profiles, in SOCIAL_PLATFORMS order. */
   socials: { key: SocialPlatformKey; label: string; url: string }[];
-  cards: { slug: string; title: string; imageUrl: string }[];
+  cards: FeaturedCardImage[];
 };
 
 export async function listFeaturedCreators(
@@ -54,13 +64,13 @@ export async function listFeaturedCreators(
     allPinnedIds.length > 0
       ? supabase
           .from("cards")
-          .select("id, slug, title, rendered_image_url, rendered_thumb_url, owner_id")
+          .select("id, slug, title, frame_style, rendered_image_url, rendered_thumb_url, owner_id")
           .in("id", allPinnedIds)
           .eq("visibility", "public")
       : Promise.resolve({ data: [] as never[] }),
     supabase
       .from("cards")
-      .select("slug, title, rendered_image_url, rendered_thumb_url, owner_id")
+      .select("slug, title, frame_style, rendered_image_url, rendered_thumb_url, owner_id")
       .in("owner_id", profileIds)
       .eq("visibility", "public")
       .not("rendered_image_url", "is", null)
@@ -83,7 +93,7 @@ export async function listFeaturedCreators(
   const out: FeaturedCreator[] = [];
   for (const p of profiles) {
     const pinned = (p.pinned_card_ids ?? []).slice(0, 3);
-    const cards: { slug: string; title: string; imageUrl: string }[] = pinned
+    const cards: FeaturedCardImage[] = pinned
       .map((id: string) => pinnedById.get(id))
       .filter((c): c is NonNullable<typeof c> =>
         Boolean(c?.rendered_image_url),
@@ -92,6 +102,7 @@ export async function listFeaturedCreators(
         slug: c.slug,
         title: c.title,
         imageUrl: (c.rendered_thumb_url ?? c.rendered_image_url) as string,
+        landscape: isLandscapeFrame(c.frame_style),
       }));
 
     for (const c of fallbackByOwner.get(p.id) ?? []) {
@@ -101,6 +112,7 @@ export async function listFeaturedCreators(
         slug: c.slug,
         title: c.title,
         imageUrl: (c.rendered_thumb_url ?? c.rendered_image_url) as string,
+        landscape: isLandscapeFrame(c.frame_style),
       });
     }
 
@@ -126,6 +138,8 @@ export type FeaturedHomeCard = {
   slug: string;
   title: string;
   imageUrl: string;
+  /** A 7:5 (Battle/Split) render — see FeaturedCardImage. */
+  landscape: boolean;
   owner: { username: string; displayName: string | null };
 };
 
@@ -139,7 +153,7 @@ export async function listFeaturedHomeCards(): Promise<FeaturedHomeCard[]> {
   const { data } = await supabase
     .from("featured_cards")
     .select(
-      "slot, cards(slug, title, visibility, rendered_image_url, rendered_thumb_url, owner_id)",
+      "slot, cards(slug, title, visibility, frame_style, rendered_image_url, rendered_thumb_url, owner_id)",
     )
     .order("slot", { ascending: true });
   if (!data || data.length === 0) return [];
@@ -149,6 +163,7 @@ export async function listFeaturedHomeCards(): Promise<FeaturedHomeCard[]> {
       slug: string;
       title: string;
       visibility: string;
+      frame_style?: unknown;
       rendered_image_url: string | null;
       rendered_thumb_url?: string | null;
       owner_id: string;
@@ -162,6 +177,7 @@ export async function listFeaturedHomeCards(): Promise<FeaturedHomeCard[]> {
       slug: string;
       title: string;
       visibility: string;
+      frame_style?: unknown;
       rendered_image_url: string | null;
       rendered_thumb_url?: string | null;
       owner_id: string;
@@ -184,6 +200,7 @@ export async function listFeaturedHomeCards(): Promise<FeaturedHomeCard[]> {
         slug: r.card.slug,
         title: r.card.title,
         imageUrl: (r.card.rendered_thumb_url ?? r.card.rendered_image_url) as string,
+        landscape: isLandscapeFrame(r.card.frame_style),
         owner: { username: owner.username, displayName: owner.display_name },
       };
     })

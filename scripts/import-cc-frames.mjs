@@ -16,11 +16,11 @@
 // For each template × colour it downloads the pack files from the PINNED
 // commit (cached outside the repo), composites the layers through their
 // masks at the pack's NATIVE size in CC's draw order (2010×2814 for the
-// accurate M15 pack), downscales once with Lanczos to 1500×2100, rounds the
-// corners, and writes <out>/<template>/<colour>.png + .webp, plus
-// P/T plates at native size under pt/, a basic land's mana-symbol discs at
-// native size under symbol/, and a planeswalker's loyalty shield cut out of
-// each master under loyalty/. Provenance (which source files made which
+// accurate M15 pack), downscales once with Lanczos to 1500×2100, cuts the
+// one card corner (lib/cards/card-corner.ts, 64.5 px), and writes
+// <out>/<template>/<colour>.png + .webp, plus P/T plates at native size
+// under pt/, a basic land's mana-symbol discs at native size under symbol/,
+// and a planeswalker's loyalty shield cut out of each master under loyalty/. Provenance (which source files made which
 // frame, and every substitution) goes to lib/cards/frame-sources.json.
 //
 // Nothing here touches public/frames or any bucket. Next:
@@ -50,9 +50,15 @@ import {
   sourceFilesFor,
   toRgba8,
 } from "./lib/cc-frames.mjs";
-// The edge contract (TODO 7.7) — the same check CI runs on every master
-// (tests/unit/frames/edge-contract.test.ts), here after the downscale.
-import { EDGE_CONTRACTS, edgeContractViolations, isKnownEdgeFailure } from "../lib/frames/edge-contract.ts";
+// The edge contract (TODO 7.7) and its corner check (TODO 3.26) — the same
+// checks CI runs on every master (tests/unit/frames/edge-contract.test.ts),
+// here after the downscale and the corner cut.
+import {
+  EDGE_CONTRACTS,
+  cornerViolations,
+  edgeContractViolations,
+  isKnownEdgeFailure,
+} from "../lib/frames/edge-contract.ts";
 
 const args = process.argv.slice(2);
 const flag = (name) => {
@@ -151,7 +157,12 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     if (!contract) {
       edgeFailures.push(`${template}/${key}: no edge contract declared (lib/frames/edge-contract.ts)`);
     } else if (!isKnownEdgeFailure(template, key)) {
-      for (const v of edgeContractViolations(contract, master, OUT_W, OUT_H)) edgeFailures.push(`${template}/${key} ${v}`);
+      for (const v of [
+        ...edgeContractViolations(contract, master, OUT_W, OUT_H),
+        ...cornerViolations(contract, master, OUT_W, OUT_H),
+      ]) {
+        edgeFailures.push(`${template}/${key} ${v}`);
+      }
     }
     await writeMaster(master, out);
     console.log(`wrote ${path.relative(process.cwd(), out)} (+ .webp) from ${W}×${H}`);
@@ -201,9 +212,9 @@ if (!dryRun) {
   console.log(`provenance → ${PROVENANCE}`);
 }
 if (edgeFailures.length) {
-  console.error(`✗ ${edgeFailures.length} master(s) break their edge contract (TODO 7.7) — fix before publishing:`);
+  console.error(`✗ ${edgeFailures.length} master(s) break their edge contract or corner check (TODO 7.7 / 3.26) — fix before publishing:`);
   for (const f of edgeFailures) console.error(`  ${f}`);
   process.exitCode = 1;
 } else if (!dryRun) {
-  console.log("edge contracts: every master honours its template's (TODO 7.7)");
+  console.log("edge contracts + corner check: every master honours its template's (TODO 7.7 / 3.26)");
 }

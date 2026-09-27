@@ -80,10 +80,34 @@ describe("runDeckExport", () => {
     );
     expect(result.filename).toBe("gorgon-gaze-sheets-a4.pdf");
     expect(result.blob.type).toBe("application/pdf");
-    expect(urls.filter((u) => u.includes("/api/cards/")).every((u) => u.endsWith("preset=hd"))).toBe(true);
+    // HD and SQUARE: the sheets are cut along the rectangle (TODO 3.26).
+    const cardUrls = urls.filter((u) => u.includes("/api/cards/"));
+    expect(cardUrls.length).toBeGreaterThan(0);
+    expect(cardUrls.every((u) => u.endsWith("/png?preset=hd&corners=square"))).toBe(true);
     expect(urls.some((u) => u.includes("part=report"))).toBe(false);
     const head = new Uint8Array(await result.blob.slice(0, 5).arrayBuffer());
     expect(String.fromCharCode(...head)).toBe("%PDF-");
+  });
+
+  it("asks for SQUARE cards in the ZIP too — print-service input, never transparent corners", async () => {
+    // The png route's default is square as well, but a stale tab must not
+    // depend on it: the export names the corner explicitly.
+    const urls: string[] = [];
+    const inner = fakeFetch();
+    await runDeckExport(
+      { deckId: "d1", kind: "zip", quality: "default", layout: "pages" },
+      {
+        fetchImpl: (input, init) => {
+          urls.push(input);
+          return inner(input, init);
+        },
+        onProgress: () => {},
+      },
+    );
+    const cardUrls = urls.filter((u) => u.includes("/api/cards/"));
+    expect(cardUrls).toHaveLength(3);
+    expect(cardUrls.every((u) => new URL(u, "http://x").searchParams.get("corners") === "square")).toBe(true);
+    expect(cardUrls.every((u) => new URL(u, "http://x").searchParams.get("preset") === "default")).toBe(true);
   });
 
   it("surfaces the upgrade code from the manifest request", async () => {

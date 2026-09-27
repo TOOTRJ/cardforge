@@ -1,4 +1,8 @@
-import { CARD_LAYOUT_VERSION, isRenderStale } from "@/lib/cards/layout-version";
+import {
+  CARD_LAYOUT_VERSION,
+  VERIFICATION_SCOPED_VERSIONS,
+  isRenderStale,
+} from "@/lib/cards/layout-version";
 
 // ---------------------------------------------------------------------------
 // Is a frame verification still meaningful? A tick in /admin/frame-compare
@@ -7,7 +11,9 @@ import { CARD_LAYOUT_VERSION, isRenderStale } from "@/lib/cards/layout-version";
 // on: a renderer bump that touches the template, or an edited/reset
 // override. Rows ticked before 0115 carry no record — they are reported as
 // `legacy` (not stale) so the 71 existing verifications don't all demand a
-// re-tick at once; the next tick stamps them.
+// re-tick at once; the next tick stamps them. A verification-neutral bump
+// (VERIFICATION_NEUTRAL_VERSIONS: v31's corner cut moves no slot) never
+// stales a tick.
 //
 // Pure: the page and the checklist derive their badges from it, tests pin
 // the rules.
@@ -76,8 +82,9 @@ export function verificationState(
     snapshot.verifiedLayoutVersion != null &&
     // A tick verifies the REGULAR frame: a finish-scoped bump (v26 etched)
     // must not stale every combo. Rarity stays unknown → rarity-scoped
-    // bumps (v23) remain conservative, as before.
-    isRenderStale(snapshot.verifiedLayoutVersion, template, undefined, currentVersion, {
+    // bumps (v23) remain conservative, as before. Verification-neutral
+    // bumps (v31) are scoped to no template here.
+    isRenderStale(snapshot.verifiedLayoutVersion, template, VERIFICATION_SCOPED_VERSIONS, currentVersion, {
       frame_style: { template, finish: "regular" },
     })
   ) {

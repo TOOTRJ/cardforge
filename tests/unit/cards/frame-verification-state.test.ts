@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
 import {
   canonicalJson,
   overrideHash,
@@ -102,5 +103,21 @@ describe("verificationState", () => {
     expect(verificationState(tick(24), "saga", "h", 26).stale).toBe(false);
     expect(verificationState(tick(24), "modern", "h", 26).stale).toBe(true);
     expect(verificationState(tick(24), "tarkirdragon", "h", 26).stale).toBe(true);
+  });
+
+  it("v31 (the one corner radius) is verification-neutral: v29 / v30 ticks stay fresh, older changes still stale", () => {
+    const tick = (v: number) => ({ verified: true, verifiedLayoutVersion: v, verifiedOverrideHash: "h" });
+    expect(CARD_LAYOUT_VERSION).toBe(31);
+    for (const template of ["m15", "modern", "battle", "lotr", "fullartland", "m15borderless"]) {
+      expect(verificationState(tick(30), template, "h").stale, template).toBe(false);
+    }
+    expect(verificationState(tick(29), "m15", "h").stale).toBe(false);
+    expect(verificationState(tick(29), "modern", "h").stale).toBe(false);
+    // v30 re-sourced fullartland: a v29 tick on it is still stale.
+    expect(verificationState(tick(29), "fullartland", "h").stale).toBe(true);
+    // v29 changed every m15 card (the display-footer word spacing).
+    const v28 = verificationState(tick(28), "m15", "h");
+    expect(v28.stale).toBe(true);
+    expect(v28.reasons[0]).toMatch(/renderer changed since layout v28 \(now v31\)/);
   });
 });

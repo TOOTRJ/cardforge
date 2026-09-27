@@ -327,20 +327,22 @@ body {
   will-change: transform;
 }
 
-/* Authentic card corner. Real Magic cards have a soft ~3.5%-of-short-side
-   corner; we render the card image edge-to-edge and only round this much so the
-   frame's own corner shows instead of a hard web-UI rounding. Expressed as an
-   aspect-corrected ELLIPTICAL radius (horizontal% / vertical%) so the corner
-   stays CIRCULAR without container-query units — `cqw` resolved against the
-   wrong ancestor and inflated the radius to ~8.6%. Portrait is 5:7, landscape
-   7:5, so the two axes use different percentages to land on the same px radius.
-     portrait : 3.5% of width  = 2.5% of height  (height = 1.4·width)
-     landscape: 2.5% of width  = 3.5% of height  (width  = 1.4·height) */
+/* The ONE card corner (TODO 3.26): 4.3% of the card's SHORT side, Scryfall's
+   cut (32.2 px on 745). The constant lives in lib/cards/card-corner.ts —
+   the bake masks the same radius and CARD_CORNER_CSS is this twin (a unit
+   test, tests/unit/cards/card-corner.test.ts, keeps them equal). Expressed as
+   an aspect-corrected ELLIPTICAL radius (horizontal% / vertical%) so the
+   corner stays CIRCULAR without container-query units — `cqw` resolved
+   against the wrong ancestor and inflated the radius to ~8.6%. Portrait is
+   5:7, landscape 7:5, so the two axes use different percentages to land on
+   the same px radius (never put the portrait pair on a 7:5 box):
+     portrait : 4.3% of width     = 3.0714% of height  (height = 1.4·width)
+     landscape: 3.0714% of width  = 4.3% of height     (width  = 1.4·height) */
 .card-corners {
-  border-radius: 3.5% / 2.5%;
+  border-radius: 4.3% / 3.0714%;
 }
 .card-corners-landscape {
-  border-radius: 2.5% / 3.5%;
+  border-radius: 3.0714% / 4.3%;
 }
 
 .card-hover-glare {
@@ -348,7 +350,7 @@ body {
   position: absolute;
   inset: 0;
   z-index: 20;
-  border-radius: 3.5% / 2.5%;
+  border-radius: 4.3% / 3.0714%;
   opacity: var(--card-active);
   background: radial-gradient(
     circle at var(--card-gx) var(--card-gy),

@@ -1,4 +1,5 @@
 import { BRAND, OG_SIZE } from "@/lib/brand/constants";
+import { cardCornerRadiusPx } from "@/lib/cards/card-corner";
 import { ogImageResponse } from "@/lib/og/image-response";
 import {
   BrandLockup,
@@ -41,7 +42,20 @@ export function socialCardBox(landscape: boolean): { width: number; height: numb
     : { width: CARD_SHORT_EDGE, height: CARD_LONG_EDGE };
 }
 
+/** The composite's clip before 3.26 — rounder than the card. */
+export const LEGACY_SOCIAL_CARD_RADIUS = 22;
 
+/** The card image's corner in the composite: the ONE card corner (4.3 % of
+ *  the SHORT side, lib/cards/card-corner.ts) at the box's size — 18 px in
+ *  either orientation. Over a pre-v31 SQUARE bake it stays the old 22 px
+ *  until the sweep re-bakes the card: that clip hid more of the MSE
+ *  masters' white paper corner (modern, saga), which the tighter card
+ *  corner would show as a crescent. */
+export function socialCardCornerRadius(landscape: boolean, legacySquareBake = false): number {
+  if (legacySquareBake) return LEGACY_SOCIAL_CARD_RADIUS;
+  const box = socialCardBox(landscape);
+  return Math.round(cardCornerRadiusPx(box.width, box.height));
+}
 
 /** PNG response of the composite — kept here so the (JSX-free) route
  *  handler at app/api/cards/[id]/og/route.ts can stay a .ts file. */
@@ -58,6 +72,7 @@ function CardSocialImage({
   cardImageDataUri,
   accent,
   landscape = false,
+  legacySquareBake = false,
 }: {
   title: string;
   typeLine: string;
@@ -66,6 +81,9 @@ function CardSocialImage({
   accent: string;
   /** The render is a landscape frame (Battle): draw it 7:5, not 5:7. */
   landscape?: boolean;
+  /** The image is a stored bake from before v31 (square, the frame's own
+   *  corner): keep the old 22 px clip (socialCardCornerRadius). */
+  legacySquareBake?: boolean;
 }) {
   const titleSize = title.length > 40 ? 44 : title.length > 24 ? 54 : 64;
   const box = socialCardBox(landscape);
@@ -167,7 +185,11 @@ function CardSocialImage({
         style={{
           width: box.width,
           height: box.height,
-          borderRadius: 22,
+          // The card's own corner (TODO 3.26): 4.3 % of the SHORT side, so
+          // 18 px in both orientations — the bake's arc at this size (a v31
+          // bake is already round and the shadow follows it). An older
+          // square bake keeps the old 22 px until the sweep reaches it.
+          borderRadius: socialCardCornerRadius(landscape, legacySquareBake),
           boxShadow: "0 24px 60px rgba(0,0,0,0.55)",
         }}
       />
