@@ -440,12 +440,15 @@ function kindFallback(ctx: Ctx): FrameTemplate {
   return standard === "m15" && isArtifactCreature(facts) ? "m15artifact" : standard;
 }
 
-/** The bordered frame an edge-to-edge frame lands on when Scryfall only has
- *  the art cropped to the classic window (1.18). */
+/** The bordered frame an edge-to-edge frame lands on, because Scryfall only
+ *  has the art cropped to the classic window (1.18). Any other kind lands on
+ *  its M15 standard (kindFallback): a borderless basic on the land frame,
+ *  whose window fits that crop, with the borderless full-art basic OFFERED
+ *  once verified (4.39) — not on m15fullartland, whose ~92 × 89 % window
+ *  would blow the 626 × 457 crop up the same way. */
 const BORDERED_EQUIVALENT: Partial<Record<FrameTemplate, FrameTemplate>> = {
   m15borderless: "m15",
   m15borderlessartifact: "m15artifact",
-  fullartland: "m15fullartland",
 };
 
 // ---------------------------------------------------------------------------
@@ -1347,9 +1350,12 @@ const kindWord = (kind: CardKind) => {
  *      and the import lands on the kind's standard (`landOn`);
  *   2. the border — a template whose border isn't true yet (4.35) is capped
  *      at `nearest`;
- *   3. the art — an edge-to-edge frame on a printing that isn't full art
- *      lands on its bordered equivalent, because Scryfall's art_crop is the
- *      626×457 window (1.18's owner decision).
+ *   3. the art — an edge-to-edge frame lands on its bordered equivalent,
+ *      because Scryfall's art_crop is the 626×457 window (1.18's owner
+ *      decision). That holds on `full_art` borderless printings too, so the
+ *      flag doesn't exempt them: measured 2026-09-28, FRA #382, CMM #702,
+ *      SPG #119 and TLE #1 crop to 626×457 and MH3 #326 to 571×460 (the
+ *      taller full-art crops are the black-bordered basics' and UNF's).
  */
 export function resolveFrameSignature(card: ScryfallCard, facts: PrintingFacts): FrameMatch {
   const ctx = contextOf(card, facts);
@@ -1382,7 +1388,7 @@ export function resolveFrameSignature(card: ScryfallCard, facts: PrintingFacts):
     blockedBy = "4.35";
   }
 
-  if (!landOn && card.full_art !== true && artReachesCardEdge(getFrameProfile(template))) {
+  if (!landOn && artReachesCardEdge(getFrameProfile(template))) {
     landOn = BORDERED_EQUIVALENT[template] ?? kindFallback(ctx);
   }
 

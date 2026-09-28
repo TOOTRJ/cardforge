@@ -68,11 +68,13 @@ describe("borderless families (TODO 1.17)", () => {
     ["ltr-306", "exact", "lotr", undefined],
     ["tla-338", "exact", "avatar", undefined],
     ["tle-315", "exact", "avatar", undefined],
-    // Text on the art (4.36): TDM clan, source material (full art: no landOn).
+    // Text on the art (4.36): TDM clan, source material. `full_art` doesn't
+    // exempt a printing from landOn: TLE #1's art_crop is the 626×457 window.
     ["tdm-327", "nearest", "m15borderless", "m15"],
-    ["tle-1", "nearest", "m15borderless", undefined],
-    // Posters: unsupported for good, Borderless offered as the nearest.
-    ["spg-119", "unsupported", "m15borderless", undefined],
+    ["tle-1", "nearest", "m15borderless", "m15"],
+    // Posters: unsupported for good, Borderless offered as the nearest (the
+    // import lands on bordered M15: SPG #119 crops to the window too).
+    ["spg-119", "unsupported", "m15borderless", "m15"],
     // Set frames: Mystical Archive, Stellar Sights (4.11); Amonkhet
     // Invocations unsupported.
     ["sta-1", "nearest", "m15borderless", "m15"],
@@ -81,9 +83,11 @@ describe("borderless families (TODO 1.17)", () => {
     // Tokens (4.37).
     ["wone-1", "nearest", "m15token", undefined],
     // Basics: textless → the textless land (UNF #235); the two-bar FRA run
-    // → the borderless full-art basic (its bars print dark: nearest).
+    // → the borderless full-art basic (its bars print dark: nearest), which
+    // lands on the land frame (its art_crop is the 626×457 window, 1.18) with
+    // the borderless full-art basic offered (4.39).
     ["unf-235", "nearest", "m15textlessland", undefined],
-    ["fra-382", "nearest", "fullartland", undefined],
+    ["fra-382", "nearest", "fullartland", "m15land"],
     // Textless non-basic: the textless frame (its black ring, 4.35).
     ["msh-385", "nearest", "m15textless", undefined],
   ];
@@ -250,6 +254,17 @@ describe("the general signatures (TODO 1.4)", () => {
       signature: "future",
       exactLabel: "Future Sight frame",
       blockedBy: "4.15",
+    });
+  });
+
+  it("keeps the white ghostfire run nearest for its border (4.30), not only the ring (4.35)", () => {
+    expect(frameMatchFromScryfall(printing("tdm-409"))).toMatchObject({
+      signature: "showcase/tdm/ghostfire/white",
+      blockedBy: "4.30",
+    });
+    expect(frameMatchFromScryfall(printing("tdm-399"))).toMatchObject({
+      signature: "showcase/tdm/ghostfire",
+      blockedBy: "4.35",
     });
   });
 

@@ -86,9 +86,10 @@ describe("printingTreatmentFromScryfall — fixtures from 1.16 / 1.19", () => {
     ["znr-266", "fullart", "m15fullartland"],
     ["spm-189", "fullart", "m15fullartland"],
     ["fin-309", "fullart", "m15fullartland"],
-    // Borderless basics: FRA #382 (bars) → the borderless full-art basic,
-    // UNF #235 (textless) → the textless land.
-    ["fra-382", "borderless", "fullartland"],
+    // Borderless basics: FRA #382 (bars) is the borderless full-art basic
+    // but lands on the land frame (the window-cropped art, 1.18); UNF #235
+    // (textless) → the textless land.
+    ["fra-382", "borderless", "m15land"],
     ["unf-235", "borderless", "m15textlessland"],
     // Dark Confidant SCH #3: textless (and full art) → the textless frame.
     ["sch-3", "textless", "m15textless"],
@@ -151,6 +152,22 @@ describe("printingTreatmentNotice — the creator's toast after the frame lands"
     );
     expect(printingTreatmentNotice("borderless", "m15pw")).toBe(
       "This printing is borderless — PipGlyph used the bordered M15 (2015) Planeswalker frame.",
+    );
+  });
+
+  it("never calls a borderless or showcase frame 'bordered' (the signature registry lands some there)", () => {
+    // FRA #382–396 land on the borderless full-art basic; a full-art poster
+    // or source-material printing on Borderless; BLB woodland on its showcase.
+    expect(printingTreatmentNotice("borderless", "fullartland")).toBe(
+      "This printing is borderless — PipGlyph used the Full Art Borderless Basic Land frame.",
+    );
+    expect(printingTreatmentNotice("borderless", "m15borderless")).toBe(
+      "This printing is borderless — PipGlyph used the M15 (2015) Borderless frame.",
+    );
+    expect(printingTreatmentNotice("borderless", "bloomburrow")).not.toMatch(/bordered/);
+    // A layout frame is still an ordinary bordered frame.
+    expect(printingTreatmentNotice("borderless", "saga")).toBe(
+      "This printing is borderless — PipGlyph used the bordered M15 (2015) Saga frame.",
     );
   });
 
@@ -287,27 +304,33 @@ describe("printingTreatmentOffer — PipGlyph's frame for the treatment, once ve
     expect(printingTreatmentOffer(bfz, keys)).toBeNull();
   });
 
-  it("lands a borderless basic that prints text on the borderless full-art basic, never a textless one", () => {
+  it("offers the borderless full-art basic for a borderless basic that prints text, never a textless one", () => {
     // FRA #382: borderless, full art, the title bar + left disc (dark bars:
-    // the nearest look, owner decision 4.39).
+    // the nearest look, owner decision 4.39). The registry names
+    // fullartland, but the import lands on the land frame (1.18: its
+    // art_crop is the 626×457 window) and the creator OFFERS it.
     const fra = patchOf("fra-382");
     expect(fra.printing_treatment).toBe("borderless");
     expect(fra.printing_detail).toEqual({ set: "fra", fullArt: true, textless: false });
-    expect(fra.frame_match).toMatchObject({ status: "nearest", template: "fullartland" });
-    expect(printingTreatmentLanding(fra, verified(["fullartland", "w"]))).toBe("fullartland");
-    expect(printingTreatmentOffer(fra, verified(["fullartland", "w"]))).toBeNull();
-    // Unverified: the import falls back to a plain frame, and nothing is offered.
-    expect(printingTreatmentLanding(fra, verified(["m15borderless", "w"], ["m15fullartland", "w"]))).toBeNull();
+    expect(fra.frame_match).toMatchObject({ status: "nearest", template: "fullartland", landOn: "m15land" });
+    expect(fra.frame_template).toBe("m15land");
+    expect(printingTreatmentLanding(fra, verified(["fullartland", "w"]))).toBeNull();
+    expect(printingTreatmentOffer(fra, verified(["fullartland", "w"]))).toEqual({
+      template: "fullartland",
+      frameLabel: "Borderless Full-Art Basic",
+      actionLabel: "Use Borderless Full-Art Basic",
+    });
+    // Unverified, or only the borderless M15 frame verified: nothing.
     expect(printingTreatmentOffer(fra, verified(["m15borderless", "w"], ["m15fullartland", "w"]))).toBeNull();
     // UNF #235 is textless: m15textlessland's (4.35), no offer.
     const unf = patchOf("unf-235");
     expect(unf.printing_detail?.textless).toBe(true);
     expect(unf.frame_template).toBe("m15textlessland");
     expect(printingTreatmentOffer(unf, verified(["fullartland", "w"], ["m15borderless", "w"]))).toBeNull();
-    // The dialog names the frame the import lands on.
-    expect(
-      printingTreatmentHint("borderless", null, printingTreatmentLanding(fra, verified(["fullartland", "w"]))),
-    ).toBe("This printing is borderless — the import uses PipGlyph's Full Art Borderless Basic Land frame.");
+    // The dialog names the offer before the import.
+    expect(printingTreatmentHint("borderless", printingTreatmentOffer(fra, verified(["fullartland", "w"])))).toBe(
+      "This printing is borderless — the import uses a bordered frame, then offers PipGlyph's Borderless Full-Art Basic frame.",
+    );
   });
 
   it("the dialog's heads-up names the offered frame, or keeps today's copy", () => {

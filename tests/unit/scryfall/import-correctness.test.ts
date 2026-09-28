@@ -647,9 +647,19 @@ describe("the signature registry's landings (TODO 1.4)", () => {
       frameComboKey("fullartland", "w"),
     ]);
     expect(landing(signature("fdn-282"), withFullArt)).toEqual({ template: "m15fullartland", colorKey: "w", status: "exact" });
-    expect(landing(signature("fra-382"), withFullArt)).toEqual({ template: "fullartland", colorKey: "w", status: "exact" });
+    // A borderless basic lands on the land frame (1.18: FRA #382's art_crop
+    // is the 626×457 window, `full_art` or not); the creator offers the
+    // borderless full-art basic.
+    expect(landing(signature("fra-382"), withFullArt)).toEqual({ template: "m15land", colorKey: "w", status: "exact" });
     expect(landing(signature("fdn-282"))).toEqual({ template: "m15land", colorKey: "w", status: "frame-switched" });
     expect(landing(signature("unf-235"), withFullArt)).toEqual({ template: "m15land", colorKey: "w", status: "frame-switched" });
+  });
+
+  it("frame_match decides the wanted frame when both are present (landOn ?? template)", () => {
+    // A patch whose frame_template disagrees with its match: the match wins,
+    // so DMU #435 asks for its landOn (bordered M15), not the stale value.
+    const patch: ScryfallImportPatch = { ...signature("dmu-435"), frame_template: "modern" };
+    expect(landing(patch)).toEqual({ template: "m15", colorKey: "b", status: "exact" });
   });
 
   it("an older cached patch without frame_match keeps frame_template", () => {

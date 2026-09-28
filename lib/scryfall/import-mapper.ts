@@ -477,15 +477,22 @@ const PRINTING_TREATMENT_PHRASES: Record<PrintingTreatment, string> = {
  * The creator's toast once an import has landed: "This printing is
  * borderless — PipGlyph used the bordered M15 (2015) Standard frame."
  * `landed` is the template the card actually got (after the published-frame
- * resolution), so the copy never names a frame the card isn't on.
+ * resolution), so the copy never names a frame the card isn't on. "Bordered"
+ * only for a plain border-era frame: since the signature registry (1.4) a
+ * borderless printing can land on a borderless or showcase frame (a FRA
+ * full-art basic on the Borderless Full-Art Basic Land, a poster on
+ * Borderless), and "the bordered Borderless frame" contradicts itself.
  */
 export function printingTreatmentNotice(
   treatment: PrintingTreatment,
   landed: FrameTemplate,
 ): string {
   const frame = describeFrame(landed);
+  const set = FRAME_TEMPLATE_SET[landed];
+  const bordered =
+    treatment === "borderless" && set !== "borderless" && FRAME_SET_ERA[set] !== "showcase";
   return `This printing ${PRINTING_TREATMENT_PHRASES[treatment]} — PipGlyph used the ${
-    treatment === "borderless" ? `bordered ${frame}` : frame
+    bordered ? `bordered ${frame}` : frame
   } frame.`;
 }
 
