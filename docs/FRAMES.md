@@ -133,9 +133,9 @@ read it.
   the edge check (which skips each corner by `Math.ceil(radius) + 2` = 67 px
   on the short side) can see. An `art` edge's half of the arc is skipped.
   It fails only on the edge contract's known failures: the rings, the
-  showcase corners that are design, adventure (a 1–2 px grey rim, luma
-  ≤ 97 — not on Phase B's allow-list, owner call) and two α 0.97 specks on
-  alphaland/b.
+  showcase corners that are design, and two α 0.97 specks on alphaland/b.
+  (It also found adventure's 1–2 px grey paper rim, luma ≤ 97 on all seven
+  keys; the owner put adventure on Phase B's allow-list on 2026-09-28.)
 - **Git MSE masters (Phase B).** Most Full-Magic-Pack frames paint their own
   rounded corner (r ≈ 57–76 px) and fill the rest with card-stock paper, so
   a light crescent showed inside the 64.5 px cut. `node
@@ -143,9 +143,12 @@ read it.
   anti-aliased fringe and the fringe's dark tail, then cuts the corner —
   only on the allow-list in `scripts/lib/frame-corners.mjs` (retro,
   retroland, modern, modernland, saga, aftermath, extendedart, fullart,
-  m15textless, m15textlessland, flip, alphatoken, and expeditionland
-  w/u/r/c/m, whose paper reached 1–2 px inside the cut), never on a
-  showcase family. The paint is the border AS IT RUNS BESIDE THE CORNER:
+  m15textless, m15textlessland, flip, alphatoken, adventure — its 1–2 px
+  grey paper rim just inside the arc, added 2026-09-28 — and
+  expeditionland w/u/r/c/m, whose paper reached 1–2 px inside the cut),
+  never on a showcase family: Bloomburrow, LOTR and Tarkir draconic keep
+  their drawn top corners in square outputs and print (owner,
+  2026-09-28). The paint is the border AS IT RUNS BESIDE THE CORNER:
   the edge band's colour at the same depth inside the card's outline,
   sampled along each edge just past the paper (retro's scanned border reads
   16/16/16/13/8/3 on its outer rows; a flat black paint left a 0 → 34 luma
@@ -170,13 +173,16 @@ read it.
     templates.
   - The MSE builders (`convert-mse-frame.mjs`, `build-era-frames.mjs`,
     `build-variation-frames.mjs`, `build-aftermath-frame.mjs`,
-    `build-flip-frame.mjs`) run the same pass AND gate before they write
-    (`normaliseMasterCorners` throws and restores the master on any
-    failure), so a rebuild can't bring the white back. Then `npm run
-    assets:frame-webp`. The normalised masters are truecolour PNGs: a
-    lossless palette is impossible (the base palettes were already full at
-    255–256 colours and the cut's alpha ramp adds 35–58), and a quantised
-    one would move the mask's alpha.
+    `build-flip-frame.mjs`, `build-adventure-frame.mjs`) run the same pass
+    AND gate before they write (`normaliseMasterCorners` throws and
+    restores the master on any failure), so a rebuild can't bring the
+    white back. Then `npm run
+    assets:frame-webp`. (`build-adventure-frame.mjs` composites on the MSE
+    m15 master, which left git with 4.4's Card Conjurer swap: restore it
+    from `cd2ffcc^` first, never the Card Conjurer m15.) The normalised
+    masters are truecolour PNGs: a lossless palette is impossible (the
+    base palettes were already full at 255–256 colours and the cut's alpha
+    ramp adds 35–58), and a quantised one would move the mask's alpha.
 - **Square outputs.** Print (the PDF card and sheets, the Pro deck PDF +
   ZIP) and the Square PNG are the round render squared again
   (`squareCardCorners`): outside the arc each corner is the card's border
@@ -189,10 +195,12 @@ read it.
   new or rebuilt frame whose corner changes turns CI red.
 - **Left alone.** The Alpha masters (agclassic, alphaland) keep their clean
   60 px cut, inside the 64.5 px one (square outputs paint the annulus
-  between the two cuts in the border black). adventure keeps its paper
-  stair-step outside the cut (never printed: square outputs replace it) and
-  its 1–2 px rim (a known failure above). expeditionland b/g keep their
-  paper: a see-through band leaves no border to paint with (7.7).
+  between the two cuts in the border black). expeditionland b/g keep their
+  paper: a see-through band leaves no border to paint with (7.7). The
+  showcase families keep their drawn corners (Bloomburrow's pale corner,
+  LOTR's tan, Tarkir draconic's ornament; owner, 2026-09-28). The small
+  steps where a Phase B repaint meets the untouched border — visible only
+  at 6× contrast — are accepted (owner, 2026-09-28).
 
 ## Shipping a frame change
 

@@ -80,10 +80,11 @@ describe("the edge-contract table", () => {
     expect(Object.values(EDGE_CONTRACTS.fullartland).every((e) => e.kind === "art")).toBe(true);
   });
 
-  it("lists today's known failures — 7.7's list, the four this check found, and the corner check's two", () => {
+  it("lists today's known failures — 7.7's list, the four this check found, and the corner check's one", () => {
+    // adventure's grey paper rim (a corner-check find) left the list when
+    // Phase B took it on (owner, 2026-09-28).
     expect(Object.keys(EDGE_CONTRACT_KNOWN_FAILURES).sort()).toEqual(
       [
-        "adventure",
         "alphaland",
         "avatar",
         "battle",
@@ -102,14 +103,14 @@ describe("the edge-contract table", () => {
     expect(isKnownEdgeFailure("fullartland", "w")).toBe(false);
     expect(isKnownEdgeFailure("alphaland", "b")).toBe(true);
     expect(isKnownEdgeFailure("alphaland", "w")).toBe(false);
+    for (const k of ["w", "u", "b", "r", "g", "c", "m"]) expect(isKnownEdgeFailure("adventure", k), k).toBe(false);
   });
 
-  it("gives every known failure a corner note (3.26) — the rings', the painted corners' and the corner check's own two", () => {
+  it("gives every known failure a corner note (3.26) — the rings', the painted corners' and the corner check's own one", () => {
     for (const [template, { why }] of Object.entries(EDGE_CONTRACT_KNOWN_FAILURES)) {
       expect(why, template).toMatch(/; corner: /);
     }
-    // The corner check's own entries fail on the corner only.
-    expect(EDGE_CONTRACT_KNOWN_FAILURES.adventure.why).toMatch(/^edges pass; corner: /);
+    // The corner check's own entry fails on the corner only.
     expect(EDGE_CONTRACT_KNOWN_FAILURES.alphaland.why).toMatch(/^edges pass; corner: /);
   });
 });
@@ -197,8 +198,8 @@ describe("the edge check's corner skip and the corner check", () => {
     // The ramp (−0.5 < d < 0.5) is the cut's own: never read.
     m.set([200, 200, 200], at(0, 56)); // d ≈ −0.002
     expect(cornerViolations(border, m, 1500, 2100)).toEqual([]);
-    // A grey pixel 1.2 px inside the arc (adventure's rim, luma ≤ 97)
-    // fails: a round bake shows it as a light ring.
+    // A grey pixel 1.2 px inside the arc (adventure's rim before Phase B,
+    // luma ≤ 97) fails: a round bake shows it as a light ring.
     m.set([74, 74, 74], at(3, 47)); // d ≈ −1.2
     expect(cornerViolations(border, m, 1500, 2100)).toEqual([expect.stringMatching(/^top-left corner \(left border\): luma 74 at 3,47/)]);
     // Deeper than 8 px it is the frame's business, not the corner's.

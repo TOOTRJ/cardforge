@@ -60,6 +60,7 @@ describe("the Phase B allow-list", () => {
   it("is the owner's list: the MSE masters with paper corners, never a showcase family", () => {
     expect(Object.keys(CORNER_NORMALISE_TEMPLATES).sort()).toEqual(
       [
+        "adventure",
         "aftermath",
         "alphatoken",
         "expeditionland",
@@ -79,21 +80,25 @@ describe("the Phase B allow-list", () => {
     // grey paper reaches 1–2 px inside the cut; b and g are 7.7 known
     // failures (a transparent edge band: no border to paint with).
     expect(CORNER_NORMALISE_TEMPLATES.expeditionland).toEqual(["w", "u", "r", "c", "m"]);
+    // adventure (owner, 2026-09-28): every key — its 1–2 px grey paper rim
+    // just inside the arc (luma ≤ 97) sits on all seven.
+    expect(CORNER_NORMALISE_TEMPLATES.adventure).toBe("all");
     for (const template of Object.keys(CORNER_NORMALISE_TEMPLATES)) {
       expect(FRAME_TEMPLATE_VALUES as readonly string[], template).toContain(template);
       expect(NEVER_NORMALISE.test(template), template).toBe(false);
     }
   });
 
-  it("never normalises the showcase families, Alpha, adventure or the Card Conjurer masters", () => {
+  it("never normalises the showcase families, Alpha or the Card Conjurer masters", () => {
     for (const t of ["bloomburrow", "bloomanime", "lotr", "lotrscroll", "tarkirdragon", "tarkirghostfire", "tarkirdraconic", "avatar", "battle"]) {
       expect(NEVER_NORMALISE.test(t), t).toBe(true);
       expect(shouldNormalise(t, "w"), t).toBe(false);
     }
-    for (const t of ["agclassic", "alphaland", "adventure", "split", "nyx", "m15", "m15borderless", "fullartland"]) {
+    for (const t of ["agclassic", "alphaland", "split", "nyx", "m15", "m15borderless", "fullartland"]) {
       expect(shouldNormalise(t, "w"), t).toBe(false);
     }
     expect(shouldNormalise("retro", "w")).toBe(true);
+    for (const k of ["w", "u", "b", "r", "g", "c", "m"]) expect(shouldNormalise("adventure", k), k).toBe(true);
     expect(shouldNormalise("expeditionland", "w")).toBe(true);
     expect(shouldNormalise("expeditionland", "b")).toBe(false);
     expect(shouldNormalise("expeditionland", "g")).toBe(false);
@@ -277,6 +282,7 @@ describe("the MSE builders run the pass", () => {
     alphatoken: "convert-mse-frame.mjs",
     aftermath: "build-aftermath-frame.mjs",
     flip: "build-flip-frame.mjs",
+    adventure: "build-adventure-frame.mjs",
     extendedart: "build-variation-frames.mjs",
     fullart: "build-variation-frames.mjs",
     m15textless: "build-variation-frames.mjs",
@@ -301,8 +307,8 @@ describe("the allow-listed git masters are already normalised", () => {
       .filter((key) => shouldNormalise(template, key))
       .map((key) => ({ template, key, file: path.join(process.cwd(), "public", "frames", template, `${key}.png`) })),
   );
-  it("covers all 89 (12 templates × 7 colours, and expeditionland's 5)", () => {
-    expect(masters).toHaveLength(89);
+  it("covers all 96 (13 templates × 7 colours, and expeditionland's 5)", () => {
+    expect(masters).toHaveLength(96);
     for (const m of masters) expect(fs.existsSync(m.file), m.file).toBe(true);
   });
   for (const { template, key, file } of masters) {

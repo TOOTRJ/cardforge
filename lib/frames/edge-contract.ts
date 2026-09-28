@@ -63,9 +63,9 @@ export const CLEAR_MAX = 0.05;
  * d ≤ −0.5 at full alpha), out to 8 px. It started 2 px in until review
  * (2026-09-27): that hid a 1–2 px grey paper rim right at the arc on
  * adventure (luma ≤ 97) and expeditionland w/u/r/c/m (luma ≤ 85), which a
- * round bake shows as a light ring. expeditionland's are normalised
- * (Phase B); adventure (not on the owner's allow-list) and one α 0.97
- * speck on alphaland/b are known failures.
+ * round bake shows as a light ring. Both are normalised (Phase B;
+ * adventure joined the allow-list on 2026-09-28, owner); one α 0.97 speck
+ * on alphaland/b is a known failure.
  */
 export const CORNER_CHECK_FROM_PX = 0.5;
 export const CORNER_CHECK_TO_PX = 8;
@@ -169,14 +169,11 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
  *  a "corner" note (3.26): a ring is transparent at the arc, and the
  *  showcase families that paint their corner (Bloomburrow's pale corner,
  *  LOTR's tan, Tarkir's ornament) are design that Phase B never paints.
- *  The corner check adds two entries of its own — adventure and
- *  alphaland/b, whose edges pass. */
+ *  The corner check adds one entry of its own — alphaland/b, whose edges
+ *  pass. (It found adventure's grey paper rim too, luma ≤ 97: Phase B
+ *  normalises it since the owner's 2026-09-28 call.) */
 export const EDGE_CONTRACT_KNOWN_FAILURES: Readonly<Record<string, { keys: "all" | readonly string[]; why: string }>> = {
   // Found by the corner check's full band (3.26 review, 2026-09-27).
-  adventure: {
-    keys: "all",
-    why: "edges pass; corner: a 1–2 px grey paper rim just inside the arc (luma ≤ 97, ≤ 13 px a corner) — not on Phase B's allow-list (owner call)",
-  },
   alphaland: {
     keys: ["b"],
     why: "edges pass; corner: two α 0.97 specks just inside the arc (top-right, bottom-right), invisible",
