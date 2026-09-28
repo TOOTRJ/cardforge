@@ -450,6 +450,12 @@ const baseCardSchema = z.object({
    *  null/omitted = fall back to the profile default. Ignored for free
    *  accounts by the actions. */
   footer_text: z.string().trim().max(40, "Keep it under 40 characters.").nullable().optional(),
+  /** An admin's frame-preview save (TODO 2.3): the creator asks for it in
+   *  admin preview mode. The actions honour it ONLY for an admin (checked
+   *  on the server) — the card then skips the verification gate, lands
+   *  private and is flagged `frame_preview` (migration 0121). Anyone else's
+   *  request is ignored and the gate applies as usual. */
+  frame_preview: z.boolean().optional(),
 });
 
 export const createCardSchema = baseCardSchema;

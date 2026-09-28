@@ -27,6 +27,11 @@ import { buildCardPath } from "@/lib/cards/utils";
 import { isDesignAiConfigured } from "@/lib/ai/provider";
 import { getDeckAiSeeds } from "@/lib/ai/generation-jobs";
 import { listMyDecks } from "@/lib/decks/queries";
+import {
+  resolveFramePreviewMode,
+  withoutPreviewParams,
+} from "@/lib/creator/frame-preview";
+import { FramePreviewBanner } from "@/components/creator/frame-preview-banner";
 
 // File-system param name is `username` because the sibling
 // `(marketing)/card/[username]/[slug]` route uses the same first
@@ -36,6 +41,10 @@ import { listMyDecks } from "@/lib/decks/queries";
 // `slug` for clarity downstream.
 type EditCardPageProps = {
   params: Promise<{ username: string }>;
+  // Admin frame preview (TODO 2.1) — ignored for everyone else. `step` is
+  // the creator's own (read client-side); it is listed so the banner's
+  // "Exit preview" link keeps it.
+  searchParams?: Promise<{ previewFrames?: string | string[]; step?: string }>;
 };
 
 export async function generateMetadata({
@@ -48,7 +57,10 @@ export async function generateMetadata({
   };
 }
 
-export default async function EditCardPage({ params }: EditCardPageProps) {
+export default async function EditCardPage({
+  params,
+  searchParams,
+}: EditCardPageProps) {
   if (!isSupabaseConfigured()) {
     return (
       <div className="mx-auto w-full max-w-2xl px-4 py-16 sm:px-6 lg:px-8">
@@ -99,6 +111,20 @@ export default async function EditCardPage({ params }: EditCardPageProps) {
     owner: { username: ownerUsername },
   });
 
+  // Admin frame preview (TODO 2.1): the same union as /create, for admins
+  // only (server-read profile). A card saved as a frame preview (2.3) shows
+  // the banner even without the parameter — it stays private whatever the
+  // Publish step says (the actions and a CHECK constraint enforce it).
+  const isAdmin = Boolean(profile?.is_admin);
+  const search = (await searchParams) ?? {};
+  const verifiedFrameKeys = await getVerifiedFrameKeys();
+  const framePreview = resolveFramePreviewMode({
+    isAdmin,
+    param: search.previewFrames,
+    verifiedKeys: verifiedFrameKeys,
+  });
+  const previewCard = card.frame_preview === true;
+
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
       <PageHeader
@@ -144,6 +170,18 @@ export default async function EditCardPage({ params }: EditCardPageProps) {
         </div>
       ) : null}
 
+      {isAdmin && (framePreview || previewCard) ? (
+        <div className="mt-8">
+          <FramePreviewBanner
+            param={framePreview?.param ?? null}
+            unverifiedCount={framePreview?.unverifiedKeys.length ?? 0}
+            previewCard={previewCard}
+            editing
+            exitHref={withoutPreviewParams(`/card/${card.slug}/edit`, search)}
+          />
+        </div>
+      ) : null}
+
       <div className="mt-10">
         <CardCreatorForm
           mode="edit"
@@ -163,7 +201,16 @@ export default async function EditCardPage({ params }: EditCardPageProps) {
           canDesignForDeck={entitlements.effectiveTier === "pro"}
           aiConfigured={isDesignAiConfigured()}
           pipOverrides={await getPipOverrides(user.id)}
-          verifiedFrameKeys={await getVerifiedFrameKeys()}
+          verifiedFrameKeys={framePreview?.pickableKeys ?? verifiedFrameKeys}
+          framePreview={
+            framePreview
+              ? {
+                  param: framePreview.param,
+                  publishedKeys: framePreview.publishedKeys,
+                  walkthrough: null,
+                }
+              : null
+          }
           profileOverrides={await getFrameProfileOverrides()}
           activeChallenge={await getCurrentChallenge()}
           isPaid={entitlements.removeWatermark}

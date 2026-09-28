@@ -491,24 +491,34 @@ Open decisions are marked **[decide]**; none blocks its phase.
 
 ### Phase 2 — Admin walk-through of the stepper (3–5 days)
 
-- [ ] **2.1 [P1] `?previewFrames=all|<list>` for admins** on the create and
+Status 2026-09-28 (feat/admin-stepper-walkthrough, migration 0121): 2.1–2.4
+done, 2.5 left open. Nothing in this phase changes a stored bake or a
+renderer (Lane B). How it works: `docs/FRAMES.md` "Walking the stepper and
+signing off a template".
+
+- [x] (done 2026-09-28 — feat/admin-stepper-walkthrough: `resolveFramePreviewMode` in `lib/creator/frame-preview.ts` parses `all`, a template (all seven colours) or `template/colour` tokens, drops anything unknown, and unions the combos with the verified set only when the server-read profile is an admin — the URL never decides it. `/create` and `/card/<slug>/edit` pass the union to the picker and the real verified set to the form (`framePreview.publishedKeys`), which the in-form AI dialog uses; AI jobs resolve frames on the server from the verified set as before. A persistent banner (`components/creator/frame-preview-banner.tsx`) names the mode, the unverified count, the walk and an "Exit preview" link; on the edit page it says the frame is locked there (revise mode) and, for a flagged card, that it stays private. The guest ISR page never reads searchParams (a unit test pins it); a non-admin's `?previewFrames` changes nothing (unit + e2e). Not done: frame chips don't mark which offered combos are unverified — the banner carries it) **2.1 [P1] `?previewFrames=all|<list>` for admins** on the create and
       edit pages: union the keys, persistent banner; never on the guest ISR
       page; AI jobs keep their own set (`app/(app)/create/page.tsx`:234,
       `app/(app)/card/[username]/edit/page.tsx`:165).
-- [ ] **2.2 [P1] "Walk the stepper" link per template row** in the checklist →
+- [x] (done 2026-09-28 — same PR: a "Walk" link on every colour row, a "Walk the stepper" link per template (its first colour still to verify, `firstColourToWalk`) and one on the compare view. The create page builds the seed with `buildFrameWalkthrough` (`lib/creator/frame-walkthrough.ts`): the combo's reference (the compare view's rule, now shared as `pickFrameReference`: `?ref=` pick, else pinned, else registry default) through `buildFrameComparePayload`, which now also returns its form patch — second face included — pinned to the template under test; no printing or a failed lookup → the compare view's sample content (`sampleWalkthroughPatch`), and the banner says which. The form applies the seed once through `handleScryfallImport` (the user's import path), pins frame + colour, toasts if the reference lands on another colour, and starts on the Card step. Art is not imported (as in the compare view) — the banner says to add some on Identity when the art window matters. Checked on the dev DB with adventure/g (Lovestruck Beast // Heart's Desire, the storybook page filled) and battle/r (sample). Note: 0.22's last bullet — the owner's Cut // Ribbons compare check — should still come before walking aftermath) **2.2 [P1] "Walk the stepper" link per template row** in the checklist →
       `/create?previewFrames=all&kind=…&template=…&color=…&seed=reference`,
       prefilled from `buildFrameComparePayload()` (with the second face from
       0.2) so battle/adventure/saga/split/flip/aftermath (later DFC) flow
       through Card → Identity → Text & stats → Publish exactly as for a user.
-- [ ] **2.3 [P1] Preview saves** — allowed for admins on unverified combos but
+- [x] (done 2026-09-28 — same PR, migration 0121: `cards.frame_preview` default false; CHECK `cards_frame_preview_private` (a flagged card is private, so every public/unlisted surface — gallery, sitemap, hubs, trending, feeds, profiles, OG — excludes it by construction); trigger `cards_guard_frame_preview` lets only an admin's API session raise the flag (service role / migration owner pass); grants stated (the trigger function is revoked from the API roles; the column rides 0097's table grants). In the app: the form asks for `frame_preview` on a save in preview mode on an unverified combo and on every save during a walk (judged as a draft: a title is enough); `createCardAction` honours it only for an admin — skips the verification gate (the kind gate still runs), stores it private + flagged, never adds it to a deck, never records `card_saved`; an ordinary save never names the column. `updateCardAction` keeps a flagged card private whatever the patch says and flags a card an admin's preview-mode edit moves onto an unverified combo. The create → edit redirect keeps `previewFrames`. Listed under its template in the checklist and per colour in the sign-off view (`listFramePreviewCards`, service role, grouped by the frame/colour it renders as) with Re-verify (the card reopened in preview mode on today's frame — own cards only; another admin's can be deleted) and Delete (`deleteFramePreviewCardAction`, flagged rows only, render objects dropped). Known edge: a bulk "make public" in My Cards that includes a preview fails on the CHECK for the whole batch — admin-only, left as a loud failure) **2.3 [P1] Preview saves** — allowed for admins on unverified combos but
       forced private and flagged `frame_preview` (migration); excluded from
       gallery/sitemap/hubs/trending/feeds; listed under the template in the
       checklist with delete / re-verify.
-- [ ] **2.4 [P1] Sign-off flow** — per-template verify button showing the
+- [x] (done 2026-09-28 — same PR, migration 0121 adds the `score` / `signoff` event actions: `/admin/frame-compare?template=<t>` (no colour) is the sign-off view — per colour the reference, the verification record (0.10: version, override hash, stale reasons), the recorded auto-score (0.9) with whether it is current, a Score button (`scoreFrameColorAction`, records a `score` event), Walk / Compare links, the walked previews rendered live, and the per-colour checkbox, which still publishes or withdraws one colour. "Score N colours" scores the unscored/stale ones one at a time. Publish (`signOffFrameTemplateAction`) re-derives the rule on the server (`signOffStatus`, `lib/cards/frame-signoff.ts`): every colour WITH a reference printing scored on today's renderer and override (the tick's own staleness rule) + the owner's tick; it stamps those colours exactly like a tick (0.10 columns, pinned-reference columns untouched) and logs a `verify` per colour and one `signoff` (colour `*`). Owner questions in the PR: colours with no real printing can't be scored, so the template sign-off leaves them to their own checkbox rather than blocking the template; and there is no minimum score — the number is information, the tick decides) **2.4 [P1] Sign-off flow** — per-template verify button showing the
       auto-score per colour (0.9), the walked preview cards (2.3) and the
       metadata (0.10); publishing = all colours scored + the owner's tick.
 - [ ] **2.5 [P3] Optional Playwright-generated snapshot strip** of each step per
-      kind in the compare view.
+      kind in the compare view. (Still open 2026-09-28: not small — it needs a
+      render target outside CI (the compare view is admin-only on a live
+      deploy, and CI's Playwright runs against the local stack), somewhere to
+      store the strips (a bucket + a manifest, or artifacts) and a way to
+      refresh them per kind. The sign-off view's live renders of the walked
+      preview cards cover most of the need for now.)
 
 ### Phase 3 — Parity on frames people already use (1 week)
 

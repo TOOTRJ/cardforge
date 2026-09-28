@@ -712,6 +712,8 @@ export type Database = {
           search_vector: unknown | null;
           color_count: number | null;
           visibility: string;
+          /** An admin's frame preview (migration 0121): always private. */
+          frame_preview: boolean;
         };
         Insert: {
           art_position?: Json;
@@ -761,6 +763,7 @@ export type Database = {
           share_count?: number;
           search_vector?: unknown | null;
           visibility?: string;
+          frame_preview?: boolean;
         };
         Update: {
           art_position?: Json;
@@ -810,6 +813,7 @@ export type Database = {
           share_count?: number;
           search_vector?: unknown | null;
           visibility?: string;
+          frame_preview?: boolean;
         };
         Relationships: [
           {

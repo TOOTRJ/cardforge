@@ -7,11 +7,10 @@ import { buildFrameComparePayload } from "@/lib/scryfall/reference-preview";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { getFrameReviews } from "@/lib/cards/frame-reviews";
 import {
-  FRAME_REFERENCES,
   findFrameReference,
-  frameComboKey,
   type FrameColorKey,
 } from "@/lib/cards/frame-reference-registry";
+import { pickFrameReferenceFrom } from "@/lib/cards/frame-reference-pick";
 import {
   listSlotPaths,
   resolveFrameProfile,
@@ -65,15 +64,11 @@ export async function resolveReferenceId(
   color: FrameColorKey,
   ref?: string | null,
 ): Promise<string | null> {
+  // An explicit registry pick needs no review read.
   const picked = findFrameReference(template, color, ref);
   if (picked) return picked.scryfallId;
   const reviews = await getFrameReviews();
-  const review = reviews.get(frameComboKey(template, color));
-  return (
-    (review?.referenceName ? review.referenceScryfallId : null) ??
-    FRAME_REFERENCES[template][color]?.scryfallId ??
-    null
-  );
+  return pickFrameReferenceFrom(reviews, template, color)?.scryfallId ?? null;
 }
 
 export async function scoreFrameCombo(input: {

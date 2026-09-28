@@ -258,6 +258,52 @@ fit (the symbol drawn at `type.sizePct × 1.1`, or at an override's
 family is a layout bump of its own. Rules text is not part of this standard: it keeps the
 9 pt ceiling and its fit (the recalibration is TODO 3.29).
 
+## Walking the stepper and signing off a template (TODO Phase 2)
+
+Verification is still the only gate (`frame_reviews`), but an admin can now
+check an unverified frame the way a user would meet it, before publishing it:
+
+- **Preview mode (2.1).** `/create` and `/card/<slug>/edit` take
+  `?previewFrames=all`, a template (`?previewFrames=battle`, all seven
+  colours) or a list (`battle/w,saga`). For an ADMIN — decided from the
+  server-read profile, never the URL — the named combos join the verified
+  set in the frame picker, and a banner says so on every step. Everyone else
+  gets the ordinary creator; the guest creator (`/create-guest`, ISR) never
+  reads the URL; AI jobs, and the in-form AI dialog, keep the verified set
+  (`lib/creator/frame-preview.ts`).
+- **Walk the stepper (2.2).** Each row of the checklist (and the compare
+  view, and each colour of the sign-off view) links to
+  `/create?previewFrames=all&kind=…&template=…&color=…&seed=reference`. The
+  page builds the seed from the compare view's own payload
+  (`buildFrameComparePayload`, the second face included) through
+  `lib/creator/frame-walkthrough.ts`; the form applies it through the same
+  handler as a user's Scryfall import, pins the frame and colour and starts
+  on the Card step. A combo with no real printing (or a failed lookup) is
+  seeded with the compare view's sample content (`seed=sample` asks for it
+  directly), and the banner says which. Art isn't imported.
+- **Preview saves (2.3).** A save on an unverified combo in preview mode, and
+  every save during a walk, asks the server for `frame_preview`;
+  `createCardAction` / `updateCardAction` honour it only for an admin (the
+  verification gate is skipped, the kind gate still runs) and store the card
+  PRIVATE with `cards.frame_preview = true` (migration 0121: a CHECK keeps a
+  flagged card private, a trigger lets only an admin's API session raise the
+  flag). It never joins a deck and never counts as product activity. The
+  checklist lists previews under their template with **Re-verify** (the
+  card reopened in preview mode on today's frame) and **Delete**
+  (`deleteFramePreviewCardAction`, flagged rows only).
+- **Template sign-off (2.4).** `/admin/frame-compare?template=<t>` (no colour)
+  shows every colour's reference, verification record (0.10), recorded
+  auto-score (0.9) and walked previews. **Score** records a `score` event
+  (`scoreFrameColorAction`); **Publish** (`signOffFrameTemplateAction`)
+  needs every colour that has a reference scored on today's renderer and
+  override (`lib/cards/frame-signoff.ts`, the tick's own staleness rule) plus
+  the owner's tick, then stamps each of those colours like a tick and logs
+  `verify` events and one `signoff` event. Colours with no real printing
+  stay on their own checkbox, which also still withdraws a single colour.
+  There is no score threshold: the number is information, the tick decides.
+
+Nothing here changes a stored bake or a renderer.
+
 ## Shipping a frame change
 
 1. Build the files into `.frames-build/<template>/…`, which is gitignored.

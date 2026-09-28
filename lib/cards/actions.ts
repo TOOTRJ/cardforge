@@ -17,7 +17,12 @@ import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { after } from "next/server";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { createClient, getCurrentUser, getCurrentUsername } from "@/lib/supabase/server";
+import {
+  createClient,
+  getCurrentProfile,
+  getCurrentUser,
+  getCurrentUsername,
+} from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
   createCardSchema,
@@ -121,6 +126,17 @@ function notConfigured(): CardActionFailure {
   };
 }
 
+/** Is the signed-in viewer an admin? From the profile (get_my_billing),
+ *  never the request. Only asked when a save requests a frame preview, so
+ *  every other save costs nothing extra. */
+async function viewerIsAdmin(): Promise<boolean> {
+  try {
+    return Boolean((await getCurrentProfile())?.is_admin);
+  } catch {
+    return false;
+  }
+}
+
 function notAuthed(): CardActionFailure {
   return {
     ok: false,
@@ -222,11 +238,19 @@ export async function createCardAction(
 
   const data = parsed.data;
 
+  // An admin's frame preview (TODO 2.3): the creator's admin preview mode
+  // asks for it, the server decides — only an admin (from the profile,
+  // never the payload) gets it. A preview skips the verification gate but
+  // nothing else, and lands private + flagged (the insert below; migration
+  // 0121's CHECK keeps it private). Anyone else's request is ignored.
+  const framePreview =
+    data.frame_preview === true && (await viewerIsAdmin());
+
   // Verification gate — the server twin of the picker's: a (template,
   // colour) pair saves only when the admin has published it in
   // /admin/frame-compare. The client hides unpublished chips, but a stale
   // page or a crafted payload must not get past.
-  {
+  if (!framePreview) {
     const gateError = frameGateError(
       data.frame_style?.template,
       data.color_identity,
@@ -250,15 +274,21 @@ export async function createCardAction(
     }
   }
 
+  // The visibility the row is stored with. No artwork → no gallery: a
+  // public save without art lands as a draft (private) so test/unfinished
+  // cards never occupy gallery space; the creator predicts this client-side
+  // and tells the user. Unlisted stays allowed — link-only sharing of a WIP
+  // is deliberate and gallery-free. A frame preview is always private.
+  const storedVisibility: Visibility = framePreview
+    ? "private"
+    : data.visibility === "public" && !data.art_url
+      ? "private"
+      : data.visibility;
+
   // A second face may stay unnamed on a private draft only (TODO 3b.5,
   // lib/cards/second-face-name.ts) — judged at the visibility the row will
-  // be stored with (an artless "public" card lands private, see the insert).
-  if (
-    missingSecondFaceName(
-      data.back_face,
-      data.visibility === "public" && !data.art_url ? "private" : data.visibility,
-    )
-  ) {
+  // be stored with.
+  if (missingSecondFaceName(data.back_face, storedVisibility)) {
     return {
       ok: false,
       fieldErrors: { "back_face.title": SECOND_FACE_NAME_ERROR },
@@ -360,14 +390,11 @@ export async function createCardAction(
     art_url: data.art_url ?? null,
     art_position: data.art_position ?? {},
     frame_style: data.frame_style ?? {},
-    // No artwork → no gallery. A public save without art lands as a draft
-    // (private) so test/unfinished cards never occupy gallery space; the
-    // creator predicts this client-side and tells the user. Unlisted stays
-    // allowed — link-only sharing of a WIP is deliberate and gallery-free.
-    visibility:
-      data.visibility === "public" && !data.art_url
-        ? "private"
-        : data.visibility,
+    // No art or a frame preview → private (storedVisibility, above).
+    visibility: storedVisibility,
+    // Only a preview names the column, so an ordinary save never depends on
+    // migration 0121 having run.
+    ...(framePreview ? { frame_preview: true } : {}),
     parent_card_id: data.parent_card_id ?? null,
     // Back face (chunk 10): null when undefined or explicitly cleared,
     // jsonb object when the user has filled in DFC content.
@@ -422,8 +449,9 @@ export async function createCardAction(
   }
 
   // Drop the card into its chosen deck as a custom-only mainboard entry.
-  // Best-effort — a deck hiccup never rolls back the card save.
-  if (data.deck_id) {
+  // Best-effort — a deck hiccup never rolls back the card save. A frame
+  // preview is a test card: it never joins a deck.
+  if (data.deck_id && !framePreview) {
     await addCustomCardEntryToDeck(
       supabase,
       user.id,
@@ -439,8 +467,9 @@ export async function createCardAction(
     await revalidateParentCardPaths(data.parent_card_id);
   }
   // Funnel: a saved card (and, once per user, first_card_saved — the
-  // activation milestone). Best effort; never touches the save.
-  if (isAdminConfigured()) {
+  // activation milestone). Best effort; never touches the save. An admin's
+  // frame preview is tooling, not product activity.
+  if (isAdminConfigured() && !framePreview) {
     await recordActivity(createAdminClient(), {
       userId: user.id,
       kind: "card_saved",
@@ -527,6 +556,12 @@ export async function updateCardAction(
     }
   }
 
+  // An admin's frame preview (TODO 2.3) stays one: it is always private.
+  // A card becomes one when an admin's preview-mode save moves it onto an
+  // unverified frame/colour (the gate below).
+  const previewCard = existing.frame_preview === true;
+  let becomesPreview = false;
+
   // Verification gate, only when the patch CHANGES the frame or the colour:
   // a card saved on a since-withdrawn frame (the picker's "legacy pin")
   // must stay editable as long as its frame/colour are left alone.
@@ -547,7 +582,13 @@ export async function updateCardAction(
         new Set(await getVerifiedFrameKeys()),
       );
       if (gateError) {
-        return { ok: false, fieldErrors: { frame_style: gateError } };
+        // Only an admin (server-checked) previews an unverified frame.
+        const preview =
+          (previewCard || data.frame_preview === true) && (await viewerIsAdmin());
+        if (!preview) {
+          return { ok: false, fieldErrors: { frame_style: gateError } };
+        }
+        becomesPreview = !previewCard;
       }
     }
 
@@ -629,6 +670,10 @@ export async function updateCardAction(
       update.visibility = "private";
     }
   }
+  // A frame preview is private whatever the patch says (migration 0121's
+  // CHECK would refuse anything else); only a preview save names the flag.
+  if (previewCard || becomesPreview) update.visibility = "private";
+  if (becomesPreview) update.frame_preview = true;
   // An unnamed second face is a draft's privilege (TODO 3b.5): judged on the
   // card as it will be stored — the patched back face over the stored one,
   // at the visibility the rule above settled on — so both "publish a draft
