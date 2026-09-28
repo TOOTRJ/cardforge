@@ -8,11 +8,14 @@ import type { FrameColorKey } from "@/lib/cards/frame-reference-registry";
 //
 //   publishing a template = every colour that HAS a reference printing
 //   carries a CURRENT auto-score (the registered, masked frame score of 0.9,
-//   recorded as a "score" event) + the owner's tick.
+//   recorded by the sign-off's Score as a "score" event, or by a per-colour
+//   tick in its "verify" event) + the owner's tick.
 //
 // "Current" is the tick's own staleness rule (frame-verification-state.ts):
 // the score was taken on a layout version whose bumps since don't touch the
-// template, and on today's layout-override hash. A colour with no real
+// template, on today's layout-override hash, AND against the combo's
+// reference printing as it stands today (after a re-pin the old number is
+// about another card). A colour with no real
 // printing can't be scored — it stays out of the template sign-off and is
 // published by its own checkbox after the owner has walked its sample
 // content. No score threshold: the number is information, the tick is the
@@ -20,7 +23,7 @@ import type { FrameColorKey } from "@/lib/cards/frame-reference-registry";
 // withdrawable (the per-colour checkbox). Pure.
 // ---------------------------------------------------------------------------
 
-/** The part of a "score" event the rule reads. */
+/** The part of a "score" (or scored "verify") event the rule reads. */
 export type RecordedScore = {
   layoutVersion: number | null;
   overrideHash: string | null;
@@ -31,8 +34,10 @@ export type RecordedScore = {
 
 export type SignOffColourInput = {
   colorKey: FrameColorKey;
-  /** A reference printing exists (pinned or registry), so it can be scored. */
-  hasReference: boolean;
+  /** The combo's reference printing today (pinned, else the registry
+   *  default — pickFrameReference); null when no real printing exists, so
+   *  the colour can't be scored. */
+  referenceId: string | null;
   score: RecordedScore | null;
 };
 
@@ -71,7 +76,7 @@ export function signOffStatus(input: {
 }): SignOffStatus {
   const currentVersion = input.currentVersion ?? CARD_LAYOUT_VERSION;
   const colours = input.colours.map((colour): SignOffColourStatus => {
-    if (!colour.hasReference) {
+    if (colour.referenceId === null) {
       return { colorKey: colour.colorKey, state: "no-reference", overall: null, reasons: [] };
     }
     const overall = colour.score ? recordedOverall(colour.score.scoreJson) : null;
@@ -84,6 +89,20 @@ export function signOffStatus(input: {
         state: "stale",
         overall,
         reasons: ["the score recorded no layout version or override"],
+      };
+    }
+    // Publishing stamps the score's reference as verified_reference_id, so
+    // it must be the printing the combo stands for today.
+    if (colour.score.referenceScryfallId !== colour.referenceId) {
+      return {
+        colorKey: colour.colorKey,
+        state: "stale",
+        overall,
+        reasons: [
+          colour.score.referenceScryfallId
+            ? "the score was taken against another reference printing than today's"
+            : "the score recorded no reference printing",
+        ],
       };
     }
     const state = verificationState(

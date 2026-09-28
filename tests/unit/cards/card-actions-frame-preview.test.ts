@@ -76,7 +76,11 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("next/server", () => ({ after: vi.fn() }));
 vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
 
-import { createCardAction, updateCardAction } from "@/lib/cards/actions";
+import {
+  createCardAction,
+  updateCardAction,
+  updateCardsVisibilityAction,
+} from "@/lib/cards/actions";
 
 function db() {
   const stub = chainClient((table): ChainAnswer =>
@@ -223,5 +227,39 @@ describe("updateCardAction — frame previews", () => {
     const update = updateOf(stub);
     expect("frame_preview" in update).toBe(false);
     expect(update.visibility).toBe("public");
+  });
+});
+
+describe("updateCardsVisibilityAction — a preview in the batch", () => {
+  const owned = [{ id: CARD, owner_id: USER, title: "Walked", back_face: null, rendered_image_url: null }];
+
+  it("names the reason when 0121's CHECK refuses the batch (nothing changed)", async () => {
+    state.client = chainClient((table, calls): ChainAnswer =>
+      calls.some((c) => c.method === "update")
+        ? {
+            error: {
+              code: "23514",
+              message: 'new row for relation "cards" violates check constraint "cards_frame_preview_private"',
+            },
+          }
+        : { data: owned, error: null },
+    ).client;
+    const result = await updateCardsVisibilityAction([CARD], "public");
+    expect(result).toEqual({
+      ok: false,
+      error: expect.stringMatching(/^Frame previews stay private .*Nothing was changed\.$/),
+    });
+  });
+
+  it("any other database error still reads as itself", async () => {
+    state.client = chainClient((table, calls): ChainAnswer =>
+      calls.some((c) => c.method === "update")
+        ? { error: { code: "42501", message: "permission denied for table cards" } }
+        : { data: owned, error: null },
+    ).client;
+    expect(await updateCardsVisibilityAction([CARD], "public")).toEqual({
+      ok: false,
+      error: "permission denied for table cards",
+    });
   });
 });

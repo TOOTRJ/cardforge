@@ -180,14 +180,44 @@ describe("signOffFrameTemplateAction", () => {
     expect(stub.forTable("frame_reviews")).toHaveLength(0);
   });
 
-  it("refuses a stale score (the override changed since)", async () => {
-    state.scores = new Map(
-      (["w", "u", "b", "r", "g", "c", "m"] as const).map((k) => [k, { ...currentScore(5), colorKey: k }]),
+  // Scores against each saga colour's registry reference — current in every
+  // respect, so each refusal below has exactly one cause.
+  const sagaScores = () =>
+    new Map(
+      (["w", "u", "b", "r", "g", "c", "m"] as const).map((k) => [
+        k,
+        { ...currentScore(5), colorKey: k, referenceScryfallId: FRAME_REFERENCES.saga[k]!.scryfallId },
+      ]),
     );
+
+  it("publishes a template whose every colour is scored against today's reference", async () => {
+    state.scores = sagaScores();
+    db();
+    const result = await signOffFrameTemplateAction({ template: "saga", confirmed: true });
+    expect(result.ok).toBe(true);
+  });
+
+  it("refuses a stale score (the override changed since)", async () => {
+    state.scores = sagaScores();
     state.overrides = { saga: { type: { rect: { topPct: 85 } } } };
     db();
     const result = await signOffFrameTemplateAction({ template: "saga", confirmed: true });
     expect(result.ok).toBe(false);
+  });
+
+  it("refuses a score taken against another reference than the one pinned today", async () => {
+    state.scores = sagaScores();
+    state.reviews = new Map([
+      [
+        "saga/w",
+        { referenceScryfallId: "0f0f0f0f-0000-4000-8000-000000000009", referenceName: "Re-pinned Saga", referenceSet: "tst" },
+      ],
+    ]);
+    const stub = db();
+    const result = await signOffFrameTemplateAction({ template: "saga", confirmed: true });
+    expect(result.ok).toBe(false);
+    expect(!result.ok && result.error).toMatch(/missing or stale: W\.$/);
+    expect(stub.forTable("frame_reviews")).toHaveLength(0);
   });
 
   it("publishes every scored colour, stamped like a tick, and logs verify + signoff events", async () => {
@@ -200,7 +230,15 @@ describe("signOffFrameTemplateAction", () => {
       (k) => FRAME_REFERENCES.split[k] === null,
     );
     state.scores = new Map(
-      referenced.map((k, i) => [k, { ...currentScore(3 + i), template: "split", colorKey: k }]),
+      referenced.map((k, i) => [
+        k,
+        {
+          ...currentScore(3 + i),
+          template: "split",
+          colorKey: k,
+          referenceScryfallId: FRAME_REFERENCES.split[k]!.scryfallId,
+        },
+      ]),
     );
     const stub = db();
     const result = await signOffFrameTemplateAction({ template: "split", confirmed: true });
@@ -215,7 +253,8 @@ describe("signOffFrameTemplateAction", () => {
         verified_by: ADMIN,
         verified_layout_version: CARD_LAYOUT_VERSION,
         verified_override_hash: "none",
-        verified_reference_id: "ref-id",
+        verified_reference_id:
+          FRAME_REFERENCES.split[row.color_key as "m"]!.scryfallId,
       });
       expect("reference_scryfall_id" in row).toBe(false);
     }

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { recordedOverall } from "@/lib/cards/frame-signoff";
 
 // ---------------------------------------------------------------------------
 // Append-only history of the frame verification checklist (migration 0115):
@@ -107,9 +108,11 @@ export async function listFrameReviewEvents(
   }
 }
 
-/** The newest "score" event per colour of a template (TODO 2.4) — what the
- *  sign-off shows and publishes. Caller must already have checked is_admin.
- *  Empty on any error (before migration 0121, "score" rows can't exist). */
+/** The newest recorded auto-score per colour of a template (TODO 2.4) — what
+ *  the sign-off shows and publishes: a "score" event (the sign-off's Score)
+ *  or a "verify" event that carries one (every per-colour tick scores the
+ *  combo, 0.10), whichever is newer; a tick whose score failed is skipped.
+ *  Caller must already have checked is_admin. Empty on any error. */
 export async function latestScoreEvents(
   template: string,
 ): Promise<Map<string, FrameReviewEvent>> {
@@ -122,11 +125,12 @@ export async function latestScoreEvents(
         "id, template, color_key, action, actor, layout_version, override_hash, reference_scryfall_id, score_json, created_at",
       )
       .eq("template", template)
-      .eq("action", "score")
+      .in("action", ["score", "verify"])
       .order("created_at", { ascending: false })
-      .limit(100);
+      .limit(200);
     for (const row of data ?? []) {
       if (latest.has(row.color_key)) continue;
+      if (recordedOverall(row.score_json) === null) continue;
       latest.set(row.color_key, {
         id: row.id,
         template: row.template,

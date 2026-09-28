@@ -28,13 +28,20 @@ test.describe("admin frame walk-through", () => {
     await expect(banner).toBeVisible();
     await expect(banner).toContainText(/Admin frame preview/);
     await expect(page.getByTestId("frame-walkthrough-note")).toContainText(/battle\/r/);
-    // The walk starts on the Card step and its save is a preview.
-    await expect(page.getByRole("radiogroup", { name: "Card type" })).toBeVisible();
+    // The walk starts on the Card step, already on the frame and colour under
+    // test (the Card step's sections are collapsed summaries once a kind is
+    // set — the chips themselves are not rendered), and its save is a preview.
+    const rail = page.getByRole("navigation", { name: /card editor steps/i });
+    await expect(rail.locator('[aria-current="step"]')).toHaveText(/^\s*card\s*$/i);
+    await expect(page.locator("summary").filter({ hasText: /card type\s*battle/i })).toBeVisible();
+    await expect(
+      page.locator("summary").filter({ hasText: /frame\s*m15 \(2015\) — battle/i }),
+    ).toBeVisible();
+    await expect(page.locator("summary").filter({ hasText: /colou?r\s*red/i })).toBeVisible();
     await expect(page.getByTestId("frame-preview-save")).toBeVisible();
 
     // Rename the sample so this run's card is findable.
     const title = `Walked Battle ${Date.now()}`;
-    const rail = page.getByRole("navigation", { name: /card editor steps/i });
     await rail.getByRole("button", { name: /^identity$/i }).click();
     await page.locator('input[placeholder="Emberbound Wyrm"]').fill(title);
 

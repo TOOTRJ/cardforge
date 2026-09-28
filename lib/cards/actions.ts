@@ -956,6 +956,16 @@ export async function updateCardsVisibilityAction(
     .eq("owner_id", user.id);
 
   if (error) {
+    // An admin's frame preview (TODO 2.3) is always private: migration 0121's
+    // CHECK refuses the whole statement, so nothing changed — say why in
+    // words instead of Postgres's.
+    if (error.code === "23514" && error.message.includes("cards_frame_preview_private")) {
+      return {
+        ok: false,
+        error:
+          "Frame previews stay private — deselect them (they're listed in Frame verification) and try again. Nothing was changed.",
+      };
+    }
     return { ok: false, error: error.message };
   }
 

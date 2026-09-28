@@ -192,7 +192,9 @@ describe("walking the stepper (TODO 2.2)", () => {
     expect(preview().colors).toBe("green");
     expect(preview().backTitle).toBe("Fertile Footsteps");
     // The walk starts on the Card step, like a user's.
-    expect(screen.getByRole("radiogroup", { name: "Card type" })).toBeTruthy();
+    // (The rail marks the active step; the Card step's chips sit inside
+    // collapsed sections once a kind is set, so they aren't the signal.)
+    expect(document.querySelector('[aria-current="step"]')?.textContent?.trim()).toBe("Card");
     expect(toast.info).not.toHaveBeenCalled();
   });
 

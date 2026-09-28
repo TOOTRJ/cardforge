@@ -46,6 +46,8 @@ export type SignOffColourView = {
     overall: number | null;
     reasons: string[];
     createdAt: string | null;
+    /** Recorded by a per-colour tick (its "verify" event), not by Score. */
+    fromTick?: boolean;
   };
   referenceId: string | null;
   walkHref: string;
@@ -86,6 +88,7 @@ function ScoreCell({ view }: { view: SignOffColourView }) {
       <span className="font-semibold tabular-nums">frame {score.overall}%</span>
       <span className="text-[10px] text-subtle">
         {score.state === "stale" ? "stale — score again" : "current"}
+        {score.fromTick ? " · from the tick" : ""}
         {score.createdAt ? ` · ${score.createdAt.slice(0, 16).replace("T", " ")}` : ""}
       </span>
     </span>

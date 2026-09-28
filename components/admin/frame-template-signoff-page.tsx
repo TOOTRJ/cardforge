@@ -65,7 +65,7 @@ export async function FrameTemplateSignOffPage({
     currentOverrideHash: currentHash,
     colours: FRAME_COLOR_KEYS.map((colorKey) => ({
       colorKey,
-      hasReference: references.get(colorKey) !== null,
+      referenceId: references.get(colorKey)?.scryfallId ?? null,
       score: scores.get(colorKey) ?? null,
     })),
   });
@@ -100,6 +100,7 @@ export async function FrameTemplateSignOffPage({
         overall: colourStatus.overall,
         reasons: colourStatus.reasons,
         createdAt: scores.get(colorKey)?.createdAt ?? null,
+        fromTick: scores.get(colorKey)?.action === "verify",
       },
       walkHref: walkthroughHref({ template, colorKey }),
       compareHref: `/admin/frame-compare?template=${template}&color=${colorKey}`,

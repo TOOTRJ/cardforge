@@ -125,7 +125,7 @@ export async function signOffFrameTemplateAction(
     currentOverrideHash: hash,
     colours: FRAME_COLOR_KEYS.map((colorKey) => ({
       colorKey,
-      hasReference: pickFrameReferenceFrom(reviews, template, colorKey) !== null,
+      referenceId: pickFrameReferenceFrom(reviews, template, colorKey)?.scryfallId ?? null,
       score: scores.get(colorKey) ?? null,
     })),
   });

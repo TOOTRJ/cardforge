@@ -294,10 +294,13 @@ check an unverified frame the way a user would meet it, before publishing it:
 - **Template sign-off (2.4).** `/admin/frame-compare?template=<t>` (no colour)
   shows every colour's reference, verification record (0.10), recorded
   auto-score (0.9) and walked previews. **Score** records a `score` event
-  (`scoreFrameColorAction`); **Publish** (`signOffFrameTemplateAction`)
-  needs every colour that has a reference scored on today's renderer and
-  override (`lib/cards/frame-signoff.ts`, the tick's own staleness rule) plus
-  the owner's tick, then stamps each of those colours like a tick and logs
+  (`scoreFrameColorAction`); a per-colour tick's own score (its `verify`
+  event) counts too, whichever is newer (`latestScoreEvents`). **Publish**
+  (`signOffFrameTemplateAction`) needs every colour that has a reference
+  scored on today's renderer and override (`lib/cards/frame-signoff.ts`, the
+  tick's own staleness rule) AND against the reference the combo stands for
+  today (a re-pin stales the old score) plus the owner's tick, then stamps
+  each of those colours like a tick and logs
   `verify` events and one `signoff` event. Colours with no real printing
   stay on their own checkbox, which also still withdraws a single colour.
   There is no score threshold: the number is information, the tick decides.

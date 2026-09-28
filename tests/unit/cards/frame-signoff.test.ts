@@ -6,22 +6,33 @@ import type { FrameColorKey } from "@/lib/cards/frame-reference-registry";
 // ---------------------------------------------------------------------------
 // The per-template sign-off rule (TODO 2.4): every colour with a reference
 // carries a CURRENT auto-score (same staleness as a tick: layout version +
-// override hash) → ready; a colour with no real printing stays out (its own
-// checkbox). The view and the publish action both derive it from here.
+// override hash, and taken against today's reference printing) → ready; a
+// colour with no real printing stays out (its own checkbox). The view and the
+// publish action both derive it from here.
 // ---------------------------------------------------------------------------
 
 const HASH = "none";
-const score = (overrides: Partial<{ layoutVersion: number | null; overrideHash: string | null; overall: unknown }> = {}) => ({
+const score = (
+  overrides: Partial<{
+    layoutVersion: number | null;
+    overrideHash: string | null;
+    overall: unknown;
+    referenceScryfallId: string | null;
+  }> = {},
+) => ({
   layoutVersion: "layoutVersion" in overrides ? overrides.layoutVersion! : CARD_LAYOUT_VERSION,
   overrideHash: "overrideHash" in overrides ? overrides.overrideHash! : HASH,
-  referenceScryfallId: "ref",
+  referenceScryfallId: "referenceScryfallId" in overrides ? overrides.referenceScryfallId! : "ref",
   scoreJson: { overall: "overall" in overrides ? overrides.overall : 7.5 },
   createdAt: "2026-09-28T10:00:00Z",
 });
 
-const colour = (colorKey: FrameColorKey, input: Partial<{ hasReference: boolean; score: ReturnType<typeof score> | null }> = {}) => ({
+const colour = (
+  colorKey: FrameColorKey,
+  input: Partial<{ referenceId: string | null; score: ReturnType<typeof score> | null }> = {},
+) => ({
   colorKey,
-  hasReference: input.hasReference ?? true,
+  referenceId: "referenceId" in input ? input.referenceId! : "ref",
   score: "score" in input ? input.score! : score(),
 });
 
@@ -82,7 +93,7 @@ describe("signOffStatus", () => {
     const status = signOffStatus({
       template: "split",
       currentOverrideHash: HASH,
-      colours: [colour("w", { hasReference: false, score: null }), colour("m")],
+      colours: [colour("w", { referenceId: null, score: null }), colour("m")],
     });
     expect(status.sampleOnly).toEqual(["w"]);
     expect(status.publishable).toEqual(["m"]);
@@ -93,8 +104,24 @@ describe("signOffStatus", () => {
     const status = signOffStatus({
       template: "split",
       currentOverrideHash: HASH,
-      colours: [colour("w", { hasReference: false, score: null })],
+      colours: [colour("w", { referenceId: null, score: null })],
     });
+    expect(status.ready).toBe(false);
+  });
+
+  it("a score taken against another reference (re-pinned since) is stale and blocks", () => {
+    const status = signOffStatus({
+      template: "saga",
+      currentOverrideHash: HASH,
+      colours: [
+        colour("w", { referenceId: "pinned-today", score: score({ referenceScryfallId: "old-default" }) }),
+        colour("u", { referenceId: "pinned-today", score: score({ referenceScryfallId: null }) }),
+      ],
+    });
+    expect(status.colours.map((c) => c.state)).toEqual(["stale", "stale"]);
+    expect(status.colours[0].reasons.join(" ")).toMatch(/another reference printing/);
+    expect(status.colours[1].reasons.join(" ")).toMatch(/no reference printing/);
+    expect(status.blocking).toEqual(["w", "u"]);
     expect(status.ready).toBe(false);
   });
 

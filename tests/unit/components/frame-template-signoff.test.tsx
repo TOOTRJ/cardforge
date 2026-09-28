@@ -169,6 +169,22 @@ describe("FrameTemplateSignOff", () => {
     expect(row.textContent).toMatch(/No real printing/);
     expect(row.querySelectorAll("button")).toHaveLength(0);
   });
+
+  it("a score recorded by the colour's own tick says so", () => {
+    const ticked = view("w", "scored");
+    render(
+      <FrameTemplateSignOff
+        template="saga"
+        currentVersion={32}
+        currentHash="none"
+        colours={[{ ...ticked, score: { ...ticked.score, fromTick: true } }, view("u", "scored")]}
+        ready
+        publishableCount={2}
+      />,
+    );
+    expect(screen.getByTestId("signoff-colour-w").textContent).toMatch(/current · from the tick/);
+    expect(screen.getByTestId("signoff-colour-u").textContent).not.toMatch(/from the tick/);
+  });
 });
 
 describe("FramePreviewList", () => {
