@@ -58,8 +58,13 @@ const DOCUMENTED_NULLS = new Set([
   // sign-off instead).
   "m15fullartland/m",
   "fullartland/c", "fullartland/m",
-  "m15textless/u",
+  // No colourless borderless textless printing exists (TODO 1.4: the Aang
+  // reference was multicolour).
+  "m15textless/u", "m15textless/c",
   "m15textlessland/c", "m15textlessland/m",
+  // The anime frame is the raised-foil legends BLB #343–355: one mono-green
+  // card and multicolour legends (TODO 1.4, checked by eye 2026-09-28).
+  "bloomanime/w", "bloomanime/u", "bloomanime/b", "bloomanime/r", "bloomanime/c",
   "expeditionland/w", "expeditionland/u", "expeditionland/b", "expeditionland/r", "expeditionland/g",
   "nyx/c",
   "lotr/c",

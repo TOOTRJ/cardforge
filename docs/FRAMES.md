@@ -258,6 +258,35 @@ fit (the symbol drawn at `type.sizePct × 1.1`, or at an override's
 family is a layout bump of its own. Rules text is not part of this standard: it keeps the
 9 pt ceiling and its fit (the recalibration is TODO 3.29).
 
+## Which printing is which frame (TODO 1.4)
+
+A Scryfall import knows which PipGlyph frame reproduces THIS printing from
+the frame signature registry, `lib/scryfall/frame-signatures.ts`: an
+ordered rule table (first match wins) over the printing's frame year,
+border colour, frame effects, promo types, set, set type and collector
+number. Each rule has a stable signature id and resolves to `exact`,
+`nearest` (with a reason and the TODO item that would make it exact) or
+`unsupported`. The import patch carries it as `frame_match`; `exact` also
+needs the combo verified in the card's colour (`withVerification`,
+`lib/creator/frame-resolve.ts`).
+
+- **A new frame** gets a rule for the printings it reproduces (a set +
+  collector range for a showcase run; never `full_art` alone), a fixture
+  printing in `tests/unit/scryfall/fixtures/signature-printings.json`, and
+  a row in `tests/unit/scryfall/frame-signatures.test.ts`. The completeness
+  test fails until some rule can reach it.
+- **A frame whose border isn't true yet** stays in
+  `BORDER_PENDING_TEMPLATES` (capped at `nearest`); take it out when 4.35
+  fixes it.
+- **Registry references** (`lib/cards/frame-references.json`) must resolve
+  to their own template and pass the pin check;
+  `tests/unit/cards/frame-reference-signatures.test.ts` holds that over a
+  trimmed capture of every reference printing
+  (`tests/unit/cards/fixtures/reference-printings.json` — re-capture it
+  when you add a reference). Never replace the DEFAULT reference of a combo
+  production has verified; add an alternate and ask the owner to
+  re-verify.
+
 ## Shipping a frame change
 
 1. Build the files into `.frames-build/<template>/…`, which is gitignored.
