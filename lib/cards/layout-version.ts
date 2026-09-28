@@ -16,9 +16,11 @@ import type { CardType } from "@/types/card";
 // (VERSION_ROLLOUT below — "sweep" for corrections, "opt-in" for taste):
 //   * SWEEP bumps (and frame-geometry changes) are platform work. Owners
 //     never see a badge or a notification for them (TODO 0.20, owner
-//     decision 2026-09-25); the admin sweep re-bakes the affected cards and
-//     downloads keep serving the stored bake until then only when no
-//     correction is pending (lib/render/stored-render.ts).
+//     decision 2026-09-25); the automatic re-bake (/api/cron/auto-rebake,
+//     every 10 minutes on production — lib/cards/auto-rebake.ts) re-bakes
+//     the affected cards after the deploy, and downloads keep serving the
+//     stored bake until then only when no correction is pending
+//     (lib/render/stored-render.ts).
 //   * OPT-IN bumps: the OWNER sees a "newer look available" badge on each affected card
 //     (dashboard tile + edit page), can compare the stored image with the
 //     live preview, and re-bakes it — one card at a time in the dashboard
@@ -34,10 +36,12 @@ import type { CardType } from "@/types/card";
 //     gallery tile, the share image and a free (watermarked) download all
 //     serve the stored bake (lib/render/stored-render.ts, TODO 0.21). Only a
 //     paid clean download renders live, and the download modal says so.
-//   * `node scripts/rebake-renders.mjs` (admin sweep) still exists for
-//     corrections every card should get without asking (text clipping, the
-//     2026-09 land fix) — reserve owner-driven updates for changes a user
-//     might reasonably prefer to keep.
+//   * Sweep bumps are for corrections every card should get without asking
+//     (text clipping, the 2026-09 land fix) — the automatic re-bake picks
+//     them up on its own; `node scripts/rebake-renders.mjs` still drives the
+//     same batch by hand (and the version / legacy-art scopes). Reserve
+//     owner-driven updates for changes a user might reasonably prefer to
+//     keep.
 //
 // If a bump only touches SOME frame templates, list them in
 // TEMPLATE_SCOPED_VERSIONS below: cards on other templates are not marked
@@ -636,9 +640,10 @@ function pendingVersions(
 // ---------------------------------------------------------------------------
 // Rollout policy — WHO gets to trigger the re-bake for a bump.
 //
-//   "sweep"  — the platform refreshes every affected card centrally
-//              (scripts/rebake-renders.mjs). For changes that must not
-//              linger: watermark policy, a broken bake, a wrong emblem.
+//   "sweep"  — the platform refreshes every affected card centrally (the
+//              automatic re-bake cron; scripts/rebake-renders.mjs by hand).
+//              For changes that must not linger: watermark policy, a broken
+//              bake, a wrong emblem.
 //   "opt-in" — the owner decides, through the "newer look" badge and the
 //              update walkthrough. For taste changes (typography, spacing).
 //
@@ -737,6 +742,21 @@ export function latestOptInVersion(
     if (rolloutPolicy(version, rollout) === "opt-in") latest = version;
   }
   return latest;
+}
+
+/** The newest SWEEP-policy version at or below `current` (versions missing
+ *  from the rollout map count as sweep). A stamp at or above it owes no
+ *  platform correction: every bump after it is owner opt-in. The automatic
+ *  re-bake's cheap "anything pending?" count reads cards stamped below it
+ *  (lib/cards/auto-rebake.ts). */
+export function latestSweepVersion(
+  rollout: Readonly<Record<number, RolloutPolicy>> = VERSION_ROLLOUT,
+  current: number = CARD_LAYOUT_VERSION,
+): number {
+  for (let version = current; version >= 1; version -= 1) {
+    if (rolloutPolicy(version, rollout) === "sweep") return version;
+  }
+  return 0;
 }
 
 type PolicyOptions = {
