@@ -6,11 +6,12 @@ import type * as LayoutVersion from "@/lib/cards/layout-version";
 // badge, render_update notifications, a sweep leaving an opt-in-only card
 // alone, a free download serving an older bake).
 //
-// v31 (the one corner radius, TODO 3.26) is an UNSCOPED sweep, so at v31
-// every older bake owes a correction and no card has only the v22 opt-in
-// pending: those paths are unreachable until a later opt-in bump. The
-// machinery still has to work, so its tests pin the module at v30, the last
-// version where such a card exists:
+// v31 (the one corner radius, TODO 3.26) is an UNSCOPED sweep, so from v31
+// on (v32, the M15 family's sizes, is another sweep) every bake older than
+// v31 owes a correction and no card has only the v22 opt-in pending: those
+// paths are unreachable until a later opt-in bump. The machinery still has
+// to work, so its tests pin the module at v30, the last version where such a
+// card exists:
 //
 //   vi.mock("@/lib/cards/layout-version", async (importOriginal) => {
 //     const { layoutVersionAt } = await import("@/tests/stubs/layout-version-at");

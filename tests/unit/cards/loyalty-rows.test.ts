@@ -10,7 +10,7 @@ import {
 } from "@/lib/cards/loyalty-rows";
 import { estimateRulesHeightW, fitRulesSizePct, rulesSizeLadder } from "@/lib/cards/render-tiers";
 import { BAKE_WRAP, BAKE_WRAP_WIDE, PREVIEW_WRAP, wrapRulesText } from "@/lib/cards/rules-metrics";
-import { getFrameProfile } from "@/lib/cards/template-layout";
+import { getFrameProfile, type FrameProfile } from "@/lib/cards/template-layout";
 import {
   detachedCostTitleWidthPct,
   fitDetachedCostTitle,
@@ -294,6 +294,19 @@ describe("loyaltyRowEdgesPx", () => {
   });
 });
 
+// The old detached-cost fit (fitDetachedCostTitle) — the 2003 Modern
+// frame's, and the planeswalker's until layout v32 (TODO 4.20) moved the
+// walker onto the measured fit (fitTitleBand, tests/unit/cards/
+// title-band.test.ts) and its cost box onto the print. These cases keep
+// testing that path on the walker's v31 title slot and cost box, whatever
+// the live profile does.
+const LEGACY_PW: FrameProfile = {
+  ...M15PW,
+  title: { ...M15PW.title, rect: { topPct: 4.18, leftPct: 8.5, widthPct: 80, heightPct: 4.4 }, sizePct: 0.0427, fit: undefined },
+  costRect: { topPct: 3.8, leftPct: 51.2, widthPct: 40, heightPct: 4.4 },
+  costSizePct: undefined,
+};
+
 describe("the name next to a detached cost (costRect)", () => {
   it("measures a cost as its discs plus the pip gaps", () => {
     expect(manaCostWidthPct("{W}", 0.04)).toBeCloseTo(0.04, 10);
@@ -304,21 +317,21 @@ describe("the name next to a detached cost (costRect)", () => {
 
   it("ends the name one band gap before the pips, never past the band", () => {
     const cost = "{1}{R}{W}{B}";
-    const w = detachedCostTitleWidthPct(M15PW, cost)!;
-    const pipsLeft = (M15PW.costRect!.leftPct + M15PW.costRect!.widthPct) / 100 - manaCostWidthPct(cost, M15PW.title.sizePct);
-    expect(M15PW.title.rect.leftPct / 100 + w + TITLE_COST_GAP_PCT).toBeCloseTo(pipsLeft, 10);
+    const w = detachedCostTitleWidthPct(LEGACY_PW, cost)!;
+    const pipsLeft = (LEGACY_PW.costRect!.leftPct + LEGACY_PW.costRect!.widthPct) / 100 - manaCostWidthPct(cost, LEGACY_PW.title.sizePct);
+    expect(LEGACY_PW.title.rect.leftPct / 100 + w + TITLE_COST_GAP_PCT).toBeCloseTo(pipsLeft, 10);
     // A short cost leaves what the band always left the name (band − gap).
-    expect(detachedCostTitleWidthPct({ ...M15PW, costRect: { ...M15PW.costRect!, leftPct: 90, widthPct: 30 } }, "{W}")).toBeCloseTo(
-      M15PW.title.rect.widthPct / 100 - TITLE_COST_GAP_PCT,
+    expect(detachedCostTitleWidthPct({ ...LEGACY_PW, costRect: { ...LEGACY_PW.costRect!, leftPct: 90, widthPct: 30 } }, "{W}")).toBeCloseTo(
+      LEGACY_PW.title.rect.widthPct / 100 - TITLE_COST_GAP_PCT,
       10,
     );
     // More pips, less name.
-    expect(detachedCostTitleWidthPct(M15PW, "{W}")!).toBeGreaterThan(w);
+    expect(detachedCostTitleWidthPct(LEGACY_PW, "{W}")!).toBeGreaterThan(w);
   });
 
   it("only applies to a drawn cost in a detached box", () => {
-    expect(detachedCostTitleWidthPct(M15PW, null)).toBeNull();
-    expect(detachedCostTitleWidthPct(M15PW, "  ")).toBeNull();
+    expect(detachedCostTitleWidthPct(LEGACY_PW, null)).toBeNull();
+    expect(detachedCostTitleWidthPct(LEGACY_PW, "  ")).toBeNull();
     expect(detachedCostTitleWidthPct(getFrameProfile("m15"), "{1}{R}")).toBeNull();
     expect(detachedCostTitleWidthPct(getFrameProfile("modern"), "{1}{R}")).not.toBeNull();
   });
@@ -328,13 +341,13 @@ describe("a long name shrinks to fit before a detached cost (owner decision, TOD
   const MODERN = getFrameProfile("modern");
   const FLOOR = ptToPct(RULES_TEXT.hardFloorPt);
   /** The name's drawn width at `size` with the fit's headroom, card-width. */
-  const drawn = (p: typeof M15PW, text: string, size: number) =>
+  const drawn = (p: typeof LEGACY_PW, text: string, size: number) =>
     displayTextWidthEm(text, { letterSpacingEm: p.title.letterSpacingEm }) * size * TITLE_FIT_HEADROOM;
 
   it("keeps a name that fits at the slot's own size, whole", () => {
     for (const [p, title, cost] of [
-      [M15PW, "Kikyo Zoldyck", "{1}{R}{W}{B}"],
-      [M15PW, "Coden, the Great Creator", "{4}"],
+      [LEGACY_PW, "Kikyo Zoldyck", "{1}{R}{W}{B}"],
+      [LEGACY_PW, "Coden, the Great Creator", "{4}"],
       [MODERN, "Durgan Rompehechizos", "{2}{U}{R}{W}"],
       [MODERN, "The Death Star", "{3}{B}{B}{B}{B}{B}{B}"],
     ] as const) {
@@ -348,12 +361,12 @@ describe("a long name shrinks to fit before a detached cost (owner decision, TOD
 
   it("shrinks Miner the Miner, Damned Delver just enough to end before its pips (was cut to 'Del…')", () => {
     const title = "Miner the Miner, Damned Delver";
-    const fit = fitDetachedCostTitle(M15PW, title, "{1}{R}{W}{B}")!;
+    const fit = fitDetachedCostTitle(LEGACY_PW, title, "{1}{R}{W}{B}")!;
     expect(fit.text).toBe(title);
-    expect(fit.sizePct).toBeLessThan(M15PW.title.sizePct);
+    expect(fit.sizePct).toBeLessThan(LEGACY_PW.title.sizePct);
     // The largest size that fits: the name, with its headroom, fills the
     // width exactly (about 5 % smaller than the slot's 7.7 pt).
-    expect(drawn(M15PW, title, fit.sizePct)).toBeCloseTo(fit.widthPct, 12);
+    expect(drawn(LEGACY_PW, title, fit.sizePct)).toBeCloseTo(fit.widthPct, 12);
     expect(pctToPt(fit.sizePct)).toBeGreaterThan(7.2);
   });
 
@@ -368,7 +381,7 @@ describe("a long name shrinks to fit before a detached cost (owner decision, TOD
 
   it("stops at the 5 pt floor; past it the name is cut, with a whole '…' that fits (14-symbol cost)", () => {
     const cost = "{W}".repeat(14);
-    for (const p of [M15PW, MODERN]) {
+    for (const p of [LEGACY_PW, MODERN]) {
       const fit = fitDetachedCostTitle(p, "Skeptic, the Endlessly Wandering Walker of Worlds", cost)!;
       expect(fit.sizePct).toBe(FLOOR);
       expect(fit.text.endsWith("…")).toBe(true);
@@ -381,19 +394,19 @@ describe("a long name shrinks to fit before a detached cost (owner decision, TOD
       expect(short.sizePct).toBeGreaterThanOrEqual(FLOOR);
     }
     // The cut drops a trailing separator before the "…".
-    const cut = fitDetachedCostTitle(M15PW, "Skeptic, the Endlessly Wandering Walker of Worlds", cost)!.text;
+    const cut = fitDetachedCostTitle(LEGACY_PW, "Skeptic, the Endlessly Wandering Walker of Worlds", cost)!.text;
     expect(cut).not.toMatch(/[\s,;:]…$/u);
   });
 
   it("never leaves a word cut to one or two letters: it goes back to the last whole word", () => {
     const name = "Skeptic — Walker, Tester; Doubter";
     // The cut used to keep a stub of the next word ("Skeptic — W…").
-    expect(fitDetachedCostTitle(M15PW, name, "{W}".repeat(13))!.text).toBe("Skeptic…");
-    expect(fitDetachedCostTitle(M15PW, name, "{W}".repeat(11))!.text).toBe("Skeptic — Walker…");
+    expect(fitDetachedCostTitle(LEGACY_PW, name, "{W}".repeat(13))!.text).toBe("Skeptic…");
+    expect(fitDetachedCostTitle(LEGACY_PW, name, "{W}".repeat(11))!.text).toBe("Skeptic — Walker…");
     // Three letters or more of a cut word stay, and so does a cut first word.
     const long = "Skeptic, the Endlessly Wandering Walker of Worlds";
-    expect(fitDetachedCostTitle(M15PW, long, "{W}".repeat(12))!.text).toBe("Skeptic, the End…");
-    expect(fitDetachedCostTitle(M15PW, long, "{W}".repeat(15))!.text).toBe("Skep…");
+    expect(fitDetachedCostTitle(LEGACY_PW, long, "{W}".repeat(12))!.text).toBe("Skeptic, the End…");
+    expect(fitDetachedCostTitle(LEGACY_PW, long, "{W}".repeat(15))!.text).toBe("Skep…");
     // Every cut, on both frames: the text before the "…" is the name's
     // start, ending on a whole word or on at least three letters of one.
     const names = [
@@ -404,7 +417,7 @@ describe("a long name shrinks to fit before a detached cost (owner decision, TOD
       "Ælfwine Guðmundsson, Ørsted",
     ];
     let cuts = 0;
-    for (const p of [M15PW, MODERN]) {
+    for (const p of [LEGACY_PW, MODERN]) {
       for (let pips = 6; pips <= 16; pips += 1) {
         for (const title of names) {
           const { text } = fitDetachedCostTitle(p, title, "{W}".repeat(pips))!;
@@ -423,8 +436,8 @@ describe("a long name shrinks to fit before a detached cost (owner decision, TOD
   });
 
   it("never grows a name, and leaves an inline cost's name alone", () => {
-    expect(fitDetachedCostTitle(M15PW, "Wing", "{W}")!.sizePct).toBe(M15PW.title.sizePct);
+    expect(fitDetachedCostTitle(LEGACY_PW, "Wing", "{W}")!.sizePct).toBe(LEGACY_PW.title.sizePct);
     expect(fitDetachedCostTitle(getFrameProfile("m15"), "Miner the Miner, Damned Delver", "{1}{R}{W}{B}")).toBeNull();
-    expect(fitDetachedCostTitle(M15PW, "Miner the Miner, Damned Delver", null)).toBeNull();
+    expect(fitDetachedCostTitle(LEGACY_PW, "Miner the Miner, Damned Delver", null)).toBeNull();
   });
 });

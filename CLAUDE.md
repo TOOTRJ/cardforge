@@ -173,6 +173,19 @@ Rules and gotchas:
   `corners` is in the ETag. The CC importer cuts masters at the constant;
   the allow-listed MSE masters are normalised by Phase B
   (`scripts/lib/frame-corners.mjs`, run by the builders too) — `docs/FRAMES.md`.
+- ONE M15-era display size (layout v32, TODO 4.20): the family
+  (`M15_FAMILY_TEMPLATES`, `lib/cards/m15-family.ts`; v32's scope is the
+  frozen literal in `layout-version.ts`) prints names, type lines, pips and
+  the set symbol at the constants in `lib/cards/typography.ts`
+  (`TITLE_SIZE_PCT`, `TYPE_SIZE_PCT`, `COST_DISC_PCT`, `SET_SYMBOL_BOX_PCT`…)
+  — never a profile literal. A slot with `fit: "measured"` takes its size,
+  text (ONE "…" past the 5 pt floor) and width from `fitTitleBand` /
+  `fitTypeLineBand` in BOTH renderers (bake: `measuredLinePx`; preview: the
+  HD bake's px); `TextSlot.dy` moves the text only; the set symbol's size and
+  drawn width come from `setSymbolSize()` (the ink fit only with the
+  code-owned `setSymbolFit: "ink"`). Frames outside the family keep the old
+  paths byte-for-byte — bringing one in is its own layout bump
+  (`docs/FRAMES.md`).
 - Notifications are push, not pull: `notifications` is on the
   `supabase_realtime` publication (migration 0075) and
   `components/notifications/realtime-alerts.tsx` subscribes to the signed-in

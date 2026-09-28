@@ -40,12 +40,15 @@ import {
 import {
   NAME_COST_GAP_PCT,
   fitRulesSizePct,
-  fitSingleLineSizePct,
   fitSplitTypeSizePct,
+  fitTypeLineBand,
+  inlineSymbolPullPct,
+  measuredLinePreviewPct,
   secondFaceLineSizes,
 } from "@/lib/cards/render-tiers";
 import { fitStatSizePct, ptValue, STAT_BADGE_INSET } from "@/lib/cards/stat-fit";
-import { fitDetachedCostTitle } from "@/lib/cards/title-band";
+import { fitTitleBand } from "@/lib/cards/title-band";
+import { setSymbolSize, setSymbolSource } from "@/lib/cards/set-symbol-size";
 import {
   PLACEHOLDER_FLAVOR_TEXT,
   PLACEHOLDER_RULES_TEXT,
@@ -84,6 +87,7 @@ import {
   loyaltyBadgeShapeFor,
   resolveColorAsset,
   slotInk,
+  slotTextDy,
   type FrameProfile,
   type Rect,
   type SlotAlign,
@@ -632,6 +636,9 @@ function CardFace({
   const markLayout = brandMarkLayout(layout);
   // A textless frame (TODO 3.24) prints no type line and no text box.
   const textless = Boolean(layout.textless);
+  // The set symbol's size and drawn width (lib/cards/set-symbol-size.ts) —
+  // the bake's twin: the same box, glyph fit and width in both renderers.
+  const setSymbol = setSymbolSize(layout, setSymbolSource(setIconUrl, setIconCode));
   // Per-frame-master footer ink (Alpha: silver on every frame but white) —
   // the same footerInk() the bake resolves (outlined when the profile prints
   // it on the art, footerOnArt).
@@ -720,9 +727,18 @@ function CardFace({
   const sagaContent = layout.chapters
     ? resolveSagaChapters(face.faceContent, face.rulesText)
     : null;
-  // A detached cost box (costRect): the name stops before the pips, shrinking
-  // to fit there when it is long (the bake's twin, lib/cards/title-band.ts).
-  const titleFit = showCost ? fitDetachedCostTitle(layout, safeTitle, face.cost) : null;
+  // The name's fit (the bake's twin, lib/cards/title-band.ts): before a
+  // detached cost box (costRect) it stops before the pips, shrinking to fit
+  // there when it is long; on a measured slot (the M15-era family, layout
+  // v32) it shrinks to the room its band leaves it wherever the cost is.
+  const titleFit = fitTitleBand(layout, safeTitle, showCost ? face.cost : null, orientationFromAspect(aspect));
+  // A measured name the fit shrank shows at the stored HD bake's whole px
+  // (measuredLinePreviewPct); the old path keeps its fitted size.
+  const titleSizePct = !titleFit
+    ? layout.title.sizePct
+    : layout.title.fit === "measured"
+      ? measuredLinePreviewPct(titleFit.sizePct, layout.title.sizePct, orientationFromAspect(aspect))
+      : titleFit.sizePct;
   // Explicit watermark wins; basic lands (Plains/Island/…) automatically get
   // the authentic large mana symbol in the text box.
   const basicLandFace = {
@@ -754,6 +770,27 @@ function CardFace({
     subtypes: face.subtypes,
   });
   const typeSplit = layout.type.split ? splitTypeLine(typeLine) : null;
+  // The type line's fit (the bake's twin): the old estimate, or (a measured
+  // slot) the room before the set symbol's ink as drawn — its size, its text
+  // (cut with a "…" only past the floor) and its width.
+  const typeFit = fitTypeLineBand({
+    layout,
+    text: typeLine,
+    symbolWidthPct: setSymbol.drawnWidthPct,
+    symbolInkLeftPct: setSymbol.inkLeftPct,
+    orientation: orientationFromAspect(aspect),
+  });
+  const typeSizePct =
+    layout.type.fit === "measured"
+      ? measuredLinePreviewPct(typeFit.sizePct, layout.type.sizePct, orientationFromAspect(aspect))
+      : typeFit.sizePct;
+  // A measured band's inline set symbol is pulled left over the band gap
+  // (inlineSymbolPullPct; it stays where it was) and never shrinks.
+  const symbolPull = inlineSymbolPullPct(layout, setSymbol);
+  const inlineSymbolStyle: CSSProperties | undefined =
+    layout.type.fit === "measured"
+      ? { flexShrink: 0, ...(symbolPull ? { marginLeft: `-${cqw(symbolPull)}` } : {}) }
+      : undefined;
 
   // See-through frames (colourless Eldrazi, devoid, colourless token): the
   // art also runs under the whole frame (TODO 4.17). Same object-fit cover
@@ -934,14 +971,14 @@ function CardFace({
           positioned box (right-aligned, vertically centered) so name and
           cost can be aligned independently in the layout editor. */}
       <BandSlot
-        slot={titleFit ? { ...layout.title, sizePct: titleFit.sizePct } : layout.title}
+        slot={titleFit ? { ...layout.title, sizePct: titleSizePct } : layout.title}
         italic={isShowcase}
       >
         <span
           style={
             titleFit
-              ? { ...ELLIPSIS, ...titleInk, maxWidth: cqw(titleFit.widthPct) }
-              : { ...ELLIPSIS, ...titleInk }
+              ? { ...ELLIPSIS, ...titleInk, ...textDy(layout.title, titleSizePct), maxWidth: cqw(titleFit.widthPct) }
+              : { ...ELLIPSIS, ...titleInk, ...textDy(layout.title) }
           }
           title={safeTitle}
         >
@@ -976,7 +1013,7 @@ function CardFace({
       ) : null}
 
       {/* Type band — type line (left) + rarity set-symbol (right). Long type
-          lines shrink to fit on one line (fitSingleLineSizePct), matching how
+          lines shrink to fit on one line (fitTypeLine), matching how
           real cards condense e.g. "Legendary Artifact Creature — …". When the
           profile defines a symbolRect, the symbol renders in its OWN
           absolutely positioned box so it can be aligned independently. */}
@@ -1000,35 +1037,26 @@ function CardFace({
           ink={typeInk}
         />
       ) : (
-      <BandSlot
-        slot={{
-          ...layout.type,
-          sizePct: fitSingleLineSizePct({
-            text: typeLine,
-            rect: layout.type.rect,
-            baseSizePct: layout.type.sizePct,
-            reservedPct: layout.symbolRect
-              ? 0
-              : (layout.symbolSizePct ?? layout.type.sizePct * 1.1) * 1.3,
-          }),
-        }}
-      >
-        <span style={{ ...ELLIPSIS, ...typeInk }}>
-          {displayLine(
-            buildTypeLine({
-              supertype: face.supertype,
-              cardType: face.cardType,
-              subtypes: face.subtypes,
-            }),
-          )}
+      <BandSlot slot={{ ...layout.type, sizePct: typeSizePct }}>
+        <span
+          style={{
+            ...ELLIPSIS,
+            ...typeInk,
+            ...textDy(layout.type, typeSizePct),
+            ...(typeFit.widthPct !== null ? { maxWidth: cqw(typeFit.widthPct) } : {}),
+          }}
+        >
+          {displayLine(typeFit.text)}
         </span>
         {!layout.symbolRect ? (
           <SetSymbol
             rarity={rarity}
             iconUrl={setIconUrl}
             setCode={setIconCode}
-            size={cqw(layout.symbolSizePct ?? layout.type.sizePct * 1.1)}
+            size={cqw(setSymbol.sizePct)}
+            width={cqw(setSymbol.drawnWidthPct)}
             keyline={layout.setSymbolKeyline}
+            style={inlineSymbolStyle}
           />
         ) : null}
       </BandSlot>
@@ -1047,7 +1075,8 @@ function CardFace({
             rarity={rarity}
             iconUrl={setIconUrl}
             setCode={setIconCode}
-            size={cqw(layout.symbolSizePct ?? layout.type.sizePct * 1.1)}
+            size={cqw(setSymbol.sizePct)}
+            width={cqw(setSymbol.drawnWidthPct)}
             keyline={layout.setSymbolKeyline}
           />
         </div>
@@ -1415,13 +1444,13 @@ function SplitTypeLine({
   return (
     <>
       <BandSlot slot={{ ...slot, rect: split.leftRect, align: split.leftAlign ?? "start" }}>
-        <span style={{ ...ELLIPSIS, ...ink }} data-type-half="left">
+        <span style={{ ...ELLIPSIS, ...ink, ...textDy(slot) }} data-type-half="left">
           {displayLine(parts[0])}
         </span>
       </BandSlot>
       {parts[1] ? (
         <BandSlot slot={{ ...slot, rect: split.rightRect, align: split.rightAlign ?? "center" }}>
-          <span style={{ ...ELLIPSIS, ...ink }} data-type-half="right">
+          <span style={{ ...ELLIPSIS, ...ink, ...textDy(slot) }} data-type-half="right">
             {displayLine(parts[1])}
           </span>
         </BandSlot>
@@ -1807,11 +1836,35 @@ function AdventurePanel({
     subtypes: data.subtypes,
   });
   const showCost = Boolean(data.cost?.trim());
+  // A measured panel (the M15-era family, layout v32) fits its name before
+  // its inline cost and its type line to its bar — the bake's twins
+  // (AdventureBake); the pips keep their size. Otherwise the slots' sizes.
+  const titleFit = fitTitleBand(
+    { title: slot.title, costSizePct: slot.costSizePct },
+    name,
+    showCost ? data.cost : null,
+  );
+  const typeFit =
+    slot.type.fit === "measured"
+      ? fitTypeLineBand({ layout: { type: slot.type }, text: typeLine, symbolWidthPct: null })
+      : null;
+  // A shrunk line at the stored HD bake's whole px (measuredLinePreviewPct).
+  const panelPct = (fitted: number, base: number, measured: boolean) =>
+    measured ? measuredLinePreviewPct(fitted, base) : fitted;
   return (
     <>
-      <BandSlot slot={slot.title}>
-        <span style={ELLIPSIS} title={name}>
-          {displayLine(name)}
+      <BandSlot
+        slot={
+          titleFit
+            ? { ...slot.title, sizePct: panelPct(titleFit.sizePct, slot.title.sizePct, slot.title.fit === "measured") }
+            : slot.title
+        }
+      >
+        <span
+          style={titleFit ? { ...ELLIPSIS, maxWidth: cqw(titleFit.widthPct) } : ELLIPSIS}
+          title={name}
+        >
+          {displayLine(titleFit ? titleFit.text : name)}
         </span>
         {showCost ? (
           <ManaCostGlyphs
@@ -1821,8 +1874,10 @@ function AdventurePanel({
           />
         ) : null}
       </BandSlot>
-      <BandSlot slot={slot.type}>
-        <span style={ELLIPSIS}>{displayLine(typeLine)}</span>
+      <BandSlot slot={typeFit ? { ...slot.type, sizePct: panelPct(typeFit.sizePct, slot.type.sizePct, true) } : slot.type}>
+        <span style={typeFit?.widthPct != null ? { ...ELLIPSIS, maxWidth: cqw(typeFit.widthPct) } : ELLIPSIS}>
+          {displayLine(typeFit ? typeFit.text : typeLine)}
+        </span>
       </BandSlot>
       <div
         style={{
@@ -1888,14 +1943,20 @@ function SecondFacePanel({
   });
   const showCost = Boolean(slot.costSizePct) && Boolean(data.cost?.trim());
   const showPT = Boolean(slot.pt) && Boolean(data.power || data.toughness);
-  // Same math as SecondFaceBake: aftermath's name bar (name + cost) and type
-  // line shrink to fit their short sideways bars.
+  // Same math as SecondFaceBake: a `fitLines` face's name bar (name + cost)
+  // and type line shrink to fit their bars (aftermath's short sideways ones,
+  // flip's upside-down ones), down to the card's own 5 pt floor.
   const lineSizes = secondFaceLineSizes({
     slot,
     name,
     typeLine,
     cost: showCost ? data.cost : null,
+    orientation: orientationFromAspect(aspect),
   });
+  // A `fitLines` face's shrunk lines at the stored HD bake's whole px, as the
+  // bake sets them (measuredLinePx); a face without it as before.
+  const linePct = (fitted: number, base: number) =>
+    slot.fitLines ? measuredLinePreviewPct(fitted, base, orientationFromAspect(aspect)) : fitted;
   const rulesSizePct = fitRulesSizePct({
     rulesText: data.rulesText,
     flavorText: null,
@@ -1917,13 +1978,13 @@ function SecondFacePanel({
           justifyContent: showCost ? "space-between" : "flex-start",
           gap: cqw(NAME_COST_GAP_PCT),
           fontFamily: DISPLAY_FONT,
-          fontSize: cqw(lineSizes.titleSizePct),
+          fontSize: cqw(linePct(lineSizes.titleSizePct, slot.title.sizePct)),
           fontWeight: slot.title.weight ?? 600,
           color: slot.title.colorHex,
         }}
       >
         <span style={ELLIPSIS} title={name}>
-          {displayLine(name)}
+          {displayLine(lineSizes.titleText)}
         </span>
         {showCost ? (
           <ManaCostGlyphs
@@ -1942,12 +2003,12 @@ function SecondFacePanel({
           display: "flex",
           alignItems: "center",
           fontFamily: DISPLAY_FONT,
-          fontSize: cqw(lineSizes.typeSizePct),
+          fontSize: cqw(linePct(lineSizes.typeSizePct, slot.type.sizePct)),
           fontWeight: slot.type.weight ?? 600,
           color: slot.type.colorHex,
         }}
       >
-        <span style={ELLIPSIS}>{displayLine(typeLine)}</span>
+        <span style={ELLIPSIS}>{displayLine(lineSizes.typeText)}</span>
       </div>
       <div
         style={{
@@ -2028,6 +2089,17 @@ function rectStyle(rect: Rect): CSSProperties {
 // Font size as container-query width units, so text scales with the card.
 function cqw(pct: number): string {
   return `${(pct * 100).toFixed(3)}cqw`;
+}
+
+/** TextSlot.dy (TODO 4.20): the slot's text span — never its band, pips or
+ *  set symbol — moved vertically by a fraction of the card width (negative
+ *  = up), as costDy moves the pips; a measured line the fit shrank to
+ *  `drawnSizePct` also keeps its baseline (slotTextDy). Front-face title and
+ *  type line only; the bake's textDyBake twin moves it by the same amount in
+ *  whole px. */
+function textDy(slot: TextSlot, drawnSizePct = slot.sizePct): CSSProperties {
+  const dy = slotTextDy(slot, drawnSizePct);
+  return dy ? { transform: `translateY(${cqw(dy)})` } : {};
 }
 
 // mana-font's `.ms-cost` disc renders at 1.3em for a given font-size; profiles

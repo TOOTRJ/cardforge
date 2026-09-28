@@ -5,7 +5,7 @@ import type { CardPreviewData } from "@/components/cards/card-preview";
 import { parseLoyaltyAbilities } from "@/lib/cards/card-display";
 import { LOYALTY_ROW, layoutProfileLoyaltyRows, loyaltyRowEdgesPx } from "@/lib/cards/loyalty-rows";
 import { getFrameProfile } from "@/lib/cards/template-layout";
-import { detachedCostTitleWidthPct, fitDetachedCostTitle } from "@/lib/cards/title-band";
+import { DETACHED_COST_GAP_PCT, fitTitleBand, titleBandRoomPct } from "@/lib/cards/title-band";
 import { RENDER_PRESETS } from "@/lib/render/card-image";
 
 // ---------------------------------------------------------------------------
@@ -309,7 +309,9 @@ describe("m15pw ability rows + title — real bakes", () => {
   }, 60_000);
 
   /** The title band's ink: where the name starts and ends, where the pips
-   *  begin, the name's cap edge, and the height of its first glyph. */
+   *  begin, the end of the name's room (layout v32: the measured fit,
+   *  fitTitleBand — up to DETACHED_COST_GAP_PCT before the first disc), and
+   *  the height of its first glyph. */
   function titleInk(px: Awaited<ReturnType<typeof bake>>, cost: string) {
     const band = P.title.rect;
     const [y0, y1] = [Math.round((band.topPct / 100) * H) + 2, Math.round(((band.topPct + band.heightPct) / 100) * H) - 2];
@@ -350,27 +352,28 @@ describe("m15pw ability rows + title — real bakes", () => {
         if (lum(px(xx, y)) < 70) [top, bottom] = [Math.min(top, y), Math.max(bottom, y)];
       }
     }
-    return { runs, gapStart, gapEnd, cap: x0 + Math.round(detachedCostTitleWidthPct(P, cost)! * W), glyphH: bottom - top + 1 };
+    return { runs, gapStart, gapEnd, roomEnd: x0 + Math.round(titleBandRoomPct(P, cost) * W), glyphH: bottom - top + 1 };
   }
 
   /** The bake's title font size in px: the slot's (rounded), or the fitted
    *  size floored to a whole pixel. */
   const basePx = Math.round(P.title.sizePct * W);
-  const fittedPx = (title: string, cost: string) => Math.floor(fitDetachedCostTitle(P, title, cost)!.sizePct * W);
+  const x0Of = () => Math.round((P.title.rect.leftPct / 100) * W);
+  const fittedPx = (title: string, cost: string) => Math.floor(fitTitleBand(P, title, cost)!.sizePct * W);
 
   it("shrinks a long name to fit before the detached cost's pips, whole", async () => {
     const cost = "{1}{R}{W}{B}";
     const title = "Miner the Miner, Damned Delver of the Deep";
-    expect(fitDetachedCostTitle(P, title, cost)!.text).toBe(title);
-    const { gapStart, gapEnd, cap, glyphH } = titleInk(await bake({ title, cost }), cost);
-    // The name ends before its cap (it fits: no ellipsis) and fills most of
-    // it; the pips start one band gap (2 % of the width, less their hard
-    // shadow) after the cap. Before, the name ran on under the pips, then
-    // was cut with a "…" at the cap.
-    expect(gapStart).toBeLessThanOrEqual(cap);
-    expect(gapStart).toBeGreaterThanOrEqual(cap - 0.1 * (cap - Math.round((P.title.rect.leftPct / 100) * W)));
-    expect(gapEnd - cap).toBeGreaterThanOrEqual(Math.round(0.02 * W) - 4);
-    expect(gapEnd - cap).toBeLessThanOrEqual(Math.round(0.02 * W) + 2);
+    expect(fitTitleBand(P, title, cost)!.text).toBe(title);
+    const { gapStart, gapEnd, roomEnd, glyphH } = titleInk(await bake({ title, cost }), cost);
+    // The name ends within its room (it fits: no ellipsis) and fills most
+    // of it; the pips start DETACHED_COST_GAP_PCT after the room (their hard
+    // shadow aside). Before v31, the name ran on under the pips, then was
+    // cut with a "…".
+    expect(gapStart).toBeLessThanOrEqual(roomEnd);
+    expect(gapStart).toBeGreaterThanOrEqual(roomEnd - 0.1 * (roomEnd - Math.round((P.title.rect.leftPct / 100) * W)));
+    expect(gapEnd - roomEnd).toBeGreaterThanOrEqual(Math.round(DETACHED_COST_GAP_PCT * W) - 2);
+    expect(gapEnd - roomEnd).toBeLessThanOrEqual(Math.round(DETACHED_COST_GAP_PCT * W) + 2);
     // Set smaller: its first letter (M) is the fitted size's height, not the
     // slot's (the same M, baked at the slot's size).
     const px = fittedPx(title, cost);
@@ -382,20 +385,22 @@ describe("m15pw ability rows + title — real bakes", () => {
   it("past the 5 pt floor cuts the name with a whole '…' before the pips (a 14-symbol cost)", async () => {
     const cost = "{W}".repeat(14);
     const title = "Skeptic, the Endlessly Wandering Walker of Worlds";
-    const fit = fitDetachedCostTitle(P, title, cost)!;
+    const fit = fitTitleBand(P, title, cost)!;
     expect(fit.text.endsWith("\u2026")).toBe(true);
-    const { runs, gapStart, cap, glyphH } = titleInk(await bake({ title, cost }), cost);
+    const { runs, gapStart, roomEnd, glyphH } = titleInk(await bake({ title, cost }), cost);
     // Nothing clipped at the name's edge (Satori's own ellipsis could lose
-    // its last dot there), and the name ends in three dots: small runs,
-    // evenly spaced, after the last letter.
-    expect(gapStart).toBeLessThanOrEqual(cap - 1);
+    // its last dot there — the span's max-width, fit.widthPct, is past the
+    // room), and the name ends in three dots: small runs, evenly spaced,
+    // after the last letter.
+    expect(gapStart).toBeLessThanOrEqual(roomEnd);
+    expect(x0Of() + Math.round(fit.widthPct * W)).toBeGreaterThan(roomEnd);
     const dots = runs.slice(-3);
     const em = Math.floor(fit.sizePct * W);
     for (const [a, b] of dots) expect(b - a + 1).toBeLessThanOrEqual(Math.ceil(0.2 * em));
     const gaps = [dots[1][0] - dots[0][1], dots[2][0] - dots[1][1]];
     expect(Math.abs(gaps[0] - gaps[1])).toBeLessThanOrEqual(1);
     // At the floor size, legibly: the S at 5 pt against the S at the slot's
-    // 7.7 pt.
+    // size (9.6 pt since layout v32).
     const base = titleInk(await bake({ title: "Skeptic", cost: "{W}" }), "{W}").glyphH;
     expect(Math.abs(glyphH - (base * em) / basePx)).toBeLessThanOrEqual(1.5);
     expect(glyphH).toBeGreaterThanOrEqual(12);

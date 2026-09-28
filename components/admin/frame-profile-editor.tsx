@@ -149,6 +149,19 @@ export function writeSlotField(
 /** Top-level scalar overrides (not tied to a slot). */
 export const SCALAR_FIELDS = ["costSizePct", "symbolSizePct"] as const;
 
+/** What each scalar means (fractions of card width) — the field's label and
+ *  hover hint. symbolSizePct is the set-symbol BOX since layout v32
+ *  (lib/cards/set-symbol-size.ts), not a font size. */
+export const SCALAR_LABELS: Record<(typeof SCALAR_FIELDS)[number], { label: string; hint: string }> = {
+  costSizePct: { label: "costSizePct (pip disc)", hint: "Mana pip disc diameter, fraction of card width." },
+  symbolSizePct: {
+    label: "symbolSizePct (symbol box)",
+    hint:
+      "Set-symbol box, fraction of card width: an icon and the default mark fill it; on an M15-era " +
+      "frame a Keyrune glyph is fitted to it by its ink (font ≤ box × 1.13), elsewhere its font size is the box.",
+  },
+};
+
 // ---------------------------------------------------------------------------
 // SlotOverlay — outlines + hit testing over the rendered card.
 // ---------------------------------------------------------------------------
@@ -373,9 +386,10 @@ export function EditorPanel({
           return (
             <label
               key={name}
+              title={SCALAR_LABELS[name].hint}
               className="flex items-center justify-between gap-2 text-xs text-muted"
             >
-              {name}
+              {SCALAR_LABELS[name].label}
               <input
                 type="number"
                 step={0.001}

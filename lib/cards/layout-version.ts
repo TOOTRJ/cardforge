@@ -294,9 +294,72 @@ import type { CardType } from "@/types/card";
 //            "sweep". VERIFICATION-NEUTRAL (VERIFICATION_NEUTRAL_VERSIONS,
 //            owner decision): corner pixels move no slot, so a frame_reviews
 //            tick from v29 / v30 stays fresh.
+//   32     — ONE M15-era title / type size (TODO 4.20, owner-approved
+//            2026-09-28): the M15 family (lib/cards/m15-family.ts) prints its
+//            names and type lines at Card Conjurer's sizes, which match the
+//            prints — lib/cards/typography.ts TITLE_SIZE_PCT 0.0533 W (75 →
+//            80 px at HD on M15) and TYPE_SIZE_PCT 0.0453 W (65 → 68 px);
+//            the adventure panel at ADVENTURE_PANEL_PCT with its pips at
+//            ADVENTURE_PANEL_COST_PCT.
+//            * each grown front-face slot keeps its baseline through
+//              TextSlot.dy (the TEXT only — the rect, the pips and the set
+//              symbol stay where v24–v31 verified them; second faces and
+//              the adventure panel stay centred in their bars); the type
+//              line's print correction (4.2 px up at HD) only on the Card
+//              Conjurer profiles on M15's type bar, never on the M15 base
+//              the MSE-framed spreads inherit nor on the tokens' pill; the
+//              planeswalker's type line takes M15's slot and its name
+//              stays centred on its plate (the v27 relation); the token's
+//              type band is centred on Card Conjurer's pill (82.6 → 82.14
+//              %H) with its text's dy keeping its baseline, so the bigger
+//              set symbol sits in the pill, not on its bevel.
+//            * planeswalker, saga and flip cost discs at COST_DISC_PCT
+//              (M15's 0.0485), the detached-cost name room re-tuned against
+//              print: the walker's cost box ends where the printed pips do
+//              (92.2 %W, where M15's inline pips end; it stopped 15 px
+//              short), and the name is measured by the box the bake lays it
+//              out in, up to one band gap before the first disc
+//              (DETACHED_COST_GAP_PCT = BAND_GAP_PCT, the inline cost's gap;
+//              lib/cards/title-band.ts) — "Chandra, Torch of Defiance" at
+//              78 px like KLD #110, the shorter printed walkers at 80.
+//            * names and type lines fitted to the room their band really
+//              leaves (TextSlot.fit "measured": fitTitleBand,
+//              fitTypeLineBand) instead of the character estimate and an
+//              ellipsis — a type line up to TYPE_SYMBOL_GAP_PCT (the
+//              prints' 20 px) before the set symbol's INK as drawn, a
+//              planeswalker's symbolRect included, the inline symbol pulled
+//              over the band gap to give it that room — down to 5 pt of the
+//              card's own orientation, and past it ONE "…" both renderers
+//              draw; the bake sets a shrunk line at measuredLinePx (the whole
+//              px below its fit, never below the floor's) and a shrunk
+//              front-face line keeps its band's baseline (slotTextDy). The
+//              adventure panel's name and type line too, and flip's
+//              upside-down face (fitLines, as aftermath's). The full-art
+//              basics keep the old fit path.
+//            * the bake paints the rules backdrop under the title and type
+//              bands (the preview's z-order): on Expedition, whose rules box
+//              overlaps the type bar, it dimmed the bake's type line and
+//              set symbol only.
+//            * the set symbol in SET_SYMBOL_BOX_PCT (0.0574 W): the default
+//              mark and an uploaded icon 72 → 86 px on M15 (the planeswalker
+//              and saga in CC's 0.0533 W box, 80 px); a Keyrune glyph fitted
+//              to the box by its own ink (font = the smallest of box ×
+//              KEYRUNE_EM_PER_BOX, box ÷ the glyph's ink height in em and
+//              0.12 W ÷ its ink width; lib/cards/set-symbol-size.ts, the
+//              ink boxes in lib/cards/keyrune-metrics.ts) — on a profile with
+//              the code-owned setSymbolFit "ink" (the family) only, so an
+//              override's symbolSizePct never switches another frame.
+//            Rules text is unchanged (its recalibration is its own item).
+//            Split and battle are NOT in it (their slots sit off the MSE
+//            masters' bars — TODO 4.21) and bake byte-identical, as does
+//            every template outside the family. Template-scoped to the
+//            FROZEN V32_M15_FAMILY_TEMPLATES, every card on them (every name
+//            grows: no card predicate narrows it), "sweep".
+//            VERIFICATION-NEUTRAL (owner decision 2026-09-28): the round-8
+//            print sign-off stands in for re-ticking the family's combos.
 // ---------------------------------------------------------------------------
 
-export const CARD_LAYOUT_VERSION = 31;
+export const CARD_LAYOUT_VERSION = 32;
 
 /** The first layout whose stored bakes are ROUND (v31, TODO 3.26). An older
  *  stamp — or a null one, whose bake may predate it — is a square bake with
@@ -308,6 +371,19 @@ export const ROUND_BAKE_LAYOUT_VERSION = 31;
 export function isRoundBake(layoutVersion: number | null | undefined): boolean {
   return layoutVersion != null && layoutVersion >= ROUND_BAKE_LAYOUT_VERSION;
 }
+
+// v32 — the M15-era family (lib/cards/m15-family.ts M15_FAMILY_TEMPLATES) as
+// it stood at v32: every card on these templates re-bakes. A LITERAL, frozen
+// like V29_DISPLAY_FOOTER_TEMPLATES: v32 is history once it ships, so a
+// template that joins the family later must not make its cards stamped below
+// 32 owe v32 retroactively — it brings its own bump. A test pins the family
+// to this list; when the family changes, that test records the change and
+// the bump that ships it, never this list.
+export const V32_M15_FAMILY_TEMPLATES: readonly string[] = [
+  "m15", "m15land", "m15snowland", "m15artifact", "m15snow", "m15devoid", "m15borderless", "m15borderlessartifact",
+  "m15pw", "m15token", "m15tokenartifact", "saga", "adventure", "flip", "aftermath", "extendedart",
+  "expeditionland", "nyx", "fullart", "m15textless", "m15textlessland", "m15fullartland", "fullartland",
+];
 
 /**
  * Bumps that changed the output of only some frame templates, keyed by the
@@ -337,17 +413,22 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // pill and outlined footer (4.39).
   30: ["fullartland"],
   // (v31, the one corner radius, changes every template's bake: unscoped.)
+  // v32: one M15-era title / type size (4.20) — the M15 family as it stood.
+  32: V32_M15_FAMILY_TEMPLATES,
 };
 
 /**
- * Bumps that change nothing a frame VERIFICATION measures: a tick in
+ * Bumps that don't cost the owner a frame VERIFICATION: a tick in
  * /admin/frame-compare (frame_reviews.verified_layout_version) survives them.
  * v31 only cuts the card's corner — no slot, bar or text moves — so the
- * owner's existing ticks stay fresh (owner decision, TODO 3.26). Stored
- * bakes still owe these bumps: this list is read by frame verification
- * only, never by the stale / sweep / download rules.
+ * owner's existing ticks stay fresh (owner decision, TODO 3.26). v32 does
+ * move text (the M15 family's name, type line and set-symbol sizes), but
+ * the owner signs it off on the round-8 print comparison instead of
+ * re-ticking every family combo (owner decision 2026-09-28, TODO 4.20).
+ * Stored bakes still owe these bumps: this list is read by frame
+ * verification only, never by the stale / sweep / download rules.
  */
-export const VERIFICATION_NEUTRAL_VERSIONS: readonly number[] = [31];
+export const VERIFICATION_NEUTRAL_VERSIONS: readonly number[] = [31, 32];
 
 /** TEMPLATE_SCOPED_VERSIONS with every verification-neutral bump scoped to
  *  no template — the map lib/cards/frame-verification-state.ts judges a
@@ -584,6 +665,7 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   29: "sweep", // round-5 leftovers: word spacing, pw rows, Alpha ink, stats, foil backdrops, aftermath
   30: "sweep", // fullartland re-sourced from Card Conjurer (4.39) — a frame swap, never an owner badge
   31: "sweep", // one corner radius (3.26): the bake's rounded corner, every card — a correction, never a badge
+  32: "sweep", // one M15-era title / type size (4.20): the family's print sizes — a platform correction, never a badge
 };
 
 export function rolloutPolicy(version: number, rollout = VERSION_ROLLOUT): RolloutPolicy {

@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { CardPreview } from "@/components/cards/card-preview";
 import { displayLine } from "@/lib/cards/card-display";
 import { getFrameProfile } from "@/lib/cards/template-layout";
-import { secondFaceLineSizes } from "@/lib/cards/render-tiers";
+import { measuredLinePreviewPct, secondFaceLineSizes } from "@/lib/cards/render-tiers";
 import { RULES_TEXT, ptToPct } from "@/lib/cards/typography";
 
 // ---------------------------------------------------------------------------
@@ -115,9 +115,10 @@ describe("CardPreview — aftermath's second half", () => {
           el.textContent?.replace(/\s/g, "") === rules.replace(/\s/g, ""),
       ),
     );
-    expect(fontSize(topName)).toBe("5.000cqw");
+    // The M15-era display sizes (layout v32): 80 / 68 px at HD.
+    expect(fontSize(topName)).toBe("5.330cqw");
     expect(fontSize(bottomName)).toBe(fontSize(topName));
-    expect(fontSize(topType)).toBe("4.350cqw");
+    expect(fontSize(topType)).toBe("4.530cqw");
     expect(fontSize(bottomType)).toBe(fontSize(topType));
     expect(fontSize(bottomCost)).toBe(fontSize(topCost));
     expect(fontSize(topRules)).toBe(`${(ptToPct(9) * 100).toFixed(3)}cqw`);
@@ -146,8 +147,10 @@ describe("CardPreview — aftermath's second half", () => {
     const want = secondFaceLineSizes({ slot: second, name: back.title, typeLine, cost: back.cost });
     expect(want.titleSizePct).toBeLessThan(second.title.sizePct);
     expect(want.typeSizePct).toBeLessThan(second.type.sizePct);
-    expect(fontSize(name)).toBe(`${(want.titleSizePct * 100).toFixed(3)}cqw`);
-    expect(fontSize(type)).toBe(`${(want.typeSizePct * 100).toFixed(3)}cqw`);
+    // A shrunk `fitLines` line shows at the stored HD bake's whole px.
+    const shown = (fitted: number, base: number) => `${(measuredLinePreviewPct(fitted, base) * 100).toFixed(3)}cqw`;
+    expect(fontSize(name)).toBe(shown(want.titleSizePct, second.title.sizePct));
+    expect(fontSize(type)).toBe(shown(want.typeSizePct, second.type.sizePct));
   });
 
   it("shrinks a long cost's pips with the name, to the bake's sizes", () => {
@@ -172,7 +175,7 @@ describe("CardPreview — aftermath's second half", () => {
     // mana-font draws a 1.3em disc, so the font size is the disc ÷ 1.3.
     expect(fontSize(pips)).toBe(`${((want.costSizePct / 1.3) * 100).toFixed(3)}cqw`);
     const band = pips.parentElement!;
-    expect(fontSize(band)).toBe(`${(want.titleSizePct * 100).toFixed(3)}cqw`);
+    expect(fontSize(band)).toBe(`${(measuredLinePreviewPct(want.titleSizePct, second.title.sizePct) * 100).toFixed(3)}cqw`);
     expect(band.getAttribute("style")).toMatch(/gap:2\.000cqw/);
   });
 });

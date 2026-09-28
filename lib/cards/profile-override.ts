@@ -86,6 +86,10 @@ export const frameProfileOverrideSchema = z
     loyalty: statSlotOverrideSchema,
     defense: statSlotOverrideSchema,
     costSizePct: sizePct,
+    // The set-symbol BOX since layout v32 (lib/cards/set-symbol-size.ts). It
+    // never switches a Keyrune glyph to the ink fit: that is the code-owned
+    // FrameProfile.setSymbolFit (the M15-era family), so on any other
+    // template the glyph's font size stays the box, as before v32.
     symbolSizePct: sizePct,
     chapters: z.object({ rect: rectOverrideSchema, sizePct }).partial().strict(),
     adventure: z

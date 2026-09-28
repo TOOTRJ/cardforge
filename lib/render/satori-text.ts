@@ -1,7 +1,7 @@
 import "server-only";
 
 import fontkit from "@pdf-lib/fontkit";
-import { DISPLAY_FONT_BYTES, KEYRUNE_FONT_BYTES } from "@/lib/render/card-fonts";
+import { DISPLAY_FONT_BYTES } from "@/lib/render/card-fonts";
 
 // ---------------------------------------------------------------------------
 // How Satori sets one run of text — the width its layout gives the text node
@@ -20,7 +20,6 @@ import { DISPLAY_FONT_BYTES, KEYRUNE_FONT_BYTES } from "@/lib/render/card-fonts"
 type Font = ReturnType<typeof fontkit.create>;
 
 let display: Font | null = null;
-let keyrune: Font | null = null;
 
 /**
  * One single-line CardDisplay run at `fontPx`, in px: `box` is the width
@@ -44,11 +43,6 @@ export function displayRunPx(
   };
 }
 
-/** The advance of one Keyrune set-symbol glyph at `fontPx`, in px. */
-export function keyruneAdvancePx(glyph: string, fontPx: number): number {
-  keyrune ??= fontkit.create(KEYRUNE_FONT_BYTES);
-  const advance = keyrune
-    .glyphsForString(glyph)
-    .reduce((sum, g) => sum + g.advanceWidth, 0);
-  return (advance * fontPx) / keyrune.unitsPerEm;
-}
+// A Keyrune set glyph's advance is not measured here: both renderers read it
+// from lib/cards/keyrune-metrics.ts (setSymbolSize / setSymbolDrawnPx in
+// lib/cards/set-symbol-size.ts), generated from the same keyrune.ttf.
