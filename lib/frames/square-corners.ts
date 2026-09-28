@@ -23,11 +23,11 @@ import type { CardCornerFills, CornerFill } from "@/lib/cards/card-corner";
 //
 // At a border or root corner the fill REPLACES everything outside the arc
 // (lib/cards/card-corner.ts squareCardCorners), so a frame's own pixels
-// there — expeditionland's paper, adventure's paper stair-step, Alpha's
-// 60 px cut — never print, and a free Square (the stored round bake squared
-// with the same fills) is the paid live Square's twin. A template with a
-// "frame" corner renders its free Square live instead (the round bake's
-// downscale no longer carries those pixels).
+// there — expeditionland b/g's paper, Alpha's 60 px cut — never print, and
+// a free Square (the stored round bake squared with the same fills) is the
+// paid live Square's twin. A template with a "frame" corner renders its
+// free Square live instead (the round bake's downscale no longer carries
+// those pixels).
 //
 // tests/unit/frames/square-corners.test.ts holds this table to the masters
 // (git, and the frames bucket where a local build is present).

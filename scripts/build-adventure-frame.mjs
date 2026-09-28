@@ -16,7 +16,11 @@
 // BASE is the MSE m15 master, which left git when 4.4 swapped the M15 family
 // to Card Conjurer (cd2ffcc): restore it from history before a rebuild
 // (`git show cd2ffcc^:public/frames/m15/<key>.png`), never from the Card
-// Conjurer m15 — a CC-derived master never enters the repo. The card
+// Conjurer m15 — a CC-derived master never enters the repo. Restore it
+// outside public/frames and point BASE there: m15 is bucket-hosted now, and
+// a copy left under public/frames/m15 turns frame-manifest.test.ts red. A
+// rebuild changes the whole frame slightly (today's master was
+// palette-quantised by 42b1126), so compare it before committing. The card
 // corners are normalised before the write (Phase B, TODO 3.26; adventure
 // joined the allow-list on 2026-09-28), so a rebuild can't bring back the
 // grey paper rim inside the cut.
@@ -72,9 +76,13 @@ async function build(colorKey, stem) {
   const { data, info } = await sharp(composed).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   const { width: W, height: H, channels: ch } = info;
 
+  // Written truecolour, never a palette: sharp's `effort` (like `palette`,
+  // `quality`, `colours`) quantises AFTER the gate, which moved every pixel
+  // of the cut's alpha ramp (by up to 52) and brought repainted pixels back
+  // lighter.
   normaliseMasterCorners(path.basename(OUT), colorKey, data, W, H);
   await sharp(data, { raw: { width: W, height: H, channels: ch } })
-    .png({ compressionLevel: 9, effort: 10 })
+    .png({ compressionLevel: 9 })
     .toFile(path.join(OUT, `${colorKey}.png`));
   console.log(`${colorKey}.png  ← m15 + double_page(${stem}) + null_page(${stem})`);
 }

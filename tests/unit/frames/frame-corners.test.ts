@@ -297,6 +297,22 @@ describe("the MSE builders run the pass", () => {
       expect(src, file).toMatch(/normaliseMasterCorners\(path\.basename\(\w+\), \w+, data, W, H\);\s+await sharp\(data/);
     }
   });
+  // sharp's `effort` (like `palette`, `quality`, `colours`, `dither`)
+  // quantises the PNG to a palette AFTER the gate passed: on a rebuilt
+  // adventure master it moved every pixel of the cut's alpha ramp (by up to
+  // 52) and brought a few repainted pixels back lighter, and the corner
+  // check and "already normalised" below still pass on that. The master
+  // written must be the one the gate checked, so the write is truecolour.
+  // Still quantising (a follow-up: drop their `effort: 10`):
+  const QUANTISE_AFTER_THE_GATE = ["build-aftermath-frame.mjs", "build-era-frames.mjs", "build-flip-frame.mjs", "convert-mse-frame.mjs"];
+  it("writes the normalised master truecolour — the pixels the gate passed", () => {
+    for (const file of new Set(Object.values(BUILDER_OF))) {
+      const src = fs.readFileSync(path.join(process.cwd(), "scripts", file), "utf8");
+      const write = /normaliseMasterCorners\(path\.basename\(\w+\), \w+, data, W, H\);[^;]*?await sharp\(data[^;]*?\.png\(([^)]*)\)/.exec(src);
+      expect(write, file).not.toBeNull();
+      expect(/\b(effort|palette|quality|colou?rs|dither)\b/.test(write![1]), file).toBe(QUANTISE_AFTER_THE_GATE.includes(file));
+    }
+  });
 });
 
 // The committed masters are normalised: a rebuild that skipped the pass (or

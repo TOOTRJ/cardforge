@@ -176,13 +176,20 @@ read it.
     `build-flip-frame.mjs`, `build-adventure-frame.mjs`) run the same pass
     AND gate before they write (`normaliseMasterCorners` throws and
     restores the master on any failure), so a rebuild can't bring the
-    white back. Then `npm run
-    assets:frame-webp`. (`build-adventure-frame.mjs` composites on the MSE
-    m15 master, which left git with 4.4's Card Conjurer swap: restore it
-    from `cd2ffcc^` first, never the Card Conjurer m15.) The normalised
-    masters are truecolour PNGs: a lossless palette is impossible (the
-    base palettes were already full at 255–256 colours and the cut's alpha
-    ramp adds 35–58), and a quantised one would move the mask's alpha.
+    white back. Then `npm run assets:frame-webp`.
+    (`build-adventure-frame.mjs` composites on the MSE m15 master, which
+    left git with 4.4's Card Conjurer swap: restore it from `cd2ffcc^`
+    outside `public/frames` first, never the Card Conjurer m15.) The
+    normalised masters are truecolour PNGs: a lossless palette is
+    impossible (the base palettes were already full at 255–256 colours and
+    the cut's alpha ramp adds 35–58), and a quantised one moves the mask's
+    alpha — so a builder writes truecolour after the gate. sharp's `effort`
+    turns palette quantisation on: on a rebuilt adventure master it moved
+    every pixel of the cut's ramp (by up to 52), and the corner check still
+    passed. `build-adventure-frame.mjs` and `build-variation-frames.mjs`
+    write truecolour; the aftermath, era, flip and `convert-mse-frame.mjs`
+    builders still pass `effort: 10` (a follow-up;
+    `tests/unit/frames/frame-corners.test.ts` lists them).
 - **Square outputs.** Print (the PDF card and sheets, the Pro deck PDF +
   ZIP) and the Square PNG are the round render squared again
   (`squareCardCorners`): outside the arc each corner is the card's border
