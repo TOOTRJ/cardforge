@@ -621,6 +621,234 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
     },
   },
 
+  // --- 1.17: border_color borderless ---------------------------------------
+  {
+    key: "borderless/poster",
+    exactLabel: "Artist-lettered borderless poster",
+    match: { borders: ["borderless"], promosAny: ["poster"] },
+    outcome: {
+      status: "unsupported",
+      template: { family: "borderless" },
+      reason: "an artist-lettered poster is a one-off design",
+      forGood: true,
+    },
+  },
+  {
+    key: "borderless/sourcematerial",
+    exactLabel: "Source-material borderless frame (text on the art)",
+    match: { borders: ["borderless"], promosAny: ["sourcematerial"] },
+    outcome: {
+      status: "nearest",
+      template: { family: "borderless" },
+      reason: "PipGlyph doesn't have the text-on-art frame yet",
+      blockedBy: "4.36",
+    },
+  },
+  {
+    key: "borderless/mystical-archive",
+    exactLabel: "Mystical Archive frame",
+    match: { borders: ["borderless"], sets: ["sta", "soa"] },
+    outcome: {
+      status: "nearest",
+      template: { family: "borderless" },
+      reason: "PipGlyph doesn't have the Mystical Archive frame yet",
+      blockedBy: "4.11",
+    },
+  },
+  {
+    key: "borderless/stellar-sights",
+    exactLabel: "Stellar Sights borderless frame",
+    match: { borders: ["borderless"], sets: ["eos"] },
+    outcome: {
+      status: "nearest",
+      template: { family: "borderless" },
+      reason: "PipGlyph doesn't have the Stellar Sights frame yet",
+      blockedBy: "4.11",
+    },
+  },
+  {
+    key: "borderless/unsupported-set",
+    exactLabel: ({ card, set }) => `${card.set_name ?? set.toUpperCase()} borderless frame`,
+    // UST's five textless basics are 1.17's textless borderless basics.
+    match: { borders: ["borderless"], sets: ["mp2", "ust", "bot"], singleBasic: false },
+    outcome: {
+      status: "unsupported",
+      template: { family: "borderless" },
+      reason: "this set's borderless frame is a one-off design",
+    },
+  },
+  // Bloomburrow: ONE woodland run in WUBRG + gold order, #295–336 (checked
+  // by eye 2026-09-28: #315 and #316 print the same vine frame, so 1.17's
+  // split at #316 was wrong), and the raised-foil anime legends #343–355
+  // (black bars with vine flourishes at their corners: the bloomanime
+  // master). #282–294 are the standard borderless run.
+  {
+    key: "showcase/blb/woodland",
+    exactLabel: "Bloomburrow woodland showcase",
+    match: { borders: ["borderless"], collectors: { blb: [[295, 336]] } },
+    outcome: { status: "exact", template: "bloomburrow" },
+  },
+  {
+    key: "showcase/blb/anime",
+    exactLabel: "Bloomburrow anime showcase",
+    match: { borders: ["borderless"], collectors: { blb: [[343, 355]] } },
+    outcome: { status: "exact", template: "bloomanime" },
+  },
+  {
+    key: "showcase/ltr/ring",
+    exactLabel: "The Lord of the Rings ring showcase",
+    match: { borders: ["borderless"], collectors: { ltr: [[302, 331], [794, 823]] } },
+    outcome: { status: "exact", template: "lotr" },
+  },
+  {
+    key: "showcase/tdm/clan",
+    exactLabel: "Tarkir: Dragonstorm clan showcase (text on the art)",
+    match: { borders: ["borderless"], collectors: { tdm: [[327, 376]] } },
+    outcome: {
+      status: "nearest",
+      template: { family: "borderless" },
+      reason: "PipGlyph doesn't have the text-on-art frame yet",
+      blockedBy: "4.36",
+    },
+  },
+  {
+    key: "showcase/tla/avatar",
+    exactLabel: "Avatar: The Last Airbender elemental showcase",
+    // TLE #305–317 (the Eternal-legal companion set) print the same frame,
+    // including its only colourless printings (Arcane Signet TLE #315).
+    match: { borders: ["borderless"], collectors: { tla: [[336, 353]], tle: [[305, 317]] } },
+    outcome: { status: "exact", template: "avatar" },
+  },
+  {
+    key: "borderless/showcase",
+    exactLabel: (ctx) => `${showcaseLabel(ctx)} (borderless)`,
+    match: { borders: ["borderless"], effectsAny: ["showcase"] },
+    outcome: {
+      status: "nearest",
+      template: { family: "borderless" },
+      reason: "PipGlyph doesn't have this set's showcase frame yet",
+      blockedBy: "4.11",
+    },
+  },
+  {
+    key: "borderless/basic/textless",
+    exactLabel: "Textless borderless basic land",
+    match: { borders: ["borderless"], singleBasic: true, textless: true },
+    outcome: {
+      status: "nearest",
+      template: "m15textlessland",
+      reason: "each set prints its own textless basic design",
+      blockedBy: "4.11",
+    },
+  },
+  {
+    key: "borderless/basic/two-bar",
+    exactLabel: "Borderless full-art basic land (title bar + type bar)",
+    match: { borders: ["borderless"], singleBasic: true, collectors: { fra: [[382, 396]] } },
+    outcome: {
+      status: "nearest",
+      template: "fullartland",
+      reason: "this printing's bars are dark, and PipGlyph's are light (owner decision)",
+      blockedBy: "4.39",
+    },
+  },
+  {
+    key: "borderless/basic",
+    exactLabel: "Borderless full-art basic land",
+    match: { borders: ["borderless"], singleBasic: true },
+    outcome: {
+      status: "nearest",
+      template: "fullartland",
+      reason: "each set prints its own borderless basic design",
+      blockedBy: "4.11",
+    },
+  },
+  {
+    key: "borderless/textless",
+    exactLabel: "Textless borderless frame",
+    match: { borders: ["borderless"], textless: true },
+    outcome: {
+      status: "nearest",
+      template: { family: "textless" },
+      reason: "PipGlyph's textless frame still has a black ring",
+      blockedBy: "4.35",
+    },
+  },
+  {
+    key: "borderless/dfc",
+    exactLabel: "Borderless double-faced card",
+    match: {
+      borders: ["borderless"],
+      anyOf: [{ layouts: ["transform", "modal_dfc"] }, { effectsAny: DFC_EFFECTS }],
+    },
+    outcome: {
+      status: "nearest",
+      template: { family: "borderless" },
+      reason: "PipGlyph doesn't have the borderless double-faced frames yet",
+      blockedBy: "5.7",
+    },
+  },
+  {
+    key: "borderless/planeswalker",
+    exactLabel: "Borderless planeswalker",
+    match: { borders: ["borderless"], kinds: ["planeswalker"] },
+    outcome: {
+      status: "nearest",
+      template: "m15pw",
+      reason: "PipGlyph doesn't have the borderless planeswalker frame yet",
+      blockedBy: "4.33",
+    },
+  },
+  {
+    key: "borderless/land",
+    exactLabel: "Borderless land",
+    match: { borders: ["borderless"], kinds: ["land"] },
+    outcome: {
+      status: "nearest",
+      template: "m15land",
+      reason: "PipGlyph doesn't have the borderless land frame yet",
+      blockedBy: "4.34",
+    },
+  },
+  {
+    key: "borderless/layout",
+    exactLabel: "Borderless layout card",
+    match: {
+      borders: ["borderless"],
+      anyOf: [
+        { kinds: LAYOUT_KINDS },
+        { layouts: UNMODELLED_LAYOUTS },
+        { subtypesAny: UNMODELLED_SUBTYPES },
+      ],
+    },
+    outcome: {
+      status: "nearest",
+      template: { family: "borderless" },
+      reason: "PipGlyph doesn't have the borderless layout frames yet",
+      blockedBy: "4.38",
+    },
+  },
+  {
+    key: "borderless/token",
+    exactLabel: "Borderless token",
+    match: { borders: ["borderless"], kinds: ["token"] },
+    outcome: {
+      status: "nearest",
+      template: "m15token",
+      reason: "PipGlyph doesn't have the borderless token frame yet",
+      blockedBy: "4.37",
+    },
+  },
+  ...withGaps(
+    {
+      key: "borderless/standard",
+      exactLabel: "Borderless frame",
+      match: { borders: ["borderless"] },
+      outcome: { status: "exact", template: { family: "borderless" } },
+    },
+    ["etched", "nickname", "crown", "nyx", "vehicle", "colour-indicator", "two-colour", "light-box"],
+  ),
+
   // --- 1.4: pinned showcase runs -------------------------------------------
   {
     key: "showcase/ltr/scroll",

@@ -70,9 +70,9 @@ describe("printingTreatmentFromScryfall — fixtures from 1.16 / 1.19", () => {
     ["dmu-435", "borderless", "m15"],
     // Clarion Conqueror TDM #400: black-bordered ghostfire showcase.
     ["tdm-400", "showcase", "tarkirghostfire"],
-    // Festival of Embers BLB #316: borderless AND showcase → borderless (the
-    // borderless showcase families are 1.17's).
-    ["blb-316", "borderless", "m15"],
+    // Festival of Embers BLB #316: borderless AND showcase → borderless; the
+    // Bloomburrow woodland frame is its own.
+    ["blb-316", "borderless", "bloomburrow"],
     // Archangel of Wrath DMU #384: extended art.
     ["dmu-384", "extendedart", "extendedart"],
     // Overlord of the Floodpits DSK #389: Japan showcase (showcase + full art).
@@ -85,9 +85,10 @@ describe("printingTreatmentFromScryfall — fixtures from 1.16 / 1.19", () => {
     ["znr-266", "fullart", "m15land"],
     ["spm-189", "fullart", "m15land"],
     ["fin-309", "fullart", "m15land"],
-    // Borderless basics: FRA #382 (bars) and UNF #235 (textless).
-    ["fra-382", "borderless", "m15land"],
-    ["unf-235", "borderless", "m15land"],
+    // Borderless basics: FRA #382 (bars) → the borderless full-art basic,
+    // UNF #235 (textless) → the textless land.
+    ["fra-382", "borderless", "fullartland"],
+    ["unf-235", "borderless", "m15textlessland"],
     // Dark Confidant SCH #3: textless (and full art) → textless, lands on m15.
     ["sch-3", "textless", "m15"],
     // Cat T2XM #4: a full-art 2015 token already lands on its own family.
@@ -270,27 +271,27 @@ describe("printingTreatmentOffer — PipGlyph's frame for the treatment, once ve
     expect(printingTreatmentOffer(patchOf("sch-3"), verified(["m15fullartland", "b"]))).toBeNull();
   });
 
-  it("offers the borderless full-art basic for a borderless basic that prints text, never a textless one", () => {
+  it("lands a borderless basic that prints text on the borderless full-art basic, never a textless one", () => {
     // FRA #382: borderless, full art, the title bar + left disc (dark bars:
     // the nearest look, owner decision 4.39).
     const fra = patchOf("fra-382");
     expect(fra.printing_treatment).toBe("borderless");
     expect(fra.printing_detail).toEqual({ set: "fra", fullArt: true, textless: false });
-    expect(printingTreatmentOffer(fra, verified(["fullartland", "w"]))).toEqual({
-      template: "fullartland",
-      frameLabel: "Borderless Full-Art Basic",
-      actionLabel: "Use Borderless Full-Art Basic",
-    });
-    // Unverified, or only the borderless M15 frame verified: nothing.
+    expect(fra.frame_match).toMatchObject({ status: "nearest", template: "fullartland" });
+    expect(printingTreatmentLanding(fra, verified(["fullartland", "w"]))).toBe("fullartland");
+    expect(printingTreatmentOffer(fra, verified(["fullartland", "w"]))).toBeNull();
+    // Unverified: the import falls back to a plain frame, and nothing is offered.
+    expect(printingTreatmentLanding(fra, verified(["m15borderless", "w"], ["m15fullartland", "w"]))).toBeNull();
     expect(printingTreatmentOffer(fra, verified(["m15borderless", "w"], ["m15fullartland", "w"]))).toBeNull();
     // UNF #235 is textless: m15textlessland's (4.35), no offer.
     const unf = patchOf("unf-235");
     expect(unf.printing_detail?.textless).toBe(true);
+    expect(unf.frame_template).toBe("m15textlessland");
     expect(printingTreatmentOffer(unf, verified(["fullartland", "w"], ["m15borderless", "w"]))).toBeNull();
-    // The dialog names the offer before the import.
-    expect(printingTreatmentHint("borderless", printingTreatmentOffer(fra, verified(["fullartland", "w"])))).toBe(
-      "This printing is borderless — the import uses a bordered frame, then offers PipGlyph's Borderless Full-Art Basic frame.",
-    );
+    // The dialog names the frame the import lands on.
+    expect(
+      printingTreatmentHint("borderless", null, printingTreatmentLanding(fra, verified(["fullartland", "w"]))),
+    ).toBe("This printing is borderless — the import uses PipGlyph's Full Art Borderless Basic Land frame.");
   });
 
   it("the dialog's heads-up names the offered frame, or keeps today's copy", () => {

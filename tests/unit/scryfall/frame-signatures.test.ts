@@ -31,6 +31,81 @@ const colorKeyOf = (key: PrintingKey) => pickFrameColorKey(frameColorsFromScryfa
 // [fixture, status, template, landOn]
 type Row = [PrintingKey, FrameMatchStatus, FrameTemplate, FrameTemplate | undefined];
 
+describe("borderless families (TODO 1.17)", () => {
+  const rows: Row[] = [
+    // Standard: dark box = exact Borderless; the window-cropped art lands the
+    // import on the bordered frame (1.18's owner decision).
+    ["m21-315", "exact", "m15borderless", "m15"],
+    ["fdn-311", "exact", "m15borderless", "m15"],
+    ["blb-286", "exact", "m15borderless", "m15"],
+    // WOT #64: anime art with no showcase flag — the standard frame (by eye).
+    ["wot-64", "exact", "m15borderless", "m15"],
+    // Anatomy the frame doesn't draw: the crown (DMU #435), the nickname
+    // line (IKO #275).
+    ["dmu-435", "nearest", "m15borderless", "m15"],
+    ["iko-275", "nearest", "m15borderless", "m15"],
+    // Planeswalkers (4.33), light (ELD #271) and dark (WOE #297).
+    ["eld-271", "nearest", "m15pw", undefined],
+    ["woe-297", "nearest", "m15pw", undefined],
+    // Nonbasic lands (4.34).
+    ["mid-281", "nearest", "m15land", undefined],
+    ["otj-304", "nearest", "m15land", undefined],
+    // MDFC (5.7), saga / adventure / room (4.38).
+    ["znr-284", "nearest", "m15land", undefined],
+    ["tdm-383", "nearest", "saga", undefined],
+    ["woe-298", "nearest", "adventure", undefined],
+    ["dsk-334", "nearest", "m15borderless", "m15"],
+    // Showcase runs by collector number. BLB #295–336 is ONE woodland run
+    // (#315 and #316 print the same frame, checked by eye); the anime frame
+    // is the raised-foil #343–355, capped at nearest until its border is
+    // true (4.35).
+    ["blb-295", "exact", "bloomburrow", undefined],
+    ["blb-316", "exact", "bloomburrow", undefined],
+    ["blb-343", "nearest", "bloomanime", undefined],
+    ["ltr-306", "exact", "lotr", undefined],
+    ["tla-338", "exact", "avatar", undefined],
+    ["tle-315", "exact", "avatar", undefined],
+    // Text on the art (4.36): TDM clan, source material (full art: no landOn).
+    ["tdm-327", "nearest", "m15borderless", "m15"],
+    ["tle-1", "nearest", "m15borderless", undefined],
+    // Posters: unsupported for good, Borderless offered as the nearest.
+    ["spg-119", "unsupported", "m15borderless", undefined],
+    // Set frames: Mystical Archive, Stellar Sights (4.11); Amonkhet
+    // Invocations unsupported.
+    ["sta-1", "nearest", "m15borderless", "m15"],
+    ["eos-1", "nearest", "m15land", undefined],
+    ["mp2-1", "unsupported", "m15borderless", "m15"],
+    // Tokens (4.37).
+    ["wone-1", "nearest", "m15token", undefined],
+    // Basics: textless → the textless land (UNF #235); the two-bar FRA run
+    // → the borderless full-art basic (its bars print dark: nearest).
+    ["unf-235", "nearest", "m15textlessland", undefined],
+    ["fra-382", "nearest", "fullartland", undefined],
+    // Textless non-basic: the textless frame (its black ring, 4.35).
+    ["msh-385", "nearest", "m15textless", undefined],
+  ];
+
+  it.each(rows)("%s → %s %s (landOn %s)", (key, status, template, landOn) => {
+    const match = frameMatchFromScryfall(printing(key));
+    expect([match.status, match.template, match.landOn]).toEqual([status, template, landOn]);
+    expect(match.reason === null).toBe(status === "exact");
+  });
+
+  it("names why a borderless printing isn't exact", () => {
+    expect(frameMatchFromScryfall(printing("dmu-435"))).toMatchObject({
+      signature: "borderless/standard+crown",
+      blockedBy: "4.6",
+    });
+    expect(frameMatchFromScryfall(printing("iko-275")).signature).toBe("borderless/standard+nickname");
+    expect(frameMatchFromScryfall(printing("eld-271")).blockedBy).toBe("4.33");
+    expect(frameMatchFromScryfall(printing("spg-119"))).toMatchObject({ forGood: true });
+    expect(frameMatchFromScryfall(printing("blb-343"))).toMatchObject({
+      blockedBy: "4.35",
+      exactLabel: "Bloomburrow anime showcase",
+    });
+  });
+});
+
 describe("the general signatures (TODO 1.4)", () => {
   const rows: Row[] = [
     // Porcelain Legionnaire NPH #19: a white artifact creature on the 2003
@@ -137,6 +212,12 @@ describe("the acceptance's named cases (TODO 1.4 (e))", () => {
     expect(patch.frame_template).toBe("m15");
   });
 
+  it("Sheoldred DMU #435 → m15borderless, landing on bordered m15", () => {
+    const patch = mapScryfallToFormPatch(printing("dmu-435"));
+    expect(patch.frame_match).toMatchObject({ template: "m15borderless", landOn: "m15" });
+    expect(patch.frame_template).toBe("m15");
+  });
+
   it("layout kinds keep frame_template undefined (the kind fixes it) but carry the match", () => {
     const patch = mapScryfallToFormPatch(printing("tdm-320"));
     expect(patch.kind).toBe("adventure");
@@ -145,7 +226,7 @@ describe("the acceptance's named cases (TODO 1.4 (e))", () => {
   });
 
   it("survives the route's JSON hop", () => {
-    const patch = mapScryfallToFormPatch(printing("nph-19"));
+    const patch = mapScryfallToFormPatch(printing("dmu-435"));
     const wire = JSON.parse(JSON.stringify(patch)) as typeof patch;
     expect(wire.frame_match).toEqual(patch.frame_match);
   });

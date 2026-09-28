@@ -628,6 +628,10 @@ describe("the signature registry's landings (TODO 1.4)", () => {
     expect(landing(signature("ktk-233"))).toEqual({ template: "m15land", colorKey: "m", status: "exact" });
   });
 
+  it("Sheoldred DMU #435 still lands on bordered M15 (landOn)", () => {
+    expect(landing(signature("dmu-435"))).toEqual({ template: "m15", colorKey: "b", status: "exact" });
+  });
+
   it("a Theros constellation god lands on M15: PipGlyph's Nyx dresses enchantments only", () => {
     expect(landing(signature("thb-259"))).toEqual({ template: "m15", colorKey: "w", status: "exact" });
   });
