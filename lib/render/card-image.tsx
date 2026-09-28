@@ -23,8 +23,10 @@ import {
   COST_PIP_GAP,
   NAME_COST_GAP_PCT,
   fitRulesSizePct,
-  fitSingleLineSizePct,
   fitSplitTypeSizePct,
+  fitTypeLineBand,
+  inlineSymbolPullPct,
+  measuredLinePx,
   secondFaceLineSizes,
 } from "@/lib/cards/render-tiers";
 import { fitStatSizePct, ptValue, STAT_BADGE_INSET } from "@/lib/cards/stat-fit";
@@ -97,7 +99,12 @@ import {
   getKeyruneCodepoint,
   getManaCodepoint,
 } from "@/lib/render/card-fonts";
-import { displayRunPx, keyruneAdvancePx } from "@/lib/render/satori-text";
+import { displayRunPx } from "@/lib/render/satori-text";
+import {
+  setSymbolDrawnPx,
+  setSymbolSize,
+  setSymbolSource,
+} from "@/lib/cards/set-symbol-size";
 import {
   getFrameAssetDataUrl,
   getFrameDataUrl,
@@ -116,6 +123,7 @@ import {
   SAGA_MARKER_POINTS,
   loyaltyBadgeShapeFor,
   slotInk,
+  slotTextDy,
   type FrameProfile,
   type Rect,
   type SlotAlign,
@@ -141,7 +149,7 @@ import {
   loyaltyRowEdgesPx,
   type LoyaltyRowsLayout,
 } from "@/lib/cards/loyalty-rows";
-import { fitDetachedCostTitle } from "@/lib/cards/title-band";
+import { fitTitleBand } from "@/lib/cards/title-band";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import type { CardBackFace, ColorIdentity, Rarity } from "@/types/card";
 import { clamp } from "@/lib/utils";
@@ -213,6 +221,18 @@ function slotBox(rect: Rect) {
 
 function fpx(sizePct: number, cardWidth: number): number {
   return Math.round(sizePct * cardWidth);
+}
+
+/** TextSlot.dy (TODO 4.20): the slot's text span — never its band, pips or
+ *  set symbol — moved vertically by the whole px nearest dy × width
+ *  (negative = up), as CostGlyphs moves the pips by costDy; a measured line
+ *  the fit shrank to `drawnSizePct` (its whole-px size) also keeps its
+ *  baseline (slotTextDy). Front-face title and type line only; the
+ *  preview's textDy twin translates by the same dy in cqw. */
+function textDyBake(slot: TextSlot, cardWidth: number, drawnSizePct = slot.sizePct): { transform?: string } {
+  const dyPct = slotTextDy(slot, drawnSizePct);
+  const dy = dyPct ? fpx(dyPct, cardWidth) : 0;
+  return dy ? { transform: `translate(0px, ${dy}px)` } : {};
 }
 
 /** A stat value's font size in px (TODO 3.18): the profile size, rounded as
@@ -373,26 +393,51 @@ function CardImage({
   // A two-box type line (TextSlot.split, TODO 3.24): split at the em dash,
   // one size for both halves — the preview's twin.
   const typeSplit = layout.type.split ? splitTypeLine(typeLine) : null;
+  const orientation: CardOrientation = layout.orientation === "landscape" ? "landscape" : "portrait";
+  // The set symbol's size and drawn width (lib/cards/set-symbol-size.ts) —
+  // the preview's twin: the same box, glyph fit and width in both renderers.
+  const setSymbol = setSymbolSize(layout, setSymbolSource(card.setIconUrl, card.setIconCode));
+  // The preview's twin: the old estimate, or (a measured slot, the M15-era
+  // family) the room before the set symbol's ink as drawn — its size, its
+  // text (cut with a "…" only past the floor) and its width. A measured
+  // line that shrank is set at measuredLinePx, the whole pixel BELOW its
+  // fitted size (never below the floor's), like the name.
+  const typeFit =
+    layout.type.split && typeSplit
+      ? null
+      : fitTypeLineBand({
+          layout,
+          text: typeLine,
+          symbolWidthPct: setSymbol.drawnWidthPct,
+          symbolInkLeftPct: setSymbol.inkLeftPct,
+          orientation,
+        });
+  const typeFitPct =
+    layout.type.split && typeSplit
+      ? fitSplitTypeSizePct({
+          left: typeSplit[0],
+          right: typeSplit[1],
+          leftRect: layout.type.split.leftRect,
+          rightRect: layout.type.split.rightRect,
+          baseSizePct: layout.type.sizePct,
+        })
+      : (typeFit?.sizePct ?? layout.type.sizePct);
+  const typeMeasured = layout.type.fit === "measured";
   const typeSlot: TextSlot = {
     ...layout.type,
     sizePct:
-      layout.type.split && typeSplit
-        ? fitSplitTypeSizePct({
-            left: typeSplit[0],
-            right: typeSplit[1],
-            leftRect: layout.type.split.leftRect,
-            rightRect: layout.type.split.rightRect,
-            baseSizePct: layout.type.sizePct,
-          })
-        : fitSingleLineSizePct({
-            text: typeLine,
-            rect: layout.type.rect,
-            baseSizePct: layout.type.sizePct,
-            reservedPct: layout.symbolRect
-              ? 0
-              : (layout.symbolSizePct ?? layout.type.sizePct * 1.1) * 1.3,
-          }),
+      typeMeasured && typeFitPct < layout.type.sizePct
+        ? measuredLinePx(typeFitPct, layout.type.sizePct, width, orientation) / width
+        : typeFitPct,
   };
+  const typeText = typeFit ? typeFit.text : typeLine;
+  // A measured band's inline set symbol is pulled left over the band gap (it
+  // stays where it was): the line's room ends a print's gap before its ink
+  // (inlineSymbolPullPct) — the preview's twin. It never shrinks.
+  const symbolPull = inlineSymbolPullPct(layout, setSymbol);
+  const inlineSymbolWrap = typeMeasured
+    ? { flexShrink: 0, ...(symbolPull ? { marginLeft: -Math.round(symbolPull * width) } : {}) }
+    : undefined;
   // Room a centred title / type line may fill before it ellipsizes: the band
   // less the set symbol + gap beside it (see alignedText; a cost in the
   // title band is never centred, so 0 = don't judge).
@@ -401,14 +446,7 @@ function CardImage({
   const typeRoom = !isAligned(typeSlot)
     ? 0
     : bandWidth(typeSlot, width) -
-      (layout.symbolRect
-        ? 0
-        : fpx(0.02, width) +
-          setSymbolWidth({
-            iconUrl: card.setIconUrl,
-            setCode: card.setIconCode,
-            fontSize: fpx(layout.symbolSizePct ?? layout.type.sizePct * 1.1, width),
-          }));
+      (layout.symbolRect ? 0 : fpx(0.02, width) + setSymbolDrawnPx(setSymbol, width));
 
   // Same gating as the preview (shared helpers) — and only when the frame
   // actually defines a slot for that stat.
@@ -470,14 +508,24 @@ function CardImage({
   const sagaContent = layout.chapters
     ? resolveSagaChapters(card.faceContent, card.rulesText)
     : null;
-  // A detached cost box (costRect): the name stops before the pips, shrinking
-  // to fit there when it is long (the preview's twin, lib/cards/title-band.ts).
+  // The name's fit (the preview's twin, lib/cards/title-band.ts): before a
+  // detached cost box (costRect) it stops before the pips, shrinking to fit
+  // there when it is long; on a measured slot (the M15-era family, layout
+  // v32) it shrinks to the room its band leaves it wherever the cost is.
   // A shrunk name is set at the whole pixel BELOW its fitted size: rounding
   // up could push a name that fits back into its ellipsis.
-  const titleFit = showCost ? fitDetachedCostTitle(layout, title, card.cost) : null;
+  // A measured name that shrank is set at measuredLinePx (never below the
+  // floor's whole pixel) and keeps its baseline (textDyBake).
+  const titleFit = fitTitleBand(layout, title, showCost ? card.cost : null, orientation);
   const titleSlot =
     titleFit && titleFit.sizePct < layout.title.sizePct
-      ? { ...layout.title, sizePct: Math.floor(titleFit.sizePct * width) / width }
+      ? {
+          ...layout.title,
+          sizePct:
+            layout.title.fit === "measured"
+              ? measuredLinePx(titleFit.sizePct, layout.title.sizePct, width, orientation) / width
+              : Math.floor(titleFit.sizePct * width) / width,
+        }
       : layout.title;
   // Explicit watermark wins; basic lands automatically get the large mana
   // symbol — identical resolution to the live preview.
@@ -723,15 +771,54 @@ function CardImage({
         />
       ) : null}
 
+      {/* Rules-box backdrop — own layer under the watermark and the title /
+          type bands (see the preview's twin comment: z9 under their z20).
+          Satori paints in document order, so it comes BEFORE the bands:
+          where a rules box overlaps the type bar (Expedition, 60.5 %H) the
+          backdrop used to dim the bake's type line and set symbol only. */}
+      {layout.rules.backdropHex &&
+      hasRulesContent &&
+      !layout.chapters &&
+      !(layout.loyaltyRows && loyaltyAbilities.length > 0) ? (
+        <div
+          style={{
+            ...slotBox(layout.rules.rect),
+            // Satori refuses a div with an element child unless it's flex.
+            display: "flex",
+            zIndex: 9,
+            background: layout.rules.backdropHex,
+            borderRadius: backdropRadius,
+          }}
+        >
+          {/* Foil: the backdrop's own sheen, masked by its colour — its only
+              child, so Satori paints it over the backdrop and under the
+              watermark + text. Satori clips an image to its own shape, not
+              to its parent's rounded corners, so it rounds its own. */}
+          {plateFoil ? (
+            <FoilBackdropSheen
+              id="foil-backdrop"
+              region={layout.rules.rect}
+              fill={layout.rules.backdropHex}
+              landscape={plateFoil.landscape}
+              width={Math.round((layout.rules.rect.widthPct / 100) * width)}
+              height={Math.round((layout.rules.rect.heightPct / 100) * height)}
+              style={{ width: "100%", height: "100%", borderRadius: backdropRadius }}
+            />
+          ) : null}
+        </div>
+      ) : null}
+
       {/* Title band — name + mana cost. A centred title (tokens) has no
           cost beside it: no filler span either, or the band's gap pushed
-          the name half a gap left of the preview's. (Nor a detached cost:
-          titleFit is only ever set on a left-aligned band.) */}
+          the name half a gap left of the preview's. Nor a measured band
+          (layout v32) with no inline cost: the preview never draws one, and
+          the name's room runs to the band's end (titleBandRoomPct). */}
       <Band slot={titleSlot} cardWidth={width} italic={isShowcase}>
         <span
           style={{
-            ...alignedText(layout.title, displayLine(title), fpx(layout.title.sizePct, width), titleRoom),
+            ...alignedText(titleSlot, displayLine(titleFit ? titleFit.text : title), fpx(titleSlot.sizePct, width), titleRoom),
             ...titleInk,
+            ...textDyBake(layout.title, width, titleSlot.sizePct),
             ...(titleFit ? { maxWidth: Math.round(titleFit.widthPct * width) } : {}),
           }}
         >
@@ -744,7 +831,7 @@ function CardImage({
             overrides={card.pipOverrides}
             dy={layout.costDy ? fpx(layout.costDy, width) : 0}
           />
-        ) : isAligned(layout.title) ? null : (
+        ) : isAligned(layout.title) || layout.title.fit === "measured" ? null : (
           <span style={{ display: "flex" }} />
         )}
       </Band>
@@ -781,19 +868,22 @@ function CardImage({
       <Band slot={typeSlot} cardWidth={width}>
         <span
           style={{
-            ...alignedText(typeSlot, displayLine(typeLine), fpx(typeSlot.sizePct, width), typeRoom),
+            ...alignedText(typeSlot, displayLine(typeText), fpx(typeSlot.sizePct, width), typeRoom),
             ...typeInk,
+            ...textDyBake(layout.type, width, typeSlot.sizePct),
+            ...(typeFit?.widthPct != null ? { maxWidth: Math.round(typeFit.widthPct * width) } : {}),
           }}
         >
-          {displayLine(typeLine)}
+          {displayLine(typeText)}
         </span>
         {!layout.symbolRect ? (
           <SetSymbolGlyph
             rarity={(card.rarity as Rarity | null) ?? "common"}
             iconUrl={card.setIconUrl}
             setCode={card.setIconCode}
-            fontSize={fpx(layout.symbolSizePct ?? layout.type.sizePct * 1.1, width)}
+            fontSize={fpx(setSymbol.sizePct, width)}
             keyline={layout.setSymbolKeyline}
+            wrap={inlineSymbolWrap}
           />
         ) : isAligned(typeSlot) ? null : (
           <span style={{ display: "flex" }} />
@@ -813,43 +903,9 @@ function CardImage({
             rarity={(card.rarity as Rarity | null) ?? "common"}
             iconUrl={card.setIconUrl}
             setCode={card.setIconCode}
-            fontSize={fpx(layout.symbolSizePct ?? layout.type.sizePct * 1.1, width)}
+            fontSize={fpx(setSymbol.sizePct, width)}
             keyline={layout.setSymbolKeyline}
           />
-        </div>
-      ) : null}
-
-      {/* Rules-box backdrop — own layer under the watermark (see the
-          preview's twin comment). */}
-      {layout.rules.backdropHex &&
-      hasRulesContent &&
-      !layout.chapters &&
-      !(layout.loyaltyRows && loyaltyAbilities.length > 0) ? (
-        <div
-          style={{
-            ...slotBox(layout.rules.rect),
-            // Satori refuses a div with an element child unless it's flex.
-            display: "flex",
-            zIndex: 9,
-            background: layout.rules.backdropHex,
-            borderRadius: backdropRadius,
-          }}
-        >
-          {/* Foil: the backdrop's own sheen, masked by its colour — its only
-              child, so Satori paints it over the backdrop and under the
-              watermark + text. Satori clips an image to its own shape, not
-              to its parent's rounded corners, so it rounds its own. */}
-          {plateFoil ? (
-            <FoilBackdropSheen
-              id="foil-backdrop"
-              region={layout.rules.rect}
-              fill={layout.rules.backdropHex}
-              landscape={plateFoil.landscape}
-              width={Math.round((layout.rules.rect.widthPct / 100) * width)}
-              height={Math.round((layout.rules.rect.heightPct / 100) * height)}
-              style={{ width: "100%", height: "100%", borderRadius: backdropRadius }}
-            />
-          ) : null}
         </div>
       ) : null}
 
@@ -1299,7 +1355,13 @@ function SplitTypeBake({
     const line = displayLine(text);
     return (
       <Band slot={band} cardWidth={cardWidth}>
-        <span style={{ ...alignedText(band, line, fpx(slot.sizePct, cardWidth), bandWidth(band, cardWidth)), ...ink }}>
+        <span
+          style={{
+            ...alignedText(band, line, fpx(slot.sizePct, cardWidth), bandWidth(band, cardWidth)),
+            ...ink,
+            ...textDyBake(slot, cardWidth),
+          }}
+        >
           {line}
         </span>
       </Band>
@@ -1412,21 +1474,24 @@ function BasicSymbolBake({
  *  layer, in the layer's colour and offset, UNDER the glyph (paint order =
  *  DOM order) — Satori merges a multi-layer text-shadow into one filter and
  *  librsvg keeps only the last layer (FooterBake, TODO 3.25). The copies are
- *  absolute, so the glyph's box — and the type band's layout and the width
- *  setSymbolWidth measures — is the plain glyph's. Any other shadow stays
- *  CSS. */
+ *  absolute, so the glyph's box — and the type band's layout and the drawn
+ *  width setSymbolDrawnPx reads from lib/cards/keyrune-metrics.ts — is the
+ *  plain glyph's. Any other shadow stays CSS. */
 function KeylinedKeyruneGlyph({
   glyph,
   fontSize,
   color,
   keyline,
+  wrap,
 }: {
   glyph: string;
   fontSize: number;
   color: string;
   keyline: string;
+  /** SetSymbolGlyph's `wrap`, on the outer element. */
+  wrap?: React.CSSProperties;
 }) {
-  const style = { display: "flex", fontFamily: '"Keyrune"', fontSize, lineHeight: 1, color };
+  const style = { display: "flex", fontFamily: '"Keyrune"', fontSize, lineHeight: 1, color, ...wrap };
   const copies = textShadowCopies(keyline, fontSize);
   if (!copies) return <span style={{ ...style, textShadow: keyline }}>{glyph}</span>;
   return (
@@ -1439,20 +1504,6 @@ function KeylinedKeyruneGlyph({
       <span style={{ display: "flex" }}>{glyph}</span>
     </span>
   );
-}
-
-/** SetSymbolGlyph's laid-out width at `fontSize` (its three branches). */
-function setSymbolWidth({
-  iconUrl,
-  setCode,
-  fontSize,
-}: {
-  iconUrl?: string | null;
-  setCode?: string | null;
-  fontSize: number;
-}): number {
-  if (iconUrl || !setCode) return Math.round(fontSize);
-  return keyruneAdvancePx(getKeyruneCodepoint(setCode) ?? KEYRUNE_DEFAULT_GLYPH, fontSize);
 }
 
 // Mana-pip gem disc colors — the mana-font `.ms-cost` background-colors from
@@ -1987,6 +2038,7 @@ function SetSymbolGlyph({
   iconUrl,
   setCode,
   keyline,
+  wrap,
 }: {
   rarity: Rarity;
   fontSize: number;
@@ -1994,13 +2046,17 @@ function SetSymbolGlyph({
   setCode?: string | null;
   /** FrameProfile.setSymbolKeyline — the preview's text-shadow on the glyph. */
   keyline?: string;
+  /** Extra style on the symbol's own flex item — a measured type band's
+   *  (layout v32): never shrink, and the pull over the band gap
+   *  (inlineSymbolPullPct). Unset, the element is exactly as before. */
+  wrap?: React.CSSProperties;
 }) {
   const color = RARITY_SET_SYMBOL_COLOR[rarity];
 
   // 1. A set's uploaded icon image — drawn as-is.
   if (iconUrl) {
     return (
-      <span style={{ display: "flex" }}>
+      <span style={{ display: "flex", ...wrap }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={iconUrl}
@@ -2025,6 +2081,7 @@ function SetSymbolGlyph({
         fontSize={fontSize}
         color={color}
         keyline={keyline}
+        wrap={wrap}
       />
     );
   }
@@ -2037,6 +2094,7 @@ function SetSymbolGlyph({
           fontSize,
           lineHeight: 1,
           color,
+          ...wrap,
         }}
       >
         {getKeyruneCodepoint(setCode) ?? KEYRUNE_DEFAULT_GLYPH}
@@ -2051,7 +2109,7 @@ function SetSymbolGlyph({
   const s = Math.round(fontSize);
   const mark = RARITY_SET_MARK[rarity];
   return (
-    <span style={{ display: "flex" }}>
+    <span style={{ display: "flex", ...wrap }}>
       <svg width={s} height={s} viewBox="0 0 32 32">
         <circle
           cx={SET_MARK_RING.cx}
@@ -2355,6 +2413,23 @@ function AdventureBake({
     subtypes: back.subtypes,
   });
   const showCost = Boolean(back.cost?.trim());
+  // A measured panel (the M15-era family, layout v32) fits its name before
+  // its inline cost and its type line to its bar — the preview's twins
+  // (AdventurePanel); the pips keep their size. A shrunk line is set at the
+  // whole pixel below its fitted size. Otherwise the slots' sizes.
+  const titleFit = fitTitleBand(
+    { title: slot.title, costSizePct: slot.costSizePct },
+    name,
+    showCost ? back.cost : null,
+  );
+  const wholePxBelow = (fitted: number, base: number) =>
+    fitted < base ? measuredLinePx(fitted, base, cardWidth) / cardWidth : base;
+  const titleSlot = titleFit ? { ...slot.title, sizePct: wholePxBelow(titleFit.sizePct, slot.title.sizePct) } : slot.title;
+  const typeFit =
+    slot.type.fit === "measured"
+      ? fitTypeLineBand({ layout: { type: slot.type }, text: typeLine, symbolWidthPct: null })
+      : null;
+  const typeSlot = typeFit ? { ...slot.type, sizePct: wholePxBelow(typeFit.sizePct, slot.type.sizePct) } : slot.type;
   const rulesSize = fitRulesSizePct({
     rulesText: back.rules_text,
     flavorText: null,
@@ -2377,20 +2452,26 @@ function AdventureBake({
         zIndex: 20,
       }}
     >
-      <Band slot={slot.title} cardWidth={cardWidth}>
-        <span style={ELLIPSIS}>{displayLine(name)}</span>
+      <Band slot={titleSlot} cardWidth={cardWidth}>
+        <span style={titleFit ? { ...ELLIPSIS, maxWidth: Math.round(titleFit.widthPct * cardWidth) } : ELLIPSIS}>
+          {displayLine(titleFit ? titleFit.text : name)}
+        </span>
         {showCost && back.cost ? (
           <CostGlyphs
             cost={back.cost}
             fontSize={fpx(slot.costSizePct ?? slot.title.sizePct, cardWidth)}
             overrides={pipOverrides}
           />
-        ) : (
+        ) : slot.title.fit === "measured" ? null : (
+          // (A measured panel name with no cost has the whole band —
+          // titleBandRoomPct — as in the preview: no filler takes a gap.)
           <span style={{ display: "flex" }} />
         )}
       </Band>
-      <Band slot={slot.type} cardWidth={cardWidth}>
-        <span style={ELLIPSIS}>{displayLine(typeLine)}</span>
+      <Band slot={typeSlot} cardWidth={cardWidth}>
+        <span style={typeFit?.widthPct != null ? { ...ELLIPSIS, maxWidth: Math.round(typeFit.widthPct * cardWidth) } : ELLIPSIS}>
+          {displayLine(typeFit ? typeFit.text : typeLine)}
+        </span>
         <span style={{ display: "flex" }} />
       </Band>
       <div
@@ -2521,14 +2602,22 @@ function SecondFaceBake({
   const rot = `rotate(${slot.rotation}deg)`;
   const showCost = Boolean(slot.costSizePct) && Boolean(back.cost?.trim());
   const showPT = Boolean(slot.pt) && Boolean(back.power || back.toughness);
-  // Same math as SecondFacePanel: aftermath's name bar (name + cost) and type
-  // line shrink to fit their short sideways bars.
+  // Same math as SecondFacePanel: a `fitLines` face's name bar (name + cost)
+  // and type line shrink to fit their bars (aftermath's short sideways ones,
+  // flip's upside-down ones), down to the card's own 5 pt floor.
+  const orientation = orientationFromAspect(aspect);
   const lineSizes = secondFaceLineSizes({
     slot,
     name,
     typeLine,
     cost: showCost ? back.cost : null,
+    orientation,
   });
+  // A `fitLines` face's shrunk name and type line are set at measuredLinePx
+  // (the whole pixel below the fit, never below the floor's), as the front's
+  // are; rounding a fitted size up drew a line wider than its fit.
+  const linePx = (fitted: number, base: number) =>
+    slot.fitLines ? measuredLinePx(fitted, base, cardWidth, orientation) : fpx(fitted, cardWidth);
   const rulesSize = fitRulesSizePct({
     rulesText: back.rules_text,
     flavorText: null,
@@ -2556,18 +2645,21 @@ function SecondFaceBake({
           alignItems: "center",
           justifyContent: showCost ? "space-between" : "flex-start",
           // The preview's name–cost gap, which secondFaceLineSizes measures
-          // the bar with. Flip / split keep their gap-less band for now.
-          ...(slot.fitLines ? { gap: fpx(NAME_COST_GAP_PCT, cardWidth) } : {}),
+          // the bar with — between a name and its cost only: with no cost
+          // the preview draws the name alone, so the empty filler span must
+          // not take a gap from it (a flip face, an aftermath half without
+          // a cost). Split keeps its gap-less band for now (TODO 4.21).
+          ...(slot.fitLines && showCost ? { gap: fpx(NAME_COST_GAP_PCT, cardWidth) } : {}),
           transform: rot,
           transformOrigin: "50% 50%",
           fontFamily: DISPLAY_FONT,
-          fontSize: fpx(lineSizes.titleSizePct, cardWidth),
+          fontSize: linePx(lineSizes.titleSizePct, slot.title.sizePct),
           fontWeight: slot.title.weight ?? 600,
           color: slot.title.colorHex,
           zIndex: 20,
         }}
       >
-        <span style={ELLIPSIS}>{displayLine(name)}</span>
+        <span style={ELLIPSIS}>{displayLine(lineSizes.titleText)}</span>
         {showCost && back.cost ? (
           <CostGlyphs
             cost={back.cost}
@@ -2586,13 +2678,13 @@ function SecondFaceBake({
           transform: rot,
           transformOrigin: "50% 50%",
           fontFamily: DISPLAY_FONT,
-          fontSize: fpx(lineSizes.typeSizePct, cardWidth),
+          fontSize: linePx(lineSizes.typeSizePct, slot.type.sizePct),
           fontWeight: slot.type.weight ?? 600,
           color: slot.type.colorHex,
           zIndex: 20,
         }}
       >
-        <span style={ELLIPSIS}>{displayLine(typeLine)}</span>
+        <span style={ELLIPSIS}>{displayLine(lineSizes.typeText)}</span>
       </div>
       <div
         style={{

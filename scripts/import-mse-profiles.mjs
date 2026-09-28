@@ -22,6 +22,7 @@ const { parseMseStyle, extractElement, cardDimensions } = await import(
   "../lib/mse/parse-mse-style.ts"
 );
 const { getFrameProfile } = await import("../lib/cards/template-layout.ts");
+const { setSymbolBoxPct } = await import("../lib/cards/set-symbol-size.ts");
 
 // template → style dir (relative to PACK) + optional extra elements.
 // Standard elements (always attempted): name→title, image→artSlot,
@@ -65,7 +66,9 @@ const SLOT_MAP = [
   { mse: "text", slot: "rules", rect: (p) => p.rules.rect, size: (p) => p.rules.sizePct },
   { mse: "pt", slot: "pt", rect: (p) => p.pt?.rect ?? null, size: (p) => p.pt?.sizePct ?? null },
   { mse: "illustrator", slot: "footer", rect: (p) => p.footer?.rect ?? null, size: (p) => p.footer?.sizePct ?? null },
-  { mse: "symbol", slot: "symbol", rect: () => null, size: (p) => p.symbolSizePct ?? p.type.sizePct * 1.1 },
+  // The set-symbol BOX (lib/cards/set-symbol-size.ts): what an icon or the
+  // mark fills and a Keyrune glyph is fitted to — the renderers' own rule.
+  { mse: "symbol", slot: "symbol", rect: () => null, size: (p) => setSymbolBoxPct(p) },
 ];
 
 // Size fields are small fractions of card width — keep 4 decimals for them.

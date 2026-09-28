@@ -21,6 +21,9 @@ async function sweepAt(current: number) {
  *  UNSCOPED sweep: at v31 every older bake owes a correction, so the
  *  opt-in-only and nothing-pending cases below are pinned at v30. */
 const AT_V30 = { current: 30 } as const;
+/** …and at v31, before v32 (the M15 family's sizes) made a v31 bake on the
+ *  family stale again. */
+const AT_V31 = { current: 31 } as const;
 
 describe("isRenderStale — which stored renders a version bump invalidates", () => {
   it("treats unversioned or override-cleared renders as stale", () => {
@@ -598,7 +601,7 @@ describe("v31 — one corner radius (TODO 3.26)", () => {
       latestOptInVersion,
       rolloutPolicy,
     } = await import("@/lib/cards/layout-version");
-    expect(CARD_LAYOUT_VERSION).toBe(31);
+    expect(CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(31);
     expect(rolloutPolicy(31)).toBe("sweep");
     expect(VERSION_SCOPES[31]).toBeUndefined();
     expect(latestOptInVersion()).toBe(22);
@@ -617,9 +620,9 @@ describe("v31 — one corner radius (TODO 3.26)", () => {
     expect(isRenderStale(30, null, undefined, 31, { frame_style: {} })).toBe(true);
     expect(classifyForSweep({ ...at("m15", 30), frame_style: {} }, 31)).toBe("rebake");
     expect(classifyForSweep(at("modern", 30, { frame_style: { template: "modern", finish: "foil" } }), 31)).toBe("rebake");
-    // A v31 bake is current.
-    expect(classifyForSweep(at("m15", 31))).toBe("current");
-    expect(hasPendingCorrection(at("m15", 31))).toBe(false);
+    // A v31 bake was current at v31 (v32 re-bakes the M15 family's).
+    expect(classifyForSweep(at("m15", 31), undefined, AT_V31)).toBe("current");
+    expect(hasPendingCorrection(at("m15", 31), AT_V31)).toBe(false);
   });
 
   it("takes an opt-in-only card along: a v21 bake owes v31, so the sweep re-bakes it (v22 rides along)", async () => {
@@ -634,7 +637,7 @@ describe("v31 — one corner radius (TODO 3.26)", () => {
 
   it("is verification-neutral: a frame_reviews tick from v29 / v30 stays fresh", async () => {
     const { VERIFICATION_NEUTRAL_VERSIONS, VERIFICATION_SCOPED_VERSIONS } = await import("@/lib/cards/layout-version");
-    expect(VERIFICATION_NEUTRAL_VERSIONS).toEqual([31]);
+    expect(VERIFICATION_NEUTRAL_VERSIONS).toContain(31);
     expect(VERIFICATION_SCOPED_VERSIONS[31]).toEqual([]);
     // Every other bump keeps its real template scope.
     expect(VERIFICATION_SCOPED_VERSIONS[30]).toEqual(["fullartland"]);
@@ -646,6 +649,94 @@ describe("v31 — one corner radius (TODO 3.26)", () => {
     }
     // …while the stored bakes still owe it.
     expect(isRenderStale(30, "m15", undefined, 31, { frame_style: { template: "m15", finish: "regular" } })).toBe(true);
+  });
+});
+
+describe("v32 — one M15-era title / type size (TODO 4.20)", () => {
+  const png = "https://x/y.png";
+  /** A bake at `version` of a card no scoped bump since v22 touched. */
+  const at = (template: string, version: number, over: Record<string, unknown> = {}) => ({
+    ...UNTOUCHED_SINCE_V22,
+    layout_version: version,
+    rendered_image_url: png,
+    frame_style: { template, finish: "regular" },
+    ...over,
+  });
+
+  it("freezes its scope as a literal: the M15 family as it stood at v32, split and battle left out", async () => {
+    const { V32_M15_FAMILY_TEMPLATES } = await import("@/lib/cards/layout-version");
+    const { M15_FAMILY_TEMPLATES } = await import("@/lib/cards/m15-family");
+    // The family changed? Don't edit the frozen v32 list: ship the change in
+    // its own bump, and record it here (the family = v32's list ± it).
+    expect([...V32_M15_FAMILY_TEMPLATES].sort()).toEqual([...M15_FAMILY_TEMPLATES].sort());
+    expect(new Set(V32_M15_FAMILY_TEMPLATES).size).toBe(V32_M15_FAMILY_TEMPLATES.length);
+    expect(V32_M15_FAMILY_TEMPLATES).toHaveLength(23);
+    for (const t of V32_M15_FAMILY_TEMPLATES) expect(FRAME_TEMPLATE_VALUES, t).toContain(t);
+    // Their slots sit off the MSE masters' bars: their sizes ship with 4.21.
+    expect(V32_M15_FAMILY_TEMPLATES).not.toContain("split");
+    expect(V32_M15_FAMILY_TEMPLATES).not.toContain("battle");
+  });
+
+  it("is a template-scoped sweep: every v31 bake on the family re-bakes, every other template's is stamped", async () => {
+    const {
+      CARD_LAYOUT_VERSION,
+      V32_M15_FAMILY_TEMPLATES,
+      VERSION_SCOPES,
+      classifyForSweep,
+      hasNewerLook,
+      hasPendingCorrection,
+      latestOptInVersion,
+      rolloutPolicy,
+    } = await import("@/lib/cards/layout-version");
+    expect(CARD_LAYOUT_VERSION).toBe(32);
+    expect(rolloutPolicy(32)).toBe("sweep");
+    // Every name on the family grows: no card predicate narrows it.
+    expect(VERSION_SCOPES[32]).toBeUndefined();
+    expect(latestOptInVersion()).toBe(22);
+    for (const t of FRAME_TEMPLATE_VALUES) {
+      const row = at(t, 31);
+      const family = V32_M15_FAMILY_TEMPLATES.includes(t);
+      expect(isRenderStale(31, t), t).toBe(family);
+      expect(isRenderStale(31, t, undefined, 32, row), t).toBe(family);
+      expect(hasPendingCorrection(row), t).toBe(family);
+      expect(hasNewerLook({ ...row, visibility: "public" }), t).toBe(false);
+      expect(classifyForSweep(row), t).toBe(family ? "rebake" : "stamp");
+      expect(classifyForSweep(row, 32), t).toBe(family ? "rebake" : "stamp");
+    }
+    expect(classifyForSweep(at("split", 31))).toBe("stamp");
+    expect(classifyForSweep(at("battle", 31))).toBe("stamp");
+    // The default frame a {} frame_style draws is m15: re-baked.
+    expect(isRenderStale(31, null, undefined, 32, { frame_style: {} })).toBe(true);
+    expect(classifyForSweep({ ...at("m15", 31), frame_style: {} }, 32)).toBe("rebake");
+    // Whatever the card: a finish, a rarity, a Keyrune or an uploaded set
+    // icon, a full-art basic on a Keyrune glyph (no predicate spares it).
+    for (const row of [
+      at("m15", 31, { frame_style: { template: "m15", finish: "foil" } }),
+      at("m15pw", 31, { rarity: "mythic", set_icon_code: "dom" }),
+      at("saga", 31, { set_icon_url: "https://x/icon.png" }),
+      at("fullartland", 31, { title: "Mountain", supertype: "Basic Snow", card_type: "land", set_icon_code: "khm" }),
+      at("m15fullartland", 31, { title: "Plains", supertype: "Basic", card_type: "land", set_icon_code: "one" }),
+    ]) {
+      expect(classifyForSweep(row, 32), JSON.stringify(row.frame_style)).toBe("rebake");
+    }
+    // A v32 bake is current.
+    expect(classifyForSweep(at("m15", 32))).toBe("current");
+    expect(hasPendingCorrection(at("m15", 32))).toBe(false);
+  });
+
+  it("is verification-neutral: a v31 / v30 frame_reviews tick on the family stays fresh", async () => {
+    const { V32_M15_FAMILY_TEMPLATES, VERIFICATION_NEUTRAL_VERSIONS, VERIFICATION_SCOPED_VERSIONS } = await import(
+      "@/lib/cards/layout-version"
+    );
+    expect(VERIFICATION_NEUTRAL_VERSIONS).toEqual([31, 32]);
+    expect(VERIFICATION_SCOPED_VERSIONS[32]).toEqual([]);
+    for (const t of V32_M15_FAMILY_TEMPLATES) {
+      const regular = { frame_style: { template: t, finish: "regular" } };
+      expect(isRenderStale(31, t, VERIFICATION_SCOPED_VERSIONS, 32, regular), t).toBe(false);
+      expect(isRenderStale(30, t, VERIFICATION_SCOPED_VERSIONS, 32, regular), t).toBe(false);
+      // …while the stored bakes still owe it.
+      expect(isRenderStale(31, t, undefined, 32, regular), t).toBe(true);
+    }
   });
 });
 

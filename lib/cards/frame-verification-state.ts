@@ -12,8 +12,9 @@ import {
 // override. Rows ticked before 0115 carry no record — they are reported as
 // `legacy` (not stale) so the 71 existing verifications don't all demand a
 // re-tick at once; the next tick stamps them. A verification-neutral bump
-// (VERIFICATION_NEUTRAL_VERSIONS: v31's corner cut moves no slot) never
-// stales a tick.
+// (VERIFICATION_NEUTRAL_VERSIONS: v31's corner cut moves no slot; v32's M15
+// family sizes are signed off on the round-8 print comparison instead)
+// never stales a tick.
 //
 // Pure: the page and the checklist derive their badges from it, tests pin
 // the rules.
@@ -83,7 +84,7 @@ export function verificationState(
     // A tick verifies the REGULAR frame: a finish-scoped bump (v26 etched)
     // must not stale every combo. Rarity stays unknown → rarity-scoped
     // bumps (v23) remain conservative, as before. Verification-neutral
-    // bumps (v31) are scoped to no template here.
+    // bumps (v31, v32) are scoped to no template here.
     isRenderStale(snapshot.verifiedLayoutVersion, template, VERIFICATION_SCOPED_VERSIONS, currentVersion, {
       frame_style: { template, finish: "regular" },
     })

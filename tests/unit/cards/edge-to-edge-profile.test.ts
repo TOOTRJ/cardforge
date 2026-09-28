@@ -11,7 +11,9 @@ import {
   getFrameProfile,
   type TextSlot,
 } from "@/lib/cards/template-layout";
+import { KEYRUNE_EM_PER_BOX } from "@/lib/cards/typography";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
+import { setSymbolSize, setSymbolSource } from "@/lib/cards/set-symbol-size";
 
 // ---------------------------------------------------------------------------
 // The edge-to-edge / full-art profile fields (TODO 3.23 / 3.24) are OPT-IN:
@@ -83,7 +85,24 @@ describe("opt-in profile fields", () => {
       expect(p.title.sizePct).toBe(0.0533);
       expect(p.type.rect).toEqual({ topPct: 85.1, leftPct: 18.87, widthPct: 65.13, heightPct: 4.2 });
       expect(p.type.sizePct).toBe(0.0453);
-      expect(p.symbolSizePct).toBe(0.065);
+      // Layout v32 (TODO 4.20): none of M15's text changes reach these
+      // print-verified slots — no baseline dy, the old fit path — although
+      // they spread M15's.
+      for (const slot of [p.title, p.type]) {
+        expect(slot.dy ?? 0).toBe(0);
+        expect(slot.fit).toBeUndefined();
+      }
+      // Since layout v32 symbolSizePct is the symbol BOX — CC's 0.041 H, the
+      // rect's height (86 px) — not a font size: the default mark and an
+      // icon fill it (they drew at 97.5 px, past the rect), and a Keyrune
+      // glyph keeps its print-checked 0.065 W font (box × KEYRUNE_EM_PER_BOX)
+      // unless its ink would stand taller than the box
+      // (lib/cards/set-symbol-size.ts).
+      expect(p.symbolSizePct).toBe(0.0574);
+      expect(p.symbolSizePct! * KEYRUNE_EM_PER_BOX).toBeCloseTo(0.065, 12);
+      expect(p.symbolSizePct! * 1500).toBeCloseTo((s.heightPct / 100) * 2100, 1);
+      expect(setSymbolSize(p, setSymbolSource(null, "m20")).sizePct).toBe(0.065);
+      expect(setSymbolSize(p, setSymbolSource(null, null)).sizePct).toBe(0.0574);
     }
     // CC's 168 px disc box (62/1752 px on 1500 × 2100).
     expect(BASIC_SYMBOL_CC_2022.rect).toEqual({ topPct: 83.43, leftPct: 4.13, widthPct: 11.2, heightPct: 8.0 });

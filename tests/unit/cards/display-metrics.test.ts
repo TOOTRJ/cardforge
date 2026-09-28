@@ -64,8 +64,16 @@ describe("displayTextWidthEm", () => {
     // The table leaves kerning out. A few pairs widen a name — "Belfry
     // Spirit" draws 1.2 % wider than its advances — so a name fitted to
     // exactly its width would lose its last letter to the ellipsis. Kerned
-    // the way both renderers draw it, each still fits.
-    const p = getFrameProfile("m15pw");
+    // the way both renderers draw it, each still fits. (The old detached
+    // fit — modern's; the walker's v31 title slot and cost box, which
+    // layout v32 moved onto the measured fit and the print.)
+    const live = getFrameProfile("m15pw");
+    const p = {
+      ...live,
+      title: { ...live.title, rect: { topPct: 4.18, leftPct: 8.5, widthPct: 80, heightPct: 4.4 }, sizePct: 0.0427, fit: undefined },
+      costRect: { topPct: 3.8, leftPct: 51.2, widthPct: 40, heightPct: 4.4 },
+      costSizePct: undefined,
+    };
     // Each against a cost long enough that it must shrink (above the floor).
     for (const [title, pips] of [
       ["Belfry Spirit", 12],

@@ -7,7 +7,8 @@ import { displayLine, parseLoyaltyAbilities } from "@/lib/cards/card-display";
 import { LOYALTY_ROW, layoutProfileLoyaltyRows } from "@/lib/cards/loyalty-rows";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import type { FrameTemplate } from "@/types/card";
-import { detachedCostTitleWidthPct, fitDetachedCostTitle } from "@/lib/cards/title-band";
+import { fitTitleBand } from "@/lib/cards/title-band";
+import { measuredLinePreviewPct } from "@/lib/cards/render-tiers";
 
 // ---------------------------------------------------------------------------
 // The live-preview half of the planeswalker rows fix (TODO 3.13 / 3.3): the
@@ -150,24 +151,30 @@ describe("CardPreview — the name before a detached cost", () => {
     return { bandTag, span };
   }
 
-  it("caps the name where the bake does: one band gap before the pips", () => {
+  // Since layout v32 the walker's name is on the measured fit (fitTitleBand;
+  // the old detached fit, which Modern keeps, is fitTitleBand's fallback).
+  it("caps the name where the bake does: fitTitleBand's room before the pips", () => {
     const cost = "{1}{R}{W}{B}";
     const title = "Miner the Miner, Damned Delver";
     const { container } = render(
       <CardPreview title={title} cost={cost} cardType="planeswalker" colorIdentity={["red", "white", "black"]} loyalty="5" frameStyle={{ template: "m15pw" }} />,
     );
     const name = container.querySelector(`span[title="${title}"]`) as HTMLElement;
-    expect(name.style.maxWidth).toBe(cqw(detachedCostTitleWidthPct(P, cost)!));
+    expect(name.style.maxWidth).toBe(cqw(fitTitleBand(P, title, cost)!.widthPct));
     expect(name.style.textOverflow).toBe("ellipsis");
   });
 
   it("sets a long name at its fitted size, whole (Miner the Miner, Damned Delver)", () => {
     const cost = "{1}{R}{W}{B}";
     const title = "Miner the Miner, Damned Delver";
-    const fit = fitDetachedCostTitle(P, title, cost)!;
+    const fit = fitTitleBand(P, title, cost)!;
+    expect(fit.text).toBe(title);
     expect(fit.sizePct).toBeLessThan(P.title.sizePct);
     const { bandTag, span } = titleBand(title, cost);
-    expect(bandTag).toContain(`font-size:${cqw(fit.sizePct)}`);
+    // A measured (family) name the fit shrank shows at the stored HD bake's
+    // whole px (layout v32).
+    expect(P.title.fit).toBe("measured");
+    expect(bandTag).toContain(`font-size:${cqw(measuredLinePreviewPct(fit.sizePct, P.title.sizePct))}`);
     // Drawn as one run with no-break spaces, like every display line.
     expect(span.endsWith(`>${displayLine(title)}`)).toBe(true);
   });
@@ -176,10 +183,14 @@ describe("CardPreview — the name before a detached cost", () => {
     const cost = "{W}".repeat(14);
     const title = "Skeptic, the Endlessly Wandering Walker of Worlds";
     for (const template of ["m15pw", "modern"] as const) {
-      const fit = fitDetachedCostTitle(getFrameProfile(template), title, cost)!;
+      const profile = getFrameProfile(template);
+      const fit = fitTitleBand(profile, title, cost)!;
       expect(fit.text.endsWith("…")).toBe(true);
       const { bandTag, span } = titleBand(title, cost, template);
-      expect(bandTag).toContain(`font-size:${cqw(fit.sizePct)}`);
+      // The family's walker at the HD bake's floor px (42 / 1500); modern's
+      // old path at its fitted size.
+      const size = profile.title.fit === "measured" ? measuredLinePreviewPct(fit.sizePct, profile.title.sizePct) : fit.sizePct;
+      expect(bandTag).toContain(`font-size:${cqw(size)}`);
       // The drawn text is the cut one; the tooltip keeps the whole name.
       expect(span.endsWith(`>${displayLine(fit.text)}`)).toBe(true);
     }
@@ -191,15 +202,22 @@ describe("CardPreview — the name before a detached cost", () => {
     expect(span.endsWith(`>${displayLine("Kikyo Zoldyck")}`)).toBe(true);
   });
 
-  it("leaves an inline cost's name (and a cost-less name) uncapped", () => {
-    const { container } = render(
-      <CardPreview title="Serra Angel" cost="{3}{W}{W}" cardType="creature" colorIdentity={["white"]} frameStyle={{ template: "m15" }} />,
-    );
-    expect((container.querySelector('span[title="Serra Angel"]') as HTMLElement).style.maxWidth).toBe("");
+  it("leaves an inline cost's name uncapped outside the family; a measured band caps it at its room", () => {
+    const serra = (template: FrameTemplate) =>
+      (
+        render(
+          <CardPreview title="Serra Angel" cost="{3}{W}{W}" cardType="creature" colorIdentity={["white"]} frameStyle={{ template }} />,
+        ).container.querySelector('span[title="Serra Angel"]') as HTMLElement
+      ).style.maxWidth;
+    expect(serra("retro")).toBe("");
+    cleanup();
+    expect(serra("m15")).toBe(cqw(fitTitleBand(getFrameProfile("m15"), "Serra Angel", "{3}{W}{W}")!.widthPct));
     cleanup();
     const { container: noCost } = render(
       <CardPreview title="Probe" cardType="planeswalker" colorIdentity={["white"]} loyalty="3" frameStyle={{ template: "m15pw" }} />,
     );
-    expect((noCost.querySelector('span[title="Probe"]') as HTMLElement).style.maxWidth).toBe("");
+    expect((noCost.querySelector('span[title="Probe"]') as HTMLElement).style.maxWidth).toBe(
+      cqw(fitTitleBand(P, "Probe", null)!.widthPct),
+    );
   });
 });

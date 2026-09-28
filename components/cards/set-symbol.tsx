@@ -32,14 +32,26 @@ type SetSymbolProps = {
   /** A preset Keyrune set code (e.g. "dom", "mh3"). Rarity-tinted glyph. */
   setCode?: string | null;
   /** Glyph size — a number (px) or any CSS length. Pass a container-relative
-   *  value (e.g. a `cqw` string) so the symbol scales with the card. */
+   *  value (e.g. a `cqw` string) so the symbol scales with the card. For an
+   *  icon or the mark it is the square's side; for a Keyrune glyph, its font
+   *  size (lib/cards/set-symbol-size.ts fits each glyph by its ink). */
   size?: number | string;
+  /** A Keyrune glyph's laid-out width — its advance at `size`, from
+   *  lib/cards/keyrune-metrics.ts (setSymbolSize's drawnWidthPct): the width
+   *  the bake gives it, so both renderers leave the type line the same room.
+   *  Unset, the browser sizes it from the font. An icon and the mark are
+   *  `size` wide. */
+  width?: number | string;
   /** A keyline around a preset Keyrune glyph (FrameProfile.setSymbolKeyline:
    *  a zero-blur multi-layer text shadow, e.g. SET_SYMBOL_KEYLINE), drawn as
    *  its CSS text-shadow; the bake draws the same layers as offset copies.
    *  Ignored for an uploaded icon and the default mark. */
   keyline?: string;
   className?: string;
+  /** Extra style on the symbol's own element — a measured type band's
+   *  (layout v32): never shrink, and the pull over the band gap
+   *  (lib/cards/render-tiers.ts inlineSymbolPullPct), as the bake draws it. */
+  style?: React.CSSProperties;
 };
 
 // The PipGlyph house mark as a ringed two-tone emblem — the rose star
@@ -117,8 +129,10 @@ export function SetSymbol({
   iconUrl,
   setCode,
   size = 14,
+  width,
   keyline,
   className,
+  style,
 }: SetSymbolProps) {
   const color = setSymbolColor(rarity);
 
@@ -130,7 +144,7 @@ export function SetSymbol({
         src={iconUrl}
         alt="Set icon"
         className={className}
-        style={{ width: size, height: size, objectFit: "contain" }}
+        style={{ width: size, height: size, objectFit: "contain", ...style }}
       />
     );
   }
@@ -145,7 +159,13 @@ export function SetSymbol({
       <i
         aria-label={rarity ? `${rarity} rarity` : "Set symbol"}
         className={cn("ss", `ss-${setCode.toLowerCase()}`, className)}
-        style={keyline ? { fontSize: size, color, textShadow: keyline } : { fontSize: size, color }}
+        style={{
+          fontSize: size,
+          ...(width !== undefined ? { width } : {}),
+          color,
+          ...(keyline ? { textShadow: keyline } : {}),
+          ...style,
+        }}
       />
     );
   }
@@ -155,7 +175,7 @@ export function SetSymbol({
     <PipGlyphSetMark
       rarity={rarity}
       className={className}
-      style={{ width: size, height: size, flexShrink: 0 }}
+      style={{ width: size, height: size, flexShrink: 0, ...style }}
     />
   );
 }

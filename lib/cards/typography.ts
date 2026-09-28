@@ -11,8 +11,13 @@
 //     points"). Flavor text is the italic cut at the same size, reminder
 //     text and ability words italic in-line.
 //   • Titles / type line / P&T are the display face (Beleren on M15-era
-//     frames); those slots are scan-measured per frame in template-layout.ts
-//     and are NOT derived from this file.
+//     frames). Their SLOTS (rects, alignment, ink) are scan-measured per
+//     frame in template-layout.ts. Since layout v32 (TODO 4.20) the M15-era
+//     family's display SIZES come from the named constants below — Card
+//     Conjurer's, which match the prints (name 0.0381 H, type line
+//     0.0324 H) — so every frame in lib/cards/m15-family.ts prints one name
+//     size and one type size instead of per-frame literals. Frames outside
+//     that family keep their own measured sizes.
 //   • Inline mana symbols print a touch taller than the capitals of the line
 //     they sit in and are centred on the x-height, with a hairline between
 //     adjacent symbols ("{G}{G}") and none between a symbol and its
@@ -44,6 +49,65 @@ export function pctToPt(pct: number, orientation: CardOrientation = "portrait"):
 /** Orientation from the card's height ÷ width ratio (7/5 portrait, 5/7 landscape). */
 export function orientationFromAspect(aspect: number): CardOrientation {
   return aspect < 1 ? "landscape" : "portrait";
+}
+
+// ---------------------------------------------------------------------------
+// M15-era display sizes (TODO 4.20, layout v32). Every value is a fraction of
+// a PORTRAIT card's width — the profile unit — measured against Card
+// Conjurer's M15 packs, which match the prints (name ink width 1.007 of the
+// print's at 0.0533, n = 30; type line 0.995 at 0.0453). HD px = × 1500.
+// A landscape slot takes displayPct(constant, "landscape"): the same
+// absolute size on the physical card.
+// ---------------------------------------------------------------------------
+
+/** Card name (title) — CC 0.0381 H, 80 px at HD. */
+export const TITLE_SIZE_PCT = 0.0533;
+
+/** Type line — CC 0.0324 H, 68 px at HD. */
+export const TYPE_SIZE_PCT = 0.0453;
+
+/** Mana-cost pip DISC diameter (FrameProfile.costSizePct) — M15's measured
+ *  disc (a DOM scan; CC mana 71/1638, prints ≈ 70 px), 72.75 px at HD.
+ *  Planeswalker, saga and flip use it too (owner decision 2026-09-28). */
+export const COST_DISC_PCT = 0.0485;
+
+/** Set-symbol BOX height (FrameProfile.symbolSizePct on the family) — CC's
+ *  symbol box, 0.041 H = 86 px at HD. An uploaded icon or the default mark
+ *  is drawn contained in a square of this size; a Keyrune glyph's font size
+ *  is derived from it (KEYRUNE_EM_PER_BOX). */
+export const SET_SYMBOL_BOX_PCT = 0.0574;
+
+/** Keyrune font size per unit of set-symbol box: box × this = 0.065 W on
+ *  M15, the full-art basics' print-checked glyph size (4.39). A glyph whose
+ *  ink is taller than the box at that size is fitted by its ink instead
+ *  (font = min(box × KEYRUNE_EM_PER_BOX, box ÷ inkHeightEm)). */
+export const KEYRUNE_EM_PER_BOX = 0.065 / SET_SYMBOL_BOX_PCT;
+
+/** The planeswalker's and saga's set-symbol box — CC's 0.0381 H on their
+ *  thinner type bars (packPlaneswalkerRegular / packSagaRegular), 80 px at
+ *  HD. Every other M15-era pack (M15, tokens, flip, aftermath, adventure)
+ *  uses SET_SYMBOL_BOX_PCT. */
+export const SET_SYMBOL_BOX_PCT_THIN_BAR = 0.0533;
+
+/** The widest a fitted Keyrune glyph's ink may draw — CC's symbol box
+ *  width, 0.12 W. No keyrune 3.19 glyph comes near it (the widest ink is
+ *  1.004 em, 98 px at 0.065 W); it guards a wider glyph a later keyrune
+ *  might add. */
+export const SET_SYMBOL_MAX_WIDTH_PCT = 0.12;
+
+/** Adventure panel name and type line — CC name2 / type2, 0.0296 H = 62 px
+ *  at HD. */
+export const ADVENTURE_PANEL_PCT = 0.0414;
+
+/** Adventure panel pip disc — CC mana2, 60 px at HD. */
+export const ADVENTURE_PANEL_COST_PCT = 0.04;
+
+/** A display size given as a fraction of a PORTRAIT card's width, as a
+ *  fraction of the width of a card in `orientation`: the same absolute size
+ *  on the physical card (× 5/7 on a landscape card, whose width is the
+ *  portrait card's height). */
+export function displayPct(pct: number, orientation: CardOrientation = "portrait"): number {
+  return (pct * CARD_WIDTH_IN.portrait) / CARD_WIDTH_IN[orientation];
 }
 
 export const RULES_TEXT = {

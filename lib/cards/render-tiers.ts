@@ -17,13 +17,15 @@
 // bake always agree.
 
 import { tokenize } from "@/components/cards/mana-cost-glyphs";
-import { displayTextEm } from "@/lib/cards/display-metrics";
-import type { Rect } from "@/lib/cards/template-layout";
+import { displayTextEm, truncateDisplayLine } from "@/lib/cards/display-metrics";
+import { setSymbolBoxPct } from "@/lib/cards/set-symbol-size";
+import type { FrameProfile, Rect, TextSlot } from "@/lib/cards/template-layout";
 import {
   RULES_LINE_PITCH_EM,
   RULES_TEXT,
   orientationFromAspect,
   ptToPct,
+  type CardOrientation,
 } from "@/lib/cards/typography";
 
 // Average MPlantin advance width as a fraction of the font size
@@ -203,25 +205,288 @@ export function fitSplitTypeSizePct({
   );
 }
 
+// ---------------------------------------------------------------------------
+// The measured fit (TextSlot.fit "measured", TODO 4.20, layout v32) — the
+// M15-era family's names and type lines. A line prints at its slot's size
+// unless its MEASURED width (Beleren's own advances, lib/cards/display-metrics)
+// is more than the room its band really leaves it, and then shrinks only as
+// far as that room needs, never below the 5 pt floor of the CARD's own
+// orientation (the old fit floors a landscape card at the portrait 5 pt,
+// ≈ 7 pt there). A slot without the flag keeps the old estimate, byte for
+// byte: every frame outside lib/cards/m15-family.ts, the full-art basics,
+// split and battle.
+// ---------------------------------------------------------------------------
+
+/** The gap both renderers draw between the two things sharing a band — a
+ *  name and its cost, a type line and its set symbol (the preview's
+ *  `gap: 2cqw`, the bake's `gap: fpx(0.02)`), as a fraction of card width.
+ *  The bake's empty filler span after a start-aligned line with nothing
+ *  beside it takes this gap too, so the line's room ends there as well. */
+export const BAND_GAP_PCT = 0.02;
+
+/** How close a measured type line's box may come to the set symbol's INK
+ *  (fraction of card width): 20 px at HD, the gap the prints leave before
+ *  the symbol on a type line they set at full size (ONE #196 "Legendary
+ *  Creature — Phyrexian Angel", DSK #113; 4.20 print review). The line's
+ *  kerned ink ends further left still (Beleren tightens a line ≈ 2.5 %). A
+ *  start-aligned band's inline symbol is pulled left over the band gap by
+ *  inlineSymbolPullPct, so both renderers give the line exactly this room. */
+export const TYPE_SYMBOL_GAP_PCT = 0.013;
+
+/** Headroom a measured front-face type line keeps over its measured width
+ *  (slotLineEm — already an upper bound for both renderers: advances
+ *  rounded up plus every pair the browser kerns apart): the bake's whole-px
+ *  sizes and the browser's sub-pixel layout, ≈ the worst public line's
+ *  +1.2 % (4.20 review). Second faces keep LINE_FIT_SAFETY. */
+export const MEASURED_LINE_FIT_SAFETY = 1.015;
+
+/** The smallest size a measured line shrinks to: the 5 pt hard floor on the
+ *  card's own orientation. */
+export function measuredLineFloorPct(orientation: CardOrientation = "portrait"): number {
+  return ptToPct(RULES_TEXT.hardFloorPt, orientation);
+}
+
+/** A measured line's size: the slot's own, shrunk to `fittedPct` when that
+ *  is smaller, but never below the floor — and never above the slot's size
+ *  (a slot set below the floor keeps its own size; the old fit clamped it
+ *  UP to the portrait floor). */
+export function measuredLineSizePct(
+  baseSizePct: number,
+  fittedPct: number,
+  orientation: CardOrientation = "portrait",
+): number {
+  return Math.min(baseSizePct, Math.max(measuredLineFloorPct(orientation), fittedPct));
+}
+
+/** A display slot's line width at a 1 em font size, as the browser sets it
+ *  (an upper bound for both renderers — displayTextEm): its letters, every
+ *  pair Beleren kerns apart, its case and its tracking. */
+export function slotLineEm(
+  text: string,
+  slot: Pick<TextSlot, "uppercase" | "letterSpacingEm">,
+): number {
+  const line = slot.uppercase ? text.toUpperCase() : text;
+  return displayTextEm(line) + (slot.letterSpacingEm ?? 0) * Array.from(line).length;
+}
+
+type TypeLineLayout = Pick<FrameProfile, "type" | "symbolRect" | "symbolSizePct">;
+
+/** A start-aligned band with the set symbol inline at its end (not a
+ *  symbolRect, not a centred token band). */
+function inlineAtEnd(layout: TypeLineLayout, symbolWidthPct: number | null): boolean {
+  const { align } = layout.type;
+  return !layout.symbolRect && symbolWidthPct !== null && align !== "center" && align !== "end";
+}
+
+/**
+ * How far a measured type band's inline set symbol is pulled left over the
+ * band gap (fraction of card width; both renderers' negative margin-left on
+ * the symbol, which stays right-aligned where it was): the gap's excess over
+ * TYPE_SYMBOL_GAP_PCT plus the glyph's side bearing, so the type line's flex
+ * room ends TYPE_SYMBOL_GAP_PCT before the symbol's ink — the room
+ * typeLineRoomPct fits it to. 0 for any other band (the old fit, a
+ * symbolRect, a centred token band).
+ */
+export function inlineSymbolPullPct(
+  layout: TypeLineLayout,
+  symbol: { drawnWidthPct: number; inkLeftPct: number } | null,
+): number {
+  if (layout.type.fit !== "measured" || !inlineAtEnd(layout, symbol?.drawnWidthPct ?? null)) return 0;
+  return BAND_GAP_PCT - TYPE_SYMBOL_GAP_PCT + (symbol?.inkLeftPct ?? 0);
+}
+
+function rectsOverlap(a: Rect, b: Rect): boolean {
+  return (
+    a.leftPct < b.leftPct + b.widthPct &&
+    b.leftPct < a.leftPct + a.widthPct &&
+    a.topPct < b.topPct + b.heightPct &&
+    b.topPct < a.topPct + a.heightPct
+  );
+}
+
+/**
+ * The width (fraction of card width) a measured type line may take in its
+ * band: up to TYPE_SYMBOL_GAP_PCT before the set symbol's INK as it is DRAWN
+ * — inline at the band's right end (inlineSymbolPullPct gives the line that
+ * room in both renderers), or right-aligned in a `symbolRect` that overlaps
+ * the band (the planeswalker's, devoid's; the old fit reserved nothing for
+ * it, so a long line could run under the symbol) — or up to the bake's
+ * filler span. A centred band (tokens) keeps the band gap to the symbol it
+ * centres with. `symbolWidthPct` (the symbol's drawn width) is null when
+ * none is drawn beside the line (the adventure panel); `symbolInkLeftPct` is
+ * how far into that width its ink starts (setSymbolSize's inkLeftPct).
+ */
+export function typeLineRoomPct(
+  layout: TypeLineLayout,
+  symbolWidthPct: number | null,
+  symbolInkLeftPct = 0,
+): number {
+  const { rect, align } = layout.type;
+  const aligned = align === "center" || align === "end";
+  const band = rect.widthPct / 100;
+  const inkReserve = symbolWidthPct === null ? 0 : symbolWidthPct - symbolInkLeftPct;
+  let room: number;
+  if (inlineAtEnd(layout, symbolWidthPct)) room = band - TYPE_SYMBOL_GAP_PCT - inkReserve;
+  else if (!layout.symbolRect && symbolWidthPct !== null) room = band - BAND_GAP_PCT - symbolWidthPct;
+  else room = band - (aligned ? 0 : BAND_GAP_PCT);
+  const box = layout.symbolRect;
+  if (box && symbolWidthPct !== null && rectsOverlap(box, rect)) {
+    const inkLeft = (box.leftPct + box.widthPct) / 100 - inkReserve;
+    room = Math.min(room, inkLeft - TYPE_SYMBOL_GAP_PCT - rect.leftPct / 100);
+  }
+  return Math.max(0, room);
+}
+
+/** A measured band line as both renderers draw it. */
+export type FittedLine = {
+  /** The font size (fraction of card width). */
+  sizePct: number;
+  /** The line as drawn: whole, or — only past the 5 pt floor — cut with a
+   *  "…" (truncateDisplayLine), the same in both renderers. */
+  text: string;
+  /** The span's max-width (fraction of card width): the room the fit
+   *  measured against, so a line the estimate got wrong still ends there —
+   *  before the set symbol — at the renderers' CSS ellipsis. null on the old
+   *  path (no cap). */
+  widthPct: number | null;
+};
+
+type TypeLineFitInput = {
+  layout: TypeLineLayout;
+  text: string | null | undefined;
+  /** The set symbol's drawn width — setSymbolSize(layout, source)
+   *  .drawnWidthPct (lib/cards/set-symbol-size.ts), the width both renderers
+   *  draw it at; null when none is drawn beside the line. Read by the
+   *  measured fit only. */
+  symbolWidthPct: number | null;
+  /** Where its ink starts in that width (setSymbolSize's inkLeftPct); 0 if
+   *  unknown (an icon, the mark). Read by the measured fit only. */
+  symbolInkLeftPct?: number;
+  orientation?: CardOrientation;
+};
+
+/**
+ * The type line's size, text and width, for both renderers. A slot with
+ * `fit: "measured"` (the M15-era family) measures the line (slotLineEm ×
+ * MEASURED_LINE_FIT_SAFETY) against the room its band leaves before the
+ * drawn set symbol's ink (typeLineRoomPct), and shrinks only as far as that
+ * needs, down to the 5 pt floor of the card's orientation; a line too long
+ * even there is cut with a "…" here (truncateDisplayLine), measured at the
+ * floor plus the half pixel the bake may round it up by (measuredLinePx), so
+ * both renderers draw the same letters and it never runs under the symbol.
+ * Any other slot keeps the old estimate exactly: fitSingleLineSizePct with
+ * the symbol's box × 1.3 reserved, the whole line, no width cap.
+ */
+export function fitTypeLineBand({
+  layout,
+  text,
+  symbolWidthPct,
+  symbolInkLeftPct = 0,
+  orientation = "portrait",
+}: TypeLineFitInput): FittedLine {
+  const slot = layout.type;
+  if (slot.fit !== "measured") {
+    const sizePct = fitSingleLineSizePct({
+      text,
+      rect: slot.rect,
+      baseSizePct: slot.sizePct,
+      reservedPct: layout.symbolRect ? 0 : setSymbolBoxPct(layout) * 1.3,
+    });
+    return { sizePct, text: text ?? "", widthPct: null };
+  }
+  const room = typeLineRoomPct(layout, symbolWidthPct, symbolInkLeftPct);
+  const line = (text ?? "").trim();
+  if (!line) return { sizePct: slot.sizePct, text: text ?? "", widthPct: room };
+  const measure = (s: string) => slotLineEm(s, slot) * MEASURED_LINE_FIT_SAFETY;
+  const sizePct = measuredLineSizePct(slot.sizePct, room / measure(line), orientation);
+  return { sizePct, text: pastFloorText(line, room, sizePct, orientation, measure), widthPct: room };
+}
+
+/** The measured type line's size (fitTypeLineBand's). */
+export function fitTypeLine(input: TypeLineFitInput): number {
+  return fitTypeLineBand(input).sizePct;
+}
+
+/** A measured line at `sizePct` in `room` (both fractions of card width,
+ *  `measure` its width at 1 em with its headroom): the whole line while it
+ *  fits, otherwise — at the floor — cut with a "…" to fit at the floor plus
+ *  the half pixel the bake may round it up by (measuredLinePx). */
+export function pastFloorText(
+  line: string,
+  room: number,
+  sizePct: number,
+  orientation: CardOrientation,
+  measure: (s: string) => number,
+): string {
+  if (measure(line) * sizePct <= room * (1 + 1e-9)) return line;
+  const drawn = Math.max(sizePct, measuredLineFloorPct(orientation)) + HALF_PX_PCT;
+  return truncateDisplayLine(line, room / drawn, measure);
+}
+
+/**
+ * The whole-px font size the bake draws a measured line at (TextSlot.fit
+ * "measured": a front name or type line, the adventure panel's, a `fitLines`
+ * second face's): the slot's size rounded, as every slot, while the line
+ * fits; a shrunk line at the whole pixel BELOW its fit (rounding up could
+ * push it past its room) — but never below the 5 pt floor's own rounded
+ * pixel (42 px at HD, 21 at 750), which the fit's "…" is measured with
+ * (pastFloorText).
+ */
+export function measuredLinePx(
+  fitPct: number,
+  basePct: number,
+  cardWidth: number,
+  orientation: CardOrientation = "portrait",
+): number {
+  const base = Math.round(basePct * cardWidth);
+  if (fitPct >= basePct) return base;
+  const floorPx = Math.round(measuredLineFloorPct(orientation) * cardWidth);
+  return Math.min(base, Math.max(Math.floor(fitPct * cardWidth), floorPx));
+}
+
+/** The stored bake's width (RENDER_PRESETS.hd, the HD PNG every display
+ *  surface serves), per orientation. */
+const STORED_BAKE_WIDTH: Readonly<Record<CardOrientation, number>> = { portrait: 1500, landscape: 2100 };
+
+/**
+ * A measured line's size as the PREVIEW draws it: when the fit shrank it,
+ * the stored HD bake's own whole px (measuredLinePx at 1500 — 2100
+ * landscape), so the editor shows exactly the size the stored PNG prints;
+ * otherwise the slot's size. The 750 px bake floors the same fit to its own
+ * whole px (≤ 1 px of 750 apart). Only for a line the bake sets with
+ * measuredLinePx; the old path keeps its continuous size.
+ */
+export function measuredLinePreviewPct(
+  fitPct: number,
+  basePct: number,
+  orientation: CardOrientation = "portrait",
+): number {
+  if (!(fitPct < basePct)) return fitPct;
+  const width = STORED_BAKE_WIDTH[orientation];
+  return measuredLinePx(fitPct, basePct, width, orientation) / width;
+}
+
 /** The gap between cost pips, as a fraction of the disc: the bake's
  *  CostGlyphs draws exactly this; the preview's 0.12em of disc ÷ 1.3 is
  *  narrower, so a row measured with it fits both. */
 export const COST_PIP_GAP = 0.12;
 /** The gap between a second face's name and its cost, as a fraction of the
- *  card's width (the preview's 2cqw; the bake draws it for `fitLines` faces). */
-export const NAME_COST_GAP_PCT = 0.02;
-// Headroom on a measured line (displayTextEm already counts the kerning that
-// widens it): the bake rounding a font size to whole pixels (+0.5 px of a
-// 21 px 5 pt name at 750) and the browser's sub-pixel text layout.
-const LINE_FIT_SAFETY = 1.05;
-// Half a pixel of the smaller bake (750 px wide), as a fraction of the card's
-// width: the bake rounds each disc and each gap to whole pixels.
-const HALF_PX_PCT = 0.5 / 750;
+ *  card's width (the preview's 2cqw; the bake draws it for `fitLines` faces
+ *  that print a cost) — the band gap. */
+export const NAME_COST_GAP_PCT = BAND_GAP_PCT;
+/** Headroom on a measured line (displayTextEm already counts the kerning
+ *  that widens it): the bake rounding a font size to whole pixels (+0.5 px
+ *  of a 21 px 5 pt name at 750) and the browser's sub-pixel text layout. */
+export const LINE_FIT_SAFETY = 1.05;
+/** Half a pixel of the smaller bake (750 px wide), as a fraction of the
+ *  card's width: the bake rounds each disc, gap and floor-size font to whole
+ *  pixels. */
+export const HALF_PX_PCT = 0.5 / 750;
 // The discs' hard shadow reaches ≈ 0.07 disc past either end of the row.
 const COST_SHADOW_DISCS = 0.1;
-// Past the floor a long name ellipsizes, but the cost still leaves it at
-// least this much of the bar (≈ 4 letters), or all of it if it is shorter.
-const MIN_NAME_EM = 2;
+/** Past the floor a long name ellipsizes, but the cost still leaves it at
+ *  least this much of the bar (≈ 4 letters), or all of it if it is shorter. */
+export const MIN_NAME_EM = 2;
 
 /** A cost row's length as a line `perDisc × disc + fixedPct` (fractions of
  *  the card's width), as the bake draws it. */
@@ -259,6 +524,11 @@ export type SecondFaceLineSizes = {
   typeSizePct: number;
   /** The cost's disc diameter (fraction of card width). */
   costSizePct: number;
+  /** The name and the type line as drawn: whole, or — a `fitLines` face's
+   *  line too long even at the floor — cut with a "…" here (pastFloorText),
+   *  so both renderers cut at the same letter. */
+  titleText: string;
+  typeText: string;
 };
 
 /**
@@ -275,12 +545,19 @@ export type SecondFaceLineSizes = {
  *   capped so they always stay on the bar with a few letters of name beside
  *   them (up to the 64-character cost cap);
  * - the type line shrinks alone to fit its bar, down to the same floor.
+ *
+ * The floor is 5 pt on the card's own orientation (TODO 4.20): a landscape
+ * card's second face (split) floors where its front does, not at the
+ * portrait 5 pt (≈ 7 pt there). Past it a `fitLines` face's name and type
+ * line are cut with a "…" here (titleText / typeText), not by each
+ * renderer's text-overflow; the bake draws a shrunk line at measuredLinePx.
  */
 export function secondFaceLineSizes({
   slot,
   name,
   typeLine,
   cost,
+  orientation = "portrait",
 }: {
   slot: {
     title: { rect: Rect; sizePct: number };
@@ -292,12 +569,20 @@ export function secondFaceLineSizes({
   typeLine: string;
   /** The face's cost (e.g. "{X}{B}{B}"); null/empty when it has none. */
   cost: string | null | undefined;
+  /** The card's orientation (orientationFromAspect) — picks the floor. */
+  orientation?: CardOrientation;
 }): SecondFaceLineSizes {
   const baseCost = slot.costSizePct ?? slot.title.sizePct;
   if (!slot.fitLines) {
-    return { titleSizePct: slot.title.sizePct, typeSizePct: slot.type.sizePct, costSizePct: baseCost };
+    return {
+      titleSizePct: slot.title.sizePct,
+      typeSizePct: slot.type.sizePct,
+      costSizePct: baseCost,
+      titleText: name,
+      typeText: typeLine,
+    };
   }
-  const floor = ptToPct(RULES_TEXT.hardFloorPt);
+  const floor = measuredLineFloorPct(orientation);
   const nameEm = displayTextEm(name) * LINE_FIT_SAFETY;
   const row = slot.costSizePct ? costRowTerms(cost) : { perDisc: 0, fixedPct: 0 };
   // The bar's length left for the name and the discs' scalable part.
@@ -307,14 +592,27 @@ export function secondFaceLineSizes({
   const scale = Math.min(slot.title.sizePct, room / (nameEm + row.perDisc * ratio));
   const titleSizePct = Math.max(floor, scale);
   const costSizePct = row.perDisc
-    ? Math.min(ratio * titleSizePct, (room - Math.min(nameEm, MIN_NAME_EM) * titleSizePct) / row.perDisc)
+    ? Math.min(
+        ratio * titleSizePct,
+        // At the floor, the name's few letters are kept at the floor's whole
+        // px in the bake (the half pixel it may round up by, measuredLinePx).
+        (room - Math.min(nameEm, MIN_NAME_EM) * (titleSizePct > floor ? titleSizePct : titleSizePct + HALF_PX_PCT)) /
+          row.perDisc,
+      )
     : baseCost;
   const typeEm = displayTextEm(typeLine) * LINE_FIT_SAFETY;
-  const typeFit = typeEm > 0 ? slot.type.rect.widthPct / 100 / typeEm : slot.type.sizePct;
+  const typeRoom = slot.type.rect.widthPct / 100;
+  const typeFit = typeEm > 0 ? typeRoom / typeEm : slot.type.sizePct;
+  const typeSizePct = Math.max(floor, Math.min(slot.type.sizePct, typeFit));
+  const measure = (s: string) => displayTextEm(s) * LINE_FIT_SAFETY;
+  // What the cost leaves the name on its bar, as drawn.
+  const nameRoom = room - (row.perDisc ? row.perDisc * costSizePct : 0);
   return {
     titleSizePct,
-    typeSizePct: Math.max(floor, Math.min(slot.type.sizePct, typeFit)),
+    typeSizePct,
     costSizePct,
+    titleText: pastFloorText(name, nameRoom, titleSizePct, orientation, measure),
+    typeText: pastFloorText(typeLine, typeRoom, typeSizePct, orientation, measure),
   };
 }
 

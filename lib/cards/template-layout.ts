@@ -53,7 +53,16 @@
 
 import type { FrameColorKey, FrameMasterKey } from "@/lib/cards/frame-reference-registry";
 import type { FrameTemplate } from "@/types/card";
-import { ptToPct } from "@/lib/cards/typography";
+import {
+  ADVENTURE_PANEL_COST_PCT,
+  ADVENTURE_PANEL_PCT,
+  COST_DISC_PCT,
+  SET_SYMBOL_BOX_PCT,
+  SET_SYMBOL_BOX_PCT_THIN_BAR,
+  TITLE_SIZE_PCT,
+  TYPE_SIZE_PCT,
+  ptToPct,
+} from "@/lib/cards/typography";
 
 /** A rectangle in card-relative percent (0–100), origin top-left. The card's
  *  full outer rect (corner to corner, the area the frame PNG fills) is the
@@ -102,7 +111,33 @@ export type TextSlot = {
    *  symbol draws only in the profile's `symbolRect`. Code-owned: not part of
    *  the override schema. */
   split?: TypeLineSplit;
+  /** Vertical nudge of the slot's TEXT only, as a fraction of card WIDTH
+   *  (the unit of sizePct; negative = up) — TODO 4.20, layout v32. The rect
+   *  stays put, and with it the mana cost (costDy moves that), an inline set
+   *  symbol and any symbolRect: a slot whose size grows keeps its baseline,
+   *  or moves onto the print's, without re-verifying what shares its band.
+   *  The same mechanism as costDy: the preview translates the text span by
+   *  dy in cqw, the bake by the whole px (Math.round(dy × width)).
+   *  FRONT-FACE title and type line only (both halves of a `split` type
+   *  line): a second face (FrameProfile.secondFace) and the adventure panel
+   *  ignore it and keep centring their text in the rect. Code-owned: not
+   *  part of the override schema. */
+  dy?: number;
+  /** How a single-line display slot (title / type line) fits its room —
+   *  TODO 4.20, layout v32. "measured": shrink by the text's measured
+   *  display width to the room the band really leaves it, instead of the
+   *  character estimate and an ellipsis, down to 5 pt of the card's own
+   *  orientation. Unset = the old path, byte for byte (every frame outside
+   *  the M15-era family, and the full-art basics). Both renderers read it
+   *  through the shared fits: a title (the front face's, the adventure
+   *  panel's) through lib/cards/title-band.ts fitTitleBand, a type line
+   *  through lib/cards/render-tiers.ts fitTypeLine. A second face fits
+   *  with its own `fitLines`. Code-owned: not part of the override schema. */
+  fit?: TextSlotFit;
 };
+
+/** TextSlot.fit's policies. */
+export type TextSlotFit = "measured";
 
 /** A type line printed in two boxes — see TextSlot.split. */
 export type TypeLineSplit = {
@@ -314,9 +349,21 @@ export type FrameProfile = {
    *  band's right edge — lets the symbol move independently of the type
    *  line. Front face only; editable via the layout editor ("set symbol"). */
   symbolRect?: Rect;
-  /** Set-symbol size (fraction of card width), right-aligned in the type band.
-   *  Defaults to `type.sizePct`. */
+  /** Set-symbol BOX (fraction of card width), right-aligned in the type band
+   *  or the symbolRect (layout v32, TODO 4.20; lib/cards/set-symbol-size.ts):
+   *  an uploaded icon and the default mark draw contained in a square of
+   *  this side, and a Keyrune glyph is fitted to it by its ink — font =
+   *  min(box × KEYRUNE_EM_PER_BOX, box ÷ ink height, 0.12 W ÷ ink width).
+   *  Unset, the box is `type.sizePct × 1.1` and a Keyrune glyph's font size
+   *  equals it (every frame outside the M15-era family, unchanged). */
   symbolSizePct?: number;
+  /** How a Keyrune glyph fills the set-symbol box (layout v32, TODO 4.20):
+   *  "ink" fits it by its ink (lib/cards/set-symbol-size.ts); unset, its
+   *  font size IS the box, as before v32. Set on the M15-era family only
+   *  (lib/cards/m15-family.ts). Code-owned: not part of the override schema,
+   *  so an override's symbolSizePct resizes the box but never switches a
+   *  frame outside the family to the ink fit. */
+  setSymbolFit?: "ink";
   /** When true, never render the mana cost (tokens/emblems have none, and the
    *  frame's title bar has no cost area). */
   hideCost?: boolean;
@@ -734,6 +781,75 @@ const ALPHA_BAND_INK: InkByColorKey = {
 };
 
 // ---------------------------------------------------------------------------
+// M15-era display sizes (TODO 4.20, layout v32). Every frame in
+// lib/cards/m15-family.ts prints its name, type line, pips and set symbol at
+// the ONE set of sizes in lib/cards/typography.ts (TITLE_SIZE_PCT 80 px,
+// TYPE_SIZE_PCT 68 px, COST_DISC_PCT 72.75 px, SET_SYMBOL_BOX_PCT 86 px at
+// HD) — Card Conjurer's, which match the prints — instead of per-frame
+// literals that ran 5–24 % small. The rects did not move: the bands, the
+// pips (costDy) and the set symbol stay where v24–v31 verified them, and a
+// band whose text grew keeps its BASELINE with TextSlot.dy (keepBaseline).
+// Only the Card Conjurer masters' type line also moves onto the prints'
+// baseline (CC_M15_TYPE_DY); the MSE-framed spreads keep theirs until the
+// Card Conjurer re-source (TODO 4.21).
+// ---------------------------------------------------------------------------
+
+/** Beleren Bold's baseline below the centre of its line box, per em:
+ *  (hhea ascender 1917 − descender 552) ÷ 2 ÷ 2048 units. Both renderers
+ *  centre a band's single line box (line-height normal = the hhea box,
+ *  1.2056 em) in its rect, so a band whose font grows by Δ (a fraction of
+ *  the card's width) lowers its baseline by this × Δ.
+ *  tests/unit/cards/m15-text-sizes.test.ts re-reads the TTF. */
+export const DISPLAY_BASELINE_BELOW_CENTRE_EM = (1917 - 552) / 2 / 2048;
+
+/** The TextSlot.dy that keeps a centred band's baseline where it printed at
+ *  `fromPct` once its size is `toPct` (both fractions of the card's width,
+ *  the unit of dy): the text moves up by the baseline's drop. Exact in the
+ *  preview; the bake rounds it to whole pixels (≤ 1 px from the old
+ *  baseline at 750 and 1500 px, measured on bakes of every family slot). */
+function keepBaseline(fromPct: number, toPct: number): number {
+  return -DISPLAY_BASELINE_BELOW_CENTRE_EM * (toPct - fromPct);
+}
+
+/**
+ * The dy a front-face band's text is drawn with at `drawnSizePct` (both
+ * renderers — the preview's textDy, the bake's textDyBake; layout v32): the
+ * slot's own dy while it prints at its size, and for a measured line the
+ * fit SHRANK, the same baseline — keepBaseline from the slot's size to the
+ * drawn one, on top of the slot's dy — as a print sets a condensed name or
+ * type line on its band's common baseline (a centred shrunk line used to
+ * climb ≈ 0.33 px per px it lost: Vinnie 'Goldfang' Lupo at 46 px sat 11 px
+ * above every full-size name). The bake passes its whole-px size.
+ */
+export function slotTextDy(slot: Pick<TextSlot, "dy" | "fit" | "sizePct">, drawnSizePct: number): number {
+  const dy = slot.dy ?? 0;
+  if (slot.fit !== "measured" || !(drawnSizePct < slot.sizePct)) return dy;
+  return dy + keepBaseline(slot.sizePct, drawnSizePct);
+}
+
+/** The M15 name: 0.05 → TITLE_SIZE_PCT, baseline kept — it already sits on
+ *  the prints' (188.7 vs 188.0–188.2 px on 2023+ prints at HD). Spread with
+ *  M15.title by every frame on the M15 skeleton. */
+const M15_TITLE_DY = keepBaseline(0.05, TITLE_SIZE_PCT);
+/** The M15 type line: 0.0435 → TYPE_SIZE_PCT, baseline kept. The MSE-framed
+ *  spreads (adventure, extended art, Expedition, Nyx) keep it; their print
+ *  offsets belong to the Card Conjurer re-source (TODO 4.21). */
+const M15_TYPE_DY = keepBaseline(0.0435, TYPE_SIZE_PCT);
+/** Card Conjurer's M15 masters (frames swap 4.4) print the type line ~4 px
+ *  lower than the cards: 1263.7 px at HD vs 1259.6 on 22 black-bordered and
+ *  borderless 2023+ prints (4.20 print review; pre-2023 prints sit at
+ *  1262.2). The correction lifts it 4.2 px at HD (0.2 %H, the review's
+ *  rendered check: 1259.7) onto the print's baseline — only on the
+ *  profiles that draw those masters (the registry m15 entry, land, snow
+ *  land, artifact, snow, devoid, borderless and its artifact, the
+ *  planeswalker's M15 type slot), NOT on M15 itself, whose geometry the
+ *  MSE-framed families spread (as with CC_M15_COST_DY). The tokens' pill
+ *  prints no higher than ours (1799.9 vs 1796.6 on DOM tokens), so they keep
+ *  their baseline. */
+const CC_M15_TYPE_PRINT_DY = -0.0028;
+const CC_M15_TYPE_DY = M15_TYPE_DY + CC_M15_TYPE_PRINT_DY;
+
+// ---------------------------------------------------------------------------
 // Profiles. Coordinates measured from the 1500×2100 white frame PNGs by
 // scanning the center column for transparent (art) and painted (plate) runs;
 // every color variant shares the same slots (same MSE template).
@@ -746,15 +862,28 @@ const M15: FrameProfile = {
   label: "M15",
   // Pip disc measured on a real DOM Serra Angel scan (frame-compare tool,
   // 745px PNG): ~34px ≈ 4.6% of card width; 0.0485 lands our disc there.
-  costSizePct: 0.0485,
+  costSizePct: COST_DISC_PCT,
   artSlot: { topPct: 11.4, leftPct: 7.8, widthPct: 84.4, heightPct: 44.0 },
+  // Card Conjurer's M15 symbol box (setSymbolBounds 0.12 W × 0.041 H, 86 px
+  // at HD; layout v32): the default mark and an uploaded icon fill it, a
+  // Keyrune glyph is fitted to it by its ink (lib/cards/set-symbol-size.ts,
+  // setSymbolFit "ink") — 0.83–1.07 of the prints' keyline-inclusive height
+  // on compact and medium glyphs (DOM, BFZ, KTK, TLA, SPM, IKO, FIN, EOE,
+  // MSC; print checks 2026-09-28), where type.sizePct × 1.1 drew 0.60–0.82;
+  // wide ones (M20/M21/SLD, DSK, NEO, OTJ, WOE, MH3, LTR) stay 0.51–0.62,
+  // capped by box × KEYRUNE_EM_PER_BOX (TODO 4.46). Every profile that
+  // spreads M15 inherits it.
+  symbolSizePct: SET_SYMBOL_BOX_PCT,
+  setSymbolFit: "ink",
   title: {
     // 7-card scan sweep: title ink starts at 8.3–8.9% of card width (avg
     // 8.55). Cost pips end at 92.2%W — the dark cluster at ~94% that an
     // earlier pass took for the pip edge is the name bar's right bevel
     // shading (identical in every card's title AND type band).
     rect: { topPct: 4.8, leftPct: 8.5, widthPct: 83.7, heightPct: 6.0 },
-    sizePct: 0.05,
+    sizePct: TITLE_SIZE_PCT,
+    dy: M15_TITLE_DY,
+    fit: "measured",
     colorHex: INK_DARK,
     weight: 600,
     font: "display",
@@ -768,7 +897,9 @@ const M15: FrameProfile = {
     // Right edge 92.2%W: the real set symbol's ink ends at ~92%W (685px on
     // the 745px scans), well left of the bar's bevel shading.
     rect: { topPct: 56.5, leftPct: 8.5, widthPct: 83.7, heightPct: 5.2 },
-    sizePct: 0.0435,
+    sizePct: TYPE_SIZE_PCT,
+    dy: M15_TYPE_DY,
+    fit: "measured",
     colorHex: INK_DARK_SOFT,
     weight: 600,
     font: "display",
@@ -829,6 +960,8 @@ const M15: FrameProfile = {
 //     override on production since 2026-07-08, folded into code 2026-09-25
 //     (migration 0114). The band keeps its 77.5% width; keep the right edge
 //     with M15 (14 + 77.5 = 91.5 ≈ 8.5 + 83).
+// A Card Conjurer master (4.4): the type line sits on the prints' baseline
+// (CC_M15_TYPE_DY).
 const M15LAND: FrameProfile = {
   ...M15,
   label: "M15 Land",
@@ -837,6 +970,7 @@ const M15LAND: FrameProfile = {
     ...M15.title,
     rect: { ...M15.title.rect, leftPct: 8.4, widthPct: 77.5 },
   },
+  type: { ...M15.type, dy: CC_M15_TYPE_DY },
 };
 
 // Snow land — the frosted land skin. Its title bar starts a touch further
@@ -954,7 +1088,14 @@ const M15PW: FrameProfile = {
   artSlot: { topPct: 9.9, leftPct: 6.7, widthPct: 86.4, heightPct: 81.7 },
   // Title/type tops, the detached cost box and the set-symbol box were tuned
   // in the compare tool (production override 2026-07-09, folded 2026-09-25).
-  costRect: { topPct: 3.8, leftPct: 51.2, widthPct: 40, heightPct: 4.4 },
+  // Layout v32 (TODO 4.20): the box ends where the printed walkers' pips do
+  // — 1380–1383 px at HD on all four measured prints (BFZ #29, DOM #1, KLD
+  // #110, AKH #97), and where M15's inline pips end (its band's right edge,
+  // 92.2 %W) — not 15 px short of them (91.2 %, tuned on the MSE frame's
+  // 64 px discs). With the family's 72.75 px discs that is what lets a name
+  // as long as the print's "Chandra, Torch of Defiance" keep full size
+  // (owner decision 2026-09-28; lib/cards/title-band.ts fitTitleBand).
+  costRect: { topPct: 3.8, leftPct: 52.2, widthPct: 40, heightPct: 4.4 },
   // That box was tuned on the MSE frame. Card Conjurer's planeswalker title
   // bar (frames swap 4.4) runs ~9 px lower at HD (plate 77–192 px vs
   // 73–183 on eight printed M15 planeswalkers, 1500 × 2100), so the pips —
@@ -962,27 +1103,39 @@ const M15PW: FrameProfile = {
   // centre 48.0 % of the way down the plate (47.3–48.8 %); 6 px down puts
   // ours there (132 px).
   costDy: 0.004,
+  // Layout v32: the M15 disc (the prints' pips are ~70 px on a planeswalker
+  // as on M15; the old default, the 64 px name size, left them small under
+  // an 80 px name — owner decision 2026-09-28). The row stays centred in
+  // costRect, so the pips' centre does not move.
+  costSizePct: COST_DISC_PCT,
   symbolRect: { topPct: 56.9, leftPct: 79, widthPct: 12, heightPct: 3.8 },
+  // CC's planeswalker symbol box (0.12 W × 0.0381 H = 80 px, the rect's
+  // height; layout v32) — see M15's symbolSizePct.
+  symbolSizePct: SET_SYMBOL_BOX_PCT_THIN_BAR,
+  setSymbolFit: "ink",
   title: {
     // The name sat just as high: caps centre 125.5 px = 42 % of the plate,
     // level with the old pips. Printed names centre 49–51 % down (126.8–129.2
     // px on eleven M15 walkers), about 2 px below their pips. 3.8 → 4.18
     // (8 px lower at HD) puts ours at 133.5 px = 49 %, 2 px below the pips,
     // the print's relation.
+    // Layout v32 grows it 64 → 80 px and keeps it CENTRED on the plate (no
+    // dy): CC's plate sits 6–9 px lower than the prints', so the prints'
+    // absolute baseline (156 px) would lift the caps ~6 px above the pips.
+    // Centred, the caps stay level with the pips, as the owner placed them
+    // in round 3 (plate-relative, owner decision 2026-09-28).
     rect: { topPct: 4.18, leftPct: 8.5, widthPct: 80, heightPct: 4.4 },
-    sizePct: 0.0427,
+    sizePct: TITLE_SIZE_PCT,
+    fit: "measured",
     colorHex: INK_DARK,
     weight: 600,
     font: "display",
     letterSpacingEm: 0.01,
   },
-  type: {
-    rect: { topPct: 56.8, leftPct: 8.8, widthPct: 79, heightPct: 3.8 },
-    sizePct: 0.0347,
-    colorHex: INK_DARK_SOFT,
-    weight: 600,
-    font: "display",
-  },
+  // Layout v32: M15's type slot. Printed planeswalkers put the type line on
+  // M15's baseline (1259.6 px at HD, three BFZ/DOM/AKH walkers) starting at
+  // 8.5 %W; ours sat 10 px higher, 8 px right and a quarter small.
+  type: { ...M15.type, dy: CC_M15_TYPE_DY },
   rules: {
     rect: { topPct: 63.1, leftPct: 8.5, widthPct: 83.5, heightPct: 28.3 },
     sizePct: ptToPct(8),
@@ -1034,13 +1187,27 @@ const M15PW: FrameProfile = {
 // (centered), and P/T over the art (no plate). Token abilities render over the
 // lower art on a dark scrim. The arched top of the window is covered by the
 // frame; the artSlot is the bounding box.
+// Layout v32: the M15 name and type sizes (the prints' type line is M15's
+// ~68 px; the name's Beleren Small Caps and a left-aligned type line are
+// 4.8 / 4.4), both still centred and each on its old baseline; the set
+// symbol in M15's 86 px box, inside the ~101 px pill.
+/** How far the token's type band moved up onto the CC pill's centre (82.6 →
+ *  82.14 %H, layout v32), as a fraction of card WIDTH (dy's unit): 0.46 %H ×
+ *  7/5. The type text's dy moves it back down by exactly this. */
+const TOKEN_PILL_LIFT_PCT = (0.46 / 100) * (7 / 5);
 const M15TOKEN: FrameProfile = {
   label: "M15 Token",
   hideCost: true,
   artSlot: { topPct: 12.0, leftPct: 6.5, widthPct: 87, heightPct: 69.0 },
+  // CC's token symbol box, M15's (0.041 H = 86 px; layout v32), centred on
+  // the cream pill with the type band (below).
+  symbolSizePct: SET_SYMBOL_BOX_PCT,
+  setSymbolFit: "ink",
   title: {
     rect: { topPct: 4.6, leftPct: 9, widthPct: 82, heightPct: 6.4 },
-    sizePct: 0.05,
+    sizePct: TITLE_SIZE_PCT,
+    dy: keepBaseline(0.05, TITLE_SIZE_PCT),
+    fit: "measured",
     colorHex: INK_LIGHT,
     weight: 600,
     align: "center",
@@ -1049,9 +1216,18 @@ const M15TOKEN: FrameProfile = {
   },
   // Measured: the cream type pill spans 82.2–87.0% (was rendered at 87.5+,
   // a band too low); MSE token type font is 14/375.
+  // Layout v32: the band is centred on Card Conjurer's pill (interior 1716–
+  // 1822 px at HD on every m15token / m15tokenartifact master; at 82.6 %H it
+  // centred 9.7 px below it — hidden by the old 55 px symbol, but the 86 px
+  // one sat on the pill's bottom bevel, 4.20 print review). The set symbol,
+  // centred in the band, moves up with it; the type line keeps its baseline
+  // (≈ the prints': 1796.6 vs 1799.9 px on DOM tokens) — its dy takes the
+  // move back as well as the size change.
   type: {
-    rect: { topPct: 82.6, leftPct: 11, widthPct: 78, heightPct: 4.2 },
-    sizePct: 0.034,
+    rect: { topPct: 82.14, leftPct: 11, widthPct: 78, heightPct: 4.2 },
+    sizePct: TYPE_SIZE_PCT,
+    dy: keepBaseline(0.034, TYPE_SIZE_PCT) + TOKEN_PILL_LIFT_PCT,
+    fit: "measured",
     colorHex: INK_DARK,
     weight: 600,
     align: "center",
@@ -1094,17 +1270,21 @@ const M15TOKEN: FrameProfile = {
 // band (7.8 %H) sat 0.5–0.7 % of the card height below six real printings
 // (owner review 2026-09-25). Lift them 0.55 %H on the CC-framed profiles —
 // NOT on M15 itself, whose geometry the older MSE-framed families spread.
+// The same profiles put the type line on the prints' baseline
+// (CC_M15_TYPE_DY, layout v32).
 const CC_M15_COST_DY = -0.0077;
 const M15ARTIFACT: FrameProfile = {
   ...M15,
   label: "M15 Artifact",
   costDy: CC_M15_COST_DY,
+  type: { ...M15.type, dy: CC_M15_TYPE_DY },
   pt: { ...M15.pt!, plateAssetPathTemplate: "/frames/m15artifact/pt/{color}.png" },
 };
 const M15SNOW: FrameProfile = {
   ...M15,
   label: "M15 Snow",
   costDy: CC_M15_COST_DY,
+  type: { ...M15.type, dy: CC_M15_TYPE_DY },
   pt: { ...M15.pt!, plateAssetPathTemplate: "/frames/m15snow/pt/{color}.png" },
 };
 
@@ -1121,7 +1301,7 @@ const M15DEVOID: FrameProfile = {
   // runs under the whole frame like printed devoid cards (4.17).
   underFrameArt: { rect: UNDER_FRAME_RECT },
   pt: { ...M15.pt!, plateAssetPathTemplate: "/frames/m15devoid/pt/{color}.png" },
-  type: { ...M15.type, rect: { ...M15.type.rect, topPct: 56.4 } },
+  type: { ...M15.type, rect: { ...M15.type.rect, topPct: 56.4 }, dy: CC_M15_TYPE_DY },
   symbolRect: { topPct: 56.2, leftPct: 80.2, widthPct: 12, heightPct: 5.2 },
 };
 
@@ -1153,7 +1333,7 @@ const M15BORDERLESS: FrameProfile = {
   setSymbolKeyline: SET_SYMBOL_KEYLINE,
   artSlot: { topPct: 0, leftPct: 0, widthPct: 100, heightPct: 92.24 },
   title: { ...M15.title, colorHex: BORDERLESS_INK },
-  type: { ...M15.type, colorHex: BORDERLESS_INK },
+  type: { ...M15.type, colorHex: BORDERLESS_INK, dy: CC_M15_TYPE_DY },
   rules: { ...M15.rules, colorHex: BORDERLESS_INK },
   pt: {
     ...M15.pt!,
@@ -1458,15 +1638,26 @@ const BATTLE: FrameProfile = {
 // chapters replace the normal rules box) and a tall art column on the RIGHT,
 // with a title bar (name + cost) on top and a type bar at the bottom. Source:
 // magic-modules.mse-include/cards/375 m15 saga cut.
+// Layout v32: printed sagas set the name and type line at M15's sizes (81 /
+// 68 px on DOM #21 / #90 / #122; ours were 64 / 52) and their pips at M15's
+// ~70 px (owner decision 2026-09-28). Both bands keep their baseline — the
+// name's is the prints' (184.7 px); the type line's print offset (~11 px
+// lower) waits for the Card Conjurer re-source (TODO 4.21).
 const SAGA: FrameProfile = {
   label: "Saga",
-  costSizePct: 0.04,
+  costSizePct: COST_DISC_PCT,
   // MSE m15-saga spec: image 188,59 → 345,438; rail text from 60 to 437
   // (badges at left 30, text indented to 45); type at 444.
   artSlot: { topPct: 11.3, leftPct: 50.1, widthPct: 41.9, heightPct: 72.5 },
+  // CC's saga symbol box (packSagaRegular 0.12 W × 0.0381 H = 80 px; layout
+  // v32) — see M15's symbolSizePct.
+  symbolSizePct: SET_SYMBOL_BOX_PCT_THIN_BAR,
+  setSymbolFit: "ink",
   title: {
     rect: { topPct: 5.4, leftPct: 8.5, widthPct: 83, heightPct: 4.8 },
-    sizePct: 0.0427,
+    sizePct: TITLE_SIZE_PCT,
+    dy: keepBaseline(0.0427, TITLE_SIZE_PCT),
+    fit: "measured",
     colorHex: INK_DARK,
     weight: 600,
     font: "display",
@@ -1474,7 +1665,9 @@ const SAGA: FrameProfile = {
   type: {
     // 85.1, not the MSE 84.9: production override 2026-07-08, folded 2026-09-25.
     rect: { topPct: 85.1, leftPct: 8.8, widthPct: 82, heightPct: 3.9 },
-    sizePct: 0.0347,
+    sizePct: TYPE_SIZE_PCT,
+    dy: keepBaseline(0.0347, TYPE_SIZE_PCT),
+    fit: "measured",
     colorHex: INK_DARK,
     weight: 600,
     font: "display",
@@ -1527,11 +1720,16 @@ const ADVENTURE: FrameProfile = {
     vAlign: "start",
     font: "body",
   },
+  // Layout v32: the panel's name and type line at Card Conjurer's name2 /
+  // type2 (ADVENTURE_PANEL_PCT, 62 px at HD; were 48 / 38) and its pips at
+  // mana2 (ADVENTURE_PANEL_COST_PCT, 60 px; were 45). The panel keeps
+  // centring its text on its bars (TextSlot.dy is front-face only).
   adventure: {
     // Adventure name (+ its cost) — MSE name 2 (left 32, top ~330, → cost 180).
     title: {
       rect: { topPct: 62.7, leftPct: 8.5, widthPct: 39.5, heightPct: 4.0 },
-      sizePct: 0.032,
+      sizePct: ADVENTURE_PANEL_PCT,
+      fit: "measured",
       colorHex: INK_LIGHT,
       weight: 700,
       font: "display",
@@ -1540,7 +1738,8 @@ const ADVENTURE: FrameProfile = {
     // Adventure type line — MSE type 2 (left 32, top ~353, width 155).
     type: {
       rect: { topPct: 67.0, leftPct: 8.5, widthPct: 41.3, heightPct: 3.7 },
-      sizePct: 0.0255,
+      sizePct: ADVENTURE_PANEL_PCT,
+      fit: "measured",
       colorHex: INK_LIGHT,
       weight: 600,
       font: "display",
@@ -1554,7 +1753,7 @@ const ADVENTURE: FrameProfile = {
       vAlign: "start",
       font: "body",
     },
-    costSizePct: 0.03,
+    costSizePct: ADVENTURE_PANEL_COST_PCT,
   },
 };
 
@@ -1565,20 +1764,33 @@ const ADVENTURE: FrameProfile = {
 // They share the single middle art window. No painted P/T plate (the value sits
 // on the cream type bar → dark ink). Convert via scripts/build-flip-frame.mjs.
 // Geometry is the MSE 375×523 spec / measured plates, in percent.
+// Layout v32: both creatures print M15's name and type sizes (Card
+// Conjurer's flip pack: 0.0381 / 0.0324 H on both halves; were 64 / 52 px)
+// and M15's pips (owner decision 2026-09-28). The top half keeps its
+// baselines (TextSlot.dy); the upside-down half keeps centring its text in
+// its bars, and its name bar and type line fit their bars (fitLines).
 const FLIP: FrameProfile = {
   label: "Flip",
-  costSizePct: 0.04,
+  costSizePct: COST_DISC_PCT,
   artSlot: { topPct: 31.0, leftPct: 7.7, widthPct: 84.3, heightPct: 35.2 },
+  // CC's flip symbol box, M15's (packFlip 0.12 W × 0.041 H = 86 px; layout
+  // v32) — see M15's symbolSizePct.
+  symbolSizePct: SET_SYMBOL_BOX_PCT,
+  setSymbolFit: "ink",
   title: {
     rect: { topPct: 5.7, leftPct: 8.5, widthPct: 82, heightPct: 4.4 },
-    sizePct: 0.0427,
+    sizePct: TITLE_SIZE_PCT,
+    dy: keepBaseline(0.0427, TITLE_SIZE_PCT),
+    fit: "measured",
     colorHex: INK_DARK,
     weight: 600,
     font: "display",
   },
   type: {
     rect: { topPct: 25.0, leftPct: 8.5, widthPct: 68, heightPct: 4.2 },
-    sizePct: 0.0347,
+    sizePct: TYPE_SIZE_PCT,
+    dy: keepBaseline(0.0347, TYPE_SIZE_PCT),
+    fit: "measured",
     colorHex: INK_DARK_SOFT,
     weight: 600,
     font: "display",
@@ -1603,16 +1815,21 @@ const FLIP: FrameProfile = {
   // 72.6–86.0, title plate 87.2–92.4.
   secondFace: {
     rotation: 180,
+    // Layout v32 (TODO 4.20): the upside-down name and type line fit their
+    // bars as the front's do (secondFaceLineSizes), instead of ellipsizing
+    // at the profile's sizes — at the family's name size a long flip name
+    // ("Rune-Tail, Kitsune Ascendant") reaches its bar's end.
+    fitLines: true,
     title: {
       rect: { topPct: 87.8, leftPct: 9.5, widthPct: 82, heightPct: 4.4 },
-      sizePct: 0.0427,
+      sizePct: TITLE_SIZE_PCT,
       colorHex: INK_DARK,
       weight: 600,
       font: "display",
     },
     type: {
       rect: { topPct: 68.0, leftPct: 23.5, widthPct: 68, heightPct: 4.2 },
-      sizePct: 0.0347,
+      sizePct: TYPE_SIZE_PCT,
       colorHex: INK_DARK_SOFT,
       weight: 600,
       font: "display",
@@ -1725,20 +1942,29 @@ const SPLIT: FrameProfile = {
 // bars are a third of the card long, so a name + cost too long for them at
 // these sizes shrinks as one (pips with the name), and a long type line
 // shrinks alone (fitLines); the printed cards keep the full sizes.
+// Layout v32: M15's sizes are now the shared display sizes (80 / 68 px,
+// 72.75 px discs; were 75 / 65 px); the top half keeps its baselines
+// (TextSlot.dy), the sideways half keeps centring its text in its bars.
 const AFTERMATH_TEXT = {
-  titleSizePct: 0.05,
-  typeSizePct: 0.0435,
-  costSizePct: 0.0485,
+  titleSizePct: TITLE_SIZE_PCT,
+  typeSizePct: TYPE_SIZE_PCT,
+  costSizePct: COST_DISC_PCT,
   rulesSizePct: ptToPct(9),
 } as const;
 
 const AFTERMATH: FrameProfile = {
   label: "Aftermath",
+  // CC's aftermath symbol box, M15's (packAftermath 0.12 W × 0.041 H = 86 px;
+  // layout v32) — see M15's symbolSizePct.
+  symbolSizePct: SET_SYMBOL_BOX_PCT,
+  setSymbolFit: "ink",
   artSlot: { topPct: 11.3, leftPct: 7.7, widthPct: 84.5, heightPct: 22.4 },
   costSizePct: AFTERMATH_TEXT.costSizePct,
   title: {
     rect: { topPct: 5.7, leftPct: 8.5, widthPct: 82, heightPct: 4.4 },
     sizePct: AFTERMATH_TEXT.titleSizePct,
+    dy: keepBaseline(0.05, AFTERMATH_TEXT.titleSizePct),
+    fit: "measured",
     colorHex: INK_DARK,
     weight: 600,
     font: "display",
@@ -1746,6 +1972,8 @@ const AFTERMATH: FrameProfile = {
   type: {
     rect: { topPct: 35.4, leftPct: 8, widthPct: 82.7, heightPct: 3.8 },
     sizePct: AFTERMATH_TEXT.typeSizePct,
+    dy: keepBaseline(0.0435, AFTERMATH_TEXT.typeSizePct),
+    fit: "measured",
     colorHex: INK_DARK_SOFT,
     weight: 600,
     font: "display",
@@ -2241,9 +2469,12 @@ const FULLART: FrameProfile = {
     ...M15.title,
     rect: { topPct: 5.4, leftPct: 8.5, widthPct: 83, heightPct: 5 },
   },
+  // Layout v32: M15's type size (was 0.0347, 52 px), on its old baseline.
   type: {
     rect: { topPct: 73.6, leftPct: 8.5, widthPct: 83, heightPct: 4.2 },
-    sizePct: 0.0347,
+    sizePct: TYPE_SIZE_PCT,
+    dy: keepBaseline(0.0347, TYPE_SIZE_PCT),
+    fit: "measured",
     colorHex: INK_LIGHT,
     weight: 600,
     font: "display",
@@ -2280,21 +2511,35 @@ const FULLART: FrameProfile = {
 // right-anchored at 92.13 %W and centred on 87.39 %H (CC setSymbolBounds).
 // `rules` only places a non-basic's text and watermark, which the basic-only
 // gate keeps off these frames.
+// Layout v32: these slots already print at the family's sizes (they ARE
+// TITLE_SIZE_PCT / TYPE_SIZE_PCT) on print-verified rects, so they take
+// none of M15's v32 text changes: no baseline dy and the old fit path (both
+// set explicitly — the slots spread M15's). The set symbol's box is M15's
+// (SET_SYMBOL_BOX_PCT, 86 px, inside the 4.1 %H symbolRect): a Keyrune
+// glyph keeps its print-checked 0.065 font (box × KEYRUNE_EM_PER_BOX), the
+// default mark and an uploaded icon fill the box (they drew 97.5 px).
 const FULL_ART_BASIC: FrameProfile = {
   ...M15,
   hideCost: true,
   title: {
     ...M15.title,
     rect: { topPct: 5.4, leftPct: 8.54, widthPct: 80.46, heightPct: 4.6 },
-    sizePct: 0.0533,
+    sizePct: TITLE_SIZE_PCT,
+    dy: 0,
+    fit: undefined,
   },
   type: {
     ...M15.type,
     rect: { topPct: 85.1, leftPct: 18.87, widthPct: 65.13, heightPct: 4.2 },
-    sizePct: 0.0453,
+    sizePct: TYPE_SIZE_PCT,
+    dy: 0,
+    fit: undefined,
   },
   symbolRect: { topPct: 85.34, leftPct: 80.13, widthPct: 12, heightPct: 4.1 },
-  symbolSizePct: 0.065,
+  // CC's box, the rect's height (layout v32; it was a 0.065 font size, which
+  // drew the mark and an icon at 97.5 px, past the rect). A Keyrune glyph
+  // still draws at 0.065 W unless its ink would stand taller than the box.
+  symbolSizePct: SET_SYMBOL_BOX_PCT,
   rules: {
     rect: { topPct: 16, leftPct: 15, widthPct: 70, heightPct: 62 },
     sizePct: ptToPct(9),
@@ -2362,7 +2607,14 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // Colourless M15 is CC's see-through "Eldrazi" frame: art under the frame
   // for "c" only (4.17). Set here, not on M15, so the many profiles that
   // spread M15 don't inherit it.
-  m15: { ...M15, costDy: CC_M15_COST_DY, underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] } },
+  // The CC cost lift and type-line baseline (CC_M15_COST_DY /
+  // CC_M15_TYPE_DY) are set here too, for the same reason.
+  m15: {
+    ...M15,
+    costDy: CC_M15_COST_DY,
+    type: { ...M15.type, dy: CC_M15_TYPE_DY },
+    underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] },
+  },
   m15land: M15LAND,
   m15snowland: M15SNOWLAND,
   // Colourless creature tokens print a see-through frame (BFZ, MH1, WAR).

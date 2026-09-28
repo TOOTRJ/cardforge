@@ -35,8 +35,15 @@ describe("Card Conjurer frame profiles", () => {
     // compare tool tuned it (right end unchanged); costDy (a fraction of the
     // WIDTH) moves the pips 6 px down, 126 → 132 px. The name was level with
     // the old pips, so it moves too: title top 3.8 → 4.18 (8 px).
+    // Layout v32 (TODO 4.20) moved the box RIGHT only, onto the print: the
+    // four measured walkers end their pips at 1380–1383 px, M15's inline
+    // pips at its band's right edge (92.2 %W); its rows are unchanged.
     const pw = getFrameProfile("m15pw");
-    expect(pw.costRect).toEqual({ topPct: 3.8, leftPct: 51.2, widthPct: 40, heightPct: 4.4 });
+    expect(pw.costRect).toEqual({ topPct: 3.8, leftPct: 52.2, widthPct: 40, heightPct: 4.4 });
+    const m15Band = getFrameProfile("m15").title.rect;
+    expect(pw.costRect!.leftPct + pw.costRect!.widthPct).toBeCloseTo(m15Band.leftPct + m15Band.widthPct, 9);
+    expect(((pw.costRect!.leftPct + pw.costRect!.widthPct) / 100) * 1500).toBeGreaterThanOrEqual(1380);
+    expect(((pw.costRect!.leftPct + pw.costRect!.widthPct) / 100) * 1500).toBeLessThanOrEqual(1384);
     expect(pw.costDy).toBe(0.004);
     const pipPx = ((pw.costRect!.topPct + pw.costRect!.heightPct / 2) / 100) * 2100 + pw.costDy! * 1500;
     expect(pipPx).toBeCloseTo(132, 6);

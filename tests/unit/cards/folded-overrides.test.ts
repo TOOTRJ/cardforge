@@ -46,7 +46,16 @@ const PRODUCTION_OVERRIDES_2026_09_24: FrameProfileOverridesMap = {
 const MOVED_AFTER_FOLD: Record<string, (p: FrameProfile) => FrameProfile> = {
   // Frame review round 4: the planeswalker name lowered 8 px into CC's taller
   // title plate (3.8 → 4.18), with the pips (costDy, not in the snapshot).
-  m15pw: (p) => ({ ...p, title: { ...p.title, rect: { ...p.title.rect, topPct: 3.8 } } }),
+  // Layout v32 (TODO 4.20): its type line took M15's slot (top 56.5, on the
+  // prints' baseline), so the old override's 56.8 would put it back too, and
+  // its cost box moved right onto the print's pips (51.2 → 52.2, ending at
+  // M15's 92.2 %W).
+  m15pw: (p) => ({
+    ...p,
+    title: { ...p.title, rect: { ...p.title.rect, topPct: 3.8 } },
+    type: { ...p.type, rect: { ...p.type.rect, topPct: 56.8 } },
+    costRect: { ...p.costRect!, leftPct: 51.2 },
+  }),
 };
 
 describe("folded production overrides (migration 0114)", () => {
@@ -58,10 +67,15 @@ describe("folded production overrides (migration 0114)", () => {
     });
   }
 
-  it("m15pw: only the name's top moved after the fold", () => {
+  it("m15pw: only the name's top (round 4), the type line's slot and the cost box's left (v32) moved after the fold", () => {
     const code = getFrameProfile("m15pw");
+    const folded = mergeProfile(code, PRODUCTION_OVERRIDES_2026_09_24.m15pw);
     expect(code.title.rect.topPct).toBe(4.18);
-    expect(mergeProfile(code, PRODUCTION_OVERRIDES_2026_09_24.m15pw).title.rect.topPct).toBe(3.8);
+    expect(folded.title.rect.topPct).toBe(3.8);
+    expect(code.type.rect).toEqual(getFrameProfile("m15").type.rect);
+    expect(folded.type.rect.topPct).toBe(56.8);
+    expect(code.costRect!.leftPct).toBe(52.2);
+    expect(folded.costRect!.leftPct).toBe(51.2);
   });
 
   it("the snow land keeps its own title inset, distinct from the plain land", () => {

@@ -209,6 +209,55 @@ read it.
   steps where a Phase B repaint meets the untouched border — visible only
   at 6× contrast — are accepted (owner, 2026-09-28).
 
+## Text sizes on the M15-era family (TODO 4.20, layout v32)
+
+The M15-era family (`M15_FAMILY_TEMPLATES` in `lib/cards/m15-family.ts`,
+23 templates; split and battle join with 4.21) prints its names, type
+lines, pips and set symbol at ONE set of sizes, Card Conjurer's, which match
+the prints. They live in `lib/cards/typography.ts`, as fractions of a
+portrait card's width: `TITLE_SIZE_PCT` 0.0533 (80 px at HD),
+`TYPE_SIZE_PCT` 0.0453 (68 px), `COST_DISC_PCT` 0.0485, the set-symbol box
+`SET_SYMBOL_BOX_PCT` 0.0574 (86 px; `SET_SYMBOL_BOX_PCT_THIN_BAR` 0.0533 on
+the planeswalker and saga) and the adventure panel's `ADVENTURE_PANEL_PCT` /
+`ADVENTURE_PANEL_COST_PCT`; `displayPct(pct, orientation)` gives a landscape
+slot the same absolute size.
+
+A family profile:
+
+- references those constants, never a literal;
+- sets `fit: "measured"` on its title and type slots, so both renderers take
+  the name's text, size and width from `fitTitleBand`
+  (`lib/cards/title-band.ts`) and the type line's from `fitTypeLineBand`
+  (`lib/cards/render-tiers.ts`). Each shrinks only as far as its room needs,
+  down to 5 pt of the card's orientation; past that floor the helper cuts it
+  with ONE "…", and both renderers draw that string. The room: a name runs
+  to one band gap (`BAND_GAP_PCT`, 0.02 W) before its pips, inline or in a
+  `costRect`, or to the band's end with no cost; a type line runs to
+  `TYPE_SYMBOL_GAP_PCT` (0.013 W, the prints' gap) before the set symbol's
+  INK as drawn, inline (both renderers pull the symbol left over the band
+  gap by `inlineSymbolPullPct`; it stays where it was) or in a `symbolRect`
+  that overlaps the band. The bake sets a shrunk line at `measuredLinePx`
+  (the whole px below its fit, never below the floor's own px), and the
+  preview shows it at the stored HD bake's px (`measuredLinePreviewPct`);
+- keeps a grown slot's baseline with `TextSlot.dy` (`keepBaseline` in
+  `template-layout.ts`): it moves the TEXT only — the rects, pips and set
+  symbol stay where they were verified. A line the fit shrank keeps its
+  band's baseline too (`slotTextDy`). Front faces only; second faces and the
+  adventure panel centre their text in the rect;
+- gives the set symbol a box in `symbolSizePct` and sets
+  `setSymbolFit: "ink"` (code-owned, never in an override). `setSymbolSize`
+  (`lib/cards/set-symbol-size.ts`) draws an uploaded icon or the default mark
+  in a square of the box and fits a Keyrune glyph to it by its ink, from
+  `lib/cards/keyrune-metrics.ts`. After a keyrune upgrade, run
+  `node scripts/generate-keyrune-metrics.mjs`; its test fails until then.
+
+Every frame outside the family keeps the old code paths byte-for-byte: no
+`fit` flag (the character estimate and the CSS ellipsis) and no box or ink
+fit (the symbol drawn at `type.sizePct × 1.1`, or at an override's
+`symbolSizePct`, which stays a font size there). Bringing a frame into the
+family is a layout bump of its own. Rules text is not part of this standard: it keeps the
+9 pt ceiling and its fit (the recalibration is TODO 3.29).
+
 ## Shipping a frame change
 
 1. Build the files into `.frames-build/<template>/…`, which is gitignored.

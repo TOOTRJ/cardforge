@@ -15,16 +15,19 @@
 // shrink ~13 % when it needed under 1 % (Miner the Miner, Damned Delver).
 // Two fits measure here instead, each with its own policy:
 //
-//   * displayTextWidthEm — the name next to a detached cost (m15pw, modern;
-//     lib/cards/title-band.ts). The advances alone, each to the nearest
-//     thousandth of an em. Kerning is left out: Beleren's pairs mostly
-//     tighten (a public title's kerned width is 97.5 % of this sum at the
-//     median, 101.2 % at the worst), and the title fit keeps its own
-//     headroom (TITLE_FIT_HEADROOM) for the rest.
-//   * displayTextEm — aftermath's sideways name and type bars
-//     (secondFaceLineSizes in lib/cards/render-tiers.ts). The advances
-//     rounded UP, plus every pair the browser kerns APART (KERN_WIDENING),
-//     so a measured line is an upper bound for both renderers.
+//   * displayTextWidthEm — the name: next to a detached cost (modern), and
+//     every name on a measured slot (the M15-era family, layout v32;
+//     fitTitleBand in lib/cards/title-band.ts). The advances alone, each to
+//     the nearest thousandth of an em — the box the bake lays a name out in.
+//     Kerning is left out: Beleren's pairs mostly tighten (a public title's
+//     kerned width is 97.5 % of this sum at the median, 101.2 % at the
+//     worst), and the title fit keeps its own headroom (TITLE_FIT_HEADROOM)
+//     for the rest.
+//   * displayTextEm — a second face's name and type bars (aftermath, flip;
+//     secondFaceLineSizes in lib/cards/render-tiers.ts) and a measured type
+//     line (fitTypeLine). The advances rounded UP, plus every pair the
+//     browser kerns APART (KERN_WIDENING), so a measured line is an upper
+//     bound for both renderers.
 //
 // Both read ONE advance table, in the font's own units.
 
@@ -180,4 +183,49 @@ export function displayTextEm(text: string | null | undefined): number {
     if (i > 0) total += kernWidening(chars[i - 1] + chars[i]);
   }
   return total / 1000;
+}
+
+// ---------------------------------------------------------------------------
+// truncateDisplayLine — the one "…" cut for a line past its fit's floor.
+// ---------------------------------------------------------------------------
+
+const ELLIPSIS = "…";
+
+/** A word cut by the "…" keeps at least this many characters; a shorter
+ *  fragment ("Skeptic — K…") goes, back to the last whole word
+ *  ("Skeptic…"). */
+const MIN_CUT_FRAGMENT = 3;
+
+/**
+ * `text` cut to at most `maxEm` including its "…", measured with `measure`
+ * (a line's width at 1 em — displayTextWidthEm for a name, the type line's
+ * own upper bound for a type line), at a character boundary, with trailing
+ * spaces and separators (, ; : and dashes) dropped before the "…"
+ * ("Skeptic…", not "Skeptic,…"). A word cut to fewer than MIN_CUT_FRAGMENT
+ * characters is dropped when a whole word comes before it. The whole text
+ * when it fits.
+ *
+ * Both renderers draw the string this returns (lib/cards/title-band.ts
+ * fitTitleBand, lib/cards/render-tiers.ts fitTypeLineBand and
+ * secondFaceLineSizes), so a line too long even at its 5 pt floor is cut at
+ * ONE place in the preview and the bake — never by each renderer's
+ * text-overflow, which cut at different letters (the bake draws a whole
+ * pixel's size, the preview a fraction).
+ */
+export function truncateDisplayLine(text: string, maxEm: number, measure: (s: string) => number): string {
+  // (A line fitted exactly measures maxEm give or take rounding error.)
+  if (measure(text) <= maxEm * (1 + 1e-9)) return text;
+  const chars = Array.from(text);
+  let kept = 0;
+  while (kept < chars.length && measure(chars.slice(0, kept + 1).join("") + ELLIPSIS) <= maxEm) kept += 1;
+  let head = chars.slice(0, kept).join("");
+  if (kept < chars.length && !/\s/u.test(chars[kept])) {
+    // Cut inside a word.
+    const fragment = /\S*$/u.exec(head)?.[0] ?? "";
+    if (Array.from(fragment).length < MIN_CUT_FRAGMENT && fragment.length < head.length) {
+      head = head.slice(0, head.length - fragment.length);
+    }
+  }
+  const cut = head.replace(/[\s,;:\-–—]+$/u, "");
+  return (cut || chars[0]) + ELLIPSIS;
 }

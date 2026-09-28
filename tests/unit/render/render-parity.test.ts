@@ -31,6 +31,37 @@ describe("set symbol", () => {
     // keeps one layer): offset copies under the glyph.
     expect(BAKE).toContain("const copies = textShadowCopies(keyline, fontSize);");
   });
+
+  it("sizes every set symbol from lib/cards/set-symbol-size.ts in both renderers (layout v32)", () => {
+    // One size + drawn width per card, from the same helper and inputs.
+    expect(PREVIEW).toContain("setSymbolSize(layout, setSymbolSource(setIconUrl, setIconCode))");
+    expect(BAKE).toContain("setSymbolSize(layout, setSymbolSource(card.setIconUrl, card.setIconCode))");
+    // Both call sites draw at it — the preview in cqw, the bake in whole px —
+    // and the preview lays a glyph out at the table's advance, the width the
+    // bake reserves for a centred type line (setSymbolDrawnPx; the bake-only
+    // fontkit measure is gone).
+    expect(PREVIEW.match(/size=\{cqw\(setSymbol\.sizePct\)\}/g)).toHaveLength(2);
+    expect(PREVIEW.match(/width=\{cqw\(setSymbol\.drawnWidthPct\)\}/g)).toHaveLength(2);
+    expect(BAKE.match(/fontSize=\{fpx\(setSymbol\.sizePct, width\)\}/g)).toHaveLength(2);
+    expect(BAKE).toContain("setSymbolDrawnPx(setSymbol, width)");
+    expect(BAKE).not.toContain("keyruneAdvancePx");
+    // The type line's fit reserves the symbol as drawn — the same width and
+    // ink start in both (fitTypeLineBand; its old path's box × 1.3 reads the
+    // same box), and both pull a measured band's inline symbol by the same
+    // amount (inlineSymbolPullPct) and never shrink it.
+    for (const src of [PREVIEW, BAKE]) {
+      expect(src).toContain("symbolWidthPct: setSymbol.drawnWidthPct,");
+      expect(src).toContain("symbolInkLeftPct: setSymbol.inkLeftPct,");
+      expect(src).toContain("const symbolPull = inlineSymbolPullPct(layout, setSymbol);");
+    }
+    expect(PREVIEW).toContain('? { flexShrink: 0, ...(symbolPull ? { marginLeft: `-${cqw(symbolPull)}` } : {}) }');
+    expect(BAKE).toContain("? { flexShrink: 0, ...(symbolPull ? { marginLeft: -Math.round(symbolPull * width) } : {}) }");
+    expect(PREVIEW).toContain("style={inlineSymbolStyle}");
+    expect(BAKE).toContain("wrap={inlineSymbolWrap}");
+    expect(read("lib/cards/render-tiers.ts")).toContain("setSymbolBoxPct(layout) * 1.3");
+    // No renderer re-derives the size on its own.
+    for (const src of [PREVIEW, BAKE]) expect(src).not.toMatch(/symbolSizePct \?\?/);
+  });
 });
 
 describe("watermark", () => {
@@ -60,6 +91,34 @@ describe("title band", () => {
   });
 });
 
+describe("text dy (TextSlot.dy, TODO 4.20)", () => {
+  it("moves the front-face name and type line text — and nothing else — in both renderers", () => {
+    // The preview translates by dy in cqw, the bake by the whole px: the
+    // same mechanism as costDy (tests/unit/render/text-dy-bake.test.tsx
+    // measures it on a real bake, the preview's twin in
+    // tests/unit/components/text-dy-preview.test.tsx).
+    // Both from slotTextDy (a shrunk measured line also keeps its baseline),
+    // at the size each draws: the preview's fit, the bake's whole px.
+    expect(PREVIEW).toContain("const dy = slotTextDy(slot, drawnSizePct);");
+    expect(PREVIEW).toContain("return dy ? { transform: `translateY(${cqw(dy)})` } : {};");
+    expect(BAKE).toContain("const dyPct = slotTextDy(slot, drawnSizePct);");
+    expect(BAKE).toContain("const dy = dyPct ? fpx(dyPct, cardWidth) : 0;");
+    expect(BAKE).toContain("return dy ? { transform: `translate(0px, ${dy}px)` } : {};");
+    // The name, the type line and each half of a split type line.
+    expect(PREVIEW).toContain("...textDy(layout.title, titleSizePct)");
+    expect(PREVIEW.match(/\.\.\.textDy\(layout\.title\)/g)).toHaveLength(1);
+    expect(PREVIEW).toContain("...textDy(layout.type, typeSizePct)");
+    expect(PREVIEW.match(/\.\.\.textDy\(slot\)/g)).toHaveLength(2);
+    expect(BAKE).toContain("...textDyBake(layout.title, width, titleSlot.sizePct)");
+    expect(BAKE).toContain("...textDyBake(layout.type, width, typeSlot.sizePct)");
+    expect(BAKE.match(/\.\.\.textDyBake\(slot, cardWidth\)/g)).toHaveLength(1);
+    // Nowhere else: a second face and the adventure panel keep centring
+    // their text in the rect.
+    expect(PREVIEW.match(/textDy\(/g)).toHaveLength(6);
+    expect(BAKE.match(/textDyBake\(/g)).toHaveLength(4);
+  });
+});
+
 describe("display-font lines", () => {
   it("hand every title, type line and display footer to displayLine in both renderers", () => {
     // Satori places a word after a space at unkerned advances (TODO 4.31):
@@ -74,14 +133,23 @@ describe("display-font lines", () => {
     expect(BAKE).toMatch(/artist: card\.artistCredit\?\.trim\(\) \? `Art: \$\{card\.artistCredit\}` : "Art: Unknown"/);
     expect(BAKE).toContain("const line = slotLine(slot.font, artist);");
     expect(BAKE).toContain("const mark = watermarkText ? slotLine(slot.font, watermarkText) : null;");
-    // The name: whole, or as fitted before a detached cost (m15pw, modern).
+    // The name: whole, or as fitted (fitTitleBand: before a detached cost,
+    // and anywhere on a measured slot, TODO 4.20).
     expect(BAKE).toContain("{displayLine(titleFit ? titleFit.text : title)}");
     expect(PREVIEW).toContain("{displayLine(titleFit ? titleFit.text : safeTitle)}");
-    expect(BAKE.match(/\{displayLine\(typeLine\)\}/g)).toHaveLength(3);
-    expect(PREVIEW.match(/\{displayLine\(typeLine\)\}/g)).toHaveLength(2);
-    expect(PREVIEW).toMatch(/\{displayLine\(\s*buildTypeLine\(/);
-    expect(BAKE.match(/\{displayLine\(name\)\}/g)).toHaveLength(2);
-    expect(PREVIEW.match(/\{displayLine\(name\)\}/g)).toHaveLength(2);
+    // The type line as fitted (cut with a "…" only past the floor, the same
+    // string in both): the front's, the adventure panel's, a second face's.
+    expect(BAKE).toContain("{displayLine(typeText)}");
+    expect(BAKE).toContain("const typeText = typeFit ? typeFit.text : typeLine;");
+    expect(PREVIEW).toContain("{displayLine(typeFit.text)}");
+    for (const src of [PREVIEW, BAKE]) {
+      expect(src.match(/\{displayLine\(typeFit \? typeFit\.text : typeLine\)\}/g)).toHaveLength(1);
+      expect(src.match(/\{displayLine\(lineSizes\.typeText\)\}/g)).toHaveLength(1);
+      // The second face's name, and the adventure panel's (as fitted).
+      expect(src.match(/\{displayLine\(lineSizes\.titleText\)\}/g)).toHaveLength(1);
+      expect(src.match(/\{displayLine\(titleFit \? titleFit\.text : name\)\}/g)).toHaveLength(1);
+      expect(src).not.toMatch(/\{displayLine\((typeLine|name)\)\}/);
+    }
   });
 
   it("centre the bake's token title and type line on their kerned width, with no filler span", () => {
@@ -92,13 +160,20 @@ describe("display-font lines", () => {
     // it: colour + shadow only, so the kerned-width margin stands.
     // The title, the type line and each half of a split type line (TODO
     // 3.24; its right half centres).
+    // The text's dy (TextSlot.dy, TODO 4.20) is spread last: a transform,
+    // which leaves the margin alone.
     expect(BAKE.match(/style=\{\{\s*\.\.\.alignedText\(/g)).toHaveLength(3);
-    expect(BAKE).toContain(
-      "<span style={{ ...alignedText(band, line, fpx(slot.sizePct, cardWidth), bandWidth(band, cardWidth)), ...ink }}>",
+    expect(BAKE).toMatch(
+      /\.\.\.alignedText\(band, line, fpx\(slot\.sizePct, cardWidth\), bandWidth\(band, cardWidth\)\),\n\s*\.\.\.ink,\n\s*\.\.\.textDyBake\(slot, cardWidth\),\n/,
     );
-    expect(BAKE).toMatch(/\.\.\.alignedText\(layout\.title, displayLine\(title\),[^\n]*\n\s*\.\.\.titleInk,\n/);
-    expect(BAKE).toMatch(/\.\.\.alignedText\(typeSlot, displayLine\(typeLine\),[^\n]*\n\s*\.\.\.typeInk,\n/);
-    expect(BAKE).toContain("isAligned(layout.title) ? null : (");
+    // The name centres as it is drawn: fitted text at the fitted size.
+    expect(BAKE).toMatch(
+      /\.\.\.alignedText\(titleSlot, displayLine\(titleFit \? titleFit\.text : title\), fpx\(titleSlot\.sizePct, width\),[^\n]*\n\s*\.\.\.titleInk,\n/,
+    );
+    expect(BAKE).toMatch(/\.\.\.alignedText\(typeSlot, displayLine\(typeText\),[^\n]*\n\s*\.\.\.typeInk,\n/);
+    // A measured title band with no inline cost draws no filler either
+    // (layout v32): the preview has none, and the name's room is the band.
+    expect(BAKE).toContain('isAligned(layout.title) || layout.title.fit === "measured" ? null : (');
     expect(BAKE).toContain("isAligned(typeSlot) ? null : (");
   });
 });
@@ -132,16 +207,90 @@ describe("planeswalker ability rows", () => {
   });
 });
 
-describe("title next to a detached cost", () => {
-  it("takes its text, size and width from fitDetachedCostTitle in both renderers", () => {
-    expect(PREVIEW).toContain("fitDetachedCostTitle(layout, safeTitle, face.cost)");
-    expect(BAKE).toContain("fitDetachedCostTitle(layout, title, card.cost)");
+describe("the name's fit", () => {
+  it("takes its text, size and width from fitTitleBand in both renderers, with the cost the band draws", () => {
+    // fitTitleBand keeps fitDetachedCostTitle for every slot without the
+    // measured flag (tests/unit/cards/title-band.test.ts).
+    expect(PREVIEW).toContain("fitTitleBand(layout, safeTitle, showCost ? face.cost : null, orientationFromAspect(aspect))");
+    expect(BAKE).toContain("fitTitleBand(layout, title, showCost ? card.cost : null, orientation)");
+    expect(BAKE).toContain('const orientation: CardOrientation = layout.orientation === "landscape" ? "landscape" : "portrait";');
+    expect(PREVIEW).not.toContain("fitDetachedCostTitle(");
+    expect(BAKE).not.toContain("fitDetachedCostTitle(");
     // ...joined for one kerned run like every display line (displayLine).
     expect(PREVIEW).toContain("{displayLine(titleFit ? titleFit.text : safeTitle)}");
     expect(BAKE).toContain("{displayLine(titleFit ? titleFit.text : title)}");
-    expect(PREVIEW).toContain("sizePct: titleFit.sizePct");
+    // A measured name the fit shrank shows at the stored HD bake's whole
+    // px; the old path (modern) at its fitted size.
+    expect(PREVIEW).toContain("slot={titleFit ? { ...layout.title, sizePct: titleSizePct } : layout.title}");
+    expect(PREVIEW).toMatch(
+      /layout\.title\.fit === "measured"\s*\? measuredLinePreviewPct\(titleFit\.sizePct, layout\.title\.sizePct, orientationFromAspect\(aspect\)\)\s*: titleFit\.sizePct;/,
+    );
+    expect(PREVIEW).toContain("maxWidth: cqw(titleFit.widthPct)");
+    expect(BAKE).toContain("maxWidth: Math.round(titleFit.widthPct * width)");
     // The bake sets a shrunk name at the whole pixel below its fitted size.
     expect(BAKE).toContain("Math.floor(titleFit.sizePct * width) / width");
+  });
+});
+
+describe("the measured fits (TODO 4.20, layout v32)", () => {
+  /** A renderer's component, up to its closing brace. */
+  const fn = (src: string, name: string) => {
+    const start = src.indexOf(`function ${name}(`);
+    return src.slice(start, src.indexOf("\n}\n", start));
+  };
+
+  it("size, cut and cap the type line from fitTypeLineBand, with the drawn set symbol, in both renderers", () => {
+    for (const src of [PREVIEW, BAKE]) {
+      expect(src).not.toContain("fitSingleLineSizePct(");
+      expect(src).not.toContain("fitTypeLine(");
+      expect(src.match(/fitTypeLineBand\(\{/g)).toHaveLength(2); // the type band, the adventure panel
+    }
+    expect(PREVIEW).toMatch(
+      /fitTypeLineBand\(\{\s*layout,\s*text: typeLine,\s*symbolWidthPct: setSymbol\.drawnWidthPct,\s*symbolInkLeftPct: setSymbol\.inkLeftPct,\s*orientation: orientationFromAspect\(aspect\),/,
+    );
+    expect(BAKE).toMatch(
+      /fitTypeLineBand\(\{\s*layout,\s*text: typeLine,\s*symbolWidthPct: setSymbol\.drawnWidthPct,\s*symbolInkLeftPct: setSymbol\.inkLeftPct,\s*orientation,/,
+    );
+    // The span's max-width is the fit's room in both.
+    expect(PREVIEW).toContain("...(typeFit.widthPct !== null ? { maxWidth: cqw(typeFit.widthPct) } : {}),");
+    expect(BAKE).toContain("...(typeFit?.widthPct != null ? { maxWidth: Math.round(typeFit.widthPct * width) } : {}),");
+    // A measured line that shrank is set at measuredLinePx: the whole pixel
+    // below its fit, never below the floor's.
+    expect(BAKE).toContain(
+      "typeMeasured && typeFitPct < layout.type.sizePct\n        ? measuredLinePx(typeFitPct, layout.type.sizePct, width, orientation) / width",
+    );
+    expect(BAKE).toContain('? measuredLinePx(titleFit.sizePct, layout.title.sizePct, width, orientation) / width');
+  });
+
+  it("fit the adventure panel's name before its cost and its type line to its bar, in both renderers", () => {
+    const panel = fn(PREVIEW, "AdventurePanel");
+    const bake = fn(BAKE, "AdventureBake");
+    for (const src of [panel, bake]) {
+      expect(src).toMatch(/fitTitleBand\(\s*\{ title: slot\.title, costSizePct: slot\.costSizePct \},\s*name,\s*showCost \? \w+\.cost : null,\s*\)/);
+      expect(src).toContain('slot.type.fit === "measured"');
+      expect(src).toContain("fitTypeLineBand({ layout: { type: slot.type }, text: typeLine, symbolWidthPct: null })");
+      // The pips keep the panel's disc whatever the name does.
+      expect(src).toMatch(/\(slot\.costSizePct \?\? slot\.title\.sizePct/);
+    }
+    expect(panel).toContain("maxWidth: cqw(titleFit.widthPct)");
+    expect(bake).toContain("maxWidth: Math.round(titleFit.widthPct * cardWidth)");
+    expect(bake).toContain("measuredLinePx(fitted, base, cardWidth) / cardWidth");
+    expect(panel).toContain("maxWidth: cqw(typeFit.widthPct)");
+    expect(bake).toContain("maxWidth: Math.round(typeFit.widthPct * cardWidth)");
+  });
+
+  it("floor a second face at the card's own orientation, and gap its name and cost only when it prints one", () => {
+    const panel = fn(PREVIEW, "SecondFacePanel");
+    const bake = fn(BAKE, "SecondFaceBake");
+    expect(panel).toContain("orientation: orientationFromAspect(aspect),");
+    expect(bake).toContain("const orientation = orientationFromAspect(aspect);");
+    // A `fitLines` face's shrunk lines at measuredLinePx in the bake.
+    expect(bake).toContain("slot.fitLines ? measuredLinePx(fitted, base, cardWidth, orientation) : fpx(fitted, cardWidth)");
+    expect(bake).toContain("fontSize: linePx(lineSizes.titleSizePct, slot.title.sizePct),");
+    expect(bake).toContain("fontSize: linePx(lineSizes.typeSizePct, slot.type.sizePct),");
+    // The preview draws the name alone when there is no cost; the bake's
+    // filler span must not take a gap from it.
+    expect(bake).toContain("...(slot.fitLines && showCost ? { gap: fpx(NAME_COST_GAP_PCT, cardWidth) } : {}),");
   });
 });
 

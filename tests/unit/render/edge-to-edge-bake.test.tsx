@@ -14,6 +14,7 @@ import {
   type Rect,
 } from "@/lib/cards/template-layout";
 import type { FrameProfileOverride } from "@/lib/cards/profile-override";
+import { setSymbolSize, setSymbolSource } from "@/lib/cards/set-symbol-size";
 import { RENDER_PRESETS } from "@/lib/render/card-image";
 import type { CardCorners } from "@/lib/cards/output-corners";
 import { RARITY_INK } from "@/lib/brand/constants";
@@ -702,12 +703,15 @@ describe("the set symbol's white keyline on a dark type bar (4.32)", () => {
   it("rings every side by 0.05 em, as the browser draws the eight-layer text-shadow", async () => {
     // Satori merges a multi-layer text-shadow into one filter and librsvg
     // keeps only the last layer (up-left here): offset copies ring all four
-    // sides. HD: the glyph is 0.04785 W = 71.8 px, the keyline 3.6 px.
+    // sides. HD: the DOM glyph is fitted to the host's set-symbol box by its
+    // ink (layout v32, lib/cards/set-symbol-size.ts) — 0.058 W = 87 px — the
+    // keyline 4.35 px.
     const b = await bake(onHost(true), false, "hd");
     const glyph = inkBox(b, HOST_SYMBOL, ink);
     const ring = inkBox(b, HOST_SYMBOL, white);
     expect(glyph.n).toBeGreaterThan(600);
-    const em = getFrameProfile(HOST).type.sizePct * 1.1 * b.w;
+    const em = Math.round(setSymbolSize(getFrameProfile(HOST), setSymbolSource(null, "dom")).sizePct * b.w);
+    expect(em).toBe(87);
     const out = {
       left: glyph.minX - ring.minX,
       right: ring.maxX - glyph.maxX,
