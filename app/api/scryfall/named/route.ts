@@ -13,6 +13,9 @@ import {
 } from "@/lib/scryfall/rate-limit";
 import { mapScryfallToFormPatch } from "@/lib/scryfall/import-mapper";
 import { rateLimitedResponse } from "@/lib/api/responses";
+import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
+import { withVerification } from "@/lib/creator/frame-resolve";
+import { pickFrameColorKey } from "@/components/cards/frame-layer";
 
 // ---------------------------------------------------------------------------
 // GET /api/scryfall/named?id=<scryfall_id>
@@ -80,6 +83,15 @@ export async function GET(request: NextRequest) {
 
   const artPreviewUrl = pickArtCropUrl(card);
   const patch = mapScryfallToFormPatch(card, { artPreviewUrl });
+  // The registry's match is static; an `exact` frame that isn't verified in
+  // the card's colour is only `nearest` to the user (TODO 1.4).
+  if (patch.frame_match) {
+    patch.frame_match = withVerification(
+      patch.frame_match,
+      pickFrameColorKey(patch.color_identity),
+      new Set(await getVerifiedFrameKeys()),
+    );
+  }
 
   return NextResponse.json({
     ok: true,

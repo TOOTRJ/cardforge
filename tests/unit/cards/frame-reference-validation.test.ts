@@ -147,8 +147,11 @@ describe("validateReferenceForCombo", () => {
   it("warns (does not refuse) on an era mismatch", () => {
     const result = validateReferenceForCombo(card({ frame: "2003" }), "m15", "w");
     expect(result.errors).toEqual([]);
-    expect(result.warnings).toHaveLength(1);
-    expect(result.warnings[0]).toMatch(/2003 frame/);
+    // The era warning, and the signature registry's (TODO 1.4): a 2003-frame
+    // printing is the modern frame's.
+    expect(result.warnings).toHaveLength(2);
+    expect(result.warnings.find((w) => /2003 frame/.test(w))).toBeTruthy();
+    expect(result.warnings.find((w) => /resolves it to the Standard frame/.test(w))).toBeTruthy();
   });
 
   it("warns when the kind cannot be derived", () => {

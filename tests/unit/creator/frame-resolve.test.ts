@@ -1,6 +1,49 @@
 import { describe, expect, it } from "vitest";
-import { basicOnlyFrameFallback, resolvePublishedFrame } from "@/lib/creator/frame-resolve";
+import {
+  basicOnlyFrameFallback,
+  resolvePublishedFrame,
+  withVerification,
+} from "@/lib/creator/frame-resolve";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
+import type { FrameMatch } from "@/lib/scryfall/frame-signatures";
+
+describe("withVerification (TODO 1.4)", () => {
+  const match = (over: Partial<FrameMatch> = {}): FrameMatch => ({
+    status: "exact",
+    template: "m15fullartland",
+    exactLabel: "Full-art basic land",
+    reason: null,
+    signature: "fullart/basic/2022",
+    ...over,
+  });
+
+  it("keeps an exact match only when the combo is verified in the card's colour", () => {
+    expect(withVerification(match(), "w", new Set([frameComboKey("m15fullartland", "w")]))).toEqual(match());
+  });
+
+  it("downgrades an unverified exact match to nearest, naming the colour", () => {
+    expect(withVerification(match(), "u", new Set([frameComboKey("m15fullartland", "w")]))).toEqual(
+      match({ status: "nearest", reason: "not yet verified in blue" }),
+    );
+    expect(withVerification(match(), "m", new Set())).toMatchObject({
+      status: "nearest",
+      reason: "not yet verified in multicolor",
+    });
+  });
+
+  it("passes nearest and unsupported matches through unchanged", () => {
+    const nearest = match({ status: "nearest", reason: "the 2023 bars" });
+    const unsupported = match({ status: "unsupported", template: "m15", reason: "poster", forGood: true });
+    expect(withVerification(nearest, "w", new Set())).toBe(nearest);
+    expect(withVerification(unsupported, "w", new Set())).toBe(unsupported);
+  });
+
+  it("checks the matched template, not where the import lands", () => {
+    const borderless = match({ template: "m15borderless", landOn: "m15", signature: "borderless/standard" });
+    expect(withVerification(borderless, "b", new Set([frameComboKey("m15", "b")])).status).toBe("nearest");
+    expect(withVerification(borderless, "b", new Set([frameComboKey("m15borderless", "b")])).status).toBe("exact");
+  });
+});
 
 // The one resolver behind every programmatic frame write. It must never
 // answer with an unpublished (template, colour) pair, and it must SAY what

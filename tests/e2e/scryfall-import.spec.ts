@@ -217,4 +217,86 @@ test.describe("Scryfall search → import", () => {
       "This printing is borderless — PipGlyph used the bordered M15 (2015) Standard frame.",
     );
   });
+
+  // TODO 1.4: the frame signature registry. Bident of Thassa THS #42 prints
+  // Theros's 2003 Nyx frame, whose nearest PipGlyph frame is Nyx
+  // (frame_match); Nyx isn't verified in blue (supabase/seed.sql), so the
+  // import falls forward to M15 and the creator says which frame it wanted.
+  test("an import asks for its signature's frame and names the fallback", async ({
+    page,
+  }) => {
+    const id = "85e45d14-a501-40b9-af0a-720ecd20dad7"; // THS #42
+    await page.route("**/api/scryfall/search**", async (route) => {
+      await route.fulfill({
+        json: {
+          ok: true,
+          results: [
+            {
+              id,
+              name: "Bident of Thassa",
+              set: "ths",
+              set_name: "Theros",
+              type_line: "Legendary Enchantment Artifact",
+              mana_cost: "{2}{U}{U}",
+              rarity: "rare",
+              artist: null,
+              thumb_url: null,
+              print_url: null,
+              oracle_text: null,
+            },
+          ],
+        },
+      });
+    });
+    await page.route("**/api/scryfall/named**", async (route) => {
+      await route.fulfill({
+        json: {
+          ok: true,
+          card: {
+            id,
+            name: "Bident of Thassa",
+            set: "ths",
+            set_name: "Theros",
+            print_url: null,
+            thumb_url: null,
+            scryfall_uri: null,
+          },
+          // What lib/scryfall/import-mapper.ts emits for THS #42.
+          patch: {
+            title: "Bident of Thassa",
+            cost: "{2}{U}{U}",
+            kind: "enchantment",
+            frame_template: "nyx",
+            frame_match: {
+              status: "nearest",
+              template: "nyx",
+              exactLabel: "Nyx frame (2003)",
+              reason: "PipGlyph's Nyx frame is the 2015 constellation showcase",
+              signature: "nyx/2003",
+              blockedBy: "4.7",
+            },
+            card_type: "enchantment",
+            supertype: "Legendary Artifact",
+            rarity: "rare",
+            color_identity: ["blue"],
+            source_scryfall_id: id,
+          },
+        },
+      });
+    });
+
+    await signIn(page);
+    await page.goto("/create");
+    await page.getByRole("button", { name: /^search a real card/i }).click();
+    await page.locator('input[aria-label="Search Scryfall"]').fill("Bident");
+    await page.getByRole("option", { name: /bident of thassa/i }).click();
+    await page.getByRole("checkbox", { name: /also import artwork/i }).uncheck();
+    await page.getByRole("button", { name: /use as starting point/i }).click();
+
+    await expect(
+      page.getByText(
+        "This printing's Nyx Constellation frame isn't available in blue yet — using M15 (2015) Standard.",
+      ),
+    ).toBeVisible();
+  });
 });

@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import printings from "./fixtures/import-printings.json";
+import signaturePrintings from "./fixtures/signature-printings.json";
 import { scryfallCardSchema, type ScryfallCard } from "@/lib/scryfall/client";
 import {
   frameColorsFromScryfall,
@@ -259,9 +260,10 @@ describe("type-line + layout precedence (TODO 1.3)", () => {
     ["khm-278", "land", "land", "Basic Snow", "Island", "m15snowland"],
     ["khm-249", "land", "land", "Snow", "Forest, Plains", "m15snowland"],
     // Enchantment beats artifact: Bident of Thassa THS #42 prints the Nyx
-    // ENCHANTMENT frame (the Nyx dress itself is 1.4's) and keeps "Artifact"
-    // as a word in front. A 2003-frame printing asks for its era's standard.
-    ["ths-42", "enchantment", "enchantment", "Legendary Artifact", undefined, "modern"],
+    // ENCHANTMENT frame and keeps "Artifact" as a word in front. The
+    // signature registry (1.4) asks for Nyx, the nearest PipGlyph frame to
+    // THS's 2003 Nyx (it was the plain 2003 frame before).
+    ["ths-42", "enchantment", "enchantment", "Legendary Artifact", undefined, "nyx"],
     // Layout kinds read the type line against their own card type: Urza's
     // Saga keeps "Land", a FIN Summon keeps "Creature" (the renderers print
     // them BEFORE the card type — a TODO 1.3 renderer leftover).
@@ -397,9 +399,20 @@ describe("where an import lands in the creator (production's verified frames)", 
     // KHM snow lands land on the verified snow land frame.
     expect(landing(mapScryfallToFormPatch(printing("khm-278")))).toEqual({ template: "m15snowland", colorKey: "u", status: "exact" });
     expect(landing(mapScryfallToFormPatch(printing("khm-249")))).toEqual({ template: "m15snowland", colorKey: "m", status: "exact" });
-    // Bident of Thassa is an enchantment: its 2003 frame isn't verified in
-    // blue, so it falls forward to M15 — never the artifact frame.
-    expect(landing(mapScryfallToFormPatch(printing("ths-42")))).toEqual({ template: "m15", colorKey: "u", status: "frame-switched" });
+    // Bident of Thassa is an enchantment: it asks for Nyx (the signature
+    // registry), which isn't verified in blue, so it falls forward to M15 —
+    // never the artifact frame — and the creator's toast names the switch.
+    const bident = resolveImportFrame({
+      patch: mapScryfallToFormPatch(printing("ths-42")),
+      kind: "enchantment",
+      current: { template: DEFAULT_FRAME_TEMPLATE, cardType: "enchantment", colors: [] },
+      verifiedKeys: PROD_VERIFIED,
+    });
+    expect(bident.resolution).toEqual({ status: "frame-switched", template: "m15", colorKey: "u", fromTemplate: "nyx" });
+    // Once nyx/u is verified, Bident lands on it.
+    expect(
+      landing(mapScryfallToFormPatch(printing("ths-42")), new Set([...PROD_VERIFIED, frameComboKey("nyx", "u")])),
+    ).toEqual({ template: "nyx", colorKey: "u", status: "exact" });
   });
 });
 
@@ -595,4 +608,33 @@ describe("colour from the front face (TODO 1.2)", () => {
     });
     expect(frameColorsFromScryfall(legacy)).toEqual(["green"]);
   });
+});
+
+// ---------------------------------------------------------------------------
+// Where the signature registry's printings LAND (TODO 1.4): the creator runs
+// resolveImportFrame with the patch's frame_match (`landOn ?? template`)
+// against the frames production has verified (supabase/seed.sql).
+// ---------------------------------------------------------------------------
+
+describe("the signature registry's landings (TODO 1.4)", () => {
+  const signature = (key: keyof typeof signaturePrintings) =>
+    mapScryfallToFormPatch(scryfallCardSchema.parse(signaturePrintings[key]));
+
+  it("Porcelain Legionnaire NPH #19 lands on the M15 artifact frame, white", () => {
+    expect(landing(signature("nph-19"))).toEqual({ template: "m15artifact", colorKey: "w", status: "exact" });
+  });
+
+  it("Flooded Strand KTK #233 lands on the land frame, multicolour", () => {
+    expect(landing(signature("ktk-233"))).toEqual({ template: "m15land", colorKey: "m", status: "exact" });
+  });
+
+  it("a Theros constellation god lands on M15: PipGlyph's Nyx dresses enchantments only", () => {
+    expect(landing(signature("thb-259"))).toEqual({ template: "m15", colorKey: "w", status: "exact" });
+  });
+
+  it("an older cached patch without frame_match keeps frame_template", () => {
+    const old: ScryfallImportPatch = { ...signature("nph-19"), frame_match: undefined, frame_template: "modern" };
+    expect(landing(old)).toEqual({ template: "modern", colorKey: "w", status: "exact" });
+  });
+
 });

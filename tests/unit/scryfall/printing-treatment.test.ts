@@ -6,6 +6,7 @@ import {
   mapScryfallToFormPatch,
   printingTreatmentFromScryfall,
   printingTreatmentHint,
+  printingTreatmentLanding,
   printingTreatmentNotice,
   printingTreatmentOffer,
   FULL_ART_BASIC_2022_SETS,
@@ -56,19 +57,24 @@ describe("scryfallCardSchema — printing treatment fields", () => {
 });
 
 describe("printingTreatmentFromScryfall — fixtures from 1.16 / 1.19", () => {
-  // [fixture, treatment the import must name, frame the import lands on].
-  // The frame column pins "the stopgap never changes which frame is chosen".
+  // [fixture, treatment the import must name, frame the import asks for].
+  // The stopgap never changed the frame; the signature registry (TODO 1.4 /
+  // 1.17 / 1.19) now does, on purpose: a showcase, extended-art, full-art
+  // or textless printing asks for its own (or nearest) PipGlyph frame, and a
+  // borderless one still lands on the bordered frame (1.18). The creator
+  // falls back while that frame is unverified in the card's colour.
   const cases: Array<[PrintingKey, PrintingTreatment | undefined, FrameTemplate]> = [
     // Plain M15 printing of the same card → no notice.
     ["dmu-107", undefined, "m15"],
     // Sheoldred DMU #435: borderless (legendary + inverted, no showcase).
     ["dmu-435", "borderless", "m15"],
     // Clarion Conqueror TDM #400: black-bordered ghostfire showcase.
-    ["tdm-400", "showcase", "m15"],
-    // Festival of Embers BLB #316: borderless AND showcase → borderless.
+    ["tdm-400", "showcase", "tarkirghostfire"],
+    // Festival of Embers BLB #316: borderless AND showcase → borderless (the
+    // borderless showcase families are 1.17's).
     ["blb-316", "borderless", "m15"],
     // Archangel of Wrath DMU #384: extended art.
-    ["dmu-384", "extendedart", "m15"],
+    ["dmu-384", "extendedart", "extendedart"],
     // Overlord of the Floodpits DSK #389: Japan showcase (showcase + full art).
     ["dsk-389", "showcase", "m15"],
     // Full-art basics: ONE #262, FDN #282, BFZ #250, ZNR #266, SPM #189 and
@@ -176,17 +182,19 @@ describe("printingTreatmentHint — the import dialog, before committing", () =>
   });
 });
 
-// Frames plan 4.32 / 4.39: the borderless M15 frame and the full-art basic
-// exist now, but the import never picks them — it lands on the plain frame
-// (the frame choice above is unchanged) and the creator OFFERS PipGlyph's
-// frame, only once the owner has verified it in the card's colour.
+// Frames plan 4.32 / 4.39: the borderless M15 frame and the full-art basic.
+// A borderless card still lands on the bordered frame (1.18) and the
+// creator OFFERS Borderless, once the owner has verified it in the card's
+// colour. A full-art or borderless basic lands on its full-art frame itself
+// (the signature registry), so it needs no offer.
 describe("printingTreatmentOffer — PipGlyph's frame for the treatment, once verified", () => {
   const patchOf = (key: PrintingKey) => mapScryfallToFormPatch(printing(key));
   const verified = (...keys: [string, string][]) => new Set(keys.map(([t, k]) => frameComboKey(t, k)));
 
-  it("offers nothing while the frame is unverified (today), so the import stays on the plain frame", () => {
+  it("offers nothing while the frame is unverified (today)", () => {
     for (const key of Object.keys(printings) as PrintingKey[]) {
       expect(printingTreatmentOffer(patchOf(key), new Set()), key).toBeNull();
+      expect(printingTreatmentLanding(patchOf(key), new Set()), key).toBeNull();
     }
     expect(patchOf("dmu-435").frame_template).toBe("m15");
     expect(patchOf("one-262").frame_template).toBe("m15land");

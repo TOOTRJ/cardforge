@@ -10,10 +10,13 @@ import {
   type FrameTemplate,
 } from "@/types/card";
 import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
+import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import {
+  colorWord,
   isArtifactFrameType,
   pickFrameColorKey,
 } from "@/components/cards/frame-layer";
+import type { FrameMatch } from "@/lib/scryfall/frame-signatures";
 import { eraForTemplate, standardFrameFor } from "@/lib/creator/frame-picker";
 import {
   baseFrameFor,
@@ -188,6 +191,12 @@ export function importFrameCandidates(input: {
 export function resolveImportFrame(input: {
   patch: {
     frame_template?: FrameTemplate;
+    /** The signature registry's match (TODO 1.4). When present, the import
+     *  wants `landOn ?? template` — the same frame `frame_template` names
+     *  on a fresh patch; an older cached patch without it keeps
+     *  `frame_template`. A rejected printing (a substitute card) wants
+     *  nothing of its own. */
+    frame_match?: Pick<FrameMatch, "template" | "landOn" | "reject">;
     card_type?: CardType;
     supertype?: string;
     color_identity?: readonly ColorIdentity[];
@@ -206,7 +215,12 @@ export function resolveImportFrame(input: {
     patch.color_identity ?? current.colors,
   ) as FrameColorKey;
   const cardType = patch.card_type || current.cardType || "creature";
-  const wanted = patch.frame_template ?? current.template ?? DEFAULT_FRAME_TEMPLATE;
+  const matched =
+    patch.frame_match && !patch.frame_match.reject
+      ? (patch.frame_match.landOn ?? patch.frame_match.template)
+      : undefined;
+  const wanted =
+    matched ?? patch.frame_template ?? current.template ?? DEFAULT_FRAME_TEMPLATE;
   const resolution = resolvePublishedFrame({
     kind: input.kind ?? kindFromCard(cardType, undefined),
     candidates: importFrameCandidates({
@@ -219,6 +233,27 @@ export function resolveImportFrame(input: {
     prefer: "frame",
   });
   return { wanted, colorKey, resolution };
+}
+
+/**
+ * Finalize a static frame match (the signature registry, TODO 1.4) against
+ * the verified combos: `exact` only when PipGlyph's frame is verified in the
+ * card's colour — an unverified frame is never an exact match to a user, so
+ * it becomes `nearest`, "not yet verified in <colour>". Nearest and
+ * unsupported matches pass through unchanged. Pure.
+ */
+export function withVerification<T extends Pick<FrameMatch, "status" | "template" | "reason">>(
+  match: T,
+  colorKey: string,
+  verifiedKeys: ReadonlySet<string>,
+): T {
+  if (match.status !== "exact") return match;
+  if (verifiedKeys.has(frameComboKey(match.template, colorKey))) return match;
+  return {
+    ...match,
+    status: "nearest",
+    reason: `not yet verified in ${colorWord(colorKey)}`,
+  };
 }
 
 /** Where a card on a basic-only frame (the full-art basic land) goes when it

@@ -33,6 +33,7 @@ import {
 import { ManaCostGlyphs } from "@/components/cards/mana-cost-glyphs";
 import {
   printingTreatmentHint,
+  printingTreatmentLanding,
   printingTreatmentOffer,
   type ScryfallImportPatch,
 } from "@/lib/scryfall/import-mapper";
@@ -882,6 +883,7 @@ function Detail({
                   {printingTreatmentHint(
                     patch.printing_treatment,
                     printingTreatmentOffer(patch, new Set(verifiedFrameKeys ?? [])),
+                    printingTreatmentLanding(patch, new Set(verifiedFrameKeys ?? [])),
                   )}
                 </span>
               ) : null}
