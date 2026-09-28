@@ -291,7 +291,7 @@ export function remixFrameFor(
   // colour: the card type's frames, from the printing's own (a layout kind
   // has none) down to the M15 standard.
   const standardKind = layoutTemplate ? kindFromCard(cardType, undefined) : kind;
-  const { resolution } = resolveImportFrame({
+  const { colorKey, resolution } = resolveImportFrame({
     patch: {
       frame_template: layoutTemplate ? undefined : patch.frame_template,
       card_type: cardType,
@@ -306,7 +306,15 @@ export function remixFrameFor(
     },
     verifiedKeys,
   });
-  if (resolution.status === "exact" || resolution.status === "frame-switched") {
+  // Only a landing in the card's OWN colour saves: when nothing of the kind
+  // is published in it, the resolver's last resort is a candidate frame in
+  // another colour — reported as "frame-switched" too, but with that other
+  // colour's key — and the save's frame gate would refuse it after the art
+  // was already paid for.
+  if (
+    (resolution.status === "exact" || resolution.status === "frame-switched") &&
+    resolution.colorKey === colorKey
+  ) {
     return { ok: true, template: resolution.template, card_type: savedType };
   }
   return { ok: false, error: REMIX_FRAME_UNAVAILABLE };

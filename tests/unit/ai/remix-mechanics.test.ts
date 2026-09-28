@@ -156,6 +156,15 @@ describe("remixFrameFor — nothing published in the card's colour", () => {
     expect(remixFrameFor(patchOf("dom-168"), whiteOnly)).toEqual({ ok: false, error: REMIX_FRAME_UNAVAILABLE });
   });
 
+  it("never lands on a fallback frame published only in another colour", () => {
+    // Juggernaut (colourless) wants agclassic; with nothing of its kind in
+    // colourless, the resolver's last resort is a candidate (m15artifact,
+    // m15) in ANOTHER colour, reported as "frame-switched" with that
+    // colour's key. The save's frame gate would refuse it — after the art.
+    const whiteOnly = new Set(["m15", "m15artifact"].map((t) => frameComboKey(t as FrameTemplate, "w")));
+    expect(remixFrameFor(patchOf("lea-255"), whiteOnly)).toEqual({ ok: false, error: REMIX_FRAME_UNAVAILABLE });
+  });
+
   it("never invents a card type for a printing with none PipGlyph models", () => {
     // A Conspiracy / Scheme-style type line: no kind, no card type.
     const card = scryfallCardSchema.parse({
