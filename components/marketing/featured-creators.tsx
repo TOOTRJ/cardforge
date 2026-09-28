@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { toRenderCdnUrl } from "@/lib/cards/render-cdn";
+import { cardCornersClass } from "@/lib/cards/card-orientation";
 import { Crown } from "lucide-react";
 import { listFeaturedCreators } from "@/lib/featured/queries";
 import { SocialIcon } from "@/components/profile/social-icon";
@@ -119,12 +120,16 @@ export async function FeaturedCreators() {
                           transform: `rotate(${(i - (c.cards.length - 1) / 2) * 6}deg)`,
                         }}
                       >
+                        {/* The <img> box is the card (w-auto keeps its 5:7
+                            or 7:5 aspect), so it takes the card corner for
+                            its orientation, over the card's #101015 (never
+                            the page colour) behind a rounded bake. */}
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={toRenderCdnUrl(card.imageUrl) ?? card.imageUrl}
                           alt={card.title}
                           loading="lazy"
-                          className="h-40 w-auto rounded-md border border-border/60 shadow-lg transition-shadow group-hover:shadow-[0_8px_30px_-8px_rgba(201,165,76,0.5)] sm:h-48"
+                          className={`h-40 w-auto ${cardCornersClass(card.landscape)} border border-border/60 bg-[#101015] bg-clip-padding shadow-lg transition-shadow group-hover:shadow-[0_8px_30px_-8px_rgba(201,165,76,0.5)] sm:h-48`}
                         />
                       </Link>
                     ))}

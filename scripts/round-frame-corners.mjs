@@ -1,123 +1,144 @@
-// Make the outer card corners of every frame PNG transparent.
+#!/usr/bin/env node
+// ---------------------------------------------------------------------------
+// round-frame-corners.mjs — the Phase B corner normalise pass (TODO 3.26,
+// owner decision 2026-09-27) over the git MSE masters in public/frames.
 //
-// Why: several MSE-derived frame families (m15*, agclassic/alpha*, saga,
-// adventure, flip) ship with OPAQUE WHITE pixels in the four corners — the area
-// *outside* the card's painted rounded black border. On the web the card tiles
-// clip with a CSS border-radius; when that radius doesn't exactly match each
-// frame's painted corner, those white pixels peek out as light wedges and the
-// corners read as "cut off". The showcase frames (avatar/battle/bloomanime/
-// tarkirghostfire) already ship transparent corners — this normalises the rest
-// to match, so every card rounds cleanly on any background (preview AND bake).
+// For every master on the allow-list (scripts/lib/frame-corners.mjs
+// CORNER_NORMALISE_TEMPLATES — never a showcase family) it paints the light
+// card-stock paper outside the frame's painted corner, and its grey
+// anti-aliased fringe and its dark tail, with the border as it runs beside
+// the corner (the edge band's depth profile),
+// then cuts the one card corner (lib/cards/card-corner.ts, 64.5 px). Each
+// master must pass the gate before it is written:
+//   - the diff stays inside the four 96×96 corner boxes;
+//   - the light it repaints is at most the light the cut showed before (the
+//     challenge's measured light count) and none is left;
+//   - the WHOLE repaint (light paper, grey fringe and the fringe's dark tail)
+//     stays within REPAINT_DEPTH_MAX (10 px) of the outline and only darkens;
+//   - the corner check and the edge contract (lib/frames/edge-contract.ts)
+//     pass on the result.
+// (scripts/lib/frame-corners.mjs normalisedMasterFailures — the builders'
+// hook runs the same gate.)
+// A master that fails is reported and left alone, and the run exits 1.
 //
-// How: a bounded flood-fill from each of the 4 corners. We only clear pixels
-// that are (a) light — min(R,G,B) ≥ LIGHT_MIN — and (b) reachable from the
-// corner without crossing the dark painted border. The fill is capped to a
-// corner box (REACH_PCT of the smaller dimension) as a runaway guard, and the
-// dark border naturally stops it well before the card interior. Frames whose
-// corners are already transparent / dark / saturated are left untouched (no
-// light pixels to fill → file unchanged, not rewritten).
+//   node scripts/round-frame-corners.mjs                  # normalise + rewrite
+//   node scripts/round-frame-corners.mjs --dry            # report only
+//   node scripts/round-frame-corners.mjs --only retro,saga
+//   node scripts/round-frame-corners.mjs --report gate.json
+//   node scripts/round-frame-corners.mjs --dir <frames dir>   (default public/frames)
 //
-// Run: `node scripts/round-frame-corners.mjs`  (idempotent — re-running is a
-// no-op once corners are transparent). Add `--dry` to only report.
-
-import { readdir, readFile, writeFile } from "node:fs/promises";
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
+// Idempotent: a normalised master comes out byte-identical and is not
+// rewritten. Then regenerate the WebP siblings: `npm run assets:frame-webp`.
+// The MSE builders (convert-mse-frame.mjs, build-era-frames.mjs, …) run the
+// same pass (normaliseMasterCorners) before they write, so rebuilding a
+// master can't bring the white back (it came back once: dc65aa5's clear was
+// a one-off over the files, and later builds overwrote it).
+// ---------------------------------------------------------------------------
+import fs from "node:fs";
+import path from "node:path";
 import sharp from "sharp";
+import {
+  CORNER_NORMALISE_TEMPLATES,
+  cornerDiff,
+  lightInsideCorners,
+  normaliseCardCorners,
+  normalisedMasterFailures,
+  shouldNormalise,
+} from "./lib/frame-corners.mjs";
 
-const FRAMES_DIR = join(
-  dirname(fileURLToPath(import.meta.url)),
-  "..",
-  "public",
-  "frames",
-);
+const args = process.argv.slice(2);
+const flag = (name) => {
+  const at = args.indexOf(name);
+  return at >= 0 ? (args[at + 1] ?? "") : null;
+};
+const DRY = args.includes("--dry");
+const only = flag("--only")?.split(",").map((s) => s.trim()).filter(Boolean) ?? null;
+const reportFile = flag("--report");
+const dir = path.resolve(flag("--dir") ?? path.join("public", "frames"));
+const KEYS = ["w", "u", "b", "r", "g", "c", "m", "a"];
 
-// A pixel is "clearable corner background" when every channel is at least this
-// bright. 230 catches pure white (255) and the near-white token plate (235)
-// while leaving Bloomburrow's pale-blue (195) and all dark/colored corners be.
-const LIGHT_MIN = 230;
-const ALPHA_MIN = 200; // only clear currently-opaque pixels
-const REACH_PCT = 0.16; // runaway guard: fill no further than 16% from a corner
-const DRY = process.argv.includes("--dry");
+if (only) {
+  const unknown = only.filter((t) => !CORNER_NORMALISE_TEMPLATES[t]);
+  if (unknown.length) {
+    console.error(`✗ Not on the Phase B allow-list: ${unknown.join(", ")}`);
+    process.exit(1);
+  }
+}
 
-async function listFramePngs() {
-  const out = [];
-  for (const entry of await readdir(FRAMES_DIR, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue;
-    const dir = join(FRAMES_DIR, entry.name);
-    for (const file of await readdir(dir)) {
-      if (file.toLowerCase().endsWith(".png")) out.push(join(dir, file));
+const results = [];
+let written = 0;
+let failed = 0;
+for (const template of Object.keys(CORNER_NORMALISE_TEMPLATES)) {
+  if (only && !only.includes(template)) continue;
+  for (const key of KEYS) {
+    const file = path.join(dir, template, `${key}.png`);
+    if (!fs.existsSync(file) || !shouldNormalise(template, key)) continue;
+    const { data, info } = await sharp(file).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const { width, height } = info;
+    const before = Buffer.from(data);
+    const lightBefore = lightInsideCorners(before, width, height);
+    const report = normaliseCardCorners(data, width, height);
+    const diff = cornerDiff(before, data, width, height);
+    // The ONE gate (the builders' hook runs it too): Phase B's own checks,
+    // then the edge contract and the corner check unless a known failure.
+    const failures = normalisedMasterFailures(template, key, before, data, width, height, report);
+    const sum = (field) => report.reduce((s, c) => s + c[field], 0);
+    const row = {
+      master: `${template}/${key}.png`,
+      lightBefore,
+      repainted: sum("repainted"),
+      repaintedLight: sum("repaintedLight"),
+      repaintedFringe: sum("repaintedFringe"),
+      repaintedDark: sum("repaintedDark"),
+      tail: sum("tail"),
+      deepestPx: Number(Math.max(...report.map((c) => c.deepestPx)).toFixed(2)),
+      lightened: sum("lightened"),
+      ghost: sum("ghost"),
+      ghostLumaOver: Math.max(...report.map((c) => c.ghostLumaOver)),
+      changedPx: diff.changed,
+      changedOutsideBoxes: diff.outside,
+      corners: report.map((c) => ({
+        corner: c.corner,
+        border: c.border,
+        profile: c.profile,
+        flooded: c.flooded,
+        repainted: c.repainted,
+        repaintedLight: c.repaintedLight,
+        repaintedFringe: c.repaintedFringe,
+        repaintedDark: c.repaintedDark,
+        tail: c.tail,
+        deepestPx: Number(c.deepestPx.toFixed(2)),
+        ghost: c.ghost,
+        ghostLumaOver: c.ghostLumaOver,
+        lightLeft: c.lightLeft,
+        blocked: c.blocked,
+        ...(c.skipped ? { skipped: c.skipped } : {}),
+      })),
+      failures,
+      written: false,
+    };
+    results.push(row);
+    const rel = path.relative(process.cwd(), file);
+    if (failures.length) {
+      failed += 1;
+      console.error(`✗ ${rel}: ${failures.join("; ")}`);
+      continue;
     }
-  }
-  return out.sort();
-}
-
-// Flood-fill light, opaque pixels from (sx,sy) → alpha 0. Returns pixels cleared.
-function clearCorner(data, width, height, sx, sy, reach) {
-  const idx = (x, y) => (y * width + x) * 4;
-  const start = idx(sx, sy);
-  // Nothing to do if the corner itself isn't a light/opaque pixel.
-  if (
-    data[start + 3] < ALPHA_MIN ||
-    Math.min(data[start], data[start + 1], data[start + 2]) < LIGHT_MIN
-  ) {
-    return 0;
-  }
-  const stack = [[sx, sy]];
-  let cleared = 0;
-  while (stack.length) {
-    const [x, y] = stack.pop();
-    if (x < 0 || y < 0 || x >= width || y >= height) continue;
-    if (Math.abs(x - sx) > reach || Math.abs(y - sy) > reach) continue;
-    const i = idx(x, y);
-    if (data[i + 3] < ALPHA_MIN) continue; // already transparent → boundary
-    if (Math.min(data[i], data[i + 1], data[i + 2]) < LIGHT_MIN) continue; // dark border → boundary
-    data[i + 3] = 0; // clear alpha
-    cleared++;
-    stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
-  }
-  return cleared;
-}
-
-async function processFile(path) {
-  const input = await readFile(path);
-  const { data, info } = await sharp(input)
-    .ensureAlpha()
-    .raw()
-    .toBuffer({ resolveWithObject: true });
-  const { width, height } = info;
-  const reach = Math.round(Math.min(width, height) * REACH_PCT);
-  let cleared = 0;
-  for (const [sx, sy] of [
-    [0, 0],
-    [width - 1, 0],
-    [0, height - 1],
-    [width - 1, height - 1],
-  ]) {
-    cleared += clearCorner(data, width, height, sx, sy, reach);
-  }
-  if (cleared === 0) return { path, cleared: 0 };
-  if (!DRY) {
-    const out = await sharp(data, { raw: { width, height, channels: 4 } })
-      .png({ compressionLevel: 9, effort: 10 })
-      .toBuffer();
-    await writeFile(path, out);
-  }
-  return { path, cleared };
-}
-
-const files = await listFramePngs();
-let changed = 0;
-for (const file of files) {
-  const { cleared } = await processFile(file);
-  if (cleared > 0) {
-    changed++;
-    const rel = file.slice(FRAMES_DIR.length + 1);
-    console.log(`  ${DRY ? "would clear" : "cleared"} ${cleared} px  ${rel}`);
+    if (diff.changed === 0) {
+      console.log(`= ${rel} (already normalised)`);
+      continue;
+    }
+    if (!DRY) {
+      await sharp(data, { raw: { width, height, channels: 4 } }).png({ compressionLevel: 9 }).toFile(file);
+      row.written = true;
+      written += 1;
+    }
+    console.log(
+      `${DRY ? "would write" : "wrote"} ${rel}: repainted ${row.repainted} px (light ${row.repaintedLight} of ${lightBefore}, fringe ${row.repaintedFringe}, dark tail ${row.repaintedDark}), deepest ${row.deepestPx} px, ghost ${row.ghost} (≤ +${row.ghostLumaOver} luma), ${diff.changed} px changed, all inside the corner boxes`,
+    );
   }
 }
-console.log(
-  `\n${DRY ? "[dry] " : ""}${changed}/${files.length} frame PNGs ${
-    DRY ? "would be" : ""
-  } updated (transparent corners).`,
-);
+if (reportFile) fs.writeFileSync(reportFile, `${JSON.stringify({ generated: new Date().toISOString(), dry: DRY, results }, null, 2)}\n`);
+console.log(`\n${results.length} masters checked · ${DRY ? "dry run" : `${written} written`} · ${failed} failed the gate`);
+if (!DRY && written) console.log("Next: npm run assets:frame-webp (the WebP siblings).");
+if (failed) process.exitCode = 1;

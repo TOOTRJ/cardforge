@@ -17,6 +17,11 @@ async function sweepAt(current: number) {
     classifyForSweep(row, target, { current });
 }
 
+/** The policy as it answered at v30. v31 (the one corner radius) is an
+ *  UNSCOPED sweep: at v31 every older bake owes a correction, so the
+ *  opt-in-only and nothing-pending cases below are pinned at v30. */
+const AT_V30 = { current: 30 } as const;
+
 describe("isRenderStale — which stored renders a version bump invalidates", () => {
   it("treats unversioned or override-cleared renders as stale", () => {
     expect(isRenderStale(null, "m15")).toBe(true);
@@ -75,10 +80,12 @@ describe("hasNewerLook — only an owner opt-in bump is the owner's call (TODO 0
 
   it("flags a published, baked card with a pending OPT-IN bump (v22 typography)", async () => {
     const { hasNewerLook } = await import("@/lib/cards/layout-version");
-    expect(hasNewerLook({ ...base, layout_version: 21 })).toBe(true);
+    expect(hasNewerLook({ ...base, layout_version: 21 }, AT_V30)).toBe(true);
     // Private cards never carry a render; unbaked cards are "not baked".
-    expect(hasNewerLook({ ...base, layout_version: 21, visibility: "private" })).toBe(false);
-    expect(hasNewerLook({ ...base, layout_version: 21, rendered_image_url: null })).toBe(false);
+    expect(hasNewerLook({ ...base, layout_version: 21, visibility: "private" }, AT_V30)).toBe(false);
+    expect(hasNewerLook({ ...base, layout_version: 21, rendered_image_url: null }, AT_V30)).toBe(false);
+    // At v31 the same card also owes the corner sweep: no badge.
+    expect(hasNewerLook({ ...base, layout_version: 21 })).toBe(false);
   });
 
   it("never flags a card that also owes a correction — the sweep will override the choice", async () => {
@@ -131,11 +138,14 @@ describe("hasPendingCorrection — when the platform still owes a card a re-bake
     expect(hasPendingCorrection({ ...card, layout_version: null })).toBe(true);
     // v22 common → v23 set-mark sweep pending.
     expect(hasPendingCorrection({ ...card, layout_version: 22, rarity: "common" })).toBe(true);
-    // v22 uncommon → v23 didn't change it → nothing owed.
-    expect(hasPendingCorrection({ ...card, layout_version: 22 })).toBe(false);
+    // v22 uncommon → v23 didn't change it → nothing owed (up to v30).
+    expect(hasPendingCorrection({ ...card, layout_version: 22 }, AT_V30)).toBe(false);
     // v21 uncommon → only the v22 opt-in is pending: the owner's call, not a correction.
-    expect(hasPendingCorrection({ ...card, layout_version: 21 })).toBe(false);
+    expect(hasPendingCorrection({ ...card, layout_version: 21 }, AT_V30)).toBe(false);
     expect(hasPendingCorrection({ ...card, layout_version: CARD_LAYOUT_VERSION })).toBe(false);
+    // v31's corner cut is owed by every older bake.
+    expect(hasPendingCorrection({ ...card, layout_version: 22 })).toBe(true);
+    expect(hasPendingCorrection({ ...card, layout_version: 21 })).toBe(true);
     // Very old bakes owe the v20/v21 watermark sweeps.
     expect(hasPendingCorrection({ ...card, layout_version: 19 })).toBe(true);
     // v20 bakes may be clean — v21's sweep is still owed.
@@ -147,9 +157,11 @@ describe("downloadDiffersFromGallery — the download modal's note, per viewer",
   it("paid: whenever the stored look is older; free: only while a correction is pending", async () => {
     const { downloadDiffersFromGallery, CARD_LAYOUT_VERSION } = await import("@/lib/cards/layout-version");
     const card = { ...UNTOUCHED_SINCE_V22, rendered_image_url: "https://x/y.png" };
-    // Opt-in pending (v21 uncommon): paid renders live → differs; free serves the bake → same.
-    expect(downloadDiffersFromGallery({ ...card, layout_version: 21 }, true)).toBe(true);
-    expect(downloadDiffersFromGallery({ ...card, layout_version: 21 }, false)).toBe(false);
+    // Opt-in pending (v21 uncommon, at v30): paid renders live → differs; free serves the bake → same.
+    expect(downloadDiffersFromGallery({ ...card, layout_version: 21 }, true, AT_V30)).toBe(true);
+    expect(downloadDiffersFromGallery({ ...card, layout_version: 21 }, false, AT_V30)).toBe(false);
+    // At v31 the corner sweep is pending too: a free download renders live as well.
+    expect(downloadDiffersFromGallery({ ...card, layout_version: 21 }, false)).toBe(true);
     // Marked by a layout change: both render live.
     expect(downloadDiffersFromGallery({ ...card, layout_version: null }, false)).toBe(true);
     expect(downloadDiffersFromGallery({ ...card, layout_version: CARD_LAYOUT_VERSION }, true)).toBe(false);
@@ -165,10 +177,13 @@ describe("storedLookIsOlder — the download modal's clean-download note", () =>
     expect(storedLookIsOlder({ ...card, layout_version: null })).toBe(true);
     expect(storedLookIsOlder({ ...card, layout_version: CARD_LAYOUT_VERSION })).toBe(false);
     expect(storedLookIsOlder({ ...card, layout_version: 21, rendered_image_url: null })).toBe(false);
-    // v23 is card-scoped: an uncommon's v22 bake is what the renderer draws;
-    // a common's is not.
-    expect(storedLookIsOlder({ ...card, layout_version: 22 })).toBe(false);
-    expect(storedLookIsOlder({ ...card, rarity: "common", layout_version: 22 })).toBe(true);
+    // v23 is card-scoped: an uncommon's v22 bake is what the v30 renderer
+    // draws; a common's is not.
+    expect(storedLookIsOlder({ ...card, layout_version: 22 }, AT_V30)).toBe(false);
+    expect(storedLookIsOlder({ ...card, rarity: "common", layout_version: 22 }, AT_V30)).toBe(true);
+    // v31 is unscoped: every older bake is older.
+    expect(storedLookIsOlder({ ...card, layout_version: 22 })).toBe(true);
+    expect(storedLookIsOlder({ ...card, layout_version: 30 })).toBe(true);
   });
 });
 
@@ -510,10 +525,11 @@ describe("v29 — the round-5 leftovers, one sweep (2026-09-25)", () => {
     const classifyForSweep = await sweepAt(29);
     expect(hasNewerLook({ ...at("m15pw"), visibility: "public" })).toBe(false);
     expect(hasPendingCorrection(at("m15pw"))).toBe(true);
-    expect(hasPendingCorrection(at("lotr"))).toBe(false);
-    // A v21 card v29 left alone keeps its v22 opt-in badge; one v29 changed
-    // gets the sweep's re-bake (opt-in look included) instead.
-    expect(hasNewerLook({ ...at("lotr"), layout_version: 21, visibility: "public" })).toBe(true);
+    expect(hasPendingCorrection(at("lotr"), AT_V30)).toBe(false);
+    // A v21 card v29 left alone keeps its v22 opt-in badge (until v31's
+    // unscoped sweep); one v29 changed gets the sweep's re-bake (opt-in look
+    // included) instead.
+    expect(hasNewerLook({ ...at("lotr"), layout_version: 21, visibility: "public" }, AT_V30)).toBe(true);
     expect(hasNewerLook({ ...at("lotr", { title: "Red Worm" }), layout_version: 21, visibility: "public" })).toBe(false);
     // Targeting v29 alone: in scope → re-bake, out of scope → stamped.
     expect(classifyForSweep(at("saga"), 29)).toBe("rebake");
@@ -541,22 +557,108 @@ describe("v30 — fullartland re-sourced from Card Conjurer (frames plan 4.39)",
       "@/lib/cards/layout-version"
     );
     const classifyForSweep = await sweepAt(30);
-    expect(CARD_LAYOUT_VERSION).toBe(30);
+    expect(CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(30);
     expect(rolloutPolicy(30)).toBe("sweep");
     expect(latestOptInVersion()).toBe(22);
     expect(classifyForSweep(at("fullartland"))).toBe("rebake");
     expect(classifyForSweep(at("fullartland", { frame_style: { template: "fullartland", finish: "foil" } }))).toBe(
       "rebake",
     );
-    expect(hasNewerLook({ ...at("fullartland"), visibility: "public" })).toBe(false);
-    expect(hasPendingCorrection(at("fullartland"))).toBe(true);
+    expect(hasNewerLook({ ...at("fullartland"), visibility: "public" }, AT_V30)).toBe(false);
+    expect(hasPendingCorrection(at("fullartland"), AT_V30)).toBe(true);
     // Every other template — including the full-art frames that share its
     // profile family and the default m15 a {} frame_style draws — keeps its
     // v29 bake: the sweep stamps it without a render.
     for (const t of FRAME_TEMPLATE_VALUES.filter((v) => v !== "fullartland")) {
-      expect(isRenderStale(29, t), t).toBe(false);
+      expect(isRenderStale(29, t, undefined, 30), t).toBe(false);
       expect(classifyForSweep(at(t)), t).toBe("stamp");
     }
     expect(classifyForSweep({ ...at("m15"), frame_style: {} })).toBe("stamp");
+  });
+});
+
+describe("v31 — one corner radius (TODO 3.26)", () => {
+  const png = "https://x/y.png";
+  /** A bake at `version` of a card no scoped bump since v22 touched. */
+  const at = (template: string, version: number, over: Record<string, unknown> = {}) => ({
+    ...UNTOUCHED_SINCE_V22,
+    layout_version: version,
+    rendered_image_url: png,
+    frame_style: { template, finish: "regular" },
+    ...over,
+  });
+
+  it("is an unscoped sweep: every v30 / v29 bake on every template is stale, a correction, never a badge", async () => {
+    const {
+      CARD_LAYOUT_VERSION,
+      VERSION_SCOPES,
+      classifyForSweep,
+      hasNewerLook,
+      hasPendingCorrection,
+      latestOptInVersion,
+      rolloutPolicy,
+    } = await import("@/lib/cards/layout-version");
+    expect(CARD_LAYOUT_VERSION).toBe(31);
+    expect(rolloutPolicy(31)).toBe("sweep");
+    expect(VERSION_SCOPES[31]).toBeUndefined();
+    expect(latestOptInVersion()).toBe(22);
+    for (const version of [30, 29]) {
+      for (const t of [...FRAME_TEMPLATE_VALUES, ...POST_V29_TEMPLATES]) {
+        const row = at(t, version);
+        expect(isRenderStale(version, t), `${t}@${version}`).toBe(true);
+        expect(isRenderStale(version, t, undefined, 31, row), `${t}@${version}`).toBe(true);
+        expect(hasPendingCorrection(row), `${t}@${version}`).toBe(true);
+        expect(hasNewerLook({ ...row, visibility: "public" }), `${t}@${version}`).toBe(false);
+        expect(classifyForSweep(row), `${t}@${version}`).toBe("rebake");
+        expect(classifyForSweep(row, 31), `${t}@${version}`).toBe("rebake");
+      }
+    }
+    // The default frame a {} frame_style draws, and a foil card, too.
+    expect(isRenderStale(30, null, undefined, 31, { frame_style: {} })).toBe(true);
+    expect(classifyForSweep({ ...at("m15", 30), frame_style: {} }, 31)).toBe("rebake");
+    expect(classifyForSweep(at("modern", 30, { frame_style: { template: "modern", finish: "foil" } }), 31)).toBe("rebake");
+    // A v31 bake is current.
+    expect(classifyForSweep(at("m15", 31))).toBe("current");
+    expect(hasPendingCorrection(at("m15", 31))).toBe(false);
+  });
+
+  it("takes an opt-in-only card along: a v21 bake owes v31, so the sweep re-bakes it (v22 rides along)", async () => {
+    const { classifyForSweep, hasNewerLook } = await import("@/lib/cards/layout-version");
+    // At v30 this card had only the v22 opt-in pending and kept its badge.
+    expect(hasNewerLook({ ...at("lotr", 21), visibility: "public" }, AT_V30)).toBe(true);
+    expect(classifyForSweep(at("lotr", 21), undefined, AT_V30)).toBe("opt-in");
+    // At v31 the corner sweep takes it: no badge, re-baked.
+    expect(hasNewerLook({ ...at("lotr", 21), visibility: "public" })).toBe(false);
+    expect(classifyForSweep(at("lotr", 21), 31)).toBe("rebake");
+  });
+
+  it("is verification-neutral: a frame_reviews tick from v29 / v30 stays fresh", async () => {
+    const { VERIFICATION_NEUTRAL_VERSIONS, VERIFICATION_SCOPED_VERSIONS } = await import("@/lib/cards/layout-version");
+    expect(VERIFICATION_NEUTRAL_VERSIONS).toEqual([31]);
+    expect(VERIFICATION_SCOPED_VERSIONS[31]).toEqual([]);
+    // Every other bump keeps its real template scope.
+    expect(VERIFICATION_SCOPED_VERSIONS[30]).toEqual(["fullartland"]);
+    expect(VERIFICATION_SCOPED_VERSIONS[24]).toContain("m15");
+    expect(VERIFICATION_SCOPED_VERSIONS[29]).toBeUndefined();
+    for (const t of [...FRAME_TEMPLATE_VALUES, ...POST_V29_TEMPLATES]) {
+      const regular = { frame_style: { template: t, finish: "regular" } };
+      expect(isRenderStale(30, t, VERIFICATION_SCOPED_VERSIONS, 31, regular), t).toBe(false);
+    }
+    // …while the stored bakes still owe it.
+    expect(isRenderStale(30, "m15", undefined, 31, { frame_style: { template: "m15", finish: "regular" } })).toBe(true);
+  });
+});
+
+// TODO 3.26 review: the share composite keeps its old clip over a bake from
+// before v31 (a square bake with the frame's own corner) until the sweep.
+describe("isRoundBake", () => {
+  it("is true from v31 on; an older or a null stamp may be a square bake", async () => {
+    const { ROUND_BAKE_LAYOUT_VERSION, isRoundBake } = await import("@/lib/cards/layout-version");
+    expect(ROUND_BAKE_LAYOUT_VERSION).toBe(31);
+    expect(isRoundBake(31)).toBe(true);
+    expect(isRoundBake(32)).toBe(true);
+    expect(isRoundBake(30)).toBe(false);
+    expect(isRoundBake(null)).toBe(false);
+    expect(isRoundBake(undefined)).toBe(false);
   });
 });

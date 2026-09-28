@@ -23,6 +23,10 @@
 import sharp from "sharp";
 import path from "node:path";
 import fs from "node:fs";
+// Phase B (TODO 3.26): normalise the card corners at the final size before
+// the write, so a rebuild can't bring the white paper back (extendedart,
+// fullart and m15textless* are allow-listed).
+import { normaliseMasterCorners } from "./lib/frame-corners.mjs";
 
 const DATA = "/Users/redjester/Projects/other/Full-Magic-Pack/data";
 const W = 1500;
@@ -73,7 +77,9 @@ async function cutWindow(buf, fill, seeds, maxYFrac = 1) {
 
 async function writeOut(outDir, key, buf) {
   fs.mkdirSync(outDir, { recursive: true });
-  await sharp(buf).resize(W, H, { fit: "fill" }).png().toFile(path.join(outDir, `${key}.png`));
+  const data = await sharp(buf).resize(W, H, { fit: "fill" }).ensureAlpha().raw().toBuffer();
+  normaliseMasterCorners(path.basename(outDir), key, data, W, H);
+  await sharp(data, { raw: { width: W, height: H, channels: 4 } }).png().toFile(path.join(outDir, `${key}.png`));
 }
 
 const COLORS = ["w", "u", "b", "r", "g", "c", "m"];

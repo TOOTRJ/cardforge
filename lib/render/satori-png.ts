@@ -3,6 +3,7 @@ import "server-only";
 import type { ReactNode } from "react";
 import satori, { type Font } from "satori";
 import sharp from "sharp";
+import { applyCardCornerMask, squareCardCorners, type CardCornerFills } from "@/lib/cards/card-corner";
 import { loadLocalAdditionalAsset } from "@/lib/render/fallback-assets";
 
 // ---------------------------------------------------------------------------
@@ -22,12 +23,33 @@ import { loadLocalAdditionalAsset } from "@/lib/render/fallback-assets";
 // Edge routes (app/opengraph-image.tsx, twitter-image, icon, apple-icon) keep
 // next/og: they draw only fixed brand copy the default Geist covers, so they
 // never reach its loader (tests/unit/og/image-response.test.tsx).
+//
+// A CARD render may ask for its rounded corner (`cornerRadiusPx`, TODO 3.26):
+// the raster's alpha is cut with lib/cards/card-corner.ts applyCardCornerMask
+// — the formula the CSS clip and the frame importer share — AFTER
+// rasterizing, so the arc is exact and RGB is kept (a Satori clip would
+// anti-alias its own way and blacken the pixels it hides). A card's SQUARE
+// render (print, the Square download) passes the radius AND
+// `squareCornerFills`: the masked raster is then squared again with
+// squareCardCorners — each corner composited over its fill (the border black
+// or the root's #101015, lib/frames/square-corners.ts) or, for art or design
+// in the corner, made opaque as drawn — the same function a free Square
+// download runs on the stored round bake. Unset — every OG / brand image —
+// the bytes are exactly what they were.
 // ---------------------------------------------------------------------------
 
 export type PngRenderOptions = {
   width: number;
   height: number;
   fonts: readonly Font[];
+  /** Cut the card's rounded corner at this radius in px — fractional, pass
+   *  cardCornerRadiusPx(width, height) and never round it. Alpha only, RGB
+   *  kept. Unset = the square PNG exactly as drawn (the OG/brand invariant). */
+  cornerRadiusPx?: number;
+  /** With `cornerRadiusPx`: square the output again, each corner outside the
+   *  arc in its fill (null: as drawn) — lib/cards/card-corner.ts
+   *  squareCardCorners. Opaque. */
+  squareCornerFills?: CardCornerFills;
 };
 
 export async function renderPng(element: ReactNode, options: PngRenderOptions): Promise<Buffer> {
@@ -41,7 +63,18 @@ export async function renderPng(element: ReactNode, options: PngRenderOptions): 
     fonts: [...options.fonts],
     loadAdditionalAsset: loadLocalAdditionalAsset,
   });
-  return sharp(new TextEncoder().encode(svg)).resize(options.width).png().toBuffer();
+  const raster = sharp(new TextEncoder().encode(svg)).resize(options.width);
+  if (options.cornerRadiusPx === undefined) return raster.png().toBuffer();
+  // Straight (unpremultiplied) RGBA out of the rasterizer, the corner cut
+  // into its alpha, then the same PNG encode as the square path.
+  const { data, info } = await raster.ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  applyCardCornerMask(data, info.width, info.height, options.cornerRadiusPx);
+  if (options.squareCornerFills) {
+    squareCardCorners(data, info.width, info.height, options.squareCornerFills, options.cornerRadiusPx);
+  }
+  return sharp(data, { raw: { width: info.width, height: info.height, channels: 4 } })
+    .png()
+    .toBuffer();
 }
 
 /**

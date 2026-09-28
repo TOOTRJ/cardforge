@@ -5,6 +5,7 @@ import { LEGACY_SUPABASE_HOSTS } from "@/lib/validation/card";
 import type { createAdminClient } from "@/lib/supabase/admin";
 import { renderCardImage } from "@/lib/render/card-image";
 import { cardRenderPath } from "@/lib/cards/storage-paths";
+import { purgeCardCdnCache } from "@/lib/cards/cache-purge";
 import {
   BAKE_SELECT_COLUMNS,
   removeRenderObject,
@@ -234,7 +235,8 @@ export async function runRebakeBatch(
       }
 
       // Same render contract as the save-time bake: HD, always watermarked
-      // (when billing is on), no custom footer text (layout v20).
+      // (when billing is on), no custom footer text (layout v20), round
+      // corners (layout v31).
       profileOverrides ??= await getFrameProfileOverrides();
       const pipOverrides = await getPipOverrides(row.owner_id);
       const previewData = rowToPreviewData(row, pipOverrides, profileOverrides);
@@ -246,6 +248,7 @@ export async function runRebakeBatch(
       const response = await renderCardImage(previewData, "hd", {
         brandMark: billingEnabled,
         watermarkText: null,
+        corners: "round",
       });
       const pngBytes = await response.arrayBuffer();
 
@@ -310,6 +313,13 @@ export async function runRebakeBatch(
       failed.push({ id: row.id, error: err instanceof Error ? err.message : "Unknown error" });
     }
   }
+
+  // A new render: drop the CDN copies of its share images at once, so the
+  // UNVERSIONED /og (Web Share, old links) stops serving the old bake for
+  // up to a day of stale-while-revalidate — a sweep that changes every card
+  // (v31's round corner) would otherwise show both looks side by side.
+  // Best-effort and Vercel-only (lib/cards/cache-purge.ts).
+  await purgeCardCdnCache(processed.filter((p) => p.verdict === "rebake").map((p) => p.id));
 
   // Work left for the driver. The marked scope counts exactly, leaving out
   // the cards this caller will skip (earlier failures + this call's) that

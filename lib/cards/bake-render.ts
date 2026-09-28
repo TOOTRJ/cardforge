@@ -144,10 +144,12 @@ async function bakeCardRender(
     // downloads) and is always watermarked, whatever the owner's plan —
     // layout v20. The only clean output is a paid viewer's download, which
     // renders live (app/api/cards/[id]/png). No custom footer text here
-    // either: that prints on downloads only.
+    // either: that prints on downloads only. ROUND corners (TODO 3.26): the
+    // stored PNG is the card's true shape wherever it is shown unclipped.
     const response = await renderCardImage(previewData, "hd", {
       brandMark: isBillingEnabled(),
       watermarkText: null,
+      corners: "round",
     });
     pngBytes = await response.arrayBuffer();
   } catch (err) {

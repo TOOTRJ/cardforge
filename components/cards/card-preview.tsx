@@ -438,8 +438,9 @@ export function CardPreview({
       className={cn(
         "group relative w-full overflow-hidden bg-[#101015] shadow-[0_18px_60px_-30px_rgba(0,0,0,0.85)] transition-transform",
         // Battle frames are landscape (7:5); every other frame is the 5:7 card.
-        // card-corners* round only as much as a real card (~3.5%) so the frame's
-        // own corner shows — no hard web-UI rounding cutting into the card.
+        // card-corners* cut the ONE card corner (4.3% of the short side,
+        // lib/cards/card-corner.ts) — the same radius the bake masks, so the
+        // preview and the stored image share an outline.
         layout.orientation === "landscape"
           ? "aspect-[7/5] card-corners-landscape"
           : "aspect-[5/7] card-corners",

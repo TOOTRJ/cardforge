@@ -4,19 +4,25 @@ import path from "node:path";
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
 import {
+  CORNER_CHECK_FROM_PX,
+  CORNER_CHECK_TO_PX,
   EDGE_CONTRACTS,
   EDGE_CONTRACT_KNOWN_FAILURES,
+  cornerViolations,
   edgeContractViolations,
+  edgeCornerSkipPx,
   isKnownEdgeFailure,
   type EdgeContract,
 } from "@/lib/frames/edge-contract";
+import { applyCardCornerMask } from "@/lib/cards/card-corner";
 import manifestJson from "@/lib/frames/frame-manifest.json";
 import { FRAME_MASTER_KEYS } from "@/lib/cards/frame-reference-registry";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 
 // ---------------------------------------------------------------------------
-// TODO 7.7 — the edge contract, for every template × colour master.
+// TODO 7.7 — the edge contract, for every template × colour master, and its
+// corner check (TODO 3.26: the border reaches the one card corner's arc).
 //
 // Git masters (public/frames) are checked everywhere. Frames-bucket masters
 // (the Card Conjurer M15 family) are not in the repo: they are checked when a
@@ -74,9 +80,12 @@ describe("the edge-contract table", () => {
     expect(Object.values(EDGE_CONTRACTS.fullartland).every((e) => e.kind === "art")).toBe(true);
   });
 
-  it("lists today's known failures — 7.7's list plus the four this check found", () => {
+  it("lists today's known failures — 7.7's list, the four this check found, and the corner check's one", () => {
+    // adventure's grey paper rim (a corner-check find) left the list when
+    // Phase B took it on (owner, 2026-09-28).
     expect(Object.keys(EDGE_CONTRACT_KNOWN_FAILURES).sort()).toEqual(
       [
+        "alphaland",
         "avatar",
         "battle",
         "bloomanime",
@@ -92,6 +101,125 @@ describe("the edge-contract table", () => {
     expect(isKnownEdgeFailure("expeditionland", "b")).toBe(true);
     expect(isKnownEdgeFailure("expeditionland", "w")).toBe(false);
     expect(isKnownEdgeFailure("fullartland", "w")).toBe(false);
+    expect(isKnownEdgeFailure("alphaland", "b")).toBe(true);
+    expect(isKnownEdgeFailure("alphaland", "w")).toBe(false);
+    for (const k of ["w", "u", "b", "r", "g", "c", "m"]) expect(isKnownEdgeFailure("adventure", k), k).toBe(false);
+  });
+
+  it("gives every known failure a corner note (3.26) — the rings', the painted corners' and the corner check's own one", () => {
+    for (const [template, { why }] of Object.entries(EDGE_CONTRACT_KNOWN_FAILURES)) {
+      expect(why, template).toMatch(/; corner: /);
+    }
+    // The corner check's own entry fails on the corner only.
+    expect(EDGE_CONTRACT_KNOWN_FAILURES.alphaland.why).toMatch(/^edges pass; corner: /);
+  });
+});
+
+// TODO 3.26 — one card corner: 4.3 % of the short side (64.5 px at HD).
+describe("the edge check's corner skip and the corner check", () => {
+  const border: EdgeContract = {
+    top: { kind: "border" },
+    right: { kind: "border" },
+    bottom: { kind: "border" },
+    left: { kind: "border" },
+  };
+  /** An opaque black HD master (portrait or landscape). */
+  const black = (w: number, h: number) => {
+    const buf = new Uint8Array(w * h * 4);
+    for (let i = 3; i < buf.length; i += 4) buf[i] = 255;
+    return buf;
+  };
+  /** Paint the corner exterior of a `painted`-px rounded corner white — an
+   *  MSE master's card-stock paper (retro paints r ≈ 76). */
+  const withPaper = (buf: Uint8Array, w: number, h: number, painted: number) => {
+    for (const [fx, fy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) {
+      for (let ly = 0; ly < painted; ly += 1) {
+        for (let lx = 0; lx < painted; lx += 1) {
+          if (Math.hypot(painted - lx - 0.5, painted - ly - 0.5) <= painted) continue;
+          const o = ((fy ? h - 1 - ly : ly) * w + (fx ? w - 1 - lx : lx)) * 4;
+          buf[o] = buf[o + 1] = buf[o + 2] = 255;
+        }
+      }
+    }
+    return buf;
+  };
+
+  it("skips the corner by the constant's radius on the SHORT side, rounded up, + 2 px", () => {
+    expect(edgeCornerSkipPx(1500, 2100)).toBe(67);
+    // Landscape: the short side again (it was 4 % of the width: 84 px).
+    expect(edgeCornerSkipPx(2100, 1500)).toBe(67);
+    expect(edgeCornerSkipPx(300, 420)).toBe(15);
+  });
+
+  it("passes a master cut at the constant, where the old 60 px skip read α 0.875 at (60, 0)", () => {
+    const m = black(1500, 2100);
+    applyCardCornerMask(m, 1500, 2100);
+    expect(m[(0 * 1500 + 60) * 4 + 3]).toBe(223);
+    expect(edgeContractViolations(border, m, 1500, 2100)).toEqual([]);
+    expect(cornerViolations(border, m, 1500, 2100)).toEqual([]);
+  });
+
+  it("checks a landscape master from 67 px, not 84 (split, battle)", () => {
+    const m = black(2100, 1500);
+    applyCardCornerMask(m, 2100, 1500);
+    expect(edgeContractViolations(border, m, 2100, 1500)).toEqual([]);
+    m[(1 * 2100 + 75) * 4 + 3] = 0; // a hole the 84 px skip hid
+    expect(edgeContractViolations(border, m, 2100, 1500)).toEqual([expect.stringMatching(/^top: border, but the frame is α 0\.00 at 75,1/)]);
+  });
+
+  it("fails a 39 px cut over white paper (the MSE crescent) and passes the same corner painted with the border", () => {
+    const paper = withPaper(black(1500, 2100), 1500, 2100, 74);
+    applyCardCornerMask(paper, 1500, 2100, 39);
+    // The edge check never sees it: the paper sits inside the 67 px skip.
+    expect(edgeContractViolations(border, paper, 1500, 2100)).toEqual([]);
+    const v = cornerViolations(border, paper, 1500, 2100);
+    expect(v).toHaveLength(8); // four corners × both halves of each arc
+    for (const s of v) expect(s).toMatch(/corner \((top|bottom|left|right) border\): luma 255 at \d+,\d+ just inside the arc/);
+    // Black to the corner passes whatever the cut (Card Conjurer's 39 px).
+    const cc = black(1500, 2100);
+    applyCardCornerMask(cc, 1500, 2100, 39);
+    expect(cornerViolations(border, cc, 1500, 2100)).toEqual([]);
+  });
+
+  it("fails a transparent ring at the arc (the #101015 ring a bake shows)", () => {
+    const ring = black(1500, 2100);
+    for (let y = 0; y < 2100; y += 1) {
+      for (let x = 0; x < 1500; x += 1) if (x < 30 || y < 30 || x >= 1470 || y >= 2070) ring[(y * 1500 + x) * 4 + 3] = 0;
+    }
+    const v = cornerViolations(border, ring, 1500, 2100);
+    expect(v).toHaveLength(8);
+    expect(v[0]).toMatch(/^top-left corner \(top border\): the frame is α 0\.00/);
+  });
+
+  it(`reads every pixel the cut keeps whole, ${CORNER_CHECK_FROM_PX}–${CORNER_CHECK_TO_PX} px inside the arc: a grey rim right at the arc fails, the cut's own ramp passes`, () => {
+    const at = (x: number, y: number) => (y * 1500 + x) * 4;
+    const m = black(1500, 2100);
+    applyCardCornerMask(m, 1500, 2100);
+    // The ramp (−0.5 < d < 0.5) is the cut's own: never read.
+    m.set([200, 200, 200], at(0, 56)); // d ≈ −0.002
+    expect(cornerViolations(border, m, 1500, 2100)).toEqual([]);
+    // A grey pixel 1.2 px inside the arc (adventure's rim before Phase B,
+    // luma ≤ 97) fails: a round bake shows it as a light ring.
+    m.set([74, 74, 74], at(3, 47)); // d ≈ −1.2
+    expect(cornerViolations(border, m, 1500, 2100)).toEqual([expect.stringMatching(/^top-left corner \(left border\): luma 74 at 3,47/)]);
+    // Deeper than 8 px it is the frame's business, not the corner's.
+    const deep = black(1500, 2100);
+    deep.set([200, 200, 200], at(25, 25)); // d ≈ −9.4
+    expect(cornerViolations(border, deep, 1500, 2100)).toEqual([]);
+  });
+
+  it("skips an art edge's half of the arc and checks a bar's (m15borderless)", () => {
+    const contract = EDGE_CONTRACTS.m15borderless;
+    const m = black(1500, 2100);
+    // Art to the top corners and down the sides: see-through above the bar.
+    for (let y = 0; y < 1640; y += 1) for (let x = 0; x < 1500; x += 1) m[(y * 1500 + x) * 4 + 3] = 0;
+    applyCardCornerMask(m, 1500, 2100);
+    expect(cornerViolations(contract, m, 1500, 2100)).toEqual([]);
+    // The bottom bar's corner must be the border.
+    withPaper(m, 1500, 2100, 74);
+    const v = cornerViolations(contract, m, 1500, 2100);
+    expect(v.length).toBeGreaterThan(0);
+    for (const s of v) expect(s).toMatch(/^bottom-(left|right) corner \(bottom bar\)/);
   });
 });
 
@@ -152,7 +280,7 @@ describe("edgeContractViolations", () => {
   });
 });
 
-describe("every frame master honours its template's edge contract", () => {
+describe("every frame master honours its template's edge contract and corner check", () => {
   const bucketTemplates = new Set(Object.keys(manifest.files).map((k) => k.split("/")[0]));
   for (const template of FRAME_TEMPLATE_VALUES) {
     const masters = mastersOf(template);
@@ -176,7 +304,12 @@ describe("every frame master honours its template's edge contract", () => {
         expect([width, height]).toEqual(
           getFrameProfile(template).orientation === "landscape" ? [2100, 1500] : [1500, 2100],
         );
-        expect(edgeContractViolations(contract, data, width, height, getFrameProfile(template).artSlot)).toEqual([]);
+        expect([
+          ...edgeContractViolations(contract, data, width, height, getFrameProfile(template).artSlot),
+          // TODO 3.26: the border reaches the one card corner's arc (no paper
+          // crescent, no transparent ring inside the cut).
+          ...cornerViolations(contract, data, width, height),
+        ]).toEqual([]);
       });
     }
   }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import sharp from "sharp";
+import { applyCardCornerMask } from "@/lib/cards/card-corner";
 import {
   RENDER_THUMB_WIDTH,
   makeRenderThumb,
@@ -31,5 +32,24 @@ describe("render-thumb — the tile-sized WebP beside the HD bake", () => {
       .toBuffer();
     const smallThumb = await sharp(await makeRenderThumb(small)).metadata();
     expect(smallThumb.width).toBe(300);
+  });
+
+  it("keeps a round bake's transparent corner: a WebP with alpha (TODO 3.26)", async () => {
+    const w = 1500;
+    const h = 2100;
+    const data = Buffer.alloc(w * h * 4);
+    for (let i = 0; i < data.length; i += 4) data.set([68, 102, 68, 255], i);
+    applyCardCornerMask(data, w, h);
+    const hd = await sharp(data, { raw: { width: w, height: h, channels: 4 } }).png().toBuffer();
+    const thumb = await makeRenderThumb(hd);
+    const meta = await sharp(thumb).metadata();
+    expect(meta.format).toBe("webp");
+    expect(meta.hasAlpha).toBe(true);
+    expect(meta.channels).toBe(4);
+    const { data: px, info } = await sharp(thumb).raw().toBuffer({ resolveWithObject: true });
+    const alpha = (x: number, y: number) => px[(y * info.width + x) * 4 + 3];
+    expect(alpha(0, 0)).toBe(0);
+    expect(alpha(599, 839)).toBe(0);
+    expect(alpha(300, 420)).toBe(255);
   });
 });

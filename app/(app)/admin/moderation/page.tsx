@@ -71,16 +71,28 @@ export default async function ModerationPage() {
                 key={item.cardId}
                 className="flex flex-col gap-4 p-5 sm:flex-row sm:items-start"
               >
-                <div className="aspect-[5/7] w-28 shrink-0 overflow-hidden rounded-md bg-elevated">
-                  {item.renderedImageUrl || item.artUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={item.renderedImageUrl ?? item.artUrl ?? ""}
-                      alt=""
-                      className="h-full w-full object-cover"
-                    />
-                  ) : null}
-                </div>
+                {item.renderedImageUrl && item.landscape ? (
+                  // A 7:5 render (Battle, Split) whole, letterboxed in the
+                  // 5:7 slot with its own corner — never cropped to its
+                  // middle (TODO 3.26 review).
+                  <div className="flex aspect-[5/7] w-28 shrink-0 items-center overflow-hidden card-corners bg-elevated">
+                    <div className="aspect-[7/5] w-full overflow-hidden card-corners-landscape">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={item.renderedImageUrl} alt="" className="h-full w-full bg-[#101015] object-cover" />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="aspect-[5/7] w-28 shrink-0 overflow-hidden card-corners bg-elevated">
+                    {item.renderedImageUrl || item.artUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={item.renderedImageUrl ?? item.artUrl ?? ""}
+                        alt=""
+                        className="h-full w-full bg-[#101015] object-cover"
+                      />
+                    ) : null}
+                  </div>
+                )}
                 <div className="flex min-w-0 flex-1 flex-col gap-2">
                   <div className="flex flex-wrap items-center gap-2">
                     <h3 className="font-display text-base font-semibold text-foreground">

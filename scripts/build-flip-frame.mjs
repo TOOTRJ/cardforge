@@ -13,6 +13,9 @@
 import sharp from "sharp";
 import path from "node:path";
 import fs from "node:fs";
+// Phase B (TODO 3.26): normalise the card corners before the write, so a
+// rebuild can't bring the white paper back.
+import { normaliseMasterCorners } from "./lib/frame-corners.mjs";
 
 const PACK =
   "/Users/redjester/Projects/other/Full-Magic-Pack/data/magic-m15-flip.mse-style";
@@ -78,8 +81,9 @@ async function convert(colorKey, srcFile) {
     }
   }
 
+  normaliseMasterCorners(path.basename(OUT), colorKey, data, W, H);
   await sharp(data, { raw: { width: W, height: H, channels: ch } })
-    .png({ compressionLevel: 9, effort: 10 })
+    .png({ compressionLevel: 9 }) // truecolour: `effort` would palette-quantise after the corner gate
     .toFile(path.join(OUT, `${colorKey}.png`));
   console.log(`${colorKey}.png  cut ${((cut / (W * H)) * 100).toFixed(1)}% ← ${srcFile}`);
 }

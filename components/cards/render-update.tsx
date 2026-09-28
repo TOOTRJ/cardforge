@@ -20,6 +20,7 @@ import {
   rebakeOwnCardAction,
   type StaleOwnCard,
 } from "@/lib/cards/render-actions";
+import { cardCornersClass, isLandscapeFrame } from "@/lib/cards/card-orientation";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -101,6 +102,12 @@ function ConfirmPermanent({
 // ---------------------------------------------------------------------------
 
 function CompareView({ card }: { card: CardForUpdate }) {
+  // "Current image" draws the card box the live preview beside it draws —
+  // 5:7, or 7:5 for a landscape frame — clipped at the ONE card corner, so
+  // before and after share an outline (it used to be a fixed 20 px radius
+  // cutting into the card, with a landscape bake letterboxed square).
+  const landscape = isLandscapeFrame(card.previewData.frameStyle);
+  const box = cn(landscape ? "aspect-[7/5]" : "aspect-[5/7]", cardCornersClass(landscape));
   return (
     <div className="grid gap-4 overflow-y-auto px-6 pb-2 sm:grid-cols-2">
       <figure className="mx-auto flex w-full max-w-[300px] flex-col gap-2">
@@ -108,18 +115,26 @@ function CompareView({ card }: { card: CardForUpdate }) {
           Current image
         </figcaption>
         {card.renderedImageUrl ? (
-          <div className="relative aspect-[5/7] w-full overflow-hidden rounded-frame border border-border/40">
+          <div
+            className={cn("relative w-full overflow-hidden border border-border/40", box)}
+            data-testid="compare-current-image"
+          >
             <Image
               src={card.renderedImageUrl}
               alt={`${card.title} — current image`}
               fill
               sizes="(min-width: 640px) 320px, 100vw"
-              className="object-contain"
+              className="bg-[#101015] object-contain"
               unoptimized
             />
           </div>
         ) : (
-          <div className="flex aspect-[5/7] w-full items-center justify-center rounded-frame border border-dashed border-border/60 p-6 text-center text-sm text-muted">
+          <div
+            className={cn(
+              "flex w-full items-center justify-center border border-dashed border-border/60 p-6 text-center text-sm text-muted",
+              box,
+            )}
+          >
             No stored image yet — the gallery shows the live preview.
           </div>
         )}

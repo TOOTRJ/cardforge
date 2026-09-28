@@ -101,8 +101,11 @@ export async function scoreFrameCombo(input: {
 
   const [oursRaw, scanFetched] = await Promise.all([
     // No brand mark: it has no counterpart on the printed card and would
-    // score as drift in the footer corner.
-    renderCardImage(preview, "default", { brandMark: false }).then((r) =>
+    // score as drift in the footer corner. ROUND corners, like the Scryfall
+    // PNG it is scored against (cut round and transparent): both flatten to
+    // black below, so the corners now match — every template's score moved
+    // a little when the bake gained its rounded corner (TODO 3.26).
+    renderCardImage(preview, "default", { brandMark: false, corners: "round" }).then((r) =>
       r.arrayBuffer(),
     ),
     fetchScryfallImage(payload.scanUrl),

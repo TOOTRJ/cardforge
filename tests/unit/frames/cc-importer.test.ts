@@ -18,6 +18,7 @@ import {
   toRgba8,
 } from "@/scripts/lib/cc-frames.mjs";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
+import { applyCardCornerMask, cardCornerRadiusPx } from "@/lib/cards/card-corner";
 import manifestJson from "@/lib/frames/frame-manifest.json";
 import { frameUrl, setFrameStorageForTests, type FrameManifest } from "@/lib/frames/frame-url";
 
@@ -273,7 +274,20 @@ describe("pixel operations", () => {
     expect(alpha(50, 70)).toBe(1);
     expect(alpha(10, 10)).toBe(1);
     expect(alpha(0, 70)).toBe(1); // straight edge, not a corner
-    expect(CORNER_RADIUS).toBe(39); // matches the existing masters (2.6 % of 1500)
+  });
+
+  it("cuts the masters at the one card corner: 4.3 % of the short side, 64.5 px, never rounded (TODO 3.26)", () => {
+    // 39 px (Math.round(1500 × 0.026)) before 3.26; Math.round would give 65.
+    expect(CORNER_RADIUS).toBe(64.5);
+    expect(CORNER_RADIUS).toBe(cardCornerRadiusPx(1500, 2100));
+    // The importer's 8-bit cut IS the bake's mask: same pixels.
+    const w = 150;
+    const h = 210;
+    const a = Buffer.alloc(w * h * 4, 255);
+    const b = Buffer.alloc(w * h * 4, 255);
+    roundCornersRgba8(a, w, h, 6.45);
+    applyCardCornerMask(b, w, h);
+    expect(a.equals(b)).toBe(true);
   });
 
   it("crops a box and keeps only what the mask's alpha covers, colour untouched", () => {
@@ -357,6 +371,9 @@ describe("provenance and hygiene", () => {
     for (const template of Object.keys(templates)) {
       expect(provenance[template]?.source, template).toBe("cardconjurer");
       expect(provenance[template].commit).toBe(CC_COMMIT);
+      // Every master was cut at the one card corner (TODO 3.26's re-import).
+      expect(provenance[template].output, template).toBe(`1500x2100, corners rounded to ${CORNER_RADIUS}px, webp q90`);
+      expect(provenance[template].output, template).toContain("64.5px");
       expect(Object.keys(provenance[template].colors).sort()).toEqual([...COLORS].sort());
     }
     expect(provenance.m15devoid.source).toBe("cardconjurer");

@@ -16,7 +16,8 @@ import type { CardPreviewData } from "@/components/cards/card-preview";
 // the only way to render real cards.
 //
 //   POST /api/dev/render
-//   { "card": <CardPreviewData>, "preset": "default" | "hd", "watermark": false }
+//   { "card": <CardPreviewData>, "preset": "default" | "hd", "watermark": false,
+//     "corners": "round" | "square" }   (corners: the bake's default, round)
 // ---------------------------------------------------------------------------
 
 export async function POST(request: NextRequest) {
@@ -28,6 +29,7 @@ export async function POST(request: NextRequest) {
     card?: CardPreviewData;
     preset?: string;
     watermark?: boolean;
+    corners?: string;
   };
   try {
     body = await request.json();
@@ -42,5 +44,6 @@ export async function POST(request: NextRequest) {
 
   return await renderCardImage(body.card ?? {}, preset, {
     brandMark: body.watermark ?? false,
+    corners: body.corners === "square" ? "square" : "round",
   });
 }

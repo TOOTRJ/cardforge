@@ -6,7 +6,12 @@
 // One dialog covering every "get the card off the screen" path:
 //
 //   PNG          — render of the card (free: 750 px with the PipGlyph mark;
-//                  paid: clean 1500 × 2100).
+//                  paid: clean 1500 × 2100), with a Rounded / Square switch
+//                  for EVERY viewer (TODO 3.26, owner decision 2026-09-27):
+//                  Rounded (the default) cuts the card's corner transparent,
+//                  like the card in the gallery; Square is the full
+//                  rectangle with the corner in the border's colour, for
+//                  printing. Both ask the png route by name (corners=…).
 //   Single PDF   — 2.5"×3.5" page sized exactly to the card; sleeve-ready. (Plus+)
 //   3×3 Letter   — 9 copies on US Letter with corner crop marks. (Pro)
 //   3×3 A4       — 9 copies on A4 with corner crop marks. (Pro)
@@ -19,7 +24,7 @@
 // client-side fetch.
 // ---------------------------------------------------------------------------
 
-import { type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
   Crown,
   Download,
@@ -43,9 +48,23 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { ChipGroup, type ChipOption } from "@/components/ui/chip-group";
 import { PremiumBadge } from "@/components/billing/premium-badge";
 import { useUpgradeModal } from "@/components/billing/upgrade-modal-provider";
+import { cardPngHref, type CardCorners } from "@/lib/cards/output-corners";
 import { cn } from "@/lib/utils";
+
+const CORNER_OPTIONS: ChipOption<CardCorners>[] = [
+  { value: "round", label: "Rounded" },
+  { value: "square", label: "Square" },
+];
+
+/** One line under the switch — tier-aware: only a paid viewer has the PDF. */
+function cornersHint(isPaid: boolean): string {
+  return isPaid
+    ? "Rounded for sharing; choose Square (or the PDF) to print."
+    : "Rounded for sharing; choose Square to print.";
+}
 
 type DownloadModalProps = {
   cardId: string;
@@ -79,15 +98,18 @@ export function DownloadModal({
   downloadDiffersFromGallery = false,
 }: DownloadModalProps) {
   const upgrade = useUpgradeModal();
+  // The PNG's corner — Rounded first, like the card in the gallery.
+  const [corners, setCorners] = useState<CardCorners>("round");
   const base = `/api/cards/${cardId}`;
   // Free users start on the PNG tab — the one format they can actually use.
   const initialTab: DownloadTab = isPaid ? defaultTab : "png";
   const links: Record<DownloadTab, { href: string; filename: string }> = {
     // The server clamps a free viewer to 750 px anyway; asking for it
-    // outright keeps the URL honest about what they get.
+    // outright keeps the URL honest about what they get. The corner is
+    // always named: the route's default is square (older callers).
     png: {
-      href: `${base}/png?preset=${isPaid ? "hd" : "default"}`,
-      filename: `${cardSlug}.png`,
+      href: cardPngHref(cardId, { preset: isPaid ? "hd" : "default", corners }),
+      filename: corners === "square" ? `${cardSlug}-square.png` : `${cardSlug}.png`,
     },
     single: { href: `${base}/pdf?layout=card`, filename: `${cardSlug}.pdf` },
     letter: {
@@ -169,10 +191,11 @@ export function DownloadModal({
             ) : null}
 
             <TabsContent value="png" className="mt-5">
+              <CornersSwitch value={corners} onChange={setCorners} isPaid={isPaid} />
               {isPaid ? (
                 <DownloadPanel
                   title="High-resolution PNG"
-                  description="Clean, full-resolution (1500 × 2100) render. Great for sharing, embedding, and printing single cards."
+                  description="Clean, full-resolution (1500 × 2100) render. Rounded for sharing and embedding; Square for printing single cards."
                   href={links.png.href}
                   filename={links.png.filename}
                 />
@@ -246,6 +269,30 @@ export function DownloadModal({
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** The PNG's Rounded / Square switch — every viewer, free included. */
+function CornersSwitch({
+  value,
+  onChange,
+  isPaid,
+}: {
+  value: CardCorners;
+  onChange: (next: CardCorners) => void;
+  isPaid: boolean;
+}) {
+  return (
+    <div className="mb-4 flex flex-col gap-1.5" data-testid="download-corners">
+      <span className="text-xs font-medium text-foreground">Corners</span>
+      <ChipGroup
+        ariaLabel="Corners"
+        options={CORNER_OPTIONS}
+        value={value}
+        onChange={onChange}
+      />
+      <p className="text-[11px] leading-4 text-subtle">{cornersHint(isPaid)}</p>
+    </div>
   );
 }
 

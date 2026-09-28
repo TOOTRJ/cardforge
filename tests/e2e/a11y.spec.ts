@@ -12,8 +12,10 @@ import AxeBuilder from "@axe-core/playwright";
 //   * Card *faces* (CardPreview) intentionally reproduce printed-card
 //     contrast and aren't expected to meet web AA — axe only sees the
 //     placeholder cards here, which render fine, but if a future violation
-//     points inside a card face, exclude `.card-corners` rather than
-//     changing trade-dress colors.
+//     points inside a card face, exclude the card face rather than changing
+//     trade-dress colors. CardPreview's root carries `.card-corners` (or
+//     `.card-corners-landscape`) plus an inline `container-type` — match
+//     both, since tile focus rings and scrims wear `.card-corners` too.
 // ---------------------------------------------------------------------------
 
 const PAGES = [

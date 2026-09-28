@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { renderVersionOf } from "@/lib/cards/render-version";
+import { isRoundBake } from "@/lib/cards/layout-version";
 import sharp from "sharp";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -143,7 +144,10 @@ export async function GET(
   }
 
   if (social) {
-    return renderSocialComposite(card, previewData, portraitBytes, cacheHeader);
+    // A bake stamped before v31 is square with the frame's own corner: the
+    // composite keeps its old clip for it until the sweep re-bakes the card.
+    const legacySquareBake = Boolean(stored) && !isRoundBake(card.layout_version);
+    return renderSocialComposite(card, previewData, portraitBytes, cacheHeader, legacySquareBake);
   }
 
   return new NextResponse(new Uint8Array(portraitBytes), {
@@ -179,6 +183,7 @@ async function renderSocialComposite(
   previewData: CardPreviewData,
   portraitBytes: Buffer,
   cacheHeader: string,
+  legacySquareBake: boolean,
 ) {
   const cardImageDataUri = `data:image/png;base64,${portraitBytes.toString("base64")}`;
 
@@ -200,6 +205,7 @@ async function renderSocialComposite(
     cardImageDataUri,
     accent: cardAccentColor(card.color_identity),
     landscape: isLandscapeRender(previewData),
+    legacySquareBake,
   });
 
   const jpeg = await sharp(Buffer.from(await composite.arrayBuffer()))

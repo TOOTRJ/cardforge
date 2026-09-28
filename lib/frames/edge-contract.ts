@@ -17,9 +17,20 @@
 //
 // The table below is hand-kept until 4.1's frame manifest carries it
 // (TODO 7.7 asks for "a table in the test until then"; it lives here so the
-// Card Conjurer importer can run the same check after its downscale). This
-// module has NO imports — scripts/import-cc-frames.mjs loads it as .ts.
+// Card Conjurer importer can run the same check after its downscale).
+//
+// The corner check (TODO 3.26) is the other half of the contract at the card
+// corner: on a border or bar edge, the pixels just inside the one card corner
+// (lib/cards/card-corner.ts) must be the border — opaque and dark — or the
+// cut shows a light crescent (the MSE masters' white paper) or a hole (a
+// transparent ring). The edge check skips each corner by the same constant.
+//
+// This module imports only the import-free lib/cards/card-corner.ts, with an
+// explicit .ts specifier: scripts/import-cc-frames.mjs loads it through
+// Node's type stripping.
 // ---------------------------------------------------------------------------
+
+import { cardCornerRadiusPx } from "../cards/card-corner.ts";
 
 export type EdgeName = "top" | "right" | "bottom" | "left";
 
@@ -34,11 +45,33 @@ export const EDGE_NAMES: readonly EdgeName[] = ["top", "right", "bottom", "left"
 
 /** Band depth: 2 % of the card along the edge's normal. */
 export const EDGE_BAND_PCT = 2;
-/** Each end of an edge is skipped for this % of the card's WIDTH — the
- *  rounded corner (39 px Card Conjurer cut, ~65 px printed) plus margin. */
-export const EDGE_CORNER_PCT = 4;
+/**
+ * Each end of an edge is skipped for the card corner — the one constant's
+ * radius on the SHORT side, rounded up, plus 2 px of margin: 67 px at
+ * 1500×2100 and at 2100×1500. (It was 4 % of the width: 60 px, which reads
+ * α 0.875 at (60, 0) of a 64.5 px cut, and 84 px on landscape masters.)
+ */
+export function edgeCornerSkipPx(width: number, height: number): number {
+  return Math.ceil(cardCornerRadiusPx(width, height)) + 2;
+}
 export const OPAQUE_MIN = 0.99;
 export const CLEAR_MAX = 0.05;
+/**
+ * The corner check reads the band CORNER_CHECK_FROM_PX … CORNER_CHECK_TO_PX
+ * inside the card corner's arc (−8 ≤ d ≤ −0.5, d = the pixel centre's
+ * distance past the arc): EVERY pixel the cut keeps whole (the mask leaves
+ * d ≤ −0.5 at full alpha), out to 8 px. It started 2 px in until review
+ * (2026-09-27): that hid a 1–2 px grey paper rim right at the arc on
+ * adventure (luma ≤ 97) and expeditionland w/u/r/c/m (luma ≤ 85), which a
+ * round bake shows as a light ring. Both are normalised (Phase B;
+ * adventure joined the allow-list on 2026-09-28, owner); one α 0.97 speck
+ * on alphaland/b is a known failure.
+ */
+export const CORNER_CHECK_FROM_PX = 0.5;
+export const CORNER_CHECK_TO_PX = 8;
+/** "Dark" for the corner check: Rec. 601 luma ≤ 48 (the borders are black,
+ *  #000–#0d0d0d; the MSE paper is 225–255). */
+export const CORNER_DARK_LUMA_MAX = 48;
 
 const BORDER: EdgeSpec = { kind: "border" };
 const ALL_BORDER: EdgeContract = { top: BORDER, right: BORDER, bottom: BORDER, left: BORDER };
@@ -132,23 +165,55 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
 
 /** Templates × colour masters that fail their contract today, with why.
  *  The test asserts they STILL fail (it.fails), so fixing one flips the
- *  test red until it is struck from this list. */
+ *  test red until it is struck from this list. Every entry's `why` carries
+ *  a "corner" note (3.26): a ring is transparent at the arc, and the
+ *  showcase families that paint their corner (Bloomburrow's pale corner,
+ *  LOTR's tan, Tarkir's ornament) are design that Phase B never paints.
+ *  The corner check adds one entry of its own — alphaland/b, whose edges
+ *  pass. (It found adventure's grey paper rim too, luma ≤ 97: Phase B
+ *  normalises it since the owner's 2026-09-28 call.) */
 export const EDGE_CONTRACT_KNOWN_FAILURES: Readonly<Record<string, { keys: "all" | readonly string[]; why: string }>> = {
-  bloomanime: { keys: "all", why: "transparent outer ring + inset art slot 2.5/3.5/93×92 (4.35)" },
-  tarkirghostfire: { keys: "all", why: "transparent outer ring bakes #101015; the black run needs a real ring (4.35)" },
-  tarkirdragon: { keys: "all", why: "the ring bakes #101015 (16,16,21), not the MUL print's black (4.35)" },
-  lotrscroll: { keys: "all", why: "borderless scroll PNG, transparent ring (7.6 / 4.21)" },
-  battle: { keys: "all", why: "borderless PNG, transparent ring (7.6 / 4.21)" },
+  // Found by the corner check's full band (3.26 review, 2026-09-27).
+  alphaland: {
+    keys: ["b"],
+    why: "edges pass; corner: two α 0.97 specks just inside the arc (top-right, bottom-right), invisible",
+  },
+  bloomanime: {
+    keys: "all",
+    why: "transparent outer ring + inset art slot 2.5/3.5/93×92 (4.35); corner: the bottom bar is transparent at the arc",
+  },
+  tarkirghostfire: {
+    keys: "all",
+    why: "transparent outer ring bakes #101015; the black run needs a real ring (4.35); corner: transparent at the arc",
+  },
+  tarkirdragon: {
+    keys: "all",
+    why: "the ring bakes #101015 (16,16,21), not the MUL print's black (4.35); corner: transparent at the arc",
+  },
+  lotrscroll: { keys: "all", why: "borderless scroll PNG, transparent ring (7.6 / 4.21); corner: transparent at the arc" },
+  battle: { keys: "all", why: "borderless PNG, transparent ring (7.6 / 4.21); corner: transparent at the arc" },
   expeditionland: {
     keys: ["b", "g"],
-    why: "the black flood fill leaked through the dark stone: no ring, no text box (4.35 (3))",
+    why: "the black flood fill leaked through the dark stone: no ring, no text box (4.35 (3)); corner: transparent at the arc",
   },
   // Found by this check on 2026-09-26 (the borderless research sampled the
   // side band at 20–80 % H only): transparent bottom band and lower sides.
-  avatar: { keys: "all", why: "transparent outer band at the bottom and lower sides (found 2026-09-26)" },
-  bloomburrow: { keys: "all", why: "transparent outer band at the bottom and lower sides (found 2026-09-26)" },
-  lotr: { keys: "all", why: "transparent outer band at the bottom and lower sides (found 2026-09-26)" },
-  tarkirdraconic: { keys: "all", why: "transparent outer band at the bottom and lower sides (found 2026-09-26)" },
+  avatar: {
+    keys: "all",
+    why: "transparent outer band at the bottom and lower sides (found 2026-09-26); corner: transparent at the arc",
+  },
+  bloomburrow: {
+    keys: "all",
+    why: "transparent outer band at the bottom and lower sides (found 2026-09-26); corner: the pale design corner (never normalised, 3.26)",
+  },
+  lotr: {
+    keys: "all",
+    why: "transparent outer band at the bottom and lower sides (found 2026-09-26); corner: the tan design corner on top (never normalised, 3.26)",
+  },
+  tarkirdraconic: {
+    keys: "all",
+    why: "transparent outer band at the bottom and lower sides (found 2026-09-26); corner: the dragon ornament on top (never normalised, 3.26)",
+  },
 };
 
 export function isKnownEdgeFailure(template: string, key: string): boolean {
@@ -186,7 +251,7 @@ export function edgeContractViolations(
   artSlot?: EdgeRect,
 ): string[] {
   const out: string[] = [];
-  const corner = Math.round((EDGE_CORNER_PCT / 100) * width);
+  const corner = edgeCornerSkipPx(width, height);
   const alphaAt = (x: number, y: number) => rgba[(y * width + x) * 4 + 3] / 255;
   for (const edge of EDGE_NAMES) {
     const spec = contract[edge];
@@ -235,6 +300,82 @@ export function edgeContractViolations(
     } else if (worst < OPAQUE_MIN) {
       const what = spec.kind === "bar" ? `bar (${spec.depthPct} %)` : "border";
       out.push(`${edge}: ${what}, but the frame is α ${worst.toFixed(2)} at ${worstAt?.join(",")} (≥ ${OPAQUE_MIN})`);
+    }
+  }
+  return out;
+}
+
+/** The two edges that meet at each card corner. */
+const CORNER_EDGES = [
+  { corner: "top-left", horizontal: "top", vertical: "left", fx: 0, fy: 0 },
+  { corner: "top-right", horizontal: "top", vertical: "right", fx: 1, fy: 0 },
+  { corner: "bottom-left", horizontal: "bottom", vertical: "left", fx: 0, fy: 1 },
+  { corner: "bottom-right", horizontal: "bottom", vertical: "right", fx: 1, fy: 1 },
+] as const;
+
+/**
+ * Every way a master's card corners break `contract` (TODO 3.26): on a
+ * `border` or `bar` edge, each pixel just inside the one card corner's arc
+ * (−CORNER_CHECK_TO_PX ≤ d ≤ −CORNER_CHECK_FROM_PX) must be opaque
+ * (α ≥ OPAQUE_MIN) and dark
+ * (luma ≤ CORNER_DARK_LUMA_MAX). Each arc is split on its diagonal: the half
+ * nearer an edge belongs to that edge, and an `art` edge's half is skipped
+ * (the art reaches the corner there). Empty = the corners honour it.
+ */
+export function cornerViolations(
+  contract: EdgeContract,
+  rgba: Uint8Array | Uint8ClampedArray,
+  width: number,
+  height: number,
+): string[] {
+  const out: string[] = [];
+  const r = cardCornerRadiusPx(width, height);
+  const n = Math.ceil(r);
+  for (const { corner, horizontal, vertical, fx, fy } of CORNER_EDGES) {
+    for (const edge of [horizontal, vertical] as const) {
+      const spec = contract[edge];
+      if (spec.kind === "art") continue;
+      let minAlpha = 1;
+      let minAt: [number, number] | null = null;
+      let maxLuma = 0;
+      let lumaAt: [number, number] | null = null;
+      for (let ly = 0; ly < n; ly += 1) {
+        for (let lx = 0; lx < n; lx += 1) {
+          const cx = r - lx - 0.5;
+          const cy = r - ly - 0.5;
+          if (cx <= 0 || cy <= 0) continue;
+          // The half of the arc nearer the horizontal edge has cy ≥ cx.
+          if ((edge === horizontal) !== cy >= cx) continue;
+          const d = Math.hypot(cx, cy) - r;
+          if (d > -CORNER_CHECK_FROM_PX || d < -CORNER_CHECK_TO_PX) continue;
+          const x = fx ? width - 1 - lx : lx;
+          const y = fy ? height - 1 - ly : ly;
+          const o = (y * width + x) * 4;
+          const a = rgba[o + 3] / 255;
+          if (a < minAlpha) {
+            minAlpha = a;
+            minAt = [x, y];
+          }
+          // A see-through pixel's colour means nothing; α reports it.
+          if (a < 0.5) continue;
+          const luma = 0.299 * rgba[o] + 0.587 * rgba[o + 1] + 0.114 * rgba[o + 2];
+          if (luma > maxLuma) {
+            maxLuma = luma;
+            lumaAt = [x, y];
+          }
+        }
+      }
+      const what = spec.kind === "bar" ? "bar" : "border";
+      if (minAlpha < OPAQUE_MIN) {
+        out.push(
+          `${corner} corner (${edge} ${what}): the frame is α ${minAlpha.toFixed(2)} at ${minAt?.join(",")} just inside the arc (≥ ${OPAQUE_MIN})`,
+        );
+      }
+      if (maxLuma > CORNER_DARK_LUMA_MAX) {
+        out.push(
+          `${corner} corner (${edge} ${what}): luma ${Math.round(maxLuma)} at ${lumaAt?.join(",")} just inside the arc (≤ ${CORNER_DARK_LUMA_MAX}, the border)`,
+        );
+      }
     }
   }
   return out;

@@ -1,8 +1,7 @@
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { CardPreview, type CardPreviewData } from "@/components/cards/card-preview";
-import { normalizeFrameTemplate } from "@/lib/cards/card-display";
-import { getFrameProfile } from "@/lib/cards/template-layout";
+import { isLandscapeFrame } from "@/lib/cards/card-orientation";
 import { toRenderCdnUrl } from "@/lib/cards/render-cdn";
 
 // ---------------------------------------------------------------------------
@@ -27,6 +26,16 @@ import { toRenderCdnUrl } from "@/lib/cards/render-cdn";
 // with breathing room above/below — rather than cropped (object-cover would
 // zoom into the middle of a Siege). This keeps every grid aligned while the
 // battle card stays whole and undistorted.
+//
+// Corners (TODO 3.26): the card is clipped at the ONE card corner — by the
+// tile itself for a portrait card (`.card-corners` on the 5:7 box), by a
+// centred 7:5 inner box for a landscape one (`.card-corners-landscape`), so
+// the battle's own corners round rather than the empty letterbox (and a
+// pre-v31 square bake rounds too). The image sits on the card's #101015 (the
+// live preview's root colour), never on the page colour: a v31 bake has
+// transparent rounded corners, and the tile's clip inside its 1 px border is
+// a hair tighter than the image's own arc — over bg-background that sliver
+// showed as a pale rim on every dark-bordered card in LIGHT theme.
 //
 // The editor still uses <CardPreview> directly — that's where the live
 // preview matters and where the bake-from-form-state would be a chicken-
@@ -68,9 +77,7 @@ export function BakedCardThumbnail({
   sizes = DEFAULT_SIZES,
   priority = false,
 }: BakedCardThumbnailProps) {
-  const isLandscape =
-    getFrameProfile(normalizeFrameTemplate(previewData.frameStyle?.template))
-      .orientation === "landscape";
+  const isLandscape = isLandscapeFrame(previewData.frameStyle);
 
   if (!renderedImageUrl) {
     // Live-preview fallback. Portrait cards fill the cell; landscape (Battle)
@@ -90,38 +97,48 @@ export function BakedCardThumbnail({
     return <CardPreview {...previewData} className={className} />;
   }
 
+  const label = alt ?? (title?.trim() || "Card");
+  // The #101015 backdrop sits directly behind the image (see the header): it
+  // only ever shows through a rounded bake's transparent corner sliver.
+  const image = renderedThumbUrl ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={toRenderCdnUrl(renderedThumbUrl) ?? renderedThumbUrl}
+      alt={label}
+      loading={priority ? "eager" : "lazy"}
+      fetchPriority={priority ? "high" : "auto"}
+      decoding="async"
+      className="absolute inset-0 h-full w-full bg-[#101015] object-cover"
+    />
+  ) : (
+    <Image
+      src={renderedImageUrl}
+      alt={label}
+      fill
+      sizes={sizes}
+      priority={priority}
+      className="bg-[#101015] object-cover"
+    />
+  );
+
   // The wrapper mirrors the rounded-frame look so the thumbnail integrates with
-  // the same hover effects and shadows the live preview gets. Portrait renders
-  // are 5:7 (object-cover fills the tile); landscape renders are letterboxed.
+  // the same hover effects and shadows the live preview gets. A portrait render
+  // is 5:7 and fills the tile; a landscape render is letterboxed in it, inside
+  // its own 7:5 card box.
   return (
     <div
       className={cn(
         "relative aspect-[5/7] w-full overflow-hidden card-corners border border-border/40 bg-background shadow-[0_18px_60px_-30px_rgba(0,0,0,0.85)]",
+        isLandscape && "flex items-center",
         className,
       )}
     >
-      {renderedThumbUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={toRenderCdnUrl(renderedThumbUrl) ?? renderedThumbUrl}
-          alt={alt ?? (title?.trim() || "Card")}
-          loading={priority ? "eager" : "lazy"}
-          fetchPriority={priority ? "high" : "auto"}
-          decoding="async"
-          className={cn(
-            "absolute inset-0 h-full w-full",
-            isLandscape ? "object-contain" : "object-cover",
-          )}
-        />
+      {isLandscape ? (
+        <div className="relative aspect-[7/5] w-full overflow-hidden card-corners-landscape">
+          {image}
+        </div>
       ) : (
-        <Image
-          src={renderedImageUrl}
-          alt={alt ?? (title?.trim() || "Card")}
-          fill
-          sizes={sizes}
-          priority={priority}
-          className={isLandscape ? "object-contain" : "object-cover"}
-        />
+        image
       )}
     </div>
   );

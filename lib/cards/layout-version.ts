@@ -260,9 +260,54 @@ import type { CardType } from "@/types/card";
 //            fullartland, "sweep": 0 public production cards (anonymous
 //            read, 2026-09-26); private rows need the owner's admin count
 //            before the sweep.
+//   31     — ONE corner radius (TODO 3.26, owner-approved 2026-09-27): 4.3 %
+//            of the card's SHORT side (lib/cards/card-corner.ts — 64.5 px at
+//            HD in portrait AND landscape, Scryfall's cut), the one constant
+//            the CSS clip, the OG composite and the importer read too.
+//            * the corner mask: every bake is cut to a transparent rounded
+//              corner after rasterising (applyCardCornerMask, the importer's
+//              1 px anti-aliased formula, alpha only), so the stored PNG, its
+//              WebP thumb and every unclipped use of the URL show the card's
+//              true shape. Print (card PDF, Letter/A4 sheets, the Pro deck
+//              PDF + ZIP) and the download modal's "Square" PNG are square:
+//              the round render squared again, the area outside the arc in
+//              the card's border colour (lib/frames/square-corners.ts) — the
+//              border black #000 (owner decision), the root's #101015 on a
+//              ring whose see-through band IS that colour, or the art /
+//              design where it runs into the corner — instead of the old
+//              #101015 notch everywhere. A free Square PNG is the stored
+//              round bake squared with the same fills.
+//            * the Card Conjurer masters re-cut 39 → 64.5 px (frames bucket).
+//            * Phase B: the MSE git masters' light paper outside the painted
+//              corner, its grey fringe and the fringe's dark tail repainted
+//              in the border as it runs beside them (the edge band's depth
+//              profile), then cut at the constant — an allow-list (retro,
+//              retroland, modern, modernland, saga, aftermath, extendedart,
+//              fullart, m15textless, m15textlessland, flip, alphatoken;
+//              expeditionland w/u/r/c/m), never a showcase family
+//              (Bloomburrow, LOTR, Tarkir, Avatar, battle). Its changes stay
+//              inside 96 × 96 px corner boxes: on retro/retroland/modern the
+//              paper's anti-aliased edge runs along the card edge to ~77 px
+//              from the corner (≤ 9 px from the edge), past the bake's
+//              ceil(r)+3 = 68 px box.
+//            Every template's bake changes (no template or card scope),
+//            "sweep". VERIFICATION-NEUTRAL (VERIFICATION_NEUTRAL_VERSIONS,
+//            owner decision): corner pixels move no slot, so a frame_reviews
+//            tick from v29 / v30 stays fresh.
 // ---------------------------------------------------------------------------
 
-export const CARD_LAYOUT_VERSION = 30;
+export const CARD_LAYOUT_VERSION = 31;
+
+/** The first layout whose stored bakes are ROUND (v31, TODO 3.26). An older
+ *  stamp — or a null one, whose bake may predate it — is a square bake with
+ *  the frame's corner as it was (lib/og/card-social.tsx keeps its old clip
+ *  for those until the sweep re-bakes them). */
+export const ROUND_BAKE_LAYOUT_VERSION = 31;
+
+/** True when a stored bake stamped `layoutVersion` is already round. */
+export function isRoundBake(layoutVersion: number | null | undefined): boolean {
+  return layoutVersion != null && layoutVersion >= ROUND_BAKE_LAYOUT_VERSION;
+}
 
 /**
  * Bumps that changed the output of only some frame templates, keyed by the
@@ -291,6 +336,25 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // v30: fullartland re-sourced from Card Conjurer, with its symbol slot,
   // pill and outlined footer (4.39).
   30: ["fullartland"],
+  // (v31, the one corner radius, changes every template's bake: unscoped.)
+};
+
+/**
+ * Bumps that change nothing a frame VERIFICATION measures: a tick in
+ * /admin/frame-compare (frame_reviews.verified_layout_version) survives them.
+ * v31 only cuts the card's corner — no slot, bar or text moves — so the
+ * owner's existing ticks stay fresh (owner decision, TODO 3.26). Stored
+ * bakes still owe these bumps: this list is read by frame verification
+ * only, never by the stale / sweep / download rules.
+ */
+export const VERIFICATION_NEUTRAL_VERSIONS: readonly number[] = [31];
+
+/** TEMPLATE_SCOPED_VERSIONS with every verification-neutral bump scoped to
+ *  no template — the map lib/cards/frame-verification-state.ts judges a
+ *  tick by. */
+export const VERIFICATION_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
+  ...TEMPLATE_SCOPED_VERSIONS,
+  ...Object.fromEntries(VERIFICATION_NEUTRAL_VERSIONS.map((version) => [version, [] as readonly string[]])),
 };
 
 /** The card fields a scoped bump can look at — `cards` columns, as stored.
@@ -519,6 +583,7 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   28: "sweep", // foil finish — it never reached a saved image
   29: "sweep", // round-5 leftovers: word spacing, pw rows, Alpha ink, stats, foil backdrops, aftermath
   30: "sweep", // fullartland re-sourced from Card Conjurer (4.39) — a frame swap, never an owner badge
+  31: "sweep", // one corner radius (3.26): the bake's rounded corner, every card — a correction, never a badge
 };
 
 export function rolloutPolicy(version: number, rollout = VERSION_ROLLOUT): RolloutPolicy {
@@ -667,14 +732,16 @@ export function storedLookIsOlder(
     layout_version: number | null | undefined;
     frame_style: unknown;
   } & ScopeCard,
+  opts: PolicyOptions = {},
 ): boolean {
   if (!card.rendered_image_url) return false;
   return isRenderStale(
     card.layout_version,
     templateOfFrameStyle(card.frame_style),
-    TEMPLATE_SCOPED_VERSIONS,
-    CARD_LAYOUT_VERSION,
+    opts.scoped ?? TEMPLATE_SCOPED_VERSIONS,
+    opts.current ?? CARD_LAYOUT_VERSION,
     card,
+    opts.scopes ?? VERSION_SCOPES,
   );
 }
 
@@ -692,7 +759,8 @@ export function downloadDiffersFromGallery(
     frame_style: unknown;
   } & ScopeCard,
   viewerIsPaid: boolean,
+  opts: PolicyOptions = {},
 ): boolean {
   if (!card.rendered_image_url) return false;
-  return viewerIsPaid ? storedLookIsOlder(card) : hasPendingCorrection(card);
+  return viewerIsPaid ? storedLookIsOlder(card, opts) : hasPendingCorrection(card, opts);
 }

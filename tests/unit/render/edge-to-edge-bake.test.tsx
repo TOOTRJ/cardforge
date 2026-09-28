@@ -15,6 +15,7 @@ import {
 } from "@/lib/cards/template-layout";
 import type { FrameProfileOverride } from "@/lib/cards/profile-override";
 import { RENDER_PRESETS } from "@/lib/render/card-image";
+import type { CardCorners } from "@/lib/cards/output-corners";
 import { RARITY_INK } from "@/lib/brand/constants";
 
 // ---------------------------------------------------------------------------
@@ -108,12 +109,21 @@ afterAll(() => {
   vi.unstubAllGlobals();
 });
 
-type Bake = { px: (x: number, y: number) => [number, number, number]; data: Buffer; w: number; h: number };
+type Bake = {
+  px: (x: number, y: number) => [number, number, number];
+  /** Alpha at (x, y): a round bake (the default, TODO 3.26) is transparent
+   *  outside the card's corner arc; `px` still reads the RGB drawn there. */
+  a: (x: number, y: number) => number;
+  data: Buffer;
+  w: number;
+  h: number;
+};
 
 async function bake(
   card: Record<string, unknown>,
   brandMark = false,
   preset: "default" | "hd" = "default",
+  corners: CardCorners = "round",
 ): Promise<Bake> {
   const { renderCardImage } = await import("@/lib/render/card-image");
   const w = RENDER_PRESETS[preset].width;
@@ -131,9 +141,11 @@ async function bake(
       ...card,
     } as unknown as CardPreviewData,
     preset,
-    { brandMark, watermarkText: null },
+    { brandMark, watermarkText: null, corners },
   );
-  const data = await sharp(Buffer.from(await res.arrayBuffer())).removeAlpha().raw().toBuffer();
+  const buf = Buffer.from(await res.arrayBuffer());
+  const data = await sharp(buf).removeAlpha().raw().toBuffer();
+  const alpha = await sharp(buf).ensureAlpha().extractChannel(3).raw().toBuffer();
   return {
     data,
     w,
@@ -142,6 +154,7 @@ async function bake(
       const i = (Math.round(y) * w + Math.round(x)) * 3;
       return [data[i], data[i + 1], data[i + 2]];
     },
+    a: (x, y) => alpha[Math.round(y) * w + Math.round(x)],
   };
 }
 
@@ -395,9 +408,16 @@ describe("the brand mark and the footer on the art (TODO 3.23)", () => {
   });
 
   it("shows the art in the card's corner on a full-bleed frame, the border on a bordered one", async () => {
-    const full = await bake({ ...plains, ...fullart(onArt()) });
+    // Square (print): the art fills the corner itself.
+    const full = await bake({ ...plains, ...fullart(onArt()) }, false, "default", "square");
     expect(isArt(full.px(1, 1))).toBe(true);
     expect(isArt(full.px(W - 2, H - 2))).toBe(true);
+    // Round (display, TODO 3.26): the same art is cut at the card's corner —
+    // transparent there, its RGB kept under the arc.
+    const round = await bake({ ...plains, ...fullart(onArt()) });
+    expect(round.a(1, 1)).toBe(0);
+    expect(round.a(W - 2, H - 2)).toBe(0);
+    expect(isArt(round.px(1, 1))).toBe(true);
     const bordered = await bake({ ...plains, frameStyle: { template: "m15textlessland" } });
     expect(lum(bordered.px(8, H / 2))).toBeLessThan(30);
   });
@@ -559,10 +579,14 @@ describe("the profiles that ship the pieces (4.39 full-art basics, 4.32 borderle
     expect(count(b, ccBox, magenta)).toBeGreaterThan(0.9 * boxArea);
     // Nothing across the art where the big watermark used to print.
     expect(count(b, HOST_GEOMETRY.rules.rect, (p) => !isArt(p))).toBe(0);
-    // The art reaches every corner.
-    expect(isArt(b.px(1, 1))).toBe(true);
-    expect(isArt(b.px(W - 2, 2))).toBe(true);
-    expect(isArt(b.px(1, H - 2))).toBe(true);
+    // The art reaches every corner: a square (print) bake shows it there; the
+    // round display bake cuts it at the card's corner (TODO 3.26).
+    const sq = await bake(plainsCard, true, "default", "square");
+    for (const [x, y] of [[1, 1], [W - 2, 2], [1, H - 2], [W - 2, H - 2]]) {
+      expect(isArt(sq.px(x, y))).toBe(true);
+      expect(sq.a(x, y)).toBe(255);
+      expect(b.a(x, y)).toBe(0);
+    }
     // The pill behind the mark, bottom right, on the art.
     const expected = ART_RGB.map((c, i) => 0.62 * [12, 12, 16][i] + 0.38 * c);
     const isPill = (p: [number, number, number]) => p.every((c, i) => Math.abs(c - expected[i]) <= 4);
@@ -605,9 +629,23 @@ describe("the profiles that ship the pieces (4.39 full-art basics, 4.32 borderle
     expect(count(bear, plate, gray)).toBeGreaterThan(0.6 * ((plate.widthPct / 100) * W) * ((plate.heightPct / 100) * H));
     expect(count(bear, { ...plate, topPct: plate.topPct - 1, heightPct: 0.8 }, gray)).toBe(0);
     expect(count(bear, p.pt!.rect, white)).toBeGreaterThan(50);
-    // Art in the top corners: the frame is borderless.
+    // Art in the top corners: the frame is borderless. The round display
+    // bake cuts it at the card's corner (TODO 3.26), RGB kept under the arc…
     expect(isArt(bear.px(1, 1))).toBe(true);
     expect(isArt(bear.px(W - 2, 2))).toBe(true);
+    expect(bear.a(1, 1)).toBe(0);
+    expect(bear.a(W - 2, 2)).toBe(0);
+    // …and a square (print) bake shows it there, opaque.
+    const square = await bake(
+      { title: "Grizzly Bears", cardType: "creature", colorIdentity: ["green"], frameStyle: { template: "m15borderless" } },
+      false,
+      "default",
+      "square",
+    );
+    for (const [x, y] of [[1, 1], [W - 2, 2]]) {
+      expect(isArt(square.px(x, y))).toBe(true);
+      expect(square.a(x, y)).toBe(255);
+    }
   });
 });
 

@@ -34,6 +34,7 @@ import {
   type MyCardLite,
 } from "@/lib/decks/card-actions";
 import { buildCardPath } from "@/lib/cards/utils";
+import { isLandscapeFrame } from "@/lib/cards/card-orientation";
 import {
   DECK_BOARD_LABELS,
   DECK_BOARD_VALUES,
@@ -88,6 +89,9 @@ export function DeckCardModal({
 
   const shownImage =
     (showProxy ? proxyImage : originalImage) ?? proxyImage ?? originalImage;
+  // A 7:5 proxy bake (Battle, Split) is shown whole in its own landscape box
+  // inside the 5:7 frame, never cropped to its middle (TODO 3.26 review).
+  const landscapeProxy = Boolean(shownImage && shownImage === proxyImage && isLandscapeFrame(card?.frame_style));
   // Where the card "lives": a custom card / proxy has a PipGlyph page (a
   // soft navigation there opens the site's large card modal over this
   // deck); a real card points at Scryfall.
@@ -159,12 +163,23 @@ export function DeckCardModal({
               label={cardPath ? "Open this card's page" : "View on Scryfall"}
               onNavigate={() => onOpenChange(false)}
             >
-              {shownImage ? (
+              {shownImage && landscapeProxy ? (
+                <span className="flex h-full w-full items-center">
+                  <span className="block aspect-[7/5] w-full overflow-hidden card-corners-landscape">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={shownImage}
+                      alt={card?.title ?? entry.name}
+                      className="h-full w-full bg-[#101015] object-cover"
+                    />
+                  </span>
+                </span>
+              ) : shownImage ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={shownImage}
                   alt={card?.title ?? entry.name}
-                  className="h-full w-full object-cover"
+                  className="h-full w-full bg-[#101015] object-cover"
                 />
               ) : (
                 <span className="flex h-full w-full items-center justify-center px-4 text-center text-xs text-subtle">
@@ -374,9 +389,11 @@ function CardImageLink({
   children: React.ReactNode;
 }) {
   // On wide screens the card is sized to the viewport height (5:7 kept), so
-  // the whole dialog — padding included — fits without scrolling.
+  // the whole dialog — padding included — fits without scrolling. The frame
+  // IS the 5:7 card box, so it takes the ONE card corner (a fixed 12 px
+  // radius left a sliver of a rounded bake's transparent corner showing).
   const frame =
-    "relative block aspect-[5/7] w-full overflow-hidden rounded-xl border border-border/60 bg-elevated md:h-[min(60dvh,36rem)] md:w-auto";
+    "relative block aspect-[5/7] w-full overflow-hidden card-corners border border-border/60 bg-elevated md:h-[min(60dvh,36rem)] md:w-auto";
   if (!href) return <div className={frame}>{children}</div>;
   const hint = (
     <span className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center bg-linear-to-t from-background/85 to-transparent px-3 pb-3 pt-8 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
@@ -536,11 +553,11 @@ function LinkCardPicker({
                 <img
                   src={card.rendered_image_url}
                   alt=""
-                  className="aspect-[5/7] w-full rounded-sm object-cover"
+                  className="aspect-[5/7] w-full card-corners bg-[#101015] object-cover"
                   loading="lazy"
                 />
               ) : (
-                <span className="flex aspect-[5/7] w-full items-center justify-center rounded-sm bg-elevated px-1 text-center text-[9px] text-subtle">
+                <span className="flex aspect-[5/7] w-full items-center justify-center card-corners bg-elevated px-1 text-center text-[9px] text-subtle">
                   {card.title}
                 </span>
               )}

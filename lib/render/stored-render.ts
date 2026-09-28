@@ -3,6 +3,7 @@ import "server-only";
 import sharp from "sharp";
 import { hasPendingCorrection, type ScopeCard } from "@/lib/cards/layout-version";
 import { isAllowedServerImageFetchUrl } from "@/lib/validation/card";
+import { squareCardCorners, type CardCornerFills } from "@/lib/cards/card-corner";
 import { RENDER_PRESETS, type RenderPreset } from "@/lib/render/card-image";
 
 // ---------------------------------------------------------------------------
@@ -117,5 +118,31 @@ export async function fitStoredRender(
   const base = RENDER_PRESETS[preset];
   const width = landscape ? base.height : base.width;
   const height = landscape ? base.width : base.height;
+  // sharp premultiplies alpha to resample, so a round bake's transparent
+  // corners (TODO 3.26) stay clean at 750 px — no dark or light fringe.
   return sharp(bytes).resize(width, height, { fit: "fill" }).png().toBuffer();
+}
+
+/**
+ * A SQUARE PNG from a round stored bake (TODO 3.26, owner decision
+ * 2026-09-27), so a free viewer's Square download stays a few ms of sharp
+ * instead of a live Satori render: each corner squared with its fill
+ * (lib/cards/card-corner.ts squareCardCorners, `fills` from the png route's
+ * squareCornerFillsOf) — the very function the bake's square mode runs, so
+ * it is the live Square's twin: the border black, or the root's #101015 on
+ * a ring, outside the arc, a blend on the 1 px ramp. Every fill must be a
+ * colour: a null corner (art or design in the corner) needs pixels a
+ * downscaled round bake no longer has — the route renders those live.
+ * Opaque output (no alpha channel).
+ */
+export async function flattenStoredCorners(bytes: Buffer, fills: CardCornerFills): Promise<Buffer> {
+  if (fills.some((fill) => fill === null)) {
+    throw new Error("flattenStoredCorners: a corner that keeps its drawn pixels can't be squared from a round bake");
+  }
+  const { data, info } = await sharp(bytes).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  squareCardCorners(data, info.width, info.height, fills);
+  return sharp(data, { raw: { width: info.width, height: info.height, channels: 4 } })
+    .removeAlpha()
+    .png()
+    .toBuffer();
 }

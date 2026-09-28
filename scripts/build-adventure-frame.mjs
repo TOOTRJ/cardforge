@@ -13,11 +13,26 @@
 // Geometry is the MSE 375×523 spec scaled to our 1500×2100 canvas
 // (X ×4.0, Y ×2100/523), matching scripts/convert-mse-frame.mjs's fit:"fill".
 //
+// BASE is the MSE m15 master, which left git when 4.4 swapped the M15 family
+// to Card Conjurer (cd2ffcc): restore it from history before a rebuild
+// (`git show cd2ffcc^:public/frames/m15/<key>.png`), never from the Card
+// Conjurer m15 — a CC-derived master never enters the repo. Restore it
+// outside public/frames and point BASE there: m15 is bucket-hosted now, and
+// a copy left under public/frames/m15 turns frame-manifest.test.ts red. A
+// rebuild changes the whole frame slightly (today's master was
+// palette-quantised by 42b1126), so compare it before committing. The card
+// corners are normalised before the write (Phase B, TODO 3.26; adventure
+// joined the allow-list on 2026-09-28), so a rebuild can't bring back the
+// grey paper rim inside the cut.
+//
 //   node scripts/build-adventure-frame.mjs
 // ---------------------------------------------------------------------------
 import sharp from "sharp";
 import path from "node:path";
 import fs from "node:fs";
+// Phase B (TODO 3.26): normalise the card corners before the write, so a
+// rebuild can't bring the paper rim back.
+import { normaliseMasterCorners } from "./lib/frame-corners.mjs";
 
 const PAGES =
   "/Users/redjester/Projects/other/Full-Magic-Pack/data/magic-modules.mse-include/pages";
@@ -51,12 +66,23 @@ async function build(colorKey, stem) {
   const adventure = await panel("double_page", stem);
   const creature = await panel("null_page", stem);
 
-  await sharp(path.join(BASE, `${colorKey}.png`))
+  const composed = await sharp(path.join(BASE, `${colorKey}.png`))
     .composite([
       { input: adventure, left: ADV_LEFT, top: BOX_TOP },
       { input: creature, left: MAIN_LEFT, top: BOX_TOP },
     ])
-    .png({ compressionLevel: 9, effort: 10 })
+    .png()
+    .toBuffer();
+  const { data, info } = await sharp(composed).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const { width: W, height: H, channels: ch } = info;
+
+  // Written truecolour, never a palette: sharp's `effort` (like `palette`,
+  // `quality`, `colours`) quantises AFTER the gate, which moved every pixel
+  // of the cut's alpha ramp (by up to 52) and brought repainted pixels back
+  // lighter.
+  normaliseMasterCorners(path.basename(OUT), colorKey, data, W, H);
+  await sharp(data, { raw: { width: W, height: H, channels: ch } })
+    .png({ compressionLevel: 9 })
     .toFile(path.join(OUT, `${colorKey}.png`));
   console.log(`${colorKey}.png  ← m15 + double_page(${stem}) + null_page(${stem})`);
 }
