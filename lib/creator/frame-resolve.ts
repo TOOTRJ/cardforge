@@ -16,8 +16,10 @@ import {
 } from "@/components/cards/frame-layer";
 import { eraForTemplate, standardFrameFor } from "@/lib/creator/frame-picker";
 import {
+  KIND_DEFS,
   baseFrameFor,
   framesForKind,
+  importedCardTypeForKind,
   isBorrowedVariation,
   kindFromCard,
   templateIsBasicOnly,
@@ -219,6 +221,95 @@ export function resolveImportFrame(input: {
     prefer: "frame",
   });
   return { wanted, colorKey, resolution };
+}
+
+/** The AI deck remix's step error when no frame is published in the card's
+ *  colour (TODO 1.22) — said plainly instead of the save's frame gate. */
+export const REMIX_FRAME_UNAVAILABLE = "No published frame for this card's colour yet.";
+
+export type RemixFrame =
+  | {
+      ok: true;
+      template: FrameTemplate;
+      /** Undefined only when the printing has no card type PipGlyph models
+       *  (the mapper found no kind either) — never invented. */
+      card_type: CardType | undefined;
+    }
+  | { ok: false; error: string };
+
+/**
+ * Where an AI deck remix of a Scryfall printing lands (TODO 1.22) — the
+ * creator import's rules, without a form: the remix saves the mechanics of a
+ * real printing on a new card, so it must pass the same published-frame gate
+ * the save checks (frameGateError), in the card's own colour, which it never
+ * changes.
+ *   • A layout kind (saga, adventure, split, aftermath, flip) lands on its
+ *     layout template with the printed card type the template can draw
+ *     (importedCardTypeForKind, TODO 1.21). When that template isn't
+ *     published in the colour, the card prints on its card type's standard
+ *     frame, as the creator import does — a remixed Bonecrusher Giant is a
+ *     creature on M15 while the adventure frame is unpublished.
+ *   • A standard kind resolves like the creator import (resolveImportFrame):
+ *     the printing's frame, its era's standard, M15's artifact frame for an
+ *     Artifact Creature, the kind's M15 standard, then any published frame
+ *     of the kind in the colour. Juggernaut LEA #255 lands on agclassic where
+ *     it is verified and on m15artifact otherwise; Seat of the Synod MRD
+ *     #283 and Command Tower C13 #281 on modernland, else m15land.
+ *   • Nothing published in the colour → { ok: false } with
+ *     REMIX_FRAME_UNAVAILABLE (a colour switch counts: the remix never
+ *     recolours a card).
+ * Pure, so the remix step's frame choice is the tested path. The remix
+ * doesn't log a frame request (TODO 1.6) — a follow-up.
+ */
+export function remixFrameFor(
+  patch: {
+    kind?: CardKind;
+    frame_template?: FrameTemplate;
+    card_type?: CardType;
+    supertype?: string;
+    color_identity?: readonly ColorIdentity[];
+  },
+  verifiedKeys: ReadonlySet<string>,
+): RemixFrame {
+  // A printing with no modelled card type (the mapper found neither) keeps
+  // none; its frame resolves as a creature's, which is the default frame.
+  const known = Boolean(patch.kind || patch.card_type);
+  const kind = patch.kind ?? kindFromCard(patch.card_type, undefined);
+  const cardType = importedCardTypeForKind(kind, patch.card_type);
+  const savedType = known ? cardType : undefined;
+  const colors: readonly ColorIdentity[] = patch.color_identity ?? ["colorless"];
+  const layoutTemplate = KIND_DEFS[kind].layoutTemplates?.[0];
+
+  if (layoutTemplate) {
+    const colorKey = pickFrameColorKey([...colors]);
+    if (isFrameComboAvailable(layoutTemplate, colorKey, verifiedKeys)) {
+      return { ok: true, template: layoutTemplate, card_type: savedType };
+    }
+  }
+
+  // A standard kind, or a layout kind whose template isn't published in the
+  // colour: the card type's frames, from the printing's own (a layout kind
+  // has none) down to the M15 standard.
+  const standardKind = layoutTemplate ? kindFromCard(cardType, undefined) : kind;
+  const { resolution } = resolveImportFrame({
+    patch: {
+      frame_template: layoutTemplate ? undefined : patch.frame_template,
+      card_type: cardType,
+      supertype: patch.supertype,
+      color_identity: colors,
+    },
+    kind: standardKind,
+    current: {
+      template: standardFrameFor("m15", cardType) ?? DEFAULT_FRAME_TEMPLATE,
+      cardType,
+      colors,
+    },
+    verifiedKeys,
+  });
+  if (resolution.status === "exact" || resolution.status === "frame-switched") {
+    return { ok: true, template: resolution.template, card_type: savedType };
+  }
+  return { ok: false, error: REMIX_FRAME_UNAVAILABLE };
 }
 
 /** Where a card on a basic-only frame (the full-art basic land) goes when it

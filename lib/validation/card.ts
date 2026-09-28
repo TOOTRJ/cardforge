@@ -75,11 +75,19 @@ export function isAllowedServerImageFetchUrl(value: string): boolean {
   return devLoopback || allowedServerImageFetchHosts().has(url.host);
 }
 
+/** A card title's (and a second face's) maximum length — the DB's
+ *  `cards_title_length` CHECK (migration 0122, TODO 1.12). 150, not 120, so
+ *  the longest printed name imports: Unhinged #107's "Our Market Research
+ *  Shows That Players Like Really Long Card Names…" is 141 characters. Deck,
+ *  challenge and news titles keep their own 120. */
+export const CARD_TITLE_MAX = 150;
+const CARD_TITLE_MAX_MESSAGE = `Title must be ${CARD_TITLE_MAX} characters or fewer.`;
+
 export const cardTitleSchema = z
   .string()
   .trim()
   .min(1, "Title is required.")
-  .max(120, "Title must be 120 characters or fewer.");
+  .max(CARD_TITLE_MAX, CARD_TITLE_MAX_MESSAGE);
 
 export const cardSlugSchema = z
   .string()
@@ -249,7 +257,7 @@ const uuidSchema = z.string().uuid("Must be a valid UUID.");
 const backFaceTitleSchema = z
   .string()
   .trim()
-  .max(120, "Title must be 120 characters or fewer.");
+  .max(CARD_TITLE_MAX, CARD_TITLE_MAX_MESSAGE);
 
 export const backFaceSchema = z
   .object({

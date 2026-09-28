@@ -41,7 +41,11 @@
         "colors": [
           "U"
         ],
-        "artist": "Nils Hamm"
+        "artist": "Nils Hamm",
+        "image_uris": {
+          "normal": "https://cards.scryfall.io/normal/front/1/1/11bf83bb-c95b-4b4f-9a56-ce7a1816307a.jpg?1783940984",
+          "art_crop": "https://cards.scryfall.io/art_crop/front/1/1/11bf83bb-c95b-4b4f-9a56-ce7a1816307a.jpg?1783940984"
+        }
       },
       {
         "name": "Insectile Aberration",
@@ -55,7 +59,11 @@
         "color_indicator": [
           "U"
         ],
-        "artist": "Nils Hamm"
+        "artist": "Nils Hamm",
+        "image_uris": {
+          "normal": "https://cards.scryfall.io/normal/back/1/1/11bf83bb-c95b-4b4f-9a56-ce7a1816307a.jpg?1783940984",
+          "art_crop": "https://cards.scryfall.io/art_crop/back/1/1/11bf83bb-c95b-4b4f-9a56-ce7a1816307a.jpg?1783940984"
+        }
       }
     ]
   },
@@ -1194,7 +1202,11 @@
         "type_line": "Instant",
         "artist": "Franz Vohwinkel"
       }
-    ]
+    ],
+    "image_uris": {
+      "normal": "https://cards.scryfall.io/normal/front/1/8/18303862-4726-4136-814f-157aa7006579.jpg?1783918420",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/1/8/18303862-4726-4136-814f-157aa7006579.jpg?1783918420"
+    }
   },
   "eld-115": {
     "id": "09fd2d9c-1793-4beb-a3fb-7a869f660cd4",
@@ -1244,7 +1256,11 @@
         "type_line": "Instant — Adventure",
         "artist": "Victor Adame Minguez"
       }
-    ]
+    ],
+    "image_uris": {
+      "normal": "https://cards.scryfall.io/normal/front/0/9/09fd2d9c-1793-4beb-a3fb-7a869f660cd4.jpg?1783932628",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/0/9/09fd2d9c-1793-4beb-a3fb-7a869f660cd4.jpg?1783932628"
+    }
   },
   "woe-221": {
     "id": "770ee3da-d33e-466f-9a2e-ad2d08ef5012",
@@ -2284,6 +2300,184 @@
     "color_identity": [],
     "rarity": "mythic",
     "artist": "Arif Wijaya",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ]
+  },
+  "woe-38": {
+    "id": "ea7e7daf-7c06-4c74-8bcf-e42c1f611861",
+    "oracle_id": "f61f4307-4eec-476a-97e5-d4d3da2b54c3",
+    "name": "Virtue of Loyalty // Ardenvale Fealty",
+    "released_at": "2023-09-08",
+    "layout": "adventure",
+    "set": "woe",
+    "set_name": "Wilds of Eldraine",
+    "set_type": "expansion",
+    "collector_number": "38",
+    "lang": "en",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "security_stamp": "oval",
+    "keywords": [],
+    "type_line": "Enchantment // Instant — Adventure",
+    "mana_cost": "{3}{W}{W} // {1}{W}",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "rarity": "mythic",
+    "artist": "Piotr Dura",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "card_faces": [
+      {
+        "name": "Virtue of Loyalty",
+        "mana_cost": "{3}{W}{W}",
+        "type_line": "Enchantment",
+        "artist": "Piotr Dura"
+      },
+      {
+        "name": "Ardenvale Fealty",
+        "mana_cost": "{1}{W}",
+        "type_line": "Instant — Adventure",
+        "artist": "Piotr Dura"
+      }
+    ]
+  },
+  "akh-211": {
+    "id": "06c9e2e8-2b4c-4087-9141-6aa25a506626",
+    "oracle_id": "56fd8895-3be2-4591-86fa-87567d9cdc14",
+    "name": "Commit // Memory",
+    "released_at": "2017-04-28",
+    "layout": "split",
+    "set": "akh",
+    "set_name": "Amonkhet",
+    "set_type": "expansion",
+    "collector_number": "211",
+    "lang": "en",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "security_stamp": "oval",
+    "keywords": [
+      "Aftermath"
+    ],
+    "type_line": "Instant // Sorcery",
+    "mana_cost": "{3}{U} // {4}{U}{U}",
+    "colors": [
+      "U"
+    ],
+    "color_identity": [
+      "U"
+    ],
+    "rarity": "rare",
+    "artist": "Ryan Alexander Lee",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "card_faces": [
+      {
+        "name": "Commit",
+        "mana_cost": "{3}{U}",
+        "type_line": "Instant",
+        "artist": "Ryan Alexander Lee"
+      },
+      {
+        "name": "Memory",
+        "mana_cost": "{4}{U}{U}",
+        "type_line": "Sorcery",
+        "artist": "Ryan Alexander Lee"
+      }
+    ]
+  },
+  "dgm-123": {
+    "id": "a01d6540-9eaf-4e08-a62d-682551ee78e9",
+    "oracle_id": "5b8472c8-a7e7-46f2-aecf-e954082a5ef5",
+    "name": "Beck // Call",
+    "released_at": "2013-05-03",
+    "layout": "split",
+    "set": "dgm",
+    "set_name": "Dragon's Maze",
+    "set_type": "expansion",
+    "collector_number": "123",
+    "lang": "en",
+    "frame": "2003",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Fuse"
+    ],
+    "type_line": "Sorcery // Sorcery",
+    "mana_cost": "{G}{U} // {4}{W}{U}",
+    "colors": [
+      "G",
+      "U",
+      "W"
+    ],
+    "color_identity": [
+      "G",
+      "U",
+      "W"
+    ],
+    "rarity": "rare",
+    "artist": "Adam Paquette",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "card_faces": [
+      {
+        "name": "Beck",
+        "mana_cost": "{G}{U}",
+        "type_line": "Sorcery",
+        "artist": "Adam Paquette"
+      },
+      {
+        "name": "Call",
+        "mana_cost": "{4}{W}{U}",
+        "type_line": "Sorcery",
+        "artist": "Adam Paquette"
+      }
+    ]
+  },
+  "unh-107": {
+    "id": "5c1f3f52-cb9b-4b2a-bb02-6175897ae76e",
+    "oracle_id": "94a3b2af-0741-48c5-b827-6ff529bafae3",
+    "name": "Our Market Research Shows That Players Like Really Long Card Names So We Made this Card to Have the Absolute Longest Card Name Ever Elemental",
+    "released_at": "2004-11-19",
+    "layout": "normal",
+    "set": "unh",
+    "set_name": "Unhinged",
+    "set_type": "funny",
+    "collector_number": "107",
+    "lang": "en",
+    "frame": "2003",
+    "border_color": "silver",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Creature — Elemental",
+    "mana_cost": "{1}{G}{G}",
+    "power": "2",
+    "toughness": "2",
+    "colors": [
+      "G"
+    ],
+    "color_identity": [
+      "G"
+    ],
+    "rarity": "common",
+    "artist": "Greg Hildebrandt",
     "finishes": [
       "nonfoil",
       "foil"

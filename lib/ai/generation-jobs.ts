@@ -57,6 +57,7 @@ import {
   resolveGeneratedFrame,
 } from "@/lib/creator/frame-random";
 import type {
+  CardBackFace,
   CardType,
   ColorIdentity,
   FrameTemplate,
@@ -65,6 +66,7 @@ import type {
 import type { DesignedCard } from "@/lib/ai/card-design";
 import { getCardById as getScryfallCardById } from "@/lib/scryfall/client";
 import { mapScryfallToFormPatch } from "@/lib/scryfall/import-mapper";
+import { scryfallRemixMechanics } from "@/lib/ai/remix-mechanics";
 import type { DeckFormat } from "@/types/deck";
 import { withCreditedStep } from "@/lib/ai/credited-step";
 import { getCardCapacity } from "@/lib/cards/capacity";
@@ -1367,6 +1369,8 @@ async function executeDeckRemixStep(
     parent_card_id?: string;
     source_scryfall_id?: string;
     frame_template?: string;
+    /** A layout frame's second half (TODO 1.22), Scryfall entries only. */
+    back_face?: CardBackFace;
     art_url?: string | null;
   };
   let mechanics: Mechanics;
@@ -1398,26 +1402,21 @@ async function executeDeckRemixStep(
     if (!scry) {
       return { ...step, status: "failed", error: "Couldn't resolve the printing." };
     }
-    const patch = mapScryfallToFormPatch(scry);
+    // The frame resolves like the creator import (TODO 1.22): the
+    // printing's frame when it is published in the card's colour, else its
+    // card type's standard; a layout kind on its layout template with the
+    // printed card type. Nothing published in the colour fails the step
+    // plainly, before any credit-costing art is generated.
+    const resolved = scryfallRemixMechanics(
+      mapScryfallToFormPatch(scry),
+      entry.name,
+      new Set(await getVerifiedFrameKeys()),
+    );
+    if (!resolved.ok) {
+      return { ...step, status: "failed", error: resolved.error };
+    }
     mechanics = {
-      title: patch.title ?? entry.name,
-      cost: patch.cost,
-      card_type: patch.card_type,
-      supertype: patch.supertype,
-      subtypes: (patch.subtypes_text ?? "")
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean),
-      rarity: patch.rarity,
-      color_identity: patch.color_identity,
-      rules_text: patch.rules_text,
-      flavor_text: patch.flavor_text,
-      power: patch.power,
-      toughness: patch.toughness,
-      loyalty: patch.loyalty,
-      defense: patch.defense,
-      source_scryfall_id: patch.source_scryfall_id,
-      frame_template: patch.frame_template,
+      ...resolved.mechanics,
       // Real-card art is NEVER restyled — we don't touch the scan. Fresh
       // art is generated from the identity's text description instead.
       art_url: null,
@@ -1533,6 +1532,7 @@ async function executeDeckRemixStep(
       frame_style: mechanics.frame_template
         ? { template: mechanics.frame_template }
         : undefined,
+      back_face: mechanics.back_face,
       parent_card_id: mechanics.parent_card_id,
       source_scryfall_id: mechanics.source_scryfall_id,
       // Art is guaranteed above; remixed cards ship public like the deck.
