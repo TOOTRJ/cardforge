@@ -110,6 +110,19 @@ export const FULL_ART_BASIC_2022_SETS: ReadonlySet<string> = new Set([
   "pl24", "pl25", "pl26", "pss4", "slp",
 ]);
 
+/** The 2023 printings of the 2022 design, with an older bar geometry
+ *  (bars 6–13 px off, colours up to 43 levels: the 4.39 print review). */
+const FULL_ART_BASIC_OLDER_BARS = ["one", "mom"] as const;
+
+/** Zendikar-style split type bar with a centred medallion (4.40). */
+const SPLIT_BAR_BASIC_SETS = ["bfz", "ogw", "akh", "hou", "mh1", "znr", "snc", "bro", "mid", "vow"] as const;
+/** The same design on the 2003 frame (4.40 on 4.43's border). */
+const SPLIT_BAR_BASIC_2003_SETS = ["zen", "j14"] as const;
+/** A title bar and a plain "Basic Land — Plains" bar, no symbol (4.41). */
+const PLAIN_BAR_BASIC_SETS = ["thb", "2xm", "dmu", "spm", "sos", "plg25"] as const;
+/** Per-set full-art basic designs (4.11). */
+const PER_SET_BASIC_SETS = ["ugl", "unh", "und", "neo", "lci"] as const;
+
 /** The double-faced frame marks (Phase 5). */
 const DFC_EFFECTS = [
   "sunmoondfc",
@@ -597,7 +610,19 @@ const LAYOUT_KINDS: readonly CardKind[] = ["saga", "adventure", "split", "afterm
 // ---------------------------------------------------------------------------
 
 export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
-  // --- Not a card PipGlyph makes ------------------------------------------
+  // --- 1.19 steps 1–2: not a card; unsupported for good -------------------
+  {
+    key: "substitute-card",
+    exactLabel: "Double-faced substitute card",
+    match: { typeLineCard: true },
+    outcome: {
+      status: "unsupported",
+      template: "m15",
+      reason: "this is a substitute card, not a playable card",
+      reject: true,
+      forGood: true,
+    },
+  },
   {
     key: "art-series",
     exactLabel: "Art card",
@@ -618,6 +643,28 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       status: "unsupported",
       template: "m15",
       reason: "PipGlyph doesn't make this kind of card (emblems, planes, schemes)",
+    },
+  },
+  {
+    key: "frameless/slz",
+    exactLabel: "The Zeta Set frameless typeset card",
+    match: { sets: ["slz"] },
+    outcome: {
+      status: "unsupported",
+      template: { family: "m15" },
+      reason: "The Zeta Set's frameless typeset design",
+      forGood: true,
+    },
+  },
+  {
+    key: "poster/black",
+    exactLabel: "Artist-lettered poster",
+    match: { promosAny: ["poster"], borders: ["black"] },
+    outcome: {
+      status: "unsupported",
+      template: { family: "m15" },
+      reason: "an artist-lettered poster is a one-off design",
+      forGood: true,
     },
   },
 
@@ -848,6 +895,182 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
     },
     ["etched", "nickname", "crown", "nyx", "vehicle", "colour-indicator", "two-colour", "light-box"],
   ),
+
+  // --- 1.19 steps 3–7: the other full-art and textless printings ----------
+  {
+    key: "japan-showcase",
+    exactLabel: "Japan showcase",
+    match: { promosAny: ["japanshowcase"] },
+    outcome: {
+      status: "nearest",
+      template: { family: "m15" },
+      reason: ({ border }) =>
+        border === "white"
+          ? "PipGlyph doesn't have the Japan showcase frame or a white border yet"
+          : "PipGlyph doesn't have the Japan showcase frame yet",
+      blockedBy: "4.36",
+    },
+  },
+  {
+    key: "token/old-frame",
+    exactLabel: ({ frame }) => `${frame} frame token`,
+    match: { frames: ["1997", "2003"], kinds: ["token"] },
+    outcome: {
+      status: "nearest",
+      template: { family: "m15" },
+      reason: "PipGlyph has no token frame for this border era yet",
+      blockedBy: "4.43",
+    },
+  },
+  {
+    key: "fullart/basic/coloured-border",
+    exactLabel: "Full-art basic land with a coloured border",
+    match: { fullArt: true, singleBasic: true, borders: ["yellow", "white", "silver", "gold"] },
+    outcome: {
+      status: "nearest",
+      template: "m15fullartland",
+      reason: ({ border }) => `PipGlyph doesn't print a ${border} border yet`,
+      blockedBy: "4.30",
+    },
+  },
+  {
+    key: "fullart/basic/per-set",
+    exactLabel: ({ card, set }) => `${card.set_name ?? set.toUpperCase()} full-art basic land`,
+    match: {
+      fullArt: true,
+      singleBasic: true,
+      anyOf: [
+        { sets: PER_SET_BASIC_SETS },
+        { collectors: { unf: [[486, 490]] } },
+        { frames: ["1997"] },
+        { collectorIds: { plst: ["UGL-84", "UNH-139"] } },
+      ],
+    },
+    outcome: {
+      status: "nearest",
+      template: "m15fullartland",
+      reason: "this set prints its own full-art basic design",
+      blockedBy: "4.11",
+    },
+  },
+  {
+    key: "fullart/basic/split-bar/2003",
+    exactLabel: "Zendikar full-art basic land (2003 frame)",
+    match: { fullArt: true, singleBasic: true, sets: SPLIT_BAR_BASIC_2003_SETS },
+    outcome: {
+      status: "nearest",
+      template: "m15fullartland",
+      reason: "PipGlyph doesn't have the split-bar full-art basic or the 2003 border yet",
+      blockedBy: "4.43",
+    },
+  },
+  {
+    key: "fullart/basic/split-bar",
+    exactLabel: "Zendikar-style full-art basic land (split type bar)",
+    match: { fullArt: true, singleBasic: true, sets: SPLIT_BAR_BASIC_SETS },
+    outcome: {
+      status: "nearest",
+      template: "m15fullartland",
+      reason: "PipGlyph doesn't have the split-bar full-art basic yet",
+      blockedBy: "4.40",
+    },
+  },
+  {
+    key: "fullart/basic/plain-bar",
+    exactLabel: "Full-art basic land (plain type bar)",
+    match: { fullArt: true, singleBasic: true, sets: PLAIN_BAR_BASIC_SETS },
+    outcome: {
+      status: "nearest",
+      template: "m15fullartland",
+      reason: "PipGlyph doesn't have the plain-bar full-art basic yet",
+      blockedBy: "4.41",
+    },
+  },
+  {
+    key: "fullart/basic/2022/older-bars",
+    exactLabel: "Full-art basic land (2023 bars)",
+    match: { fullArt: true, singleBasic: true, sets: FULL_ART_BASIC_OLDER_BARS },
+    outcome: {
+      status: "nearest",
+      template: "m15fullartland",
+      reason: "the 2023 printings place their bars a little differently",
+      blockedBy: "4.39",
+    },
+  },
+  {
+    key: "fullart/basic/2022",
+    exactLabel: "Full-art basic land",
+    match: { fullArt: true, singleBasic: true, sets: [...FULL_ART_BASIC_2022_SETS] },
+    outcome: { status: "exact", template: "m15fullartland" },
+  },
+  {
+    key: "fullart/basic",
+    exactLabel: "Full-art basic land",
+    match: { fullArt: true, singleBasic: true },
+    outcome: {
+      status: "nearest",
+      template: "m15fullartland",
+      reason: "this printing's full-art basic design isn't in PipGlyph yet",
+      blockedBy: "4.39",
+    },
+  },
+  {
+    key: "textless/trk-lcars",
+    exactLabel: "Star Trek LCARS textless land",
+    match: { textless: true, collectors: { trk: [[392, 401], [487, 496]] } },
+    outcome: {
+      status: "unsupported",
+      template: { family: "m15" },
+      reason: "the LCARS lands are a one-off design",
+    },
+  },
+  {
+    key: "textless/2015",
+    exactLabel: "Black-bordered textless promo",
+    match: { frames: ["2015"], textless: true, notKinds: ["token"] },
+    outcome: {
+      status: "nearest",
+      template: { family: "textless" },
+      reason: "PipGlyph doesn't have the black-bordered textless promo frame yet",
+      blockedBy: "4.42",
+    },
+  },
+  {
+    key: "textless/old-frame",
+    exactLabel: ({ frame }) =>
+      frame === "future" ? "Future Sight textless frame" : "2003 frame textless promo",
+    match: { frames: ["2003", "future"], textless: true, notKinds: ["token"] },
+    outcome: {
+      status: "nearest",
+      template: { family: "textless" },
+      reason: "PipGlyph doesn't have this old-frame textless design yet",
+      blockedBy: "4.43",
+    },
+  },
+  {
+    key: "fullart/one-off",
+    exactLabel: "Full-art one-off",
+    match: { fullArt: true, notKinds: ["token"] },
+    outcome: {
+      status: "nearest",
+      template: { family: "m15" },
+      reason: "full-art one-off",
+    },
+  },
+
+  // --- Look-alikes that are never full art --------------------------------
+  {
+    key: "showcase/znr/hedron",
+    exactLabel: "Zendikar Rising showcase (hedron)",
+    match: { collectors: { znr: [[290, 313]] } },
+    outcome: { status: "exact", template: "fullart" },
+  },
+  {
+    key: "expedition",
+    exactLabel: "Zendikar Expedition",
+    match: { setTypes: ["masterpiece"], sets: ["zne", "exp"] },
+    outcome: { status: "exact", template: "expeditionland" },
+  },
 
   // --- 1.4: pinned showcase runs -------------------------------------------
   {

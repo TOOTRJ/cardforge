@@ -78,19 +78,20 @@ describe("printingTreatmentFromScryfall — fixtures from 1.16 / 1.19", () => {
     // Overlord of the Floodpits DSK #389: Japan showcase (showcase + full art).
     ["dsk-389", "showcase", "m15"],
     // Full-art basics: ONE #262, FDN #282, BFZ #250, ZNR #266, SPM #189 and
-    // FIN #309 (a Wastes) land on m15land.
-    ["one-262", "fullart", "m15land"],
-    ["fdn-282", "fullart", "m15land"],
-    ["bfz-250", "fullart", "m15land"],
-    ["znr-266", "fullart", "m15land"],
-    ["spm-189", "fullart", "m15land"],
-    ["fin-309", "fullart", "m15land"],
+    // FIN #309 (a Wastes) ask for the black-bordered full-art basic (exact
+    // for the 2022 design, nearest for the others).
+    ["one-262", "fullart", "m15fullartland"],
+    ["fdn-282", "fullart", "m15fullartland"],
+    ["bfz-250", "fullart", "m15fullartland"],
+    ["znr-266", "fullart", "m15fullartland"],
+    ["spm-189", "fullart", "m15fullartland"],
+    ["fin-309", "fullart", "m15fullartland"],
     // Borderless basics: FRA #382 (bars) → the borderless full-art basic,
     // UNF #235 (textless) → the textless land.
     ["fra-382", "borderless", "fullartland"],
     ["unf-235", "borderless", "m15textlessland"],
-    // Dark Confidant SCH #3: textless (and full art) → textless, lands on m15.
-    ["sch-3", "textless", "m15"],
+    // Dark Confidant SCH #3: textless (and full art) → the textless frame.
+    ["sch-3", "textless", "m15textless"],
     // Cat T2XM #4: a full-art 2015 token already lands on its own family.
     ["t2xm-4", undefined, "m15token"],
     // Kithkin Soldier TLRW #3: a 2003-frame full-art token is NOT m15token's
@@ -198,7 +199,7 @@ describe("printingTreatmentOffer — PipGlyph's frame for the treatment, once ve
       expect(printingTreatmentLanding(patchOf(key), new Set()), key).toBeNull();
     }
     expect(patchOf("dmu-435").frame_template).toBe("m15");
-    expect(patchOf("one-262").frame_template).toBe("m15land");
+    expect(patchOf("one-262").frame_template).toBe("m15fullartland");
   });
 
   it("offers Borderless for a borderless creature or enchantment once verified in its colour", () => {
@@ -237,38 +238,53 @@ describe("printingTreatmentOffer — PipGlyph's frame for the treatment, once ve
     }
   });
 
-  it("offers the black-bordered full-art basic for a 2022-design full-art basic only", () => {
-    // ONE #262 and FDN #282 print the 2022 design (title bar + left disc).
-    // The mapper colours a Plains white.
+  it("lands a full-art basic on the black-bordered full-art basic itself, once verified (no offer)", () => {
+    // ONE #262 and FDN #282 print the 2022 design (title bar + left disc):
+    // FDN exact, ONE nearest (its 2023 bars). The mapper colours a Plains
+    // white.
     const keys = verified(["m15fullartland", "w"]);
     for (const key of ["one-262", "fdn-282"] as const) {
       expect(patchOf(key).color_identity, key).toEqual(["white"]);
       expect(patchOf(key).printing_detail?.set, key).toBe(key.slice(0, 3));
-      expect(printingTreatmentOffer(patchOf(key), keys), key).toEqual({
-        template: "m15fullartland",
-        frameLabel: "Full-Art Basic",
-        actionLabel: "Use Full-Art Basic",
-      });
+      expect(printingTreatmentLanding(patchOf(key), keys), key).toBe("m15fullartland");
+      expect(printingTreatmentOffer(patchOf(key), keys), key).toBeNull();
     }
-    // Other designs get no offer — it would promise a look the printing
-    // doesn't have: BFZ #250 / ZNR #266 (Zendikar's split bar, 4.40) and
-    // SPM #189 (the plain bar, 4.41; pinned by set, not date).
+    expect(patchOf("fdn-282").frame_match?.status).toBe("exact");
+    expect(patchOf("one-262").frame_match?.status).toBe("nearest");
+    // The other designs are the registry's `nearest` full-art basic: BFZ
+    // #250 / ZNR #266 (Zendikar's split bar, 4.40) and SPM #189 (the plain
+    // bar, 4.41; pinned by set, not date) land on it too, named nearest.
     for (const key of ["bfz-250", "znr-266", "spm-189"] as const) {
       expect(patchOf(key).printing_treatment, key).toBe("fullart");
+      expect(patchOf(key).frame_match?.status, key).toBe("nearest");
+      expect(printingTreatmentLanding(patchOf(key), keys), key).toBe("m15fullartland");
       expect(printingTreatmentOffer(patchOf(key), keys), key).toBeNull();
     }
     expect([...FULL_ART_BASIC_2022_SETS]).not.toContain("spm");
     expect([...FULL_ART_BASIC_2022_SETS]).not.toContain("sos");
-    // A patch from an older payload (no printing_detail): nothing.
-    expect(printingTreatmentOffer({ ...patchOf("one-262"), printing_detail: undefined }, keys)).toBeNull();
     // FIN #309, the one printed left-disc Wastes: colourless, once c is verified.
     expect(patchOf("fin-309").color_identity).toEqual(["colorless"]);
-    expect(printingTreatmentOffer(patchOf("fin-309"), keys)).toBeNull();
-    expect(printingTreatmentOffer(patchOf("fin-309"), verified(["m15fullartland", "c"]))?.template).toBe(
+    expect(printingTreatmentLanding(patchOf("fin-309"), keys)).toBeNull();
+    expect(printingTreatmentLanding(patchOf("fin-309"), verified(["m15fullartland", "c"]))).toBe(
       "m15fullartland",
     );
-    // A full-art token or a full-art creature: nothing.
+    // A full-art creature: nothing.
     expect(printingTreatmentOffer(patchOf("sch-3"), verified(["m15fullartland", "b"]))).toBeNull();
+  });
+
+  it("an older patch without the registry's frame still gets the 2022-design offer", () => {
+    const keys = verified(["m15fullartland", "w"]);
+    const old = { ...patchOf("fdn-282"), frame_template: "m15land" as const, frame_match: undefined };
+    expect(printingTreatmentOffer(old, keys)).toEqual({
+      template: "m15fullartland",
+      frameLabel: "Full-Art Basic",
+      actionLabel: "Use Full-Art Basic",
+    });
+    // …and a payload without printing_detail: nothing.
+    expect(printingTreatmentOffer({ ...old, printing_detail: undefined }, keys)).toBeNull();
+    // BFZ's split bar was never offered the 2022 frame.
+    const bfz = { ...patchOf("bfz-250"), frame_template: "m15land" as const };
+    expect(printingTreatmentOffer(bfz, keys)).toBeNull();
   });
 
   it("lands a borderless basic that prints text on the borderless full-art basic, never a textless one", () => {

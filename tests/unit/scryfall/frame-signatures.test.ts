@@ -10,12 +10,15 @@ import {
   BORDER_PENDING_TEMPLATES,
   FRAME_SIGNATURE_KEYS,
   FRAME_SIGNATURE_RULES,
+  TEMPLATES_WITHOUT_PRINTED_SIGNATURE,
   isKnownFrameSignature,
   landFrameColorRule,
+  registryCoversEveryTemplate,
+  templatesReachedByRegistry,
   type FrameMatchStatus,
 } from "@/lib/scryfall/frame-signatures";
 import { pickFrameColorKey } from "@/components/cards/frame-layer";
-import type { FrameTemplate } from "@/types/card";
+import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
 
 // ---------------------------------------------------------------------------
 // The frame signature registry (TODO 1.4, 1.17, 1.19). Every fixture is a
@@ -103,6 +106,80 @@ describe("borderless families (TODO 1.17)", () => {
       blockedBy: "4.35",
       exactLabel: "Bloomburrow anime showcase",
     });
+  });
+});
+
+describe("full-art and textless families (TODO 1.19)", () => {
+  const rows: Row[] = [
+    // The 2022 full-art basic: exact on FDN / HOB / DSK, nearest on the 2023
+    // ONE / MOM bars (the 4.39 amendment).
+    ["fdn-282", "exact", "m15fullartland", undefined],
+    ["hob-194", "exact", "m15fullartland", undefined],
+    ["dsk-273", "exact", "m15fullartland", undefined],
+    ["fin-309", "exact", "m15fullartland", undefined],
+    ["one-262", "nearest", "m15fullartland", undefined],
+    ["mom-282", "nearest", "m15fullartland", undefined],
+    // Split bar (4.40), incl. the 2003 frame (ZEN) and MH1's snow basics.
+    ["bfz-250", "nearest", "m15fullartland", undefined],
+    ["znr-269", "nearest", "m15fullartland", undefined],
+    ["znr-266", "nearest", "m15fullartland", undefined],
+    ["snc-272", "nearest", "m15fullartland", undefined],
+    ["mh1-250", "nearest", "m15fullartland", undefined],
+    ["zen-230", "nearest", "m15fullartland", undefined],
+    // Plain bar (4.41).
+    ["thb-250", "nearest", "m15fullartland", undefined],
+    ["spm-189", "nearest", "m15fullartland", undefined],
+    // Coloured border (4.30) and per-set designs (4.11).
+    ["dft-507", "nearest", "m15fullartland", undefined],
+    ["neo-293", "nearest", "m15fullartland", undefined],
+    ["lci-287", "nearest", "m15fullartland", undefined],
+    ["ugl-84", "nearest", "m15fullartland", undefined],
+    // Textless promos: black border (4.42), 2003 / Future Sight (4.43).
+    ["sch-3", "nearest", "m15textless", undefined],
+    ["pf19-1", "nearest", "m15textless", undefined],
+    ["fra-402", "nearest", "m15textless", undefined],
+    ["p07-1", "nearest", "m15textless", undefined],
+    ["p10-1", "nearest", "m15textless", undefined],
+    ["fut-19", "nearest", "m15textless", undefined],
+    ["mb2-194", "nearest", "m15textless", undefined],
+    ["trk-392", "unsupported", "m15land", undefined],
+    // Tokens: the 2015 full-art token IS m15token; older ones are 4.43's.
+    ["t2xm-4", "exact", "m15token", undefined],
+    ["tlrw-3", "nearest", "m15token", undefined],
+    ["tzen-3", "nearest", "m15token", undefined],
+    // Japan showcase (black and white border).
+    ["dsk-389", "nearest", "m15", undefined],
+    ["fdn-428", "nearest", "m15", undefined],
+    ["dsk-398", "nearest", "m15", undefined],
+    // The Zeta Set: unsupported for good; one-offs nearest M15.
+    ["slz-46", "unsupported", "m15", undefined],
+    ["sld-364", "nearest", "m15", undefined],
+    ["unh-120", "nearest", "split", undefined],
+    // The look-alikes that are never full art.
+    ["znr-293", "exact", "fullart", undefined],
+    ["znr-305", "exact", "fullart", undefined],
+    ["zne-1", "exact", "expeditionland", undefined],
+  ];
+
+  it.each(rows)("%s → %s %s (landOn %s)", (key, status, template, landOn) => {
+    const match = frameMatchFromScryfall(printing(key));
+    expect([match.status, match.template, match.landOn]).toEqual([status, template, landOn]);
+  });
+
+  it("rejects a substitute card: not a playable card", () => {
+    expect(frameMatchFromScryfall(printing("sznr-1"))).toMatchObject({
+      status: "unsupported",
+      reject: true,
+      forGood: true,
+      signature: "substitute-card",
+    });
+  });
+
+  it("keys the full-art basics on set lists, never on the full_art flag alone", () => {
+    expect(frameMatchFromScryfall(printing("bfz-250")).blockedBy).toBe("4.40");
+    expect(frameMatchFromScryfall(printing("thb-250")).blockedBy).toBe("4.41");
+    expect(frameMatchFromScryfall(printing("one-262")).blockedBy).toBe("4.39");
+    expect(frameMatchFromScryfall(printing("sld-364")).reason).toBe("full-art one-off");
   });
 });
 
@@ -218,6 +295,13 @@ describe("the acceptance's named cases (TODO 1.4 (e))", () => {
     expect(patch.frame_template).toBe("m15");
   });
 
+  it("FDN #282 → m15fullartland, exact", () => {
+    expect(mapScryfallToFormPatch(printing("fdn-282")).frame_match).toMatchObject({
+      status: "exact",
+      template: "m15fullartland",
+    });
+  });
+
   it("layout kinds keep frame_template undefined (the kind fixes it) but carry the match", () => {
     const patch = mapScryfallToFormPatch(printing("tdm-320"));
     expect(patch.kind).toBe("adventure");
@@ -264,6 +348,15 @@ describe("the rule table", () => {
     expect(FRAME_SIGNATURE_RULES[FRAME_SIGNATURE_RULES.length - 1]?.key).toBe("unknown-frame");
     const odd = scryfallCardSchema.parse({ id: "x", name: "Odd", frame: "3021", type_line: "Sorcery" });
     expect(frameMatchFromScryfall(odd)).toMatchObject({ status: "nearest", template: "m15" });
+  });
+
+  it("(d) every FrameTemplate is some rule's outcome, or listed as having no printed signature", () => {
+    const reached = templatesReachedByRegistry();
+    const missing = FRAME_TEMPLATE_VALUES.filter(
+      (t) => !reached.has(t) && !TEMPLATES_WITHOUT_PRINTED_SIGNATURE.includes(t),
+    );
+    expect(missing).toEqual([]);
+    expect(registryCoversEveryTemplate()).toBe(true);
   });
 
   it("never calls a template whose border isn't true yet exact (4.35)", () => {

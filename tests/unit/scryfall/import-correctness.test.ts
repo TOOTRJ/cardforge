@@ -269,8 +269,10 @@ describe("type-line + layout precedence (TODO 1.3)", () => {
     // them BEFORE the card type — a TODO 1.3 renderer leftover).
     ["mh2-259", "saga", "enchantment", "Land", "Urza's, Saga", undefined],
     ["fin-1", "saga", "enchantment", "Creature", "Saga, Dragon", undefined],
-    // A reversible card is its front: one land.
-    ["sld-2794", "land", "land", undefined, undefined, "m15land"],
+    // A reversible card is its front: one land. SLD #2794 is a black-bordered
+    // TEXTLESS promo, so the registry (1.19) asks for the textless land frame
+    // (nearest, 4.42); unverified, it still lands on m15land (below).
+    ["sld-2794", "land", "land", undefined, undefined, "m15textlessland"],
   ];
 
   it.each(cases)("%s → %s (%s, supertype %s, subtypes %s) on %s", (key, kind, cardType, supertype, subtypes, frame) => {
@@ -636,9 +638,34 @@ describe("the signature registry's landings (TODO 1.4)", () => {
     expect(landing(signature("thb-259"))).toEqual({ template: "m15", colorKey: "w", status: "exact" });
   });
 
+  it("a verified full-art basic lands on it; an unverified one falls back to the land frame", () => {
+    // Production has verified both full-art basics in w/u/b/r/g (seed.sql
+    // doesn't list them yet), so add them here.
+    const withFullArt = new Set([
+      ...PROD_VERIFIED,
+      frameComboKey("m15fullartland", "w"),
+      frameComboKey("fullartland", "w"),
+    ]);
+    expect(landing(signature("fdn-282"), withFullArt)).toEqual({ template: "m15fullartland", colorKey: "w", status: "exact" });
+    expect(landing(signature("fra-382"), withFullArt)).toEqual({ template: "fullartland", colorKey: "w", status: "exact" });
+    expect(landing(signature("fdn-282"))).toEqual({ template: "m15land", colorKey: "w", status: "frame-switched" });
+    expect(landing(signature("unf-235"), withFullArt)).toEqual({ template: "m15land", colorKey: "w", status: "frame-switched" });
+  });
+
   it("an older cached patch without frame_match keeps frame_template", () => {
     const old: ScryfallImportPatch = { ...signature("nph-19"), frame_match: undefined, frame_template: "modern" };
     expect(landing(old)).toEqual({ template: "modern", colorKey: "w", status: "exact" });
   });
 
+  it("a rejected printing (a substitute card) wants no frame of its own", () => {
+    const patch = signature("sznr-1");
+    expect(patch.frame_match?.reject).toBe(true);
+    const { wanted } = resolveImportFrame({
+      patch,
+      kind: null,
+      current: { template: "m15land", cardType: "land", colors: [] },
+      verifiedKeys: PROD_VERIFIED,
+    });
+    expect(wanted).toBe("m15land");
+  });
 });
