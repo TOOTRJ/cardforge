@@ -4,7 +4,13 @@ import { cleanup, render } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { CardPreview } from "@/components/cards/card-preview";
 import { displayLine, parseLoyaltyAbilities } from "@/lib/cards/card-display";
-import { LOYALTY_ROW, layoutProfileLoyaltyRows } from "@/lib/cards/loyalty-rows";
+import {
+  LOYALTY_ROW,
+  LOYALTY_ROW_SIZE_PX,
+  layoutProfileLoyaltyRows,
+  loyaltyRowPx,
+  loyaltyRowsDrawing,
+} from "@/lib/cards/loyalty-rows";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import type { FrameTemplate } from "@/types/card";
 import { fitTitleBand } from "@/lib/cards/title-band";
@@ -25,6 +31,8 @@ afterEach(cleanup);
 const P = getFrameProfile("m15pw");
 const norm = (css: string | null | undefined) => (css ?? "").replace(/\s+/g, "");
 const cqw = (fraction: number) => `${(fraction * 100).toFixed(3)}cqw`;
+/** An HD px length as the preview draws it (lib/cards/rules-layout.ts). */
+const hd = (px: number) => `${((px * 100) / 1500).toFixed(4)}cqw`;
 const WALKER_115 =
   "+1: Scry 1.\n−2: Draw a card.\n−8: You get an emblem with \"At the beginning of your upkeep, exile the top three cards of your library. Until end of turn, you may play those cards, and you may spend mana as though it were mana of any color to cast them.\"";
 
@@ -51,7 +59,7 @@ describe("CardPreview — m15pw ability rows", () => {
     const { rowFractions } = layoutProfileLoyaltyRows(P, parseLoyaltyAbilities(WALKER_115), 7 / 5);
     const rows = rowsOf(container);
     expect(rows).toHaveLength(3);
-    expect(rowFractions[2]).toBeGreaterThan(2.5 * rowFractions[0]);
+    expect(rowFractions[2]).toBeGreaterThan(2 * rowFractions[0]);
     rows.forEach((row, i) => {
       expect(row.style.height).toBe(`${rowFractions[i] * 100}%`);
       expect(row.style.flex).toMatch(/^(none|0 0 auto)$/);
@@ -65,7 +73,7 @@ describe("CardPreview — m15pw ability rows", () => {
     expect(LOYALTY_ROW.badgeHeightEm).toBe(1.5);
   });
 
-  it("sets the rows' text at the layout's size, with the 1.5 em badge box (server markup keeps cqw)", () => {
+  it("sets the rows' text at the layout's size, with the 1.5 em badge box — the HD bake's px (server markup keeps cqw)", () => {
     const html = renderToStaticMarkup(
       <CardPreview
         title="Probe"
@@ -77,26 +85,26 @@ describe("CardPreview — m15pw ability rows", () => {
         frameStyle={{ template: "m15pw" }}
       />,
     );
-    const { sizePct } = layoutProfileLoyaltyRows(P, parseLoyaltyAbilities(WALKER_115), 7 / 5);
-    // The opening tags up to the first stripe row: …, the rows' box, the row.
+    const rows = layoutProfileLoyaltyRows(P, parseLoyaltyAbilities(WALKER_115), 7 / 5);
+    const a = loyaltyRowPx();
+    // The badge keeps the anatomy's one size, whatever the text's.
+    expect(a.badgeHeight).toBe(Math.round(LOYALTY_ROW_SIZE_PX * LOYALTY_ROW.badgeHeightEm));
+    // The row's badge box: the first div inside the first stripe row.
     const firstRow = html.indexOf(`background:${P.loyaltyRows!.stripeAHex}`);
     expect(firstRow).toBeGreaterThan(0);
-    const tags = html.slice(0, firstRow).match(/<div style="[^"]*/g)!;
-    const box = tags.at(-2)!;
-    expect(box).toContain("flex-direction:column");
-    expect(box).toContain(`font-size:${cqw(sizePct)}`);
-    // The row's badge box: the first div inside the row.
     const rowTag = html.indexOf("<div", firstRow);
     const badge = html.slice(rowTag, html.indexOf(">", rowTag));
-    expect(badge).toContain(`width:${cqw(sizePct * LOYALTY_ROW.badgeWidthEm)}`);
-    expect(badge).toContain(`height:${cqw(sizePct * LOYALTY_ROW.badgeHeightEm)}`);
+    expect(badge).toContain(`width:${hd(a.badgeWidth)}`);
+    expect(badge).toContain(`height:${hd(a.badgeHeight)}`);
+    // Each ability's lines at the HD bake's size (RulesLines' box).
+    expect(html).toContain(`font-size:${hd(rows.sizePx)}`);
   });
 
   it("wraps only a last ability that would reach the loyalty shield short of it (server markup keeps cqw)", () => {
-    // Its ultimate's second-to-last line runs on beside the shield at the
-    // full width: the last column ends short of the shield.
+    // Its ultimate runs on beside the shield at the full width: the last
+    // column ends short of the shield.
     const reaches =
-      "+1: Look at the top three cards of your library. Put one of them into your hand and the rest on the bottom of your library in any order.\n−3: Return target creature card from your graveyard to your hand.\n−7: Search your library for any number of creature cards, reveal them, put them into your hand, then shuffle. You gain 1 life for each card.";
+      "+1: Look at the top three cards of your library. Put one of them into your hand and the rest on the bottom of your library in any order.\n−3: Return target creature card from your graveyard to your hand.\n−7: Search your library for up to three creature cards, reveal them, put them into your hand, then shuffle. You gain 1 life for each card.";
     const columnsOf = (rulesText: string) =>
       renderToStaticMarkup(
         <CardPreview
@@ -108,22 +116,51 @@ describe("CardPreview — m15pw ability rows", () => {
           loyalty="4"
           frameStyle={{ template: "m15pw" }}
         />,
-      ).match(/<div style="flex:1;min-width:0[^"]*"/g)!;
-    const { lastRowInsetPct } = layoutProfileLoyaltyRows(P, parseLoyaltyAbilities(reaches), 7 / 5);
-    expect(lastRowInsetPct).toBeGreaterThan(0.1);
-    // Each row's text column: the div after the badge box, flex: 1.
+      ).match(/<div style="display:flex;flex-direction:column;flex-shrink:0;width:[^"]*"/g)!;
+    const rows = layoutProfileLoyaltyRows(P, parseLoyaltyAbilities(reaches), 7 / 5);
+    expect(rows.lastRowInsetPct).toBeGreaterThan(0.1);
+    // Each row's text column, the width the lines were broken for: the last
+    // one 186 HD px (the shield's 12.4 %) narrower.
+    const { text } = loyaltyRowsDrawing(rows, "hd");
     const columns = columnsOf(reaches);
     expect(columns).toHaveLength(3);
-    expect(columns[0]).not.toContain("margin-right");
-    expect(columns[1]).not.toContain("margin-right");
-    expect(columns[2]).toContain(`margin-right:${cqw(lastRowInsetPct)}`);
-    // The 1 / 1 / 5 walker's ultimate stays clear of the shield at the full
-    // width (its long lines sit above it): every column keeps the row's
-    // width (owner decision 2026-09-26).
-    expect(layoutProfileLoyaltyRows(P, parseLoyaltyAbilities(WALKER_115), 7 / 5).lastRowInsetPct).toBe(0);
-    const clear = columnsOf(WALKER_115);
+    columns.forEach((column, i) => expect(column).toContain(`width:${hd(text[i].column)}`));
+    expect(text[0].column - text[2].column).toBe(186);
+    // An ultimate that stays clear of the shield at the full width (its long
+    // lines sit above it): every column keeps the row's width (owner
+    // decision 2026-09-26).
+    const clears =
+      "+1: Draw a card, then discard a card.\n−2: Draw a card.\n−10: Search your library for any number of creature cards, put them onto the battlefield, then shuffle. They gain haste. Exile them at the beginning of the next end step.";
+    const clearRows = layoutProfileLoyaltyRows(P, parseLoyaltyAbilities(clears), 7 / 5);
+    expect(clearRows.lastRowInsetPct).toBe(0);
+    const clearText = loyaltyRowsDrawing(clearRows, "hd").text;
+    const clear = columnsOf(clears);
     expect(clear).toHaveLength(3);
-    for (const column of clear) expect(column).not.toContain("margin-right");
+    for (const column of clear) expect(column).toContain(`width:${hd(clearText[0].column)}`);
+  });
+
+  it("draws exactly the layout's lines, never a wrapping one (server markup)", () => {
+    const html = renderToStaticMarkup(
+      <CardPreview
+        title="Probe"
+        cost="{B}"
+        cardType="planeswalker"
+        colorIdentity={["black"]}
+        rulesText={WALKER_115}
+        loyalty="4"
+        frameStyle={{ template: "m15pw" }}
+      />,
+    );
+    const rows = layoutProfileLoyaltyRows(P, parseLoyaltyAbilities(WALKER_115), 7 / 5);
+    const lines = html.match(/<div data-rules-line="" style="[^"]*"/g)!;
+    const want = rows.text.reduce((n, t) => n + t.blocks.reduce((m, b) => m + b.lines.length, 0), 0);
+    expect(lines).toHaveLength(want);
+    const m = loyaltyRowsDrawing(rows, "hd").text[0].metrics;
+    for (const line of lines) {
+      expect(line).toContain("flex-wrap:nowrap");
+      expect(line).toContain("white-space:nowrap");
+      expect(line).toContain(`height:${hd(m.linePx)}`);
+    }
   });
 
   it("lays out the editor-only hint rows the same way", () => {

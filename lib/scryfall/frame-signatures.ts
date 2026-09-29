@@ -74,6 +74,19 @@ export type FrameMatch = {
    *  the textless frame isn't verified (owner decision A9, 2026-09-29).
    *  withVerification (lib/creator/frame-resolve.ts) swaps it in. */
   onceVerified?: FrameTemplate;
+  /** Set by withVerification only: the registry answered `exact`, but that
+   *  frame isn't verified in the card's colour yet, so the match was
+   *  downgraded to `nearest`. The frame request log files it under "Not yet
+   *  verified" instead of "Missing frames" (TODO 1.6, owner decision D1
+   *  2026-09-29). Never set by a registry rule. */
+  unverified?: true;
+  /** Every anatomy gap of the printing — a piece PipGlyph doesn't draw yet
+   *  (the legendary crown, a colour indicator, the Vehicle plate, …) — most
+   *  visible first: the first names `reason`. Absent when the rule that
+   *  matched has none. The import dialog reads it to skip its frame chooser
+   *  when the only gaps are details no PipGlyph frame draws (owner decision
+   *  C1, 2026-09-29). */
+  gaps?: readonly FrameGap[];
 };
 
 /** The facts the registry reads that need the importer's own rules — the
@@ -259,6 +272,9 @@ type Rule = {
   exactLabel: Text;
   match: Match;
   outcome: Outcome;
+  /** A gap rule's gaps (withGaps): its own first — it holds when the rule
+   *  matches — then the base's later ones, which may hold too. */
+  gaps?: readonly GapKey[];
 };
 
 type Ctx = {
@@ -496,6 +512,8 @@ const BORDERED_EQUIVALENT: Partial<Record<FrameTemplate, FrameTemplate>> = {
 // default: a missing piece is not an exact match).
 // ---------------------------------------------------------------------------
 
+export type FrameGap = GapKey;
+
 type GapKey =
   | "crown"
   | "two-colour"
@@ -602,7 +620,7 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
 /** The base rule, preceded by one `nearest` rule per gap ('era/2015+crown'). */
 function withGaps(base: Rule, gaps: readonly GapKey[]): Rule[] {
   return [
-    ...gaps.map((gap): Rule => ({
+    ...gaps.map((gap, index): Rule => ({
       key: `${base.key}+${gap}`,
       exactLabel: base.exactLabel,
       match: { allOf: [base.match, GAPS[gap].match] },
@@ -612,6 +630,9 @@ function withGaps(base: Rule, gaps: readonly GapKey[]): Rule[] {
         reason: GAPS[gap].reason,
         blockedBy: GAPS[gap].blockedBy,
       },
+      // The earlier gaps didn't hold (first match wins); the later ones are
+      // checked at resolve time (FrameMatch.gaps).
+      gaps: gaps.slice(index),
     })),
     base,
   ];
@@ -1462,6 +1483,12 @@ export function resolveFrameSignature(card: ScryfallCard, facts: PrintingFacts):
       ? later
       : undefined;
 
+  // Every anatomy gap that holds: the matched gap rule's own, then the
+  // base's later ones (FrameMatch.gaps).
+  const gaps = rule.gaps
+    ? rule.gaps.filter((gap, index) => index === 0 || matches(GAPS[gap].match, ctx))
+    : [];
+
   return {
     status,
     template,
@@ -1473,6 +1500,7 @@ export function resolveFrameSignature(card: ScryfallCard, facts: PrintingFacts):
     ...(rule.outcome.forGood ? { forGood: true as const } : {}),
     ...(status !== "exact" && blockedBy ? { blockedBy } : {}),
     ...(onceVerified ? { onceVerified } : {}),
+    ...(gaps.length > 0 ? { gaps } : {}),
   };
 }
 

@@ -15,7 +15,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Controller, useFormContext, useFormState, useWatch } from "react-hook-form";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Replace } from "lucide-react";
 import { toast } from "sonner";
 import { ChipGroup, type ChipOption } from "@/components/ui/chip-group";
 import {
@@ -74,6 +74,10 @@ import { eraForTemplate } from "@/lib/creator/frame-picker";
 import { normalizeFrameTemplate } from "@/lib/cards/card-display";
 import { parseSubtypes } from "@/lib/creator/card-fields";
 import type { FormValues } from "@/lib/creator/form-types";
+import {
+  frameSubstitutionLabel,
+  type FrameSubstitution,
+} from "@/lib/creator/import-frame-choice";
 
 // Single-color key each identity chip contributes (frame-layer's palette).
 const IDENTITY_COLOR_KEY: Record<ColorIdentity, string> = {
@@ -154,6 +158,12 @@ type CardSetupPanelProps = {
   colorIdentity: ColorIdentity[];
   /** Verified (template/color) combo keys from frame_reviews. */
   verifiedFrameKeys?: string[];
+  /** A Scryfall import landed on a frame that isn't the printing's own (TODO
+   *  1.5): the "Frame substituted (imported …)" chip shows while the card
+   *  still sits on that frame. Session-only, never saved. */
+  frameSubstitution?: FrameSubstitution | null;
+  /** The user picked a frame tile (the orchestrator clears the chip). */
+  onFramePick?: () => void;
   /** Kind selection routes through the orchestrator's planKindChange so a
    *  change can remap the frame in-era or ask — never silently. */
   onKindSelect: (next: CardKind) => void;
@@ -173,6 +183,8 @@ export function CardSetupPanel({
   kind,
   colorIdentity,
   verifiedFrameKeys = [],
+  frameSubstitution = null,
+  onFramePick,
   onKindSelect,
   onColorIdentityChange,
   landMode,
@@ -225,6 +237,9 @@ export function CardSetupPanel({
   // seeds (Artifact → Nyx takes "Artifact" out and puts "Enchantment" in).
   const seededWords = useRef<Set<BorrowedTypeWord>>(new Set());
   const watchedTemplate = useWatch({ control, name: "frame_style.template" });
+  const showSubstitution =
+    frameSubstitution !== null &&
+    normalizeFrameTemplate(watchedTemplate) === frameSubstitution.template;
   useEffect(() => {
     if (seededWords.current.size === 0) return;
     const current = normalizeFrameTemplate(
@@ -280,6 +295,16 @@ export function CardSetupPanel({
           data-testid="frame-error"
         >
           {frameError}
+        </p>
+      ) : null}
+      {showSubstitution && frameSubstitution ? (
+        <p
+          data-testid="frame-substituted"
+          title={frameSubstitution.reason ?? undefined}
+          className="inline-flex items-center gap-1.5 self-start rounded-full border border-gold/45 bg-gold/10 px-3 py-1 text-xs font-medium text-gold-strong"
+        >
+          <Replace className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          {frameSubstitutionLabel(frameSubstitution)}
         </p>
       ) : null}
       {/* 1 · Card type — one combined list; layouts are just more types. */}
@@ -376,6 +401,7 @@ export function CardSetupPanel({
             if (resolution.status === "unavailable") return;
             field.onChange(resolution.template);
             clearErrors("frame_style");
+            onFramePick?.();
             const word = borrowedTypeWord(kind, resolution.template);
             if (
               word &&

@@ -392,7 +392,7 @@ describe("foil finish — planeswalker ability stripes in the preview", () => {
       const [, badge, text] = Array.from(row.children) as HTMLElement[];
       expect(badge.style.position).toBe("relative");
       expect(text.style.position).toBe("relative");
-      // (RulesBody sets words as spans: compare without whitespace.)
+      // (RulesLines sets words as spans: compare without whitespace.)
       expect(norm(text.textContent)).toContain(norm(PW_LINES[i]));
       // The row's card-space box, so the rainbow runs on from the card's.
       const r = expected[i];

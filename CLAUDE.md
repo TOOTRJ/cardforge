@@ -206,6 +206,23 @@ Rules and gotchas:
   code-owned `setSymbolFit: "ink"`). Frames outside the family keep the old
   paths byte-for-byte — bringing one in is its own layout bump
   (`docs/FRAMES.md`).
+- ONE rules layout (layout v33, TODO 3.29): `lib/cards/rules-layout.ts`
+  decides the size (the even HD-px ladder `RULES_SIZE_PX` 76 / 68 / 64 → 42;
+  profiles use `rulesPxToPct(RULES_SIZE_PX.*)`, never a pt literal), every
+  line break (MPlantin's real advances, `lib/cards/rules-metrics.ts`, checked
+  at BOTH the 750 and HD bakes, no safety factor; a lone " —" breaks with its
+  word) and every position (0.98 em pitch, 24 HD px between abilities,
+  30 + 1 + 30 around the flavor bar) of rules, flavor, walker rows and the
+  saga rail. Both renderers only DRAW its lines (`rulesDraw` → `RulesBox` /
+  `RulesBoxBake`, `RulesLines*`: nowrap rows, word gaps as `marginLeft`, each
+  preview word at its ceiled `wordWidthPx`) — never a box that wraps.
+  `TextSlot.padPx` pads past any textbox border the rect holds (split).
+  Keep-outs = the stat badges the card DRAWS (`statKeepOuts`; plate ink in
+  `lib/cards/plate-ink.ts` — a new or replaced plate needs
+  `scripts/measure-plate-ink.mjs` + the test's `MEASURED_ON`), judged glyph
+  by glyph. Walkers ≤ `walkerSizePct`, row anatomy at `LOYALTY_ROW_SIZE_PX`;
+  saga keeps v32's geometry (TODO 4.21).
+  `tests/unit/render/rules-no-clip.test.tsx` holds real bakes to the layout.
 - Notifications are push, not pull: `notifications` is on the
   `supabase_realtime` publication (migration 0075) and
   `components/notifications/realtime-alerts.tsx` subscribes to the signed-in

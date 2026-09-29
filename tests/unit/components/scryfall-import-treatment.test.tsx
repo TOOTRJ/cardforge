@@ -1,23 +1,29 @@
 // @vitest-environment happy-dom
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi, type Mock } from "vitest";
 import {
   cleanup,
   fireEvent,
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
-import printings from "../scryfall/fixtures/treatment-printings.json";
-import { scryfallCardSchema } from "@/lib/scryfall/client";
-import { mapScryfallToFormPatch } from "@/lib/scryfall/import-mapper";
+import {
+  card,
+  stubScryfallRoutes,
+  verifiedIn,
+  type FixtureKey,
+} from "./scryfall-import-stubs";
 
 // ---------------------------------------------------------------------------
-// TODO 1.16 stopgap, dialog half: picking a borderless (or showcase / full-
-// art / textless) printing says, before "Use as starting point", that the
-// import lands on a plain frame — and the treatment rides on the patch the
-// form receives (which toasts the landed frame). A plain printing says
-// nothing. The /api/scryfall/* routes are stubbed with the real mapper's
-// output for real (trimmed) Scryfall payloads.
+// TODO 1.5's frame chooser in the import dialog (it replaced 1.16's pre-import
+// heads-up and the post-import treatment toast): a printing whose frame
+// PipGlyph doesn't have — or a borderless printing whose Scryfall art is
+// only the bordered window (1.18's owner decision) — asks for a frame in the
+// detail pane before commit. The kind's published frames in the imported
+// colour, the nearest preselected, "Keep my current frame"; the pick rides on
+// the payload. A substitute card can't be imported. The /api/scryfall/*
+// routes are stubbed with the real mapper's output for real printings.
 // ---------------------------------------------------------------------------
 
 vi.mock("sonner", () => ({
@@ -25,174 +31,256 @@ vi.mock("sonner", () => ({
 }));
 
 import { toast } from "sonner";
-import { ScryfallImportDialog } from "@/components/creator/scryfall-import-dialog";
+import {
+  ScryfallImportDialog,
+  type ScryfallImportPayload,
+} from "@/components/creator/scryfall-import-dialog";
 
-type Key = keyof typeof printings;
+type OnImport = Mock<(payload: ScryfallImportPayload) => unknown>;
 
-function namedResponse(key: Key) {
-  const card = scryfallCardSchema.parse(printings[key]);
-  return {
-    ok: true,
-    card: {
-      id: card.id,
-      name: card.name,
-      oracle_id: card.oracle_id ?? null,
-      set: card.set ?? null,
-      set_name: card.set_name ?? null,
-      print_url: null,
-      thumb_url: null,
-      scryfall_uri: null,
-      image_status: null,
-    },
-    // Through JSON, exactly like the route's NextResponse.json.
-    patch: JSON.parse(JSON.stringify(mapScryfallToFormPatch(card))),
-  };
-}
-
-let current: Key = "dmu-435";
-
-beforeEach(() => {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (input: RequestInfo | URL) => {
-      const url = String(input);
-      const json = (body: unknown) =>
-        new Response(JSON.stringify(body), { status: 200 });
-      if (url.startsWith("/api/scryfall/search")) {
-        const card = printings[current];
-        return json({
-          ok: true,
-          results: [
-            {
-              id: card.id,
-              name: card.name,
-              set: card.set,
-              set_name: card.set_name,
-              type_line: card.type_line,
-              mana_cost: null,
-              rarity: card.rarity,
-              artist: null,
-              thumb_url: null,
-              print_url: null,
-              oracle_text: null,
-              image_status: null,
-            },
-          ],
-        });
-      }
-      if (url.startsWith("/api/scryfall/named")) return json(namedResponse(current));
-      if (url.startsWith("/api/scryfall/printings")) {
-        return json({ ok: true, printings: [] });
-      }
-      return new Response("{}", { status: 404 });
-    }),
-  );
-});
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.mocked(toast.info).mockClear();
 });
 
-async function pickPrinting(key: Key, onImport = vi.fn(), verifiedFrameKeys?: string[]) {
-  current = key;
+async function pickPrinting(
+  key: FixtureKey,
+  options: { verified?: string[]; currentFrameTemplate?: string; onImport?: OnImport } = {},
+) {
+  const verified = options.verified ?? verifiedIn("m15", "m15land", "m15token");
+  stubScryfallRoutes({ search: [key], printings: {}, serverVerified: new Set(verified) });
+  const onImport: OnImport = options.onImport ?? vi.fn();
   render(
     <ScryfallImportDialog
       signedIn
       open
       onOpenChange={() => {}}
       onImport={onImport}
-      verifiedFrameKeys={verifiedFrameKeys}
+      verifiedFrameKeys={verified}
+      currentFrameTemplate={options.currentFrameTemplate ?? "m15"}
     />,
   );
-  fireEvent.change(screen.getByLabelText("Search Scryfall"), {
-    target: { value: printings[key].name },
-  });
-  const option = await screen.findByRole("option", {
-    name: new RegExp(printings[key].name.split(",")[0]),
-  });
-  fireEvent.click(option);
+  const name = card(key).name;
+  fireEvent.change(screen.getByLabelText("Search Scryfall"), { target: { value: name } });
+  fireEvent.click(await screen.findByRole("option", { name: new RegExp(name.split(",")[0]!) }));
   await screen.findByText(/Will populate/);
   return onImport;
 }
 
-describe("ScryfallImportDialog — printing treatment heads-up", () => {
-  it("borderless Sheoldred (DMU #435): warns before import and hands the treatment to the form", async () => {
-    const onImport = await pickPrinting("dmu-435");
+function frameRadio(label: RegExp) {
+  const group = screen.getByRole("radiogroup", { name: "Frame for the import" });
+  const radio = within(group)
+    .getAllByRole("radio")
+    .find((el) => label.test(el.textContent ?? ""));
+  if (!radio) throw new Error(`no frame option ${label}`);
+  return radio as HTMLButtonElement;
+}
+
+async function commit(onImport: OnImport) {
+  // Skip the art fetch.
+  fireEvent.click(screen.getByRole("checkbox", { name: /also import artwork/i }));
+  fireEvent.click(screen.getByRole("button", { name: /use as starting point/i }));
+  await waitFor(() => expect(onImport).toHaveBeenCalledTimes(1));
+  return onImport.mock.calls[0]![0];
+}
+
+describe("borderless Sheoldred (DMU #435) — 1.18: the bordered frame, Borderless offered", () => {
+  const BORDERLESS_VERIFIED = [...verifiedIn("m15"), "m15borderless/b"];
+
+  it("preselects M15 with the window-cropped note and hands the pick to the form", async () => {
+    const onImport = await pickPrinting("dmu-435", { verified: BORDERLESS_VERIFIED });
+    const chooser = screen.getByTestId("import-frame-chooser");
     expect(
-      screen.getByText(
-        "This printing is borderless, which PipGlyph doesn't offer yet — the import uses a bordered frame instead.",
+      within(chooser).getByText(
+        "PipGlyph can't match this printing's Borderless frame exactly yet — pick one of these",
       ),
     ).toBeTruthy();
+    expect(
+      within(chooser).getByText("Scryfall's art for this printing is cropped to the bordered window."),
+    ).toBeTruthy();
+    expect(within(chooser).getByText("Why: PipGlyph doesn't draw the legendary crown yet.")).toBeTruthy();
+    expect(frameRadio(/^M15 \(2015\) Standard/).getAttribute("aria-checked")).toBe("true");
+    expect(frameRadio(/Borderless/).getAttribute("aria-checked")).toBe("false");
 
-    // Skip the art fetch; commit.
-    fireEvent.click(screen.getByRole("checkbox"));
-    fireEvent.click(screen.getByRole("button", { name: /use as starting point/i }));
-    await waitFor(() => expect(onImport).toHaveBeenCalledTimes(1));
-    const payload = onImport.mock.calls[0]![0];
-    expect(payload.patch.printing_treatment).toBe("borderless");
-    // The stopgap never changes the frame the import picks.
-    expect(payload.patch.frame_template).toBe("m15");
+    const payload = await commit(onImport);
+    expect(payload.frameChoice).toEqual({ template: "m15" });
+    expect(payload.patch.frame_match).toMatchObject({ status: "nearest", landOn: "m15" });
   });
 
-  it("toasts the form's notice AFTER its own success toast, so the notice sits in front", async () => {
-    const notice =
-      "This printing is borderless — PipGlyph used the bordered M15 (2015) Standard frame.";
-    const onImport = await pickPrinting("dmu-435", vi.fn(() => notice));
-    vi.mocked(toast.success).mockClear();
-    vi.mocked(toast.info).mockClear();
-    fireEvent.click(screen.getByRole("checkbox"));
-    fireEvent.click(screen.getByRole("button", { name: /use as starting point/i }));
-    await waitFor(() => expect(onImport).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(toast.info).toHaveBeenCalledWith(notice, { duration: 8000 }));
-    expect(toast.success).toHaveBeenCalledWith("Seeded form with Sheoldred, the Apocalypse.");
-    // Sonner shows the newest toast in front.
-    expect(vi.mocked(toast.success).mock.invocationCallOrder[0]).toBeLessThan(
-      vi.mocked(toast.info).mock.invocationCallOrder[0]!,
-    );
+  it("picking Borderless sends it", async () => {
+    const onImport = await pickPrinting("dmu-435", { verified: BORDERLESS_VERIFIED });
+    fireEvent.click(frameRadio(/Borderless/));
+    expect(frameRadio(/Borderless/).getAttribute("aria-checked")).toBe("true");
+    expect((await commit(onImport)).frameChoice).toEqual({ template: "m15borderless" });
   });
 
-  it("full-art basic (ONE #262): names full art", async () => {
-    await pickPrinting("one-262");
-    expect(screen.getByText(/This printing is full art, which PipGlyph doesn't offer yet/)).toBeTruthy();
+  it("Keep my current frame sends keepCurrent", async () => {
+    const onImport = await pickPrinting("dmu-435", { verified: BORDERLESS_VERIFIED });
+    fireEvent.click(frameRadio(/Keep my current frame/));
+    expect((await commit(onImport)).frameChoice).toEqual({ keepCurrent: true });
   });
 
-  it("plain M15 printing (DMU #107): no heads-up", async () => {
-    await pickPrinting("dmu-107");
+  it("lists only published frames in the imported colour: no Borderless while it's unverified in black", async () => {
+    await pickPrinting("dmu-435", { verified: [...verifiedIn("m15"), "m15borderless/w"] });
+    const group = screen.getByRole("radiogroup", { name: "Frame for the import" });
+    expect(within(group).queryByText(/Borderless/)).toBeNull();
+    expect(
+      screen.getByText("PipGlyph doesn't have the Borderless frame yet — pick one of these"),
+    ).toBeTruthy();
+  });
+
+  it("names the match in the overwrite note, and never shows 1.16's heads-up or treatment toast", async () => {
+    const onImport = await pickPrinting("dmu-435", { verified: BORDERLESS_VERIFIED });
+    expect(
+      screen.getByText(
+        /the frame \(nearest to Borderless frame: M15 \(2015\) Standard, your pick above\) are all replaced/,
+      ),
+    ).toBeTruthy();
+    // "Keep my current frame": the frame isn't replaced, and the note says so.
+    fireEvent.click(frameRadio(/Keep my current frame/));
+    expect(
+      screen.getByText(/name, text, type and colors are all replaced; your current frame stays/),
+    ).toBeTruthy();
+    fireEvent.click(frameRadio(/^M15 \(2015\) Standard/));
+    expect(screen.queryByText(/matched to this printing/)).toBeNull();
     expect(screen.queryByText(/which PipGlyph doesn't offer yet/)).toBeNull();
+    await commit(onImport);
+    expect(toast.info).not.toHaveBeenCalled();
   });
 });
 
-// Frames plan 4.32 / 4.39: once PipGlyph's frame for the treatment is
-// verified in the card's colour, the heads-up says the creator offers it and
-// the notice carries the action — the import itself still lands on the
-// plain frame (never an unverified or unasked-for frame).
-describe("ScryfallImportDialog — PipGlyph's frame for the treatment, once verified", () => {
-  it("names the offered frame for borderless Sheoldred when m15borderless is verified in black", async () => {
-    const onImport = await pickPrinting("dmu-435", vi.fn(), ["m15/b", "m15borderless/b"]);
+describe("the other outcomes", () => {
+  it("an exact printing (a 2015 full-art Cat token) imports without asking", async () => {
+    const onImport = await pickPrinting("t2xm-4");
+    expect(screen.queryByTestId("import-frame-chooser")).toBeNull();
+    expect(screen.getByText(/the frame \(an exact match: .*\) are all replaced/)).toBeTruthy();
+    const payload = await commit(onImport);
+    expect(payload.frameChoice).toBeUndefined();
+  });
+
+  it("a 2023 full-art basic (ONE #262) preselects the full-art basic when it is verified in white", async () => {
+    await pickPrinting("one-262", { verified: [...verifiedIn("m15", "m15land"), "m15fullartland/w"] });
+    expect(frameRadio(/Basic Land/).getAttribute("aria-checked")).toBe("true");
+    // The creature frame the card is on can't dress a land: keep-current is off.
+    expect(frameRadio(/Keep my current frame/).disabled).toBe(true);
+    expect(
+      screen.getByText(/M15 \(2015\) Standard isn't published for land cards in white/),
+    ).toBeTruthy();
+  });
+
+  it("a substitute card is Not available and can't be imported", async () => {
+    await pickPrinting("sznr-1");
+    expect(screen.getByRole("alert").textContent).toMatch(
+      /Not available — this is a substitute card, not a playable card/,
+    );
+    const confirm = screen.getByRole("button", { name: /use as starting point/i }) as HTMLButtonElement;
+    expect(confirm.disabled).toBe(true);
+    expect(confirm.title).toBe("Not available — this is a substitute card, not a playable card.");
+    expect(screen.queryByTestId("import-frame-chooser")).toBeNull();
+  });
+});
+
+describe("owner decisions 2026-09-29 (C1, C2)", () => {
+  it("C1: Sheoldred DMU #107, short of only the crown, imports on its own M15 frame without asking", async () => {
+    const onImport = await pickPrinting("dmu-107", { verified: verifiedIn("m15") });
+    expect(screen.queryByTestId("import-frame-chooser")).toBeNull();
+    // The detail still says what the printing is and why it isn't exact.
+    expect(screen.getByText("M15 (2015) frame")).toBeTruthy();
     expect(
       screen.getByText(
-        "This printing is borderless — the import uses a bordered frame, then offers PipGlyph's Borderless frame.",
+        /the frame \(M15 \(2015\) Standard — PipGlyph doesn't draw the legendary crown yet\) are all replaced/,
       ),
     ).toBeTruthy();
-    fireEvent.click(screen.getByRole("checkbox"));
-    fireEvent.click(screen.getByRole("button", { name: /use as starting point/i }));
-    await waitFor(() => expect(onImport).toHaveBeenCalledTimes(1));
-    expect(onImport.mock.calls[0]![0].patch.frame_template).toBe("m15");
+    const payload = await commit(onImport);
+    expect(payload.frameChoice).toBeUndefined();
+    expect(payload.patch.frame_match).toMatchObject({ status: "nearest", template: "m15", gaps: ["crown"] });
+    expect(toast.info).not.toHaveBeenCalled();
   });
 
-  it("keeps today's heads-up when the frame is verified in another colour only", async () => {
-    await pickPrinting("dmu-435", vi.fn(), ["m15borderless/w"]);
-    expect(screen.getByText(/This printing is borderless, which PipGlyph doesn't offer yet/)).toBeTruthy();
+  it("C1: …but asks while M15 isn't published in black (a real substitution)", async () => {
+    await pickPrinting("dmu-107", { verified: [...verifiedIn("m15snow"), "m15/w"] });
+    expect(screen.getByTestId("import-frame-chooser")).toBeTruthy();
   });
 
-  it("toasts a notice's action with it", async () => {
-    const action = { label: "Use Borderless", onClick: vi.fn() };
-    const message = "This printing is borderless — PipGlyph used the bordered M15 (2015) Standard frame.";
-    const onImport = await pickPrinting("dmu-435", vi.fn(() => ({ message, action })));
-    vi.mocked(toast.info).mockClear();
-    fireEvent.click(screen.getByRole("checkbox"));
-    fireEvent.click(screen.getByRole("button", { name: /use as starting point/i }));
-    await waitFor(() => expect(onImport).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(toast.info).toHaveBeenCalledWith(message, { duration: 12000, action }));
+  it("C2: the standard frame and the printing's family first; Show all frames reveals the rest, and a pick among them is sent", async () => {
+    const onImport = await pickPrinting("dmu-435", {
+      verified: [...verifiedIn("m15", "m15snow", "m15devoid"), "m15borderless/b"],
+    });
+    const group = screen.getByRole("radiogroup", { name: "Frame for the import" });
+    const labels = () => within(group).getAllByRole("radio").map((el) => el.textContent ?? "");
+    expect(labels()).toHaveLength(3);
+    expect(labels()[0]).toMatch(/^M15 \(2015\) Standard/);
+    expect(labels()[1]).toMatch(/^M15 \(2015\) Borderless/);
+    expect(labels()[2]).toMatch(/^Keep my current frame/);
+    const showAll = screen.getByTestId("import-frame-show-all");
+    expect(showAll.textContent).toBe("Show all frames (2 more)");
+
+    fireEvent.click(showAll);
+    expect(screen.queryByTestId("import-frame-show-all")).toBeNull();
+    expect(labels()).toHaveLength(5);
+    expect(labels().some((label) => /^M15 \(2015\) Snow/.test(label))).toBe(true);
+    expect(labels().some((label) => /^M15 \(2015\) Devoid/.test(label))).toBe(true);
+    // The link is gone, so keyboard focus moves to the first frame it revealed.
+    expect(document.activeElement).toBe(frameRadio(/^M15 \(2015\) Snow/));
+    // The preselection didn't move.
+    expect(frameRadio(/^M15 \(2015\) Standard/).getAttribute("aria-checked")).toBe("true");
+    fireEvent.click(frameRadio(/^M15 \(2015\) Snow/));
+    expect((await commit(onImport)).frameChoice).toEqual({ template: "m15snow" });
+  });
+
+  it("C2: no link when the standard frame and the family are all there is", async () => {
+    await pickPrinting("dmu-435", { verified: [...verifiedIn("m15"), "m15borderless/b"] });
+    expect(screen.getByTestId("import-frame-chooser")).toBeTruthy();
+    expect(screen.queryByTestId("import-frame-show-all")).toBeNull();
+  });
+
+  it("C2: every printing starts collapsed, and a pick among the other frames stays on show when its printing comes back", async () => {
+    // M15 isn't published in black here, so both Sheoldred printings ask:
+    // Snow first (the fallback the import lands on), Devoid behind the link.
+    const verified = verifiedIn("m15snow", "m15devoid");
+    stubScryfallRoutes({
+      search: ["dmu-107"],
+      printings: { representative: [["dmu-107", "dmu-435"]] },
+      serverVerified: new Set(verified),
+    });
+    render(
+      <ScryfallImportDialog
+        signedIn
+        open
+        onOpenChange={() => {}}
+        onImport={vi.fn()}
+        verifiedFrameKeys={verified}
+        currentFrameTemplate="m15"
+      />,
+    );
+    fireEvent.change(screen.getByLabelText("Search Scryfall"), { target: { value: "Sheoldred" } });
+    fireEvent.click(await screen.findByRole("option", { name: /Sheoldred/ }));
+    await screen.findByText(/Will populate/);
+    const grid = () => screen.getByTestId("printings-grid");
+    await waitFor(() => expect(within(grid()).getAllByRole("button")).toHaveLength(2));
+    const heading = () => within(screen.getByTestId("import-frame-chooser")).getByRole("heading");
+    const hasRadio = (label: RegExp) =>
+      within(screen.getByRole("radiogroup", { name: "Frame for the import" }))
+        .getAllByRole("radio")
+        .some((el) => label.test(el.textContent ?? ""));
+
+    // DMU #107: expand, pick Devoid.
+    expect(heading().textContent).toMatch(/M15 \(2015\) frame yet/);
+    expect(hasRadio(/^M15 \(2015\) Devoid/)).toBe(false);
+    fireEvent.click(screen.getByTestId("import-frame-show-all"));
+    fireEvent.click(frameRadio(/^M15 \(2015\) Devoid/));
+
+    // DMU #435: its own chooser, collapsed again.
+    fireEvent.click(within(grid()).getAllByRole("button")[1]!);
+    await waitFor(() => expect(heading().textContent).toMatch(/Borderless frame yet/));
+    expect(screen.getByTestId("import-frame-show-all")).toBeTruthy();
+    expect(hasRadio(/^M15 \(2015\) Devoid/)).toBe(false);
+
+    // Back to DMU #107: the Devoid pick is still its pick, and on show.
+    fireEvent.click(within(grid()).getAllByRole("button")[0]!);
+    await waitFor(() => expect(heading().textContent).toMatch(/M15 \(2015\) frame yet/));
+    expect(frameRadio(/^M15 \(2015\) Devoid/).getAttribute("aria-checked")).toBe("true");
+    expect(screen.queryByTestId("import-frame-show-all")).toBeNull();
   });
 });

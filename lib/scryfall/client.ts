@@ -322,13 +322,14 @@ export async function searchCards({
  * eras — live at the tail. So when page one (newest first) says has_more,
  * we spend one extra request on the OLDEST page and merge, giving the
  * picker both ends of the card's history. Same soft-empty error posture
- * as searchCards.
+ * as searchCards. `totalCards` is Scryfall's count of every printing (the
+ * dialog's "30 of 916"), not the length of `cards`.
  */
 export async function getCardPrintings(
   oracleId: string,
-): Promise<ScryfallCard[]> {
+): Promise<{ cards: ScryfallCard[]; totalCards: number }> {
   const id = oracleId.trim();
-  if (!id) return [];
+  if (!id) return { cards: [], totalCards: 0 };
 
   const fetchPage = async (dir: "desc" | "asc") => {
     const url = `/cards/search?${new URLSearchParams({
@@ -348,7 +349,7 @@ export async function getCardPrintings(
   };
 
   const newest = await fetchPage("desc");
-  if (!newest) return [];
+  if (!newest) return { cards: [], totalCards: 0 };
   let cards = newest.data;
   if (newest.has_more) {
     const oldest = await fetchPage("asc");
@@ -357,7 +358,50 @@ export async function getCardPrintings(
       cards = cards.concat(oldest.data.filter((c) => !seen.has(c.id)));
     }
   }
-  return cards;
+  return { cards, totalCards: newest.total_cards ?? cards.length };
+}
+
+/** One page of a printings search: the cards, whether a next page exists,
+ *  and Scryfall's count for the whole query. */
+export type ScryfallPrintingsPage = {
+  cards: ScryfallCard[];
+  hasMore: boolean;
+  totalCards: number;
+};
+
+/**
+ * One page (Scryfall's 175) of an oracle card's printings, newest first,
+ * narrowed by a search qualifier (`q` built by printingsQuery in
+ * lib/scryfall/printing-views.ts) — the import dialog's filter chips and
+ * its "Load more" (TODO 1.5). ONE Scryfall search per call. A 404 is
+ * Scryfall's "no matches": an empty page, not an error. Null when Scryfall
+ * didn't answer (network, 429 past the retry budget, 5xx, a bad body).
+ */
+export async function searchPrintingsPage(
+  q: string,
+  page: number,
+): Promise<ScryfallPrintingsPage | null> {
+  const url = `/cards/search?${new URLSearchParams({
+    q,
+    unique: "prints",
+    order: "released",
+    dir: "desc",
+    page: String(page),
+  })}`;
+  const response = await scryfallFetch(url);
+  if (response.status === 404) return { cards: [], hasMore: false, totalCards: 0 };
+  if (!response.ok) return null;
+  try {
+    const body: unknown = await response.json();
+    const parsed = scryfallSearchResponseSchema.parse(body);
+    return {
+      cards: parsed.data,
+      hasMore: parsed.has_more === true,
+      totalCards: parsed.total_cards ?? parsed.data.length,
+    };
+  } catch {
+    return null;
+  }
 }
 
 export type ScryfallNamedLookup =

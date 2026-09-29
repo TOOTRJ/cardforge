@@ -300,6 +300,22 @@ describe("the general signatures (TODO 1.4)", () => {
     });
   });
 
+  it("lists every anatomy gap that holds, the reason's first (FrameMatch.gaps, for the import dialog's C1)", () => {
+    expect(frameMatchFromScryfall(printing("dmu-107")).gaps).toEqual(["crown"]);
+    // The nickname names the reason; the crown and the two-colour frame hold too.
+    expect(frameMatchFromScryfall(printing("iko-275")).gaps).toEqual(["nickname", "crown", "two-colour"]);
+    expect(frameMatchFromScryfall(printing("thb-18")).gaps).toEqual(["nyx", "crown"]);
+    // A synthetic colour-indicator dot on a legendary: both details, in order.
+    const indicator = scryfallCardSchema.parse({ ...printingsData["dmu-107"], color_indicator: ["B"] });
+    expect(frameMatchFromScryfall(indicator)).toMatchObject({
+      signature: "era/2015+crown",
+      gaps: ["crown", "colour-indicator"],
+    });
+    // No gap rule matched: no list (an exact frame, a nearest showcase).
+    expect(frameMatchFromScryfall(printing("m21-315")).gaps).toBeUndefined();
+    expect(frameMatchFromScryfall(printing("blb-343")).gaps).toBeUndefined();
+  });
+
   it("keeps the white ghostfire run nearest for its border (4.30), not only the ring (4.35)", () => {
     expect(frameMatchFromScryfall(printing("tdm-409"))).toMatchObject({
       signature: "showcase/tdm/ghostfire/white",

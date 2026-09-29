@@ -7,7 +7,8 @@ import type * as LayoutVersion from "@/lib/cards/layout-version";
 // alone, a free download serving an older bake).
 //
 // v31 (the one corner radius, TODO 3.26) is an UNSCOPED sweep, so from v31
-// on (v32, the M15 family's sizes, is another sweep) every bake older than
+// on (v32, the M15 family's sizes, and v33, the rules layout, are more
+// sweeps) every bake older than
 // v31 owes a correction and no card has only the v22 opt-in pending: those
 // paths are unreachable until a later opt-in bump. The machinery still has
 // to work, so its tests pin the module at v30, the last version where such a

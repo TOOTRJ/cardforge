@@ -974,6 +974,57 @@ export type Database = {
         };
         Relationships: [];
       };
+      // Migration 0123 — the "most-requested missing frames" log (TODO 1.6).
+      // Written only through record_frame_request(); admins read. `cause`:
+      // 'missing' | 'unverified' (D1).
+      frame_requests: {
+        Row: {
+          id: string;
+          user_id: string | null;
+          signature: string;
+          label: string;
+          set_code: string | null;
+          collector_number: string | null;
+          scryfall_id: string | null;
+          status: string;
+          cause: string;
+          template: string | null;
+          art_flag: string | null;
+          source: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id?: string | null;
+          signature: string;
+          label: string;
+          set_code?: string | null;
+          collector_number?: string | null;
+          scryfall_id?: string | null;
+          status: string;
+          cause: string;
+          template?: string | null;
+          art_flag?: string | null;
+          source?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string | null;
+          signature?: string;
+          label?: string;
+          set_code?: string | null;
+          collector_number?: string | null;
+          scryfall_id?: string | null;
+          status?: string;
+          cause?: string;
+          template?: string | null;
+          art_flag?: string | null;
+          source?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       frame_reviews: {
         Row: {
           template: string;
@@ -1859,6 +1910,41 @@ export type Database = {
           saves: number;
           generations: number;
           downloads: number;
+        }[];
+      };
+      // Migration 0123 — frame requests (TODO 1.6). record_frame_request is
+      // the authenticated write (auth.uid() stamped, 30/hour cap);
+      // admin_frame_request_counts is service_role only.
+      record_frame_request: {
+        Args: {
+          p_signature: string;
+          p_label: string;
+          p_set: string | null;
+          p_collector: string | null;
+          p_scryfall_id: string | null;
+          p_status: string;
+          p_cause: string;
+          p_template: string | null;
+          p_art_flag: string | null;
+          p_source: string;
+        };
+        Returns: undefined;
+      };
+      admin_frame_request_counts: {
+        Args: { p_since?: string | null };
+        Returns: {
+          signature: string;
+          label: string;
+          set_code: string | null;
+          cause: string;
+          status: string;
+          template: string | null;
+          n: number;
+          users: number;
+          last_seen: string;
+          sample_scryfall_id: string | null;
+          sample_collector: string | null;
+          art_flags: string[];
         }[];
       };
       // Migrations 0094/0095 — usernames + email preferences.

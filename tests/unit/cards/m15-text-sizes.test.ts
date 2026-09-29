@@ -11,10 +11,13 @@ import {
   ADVENTURE_PANEL_COST_PCT,
   ADVENTURE_PANEL_PCT,
   COST_DISC_PCT,
+  RULES_SIZE_PX,
   SET_SYMBOL_BOX_PCT,
   SET_SYMBOL_BOX_PCT_THIN_BAR,
   TITLE_SIZE_PCT,
   TYPE_SIZE_PCT,
+  ptToPct,
+  rulesPxToPct,
 } from "@/lib/cards/typography";
 import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
 
@@ -300,11 +303,44 @@ describe("the full-art basics (4.39) and the frames outside the family", () => {
     modernland: "84c510944cc37e2f818cf127ea36b36d01c12613714b1c741a0cc7bca5d49777",
   };
 
-  it("leaves every frame outside the family byte-identical to layout v31", () => {
+  // Layout v33 (TODO 3.29) gave every profile's rules box a named HD-px
+  // ceiling (RULES_SIZE_PX) in place of its point literal — the prints' 9 /
+  // 8 / 7.5 pt at 63 mm rounded up to 76 / 68 / 64 px. Each maps back to
+  // the one v31 literal it replaced on these frames, so the rest of each
+  // profile is still held to its v31 digest byte for byte.
+  const V31_RULES_SIZE = new Map<number, number>([
+    [rulesPxToPct(RULES_SIZE_PX.standard), ptToPct(9)],
+    [rulesPxToPct(RULES_SIZE_PX.reduced), ptToPct(8)],
+    [rulesPxToPct(RULES_SIZE_PX.compact), ptToPct(7.5)],
+    [rulesPxToPct(RULES_SIZE_PX.reduced, "landscape"), ptToPct(8, "landscape")],
+  ]);
+  const asAtV31 = (p: FrameProfile): FrameProfile => {
+    const size = (slot: TextSlot): TextSlot => {
+      const v31 = V31_RULES_SIZE.get(slot.sizePct);
+      expect(v31, `rules size ${slot.sizePct}`).toBeDefined();
+      // v33 also pads split's two rules boxes past the textbox border they
+      // hold (the text moves, no slot does); no other frame outside the
+      // family carries a rules padding.
+      const { padPx, ...rest } = slot;
+      if (padPx) {
+        expect(p.label).toBe("Split");
+        expect(padPx).toEqual({ left: 57, right: 54, top: 18, bottom: 18 });
+      }
+      return { ...rest, sizePct: v31! };
+    };
+    return {
+      ...p,
+      rules: size(p.rules),
+      ...(p.secondFace ? { secondFace: { ...p.secondFace, rules: size(p.secondFace.rules) } } : {}),
+      ...(p.adventure ? { adventure: { ...p.adventure, rules: size(p.adventure.rules) } } : {}),
+    };
+  };
+
+  it("leaves every frame outside the family byte-identical to layout v31 but for its v33 rules ceiling (and split's rules padding)", () => {
     const outside = FRAME_TEMPLATE_VALUES.filter((t) => !FAMILY.has(t));
     expect([...outside].sort()).toEqual(Object.keys(V31_DIGESTS).sort());
     for (const t of outside) {
-      const digest = createHash("sha256").update(JSON.stringify(getFrameProfile(t))).digest("hex");
+      const digest = createHash("sha256").update(JSON.stringify(asAtV31(getFrameProfile(t)))).digest("hex");
       expect(digest, t).toBe(V31_DIGESTS[t]);
     }
   });

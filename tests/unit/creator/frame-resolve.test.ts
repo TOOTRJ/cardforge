@@ -22,14 +22,19 @@ describe("withVerification (TODO 1.4)", () => {
     expect(withVerification(match(), "w", new Set([frameComboKey("m15fullartland", "w")]))).toEqual(match());
   });
 
-  it("downgrades an unverified exact match to nearest, naming the colour", () => {
+  it("downgrades an unverified exact match to nearest, naming the colour and marking it unverified", () => {
     expect(withVerification(match(), "u", new Set([frameComboKey("m15fullartland", "w")]))).toEqual(
-      match({ status: "nearest", reason: "not yet verified in blue" }),
+      match({ status: "nearest", reason: "not yet verified in blue", unverified: true }),
     );
     expect(withVerification(match(), "m", new Set())).toMatchObject({
       status: "nearest",
       reason: "not yet verified in multicolor",
+      unverified: true,
     });
+    // A verified match carries no mark: the frame request log's cause (D1).
+    expect("unverified" in withVerification(match(), "w", new Set([frameComboKey("m15fullartland", "w")]))).toBe(
+      false,
+    );
   });
 
   it("passes nearest and unsupported matches through unchanged", () => {
@@ -37,6 +42,7 @@ describe("withVerification (TODO 1.4)", () => {
     const unsupported = match({ status: "unsupported", template: "m15", reason: "poster", forGood: true });
     expect(withVerification(nearest, "w", new Set())).toBe(nearest);
     expect(withVerification(unsupported, "w", new Set())).toBe(unsupported);
+    expect("unverified" in withVerification(nearest, "w", new Set())).toBe(false);
   });
 
   it("checks the matched template, not where the import lands", () => {
@@ -108,7 +114,13 @@ describe("finalizeImportMatch (the /api/scryfall/named step)", () => {
     };
     const patch = { frame_match: exact, frame_template: "m15" as const, color_identity: ["black" as const] };
     const out = finalizeImportMatch(patch, new Set());
-    expect(out.frame_match).toMatchObject({ status: "nearest", reason: "not yet verified in black" });
+    expect(out.frame_match).toMatchObject({
+      status: "nearest",
+      reason: "not yet verified in black",
+      unverified: true,
+    });
+    // Finalizing again (the form does, after the route) keeps the mark.
+    expect(finalizeImportMatch(out, new Set()).frame_match?.unverified).toBe(true);
     expect(out.frame_template).toBe("m15");
   });
 

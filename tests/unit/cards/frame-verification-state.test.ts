@@ -123,16 +123,31 @@ describe("verificationState", () => {
 
   it("v32 (the M15 family's sizes) is verification-neutral too: the round-8 sign-off stands in for re-ticks", () => {
     const tick = (v: number) => ({ verified: true, verifiedLayoutVersion: v, verifiedOverrideHash: "h" });
-    expect(CARD_LAYOUT_VERSION).toBe(32);
+    expect(CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(32);
     // A v31 or v30 tick on a family template — and on any other — stays fresh.
     for (const template of ["m15", "m15pw", "saga", "m15token", "fullartland", "m15borderless", "modern", "split"]) {
-      expect(verificationState(tick(31), template, "h").stale, template).toBe(false);
-      expect(verificationState(tick(30), template, "h").stale, template).toBe(false);
+      expect(verificationState(tick(31), template, "h", 32).stale, template).toBe(false);
+      expect(verificationState(tick(30), template, "h", 32).stale, template).toBe(false);
     }
     // Older changes still stale a tick, now reported against v32.
+    expect(verificationState(tick(29), "fullartland", "h", 32).stale).toBe(true);
+    const v28 = verificationState(tick(28), "m15", "h", 32);
+    expect(v28.stale).toBe(true);
+    expect(v28.reasons[0]).toMatch(/renderer changed since layout v28 \(now v32\)/);
+  });
+
+  it("v33 (the rules layout) is verification-neutral too: the round-9 sign-off stands in for re-ticks", () => {
+    const tick = (v: number) => ({ verified: true, verifiedLayoutVersion: v, verifiedOverrideHash: "h" });
+    expect(CARD_LAYOUT_VERSION).toBe(33);
+    // A v32, v31 or v30 tick stays fresh on every template — v33 moves text
+    // inside every rules box, but no slot.
+    for (const template of ["m15", "m15pw", "saga", "m15token", "fullartland", "modern", "split", "battle", "lotr", "flip"]) {
+      for (const v of [32, 31, 30]) expect(verificationState(tick(v), template, "h").stale, `${template}@${v}`).toBe(false);
+    }
+    // Older changes still stale a tick, now reported against v33.
     expect(verificationState(tick(29), "fullartland", "h").stale).toBe(true);
     const v28 = verificationState(tick(28), "m15", "h");
     expect(v28.stale).toBe(true);
-    expect(v28.reasons[0]).toMatch(/renderer changed since layout v28 \(now v32\)/);
+    expect(v28.reasons[0]).toMatch(/renderer changed since layout v28 \(now v33\)/);
   });
 });
