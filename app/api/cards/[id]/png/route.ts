@@ -18,6 +18,14 @@ import {
 } from "@/lib/render/stored-render";
 import { parseCornersParam } from "@/lib/cards/output-corners";
 import {
+  cardImageFilename,
+  effectiveCorners,
+  parseFormatParam,
+} from "@/lib/cards/output-format";
+import { encodeCardJpeg } from "@/lib/render/card-jpeg";
+import { checkAnonLiveRenderLimit } from "@/lib/cards/anon-render-limit";
+import { rateLimitedResponse } from "@/lib/api/responses";
+import {
   downloadBrandMark,
   getEntitlements,
   ownerExportStamp,
@@ -28,7 +36,7 @@ import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { isUuid } from "@/lib/ids";
 
 // ---------------------------------------------------------------------------
-// /api/cards/[id]/png — Download a rendered PNG of a card
+// /api/cards/[id]/png — Download a rendered PNG (or JPEG) of a card
 //
 // Visibility mirrors /api/cards/[id]/pdf and /og (public/unlisted readable
 // by anyone with the link, private owner-only), but the BYTES vary by the
@@ -48,6 +56,12 @@ import { isUuid } from "@/lib/ids";
 //                      request names none (lib/cards/output-corners.ts): a
 //                      deck-export tab or link from before 3.26 keeps getting
 //                      the square bytes it always got.
+//   ?format=jpeg     → a JPEG (TODO 6.18): ALWAYS the square card — JPEG has
+//                      no alpha — so `corners` is ignored; the Square PNG's
+//                      bytes re-encoded (lib/render/card-jpeg.ts: quality 92,
+//                      sRGB, no metadata), named <slug>.jpg. Any other or no
+//                      `format` is the PNG, exactly as before
+//                      (lib/cards/output-format.ts).
 //
 // Every viewer may pick either corner. A FREE viewer's square PNG is the
 // stored round bake squared with the corner fills a live square render
@@ -55,7 +69,13 @@ import { isUuid } from "@/lib/ids";
 // ms of sharp), except where art or frame design runs into a corner (an
 // art-to-edge frame; Bloomburrow, LOTR, Tarkir draconic): the downscaled
 // bake no longer carries those pixels, so that renders live. A paid
-// viewer's is a live square render. The file is <slug>-square.png.
+// viewer's is a live square render. The file is <slug>-square.png. A JPEG
+// follows the same tier rules on the same square bytes.
+//
+// A SIGNED-OUT caller's live renders are rate-limited per network (TODO 7.8,
+// lib/cards/anon-render-limit.ts): over the limit a live render answers 429 +
+// Retry-After. Stored-bake serves, 304s and signed-in viewers are never
+// counted.
 // ---------------------------------------------------------------------------
 
 type RouteParams = { id: string };
@@ -80,7 +100,17 @@ export async function GET(
   const presetParam = request.nextUrl.searchParams.get("preset");
   const requestedPreset: RenderPreset =
     presetParam === "default" ? "default" : "hd";
-  const corners = parseCornersParam(request.nextUrl.searchParams.get("corners"));
+  const format = parseFormatParam(request.nextUrl.searchParams.get("format"));
+  // A JPEG is always square; a PNG has the corner the request names.
+  const corners = effectiveCorners(
+    format,
+    parseCornersParam(request.nextUrl.searchParams.get("corners")),
+  );
+
+  // The signed-in viewer, asked at most once: a private card's owner check,
+  // a live render's anonymous limiter, and the funnel.
+  let viewerLookup: ReturnType<typeof getCurrentUser> | undefined;
+  const currentViewer = () => (viewerLookup ??= getCurrentUser());
 
   let card: Awaited<ReturnType<typeof fetchCard>>;
   try {
@@ -94,7 +124,7 @@ export async function GET(
   }
 
   if (card.visibility === "private") {
-    const user = await getCurrentUser();
+    const user = await currentViewer();
     if (!user || user.id !== card.owner_id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -153,6 +183,9 @@ export async function GET(
         preset,
         // Round and square are different bytes of the same card.
         corners,
+        // …and so are a PNG and a JPEG. Folded in only for the JPEG, so every
+        // PNG keeps the ETag it had (a repeat download still answers 304).
+        ...(format === "jpeg" ? ["jpeg"] : []),
         watermark ? "wm" : "clean",
         // The owner's custom footer mark prints into the render — fold it in
         // so a changed mark busts the 304 path.
@@ -178,8 +211,9 @@ export async function GET(
     });
   }
 
-  let pngBytes: Uint8Array;
+  let bytes: Uint8Array;
   try {
+    let pngBytes: Uint8Array;
     // The stored bake is always watermarked with no footer text (layout
     // v20) — exactly what a FREE viewer downloads, so serve it (2×
     // downscaled) instead of re-rendering — lib/render/stored-render.ts.
@@ -192,7 +226,8 @@ export async function GET(
     // The stored bake is ROUND (layout v31). A free square download
     // squares it with the live render's corner fills — unless a corner
     // keeps what was drawn there (art or frame design: a null fill), which
-    // the downscaled bake no longer carries: that renders live.
+    // the downscaled bake no longer carries: that renders live. A JPEG is
+    // the same square bytes, re-encoded below.
     const squareFills = corners === "square" ? squareCornerFillsOf(previewData) : null;
     const storedServes = watermark && !squareFills?.includes(null);
     const stored = storedServes ? await fetchStoredRender(card) : null;
@@ -200,6 +235,12 @@ export async function GET(
       const fitted = await fitStoredRender(stored, preset, isLandscapeRender(previewData));
       pngBytes = new Uint8Array(squareFills ? await flattenStoredCorners(fitted, squareFills) : fitted);
     } else {
+      // A live render costs a Satori pass: a signed-out caller gets a
+      // limited number of them (TODO 7.8). Signed-in viewers never count.
+      if (!(await currentViewer())) {
+        const limit = await checkAnonLiveRenderLimit(request);
+        if (!limit.ok) return rateLimitedResponse(limit);
+      }
       const imgResponse = await renderCardImage(previewData, preset, {
         brandMark: watermark,
         watermarkText: footerText,
@@ -207,6 +248,7 @@ export async function GET(
       });
       pngBytes = new Uint8Array(await imgResponse.arrayBuffer());
     }
+    bytes = format === "jpeg" ? new Uint8Array(await encodeCardJpeg(pngBytes)) : pngBytes;
   } catch (err) {
     const detail = err instanceof Error ? err.message : "Render error";
     return NextResponse.json(
@@ -217,23 +259,24 @@ export async function GET(
 
   // Funnel: a download (and, once per user, first_download) — signed-in
   // viewers only; anonymous downloads of public cards aren't attributed.
-  const viewer = await getCurrentUser();
+  const viewer = await currentViewer();
   if (viewer && isAdminConfigured()) {
     await recordActivity(createAdminClient(), {
       userId: viewer.id,
       kind: "download",
-      props: { format: "png", preset, clean: !watermark, corners },
+      props: { format, preset, clean: !watermark, corners },
     });
   }
 
-  return new NextResponse(Buffer.from(pngBytes), {
+  return new NextResponse(Buffer.from(bytes), {
     status: 200,
     headers: {
-      "Content-Type": "image/png",
-      // The header wins over the modal's download="" attribute, so the
-      // Square file is named here: both corners can sit side by side.
-      "Content-Disposition": `attachment; filename="${card.slug}${corners === "square" ? "-square" : ""}.png"`,
-      "Content-Length": String(pngBytes.byteLength),
+      "Content-Type": format === "jpeg" ? "image/jpeg" : "image/png",
+      // The header wins over the modal's download="" attribute, so the file
+      // is named here: <slug>.png, <slug>-square.png (both corners can sit
+      // side by side) or <slug>.jpg.
+      "Content-Disposition": `attachment; filename="${cardImageFilename(card.slug, { format, corners })}"`,
+      "Content-Length": String(bytes.byteLength),
       "Cache-Control": cacheControl,
       ETag: etag,
     },
