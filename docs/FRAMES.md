@@ -669,6 +669,39 @@ A frame swap that changes baked output still needs its `CARD_LAYOUT_VERSION`
 bump with a `"sweep"` rollout, so owners are never badged. After the deploy,
 the automatic re-bake sweeps the affected cards on its own (next section).
 
+### Additions vs corrections (owner rule, 2026-09-29)
+
+Every change to how cards look is one of two kinds, and the kind decides the
+rollout:
+
+- **Addition or new look — opt-in per card.** A new anatomy element or a
+  different style a card owner might reasonably not want: legendary crowns,
+  two-colour frames, the full-art token design, the Nyx starfield, the
+  collector line and holofoil stamp, the vehicle P/T plate, colour
+  indicators, coloured-artifact blends, new frames and treatments.
+  - NEW cards get it by default, with a switch to turn it off.
+  - EXISTING cards keep their look; the owner can open the card and switch
+    it on (the editor may hint at it).
+  - Scryfall imports follow the printing (a crown only on printings from
+    Dominaria, 2018-04, on; a two-colour frame only where the printing has
+    one).
+  - It is stored as card data (`frame_style`), so the preview and the bake
+    read the same switch; stored cards are NOT swept and owners are NOT
+    badged. Announce it with a site update.
+- **Correction — sweep.** Fixing a look that is wrong against its own print
+  (P/T on the border, clipped text, a misplaced pill or symbol, wrong sizes,
+  a mis-sourced frame): a `CARD_LAYOUT_VERSION` bump with a `"sweep"`
+  rollout for every affected card, after the owner signs off the
+  before/after sheet. No badge.
+- **Borderline** (e.g. era fonts on the old frames, 4.8): ask the owner.
+
+Why: a design choice belongs to the card's owner (789 legendary cards were
+printed without a crown between M15 and Rivals, so a crownless legendary is
+an authentic look), but a broken look must not stay broken; and every
+per-card switch is a permanent second render path — both renderers, the
+verification ticks and the tests — so switches are reserved for real design
+choices.
+
 ## Re-bakes after a deploy (automatic)
 
 Nobody runs a sweep by hand any more. `/api/cron/auto-rebake`

@@ -172,7 +172,16 @@ Rules and gotchas:
   the `CARD_LAYOUT_VERSION` bump + a `VERSION_ROLLOUT` policy: only
   "opt-in" bumps badge owners (`hasNewerLook`); "sweep" bumps and
   frame-override saves (null stamp) are re-baked by the platform — the
-  compare page does it right after a save (`/api/admin/rebake-marked`). Every bake also writes a
+  compare page does it right after a save (`/api/admin/rebake-marked`).
+  WHICH rollout (owner rule 2026-09-29): an ADDITION or new look (crown,
+  two-colour frame, full-art token design, Nyx, collector line, vehicle
+  plate, colour indicator, new frames) is OPT-IN PER CARD — new cards get it
+  by default with an off switch, existing cards keep their look until the
+  owner switches it on, imports follow the printing; it is card data
+  (`frame_style`), never a sweep of stored cards, and never badges. A
+  CORRECTION of a look that is wrong against its own print is a "sweep",
+  after the owner's before/after sign-off. Flag borderline cases
+  (`docs/FRAMES.md` "Additions vs corrections"). Every bake also writes a
   600 px WebP thumbnail beside the HD PNG (`cards.rendered_thumb_url`,
   `lib/cards/render-thumb.ts`) — gallery-style tiles MUST use
   `BakedCardThumbnail` with `renderedThumbUrl`, never the 3 MB PNG;
