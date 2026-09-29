@@ -118,6 +118,8 @@ import {
   updateCardAction,
 } from "@/lib/cards/actions";
 import { linkDeckCardAction } from "@/lib/decks/card-actions";
+import { recordFrameRequestAction } from "@/lib/frames/frame-request-actions";
+import { frameRequestFromImport } from "@/lib/frames/frame-requests";
 import type { DeckRemixContext } from "@/types/deck";
 import {
   printingTreatmentNotice,
@@ -1293,7 +1295,9 @@ export function CardCreatorForm({
    *  • "deck-remix" — /create?deckCard= has no dialog: the usual resolution,
    *    and ONE notice naming the substitution, RETURNED for the caller to
    *    toast after its own "Pre-filled …" toast (Sonner shows the newest in
-   *    front). */
+   *    front).
+   *  The frame request log (TODO 1.6) files a "dialog" import as `import`
+   *  and a "deck-remix" one as `deck_prefill`. */
   const handleScryfallImport = (
     { patch, importedArtUrl, frameChoice, source }: ScryfallImportPayload,
     via: "dialog" | "deck-remix" = "dialog",
@@ -1377,6 +1381,24 @@ export function CardCreatorForm({
         resolutionMessage = `${describeFrame(wanted)} isn't available in ${colorWord(colorKey)} yet — kept the current frame.`;
       }
     }
+    // A printing PipGlyph can't reproduce exactly (nearest / unsupported, or
+    // an exact frame not verified in this colour) is logged for the admin's
+    // "most-requested missing frames" page (TODO 1.6). Fire and forget: the
+    // action never throws, and the catch covers the call itself failing
+    // (offline, a stale deployment), so a lost log never touches the import.
+    // An admin's frame preview (TODO 2.3) never logs — its picker set is
+    // verified ∪ previewed, and the stepper walk-through (2.2) seeds from a
+    // combo's reference printing through this same handler — so a row there
+    // would count admin tooling as a user's missing frame.
+    const frameRequest = framePreview
+      ? null
+      : frameRequestFromImport(patch, {
+          artImported: Boolean(importedArtUrl),
+          source: via === "deck-remix" ? "deck_prefill" : "import",
+          landedTemplate: getValues("frame_style.template") as FrameTemplate | undefined,
+          verifiedKeys,
+        });
+    if (frameRequest) void recordFrameRequestAction(frameRequest).catch(() => {});
     const landedTemplate =
       (getValues("frame_style.template") as FrameTemplate | undefined) ??
       DEFAULT_FRAME_TEMPLATE;

@@ -363,6 +363,16 @@ badges to Exact the moment its `frame_reviews` row is ticked.
   printing in `tests/unit/scryfall/fixtures/signature-printings.json`, and
   a row in `tests/unit/scryfall/frame-signatures.test.ts`. The completeness
   test fails until some rule can reach it.
+- **Signature ids are stored.** Every import that isn't exact writes a
+  `frame_requests` row keyed by its signature (TODO 1.6, migration 0123,
+  `lib/frames/frame-requests.ts`; never from an admin's frame preview or
+  its stepper walk-through — admin tooling isn't demand), with its cause — `missing` (the rule's
+  own nearest / unsupported answer) or `unverified` (an exact frame
+  `withVerification` downgraded) — and `/admin/frame-requests` counts them
+  per signature + set in those two groups, most distinct users first, to
+  decide what to build or verify next. Never rename a rule's key: old rows
+  would stop grouping with new ones, and the page flags them "not in
+  registry". Split a rule under a new key instead.
 - **A frame whose border isn't true yet** stays in
   `BORDER_PENDING_TEMPLATES` (or, for single colour masters,
   `BORDER_PENDING_COLOURS`), capped at `nearest`. The list is the edge

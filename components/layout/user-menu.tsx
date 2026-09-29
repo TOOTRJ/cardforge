@@ -7,6 +7,7 @@ import {
   Frame,
   GalleryVerticalEnd,
   LayoutDashboard,
+  ListOrdered,
   LogOut,
   MessageSquare,
   Settings,
@@ -165,6 +166,11 @@ export function UserMenu({
             href="/admin/frame-compare"
             icon={Frame}
             label="Frame compare"
+          />
+          <MenuItem
+            href="/admin/frame-requests"
+            icon={ListOrdered}
+            label="Frame requests"
           />
           </>
         ) : null}
