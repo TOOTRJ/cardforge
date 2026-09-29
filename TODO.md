@@ -306,8 +306,9 @@ Open decisions are marked **[decide]**; none blocks its phase.
         their promos and reprints) keeps
         `nearest` nyx without the kind landing, so while nyx is unverified a
         white one lands on M15, not modern/w (the only verified 2003
-        standard) — **[decide]** whether they keep the 2003 frame until nyx
-        is verified (`onceVerified` on `nyx/2003`, which moves Bident too).
+        standard) — **owner 2026-09-29: keep as built** (they land on M15
+        until nyx is verified; no `onceVerified` on `nyx/2003`, Bident
+        unchanged).
         Their `frame_template` is now `nyx`, so the AI deck remix needs
         #397's `remixFrameFor` (which resolves the remix frame against the
         verified combos) before a remix of one saves.
