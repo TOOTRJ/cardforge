@@ -13,6 +13,7 @@ import {
   LayoutDashboard,
   MessageSquare,
   MessageSquarePlus,
+  RefreshCw,
   Rss,
   Settings,
   ShieldCheck,
@@ -49,6 +50,7 @@ const NAV_ICONS: Record<string, LucideIcon> = {
   "/admin/updates": Megaphone,
   "/admin/scryfall": Activity,
   "/admin/frame-compare": Frame,
+  "/admin/renders": RefreshCw,
   "/admin/creator-lab": FlaskConical,
 };
 

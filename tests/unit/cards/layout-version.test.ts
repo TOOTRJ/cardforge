@@ -134,6 +134,32 @@ describe("latestOptInVersion — what owner notifications are keyed on", () => {
   });
 });
 
+describe("latestSweepVersion — the automatic re-bake's cheap pending count", () => {
+  it("is the newest sweep version at or below current (unlisted versions count as sweep)", async () => {
+    const { latestSweepVersion, CARD_LAYOUT_VERSION } = await import("@/lib/cards/layout-version");
+    // Today's newest bump (v32) is a sweep.
+    expect(latestSweepVersion()).toBe(CARD_LAYOUT_VERSION);
+    // An opt-in bump on top: cards stamped at the last sweep owe nothing.
+    expect(latestSweepVersion({ 32: "sweep", 33: "opt-in" }, 33)).toBe(32);
+    expect(latestSweepVersion({ 22: "opt-in" }, 22)).toBe(21);
+    expect(latestSweepVersion({ 1: "opt-in" }, 1)).toBe(0);
+  });
+
+  it("a card stamped at or above it never has a pending sweep bump", async () => {
+    const { latestSweepVersion, hasPendingCorrection } = await import("@/lib/cards/layout-version");
+    const rollout = { 22: "opt-in", 33: "opt-in", 34: "opt-in" } as const;
+    const sweep = latestSweepVersion(rollout, 34);
+    expect(sweep).toBe(32);
+    for (let stamp = 1; stamp <= 34; stamp += 1) {
+      const owed = hasPendingCorrection(
+        { ...UNTOUCHED_SINCE_V22, layout_version: stamp, frame_style: { template: "m15" } },
+        { rollout, current: 34 },
+      );
+      if (stamp >= sweep) expect(owed, `v${stamp}`).toBe(false);
+    }
+  });
+});
+
 describe("hasPendingCorrection — when the platform still owes a card a re-bake", () => {
   it("is true for a null stamp or a pending SWEEP bump, false for opt-in-only", async () => {
     const { hasPendingCorrection, CARD_LAYOUT_VERSION } = await import("@/lib/cards/layout-version");

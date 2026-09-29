@@ -11,6 +11,10 @@ import { cardToPreviewData } from "@/lib/cards/preview-data";
 import { hasNewerLook } from "@/lib/cards/layout-version";
 import type { FrameProfileOverridesMap } from "@/lib/cards/profile-override";
 import { CardHoverEffect } from "@/components/cards/card-hover-effect";
+import {
+  FramePreviewCardBadge,
+  isFramePreviewCard,
+} from "@/components/creator/frame-preview-card-badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { listMyCards } from "@/lib/cards/queries";
@@ -234,8 +238,11 @@ export function DashboardCardTile({
           <Check className="h-3.5 w-3.5" aria-hidden />
         </button>
       </div>
-      <div className="mt-2 flex items-center justify-between text-xs text-muted">
-        <span>{VISIBILITY_LABELS[card.visibility]}</span>
+      <div className="mt-2 flex items-center justify-between gap-2 text-xs text-muted">
+        <span className="flex min-w-0 flex-wrap items-center gap-1.5">
+          {VISIBILITY_LABELS[card.visibility]}
+          {isFramePreviewCard(card) ? <FramePreviewCardBadge /> : null}
+        </span>
         <span
           className={cn(
             "transition-opacity",

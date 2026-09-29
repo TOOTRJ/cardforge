@@ -151,6 +151,11 @@ export async function runRebakeBatch(
     /** Cards that already failed in this run: never picked again, so one
      *  unbakeable card can't wedge a client-driven loop. */
     skipIds?: readonly string[];
+    /** Told which cards the batch picked, before it renders any of them —
+     *  the automatic re-bake records them so a run that dies mid-batch
+     *  (maxDuration, out of memory) can blame them. Not called for a dry
+     *  run or an empty batch; a throw aborts the batch before any write. */
+    onPicked?: (ids: string[]) => Promise<void> | void;
   },
 ): Promise<RebakeBatchResult | { ok: false; error: string }> {
   const { scope, dry, billingEnabled } = opts;
@@ -210,6 +215,8 @@ export async function runRebakeBatch(
   if (dry) {
     return { ...base, dry: true, processed: [], failed: [], superseded: [], remaining: plan.rebake + plan.stamp };
   }
+
+  if (batch.length > 0 && opts.onPicked) await opts.onPicked(batch.map(({ row }) => row.id));
 
   const processed: RebakeBatchResult["processed"] = [];
   const failed: RebakeBatchResult["failed"] = [];
