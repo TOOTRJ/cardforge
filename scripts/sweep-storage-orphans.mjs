@@ -25,11 +25,16 @@
 //   --min-age-days <n>    only objects unchanged for n days (default and
 //                         floor 7 — every bucket, not only card-art)
 //   --batch-size <n>      objects per delete, each batch re-checked first
-//                         (default 25, max 100)
+//                         (default 25, max 100). Every batch re-reads the
+//                         WHOLE database, so use 100 on production (the
+//                         prompt says how many full reads the run makes)
 //   --limit <n>           delete at most n objects this run (re-run resumes)
 //   --backup-dir <dir>    download each object there before deleting it (an
 //                         object whose copy fails, or whose bytes no longer
-//                         match the listed MD5 eTag, is kept)
+//                         match the listed MD5 eTag, is kept). Never inside a
+//                         git working tree — this repo is public and the
+//                         backups are users' images (refused); use e.g.
+//                         ~/.pipglyph/sweep-backups/<date>
 //   --state <file>        resume file (default ~/.pipglyph/sweep-storage-
 //                         orphans.<project>.json)
 //   --manifest <file>     delete log, JSON lines (default ~/.pipglyph/sweep-
@@ -53,17 +58,26 @@
 // the whole database is scanned AGAIN for that batch's keys and card ids,
 // then every object is looked up again, all at once (gone, a different
 // eTag/size, or now too young → kept), and right after that the batch is
-// noted in the state file, removed, and every removed object is appended to
-// the manifest (bucket, path, size, eTag, last change, reason, copy). Storage
-// has no conditional delete, so the lookups sit right before the remove. A
-// run that dies mid-delete is settled on the next run (what is gone is
-// logged, the rest is judged again). Nothing about an object is printed but
-// its key, size and age.
+// noted in the state file and removed; every object is then looked up once
+// more, and only what storage says is gone goes into the manifest (bucket,
+// path, size, eTag, last change, reason, copy). Storage has no conditional
+// delete, so the lookups sit right before the remove. A run that dies
+// mid-delete is settled on the next run (what is gone is logged, the rest is
+// judged again). Nothing about an object is printed but its key, size and
+// age.
+//
+// The dry run also lists, for review only (nothing here deletes them):
+//   * renders of PRIVATE cards that are still stored — publicly fetchable at
+//     their fixed URL; going private should have deleted them;
+//   * user-folder objects whose names the server doesn't make — an older
+//     upload path, or a file written straight to storage with the user's own
+//     session before 0126 (it skipped the sniff, the strip and the scan).
 // ---------------------------------------------------------------------------
 import { existsSync, readFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import readline from "node:readline";
+import { fileURLToPath } from "node:url";
 import { createClient } from "@supabase/supabase-js";
 import { promptHidden } from "./lib/hidden-prompt.mjs";
 import { PRODUCTION_SUPABASE_REF, isProductionSupabaseUrl } from "./lib/prod-guard.mjs";
@@ -77,15 +91,22 @@ import {
   VERDICTS,
   ageDays,
   applySweep,
+  backupDirProblem,
   classify,
   formatBytes,
+  isServerMintedName,
   loadState,
+  plannedBatches,
+  privateCardRenders,
   reconcilePending,
   referenceKey,
   saveState,
   scanReferences,
   summarize,
+  userFolderKey,
 } from "./lib/storage-orphans.mjs";
+
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 // --- flags ---------------------------------------------------------------------
 const VALUE_FLAGS = new Set([
@@ -145,6 +166,10 @@ const minAgeDays = values.has("--min-age-days") ? Number(values.get("--min-age-d
 const batchSize = intFlag("--batch-size", DEFAULT_BATCH_SIZE, 1, MAX_BATCH_SIZE);
 const limit = intFlag("--limit", Infinity, 1, Number.MAX_SAFE_INTEGER);
 const backupDir = values.has("--backup-dir") ? path.resolve(values.get("--backup-dir")) : null;
+if (backupDir) {
+  const problem = backupDirProblem(backupDir, REPO_ROOT);
+  if (problem) fail(`--backup-dir: ${problem}.`);
+}
 
 // --- target ----------------------------------------------------------------------
 function parseEnvFile(file) {
@@ -351,6 +376,32 @@ if (unusual.length) {
   for (const o of unusual) console.log(`  ${o.bucket}/${o.path}  ${formatBytes(Number(o.size) || 0)}  — ${VERDICTS[o.verdict]}`);
 }
 
+const privateRenders = privateCardRenders(classified, scan.privateCardIds);
+if (privateRenders.length) {
+  console.log(
+    `\nPrivacy follow-up — ${privateRenders.length} render(s) of PRIVATE cards still stored (publicly fetchable at ` +
+      `their URL; going private should have deleted them). Listed only — the sweep never deletes a live card's render:`,
+  );
+  for (const o of privateRenders) console.log(`  ${o.bucket}/${o.path}  ${formatBytes(Number(o.size) || 0)}`);
+}
+
+const LIST_CAP = 100;
+const oddNames = classified.filter(
+  (o) => SWEEP_BUCKETS.includes(o.bucket) && userFolderKey(o.path) && !isServerMintedName(o.bucket, o.path),
+);
+if (oddNames.length) {
+  const byBucket = oddNames.reduce((m, o) => m.set(o.bucket, (m.get(o.bucket) ?? 0) + 1), new Map());
+  console.log(
+    `\nReview — ${oddNames.length} user-folder object(s) with a name the server doesn't make today ` +
+      `(${[...byBucket].map(([b, n]) => `${b} ${n}`).join(", ")}): an older upload path, or a file written straight to ` +
+      `storage before 0126 (no sniff, strip or scan). Listed only; deleted only if also an orphan:`,
+  );
+  for (const o of oddNames.slice(0, LIST_CAP)) {
+    console.log(`  ${o.bucket}/${o.path}  ${formatBytes(Number(o.size) || 0)}  — ${VERDICTS[o.verdict]}`);
+  }
+  if (oddNames.length > LIST_CAP) console.log(`  … and ${oddNames.length - LIST_CAP} more`);
+}
+
 const reclaimable = orphans.reduce((n, o) => n + (Number(o.size) || 0), 0);
 if (orphans.length) {
   console.log(`\nOrphans (${orphans.length}):`);
@@ -376,6 +427,11 @@ if (orphans.length === 0) {
 
 // --- apply -----------------------------------------------------------------------
 const count = Math.min(orphans.length, limit);
+const reads = plannedBatches(orphans, batchSize, limit);
+console.log(
+  `\n--apply re-reads the whole database once per batch: ${reads} batch(es) of up to ${batchSize} → ${reads} full read(s) of ` +
+    `every table.${target === "prod" && batchSize < MAX_BATCH_SIZE ? ` On production use --batch-size ${MAX_BATCH_SIZE} to cut that.` : ""}`,
+);
 const answer = await promptLine(
   `\nDelete ${count === orphans.length ? "" : `${count} of `}${orphans.length} object(s) (${formatBytes(reclaimable)}) from ` +
     `${target === "prod" ? "PRODUCTION" : "dev"} (${host})? Storage has no undo — ${backupDir ? `copies go to ${backupDir}` : "no --backup-dir given"}. Type "yes": `,

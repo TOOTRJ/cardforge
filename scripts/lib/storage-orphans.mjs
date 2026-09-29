@@ -19,8 +19,9 @@
 // listed and kept. Matching is bucket-agnostic and case-insensitive on
 // purpose: a key named anywhere keeps every object with that key.
 // ---------------------------------------------------------------------------
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { isUuid } from "../../lib/ids.ts";
 
@@ -66,7 +67,11 @@ export const URL_SOURCES = [
   },
   { table: "profiles", columns: ["avatar_url", "banner_url"], note: "profile-media uploads (or a /defaults/ site path)" },
   { table: "decks", columns: ["cover_url"], note: "set-covers upload, or AI cover art in card-art" },
-  { table: "deck_cards", columns: ["image_url"], note: "Scryfall art, or a PipGlyph card's bake" },
+  {
+    table: "deck_cards",
+    columns: ["image_url"],
+    note: "a Scryfall printing image (cards.scryfall.io — the only value 0127 accepts); a row from before 0127 could hold anything, so it is read like every other column",
+  },
   { table: "custom_pips", columns: ["image_url"], note: "custom-pips `{uid}/{symbol}.png`" },
   { table: "challenges", columns: ["hero_image_url"], note: "admin-set hero image" },
   { table: "ai_generation_jobs", columns: ["request", "plan", "steps"], note: "a step's fill.art_url before a card claims it" },
@@ -165,23 +170,29 @@ const UUID_SLASH = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}
 
 /** The forms a stored string may hide a key in: as is, JSON-escaped slashes
  *  (`\/`), and percent-decoded up to three times (a next/image URL carries
- *  the storage URL encoded; a link inside it, twice). Lower-cased. */
+ *  the storage URL encoded; a link inside it, twice). Each form is lower-
+ *  cased AFTER it is decoded: `%57.png` is `W.png`, which must meet the
+ *  lower-cased index as `w.png` (review 2026-09-29 — decoding a lower-cased
+ *  string left an upper-case letter that missed its key, the unsafe way). */
 export function stringVariants(value) {
   const out = new Set();
-  let s = value.toLowerCase();
-  out.add(s);
-  if (s.includes("\\/")) out.add(s.replaceAll("\\/", "/"));
+  const add = (form) => {
+    const lower = form.toLowerCase();
+    out.add(lower);
+    if (lower.includes("\\/")) out.add(lower.replaceAll("\\/", "/"));
+  };
+  let s = value;
+  add(s);
   for (let i = 0; i < 3 && s.includes("%"); i += 1) {
     let decoded;
     try {
       decoded = decodeURIComponent(s);
     } catch {
-      decoded = s.replace(/%([0-9a-f]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+      decoded = s.replace(/%([0-9a-f]{2})/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
     }
     if (decoded === s) break;
     s = decoded;
-    out.add(s);
-    if (s.includes("\\/")) out.add(s.replaceAll("\\/", "/"));
+    add(s);
   }
   return [...out];
 }
@@ -278,8 +289,9 @@ export function textColumns(table) {
 /**
  * Read every text/JSON value of every table and return which indexed keys
  * are referenced, plus every card id (card-renders objects are kept while
- * their card exists). Any read error throws: a partial reference set must
- * never decide a delete.
+ * their card exists) and the ids of PRIVATE cards (their renders are listed
+ * as a privacy follow-up — never deleted by this sweep). Any read error
+ * throws: a partial reference set must never decide a delete.
  *
  * `db.openApi()` → the OpenAPI document; `db.select(table, { columns,
  * order, after, offset, limit })` → rows ordered by `order`, `order[0] >
@@ -299,6 +311,7 @@ export async function scanReferences(db, index, { log = () => {}, concurrency = 
 
   const referenced = new Set();
   const cardIds = new Set();
+  const privateCardIds = new Set();
   const scanned = [];
   const skipped = [];
   const work = [];
@@ -310,11 +323,14 @@ export async function scanReferences(db, index, { log = () => {}, concurrency = 
 
   async function scanTable({ table, columns }) {
     const isCards = table.name === "cards";
+    const cardsExtra = isCards
+      ? ["id", ...(table.columns.some((c) => c.name === "visibility") ? ["visibility"] : [])]
+      : [];
     // Keyset paging on a one-column key: a row deleted mid-scan can't shift
     // an unread row onto a page already read. Composite (or no) key: offset
     // paging over a total order of the key (or every column read).
     const order = table.pk.length ? table.pk : columns;
-    const select = [...new Set([...table.pk, ...columns, ...(isCards ? ["id"] : [])])];
+    const select = [...new Set([...table.pk, ...columns, ...cardsExtra])];
     const keyset = table.pk.length === 1;
     let tableRows = 0;
     let after = null;
@@ -329,7 +345,10 @@ export async function scanReferences(db, index, { log = () => {}, concurrency = 
       if (!Array.isArray(page)) throw new Error(`${table.name}: unexpected response`);
       if (page.length === 0) break;
       for (const row of page) {
-        if (isCards && isUuid(row.id)) cardIds.add(row.id.toLowerCase());
+        if (isCards && isUuid(row.id)) {
+          cardIds.add(row.id.toLowerCase());
+          if (row.visibility === "private") privateCardIds.add(row.id.toLowerCase());
+        }
         for (const column of columns) {
           for (const s of stringsIn(row[column])) index.mark(s, referenced);
         }
@@ -358,7 +377,7 @@ export async function scanReferences(db, index, { log = () => {}, concurrency = 
   const rows = scanned.reduce((n, t) => n + t.rows, 0);
   const ms = Date.now() - started;
   log(`Reference scan: ${scanned.length} tables, ${rows} rows in ${(ms / 1000).toFixed(1)} s (${skipped.length} without a text column skipped).`);
-  return { referenced, cardIds, scanned, skipped, rows, ms };
+  return { referenced, cardIds, privateCardIds, scanned, skipped, rows, ms };
 }
 
 // --- classification ------------------------------------------------------------
@@ -397,6 +416,101 @@ export function classify(objects, { referenced, cardIds, now, minAgeDays }) {
     })();
     return { ...obj, verdict };
   });
+}
+
+/**
+ * Renders of cards that exist and are PRIVATE (whatever their verdict — the
+ * card's own row usually still names them). A private card's render should
+ * have been deleted when it went private (lib/cards/bake-core.ts: a failed
+ * delete leaves the PNG publicly fetchable at its fixed URL). The sweep never
+ * deletes a live card's render; the dry run lists these as a privacy
+ * follow-up for the owner.
+ */
+export function privateCardRenders(objects, privateCardIds) {
+  return objects.filter((obj) => {
+    if (obj.bucket !== "card-renders") return false;
+    const cardId = renderCardId(obj.path);
+    return cardId !== null && privateCardIds.has(cardId);
+  });
+}
+
+const UUID_TEXT = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
+/** The names the server writes today (lower-cased, as userFolderKey gives
+ *  them): `{uuid}.ext` (art upload, Scryfall import, deck cover / set icon),
+ *  `{word}-{uuid}.ext` (`ai-`, `wm-`, `remix-`, `avatar-`, `banner-`, and the
+ *  dev seed's `icon-` / `back-`), `{cardId}.png` / `{cardId}.thumb.webp`
+ *  (bakes), and a custom pip's `{symbol}.png` / `{symbol}.pending.png`. */
+const SERVER_NAME = new RegExp(`^(?:[a-z]+-)?${UUID_TEXT}(?:\\.thumb)?\\.[a-z0-9]{2,5}$`);
+const PIP_NAME = /^[wubrgc](?:\.pending)?\.png$/;
+
+/**
+ * False for a user-folder object whose name the server doesn't make today —
+ * an older upload path, or a file written straight to storage with the
+ * user's own session before 0126 took the write policies away (such a file
+ * skipped the byte sniff, the metadata strip and the moderation scan). The
+ * dry run lists these for review; the sweep treats them like any other
+ * object (deleted only as an orphan).
+ */
+export function isServerMintedName(bucket, objectPath) {
+  const key = userFolderKey(objectPath);
+  if (!key) return false;
+  return bucket === "custom-pips" ? PIP_NAME.test(key.name) : SERVER_NAME.test(key.name);
+}
+
+/** How many delete batches (each one a full database re-scan) an --apply
+ *  run makes: one bucket per batch, `batchSize` objects each, `limit` in all. */
+export function plannedBatches(candidates, batchSize, limit = Infinity) {
+  const perBucket = new Map();
+  for (const obj of candidates) perBucket.set(obj.bucket, (perBucket.get(obj.bucket) ?? 0) + 1);
+  let left = limit;
+  let batches = 0;
+  for (const n of perBucket.values()) {
+    const take = Math.min(n, left);
+    if (take <= 0) break;
+    batches += Math.ceil(take / batchSize);
+    left -= take;
+  }
+  return batches;
+}
+
+/** The deepest existing directory at or above `p`, resolved through symlinks. */
+function existingRealDir(p) {
+  let dir = path.resolve(p);
+  for (;;) {
+    if (existsSync(dir)) return realpathSync(dir);
+    const parent = path.dirname(dir);
+    if (parent === dir) return dir;
+    dir = parent;
+  }
+}
+
+const isInside = (child, parent) => {
+  const rel = path.relative(parent, child);
+  return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
+};
+
+/**
+ * Why `dir` can't hold the backups, or null. The backups are users' images
+ * and this repository is PUBLIC (review 2026-09-29): refused inside
+ * `repoRoot` (this checkout) and inside any git working tree at all.
+ */
+export function backupDirProblem(dir, repoRoot) {
+  const real = existingRealDir(dir);
+  if (repoRoot && isInside(real, existingRealDir(repoRoot))) {
+    return `${dir} is inside this repository (${repoRoot}), which is public — keep backups outside it (e.g. ~/.pipglyph/sweep-backups)`;
+  }
+  try {
+    const top = execFileSync("git", ["rev-parse", "--show-toplevel"], {
+      cwd: real,
+      stdio: ["ignore", "pipe", "ignore"],
+    })
+      .toString()
+      .trim();
+    if (top) return `${dir} is inside the git working tree ${top} — keep backups outside any repository (e.g. ~/.pipglyph/sweep-backups)`;
+  } catch {
+    // not in a git working tree (or no git): fine
+  }
+  return null;
 }
 
 /** Per-bucket totals: `{ [bucket]: { objects, bytes, [verdict]: { n, bytes } } }`. */
@@ -502,8 +616,25 @@ function manifestEntry(target, bucket, item, run) {
 /** The MD5 hex of a single-part upload's eTag (`"<32 hex>"`); null for a
  *  multipart eTag (`"…-3"`) or anything else, which can't be checked. */
 export function plainMd5(etag) {
-  const m = typeof etag === "string" ? etag.match(/^"?([0-9a-f]{32})"?$/i) : null;
+  const m = typeof etag === "string" ? etag.match(/^(?:W\/)?"?([0-9a-f]{32})"?$/i) : null;
   return m ? m[1].toLowerCase() : null;
+}
+
+/** An eTag without its quoting (`W/"x"`, `"x"`, `x` → `x`), lower-cased. */
+function bareEtag(etag) {
+  return typeof etag === "string" ? etag.trim().replace(/^W\//i, "").replace(/^"(.*)"$/, "$1").toLowerCase() : "";
+}
+
+/** Whether two eTags name the same bytes, however each API quotes them —
+ *  the listing's `metadata.eTag` and info()'s `etag` need not be formatted
+ *  alike (review 2026-09-29: a quoted-vs-bare mismatch would have kept every
+ *  object as "changed", and --apply would have deleted nothing). */
+export function sameEtag(a, b) {
+  const md5a = plainMd5(a);
+  const md5b = plainMd5(b);
+  if (md5a || md5b) return md5a === md5b;
+  const bareA = bareEtag(a);
+  return bareA !== "" && bareA === bareEtag(b);
 }
 
 /**
@@ -515,17 +646,30 @@ export function plainMd5(etag) {
  *   2. the whole database is scanned AGAIN for the batch's keys (a row may
  *      have started pointing at one since the listing) and, for renders, the
  *      card ids (a card may exist again);
- *   3. every object is looked up again, all at once: gone, another eTag or
- *      size, or now younger than the floor → kept;
- *   4. the survivors go into `state.pending`, are removed, appended to the
- *      manifest, and `state.pending` is cleared. A crash in between is
- *      settled by `reconcilePending` next run.
+ *   3. every object is looked up again, all at once: gone, another eTag
+ *      (compared however each API quotes it, `sameEtag`) or size, or now
+ *      younger than the floor → kept;
+ *   4. the survivors go into `state.pending` and are removed; then EVERY one
+ *      is looked up again — storage's own answer, not the names remove()
+ *      echoes back (review 2026-09-29), decides: gone → the manifest (its
+ *      copy kept); still there → kept (its copy dropped); lookup failed →
+ *      stays in `state.pending` with its copy, and the next run settles it
+ *      (`reconcilePending`, the same lookup). A crash anywhere in between is
+ *      settled the same way.
  * Storage has no conditional delete, so 3 sits right before 4. Backup
  * copies of objects the re-check kept are removed again.
  *
+ * Known, accepted race (review 2026-09-29): custom-pips names are
+ * deterministic (`{uid}/{SYMBOL}.png`, overwritten in place), so a re-upload
+ * landing in the milliseconds between step 3's lookup and the remove would
+ * be deleted while its new custom_pips row points at it. A re-upload before
+ * step 3 changes the eTag and the timestamp and is kept; the user fixes the
+ * rare loser by saving the pip again.
+ *
  * `storage`: `info(bucket, path)` → `{ missing: true }` | `{ etag, size,
  * createdAt, lastModified }` (throws on any other error), `remove(bucket,
- * paths)` → the paths it removed, `download(bucket, path)` → Buffer.
+ * paths)` → what it says it removed (logged only), `download(bucket, path)`
+ * → Buffer.
  */
 export async function applySweep({
   db,
@@ -625,7 +769,7 @@ export async function applySweep({
           skip(bucket, obj, "already gone");
           continue;
         }
-        if (!info.etag || info.etag !== obj.etag || (info.size != null && obj.size != null && Number(info.size) !== Number(obj.size))) {
+        if (!sameEtag(info.etag, obj.etag) || (info.size != null && obj.size != null && Number(info.size) !== Number(obj.size))) {
           skip(bucket, obj, "changed since it was listed");
           continue;
         }
@@ -651,12 +795,12 @@ export async function applySweep({
         continue;
       }
 
-      // 4. The delete.
+      // 4. The delete, then storage's own answer for every object.
       state.pending = { bucket, run, at: new Date().toISOString(), items: toRemove };
       saveState(statePath, state);
-      let removed;
+      let echoed;
       try {
-        removed = new Set(await storage.remove(bucket, toRemove.map((item) => item.path)));
+        echoed = new Set(await storage.remove(bucket, toRemove.map((item) => item.path)));
       } catch (err) {
         // Unknown outcome: pending stays in the state, the next run settles
         // it (and the copies stay).
@@ -664,18 +808,50 @@ export async function applySweep({
         log(`  ✗ ${bucket}: delete of ${toRemove.length} object(s) failed (${err.message}) — re-run to settle it`);
         break outer;
       }
-      const done = toRemove.filter((item) => removed.has(item.path));
-      for (const item of toRemove) if (!removed.has(item.path)) skip(bucket, item, "storage did not remove it");
-      dropBackups(removed);
+      const confirmed = await Promise.all(
+        toRemove.map(async (item) => {
+          try {
+            const after = await storage.info(bucket, item.path);
+            return { item, gone: Boolean(after.missing) };
+          } catch (err) {
+            return { item, error: err };
+          }
+        }),
+      );
+      const done = [];
+      const stillThere = new Set();
+      const unsettled = [];
+      for (const { item, gone, error } of confirmed) {
+        if (error) {
+          unsettled.push(item);
+          log(`  ? ${bucket}/${item.path}: couldn't confirm the delete (${error.message}) — the next run settles it`);
+        } else if (gone) {
+          done.push(item);
+          if (!echoed.has(item.path)) log(`  (${bucket}/${item.path}: gone, though remove() didn't name it)`);
+        } else {
+          stillThere.add(item.path);
+          skip(bucket, item, "storage did not remove it");
+        }
+      }
+      // Keep the copy of everything deleted or unconfirmed; drop the copies
+      // of objects certainly still in storage (and of those the re-check kept).
+      const removing = new Set(toRemove.map((item) => item.path));
+      for (const [p, file] of backups) {
+        if (stillThere.has(p) || !removing.has(p)) rmSync(file, { force: true });
+      }
       appendManifest(manifestPath, done.map((item) => manifestEntry(target, bucket, item, run)));
       const bytes = done.reduce((n, item) => n + (Number(item.size) || 0), 0);
       result.deleted += done.length;
       result.bytes += bytes;
       state.deleted += done.length;
       state.bytes += bytes;
-      state.pending = null;
+      state.pending = unsettled.length ? { ...state.pending, items: unsettled } : null;
       saveState(statePath, state);
       for (const item of done) log(`  ✓ ${bucket}/${item.path}  ${formatBytes(Number(item.size) || 0)}`);
+      if (unsettled.length) {
+        result.failed.push({ bucket, paths: unsettled.map((item) => item.path), error: "delete not confirmed" });
+        break outer;
+      }
     }
   }
   return result;

@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
@@ -15,12 +15,18 @@ import {
   SWEEP_BUCKETS,
   URL_SOURCES,
   applySweep,
+  backupDirProblem,
   classify,
+  isServerMintedName,
   loadState,
+  plainMd5,
+  plannedBatches,
+  privateCardRenders,
   readManifest,
   reconcilePending,
   referenceKey,
   renderCardId,
+  sameEtag,
   saveState,
   scanReferences,
   stringVariants,
@@ -164,19 +170,39 @@ function fakeDb(db: Db, opts: { maxRows?: number; failOn?: string; onScan?: (n: 
 
 type Obj = { bucket: string; path: string; size: number; etag: string; createdAt: string; updatedAt: string; lastModified: string };
 
-function fakeStorage(objects: Obj[], opts: { removeFails?: boolean; downloadFails?: string } = {}) {
+type StorageOpts = {
+  removeFails?: boolean;
+  downloadFails?: string;
+  /** What remove() echoes back: the paths (default), nothing, or other names. */
+  echo?: "paths" | "none" | "renamed";
+  /** Paths remove() names as removed but leaves in place. */
+  sticky?: string[];
+  /** info() throws for these paths once a remove has run. */
+  lookupFailsAfterRemove?: string[];
+  /** How info() formats the eTag (the listing keeps the stored form). */
+  infoEtag?: (etag: string) => string;
+};
+
+function fakeStorage(objects: Obj[], opts: StorageOpts = {}) {
   const store = new Map(objects.map((o) => [`${o.bucket}/${o.path}`, { ...o }]));
+  let removed = false;
   return {
     store,
     removes: [] as string[][],
     async info(bucket: string, p: string) {
+      if (removed && opts.lookupFailsAfterRemove?.includes(p)) throw new Error("lookup timed out");
       const o = store.get(`${bucket}/${p}`);
-      return o ? { etag: o.etag, size: o.size, createdAt: o.createdAt, lastModified: o.updatedAt } : { missing: true };
+      return o
+        ? { etag: opts.infoEtag ? opts.infoEtag(o.etag) : o.etag, size: o.size, createdAt: o.createdAt, lastModified: o.updatedAt }
+        : { missing: true };
     },
     async remove(bucket: string, paths: string[]) {
       this.removes.push(paths.map((p) => `${bucket}/${p}`));
       if (opts.removeFails) throw new Error("gateway timeout");
-      const gone = paths.filter((p) => store.delete(`${bucket}/${p}`));
+      removed = true;
+      const gone = paths.filter((p) => opts.sticky?.includes(p) || store.delete(`${bucket}/${p}`));
+      if (opts.echo === "none") return [];
+      if (opts.echo === "renamed") return gone.map((p) => `${bucket}/${p}`);
       return gone;
     },
     async download(bucket: string, p: string) {
@@ -231,6 +257,54 @@ describe("object keys", () => {
     expect(stringVariants(url.replaceAll("/", "\\/"))).toContain(url.toLowerCase());
     // A malformed escape doesn't throw.
     expect(() => stringVariants(`%E0%A4%A ${url}`)).not.toThrow();
+  });
+
+  it("lower-cases AFTER decoding: a percent-encoded capital still meets its key (review 2026-09-29)", async () => {
+    // `%57` is `W`: decoding a lower-cased string left `W.png`, which missed
+    // the lower-cased index — the unsafe direction (a live pip looked
+    // unreferenced).
+    expect(stringVariants(`${U1}/%57.png`)).toContain(`${U1}/w.png`);
+    expect(stringVariants(`${U1}/%2557.png`)).toContain(`${U1}/w.png`); // encoded twice
+    const db = emptyDb();
+    db.custom_pips.rows.push({ id: "cp1", symbol: "W", image_url: `${pub("custom-pips", `${U1}/%57.png`)}?v=3` });
+    db.messages.rows.push({ id: "m1", body: `/_next/image?url=${encodeURIComponent(pub("card-art", `${U1}/%41rt.png`))}` });
+    const { referenced } = await scanReferences(fakeDb(db), new KeyIndex([`${U1}/W.png`, `${U1}/Art.png`]));
+    expect([...referenced].sort()).toEqual([`${U1}/art.png`, `${U1}/w.png`]);
+  });
+});
+
+describe("names the server makes (the dry run's review list)", () => {
+  it("accepts every shape the upload paths write today", () => {
+    const uuid = "0f1e2d3c-4b5a-4968-8776-655443322110";
+    for (const [bucket, name] of [
+      ["card-art", `${uuid}.jpg`],
+      ["card-art", `ai-${uuid}.png`],
+      ["card-art", `wm-${uuid}.webp`],
+      ["card-art", `remix-${uuid}.jpg`],
+      ["profile-media", `avatar-${uuid}.png`],
+      ["profile-media", `banner-${uuid}.webp`],
+      ["set-covers", `${uuid}.webp`],
+      ["card-renders", `${CARD_LIVE}.png`],
+      ["card-renders", `${CARD_LIVE}.thumb.webp`],
+      ["custom-pips", "W.png"],
+      ["custom-pips", "C.pending.png"],
+    ]) {
+      expect(isServerMintedName(bucket, `${U1}/${name}`), `${bucket}/${name}`).toBe(true);
+    }
+  });
+
+  it("flags anything else — a hand-picked name is what a direct pre-0126 upload looks like", () => {
+    for (const [bucket, name] of [
+      ["card-art", "my-photo.jpg"],
+      ["card-art", "abc.jpg"],
+      ["profile-media", "avatar.png"],
+      ["custom-pips", "X.png"],
+      ["custom-pips", `${CARD_LIVE}.png`],
+      ["card-art", "W.png"],
+    ]) {
+      expect(isServerMintedName(bucket, `${U1}/${name}`), `${bucket}/${name}`).toBe(false);
+    }
+    expect(isServerMintedName("card-art", "loose.jpg")).toBe(false);
   });
 });
 
@@ -509,6 +583,62 @@ describe("applySweep", () => {
     expect(readManifest(s.manifestPath).map((e: { path: string }) => e.path)).toEqual([`${U1}/still-orphan.jpg`]);
   });
 
+  it("compares eTags however each API quotes them (review 2026-09-29)", async () => {
+    const md5 = createHash("md5").update("x").digest("hex");
+    expect(sameEtag(`"${md5}"`, md5)).toBe(true);
+    expect(sameEtag(`W/"${md5.toUpperCase()}"`, `"${md5}"`)).toBe(true);
+    expect(sameEtag(`"${md5}"`, `"${"0".repeat(32)}"`)).toBe(false);
+    expect(sameEtag('"abc-3"', "abc-3")).toBe(true);
+    expect(sameEtag('"abc-3"', '"abc-4"')).toBe(false);
+    expect(sameEtag(null, null)).toBe(false);
+    expect(plainMd5(`W/"${md5}"`)).toBe(md5);
+    // The listing says `"<md5>"`, info() says `<md5>`: still the same object,
+    // so it IS deleted — a strict !== kept everything and deleted nothing.
+    const objects = [real("card-art", `${U1}/a.jpg`, 30, { etag: `"${md5}"` })];
+    const s = setup(objects, emptyDb(), {}, { infoEtag: (e) => e.replaceAll('"', "") });
+    expect((await s.run()).deleted).toBe(1);
+  });
+
+  it("trusts storage's own lookup after the delete, not the names remove() echoes", async () => {
+    const md5 = (text: string) => `"${createHash("md5").update(text).digest("hex")}"`;
+    const objects = ["a.jpg", "b.jpg", "c.jpg"].map((n) => real("card-art", `${U1}/${n}`, 30, { etag: md5(`bytes of card-art/${U1}/${n}`) }));
+    const backupDir = path.join(tmp, "backup-echo");
+    // remove() answers with names that aren't the requested paths, and names
+    // b.jpg as removed although it is still there.
+    const s = setup(objects, emptyDb(), {}, { echo: "renamed", sticky: [`${U1}/b.jpg`] });
+    const result = await s.run({ backupDir });
+    expect(result.deleted).toBe(2);
+    expect(readManifest(s.manifestPath).map((e: { path: string }) => e.path)).toEqual([`${U1}/a.jpg`, `${U1}/c.jpg`]);
+    expect(result.skipped).toEqual([{ bucket: "card-art", path: `${U1}/b.jpg`, why: "storage did not remove it" }]);
+    // The copies of what is gone stay; the copy of what is still there goes.
+    expect(existsSync(path.join(backupDir, "card-art", U1, "a.jpg"))).toBe(true);
+    expect(existsSync(path.join(backupDir, "card-art", U1, "c.jpg"))).toBe(true);
+    expect(existsSync(path.join(backupDir, "card-art", U1, "b.jpg"))).toBe(false);
+    expect(loadState(s.statePath)).toMatchObject({ pending: null, deleted: 2 });
+
+    // remove() echoing nothing at all: still logged by the lookup.
+    const quiet = setup([real("card-art", `${U2}/d.jpg`)], emptyDb(), {}, { echo: "none" });
+    expect((await quiet.run()).deleted).toBeGreaterThanOrEqual(1);
+    expect(readManifest(quiet.manifestPath).map((e: { path: string }) => e.path)).toContain(`${U2}/d.jpg`);
+  });
+
+  it("an unconfirmed delete stays pending with its copy; the next run settles it", async () => {
+    const md5 = (text: string) => `"${createHash("md5").update(text).digest("hex")}"`;
+    const objects = ["a.jpg", "b.jpg"].map((n) => real("card-art", `${U1}/${n}`, 30, { etag: md5(`bytes of card-art/${U1}/${n}`) }));
+    const backupDir = path.join(tmp, "backup-unsettled");
+    const s = setup(objects, emptyDb(), {}, { lookupFailsAfterRemove: [`${U1}/b.jpg`] });
+    const result = await s.run({ backupDir });
+    expect(result.deleted).toBe(1);
+    expect(result.failed).toEqual([{ bucket: "card-art", paths: [`${U1}/b.jpg`], error: "delete not confirmed" }]);
+    const state = loadState(s.statePath);
+    expect(state.pending.items.map((i: { path: string }) => i.path)).toEqual([`${U1}/b.jpg`]);
+    expect(existsSync(path.join(backupDir, "card-art", U1, "b.jpg"))).toBe(true);
+    // Next run: storage says it's gone → the manifest.
+    const settled = await reconcilePending({ storage: fakeStorage([]), state, statePath: s.statePath, manifestPath: s.manifestPath, target: "dev.example" });
+    expect(settled).toEqual({ gone: 1, present: 0 });
+    expect(readManifest(s.manifestPath).map((e: { path: string }) => e.path)).toEqual([`${U1}/a.jpg`, `${U1}/b.jpg`]);
+  });
+
   it("stops at --limit, and a re-run picks up the rest", async () => {
     const objects = [real("card-art", `${U1}/a.jpg`), real("card-art", `${U1}/b.jpg`), real("card-art", `${U1}/c.jpg`)];
     const s = setup(objects);
@@ -579,6 +709,73 @@ describe("applySweep", () => {
     expect(loadState(file)).toMatchObject({ version: 1, target: "x", deleted: 3, pending: null });
   });
 });
+
+// --- the run plan, backups, private renders -------------------------------------------------
+
+describe("plannedBatches — the full database reads an --apply run makes", () => {
+  const o = (bucket: string, n: number) => Array.from({ length: n }, (_, i) => ({ bucket, path: `${U1}/${i}.png` }));
+  it("one per batch, one bucket per batch, capped by --limit", () => {
+    const candidates = [...o("card-art", 1000), ...o("profile-media", 30)];
+    expect(plannedBatches(candidates, 25)).toBe(40 + 2);
+    expect(plannedBatches(candidates, 100)).toBe(10 + 1);
+    expect(plannedBatches(candidates, 25, 60)).toBe(3);
+    expect(plannedBatches([], 25)).toBe(0);
+  });
+});
+
+describe("backupDirProblem — users' images never land in a (public) repository", () => {
+  it("refuses a directory inside this checkout, or inside any git working tree", () => {
+    expect(backupDirProblem(path.join(ROOT, "sweep-backups"), ROOT)).toMatch(/inside this repository/);
+    expect(backupDirProblem(path.join(ROOT, "scripts", "not-yet", "there"), ROOT)).toMatch(/inside this repository/);
+    const other = mkdtempSync(path.join(os.tmpdir(), "sweep-git-"));
+    try {
+      spawnSyncGit(other);
+      expect(backupDirProblem(path.join(other, "copies"), ROOT)).toMatch(/inside the git working tree/);
+    } finally {
+      rmSync(other, { recursive: true, force: true });
+    }
+  });
+
+  it("accepts a directory outside any repository", () => {
+    const dir = mkdtempSync(path.join(os.tmpdir(), "sweep-backup-ok-"));
+    try {
+      expect(backupDirProblem(path.join(dir, "2026-09-29"), ROOT)).toBeNull();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("renders of private cards (a privacy follow-up the dry run lists)", () => {
+  it("the scan collects private card ids, and their renders are listed whatever their verdict", async () => {
+    const db = emptyDb();
+    db.cards.columns.visibility = "text";
+    db.cards.rows.push(
+      { id: CARD_LIVE, visibility: "private", rendered_image_url: pub("card-renders", `${U1}/${CARD_LIVE}.png`) },
+      { id: CARD_GONE, visibility: "public" },
+    );
+    const scan = await scanReferences(fakeDb(db), new KeyIndex([`${U1}/${CARD_LIVE}.png`]));
+    expect([...scan.privateCardIds]).toEqual([CARD_LIVE]);
+    const objects = [
+      obj("card-renders", `${U1}/${CARD_LIVE}.png`),
+      obj("card-renders", `${U1}/${CARD_LIVE}.thumb.webp`),
+      obj("card-renders", `${U1}/${CARD_GONE}.png`),
+      obj("card-art", `${U1}/${CARD_LIVE}.png`),
+    ];
+    const classified = classify(objects, { referenced: scan.referenced, cardIds: scan.cardIds, now: NOW, minAgeDays: MIN_AGE_DAYS });
+    expect(privateCardRenders(classified, scan.privateCardIds).map((o: Obj) => o.path)).toEqual([
+      `${U1}/${CARD_LIVE}.png`,
+      `${U1}/${CARD_LIVE}.thumb.webp`,
+    ]);
+    // …and none of them is ever an orphan.
+    expect(classified.filter((o: { verdict: string }) => o.verdict === "orphan").map((o: Obj) => o.path)).toEqual([]);
+  });
+});
+
+function spawnSyncGit(dir: string) {
+  const r = spawnSync("git", ["init", "-q", dir]);
+  if (r.status !== 0) throw new Error("git init failed");
+}
 
 // --- the CLI against a fake Supabase ------------------------------------------------------
 
@@ -725,6 +922,18 @@ describe("scripts/sweep-storage-orphans.mjs against a fake Supabase", () => {
     if (tmp) rmSync(tmp, { recursive: true, force: true });
   });
 
+  it("refuses a --backup-dir inside the repository (it is public; the copies are users' images)", async () => {
+    const inRepo = path.join(ROOT, "tmp-sweep-backup");
+    try {
+      const { code, out } = await run([...common(), "--apply", "--backup-dir", inRepo], "yes\n");
+      expect(code).toBe(1);
+      expect(out).toMatch(/--backup-dir: .*inside this repository/);
+      expect(existsSync(inRepo)).toBe(false);
+    } finally {
+      rmSync(inRepo, { recursive: true, force: true }); // never leave copies in the checkout
+    }
+  });
+
   it("refuses production without the prompt, frames/card-exports, and an age under 7 days", async () => {
     expect((await run(["--env-file", path.join(tmp, "prod-env")])).out).toMatch(/points at PRODUCTION/);
     expect((await run(["--target", "prod"], "sb_secret_typed_into_a_pipe\n")).out).toMatch(/hidden prompt/);
@@ -751,6 +960,9 @@ describe("scripts/sweep-storage-orphans.mjs against a fake Supabase", () => {
     }
     expect(out).toMatch(/Total: 5 orphan\(s\), [\d.]+ [KM]?B reclaimable\./);
     expect(out).toMatch(/Dry run: nothing deleted/);
+    // For review, listed only: hand-picked names (every fixture here is one).
+    expect(out).toMatch(/Review — \d+ user-folder object\(s\) with a name the server doesn't make today/);
+    expect(out).toContain(`card-art/${U1}/draft.jpg`);
     expect([...store.keys()].sort()).toEqual(before);
   });
 
@@ -774,6 +986,9 @@ describe("scripts/sweep-storage-orphans.mjs against a fake Supabase", () => {
     const { code, out } = await run([...common(), "--apply", "--batch-size", "2", "--backup-dir", backupDir], "yes\n");
     openApiHook = undefined;
     expect(code).toBe(0);
+    // It says how many full database reads the run costs before "yes":
+    // card-art 2 → 1 batch, profile-media 1 → 1, card-renders 2 → 1.
+    expect(out).toMatch(/3 batch\(es\) of up to 2 → 3 full read\(s\) of every table/);
     expect(out).toMatch(/appears-later\.jpg: a row references it now — kept/);
     expect(out).toMatch(/Deleted 4 object\(s\)/);
     for (const gone of [`card-art/${U1}/orphan.jpg`, `profile-media/${U2}/avatar-old.png`, `card-renders/${U1}/${CARD_GONE}.png`, `card-renders/${U1}/${CARD_GONE}.thumb.webp`]) {
