@@ -3,10 +3,11 @@
 import "server-only";
 
 import sharp from "sharp";
-import { createClient, getCurrentUser } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { scanImageUrl } from "@/lib/moderation/image-scan";
 import { prepareUploadBytes } from "@/lib/media/upload-bytes";
+import { isUserStorageConfigured, userFolder } from "@/lib/media/user-storage";
 import { randomId } from "@/lib/ids";
 
 // ---------------------------------------------------------------------------
@@ -26,8 +27,10 @@ import { randomId } from "@/lib/ids";
 //      the bake draws what the creator showed (TODO 3.14) — and camera
 //      metadata (EXIF incl. GPS, XMP, IPTC…) stripped without touching the
 //      pixels (lib/media/upload-bytes.ts, TODO 3.14a).
-//   6. Storage upload via the user's Supabase session — RLS still binds
-//      the destination to `card-art/{userId}/...`.
+//   6. Storage upload with the service role into `card-art/{userId}/...`,
+//      the folder forced from the session's user id (lib/media/user-
+//      storage.ts). Users hold no storage write policy since migration
+//      0126, so this action — strip + scan included — is the only way in.
 //
 // Why this matters: the bucket policy validates the DECLARED Content-Type
 // header, not the file bytes. Before this server-side check, a client
@@ -67,14 +70,17 @@ export type UploadArtServerResult =
 
 /**
  * Server action — accepts a FormData with a single `file` field, validates
- * the bytes via Sharp, uploads to `card-art/{userId}/...` via the user's
- * Supabase session, and returns the public URL.
+ * the bytes via Sharp, uploads to `card-art/{userId}/...` with the service
+ * role (the folder forced from the session), and returns the public URL.
  */
 export async function uploadCardArtServerAction(
   formData: FormData,
 ): Promise<UploadArtServerResult> {
   if (!isSupabaseConfigured()) {
     return { ok: false, error: "Supabase is not configured." };
+  }
+  if (!isUserStorageConfigured()) {
+    return { ok: false, error: "Uploads aren't available right now." };
   }
 
   const user = await getCurrentUser();
@@ -139,42 +145,37 @@ export async function uploadCardArtServerAction(
     return { ok: false, error: "That doesn't look like a valid image." };
   }
 
-  // Storage upload. The same `card-art/{userId}/{uuid}.{ext}` layout as
-  // the client-side path, so the bucket's RLS write policy
-  // (`auth.uid()::text = (storage.foldername(name))[1]`) continues to
-  // gate writes.
+  // Storage upload: `card-art/{userId}/{uuid}.{ext}`, written with the
+  // service role into the folder of the user this action authenticated.
   const ext = EXTENSION_BY_FORMAT[format] ?? "bin";
-  const id = randomId();
-  const path = `${user.id}/${id}.${ext}`;
+  const name = `${randomId()}.${ext}`;
+  const art = userFolder("card-art", user.id);
 
-  const supabase = await createClient();
-  const { error } = await supabase.storage
-    .from("card-art")
-    .upload(path, stored, {
-      cacheControl: "3600",
-      // Use Sharp's detected MIME, not the client-declared one, so the
-      // stored object's Content-Type reflects reality.
-      contentType: CONTENT_TYPE_BY_FORMAT[format] ?? "application/octet-stream",
-      upsert: false,
-    });
+  const { error } = await art.upload(name, stored, {
+    cacheControl: "3600",
+    // Use Sharp's detected MIME, not the client-declared one, so the
+    // stored object's Content-Type reflects reality.
+    contentType: CONTENT_TYPE_BY_FORMAT[format] ?? "application/octet-stream",
+    upsert: false,
+  });
 
   if (error) {
     return { ok: false, error: error.message };
   }
 
-  const { data } = supabase.storage.from("card-art").getPublicUrl(path);
+  const publicUrl = art.publicUrl(name);
 
   // NSFW auto-scan. scanImageUrl fails open (missing key / API error → not
   // flagged) so a moderation hiccup never blocks uploads; a positive flag
   // removes the just-uploaded object and rejects the upload.
-  const scan = await scanImageUrl(data.publicUrl);
+  const scan = await scanImageUrl(publicUrl);
   if (scan.flagged) {
-    await supabase.storage.from("card-art").remove([path]);
+    await art.remove([name]);
     return {
       ok: false,
       error: "That image was flagged by our content filter and can't be uploaded.",
     };
   }
 
-  return { ok: true, publicUrl: data.publicUrl, path };
+  return { ok: true, publicUrl, path: art.path(name) };
 }

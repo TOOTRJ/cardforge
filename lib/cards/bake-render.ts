@@ -6,6 +6,8 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { fileNameInFolder, isUserStorageConfigured } from "@/lib/media/user-storage";
 import { renderCardImage } from "@/lib/render/card-image";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { cardRenderPath } from "@/lib/cards/storage-paths";
@@ -34,7 +36,9 @@ import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
 // Path layout: card-renders/{owner_id}/{card_id}.png
 //   * single object per card, overwritten on every save
 //   * cache-busted via a `?v={timestamp}` query string on the stored URL
-//   * RLS (migration 0021) restricts writes to the card owner
+//   * written (and removed) with the SERVICE ROLE, in the verified owner's
+//     folder only: users hold no storage write policy since migration 0126,
+//     so nobody can put their own picture where the watermarked bake goes
 // ---------------------------------------------------------------------------
 
 type BakeRenderResult =
@@ -86,8 +90,9 @@ async function bakeCardRender(
   // `after()` — a post-response context where Supabase's `auth.getUser()` can
   // trigger a token refresh whose rotated cookies are dropped, which silently
   // invalidates the user's session (logging them out after a save). Reading
-  // rows/storage with the request-scoped client below never refreshes auth, so
-  // avoiding the auth call here keeps the deferred bake session-safe.
+  // rows with the request-scoped client below never refreshes auth (storage
+  // goes through the service role), so avoiding the auth call here keeps the
+  // deferred bake session-safe.
   if (!ownerId) {
     return { ok: false, error: "Missing owner." };
   }
@@ -111,6 +116,12 @@ async function bakeCardRender(
   }
 
   const path = cardRenderPath(ownerId, card.id);
+  // The card row was read above and belongs to `ownerId` (the caller's
+  // authenticated user): the object key is that user's folder, nothing else.
+  if (!isUserStorageConfigured() || !fileNameInFolder(ownerId, path)) {
+    return { ok: false, error: "Render storage is unavailable." };
+  }
+  const storage = createAdminClient();
 
   // A private card must not leave its render in the public-read card-renders
   // bucket — that PNG is the full card image. Skip the bake and remove any
@@ -119,8 +130,8 @@ async function bakeCardRender(
   // (Art is intentionally NOT removed here — remixes copy art_url, so the art
   // object can be shared; its random-id path is also never publicly exposed.)
   if (card.visibility === "private") {
-    await removeRenderObject(supabase, path);
-    await removeRenderObject(supabase, renderThumbPath(path));
+    await removeRenderObject(storage, path);
+    await removeRenderObject(storage, renderThumbPath(path));
     return { ok: true, renderedImageUrl: null, renderedThumbUrl: null };
   }
 
@@ -170,7 +181,7 @@ async function bakeCardRender(
     return { ok: false, error: "Superseded by a newer save.", superseded: true };
   }
 
-  const uploaded = await uploadRenderObjects(supabase, path, pngBytes, cardId);
+  const uploaded = await uploadRenderObjects(storage, path, pngBytes, cardId);
   if (!uploaded.ok) return uploaded;
   return { ...uploaded, bakedFrom: card.updated_at };
 }

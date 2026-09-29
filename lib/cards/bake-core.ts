@@ -99,8 +99,10 @@ export function rowToPreviewData(
 // Bucket plumbing shared by the same two callers.
 // ---------------------------------------------------------------------------
 
-/** Any server-side client that may write the bucket: the owner's cookie-bound
- *  client (save bake) or the service role (admin sweep). */
+/** The service-role client — the only one that may write the bucket (users
+ *  hold no storage write policy since migration 0126). The save bake
+ *  (lib/cards/bake-render.ts) passes it with the verified owner's path; the
+ *  admin sweep with the path of the card row it read. */
 export type RenderStorageClient = SupabaseClient<Database>;
 
 /**

@@ -38,6 +38,12 @@ import { bakeAndPersistCardRender } from "@/lib/cards/bake-render";
 import { addCustomCardEntryToDeck } from "@/lib/decks/membership";
 import { cardRenderPath } from "@/lib/cards/storage-paths";
 import {
+  fileNameInFolder,
+  isUserStorageConfigured,
+  userFolder,
+  type UserStorageResult,
+} from "@/lib/media/user-storage";
+import {
   purgeHiddenCard,
   purgeHiddenCards,
   revalidateCardListSurfaces,
@@ -178,6 +184,26 @@ async function ensureUniqueSlugForUser(
 function renderObjectPaths(ownerId: string, cardId: string): string[] {
   const png = cardRenderPath(ownerId, cardId);
   return [png, renderThumbPath(png)];
+}
+
+/** Delete these cards' render objects from `ownerId`'s card-renders folder.
+ *  Service role (users hold no storage write policy since migration 0126):
+ *  every caller passes its authenticated user and cards it has just checked
+ *  that user owns, and the keys can only resolve inside that folder. */
+async function removeCardRenders(
+  ownerId: string,
+  cardIds: string[],
+): Promise<UserStorageResult> {
+  if (!isUserStorageConfigured()) {
+    return { error: { message: "Render storage is unavailable." } };
+  }
+  const names = cardIds
+    .flatMap((id) => renderObjectPaths(ownerId, id))
+    .map((path) => fileNameInFolder(ownerId, path));
+  if (names.some((name) => name === null)) {
+    return { error: { message: "Invalid render path." } };
+  }
+  return userFolder("card-renders", ownerId).remove(names as string[]);
 }
 
 /** A remix changes what its PARENT's page shows (remix count, "Top
@@ -822,9 +848,7 @@ export async function deleteCardAction(
   // (best-effort; the render path is per-card, so this never touches another
   // card's render). Art is left alone — remixes copy art_url, so it can be
   // shared.
-  await supabase.storage
-    .from("card-renders")
-    .remove(renderObjectPaths(existing.owner_id, cardId));
+  await removeCardRenders(existing.owner_id, [cardId]);
 
   const ownerUsername = await getCurrentUsername();
   await purgeHiddenCard({ id: cardId, slug: existing.slug }, ownerUsername);
@@ -1019,15 +1043,12 @@ export async function updateCardsVisibilityAction(
     // path is deterministic and the bucket is public-read, so a leftover PNG
     // stays fetchable for a card the DB now reports as having no render.
     // (Mirrors removeRenderObject in lib/cards/bake-render.ts.)
-    const paths = targetIds.flatMap((id) => renderObjectPaths(user.id, id));
     for (let attempt = 1; attempt <= 2; attempt += 1) {
-      const { error: removeErr } = await supabase.storage
-        .from("card-renders")
-        .remove(paths);
+      const { error: removeErr } = await removeCardRenders(user.id, targetIds);
       if (!removeErr) break;
       if (attempt === 2) {
         console.error(
-          `[bulk-visibility] Could not delete ${paths.length} render object(s) after a retry: ${removeErr.message}. Those PNGs may remain publicly fetchable for now-private cards.`,
+          `[bulk-visibility] Could not delete ${targetIds.length * 2} render object(s) after a retry: ${removeErr.message}. Those PNGs may remain publicly fetchable for now-private cards.`,
         );
       }
     }
@@ -1129,9 +1150,7 @@ export async function deleteCardsAction(
 
   // Remove the deleted cards' baked renders + thumbnails from the public
   // bucket (best-effort).
-  await supabase.storage
-    .from("card-renders")
-    .remove(ids.flatMap((id) => renderObjectPaths(user.id, id)));
+  await removeCardRenders(user.id, ids);
 
   await purgeHiddenCards(ids);
 

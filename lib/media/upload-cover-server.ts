@@ -3,19 +3,21 @@
 import "server-only";
 
 import sharp from "sharp";
-import { createClient, getCurrentUser } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { scanImageUrl } from "@/lib/moderation/image-scan";
 import { prepareUploadBytes } from "@/lib/media/upload-bytes";
+import { isUserStorageConfigured, userFolder } from "@/lib/media/user-storage";
 
 // ---------------------------------------------------------------------------
 // Moderated upload for the `set-covers` bucket — deck covers and custom card
 // set icons (the bucket keeps its historical name; the sets feature itself was
 // removed 2026-09-22). Mirrors lib/cards/upload-art-server.ts: the bytes are
 // validated with Sharp (never the client-declared MIME), stored under the
-// caller's own folder (the bucket RLS demands it), then run through the same
-// NSFW scan as card art. Until 2026-09-21 these went browser → storage with
-// no scan at all — a deck cover is public the moment the deck is.
+// caller's own folder (service-role write, folder forced from the session —
+// lib/media/user-storage.ts), then run through the same NSFW scan as card
+// art. Until 2026-09-21 these went browser → storage with no scan at all — a
+// deck cover is public the moment the deck is.
 // ---------------------------------------------------------------------------
 
 const MAX_BYTES = 5 * 1024 * 1024; // matches the bucket's file_size_limit
@@ -40,7 +42,7 @@ export type UploadCoverServerResult =
 export async function uploadCoverServerAction(
   formData: FormData,
 ): Promise<UploadCoverServerResult> {
-  if (!isSupabaseConfigured()) {
+  if (!isSupabaseConfigured() || !isUserStorageConfigured()) {
     return { ok: false, error: "Uploads aren't configured." };
   }
   const user = await getCurrentUser();
@@ -75,27 +77,27 @@ export async function uploadCoverServerAction(
     return { ok: false, error: "That doesn't look like an image." };
   }
 
-  const path = `${user.id}/${crypto.randomUUID()}.${EXTENSION_BY_FORMAT[format]}`;
-  const supabase = await createClient();
-  const { error } = await supabase.storage.from("set-covers").upload(path, stored, {
+  const name = `${crypto.randomUUID()}.${EXTENSION_BY_FORMAT[format]}`;
+  const covers = userFolder("set-covers", user.id);
+  const { error } = await covers.upload(name, stored, {
     cacheControl: "3600",
     contentType: CONTENT_TYPE_BY_FORMAT[format],
     upsert: false,
   });
   if (error) return { ok: false, error: error.message };
 
-  const { data } = supabase.storage.from("set-covers").getPublicUrl(path);
+  const publicUrl = covers.publicUrl(name);
 
   // Fails open on a missing key / API error (a moderation hiccup never blocks
   // uploads); a positive flag removes the object and rejects the upload.
-  const scan = await scanImageUrl(data.publicUrl);
+  const scan = await scanImageUrl(publicUrl);
   if (scan.flagged) {
-    await supabase.storage.from("set-covers").remove([path]);
+    await covers.remove([name]);
     return {
       ok: false,
       error: "That image was flagged by our content filter and can't be uploaded.",
     };
   }
 
-  return { ok: true, publicUrl: data.publicUrl, path };
+  return { ok: true, publicUrl, path: covers.path(name) };
 }
