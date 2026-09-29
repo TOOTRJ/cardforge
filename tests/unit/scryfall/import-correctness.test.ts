@@ -716,6 +716,41 @@ describe("the signature registry's landings (TODO 1.4)", () => {
     expect(signature("t2xm-4").frame_match?.template).toBe("m15token");
   });
 
+  it("a token with text that PipGlyph has no frame of its own for lands on the text box too, never its text on the scrim (4.49 (b))", () => {
+    // The printings as they are, with text on them (a borderless ONE
+    // Jumpstart token, a Zendikar token re-dated to the 1993 border): the
+    // box follows the text on every token route, not only the 2014–19 arch.
+    const withText = (key: keyof typeof signaturePrintings, extra: Record<string, unknown>) =>
+      mapScryfallToFormPatch(scryfallCardSchema.parse({ ...signaturePrintings[key], ...extra }));
+    // Borderless (4.37): the nearest is the bordered arch its text and type
+    // words pick — the box, and for a Treasure the artifact box.
+    const borderless = withText("wone-1", { oracle_text: "Vigilance" });
+    expect(borderless.frame_match).toMatchObject({ status: "nearest", template: "m15tokentext" });
+    expect(landing(borderless)).toEqual({ template: "m15tokentext", colorKey: "w", status: "exact" });
+    const borderlessTreasure = withText("wone-1", {
+      type_line: "Token Artifact — Treasure",
+      oracle_text: "{T}, Sacrifice this artifact: Add one mana of any color.",
+      power: undefined,
+      toughness: undefined,
+    });
+    expect(borderlessTreasure.frame_match?.template).toBe("m15tokenartifacttext");
+    // …a borderless vanilla token keeps the textless arch.
+    expect(withText("wone-1", {}).frame_match?.template).toBe("m15token");
+    // An Alpha token (its own frame, unverified on production): the M15
+    // fallback follows the text — the box, then its textless dress while the
+    // box isn't verified in the colour.
+    const alpha = withText("tzen-3", { frame: "1993", oracle_text: "Flying" });
+    expect(alpha.frame_template).toBe("alphatoken");
+    expect(landing(alpha)).toEqual({ template: "m15tokentext", colorKey: "w", status: "frame-switched" });
+    const noBox = new Set([...PROD_VERIFIED].filter((key) => !/^m15token(artifact)?text\//.test(key)));
+    expect(landing(alpha, noBox)).toEqual({ template: "m15token", colorKey: "w", status: "frame-switched" });
+    expect(landing(withText("tzen-3", { frame: "1993" }))).toEqual({
+      template: "m15token",
+      colorKey: "w",
+      status: "frame-switched",
+    });
+  });
+
   it("a verified full-art basic lands on it; an unverified one falls back to the land frame", () => {
     // Built explicitly both ways, so the test holds whether or not seed.sql
     // (which mirrors production) lists the full-art basics as verified yet.

@@ -282,8 +282,8 @@ Rules and gotchas:
   pick, which sticks, as does a stored frame that disagrees with its text),
   the registry (tall box = pinned `TALL_BOX_TOKEN_PINS`, nearest, 4.55;
   unverified → `TEXT_BOX_TOKEN_FALLBACK`), `resolveGeneratedFrame` and the
-  remix (`autoTokenTextBoxFrame`); 0129 moved stored non-land cards with
-  text off the textless pair (null stamp, no bump). The textless pair's
+  remix (`autoTokenTextBoxFrame`); 0129 moved stored non-land, non-preview
+  cards with text off the textless pair (null stamp, no bump). The textless pair's
   scrim is ONLY the fallback for text left on them. A
   later bump whose slots move on fewer templates than its bakes change on
   lists them in `VERIFICATION_TEMPLATE_SCOPES`; legacy ticks

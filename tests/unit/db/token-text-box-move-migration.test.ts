@@ -62,11 +62,13 @@ type Row = {
   card_type: string | null;
   rules_text: string | null;
   flavor_text: string | null;
+  /** cards.frame_preview (0121, NOT NULL default false). */
+  frame_preview?: boolean;
 };
 function migrated(row: Row): string | null {
   const pairs = new Map(casePairs());
   const target = row.template ? pairs.get(row.template) : undefined;
-  if (!target || row.card_type === "land") return null;
+  if (!target || row.card_type === "land" || row.frame_preview) return null;
   const text = (row.rules_text ?? "") + (row.flavor_text ?? "");
   return textPattern().test(text) ? target : null;
 }
@@ -107,6 +109,12 @@ describe("0129 — stored cards with text move to the text-box token frames", ()
       }
     }
     expect(where).toContain("frame_style ->> 'template' in ('m15token', 'm15tokenartifact')");
+  });
+
+  it("leaves an admin's frame preview on the combo it previews (TODO 2.3)", () => {
+    // A preview is the evidence for its (template, colour), listed under that
+    // template in /admin/frame-compare; the creator pins it the same way.
+    expect(where).toContain("and not frame_preview");
   });
 
   it("leaves a land alone (the renderers print none of a basic land's text) — and only a land", () => {
@@ -159,15 +167,19 @@ describe("0129 — stored cards with text move to the text-box token frames", ()
     { template: "m15token", card_type: "creature", rules_text: "Flying", flavor_text: null, after: "m15tokentext" },
     { template: "m15token", card_type: null, rules_text: "Flying", flavor_text: null, after: "m15tokentext" },
     { template: "m15token", card_type: "land", rules_text: "{T}: Add {C}.", flavor_text: null, after: null },
+    // An admin's frame preview stays on the combo it previews.
+    { template: "m15token", card_type: "token", rules_text: "Flying", flavor_text: null, frame_preview: true, after: null },
+    { template: "m15tokenartifact", card_type: "token", rules_text: null, flavor_text: "Shiny.", frame_preview: true, after: null },
+    { template: "m15token", card_type: "token", rules_text: "Flying", flavor_text: null, frame_preview: false, after: "m15tokentext" },
   ];
   for (const [index, row] of ROWS.entries()) {
-    it(`row ${index + 1}: ${row.template ?? "{}"} ${row.card_type ?? "null"} ${JSON.stringify(row.rules_text)} / ${JSON.stringify(row.flavor_text)}`, () => {
+    it(`row ${index + 1}: ${row.template ?? "{}"} ${row.card_type ?? "null"} ${JSON.stringify(row.rules_text)} / ${JSON.stringify(row.flavor_text)}${row.frame_preview ? " (frame preview)" : ""}`, () => {
       expect(migrated(row)).toBe(row.after);
       // The app agrees: a moved row is exactly a non-land on a textless
       // token frame with text the renderers would draw.
       const onTextless = row.template === "m15token" || row.template === "m15tokenartifact";
       const draws = hasRulesBoxText({ rulesText: row.rules_text, flavorText: row.flavor_text });
-      expect(migrated(row) !== null).toBe(onTextless && row.card_type !== "land" && draws);
+      expect(migrated(row) !== null).toBe(onTextless && row.card_type !== "land" && !row.frame_preview && draws);
       if (row.after) expect(row.after).toBe(textBoxFrameFor("token", row.template as FrameTemplate, true));
     });
   }

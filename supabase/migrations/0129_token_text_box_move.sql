@@ -41,6 +41,11 @@
 --     be a basic land, so for it "has text" is exactly the renderers' test.
 --     A land left on a textless token frame keeps what it prints today (the
 --     scrim's fallback below for a nonbasic's text). 0 public rows.
+--   * never an admin's FRAME PREVIEW (cards.frame_preview, 0121): it is the
+--     evidence for the combo it was saved on, listed under that template in
+--     /admin/frame-compare, so it stays on it — the creator's walk-through
+--     and its edits pin the frame the same way. Always private (0 public
+--     rows); the owner's count names them.
 -- A card with no text stays on the textless frame, which prints none.
 --
 -- Production, 2026-09-29 (anonymous REST, public rows only — RLS hides the
@@ -52,13 +57,13 @@
 -- template; the same WHERE as below).
 --
 -- The textless frames keep their scrim, as a FALLBACK: after this, no stored
--- card on them has text (the public ones, and every private one this WHERE
--- matches), and new ones get text only by a hand-picked variation (the
--- creator's choice sticks, owner decision 5) or an older client's save — the
--- text then stays readable on the scrim instead of being lost or set
--- straight on the art. No renderer changes in this release, so no
--- CARD_LAYOUT_VERSION bump: a moved card's bake changes because its frame
--- does, which the null stamp below covers.
+-- card on them has text but a land's or a frame preview's (the public ones,
+-- and every private one this WHERE matches), and new ones get text only by a
+-- hand-picked variation (the creator's choice sticks, owner decision 5), a
+-- frame preview or an older client's save — the text then stays readable on
+-- the scrim instead of being lost or set straight on the art. No renderer
+-- changes in this release, so no CARD_LAYOUT_VERSION bump: a moved card's
+-- bake changes because its frame does, which the null stamp below covers.
 --
 -- The same statement sets layout_version = NULL on exactly these rows (the
 -- 0117 / 0128 pattern). A null stamp owes a platform re-bake that the
@@ -106,5 +111,6 @@ set
   layout_version = null
 where frame_style ->> 'template' in ('m15token', 'm15tokenartifact')
   and card_type is distinct from 'land'
+  and not frame_preview
   and (coalesce(rules_text, '') || coalesce(flavor_text, ''))
     ~ '[^\u0009\u000A\u000B\u000C\u000D\u0020\u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF]';

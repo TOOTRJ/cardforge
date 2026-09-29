@@ -1550,6 +1550,34 @@ describe("4.49 (b) the token text box follows the text", () => {
     expect(preview().template).toBe("m15tokentext");
   });
 
+  it("an admin's saved frame preview keeps the combo it previews, whatever its text does", async () => {
+    // TODO 2.3: the card previews m15token/w — text typed into it never
+    // moves it onto the text box (nor migration 0129: it skips previews).
+    renderForm({
+      mode: "edit",
+      verifiedFrameKeys: WITH_TEXT_BOX,
+      card: savedCard({
+        title: "Soldier",
+        card_type: "token",
+        supertype: "Creature",
+        subtypes: ["Soldier"],
+        power: "1",
+        toughness: "1",
+        cost: null,
+        rules_text: null,
+        flavor_text: null,
+        color_identity: ["white"],
+        frame_style: { finish: "regular", template: "m15token" },
+        frame_preview: true,
+      }),
+    });
+    await goToText();
+    await typeFlavour("Hold the line.");
+    expect(preview().template).toBe("m15token");
+    await typeFlavour("");
+    expect(preview().template).toBe("m15token");
+  });
+
   async function goToText() {
     await act(async () => {
       fireEvent.click(screen.getAllByTitle("Go to Text & stats")[0]);

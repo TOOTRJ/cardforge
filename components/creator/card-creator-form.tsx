@@ -911,18 +911,22 @@ export function CardCreatorForm({
   // card whose frame disagrees with its text — sticks. A Frame-section pick
   // of the arch goes back to automatic. An import or an AI fill that names
   // its frame decides it itself (settleTokenTextFollow). Never an unverified
-  // combo: the card keeps its frame and says so.
+  // combo: the card keeps its frame and says so. Nor an admin's saved frame
+  // preview (TODO 2.3): it previews its frame, so an edit of its text never
+  // moves it to another combo — the walk-through's rule, and migration
+  // 0129's (it leaves frame previews where they are).
   const tokenTextPresent = hasRulesBoxText({
     rulesText: watched.rules_text,
     flavorText: watched.flavor_text,
   });
+  const tokenFramePinned = isEdit && card?.frame_preview === true;
   const lastTokenTextRef = useRef({ kind, text: tokenTextPresent });
   const manualTokenFrameRef = useRef(false);
   useEffect(() => {
     const prev = lastTokenTextRef.current;
     if (prev.kind === kind && prev.text === tokenTextPresent) return;
     lastTokenTextRef.current = { kind, text: tokenTextPresent };
-    if (!isDirty || kind !== "token") return;
+    if (!isDirty || kind !== "token" || tokenFramePinned) return;
     const current = normalizeFrameTemplate(getValues("frame_style.template"));
     let next: FrameTemplate | null;
     if (prev.kind !== "token") {
@@ -949,6 +953,7 @@ export function CardCreatorForm({
     kind,
     tokenTextPresent,
     isDirty,
+    tokenFramePinned,
     getValues,
     setValue,
     verifiedFrameKeys,

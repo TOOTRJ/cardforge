@@ -463,27 +463,33 @@ Artifact word, `tokenFrameFor`), and every writer follows it:
   the arch is automatic again. It runs while revising a saved card too (the
   text isn't locked there); an import or an AI fill that wrote the frame, and
   the admin walk-through's combo under test, settle it
-  (`settleTokenTextFollow`). An unverified variation is never written: the
-  card keeps its frame and a toast says so. The AI fill dialog no longer
-  offers the text box (the text it writes picks it);
-- the import: the registry's `archTokenFrame` already picks by the
-  printing's text;
+  (`settleTokenTextFollow`), and an admin's saved frame preview never
+  follows (it previews its combo). An unverified variation is never
+  written: the card keeps its frame and a toast says so. The AI fill dialog
+  no longer offers the text box (the text it writes picks it);
+- the import: the registry's `archTokenFrame` picks by the printing's text
+  (the 2015 arch, the 1997 / 2003 tokens, and a borderless token's
+  `nearest` — `borderless/token` is the m15 family's pick), and a token
+  whose own frame isn't published (an Alpha token) falls back to the arch
+  its text and type words pick (`importFrameCandidates`: `tokenFrameFor`,
+  then its textless dress);
 - the AI jobs: `resolveGeneratedFrame` prefers the variation the generated
   text picks (a request for either one means that one; while it isn't
   published, the textless arch asked for), and the deck remix saves the one
   its FINAL text picks (`autoTokenTextBoxFrame` — the AI's flavour replaces
   the printing's);
 - stored cards: migration 0129 moved every non-land card with text from
-  m15token / m15tokenartifact to its text-box variation (only the
+  m15token / m15tokenartifact to its text-box variation — never an admin's
+  frame preview (0121), which stays on the combo it previews (only the
   `template` key; a null stamp, so the automatic re-bake draws the box — 33
   public cards on 2026-09-29, all on m15token). No layout bump: the
   renderers didn't change, and the templates were live before the move.
 
 The textless frames keep their scrim (`rules.backdropHex`) as a FALLBACK: it
 draws only when there is text (as it always did), which after 0129 is only a
-card whose owner picked the textless variation by hand over text, or one an
-older client saved — its text stays readable instead of being lost or set
-straight on the art.
+card whose owner picked the textless variation by hand over text, a frame
+preview, a land, or one an older client saved — its text stays readable
+instead of being lost or set straight on the art.
 
 TSOI #11 Clue prints the TALL box (type bar ~56 %H, no CC source: its own
 item, 4.55, P3) and is not a reference. The registry pins the 21 arch printings with
