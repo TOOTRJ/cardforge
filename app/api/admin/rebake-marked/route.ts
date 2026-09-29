@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -5,6 +6,12 @@ import { getCurrentProfile } from "@/lib/supabase/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { runRebakeBatch } from "@/lib/cards/rebake-batch";
+import {
+  acquireManualLease,
+  leaseBusyMessage,
+  MANUAL_PARK_SECONDS,
+  releaseSweepLease,
+} from "@/lib/cards/sweep-lease";
 
 // ---------------------------------------------------------------------------
 // POST /api/admin/rebake-marked  { skipIds? }
@@ -22,6 +29,12 @@ import { runRebakeBatch } from "@/lib/cards/rebake-batch";
 // SameSite=Lax, and the Origin header must be ours. Same billing gate as
 // the cron route: a server without NEXT_PUBLIC_BILLING_ENABLED would bake
 // every card clean, so it refuses.
+//
+// One sweeper at a time: each call takes the shared sweep lease
+// (lib/cards/sweep-lease.ts, like POST /api/admin/rebake), waiting for a
+// running automatic re-bake to hand over after its batch, and parks it
+// between calls so the cron stays out of the loop. A lease still busy after
+// ~2 minutes answers 503 with a message the panel shows ("Try again").
 // ---------------------------------------------------------------------------
 
 export const runtime = "nodejs";
@@ -73,13 +86,29 @@ export async function POST(request: Request) {
     );
   }
 
-  const result = await runRebakeBatch(createAdminClient(), {
-    scope: { kind: "marked" },
-    limit: BATCH,
-    dry: false,
-    billingEnabled,
-    skipIds: parsed.data.skipIds,
-  });
+  const admin = createAdminClient();
+  const token = randomUUID();
+  let lease: Awaited<ReturnType<typeof acquireManualLease>>;
+  try {
+    lease = await acquireManualLease(admin, token);
+  } catch (err) {
+    return json({ ok: false, error: err instanceof Error ? err.message : "Sweep lease unavailable." }, 500);
+  }
+  if (!lease.ok) return json({ ok: false, error: leaseBusyMessage(lease) }, 503);
+
+  let result: Awaited<ReturnType<typeof runRebakeBatch>> | null = null;
+  try {
+    result = await runRebakeBatch(admin, {
+      scope: { kind: "marked" },
+      limit: BATCH,
+      dry: false,
+      billingEnabled,
+      skipIds: parsed.data.skipIds,
+    });
+  } finally {
+    const finished = result?.ok === true && result.remaining === 0;
+    await releaseSweepLease(admin, token, finished ? {} : { parkSeconds: MANUAL_PARK_SECONDS });
+  }
   if (!result.ok) return json({ ok: false, error: result.error }, 500);
   // Gallery landings, hubs and card pages are ISR and point at the old
   // ?v= render URLs (cached immutably by /render-cdn). Refresh them once,

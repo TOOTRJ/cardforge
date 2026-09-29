@@ -209,8 +209,9 @@ type ScryfallImportBackFacePatch = {
   artist_credit?: string;
   /** Public URL of the imported back-face artwork. When set, the form
    *  writes this into `back_face.art_url`. Set only when the user opted
-   *  to also import artwork on the front face — the back-face import is
-   *  triggered in the same flow. */
+   *  to also import artwork on the front face and the printing's second
+   *  face has its own image (the named route's `has_back_image`, TODO 1.8)
+   *  — the back-face import is triggered in the same flow. */
   imported_art_url?: string | null;
 };
 
@@ -773,6 +774,23 @@ export function referenceColorIdentity(card: ScryfallCard): ColorIdentity[] {
 }
 
 /**
+ * One face's artist credit (TODO 1.8). A multi-face card credits each face
+ * on its own — Fire // Ice DMR #215 is David Martin (Fire) and Franz
+ * Vohwinkel (Ice) — while its card-level `artist` joins them ("David Martin &
+ * Franz Vohwinkel"), so the card-level name is only the fallback for a face
+ * Scryfall gives none. A single-faced card has only its card-level artist
+ * (and no second face).
+ */
+export function scryfallFaceArtist(
+  card: ScryfallCard,
+  face: 0 | 1,
+): string | undefined {
+  const faces = card.card_faces ?? [];
+  if (faces.length >= 2) return faces[face]?.artist ?? card.artist ?? undefined;
+  return face === 0 ? (card.artist ?? undefined) : undefined;
+}
+
+/**
  * Convert a Scryfall card into a patch the form can merge in. Falls back
  * to undefined fields when the Scryfall data is missing — we never invent
  * values just to fill a slot.
@@ -844,7 +862,8 @@ export function mapScryfallToFormPatch(
     // walker backs hold loyalty) — prefer the face on multiface cards.
     loyalty: pick(front?.loyalty, card.loyalty),
     defense: pick(front?.defense, card.defense),
-    artist_credit: card.artist ?? undefined,
+    // The front face's own artist on a multi-face card (TODO 1.8).
+    artist_credit: scryfallFaceArtist(card, 0),
     source_scryfall_id: card.id,
     preview_art_url: options.artPreviewUrl ?? null,
     // DFC detection: any card with two faces (Delver, Werewolves, etc.)
@@ -887,9 +906,9 @@ function mapScryfallBackFace(
     // walkers), defense on battle faces.
     loyalty: back.loyalty ?? undefined,
     defense: back.defense ?? undefined,
-    // Per-face artist is the same person in practice; reuse the front's
-    // artist credit so the user has something to start from.
-    artist_credit: card.artist ?? undefined,
+    // The second face's own artist (TODO 1.8): Ice is Franz Vohwinkel's,
+    // not "David Martin & Franz Vohwinkel".
+    artist_credit: scryfallFaceArtist(card, 1),
     imported_art_url: null,
   };
 }

@@ -11,6 +11,7 @@ import { overrideHash } from "@/lib/cards/frame-verification-state";
 import { recordFrameReviewEvent } from "@/lib/cards/frame-review-events";
 import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
 import { scoreFrameCombo } from "@/lib/frames/score-combo";
+import { revalidateFramePickers } from "@/lib/cards/frame-picker-revalidate";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -40,16 +41,6 @@ const inputSchema = z.object({
 export type SetFrameReviewResult =
   | { ok: true; scored: boolean }
   | { ok: false; error: string };
-
-/** Every page that renders the frame picker from the verified set. `/create`
- *  is dynamic and reads the table per request; the guest creator is ISR
- *  (revalidate 3600) and would otherwise show or hide a frame up to an hour
- *  late. */
-function revalidateFramePickers(): void {
-  revalidatePath("/admin/frame-compare");
-  revalidatePath("/create-guest");
-  revalidatePath("/create");
-}
 
 export async function setFrameReviewAction(
   payload: unknown,

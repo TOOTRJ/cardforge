@@ -9,6 +9,10 @@ import { QuickLikeButton } from "@/components/cards/quick-like-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { type DashboardCard } from "@/components/creator/dashboard-card-tile";
+import {
+  FramePreviewCardBadge,
+  isFramePreviewCard,
+} from "@/components/creator/frame-preview-card-badge";
 import { formatRelativeTime } from "@/components/messages/format";
 import { buildTypeLine } from "@/lib/cards/card-display";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
@@ -151,6 +155,7 @@ export function MyCardListRow({
           {card.title}
         </Link>
         <span className="truncate text-xs text-muted">{typeLineOf(card)}</span>
+        {isFramePreviewCard(card) ? <FramePreviewCardBadge className="self-start" /> : null}
         {caption}
       </div>
 

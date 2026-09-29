@@ -15,7 +15,7 @@ import {
   type ScryfallImportPatch,
 } from "@/lib/scryfall/import-mapper";
 import { toResolvedCardData } from "@/lib/decks/import-resolution";
-import { KIND_DEFS } from "@/lib/creator/card-kinds";
+import { KIND_DEFS, importedCardTypeForKind } from "@/lib/creator/card-kinds";
 import { finalizeImportMatch, resolveImportFrame } from "@/lib/creator/frame-resolve";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import { getFrameProfile } from "@/lib/cards/template-layout";
@@ -273,6 +273,14 @@ describe("type-line + layout precedence (TODO 1.3)", () => {
     // TEXTLESS promo, so the registry (1.19) asks for the textless land frame
     // (nearest, 4.42); unverified, it still lands on m15land (below).
     ["sld-2794", "land", "land", undefined, undefined, "m15textlessland"],
+    // A layout kind keeps the printed card type its template can draw (TODO
+    // 1.21): an Enchantment adventurer, an Instant aftermath, a Sorcery
+    // split card.
+    ["woe-38", "adventure", "enchantment", undefined, undefined, undefined],
+    ["akh-211", "aftermath", "instant", undefined, undefined, undefined],
+    ["dgm-123", "split", "sorcery", undefined, undefined, undefined],
+    // The longest printed name (TODO 1.12), a silver-bordered 2003 frame.
+    ["unh-107", "creature", "creature", undefined, "Elemental", "modern"],
   ];
 
   it.each(cases)("%s → %s (%s, supertype %s, subtypes %s) on %s", (key, kind, cardType, supertype, subtypes, frame) => {
@@ -282,8 +290,9 @@ describe("type-line + layout precedence (TODO 1.3)", () => {
     expect(patch.supertype).toBe(supertype);
     expect(patch.subtypes_text).toBe(subtypes);
     expect(patch.frame_template).toBe(frame);
-    // The kind's own card type is what the form writes; the patch agrees.
-    expect(KIND_DEFS[patch.kind!].cardType).toBe(cardType);
+    // The card type the form writes for the kind is the patch's (TODO 1.21:
+    // a layout kind no longer writes its own over the printed one).
+    expect(importedCardTypeForKind(patch.kind!, patch.card_type)).toBe(cardType);
   });
 
   it("the second door / face / spell page rides as the back face", () => {
@@ -513,6 +522,12 @@ describe("colour from the front face (TODO 1.2)", () => {
     ["mor-58", ["B"], "b", ["B"]],
     ["lrw-11", ["W"], "w", ["W"]],
     ["c17-11", ["U"], "u", ["U"]],
+    // TODO 1.21's layout cards: the adventurer's colour, both halves'.
+    ["woe-38", ["W"], "w", ["W"]],
+    ["akh-211", ["U"], "u", ["U"]],
+    ["dgm-123", ["G", "U", "W"], "m", ["G", "U", "W"]],
+    // TODO 1.12's longest name.
+    ["unh-107", ["G"], "g", ["G"]],
   ];
 
   it("covers every fixture", () => {

@@ -1,6 +1,10 @@
 import "server-only";
 
-import { pickArtCropUrl, type ScryfallCard } from "@/lib/scryfall/client";
+import {
+  hasBackFaceImage,
+  pickArtCropUrl,
+  type ScryfallCard,
+} from "@/lib/scryfall/client";
 import {
   printingTreatmentFromScryfall,
   verifiedFrameMatchFromScryfall,
@@ -41,7 +45,8 @@ export function trimPrinting(
     devoid: effects.includes("devoid"),
     treatment: printingTreatmentFromScryfall(card) ?? null,
     artist: card.artist ?? front?.artist ?? null,
-    has_back_image: Boolean(card.card_faces?.[1]?.image_uris),
+    // The same test as /api/scryfall/named's has_back_image (TODO 1.8).
+    has_back_image: hasBackFaceImage(card),
     thumb_url: pickArtCropUrl(card),
     image_status: card.image_status ?? null,
     match: {

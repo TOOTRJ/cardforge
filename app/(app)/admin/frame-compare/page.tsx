@@ -14,6 +14,13 @@ import { FrameVerifyCheckbox } from "@/components/admin/frame-verify-checkbox";
 import { FrameReferencePicker } from "@/components/admin/frame-reference-picker";
 import { FrameGuide } from "@/components/admin/frame-guide";
 import { MarkedRendersPanel } from "@/components/admin/marked-renders-panel";
+import { FrameTemplateSignOffPage } from "@/components/admin/frame-template-signoff-page";
+import { listFramePreviewCards } from "@/lib/cards/frame-preview-cards";
+import {
+  framePreviewEditHref,
+  groupFramePreviewsByTemplate,
+} from "@/lib/cards/frame-preview-groups";
+import { firstColourToWalk, walkthroughHref } from "@/lib/creator/frame-preview";
 import { countMarkedRenders } from "@/lib/cards/rebake-batch";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
@@ -158,6 +165,18 @@ export default async function AdminFrameComparePage({
   const { template, color, ref } = await searchParams;
   const [reviews, markedCount] = await Promise.all([getFrameReviews(), markedRenderCount()]);
 
+  // ----- Sign-off mode (TODO 2.4): a template, no colour -----
+  if (isTemplate(template) && color === undefined) {
+    return (
+      <FrameTemplateSignOffPage
+        template={template}
+        reviews={reviews}
+        markedCount={markedCount}
+        viewerId={profile.id}
+      />
+    );
+  }
+
   // ----- Compare mode -----
   if (isTemplate(template) && isColorKey(color)) {
     const review = reviews.get(frameComboKey(template, color));
@@ -291,6 +310,22 @@ export default async function AdminFrameComparePage({
           </details>
         ) : null}
         <div className="mt-4 flex flex-col gap-3">
+          <p className="flex flex-wrap items-center gap-3 text-xs font-semibold">
+            <Link
+              href={walkthroughHref({ template, colorKey: color })}
+              className="text-muted underline-offset-2 hover:text-foreground hover:underline"
+              title="Open the creator on this frame and colour as an admin preview, prefilled from the reference printing (TODO 2.2)."
+            >
+              Walk the stepper on {template}/{color}
+            </Link>
+            <Link
+              href={`/admin/frame-compare?template=${template}`}
+              className="text-muted underline-offset-2 hover:text-foreground hover:underline"
+              title="Score every colour, see the walked previews and publish the whole template (TODO 2.4)."
+            >
+              Sign off {template}
+            </Link>
+          </p>
           <ReferenceSwitcher
             template={template}
             color={color}
@@ -339,7 +374,12 @@ export default async function AdminFrameComparePage({
     templatesByEra.set(era, [...(templatesByEra.get(era) ?? []), t]);
   }
 
-  const checklistOverrides = await getFrameProfileOverrides();
+  const [checklistOverrides, previewCards] = await Promise.all([
+    getFrameProfileOverrides(),
+    // Walked preview cards (TODO 2.3), listed under their template.
+    listFramePreviewCards(profile.id),
+  ]);
+  const previewsByTemplate = groupFramePreviewsByTemplate(previewCards);
   const stateOf = (review: FrameReview | undefined, t: FrameTemplate) =>
     verificationState(
       {
@@ -357,13 +397,7 @@ export default async function AdminFrameComparePage({
     label: FRAME_ERA_LABELS[era],
     templates: (templatesByEra.get(era) ?? []).map((t) => {
       const { note, confirm } = frameReferenceNote(t);
-      return {
-        template: t,
-        label: eraGroupFrameLabel(t),
-        hasOverride: Boolean(checklistOverrides[t]),
-        note,
-        confirm,
-        combos: FRAME_COLOR_KEYS.map((colorKey) => {
+      const combos = FRAME_COLOR_KEYS.map((colorKey) => {
           const review = reviews.get(frameComboKey(t, colorKey));
           const custom =
             review?.referenceScryfallId && review.referenceName
@@ -394,8 +428,25 @@ export default async function AdminFrameComparePage({
                   thumbUrl: referenceThumbUrl(reference),
                 }
               : null,
+            walkHref: walkthroughHref({ template: t, colorKey }),
           };
-        }),
+        });
+      return {
+        template: t,
+        label: eraGroupFrameLabel(t),
+        hasOverride: Boolean(checklistOverrides[t]),
+        note,
+        confirm,
+        combos,
+        walkHref: walkthroughHref({ template: t, colorKey: firstColourToWalk(combos) }),
+        signOffHref: `/admin/frame-compare?template=${t}`,
+        previews: (previewsByTemplate.get(t) ?? []).map((card) => ({
+          id: card.id,
+          title: card.title,
+          colorKey: card.colorKey,
+          createdAt: card.createdAt,
+          editHref: card.ownedByViewer ? framePreviewEditHref(card) : null,
+        })),
       };
     }),
   }));

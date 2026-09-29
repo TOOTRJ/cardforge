@@ -166,6 +166,7 @@ import { cardToPreviewData } from "@/lib/cards/preview-data";
 import type { FrameProfileOverridesMap } from "@/lib/cards/profile-override";
 import {
   basicLandSeedForColorKey,
+  importedCardTypeForKind,
   isSeedableLandIdentity,
   kindFromCard,
   shouldClearBasicSeedForTitle,
@@ -215,6 +216,11 @@ import { buildCardPath } from "@/lib/cards/utils";
 import { CapacityNotice } from "@/components/billing/capacity-notice";
 import { GlyphCoverageNotice } from "@/components/creator/glyph-coverage-notice";
 import type { CardCapacity } from "@/lib/billing/capacity-copy";
+import {
+  isFramePreviewSave,
+  withPreviewFramesParam,
+  type CreatorFramePreview,
+} from "@/lib/creator/frame-preview";
 
 // ---------------------------------------------------------------------------
 // Form values — mirror createCardSchema but typed at the component boundary.
@@ -285,8 +291,15 @@ type CardCreatorFormProps = {
    *  edit, a restored draft, or an imported value. */
   defaultArtistCredit?: string;
   /** Verified (template/color) combo keys from frame_reviews — special
-   *  layouts publish per color once verified in /admin/frame-compare. */
+   *  layouts publish per color once verified in /admin/frame-compare. In an
+   *  admin's frame preview these are verified ∪ previewed (the picker's
+   *  set); `framePreview.publishedKeys` keeps the real verified set. */
   verifiedFrameKeys?: string[];
+  /** An admin's frame preview (TODO Phase 2, server-decided): the real
+   *  verified set (AI keeps using it; a save outside it is a private,
+   *  flagged preview), the URL param to keep across the create → edit hop,
+   *  and a walk through the stepper to prefill. Null for everyone else. */
+  framePreview?: CreatorFramePreview | null;
   /** Admin frame-layout overrides (server-fetched) — keeps the editor's
    *  live preview identical to the gallery render and the bake. */
   profileOverrides?: FrameProfileOverridesMap | null;
@@ -424,11 +437,16 @@ export function CardCreatorForm({
   activeChallenge = null,
   defaultArtistCredit = "",
   verifiedFrameKeys = [],
+  framePreview = null,
   profileOverrides = null,
   isPaid = false,
   defaultFooterText = null,
   layout = "stepper",
 }: CardCreatorFormProps) {
+  // The real verified set: the AI dialog offers only these (AI jobs resolve
+  // their frames on the server from the same set) — never an admin's
+  // previewed frames.
+  const publishedFrameKeys = framePreview?.publishedKeys ?? verifiedFrameKeys;
   const router = useRouter();
   const upgrade = useUpgradeModal();
   const confirmSpend = useCreditConfirm();
@@ -716,15 +734,29 @@ export function CardCreatorForm({
   // lib/cards/second-face-name.ts). That name used to be required silently:
   // Save stayed enabled, the save failed on a field folded away inside the
   // Identity step's "More options".
+  //
+  // An admin's frame preview (TODO 2.3) saves private whatever the Publish
+  // step says, so it is judged as a draft: a title is enough.
+  const previewSaveFor = (values: Pick<FormValues, "frame_style" | "color_identity">) =>
+    isEdit
+      ? card?.frame_preview === true
+      : isFramePreviewSave({
+          mode: framePreview,
+          walkthrough: Boolean(framePreview?.walkthrough) && mode === "create",
+          template: values.frame_style?.template,
+          colorIdentity: values.color_identity,
+        });
+  const previewSave = previewSaveFor(watched);
+  const savesAsDraft = watched.save_as_draft || previewSave;
   const secondFaceNameMissing =
     watched.has_back_face &&
     missingSecondFaceName(
       watched.back_face,
-      watched.save_as_draft ? "private" : watched.visibility,
+      savesAsDraft ? "private" : watched.visibility,
     );
   const saveMissing = [
     !watched.title.trim() ? "a title" : null,
-    !watched.save_as_draft && !watched.art_url.trim() ? "artwork" : null,
+    !savesAsDraft && !watched.art_url.trim() ? "artwork" : null,
     secondFaceNameMissing
       ? isAdventureFrame
         ? "the adventure's name"
@@ -1134,13 +1166,18 @@ export function CardCreatorForm({
   };
 
   /** Programmatic kind application (import/AI): never blocks on a dialog —
-   *  accepts the era fallback and tells the user what happened. */
-  const applyKindProgrammatic = (nextKind: CardKind) => {
+   *  accepts the era fallback and tells the user what happened. `cardType`
+   *  replaces the kind's own card type when the caller knows the real one
+   *  (an import's printed type on a layout kind, TODO 1.21 — see
+   *  importedCardTypeForKind), so the P/T / loyalty gating and the default
+   *  watermark follow it; the kind is unchanged, since a layout template
+   *  decides the kind whatever the card type. */
+  const applyKindProgrammatic = (nextKind: CardKind, cardType?: CardType) => {
     const plan = planKindChange(nextKind, {
       cardType: watched.card_type,
       template: getValues("frame_style.template"),
     });
-    applyKindPatch(plan.patch);
+    applyKindPatch(cardType ? { ...plan.patch, card_type: cardType } : plan.patch);
     if (plan.action === "confirm") {
       toast.info("Switched to the M15 frame to fit the card's type.");
     }
@@ -1280,7 +1317,13 @@ export function CardCreatorForm({
         ? kindFromCard(patch.card_type as CardType, undefined)
         : null);
     if (importedKind) {
-      applyKindProgrammatic(importedKind);
+      // A layout kind keeps the PRINTED card type when its template can draw
+      // it (TODO 1.21): Virtue of Loyalty is an Enchantment adventurer, not
+      // a Creature; Commit // Memory an Instant, Beck // Call a Sorcery.
+      applyKindProgrammatic(
+        importedKind,
+        importedCardTypeForKind(importedKind, patch.card_type),
+      );
     }
 
     // The frame. The dialog's chooser pick lands when it still fits the
@@ -1590,6 +1633,52 @@ export function CardCreatorForm({
     // listing it pure dependency churn.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, deckRemix]);
+
+  // Admin walk through the stepper (TODO 2.2): prefill ONCE from the combo's
+  // reference printing (or the compare view's sample content) through the
+  // same handler as a user's Scryfall import — the second face included —
+  // then pin the frame and colour under test and start on the Card step, so
+  // the walk covers Card → Identity → Text & stats → Publish. Left dirty on
+  // purpose: the point of the walk is to save the preview card.
+  const walkthrough = mode === "create" ? (framePreview?.walkthrough ?? null) : null;
+  const walkthroughAppliedRef = useRef(false);
+  useEffect(() => {
+    if (!walkthrough || walkthroughAppliedRef.current) return;
+    // Applied from a task, not the effect body (the import handler sets
+    // state); the ref is claimed only when it runs, so a StrictMode
+    // mount → unmount → mount cancels the first timer and applies once.
+    const timer = window.setTimeout(() => {
+      if (walkthroughAppliedRef.current) return;
+      walkthroughAppliedRef.current = true;
+      if (walkthrough.seed) {
+        handleScryfallImport({
+          patch: walkthrough.seed.patch,
+          importedArtUrl: null,
+          source: walkthrough.seed.source,
+        });
+      } else {
+        applyKindProgrammatic(walkthrough.kind);
+        setValue("color_identity", [colorIdentityForKey(walkthrough.colorKey)], {
+          shouldDirty: true,
+        });
+      }
+      setValue("frame_style.template", walkthrough.template, { shouldDirty: true });
+      clearErrors("frame_style");
+      // A reference printing is validated against its colour when pinned
+      // (0.8); say so if this one still lands elsewhere rather than walking
+      // another combination silently.
+      const landedKey = pickFrameColorKey(getValues("color_identity"));
+      if (landedKey !== walkthrough.colorKey) {
+        toast.info(
+          `The reference is ${colorWord(landedKey)}, not ${colorWord(walkthrough.colorKey)} — pick the colour on the Card step to walk ${walkthrough.template}/${walkthrough.colorKey}.`,
+        );
+      }
+      goToStepKey("card");
+    }, 0);
+    return () => window.clearTimeout(timer);
+    // Apply-once (the ref); the handlers are recreated per render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [walkthrough]);
 
   // ---- Per-field AI fill ----
   // The dialog's tick-set becomes a "card_fill" job (plan = fast text
@@ -1918,7 +2007,10 @@ export function CardCreatorForm({
   ) => {
     setServerError(null);
     const createBackAfter = intent === "back";
-    const chosenVisibility = values.save_as_draft
+    // An admin's frame preview is private and asks the server for the flag
+    // (it decides — admins only).
+    const previewSaveNow = previewSaveFor(values);
+    const chosenVisibility = values.save_as_draft || previewSaveNow
       ? "private"
       : values.visibility;
     // No artwork → no gallery (server-enforced in create/updateCardAction).
@@ -2082,6 +2174,10 @@ export function CardCreatorForm({
       // Subscriber footer mark for this card ("" = none). The action ignores
       // it for free accounts.
       footer_text: values.footer_text.trim(),
+      // An admin's frame preview (TODO 2.3) — honoured for admins only.
+      // Edits never send it (not a revisable key); a flagged card stays
+      // private on the server.
+      ...(previewSaveNow && !isEdit ? { frame_preview: true } : {}),
     };
 
     startTransition(async () => {
@@ -2162,11 +2258,13 @@ export function CardCreatorForm({
           return;
         }
         toast.success(
-          finalVisibility === "public"
-            ? `Published “${payload.title}”`
-            : finalVisibility === "private"
-              ? `Saved “${payload.title}” as a draft`
-              : `Saved “${payload.title}”`,
+          previewSaveNow
+            ? `Saved “${payload.title}” as a frame preview (private).`
+            : finalVisibility === "public"
+              ? `Published “${payload.title}”`
+              : finalVisibility === "private"
+                ? `Saved “${payload.title}” as a draft`
+                : `Saved “${payload.title}”`,
         );
         // Every create leaves this page: stop guarding and take the Back
         // sentinel off first, so Back from the saved card doesn't land on a
@@ -2257,9 +2355,13 @@ export function CardCreatorForm({
           router.replace(`/go/card/${result.cardId}`);
           return;
         }
-        // Draft saves stay in the editor, on the same step.
+        // Draft saves stay in the editor, on the same step — an admin's
+        // frame preview keeps its preview mode across the hop.
         router.replace(
-          `/card/${result.slug}/edit?step=${activeStep?.key ?? "publish"}`,
+          withPreviewFramesParam(
+            `/card/${result.slug}/edit?step=${activeStep?.key ?? "publish"}`,
+            framePreview?.param,
+          ),
         );
         router.refresh();
         return;
@@ -2529,7 +2631,13 @@ export function CardCreatorForm({
           . The public card keeps the pipglyph.com mark.{" "}
         </>
       ) : null}
-      {isEdit ? (
+      {previewSave ? (
+        <>
+          An admin&apos;s <strong className="text-foreground">frame preview</strong>{" "}
+          saves private, whatever the Publish step says, and is listed under
+          its frame in Frame verification.
+        </>
+      ) : isEdit ? (
         <>
           Nothing changes until you click Save. Visibility and
           &ldquo;Save as a draft&rdquo; live on the Publish step.
@@ -2694,6 +2802,21 @@ export function CardCreatorForm({
               />
             ) : null}
 
+            {/* An admin's frame preview (TODO 2.3) saves private whatever
+                the visibility below says — say so where it is chosen. */}
+            {stepKey === "publish" && previewSave ? (
+              <p
+                role="status"
+                data-testid="frame-preview-publish-note"
+                className="rounded-md border border-sky-400/50 bg-sky-400/10 px-3 py-2 text-xs leading-5 text-foreground"
+              >
+                <strong className="mr-1">Frame preview:</strong>this card saves private and
+                flagged, and stays out of decks, the gallery, the sitemap, hubs,
+                trending and feeds. Delete it from Frame verification when
+                you&apos;re done.
+              </p>
+            ) : null}
+
             {/* ----- Publish panel (visibility/back face + Advanced: finish/tags/save) ----- */}
             {stepKey === "publish" ? (
               <PublishPanel
@@ -2735,7 +2858,7 @@ export function CardCreatorForm({
             revise={isRevise}
             statsLabel={statsLabel}
             statsAvailable={hasStats}
-            verifiedFrameKeys={verifiedFrameKeys}
+            verifiedFrameKeys={publishedFrameKeys}
             generating={fillPhase !== null}
             onGenerate={(options) => void handleAiFill(options)}
             myDecks={aiDecks ?? myDecks}
@@ -2878,6 +3001,15 @@ export function CardCreatorForm({
                   {mode === "create" ? "Not saved yet" : "Up to date"}
                 </Badge>
               )}
+              {userId && previewSave ? (
+                <Badge
+                  variant="outline"
+                  data-testid="frame-preview-save"
+                  title="An admin's frame preview: it saves private and flagged, and never reaches the gallery, sitemap, hubs, trending or feeds."
+                >
+                  Frame preview · saves private
+                </Badge>
+              ) : null}
               {remixSource ? (
                 <Badge variant="primary" className="gap-1.5">
                   Based on{" "}
