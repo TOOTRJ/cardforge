@@ -20,6 +20,8 @@ Custom MTG-style card creator. Next.js 16 App Router + Supabase + Tailwind v4
   `scripts/lib/prod-guard.mjs`). `npm run dev:prod` is the deliberate, loud
   exception (reads `.env.prod-peek`). Never weaken these guards, never put
   production keys back in `.env.local`, never use `--with-data` branching.
+  An owner-run script reads production's key ONLY through `promptHidden()`
+  (`scripts/lib/hidden-prompt.mjs`) — a `_writeToOutput` filter echoed it.
 - The repo is **public**: no credentials in seeds, fixtures or docs — not even
   test passwords.
 

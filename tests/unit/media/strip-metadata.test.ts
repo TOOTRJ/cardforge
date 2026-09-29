@@ -187,6 +187,50 @@ describe("stripImageMetadata — JPEG", () => {
     await expectSamePixels(signedPhoto, bytes);
   });
 
+  it("…and when a thumbnail inside them still carries binary EXIF (GPS a text search can't see)", async () => {
+    const thumbnail = await sharp(await cleanPhoto("jpeg"))
+      .resize(8, 8)
+      .withExif({ IFD0: { Make: FAKE_CAMERA_MAKE }, IFD3: { GPSLatitudeRef: "N", GPSLatitude: "0/1 12/1 34/1" } })
+      .jpeg()
+      .toBuffer();
+    expect(thumbnail.toString("latin1").includes("GPSLatitude")).toBe(false); // binary tags only
+    const manifest = jpegSegment(
+      0xeb,
+      Buffer.concat([Buffer.from("JP\0\x01\0\0\0\x01\0\0\0\x10jumbc2pa.thumbnail.claim.jpeg", "latin1"), thumbnail]),
+    );
+    const signed = withJpegSegments(await cleanPhoto("jpeg"), manifest);
+    const { bytes, report } = strip(signed);
+    expect(report).toMatchObject({ found: ["c2pa", "c2pa:exif"], provenance: false });
+    await expectNoCameraMetadata(bytes);
+    await expectSamePixels(signed, bytes);
+  });
+
+  it("only the FIRST EXIF block counts (sharp and Chrome ignore the rest): a later block's orientation is not promoted", async () => {
+    const exif = async (orientation?: number) =>
+      jpegSegment(0xe1, Buffer.concat([Buffer.from("Exif\0\0", "latin1"), await gpsTiff(orientation)]));
+    const exifBlocks = (b: Uint8Array) => Buffer.from(b).toString("latin1").split("Exif\0\0").length - 1;
+
+    // Orientation only in the second block: every reader shows the file
+    // upright, so the stripped file must not say "turn me".
+    const secondTurns = withJpegSegments(await cleanPhoto("jpeg"), await exif(), await exif(6));
+    expect((await sharp(secondTurns).metadata()).orientation ?? 1).toBe(1);
+    const a = strip(secondTurns);
+    expect(a.report).toMatchObject({ orientation: null, gps: true });
+    expect(exifBlocks(a.bytes)).toBe(0);
+    expect((await sharp(a.bytes).metadata()).orientation ?? 1).toBe(1);
+    await expectNoCameraMetadata(a.bytes);
+    await expectSamePixels(secondTurns, a.bytes);
+
+    // Orientation in the first block: it stays, as the ONE block left.
+    const firstTurns = withJpegSegments(await cleanPhoto("jpeg"), await exif(6), jpegSegment(0xe1, Buffer.concat([Buffer.from("Exif\0\0", "latin1"), Buffer.from(orientationOnlyTiff(3))])));
+    const b = strip(firstTurns);
+    expect(b.report.orientation).toBe(6);
+    expect(exifBlocks(b.bytes)).toBe(1);
+    expect((await sharp(b.bytes).metadata()).orientation).toBe(6);
+    await expectNoCameraMetadata(b.bytes);
+    await expectSamePixels(firstTurns, b.bytes);
+  });
+
   it("refuses a truncated JPEG (no EOI) rather than guessing", async () => {
     const whole = await cameraPhoto("jpeg");
     expect(stripImageMetadata(whole.subarray(0, whole.length - 200))).toBeNull();

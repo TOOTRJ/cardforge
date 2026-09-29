@@ -45,10 +45,16 @@ export async function carriesNoMetadata(bytes: Uint8Array): Promise<boolean> {
 }
 
 /** Fallback: decode and re-encode in the same format (turned upright first).
- *  sharp writes no EXIF/XMP/IPTC/ICC — it converts to sRGB instead. */
+ *  sharp writes no EXIF/XMP/IPTC/ICC — it converts to sRGB instead.
+ *
+ *  Decoded leniently (`failOn: "none"`): the files that land here are the
+ *  ones the container walk refuses — mostly a JPEG cut short (no EOI) or a
+ *  PNG with no IEND, which browsers still draw and which uploads stored
+ *  as-is before TODO 3.14a. sharp's default ("warning") would throw on them
+ *  and turn a file that used to upload into "not a valid image". */
 async function reencodeWithoutMetadata(buffer: Buffer, meta: UploadMeta): Promise<Buffer> {
   const animated = (meta.pages ?? 1) > 1;
-  let image = sharp(buffer, { animated });
+  let image = sharp(buffer, { animated, failOn: "none" });
   if (!animated && needsAutoOrient(meta.orientation)) image = image.autoOrient();
   switch (meta.format) {
     case "jpeg":
@@ -107,7 +113,7 @@ export async function imageWithoutMetadata(
     // Turn only what the browser turns (a tagged JPEG/PNG), like
     // autoOrientBytes: a tagged WebP is shown — and sent — as stored.
     const meta = await sharp(bytes, { animated: false }).metadata();
-    const decoded = sharp(bytes, { animated: false });
+    const decoded = sharp(bytes, { animated: false, failOn: "none" });
     const image = browserAppliesOrientation(meta) ? decoded.autoOrient() : decoded;
     if (meta.hasAlpha) return { bytes: new Uint8Array(await image.png().toBuffer()), contentType: "image/png" };
     return {

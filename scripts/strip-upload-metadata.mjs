@@ -47,6 +47,7 @@ import os from "node:os";
 import path from "node:path";
 import readline from "node:readline";
 import { createClient } from "@supabase/supabase-js";
+import { promptHidden } from "./lib/hidden-prompt.mjs";
 import { PRODUCTION_SUPABASE_REF, isProductionSupabaseUrl } from "./lib/prod-guard.mjs";
 import {
   USER_UPLOAD_BUCKETS,
@@ -109,20 +110,6 @@ function parseEnvFile(file) {
   return out;
 }
 
-/** Read a secret from the TTY without echoing it. */
-function promptHidden(question) {
-  return new Promise((resolve) => {
-    const rl = readline.createInterface({ input: process.stdin, output: process.stdout, terminal: true });
-    rl._writeToOutput = (s) => {
-      if (s.includes(question)) process.stdout.write(s);
-    };
-    rl.question(question, (answer) => {
-      rl.close();
-      process.stdout.write("\n");
-      resolve(answer.trim());
-    });
-  });
-}
 
 function promptLine(question) {
   return new Promise((resolve) => {
@@ -230,7 +217,16 @@ scan: for (const bucket of scanBuckets) {
     if (gpsOnly && !plan.report.gps) continue;
     totals.affected += 1;
     if (plan.report.gps) totals.gps += 1;
-    const issues = await verifyStripped(bytes, plan.bytes);
+    let issues;
+    try {
+      issues = await verifyStripped(bytes, plan.bytes);
+    } catch (err) {
+      // sharp refuses to decode it (a corrupt or cut-short scan): what the
+      // strip does to it can't be checked, so it is never rewritten — and one
+      // broken legacy file does not stop the scan.
+      problems.push(`${objectKey}: could not verify (${err.message.split("\n")[0]}) — left as is`);
+      continue;
+    }
     if (issues.length) {
       problems.push(`${objectKey}: would change what is drawn (${issues.join("; ")}) — left as is`);
       continue;

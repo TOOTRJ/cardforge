@@ -323,4 +323,22 @@ describe("scripts/strip-upload-metadata.mjs against a fake Storage API", () => {
     expect(out).toMatch(/0 carry metadata \(0 with GPS\)/);
     expect(out).toMatch(/\d+ unchanged since an earlier run/);
   }, 60_000);
+
+  it("a legacy file sharp can't decode (a scan cut short) is listed as unverifiable and left alone — the scan goes on", async () => {
+    const photo = await cameraPhoto("jpeg");
+    const sos = photo.lastIndexOf(Buffer.from([0xff, 0xda]));
+    const broken = Buffer.concat([photo.subarray(0, sos + 60), photo.subarray(photo.length - 2)]);
+    expect(planStrip(broken).status).toBe("strip"); // the container walks…
+    await expect(sharp(broken).raw().toBuffer()).rejects.toThrow(); // …but sharp refuses the pixels
+    put("card-art/u1/broken.jpg", broken, "image/jpeg");
+    try {
+      const { code, out } = await run(["--env-file", path.join(tmp, "env"), "--state", path.join(tmp, "state-broken.json")]);
+      expect(code, out).toBe(0);
+      expect(out).toMatch(/! card-art\/u1\/broken\.jpg: could not verify \(.+\) — left as is/);
+      expect(out).toMatch(/Scanned \d+ objects: 1 carry metadata \(1 with GPS\)/);
+      expect(store.get("card-art/u1/broken.jpg")!.puts).toBe(0);
+    } finally {
+      store.delete("card-art/u1/broken.jpg");
+    }
+  }, 60_000);
 });

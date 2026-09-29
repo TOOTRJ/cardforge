@@ -153,6 +153,22 @@ describe("every upload path stores the file without camera metadata", () => {
     expect(up.body.toString("latin1").includes(FAKE_OWNER)).toBe(false);
   });
 
+  it("card art cut short (a JPEG with no EOI, a PNG with no IEND): still uploads, re-encoded without metadata", async () => {
+    // Browsers draw these and uploads stored them as-is before 3.14a; the
+    // container walk refuses them, so the fallback re-encode must decode them
+    // (leniently) instead of turning them into "not a valid image".
+    for (const format of ["jpeg", "png"] as const) {
+      const whole = await cameraPhoto(format);
+      const cut = whole.subarray(0, whole.length - (format === "jpeg" ? 2 : 12));
+      const result = await uploadCardArtServerAction(form(cut, format));
+      expect(result, format).toMatchObject({ ok: true });
+      const up = lastUpload("card-art");
+      const meta = await sharp(up.body).metadata();
+      expect([meta.format, meta.width, meta.height]).toEqual([format, 96, 64]);
+      await expectNoCameraMetadata(up.body);
+    }
+  });
+
   it("design watermark / land icon (PNG with a GPS eXIf and text chunks)", async () => {
     const png = withPngChunks(
       await cameraPhoto("png", { alpha: true }),

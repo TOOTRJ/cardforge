@@ -13,7 +13,8 @@
 //   * the ICC colour profile (JPEG APP2 ICC_PROFILE, PNG iCCP, WebP ICCP, GIF
 //     ICCRGBG1012) and PNG's other colour/transparency chunks;
 //   * an EXIF Orientation of 2–8, rewritten as a one-tag EXIF block (26 bytes
-//     of TIFF). lib/media/orientation.ts turns new uploads, but a file whose
+//     of TIFF) — from the file's FIRST EXIF block only, the one sharp and
+//     Chrome read. lib/media/orientation.ts turns new uploads, but a file whose
 //     upright re-encode would overflow its bucket, or a legacy file (the two
 //     migration-0118 JPEGs), must keep saying how it is turned or the creator
 //     would show it sideways;
@@ -30,7 +31,8 @@
 //     EXIF assertion (`stds.exif`, GPS): then nothing else changes, so the
 //     file is left byte-for-byte and its credential stays valid. When anything
 //     else has to go, the credential goes too — its hash covers the other
-//     bytes, so it would no longer verify — and so does one that embeds EXIF.
+//     bytes, so it would no longer verify — and so does one that embeds EXIF
+//     (an assertion, or a thumbnail that kept its own EXIF block).
 // Dropped: EXIF (GPS, camera, dates, thumbnail, MakerNote), XMP (incl.
 // extended), IPTC / Photoshop IRB, comments, PNG text/time chunks, MPF and
 // everything after the image's end marker (secondary, depth and gain-map
@@ -265,6 +267,8 @@ type Collector = {
   gps: boolean;
   orientation: number | null;
   icc: boolean;
+  /** An EXIF block was already seen — readers only take the first. */
+  exifSeen: boolean;
   /** C2PA manifests seen (always left out of the rebuilt file). */
   c2pa: { present: boolean; exif: boolean };
 };
@@ -274,18 +278,25 @@ const newCollector = (): Collector => ({
   gps: false,
   orientation: null,
   icc: false,
+  exifSeen: false,
   c2pa: { present: false, exif: false },
 });
 
 /** An EXIF block: note what it carries; return the TIFF to keep in its place
  *  (the one-tag Orientation form) or null to drop it. `unchanged` = keep the
- *  original bytes, it already is that form. */
+ *  original bytes, it already is that form.
+ *
+ *  Only the FIRST EXIF block of a file can keep anything: sharp (so the
+ *  bake) and Chrome read the first one and ignore the rest, so a second
+ *  block's Orientation never turned the picture — kept, it would start to. */
 function handleExif(
   tiff: Uint8Array,
   c: Collector,
 ): { keep: Uint8Array | null; unchanged: boolean; orientation: number | null } {
   const info = readTiff(tiff);
-  const { orientation } = info;
+  const first = !c.exifSeen;
+  c.exifSeen = true;
+  const orientation = first ? info.orientation : null;
   if (orientation !== null && isOrientationOnlyTiff(tiff)) return { keep: tiff, unchanged: true, orientation };
   c.found.add("exif");
   for (const label of info.labels) c.found.add(label);
@@ -295,12 +306,18 @@ function handleExif(
 
 const XMP_GPS = /GPS(Latitude|Longitude)/;
 
+/** Binary EXIF inside a manifest — a JPEG thumbnail's APP1 ("Exif\0\0" +
+ *  a TIFF header) or a PNG thumbnail's eXIf chunk — where a text search for
+ *  GPS property names cannot see the coordinates. */
+const EMBEDDED_BINARY_EXIF = /Exif\0\0(?:MM\0\x2a|II\x2a\0)|eXIf/;
+
 /** A C2PA manifest store: note it, and whether it embeds EXIF (the
- *  `stds.exif` assertion, which may hold GPS coordinates). */
+ *  `stds.exif` assertion, which may hold GPS coordinates, or a thumbnail
+ *  that still carries its own EXIF). */
 function noteC2pa(payload: Uint8Array, c: Collector) {
   c.c2pa.present = true;
   const body = latin1(payload);
-  if (/stds\.exif/.test(body) || XMP_GPS.test(body)) {
+  if (/stds\.exif/.test(body) || XMP_GPS.test(body) || EMBEDDED_BINARY_EXIF.test(body)) {
     c.c2pa.exif = true;
     if (XMP_GPS.test(body)) c.gps = true;
   }
