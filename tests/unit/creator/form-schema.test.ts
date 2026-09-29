@@ -97,10 +97,10 @@ describe("cardFormSchema", () => {
 
   it("rejects an overlong title with the server's message", () => {
     const issue = firstIssueFor(
-      baseValues({ title: "a".repeat(121) }),
+      baseValues({ title: "a".repeat(151) }),
       "title",
     );
-    expect(issue?.message).toBe("Title must be 120 characters or fewer.");
+    expect(issue?.message).toBe("Title must be 150 characters or fewer.");
   });
 
   it("rejects rules text over 4000 characters", () => {
@@ -234,10 +234,10 @@ describe("cardFormSchema", () => {
           save_as_draft: true,
           visibility: "private",
           has_back_face: true,
-          back_face: { ...EMPTY_BACK_FACE, title: "x".repeat(121) },
+          back_face: { ...EMPTY_BACK_FACE, title: "x".repeat(151) },
         }),
       );
-      expect(issue?.message).toBe("Title must be 120 characters or fewer.");
+      expect(issue?.message).toBe("Title must be 150 characters or fewer.");
     });
   });
 

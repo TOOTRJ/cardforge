@@ -156,6 +156,7 @@ import { cardToPreviewData } from "@/lib/cards/preview-data";
 import type { FrameProfileOverridesMap } from "@/lib/cards/profile-override";
 import {
   basicLandSeedForColorKey,
+  importedCardTypeForKind,
   isSeedableLandIdentity,
   kindFromCard,
   shouldClearBasicSeedForTitle,
@@ -1145,13 +1146,18 @@ export function CardCreatorForm({
   };
 
   /** Programmatic kind application (import/AI): never blocks on a dialog —
-   *  accepts the era fallback and tells the user what happened. */
-  const applyKindProgrammatic = (nextKind: CardKind) => {
+   *  accepts the era fallback and tells the user what happened. `cardType`
+   *  replaces the kind's own card type when the caller knows the real one
+   *  (an import's printed type on a layout kind, TODO 1.21 — see
+   *  importedCardTypeForKind), so the P/T / loyalty gating and the default
+   *  watermark follow it; the kind is unchanged, since a layout template
+   *  decides the kind whatever the card type. */
+  const applyKindProgrammatic = (nextKind: CardKind, cardType?: CardType) => {
     const plan = planKindChange(nextKind, {
       cardType: watched.card_type,
       template: getValues("frame_style.template"),
     });
-    applyKindPatch(plan.patch);
+    applyKindPatch(cardType ? { ...plan.patch, card_type: cardType } : plan.patch);
     if (plan.action === "confirm") {
       toast.info("Switched to the M15 frame to fit the card's type.");
     }
@@ -1282,7 +1288,13 @@ export function CardCreatorForm({
         ? kindFromCard(patch.card_type as CardType, undefined)
         : null);
     if (importedKind) {
-      applyKindProgrammatic(importedKind);
+      // A layout kind keeps the PRINTED card type when its template can draw
+      // it (TODO 1.21): Virtue of Loyalty is an Enchantment adventurer, not
+      // a Creature; Commit // Memory an Instant, Beck // Call a Sorcery.
+      applyKindProgrammatic(
+        importedKind,
+        importedCardTypeForKind(importedKind, patch.card_type),
+      );
     }
 
     // Adopt THIS PRINTING's frame (the mapper's era/skin template; layout

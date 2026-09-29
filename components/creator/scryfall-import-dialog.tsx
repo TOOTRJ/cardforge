@@ -108,6 +108,11 @@ type NamedResponse = {
     thumb_url: string | null;
     scryfall_uri: string | null;
     image_status: string | null;
+    /** The second face has an image of its own (a DFC) — false for split,
+     *  adventure, flip and Room cards, which share one image (TODO 1.8).
+     *  Optional: an older cached response has no flag and imports no
+     *  back-face art. */
+    has_back_image?: boolean;
   };
   patch: ScryfallImportPatch;
 };
@@ -388,6 +393,11 @@ function ScryfallImportContent({
     const card = selectedCard.card;
     const patch = selectedCard.patch;
     const hasBackFace = Boolean(patch.back_face);
+    // Only a second face with its own image has back-face art to import. A
+    // split, adventure, flip or Room card's second face is text on the one
+    // shared image: asking for its art spent a lookup on a 404 and toasted
+    // "back-face art couldn't be fetched" (TODO 1.8).
+    const hasBackImage = hasBackFace && card.has_back_image === true;
 
     startCommit(async () => {
       // Fetch one face's art crop into the user's bucket. Returns the public
@@ -428,12 +438,12 @@ function ScryfallImportContent({
         // faces (Delver, werewolves, MDFCs) rather than a blank back.
         [importedArtUrl, importedBackArtUrl] = await Promise.all([
           importArtFace("art"),
-          hasBackFace ? importArtFace("art-back") : Promise.resolve(null),
+          hasBackImage ? importArtFace("art-back") : Promise.resolve(null),
         ]);
 
         if (!importedArtUrl) {
           toast.error("Could not import the artwork.");
-        } else if (hasBackFace && !importedBackArtUrl) {
+        } else if (hasBackImage && !importedBackArtUrl) {
           toast.message("Imported the front art", {
             description:
               "The back-face art couldn't be fetched — you can add it on the Layout step.",
