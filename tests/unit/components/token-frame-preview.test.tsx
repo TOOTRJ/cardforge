@@ -46,7 +46,7 @@ function markup(template: string, over: { colorIdentity?: string[]; power?: stri
       power={over.power === undefined ? "1" : over.power}
       toughness={over.toughness === undefined ? "1" : over.toughness}
       rarity="common"
-      setIconUrl="https://example.test/icon.png"
+      setIconUrl="https://zkwkisxoqdhdchqyjwdc.supabase.co/storage/v1/object/public/set-covers/0f3c2a1e-5b6d-4c7e-8f90-a1b2c3d4e5f6/icon.png"
       frameStyle={{ template: template as "m15token" }}
     />,
   );
