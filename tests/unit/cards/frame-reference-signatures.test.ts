@@ -85,14 +85,21 @@ describe("the pin check reads the signature (TODO 1.4)", () => {
   const idOf = (template: string, colour: string, name: string) =>
     registry[template]!.colors[colour]!.find((ref) => ref.name.startsWith(name))!.scryfallId;
 
-  it("accepts a Theros god on Nyx — the printing IS the constellation showcase — with a warning", () => {
+  it("accepts a Theros god on Nyx outright: an Enchantment Creature borrows it (A3)", () => {
     const heliod = card(idOf("nyx", "w", "Heliod"));
     const result = validateReferenceForCombo(heliod, "nyx", "w");
     expect(result.errors).toEqual([]);
-    expect(result.warnings.join(" ")).toMatch(/accepted because this printing is that frame/);
-    // …but only on the frame it IS: a creature on the saga frame is still
-    // refused.
+    // No kind exception needed any more: the creator dresses it.
+    expect(result.warnings.join(" ")).not.toMatch(/accepted because this printing is that frame/);
+    // A creature on the saga frame is still refused.
     expect(validateReferenceForCombo(heliod, "saga", "w").errors).toHaveLength(1);
+  });
+
+  it("refuses a plain creature on Nyx, as on the artifact frame (A3, 1.7)", () => {
+    const serra = card(idOf("m15", "w", "Serra Angel"));
+    expect(validateReferenceForCombo(serra, "nyx", "w").errors).toEqual([
+      "Serra Angel isn't an Enchantment Creature; the Nyx — Constellation frame dresses a creature only when it is an enchantment.",
+    ]);
   });
 
   it("accepts a snow artifact on the snow frame (Replicating Ring KHM #244)", () => {

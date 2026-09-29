@@ -2,17 +2,15 @@ import { vi } from "vitest";
 import signaturePrintings from "../scryfall/fixtures/signature-printings.json";
 import treatmentPrintings from "../scryfall/fixtures/treatment-printings.json";
 import { scryfallCardSchema, type ScryfallCard } from "@/lib/scryfall/client";
-import {
-  mapScryfallToFormPatch,
-  verifiedFrameMatchFromScryfall,
-} from "@/lib/scryfall/import-mapper";
+import { mapScryfallToFormPatch } from "@/lib/scryfall/import-mapper";
+import { finalizeImportMatch } from "@/lib/creator/frame-resolve";
 import { trimPrinting } from "@/lib/scryfall/printing-summary";
 
 // ---------------------------------------------------------------------------
 // The import dialog's /api/scryfall/* routes, stubbed with what the real
 // routes answer for real (trimmed) Scryfall printings: /named runs the real
-// mapper and finalizes the match against `serverVerified`, /printings trims
-// with the route's own trimPrinting. Shared by the dialog's component tests.
+// mapper and finalizes the match against `serverVerified` (the route's own
+// finalizeImportMatch), /printings trims with the route's own trimPrinting. Shared by the dialog's component tests.
 // ---------------------------------------------------------------------------
 
 export const FIXTURES = { ...signaturePrintings, ...treatmentPrintings } as Record<
@@ -30,8 +28,7 @@ export function card(key: FixtureKey): ScryfallCard {
 
 export function namedBody(key: FixtureKey, serverVerified: ReadonlySet<string>) {
   const c = card(key);
-  const patch = mapScryfallToFormPatch(c);
-  patch.frame_match = verifiedFrameMatchFromScryfall(c, serverVerified, patch.frame_match);
+  const patch = finalizeImportMatch(mapScryfallToFormPatch(c), serverVerified);
   return {
     ok: true,
     card: {

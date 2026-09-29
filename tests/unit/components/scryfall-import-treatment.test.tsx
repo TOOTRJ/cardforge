@@ -180,3 +180,107 @@ describe("the other outcomes", () => {
     expect(screen.queryByTestId("import-frame-chooser")).toBeNull();
   });
 });
+
+describe("owner decisions 2026-09-29 (C1, C2)", () => {
+  it("C1: Sheoldred DMU #107, short of only the crown, imports on its own M15 frame without asking", async () => {
+    const onImport = await pickPrinting("dmu-107", { verified: verifiedIn("m15") });
+    expect(screen.queryByTestId("import-frame-chooser")).toBeNull();
+    // The detail still says what the printing is and why it isn't exact.
+    expect(screen.getByText("M15 (2015) frame")).toBeTruthy();
+    expect(
+      screen.getByText(
+        /the frame \(M15 \(2015\) Standard — PipGlyph doesn't draw the legendary crown yet\) are all replaced/,
+      ),
+    ).toBeTruthy();
+    const payload = await commit(onImport);
+    expect(payload.frameChoice).toBeUndefined();
+    expect(payload.patch.frame_match).toMatchObject({ status: "nearest", template: "m15", gaps: ["crown"] });
+    expect(toast.info).not.toHaveBeenCalled();
+  });
+
+  it("C1: …but asks while M15 isn't published in black (a real substitution)", async () => {
+    await pickPrinting("dmu-107", { verified: [...verifiedIn("m15snow"), "m15/w"] });
+    expect(screen.getByTestId("import-frame-chooser")).toBeTruthy();
+  });
+
+  it("C2: the standard frame and the printing's family first; Show all frames reveals the rest, and a pick among them is sent", async () => {
+    const onImport = await pickPrinting("dmu-435", {
+      verified: [...verifiedIn("m15", "m15snow", "m15devoid"), "m15borderless/b"],
+    });
+    const group = screen.getByRole("radiogroup", { name: "Frame for the import" });
+    const labels = () => within(group).getAllByRole("radio").map((el) => el.textContent ?? "");
+    expect(labels()).toHaveLength(3);
+    expect(labels()[0]).toMatch(/^M15 \(2015\) Standard/);
+    expect(labels()[1]).toMatch(/^M15 \(2015\) Borderless/);
+    expect(labels()[2]).toMatch(/^Keep my current frame/);
+    const showAll = screen.getByTestId("import-frame-show-all");
+    expect(showAll.textContent).toBe("Show all frames (2 more)");
+
+    fireEvent.click(showAll);
+    expect(screen.queryByTestId("import-frame-show-all")).toBeNull();
+    expect(labels()).toHaveLength(5);
+    expect(labels().some((label) => /^M15 \(2015\) Snow/.test(label))).toBe(true);
+    expect(labels().some((label) => /^M15 \(2015\) Devoid/.test(label))).toBe(true);
+    // The link is gone, so keyboard focus moves to the first frame it revealed.
+    expect(document.activeElement).toBe(frameRadio(/^M15 \(2015\) Snow/));
+    // The preselection didn't move.
+    expect(frameRadio(/^M15 \(2015\) Standard/).getAttribute("aria-checked")).toBe("true");
+    fireEvent.click(frameRadio(/^M15 \(2015\) Snow/));
+    expect((await commit(onImport)).frameChoice).toEqual({ template: "m15snow" });
+  });
+
+  it("C2: no link when the standard frame and the family are all there is", async () => {
+    await pickPrinting("dmu-435", { verified: [...verifiedIn("m15"), "m15borderless/b"] });
+    expect(screen.getByTestId("import-frame-chooser")).toBeTruthy();
+    expect(screen.queryByTestId("import-frame-show-all")).toBeNull();
+  });
+
+  it("C2: every printing starts collapsed, and a pick among the other frames stays on show when its printing comes back", async () => {
+    // M15 isn't published in black here, so both Sheoldred printings ask:
+    // Snow first (the fallback the import lands on), Devoid behind the link.
+    const verified = verifiedIn("m15snow", "m15devoid");
+    stubScryfallRoutes({
+      search: ["dmu-107"],
+      printings: { representative: [["dmu-107", "dmu-435"]] },
+      serverVerified: new Set(verified),
+    });
+    render(
+      <ScryfallImportDialog
+        signedIn
+        open
+        onOpenChange={() => {}}
+        onImport={vi.fn()}
+        verifiedFrameKeys={verified}
+        currentFrameTemplate="m15"
+      />,
+    );
+    fireEvent.change(screen.getByLabelText("Search Scryfall"), { target: { value: "Sheoldred" } });
+    fireEvent.click(await screen.findByRole("option", { name: /Sheoldred/ }));
+    await screen.findByText(/Will populate/);
+    const grid = () => screen.getByTestId("printings-grid");
+    await waitFor(() => expect(within(grid()).getAllByRole("button")).toHaveLength(2));
+    const heading = () => within(screen.getByTestId("import-frame-chooser")).getByRole("heading");
+    const hasRadio = (label: RegExp) =>
+      within(screen.getByRole("radiogroup", { name: "Frame for the import" }))
+        .getAllByRole("radio")
+        .some((el) => label.test(el.textContent ?? ""));
+
+    // DMU #107: expand, pick Devoid.
+    expect(heading().textContent).toMatch(/M15 \(2015\) frame yet/);
+    expect(hasRadio(/^M15 \(2015\) Devoid/)).toBe(false);
+    fireEvent.click(screen.getByTestId("import-frame-show-all"));
+    fireEvent.click(frameRadio(/^M15 \(2015\) Devoid/));
+
+    // DMU #435: its own chooser, collapsed again.
+    fireEvent.click(within(grid()).getAllByRole("button")[1]!);
+    await waitFor(() => expect(heading().textContent).toMatch(/Borderless frame yet/));
+    expect(screen.getByTestId("import-frame-show-all")).toBeTruthy();
+    expect(hasRadio(/^M15 \(2015\) Devoid/)).toBe(false);
+
+    // Back to DMU #107: the Devoid pick is still its pick, and on show.
+    fireEvent.click(within(grid()).getAllByRole("button")[0]!);
+    await waitFor(() => expect(heading().textContent).toMatch(/M15 \(2015\) frame yet/));
+    expect(frameRadio(/^M15 \(2015\) Devoid/).getAttribute("aria-checked")).toBe("true");
+    expect(screen.queryByTestId("import-frame-show-all")).toBeNull();
+  });
+});

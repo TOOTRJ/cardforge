@@ -274,7 +274,14 @@ The import dialog (TODO 1.5) shows every printing's finalized match as a
 badge (✓ Exact · ≈ Nearest · ✕ Not available — `/api/scryfall/printings`)
 and, for anything but an exact match that lands on its own frame, asks for
 a frame before the import (`lib/creator/import-frame-choice.ts`): the kind's
-published frames in the card's colour, the import's own landing preselected.
+published frames in the card's colour, the import's own landing preselected
+and listed first with the printing's own frame, the kind's M15 standard and
+the printing's family (its frame set — a skin only when it IS the printing's
+frame); every other frame sits behind "Show all frames". A printing short of
+nothing but a detail no frame draws — the legendary crown, a colour
+indicator (`FrameMatch.gaps` ⊆ `UNDRAWN_DETAIL_GAPS`) — doesn't ask: it
+lands on its own frame, the Card step shows "Nearest frame" with the reason,
+and the deck pre-fill doesn't toast (owner decisions C1–C3, 2026-09-29).
 So a newly verified frame shows up in the chooser and turns its printings'
 badges to Exact the moment its `frame_reviews` row is ticked.
 
@@ -284,8 +291,17 @@ badges to Exact the moment its `frame_reviews` row is ticked.
   a row in `tests/unit/scryfall/frame-signatures.test.ts`. The completeness
   test fails until some rule can reach it.
 - **A frame whose border isn't true yet** stays in
-  `BORDER_PENDING_TEMPLATES` (capped at `nearest`); take it out when 4.35
-  fixes it.
+  `BORDER_PENDING_TEMPLATES` (or, for single colour masters,
+  `BORDER_PENDING_COLOURS`), capped at `nearest`. The list is the edge
+  contract's known failures (`lib/frames/edge-contract.ts`, 7.7) except
+  alphaland's invisible corner specks, and a test holds them together:
+  once a master is fixed and struck from the known failures, take its cap
+  out too (4.35).
+- **A frame the registry names for later** (`onceVerified`): a rule may
+  name a verified frame now and another once that one is verified in the
+  card's colour — the 2003-frame textless promos name the 2003 frame until
+  `m15textless` is verified. `withVerification` makes the swap, so
+  verifying the combo is all it takes.
 - **Registry references** (`lib/cards/frame-references.json`) must resolve
   to their own template and pass the pin check;
   `tests/unit/cards/frame-reference-signatures.test.ts` holds that over a

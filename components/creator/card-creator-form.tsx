@@ -1354,9 +1354,15 @@ export function CardCreatorForm({
       // 4.32 / 4.39) is OFFERED once it is verified in this colour, never
       // picked for the user.
       const importedColorKey = pickFrameColorKey(patch.color_identity);
+      // Only a real substitution toasts: a card on the printing's own frame
+      // short of only the crown or a colour indicator gets just the Card
+      // step's "Nearest frame" chip (owner decision C3).
       const message =
-        importSubstitutionMessage(patch.frame_match, landedTemplate, (template) =>
-          isFrameComboAvailable(template, importedColorKey, verifiedKeys),
+        importSubstitutionMessage(
+          patch.frame_match,
+          landedTemplate,
+          (template) => isFrameComboAvailable(template, importedColorKey, verifiedKeys),
+          importedColorKey,
         ) ??
         resolutionMessage ??
         (patch.printing_treatment && !patch.frame_match

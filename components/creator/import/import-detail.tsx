@@ -11,11 +11,13 @@ import {
 } from "@/components/creator/import/printings-grid";
 import { ImportFrameChooser } from "@/components/creator/import/frame-chooser";
 import type { UsePrintingsResult } from "@/components/creator/import/use-printings";
-import type {
-  ImportFrameChoice,
-  ImportFramePlan,
+import {
+  onlyUndrawnDetailsMissing,
+  type ImportFrameChoice,
+  type ImportFramePlan,
 } from "@/lib/creator/import-frame-choice";
 import { describeFrame } from "@/lib/creator/frame-resolve";
+import { pickFrameColorKey } from "@/components/cards/frame-layer";
 import type { ScryfallImportPatch } from "@/lib/scryfall/import-mapper";
 import type { PrintingSummary, PrintingView } from "@/lib/scryfall/printing-views";
 
@@ -46,10 +48,14 @@ export type NamedResponse = {
 
 /** "…and the frame (an exact match: M15 (2015) frame)" — the overwrite
  *  note names what the import does with the frame (TODO 1.5). Null when the
- *  chooser's "Keep my current frame" is picked: the frame isn't replaced. */
+ *  chooser's "Keep my current frame" is picked: the frame isn't replaced.
+ *  A printing short of only a detail no frame draws lands on its own frame
+ *  without the chooser (owner decision C1): the note names the frame and
+ *  the reason. */
 export function frameOverwriteCopy(
-  patch: Pick<ScryfallImportPatch, "frame_match">,
+  patch: Pick<ScryfallImportPatch, "frame_match" | "color_identity">,
   choice: ImportFrameChoice | null = null,
+  planMode: ImportFramePlan["mode"] = "none",
 ): string | null {
   const match = patch.frame_match;
   if (choice && "keepCurrent" in choice) return null;
@@ -59,6 +65,13 @@ export function frameOverwriteCopy(
   }
   if (choice) {
     return `the frame (nearest to ${match.exactLabel}: ${describeFrame(choice.template)}, your pick above)`;
+  }
+  if (
+    planMode === "none" &&
+    match.reason &&
+    onlyUndrawnDetailsMissing(match, pickFrameColorKey(patch.color_identity))
+  ) {
+    return `the frame (${describeFrame(match.template)} — ${match.reason})`;
   }
   return `the frame (nearest to ${match.exactLabel})`;
 }
@@ -97,7 +110,11 @@ export function ImportDetail({
 }) {
   const { card, patch } = data;
   const match = patch.frame_match;
-  const frameCopy = frameOverwriteCopy(patch, plan.mode === "choose" ? frameChoice : null);
+  const frameCopy = frameOverwriteCopy(
+    patch,
+    plan.mode === "choose" ? frameChoice : null,
+    plan.mode,
+  );
   return (
     <div className="relative flex flex-col gap-4 p-5" aria-busy={busy}>
       {busy ? (
@@ -209,6 +226,7 @@ export function ImportDetail({
         </p>
       ) : plan.mode === "choose" ? (
         <ImportFrameChooser
+          key={card.id}
           plan={plan}
           value={frameChoice}
           onChange={onFrameChoiceChange}

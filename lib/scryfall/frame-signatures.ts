@@ -7,6 +7,7 @@ import {
 } from "@/types/card";
 import {
   KIND_DEFS,
+  borrowedTypeWord,
   templateIsBasicOnly,
   templateSupportsKind,
   type CardKind,
@@ -68,6 +69,18 @@ export type FrameMatch = {
   forGood?: true;
   /** The TODO item that would make this exact ("4.35", "4.6", …). */
   blockedBy?: string;
+  /** The frame the registry names instead once it is verified in the
+   *  card's colour: a 2003-frame textless promo names the 2003 frame while
+   *  the textless frame isn't verified (owner decision A9, 2026-09-29).
+   *  withVerification (lib/creator/frame-resolve.ts) swaps it in. */
+  onceVerified?: FrameTemplate;
+  /** Every anatomy gap of the printing — a piece PipGlyph doesn't draw yet
+   *  (the legendary crown, a colour indicator, the Vehicle plate, …) — most
+   *  visible first: the first names `reason`. Absent when the rule that
+   *  matched has none. The import dialog reads it to skip its frame chooser
+   *  when the only gaps are details no PipGlyph frame draws (owner decision
+   *  C1, 2026-09-29). */
+  gaps?: readonly FrameGap[];
 };
 
 /** The facts the registry reads that need the importer's own rules — the
@@ -142,16 +155,47 @@ const MARK_EFFECTS = ["miracle", "companion", "lesson", "spree", "tombstone", "d
 const UNMODELLED_LAYOUTS = ["class", "case", "leveler", "prototype", "mutate", "meld", "prepare", "host", "augment"] as const;
 const UNMODELLED_SUBTYPES = ["Room", "Class", "Case"] as const;
 
-/** The templates whose border isn't true yet: a transparent outer ring plus
- *  an inset art slot that bakes a flat #101015 "border" (TODO 4.35). Capped
- *  at `nearest` so verifying one can never make it exact. */
+/** The templates whose border isn't true yet, capped at `nearest` so
+ *  verifying one can never make it exact:
+ *   • a transparent outer ring plus an inset art slot that bakes a flat
+ *     #101015 "border" (TODO 4.35): bloomanime, tarkirghostfire,
+ *     tarkirdragon, lotrscroll, battle;
+ *   • a transparent outer band at the bottom and lower sides, found by 7.7's
+ *     edge contract (owner decision A8, 2026-09-29): avatar, bloomburrow,
+ *     lotr, tarkirdraconic.
+ *  Each is a known failure in lib/frames/edge-contract.ts; a test holds the
+ *  two lists together, so fixing a master (and striking it from the known
+ *  failures) lifts its cap here too. */
 export const BORDER_PENDING_TEMPLATES: ReadonlySet<FrameTemplate> = new Set<FrameTemplate>([
   "bloomanime",
   "tarkirghostfire",
   "tarkirdragon",
   "lotrscroll",
   "battle",
+  "avatar",
+  "bloomburrow",
+  "lotr",
+  "tarkirdraconic",
 ]);
+
+/** Single colour masters whose border isn't true yet (owner decision A8):
+ *  expeditionland's black and green, where the black flood fill leaked
+ *  through the dark stone (4.35 (3)). No printed Expedition is black or
+ *  green today (ZNE and EXP checked 2026-09-29: the fetches and duals are
+ *  multicolour, Ancient Tomb and Kor Haven colourless, Valakut red), so the
+ *  cap guards the combos rather than a printing. */
+export const BORDER_PENDING_COLOURS: ReadonlyMap<FrameTemplate, ReadonlySet<string>> = new Map<
+  FrameTemplate,
+  ReadonlySet<string>
+>([["expeditionland", new Set(["b", "g"])]]);
+
+/** True when `template`'s border isn't true yet in this colour key. */
+export function isBorderPending(template: FrameTemplate, colorKey: string): boolean {
+  return (
+    BORDER_PENDING_TEMPLATES.has(template) ||
+    Boolean(BORDER_PENDING_COLOURS.get(template)?.has(colorKey))
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Rule shape
@@ -211,6 +255,8 @@ type Outcome = {
   reject?: true;
   forGood?: true;
   blockedBy?: string;
+  /** FrameMatch.onceVerified: the frame named instead once verified. */
+  onceVerified?: TemplateSpec;
 };
 
 type Rule = {
@@ -220,6 +266,9 @@ type Rule = {
   exactLabel: Text;
   match: Match;
   outcome: Outcome;
+  /** A gap rule's gaps (withGaps): its own first — it holds when the rule
+   *  matches — then the base's later ones, which may hold too. */
+  gaps?: readonly GapKey[];
 };
 
 type Ctx = {
@@ -457,6 +506,8 @@ const BORDERED_EQUIVALENT: Partial<Record<FrameTemplate, FrameTemplate>> = {
 // default: a missing piece is not an exact match).
 // ---------------------------------------------------------------------------
 
+export type FrameGap = GapKey;
+
 type GapKey =
   | "crown"
   | "two-colour"
@@ -563,7 +614,7 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
 /** The base rule, preceded by one `nearest` rule per gap ('era/2015+crown'). */
 function withGaps(base: Rule, gaps: readonly GapKey[]): Rule[] {
   return [
-    ...gaps.map((gap): Rule => ({
+    ...gaps.map((gap, index): Rule => ({
       key: `${base.key}+${gap}`,
       exactLabel: base.exactLabel,
       match: { allOf: [base.match, GAPS[gap].match] },
@@ -573,6 +624,9 @@ function withGaps(base: Rule, gaps: readonly GapKey[]): Rule[] {
         reason: GAPS[gap].reason,
         blockedBy: GAPS[gap].blockedBy,
       },
+      // The earlier gaps didn't hold (first match wins); the later ones are
+      // checked at resolve time (FrameMatch.gaps).
+      gaps: gaps.slice(index),
     })),
     base,
   ];
@@ -1038,11 +1092,27 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       blockedBy: "4.42",
     },
   },
+  // The 2003-frame textless promos (Player Rewards P05–P11, e.g. Wrath of
+  // God P07 #1) name the verified 2003 frame as their nearest until the
+  // textless frame is verified in their colour, then the textless frame,
+  // whose no-box layout fits their tall 619×808 art_crop (owner decision A9,
+  // 2026-09-29; withVerification makes the swap).
   {
     key: "textless/old-frame",
-    exactLabel: ({ frame }) =>
-      frame === "future" ? "Future Sight textless frame" : "2003 frame textless promo",
-    match: { frames: ["2003", "future"], textless: true, notKinds: ["token"] },
+    exactLabel: "2003 frame textless promo",
+    match: { frames: ["2003"], textless: true, notKinds: ["token"] },
+    outcome: {
+      status: "nearest",
+      template: { family: "modern" },
+      onceVerified: { family: "textless" },
+      reason: "PipGlyph doesn't have this old-frame textless design yet",
+      blockedBy: "4.43",
+    },
+  },
+  {
+    key: "textless/future",
+    exactLabel: "Future Sight textless frame",
+    match: { frames: ["future"], textless: true, notKinds: ["token"] },
     outcome: {
       status: "nearest",
       template: { family: "textless" },
@@ -1344,12 +1414,14 @@ const kindWord = (kind: CardKind) => {
 /**
  * Resolve a printing's frame signature: the first matching rule's outcome,
  * then three checks the table can't express by itself:
- *   1. the kind — a frame that can't dress this kind of card (a Theros god,
- *      an Enchantment CREATURE, on the Nyx showcase frame; a Snow ARTIFACT on
- *      the snow frame; an Omen on the draconic frame) is at best `nearest`,
- *      and the import lands on the kind's standard (`landOn`);
- *   2. the border — a template whose border isn't true yet (4.35) is capped
- *      at `nearest`;
+ *   1. the kind — a frame that can't dress this kind of card (a Snow
+ *      ARTIFACT on the snow frame; an Omen on the draconic frame), or a frame
+ *      the kind borrows for a type the card isn't (Nyx on a creature that
+ *      isn't an Enchantment Creature, owner decision A3), is at best
+ *      `nearest`, and the import lands on the kind's standard (`landOn`);
+ *   2. the border — a template whose border isn't true yet (4.35, and 7.7's
+ *      edge contract: isBorderPending, owner decision A8) is capped at
+ *      `nearest`;
  *   3. the art — an edge-to-edge frame lands on its bordered equivalent,
  *      because Scryfall's art_crop is the 626×457 window (1.18's owner
  *      decision). That holds on `full_art` borderless printings too, so the
@@ -1371,18 +1443,14 @@ export function resolveFrameSignature(card: ScryfallCard, facts: PrintingFacts):
   let landOn: FrameTemplate | undefined;
 
   const kind = facts.kind;
-  if (
-    kind &&
-    (!templateSupportsKind(template, kind) ||
-      (templateIsBasicOnly(template) && !facts.singleBasic))
-  ) {
+  const misfit = kind ? kindMisfit(template, kind, ctx) : null;
+  if (misfit) {
     landOn = kindFallback(ctx);
-    const kindReason = `PipGlyph's ${describeFrame(template)} frame doesn't dress ${kindWord(kind)} yet`;
-    reason = reason ? `${reason}; ${kindReason}` : kindReason;
+    reason = reason ? `${reason}; ${misfit}` : misfit;
     if (status === "exact") status = "nearest";
   }
 
-  if (status === "exact" && BORDER_PENDING_TEMPLATES.has(template)) {
+  if (status === "exact" && isBorderPending(template, colorKeyOf(facts))) {
     status = "nearest";
     reason = `PipGlyph's ${describeFrame(template)} frame doesn't have the printed border yet`;
     blockedBy = "4.35";
@@ -1391,6 +1459,29 @@ export function resolveFrameSignature(card: ScryfallCard, facts: PrintingFacts):
   if (!landOn && artReachesCardEdge(getFrameProfile(template))) {
     landOn = BORDERED_EQUIVALENT[template] ?? kindFallback(ctx);
   }
+
+  // The frame named instead once verified: only one that dresses this card
+  // as it stands, on no other frame (no kind or edge landing to redo).
+  const laterSpec = rule.outcome.onceVerified;
+  const later = laterSpec
+    ? typeof laterSpec === "string"
+      ? laterSpec
+      : FAMILIES[laterSpec.family].pick(ctx)
+    : undefined;
+  const onceVerified =
+    later &&
+    later !== template &&
+    !landOn &&
+    !(kind && kindMisfit(later, kind, ctx)) &&
+    !artReachesCardEdge(getFrameProfile(later))
+      ? later
+      : undefined;
+
+  // Every anatomy gap that holds: the matched gap rule's own, then the
+  // base's later ones (FrameMatch.gaps).
+  const gaps = rule.gaps
+    ? rule.gaps.filter((gap, index) => index === 0 || matches(GAPS[gap].match, ctx))
+    : [];
 
   return {
     status,
@@ -1402,7 +1493,35 @@ export function resolveFrameSignature(card: ScryfallCard, facts: PrintingFacts):
     ...(rule.outcome.reject ? { reject: true as const } : {}),
     ...(rule.outcome.forGood ? { forGood: true as const } : {}),
     ...(status !== "exact" && blockedBy ? { blockedBy } : {}),
+    ...(onceVerified ? { onceVerified } : {}),
+    ...(gaps.length > 0 ? { gaps } : {}),
   };
+}
+
+/** Why `template` can't dress this printing's kind, or null when it can: a
+ *  frame whose kind restriction leaves the kind out, a basic-only frame on
+ *  anything but one basic land, or a frame the kind borrows from another
+ *  type (the artifact frame, Nyx) on a card whose type line doesn't say it. */
+function kindMisfit(template: FrameTemplate, kind: CardKind, ctx: Ctx): string | null {
+  const { facts } = ctx;
+  if (!templateSupportsKind(template, kind) || (templateIsBasicOnly(template) && !facts.singleBasic)) {
+    return `PipGlyph's ${describeFrame(template)} frame doesn't dress ${kindWord(kind)} yet`;
+  }
+  const word = borrowedTypeWord(kind, template);
+  if (word && !facts.cardTypes.has(word.toLowerCase() as CardType)) {
+    const label = KIND_DEFS[kind].label.toLowerCase();
+    return `PipGlyph's ${describeFrame(template)} frame dresses a ${label} only when it is an ${word.toLowerCase()}`;
+  }
+  return null;
+}
+
+/** The frame colour key the creator verifies this printing in — the facts'
+ *  colours through pickFrameColorKey's rule (none → c, one → its letter,
+ *  two or more → m). */
+function colorKeyOf(facts: PrintingFacts): string {
+  if (facts.colors.length === 0) return "c";
+  if (facts.colors.length > 1) return "m";
+  return facts.colors[0]!.toLowerCase();
 }
 
 /** Every template the registry can resolve to, for the completeness test. */
