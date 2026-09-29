@@ -8,6 +8,7 @@ import {
   OgShell,
 } from "@/lib/og/shell";
 import { BRAND } from "@/lib/brand/constants";
+import { profileMediaSrc } from "@/lib/media/media-urls";
 
 // Social-preview card for creator profiles — avatar, display name, and
 // handle, so a shared profile link unfurls as the person rather than the
@@ -18,6 +19,7 @@ export const size = OG_SIZE;
 export const contentType = "image/png";
 
 type OgProfile = {
+  id: string;
   username: string | null;
   display_name: string | null;
   avatar_url: string | null;
@@ -30,7 +32,7 @@ async function getProfile(username: string): Promise<OgProfile | null> {
     const supabase = createPublicClient();
     const { data } = await supabase
       .from("profiles")
-      .select("username, display_name, avatar_url, bio")
+      .select("id, username, display_name, avatar_url, bio")
       .eq("username", username)
       .maybeSingle();
     return (data as OgProfile | null) ?? null;
@@ -64,9 +66,9 @@ export default async function Image({
   const displayName =
     profile.display_name?.trim() || profile.username || "Forgemaster";
   const initial = (displayName[0] ?? "?").toUpperCase();
-  const avatar = profile.avatar_url
-    ? await fetchImageAsDataUri(profile.avatar_url)
-    : null;
+  // Only a drawable avatar (migration 0127, lib/media/media-urls.ts).
+  const avatarSrc = profileMediaSrc("avatar", profile.avatar_url, profile.id);
+  const avatar = avatarSrc ? await fetchImageAsDataUri(avatarSrc) : null;
 
   return ogImageResponse(
     (

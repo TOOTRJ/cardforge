@@ -37,6 +37,7 @@ import { getSiteBaseUrl } from "@/lib/site-url";
 import { absoluteProfileMediaUrl } from "@/lib/profile/default-media";
 import { JsonLd } from "@/components/seo/json-ld";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
+import { profileMediaSrc } from "@/lib/media/media-urls";
 
 type Params = { username: string };
 
@@ -266,11 +267,12 @@ function ProfileHero({
 }) {
   return (
     <div className="overflow-hidden rounded-frame border border-border bg-surface">
-      <ProfileBanner bannerUrl={profile.banner_url} />
+      {/* Only drawable profile pictures (migration 0127, lib/media/media-urls.ts). */}
+      <ProfileBanner bannerUrl={profileMediaSrc("banner", profile.banner_url, profile.id)} />
       <div className="flex flex-col gap-4 px-6 pb-6 pt-2 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <ProfileAvatar
-            avatarUrl={profile.avatar_url}
+            avatarUrl={profileMediaSrc("avatar", profile.avatar_url, profile.id)}
             initial={initial}
             displayName={displayName}
           />
@@ -592,7 +594,10 @@ function buildProfileJsonLd(
       profile.bio?.trim() || `Custom cards forged by @${profile.username} on PipGlyph.`,
   };
   // Built-in avatars are stored site-relative; structured data needs absolute.
-  const avatarUrl = absoluteProfileMediaUrl(profile.avatar_url, base);
+  const avatarUrl = absoluteProfileMediaUrl(
+    profileMediaSrc("avatar", profile.avatar_url, profile.id),
+    base,
+  );
   if (avatarUrl) person.image = avatarUrl;
   if (sameAs.length > 0) person.sameAs = sameAs;
 

@@ -30,6 +30,7 @@ import {
 } from "@/lib/cards/trending";
 import { narrowCard } from "@/lib/cards/narrow";
 import { lookupUsername } from "@/lib/profile/username";
+import { profileMediaSrc } from "@/lib/media/media-urls";
 
 // Composed shape: card + owner profile + like count + viewer's like state.
 // Used by the gallery and any "card tile" listing.
@@ -249,7 +250,8 @@ export const getCardByOwnerAndSlug = cache(async (
       owner: {
         username: profile.username,
         display_name: profile.display_name,
-        avatar_url: profile.avatar_url,
+        // Only a drawable avatar (migration 0127, lib/media/media-urls.ts).
+        avatar_url: profileMediaSrc("avatar", profile.avatar_url, profile.id),
       },
     };
   } catch {
@@ -342,7 +344,7 @@ async function attachStats(
     ownerById.set(row.id, {
       username: row.username,
       display_name: row.display_name,
-      avatar_url: row.avatar_url,
+      avatar_url: profileMediaSrc("avatar", row.avatar_url, row.id),
     });
   }
 
@@ -1099,7 +1101,7 @@ export async function listTrendingCards(
       ownerProfileById.set(row.id, {
         username: row.username,
         display_name: row.display_name,
-        avatar_url: row.avatar_url,
+        avatar_url: profileMediaSrc("avatar", row.avatar_url, row.id),
       });
     }
 

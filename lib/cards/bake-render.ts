@@ -8,6 +8,7 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isUserStorageConfigured } from "@/lib/media/user-storage";
+import { isAllowedMediaUrl } from "@/lib/media/media-urls";
 import { renderCardImage } from "@/lib/render/card-image";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import {
@@ -77,6 +78,13 @@ export async function resolveBakeArt(
   artUrl: string | null | undefined,
 ): Promise<{ ok: true; artUrl: string | null } | { ok: false; error: string }> {
   if (!artUrl) return { ok: true, artUrl: null };
+  // Art the live preview won't draw (lib/media/media-urls.ts, migration
+  // 0127 — an older row could name any host) isn't baked either: the preview
+  // and the bake drop the same pictures, and an art-less render never stands
+  // in for a card that has art.
+  if (!isAllowedMediaUrl("card-art", artUrl)) {
+    return { ok: false, error: "Art isn't one of our stored pictures — not baking it." };
+  }
   const resolved = await resolveRenderableImage(artUrl);
   if (!resolved || resolved === TRANSPARENT_PIXEL_DATA_URL || resolved === artUrl) {
     return { ok: false, error: "Art unavailable — not baking an art-less render." };

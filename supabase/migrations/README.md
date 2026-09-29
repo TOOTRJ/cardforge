@@ -58,12 +58,119 @@ real session.
 as the card's picture) joins that trigger, and any surface that draws one
 checks it with `isStoredRenderUrl()` (`lib/cards/render-cdn.ts`) first.
 
-**Not covered yet (TODO 3.14b):** the other user-media URL columns —
-`cards.art_url` (and the second face's art in `back_face`), `set_icon_url`,
-`watermark`'s icon, `profiles.avatar_url` / `banner_url`, `decks.cover_url`,
-`custom_pips.image_url`, `deck_cards.image_url` — are still any https URL
-their owner writes through PostgREST (length CHECKs only), so an outside
-picture can skip the strip and the scan there.
+**Every picture URL column is tied to our storage (0127, TODO 3.14b).** One
+guard trigger per table (`cards_guard_media_columns`,
+`profiles_guard_media_columns`, `decks_guard_media_columns`,
+`custom_pips_guard_media_columns`, `deck_cards_guard_media_columns`) lets
+`anon` / `authenticated` only keep a column's value, clear it, or set what
+`public.media_url_allowed(kind, url, auth.uid())` accepts: a public object on
+one of `public.storage_origins`, in the kind's bucket, directly in the
+caller's own folder — `cards.art_url` and the second face's art (card-art,
+or a built-in image: the seed cards), the custom watermark's `url`
+(card-art), `set_icon_url` (set-covers or card-art), `avatar_url` /
+`banner_url` (profile-media or a built-in `/defaults/…` image of that kind),
+`decks.cover_url` (set-covers, or card-art for an AI cover),
+`custom_pips.image_url` (custom-pips, `?v=` allowed); `deck_cards.image_url`
+takes a Scryfall printing image (`https://cards.scryfall.io/…`) only. Refused
+= `insufficient_privilege` with `media_url_not_allowed: <table>.<column>`
+(the save actions turn it into a field error, `lib/media/media-url-errors.ts`).
+The service role and `postgres` are not checked; existing rows are
+grandfathered (only changes are checked). A remix of someone else's card
+copies the parent's pictures into the remixer's folder before it saves
+(`lib/cards/remix-media.ts`) — also when the parent is your own card whose
+art still sits in its original owner's folder (a pre-0127 remix).
+`handle_new_user` keeps a signup's metadata avatar only for a Google sign-in
+(`raw_app_meta_data.provider = 'google'`, GoTrue's, never the user's) and
+only a Google ACCOUNT picture (`https://lhN.googleusercontent.com/a/…` or
+`/a-/…`). A card's `back_card_id` must name another of its owner's cards
+(`cards_guard_back_card`). Any surface that DRAWS one of these columns checks
+it with `isAllowedMediaUrl()` / `profileMediaSrc()` (`lib/media/media-urls.ts`)
+first — the database can't pin the deployment's host, the app can.
+
+- **A new picture column** joins a guard trigger and a `media_url_allowed`
+  kind (and `MEDIA_KIND_BUCKETS` in `lib/media/media-urls.ts` — a unit test
+  keeps the two tables equal).
+- **`public.storage_origins`** lists production's two origins (the custom
+  domain and the project host) — from the migration, which runs everywhere,
+  so nothing else goes there (no dev host, no wildcard: production would
+  trust it too). Every other database gets its OWN origin from the app,
+  which upserts the origin of `NEXT_PUBLIC_SUPABASE_URL` with the service
+  role before its first write into a user folder (`lib/media/storage-origin.ts`);
+  a storage domain move registers itself the same way. The e2e spec
+  registers the local stack's origin in its setup, like the app would.
+- **Uploads are rate-limited per user** (30 in any 60 seconds, 300 in any
+  24 hours — sliding windows over one row per counted upload; admins
+  exempt): `public.upload_hits` + `hit_upload_limit()`, service role only,
+  called by every upload action before it touches the bytes
+  (`lib/media/upload-rate-limit.ts`, fail-CLOSED except while the function
+  isn't deployed yet; AI art and our own bakes aren't counted).
+
+Classification of every row (counts only — production's private rows are the
+owner's to read):
+
+```sql
+-- Read-only. Every user-media URL column, classified the way 0127 sees it —
+-- counts only (no ids, no URLs). Runs before or after 0127 (SQL editor,
+-- production).
+with v (tbl, col, vis, owner, url, buckets) as (
+  select 'cards', 'art_url', c.visibility, c.owner_id, c.art_url, array['card-art'] from public.cards c
+  union all select 'cards', 'back_face.art_url', c.visibility, c.owner_id, c.back_face ->> 'art_url', array['card-art'] from public.cards c
+  union all select 'cards', 'watermark.url', c.visibility, c.owner_id, c.watermark ->> 'url', array['card-art'] from public.cards c
+  union all select 'cards', 'set_icon_url', c.visibility, c.owner_id, c.set_icon_url, array['set-covers', 'card-art'] from public.cards c
+  union all select 'profiles', 'avatar_url', 'all', p.id, p.avatar_url, array['profile-media'] from public.profiles p
+  union all select 'profiles', 'banner_url', 'all', p.id, p.banner_url, array['profile-media'] from public.profiles p
+  union all select 'decks', 'cover_url', d.visibility, d.owner_id, d.cover_url, array['set-covers', 'card-art'] from public.decks d
+  union all select 'custom_pips', 'image_url', 'all', cp.owner_id, cp.image_url, array['custom-pips'] from public.custom_pips cp
+  union all select 'deck_cards', 'image_url', d.visibility, d.owner_id, dc.image_url, array[]::text[]
+    from public.deck_cards dc join public.decks d on d.id = dc.deck_id
+),
+m as (
+  select *, regexp_match(url, '^(https?://[^/]+)/storage/v1/object/public/([^/]+)/([^/]+)/(.+)$') as p from v
+)
+select tbl, col,
+       case when vis in ('public', 'unlisted') then 'public+unlisted' else vis end as rows_of,
+       case
+         when url is null or url = '' then 'empty'
+         when url ~ '^/defaults/' then 'built-in (site-relative)'
+         when url ~ '^https://(www\.)?pipglyph\.com/defaults/' then 'built-in (pipglyph.com)'
+         when p is not null and p[1] in ('https://auth.pipglyph.com', 'https://zkwkisxoqdhdchqyjwdc.supabase.co') then
+           case
+             when not (p[2] = any (buckets)) then 'our storage, another bucket'
+             -- A nested path, an odd file name or a query other than
+             -- ?v=<digits>: kept while unchanged, but the guard refuses it as
+             -- a new value and the display drops a nested path / odd name.
+             when p[4] !~ '^[A-Za-z0-9][A-Za-z0-9._-]{0,199}(\?v=[0-9]{1,20})?$'
+                  or position('..' in p[4]) > 0 then 'our storage, odd path/name/query'
+             when p[3] = owner::text then 'our storage, own folder'
+             else 'our storage, ANOTHER user''s folder'
+           end
+         when url ~ '^https://lh[0-9]{1,2}\.googleusercontent\.com/a-?/' then 'Google account avatar'
+         when url ~ '^https://lh[0-9]+\.googleusercontent\.com/' then 'Google host, NOT an account avatar'
+         when url ~ '^https://cards\.scryfall\.io/[A-Za-z0-9_./-]+(\?[0-9]{1,20})?$' then 'Scryfall CDN'
+         when url ~ '^https://cards\.scryfall\.io/' then 'Scryfall CDN, odd path/query'
+         when url ~ '^https://([a-z0-9-]+\.)*scryfall\.(io|com)/' then 'Scryfall, other host'
+         else 'OTHER HOST'
+       end as class,
+       count(*) as n
+from m
+group by 1, 2, 3, 4
+order by 1, 2, 3, 4;
+```
+
+And the back faces (counts only; production's public + unlisted cards have
+no `back_card_id` at all, 2026-09-29):
+
+```sql
+-- Read-only. Cards whose v2 back face is ANOTHER owner's card — refused as
+-- a new value since 0127 (cards_guard_back_card); the card page skips them.
+select case when c.visibility in ('public', 'unlisted') then 'public+unlisted' else c.visibility end as rows_of,
+       count(*) as n
+from public.cards c
+join public.cards b on b.id = c.back_card_id
+where b.owner_id <> c.owner_id
+group by 1
+order by 1;
+```
 
 ## Errata — corrections to merged migration headers
 

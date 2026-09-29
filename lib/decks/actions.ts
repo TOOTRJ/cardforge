@@ -12,6 +12,7 @@ import { getDeckById } from "@/lib/decks/queries";
 import type { DeckInsert, DeckUpdate } from "@/types/supabase";
 import type { ZodIssue } from "zod";
 import { isUuid } from "@/lib/ids";
+import { MEDIA_URL_NOT_ALLOWED_MESSAGE, mediaUrlViolationField } from "@/lib/media/media-url-errors";
 
 // ---------------------------------------------------------------------------
 // Result shapes — discriminated unions so callers pattern-match without throwing.
@@ -146,6 +147,10 @@ export async function createDeckAction(
     if (error?.code !== UNIQUE_VIOLATION) break;
   }
 
+  if (!row && mediaUrlViolationField(lastError)) {
+    // Migration 0127: a cover that isn't one of the user's own uploads.
+    return { ok: false, fieldErrors: { cover_url: MEDIA_URL_NOT_ALLOWED_MESSAGE } };
+  }
   if (!row) {
     return { ok: false, formError: lastError ?? "Could not create deck." };
   }
@@ -227,6 +232,10 @@ export async function updateDeckAction(
     if (error?.code !== UNIQUE_VIOLATION) break;
   }
 
+  if (!row && mediaUrlViolationField(lastError)) {
+    // Migration 0127: a cover that isn't one of the user's own uploads.
+    return { ok: false, fieldErrors: { cover_url: MEDIA_URL_NOT_ALLOWED_MESSAGE } };
+  }
   if (!row) {
     return { ok: false, formError: lastError ?? "Could not update deck." };
   }

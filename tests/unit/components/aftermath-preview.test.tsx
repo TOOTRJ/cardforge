@@ -30,14 +30,14 @@ describe("CardPreview — aftermath's second half", () => {
         cardType="sorcery"
         colorIdentity={["red"]}
         rulesText="Cut deals 4 damage to target creature."
-        artUrl="/art/top.png"
+        artUrl="https://zkwkisxoqdhdchqyjwdc.supabase.co/storage/v1/object/public/card-art/11111111-1111-4111-8111-111111111111/top.png"
         frameStyle={{ template: "aftermath" }}
         backFace={{
           title: "Ribbons",
           cost: "{X}{B}{B}",
           card_type: "sorcery",
           rules_text: "Each opponent loses X life.",
-          art_url: "/art/bottom.png",
+          art_url: "https://zkwkisxoqdhdchqyjwdc.supabase.co/storage/v1/object/public/card-art/11111111-1111-4111-8111-111111111111/bottom.png",
         }}
       />,
     );
@@ -50,7 +50,7 @@ describe("CardPreview — aftermath's second half", () => {
     expect(band.firstElementChild).toBe(name);
     expect(band.lastElementChild?.getAttribute("aria-label")).toBe("Cost {X}{B}{B}");
 
-    const art = container.querySelector('img[src="/art/bottom.png"]') as HTMLElement;
+    const art = container.querySelector('img[src="https://zkwkisxoqdhdchqyjwdc.supabase.co/storage/v1/object/public/card-art/11111111-1111-4111-8111-111111111111/bottom.png"]') as HTMLElement;
     expect((art.parentElement as HTMLElement).style.transform).toBe("rotate(90deg)");
   });
 

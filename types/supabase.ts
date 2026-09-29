@@ -156,6 +156,39 @@ export type Database = {
         };
         Relationships: [];
       };
+      upload_hits: {
+        Row: {
+          user_id: string;
+          hit_at: string;
+          hits: number;
+        };
+        Insert: {
+          user_id: string;
+          hit_at: string;
+          hits?: number;
+        };
+        Update: {
+          user_id?: string;
+          hit_at?: string;
+          hits?: number;
+        };
+        Relationships: [];
+      };
+      storage_origins: {
+        Row: {
+          origin: string;
+          note: string | null;
+        };
+        Insert: {
+          origin: string;
+          note?: string | null;
+        };
+        Update: {
+          origin?: string;
+          note?: string | null;
+        };
+        Relationships: [];
+      };
       credit_ledger: {
         Row: {
           balance_after: number;
@@ -1769,6 +1802,18 @@ export type Database = {
       hit_anon_render_limit: {
         Args: { p_key_hash: string; p_per_minute: number; p_per_hour: number };
         Returns: { allowed: boolean; retry_after_seconds: number }[];
+      };
+      hit_upload_limit: {
+        Args: { p_user_id: string; p_per_minute: number; p_per_day: number };
+        Returns: { allowed: boolean; retry_after_seconds: number; limited_by: string | null }[];
+      };
+      media_url_allowed: {
+        Args: { p_kind: string; p_url: string; p_owner: string };
+        Returns: boolean;
+      };
+      media_url_change_allowed: {
+        Args: { p_kind: string; p_old: string; p_new: string };
+        Returns: boolean;
       };
       grant_credits: {
         Args: {

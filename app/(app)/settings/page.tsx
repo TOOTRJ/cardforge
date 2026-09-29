@@ -27,6 +27,7 @@ import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { listPublicCardsByOwner } from "@/lib/cards/queries";
+import { drawableMediaUrl } from "@/lib/media/media-urls";
 
 export const metadata: Metadata = {
   title: "Settings",
@@ -89,13 +90,13 @@ export default async function SettingsPage({
           <div className="flex flex-col gap-8">
             <ProfileMediaField
               kind="avatar"
-              currentUrl={profile?.avatar_url ?? null}
+              currentUrl={drawableMediaUrl("avatar", profile?.avatar_url, profile?.id)}
               label="Avatar"
               hint="Square crops look best — 256×256 or larger."
             />
             <ProfileMediaField
               kind="banner"
-              currentUrl={profile?.banner_url ?? null}
+              currentUrl={drawableMediaUrl("banner", profile?.banner_url, profile?.id)}
               label="Banner"
               hint="Wide aspect (≈ 4:1). Renders at the top of your profile."
             />

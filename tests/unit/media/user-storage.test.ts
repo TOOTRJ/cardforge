@@ -30,11 +30,23 @@ vi.mock("@/lib/supabase/admin", () => ({
               state.calls.push({ op: "remove", args });
               return { data: [], error: null };
             },
+            copy: async (...args: unknown[]) => {
+              state.calls.push({ op: "copy", args });
+              return { data: { path: args[1] }, error: null };
+            },
             getPublicUrl: (key: string) => ({ data: { publicUrl: `https://storage.test/${bucket}/${key}` } }),
           };
         },
       },
     };
+  },
+}));
+
+// Migration 0127: the deployment registers its storage origin with its own
+// database before its first write (lib/media/storage-origin.ts).
+vi.mock("@/lib/media/storage-origin", () => ({
+  ensureStorageOriginRegistered: async () => {
+    state.calls.push({ op: "register", args: [] });
   },
 }));
 
@@ -113,6 +125,9 @@ describe("userFolder", () => {
     expect(state.clients).toBe(1);
     expect(state.buckets).toEqual(["profile-media"]);
     expect(state.calls).toEqual([
+      // The storage origin is registered before the write (0127), never
+      // before a remove.
+      { op: "register", args: [] },
       { op: "upload", args: [`${ME}/avatar-1.png`, new Uint8Array([1]), { contentType: "image/png", upsert: false }] },
       { op: "remove", args: [[`${ME}/avatar-0.png`, `${ME}/avatar-1.png`]] },
     ]);
@@ -141,5 +156,43 @@ describe("userFolder", () => {
   it("an empty remove makes no request", async () => {
     expect(await userFolder("custom-pips", ME).remove([])).toEqual({ error: null });
     expect(state.calls).toEqual([]);
+  });
+});
+
+// A remix save gives the remixer their own copy of the parent's pictures
+// (lib/cards/remix-media.ts, migration 0127): the SOURCE may be any user's
+// object (read from stored data), the copy always lands in `{userId}/`.
+describe("userFolder.copyIn", () => {
+  it("copies another user's object into the caller's own folder", async () => {
+    expect(await userFolder("card-art", ME).copyIn(`${OTHER}/front.jpg`, "remix-1.jpg")).toEqual({ error: null });
+    expect(state.buckets).toEqual(["card-art"]);
+    expect(state.calls).toEqual([
+      { op: "register", args: [] },
+      { op: "copy", args: [`${OTHER}/front.jpg`, `${ME}/remix-1.jpg`] },
+    ]);
+  });
+
+  it("refuses a bad destination name, a nested or traversing source, and a non-uuid source folder", async () => {
+    const folder = userFolder("card-art", ME);
+    for (const name of BAD_NAMES) {
+      expect(await folder.copyIn(`${OTHER}/front.jpg`, name), JSON.stringify(name)).toEqual({
+        error: { message: "Invalid storage path." },
+      });
+    }
+    for (const source of [
+      `${OTHER}/nested/front.jpg`,
+      `${OTHER}/../${ME}/x.jpg`,
+      "front.jpg",
+      "not-a-uuid/front.jpg",
+      `${OTHER}/`,
+      `${OTHER}/..`,
+    ]) {
+      expect(await folder.copyIn(source, "remix-1.jpg"), source).toEqual({ error: { message: "Invalid storage path." } });
+    }
+    expect(await userFolder("card-art", "user-1").copyIn(`${OTHER}/front.jpg`, "a.jpg")).toEqual({
+      error: { message: "Invalid storage path." },
+    });
+    expect(state.calls).toEqual([]);
+    expect(state.clients).toBe(0);
   });
 });

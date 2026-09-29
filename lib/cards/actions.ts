@@ -60,6 +60,8 @@ import { buildCardPath } from "@/lib/cards/utils";
 import { isCapacityViolation } from "@/lib/billing/capacity-copy";
 import { allFramePreviewsMessage } from "@/lib/cards/bulk-visibility-copy";
 import { CARD_CAPACITY_UNLIMITED } from "@/lib/billing/plans";
+import { adoptRemixMedia, type RemixMedia } from "@/lib/cards/remix-media";
+import { MEDIA_URL_NOT_ALLOWED_MESSAGE, mediaUrlViolationField } from "@/lib/media/media-url-errors";
 
 // ---------------------------------------------------------------------------
 // Result shape — every action returns either a typed success payload or a
@@ -323,14 +325,12 @@ export async function createCardAction(
 
   // If the caller passed a parent_card_id, sanity-check it before insert so
   // we can return a friendlier error than the bare DB FK violation.
-  if (data.parent_card_id) {
-    const parent = await getCardById(data.parent_card_id);
-    if (!parent) {
-      return {
-        ok: false,
-        fieldErrors: { parent_card_id: "The card to remix could not be found." },
-      };
-    }
+  const parent = data.parent_card_id ? await getCardById(data.parent_card_id) : null;
+  if (data.parent_card_id && !parent) {
+    return {
+      ok: false,
+      fieldErrors: { parent_card_id: "The card to remix could not be found." },
+    };
   }
 
   // A back face references another of the user's OWN cards — pre-flight
@@ -357,6 +357,25 @@ export async function createCardAction(
     };
   }
 
+  // Free accounts: creatures and spells always carry the PipGlyph Rose
+  // (owner decision 2026-09-17) — enforced here so AI, proxy and remix
+  // paths agree with the form. Subscribers keep whatever they chose.
+  const watermark =
+    usesDefaultWatermark(data.card_type) && !entitlements.removeWatermark
+      ? PIPGLYPH_ROSE_WATERMARK
+      : data.watermark ?? null;
+
+  // A remix stores its OWN copy of the parent's pictures (migration 0127
+  // lets a user store only their own uploads; lib/cards/remix-media.ts).
+  // Whoever owns the parent: a remix of your own pre-0127 remix still has
+  // the ORIGINAL owner's art, and adoptRemixMedia copies only what sits in
+  // another user's folder — a parent whose pictures are yours copies nothing.
+  let media: RemixMedia = { art_url: data.art_url, back_face: data.back_face, watermark };
+  if (parent) {
+    const adopted = await adoptRemixMedia(user.id, parent, media);
+    if (!adopted.ok) return { ok: false, formError: adopted.error, code: adopted.code };
+    media = adopted;
+  }
 
   const insert: CardInsert = {
     owner_id: user.id,
@@ -379,7 +398,7 @@ export async function createCardAction(
     loyalty: data.loyalty ?? null,
     defense: data.defense ?? null,
     artist_credit: data.artist_credit ?? null,
-    art_url: data.art_url ?? null,
+    art_url: media.art_url ?? null,
     art_position: data.art_position ?? {},
     frame_style: data.frame_style ?? {},
     // No art or a frame preview → private (storedVisibility, above).
@@ -390,7 +409,7 @@ export async function createCardAction(
     parent_card_id: data.parent_card_id ?? null,
     // Back face (chunk 10): null when undefined or explicitly cleared,
     // jsonb object when the user has filled in DFC content.
-    back_face: data.back_face ?? null,
+    back_face: media.back_face ?? null,
     // v2 back face: FK to a full owned card (fully customisable), or null.
     back_card_id: data.back_card_id ?? null,
     // Scryfall provenance (chunk 13): the source card id when imported,
@@ -399,13 +418,8 @@ export async function createCardAction(
     // Structured loyalty/saga rows (migration 0050); null = derive from
     // rules_text. Design watermark; null = none.
     face_content: data.face_content ?? null,
-    // Free accounts: creatures and spells always carry the PipGlyph Rose
-    // (owner decision 2026-09-17) — enforced here so AI, proxy and remix
-    // paths agree with the form. Subscribers keep whatever they chose.
-    watermark:
-      usesDefaultWatermark(data.card_type) && !entitlements.removeWatermark
-        ? PIPGLYPH_ROSE_WATERMARK
-        : data.watermark ?? null,
+    // The Rose for free creatures / spells (above), or the remix's copy.
+    watermark: media.watermark ?? null,
     // Per-card footer mark (subscribers only; migration 0090). null = fall
     // back to the profile default at download time.
     footer_text: entitlements.removeWatermark ? data.footer_text ?? null : null,
@@ -432,6 +446,10 @@ export async function createCardAction(
           ? "You've reached your plan's card limit. Upgrade for more space."
           : `You've reached your ${entitlements.cardCapacity}-card limit. Upgrade for more space.`,
     };
+  }
+  const mediaField = mediaUrlViolationField(error?.message);
+  if (mediaField) {
+    return { ok: false, fieldErrors: { [mediaField]: MEDIA_URL_NOT_ALLOWED_MESSAGE } };
   }
   if (error || !row) {
     return {
@@ -730,6 +748,11 @@ export async function updateCardAction(
     .select("id, slug")
     .single();
 
+  // Migration 0127: a picture that isn't one of the user's own uploads.
+  const mediaField = mediaUrlViolationField(error?.message);
+  if (mediaField) {
+    return { ok: false, fieldErrors: { [mediaField]: MEDIA_URL_NOT_ALLOWED_MESSAGE } };
+  }
   if (error || !row) {
     return {
       ok: false,

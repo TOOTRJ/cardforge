@@ -13,6 +13,7 @@ import {
   ogExcerpt,
 } from "@/lib/og/shell";
 import { DECK_FORMAT_LABELS, isDeckFormat } from "@/types/deck";
+import { drawableMediaUrl } from "@/lib/media/media-urls";
 
 // Social-preview card for deck pages (the set version is its twin). An
 // uploaded cover is embedded full-bleed — pre-fetched to a data URI so a dead
@@ -72,9 +73,9 @@ export default async function Image({
   }
 
   const { deck, username } = result;
-  const cover = deck.cover_url
-    ? await fetchImageAsDataUri(deck.cover_url)
-    : null;
+  // Only a cover we store (migration 0127, lib/media/media-urls.ts).
+  const coverUrl = drawableMediaUrl("deck-cover", deck.cover_url, deck.owner_id);
+  const cover = coverUrl ? await fetchImageAsDataUri(coverUrl) : null;
   const byline = username ? `by @${username}` : "on PipGlyph";
   const formatLabel = isDeckFormat(deck.format)
     ? DECK_FORMAT_LABELS[deck.format]

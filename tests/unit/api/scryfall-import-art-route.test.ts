@@ -32,6 +32,10 @@ vi.mock("@/lib/supabase/server", () => ({
 vi.mock("@/lib/supabase/admin", () => ({
   isAdminConfigured: () => true,
   createAdminClient: () => ({
+    // The upload limit (0127, fail-closed) answers "allowed"; the storage
+    // origin registration (lib/media/storage-origin.ts) is a no-op upsert.
+    rpc: async () => ({ data: [{ allowed: true, retry_after_seconds: 0, limited_by: null }], error: null }),
+    from: () => ({ upsert: async () => ({ error: null }) }),
     storage: {
       from: () => ({
         upload: state.upload,

@@ -13,6 +13,7 @@ import { getMessageNavState } from "@/lib/messages/queries";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import type { HeaderUser } from "@/components/layout/site-header";
 import { getCardCapacity } from "@/lib/cards/capacity";
+import { profileMediaSrc } from "@/lib/media/media-urls";
 
 // ---------------------------------------------------------------------------
 // GET /api/me — the header auth island's data source.
@@ -60,7 +61,8 @@ export async function GET() {
     id: user.id,
     username: profile?.username ?? null,
     displayName: profile?.display_name ?? null,
-    avatarUrl: profile?.avatar_url ?? null,
+    // Only a drawable avatar (migration 0127, lib/media/media-urls.ts).
+    avatarUrl: profileMediaSrc("avatar", profile?.avatar_url, user.id),
     isPaid: entitlements?.isPaid ?? false,
     // The EFFECTIVE tier (comp + live subscription), not the display tier a
     // lapsed subscription keeps — /pricing decides "your current plan" on it.

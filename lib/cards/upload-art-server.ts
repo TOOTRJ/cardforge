@@ -8,6 +8,11 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { scanImageUrl } from "@/lib/moderation/image-scan";
 import { prepareUploadBytes } from "@/lib/media/upload-bytes";
 import { isUserStorageConfigured, userFolder } from "@/lib/media/user-storage";
+import {
+  checkUploadRateLimit,
+  uploadRateLimitFailure,
+  type UploadLimitFields,
+} from "@/lib/media/upload-rate-limit";
 import { randomId } from "@/lib/ids";
 
 // ---------------------------------------------------------------------------
@@ -66,7 +71,7 @@ const CONTENT_TYPE_BY_FORMAT: Record<string, string> = {
 
 export type UploadArtServerResult =
   | { ok: true; publicUrl: string; path: string }
-  | { ok: false; error: string };
+  | ({ ok: false; error: string } & UploadLimitFields);
 
 /**
  * Server action — accepts a FormData with a single `file` field, validates
@@ -87,6 +92,10 @@ export async function uploadCardArtServerAction(
   if (!user) {
     return { ok: false, error: "Sign in to upload artwork." };
   }
+  // 30 a minute / 300 a day per user (lib/media/upload-rate-limit.ts),
+  // before any work on the bytes.
+  const limit = await checkUploadRateLimit(user.id);
+  if (!limit.ok) return uploadRateLimitFailure(limit);
 
   const file = formData.get("file");
   if (!(file instanceof File)) {

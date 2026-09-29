@@ -2,6 +2,7 @@ import "server-only";
 
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { isUuid } from "@/lib/ids";
+import { ensureStorageOriginRegistered } from "@/lib/media/storage-origin";
 
 // ---------------------------------------------------------------------------
 // Writes into a user's storage folder — the ONLY way app code writes the
@@ -31,6 +32,9 @@ import { isUuid } from "@/lib/ids";
 //   * A path that came from stored data (a profile's old avatar URL) goes
 //     through `fileNameInFolder()` first: another user's object is skipped,
 //     never deleted by the service role.
+//   * Before the first write, the deployment's storage origin is registered
+//     with its database (lib/media/storage-origin.ts), so migration 0127's
+//     media URL guards accept the URLs minted here — and no other project's.
 //
 // Reads stay public URLs; nothing here lists or downloads.
 // ---------------------------------------------------------------------------
@@ -104,7 +108,27 @@ export function userFolder(bucket: UserStorageBucket, userId: string) {
     async upload(name: string, body: UploadBody, options: UploadOptions): Promise<UserStorageResult> {
       const key = keyOf(name);
       if (!key) return refused("Invalid storage path.");
+      await ensureStorageOriginRegistered();
       const { error } = await objects().upload(key, body, options);
+      return { error: error ? { message: error.message } : null };
+    },
+
+    /**
+     * Copy an existing object of the same bucket — `sourceKey` is
+     * `{anyUser}/{name}`, as read back from stored data — INTO this user's
+     * folder as `name`. Only a remix save uses it, to give the remixer their
+     * own copy of the parent card's pictures (lib/cards/remix-media.ts,
+     * migration 0127): the source is only read (every bucket is public-read
+     * anyway), and the write lands in `{userId}/` like any other.
+     */
+    async copyIn(sourceKey: string, name: string): Promise<UserStorageResult> {
+      const key = keyOf(name);
+      const [folder, sourceName, ...rest] = sourceKey.split("/");
+      if (!key || rest.length > 0 || !isUuid(folder ?? "") || !isValidFileName(sourceName ?? "")) {
+        return refused("Invalid storage path.");
+      }
+      await ensureStorageOriginRegistered();
+      const { error } = await objects().copy(sourceKey, key);
       return { error: error ? { message: error.message } : null };
     },
 
