@@ -1,17 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, ChevronDown } from "lucide-react";
+import { ArrowRight, CheckCircle2, ChevronDown, Footprints } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { FrameVerifyCheckbox } from "@/components/admin/frame-verify-checkbox";
+import {
+  FramePreviewList,
+  type FramePreviewListItem,
+} from "@/components/admin/frame-preview-list";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
 // The frame verification checklist — every (template, color) combination the
 // site ships, grouped era → template, with the real reference printing next
 // to each row. Checking a row publishes that combination to the frame picker
-// (see lib/cards/frame-availability.ts); "Compare" opens the overlay tool.
+// (see lib/cards/frame-availability.ts); "Compare" opens the overlay tool;
+// "Walk" opens the creator on the combo in admin preview mode, prefilled
+// from the reference (TODO 2.2). Under each template: its walked preview
+// cards (2.3) and the link to the per-template sign-off (2.4).
 //
 // All data arrives serialized from the server page (reviews + references
 // resolved there) — this component only renders and mutates.
@@ -35,6 +42,8 @@ type ChecklistCombo = {
   /** Verified before ticks recorded what they measured. */
   legacy?: boolean;
   reference: { name: string; set: string; thumbUrl: string } | null;
+  /** "Walk the stepper" on this combination (TODO 2.2). */
+  walkHref?: string;
 };
 
 type ChecklistTemplate = {
@@ -47,6 +56,12 @@ type ChecklistTemplate = {
   note?: string | null;
   confirm?: boolean;
   combos: ChecklistCombo[];
+  /** Walk the stepper on the first colour still to verify (TODO 2.2). */
+  walkHref?: string;
+  /** The per-template sign-off view (TODO 2.4). */
+  signOffHref?: string;
+  /** Preview cards walked on this frame (TODO 2.3). */
+  previews?: FramePreviewListItem[];
 };
 
 export type ChecklistEra = {
@@ -213,6 +228,16 @@ export function FrameReviewChecklist({ eras }: { eras: ChecklistEra[] }) {
                             aria-hidden
                           />
                         ) : null}
+                        {combo.walkHref ? (
+                          <Link
+                            href={combo.walkHref}
+                            title="Walk the stepper: open the creator on this frame and colour as an admin preview, prefilled from the reference printing."
+                            aria-label={`Walk the stepper on ${tpl.template}/${combo.colorKey}`}
+                            className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border/50 px-2 py-1 text-[11px] font-medium text-muted transition-colors hover:border-border-strong hover:text-foreground"
+                          >
+                            <Footprints className="h-3 w-3" aria-hidden /> Walk
+                          </Link>
+                        ) : null}
                         <Link
                           href={`/admin/frame-compare?template=${tpl.template}&color=${combo.colorKey}`}
                           title="Open the compare & edit view: overlay the real printing on our render, adjust the layout, score the alignment."
@@ -225,6 +250,36 @@ export function FrameReviewChecklist({ eras }: { eras: ChecklistEra[] }) {
                       </li>
                     ))}
                   </ul>
+                  {tpl.walkHref || tpl.signOffHref ? (
+                    <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-border/40 pt-2">
+                      {tpl.walkHref ? (
+                        <Link
+                          href={tpl.walkHref}
+                          title="Walk the stepper on this frame (first colour still to verify), prefilled from its reference printing."
+                          className="inline-flex items-center gap-1 rounded-md border border-border/50 px-2 py-1 text-[11px] font-medium text-muted transition-colors hover:border-border-strong hover:text-foreground"
+                        >
+                          <Footprints className="h-3 w-3" aria-hidden /> Walk the stepper
+                        </Link>
+                      ) : null}
+                      {tpl.signOffHref ? (
+                        <Link
+                          href={tpl.signOffHref}
+                          title="Score every colour, see the walked previews and publish the whole template."
+                          className="inline-flex items-center gap-1 rounded-md border border-border/50 px-2 py-1 text-[11px] font-medium text-muted transition-colors hover:border-border-strong hover:text-foreground"
+                        >
+                          Sign off template <ArrowRight className="h-3 w-3" aria-hidden />
+                        </Link>
+                      ) : null}
+                      {tpl.previews && tpl.previews.length > 0 ? (
+                        <span className="ml-auto text-[10px] uppercase tracking-wider text-subtle">
+                          {tpl.previews.length} walked preview{tpl.previews.length === 1 ? "" : "s"}
+                        </span>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  {tpl.previews && tpl.previews.length > 0 ? (
+                    <FramePreviewList items={tpl.previews} className="mt-2" />
+                  ) : null}
                 </SurfaceCard>
               ))}
             </div>

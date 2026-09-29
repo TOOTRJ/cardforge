@@ -1,6 +1,127 @@
 import { describe, expect, it } from "vitest";
-import { basicOnlyFrameFallback, resolvePublishedFrame } from "@/lib/creator/frame-resolve";
+import {
+  basicOnlyFrameFallback,
+  finalizeImportMatch,
+  resolvePublishedFrame,
+  withVerification,
+} from "@/lib/creator/frame-resolve";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
+import type { FrameMatch } from "@/lib/scryfall/frame-signatures";
+
+describe("withVerification (TODO 1.4)", () => {
+  const match = (over: Partial<FrameMatch> = {}): FrameMatch => ({
+    status: "exact",
+    template: "m15fullartland",
+    exactLabel: "Full-art basic land",
+    reason: null,
+    signature: "fullart/basic/2022",
+    ...over,
+  });
+
+  it("keeps an exact match only when the combo is verified in the card's colour", () => {
+    expect(withVerification(match(), "w", new Set([frameComboKey("m15fullartland", "w")]))).toEqual(match());
+  });
+
+  it("downgrades an unverified exact match to nearest, naming the colour", () => {
+    expect(withVerification(match(), "u", new Set([frameComboKey("m15fullartland", "w")]))).toEqual(
+      match({ status: "nearest", reason: "not yet verified in blue" }),
+    );
+    expect(withVerification(match(), "m", new Set())).toMatchObject({
+      status: "nearest",
+      reason: "not yet verified in multicolor",
+    });
+  });
+
+  it("passes nearest and unsupported matches through unchanged", () => {
+    const nearest = match({ status: "nearest", reason: "the 2023 bars" });
+    const unsupported = match({ status: "unsupported", template: "m15", reason: "poster", forGood: true });
+    expect(withVerification(nearest, "w", new Set())).toBe(nearest);
+    expect(withVerification(unsupported, "w", new Set())).toBe(unsupported);
+  });
+
+  it("checks the matched template, not where the import lands", () => {
+    const borderless = match({ template: "m15borderless", landOn: "m15", signature: "borderless/standard" });
+    expect(withVerification(borderless, "b", new Set([frameComboKey("m15", "b")])).status).toBe("nearest");
+    expect(withVerification(borderless, "b", new Set([frameComboKey("m15borderless", "b")])).status).toBe("exact");
+  });
+
+  // Owner decision A9: a 2003-frame textless promo names the 2003 frame
+  // until the textless frame is verified in its colour.
+  const promo = match({
+    status: "nearest",
+    template: "modern",
+    reason: "PipGlyph doesn't have this old-frame textless design yet",
+    signature: "textless/old-frame",
+    blockedBy: "4.43",
+    onceVerified: "m15textless",
+  });
+
+  it("keeps the named frame while the later one isn't verified in the card's colour", () => {
+    expect(withVerification(promo, "w", new Set([frameComboKey("modern", "w")]))).toBe(promo);
+    expect(withVerification(promo, "w", new Set([frameComboKey("m15textless", "u")]))).toBe(promo);
+  });
+
+  it("takes the later frame once it is verified, and drops the pointer", () => {
+    const later = withVerification(promo, "w", new Set([frameComboKey("m15textless", "w")]));
+    expect(later).toEqual({
+      status: "nearest",
+      template: "m15textless",
+      exactLabel: "Full-art basic land",
+      reason: "PipGlyph doesn't have this old-frame textless design yet",
+      signature: "textless/old-frame",
+      blockedBy: "4.43",
+    });
+    expect("onceVerified" in later).toBe(false);
+  });
+});
+
+describe("finalizeImportMatch (the /api/scryfall/named step)", () => {
+  const promoMatch: FrameMatch = {
+    status: "nearest",
+    template: "modern",
+    exactLabel: "2003 frame textless promo",
+    reason: "PipGlyph doesn't have this old-frame textless design yet",
+    signature: "textless/old-frame",
+    blockedBy: "4.43",
+    onceVerified: "m15textless",
+  };
+
+  it("finalizes the match in the patch's own colour and moves frame_template with it", () => {
+    const patch = { frame_match: promoMatch, frame_template: "modern" as const, color_identity: ["white" as const] };
+    expect(finalizeImportMatch(patch, new Set())).toEqual(patch);
+    const later = finalizeImportMatch(patch, new Set([frameComboKey("m15textless", "w")]));
+    expect(later.frame_template).toBe("m15textless");
+    expect(later.frame_match?.template).toBe("m15textless");
+    // Blue isn't white: the swap is per colour.
+    const blue = { ...patch, color_identity: ["blue" as const] };
+    expect(finalizeImportMatch(blue, new Set([frameComboKey("m15textless", "w")])).frame_template).toBe("modern");
+  });
+
+  it("downgrades an unverified exact match without touching frame_template", () => {
+    const exact: FrameMatch = {
+      status: "exact",
+      template: "m15borderless",
+      landOn: "m15",
+      exactLabel: "Borderless frame",
+      reason: null,
+      signature: "borderless/standard",
+    };
+    const patch = { frame_match: exact, frame_template: "m15" as const, color_identity: ["black" as const] };
+    const out = finalizeImportMatch(patch, new Set());
+    expect(out.frame_match).toMatchObject({ status: "nearest", reason: "not yet verified in black" });
+    expect(out.frame_template).toBe("m15");
+  });
+
+  it("leaves a layout kind's frame_template undefined and a patch without a match alone", () => {
+    const layout: { frame_match: FrameMatch; frame_template?: "modern"; color_identity: "white"[] } = {
+      frame_match: promoMatch,
+      color_identity: ["white"],
+    };
+    expect(finalizeImportMatch(layout, new Set([frameComboKey("m15textless", "w")])).frame_template).toBeUndefined();
+    const bare = { frame_template: "m15" as const };
+    expect(finalizeImportMatch(bare, new Set())).toBe(bare);
+  });
+});
 
 // The one resolver behind every programmatic frame write. It must never
 // answer with an unpublished (template, colour) pair, and it must SAY what
@@ -196,6 +317,30 @@ describe("basic-only frames", () => {
         prefer: "frame",
       }),
     ).toEqual({ status: "exact", template: "m15artifact", colorKey: "u" });
+  });
+
+  it("nor is the Nyx showcase a creature borrows (A3)", () => {
+    // Only nyx is published in blue: a plain creature is never dressed as
+    // an Enchantment Creature behind the user's back…
+    expect(
+      resolvePublishedFrame({
+        kind: "creature",
+        candidates: ["m15snow", "m15"],
+        colorKey: "u",
+        verifiedKeys: verified(k("nyx", "u")),
+        prefer: "frame",
+      }),
+    ).toEqual({ status: "unavailable" });
+    // …while a Theros god's import asks for it by name and gets it.
+    expect(
+      resolvePublishedFrame({
+        kind: "creature",
+        candidates: ["nyx", "m15"],
+        colorKey: "u",
+        verifiedKeys: verified(k("nyx", "u")),
+        prefer: "frame",
+      }),
+    ).toEqual({ status: "exact", template: "nyx", colorKey: "u" });
   });
 
   it("basicOnlyFrameFallback: never recolours, and ignores frames that aren't basic-only", () => {

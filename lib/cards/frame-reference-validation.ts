@@ -1,19 +1,18 @@
 import type { ScryfallCard } from "@/lib/scryfall/client";
 import {
   frameColorsFromScryfall,
+  frameMatchFromScryfall,
   kindFromScryfall,
   parseTypeLine,
 } from "@/lib/scryfall/import-mapper";
-import {
-  isArtifactFrameType,
-  pickFrameColorKey,
-} from "@/components/cards/frame-layer";
+import { pickFrameColorKey } from "@/components/cards/frame-layer";
 import {
   KIND_DEFS,
-  isBorrowedVariation,
+  borrowedTypeWord,
   isSingleBasicLand,
   templateIsBasicOnly,
   templateSupportsKind,
+  typeLineHasWord,
   type CardKind,
 } from "@/lib/creator/card-kinds";
 import { eraForTemplate } from "@/lib/creator/frame-picker";
@@ -29,6 +28,16 @@ import { FRAME_TEMPLATE_LABELS, type FrameTemplate } from "@/types/card";
 // Colour and kind mismatches are refused; an era mismatch (a 2003-frame
 // printing on an M15 template) is a warning, since some references are the
 // closest print that exists.
+//
+// The frame signature registry (TODO 1.4, lib/scryfall/frame-signatures.ts)
+// knows which frame each printing IS. A printing whose signature resolves to
+// this very template is accepted even when PipGlyph's frame can't dress its
+// kind yet — a Snow ARTIFACT on the snow frame — because the compare view
+// draws it as printed (a Theros god, an Enchantment CREATURE, needed this
+// too until a creature could borrow Nyx, owner decision A3); a layout kind
+// (a saga on the scroll frame) stays refused, since the frame can't draw
+// its layout. A printing
+// whose signature resolves to ANOTHER template gets a warning.
 //
 // Pure (no Supabase, no fetch) so the rules are unit-tested directly.
 // ---------------------------------------------------------------------------
@@ -76,13 +85,14 @@ function referenceIsSingleBasicLand(card: ScryfallCard): boolean {
   });
 }
 
-/** True when the printing's front face says Artifact (an Artifact Creature,
- *  an artifact token) — the cards a borrowed artifact frame dresses. */
-function referenceIsArtifact(card: ScryfallCard): boolean {
+/** The word a borrowed frame dresses (TODO 1.7, owner decision A3) as the
+ *  printing's front face says it: an Artifact Creature, an artifact token,
+ *  an Enchantment Creature. */
+function referenceSays(card: ScryfallCard, word: "Artifact" | "Enchantment"): boolean {
   const { supertype, card_type } = parseTypeLine(
     card.card_faces?.[0]?.type_line ?? card.type_line,
   );
-  return isArtifactFrameType({ cardType: card_type, supertype });
+  return typeLineHasWord({ cardType: card_type, supertype }, word);
 }
 
 export function validateReferenceForCombo(
@@ -95,6 +105,16 @@ export function validateReferenceForCombo(
   // Showcase frames name their set ("Zendikar Rising — Hedron"), as the
   // admin checklist and the compare page title do.
   const label = FRAME_TEMPLATE_LABELS[template] ? eraGroupFrameLabel(template) : template;
+
+  const signature = frameMatchFromScryfall(card);
+  if (signature.template !== template) {
+    const resolved = FRAME_TEMPLATE_LABELS[signature.template]
+      ? eraGroupFrameLabel(signature.template)
+      : signature.template;
+    warnings.push(
+      `This printing is the ${signature.exactLabel}; the frame signature registry resolves it to the ${resolved} frame, not ${label}.`,
+    );
+  }
 
   const cardColor = pickFrameColorKey(frameColorsFromScryfall(card));
   if (cardColor !== colorKey) {
@@ -109,21 +129,30 @@ export function validateReferenceForCombo(
       `Couldn't tell what kind of card ${card.name} is — the render may not match the frame.`,
     );
   } else if (!templateSupportsKind(template, kind)) {
-    errors.push(
-      `${card.name} is a ${KIND_DEFS[kind].label.toLowerCase()}; the ${label} frame doesn't dress that kind.`,
-    );
+    if (signature.template === template && !KIND_DEFS[kind].layoutTemplates) {
+      warnings.push(
+        `${card.name} is a ${KIND_DEFS[kind].label.toLowerCase()}, which the ${label} frame doesn't dress in the creator yet — accepted because this printing is that frame (${signature.exactLabel}).`,
+      );
+    } else {
+      errors.push(
+        `${card.name} is a ${KIND_DEFS[kind].label.toLowerCase()}; the ${label} frame doesn't dress that kind.`,
+      );
+    }
   } else if (templateIsBasicOnly(template) && !referenceIsSingleBasicLand(card)) {
     errors.push(
       `${card.name} isn't a basic land; the ${label} frame dresses basic lands only.`,
     );
-  } else if (isBorrowedVariation(kind, template) && !referenceIsArtifact(card)) {
-    // A creature may borrow the artifact frame (TODO 1.7), but only an
-    // Artifact Creature is a reference for it — Llanowar Elves on
-    // m15artifact/g would verify the frame against a card that never prints
-    // on it.
-    errors.push(
-      `${card.name} isn't an Artifact ${KIND_DEFS[kind].label}; the ${label} frame dresses a ${KIND_DEFS[kind].label.toLowerCase()} only when it is an artifact.`,
-    );
+  } else {
+    // A creature may borrow the artifact frame (TODO 1.7) or the Nyx
+    // showcase (owner decision A3), but only an Artifact / Enchantment
+    // Creature is a reference for it — Llanowar Elves on m15artifact/g would
+    // verify the frame against a card that never prints on it.
+    const word = borrowedTypeWord(kind, template);
+    if (word && !referenceSays(card, word)) {
+      errors.push(
+        `${card.name} isn't an ${word} ${KIND_DEFS[kind].label}; the ${label} frame dresses a ${KIND_DEFS[kind].label.toLowerCase()} only when it is an ${word.toLowerCase()}.`,
+      );
+    }
   }
 
   const expected = ERA_FRAME[eraForTemplate(template)];

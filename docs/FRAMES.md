@@ -326,6 +326,104 @@ What a frame gives it:
   measured on. A value printed on the art (no plate) keeps its rect clear, a
   drawn badge (the battle's defense) its disc.
 
+## Which printing is which frame (TODO 1.4)
+
+A Scryfall import knows which PipGlyph frame reproduces THIS printing from
+the frame signature registry, `lib/scryfall/frame-signatures.ts`: an
+ordered rule table (first match wins) over the printing's frame year,
+border colour, frame effects, promo types, set, set type and collector
+number. Each rule has a stable signature id and resolves to `exact`,
+`nearest` (with a reason and the TODO item that would make it exact) or
+`unsupported`. The import patch carries it as `frame_match`; `exact` also
+needs the combo verified in the card's colour (`withVerification`,
+`lib/creator/frame-resolve.ts`).
+
+- **A new frame** gets a rule for the printings it reproduces (a set +
+  collector range for a showcase run; never `full_art` alone), a fixture
+  printing in `tests/unit/scryfall/fixtures/signature-printings.json`, and
+  a row in `tests/unit/scryfall/frame-signatures.test.ts`. The completeness
+  test fails until some rule can reach it.
+- **A frame whose border isn't true yet** stays in
+  `BORDER_PENDING_TEMPLATES` (or, for single colour masters,
+  `BORDER_PENDING_COLOURS`), capped at `nearest`. The list is the edge
+  contract's known failures (`lib/frames/edge-contract.ts`, 7.7) except
+  alphaland's invisible corner specks, and a test holds them together:
+  once a master is fixed and struck from the known failures, take its cap
+  out too (4.35).
+- **A frame the registry names for later** (`onceVerified`): a rule may
+  name a verified frame now and another once that one is verified in the
+  card's colour — the 2003-frame textless promos name the 2003 frame until
+  `m15textless` is verified. `withVerification` makes the swap, so
+  verifying the combo is all it takes.
+- **Registry references** (`lib/cards/frame-references.json`) must resolve
+  to their own template and pass the pin check;
+  `tests/unit/cards/frame-reference-signatures.test.ts` holds that over a
+  trimmed capture of every reference printing
+  (`tests/unit/cards/fixtures/reference-printings.json` — re-capture it
+  when you add a reference). Never replace the DEFAULT reference of a combo
+  production has verified; add an alternate and ask the owner to
+  re-verify.
+
+## Walking the stepper and signing off a template (TODO Phase 2)
+
+Verification is still the only gate (`frame_reviews`), but an admin can now
+check an unverified frame the way a user would meet it, before publishing it:
+
+- **Preview mode (2.1).** `/create` and `/card/<slug>/edit` take
+  `?previewFrames=all`, a template (`?previewFrames=battle`, all seven
+  colours) or a list (`battle/w,saga`). For an ADMIN — decided from the
+  server-read profile, never the URL — the named combos join the verified
+  set in the frame picker, and a banner says so on every step. Everyone else
+  gets the ordinary creator; the guest creator (`/create-guest`, ISR) never
+  reads the URL; AI jobs, and the in-form AI dialog, keep the verified set
+  (`lib/creator/frame-preview.ts`).
+- **Walk the stepper (2.2).** Each row of the checklist (and the compare
+  view, and each colour of the sign-off view) links to
+  `/create?previewFrames=all&kind=…&template=…&color=…&seed=reference`. The
+  page builds the seed from the compare view's own payload
+  (`buildFrameComparePayload`, the second face included) through
+  `lib/creator/frame-walkthrough.ts`; the form applies it through the same
+  handler as a user's Scryfall import, pins the frame and colour and starts
+  on the Card step. A combo with no real printing (or a failed lookup) is
+  seeded with the compare view's sample content (`seed=sample` asks for it
+  directly), and the banner says which. Art isn't imported.
+- **Preview saves (2.3).** A save on an unverified combo in preview mode, and
+  every save during a walk, asks the server for `frame_preview`;
+  `createCardAction` / `updateCardAction` honour it only for an admin (the
+  verification gate is skipped, the kind gate still runs) and store the card
+  PRIVATE with `cards.frame_preview = true` (migration 0121: a CHECK keeps a
+  flagged card private, a trigger lets only an admin's API session raise the
+  flag). It never joins a deck and never counts as product activity. The
+  checklist lists previews under their template with **Re-verify** (the
+  card reopened in preview mode on today's frame) and **Delete**
+  (`deleteFramePreviewCardAction`, flagged rows only). In the admin's own
+  My Cards a preview carries a **Frame preview** badge in every view (grid,
+  compact, list) so it can be spotted and deleted there too. A bulk "make
+  public" or "make unlisted" skips the previews and changes the rest:
+  `updateCardsVisibilityAction` reads the flag itself, and the toast says
+  "Published 5 cards. Skipped 2 frame previews — they stay private." A batch
+  of only previews changes nothing and says why.
+- **Template sign-off (2.4).** `/admin/frame-compare?template=<t>` (no colour)
+  shows every colour's reference, verification record (0.10), recorded
+  auto-score (0.9) and walked previews. **Score** records a `score` event
+  (`scoreFrameColorAction`); a per-colour tick's own score (its `verify`
+  event) counts too, whichever is newer (`latestScoreEvents`). **Publish**
+  (`signOffFrameTemplateAction`) needs every colour that has a reference
+  scored on today's renderer and override (`lib/cards/frame-signoff.ts`, the
+  tick's own staleness rule) AND against the reference the combo stands for
+  today (a re-pin stales the old score) plus the owner's tick, then stamps
+  each of those colours like a tick and logs
+  `verify` events and one `signoff` event. Colours with no real printing
+  stay on their own checkbox, which also still withdraws a single colour.
+  The recorded score is an edge difference (lower is better); the view also
+  shows it as a match, 100 − the difference. A colour whose match is below
+  `SIGN_OFF_LOW_MATCH_PCT` (90 %) is marked on its row, and Publish first
+  asks "N colours score below 90% — publish anyway?", naming them. It is a
+  warning, never a block. The `signoff` event records those colours as
+  `lowMatch`.
+
+Nothing here changes a stored bake or a renderer.
+
 ## Shipping a frame change
 
 1. Build the files into `.frames-build/<template>/…`, which is gitignored.
@@ -371,7 +469,90 @@ What a frame gives it:
 
 A frame swap that changes baked output still needs its `CARD_LAYOUT_VERSION`
 bump with a `"sweep"` rollout, so owners are never badged. After the deploy,
-run the sweep.
+the automatic re-bake sweeps the affected cards on its own (next section).
+
+## Re-bakes after a deploy (automatic)
+
+Nobody runs a sweep by hand any more. `/api/cron/auto-rebake`
+(`vercel.json`, every 5 minutes, production only; `lib/cards/auto-rebake.ts`)
+re-bakes every published card that a `"sweep"` bump, a frame-layout save or a
+migration left on an older render.
+
+- **What it runs.** The same batch as the manual script (`runRebakeBatch`,
+  scope `sweep`): opt-in-only cards are left alone with their owner badge,
+  a card whose only pending bumps are scoped out is just stamped, and the
+  overlap guards still apply. Batches of 8 until a batch finds nothing, or
+  until about 240 s have gone (`maxDuration` is 300 s). The next run carries
+  on. A 700-card sweep takes roughly an hour.
+- **When idle** it costs a state read, one head count and a timestamp
+  write. The count covers published cards that were never baked, have no
+  stamp, or are stamped below the newest sweep version
+  (`latestSweepVersion()`). If only opt-in leftovers remain,
+  the count is remembered and the scan is skipped for up to 6 hours.
+- **Never clean.** It refuses (412, and records it) unless
+  `NEXT_PUBLIC_BILLING_ENABLED` is `true`. `ALLOW_UNWATERMARKED_SWEEP` does
+  not apply to it.
+- **One sweeper at a time.** One lease (`render_sweep_state`, migration 0120;
+  `lib/cards/sweep-lease.ts`) is shared by the cron,
+  `POST /api/admin/rebake` (the script) and `POST /api/admin/rebake-marked`
+  (the compare page's "Re-bake now"). A manual call that finds the cron
+  running asks it to stop after its current batch and waits. Between two
+  manual calls the lease stays parked for the manual run, so the cron stays
+  out until the run ends. If the lease is still busy after 2 minutes, the
+  manual route answers `503` with `Retry-After: 60` and says why. The
+  script's retry helper (`scripts/lib/rebake-request.mjs`) backs off and
+  retries a 503. The compare page shows it next to "Try again". Never
+  `409`: the script treats that as fatal.
+- **Failures.** A card that fails is skipped for the rest of that run. After
+  it fails in 3 runs it goes on the **poison list**: every later run skips
+  it and the pending count leaves it out. "Retry these cards" gives each
+  one more try. An entry whose card no longer needs a re-bake (the owner
+  saved it again, unpublished or deleted it) leaves the list on the next
+  working run.
+- **A run that dies.** A run killed at the 300 s limit or out of memory
+  writes nothing. It records the batch it is baking first (`in_flight`), so
+  the next run gives each of those cards a strike: a card that kills the
+  renderer ends up on the poison list like one that fails.
+- **Time limit.** No batch starts if it would end past 240 s. A batch still
+  running at 280 s keeps the lease (it may still write) and ends the run.
+  If it had been running for 2 minutes or more, that is a **hung** batch
+  (breaker). A shorter one was just a slow last batch (an "overrun"): the
+  next run carries on.
+- **Breaker.** It pauses the automatic sweep and sends every admin a
+  `render_sweep_paused` notification (a toast and a bell entry) when any of
+  these happens:
+  - a whole batch of first-time failures re-bakes nothing (≥ 3 cards);
+  - 10 cards fail for the first time in one run;
+  - a batch hangs (see above);
+  - the batch query fails 3 runs in a row (a blip heals itself; code that
+    reads a column its migration hasn't added yet doesn't);
+  - 2 runs in a row die before finishing;
+  - one run pushes the poison list past 50 cards. It trips once, when the
+    list crosses 50, so Resume lets the sweep carry on past cards you
+    can't fix yet.
+
+  A known-bad card that fails again doesn't count.
+- **Watching it.** `/admin/renders` (Admin → Re-bakes) shows the status, a
+  pending estimate, the last run (re-baked / stamped / failed / remaining /
+  why it stopped), the pause reason, the cards that keep failing, and
+  **Pause / Resume / Retry**. Resuming clears the breaker. Vercel logs carry
+  one line per run: `[auto-rebake] v32 stop=… rebaked=… failed=…`.
+- **The manual script still works** (`scripts/rebake-renders.mjs`, which also
+  has the `version` and `legacy-art` scopes). Use it for a one-off. It
+  takes turns with the cron through the lease.
+- **Previews never run crons.** On a preview, `/admin/renders` shows the
+  branch's state. To run one invocation by hand, call the route with the
+  Preview `CRON_SECRET` (`curl -H "Authorization: Bearer …"
+  <preview>/api/cron/auto-rebake`).
+
+**Gotcha: a migration that marks cards for a CODE fix.** Say a PR ships a
+renderer fix together with a migration that sets `layout_version = null`
+(0118 did this). On merge, the migration can reach production minutes before
+the new deployment does. In that window, the old deployment's cron could
+re-bake those cards with the OLD code and stamp them current. So ship such a
+fix with a `"sweep"` bump that covers those cards, and the new code will
+re-bake them again. Or pause the automatic re-bake before merging and resume
+it once the deploy is live.
 
 ## Owner setup (once)
 

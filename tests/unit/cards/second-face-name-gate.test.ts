@@ -236,10 +236,18 @@ describe("updateCardsVisibilityAction (bulk publish)", () => {
   it("still makes such a card private, and publishes named ones", async () => {
     state.useChain = true;
     state.bulkRows = [row(CARD, "Fire", { title: "", card_type: "instant" })];
-    expect(await updateCardsVisibilityAction([CARD], "private")).toEqual({ ok: true, count: 1 });
+    expect(await updateCardsVisibilityAction([CARD], "private")).toEqual({
+      ok: true,
+      count: 1,
+      skippedPreviews: 0,
+    });
 
     state.bulkRows = [row(CARD, "Fire // Ice", { title: "Ice", card_type: "instant" })];
-    expect(await updateCardsVisibilityAction([CARD], "unlisted")).toEqual({ ok: true, count: 1 });
+    expect(await updateCardsVisibilityAction([CARD], "unlisted")).toEqual({
+      ok: true,
+      count: 1,
+      skippedPreviews: 0,
+    });
   });
 });
 

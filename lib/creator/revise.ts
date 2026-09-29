@@ -8,6 +8,7 @@
 // tests all agree on the same list.
 
 import type { FormValues } from "@/lib/creator/form-types";
+import { CARD_TITLE_MAX } from "@/lib/validation/card";
 
 /** Form fields a user may change while editing or remixing. Everything else
  *  is displayed read-only (LockedSummary) and never leaves the client. */
@@ -102,8 +103,9 @@ export function hasMeaningfulChange(
   );
 }
 
-/** "Title (remix)" — the prefilled name for a remix; the slug is derived from
- *  whatever title the user finally saves with. */
+/** "Title (remix)" — the prefilled name for a remix, cut to the card title
+ *  limit; the slug is derived from whatever title the user finally saves
+ *  with. */
 export function remixTitleFor(parentTitle: string): string {
-  return `${parentTitle} (remix)`.slice(0, 120);
+  return `${parentTitle} (remix)`.slice(0, CARD_TITLE_MAX);
 }

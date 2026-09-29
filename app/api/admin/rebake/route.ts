@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isBillingEnabled } from "@/lib/billing/flags";
@@ -8,6 +9,13 @@ import {
   parseRebakeScope,
   runRebakeBatch,
 } from "@/lib/cards/rebake-batch";
+import {
+  acquireManualLease,
+  leaseBusyMessage,
+  MANUAL_PARK_SECONDS,
+  releaseSweepLease,
+  type ManualLease,
+} from "@/lib/cards/sweep-lease";
 
 // ---------------------------------------------------------------------------
 // POST /api/admin/rebake — re-bake stored card renders, one batch per call.
@@ -27,6 +35,15 @@ import {
 // bakes every card CLEAN (layout v21, and again on 2026-09-16). The route
 // refuses to write unless the flag is on, or ALLOW_UNWATERMARKED_SWEEP=true
 // is set deliberately. The response always reports `billingEnabled`.
+//
+// One sweeper at a time: a writing call takes the shared sweep lease
+// (lib/cards/sweep-lease.ts) that the automatic re-bake cron
+// (/api/cron/auto-rebake) and the compare page's route also take. If the
+// cron is mid-run, the call asks it to hand over after its current batch
+// and waits (the driver just sees a slower answer); if the lease is still
+// busy after ~2 minutes it answers 503 + Retry-After with a plain message.
+// Between two calls the lease stays PARKED for the manual run, so the cron
+// stays out until the driver finishes. Dry runs take no lease.
 // ---------------------------------------------------------------------------
 
 export const runtime = "nodejs";
@@ -66,19 +83,52 @@ export async function POST(request: Request) {
     );
   }
 
-  const result = await runRebakeBatch(createAdminClient(), { scope, limit, dry, billingEnabled });
-  if (!result.ok) return NextResponse.json(result, { status: 500 });
-  if (result.dry) {
-    // The driver prints the plan; a dry run has nothing processed or failed.
-    return NextResponse.json({
-      ok: true,
-      dry: true,
-      scope: result.scope,
-      layoutVersion: result.layoutVersion,
-      billingEnabled: result.billingEnabled,
-      plan: result.plan,
-      remaining: result.remaining,
-    });
+  const admin = createAdminClient();
+  if (dry) return planResponse(await runRebakeBatch(admin, { scope, limit, dry, billingEnabled }));
+
+  // One sweeper at a time (lib/cards/sweep-lease.ts): wait for a running
+  // automatic re-bake to hand over after its current batch; answer 503 +
+  // Retry-After if the lease stays busy.
+  const token = randomUUID();
+  let lease: ManualLease;
+  try {
+    lease = await acquireManualLease(admin, token);
+  } catch (err) {
+    return NextResponse.json(
+      { ok: false, billingEnabled, error: err instanceof Error ? err.message : "Sweep lease unavailable." },
+      { status: 500 },
+    );
   }
+  if (!lease.ok) {
+    return NextResponse.json(
+      { ok: false, busy: true, holder: lease.holder, billingEnabled, error: leaseBusyMessage(lease) },
+      { status: 503, headers: { "Retry-After": "60" } },
+    );
+  }
+
+  let result: Awaited<ReturnType<typeof runRebakeBatch>> | null = null;
+  try {
+    result = await runRebakeBatch(admin, { scope, limit, dry, billingEnabled });
+  } finally {
+    // Finished → hand the lease back; otherwise park it so the cron stays
+    // out until the driver's next call (or MANUAL_PARK_SECONDS).
+    const finished = result?.ok === true && result.remaining === 0;
+    await releaseSweepLease(admin, token, finished ? {} : { parkSeconds: MANUAL_PARK_SECONDS });
+  }
+  if (!result.ok) return NextResponse.json(result, { status: 500 });
   return NextResponse.json(result);
+}
+
+/** The dry run's answer: the plan the driver prints (nothing processed). */
+function planResponse(result: Awaited<ReturnType<typeof runRebakeBatch>>) {
+  if (!result.ok) return NextResponse.json(result, { status: 500 });
+  return NextResponse.json({
+    ok: true,
+    dry: true,
+    scope: result.scope,
+    layoutVersion: result.layoutVersion,
+    billingEnabled: result.billingEnabled,
+    plan: result.plan,
+    remaining: result.remaining,
+  });
 }

@@ -335,6 +335,28 @@ describe("runRebakeBatch", () => {
     expect(stub.forTable("cards").some((e) => called(e.calls, "update"))).toBe(false);
   });
 
+  it("tells onPicked the batch before rendering any of it (never for a dry run or an empty batch)", async () => {
+    const order: string[] = [];
+    mocks.render.mockImplementationOnce(async () => {
+      order.push("render");
+      return new Response(new Uint8Array([137, 80, 78, 71]));
+    });
+    const onPicked = vi.fn(async (ids: string[]) => {
+      order.push(`picked:${ids.join(",")}`);
+    });
+    const stub = db([row("c1"), row("c2"), row("c3")], { markedCount: 1, markedAmongIds: 0 });
+    const result = await run(stub, { limit: 2, skipIds: ["c1"], onPicked });
+    if (!result.ok) throw new Error(result.error);
+    expect(onPicked).toHaveBeenCalledTimes(1);
+    expect(onPicked).toHaveBeenCalledWith(["c2", "c3"]);
+    expect(order[0]).toBe("picked:c2,c3");
+
+    onPicked.mockClear();
+    await run(db([row("c1")]), { dry: true, onPicked });
+    await run(db([]), { onPicked });
+    expect(onPicked).not.toHaveBeenCalled();
+  });
+
   it("surfaces a scan error", async () => {
     const stub = chainClient(() => ({ error: { message: "boom" } }));
     const result = await runRebakeBatch(stub.client as never, {

@@ -37,6 +37,7 @@ export function layoutVersionAt(
       real.isRenderStale(layoutVersion, template, scoped, at ?? current, card, scopes),
     classifyForSweep: (row, targetVersion, opts = {}) => real.classifyForSweep(row, targetVersion, { current, ...opts }),
     latestOptInVersion: (rollout, at) => real.latestOptInVersion(rollout, at ?? current),
+    latestSweepVersion: (rollout, at) => real.latestSweepVersion(rollout, at ?? current),
     hasPendingCorrection: (card, opts = {}) => real.hasPendingCorrection(card, { current, ...opts }),
     hasNewerLook: (card, opts = {}) => real.hasNewerLook(card, { current, ...opts }),
     storedLookIsOlder: (card, opts = {}) => real.storedLookIsOlder(card, { current, ...opts }),
