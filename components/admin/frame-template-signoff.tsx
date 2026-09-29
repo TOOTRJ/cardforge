@@ -58,10 +58,11 @@ export type SignOffColourView = {
   /** The recorded auto-score and whether it counts today. */
   score: {
     state: "scored" | "stale" | "unscored" | "no-reference";
-    /** Edge difference, 0–100, lower is better (lib/frames/align.ts). */
+    /** Edge difference, 0–100, lower is better (lib/frames/align.ts). The
+     *  view derives the low-match warning from it (`isLowFrameScore`, the
+     *  same pure rule the publish action records) — no separate flag to
+     *  forget to pass. */
     overall: number | null;
-    /** Its match (100 − overall) is below SIGN_OFF_LOW_MATCH_PCT. */
-    low?: boolean;
     reasons: string[];
     createdAt: string | null;
     /** Recorded by a per-colour tick (its "verify" event), not by Score. */
@@ -109,7 +110,7 @@ function ScoreCell({ view }: { view: SignOffColourView }) {
           <span className="font-normal text-muted"> · {frameMatchPct(score.overall)}% match</span>
         ) : null}
       </span>
-      {score.low ? (
+      {isLowFrameScore(score.overall) ? (
         <span
           className="flex items-center gap-1 text-[10px] font-semibold text-gold-strong"
           data-testid={`signoff-low-${view.colorKey}`}
@@ -150,7 +151,9 @@ export function FrameTemplateSignOff({
   const [publishing, startPublish] = useTransition();
 
   // Colours Publish would stamp whose match is below the warning line.
-  const lowColours = colours.filter((c) => c.score.state === "scored" && c.score.low);
+  const lowColours = colours.filter(
+    (c) => c.score.state === "scored" && isLowFrameScore(c.score.overall),
+  );
 
   const scoreOne = async (colorKey: string): Promise<boolean> => {
     setScoring(colorKey);
@@ -224,7 +227,7 @@ export function FrameTemplateSignOff({
             <SurfaceCard
               className={cn(
                 "flex flex-col gap-3 p-4",
-                view.score.low && "border-gold/50",
+                isLowFrameScore(view.score.overall) && "border-gold/50",
               )}
               data-testid={`signoff-colour-${view.colorKey}`}
             >

@@ -297,6 +297,21 @@ describe("updateCardsVisibilityAction — frame previews in the batch", () => {
     expect(payloadOf(updates(stub)[0].calls, "update")).toEqual({ visibility: "public" });
   });
 
+  it("a skipped preview's unnamed second face doesn't block publishing the rest", async () => {
+    // A preview is saved as a draft (a title is enough), so its second face
+    // may be unnamed — it isn't going out, so the name gate mustn't read it.
+    const { stub } = bulkDb([
+      rowOf(ORDINARY, false),
+      { ...rowOf(PREVIEW, true), back_face: { title: "", card_type: "instant" } },
+    ]);
+    expect(await updateCardsVisibilityAction([ORDINARY, PREVIEW], "public")).toEqual({
+      ok: true,
+      count: 1,
+      skippedPreviews: 1,
+    });
+    expect(updatedIds(stub)).toEqual([ORDINARY]);
+  });
+
   it("an unlist skips the previews the same way", async () => {
     const { stub } = bulkDb([rowOf(ORDINARY, false), rowOf(PREVIEW, true)]);
     expect(await updateCardsVisibilityAction([ORDINARY, PREVIEW], "unlisted")).toEqual({

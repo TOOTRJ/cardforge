@@ -171,9 +171,11 @@ describe("FrameTemplateSignOff", () => {
   });
 
   describe("a colour below the 90 % warning line (owner, 2026-09-28)", () => {
+    // Only the recorded difference is passed: the view derives the warning
+    // from it (isLowFrameScore), so no separate flag can go missing.
     const lowView = (colorKey: string, overall: number) => {
       const base = view(colorKey, "scored");
-      return { ...base, score: { ...base.score, overall, low: true } };
+      return { ...base, score: { ...base.score, overall } };
     };
     const renderLow = () =>
       render(
@@ -202,6 +204,27 @@ describe("FrameTemplateSignOff", () => {
       expect(screen.getByTestId("signoff-colour-u").textContent).toMatch(/87\.6% match/);
       expect(screen.getByTestId("signoff-low-u").textContent).toMatch(/Below 90% match/);
       expect(screen.getByTestId("signoff-low-b")).toBeTruthy();
+    });
+
+    it("the line is exactly 90 % match: a difference of 10 is not marked, 10.1 is", async () => {
+      render(
+        <FrameTemplateSignOff
+          template="saga"
+          currentVersion={32}
+          currentHash="none"
+          colours={[lowView("w", 10), lowView("u", 10.1)]}
+          ready
+          publishableCount={2}
+        />,
+      );
+      expect(screen.getByTestId("signoff-colour-w").textContent).toMatch(/90% match/);
+      expect(screen.queryByTestId("signoff-low-w")).toBeNull();
+      expect(screen.getByTestId("signoff-low-u")).toBeTruthy();
+      await tickAndPublish();
+      const confirm = await screen.findByTestId("signoff-low-confirm");
+      expect(confirm.textContent).toMatch(/1 colour scores below 90%/);
+      expect(confirm.textContent).toMatch(/U 89\.9%/);
+      expect(confirm.textContent).not.toMatch(/W 90%/);
     });
 
     it("Publish asks first, naming the low colours; Go back publishes nothing", async () => {
@@ -256,7 +279,7 @@ describe("FrameTemplateSignOff", () => {
           template="saga"
           currentVersion={32}
           currentHash="none"
-          colours={[view("w", "scored"), { ...stale, score: { ...stale.score, overall: 30, low: true } }]}
+          colours={[view("w", "scored"), { ...stale, score: { ...stale.score, overall: 30 } }]}
           ready
           publishableCount={1}
         />,
