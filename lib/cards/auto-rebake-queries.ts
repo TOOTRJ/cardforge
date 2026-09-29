@@ -39,7 +39,12 @@ export type AutoRebakeOverview = {
   readAt: number;
 };
 
-export async function getAutoRebakeOverview(): Promise<AutoRebakeOverview> {
+/** `poisonDetails: false` skips looking the poisoned cards up (titles,
+ *  links) — for the admin dashboard tile, which prints only their count. */
+export async function getAutoRebakeOverview(
+  options: { poisonDetails?: boolean } = {},
+): Promise<AutoRebakeOverview> {
+  const { poisonDetails = true } = options;
   const base: AutoRebakeOverview = {
     state: EMPTY_AUTO_REBAKE_STATE,
     pending: null,
@@ -63,7 +68,7 @@ export async function getAutoRebakeOverview(): Promise<AutoRebakeOverview> {
   const poisonIds = state.poison.map((p) => p.id);
   const [pending, poisonCards] = await Promise.all([
     countSweepCandidates(admin, poisonIds).catch(() => null),
-    describePoison(admin, state.poison),
+    poisonDetails ? describePoison(admin, state.poison) : Promise.resolve<PoisonCard[]>([]),
   ]);
   return { ...base, state, pending, poisonCards };
 }
