@@ -47,6 +47,18 @@ describe("card ideas — composing the user's picks into a form patch", () => {
     expect(IDEA_FIELD_GROUPS).toHaveLength(7);
   });
 
+  it("a token idea reads as it prints — \"Token\" first, its words kept for the picker (TODO 3b.15)", () => {
+    const treasure: CardIdea = {
+      ...b, title: "Treasure", card_type: "token", supertype: "Artifact", subtypes: ["Treasure"], cost: "—",
+    };
+    expect(ideaFieldSummary(treasure, "typeLine")).toBe("Token Artifact — Treasure");
+    expect(ideaFieldSummary({ ...treasure, supertype: null, subtypes: [] }, "typeLine")).toBe("Token");
+    const patch = composeIdeaPatch([treasure], wholeIdeaSelection(0));
+    expect(patch.card_type).toBe("token");
+    expect(patch.supertype).toBe("Artifact");
+    expect(patch.subtypes_text).toBe("Treasure");
+  });
+
   it("returns an empty patch with no ideas", () => {
     expect(composeIdeaPatch([], wholeIdeaSelection(0))).toEqual({});
   });

@@ -19,6 +19,11 @@
 // ---------------------------------------------------------------------------
 
 import type { CardType, ColorIdentity, Rarity } from "@/types/card";
+import {
+  hasTokenTypeWord,
+  showsPowerToughness,
+  withSupertypeWord,
+} from "@/lib/cards/card-display";
 
 // ---------------------------------------------------------------------------
 // Mana costs
@@ -211,6 +216,7 @@ export type LintIssue = {
     | "loyalty"
     | "defense"
     | "color_identity"
+    | "supertype"
     | "balance";
   message: string;
 };
@@ -226,6 +232,10 @@ export type LintableCard = {
   title: string;
   cost: string;
   card_type: CardType;
+  /** The type words before the card type — and a TOKEN's card types
+   *  ("Artifact" for a Treasure, "Creature" for a Soldier; TODO 3b.15). */
+  supertype?: string | null;
+  subtypes?: readonly string[];
   color_identity: ColorIdentity[];
   rules_text: string;
   power: string | null;
@@ -283,21 +293,39 @@ export function lintCardDesign(card: LintableCard): LintResult {
   }
 
   // ---- Stat slots per type ----
-  const isCreatureLike = type === "creature" || type === "token";
+  // A P/T belongs to a creature, a creature TOKEN (its supertype says
+  // "Creature" — a Treasure or a Shard has none, TODO 3b.15) and a Vehicle
+  // or Spacecraft: the rule the creator and the renderers use
+  // (showsPowerToughness).
+  const isCreatureLike = showsPowerToughness(type, card.subtypes, card.supertype);
   if (isCreatureLike) {
     if (card.power == null || card.toughness == null) {
       errors.push({
         field: card.power == null ? "power" : "toughness",
-        message: "Creatures and tokens need both power and toughness.",
+        message: "Creatures and creature tokens need both power and toughness.",
       });
     }
-  } else {
-    if (card.power != null || card.toughness != null) {
-      errors.push({
-        field: "power",
-        message: `${type} cards don't have power/toughness.`,
-      });
-    }
+  } else if (card.power != null || card.toughness != null) {
+    errors.push(
+      type !== "token"
+        ? { field: "power", message: `${type} cards don't have power/toughness.` }
+        : hasTokenTypeWord(card.supertype)
+          ? {
+              field: "power",
+              message: 'Only creature tokens have power/toughness — add "Creature" to the supertype or drop the stats.',
+            }
+          : {
+              field: "supertype",
+              message: 'A token with power/toughness is a creature token — put "Creature" in its supertype.',
+            },
+    );
+  }
+  if (type === "token" && !hasTokenTypeWord(card.supertype) && card.power == null && card.toughness == null) {
+    warnings.push({
+      field: "supertype",
+      message:
+        'Token with no card type — put "Creature", "Artifact" or "Enchantment" in its supertype (only a Copy token prints a bare "Token").',
+    });
   }
   if (type === "planeswalker" && card.loyalty == null) {
     errors.push({ field: "loyalty", message: "Planeswalkers need starting loyalty." });
@@ -404,7 +432,18 @@ export function lintCardDesign(card: LintableCard): LintResult {
 export function autofixCard<T extends LintableCard>(card: T): T {
   const fixed = { ...card };
   const type = fixed.card_type;
-  const isCreatureLike = type === "creature" || type === "token";
+  // A token with a P/T and no type word was designed as a creature token
+  // (every token was one before TODO 3b.15): it gains "Creature", as
+  // migration 0124 does for stored ones. A token that names another type
+  // (a Treasure) keeps it and loses the stats.
+  if (
+    type === "token" &&
+    (fixed.power != null || fixed.toughness != null) &&
+    !hasTokenTypeWord(fixed.supertype)
+  ) {
+    fixed.supertype = withSupertypeWord(fixed.supertype, "Creature");
+  }
+  const isCreatureLike = showsPowerToughness(type, fixed.subtypes, fixed.supertype);
 
   if (!isCreatureLike) {
     fixed.power = null;

@@ -67,7 +67,9 @@ const designedCardSchema = z
     card_type: z.enum(CARD_TYPE_VALUES),
     supertype: clampedText(64, 0)
       .nullable()
-      .describe("Legendary/Basic/Snow etc. Null when none."),
+      .describe(
+        "Legendary/Basic/Snow etc. For a token also its card types: Creature, Artifact, Enchantment (e.g. 'Artifact' for a Treasure, 'Artifact Creature' for a Thopter). Null when none.",
+      ),
     subtypes: z
       .array(clampedText(40, 0))
       .transform((values) => values.filter(Boolean).slice(0, 6))
@@ -166,8 +168,12 @@ EXAMPLE OUTPUTS (match this quality and templating exactly):
 {"title":"Riptide Calculus","cost":"{1}{U}{U}","card_type":"instant","supertype":null,"subtypes":[],"rarity":"uncommon","color_identity":["blue"],"rules_text":"Counter target spell unless its controller pays {2}. Draw a card.","flavor_text":"\\"Every wave breaks. I simply know where.\\"","power":null,"toughness":null,"loyalty":null,"defense":null,"art_prompt":"A sea-mage mid-gesture atop a tidal rock, a colossal wave frozen in impossible geometric spirals above her, teal and silver palette, dramatic backlighting through the curl of the wave, detailed oil-painted fantasy illustration."}
 {"title":"Emberwake Tyrant","cost":"{3}{R}{R}","card_type":"creature","supertype":null,"subtypes":["Dragon"],"rarity":"rare","color_identity":["red"],"rules_text":"Flying, haste\\nWhenever Emberwake Tyrant attacks, it deals 2 damage to each other attacking creature you control and 2 damage to each player.","flavor_text":"Its allies learned to fly behind it.","power":"4","toughness":"4","loyalty":null,"defense":null,"art_prompt":"A furious crimson dragon erupting from a volcanic caldera at dawn, wings scattering embers over a charging warband below, orange and ash-grey palette, cinematic low-angle composition, painterly high-fantasy illustration."}
 
+TOKENS (card_type "token"):
+- A token's card types go in supertype, after Legendary/Snow, in printed order Enchantment, Artifact, Creature: "Creature" for a 1/1 Soldier, "Artifact" for a Treasure, Clue, Food or Map, "Enchantment" for a Shard, "Artifact Creature" for a Thopter, "Legendary Creature" for a named one. The card prints "Token" first: "Token Artifact — Treasure".
+- A token is named after its subtypes ("Soldier", "Rabbit Knight") unless it is a legendary one with a proper name. It has no mana cost ("—").
+
 OUTPUT RULES:
-- power/toughness only for creatures and tokens; loyalty only for planeswalkers; defense only for battles; otherwise null.
+- power/toughness only for creatures, creature tokens (supertype includes "Creature") and Vehicles; loyalty only for planeswalkers; defense only for battles; otherwise null.
 - color_identity must cover every colored mana symbol in the cost AND the rules text.
 - art_prompt: 60-100 words, subject + action + environment + lighting + palette. No frames, no text, no copyrighted artist or world names.
 - Output ONLY the structured fields. No preamble.`;

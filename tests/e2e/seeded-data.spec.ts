@@ -70,6 +70,22 @@ test.describe("seeded dev data renders", () => {
     await expect(page.getByText(/enchantment\s+—\s+saga/i).first()).toBeVisible();
   });
 
+  test("the seeded tokens print \"Token\" first on their card pages (TODO 3b.15)", async ({ page }) => {
+    // \s+: the preview joins its type line with no-break spaces.
+    for (const [path, line] of [
+      ["/card/dev_artist/beast-token", /token\s+creature\s+—\s+beast/i],
+      ["/card/dev_pro/treasure-token", /token\s+artifact\s+—\s+treasure/i],
+      ["/card/dev_pro/glimmer-token", /token\s+enchantment\s+creature\s+—\s+glimmer/i],
+    ] as const) {
+      await page.goto(path);
+      await expect(page.getByText(line).first()).toBeVisible();
+    }
+    // The Copy prints a bare "Token" (its "Card details" Type row).
+    await page.goto("/card/dev_pro/copy-token");
+    await expect(page.getByRole("heading", { name: "Copy", exact: true })).toBeVisible();
+    await expect(page.locator("dd").filter({ hasText: /^Token$/ })).toBeVisible();
+  });
+
   test("the seeded public deck and challenges are browsable", async ({ page }) => {
     await page.goto("/decks");
     await expect(

@@ -101,10 +101,12 @@ export function hidesCost(
 /** Which stat inputs are relevant for a card type — P/T vs loyalty vs defense.
  *  Mirrors the renderer's gating so the form never shows a stat the card can't
  *  display. Subtypes matter too: Vehicles/Spacecraft print P/T without being
- *  creatures. */
+ *  creatures — and a token's supertype: only a Creature token has a P/T (a
+ *  Treasure has none, TODO 3b.15). */
 export function statVisibility(
   cardType: CardType | "" | null | undefined,
   subtypes?: readonly string[] | null,
+  supertype?: string | null,
 ): {
   pt: boolean;
   loyalty: boolean;
@@ -112,7 +114,7 @@ export function statVisibility(
 } {
   const ct = (cardType || null) as CardType | null;
   return {
-    pt: showsPowerToughness(ct, subtypes),
+    pt: showsPowerToughness(ct, subtypes, supertype),
     loyalty: showsLoyalty(ct),
     defense: showsDefense(ct),
   };

@@ -46,12 +46,132 @@ export function normalizeCardFinish(finish: unknown): CardFinish {
 // so hand-typed subtypes ("vehicle") behave like imported ones ("Vehicle").
 const PT_SUBTYPES = new Set(["vehicle", "spacecraft"]);
 
+// ---------------------------------------------------------------------------
+// Token type words (TODO 3b.15). A token's card types ride in `supertype`
+// ("Token Artifact Creature — Thopter" is card_type token with "Artifact
+// Creature" in supertype — the importer's rule, TODO 1.3), so the P/T and
+// the frame read them from there. Printed order: Enchantment, Artifact,
+// Creature ("Token Enchantment Artifact Creature — Golem", TEOC #13).
+// ---------------------------------------------------------------------------
+
+/** The card-type words the token kind's picker toggles, in printed order. */
+export const TOKEN_TYPE_WORDS = ["Enchantment", "Artifact", "Creature"] as const;
+export type TokenTypeWord = (typeof TOKEN_TYPE_WORDS)[number];
+
+/** The words of a supertype, as typed ("Legendary  Artifact" → two). */
+export function supertypeWords(supertype: string | null | undefined): string[] {
+  return (supertype ?? "").split(/\s+/).filter(Boolean);
+}
+
+/** True when the supertype holds `word` (case-insensitive, whole word). */
+export function supertypeHasWord(
+  supertype: string | null | undefined,
+  word: string,
+): boolean {
+  const lower = word.toLowerCase();
+  return supertypeWords(supertype).some((part) => part.toLowerCase() === lower);
+}
+
+/** True when the supertype names a token's card type (Creature, Artifact or
+ *  Enchantment). A token with none prints a bare "Token" (a Copy, TFDN #26)
+ *  — or is a legacy row from before the picker (see printsPowerToughness). */
+export function hasTokenTypeWord(supertype: string | null | undefined): boolean {
+  return TOKEN_TYPE_WORDS.some((word) => supertypeHasWord(supertype, word));
+}
+
+// Printed order of the words left of a type line's dash: the supertypes
+// (Basic, Legendary, Ongoing, Snow, World), then the card types (Kindred,
+// Enchantment, Artifact, Land, Planeswalker, Creature) — "Legendary Snow
+// Artifact Creature", "Legendary Enchantment Artifact" (Bident of Thassa),
+// "Artifact Land", "Land Creature" (Dryad Arbor, TBRO #3).
+const TYPE_WORD_RANK: Readonly<Record<string, number>> = {
+  basic: 0,
+  legendary: 1,
+  ongoing: 2,
+  snow: 3,
+  world: 4,
+  kindred: 5,
+  tribal: 5,
+  enchantment: 6,
+  artifact: 7,
+  land: 8,
+  planeswalker: 9,
+  creature: 10,
+};
+
+/**
+ * The supertype with `word` added in printed order (TYPE_WORD_RANK): before
+ * the first word that prints after it, else last; a word the rank doesn't
+ * know ("Emblem") goes last. Every other word is kept where it is, and a
+ * supertype that already says the word comes back unchanged (its spacing
+ * normalised). A token's picker toggles write through this (TODO 3b.15):
+ * "Legendary" + Artifact → "Legendary Artifact"; "Artifact" + Enchantment →
+ * "Enchantment Artifact"; "Land" + Creature → "Land Creature".
+ */
+export function withSupertypeWord(
+  supertype: string | null | undefined,
+  word: string,
+): string {
+  const words = supertypeWords(supertype);
+  if (supertypeHasWord(supertype, word)) return words.join(" ");
+  const rank = TYPE_WORD_RANK[word.toLowerCase()];
+  const at =
+    rank === undefined
+      ? -1
+      : words.findIndex((part) => (TYPE_WORD_RANK[part.toLowerCase()] ?? -1) > rank);
+  return (at < 0 ? [...words, word] : [...words.slice(0, at), word, ...words.slice(at)]).join(" ");
+}
+
+/** The supertype without `word` (any case); every other word kept, in
+ *  order — undoes withSupertypeWord. */
+export function withoutSupertypeWord(
+  supertype: string | null | undefined,
+  word: string,
+): string {
+  const lower = word.toLowerCase();
+  return supertypeWords(supertype)
+    .filter((part) => part.toLowerCase() !== lower)
+    .join(" ");
+}
+
+/**
+ * Whether the card type shows a P/T: a creature; a token whose supertype says
+ * "Creature" (a Treasure — "Token Artifact — Treasure" — has none, TODO
+ * 3b.15); any card with a Vehicle or Spacecraft subtype. The creator's P/T
+ * inputs and the AI's stat rules follow this; the renderers print through
+ * printsPowerToughness, which adds the stored tokens from before the picker.
+ */
 export function showsPowerToughness(
   cardType: CardType | null | undefined,
   subtypes?: readonly string[] | null,
+  supertype?: string | null,
 ): boolean {
-  if (cardType === "creature" || cardType === "token") return true;
+  if (cardType === "creature") return true;
+  if (cardType === "token" && supertypeHasWord(supertype, "Creature")) return true;
   return (subtypes ?? []).some((s) => PT_SUBTYPES.has(s.trim().toLowerCase()));
+}
+
+/** A face as far as its printed P/T goes. */
+export type PowerToughnessFace = {
+  cardType?: CardType | null;
+  subtypes?: readonly string[] | null;
+  supertype?: string | null;
+  power?: string | null;
+  toughness?: string | null;
+};
+
+/**
+ * Whether a face PRINTS its P/T — both renderers (and the stat-fit scope)
+ * gate on this: it has a value and its type shows one (showsPowerToughness).
+ * A token with a value and no type word at all also prints it: before the
+ * picker (TODO 3b.15) every token was a creature, so a stored one written
+ * then keeps its P/T. Migration 0124 gives those rows "Creature"; this keeps
+ * one written by an older client after it (or before it ran) printing too.
+ */
+export function printsPowerToughness(face: PowerToughnessFace): boolean {
+  if (!face.power && !face.toughness) return false;
+  if (showsPowerToughness(face.cardType, face.subtypes, face.supertype)) return true;
+  return face.cardType === "token" && !hasTokenTypeWord(face.supertype);
 }
 
 export function showsLoyalty(cardType: CardType | null | undefined): boolean {
@@ -154,6 +274,10 @@ export function parseLoyaltyAbilities(
 }
 
 // Builds the "Supertype Type — Subtype Subtype" line shown in the type bar.
+// A token prints "Token" FIRST, then its words (TODO 3b.15, the M15-on
+// wording): "Token Creature — Soldier", "Token Legendary Artifact Creature —
+// Construct", a bare "Token" for a Copy (TFDN #26), "Token Basic — Wastes"
+// for a basic typed on the token frame.
 export function buildTypeLine({
   supertype,
   cardType,
@@ -161,9 +285,13 @@ export function buildTypeLine({
 }: {
   supertype?: string | null;
   cardType?: CardType | null;
-  subtypes?: string[];
+  subtypes?: readonly string[];
 }): string {
-  const left = [supertype, cardType ? capitalize(cardType) : null]
+  const left = (
+    cardType === "token"
+      ? ["Token", supertype?.trim()]
+      : [supertype, cardType ? capitalize(cardType) : null]
+  )
     .filter(Boolean)
     .join(" ");
   const right = subtypes?.filter(Boolean).join(" ") ?? "";

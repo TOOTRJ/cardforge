@@ -104,6 +104,9 @@ vi.mock("@/components/cards/card-preview", () => ({
   CardPreview: (props: {
     title?: string;
     cardType?: string | null;
+    supertype?: string | null;
+    power?: string | null;
+    rarity?: string | null;
     rulesText?: string;
     frameStyle?: { template?: string };
     faceContent?: unknown;
@@ -113,6 +116,9 @@ vi.mock("@/components/cards/card-preview", () => ({
       data-testid="card-preview"
       data-title={props.title ?? ""}
       data-card-type={props.cardType ?? ""}
+      data-supertype={props.supertype ?? ""}
+      data-power={props.power ?? ""}
+      data-rarity={props.rarity ?? ""}
       data-template={props.frameStyle?.template ?? ""}
       data-rules={props.rulesText ?? ""}
       data-face-content={JSON.stringify(props.faceContent ?? null)}
@@ -268,6 +274,9 @@ function preview() {
   return {
     title: el.dataset.title,
     cardType: el.dataset.cardType,
+    supertype: el.dataset.supertype,
+    power: el.dataset.power,
+    rarity: el.dataset.rarity,
     template: el.dataset.template,
     rules: el.dataset.rules,
     faceContent: JSON.parse(el.dataset.faceContent ?? "null"),
@@ -1014,6 +1023,163 @@ describe("3b.8 the second half is typed from the kind", () => {
     await clickSave();
     await waitFor(() => expect(actions.createCardAction).toHaveBeenCalledTimes(1));
     expect(actions.createCardAction.mock.calls[0][0].back_face.card_type).toBe("instant");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 3b.15 — the token kind: its type picker writes the words, the frame and the
+// P/T follow them, the name follows the subtypes, and a new token is common.
+// ---------------------------------------------------------------------------
+
+describe("3b.15 the token type picker", () => {
+  const WITH_ARTIFACT_TOKEN = [...VERIFIED, ...EVERY_COLOUR.map((k) => frameComboKey("m15tokenartifact", k))];
+
+  function tokenChip(label: RegExp) {
+    const chip = Array.from(
+      document.querySelectorAll("[aria-label='Token types'] button, [aria-label='Token supertypes'] button"),
+    ).find((el) => label.test(el.textContent ?? "")) as HTMLButtonElement | undefined;
+    if (!chip) throw new Error(`no token chip ${label}`);
+    return chip;
+  }
+  async function toggle(label: RegExp) {
+    const chip = tokenChip(label);
+    await act(async () => {
+      fireEvent.click(chip);
+    });
+  }
+
+  it("a new token is a common Creature token with a P/T", async () => {
+    renderForm({ mode: "create", verifiedFrameKeys: WITH_ARTIFACT_TOKEN });
+    await pickKind(/^Token/);
+    expect(preview().cardType).toBe("token");
+    expect(preview().template).toBe("m15token");
+    expect(preview().supertype).toBe("Creature");
+    expect(preview().power).toBe("1");
+    expect(preview().rarity).toBe("common");
+    expect(tokenChip(/^Creature/).getAttribute("aria-pressed")).toBe("true");
+    expect(tokenChip(/^Artifact/).getAttribute("aria-pressed")).toBe("false");
+    // Back to a creature: the picker's word leaves with the kind.
+    await pickKind(/^Creature/);
+    expect(preview().supertype).toBe("");
+  });
+
+  it("Artifact picks the artifact token frame; the P/T goes with Creature; off again → the plain frame", async () => {
+    renderForm({ mode: "create", verifiedFrameKeys: WITH_ARTIFACT_TOKEN });
+    await pickKind(/^Token/);
+    await toggle(/^Creature/);
+    await toggle(/^Artifact/);
+    expect(preview().supertype).toBe("Artifact");
+    expect(preview().template).toBe("m15tokenartifact");
+    // The form still holds the new card's 1/1, but a Treasure prints none.
+    expect(preview().power).toBe("");
+    await toggle(/^Legendary/);
+    await toggle(/^Enchantment/);
+    expect(preview().supertype).toBe("Legendary Enchantment Artifact");
+    await toggle(/^Artifact/);
+    expect(preview().supertype).toBe("Legendary Enchantment");
+    expect(preview().template).toBe("m15token");
+    // No toggle at all: a bare "Token", on the plain frame.
+    await toggle(/^Legendary/);
+    await toggle(/^Enchantment/);
+    expect(preview().supertype).toBe("");
+    expect(preview().template).toBe("m15token");
+  });
+
+  it("the \"Artifact Token\" frame is no chip of its own", async () => {
+    renderForm({ mode: "create", verifiedFrameKeys: WITH_ARTIFACT_TOKEN });
+    await pickKind(/^Token/);
+    const variations = screen.getByRole("radiogroup", { name: "Frame variations" });
+    const labels = Array.from(variations.querySelectorAll("[role='radio']")).map((el) => el.textContent ?? "");
+    expect(labels.some((text) => /^Standard/.test(text))).toBe(true);
+    expect(labels.some((text) => /Artifact Token/.test(text))).toBe(false);
+  });
+
+  it("an unverified artifact frame keeps the plain one and says so", async () => {
+    renderForm({ mode: "create" }); // m15tokenartifact isn't verified here
+    await pickKind(/^Token/);
+    await toggle(/^Artifact/);
+    expect(preview().supertype).toBe("Artifact Creature");
+    expect(preview().template).toBe("m15token");
+    expect(toast.info.mock.calls.map((call) => String(call[0])).join(" ")).toMatch(/isn't verified in colorless yet/);
+  });
+
+  it("the name follows the subtypes until the user types one", async () => {
+    renderForm({ mode: "create", verifiedFrameKeys: WITH_ARTIFACT_TOKEN });
+    await pickKind(/^Token/);
+    await clickNext(); // Card → Identity
+    const subtypes = screen.getByPlaceholderText("Dragon, Elder");
+    await act(async () => {
+      fireEvent.change(subtypes, { target: { value: "Rabbit, Knight" } });
+    });
+    expect(titleInput().value).toBe("Rabbit Knight");
+    await act(async () => {
+      fireEvent.change(subtypes, { target: { value: "Rabbit" } });
+    });
+    expect(titleInput().value).toBe("Rabbit");
+    await typeTitle("Warren Warleader");
+    await act(async () => {
+      fireEvent.change(subtypes, { target: { value: "Rabbit, Knight" } });
+    });
+    expect(titleInput().value).toBe("Warren Warleader");
+  });
+
+  it("a Treasure saves as \"Artifact\", common, with no P/T, on the artifact token frame", async () => {
+    actions.createCardAction.mockResolvedValue({
+      ok: true,
+      cardId: "44444444-4444-4444-8444-444444444444",
+      slug: "treasure",
+    });
+    renderForm({ mode: "create", verifiedFrameKeys: WITH_ARTIFACT_TOKEN });
+    await pickKind(/^Token/);
+    await toggle(/^Creature/);
+    await toggle(/^Artifact/);
+    await clickNext();
+    await act(async () => {
+      fireEvent.change(screen.getByPlaceholderText("Dragon, Elder"), { target: { value: "Treasure" } });
+    });
+    // No rarity chips for a token.
+    await clickNext();
+    expect(screen.queryByRole("radiogroup", { name: "Rarity" })).toBeNull();
+    expect(screen.queryByPlaceholderText("4")).toBeNull();
+    await goToLastStep();
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("save-as-draft"));
+    });
+    await clickSave();
+    await waitFor(() => expect(actions.createCardAction).toHaveBeenCalledTimes(1));
+    const payload = actions.createCardAction.mock.calls[0][0];
+    expect(payload).toMatchObject({
+      title: "Treasure",
+      card_type: "token",
+      supertype: "Artifact",
+      subtypes: ["Treasure"],
+      rarity: "common",
+      frame_style: { template: "m15tokenartifact" },
+    });
+    expect(payload.power).toBeUndefined();
+    expect(payload.toughness).toBeUndefined();
+  });
+
+  it("a stored token from before the picker opens as a Creature token with its P/T", async () => {
+    renderForm({
+      mode: "edit",
+      card: savedCard({
+        title: "Stalzalfos",
+        card_type: "token",
+        supertype: null,
+        subtypes: ["Skeleton"],
+        power: "1",
+        toughness: "1",
+        cost: null,
+        rarity: "uncommon",
+        frame_style: { finish: "regular", template: "m15token" },
+      }),
+    });
+    expect(preview().supertype).toBe("Creature");
+    expect(preview().power).toBe("1");
+    // Its stored rarity stays.
+    expect(preview().rarity).toBe("uncommon");
+    expect(screen.getByTestId("locked-summary").textContent).toMatch(/Token Creature — Skeleton/);
   });
 });
 

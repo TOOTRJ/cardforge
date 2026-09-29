@@ -25,9 +25,9 @@
 import { getFrameProfile, type StatSlot } from "@/lib/cards/template-layout";
 import {
   normalizeFrameTemplate,
+  printsPowerToughness,
   showsDefense,
   showsLoyalty,
-  showsPowerToughness,
 } from "@/lib/cards/card-display";
 import { RULES_TEXT, ptToPct, type CardOrientation } from "@/lib/cards/typography";
 import type { CardType } from "@/types/card";
@@ -174,6 +174,10 @@ export type StatScopeCard = {
   frame_style?: unknown;
   card_type?: string | null;
   subtypes?: readonly string[] | null;
+  /** A token prints its P/T by its type words (TODO 3b.15). Not in
+   *  STAT_SCOPE_COLUMNS: a row without it reads as no words — a token then
+   *  prints any P/T it has, as every token did before the picker. */
+  supertype?: string | null;
   power?: string | null;
   toughness?: string | null;
   loyalty?: string | null;
@@ -194,7 +198,13 @@ function printedStats(card: StatScopeCard) {
   const layout = getFrameProfile(template);
   const cardType = (card.card_type ?? null) as CardType | null;
   const stats: { slot: StatSlot; value: string; upsideDown: boolean }[] = [];
-  const printsPT = showsPowerToughness(cardType, card.subtypes) && Boolean(card.power || card.toughness);
+  const printsPT = printsPowerToughness({
+    cardType,
+    subtypes: card.subtypes,
+    supertype: card.supertype,
+    power: card.power,
+    toughness: card.toughness,
+  });
   if (layout.pt && printsPT) stats.push({ slot: layout.pt, value: ptValue(card.power, card.toughness), upsideDown: false });
   if (layout.loyalty && showsLoyalty(cardType) && card.loyalty) stats.push({ slot: layout.loyalty, value: card.loyalty, upsideDown: false });
   if (layout.defense && showsDefense(cardType) && card.defense) stats.push({ slot: layout.defense, value: card.defense, upsideDown: false });

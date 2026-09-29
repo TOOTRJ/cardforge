@@ -324,6 +324,18 @@ describe("statsShrink / statLayoutChanged — the card-row scope", () => {
     expect(statsShrink(row({ power: "10000", toughness: null }))).toBe(true);
   });
 
+  it("reads a token's P/T by its type words, as the bake does (TODO 3b.15)", () => {
+    const token = { frame_style: { template: "m15token" }, card_type: "token", power: "10000", toughness: "10000" };
+    // A creature token prints (and shrinks) its P/T; so does a stored one
+    // with no type word, or a row that didn't select supertype.
+    expect(statsShrink(row({ ...token, supertype: "Creature" }))).toBe(true);
+    expect(statsShrink(row({ ...token, supertype: null }))).toBe(true);
+    expect(statsShrink(row({ ...token }))).toBe(true);
+    // A Treasure with a stray P/T prints none.
+    expect(statsShrink(row({ ...token, supertype: "Artifact" }))).toBe(false);
+    expect(statLayoutChanged(row({ ...token, supertype: "Artifact" }))).toBe(false);
+  });
+
   it("reads the template the card is drawn on ({} and retired values draw m15)", () => {
     expect(statsShrink(row({ frame_style: {}, power: "100", toughness: "100" }))).toBe(true);
     expect(statLayoutChanged(row({ frame_style: null, power: "X", toughness: "X+1" }))).toBe(true);

@@ -5,8 +5,10 @@
 
 import { tokenize } from "@/components/cards/mana-cost-glyphs";
 import {
+  hasTokenTypeWord,
   normalizeCardFinish,
   normalizeFrameTemplate,
+  withSupertypeWord,
 } from "@/lib/cards/card-display";
 import {
   DEFAULT_FRAME_TEMPLATE,
@@ -132,6 +134,21 @@ function backFaceFormValuesFrom(
   };
 }
 
+/**
+ * The supertype the form edits for a stored card. A token from before the
+ * type picker (TODO 3b.15) with a P/T and no type word was a creature — every
+ * token was — so it reads as "Creature", the word migration 0124 writes: its
+ * P/T inputs show, the picker's Creature toggle is on, and a remix saves the
+ * word. Every other card's supertype is as stored.
+ */
+export function formSupertypeOf(
+  card: Pick<Card, "card_type" | "supertype" | "power" | "toughness">,
+): string {
+  const supertype = card.supertype ?? "";
+  if (card.card_type !== "token" || !(card.power || card.toughness)) return supertype;
+  return hasTokenTypeWord(supertype) ? supertype : withSupertypeWord(supertype, "Creature");
+}
+
 /** Viewer facts the defaults depend on (owner decision 2026-09-17): paid
  *  accounts start creatures/spells with no watermark (free: the PipGlyph
  *  Rose) and new cards prefill the account's footer mark. */
@@ -213,7 +230,7 @@ export function defaultValuesFor(
     game_system_id: card.game_system_id,
     cost: card.cost ?? "",
     color_identity: card.color_identity,
-    supertype: card.supertype ?? "",
+    supertype: formSupertypeOf(card),
     card_type: card.card_type ?? "",
     subtypes_text: card.subtypes.join(", "),
     tags_text: card.tags?.join(", ") ?? "",

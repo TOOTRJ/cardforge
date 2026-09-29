@@ -65,7 +65,7 @@ import {
   normalizeFrameTemplate,
   showsDefense,
   showsLoyalty,
-  showsPowerToughness,
+  printsPowerToughness,
   slotLine,
   splitTypeLine,
   type LoyaltyAbility,
@@ -468,10 +468,7 @@ function CardImage({
 
   // Same gating as the preview (shared helpers) — and only when the frame
   // actually defines a slot for that stat.
-  const showPT =
-    Boolean(layout.pt) &&
-    showsPowerToughness(card.cardType, card.subtypes) &&
-    Boolean(card.power || card.toughness);
+  const showPT = Boolean(layout.pt) && printsPowerToughness(card);
   const showLoyalty =
     Boolean(layout.loyalty) &&
     showsLoyalty(card.cardType) &&
