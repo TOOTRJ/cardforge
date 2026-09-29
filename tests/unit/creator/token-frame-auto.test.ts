@@ -76,51 +76,74 @@ describe("newTokenFrame — the default switch (owner 2026-09-29: new tokens def
   });
 });
 
-describe("followTokenHeight — automatic, with a manual choice that sticks", () => {
+describe("followTokenHeight — automatic, with a manual choice that sticks (owner decision 5)", () => {
   const base = { heightPinned: false, colorKey: "w", verifiedKeys: everyM20("w") };
 
-  it("follows the text while the user hasn't picked a height", () => {
-    expect(followTokenHeight({ ...base, ...NONE, template: "m20token" })).toBe("m20token");
-    expect(followTokenHeight({ ...base, ...FLYING, template: "m20token" })).toBe("m20tokentext");
-    expect(followTokenHeight({ ...base, ...LONG, template: "m20tokentext" })).toBe("m20tokentall");
+  it("follows the text while the card wears the height the text asked for and the user hasn't picked one", () => {
+    expect(followTokenHeight({ ...base, ...NONE, previous: NONE, template: "m20token" })).toBe("m20token");
+    expect(followTokenHeight({ ...base, ...FLYING, previous: NONE, template: "m20token" })).toBe("m20tokentext");
+    expect(followTokenHeight({ ...base, ...LONG, previous: FLYING, template: "m20tokentext" })).toBe("m20tokentall");
     // Text removed: back to no box.
-    expect(followTokenHeight({ ...base, ...NONE, template: "m20tokentall" })).toBe("m20token");
+    expect(followTokenHeight({ ...base, ...NONE, previous: LONG, template: "m20tokentall" })).toBe("m20token");
   });
 
   it("keeps a height the user picked, whatever the text — the Artifact word still dresses it", () => {
     const pinned = { ...base, heightPinned: true };
-    expect(followTokenHeight({ ...pinned, ...NONE, template: "m20tokentall" })).toBe("m20tokentall");
-    expect(followTokenHeight({ ...pinned, ...LONG, template: "m20tokentext" })).toBe("m20tokentext");
-    expect(followTokenHeight({ ...pinned, ...LONG, supertype: "Artifact", template: "m20tokentext" })).toBe("m20tokenartifacttext");
-    expect(followTokenHeight({ ...pinned, ...NONE, supertype: "Creature", template: "m20tokenartifacttall" })).toBe("m20tokentall");
+    expect(followTokenHeight({ ...pinned, ...NONE, previous: LONG, template: "m20tokentall" })).toBe("m20tokentall");
+    expect(followTokenHeight({ ...pinned, ...LONG, previous: FLYING, template: "m20tokentext" })).toBe("m20tokentext");
+    expect(followTokenHeight({ ...pinned, ...LONG, supertype: "Artifact", previous: LONG, template: "m20tokentext" })).toBe(
+      "m20tokenartifacttext",
+    );
+    expect(followTokenHeight({ ...pinned, ...NONE, supertype: "Creature", previous: NONE, template: "m20tokenartifacttall" })).toBe(
+      "m20tokentall",
+    );
+  });
+
+  it("keeps a height that disagreed with the text before the edit: a stored card's earlier pick sticks (round 11's rule)", () => {
+    // Saved on the tall box with one short line — a choice from an earlier
+    // session, so nothing in this one set heightPinned.
+    expect(followTokenHeight({ ...base, ...FLYING, rulesText: "Flying, vigilance", previous: FLYING, template: "m20tokentall" })).toBe(
+      "m20tokentall",
+    );
+    // Saved textless with text on it: typing more keeps it textless.
+    expect(followTokenHeight({ ...base, ...LONG, previous: FLYING, template: "m20token" })).toBe("m20token");
+    // …and the Artifact word still dresses it.
+    expect(followTokenHeight({ ...base, ...FLYING, supertype: "Artifact Creature", previous: FLYING, template: "m20tokentall" })).toBe(
+      "m20tokenartifacttall",
+    );
   });
 
   it("dresses by the Artifact word at the height the text asks for", () => {
-    expect(followTokenHeight({ ...base, ...TREASURE, colorKey: "c", verifiedKeys: everyM20("c"), template: "m20tokentext" })).toBe(
-      "m20tokenartifacttext",
-    );
+    expect(
+      followTokenHeight({ ...base, ...TREASURE, previous: { ...TREASURE, supertype: "Creature" }, colorKey: "c", verifiedKeys: everyM20("c"), template: "m20tokentext" }),
+    ).toBe("m20tokenartifacttext");
   });
 
   it("never moves a card onto a combo that isn't verified in its colour", () => {
     const onlyTextless = { ...base, verifiedKeys: verified(["m20token", "w"]) };
-    expect(followTokenHeight({ ...onlyTextless, ...FLYING, template: "m20token" })).toBe("m20token");
+    expect(followTokenHeight({ ...onlyTextless, ...FLYING, previous: NONE, template: "m20token" })).toBe("m20token");
   });
 
   it("leaves every other frame alone (the arch, a showcase): round 11's pick owns the arch", () => {
     for (const template of ["m15token", "m15tokentext", "m15tokenartifact", "nyx", "m15"] as FrameTemplate[]) {
-      expect(followTokenHeight({ ...base, ...LONG, template }), template).toBe(template);
+      expect(followTokenHeight({ ...base, ...LONG, previous: NONE, template }), template).toBe(template);
     }
   });
 });
 
 describe("pinsTokenHeight — which picks pin the height", () => {
-  it("a full-art height other than the automatic one pins; the automatic one and other frames don't", () => {
-    expect(pinsTokenHeight("m20tokentall", FLYING)).toBe(true);
-    expect(pinsTokenHeight("m20tokentext", FLYING)).toBe(false);
-    expect(pinsTokenHeight("m20token", NONE)).toBe(false);
-    expect(pinsTokenHeight("m20tokenartifacttext", TREASURE)).toBe(false);
-    expect(pinsTokenHeight("m20tokenartifact", TREASURE)).toBe(true);
-    expect(pinsTokenHeight("m15token", FLYING)).toBe(false);
+  it("any full-art height picked in Variations pins — the one the text asks for too (owner decision 5: 'until the user picks a height')", () => {
+    expect(pinsTokenHeight("m20tokentall", { variation: true })).toBe(true);
+    expect(pinsTokenHeight("m20tokentext", { variation: true })).toBe(true);
+    expect(pinsTokenHeight("m20token", { variation: true })).toBe(true);
+    expect(pinsTokenHeight("m20tokenartifacttext", { variation: true })).toBe(true);
+  });
+
+  it("a Frame-section pick goes back to automatic, and a frame outside the family pins nothing here", () => {
+    expect(pinsTokenHeight("m20token", { variation: false })).toBe(false);
+    expect(pinsTokenHeight("m20tokentall", { variation: false })).toBe(false);
+    expect(pinsTokenHeight("m15token", { variation: true })).toBe(false);
+    expect(pinsTokenHeight("m15tokentext", { variation: true })).toBe(false);
   });
 });
 

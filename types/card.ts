@@ -679,7 +679,7 @@ export const TEMPLATE_SKIN_VARIANTS: Partial<
   // by the Artifact type word (lib/creator/card-kinds.ts TYPE_WORD_DRESSES).
   // The full-art token design (TODO 4.48) and its heights, variations of the
   // token kind until they are verified and become its standard
-  // (lib/creator/token-frame-height.ts TOKEN_STANDARD_ONCE_VERIFIED); the
+  // (lib/creator/token-frame-auto.ts TOKEN_STANDARD_ONCE_VERIFIED); the
   // artifact templates are dressed by the Artifact word (4.50).
   m15token: [
     "m15tokenartifact",

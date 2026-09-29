@@ -6,6 +6,7 @@ import { mainRulesLayout, rulesDraw } from "@/lib/cards/rules-box";
 import {
   M20_TOKEN_PILL_INTERIOR_PX,
   M20_TOKEN_SYMBOL_CENTRE_PX,
+  M20_TOKEN_TITLE_BOX_PX,
   bandTextStyle,
   getFrameProfile,
 } from "@/lib/cards/template-layout";
@@ -122,6 +123,26 @@ describe("CardPreview — the full-art token (TODO 4.48 / 4.50)", () => {
       expect(pt.rect, t).toEqual(m15.rect);
       expect(((pt.valueDyEm! - m15.valueDyEm!) * 75)).toBeCloseTo(-3.5, 9);
       expect(pt.plateAssetPathTemplate, t).toBe(t.includes("artifact") ? "/frames/m15artifact/pt/{color}.png" : "/frames/m15/pt/{color}.png");
+    }
+  });
+
+  it("puts the name band on whole px at both bake targets, so the preview and the bake centre the same box", () => {
+    // CC's name box is 109.62 + 114.03 px at HD (54.81 + 57.015 at 750): the
+    // browser and Satori round a box between pixels differently, and the
+    // 750 px preview's name sat 2 px above the bake's (measured on real
+    // screenshots vs bakes, 2026-09-29; the arch token's whole-px box: 1).
+    expect(M20_TOKEN_TITLE_BOX_PX).toEqual({ top: 110, height: 114 });
+    for (const t of ["m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall"]) {
+      const { rect } = getFrameProfile(t).title;
+      for (const cardHeight of [2100, 1050]) {
+        for (const px of [(rect.topPct / 100) * cardHeight, (rect.heightPct / 100) * cardHeight]) {
+          expect(Math.abs(px - Math.round(px)), `${t} @${cardHeight}: ${px}`).toBeLessThan(1e-9);
+        }
+      }
+      // Still CC's box, to the nearest even row.
+      expect(Math.abs((rect.topPct / 100) * 2100 - 0.0522 * 2100)).toBeLessThanOrEqual(1);
+      expect(Math.abs((rect.heightPct / 100) * 2100 - 0.0543 * 2100)).toBeLessThanOrEqual(1);
+      expect([rect.leftPct, rect.widthPct]).toEqual([8.54, 82.92]);
     }
   });
 

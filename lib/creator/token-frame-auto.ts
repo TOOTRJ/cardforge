@@ -7,8 +7,9 @@
 //     automatic pick between the 2014–19 arch's textless and text-box
 //     frames first; this module is the full-art family's half of the same
 //     mechanism and is wired into it once that merges (the form's frame
-//     follows `followTokenHeight`, a user's pick sets `heightPinned`, a new
-//     token starts on `newTokenFrame`). Until then nothing in the app
+//     follows `followTokenHeight`, a Variations pick sets `heightPinned`
+//     through `pinsTokenHeight` — round 11's `manual` — and a new token
+//     starts on `newTokenFrame`). Until then nothing in the app
 //     imports it, so no card, preview or bake changes.
 //
 //   * The default switch: once 4.48 is VERIFIED, a NEW token defaults to the
@@ -18,14 +19,21 @@
 //     is gated (frame_reviews): a colour whose full-art template isn't
 //     verified yet starts on the arch.
 //
-//   * The height: automatic, with a manual choice that sticks. A new token
-//     takes the smallest printed height its text fits at the rules standard
-//     size (lib/cards/token-height.ts — the import's rule too); the creator
-//     follows the text as it changes until the user picks a height, and from
-//     then on keeps theirs. The Artifact word picks the artifact template at
-//     the same height (4.50). The form never lands on an unverified combo:
-//     a height that isn't verified in the card's colour keeps the frame it
-//     has (the type-word dress's rule, typeWordFrameFor).
+//   * The height: automatic, with a manual choice that sticks (owner
+//     decision 5). A new token takes the smallest printed height its text
+//     fits at the rules standard size (lib/cards/token-height.ts — the
+//     import's rule too); the creator follows the text as it changes until
+//     the user picks a height, and from then on keeps theirs. Round 11's
+//     rules for the arch's text box (followTokenTextBox) hold here too: ANY
+//     height picked in the setup panel's Variations sticks — the one the
+//     text asks for included (pinsTokenHeight); a Frame-section pick goes
+//     back to automatic; and the frame follows only while it wears the
+//     height the text asked for BEFORE the edit, so a stored card whose
+//     height disagrees with its text (a pick from an earlier session) keeps
+//     it. The Artifact word picks the artifact template at the same height
+//     (4.50). The form never lands on an unverified combo: a height that
+//     isn't verified in the card's colour keeps the frame it has (the
+//     type-word dress's rule, typeWordFrameFor).
 //
 // Pure and client-safe.
 // ---------------------------------------------------------------------------
@@ -110,16 +118,21 @@ export function newTokenFrame(
 
 /**
  * The frame a full-art token follows to as its text or type words change:
- * the height the text asks for — or, once the user picked one
- * (`heightPinned`), the height it is on — dressed by the Artifact word. Any
- * other template is returned as it is (the arch, a showcase), and so is a
- * full-art frame whose target isn't verified in the card's colour: the form
- * never moves a card onto an unverified combo.
+ * the height the text now asks for — but only while the card wears the
+ * height the text asked for before the edit (`previous`) and the user
+ * hasn't picked one (`heightPinned`); otherwise the height it is on (round
+ * 11's rule, followTokenTextBox: a frame that disagreed with the text is a
+ * choice the user made, and it sticks) — dressed by the Artifact word
+ * either way. Any other template is returned as it is (the arch, a
+ * showcase), and so is a full-art frame whose target isn't verified in the
+ * card's colour: the form never moves a card onto an unverified combo.
  */
 export function followTokenHeight(
   input: TokenFrameText & {
     template: FrameTemplate;
-    /** The user picked a height (a frame chip of the family). */
+    /** The text and type words before this edit. */
+    previous: TokenFrameText;
+    /** The user picked a height this session (pinsTokenHeight). */
     heightPinned: boolean;
     colorKey: string;
     verifiedKeys: ReadonlySet<string>;
@@ -128,22 +141,25 @@ export function followTokenHeight(
   const current = m20TokenHeightOf(input.template);
   if (!current) return input.template;
   const artifact = supertypeHasWord(input.supertype, "Artifact");
-  const height: M20TokenHeight = input.heightPinned
-    ? current
-    : tokenHeightForText({ ...input, artifact });
+  const followed =
+    !input.heightPinned &&
+    current ===
+      tokenHeightForText({ ...input.previous, artifact: supertypeHasWord(input.previous.supertype, "Artifact") });
+  const height: M20TokenHeight = followed ? tokenHeightForText({ ...input, artifact }) : current;
   const next = m20TokenTemplate(height, artifact);
   if (next === input.template) return next;
   return isFrameComboAvailable(next, input.colorKey, input.verifiedKeys) ? next : input.template;
 }
 
 /**
- * Whether a frame pick pins the height: the user chose a full-art height
- * other than the one the text asks for. Picking the automatic one (or any
- * frame outside the family) leaves the creator following the text.
+ * Whether a frame pick pins the height (owner decision 5: the creator
+ * follows the text "until the user picks a height"): a full-art height
+ * picked in the setup panel's Variations — whichever it is, the one the
+ * text asks for included, as round 11's text-box chips stick. A pick in the
+ * Frame section (the family's standard) goes back to automatic, and a frame
+ * outside the family pins nothing here (round 11's own flag covers the
+ * arch).
  */
-export function pinsTokenHeight(picked: FrameTemplate, text: TokenFrameText): boolean {
-  const height = m20TokenHeightOf(picked);
-  if (!height) return false;
-  const artifact = supertypeHasWord(text.supertype, "Artifact");
-  return height !== tokenHeightForText({ ...text, artifact });
+export function pinsTokenHeight(picked: FrameTemplate, pick: { variation: boolean }): boolean {
+  return pick.variation && m20TokenHeightOf(picked) !== null;
 }

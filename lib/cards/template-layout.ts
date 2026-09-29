@@ -1525,6 +1525,11 @@ const M20_TOKEN_PT_PRINT_DY_EM = -3.5 / 75;
 /** Card %H of an HD px row (2100 px card). */
 const hdRowPct = (px: number) => (px / 2100) * 100;
 
+/** The name band's box, HD px: CC's name box (109.62 + 114.03 px) on whole
+ *  px at both bake targets — even HD rows, so the 750 px bake's box is whole
+ *  px too (55 + 57). A unit test holds every full-art token to it. */
+export const M20_TOKEN_TITLE_BOX_PX = { top: 110, height: 114 } as const;
+
 /** CC's set-symbol box (0.12 W × 0.041 H — M15's 86 px box, layout v32),
  *  its right edge at CC's 92.13 %W (setSymbolBounds x 0.9213,
  *  right-anchored), centred where the prints centre theirs
@@ -1569,9 +1574,19 @@ const M20TOKENTEXT: FrameProfile = {
   symbolRect: m20TokenSymbolRect("regular"),
   // CC's name box (x 0.0854, y 0.0522, 0.8292 × 0.0543 — the name pill's
   // interior, 104–217 px), centred, the M15 name size (CC 0.0381 H =
-  // TITLE_SIZE_PCT); Beleren Small Caps waits for 4.8.
+  // TITLE_SIZE_PCT); Beleren Small Caps waits for 4.8. Its rows snapped to
+  // whole px at BOTH bake targets (M20_TOKEN_TITLE_BOX_PX: 110 + 114 px at
+  // HD, 55 + 57 at 750): CC's 109.62 + 114.03 px put the band's edges
+  // between pixels, and the browser and Satori round a fractional box
+  // differently — the preview's name sat 2 px above the 750 bake's (1 px
+  // on the arch token's whole-px box). The bake's baseline is unchanged.
   title: {
-    rect: { topPct: 5.22, leftPct: 8.54, widthPct: 82.92, heightPct: 5.43 },
+    rect: {
+      topPct: hdRowPct(M20_TOKEN_TITLE_BOX_PX.top),
+      leftPct: 8.54,
+      widthPct: 82.92,
+      heightPct: hdRowPct(M20_TOKEN_TITLE_BOX_PX.height),
+    },
     sizePct: TITLE_SIZE_PCT,
     dy: M20_TOKEN_TITLE_PRINT_DY,
     fit: "measured",

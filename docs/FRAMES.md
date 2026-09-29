@@ -519,7 +519,10 @@ frames bucket — never git:
   4.16's `m15artifact` recipe; their plates are M15's artifact set.
 - **Profile** (`M20TOKENTEXT` and the heights spread from it,
   `lib/cards/template-layout.ts`): the art to the ring (CC's bounds with
-  7.6's overscan), the name in CC's box at `TITLE_SIZE_PCT` — white, dark
+  7.6's overscan), the name in CC's box at `TITLE_SIZE_PCT` — snapped to
+  whole px at both bake targets (`M20_TOKEN_TITLE_BOX_PX`, 110 + 114 px at
+  HD: CC's 109.62 + 114.03 px set the 750 px preview's name 2 px above the
+  bake's; now 1 px, as on the arch token) — white, dark
   on the plain white pill (`inkByColorKey`) — the type line on the pill
   from 8.54 %W at `TYPE_SIZE_PCT`, the set symbol in CC's 86 px box
   (right edge 92.13 %W), the P/T on M15's plate with M15's value box, the
@@ -554,7 +557,12 @@ frames bucket — never git:
   reaches them (`/create?previewFrames=m20token`). The default switch (new
   tokens start on the full-art design once verified) and the automatic
   height with a sticky manual pick live in `lib/creator/token-frame-auto.ts`,
-  NOT wired into the form until round 11's arch auto-pick merges.
+  NOT wired into the form until round 11's arch auto-pick merges. They keep
+  round 11's rules (`followTokenTextBox`): any height picked in Variations
+  sticks, the one the text asks for included (`pinsTokenHeight`); a
+  Frame-section pick goes back to automatic; and `followTokenHeight` moves
+  the height only while the card wears the one the text asked for before
+  the edit, so a stored card's earlier pick survives its next edit.
 - **Rollout.** New templates, no stored card: no layout bump, no sweep. The
   owner runs `frames:promote`, then verifies each colour (0.9 → 2.2 → 2.4)
   against the references in `lib/cards/frame-references.json`.
