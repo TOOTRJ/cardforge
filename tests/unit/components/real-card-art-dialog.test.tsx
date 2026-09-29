@@ -425,6 +425,37 @@ describe("failures leave the form alone", () => {
     expect(second.values()).toEqual(before2);
   });
 
+  it("Escape, Cancel and the X can't close the dialog while the art downloads", async () => {
+    let releaseArt: (() => void) | null = null;
+    stubRoutes({
+      importArt: () =>
+        new Promise<Response>((resolve) => {
+          releaseArt = () =>
+            resolve(json({ ok: true, publicUrl: PUBLIC_URL, artist: "Artist of DOM", warning: null }));
+        }),
+    });
+    const { values } = renderButton("front");
+    await pickCard("Llanowar", /Llanowar Elves/);
+    await useThisArt();
+    await waitFor(() => expect(releaseArt).not.toBeNull());
+
+    const cancel = screen.getByRole("button", { name: "Cancel" }) as HTMLButtonElement;
+    const close = screen.getByRole("button", { name: "Close" }) as HTMLButtonElement;
+    expect(cancel.disabled).toBe(true);
+    expect(close.disabled).toBe(true);
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+    fireEvent.click(close);
+    fireEvent.click(cancel);
+    expect(screen.getByRole("dialog")).toBeTruthy();
+
+    await act(async () => {
+      releaseArt!();
+    });
+    await waitFor(() => expect(values().art_url).toBe(PUBLIC_URL));
+    // The finished import closes it.
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
   it("an aborted search never shows 'Search failed' nor stops the newer search's spinner", async () => {
     let releaseSecond: (() => void) | null = null;
     stubRoutes({

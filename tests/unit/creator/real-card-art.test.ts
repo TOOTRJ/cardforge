@@ -54,6 +54,11 @@ describe("realCardArtWrites", () => {
       "",
     ]);
     expect(realCardArtWrites("front", { publicUrl: URL, artist: "   " })[2]![1]).toBe("");
+    // The back face too (owner decision E2, 2026-09-29).
+    expect(realCardArtWrites("back", { publicUrl: URL, artist: null })[2]).toEqual([
+      "back_face.artist_credit",
+      "",
+    ]);
   });
 
   it("the credit is trimmed and held to the field's 120 characters", () => {
