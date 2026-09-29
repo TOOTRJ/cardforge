@@ -84,12 +84,14 @@
 // own state + manifest (`…<project>.<mode>.json` / `.manifest.jsonl`):
 //
 //   --private-renders   remove the card-renders PNG + thumb of every card
-//                       that is PRIVATE or deleted — never a public or
-//                       unlisted card's — and clear the render pointer of the
-//                       private ones, as going private does. The visibility
-//                       is read again right before each delete. Takes
-//                       --batch-size (cards) and --limit (objects); refuses
-//                       --bucket, --min-age-days and --backup-dir.
+//                       whose row says PRIVATE — never a public or unlisted
+//                       card's, and never on a missing row (a deleted card's
+//                       render is an orphan: the sweep above judges it) —
+//                       and clear those cards' render pointer, as going
+//                       private does. Each object is looked up, then the
+//                       visibility read again, right before the delete.
+//                       Takes --batch-size (cards) and --limit (objects);
+//                       refuses --bucket, --min-age-days and --backup-dir.
 //                       scripts/lib/private-renders.mjs.
 //   --rescan-review     run the upload path's moderation scan (lib/moderation/
 //                       image-scan-core.ts) on the review list above and, with
@@ -199,8 +201,8 @@ const REFUSED = {
   orphans: { "--per-minute": "only --rescan-review calls the moderation API" },
   "private-renders": {
     "--bucket": "it only reads card-renders",
-    "--min-age-days": "a private or deleted card's render goes whatever its age",
-    "--backup-dir": "a render is derived (a card published again is baked again) and a deleted card's image is not kept",
+    "--min-age-days": "a private card's render goes whatever its age",
+    "--backup-dir": "a render is derived (a card published again is baked again)",
     "--per-minute": "only --rescan-review calls the moderation API",
   },
   "rescan-review": {
@@ -357,14 +359,18 @@ const db = {
     if (error) throw new Error(`read ${table}: ${error.message}`);
     return data;
   },
-  /** --private-renders: `Map<cardId, visibility>` for the ids whose row exists. */
+  /** --private-renders: `Map<cardId, visibility>` for the ids whose row
+   *  exists. The server's exact count must match the rows it returned: an
+   *  answer cut short (a max-rows cap below the chunk) stops the run instead
+   *  of leaving private cards out of the plan. */
   async cardVisibility(ids) {
     const out = new Map();
     for (let i = 0; i < ids.length; i += CARD_READ_CHUNK) {
       const chunk = ids.slice(i, i + CARD_READ_CHUNK);
-      const { data, error } = await supabase.from("cards").select("id,visibility").in("id", chunk);
+      const { data, error, count } = await supabase.from("cards").select("id,visibility", { count: "exact" }).in("id", chunk);
       if (error) throw new Error(`read cards: ${error.message}`);
       if (!Array.isArray(data) || data.length > chunk.length) throw new Error("read cards: unexpected response");
+      if (count !== data.length) throw new Error(`read cards: the answer was cut short (${data.length} of ${count ?? "an unknown number of"} rows)`);
       for (const row of data) out.set(String(row.id).toLowerCase(), row.visibility);
     }
     return out;

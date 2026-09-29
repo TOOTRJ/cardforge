@@ -18,11 +18,14 @@ import { emptyDb, fakeStorage, fakeSupabase, type Obj, type Row, type StoredObje
 
 // ---------------------------------------------------------------------------
 // TODO 3.14b, owner decision 2026-09-29 (c): `sweep-storage-orphans.mjs
-// --private-renders` removes the card-renders PNG + thumb of cards that are
-// PRIVATE or deleted, and clears the private ones' render pointer the way
-// going private does. The visibility is read again right before each delete;
-// a public or unlisted card's render is never touched. First the helpers
-// against in-memory fakes, then the real CLI against a fake Supabase.
+// --private-renders` removes the card-renders PNG + thumb of cards whose row
+// says PRIVATE, and clears their render pointer the way going private does.
+// Only on positive evidence (review 2026-09-29): a card missing from the
+// answer — deleted, or left out of a short read — is never touched here (a
+// deleted card's render is the orphan sweep's). The objects are looked up,
+// then the visibility is read again, right before each delete; a public or
+// unlisted card's render is never touched. First the helpers against
+// in-memory fakes, then the real CLI against a fake Supabase.
 // ---------------------------------------------------------------------------
 
 const ROOT = path.resolve(__dirname, "../../..");
@@ -36,6 +39,7 @@ const DELETED = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const PUBLIC = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 const UNLISTED = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
 const FLIPS = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
+const PRIVATE2 = "ffffffff-ffff-4fff-8fff-ffffffffffff";
 const SECRET_TITLE = "The Secret Dragon of Nobody";
 const RENDER_HOST = "https://auth.pipglyph.com/storage/v1/object/public/card-renders";
 
@@ -58,13 +62,14 @@ type Card = { id: string; visibility: string } & Partial<Record<(typeof RENDER_P
 /** The two database calls the mode makes, over an in-memory `cards` table,
  *  with an event log shared with the storage fake (order checks) and hooks
  *  that change a card between calls. */
-function cardsDb(cards: Card[], events: string[], hooks: { afterClear?: () => void } = {}) {
+function cardsDb(cards: Card[], events: string[], hooks: { afterClear?: () => void; hidden?: Set<string> } = {}) {
   const rows = new Map(cards.map((c) => [c.id, c]));
   return {
     rows,
     async cardVisibility(ids: string[]) {
       events.push(`read ${ids.length}`);
-      return new Map(ids.filter((id) => rows.has(id)).map((id) => [id, rows.get(id)!.visibility]));
+      // `hidden`: rows that exist but the answer leaves out (a short read).
+      return new Map(ids.filter((id) => rows.has(id) && !hooks.hidden?.has(id)).map((id) => [id, rows.get(id)!.visibility]));
     },
     async clearRenderPointers(ids: string[]) {
       events.push(`clear ${ids.length}`);
@@ -111,7 +116,7 @@ describe("which objects are a card's render, and what happens to them", () => {
     expect(groups.get(PRIVATE)!.map((o: Obj) => o.path)).toEqual([`${U1}/${PRIVATE}.png`, `${U1}/${PRIVATE}.thumb.webp`]);
   });
 
-  it("private and deleted cards lose their render; public, unlisted and anything else keep it", () => {
+  it("only a row that says private loses its render; public, unlisted, no row and anything else keep it", () => {
     expect(cardState("private")).toBe("private");
     expect(cardState(undefined)).toBe("deleted");
     expect(cardState("public")).toBe("visible");
@@ -159,7 +164,7 @@ describe("applyPrivateRenders", () => {
     const state = loadState(statePath);
     // The plan read is not part of the apply's event log.
     const plan = await planPrivateRenders(cardsDb(cards.map((c) => ({ ...c })), []), objects);
-    const doomed = plan.filter((c: { state: string }) => c.state === "private" || c.state === "deleted");
+    const doomed = plan.filter((c: { state: string }) => c.state === "private");
     const run = (extra: Record<string, unknown> = {}) =>
       applyPrivateRenders({ db, storage, cards: doomed, state, statePath, manifestPath, target: "dev.example", run: "r1", ...extra });
     return { db, storage, events, statePath, manifestPath, state, plan, doomed, run };
@@ -172,12 +177,19 @@ describe("applyPrivateRenders", () => {
     rendered_at: "2026-09-01T00:00:00Z",
   });
 
-  it("removes the PNG + thumb of private and deleted cards, clears the private ones' pointer, never touches a public card", async () => {
+  it("removes the PNG + thumb of private cards and clears their pointer; a public card and a card with no row are never touched", async () => {
     const pub = withPointer(PUBLIC, "public");
     const s = await setup([withPointer(PRIVATE, "private"), pub], [...both(U1, PRIVATE), ...both(U1, DELETED), ...both(U2, PUBLIC)]);
+    expect(s.doomed.map((c: { cardId: string }) => c.cardId)).toEqual([PRIVATE]);
     const result = await s.run();
-    expect(result).toMatchObject({ deleted: 4, bytes: 2200, pointersCleared: 1, failed: [] });
-    expect([...s.storage.store.keys()].sort()).toEqual([`card-renders/${U2}/${PUBLIC}.png`, `card-renders/${U2}/${PUBLIC}.thumb.webp`]);
+    expect(result).toMatchObject({ deleted: 2, bytes: 1100, pointersCleared: 1, failed: [] });
+    // A deleted card's render is an orphan — the orphan sweep judges it, not this mode.
+    expect([...s.storage.store.keys()].sort()).toEqual([
+      `card-renders/${U1}/${DELETED}.png`,
+      `card-renders/${U1}/${DELETED}.thumb.webp`,
+      `card-renders/${U2}/${PUBLIC}.png`,
+      `card-renders/${U2}/${PUBLIC}.thumb.webp`,
+    ]);
     // The private row now looks like going private leaves it; the public row is as it was.
     expect(s.db.rows.get(PRIVATE)).toMatchObject({ rendered_image_url: null, rendered_thumb_url: null, rendered_at: null });
     expect(s.db.rows.get(PUBLIC)).toEqual(pub);
@@ -186,10 +198,40 @@ describe("applyPrivateRenders", () => {
     expect(manifest.slice(1).map((e: { path: string; reason: string; card: string }) => [e.path, e.reason, e.card])).toEqual([
       [`${U1}/${PRIVATE}.png`, "render of a private card", PRIVATE],
       [`${U1}/${PRIVATE}.thumb.webp`, "render of a private card", PRIVATE],
-      [`${U1}/${DELETED}.png`, "render of a deleted card", DELETED],
-      [`${U1}/${DELETED}.thumb.webp`, "render of a deleted card", DELETED],
     ]);
-    expect(loadState(s.statePath)).toMatchObject({ pending: null, deleted: 4, bytes: 2200 });
+    expect(loadState(s.statePath)).toMatchObject({ pending: null, deleted: 2, bytes: 1100 });
+  });
+
+  it("a short visibility answer never deletes: a PUBLIC card left out of the read is not a deleted card here", async () => {
+    // The row exists and is public, but the read leaves it out (a max-rows
+    // cap, a key that RLS limits). Absence is never evidence for a delete.
+    const events: string[] = [];
+    const objects = [...both(U2, PUBLIC), ...both(U1, PRIVATE)];
+    const shortDb = cardsDb([withPointer(PUBLIC, "public"), withPointer(PRIVATE, "private")], events, { hidden: new Set([PUBLIC]) });
+    const plan = await planPrivateRenders(shortDb, objects);
+    expect(plan.map((c: { cardId: string; state: string }) => [c.cardId, c.state])).toEqual([
+      [PRIVATE, "private"],
+      [PUBLIC, "deleted"],
+    ]);
+    const s = await setup([withPointer(PUBLIC, "public"), withPointer(PRIVATE, "private")], objects, { hidden: new Set([PUBLIC]) });
+    const result = await s.run({ cards: plan.filter((c: { state: string }) => c.state === "private") });
+    expect(result.deleted).toBe(2);
+    expect(s.storage.store.has(`card-renders/${U2}/${PUBLIC}.png`)).toBe(true);
+    expect(s.storage.store.has(`card-renders/${U2}/${PUBLIC}.thumb.webp`)).toBe(true);
+    // …and the apply refuses a card without positive evidence outright.
+    await expect(s.run({ cards: plan.filter((c: { state: string }) => c.state === "deleted") })).rejects.toThrow(/only a private card/);
+  });
+
+  it("a private card whose row is left out of the RE-read is kept (only a row that says private lets a render go)", async () => {
+    const hidden = new Set<string>();
+    const s = await setup([withPointer(PRIVATE, "private")], both(U1, PRIVATE), { afterClear: () => hidden.add(PRIVATE), hidden });
+    const result = await s.run();
+    expect(result.deleted).toBe(0);
+    expect(s.storage.removes).toEqual([]);
+    expect(result.skipped.map((k: { why: string }) => k.why)).toEqual([
+      "its card has no row now — the orphan sweep's to judge",
+      "its card has no row now — the orphan sweep's to judge",
+    ]);
   });
 
   it("reads the visibility AGAIN right before the delete: a card made public since the plan is kept, pointer and all", async () => {
@@ -206,12 +248,15 @@ describe("applyPrivateRenders", () => {
     expect(s.storage.store.has(`card-renders/${U1}/${FLIPS}.png`)).toBe(true);
     // The conditional clear never touched a card that isn't private.
     expect(s.db.rows.get(FLIPS)!.rendered_image_url).toBe(flips.rendered_image_url);
-    // Order within the batch: clear → re-read → lookups → remove.
+    // Order within the batch: clear → lookups (the slow part) → re-read → remove,
+    // so nothing slow sits between the re-read and the remove.
     expect(s.events).toEqual([
       "clear 2",
-      "read 2",
       `info ${PRIVATE}.png`,
       `info ${PRIVATE}.thumb.webp`,
+      `info ${FLIPS}.png`,
+      `info ${FLIPS}.thumb.webp`,
+      "read 2",
       "remove 2",
       `info ${PRIVATE}.png`,
       `info ${PRIVATE}.thumb.webp`,
@@ -233,22 +278,25 @@ describe("applyPrivateRenders", () => {
     ]);
   });
 
-  it("a deleted card that exists again (a restore) is kept; an object already gone is skipped", async () => {
-    const s = await setup([withPointer(PRIVATE, "private")], [...both(U1, DELETED), render(U1, PRIVATE)]);
-    s.db.rows.set(DELETED, { id: DELETED, visibility: "public" });
+  it("an object already gone is skipped; one with new bytes since the listing (a bake) is kept for the next run", async () => {
+    const s = await setup([withPointer(PRIVATE, "private"), withPointer(PRIVATE2, "private")], [render(U1, PRIVATE), ...both(U1, PRIVATE2)]);
     s.storage.store.delete(`card-renders/${U1}/${PRIVATE}.png`);
+    // PRIVATE2 was public for a moment after the listing and its bake landed.
+    s.storage.store.get(`card-renders/${U1}/${PRIVATE2}.png`)!.etag = `"etag-rebaked"`;
     const result = await s.run();
-    expect(result.deleted).toBe(0);
+    expect(result.deleted).toBe(1);
     expect(Object.fromEntries(result.skipped.map((k: { path: string; why: string }) => [k.path.split("/")[1], k.why]))).toEqual({
-      [`${DELETED}.png`]: "its card is public now — never touched",
-      [`${DELETED}.thumb.webp`]: "its card is public now — never touched",
       [`${PRIVATE}.png`]: "already gone",
+      [`${PRIVATE2}.png`]: "new bytes since the listing (a bake) — the next run judges it again",
     });
+    expect(s.storage.store.has(`card-renders/${U1}/${PRIVATE2}.png`)).toBe(true);
+    expect(s.storage.store.has(`card-renders/${U1}/${PRIVATE2}.thumb.webp`)).toBe(false);
   });
 
   it("refuses to act on a visible card or on an object that isn't that card's render", async () => {
     const s = await setup([], []);
-    await expect(s.run({ cards: [{ cardId: PUBLIC, state: "visible", objects: both(U2, PUBLIC), bytes: 0 }] })).rejects.toThrow(/never touched/);
+    await expect(s.run({ cards: [{ cardId: PUBLIC, state: "visible", objects: both(U2, PUBLIC), bytes: 0 }] })).rejects.toThrow(/only a private card/);
+    await expect(s.run({ cards: [{ cardId: DELETED, state: "deleted", objects: both(U1, DELETED), bytes: 0 }] })).rejects.toThrow(/only a private card/);
     await expect(s.run({ cards: [{ cardId: PRIVATE, state: "private", objects: [render(U1, DELETED)], bytes: 0 }] })).rejects.toThrow(/not a render of card/);
     await expect(
       s.run({ cards: [{ cardId: PRIVATE, state: "private", objects: [{ ...render(U1, PRIVATE), bucket: "card-art" }], bytes: 0 }] }),
@@ -257,7 +305,10 @@ describe("applyPrivateRenders", () => {
   });
 
   it("batches whole cards, stops at --limit (objects), and a re-run picks up the rest", async () => {
-    const s = await setup([], [...both(U1, PRIVATE), ...both(U1, DELETED), ...both(U1, FLIPS)]);
+    const s = await setup(
+      [PRIVATE, PRIVATE2, FLIPS].map((id) => withPointer(id, "private")),
+      [...both(U1, PRIVATE), ...both(U1, PRIVATE2), ...both(U1, FLIPS)],
+    );
     const first = await s.run({ limit: 3, batchSize: 1 });
     // Whole cards only: 2 + 2 would pass 3, so the second card waits.
     expect(first).toMatchObject({ deleted: 2, limitReached: true });
@@ -268,26 +319,26 @@ describe("applyPrivateRenders", () => {
   });
 
   it("a failed delete stays pending; the next run settles it into the manifest", async () => {
-    const s = await setup([], both(U1, DELETED), {}, { removeFails: true });
+    const s = await setup([{ id: PRIVATE, visibility: "private" }], both(U1, PRIVATE), {}, { removeFails: true });
     const result = await s.run();
     expect(result.failed).toHaveLength(1);
     const state = loadState(s.statePath);
-    expect(state.pending.items.map((i: { path: string }) => i.path)).toEqual([`${U1}/${DELETED}.png`, `${U1}/${DELETED}.thumb.webp`]);
+    expect(state.pending.items.map((i: { path: string }) => i.path)).toEqual([`${U1}/${PRIVATE}.png`, `${U1}/${PRIVATE}.thumb.webp`]);
     // The delete had in fact gone through for the PNG.
-    s.storage.store.delete(`card-renders/${U1}/${DELETED}.png`);
+    s.storage.store.delete(`card-renders/${U1}/${PRIVATE}.png`);
     const settled = await reconcilePending({ storage: s.storage, state, statePath: s.statePath, manifestPath: s.manifestPath, target: "dev.example" });
     expect(settled).toEqual({ gone: 1, present: 1 });
     expect(readManifest(s.manifestPath)).toMatchObject([
-      { bucket: "card-renders", path: `${U1}/${DELETED}.png`, reason: "render of a deleted card", note: "confirmed after an interrupted run" },
+      { bucket: "card-renders", path: `${U1}/${PRIVATE}.png`, reason: "render of a private card", note: "confirmed after an interrupted run" },
     ]);
   });
 
   it("an unconfirmed delete stays pending", async () => {
-    const s = await setup([], both(U1, DELETED), {}, { lookupFailsAfterRemove: [`${U1}/${DELETED}.thumb.webp`] });
+    const s = await setup([{ id: PRIVATE, visibility: "private" }], both(U1, PRIVATE), {}, { lookupFailsAfterRemove: [`${U1}/${PRIVATE}.thumb.webp`] });
     const result = await s.run();
     expect(result.deleted).toBe(1);
-    expect(result.failed).toEqual([{ bucket: "card-renders", paths: [`${U1}/${DELETED}.thumb.webp`], error: "delete not confirmed" }]);
-    expect(loadState(s.statePath).pending.items.map((i: { path: string }) => i.path)).toEqual([`${U1}/${DELETED}.thumb.webp`]);
+    expect(result.failed).toEqual([{ bucket: "card-renders", paths: [`${U1}/${PRIVATE}.thumb.webp`], error: "delete not confirmed" }]);
+    expect(loadState(s.statePath).pending.items.map((i: { path: string }) => i.path)).toEqual([`${U1}/${PRIVATE}.thumb.webp`]);
   });
 });
 
@@ -300,6 +351,7 @@ describe("sweep-storage-orphans.mjs --private-renders against a fake Supabase", 
   const db = emptyDb();
   const rest: string[] = [];
   let onPatch: (() => void) | undefined;
+  let maxRows = Infinity;
   const put = (key: string) => {
     const t = new Date(Date.now() - 30 * DAY).toISOString();
     const bytes = Buffer.from(`bytes:${key}`);
@@ -355,6 +407,7 @@ describe("sweep-storage-orphans.mjs --private-renders against a fake Supabase", 
     put(`card-art/${U1}/${PRIVATE}.png`); // another bucket — never read by this mode
 
     server = fakeSupabase(store, db, {
+      maxRows: () => maxRows,
       onRest: (method, table, params) => {
         rest.push(`${method} ${table} ${[...params.keys()].join(",")}`);
         // Before the fake applies it: a change here lands "just before" the write.
@@ -399,9 +452,11 @@ describe("sweep-storage-orphans.mjs --private-renders against a fake Supabase", 
     expect(out).toMatch(/--private-renders dry run/);
     expect(out).toMatch(/card-renders: 11 objects .* 10 render\(s\) of 5 card\(s\), 1 with another name/);
     expect(out).toMatch(/public\/unlisted cards: 2 \(4 objects\) — never touched/);
-    expect(out).toMatch(/Renders to remove: 6 object\(s\) .* of 3 card\(s\) — 2 private, 1 deleted\./);
-    expect(out).toMatch(new RegExp(`${PRIVATE}\\s+private\\s+2 object\\(s\\)`));
-    expect(out).toMatch(new RegExp(`${DELETED}\\s+deleted\\s+2 object\\(s\\)`));
+    expect(out).toMatch(/cards with no row: 1 \(2 objects\) — never touched here/);
+    expect(out).toMatch(/Renders to remove: 4 object\(s\) .* of 2 private card\(s\)\./);
+    expect(out).toMatch(new RegExp(`${PRIVATE}\\s+2 object\\(s\\)`));
+    expect(out).toMatch(new RegExp(`${FLIPS}\\s+2 object\\(s\\)`));
+    expect(out).not.toContain(DELETED);
     expect(out).not.toContain(PUBLIC);
     expect(out).not.toContain(SECRET_TITLE);
     expect(out).not.toContain(U1);
@@ -420,7 +475,22 @@ describe("sweep-storage-orphans.mjs --private-renders against a fake Supabase", 
     expect(rest.filter((r) => r.startsWith("PATCH"))).toEqual([]);
   });
 
-  it("--apply: private + deleted renders go, the private pointer is cleared, a card published mid-run and every public card are untouched", async () => {
+  it("a visibility answer cut short (server max-rows below the chunk) stops the run before anything is planned or deleted", async () => {
+    maxRows = 1;
+    const before = [...store.keys()].sort();
+    const dry = await run(common());
+    const apply = await run([...common(), "--apply"], "yes\n");
+    maxRows = Infinity;
+    for (const r of [dry, apply]) {
+      expect(r.code).toBe(1);
+      expect(r.out).toMatch(/read cards: the answer was cut short \(1 of 4 rows\)/);
+      expect(r.out).not.toMatch(/Renders to remove/);
+    }
+    expect([...store.keys()].sort()).toEqual(before);
+    expect(rest.filter((r) => r.startsWith("PATCH"))).toEqual([]);
+  });
+
+  it("--apply: private renders go and their pointer is cleared; a card published mid-run, every public card and a deleted card's render are untouched", async () => {
     // The owner publishes FLIPS (and its bake lands) after the run read the
     // plan, just before the batch's pointer clear reaches the database: the
     // conditional clear must skip it (it isn't private any more) and the
@@ -431,9 +501,9 @@ describe("sweep-storage-orphans.mjs --private-renders against a fake Supabase", 
     const { code, out } = await run([...common(), "--apply"], "yes\n");
     onPatch = undefined;
     expect(code).toBe(0);
-    expect(out).toMatch(/Deleted 4 render object\(s\).*cleared 1 private card pointer\(s\); kept 2 on re-check/);
+    expect(out).toMatch(/Deleted 2 render object\(s\).*cleared 1 private card pointer\(s\); kept 2 on re-check/);
     expect(out).toMatch(new RegExp(`${FLIPS}\\.png: its card is public now — never touched — kept`));
-    for (const gone of [PRIVATE, DELETED].flatMap((id) => [`card-renders/${U1}/${id}.png`, `card-renders/${U1}/${id}.thumb.webp`])) {
+    for (const gone of [`card-renders/${U1}/${PRIVATE}.png`, `card-renders/${U1}/${PRIVATE}.thumb.webp`]) {
       expect(store.has(gone), gone).toBe(false);
     }
     for (const kept of [
@@ -443,6 +513,9 @@ describe("sweep-storage-orphans.mjs --private-renders against a fake Supabase", 
       `card-renders/${U2}/${UNLISTED}.thumb.webp`,
       `card-renders/${U1}/${FLIPS}.png`,
       `card-renders/${U1}/${FLIPS}.thumb.webp`,
+      // A deleted card's render: an orphan, the orphan sweep's to judge.
+      `card-renders/${U1}/${DELETED}.png`,
+      `card-renders/${U1}/${DELETED}.thumb.webp`,
       `card-renders/${U1}/stray-upload.png`,
       `card-art/${U1}/${PRIVATE}.png`,
     ]) {
@@ -459,9 +532,9 @@ describe("sweep-storage-orphans.mjs --private-renders against a fake Supabase", 
     const manifest = readManifest(path.join(tmp, "manifest.jsonl"));
     expect(manifest.filter((e: { table?: string }) => e.table === "cards")).toMatchObject([{ ids: [PRIVATE] }]);
     expect(manifest.filter((e: { path?: string }) => e.path).map((e: { path: string }) => e.path).sort()).toEqual(
-      [PRIVATE, DELETED].flatMap((id) => [`${U1}/${id}.png`, `${U1}/${id}.thumb.webp`]).sort(),
+      [`${U1}/${PRIVATE}.png`, `${U1}/${PRIVATE}.thumb.webp`].sort(),
     );
-    expect(loadState(path.join(tmp, "state.json"))).toMatchObject({ pending: null, deleted: 4 });
+    expect(loadState(path.join(tmp, "state.json"))).toMatchObject({ pending: null, deleted: 2 });
 
     const again = await run(common());
     expect(again.out).toMatch(/Renders to remove: 0 object\(s\)/);

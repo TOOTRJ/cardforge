@@ -261,11 +261,11 @@ node scripts/sweep-storage-orphans.mjs --target prod --apply --batch-size 100 \
    `… --rescan-review --apply` removes them (decide yourself about the rows
    it lists as naming them — the run changes none).
 3. `node scripts/sweep-storage-orphans.mjs --target prod --private-renders`,
-   then `… --private-renders --apply` — removes the renders of private and
-   deleted cards.
+   then `… --private-renders --apply` — removes the renders of private
+   cards (a deleted card's render is an orphan: step 4 judges it).
 4. The orphan sweep's `--apply` (above). Last on purpose: its
    `--backup-dir` copies what it deletes to your disk, so flagged files and
-   the renders of private/deleted cards are removed first, without copies.
+   private cards' renders are removed first, without copies.
 
 - **What counts as a reference:** the object's `{uuid}/{file}` key anywhere
   in any string of any row — the scan reads EVERY text/JSON column of EVERY
@@ -325,14 +325,19 @@ node scripts/sweep-storage-orphans.mjs --target prod --apply --batch-size 100 \
     are not on the list (the dry run lists them separately).
   - **Renders of PRIVATE cards that are still stored** (publicly fetchable
     at their URL — going private should have deleted them).
-    `--private-renders` removes the PNG + thumb of every private or deleted
-    card. Per batch of cards: first the render pointer of those that are
-    private at that moment (one conditional UPDATE of `rendered_image_url`,
-    `rendered_thumb_url`, `rendered_at` — what going private writes), then
-    the visibility is read AGAIN, then every object is looked up, then the
-    remove: a public or unlisted card's render is never touched. The dry run
-    prints card ids, state and counts only — no titles, no owners. No
-    backups (a render is derived; a deleted card's image isn't kept).
+    `--private-renders` removes the PNG + thumb of every card whose row
+    says private — only on that positive evidence: a card with no row in
+    the answer is never touched here (a deleted card's render is an orphan,
+    judged by the orphan sweep with its reference check, age floor and
+    backup), and a visibility answer whose exact count doesn't match the
+    rows returned stops the run. Per batch of cards: first the render
+    pointer of those that are private at that moment (one conditional
+    UPDATE of `rendered_image_url`, `rendered_thumb_url`, `rendered_at` —
+    what going private writes), then every object is looked up (gone, or
+    new bytes since the listing → kept), then the visibility is read AGAIN,
+    then the remove: a card that is public, unlisted or without a row by
+    then is never touched. The dry run prints card ids and counts only — no
+    titles, no owners. No backups (a render is derived).
 - **Decisions recorded 2026-09-29** (upload limit, #411): AI art stays
   EXEMPT from the upload limit (it is credit-metered and already behind
   `checkAiRateLimit`); the fail-closed refusal's wording "Uploads are paused

@@ -216,6 +216,9 @@ export type FakeSupabaseHooks = {
   onOpenApi?: () => void;
   /** Every PostgREST call: its method, table and query. */
   onRest?: (method: string, table: string, params: URLSearchParams) => void;
+  /** A server max-rows below what the client asks for: a GET returns at most
+   *  this many rows (its `Prefer: count=exact` total still counts them all). */
+  maxRows?: () => number;
 };
 
 /** Storage (list / info / download / remove) + PostgREST (the OpenAPI
@@ -228,8 +231,8 @@ export function fakeSupabase(store: Map<string, StoredObject>, db: Db, hooks: Fa
       req.on("data", (d) => parts.push(d));
       req.on("end", () => resolve(Buffer.concat(parts)));
     });
-  const json = (res: ServerResponse, status: number, body: unknown) => {
-    res.writeHead(status, { "content-type": "application/json" });
+  const json = (res: ServerResponse, status: number, body: unknown, headers: Record<string, string> = {}) => {
+    res.writeHead(status, { "content-type": "application/json", ...headers });
     res.end(JSON.stringify(body));
   };
   return createServer(async (req, res) => {
@@ -269,8 +272,13 @@ export function fakeSupabase(store: Map<string, StoredObject>, db: Db, hooks: Fa
           return 0;
         });
         const offset = Number(u.searchParams.get("offset") ?? 0);
-        const limit = Number(u.searchParams.get("limit") ?? 1000);
-        return json(res, 200, project(sorted.slice(offset, offset + limit)));
+        const limit = Math.min(Number(u.searchParams.get("limit") ?? 1000), hooks.maxRows?.() ?? Infinity);
+        const page = sorted.slice(offset, offset + limit);
+        // PostgREST's answer to `Prefer: count=exact`: the page's range and the total.
+        const counted: Record<string, string> = /count=exact/.test(String(req.headers.prefer ?? ""))
+          ? { "content-range": `${page.length ? `${offset}-${offset + page.length - 1}` : "*"}/${sorted.length}` }
+          : {};
+        return json(res, 200, project(page), counted);
       } catch (err) {
         return json(res, 400, { message: (err as Error).message });
       }
