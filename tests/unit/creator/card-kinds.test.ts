@@ -19,6 +19,12 @@ import {
   toNonbasicLandIdentity,
   withArtifactWord,
   withoutArtifactWord,
+  borrowedFrameFits,
+  borrowedTypeWord,
+  isBorrowedVariation,
+  typeLineHasWord,
+  withTypeWord,
+  withoutTypeWord,
   type CardKind,
 } from "@/lib/creator/card-kinds";
 import { FRAME_COLOR_KEYS, frameComboKey } from "@/lib/cards/frame-reference-registry";
@@ -390,9 +396,15 @@ describe("templateSupportsKind", () => {
     // Skins ride with their base kind; showcase dresses any standard kind.
     expect(templateSupportsKind("m15snow", "creature")).toBe(true);
     expect(templateSupportsKind("lotr", "instant")).toBe(true);
-    // Type-restricted showcase treatments stay restricted.
-    expect(templateSupportsKind("nyx", "creature")).toBe(false);
+    // Type-restricted showcase treatments stay restricted — but a creature
+    // borrows Nyx for an Enchantment Creature (owner decision A3), with
+    // M15's P/T plate (NYX is the M15 profile).
+    expect(templateSupportsKind("nyx", "creature")).toBe(true);
+    expect(getFrameProfile("nyx").pt?.plateAssetPathTemplate).toBe("/frames/m15/pt/{color}.png");
     expect(templateSupportsKind("nyx", "enchantment")).toBe(true);
+    for (const kind of ["instant", "sorcery", "artifact", "land", "token", "planeswalker", "battle"] as const) {
+      expect(templateSupportsKind("nyx", kind), kind).toBe(false);
+    }
     expect(templateSupportsKind("fullartland", "land")).toBe(true);
     expect(templateSupportsKind("fullartland", "creature")).toBe(false);
   });
@@ -423,7 +435,8 @@ describe("templateRefusesKind", () => {
   it("refuses only what a showcase restriction leaves out", () => {
     expect(templateRefusesKind("fullart", "planeswalker")).toBe(true);
     expect(templateRefusesKind("extendedart", "battle")).toBe(true);
-    expect(templateRefusesKind("nyx", "creature")).toBe(true);
+    expect(templateRefusesKind("nyx", "artifact")).toBe(true);
+    expect(templateRefusesKind("nyx", "creature")).toBe(false);
     expect(templateRefusesKind("fullartland", "creature")).toBe(true);
     expect(templateRefusesKind("fullart", "creature")).toBe(false);
     expect(templateRefusesKind("lotr", "planeswalker")).toBe(false);
@@ -500,6 +513,54 @@ describe("withArtifactWord / withoutArtifactWord", () => {
     expect(withoutArtifactWord("Snow Artifact")).toBe("Snow");
     expect(withoutArtifactWord("Legendary")).toBe("Legendary");
     expect(withoutArtifactWord(null)).toBe("");
+  });
+
+  it("does the same for the Enchantment word Nyx dresses (A3)", () => {
+    expect(withTypeWord("Legendary", "Enchantment")).toBe("Legendary Enchantment");
+    expect(withTypeWord("Legendary Enchantment", "Enchantment")).toBe("Legendary Enchantment");
+    expect(withoutTypeWord("Legendary Artifact Enchantment", "Enchantment")).toBe("Legendary Artifact");
+    expect(withoutTypeWord("Legendary Artifact", "Enchantment")).toBe("Legendary Artifact");
+  });
+});
+
+// Owner decision A3 (2026-09-29): a creature borrows the Nyx showcase the
+// way it borrows the artifact frame (1.7) — for an Enchantment Creature
+// (the Theros Beyond Death constellation gods).
+describe("borrowed frames and their type words", () => {
+  it("offers Nyx to the creature gallery as a showcase treatment, borrowed", () => {
+    const nyx = framesForKind("creature", NO_VERIFIED).find((f) => f.template === "nyx");
+    expect(nyx?.group).toBe("showcase");
+    expect(isBorrowedVariation("creature", "nyx")).toBe(true);
+    // The Enchantment kind's own showcase, never borrowed there.
+    expect(isBorrowedVariation("enchantment", "nyx")).toBe(false);
+    // A showcase maps to the kind's M15 standard.
+    expect(baseFrameFor("creature", "nyx")).toBe("m15");
+  });
+
+  it("names the word each borrowed frame dresses the card as", () => {
+    expect(borrowedTypeWord("creature", "m15artifact")).toBe("Artifact");
+    expect(borrowedTypeWord("creature", "m15borderlessartifact")).toBe("Artifact");
+    expect(borrowedTypeWord("creature", "nyx")).toBe("Enchantment");
+    expect(borrowedTypeWord("artifact", "m15artifact")).toBeNull();
+    expect(borrowedTypeWord("enchantment", "nyx")).toBeNull();
+    expect(borrowedTypeWord("creature", "lotr")).toBeNull();
+  });
+
+  it("fits a borrowed frame only to a card whose type line says its word", () => {
+    const god = { cardType: "creature", supertype: "Legendary Enchantment" };
+    const elves = { cardType: "creature", supertype: "" };
+    const golem = { cardType: "creature", supertype: "Artifact" };
+    expect(borrowedFrameFits("creature", "nyx", god)).toBe(true);
+    expect(borrowedFrameFits("creature", "nyx", elves)).toBe(false);
+    expect(borrowedFrameFits("creature", "nyx", golem)).toBe(false);
+    expect(borrowedFrameFits("creature", "m15artifact", golem)).toBe(true);
+    expect(borrowedFrameFits("creature", "m15artifact", god)).toBe(false);
+    // A frame the kind doesn't borrow always fits as far as borrowing goes.
+    expect(borrowedFrameFits("creature", "m15", elves)).toBe(true);
+    expect(borrowedFrameFits("enchantment", "nyx", { cardType: "enchantment" })).toBe(true);
+    // The card type itself counts as the word.
+    expect(typeLineHasWord({ cardType: "enchantment" }, "Enchantment")).toBe(true);
+    expect(typeLineHasWord({ cardType: "creature", supertype: "enchantment" }, "Enchantment")).toBe(true);
   });
 });
 
