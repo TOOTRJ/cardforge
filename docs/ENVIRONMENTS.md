@@ -221,6 +221,50 @@ feature branch ──PR──▶ CI: typecheck · lint · unit · e2e (local Sup
 `npm run db:push:prod` still exists (reads `SUPABASE_PROD_REF`, requires typing
 `production`). For genuine emergencies only.
 
+### Storage orphan sweep (owner-run, TODO 3.14b)
+
+`scripts/sweep-storage-orphans.mjs` lists, and with `--apply` deletes, the
+storage objects no database row references: flagged uploads and replaced
+avatars/banners that the pre-0126 user-session removes never deleted, art
+uploaded for a card that was never saved, renders of deleted cards, leftovers
+of deleted accounts. Run it from an up-to-date `main` checkout:
+
+```bash
+node scripts/sweep-storage-orphans.mjs                  # dev (.env.local), dry run
+node scripts/sweep-storage-orphans.mjs --target prod    # prod, dry run (hidden-prompt key)
+node scripts/sweep-storage-orphans.mjs --target prod --apply --backup-dir ~/pipglyph-orphans
+```
+
+- **What counts as a reference:** the object's `{uuid}/{file}` key anywhere
+  in any string of any row — the scan reads EVERY text/JSON column of EVERY
+  table the API exposes (PostgREST's OpenAPI document), not a column list,
+  and finds keys inside public URLs (either host), `/render-cdn/` paths,
+  percent-encoded next/image URLs, Markdown, JSON at any depth and bare
+  storage paths. A new column that stores a storage URL is covered without a
+  code change; a new way of naming an object that doesn't contain its
+  `{uuid}/{file}` key is not — keep keys in the stored value.
+- **What is never deleted:** anything younger than 7 days (`--min-age-days`,
+  floor 7, every bucket — AI job steps and the creator's unsaved drafts point
+  at fresh uploads); a card-renders bake or thumb whose card still exists; an
+  object outside the `{uuid}/{file}` user-folder shape (listed for you to
+  judge); the `frames` bucket (never listed) and `card-exports` (legacy
+  download history, still named by `card_exports` rows and possibly shared
+  as links — listed, never deleted).
+- **`--apply`** (type "yes"): batches of 25 (`--batch-size`). Per batch:
+  `--backup-dir` copies each object (recommended for the first production
+  run — storage has no undo; a copy that doesn't match the listed MD5 eTag
+  keeps the object), then a fresh full database scan for the batch's keys
+  and card ids, then a lookup of every object at once right before the
+  delete (gone, another eTag/size, or recently changed → kept). Every delete
+  is appended to `~/.pipglyph/sweep-storage-orphans.<project>.manifest.jsonl`
+  (bucket, path, size, eTag, last change, reason, copy). A run that dies
+  mid-delete is settled by the next one (state file beside the manifest).
+  `--limit n` deletes at most n per run.
+- Dev dry run 2026-09-29: 218 card-art objects (193 referenced, 24
+  unreferenced but under 7 days, 1 test file outside a user folder), 380
+  card-renders (all referenced), the other buckets empty — 0 orphans; the
+  reference scan read 35 tables (768 rows) in about 2 s.
+
 ### Branch protection on `main` (ruleset "main", created 2026-09-21)
 
 Direct pushes and force-pushes to `main` are blocked; changes arrive by PR
