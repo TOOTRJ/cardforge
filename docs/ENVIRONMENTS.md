@@ -200,7 +200,11 @@ feature branch ──PR──▶ CI: typecheck · lint · unit · e2e (local Sup
   delete `storage.objects` with their own JWT; uploads and removals are server
   actions on the service role (`lib/media/user-storage.ts` forces the
   `{userId}/` folder). A new bucket or upload path follows that — never an
-  owner-folder policy (`supabase/migrations/README.md`, "Storage").
+  owner-folder policy (`supabase/migrations/README.md`, "Storage"). The same
+  goes for a card's render columns (`cards_guard_render_columns`: an API
+  role may only clear them). Uploads therefore need `SUPABASE_SECRET_KEY` in
+  every environment — a local checkout or a preview without it can't upload,
+  bake or delete a render (the app logs that loudly).
 
 ### When the Supabase check misbehaves
 

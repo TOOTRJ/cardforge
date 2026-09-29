@@ -133,9 +133,13 @@ Rules and gotchas:
   keeps routes ISR-eligible); cookie-bound reads via `createClient()` make
   a route dynamic. `lib/supabase/admin.ts` bypasses RLS — webhook/cron,
   credit grants/refunds, protected billing columns, is_admin-gated tooling,
-  and storage writes into the caller's own folder via
+  storage writes into the caller's own folder via
   `lib/media/user-storage.ts` (users have no storage write policy since
-  0126) only; every non-cron caller checks auth itself.
+  0126; card renders through `lib/cards/bake-core.ts`, which takes an
+  owner + card ids, never a path), and a card's render pointer
+  (`cards_guard_render_columns`, 0126: an API role may only CLEAR
+  `rendered_*` / `layout_version`; draw one only if `isStoredRenderUrl()`)
+  only; every non-cron caller checks auth itself.
 - Watermark policy (layout v20): every DISPLAY surface — stored bake,
   gallery tile, OG image, live preview — carries the pipglyph.com mark and
   no custom footer text, whatever the owner's plan. Only a paid VIEWER's
