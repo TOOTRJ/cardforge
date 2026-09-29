@@ -2950,7 +2950,7 @@ export function CardCreatorForm({
             {/* The two-colour frame's switch (TODO 4.6b), under the colour —
                 shown only where the frame draws it. */}
             {stepKey === "card" ? (
-              <AnatomyPanel which={["twoColor"]} onPairTouched={markPairTouched} />
+              <AnatomyPanel which={["twoColor"]} pairRow={false} onPairTouched={markPairTouched} />
             ) : null}
 
             {/* ----- Identity (name + artwork). The inline-layout frames

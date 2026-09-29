@@ -228,11 +228,17 @@ export function AnatomyPanel({
   which,
   stored = null,
   onPairTouched,
+  pairRow = true,
 }: {
   which: readonly FrameAnatomyKey[];
   stored?: AnatomyStoredCard | null;
   /** A pick in the "Two colours" row (useTwoColorPairFollow's markTouched). */
   onPairTouched?: () => void;
+  /** Show the "Two colours" row under the two-colour switch — for an edit
+   *  or a remix, whose Colour step is locked. A new card picks its pair in
+   *  the Colour step's own row (card-setup-panel.tsx), so the Card step
+   *  passes false. */
+  pairRow?: boolean;
 }) {
   const { control, setValue } = useFormContext<FormValues>();
   const [template, crown, twoColor, cardType, supertype, cost, colorIdentity] = useWatch({
@@ -299,7 +305,7 @@ export function AnatomyPanel({
               }
             }}
           >
-            {twoColor === true && pairEditable ? (
+            {pairRow && twoColor === true && pairEditable ? (
               <TwoColorPairRow
                 pair={pair}
                 onChange={(next) => {

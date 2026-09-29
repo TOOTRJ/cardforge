@@ -165,6 +165,13 @@ describe("an edit", () => {
     expect(payload).not.toHaveProperty("color_identity");
   });
 
+  it("a stored card its owner switched on shows the switch on, with no hint", () => {
+    renderForm("edit", savedCard({ frame_style: { template: "m15", finish: "foil", crown: true } }));
+    expect(screen.getByRole("switch", { name: "Legendary crown" }).getAttribute("aria-checked")).toBe("true");
+    expect(screen.queryByTestId("anatomy-hint-crown")).toBeNull();
+    expect(previewStyle()).toEqual({ template: "m15", finish: "foil", crown: true });
+  });
+
   it("an ordinary edit sends nothing about the switches", async () => {
     renderForm("edit", savedCard());
     await act(async () => {

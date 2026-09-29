@@ -51,6 +51,8 @@ function Harness({
   stored?: { frameStyle: FrameStyle | null; colorIdentity: ColorIdentity[] } | null;
   which?: ("crown" | "twoColor")[];
   follow?: boolean;
+  /** The Card step of a new card: the Colour section, and the anatomy
+   *  panel without its own pair row (as the creator renders them). */
   setup?: boolean;
 }) {
   const methods = useForm<FormValues>({
@@ -80,7 +82,7 @@ function Harness({
           onPairTouched={markTouched}
         />
       ) : null}
-      <AnatomyPanel which={which} stored={stored} onPairTouched={markTouched} />
+      <AnatomyPanel which={which} stored={stored} onPairTouched={markTouched} pairRow={!setup} />
       <output data-testid="colors">{colors.join(",")}</output>
       <output data-testid="style">{JSON.stringify(frameStyle)}</output>
       <output data-testid="type">{cardType}</output>
@@ -217,7 +219,9 @@ describe("a new card's Two colours row (Card step)", () => {
     expect(screen.queryByTestId("two-colour-row")).toBeNull();
     fireEvent.click(screen.getByRole("radio", { name: /multicolor/i }));
     expect(colors()).toBe("white,blue");
-    expect(screen.getAllByTestId("two-colour-row").length).toBeGreaterThan(0);
+    // ONE row, the Colour section's (the anatomy panel's switch has none here).
+    expect(screen.getAllByTestId("two-colour-row")).toHaveLength(1);
+    expect(twoColorSwitch()?.getAttribute("aria-checked")).toBe("true");
     // The cost changes: the pre-filled pair follows it.
     await act(async () => {
       fireEvent.change(screen.getByLabelText("cost"), { target: { value: "{1}{U}{R}" } });
