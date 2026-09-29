@@ -153,8 +153,11 @@ describe("full-art and textless families (TODO 1.19)", () => {
     ["fut-19", "nearest", "m15textless", undefined],
     ["mb2-194", "nearest", "m15textless", undefined],
     ["trk-392", "unsupported", "m15land", undefined],
-    // Tokens: the 2015 full-art token IS m15token; older ones are 4.43's.
-    ["t2xm-4", "exact", "m15token", undefined],
+    // Tokens: a full-art token from M20 on wears the full-art design, which
+    // PipGlyph doesn't draw yet (4.48): nearest the 2014–19 arch m15token
+    // (TODO 1.23 — "the 2015 full-art token IS m15token" was wrong for it).
+    // Older ones are 4.43's.
+    ["t2xm-4", "nearest", "m15token", undefined],
     ["tlrw-3", "nearest", "m15token", undefined],
     ["tzen-3", "nearest", "m15token", undefined],
     // Japan showcase (black and white border).

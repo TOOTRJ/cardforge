@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import importPrintings from "../scryfall/fixtures/import-printings.json";
+import tokenPrintings from "../scryfall/fixtures/token-printings.json";
 
 // ---------------------------------------------------------------------------
 // GET /api/scryfall/search — the per-user quota (TODO 0.17). A normal
@@ -8,8 +9,14 @@ import importPrintings from "../scryfall/fixtures/import-printings.json";
 // (the frame-compare reference picker) is never refused and never logged, so a
 // verification session never spends the admin's "search" bucket, which the
 // printings strip shares. is_admin comes from the session's profile only.
-// The upstream call still goes through searchCards, whose module-level
-// throttle (lib/scryfall/client.ts) spaces every request, admin or not.
+// The upstream call still goes through the Scryfall client
+// (searchCardsWithOutcome), whose module-level throttle
+// (lib/scryfall/client.ts) spaces every request, admin or not.
+//
+// TODO 1.23: tokens and emblems — the "Tokens & emblems" scope (Scryfall's
+// include_extras, restricted to tokens and emblems) and the fallback to it
+// when a plain query finds nothing, which only the import dialog's Cards
+// scope asks for (`fallback=tokens`).
 // ---------------------------------------------------------------------------
 
 type Profile = { id: string; is_admin: boolean } | null;
@@ -32,7 +39,12 @@ vi.mock("@/lib/scryfall/rate-limit", () => ({
   logScryfallCall: state.log,
 }));
 vi.mock("@/lib/scryfall/client", () => ({
-  searchCards: state.search,
+  // `state.search` answers the cards, or a whole outcome; an empty list is
+  // Scryfall's "no matches" (its 404).
+  searchCardsWithOutcome: async (options: unknown) => {
+    const answer = (await state.search(options)) as unknown[] | { cards: unknown[]; noMatches: boolean };
+    return Array.isArray(answer) ? { cards: answer, noMatches: answer.length === 0 } : answer;
+  },
   pickArtCropUrl: () => null,
   pickPrintImageUrl: () => null,
 }));
@@ -153,5 +165,105 @@ describe("GET /api/scryfall/search — the trimmed result", () => {
       { id: commandTower.id, oracle_id: null },
     ]);
     expect(delver.oracle_id).toBe("edd531b9-f615-4399-8c8c-1c5e18c4acbf");
+  });
+});
+
+describe("GET /api/scryfall/search — tokens and emblems (TODO 1.23)", () => {
+  const TREASURE = tokenPrintings["tfra-15"];
+  const KAITO = tokenPrintings["tfdn-24"];
+
+  it("the Tokens & emblems scope searches tokens and emblems with include_extras, one call", async () => {
+    state.search.mockResolvedValue([TREASURE]);
+    const body = await (await get(`q=${encodeURIComponent('!"Treasure"')}&scope=tokens`)).json();
+    expect(state.search).toHaveBeenCalledTimes(1);
+    expect(state.search).toHaveBeenCalledWith({
+      query: '(!"Treasure") (t:token OR t:emblem)',
+      limit: 12,
+      includeExtras: true,
+    });
+    expect(state.log).toHaveBeenCalledTimes(1);
+    expect(body).toMatchObject({ ok: true, scope: "tokens" });
+    expect(body.results).toMatchObject([
+      { id: TREASURE.id, name: "Treasure", set: "tfra", type_line: "Token Artifact — Treasure" },
+    ]);
+  });
+
+  it("the Cards scope never sends include_extras while the plain query finds something", async () => {
+    state.search.mockResolvedValue([{ id: "c1", name: "Treasure Map" }]);
+    const body = await (await get("q=treasure")).json();
+    expect(state.search).toHaveBeenCalledTimes(1);
+    expect(state.search).toHaveBeenCalledWith({ query: "treasure", limit: 12 });
+    expect(body.scope).toBe("cards");
+  });
+
+  it("falls back to tokens and emblems when the plain query finds nothing — two calls, each counted", async () => {
+    state.search.mockResolvedValueOnce([]).mockResolvedValueOnce([KAITO]);
+    const body = await (
+      await get(`q=${encodeURIComponent("Kaito Cunning Infiltrator Emblem")}&fallback=tokens`)
+    ).json();
+    expect(state.search.mock.calls).toEqual([
+      [{ query: "Kaito Cunning Infiltrator Emblem", limit: 12 }],
+      [{ query: "(Kaito Cunning Infiltrator Emblem) (t:token OR t:emblem)", limit: 12, includeExtras: true }],
+    ]);
+    expect(state.log).toHaveBeenCalledTimes(2);
+    expect(body).toMatchObject({ ok: true, scope: "tokens" });
+    expect(body.results.map((c: { name: string }) => c.name)).toEqual(["Kaito, Cunning Infiltrator Emblem"]);
+  });
+
+  it("keeps the Cards scope when the fallback finds nothing either", async () => {
+    state.search.mockResolvedValue([]);
+    const body = await (await get("q=zzzz&fallback=tokens")).json();
+    expect(state.search).toHaveBeenCalledTimes(2);
+    expect(body).toEqual({ ok: true, results: [], scope: "cards" });
+  });
+
+  it("never falls back on an upstream failure (not Scryfall's 'no matches')", async () => {
+    state.search.mockResolvedValue({ cards: [], noMatches: false });
+    await get("q=treasure&fallback=tokens");
+    expect(state.search).toHaveBeenCalledTimes(1);
+  });
+
+  it("never falls back unless the caller asks: the real-card art dialog and the admin reference picker search once", async () => {
+    // Their no-match stays ONE counted search and lists no tokens.
+    state.search.mockResolvedValueOnce([]).mockResolvedValueOnce([KAITO]);
+    const body = await (await get(`q=${encodeURIComponent("Kaito Cunning Infiltrator Emblem")}&limit=12`)).json();
+    expect(state.search.mock.calls).toEqual([[{ query: "Kaito Cunning Infiltrator Emblem", limit: 12 }]]);
+    expect(state.log).toHaveBeenCalledTimes(1);
+    expect(body).toEqual({ ok: true, results: [], scope: "cards" });
+  });
+
+  it("the Tokens & emblems scope is already that search: a fallback there adds no request", async () => {
+    state.search.mockResolvedValue([]);
+    await get("q=zzzz&scope=tokens&fallback=tokens");
+    expect(state.search).toHaveBeenCalledTimes(1);
+  });
+
+  it("refuses an unknown fallback before calling Scryfall", async () => {
+    const res = await get("q=treasure&fallback=planes");
+    expect(res.status).toBe(400);
+    expect(state.search).not.toHaveBeenCalled();
+  });
+
+  it("an admin's fallback isn't counted either", async () => {
+    signIn({ id: "admin-1", is_admin: true });
+    state.search.mockResolvedValueOnce([]).mockResolvedValueOnce([KAITO]);
+    await get("q=kaito%20emblem&fallback=tokens");
+    expect(state.search).toHaveBeenCalledTimes(2);
+    expect(state.log).not.toHaveBeenCalled();
+  });
+
+  it("refuses an unknown scope before calling Scryfall", async () => {
+    const res = await get("q=treasure&scope=planes");
+    expect(res.status).toBe(400);
+    expect(state.search).not.toHaveBeenCalled();
+  });
+
+  it("carries the front face's P/T, which tells same-named tokens apart", async () => {
+    state.search.mockResolvedValue([tokenPrintings["tdom-3"], tokenPrintings["tmom-16"]]);
+    const body = await (await get("q=soldier&scope=tokens")).json();
+    expect(body.results).toMatchObject([
+      { name: "Soldier", power: "1", toughness: "1" },
+      { name: "Incubator // Phyrexian", power: null, toughness: null },
+    ]);
   });
 });

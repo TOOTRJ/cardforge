@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import signaturePrintings from "../scryfall/fixtures/signature-printings.json";
 import treatmentPrintings from "../scryfall/fixtures/treatment-printings.json";
+import tokenPrintings from "../scryfall/fixtures/token-printings.json";
 import { scryfallCardSchema } from "@/lib/scryfall/client";
 import { mapScryfallToFormPatch, type ScryfallImportPatch } from "@/lib/scryfall/import-mapper";
 import { finalizeImportMatch } from "@/lib/creator/frame-resolve";
@@ -28,7 +29,10 @@ import {
 // and the printing's family first, the rest behind "Show all frames" (C2).
 // ---------------------------------------------------------------------------
 
-const fixtures = { ...signaturePrintings, ...treatmentPrintings } as Record<string, unknown>;
+const fixtures = { ...signaturePrintings, ...treatmentPrintings, ...tokenPrintings } as Record<
+  string,
+  unknown
+>;
 const EVERY_COLOUR = ["w", "u", "b", "r", "g", "c", "m"];
 const verified = (...templates: string[]) =>
   new Set(templates.flatMap((t) => EVERY_COLOUR.map((k) => frameComboKey(t, k))));
@@ -82,9 +86,25 @@ const EVERYTHING = new Set([
 ]);
 
 describe("importFramePlan — when the chooser shows", () => {
-  it("an exact printing imports without asking (Evolving Wilds MSC #240, a Cat token)", () => {
+  it("an exact printing imports without asking (Evolving Wilds MSC #240, a 2014–19 Soldier token)", () => {
     expect(importFramePlan(namedPatch("msc-240", STANDARD), STANDARD, "m15")).toEqual({ mode: "none" });
-    expect(importFramePlan(namedPatch("t2xm-4", STANDARD), STANDARD, "m15")).toEqual({ mode: "none" });
+    expect(importFramePlan(namedPatch("tdom-3", STANDARD), STANDARD, "m15")).toEqual({ mode: "none" });
+  });
+
+  it("an M20-design token asks, with the arch token frame preselected (TODO 1.23: T2XM #4 was exact)", () => {
+    const plan = importFramePlan(namedPatch("t2xm-4", STANDARD), STANDARD, "m15");
+    expect(plan).toMatchObject({
+      mode: "choose",
+      heading: "PipGlyph can't match this printing's M20 full-art token frame exactly yet — pick one of these",
+      match: { status: "nearest", template: "m15token" },
+      preselected: { template: "m15token" },
+    });
+    // A legendary M20 token is short of more than the crown: the frame
+    // itself is a stand-in, so C1 never skips the chooser.
+    expect(importFramePlan(namedPatch("tmkm-13", STANDARD), STANDARD, "m15")).toMatchObject({
+      mode: "choose",
+      match: { status: "nearest", template: "m15token" },
+    });
   });
 
   it("a substitute card is refused", () => {

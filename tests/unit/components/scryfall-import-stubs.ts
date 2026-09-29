@@ -1,6 +1,7 @@
 import { vi } from "vitest";
 import signaturePrintings from "../scryfall/fixtures/signature-printings.json";
 import treatmentPrintings from "../scryfall/fixtures/treatment-printings.json";
+import tokenPrintings from "../scryfall/fixtures/token-printings.json";
 import { scryfallCardSchema, type ScryfallCard } from "@/lib/scryfall/client";
 import { mapScryfallToFormPatch } from "@/lib/scryfall/import-mapper";
 import { finalizeImportMatch } from "@/lib/creator/frame-resolve";
@@ -13,7 +14,7 @@ import { trimPrinting } from "@/lib/scryfall/printing-summary";
 // finalizeImportMatch), /printings trims with the route's own trimPrinting. Shared by the dialog's component tests.
 // ---------------------------------------------------------------------------
 
-export const FIXTURES = { ...signaturePrintings, ...treatmentPrintings } as Record<
+export const FIXTURES = { ...signaturePrintings, ...treatmentPrintings, ...tokenPrintings } as Record<
   string,
   Record<string, unknown>
 >;

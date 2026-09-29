@@ -22,6 +22,7 @@ import { isArtifactFrameType, pickFrameColorKey } from "@/components/cards/frame
 import { describeFrame, withVerification } from "@/lib/creator/frame-resolve";
 import {
   FULL_ART_BASIC_2022_SETS,
+  isM20DesignPrinting,
   landFrameColorRule,
   resolveFrameSignature,
   type FrameMatch,
@@ -196,6 +197,10 @@ export type ScryfallImportPatch = {
    *  back-face art is imported separately via the `mode: "art-back"`
    *  option on /api/scryfall/import-art. */
   back_face?: ScryfallImportBackFacePatch;
+  /** Display-only: the second face this import left out (TODO 1.23) — a
+   *  double-faced token or a Role card imports its front face with no
+   *  `back_face`, and the creator says so (droppedFaceNotice). */
+  dropped_face?: DroppedFace;
 };
 
 type ScryfallImportBackFacePatch = {
@@ -303,6 +308,41 @@ function frontTypeLine(card: ScryfallCard): string | null | undefined {
   return card.card_faces?.[0]?.type_line ?? card.type_line;
 }
 
+/** True when a type line's front face says Token. */
+function isTokenTypeLine(typeLine: string | null | undefined): boolean {
+  return typeLineWords(typeLine).words.some((w) => w.cardType === "token");
+}
+
+/** The second face an import leaves out (TODO 1.23), or undefined: a
+ *  double-faced token (TMOM #16 Incubator // Phyrexian) imports its front
+ *  face until two-sided tokens exist (5.5); a Role card (TWOE #15) its front
+ *  Role, for good (no two-Role layout is planned). */
+export type DroppedFace = "double-faced-token" | "role";
+
+export function droppedFaceOf(card: ScryfallCard): DroppedFace | undefined {
+  const layout = (card.layout ?? "").toLowerCase();
+  if (layout === "double_faced_token") return "double-faced-token";
+  if (layout === "flip" && isTokenTypeLine(frontTypeLine(card))) return "role";
+  return undefined;
+}
+
+/** The toast (and the import dialog's note) for a face the import left out:
+ *  "Incubator // Phyrexian is a double-faced token — PipGlyph imported its
+ *  front face, Incubator." */
+export function droppedFaceNotice(
+  patch: Pick<ScryfallImportPatch, "dropped_face" | "title">,
+  cardName: string,
+): string | null {
+  switch (patch.dropped_face) {
+    case "double-faced-token":
+      return `${cardName} is a double-faced token — PipGlyph imported its front face, ${patch.title ?? "the front"}. Two-sided tokens aren't supported yet.`;
+    case "role":
+      return `${cardName} holds two Roles — PipGlyph imported the front one, ${patch.title ?? "the front Role"}.`;
+    default:
+      return null;
+  }
+}
+
 /** True when the card is a Room (Duskmourn): Scryfall files Rooms under
  *  layout "split", but a Room is ONE enchantment with two doors, not a
  *  split card. */
@@ -338,7 +378,10 @@ export function kindFromScryfall(card: ScryfallCard): CardKind | undefined {
     const keywords = (card.keywords ?? []).map((k) => k.toLowerCase());
     return keywords.includes("aftermath") ? "aftermath" : "split";
   }
-  if (layout === "flip") return "flip";
+  // WOE's Role cards are Scryfall's `flip` layout but tokens: the front Role
+  // imports on the token kind (TODO 1.23, the owner's override of 1.21's B2
+  // for Roles only; Kamigawa's flip cards keep the flip kind).
+  if (layout === "flip") return isTokenTypeLine(frontTypeLine(card)) ? "token" : "flip";
   if (layout === "adventure" || layout === "omen") return "adventure";
 
   const { card_type } = parseTypeLine(frontTypeLine(card));
@@ -439,8 +482,11 @@ export type PrintingTreatment =
  * printing, most visible first: a border change beats a frame change beats
  * an art change (BLB #316 is borderless AND showcase → borderless; DSK #389,
  * a Japan showcase, is showcase AND full art → showcase). Full-art and
- * textless tokens on the 2015 frame are skipped: they land on `m15token`,
- * which is that family's own frame (T2XM #4).
+ * textless 2014–19 tokens on the 2015 frame are skipped: they land on
+ * `m15token`, which is that design's own frame. A token from M20 on
+ * (isM20DesignPrinting: T2XM #4, TM20 #2) is not: it wears the full-art
+ * design PipGlyph doesn't draw yet (4.48), so it is named like any other
+ * nearest (TODO 1.23).
  */
 export function printingTreatmentFromScryfall(
   card: ScryfallCard,
@@ -455,7 +501,11 @@ export function printingTreatmentFromScryfall(
   if (!textless && card.full_art !== true && !effects.includes("fullart")) {
     return undefined;
   }
-  if ((card.frame ?? "").trim() === "2015" && kindFromScryfall(card) === "token") {
+  if (
+    (card.frame ?? "").trim() === "2015" &&
+    kindFromScryfall(card) === "token" &&
+    !isM20DesignPrinting(card)
+  ) {
     return undefined;
   }
   return textless ? "textless" : "fullart";
@@ -848,6 +898,7 @@ export function mapScryfallToFormPatch(
   // Enchantment".
   const kind = kindFromScryfall(card);
   const frameMatch = frameMatchFromScryfall(card);
+  const droppedFace = droppedFaceOf(card);
   const typeParts = parseTypeLine(pick(front?.type_line, card.type_line), {
     cardType: kind ? KIND_DEFS[kind].cardType : undefined,
   });
@@ -899,10 +950,14 @@ export function mapScryfallToFormPatch(
     printing: importedPrintingFromScryfall(card),
     preview_art_url: options.artPreviewUrl ?? null,
     // DFC detection: any card with two faces (Delver, Werewolves, etc.)
-    // emits a back_face patch the form will seed when the user imports.
-    back_face: card.card_faces && card.card_faces.length >= 2
-      ? mapScryfallBackFace(card)
-      : undefined,
+    // emits a back_face patch the form will seed when the user imports —
+    // except a double-faced token or a Role card, which import their front
+    // face only (TODO 1.23) and say so.
+    back_face:
+      !droppedFace && card.card_faces && card.card_faces.length >= 2
+        ? mapScryfallBackFace(card)
+        : undefined,
+    dropped_face: droppedFace,
   };
 }
 
