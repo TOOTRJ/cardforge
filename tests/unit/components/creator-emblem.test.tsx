@@ -88,8 +88,13 @@ vi.mock("@/components/creator/scryfall-import-dialog", () => ({
   // The deck pre-fill toasts the printing's treatment notice through it.
   toastImportNotice: () => {},
 }));
+// The AI fill dialog reports the fields the form hides from it.
+const fill = vi.hoisted(() => ({ hidden: undefined as readonly string[] | undefined }));
 vi.mock("@/components/creator/ai-fill-dialog", () => ({
-  AiFillDialog: () => null,
+  AiFillDialog: (props: { hiddenFields?: readonly string[] }) => {
+    fill.hidden = props.hiddenFields;
+    return null;
+  },
 }));
 vi.mock("@/components/creator/card-ideas-dialog", () => ({
   CardIdeasDialog: ({ onApply }: { onApply: (patch: unknown) => void }) => (
@@ -382,5 +387,42 @@ describe("6.23 the Emblem choice inside the token kind", () => {
     expect(preview().title).toBe("Vivien Reid");
     expect(preview().supertype).toBe("");
     expect(preview().rarity).toBe("common");
+  });
+});
+
+describe("6.23 skeptic review: entering the emblem keeps nothing a token had", () => {
+  it("a red token becomes an emblem with no colour switch toast: the emblem is silver in every colour", async () => {
+    renderForm({ mode: "create", verifiedFrameKeys: WITH_EMBLEM });
+    await pickKind(/^Token/);
+    await clickChip("Color identity", /^red/i);
+    toast.info.mockReset();
+    await toggleEmblem();
+    expect(preview().template).toBe("emblem");
+    expect(preview().cardType).toBe("emblem");
+    const said = toast.info.mock.calls.map((call) => String(call[0]));
+    expect(said.filter((text) => /isn.t available|switched the colou?r/i.test(text))).toEqual([]);
+  });
+
+  it("a token's subtype doesn't follow it in: the emblem starts on today's bare \"Emblem\"", async () => {
+    renderForm({ mode: "create", verifiedFrameKeys: WITH_EMBLEM });
+    await pickKind(/^Token/);
+    await clickNext(); // Card → Identity
+    await act(async () => {
+      fireEvent.change(screen.getByPlaceholderText("Dragon, Elder"), { target: { value: "Soldier" } });
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /^Back/ }));
+    });
+    await toggleEmblem();
+    await clickNext(); // Card → Identity
+    expect((screen.getByPlaceholderText("Kaito") as HTMLInputElement).value).toBe("");
+  });
+
+  it("the AI fill offers an emblem no cost, colour, rarity or stats; a token keeps them", async () => {
+    renderForm({ mode: "create", verifiedFrameKeys: WITH_EMBLEM });
+    await pickKind(/^Token/);
+    expect(fill.hidden ?? []).toEqual([]);
+    await toggleEmblem();
+    expect([...(fill.hidden ?? [])].sort()).toEqual(["color_identity", "cost", "rarity", "stats"]);
   });
 });

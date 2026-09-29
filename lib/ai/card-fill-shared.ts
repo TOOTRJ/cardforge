@@ -30,6 +30,16 @@ export const CREATE_ONLY_FILL_FIELDS: readonly CardFillField[] = [
   "color_identity",
 ];
 
+/** The fields an emblem has none of (CR 114, TODO 6.23): the fill dialog
+ *  never offers them on an open emblem — the save would drop a generated
+ *  cost or colour anyway, and a new emblem is common. */
+export const EMBLEM_UNFILLED_FIELDS: readonly CardFillField[] = [
+  "cost",
+  "rarity",
+  "color_identity",
+  "stats",
+];
+
 export const FILL_FIELD_LABELS: Record<CardFillField, string> = {
   title: "Title",
   art: "Artwork",
@@ -201,6 +211,13 @@ export function fillPromptNote(
   if (pinned.length > 0) {
     lines.push(
       `This card already exists in part. Keep these EXACTLY as given, reproducing them verbatim in your output: ${pinned.join("; ")}.`,
+    );
+  }
+  // An emblem (CR 114, TODO 6.23) has none of a card's other parts: the
+  // designer writes only the lasting effect, never a cost, colour or stats.
+  if (!has("card_type") && locked.card_type === "emblem") {
+    lines.push(
+      'It is an emblem (card_type "emblem"): the lasting effect a planeswalker\'s ability leaves behind, named after that planeswalker. An emblem has no mana cost (use "—"), no color (color_identity ["colorless"]) and no power, toughness, loyalty or defense (null).',
     );
   }
   if (generate.length > 0) {

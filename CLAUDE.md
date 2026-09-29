@@ -299,7 +299,9 @@ Rules and gotchas:
   is the emblem card type (title minus " Emblem", subtype only on the
   2014–19 look / AFR); registry `emblem/m20` exact, `emblem/2014-19` /
   `emblem/old-frame` nearest, `emblem/one-off` unsupported. Emblems stay out
-  of the AI's design types (a fill may only PIN one).
+  of the AI's design types AND its output enum (`designedCardsSchema`: a
+  fill may only PIN one); the lint errors on an emblem's cost or colour.
+  An emblem names no rarity on its card page (`cardTypeHasRarity`).
 - Notifications are push, not pull: `notifications` is on the
   `supabase_realtime` publication (migration 0075) and
   `components/notifications/realtime-alerts.tsx` subscribes to the signed-in

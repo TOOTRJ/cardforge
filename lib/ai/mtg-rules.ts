@@ -285,6 +285,10 @@ export function lintCardDesign(card: LintableCard): LintResult {
   if (type === "land" && parsed !== null && parsed.symbols.length > 0) {
     errors.push({ field: "cost", message: "Lands don't have a mana cost — use \"—\"." });
   }
+  // CR 114: an emblem has no mana cost and no colour (TODO 6.23).
+  if (type === "emblem" && !isNoCost(card.cost)) {
+    errors.push({ field: "cost", message: "Emblems don't have a mana cost — use \"—\"." });
+  }
   // A land, a token and an emblem (CR 114, TODO 6.23) have no mana cost.
   if (type !== "land" && type !== "token" && type !== "emblem" && isNoCost(card.cost)) {
     warnings.push({
@@ -342,9 +346,14 @@ export function lintCardDesign(card: LintableCard): LintResult {
   }
 
   // ---- Color identity consistency ----
-  const derived = deriveColorLetters(card.cost, card.rules_text);
+  // An emblem is colorless whatever its text names (CR 114): the mana
+  // symbols in "Add {U}" don't give it a colour.
+  const derived = type === "emblem" ? [] : deriveColorLetters(card.cost, card.rules_text);
   const declared = new Set(colorLettersFromWords(card.color_identity));
   const missing = derived.filter((letter) => !declared.has(letter));
+  if (type === "emblem" && card.color_identity.some((color) => color !== "colorless")) {
+    errors.push({ field: "color_identity", message: 'Emblems have no color — use ["colorless"].' });
+  }
   if (missing.length > 0) {
     errors.push({
       field: "color_identity",
@@ -356,6 +365,7 @@ export function lintCardDesign(card: LintableCard): LintResult {
   if (
     derived.length === 0 &&
     type !== "land" && // lands legitimately claim identity via abilities/flavor
+    type !== "emblem" && // an emblem's colour is an error above
     !card.color_identity.includes("colorless") &&
     card.color_identity.length > 0
   ) {
@@ -460,10 +470,16 @@ export function autofixCard<T extends LintableCard>(card: T): T {
 
   if (type === "land") fixed.cost = "—";
 
-  // Realign declared identity with the symbols actually used.
-  const derived = deriveColorLetters(fixed.cost, fixed.rules_text);
-  if (derived.length > 0 || type !== "land") {
-    fixed.color_identity = colorWordsFromLetters(derived);
+  if (type === "emblem") {
+    // CR 114 (TODO 6.23): no mana cost, no colour.
+    fixed.cost = "—";
+    fixed.color_identity = ["colorless"];
+  } else {
+    // Realign declared identity with the symbols actually used.
+    const derived = deriveColorLetters(fixed.cost, fixed.rules_text);
+    if (derived.length > 0 || type !== "land") {
+      fixed.color_identity = colorWordsFromLetters(derived);
+    }
   }
 
   fixed.rules_text = fixed.rules_text

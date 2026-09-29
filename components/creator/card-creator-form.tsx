@@ -65,6 +65,7 @@ import {
   type AiFillOptions,
 } from "@/components/creator/ai-fill-dialog";
 import {
+  EMBLEM_UNFILLED_FIELDS,
   FILL_PRESETS,
   type CardFillField,
   type CardFillLocked,
@@ -187,7 +188,7 @@ import {
   type KindChangePlan,
 } from "@/lib/creator/card-kinds";
 // The emblem kind (TODO 6.23): its entry values and the hidden rarity chips.
-import { EMBLEM_ENTRY_VALUES, kindHidesRarity } from "@/lib/creator/card-kinds";
+import { EMBLEM_ENTRY_VALUES, frameColorKeyForKind, kindHidesRarity } from "@/lib/creator/card-kinds";
 import {
   blankSecondFaceFor,
   defaultValuesFor,
@@ -1085,9 +1086,11 @@ export function CardCreatorForm({
     // planned template in this colour, else another published frame of the
     // kind in this colour, else the planned template in a colour it has —
     // and say which of those happened. Never an unpublished pair.
-    const currentColorKey = pickFrameColorKey(
-      getValues("color_identity"),
-    ) as FrameColorKey;
+    // An emblem's frame is silver in every colour: it resolves in `c`.
+    const currentColorKey = frameColorKeyForKind(
+      kindFromCard(patch.card_type, patch.template),
+      pickFrameColorKey(getValues("color_identity")) as FrameColorKey,
+    );
     const resolution = resolvePublishedFrame({
       kind: kindFromCard(patch.card_type, patch.template),
       candidates: [patch.template],
@@ -3004,6 +3007,7 @@ export function CardCreatorForm({
             onGenerate={(options) => void handleAiFill(options)}
             myDecks={aiDecks ?? myDecks}
             canDesignForDeck={canDesignForDeck}
+            hiddenFields={kind === "emblem" ? EMBLEM_UNFILLED_FIELDS : undefined}
           />
           <CardIdeasDialog
             open={ideasOpen}

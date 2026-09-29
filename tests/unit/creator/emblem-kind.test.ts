@@ -3,6 +3,7 @@ import {
   CARD_KIND_VALUES,
   EMBLEM_ENTRY_VALUES,
   KIND_DEFS,
+  frameColorKeyForKind,
   KIND_PICKER_KINDS,
   framesForKind,
   kindFromCard,
@@ -120,6 +121,13 @@ describe("the emblem kind", () => {
     });
   });
 
+  it("resolves its frame in colourless whatever the card's colour (the frame is silver in every key)", () => {
+    expect(frameColorKeyForKind("emblem", "r")).toBe("c");
+    expect(frameColorKeyForKind("emblem", "m")).toBe("c");
+    expect(frameColorKeyForKind("token", "r")).toBe("r");
+    expect(frameColorKeyForKind("creature", "g")).toBe("g");
+  });
+
   it("hides the rarity chips like the token kind, and clears colour, cost, supertype and stats on entry", () => {
     expect(kindHidesRarity("emblem")).toBe(true);
     expect(kindHidesRarity("token")).toBe(true);
@@ -128,6 +136,8 @@ describe("the emblem kind", () => {
       color_identity: ["colorless"],
       cost: "",
       supertype: "",
+      // The optional subtype starts off (a token's "Soldier" stays behind).
+      subtypes_text: "",
       power: "",
       toughness: "",
       loyalty: "",

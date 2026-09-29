@@ -67,6 +67,7 @@ import { cardToPreviewData } from "@/lib/cards/preview-data";
 import { sameOwnerBackCard } from "@/lib/cards/back-card";
 import { listPublicDecksContaining } from "@/lib/decks/queries";
 import { buildTypeLine, describeManaCost, printsPowerToughness } from "@/lib/cards/card-display";
+import { cardTypeHasRarity } from "@/lib/cards/emblem";
 import { renderVersionOf } from "@/lib/cards/render-version";
 import { isLandscapeTemplate, naturalRenderSize } from "@/lib/render/card-image";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
@@ -862,7 +863,8 @@ function CreatorFeature({
 // renderer so social unfurls and search-result thumbnails match.
 // ---------------------------------------------------------------------------
 
-function buildCardJsonLd({
+/** Exported for tests (tests/unit/cards/emblem-card-page.test.tsx). */
+export function buildCardJsonLd({
   inDecks,
   card,
   username,
@@ -908,11 +910,14 @@ function buildCardJsonLd({
   });
   const version = renderVersionOf(card);
   const imageSize = naturalRenderSize(isLandscapeTemplate(card.frame_style));
+  // An emblem names no rarity (CR 114; its stored "common" only inks the
+  // set symbol).
+  const rarity = cardTypeHasRarity(card.card_type) ? card.rarity : null;
   const keywords = Array.from(
     new Set(
       [
         ...card.tags,
-        card.rarity ?? "",
+        rarity ?? "",
         ...typeLine.split(/[\s—–-]+/),
         ...(card.color_identity ?? []),
         "custom MTG card",
@@ -938,7 +943,7 @@ function buildCardJsonLd({
       url: `${siteBase}/api/cards/${card.id}/og${version ? `?v=${version}` : ""}`,
       width: imageSize.width,
       height: imageSize.height,
-      caption: `${card.title} — custom MTG-style ${typeLine}${card.rarity ? `, ${card.rarity}` : ""}${
+      caption: `${card.title} — custom MTG-style ${typeLine}${rarity ? `, ${rarity}` : ""}${
         card.cost ? `, mana cost ${describeManaCost(card.cost)}` : ""
       }`,
     },
@@ -984,7 +989,8 @@ function buildCardJsonLd({
 // The details block — every fact the rendered card shows, as text.
 // ---------------------------------------------------------------------------
 
-function CardDetails({
+/** Exported for tests (tests/unit/cards/emblem-card-page.test.tsx). */
+export function CardDetails({
   card,
   inDecks,
 }: {
@@ -1034,7 +1040,10 @@ function CardDetails({
   const rows: Array<[string, React.ReactNode]> = [
     ["Type", typeLine],
     ["Mana cost", card.cost ? `${card.cost} (${costWords})` : "None"],
-    ["Rarity", card.rarity ? RARITY_LABELS[card.rarity as Rarity] ?? card.rarity : "—"],
+    // An emblem has no rarity (CR 114): no row for its stored "common".
+    ...(cardTypeHasRarity(card.card_type)
+      ? [["Rarity", card.rarity ? RARITY_LABELS[card.rarity as Rarity] ?? card.rarity : "—"] as [string, React.ReactNode]]
+      : []),
     // The card's colour as the creator models it — its frame colour, which
     // is not MTG's Commander colour identity (an imported Ajani, Nacatl
     // Pariah is White, its identity R/W; TODO 1.2), so the row says "Color".

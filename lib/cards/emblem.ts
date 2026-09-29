@@ -64,3 +64,12 @@ export function withEmblemUpdateShape<T extends EmblemShaped>(
   }
   return out as T;
 }
+
+/**
+ * Whether a card of this type has a rarity to name. An emblem has none (CR
+ * 114): the "common" it stores only inks its set symbol, so the card page's
+ * Card details and its JSON-LD (caption, keywords) leave the rarity out.
+ */
+export function cardTypeHasRarity(cardType: string | null | undefined): boolean {
+  return cardType !== "emblem";
+}

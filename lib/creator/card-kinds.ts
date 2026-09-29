@@ -364,18 +364,29 @@ export function kindHidesRarity(kind: CardKind): boolean {
 
 /** What a card becomes on entering the emblem kind (TODO 6.23): an emblem
  *  has no colour (the frame is silver whatever the walker's colour), cost,
- *  supertype, stats or rarity (common, the chips hidden). The name, rules,
- *  art, subtypes (an optional "Emblem — Kaito") and set icon stay. */
+ *  supertype, stats or rarity (common, the chips hidden). Its optional
+ *  subtype ("Emblem — Kaito") starts off (owner 2026-09-29): a token's
+ *  "Soldier" would print "Emblem — Soldier". The name, rules, art and set
+ *  icon stay. */
 export const EMBLEM_ENTRY_VALUES = {
   color_identity: ["colorless"],
   cost: "",
   supertype: "",
+  subtypes_text: "",
   power: "",
   toughness: "",
   loyalty: "",
   defense: "",
   rarity: "common",
 } as const;
+
+/** The colour key a kind's frame is resolved in (the creator's kind change):
+ *  an emblem's frame is silver whatever the card's colour (CR 114), so the
+ *  emblem kind resolves in `c` — entering it from a red token is no "isn't
+ *  available in red" colour switch. Every other kind keeps the card's. */
+export function frameColorKeyForKind(kind: CardKind, colorKey: FrameColorKey): FrameColorKey {
+  return kind === "emblem" ? "c" : colorKey;
+}
 
 // Kinds a frame can only draw through a stat overlay its profile must carry:
 // a planeswalker needs the loyalty shield and the ability rows
