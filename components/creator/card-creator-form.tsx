@@ -2584,6 +2584,8 @@ export function CardCreatorForm({
                 <ArtPanel
                   userId={userId}
                   importedArtOrigin={importedArtOrigin}
+                  onImportedArtOrigin={setImportedArtOrigin}
+                  onBackFaceArt={() => setPreviewFace("back")}
                   secondFaceNameMissing={secondFaceNameMissing}
                   aiSlot={
                     <AiFillButton

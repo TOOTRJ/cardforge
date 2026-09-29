@@ -128,3 +128,17 @@ describe("GET /api/scryfall/search — per-user quota", () => {
     expect(state.search).not.toHaveBeenCalled();
   });
 });
+
+describe("GET /api/scryfall/search — the trimmed result", () => {
+  it("carries the oracle id the art picker's printings grid needs (TODO 1.15); null when Scryfall has none", async () => {
+    state.search.mockResolvedValue([
+      { id: "c1", name: "Llanowar Elves", oracle_id: "68954295-54e3-4303-a6bc-fc4547a4e3a3" },
+      { id: "c2", name: "Reversible card" },
+    ]);
+    const body = await (await get("q=llanowar")).json();
+    expect(body.results.map((c: { oracle_id: string | null }) => c.oracle_id)).toEqual([
+      "68954295-54e3-4303-a6bc-fc4547a4e3a3",
+      null,
+    ]);
+  });
+});
