@@ -11,6 +11,7 @@ import {
   GalleryVerticalEnd,
   Inbox,
   LayoutDashboard,
+  ListOrdered,
   MessageSquare,
   MessageSquarePlus,
   Rss,
@@ -49,6 +50,7 @@ const NAV_ICONS: Record<string, LucideIcon> = {
   "/admin/updates": Megaphone,
   "/admin/scryfall": Activity,
   "/admin/frame-compare": Frame,
+  "/admin/frame-requests": ListOrdered,
   "/admin/creator-lab": FlaskConical,
 };
 

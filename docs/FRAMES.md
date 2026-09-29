@@ -275,6 +275,12 @@ needs the combo verified in the card's colour (`withVerification`,
   printing in `tests/unit/scryfall/fixtures/signature-printings.json`, and
   a row in `tests/unit/scryfall/frame-signatures.test.ts`. The completeness
   test fails until some rule can reach it.
+- **Signature ids are stored.** Every import that isn't exact writes a
+  `frame_requests` row keyed by its signature (TODO 1.6, migration 0120,
+  `lib/frames/frame-requests.ts`), and `/admin/frame-requests` counts them
+  per signature + set to decide what to build next. Never rename a rule's
+  key: old rows would stop grouping with new ones. Split a rule under a new
+  key instead.
 - **A frame whose border isn't true yet** stays in
   `BORDER_PENDING_TEMPLATES` (capped at `nearest`); take it out when 4.35
   fixes it.

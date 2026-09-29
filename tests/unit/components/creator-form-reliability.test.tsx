@@ -11,6 +11,10 @@ import {
 } from "@testing-library/react";
 import type { Card, GameSystem } from "@/types/card";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
+import type { ScryfallCard } from "@/lib/scryfall/client";
+import { mapScryfallToFormPatch } from "@/lib/scryfall/import-mapper";
+import signaturePrintings from "../scryfall/fixtures/signature-printings.json";
+import importPrintings from "../scryfall/fixtures/import-printings.json";
 
 // ---------------------------------------------------------------------------
 // The card creator's save + kind-change plumbing, driven through the real
@@ -62,6 +66,7 @@ const actions = vi.hoisted(() => ({
   createCardAction: vi.fn(),
   updateCardAction: vi.fn(),
   linkDeckCardAction: vi.fn(),
+  recordFrameRequestAction: vi.fn(),
 }));
 vi.mock("@/lib/cards/actions", () => ({
   createCardAction: actions.createCardAction,
@@ -70,12 +75,17 @@ vi.mock("@/lib/cards/actions", () => ({
 vi.mock("@/lib/decks/card-actions", () => ({
   linkDeckCardAction: actions.linkDeckCardAction,
 }));
+vi.mock("@/lib/frames/frame-request-actions", () => ({
+  recordFrameRequestAction: actions.recordFrameRequestAction,
+}));
 
 // The dialogs the tests don't drive render nothing; the Ideas dialog is a
 // button that applies whatever patch the test put in `ideas.patch`.
 const ideas = vi.hoisted(() => ({ patch: {} as Record<string, unknown> }));
 vi.mock("@/components/creator/scryfall-import-dialog", () => ({
   ScryfallImportDialog: () => null,
+  // The deck pre-fill toasts the printing's treatment notice through it.
+  toastImportNotice: () => {},
 }));
 vi.mock("@/components/creator/ai-fill-dialog", () => ({
   AiFillDialog: () => null,
@@ -1074,5 +1084,87 @@ describe("a save from the leave dialog still links the new card", () => {
     );
     expect(toast.success).toHaveBeenCalledWith("Linked into “Burn”.");
     expect(router.replace).not.toHaveBeenCalled();
+  });
+});
+
+// TODO 1.6: an import PipGlyph can't reproduce exactly writes one frame
+// request row, fire and forget — driven here through the deck pre-fill
+// (/create?deckCard=…), the path that calls handleScryfallImport itself.
+describe("frame request log", () => {
+  function stubScryfall(card: ScryfallCard) {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (String(url).startsWith("/api/scryfall/named")) {
+          return new Response(
+            JSON.stringify({
+              ok: true,
+              card: { name: card.name, scryfall_uri: null },
+              patch: mapScryfallToFormPatch(card),
+            }),
+            { status: 200 },
+          );
+        }
+        if (String(url).startsWith("/api/scryfall/import-art")) {
+          return new Response(
+            JSON.stringify({ ok: true, publicUrl: "https://example.com/imported.png" }),
+            { status: 200 },
+          );
+        }
+        return new Response(JSON.stringify({ ok: false }), { status: 200 });
+      }),
+    );
+  }
+
+  function prefill(card: ScryfallCard) {
+    stubScryfall(card);
+    renderForm({
+      mode: "create",
+      deckRemix: {
+        deckCardId: "66666666-6666-4666-8666-666666666666",
+        scryfallId: card.id,
+        deckSlug: "tester/deck",
+        deckTitle: "Deck",
+        entryName: card.name,
+      },
+    });
+  }
+
+  it("logs a nearest printing from the deck pre-fill, with its art flag", async () => {
+    const sheoldred = (signaturePrintings as unknown as Record<string, ScryfallCard>)["dmu-435"];
+    actions.recordFrameRequestAction.mockResolvedValue({ ok: true });
+    prefill(sheoldred);
+    await waitFor(() => expect(actions.recordFrameRequestAction).toHaveBeenCalledTimes(1));
+    expect(actions.recordFrameRequestAction).toHaveBeenCalledWith({
+      signature: "borderless/standard+crown",
+      label: "Borderless frame",
+      setCode: "dmu",
+      collectorNumber: "435",
+      scryfallId: sheoldred.id,
+      status: "nearest",
+      template: "m15",
+      artFlag: "window-cropped",
+      source: "deck_prefill",
+    });
+  });
+
+  it("a log call that fails (offline) never blocks the import", async () => {
+    const oko = (signaturePrintings as unknown as Record<string, ScryfallCard>)["eld-271"];
+    actions.recordFrameRequestAction.mockRejectedValue(new TypeError("Failed to fetch"));
+    prefill(oko);
+    await waitFor(() =>
+      expect(toast.success).toHaveBeenCalledWith(expect.stringContaining("Pre-filled from Oko")),
+    );
+    expect(actions.recordFrameRequestAction).toHaveBeenCalledTimes(1);
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+
+  it("logs nothing for an exact printing (Llanowar Elves DOM #168 on the verified M15 frame)", async () => {
+    const elves = (importPrintings as unknown as Record<string, ScryfallCard>)["dom-168"];
+    prefill(elves);
+    await waitFor(() =>
+      expect(toast.success).toHaveBeenCalledWith(expect.stringContaining("Pre-filled from Llanowar Elves")),
+    );
+    expect(actions.recordFrameRequestAction).not.toHaveBeenCalled();
   });
 });

@@ -109,6 +109,11 @@ import {
   updateCardAction,
 } from "@/lib/cards/actions";
 import { linkDeckCardAction } from "@/lib/decks/card-actions";
+import { recordFrameRequestAction } from "@/lib/frames/frame-request-actions";
+import {
+  frameRequestFromImport,
+  type FrameRequestSource,
+} from "@/lib/frames/frame-requests";
 import type { DeckRemixContext } from "@/types/deck";
 import {
   printingTreatmentNotice,
@@ -1230,11 +1235,11 @@ export function CardCreatorForm({
   /** Applies the import and returns the printing-treatment notice (or null)
    *  for the CALLER to toast after its own success toast, so the notice
    *  stacks on top of it (Sonner shows the newest in front). */
-  const handleScryfallImport = ({
-    patch,
-    importedArtUrl,
-    source,
-  }: ScryfallImportPayload): ImportNotice | null => {
+  const handleScryfallImport = (
+    { patch, importedArtUrl, source }: ScryfallImportPayload,
+    /** Which flow imported — the frame request log's `source` (TODO 1.6). */
+    requestSource: FrameRequestSource = "import",
+  ): ImportNotice | null => {
     const setIfPresent = (key: keyof FormValues, value: string | undefined) => {
       if (value === undefined) return;
       setValue(key, value as never, { shouldDirty: true });
@@ -1296,6 +1301,18 @@ export function CardCreatorForm({
         );
       }
     }
+    // A printing PipGlyph can't reproduce exactly (nearest / unsupported, or
+    // an exact frame not verified in this colour) is logged for the admin's
+    // "most-requested missing frames" page (TODO 1.6). Fire and forget: the
+    // action never throws, and the catch covers the call itself failing
+    // (offline, a stale deployment), so a lost log never touches the import.
+    const frameRequest = frameRequestFromImport(patch, {
+      artImported: Boolean(importedArtUrl),
+      source: requestSource,
+      landedTemplate: getValues("frame_style.template") as FrameTemplate | undefined,
+      verifiedKeys: new Set(verifiedFrameKeys),
+    });
+    if (frameRequest) void recordFrameRequestAction(frameRequest).catch(() => {});
     // A borderless / showcase / extended-art / full-art / textless printing
     // lands on the plain frame above, which "exact" alone would pass off as
     // a match — name the treatment and the frame it actually got (TODO 1.16
@@ -1489,14 +1506,17 @@ export function CardCreatorForm({
           // soft-fail — the user can import art from the dialog later
         }
 
-        const treatmentNotice = handleScryfallImport({
-          patch: body.patch,
-          importedArtUrl,
-          source: {
-            name: body.card.name,
-            scryfallUri: body.card.scryfall_uri,
+        const treatmentNotice = handleScryfallImport(
+          {
+            patch: body.patch,
+            importedArtUrl,
+            source: {
+              name: body.card.name,
+              scryfallUri: body.card.scryfall_uri,
+            },
           },
-        });
+          "deck_prefill",
+        );
         // Re-baseline: the imported card is the starting point, not user
         // work. Save stays disabled until they actually alter something —
         // an unchanged copy is just the real card, not a custom proxy.
