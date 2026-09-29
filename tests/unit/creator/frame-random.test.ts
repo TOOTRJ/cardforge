@@ -160,6 +160,39 @@ describe("resolveGeneratedFrame — the artifact frame on a creature", () => {
   });
 });
 
+// Owner decision A3: a creature borrows Nyx for an Enchantment Creature — an
+// AI pick gives it only to a design whose type line says Enchantment.
+describe("resolveGeneratedFrame — Nyx on a creature", () => {
+  const verified = keys(["nyx", "w"]);
+  const face = (supertype: string | null) => ({
+    cardType: "creature",
+    supertype,
+    subtypes: ["God"],
+    title: "Test God",
+    rulesText: "",
+  });
+  const pick = (supertype: string | null, requested: "random" | "nyx") =>
+    resolveGeneratedFrame({
+      cardType: "creature",
+      requested,
+      colorIdentity: ["white"],
+      verifiedKeys: verified,
+      face: face(supertype),
+      random: () => 0,
+    });
+
+  it("offers it among a creature's frames", () => {
+    expect(frameChoicesForType("creature", verified).map((c) => c.template)).toContain("nyx");
+  });
+
+  it("gives it to an Enchantment Creature, never to a plain or artifact one", () => {
+    expect(pick("Legendary Enchantment", "random")).toBe("nyx");
+    expect(pick("Legendary Enchantment", "nyx")).toBe("nyx");
+    expect(pick("Legendary", "random")).toBeNull();
+    expect(pick("Artifact", "nyx")).toBeNull();
+  });
+});
+
 // TODO 0.26: the full-art basic land frame can't draw a nonbasic's rules, so
 // an AI-generated land only lands on it when the design is one basic land.
 describe("resolveGeneratedFrame — basic-only frames", () => {

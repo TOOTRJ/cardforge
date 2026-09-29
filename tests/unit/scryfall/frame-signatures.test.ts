@@ -7,16 +7,19 @@ import {
   mapScryfallToFormPatch,
 } from "@/lib/scryfall/import-mapper";
 import {
+  BORDER_PENDING_COLOURS,
   BORDER_PENDING_TEMPLATES,
   FRAME_SIGNATURE_KEYS,
   FRAME_SIGNATURE_RULES,
   TEMPLATES_WITHOUT_PRINTED_SIGNATURE,
+  isBorderPending,
   isKnownFrameSignature,
   landFrameColorRule,
   registryCoversEveryTemplate,
   templatesReachedByRegistry,
   type FrameMatchStatus,
 } from "@/lib/scryfall/frame-signatures";
+import { EDGE_CONTRACT_KNOWN_FAILURES } from "@/lib/frames/edge-contract";
 import { pickFrameColorKey } from "@/components/cards/frame-layer";
 import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
 
@@ -60,14 +63,15 @@ describe("borderless families (TODO 1.17)", () => {
     ["dsk-334", "nearest", "m15borderless", "m15"],
     // Showcase runs by collector number. BLB #295–336 is ONE woodland run
     // (#315 and #316 print the same frame, checked by eye); the anime frame
-    // is the raised-foil #343–355, capped at nearest until its border is
-    // true (4.35).
-    ["blb-295", "exact", "bloomburrow", undefined],
-    ["blb-316", "exact", "bloomburrow", undefined],
+    // is the raised-foil #343–355. Every one is capped at nearest until its
+    // border is true: 4.35's five, and the four 7.7's edge contract found
+    // (bloomburrow, lotr, avatar, tarkirdraconic — owner decision A8).
+    ["blb-295", "nearest", "bloomburrow", undefined],
+    ["blb-316", "nearest", "bloomburrow", undefined],
     ["blb-343", "nearest", "bloomanime", undefined],
-    ["ltr-306", "exact", "lotr", undefined],
-    ["tla-338", "exact", "avatar", undefined],
-    ["tle-315", "exact", "avatar", undefined],
+    ["ltr-306", "nearest", "lotr", undefined],
+    ["tla-338", "nearest", "avatar", undefined],
+    ["tle-315", "nearest", "avatar", undefined],
     // Text on the art (4.36): TDM clan, source material. `full_art` doesn't
     // exempt a printing from landOn: TLE #1's art_crop is the 626×457 window.
     ["tdm-327", "nearest", "m15borderless", "m15"],
@@ -138,12 +142,14 @@ describe("full-art and textless families (TODO 1.19)", () => {
     ["neo-293", "nearest", "m15fullartland", undefined],
     ["lci-287", "nearest", "m15fullartland", undefined],
     ["ugl-84", "nearest", "m15fullartland", undefined],
-    // Textless promos: black border (4.42), 2003 / Future Sight (4.43).
+    // Textless promos: black border (4.42), Future Sight (4.43). The 2003
+    // ones (Player Rewards) name the 2003 frame until the textless frame is
+    // verified in their colour (owner decision A9: onceVerified).
     ["sch-3", "nearest", "m15textless", undefined],
     ["pf19-1", "nearest", "m15textless", undefined],
     ["fra-402", "nearest", "m15textless", undefined],
-    ["p07-1", "nearest", "m15textless", undefined],
-    ["p10-1", "nearest", "m15textless", undefined],
+    ["p07-1", "nearest", "modern", undefined],
+    ["p10-1", "nearest", "modern", undefined],
     ["fut-19", "nearest", "m15textless", undefined],
     ["mb2-194", "nearest", "m15textless", undefined],
     ["trk-392", "unsupported", "m15land", undefined],
@@ -162,6 +168,8 @@ describe("full-art and textless families (TODO 1.19)", () => {
     // The look-alikes that are never full art.
     ["znr-293", "exact", "fullart", undefined],
     ["znr-305", "exact", "fullart", undefined],
+    // The Expeditions: exact, but for the black and green masters (A8) —
+    // Flooded Strand is multicolour (its two colours, landFrameColorRule).
     ["zne-1", "exact", "expeditionland", undefined],
   ];
 
@@ -177,6 +185,27 @@ describe("full-art and textless families (TODO 1.19)", () => {
       forGood: true,
       signature: "substitute-card",
     });
+  });
+
+  it("names the 2003 frame for a 2003-frame textless promo until the textless frame is verified (A9)", () => {
+    expect(frameMatchFromScryfall(printing("p07-1"))).toMatchObject({
+      signature: "textless/old-frame",
+      exactLabel: "2003 frame textless promo",
+      template: "modern",
+      onceVerified: "m15textless",
+      blockedBy: "4.43",
+    });
+    expect(frameMatchFromScryfall(printing("p10-1")).onceVerified).toBe("m15textless");
+    // Future Sight has no border-era frame of its own: the textless frame
+    // stays its nearest, and nothing to swap.
+    const future = frameMatchFromScryfall(printing("fut-19"));
+    expect(future).toMatchObject({ signature: "textless/future", template: "m15textless" });
+    expect(future.onceVerified).toBeUndefined();
+    // No other fixture names a frame for later.
+    for (const key of Object.keys(printingsData) as PrintingKey[]) {
+      const match = frameMatchFromScryfall(printing(key));
+      if (match.onceVerified) expect(match.signature, key).toBe("textless/old-frame");
+    }
   });
 
   it("keys the full-art basics on set lists, never on the full_art flag alone", () => {
@@ -201,11 +230,12 @@ describe("the general signatures (TODO 1.4)", () => {
     ["eld-244", "exact", "m15land", undefined],
     ["mh1-244", "exact", "m15land", undefined],
     ["zen-211", "nearest", "modernland", undefined],
-    // Nyx: the THB constellation showcase IS the nyx frame, but PipGlyph's
-    // Nyx dresses enchantments only, so a god lands on M15; the regular Nyx
-    // starfield (THB #18, FDN #27) is M15 with a gap; THS on the 2003 frame
-    // is nearest Nyx (Bident of Thassa THS #42).
-    ["thb-259", "nearest", "nyx", "m15"],
+    // Nyx: the THB constellation showcase IS the nyx frame, and an
+    // Enchantment Creature borrows it (owner decision A3), so a god is exact
+    // (once nyx is verified in its colour); the regular Nyx starfield
+    // (THB #18, FDN #27) is M15 with a gap; THS on the 2003 frame is nearest
+    // Nyx (Bident of Thassa THS #42).
+    ["thb-259", "exact", "nyx", undefined],
     ["thb-18", "nearest", "m15", undefined],
     ["fdn-27", "nearest", "m15", undefined],
     ["ths-42", "nearest", "nyx", undefined],
@@ -216,7 +246,7 @@ describe("the general signatures (TODO 1.4)", () => {
     // Pinned showcase runs.
     ["ltr-482", "nearest", "lotrscroll", undefined],
     ["ltr-602", "nearest", "lotrscroll", "saga"],
-    ["tdm-303", "exact", "tarkirdraconic", undefined],
+    ["tdm-303", "nearest", "tarkirdraconic", undefined],
     ["tdm-320", "nearest", "tarkirdraconic", "adventure"],
     ["tdm-399", "nearest", "tarkirghostfire", undefined],
     ["tdm-400", "nearest", "tarkirghostfire", undefined],
@@ -269,12 +299,41 @@ describe("the general signatures (TODO 1.4)", () => {
   });
 
   it("says why a frame that can't dress the kind lands elsewhere", () => {
-    expect(frameMatchFromScryfall(printing("thb-259")).reason).toBe(
-      "PipGlyph's Nyx Constellation frame doesn't dress creatures yet",
-    );
     expect(frameMatchFromScryfall(printing("khm-244")).reason).toBe(
       "PipGlyph's M15 (2015) Snow frame doesn't dress artifacts yet",
     );
+  });
+
+  it("dresses a Theros god on Nyx because its type line says Enchantment (A3)", () => {
+    expect(frameMatchFromScryfall(printing("thb-259"))).toMatchObject({
+      status: "exact",
+      template: "nyx",
+      signature: "showcase/thb/constellation",
+      reason: null,
+    });
+    // The same printing typed as a plain creature: Nyx is borrowed for an
+    // Enchantment Creature only, so it lands on M15 and says why.
+    const plain = scryfallCardSchema.parse({
+      ...printingsData["thb-259"],
+      type_line: "Legendary Creature — God",
+    });
+    expect(frameMatchFromScryfall(plain)).toMatchObject({
+      status: "nearest",
+      template: "nyx",
+      landOn: "m15",
+      reason: "PipGlyph's Nyx Constellation frame dresses a creature only when it is an enchantment",
+    });
+    // A THS god on the 2003 frame keeps its nearest Nyx and now lands on it
+    // once verified: no kind landing any more.
+    const thsGod = scryfallCardSchema.parse({
+      ...printingsData["ths-42"],
+      name: "A God",
+      type_line: "Legendary Enchantment Creature — God",
+      colors: ["U"],
+      color_identity: ["U"],
+    });
+    const god = frameMatchFromScryfall(thsGod);
+    expect([god.status, god.template, god.landOn]).toEqual(["nearest", "nyx", undefined]);
   });
 });
 
@@ -374,11 +433,69 @@ describe("the rule table", () => {
     expect(registryCoversEveryTemplate()).toBe(true);
   });
 
-  it("never calls a template whose border isn't true yet exact (4.35)", () => {
+  it("never calls a template whose border isn't true yet exact (4.35, A8)", () => {
     for (const key of Object.keys(printingsData) as PrintingKey[]) {
       const match = frameMatchFromScryfall(printing(key));
-      if (BORDER_PENDING_TEMPLATES.has(match.template)) expect(match.status, key).not.toBe("exact");
+      if (isBorderPending(match.template, colorKeyOf(key))) expect(match.status, key).not.toBe("exact");
     }
+  });
+
+  it("caps exactly the edge contract's known failures, but alphaland's invisible corner specks (A8)", () => {
+    // Fixing a master strikes it from EDGE_CONTRACT_KNOWN_FAILURES (its
+    // it.fails turns red); this test then asks for the cap to go too.
+    for (const [template, { keys }] of Object.entries(EDGE_CONTRACT_KNOWN_FAILURES)) {
+      if (template === "alphaland") continue;
+      if (keys === "all") {
+        expect(BORDER_PENDING_TEMPLATES.has(template as FrameTemplate), template).toBe(true);
+      } else {
+        expect([...(BORDER_PENDING_COLOURS.get(template as FrameTemplate) ?? [])].sort(), template).toEqual(
+          [...keys].sort(),
+        );
+      }
+    }
+    for (const template of [...BORDER_PENDING_TEMPLATES, ...BORDER_PENDING_COLOURS.keys()]) {
+      expect(EDGE_CONTRACT_KNOWN_FAILURES[template], template).toBeDefined();
+    }
+    expect(EDGE_CONTRACT_KNOWN_FAILURES.alphaland?.why).toMatch(/^edges pass; corner:/);
+  });
+
+  it("names the border as the reason a capped showcase isn't exact (A8)", () => {
+    for (const [key, frame] of [
+      ["ltr-306", "The Lord of the Rings Ring"],
+      ["tla-338", "Avatar: The Last Airbender"],
+    ] as const) {
+      const match = frameMatchFromScryfall(printing(key));
+      expect(match.blockedBy, key).toBe("4.35");
+      expect(match.reason, key).toMatch(/frame doesn't have the printed border yet$/);
+      expect(match.reason, key).toContain(frame);
+    }
+  });
+
+  it("caps the Expedition frame in black and green only (A8)", () => {
+    // No printed Expedition is black or green (ZNE/EXP checked 2026-09-29):
+    // the same printing, made to tap for one colour.
+    const expedition = (mana: string) =>
+      scryfallCardSchema.parse({
+        ...printingsData["zne-1"],
+        name: `Test Expedition ${mana}`,
+        oracle_text: `{T}: Add {${mana}}.`,
+        produced_mana: [mana],
+        color_identity: [mana],
+      });
+    for (const mana of ["B", "G"]) {
+      expect(frameMatchFromScryfall(expedition(mana)), mana).toMatchObject({
+        status: "nearest",
+        template: "expeditionland",
+        blockedBy: "4.35",
+      });
+    }
+    for (const mana of ["W", "U", "R"]) {
+      expect(frameMatchFromScryfall(expedition(mana)).status, mana).toBe("exact");
+    }
+    expect(isBorderPending("expeditionland", "b")).toBe(true);
+    expect(isBorderPending("expeditionland", "m")).toBe(false);
+    expect(isBorderPending("lotr", "w")).toBe(true);
+    expect(isBorderPending("m15", "w")).toBe(false);
   });
 
   it("an exact match never needs a reason, a non-exact one always has one", () => {

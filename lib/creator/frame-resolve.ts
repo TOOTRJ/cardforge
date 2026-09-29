@@ -237,22 +237,61 @@ export function resolveImportFrame(input: {
 
 /**
  * Finalize a static frame match (the signature registry, TODO 1.4) against
- * the verified combos: `exact` only when PipGlyph's frame is verified in the
- * card's colour — an unverified frame is never an exact match to a user, so
- * it becomes `nearest`, "not yet verified in <colour>". Nearest and
- * unsupported matches pass through unchanged. Pure.
+ * the verified combos:
+ *   • a match that names another frame once it is verified
+ *     (`onceVerified`: a 2003-frame textless promo names the 2003 frame
+ *     until the textless frame is verified in its colour, owner decision
+ *     A9) takes that frame when it is;
+ *   • `exact` only when PipGlyph's frame is verified in the card's colour —
+ *     an unverified frame is never an exact match to a user, so it becomes
+ *     `nearest`, "not yet verified in <colour>".
+ * Nearest and unsupported matches otherwise pass through unchanged. Pure.
  */
-export function withVerification<T extends Pick<FrameMatch, "status" | "template" | "reason">>(
-  match: T,
-  colorKey: string,
-  verifiedKeys: ReadonlySet<string>,
-): T {
-  if (match.status !== "exact") return match;
-  if (verifiedKeys.has(frameComboKey(match.template, colorKey))) return match;
+export function withVerification<
+  T extends Pick<FrameMatch, "status" | "template" | "reason"> &
+    Partial<Pick<FrameMatch, "onceVerified">>,
+>(match: T, colorKey: string, verifiedKeys: ReadonlySet<string>): T {
+  let finalized = match;
+  if (match.onceVerified && verifiedKeys.has(frameComboKey(match.onceVerified, colorKey))) {
+    const { onceVerified, ...rest } = match;
+    finalized = { ...rest, template: onceVerified } as unknown as T;
+  }
+  if (finalized.status !== "exact") return finalized;
+  if (verifiedKeys.has(frameComboKey(finalized.template, colorKey))) return finalized;
   return {
-    ...match,
+    ...finalized,
     status: "nearest",
     reason: `not yet verified in ${colorWord(colorKey)}`,
+  };
+}
+
+/**
+ * An import patch with its frame match finalized (withVerification, in the
+ * patch's own colour) — what /api/scryfall/named returns. `frame_template`
+ * follows the finalized match (`landOn ?? template`) when the match took
+ * another frame, as the mapper wrote it from the static one; a patch
+ * without a match, or a layout kind's (no frame_template), keeps its own.
+ * Pure: returns a new patch.
+ */
+export function finalizeImportMatch<
+  P extends {
+    frame_match?: FrameMatch;
+    frame_template?: FrameTemplate;
+    color_identity?: readonly ColorIdentity[];
+  },
+>(patch: P, verifiedKeys: ReadonlySet<string>): P {
+  if (!patch.frame_match) return patch;
+  const match = withVerification(
+    patch.frame_match,
+    pickFrameColorKey(patch.color_identity),
+    verifiedKeys,
+  );
+  const moved =
+    patch.frame_template !== undefined && match.template !== patch.frame_match.template;
+  return {
+    ...patch,
+    frame_match: match,
+    ...(moved ? { frame_template: match.landOn ?? match.template } : {}),
   };
 }
 

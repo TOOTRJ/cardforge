@@ -424,6 +424,54 @@ describe("CardSetupPanel — the artifact frame is a creature variation (TODO 1.
   });
 });
 
+// Owner decision A3 (2026-09-29): a creature borrows the Nyx showcase for an
+// Enchantment Creature, the way it borrows the artifact frame (1.7).
+describe("CardSetupPanel — Nyx is a creature variation for Enchantment Creatures (A3)", () => {
+  const verified = [frameComboKey("m15", "w"), frameComboKey("m15artifact", "w"), frameComboKey("nyx", "w")];
+  const variations = () => screen.getByRole("radiogroup", { name: /Frame variations/ });
+  const nyxChip = () => within(variations()).getByRole("radio", { name: /^Nyx/ });
+
+  it("offers Nyx to a creature, saying who it is for", () => {
+    render(<Harness verified={verified} onColor={vi.fn()} initialColor="white" />);
+    expect(nyxChip().textContent).toContain("For Enchantment Creatures");
+  });
+
+  it("picking it makes a creature an Enchantment Creature, and leaving it undoes that", () => {
+    render(<Harness verified={verified} onColor={vi.fn()} initialColor="white" supertype="Legendary" />);
+    fireEvent.click(nyxChip());
+    expect(screen.getByTestId("template").textContent).toBe("nyx");
+    expect(screen.getByTestId("supertype").textContent).toBe("Legendary Enchantment");
+    fireEvent.click(within(variations()).getByRole("radio", { name: /Standard/ }));
+    expect(screen.getByTestId("template").textContent).toBe("m15");
+    expect(screen.getByTestId("supertype").textContent).toBe("Legendary");
+  });
+
+  it("swaps the word it wrote when the card moves from the artifact frame to Nyx", () => {
+    render(<Harness verified={verified} onColor={vi.fn()} initialColor="white" supertype="Legendary" />);
+    fireEvent.click(within(variations()).getByRole("radio", { name: /^Artifact/ }));
+    expect(screen.getByTestId("supertype").textContent).toBe("Legendary Artifact");
+    fireEvent.click(nyxChip());
+    expect(screen.getByTestId("template").textContent).toBe("nyx");
+    expect(screen.getByTestId("supertype").textContent).toBe("Legendary Enchantment");
+  });
+
+  it("an imported Theros god opens on Nyx and keeps its own Enchantment word", () => {
+    render(
+      <Harness
+        verified={verified}
+        onColor={vi.fn()}
+        initialColor="white"
+        supertype="Legendary Enchantment"
+        initialTemplate="nyx"
+      />,
+    );
+    expect(screen.queryByRole("radiogroup", { name: "Current frame" })).toBeNull();
+    expect(nyxChip().getAttribute("aria-checked")).toBe("true");
+    fireEvent.click(within(variations()).getByRole("radio", { name: /Standard/ }));
+    expect(screen.getByTestId("supertype").textContent).toBe("Legendary Enchantment");
+  });
+});
+
 // Frames plan 4.32 / 4.39: the new frames sit in the Variations of the frame
 // they re-dress, gated on verification like every frame — nothing is
 // offered until the owner ticks it in /admin/frame-compare.

@@ -10,17 +10,14 @@
 
 import type { CardType, ColorIdentity, FrameTemplate } from "@/types/card";
 import {
+  borrowedFrameFits,
   framesForKind,
-  isBorrowedVariation,
   isSingleBasicLand,
   kindFromCard,
   templateIsBasicOnly,
   type FrameChoice,
 } from "@/lib/creator/card-kinds";
-import {
-  isArtifactFrameType,
-  pickFrameColorKey,
-} from "@/components/cards/frame-layer";
+import { pickFrameColorKey } from "@/components/cards/frame-layer";
 import type { BasicLandFace } from "@/lib/cards/watermark";
 
 export type FrameRequest = FrameTemplate | "random" | undefined;
@@ -66,15 +63,16 @@ export function resolveGeneratedFrame(input: {
   const choices = frameChoicesForType(cardType, verifiedKeys);
   const basicLand = face !== undefined && isSingleBasicLand(face);
   // A frame never dresses a card as a type it isn't: the artifact frame a
-  // creature borrows (TODO 1.7) is for an Artifact Creature only — asked for
-  // by name or picked at random.
+  // creature borrows (TODO 1.7) is for an Artifact Creature only, the Nyx
+  // showcase (owner decision A3) for an Enchantment Creature — asked for by
+  // name or picked at random.
   const kind = kindFromCard(cardType, undefined);
-  const artifact = isArtifactFrameType({ cardType, supertype: face?.supertype });
+  const type = { cardType, supertype: face?.supertype };
   const pool = choices.filter(
     (choice) =>
       choice.availableColorKeys.includes(colorKey as never) &&
       (basicLand || !templateIsBasicOnly(choice.template)) &&
-      (artifact || !isBorrowedVariation(kind, choice.template)),
+      borrowedFrameFits(kind, choice.template, type),
   );
 
   if (requested !== "random") {

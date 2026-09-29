@@ -16,7 +16,7 @@ import {
 } from "@/lib/scryfall/import-mapper";
 import { toResolvedCardData } from "@/lib/decks/import-resolution";
 import { KIND_DEFS } from "@/lib/creator/card-kinds";
-import { resolveImportFrame } from "@/lib/creator/frame-resolve";
+import { finalizeImportMatch, resolveImportFrame } from "@/lib/creator/frame-resolve";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import {
@@ -634,8 +634,39 @@ describe("the signature registry's landings (TODO 1.4)", () => {
     expect(landing(signature("dmu-435"))).toEqual({ template: "m15", colorKey: "b", status: "exact" });
   });
 
-  it("a Theros constellation god lands on M15: PipGlyph's Nyx dresses enchantments only", () => {
-    expect(landing(signature("thb-259"))).toEqual({ template: "m15", colorKey: "w", status: "exact" });
+  it("a Theros constellation god asks for Nyx, which an Enchantment Creature borrows (A3)", () => {
+    const heliod = signature("thb-259");
+    expect(heliod.supertype).toBe("Legendary Enchantment");
+    // nyx/w isn't verified on production: M15, and the creator's toast
+    // names the switch.
+    expect(landing(heliod)).toEqual({ template: "m15", colorKey: "w", status: "frame-switched" });
+    // Once it is, the god lands on Nyx — and the route calls it exact.
+    const withNyx = new Set([...PROD_VERIFIED, frameComboKey("nyx", "w")]);
+    expect(landing(heliod, withNyx)).toEqual({ template: "nyx", colorKey: "w", status: "exact" });
+    expect(finalizeImportMatch(heliod, withNyx).frame_match?.status).toBe("exact");
+    expect(finalizeImportMatch(heliod, PROD_VERIFIED).frame_match?.status).toBe("nearest");
+  });
+
+  it("a 2003-frame textless promo lands on the 2003 frame until the textless frame is verified (A9)", () => {
+    // Wrath of God P07 #1: modern/w is verified on production, m15textless/w
+    // isn't — the 2003 frame, as before the registry.
+    const wrath = finalizeImportMatch(signature("p07-1"), PROD_VERIFIED);
+    expect(wrath.frame_match).toMatchObject({ template: "modern", onceVerified: "m15textless" });
+    expect(wrath.frame_template).toBe("modern");
+    expect(landing(wrath)).toEqual({ template: "modern", colorKey: "w", status: "exact" });
+    // Once m15textless/w is verified, the route names it and the import
+    // lands on it; frame_template follows.
+    const withTextless = new Set([...PROD_VERIFIED, frameComboKey("m15textless", "w")]);
+    const later = finalizeImportMatch(signature("p07-1"), withTextless);
+    expect(later.frame_match).toMatchObject({ status: "nearest", template: "m15textless" });
+    expect(later.frame_match?.onceVerified).toBeUndefined();
+    expect(later.frame_template).toBe("m15textless");
+    expect(landing(later, withTextless)).toEqual({ template: "m15textless", colorKey: "w", status: "exact" });
+    // Lightning Bolt P10 #1 is red: modern/r isn't verified, so it falls
+    // forward to M15 while it waits, and the swap is per colour.
+    const bolt = finalizeImportMatch(signature("p10-1"), withTextless);
+    expect(bolt.frame_match?.template).toBe("modern");
+    expect(landing(bolt, withTextless)).toEqual({ template: "m15", colorKey: "r", status: "frame-switched" });
   });
 
   it("a verified full-art basic lands on it; an unverified one falls back to the land frame", () => {
