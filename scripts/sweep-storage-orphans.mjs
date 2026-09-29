@@ -28,8 +28,22 @@
 //                         floor 7 — every bucket, not only card-art)
 //   --batch-size <n>      objects per delete, each batch re-checked first
 //                         (default 25, max 100). Every batch re-reads the
-//                         WHOLE database, so use 100 on production (the
-//                         prompt says how many full reads the run makes)
+//                         WHOLE database — about 2 s on production
+//                         (2026-09-29: 36 tables, 6.6k rows), so keep the
+//                         default; the prompt says how many full reads the
+//                         run makes. It does NOT make storage calls more
+//                         parallel (below)
+//   --storage-concurrency <n>
+//                         storage calls in flight at once — listing pages,
+//                         lookups, downloads, removes, in every mode (default
+//                         4, max 8). A call storage answers "busy" (Too many
+//                         connections, 429, 5xx, no answer) is retried with
+//                         backoff before it counts as failed — a remove only
+//                         for what a fresh re-check still clears. Incident
+//                         2026-09-29: --batch-size 100 fired each batch's
+//                         100 lookups at once and ran storage out of database
+//                         connections after 193 deletes (nothing lost; the
+//                         next run settled it) — scripts/lib/storage-calls.mjs
 //   --limit <n>           delete at most n objects this run (re-run resumes)
 //   --backup-dir <dir>    download each object there before deleting it (an
 //                         object whose copy fails, or whose bytes no longer
@@ -66,15 +80,15 @@
 //
 // --apply, after "type yes", batch by batch: the copies (--backup-dir), then
 // the whole database is scanned AGAIN for that batch's keys and card ids,
-// then every object is looked up again, all at once (gone, a different
-// eTag/size, or now too young → kept), and right after that the batch is
-// noted in the state file and removed; every object is then looked up once
-// more, and only what storage says is gone goes into the manifest (bucket,
-// path, size, eTag, last change, reason, copy). Storage has no conditional
-// delete, so the lookups sit right before the remove. A run that dies
-// mid-delete is settled on the next run (what is gone is logged, the rest is
-// judged again). Nothing about an object is printed but its key, size and
-// age.
+// then every object is looked up again, --storage-concurrency at a time
+// (gone, a different eTag/size, or now too young → kept), and right after
+// that the batch is noted in the state file and removed; every object is
+// then looked up once more, and only what storage says is gone goes into the
+// manifest (bucket, path, size, eTag, last change, reason, copy). Storage has
+// no conditional delete, so the lookups sit right before the remove (a
+// smaller batch keeps that stretch short too). A run that dies mid-delete is
+// settled on the next run (what is gone is logged, the rest is judged
+// again). Nothing about an object is printed but its key, size and age.
 //
 // The dry run also lists, for review only (the orphan sweep never deletes
 // them; the two modes below act on exactly these lists):
@@ -140,6 +154,12 @@ import { AppEndpointError, PRODUCTION_APP_URL, appUrlProblem, createAppEndpoint 
 import { PRODUCTION_SUPABASE_REF, isProductionSupabaseUrl } from "./lib/prod-guard.mjs";
 import { DEFAULT_PER_MINUTE, MAX_PER_MINUTE, runReviewRescan } from "./lib/review-rescan.mjs";
 import {
+  DEFAULT_STORAGE_CONCURRENCY,
+  MAX_STORAGE_CONCURRENCY,
+  limitStorage,
+  storageCallError,
+} from "./lib/storage-calls.mjs";
+import {
   DEFAULT_BATCH_SIZE,
   KeyIndex,
   MAX_BATCH_SIZE,
@@ -178,6 +198,7 @@ const VALUE_FLAGS = new Set([
   "--env-file",
   "--per-minute",
   "--app-url",
+  "--storage-concurrency",
 ]);
 const BARE_FLAGS = new Set(["--apply", "--private-renders", "--rescan-review"]);
 const values = new Map();
@@ -249,6 +270,7 @@ const minAgeDays = values.has("--min-age-days") ? Number(values.get("--min-age-d
 const batchSize = intFlag("--batch-size", DEFAULT_BATCH_SIZE, 1, MAX_BATCH_SIZE);
 const limit = intFlag("--limit", Infinity, 1, Number.MAX_SAFE_INTEGER);
 const perMinute = intFlag("--per-minute", DEFAULT_PER_MINUTE, 1, MAX_PER_MINUTE);
+const storageConcurrency = intFlag("--storage-concurrency", DEFAULT_STORAGE_CONCURRENCY, 1, MAX_STORAGE_CONCURRENCY);
 const backupDir = values.has("--backup-dir") ? path.resolve(values.get("--backup-dir")) : null;
 if (backupDir) {
   const problem = backupDirProblem(backupDir, REPO_ROOT);
@@ -314,39 +336,23 @@ const bucketApi = (bucket) => supabase.storage.from(bucket);
 const isMissing = (error) =>
   (String(error?.statusCode) === "404" || error?.status === 404) && !/bucket/i.test(String(error?.message ?? ""));
 
-const storage = {
-  /** Every object under `prefix`, depth-first (folders have id null). */
-  async *list(bucket, prefix = "") {
-    for (let offset = 0; ; offset += 1000) {
-      const { data, error } = await bucketApi(bucket).list(prefix, {
-        limit: 1000,
-        offset,
-        sortBy: { column: "name", order: "asc" },
-      });
-      if (error) throw new Error(`list ${bucket}/${prefix}: ${error.message}`);
-      for (const entry of data ?? []) {
-        const full = prefix ? `${prefix}/${entry.name}` : entry.name;
-        if (entry.id === null) yield* storage.list(bucket, full);
-        else
-          yield {
-            bucket,
-            path: full,
-            etag: entry.metadata?.eTag ?? null,
-            size: entry.metadata?.size ?? null,
-            createdAt: entry.created_at ?? null,
-            updatedAt: entry.updated_at ?? null,
-            lastModified: entry.metadata?.lastModified ?? null,
-            contentType: entry.metadata?.mimetype ?? null,
-          };
-      }
-      if (!data || data.length < 1000) return;
-    }
+/** One Storage API request per method, nothing more: errors keep their HTTP
+ *  status (storageCallError) so the limiter below can tell "busy" from "no". */
+const rawStorage = {
+  async listPage(bucket, prefix, { offset, limit }) {
+    const { data, error } = await bucketApi(bucket).list(prefix, {
+      limit,
+      offset,
+      sortBy: { column: "name", order: "asc" },
+    });
+    if (error) throw storageCallError(error, `list ${bucket}/${prefix}: `);
+    return data ?? [];
   },
   async info(bucket, objectPath) {
     const { data, error } = await bucketApi(bucket).info(objectPath);
     if (error) {
       if (isMissing(error)) return { missing: true };
-      throw new Error(error.message);
+      throw storageCallError(error);
     }
     return {
       etag: data?.etag ?? null,
@@ -357,15 +363,27 @@ const storage = {
   },
   async remove(bucket, paths) {
     const { data, error } = await bucketApi(bucket).remove(paths);
-    if (error) throw new Error(error.message);
+    if (error) throw storageCallError(error);
     return (data ?? []).map((o) => o.name);
   },
   async download(bucket, objectPath) {
     const { data, error } = await bucketApi(bucket).download(objectPath);
-    if (error || !data) throw new Error(error?.message ?? "empty download");
-    return Buffer.from(await data.arrayBuffer());
+    if (error) throw storageCallError(error);
+    if (!data) throw new Error("empty download");
+    try {
+      return Buffer.from(await data.arrayBuffer());
+    } catch (err) {
+      // The body was cut short (a reset connection): no answer, retryable.
+      throw Object.assign(new Error(`download cut short (${err.message})`), { network: true });
+    }
   },
 };
+
+/** Every storage call of the run — listing pages, lookups, downloads,
+ *  removes, in every mode — through ONE limiter: at most
+ *  --storage-concurrency in flight, a busy storage retried with backoff
+ *  (scripts/lib/storage-calls.mjs; incident 2026-09-29). */
+const storage = limitStorage(rawStorage, { concurrency: storageConcurrency, log: (line) => console.log(line) });
 
 const quoteColumn = (c) => (/^[A-Za-z_][A-Za-z0-9_]*$/.test(c) ? c : `"${c.replaceAll('"', '""')}"`);
 const db = {
@@ -487,7 +505,7 @@ saveState(statePath, state);
 const targetLabel = `${target === "prod" ? "PRODUCTION" : "dev"} (${host})`;
 if (mode !== "orphans") {
   console.log(`${target === "prod" ? "PRODUCTION" : "dev"} ${host} — --${mode} ${apply ? "APPLY" : "dry run"}`);
-  console.log(`State: ${statePath}\nManifest: ${manifestPath}\n`);
+  console.log(`State: ${statePath}\nManifest: ${manifestPath}\nStorage calls: at most ${storageConcurrency} at a time.\n`);
   let code;
   try {
     code =
@@ -537,7 +555,7 @@ console.log(
   `${target === "prod" ? "PRODUCTION" : "dev"} ${host} — ${apply ? "APPLY" : "dry run"}; buckets: ${sweepBuckets.join(", ")}; ` +
     `only objects unchanged for ${minAgeDays} days`,
 );
-console.log(`State: ${statePath}\nManifest: ${manifestPath}\n`);
+console.log(`State: ${statePath}\nManifest: ${manifestPath}\nStorage calls: at most ${storageConcurrency} at a time.\n`);
 
 try {
   await reconcilePending({ storage, state, statePath, manifestPath, target: host, log });
@@ -659,7 +677,7 @@ const count = Math.min(orphans.length, limit);
 const reads = plannedBatches(orphans, batchSize, limit);
 console.log(
   `\n--apply re-reads the whole database once per batch: ${reads} batch(es) of up to ${batchSize} → ${reads} full read(s) of ` +
-    `every table.${target === "prod" && batchSize < MAX_BATCH_SIZE ? ` On production use --batch-size ${MAX_BATCH_SIZE} to cut that.` : ""}`,
+    `every table. Storage calls: at most ${storageConcurrency} at a time (--storage-concurrency).`,
 );
 const answer = await promptLine(
   `\nDelete ${count === orphans.length ? "" : `${count} of `}${orphans.length} object(s) (${formatBytes(reclaimable)}) from ` +

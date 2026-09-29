@@ -130,33 +130,97 @@ export type StorageOpts = {
   lookupFailsAfterRemove?: string[];
   /** How info() formats the eTag (the listing keeps the stored form). */
   infoEtag?: (etag: string) => string;
+  /** Storage's own database pool (incident 2026-09-29): a call made while
+   *  this many are already in flight fails with "Too many connections issued
+   *  to the database". Every call then takes a macrotask, so calls made
+   *  together really overlap. */
+  maxConcurrent?: number;
+  /** info() of these paths answers "Too many connections…" this many times
+   *  first (then normally) — a busy storage, whatever the concurrency. */
+  busyInfo?: Record<string, number>;
+  /** The same, counted only once a remove has run (the confirm lookups). */
+  busyInfoAfterRemove?: Record<string, number>;
+  /** The first this-many removes answer "Too many connections…" without
+   *  removing anything (the pool refused them). */
+  busyRemove?: number;
+  /** The first this-many removes DO remove, then answer "Too many
+   *  connections…" — an answer lost after the delete went through. */
+  busyRemoveAfterDelete?: number;
 };
+
+/** What Supabase Storage answered on 2026-09-29 when its database pool ran
+ *  dry — an error with no HTTP status here, as an in-memory fake has none
+ *  (the HTTP fake below adds one). */
+export const tooManyConnections = () => new Error("Too many connections issued to the database");
 
 export function fakeStorage(objects: Obj[], opts: StorageOpts = {}) {
   const store = new Map(objects.map((o) => [`${o.bucket}/${o.path}`, { ...o }]));
   let removed = false;
+  /** `peak`: most calls in flight at once; `refused`: calls the pool turned away. */
+  const stats = { inFlight: 0, peak: 0, refused: 0 };
+  const busyLeft = new Map(Object.entries(opts.busyInfo ?? {}));
+  const busyAfterRemoveLeft = new Map(Object.entries(opts.busyInfoAfterRemove ?? {}));
+  let busyRemoveLeft = opts.busyRemove ?? 0;
+  let busyRemoveAfterDeleteLeft = opts.busyRemoveAfterDelete ?? 0;
+  const pool = async <T>(fn: () => T | Promise<T>): Promise<T> => {
+    if (opts.maxConcurrent === undefined) return fn();
+    if (stats.inFlight >= opts.maxConcurrent) {
+      stats.refused += 1;
+      throw tooManyConnections();
+    }
+    stats.inFlight += 1;
+    stats.peak = Math.max(stats.peak, stats.inFlight);
+    try {
+      await new Promise((resolve) => setImmediate(resolve));
+      return await fn();
+    } finally {
+      stats.inFlight -= 1;
+    }
+  };
   return {
     store,
+    stats,
     removes: [] as string[][],
     async info(bucket: string, p: string) {
-      if (removed && opts.lookupFailsAfterRemove?.includes(p)) throw new Error("lookup timed out");
-      const o = store.get(`${bucket}/${p}`);
-      return o
-        ? { etag: opts.infoEtag ? opts.infoEtag(o.etag) : o.etag, size: o.size, createdAt: o.createdAt, lastModified: o.updatedAt }
-        : { missing: true };
+      return pool(() => {
+        for (const left of removed ? [busyLeft, busyAfterRemoveLeft] : [busyLeft]) {
+          const busy = left.get(p) ?? 0;
+          if (busy > 0) {
+            left.set(p, busy - 1);
+            throw tooManyConnections();
+          }
+        }
+        if (removed && opts.lookupFailsAfterRemove?.includes(p)) throw new Error("lookup timed out");
+        const o = store.get(`${bucket}/${p}`);
+        return o
+          ? { etag: opts.infoEtag ? opts.infoEtag(o.etag) : o.etag, size: o.size, createdAt: o.createdAt, lastModified: o.updatedAt }
+          : { missing: true as const };
+      });
     },
     async remove(bucket: string, paths: string[]) {
-      this.removes.push(paths.map((p) => `${bucket}/${p}`));
-      if (opts.removeFails) throw new Error("gateway timeout");
-      removed = true;
-      const gone = paths.filter((p) => opts.sticky?.includes(p) || store.delete(`${bucket}/${p}`));
-      if (opts.echo === "none") return [];
-      if (opts.echo === "renamed") return gone.map((p) => `${bucket}/${p}`);
-      return gone;
+      return pool(() => {
+        this.removes.push(paths.map((p) => `${bucket}/${p}`));
+        if (opts.removeFails) throw new Error("gateway timeout");
+        if (busyRemoveLeft > 0) {
+          busyRemoveLeft -= 1;
+          throw tooManyConnections();
+        }
+        removed = true;
+        const gone = paths.filter((p) => opts.sticky?.includes(p) || store.delete(`${bucket}/${p}`));
+        if (busyRemoveAfterDeleteLeft > 0) {
+          busyRemoveAfterDeleteLeft -= 1;
+          throw tooManyConnections();
+        }
+        if (opts.echo === "none") return [];
+        if (opts.echo === "renamed") return gone.map((p) => `${bucket}/${p}`);
+        return gone;
+      });
     },
     async download(bucket: string, p: string) {
-      if (opts.downloadFails === p) throw new Error("download failed");
-      return Buffer.from(`bytes of ${bucket}/${p}`);
+      return pool(() => {
+        if (opts.downloadFails === p) throw new Error("download failed");
+        return Buffer.from(`bytes of ${bucket}/${p}`);
+      });
     },
   };
 }
@@ -219,7 +283,31 @@ export type FakeSupabaseHooks = {
   /** A server max-rows below what the client asks for: a GET returns at most
    *  this many rows (its `Prefer: count=exact` total still counts them all). */
   maxRows?: () => number;
+  /** Storage's own database pool (incident 2026-09-29), for every
+   *  /storage/v1/ request: one that arrives while `max` are in flight — or
+   *  that `refuse(method, path)` picks — is answered like production answered
+   *  that day ("Too many connections issued to the database"; HTTP 544 here,
+   *  storage's pool-timeout status — the script retries on the message
+   *  whatever the status). `delayMs` holds every storage answer back so
+   *  requests sent together overlap. `peak` / `refused` are filled in. */
+  storagePool?: StoragePool;
 };
+
+export type StoragePool = {
+  max?: number;
+  delayMs?: number;
+  refuse?: (method: string, path: string) => boolean;
+  inFlight: number;
+  peak: number;
+  refused: number;
+};
+
+export const storagePool = (opts: Partial<Pick<StoragePool, "max" | "delayMs" | "refuse">> = {}): StoragePool => ({
+  ...opts,
+  inFlight: 0,
+  peak: 0,
+  refused: 0,
+});
 
 /** Storage (list / info / download / remove) + PostgREST (the OpenAPI
  *  document, GET with select/order/limit/offset and the filters above, PATCH)
@@ -236,6 +324,30 @@ export function fakeSupabase(store: Map<string, StoredObject>, db: Db, hooks: Fa
     res.end(JSON.stringify(body));
   };
   return createServer(async (req, res) => {
+    const pool = hooks.storagePool;
+    const early = new URL(req.url ?? "/", "http://x");
+    if (pool && early.pathname.startsWith("/storage/v1/")) {
+      const path = decodeURIComponent(early.pathname);
+      if ((pool.max !== undefined && pool.inFlight >= pool.max) || pool.refuse?.(req.method ?? "GET", path)) {
+        pool.refused += 1;
+        await readBody(req);
+        return json(res, 544, { statusCode: "544", code: "DatabaseTimeout", error: "DatabaseTimeout", message: "Too many connections issued to the database" });
+      }
+      pool.inFlight += 1;
+      pool.peak = Math.max(pool.peak, pool.inFlight);
+      // Out of the pool the moment the answer is written (before the client
+      // can see it and send the next request).
+      const end = res.end.bind(res) as (...args: unknown[]) => ServerResponse;
+      let released = false;
+      res.end = ((...args: unknown[]) => {
+        if (!released) {
+          released = true;
+          pool.inFlight -= 1;
+        }
+        return end(...args);
+      }) as typeof res.end;
+      if (pool.delayMs) await new Promise((resolve) => setTimeout(resolve, pool.delayMs));
+    }
     const body = await readBody(req);
     const u = new URL(req.url ?? "/", "http://x");
     const p = decodeURIComponent(u.pathname);

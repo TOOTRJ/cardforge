@@ -24,6 +24,7 @@ import {
   runReviewRescan,
 } from "@/scripts/lib/review-rescan.mjs";
 import { loadState, readManifest, reconcilePending, reviewList } from "@/scripts/lib/storage-orphans.mjs";
+import { limitStorage } from "@/scripts/lib/storage-calls.mjs";
 import { emptyDb, fakeDb, fakeStorage, fakeSupabase, type Obj, type StoredObject } from "./helpers/fake-supabase";
 import { fakeApp, type RowAction } from "./helpers/fake-app";
 
@@ -294,6 +295,74 @@ describe("applyFlagged — the upload path's consequence, nothing more", () => {
       setAppDown: (v: boolean) => (appDown = v),
     };
   }
+
+  it("a busy storage is retried (incident 2026-09-29): a lookup and a confirm that answer \"Too many connections\" first still decide", async () => {
+    const flagged = listed("card-art", `${U1}/nsfw.jpg`);
+    const s = setup([flagged], { busyInfo: { [`${U1}/nsfw.jpg`]: 1 }, busyInfoAfterRemove: { [`${U1}/nsfw.jpg`]: 1 } });
+    const waits: number[] = [];
+    const storage = limitStorage(s.storage, { sleep: async (ms: number) => void waits.push(ms) });
+    const result = await applyFlagged({
+      storage,
+      flagged: [flagged],
+      references: new Map(),
+      state: s.state,
+      statePath: s.statePath,
+      manifestPath: s.manifestPath,
+      target: "dev.example",
+      run: "r1",
+    });
+    expect(result).toMatchObject({ deleted: 1, skipped: [], failed: [] });
+    expect(waits).toHaveLength(2);
+    expect(s.storage.store.size).toBe(0);
+    expect(loadState(s.statePath)).toMatchObject({ pending: null, deleted: 1 });
+  });
+
+  it("a busy remove is sent again only while a fresh lookup still shows the scanned bytes: a re-upload at the same name during the wait is kept", async () => {
+    const flagged = listed("custom-pips", `${U1}/nsfw-W.png`, "image/png");
+    const s = setup([flagged], { busyRemoveAfterDelete: 1 });
+    const reuploaded = { ...s.storage.store.get(`custom-pips/${U1}/nsfw-W.png`)!, etag: '"re-uploaded"' };
+    // The first remove went through but its answer was lost; the pip is
+    // saved again at its fixed name while we wait.
+    const sleep = async () => void s.storage.store.set(`custom-pips/${U1}/nsfw-W.png`, reuploaded);
+    const result = await applyFlagged({
+      storage: limitStorage(s.storage, { sleep }),
+      flagged: [flagged],
+      references: new Map(),
+      state: s.state,
+      statePath: s.statePath,
+      manifestPath: s.manifestPath,
+      target: "dev.example",
+      run: "r1",
+    });
+    expect(s.storage.removes).toHaveLength(1);
+    expect(s.storage.store.get(`custom-pips/${U1}/nsfw-W.png`)).toEqual(reuploaded);
+    expect(result).toMatchObject({ deleted: 0, failed: [] });
+    expect(result.skipped).toEqual([
+      { bucket: "custom-pips", path: `${U1}/nsfw-W.png`, why: "changed since it was scanned — the next run scans the new bytes" },
+    ]);
+    expect(loadState(s.statePath)).toMatchObject({ pending: null });
+  });
+
+  it("a busy remove refused outright is sent again once the lookup still shows the scanned bytes", async () => {
+    const flagged = listed("card-art", `${U1}/nsfw.jpg`);
+    const s = setup([flagged], { busyRemove: 2 });
+    const waits: number[] = [];
+    const result = await applyFlagged({
+      storage: limitStorage(s.storage, { sleep: async (ms: number) => void waits.push(ms), random: () => 0.5 }),
+      flagged: [flagged],
+      references: new Map(),
+      state: s.state,
+      statePath: s.statePath,
+      manifestPath: s.manifestPath,
+      target: "dev.example",
+      run: "r1",
+    });
+    expect(waits).toEqual([1000, 2000]);
+    expect(s.storage.removes).toHaveLength(3);
+    expect(result).toMatchObject({ deleted: 1, skipped: [], failed: [] });
+    expect(s.storage.store.size).toBe(0);
+    expect(loadState(s.statePath)).toMatchObject({ pending: null, deleted: 1 });
+  });
 
   it("acts on the rows that draw the file through the app FIRST, then removes exactly the flagged object — every action in the manifest", async () => {
     const flagged = listed("card-art", `${U1}/nsfw.jpg`);

@@ -50,6 +50,7 @@
 // ---------------------------------------------------------------------------
 import { imageModerationRequest, scanVerdict } from "../../lib/moderation/image-scan-core.ts";
 import { AppEndpointError } from "./app-endpoint.mjs";
+import { limitStorage } from "./storage-calls.mjs";
 import {
   KeyIndex,
   appendManifest,
@@ -359,10 +360,11 @@ const describePlace = (p) =>
  *      through `app.flaggedFile` — every result appended to the manifest; a
  *      FAILED action keeps the file (a re-run retries, the app re-checks each
  *      row); the app not answering stops the run;
- *   3. gone already → nothing to delete; else `state.pending`, the remove,
- *      then storage's own answer: gone → the manifest (with its categories
- *      and the rows that named it); lookup failed → stays pending, the next
- *      run settles it.
+ *   3. gone already → nothing to delete; else `state.pending`, the remove
+ *      (a busy one sent again only while a fresh lookup still shows the
+ *      scanned bytes — `removeRechecked`), then storage's own answer: gone →
+ *      the manifest (with its categories and the rows that named it); lookup
+ *      failed → stays pending, the next run settles it.
  */
 export async function applyFlagged({
   storage,
@@ -377,6 +379,7 @@ export async function applyFlagged({
   log = () => {},
 }) {
   withVerdicts(state);
+  storage = limitStorage(storage, { log });
   const result = { deleted: 0, bytes: 0, skipped: [], failed: [], rows: { done: 0, skipped: 0, failed: 0 } };
   const skip = (f, why) => {
     result.skipped.push({ bucket: f.bucket, path: f.path, why });
@@ -448,8 +451,28 @@ export async function applyFlagged({
     };
     state.pending = { bucket: f.bucket, run, at: new Date().toISOString(), items: [item] };
     saveState(statePath, state);
+    // A busy remove is sent again only while a fresh lookup still shows the
+    // bytes that were scanned (removeRechecked, scripts/lib/storage-calls
+    // .mjs): gone → not sent (the first try took it; the confirm records
+    // it), new bytes or no answer → not sent, kept.
+    let notSentAgain = null;
+    const recheck = async () => {
+      let again;
+      try {
+        again = await storage.info(f.bucket, f.path);
+      } catch (err) {
+        notSentAgain = `lookup failed before the delete was sent again (${err.message})`;
+        return [];
+      }
+      if (again.missing) return [];
+      if (!sameEtag(again.etag, f.etag)) {
+        notSentAgain = "changed since it was scanned — the next run scans the new bytes";
+        return [];
+      }
+      return [f.path];
+    };
     try {
-      await storage.remove(f.bucket, [f.path]);
+      await storage.removeRechecked(f.bucket, [f.path], recheck);
     } catch (err) {
       result.failed.push({ bucket: f.bucket, paths: [f.path], error: err.message });
       log(`  ✗ ${f.bucket}/${f.path}: delete failed (${err.message}) — re-run to settle it`);
@@ -466,7 +489,7 @@ export async function applyFlagged({
     state.pending = null;
     if (!after.missing) {
       saveState(statePath, state);
-      skip(f, "storage did not remove it");
+      skip(f, notSentAgain ?? "storage did not remove it");
       continue;
     }
     appendManifest(manifestPath, [{ ...manifestEntry(target, f.bucket, item, run), categories, usedBy }]);
@@ -513,6 +536,7 @@ export async function runReviewRescan({
   log = () => {},
 }) {
   withVerdicts(state);
+  storage = limitStorage(storage, { log });
   await reconcilePending({ storage, state, statePath, manifestPath, target, log });
 
   const listed = [];
