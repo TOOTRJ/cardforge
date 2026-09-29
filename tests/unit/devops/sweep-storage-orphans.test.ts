@@ -1,7 +1,7 @@
 import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import os from "node:os";
 import path from "node:path";
@@ -34,6 +34,7 @@ import {
   textColumns,
   userFolderKey,
 } from "@/scripts/lib/storage-orphans.mjs";
+import { emptyDb, fakeDb, fakeStorage, fakeSupabase, openApiOf, type Db, type Obj, type StoredObject } from "./helpers/fake-supabase";
 
 vi.mock("@/lib/supabase/admin", () => ({ isAdminConfigured: () => false, createAdminClient: () => ({}) }));
 
@@ -60,157 +61,9 @@ const HOST = "https://auth.pipglyph.com";
 const LEGACY = "https://zkwkisxoqdhdchqyjwdc.supabase.co";
 const pub = (bucket: string, key: string, host = HOST) => `${host}/storage/v1/object/public/${bucket}/${key}`;
 
-// --- fake database -----------------------------------------------------------------
-
-type Row = Record<string, unknown>;
-type TableDef = { pk: string[]; columns: Record<string, string>; rows: Row[] };
-type Db = Record<string, TableDef>;
-
-/** Every table the app has, with its real column types (as PostgREST's
- *  OpenAPI document spells them) and no rows. */
-function emptyDb(): Db {
-  const t = (pk: string[], columns: Record<string, string>): TableDef => ({ pk, columns, rows: [] });
-  return {
-    cards: t(["id"], {
-      id: "uuid",
-      owner_id: "uuid",
-      title: "text",
-      art_url: "text",
-      back_face: "jsonb",
-      set_icon_url: "text",
-      watermark: "jsonb",
-      face_content: "jsonb",
-      metadata: "jsonb",
-      rendered_image_url: "text",
-      rendered_thumb_url: "text",
-      tags: "text[]",
-      created_at: "timestamp with time zone",
-      likes_count: "integer",
-    }),
-    profiles: t(["id"], { id: "uuid", avatar_url: "text", banner_url: "text", bio: "text" }),
-    decks: t(["id"], { id: "uuid", cover_url: "text", cover_position: "jsonb" }),
-    deck_cards: t(["id"], { id: "uuid", deck_id: "uuid", image_url: "text" }),
-    custom_pips: t(["id"], { id: "uuid", symbol: "text", image_url: "text" }),
-    challenges: t(["id"], { id: "uuid", hero_image_url: "text" }),
-    ai_generation_jobs: t(["id"], { id: "uuid", request: "jsonb", plan: "jsonb", steps: "jsonb" }),
-    card_idea_batches: t(["id"], { id: "uuid", request: "jsonb", ideas: "jsonb" }),
-    deck_idea_batches: t(["id"], { id: "uuid", request: "jsonb", ideas: "jsonb" }),
-    notifications: t(["id"], { id: "bigint", payload: "jsonb" }),
-    site_updates: t(["id"], { id: "uuid", summary: "text", body: "text", link_href: "text" }),
-    card_exports: t(["id"], { id: "uuid", file_url: "text", storage_path: "text" }),
-    messages: t(["id"], { id: "uuid", body: "text" }),
-    feedback: t(["id"], { id: "uuid", page_url: "text" }),
-    site_settings: t(["key"], { key: "text", value: "jsonb" }),
-    frame_reviews: t(["template", "color_key"], { template: "text", color_key: "text", score_json: "jsonb" }),
-    card_likes: t(["id"], { id: "uuid", card_id: "uuid", user_id: "uuid" }),
-  };
-}
-
-function openApiOf(db: Db) {
-  return {
-    swagger: "2.0",
-    definitions: Object.fromEntries(
-      Object.entries(db).map(([name, def]) => [
-        name,
-        {
-          type: "object",
-          properties: Object.fromEntries(
-            Object.entries(def.columns).map(([c, format]) => [
-              c,
-              { format, type: "string", ...(def.pk.includes(c) ? { description: "Note:\nThis is a Primary Key.<pk/>" } : {}) },
-            ]),
-          ),
-        },
-      ]),
-    ),
-  };
-}
-
-const compare = (a: unknown, b: unknown) =>
-  typeof a === "number" && typeof b === "number" ? a - b : String(a) < String(b) ? -1 : String(a) > String(b) ? 1 : 0;
-
-/** PostgREST's semantics for what the scan asks: select, order, `gt` on the
- *  first order column, offset, limit — capped at `maxRows` like a server
- *  whose max-rows is below the page the client asks for. */
-function selectRows(db: Db, table: string, q: { columns: string[]; order: string[]; after: unknown; offset: number; limit: number }, maxRows = Infinity) {
-  const def = db[table];
-  if (!def) throw new Error(`relation "${table}" does not exist`);
-  for (const c of q.columns) if (!(c in def.columns)) throw new Error(`column ${table}.${c} does not exist`);
-  let rows = [...def.rows].sort((a, b) => {
-    for (const c of q.order) {
-      const d = compare(a[c], b[c]);
-      if (d) return d;
-    }
-    return 0;
-  });
-  if (q.after !== null && q.after !== undefined) rows = rows.filter((r) => compare(r[q.order[0]], q.after) > 0);
-  return rows
-    .slice(q.offset, q.offset + Math.min(q.limit, maxRows))
-    .map((r) => Object.fromEntries(q.columns.map((c) => [c, r[c] ?? null])));
-}
-
-function fakeDb(db: Db, opts: { maxRows?: number; failOn?: string; onScan?: (n: number) => void } = {}) {
-  let scans = 0;
-  return {
-    selects: [] as string[],
-    async openApi() {
-      scans += 1;
-      opts.onScan?.(scans);
-      return openApiOf(db);
-    },
-    async select(table: string, q: { columns: string[]; order: string[]; after: unknown; offset: number; limit: number }) {
-      this.selects.push(table);
-      if (opts.failOn === table) throw new Error(`read ${table}: boom`);
-      return selectRows(db, table, q, opts.maxRows);
-    },
-  };
-}
-
-// --- fake storage --------------------------------------------------------------------
-
-type Obj = { bucket: string; path: string; size: number; etag: string; createdAt: string; updatedAt: string; lastModified: string };
-
-type StorageOpts = {
-  removeFails?: boolean;
-  downloadFails?: string;
-  /** What remove() echoes back: the paths (default), nothing, or other names. */
-  echo?: "paths" | "none" | "renamed";
-  /** Paths remove() names as removed but leaves in place. */
-  sticky?: string[];
-  /** info() throws for these paths once a remove has run. */
-  lookupFailsAfterRemove?: string[];
-  /** How info() formats the eTag (the listing keeps the stored form). */
-  infoEtag?: (etag: string) => string;
-};
-
-function fakeStorage(objects: Obj[], opts: StorageOpts = {}) {
-  const store = new Map(objects.map((o) => [`${o.bucket}/${o.path}`, { ...o }]));
-  let removed = false;
-  return {
-    store,
-    removes: [] as string[][],
-    async info(bucket: string, p: string) {
-      if (removed && opts.lookupFailsAfterRemove?.includes(p)) throw new Error("lookup timed out");
-      const o = store.get(`${bucket}/${p}`);
-      return o
-        ? { etag: opts.infoEtag ? opts.infoEtag(o.etag) : o.etag, size: o.size, createdAt: o.createdAt, lastModified: o.updatedAt }
-        : { missing: true };
-    },
-    async remove(bucket: string, paths: string[]) {
-      this.removes.push(paths.map((p) => `${bucket}/${p}`));
-      if (opts.removeFails) throw new Error("gateway timeout");
-      removed = true;
-      const gone = paths.filter((p) => opts.sticky?.includes(p) || store.delete(`${bucket}/${p}`));
-      if (opts.echo === "none") return [];
-      if (opts.echo === "renamed") return gone.map((p) => `${bucket}/${p}`);
-      return gone;
-    },
-    async download(bucket: string, p: string) {
-      if (opts.downloadFails === p) throw new Error("download failed");
-      return Buffer.from(`bytes of ${bucket}/${p}`);
-    },
-  };
-}
+// The fake database + storage and the fake Supabase over HTTP live in
+// ./helpers/fake-supabase.ts (shared with the --private-renders and
+// --rescan-review tests).
 
 const obj = (bucket: string, p: string, ageDays = 30, extra: Partial<Obj> = {}): Obj => ({
   bucket,
@@ -778,89 +631,6 @@ function spawnSyncGit(dir: string) {
 }
 
 // --- the CLI against a fake Supabase ------------------------------------------------------
-
-type StoredObject = { bytes: Buffer; etag: string; created: string; updated: string };
-
-function fakeSupabase(store: Map<string, StoredObject>, db: Db, hooks: { onOpenApi?: () => void } = {}): Server {
-  const readBody = (req: IncomingMessage) =>
-    new Promise<Buffer>((resolve) => {
-      const parts: Buffer[] = [];
-      req.on("data", (d) => parts.push(d));
-      req.on("end", () => resolve(Buffer.concat(parts)));
-    });
-  const json = (res: ServerResponse, status: number, body: unknown) => {
-    res.writeHead(status, { "content-type": "application/json" });
-    res.end(JSON.stringify(body));
-  };
-  return createServer(async (req, res) => {
-    const body = await readBody(req);
-    const u = new URL(req.url ?? "/", "http://x");
-    const p = decodeURIComponent(u.pathname);
-    if (req.method === "GET" && (p === "/rest/v1/" || p === "/rest/v1")) {
-      hooks.onOpenApi?.();
-      return json(res, 200, openApiOf(db));
-    }
-    if (req.method === "GET" && p.startsWith("/rest/v1/")) {
-      const table = p.slice("/rest/v1/".length);
-      const columns = (u.searchParams.get("select") ?? "*").split(",");
-      const order = (u.searchParams.get("order") ?? "").split(",").filter(Boolean).map((o) => o.split(".")[0]);
-      let after: unknown = null;
-      for (const [k, v] of u.searchParams) {
-        if (k === order[0] && v.startsWith("gt.")) {
-          const raw = v.slice(3);
-          after = db[table]?.columns[k] === "bigint" ? Number(raw) : raw;
-        }
-      }
-      try {
-        return json(res, 200, selectRows(db, table, { columns, order, after, offset: Number(u.searchParams.get("offset") ?? 0), limit: Number(u.searchParams.get("limit") ?? 1000) }));
-      } catch (err) {
-        return json(res, 400, { message: (err as Error).message });
-      }
-    }
-    const LIST = "/storage/v1/object/list/";
-    const INFO = "/storage/v1/object/info/";
-    const OBJECT = "/storage/v1/object/";
-    if (req.method === "POST" && p.startsWith(LIST)) {
-      const bucket = p.slice(LIST.length);
-      const { prefix = "", limit = 100, offset = 0 } = JSON.parse(body.toString() || "{}");
-      const base = `${bucket}/${prefix ? `${prefix}/` : ""}`;
-      const entries = new Map<string, StoredObject | null>();
-      for (const [key, o] of store) {
-        if (!key.startsWith(base)) continue;
-        const [head, ...rest] = key.slice(base.length).split("/");
-        entries.set(head, rest.length ? null : o);
-      }
-      const page = [...entries].sort(([a], [b]) => (a < b ? -1 : 1)).slice(offset, offset + limit);
-      return json(
-        res,
-        200,
-        page.map(([name, o]) =>
-          o
-            ? { name, id: `id-${name}`, created_at: o.created, updated_at: o.updated, metadata: { eTag: o.etag, size: o.bytes.length, lastModified: o.updated } }
-            : { name, id: null, metadata: null },
-        ),
-      );
-    }
-    if (req.method === "GET" && p.startsWith(INFO)) {
-      const o = store.get(p.slice(INFO.length));
-      if (!o) return json(res, 400, { statusCode: "404", error: "not_found", message: "Object not found" });
-      return json(res, 200, { size: o.bytes.length, etag: o.etag, created_at: o.created, last_modified: o.updated });
-    }
-    if (req.method === "DELETE" && p.startsWith(OBJECT)) {
-      const bucket = p.slice(OBJECT.length);
-      const { prefixes = [] } = JSON.parse(body.toString() || "{}");
-      const removed = (prefixes as string[]).filter((k) => store.delete(`${bucket}/${k}`));
-      return json(res, 200, removed.map((name) => ({ name, bucket_id: bucket })));
-    }
-    if (req.method === "GET" && p.startsWith(OBJECT)) {
-      const o = store.get(p.slice(OBJECT.length));
-      if (!o) return json(res, 400, { statusCode: "404", error: "not_found", message: "Object not found" });
-      res.writeHead(200, { "content-type": "application/octet-stream" });
-      return res.end(o.bytes);
-    }
-    json(res, 400, { message: `unexpected ${req.method} ${p}` });
-  });
-}
 
 describe("scripts/sweep-storage-orphans.mjs against a fake Supabase", () => {
   let tmp = "";

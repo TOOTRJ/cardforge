@@ -9,6 +9,8 @@
 //   node scripts/sweep-storage-orphans.mjs                        # dev, dry run
 //   node scripts/sweep-storage-orphans.mjs --target prod          # prod, dry run
 //   node scripts/sweep-storage-orphans.mjs --target prod --apply  # prod, delete
+//   node scripts/sweep-storage-orphans.mjs --target prod --rescan-review [--apply]
+//   node scripts/sweep-storage-orphans.mjs --target prod --private-renders [--apply]
 //
 // Run it from an up-to-date `main` checkout (trusted code). Production's
 // secret key is asked for at a hidden prompt (it never lives in .env.local or
@@ -36,10 +38,14 @@
 //                         backups are users' images (refused); use e.g.
 //                         ~/.pipglyph/sweep-backups/<date>
 //   --state <file>        resume file (default ~/.pipglyph/sweep-storage-
-//                         orphans.<project>.json)
+//                         orphans.<project>[.<mode>].json)
 //   --manifest <file>     delete log, JSON lines (default ~/.pipglyph/sweep-
-//                         storage-orphans.<project>.manifest.jsonl)
+//                         storage-orphans.<project>[.<mode>].manifest.jsonl)
 //   --env-file <path>     dev target's env file (default .env.local)
+//   --private-renders     the private-render clean-up (below)
+//   --rescan-review       the review list's moderation rescan (below)
+//   --per-minute <n>      --rescan-review only: moderation calls a minute
+//                         (default 60, max 600)
 //
 // An object is an ORPHAN when all of these hold (scripts/lib/storage-orphans
 // .mjs):
@@ -66,12 +72,41 @@
 // judged again). Nothing about an object is printed but its key, size and
 // age.
 //
-// The dry run also lists, for review only (nothing here deletes them):
+// The dry run also lists, for review only (the orphan sweep never deletes
+// them; the two modes below act on exactly these lists):
 //   * renders of PRIVATE cards that are still stored — publicly fetchable at
 //     their fixed URL; going private should have deleted them;
 //   * user-folder objects whose names the server doesn't make — an older
 //     upload path, or a file written straight to storage with the user's own
 //     session before 0126 (it skipped the sniff, the strip and the scan).
+//
+// Two more modes, one per list (owner decisions 2026-09-29), each with its
+// own state + manifest (`…<project>.<mode>.json` / `.manifest.jsonl`):
+//
+//   --private-renders   remove the card-renders PNG + thumb of every card
+//                       that is PRIVATE or deleted — never a public or
+//                       unlisted card's — and clear the render pointer of the
+//                       private ones, as going private does. The visibility
+//                       is read again right before each delete. Takes
+//                       --batch-size (cards) and --limit (objects); refuses
+//                       --bucket, --min-age-days and --backup-dir.
+//                       scripts/lib/private-renders.mjs.
+//   --rescan-review     run the upload path's moderation scan (lib/moderation/
+//                       image-scan-core.ts) on the review list above and, with
+//                       --apply, remove each flagged file — the upload path's
+//                       consequence, nothing more: rows that name one are
+//                       listed, not changed. Paced (--per-minute, default 60),
+//                       resumable (a verdict is kept per object and eTag).
+//                       OPENAI_API_KEY: production's at a hidden prompt, the
+//                       dev target's from the env file. Takes --bucket and
+//                       --limit (scans); refuses --min-age-days, --batch-size
+//                       and --backup-dir (a flagged file is never copied).
+//                       scripts/lib/review-rescan.mjs.
+//
+// The owner's order (docs/ENVIRONMENTS.md §4): dry run → --rescan-review
+// (dry run, then --apply) → --private-renders (dry run, then --apply) → the
+// orphan sweep's --apply, last because its --backup-dir copies what it
+// deletes to disk (flagged files and private renders go first, uncopied).
 // ---------------------------------------------------------------------------
 import { existsSync, readFileSync } from "node:fs";
 import os from "node:os";
@@ -79,8 +114,12 @@ import path from "node:path";
 import readline from "node:readline";
 import { fileURLToPath } from "node:url";
 import { createClient } from "@supabase/supabase-js";
+import OpenAI from "openai";
+import { IMAGE_MODERATION_TIMEOUT_MS } from "../lib/moderation/image-scan-core.ts";
 import { promptHidden } from "./lib/hidden-prompt.mjs";
+import { CARD_READ_CHUNK, RENDER_POINTER_COLUMNS, runPrivateRenders } from "./lib/private-renders.mjs";
 import { PRODUCTION_SUPABASE_REF, isProductionSupabaseUrl } from "./lib/prod-guard.mjs";
+import { DEFAULT_PER_MINUTE, MAX_PER_MINUTE, runReviewRescan } from "./lib/review-rescan.mjs";
 import {
   DEFAULT_BATCH_SIZE,
   KeyIndex,
@@ -94,16 +133,15 @@ import {
   backupDirProblem,
   classify,
   formatBytes,
-  isServerMintedName,
   loadState,
   plannedBatches,
   privateCardRenders,
   reconcilePending,
   referenceKey,
+  reviewList,
   saveState,
   scanReferences,
   summarize,
-  userFolderKey,
 } from "./lib/storage-orphans.mjs";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -119,8 +157,9 @@ const VALUE_FLAGS = new Set([
   "--state",
   "--manifest",
   "--env-file",
+  "--per-minute",
 ]);
-const BARE_FLAGS = new Set(["--apply"]);
+const BARE_FLAGS = new Set(["--apply", "--private-renders", "--rescan-review"]);
 const values = new Map();
 const buckets = [];
 const bare = new Set();
@@ -153,6 +192,27 @@ const intFlag = (name, fallback, min, max) => {
 const target = values.get("--target") ?? "dev";
 if (target !== "dev" && target !== "prod") fail("--target must be dev or prod.");
 const apply = bare.has("--apply");
+if (bare.has("--private-renders") && bare.has("--rescan-review")) fail("--private-renders and --rescan-review are separate runs — pick one.");
+const mode = bare.has("--private-renders") ? "private-renders" : bare.has("--rescan-review") ? "rescan-review" : "orphans";
+/** Flags a mode refuses, and why. */
+const REFUSED = {
+  orphans: { "--per-minute": "only --rescan-review calls the moderation API" },
+  "private-renders": {
+    "--bucket": "it only reads card-renders",
+    "--min-age-days": "a private or deleted card's render goes whatever its age",
+    "--backup-dir": "a render is derived (a card published again is baked again) and a deleted card's image is not kept",
+    "--per-minute": "only --rescan-review calls the moderation API",
+  },
+  "rescan-review": {
+    "--min-age-days": "the review list is scanned whatever its age",
+    "--batch-size": "flagged files are deleted one at a time",
+    "--backup-dir": "a flagged file is never copied off storage",
+  },
+};
+for (const [flag, why] of Object.entries(REFUSED[mode])) {
+  const given = flag === "--bucket" ? buckets.length > 0 : values.has(flag);
+  if (given) fail(`${flag} doesn't apply${mode === "orphans" ? "" : ` to --${mode}`}: ${why}.`);
+}
 for (const b of buckets) {
   if (b in NOT_SWEPT) fail(`--bucket ${b}: never swept — ${NOT_SWEPT[b]}.`);
   if (!SWEEP_BUCKETS.includes(b)) fail(`--bucket ${b}: only ${SWEEP_BUCKETS.join(", ")}.`);
@@ -165,6 +225,7 @@ if (values.has("--min-age-days")) {
 const minAgeDays = values.has("--min-age-days") ? Number(values.get("--min-age-days")) : MIN_AGE_DAYS;
 const batchSize = intFlag("--batch-size", DEFAULT_BATCH_SIZE, 1, MAX_BATCH_SIZE);
 const limit = intFlag("--limit", Infinity, 1, Number.MAX_SAFE_INTEGER);
+const perMinute = intFlag("--per-minute", DEFAULT_PER_MINUTE, 1, MAX_PER_MINUTE);
 const backupDir = values.has("--backup-dir") ? path.resolve(values.get("--backup-dir")) : null;
 if (backupDir) {
   const problem = backupDirProblem(backupDir, REPO_ROOT);
@@ -194,6 +255,8 @@ function promptLine(question) {
 
 let url;
 let key;
+let envFile = null;
+let devEnv = {};
 if (target === "prod") {
   if (values.has("--env-file")) fail("--env-file is for the dev target; production's key is only read at the prompt.");
   url = `https://${PRODUCTION_SUPABASE_REF}.supabase.co`;
@@ -202,20 +265,20 @@ if (target === "prod") {
   key = await promptHidden("Production secret key (Supabase dashboard → API keys; not echoed): ");
   if (!key) fail("No key given.");
 } else {
-  const envFile = path.resolve(values.get("--env-file") ?? ".env.local");
-  const env = parseEnvFile(envFile);
-  url = env.NEXT_PUBLIC_SUPABASE_URL ?? "";
-  key = env.SUPABASE_SECRET_KEY ?? "";
+  envFile = path.resolve(values.get("--env-file") ?? ".env.local");
+  devEnv = parseEnvFile(envFile);
+  url = devEnv.NEXT_PUBLIC_SUPABASE_URL ?? "";
+  key = devEnv.SUPABASE_SECRET_KEY ?? "";
   if (!url || !key) fail(`${envFile} needs NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SECRET_KEY.`);
   if (isProductionSupabaseUrl(url)) fail(`${envFile} points at PRODUCTION — use --target prod (hidden-prompt key) for that.`);
 }
 const host = new URL(url).host;
 const project = host.split(".")[0];
 const pipglyphDir = path.join(os.homedir(), ".pipglyph");
-const statePath = path.resolve(values.get("--state") ?? path.join(pipglyphDir, `sweep-storage-orphans.${project}.json`));
-const manifestPath = path.resolve(
-  values.get("--manifest") ?? path.join(pipglyphDir, `sweep-storage-orphans.${project}.manifest.jsonl`),
-);
+// Each mode keeps its own state + manifest (their shapes differ).
+const fileStem = `sweep-storage-orphans.${project}${mode === "orphans" ? "" : `.${mode}`}`;
+const statePath = path.resolve(values.get("--state") ?? path.join(pipglyphDir, `${fileStem}.json`));
+const manifestPath = path.resolve(values.get("--manifest") ?? path.join(pipglyphDir, `${fileStem}.manifest.jsonl`));
 const supabase = createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
 
 // --- storage + database, as the helpers want them ---------------------------------
@@ -245,6 +308,7 @@ const storage = {
             createdAt: entry.created_at ?? null,
             updatedAt: entry.updated_at ?? null,
             lastModified: entry.metadata?.lastModified ?? null,
+            contentType: entry.metadata?.mimetype ?? null,
           };
       }
       if (!data || data.length < 1000) return;
@@ -293,7 +357,60 @@ const db = {
     if (error) throw new Error(`read ${table}: ${error.message}`);
     return data;
   },
+  /** --private-renders: `Map<cardId, visibility>` for the ids whose row exists. */
+  async cardVisibility(ids) {
+    const out = new Map();
+    for (let i = 0; i < ids.length; i += CARD_READ_CHUNK) {
+      const chunk = ids.slice(i, i + CARD_READ_CHUNK);
+      const { data, error } = await supabase.from("cards").select("id,visibility").in("id", chunk);
+      if (error) throw new Error(`read cards: ${error.message}`);
+      if (!Array.isArray(data) || data.length > chunk.length) throw new Error("read cards: unexpected response");
+      for (const row of data) out.set(String(row.id).toLowerCase(), row.visibility);
+    }
+    return out;
+  },
+  /** --private-renders: clear the render pointer of those of `ids` that are
+   *  PRIVATE right now — one conditional UPDATE, what going private writes —
+   *  and return the ids it changed. */
+  async clearRenderPointers(ids) {
+    if (!ids.length) return [];
+    const { data, error } = await supabase
+      .from("cards")
+      .update(Object.fromEntries(RENDER_POINTER_COLUMNS.map((c) => [c, null])))
+      .in("id", ids)
+      .eq("visibility", "private")
+      .or(RENDER_POINTER_COLUMNS.map((c) => `${c}.not.is.null`).join(","))
+      .select("id");
+    if (error) throw new Error(`clear render pointers: ${error.message}`);
+    return (data ?? []).map((row) => String(row.id).toLowerCase());
+  },
 };
+
+/** --rescan-review: the moderation client, made only when something needs a
+ *  scan. Production's OPENAI_API_KEY is read at the hidden prompt (never from
+ *  a file or the environment) and always goes to api.openai.com; the dev
+ *  target reads OPENAI_API_KEY (and OPENAI_BASE_URL, for a fake) from its
+ *  env file, or asks. No key → no scan: the upload path's fail-open would
+ *  call every file clean. */
+async function moderateFor() {
+  let apiKey = "";
+  if (target === "prod") {
+    apiKey = await promptHidden("OpenAI API key for the moderation scan (production's OPENAI_API_KEY; not echoed): ");
+  } else {
+    apiKey = devEnv.OPENAI_API_KEY ?? "";
+    if (!apiKey && process.stdin.isTTY) apiKey = await promptHidden("OpenAI API key for the moderation scan (not echoed): ");
+    if (!apiKey) fail(`${envFile} has no OPENAI_API_KEY and there is no terminal to ask for one — nothing is scanned without it.`);
+  }
+  if (!apiKey) fail("No moderation key given — nothing is scanned without one.");
+  const client = new OpenAI({
+    apiKey,
+    baseURL: target === "prod" ? "https://api.openai.com/v1" : devEnv.OPENAI_BASE_URL || "https://api.openai.com/v1",
+    timeout: IMAGE_MODERATION_TIMEOUT_MS,
+    // review-rescan.mjs paces and retries itself (Retry-After, backoff).
+    maxRetries: 0,
+  });
+  return (request) => client.moderations.create(request);
+}
 
 // --- run -------------------------------------------------------------------------
 const log = (line) => console.log(line);
@@ -303,6 +420,53 @@ state.target = host;
 state.runs = (state.runs ?? 0) + 1;
 const run = `${new Date().toISOString()}#${state.runs}`;
 saveState(statePath, state);
+
+const targetLabel = `${target === "prod" ? "PRODUCTION" : "dev"} (${host})`;
+if (mode !== "orphans") {
+  console.log(`${target === "prod" ? "PRODUCTION" : "dev"} ${host} — --${mode} ${apply ? "APPLY" : "dry run"}`);
+  console.log(`State: ${statePath}\nManifest: ${manifestPath}\n`);
+  let code;
+  try {
+    code =
+      mode === "private-renders"
+        ? await runPrivateRenders({
+            storage,
+            db,
+            apply,
+            confirm: promptLine,
+            batchSize,
+            limit,
+            state,
+            statePath,
+            manifestPath,
+            target: host,
+            targetLabel,
+            run,
+            log,
+          })
+        : await runReviewRescan({
+            storage,
+            db,
+            buckets: sweepBuckets,
+            apply,
+            confirm: promptLine,
+            moderateFor,
+            publicUrl: (bucket, objectPath) => bucketApi(bucket).getPublicUrl(objectPath).data.publicUrl,
+            perMinute,
+            limit,
+            state,
+            statePath,
+            manifestPath,
+            target: host,
+            targetLabel,
+            run,
+            log,
+          });
+  } catch (err) {
+    fail(`Stopped: ${err.message}. Re-run to continue — the state file settles an interrupted delete.`);
+  }
+  process.exit(code);
+}
 
 console.log(
   `${target === "prod" ? "PRODUCTION" : "dev"} ${host} — ${apply ? "APPLY" : "dry run"}; buckets: ${sweepBuckets.join(", ")}; ` +
@@ -380,21 +544,21 @@ const privateRenders = privateCardRenders(classified, scan.privateCardIds);
 if (privateRenders.length) {
   console.log(
     `\nPrivacy follow-up — ${privateRenders.length} render(s) of PRIVATE cards still stored (publicly fetchable at ` +
-      `their URL; going private should have deleted them). Listed only — the sweep never deletes a live card's render:`,
+      `their URL; going private should have deleted them). Listed only — the sweep never deletes a live card's render; ` +
+      `--private-renders removes them:`,
   );
   for (const o of privateRenders) console.log(`  ${o.bucket}/${o.path}  ${formatBytes(Number(o.size) || 0)}`);
 }
 
 const LIST_CAP = 100;
-const oddNames = classified.filter(
-  (o) => SWEEP_BUCKETS.includes(o.bucket) && userFolderKey(o.path) && !isServerMintedName(o.bucket, o.path),
-);
+const oddNames = reviewList(classified);
 if (oddNames.length) {
   const byBucket = oddNames.reduce((m, o) => m.set(o.bucket, (m.get(o.bucket) ?? 0) + 1), new Map());
   console.log(
     `\nReview — ${oddNames.length} user-folder object(s) with a name the server doesn't make today ` +
       `(${[...byBucket].map(([b, n]) => `${b} ${n}`).join(", ")}): an older upload path, or a file written straight to ` +
-      `storage before 0126 (no sniff, strip or scan). Listed only; deleted only if also an orphan:`,
+      `storage before 0126 (no sniff, strip or scan). Listed only; deleted only if also an orphan. ` +
+      `--rescan-review runs the upload path's moderation scan on them:`,
   );
   for (const o of oddNames.slice(0, LIST_CAP)) {
     console.log(`  ${o.bucket}/${o.path}  ${formatBytes(Number(o.size) || 0)}  — ${VERDICTS[o.verdict]}`);

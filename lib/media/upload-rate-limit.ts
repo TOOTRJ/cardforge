@@ -18,9 +18,8 @@ import type { RateLimitDenied } from "@/lib/api/responses";
 // paid for in credits, and every AI call, the FREE deck-cover step
 // included, first passes checkAiRateLimit: 40 a minute, 500 a day,
 // lib/ai/rate-limit.ts; a 100-card deck alone is 100 images, so 300 a day
-// would stop a Pro user's third deck). Whether AI persists should also
-// count here, in a larger bucket of their own, is an open owner question
-// (review 2026-09-29).
+// would stop a Pro user's third deck). Owner decision 2026-09-29: AI art
+// stays EXEMPT — no bucket of its own here.
 //
 // The counter is migration 0127's public.upload_hits, written ONLY by
 // hit_upload_limit() (service role): one row per counted upload, sliding
@@ -45,7 +44,8 @@ export const UPLOAD_RATE_LIMITED = "UPLOAD_RATE_LIMITED" as const;
 
 export const UPLOAD_TOO_FAST_MESSAGE = "You're uploading too fast — try again in a minute.";
 export const UPLOAD_DAILY_LIMIT_MESSAGE = "Daily upload limit reached — try again tomorrow.";
-/** The limit couldn't be checked (the counter failed): uploads wait a minute. */
+/** The limit couldn't be checked (the counter failed): uploads wait a minute.
+ *  Wording approved by the owner (2026-09-29). */
 export const UPLOAD_LIMIT_UNAVAILABLE_MESSAGE = "Uploads are paused for a moment — try again in a minute.";
 
 export type UploadRateLimitDenied = RateLimitDenied & {

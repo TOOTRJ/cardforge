@@ -250,6 +250,23 @@ node scripts/sweep-storage-orphans.mjs --target prod --apply --batch-size 100 \
   --backup-dir ~/.pipglyph/sweep-backups/$(date +%F)
 ```
 
+**Owner steps on production, in this order, once #409 and #411 are live**
+(each step's dry run first; nothing is deleted without `--apply` + "yes"):
+
+1. `node scripts/sweep-storage-orphans.mjs --target prod` — the dry run:
+   orphans, plus the two review lists below.
+2. `node scripts/sweep-storage-orphans.mjs --target prod --rescan-review` —
+   moderation-scans the review list (asks for production's `OPENAI_API_KEY`
+   at a second hidden prompt) and lists flagged files. If any:
+   `… --rescan-review --apply` removes them (decide yourself about the rows
+   it lists as naming them — the run changes none).
+3. `node scripts/sweep-storage-orphans.mjs --target prod --private-renders`,
+   then `… --private-renders --apply` — removes the renders of private and
+   deleted cards.
+4. The orphan sweep's `--apply` (above). Last on purpose: its
+   `--backup-dir` copies what it deletes to your disk, so flagged files and
+   the renders of private/deleted cards are removed first, without copies.
+
 - **What counts as a reference:** the object's `{uuid}/{file}` key anywhere
   in any string of any row — the scan reads EVERY text/JSON column of EVERY
   table the API exposes (PostgREST's OpenAPI document), not a column list,
@@ -285,13 +302,41 @@ node scripts/sweep-storage-orphans.mjs --target prod --apply --batch-size 100 \
   deletes at most n per run. Accepted race: a custom pip re-uploaded in the
   milliseconds between that last lookup and the delete (its name is fixed,
   `{uid}/{SYMBOL}.png`) is deleted — the user saves the pip again.
-- **Listed for review, never deleted by the sweep:** renders of PRIVATE
-  cards that are still stored (publicly fetchable at their URL — going
-  private should have deleted them; remove them by hand with the service
-  role), and user-folder objects whose names the
-  server doesn't make today (an older upload path, or a file written
-  straight to storage with the user's own session before 0126 — it skipped
-  the byte sniff, the strip and the moderation scan; look at them).
+- **Listed for review, never deleted by the orphan sweep** — each list has
+  its own mode (owner decisions 2026-09-29; own state + manifest,
+  `~/.pipglyph/sweep-storage-orphans.<project>.<mode>.json` /
+  `.manifest.jsonl`):
+  - **User-folder objects whose names the server doesn't make today** (an
+    older upload path, or a file written straight to storage with the
+    user's own session before 0126 — it skipped the byte sniff, the strip
+    and the moderation scan). `--rescan-review` runs the upload path's own
+    scan on exactly this list (`lib/moderation/image-scan-core.ts`: same
+    request, model and categories), paced (`--per-minute`, default 60),
+    retrying 429/5xx; an error is "not scanned", never clean, and is tried
+    again next run; verdicts are kept per object + eTag, so a re-run only
+    scans new or changed files. `--apply` does what the upload path does to
+    a flagged upload — removes the object and nothing else (no row changed,
+    nobody notified); the output and the manifest name every row that
+    points at a flagged file (a card that used it still shows it in its
+    stored render until re-baked or hidden). No copies, ever
+    (`--backup-dir` is refused). Production's `OPENAI_API_KEY` is read only
+    at the hidden prompt and only sent to api.openai.com; the dev target
+    reads it from the env file. Objects outside the `{uuid}/{file}` shape
+    are not on the list (the dry run lists them separately).
+  - **Renders of PRIVATE cards that are still stored** (publicly fetchable
+    at their URL — going private should have deleted them).
+    `--private-renders` removes the PNG + thumb of every private or deleted
+    card. Per batch of cards: first the render pointer of those that are
+    private at that moment (one conditional UPDATE of `rendered_image_url`,
+    `rendered_thumb_url`, `rendered_at` — what going private writes), then
+    the visibility is read AGAIN, then every object is looked up, then the
+    remove: a public or unlisted card's render is never touched. The dry run
+    prints card ids, state and counts only — no titles, no owners. No
+    backups (a render is derived; a deleted card's image isn't kept).
+- **Decisions recorded 2026-09-29** (upload limit, #411): AI art stays
+  EXEMPT from the upload limit (it is credit-metered and already behind
+  `checkAiRateLimit`); the fail-closed refusal's wording "Uploads are paused
+  for a moment — try again in a minute." is approved.
 - Checked on dev 2026-09-29 (a throwaway object in a fake folder, uploaded,
   removed, gone): the listing's `metadata.eTag` and `info()`'s `etag` are the
   same quoted MD5, `remove()` echoes the full paths, and `info()` of a gone
@@ -300,7 +345,10 @@ node scripts/sweep-storage-orphans.mjs --target prod --apply --batch-size 100 \
 - Dev dry run 2026-09-29: 218 card-art objects (193 referenced, 24
   unreferenced but under 7 days, 1 test file outside a user folder), 380
   card-renders (all referenced), the other buckets empty — 0 orphans; the
-  reference scan read 35 tables (768 rows) in about 2 s.
+  reference scan read 35 tables (768 rows) in about 2 s. The same day:
+  `--private-renders` found 380 renders of 190 cards, all public/unlisted
+  (nothing to remove); `--rescan-review` listed 598 objects, review list
+  empty (nothing to scan).
 
 ### Branch protection on `main` (ruleset "main", created 2026-09-21)
 

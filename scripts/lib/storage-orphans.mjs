@@ -295,9 +295,11 @@ export function textColumns(table) {
  *
  * `db.openApi()` → the OpenAPI document; `db.select(table, { columns,
  * order, after, offset, limit })` → rows ordered by `order`, `order[0] >
- * after` when `after` is set.
+ * after` when `after` is set. `onReference(key, { table, column, row })`,
+ * when given, is called for every place a key is found (`row` = the row's
+ * primary-key values) — the rescan reports where a flagged file is used.
  */
-export async function scanReferences(db, index, { log = () => {}, concurrency = SCAN_CONCURRENCY } = {}) {
+export async function scanReferences(db, index, { log = () => {}, concurrency = SCAN_CONCURRENCY, onReference = null } = {}) {
   const started = Date.now();
   const tables = tablesFromOpenApi(await db.openApi());
   const names = new Set(tables.map((t) => t.name));
@@ -350,7 +352,16 @@ export async function scanReferences(db, index, { log = () => {}, concurrency = 
           if (row.visibility === "private") privateCardIds.add(row.id.toLowerCase());
         }
         for (const column of columns) {
-          for (const s of stringsIn(row[column])) index.mark(s, referenced);
+          if (!onReference) {
+            for (const s of stringsIn(row[column])) index.mark(s, referenced);
+            continue;
+          }
+          const here = new Set();
+          for (const s of stringsIn(row[column])) index.mark(s, here);
+          for (const key of here) {
+            referenced.add(key);
+            onReference(key, { table: table.name, column, row: Object.fromEntries(table.pk.map((c) => [c, row[c] ?? null])) });
+          }
         }
       }
       tableRows += page.length;
@@ -424,7 +435,8 @@ export function classify(objects, { referenced, cardIds, now, minAgeDays }) {
  * have been deleted when it went private (lib/cards/bake-core.ts: a failed
  * delete leaves the PNG publicly fetchable at its fixed URL). The sweep never
  * deletes a live card's render; the dry run lists these as a privacy
- * follow-up for the owner.
+ * follow-up for the owner, and `--private-renders` (scripts/lib/private-
+ * renders.mjs) removes them.
  */
 export function privateCardRenders(objects, privateCardIds) {
   return objects.filter((obj) => {
@@ -455,6 +467,20 @@ export function isServerMintedName(bucket, objectPath) {
   const key = userFolderKey(objectPath);
   if (!key) return false;
   return bucket === "custom-pips" ? PIP_NAME.test(key.name) : SERVER_NAME.test(key.name);
+}
+
+/**
+ * The dry run's REVIEW LIST: user-folder objects (`{uuid}/{file}`) in a swept
+ * bucket whose names the server doesn't make. The one definition, shared by
+ * the dry run that prints it and `--rescan-review` (scripts/lib/review-
+ * rescan.mjs), which moderation-scans exactly these (owner decision
+ * 2026-09-29). Objects outside the `{uuid}/{file}` shape are not on it (the
+ * dry run lists them separately, "not a shape the sweep deletes").
+ */
+export function reviewList(objects) {
+  return objects.filter(
+    (o) => SWEEP_BUCKETS.includes(o.bucket) && userFolderKey(o.path) !== null && !isServerMintedName(o.bucket, o.path),
+  );
 }
 
 /** How many delete batches (each one a full database re-scan) an --apply
@@ -551,7 +577,8 @@ export function saveState(file, state) {
   renameSync(tmp, file);
 }
 
-/** One JSON line per deleted object — the trace of every delete. */
+/** One JSON line per deleted object — the trace of every delete (and, for
+ *  `--private-renders`, per render-pointer clear). */
 export function appendManifest(file, entries) {
   if (!entries.length) return;
   mkdirSync(path.dirname(file), { recursive: true });
@@ -596,7 +623,7 @@ export async function reconcilePending({ storage, state, statePath, manifestPath
   return { gone, present };
 }
 
-function manifestEntry(target, bucket, item, run) {
+export function manifestEntry(target, bucket, item, run) {
   return {
     at: new Date().toISOString(),
     target,
