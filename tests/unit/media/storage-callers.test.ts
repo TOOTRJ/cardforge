@@ -19,12 +19,14 @@ import { describe, expect, it } from "vitest";
 
 const ROOT = path.resolve(__dirname, "../../..");
 
-/** Server-only modules allowed to call `.storage`, and why. */
+/** Server-only modules allowed to call `.storage`, and why. Card renders are
+ *  NOT here on purpose: every bake upload / delete (save bake, admin sweep,
+ *  card delete, go-private, moderation hide, frame-preview delete) goes
+ *  through lib/cards/bake-core.ts, which only ever opens the owner's folder
+ *  with userFolder() — no caller holds a service-role storage client. */
 const STORAGE_CALLERS: Record<string, string> = {
   "lib/media/user-storage.ts": "the user-folder door: service role, `{userId}/{name}` keys only",
-  "lib/cards/bake-core.ts": "card-renders upload/remove, handed the service-role client by the bake and the admin sweep",
-  "lib/account/actions.ts": "account deletion empties the user's folders (service role, after its own auth check)",
-  "lib/moderation/actions.ts": "an admin hiding a reported card removes its render (is_admin-gated, service role)",
+  "lib/account/actions.ts": "account deletion lists and empties the user's folders (service role, after its own auth check)",
 };
 
 function sourceFiles(dir: string, out: string[] = []): string[] {
@@ -52,12 +54,40 @@ const isServerOnly = (rel: string, src: string) =>
   /^import\s+["']server-only["'];?$/m.test(src) ||
   /^app\/.*\/route\.ts$/.test(rel);
 
-const USES_STORAGE = /\.storage\b|createSignedUploadUrl|uploadToSignedUrl/;
+/** Any reach for a Supabase client's Storage API: member access (`.storage`,
+ *  `?.storage`), destructuring (`const { storage } = client`,
+ *  `{ storage: s } =`), bracket access (`client["storage"]`) and the
+ *  signed-upload helpers. */
+const USES_STORAGE =
+  /\.storage\b|\{[^{}]*\bstorage\b[^{}]*\}\s*=[^=>]|\[\s*["'`]storage["'`]\s*\]|createSignedUploadUrl|uploadToSignedUrl/;
 
 const files = ["app", "components", "lib", "hooks"]
   .flatMap((dir) => sourceFiles(path.join(ROOT, dir)))
   .concat(existsSync(path.join(ROOT, "proxy.ts")) ? [path.join(ROOT, "proxy.ts")] : [])
   .map((file) => ({ rel: path.relative(ROOT, file).split(path.sep).join("/"), src: code(file) }));
+
+describe("the storage matcher", () => {
+  it.each([
+    ["member access", "await supabase.storage.from('card-art').upload(k, b)"],
+    ["optional member access", "client?.storage?.from(bucket)"],
+    ["destructuring", "const { storage } = await createClient();"],
+    ["destructuring with a rename", "const { auth, storage: files } = supabase;"],
+    ["bracket access", 'const s = supabase["storage"];'],
+    ["a signed upload URL", "await bucket.createSignedUploadUrl(path)"],
+  ])("sees %s", (_label, snippet) => {
+    expect(USES_STORAGE.test(snippet)).toBe(true);
+  });
+
+  it.each([
+    ["localStorage", "window.localStorage.getItem(key)"],
+    ["the storage event", 'window.addEventListener("storage", onChange);'],
+    ["a storage-paths import", 'import { cardRenderPath } from "@/lib/cards/storage-paths";'],
+    ["prose in a string", 'return { ok: false, error: "Render storage is unavailable." };'],
+    ["a type named after it", "import { isUserStorageConfigured } from \"@/lib/media/user-storage\";"],
+  ])("ignores %s", (_label, snippet) => {
+    expect(USES_STORAGE.test(snippet)).toBe(false);
+  });
+});
 
 describe("Supabase Storage callers", () => {
   it("scans the app", () => {

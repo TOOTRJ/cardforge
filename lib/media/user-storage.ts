@@ -5,7 +5,12 @@ import { isUuid } from "@/lib/ids";
 
 // ---------------------------------------------------------------------------
 // Writes into a user's storage folder — the ONLY way app code writes the
-// user buckets (migration 0126).
+// user buckets (migration 0126). Card renders use it too, through
+// lib/cards/bake-core.ts (`userFolder("card-renders", ownerId)` for the save
+// bake, the admin sweep, card delete / go-private, a moderation hide and a
+// frame-preview delete). The one other storage caller is account deletion
+// (lib/account/actions.ts), which lists and empties the deleted user's own
+// folders; tests/unit/media/storage-callers.test.ts keeps that list closed.
 //
 // Until 0126 each user bucket had owner-folder INSERT / UPDATE / DELETE
 // policies, so a signed-in user could skip the upload actions and write

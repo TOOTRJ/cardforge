@@ -29,8 +29,10 @@ import sharp from "sharp";
 // Retry-After. Signed-in viewers, stored-bake serves and 304s never count.
 // ---------------------------------------------------------------------------
 
-const STORAGE = "https://zkwkisxoqdhdchqyjwdc.supabase.co/storage/v1/object/public/card-renders/o/c.png?v=1";
 const ID = "22222222-2222-4222-8222-222222222222";
+// The card's own bake — `{owner_id}/{id}.png` in card-renders (fetchStoredRender
+// serves nothing else, lib/render/stored-render.ts).
+const STORAGE = `https://zkwkisxoqdhdchqyjwdc.supabase.co/storage/v1/object/public/card-renders/o/${ID}.png?v=1`;
 
 const state = vi.hoisted(() => ({
   card: null as Record<string, unknown> | null,

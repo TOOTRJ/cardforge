@@ -9,6 +9,13 @@ import { called, chainClient, type ChainAnswer } from "@/tests/stubs/supabase-ch
 // bake and the delete / go-private clean-ups write with the SERVICE ROLE,
 // only at `{verified owner}/{card}.png` + its `.thumb.webp`, and never through
 // the user's cookie client (whose `.storage` throws here).
+//
+// The row's POINTER to the bake moved too: 0126's cards_guard_render_columns
+// lets an API role only clear rendered_image_url / rendered_thumb_url /
+// rendered_at / layout_version (an owner used to be able to PATCH them at any
+// picture), so a new URL is persisted with the service role, pinned to the
+// verified owner — while a clear still works on the owner's own client, even
+// without the service-role key.
 // ---------------------------------------------------------------------------
 
 const USER = "11111111-1111-4111-8111-111111111111";
@@ -17,6 +24,7 @@ const CARD = "22222222-2222-4222-8222-222222222222";
 const CARD_2 = "33333333-3333-4333-8333-333333333333";
 
 type Op = { bucket: string; op: "upload" | "remove"; keys: string[] };
+type RowWrite = { via: "user" | "admin"; payload: unknown; filters: [string, unknown][] };
 
 const state = vi.hoisted(() => ({
   user: null as { id: string } | null,
@@ -26,13 +34,24 @@ const state = vi.hoisted(() => ({
   card: null as Record<string, unknown> | null,
   rows: [] as { id: string; owner_id: string }[],
   updates: [] as unknown[],
+  writes: [] as RowWrite[],
   png: null as Buffer | null,
 }));
+
+function recordWrite(via: RowWrite["via"], calls: { method: string; args: unknown[] }[]) {
+  const payload = calls.find((c) => c.method === "update")!.args[0];
+  state.writes.push({
+    via,
+    payload,
+    filters: calls.filter((c) => c.method === "eq").map((c) => [c.args[0] as string, c.args[1]]),
+  });
+  if (via === "user") state.updates.push(payload);
+}
 
 function cookieClient() {
   const db = chainClient((table, calls): ChainAnswer => {
     if (called(calls, "update")) {
-      state.updates.push(calls.find((c) => c.method === "update")!.args[0]);
+      recordWrite("user", calls);
       return { data: [{ id: CARD }], error: null };
     }
     if (called(calls, "delete")) return { error: null };
@@ -59,7 +78,15 @@ vi.mock("@/lib/supabase/admin", () => ({
   isAdminConfigured: () => state.adminConfigured,
   createAdminClient: () => {
     state.adminClients += 1;
+    const db = chainClient((_table, calls): ChainAnswer => {
+      if (called(calls, "update")) {
+        recordWrite("admin", calls);
+        return { data: [{ id: CARD }], error: null };
+      }
+      return { data: null };
+    });
     return {
+      from: db.client.from,
       storage: {
         from: (bucket: string) => ({
           upload: async (key: string) => {
@@ -146,6 +173,7 @@ beforeEach(async () => {
   state.card = cardRow();
   state.rows = [];
   state.updates.length = 0;
+  state.writes.length = 0;
   state.png ??= await sharp({ create: { width: 30, height: 42, channels: 4, background: "#345" } }).png().toBuffer();
 });
 
@@ -157,17 +185,60 @@ describe("the save-time bake writes card-renders with the service role", () => {
       { bucket: "card-renders", op: "upload", keys: [`${USER}/${CARD}.thumb.webp`] },
     ]);
     expect(url).toMatch(new RegExp(`^https://storage\\.test/card-renders/${USER}/${CARD}\\.png\\?v=\\d+$`));
-    expect(state.updates).toHaveLength(1);
-    expect(state.updates[0]).toMatchObject({ rendered_image_url: url });
+    expect(state.writes).toHaveLength(1);
+    expect(state.writes[0].payload).toMatchObject({ rendered_image_url: url });
   });
 
-  it("a private card: its public render objects are removed, nothing is written", async () => {
+  it("the new URL is persisted by the SERVICE ROLE, pinned to the card, its verified owner and the row it rendered", async () => {
+    const url = await bakeAndPersistCardRender(CARD, USER);
+    expect(state.writes).toEqual([
+      {
+        via: "admin",
+        payload: expect.objectContaining({
+          rendered_image_url: url,
+          rendered_thumb_url: expect.stringMatching(new RegExp(`/card-renders/${USER}/${CARD}\\.thumb\\.webp\\?v=`)),
+          layout_version: expect.any(Number),
+        }),
+        filters: [
+          ["id", CARD],
+          ["owner_id", USER],
+          ["updated_at", "2026-09-29T00:00:00.000Z"],
+        ],
+      },
+    ]);
+    // Never through the owner's own client: 0126's guard would refuse it.
+    expect(state.updates).toEqual([]);
+  });
+
+  it("a private card: its public render objects are removed, and the row is cleared on the owner's client", async () => {
     state.card = cardRow({ visibility: "private" });
     expect(await bakeAndPersistCardRender(CARD, USER)).toBeNull();
     expect(state.ops).toEqual([
-      { bucket: "card-renders", op: "remove", keys: [`${USER}/${CARD}.png`] },
-      { bucket: "card-renders", op: "remove", keys: [`${USER}/${CARD}.thumb.webp`] },
+      { bucket: "card-renders", op: "remove", keys: [`${USER}/${CARD}.png`, `${USER}/${CARD}.thumb.webp`] },
     ]);
+    expect(state.writes).toEqual([
+      expect.objectContaining({
+        via: "user",
+        payload: { rendered_image_url: null, rendered_thumb_url: null, rendered_at: null, layout_version: null },
+      }),
+    ]);
+  });
+
+  it("a private card without the service-role key: the missing delete is logged loudly, never skipped silently", async () => {
+    state.adminConfigured = false;
+    state.card = cardRow({ visibility: "private" });
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      expect(await bakeAndPersistCardRender(CARD, USER)).toBeNull();
+      expect(state.ops).toEqual([]);
+      expect(error).toHaveBeenCalledWith(expect.stringMatching(/SUPABASE_SECRET_KEY is not set.*publicly fetchable/));
+      // The row still loses its render pointer (the clear needs no key).
+      expect(state.updates).toEqual([
+        { rendered_image_url: null, rendered_thumb_url: null, rendered_at: null, layout_version: null },
+      ]);
+    } finally {
+      error.mockRestore();
+    }
   });
 
   it("a card that isn't the given owner's is never written", async () => {
@@ -193,6 +264,18 @@ describe("deleting cards removes their renders with the service role, in the cal
     expect(state.ops).toEqual([
       { bucket: "card-renders", op: "remove", keys: [`${USER}/${CARD}.png`, `${USER}/${CARD}.thumb.webp`] },
     ]);
+  });
+
+  it("without the service-role key the delete still succeeds, and the render left behind is logged loudly", async () => {
+    state.adminConfigured = false;
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      expect(await deleteCardAction(CARD)).toMatchObject({ ok: true });
+      expect(state.ops).toEqual([]);
+      expect(error).toHaveBeenCalledWith(expect.stringMatching(/SUPABASE_SECRET_KEY is not set.*publicly fetchable/));
+    } finally {
+      error.mockRestore();
+    }
   });
 
   it("someone else's card is refused before any storage call", async () => {

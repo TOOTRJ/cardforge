@@ -150,6 +150,35 @@ describe("stored-render — when the baked PNG can stand in for a live render", 
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
+  // A row written before migration 0126 — when an owner could PATCH
+  // rendered_image_url through PostgREST — may name any object the SSRF gate
+  // lets through. The free download and the share image serve only a bake in
+  // card-renders, and with the row's ids only THIS card's own bake.
+  it.each([
+    ["a raw card-art upload (no watermark)", "https://zkwkisxoqdhdchqyjwdc.supabase.co/storage/v1/object/public/card-art/o/upload.png"],
+    ["a Scryfall image", "https://cards.scryfall.io/png/front/a/b/ab.png"],
+    ["another card's bake", "https://zkwkisxoqdhdchqyjwdc.supabase.co/storage/v1/object/public/card-renders/o/other.png?v=1"],
+    ["another owner's folder", "https://zkwkisxoqdhdchqyjwdc.supabase.co/storage/v1/object/public/card-renders/x/c.png?v=1"],
+  ])("never fetches %s as the card's render", async (_label, url) => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://zkwkisxoqdhdchqyjwdc.supabase.co");
+    const fetchSpy = vi.fn(async () => new Response(new Uint8Array([1]), { headers: { "content-type": "image/png" } }));
+    vi.stubGlobal("fetch", fetchSpy);
+    const row = { id: "c", owner_id: "o", rendered_image_url: url, layout_version: CARD_LAYOUT_VERSION };
+    expect(await fetchStoredRender(row, { accept: "any" })).toBeNull();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("fetches the card's own bake when the row carries its ids", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://zkwkisxoqdhdchqyjwdc.supabase.co");
+    const png = await sharp({ create: { width: 2, height: 2, channels: 4, background: "#123" } }).png().toBuffer();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(new Uint8Array(png), { headers: { "content-type": "image/png" } })),
+    );
+    const row = { id: "c", owner_id: "o", rendered_image_url: STORAGE_URL, layout_version: null };
+    expect((await fetchStoredRender(row, { accept: "any" }))?.equals(png)).toBe(true);
+  });
+
   it("rejects a non-PNG or failed response", async () => {
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://zkwkisxoqdhdchqyjwdc.supabase.co");
     vi.stubGlobal(

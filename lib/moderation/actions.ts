@@ -8,8 +8,7 @@ import {
   getCurrentUser,
 } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { cardRenderPath } from "@/lib/cards/storage-paths";
-import { renderThumbPath } from "@/lib/cards/render-thumb";
+import { removeRenderObjects } from "@/lib/cards/bake-core";
 import { purgeHiddenCard, revalidateCardPaths } from "@/lib/cards/revalidate";
 import {
   reportDetailsSchema,
@@ -243,13 +242,12 @@ export async function resolveCardReportsAction(input: {
       .eq("id", input.cardId);
     if (hideError) return { ok: false, error: `Couldn't hide the card: ${hideError.message}` };
 
-    // Both public render objects (the thumb used to be left behind).
-    const png = cardRenderPath(card.owner_id, input.cardId);
-    const { error: removeError } = await admin.storage
-      .from("card-renders")
-      .remove([png, renderThumbPath(png)]);
+    // Both public render objects (the thumb used to be left behind), in the
+    // owner's card-renders folder; removeRenderObjects retries once and logs
+    // a failure itself.
+    const { error: removeError } = await removeRenderObjects(card.owner_id, [input.cardId]);
     if (removeError) {
-      console.error(`[moderation] hid ${input.cardId} but could not delete its render: ${removeError.message}`);
+      console.error(`[moderation] hid ${input.cardId} but could not delete its render: ${removeError}`);
     }
 
     const { error: reportsError } = await admin

@@ -36,20 +36,13 @@ import {
 } from "@/lib/cards/queries";
 import { bakeAndPersistCardRender } from "@/lib/cards/bake-render";
 import { addCustomCardEntryToDeck } from "@/lib/decks/membership";
-import { cardRenderPath } from "@/lib/cards/storage-paths";
-import {
-  fileNameInFolder,
-  isUserStorageConfigured,
-  userFolder,
-  type UserStorageResult,
-} from "@/lib/media/user-storage";
+import { removeRenderObjects } from "@/lib/cards/bake-core";
 import {
   purgeHiddenCard,
   purgeHiddenCards,
   revalidateCardListSurfaces,
   revalidateCardPaths,
 } from "@/lib/cards/revalidate";
-import { renderThumbPath } from "@/lib/cards/render-thumb";
 import { normalizeManaCost } from "@/lib/cards/mana-order";
 import { PIPGLYPH_ROSE_WATERMARK, usesDefaultWatermark } from "@/lib/cards/watermark";
 import {
@@ -176,34 +169,6 @@ async function ensureUniqueSlugForUser(
   }
 
   return { slug: desired, conflict: true };
-}
-
-/** Every public object a bake writes for a card — the HD PNG and its WebP
- *  thumbnail (lib/cards/render-thumb.ts). Deleting or privatising a card must
- *  drop BOTH; the thumb used to be left behind, publicly fetchable. */
-function renderObjectPaths(ownerId: string, cardId: string): string[] {
-  const png = cardRenderPath(ownerId, cardId);
-  return [png, renderThumbPath(png)];
-}
-
-/** Delete these cards' render objects from `ownerId`'s card-renders folder.
- *  Service role (users hold no storage write policy since migration 0126):
- *  every caller passes its authenticated user and cards it has just checked
- *  that user owns, and the keys can only resolve inside that folder. */
-async function removeCardRenders(
-  ownerId: string,
-  cardIds: string[],
-): Promise<UserStorageResult> {
-  if (!isUserStorageConfigured()) {
-    return { error: { message: "Render storage is unavailable." } };
-  }
-  const names = cardIds
-    .flatMap((id) => renderObjectPaths(ownerId, id))
-    .map((path) => fileNameInFolder(ownerId, path));
-  if (names.some((name) => name === null)) {
-    return { error: { message: "Invalid render path." } };
-  }
-  return userFolder("card-renders", ownerId).remove(names as string[]);
 }
 
 /** A remix changes what its PARENT's page shows (remix count, "Top
@@ -847,8 +812,11 @@ export async function deleteCardAction(
   // Remove the card's baked render + thumbnail from the public bucket
   // (best-effort; the render path is per-card, so this never touches another
   // card's render). Art is left alone — remixes copy art_url, so it can be
-  // shared.
-  await removeCardRenders(existing.owner_id, [cardId]);
+  // shared. Service role, in the verified owner's folder (bake-core; users
+  // hold no storage write policy since 0126); a failure — or a missing
+  // service-role key — is logged there: the PNG would stay publicly
+  // fetchable at its fixed URL.
+  await removeRenderObjects(existing.owner_id, [cardId]);
 
   const ownerUsername = await getCurrentUsername();
   await purgeHiddenCard({ id: cardId, slug: existing.slug }, ownerUsername);
@@ -1038,20 +1006,13 @@ export async function updateCardsVisibilityAction(
   }
 
   if (goingPrivate) {
-    // Delete the now-private cards' public renders, retrying once and logging
-    // loudly on a persistent failure rather than swallowing it — the render
-    // path is deterministic and the bucket is public-read, so a leftover PNG
-    // stays fetchable for a card the DB now reports as having no render.
-    // (Mirrors removeRenderObject in lib/cards/bake-render.ts.)
-    for (let attempt = 1; attempt <= 2; attempt += 1) {
-      const { error: removeErr } = await removeCardRenders(user.id, targetIds);
-      if (!removeErr) break;
-      if (attempt === 2) {
-        console.error(
-          `[bulk-visibility] Could not delete ${targetIds.length * 2} render object(s) after a retry: ${removeErr.message}. Those PNGs may remain publicly fetchable for now-private cards.`,
-        );
-      }
-    }
+    // Delete the now-private cards' public renders (PNG + thumb, in the
+    // caller's folder, service role). removeRenderObjects retries once and
+    // logs loudly on a persistent failure rather than swallowing it — the
+    // render path is deterministic and the bucket is public-read, so a
+    // leftover PNG stays fetchable for a card the DB now reports as having no
+    // render.
+    await removeRenderObjects(user.id, targetIds);
   }
 
   // Revalidate the surfaces that show card lists. Per-card slug paths are
@@ -1150,7 +1111,7 @@ export async function deleteCardsAction(
 
   // Remove the deleted cards' baked renders + thumbnails from the public
   // bucket (best-effort).
-  await removeCardRenders(user.id, ids);
+  await removeRenderObjects(user.id, ids);
 
   await purgeHiddenCards(ids);
 

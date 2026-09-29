@@ -46,8 +46,9 @@ vi.mock("@/lib/cards/frame-profile-overrides", () => ({
 vi.mock("@/lib/cards/frame-reviews", () => ({ getFrameReviews: async () => state.reviews }));
 vi.mock("@/lib/frames/score-combo", () => ({ scoreFrameCombo: async () => state.score }));
 vi.mock("@/lib/cards/bake-core", () => ({
-  removeRenderObject: async (_client: unknown, path: string) => {
-    state.removed.push(path);
+  removeRenderObjects: async (ownerId: string, cardIds: string[]) => {
+    for (const id of cardIds) state.removed.push(`${ownerId}/${id}.png`, `${ownerId}/${id}.thumb.webp`);
+    return { error: null };
   },
 }));
 vi.mock("@/lib/cards/frame-review-events", async () => {
