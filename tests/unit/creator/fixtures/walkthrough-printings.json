@@ -376,5 +376,37 @@
         "artist": "Lucas Graciano"
       }
     ]
+  },
+  "tkld-2": {
+    "id": "623a08d1-f5ff-48b7-bdb6-54b8d7a4b931",
+    "oracle_id": "63ff850d-df4a-4903-95cb-cc04dfacc3f1",
+    "name": "Construct",
+    "released_at": "2016-09-30",
+    "layout": "token",
+    "set": "tkld",
+    "set_name": "Kaladesh Tokens",
+    "set_type": "token",
+    "collector_number": "2",
+    "lang": "en",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "setpromo"
+    ],
+    "keywords": [],
+    "type_line": "Token Artifact Creature — Construct",
+    "mana_cost": "",
+    "power": "*",
+    "toughness": "*",
+    "colors": [],
+    "color_identity": [],
+    "rarity": "common",
+    "artist": "Magali Villeneuve",
+    "finishes": [
+      "nonfoil"
+    ],
+    "scryfall_uri": "https://scryfall.com/card/tkld/2/construct"
   }
 }

@@ -861,8 +861,8 @@ const M15_TYPE_DY = keepBaseline(0.0435, TYPE_SIZE_PCT);
  *  land, artifact, snow, devoid, borderless and its artifact, the
  *  planeswalker's M15 type slot), NOT on M15 itself, whose geometry the
  *  MSE-framed families spread (as with CC_M15_COST_DY). The tokens' pill
- *  prints no higher than ours (1799.9 vs 1796.6 on DOM tokens), so they keep
- *  their baseline. */
+ *  prints LOWER than ours (1800.4 vs 1796 px): TODO 4.49 (d) moves their
+ *  type line down instead (TOKEN_TYPE_PRINT_DY). */
 const CC_M15_TYPE_PRINT_DY = -0.0028;
 const CC_M15_TYPE_DY = M15_TYPE_DY + CC_M15_TYPE_PRINT_DY;
 
@@ -1218,27 +1218,38 @@ const M15PW: FrameProfile = {
   },
 };
 
-// M15 Token — art-forward token frame. A dark title bar (light, centered name,
-// no cost), a large arched art window (12–81%), a cream type pill at the bottom
-// (centered), and P/T over the art (no plate). Token abilities render over the
-// lower art on a dark scrim. The arched top of the window is covered by the
-// frame; the artSlot is the bounding box.
+// M15 Token — the 2014–19 arch token frame (CC 'Textless (Bordered M15)').
+// A dark title bar (light, centered name, no cost), a large arched art
+// window (12–81%), a cream type pill at the bottom, and the M15 P/T plate
+// on the lower band. Token abilities render over the lower art on a dark
+// scrim (until 4.49 (b)'s text-box template). The arched top of the window
+// is covered by the frame; the artSlot is the bounding box.
 // Layout v32: the M15 name and type sizes (the prints' type line is M15's
-// ~68 px; the name's Beleren Small Caps and a left-aligned type line are
-// 4.8 / 4.4), both still centred and each on its old baseline; the set
-// symbol in M15's 86 px box, inside the ~101 px pill.
+// ~68 px; the name's Beleren Small Caps is 4.53); the set symbol in M15's
+// 86 px box, inside the ~101 px pill.
+// TODO 4.49 (a) + (d): the type line starts at CC's 8.54 %W and the set
+// symbol is right-anchored in CC's box (below), as every 2014–19 token
+// prints them (TDOM #3, TM19 #6, TBFZ #1 …); the P/T sits on M15's plate.
 /** How far the token's type band moved up onto the CC pill's centre (82.6 →
  *  82.14 %H, layout v32), as a fraction of card WIDTH (dy's unit): 0.46 %H ×
  *  7/5. The type text's dy moves it back down by exactly this. */
 const TOKEN_PILL_LIFT_PCT = (0.46 / 100) * (7 / 5);
+/** TODO 4.49 (d): down onto the prints' type-line baseline, as a fraction of
+ *  card WIDTH (dy's unit): 1796 → 1800 px at HD (2 px at 750). Fifteen
+ *  2014–19 token prints (TDOM #2–#11, TM19, TBFZ, TWAR, TMH1, TKLD, TC18,
+ *  TEMN; Scryfall PNGs at 1500 × 2100) print it at 1797–1803, mean 1800.4. */
+const TOKEN_TYPE_PRINT_DY = 0.0027;
 const M15TOKEN: FrameProfile = {
   label: "M15 Token",
   hideCost: true,
   artSlot: { topPct: 12.0, leftPct: 6.5, widthPct: 87, heightPct: 69.0 },
-  // CC's token symbol box, M15's (0.041 H = 86 px; layout v32), centred on
-  // the cream pill with the type band (below).
+  // CC's token symbol box, M15's (0.041 H = 86 px; layout v32).
   symbolSizePct: SET_SYMBOL_BOX_PCT,
   setSymbolFit: "ink",
+  // CC's setSymbolBounds on its textless token (packTokenTextlessM15.js):
+  // right edge 92.13 %W, centred on 84.39 %H — the pill's centre (TODO 4.49
+  // (d); it rode the end of a centred type line before).
+  symbolRect: { topPct: 82.34, leftPct: 80.13, widthPct: 12, heightPct: 4.1 },
   title: {
     rect: { topPct: 4.6, leftPct: 9, widthPct: 82, heightPct: 6.4 },
     sizePct: TITLE_SIZE_PCT,
@@ -1255,18 +1266,19 @@ const M15TOKEN: FrameProfile = {
   // Layout v32: the band is centred on Card Conjurer's pill (interior 1716–
   // 1822 px at HD on every m15token / m15tokenartifact master; at 82.6 %H it
   // centred 9.7 px below it — hidden by the old 55 px symbol, but the 86 px
-  // one sat on the pill's bottom bevel, 4.20 print review). The set symbol,
-  // centred in the band, moves up with it; the type line keeps its baseline
-  // (≈ the prints': 1796.6 vs 1799.9 px on DOM tokens) — its dy takes the
-  // move back as well as the size change.
+  // one sat on the pill's bottom bevel, 4.20 print review); the type line
+  // kept its baseline — its dy takes the move back as well as the size
+  // change.
+  // TODO 4.49 (d): left-aligned from CC's 8.54 %W to the set symbol's box
+  // (symbolRect, 92.13 %W; the measured fit keeps TYPE_SYMBOL_GAP_PCT before
+  // its ink), and down TOKEN_TYPE_PRINT_DY onto the prints' baseline.
   type: {
-    rect: { topPct: 82.14, leftPct: 11, widthPct: 78, heightPct: 4.2 },
+    rect: { topPct: 82.14, leftPct: 8.54, widthPct: 83.59, heightPct: 4.2 },
     sizePct: TYPE_SIZE_PCT,
-    dy: keepBaseline(0.034, TYPE_SIZE_PCT) + TOKEN_PILL_LIFT_PCT,
+    dy: keepBaseline(0.034, TYPE_SIZE_PCT) + TOKEN_PILL_LIFT_PCT + TOKEN_TYPE_PRINT_DY,
     fit: "measured",
     colorHex: INK_DARK,
     weight: 600,
-    align: "center",
     font: "display",
   },
   rules: {
@@ -1285,14 +1297,13 @@ const M15TOKEN: FrameProfile = {
     letterSpacingEm: 0.05,
     font: "display",
   },
-  // MSE pt sits at 286,469 (76.3%, 89.7%) on the light lower band — dark ink
-  // at the card bottom, exactly like printed full-art tokens.
-  pt: {
-    rect: { topPct: 88.6, leftPct: 73.5, widthPct: 20, heightPct: 6.2 },
-    sizePct: 0.0427,
-    colorHex: INK_DARK,
-    weight: 700,
-  },
+  // TODO 4.49 (a): every 2014–19 token prints its P/T on the M15 plate
+  // (78.1–93.6 %W × 89.7–94.6 %H of ink, TDOM #3, TM19 #6, TBFZ #1 …), not
+  // on the band's edge (MSE's 88.6–94.8 %H rect put the digits into the
+  // black border at ~1948 px). M15's slot as a whole: CC's plate box, the
+  // value box (4.18), its ink span, size and dark ink; the plate masters are
+  // M15's own (m15/pt, and m15artifact/pt on the artifact token below).
+  pt: { ...M15.pt! },
 };
 
 // M15 Snow (Kaldheim/Coldsnap frosty frame) and M15 Devoid (Eldrazi washed-out
@@ -2680,7 +2691,14 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   m15snowland: M15SNOWLAND,
   // Colourless creature tokens print a see-through frame (BFZ, MH1, WAR).
   m15token: { ...M15TOKEN, underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] } },
-  m15tokenartifact: { ...M15TOKEN, label: "M15 Artifact Token" },
+  // The artifact token's plate is M15's artifact set (TODO 4.49 (a)): CC's
+  // silver m15PTa for colourless (TKLD #2, TMH1 #18), the colour's plate on
+  // a coloured one (TC18 #7), as on m15artifact.
+  m15tokenartifact: {
+    ...M15TOKEN,
+    label: "M15 Artifact Token",
+    pt: { ...M15TOKEN.pt!, plateAssetPathTemplate: "/frames/m15artifact/pt/{color}.png" },
+  },
   m15artifact: M15ARTIFACT,
   m15borderless: M15BORDERLESS,
   m15borderlessartifact: M15BORDERLESSARTIFACT,

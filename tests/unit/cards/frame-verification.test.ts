@@ -33,11 +33,16 @@ describe("frame reference registry", () => {
   it("every M15-era standard combo has a real reference", () => {
     // The fully researched set (2026-07-01). Combos documented as having no
     // real printing are allowed to be null.
-    // Since the 2026-09-25 registry refresh (scripts/find-frame-references.mjs)
-    // coloured artifact tokens and a gold creature token exist as Universes
-    // Beyond token prints; the remaining nulls are documented in
+    // TODO 4.49's re-pin (2026-09-29) keeps the arch token frames to the
+    // 2014–19 arch prints: no textless gold token, and a coloured arch
+    // artifact token in blue only (TC18 #7); the nulls are documented in
     // tests/unit/cards/frame-references-data.test.ts too.
     const noRealPrinting = new Set([
+      "m15token/m",
+      "m15tokenartifact/w",
+      "m15tokenartifact/b",
+      "m15tokenartifact/r",
+      "m15tokenartifact/m",
       "adventure/c",
       "split/w",
       "split/u",

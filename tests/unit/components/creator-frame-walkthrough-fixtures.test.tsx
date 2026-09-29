@@ -21,7 +21,8 @@ import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
 // Card step, without a "wrong colour" toast.
 //
 // Fixtures are real Scryfall payloads (/cards/:id, captured once on
-// 2026-09-28 for the references the import fixtures lack; the rest reuse
+// 2026-09-28 for the references the import fixtures lack — TKLD #2 on
+// 2026-09-29, after TODO 4.49's token re-pin; the rest reuse
 // tests/unit/scryfall/fixtures/import-printings.json), trimmed like those to
 // identity + the frame fields (no rules or flavour text) and parsed through
 // the routes' zod schema. No network. The walk's skins/treatments ride the
@@ -155,7 +156,8 @@ const CASES: Array<[FrameTemplate, FrameColorKey, string, string]> = [
   ["m15land", "m", "Command Tower", ""],
   ["m15snowland", "u", "Snow-Covered Island", ""],
   ["m15devoid", "w", "Eldrazi Displacer", ""],
-  ["m15tokenartifact", "c", "Treasure", ""],
+  // TKLD #2 since TODO 4.49's re-pin (the TMSH Treasure is an M20+ print).
+  ["m15tokenartifact", "c", "Construct", ""],
 ];
 
 describe("walking a layout frame from its real reference printing", () => {

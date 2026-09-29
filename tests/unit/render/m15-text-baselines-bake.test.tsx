@@ -108,6 +108,10 @@ function measure(b: Baked, slot: TextSlot): { capTop: number; baseline: number }
 
 /** The 2023+ prints' type-line baseline at HD (4.20 print review, n = 22). */
 const PRINT_TYPE_BASELINE_HD = 1259.6;
+/** The 2014–19 token prints' type-line baseline at HD (TODO 4.49 (d):
+ *  fifteen prints, TDOM / TM19 / TBFZ / TWAR / TMH1 / TKLD / TC18 / TEMN,
+ *  1797–1803). */
+const TOKEN_PRINT_TYPE_BASELINE_HD = 1800.4;
 
 describe("M15-era display sizes on real bakes (layout v32)", () => {
   beforeAll(async () => {
@@ -126,7 +130,8 @@ describe("M15-era display sizes on real bakes (layout v32)", () => {
     ["extendedart", 189, 1264],
     ["saga", 185, 1845],
     ["flip", 188, 587],
-    ["m15token", 189, 1797],
+    // Its type line moved onto the prints' in TODO 4.49 (d) (below).
+    ["m15token", 189, null],
     ["fullart", null, 1608],
     ["aftermath", 191, 805],
   ];
@@ -155,6 +160,16 @@ describe("M15-era display sizes on real bakes (layout v32)", () => {
     // …and at the default size (750 px): v31 printed it at 631.
     const m = measure(await bake("m15", "default"), getFrameProfile("m15").type);
     expect(Math.abs(m.baseline - PRINT_TYPE_BASELINE_HD / 2)).toBeLessThanOrEqual(1);
+  });
+
+  it("puts the 2014–19 token's type line on the prints' baseline (TODO 4.49 (d); v31–v33: 1797)", async () => {
+    for (const template of ["m15token", "m15tokenartifact"]) {
+      const m = measure(await bake(template, "hd"), getFrameProfile(template).type);
+      expect(Math.abs(m.baseline - TOKEN_PRINT_TYPE_BASELINE_HD), `${template} ${m.baseline}`).toBeLessThanOrEqual(1);
+      expect(m.baseline).toBeGreaterThan(1797 + 2);
+    }
+    const m = measure(await bake("m15token", "default"), getFrameProfile("m15token").type);
+    expect(Math.abs(m.baseline - TOKEN_PRINT_TYPE_BASELINE_HD / 2)).toBeLessThanOrEqual(1);
   });
 
   it("keeps the planeswalker's grown name centred where its v31 name was (133.6 px, level with the pips) and its type line on M15's", async () => {
