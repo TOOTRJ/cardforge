@@ -108,6 +108,60 @@ export function slotPixelBox(rect: ArtWindowRect, rotation: number, width: numbe
 }
 
 /**
+ * Scanline flood fill over `mask` (1 = fillable; the fill clears what it
+ * takes) from pixel `start`: the 4-connected region's bounding box and pixel
+ * count. Runs, not pixels, go on the stack — the fills run over millions of
+ * pixels per master, and under CI's V8 coverage a per-pixel push cost ~10×.
+ */
+function fillRegion(mask: Uint8Array, width: number, height: number, start: number): PixelBox & { pixels: number } {
+  let stack = new Int32Array(1024);
+  let top = 0;
+  stack[top++] = start;
+  let x0 = width;
+  let x1 = -1;
+  let y0 = height;
+  let y1 = -1;
+  let pixels = 0;
+  while (top > 0) {
+    const i = stack[--top];
+    if (!mask[i]) continue;
+    const y = (i / width) | 0;
+    const row = y * width;
+    let l = i - row;
+    let r = l;
+    while (l > 0 && mask[row + l - 1]) l -= 1;
+    while (r < width - 1 && mask[row + r + 1]) r += 1;
+    mask.fill(0, row + l, row + r + 1);
+    pixels += r - l + 1;
+    if (l < x0) x0 = l;
+    if (r > x1) x1 = r;
+    if (y < y0) y0 = y;
+    if (y > y1) y1 = y;
+    // One seed per run of fillable pixels in the rows above and below.
+    for (let ny = y - 1; ny <= y + 1; ny += 2) {
+      if (ny < 0 || ny >= height) continue;
+      const nrow = ny * width;
+      let inRun = false;
+      for (let x = l; x <= r; x += 1) {
+        if (!mask[nrow + x]) {
+          inRun = false;
+          continue;
+        }
+        if (inRun) continue;
+        inRun = true;
+        if (top === stack.length) {
+          const grown = new Int32Array(stack.length * 2);
+          grown.set(stack);
+          stack = grown;
+        }
+        stack[top++] = nrow + x;
+      }
+    }
+  }
+  return { x0, x1: x1 + 1, y0, y1: y1 + 1, pixels };
+}
+
+/**
  * The see-through region (α < `alphaMax`, 4-connected) that contains the
  * pixel (x, y) of a straight-RGBA master: its bounding box and pixel count,
  * or null when that pixel itself is not see-through.
@@ -122,37 +176,9 @@ export function seeThroughWindow(
 ): (PixelBox & { pixels: number }) | null {
   if (x < 0 || y < 0 || x >= width || y >= height) return null;
   if (rgba[(y * width + x) * 4 + 3] >= alphaMax) return null;
-  const seen = new Uint8Array(width * height);
-  const stack = new Int32Array(width * height);
-  let top = 0;
-  stack[top++] = y * width + x;
-  seen[y * width + x] = 1;
-  let x0 = x;
-  let x1 = x;
-  let y0 = y;
-  let y1 = y;
-  let pixels = 0;
-  const push = (j: number) => {
-    if (!seen[j] && rgba[j * 4 + 3] < alphaMax) {
-      seen[j] = 1;
-      stack[top++] = j;
-    }
-  };
-  while (top > 0) {
-    const i = stack[--top];
-    const px = i % width;
-    const py = (i - px) / width;
-    pixels += 1;
-    if (px < x0) x0 = px;
-    if (px > x1) x1 = px;
-    if (py < y0) y0 = py;
-    if (py > y1) y1 = py;
-    if (px > 0) push(i - 1);
-    if (px < width - 1) push(i + 1);
-    if (py > 0) push(i - width);
-    if (py < height - 1) push(i + width);
-  }
-  return { x0, x1: x1 + 1, y0, y1: y1 + 1, pixels };
+  const mask = new Uint8Array(width * height);
+  for (let i = 0; i < mask.length; i += 1) if (rgba[i * 4 + 3] < alphaMax) mask[i] = 1;
+  return fillRegion(mask, width, height, y * width + x);
 }
 
 /**
@@ -235,49 +261,11 @@ export function translucentRegionsUnder(
   alphaMax = SEE_THROUGH_FRAME_ALPHA_MAX,
   seed?: { x: number; y: number },
 ): TranslucentRegion[] {
-  // mask: 1 = translucent and not yet visited; a fill clears what it visits.
+  // mask: 1 = translucent and not yet in a region; a fill clears what it takes.
   const mask = translucentMask(rgba, width, height, alphaMax);
-  const stack = new Int32Array(width * height);
-  const fill = (start: number, seeded: boolean): TranslucentRegion => {
-    let top = 0;
-    stack[top++] = start;
-    mask[start] = 0;
-    let x0 = width;
-    let x1 = -1;
-    let y0 = height;
-    let y1 = -1;
-    let pixels = 0;
-    while (top > 0) {
-      const i = stack[--top];
-      const px = i % width;
-      const py = (i - px) / width;
-      pixels += 1;
-      if (px < x0) x0 = px;
-      if (px > x1) x1 = px;
-      if (py < y0) y0 = py;
-      if (py > y1) y1 = py;
-      if (px > 0 && mask[i - 1]) {
-        mask[i - 1] = 0;
-        stack[top++] = i - 1;
-      }
-      if (px < width - 1 && mask[i + 1]) {
-        mask[i + 1] = 0;
-        stack[top++] = i + 1;
-      }
-      if (py > 0 && mask[i - width]) {
-        mask[i - width] = 0;
-        stack[top++] = i - width;
-      }
-      if (py < height - 1 && mask[i + width]) {
-        mask[i + width] = 0;
-        stack[top++] = i + width;
-      }
-    }
-    return { x0, x1: x1 + 1, y0, y1: y1 + 1, pixels, seeded };
-  };
   const regions: TranslucentRegion[] = [];
   if (seed && seed.x >= 0 && seed.y >= 0 && seed.x < width && seed.y < height && mask[seed.y * width + seed.x]) {
-    regions.push(fill(seed.y * width + seed.x, true));
+    regions.push({ ...fillRegion(mask, width, height, seed.y * width + seed.x), seeded: true });
   }
   // Pixel x's centre x + 0.5 lies in [box.x0, box.x1).
   const xa = Math.max(0, Math.ceil(box.x0 - 0.5));
@@ -285,7 +273,8 @@ export function translucentRegionsUnder(
   const ya = Math.max(0, Math.ceil(box.y0 - 0.5));
   const yb = Math.min(height, Math.ceil(box.y1 - 0.5));
   for (let y = ya; y < yb; y += 1) {
-    for (let x = xa; x < xb; x += 1) if (mask[y * width + x]) regions.push(fill(y * width + x, false));
+    const row = y * width;
+    for (let i = row + xa; i < row + xb; i += 1) if (mask[i]) regions.push({ ...fillRegion(mask, width, height, i), seeded: false });
   }
   return regions;
 }

@@ -154,6 +154,25 @@ describe("artWindowViolations", () => {
     expect(seeThroughWindow(m, W, H, 150, 48)).toBeNull();
   });
 
+  it("fills a winding window exactly — every run of a serpentine, nothing past a diagonal", () => {
+    // A serpentine: rows 100, 104, …, 196 clear from x 40 to 259, joined
+    // alternately at the right (x 259) and the left (x 40) by 3-px uprights.
+    const m = withWindow(0, 0, 0, 0);
+    let clear = 0;
+    const open = (x: number, y: number) => {
+      if (m[(y * W + x) * 4 + 3] !== 0) clear += 1;
+      m[(y * W + x) * 4 + 3] = 0;
+    };
+    for (let row = 0; row <= 24; row += 1) {
+      const y = 100 + row * 4;
+      for (let x = 40; x < 260; x += 1) open(x, y);
+      if (row < 24) for (let dy = 1; dy <= 3; dy += 1) open(row % 2 ? 40 : 259, y + dy);
+    }
+    m[(197 * W + 261) * 4 + 3] = 0; // touches the last row's end only diagonally
+    expect(seeThroughWindow(m, W, H, 40, 100)).toEqual({ x0: 40, x1: 260, y0: 100, y1: 197, pixels: clear });
+    expect(seeThroughWindow(m, W, H, 150, 196)).toEqual({ x0: 40, x1: 260, y0: 100, y1: 197, pixels: clear });
+  });
+
   it("reports a slot whose centre the frame paints over", () => {
     const m = withWindow(30, 100, 50, 200);
     expect(artWindowViolations(m, W, H, slot(200, 280, 50, 200))).toEqual([
@@ -272,7 +291,8 @@ describe("artWindowVerdict: the known-failure table", () => {
   });
 });
 
-describe("see-through masters (4.17): the under-frame art covers the window and the see-through body", () => {
+// 1500 × 2100 synthetic masters: generous timeouts for CI's V8 coverage.
+describe("see-through masters (4.17): the under-frame art covers the window and the see-through body", { timeout: 20_000 }, () => {
   const W = 1500;
   const H = 2100;
   const under = { topPct: 4, leftPct: 4, widthPct: 92, heightPct: 92 }; // 60–1440 × 84–2016
@@ -490,7 +510,8 @@ describe("every frame master's art window is covered by the art that fills it", 
     for (const m of masters) {
       const known = isKnownArtWindowFailure(template, m.key);
       const todo = known ? ` — known failure (TODO ${ART_WINDOW_KNOWN_FAILURES[template].todo.join(", ")})` : "";
-      it(`${template}/${m.key}${m.bucket ? " (bucket)" : ""}${todo}`, async () => {
+      // Decode + fills on a 3 Mpx master: a generous timeout for CI's V8 coverage.
+      it(`${template}/${m.key}${m.bucket ? " (bucket)" : ""}${todo}`, { timeout: 20_000 }, async () => {
         const { data, width, height } = await rgbaOf(m.file);
         expect([width, height]).toEqual(getFrameProfile(template).orientation === "landscape" ? [2100, 1500] : [1500, 2100]);
         const verdict = artWindowVerdict(template, m.key, artWindowFindings(data, width, height, slotsFor(template, m.key)));
