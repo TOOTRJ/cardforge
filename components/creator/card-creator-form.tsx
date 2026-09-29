@@ -122,6 +122,7 @@ import { recordFrameRequestAction } from "@/lib/frames/frame-request-actions";
 import { frameRequestFromImport } from "@/lib/frames/frame-requests";
 import type { DeckRemixContext } from "@/types/deck";
 import {
+  droppedFaceNotice,
   printingTreatmentNotice,
   printingTreatmentOffer,
   type ScryfallImportPatch,
@@ -1405,6 +1406,11 @@ export function CardCreatorForm({
     // The Card step's chip while the card sits on a frame that isn't the
     // printing's own (session-only; never saved).
     setFrameSubstitution(frameSubstitutionFor(patch.frame_match, landedTemplate));
+
+    // A double-faced token or a Role card came in front face only (TODO
+    // 1.23): say so, whoever asked — it isn't a frame substitution.
+    const faceNotice = droppedFaceNotice(patch, source.name);
+    if (faceNotice) toast.info(faceNotice, { duration: 8000 });
 
     let notice: ImportNotice | null = null;
     if (via === "dialog") {

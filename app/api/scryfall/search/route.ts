@@ -4,9 +4,15 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
   pickArtCropUrl,
   pickPrintImageUrl,
-  searchCards,
+  searchCardsWithOutcome,
   type ScryfallCard,
 } from "@/lib/scryfall/client";
+import {
+  DEFAULT_SEARCH_SCOPE,
+  isSearchScope,
+  tokensScopeQuery,
+  type SearchScope,
+} from "@/lib/scryfall/search-scope";
 import {
   checkScryfallRateLimit,
   logScryfallCall,
@@ -14,7 +20,7 @@ import {
 import { rateLimitedResponse } from "@/lib/api/responses";
 
 // ---------------------------------------------------------------------------
-// GET /api/scryfall/search?q=<query>&limit=<n>
+// GET /api/scryfall/search?q=<query>&limit=<n>&scope=<cards|tokens>
 //
 // Server-side proxy in front of Scryfall's /cards/search. Auth-gated and
 // per-user rate-limited so a single malicious account can't hammer the
@@ -31,6 +37,14 @@ import { rateLimitedResponse } from "@/lib/api/responses";
 // from the session's own profile (getCurrentProfile), never from the request.
 // The global throttle in lib/scryfall/client.ts still spaces every upstream
 // call, admin or not.
+//
+// Tokens and emblems (TODO 1.23, lib/scryfall/search-scope.ts): Scryfall
+// leaves them out unless the request sends `include_extras`. `scope=tokens`
+// (the dialog's "Tokens & emblems" scope) searches only tokens and emblems,
+// with the flag. The default scope (`cards`) sends a plain query and, when
+// Scryfall finds NOTHING (its 404 — never on an upstream failure), asks once
+// more in the tokens scope; the answer's `scope` says which one the results
+// come from. Each upstream search is one call against the quota.
 // ---------------------------------------------------------------------------
 
 export const maxDuration = 15;
@@ -50,6 +64,10 @@ type TrimmedScryfallCard = {
   mana_cost: string | null;
   rarity: string | null;
   artist: string | null;
+  /** The front face's power and toughness: the tokens scope lists "1/1"
+   *  beside the type line (a Soldier token is several cards). */
+  power: string | null;
+  toughness: string | null;
   thumb_url: string | null;
   print_url: string | null;
   oracle_text: string | null;
@@ -67,6 +85,8 @@ function trim(card: ScryfallCard): TrimmedScryfallCard {
     mana_cost: card.mana_cost ?? null,
     rarity: card.rarity ?? null,
     artist: card.artist ?? null,
+    power: card.power ?? card.card_faces?.[0]?.power ?? null,
+    toughness: card.toughness ?? card.card_faces?.[0]?.toughness ?? null,
     thumb_url: pickArtCropUrl(card),
     print_url: pickPrintImageUrl(card),
     oracle_text: card.oracle_text ?? null,
@@ -101,6 +121,14 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  const scopeParam = request.nextUrl.searchParams.get("scope")?.trim() || DEFAULT_SEARCH_SCOPE;
+  if (!isSearchScope(scopeParam)) {
+    return NextResponse.json(
+      { ok: false, error: "Unknown search scope." },
+      { status: 400 },
+    );
+  }
+
   const limitRaw = Number(request.nextUrl.searchParams.get("limit") ?? "12");
   const limit = Number.isFinite(limitRaw)
     ? Math.min(50, Math.max(1, Math.round(limitRaw)))
@@ -119,15 +147,34 @@ export async function GET(request: NextRequest) {
     return rateLimitedResponse(limitCheck);
   }
 
-  // Log only after the upstream call resolves, so a network error (which
-  // rejects here) doesn't erode the user's budget. searchCards collapses an
+  // Log only after each upstream call resolves, so a network error (which
+  // rejects here) doesn't erode the user's budget. The client collapses an
   // upstream 5xx into an empty list, so that case is still counted.
-  const cards = await searchCards({ query, limit });
-  if (!quotaExempt) {
-    await logScryfallCall(user.id, "search");
+  const search = async (scope: SearchScope) => {
+    const outcome = await searchCardsWithOutcome(
+      scope === "tokens"
+        ? { query: tokensScopeQuery(query), limit, includeExtras: true }
+        : { query, limit },
+    );
+    if (!quotaExempt) {
+      await logScryfallCall(user.id, "search");
+    }
+    return outcome;
+  };
+
+  let scope: SearchScope = scopeParam;
+  let outcome = await search(scope);
+  if (scope === "cards" && outcome.noMatches) {
+    // Nothing is called that: perhaps a token or an emblem (TODO 1.23).
+    const extras = await search("tokens");
+    if (extras.cards.length > 0) {
+      scope = "tokens";
+      outcome = extras;
+    }
   }
   return NextResponse.json({
     ok: true,
-    results: cards.map(trim),
+    results: outcome.cards.map(trim),
+    scope,
   });
 }

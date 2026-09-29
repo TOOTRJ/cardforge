@@ -18,7 +18,10 @@ import {
 } from "@/lib/creator/import-frame-choice";
 import { describeFrame } from "@/lib/creator/frame-resolve";
 import { pickFrameColorKey } from "@/components/cards/frame-layer";
-import type { ScryfallImportPatch } from "@/lib/scryfall/import-mapper";
+import {
+  droppedFaceNotice,
+  type ScryfallImportPatch,
+} from "@/lib/scryfall/import-mapper";
 import type { PrintingSummary, PrintingView } from "@/lib/scryfall/printing-views";
 
 // ---------------------------------------------------------------------------
@@ -115,6 +118,9 @@ export function ImportDetail({
 }) {
   const { card, patch } = data;
   const match = patch.frame_match;
+  // A double-faced token or a Role card imports its front face only (TODO
+  // 1.23): say so before the commit, as the creator's toast does after.
+  const faceNote = droppedFaceNotice(patch, card.name);
   const frameCopy = frameOverwriteCopy(
     patch,
     plan.mode === "choose" ? frameChoice : null,
@@ -194,6 +200,15 @@ export function ImportDetail({
           </div>
 
           <PatchPreview patch={patch} />
+          {faceNote ? (
+            <p
+              className="inline-flex items-start gap-2 text-[11px] leading-4 text-muted"
+              data-testid="import-face-note"
+            >
+              <Info className="mt-0.5 h-3 w-3 shrink-0 text-primary-bright" aria-hidden />
+              <span>{faceNote}</span>
+            </p>
+          ) : null}
         </div>
       </div>
 

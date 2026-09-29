@@ -91,8 +91,10 @@ describe("printingTreatmentFromScryfall — fixtures from 1.16 / 1.19", () => {
     ["unf-235", "borderless", "m15textlessland"],
     // Dark Confidant SCH #3: textless (and full art) → the textless frame.
     ["sch-3", "textless", "m15textless"],
-    // Cat T2XM #4: a full-art 2015 token already lands on its own family.
-    ["t2xm-4", undefined, "m15token"],
+    // Cat T2XM #4: a full-art token of the M20 design lands on the 2014–19
+    // arch, which isn't its look, so it is named like any nearest (TODO 1.23;
+    // it was skipped as "its own family" before).
+    ["t2xm-4", "fullart", "m15token"],
     // Kithkin Soldier TLRW #3: a 2003-frame full-art token is NOT m15token's
     // look, so it still gets the notice.
     ["tlrw-3", "fullart", "m15token"],
@@ -132,6 +134,14 @@ describe("printingTreatmentFromScryfall — fixtures from 1.16 / 1.19", () => {
       frame_effects: ["extendedart", "showcase"],
     });
     expect(printingTreatmentFromScryfall(card)).toBe("showcase");
+  });
+
+  it("skips a full-art 2014–19 token on the 2015 frame: m15token IS that design (TODO 1.23)", () => {
+    // T2XM #4 as if printed before M20 (released 2019-07-12).
+    const arch = scryfallCardSchema.parse({ ...printings["t2xm-4"], released_at: "2018-04-27" });
+    expect(printingTreatmentFromScryfall(arch)).toBeUndefined();
+    const m20 = scryfallCardSchema.parse({ ...printings["t2xm-4"], released_at: "2019-07-12" });
+    expect(printingTreatmentFromScryfall(m20)).toBe("fullart");
   });
 
   it("still names a borderless 2015 token (only full-art/textless tokens are skipped)", () => {

@@ -71,7 +71,7 @@ describe("the printings grid (TODO 1.5)", () => {
   it("badges each printing ✓ Exact · ≈ Nearest · ✕ Not available, with what it is and why in the tooltip", async () => {
     stubScryfallRoutes({
       search: ["dmu-107"],
-      printings: { representative: [["t2xm-4", "dmu-435", "sznr-1"]] },
+      printings: { representative: [["tdom-3", "dmu-435", "sznr-1", "t2xm-4"]] },
       serverVerified: SERVER_VERIFIED,
     });
     renderDialog();
@@ -79,7 +79,7 @@ describe("the printings grid (TODO 1.5)", () => {
     await waitFor(() => expect(grid()).toBeTruthy());
 
     const tiles = within(grid()).getAllByRole("button");
-    expect(tiles).toHaveLength(3);
+    expect(tiles).toHaveLength(4);
     const badge = (tile: HTMLElement) => tile.querySelector("[data-status]") as HTMLElement;
     expect(badge(tiles[0]!).textContent).toBe("✓ Exact");
     expect(badge(tiles[1]!).textContent).toBe("≈ Nearest");
@@ -90,7 +90,12 @@ describe("the printings grid (TODO 1.5)", () => {
     // SET · year · #number, and the treatment badge.
     expect(tiles[1]!.textContent).toContain("DMU · 2023 · #435");
     expect(tiles[1]!.textContent).toContain("Borderless");
-    expect(tiles[0]!.textContent).toContain("Full art");
+    // A full-art token of the M20 design: nearest the arch (TODO 1.23).
+    expect(badge(tiles[3]!).textContent).toBe("≈ Nearest");
+    expect(badge(tiles[3]!).title).toBe(
+      "M20 full-art token frame — PipGlyph doesn't have the current full-art token frame yet",
+    );
+    expect(tiles[3]!.textContent).toContain("Full art");
   });
 
   it("a filter chip asks for that view; Load more asks for the next page and appends it", async () => {

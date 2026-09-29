@@ -439,6 +439,135 @@ test.describe("Scryfall search → import", () => {
     await expect(typeLines.first()).toHaveText("Instant");
   });
 
+  // TODO 1.23: Scryfall leaves tokens and emblems out of a plain search. The
+  // dialog's "Tokens & emblems" scope asks the search route for scope=tokens
+  // (the only place Scryfall's include_extras is sent), and a Cards search
+  // that the server answered from tokens and emblems (its no-match fallback)
+  // says so. The routes are mocked, so the run stays offline; the token is
+  // the 2014–19 Treasure TXLN #7, an exact match, so no chooser.
+  test("the Tokens & emblems scope finds a Treasure token and imports it", async ({ page }) => {
+    const id = "720f3e68-84c0-462e-a0d1-90236ccc494a"; // TXLN #7
+    const searched: Array<{ q: string | null; scope: string | null }> = [];
+    await page.route("**/api/scryfall/search**", async (route) => {
+      const params = new URL(route.request().url()).searchParams;
+      searched.push({ q: params.get("q"), scope: params.get("scope") });
+      const token = params.get("scope") === "tokens";
+      await route.fulfill({
+        json: {
+          ok: true,
+          // A Cards search the server answered from tokens and emblems.
+          scope: "tokens",
+          results: [
+            token
+              ? {
+                  id,
+                  name: "Treasure",
+                  set: "txln",
+                  set_name: "Ixalan Tokens",
+                  type_line: "Token Artifact — Treasure",
+                  mana_cost: "",
+                  rarity: "common",
+                  artist: "Florian de Gesincourt",
+                  power: null,
+                  toughness: null,
+                  thumb_url: null,
+                  print_url: null,
+                  oracle_text: "{T}, Sacrifice this token: Add one mana of any color.",
+                  image_status: "highres_scan",
+                }
+              : {
+                  id: "3c4a0a5f-4b2a-4a0e-9d56-2a2f2f0b3f11",
+                  name: "Kaito, Cunning Infiltrator Emblem",
+                  set: "tfdn",
+                  set_name: "Foundations Tokens",
+                  type_line: "Emblem",
+                  mana_cost: "",
+                  rarity: "common",
+                  artist: null,
+                  power: null,
+                  toughness: null,
+                  thumb_url: null,
+                  print_url: null,
+                  oracle_text: null,
+                  image_status: "highres_scan",
+                },
+          ],
+        },
+      });
+    });
+    await page.route("**/api/scryfall/named**", async (route) => {
+      await route.fulfill({
+        json: {
+          ok: true,
+          card: {
+            id,
+            name: "Treasure",
+            set: "txln",
+            set_name: "Ixalan Tokens",
+            print_url: null,
+            thumb_url: null,
+            scryfall_uri: null,
+            has_back_image: false,
+          },
+          patch: {
+            title: "Treasure",
+            cost: "",
+            kind: "token",
+            frame_template: "m15tokenartifact",
+            frame_match: {
+              status: "exact",
+              template: "m15tokenartifact",
+              exactLabel: "M15 (2015) frame",
+              reason: null,
+              signature: "era/2015",
+            },
+            card_type: "token",
+            supertype: "Artifact",
+            subtypes_text: "Treasure",
+            rarity: "common",
+            color_identity: ["colorless"],
+            rules_text: "{T}, Sacrifice this token: Add one mana of any color.",
+            artist_credit: "Florian de Gesincourt",
+            source_scryfall_id: id,
+          },
+        },
+      });
+    });
+
+    await signIn(page);
+    await page.goto("/create");
+    await page.getByRole("button", { name: /^search a real card/i }).click();
+    const search = page.locator('input[aria-label="Search Scryfall"]');
+
+    // A Cards search the server answered from tokens and emblems says so.
+    await search.fill("Kaito Cunning Infiltrator Emblem");
+    await expect(page.getByTestId("search-fallback-note")).toHaveText(
+      "No cards matched — these are tokens and emblems.",
+    );
+    await expect.poll(() => searched.at(-1)).toEqual({ q: "Kaito Cunning Infiltrator Emblem", scope: null });
+
+    // The Tokens & emblems scope sends scope=tokens and lists the type line.
+    await page
+      .getByRole("radiogroup", { name: "Search scope" })
+      .getByRole("radio", { name: "Tokens & emblems" })
+      .click();
+    await search.fill("Treasure");
+    // Switching the scope re-ran the Kaito query first; wait for Treasure's.
+    await expect.poll(() => searched.at(-1)).toEqual({ q: "Treasure", scope: "tokens" });
+    const option = page.getByRole("option", { name: /Treasure/ });
+    await expect(option).toContainText("Token Artifact — Treasure");
+    await expect(page.getByTestId("search-fallback-note")).toHaveCount(0);
+
+    await option.click();
+    await confirmImport(page, false);
+    await expect(page.getByText("Seeded form with Treasure.")).toBeVisible();
+    const identityStep = page
+      .getByRole("navigation", { name: /card editor steps/i })
+      .getByRole("button", { name: /^identity$/i });
+    if (await identityStep.count()) await identityStep.click();
+    await expect(page.locator('input[placeholder="Emberbound Wyrm"]')).toHaveValue("Treasure");
+  });
+
   // TODO 1.4 + 1.5: Bident of Thassa THS #42 prints Theros's 2003 Nyx frame,
   // whose nearest PipGlyph frame is Nyx (frame_match). With Nyx not verified
   // in blue (withdrawn for this run, whatever the seed lists), the chooser

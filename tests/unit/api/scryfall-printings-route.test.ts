@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import treatmentPrintings from "../scryfall/fixtures/treatment-printings.json";
 import importPrintings from "../scryfall/fixtures/import-printings.json";
+import tokenPrintings from "../scryfall/fixtures/token-printings.json";
 import { scryfallCardSchema, type ScryfallCard } from "@/lib/scryfall/client";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import {
@@ -194,16 +195,31 @@ describe("GET /api/scryfall/printings — each printing's match and facts", () =
   });
 
   it("an exact match needs the combo verified in the card's colour", async () => {
-    const card = printing("t2xm-4"); // a white 2015 full-art Cat token → m15token
+    // A white 2014–19 Soldier token (TDOM #3) → m15token, its own design.
+    const card = scryfallCardSchema.parse(tokenPrintings["tdom-3"]);
     state.searchPrintingsPage.mockResolvedValue({ cards: [card], hasMore: false, totalCards: 1 });
     state.verifiedKeys.mockResolvedValue([frameComboKey("m15token", "w")]);
     const exact = (await (await get(`oracle_id=${PLAINS}&view=all`)).json()).printings[0];
     expect(exact.match).toMatchObject({ status: "exact", template: "m15token", reason: null });
-    expect(printingTreatmentBadge(exact)).toBe("Full art");
 
     state.verifiedKeys.mockResolvedValue([]);
     const nearest = (await (await get(`oracle_id=${PLAINS}&view=all`)).json()).printings[0];
     expect(nearest.match).toMatchObject({ status: "nearest", reason: "not yet verified in white" });
+  });
+
+  it("an M20-design token is nearest the arch whatever is verified, and badged Full art (TODO 1.23)", async () => {
+    const card = printing("t2xm-4"); // a white full-art Cat token, 2020
+    state.searchPrintingsPage.mockResolvedValue({ cards: [card], hasMore: false, totalCards: 1 });
+    state.verifiedKeys.mockResolvedValue([frameComboKey("m15token", "w")]);
+    const tile = (await (await get(`oracle_id=${PLAINS}&view=all`)).json()).printings[0];
+    expect(tile.match).toMatchObject({
+      status: "nearest",
+      template: "m15token",
+      exactLabel: "M20 full-art token frame",
+      reason: "PipGlyph doesn't have the current full-art token frame yet",
+    });
+    expect(tile).toMatchObject({ treatment: "fullart" });
+    expect(printingTreatmentBadge(tile)).toBe("Full art");
   });
 });
 
