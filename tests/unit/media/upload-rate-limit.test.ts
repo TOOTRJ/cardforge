@@ -7,7 +7,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // 31st refused and not counted, the day cap, the admin exemption — is pinned
 // in tests/unit/db/media-url-guards-migration.test.ts and proved on the CI
 // stack by tests/e2e/media-url-guards.spec.ts). This checks the app's side:
-// the numbers it asks for, the typed refusal the UI shows, and fail-open.
+// the numbers it asks for, the typed refusal the UI shows, and that it fails
+// CLOSED — open only while the function isn't deployed yet (review
+// 2026-09-29: a flood of uploads is what makes the counter time out).
 // ---------------------------------------------------------------------------
 
 const state = vi.hoisted(() => ({
@@ -34,6 +36,7 @@ vi.mock("@/lib/supabase/admin", () => ({
 import {
   checkUploadRateLimit,
   UPLOAD_DAILY_LIMIT_MESSAGE,
+  UPLOAD_LIMIT_UNAVAILABLE_MESSAGE,
   UPLOAD_RATE_LIMITS,
   UPLOAD_TOO_FAST_MESSAGE,
   uploadRateLimitFailure,
@@ -83,19 +86,53 @@ describe("checkUploadRateLimit", () => {
     ).toEqual({ ok: false, error: UPLOAD_TOO_FAST_MESSAGE, code: "UPLOAD_RATE_LIMITED", retryAfterSeconds: 9 });
   });
 
-  it("fails OPEN: an RPC error, a throw, an empty answer, no service role, no user", async () => {
-    state.answer = { data: null, error: { message: "function does not exist" } };
-    expect(await checkUploadRateLimit(USER)).toEqual({ ok: true });
-    state.answer = { data: [], error: null };
-    expect(await checkUploadRateLimit(USER)).toEqual({ ok: true });
+  const REFUSED = {
+    ok: false,
+    code: "UPLOAD_RATE_LIMITED",
+    window: "unavailable",
+    retryAfterSeconds: 60,
+    message: UPLOAD_LIMIT_UNAVAILABLE_MESSAGE,
+  };
+
+  it("fails CLOSED on a database error, a timeout, a throw or an empty answer", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    for (const error of [
+      { code: "57014", message: "canceling statement due to statement timeout" },
+      { code: "53300", message: "sorry, too many clients already" },
+      { code: "PGRST003", message: "Timed out acquiring connection from connection pool." },
+      { code: "", message: "TypeError: fetch failed" },
+    ]) {
+      state.answer = { data: null, error };
+      expect(await checkUploadRateLimit(USER), error.message).toEqual(REFUSED);
+    }
+    for (const data of [[], null, [{}], [{ allowed: "yes" }]]) {
+      state.answer = { data, error: null };
+      expect(await checkUploadRateLimit(USER), JSON.stringify(data)).toEqual(REFUSED);
+    }
     state.throws = true;
+    expect(await checkUploadRateLimit(USER)).toEqual(REFUSED);
+    expect(UPLOAD_LIMIT_UNAVAILABLE_MESSAGE).toMatch(/try again in a minute/);
+  });
+
+  it("fails OPEN only while the function isn't deployed (PGRST202 / 42883), with no service role, or no user", async () => {
+    state.answer = { data: null, error: { code: "PGRST202", message: "Could not find the function public.hit_upload_limit" } };
     expect(await checkUploadRateLimit(USER)).toEqual({ ok: true });
-    state.throws = false;
+    state.answer = { data: null, error: { code: "42883", message: "function public.hit_upload_limit does not exist" } };
+    expect(await checkUploadRateLimit(USER)).toEqual({ ok: true });
     state.calls.length = 0;
     state.configured = false;
     expect(await checkUploadRateLimit(USER)).toEqual({ ok: true });
     state.configured = true;
     expect(await checkUploadRateLimit("")).toEqual({ ok: true });
     expect(state.calls).toEqual([]);
+  });
+
+  it("a refusal for being unavailable reaches the upload action like any other", () => {
+    expect(uploadRateLimitFailure(REFUSED as never)).toEqual({
+      ok: false,
+      error: UPLOAD_LIMIT_UNAVAILABLE_MESSAGE,
+      code: "UPLOAD_RATE_LIMITED",
+      retryAfterSeconds: 60,
+    });
   });
 });

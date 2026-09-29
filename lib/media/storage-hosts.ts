@@ -10,8 +10,11 @@
 // transparent pixel instead of its art — black art boxes in the gallery
 // (2026-09-16).
 //
-// The database has its own copy of this list for the media URL guards
-// (migration 0127 public.storage_origins); a new storage domain goes in both.
+// The database has its own list for the media URL guards (migration 0127
+// public.storage_origins): production's two origins from the migration, and
+// each deployment's own, registered by lib/media/storage-origin.ts before its
+// first upload. When the storage domain moves, the OLD host goes here (the
+// new one registers itself on both sides).
 // ---------------------------------------------------------------------------
 
 export const LEGACY_SUPABASE_HOSTS: readonly string[] = ["zkwkisxoqdhdchqyjwdc.supabase.co"];

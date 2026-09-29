@@ -19,7 +19,12 @@ import type { CardBackFace, CardWatermark } from "@/types/card";
 // account (remixes saved before 0127 still share the parent's object).
 //
 // Only a picture that IS the parent's current one is copied — anything else
-// in another user's folder is left for the database to refuse.
+// in another user's folder is left for the database to refuse. The parent
+// may be the remixer's OWN card: a remix saved before 0127 still points at
+// the original owner's object, so a remix of it copies that too (review
+// 2026-09-29); pictures already in the remixer's folder are never copied.
+// If the parent's object is gone (its owner deleted it), the save fails with
+// a plain "couldn't copy" error instead of storing a dead link.
 // ---------------------------------------------------------------------------
 
 export type RemixMedia = {

@@ -112,4 +112,24 @@ describe("planImportWrites", () => {
     ]);
     expect(plan.inserts[0]?.image_url).toBeNull();
   });
+
+  it("drops a Scryfall URL migration 0127 would refuse — one odd image, not the whole import", () => {
+    // Every entry goes in with ONE insert, and 0127's deck-card-image rule
+    // is strict (digits-only query, no `%`, `~` or `..`): a prefix-only
+    // check let such a URL through and the database failed the import.
+    const good = "https://cards.scryfall.io/large/front/6/d/6da045f8.jpg?1562404626";
+    const odd = [
+      "https://cards.scryfall.io/large/front/6/d/6da045f8.jpg?v=abc",
+      "https://cards.scryfall.io/large/front/6/d/6da0%2045f8.jpg",
+      "https://cards.scryfall.io/large/front/6/d/~6da045f8.jpg",
+      "https://cards.scryfall.io/large/../x.jpg",
+    ];
+    expect(scryfallImageOnly(good)).toBe(good);
+    for (const url of odd) expect(scryfallImageOnly(url), url).toBeNull();
+    const plan = planImportWrites(DECK, [], [
+      line({ name: "Keeps", resolved: resolved({ scryfall_id: "s-1", image_url: good }) }),
+      line({ name: "Drops", resolved: resolved({ scryfall_id: "s-2", image_url: odd[0] }) }),
+    ]);
+    expect(plan.inserts.map((row) => row.image_url)).toEqual([good, null]);
+  });
 });

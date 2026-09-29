@@ -64,6 +64,7 @@ import {
 } from "@/lib/cards/queries";
 import { countDecksForCard } from "@/lib/decks/queries";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
+import { sameOwnerBackCard } from "@/lib/cards/back-card";
 import { listPublicDecksContaining } from "@/lib/decks/queries";
 import { buildTypeLine, describeManaCost } from "@/lib/cards/card-display";
 import { renderVersionOf } from "@/lib/cards/render-version";
@@ -153,9 +154,11 @@ export async function CardDetailContent({
     inDecks,
   ] = await Promise.all([
     // v2 back face: the referenced card, if any and if it's readable (RLS
-    // scopes the anon client to shareable cards). Rendered on the flip.
+    // scopes the anon client to shareable cards) — and only the owner's own
+    // (sameOwnerBackCard: a pre-0127 row could name someone else's card).
+    // Rendered on the flip.
     card.back_card_id
-      ? getCardById(card.back_card_id)
+      ? getCardById(card.back_card_id).then((back) => sameOwnerBackCard(card, back))
       : Promise.resolve(null),
     getFrameProfileOverrides(),
     countCardLikes(card.id),

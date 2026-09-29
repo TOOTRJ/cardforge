@@ -47,12 +47,22 @@ export const MEDIA_KIND_BUCKETS: Readonly<Record<Exclude<MediaKind, "deck-card-i
 };
 
 /** A deck entry's Scryfall printing image — the only outside host the product
- *  stores (lib/decks/import-plan.ts scryfallImageOnly). Same pattern as 0127. */
-const SCRYFALL_IMAGE = /^https:\/\/cards\.scryfall\.io\/[A-Za-z0-9_./-]+(\?[0-9]{1,20})?$/;
+ *  stores. Same pattern as 0127's `deck-card-image` rule; the deck import
+ *  (lib/decks/import-plan.ts scryfallImageOnly) drops anything else to null
+ *  rather than have the database refuse the whole import. */
+export const SCRYFALL_IMAGE = /^https:\/\/cards\.scryfall\.io\/[A-Za-z0-9_./-]+(\?[0-9]{1,20})?$/;
 
-/** Google's profile picture, copied at a Google sign-up by handle_new_user
- *  (0046; 0127 keeps only this host). Never writable through the API. */
-const GOOGLE_AVATAR = /^https:\/\/lh[0-9]{1,2}\.googleusercontent\.com\/[A-Za-z0-9_./=-]+$/;
+/** True for a URL 0127 accepts in `deck_cards.image_url`. */
+export function isScryfallPrintingImage(url: string | null | undefined): url is string {
+  return typeof url === "string" && SCRYFALL_IMAGE.test(url) && !url.includes("..");
+}
+
+/** Google's ACCOUNT picture (`/a/…`, `/a-/…`), copied at a Google sign-up by
+ *  handle_new_user (0046; 0127 keeps it only for a Google sign-in, and only
+ *  this shape — the same host serves any Google Photos / Blogger / Sites
+ *  image). Never writable through the API. All 53 production Google avatars
+ *  have it (2026-09-29). */
+const GOOGLE_AVATAR = /^https:\/\/lh[0-9]{1,2}\.googleusercontent\.com\/a-?\/[A-Za-z0-9_./=-]+$/;
 
 /** PipGlyph's own built-in images (public/defaults), site-relative or on
  *  the production site — the art the dev and preview seed cards use
@@ -72,7 +82,7 @@ const FILE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,199}$/;
  *     drawn by CardPreview, which knows no owner: a remix saved before 0127
  *     shares its parent's art object, which is ours and was scanned.
  *   * avatar / banner: also a built-in image (`/defaults/…`, 0095); an avatar
- *     also a Google profile picture (Google sign-ups).
+ *     also a Google account picture (Google sign-ups).
  *   * card-art: also PipGlyph's own built-in images (the seed cards).
  *   * deck-card-image: a Scryfall printing image only.
  */
@@ -82,7 +92,7 @@ export function isAllowedMediaUrl(
   ownerId?: string | null,
 ): url is string {
   if (!url) return false;
-  if (kind === "deck-card-image") return SCRYFALL_IMAGE.test(url) && !url.includes("..");
+  if (kind === "deck-card-image") return isScryfallPrintingImage(url);
   if (kind === "avatar" || kind === "banner") {
     if (isDefaultProfileMedia(url, kind)) return true;
     if (kind === "avatar" && GOOGLE_AVATAR.test(url)) return true;

@@ -10,7 +10,9 @@ import type { Database } from "@/types/supabase";
 // tooling behind an is_admin gate, storage writes into a user's own
 // folder through lib/media/user-storage.ts (users hold no storage write
 // policy since migration 0126; card renders go through lib/cards/bake-core.ts,
-// which opens the owner's folder the same way), and a card's render pointer
+// which opens the owner's folder the same way — and, before the first such
+// write, this deployment's own storage origin in public.storage_origins,
+// lib/media/storage-origin.ts), and a card's render pointer
 // (rendered_image_url / rendered_thumb_url / rendered_at / layout_version —
 // 0126's cards_guard_render_columns lets an API role only clear them; the
 // save bake persists a new one in lib/cards/bake-render.ts). NEVER import it

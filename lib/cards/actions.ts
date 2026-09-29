@@ -365,11 +365,13 @@ export async function createCardAction(
       ? PIPGLYPH_ROSE_WATERMARK
       : data.watermark ?? null;
 
-  // A remix of someone else's card stores its OWN copy of the parent's
-  // pictures (migration 0127 lets a user store only their own uploads;
-  // lib/cards/remix-media.ts).
+  // A remix stores its OWN copy of the parent's pictures (migration 0127
+  // lets a user store only their own uploads; lib/cards/remix-media.ts).
+  // Whoever owns the parent: a remix of your own pre-0127 remix still has
+  // the ORIGINAL owner's art, and adoptRemixMedia copies only what sits in
+  // another user's folder — a parent whose pictures are yours copies nothing.
   let media: RemixMedia = { art_url: data.art_url, back_face: data.back_face, watermark };
-  if (parent && parent.owner_id !== user.id) {
+  if (parent) {
     const adopted = await adoptRemixMedia(user.id, parent, media);
     if (!adopted.ok) return { ok: false, formError: adopted.error, code: adopted.code };
     media = adopted;

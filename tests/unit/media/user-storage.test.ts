@@ -42,6 +42,14 @@ vi.mock("@/lib/supabase/admin", () => ({
   },
 }));
 
+// Migration 0127: the deployment registers its storage origin with its own
+// database before its first write (lib/media/storage-origin.ts).
+vi.mock("@/lib/media/storage-origin", () => ({
+  ensureStorageOriginRegistered: async () => {
+    state.calls.push({ op: "register", args: [] });
+  },
+}));
+
 import {
   fileNameInFolder,
   userFolder,
@@ -117,6 +125,9 @@ describe("userFolder", () => {
     expect(state.clients).toBe(1);
     expect(state.buckets).toEqual(["profile-media"]);
     expect(state.calls).toEqual([
+      // The storage origin is registered before the write (0127), never
+      // before a remove.
+      { op: "register", args: [] },
       { op: "upload", args: [`${ME}/avatar-1.png`, new Uint8Array([1]), { contentType: "image/png", upsert: false }] },
       { op: "remove", args: [[`${ME}/avatar-0.png`, `${ME}/avatar-1.png`]] },
     ]);
@@ -155,7 +166,10 @@ describe("userFolder.copyIn", () => {
   it("copies another user's object into the caller's own folder", async () => {
     expect(await userFolder("card-art", ME).copyIn(`${OTHER}/front.jpg`, "remix-1.jpg")).toEqual({ error: null });
     expect(state.buckets).toEqual(["card-art"]);
-    expect(state.calls).toEqual([{ op: "copy", args: [`${OTHER}/front.jpg`, `${ME}/remix-1.jpg`] }]);
+    expect(state.calls).toEqual([
+      { op: "register", args: [] },
+      { op: "copy", args: [`${OTHER}/front.jpg`, `${ME}/remix-1.jpg`] },
+    ]);
   });
 
   it("refuses a bad destination name, a nested or traversing source, and a non-uuid source folder", async () => {

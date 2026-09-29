@@ -218,6 +218,32 @@ describe("createCardAction — a remix", () => {
     expect(state.copies.map((c) => c.from)).toEqual([`card-art:${THEM}/front.jpg`]);
   });
 
+  it("a remix of your OWN pre-0127 remix copies the art that remix still borrows (review 2026-09-29)", async () => {
+    // The parent is MY card, saved before 0127: its art is still the object
+    // in its own parent's owner's folder. Copying only for someone else's
+    // parent stored THEM's URL, and 0127 refused the save.
+    state.parent = { id: PARENT, ...parentRow, owner_id: ME };
+    const stub = db();
+    const result = await createCardAction(remixPayload as never);
+    expect(result).toMatchObject({ ok: true });
+    const insertCall = stub.forTable("cards").find((entry) => entry.calls.some((c) => c.method === "insert"))!;
+    const insert = payloadOf(insertCall.calls, "insert") as Record<string, string>;
+    expect(insert.art_url).toMatch(new RegExp(`^${HOST}/storage/v1/object/public/card-art/${ME}/remix-${UUID}\\.jpg$`));
+    expect(state.copies.map((c) => c.from)).toEqual([`card-art:${THEM}/front.jpg`]);
+    expect(state.limitChecks).toBe(1);
+  });
+
+  it("a remix of your own card whose art is already yours copies nothing and isn't counted", async () => {
+    state.parent = { id: PARENT, ...parentRow, owner_id: ME, art_url: art(ME, "front.jpg") };
+    const stub = db();
+    const result = await createCardAction({ ...remixPayload, art_url: art(ME, "front.jpg") } as never);
+    expect(result).toMatchObject({ ok: true });
+    const insertCall = stub.forTable("cards").find((entry) => entry.calls.some((c) => c.method === "insert"))!;
+    expect((payloadOf(insertCall.calls, "insert") as Record<string, string>).art_url).toBe(art(ME, "front.jpg"));
+    expect(state.copies).toEqual([]);
+    expect(state.limitChecks).toBe(0);
+  });
+
   it("the database's refusal of someone else's picture becomes a field error", async () => {
     state.parent = { id: PARENT, ...parentRow };
     state.insertError = {

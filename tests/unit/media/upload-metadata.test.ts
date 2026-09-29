@@ -42,6 +42,10 @@ function dbClient() {
 
 function storageClient() {
   return {
+    // The upload limit (0127, fail-closed) answers "allowed"; the storage
+    // origin registration (lib/media/storage-origin.ts) is a no-op upsert.
+    rpc: async () => ({ data: [{ allowed: true, retry_after_seconds: 0, limited_by: null }], error: null }),
+    from: () => ({ upsert: async () => ({ error: null }) }),
     storage: {
       from: (bucket: string) => ({
         upload: async (path: string, body: unknown, opts: { contentType?: string }) => {

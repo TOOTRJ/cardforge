@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   isAllowedMediaUrl,
+  isScryfallPrintingImage,
   MEDIA_KIND_BUCKETS,
   profileMediaSrc,
   type MediaKind,
@@ -85,12 +86,23 @@ describe("isAllowedMediaUrl — the non-storage exceptions", () => {
     expect(isAllowedMediaUrl("deck-cover", "/defaults/avatars/avatar-01.webp", ME)).toBe(false);
   });
 
-  it("a Google profile picture for an avatar only (Google sign-ups)", () => {
+  it("a Google ACCOUNT picture for an avatar only (Google sign-ups)", () => {
     const google = "https://lh3.googleusercontent.com/a/ACg8ocK-abc_DEF=s96-c";
     expect(isAllowedMediaUrl("avatar", google, ME)).toBe(true);
+    expect(isAllowedMediaUrl("avatar", "https://lh5.googleusercontent.com/a-/AOh14Gi_xyz=s96-c", ME)).toBe(true);
     expect(isAllowedMediaUrl("banner", google, ME)).toBe(false);
     expect(isAllowedMediaUrl("card-art", google)).toBe(false);
     expect(isAllowedMediaUrl("avatar", "https://lh3.googleusercontent.com.evil.example/a.png", ME)).toBe(false);
+    // The same host serves any Google Photos / Blogger / Sites image (review
+    // 2026-09-29) — only the account-picture paths are an avatar.
+    for (const other of [
+      "https://lh3.googleusercontent.com/pw/AP1GczN-any-shared-photo=w2400",
+      "https://lh4.googleusercontent.com/-abc/XYZ/AAAA/def/s1600/photo.jpg",
+      "https://lh6.googleusercontent.com/proxy/abcdef=s0-d",
+      "https://lh3.googleusercontent.com/ab/xyz",
+    ]) {
+      expect(isAllowedMediaUrl("avatar", other, ME), other).toBe(false);
+    }
   });
 
   it("PipGlyph's own built-in images as card art (the seed cards)", () => {
@@ -108,6 +120,21 @@ describe("isAllowedMediaUrl — the non-storage exceptions", () => {
     expect(isAllowedMediaUrl("deck-card-image", "https://c1.scryfall.com/file/x.jpg")).toBe(false);
     expect(isAllowedMediaUrl("deck-card-image", "https://cards.scryfall.io/../x.jpg")).toBe(false);
     expect(isAllowedMediaUrl("deck-card-image", obj("card-art"))).toBe(false);
+  });
+
+  it("isScryfallPrintingImage is that same rule (the deck import drops anything else)", () => {
+    expect(isScryfallPrintingImage("https://cards.scryfall.io/large/front/a/b/x.jpg?1700000000")).toBe(true);
+    for (const odd of [
+      "https://cards.scryfall.io/large/front/a/b/x.jpg?abc",
+      "https://cards.scryfall.io/large/front/a/b/x%20y.jpg",
+      "https://cards.scryfall.io/large/front/a/b/x~y.jpg",
+      "https://cards.scryfall.io/../x.jpg",
+      "https://cards.scryfall.io.evil.example/x.jpg",
+      "",
+      null,
+    ]) {
+      expect(isScryfallPrintingImage(odd), String(odd)).toBe(false);
+    }
   });
 });
 
@@ -218,7 +245,16 @@ describe("the same rules as migration 0127", () => {
         isDefaultProfileMedia(path, "avatar"),
       );
     }
-    expect(sql).toContain(String.raw`'^https://lh[0-9]{1,2}\.googleusercontent\.com/[A-Za-z0-9_./=-]+$'`);
+    // The Google ACCOUNT picture: handle_new_user's pattern is the display's.
+    const googleSql = String.raw`^https://lh[0-9]{1,2}\.googleusercontent\.com/a-?/[A-Za-z0-9_./=-]+$`;
+    expect(sql).toContain(`'${googleSql}'`);
+    for (const url of [
+      "https://lh3.googleusercontent.com/a/ACg8ocK-abc_DEF=s96-c",
+      "https://lh3.googleusercontent.com/a-/AOh14G=s96-c",
+      "https://lh3.googleusercontent.com/pw/AP1Gcz=w2400",
+    ]) {
+      expect(isAllowedMediaUrl("avatar", url, ME), url).toBe(new RegExp(googleSql).test(url));
+    }
     // Built-in images as card art (the seed cards): the same pattern both sides.
     expect(fn).toContain(
       String.raw`p_url ~ '^(https://(www\.)?pipglyph\.com)?/defaults/(avatars/avatar|banners/banner)-(0[1-9]|1[0-9]|2[0-5])\.webp$'`,
