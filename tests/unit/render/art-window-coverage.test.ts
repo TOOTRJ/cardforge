@@ -8,12 +8,16 @@ import {
   ART_WINDOW_KNOWN_FAILURES,
   ART_WINDOW_OVERSCAN_PCT,
   SEE_THROUGH_FRAME_ALPHA_MAX,
+  TRANSLUCENT_RIM_PCT,
+  artWindowFindings,
   artWindowSlotsOf,
+  artWindowVerdict,
   artWindowViolations,
   isKnownArtWindowFailure,
   seeThroughBody,
   seeThroughWindow,
   slotPixelBox,
+  translucentRegionsUnder,
   type ArtWindowSlot,
 } from "@/lib/frames/art-window";
 import { applyCardCornerMask } from "@/lib/cards/card-corner";
@@ -26,18 +30,21 @@ import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 // TODO 7.6 — art-window coverage, for every template × colour master: the
 // see-through window (α < 16, flood-filled from each art slot's centre) is
 // covered by the (rotated) slot that paints the art there, with ≥ 0.05 % of
-// the card to spare; on a see-through master (4.17) the under-frame art
-// covers the window and the see-through body. lib/frames/art-window.ts
-// holds the check and today's known failures; the Card Conjurer importer
-// runs the same check on every master it builds (scripts/import-cc-frames.mjs).
+// the card to spare, and every translucent frame part (α < 250) the art
+// shows through stays inside it (0.2 % rim); on a see-through master (4.17)
+// the under-frame art covers the window and the see-through body.
+// lib/frames/art-window.ts holds the check and today's known failures; the
+// Card Conjurer importer runs the same check on every master it builds
+// (scripts/import-cc-frames.mjs).
 //
 // Git masters (public/frames) are checked everywhere. Bucket masters (the
 // Card Conjurer family, never in git) are checked where a copy at the
 // manifest's sha256 is on disk: FRAMES_BUILD_DIR, else <repo>/.frames-build.
 // CI fetches every one from production's public bucket
 // (scripts/frames-fetch.mjs) and sets FRAMES_BUILD_DIR, and there a missing
-// bucket master FAILS instead of skipping. Known failures are it.fails, so
-// fixing one turns this red until it is struck from the table.
+// bucket master FAILS instead of skipping. A known failure must STILL fail,
+// by no more than its entry's maxMissPx: fixing one turns this red until it
+// is struck from the table, and so does a master getting worse behind it.
 // ---------------------------------------------------------------------------
 
 const manifest = manifestJson as { files: Record<string, { sha256: string }> };
@@ -138,7 +145,12 @@ describe("artWindowViolations", () => {
     set(150, 48, 16); // doesn't
     set(29, 49, 0); // touches the window's corner only diagonally
     expect(seeThroughWindow(m, W, H, 150, 100)).toEqual({ x0: 30, x1: 270, y0: 49, y1: 200, pixels: 240 * 150 + 1 });
-    expect(artWindowViolations(m, W, H, slot(29, 271, 49, 201))).toEqual([expect.stringMatching(/: top 49 > 48\.79$/)]);
+    expect(artWindowViolations(m, W, H, slot(29, 271, 49, 201))).toEqual([
+      expect.stringMatching(/: top 49 > 48\.79$/),
+      // The α 16 pixel above it isn't window — but it is translucent, 1 px
+      // past the slot and the window, over this small card's 0.84 px rim.
+      expect.stringMatching(/^artSlot: a translucent part of the frame 30–270 × 48–200 px .*: top 1 px$/),
+    ]);
     expect(seeThroughWindow(m, W, H, 150, 48)).toBeNull();
   });
 
@@ -181,6 +193,85 @@ describe("artWindowViolations", () => {
   });
 });
 
+describe("translucent frame parts: the art that shows through one must fill all of it", () => {
+  const W = 300;
+  const H = 420;
+  /** An opaque master, a clear window 30–270 × 50–240 and a translucent
+   *  (α 135) text box 40–260 × `boxTop`–`boxBottom`. */
+  const master = (boxTop: number, boxBottom: number) => {
+    const buf = new Uint8Array(W * H * 4);
+    for (let y = 0; y < H; y += 1) {
+      for (let x = 0; x < W; x += 1) {
+        const win = x >= 30 && x < 270 && y >= 50 && y < 240;
+        const box = x >= 40 && x < 260 && y >= boxTop && y < boxBottom;
+        buf[(y * W + x) * 4 + 3] = win ? 0 : box ? 135 : 255;
+      }
+    }
+    return buf;
+  };
+  const slot = (y1: number): ArtWindowSlot[] => [
+    { name: "artSlot", rect: { leftPct: (29 / W) * 100, widthPct: (242 / W) * 100, topPct: (49 / H) * 100, heightPct: ((y1 - 49) / H) * 100 } },
+  ];
+
+  it("fails a text box the slot ends inside — nyx's seam at 81.2 % (4.17b)", () => {
+    const f = artWindowFindings(master(250, 380), W, H, slot(300));
+    expect(f).toEqual([
+      {
+        message: expect.stringMatching(/^artSlot: a translucent part of the frame 40–260 × 250–380 px \(28600 px, α < 250\) runs past the slot .*: bottom 80 px$/),
+        missPx: 80,
+      },
+    ]);
+  });
+
+  it(`lets the region run past the slot by its anti-aliased rim (≤ ${TRANSLUCENT_RIM_PCT} % of the card)`, () => {
+    // 0.2 % of 420 = 0.84 px down: a box ending 0.8 px past the slot passes, 1 px fails.
+    expect(artWindowViolations(master(250, 380), W, H, slot(379.2))).toEqual([]);
+    expect(artWindowViolations(master(250, 380), W, H, slot(379))).toEqual([expect.stringMatching(/: bottom 1 px$/)]);
+    // A slot that fills the whole box passes.
+    expect(artWindowViolations(master(250, 380), W, H, slot(381))).toEqual([]);
+  });
+
+  it("leaves a translucent part the art never reaches to the frame (it shows #101015 evenly — 7.7's rings)", () => {
+    expect(translucentRegionsUnder(master(250, 380), W, H, slotPixelBox(slot(241)[0].rect, 0, W, H)).map((r) => r.y0)).toEqual([50]);
+    expect(artWindowViolations(master(250, 380), W, H, slot(241))).toEqual([]);
+  });
+
+  it("counts a pixel as under the slot by its centre, and leaves the corner cut out", () => {
+    // The slot ends at 250.4: row 250's centre (250.5) is outside it.
+    expect(artWindowViolations(master(250, 380), W, H, slot(250.4))).toEqual([]);
+    expect(artWindowViolations(master(250, 380), W, H, slot(250.6))).toHaveLength(1);
+    const m = master(250, 380);
+    applyCardCornerMask(m, W, H);
+    const full = { leftPct: 0, widthPct: 100, topPct: 0, heightPct: 100 };
+    const regions = translucentRegionsUnder(m, W, H, slotPixelBox(full, 0, W, H));
+    expect(regions.map((r) => [r.y0, r.y1])).toEqual([[50, 240], [250, 380]]);
+    // A seed's region comes first, marked.
+    const seeded = translucentRegionsUnder(m, W, H, slotPixelBox(full, 0, W, H), SEE_THROUGH_FRAME_ALPHA_MAX, { x: 100, y: 300 });
+    expect(seeded.map((r) => [r.y0, r.seeded])).toEqual([[250, true], [50, false]]);
+  });
+});
+
+describe("artWindowVerdict: the known-failure table", () => {
+  const miss = (missPx: number) => [{ message: "artSlot: …", missPx }];
+
+  it("fails every finding of a master the table doesn't list", () => {
+    expect(artWindowVerdict("retro", "w", miss(0.2))).toEqual({ fails: ["artSlot: …"], fixed: false });
+    expect(artWindowVerdict("retro", "w", [])).toEqual({ fails: [], fixed: false });
+  });
+
+  it("passes a listed master within its maxMissPx, and fails one that got worse", () => {
+    expect(artWindowVerdict("modern", "w", miss(1.65))).toEqual({ fails: [], fixed: false });
+    expect(artWindowVerdict("modern", "w", miss(2.5)).fails).toEqual([expect.stringMatching(/^worse than its known failure \(4\.10\): misses by 2\.5 px > 2: /)]);
+    // Per-key bounds: m15/c's see-through band, the other colours' hairline.
+    expect(artWindowVerdict("m15", "c", miss(26)).fails).toEqual([]);
+    expect(artWindowVerdict("m15", "w", miss(26)).fails).toHaveLength(1);
+  });
+
+  it("marks a listed master with nothing left to find as fixed", () => {
+    expect(artWindowVerdict("modern", "w", [])).toEqual({ fails: [], fixed: true });
+  });
+});
+
 describe("see-through masters (4.17): the under-frame art covers the window and the see-through body", () => {
   const W = 1500;
   const H = 2100;
@@ -205,8 +296,13 @@ describe("see-through masters (4.17): the under-frame art covers the window and 
 
   it("passes when the body lies inside the under-frame rect — the art slot's own 1 px hairline is hidden under the art", () => {
     expect(artWindowViolations(master(90), W, H, slots(under))).toEqual([]);
-    // Without the under-frame art the same master fails on the hairline.
-    expect(artWindowViolations(master(90), W, H, slots(null))).toEqual([expect.stringMatching(/^artSlot: the slot /)]);
+    // Without the under-frame art the same master fails on the hairline —
+    // and the translucent-region rule finds the see-through body the art
+    // only partly shows through (m15pw/c's case: see-through, not flagged).
+    expect(artWindowViolations(master(90), W, H, slots(null))).toEqual([
+      expect.stringMatching(/^artSlot: the slot /),
+      expect.stringMatching(/^artSlot: a translucent part of the frame 62–1438 × 90–1938 px .*: left 55 px, right 55 px, top 149\.4 px, bottom 774\.6 px$/),
+    ]);
   });
 
   it("fails the 25 px band CC's see-through body leaves above the under-frame rect (4.17a)", () => {
@@ -244,6 +340,15 @@ describe("the art-window known failures", () => {
       }
       expect(entry.why.length, template).toBeGreaterThan(20);
       expect(entry.todo.length, template).toBeGreaterThan(0);
+      // A bound per entry, or one per key it lists (every key, no other).
+      // (A key the record misses fails its master's test: artWindowVerdict.)
+      if (typeof entry.maxMissPx === "number") expect(entry.maxMissPx, template).toBeGreaterThan(0);
+      else {
+        const keys = Object.keys(entry.maxMissPx);
+        if (entry.keys === "all") for (const key of keys) expect(FRAME_MASTER_KEYS as readonly string[], `${template}/${key}`).toContain(key);
+        else expect(keys.sort(), template).toEqual([...entry.keys].sort());
+        for (const v of Object.values(entry.maxMissPx)) expect(v, template).toBeGreaterThan(0);
+      }
       for (const id of entry.todo) if (!todo.includes(`**${id} [P`)) unknownItems.push(`${template} → ${id}`);
     }
     expect(unknownItems, "TODO.md has no such item").toEqual([]);
@@ -285,6 +390,10 @@ describe("the art-window known failures", () => {
         "modernland",
         "tarkirdraconic",
         "tarkirghostfire",
+        // The translucent-region rule (4.17b), found in the skeptic pass.
+        "fullart",
+        "m15pw",
+        "nyx",
       ].sort(),
     );
     // Two of the TODO's list pass today: alphaland (its window was re-cut
@@ -303,13 +412,14 @@ describe("the art-window known failures", () => {
 describe("the Card Conjurer importer runs the art-window check (TODO 7.6)", () => {
   const importer = fs.readFileSync(path.join(ROOT, "scripts/import-cc-frames.mjs"), "utf8");
 
-  it("checks every master it builds after the downscale and the corner cut, skipping only known failures", () => {
+  it("checks every master it builds after the downscale and the corner cut, holding known failures to their bounds", () => {
     const cut = importer.indexOf("roundCornersRgba8(master");
-    const check = importer.indexOf("artWindowViolations(master, OUT_W, OUT_H");
+    const check = importer.indexOf("artWindowFindings(master, OUT_W, OUT_H");
     expect(cut).toBeGreaterThan(0);
     expect(check).toBeGreaterThan(cut);
-    expect(importer).toContain("isKnownArtWindowFailure(template, key)");
+    expect(importer).toContain("artWindowVerdict(template, key, findings)");
     expect(importer).toContain("artWindowSlotsOf(profile, underFrameArtRect(profile, key))");
+    expect(importer).not.toContain("isKnownArtWindowFailure");
   });
 
   it("reads the frame profiles through the \"@/\" alias hook exactly as vitest does", () => {
@@ -346,7 +456,7 @@ describe("CI fetches the bucket masters", () => {
   });
 
   it("never commits the fetched frames", () => {
-    expect(fs.readFileSync(path.join(ROOT, ".gitignore"), "utf8")).toMatch(/^\/\.frames-cache\/$/m);
+    expect(fs.readFileSync(path.join(ROOT, ".gitignore"), "utf8")).toMatch(/^\.frames-cache\/$/m);
     const tracked = execFileSync("git", ["ls-files", "--", ".frames-cache"], { cwd: ROOT, encoding: "utf8" }).trim();
     expect(tracked).toBe("");
   });
@@ -379,12 +489,13 @@ describe("every frame master's art window is covered by the art that fills it", 
     }
     for (const m of masters) {
       const known = isKnownArtWindowFailure(template, m.key);
-      const run = known ? it.fails : it;
       const todo = known ? ` — known failure (TODO ${ART_WINDOW_KNOWN_FAILURES[template].todo.join(", ")})` : "";
-      run(`${template}/${m.key}${m.bucket ? " (bucket)" : ""}${todo}`, async () => {
+      it(`${template}/${m.key}${m.bucket ? " (bucket)" : ""}${todo}`, async () => {
         const { data, width, height } = await rgbaOf(m.file);
         expect([width, height]).toEqual(getFrameProfile(template).orientation === "landscape" ? [2100, 1500] : [1500, 2100]);
-        expect(artWindowViolations(data, width, height, slotsFor(template, m.key))).toEqual([]);
+        const verdict = artWindowVerdict(template, m.key, artWindowFindings(data, width, height, slotsFor(template, m.key)));
+        expect(verdict.fails).toEqual([]);
+        expect(verdict.fixed, "it passes now — strike it from ART_WINDOW_KNOWN_FAILURES and close its TODO item").toBe(false);
       });
     }
   }

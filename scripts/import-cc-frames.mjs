@@ -69,7 +69,7 @@ import {
 // master after the downscale has anti-aliased the window edge. The art
 // slots are the frame profiles' own (lib/cards/template-layout.ts), read
 // through the "@/" alias hook — a dynamic import, so the hook is in place.
-import { artWindowSlotsOf, artWindowViolations, isKnownArtWindowFailure } from "../lib/frames/art-window.ts";
+import { artWindowFindings, artWindowSlotsOf, artWindowVerdict } from "../lib/frames/art-window.ts";
 import "./lib/ts-alias-hooks.mjs";
 
 const { getFrameProfile, underFrameArtRect } = await import("../lib/cards/template-layout.ts");
@@ -181,11 +181,13 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
         edgeFailures.push(`${template}/${key} ${v}`);
       }
     }
-    if (!isKnownArtWindowFailure(template, key)) {
+    {
+      // A known failure fails only when it got worse than its entry's bound.
       const profile = getFrameProfile(template);
-      for (const v of artWindowViolations(master, OUT_W, OUT_H, artWindowSlotsOf(profile, underFrameArtRect(profile, key)))) {
-        artWindowFailures.push(`${template}/${key} ${v}`);
-      }
+      const findings = artWindowFindings(master, OUT_W, OUT_H, artWindowSlotsOf(profile, underFrameArtRect(profile, key)));
+      const verdict = artWindowVerdict(template, key, findings);
+      for (const v of verdict.fails) artWindowFailures.push(`${template}/${key} ${v}`);
+      if (verdict.fixed) console.log(`${template}/${key}: its art window passes now — strike it from ART_WINDOW_KNOWN_FAILURES (lib/frames/art-window.ts)`);
     }
     await writeMaster(master, out);
     console.log(`wrote ${path.relative(process.cwd(), out)} (+ .webp) from ${W}×${H}`);
@@ -247,5 +249,5 @@ if (artWindowFailures.length) {
   for (const f of artWindowFailures) console.error(`  ${f}`);
   process.exitCode = 1;
 } else if (!dryRun) {
-  console.log("art windows: every slot covers its master's window, 0.05 % to spare (TODO 7.6; known failures skipped)");
+  console.log("art windows: every slot covers its master's window, 0.05 % to spare (TODO 7.6; known failures within their bounds)");
 }

@@ -115,12 +115,14 @@ describe("applyCardCornerMask", () => {
     const buf = before.slice();
     applyCardCornerMask(buf, w, h);
     let changed = 0;
+    // One assertion over the whole buffer, not one per pixel: 126k expect()
+    // calls timed out under CI load (TODO 7.6 added bucket-frame work beside it).
+    const rgbMoved: number[] = [];
     for (let i = 0; i < buf.length; i += 4) {
-      expect(buf[i]).toBe(before[i]);
-      expect(buf[i + 1]).toBe(before[i + 1]);
-      expect(buf[i + 2]).toBe(before[i + 2]);
+      if (buf[i] !== before[i] || buf[i + 1] !== before[i + 1] || buf[i + 2] !== before[i + 2]) rgbMoved.push(i / 4);
       if (buf[i + 3] !== before[i + 3]) changed += 1;
     }
+    expect(rgbMoved).toEqual([]);
     expect(changed).toBeGreaterThan(0);
   });
 
@@ -227,10 +229,16 @@ describe("squareCardCorners", () => {
     })();
     expect(at(buf, ramp.x, 0)).toEqual([Math.round((200 * ramp.a) / 255), Math.round((100 * ramp.a) / 255), Math.round((50 * ramp.a) / 255), 255]);
     // Every pixel is opaque; nothing the mask kept whole moved.
-    for (let i = 3; i < buf.length; i += 4) expect(buf[i]).toBe(255);
+    // One assertion each over the whole buffer (per-pixel expect() calls
+    // timed out at 5 s under CI load).
+    const seeThrough: number[] = [];
+    const moved: number[] = [];
     for (let i = 0; i < buf.length; i += 4) {
-      if (before[i + 3] === 255) expect([...buf.subarray(i, i + 3)]).toEqual([...before.subarray(i, i + 3)]);
+      if (buf[i + 3] !== 255) seeThrough.push(i / 4);
+      if (before[i + 3] === 255 && (buf[i] !== before[i] || buf[i + 1] !== before[i + 1] || buf[i + 2] !== before[i + 2])) moved.push(i / 4);
     }
+    expect(seeThrough).toEqual([]);
+    expect(moved).toEqual([]);
   });
 
   it("a null corner is only made opaque again: the RGB the mask kept under the cut comes back", () => {

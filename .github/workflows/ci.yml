@@ -59,7 +59,10 @@ jobs:
           path: .frames-cache
           key: frames-${{ hashFiles('lib/frames/frame-manifest.json') }}
           restore-keys: frames-
+      # A hung storage read fails this step in 10 min instead of eating the
+      # job's 25 (fetchVerified retries each file 4× with a 60 s timeout).
       - name: Fetch bucket frames
+        timeout-minutes: 10
         run: >-
           node scripts/frames-fetch.mjs --out .frames-cache
           --fallback-origin https://znipzaxgpaiandwiqabn.supabase.co/storage/v1/object/public/frames
