@@ -297,9 +297,15 @@ export async function runRebakeBatch(
       if (updateErr) throw new Error(`Row update failed: ${updateErr.message}`);
       if (!written || written.length === 0) {
         // Lost the race. If the card went private meanwhile, the objects we
-        // just uploaded must not stay public (the unpublish deleted its own).
+        // just uploaded must not stay public (the unpublish deleted its own)
+        // — nor a CDN copy of them: between our upload and this remove, the
+        // card's /render-cdn URL could have been filled from the new bytes,
+        // after the unpublish had already purged its tag.
         const { data: now } = await supabase.from("cards").select("visibility").eq("id", row.id).maybeSingle();
-        if (!now || now.visibility === "private") await removeRenderObjects(row.owner_id, [row.id]);
+        if (!now || now.visibility === "private") {
+          await removeRenderObjects(row.owner_id, [row.id]);
+          await purgeCardCdnCache([row.id]);
+        }
         superseded.push(row.id);
         continue;
       }

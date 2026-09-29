@@ -319,6 +319,10 @@ describe("runRebakeBatch", () => {
     // Both objects (PNG + thumb) in the row owner's folder — bake-core only
     // ever opens `{owner_id}/` (the thumb used to be left behind here).
     expect(mocks.remove).toHaveBeenCalledWith("owner-1", ["c1"]);
+    // …and the CDN copies (/render-cdn could have been filled from the new
+    // bytes after the unpublish purged it) — after the remove.
+    expect(mocks.purge).toHaveBeenCalledWith(["c1"]);
+    expect(mocks.purge.mock.invocationCallOrder[0]).toBeGreaterThan(mocks.remove.mock.invocationCallOrder[0]);
   });
 
   it("a lost compare-and-set on a still-public card keeps the objects (the newer bake owns them)", async () => {
@@ -327,6 +331,7 @@ describe("runRebakeBatch", () => {
     if (!result.ok) throw new Error(result.error);
     expect(result.superseded).toEqual(["c1"]);
     expect(mocks.remove).not.toHaveBeenCalled();
+    expect(mocks.purge.mock.calls.flat(2)).not.toContain("c1");
   });
 
   it("a dry run plans without rendering or writing", async () => {
