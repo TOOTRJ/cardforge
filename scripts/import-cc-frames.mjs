@@ -6,8 +6,10 @@
 // and the old borders). Later runs of the same importer: 4.32's borderless
 // frame (m15borderless, m15borderlessartifact) and 4.39's full-art basics
 // (m15fullartland, fullartland), 4.49 (b)'s text-box tokens
-// (m15tokentext, m15tokenartifacttext), re-cut onto the prints, and 4.49's
-// textless-token re-cut (m15token, m15tokenartifact moved onto the prints).
+// (m15tokentext, m15tokenartifacttext), re-cut onto the prints, 4.49's
+// textless-token re-cut (m15token, m15tokenartifact moved onto the prints),
+// and 4.48 / 4.50's full-art tokens (m20token, m20tokentext, m20tokentall and
+// their artifact templates; the textless pair re-cut 5 px onto the prints).
 //
 //   node scripts/import-cc-frames.mjs                 # every template
 //   node scripts/import-cc-frames.mjs --only m15,m15land

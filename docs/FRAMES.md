@@ -56,7 +56,11 @@ environment's own Supabase project, taken from `NEXT_PUBLIC_SUPABASE_URL`.
   `<template>/symbol/{w,u,b,r,g,c}.png` for the profile's basic-symbol slot;
 - the 2014–19 text-box tokens from 'Regular (Bordered M15)' (4.49 (b)):
   m15tokentext and its artifact dress m15tokenartifacttext, re-cut onto the
-  prints (below).
+  prints (below);
+- the full-art tokens (M20 → today) from the 'Textless', 'Short' and 'Tall'
+  token packs (4.48 / 4.50): m20token, m20tokentext, m20tokentall and their
+  artifact templates m20tokenartifact / …text / …tall, the textless pair
+  re-cut 5 px onto the prints (below).
 
 ```bash
 node scripts/import-cc-frames.mjs --only m15,m15land
@@ -482,6 +486,76 @@ a pre-0115 tick is judged as made at `LEGACY_TICK_LAYOUT_VERSION` 33, so the
 walk-through. A stale tick stays verified, so the creator keeps offering
 the frames; the wording alone stales no tick anywhere.
 
+## Full-art tokens: M20 → today (TODO 4.48 / 4.50)
+
+Core Set 2020 (2019-07-12) moved tokens to a full-art design, and about three
+quarters of token printings since 2014 wear it. PipGlyph draws it with six
+NEW templates from Card Conjurer's token packs (`groupToken-2.js`), built by
+the importer (`m20TokenTemplate` in `scripts/lib/cc-frames.mjs`) into the
+frames bucket — never git:
+
+| height | plain | artifact | CC pack | type pill |
+| --- | --- | --- | --- | --- |
+| no box | `m20token` | `m20tokenartifact` | 'Textless' (re-cut 5 px) | 81.2–88.1 %H |
+| regular box | `m20tokentext` | `m20tokenartifacttext` | 'Short' | 66.9–73.7 %H |
+| tall box | `m20tokentall` | `m20tokenartifacttall` | 'Tall' | 55.7–62.5 %H |
+
+- **Measure first.** CC's 'Regular' pack (type pill at 64 %H) matches no
+  print and is not used; its 'Short' pack is the printed regular box.
+  Measured against the prints (Scryfall PNGs at 1500 × 2100, profile
+  correlation over each piece; 63 prints, 28 / 19 / 16 by height): the
+  regular and tall pills sit +0.9 / +0.7 px from the prints, the name pill
+  +1.3, the colour strip −1.0 — used as drawn. The textless pill prints
+  4.8 px lower than CC's (its top outline +4.4, bottom +5.7): the importer
+  moves rows 1687–1844 down 5 px (`M20_TOKEN_TEXTLESS_RECUT`, hard seams —
+  only clear art and the black ring meet them; provenance records it), and
+  the profile rides it (`M20_TOKEN_TEXTLESS_RECUT_PX`). After: −0.2 px
+  (median) on the textless prints.
+- **Colours.** w/u/b/r/g/m are CC's masters, `c` its charcoal `frameC`.
+  Two colours land on gold (`m`) until 4.6's gradient; legends wait for
+  4.6's crown. The artifact templates are the silver `A` master whole plus
+  the colour's master through the pack's Pinline mask — silver pills and
+  box, the colour on the rims, pinline and strip (TDSK #7, TSOC #8) — not
+  4.16's `m15artifact` recipe; their plates are M15's artifact set.
+- **Profile** (`M20TOKENTEXT` and the heights spread from it,
+  `lib/cards/template-layout.ts`): the art to the ring (CC's bounds with
+  7.6's overscan), the name in CC's box at `TITLE_SIZE_PCT` — white, dark
+  on the plain white pill (`inkByColorKey`) — the type line on the pill
+  from 8.54 %W at `TYPE_SIZE_PCT`, the set symbol in CC's 86 px box
+  (right edge 92.13 %W), the P/T on M15's plate with M15's value box, the
+  rules in the box with `rules.alignSingleLine: "center"`. The textless
+  height sets 3.24's `textless` flag with `textlessTypeLine` (both
+  renderers keep the type band; the rules, flavour and watermark stay
+  hidden, and the Text step says so). Onto the prints (medians, HD px):
+  name baseline 190 (`M20_TOKEN_TITLE_PRINT_DY`), type baseline 1797 / 1496
+  / 1261 (`M20_TOKEN_TYPE_PRINT_DY`), symbol centre 1775 / 1476 / 1241.5
+  (`M20_TOKEN_SYMBOL_CENTRE_PX`), digits 3.5 px above M15's value box
+  (`M20_TOKEN_PT_PRINT_DY_EM`). `tests/unit/render/m20-token-bake.test.tsx`
+  holds real bakes to them, `tests/unit/components/m20-token-preview.test.tsx`
+  the preview.
+- **Height** (`lib/cards/token-height.ts`, owner 2026-09-29): the smallest
+  printed height whose text fits at the rules standard size — no text → no
+  box, fits the regular box at 76 px → regular, else tall. It picks the
+  height all 63 measured prints wear; on the research's 116-print survey it
+  sends 12 regular-box prints of 142–194 characters to the tall box (WotC
+  sets those below 9 pt).
+- **Import** (TODO 1.23). `token/m20` names the height's template through
+  `onceVerified` (family `m20`) and is `exactOnceVerified`: until the
+  template is verified in the card's colour the 2014–19 arch stands in
+  (`nearest`, 4.48); once it is, `withVerification` makes the match `exact`
+  on it (`FrameMatch.onceVerifiedMatch`) — or `nearest` with the gap's own
+  reason for a crown, two colours or the Nyx dress.
+- **Creator.** The six are variations of the token kind
+  (`TEMPLATE_SKIN_VARIANTS.m15token`), each height's artifact template its
+  Artifact-word dress (`TYPE_WORD_DRESSES`), and unverified: the walk-through
+  reaches them (`/create?previewFrames=m20token`). The default switch (new
+  tokens start on the full-art design once verified) and the automatic
+  height with a sticky manual pick live in `lib/creator/token-frame-auto.ts`,
+  NOT wired into the form until round 11's arch auto-pick merges.
+- **Rollout.** New templates, no stored card: no layout bump, no sweep. The
+  owner runs `frames:promote`, then verifies each colour (0.9 → 2.2 → 2.4)
+  against the references in `lib/cards/frame-references.json`.
+
 ## Which printing is which frame (TODO 1.4)
 
 A Scryfall import knows which PipGlyph frame reproduces THIS printing from
@@ -519,7 +593,8 @@ badges to Exact the moment its `frame_reviews` row is ticked.
   a `plst` reprint by its collector prefix — `PLST_PRE_M20_PREFIX_SETS`,
   held to Scryfall by `tests/unit/scryfall/fixtures/plst-token-prefixes.json`).
   Those print the full-art design (4.48), so `token/m20` answers `nearest`
-  the 2014–19 arch until 4.48's templates exist (then `onceVerified`); the
+  the 2014–19 arch until 4.48's template is verified in the card's colour,
+  then `exact` on it (`onceVerified` + `exactOnceVerified`, above); the
   earlier 2015-frame tokens ARE the arch (`era/2015`, exact). Either way the
   family pick is the text-box arch (`m15tokentext` / `m15tokenartifacttext`,
   4.49 (b)) for a printing with rules or flavour text — a box, not the

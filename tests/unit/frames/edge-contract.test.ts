@@ -445,3 +445,96 @@ describe("the text-box tokens' re-cut window and 7.6's art-window coverage", () 
     });
   }
 });
+
+// TODO 4.48 / 4.50: the full-art tokens are Card Conjurer's 'Textless',
+// 'Short' and 'Tall' token masters — the art runs to the 60 px black ring,
+// the pills and box are opaque (the colourless `c` translucent, α 166–204),
+// and the textless height's type pill is re-cut 5 px down onto the prints
+// (M20_TOKEN_TEXTLESS_RECUT). Here: each height's clear window and pill rows
+// on every colour, the re-cut pill interior the profile's type band centres
+// on (M20_TOKEN_PILL_INTERIOR_PX), and 7.6's art-window coverage (the art
+// slot covers the window flood-filled from its centre with ≥ 0.05 %
+// overscan). Run where the masters are available (the importer builds them;
+// CI has no bucket frames).
+describe("the full-art tokens' windows, pills and 7.6's art-window coverage", () => {
+  /** The α < 16 region 4-connected to (cx, cy): its bounding box. */
+  function windowBox(data: Buffer, width: number, height: number, cx: number, cy: number) {
+    const seen = new Uint8Array(width * height);
+    const stack = [cy * width + cx];
+    let x0 = cx;
+    let x1 = cx;
+    let y0 = cy;
+    let y1 = cy;
+    while (stack.length) {
+      const i = stack.pop()!;
+      if (seen[i] || data[i * 4 + 3] >= 16) continue;
+      seen[i] = 1;
+      const x = i % width;
+      const y = (i - x) / width;
+      x0 = Math.min(x0, x);
+      x1 = Math.max(x1, x);
+      y0 = Math.min(y0, y);
+      y1 = Math.max(y1, y);
+      if (x > 0) stack.push(i - 1);
+      if (x < width - 1) stack.push(i + 1);
+      if (y > 0) stack.push(i - width);
+      if (y < height - 1) stack.push(i + width);
+    }
+    return { x0, x1: x1 + 1, y0, y1: y1 + 1 };
+  }
+  // [template, the pill's first opaque row (its rim), the type band's pill]
+  const HEIGHTS: [string, number, "textless" | "regular" | "tall"][] = [
+    ["m20token", 1701 + 5, "textless"],
+    ["m20tokenartifact", 1701 + 5, "textless"],
+    ["m20tokentext", 1404, "regular"],
+    ["m20tokenartifacttext", 1404, "regular"],
+    ["m20tokentall", 1170, "tall"],
+    ["m20tokenartifacttall", 1170, "tall"],
+  ];
+  for (const [template, rim, height] of HEIGHTS) {
+    const masters = mastersOf(template);
+    if (masters.length === 0) {
+      it.skip(`${template}: masters not available here (frames bucket; set FRAMES_BUILD_DIR)`, () => {});
+      continue;
+    }
+    it(`${template}: every colour's window runs from the ring to its pill (rim at ${rim} px), inside the art slot`, async () => {
+      expect(masters).toHaveLength(7);
+      const { M20_TOKEN_PILL_INTERIOR_PX } = await import("@/lib/cards/template-layout");
+      const pill = M20_TOKEN_PILL_INTERIOR_PX[height];
+      const slot = getFrameProfile(template).artSlot;
+      for (const m of masters) {
+        const { data, width, height: h } = await rgbaOf(m.file);
+        const a = (x: number, y: number) => data[(y * width + x) * 4 + 3];
+        // The black ring and the clear window beside it, on the art's rows.
+        expect(a(30, 1000), `${m.key} ring`).toBe(255);
+        expect(a(750, 1000), `${m.key} art`).toBe(0);
+        // The pill: clear just above its glow, an opaque rim, a lightly
+        // see-through interior (CC's α 204; the colourless type pill's 166).
+        expect(a(750, rim - 20), `${m.key} above the pill`).toBe(0);
+        expect(a(750, rim + 2), `${m.key} rim`).toBe(255);
+        for (const y of [pill.top + 4, Math.round((pill.top + pill.bottom) / 2), pill.bottom - 4]) {
+          expect(a(750, y), `${m.key} pill α at ${y}`).toBeGreaterThanOrEqual(m.key === "c" && !template.includes("artifact") ? 160 : 200);
+        }
+        if (height === "textless") {
+          // The re-cut: the pill's bottom rim ends at 1849 (CC's 1844 + 5),
+          // the clear lower window below it — CC's master was clear from 1845.
+          expect(a(750, 1847), `${m.key} re-cut rim`).toBe(255);
+          expect(a(750, 1852), `${m.key} lower window`).toBe(0);
+        }
+        const cx = Math.round(((slot.leftPct + slot.widthPct / 2) / 100) * width);
+        const cy = Math.round(((slot.topPct + slot.heightPct / 2) / 100) * h);
+        const win = windowBox(data, width, h, cx, cy);
+        expect(win.y0, `${m.key} window top`).toBe(60);
+        expect([win.x0, win.x1], `${m.key} window sides`).toEqual([60, 1440]);
+        // 7.6: the art slot covers the window with ≥ 0.05 % overscan.
+        const over = { x: 0.0005 * width, y: 0.0005 * h };
+        expect((slot.leftPct / 100) * width, `${m.key} left`).toBeLessThanOrEqual(win.x0 - over.x);
+        expect(((slot.leftPct + slot.widthPct) / 100) * width, `${m.key} right`).toBeGreaterThanOrEqual(win.x1 + over.x);
+        expect((slot.topPct / 100) * h, `${m.key} top`).toBeLessThanOrEqual(win.y0 - over.y);
+        expect(((slot.topPct + slot.heightPct) / 100) * h, `${m.key} bottom`).toBeGreaterThanOrEqual(win.y1 + over.y);
+        // …and the whole card down to the colour strip (1937 px).
+        expect(((slot.topPct + slot.heightPct) / 100) * h, `${m.key} strip`).toBeGreaterThanOrEqual(1937 + over.y);
+      }
+    });
+  }
+});

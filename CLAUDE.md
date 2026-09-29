@@ -283,7 +283,16 @@ Rules and gotchas:
   later bump whose slots move on fewer templates than its bakes change on
   lists them in `VERIFICATION_TEMPLATE_SCOPES`; legacy ticks
   are judged at `LEGACY_TICK_LAYOUT_VERSION` (33) (`docs/FRAMES.md`
-  "Tokens").
+  "Tokens"). M20+ tokens (4.48 / 4.50) = six NEW templates `m20token` /
+  `m20tokentext` / `m20tokentall` + `m20tokenartifact…` (CC's 'Textless' —
+  re-cut 5 px, `M20_TOKEN_TEXTLESS_RECUT` — 'Short' and 'Tall' packs; never
+  CC's 'Regular'): the textless height is 3.24's `textless` with
+  `textlessTypeLine`; the height follows the text (`tokenHeightForText`,
+  `lib/cards/token-height.ts` — the import's rule too); `token/m20` is exact
+  on them once verified (`onceVerified` + `exactOnceVerified` →
+  `FrameMatch.onceVerifiedMatch`, applied by `withVerification`). The default
+  switch + sticky automatic height are `lib/creator/token-frame-auto.ts`, not
+  wired until round 11's arch auto-pick (`docs/FRAMES.md` "Full-art tokens").
 - Notifications are push, not pull: `notifications` is on the
   `supabase_realtime` publication (migration 0075) and
   `components/notifications/realtime-alerts.tsx` subscribes to the signed-in

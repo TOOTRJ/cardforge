@@ -222,10 +222,16 @@ describe("full-art and textless families (TODO 1.19)", () => {
     );
     expect(walker).toMatchObject({ signature: "textless/old-frame", template: "m15pw" });
     expect(walker.onceVerified).toBeUndefined();
-    // No other fixture names a frame for later.
+    // No other fixture names a frame for later — but the M20+ tokens, whose
+    // full-art template takes over once verified (TODO 4.48, token/m20).
     for (const key of Object.keys(printingsData) as PrintingKey[]) {
       const match = frameMatchFromScryfall(printing(key));
-      if (match.onceVerified) expect(match.signature, key).toBe("textless/old-frame");
+      if (!match.onceVerified) continue;
+      if (match.signature.startsWith("token/m20")) {
+        expect(match.onceVerified, key).toMatch(/^m20token/);
+        continue;
+      }
+      expect(match.signature, key).toBe("textless/old-frame");
     }
   });
 

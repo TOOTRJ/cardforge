@@ -8,6 +8,7 @@ import {
   COLORS,
   CORNER_RADIUS,
   SHIELD_BOX,
+  M20_TOKEN_TEXTLESS_RECUT,
   TOKEN_REGULAR_RECUT,
   TOKEN_TEXTLESS_RECUT,
   builtColors,
@@ -21,6 +22,7 @@ import {
   toRgba8,
 } from "@/scripts/lib/cc-frames.mjs";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
+import { M20_TOKEN_TEXTLESS_RECUT_PX } from "@/lib/cards/template-layout";
 import { applyCardCornerMask, cardCornerRadiusPx } from "@/lib/cards/card-corner";
 import manifestJson from "@/lib/frames/frame-manifest.json";
 import { frameUrl, setFrameStorageForTests, type FrameManifest } from "@/lib/frames/frame-url";
@@ -51,6 +53,18 @@ const templates = CC_TEMPLATES as Record<string, Def>;
 /** The re-cut templates (TODO 4.49): each pair has its own band. */
 const TEXTLESS_TOKENS = ["m15token", "m15tokenartifact"];
 const TEXT_BOX_TOKENS = ["m15tokentext", "m15tokenartifacttext"];
+/** The full-art tokens' textless height (TODO 4.48): its own band. */
+const M20_TEXTLESS_TOKENS = ["m20token", "m20tokenartifact"];
+const M20_TOKENS = ["m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall"];
+/** The recut each template has, if any. */
+const recutOf = (template: string) =>
+  TEXTLESS_TOKENS.includes(template)
+    ? TOKEN_TEXTLESS_RECUT
+    : TEXT_BOX_TOKENS.includes(template)
+      ? TOKEN_REGULAR_RECUT
+      : M20_TEXTLESS_TOKENS.includes(template)
+        ? M20_TOKEN_TEXTLESS_RECUT
+        : undefined;
 
 describe("Card Conjurer recipe", () => {
   it("covers the M15-era, borderless and full-art-basic templates — every colour built or excluded with a reason — with pack paths", () => {
@@ -70,6 +84,12 @@ describe("Card Conjurer recipe", () => {
       "m15tokenartifact",
       "m15tokenartifacttext",
       "m15tokentext",
+      "m20token",
+      "m20tokenartifact",
+      "m20tokenartifacttall",
+      "m20tokenartifacttext",
+      "m20tokentall",
+      "m20tokentext",
     ]);
     for (const [template, def] of Object.entries(templates)) {
       expect(FRAME_TEMPLATE_VALUES as readonly string[]).toContain(template);
@@ -124,13 +144,10 @@ describe("Card Conjurer recipe", () => {
       // (blendBottom) is theirs alone.
       expect(def.transforms).toMatch(/each seam cross-faded over 24 rows/);
     }
-    // No other template is re-cut by this band: the textless tokens have
-    // their own (TOKEN_TEXTLESS_RECUT, the next test), the rest none.
-    for (const [template, def] of Object.entries(templates)) {
-      if (TEXT_BOX_TOKENS.includes(template)) continue;
-      if (TEXTLESS_TOKENS.includes(template)) expect(def.recut, template).toBe(TOKEN_TEXTLESS_RECUT);
-      else expect(def.recut, template).toBeUndefined();
-    }
+    // No other template is re-cut by this band: the textless tokens and the
+    // full-art textless tokens have their own (the tests below), the rest
+    // none.
+    for (const [template, def] of Object.entries(templates)) expect(def.recut, template).toBe(recutOf(template));
     // The colourless text-box token is see-through like m15token's, its box
     // too (BFZ #2 / OGW #1 Eldrazi Scion); border, title and pinline opaque.
     const c = templates.m15tokentext.colors.c;
@@ -174,12 +191,75 @@ describe("Card Conjurer recipe", () => {
     }
     // No other template is re-cut by this band: the text-box tokens keep
     // their own (TOKEN_REGULAR_RECUT, the test above: no blendBottom, the
-    // bottom seam over `blend` rows), the rest none.
-    for (const [template, def] of Object.entries(templates)) {
-      if (TEXTLESS_TOKENS.includes(template)) continue;
-      if (TEXT_BOX_TOKENS.includes(template)) expect(def.recut, template).toBe(TOKEN_REGULAR_RECUT);
-      else expect(def.recut, template).toBeUndefined();
+    // bottom seam over `blend` rows), the full-art textless tokens theirs,
+    // the rest none.
+    for (const [template, def] of Object.entries(templates)) expect(def.recut, template).toBe(recutOf(template));
+  });
+
+  it("builds the full-art tokens from CC's 'Textless' / 'Short' / 'Tall' token packs, the artifact ones their own templates (TODO 4.48 / 4.50)", () => {
+    const H = { m20token: "textless", m20tokentext: "short", m20tokentall: "tall" } as const;
+    for (const [template, dir] of Object.entries(H)) {
+      const Hn = { textless: "Textless", short: "Short", tall: "Tall" }[dir];
+      const def = templates[template];
+      // One layer per colour: the pack's own master; `c` its frameC.
+      for (const k of ["w", "u", "b", "r", "g", "m"]) {
+        expect(def.colors[k], `${template}/${k}`).toEqual([{ src: `img/frames/token/${dir}/tokenFrame${k.toUpperCase()}${Hn}.png` }]);
+      }
+      expect(def.colors.c).toEqual([{ src: `img/frames/token/${dir}/frameC.png` }]);
+      // The artifact template: the silver master whole, the colour through
+      // the pack's Pinline mask only (the pills stay silver: not 4.16's
+      // m15artifact recipe, whose colour takes the title, type and box).
+      const art = templates[`${template.replace("m20token", "m20tokenartifact")}`];
+      expect(art.colors.c).toEqual([{ src: `img/frames/token/${dir}/tokenFrameA${Hn}.png` }]);
+      const pinline = {
+        textless: "img/frames/token/tokenMaskTextlessPinline.png",
+        short: "img/frames/token/short/m15MaskPinlineSuperShort.png",
+        tall: "img/frames/m15/regular/m15MaskPinline.png",
+      }[dir];
+      for (const k of ["w", "u", "b", "r", "g", "m"]) {
+        expect(art.colors[k], `${template} artifact/${k}`).toEqual([
+          { src: `img/frames/token/${dir}/tokenFrameA${Hn}.png` },
+          { src: `img/frames/token/${dir}/tokenFrame${k.toUpperCase()}${Hn}.png`, mask: pinline },
+        ]);
+      }
+      for (const t of [template, `${template.replace("m20token", "m20tokenartifact")}`]) {
+        expect(templates[t].pack, t).toMatch(new RegExp(`packToken${Hn}-1\\.js`));
+        // No plates of their own: M15's (m15/pt) and M15 artifact's.
+        expect(templates[t].plates, t).toBeUndefined();
+      }
     }
+    // CC's 'Regular' pack (type pill at 64 %H) matches no print: never used.
+    for (const t of M20_TOKENS) {
+      for (const f of sourceFilesFor(templates[t] as never)) expect(f, t).not.toMatch(/token\/regular\//);
+    }
+  });
+
+  it("re-cuts only the full-art textless masters' type pill 5 px down onto the prints (TODO 4.48, measure first)", () => {
+    // Held to the profile's own constant (the art slot and the bands ride it).
+    expect(M20_TOKEN_TEXTLESS_RECUT.shift).toBe(M20_TOKEN_TEXTLESS_RECUT_PX);
+    expect(M20_TOKEN_TEXTLESS_RECUT).toEqual({ fromY: 1687, toY: 1845, shift: 5, blend: 0, blendBottom: 0 });
+    for (const template of M20_TEXTLESS_TOKENS) {
+      const def = templates[template];
+      expect(def.recut, template).toBe(M20_TOKEN_TEXTLESS_RECUT);
+      expect(def.transforms).toMatch(/rows 1687–1844 \(the type pill with its glow and bottom rim\) moved down 5 px/);
+      expect(def.notes.join(" ")).toMatch(/re-cut onto the prints \(TODO 4\.48/);
+    }
+    // The regular and tall packs sit on the prints as drawn (±1 px).
+    for (const template of ["m20tokentext", "m20tokentall", "m20tokenartifacttext", "m20tokenartifacttall"]) {
+      expect(templates[template].recut, template).toBeUndefined();
+    }
+    // The band moves as one piece; the rows it opens repeat the rows above
+    // it (the clear window and the black ring), and nothing below 1850 moves.
+    const W = 4;
+    const H = 2100;
+    const buf = Buffer.alloc(W * H * 4);
+    for (let y = 0; y < H; y += 1) for (let x = 0; x < W; x += 1) buf[(y * W + x) * 4 + 3] = y % 251;
+    const out = recutBand(buf, W, H, M20_TOKEN_TEXTLESS_RECUT);
+    const a = (b: Buffer, y: number) => b[y * W * 4 + 3];
+    for (let y = 0; y < 1687; y += 1) expect(a(out, y), `${y}`).toBe(a(buf, y));
+    for (let y = 1687; y < 1692; y += 1) expect(a(out, y), `${y}`).toBe(a(buf, y - 5));
+    for (let y = 1692; y < 1850; y += 1) expect(a(out, y), `${y}`).toBe(a(buf, y - 5));
+    for (let y = 1850; y < H; y += 1) expect(a(out, y), `${y}`).toBe(a(buf, y));
   });
 
   it("imports the see-through frames now that art runs under the frame (4.17, owner decision)", () => {

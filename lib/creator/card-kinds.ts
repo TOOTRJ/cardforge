@@ -662,15 +662,19 @@ export function followTokenName(input: {
 // toggle writes the word and the frame follows — so the "Artifact Token"
 // chip is no longer a choice of its own (stored cards keep their template).
 // Keyed by kind, then by the base frame the word re-dresses. Enchantment's
-// Nyx dress joins here with 4.51; the full-art family's artifact templates
-// with 4.48 / 4.50. The text-box token (4.49 (b)) has its own artifact
-// dress, as the textless one does.
+// Nyx dress joins here with 4.51. The text-box token (4.49 (b)) has its own
+// artifact dress, as the textless one does, and so does each height of the
+// full-art token (4.48 / 4.50).
 const TYPE_WORD_DRESSES: Partial<
   Record<CardKind, Partial<Record<FrameTemplate, { word: TokenTypeWord; template: FrameTemplate }>>>
 > = {
   token: {
     m15token: { word: "Artifact", template: "m15tokenartifact" },
     m15tokentext: { word: "Artifact", template: "m15tokenartifacttext" },
+    // The full-art tokens' artifact templates (TODO 4.50), one per height.
+    m20token: { word: "Artifact", template: "m20tokenartifact" },
+    m20tokentext: { word: "Artifact", template: "m20tokenartifacttext" },
+    m20tokentall: { word: "Artifact", template: "m20tokenartifacttall" },
   },
 };
 

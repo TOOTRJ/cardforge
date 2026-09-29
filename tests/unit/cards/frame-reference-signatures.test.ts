@@ -71,7 +71,9 @@ describe("frame registry references vs the signature registry (TODO 1.4 (c))", (
       );
       return;
     }
-    expect(match.template, `${row.combo} ${match.signature} ${match.reason ?? ""}`).toBe(row.template);
+    // A full-art token (TODO 4.48) resolves to its own template through
+    // `onceVerified`: the 2014–19 arch stands in until it is verified.
+    expect(match.onceVerified ?? match.template, `${row.combo} ${match.signature} ${match.reason ?? ""}`).toBe(row.template);
     expect(match.status).not.toBe("unsupported");
   });
 

@@ -259,7 +259,10 @@ export function resolveImportFrame(input: {
  *   • a match that names another frame once it is verified
  *     (`onceVerified`: a 2003-frame textless promo names the 2003 frame
  *     until the textless frame is verified in its colour, owner decision
- *     A9) takes that frame when it is;
+ *     A9) takes that frame when it is — and, when the registry says what
+ *     the match is then (`onceVerifiedMatch`: an M20+ token is exact on its
+ *     full-art template, TODO 4.48, or nearest for a gap it doesn't draw),
+ *     that status, reason, item and gaps;
  *   • `exact` only when PipGlyph's frame is verified in the card's colour —
  *     an unverified frame is never an exact match to a user, so it becomes
  *     `nearest`, "not yet verified in <colour>", marked `unverified` (the
@@ -268,12 +271,29 @@ export function resolveImportFrame(input: {
  */
 export function withVerification<
   T extends Pick<FrameMatch, "status" | "template" | "reason"> &
-    Partial<Pick<FrameMatch, "onceVerified" | "unverified">>,
+    Partial<Pick<FrameMatch, "onceVerified" | "onceVerifiedMatch" | "unverified" | "blockedBy" | "gaps">>,
 >(match: T, colorKey: string, verifiedKeys: ReadonlySet<string>): T {
   let finalized = match;
   if (match.onceVerified && verifiedKeys.has(frameComboKey(match.onceVerified, colorKey))) {
-    const { onceVerified, ...rest } = match;
-    finalized = { ...rest, template: onceVerified } as unknown as T;
+    const { onceVerified, onceVerifiedMatch, ...rest } = match;
+    if (onceVerifiedMatch) {
+      // The M20 token design (TODO 4.48): exact on its own verified frame,
+      // or nearest for a gap it doesn't draw either — with that gap's
+      // reason, item and gaps, never the stand-in's.
+      const base: Partial<FrameMatch> = { ...rest };
+      delete base.blockedBy;
+      delete base.gaps;
+      finalized = {
+        ...base,
+        template: onceVerified,
+        status: onceVerifiedMatch.status,
+        reason: onceVerifiedMatch.reason,
+        ...(onceVerifiedMatch.blockedBy ? { blockedBy: onceVerifiedMatch.blockedBy } : {}),
+        ...(onceVerifiedMatch.gaps ? { gaps: onceVerifiedMatch.gaps } : {}),
+      } as unknown as T;
+    } else {
+      finalized = { ...rest, template: onceVerified } as unknown as T;
+    }
   }
   if (finalized.status !== "exact") return finalized;
   if (verifiedKeys.has(frameComboKey(finalized.template, colorKey))) return finalized;

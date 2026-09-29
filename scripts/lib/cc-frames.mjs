@@ -146,6 +146,89 @@ export const TOKEN_TEXTLESS_RECUT = { fromY: 1640, toY: 1857, shift: 8, blend: 2
 /** The textless token pack, as provenance names it. */
 const TOKEN_TEXTLESS_PACK = "packTokenTextlessM15.js 'Textless (Bordered M15)'";
 
+// --- 4.48 / 4.50 — the full-art token design (M20, 2019 → today): Card
+// Conjurer's 'Textless', 'Short' and 'Tall' token packs (groupToken-2.js;
+// packTokenTextless-1.js, packTokenShort-1.js, packTokenTall-1.js @2fcddba).
+// 1500×2100 native (no resample): a black ring 60 px wide (the art runs to
+// it: CC artBounds 4 / 2.86 / 92 × 89.53), the name pill (89–232 px) and the
+// type pill (textless 1701–1844, short 1404–1547, tall 1170–1313) at ~α250,
+// the translucent box (α≈205, `c` 166) from the pill to the colour strip at
+// 1937–1948, black below. CC's 'Regular' pack (type pill at 64 %H) matches
+// no print (4.48: 0 of 116) and is not imported; its 'Short' pack is the
+// printed regular box.
+const M20_TOKEN = "img/frames/token";
+/** A height's master for a colour key: W/U/B/R/G/M/A, `c` = frameC. */
+const m20TokenFrame = (dir, height, k) =>
+  k === "c" ? `${M20_TOKEN}/${dir}/frameC.png` : `${M20_TOKEN}/${dir}/tokenFrame${k.toUpperCase()}${height}.png`;
+/** Each pack's Pinline mask (its first mask): the pill rims, the box or
+ *  lower-window outline and the colour strip. The tall pack lists the
+ *  regular M15 masks; drawn through the colour master, the M15 pinline's
+ *  art-window sides fall where the master is clear, so only its pills, box
+ *  and strip take colour. */
+const M20_TOKEN_PINLINE = {
+  textless: `${M20_TOKEN}/tokenMaskTextlessPinline.png`,
+  short: `${M20_TOKEN}/short/m15MaskPinlineSuperShort.png`,
+  tall: `${REG}/m15MaskPinline.png`,
+};
+const M20_TOKEN_PACKS = {
+  textless: { dir: "textless", height: "Textless", pack: "packTokenTextless-1.js 'Textless' (groupToken-2.js)" },
+  short: { dir: "short", height: "Short", pack: "packTokenShort-1.js 'Short' (groupToken-2.js) — the printed regular box" },
+  tall: { dir: "tall", height: "Tall", pack: "packTokenTall-1.js 'Tall' (groupToken-2.js)" },
+};
+/**
+ * The re-cut of CC's TEXTLESS full-art token masters (m20token,
+ * m20tokenartifact; TODO 4.48, "measure first"). Measured on 28 M20+
+ * textless prints (Scryfall PNGs at 1500 × 2100; tfdn #1/#6/#12/#13/#15/
+ * #18/#20, tmh3 #7, tcmm #1/#45, teoe #1, teoc #14, tdsk #7/#14, tsoc #8,
+ * tm3c #7, tmkm #10, tlci #13, tfin #6, tpip #9, thob #8, tsos #5, tm20 #2,
+ * t2xm #4, tscd #6, tc19 #26, tdmu #20, tmoc #25): the type pill prints as
+ * ONE piece 4.8 px below CC's (profile correlation over the pill, 2023+
+ * prints 4.1–4.9; its top outline +4.4, bottom outline +5.7, medians),
+ * while the name pill (+1.3) and the colour strip (−1.0) sit where CC draws
+ * them — the 'Short' (+0.9) and 'Tall' (+0.7) pills too, so only the
+ * textless pack moves. The band from the pill's glow (1687) through its
+ * bottom rim (1844; the lower window's own top edge) moves down `shift` px
+ * over the top rows of the clear lower window; the rows it opens repeat the
+ * clear window above it and the black ring beside it, row for row, so both
+ * seams are hard cuts (no fade: nothing but the ring and clear art meets
+ * them). Native px of the pack (1500 × 2100).
+ */
+export const M20_TOKEN_TEXTLESS_RECUT = { fromY: 1687, toY: 1845, shift: 5, blend: 0, blendBottom: 0 };
+
+/** One full-art token template: the height's pack, plain or artifact. */
+function m20TokenTemplate(height, artifact) {
+  const { dir, height: H, pack } = M20_TOKEN_PACKS[height];
+  const recut = height === "textless" ? M20_TOKEN_TEXTLESS_RECUT : undefined;
+  const colors = artifact
+    ? {
+        c: [layer(m20TokenFrame(dir, H, "a"))],
+        // 4.50: a coloured artifact token keeps the silver pills and box and
+        // takes the colour on the pill rims, the pinline and the strip
+        // (TDSK #7 Toy w, TSOC #8 Phyrexian Myr u, TMH3 #18 b, TMOC #25 r).
+        ...perColor((k) => [layer(m20TokenFrame(dir, H, "a")), layer(m20TokenFrame(dir, H, k), M20_TOKEN_PINLINE[height])], WUBRGM),
+      }
+    : perColor((k) => [layer(m20TokenFrame(dir, H, k))]);
+  const notes = artifact
+    ? [
+        `source: CC '${H}' token pack Artifact Frame (tokenFrameA${H}.png) — TODO 4.50`,
+        `coloured artifact tokens = the silver artifact master whole + the colour's master through the pack's Pinline mask (${M20_TOKEN_PINLINE[height]}): silver pills and box, the colour on the rims, pinline and strip, as TDSK #7 / TSOC #8 print; NOT 4.16's m15artifact recipe (the token pills stay silver)`,
+      ]
+    : [
+        `source: CC '${H}' token pack (tokenFrame{W,U,B,R,G,M}${H}.png) — the full-art token design, M20 → today (TODO 4.48)`,
+        `colourless = CC's frameC.png (charcoal pills, box α≈166; TEOE #1 Sliver, TMH3 #38 Eldrazi Spawn)`,
+      ];
+  if (height === "short") notes.push("CC's 'Short' pack is the printed REGULAR box (type pill 66.9–73.7 %H; its 'Regular' pack at 64 %H matches no print, TODO 4.48); measured on 19 prints: pill +0.9 px, name pill +1.3, strip −1.0 — used as drawn");
+  if (height === "tall") notes.push("measured on 16 tall prints: pill +0.7 px, name pill +1.3 — used as drawn");
+  if (recut) notes.push("re-cut onto the prints (TODO 4.48, measure first): the type pill 5 px lower, as 28 M20+ textless prints print it (+4.8 px, correlation); PipGlyph composite of CC pixels");
+  return {
+    colors,
+    ...(recut ? { recut } : {}),
+    pack,
+    transforms: recut ? m20TextlessRecutTransform(recut) : "native 1500x2100, pixels copied 1:1 (no resample), composited in CC's order, corners rounded to the importer radius",
+    notes,
+  };
+}
+
 // --- 4.32 'Borderless (Alt)' — CC packBorderless.js (groupShowcase-5.js:49).
 // 1500×2100 native (no resample): sides α0 down to the fins, the α128 black
 // box and the translucent bars baked in, an opaque bottom bar from 92.24 % H
@@ -324,6 +407,17 @@ export const CC_TEMPLATES = {
       "coloured artifact tokens = the silver token frame + border and box, the colour through CC's Title, Type and Pinline masks (TC16 #9, TC18 #8 Thopter print a blue pinline and pill on the silver frame and box)",
     ],
   },
+  // TODO 4.48 — the full-art token design (M20 → today), three printed
+  // heights: textless (re-cut onto the prints), the regular box (CC
+  // 'Short') and the tall box.
+  m20token: m20TokenTemplate("textless", false),
+  m20tokentext: m20TokenTemplate("short", false),
+  m20tokentall: m20TokenTemplate("tall", false),
+  // TODO 4.50 — their artifact templates (owner 2026-09-29: artifact tokens
+  // get their own templates, picked from the Artifact type word).
+  m20tokenartifact: m20TokenTemplate("textless", true),
+  m20tokenartifacttext: m20TokenTemplate("short", true),
+  m20tokenartifacttall: m20TokenTemplate("tall", true),
   // 4.32 — the standard borderless frame (2019+): art to the card edge.
   m15borderless: {
     colors: perColor((k) => [layer(borderlessFrame(k))]),
@@ -388,6 +482,12 @@ function recutTransform(r) {
 /** How provenance describes the textless tokens' re-cut (TOKEN_TEXTLESS_RECUT). */
 function textlessRecutTransform(r) {
   return `native 1500x2100, no resample; composited in CC's order, then re-cut: rows ${r.fromY}–${r.toY - 1} (the window's straight sides through the type pill's shadow) moved down ${r.shift} px as one piece over the top ${r.shift} rows of the frame texture below them, the rows opened above them filled from the window's sides and cross-faded over ${r.blend} rows, the shadow's last ${r.blendBottom} rows faded into the texture (premultiplied); corners rounded to the importer radius`;
+}
+
+/** How provenance describes the full-art textless tokens' re-cut
+ *  (M20_TOKEN_TEXTLESS_RECUT). */
+function m20TextlessRecutTransform(r) {
+  return `native 1500x2100, no resample; composited in CC's order, then re-cut: rows ${r.fromY}–${r.toY - 1} (the type pill with its glow and bottom rim) moved down ${r.shift} px as one piece over the top ${r.shift} rows of the clear lower window, the rows opened above them repeating the clear window and the black ring (hard cuts: only the ring and clear art meet either seam); corners rounded to the importer radius`;
 }
 
 /** Templates deliberately NOT imported yet, and why. */
