@@ -17,7 +17,12 @@ import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { after } from "next/server";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { createClient, getCurrentUser, getCurrentUsername } from "@/lib/supabase/server";
+import {
+  createClient,
+  getCurrentProfile,
+  getCurrentUser,
+  getCurrentUsername,
+} from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
   createCardSchema,
@@ -54,6 +59,7 @@ import { isUuid } from "@/lib/ids";
 import { lookupUsername } from "@/lib/profile/username";
 import { buildCardPath } from "@/lib/cards/utils";
 import { isCapacityViolation } from "@/lib/billing/capacity-copy";
+import { allFramePreviewsMessage } from "@/lib/cards/bulk-visibility-copy";
 import { CARD_CAPACITY_UNLIMITED } from "@/lib/billing/plans";
 
 // ---------------------------------------------------------------------------
@@ -119,6 +125,17 @@ function notConfigured(): CardActionFailure {
     formError:
       "Supabase isn't configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY in your environment.",
   };
+}
+
+/** Is the signed-in viewer an admin? From the profile (get_my_billing),
+ *  never the request. Only asked when a save requests a frame preview, so
+ *  every other save costs nothing extra. */
+async function viewerIsAdmin(): Promise<boolean> {
+  try {
+    return Boolean((await getCurrentProfile())?.is_admin);
+  } catch {
+    return false;
+  }
 }
 
 function notAuthed(): CardActionFailure {
@@ -222,11 +239,19 @@ export async function createCardAction(
 
   const data = parsed.data;
 
+  // An admin's frame preview (TODO 2.3): the creator's admin preview mode
+  // asks for it, the server decides — only an admin (from the profile,
+  // never the payload) gets it. A preview skips the verification gate but
+  // nothing else, and lands private + flagged (the insert below; migration
+  // 0121's CHECK keeps it private). Anyone else's request is ignored.
+  const framePreview =
+    data.frame_preview === true && (await viewerIsAdmin());
+
   // Verification gate — the server twin of the picker's: a (template,
   // colour) pair saves only when the admin has published it in
   // /admin/frame-compare. The client hides unpublished chips, but a stale
   // page or a crafted payload must not get past.
-  {
+  if (!framePreview) {
     const gateError = frameGateError(
       data.frame_style?.template,
       data.color_identity,
@@ -250,15 +275,21 @@ export async function createCardAction(
     }
   }
 
+  // The visibility the row is stored with. No artwork → no gallery: a
+  // public save without art lands as a draft (private) so test/unfinished
+  // cards never occupy gallery space; the creator predicts this client-side
+  // and tells the user. Unlisted stays allowed — link-only sharing of a WIP
+  // is deliberate and gallery-free. A frame preview is always private.
+  const storedVisibility: Visibility = framePreview
+    ? "private"
+    : data.visibility === "public" && !data.art_url
+      ? "private"
+      : data.visibility;
+
   // A second face may stay unnamed on a private draft only (TODO 3b.5,
   // lib/cards/second-face-name.ts) — judged at the visibility the row will
-  // be stored with (an artless "public" card lands private, see the insert).
-  if (
-    missingSecondFaceName(
-      data.back_face,
-      data.visibility === "public" && !data.art_url ? "private" : data.visibility,
-    )
-  ) {
+  // be stored with.
+  if (missingSecondFaceName(data.back_face, storedVisibility)) {
     return {
       ok: false,
       fieldErrors: { "back_face.title": SECOND_FACE_NAME_ERROR },
@@ -360,14 +391,11 @@ export async function createCardAction(
     art_url: data.art_url ?? null,
     art_position: data.art_position ?? {},
     frame_style: data.frame_style ?? {},
-    // No artwork → no gallery. A public save without art lands as a draft
-    // (private) so test/unfinished cards never occupy gallery space; the
-    // creator predicts this client-side and tells the user. Unlisted stays
-    // allowed — link-only sharing of a WIP is deliberate and gallery-free.
-    visibility:
-      data.visibility === "public" && !data.art_url
-        ? "private"
-        : data.visibility,
+    // No art or a frame preview → private (storedVisibility, above).
+    visibility: storedVisibility,
+    // Only a preview names the column, so an ordinary save never depends on
+    // migration 0121 having run.
+    ...(framePreview ? { frame_preview: true } : {}),
     parent_card_id: data.parent_card_id ?? null,
     // Back face (chunk 10): null when undefined or explicitly cleared,
     // jsonb object when the user has filled in DFC content.
@@ -422,8 +450,9 @@ export async function createCardAction(
   }
 
   // Drop the card into its chosen deck as a custom-only mainboard entry.
-  // Best-effort — a deck hiccup never rolls back the card save.
-  if (data.deck_id) {
+  // Best-effort — a deck hiccup never rolls back the card save. A frame
+  // preview is a test card: it never joins a deck.
+  if (data.deck_id && !framePreview) {
     await addCustomCardEntryToDeck(
       supabase,
       user.id,
@@ -439,8 +468,9 @@ export async function createCardAction(
     await revalidateParentCardPaths(data.parent_card_id);
   }
   // Funnel: a saved card (and, once per user, first_card_saved — the
-  // activation milestone). Best effort; never touches the save.
-  if (isAdminConfigured()) {
+  // activation milestone). Best effort; never touches the save. An admin's
+  // frame preview is tooling, not product activity.
+  if (isAdminConfigured() && !framePreview) {
     await recordActivity(createAdminClient(), {
       userId: user.id,
       kind: "card_saved",
@@ -527,6 +557,12 @@ export async function updateCardAction(
     }
   }
 
+  // An admin's frame preview (TODO 2.3) stays one: it is always private.
+  // A card becomes one when an admin's preview-mode save moves it onto an
+  // unverified frame/colour (the gate below).
+  const previewCard = existing.frame_preview === true;
+  let becomesPreview = false;
+
   // Verification gate, only when the patch CHANGES the frame or the colour:
   // a card saved on a since-withdrawn frame (the picker's "legacy pin")
   // must stay editable as long as its frame/colour are left alone.
@@ -547,7 +583,13 @@ export async function updateCardAction(
         new Set(await getVerifiedFrameKeys()),
       );
       if (gateError) {
-        return { ok: false, fieldErrors: { frame_style: gateError } };
+        // Only an admin (server-checked) previews an unverified frame.
+        const preview =
+          (previewCard || data.frame_preview === true) && (await viewerIsAdmin());
+        if (!preview) {
+          return { ok: false, fieldErrors: { frame_style: gateError } };
+        }
+        becomesPreview = !previewCard;
       }
     }
 
@@ -629,6 +671,10 @@ export async function updateCardAction(
       update.visibility = "private";
     }
   }
+  // A frame preview is private whatever the patch says (migration 0121's
+  // CHECK would refuse anything else); only a preview save names the flag.
+  if (previewCard || becomesPreview) update.visibility = "private";
+  if (becomesPreview) update.frame_preview = true;
   // An unnamed second face is a draft's privilege (TODO 3b.5): judged on the
   // card as it will be stored — the patched back face over the stored one,
   // at the visibility the rule above settled on — so both "publish a draft
@@ -797,6 +843,10 @@ export async function deleteCardAction(
 //      a belt-and-braces guard alongside RLS.
 //   4. Revalidate the dashboard / gallery surfaces.
 //
+// A visibility change to public / unlisted SKIPS an admin's frame previews
+// (TODO 2.3 — migration 0121 keeps them private) and changes the rest; the
+// action finds them itself, never from the client (owner, 2026-09-28).
+//
 // We bound batches at 100 ids to keep request payloads reasonable + so the
 // pre-flight `IN (...)` query stays index-friendly.
 // ---------------------------------------------------------------------------
@@ -825,15 +875,30 @@ type BulkCardsFailure = {
 
 export type BulkCardsResult = BulkCardsSuccess | BulkCardsFailure;
 
+/** A bulk visibility change also says how many frame previews it skipped. */
+export type BulkVisibilityResult =
+  | (BulkCardsSuccess & { skippedPreviews: number })
+  | BulkCardsFailure;
+
 /** Wall-clock budget for the deferred bakes of one bulk publish — well inside
  *  the function's lifetime; whatever doesn't fit renders live until its next
  *  individual save. */
 const BULK_BAKE_BUDGET_MS = 200_000;
 
+type BulkPreflightRow = {
+  id: string;
+  owner_id: string;
+  title: string;
+  back_face: unknown;
+  rendered_image_url: string | null;
+  /** Absent until migration 0121 lands. */
+  frame_preview?: boolean;
+};
+
 export async function updateCardsVisibilityAction(
   cardIds: string[],
   visibility: Visibility,
-): Promise<BulkCardsResult> {
+): Promise<BulkVisibilityResult> {
   if (!isSupabaseConfigured()) {
     return { ok: false, error: "Supabase is not configured." };
   }
@@ -854,10 +919,22 @@ export async function updateCardsVisibilityAction(
   const supabase = await createClient();
 
   // Pre-flight ownership: every id must exist AND be owned by the caller.
-  const { data: existing, error: existingError } = await supabase
+  // `frame_preview` rides along so a publish can skip an admin's previews.
+  // Between a deploy and migration 0121 landing the column doesn't exist
+  // yet (so no card can be a preview): read without it rather than break
+  // every user's bulk change in that window.
+  let existing: BulkPreflightRow[] | null;
+  let existingError: { message: string } | null;
+  ({ data: existing, error: existingError } = await supabase
     .from("cards")
-    .select("id, owner_id, title, back_face, rendered_image_url")
-    .in("id", ids);
+    .select("id, owner_id, title, back_face, rendered_image_url, frame_preview")
+    .in("id", ids));
+  if (existingError?.message.includes("frame_preview")) {
+    ({ data: existing, error: existingError } = await supabase
+      .from("cards")
+      .select("id, owner_id, title, back_face, rendered_image_url")
+      .in("id", ids));
+  }
   if (existingError) {
     return { ok: false, error: existingError.message };
   }
@@ -873,18 +950,31 @@ export async function updateCardsVisibilityAction(
       error: "Some cards aren't yours to edit.",
     };
   }
+  // An admin's frame preview (TODO 2.3) always stays private — 0121's CHECK
+  // refuses it anything else — so a publish / unlist skips the previews and
+  // changes the rest. Decided here from the rows, never from the client.
+  const goingPrivate = parsed.data.visibility === "private";
+  const previews = goingPrivate ? [] : existing.filter((c) => c.frame_preview === true);
+  const targets = goingPrivate ? existing : existing.filter((c) => c.frame_preview !== true);
+  if (targets.length === 0) {
+    return {
+      ok: false,
+      error: allFramePreviewsMessage(parsed.data.visibility, previews.length),
+    };
+  }
+  const targetIds = targets.map((c) => c.id);
+
   // Publishing needs every second face named (TODO 3b.5): a draft saved
   // with an unnamed Adventure / split half can't go out from here either.
   // Hiding a card never needs a name — whatever the draft policy says.
-  const unnamed =
-    parsed.data.visibility === "private"
-      ? []
-      : existing.filter((c) =>
-          missingSecondFaceName(
-            c.back_face as { title?: string | null } | null,
-            parsed.data.visibility,
-          ),
-        );
+  const unnamed = goingPrivate
+    ? []
+    : targets.filter((c) =>
+        missingSecondFaceName(
+          c.back_face as { title?: string | null } | null,
+          parsed.data.visibility,
+        ),
+      );
   if (unnamed.length > 0) {
     const names = unnamed
       .slice(0, 3)
@@ -899,7 +989,6 @@ export async function updateCardsVisibilityAction(
   // Going private must also drop the public render (the full card image) — both
   // the row's URL and the stored object — for the same reason the single-card
   // path does. Going public/unlisted bakes the missing renders below.
-  const goingPrivate = parsed.data.visibility === "private";
   const { error } = await supabase
     .from("cards")
     .update(
@@ -907,10 +996,20 @@ export async function updateCardsVisibilityAction(
         ? { visibility: "private", rendered_image_url: null, rendered_thumb_url: null, rendered_at: null }
         : { visibility: parsed.data.visibility },
     )
-    .in("id", ids)
+    .in("id", targetIds)
     .eq("owner_id", user.id);
 
   if (error) {
+    // A card flagged as a frame preview after the pre-flight read: 0121's
+    // CHECK refuses the whole statement, so nothing changed — say why in
+    // words instead of Postgres's (a retry reads the flag and skips it).
+    if (error.code === "23514" && error.message.includes("cards_frame_preview_private")) {
+      return {
+        ok: false,
+        error:
+          "Frame previews stay private, and nothing was changed — try again and they'll be skipped.",
+      };
+    }
     return { ok: false, error: error.message };
   }
 
@@ -920,7 +1019,7 @@ export async function updateCardsVisibilityAction(
     // path is deterministic and the bucket is public-read, so a leftover PNG
     // stays fetchable for a card the DB now reports as having no render.
     // (Mirrors removeRenderObject in lib/cards/bake-render.ts.)
-    const paths = ids.flatMap((id) => renderObjectPaths(user.id, id));
+    const paths = targetIds.flatMap((id) => renderObjectPaths(user.id, id));
     for (let attempt = 1; attempt <= 2; attempt += 1) {
       const { error: removeErr } = await supabase.storage
         .from("card-renders")
@@ -938,7 +1037,7 @@ export async function updateCardsVisibilityAction(
   // skipped here — they'll refresh on next visit. Same posture as the
   // single-card updateCardAction. Cards going private also lose their CDN
   // share image right away.
-  if (goingPrivate) await purgeHiddenCards(ids);
+  if (goingPrivate) await purgeHiddenCards(targetIds);
   else revalidateCardListSurfaces();
 
   if (!goingPrivate) {
@@ -947,7 +1046,7 @@ export async function updateCardsVisibilityAction(
     // the live preview forever and every uncached /og or /png hit re-ran
     // Satori. Bake the missing ones after the response, one at a time, inside
     // a time budget — the single-card save path does the same in after().
-    const toBake = existing
+    const toBake = targets
       .filter((c) => !c.rendered_image_url)
       .map((c) => c.id);
     if (toBake.length > 0) {
@@ -973,7 +1072,7 @@ export async function updateCardsVisibilityAction(
     }
   }
 
-  return { ok: true, count: ids.length };
+  return { ok: true, count: targetIds.length, skippedPreviews: previews.length };
 }
 
 export async function deleteCardsAction(

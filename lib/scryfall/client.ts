@@ -408,30 +408,88 @@ export type ScryfallNamedLookup =
   | { exact: string }
   | { fuzzy: string };
 
+/** Why a /cards/named lookup found no card (TODO 1.12):
+ *   - "ambiguous"   — a fuzzy name matched several cards (Scryfall answers
+ *                     404 with an error object whose `type` is "ambiguous");
+ *   - "not_found"   — no card has that name (a plain 404);
+ *   - "bad_request" — Scryfall refused the request (400), or the name was
+ *                     empty, so no request was sent;
+ *   - "upstream"    — anything else: a 429/5xx after the retries, a network
+ *                     failure, or a body that doesn't parse. */
+export type ScryfallNamedFailure = "not_found" | "ambiguous" | "bad_request" | "upstream";
+
+export type ScryfallNamedResult =
+  | { ok: true; card: ScryfallCard }
+  | { ok: false; kind: ScryfallNamedFailure };
+
+// Scryfall's error object (https://scryfall.com/docs/api/errors). Only
+// `type` tells an ambiguous fuzzy name apart from a missing one: both are
+// status 404 with code "not_found".
+const scryfallErrorSchema = z
+  .object({
+    object: z.literal("error"),
+    code: z.string().optional(),
+    type: z.string().optional().nullable(),
+  })
+  .passthrough();
+
+/**
+ * Look up a single card by name (exact or fuzzy) and say why when there is
+ * no card — the /api/scryfall/named route turns each failure into its own
+ * message and status.
+ */
+export async function getCardByNameResult(
+  lookup: ScryfallNamedLookup,
+): Promise<ScryfallNamedResult> {
+  const params = new URLSearchParams();
+  if ("exact" in lookup) {
+    if (!lookup.exact.trim()) return { ok: false, kind: "bad_request" };
+    params.set("exact", lookup.exact.trim());
+  } else {
+    if (!lookup.fuzzy.trim()) return { ok: false, kind: "bad_request" };
+    params.set("fuzzy", lookup.fuzzy.trim());
+  }
+
+  let response: Response;
+  try {
+    response = await scryfallFetch(`/cards/named?${params}`);
+  } catch {
+    return { ok: false, kind: "upstream" };
+  }
+
+  if (response.ok) {
+    try {
+      const body: unknown = await response.json();
+      return { ok: true, card: scryfallCardSchema.parse(body) };
+    } catch {
+      return { ok: false, kind: "upstream" };
+    }
+  }
+  if (response.status === 404) {
+    let ambiguous = false;
+    try {
+      const error = scryfallErrorSchema.safeParse(await response.json());
+      ambiguous = error.success && error.data.type === "ambiguous";
+    } catch {
+      // An unreadable 404 body is still "no such card".
+    }
+    return { ok: false, kind: ambiguous ? "ambiguous" : "not_found" };
+  }
+  if (response.status === 400) return { ok: false, kind: "bad_request" };
+  return { ok: false, kind: "upstream" };
+}
+
 /**
  * Look up a single card by name (exact or fuzzy). Returns null on any error
- * — the caller decides between "card not found" UI vs an error toast.
+ * — the caller decides between "card not found" UI vs an error toast. The
+ * decklist importer (lib/decks/import.ts) uses this; the named route wants
+ * the reason and calls getCardByNameResult.
  */
 export async function getCardByName(
   lookup: ScryfallNamedLookup,
 ): Promise<ScryfallCard | null> {
-  const params = new URLSearchParams();
-  if ("exact" in lookup) {
-    if (!lookup.exact.trim()) return null;
-    params.set("exact", lookup.exact.trim());
-  } else {
-    if (!lookup.fuzzy.trim()) return null;
-    params.set("fuzzy", lookup.fuzzy.trim());
-  }
-
-  const response = await scryfallFetch(`/cards/named?${params}`);
-  if (!response.ok) return null;
-  try {
-    const body: unknown = await response.json();
-    return scryfallCardSchema.parse(body);
-  } catch {
-    return null;
-  }
+  const result = await getCardByNameResult(lookup);
+  return result.ok ? result.card : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -573,6 +631,19 @@ export function pickArtCropUrl(card: ScryfallCard): string | null {
   const face = card.card_faces?.[0]?.image_uris ?? null;
   const source = top ?? face;
   return source?.art_crop ?? source?.normal ?? null;
+}
+
+/**
+ * True when the printing's SECOND face has its own image (TODO 1.8) — a
+ * transform, modal DFC, battle or reversible card, where Scryfall puts
+ * `image_uris` on each face. Split, aftermath, flip, adventure and Room cards
+ * are one image with two faces of text: their faces carry no `image_uris`,
+ * so there is no back-face art to import (an "art-back" request would spend
+ * a lookup on a 404).
+ */
+export function hasBackFaceImage(card: ScryfallCard): boolean {
+  const uris = card.card_faces?.[1]?.image_uris;
+  return Boolean(uris && Object.values(uris).some(Boolean));
 }
 
 // ---------------------------------------------------------------------------

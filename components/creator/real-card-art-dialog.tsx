@@ -569,13 +569,15 @@ function ChosenPrinting({
   // the same text the Art block shows once the art is in place.
   const previewOrigin: ImportedArtOrigin = realCardArtOrigin(printing, "chosen-printing");
   // Show the image "Use this art" will import: the back face's own crop
-  // (and its artist) once "Back art" is picked.
+  // (and its artist) once "Back art" is picked. Each face's credit is the
+  // one import-art writes (TODO 1.8) — Fire // Ice's front art is David
+  // Martin's alone, not the card-level "David Martin & Franz Vohwinkel".
   const showBack = mode === "art-back";
   const thumb = showBack ? printing.back_thumb_url ?? null : printing.thumb_url;
   const faceName = showBack ? faceNames.back ?? faceNames.front : faceNames.front;
   const artist = showBack
     ? printing.back_artist ?? printing.artist
-    : printing.artist;
+    : printing.front_artist ?? printing.artist;
   return (
     <div
       className="flex flex-col gap-3 rounded-md border border-border/60 bg-elevated/30 p-3"

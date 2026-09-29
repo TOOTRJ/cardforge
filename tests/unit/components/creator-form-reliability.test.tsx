@@ -11,6 +11,9 @@ import {
 } from "@testing-library/react";
 import type { Card, GameSystem } from "@/types/card";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
+import printings from "../scryfall/fixtures/import-printings.json";
+import { scryfallCardSchema } from "@/lib/scryfall/client";
+import { mapScryfallToFormPatch } from "@/lib/scryfall/import-mapper";
 
 // ---------------------------------------------------------------------------
 // The card creator's save + kind-change plumbing, driven through the real
@@ -1074,5 +1077,67 @@ describe("a save from the leave dialog still links the new card", () => {
     );
     expect(toast.success).toHaveBeenCalledWith("Linked into “Burn”.");
     expect(router.replace).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TODO 1.21 — an import keeps a layout kind's printed card type. The form
+// used to write the kind's own type over it (applyKindProgrammatic), so an
+// Enchantment adventurer saved as a Creature and the aftermath / split
+// halves swapped Instant and Sorcery. Driven through the deck-remix prefill
+// (/create?deckCard=…), which runs the same handleScryfallImport as the
+// dialog, with the real mapper's patch for real (trimmed) printings.
+// ---------------------------------------------------------------------------
+
+describe("1.21 an import keeps a layout kind's printed card type", () => {
+  type PrintingKey = keyof typeof printings;
+
+  function prefillFrom(key: PrintingKey) {
+    const card = scryfallCardSchema.parse(printings[key]);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.startsWith("/api/scryfall/named")) {
+          return new Response(
+            JSON.stringify({
+              ok: true,
+              card: { name: card.name, scryfall_uri: null },
+              patch: JSON.parse(JSON.stringify(mapScryfallToFormPatch(card))),
+            }),
+            { status: 200 },
+          );
+        }
+        // No art: the text-only prefill.
+        return new Response(JSON.stringify({ ok: false }), { status: 200 });
+      }),
+    );
+    renderForm({
+      mode: "create",
+      deckRemix: {
+        deckCardId: "66666666-6666-4666-8666-666666666666",
+        scryfallId: card.id,
+        deckSlug: "tester/deck",
+        deckTitle: "Deck",
+        entryName: card.name,
+      },
+    });
+  }
+
+  it.each([
+    // Virtue of Loyalty WOE #38 — an Enchantment adventurer (was Creature).
+    ["woe-38", "adventure", "enchantment", "Ardenvale Fealty"],
+    // Commit // Memory AKH #211 — its front is an Instant (was Sorcery).
+    ["akh-211", "aftermath", "instant", "Memory"],
+    // Beck // Call DGM #123 — a Sorcery split card (was Instant).
+    ["dgm-123", "split", "sorcery", "Call"],
+    // Control: an adventurer that IS a creature.
+    ["eld-115", "adventure", "creature", "Stomp"],
+  ] as const)("%s lands on %s as %s", async (key, template, cardType, backTitle) => {
+    prefillFrom(key);
+    await waitFor(() => expect(preview().template).toBe(template));
+    expect(preview().cardType).toBe(cardType);
+    // The second half rides along, typed as printed.
+    expect(preview().backFace?.title).toBe(backTitle);
   });
 });

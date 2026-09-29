@@ -42,6 +42,11 @@ export type NamedResponse = {
     thumb_url: string | null;
     scryfall_uri: string | null;
     image_status: string | null;
+    /** The second face has an image of its own (a DFC) — false for split,
+     *  adventure, flip and Room cards, which share one image (TODO 1.8).
+     *  Optional: an older cached response has no flag and imports no
+     *  back-face art. */
+    has_back_image?: boolean;
   };
   patch: ScryfallImportPatch;
 };

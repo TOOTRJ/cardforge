@@ -372,6 +372,52 @@ describe("the back art is offered only when the printing has a back image", () =
     expect(chosen().textContent).toContain("Artist: Aberration Artist");
   });
 
+  it("a split printing's front art names its first half's artist — the credit import-art writes (TODO 1.8)", async () => {
+    // Fire // Ice DMR #215: the card-level credit joins both halves', each
+    // face credits its own, and import-art writes the face's (main's 1.8).
+    const FIRE_ICE = { id: "fire-ice-search-hit", oracleId: "0b6a0b43-0e3f-4a0e-9d3e-0d3b2f1c6a15" };
+    const FIRE_ICE_DMR = printing({
+      id: "f1e2d3c4-0000-4000-8000-000000000215",
+      set: "dmr",
+      set_name: "Dominaria Remastered",
+      released_at: "2023-01-13",
+      collector_number: "215",
+      artist: "David Martin & Franz Vohwinkel",
+      front_artist: "David Martin",
+      has_back_image: false,
+      back_thumb_url: null,
+      back_artist: null,
+    });
+    stubRoutes({
+      printings: { [FIRE_ICE.oracleId]: [FIRE_ICE_DMR] },
+      search: () =>
+        json({
+          ok: true,
+          results: [{ id: FIRE_ICE.id, name: "Fire // Ice", oracle_id: FIRE_ICE.oracleId, set: "dmr", set_name: "Dominaria Remastered", thumb_url: null }],
+        }),
+      importArt: () => json({ ok: true, publicUrl: PUBLIC_URL, artist: "David Martin", warning: null }),
+    });
+    const { values } = renderButton("front");
+    await pickCard("Fire", /Fire \/\/ Ice/);
+    // One shared image: no front/back choice.
+    expect(screen.queryByRole("radiogroup", { name: "Which art" })).toBeNull();
+    const chosen = screen.getByTestId("real-art-chosen").textContent ?? "";
+    expect(chosen).toContain("Artist: David Martin");
+    expect(chosen).not.toContain("Franz Vohwinkel");
+    await useThisArt();
+    await waitFor(() => expect(values().art_url).toBe(PUBLIC_URL));
+    expect(values().artist_credit).toBe("David Martin");
+  });
+
+  it("an older payload without front_artist falls back to the printing's credit", async () => {
+    stubRoutes();
+    renderButton("front");
+    await pickCard("Llanowar", /Llanowar Elves/);
+    fireEvent.click(tile(/DOM · 2018 · #168/));
+    expect(LLANOWAR_DOM.front_artist).toBeUndefined();
+    expect(screen.getByTestId("real-art-chosen").textContent).toContain("Artist: Artist of DOM");
+  });
+
   it("a placeholder scan can't be used", async () => {
     stubRoutes({ printings: { [LLANOWAR.oracleId]: [PLACEHOLDER] } });
     renderButton("front");

@@ -197,6 +197,61 @@ export const KIND_DEFS: Record<CardKind, KindDef> = Object.fromEntries(
   ),
 ) as Record<CardKind, KindDef>;
 
+// ---------------------------------------------------------------------------
+// The card types a layout kind's template can draw (TODO 1.21). A layout kind
+// writes its own card type (KIND_DEFS[kind].cardType) on a kind change, but a
+// real card on that layout may be another type: Virtue of Loyalty WOE #38 is
+// an Enchantment adventurer, Commit // Memory AKH #211 an Instant aftermath,
+// Beck // Call DGM #123 a Sorcery split card. The import keeps the printed
+// type when the template can draw it (importedCardTypeForKind), so the P/T,
+// loyalty and watermark gating follow the real card. The kind never changes:
+// kindFromCard reads the layout template first, whatever the card type.
+//
+// Decided from the profiles and the masters (tests/unit/creator/
+// layout-kind-card-types.test.ts holds the table to the profiles):
+//   • adventure — the master (m15 + the storybook pages) paints no P/T box;
+//     the P/T plate is M15's overlay, drawn only when the card type shows
+//     P/T, and the cost hides only for a land (the FIN Towns have none). No
+//     loyalty or defense slot. So every permanent and spell type draws:
+//     Scryfall prints 22 non-creature adventurers (captured 2026-09-28) — 8
+//     enchantments (the WOE Virtues), 8 artifacts (Equipment, a Book), 5 FIN
+//     Town lands and 1 sorcery (Twice Upon a Time).
+//   • flip — the P/T is ink on the cream band, drawn only for a P/T type; the
+//     master paints no box. Kamigawa's flips are creatures; WOE's Role tokens
+//     ("Token Enchantment — Aura Role") are tokens.
+//   • saga — Saga is an enchantment subtype; the chapter rail replaces the
+//     rules box and the profile has no P/T slot (a FIN Summon, "Enchantment
+//     Creature — Saga Dragon", stays the enchantment with "Creature" in
+//     front: TODO 1.20).
+//   • split / aftermath — both halves are spells; Scryfall has no split card
+//     of another type (the Rooms are split on Scryfall but import as
+//     enchantments, not this kind).
+// ---------------------------------------------------------------------------
+
+type LayoutKind = "saga" | "adventure" | "split" | "aftermath" | "flip";
+
+export const LAYOUT_KIND_CARD_TYPES: Readonly<Record<LayoutKind, readonly CardType[]>> = {
+  saga: ["enchantment"],
+  adventure: ["creature", "enchantment", "artifact", "land", "instant", "sorcery"],
+  split: ["instant", "sorcery"],
+  aftermath: ["instant", "sorcery"],
+  flip: ["creature", "enchantment", "token"],
+};
+
+/** The card type an import writes for its kind (TODO 1.21): a layout kind
+ *  keeps the printed card type when its template can draw it
+ *  (LAYOUT_KIND_CARD_TYPES), else its own; a standard kind is its own card
+ *  type. */
+export function importedCardTypeForKind(
+  kind: CardKind,
+  patchCardType: CardType | null | undefined,
+): CardType {
+  const own = KIND_DEFS[kind].cardType;
+  if (!patchCardType || !KIND_DEFS[kind].layoutTemplates) return own;
+  const drawable = LAYOUT_KIND_CARD_TYPES[kind as LayoutKind] ?? [];
+  return drawable.includes(patchCardType) ? patchCardType : own;
+}
+
 // Reverse map: layout template → its kind (saga → saga, adventure →
 // adventure, …). Skins and standards are deliberately absent — they resolve
 // through the card_type branch of kindFromCard.

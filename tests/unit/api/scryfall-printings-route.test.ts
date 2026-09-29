@@ -271,7 +271,28 @@ describe("GET /api/scryfall/printings — a back face's own art (TODO 1.15)", ()
       has_back_image: true,
       thumb_url: art("front", id),
       back_thumb_url: art("back", id),
+      front_artist: "Nils Hamm",
       back_artist: "Nils Hamm",
+    });
+  });
+
+  it("an empty image_uris on the back face is no back image (hasBackFaceImage, TODO 1.8)", async () => {
+    const raw = importPrintings["isd-51"];
+    const card = scryfallCardSchema.parse({
+      ...raw,
+      card_faces: raw.card_faces.map((face, i) => ({
+        ...face,
+        image_uris: i === 0 ? { art_crop: art("front", raw.id) } : {},
+      })),
+    });
+    state.searchPrintingsPage.mockResolvedValue({ cards: [card], hasMore: false, totalCards: 1 });
+    const body = (await (await get(`oracle_id=${PLAINS}&view=all`)).json()) as {
+      printings: PrintingSummary[];
+    };
+    expect(body.printings[0]).toMatchObject({
+      has_back_image: false,
+      back_thumb_url: null,
+      back_artist: null,
     });
   });
 
@@ -285,6 +306,10 @@ describe("GET /api/scryfall/printings — a back face's own art (TODO 1.15)", ()
       thumb_url: art("front", importPrintings["dmr-215"].id),
       back_thumb_url: null,
       back_artist: null,
+      // The card-level credit joins the halves'; the front art's credit is
+      // the first face's own — what import-art writes (TODO 1.8).
+      artist: "David Martin & Franz Vohwinkel",
+      front_artist: "David Martin",
     });
   });
 });

@@ -103,7 +103,14 @@ export type PrintingSummary = {
   devoid: boolean;
   /** The printing's treatment, most visible first (printingTreatmentFromScryfall). */
   treatment: PrintingTreatment | null;
+  /** The printing's card-level credit — a split card's joins its halves'
+   *  ("David Martin & Franz Vohwinkel"). */
   artist: string | null;
+  /** The first face's own artist (scryfallFaceArtist, TODO 1.8): the credit
+   *  POST /api/scryfall/import-art writes for its front "art" — Fire // Ice
+   *  DMR #215's is David Martin alone. Absent on an older payload (fall back
+   *  to `artist`). */
+  front_artist?: string | null;
   /** The second face carries its own art (a transform / modal DFC). */
   has_back_image: boolean;
   thumb_url: string | null;

@@ -121,6 +121,7 @@ export type Card = Omit<
   | "color_identity"
   | "face_content"
   | "watermark"
+  | "frame_preview"
 > & {
   visibility: Visibility;
   rarity: Rarity | null;
@@ -131,6 +132,10 @@ export type Card = Omit<
   // typed FaceContent / CardWatermark shapes. NULL on every legacy row.
   face_content?: FaceContent | null;
   watermark?: CardWatermark | null;
+  /** An admin's frame preview (TODO 2.3, migration 0121) — always private.
+   *  Optional: a row read before the migration lands has no such key, so
+   *  test it with `=== true`. */
+  frame_preview?: boolean;
 };
 
 export type CardInsert = Omit<

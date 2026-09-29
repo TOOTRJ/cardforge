@@ -12,6 +12,7 @@ import {
   checkScryfallRateLimit,
   logScryfallCall,
 } from "@/lib/scryfall/rate-limit";
+import { scryfallFaceArtist } from "@/lib/scryfall/import-mapper";
 import { rateLimitedResponse } from "@/lib/api/responses";
 import { randomId } from "@/lib/ids";
 
@@ -48,7 +49,11 @@ const bodySchema = z.object({
    *   - "art"       : art_crop of the front face (default)
    *   - "print-back": full card frame of the back face (DFC only)
    *   - "art-back"  : art_crop of the back face (DFC only)
-   *  Both "*-back" modes return 404 when the card has no second face. */
+   *  Both "*-back" modes return 404 when the card has no second face, or
+   *  when that face has no image of its own (a split / adventure / flip
+   *  card — the import dialog asks only when /named says `has_back_image`,
+   *  "Use art from a real card" only when /printings does; both flags are
+   *  hasBackFaceImage). */
   mode: z
     .enum(["print", "art", "print-back", "art-back"])
     .optional()
@@ -109,7 +114,7 @@ export async function POST(request: Request) {
   const card = await getCardById(parsed.data.scryfallId);
   if (!card) {
     // A missing/failed lookup shouldn't cost the user's Scryfall budget —
-    // only log once we know there's a real card to import art from.
+    // only log once we know there's a real image to import (below).
     return NextResponse.json(
       { ok: false, error: "Scryfall card not found." },
       { status: 404 },
@@ -130,8 +135,6 @@ export async function POST(request: Request) {
       { status: 422 },
     );
   }
-
-  await logScryfallCall(user.id, "import_art");
 
   // For "*-back" modes, source the image from `card_faces[1]`. If the
   // card has only one face, fail with 404 — the caller asked for art
@@ -168,6 +171,11 @@ export async function POST(request: Request) {
       { status: 404 },
     );
   }
+
+  // Charged only now (TODO 1.8): the face and its image URL both resolved.
+  // "No back face" and "no image" — a split, adventure or flip card asked
+  // for back-face art it doesn't have — never spend the user's quota.
+  await logScryfallCall(user.id, "import_art");
 
   // 2) Pull the bytes. fetchScryfallImage host-locks the URL.
   const fetched = await fetchScryfallImage(finalImageUrl);
@@ -217,7 +225,9 @@ export async function POST(request: Request) {
   return NextResponse.json({
     ok: true,
     publicUrl: publicData.publicUrl,
-    artist: card.artist ?? null,
+    // The requested face's artist (TODO 1.8): Ice's, not "David Martin &
+    // Franz Vohwinkel".
+    artist: scryfallFaceArtist(card, isBack ? 1 : 0) ?? null,
     // Non-blocking quality signal — the dialog surfaces this as a toast so
     // the user can pick a better printing if they care.
     warning:

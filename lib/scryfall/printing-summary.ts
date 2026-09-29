@@ -1,8 +1,13 @@
 import "server-only";
 
-import { pickArtCropUrl, type ScryfallCard } from "@/lib/scryfall/client";
+import {
+  hasBackFaceImage,
+  pickArtCropUrl,
+  type ScryfallCard,
+} from "@/lib/scryfall/client";
 import {
   printingTreatmentFromScryfall,
+  scryfallFaceArtist,
   verifiedFrameMatchFromScryfall,
 } from "@/lib/scryfall/import-mapper";
 import type { PrintingSummary } from "@/lib/scryfall/printing-views";
@@ -25,8 +30,9 @@ export function trimPrinting(
   const effects = (card.frame_effects ?? []).map((e) => e.toLowerCase());
   const front = card.card_faces?.[0];
   // A back face with its own image (a transform / modal DFC); a split,
-  // adventure or flip card's second face shares the one image.
-  const back = card.card_faces?.[1]?.image_uris ? card.card_faces[1] : null;
+  // adventure or flip card's second face shares the one image. ONE test
+  // (hasBackFaceImage, TODO 1.8) for the flag and the back art below.
+  const back = hasBackFaceImage(card) ? (card.card_faces?.[1] ?? null) : null;
   // Every printing has a match: a card PipGlyph can't make (an Emblem, a
   // Plane) is the registry's `unsupported` "no-card-type".
   const match = verifiedFrameMatchFromScryfall(card, verifiedKeys);
@@ -44,10 +50,13 @@ export function trimPrinting(
     devoid: effects.includes("devoid"),
     treatment: printingTreatmentFromScryfall(card) ?? null,
     artist: card.artist ?? front?.artist ?? null,
-    has_back_image: Boolean(back),
+    // Each face's own credit, by the rule import-art writes it (TODO 1.8).
+    front_artist: scryfallFaceArtist(card, 0) ?? null,
+    // The same test as /api/scryfall/named's has_back_image (TODO 1.8).
+    has_back_image: back !== null,
     thumb_url: pickArtCropUrl(card),
     back_thumb_url: back?.image_uris?.art_crop ?? back?.image_uris?.normal ?? null,
-    back_artist: back ? (back.artist ?? card.artist ?? null) : null,
+    back_artist: back ? (scryfallFaceArtist(card, 1) ?? null) : null,
     image_status: card.image_status ?? null,
     match: {
       status: match.status,
