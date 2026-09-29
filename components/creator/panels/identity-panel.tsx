@@ -112,7 +112,9 @@ export function IdentityPanel({ revise = false, token = false }: IdentityPanelPr
  * the user's while they type (a trailing space survives); it re-reads the
  * supertype when another control changes those words (an AI fill, an
  * import) and on blur, when a picker word typed here ("Legendary") turns its
- * toggle on and leaves the field.
+ * toggle on and leaves the field. Enter does the same first: it submits the
+ * form (Save is the form's default button) without a blur, and the save
+ * must not drop a word the field still shows.
  */
 function TokenSupertypeInput({ invalid }: { invalid: boolean }) {
   const { control, getValues, setValue } = useFormContext<FormValues>();
@@ -126,6 +128,15 @@ function TokenSupertypeInput({ invalid }: { invalid: boolean }) {
   }
   const write = (next: string) =>
     setValue("supertype", next, { shouldDirty: true, shouldValidate: invalid });
+  // Only a typed picker word is left to write (the other words went in as
+  // they were typed): focusing and leaving the field never re-spells a
+  // stored supertype, nor marks the card edited.
+  const adoptPickerWords = () => {
+    const current = getValues("supertype") ?? "";
+    const adopted = withTokenOtherWords(current, text, { adoptPickerWords: true });
+    if (adopted !== withTokenOtherWords(current, text)) write(adopted);
+    setText(tokenOtherWordsOf(getValues("supertype")));
+  };
   return (
     <input
       value={text}
@@ -133,14 +144,9 @@ function TokenSupertypeInput({ invalid }: { invalid: boolean }) {
         setText(event.target.value);
         write(withTokenOtherWords(getValues("supertype"), event.target.value));
       }}
-      onBlur={() => {
-        // Only a typed picker word is left to write (the other words went
-        // in as they were typed): focusing and leaving the field never
-        // re-spells a stored supertype, nor marks the card edited.
-        const current = getValues("supertype") ?? "";
-        const adopted = withTokenOtherWords(current, text, { adoptPickerWords: true });
-        if (adopted !== withTokenOtherWords(current, text)) write(adopted);
-        setText(tokenOtherWordsOf(getValues("supertype")));
+      onBlur={adoptPickerWords}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" && !event.nativeEvent.isComposing) adoptPickerWords();
       }}
       placeholder="Snow"
       aria-invalid={invalid || undefined}
