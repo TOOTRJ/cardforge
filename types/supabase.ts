@@ -1075,7 +1075,7 @@ export type Database = {
         };
         Relationships: [];
       };
-      // Migration 0123 — the automatic re-bake's lease, breaker and summary
+      // migration 0120 — the automatic re-bake's lease, breaker and summary
       // (service-role only; lib/cards/auto-rebake.ts).
       render_sweep_state: {
         Row: {
@@ -1911,7 +1911,7 @@ export type Database = {
           unread_from_user: number;
         }[];
       };
-      // Migration 0123 — the shared sweep lease (service-role only).
+      // migration 0120 — the shared sweep lease (service-role only).
       acquire_render_sweep_lease: {
         Args: { p_holder: string; p_token: string; p_ttl_seconds: number };
         Returns: { acquired: boolean; holder: string | null; expires_at: string | null }[];

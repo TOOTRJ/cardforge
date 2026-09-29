@@ -326,7 +326,7 @@ migration left on an older render.
 - **Never clean.** It refuses (412, and records it) unless
   `NEXT_PUBLIC_BILLING_ENABLED` is `true`. `ALLOW_UNWATERMARKED_SWEEP` does
   not apply to it.
-- **One sweeper at a time.** One lease (`render_sweep_state`, migration 0123;
+- **One sweeper at a time.** One lease (`render_sweep_state`, migration 0120;
   `lib/cards/sweep-lease.ts`) is shared by the cron,
   `POST /api/admin/rebake` (the script) and `POST /api/admin/rebake-marked`
   (the compare page's "Re-bake now"). A manual call that finds the cron

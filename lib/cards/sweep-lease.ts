@@ -4,7 +4,7 @@ import type { createAdminClient } from "@/lib/supabase/admin";
 import type { LeaseHolder } from "@/lib/cards/auto-rebake-state";
 
 // ---------------------------------------------------------------------------
-// The ONE sweep lease (public.render_sweep_state, migration 0123) that keeps
+// The ONE sweep lease (public.render_sweep_state, migration 0120) that keeps
 // the three re-bake drivers from running batches at the same time:
 //
 //   cron     /api/cron/auto-rebake — holds it for one invocation (≤ 300 s),

@@ -155,7 +155,7 @@ Rules and gotchas:
   `lib/cards/render-thumb.ts`) — gallery-style tiles MUST use
   `BakedCardThumbnail` with `renderedThumbUrl`, never the 3 MB PNG;
   `scripts/backfill-render-thumbs.mjs` fills thumbs for older bakes.
-- Automatic re-bake (migration 0123, `docs/FRAMES.md` "Re-bakes after a
+- Automatic re-bake (migration 0120, `docs/FRAMES.md` "Re-bakes after a
   deploy"): `/api/cron/auto-rebake` (`vercel.json`, every 5 min, production
   only; `lib/cards/auto-rebake.ts`) re-bakes what a "sweep" bump or a null
   stamp left behind — `runRebakeBatch` scope `sweep`, ≤240 s per run, never

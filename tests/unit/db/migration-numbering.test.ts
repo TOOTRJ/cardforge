@@ -7,8 +7,11 @@ import { describe, expect, it } from "vitest";
 // PRs that each pick "the next number" merge without a git conflict (the
 // names differ) and leave two files with ONE version — the second one then
 // fails to apply on production. (0121 was claimed twice on 2026-09-28: the
-// admin stepper's frame_preview_cards and the automatic re-bake, which moved
-// to 0123.) This fails the moment both land in one tree.
+// admin stepper's frame_preview_cards and the automatic re-bake.) This fails
+// the moment both land in one tree. Numbers must also only ever INCREASE on
+// main: Supabase won't apply a migration numbered below one already applied,
+// so the automatic re-bake, merging first, took 0120 and the open PRs keep
+// 0121 / 0122 — a PR that falls behind a higher number renumbers before merge.
 // ---------------------------------------------------------------------------
 
 const dir = join(process.cwd(), "supabase/migrations");

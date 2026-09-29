@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------------
 // The automatic re-bake's persisted state (public.render_sweep_state, migration
-// 0123) — types, the defensive row parser, and the pure bookkeeping the cron
+// 0120) — types, the defensive row parser, and the pure bookkeeping the cron
 // runs after an invocation: strikes → poison list, and the circuit breaker.
 // No imports and no server-only code: the admin panel renders these types.
 //

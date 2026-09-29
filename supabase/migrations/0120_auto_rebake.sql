@@ -1,4 +1,4 @@
--- 0123 — automatic re-bake: one shared sweep lease, a circuit breaker, and
+-- 0120 — automatic re-bake: one shared sweep lease, a circuit breaker, and
 -- what the admin control shows.
 --
 -- A "sweep" layout bump (lib/cards/layout-version.ts VERSION_ROLLOUT) used to
@@ -67,9 +67,11 @@
 -- Grants: stated below (new projects don't auto-grant; prod's anon/
 -- authenticated grants are revoked explicitly).
 --
--- Numbering: 0120 is reserved for Phase 1's frame_requests, 0121 is
--- PR #395's frame_preview_cards and 0122 is PR #397's card_title_150 — two
--- files with one version number would break the migration history on merge.
+-- Numbering: this merges first, so it takes 0120 (versions only ever
+-- increase on production); 0121 is PR #395's frame_preview_cards, 0122 is
+-- PR #397's card_title_150, and Phase 1's frame_requests takes the next free
+-- number when it lands — two files with one version number, or a version
+-- below one already applied, would break the migration history on merge.
 --
 -- Ships through a PR; never applied ad-hoc.
 

@@ -2,12 +2,12 @@ import { vi } from "vitest";
 import { chainClient, called, payloadOf, type ChainCall } from "@/tests/stubs/supabase-chain";
 
 // ---------------------------------------------------------------------------
-// An in-memory stand-in for the automatic re-bake's tables (migration 0123):
+// An in-memory stand-in for the automatic re-bake's tables (migration 0120):
 // the single render_sweep_state row, the lease RPCs, the pending-card count,
 // the poison prune's lookup, the admin lookup and the notifications insert. Builds on chainClient, so
 // every chain is recorded for assertions.
 //
-// The lease RPCs follow the SQL of supabase/migrations/0123_auto_rebake.sql
+// The lease RPCs follow the SQL of supabase/migrations/0120_auto_rebake.sql
 // branch for branch — the lease is free when it has no expiry, has expired,
 // is the caller's own token, or is PARKED (no token) for the same holder.
 // tests/unit/db/auto-rebake-migration.test.ts pins the SQL to those four
