@@ -15,7 +15,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Controller, useFormContext, useFormState, useWatch } from "react-hook-form";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Replace } from "lucide-react";
 import { toast } from "sonner";
 import { ChipGroup, type ChipOption } from "@/components/ui/chip-group";
 import {
@@ -26,7 +26,6 @@ import {
 import {
   colorIdentityForKey,
   colorWord,
-  isArtifactFrameType,
   pickFrameColorKey,
   type FrameTypeInfo,
 } from "@/components/cards/frame-layer";
@@ -44,14 +43,16 @@ import {
   CARD_KIND_VALUES,
   KIND_DEFS,
   baseFrameFor,
+  borrowedTypeWord,
   framesForKind,
   isSingleBasicLand,
-  isBorrowedVariation,
   kindHasAvailableFrame,
   skinVariantsFor,
   templateIsBasicOnly,
-  withArtifactWord,
-  withoutArtifactWord,
+  typeLineHasWord,
+  withTypeWord,
+  withoutTypeWord,
+  type BorrowedTypeWord,
   type CardKind,
   type FrameChoice,
   type FrameColorKey,
@@ -73,6 +74,10 @@ import { eraForTemplate } from "@/lib/creator/frame-picker";
 import { normalizeFrameTemplate } from "@/lib/cards/card-display";
 import { parseSubtypes } from "@/lib/creator/card-fields";
 import type { FormValues } from "@/lib/creator/form-types";
+import {
+  frameSubstitutionLabel,
+  type FrameSubstitution,
+} from "@/lib/creator/import-frame-choice";
 
 // Single-color key each identity chip contributes (frame-layer's palette).
 const IDENTITY_COLOR_KEY: Record<ColorIdentity, string> = {
@@ -153,6 +158,12 @@ type CardSetupPanelProps = {
   colorIdentity: ColorIdentity[];
   /** Verified (template/color) combo keys from frame_reviews. */
   verifiedFrameKeys?: string[];
+  /** A Scryfall import landed on a frame that isn't the printing's own (TODO
+   *  1.5): the "Frame substituted (imported …)" chip shows while the card
+   *  still sits on that frame. Session-only, never saved. */
+  frameSubstitution?: FrameSubstitution | null;
+  /** The user picked a frame tile (the orchestrator clears the chip). */
+  onFramePick?: () => void;
   /** Kind selection routes through the orchestrator's planKindChange so a
    *  change can remap the frame in-era or ask — never silently. */
   onKindSelect: (next: CardKind) => void;
@@ -172,6 +183,8 @@ export function CardSetupPanel({
   kind,
   colorIdentity,
   verifiedFrameKeys = [],
+  frameSubstitution = null,
+  onFramePick,
   onKindSelect,
   onColorIdentityChange,
   landMode,
@@ -214,24 +227,33 @@ export function CardSetupPanel({
   // (Alpha's colourless artifact paints the brown artifact card).
   const frameType: FrameTypeInfo = { cardType, supertype };
 
-  // The Artifact variation a creature borrows dresses an Artifact Creature
-  // (TODO 1.7): picking it for a creature whose type line doesn't say
-  // Artifact puts the word into the supertype, and once the card leaves that
-  // frame — Standard, another variation, another kind — the word it put
-  // there comes out again. A word the user typed is never touched: the ref
-  // remembers only this visit's seed.
-  const seededArtifactWord = useRef(false);
+  // A frame a creature borrows dresses it as another type too: the Artifact
+  // variation an Artifact Creature (TODO 1.7), the Nyx showcase an
+  // Enchantment Creature (owner decision A3, 2026-09-29). Picking one for a
+  // creature whose type line doesn't say that word puts the word into the
+  // supertype, and once the card leaves that frame — Standard, another
+  // variation, another kind — the word it put there comes out again. A word
+  // the user typed is never touched: the ref remembers only this visit's
+  // seeds (Artifact → Nyx takes "Artifact" out and puts "Enchantment" in).
+  const seededWords = useRef<Set<BorrowedTypeWord>>(new Set());
   const watchedTemplate = useWatch({ control, name: "frame_style.template" });
+  const showSubstitution =
+    frameSubstitution !== null &&
+    normalizeFrameTemplate(watchedTemplate) === frameSubstitution.template;
   useEffect(() => {
-    if (!seededArtifactWord.current) return;
+    if (seededWords.current.size === 0) return;
     const current = normalizeFrameTemplate(
       (watchedTemplate ?? DEFAULT_FRAME_TEMPLATE) as FrameTemplate,
     );
-    if (isBorrowedVariation(kind, current)) return;
-    seededArtifactWord.current = false;
-    const words = getValues("supertype") ?? "";
-    const next = withoutArtifactWord(words);
-    if (next !== words) setValue("supertype", next, { shouldDirty: true });
+    const wearing = borrowedTypeWord(kind, current);
+    const before = getValues("supertype") ?? "";
+    let next = before;
+    for (const word of [...seededWords.current]) {
+      if (word === wearing) continue;
+      seededWords.current.delete(word);
+      next = withoutTypeWord(next, word);
+    }
+    if (next !== before) setValue("supertype", next, { shouldDirty: true });
   }, [kind, watchedTemplate, getValues, setValue]);
 
   const kindOptions: ChipOption<CardKind>[] = CARD_KIND_VALUES.map((k) => {
@@ -273,6 +295,16 @@ export function CardSetupPanel({
           data-testid="frame-error"
         >
           {frameError}
+        </p>
+      ) : null}
+      {showSubstitution && frameSubstitution ? (
+        <p
+          data-testid="frame-substituted"
+          title={frameSubstitution.reason ?? undefined}
+          className="inline-flex items-center gap-1.5 self-start rounded-full border border-gold/45 bg-gold/10 px-3 py-1 text-xs font-medium text-gold-strong"
+        >
+          <Replace className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          {frameSubstitutionLabel(frameSubstitution)}
         </p>
       ) : null}
       {/* 1 · Card type — one combined list; layouts are just more types. */}
@@ -369,17 +401,22 @@ export function CardSetupPanel({
             if (resolution.status === "unavailable") return;
             field.onChange(resolution.template);
             clearErrors("frame_style");
+            onFramePick?.();
+            const word = borrowedTypeWord(kind, resolution.template);
             if (
-              isBorrowedVariation(kind, resolution.template) &&
-              !isArtifactFrameType({
-                cardType: getValues("card_type"),
-                supertype: getValues("supertype"),
-              })
+              word &&
+              !typeLineHasWord(
+                {
+                  cardType: getValues("card_type"),
+                  supertype: getValues("supertype"),
+                },
+                word,
+              )
             ) {
-              setValue("supertype", withArtifactWord(getValues("supertype")), {
+              setValue("supertype", withTypeWord(getValues("supertype"), word), {
                 shouldDirty: true,
               });
-              seededArtifactWord.current = true;
+              seededWords.current.add(word);
             }
             if (resolution.status === "colour-switched") {
               const identity = colorIdentityForKey(resolution.colorKey);
@@ -410,6 +447,7 @@ export function CardSetupPanel({
             );
             const basicOnlyRefused =
               templateIsBasicOnly(choice.template) && !isBasicLand;
+            const borrowedWord = borrowedTypeWord(kind, choice.template);
             return {
               value: choice.template,
               label,
@@ -419,8 +457,8 @@ export function CardSetupPanel({
                   ? "Awaiting verification"
                   : !colorAvailable
                     ? `Not verified in ${colorWord(colorKey)} yet — picking it switches to ${colorWord(choice.availableColorKeys[0])}`
-                    : isBorrowedVariation(kind, choice.template)
-                      ? "For Artifact Creatures"
+                    : borrowedWord
+                      ? `For ${borrowedWord} ${KIND_DEFS[kind].label}s`
                       : choice.group === "skin"
                         ? "Same layout, different dress"
                         : undefined,

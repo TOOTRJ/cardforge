@@ -197,6 +197,61 @@ export const KIND_DEFS: Record<CardKind, KindDef> = Object.fromEntries(
   ),
 ) as Record<CardKind, KindDef>;
 
+// ---------------------------------------------------------------------------
+// The card types a layout kind's template can draw (TODO 1.21). A layout kind
+// writes its own card type (KIND_DEFS[kind].cardType) on a kind change, but a
+// real card on that layout may be another type: Virtue of Loyalty WOE #38 is
+// an Enchantment adventurer, Commit // Memory AKH #211 an Instant aftermath,
+// Beck // Call DGM #123 a Sorcery split card. The import keeps the printed
+// type when the template can draw it (importedCardTypeForKind), so the P/T,
+// loyalty and watermark gating follow the real card. The kind never changes:
+// kindFromCard reads the layout template first, whatever the card type.
+//
+// Decided from the profiles and the masters (tests/unit/creator/
+// layout-kind-card-types.test.ts holds the table to the profiles):
+//   • adventure — the master (m15 + the storybook pages) paints no P/T box;
+//     the P/T plate is M15's overlay, drawn only when the card type shows
+//     P/T, and the cost hides only for a land (the FIN Towns have none). No
+//     loyalty or defense slot. So every permanent and spell type draws:
+//     Scryfall prints 22 non-creature adventurers (captured 2026-09-28) — 8
+//     enchantments (the WOE Virtues), 8 artifacts (Equipment, a Book), 5 FIN
+//     Town lands and 1 sorcery (Twice Upon a Time).
+//   • flip — the P/T is ink on the cream band, drawn only for a P/T type; the
+//     master paints no box. Kamigawa's flips are creatures; WOE's Role tokens
+//     ("Token Enchantment — Aura Role") are tokens.
+//   • saga — Saga is an enchantment subtype; the chapter rail replaces the
+//     rules box and the profile has no P/T slot (a FIN Summon, "Enchantment
+//     Creature — Saga Dragon", stays the enchantment with "Creature" in
+//     front: TODO 1.20).
+//   • split / aftermath — both halves are spells; Scryfall has no split card
+//     of another type (the Rooms are split on Scryfall but import as
+//     enchantments, not this kind).
+// ---------------------------------------------------------------------------
+
+type LayoutKind = "saga" | "adventure" | "split" | "aftermath" | "flip";
+
+export const LAYOUT_KIND_CARD_TYPES: Readonly<Record<LayoutKind, readonly CardType[]>> = {
+  saga: ["enchantment"],
+  adventure: ["creature", "enchantment", "artifact", "land", "instant", "sorcery"],
+  split: ["instant", "sorcery"],
+  aftermath: ["instant", "sorcery"],
+  flip: ["creature", "enchantment", "token"],
+};
+
+/** The card type an import writes for its kind (TODO 1.21): a layout kind
+ *  keeps the printed card type when its template can draw it
+ *  (LAYOUT_KIND_CARD_TYPES), else its own; a standard kind is its own card
+ *  type. */
+export function importedCardTypeForKind(
+  kind: CardKind,
+  patchCardType: CardType | null | undefined,
+): CardType {
+  const own = KIND_DEFS[kind].cardType;
+  if (!patchCardType || !KIND_DEFS[kind].layoutTemplates) return own;
+  const drawable = LAYOUT_KIND_CARD_TYPES[kind as LayoutKind] ?? [];
+  return drawable.includes(patchCardType) ? patchCardType : own;
+}
+
 // Reverse map: layout template → its kind (saga → saga, adventure →
 // adventure, …). Skins and standards are deliberately absent — they resolve
 // through the card_type branch of kindFromCard.
@@ -259,7 +314,9 @@ const KINDS_WITHOUT_STAT_OVERLAY: readonly CardKind[] = CARD_KIND_VALUES.filter(
 );
 
 // Type-specific showcase treatments: real expeditions / full-art basics are
-// land trade dress, Nyx constellation is enchantment dress. The Zendikar
+// land trade dress, Nyx constellation is enchantment dress — which an
+// Enchantment Creature borrows (the Theros Beyond Death gods, owner decision
+// A3 2026-09-29; see BORROWED_SHOWCASES below). The Zendikar
 // Rising hedron (`fullart`), textless and extended-art frames have no
 // loyalty or defense slot, so a planeswalker would print no loyalty and
 // plain ability lines, and a battle no defense (full-art research
@@ -281,14 +338,14 @@ const SHOWCASE_KIND_RESTRICTION: Partial<
   m15textlessland: ["land"],
   m15borderless: ["creature", "instant", "sorcery", "enchantment", "artifact"],
   m15borderlessartifact: ["artifact", "creature"],
-  nyx: ["enchantment"],
+  nyx: ["enchantment", "creature"],
   fullart: KINDS_WITHOUT_STAT_OVERLAY,
   m15textless: KINDS_WITHOUT_STAT_OVERLAY,
   extendedart: KINDS_WITHOUT_STAT_OVERLAY,
 };
 
 /** True when a showcase treatment's kind restriction leaves this kind out
- *  (a planeswalker on the Zendikar Rising hedron frame, a creature on Nyx,
+ *  (a planeswalker on the Zendikar Rising hedron frame, an artifact on Nyx,
  *  a land on the borderless M15 frame). Unlike `!templateSupportsKind`, it
  *  never refuses a border-era standard or a layout frame, so an off-kind
  *  legacy card (an artifact on the plain m15 frame) isn't caught. The
@@ -355,6 +412,25 @@ const BORROWED_VARIATIONS: Partial<
   creature: { m15: ["m15artifact", "m15borderlessartifact"] },
 };
 
+// Showcase frames a kind borrows the same way (owner decision A3,
+// 2026-09-29): the Nyx constellation frame is the Enchantment kind's
+// showcase, and an ENCHANTMENT Creature — the Theros Beyond Death
+// constellation gods, THB #258–268 — prints on it. NYX is the M15 profile
+// with its P/T plate, so it dresses a creature as it is; the Variations
+// section lists it with the other showcase treatments.
+const BORROWED_SHOWCASES: Partial<Record<CardKind, readonly FrameTemplate[]>> = {
+  creature: ["nyx"],
+};
+
+/** The card-type word a borrowed frame dresses the card as. */
+export type BorrowedTypeWord = "Artifact" | "Enchantment";
+
+const BORROWED_TYPE_WORD: Partial<Record<FrameTemplate, BorrowedTypeWord>> = {
+  m15artifact: "Artifact",
+  m15borderlessartifact: "Artifact",
+  nyx: "Enchantment",
+};
+
 /** The variations the Variations section offers under `base` for this
  *  kind: the base's skins (TEMPLATE_SKIN_VARIANTS) plus the frames the kind
  *  borrows for it (the artifact frame under a creature's M15 standard). */
@@ -369,35 +445,93 @@ export function skinVariantsFor(
 }
 
 /** True when the template is a frame this kind borrows from another kind
- *  (the artifact frame on a creature). It dresses the card as that other
- *  type too, so a RANDOM frame pick skips it unless the card says so
- *  (resolveGeneratedFrame). */
+ *  (the artifact frame or the Nyx showcase on a creature). It dresses the
+ *  card as that other type too, so a RANDOM frame pick skips it unless the
+ *  card says so (resolveGeneratedFrame). */
 export function isBorrowedVariation(
   kind: CardKind,
   template: FrameTemplate,
 ): boolean {
-  return Object.values(BORROWED_VARIATIONS[kind] ?? {}).some((list) =>
-    (list ?? []).includes(template),
+  return (
+    Object.values(BORROWED_VARIATIONS[kind] ?? {}).some((list) =>
+      (list ?? []).includes(template),
+    ) || (BORROWED_SHOWCASES[kind] ?? []).includes(template)
   );
 }
 
-/** A creature's supertype once it takes the artifact frame it borrows: the
- *  word "Artifact" after its other words ("Legendary" → "Legendary
- *  Artifact"), so the type line reads "Legendary Artifact Creature". A
- *  supertype that already says Artifact is returned unchanged. */
-export function withArtifactWord(supertype: string | null | undefined): string {
-  const words = (supertype ?? "").split(/\s+/).filter(Boolean);
-  if (words.some((word) => word.toLowerCase() === "artifact")) return words.join(" ");
-  return [...words, "Artifact"].join(" ");
+/** The word a frame this kind borrows dresses the card as ("Artifact" for
+ *  the artifact frame on a creature, "Enchantment" for Nyx), or null when
+ *  the kind doesn't borrow the template. */
+export function borrowedTypeWord(
+  kind: CardKind,
+  template: FrameTemplate,
+): BorrowedTypeWord | null {
+  return isBorrowedVariation(kind, template)
+    ? (BORROWED_TYPE_WORD[template] ?? null)
+    : null;
 }
 
-/** The supertype without the word "Artifact" (every other word kept, in
- *  order) — undoes withArtifactWord. */
-export function withoutArtifactWord(supertype: string | null | undefined): string {
+/** True when the type line says `word`: the card type itself, or the word
+ *  among the supertype words (an "Enchantment Creature — God" is the
+ *  creature type with "Enchantment" in its supertype, as the importer and
+ *  the creator write it). */
+export function typeLineHasWord(
+  type: { cardType?: string | null; supertype?: string | null },
+  word: BorrowedTypeWord,
+): boolean {
+  const lower = word.toLowerCase();
+  if (type.cardType === lower) return true;
+  return (type.supertype ?? "")
+    .split(/\s+/)
+    .some((part) => part.toLowerCase() === lower);
+}
+
+/** True when this card may wear the template as far as borrowing goes: the
+ *  kind doesn't borrow it, or the type line says the word it dresses (an
+ *  Artifact Creature on the artifact frame, an Enchantment Creature on
+ *  Nyx) — never Llanowar Elves on either. */
+export function borrowedFrameFits(
+  kind: CardKind,
+  template: FrameTemplate,
+  type: { cardType?: string | null; supertype?: string | null },
+): boolean {
+  const word = borrowedTypeWord(kind, template);
+  return word === null || typeLineHasWord(type, word);
+}
+
+/** A creature's supertype once it takes a frame it borrows: `word` after
+ *  its other words ("Legendary" → "Legendary Artifact"), so the type line
+ *  reads "Legendary Artifact Creature". A supertype that already says the
+ *  word is returned unchanged. */
+export function withTypeWord(
+  supertype: string | null | undefined,
+  word: BorrowedTypeWord,
+): string {
+  const words = (supertype ?? "").split(/\s+/).filter(Boolean);
+  if (words.some((part) => part.toLowerCase() === word.toLowerCase())) return words.join(" ");
+  return [...words, word].join(" ");
+}
+
+/** The supertype without `word` (every other word kept, in order) — undoes
+ *  withTypeWord. */
+export function withoutTypeWord(
+  supertype: string | null | undefined,
+  word: BorrowedTypeWord,
+): string {
   return (supertype ?? "")
     .split(/\s+/)
-    .filter((word) => word && word.toLowerCase() !== "artifact")
+    .filter((part) => part && part.toLowerCase() !== word.toLowerCase())
     .join(" ");
+}
+
+/** withTypeWord for the artifact frame a creature borrows (TODO 1.7). */
+export function withArtifactWord(supertype: string | null | undefined): string {
+  return withTypeWord(supertype, "Artifact");
+}
+
+/** withoutTypeWord for the artifact frame — undoes withArtifactWord. */
+export function withoutArtifactWord(supertype: string | null | undefined): string {
+  return withoutTypeWord(supertype, "Artifact");
 }
 
 /** All frames offered for a kind, across every era, in gallery display

@@ -2,10 +2,11 @@ import type { ScryfallCard } from "@/lib/scryfall/client";
 import {
   CARD_TYPE_VALUES,
   COLOR_IDENTITY_VALUES,
+  FRAME_SET_ERA,
+  FRAME_TEMPLATE_SET,
   RARITY_VALUES,
   type CardType,
   type ColorIdentity,
-  type FrameEra,
   type FrameTemplate,
   type Rarity,
 } from "@/types/card";
@@ -18,8 +19,17 @@ import {
 } from "@/lib/creator/card-kinds";
 import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
 import { isArtifactFrameType, pickFrameColorKey } from "@/components/cards/frame-layer";
-import { standardFrameFor } from "@/lib/creator/frame-picker";
-import { describeFrame } from "@/lib/creator/frame-resolve";
+import { describeFrame, withVerification } from "@/lib/creator/frame-resolve";
+import {
+  FULL_ART_BASIC_2022_SETS,
+  landFrameColorRule,
+  resolveFrameSignature,
+  type FrameMatch,
+  type PrintingFacts,
+} from "@/lib/scryfall/frame-signatures";
+
+export { FULL_ART_BASIC_2022_SETS };
+export type { FrameMatch };
 
 // ---------------------------------------------------------------------------
 // Map a Scryfall card into the shape the CardCreatorForm expects.
@@ -124,13 +134,19 @@ export type ScryfallImportPatch = {
    *  this through planKindChange so the frame follows the import in one
    *  synchronous pass. */
   kind?: CardKind;
-  /** The frame matching THIS PRINTING's border era (1993→classic,
-   *  1997→retro, 2003→modern, 2015/future→m15; snow/devoid frame_effects
-   *  map onto the skin templates). Standard kinds only — layout kinds'
-   *  templates are fixed by the kind. The form applies it after the kind
-   *  patch, falling back to the era standard when a skin combo isn't
-   *  published yet. */
+  /** The frame the import lands on: the signature registry's match
+   *  (`frame_match.landOn ?? frame_match.template`). Standard kinds only —
+   *  layout kinds' templates are fixed by the kind. Kept beside frame_match
+   *  for older readers (the AI deck remix, cached patches). The form applies
+   *  it after the kind patch, falling back to the era standard when the
+   *  combo isn't published yet. */
   frame_template?: FrameTemplate;
+  /** THIS PRINTING's frame signature (TODO 1.4, lib/scryfall/
+   *  frame-signatures.ts): which PipGlyph frame reproduces it (`exact`),
+   *  which comes nearest and why, or that none does. Static here — the
+   *  /api/scryfall/named route downgrades an exact match whose combo isn't
+   *  verified in the card's colour (withVerification). */
+  frame_match?: FrameMatch;
   card_type?: CardType;
   supertype?: string;
   subtypes_text?: string;
@@ -193,8 +209,9 @@ type ScryfallImportBackFacePatch = {
   artist_credit?: string;
   /** Public URL of the imported back-face artwork. When set, the form
    *  writes this into `back_face.art_url`. Set only when the user opted
-   *  to also import artwork on the front face — the back-face import is
-   *  triggered in the same flow. */
+   *  to also import artwork on the front face and the printing's second
+   *  face has its own image (the named route's `has_back_image`, TODO 1.8)
+   *  — the back-face import is triggered in the same flow. */
   imported_art_url?: string | null;
 };
 
@@ -325,63 +342,77 @@ export function kindFromScryfall(card: ScryfallCard): CardKind | undefined {
   return kindFromCard(card_type, undefined);
 }
 
-// Scryfall's border-generation values → our frame eras. "future" (the
-// Future Sight frame) isn't converted yet, so it lands on m15.
-const SCRYFALL_FRAME_TO_ERA: Record<string, FrameEra> = {
-  "1993": "classic",
-  "1997": "retro",
-  "2003": "modern",
-  "2015": "m15",
-  future: "m15",
-};
+/**
+ * What the signature registry (lib/scryfall/frame-signatures.ts) reads of a
+ * printing beyond Scryfall's own fields: the kind, the front face's type
+ * words, whether it is one basic land, and its frame colours — the
+ * importer's own rules (TODO 1.2 / 1.3), so the registry and the import
+ * agree on every card.
+ */
+export function printingFacts(card: ScryfallCard): PrintingFacts {
+  const front = card.card_faces?.[0];
+  const typeLine = frontTypeLine(card);
+  const { words, subtypes } = typeLineWords(typeLine);
+  const parsed = parseTypeLine(typeLine);
+  const multiFace = (card.card_faces?.length ?? 0) >= 2;
+  const indicator = (multiFace ? front?.color_indicator : card.color_indicator) ?? [];
+  const back = card.card_faces?.[1];
+  return {
+    kind: kindFromScryfall(card),
+    cardTypes: new Set(words.flatMap((w) => (w.cardType ? [w.cardType] : []))),
+    supertypes: new Set(words.filter((w) => !w.cardType).map((w) => w.word)),
+    subtypes,
+    singleBasic: isSingleBasicLand({
+      cardType: parsed.card_type,
+      supertype: parsed.supertype,
+      subtypes,
+      title: front?.name ?? card.name,
+      rulesText: front?.oracle_text ?? card.oracle_text,
+    }),
+    colors: frontFaceColors(card),
+    colorIndicator: indicator.length > 0,
+    omen: typeLineWords(back?.type_line).subtypes.includes("Omen"),
+  };
+}
+
+/** THIS PRINTING's frame signature: the registry's static match (TODO 1.4).
+ *  withVerification (lib/creator/frame-resolve.ts) finalizes it against the
+ *  verified combos. */
+export function frameMatchFromScryfall(card: ScryfallCard): FrameMatch {
+  return resolveFrameSignature(card, printingFacts(card));
+}
+
+/** THIS PRINTING's match as the user sees it: the registry's static match
+ *  finalized against the verified combos in the card's frame colour (an
+ *  unverified `exact` is only `nearest`). /api/scryfall/named puts it on the
+ *  patch; /api/scryfall/printings on every printing of the grid (TODO 1.5). */
+export function verifiedFrameMatchFromScryfall(
+  card: ScryfallCard,
+  verifiedKeys: ReadonlySet<string>,
+  match: FrameMatch = frameMatchFromScryfall(card),
+): FrameMatch {
+  return withVerification(match, pickFrameColorKey(frameColorsFromScryfall(card)), verifiedKeys);
+}
 
 /**
- * The frame template matching THIS PRINTING: its border era's standard for
- * the derived kind, dressed by the rest of the front face's type line
- * (TODO 1.3) and the printing's snow/devoid treatment. Returns undefined for
- * layout kinds (their template is fixed by the kind — saga is saga in every
- * era) and for unmappable cards. Falls forward to the M15 standard when the
- * printing's era can't frame the type (e.g. 2003-frame Lorwyn
- * planeswalkers).
+ * The frame an import of THIS PRINTING lands on — the signature registry's
+ * `landOn ?? template` (a thin wrapper kept for older callers and tests).
+ * Undefined for layout kinds (their template is fixed by the kind — saga is
+ * saga in every era) and for cards with no card type PipGlyph makes.
  *
- * On the M15 era:
- *   • snow/devoid printings re-dress the plain spell frame (a frame effect
- *     is a fact about the printing, so it wins over the type words), and a
- *     snow land the land frame (Snow-Covered Island KHM #278, Arctic
- *     Treeline KHM #249 print the snow land frame);
- *   • an Artifact Creature is a creature on the artifact frame (TODO 1.7 —
- *     Solemn Simulacrum M21 #239 is the curated m15artifact/c reference);
- *   • an artifact token is the artifact token frame (Treasure).
- * An Artifact Land is a land (land outranks artifact), and every other
- * artifact is the Artifact kind, whose standard is already m15artifact.
+ * The registry keeps 1.3's dress rules on the M15 era: snow/devoid
+ * printings re-dress the plain spell frame and a snow land the land frame
+ * (Snow-Covered Island KHM #278); an Artifact Creature is a creature on the
+ * artifact frame (Solemn Simulacrum M21 #239); an artifact token is the
+ * artifact token frame (Treasure). An Artifact Land is a land.
  */
 export function frameTemplateFromScryfall(
   card: ScryfallCard,
+  match: FrameMatch = frameMatchFromScryfall(card),
 ): FrameTemplate | undefined {
   const kind = kindFromScryfall(card);
-  if (!kind) return undefined;
-  const def = KIND_DEFS[kind];
-  // Layout kinds: the kind itself decides the template; nothing to adopt.
-  if (def.layoutTemplates) return undefined;
-
-  const era = SCRYFALL_FRAME_TO_ERA[(card.frame ?? "").trim()] ?? "m15";
-  const base =
-    standardFrameFor(era, def.cardType) ??
-    standardFrameFor("m15", def.cardType) ??
-    undefined;
-
-  const artifact = typeLineWords(frontTypeLine(card)).words.some(
-    (w) => w.cardType === "artifact",
-  );
-  const effects = (card.frame_effects ?? []).map((e) => e.toLowerCase());
-  if (base === "m15") {
-    if (effects.includes("snow")) return "m15snow";
-    if (effects.includes("devoid")) return "m15devoid";
-    if (artifact && kind === "creature") return "m15artifact";
-  }
-  if (base === "m15land" && effects.includes("snow")) return "m15snowland";
-  if (base === "m15token" && artifact) return "m15tokenartifact";
-  return base;
+  if (!kind || KIND_DEFS[kind].layoutTemplates) return undefined;
+  return match.landOn ?? match.template;
 }
 
 /**
@@ -447,19 +478,6 @@ export function printingDetailFromScryfall(card: ScryfallCard): PrintingDetail |
   };
 }
 
-/** Sets whose black-bordered full-art basics print the 2022 design — a
- *  title bar, then "Basic Land — Plains" with the symbol in a disc at its
- *  left end (frames plan 4.39's list, checked by eye; pinned by set, never
- *  by date: SPM and SOS (2025–26) print the plain bar, 4.41). Every other
- *  full-art basic is another design (Zendikar's split bar 4.40, the plain
- *  bar 4.41, per-set 4.11) and gets no "Use Full-Art Basic" offer until the
- *  1.19 signature registry names its own frame. */
-export const FULL_ART_BASIC_2022_SETS: ReadonlySet<string> = new Set([
-  "one", "mom", "ltr", "woe", "mkm", "otj", "mh3", "acr", "pip", "blb", "dsk",
-  "fdn", "dft", "tdm", "fin", "fic", "tla", "ecl", "tmt", "msh", "hob", "p23",
-  "pl24", "pl25", "pl26", "pss4", "slp",
-]);
-
 const PRINTING_TREATMENT_PHRASES: Record<PrintingTreatment, string> = {
   borderless: "is borderless",
   showcase: "has a showcase frame",
@@ -469,38 +487,29 @@ const PRINTING_TREATMENT_PHRASES: Record<PrintingTreatment, string> = {
 };
 
 /**
- * The creator's toast once an import has landed: "This printing is
+ * The deck-remix pre-fill's toast for an older patch that carries no
+ * `frame_match` (the import dialog asks with its frame chooser instead, and
+ * a current patch is named by importSubstitutionMessage,
+ * lib/creator/import-frame-choice.ts): "This printing is
  * borderless — PipGlyph used the bordered M15 (2015) Standard frame."
  * `landed` is the template the card actually got (after the published-frame
- * resolution), so the copy never names a frame the card isn't on.
+ * resolution), so the copy never names a frame the card isn't on. "Bordered"
+ * only for a plain border-era frame: since the signature registry (1.4) a
+ * borderless printing can land on a borderless or showcase frame (a FRA
+ * full-art basic on the Borderless Full-Art Basic Land, a poster on
+ * Borderless), and "the bordered Borderless frame" contradicts itself.
  */
 export function printingTreatmentNotice(
   treatment: PrintingTreatment,
   landed: FrameTemplate,
 ): string {
   const frame = describeFrame(landed);
+  const set = FRAME_TEMPLATE_SET[landed];
+  const bordered =
+    treatment === "borderless" && set !== "borderless" && FRAME_SET_ERA[set] !== "showcase";
   return `This printing ${PRINTING_TREATMENT_PHRASES[treatment]} — PipGlyph used the ${
-    treatment === "borderless" ? `bordered ${frame}` : frame
+    bordered ? `bordered ${frame}` : frame
   } frame.`;
-}
-
-/**
- * The import dialog's heads-up before the user commits, while they can
- * still pick another printing. The final frame isn't known yet (it is
- * resolved against the published frames in the form), so it isn't named.
- * `offer` is the verified PipGlyph frame for the treatment, when there is
- * one (printingTreatmentOffer): the import still lands on the plain frame,
- * and the creator's toast offers this one.
- */
-export function printingTreatmentHint(
-  treatment: PrintingTreatment,
-  offer?: PrintingTreatmentOffer | null,
-): string {
-  const plain = treatment === "borderless" ? "a bordered" : "the regular";
-  if (offer) {
-    return `This printing ${PRINTING_TREATMENT_PHRASES[treatment]} — the import uses ${plain} frame, then offers PipGlyph's ${offer.frameLabel} frame.`;
-  }
-  return `This printing ${PRINTING_TREATMENT_PHRASES[treatment]}, which PipGlyph doesn't offer yet — the import uses ${plain} frame instead.`;
 }
 
 /** A PipGlyph frame the creator can OFFER for an imported printing's
@@ -516,12 +525,13 @@ export type PrintingTreatmentOffer = {
 /**
  * The PipGlyph frame that dresses an imported printing's treatment, when one
  * exists AND is published in the card's colour (frames plan 4.32 / 4.39;
- * TODO 1.16's "Use Borderless" / "Use Full-Art Basic"). It is OFFERED,
- * never picked: the import still lands on the plain frame (the frame the
- * printing's era gives, resolved against the published frames), so an
- * unverified frame is never selected and nothing changes until the owner
- * verifies it. The nearest look, not an exact match — 1.17 / 1.19's
- * signature registry decides exact:
+ * TODO 1.16's "Use Borderless" / "Use Full-Art Basic"), for a printing the
+ * import lands on another frame for. Since the signature registry (1.4 /
+ * 1.17 / 1.19) the import itself lands a full-art basic on its full-art
+ * frame and a borderless basic on the borderless one once verified, so
+ * those need no offer: none is made when the offer is the patch's own frame
+ * (`frame_template`). A borderless card lands on the bordered frame (1.18),
+ * so Borderless stays an offer. An unverified frame is never offered:
  *   • borderless → the borderless M15 frame for a creature, instant, sorcery
  *     or enchantment, and its artifact dress for an artifact or an Artifact
  *     Creature. Nothing for other lands, planeswalkers, tokens, battles or
@@ -548,6 +558,7 @@ export function printingTreatmentOffer(
     | "title"
     | "rules_text"
     | "color_identity"
+    | "frame_template"
   >,
   verifiedKeys: ReadonlySet<string>,
 ): PrintingTreatmentOffer | null {
@@ -594,7 +605,7 @@ export function printingTreatmentOffer(
     }
     return null;
   })();
-  if (!offer) return null;
+  if (!offer || offer.template === patch.frame_template) return null;
   const colorKey = pickFrameColorKey(patch.color_identity ? [...patch.color_identity] : undefined);
   if (!isFrameComboAvailable(offer.template, colorKey, verifiedKeys)) return null;
   return { ...offer, actionLabel: `Use ${offer.frameLabel}` };
@@ -705,54 +716,31 @@ export function frontFaceColors(card: ScryfallCard): string[] {
  *     utility land that taps for {C} prints colourless although its
  *     activation costs are coloured (Kessig Wolf Run ISD #243, Gavony
  *     Township ISD #239, Hanweir Battlements EMN #204). A land Scryfall
- *     lists no produced mana for (a fetch land) falls back to its identity.
+ *     lists no produced mana for falls back to its identity — except a
+ *     fetch land for two basic land types, which prints those two colours
+ *     (Flooded Strand KTK #233 white and blue; landFrameColorRule).
  *   • 1993 and 1997 frames: the identity only — those frames print an
  *     any-colour land on the plain land frame (City of Brass ARN / 7ED,
  *     Rainbow Vale FEM, Path of Ancestry and Command Tower BRC).
- *   • LAND_FRAME_OVERRIDES: the lands the data can't predict.
- * The signature registry (1.4) supersedes this with per-printing rules.
+ *   • The lands the data can't predict, by Oracle name (the signature
+ *     registry's LAND_FRAME_OVERRIDES, lib/scryfall/frame-signatures.ts); a
+ *     "colorless" override wins in every era, as it always did.
  */
 function landFrameColors(card: ScryfallCard): string[] {
-  const override = LAND_FRAME_OVERRIDES.get(card.name);
-  if (override === "colorless") return [];
-  if (
-    override === "identity" ||
-    IDENTITY_DRESSED_LAND_ERAS.has((card.frame ?? "").trim()) ||
-    card.produced_mana == null
-  ) {
+  const rule = landFrameColorRule(card);
+  if (Array.isArray(rule) && rule.length === 0) return [];
+  const identityEra = IDENTITY_DRESSED_LAND_ERAS.has((card.frame ?? "").trim());
+  if (identityEra || rule === "identity") {
     return wubrgLetters(card.color_identity ?? []);
   }
+  if (rule !== null) return [...rule];
+  if (card.produced_mana == null) return wubrgLetters(card.color_identity ?? []);
   return wubrgLetters(card.produced_mana);
 }
 
 // Border eras whose lands are dressed by their identity, never by the mana
 // they produce (landFrameColors).
 const IDENTITY_DRESSED_LAND_ERAS: ReadonlySet<string> = new Set(["1993", "1997"]);
-
-// Lands whose printed frame the produced-mana rule gets wrong, by Oracle name
-// (Scryfall's `name`, English on every printing), each checked on its scans:
-//   • "identity" — the Vivid lands tap for their colour plus, with a charge
-//     counter, any colour, and print their own colour (Vivid Crag LRW #275
-//     and C17 #289 red, Vivid Meadow NCC #446 white), unlike the Thriving
-//     lands and the CLB Gates, which print gold for the same mana;
-//   • "colorless" — produced_mana lists colours these print grey for: a
-//     one-shot or conditional any-colour ability beside a {C} tap (Crumbling
-//     Vestige OGW #170, Gemstone Caverns TSP #274, Mirrex ONE #254,
-//     Springjack Pasture C13 #326), and Urborg UMA #254, whose Swamp-granting
-//     text Scryfall counts as {B} (Yavimaya MH2 #261, its Forest twin, does
-//     print green).
-const LAND_FRAME_OVERRIDES: ReadonlyMap<string, "identity" | "colorless"> = new Map([
-  ["Vivid Crag", "identity"],
-  ["Vivid Creek", "identity"],
-  ["Vivid Grove", "identity"],
-  ["Vivid Marsh", "identity"],
-  ["Vivid Meadow", "identity"],
-  ["Crumbling Vestige", "colorless"],
-  ["Gemstone Caverns", "colorless"],
-  ["Mirrex", "colorless"],
-  ["Springjack Pasture", "colorless"],
-  ["Urborg, Tomb of Yawgmoth", "colorless"],
-]);
 
 /**
  * The imported card's colour in the creator's single-select model (one
@@ -786,6 +774,23 @@ export function referenceColorIdentity(card: ScryfallCard): ColorIdentity[] {
 }
 
 /**
+ * One face's artist credit (TODO 1.8). A multi-face card credits each face
+ * on its own — Fire // Ice DMR #215 is David Martin (Fire) and Franz
+ * Vohwinkel (Ice) — while its card-level `artist` joins them ("David Martin &
+ * Franz Vohwinkel"), so the card-level name is only the fallback for a face
+ * Scryfall gives none. A single-faced card has only its card-level artist
+ * (and no second face).
+ */
+export function scryfallFaceArtist(
+  card: ScryfallCard,
+  face: 0 | 1,
+): string | undefined {
+  const faces = card.card_faces ?? [];
+  if (faces.length >= 2) return faces[face]?.artist ?? card.artist ?? undefined;
+  return face === 0 ? (card.artist ?? undefined) : undefined;
+}
+
+/**
  * Convert a Scryfall card into a patch the form can merge in. Falls back
  * to undefined fields when the Scryfall data is missing — we never invent
  * values just to fill a slot.
@@ -811,6 +816,7 @@ export function mapScryfallToFormPatch(
   // Land") keeps "Land" in front instead of printing "Enchantment
   // Enchantment".
   const kind = kindFromScryfall(card);
+  const frameMatch = frameMatchFromScryfall(card);
   const typeParts = parseTypeLine(pick(front?.type_line, card.type_line), {
     cardType: kind ? KIND_DEFS[kind].cardType : undefined,
   });
@@ -839,7 +845,8 @@ export function mapScryfallToFormPatch(
     title: (isMultiFace && front?.name) || card.name,
     cost: pick(front?.mana_cost, card.mana_cost),
     kind,
-    frame_template: frameTemplateFromScryfall(card),
+    frame_template: frameTemplateFromScryfall(card, frameMatch),
+    frame_match: frameMatch,
     printing_treatment: printingTreatmentFromScryfall(card),
     printing_detail: printingDetailFromScryfall(card),
     card_type: cardType,
@@ -855,7 +862,8 @@ export function mapScryfallToFormPatch(
     // walker backs hold loyalty) — prefer the face on multiface cards.
     loyalty: pick(front?.loyalty, card.loyalty),
     defense: pick(front?.defense, card.defense),
-    artist_credit: card.artist ?? undefined,
+    // The front face's own artist on a multi-face card (TODO 1.8).
+    artist_credit: scryfallFaceArtist(card, 0),
     source_scryfall_id: card.id,
     preview_art_url: options.artPreviewUrl ?? null,
     // DFC detection: any card with two faces (Delver, Werewolves, etc.)
@@ -898,9 +906,9 @@ function mapScryfallBackFace(
     // walkers), defense on battle faces.
     loyalty: back.loyalty ?? undefined,
     defense: back.defense ?? undefined,
-    // Per-face artist is the same person in practice; reuse the front's
-    // artist credit so the user has something to start from.
-    artist_credit: card.artist ?? undefined,
+    // The second face's own artist (TODO 1.8): Ice is Franz Vohwinkel's,
+    // not "David Martin & Franz Vohwinkel".
+    artist_credit: scryfallFaceArtist(card, 1),
     imported_art_url: null,
   };
 }

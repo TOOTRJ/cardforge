@@ -7,18 +7,11 @@ import {
   useRef,
   useState,
   useTransition,
+  type TransitionStartFunction,
 } from "react";
-import {
-  Info,
-  Loader2,
-  Search,
-  Sparkles,
-  ExternalLink,
-  ImageDown,
-} from "lucide-react";
+import { Loader2, Search, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { InlinePips } from "@/components/cards/inline-pips";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -32,10 +25,20 @@ import {
 } from "@/components/ui/dialog";
 import { ManaCostGlyphs } from "@/components/cards/mana-cost-glyphs";
 import {
-  printingTreatmentHint,
-  printingTreatmentOffer,
-  type ScryfallImportPatch,
-} from "@/lib/scryfall/import-mapper";
+  ImportDetail,
+  type NamedResponse,
+} from "@/components/creator/import/import-detail";
+import { usePrintings } from "@/components/creator/import/use-printings";
+import {
+  importFramePlan,
+  type ImportFrameChoice,
+} from "@/lib/creator/import-frame-choice";
+import type { ScryfallImportPatch } from "@/lib/scryfall/import-mapper";
+import {
+  DEFAULT_PRINTING_VIEW,
+  type PrintingSummary,
+  type PrintingView,
+} from "@/lib/scryfall/printing-views";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -48,6 +51,12 @@ import { cn } from "@/lib/utils";
 // content only while open, so every dialog open gets a fresh state slot
 // in the inner ScryfallImportContent component — no need for manual
 // "remount on open" plumbing.
+//
+// TODO 1.5: the detail pane lists every printing (filterable, paged) with
+// whether PipGlyph has its exact frame, and asks for a frame before commit
+// when it doesn't (lib/creator/import-frame-choice.ts). TODO 1.9: a stale
+// search never reports "Search failed", a printing click keeps the result
+// list's selection, and the dialog can't close mid-commit.
 // ---------------------------------------------------------------------------
 
 const SEARCH_DEBOUNCE_MS = 250;
@@ -68,50 +77,6 @@ type TrimmedCard = {
   image_status: string | null;
 };
 
-type PrintingSummary = {
-  id: string;
-  set: string | null;
-  set_name: string | null;
-  released_at: string | null;
-  frame: string | null;
-  snow: boolean;
-  devoid: boolean;
-  thumb_url: string | null;
-  image_status: string | null;
-};
-
-// Which of OUR frame eras each Scryfall border generation maps onto —
-// display twin of the adoption logic in lib/scryfall/import-mapper.ts.
-const PRINTING_FRAME_LABELS: Record<string, string> = {
-  "1993": "Classic '93",
-  "1997": "Retro '97",
-  "2003": "Modern '03",
-  "2015": "M15",
-  future: "M15",
-};
-
-function printingFrameLabel(p: PrintingSummary): string {
-  if (p.snow) return "M15 Snow";
-  if (p.devoid) return "M15 Devoid";
-  return PRINTING_FRAME_LABELS[p.frame ?? ""] ?? "M15";
-}
-
-type NamedResponse = {
-  ok: true;
-  card: {
-    id: string;
-    name: string;
-    oracle_id: string | null;
-    set: string | null;
-    set_name: string | null;
-    print_url: string | null;
-    thumb_url: string | null;
-    scryfall_uri: string | null;
-    image_status: string | null;
-  };
-  patch: ScryfallImportPatch;
-};
-
 type ImportArtResponse =
   | {
       ok: true;
@@ -123,29 +88,16 @@ type ImportArtResponse =
     }
   | { ok: false; error: string };
 
-/** What an import hands back for the dialog to toast after its own success
- *  toast (TODO 1.16): the printing's treatment the landed frame drops, and —
- *  once PipGlyph's frame for that treatment is verified in the card's colour
- *  (frames plan 4.32 / 4.39) — an action that moves the card onto it. */
-export type ImportNotice =
-  | string
-  | { message: string; action: { label: string; onClick: () => void } };
-
-/** Toast an import's notice (the dialog and the deck-remix pre-fill). */
-export function toastImportNotice(notice: ImportNotice | null | void): void {
-  if (!notice) return;
-  if (typeof notice === "string") {
-    toast.info(notice, { duration: 8000 });
-    return;
-  }
-  toast.info(notice.message, { duration: 12000, action: notice.action });
-}
-
 export type ScryfallImportPayload = {
   patch: ScryfallImportPatch;
   /** When set, the form should write this URL into `art_url` (the user
    *  opted to also import the artwork). */
   importedArtUrl?: string | null;
+  /** The frame the user picked in the dialog's chooser (TODO 1.5), when the
+   *  printing's match wasn't exact. The form applies it after the kind
+   *  change, re-checked; a stale choice falls back to the usual resolution.
+   *  Absent = exact (or no chooser): the usual resolution. */
+  frameChoice?: ImportFrameChoice;
   /** Display-only fields surfaced near the form save bar to remind the
    *  user this card is a remix. */
   source: {
@@ -158,14 +110,13 @@ type ScryfallImportDialogProps = {
   /** Whether the user is signed in. Disables the trigger if not. */
   signedIn: boolean;
   /** Called when the user commits to a starting-point. Parent merges the
-   *  patch into the form state and optionally consumes `importedArtUrl`.
-   *  It may return a notice (the printing's treatment the chosen frame
-   *  drops, TODO 1.16), which the dialog toasts after its own success toast
-   *  so the notice sits in front. */
-  onImport: (payload: ScryfallImportPayload) => ImportNotice | null | void;
-  /** The published (template/colour) combos — the heads-up names PipGlyph's
-   *  own frame for a printing's treatment only once it is verified. */
+   *  patch into the form state and optionally consumes `importedArtUrl`. */
+  onImport: (payload: ScryfallImportPayload) => unknown;
+  /** The published (template/colour) combos — the chooser offers only these,
+   *  in the imported colour. */
   verifiedFrameKeys?: readonly string[];
+  /** The frame the card is on now — the chooser's "Keep my current frame". */
+  currentFrameTemplate?: string | null;
   /** Label override for the trigger button. */
   triggerLabel?: string;
   triggerVariant?: "primary" | "secondary" | "outline" | "ghost";
@@ -184,6 +135,7 @@ export function ScryfallImportDialog({
   signedIn,
   onImport,
   verifiedFrameKeys,
+  currentFrameTemplate,
   triggerLabel = "Search a real card",
   triggerVariant = "outline",
   open: controlledOpen,
@@ -198,9 +150,20 @@ export function ScryfallImportDialog({
     onOpenChange?.(next);
   };
   const renderTrigger = !hideTrigger && !isControlled;
+  // The commit (art download + form patch) runs here so the dialog can
+  // refuse to close under it: Cancel, Escape, an outside click and the X
+  // are all ignored while it runs (TODO 1.9). The content closes the
+  // dialog itself once the import has landed.
+  const [committing, startCommit] = useTransition();
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next && committing) return;
+        setOpen(next);
+      }}
+    >
       {renderTrigger ? (
         <DialogTrigger asChild>
           <Button
@@ -216,11 +179,24 @@ export function ScryfallImportDialog({
           </Button>
         </DialogTrigger>
       ) : null}
-      <DialogContent size="lg" className="min-h-0">
+      <DialogContent
+        size="lg"
+        className="min-h-0"
+        closeDisabled={committing}
+        onEscapeKeyDown={(event) => {
+          if (committing) event.preventDefault();
+        }}
+        onInteractOutside={(event) => {
+          if (committing) event.preventDefault();
+        }}
+      >
         <ScryfallImportContent
           onClose={() => setOpen(false)}
           onImport={onImport}
           verifiedFrameKeys={verifiedFrameKeys}
+          currentFrameTemplate={currentFrameTemplate}
+          committing={committing}
+          startCommit={startCommit}
         />
       </DialogContent>
     </Dialog>
@@ -236,10 +212,16 @@ function ScryfallImportContent({
   onClose,
   onImport,
   verifiedFrameKeys,
+  currentFrameTemplate,
+  committing,
+  startCommit,
 }: {
   onClose: () => void;
-  onImport: (payload: ScryfallImportPayload) => ImportNotice | null | void;
+  onImport: (payload: ScryfallImportPayload) => unknown;
   verifiedFrameKeys?: readonly string[];
+  currentFrameTemplate?: string | null;
+  committing: boolean;
+  startCommit: TransitionStartFunction;
 }) {
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -248,23 +230,43 @@ function ScryfallImportContent({
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
 
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // The search result the left list highlights — kept apart from the
+  // printing the detail pane shows, so picking another printing of the
+  // same card never clears the list's selection (TODO 1.9).
+  const [selectedResultId, setSelectedResultId] = useState<string | null>(null);
   const [selectedCard, setSelectedCard] = useState<NamedResponse | null>(null);
-  const [loadingSelected, setLoadingSelected] = useState(false);
+  // A new search result is loading (the detail pane shows a spinner).
+  const [loadingResult, setLoadingResult] = useState(false);
+  // Another printing of the shown card is loading: the detail stays
+  // mounted under an overlay, so the printings grid keeps its scroll.
+  const [pendingPrintingId, setPendingPrintingId] = useState<string | null>(null);
 
-  // All printings of the selected card (newest first) — picking one re-runs
-  // the normal selection flow with that printing's id, so its frame era /
-  // art / set flow through the existing patch pipeline. Cached per oracle
-  // id: switching between printings of the SAME card never refetches.
-  const [printings, setPrintings] = useState<{
-    oracleId: string;
-    items: PrintingSummary[];
+  const [view, setView] = useState<PrintingView>(DEFAULT_PRINTING_VIEW);
+  const printings = usePrintings(selectedCard?.card.oracle_id ?? null, view);
+
+  // The chooser's pick, for the printing it was made on; any other printing
+  // starts from its own preselection.
+  const [choiceState, setChoiceState] = useState<{
+    forId: string;
+    choice: ImportFrameChoice;
   } | null>(null);
-  const [loadingPrintings, setLoadingPrintings] = useState(false);
-  const printingsOracleRef = useRef<string | null>(null);
 
   const [importArt, setImportArt] = useState(true);
-  const [committing, startCommit] = useTransition();
+
+  const verifiedKeys = useMemo(() => new Set(verifiedFrameKeys ?? []), [verifiedFrameKeys]);
+  const plan = useMemo(
+    () =>
+      selectedCard
+        ? importFramePlan(selectedCard.patch, verifiedKeys, currentFrameTemplate)
+        : ({ mode: "none" } as const),
+    [selectedCard, verifiedKeys, currentFrameTemplate],
+  );
+  const frameChoice: ImportFrameChoice | null =
+    plan.mode !== "choose"
+      ? null
+      : choiceState && choiceState.forId === selectedCard?.card.id
+        ? choiceState.choice
+        : plan.preselected;
 
   // Focus the search input on mount. Radix's Dialog manages the focus trap
   // and initial focus; we just want the cursor to land in the search box
@@ -278,14 +280,21 @@ function ScryfallImportContent({
   // later; we cancel via an abort controller if the query changes mid-flight.
   // All setState calls live inside the setTimeout callback (i.e. outside the
   // synchronous effect body) so we satisfy the react-hooks/set-state-in-effect
-  // rule.
+  // rule. Every one of them checks the controller first (TODO 1.9): an
+  // aborted search — even one aborted while its body was being read, whose
+  // json() then fails — must never report "Search failed" or stop the newer
+  // search's spinner.
   useEffect(() => {
     const q = query.trim();
     const controller = new AbortController();
+    const stale = () => controller.signal.aborted;
     const timer = setTimeout(async () => {
       if (!q) {
+        // The search this one replaced was aborted and left its spinner to
+        // the newer one — which is this: clear it.
         setResults([]);
         setSearchError(null);
+        setSearching(false);
         return;
       }
       setSearching(true);
@@ -296,6 +305,7 @@ function ScryfallImportContent({
           { signal: controller.signal },
         );
         const body = await response.json().catch(() => ({}));
+        if (stale()) return;
         if (!response.ok || !body?.ok) {
           setResults([]);
           setSearchError(
@@ -304,11 +314,11 @@ function ScryfallImportContent({
           return;
         }
         setResults(Array.isArray(body.results) ? body.results : []);
-      } catch (error) {
-        if (error instanceof DOMException && error.name === "AbortError") return;
+      } catch {
+        if (stale()) return;
         setSearchError("Search failed.");
       } finally {
-        setSearching(false);
+        if (!stale()) setSearching(false);
       }
     }, SEARCH_DEBOUNCE_MS);
 
@@ -323,13 +333,17 @@ function ScryfallImportContent({
   // highlighted selection (clicking result A then B).
   const latestSelectRef = useRef<string | null>(null);
 
-  // When the user picks a result, fetch the full card so we can show the
-  // detail preview and have a canonical patch to import.
-  const handleSelect = useCallback(async (id: string) => {
+  // Fetch one Scryfall card (a search result, or another printing of the
+  // shown card) for the detail preview and the canonical patch to import.
+  const loadCard = useCallback(async (id: string, kind: "result" | "printing") => {
     latestSelectRef.current = id;
-    setSelectedId(id);
-    setSelectedCard(null);
-    setLoadingSelected(true);
+    if (kind === "result") {
+      setSelectedCard(null);
+      setLoadingResult(true);
+      setPendingPrintingId(null);
+    } else {
+      setPendingPrintingId(id);
+    }
     try {
       const response = await fetch(
         `/api/scryfall/named?${new URLSearchParams({ id })}`,
@@ -345,49 +359,44 @@ function ScryfallImportContent({
         toast.error(
           (body && "error" in body && body.error) || "Could not load card.",
         );
-        setSelectedCard(null);
+        // A failed printing switch keeps the printing already shown.
+        if (kind === "result") setSelectedCard(null);
         return;
       }
       setSelectedCard(body);
-
-      // Load the printing strip for this card (once per oracle id). Failure
-      // is non-blocking — the picker section simply doesn't render.
-      const oracleId = body.card.oracle_id;
-      if (oracleId && printingsOracleRef.current !== oracleId) {
-        printingsOracleRef.current = oracleId;
-        setPrintings(null);
-        setLoadingPrintings(true);
-        void fetch(
-          `/api/scryfall/printings?${new URLSearchParams({ oracle_id: oracleId })}`,
-        )
-          .then((r) => r.json().catch(() => null))
-          .then((pb) => {
-            if (printingsOracleRef.current !== oracleId) return;
-            if (pb?.ok && Array.isArray(pb.printings)) {
-              setPrintings({ oracleId, items: pb.printings });
-            }
-          })
-          .catch(() => {})
-          .finally(() => {
-            if (printingsOracleRef.current === oracleId) {
-              setLoadingPrintings(false);
-            }
-          });
-      }
     } catch {
       if (latestSelectRef.current !== id) return;
       toast.error("Could not load card.");
     } finally {
       // Only clear the spinner for the request that's still current.
-      if (latestSelectRef.current === id) setLoadingSelected(false);
+      if (latestSelectRef.current === id) {
+        setLoadingResult(false);
+        setPendingPrintingId(null);
+      }
     }
   }, []);
 
+  const handleSelectResult = (id: string) => {
+    setSelectedResultId(id);
+    setView(DEFAULT_PRINTING_VIEW);
+    void loadCard(id, "result");
+  };
+
+  const handleSelectPrinting = (printing: PrintingSummary) => {
+    void loadCard(printing.id, "printing");
+  };
+
   const handleConfirm = () => {
-    if (!selectedCard) return;
+    if (!selectedCard || plan.mode === "reject") return;
     const card = selectedCard.card;
     const patch = selectedCard.patch;
     const hasBackFace = Boolean(patch.back_face);
+    const chosenFrame = frameChoice ?? undefined;
+    // Only a second face with its own image has back-face art to import. A
+    // split, adventure, flip or Room card's second face is text on the one
+    // shared image: asking for its art spent a lookup on a 404 and toasted
+    // "back-face art couldn't be fetched" (TODO 1.8).
+    const hasBackImage = hasBackFace && card.has_back_image === true;
 
     startCommit(async () => {
       // Fetch one face's art crop into the user's bucket. Returns the public
@@ -428,12 +437,12 @@ function ScryfallImportContent({
         // faces (Delver, werewolves, MDFCs) rather than a blank back.
         [importedArtUrl, importedBackArtUrl] = await Promise.all([
           importArtFace("art"),
-          hasBackFace ? importArtFace("art-back") : Promise.resolve(null),
+          hasBackImage ? importArtFace("art-back") : Promise.resolve(null),
         ]);
 
         if (!importedArtUrl) {
           toast.error("Could not import the artwork.");
-        } else if (hasBackFace && !importedBackArtUrl) {
+        } else if (hasBackImage && !importedBackArtUrl) {
           toast.message("Imported the front art", {
             description:
               "The back-face art couldn't be fetched — you can add it on the Layout step.",
@@ -454,9 +463,10 @@ function ScryfallImportContent({
             }
           : patch;
 
-      const notice = onImport({
+      onImport({
         patch: finalPatch,
         importedArtUrl,
+        ...(chosenFrame ? { frameChoice: chosenFrame } : {}),
         source: {
           name: card.name,
           scryfallUri: card.scryfall_uri,
@@ -468,17 +478,19 @@ function ScryfallImportContent({
           ? `Imported ${card.name} with artwork.`
           : `Seeded form with ${card.name}.`,
       );
-      toastImportNotice(notice);
       onClose();
     });
   };
 
   const selectionPreview = useMemo(() => {
-    if (loadingSelected) return "loading" as const;
+    if (loadingResult) return "loading" as const;
     if (selectedCard) return "ready" as const;
-    if (selectedId) return "loading" as const;
+    if (selectedResultId) return "loading" as const;
     return "empty" as const;
-  }, [selectedCard, selectedId, loadingSelected]);
+  }, [selectedCard, selectedResultId, loadingResult]);
+
+  const confirmBlockedReason =
+    plan.mode === "reject" ? `Not available — ${plan.reason}.` : undefined;
 
   return (
     <>
@@ -514,11 +526,13 @@ function ScryfallImportContent({
               placeholder="e.g. Lightning Bolt, t:dragon r:rare"
               className="h-8 flex-1 bg-transparent text-sm text-foreground placeholder:text-subtle focus:outline-none"
               aria-label="Search Scryfall"
+              disabled={committing}
             />
             {searching ? (
               <Loader2
                 className="h-4 w-4 animate-spin text-subtle"
                 aria-hidden
+                data-testid="search-spinner"
               />
             ) : null}
           </div>
@@ -546,11 +560,12 @@ function ScryfallImportContent({
                     <button
                       type="button"
                       role="option"
-                      aria-selected={selectedId === card.id}
-                      onClick={() => handleSelect(card.id)}
+                      aria-selected={selectedResultId === card.id}
+                      onClick={() => handleSelectResult(card.id)}
+                      disabled={committing}
                       className={cn(
                         "flex w-full items-start gap-3 border-b border-border/40 px-3 py-2 text-left transition-colors hover:bg-elevated/60",
-                        selectedId === card.id ? "bg-elevated/80" : "",
+                        selectedResultId === card.id ? "bg-elevated/80" : "",
                       )}
                     >
                       {card.thumb_url ? (
@@ -606,22 +621,24 @@ function ScryfallImportContent({
               />
             </div>
           ) : selectedCard ? (
-            <Detail
+            <ImportDetail
               data={selectedCard}
+              busy={pendingPrintingId !== null}
               importArt={importArt}
               onImportArtChange={setImportArt}
-              printings={
-                // `printings &&` matters: a card with no top-level oracle_id
-                // (Scryfall's reversible_card layout) made the bare optional
-                // chain compare undefined === undefined and read .items off
-                // null — crashing the whole creator.
-                printings && printings.oracleId === selectedCard.card.oracle_id
-                  ? printings.items
-                  : null
+              // A card with no top-level oracle_id (Scryfall's
+              // reversible_card layout) has no printings list.
+              printings={selectedCard.card.oracle_id ? printings : null}
+              view={view}
+              onViewChange={setView}
+              onSelectPrinting={handleSelectPrinting}
+              pendingPrintingId={pendingPrintingId}
+              plan={plan}
+              frameChoice={frameChoice}
+              onFrameChoiceChange={(choice) =>
+                setChoiceState({ forId: selectedCard.card.id, choice })
               }
-              loadingPrintings={loadingPrintings}
-              onSelectPrinting={handleSelect}
-              verifiedFrameKeys={verifiedFrameKeys}
+              locked={committing}
             />
           ) : null}
         </div>
@@ -633,14 +650,20 @@ function ScryfallImportContent({
           copyright. Use the disclaimer page for the full notice.
         </p>
         <div className="flex items-center gap-2">
-          <Button type="button" variant="ghost" onClick={onClose}>
+          <Button type="button" variant="ghost" onClick={onClose} disabled={committing}>
             Cancel
           </Button>
           <Button
             type="button"
             variant="primary"
             onClick={handleConfirm}
-            disabled={!selectedCard || committing}
+            title={confirmBlockedReason}
+            disabled={
+              !selectedCard ||
+              committing ||
+              pendingPrintingId !== null ||
+              plan.mode === "reject"
+            }
           >
             {committing ? (
               <>
@@ -724,271 +747,6 @@ function DetailEmpty() {
       <p className="text-sm text-muted">Pick a card to preview.</p>
       <p className="text-xs text-subtle">
         Imported fields will appear here before you commit.
-      </p>
-    </div>
-  );
-}
-
-function Detail({
-  data,
-  importArt,
-  onImportArtChange,
-  printings,
-  loadingPrintings,
-  onSelectPrinting,
-  verifiedFrameKeys,
-}: {
-  data: NamedResponse;
-  importArt: boolean;
-  onImportArtChange: (next: boolean) => void;
-  printings: PrintingSummary[] | null;
-  loadingPrintings: boolean;
-  onSelectPrinting: (id: string) => void;
-  verifiedFrameKeys?: readonly string[];
-}) {
-  const { card, patch } = data;
-  return (
-    <div className="flex flex-col gap-4 p-5">
-      <div className="grid gap-4 sm:grid-cols-[180px_minmax(0,1fr)]">
-        <div className="flex flex-col gap-2">
-          {card.print_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={card.print_url}
-              alt={`Print of ${card.name}`}
-              className="w-full rounded-lg border border-border/60 shadow-md"
-            />
-          ) : (
-            <div className="aspect-[5/7] w-full rounded-lg bg-elevated" />
-          )}
-          {card.image_status === "lowres" ? (
-            <p className="text-[11px] leading-4 text-subtle">
-              Low-resolution scan — search for another printing for sharper
-              art.
-            </p>
-          ) : card.image_status === "placeholder" ||
-            card.image_status === "missing" ? (
-            <p className="text-[11px] leading-4 text-subtle">
-              Scryfall only has a placeholder image for this printing — art
-              import is unavailable.
-            </p>
-          ) : null}
-          {card.scryfall_uri ? (
-            <a
-              href={card.scryfall_uri}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 self-start text-[11px] uppercase tracking-wider text-primary-bright underline-offset-2 hover:underline"
-            >
-              <ExternalLink className="h-3 w-3" aria-hidden /> View on Scryfall
-            </a>
-          ) : null}
-        </div>
-
-        <div className="flex flex-col gap-3">
-          <div>
-            <h3 className="font-display text-lg font-semibold tracking-tight text-foreground">
-              {card.name}
-            </h3>
-            <p className="text-xs uppercase tracking-wider text-subtle">
-              {card.set_name ?? card.set ?? "Unknown set"}
-            </p>
-          </div>
-
-          <PatchPreview patch={patch} />
-
-          {loadingPrintings || (printings && printings.length > 1) ? (
-            <div className="flex flex-col gap-1.5">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-subtle">
-                Printing · sets the frame era
-              </span>
-              {loadingPrintings ? (
-                <p className="text-[11px] text-subtle">Loading printings…</p>
-              ) : (
-                <div className="flex gap-1.5 overflow-x-auto pb-1">
-                  {printings!.map((p) => {
-                    const active = p.id === card.id;
-                    const year = p.released_at?.slice(0, 4) ?? "—";
-                    return (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => {
-                          if (!active) onSelectPrinting(p.id);
-                        }}
-                        aria-pressed={active}
-                        title={`${p.set_name ?? p.set ?? "Unknown set"} (${year}) — ${printingFrameLabel(p)} frame`}
-                        className={`flex shrink-0 flex-col items-start gap-1 rounded-md border p-1.5 text-left transition-colors ${
-                          active
-                            ? "border-primary bg-primary/15"
-                            : "border-border bg-elevated/40 hover:border-border-strong"
-                        }`}
-                      >
-                        {p.thumb_url ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={p.thumb_url}
-                            alt=""
-                            loading="lazy"
-                            className="h-10 w-14 rounded-sm border border-border/50 object-cover"
-                          />
-                        ) : (
-                          <span className="h-10 w-14 rounded-sm bg-elevated" />
-                        )}
-                        <span className="text-[10px] font-semibold uppercase tracking-wide text-foreground">
-                          {(p.set ?? "?").toUpperCase()} · {year}
-                        </span>
-                        <span className="text-[10px] text-subtle">
-                          {printingFrameLabel(p)}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          ) : null}
-
-          <label className="mt-2 inline-flex cursor-pointer items-start gap-2 rounded-md border border-border/60 bg-elevated/40 p-3 text-xs leading-5 text-muted">
-            <input
-              type="checkbox"
-              checked={importArt}
-              onChange={(event) => onImportArtChange(event.target.checked)}
-              className="mt-0.5 accent-primary"
-            />
-            <span className="flex flex-col gap-0.5">
-              <span className="inline-flex items-center gap-1.5 text-foreground">
-                <ImageDown className="h-3.5 w-3.5" aria-hidden /> Also import
-                artwork
-              </span>
-              <span>
-                Server downloads the art crop into your card-art bucket. You
-                can replace it later.
-              </span>
-            </span>
-          </label>
-
-          <p className="inline-flex items-start gap-2 rounded-md border border-border/60 bg-elevated/40 p-3 text-xs leading-5 text-muted">
-            <Info
-              className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary-bright"
-              aria-hidden
-            />
-            <span>
-              Importing <strong>overwrites the card you&apos;re currently
-              editing</strong> — name, text, type, colors, and the frame
-              (matched to this printing&apos;s border era) are all replaced.
-              {patch.printing_treatment ? (
-                <span className="mt-1 block text-foreground">
-                  {printingTreatmentHint(
-                    patch.printing_treatment,
-                    printingTreatmentOffer(patch, new Set(verifiedFrameKeys ?? [])),
-                  )}
-                </span>
-              ) : null}
-            </span>
-          </p>
-        </div>
-      </div>
-
-      <Disclaimer />
-    </div>
-  );
-}
-
-function PatchPreview({ patch }: { patch: ScryfallImportPatch }) {
-  const rows: Array<{ label: string; value: React.ReactNode }> = [];
-  if (patch.cost) {
-    rows.push({
-      label: "Cost",
-      value: <ManaCostGlyphs cost={patch.cost} size="sm" />,
-    });
-  }
-  if (patch.card_type) {
-    rows.push({
-      label: "Type",
-      value: (
-        <span className="capitalize">
-          {[patch.supertype, patch.card_type, patch.subtypes_text ? `— ${patch.subtypes_text}` : null]
-            .filter(Boolean)
-            .join(" ")}
-        </span>
-      ),
-    });
-  }
-  if (patch.rarity) {
-    rows.push({ label: "Rarity", value: <span className="capitalize">{patch.rarity}</span> });
-  }
-  if (patch.color_identity && patch.color_identity.length > 0) {
-    rows.push({
-      label: "Colors",
-      value: (
-        <span className="capitalize">{patch.color_identity.join(" · ")}</span>
-      ),
-    });
-  }
-  if (patch.rules_text) {
-    rows.push({
-      label: "Rules",
-      value: (
-        <InlinePips
-          text={patch.rules_text}
-          className="block whitespace-pre-line text-foreground/85"
-        />
-      ),
-    });
-  }
-  if (patch.flavor_text) {
-    rows.push({
-      label: "Flavor",
-      value: (
-        <span className="italic text-subtle">{patch.flavor_text}</span>
-      ),
-    });
-  }
-  if (patch.power || patch.toughness) {
-    rows.push({
-      label: "P/T",
-      value: `${patch.power ?? "—"} / ${patch.toughness ?? "—"}`,
-    });
-  }
-  if (patch.artist_credit) {
-    rows.push({ label: "Artist", value: patch.artist_credit });
-  }
-
-  return (
-    <div className="flex flex-col gap-1.5">
-      <span className="text-[11px] uppercase tracking-wider text-subtle">
-        Will populate
-      </span>
-      <dl className="flex flex-col gap-1.5 rounded-md border border-border/40 bg-background/30 p-3 text-xs leading-5">
-        {rows.length === 0 ? (
-          <span className="text-subtle">No fields to populate.</span>
-        ) : (
-          rows.map((row) => (
-            <div key={row.label} className="grid grid-cols-[64px_minmax(0,1fr)] gap-3">
-              <dt className="text-[11px] uppercase tracking-wider text-subtle">
-                {row.label}
-              </dt>
-              <dd className="text-foreground/90">{row.value}</dd>
-            </div>
-          ))
-        )}
-      </dl>
-    </div>
-  );
-}
-
-function Disclaimer() {
-  return (
-    <div className="flex items-start gap-2 rounded-md border border-accent/30 bg-accent/5 px-3 py-2 text-[11px] leading-5 text-muted">
-      <Badge variant="accent" className="shrink-0">
-        Heads up
-      </Badge>
-      <p>
-        Imported text and artwork are the property of their respective
-        rights holders. PipGlyph surfaces them so you can riff on real
-        designs — rewrite the rules text and swap the art before
-        publishing publicly to keep your card original.
       </p>
     </div>
   );

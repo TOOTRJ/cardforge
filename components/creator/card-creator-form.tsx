@@ -74,10 +74,19 @@ import type { CardFieldPatch } from "@/lib/ai/card-ideas-select";
 import { CardIdeasDialog } from "@/components/creator/card-ideas-dialog";
 import {
   ScryfallImportDialog,
-  toastImportNotice,
-  type ImportNotice,
   type ScryfallImportPayload,
 } from "@/components/creator/scryfall-import-dialog";
+import {
+  toastImportNotice,
+  type ImportNotice,
+} from "@/components/creator/import/import-notice";
+import type { ImportedArtOrigin } from "@/components/creator/import/imported-art-note";
+import {
+  appliedImportFrameChoice,
+  frameSubstitutionFor,
+  importSubstitutionMessage,
+  type FrameSubstitution,
+} from "@/lib/creator/import-frame-choice";
 import {
   CARDFORGE_EVENTS,
   FORM_SCROLL_TARGET_ID,
@@ -133,6 +142,7 @@ import {
   showsPowerToughness,
 } from "@/lib/cards/card-display";
 import { cardCornersClass, isLandscapeFrame } from "@/lib/cards/card-orientation";
+import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
 import {
   colorIdentityForKey,
   colorWord,
@@ -156,6 +166,7 @@ import { cardToPreviewData } from "@/lib/cards/preview-data";
 import type { FrameProfileOverridesMap } from "@/lib/cards/profile-override";
 import {
   basicLandSeedForColorKey,
+  importedCardTypeForKind,
   isSeedableLandIdentity,
   kindFromCard,
   shouldClearBasicSeedForTitle,
@@ -205,6 +216,11 @@ import { buildCardPath } from "@/lib/cards/utils";
 import { CapacityNotice } from "@/components/billing/capacity-notice";
 import { GlyphCoverageNotice } from "@/components/creator/glyph-coverage-notice";
 import type { CardCapacity } from "@/lib/billing/capacity-copy";
+import {
+  isFramePreviewSave,
+  withPreviewFramesParam,
+  type CreatorFramePreview,
+} from "@/lib/creator/frame-preview";
 
 // ---------------------------------------------------------------------------
 // Form values — mirror createCardSchema but typed at the component boundary.
@@ -275,8 +291,15 @@ type CardCreatorFormProps = {
    *  edit, a restored draft, or an imported value. */
   defaultArtistCredit?: string;
   /** Verified (template/color) combo keys from frame_reviews — special
-   *  layouts publish per color once verified in /admin/frame-compare. */
+   *  layouts publish per color once verified in /admin/frame-compare. In an
+   *  admin's frame preview these are verified ∪ previewed (the picker's
+   *  set); `framePreview.publishedKeys` keeps the real verified set. */
   verifiedFrameKeys?: string[];
+  /** An admin's frame preview (TODO Phase 2, server-decided): the real
+   *  verified set (AI keeps using it; a save outside it is a private,
+   *  flagged preview), the URL param to keep across the create → edit hop,
+   *  and a walk through the stepper to prefill. Null for everyone else. */
+  framePreview?: CreatorFramePreview | null;
   /** Admin frame-layout overrides (server-fetched) — keeps the editor's
    *  live preview identical to the gallery render and the bake. */
   profileOverrides?: FrameProfileOverridesMap | null;
@@ -414,11 +437,16 @@ export function CardCreatorForm({
   activeChallenge = null,
   defaultArtistCredit = "",
   verifiedFrameKeys = [],
+  framePreview = null,
   profileOverrides = null,
   isPaid = false,
   defaultFooterText = null,
   layout = "stepper",
 }: CardCreatorFormProps) {
+  // The real verified set: the AI dialog offers only these (AI jobs resolve
+  // their frames on the server from the same set) — never an admin's
+  // previewed frames.
+  const publishedFrameKeys = framePreview?.publishedKeys ?? verifiedFrameKeys;
   const router = useRouter();
   const upgrade = useUpgradeModal();
   const confirmSpend = useCreditConfirm();
@@ -511,6 +539,15 @@ export function CardCreatorForm({
     name: string;
     scryfallUri: string | null;
   } | null>(null);
+  // Session-only import facts (never saved): the Card step's "Frame
+  // substituted (imported …)" chip while the card sits on a frame that
+  // isn't the printing's own (TODO 1.5), and the Art step's note on
+  // Scryfall's cropped art while the imported art is still in place
+  // (TODO 1.18). Any user frame or kind change clears the chip.
+  const [frameSubstitution, setFrameSubstitution] =
+    useState<FrameSubstitution | null>(null);
+  const [importedArtOrigin, setImportedArtOrigin] =
+    useState<ImportedArtOrigin | null>(null);
   // True while the deck-remix deep link is fetching + applying the original
   // card (data + artwork) — drives the preview spinner overlay.
   const [deckRemixImporting, setDeckRemixImporting] = useState(false);
@@ -697,15 +734,29 @@ export function CardCreatorForm({
   // lib/cards/second-face-name.ts). That name used to be required silently:
   // Save stayed enabled, the save failed on a field folded away inside the
   // Identity step's "More options".
+  //
+  // An admin's frame preview (TODO 2.3) saves private whatever the Publish
+  // step says, so it is judged as a draft: a title is enough.
+  const previewSaveFor = (values: Pick<FormValues, "frame_style" | "color_identity">) =>
+    isEdit
+      ? card?.frame_preview === true
+      : isFramePreviewSave({
+          mode: framePreview,
+          walkthrough: Boolean(framePreview?.walkthrough) && mode === "create",
+          template: values.frame_style?.template,
+          colorIdentity: values.color_identity,
+        });
+  const previewSave = previewSaveFor(watched);
+  const savesAsDraft = watched.save_as_draft || previewSave;
   const secondFaceNameMissing =
     watched.has_back_face &&
     missingSecondFaceName(
       watched.back_face,
-      watched.save_as_draft ? "private" : watched.visibility,
+      savesAsDraft ? "private" : watched.visibility,
     );
   const saveMissing = [
     !watched.title.trim() ? "a title" : null,
-    !watched.save_as_draft && !watched.art_url.trim() ? "artwork" : null,
+    !savesAsDraft && !watched.art_url.trim() ? "artwork" : null,
     secondFaceNameMissing
       ? isAdventureFrame
         ? "the adventure's name"
@@ -1088,6 +1139,7 @@ export function CardCreatorForm({
       template: watched.frame_style?.template,
     });
     if (plan.action === "apply") {
+      setFrameSubstitution(null);
       applyKindPatch(plan.patch);
     } else {
       setPendingKindPlan(plan);
@@ -1114,13 +1166,18 @@ export function CardCreatorForm({
   };
 
   /** Programmatic kind application (import/AI): never blocks on a dialog —
-   *  accepts the era fallback and tells the user what happened. */
-  const applyKindProgrammatic = (nextKind: CardKind) => {
+   *  accepts the era fallback and tells the user what happened. `cardType`
+   *  replaces the kind's own card type when the caller knows the real one
+   *  (an import's printed type on a layout kind, TODO 1.21 — see
+   *  importedCardTypeForKind), so the P/T / loyalty gating and the default
+   *  watermark follow it; the kind is unchanged, since a layout template
+   *  decides the kind whatever the card type. */
+  const applyKindProgrammatic = (nextKind: CardKind, cardType?: CardType) => {
     const plan = planKindChange(nextKind, {
       cardType: watched.card_type,
       template: getValues("frame_style.template"),
     });
-    applyKindPatch(plan.patch);
+    applyKindPatch(cardType ? { ...plan.patch, card_type: cardType } : plan.patch);
     if (plan.action === "confirm") {
       toast.info("Switched to the M15 frame to fit the card's type.");
     }
@@ -1227,18 +1284,27 @@ export function CardCreatorForm({
   // The `importedArtUrl` (set when the user opted to also import artwork)
   // is written to art_url and resets the focal point so the new image
   // shows centered.
-  /** Applies the import and returns the printing-treatment notice (or null)
-   *  for the CALLER to toast after its own success toast, so the notice
-   *  stacks on top of it (Sonner shows the newest in front). */
-  const handleScryfallImport = ({
-    patch,
-    importedArtUrl,
-    source,
-  }: ScryfallImportPayload): ImportNotice | null => {
+  /** Applies the import. `via` says who asked:
+   *  • "dialog" — the import dialog, whose frame chooser already asked about
+   *    a printing whose frame PipGlyph doesn't have (TODO 1.5): the user's
+   *    pick (`frameChoice`) lands, re-checked. Without one (an exact
+   *    printing), or when it went stale, the usual resolution runs and any
+   *    substitution toasts right away. Returns null.
+   *  • "deck-remix" — /create?deckCard= has no dialog: the usual resolution,
+   *    and ONE notice naming the substitution, RETURNED for the caller to
+   *    toast after its own "Pre-filled …" toast (Sonner shows the newest in
+   *    front). */
+  const handleScryfallImport = (
+    { patch, importedArtUrl, frameChoice, source }: ScryfallImportPayload,
+    via: "dialog" | "deck-remix" = "dialog",
+  ): ImportNotice | null => {
     const setIfPresent = (key: keyof FormValues, value: string | undefined) => {
       if (value === undefined) return;
       setValue(key, value as never, { shouldDirty: true });
     };
+    const verifiedKeys = new Set(verifiedFrameKeys);
+    // "Keep my current frame" means the frame BEFORE the import's kind change.
+    const templateBefore = getValues("frame_style.template") ?? null;
 
     // Kind first, synchronously: card_type + frame land in one handler pass
     // (via planKindChange), so there's no effect left to race the rest of the
@@ -1251,17 +1317,36 @@ export function CardCreatorForm({
         ? kindFromCard(patch.card_type as CardType, undefined)
         : null);
     if (importedKind) {
-      applyKindProgrammatic(importedKind);
+      // A layout kind keeps the PRINTED card type when its template can draw
+      // it (TODO 1.21): Virtue of Loyalty is an Enchantment adventurer, not
+      // a Creature; Commit // Memory an Instant, Beck // Call a Sorcery.
+      applyKindProgrammatic(
+        importedKind,
+        importedCardTypeForKind(importedKind, patch.card_type),
+      );
     }
 
-    // Adopt THIS PRINTING's frame (the mapper's era/skin template; layout
-    // kinds already landed on their template above) — resolved against the
+    // The frame. The dialog's chooser pick lands when it still fits the
+    // imported kind and colour (appliedImportFrameChoice). Otherwise adopt
+    // THIS PRINTING's frame (the signature registry's match; layout kinds
+    // already landed on their template above) — resolved against the
     // IMPORTED colour, which is a fact about the card and never changes:
     // the printing's frame, else its era's standard, else the M15 standard,
     // else any published frame of the kind in that colour. A substitution is
-    // announced, never silent. (Phase 1 replaces the toast with the
-    // exact/nearest chooser.)
-    {
+    // announced, never silent.
+    const chosenTemplate = appliedImportFrameChoice({
+      choice: frameChoice,
+      patch,
+      kind: importedKind,
+      templateBefore,
+      verifiedKeys,
+    });
+    let resolutionMessage: string | null = null;
+    if (chosenTemplate) {
+      if (getValues("frame_style.template") !== chosenTemplate) {
+        setValue("frame_style.template", chosenTemplate, { shouldDirty: true });
+      }
+    } else {
       const { wanted, colorKey, resolution } = resolveImportFrame({
         patch,
         kind: importedKind,
@@ -1272,7 +1357,7 @@ export function CardCreatorForm({
           cardType: getValues("card_type") || null,
           colors: getValues("color_identity"),
         },
-        verifiedKeys: new Set(verifiedFrameKeys),
+        verifiedKeys,
       });
       if (
         resolution.status === "exact" ||
@@ -1284,49 +1369,65 @@ export function CardCreatorForm({
           });
         }
         if (resolution.status === "frame-switched") {
-          toast.info(
-            `This printing's ${describeFrame(resolution.fromTemplate)} frame isn't available in ${colorWord(colorKey)} yet — using ${describeFrame(resolution.template)}.`,
-          );
+          resolutionMessage = `This printing's ${describeFrame(resolution.fromTemplate)} frame isn't available in ${colorWord(colorKey)} yet — using ${describeFrame(resolution.template)}.`;
         }
       } else {
         // Never recolour an imported card; keep whatever frame the kind
         // change landed on and say why.
-        toast.info(
-          `${describeFrame(wanted)} isn't available in ${colorWord(colorKey)} yet — kept the current frame.`,
-        );
+        resolutionMessage = `${describeFrame(wanted)} isn't available in ${colorWord(colorKey)} yet — kept the current frame.`;
       }
     }
-    // A borderless / showcase / extended-art / full-art / textless printing
-    // lands on the plain frame above, which "exact" alone would pass off as
-    // a match — name the treatment and the frame it actually got (TODO 1.16
-    // stopgap until the 1.4 resolver). Returned, not toasted: both callers
-    // toast their own "Imported …" / "Pre-filled …" first and this notice
-    // right after it, so it sits in front.
     const landedTemplate =
       (getValues("frame_style.template") as FrameTemplate | undefined) ??
       DEFAULT_FRAME_TEMPLATE;
-    const treatmentMessage = patch.printing_treatment
-      ? printingTreatmentNotice(patch.printing_treatment, landedTemplate)
-      : null;
-    // PipGlyph's own frame for the treatment (the borderless M15 frame, the
-    // full-art basic — frames plan 4.32 / 4.39) is OFFERED once it is
-    // verified in this colour, never picked for the user (1.16).
-    const treatmentOffer = treatmentMessage
-      ? printingTreatmentOffer(patch, new Set(verifiedFrameKeys))
-      : null;
-    const treatmentNotice: ImportNotice | null =
-      treatmentMessage && treatmentOffer && treatmentOffer.template !== landedTemplate
-        ? {
-            message: treatmentMessage,
-            action: {
-              label: treatmentOffer.actionLabel,
-              onClick: () =>
-                setValue("frame_style.template", treatmentOffer.template, {
-                  shouldDirty: true,
-                }),
-            },
-          }
-        : treatmentMessage;
+    // The Card step's chip while the card sits on a frame that isn't the
+    // printing's own (session-only; never saved).
+    setFrameSubstitution(frameSubstitutionFor(patch.frame_match, landedTemplate));
+
+    let notice: ImportNotice | null = null;
+    if (via === "dialog") {
+      // The chooser asked before commit; only a fallback it couldn't foresee
+      // (a stale pick, a patch with no match) still says what happened.
+      if (resolutionMessage) toast.info(resolutionMessage);
+    } else {
+      // ONE toast naming the substitution: what the printing is and the
+      // frame the card got; an older patch with no match names its
+      // treatment instead (TODO 1.16's copy). PipGlyph's own frame for the
+      // treatment (the borderless M15 frame, the full-art basic — frames plan
+      // 4.32 / 4.39) is OFFERED once it is verified in this colour, never
+      // picked for the user.
+      const importedColorKey = pickFrameColorKey(patch.color_identity);
+      // Only a real substitution toasts: a card on the printing's own frame
+      // short of only the crown or a colour indicator gets just the Card
+      // step's "Nearest frame" chip (owner decision C3).
+      const message =
+        importSubstitutionMessage(
+          patch.frame_match,
+          landedTemplate,
+          (template) => isFrameComboAvailable(template, importedColorKey, verifiedKeys),
+          importedColorKey,
+        ) ??
+        resolutionMessage ??
+        (patch.printing_treatment && !patch.frame_match
+          ? printingTreatmentNotice(patch.printing_treatment, landedTemplate)
+          : null);
+      const offer = message ? printingTreatmentOffer(patch, verifiedKeys) : null;
+      notice =
+        message && offer && offer.template !== landedTemplate
+          ? {
+              message,
+              action: {
+                label: offer.actionLabel,
+                onClick: () => {
+                  setValue("frame_style.template", offer.template, {
+                    shouldDirty: true,
+                  });
+                  setFrameSubstitution(null);
+                },
+              },
+            }
+          : message;
+    }
 
     setIfPresent("title", patch.title);
     setIfPresent("cost", patch.cost);
@@ -1369,6 +1470,18 @@ export function CardCreatorForm({
         { shouldDirty: true },
       );
     }
+    // What the Art step's note reads while this art stays (TODO 1.18):
+    // Scryfall's art_crop stops at the printed frame.
+    setImportedArtOrigin(
+      importedArtUrl
+        ? {
+            artUrl: importedArtUrl,
+            borderless: patch.printing_treatment === "borderless",
+            fullArt: patch.printing_detail?.fullArt ?? false,
+            textless: patch.printing_detail?.textless ?? false,
+          }
+        : null,
+    );
 
     // DFC handling: if the Scryfall card had a back face, the mapper
     // returns `patch.back_face`. Enable has_back_face and populate the
@@ -1422,7 +1535,7 @@ export function CardCreatorForm({
     setRemixSource({ name: source.name, scryfallUri: source.scryfallUri });
     // Pop the user back to Identity so they can see the seeded fields.
     goToStepKey("identity");
-    return treatmentNotice;
+    return notice;
   };
 
   // Deck remix deep-link (/create?deckCard=…): pre-fill the form from the
@@ -1489,14 +1602,17 @@ export function CardCreatorForm({
           // soft-fail — the user can import art from the dialog later
         }
 
-        const treatmentNotice = handleScryfallImport({
-          patch: body.patch,
-          importedArtUrl,
-          source: {
-            name: body.card.name,
-            scryfallUri: body.card.scryfall_uri,
+        const substitutionNotice = handleScryfallImport(
+          {
+            patch: body.patch,
+            importedArtUrl,
+            source: {
+              name: body.card.name,
+              scryfallUri: body.card.scryfall_uri,
+            },
           },
-        });
+          "deck-remix",
+        );
         // Re-baseline: the imported card is the starting point, not user
         // work. Save stays disabled until they actually alter something —
         // an unchanged copy is just the real card, not a custom proxy.
@@ -1504,7 +1620,7 @@ export function CardCreatorForm({
         toast.success(
           `Pre-filled from ${body.card.name} — change something to make it your custom proxy, then save to link it into “${deckRemix.deckTitle}”.`,
         );
-        toastImportNotice(treatmentNotice);
+        toastImportNotice(substitutionNotice);
       } catch {
         toast.error(
           `Couldn't load “${deckRemix.entryName}” — starting from a blank card.`,
@@ -1517,6 +1633,52 @@ export function CardCreatorForm({
     // listing it pure dependency churn.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, deckRemix]);
+
+  // Admin walk through the stepper (TODO 2.2): prefill ONCE from the combo's
+  // reference printing (or the compare view's sample content) through the
+  // same handler as a user's Scryfall import — the second face included —
+  // then pin the frame and colour under test and start on the Card step, so
+  // the walk covers Card → Identity → Text & stats → Publish. Left dirty on
+  // purpose: the point of the walk is to save the preview card.
+  const walkthrough = mode === "create" ? (framePreview?.walkthrough ?? null) : null;
+  const walkthroughAppliedRef = useRef(false);
+  useEffect(() => {
+    if (!walkthrough || walkthroughAppliedRef.current) return;
+    // Applied from a task, not the effect body (the import handler sets
+    // state); the ref is claimed only when it runs, so a StrictMode
+    // mount → unmount → mount cancels the first timer and applies once.
+    const timer = window.setTimeout(() => {
+      if (walkthroughAppliedRef.current) return;
+      walkthroughAppliedRef.current = true;
+      if (walkthrough.seed) {
+        handleScryfallImport({
+          patch: walkthrough.seed.patch,
+          importedArtUrl: null,
+          source: walkthrough.seed.source,
+        });
+      } else {
+        applyKindProgrammatic(walkthrough.kind);
+        setValue("color_identity", [colorIdentityForKey(walkthrough.colorKey)], {
+          shouldDirty: true,
+        });
+      }
+      setValue("frame_style.template", walkthrough.template, { shouldDirty: true });
+      clearErrors("frame_style");
+      // A reference printing is validated against its colour when pinned
+      // (0.8); say so if this one still lands elsewhere rather than walking
+      // another combination silently.
+      const landedKey = pickFrameColorKey(getValues("color_identity"));
+      if (landedKey !== walkthrough.colorKey) {
+        toast.info(
+          `The reference is ${colorWord(landedKey)}, not ${colorWord(walkthrough.colorKey)} — pick the colour on the Card step to walk ${walkthrough.template}/${walkthrough.colorKey}.`,
+        );
+      }
+      goToStepKey("card");
+    }, 0);
+    return () => window.clearTimeout(timer);
+    // Apply-once (the ref); the handlers are recreated per render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [walkthrough]);
 
   // ---- Per-field AI fill ----
   // The dialog's tick-set becomes a "card_fill" job (plan = fast text
@@ -1796,6 +1958,8 @@ export function CardCreatorForm({
   const handleStartOver = () => {
     reset(defaults);
     setRemixSource(null);
+    setFrameSubstitution(null);
+    setImportedArtOrigin(null);
     setPreviewFace("front");
     setServerError(null);
     goToIndex(0);
@@ -1843,7 +2007,10 @@ export function CardCreatorForm({
   ) => {
     setServerError(null);
     const createBackAfter = intent === "back";
-    const chosenVisibility = values.save_as_draft
+    // An admin's frame preview is private and asks the server for the flag
+    // (it decides — admins only).
+    const previewSaveNow = previewSaveFor(values);
+    const chosenVisibility = values.save_as_draft || previewSaveNow
       ? "private"
       : values.visibility;
     // No artwork → no gallery (server-enforced in create/updateCardAction).
@@ -2007,6 +2174,10 @@ export function CardCreatorForm({
       // Subscriber footer mark for this card ("" = none). The action ignores
       // it for free accounts.
       footer_text: values.footer_text.trim(),
+      // An admin's frame preview (TODO 2.3) — honoured for admins only.
+      // Edits never send it (not a revisable key); a flagged card stays
+      // private on the server.
+      ...(previewSaveNow && !isEdit ? { frame_preview: true } : {}),
     };
 
     startTransition(async () => {
@@ -2087,11 +2258,13 @@ export function CardCreatorForm({
           return;
         }
         toast.success(
-          finalVisibility === "public"
-            ? `Published “${payload.title}”`
-            : finalVisibility === "private"
-              ? `Saved “${payload.title}” as a draft`
-              : `Saved “${payload.title}”`,
+          previewSaveNow
+            ? `Saved “${payload.title}” as a frame preview (private).`
+            : finalVisibility === "public"
+              ? `Published “${payload.title}”`
+              : finalVisibility === "private"
+                ? `Saved “${payload.title}” as a draft`
+                : `Saved “${payload.title}”`,
         );
         // Every create leaves this page: stop guarding and take the Back
         // sentinel off first, so Back from the saved card doesn't land on a
@@ -2182,9 +2355,13 @@ export function CardCreatorForm({
           router.replace(`/go/card/${result.cardId}`);
           return;
         }
-        // Draft saves stay in the editor, on the same step.
+        // Draft saves stay in the editor, on the same step — an admin's
+        // frame preview keeps its preview mode across the hop.
         router.replace(
-          `/card/${result.slug}/edit?step=${activeStep?.key ?? "publish"}`,
+          withPreviewFramesParam(
+            `/card/${result.slug}/edit?step=${activeStep?.key ?? "publish"}`,
+            framePreview?.param,
+          ),
         );
         router.refresh();
         return;
@@ -2454,7 +2631,13 @@ export function CardCreatorForm({
           . The public card keeps the pipglyph.com mark.{" "}
         </>
       ) : null}
-      {isEdit ? (
+      {previewSave ? (
+        <>
+          An admin&apos;s <strong className="text-foreground">frame preview</strong>{" "}
+          saves private, whatever the Publish step says, and is listed under
+          its frame in Frame verification.
+        </>
+      ) : isEdit ? (
         <>
           Nothing changes until you click Save. Visibility and
           &ldquo;Save as a draft&rdquo; live on the Publish step.
@@ -2485,6 +2668,8 @@ export function CardCreatorForm({
                 kind={kind}
                 colorIdentity={watched.color_identity}
                 verifiedFrameKeys={verifiedFrameKeys}
+                frameSubstitution={frameSubstitution}
+                onFramePick={() => setFrameSubstitution(null)}
                 onKindSelect={handleKindSelect}
                 onColorIdentityChange={handleColorIdentityChange}
                 landMode={
@@ -2512,6 +2697,7 @@ export function CardCreatorForm({
                 <IdentityPanel revise={isRevise} />
                 <ArtPanel
                   userId={userId}
+                  importedArtOrigin={importedArtOrigin}
                   secondFaceNameMissing={secondFaceNameMissing}
                   aiSlot={
                     <AiFillButton
@@ -2616,6 +2802,21 @@ export function CardCreatorForm({
               />
             ) : null}
 
+            {/* An admin's frame preview (TODO 2.3) saves private whatever
+                the visibility below says — say so where it is chosen. */}
+            {stepKey === "publish" && previewSave ? (
+              <p
+                role="status"
+                data-testid="frame-preview-publish-note"
+                className="rounded-md border border-sky-400/50 bg-sky-400/10 px-3 py-2 text-xs leading-5 text-foreground"
+              >
+                <strong className="mr-1">Frame preview:</strong>this card saves private and
+                flagged, and stays out of decks, the gallery, the sitemap, hubs,
+                trending and feeds. Delete it from Frame verification when
+                you&apos;re done.
+              </p>
+            ) : null}
+
             {/* ----- Publish panel (visibility/back face + Advanced: finish/tags/save) ----- */}
             {stepKey === "publish" ? (
               <PublishPanel
@@ -2640,8 +2841,9 @@ export function CardCreatorForm({
               Both paths just flip `scryfallOpen` via state or events. */}
           <ScryfallImportDialog
             signedIn={Boolean(userId)}
-            onImport={handleScryfallImport}
+            onImport={(payload) => handleScryfallImport(payload, "dialog")}
             verifiedFrameKeys={verifiedFrameKeys}
+            currentFrameTemplate={watched.frame_style?.template ?? null}
             open={scryfallOpen}
             onOpenChange={setScryfallOpen}
           />
@@ -2656,7 +2858,7 @@ export function CardCreatorForm({
             revise={isRevise}
             statsLabel={statsLabel}
             statsAvailable={hasStats}
-            verifiedFrameKeys={verifiedFrameKeys}
+            verifiedFrameKeys={publishedFrameKeys}
             generating={fillPhase !== null}
             onGenerate={(options) => void handleAiFill(options)}
             myDecks={aiDecks ?? myDecks}
@@ -2677,7 +2879,10 @@ export function CardCreatorForm({
           <KindChangeDialog
             message={pendingKindPlan?.message ?? null}
             onConfirm={() => {
-              if (pendingKindPlan) applyKindPatch(pendingKindPlan.patch);
+              if (pendingKindPlan) {
+                setFrameSubstitution(null);
+                applyKindPatch(pendingKindPlan.patch);
+              }
               setPendingKindPlan(null);
             }}
             onCancel={() => setPendingKindPlan(null)}
@@ -2796,6 +3001,15 @@ export function CardCreatorForm({
                   {mode === "create" ? "Not saved yet" : "Up to date"}
                 </Badge>
               )}
+              {userId && previewSave ? (
+                <Badge
+                  variant="outline"
+                  data-testid="frame-preview-save"
+                  title="An admin's frame preview: it saves private and flagged, and never reaches the gallery, sitemap, hubs, trending or feeds."
+                >
+                  Frame preview · saves private
+                </Badge>
+              ) : null}
               {remixSource ? (
                 <Badge variant="primary" className="gap-1.5">
                   Based on{" "}

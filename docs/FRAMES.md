@@ -258,6 +258,119 @@ fit (the symbol drawn at `type.sizePct × 1.1`, or at an override's
 family is a layout bump of its own. Rules text is not part of this standard: it keeps the
 9 pt ceiling and its fit (the recalibration is TODO 3.29).
 
+## Which printing is which frame (TODO 1.4)
+
+A Scryfall import knows which PipGlyph frame reproduces THIS printing from
+the frame signature registry, `lib/scryfall/frame-signatures.ts`: an
+ordered rule table (first match wins) over the printing's frame year,
+border colour, frame effects, promo types, set, set type and collector
+number. Each rule has a stable signature id and resolves to `exact`,
+`nearest` (with a reason and the TODO item that would make it exact) or
+`unsupported`. The import patch carries it as `frame_match`; `exact` also
+needs the combo verified in the card's colour (`withVerification`,
+`lib/creator/frame-resolve.ts`).
+
+The import dialog (TODO 1.5) shows every printing's finalized match as a
+badge (✓ Exact · ≈ Nearest · ✕ Not available — `/api/scryfall/printings`)
+and, for anything but an exact match that lands on its own frame, asks for
+a frame before the import (`lib/creator/import-frame-choice.ts`): the kind's
+published frames in the card's colour, the import's own landing preselected
+and listed first with the printing's own frame, the kind's M15 standard and
+the printing's family (its frame set — a skin only when it IS the printing's
+frame); every other frame sits behind "Show all frames". A printing short of
+nothing but a detail no frame draws — the legendary crown, a colour
+indicator (`FrameMatch.gaps` ⊆ `UNDRAWN_DETAIL_GAPS`) — doesn't ask: it
+lands on its own frame, the Card step shows "Nearest frame" with the reason,
+and the deck pre-fill doesn't toast (owner decisions C1–C3, 2026-09-29).
+So a newly verified frame shows up in the chooser and turns its printings'
+badges to Exact the moment its `frame_reviews` row is ticked.
+
+- **A new frame** gets a rule for the printings it reproduces (a set +
+  collector range for a showcase run; never `full_art` alone), a fixture
+  printing in `tests/unit/scryfall/fixtures/signature-printings.json`, and
+  a row in `tests/unit/scryfall/frame-signatures.test.ts`. The completeness
+  test fails until some rule can reach it.
+- **A frame whose border isn't true yet** stays in
+  `BORDER_PENDING_TEMPLATES` (or, for single colour masters,
+  `BORDER_PENDING_COLOURS`), capped at `nearest`. The list is the edge
+  contract's known failures (`lib/frames/edge-contract.ts`, 7.7) except
+  alphaland's invisible corner specks, and a test holds them together:
+  once a master is fixed and struck from the known failures, take its cap
+  out too (4.35).
+- **A frame the registry names for later** (`onceVerified`): a rule may
+  name a verified frame now and another once that one is verified in the
+  card's colour — the 2003-frame textless promos name the 2003 frame until
+  `m15textless` is verified. `withVerification` makes the swap, so
+  verifying the combo is all it takes.
+- **Registry references** (`lib/cards/frame-references.json`) must resolve
+  to their own template and pass the pin check;
+  `tests/unit/cards/frame-reference-signatures.test.ts` holds that over a
+  trimmed capture of every reference printing
+  (`tests/unit/cards/fixtures/reference-printings.json` — re-capture it
+  when you add a reference). Never replace the DEFAULT reference of a combo
+  production has verified; add an alternate and ask the owner to
+  re-verify.
+
+## Walking the stepper and signing off a template (TODO Phase 2)
+
+Verification is still the only gate (`frame_reviews`), but an admin can now
+check an unverified frame the way a user would meet it, before publishing it:
+
+- **Preview mode (2.1).** `/create` and `/card/<slug>/edit` take
+  `?previewFrames=all`, a template (`?previewFrames=battle`, all seven
+  colours) or a list (`battle/w,saga`). For an ADMIN — decided from the
+  server-read profile, never the URL — the named combos join the verified
+  set in the frame picker, and a banner says so on every step. Everyone else
+  gets the ordinary creator; the guest creator (`/create-guest`, ISR) never
+  reads the URL; AI jobs, and the in-form AI dialog, keep the verified set
+  (`lib/creator/frame-preview.ts`).
+- **Walk the stepper (2.2).** Each row of the checklist (and the compare
+  view, and each colour of the sign-off view) links to
+  `/create?previewFrames=all&kind=…&template=…&color=…&seed=reference`. The
+  page builds the seed from the compare view's own payload
+  (`buildFrameComparePayload`, the second face included) through
+  `lib/creator/frame-walkthrough.ts`; the form applies it through the same
+  handler as a user's Scryfall import, pins the frame and colour and starts
+  on the Card step. A combo with no real printing (or a failed lookup) is
+  seeded with the compare view's sample content (`seed=sample` asks for it
+  directly), and the banner says which. Art isn't imported.
+- **Preview saves (2.3).** A save on an unverified combo in preview mode, and
+  every save during a walk, asks the server for `frame_preview`;
+  `createCardAction` / `updateCardAction` honour it only for an admin (the
+  verification gate is skipped, the kind gate still runs) and store the card
+  PRIVATE with `cards.frame_preview = true` (migration 0121: a CHECK keeps a
+  flagged card private, a trigger lets only an admin's API session raise the
+  flag). It never joins a deck and never counts as product activity. The
+  checklist lists previews under their template with **Re-verify** (the
+  card reopened in preview mode on today's frame) and **Delete**
+  (`deleteFramePreviewCardAction`, flagged rows only). In the admin's own
+  My Cards a preview carries a **Frame preview** badge in every view (grid,
+  compact, list) so it can be spotted and deleted there too. A bulk "make
+  public" or "make unlisted" skips the previews and changes the rest:
+  `updateCardsVisibilityAction` reads the flag itself, and the toast says
+  "Published 5 cards. Skipped 2 frame previews — they stay private." A batch
+  of only previews changes nothing and says why.
+- **Template sign-off (2.4).** `/admin/frame-compare?template=<t>` (no colour)
+  shows every colour's reference, verification record (0.10), recorded
+  auto-score (0.9) and walked previews. **Score** records a `score` event
+  (`scoreFrameColorAction`); a per-colour tick's own score (its `verify`
+  event) counts too, whichever is newer (`latestScoreEvents`). **Publish**
+  (`signOffFrameTemplateAction`) needs every colour that has a reference
+  scored on today's renderer and override (`lib/cards/frame-signoff.ts`, the
+  tick's own staleness rule) AND against the reference the combo stands for
+  today (a re-pin stales the old score) plus the owner's tick, then stamps
+  each of those colours like a tick and logs
+  `verify` events and one `signoff` event. Colours with no real printing
+  stay on their own checkbox, which also still withdraws a single colour.
+  The recorded score is an edge difference (lower is better); the view also
+  shows it as a match, 100 − the difference. A colour whose match is below
+  `SIGN_OFF_LOW_MATCH_PCT` (90 %) is marked on its row, and Publish first
+  asks "N colours score below 90% — publish anyway?", naming them. It is a
+  warning, never a block. The `signoff` event records those colours as
+  `lowMatch`.
+
+Nothing here changes a stored bake or a renderer.
+
 ## Shipping a frame change
 
 1. Build the files into `.frames-build/<template>/…`, which is gitignored.

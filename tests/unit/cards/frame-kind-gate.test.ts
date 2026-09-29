@@ -57,8 +57,19 @@ describe("frameKindGateError", () => {
   });
 
   it("keeps the existing showcase restrictions on the server too", () => {
-    expect(frameKindGateError("nyx", creature)).toMatch(/Nyx Constellation frame doesn't dress Creature cards/);
+    expect(frameKindGateError("nyx", cardFieldsFace({ card_type: "artifact" }))).toMatch(
+      /Nyx Constellation frame doesn't dress Artifact cards/,
+    );
     expect(frameKindGateError("fullartland", creature)).toMatch(/doesn't dress Creature cards/);
+  });
+
+  it("lets a creature wear Nyx, which an Enchantment Creature borrows (A3), like the artifact frame (1.7)", () => {
+    expect(
+      frameKindGateError("nyx", cardFieldsFace({ card_type: "creature", supertype: "Legendary Enchantment" })),
+    ).toBeNull();
+    // The Card step writes the word when the frame is picked; the server
+    // doesn't check it, as for m15artifact.
+    expect(frameKindGateError("nyx", creature)).toBeNull();
   });
 
   it("keeps the borderless M15 frame (4.32) to the kinds its pack draws", () => {

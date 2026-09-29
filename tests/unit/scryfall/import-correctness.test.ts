@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import printings from "./fixtures/import-printings.json";
+import signaturePrintings from "./fixtures/signature-printings.json";
 import { scryfallCardSchema, type ScryfallCard } from "@/lib/scryfall/client";
 import {
   frameColorsFromScryfall,
@@ -14,8 +15,8 @@ import {
   type ScryfallImportPatch,
 } from "@/lib/scryfall/import-mapper";
 import { toResolvedCardData } from "@/lib/decks/import-resolution";
-import { KIND_DEFS } from "@/lib/creator/card-kinds";
-import { resolveImportFrame } from "@/lib/creator/frame-resolve";
+import { KIND_DEFS, importedCardTypeForKind } from "@/lib/creator/card-kinds";
+import { finalizeImportMatch, resolveImportFrame } from "@/lib/creator/frame-resolve";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import {
@@ -259,16 +260,27 @@ describe("type-line + layout precedence (TODO 1.3)", () => {
     ["khm-278", "land", "land", "Basic Snow", "Island", "m15snowland"],
     ["khm-249", "land", "land", "Snow", "Forest, Plains", "m15snowland"],
     // Enchantment beats artifact: Bident of Thassa THS #42 prints the Nyx
-    // ENCHANTMENT frame (the Nyx dress itself is 1.4's) and keeps "Artifact"
-    // as a word in front. A 2003-frame printing asks for its era's standard.
-    ["ths-42", "enchantment", "enchantment", "Legendary Artifact", undefined, "modern"],
+    // ENCHANTMENT frame and keeps "Artifact" as a word in front. The
+    // signature registry (1.4) asks for Nyx, the nearest PipGlyph frame to
+    // THS's 2003 Nyx (it was the plain 2003 frame before).
+    ["ths-42", "enchantment", "enchantment", "Legendary Artifact", undefined, "nyx"],
     // Layout kinds read the type line against their own card type: Urza's
     // Saga keeps "Land", a FIN Summon keeps "Creature" (the renderers print
     // them BEFORE the card type — a TODO 1.3 renderer leftover).
     ["mh2-259", "saga", "enchantment", "Land", "Urza's, Saga", undefined],
     ["fin-1", "saga", "enchantment", "Creature", "Saga, Dragon", undefined],
-    // A reversible card is its front: one land.
-    ["sld-2794", "land", "land", undefined, undefined, "m15land"],
+    // A reversible card is its front: one land. SLD #2794 is a black-bordered
+    // TEXTLESS promo, so the registry (1.19) asks for the textless land frame
+    // (nearest, 4.42); unverified, it still lands on m15land (below).
+    ["sld-2794", "land", "land", undefined, undefined, "m15textlessland"],
+    // A layout kind keeps the printed card type its template can draw (TODO
+    // 1.21): an Enchantment adventurer, an Instant aftermath, a Sorcery
+    // split card.
+    ["woe-38", "adventure", "enchantment", undefined, undefined, undefined],
+    ["akh-211", "aftermath", "instant", undefined, undefined, undefined],
+    ["dgm-123", "split", "sorcery", undefined, undefined, undefined],
+    // The longest printed name (TODO 1.12), a silver-bordered 2003 frame.
+    ["unh-107", "creature", "creature", undefined, "Elemental", "modern"],
   ];
 
   it.each(cases)("%s → %s (%s, supertype %s, subtypes %s) on %s", (key, kind, cardType, supertype, subtypes, frame) => {
@@ -278,8 +290,9 @@ describe("type-line + layout precedence (TODO 1.3)", () => {
     expect(patch.supertype).toBe(supertype);
     expect(patch.subtypes_text).toBe(subtypes);
     expect(patch.frame_template).toBe(frame);
-    // The kind's own card type is what the form writes; the patch agrees.
-    expect(KIND_DEFS[patch.kind!].cardType).toBe(cardType);
+    // The card type the form writes for the kind is the patch's (TODO 1.21:
+    // a layout kind no longer writes its own over the printed one).
+    expect(importedCardTypeForKind(patch.kind!, patch.card_type)).toBe(cardType);
   });
 
   it("the second door / face / spell page rides as the back face", () => {
@@ -397,9 +410,20 @@ describe("where an import lands in the creator (production's verified frames)", 
     // KHM snow lands land on the verified snow land frame.
     expect(landing(mapScryfallToFormPatch(printing("khm-278")))).toEqual({ template: "m15snowland", colorKey: "u", status: "exact" });
     expect(landing(mapScryfallToFormPatch(printing("khm-249")))).toEqual({ template: "m15snowland", colorKey: "m", status: "exact" });
-    // Bident of Thassa is an enchantment: its 2003 frame isn't verified in
-    // blue, so it falls forward to M15 — never the artifact frame.
-    expect(landing(mapScryfallToFormPatch(printing("ths-42")))).toEqual({ template: "m15", colorKey: "u", status: "frame-switched" });
+    // Bident of Thassa is an enchantment: it asks for Nyx (the signature
+    // registry), which isn't verified in blue, so it falls forward to M15 —
+    // never the artifact frame — and the creator's toast names the switch.
+    const bident = resolveImportFrame({
+      patch: mapScryfallToFormPatch(printing("ths-42")),
+      kind: "enchantment",
+      current: { template: DEFAULT_FRAME_TEMPLATE, cardType: "enchantment", colors: [] },
+      verifiedKeys: PROD_VERIFIED,
+    });
+    expect(bident.resolution).toEqual({ status: "frame-switched", template: "m15", colorKey: "u", fromTemplate: "nyx" });
+    // Once nyx/u is verified, Bident lands on it.
+    expect(
+      landing(mapScryfallToFormPatch(printing("ths-42")), new Set([...PROD_VERIFIED, frameComboKey("nyx", "u")])),
+    ).toEqual({ template: "nyx", colorKey: "u", status: "exact" });
   });
 });
 
@@ -498,6 +522,12 @@ describe("colour from the front face (TODO 1.2)", () => {
     ["mor-58", ["B"], "b", ["B"]],
     ["lrw-11", ["W"], "w", ["W"]],
     ["c17-11", ["U"], "u", ["U"]],
+    // TODO 1.21's layout cards: the adventurer's colour, both halves'.
+    ["woe-38", ["W"], "w", ["W"]],
+    ["akh-211", ["U"], "u", ["U"]],
+    ["dgm-123", ["G", "U", "W"], "m", ["G", "U", "W"]],
+    // TODO 1.12's longest name.
+    ["unh-107", ["G"], "g", ["G"]],
   ];
 
   it("covers every fixture", () => {
@@ -594,5 +624,104 @@ describe("colour from the front face (TODO 1.2)", () => {
       color_identity: ["G"],
     });
     expect(frameColorsFromScryfall(legacy)).toEqual(["green"]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Where the signature registry's printings LAND (TODO 1.4): the creator runs
+// resolveImportFrame with the patch's frame_match (`landOn ?? template`)
+// against the frames production has verified (supabase/seed.sql).
+// ---------------------------------------------------------------------------
+
+describe("the signature registry's landings (TODO 1.4)", () => {
+  const signature = (key: keyof typeof signaturePrintings) =>
+    mapScryfallToFormPatch(scryfallCardSchema.parse(signaturePrintings[key]));
+
+  it("Porcelain Legionnaire NPH #19 lands on the M15 artifact frame, white", () => {
+    expect(landing(signature("nph-19"))).toEqual({ template: "m15artifact", colorKey: "w", status: "exact" });
+  });
+
+  it("Flooded Strand KTK #233 lands on the land frame, multicolour", () => {
+    expect(landing(signature("ktk-233"))).toEqual({ template: "m15land", colorKey: "m", status: "exact" });
+  });
+
+  it("Sheoldred DMU #435 still lands on bordered M15 (landOn)", () => {
+    expect(landing(signature("dmu-435"))).toEqual({ template: "m15", colorKey: "b", status: "exact" });
+  });
+
+  it("a Theros constellation god asks for Nyx, which an Enchantment Creature borrows (A3)", () => {
+    const heliod = signature("thb-259");
+    expect(heliod.supertype).toBe("Legendary Enchantment");
+    // nyx/w isn't verified on production: M15, and the creator's toast
+    // names the switch.
+    expect(landing(heliod)).toEqual({ template: "m15", colorKey: "w", status: "frame-switched" });
+    // Once it is, the god lands on Nyx — and the route calls it exact.
+    const withNyx = new Set([...PROD_VERIFIED, frameComboKey("nyx", "w")]);
+    expect(landing(heliod, withNyx)).toEqual({ template: "nyx", colorKey: "w", status: "exact" });
+    expect(finalizeImportMatch(heliod, withNyx).frame_match?.status).toBe("exact");
+    expect(finalizeImportMatch(heliod, PROD_VERIFIED).frame_match?.status).toBe("nearest");
+  });
+
+  it("a 2003-frame textless promo lands on the 2003 frame until the textless frame is verified (A9)", () => {
+    // Wrath of God P07 #1: modern/w is verified on production, m15textless/w
+    // isn't — the 2003 frame, as before the registry.
+    const wrath = finalizeImportMatch(signature("p07-1"), PROD_VERIFIED);
+    expect(wrath.frame_match).toMatchObject({ template: "modern", onceVerified: "m15textless" });
+    expect(wrath.frame_template).toBe("modern");
+    expect(landing(wrath)).toEqual({ template: "modern", colorKey: "w", status: "exact" });
+    // Once m15textless/w is verified, the route names it and the import
+    // lands on it; frame_template follows.
+    const withTextless = new Set([...PROD_VERIFIED, frameComboKey("m15textless", "w")]);
+    const later = finalizeImportMatch(signature("p07-1"), withTextless);
+    expect(later.frame_match).toMatchObject({ status: "nearest", template: "m15textless" });
+    expect(later.frame_match?.onceVerified).toBeUndefined();
+    expect(later.frame_template).toBe("m15textless");
+    expect(landing(later, withTextless)).toEqual({ template: "m15textless", colorKey: "w", status: "exact" });
+    // Lightning Bolt P10 #1 is red: modern/r isn't verified, so it falls
+    // forward to M15 while it waits, and the swap is per colour.
+    const bolt = finalizeImportMatch(signature("p10-1"), withTextless);
+    expect(bolt.frame_match?.template).toBe("modern");
+    expect(landing(bolt, withTextless)).toEqual({ template: "m15", colorKey: "r", status: "frame-switched" });
+  });
+
+  it("a verified full-art basic lands on it; an unverified one falls back to the land frame", () => {
+    // Built explicitly both ways, so the test holds whether or not seed.sql
+    // (which mirrors production) lists the full-art basics as verified yet.
+    const fullArtKeys = ["m15fullartland", "fullartland"].flatMap((t) =>
+      ["w", "u", "b", "r", "g", "c", "m"].map((c) => frameComboKey(t as FrameTemplate, c)),
+    );
+    const withFullArt = new Set([...PROD_VERIFIED, ...fullArtKeys]);
+    const withoutFullArt = new Set([...PROD_VERIFIED].filter((k) => !fullArtKeys.includes(k)));
+    expect(landing(signature("fdn-282"), withFullArt)).toEqual({ template: "m15fullartland", colorKey: "w", status: "exact" });
+    // A borderless basic lands on the land frame (1.18: FRA #382's art_crop
+    // is the 626×457 window, `full_art` or not); the creator offers the
+    // borderless full-art basic.
+    expect(landing(signature("fra-382"), withFullArt)).toEqual({ template: "m15land", colorKey: "w", status: "exact" });
+    expect(landing(signature("fdn-282"), withoutFullArt)).toEqual({ template: "m15land", colorKey: "w", status: "frame-switched" });
+    expect(landing(signature("unf-235"), withFullArt)).toEqual({ template: "m15land", colorKey: "w", status: "frame-switched" });
+  });
+
+  it("frame_match decides the wanted frame when both are present (landOn ?? template)", () => {
+    // A patch whose frame_template disagrees with its match: the match wins,
+    // so DMU #435 asks for its landOn (bordered M15), not the stale value.
+    const patch: ScryfallImportPatch = { ...signature("dmu-435"), frame_template: "modern" };
+    expect(landing(patch)).toEqual({ template: "m15", colorKey: "b", status: "exact" });
+  });
+
+  it("an older cached patch without frame_match keeps frame_template", () => {
+    const old: ScryfallImportPatch = { ...signature("nph-19"), frame_match: undefined, frame_template: "modern" };
+    expect(landing(old)).toEqual({ template: "modern", colorKey: "w", status: "exact" });
+  });
+
+  it("a rejected printing (a substitute card) wants no frame of its own", () => {
+    const patch = signature("sznr-1");
+    expect(patch.frame_match?.reject).toBe(true);
+    const { wanted } = resolveImportFrame({
+      patch,
+      kind: null,
+      current: { template: "m15land", cardType: "land", colors: [] },
+      verifiedKeys: PROD_VERIFIED,
+    });
+    expect(wanted).toBe("m15land");
   });
 });
