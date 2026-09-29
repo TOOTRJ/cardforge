@@ -123,6 +123,12 @@ Rules and gotchas:
   for OG/JSON-LD/email), "Remove" swaps in another built-in, and
   `chooseDefaultProfileMediaAction` only accepts paths `isDefaultProfileMedia`
   recognises. The seeded e2e user is pre-onboarded (`scripts/seed-e2e.mjs`).
+- Uploads: every server action that stores a user's file passes it through
+  `prepareUploadBytes()` (`lib/media/upload-bytes.ts`) — upright
+  (`lib/media/orientation.ts`, TODO 3.14) and with no camera metadata
+  (`lib/media/strip-metadata.ts`, TODO 3.14a: EXIF/GPS, XMP, IPTC, text
+  chunks… dropped at the container level, pixels + ICC kept byte-exact). A
+  new upload path does the same; a client-side strip never counts.
 - Viewer-independent server reads use `createPublicClient()` (cookie-free,
   keeps routes ISR-eligible); cookie-bound reads via `createClient()` make
   a route dynamic. `lib/supabase/admin.ts` bypasses RLS — webhook/cron,
@@ -225,12 +231,6 @@ Rules and gotchas:
   by glyph. Walkers ≤ `walkerSizePct`, row anatomy at `LOYALTY_ROW_SIZE_PX`;
   saga keeps v32's geometry (TODO 4.21).
   `tests/unit/render/rules-no-clip.test.tsx` holds real bakes to the layout.
-- Uploads: every server action that stores a user's file passes it through
-  `prepareUploadBytes()` (`lib/media/upload-bytes.ts`) — upright
-  (`lib/media/orientation.ts`, TODO 3.14) and with no camera metadata
-  (`lib/media/strip-metadata.ts`, TODO 3.14a: EXIF/GPS, XMP, IPTC, text
-  chunks… dropped at the container level, pixels + ICC kept byte-exact). A
-  new upload path does the same; a client-side strip never counts.
 - Notifications are push, not pull: `notifications` is on the
   `supabase_realtime` publication (migration 0075) and
   `components/notifications/realtime-alerts.tsx` subscribes to the signed-in
