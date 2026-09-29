@@ -142,6 +142,7 @@ import {
   showsPowerToughness,
 } from "@/lib/cards/card-display";
 import { cardCornersClass, isLandscapeFrame } from "@/lib/cards/card-orientation";
+import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
 import {
   colorIdentityForKey,
   colorWord,
@@ -1352,8 +1353,11 @@ export function CardCreatorForm({
       // treatment (the borderless M15 frame, the full-art basic — frames plan
       // 4.32 / 4.39) is OFFERED once it is verified in this colour, never
       // picked for the user.
+      const importedColorKey = pickFrameColorKey(patch.color_identity);
       const message =
-        importSubstitutionMessage(patch.frame_match, landedTemplate) ??
+        importSubstitutionMessage(patch.frame_match, landedTemplate, (template) =>
+          isFrameComboAvailable(template, importedColorKey, verifiedKeys),
+        ) ??
         resolutionMessage ??
         (patch.printing_treatment && !patch.frame_match
           ? printingTreatmentNotice(patch.printing_treatment, landedTemplate)

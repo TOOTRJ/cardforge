@@ -73,7 +73,10 @@ import { eraForTemplate } from "@/lib/creator/frame-picker";
 import { normalizeFrameTemplate } from "@/lib/cards/card-display";
 import { parseSubtypes } from "@/lib/creator/card-fields";
 import type { FormValues } from "@/lib/creator/form-types";
-import type { FrameSubstitution } from "@/lib/creator/import-frame-choice";
+import {
+  frameSubstitutionLabel,
+  type FrameSubstitution,
+} from "@/lib/creator/import-frame-choice";
 
 // Single-color key each identity chip contributes (frame-layer's palette).
 const IDENTITY_COLOR_KEY: Record<ColorIdentity, string> = {
@@ -294,7 +297,7 @@ export function CardSetupPanel({
           className="inline-flex items-center gap-1.5 self-start rounded-full border border-gold/45 bg-gold/10 px-3 py-1 text-xs font-medium text-gold-strong"
         >
           <Replace className="h-3.5 w-3.5 shrink-0" aria-hidden />
-          Frame substituted (imported {frameSubstitution.exactLabel})
+          {frameSubstitutionLabel(frameSubstitution)}
         </p>
       ) : null}
       {/* 1 · Card type — one combined list; layouts are just more types. */}

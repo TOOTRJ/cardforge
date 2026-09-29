@@ -212,13 +212,15 @@ export function importFramePlan(
 
   // Three situations, three headings: PipGlyph has the frame but Scryfall's
   // art can't fill it (an exact edge-to-edge match landing on its bordered
-  // twin); PipGlyph has the frame but not a detail of the printing (the
-  // legendary crown, a colour indicator — the reason says which); PipGlyph
-  // doesn't have the frame (or hasn't verified it in this colour).
+  // twin); PipGlyph has the frame in this colour but not a detail of the
+  // printing (the legendary crown, a colour indicator) or can't dress this
+  // kind with it yet (a snow ARTIFACT, a Theros god) — the "Why:" line says
+  // which; PipGlyph doesn't have the frame (or hasn't verified it in this
+  // colour).
   const heading =
     match.status === "exact"
       ? `PipGlyph has ${theFrame(match.exactLabel)}, but Scryfall's art won't fill it — pick one of these`
-      : fits(match.template)
+      : isFrameComboAvailable(match.template, colorKey, verifiedKeys)
         ? `PipGlyph can't match this printing's ${match.exactLabel} exactly yet — pick one of these`
         : `PipGlyph doesn't have ${theFrame(match.exactLabel)} yet — pick one of these`;
 
@@ -283,14 +285,27 @@ export type FrameSubstitution = {
   /** The frame the card landed on — the chip shows while it stays there. */
   template: FrameTemplate;
   reason: string | null;
+  /** The card sits on the frame the registry names for this printing, which
+   *  PipGlyph can't reproduce exactly yet (the legendary crown, a colour
+   *  indicator, the 2023 bars — `reason` says which): the chip says
+   *  "Nearest frame", since nothing was swapped for another frame. */
+  nearestOnOwnFrame: boolean;
 };
 
+type MatchForCopy = Pick<
+  FrameMatch,
+  "status" | "exactLabel" | "template" | "reason" | "landOn" | "reject"
+>;
+
 export function frameSubstitutionFor(
-  match: Pick<FrameMatch, "status" | "exactLabel" | "template" | "reason" | "landOn" | "reject"> | undefined,
+  match: MatchForCopy | undefined,
   landed: FrameTemplate,
 ): FrameSubstitution | null {
   if (!match || match.reject) return null;
-  if (match.status === "exact" && !match.landOn && landed === match.template) return null;
+  // On the printing's own exact frame there is nothing to flag — also when
+  // the import would have landed on the bordered twin (landOn) and the user
+  // picked the edge-to-edge frame itself in the chooser.
+  if (match.status === "exact" && landed === match.template) return null;
   return {
     exactLabel: match.exactLabel,
     template: landed,
@@ -299,19 +314,44 @@ export function frameSubstitutionFor(
       (match.landOn && artReachesCardEdge(getFrameProfile(match.template))
         ? WINDOW_CROPPED_NOTE.replace(/\.$/, "")
         : null),
+    nearestOnOwnFrame: landed === match.template,
   };
 }
 
+/** The chip's text on the Card step. */
+export function frameSubstitutionLabel(substitution: FrameSubstitution): string {
+  return substitution.nearestOnOwnFrame
+    ? `Nearest frame (imported ${substitution.exactLabel})`
+    : `Frame substituted (imported ${substitution.exactLabel})`;
+}
+
+const sentence = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+
 /** ONE toast for a substituted import that had no chooser (the deck-remix
  *  pre-fill, /create?deckCard=): names what the printing is and the frame
- *  the card got. Null when the import is the exact reproduction. */
+ *  the card got, in the chooser's three situations — the art can't fill an
+ *  edge-to-edge frame PipGlyph has, PipGlyph's frame misses a detail of the
+ *  printing (the reason), PipGlyph doesn't have the frame. `available` says
+ *  whether a frame is published in the card's colour (the verified combos),
+ *  so a nearest edge-to-edge match whose frame IS published is named by its
+ *  cropped art, not as missing. Null when the import is the exact
+ *  reproduction. */
 export function importSubstitutionMessage(
-  match: Pick<FrameMatch, "status" | "exactLabel" | "template" | "reason" | "landOn" | "reject"> | undefined,
+  match: MatchForCopy | undefined,
   landed: FrameTemplate,
+  available?: (template: FrameTemplate) => boolean,
 ): string | null {
-  if (!frameSubstitutionFor(match, landed) || !match) return null;
-  if (match.status === "exact") {
+  if (!match || !frameSubstitutionFor(match, landed)) return null;
+  const windowCropped =
+    Boolean(match.landOn) &&
+    landed !== match.template &&
+    artReachesCardEdge(getFrameProfile(match.template)) &&
+    (match.status === "exact" || Boolean(available?.(match.template)));
+  if (windowCropped) {
     return `Scryfall's art for this printing is cropped to the bordered window — using ${describeFrame(landed)} instead of ${theFrame(match.exactLabel)}.`;
+  }
+  if (landed === match.template) {
+    return `${sentence(match.reason ?? `PipGlyph can't match ${theFrame(match.exactLabel)} exactly yet`)} — using ${describeFrame(landed)}.`;
   }
   return `PipGlyph doesn't have ${theFrame(match.exactLabel)} yet — using ${describeFrame(landed)}.`;
 }

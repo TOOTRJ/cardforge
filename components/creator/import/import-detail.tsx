@@ -15,6 +15,7 @@ import type {
   ImportFrameChoice,
   ImportFramePlan,
 } from "@/lib/creator/import-frame-choice";
+import { describeFrame } from "@/lib/creator/frame-resolve";
 import type { ScryfallImportPatch } from "@/lib/scryfall/import-mapper";
 import type { PrintingSummary, PrintingView } from "@/lib/scryfall/printing-views";
 
@@ -44,14 +45,22 @@ export type NamedResponse = {
 };
 
 /** "…and the frame (an exact match: M15 (2015) frame)" — the overwrite
- *  note names what the import does with the frame (TODO 1.5). */
-export function frameOverwriteCopy(patch: Pick<ScryfallImportPatch, "frame_match">): string {
+ *  note names what the import does with the frame (TODO 1.5). Null when the
+ *  chooser's "Keep my current frame" is picked: the frame isn't replaced. */
+export function frameOverwriteCopy(
+  patch: Pick<ScryfallImportPatch, "frame_match">,
+  choice: ImportFrameChoice | null = null,
+): string | null {
   const match = patch.frame_match;
+  if (choice && "keepCurrent" in choice) return null;
   if (!match || match.reject) return "the frame";
   if (match.status === "exact" && !match.landOn) {
     return `the frame (an exact match: ${match.exactLabel})`;
   }
-  return `the frame (nearest to ${match.exactLabel} — your pick above)`;
+  if (choice) {
+    return `the frame (nearest to ${match.exactLabel}: ${describeFrame(choice.template)}, your pick above)`;
+  }
+  return `the frame (nearest to ${match.exactLabel})`;
 }
 
 export function ImportDetail({
@@ -88,6 +97,7 @@ export function ImportDetail({
 }) {
   const { card, patch } = data;
   const match = patch.frame_match;
+  const frameCopy = frameOverwriteCopy(patch, plan.mode === "choose" ? frameChoice : null);
   return (
     <div className="relative flex flex-col gap-4 p-5" aria-busy={busy}>
       {busy ? (
@@ -235,8 +245,10 @@ export function ImportDetail({
         />
         <span>
           Importing <strong>overwrites the card you&apos;re currently
-          editing</strong> — name, text, type, colors, and{" "}
-          {frameOverwriteCopy(patch)} are all replaced.
+          editing</strong> —{" "}
+          {frameCopy
+            ? <>name, text, type, colors, and {frameCopy} are all replaced.</>
+            : <>name, text, type and colors are all replaced; your current frame stays.</>}
         </span>
       </p>
 

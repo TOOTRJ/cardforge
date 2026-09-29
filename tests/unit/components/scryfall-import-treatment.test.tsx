@@ -133,8 +133,16 @@ describe("borderless Sheoldred (DMU #435) — 1.18: the bordered frame, Borderle
   it("names the match in the overwrite note, and never shows 1.16's heads-up or treatment toast", async () => {
     const onImport = await pickPrinting("dmu-435", { verified: BORDERLESS_VERIFIED });
     expect(
-      screen.getByText(/the frame \(nearest to Borderless frame — your pick above\) are all replaced/),
+      screen.getByText(
+        /the frame \(nearest to Borderless frame: M15 \(2015\) Standard, your pick above\) are all replaced/,
+      ),
     ).toBeTruthy();
+    // "Keep my current frame": the frame isn't replaced, and the note says so.
+    fireEvent.click(frameRadio(/Keep my current frame/));
+    expect(
+      screen.getByText(/name, text, type and colors are all replaced; your current frame stays/),
+    ).toBeTruthy();
+    fireEvent.click(frameRadio(/^M15 \(2015\) Standard/));
     expect(screen.queryByText(/matched to this printing/)).toBeNull();
     expect(screen.queryByText(/which PipGlyph doesn't offer yet/)).toBeNull();
     await commit(onImport);

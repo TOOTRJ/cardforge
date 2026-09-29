@@ -193,7 +193,8 @@ describe("the dialog's frame choice (TODO 1.5)", () => {
     expect(toast.info).not.toHaveBeenCalled();
 
     await toCardStep();
-    expect(chip()?.textContent).toBe("Frame substituted (imported Borderless frame)");
+    // The printing's own frame, short of the crown: nearest, not swapped.
+    expect(chip()?.textContent).toBe("Nearest frame (imported Borderless frame)");
     expect(chip()?.getAttribute("title")).toBe("PipGlyph doesn't draw the legendary crown yet");
 
     // Any frame pick clears it, for good: back on Borderless it stays gone.
@@ -229,6 +230,14 @@ describe("the dialog's frame choice (TODO 1.5)", () => {
     // m15 can't dress a land; the import resolves as it always did: its
     // full-art basic, verified in white.
     expect(template()).toBe("m15fullartland");
+  });
+
+  it("an exact borderless printing picked onto Borderless itself (FDN #311) has no chip", async () => {
+    renderForm();
+    await importPayload(payload("fdn-311", { frameChoice: { template: "m15borderless" } }));
+    expect(template()).toBe("m15borderless");
+    await toCardStep();
+    expect(chip()).toBeNull();
   });
 
   it("an exact import (no choice) lands with no chip", async () => {
@@ -306,5 +315,39 @@ describe("the deck-remix pre-fill (/create?deckCard=): no dialog, ONE toast", ()
     expect(toast.success.mock.invocationCallOrder[0]).toBeLessThan(
       toast.info.mock.invocationCallOrder[0]!,
     );
+  });
+
+  it("with Borderless published in black, names the cropped art (not a missing frame) and offers Borderless", async () => {
+    const sheoldred = card("dmu-435");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.startsWith("/api/scryfall/named")) {
+          return json(namedBody("dmu-435", new Set(WITH_BORDERLESS)));
+        }
+        return json({ ok: false, error: "no art" });
+      }),
+    );
+    renderForm({
+      deckRemix: {
+        deckCardId: "66666666-6666-4666-8666-666666666666",
+        scryfallId: sheoldred.id,
+        deckSlug: "tester/grixis",
+        deckTitle: "Grixis",
+        entryName: sheoldred.name,
+      },
+    });
+    await waitFor(() => expect(toast.success).toHaveBeenCalledTimes(1));
+    expect(template()).toBe("m15");
+    expect(toast.info).toHaveBeenCalledTimes(1);
+    const [message, options] = toast.info.mock.calls[0]! as [
+      string,
+      { action?: { label: string } },
+    ];
+    expect(message).toBe(
+      "Scryfall's art for this printing is cropped to the bordered window — using M15 (2015) Standard instead of the Borderless frame.",
+    );
+    expect(options.action?.label).toMatch(/Borderless/);
   });
 });

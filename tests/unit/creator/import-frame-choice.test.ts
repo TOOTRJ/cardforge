@@ -11,6 +11,7 @@ import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import {
   appliedImportFrameChoice,
   frameSubstitutionFor,
+  frameSubstitutionLabel,
   importFramePlan,
   importSubstitutionMessage,
   theFrame,
@@ -121,6 +122,18 @@ describe("importFramePlan — nearest", () => {
     expect(plan.options.map((o) => o.template)).not.toContain("nyx");
   });
 
+  it("a frame PipGlyph has but can't dress the kind with is 'can't match', not 'doesn't have' (Replicating Ring KHM #244)", () => {
+    const keys = new Set([...STANDARD, ...verified("m15snow")]);
+    const plan = importFramePlan(namedPatch("khm-244", keys), keys, "m15");
+    if (plan.mode !== "choose") throw new Error(plan.mode);
+    expect(plan.match).toMatchObject({ status: "nearest", template: "m15snow", landOn: "m15artifact" });
+    expect(plan.heading).toBe(
+      "PipGlyph can't match this printing's M15 (2015) frame exactly yet — pick one of these",
+    );
+    expect(plan.match.reason).toMatch(/doesn't dress artifacts yet/);
+    expect(plan.preselected).toEqual({ template: "m15artifact" });
+  });
+
   it("a 2023 full-art basic (ONE #262) preselects the full-art basic, verified in white", () => {
     const plan = importFramePlan(namedPatch("one-262", WITH_BORDERLESS), WITH_BORDERLESS, "m15land");
     if (plan.mode !== "choose") throw new Error(plan.mode);
@@ -203,6 +216,7 @@ describe("the substitution chip and the deck-remix toast", () => {
       exactLabel: "Borderless frame",
       template: "m15",
       reason: "PipGlyph doesn't draw the legendary crown yet",
+      nearestOnOwnFrame: false,
     });
     expect(importSubstitutionMessage(match, "m15")).toBe(
       "PipGlyph doesn't have the Borderless frame yet — using M15 (2015) Standard.",
@@ -217,6 +231,41 @@ describe("the substitution chip and the deck-remix toast", () => {
     expect(importSubstitutionMessage(match, "m15")).toBe(
       "Scryfall's art for this printing is cropped to the bordered window — using M15 (2015) Standard instead of the Borderless frame.",
     );
+  });
+
+  it("nothing on the printing's own exact frame, picked over the bordered landing (FDN #311 on Borderless)", () => {
+    const match = namedPatch("fdn-311", WITH_BORDERLESS).frame_match;
+    expect(match).toMatchObject({ status: "exact", template: "m15borderless", landOn: "m15" });
+    expect(frameSubstitutionFor(match, "m15borderless")).toBeNull();
+    expect(importSubstitutionMessage(match, "m15borderless")).toBeNull();
+  });
+
+  it("a nearest match on its own frame is 'Nearest frame', and the toast gives the reason (Sheoldred DMU #107)", () => {
+    const match = namedPatch("dmu-107", STANDARD).frame_match;
+    expect(match).toMatchObject({ status: "nearest", template: "m15" });
+    const substitution = frameSubstitutionFor(match, "m15");
+    expect(substitution).toMatchObject({ nearestOnOwnFrame: true });
+    expect(frameSubstitutionLabel(substitution!)).toBe("Nearest frame (imported M15 (2015) frame)");
+    expect(importSubstitutionMessage(match, "m15")).toBe(
+      "PipGlyph doesn't draw the legendary crown yet — using M15 (2015) Standard.",
+    );
+    // Another frame picked instead: that IS a substitution.
+    const swapped = frameSubstitutionFor(match, "m15snow");
+    expect(frameSubstitutionLabel(swapped!)).toBe("Frame substituted (imported M15 (2015) frame)");
+  });
+
+  it("names the cropped art, not a missing frame, when a nearest edge-to-edge frame is published (DMU #435)", () => {
+    const match = namedPatch("dmu-435", WITH_BORDERLESS).frame_match;
+    expect(match).toMatchObject({ status: "nearest", template: "m15borderless", landOn: "m15" });
+    expect(
+      importSubstitutionMessage(match, "m15", (t) => WITH_BORDERLESS.has(frameComboKey(t, "b"))),
+    ).toBe(
+      "Scryfall's art for this printing is cropped to the bordered window — using M15 (2015) Standard instead of the Borderless frame.",
+    );
+    // …and as missing while Borderless isn't published in black.
+    expect(
+      importSubstitutionMessage(match, "m15", (t) => STANDARD.has(frameComboKey(t, "b"))),
+    ).toBe("PipGlyph doesn't have the Borderless frame yet — using M15 (2015) Standard.");
   });
 
   it("nothing for the exact reproduction, a refused card, or no match", () => {
