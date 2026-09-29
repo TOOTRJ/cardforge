@@ -19,11 +19,21 @@ import { RULES_HD_WIDTH } from "@/lib/cards/typography";
 
 const EMBLEM = getFrameProfile("emblem");
 
-function preview(over: { rulesText?: string; cost?: string | null; power?: string | null; subtypes?: string[] } = {}) {
+function preview(
+  over: {
+    rulesText?: string;
+    cost?: string | null;
+    power?: string | null;
+    subtypes?: string[];
+    setIconCode?: string | null;
+    cardType?: "emblem" | "creature";
+  } = {},
+) {
   const html = renderToStaticMarkup(
     <CardPreview
       title="Kaito, Bane of Nightmares"
-      cardType="emblem"
+      cardType={over.cardType ?? "emblem"}
+      setIconCode={over.setIconCode ?? null}
       supertype={null}
       subtypes={over.subtypes ?? []}
       colorIdentity={["colorless"]}
@@ -87,6 +97,23 @@ describe("CardPreview — the emblem frame (TODO 4.52)", () => {
     });
     expect(lines).toHaveLength(3);
     for (const line of lines) expect(marginLeft(line)).toBe("");
+  });
+
+  // Owner evidence 2026-09-29: the set symbol told a screen reader "common
+  // rarity" on an emblem, which has none (CR 114) — its stored "common"
+  // only inks the symbol, as it still does.
+  it("names no rarity on the set symbol — a Keyrune glyph or the default mark — while inking it the same", () => {
+    const glyph = (html: string) => new DOMParser().parseFromString(html, "text/html").querySelector("i.ss");
+    const emblem = glyph(preview({ setIconCode: "fdn" }).html);
+    expect(emblem?.getAttribute("aria-label")).toBe("Set symbol");
+    const creature = glyph(preview({ setIconCode: "fdn", cardType: "creature" }).html);
+    expect(creature?.getAttribute("aria-label")).toBe("common rarity");
+    expect(styleOf(emblem)).toMatch(/color:/);
+    expect(/color:\s*([^;]+)/.exec(styleOf(emblem))?.[1]).toBe(/color:\s*([^;]+)/.exec(styleOf(creature))?.[1]);
+    // The default mark names the set, never a rarity.
+    const { html } = preview();
+    expect(html).toContain('aria-label="PipGlyph set"');
+    expect(html).not.toMatch(/rarity"/);
   });
 
   it("draws no cost and no P/T, whatever the card holds", () => {
