@@ -40,14 +40,37 @@ export const FRAME_COLOR_KEYS = ["w", "u", "b", "r", "g", "c", "m"] as const;
 
 export type FrameColorKey = (typeof FRAME_COLOR_KEYS)[number];
 
+/** The ten colour pairs in printed order (TODO 4.6): the first colour is the
+ *  frame's left side — the guild sequence canonicalColorSequence gives the
+ *  cost pips (WU WB UB UR BR BG RG RW GW GU). */
+export const TWO_COLOR_PAIRS = ["wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"] as const;
+
+export type TwoColorPair = (typeof TWO_COLOR_PAIRS)[number];
+
+/** A two-colour dress's pair masters (FrameProfile.twoColorMasters): the
+ *  gold-split `<pair>` and the hybrid `<pair>-h`. */
+export const TWO_COLOR_MASTER_KEYS = [
+  ...TWO_COLOR_PAIRS,
+  ...TWO_COLOR_PAIRS.map((pair) => `${pair}-h` as const),
+] as const;
+
 /** Every frame MASTER key (the file a render paints): the colour keys plus
  *  "a", the Alpha frame's colourless ARTIFACT card, which a profile paints
- *  instead of "c" for an artifact (FrameProfile.artifactMasterKeys). Not a
- *  colour: combos, references and the frame_reviews gate stay on
- *  FRAME_COLOR_KEYS. */
-export const FRAME_MASTER_KEYS = [...FRAME_COLOR_KEYS, "a"] as const;
+ *  instead of "c" for an artifact (FrameProfile.artifactMasterKeys), and the
+ *  two-colour pair masters (TWO_COLOR_MASTER_KEYS, painted only where a
+ *  profile declares twoColorMasters and the card switched the look on). Not
+ *  a colour: combos, references and the frame_reviews gate stay on
+ *  FRAME_COLOR_KEYS (a pair rides its template's "m" tick, owner decision
+ *  2026-09-29). */
+export const FRAME_MASTER_KEYS = [...FRAME_COLOR_KEYS, "a", ...TWO_COLOR_MASTER_KEYS] as const;
 
 export type FrameMasterKey = (typeof FRAME_MASTER_KEYS)[number];
+
+/** Every stat-plate key (`pt/{color}.png`): the colour keys. A two-colour
+ *  card's plate is one of them (plateKeyFor: gold-split "m", hybrid "c"),
+ *  never a pair; a new plate dress (4.6d's Vehicle "v") joins here, so the
+ *  bake's plate path never falls back to another file than the preview's. */
+export const FRAME_PLATE_KEYS = [...FRAME_COLOR_KEYS] as const;
 
 type ReferenceRow = Record<FrameColorKey, FrameReference | null>;
 

@@ -84,6 +84,12 @@ import { buildTypeLine, normalizeFrameTemplate } from "@/lib/cards/card-display"
 import { parseSubtypes } from "@/lib/creator/card-fields";
 import type { FormValues } from "@/lib/creator/form-types";
 import {
+  frameAnatomyOf,
+  pairColorIdentity,
+  twoColorPairOf,
+} from "@/lib/cards/anatomy";
+import { TwoColorPairRow } from "@/components/creator/panels/anatomy-panel";
+import {
   frameSubstitutionLabel,
   type FrameSubstitution,
 } from "@/lib/creator/import-frame-choice";
@@ -186,6 +192,9 @@ type CardSetupPanelProps = {
    *  uses it to keep a pristine basic-land name/subtype in step with the
    *  color. */
   onColorIdentityChange?: (next: ColorIdentity[]) => void;
+  /** The user picked a two-colour pair by hand (the "Two colours" row):
+   *  the orchestrator stops re-filling it from the cost. */
+  onPairTouched?: () => void;
   /** Lands only: Basic (big symbol, no text) vs Nonbasic (rules text) —
    *  rendered as the Land kind's first Variation. */
   landMode?: LandMode;
@@ -202,6 +211,7 @@ export function CardSetupPanel({
   onFramePick,
   onKindSelect,
   onColorIdentityChange,
+  onPairTouched,
   landMode,
   landBasicDisabledReason = null,
   onLandModeChange,
@@ -298,7 +308,11 @@ export function CardSetupPanel({
       colorIdentity.length > 1
         ? "multicolor"
         : colorIdentity[0] ?? "colorless";
-    return c[0].toUpperCase() + c.slice(1);
+    const word = c[0].toUpperCase() + c.slice(1);
+    // A picked pair shows only where it draws (the two-colour frame).
+    const pair =
+      frameAnatomyOf(watchedTemplate).twoColor.length > 0 ? twoColorPairOf(colorIdentity) : null;
+    return pair ? `${word} (${pairColorIdentity(pair).join(" and ")})` : word;
   })();
 
   return (
@@ -678,6 +692,7 @@ export function CardSetupPanel({
         render={({ field }) => (
           <ColorSection
             summary={colorSummary}
+            onPairTouched={onPairTouched}
             selection={(field.value ?? []) as ColorIdentity[]}
             onChange={(next) => {
               field.onChange(next);
@@ -763,12 +778,15 @@ function ColorSection({
   summary,
   selection,
   onChange,
+  onPairTouched,
   verifiedKeys,
   frameType,
 }: {
   summary: string;
   selection: ColorIdentity[];
   onChange: (next: ColorIdentity[]) => void;
+  /** The user picked the pair by hand: the cost no longer re-fills it. */
+  onPairTouched?: () => void;
   verifiedKeys: ReadonlySet<string>;
   /** The card's type: each colour tile shows the master the card would
    *  paint in that colour (Alpha's colourless tile: the artifact card for an
@@ -778,6 +796,12 @@ function ColorSection({
   // Live template so chip availability + thumbnails track frame changes.
   const { watch } = useFormContext<FormValues>();
   const template = normalizeFrameTemplate(watch("frame_style.template"));
+  // The two-colour frame (TODO 4.6b): on a template that draws it, a
+  // multicolour card picks its PAIR in the "Two colours" row, pre-filled
+  // from the cost (owner decision 2026-09-29, useTwoColorPairFollow).
+  // Nowhere else the row shows.
+  const drawsPairs = frameAnatomyOf(template).twoColor.length > 0;
+  const pair = twoColorPairOf(selection);
   const currentKey = pickFrameColorKey(selection);
   const currentAvailable = isFrameComboAvailable(
     template,
@@ -823,9 +847,20 @@ function ColorSection({
         layout="grid-2"
         size="md"
         value={selected}
+        // Multicolor on a template with the two-colour frame: the creator
+        // pre-fills the pair from the cost (useTwoColorPairFollow).
         onChange={(color) => onChange([color])}
         options={options}
       />
+      {drawsPairs && selected === "multicolor" ? (
+        <TwoColorPairRow
+          pair={pair}
+          onChange={(next) => {
+            onPairTouched?.();
+            onChange(next ? pairColorIdentity(next) : ["multicolor"]);
+          }}
+        />
+      ) : null}
       {!currentAvailable ? (
         <p className="text-[11px] text-subtle" role="status">
           This frame isn&apos;t verified in the selected color yet — pick an

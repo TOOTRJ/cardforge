@@ -37,6 +37,12 @@ import {
 import { KIND_DEFS, kindFromCard, type CardKind } from "@/lib/creator/card-kinds";
 import { remixTitleFor } from "@/lib/creator/revise";
 import { defaultWatermarkFor } from "@/lib/cards/watermark";
+import {
+  NEW_CARD_ANATOMY,
+  pairColorIdentity,
+  twoColorPairOf,
+  type FrameAnatomyStyle,
+} from "@/lib/cards/anatomy";
 
 /** Hydrate the structured row editors from a persisted card: structured
  *  face_content when present, else parsed from rules_text — but ONLY for the
@@ -200,9 +206,14 @@ export function defaultValuesFor(
       artist_credit: "",
       art_url: "",
       art_position: { focalX: 0.5, focalY: 0.5, scale: 1 },
+      // A NEW card starts with every anatomy switch on (the legendary crown,
+      // the two-colour frame — owner rule 2026-09-29): the renderers draw
+      // only what the template can, and the save drops the rest
+      // (lib/cards/anatomy.ts), so the preview is what the bake draws.
       frame_style: {
         finish: "regular",
         template: DEFAULT_FRAME_TEMPLATE,
+        ...NEW_CARD_ANATOMY,
       },
       visibility: "public",
       save_as_draft: false,
@@ -229,6 +240,9 @@ export function defaultValuesFor(
   const normalizedFrameStyle: FrameStyle = {
     finish: normalizeCardFinish(persistedFrame.finish),
     template: normalizeFrameTemplate(persistedFrame.template),
+    // The anatomy switches exactly as stored: absent stays absent — a
+    // stored card keeps its look until its owner switches a piece on.
+    ...storedAnatomyOf(persistedFrame),
   };
 
   return {
@@ -294,6 +308,9 @@ export function remixValuesFrom(
   const base = defaultValuesFor(parent, gameSystems, options);
   return {
     ...base,
+    // A remix is a NEW card: every anatomy switch starts on, except one the
+    // parent's owner switched off (owner rule 2026-09-29).
+    frame_style: { ...base.frame_style, ...NEW_CARD_ANATOMY, ...storedAnatomyOf(parent.frame_style) },
     title: remixTitleFor(parent.title),
     slug: "",
     visibility: "public",
@@ -305,6 +322,15 @@ export function remixValuesFrom(
     back_card_id: "",
     deck_id: "",
   };
+}
+
+/** The anatomy switches a stored frame_style names (booleans only). */
+function storedAnatomyOf(frameStyle: unknown): FrameAnatomyStyle {
+  const stored = (frameStyle ?? {}) as Record<string, unknown>;
+  const out: FrameAnatomyStyle = {};
+  if (typeof stored.crown === "boolean") out.crown = stored.crown;
+  if (typeof stored.twoColor === "boolean") out.twoColor = stored.twoColor;
+  return out;
 }
 
 function watermarkFormValuesFrom(card: Card): WatermarkFormValues {
@@ -344,14 +370,20 @@ const COST_COLOR_NAME: Record<string, ColorIdentity> = {
 };
 
 /** Collapse a color list to the creator's SINGLE-select model: two or more
- *  real colors become ["multicolor"] (the frame system has one multicolor
- *  dress, not per-pair blends). Stored cards keep the array shape. */
+ *  real colors become ["multicolor"] (one gold dress) — except, with
+ *  `keepPair` (the card's template draws the two-colour frame, TODO 4.6b:
+ *  lib/cards/anatomy.ts), exactly two real colors, which stay the card's
+ *  colour PAIR in printed order (["white", "blue"]; the "multicolor" token
+ *  an AI identity carries is dropped). Stored cards keep the array shape. */
 export function normalizeColorSelection(
   colors: readonly ColorIdentity[],
+  options: { keepPair?: boolean } = {},
 ): ColorIdentity[] {
   const real = [...new Set(colors)].filter(
     (c) => c !== "colorless" && c !== "multicolor",
   );
+  const pair = options.keepPair ? twoColorPairOf(real) : null;
+  if (pair && real.length === 2) return pairColorIdentity(pair);
   if (colors.includes("multicolor") || real.length > 1) return ["multicolor"];
   if (real.length === 1) return real;
   return colors.includes("colorless") ? ["colorless"] : [];

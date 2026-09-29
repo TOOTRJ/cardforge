@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import type { Rect } from "@/lib/cards/template-layout";
 
 // ---------------------------------------------------------------------------
 // Etched finish — ONE inline SVG shared by the live preview
@@ -45,6 +46,7 @@ export function EtchedSheen({
   height,
   style,
   split = null,
+  overlays = [],
 }: {
   /** Unique per rendered face — the preview can show several cards (and a
    *  DFC renders two faces), and SVG ids are document-global. */
@@ -62,6 +64,11 @@ export function EtchedSheen({
    *  of the seam and this image right of it — exactly the frame the face
    *  painted, so the sheen follows each half's own wings. */
   split?: { href: string; atPct: number } | null;
+  /** The face's anatomy overlays (the crown band, TODO 4.6.0) — each image
+   *  stretched over its card-% rect, added to the mask after the frame, so
+   *  the crown etches with the frame it is drawn over. Empty = the mask is
+   *  the frame alone, exactly as before. */
+  overlays?: readonly { href: string; rect: Rect }[];
 }) {
   const vw = landscape ? 2100 : 1500;
   const vh = landscape ? 1500 : 2100;
@@ -128,6 +135,17 @@ export function EtchedSheen({
               clipPath={`url(#${id}-right)`}
             />
           ) : null}
+          {overlays.map((overlay, i) => (
+            <image
+              key={i}
+              href={overlay.href}
+              x={(overlay.rect.leftPct / 100) * vw}
+              y={(overlay.rect.topPct / 100) * vh}
+              width={(overlay.rect.widthPct / 100) * vw}
+              height={(overlay.rect.heightPct / 100) * vh}
+              preserveAspectRatio="none"
+            />
+          ))}
         </mask>
       </defs>
       <g mask={`url(#${id}-frame)`}>

@@ -44,6 +44,7 @@ import {
   revalidateCardPaths,
 } from "@/lib/cards/revalidate";
 import { normalizeManaCost } from "@/lib/cards/mana-order";
+import { applyFrameAnatomyPatch, newCardFrameStyle, normalizeAnatomy } from "@/lib/cards/anatomy";
 import { PIPGLYPH_ROSE_WATERMARK, usesDefaultWatermark } from "@/lib/cards/watermark";
 import {
   VISIBILITY_VALUES,
@@ -400,7 +401,11 @@ export async function createCardAction(
     artist_credit: data.artist_credit ?? null,
     art_url: media.art_url ?? null,
     art_position: data.art_position ?? {},
-    frame_style: data.frame_style ?? {},
+    // The anatomy switches (TODO 4.6.0, owner rule 2026-09-29): a new card
+    // gets every piece its template draws unless the payload says otherwise
+    // (the AI jobs name none; an import of a crownless printing says false),
+    // and never a switch its template can't draw (lib/cards/anatomy.ts).
+    frame_style: newCardFrameStyle(data.frame_style ?? {}),
     // No art or a frame preview → private (storedVisibility, above).
     visibility: storedVisibility,
     // Only a preview names the column, so an ordinary save never depends on
@@ -665,7 +670,32 @@ export async function updateCardAction(
   if (data.artist_credit !== undefined) update.artist_credit = data.artist_credit ?? null;
   if (data.art_url !== undefined) update.art_url = data.art_url ?? null;
   if (data.art_position !== undefined) update.art_position = data.art_position;
-  if (data.frame_style !== undefined) update.frame_style = data.frame_style;
+  if (data.frame_style !== undefined) {
+    // Never a switch the saved template can't draw (lib/cards/anatomy.ts):
+    // a template that gains the piece later must not change this card.
+    update.frame_style = normalizeAnatomy(
+      data.frame_style,
+      data.frame_style.template ??
+        (existing.frame_style as { template?: string } | null)?.template,
+    );
+  }
+  // An edit's switch flip (frame_anatomy — edits never send frame_style):
+  // merged over the stored frame_style, which otherwise stays exactly as
+  // stored, and a confirmed colour pair for a multicolour card.
+  if (data.frame_anatomy !== undefined) {
+    const applied = applyFrameAnatomyPatch(
+      {
+        frameStyle: (update.frame_style ?? existing.frame_style ?? {}) as Record<string, unknown>,
+        colorIdentity: data.color_identity ?? existing.color_identity ?? [],
+      },
+      data.frame_anatomy,
+    );
+    if (!applied.ok) {
+      return { ok: false, fieldErrors: { color_identity: applied.error } };
+    }
+    update.frame_style = applied.frameStyle as CardUpdate["frame_style"];
+    if (applied.colorIdentity) update.color_identity = applied.colorIdentity;
+  }
   if (data.visibility !== undefined) update.visibility = data.visibility;
   // No artwork → no gallery (same rule as create). The EFFECTIVE art is the
   // patched value when present, else what the row already stores — so both

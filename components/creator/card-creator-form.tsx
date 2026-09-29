@@ -133,6 +133,7 @@ import {
   type CardWatermark,
   type ColorIdentity,
   type FaceContent,
+  type FrameStyle,
   type FrameTemplate,
   type GameSystem,
   type Rarity,
@@ -202,9 +203,19 @@ import {
 } from "@/lib/creator/card-fields";
 import { EMPTY_BACK_FACE, type FormValues } from "@/lib/creator/form-types";
 import {
+  frameAnatomyPatchFor,
   hasMeaningfulChange,
   pickRevisablePayload,
 } from "@/lib/creator/revise";
+import {
+  FRAME_ANATOMY_KEYS,
+  frameAnatomyOf,
+  importedAnatomy,
+} from "@/lib/cards/anatomy";
+import {
+  AnatomyPanel,
+  useTwoColorPairFollow,
+} from "@/components/creator/panels/anatomy-panel";
 import { cardFormSchema } from "@/lib/creator/form-schema";
 import type { PipOverrides } from "@/lib/pips/override";
 import type { Challenge } from "@/lib/challenges/shared";
@@ -706,6 +717,10 @@ export function CardCreatorForm({
   // We feed it the same defaults useForm has, so RHF always populates every
   // field; the cast just lifts useWatch's DeepPartial<> back to FormValues.
   const watched = useWatch({ control, defaultValue: defaults }) as FormValues;
+  // A new card's colour pair follows its cost on a template that draws the
+  // two-colour frame (TODO 4.6b; a no-op until one does) — until the user
+  // picks the pair by hand. A stored card's edit never re-colours.
+  const markPairTouched = useTwoColorPairFollow({ control, setValue }, mode !== "edit");
 
   // The Adventure frame repurposes the back-face content as the adventure spell
   // (rendered inline on the card's left page, not as a flippable face), so the
@@ -1299,6 +1314,10 @@ export function CardCreatorForm({
       setPendingKindPlan(plan);
     }
   };
+  /** True when the card's current frame draws the two-colour frame (TODO
+   *  4.6b): only there does a two-colour AI or idea identity stay a pair. */
+  const drawsTwoColorFrame = () =>
+    frameAnatomyOf(getValues("frame_style.template")).twoColor.length > 0;
   /** Color chips → keep a pristine basic-land identity in step with the
    *  color (Forest → Mountain when green flips to red; multicolor has no
    *  basic, so the seed clears for the user to name their dual). Inert the
@@ -1379,9 +1398,11 @@ export function CardCreatorForm({
     if (patch.color_identity) {
       setValue(
         "color_identity",
-        // Single-select color model: 2+ colors collapse to multicolor.
+        // Single-select color model: 2+ colors collapse to multicolor —
+        // except a pair, on a frame that draws the two-colour frame.
         normalizeColorSelection(
           Array.from(patch.color_identity) as ColorIdentity[],
+          { keepPair: drawsTwoColorFrame() },
         ),
         { shouldDirty: true },
       );
@@ -1633,12 +1654,28 @@ export function CardCreatorForm({
     setIfPresent("defense", patch.defense);
     setIfPresent("artist_credit", patch.artist_credit);
 
-    if (patch.color_identity) {
+    // The printing's colour — its PAIR where the landed frame draws the
+    // two-colour frame — and, for a new card, its own crown and two-colour
+    // switches (importedAnatomy; "imports follow the printing"). The save
+    // keeps only the switches the frame draws.
+    const imported = importedAnatomy(patch, landedTemplate);
+    const importedColors = isRevise ? patch.color_identity : imported.colorIdentity;
+    if (importedColors) {
       setValue(
         "color_identity",
-        Array.from(patch.color_identity) as ColorIdentity[],
+        Array.from(importedColors) as ColorIdentity[],
         { shouldDirty: true },
       );
+    }
+    if (!isRevise) {
+      for (const key of FRAME_ANATOMY_KEYS) {
+        const value = imported.style[key];
+        if (value !== undefined) {
+          setValue(`frame_style.${key}`, value, { shouldDirty: true });
+        }
+      }
+      // The import's colour is the printing's: the cost no longer re-fills it.
+      markPairTouched();
     }
 
     if (importedArtUrl) {
@@ -1965,7 +2002,7 @@ export function CardCreatorForm({
     if (fill.color_identity && !isRevise) {
       setValue(
         "color_identity",
-        normalizeColorSelection(fill.color_identity),
+        normalizeColorSelection(fill.color_identity, { keepPair: drawsTwoColorFrame() }),
         { shouldDirty: true },
       );
     }
@@ -2379,6 +2416,11 @@ export function CardCreatorForm({
       // Edits never send it (not a revisable key); a flagged card stays
       // private on the server.
       ...(previewSaveNow && !isEdit ? { frame_preview: true } : {}),
+      // An edit's anatomy switches (the legendary crown, the two-colour
+      // frame — TODO 4.6.0): only what changed, merged over the stored
+      // frame_style by the action. A create or remix sends them inside
+      // frame_style.
+      ...(isEdit && card ? { frame_anatomy: frameAnatomyPatchFor(card, values) } : {}),
     };
 
     startTransition(async () => {
@@ -2889,6 +2931,7 @@ export function CardCreatorForm({
                 }}
                 onKindSelect={handleKindSelect}
                 onColorIdentityChange={handleColorIdentityChange}
+                onPairTouched={markPairTouched}
                 landMode={
                   watched.card_type === "land"
                     ? landBasicKey
@@ -2904,6 +2947,11 @@ export function CardCreatorForm({
                 onLandModeChange={handleLandModeChange}
               />
             ) : null}
+            {/* The two-colour frame's switch (TODO 4.6b), under the colour —
+                shown only where the frame draws it. */}
+            {stepKey === "card" ? (
+              <AnatomyPanel which={["twoColor"]} onPairTouched={markPairTouched} />
+            ) : null}
 
             {/* ----- Identity (name + artwork). The inline-layout frames
                 (Adventure/Split/Flip/Aftermath) edit their second face
@@ -2912,6 +2960,19 @@ export function CardCreatorForm({
               <>
                 {isRevise ? <LockedSummary mode={mode} /> : null}
                 <IdentityPanel revise={isRevise} token={kind === "token"} />
+                {/* The printed-details switches (TODO 4.6.0): the crown
+                    beside the Legendary supertype; on an edit or a remix —
+                    whose Card step is locked — the two-colour frame too.
+                    A stored card shows each OFF with a one-line hint. */}
+                <AnatomyPanel
+                  which={isRevise ? ["crown", "twoColor"] : ["crown"]}
+                  stored={
+                    isEdit && card
+                      ? { frameStyle: card.frame_style as FrameStyle | null, colorIdentity: card.color_identity }
+                      : null
+                  }
+                  onPairTouched={markPairTouched}
+                />
                 <ArtPanel
                   userId={userId}
                   importedArtOrigin={importedArtOrigin}

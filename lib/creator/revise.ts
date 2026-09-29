@@ -9,6 +9,13 @@
 
 import type { FormValues } from "@/lib/creator/form-types";
 import { CARD_TITLE_MAX } from "@/lib/validation/card";
+import {
+  FRAME_ANATOMY_KEYS,
+  pairColorIdentity,
+  twoColorPairOf,
+  type FrameAnatomyPatch,
+} from "@/lib/cards/anatomy";
+import type { ColorIdentity } from "@/types/card";
 
 /** Form fields a user may change while editing or remixing. Everything else
  *  is displayed read-only (LockedSummary) and never leaves the client. */
@@ -74,6 +81,13 @@ export const REVISABLE_PAYLOAD_KEYS = [
   "footer_text",
   "visibility",
   "back_face",
+  // The anatomy switches (the legendary crown, the two-colour frame — TODO
+  // 4.6.0): a LOOK the owner switches on per card (owner rule 2026-09-29),
+  // not structure. They travel on their own key so an edit never re-sends
+  // the locked frame_style; the action merges them over the stored one, and
+  // a colour pair only ever refines a multicolour card
+  // (lib/cards/anatomy.ts applyFrameAnatomyPatch).
+  "frame_anatomy",
 ] as const;
 
 export type RevisablePayloadKey = (typeof REVISABLE_PAYLOAD_KEYS)[number];
@@ -108,4 +122,30 @@ export function hasMeaningfulChange(
  *  with. */
 export function remixTitleFor(parentTitle: string): string {
   return `${parentTitle} (remix)`.slice(0, CARD_TITLE_MAX);
+}
+
+/**
+ * An EDIT's anatomy change (the `frame_anatomy` payload key,
+ * updateCardAction): each switch the form sets to a value the stored card
+ * doesn't hold, and — when the owner switched the two-colour frame on for a
+ * stored card with no colour pair — the pair the editor pre-filled and they
+ * confirmed. Undefined when nothing changed, so an ordinary edit sends
+ * nothing and the stored frame_style is left exactly as it is.
+ */
+export function frameAnatomyPatchFor(
+  stored: { frame_style: unknown; color_identity: readonly ColorIdentity[] | null },
+  values: Pick<FormValues, "frame_style" | "color_identity">,
+): FrameAnatomyPatch | undefined {
+  const storedStyle = (stored.frame_style ?? {}) as Record<string, unknown>;
+  const patch: FrameAnatomyPatch = {};
+  for (const key of FRAME_ANATOMY_KEYS) {
+    const next = values.frame_style[key];
+    if (typeof next === "boolean" && next !== storedStyle[key]) patch[key] = next;
+  }
+  const pair = twoColorPairOf(values.color_identity);
+  if (pair && values.frame_style.twoColor === true && !twoColorPairOf(stored.color_identity)) {
+    patch.twoColor = true;
+    patch.pair = pairColorIdentity(pair);
+  }
+  return Object.keys(patch).length > 0 ? patch : undefined;
 }

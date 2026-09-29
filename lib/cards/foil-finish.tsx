@@ -298,6 +298,7 @@ export function FoilSheen({
   height,
   style,
   split = null,
+  overlays = [],
 }: {
   /** Unique per rendered instance (SVG ids are document-global). */
   id: string;
@@ -322,6 +323,11 @@ export function FoilSheen({
    *  each wing's sheen follows its own colour (as EtchedSheen does). Never
    *  with `region`: plates stay on the gold "m" key. */
   split?: { href: string; atPct: number } | null;
+  /** The face's anatomy overlays (the crown band, TODO 4.6.0): each image
+   *  over its card-% rect, added to the mask after the frame — what the face
+   *  shows there — so the crown sparkles like the frame it is drawn over.
+   *  Never with `region`. Empty = the mask is exactly as before. */
+  overlays?: readonly { href: string; rect: Rect }[];
 }) {
   const { vw, vh } = cardSpace(landscape);
   const seamX = split && !region ? (vw * split.atPct) / 100 : null;
@@ -415,6 +421,22 @@ export function FoilSheen({
               <image href={split.href} x={view.x} y={view.y} width={view.width} height={view.height} preserveAspectRatio="none" />
             </g>
           ) : null}
+          {region
+            ? null
+            : overlays.map((overlay, i) => {
+                const box = pct(overlay.rect);
+                return (
+                  <image
+                    key={`overlay${i}`}
+                    href={overlay.href}
+                    x={r2(box.x)}
+                    y={r2(box.y)}
+                    width={r2(box.width)}
+                    height={r2(box.height)}
+                    preserveAspectRatio="none"
+                  />
+                );
+              })}
         </mask>
       </defs>
       {sheenPaint(id, view)}

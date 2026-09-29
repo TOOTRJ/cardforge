@@ -293,8 +293,55 @@ export type TwoColorSplit = {
   atPct: number;
 };
 
+/** How a two-colour card's frame prints (TODO 4.6b; lib/cards/anatomy.ts
+ *  twoColorDressOf): "split" — the gold frame with a split pinline and text
+ *  box, the printed look of any two-colour cost; "hybrid" — the split outer
+ *  frame with grey bars, when every coloured pip is a two-colour hybrid (or
+ *  a nonland has no coloured pip). */
+export type TwoColorDress = "split" | "hybrid";
+
+/** A piece of printed anatomy drawn OVER the frame master (TODO 4.6.0): the
+ *  legendary crown band (4.6a). One image per key, stretched over `rect`,
+ *  right after the frame master in both renderers and inside both finish
+ *  masks (lib/cards/anatomy.ts resolveFrameOverlays). Code-owned: never part
+ *  of the override schema. Set only on a PROFILES entry, never on a base
+ *  another profile spreads (M15 is spread by 11 profiles, M15LAND by
+ *  m15snowland), so a template gains an overlay only on purpose. */
+export type FrameOverlaySlot = {
+  /** The per-card switch that turns it on (FrameStyle[anatomy] === true),
+   *  and the rule that decides whether the card qualifies (the crown: a
+   *  Legendary card that is not a planeswalker, token or battle). */
+  anatomy: "crown";
+  /** Where the image is stretched, in card percent. */
+  rect: Rect;
+  /** The image per key: `{key}` → the key, e.g. "/frames/m15crown/{key}.png"
+   *  (a frames-bucket path, like the masters). */
+  assetPathTemplate: string;
+  /** Every key the slot publishes. A card whose key is not listed draws no
+   *  overlay — never a stand-in ("c" was the masters' old fallback, which
+   *  would crown a land in the Eldrazi colourless band). */
+  keys: readonly string[];
+  /** The frame colour key → the slot's key where they differ: the crown of
+   *  a colourless artifact is the artifact silver ("c" → "a" on
+   *  m15artifact), a colourless land's the land grey ("c" → "l" on
+   *  m15land). */
+  keyMap?: Readonly<Record<string, string>>;
+};
+
 export type FrameProfile = {
   label: string;
+  /** Printed anatomy drawn over the frame master — see FrameOverlaySlot.
+   *  Opt-in per card (FrameStyle.crown), so declaring one never changes a
+   *  stored card. Code-owned. */
+  overlays?: readonly FrameOverlaySlot[];
+  /** The two-colour dresses this template has pair masters for (TODO 4.6b):
+   *  `<template>/<pair>.png` for "split", `<template>/<pair>-h.png` for
+   *  "hybrid" (TWO_COLOR_MASTER_KEYS). A card with a stored colour pair and
+   *  FrameStyle.twoColor === true paints its dress's pair master instead of
+   *  the gold "m" (lib/cards/anatomy.ts resolveTwoColor). Unrelated to
+   *  `twoColorSplit` (Dragon Wing's older two-halves rule, which reads the
+   *  pair with no switch). Code-owned; set only on PROFILES entries. */
+  twoColorMasters?: readonly TwoColorDress[];
   /** Two-colour cards draw the frame SPLIT down a hard vertical seam — the
    *  first colour's PNG left of `atPct`, the second's right of it, in printed
    *  pair order (twoColorFrameKeys: WU WB UB UR BR BG RG RW GW GU) — instead

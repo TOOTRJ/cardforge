@@ -17,6 +17,7 @@ import {
   normalizeColorSelection,
 } from "@/lib/creator/card-fields";
 import { pickFrameColorKey } from "@/components/cards/frame-layer";
+import { frameAnatomyOf } from "@/lib/cards/anatomy";
 import type { FormValues } from "@/lib/creator/form-types";
 import type { PipOverrides } from "@/lib/pips/override";
 
@@ -47,9 +48,13 @@ export function PipsPanel({
 
   // Colors the cost implies. The color model is single-select (2+ colors =
   // the multicolor frame), so "mismatch" means the cost's FRAME differs from
-  // the current one — a WU cost on the multicolor frame already matches.
+  // the current one — a WU cost on the multicolor frame already matches (a
+  // pair and "multicolor" are the same "m" frame key). On a frame that draws
+  // the two-colour frame (TODO 4.6b) "Switch" picks the cost's pair.
   const derived = deriveColorIdentity(cost);
-  const target = normalizeColorSelection(derived);
+  const target = normalizeColorSelection(derived, {
+    keepPair: frameAnatomyOf(frameTemplate).twoColor.length > 0,
+  });
   const framesDiffer =
     derived.length > 0 &&
     pickFrameColorKey(target) !== pickFrameColorKey(colorIdentity);

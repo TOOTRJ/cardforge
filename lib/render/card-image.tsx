@@ -114,11 +114,17 @@ import {
 import {
   getFrameAssetDataUrl,
   getFrameDataUrl,
+  getFrameOverlayDataUrl,
   getPlateDataUrlForPath,
   plateAssetPath,
   preloadFrame,
   preloadFrameAssets,
 } from "@/lib/render/card-frames";
+import {
+  plateKeyFor,
+  resolveFrameOverlays,
+  resolveTwoColor,
+} from "@/lib/cards/anatomy";
 import {
   BRAND_MARK_PILL,
   bandTextStyle,
@@ -227,6 +233,22 @@ function fontFamilyFor(font: TextSlot["font"]): string {
 // Geometry helpers — shared shape with the live preview's rectStyle(), but
 // font sizes resolve to px against the known card width.
 // ---------------------------------------------------------------------------
+
+/** The facts one card's anatomy depends on (lib/cards/anatomy.ts) — the
+ *  preview's face fields. */
+function anatomyFactsOf(card: CardPreviewData) {
+  return {
+    colors: card.colorIdentity as ColorIdentity[] | undefined,
+    cost: card.cost,
+    cardType: card.cardType,
+    supertype: card.supertype,
+  };
+}
+
+/** The overlays a finish masks with: the ones the card actually drew. */
+function drawnOverlays(overlays: readonly { href: string | null; rect: Rect }[]): { href: string; rect: Rect }[] {
+  return overlays.flatMap((overlay) => (overlay.href ? [{ href: overlay.href, rect: overlay.rect }] : []));
+}
 
 function slotBox(rect: Rect) {
   return {
@@ -384,6 +406,14 @@ function CardImage({
     layout,
     card.colorIdentity as ColorIdentity[] | undefined,
     card,
+    card.frameStyle,
+  );
+  // The two-colour look's stat plate and the anatomy overlays (the crown
+  // band) — the preview's twins (lib/cards/anatomy.ts). Nothing until a
+  // profile declares pair masters / an overlay and the card's switch is on.
+  const plateKey = plateKeyFor(colorKey, resolveTwoColor(layout, card.frameStyle, anatomyFactsOf(card)));
+  const overlays = resolveFrameOverlays(layout, card.frameStyle, { ...anatomyFactsOf(card), colorKey }).map(
+    (overlay) => ({ ...overlay, href: getFrameOverlayDataUrl(overlay.path) }),
   );
   // A two-colour Dragon Wing card draws BOTH colours' frames split down the
   // seam (FrameProfile.twoColorSplit); the plates keep colorKey ("m").
@@ -751,6 +781,22 @@ function CardImage({
         <FrameSlice src={splitDataUrl} x0={splitX} x1={width} width={width} height={height} />
       ) : null}
 
+      {/* Anatomy overlays (the legendary crown band, TODO 4.6.0) — right
+          after the frame, before the finishes and every text layer: the
+          preview's FrameOverlayLayer twin. Sibling <img>s, never a
+          Fragment; none at all when the card draws none. */}
+      {overlays.map((overlay) =>
+        overlay.href ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            key={`${overlay.anatomy}-${overlay.key}`}
+            src={overlay.href}
+            alt=""
+            style={{ ...slotBox(overlay.rect), objectFit: "fill", zIndex: 5 }}
+          />
+        ) : null,
+      )}
+
       {/* Premium finish: etched — a fine cross-hatch + sheen on the FRAME
           only (masked by the frame's own luminance), directly above the
           frame so every text/stat layer stays crisp on top of it. The SAME
@@ -768,6 +814,7 @@ function CardImage({
               ? { href: splitDataUrl, atPct: frameSplit.atPct }
               : null
           }
+          overlays={drawnOverlays(overlays)}
           landscape={layout.orientation === "landscape"}
           width={width}
           height={height}
@@ -797,6 +844,7 @@ function CardImage({
             secondArt: secondArtSlot && secondArtUrl ? (foilArt?.secondArt ?? null) : null,
             secondArtPosition: secondArtPos,
           })}
+          overlays={drawnOverlays(overlays)}
           landscape={layout.orientation === "landscape"}
           width={width}
           height={height}
@@ -1077,7 +1125,7 @@ function CardImage({
         ? StatBake({
             slot: layout.pt,
             value: ptValue(card.power, card.toughness),
-            colorKey,
+            colorKey: plateKey,
             masterKey,
             cardWidth: width,
             orientation: orientationFromAspect(aspect),
@@ -1088,7 +1136,7 @@ function CardImage({
         ? StatBake({
             slot: layout.loyalty,
             value: String(card.loyalty ?? "—"),
-            colorKey,
+            colorKey: plateKey,
             masterKey,
             cardWidth: width,
             orientation: orientationFromAspect(aspect),
@@ -1099,7 +1147,7 @@ function CardImage({
         ? StatBake({
             slot: layout.defense,
             value: String(card.defense ?? "—"),
-            colorKey,
+            colorKey: plateKey,
             masterKey,
             cardWidth: width,
             orientation: orientationFromAspect(aspect),
@@ -2940,7 +2988,7 @@ export function squareCornerFillsOf(card: CardPreviewData): CardCornerFills {
   const layout = resolveFrameProfile(template, card.profileOverrides);
   const colors = card.colorIdentity as ColorIdentity[] | undefined;
   const split = frameSplitFor(layout, colors);
-  const key = frameMasterKey(layout, colors, card);
+  const key = frameMasterKey(layout, colors, card, card.frameStyle);
   return squareCornerFills(template, layout.artSlot, {
     left: split?.leftKey ?? key,
     right: split?.rightKey ?? key,
@@ -2995,11 +3043,17 @@ export function frameAssetPathsFor(card: CardPreviewData): string[] {
   const colorKey = pickFrameColorKey(
     card.colorIdentity as ColorIdentity[] | undefined,
   );
+  // The plate key the card paints (plateKeyFor — a hybrid pair's grey "c")
+  // and its anatomy overlays (the crown band), as CardImage resolves them.
+  const plateKey = plateKeyFor(colorKey, resolveTwoColor(layout, card.frameStyle, anatomyFactsOf(card)));
   const paths: string[] = [];
   for (const slot of [layout.pt, layout.loyalty, layout.defense]) {
     if (slot?.plateAssetPathTemplate) {
-      paths.push(plateAssetPath(slot.plateAssetPathTemplate, colorKey));
+      paths.push(plateAssetPath(slot.plateAssetPathTemplate, plateKey));
     }
+  }
+  for (const overlay of resolveFrameOverlays(layout, card.frameStyle, { ...anatomyFactsOf(card), colorKey })) {
+    paths.push(overlay.path);
   }
   if (layout.loyaltyRows && showsLoyalty(card.cardType) && !layout.textless) {
     for (const ability of resolveLoyaltyRows(card.faceContent, card.rulesText)) {
@@ -3047,7 +3101,7 @@ export async function renderCardImage(
   // also needs its art's mask copies (foilMaskSource, sharp).
   const frameTemplate = normalizeFrameTemplate(card.frameStyle?.template);
   const frameLayout = resolveFrameProfile(frameTemplate, card.profileOverrides);
-  const frameKeys = frameColorKeysFor(frameLayout, card.colorIdentity as ColorIdentity[] | undefined, card);
+  const frameKeys = frameColorKeysFor(frameLayout, card.colorIdentity as ColorIdentity[] | undefined, card, card.frameStyle);
   const [, , foilArt, foilSecondArt, secondArtSize] = await Promise.all([
     Promise.all(frameKeys.map((key) => preloadFrame(frameTemplate, key))),
     preloadFrameAssets(frameAssetPathsFor(card)),

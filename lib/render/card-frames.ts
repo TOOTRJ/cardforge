@@ -1,6 +1,6 @@
 import "server-only";
 import { DEFAULT_FRAME_TEMPLATE } from "@/types/card";
-import { FRAME_MASTER_KEYS } from "@/lib/cards/frame-reference-registry";
+import { FRAME_MASTER_KEYS, FRAME_PLATE_KEYS } from "@/lib/cards/frame-reference-registry";
 
 import { createHash } from "node:crypto";
 import fs from "node:fs";
@@ -316,7 +316,7 @@ export async function preloadFrameAssets(publicPaths: Iterable<string>): Promise
  * fallback so the sync getter never has to fetch.
  */
 export async function preloadFrame(template: string, colorKey: string): Promise<void> {
-  const key = normalizeColor(colorKey);
+  const key = normalizeMasterKey(colorKey);
   const primaryRel = relPath(frameAssetPath(template, key));
   const primary = await loadAsync(primaryRel);
   if (primary !== null) return;
@@ -335,22 +335,40 @@ export async function preloadFrame(template: string, colorKey: string): Promise<
 // Paths
 // ---------------------------------------------------------------------------
 
-/** A frame master key (FRAME_MASTER_KEYS: the colour keys plus Alpha's
- *  artifact card "a", frameMasterKey); anything else → "c". */
-function normalizeColor(colorKey: string): string {
+// ONE key list per asset family (TODO 4.6.0, bake/preview key parity). The
+// preview builds its URLs from the key as given (frameImageUrl,
+// resolveColorAsset), so a key this loader doesn't know must never quietly
+// become another file here: a frame master outside FRAME_MASTER_KEYS or a
+// plate outside FRAME_PLATE_KEYS is a bug in the caller and still reads as
+// "c" (as it always did — no stored card has one), and an overlay has no
+// fallback at all (getFrameOverlayDataUrl). tests/unit/render/
+// anatomy-key-parity.test.ts holds every key a profile can produce to the
+// same path in both renderers.
+
+/** A frame master key (FRAME_MASTER_KEYS: the colour keys, Alpha's artifact
+ *  card "a" and the two-colour pair masters — frameMasterKey); anything
+ *  else → "c". */
+function normalizeMasterKey(colorKey: string): string {
   return (FRAME_MASTER_KEYS as readonly string[]).includes(colorKey)
+    ? colorKey
+    : "c";
+}
+
+/** A stat-plate key (FRAME_PLATE_KEYS, plateKeyFor); anything else → "c". */
+function normalizePlateKey(colorKey: string): string {
+  return (FRAME_PLATE_KEYS as readonly string[]).includes(colorKey)
     ? colorKey
     : "c";
 }
 
 /** "/frames/<template>/<color>.png" — the frame master for a template/color. */
 export function frameAssetPath(template: string, colorKey: string): string {
-  return `/frames/${template}/${normalizeColor(colorKey)}.png`;
+  return `/frames/${template}/${normalizeMasterKey(colorKey)}.png`;
 }
 
 /** Resolve a per-color plate template like "/frames/m15/pt/{color}.png". */
 export function plateAssetPath(pathTemplate: string, colorKey: string): string {
-  return `/${relPath(pathTemplate.replace("{color}", normalizeColor(colorKey)))}`;
+  return `/${relPath(pathTemplate.replace("{color}", normalizePlateKey(colorKey)))}`;
 }
 
 function watermarkAssetPath(key: string): string {
@@ -365,7 +383,7 @@ function watermarkAssetPath(key: string): string {
 /** Frame PNG as a data URL. Falls back to the default template, then to a 1×1
  *  transparent pixel, so an unknown/legacy template never throws mid-render. */
 export function getFrameDataUrl(template: string, colorKey: string): string {
-  const key = normalizeColor(colorKey);
+  const key = normalizeMasterKey(colorKey);
   const primaryRel = relPath(frameAssetPath(template, key));
   if (frameManifestEntry(primaryRel)) {
     // Bucket masters are only ever read after preloadFrame, which throws on
@@ -388,6 +406,20 @@ export function getPlateDataUrlForPath(
   colorKey: string,
 ): string | null {
   return loadSync(relPath(plateAssetPath(pathTemplate, colorKey)));
+}
+
+/** An anatomy overlay (FrameProfile.overlays — the crown band, TODO 4.6.0)
+ *  as a data URL, or null when a git asset is absent (the card then draws no
+ *  overlay, logged by the loader). `publicPath` is resolveFrameOverlays'
+ *  path, already checked against the slot's keys: there is no fallback key,
+ *  and a frames-bucket overlay that failed to load throws
+ *  FrameAssetUnavailableError, as a master does (preloadFrameAssets has
+ *  already thrown for it via frameAssetPathsFor). */
+export function getFrameOverlayDataUrl(publicPath: string): string | null {
+  const rel = relPath(publicPath);
+  const loaded = loadSync(rel);
+  if (loaded === null && frameManifestEntry(rel)) throw new FrameAssetUnavailableError([rel]);
+  return loaded;
 }
 
 /** Any other public/frames or frames-bucket asset a profile names (the

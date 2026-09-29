@@ -72,9 +72,14 @@ describe("a saved card's finish in the creator", () => {
       finish: "regular",
       template: "tarkirdragon",
     });
+    // A remix is a NEW card: it also starts with the anatomy switches on
+    // (TODO 4.6.0, owner rule 2026-09-29) — the save keeps only what its
+    // template draws.
     expect(remixValuesFrom(legacy, []).frame_style).toEqual({
       finish: "regular",
       template: "tarkirdragon",
+      crown: true,
+      twoColor: true,
     });
   });
 
