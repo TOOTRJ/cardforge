@@ -234,26 +234,35 @@ test.describe("Scryfall search → import", () => {
       auth: { persistSession: false },
     });
     const withdrawn: Array<{ template: string; color_key: string }> = [];
-    for (const combo of combos) {
-      const { data, error } = await admin
-        .from("frame_reviews")
-        .update({ verified: false })
-        .eq("template", combo.template)
-        .eq("color_key", combo.color_key)
-        .eq("verified", true)
-        .select("template, color_key");
-      if (error) throw new Error(`frame_reviews: ${error.message}`);
-      withdrawn.push(...(data ?? []));
-    }
     try {
+      // Inside the try: a withdrawal that fails part-way still restores the
+      // combos already withdrawn.
+      for (const combo of combos) {
+        const { data, error } = await admin
+          .from("frame_reviews")
+          .update({ verified: false })
+          .eq("template", combo.template)
+          .eq("color_key", combo.color_key)
+          .eq("verified", true)
+          .select("template, color_key");
+        if (error) throw new Error(`frame_reviews: ${error.message}`);
+        withdrawn.push(...(data ?? []));
+      }
       await run();
     } finally {
+      // A failed restore would leave the combo withdrawn for every later
+      // spec: say so rather than let it pass silently.
+      const failed: string[] = [];
       for (const combo of withdrawn) {
-        await admin
+        const { error } = await admin
           .from("frame_reviews")
           .update({ verified: true })
           .eq("template", combo.template)
           .eq("color_key", combo.color_key);
+        if (error) failed.push(`${combo.template}/${combo.color_key}: ${error.message}`);
+      }
+      if (failed.length > 0) {
+        throw new Error(`frame_reviews: couldn't restore ${failed.join("; ")}`);
       }
     }
   }
