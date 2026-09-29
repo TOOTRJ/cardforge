@@ -11,9 +11,11 @@ import type { FrameTemplate } from "@/types/card";
 // the frame signature registry, to its OWN template (exact or nearest) and
 // passes the pin check (validateReferenceForCombo) — except the documented
 // allowlist below. The printings were captured once from Scryfall
-// (/cards/collection, 2026-09-28) and trimmed to the fields the validator and
-// the resolver read (tests/unit/cards/fixtures/reference-printings.json,
-// keyed by Scryfall id); no network in tests.
+// (/cards/collection, 2026-09-28; TODO 4.49's token pins 2026-09-29) and
+// trimmed to the fields the validator and the resolver read
+// (tests/unit/cards/fixtures/reference-printings.json, keyed by Scryfall id;
+// it keeps the M20+ token prints 4.49 moved off the arch frames for 4.48 /
+// 4.50); no network in tests.
 // ---------------------------------------------------------------------------
 
 type Ref = { name: string; set: string; scryfallId: string };
@@ -36,8 +38,6 @@ const ALLOWLIST: Record<string, string> = {
     "verified default; Sarulf's Packmate KHM #192 isn't a snow printing — re-verify against Sculptor of Winter KHM #193",
   "m15devoid/c#0":
     "verified default; no colourless devoid printing exists, so the row is referenced to BFZ's colourless Eldrazi frame (Kozilek's Channeler BFZ #10)",
-  "m15token/c#0":
-    "verified default; the Treasure token XLN #7 prints the ARTIFACT token frame — re-verify against Cadet TFRA #1",
 };
 
 type Row = { combo: string; template: FrameTemplate; colour: string; ref: Ref };
@@ -108,7 +108,10 @@ describe("the pin check reads the signature (TODO 1.4)", () => {
   });
 
   it("warns when the printing's signature resolves to another template", () => {
-    const treasure = card(idOf("m15token", "c", "Treasure"));
+    // The Treasure token XLN #7 — m15token/c's default until TODO 4.49's
+    // re-pin (TBFZ #1 Eldrazi) — prints the ARTIFACT token frame.
+    const treasure = card("720f3e68-84c0-462e-a0d1-90236ccc494a");
+    expect(treasure.name).toBe("Treasure");
     expect(validateReferenceForCombo(treasure, "m15token", "c").warnings.join(" ")).toMatch(
       /frame signature registry resolves it to the Artifact Token frame/,
     );

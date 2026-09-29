@@ -75,11 +75,14 @@ const TEMPLATES = {
         ? `frame:2015 t:snow t:land -t:basic id>=2 -is:showcase -is:fullart`
         : `frame:2015 t:snow t:basic -is:showcase -is:fullart ${identityColor(k)}`,
   },
+  // The 2014–19 arch tokens only (TODO 4.49): M20 (2019-07-12) moved tokens
+  // to the full-art design (4.48 / 4.50). Keep the TEXTLESS prints by eye —
+  // the text-box ones are 4.49 (b)'s m15tokentext / m15tokenartifacttext.
   m15token: {
-    q: (k) => `t:token -t:artifact -t:emblem frame:2015 -is:fullart -is:showcase -set:tunf -set:tund ${spellColor(k)}`,
+    q: (k) => `t:token -t:artifact -t:emblem frame:2015 date<2019-07-12 -is:fullart -is:showcase -set:tunf -set:tund ${spellColor(k)}`,
   },
   m15tokenartifact: {
-    q: (k) => `t:token t:artifact frame:2015 -is:fullart -is:showcase ${spellColor(k)}`,
+    q: (k) => `t:token t:artifact frame:2015 date<2019-07-12 -is:fullart -is:showcase ${spellColor(k)}`,
   },
   m15snow: {
     q: (k) => `frame:2015 frame:snow -t:land -t:token ${STANDARD_EXCLUSIONS} ${spellColor(k)}`,
