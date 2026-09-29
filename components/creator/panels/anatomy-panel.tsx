@@ -17,10 +17,9 @@
 // owner of a stored multicolour card switches the frame on (owner decision
 // 2026-09-29: never derived at render, never a silent re-colour).
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useFormContext, useWatch, type UseFormReturn } from "react-hook-form";
 import { ChipGroup, type ChipOption } from "@/components/ui/chip-group";
-import { FieldGroup } from "@/components/creator/field-group";
 import { cn } from "@/lib/utils";
 import {
   frameAnatomyOf,
@@ -108,10 +107,10 @@ export function useTwoColorPairFollow(
 }
 
 /**
- * The "Two colours" row: pick the two colours of a multicolour card, first
- * colour first. Exactly two picked = the card's pair (color_identity, in
- * printed order); fewer = plain "multicolor" (the gold frame). A third pick
- * replaces the older one.
+ * The "Two colours" row: pick the two colours of a multicolour card. Exactly
+ * two picked = the card's pair (color_identity, in printed order); fewer =
+ * plain "multicolor" (the gold frame) — the one colour picked so far waits
+ * here for the second. A third pick is ignored: take one off first.
  */
 export function TwoColorPairRow({
   pair,
@@ -122,7 +121,22 @@ export function TwoColorPairRow({
   onChange: (next: TwoColorPair | null) => void;
   help?: string;
 }) {
-  const selected: PairColor[] = pair ? (pairColorIdentity(pair) as PairColor[]) : [];
+  const [pending, setPending] = useState<PairColor | null>(null);
+  const selected: PairColor[] = pair
+    ? (pairColorIdentity(pair) as PairColor[])
+    : pending
+      ? [pending]
+      : [];
+  const pick = (next: PairColor[]) => {
+    if (next.length > 2) return;
+    if (next.length === 2) {
+      setPending(null);
+      onChange(twoColorPairOf(next));
+      return;
+    }
+    setPending(next[0] ?? null);
+    if (pair) onChange(null);
+  };
   const options: ChipOption<PairColor>[] = PAIR_COLORS.map((color) => ({ value: color, label: color }));
   return (
     <div className="flex flex-col gap-2" data-testid="two-colour-row">
@@ -133,7 +147,7 @@ export function TwoColorPairRow({
         layout="wrap"
         size="sm"
         value={selected}
-        onChange={(next) => onChange(twoColorPairOf(next.slice(-2)))}
+        onChange={pick}
         options={options}
       />
       <p className="text-[11px] leading-4 text-subtle">
@@ -255,7 +269,12 @@ export function AnatomyPanel({
   const pairEditable = !editing || twoColorPairOf(stored?.colorIdentity) === null;
 
   return (
-    <FieldGroup label="Printed details" helper="Pieces of the printed frame, each on its own switch.">
+    // A group, not a FieldGroup: that is a <label>, which would name every
+    // switch and chip inside it with its caption.
+    <div role="group" aria-labelledby="anatomy-panel-heading" className="flex flex-col gap-1.5" data-testid="anatomy-panel">
+      <span id="anatomy-panel-heading" className="text-xs font-semibold uppercase tracking-wider text-subtle">
+        Printed details
+      </span>
       <div className="flex flex-col gap-3">
         {showCrown ? (
           <SwitchRow
@@ -297,7 +316,7 @@ export function AnatomyPanel({
           </SwitchRow>
         ) : null}
       </div>
-    </FieldGroup>
+    </div>
   );
 }
 
