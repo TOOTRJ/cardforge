@@ -6,7 +6,7 @@
     "pack": "packEmblem.js 'Planeswalker Emblems'",
     "converter": "scripts/import-cc-frames.mjs",
     "output": "1500x2100, corners rounded to 64.5px, webp q90",
-    "transforms": "native 1500x2100, pixels copied 1:1 (no resample) but for the name pill's body: rows 111–210, the pixels 4-connected to (750, 160) with luma ≥ 30 (inside the pill's dark outline), colour multiplied by a gain piecewise-linear in the distance from x 749.5 (0.8 at 0, 0.6 at 100, 0.64 at 200, 0.54 at 300, 0.52 at 400, 0.58 at 500, 0.66 at 600, 0.83 at 700 px) and made opaque; corners rounded to the importer radius",
+    "transforms": "native 1500x2100, pixels copied 1:1 (no resample) but for two touches: the spark's centre ray (columns 732–767) holds its shadow's row 239 down to 250 and fades out 11 px lower (rows 240–246 moved down 11), so the ray is shadowed down to the art window's top; the name pill's body (rows 111–210, the pixels 4-connected to (750, 160) with luma ≥ 30, inside the pill's dark outline) has its colour multiplied by a gain piecewise-linear in the distance from x 749.5 (0.8 at 0, 0.6 at 100, 0.64 at 200, 0.54 at 300, 0.52 at 400, 0.58 at 500, 0.66 at 600, 0.83 at 700 px) and is made opaque; corners rounded to the importer radius",
     "colors": {
       "w": [
         "img/frames/token/emblem/frame.png"
@@ -29,6 +29,15 @@
       "m": [
         "img/frames/token/emblem/frame.png"
       ]
+    },
+    "recut": {
+      "fromY": 240,
+      "toY": 247,
+      "shift": 11,
+      "blend": 0,
+      "x0": 732,
+      "x1": 768,
+      "fill": "hold"
     },
     "tone": {
       "seed": {
@@ -81,7 +90,8 @@
       "source: CC 'Planeswalker Emblems' (packEmblem.js), the M20 design: the source's name in the dark title bar, a silver frame with the art in a planeswalker-spark cut-out, a type bar reading \"Emblem\", a light text box (TFDN #24 / #25, TBLB #30, TDSK #17, TFRA #16)",
       "every colour key = the same silver master (CR 114: an emblem is colourless; the emblem kind forces c). w/u/b/r/g/m are built so each key has a master and are never offered",
       "the spark's tail through the type bar and the text box is CC's own 80 % white (alpha 204) over the art, as the prints show the art faintly there",
-      "the name pill's body is toned onto the prints (EMBLEM_NAME_PILL_TONE): CC's pack draws frame.png alone, and its pill is a light gradient (median luma 90 over the name band) where the six M20-design prints print a dark one (52); the gain by distance from the pill's centre is a least-squares fit on the prints, and the body is made opaque as printed"
+      "the name pill's body is toned onto the prints (EMBLEM_NAME_PILL_TONE): CC's pack draws frame.png alone, and its pill is a light gradient (median luma 90 over the name band) where the six M20-design prints print a dark one (52); the gain by distance from the pill's centre is a least-squares fit on the prints, and the body is made opaque as printed",
+      "the spark's centre ray keeps CC's black shadow down to the art window's top (EMBLEM_RAY_SHADOW_RECUT): the window is Scryfall's art_crop box at the prints' scale (from 250.4 px), and the ray's clear rows above it (245–250) showed the under-frame layer at another scale"
     ]
   },
   "fullartland": {

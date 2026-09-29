@@ -72,6 +72,15 @@ describe("the emblem master's name pill (TODO 4.52, owner evidence 2026-09-29)",
     expect(median(band(data, info.width, 140, 180, 400, 1100))).toBeLessThan(60);
   });
 
+  // The art window starts at 250.4 px (Scryfall's art_crop at the prints'
+  // scale); above it, the spark's centre ray is shadowed, never clear.
+  it("shadows the spark's centre ray down to the art window, and clears it below", async () => {
+    const { data, info } = await sharp(files[0].file!).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const alpha = (x: number, y: number) => data[(y * info.width + x) * 4 + 3];
+    for (let y = 235; y <= 250; y += 1) for (const x of [733, 750, 766]) expect(alpha(x, y), `${x},${y}`).toBeGreaterThanOrEqual(180);
+    for (let y = 258; y < 300; y += 1) expect(alpha(750, y), `750,${y}`).toBeLessThan(16);
+  });
+
   it("keeps the pill's top highlight and makes its body opaque, as printed", async () => {
     const { data, info } = await sharp(files[0].file!).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
     // CC's highlight line under the pill's top outline (the prints' is at

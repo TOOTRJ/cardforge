@@ -183,6 +183,23 @@ const BASICS_2022_SYMBOLS = Object.fromEntries(["w", "u", "b", "r", "g", "c"].ma
 const EMBLEM = "img/frames/token/emblem/frame.png";
 
 /**
+ * The emblem's spark ray tip, shadowed down to the art window (owner
+ * evidence 2026-09-29: the art window is Scryfall's art_crop box at the
+ * prints' scale, from 250.4 px). The spark is clear (α < 16) from 245 px,
+ * and the one part of it above the window is the top of its centre ray
+ * (732–767 px across): CC shades it with its own black shadow under the
+ * silver bar — α ~191 over 233–240, fading out over 241–246 — so its clear
+ * rows 245–250 had no art of their own and showed the under-frame layer,
+ * the same picture at CC's tall artBounds (1.55× the window's scale): a
+ * mismatched strip in the tip, white on TFDN #24. The ray's columns hold
+ * the shadow's row 239 down to 250 and fade out over 251–257 (the rows
+ * 240–246 moved down 11), over the art window's own picture; the frame
+ * beside the ray, where the shadow already ends by 245, is untouched.
+ * Native px of the pack (1500 × 2100).
+ */
+export const EMBLEM_RAY_SHADOW_RECUT = { fromY: 240, toY: 247, shift: 11, blend: 0, x0: 732, x1: 768, fill: "hold" };
+
+/**
  * The emblem's name pill, toned onto the prints (owner evidence
  * 2026-09-29: our pill read luma 94–97 against the prints' 54–60, the name's
  * ink included). Why: CC's pack draws frame.png ALONE — packEmblem.js has no
@@ -234,7 +251,8 @@ export const EMBLEM_NAME_PILL_TONE = {
  * into <template>/loyalty/<colour>.png, cropped to `box`.
  * `recut` moves a band of each composite down before the downscale
  * (recutBand; the textless tokens, TOKEN_TEXTLESS_RECUT; the text-box
- * tokens, TOKEN_REGULAR_RECUT).
+ * tokens, TOKEN_REGULAR_RECUT; the emblem's ray shadow, a column window
+ * only, EMBLEM_RAY_SHADOW_RECUT).
  * `tone` multiplies one outlined region of each composite by a gain before
  * the downscale (toneRegion; the emblem's name pill, EMBLEM_NAME_PILL_TONE).
  * `excluded` colours are NOT built: the template keeps its current master
@@ -438,14 +456,16 @@ export const CC_TEMPLATES = {
   // a stray coloured card on the frame still draws it); never offered.
   emblem: {
     colors: perColor(() => [layer(EMBLEM)]),
+    recut: EMBLEM_RAY_SHADOW_RECUT,
     tone: EMBLEM_NAME_PILL_TONE,
     pack: "packEmblem.js 'Planeswalker Emblems'",
-    transforms: toneTransform(EMBLEM_NAME_PILL_TONE),
+    transforms: emblemTransform(EMBLEM_RAY_SHADOW_RECUT, EMBLEM_NAME_PILL_TONE),
     notes: [
       "source: CC 'Planeswalker Emblems' (packEmblem.js), the M20 design: the source's name in the dark title bar, a silver frame with the art in a planeswalker-spark cut-out, a type bar reading \"Emblem\", a light text box (TFDN #24 / #25, TBLB #30, TDSK #17, TFRA #16)",
       "every colour key = the same silver master (CR 114: an emblem is colourless; the emblem kind forces c). w/u/b/r/g/m are built so each key has a master and are never offered",
       "the spark's tail through the type bar and the text box is CC's own 80 % white (alpha 204) over the art, as the prints show the art faintly there",
       "the name pill's body is toned onto the prints (EMBLEM_NAME_PILL_TONE): CC's pack draws frame.png alone, and its pill is a light gradient (median luma 90 over the name band) where the six M20-design prints print a dark one (52); the gain by distance from the pill's centre is a least-squares fit on the prints, and the body is made opaque as printed",
+      "the spark's centre ray keeps CC's black shadow down to the art window's top (EMBLEM_RAY_SHADOW_RECUT): the window is Scryfall's art_crop box at the prints' scale (from 250.4 px), and the ray's clear rows above it (245–250) showed the under-frame layer at another scale",
     ],
   },
 };
@@ -460,10 +480,11 @@ function textlessRecutTransform(r) {
   return `native 1500x2100, no resample; composited in CC's order, then re-cut: rows ${r.fromY}–${r.toY - 1} (the window's straight sides through the type pill's shadow) moved down ${r.shift} px as one piece over the top ${r.shift} rows of the frame texture below them, the rows opened above them filled from the window's sides and cross-faded over ${r.blend} rows, the shadow's last ${r.blendBottom} rows faded into the texture (premultiplied); corners rounded to the importer radius`;
 }
 
-/** How provenance describes the emblem's pill tone (EMBLEM_NAME_PILL_TONE). */
-function toneTransform(t) {
+/** How provenance describes the emblem's two touches (EMBLEM_RAY_SHADOW_RECUT,
+ *  EMBLEM_NAME_PILL_TONE). */
+function emblemTransform(r, t) {
   const gains = t.gain.map(([d, g]) => `${g} at ${d}`).join(", ");
-  return `native 1500x2100, pixels copied 1:1 (no resample) but for the name pill's body: rows ${t.fromY}–${t.toY - 1}, the pixels 4-connected to (${t.seed.x}, ${t.seed.y}) with luma ≥ ${t.minLuma} (inside the pill's dark outline), colour multiplied by a gain piecewise-linear in the distance from x ${t.centreX} (${gains} px) and made opaque; corners rounded to the importer radius`;
+  return `native 1500x2100, pixels copied 1:1 (no resample) but for two touches: the spark's centre ray (columns ${r.x0}–${r.x1 - 1}) holds its shadow's row ${r.fromY - 1} down to ${r.fromY + r.shift - 1} and fades out ${r.shift} px lower (rows ${r.fromY}–${r.toY - 1} moved down ${r.shift}), so the ray is shadowed down to the art window's top; the name pill's body (rows ${t.fromY}–${t.toY - 1}, the pixels 4-connected to (${t.seed.x}, ${t.seed.y}) with luma ≥ ${t.minLuma}, inside the pill's dark outline) has its colour multiplied by a gain piecewise-linear in the distance from x ${t.centreX} (${gains} px) and is made opaque; corners rounded to the importer radius`;
 }
 
 /** Templates deliberately NOT imported yet, and why. */
@@ -520,15 +541,23 @@ export function compositeLayers(images, width, height) {
 
 /**
  * Move a horizontal band of an 8-bit RGBA image down (TOKEN_TEXTLESS_RECUT,
- * TOKEN_REGULAR_RECUT): rows [fromY, toY) land `shift` px lower, the `shift`
- * rows that opens at fromY repeat the rows just above it, and the rows below
- * the moved band keep their place, so the band covers the top `shift` rows
- * of what was below it. Each seam is cross-faded in premultiplied space: the top one over
- * `blend` rows, from the original rows into the repeated ones; the bottom
- * one over `blendBottom` rows (default `blend`; 0 = a hard cut), from the
- * moved rows into the original ones. Returns a new buffer.
+ * TOKEN_REGULAR_RECUT, EMBLEM_RAY_SHADOW_RECUT): rows [fromY, toY) land
+ * `shift` px lower, the `shift` rows that opens at fromY repeat the rows
+ * just above it (`fill: "repeat"`, the default) or hold the one row above
+ * it (`fill: "hold"`: row fromY − 1, stretched), and the rows below the
+ * moved band keep their place, so the band covers the top `shift` rows of
+ * what was below it. Only columns [x0, x1) move (default: every column).
+ * Each seam is cross-faded in premultiplied space: the top one over `blend`
+ * rows, from the original rows into the repeated ones; the bottom one over
+ * `blendBottom` rows (default `blend`; 0 = a hard cut), from the moved rows
+ * into the original ones. Returns a new buffer.
  */
-export function recutBand(buf, width, height, { fromY, toY, shift, blend, blendBottom = blend }) {
+export function recutBand(
+  buf,
+  width,
+  height,
+  { fromY, toY, shift, blend, blendBottom = blend, x0 = 0, x1 = width, fill = "repeat" },
+) {
   if (
     !(shift > 0) ||
     !(fromY >= shift) ||
@@ -536,15 +565,17 @@ export function recutBand(buf, width, height, { fromY, toY, shift, blend, blendB
     toY + shift > height ||
     !(blend >= 0) ||
     !(blendBottom >= 0) ||
-    fromY + blend > toY + shift - blendBottom
+    fromY + blend > toY + shift - blendBottom ||
+    !(x0 >= 0 && x1 > x0 && x1 <= width) ||
+    (fill !== "repeat" && fill !== "hold")
   ) {
-    throw new Error(`recutBand: bad band ${JSON.stringify({ fromY, toY, shift, blend, blendBottom, height })}`);
+    throw new Error(`recutBand: bad band ${JSON.stringify({ fromY, toY, shift, blend, blendBottom, x0, x1, fill, width, height })}`);
   }
   const out = Buffer.from(buf);
   const row = width * 4;
   const mix = (y, a, b, t) => {
     // premultiplied lerp of row a (weight 1 − t) and row b (weight t) into y
-    for (let x = 0; x < width; x += 1) {
+    for (let x = x0; x < x1; x += 1) {
       const ia = a * row + x * 4;
       const ib = b * row + x * 4;
       const o = y * row + x * 4;
@@ -558,10 +589,12 @@ export function recutBand(buf, width, height, { fromY, toY, shift, blend, blendB
     }
   };
   for (let y = fromY; y < toY + shift; y += 1) {
-    const src = y - shift;
+    // The row this one takes: the band's own, `shift` rows up — or, for a
+    // held fill, the row above the band throughout the opened rows.
+    const src = fill === "hold" && y < fromY + shift ? fromY - 1 : y - shift;
     if (y < fromY + blend) mix(y, y, src, (y - fromY + 1) / (blend + 1));
     else if (y >= toY + shift - blendBottom) mix(y, src, y, (y - (toY + shift - blendBottom) + 1) / (blendBottom + 1));
-    else buf.copy(out, y * row, src * row, (src + 1) * row);
+    else buf.copy(out, y * row + x0 * 4, src * row + x0 * 4, src * row + x1 * 4);
   }
   return out;
 }

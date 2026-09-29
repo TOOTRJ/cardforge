@@ -142,17 +142,18 @@ describe("CardPreview — the emblem frame (TODO 4.52)", () => {
     expect(slot.x1).toBeCloseTo(crop.x + crop.width, 6);
     expect(slot.y1).toBeCloseTo(crop.y + crop.height, 6);
     // It covers the master's clear spark (215–1284 px across, down to the
-    // type bar's outline at 1407) but for the top of its centre ray, above
-    // the crop: CC's glow cap (α ~190 from 233 px) and the clear rows
-    // 245–250, which the under-frame layer fills.
-    expect(slot.y0).toBeGreaterThan(245);
+    // type bar's outline at 1407): the top of its centre ray, above the
+    // crop, keeps CC's shadow down to 250 px in the master (the recipe's
+    // EMBLEM_RAY_SHADOW_RECUT; tests/unit/frames/emblem-master.test.ts).
+    expect(slot.y0).toBeGreaterThan(250);
     expect(slot.y0).toBeLessThan(251);
     expect(slot.y1).toBeGreaterThanOrEqual(1407);
     expect(slot.x0).toBeLessThanOrEqual(215);
     expect(slot.x1).toBeGreaterThanOrEqual(1285);
-    // CC's artBounds is the layer under the whole frame: it takes the ray's
-    // top, and the tail (α 204) shows the art faintly down to 1896 px, as
-    // the prints do.
+    // CC's artBounds is the layer under the whole frame (the see-through
+    // master's art-window rule, 7.6, holds it to every translucent pixel):
+    // the tail (α 204) shows the art faintly down to 1896 px, as the prints
+    // do.
     expect(EMBLEM.underFrameArt).toEqual({ rect: { topPct: 4.96, leftPct: 14.2, widthPct: 71.6, heightPct: 85.48 } });
     const under = px(EMBLEM.underFrameArt!.rect);
     expect(under.y0).toBeLessThanOrEqual(233);

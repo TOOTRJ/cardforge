@@ -1477,8 +1477,8 @@ export const EMBLEM_SCRYFALL_CROP_PX = { x: 146.2, y: 250.4, width: 1215.7, heig
 /** The art window: that box exactly, so the art_crop an import brings is
  *  drawn at the print's own scale and place (owner evidence 2026-09-29: the
  *  box grown up to 232 px, 1.6 % taller and wider, drew the art 1.6–1.8 %
- *  larger than the prints; the registration's best fit now sits at scale
- *  1). */
+ *  larger than the prints; the registration's best fit is now 1.002 — the
+ *  744 × 1040 scan's own 0.16 % stretch). */
 const EMBLEM_ART_SLOT: Rect = {
   topPct: (EMBLEM_SCRYFALL_CROP_PX.y / 2100) * 100,
   leftPct: (EMBLEM_SCRYFALL_CROP_PX.x / 1500) * 100,
@@ -1502,13 +1502,14 @@ const EMBLEM: FrameProfile = {
   // scans of TFDN #24 / #25 and TDSK #17, matched pixel for pixel at scale
   // 1: 146 / 250 px, 1216 × 1163 at HD), so an imported emblem's art lands
   // where it printed, at its printed size. The spark's clear cut-out is
-  // inside it but for the top of its centre ray (731–768 px across): CC's
-  // glow cap there (233–244 px: α ~190, fading out from 241) and its clear
-  // rows 245–250 sit above the crop — an art_crop has no pixels there — and
-  // show the under-frame layer, like the tail. CC's artBounds (14.2 / 4.96 / 71.6 ×
-  // 85.48 — a tall box, which blew a landscape art up ~2.3× past the
-  // prints') is that layer: the spark's tail runs on through the type bar
-  // and the box as CC's 80 % white (α 204) to 1896 px, and the art shows
+  // inside it: the top of its centre ray (732–767 px across), which CC left
+  // clear from 245 px — above the crop, where an art_crop has no pixels —
+  // keeps CC's black shadow (α ~191) down to 250 px in the master
+  // (scripts/lib/cc-frames.mjs EMBLEM_RAY_SHADOW_RECUT), so no second
+  // picture shows there. CC's artBounds (14.2 / 4.96 / 71.6 × 85.48 — a
+  // tall box, which blew a landscape art up ~2.3× past the prints') is the
+  // under-frame layer: the spark's tail runs on through the type bar and
+  // the box as CC's 80 % white (α 204) to 1896 px, and the art shows
   // faintly there, as on the prints.
   artSlot: EMBLEM_ART_SLOT,
   underFrameArt: { rect: { topPct: 4.96, leftPct: 14.2, widthPct: 71.6, heightPct: 85.48 } },

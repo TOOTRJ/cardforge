@@ -8,6 +8,7 @@ import {
   COLORS,
   CORNER_RADIUS,
   EMBLEM_NAME_PILL_TONE,
+  EMBLEM_RAY_SHADOW_RECUT,
   SHIELD_BOX,
   TOKEN_REGULAR_RECUT,
   TOKEN_TEXTLESS_RECUT,
@@ -44,7 +45,16 @@ type Def = {
   plates?: Record<string, string>;
   symbols?: Record<string, string>;
   shield?: { mask: string; box: typeof SHIELD_BOX };
-  recut?: { fromY: number; toY: number; shift: number; blend: number; blendBottom?: number };
+  recut?: {
+    fromY: number;
+    toY: number;
+    shift: number;
+    blend: number;
+    blendBottom?: number;
+    x0?: number;
+    x1?: number;
+    fill?: "repeat" | "hold";
+  };
   tone?: typeof EMBLEM_NAME_PILL_TONE;
   excluded?: Record<string, string>;
   pack?: string;
@@ -113,9 +123,10 @@ describe("Card Conjurer recipe", () => {
   // re-cut (its bars, box and spark sit within 3 px of TFDN #24 / #25, TBLB
   // #30, TDSK #17, TFRA #16) — for every colour key: an emblem is colourless
   // (CR 114) and each key keeps a master.
-  it("builds the emblem from CC's one emblem master, the same file for every key, no re-cut (TODO 4.52)", () => {
+  it("builds the emblem from CC's one emblem master, the same file for every key (TODO 4.52)", () => {
     const def = templates.emblem;
-    expect(def.recut).toBeUndefined();
+    // Its only re-cut is the spark ray's shadow, below.
+    expect(def.recut).toBe(EMBLEM_RAY_SHADOW_RECUT);
     expect(def.plates).toBeUndefined();
     expect(def.pack).toBe("packEmblem.js 'Planeswalker Emblems'");
     for (const k of COLORS) {
@@ -140,11 +151,26 @@ describe("Card Conjurer recipe", () => {
       expect(g).toBeGreaterThan(0.5);
       expect(g).toBeLessThan(0.85);
     }
-    expect(def.transforms).toMatch(/but for the name pill's body: rows 111–210/);
+    expect(def.transforms).toMatch(/the name pill's body \(rows 111–210/);
     expect(def.notes.some((n) => /name pill's body is toned onto the prints/.test(n))).toBe(true);
     // No other template tones anything.
     for (const [template, other] of Object.entries(templates)) {
       if (template !== "emblem") expect(other.tone, template).toBeUndefined();
+    }
+  });
+
+  // The art window is Scryfall's art_crop box at the prints' scale (from
+  // 250.4 px): the spark's centre ray was clear from 245, and those rows
+  // showed the under-frame layer (the same picture at 1.55× the scale).
+  it("holds the spark ray's shadow down to the art window's top, in the ray's columns only (4.52)", () => {
+    expect(EMBLEM_RAY_SHADOW_RECUT).toEqual({ fromY: 240, toY: 247, shift: 11, blend: 0, x0: 732, x1: 768, fill: "hold" });
+    const r = EMBLEM_RAY_SHADOW_RECUT;
+    // The held rows end at 250 (the window starts at 250.4); the fade lands
+    // on the window's own picture.
+    expect(r.fromY + r.shift - 1).toBe(250);
+    expect(templates.emblem.transforms).toMatch(/the spark's centre ray \(columns 732–767\) holds its shadow's row 239 down to 250/);
+    for (const [template, other] of Object.entries(templates)) {
+      if (template !== "emblem") expect(other.recut?.fill ?? "repeat", template).toBe("repeat");
     }
   });
 
@@ -169,10 +195,12 @@ describe("Card Conjurer recipe", () => {
       expect(def.transforms).toMatch(/each seam cross-faded over 24 rows/);
     }
     // No other template is re-cut by this band: the textless tokens have
-    // their own (TOKEN_TEXTLESS_RECUT, the next test), the rest none.
+    // their own (TOKEN_TEXTLESS_RECUT, the next test), the emblem its ray
+    // shadow (EMBLEM_RAY_SHADOW_RECUT), the rest none.
     for (const [template, def] of Object.entries(templates)) {
       if (TEXT_BOX_TOKENS.includes(template)) continue;
       if (TEXTLESS_TOKENS.includes(template)) expect(def.recut, template).toBe(TOKEN_TEXTLESS_RECUT);
+      else if (template === "emblem") expect(def.recut, template).toBe(EMBLEM_RAY_SHADOW_RECUT);
       else expect(def.recut, template).toBeUndefined();
     }
     // The colourless text-box token is see-through like m15token's, its box
@@ -218,10 +246,12 @@ describe("Card Conjurer recipe", () => {
     }
     // No other template is re-cut by this band: the text-box tokens keep
     // their own (TOKEN_REGULAR_RECUT, the test above: no blendBottom, the
-    // bottom seam over `blend` rows), the rest none.
+    // bottom seam over `blend` rows), the emblem its ray shadow, the rest
+    // none.
     for (const [template, def] of Object.entries(templates)) {
       if (TEXTLESS_TOKENS.includes(template)) continue;
       if (TEXT_BOX_TOKENS.includes(template)) expect(def.recut, template).toBe(TOKEN_REGULAR_RECUT);
+      else if (template === "emblem") expect(def.recut, template).toBe(EMBLEM_RAY_SHADOW_RECUT);
       else expect(def.recut, template).toBeUndefined();
     }
   });
@@ -405,6 +435,30 @@ describe("pixel operations", () => {
       const copy = Buffer.from(src);
       recutBand(src, 1, 40, { fromY: 10, toY: 20, shift: 5, blend: 2 });
       expect(src.equals(copy)).toBe(true);
+    });
+
+    it("holds the row above the band through the opened rows with fill \"hold\" (the emblem's ray shadow)", () => {
+      const out = recutBand(column(40), 1, 40, { fromY: 10, toY: 14, shift: 5, blend: 0, fill: "hold" });
+      // Rows 10–14 hold row 9; the band (10–13) lands on 15–18; 19 on is untouched.
+      expect(Array.from({ length: 12 }, (_, i) => red(out, 8 + i))).toEqual([8, 9, 9, 9, 9, 9, 9, 10, 11, 12, 13, 19]);
+    });
+
+    it("moves only the columns [x0, x1) of a column window", () => {
+      // 3 px wide: each pixel's red = its row, green = its column.
+      const w = 3;
+      const h = 30;
+      const src = Buffer.alloc(w * h * 4);
+      for (let y = 0; y < h; y += 1) for (let x = 0; x < w; x += 1) src.set([y, x, 0, 255], (y * w + x) * 4);
+      const out = recutBand(src, w, h, { fromY: 10, toY: 15, shift: 4, blend: 0, x0: 1, x1: 2, fill: "hold" });
+      const at = (x: number, y: number) => [out[(y * w + x) * 4], out[(y * w + x) * 4 + 1]];
+      for (let y = 0; y < h; y += 1) {
+        expect(at(0, y), `x0 row ${y}`).toEqual([y, 0]);
+        expect(at(2, y), `x2 row ${y}`).toEqual([y, 2]);
+      }
+      expect([10, 13, 14, 18, 19].map((y) => at(1, y)[0])).toEqual([9, 9, 10, 14, 19]);
+      expect(() => recutBand(src, w, h, { fromY: 10, toY: 15, shift: 4, blend: 0, x0: 2, x1: 2 })).toThrow(/bad band/);
+      expect(() => recutBand(src, w, h, { fromY: 10, toY: 15, shift: 4, blend: 0, x1: 4 })).toThrow(/bad band/);
+      expect(() => recutBand(src, w, h, { fromY: 10, toY: 15, shift: 4, blend: 0, fill: "mirror" as never })).toThrow(/bad band/);
     });
   });
 
@@ -707,7 +761,9 @@ describe("provenance and hygiene", () => {
       expect(provenance[template].notes, template).toEqual(templates[template].notes);
     }
     expect(provenance.m15.recut).toBeUndefined();
-    // The emblem records its pill tone and what it did to the pixels (4.52).
+    // The emblem records its ray shadow, its pill tone and what they did to
+    // the pixels (4.52).
+    expect(provenance.emblem.recut).toEqual(EMBLEM_RAY_SHADOW_RECUT);
     expect(provenance.emblem.tone).toEqual(EMBLEM_NAME_PILL_TONE);
     expect(provenance.emblem.transforms).toBe(templates.emblem.transforms);
     expect(provenance.emblem.notes).toEqual(templates.emblem.notes);
