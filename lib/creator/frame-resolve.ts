@@ -27,6 +27,7 @@ import {
   isTypeWordDress,
   kindFromCard,
   templateIsBasicOnly,
+  tokenFrameFor,
   type CardKind,
   type FrameColorKey,
 } from "@/lib/creator/card-kinds";
@@ -174,15 +175,26 @@ const TEXT_BOX_TOKEN_FALLBACK: Partial<Record<FrameTemplate, FrameTemplate>> = {
  *  TEXT_BOX_TOKEN_FALLBACK), its era's standard for the card type, then the
  *  M15 standard. An Artifact Creature asks for M15's artifact frame before
  *  the plain one (TODO 1.7), so a Juggernaut whose Alpha frame isn't
- *  published falls forward to the artifact card it is, not a grey spell. */
+ *  published falls forward to the artifact card it is, not a grey spell. A
+ *  token's M15 standard is the 2014–19 arch its type words and text pick
+ *  (tokenFrameFor — the text box for a token with rules or flavour text,
+ *  TODO 4.49 (b)), its textless dress after it: an Alpha token whose frame
+ *  isn't published lands on the box, not with its text on the scrim. */
 export function importFrameCandidates(input: {
   wanted: FrameTemplate;
   cardType: CardType;
   supertype?: string | null;
+  rulesText?: string | null;
+  flavorText?: string | null;
 }): FrameTemplate[] {
   const { wanted, cardType, supertype } = input;
   const artifactCreature =
     cardType === "creature" && isArtifactFrameType({ cardType, supertype });
+  const m15Standard = standardFrameFor("m15", cardType);
+  const m15Token =
+    cardType === "token" && m15Standard
+      ? tokenFrameFor("token", m15Standard, input)
+      : null;
   return Array.from(
     new Set(
       [
@@ -190,10 +202,38 @@ export function importFrameCandidates(input: {
         TEXT_BOX_TOKEN_FALLBACK[wanted] ?? null,
         standardFrameFor(eraForTemplate(wanted), cardType),
         artifactCreature ? ("m15artifact" as const) : null,
-        standardFrameFor("m15", cardType),
+        m15Token,
+        m15Token ? (TEXT_BOX_TOKEN_FALLBACK[m15Token] ?? null) : null,
+        m15Standard,
       ].filter((t): t is FrameTemplate => Boolean(t)),
     ),
   );
+}
+
+/**
+ * The frame a token saved away from the creator lands on once its final text
+ * is known (TODO 4.49 (b), owner decision 5): the one its type words and text
+ * pick (tokenFrameFor — rules or flavour text → the text-box arch, none → the
+ * textless one) when that is published in the card's colour, else the frame
+ * it had, never an unpublished pair. Any other kind's frame, and a token on
+ * any other frame, is returned as it is. The AI deck remix saves through it:
+ * the printing's frame follows the PRINTED text (the signature registry), but
+ * the remix saves the AI's flavour.
+ */
+export function autoTokenTextBoxFrame(input: {
+  template: FrameTemplate;
+  cardType: CardType | null | undefined;
+  supertype?: string | null;
+  rulesText?: string | null;
+  flavorText?: string | null;
+  colorIdentity: readonly ColorIdentity[];
+  verifiedKeys: ReadonlySet<string>;
+}): FrameTemplate {
+  const kind = kindFromCard(input.cardType, input.template);
+  const wanted = tokenFrameFor(kind, input.template, input);
+  if (wanted === input.template) return wanted;
+  const colorKey = pickFrameColorKey([...input.colorIdentity]);
+  return isFrameComboAvailable(wanted, colorKey, input.verifiedKeys) ? wanted : input.template;
 }
 
 /**
@@ -217,6 +257,9 @@ export function resolveImportFrame(input: {
     frame_match?: Pick<FrameMatch, "template" | "landOn" | "reject">;
     card_type?: CardType;
     supertype?: string;
+    /** The imported text: a token's M15 fallback follows it (4.49 (b)). */
+    rules_text?: string;
+    flavor_text?: string;
     color_identity?: readonly ColorIdentity[];
   };
   /** The imported kind (patch.kind, else the card type's). */
@@ -245,6 +288,8 @@ export function resolveImportFrame(input: {
       wanted,
       cardType,
       supertype: patch.supertype,
+      rulesText: patch.rules_text,
+      flavorText: patch.flavor_text,
     }),
     colorKey,
     verifiedKeys: input.verifiedKeys,

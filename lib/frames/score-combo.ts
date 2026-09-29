@@ -15,6 +15,7 @@ import {
   listSlotPaths,
   resolveFrameProfile,
   slotRect,
+  type FrameProfileOverridesMap,
   type SlotPath,
 } from "@/lib/cards/profile-override";
 import { scanGridFor } from "@/lib/frames/scan-geometry";
@@ -75,9 +76,17 @@ export async function scoreFrameCombo(input: {
   template: FrameTemplate;
   color: FrameColorKey;
   ref?: string | null;
+  /** The reference printing, already resolved by an admin-gated caller
+   *  (the score batch plans every combo from one review read, before its
+   *  stream starts) — skips the cookie-bound review read. Never a client
+   *  value. */
+  referenceId?: string | null;
+  /** The layout overrides to render with — a caller that records the
+   *  override hash passes the same map it hashes. */
+  overrides?: FrameProfileOverridesMap;
 }): Promise<ScoreComboResult> {
   const { template, color } = input;
-  const scryfallId = await resolveReferenceId(template, color, input.ref);
+  const scryfallId = input.referenceId ?? (await resolveReferenceId(template, color, input.ref));
   if (!scryfallId) {
     return { ok: false, error: "No reference printing for this combination.", status: 404 };
   }
@@ -87,7 +96,7 @@ export async function scoreFrameCombo(input: {
     return { ok: false, error: "Could not resolve the reference scan.", status: 502 };
   }
 
-  const overrides = await getFrameProfileOverrides();
+  const overrides = input.overrides ?? (await getFrameProfileOverrides());
   const preview = { ...payload.preview, profileOverrides: overrides };
   const resolved = resolveFrameProfile(template, overrides);
   const grid = scanGridFor(resolved.orientation ?? "portrait");

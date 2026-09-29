@@ -14,7 +14,10 @@ import { e2eCredentials, signIn } from "./helpers/sign-in";
 //     previews publishes nothing and says why;
 //   * the preview is listed under its template in the checklist and in the
 //     template's sign-off view, and deleting it there removes it;
-//   * a non-admin with the same URL gets the ordinary creator.
+//   * the sign-off view shows every colour side by side and offers the
+//     one-job "Score all colours" (TODO 4.12);
+//   * a non-admin with the same URL gets the ordinary creator, and the
+//     scoring job's route answers them 404.
 // ---------------------------------------------------------------------------
 
 const WALK = "/create?previewFrames=all&kind=battle&template=battle&color=r&seed=sample";
@@ -73,6 +76,11 @@ test.describe("admin frame walk-through", () => {
     await expect(page.getByTestId("frame-template-signoff")).toBeVisible();
     await expect(page.getByTestId("signoff-colour-r")).toContainText(title);
     await expect(page.getByTestId("signoff-publish")).toBeDisabled();
+    // Every colour side by side (TODO 4.12) — our render next to its
+    // printing, or the sample when the lookup fails — and the one-job scorer.
+    await expect(page.getByTestId("signoff-side-by-side")).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId(/^side-by-side-[wubrgcm]$/)).toHaveCount(7);
+    await expect(page.getByTestId("score-all-colours")).toBeEnabled();
 
     // The checklist lists it under the template; delete it from there.
     await page.goto("/admin/frame-compare");
@@ -96,5 +104,12 @@ test.describe("admin frame walk-through", () => {
     await expect(page.getByRole("heading", { name: /forge a new card/i })).toBeVisible();
     await expect(page.getByTestId("frame-preview-banner")).toHaveCount(0);
     await expect(page.getByTestId("frame-preview-save")).toHaveCount(0);
+
+    // The scoring job is admin-only, checked on the server (TODO 4.12).
+    const refused = await page.request.post("/api/admin/frame-score-batch", {
+      data: { combos: [{ template: "battle", colorKey: "r" }] },
+      headers: { origin: new URL(page.url()).origin },
+    });
+    expect(refused.status()).toBe(404);
   });
 });

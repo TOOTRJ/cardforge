@@ -20,6 +20,7 @@ import { FieldGroup, inputClass } from "@/components/creator/field-group";
 import { frameChoicesForType } from "@/lib/creator/frame-random";
 import {
   isBorrowedVariation,
+  isTextBoxDress,
   isTypeWordDress,
   kindFromCard,
   templateIsBasicOnly,
@@ -179,13 +180,16 @@ function AiFillDialogBody({
     // Artifact / Enchantment Creature, which this dialog can't ask for.
     // The artifact token frame isn't a choice either: a token's type words
     // pick it (TODO 3b.15) — "M15 Token" lands on it for an Artifact token.
+    // Nor is the token's text box: the text the AI writes picks it (TODO
+    // 4.49 (b)) — "M15 Token" lands on it for a token with text.
     const kind = kindFromCard(cardType, undefined);
     return frameChoicesForType(cardType, verified).filter(
       (choice) =>
         choice.availableColorKeys.length > 0 &&
         !templateIsBasicOnly(choice.template) &&
         !isBorrowedVariation(kind, choice.template) &&
-        !isTypeWordDress(kind, choice.template),
+        !isTypeWordDress(kind, choice.template) &&
+        !isTextBoxDress(kind, choice.template),
     );
   }, [cardType, verifiedFrameKeys]);
 

@@ -42,7 +42,74 @@ pricing specs run). A red e2e job is a real signal — in 2026-09 the suite had
 drifted to 12 failures locally and two of them were production bugs. The
 job summary lists every skipped test and every test that only passed on a
 retry (`scripts/e2e-summary.mjs`) — a flake that keeps appearing there is a
-bug to fix, not noise.
+bug to fix, not noise. The **Visual regression** jobs gate the renderer's
+pixels (next section).
+
+## Visual regression (renderer pixels, TODO 7.1)
+
+The **Visual regression** job bakes a fixed card matrix through the real
+Satori bake and compares each card's pixel hash with the committed
+`tests/visual/baseline.json`:
+
+- `tests/visual/matrix.ts` — every frame template (published or not) × 8
+  colours (the seven frame keys, gold as three colours, plus a two-colour
+  card) × a short and a long card of the template's first kind; every other
+  kind the template hosts once; foil and etched on a spread of frames; the
+  HD preset (the stored bake's size) for every template's long card; square
+  print corners on a few; an "edge" card (100/100, a four-mode Command,
+  reversed-hybrid and unknown symbols) on one frame per family. A new
+  template, kind or colour joins by itself; a new rendering feature (a crown,
+  a new finish) gets a case here in the PR that adds it.
+- `tests/visual/bake.visual.ts` — the bake, with the stored bake's contract
+  (brand mark, no footer text, round corners). Hermetic: generated art, the
+  committed/locked fonts, and the frames bucket objects read from a local
+  cache (`tmp/visual/frames/`, gitignored) that the script fills by manifest
+  key and checks against the manifest's sha256. Card Conjurer-derived frames
+  never enter git: the baseline holds 16-hex hashes of the decoded pixels,
+  nothing else.
+- `scripts/visual-regression.mjs` + `scripts/lib/visual-gate.mjs` — fetch,
+  shard, gate, report. The fetch (`scripts/lib/visual-frames.mjs`) takes a
+  quick pass and then retries, one at a time, whatever storage refused (a
+  429, a 5xx, a hang, a 400 for an object that is there).
+
+```bash
+npm run test:visual                # bake + gate (dev bucket locally)
+npm run test:visual -- --update    # rewrite tests/visual/baseline.json
+npm run test:visual -- --only m15/r/ --save   # a few cases, PNGs in tmp/visual/renders/
+```
+
+What CI does with a changed hash:
+
+| The PR… | Result |
+| --- | --- |
+| changes pixels, no `CARD_LAYOUT_VERSION` bump | ❌ `unbumped-change` — bump it (+ `VERSION_ROLLOUT`, + a scope when only some cards change) |
+| bumps, baseline not regenerated | ❌ `regenerate` — the diff list and the regenerate command; commit the new baseline |
+| bumps, a changed case outside the bump's scope (judged at the base branch's version, before and after regenerating) | ❌ `outside-bump-scope` — the sweep would stamp that card without re-baking it |
+| regenerates the baseline without a bump | ❌ `unbumped-regeneration` |
+| adds, removes or redefines matrix cases (a case's row, preset or corners changed in `matrix.ts` — its input fingerprint moved) | ❌ `cases-changed` — regenerate; no bump needed |
+| changes only print-only cases (square corners: the PDF and the Square download are rendered live, never stored) | ❌ `print-changed` — regenerate; no bump needed, never "outside the scope" |
+| bumps with the regenerated baseline | ✅ |
+
+Each baseline entry is `<pixel hash>:<input fingerprint>`: the same input
+drawing different pixels is a renderer change; a new input is a matrix edit.
+A change to the harness itself (the generated art or the render contract in
+`bake.visual.ts`) raises `VISUAL_HARNESS` in `matrix.ts`, which redefines
+every case — never raise it to get a renderer change past the gate.
+
+"Bumped" is judged against the base branch (`--base HEAD^1` on CI's merge
+commit), never against the baseline file. The bake runs in three parallel
+jobs of four shards each; the gate job merges their hashes and uploads the
+baseline it would write as the `visual-baseline` artifact —
+`gh run download <run> -n visual-baseline -D tests/visual` takes it when
+regenerating locally isn't convenient. The pipeline is deterministic across
+platforms for the pinned sharp/libvips (2026-09-29: the baseline made on
+darwin-arm64 / Node 25 matched all 849 cases on CI's linux-x64 / Node 24
+runner, and a 3-shard local run matched the 4-shard baseline); if every case
+changes at once with no code change, the report names the tool or input
+that moved. `tests/unit/render/visual-matrix.test.ts` also fails the fast
+unit run when the baseline no longer matches the matrix or the layout
+version. DB frame-profile overrides are outside the suite (their saves null
+the stamps and the platform re-bakes).
 
 ## Full e2e coverage (local Supabase stack)
 

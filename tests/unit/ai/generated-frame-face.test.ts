@@ -138,3 +138,51 @@ describe("createCardFillJob — the face is the generated fields over the pinned
     expect(s.inserted?.plan.frame_template).toBe("m15land");
   });
 });
+
+// TODO 4.49 (b), owner decision 5: a token's text box follows its text —
+// rules OR flavour — so both jobs hand resolveGeneratedFrame the flavour
+// too (the fill job's pinned one when it didn't write one).
+describe("the token text box reads the flavour text", () => {
+  const TOKEN_FRAMES = ["m15token", "m15tokentext"].map((t) => frameComboKey(t as never, "w"));
+  const soldier = {
+    title: "Soldier",
+    cost: "",
+    card_type: "token",
+    supertype: "Creature",
+    subtypes: ["Soldier"],
+    rarity: "common",
+    color_identity: ["white"],
+    rules_text: "",
+    flavor_text: "Hold the line.",
+    power: "1",
+    toughness: "1",
+    loyalty: null,
+    defense: null,
+    art_prompt: "A soldier.",
+  };
+
+  it("a generated flavour-only token asks for the text box", async () => {
+    s.verified = TOKEN_FRAMES;
+    s.designed = soldier;
+    await createCardGenerationJob({ cardType: "token", frame: "m15token" });
+    expect(s.inserted?.plan.frame_template).toBe("m15tokentext");
+    s.designed = { ...soldier, flavor_text: null };
+    await createCardGenerationJob({ cardType: "token", frame: "m15token" });
+    expect(s.inserted?.plan.frame_template).toBe("m15token");
+  });
+
+  it("a fill that wrote no flavour reads the pinned one", async () => {
+    s.verified = TOKEN_FRAMES;
+    s.fill = {
+      fields: { card_type: "token", title: "Soldier", supertype: "Creature", subtypes: ["Soldier"], rules_text: "", color_identity: ["white"] },
+      art_prompt: null,
+    };
+    await createCardFillJob({
+      want: ["card_type", "title", "rules_text"],
+      locked: { flavor_text: "Hold the line." },
+      steer: { card_type: "token" },
+      frame: "m15token",
+    });
+    expect(s.inserted?.plan.frame_template).toBe("m15tokentext");
+  });
+});

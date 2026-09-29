@@ -14,6 +14,7 @@
     "test:unit:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
+    "test:visual": "node scripts/visual-regression.mjs",
     "assets:frame-webp": "node scripts/generate-frame-webp.mjs",
     "db:start": "supabase start",
     "db:reset": "supabase db reset",

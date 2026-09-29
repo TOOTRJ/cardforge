@@ -15,11 +15,14 @@ import {
   isSingleBasicLand,
   kindFromCard,
   templateIsBasicOnly,
+  textBoxFrameFits,
+  tokenFrameFor,
   typeWordFrameFits,
   typeWordFrameFor,
   type FrameChoice,
 } from "@/lib/creator/card-kinds";
 import { pickFrameColorKey } from "@/components/cards/frame-layer";
+import { hasRulesBoxText } from "@/lib/cards/card-display";
 import type { BasicLandFace } from "@/lib/cards/watermark";
 
 export type FrameRequest = FrameTemplate | "random" | undefined;
@@ -54,8 +57,9 @@ export function resolveGeneratedFrame(input: {
   verifiedKeys: ReadonlySet<string>;
   /** The generated card's identity. A basic-only frame (the full-art basic
    *  land) is a candidate only when this is one basic land; without it,
-   *  those frames are left out. */
-  face?: BasicLandFace;
+   *  those frames are left out. Its rules and flavour text pick a token's
+   *  text box (TODO 4.49 (b)); without them, the textless frame. */
+  face?: BasicLandFace & { flavorText?: string | null };
   /** Injectable RNG for tests. Defaults to Math.random. */
   random?: () => number;
 }): FrameTemplate | null {
@@ -72,20 +76,35 @@ export function resolveGeneratedFrame(input: {
   // …and a token's type words pick between the plain and the artifact
   // token frame (TODO 3b.15): a Treasure never lands on the plain one, a
   // Soldier never on the artifact one; a request for either means the one
-  // the words pick.
+  // the words pick. Its text picks the text box the same way (TODO 4.49
+  // (b), owner decision 5): rules or flavour text → the text-box arch, none
+  // → the textless one, whichever of the two was asked for. That one is a
+  // preference, not a gate: while the box isn't published in the card's
+  // colour, the textless arch (whose scrim keeps the text) is what was asked
+  // for, as in the creator.
   const kind = kindFromCard(cardType, undefined);
   const type = { cardType, supertype: face?.supertype };
-  const pool = choices.filter(
+  const hasText = hasRulesBoxText({ rulesText: face?.rulesText, flavorText: face?.flavorText });
+  const typed = choices.filter(
     (choice) =>
       choice.availableColorKeys.includes(colorKey as never) &&
       (basicLand || !templateIsBasicOnly(choice.template)) &&
       borrowedFrameFits(kind, choice.template, type) &&
       typeWordFrameFits(kind, choice.template, face?.supertype),
   );
+  const boxed = typed.filter((choice) => textBoxFrameFits(kind, choice.template, hasText));
+  const pool = boxed.length > 0 ? boxed : typed;
 
   if (requested !== "random") {
-    const wanted = typeWordFrameFor(kind, requested, face?.supertype);
-    const match = pool.find((choice) => choice.template === wanted);
+    const wanted = tokenFrameFor(kind, requested, {
+      supertype: face?.supertype,
+      rulesText: face?.rulesText,
+      flavorText: face?.flavorText,
+    });
+    const asked = typeWordFrameFor(kind, requested, face?.supertype);
+    const match =
+      typed.find((choice) => choice.template === wanted) ??
+      typed.find((choice) => choice.template === asked);
     if (match) return match.template;
     // Requested frame can't dress this card (wrong type after generation, or
     // that color isn't published) — degrade to a random valid one.

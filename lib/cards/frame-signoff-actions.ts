@@ -16,7 +16,7 @@ import {
 import { SIGN_OFF_LOW_MATCH_PCT, signOffStatus } from "@/lib/cards/frame-signoff";
 import { revalidateFramePickers } from "@/lib/cards/frame-picker-revalidate";
 import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
-import { scoreFrameCombo } from "@/lib/frames/score-combo";
+import { scoreAndRecordCombo } from "@/lib/frames/score-record";
 import { removeRenderObjects } from "@/lib/cards/bake-core";
 import { purgeCardCdnCache } from "@/lib/cards/cache-purge";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
@@ -25,7 +25,9 @@ import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 // Admin actions behind the stepper walk-through (frames plan Phase 2):
 //
 //   scoreFrameColorAction      — score ONE colour of a template against its
-//                                reference and record it (a "score" event).
+//                                reference and record it (a "score" event;
+//                                the whole-template job is the route
+//                                /api/admin/frame-score-batch, TODO 4.12).
 //   signOffFrameTemplateAction — publish a whole template (2.4): every colour
 //                                with a reference carries a current score +
 //                                the owner's tick; stamps each like a tick.
@@ -67,22 +69,11 @@ export async function scoreFrameColorAction(
 
   const { template, colorKey } = parsed.data;
   // The combo's own reference (pinned, else the registry default) — the one
-  // the sign-off counts, whatever alternate the compare view had open.
-  const result = await scoreFrameCombo({ template, color: colorKey, ref: null });
+  // the sign-off counts, whatever alternate the compare view had open. The
+  // same scorer + recorder as the whole-template job (TODO 4.12).
+  const result = await scoreAndRecordCombo({ template, colorKey, actorId: admin.id });
   if (!result.ok) return { ok: false, error: result.error };
-
-  const overrides = await getFrameProfileOverrides();
-  const recorded = await recordFrameReviewEvent(createAdminClient(), {
-    template,
-    colorKey,
-    action: "score",
-    actor: admin.id,
-    layoutVersion: CARD_LAYOUT_VERSION,
-    overrideHash: overrideHash(overrides[template] ?? null),
-    referenceScryfallId: result.referenceId,
-    scoreJson: { overall: result.overall, global: result.global, slots: result.slots },
-  });
-  if (!recorded) {
+  if (!result.recorded) {
     return { ok: false, error: "Scored, but the score couldn't be recorded — try again." };
   }
   revalidatePath("/admin/frame-compare");

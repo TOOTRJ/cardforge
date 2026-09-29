@@ -78,6 +78,7 @@ import type { RulesItem } from "@/lib/cards/rules-text";
 import {
   buildTypeLine,
   displayLine,
+  hasRulesBoxText,
   normalizeFrameTemplate,
   showsDefense,
   showsLoyalty,
@@ -779,7 +780,7 @@ function CardFace({
   const hasRulesContent =
     !isBasicLand &&
     !textless &&
-    Boolean(face.rulesText?.trim() || face.flavorText?.trim());
+    hasRulesBoxText(face);
   // The plain rules box's ONE layout (layout v33, lib/cards/rules-box.ts) —
   // the bake's twin: its size, every line and every position, clear of the
   // drawn stat badges. The editor shows a sample (real type, size and pips)

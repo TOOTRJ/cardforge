@@ -172,7 +172,16 @@ Rules and gotchas:
   the `CARD_LAYOUT_VERSION` bump + a `VERSION_ROLLOUT` policy: only
   "opt-in" bumps badge owners (`hasNewerLook`); "sweep" bumps and
   frame-override saves (null stamp) are re-baked by the platform — the
-  compare page does it right after a save (`/api/admin/rebake-marked`). Every bake also writes a
+  compare page does it right after a save (`/api/admin/rebake-marked`).
+  WHICH rollout (owner rule 2026-09-29): an ADDITION or new look (crown,
+  two-colour frame, full-art token design, Nyx, collector line, vehicle
+  plate, colour indicator, new frames) is OPT-IN PER CARD — new cards get it
+  by default with an off switch, existing cards keep their look until the
+  owner switches it on, imports follow the printing; it is card data
+  (`frame_style`), never a sweep of stored cards, and never badges. A
+  CORRECTION of a look that is wrong against its own print is a "sweep",
+  after the owner's before/after sign-off. Flag borderline cases
+  (`docs/FRAMES.md` "Additions vs corrections"). Every bake also writes a
   600 px WebP thumbnail beside the HD PNG (`cards.rendered_thumb_url`,
   `lib/cards/render-thumb.ts`) — gallery-style tiles MUST use
   `BakedCardThumbnail` with `renderedThumbUrl`, never the 3 MB PNG;
@@ -276,10 +285,15 @@ Rules and gotchas:
   `TOKEN_REGULAR_RECUT` — its own band, symbol and type band from CC's
   (`TOKEN_CC_*`), never M15TOKEN's re-cut ones); `rules.alignSingleLine:
   "center"` centres ONE rules line (the layout places it, both renderers
-  draw its indent). New and unverified: the registry resolves a 2015-frame
-  token that prints text to them (the arch's tall box = pinned
-  `TALL_BOX_TOKEN_PINS`, nearest, 4.55), and the import lands on the
-  textless dress until they are verified (`TEXT_BOX_TOKEN_FALLBACK`). A
+  draw its indent). The text box FOLLOWS THE TEXT (owner decision 5):
+  `textBoxFrameFor` / `tokenFrameFor` on `hasRulesBoxText` (the renderers'
+  test) — the creator (`followTokenTextBox`: automatic until a Variations
+  pick, which sticks, as does a stored frame that disagrees with its text),
+  the registry (tall box = pinned `TALL_BOX_TOKEN_PINS`, nearest, 4.55;
+  unverified → `TEXT_BOX_TOKEN_FALLBACK`), `resolveGeneratedFrame` and the
+  remix (`autoTokenTextBoxFrame`); 0129 moved stored non-land, non-preview
+  cards with text off the textless pair (null stamp, no bump). The textless pair's
+  scrim is ONLY the fallback for text left on them. A
   later bump whose slots move on fewer templates than its bakes change on
   lists them in `VERIFICATION_TEMPLATE_SCOPES`; legacy ticks
   are judged at `LEGACY_TICK_LAYOUT_VERSION` (33) (`docs/FRAMES.md`

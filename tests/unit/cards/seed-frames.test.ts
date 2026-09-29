@@ -62,6 +62,16 @@ describe("supabase/seed.sql verified frames", () => {
     expect(combos.filter((combo, i) => combos.indexOf(combo) !== i)).toEqual([]);
   });
 
+  it("seeds the four 2014–19 token frames in every colour, as production verified them (2026-09-29)", () => {
+    // Migration 0129 moves stored cards with text onto the text-box pair
+    // (TODO 4.49 (b)): a preview branch without them would offer a moved
+    // card no frame it can save on.
+    const combos = new Set(seededCombos());
+    for (const template of ["m15token", "m15tokenartifact", "m15tokentext", "m15tokenartifacttext"]) {
+      for (const colour of COLOR_KEYS) expect(combos.has(`${template}/${colour}`), `${template}/${colour}`).toBe(true);
+    }
+  });
+
   it("the snapshot count in the header is the number of seeded combos", () => {
     // Refreshing the list from production means refreshing the date and the
     // count beside it; a count that disagrees is a half-done refresh.

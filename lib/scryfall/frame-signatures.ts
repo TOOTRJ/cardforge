@@ -1142,7 +1142,11 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
     match: { borders: ["borderless"], kinds: ["token"] },
     outcome: {
       status: "nearest",
-      template: "m15token",
+      // The bordered 2014–19 arch the printing's type words and text pick
+      // (archTokenFrame): the artifact dress for a Treasure, the text box
+      // for a token that prints text (4.49 (b), owner decision 5) — never
+      // its text on the textless arch's scrim.
+      template: { family: "m15" },
       reason: "PipGlyph doesn't have the borderless token frame yet",
       blockedBy: "4.37",
     },
