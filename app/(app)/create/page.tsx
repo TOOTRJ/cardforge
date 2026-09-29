@@ -31,6 +31,12 @@ import { canUseCreatorLab, resolveCreatorLayout } from "@/lib/creator/lab-shared
 import { FlaskConical, Layers3 } from "lucide-react";
 import { isUuid } from "@/lib/ids";
 import { getCardCapacity } from "@/lib/cards/capacity";
+import {
+  resolveFramePreviewMode,
+  withoutPreviewParams,
+} from "@/lib/creator/frame-preview";
+import { buildFrameWalkthrough } from "@/lib/creator/frame-walkthrough";
+import { FramePreviewBanner } from "@/components/creator/frame-preview-banner";
 
 export const metadata: Metadata = {
   title: "Create",
@@ -49,15 +55,23 @@ export default async function CreatePage({
     deckCard?: string;
     remix?: string;
     lab?: string;
+    // Admin frame preview (TODO Phase 2) — ignored for everyone else.
+    previewFrames?: string | string[];
+    template?: string;
+    color?: string;
+    kind?: string;
+    seed?: string;
+    ref?: string;
   }>;
 }) {
+  const search = await searchParams;
   const {
     tag: tagParam,
     backFor: backForParam,
     deckCard: deckCardParam,
     remix: remixParam,
     lab: labParam,
-  } = await searchParams;
+  } = search;
   const initialTag =
     tagParam && CHALLENGE_TAG_PATTERN.test(tagParam) ? tagParam : null;
   // Re-checked here in addition to the proxy/(app) layout — defense in depth.
@@ -150,6 +164,30 @@ export default async function CreatePage({
     return <RemixSourceMissing />;
   }
 
+  // Admin frame preview (TODO 2.1): ?previewFrames=all|<list> unions the
+  // named combos with the verified set — for admins only, decided from the
+  // server-read profile (never the URL). Everyone else, and the guest ISR
+  // creator (which never reads searchParams), gets the verified set. AI
+  // jobs keep resolving frames from the verified set on the server.
+  const verifiedFrameKeys = await getVerifiedFrameKeys();
+  const framePreview = resolveFramePreviewMode({
+    isAdmin: Boolean(profile?.is_admin),
+    param: search.previewFrames,
+    verifiedKeys: verifiedFrameKeys,
+  });
+  // "Walk the stepper" (TODO 2.2): a plain create on the stepper, prefilled
+  // from the combo's reference printing.
+  const walkthrough =
+    framePreview && !backFor && !deckRemix && !remixParent && layout === "stepper"
+      ? await buildFrameWalkthrough({
+          template: search.template,
+          color: search.color,
+          kind: search.kind,
+          seed: search.seed,
+          ref: search.ref,
+        })
+      : null;
+
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
       <PageHeader
@@ -198,7 +236,23 @@ export default async function CreatePage({
         }
       />
 
-      {remixParent || layout === "canvas" ? null : (
+      {framePreview ? (
+        <div className="mt-8">
+          <FramePreviewBanner
+            param={framePreview.param}
+            unverifiedCount={framePreview.unverifiedKeys.length}
+            walkthroughNote={walkthrough?.note ?? null}
+            walking={
+              walkthrough
+                ? { template: walkthrough.template, colorKey: walkthrough.colorKey }
+                : null
+            }
+            exitHref={withoutPreviewParams("/create", search)}
+          />
+        </div>
+      ) : null}
+
+      {remixParent || layout === "canvas" || walkthrough ? null : (
         <div className="mt-10">
           <StartWithHero />
         </div>
@@ -210,7 +264,12 @@ export default async function CreatePage({
           // back face navigates /create → /create?backFor=… without leaving
           // the page, and without a key the old form (and its filled-in
           // state) stayed mounted for the new card.
-          key={backFor?.id ?? deckRemix?.deckCardId ?? remixParent?.id ?? "new"}
+          key={
+            backFor?.id ??
+            deckRemix?.deckCardId ??
+            remixParent?.id ??
+            (walkthrough ? `walk:${walkthrough.template}/${walkthrough.colorKey}` : "new")
+          }
           mode={remixParent ? "remix" : "create"}
           card={remixParent}
           userId={user.id}
@@ -231,7 +290,16 @@ export default async function CreatePage({
           deckRemix={deckRemix}
           aiConfigured={isDesignAiConfigured()}
           pipOverrides={await getPipOverrides(user.id)}
-          verifiedFrameKeys={await getVerifiedFrameKeys()}
+          verifiedFrameKeys={framePreview?.pickableKeys ?? verifiedFrameKeys}
+          framePreview={
+            framePreview
+              ? {
+                  param: framePreview.param,
+                  publishedKeys: framePreview.publishedKeys,
+                  walkthrough,
+                }
+              : null
+          }
           profileOverrides={await getFrameProfileOverrides()}
           initialTag={initialTag}
           activeChallenge={await getCurrentChallenge()}

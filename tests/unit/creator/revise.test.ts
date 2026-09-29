@@ -78,6 +78,6 @@ describe("revise contract", () => {
 
   it("prefills a remix title and keeps it within the title limit", () => {
     expect(remixTitleFor("Emberbound Wyrm")).toBe("Emberbound Wyrm (remix)");
-    expect(remixTitleFor("x".repeat(130)).length).toBe(120);
+    expect(remixTitleFor("x".repeat(145)).length).toBe(150);
   });
 });

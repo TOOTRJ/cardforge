@@ -15,7 +15,7 @@ import {
   type ScryfallImportPatch,
 } from "@/lib/scryfall/import-mapper";
 import { toResolvedCardData } from "@/lib/decks/import-resolution";
-import { KIND_DEFS } from "@/lib/creator/card-kinds";
+import { KIND_DEFS, importedCardTypeForKind } from "@/lib/creator/card-kinds";
 import { finalizeImportMatch, resolveImportFrame } from "@/lib/creator/frame-resolve";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import { getFrameProfile } from "@/lib/cards/template-layout";
@@ -273,6 +273,14 @@ describe("type-line + layout precedence (TODO 1.3)", () => {
     // TEXTLESS promo, so the registry (1.19) asks for the textless land frame
     // (nearest, 4.42); unverified, it still lands on m15land (below).
     ["sld-2794", "land", "land", undefined, undefined, "m15textlessland"],
+    // A layout kind keeps the printed card type its template can draw (TODO
+    // 1.21): an Enchantment adventurer, an Instant aftermath, a Sorcery
+    // split card.
+    ["woe-38", "adventure", "enchantment", undefined, undefined, undefined],
+    ["akh-211", "aftermath", "instant", undefined, undefined, undefined],
+    ["dgm-123", "split", "sorcery", undefined, undefined, undefined],
+    // The longest printed name (TODO 1.12), a silver-bordered 2003 frame.
+    ["unh-107", "creature", "creature", undefined, "Elemental", "modern"],
   ];
 
   it.each(cases)("%s → %s (%s, supertype %s, subtypes %s) on %s", (key, kind, cardType, supertype, subtypes, frame) => {
@@ -282,8 +290,9 @@ describe("type-line + layout precedence (TODO 1.3)", () => {
     expect(patch.supertype).toBe(supertype);
     expect(patch.subtypes_text).toBe(subtypes);
     expect(patch.frame_template).toBe(frame);
-    // The kind's own card type is what the form writes; the patch agrees.
-    expect(KIND_DEFS[patch.kind!].cardType).toBe(cardType);
+    // The card type the form writes for the kind is the patch's (TODO 1.21:
+    // a layout kind no longer writes its own over the printed one).
+    expect(importedCardTypeForKind(patch.kind!, patch.card_type)).toBe(cardType);
   });
 
   it("the second door / face / spell page rides as the back face", () => {
@@ -513,6 +522,12 @@ describe("colour from the front face (TODO 1.2)", () => {
     ["mor-58", ["B"], "b", ["B"]],
     ["lrw-11", ["W"], "w", ["W"]],
     ["c17-11", ["U"], "u", ["U"]],
+    // TODO 1.21's layout cards: the adventurer's colour, both halves'.
+    ["woe-38", ["W"], "w", ["W"]],
+    ["akh-211", ["U"], "u", ["U"]],
+    ["dgm-123", ["G", "U", "W"], "m", ["G", "U", "W"]],
+    // TODO 1.12's longest name.
+    ["unh-107", ["G"], "g", ["G"]],
   ];
 
   it("covers every fixture", () => {
@@ -670,19 +685,19 @@ describe("the signature registry's landings (TODO 1.4)", () => {
   });
 
   it("a verified full-art basic lands on it; an unverified one falls back to the land frame", () => {
-    // Production has verified both full-art basics in w/u/b/r/g (seed.sql
-    // doesn't list them yet), so add them here.
-    const withFullArt = new Set([
-      ...PROD_VERIFIED,
-      frameComboKey("m15fullartland", "w"),
-      frameComboKey("fullartland", "w"),
-    ]);
+    // Built explicitly both ways, so the test holds whether or not seed.sql
+    // (which mirrors production) lists the full-art basics as verified yet.
+    const fullArtKeys = ["m15fullartland", "fullartland"].flatMap((t) =>
+      ["w", "u", "b", "r", "g", "c", "m"].map((c) => frameComboKey(t as FrameTemplate, c)),
+    );
+    const withFullArt = new Set([...PROD_VERIFIED, ...fullArtKeys]);
+    const withoutFullArt = new Set([...PROD_VERIFIED].filter((k) => !fullArtKeys.includes(k)));
     expect(landing(signature("fdn-282"), withFullArt)).toEqual({ template: "m15fullartland", colorKey: "w", status: "exact" });
     // A borderless basic lands on the land frame (1.18: FRA #382's art_crop
     // is the 626×457 window, `full_art` or not); the creator offers the
     // borderless full-art basic.
     expect(landing(signature("fra-382"), withFullArt)).toEqual({ template: "m15land", colorKey: "w", status: "exact" });
-    expect(landing(signature("fdn-282"))).toEqual({ template: "m15land", colorKey: "w", status: "frame-switched" });
+    expect(landing(signature("fdn-282"), withoutFullArt)).toEqual({ template: "m15land", colorKey: "w", status: "frame-switched" });
     expect(landing(signature("unf-235"), withFullArt)).toEqual({ template: "m15land", colorKey: "w", status: "frame-switched" });
   });
 

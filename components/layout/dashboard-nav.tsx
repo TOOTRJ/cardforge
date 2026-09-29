@@ -14,6 +14,7 @@ import {
   ListOrdered,
   MessageSquare,
   MessageSquarePlus,
+  RefreshCw,
   Rss,
   Settings,
   ShieldCheck,
@@ -51,6 +52,7 @@ const NAV_ICONS: Record<string, LucideIcon> = {
   "/admin/scryfall": Activity,
   "/admin/frame-compare": Frame,
   "/admin/frame-requests": ListOrdered,
+  "/admin/renders": RefreshCw,
   "/admin/creator-lab": FlaskConical,
 };
 

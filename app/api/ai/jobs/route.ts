@@ -30,6 +30,7 @@ import {
   RARITY_VALUES,
 } from "@/types/card";
 import { CARD_FILL_FIELDS } from "@/lib/ai/card-fill-shared";
+import { CARD_TITLE_MAX } from "@/lib/validation/card";
 import { requireTier, UpgradeRequiredError } from "@/lib/billing/entitlements";
 import { AI_DECK_FORMATS } from "@/lib/ai/deck-design";
 import { isBillingEnabled } from "@/lib/billing/flags";
@@ -111,7 +112,7 @@ const requestSchema = z.discriminatedUnion("kind", [
     want: z.array(z.enum(CARD_FILL_FIELDS)).min(1).max(CARD_FILL_FIELDS.length),
     locked: z
       .object({
-        title: z.string().trim().max(120).optional(),
+        title: z.string().trim().max(CARD_TITLE_MAX).optional(),
         cost: z.string().trim().max(64).optional(),
         card_type: z.enum(AI_CARD_TYPE_VALUES).optional(),
         supertype: z.string().trim().max(64).optional(),

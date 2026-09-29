@@ -59,8 +59,9 @@ describe("cardTitleSchema", () => {
     expect(() => cardTitleSchema.parse("   ")).toThrow();
   });
 
-  it("rejects titles over 120 chars", () => {
-    expect(() => cardTitleSchema.parse("a".repeat(121))).toThrow();
+  it("accepts 150 characters and rejects 151 (TODO 1.12, migration 0122)", () => {
+    expect(cardTitleSchema.parse("a".repeat(150))).toHaveLength(150);
+    expect(() => cardTitleSchema.parse("a".repeat(151))).toThrow();
   });
 });
 
@@ -131,7 +132,8 @@ describe("backFaceSchema (chunk 10)", () => {
 
   it("3b.5: the title may be empty — the card actions decide by visibility", () => {
     expect(backFaceSchema.parse({ title: "   " }).title).toBe("");
-    expect(() => backFaceSchema.parse({ title: "x".repeat(121) })).toThrow();
+    expect(backFaceSchema.parse({ title: "x".repeat(150) }).title).toHaveLength(150);
+    expect(() => backFaceSchema.parse({ title: "x".repeat(151) })).toThrow();
   });
 
   it("accepts a minimal back face", () => {

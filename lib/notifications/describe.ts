@@ -209,6 +209,15 @@ export function describeNotification(
         href: "/dashboard/billing#plans",
       };
     }
+    case "render_sweep_paused": {
+      // Admin-only: the automatic re-bake's breaker (lib/cards/auto-rebake.ts).
+      const reason = str(payload.reason);
+      return {
+        subject: "Automatic re-bake",
+        body: `paused itself${reason ? ` — ${reason}` : ""}. Check the failures, then resume it.`,
+        href: "/admin/renders",
+      };
+    }
     case "card_limit": {
       const limit = num(payload.limit);
       return {

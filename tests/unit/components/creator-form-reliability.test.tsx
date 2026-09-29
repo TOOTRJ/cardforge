@@ -11,7 +11,7 @@ import {
 } from "@testing-library/react";
 import type { Card, GameSystem } from "@/types/card";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
-import type { ScryfallCard } from "@/lib/scryfall/client";
+import { scryfallCardSchema, type ScryfallCard } from "@/lib/scryfall/client";
 import { mapScryfallToFormPatch } from "@/lib/scryfall/import-mapper";
 import { finalizeImportMatch } from "@/lib/creator/frame-resolve";
 import signaturePrintings from "../scryfall/fixtures/signature-printings.json";
@@ -229,6 +229,11 @@ beforeEach(() => {
     "fetch",
     vi.fn(async () => new Response(JSON.stringify({ ok: false }), { status: 200 })),
   );
+  // A server action always returns a promise; a bare vi.fn() returns
+  // undefined, and the form's fire-and-forget `.catch` on it would throw
+  // mid-import for any inexact printing (Beck // Call DGM #123 in 1.21 is a
+  // nearest split) — the frame request tests override this per test.
+  actions.recordFrameRequestAction.mockResolvedValue({ ok: true });
 });
 
 afterEach(() => {
@@ -1088,6 +1093,68 @@ describe("a save from the leave dialog still links the new card", () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// TODO 1.21 — an import keeps a layout kind's printed card type. The form
+// used to write the kind's own type over it (applyKindProgrammatic), so an
+// Enchantment adventurer saved as a Creature and the aftermath / split
+// halves swapped Instant and Sorcery. Driven through the deck-remix prefill
+// (/create?deckCard=…), which runs the same handleScryfallImport as the
+// dialog, with the real mapper's patch for real (trimmed) printings.
+// ---------------------------------------------------------------------------
+
+describe("1.21 an import keeps a layout kind's printed card type", () => {
+  type PrintingKey = keyof typeof importPrintings;
+
+  function prefillFrom(key: PrintingKey) {
+    const card = scryfallCardSchema.parse(importPrintings[key]);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.startsWith("/api/scryfall/named")) {
+          return new Response(
+            JSON.stringify({
+              ok: true,
+              card: { name: card.name, scryfall_uri: null },
+              patch: JSON.parse(JSON.stringify(mapScryfallToFormPatch(card))),
+            }),
+            { status: 200 },
+          );
+        }
+        // No art: the text-only prefill.
+        return new Response(JSON.stringify({ ok: false }), { status: 200 });
+      }),
+    );
+    renderForm({
+      mode: "create",
+      deckRemix: {
+        deckCardId: "66666666-6666-4666-8666-666666666666",
+        scryfallId: card.id,
+        deckSlug: "tester/deck",
+        deckTitle: "Deck",
+        entryName: card.name,
+      },
+    });
+  }
+
+  it.each([
+    // Virtue of Loyalty WOE #38 — an Enchantment adventurer (was Creature).
+    ["woe-38", "adventure", "enchantment", "Ardenvale Fealty"],
+    // Commit // Memory AKH #211 — its front is an Instant (was Sorcery).
+    ["akh-211", "aftermath", "instant", "Memory"],
+    // Beck // Call DGM #123 — a Sorcery split card (was Instant).
+    ["dgm-123", "split", "sorcery", "Call"],
+    // Control: an adventurer that IS a creature.
+    ["eld-115", "adventure", "creature", "Stomp"],
+  ] as const)("%s lands on %s as %s", async (key, template, cardType, backTitle) => {
+    prefillFrom(key);
+    await waitFor(() => expect(preview().template).toBe(template));
+    expect(preview().cardType).toBe(cardType);
+    // The second half rides along, typed as printed.
+    expect(preview().backFace?.title).toBe(backTitle);
+  });
+});
+
 // TODO 1.6: an import PipGlyph can't reproduce exactly writes one frame
 // request row, fire and forget — driven here through the deck pre-fill
 // (/create?deckCard=…), the path that calls handleScryfallImport itself.
@@ -1206,6 +1273,35 @@ describe("frame request log", () => {
     await waitFor(() =>
       expect(toast.success).toHaveBeenCalledWith(expect.stringContaining("Pre-filled from Llanowar Elves")),
     );
+    expect(actions.recordFrameRequestAction).not.toHaveBeenCalled();
+  });
+
+  it("an admin's frame preview never logs — the stepper walk-through seeds through the same handler", async () => {
+    // The walk (TODO 2.2) applies the combo's reference printing with
+    // handleScryfallImport — here Sheoldred DMU #435, the borderless printing
+    // the first test logs as nearest from the deck pre-fill. In a frame
+    // preview it is admin tooling, not a user missing a frame.
+    const sheoldred = (signaturePrintings as unknown as Record<string, ScryfallCard>)["dmu-435"];
+    renderForm({
+      mode: "create",
+      framePreview: {
+        param: "all",
+        publishedKeys: VERIFIED,
+        walkthrough: {
+          template: "m15",
+          colorKey: "b",
+          kind: "creature",
+          note: "Walking m15/b",
+          seed: {
+            patch: { ...mapScryfallToFormPatch(sheoldred), frame_template: "m15" },
+            source: { name: sheoldred.name, scryfallUri: null },
+            fromReference: true,
+          },
+        },
+      },
+    });
+    await waitFor(() => expect(preview().title).toBe(sheoldred.name));
+    expect(preview().template).toBe("m15");
     expect(actions.recordFrameRequestAction).not.toHaveBeenCalled();
   });
 });

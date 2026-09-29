@@ -74,6 +74,7 @@ export const siteConfig = {
     { label: "Scryfall usage", href: "/admin/scryfall" },
     { label: "Frame compare", href: "/admin/frame-compare" },
     { label: "Frame requests", href: "/admin/frame-requests" },
+    { label: "Re-bakes", href: "/admin/renders" },
     { label: "Creator lab", href: "/admin/creator-lab" },
   ] as readonly NavItem[],
 
