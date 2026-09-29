@@ -31,19 +31,33 @@
 -- 24 have no P/T (22 of them typed "Basic", one account's lands on the token
 -- frame) and are untouched.
 --
--- Render stamps are NOT nulled: the release ships a CARD_LAYOUT_VERSION bump
--- scoped to every token whose printed line changes ("Token" first, and these
--- rows' new word), and the automatic re-bake (0120) re-draws them. This
--- update runs when the PR merges, before that deployment's cron can reach
--- them. It is an edit of the type line, so the cards' updated_at moves (the
--- 0108 trigger ignores only the render columns).
+-- The same statement sets layout_version = NULL on exactly these rows (the
+-- 0117 / 0118 pattern). A null stamp owes a platform re-bake that the
+-- automatic re-bake (0120) picks up, and never shows the owner a badge
+-- (hasNewerLook is false for a null stamp). It makes the order of this
+-- migration and the Vercel deploy irrelevant: Supabase applies migrations
+-- when the PR merges, but its runner can lag the deploy (docs/ENVIRONMENTS.md
+-- §4), and the release's CARD_LAYOUT_VERSION bump (v34, a "sweep") could then
+-- re-bake these rows BEFORE they have the word — "Token — Boar" with its P/T,
+-- stamped 34, then stale-but-current once the word lands. With the stamp
+-- nulled here:
+--   * migration first, old deployment still live: its cron re-bakes them
+--     with the old code and stamps them v33; the new deployment's v34 sweep
+--     re-bakes them again ("Token Creature — Boar");
+--   * deployment first: the v34 cron may bake them without the word; this
+--     update then nulls the stamp and the next run re-bakes them with it.
+-- The stored render is kept (the gallery shows it until the re-bake), and
+-- the render columns are not touched. It is an edit of the type line, so the
+-- cards' updated_at moves (the 0108 trigger ignores only the render columns).
 --
--- Triggers on the update: set_cards_updated_at (0108) bumps updated_at;
+-- Triggers on the update: cards_set_updated_at (set_cards_updated_at, 0108)
+-- bumps updated_at (layout_version is a render column it ignores);
 -- cards_search_vector_refresh (0086) re-indexes the new word;
 -- cards_remix_notify (0032) returns early (visibility doesn't change). No
 -- insert-only trigger (the capacity check, 0104) fires.
 --
--- Idempotent: an updated row has "Creature", so a second run matches nothing.
+-- Idempotent: an updated row has "Creature", so a second run matches nothing
+-- (and nulls no stamp).
 --
 -- Grants: none. This migration only updates rows of public.cards. It creates
 -- no table or function and changes no grant, so the API roles keep exactly
@@ -52,7 +66,9 @@
 -- Ships through a PR; never applied ad-hoc.
 
 update public.cards
-set supertype = btrim(regexp_replace(coalesce(supertype, '') || ' Creature', '\s+', ' ', 'g'))
+set
+  supertype = btrim(regexp_replace(coalesce(supertype, '') || ' Creature', '\s+', ' ', 'g')),
+  layout_version = null
 where card_type = 'token'
   and (coalesce(power, '') <> '' or coalesce(toughness, '') <> '')
   and coalesce(supertype, '') !~* '(^|\s)(creature|artifact|enchantment)(\s|$)'

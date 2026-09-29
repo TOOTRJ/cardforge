@@ -10,14 +10,16 @@ import type { Card } from "@/types/card";
 // renumber at rebase doesn't break this). A stored token with a P/T and no
 // Creature / Artifact / Enchantment word gains "Creature", the same word the
 // creator reads onto it (formSupertypeOf) and the renderers print it by
-// (printsPowerToughness). Render stamps are left for the release's layout
-// bump; no grant changes.
+// (printsPowerToughness). The same rows get a null render stamp, so the
+// automatic re-bake draws them WITH the word whichever of the migration and
+// the v34 deploy goes live first; no render column, no grant changes.
 //
 // The UPDATE was also run on 2026-09-29 against a TEMP copy of the columns
 // inside a rolled-back transaction (the local stack's Postgres 17, with the
-// cards_supertype_length CHECK): UPDATE 9 on the rows below, then UPDATE 0
-// on a second run. ROWS pins what it wrote; the test holds the app's rule
-// to the same answers.
+// cards_supertype_length CHECK): UPDATE 8 on the rows below (every row whose
+// `after` differs), each of them left with a null layout_version and every
+// other row with its stamp, then UPDATE 0 on a second run. ROWS pins what it
+// wrote; the test holds the app's rule to the same answers.
 // ---------------------------------------------------------------------------
 
 const dir = join(process.cwd(), "supabase/migrations");
@@ -66,13 +68,18 @@ describe("0124 — stored creature tokens gain \"Creature\"", () => {
     expect(file).toBe("0124_token_creature_word.sql");
   });
 
-  it("is one UPDATE of public.cards — no DDL, no grants, no render-stamp change", () => {
+  it("is one UPDATE of public.cards — no DDL, no grants; it nulls the changed rows' render stamp", () => {
     expect(statements).toHaveLength(1);
     const [stmt] = statements;
     expect(stmt).toMatch(/^update public\.cards set supertype = /i);
     expect(stmt).not.toMatch(/\b(create|alter|drop|grant|revoke|delete|insert|truncate)\b/i);
-    // The v34 sweep re-bakes every token; the stamps stay.
-    expect(stmt).not.toMatch(/layout_version|rendered_image_url|rendered_thumb_url|rendered_at/i);
+    // The SET clause writes the word AND a null stamp on the same rows: a
+    // v34 bake made before the word (the deploy went live first) is owed
+    // again, and the automatic re-bake (0120) redraws it with "Creature".
+    const set = stmt.slice(0, stmt.toLowerCase().indexOf(" where "));
+    expect(set).toMatch(/,\s*layout_version = null$/i);
+    // The stored render stays until that re-bake replaces it.
+    expect(stmt).not.toMatch(/rendered_image_url|rendered_thumb_url|rendered_at/i);
     expect(sql).toMatch(/Grants: none/);
     expect(sql).toMatch(/Ships through a PR; never applied ad-hoc\./);
   });

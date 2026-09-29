@@ -474,7 +474,12 @@ async function runGeneratedCardStep(
           supertype: card.supertype ?? undefined,
           card_type: card.card_type,
           subtypes: card.subtypes,
-          rarity: card.rarity,
+          // A token prints a black set symbol, never a rarity: a NEW token
+          // saves as common whatever the designer said (owner decision
+          // 2026-09-29, TODO 3b.15) — the creator's rule. The token kind
+          // hides the rarity chips, so a token saved rare here could never
+          // be set back in the creator.
+          rarity: card.card_type === "token" ? "common" : card.rarity,
           rules_text: card.rules_text ?? undefined,
           flavor_text: card.flavor_text ?? undefined,
           power: card.power ?? undefined,

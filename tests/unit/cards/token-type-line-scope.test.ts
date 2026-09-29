@@ -79,6 +79,15 @@ describe("tokenTypeLineChanged — 3b.15's card scope", () => {
     expect(tokenTypeLineChanged(row(["Artifact", ["Treasure"], "1", "1"]))).toBe(true);
   });
 
+  it("covers a blank supertype of spaces: the old line kept them before \"Token\", the new one trims them", () => {
+    // Before v34: [supertype, "Token"].filter(Boolean) kept "  " → "   Token
+    // — Boar"; now "Token" comes first and the supertype is trimmed.
+    expect(buildTypeLine({ cardType: "token", supertype: "  ", subtypes: ["Boar"] })).toBe("Token — Boar");
+    expect(tokenTypeLineChanged(row(["  ", ["Boar"], null, null]))).toBe(true);
+    const back = { title: "Boar", card_type: "token", supertype: " ", subtypes: ["Boar"] };
+    expect(tokenTypeLineChanged(row([null, [], null, null], { card_type: "enchantment", back_face: back }))).toBe(true);
+  });
+
   it("leaves every other card alone", () => {
     expect(tokenTypeLineChanged(row(["Legendary", ["Elf"], "2", "2"], { card_type: "creature" }))).toBe(false);
     expect(tokenTypeLineChanged(row(["Basic", ["Forest"], null, null], { card_type: "land" }))).toBe(false);

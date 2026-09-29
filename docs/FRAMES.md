@@ -363,7 +363,8 @@ every template. `showsPowerToughness(cardType, subtypes, supertype)` (the
 creator's inputs, the AI lint) is true for a token only with Creature or a
 Vehicle / Spacecraft subtype; the renderers gate on `printsPowerToughness`,
 which also keeps a stored word-less token's P/T (migration 0124 gave those
-rows "Creature"). The frame follows the Artifact word
+rows "Creature" and a null render stamp, so the automatic re-bake redraws
+them with the word whichever of the migration and the deploy lands first). The frame follows the Artifact word
 (`typeWordFrameFor`): there is no separate "Artifact Token" chip, and stored
 cards keep their template.
 

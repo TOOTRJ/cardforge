@@ -248,7 +248,13 @@ export function sampleFramePreview(template: FrameTemplate, colorKey: FrameColor
               : isSpellHalf
                 ? "instant"
                 : "creature",
-    supertype: null,
+    // A token sample is a creature token of its frame's own type words
+    // (TODO 3b.15): a token prints its P/T only with "Creature", and the
+    // Artifact word is what keeps a walk on the artifact token frame — the
+    // creator's frame follows the words. Without them the walk-through of
+    // the colours no printing covers (m15token/m, m15tokenartifact
+    // w/b/r/g/m) showed no P/T plate and landed on the plain token frame.
+    supertype: isToken ? (template.includes("artifact") ? "Artifact Creature" : "Creature") : null,
     subtypes: isLand || isPw || isSpellHalf ? [] : ["Sample"],
     rarity: "rare",
     colorIdentity: SAMPLE_COLOR_IDENTITY[colorKey],

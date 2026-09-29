@@ -229,14 +229,15 @@ Rules and gotchas:
   "Token" first on every template. P/T: `showsPowerToughness(type, subtypes,
   supertype)` for inputs and the AI (a token needs Creature or a Vehicle /
   Spacecraft subtype), `printsPowerToughness` in both renderers (keeps a
-  stored word-less token's P/T; 0124 gave them "Creature"). The Artifact
-  word picks `m15tokenartifact` (`typeWordFrameFor`; no "Artifact Token"
-  chip); new tokens save as common, chips hidden. `m15token` /
-  `m15tokenartifact` = the 2014–19 arch prints only (M20+ = 4.48): P/T on
-  M15's plates, type line left from 8.54 %W, own `symbolRect`. A later bump
-  whose slots move on fewer templates than its bakes change on lists them in
-  `VERIFICATION_TEMPLATE_SCOPES`; legacy ticks are judged at
-  `LEGACY_TICK_LAYOUT_VERSION` (33) (`docs/FRAMES.md` "Tokens").
+  stored word-less token's P/T; 0124 gave them "Creature" + a null stamp).
+  The Artifact word picks `m15tokenartifact` (`typeWordFrameFor`; no
+  "Artifact Token" chip); new tokens save as common (creator AND AI jobs),
+  chips hidden. `m15token` / `m15tokenartifact` = the 2014–19 arch prints
+  only (M20+ = 4.48): P/T on M15's plates, type line left from 8.54 %W, own
+  `symbolRect`. A later bump whose slots move on fewer templates than its
+  bakes change on lists them in `VERIFICATION_TEMPLATE_SCOPES`; legacy ticks
+  are judged at `LEGACY_TICK_LAYOUT_VERSION` (33) (`docs/FRAMES.md`
+  "Tokens").
 - Notifications are push, not pull: `notifications` is on the
   `supabase_realtime` publication (migration 0075) and
   `components/notifications/realtime-alerts.tsx` subscribes to the signed-in
