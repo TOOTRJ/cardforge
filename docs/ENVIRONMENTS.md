@@ -209,12 +209,16 @@ feature branch ──PR──▶ CI: typecheck · lint · unit · e2e (local Sup
   only an object in their own folder of the right bucket (or a built-in
   image / a Scryfall deck image) — see "Storage" in
   `supabase/migrations/README.md`. The origins it accepts are
-  `public.storage_origins`: production + the dev branch in the migration,
-  `https://*.supabase.co` + the local stack in `supabase/seed.sql`. A preview
-  branch whose seed didn't run (§4), or a local stack migrated without a
-  reset, refuses every new upload on save — re-run the seed (`npm run
-  db:reset` locally). A storage domain change needs a migration adding the
-  new origin first.
+  `public.storage_origins`: production's two in the migration, and every
+  other database's OWN origin, which the app registers itself before its
+  first upload (`lib/media/storage-origin.ts`: the origin of
+  `NEXT_PUBLIC_SUPABASE_URL`, service role, once per process) — so the dev
+  branch, each preview branch and the local stack accept exactly their own
+  storage, never another project's, and nothing in `supabase/seed.sql` is
+  needed. `npm run seed:dev -- --copy-cards-from` registers the dev origin
+  too. A storage domain change registers itself the same way (the old host
+  still goes into `LEGACY_SUPABASE_HOSTS`, `lib/media/storage-hosts.ts`, for
+  the display side).
 
 ### When the Supabase check misbehaves
 
@@ -242,7 +246,8 @@ of deleted accounts. Run it from an up-to-date `main` checkout:
 ```bash
 node scripts/sweep-storage-orphans.mjs                  # dev (.env.local), dry run
 node scripts/sweep-storage-orphans.mjs --target prod    # prod, dry run (hidden-prompt key)
-node scripts/sweep-storage-orphans.mjs --target prod --apply --backup-dir ~/pipglyph-orphans
+node scripts/sweep-storage-orphans.mjs --target prod --apply --batch-size 100 \
+  --backup-dir ~/.pipglyph/sweep-backups/$(date +%F)
 ```
 
 - **What counts as a reference:** the object's `{uuid}/{file}` key anywhere
@@ -260,16 +265,38 @@ node scripts/sweep-storage-orphans.mjs --target prod --apply --backup-dir ~/pipg
   judge); the `frames` bucket (never listed) and `card-exports` (legacy
   download history, still named by `card_exports` rows and possibly shared
   as links — listed, never deleted).
-- **`--apply`** (type "yes"): batches of 25 (`--batch-size`). Per batch:
-  `--backup-dir` copies each object (recommended for the first production
-  run — storage has no undo; a copy that doesn't match the listed MD5 eTag
-  keeps the object), then a fresh full database scan for the batch's keys
-  and card ids, then a lookup of every object at once right before the
-  delete (gone, another eTag/size, or recently changed → kept). Every delete
-  is appended to `~/.pipglyph/sweep-storage-orphans.<project>.manifest.jsonl`
-  (bucket, path, size, eTag, last change, reason, copy). A run that dies
-  mid-delete is settled by the next one (state file beside the manifest).
-  `--limit n` deletes at most n per run.
+- **`--apply`** (type "yes"): batches of 25 (`--batch-size`, max 100).
+  **Every batch re-reads the whole database** (every text/JSON column of
+  every table, `notifications`, `funnel_events` and `ai_generation_jobs`
+  included), so N orphans cost N / batch-size full reads — on production
+  pass `--batch-size 100` (the prompt prints the number of full reads before
+  you type "yes"). Per batch: `--backup-dir` copies each object
+  (recommended for the first production run — storage has no undo; a copy
+  that doesn't match the listed MD5 eTag keeps the object; the directory is
+  refused inside any git working tree, since this repo is public and the
+  copies are users' images — keep them under `~/.pipglyph/`), then a fresh
+  full database scan for the batch's keys and card ids, then a lookup of
+  every object at once right before the delete (gone, another eTag/size, or
+  recently changed → kept). After the delete every object is looked up again
+  and only what storage reports gone is appended to
+  `~/.pipglyph/sweep-storage-orphans.<project>.manifest.jsonl` (bucket, path,
+  size, eTag, last change, reason, copy); an object it can't confirm stays in
+  the state file with its copy and the next run settles it. `--limit n`
+  deletes at most n per run. Accepted race: a custom pip re-uploaded in the
+  milliseconds between that last lookup and the delete (its name is fixed,
+  `{uid}/{SYMBOL}.png`) is deleted — the user saves the pip again.
+- **Listed for review, never deleted by the sweep:** renders of PRIVATE
+  cards that are still stored (publicly fetchable at their URL — going
+  private should have deleted them; remove them by hand with the service
+  role), and user-folder objects whose names the
+  server doesn't make today (an older upload path, or a file written
+  straight to storage with the user's own session before 0126 — it skipped
+  the byte sniff, the strip and the moderation scan; look at them).
+- Checked on dev 2026-09-29 (a throwaway object in a fake folder, uploaded,
+  removed, gone): the listing's `metadata.eTag` and `info()`'s `etag` are the
+  same quoted MD5, `remove()` echoes the full paths, and `info()` of a gone
+  object is a 400 with `statusCode: "404"` — the sweep compares eTags
+  however they are quoted and trusts only the lookup anyway.
 - Dev dry run 2026-09-29: 218 card-art objects (193 referenced, 24
   unreferenced but under 7 days, 1 test file outside a user folder), 380
   card-renders (all referenced), the other buckets empty — 0 orphans; the

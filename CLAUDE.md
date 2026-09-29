@@ -129,10 +129,14 @@ Rules and gotchas:
   (`lib/media/strip-metadata.ts`, TODO 3.14a: EXIF/GPS, XMP, IPTC, text
   chunks… dropped at the container level, pixels + ICC kept byte-exact). A
   new upload path does the same; a client-side strip never counts. It also
-  calls `checkUploadRateLimit()` first (30/min, 300/day, admins exempt), and
-  a picture URL column only takes the caller's own storage objects (0127
-  `media_url_allowed`; a remix copies its parent's) — draw one only through
-  `isAllowedMediaUrl()` / `profileMediaSrc()` (`lib/media/media-urls.ts`).
+  calls `checkUploadRateLimit()` first (30 per 60 s, 300 per 24 h, sliding;
+  admins exempt; fail-closed), and a picture URL column only takes the
+  caller's own storage objects (0127 `media_url_allowed`; a remix copies its
+  parent's) on an origin in `storage_origins` — production's in the
+  migration, every other database's own registered by the app
+  (`lib/media/storage-origin.ts`; never list another host or a wildcard) —
+  draw one only through `isAllowedMediaUrl()` / `profileMediaSrc()`
+  (`lib/media/media-urls.ts`).
 - Viewer-independent server reads use `createPublicClient()` (cookie-free,
   keeps routes ISR-eligible); cookie-bound reads via `createClient()` make
   a route dynamic. `lib/supabase/admin.ts` bypasses RLS — webhook/cron,
