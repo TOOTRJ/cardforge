@@ -184,6 +184,10 @@ export type ScryfallImportPatch = {
   /** The Scryfall card id — kept on the patch so the form can request an
    *  art import for the same card via /api/scryfall/import-art. */
   source_scryfall_id?: string;
+  /** Log-only: WHICH printing this is and the facts that shape its
+   *  art_crop, for the frame request row an inexact import writes (TODO
+   *  1.6 / 1.18, lib/frames/frame-requests.ts). Never written to the form. */
+  printing?: ImportedPrinting;
   /** Display-only preview URL. NOT written to the form's `art_url` — the
    *  user has to explicitly opt in to importing the art. */
   preview_art_url?: string | null;
@@ -474,6 +478,33 @@ export function printingDetailFromScryfall(card: ScryfallCard): PrintingDetail |
   return {
     set: card.set ? card.set.toLowerCase() : null,
     fullArt: card.full_art === true || effects.includes("fullart"),
+    textless: card.textless === true,
+  };
+}
+
+/** A printing's identity and art-relevant facts (ScryfallImportPatch
+ *  .printing), in Scryfall's own field names. */
+export type ImportedPrinting = {
+  /** Scryfall set code, lower case ("dmu"). */
+  set: string | null;
+  collector_number: string | null;
+  /** `border_color`, lower case ("black", "borderless"). */
+  border_color: string | null;
+  /** `full_art`, or the `fullart` frame effect. */
+  full_art: boolean;
+  textless: boolean;
+};
+
+export function importedPrintingFromScryfall(card: ScryfallCard): ImportedPrinting {
+  const effects = (card.frame_effects ?? []).map((e) => e.toLowerCase());
+  const set = (card.set ?? "").trim().toLowerCase();
+  const collector = (card.collector_number ?? "").trim();
+  const border = (card.border_color ?? "").trim().toLowerCase();
+  return {
+    set: set || null,
+    collector_number: collector || null,
+    border_color: border || null,
+    full_art: card.full_art === true || effects.includes("fullart"),
     textless: card.textless === true,
   };
 }
@@ -865,6 +896,7 @@ export function mapScryfallToFormPatch(
     // The front face's own artist on a multi-face card (TODO 1.8).
     artist_credit: scryfallFaceArtist(card, 0),
     source_scryfall_id: card.id,
+    printing: importedPrintingFromScryfall(card),
     preview_art_url: options.artPreviewUrl ?? null,
     // DFC detection: any card with two faces (Delver, Werewolves, etc.)
     // emits a back_face patch the form will seed when the user imports.

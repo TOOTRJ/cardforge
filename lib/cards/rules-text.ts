@@ -27,61 +27,97 @@
 
 import { tokenize, tokenSuffix } from "@/components/cards/mana-cost-glyphs";
 
-// Canonical MTG ability words. Lowercased for matching. Missing one simply means
-// it won't be italicized — graceful, never wrong. Deliberately excludes keyword
-// abilities (Flying, Trample, …), which render at normal weight on real cards.
-const ABILITY_WORDS = new Set<string>([
+// MTG ability words, lowercased for matching: Scryfall's catalog/ability-words
+// as of the committed fixture (tests/unit/cards/fixtures/scryfall-ability-
+// words.json, fetched 2026-09-28 — TODO 1.13, layout v33), which a test holds
+// this list to. Refresh the two together. Missing one simply means it won't be
+// italicized — graceful, never wrong. Keyword abilities (Flying, Trample, …)
+// are not ability words: they print at normal weight on real cards.
+export const ABILITY_WORDS: ReadonlySet<string> = new Set<string>([
   "adamant",
   "addendum",
   "alliance",
   "battalion",
   "bloodrush",
+  "celebration",
   "channel",
   "chroma",
   "cohort",
   "constellation",
   "converge",
   "corrupted",
-  "coven",
   "council's dilemma",
+  "coven",
+  "covercast",
   "delirium",
   "descend",
+  "disappear",
   "domain",
+  "eerie",
   "eminence",
   "enrage",
   "fateful hour",
+  "fathomless descent",
   "ferocious",
+  "flurry",
   "formidable",
   "grandeur",
   "hellbent",
+  "hero's reward",
   "heroic",
   "imprint",
+  "infusion",
   "inspired",
   "join forces",
+  "kinfall",
   "kinship",
   "landfall",
+  "landship",
+  "legacy",
   "lieutenant",
   "magecraft",
   "metalcraft",
   "morbid",
+  "opus",
   "pack tactics",
+  "paradox",
   "parley",
   "radiance",
   "raid",
   "rally",
+  "renew",
+  "repartee",
   "revolt",
   "secret council",
   "spell mastery",
+  "start your engines!",
   "strive",
+  "survival",
   "sweep",
   "tempting offer",
   "threshold",
+  "underdog",
   "undergrowth",
   "valiant",
+  "vivid",
+  "void",
   "will of the council",
+  "will of the planeswalkers",
 ]);
 
-type RulesEmphasis = "ability" | "reminder";
+/** Whether the text before an ability's em dash is an ability word: one of
+ *  the catalog's, in any case, with a typographic apostrophe read as the
+ *  catalog's straight one ("Council’s dilemma") and a trailing number
+ *  dropped ("Descend 4" and "Descend 8" print; the catalog lists "Descend"). */
+export function isAbilityWord(prefix: string): boolean {
+  const key = prefix.trim().toLowerCase().replace(/[‘’]/g, "'");
+  return ABILITY_WORDS.has(key) || ABILITY_WORDS.has(key.replace(/\s+\d+$/, ""));
+}
+
+/** How a word is set: an ability word or reminder text inside the rules, or
+ *  flavor text (lib/cards/rules-layout.ts sets each flavor line as runs of
+ *  "flavor" words). Every emphasis is italic, in both renderers. */
+export type RulesEmphasis = "ability" | "reminder" | "flavor";
 
 export type RulesItem =
   | { t: "w"; v: string; em?: RulesEmphasis; tight?: boolean }
@@ -102,7 +138,11 @@ function pushWords(
   em?: RulesEmphasis,
   tightFirst = false,
 ): void {
-  let first = true;
+  // Only a word that really touches what came before is glued to it: a span
+  // that opens with whitespace ("{B} equal", "(remix) deals") starts a new
+  // run, whatever its caller saw before the span. Both renderers used to
+  // draw "ⓑequal" and "(remix)deals" (layout v33).
+  let first = !/^\s/.test(text);
   for (const word of text.split(/\s+/)) {
     if (!word) continue;
     const item: RulesItem = em ? { t: "w", v: word, em } : { t: "w", v: word };
@@ -148,7 +188,10 @@ function pushSpan(
   for (const m of span.matchAll(MANA_ONLY)) {
     const idx = m.index ?? 0;
     if (idx > cursor) {
-      pushWords(items, span.slice(cursor, idx), em, firstSegment && tightFirst);
+      // Words between two pips glue to the one before them when they touch
+      // it — "({T}: Add {G}.)" keeps "{T}:" together, as the trailing words
+      // after the last pip always did (layout v33).
+      pushWords(items, span.slice(cursor, idx), em, firstSegment ? tightFirst : abutsPrevious(span, cursor));
       firstSegment = false;
     }
     pushMana(
@@ -183,8 +226,7 @@ export function tokenizeRulesText(raw: string): RulesParagraph[] {
     // normal sentence containing an em dash isn't misdetected.
     const dash = rest.indexOf("—");
     if (dash > 0) {
-      const prefix = rest.slice(0, dash).trim().toLowerCase();
-      if (ABILITY_WORDS.has(prefix)) {
+      if (isAbilityWord(rest.slice(0, dash))) {
         pushWords(items, rest.slice(0, dash).trimEnd(), "ability");
         items.push({ t: "w", v: "—", em: "ability" });
         rest = rest.slice(dash + 1);

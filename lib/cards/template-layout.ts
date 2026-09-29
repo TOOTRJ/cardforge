@@ -60,8 +60,9 @@ import {
   SET_SYMBOL_BOX_PCT,
   SET_SYMBOL_BOX_PCT_THIN_BAR,
   TITLE_SIZE_PCT,
+  RULES_SIZE_PX,
   TYPE_SIZE_PCT,
-  ptToPct,
+  rulesPxToPct,
 } from "@/lib/cards/typography";
 
 /** A rectangle in card-relative percent (0–100), origin top-left. The card's
@@ -134,6 +135,16 @@ export type TextSlot = {
    *  through lib/cards/render-tiers.ts fitTypeLine. A second face fits
    *  with its own `fitLines`. Code-owned: not part of the override schema. */
   fit?: TextSlotFit;
+  /** RULES boxes only (layout v33, TODO 3.29): the box's padding in HD px —
+   *  px of the 1500 px portrait / 2100 px landscape card, one physical
+   *  scale — `x` either side, `y` above and below. Unset, the consumer's
+   *  default (lib/cards/rules-box.ts): RULES_BOX_PAD_PX (9 / 18, the old
+   *  0.6 % / 1.2 %) on a main box, the adventure page's and a second face's
+   *  own. M15 sets the prints' margins, 4 / 0: its printed text runs to
+   *  within a few px of the box; split gives each side its own (its boxes
+   *  hold the textbox border, SPLIT_RULES_PAD_PX). Code-owned: not part of
+   *  the override schema. */
+  padPx?: { x: number; y: number } | { left: number; right: number; top: number; bottom: number };
 };
 
 /** TextSlot.fit's policies. */
@@ -314,10 +325,11 @@ export type FrameProfile = {
   title: TextSlot;
   /** Type band. Type line left; rarity set-symbol right. */
   type: TextSlot;
-  /** Rules + flavor text box. Its `sizePct` is the printed standard from
-   *  lib/cards/typography.ts (9 pt on a full box, 7.5–8 pt on half boxes);
-   *  the fit ladder shrinks from there. `lineHeight` is left unset so the
-   *  standard leading applies. */
+  /** Rules + flavor text box. Its `sizePct` is one of the named HD-px
+   *  ceilings in lib/cards/typography.ts RULES_SIZE_PX (rulesPxToPct — 76 px,
+   *  the prints' 9 pt, on a full box; 68 / 64 on half boxes and walkers,
+   *  layout v33); the fit ladder shrinks from there. `lineHeight` is left
+   *  unset so the standard leading applies. */
   rules: TextSlot;
   /** Draw the M15-family hairline between rules and flavor text. Pre-M15
    *  frames (1997 retro, 2003 modern, Alpha-era) separate them with a gap
@@ -378,6 +390,11 @@ export type FrameProfile = {
    *  printed M15 planeswalkers — instead of the plain text body. Lines without
    *  a leading loyalty cost (static abilities) render unbadged. */
   loyaltyRows?: {
+    /** The walker text's ceiling (layout v33): the ability rows, and a
+     *  walker drawn in the plain box, never set above this (nor above the
+     *  rules slot's own size — lib/cards/rules-box.ts walkerSizePct). The
+     *  rules slot's size is then what any OTHER card on the frame gets. */
+    maxSizePct?: number;
     badgeTextHex: string;
     /** Alternating row backdrops (odd/even), translucent over the art. */
     stripeAHex: string;
@@ -909,13 +926,27 @@ const M15: FrameProfile = {
     // block center across all seven reference scans (77.2–78.0 regardless
     // of text length).
     rect: { topPct: 63.6, leftPct: 8.5, widthPct: 83, heightPct: 28.0 },
-    sizePct: ptToPct(9),
+    sizePct: rulesPxToPct(RULES_SIZE_PX.standard),
     colorHex: INK_DARK,
     // Real M15 cards vertically center the rules block when it doesn't fill
     // the box (see any short-text printing, e.g. DOM Serra Angel) — full
     // boxes render identically either way.
     vAlign: "center",
     font: "body",
+    // The prints' margins (layout v33, TODO 3.29): full-box print ink runs
+    // y 1333–1927 and from x 134 on an HD card, within a few px of this box
+    // (1335.6–1923.6, x 127.5) — not the 18 / 9 px the old padding kept. No
+    // vertical padding at all: a 0.98 em line box already holds 0.07 em of
+    // air above its ascenders and 0.016 em below its descenders, so the
+    // first ascender lands at y ≈ 1340 (the prints' 1333–1343) and the last
+    // descender ends ≈ 1.4 px inside the box; an accented capital's extra
+    // height is the layout's headroom (insetTop), never clipped. (6 px, the
+    // first cut, left ≈ 23 px of the prints' box unused: 113 of 706 public
+    // boxes and 5 of 25 prints one 2 px step small — layout v33 review.) The
+    // profiles that spread M15 inherit them; borderless and extended art,
+    // whose drawn boxes differ, keep the default (a by-eye item on the
+    // round-9 sheet).
+    padPx: { x: 4, y: 0 },
   },
   footer: {
     // The real artist line's ink centers at ~96.2% of card height and its
@@ -1044,7 +1075,7 @@ const AGCLASSIC: FrameProfile = {
   // Inside the textured area with ~30 px at the sides, ~20 above, ~12 below.
   rules: {
     rect: { topPct: 61.2, leftPct: 15.4, widthPct: 69.2, heightPct: 25.6 },
-    sizePct: ptToPct(9),
+    sizePct: rulesPxToPct(RULES_SIZE_PX.standard),
     colorHex: INK_DARK,
     vAlign: "start",
     font: "body",
@@ -1136,9 +1167,13 @@ const M15PW: FrameProfile = {
   // M15's baseline (1259.6 px at HD, three BFZ/DOM/AKH walkers) starting at
   // 8.5 %W; ours sat 10 px higher, 8 px right and a quarter small.
   type: { ...M15.type, dy: CC_M15_TYPE_DY },
+  // Layout v33: a planeswalker's text (its ability rows, or the plain box
+  // with its shield drawn) is capped at loyaltyRows.maxSizePct — the walker
+  // prints' 7.5 pt; this 8 pt ceiling is for any other card on the frame
+  // (v32's 67 px → 68, never a shrink).
   rules: {
     rect: { topPct: 63.1, leftPct: 8.5, widthPct: 83.5, heightPct: 28.3 },
-    sizePct: ptToPct(8),
+    sizePct: rulesPxToPct(RULES_SIZE_PX.reduced),
     colorHex: INK_DARK,
     vAlign: "start",
     font: "body",
@@ -1147,6 +1182,7 @@ const M15PW: FrameProfile = {
   // Printed planeswalkers stripe each ability row and badge its loyalty cost
   // in the left rail; parseLoyaltyAbilities supplies the rows.
   loyaltyRows: {
+    maxSizePct: rulesPxToPct(RULES_SIZE_PX.compact),
     badgeTextHex: "#f5f0e4",
     stripeAHex: "rgba(244,238,226,0.78)",
     stripeBHex: "rgba(229,221,202,0.78)",
@@ -1235,7 +1271,7 @@ const M15TOKEN: FrameProfile = {
   },
   rules: {
     rect: { topPct: 60.5, leftPct: 12, widthPct: 76, heightPct: 12 },
-    sizePct: ptToPct(8),
+    sizePct: rulesPxToPct(RULES_SIZE_PX.standard),
     colorHex: INK_LIGHT,
     vAlign: "center",
     font: "body",
@@ -1334,7 +1370,9 @@ const M15BORDERLESS: FrameProfile = {
   artSlot: { topPct: 0, leftPct: 0, widthPct: 100, heightPct: 92.24 },
   title: { ...M15.title, colorHex: BORDERLESS_INK },
   type: { ...M15.type, colorHex: BORDERLESS_INK, dy: CC_M15_TYPE_DY },
-  rules: { ...M15.rules, colorHex: BORDERLESS_INK },
+  // The default rules padding, not M15's print margins (layout v33): the
+  // translucent box is drawn differently.
+  rules: { ...M15.rules, colorHex: BORDERLESS_INK, padPx: undefined },
   pt: {
     ...M15.pt!,
     plateRect: { topPct: 88.62, leftPct: 76.4, widthPct: 18.27, heightPct: 6.67 },
@@ -1423,7 +1461,7 @@ const ALPHATOKEN: FrameProfile = {
   },
   rules: {
     rect: { topPct: 49.0, leftPct: 12, widthPct: 76, heightPct: 11 },
-    sizePct: ptToPct(7.5),
+    sizePct: rulesPxToPct(RULES_SIZE_PX.compact),
     colorHex: INK_LIGHT,
     vAlign: "center",
     font: "body",
@@ -1478,7 +1516,7 @@ const RETRO: FrameProfile = {
   },
   rules: {
     rect: { topPct: 60.6, leftPct: 11.5, widthPct: 77, heightPct: 27.2 },
-    sizePct: ptToPct(9),
+    sizePct: rulesPxToPct(RULES_SIZE_PX.standard),
     colorHex: INK_DARK,
     vAlign: "center",
     font: "body",
@@ -1551,7 +1589,7 @@ const MODERN: FrameProfile = {
   },
   rules: {
     rect: { topPct: 62.5, leftPct: 8.3, widthPct: 83, heightPct: 27 },
-    sizePct: ptToPct(9),
+    sizePct: rulesPxToPct(RULES_SIZE_PX.standard),
     colorHex: INK_DARK,
     vAlign: "center",
     font: "body",
@@ -1619,7 +1657,7 @@ const BATTLE: FrameProfile = {
   },
   rules: {
     rect: { topPct: 67.5, leftPct: 12.1, widthPct: 78.4, heightPct: 27 },
-    sizePct: ptToPct(8, "landscape"),
+    sizePct: rulesPxToPct(RULES_SIZE_PX.reduced, "landscape"),
     colorHex: INK_DARK,
     vAlign: "start",
     font: "body",
@@ -1676,7 +1714,7 @@ const SAGA: FrameProfile = {
   // a frame has no `chapters`).
   rules: {
     rect: { topPct: 11.5, leftPct: 8, widthPct: 41, heightPct: 72 },
-    sizePct: ptToPct(7.5),
+    sizePct: rulesPxToPct(RULES_SIZE_PX.compact),
     colorHex: INK_DARK,
     font: "body",
   },
@@ -1715,7 +1753,7 @@ const ADVENTURE: FrameProfile = {
   // Creature rules → RIGHT page (MSE text left 190, top 332, width 143 → 481).
   rules: {
     rect: { topPct: 63.5, leftPct: 50.7, widthPct: 38.2, heightPct: 28.5 },
-    sizePct: ptToPct(8),
+    sizePct: rulesPxToPct(RULES_SIZE_PX.reduced),
     colorHex: INK_DARK,
     vAlign: "start",
     font: "body",
@@ -1748,7 +1786,7 @@ const ADVENTURE: FrameProfile = {
     // Adventure rules — MSE text 2 (left 27, top 375, width 143 → 481).
     rules: {
       rect: { topPct: 71.6, leftPct: 7.2, widthPct: 38.1, heightPct: 20.3 },
-      sizePct: ptToPct(7.5),
+      sizePct: rulesPxToPct(RULES_SIZE_PX.compact),
       colorHex: INK_DARK,
       vAlign: "start",
       font: "body",
@@ -1797,7 +1835,7 @@ const FLIP: FrameProfile = {
   },
   rules: {
     rect: { topPct: 11.3, leftPct: 7.7, widthPct: 84, heightPct: 12.5 },
-    sizePct: ptToPct(7.5),
+    sizePct: rulesPxToPct(RULES_SIZE_PX.compact),
     colorHex: INK_DARK,
     vAlign: "center",
     font: "body",
@@ -1836,7 +1874,7 @@ const FLIP: FrameProfile = {
     },
     rules: {
       rect: { topPct: 73.4, leftPct: 8.3, widthPct: 84, heightPct: 11.8 },
-      sizePct: ptToPct(7.5),
+      sizePct: rulesPxToPct(RULES_SIZE_PX.compact),
       colorHex: INK_DARK,
       vAlign: "center",
       font: "body",
@@ -1859,6 +1897,25 @@ const FLIP: FrameProfile = {
 // color (the app has one color identity, so a two-color split renders multicolor
 // on both halves). Frame composited from two MSE half-frames by
 // scripts/build-split-frame.mjs. Geometry is the MSE 523×375 spec in percent.
+//
+// The rules rects span each half's art-window width, so the frame's textbox
+// border lies INSIDE them: at its widest the cream starts 33 HD px inside a
+// rect's left edge and ends 38 px inside its right, on both halves of every
+// colour master (tests/unit/cards/rules-box.test.ts measures them). The text
+// keeps the padding of the MSE split style the frame comes from (6 / 4 of
+// its 523 px card: 24 / 16 HD px) inside that border — the first v33 cut
+// set it on the gold (an italic "f" crossed into the black frame). Both halves
+// keep the front box's 18 px above and below (the right half had a second
+// face's 12), so their first lines sit level. The boxes themselves (the
+// clip, the watermark centred in them) stay where they were.
+export const SPLIT_TEXTBOX_BORDER_PX = { left: 33, right: 38 } as const;
+const SPLIT_RULES_PAD_PX = {
+  left: SPLIT_TEXTBOX_BORDER_PX.left + 24,
+  right: SPLIT_TEXTBOX_BORDER_PX.right + 16,
+  top: 18,
+  bottom: 18,
+} as const;
+
 const SPLIT: FrameProfile = {
   label: "Split",
   orientation: "landscape",
@@ -1883,10 +1940,11 @@ const SPLIT: FrameProfile = {
   },
   rules: {
     rect: { topPct: 62.4, leftPct: 4.8, widthPct: 41.9, heightPct: 28.5 },
-    sizePct: ptToPct(8, "landscape"),
+    sizePct: rulesPxToPct(RULES_SIZE_PX.reduced, "landscape"),
     colorHex: INK_DARK,
     vAlign: "start",
     font: "body",
+    padPx: SPLIT_RULES_PAD_PX,
   },
   secondFace: {
     rotation: 0,
@@ -1908,10 +1966,11 @@ const SPLIT: FrameProfile = {
     },
     rules: {
       rect: { topPct: 62.4, leftPct: 53.2, widthPct: 41.9, heightPct: 28.5 },
-      sizePct: ptToPct(8, "landscape"),
+      sizePct: rulesPxToPct(RULES_SIZE_PX.reduced, "landscape"),
       colorHex: INK_DARK,
       vAlign: "start",
       font: "body",
+      padPx: SPLIT_RULES_PAD_PX,
     },
   },
 };
@@ -1949,7 +2008,7 @@ const AFTERMATH_TEXT = {
   titleSizePct: TITLE_SIZE_PCT,
   typeSizePct: TYPE_SIZE_PCT,
   costSizePct: COST_DISC_PCT,
-  rulesSizePct: ptToPct(9),
+  rulesSizePct: rulesPxToPct(RULES_SIZE_PX.standard),
 } as const;
 
 const AFTERMATH: FrameProfile = {
@@ -2061,7 +2120,7 @@ function artForwardShowcase(
     },
     rules: {
       rect: { topPct: 67.6, leftPct: 8, widthPct: 84, heightPct: 24.5 },
-      sizePct: ptToPct(8),
+      sizePct: rulesPxToPct(RULES_SIZE_PX.reduced),
       colorHex: INK_DARK,
       vAlign: "start",
       font: "body",
@@ -2113,7 +2172,7 @@ function tarkirCard(
     },
     rules: {
       rect: { topPct: 66, leftPct: 9, widthPct: 82, heightPct: 26 },
-      sizePct: ptToPct(8),
+      sizePct: rulesPxToPct(RULES_SIZE_PX.reduced),
       colorHex: inks.rules,
       vAlign: "start",
       font: "body",
@@ -2174,7 +2233,7 @@ const TARKIRDRAGON: FrameProfile = {
   // like MSE; 9 pt, the platform rules base.
   rules: {
     rect: { topPct: 62.75, leftPct: 8.7, widthPct: 82.6, heightPct: 28.5 },
-    sizePct: ptToPct(9),
+    sizePct: rulesPxToPct(RULES_SIZE_PX.standard),
     colorHex: INK_LIGHT,
     vAlign: "center",
     font: "body",
@@ -2244,7 +2303,7 @@ const LOTR: FrameProfile = {
   },
   rules: {
     rect: { topPct: 66, leftPct: 8.5, widthPct: 83, heightPct: 26 },
-    sizePct: ptToPct(8),
+    sizePct: rulesPxToPct(RULES_SIZE_PX.reduced),
     colorHex: INK_DARK,
     vAlign: "start",
     font: "body",
@@ -2315,7 +2374,7 @@ function borderlessShowcase(
     },
     rules: {
       rect: { topPct: 62, leftPct: 7, widthPct: 86, heightPct: 28 },
-      sizePct: ptToPct(8),
+      sizePct: rulesPxToPct(RULES_SIZE_PX.reduced),
       colorHex: INK_LIGHT,
       vAlign: "center",
       font: "body",
@@ -2377,7 +2436,7 @@ const TARKIRGHOSTFIRE: FrameProfile = {
   // textbox is the backdrop now.
   rules: {
     rect: { topPct: 58.71, leftPct: 8.3, widthPct: 83.4, heightPct: 28.39 },
-    sizePct: ptToPct(9),
+    sizePct: rulesPxToPct(RULES_SIZE_PX.standard),
     colorHex: GHOSTFIRE_INK,
     vAlign: "center",
     font: "body",
@@ -2412,9 +2471,11 @@ const EXTENDEDART: FrameProfile = {
   // Frame edge at 96.76%H (lower than M15's 92.86%).
   brandMark: { rightPct: 3.5, bottomPct: 0.8 },
   artSlot: { topPct: 11.9, leftPct: 4, widthPct: 92, heightPct: 48.4 },
+  // The default rules padding, not M15's print margins (layout v33).
   rules: {
     ...M15.rules,
     rect: { topPct: 60.5, leftPct: 9.1, widthPct: 82.9, heightPct: 29 },
+    padPx: undefined,
   },
 };
 
@@ -2437,7 +2498,7 @@ const EXPEDITIONLAND: FrameProfile = {
   },
   rules: {
     rect: { topPct: 60.5, leftPct: 8, widthPct: 83.5, heightPct: 21 },
-    sizePct: ptToPct(9),
+    sizePct: rulesPxToPct(RULES_SIZE_PX.standard),
     colorHex: INK_LIGHT,
     vAlign: "start",
     font: "body",
@@ -2482,7 +2543,7 @@ const FULLART: FrameProfile = {
   },
   rules: {
     rect: { topPct: 78.6, leftPct: 8, widthPct: 84, heightPct: 13.5 },
-    sizePct: ptToPct(8),
+    sizePct: rulesPxToPct(RULES_SIZE_PX.reduced),
     colorHex: INK_LIGHT,
     vAlign: "start",
     font: "body",
@@ -2542,7 +2603,7 @@ const FULL_ART_BASIC: FrameProfile = {
   symbolSizePct: SET_SYMBOL_BOX_PCT,
   rules: {
     rect: { topPct: 16, leftPct: 15, widthPct: 70, heightPct: 62 },
-    sizePct: ptToPct(9),
+    sizePct: rulesPxToPct(RULES_SIZE_PX.standard),
     colorHex: INK_LIGHT,
     font: "body",
   },

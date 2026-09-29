@@ -26,4 +26,8 @@ export const UNTOUCHED_SINCE_V22 = {
   loyalty: null,
   defense: null,
   back_face: null,
+  // v33 (the rules layout) reads what a card prints: this one prints no text.
+  rules_text: null,
+  flavor_text: null,
+  face_content: null,
 };

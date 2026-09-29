@@ -187,23 +187,63 @@ describe("planeswalker ability rows", () => {
   const BAKE_ROWS = fn(BAKE, "LoyaltyRowsBake");
   const PREVIEW_ROWS = fn(PREVIEW, "LoyaltyRows");
 
-  it("draw one row layout and one badge box from lib/cards/loyalty-rows in both renderers", () => {
+  it("draw one row layout, one badge box and the layout's lines from lib/cards/loyalty-rows in both renderers", () => {
     // Content-sized rows (TODO 3.13): the shared layout, never equal flex rows,
     // from the one profile call (rules box, size, leading, loyalty shield).
     for (const src of [BAKE, PREVIEW]) expect(src).toContain("layoutProfileLoyaltyRows(layout, ");
-    expect(BAKE_ROWS).toContain("loyaltyRowEdgesPx(rowsLayout.rowFractions");
+    // Every row value in whole px of the renderer's target (layout v33): the
+    // bake's own, the preview the HD bake's (in cqw).
+    expect(BAKE_ROWS).toContain("loyaltyRowsDrawing(rowsLayout, target)");
+    expect(PREVIEW_ROWS).toContain('loyaltyRowsDrawing(rowsLayout, "hd")');
     expect(PREVIEW_ROWS).toContain("height: `${rowFractions[i] * 100}%`");
-    // One badge height (TODO 3.3: the preview's was 1.6 em, the bake's 1.5).
+    // One badge box (TODO 3.3: the preview's was 1.6 em, the bake's 1.5),
+    // from LOYALTY_ROW through loyaltyRowPx — never an em literal here.
+    expect(BAKE_ROWS).toContain("width: a.badgeWidth,");
+    expect(BAKE_ROWS).toContain("height: a.badgeHeight,");
+    expect(PREVIEW_ROWS).toContain("width: hdCqw(a.badgeWidth),");
+    expect(PREVIEW_ROWS).toContain("height: hdCqw(a.badgeHeight),");
     for (const rows of [BAKE_ROWS, PREVIEW_ROWS]) {
-      expect(rows).toContain("LOYALTY_ROW.badgeHeightEm");
-      expect(rows).toContain("LOYALTY_ROW.badgeWidthEm");
-      expect(rows).toContain("LOYALTY_ROW.padYEm");
-      expect(rows).not.toMatch(/\* (1\.6|1\.5|2\.3|0\.22)\b/);
-      // The last ability wraps short of the loyalty shield (TODO 4.19).
-      expect(rows).toMatch(/i === last && [A-Za-z]+ > 0 \? \{ marginRight: /);
+      expect(rows).not.toMatch(/\* (1\.6|1\.5|2\.3|0\.22|0\.4)\b/);
+      expect(rows).not.toContain("LOYALTY_ROW.");
+      // The text starts where the rail ends; each ability's column is the
+      // width its lines were broken for — the last one short of the loyalty
+      // shield when it would reach it (TODO 4.19) — and they are the
+      // layout's own lines, never wrapped by the renderer.
+      expect(rows).toMatch(/marginRight: (hdCqw\()?a\.rail - a\.padX - a\.badgeWidth/);
+      expect(rows).toMatch(/width: (hdCqw\()?draw\.text\[i\]\.column/);
+      expect(rows).toMatch(/<RulesLines(Bake)? blocks=\{rowsLayout\.text\[i\]\.blocks\} metrics=\{draw\.text\[i\]\.metrics\}/);
+      expect(rows).not.toContain("RulesBody");
     }
-    expect(BAKE_ROWS).toContain("Math.round(rowsLayout.lastRowInsetPct * cardWidth)");
-    expect(PREVIEW_ROWS).toContain("cqw(lastRowInsetPct)");
+  });
+});
+
+describe("saga chapter rail (layout v33: correctness only)", () => {
+  const fn = (src: string, name: string) => {
+    const start = src.indexOf(`function ${name}(`);
+    return src.slice(start, src.indexOf("\n}\n", start));
+  };
+  const BAKE_RAIL = fn(BAKE, "ChapterBake");
+  const PREVIEW_RAIL = fn(PREVIEW, "ChapterRail");
+
+  it("draws the intro and every chapter as lib/cards/saga-rail.ts's lines in both renderers, at today's anatomy", () => {
+    // One layout call each (the same resolution of face_content / rules).
+    for (const src of [BAKE, PREVIEW]) {
+      expect(src).toContain("layoutSagaRail(layout.chapters, sagaContent.intro, sagaContent.chapters)");
+    }
+    expect(BAKE_RAIL).toContain("sagaRailPx(slot, target)");
+    expect(PREVIEW_RAIL).toContain('sagaRailPx(slot, "hd")');
+    for (const rail of [BAKE_RAIL, PREVIEW_RAIL]) {
+      // Real pips, reminder italics, U+2212 — never the raw text (DOM #122
+      // baked "Add {R}{R}." as literal braces).
+      expect(rail).not.toMatch(/\{(ch\.text|intro|bakeText\(intro\))\}/);
+      expect(rail).toMatch(/<RulesLines(Bake)? blocks=\{rail\.intro\} metrics=\{metrics\.intro\}/);
+      expect(rail).toMatch(/<RulesLines(Bake)? blocks=\{ch\.blocks\} metrics=\{metrics\.chapter\}/);
+      // The badge box the lines were broken beside, in both.
+      expect(rail).toMatch(/width: (hdCqw\()?sagaBadgeWidthPx\(ch\.marker, px\)/);
+      // Equal rows, as v32 drew them (owner decision 2026-09-28; TODO 4.21).
+      expect(rail).toContain("flex: 1,");
+      expect(rail).not.toMatch(/\* (0\.9|1\.7|1\.12|0\.32|0\.6|0\.82|1\.22|1\.2)\b/);
+    }
   });
 });
 
@@ -327,9 +367,9 @@ describe("edge-to-edge and full-art pieces (TODO 3.23 / 3.24)", () => {
       expect(src).toContain("basicSymbolBox(plan.slot.rect");
       expect(src).toContain("BRAND_MARK_PILL.padXPct * scale");
       // A slot or a textless frame suppresses the rules-box watermark; a
-      // textless frame skips the rules fit and every rules layer.
+      // textless frame skips the rules layout and every rules layer.
       expect(src).toMatch(/effectiveWatermark &&\s*!textless &&\s*!basicSymbolPlan &&/);
-      expect(src).toMatch(/const rulesSizePct = textless\s*\?\s*layout\.rules\.sizePct/);
+      expect(src).toMatch(/const drawsRulesBox =\s*!textless &&/);
       expect(src).toMatch(/\{textless \? null : layout\.type\.split && typeSplit \?/);
     }
   });
@@ -379,5 +419,53 @@ describe("art guard", () => {
       expect((await resolveBakeArt(url)).ok, url).toBe(false);
     }
     vi.doUnmock("@/lib/render/art-source");
+  });
+});
+
+describe("rules text (layout v33, TODO 3.29)", () => {
+  /** A renderer's component, up to its closing brace. */
+  const fn = (src: string, name: string) => {
+    const start = src.indexOf(`function ${name}(`);
+    return src.slice(start, src.indexOf("\n}\n", start));
+  };
+
+  it("lay every rules box out through lib/cards/rules-box.ts, clear of the same drawn badges", () => {
+    for (const src of [BAKE, PREVIEW]) {
+      // The main box, the adventure page and a second face: one layout each.
+      expect(src).toMatch(/mainRulesLayout\(\{/);
+      expect(src).toMatch(/adventureRulesLayout\(\{/);
+      expect(src).toMatch(/secondFaceRulesLayout\(\{/);
+      // Every drawn stat badge, gated as the renderer draws it.
+      expect(src).toMatch(/pt: showPT,\s*loyalty: showLoyalty,\s*defense: showDefense,\s*secondFacePt: Boolean\(layout\.secondFace\?\.pt/);
+      // The old estimate, its walker fit rect and the wrapping flavor block
+      // are gone.
+      expect(src).not.toContain("fitRulesSizePct");
+      expect(src).not.toContain("fitRect");
+      expect(src).not.toMatch(/function Flavor(Block|Bake)\(/);
+    }
+  });
+
+  it("draw the layout's lines — never wrap them — in both renderers", () => {
+    const bake = fn(BAKE, "RulesBoxBake") + fn(BAKE, "RulesBoxLineBake");
+    const preview = fn(PREVIEW, "RulesBox") + fn(PREVIEW, "RulesBoxLine");
+    // The bake at its own target (the 750 px or the HD bake), the preview at
+    // the HD bake's px in cqw.
+    expect(bake).toContain("rulesDraw(layout, target)");
+    expect(BAKE).toContain("rulesTargetFor(width, orientation)");
+    expect(preview).toContain('rulesDraw(layout, "hd")');
+    expect(preview).toContain("cqw(px / RULES_HD_WIDTH[layout.orientation])");
+    for (const src of [bake, preview]) {
+      expect(src).toContain('flexWrap: "nowrap"');
+      expect(src).toContain('whiteSpace: "nowrap"');
+      expect(src).toContain("flexShrink: 0");
+      expect(src).toContain("rulesWordText(item.v)");
+      // Word gaps are margins after the first run, never a container gap.
+      expect(src).toMatch(/ri > 0 \? \{ marginLeft: /);
+      expect(src).not.toMatch(/\bgap:/);
+      expect(src).not.toContain('flexWrap: "wrap"');
+    }
+    // Each word's line height is its line box.
+    expect(bake).toContain("lineHeight: d.lineHeight");
+    expect(preview).toContain("lineHeight: hd(d.linePx)");
   });
 });

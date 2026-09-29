@@ -1,15 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { parseLoyaltyAbilities } from "@/lib/cards/card-display";
+import { parseLoyaltyAbilities, type LoyaltyAbility } from "@/lib/cards/card-display";
 import { displayTextWidthEm } from "@/lib/cards/display-metrics";
 import {
   LOYALTY_ROW,
+  LOYALTY_ROW_SIZE_PX,
   layoutLoyaltyRows,
   layoutProfileLoyaltyRows,
   loyaltyRowEdgesPx,
+  loyaltyRowLines,
+  loyaltyRowPx,
+  loyaltyRowsDrawing,
   loyaltyShieldRect,
+  type LoyaltyRowsLayout,
 } from "@/lib/cards/loyalty-rows";
-import { estimateRulesHeightW, fitRulesSizePct, rulesSizeLadder } from "@/lib/cards/render-tiers";
-import { BAKE_WRAP, BAKE_WRAP_WIDE, PREVIEW_WRAP, wrapRulesText } from "@/lib/cards/rules-metrics";
+import { walkerSizePct } from "@/lib/cards/rules-box";
+import { RULES_TARGETS, blockHeightPx, metricsFor, rectPx, rulesLadderPx, type RulesTarget } from "@/lib/cards/rules-layout";
 import { getFrameProfile, type FrameProfile } from "@/lib/cards/template-layout";
 import {
   detachedCostTitleWidthPct,
@@ -18,15 +23,17 @@ import {
   TITLE_COST_GAP_PCT,
   TITLE_FIT_HEADROOM,
 } from "@/lib/cards/title-band";
-import { RULES_TEXT, pctToPt, ptToPct } from "@/lib/cards/typography";
+import { RULES_SIZE_PX, RULES_TEXT, pctToPt, ptToPct, rulesPxToPct } from "@/lib/cards/typography";
 
 // ---------------------------------------------------------------------------
 // Planeswalker ability rows sized by their text (TODO 3.13), the last one
 // wrapping before the loyalty shield when its text would reach it (4.19),
-// and the name that stops before
-// a detached cost (4.31), shrinking to fit there (3.10 for these frames).
-// All pure, shared by the preview and the bake; real-pixel checks live in
-// tests/unit/render/pw-rows-bake.test.tsx.
+// laid out since layout v33 (TODO 3.29) by the ONE rules layout: each
+// ability's real lines, broken once and checked at both bake targets, at
+// the rules standard's spacing — and the name that stops before a detached
+// cost (4.31), shrinking to fit there (3.10 for these frames). All pure,
+// shared by the preview and the bake; real-pixel checks live in
+// tests/unit/render/pw-rows-bake.test.tsx and walker-saga-matrix.test.tsx.
 // ---------------------------------------------------------------------------
 
 const M15PW = getFrameProfile("m15pw");
@@ -35,108 +42,214 @@ const layout = (rules: string) =>
   layoutLoyaltyRows({
     abilities: parseLoyaltyAbilities(rules),
     rect: M15PW.rules.rect,
-    baseSizePct: M15PW.rules.sizePct,
+    baseSizePct: walkerSizePct(M15PW),
     aspect: ASPECT,
   });
-const boxH = (M15PW.rules.rect.heightPct / 100) * ASPECT;
+const withShield = (rules: string) => layoutProfileLoyaltyRows(M15PW, parseLoyaltyAbilities(rules), ASPECT);
 const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
+const lineCounts = (l: LoyaltyRowsLayout) => l.text.map((t) => sum(t.blocks.map((b) => b.lines.length)));
 
-// The acceptance walker: 1-line / 1-line / 5-line.
+/** A row's natural height at a target: its text block as drawn (lines,
+ *  gaps, ink headroom) or its badge, plus its padding — whole px. */
+const need = (l: LoyaltyRowsLayout, i: number, t: RulesTarget) => {
+  const a = loyaltyRowPx(t);
+  return Math.max(blockHeightPx(l.text[i], t), a.badgeHeight) + 2 * a.padY;
+};
+
+// The acceptance walker: 1-line / 1-line / 6-line at the 64 px ceiling
+// without a shield (5 lines when the rail scaled with the text).
 const WALKER_115 =
   "+1: Scry 1.\n−2: Draw a card.\n−8: You get an emblem with \"At the beginning of your upkeep, exile the top three cards of your library. Until end of turn, you may play those cards, and you may spend mana as though it were mana of any color to cast them.\"";
+const SHORT = "+2: Scry 2.\n−3: Draw a card.\n−7: You win.";
+// Test walkers whose last ability, at the full width, reaches the shield:
+// a mixed-case one and an ALL-CAPS one.
+const REACHES =
+  "+1: Look at the top three cards of your library. Put one of them into your hand and the rest on the bottom of your library in any order.\n−3: Return target creature card from your graveyard to your hand.\n−7: Search your library for up to three creature cards, reveal them, put them into your hand, then shuffle. You gain 1 life for each card.";
+const CAPS =
+  "+1: CREATURES YOU CONTROL GET +2/+2 AND GAIN TRAMPLE UNTIL END OF TURN.\n−3: DESTROY TARGET CREATURE OR PLANESWALKER WITH MANA VALUE 4 OR GREATER. ITS CONTROLLER CREATES A TREASURE TOKEN AND A CLUE TOKEN.\n−8: YOU GET AN EMBLEM WITH \"WHENEVER A CREATURE YOU CONTROL ATTACKS, DRAW A CARD.\"";
+// A test walker whose ultimate stays clear of it at the ceiling: its long
+// lines end above the shield and the line beside it is short.
+const CLEARS =
+  "+1: Draw a card, then discard a card.\n−2: Draw a card.\n−10: Search your library for any number of creature cards, put them onto the battlefield, then shuffle. They gain haste. Exile them at the beginning of the next end step.";
+// A test walker whose ultimate reaches the shield at the full width where
+// its rows first fit (64 px) and whose narrowed rows don't fit there, while
+// a smaller size clears the shield at the full width.
+const SMALLER_CLEARS =
+  "+1: Scry 1.\n−2: Draw a card.\n−8: You get an emblem with At the beginning of your upkeep exile the top three cards of your library Until end of turn you may play those cards and you may spend mana as though it were mana of any.";
+const WALKERS = [WALKER_115, SHORT, REACHES, CAPS, CLEARS, SMALLER_CLEARS];
 
-describe("layoutLoyaltyRows", () => {
-  it("keeps equal rows at the base size for equally short abilities (the old look)", () => {
-    const { sizePct, rowFractions } = layout("+2: Scry 2.\n−3: Draw a card.\n−7: You win.");
-    expect(sizePct).toBe(M15PW.rules.sizePct);
+describe("layoutLoyaltyRows (layout v33: the rules layout's lines)", () => {
+  it("sets the rows' text on the rules ladder from the walker's 64 px ceiling (7.5 pt), at the standard's spacing", () => {
+    expect(rulesLadderPx(walkerSizePct(M15PW))[0]).toBe(RULES_SIZE_PX.compact);
+    // Any OTHER card on the planeswalker frame keeps the rules slot's own
+    // 68 px (v32's 8 pt, 67 px — never a shrink).
+    expect(rulesLadderPx(M15PW.rules.sizePct)[0]).toBe(RULES_SIZE_PX.reduced);
+    const l = layout(SHORT);
+    expect(l.sizePx).toBe(64);
+    expect(l.sizePct).toBe(rulesPxToPct(64));
+    // The row spacing, stated: lines at RULES_TEXT.lineHeight (0.98 em, the
+    // prints' pitch), the fixed 24 px paragraph gap, LOYALTY_ROW.padYEm of
+    // the anatomy's fixed 46 px above and below — whole px at each target.
+    for (const t of RULES_TARGETS) {
+      const m = loyaltyRowsDrawing(l, t).text[0].metrics;
+      expect(m).toEqual(metricsFor(64, RULES_TEXT.lineHeight, t));
+      expect(m.linePx).toBe(t === "hd" ? 63 : 31);
+      expect(m.paragraphGapPx).toBe(t === "hd" ? 24 : 12);
+      expect(loyaltyRowPx(t).padY).toBe(t === "hd" ? 10 : 5);
+    }
+    expect(LOYALTY_ROW.padYEm).toBe(0.22);
+  });
+
+  it("draws the row anatomy at ONE size whatever the text's: the text column starts where the walker prints start theirs", () => {
+    expect(LOYALTY_ROW_SIZE_PX).toBe(46);
+    // padding 18 + badge 106 + gap 23: the text at x 275 of an HD card (the
+    // rules box from 128), the prints' 274–276 (BFZ #29, DOM #1, AKH #97).
+    expect(loyaltyRowPx("hd")).toMatchObject({ padX: 18, badgeWidth: 106, badgeGap: 23, rail: 147, badgeHeight: 69 });
+    expect(rectPx(M15PW.rules.rect, "portrait", ASPECT, "hd").left + loyaltyRowPx("hd").rail).toBe(275);
+    // A short walker (64 px text) and a long one (at the floor) draw the
+    // same badges and start their text on the same margin.
+    for (const t of RULES_TARGETS) {
+      expect(loyaltyRowsDrawing(layout(SHORT), t).row).toEqual(loyaltyRowsDrawing(withShield(WALKER_115), t).row);
+      for (const l of [layout(SHORT), withShield(WALKER_115)]) {
+        const box = rectPx(M15PW.rules.rect, "portrait", ASPECT, t);
+        for (let i = 0; i < l.text.length; i += 1) {
+          for (const line of loyaltyRowLines(l, i, t).lines) expect(line.left).toBe(box.left + loyaltyRowPx(t).rail);
+        }
+      }
+    }
+  });
+
+  it("keeps equal rows at the ceiling for equally short abilities (the old look)", () => {
+    const { rowFractions } = layout(SHORT);
     expect(rowFractions).toHaveLength(3);
     for (const f of rowFractions) expect(f).toBeCloseTo(1 / 3, 10);
   });
 
-  it("gives a long ability the height its text needs and shares the rest (1 / 1 / 5 lines)", () => {
-    const { sizePct, rowFractions } = layout(WALKER_115);
-    const [a, b, c] = rowFractions;
-    expect(sum(rowFractions)).toBeCloseTo(1, 10);
+  it("gives a long ability the height its lines need and shares the rest (1 / 1 / 6 lines)", () => {
+    const l = layout(WALKER_115);
+    const [a, b, c] = l.rowFractions;
+    expect(l.sizePx).toBe(64);
+    expect(lineCounts(l)).toEqual([1, 1, 6]);
+    expect(sum(l.rowFractions)).toBeCloseTo(1, 10);
     expect(a).toBeCloseTo(b, 10);
-    expect(c).toBeGreaterThan(2.5 * a);
-    // The long row holds its estimated text + padding at the chosen size…
-    const columnW =
-      M15PW.rules.rect.widthPct / 100 -
-      sizePct * (2 * LOYALTY_ROW.padXEm + LOYALTY_ROW.badgeWidthEm + LOYALTY_ROW.badgeGapEm);
-    const ability = parseLoyaltyAbilities(WALKER_115)[2].text;
-    const textH = estimateRulesHeightW(ability, sizePct, RULES_TEXT.lineHeight, columnW);
-    // (The estimate errs wide: it counts at least the five lines it prints.)
-    expect(textH / (RULES_TEXT.lineHeight + RULES_TEXT.wrapGapEm) / sizePct).toBeGreaterThanOrEqual(5 - 1e-9);
-    expect(c * boxH).toBeGreaterThanOrEqual(textH + 2 * LOYALTY_ROW.padYEm * sizePct);
-    // …and the short ones at least a badge and its padding.
-    const floor = (LOYALTY_ROW.badgeHeightEm + 2 * LOYALTY_ROW.padYEm) * sizePct;
-    expect(a * boxH).toBeGreaterThanOrEqual(floor);
-    // It is the largest ladder step at which all rows fit: one half-point up
-    // they would not.
-    const ladder = rulesSizeLadder(M15PW.rules.sizePct, ASPECT);
-    expect(ladder).toContain(sizePct);
-    expect(pctToPt(sizePct)).toBeLessThan(pctToPt(M15PW.rules.sizePct));
+    expect(c).toBeGreaterThan(2 * a);
+    // The long row is taller than a short one by exactly what its lines add
+    // (the slack is shared equally).
+    const boxHd = rectPx(M15PW.rules.rect, "portrait", ASPECT, "hd").height;
+    expect(Math.abs((c - a) * boxHd - (need(l, 2, "hd") - need(l, 0, "hd")))).toBeLessThanOrEqual(2);
+    expect(l.clipped).toBe(false);
+    // It is the largest ladder step at which every row holds its text: from
+    // a ceiling one step higher, the size it lands on is the same.
+    for (const rules of [WALKER_115, REACHES, CAPS]) {
+      const at = withShield(rules);
+      const up = layoutLoyaltyRows({
+        abilities: parseLoyaltyAbilities(rules),
+        rect: M15PW.rules.rect,
+        baseSizePct: rulesPxToPct(at.sizePx + 2),
+        aspect: ASPECT,
+        shield: loyaltyShieldRect(M15PW),
+      });
+      const facts = (x: LoyaltyRowsLayout) => [x.sizePx, x.rowFractions, x.lastRowInsetPct, x.text.map((t) => t.blocks)];
+      expect(facts(up)).toEqual(facts(at));
+    }
+  });
+
+  it("holds every row's text in the whole-px rows the bake draws, at BOTH targets — no row overlaps the next", () => {
+    for (const rules of WALKERS) {
+      for (const l of [layout(rules), withShield(rules)]) {
+        for (const t of RULES_TARGETS) {
+          const { edges, boxHeight } = loyaltyRowsDrawing(l, t);
+          expect(boxHeight).toBe(rectPx(M15PW.rules.rect, "portrait", ASPECT, t).height);
+          expect(edges.at(-1)).toBe(boxHeight);
+          l.text.forEach((_, i) => expect(edges[i + 1] - edges[i], `${rules.slice(0, 20)} row ${i} ${t}`).toBeGreaterThanOrEqual(need(l, i, t)));
+          // And its lines, where the row puts them, inside its stripe.
+          l.text.forEach((_, i) => {
+            const placed = loyaltyRowLines(l, i, t);
+            const top = rectPx(M15PW.rules.rect, "portrait", ASPECT, t).top;
+            for (const line of placed.lines) {
+              expect(line.inkTop).toBeGreaterThanOrEqual(top + edges[i]);
+              expect(line.inkBottom).toBeLessThanOrEqual(top + edges[i + 1]);
+            }
+          });
+        }
+      }
+    }
+  });
+
+  it("breaks each ability's lines for its row's column at both targets: no line is wider than it", () => {
+    for (const rules of WALKERS) {
+      const l = withShield(rules);
+      for (const t of RULES_TARGETS) {
+        const d = loyaltyRowsDrawing(l, t);
+        l.text.forEach((text, i) => {
+          for (const block of text.blocks) for (const line of block.lines) expect(line.widthPx[t]).toBeLessThanOrEqual(d.text[i].column);
+        });
+        // The column: the box less the rail and the right padding (and, on a
+        // narrowed last row, the shield's inset).
+        const a = d.row;
+        const width = rectPx(M15PW.rules.rect, "portrait", ASPECT, t).width;
+        expect(d.text[0].column).toBe(width - a.rail - a.padX);
+      }
+    }
   });
 
   it("shrinks the whole box's text only when the rows together overflow it", () => {
     const long = "Each opponent sacrifices a creature, discards a card and loses 2 life. ";
     const rules = ["+1: " + long.repeat(2), "−2: " + long.repeat(2), "−6: " + long.repeat(3), "−9: " + long.repeat(2)].join("\n");
     const tight = layout(rules);
-    expect(tight.sizePct).toBeLessThan(layout(WALKER_115).sizePct);
+    expect(tight.sizePx).toBeLessThan(layout(WALKER_115).sizePx);
     expect(sum(tight.rowFractions)).toBeCloseTo(1, 10);
   });
 
-  it("past the hard floor scales every row down alike instead of dropping the last ones", () => {
+  it("past the floor scales every row down alike instead of dropping the last ones, and says it clips", () => {
     const rules = Array.from({ length: 6 }, (_, i) => `−${i + 1}: ${"Destroy all creatures and all lands you do not control. ".repeat(4)}`).join("\n");
-    const { sizePct, rowFractions } = layout(rules);
-    expect(pctToPt(sizePct)).toBeCloseTo(RULES_TEXT.hardFloorPt, 6);
-    expect(sum(rowFractions)).toBeCloseTo(1, 10);
-    for (const f of rowFractions) expect(f).toBeCloseTo(1 / 6, 10);
+    const l = layout(rules);
+    expect(l.sizePx).toBe(RULES_SIZE_PX.floor);
+    expect(pctToPt(l.sizePct)).toBeCloseTo(RULES_TEXT.hardFloorPt, 0);
+    expect(l.clipped).toBe(true);
+    expect(sum(l.rowFractions)).toBeCloseTo(1, 10);
+    for (const f of l.rowFractions) expect(f).toBeCloseTo(1 / 6, 10);
   });
 
-  it("counts capitals at their own width, so an ALL-CAPS ability gets the rows it draws", () => {
-    // MPlantin capitals are ≈0.74 em against the 0.5 em a mixed-case letter
-    // is counted at: counted alike, an all-caps −3 got a 3-line row and drew
-    // 5 lines, over the next stripe and under the loyalty shield.
-    const caps =
-      "+1: CREATURES YOU CONTROL GET +2/+2 AND GAIN TRAMPLE UNTIL END OF TURN.\n−3: DESTROY TARGET CREATURE OR PLANESWALKER WITH MANA VALUE 4 OR GREATER. ITS CONTROLLER CREATES A TREASURE TOKEN AND A CLUE TOKEN.\n−8: YOU GET AN EMBLEM WITH \"WHENEVER A CREATURE YOU CONTROL ATTACKS, DRAW A CARD.\"";
-    const lower = caps.toLowerCase();
-    const size = M15PW.rules.sizePct;
-    const text = parseLoyaltyAbilities(caps)[1].text;
-    const columnW = 0.5;
-    expect(estimateRulesHeightW(text, size, RULES_TEXT.lineHeight, columnW)).toBeGreaterThan(
-      1.3 * estimateRulesHeightW(text.toLowerCase(), size, RULES_TEXT.lineHeight, columnW),
-    );
-    // So the caps walker fits at a smaller size than the same words in lower
-    // case.
-    const [c, l] = [layout(caps), layout(lower)];
-    expect(c.sizePct).toBeLessThan(l.sizePct);
-    // The whole-box fit (every other frame's rules box) keeps the plain
-    // count: capitals never move a fitted size there.
-    const fit = (rulesText: string) =>
-      fitRulesSizePct({ rulesText, flavorText: null, rect: M15PW.rules.rect, baseSizePct: size, aspect: ASPECT });
-    expect(fit(caps)).toBe(fit(lower));
+  it("measures capitals at their own advances, so an ALL-CAPS walker gets the lines it draws", () => {
+    const [c, lower] = [layout(CAPS), layout(CAPS.toLowerCase())];
+    expect(c.sizePx).toBeLessThan(lower.sizePx);
+    // At one size the capitals take more lines.
+    const at = (rules: string, size: number) =>
+      layoutLoyaltyRows({ abilities: parseLoyaltyAbilities(rules), rect: M15PW.rules.rect, baseSizePct: rulesPxToPct(size), aspect: ASPECT });
+    expect(sum(lineCounts(at(CAPS, 42)))).toBeGreaterThan(sum(lineCounts(at(CAPS.toLowerCase(), 42))));
   });
 
   it("gives a static (unbadged) ability and an empty hint row the badge-height floor", () => {
-    const { rowFractions } = layoutLoyaltyRows({
-      abilities: [
-        { cost: null, text: "" },
-        { cost: "+1", text: "Scry 1." },
-      ],
-      rect: M15PW.rules.rect,
-      baseSizePct: M15PW.rules.sizePct,
-      aspect: ASPECT,
-    });
-    expect(rowFractions[0]).toBeCloseTo(rowFractions[1], 10);
+    const abilities: LoyaltyAbility[] = [
+      { cost: null, text: "" },
+      { cost: "+1", text: "Scry 1." },
+    ];
+    const l = layoutLoyaltyRows({ abilities, rect: M15PW.rules.rect, baseSizePct: walkerSizePct(M15PW), aspect: ASPECT });
+    expect(l.rowFractions[0]).toBeCloseTo(l.rowFractions[1], 10);
+    expect(l.text[0].blocks).toEqual([]);
+  });
+
+  it("sets a static ability's paragraphs the fixed paragraph gap apart", () => {
+    const abilities = [{ cost: null, text: "Skeptic can be your commander.\nSkeptic can't be countered." }, { cost: "+1", text: "Scry 1." }];
+    const l = layoutLoyaltyRows({ abilities, rect: M15PW.rules.rect, baseSizePct: walkerSizePct(M15PW), aspect: ASPECT });
+    expect(l.text[0].blocks.map((b) => b.kind)).toEqual(["rules", "rules"]);
+    for (const t of RULES_TARGETS) {
+      const [first, second] = loyaltyRowLines(l, 0, t).lines;
+      const m = metricsFor(l.sizePx, RULES_TEXT.lineHeight, t);
+      expect(second.top - first.top).toBe(m.linePx + m.paragraphGapPx);
+    }
   });
 
   it("is deterministic and empty for no abilities", () => {
     expect(layout(WALKER_115)).toEqual(layout(WALKER_115));
-    expect(layoutLoyaltyRows({ abilities: [], rect: M15PW.rules.rect, baseSizePct: 0.04, aspect: ASPECT })).toEqual({
-      sizePct: 0.04,
+    expect(layoutLoyaltyRows({ abilities: [], rect: M15PW.rules.rect, baseSizePct: walkerSizePct(M15PW), aspect: ASPECT })).toEqual({
+      sizePx: 64,
+      sizePct: walkerSizePct(M15PW),
       rowFractions: [],
       lastRowInsetPct: 0,
+      text: [],
+      clipped: false,
     });
   });
 });
@@ -144,22 +257,20 @@ describe("layoutLoyaltyRows", () => {
 describe("the last ability wraps before the loyalty shield when its text would reach it (TODO 4.19)", () => {
   const rulesRight = (M15PW.rules.rect.leftPct + M15PW.rules.rect.widthPct) / 100;
   const plate = M15PW.loyalty!.plateRect!;
-  const withShield = (rules: string) => layoutProfileLoyaltyRows(M15PW, parseLoyaltyAbilities(rules), ASPECT);
-  const columnAt = (sizePct: number) =>
-    M15PW.rules.rect.widthPct / 100 -
-    sizePct * (2 * LOYALTY_ROW.padXEm + LOYALTY_ROW.badgeWidthEm + LOYALTY_ROW.badgeGapEm);
-  // Test walkers whose last ability, at the full width, reaches the shield:
-  // a mixed-case one (the second-to-last line of its long ultimate runs on
-  // beside the shield) and an ALL-CAPS one (its last words hid under it on
-  // the reviewed branch).
-  const REACHES =
-    "+1: Look at the top three cards of your library. Put one of them into your hand and the rest on the bottom of your library in any order.\n−3: Return target creature card from your graveyard to your hand.\n−7: Search your library for any number of creature cards, reveal them, put them into your hand, then shuffle. You gain 1 life for each card.";
-  const CAPS =
-    "+1: CREATURES YOU CONTROL GET +2/+2 AND GAIN TRAMPLE UNTIL END OF TURN.\n−3: DESTROY TARGET CREATURE OR PLANESWALKER WITH MANA VALUE 4 OR GREATER. ITS CONTROLLER CREATES A TREASURE TOKEN AND A CLUE TOKEN.\n−8: YOU GET AN EMBLEM WITH \"WHENEVER A CREATURE YOU CONTROL ATTACKS, DRAW A CARD.\"";
-  // Test walkers whose last ability stays clear of it: its full lines sit
-  // above the shield and the line beside it is short.
-  const CLEARS =
-    "+1: Draw a card.\n−3: Destroy target creature. Its controller loses 2 life.\n−8: You get an emblem with \"Creatures you control get +2/+2 and have flying, vigilance and first strike.\"";
+  /** The last row's lines against the shield at a target: the furthest any
+   *  line beside the shield reaches right, and the edge the narrowed column
+   *  ends at (the shield's box less the row's padding). */
+  const beside = (l: LoyaltyRowsLayout, t: RulesTarget) => {
+    const s = rectPx(plate, "portrait", ASPECT, t);
+    const lines = loyaltyRowLines(l, l.text.length - 1, t).lines;
+    const near = lines.filter((line) => line.inkBottom > s.top);
+    return {
+      reach: Math.max(0, ...near.map((line) => line.left + line.width)),
+      widest: Math.max(...lines.map((line) => line.left + line.width)),
+      narrowEnd: s.left - loyaltyRowPx(t).padX,
+      nearCount: near.length,
+    };
+  };
 
   it("takes the shield from the loyalty plate's box, else the value's", () => {
     expect(loyaltyShieldRect(M15PW)).toEqual(plate);
@@ -167,116 +278,107 @@ describe("the last ability wraps before the loyalty shield when its text would r
     expect(loyaltyShieldRect(getFrameProfile("m15"))).toBeNull();
   });
 
-  it("ends a reaching last row's text column where the shield's box begins (m15pw: 12.4 % of the width)", () => {
+  it("ends a reaching last row's text column where the shield's box begins (m15pw: 12.4 % of the width), at both targets", () => {
     for (const rules of [REACHES, CAPS]) {
-      const { lastRowInsetPct } = withShield(rules);
-      expect(lastRowInsetPct).toBeCloseTo(rulesRight - plate.leftPct / 100, 12);
-      expect(lastRowInsetPct).toBeCloseTo(0.124, 6);
+      const l = withShield(rules);
+      expect(l.lastRowInsetPct).toBeCloseTo(rulesRight - plate.leftPct / 100, 12);
+      expect(l.lastRowInsetPct).toBeCloseTo(0.124, 6);
+      for (const t of RULES_TARGETS) {
+        const d = loyaltyRowsDrawing(l, t);
+        // 186 HD px narrower (93 at 750); only the LAST row.
+        expect(d.text[0].column - d.text.at(-1)!.column).toBe(t === "hd" ? 186 : 93);
+        for (const row of d.text.slice(0, -1)) expect(row.column).toBe(d.text[0].column);
+        // Every line of it ends before the shield (less the row's padding).
+        const b = beside(l, t);
+        expect(b.widest).toBeLessThanOrEqual(b.narrowEnd);
+      }
     }
     // The same call both renderers make.
     expect(withShield(REACHES)).toEqual(
       layoutLoyaltyRows({
         abilities: parseLoyaltyAbilities(REACHES),
         rect: M15PW.rules.rect,
-        baseSizePct: M15PW.rules.sizePct,
+        baseSizePct: walkerSizePct(M15PW),
         aspect: ASPECT,
         shield: plate,
       }),
     );
   });
 
-  it("keeps the full width — the rows it had before the shield — when the last ability stays clear of it", () => {
-    // Owner decision 2026-09-26: a last ability that never came near the
-    // shield wraps exactly as before, instead of leaving a word on a line of
-    // its own. Its column's right edge is the row's (no inset), and the
-    // whole layout is the one without a shield at all.
-    for (const rules of [CLEARS, WALKER_115, "+2: Scry 2.\n−3: Draw a card.\n−7: You win."]) {
+  it("keeps the full width — the layout it would have without a shield — when the last ability stays clear of it", () => {
+    // Owner decision 2026-09-26: a last ability that never comes near the
+    // shield wraps exactly as it would without one, instead of leaving a word
+    // on a line of its own.
+    for (const rules of [CLEARS, SHORT]) {
       const clear = withShield(rules);
       expect(clear.lastRowInsetPct, rules).toBe(0);
       expect(clear).toEqual(layout(rules));
     }
-    // It isn't a narrow text: its first line runs past where the narrower
-    // column would end — narrowing would have re-wrapped it.
-    const { sizePct } = withShield(CLEARS);
-    const last = parseLoyaltyAbilities(CLEARS)[2].text;
-    const narrowEm = (columnAt(sizePct) - (rulesRight - plate.leftPct / 100)) / sizePct;
-    for (const rule of [PREVIEW_WRAP, BAKE_WRAP, BAKE_WRAP_WIDE]) {
-      const [lines] = wrapRulesText(last, columnAt(sizePct) / sizePct, rule);
-      expect(lines.length).toBeGreaterThan(1);
-      expect(lines[0]).toBeGreaterThan(narrowEm);
-      expect(lines.at(-1)!).toBeLessThan(narrowEm);
+    // It isn't a narrow text: its long lines run past where a narrowed
+    // column would end — only the line beside the shield is short.
+    const l = withShield(CLEARS);
+    expect(l.sizePx).toBe(64);
+    for (const t of RULES_TARGETS) {
+      const b = beside(l, t);
+      expect(b.widest).toBeGreaterThan(b.narrowEnd);
+      expect(b.nearCount).toBeGreaterThan(0);
+      expect(b.reach).toBeLessThanOrEqual(b.narrowEnd);
     }
   });
 
-  it("decides from where the lines break: the height estimate puts every last row's text beside the shield", () => {
-    // The rows' estimate centres CLEARS's ultimate so its text ends below the
-    // shield's top — as it does for every walker measured in round 5 — so a
-    // height rule would narrow them all. The lines themselves stop short.
-    const { sizePct, rowFractions } = withShield(CLEARS);
-    const last = parseLoyaltyAbilities(CLEARS)[2].text;
-    const textH = estimateRulesHeightW(last, sizePct, RULES_TEXT.lineHeight, columnAt(sizePct));
-    const lastTop = sum(rowFractions.slice(0, -1)) * boxH;
-    const textBottom = lastTop + (rowFractions[2] * boxH + textH) / 2;
-    const shieldTop = ((plate.topPct - M15PW.rules.rect.topPct) / 100) * ASPECT;
-    expect(textBottom).toBeGreaterThan(shieldTop);
-    expect(withShield(CLEARS).lastRowInsetPct).toBe(0);
-  });
-
   it("sizes a narrowed last row for its narrower column, so its text still fits its row", () => {
-    const abilities = parseLoyaltyAbilities(REACHES);
-    const before = layout(REACHES); // the whole width, as without a shield
-    const after = withShield(REACHES);
-    // The ultimate needs more lines in the narrower column: its row grows
-    // (or the whole box steps its text down).
-    expect(after.rowFractions[2] > before.rowFractions[2] || after.sizePct < before.sizePct).toBe(true);
-    expect(sum(after.rowFractions)).toBeCloseTo(1, 10);
-    // The estimate in the narrow column, plus padding, fits the last row.
-    const { sizePct, rowFractions, lastRowInsetPct } = after;
-    const textH = estimateRulesHeightW(abilities[2].text, sizePct, RULES_TEXT.lineHeight, columnAt(sizePct) - lastRowInsetPct);
-    expect(rowFractions[2] * boxH).toBeGreaterThanOrEqual(textH + 2 * LOYALTY_ROW.padYEm * sizePct - 1e-12);
-  });
-
-  it("estimates only the LAST row in the narrower column; the others keep the full width", () => {
-    // The same ability first and last, and room to spare: every row gets
-    // its estimate plus the same share of the slack, so the last row is
-    // taller than the first by exactly what the narrower column adds to the
-    // estimate. (Narrowing the first row's estimate instead passed every
-    // other test here, yet in real bakes put text across a seam, off the box
-    // bottom and back under the shield.)
-    const ability = "Draw two cards. Destroy target creature. Its controller loses 2 life.";
-    const { sizePct, rowFractions, lastRowInsetPct } = withShield(`+1: ${ability}\n−2: Draw a card.\n−8: ${ability}`);
-    expect(lastRowInsetPct).toBeGreaterThan(0); // it reaches the shield
-    const est = (w: number) => estimateRulesHeightW(ability, sizePct, RULES_TEXT.lineHeight, w);
-    const full = columnAt(sizePct);
-    expect(est(full - lastRowInsetPct)).toBeGreaterThan(est(full)); // one more line in the narrow column
-    expect(pctToPt(sizePct)).toBeGreaterThan(RULES_TEXT.hardFloorPt + 1); // a ladder step fits: equal slack
-    expect((rowFractions[2] - rowFractions[0]) * boxH).toBeCloseTo(est(full - lastRowInsetPct) - est(full), 12);
+    const before = layout(CAPS); // the whole width, as without a shield
+    const after = withShield(CAPS);
+    expect(after.lastRowInsetPct).toBeGreaterThan(0);
+    expect(lineCounts(after).at(-1)!).toBeGreaterThan(lineCounts(before).at(-1)!);
+    expect(after.rowFractions[2] > before.rowFractions[2] || after.sizePx < before.sizePx).toBe(true);
+    for (const t of RULES_TARGETS) {
+      const { edges } = loyaltyRowsDrawing(after, t);
+      expect(edges[3] - edges[2]).toBeGreaterThanOrEqual(need(after, 2, t));
+    }
   });
 
   it("checks each step of the size ladder at the full width first: a smaller size that alone clears the shield keeps it", () => {
-    // This ultimate reaches the shield at the full-width rows' size (5.5 pt)
-    // and its narrowed rows don't fit there; half a point down its text
-    // clears the shield at the full width — so it keeps the full width, at
-    // the size the always-narrowed layout would have used anyway.
-    const rules =
-      "+1: Create a 1/1 white Soldier creature token.\n−4: Exile target nonland permanent. Its controller creates a 2/2 colorless Robot artifact creature token.\n−8: You get an emblem with \"Whenever you cast a spell, exile the top card of your library. You may play it this turn. At the beginning of your end step, return all creature cards exiled with Probe to the battlefield.\"";
-    const noShield = layout(rules);
-    const lay = withShield(rules);
-    expect(pctToPt(noShield.sizePct)).toBeCloseTo(5.5, 9);
-    expect(pctToPt(lay.sizePct)).toBeCloseTo(5, 9);
-    expect(lay.lastRowInsetPct).toBe(0);
+    // This ultimate reaches the shield at the full width where its rows
+    // first fit (64 px), and its narrowed rows don't fit there; a few steps
+    // down its lines clear the shield at the full width — so it keeps the
+    // full width there.
+    const noShield = layout(SMALLER_CLEARS);
+    const l = withShield(SMALLER_CLEARS);
+    expect(noShield.sizePx).toBe(64);
+    expect(lineCounts(noShield)).toEqual([1, 1, 6]);
+    expect(l.sizePx).toBe(58);
+    expect(lineCounts(l)).toEqual([1, 1, 5]);
+    expect(l.lastRowInsetPct).toBe(0);
+  });
+
+  it("never lets a line's ink under the shield, at either target", () => {
+    for (const rules of WALKERS) {
+      const l = withShield(rules);
+      for (const t of RULES_TARGETS) {
+        const s = rectPx(plate, "portrait", ASPECT, t);
+        l.text.forEach((_, i) => {
+          for (const line of loyaltyRowLines(l, i, t).lines) {
+            const under = line.left + line.width > s.left && line.inkBottom > s.top;
+            expect(under, `${rules.slice(0, 20)} row ${i} ${t}`).toBe(false);
+          }
+        });
+      }
+    }
   });
 
   it("ignores a shield that misses the box, and never takes more than half its width", () => {
     const rect = M15PW.rules.rect;
     const lay = (shield: typeof plate | null) =>
-      layoutLoyaltyRows({ abilities: parseLoyaltyAbilities(WALKER_115), rect, baseSizePct: M15PW.rules.sizePct, aspect: ASPECT, shield });
+      layoutLoyaltyRows({ abilities: parseLoyaltyAbilities(REACHES), rect, baseSizePct: walkerSizePct(M15PW), aspect: ASPECT, shield });
     expect(lay(null).lastRowInsetPct).toBe(0);
     expect(lay({ ...plate, topPct: rect.topPct + rect.heightPct + 1 }).lastRowInsetPct).toBe(0); // below the box
     expect(lay({ ...plate, leftPct: rect.leftPct + rect.widthPct + 1 }).lastRowInsetPct).toBe(0); // right of it
-    // A shield over the whole box: every full line reaches it, and the
-    // column still keeps half the box.
-    expect(lay({ ...plate, leftPct: 0, topPct: rect.topPct }).lastRowInsetPct).toBeCloseTo(rect.widthPct / 200, 12);
+    // A shield over the whole box: every line reaches it, even narrowed —
+    // the floor, clipped — and the column still keeps half the box.
+    const over = lay({ topPct: rect.topPct, leftPct: 0, widthPct: 100, heightPct: rect.heightPct });
+    expect(over.lastRowInsetPct).toBeCloseTo(rect.widthPct / 200, 12);
+    expect(over.clipped).toBe(true);
   });
 });
 

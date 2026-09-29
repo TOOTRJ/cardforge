@@ -24,6 +24,9 @@ const AT_V30 = { current: 30 } as const;
 /** …and at v31, before v32 (the M15 family's sizes) made a v31 bake on the
  *  family stale again. */
 const AT_V31 = { current: 31 } as const;
+/** …and at v32, before v33 (the rules layout) made a v32 bake of any card
+ *  that prints text stale again. */
+const AT_V32 = { current: 32 } as const;
 
 describe("isRenderStale — which stored renders a version bump invalidates", () => {
   it("treats unversioned or override-cleared renders as stale", () => {
@@ -714,23 +717,25 @@ describe("v32 — one M15-era title / type size (TODO 4.20)", () => {
       latestOptInVersion,
       rolloutPolicy,
     } = await import("@/lib/cards/layout-version");
-    expect(CARD_LAYOUT_VERSION).toBe(32);
+    expect(CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(32);
     expect(rolloutPolicy(32)).toBe("sweep");
     // Every name on the family grows: no card predicate narrows it.
     expect(VERSION_SCOPES[32]).toBeUndefined();
     expect(latestOptInVersion()).toBe(22);
+    // Pinned at v32: v33 (the rules layout) re-bakes these text cards again.
+    const classifyAtV32 = await sweepAt(32);
     for (const t of FRAME_TEMPLATE_VALUES) {
       const row = at(t, 31);
       const family = V32_M15_FAMILY_TEMPLATES.includes(t);
-      expect(isRenderStale(31, t), t).toBe(family);
+      expect(isRenderStale(31, t, undefined, 32), t).toBe(family);
       expect(isRenderStale(31, t, undefined, 32, row), t).toBe(family);
-      expect(hasPendingCorrection(row), t).toBe(family);
+      expect(hasPendingCorrection(row, AT_V32), t).toBe(family);
       expect(hasNewerLook({ ...row, visibility: "public" }), t).toBe(false);
-      expect(classifyForSweep(row), t).toBe(family ? "rebake" : "stamp");
-      expect(classifyForSweep(row, 32), t).toBe(family ? "rebake" : "stamp");
+      expect(classifyAtV32(row), t).toBe(family ? "rebake" : "stamp");
+      expect(classifyAtV32(row, 32), t).toBe(family ? "rebake" : "stamp");
     }
-    expect(classifyForSweep(at("split", 31))).toBe("stamp");
-    expect(classifyForSweep(at("battle", 31))).toBe("stamp");
+    expect(classifyAtV32(at("split", 31))).toBe("stamp");
+    expect(classifyAtV32(at("battle", 31))).toBe("stamp");
     // The default frame a {} frame_style draws is m15: re-baked.
     expect(isRenderStale(31, null, undefined, 32, { frame_style: {} })).toBe(true);
     expect(classifyForSweep({ ...at("m15", 31), frame_style: {} }, 32)).toBe("rebake");
@@ -745,16 +750,16 @@ describe("v32 — one M15-era title / type size (TODO 4.20)", () => {
     ]) {
       expect(classifyForSweep(row, 32), JSON.stringify(row.frame_style)).toBe("rebake");
     }
-    // A v32 bake is current.
-    expect(classifyForSweep(at("m15", 32))).toBe("current");
-    expect(hasPendingCorrection(at("m15", 32))).toBe(false);
+    // A v32 bake was current at v32.
+    expect(classifyAtV32(at("m15", 32))).toBe("current");
+    expect(hasPendingCorrection(at("m15", 32), AT_V32)).toBe(false);
   });
 
   it("is verification-neutral: a v31 / v30 frame_reviews tick on the family stays fresh", async () => {
     const { V32_M15_FAMILY_TEMPLATES, VERIFICATION_NEUTRAL_VERSIONS, VERIFICATION_SCOPED_VERSIONS } = await import(
       "@/lib/cards/layout-version"
     );
-    expect(VERIFICATION_NEUTRAL_VERSIONS).toEqual([31, 32]);
+    expect(VERIFICATION_NEUTRAL_VERSIONS).toContain(32);
     expect(VERIFICATION_SCOPED_VERSIONS[32]).toEqual([]);
     for (const t of V32_M15_FAMILY_TEMPLATES) {
       const regular = { frame_style: { template: t, finish: "regular" } };
@@ -762,6 +767,128 @@ describe("v32 — one M15-era title / type size (TODO 4.20)", () => {
       expect(isRenderStale(30, t, VERIFICATION_SCOPED_VERSIONS, 32, regular), t).toBe(false);
       // …while the stored bakes still owe it.
       expect(isRenderStale(31, t, undefined, 32, regular), t).toBe(true);
+    }
+  });
+});
+
+describe("v33 — rules text laid out by its real lines (TODO 3.29)", () => {
+  const png = "https://x/y.png";
+  /** A v32 bake of a card that prints no text (UNTOUCHED_SINCE_V22 has none). */
+  const at = (template: string, over: Record<string, unknown> = {}) => ({
+    ...UNTOUCHED_SINCE_V22,
+    layout_version: 32,
+    rendered_image_url: png,
+    frame_style: { template, finish: "regular" },
+    ...over,
+  });
+  const scope = async () => (await import("@/lib/cards/layout-version")).VERSION_SCOPES[33];
+
+  it("is an unscoped-by-template sweep narrowed by what the card prints — never a badge", async () => {
+    const { CARD_LAYOUT_VERSION, VERSION_SCOPES, classifyForSweep, hasNewerLook, hasPendingCorrection, latestOptInVersion, rolloutPolicy } =
+      await import("@/lib/cards/layout-version");
+    expect(CARD_LAYOUT_VERSION).toBe(33);
+    expect(rolloutPolicy(33)).toBe("sweep");
+    expect(latestOptInVersion()).toBe(22);
+    expect(VERSION_SCOPES[33]).toBeTypeOf("function");
+    for (const t of [...FRAME_TEMPLATE_VALUES, ...POST_V29_TEMPLATES]) {
+      // No card to judge by → every template is touched (no template list).
+      expect(isRenderStale(32, t), t).toBe(true);
+      // Every frame prints text at v33 — the "M15 Textless" ones on the art.
+      const printed = at(t, { rules_text: "Flying" });
+      expect(isRenderStale(32, t, undefined, 33, printed), t).toBe(true);
+      expect(classifyForSweep(printed), t).toBe("rebake");
+      expect(classifyForSweep(printed, 33), t).toBe("rebake");
+      expect(hasPendingCorrection(printed), t).toBe(true);
+      expect(hasNewerLook({ ...printed, visibility: "public" }), t).toBe(false);
+      // A card that prints no text bakes as before: stamped, never re-rendered.
+      expect(classifyForSweep(at(t)), t).toBe("stamp");
+      expect(hasPendingCorrection(at(t)), t).toBe(false);
+    }
+    // A v33 bake is current; the default frame a {} frame_style draws is m15.
+    expect(classifyForSweep(at("m15", { layout_version: 33, rules_text: "Flying" }))).toBe("current");
+    expect(classifyForSweep(at("m15", { frame_style: {}, flavor_text: "Hm." }), 33)).toBe("rebake");
+    // An older bake owes v33 along with what it owed before.
+    expect(classifyForSweep(at("lotr", { layout_version: 31, rules_text: "Flying" }))).toBe("rebake");
+    expect(classifyForSweep(at("m15", { layout_version: 31 }))).toBe("rebake"); // v32, the family's sizes
+    expect(classifyForSweep(at("lotr", { layout_version: 31 }))).toBe("stamp");
+  });
+
+  it("covers every text the bake prints: rules, flavor, loyalty rows, saga chapters and intro, a back face", async () => {
+    const v33 = await scope();
+    const card = (over: Record<string, unknown>, template = "m15") => ({ ...at(template), ...over });
+    expect(v33(card({ rules_text: "Flying" }))).toBe(true);
+    expect(v33(card({ flavor_text: "“Hm.”\n—Someone" }))).toBe(true);
+    // Whitespace prints nothing.
+    expect(v33(card({ rules_text: "  \n ", flavor_text: "" }))).toBe(false);
+    // A walker's structured rows — even a row with only a cost: its badge and
+    // row are sized by the rules text size.
+    const walker = { card_type: "planeswalker" };
+    expect(v33(card({ ...walker, face_content: { v: 1, loyalty: { abilities: [{ cost: "+1", text: "Scry 1." }] } } }, "m15pw"))).toBe(true);
+    expect(v33(card({ ...walker, face_content: { v: 1, loyalty: { abilities: [{ cost: "+1", text: "" }] } } }, "m15pw"))).toBe(true);
+    expect(v33(card({ ...walker, face_content: { v: 1, loyalty: { abilities: [] } } }, "m15pw"))).toBe(false);
+    // A saga's chapters and its intro; a chapter with no text keeps today's row.
+    const saga = (s: Record<string, unknown>) => card({ face_content: { v: 1, saga: s } }, "saga");
+    expect(v33(saga({ chapters: [{ numerals: [1], text: "Draw a card." }] }))).toBe(true);
+    expect(v33(saga({ intro: "(As this Saga enters…)", chapters: [] }))).toBe(true);
+    expect(v33(saga({ intro: null, chapters: [{ numerals: [1], text: " " }] }))).toBe(false);
+    // A back face's text: the adventure page, a flip / split / aftermath half.
+    expect(v33(card({ back_face: { title: "Tale", rules_text: "Draw two cards." } }, "adventure"))).toBe(true);
+    expect(v33(card({ back_face: { title: "Tale", flavor_text: "Once." } }, "flip"))).toBe(true);
+    expect(v33(card({ back_face: { title: "Tale" } }, "split"))).toBe(false);
+  });
+
+  it("leaves out what prints no text: a basic land (no frame prints no text box at v33)", async () => {
+    const v33 = await scope();
+    const { V33_SCOPE_TEMPLATES } = await import("@/lib/cards/layout-version");
+    const card = (over: Record<string, unknown>, template = "m15") => ({ ...at(template), ...over });
+    // FrameProfile.textless is set on no profile yet: the "M15 Textless"
+    // frames print their text straight on the art, so their cards re-bake.
+    expect(V33_SCOPE_TEMPLATES.textless).toEqual([]);
+    for (const t of ["m15textless", "m15textlessland"]) {
+      expect(getFrameProfile(t).textless, t).toBeUndefined();
+      expect(v33(card({ rules_text: "Flying", flavor_text: "Hm." }, t)), t).toBe(true);
+    }
+    const forest = { title: "Forest", card_type: "land", supertype: "Basic", subtypes: ["Forest"] };
+    expect(v33(card({ ...forest, flavor_text: "Deep roots." }, "fullartland"))).toBe(false);
+    expect(v33(card({ ...forest, rules_text: "({T}: Add {G}.)" }, "m15land"))).toBe(false);
+    // The legacy shape: one basic land type, no supertype, no rules text.
+    expect(v33(card({ title: "Island", card_type: "land", supertype: null, subtypes: ["Island"], flavor_text: "Wet." }, "m15land"))).toBe(false);
+    // A nonbasic land prints its text…
+    expect(v33(card({ title: "Temple", card_type: "land", subtypes: ["Forest", "Island"], rules_text: "Scry 1." }, "m15land"))).toBe(true);
+    // …and a saga's chapter rail draws whatever the card is.
+    expect(v33(card({ ...forest, rules_text: "I — Draw a card." }, "saga"))).toBe(true);
+  });
+
+  it("answers conservatively (affected) for a row missing a column it reads", async () => {
+    const v33 = await scope();
+    expect(v33({ ...at("m15"), frame_style: undefined })).toBe(true);
+    for (const column of ["rules_text", "flavor_text", "face_content", "back_face"]) {
+      expect(v33({ ...at("m15"), [column]: undefined }), column).toBe(true);
+    }
+    // The basic-land test needs the type columns once there is text.
+    for (const column of ["card_type", "supertype", "subtypes", "title"]) {
+      expect(v33({ ...at("m15"), rules_text: "Flying", [column]: undefined }), column).toBe(true);
+    }
+  });
+
+  it("freezes its template lists as literals, pinned to the profiles as they stand at v33", async () => {
+    const { V33_SCOPE_TEMPLATES } = await import("@/lib/cards/layout-version");
+    const all = [...FRAME_TEMPLATE_VALUES];
+    // A template that becomes textless or gains a chapter rail later brings
+    // its own bump: record it here, never in the frozen lists.
+    expect([...V33_SCOPE_TEMPLATES.textless].sort()).toEqual(all.filter((t) => getFrameProfile(t).textless).sort());
+    expect([...V33_SCOPE_TEMPLATES.chapters].sort()).toEqual(all.filter((t) => getFrameProfile(t).chapters).sort());
+  });
+
+  it("is verification-neutral: a v32 / v31 / v30 frame_reviews tick stays fresh on every template", async () => {
+    const { VERIFICATION_NEUTRAL_VERSIONS, VERIFICATION_SCOPED_VERSIONS } = await import("@/lib/cards/layout-version");
+    expect(VERIFICATION_NEUTRAL_VERSIONS).toEqual([31, 32, 33]);
+    expect(VERIFICATION_SCOPED_VERSIONS[33]).toEqual([]);
+    for (const t of [...FRAME_TEMPLATE_VALUES, ...POST_V29_TEMPLATES]) {
+      const regular = { frame_style: { template: t, finish: "regular" } };
+      expect(isRenderStale(32, t, VERIFICATION_SCOPED_VERSIONS, 33, regular), t).toBe(false);
+      // …while a stored bake of a card that prints text still owes it.
+      expect(isRenderStale(32, t, undefined, 33, { ...at(t), ...regular, rules_text: "Flying" }), t).toBe(true);
     }
   });
 });

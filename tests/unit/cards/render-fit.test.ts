@@ -7,14 +7,12 @@ import {
   NAME_COST_GAP_PCT,
   TYPE_SYMBOL_GAP_PCT,
   costRowWidthPct,
-  fitRulesSizePct,
   fitSingleLineSizePct,
   fitTypeLine,
   fitTypeLineBand,
   inlineSymbolPullPct,
   measuredLinePreviewPct,
   measuredLinePx,
-  rulesSizeLadder,
   secondFaceLineSizes,
   slotLineEm,
   typeLineRoomPct,
@@ -24,84 +22,6 @@ import { displayTextEm } from "@/lib/cards/display-metrics";
 import { getFrameProfile, type FrameProfile } from "@/lib/cards/template-layout";
 import { RULES_TEXT, TYPE_SIZE_PCT, pctToPt, ptToPct } from "@/lib/cards/typography";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
-
-// The m15 rules slot — the most common case.
-const M15_RULES = {
-  rect: { topPct: 63.4, leftPct: 8.5, widthPct: 83, heightPct: 28.0 },
-  baseSizePct: ptToPct(RULES_TEXT.standardPt),
-  aspect: 7 / 5,
-};
-const HARD_FLOOR = ptToPct(RULES_TEXT.hardFloorPt);
-
-const fit = (rulesText: string, flavorText: string | null = null) =>
-  fitRulesSizePct({ rulesText, flavorText, ...M15_RULES });
-
-describe("fitRulesSizePct", () => {
-  it("returns the authentic base size for short text (no premature shrink)", () => {
-    expect(fit("Trample")).toBe(M15_RULES.baseSizePct);
-    expect(fit("")).toBe(M15_RULES.baseSizePct);
-  });
-
-  it("shrinks as text grows, never below the floor", () => {
-    const sentence =
-      "Whenever this creature attacks, draw a card and gain 1 life. ";
-    let last = Number.POSITIVE_INFINITY;
-    for (const repeats of [1, 4, 8, 16, 40]) {
-      const size = fit(sentence.repeat(repeats));
-      expect(size).toBeLessThanOrEqual(last);
-      expect(size).toBeGreaterThanOrEqual(HARD_FLOOR - 1e-9);
-      last = size;
-    }
-    expect(last).toBeLessThan(M15_RULES.baseSizePct);
-  });
-
-  it("is deterministic (preview and bake must agree)", () => {
-    const text = "Flying, vigilance\n{T}: Add {G}{G}.\nLandfall — draw a card.";
-    expect(fit(text, "A coil of fire.")).toBe(fit(text, "A coil of fire."));
-  });
-
-  it("counts flavor text against the box", () => {
-    const rules = "Whenever this creature attacks, draw a card. ".repeat(6);
-    const withFlavor = fit(rules, "The mountain answered with fire. ".repeat(4));
-    expect(withFlavor).toBeLessThanOrEqual(fit(rules));
-  });
-
-  it("treats explicit line breaks as separate paragraphs", () => {
-    const oneLine = fit("Flying. Haste. Trample. Vigilance. Reach. Menace.");
-    const manyLines = fit("Flying\nHaste\nTrample\nVigilance\nReach\nMenace");
-    expect(manyLines).toBeLessThanOrEqual(oneLine);
-  });
-
-  it("respects landscape aspect (battle frames)", () => {
-    const battle = fitRulesSizePct({
-      rulesText: "When this Siege enters, search your library. ".repeat(6),
-      flavorText: null,
-      rect: { topPct: 67.5, leftPct: 13, widthPct: 80, heightPct: 25 },
-      baseSizePct: ptToPct(8, "landscape"),
-      aspect: 5 / 7,
-    });
-    expect(battle).toBeGreaterThanOrEqual(ptToPct(RULES_TEXT.hardFloorPt, "landscape") - 1e-9);
-    expect(battle).toBeLessThanOrEqual(ptToPct(8, "landscape"));
-  });
-});
-
-describe("rulesSizeLadder", () => {
-  it("steps down from 9 pt in half points through the 7.5 pt floor to the hard floor", () => {
-    const ladder = rulesSizeLadder(ptToPct(9), 7 / 5).map((pct) => Math.round(pctToPt(pct) * 10) / 10);
-    expect(ladder.slice(0, 4)).toEqual([9, 8.5, 8, 7.5]);
-    expect(ladder[ladder.length - 1]).toBe(RULES_TEXT.hardFloorPt);
-    expect(ladder).toContain(7);
-  });
-
-  it("measures the step against the landscape width for landscape frames", () => {
-    const [base, next] = rulesSizeLadder(ptToPct(8, "landscape"), 5 / 7);
-    expect(pctToPt(base - next, "landscape")).toBeCloseTo(RULES_TEXT.stepPt, 6);
-  });
-
-  it("uses the standard as the M15 base size", () => {
-    expect(fit("Trample")).toBeCloseTo(0.05, 6); // 9 pt on a 2.5 in card
-  });
-});
 
 describe("fitSingleLineSizePct", () => {
   const M15_TYPE_RECT = { topPct: 56.5, leftPct: 7.9, widthPct: 86.1, heightPct: 5.2 };
