@@ -95,7 +95,7 @@ describe("CardPreview — the emblem frame (TODO 4.52)", () => {
     expect(html).not.toContain("/pt/");
   });
 
-  it("windows the art where Scryfall's emblem art_crop printed it, and runs it under the spark's tail", () => {
+  it("windows the art exactly where Scryfall's emblem art_crop printed it, at its printed size, and runs it under the spark's tail", () => {
     const px = (r: { topPct: number; leftPct: number; widthPct: number; heightPct: number }) => ({
       x0: (r.leftPct / 100) * 1500,
       y0: (r.topPct / 100) * 2100,
@@ -105,23 +105,32 @@ describe("CardPreview — the emblem frame (TODO 4.52)", () => {
     const slot = px(EMBLEM.artSlot);
     const crop = EMBLEM_SCRYFALL_CROP_PX;
     // The crop's own box (603 × 576 at 72.5 / 124 of the 744 × 1040 scan),
-    // grown up to the spark's anti-aliased tips — its aspect, bottom and
-    // centre kept, so an imported art_crop lands within 1 px of its print
-    // at the bottom and centre (and 19 px taller up top).
+    // at scale 1: an imported art_crop lands on its print pixel for pixel.
+    // (Owner evidence 2026-09-29: grown up to 232 px, aspect kept, the box
+    // drew the art 1.6–1.8 % larger than TFDN #24 / #25, TDSK #17, TBLB #30
+    // and TFRA #16.)
     expect(crop.width / crop.height).toBeCloseTo(603 / 576, 2);
-    expect((slot.x1 - slot.x0) / (slot.y1 - slot.y0)).toBeCloseTo(crop.width / crop.height, 6);
+    expect(slot.x0).toBeCloseTo(crop.x, 6);
+    expect(slot.y0).toBeCloseTo(crop.y, 6);
+    expect(slot.x1).toBeCloseTo(crop.x + crop.width, 6);
     expect(slot.y1).toBeCloseTo(crop.y + crop.height, 6);
-    expect((slot.x0 + slot.x1) / 2).toBeCloseTo(crop.x + crop.width / 2, 6);
-    expect(slot.y0).toBe(232);
-    // It covers the master's clear spark (α < 255 from 233 px down to the
-    // type bar's outline at 1407, 215–1284 px across).
-    expect(slot.y0).toBeLessThanOrEqual(233);
+    // It covers the master's clear spark (215–1284 px across, down to the
+    // type bar's outline at 1407) but for the top of its centre ray, above
+    // the crop: CC's glow cap (α ~190 from 233 px) and the clear rows
+    // 245–250, which the under-frame layer fills.
+    expect(slot.y0).toBeGreaterThan(245);
+    expect(slot.y0).toBeLessThan(251);
     expect(slot.y1).toBeGreaterThanOrEqual(1407);
     expect(slot.x0).toBeLessThanOrEqual(215);
     expect(slot.x1).toBeGreaterThanOrEqual(1285);
-    // CC's artBounds is the layer under the whole frame: the tail (α 204)
-    // shows the art faintly down to 1896 px, as the prints do.
+    // CC's artBounds is the layer under the whole frame: it takes the ray's
+    // top, and the tail (α 204) shows the art faintly down to 1896 px, as
+    // the prints do.
     expect(EMBLEM.underFrameArt).toEqual({ rect: { topPct: 4.96, leftPct: 14.2, widthPct: 71.6, heightPct: 85.48 } });
-    expect(px(EMBLEM.underFrameArt!.rect).y1).toBeGreaterThanOrEqual(1896);
+    const under = px(EMBLEM.underFrameArt!.rect);
+    expect(under.y0).toBeLessThanOrEqual(233);
+    expect(under.x0).toBeLessThanOrEqual(731);
+    expect(under.x1).toBeGreaterThanOrEqual(769);
+    expect(under.y1).toBeGreaterThanOrEqual(1896);
   });
 });
