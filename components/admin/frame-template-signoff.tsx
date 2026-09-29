@@ -21,6 +21,14 @@ import {
   FramePreviewList,
   type FramePreviewListItem,
 } from "@/components/admin/frame-preview-list";
+import { ScoreBatchPanel, useStartScoreJob } from "@/components/admin/score-batch-panel";
+import { useScoreBatch, type LiveComboResult } from "@/components/admin/score-batch-store";
+import { FrameSlotTable, type SlotTableColumn } from "@/components/admin/frame-slot-table";
+import { FrameTreatmentPanel } from "@/components/admin/frame-treatment-panel";
+import type { SlotScore } from "@/lib/frames/align";
+import type { FrameColorKey } from "@/lib/cards/frame-reference-registry";
+import type { TreatmentView } from "@/lib/frames/treatment-summary";
+import type { FrameTemplate } from "@/types/card";
 import {
   scoreFrameColorAction,
   signOffFrameTemplateAction,
@@ -43,6 +51,14 @@ import { cn } from "@/lib/utils";
 // single colour. A colour whose match is below SIGN_OFF_LOW_MATCH_PCT is
 // marked on its row and named in a confirm step before Publish — a warning,
 // never a block (owner, 2026-09-28).
+//
+// Verification throughput (TODO 4.12): "Score all colours" is ONE job
+// (POST /api/admin/frame-score-batch, streamed; components/admin/
+// score-batch-store.ts) with a progress panel; its results fill the per-slot
+// table (each colour's slot scores and nudges + the nudge the colours agree
+// on); "Score the treatment" does the same for every frame of the frame
+// set. None of it ticks anything — Publish below and the checkboxes stay
+// the owner's clicks.
 // ---------------------------------------------------------------------------
 
 export type SignOffColourView = {
@@ -67,6 +83,10 @@ export type SignOffColourView = {
     createdAt: string | null;
     /** Recorded by a per-colour tick (its "verify" event), not by Score. */
     fromTick?: boolean;
+    /** Registration + per-slot scores of the recorded score (TODO 4.12's
+     *  results table); null when it recorded none. */
+    global?: { dxPct: number; dyPct: number; confidence: number } | null;
+    slots?: Record<string, SlotScore> | null;
   };
   referenceId: string | null;
   walkHref: string;
@@ -128,6 +148,38 @@ function ScoreCell({ view }: { view: SignOffColourView }) {
   );
 }
 
+/** The table's columns: each colour's recorded score — or, while the page
+ *  still shows the data from BEFORE the tab's job (it is running, or its
+ *  refresh hasn't landed), the job's recorded result for it. Once the
+ *  refreshed server data arrives it is the one truth again (it knows what
+ *  is stale; no client clock is compared with a server one). */
+export function slotTableColumns(
+  template: string,
+  colours: SignOffColourView[],
+  live: Record<string, LiveComboResult>,
+  preferLive: boolean,
+): SlotTableColumn[] {
+  return colours.map((view) => {
+    const fresh = preferLive ? live[`${template}/${view.colorKey}`] : undefined;
+    if (fresh && fresh.recorded) {
+      return {
+        colorKey: view.colorKey,
+        state: "live",
+        overall: fresh.overall,
+        global: fresh.global,
+        slots: fresh.slots,
+      };
+    }
+    return {
+      colorKey: view.colorKey,
+      state: view.score.state,
+      overall: view.score.overall,
+      global: view.score.global ?? null,
+      slots: view.score.slots ?? null,
+    };
+  });
+}
+
 export function FrameTemplateSignOff({
   template,
   currentVersion,
@@ -135,6 +187,8 @@ export function FrameTemplateSignOff({
   colours,
   ready,
   publishableCount,
+  slotOrder = [],
+  treatment = null,
 }: {
   template: string;
   currentVersion: number;
@@ -142,10 +196,25 @@ export function FrameTemplateSignOff({
   colours: SignOffColourView[];
   ready: boolean;
   publishableCount: number;
+  /** The template's slots in editor order (the results table's rows). */
+  slotOrder?: string[];
+  /** Its treatment's other frames, when there are any (TODO 4.12). */
+  treatment?: TreatmentView | null;
 }) {
   const router = useRouter();
   const [scoring, setScoring] = useState<string | null>(null);
-  const [scoringAll, setScoringAll] = useState(false);
+  const job = useScoreBatch();
+  const startJob = useStartScoreJob();
+  const scoringAll = job.status === "running";
+  // The colours the page showed when a job of this view finished: until the
+  // refresh replaces them, the table keeps the job's fresh results.
+  const [awaitingRefresh, setAwaitingRefresh] = useState<SignOffColourView[] | null>(null);
+  const preferLive = scoringAll || (awaitingRefresh !== null && awaitingRefresh === colours);
+  const runJob = async (input: Parameters<typeof startJob>[0]) => {
+    const shown = colours;
+    const final = await startJob(input);
+    if (final) setAwaitingRefresh(shown);
+  };
   const [confirmed, setConfirmed] = useState(false);
   const [lowConfirmOpen, setLowConfirmOpen] = useState(false);
   const [publishing, startPublish] = useTransition();
@@ -183,17 +252,14 @@ export function FrameTemplateSignOff({
   const toScore = colours.filter(
     (c) => c.score.state === "unscored" || c.score.state === "stale",
   );
+  const scorable = colours.filter((c) => c.score.state !== "no-reference");
+  const combosOf = (views: SignOffColourView[]) =>
+    views.map((c) => ({ template: template as FrameTemplate, colorKey: c.colorKey as FrameColorKey }));
 
-  const scoreAll = async () => {
-    setScoringAll(true);
-    // One at a time: each score renders a card and fetches a scan through
-    // the throttled Scryfall client.
-    for (const colour of toScore) {
-      await scoreOne(colour.colorKey);
-    }
-    setScoringAll(false);
-    router.refresh();
-  };
+  // ONE job for the whole template (TODO 4.12): scored server-side a couple
+  // at a time, streamed back into the progress panel and the table.
+  const scoreAll = (views: SignOffColourView[], label: string) =>
+    void runJob({ scopeKey: `template:${template}`, label, combos: combosOf(views) });
 
   const publish = () =>
     startPublish(async () => {
@@ -221,6 +287,36 @@ export function FrameTemplateSignOff({
         colour counts once it is scored on these — a later renderer bump that
         touches this frame, or an override edit, makes its score stale again.
       </p>
+      <SurfaceCard className="flex flex-col gap-3 p-4" data-testid="signoff-results">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="flex min-w-[14rem] flex-1 flex-col leading-tight">
+            <span className="text-sm font-semibold text-foreground">Scores per slot</span>
+            <span className="text-[11px] text-subtle">
+              Edge difference after the scan is lined up (lower is better), and
+              the nudge each colour&apos;s scan suggests. Text never reaches 0 —
+              fonts differ — so trust the nudges, not the absolute numbers.
+            </span>
+          </span>
+          <Button
+            type="button"
+            disabled={scorable.length === 0 || scoring !== null || scoringAll}
+            onClick={() => scoreAll(scorable, `${template} — all colours`)}
+            data-testid="score-all-colours"
+          >
+            {scoringAll && job.scopeKey === `template:${template}` ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            ) : (
+              <Gauge className="h-4 w-4" aria-hidden />
+            )}
+            Score all {scorable.length} colour{scorable.length === 1 ? "" : "s"}
+          </Button>
+        </div>
+        <ScoreBatchPanel />
+        <FrameSlotTable
+          columns={slotTableColumns(template, colours, job.results, preferLive)}
+          slotOrder={slotOrder}
+        />
+      </SurfaceCard>
       <ul className="flex flex-col gap-3">
         {colours.map((view) => (
           <li key={view.colorKey}>
@@ -335,15 +431,20 @@ export function FrameTemplateSignOff({
           </li>
         ))}
       </ul>
+      {treatment ? (
+        <FrameTreatmentPanel treatment={treatment} currentTemplate={template} onScore={runJob} />
+      ) : null}
       <SurfaceCard className="flex flex-col gap-3 p-4">
         <div className="flex flex-wrap items-center gap-3">
           <Button
             type="button"
             variant="outline"
             disabled={toScore.length === 0 || scoring !== null || scoringAll}
-            onClick={() => void scoreAll()}
+            onClick={() =>
+              scoreAll(toScore, `${template} — ${toScore.length} unscored/stale`)
+            }
           >
-            {scoringAll ? (
+            {scoringAll && job.scopeKey === `template:${template}` ? (
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
             ) : (
               <Gauge className="h-4 w-4" aria-hidden />

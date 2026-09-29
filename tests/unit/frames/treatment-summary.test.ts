@@ -1,0 +1,108 @@
+import { describe, expect, it } from "vitest";
+import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
+import type { RecordedScore } from "@/lib/cards/frame-signoff";
+import { FRAME_REFERENCES } from "@/lib/cards/frame-reference-registry";
+import { buildTreatmentView, slotRectsFor } from "@/lib/frames/treatment-summary";
+
+// ---------------------------------------------------------------------------
+// The treatment half of the sign-off (TODO 4.12): a template whose frame set
+// has other frames gets them listed with each colour's state BY THE SIGN-OFF
+// RULE (so "scored" means what Publish would accept on that frame's own
+// page), a "Score the treatment" combo list without the colours no printing
+// covers, and one pooled nudge per slot the frames draw on the same rect.
+// ---------------------------------------------------------------------------
+
+const current = (template: string, colorKey: string, slots: Record<string, unknown>): RecordedScore => ({
+  layoutVersion: CARD_LAYOUT_VERSION,
+  overrideHash: "none",
+  referenceScryfallId:
+    FRAME_REFERENCES[template as "m15borderless"][colorKey as "w"]?.scryfallId ?? null,
+  scoreJson: { overall: 6, slots },
+  createdAt: "2026-09-29T10:00:00Z",
+});
+
+describe("buildTreatmentView", () => {
+  it("is null for a template alone in its treatment", () => {
+    expect(
+      buildTreatmentView({
+        template: "nyx",
+        reviews: new Map(),
+        overrides: {},
+        scores: new Map(),
+        labelFor: (t) => t,
+      }),
+    ).toBeNull();
+  });
+
+  it("lists the treatment's frames, their colours' states, and pools the shared slots", () => {
+    const nudgeDown = { score: 10, best: 6, dxPct: 0, dyPct: 0.3 };
+    const view = buildTreatmentView({
+      template: "m15borderlessartifact",
+      reviews: new Map(),
+      overrides: {},
+      scores: new Map([
+        [
+          "m15borderless",
+          new Map([
+            ["w", current("m15borderless", "w", { title: nudgeDown })],
+            ["u", current("m15borderless", "u", { title: nudgeDown })],
+            // Scored on another reference → stale, never a vote.
+            ["b", { ...current("m15borderless", "b", { title: { score: 10, best: 6, dxPct: 0, dyPct: -2 } }), referenceScryfallId: "other" }],
+          ]),
+        ],
+        ["m15borderlessartifact", new Map([["w", current("m15borderlessartifact", "w", { title: nudgeDown })]])],
+      ]),
+      labelFor: (t) => `label:${t}`,
+    });
+    expect(view).not.toBeNull();
+    expect(view!.key).toBe("borderless");
+    expect(view!.label).toBe("Borderless");
+    expect(view!.templates.map((t) => t.template)).toEqual(["m15borderless", "m15borderlessartifact"]);
+    expect(view!.templates[0].label).toBe("label:m15borderless");
+    const states = Object.fromEntries(view!.templates[0].colours.map((c) => [c.colorKey, c.state]));
+    expect(states).toMatchObject({ w: "scored", u: "scored", b: "stale", r: "unscored" });
+
+    // Every colour both frames have a printing for (all seven, per the registry).
+    expect(view!.combos).toHaveLength(14);
+
+    // The artifact kind spreads the borderless profile: title is ONE slot,
+    // voted on by the three current colours of both frames.
+    const title = view!.shared.find((row) => row.path === "title");
+    expect(title).toMatchObject({
+      templates: ["m15borderless", "m15borderlessartifact"],
+      samples: 3,
+      nudge: expect.objectContaining({ dyPct: 0.3, agree: 3, of: 3 }),
+    });
+    expect(view!.shared.some((row) => row.path === "artSlot")).toBe(false);
+  });
+
+  it("a layout override that moves a slot on one frame splits it from the other", () => {
+    const shared = slotRectsFor("m15borderless", {}).title;
+    const view = buildTreatmentView({
+      template: "m15borderless",
+      reviews: new Map(),
+      overrides: {
+        m15borderlessartifact: { title: { rect: { ...shared, topPct: shared.topPct + 1 } } },
+      } as never,
+      scores: new Map(),
+      labelFor: (t) => t,
+    });
+    expect(view!.shared.some((row) => row.path === "title")).toBe(false);
+    expect(view!.shared.some((row) => row.path === "type")).toBe(true);
+  });
+
+  it("the combos leave out the colours no printing covers", () => {
+    const view = buildTreatmentView({
+      template: "m15tokenartifact",
+      reviews: new Map(),
+      overrides: {},
+      scores: new Map(),
+      labelFor: (t) => t,
+    });
+    // m15tokenartifact has printings for u and c only.
+    const artifactCombos = view!.combos.filter((c) => c.template === "m15tokenartifact").map((c) => c.colorKey);
+    expect(artifactCombos).toEqual(["u", "c"]);
+    const row = view!.templates.find((t) => t.template === "m15tokenartifact")!;
+    expect(row.colours.find((c) => c.colorKey === "w")?.state).toBe("no-reference");
+  });
+});
